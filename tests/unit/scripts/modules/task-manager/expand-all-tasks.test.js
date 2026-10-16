@@ -182,6 +182,38 @@ describe('expandAllTasks', () => {
 			);
 		});
 
+		test('should count tasks the complexity report skips instead of expanding them (#1728)', async () => {
+			// Arrange - task 1 is skipped (report recommends 0), task 2 is expanded
+			mockExpandTask
+				.mockResolvedValueOnce({ skipped: true })
+				.mockResolvedValueOnce({
+					telemetryData: { commandName: 'expand-task', totalCost: 0.05 }
+				});
+
+			// Act
+			const result = await expandAllTasks(
+				mockTasksPath,
+				undefined,
+				false,
+				'',
+				false,
+				{
+					session: mockSession,
+					mcpLog: mockMcpLog,
+					projectRoot: mockProjectRoot,
+					tag: 'master'
+				},
+				'json'
+			);
+
+			// Assert
+			expect(result.success).toBe(true);
+			expect(result.expandedCount).toBe(1);
+			expect(result.skippedCount).toBe(1);
+			expect(result.failedCount).toBe(0);
+			expect(result.tasksToExpand).toBe(2);
+		});
+
 		test('should handle force flag to expand tasks with existing subtasks', async () => {
 			// Arrange
 			mockExpandTask.mockResolvedValue({

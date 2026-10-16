@@ -790,6 +790,79 @@ describe('expandTask', () => {
 			// Clean up stub
 			existsSpy.mockRestore();
 		});
+
+		describe('recommendedSubtasks of 0 (#1728)', () => {
+			const reportPath = '/mock/project/root/task-complexity-report.json';
+			let existsSpy;
+
+			beforeEach(() => {
+				existsSpy = jest
+					.spyOn(fs, 'existsSync')
+					.mockImplementation((filepath) => filepath === reportPath);
+				readJSON.mockImplementation((filepath, projectRootParam, tagParam) => {
+					if (filepath === reportPath) {
+						return {
+							complexityAnalysis: [
+								{
+									taskId: 1,
+									complexityScore: 2,
+									recommendedSubtasks: 0,
+									reasoning: 'Simple enough, no expansion needed'
+								}
+							]
+						};
+					}
+					const sampleTasksCopy = JSON.parse(JSON.stringify(sampleTasks));
+					const selectedTag = tagParam || 'master';
+					return {
+						...sampleTasksCopy[selectedTag],
+						tag: selectedTag,
+						_rawTaggedData: sampleTasksCopy
+					};
+				});
+			});
+
+			afterEach(() => {
+				existsSpy.mockRestore();
+			});
+
+			const context = {
+				mcpLog: createMcpLogMock(),
+				projectRoot: '/mock/project/root',
+				tag: 'master',
+				complexityReportPath: reportPath
+			};
+
+			test('should skip expansion without an AI call when the report recommends 0', async () => {
+				const result = await expandTask(
+					'tasks/tasks.json',
+					'1',
+					undefined,
+					false,
+					'',
+					context,
+					false
+				);
+
+				expect(result.skipped).toBe(true);
+				expect(generateObjectService).not.toHaveBeenCalled();
+			});
+
+			test('should still expand when an explicit subtask count outranks the report', async () => {
+				const result = await expandTask(
+					'tasks/tasks.json',
+					'1',
+					3,
+					false,
+					'',
+					context,
+					false
+				);
+
+				expect(result.skipped).toBeUndefined();
+				expect(generateObjectService).toHaveBeenCalled();
+			});
+		});
 	});
 
 	describe('Error Handling', () => {

@@ -190,11 +190,19 @@ async function expandTask(
 			logger.info(
 				`Using explicitly provided subtask count: ${finalSubtaskCount}`
 			);
-		} else if (taskAnalysis?.recommendedSubtasks) {
+		} else if (taskAnalysis?.recommendedSubtasks != null) {
 			finalSubtaskCount = parseInt(taskAnalysis.recommendedSubtasks, 10);
 			logger.info(
 				`Using subtask count from complexity report: ${finalSubtaskCount}`
 			);
+			// A report value of 0 means "no expansion needed". This differs from an
+			// explicit 0 (--num=0), which asks the model to pick an appropriate count.
+			if (finalSubtaskCount === 0) {
+				logger.info(
+					`Complexity report recommends no expansion for task ${taskId}. Skipping.`
+				);
+				return { task, skipped: true };
+			}
 		} else {
 			finalSubtaskCount = getDefaultSubtasks(session);
 			logger.info(`Using default number of subtasks: ${finalSubtaskCount}`);

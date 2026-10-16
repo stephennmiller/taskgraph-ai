@@ -72,6 +72,7 @@ async function expandAllTasks(
 	let loadingIndicator = null;
 	let expandedCount = 0;
 	let failedCount = 0;
+	let skippedCount = 0;
 	let tasksToExpandCount = 0;
 	const allTelemetryData = []; // Still collect individual data first
 
@@ -141,6 +142,21 @@ async function expandAllTasks(
 					}, // Pass the whole context object with projectRoot and resolved tag
 					force
 				);
+				if (result?.skipped) {
+					// The complexity report recommended no expansion for this task
+					skippedCount++;
+					if (taskIndicator) {
+						stopLoadingIndicator(
+							taskIndicator,
+							`Task ${task.id} skipped (no expansion recommended).`
+						);
+					}
+					logger.info(
+						`Skipped task ${task.id}: complexity report recommends no expansion.`
+					);
+					continue;
+				}
+
 				expandedCount++;
 
 				// Collect individual telemetry data
@@ -168,7 +184,7 @@ async function expandAllTasks(
 
 		// --- AGGREGATION AND DISPLAY ---
 		logger.info(
-			`Expansion complete: ${expandedCount} expanded, ${failedCount} failed.`
+			`Expansion complete: ${expandedCount} expanded, ${skippedCount} skipped, ${failedCount} failed.`
 		);
 
 		// Aggregate the collected telemetry data
@@ -182,8 +198,7 @@ async function expandAllTasks(
 				`${chalk.white.bold('Expansion Summary:')}\n\n` +
 				`${chalk.cyan('-')} Attempted: ${chalk.bold(tasksToExpandCount)}\n` +
 				`${chalk.green('-')} Expanded:  ${chalk.bold(expandedCount)}\n` +
-				// Skipped count is always 0 now due to pre-filtering
-				`${chalk.gray('-')} Skipped:   ${chalk.bold(0)}\n` +
+				`${chalk.gray('-')} Skipped:   ${chalk.bold(skippedCount)}\n` +
 				`${chalk.red('-')} Failed:    ${chalk.bold(failedCount)}`;
 
 			console.log(
@@ -205,7 +220,7 @@ async function expandAllTasks(
 			success: true,
 			expandedCount,
 			failedCount,
-			skippedCount: 0,
+			skippedCount,
 			tasksToExpand: tasksToExpandCount,
 			telemetryData: aggregatedTelemetryData
 		};
