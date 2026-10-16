@@ -1,8 +1,5 @@
 import fs from 'fs';
-import {
-	createTag,
-	listTags
-} from './scripts/modules/task-manager/tag-management.js';
+import { createTag, listTags } from '../modules/task-manager/tag-management.js';
 
 console.log('=== Testing Tag Management with Clean File ===');
 

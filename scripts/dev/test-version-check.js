@@ -1,7 +1,7 @@
 import {
 	compareVersions,
 	displayUpgradeNotification
-} from './scripts/modules/commands.js';
+} from '../modules/commands.js';
 
 // Simulate different version scenarios
 console.log('=== Simulating version check ===\n');

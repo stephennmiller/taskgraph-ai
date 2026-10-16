@@ -4,7 +4,7 @@ import {
 	checkForUpdate,
 	compareVersions,
 	displayUpgradeNotification
-} from './scripts/modules/commands.js';
+} from '../modules/commands.js';
 
 // Force our current version for testing
 process.env.FORCE_VERSION = '0.9.30';
