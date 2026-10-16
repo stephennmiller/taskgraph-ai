@@ -394,7 +394,7 @@ task-master models --set-main gpt-5-codex --codex-cli
 task-master models --set-fallback gpt-5 --codex-cli
 
 # Or use a different provider as fallback
-task-master models --set-fallback claude-3-5-sonnet
+task-master models --set-fallback claude-sonnet-5-5
 ```
 
 ## Next Steps

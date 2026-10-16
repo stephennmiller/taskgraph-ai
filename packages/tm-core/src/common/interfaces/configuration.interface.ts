@@ -518,8 +518,8 @@ export interface IConfigurationManager {
  */
 export const DEFAULT_CONFIG_VALUES = {
 	MODELS: {
-		MAIN: 'claude-sonnet-4-20250514',
-		FALLBACK: 'claude-3-7-sonnet-20250219'
+		MAIN: 'claude-sonnet-5-5',
+		FALLBACK: 'claude-sonnet-5-5'
 	},
 	TASKS: {
 		DEFAULT_PRIORITY: 'medium' as TaskPriority,

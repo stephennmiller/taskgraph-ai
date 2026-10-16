@@ -9,7 +9,7 @@
 			},
 			"allowed_roles": ["main", "fallback"],
 			"max_tokens": 64000,
-			"supported": true
+			"supported": false
 		},
 		{
 			"id": "claude-opus-4-20250514",
@@ -20,7 +20,7 @@
 			},
 			"allowed_roles": ["main", "fallback"],
 			"max_tokens": 32000,
-			"supported": true
+			"supported": false
 		},
 		{
 			"id": "claude-3-7-sonnet-20250219",
@@ -31,7 +31,7 @@
 			},
 			"allowed_roles": ["main", "fallback"],
 			"max_tokens": 120000,
-			"supported": true
+			"supported": false
 		},
 		{
 			"id": "claude-3-5-sonnet-20241022",
@@ -42,7 +42,7 @@
 			},
 			"allowed_roles": ["main", "fallback"],
 			"max_tokens": 8192,
-			"supported": true
+			"supported": false
 		},
 		{
 			"id": "claude-sonnet-4-5",
@@ -90,6 +90,54 @@
 			},
 			"allowed_roles": ["main", "fallback"],
 			"max_tokens": 32000,
+			"supported": true
+		},
+		{
+			"id": "claude-fable-5-1",
+			"name": "Claude Fable 5.1",
+			"swe_score": null,
+			"cost_per_1m_tokens": {
+				"input": 10.0,
+				"output": 50.0
+			},
+			"allowed_roles": ["main", "fallback"],
+			"max_tokens": 128000,
+			"supported": true
+		},
+		{
+			"id": "claude-opus-5-5",
+			"name": "Claude Opus 5.5",
+			"swe_score": null,
+			"cost_per_1m_tokens": {
+				"input": 4.0,
+				"output": 20.0
+			},
+			"allowed_roles": ["main", "fallback"],
+			"max_tokens": 128000,
+			"supported": true
+		},
+		{
+			"id": "claude-sonnet-5-5",
+			"name": "Claude Sonnet 5.5",
+			"swe_score": null,
+			"cost_per_1m_tokens": {
+				"input": 2.0,
+				"output": 10.0
+			},
+			"allowed_roles": ["main", "fallback"],
+			"max_tokens": 128000,
+			"supported": true
+		},
+		{
+			"id": "claude-haiku-5-5",
+			"name": "Claude Haiku 5.5",
+			"swe_score": null,
+			"cost_per_1m_tokens": {
+				"input": 0.1,
+				"output": 0.5
+			},
+			"allowed_roles": ["main", "fallback"],
+			"max_tokens": 128000,
 			"supported": true
 		}
 	],

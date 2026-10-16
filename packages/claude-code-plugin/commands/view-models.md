@@ -32,12 +32,12 @@ task-master models
 ```
 Task Master AI Model Configuration
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Main:     ✅ claude-3-5-sonnet (configured)
+Main:     ✅ claude-sonnet-5-5 (configured)
 Research: ✅ perplexity-sonar (configured)  
 Fallback: ⚠️  Not configured (optional)
 
 Available Models:
-- claude-3-5-sonnet
+- claude-sonnet-5-5
 - gpt-4-turbo
 - gpt-3.5-turbo
 - perplexity-sonar

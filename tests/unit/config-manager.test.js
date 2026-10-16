@@ -119,7 +119,7 @@ const DEFAULT_CONFIG = {
 	models: {
 		main: {
 			provider: 'anthropic',
-			modelId: 'claude-sonnet-4-20250514',
+			modelId: 'claude-sonnet-5-5',
 			maxTokens: 64000,
 			temperature: 0.2
 		},
@@ -131,7 +131,7 @@ const DEFAULT_CONFIG = {
 		},
 		fallback: {
 			provider: 'anthropic',
-			modelId: 'claude-3-7-sonnet-20250219',
+			modelId: 'claude-sonnet-5-5',
 			maxTokens: 120000,
 			temperature: 0.2
 		}

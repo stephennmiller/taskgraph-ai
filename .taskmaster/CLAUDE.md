@@ -269,7 +269,7 @@ An API key is required for any provider used across any of the 3 roles defined i
 task-master models --setup
 
 # Set specific models
-task-master models --set-main claude-3-5-sonnet-20241022
+task-master models --set-main claude-sonnet-5-5
 task-master models --set-research perplexity-llama-3.1-sonar-large-128k-online
 task-master models --set-fallback gpt-4o-mini
 ```

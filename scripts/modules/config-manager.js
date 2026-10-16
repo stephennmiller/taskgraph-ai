@@ -28,7 +28,7 @@ const DEFAULTS = {
 	models: {
 		main: {
 			provider: 'anthropic',
-			modelId: 'claude-sonnet-4-20250514',
+			modelId: 'claude-sonnet-5-5',
 			maxTokens: 64000,
 			temperature: 0.2
 		},
@@ -41,7 +41,7 @@ const DEFAULTS = {
 		fallback: {
 			// No default fallback provider/model initially
 			provider: 'anthropic',
-			modelId: 'claude-3-7-sonnet-20250219',
+			modelId: 'claude-sonnet-5-5',
 			maxTokens: 120000, // Default parameters if fallback IS configured
 			temperature: 0.2
 		}
@@ -1057,10 +1057,6 @@ function getAvailableModels() {
 							.map((p) => p.charAt(0).toUpperCase() + p.slice(1));
 						name = nameParts.join(' ');
 						// Handle specific known names better if needed
-						if (modelId === 'claude-3.5-sonnet-20240620')
-							name = 'Claude 3.5 Sonnet';
-						if (modelId === 'claude-3-7-sonnet-20250219')
-							name = 'Claude 3.7 Sonnet';
 						if (modelId === 'gpt-4o') name = 'GPT-4o';
 						if (modelId === 'gpt-4-turbo') name = 'GPT-4 Turbo';
 						if (modelId === 'sonar-pro') name = 'Perplexity Sonar Pro';
