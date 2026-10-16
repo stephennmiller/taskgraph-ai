@@ -5262,7 +5262,6 @@ async function loadTUI() {
  * Launch the interactive TUI REPL
  */
 async function launchREPL() {
-	const React = await import('react');
 	const tui = await loadTUI();
 
 	if (!tui) {
@@ -5277,6 +5276,8 @@ async function launchREPL() {
 		return;
 	}
 
+	// Only import react once a TUI exists; it is not a declared dependency
+	const React = await import('react');
 	const { render, Shell } = tui;
 
 	// Get current context

@@ -1,0 +1,30 @@
+import { jest } from '@jest/globals';
+
+// `react` is not a declared dependency, so it must never be imported while the
+// TUI is still a "coming soon" placeholder (regression test for #1725).
+jest.unstable_mockModule('react', () => {
+	throw new Error("Cannot find package 'react'");
+});
+
+const { launchREPL } = await import(
+	'../../../../../scripts/modules/commands.js'
+);
+
+describe('launchREPL', () => {
+	let logSpy;
+
+	beforeEach(() => {
+		logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+	});
+
+	afterEach(() => {
+		logSpy.mockRestore();
+	});
+
+	it('shows the placeholder and help without importing react', async () => {
+		await expect(launchREPL()).resolves.toBeUndefined();
+
+		const output = logSpy.mock.calls.map((args) => args.join(' ')).join('\n');
+		expect(output).toContain('TUI mode coming soon!');
+	});
+});
