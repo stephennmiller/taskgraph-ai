@@ -7,7 +7,7 @@ Shows the currently configured AI providers and models for Task Master.
 ## Execution
 
 ```bash
-task-master models
+taskgraph models
 ```
 
 ## Information Displayed

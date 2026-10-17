@@ -157,9 +157,9 @@ Add `TASK_MASTER_ALLOW_METADATA_UPDATES=true` to your MCP server environment con
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_ALLOW_METADATA_UPDATES": "true",
         "ANTHROPIC_API_KEY": "your_key_here"
@@ -236,15 +236,15 @@ Example workflow:
 
 ```bash
 # Generate the complexity analysis report with research capabilities
-task-master analyze-complexity --research
+taskgraph analyze-complexity --research
 
 # Review the report in a readable format
-task-master complexity-report
+taskgraph complexity-report
 
 # Expand tasks using the optimized recommendations
-task-master expand --id=8
+taskgraph expand --id=8
 # or expand all tasks
-task-master expand --all
+taskgraph expand --all
 ```
 
 </Accordion>

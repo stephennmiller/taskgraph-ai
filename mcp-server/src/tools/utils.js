@@ -142,7 +142,7 @@ function getProjectRoot(projectRootRaw, log) {
 		return lastFoundProjectRoot;
 	}
 
-	// 4. Check if the current directory has any indicators of being a task-master project
+	// 4. Check if the current directory has any indicators of being a taskgraph project
 	const currentDir = process.cwd();
 	if (
 		PROJECT_MARKERS.some((marker) => {
@@ -158,7 +158,7 @@ function getProjectRoot(projectRootRaw, log) {
 
 	// 5. Default to current working directory but warn the user
 	log.warn(
-		`No task-master project detected in current directory. Using ${currentDir} as project root.`
+		`No taskgraph project detected in current directory. Using ${currentDir} as project root.`
 	);
 	log.warn(
 		'Consider using --project-root to specify the correct project location or set TASK_MASTER_PROJECT_ROOT environment variable.'
@@ -325,7 +325,7 @@ async function handleApiResult(
 }
 
 /**
- * Executes a task-master CLI command synchronously.
+ * Executes a taskgraph CLI command synchronously.
  * @param {string} command - The command to execute (e.g., 'add-task')
  * @param {Object} log - Logger instance
  * @param {Array} args - Arguments for the command
@@ -345,7 +345,7 @@ function executeTaskMasterCommand(
 		const cwd = getProjectRoot(projectRootRaw, log);
 
 		log.info(
-			`Executing task-master ${command} with args: ${JSON.stringify(
+			`Executing taskgraph ${command} with args: ${JSON.stringify(
 				args
 			)} in directory: ${cwd}`
 		);
@@ -370,7 +370,7 @@ function executeTaskMasterCommand(
 
 		// If global CLI is not available, try fallback to the local script
 		if (result.error && result.error.code === 'ENOENT') {
-			log.info('Global task-master not found, falling back to local script');
+			log.info('Global taskgraph not found, falling back to local script');
 			// Pass the same spawnOptions (including env) to the fallback
 			result = spawnSync('node', ['scripts/dev.js', ...fullArgs], spawnOptions);
 		}
@@ -397,7 +397,7 @@ function executeTaskMasterCommand(
 			stderr: result.stderr
 		};
 	} catch (error) {
-		log.error(`Error executing task-master command: ${error.message}`);
+		log.error(`Error executing taskgraph command: ${error.message}`);
 		return {
 			success: false,
 			error: error.message

@@ -9,7 +9,7 @@ Uses the research AI provider (typically Perplexity) for more comprehensive task
 ## Execution
 
 ```bash
-task-master parse-prd --input=$ARGUMENTS --research
+taskgraph parse-prd --input=$ARGUMENTS --research
 ```
 
 ## Research Benefits

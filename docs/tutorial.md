@@ -13,7 +13,7 @@ MCP (Model Control Protocol) provides the easiest way to get started with Task M
 1. **Install the package**
 
 ```bash
-npm i -g task-master-ai
+npm i -g taskgraph-ai
 ```
 
 2. **Add the MCP config to your IDE/MCP Client** (Cursor is recommended, but it works with other clients):
@@ -23,7 +23,7 @@ npm i -g task-master-ai
   "mcpServers": {
     "taskmaster-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
         "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
@@ -39,7 +39,7 @@ npm i -g task-master-ai
 }
 ```
 
-**IMPORTANT:** An API key is _required_ for each AI provider you plan on using. Run the `task-master models` command to see your selected models and the status of your API keys across .env and mcp.json
+**IMPORTANT:** An API key is _required_ for each AI provider you plan on using. Run the `taskgraph models` command to see your selected models and the status of your API keys across .env and mcp.json
 
 **To use AI commands in CLI** you MUST have API keys in the .env file
 **To use AI commands in MCP** you MUST have API keys in the .mcp.json file (or MCP config equivalent)
@@ -76,20 +76,20 @@ If you prefer to use the command line interface directly:
 
 ```bash
 # Install globally
-npm install -g task-master-ai
+npm install -g taskgraph-ai
 
 # OR install locally within your project
-npm install task-master-ai
+npm install taskgraph-ai
 ```
 
 Initialize a new project:
 
 ```bash
 # If installed globally
-task-master init
+taskgraph init
 
 # If installed locally
-npx task-master init
+npx taskgraph init
 ```
 
 This will prompt you for project details and set up a new project with the necessary files and structure.
@@ -100,13 +100,13 @@ After setting up Task Master, you can use these commands (either via AI prompts 
 
 ```bash
 # Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
+taskgraph parse-prd your-prd.txt
 
 # List all tasks
-task-master list
+taskgraph list
 
 # Show the next task to work on
-task-master next
+taskgraph next
 ```
 
 ## Setting up Cursor AI Integration
@@ -142,7 +142,7 @@ You can also set up the MCP server in Cursor settings:
 4. Configure with the following details:
    - Name: "Task Master"
    - Type: "Command"
-   - Command: "npx -y task-master-ai"
+   - Command: "npx -y taskgraph-ai"
 5. Save the settings
 
 Once configured, you can interact with Task Master's task management commands directly through Cursor's interface, providing a more integrated experience.
@@ -152,13 +152,13 @@ Once configured, you can interact with Task Master's task management commands di
 In Cursor's AI chat, instruct the agent to generate tasks from your PRD:
 
 ```
-Please use the task-master parse-prd command to generate tasks from my PRD. The PRD is located at .taskmaster/docs/prd.txt.
+Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskmaster/docs/prd.txt.
 ```
 
 The agent will execute:
 
 ```bash
-task-master parse-prd .taskmaster/docs/prd.txt
+taskgraph parse-prd .taskmaster/docs/prd.txt
 ```
 
 This will:
@@ -193,9 +193,9 @@ Can you show me tasks 1, 3, and 5 to understand their current status?
 
 The agent will:
 
-- Run `task-master list` to see all tasks
-- Run `task-master next` to determine the next task to work on
-- Run `task-master show 1,3,5` to display multiple tasks with interactive options
+- Run `taskgraph list` to see all tasks
+- Run `taskgraph next` to determine the next task to work on
+- Run `taskgraph show 1,3,5` to display multiple tasks with interactive options
 - Analyze dependencies to determine which tasks are ready to be worked on
 - Prioritize tasks based on priority level and ID order
 - Suggest the next task(s) to implement
@@ -225,7 +225,7 @@ Show me tasks 5, 7, and 9 so I can plan my implementation approach.
 
 The agent will:
 
-- Run `task-master show 5,7,9` to display a compact summary table
+- Run `taskgraph show 5,7,9` to display a compact summary table
 - Show task status, priority, and progress indicators
 - Provide an interactive action menu with batch operations
 - Allow you to perform group actions like marking multiple tasks as in-progress
@@ -249,7 +249,7 @@ Task 3 is now complete. Please update its status.
 The agent will execute:
 
 ```bash
-task-master set-status --id=3 --status=done
+taskgraph set-status --id=3 --status=done
 ```
 
 ### 5. Handling Implementation Drift
@@ -269,10 +269,10 @@ We've decided to use MongoDB instead of PostgreSQL. Can you update all future ta
 The agent will execute:
 
 ```bash
-task-master update --from=4 --prompt="Now we are using MongoDB instead of PostgreSQL."
+taskgraph update --from=4 --prompt="Now we are using MongoDB instead of PostgreSQL."
 
 # OR, if research is needed to find best practices for MongoDB:
-task-master update --from=4 --prompt="Update to use MongoDB, researching best practices" --research
+taskgraph update --from=4 --prompt="Update to use MongoDB, researching best practices" --research
 ```
 
 This will rewrite or re-scope subsequent tasks in tasks.json while preserving completed work.
@@ -288,7 +288,7 @@ I think subtask 5.2 would fit better as part of task 7 instead. Can you move it 
 The agent will execute:
 
 ```bash
-task-master move --from=5.2 --to=7.3
+taskgraph move --from=5.2 --to=7.3
 ```
 
 You can reorganize tasks in various ways:
@@ -324,9 +324,9 @@ The agent will help you:
 
 ```bash
 # Move your tasks to new positions (e.g., 16-18)
-task-master move --from=10 --to=16
-task-master move --from=11 --to=17
-task-master move --from=12 --to=18
+taskgraph move --from=10 --to=16
+taskgraph move --from=11 --to=17
+taskgraph move --from=12 --to=18
 ```
 
 This approach preserves everyone's work while maintaining a clean task structure, making it much easier to handle task conflicts than trying to manually merge JSON files.
@@ -342,7 +342,7 @@ Task 5 seems complex. Can you break it down into subtasks?
 The agent will execute:
 
 ```bash
-task-master expand --id=5 --num=3
+taskgraph expand --id=5 --num=3
 ```
 
 You can provide additional context:
@@ -354,7 +354,7 @@ Please break down task 5 with a focus on security considerations.
 The agent will execute:
 
 ```bash
-task-master expand --id=5 --prompt="Focus on security aspects"
+taskgraph expand --id=5 --prompt="Focus on security aspects"
 ```
 
 You can also expand all pending tasks:
@@ -366,7 +366,7 @@ Please break down all pending tasks into subtasks.
 The agent will execute:
 
 ```bash
-task-master expand --all
+taskgraph expand --all
 ```
 
 For research-backed subtask generation using the configured research model:
@@ -378,7 +378,7 @@ Please break down task 5 using research-backed generation.
 The agent will execute:
 
 ```bash
-task-master expand --id=5 --research
+taskgraph expand --id=5 --research
 ```
 
 ## Example Cursor AI Interactions
@@ -446,7 +446,7 @@ Before implementing task 5 (authentication), research the latest JWT security re
 The agent will execute:
 
 ```bash
-task-master research "Latest JWT security recommendations 2024" --id=5
+taskgraph research "Latest JWT security recommendations 2024" --id=5
 ```
 
 #### Research with Project Context
@@ -458,7 +458,7 @@ Research React Query v5 migration strategies for our current API implementation.
 The agent will execute:
 
 ```bash
-task-master research "React Query v5 migration strategies" --files=src/api.js,src/hooks.js
+taskgraph research "React Query v5 migration strategies" --files=src/api.js,src/hooks.js
 ```
 
 #### Research and Update Pattern
@@ -471,8 +471,8 @@ Research the latest Node.js performance optimization techniques and update task 
 
 The agent will:
 
-1. Run research: `task-master research "Node.js performance optimization 2024" --id=12`
-2. Update the task: `task-master update-subtask --id=12.2 --prompt="Updated with latest performance findings: [research results]"`
+1. Run research: `taskgraph research "Node.js performance optimization 2024" --id=12`
+2. Update the task: `taskgraph update-subtask --id=12.2 --prompt="Updated with latest performance findings: [research results]"`
 
 #### When to Use Research
 
@@ -501,7 +501,7 @@ The agent will execute:
 
 ```bash
 # Create a tag based on your current git branch
-task-master add-tag --from-branch
+taskgraph add-tag --from-branch
 ```
 
 Or you can create a tag with a specific name:
@@ -513,7 +513,7 @@ Create a new tag called 'user-auth' for authentication-related tasks.
 The agent will execute:
 
 ```bash
-task-master add-tag user-auth --description="User authentication feature tasks"
+taskgraph add-tag user-auth --description="User authentication feature tasks"
 ```
 
 ### Switching Between Contexts
@@ -527,7 +527,7 @@ Switch to the 'user-auth' tag context so I can work on authentication tasks.
 The agent will execute:
 
 ```bash
-task-master use-tag user-auth
+taskgraph use-tag user-auth
 ```
 
 ### Copying Tasks Between Tags
@@ -541,7 +541,7 @@ Copy all tasks from the current tag to a new 'testing' tag for QA work.
 The agent will execute:
 
 ```bash
-task-master add-tag testing --copy-from-current --description="QA and testing tasks"
+taskgraph add-tag testing --copy-from-current --description="QA and testing tasks"
 ```
 
 ### Tag Management
@@ -555,7 +555,7 @@ Show me all available tags and their current status.
 The agent will execute:
 
 ```bash
-task-master tags --show-metadata
+taskgraph tags --show-metadata
 ```
 
 ### Benefits of Tagged Task Lists
@@ -571,9 +571,9 @@ task-master tags --show-metadata
 A typical git workflow with Task Master tags:
 
 1. **Create feature branch**: `git checkout -b feature/user-auth`
-2. **Create matching tag**: Ask agent to run `task-master add-tag --from-branch`
+2. **Create matching tag**: Ask agent to run `taskgraph add-tag --from-branch`
 3. **Work in isolated context**: All task operations work within the new tag
-4. **Switch contexts as needed**: Use `task-master use-tag <name>` to switch between different work streams
-5. **Merge and cleanup**: After merging the branch, optionally delete the tag with `task-master delete-tag <name>`
+4. **Switch contexts as needed**: Use `taskgraph use-tag <name>` to switch between different work streams
+5. **Merge and cleanup**: After merging the branch, optionally delete the tag with `taskgraph delete-tag <name>`
 
 This workflow ensures your task management stays organized and conflicts are minimized when working with teams or multiple features simultaneously.

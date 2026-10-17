@@ -170,7 +170,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			if (isLegacy) {
 				console.warn(
 					chalk.yellow(
-						`⚠️  DEPRECATION WARNING: Found configuration in legacy location '${configPath}'. Please migrate to .taskmaster/config.json. Run 'task-master migrate' to automatically migrate your project.`
+						`⚠️  DEPRECATION WARNING: Found configuration in legacy location '${configPath}'. Please migrate to .taskmaster/config.json. Run 'taskgraph migrate' to automatically migrate your project.`
 					)
 				);
 			}
@@ -233,7 +233,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 				// Warn about explicit root not having config
 				console.warn(
 					chalk.yellow(
-						`Warning: Configuration file not found at provided project root (${explicitRoot}). Using default configuration. Run 'task-master models --setup' to configure.`
+						`Warning: Configuration file not found at provided project root (${explicitRoot}). Using default configuration. Run 'taskgraph models --setup' to configure.`
 					)
 				);
 			} else {

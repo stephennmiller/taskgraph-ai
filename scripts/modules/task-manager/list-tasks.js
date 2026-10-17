@@ -762,9 +762,9 @@ async function listTasks(
 						subtasksSection + // <-- Subtasks are handled above now
 						'\n\n' +
 						// Use nextItem.id
-						`${chalk.cyan('Start working:')} ${chalk.yellow(`task-master set-status --id=${nextItem.id} --status=in-progress`)}\n` +
+						`${chalk.cyan('Start working:')} ${chalk.yellow(`taskgraph set-status --id=${nextItem.id} --status=in-progress`)}\n` +
 						// Use nextItem.id
-						`${chalk.cyan('View details:')} ${chalk.yellow(`task-master show ${nextItem.id}`)}`,
+						`${chalk.cyan('View details:')} ${chalk.yellow(`taskgraph show ${nextItem.id}`)}`,
 					{
 						padding: { left: 2, right: 2, top: 1, bottom: 1 },
 						borderColor: '#FF8800',
@@ -801,9 +801,9 @@ async function listTasks(
 			boxen(
 				chalk.white.bold('Suggested Next Steps:') +
 					'\n\n' +
-					`${chalk.cyan('1.')} Run ${chalk.yellow('task-master next')} to see what to work on next\n` +
-					`${chalk.cyan('2.')} Run ${chalk.yellow('task-master expand --id=<id>')} to break down a task into subtasks\n` +
-					`${chalk.cyan('3.')} Run ${chalk.yellow('task-master set-status --id=<id> --status=done')} to mark a task as complete`,
+					`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph next')} to see what to work on next\n` +
+					`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down a task into subtasks\n` +
+					`${chalk.cyan('3.')} Run ${chalk.yellow('taskgraph set-status --id=<id> --status=done')} to mark a task as complete`,
 				{
 					padding: 1,
 					borderColor: 'gray',

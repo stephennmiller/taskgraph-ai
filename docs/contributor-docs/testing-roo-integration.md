@@ -34,23 +34,23 @@ To manually verify that the Roo files are properly included in the package:
    npm init -y
    ```
 
-3. Install the task-master-ai package locally:
+3. Install the taskgraph-ai package locally:
 
    ```bash
    # From the root of the claude-task-master repository
    cd ..
    npm pack
-   # This will create a file like task-master-ai-0.12.0.tgz
+   # This will create a file like taskgraph-ai-<version>.tgz
 
    # Move back to the test directory
    cd test-tm
-   npm install ../task-master-ai-0.12.0.tgz
+   npm install ../taskgraph-ai-<version>.tgz
    ```
 
 4. Initialize a new Task Master project:
 
    ```bash
-   npx task-master init --yes
+   npx taskgraph init --yes
    ```
 
 5. Verify that all Roo files and directories are created:
@@ -86,7 +86,7 @@ Ensure that the Roo integration works alongside existing Cursor functionality:
 1. Initialize a new project that uses both Cursor and Roo:
 
    ```bash
-   npx task-master init --yes
+   npx taskgraph init --yes
    ```
 
 2. Verify that both `.cursor` and `.roo` directories are created

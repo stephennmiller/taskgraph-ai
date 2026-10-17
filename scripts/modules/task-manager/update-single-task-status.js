@@ -81,7 +81,7 @@ async function updateSingleTaskStatus(
 					);
 					console.log(
 						chalk.yellow(
-							`Consider updating the parent task status with: task-master set-status --id=${parentId} --status=done`
+							`Consider updating the parent task status with: taskgraph set-status --id=${parentId} --status=done`
 						)
 					);
 				}

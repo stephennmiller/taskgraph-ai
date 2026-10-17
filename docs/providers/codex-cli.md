@@ -24,7 +24,7 @@ npm install -g @openai/codex
 codex login
 
 # 3. Configure Task Master to use Codex CLI
-task-master models --set-main gpt-5-codex --codex-cli
+taskgraph models --set-main gpt-5-codex --codex-cli
 ```
 
 ## Requirements
@@ -44,7 +44,7 @@ node --version
 codex --version
 
 # Check Task Master version
-task-master --version
+taskgraph --version
 ```
 
 ## Installation
@@ -65,10 +65,10 @@ Expected output: `v0.44.0` or higher
 
 ```bash
 # Install globally
-npm install -g task-master-ai
+npm install -g taskgraph-ai
 
 # Or install in your project
-npm install --save-dev task-master-ai
+npm install --save-dev taskgraph-ai
 ```
 
 ## Authentication
@@ -287,16 +287,16 @@ Override settings for specific Task Master commands:
 
 ```bash
 # Set Codex CLI for main role
-task-master models --set-main gpt-5-codex --codex-cli
+taskgraph models --set-main gpt-5-codex --codex-cli
 
 # Set Codex CLI for fallback role
-task-master models --set-fallback gpt-5 --codex-cli
+taskgraph models --set-fallback gpt-5 --codex-cli
 
 # Set Codex CLI for research role
-task-master models --set-research gpt-5 --codex-cli
+taskgraph models --set-research gpt-5 --codex-cli
 
 # Verify configuration
-task-master models
+taskgraph models
 ```
 
 ### Using Codex CLI with Task Master Commands
@@ -305,16 +305,16 @@ Once configured, use Task Master commands as normal:
 
 ```bash
 # Parse a PRD with Codex CLI
-task-master parse-prd my-requirements.txt
+taskgraph parse-prd my-requirements.txt
 
 # Analyze project complexity
-task-master analyze-complexity --research
+taskgraph analyze-complexity --research
 
 # Expand a task into subtasks
-task-master expand --id=1.2
+taskgraph expand --id=1.2
 
 # Add a new task with AI assistance
-task-master add-task --prompt="Implement user authentication" --research
+taskgraph add-task --prompt="Implement user authentication" --research
 ```
 
 The provider will automatically use your OAuth credentials when Codex CLI is configured.

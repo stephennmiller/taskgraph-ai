@@ -22,7 +22,7 @@ Intelligently fixes common dependency problems while preserving project logic.
 ## Execution
 
 \`\`\`bash
-task-master fix-dependencies
+taskgraph fix-dependencies
 \`\`\`
 
 ## What Gets Fixed

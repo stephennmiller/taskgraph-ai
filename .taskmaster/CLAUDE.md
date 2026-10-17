@@ -6,32 +6,32 @@
 
 ```bash
 # Project Setup
-task-master init                                    # Initialize Task Master in current project
-task-master parse-prd .taskmaster/docs/prd.md       # Generate tasks from PRD document
-task-master models --setup                        # Configure AI models interactively
+taskgraph init                                    # Initialize Task Master in current project
+taskgraph parse-prd .taskmaster/docs/prd.md       # Generate tasks from PRD document
+taskgraph models --setup                        # Configure AI models interactively
 
 # Daily Development Workflow
-task-master list                                   # Show all tasks with status
-task-master next                                   # Get next available task to work on
-task-master show <id>                             # View detailed task information (e.g., task-master show 1.2)
-task-master set-status --id=<id> --status=done    # Mark task complete
+taskgraph list                                   # Show all tasks with status
+taskgraph next                                   # Get next available task to work on
+taskgraph show <id>                             # View detailed task information (e.g., taskgraph show 1.2)
+taskgraph set-status --id=<id> --status=done    # Mark task complete
 
 # Task Management
-task-master add-task --prompt="description" --research        # Add new task with AI assistance
-task-master expand --id=<id> --research --force              # Break task into subtasks
-task-master update-task --id=<id> --prompt="changes"         # Update specific task
-task-master update --from=<id> --prompt="changes"            # Update multiple tasks from ID onwards
-task-master update-subtask --id=<id> --prompt="notes"        # Add implementation notes to subtask
+taskgraph add-task --prompt="description" --research        # Add new task with AI assistance
+taskgraph expand --id=<id> --research --force              # Break task into subtasks
+taskgraph update-task --id=<id> --prompt="changes"         # Update specific task
+taskgraph update --from=<id> --prompt="changes"            # Update multiple tasks from ID onwards
+taskgraph update-subtask --id=<id> --prompt="notes"        # Add implementation notes to subtask
 
 # Analysis & Planning
-task-master analyze-complexity --research          # Analyze task complexity
-task-master complexity-report                      # View complexity analysis
-task-master expand --all --research               # Expand all eligible tasks
+taskgraph analyze-complexity --research          # Analyze task complexity
+taskgraph complexity-report                      # View complexity analysis
+taskgraph expand --all --research               # Expand all eligible tasks
 
 # Dependencies & Organization
-task-master add-dependency --id=<id> --depends-on=<id>       # Add task dependency
-task-master move --from=<id> --to=<id>                       # Reorganize task hierarchy
-task-master validate-dependencies                            # Check for dependency issues
+taskgraph add-dependency --id=<id> --depends-on=<id>       # Add task dependency
+taskgraph move --from=<id> --to=<id>                       # Reorganize task hierarchy
+taskgraph validate-dependencies                            # Check for dependency issues
 ```
 
 ## Key Files & Project Structure
@@ -39,7 +39,7 @@ task-master validate-dependencies                            # Check for depende
 ### Core Files
 
 - `.taskmaster/tasks/tasks.json` - Main task data file (auto-managed)
-- `.taskmaster/config.json` - AI model configuration (use `task-master models` to modify)
+- `.taskmaster/config.json` - AI model configuration (use `taskgraph models` to modify)
 - `.taskmaster/docs/prd.md` - Product Requirements Document for parsing (`.md` extension recommended for better editor support)
 - `.taskmaster/tasks/*.txt` - Individual task files (auto-generated from tasks.json)
 - `.env` - API keys for CLI usage
@@ -87,9 +87,9 @@ Task Master provides an MCP server that Claude Code can connect to. Configure in
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_TOOLS": "core",
         "ANTHROPIC_API_KEY": "your_key_here",
@@ -130,25 +130,25 @@ Task Master uses tiered tool loading to optimize context window usage:
 ```javascript
 help; // = shows available taskmaster commands
 // Project setup
-initialize_project; // = task-master init
-parse_prd; // = task-master parse-prd
+initialize_project; // = taskgraph init
+parse_prd; // = taskgraph parse-prd
 
 // Daily workflow
-get_tasks; // = task-master list
-next_task; // = task-master next
-get_task; // = task-master show <id>
-set_task_status; // = task-master set-status
+get_tasks; // = taskgraph list
+next_task; // = taskgraph next
+get_task; // = taskgraph show <id>
+set_task_status; // = taskgraph set-status
 
 // Task management
-add_task; // = task-master add-task
-expand_task; // = task-master expand
-update_task; // = task-master update-task
-update_subtask; // = task-master update-subtask
-update; // = task-master update
+add_task; // = taskgraph add-task
+expand_task; // = taskgraph expand
+update_task; // = taskgraph update-task
+update_subtask; // = taskgraph update-subtask
+update; // = taskgraph update
 
 // Analysis
-analyze_project_complexity; // = task-master analyze-complexity
-complexity_report; // = task-master complexity-report
+analyze_project_complexity; // = taskgraph analyze-complexity
+complexity_report; // = taskgraph complexity-report
 ```
 
 ## Claude Code Workflow Integration
@@ -159,14 +159,14 @@ complexity_report; // = task-master complexity-report
 
 ```bash
 # Initialize Task Master
-task-master init
+taskgraph init
 
 # Create or obtain PRD, then parse it (use .md extension for better editor support)
-task-master parse-prd .taskmaster/docs/prd.md
+taskgraph parse-prd .taskmaster/docs/prd.md
 
 # Analyze complexity and expand tasks
-task-master analyze-complexity --research
-task-master expand --all --research
+taskgraph analyze-complexity --research
+taskgraph expand --all --research
 ```
 
 If tasks already exist, another PRD can be parsed (with new information only!) using parse-prd with --append flag. This will add the generated tasks to the existing list of tasks..
@@ -175,14 +175,14 @@ If tasks already exist, another PRD can be parsed (with new information only!) u
 
 ```bash
 # Start each session
-task-master next                           # Find next available task
-task-master show <id>                     # Review task details
+taskgraph next                           # Find next available task
+taskgraph show <id>                     # Review task details
 
 # During implementation, check in code context into the tasks and subtasks
-task-master update-subtask --id=<id> --prompt="implementation notes..."
+taskgraph update-subtask --id=<id> --prompt="implementation notes..."
 
 # Complete tasks
-task-master set-status --id=<id> --status=done
+taskgraph set-status --id=<id> --status=done
 ```
 
 #### 3. Multi-Claude Workflows
@@ -209,8 +209,8 @@ Find the next available Task Master task and show its details.
 
 Steps:
 
-1. Run `task-master next` to get the next task
-2. If a task is available, run `task-master show <id>` for full details
+1. Run `taskgraph next` to get the next task
+2. If a task is available, run `taskgraph show <id>` for full details
 3. Provide a summary of what needs to be implemented
 4. Suggest the first implementation step
 ```
@@ -222,11 +222,11 @@ Complete a Task Master task: $ARGUMENTS
 
 Steps:
 
-1. Review the current task with `task-master show $ARGUMENTS`
+1. Review the current task with `taskgraph show $ARGUMENTS`
 2. Verify all implementation is complete
 3. Run any tests related to this task
-4. Mark as complete: `task-master set-status --id=$ARGUMENTS --status=done`
-5. Show the next available task with `task-master next`
+4. Mark as complete: `taskgraph set-status --id=$ARGUMENTS --status=done`
+5. Show the next available task with `taskgraph next`
 ```
 
 ## Tool Allowlist Recommendations
@@ -237,11 +237,11 @@ Add to `.claude/settings.json`:
 {
   "allowedTools": [
     "Edit",
-    "Bash(task-master *)",
+    "Bash(taskgraph *)",
     "Bash(git commit:*)",
     "Bash(git add:*)",
     "Bash(npm run *)",
-    "mcp__task_master_ai__*"
+    "mcp__taskgraph_ai__*"
   ]
 }
 ```
@@ -266,12 +266,12 @@ An API key is required for any provider used across any of the 3 roles defined i
 
 ```bash
 # Interactive setup (recommended)
-task-master models --setup
+taskgraph models --setup
 
 # Set specific models
-task-master models --set-main claude-sonnet-5-5
-task-master models --set-research perplexity-llama-3.1-sonar-large-128k-online
-task-master models --set-fallback gpt-4o-mini
+taskgraph models --set-main claude-sonnet-5-5
+taskgraph models --set-research perplexity-llama-3.1-sonar-large-128k-online
+taskgraph models --set-fallback gpt-4o-mini
 ```
 
 ## Task Structure & IDs
@@ -313,27 +313,27 @@ task-master models --set-fallback gpt-4o-mini
 
 - Use `/clear` between different tasks to maintain focus
 - This CLAUDE.md file is automatically loaded for context
-- Use `task-master show <id>` to pull specific task context when needed
+- Use `taskgraph show <id>` to pull specific task context when needed
 
 ### Iterative Implementation
 
-1. `task-master show <subtask-id>` - Understand requirements
+1. `taskgraph show <subtask-id>` - Understand requirements
 2. Explore codebase and plan implementation
-3. `task-master update-subtask --id=<id> --prompt="detailed plan"` - Log plan
-4. `task-master set-status --id=<id> --status=in-progress` - Start work
+3. `taskgraph update-subtask --id=<id> --prompt="detailed plan"` - Log plan
+4. `taskgraph set-status --id=<id> --status=in-progress` - Start work
 5. Implement code following logged plan
-6. `task-master update-subtask --id=<id> --prompt="what worked/didn't work"` - Log progress
-7. `task-master set-status --id=<id> --status=done` - Complete task
+6. `taskgraph update-subtask --id=<id> --prompt="what worked/didn't work"` - Log progress
+7. `taskgraph set-status --id=<id> --status=done` - Complete task
 
 ### Complex Workflows with Checklists
 
 For large migrations or multi-step processes:
 
 1. Create a markdown PRD file describing the new changes: `touch task-migration-checklist.md` (prds can be .txt or .md)
-2. Use Taskmaster to parse the new prd with `task-master parse-prd --append` (also available in MCP)
+2. Use Taskmaster to parse the new prd with `taskgraph parse-prd --append` (also available in MCP)
 3. Use Taskmaster to expand the newly generated tasks into subtasks. Consdier using `analyze-complexity` with the correct --to and --from IDs (the new ids) to identify the ideal subtask amounts for each task. Then expand them.
 4. Work through items systematically, checking them off as completed
-5. Use `task-master update-subtask` to log progress on each task/subtask and/or updating/researching them before/during implementation if getting stuck
+5. Use `taskgraph update-subtask` to log progress on each task/subtask and/or updating/researching them before/during implementation if getting stuck
 
 ### Git Integration
 
@@ -368,10 +368,10 @@ cd ../project-api && claude     # Terminal 2: API work
 cat .env                           # For CLI usage
 
 # Verify model configuration
-task-master models
+taskgraph models
 
 # Test with different model
-task-master models --set-fallback gpt-4o-mini
+taskgraph models --set-fallback gpt-4o-mini
 ```
 
 ### MCP Connection Issues
@@ -385,7 +385,7 @@ task-master models --set-fallback gpt-4o-mini
 
 ```bash
 # Fix dependency issues
-task-master fix-dependencies
+taskgraph fix-dependencies
 ```
 
 DO NOT RE-INITIALIZE. That will not do anything beyond re-adding the same Taskmaster core files.
@@ -396,26 +396,26 @@ DO NOT RE-INITIALIZE. That will not do anything beyond re-adding the same Taskma
 
 These commands make AI calls and may take up to a minute:
 
-- `parse_prd` / `task-master parse-prd`
-- `analyze_project_complexity` / `task-master analyze-complexity`
-- `expand_task` / `task-master expand`
-- `expand_all` / `task-master expand --all`
-- `add_task` / `task-master add-task`
-- `update` / `task-master update`
-- `update_task` / `task-master update-task`
-- `update_subtask` / `task-master update-subtask`
+- `parse_prd` / `taskgraph parse-prd`
+- `analyze_project_complexity` / `taskgraph analyze-complexity`
+- `expand_task` / `taskgraph expand`
+- `expand_all` / `taskgraph expand --all`
+- `add_task` / `taskgraph add-task`
+- `update` / `taskgraph update`
+- `update_task` / `taskgraph update-task`
+- `update_subtask` / `taskgraph update-subtask`
 
 ### File Management
 
 - Never manually edit `tasks.json` - use commands instead
-- Never manually edit `.taskmaster/config.json` - use `task-master models`
+- Never manually edit `.taskmaster/config.json` - use `taskgraph models`
 
 ### Claude Code Session Management
 
 - Use `/clear` frequently to maintain focused context
 - Create custom slash commands for repeated Task Master workflows
 - Configure tool allowlist to streamline permissions
-- Use headless mode for automation: `claude -p "task-master next"`
+- Use headless mode for automation: `claude -p "taskgraph next"`
 
 ### Multi-Task Updates
 

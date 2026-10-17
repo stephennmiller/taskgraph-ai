@@ -36,7 +36,7 @@ Clearly describe the proposed feature, including:
 Provide a clear, concrete example demonstrating the feature:
 
 ```shell
-$ task-master [action]
+$ taskgraph [action]
 → Expected response/output
 ```
 

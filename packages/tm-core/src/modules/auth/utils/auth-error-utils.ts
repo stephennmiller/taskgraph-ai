@@ -23,17 +23,17 @@ export function isSupabaseAuthError(
  */
 export const AUTH_ERROR_MESSAGES: Record<string, string> = {
 	refresh_token_not_found:
-		'Your session has expired. Please log in again with: task-master login',
+		'Your session has expired. Please log in again with: taskgraph login',
 	refresh_token_already_used:
-		'Your session has expired (token was already used). Please log in again with: task-master login',
+		'Your session has expired (token was already used). Please log in again with: taskgraph login',
 	invalid_refresh_token:
-		'Your session has expired (invalid token). Please log in again with: task-master login',
+		'Your session has expired (invalid token). Please log in again with: taskgraph login',
 	session_expired:
-		'Your session has expired. Please log in again with: task-master login',
+		'Your session has expired. Please log in again with: taskgraph login',
 	user_not_found:
-		'User account not found. Please log in again with: task-master login',
+		'User account not found. Please log in again with: taskgraph login',
 	invalid_credentials:
-		'Invalid credentials. Please log in again with: task-master login'
+		'Invalid credentials. Please log in again with: taskgraph login'
 };
 
 /**

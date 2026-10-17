@@ -933,8 +933,8 @@ async function finalizeMove(
 		dependencyResolution.type === 'ignored-dependencies'
 	) {
 		response.tips = [
-			'Run "task-master validate-dependencies" to check for dependency issues.',
-			'Run "task-master fix-dependencies" to automatically repair dangling dependencies.'
+			'Run "taskgraph validate-dependencies" to check for dependency issues.',
+			'Run "taskgraph fix-dependencies" to automatically repair dangling dependencies.'
 		];
 	}
 

@@ -42,19 +42,19 @@ Once configured, you can use Claude Code with all Task Master commands:
 
 ```bash
 # Generate tasks from a PRD
-task-master parse-prd --input=prd.txt
+taskgraph parse-prd --input=prd.txt
 
 # Analyze project complexity
-task-master analyze-complexity
+taskgraph analyze-complexity
 
 # Show the next task to work on
-task-master next
+taskgraph next
 
 # View a specific task
-task-master show task-001
+taskgraph show task-001
 
 # Update task status
-task-master set-status --id=task-001 --status=in-progress
+taskgraph set-status --id=task-001 --status=in-progress
 ```
 
 ## Requirements

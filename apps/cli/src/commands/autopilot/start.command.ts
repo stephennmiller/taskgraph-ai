@@ -90,7 +90,7 @@ export class StartCommand extends Command {
 			if (!task.subtasks || task.subtasks.length === 0) {
 				formatter.error('Task has no subtasks. Expand task first.', {
 					taskId,
-					suggestion: `Run: task-master expand --id=${taskId}`
+					suggestion: `Run: taskgraph expand --id=${taskId}`
 				});
 				process.exit(1);
 			}

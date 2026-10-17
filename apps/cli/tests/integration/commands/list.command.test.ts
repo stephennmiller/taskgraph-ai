@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for 'task-master list' command
+ * @fileoverview Integration tests for 'taskgraph list' command
  *
  * Tests the list command which displays all tasks with optional filtering.
  *

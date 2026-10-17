@@ -19,7 +19,7 @@ Parse natural language or IDs:
 ## Execution
 
 ```bash
-task-master remove-dependency --id=<task-id> --depends-on=<dependency-id>
+taskgraph remove-dependency --id=<task-id> --depends-on=<dependency-id>
 ```
 
 ## Pre-Removal Checks

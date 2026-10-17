@@ -197,7 +197,7 @@ The standard pattern for adding a feature follows this workflow:
   - ❌ **DON'T**: Access the global `silentMode` flag directly.
 
 - **Debugging Strategy**:
-  - ✅ **DO**: If an MCP tool fails with vague errors (e.g., JSON parsing issues like `Unexpected token ... is not valid JSON`), **try running the equivalent CLI command directly in the terminal** (e.g., `task-master expand --all`). CLI output often provides much more specific error messages (like missing function definitions or stack traces from the core logic) that pinpoint the root cause.
+  - ✅ **DO**: If an MCP tool fails with vague errors (e.g., JSON parsing issues like `Unexpected token ... is not valid JSON`), **try running the equivalent CLI command directly in the terminal** (e.g., `taskgraph expand --all`). CLI output often provides much more specific error messages (like missing function definitions or stack traces from the core logic) that pinpoint the root cause.
   - ❌ **DON'T**: Rely solely on MCP logs if the error is unclear; use the CLI as a complementary debugging tool for core logic issues.
 
 - **Telemetry Integration**: Ensure AI calls correctly handle and propagate `telemetryData` as described in [`telemetry.mdc`](mdc:.cursor/rules/telemetry.mdc).
@@ -492,12 +492,12 @@ For each new feature:
 Follow the existing command reference format:
 ```markdown
 - **Command Reference: your-command**
-  - CLI Syntax: `task-master your-command [options]`
+  - CLI Syntax: `taskgraph your-command [options]`
   - Description: Brief explanation of what the command does
   - Parameters:
     - `--option1=<value>`: Description of option1 (default: 'default')
     - `--option2=<value>`: Description of option2 (required)
-  - Example: `task-master your-command --option1=value --option2=value2`
+  - Example: `taskgraph your-command --option1=value --option2=value2`
   - Notes: Additional details, limitations, or special considerations
 ```
 

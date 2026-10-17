@@ -7,7 +7,7 @@ Comprehensive check for dependency problems across the entire project.
 ## Execution
 
 ```bash
-task-master validate-dependencies
+taskgraph validate-dependencies
 ```
 
 ## Validation Checks

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for 'task-master generate' command
+ * @fileoverview Integration tests for 'taskgraph generate' command
  *
  * Tests CLI-specific behavior: argument parsing, output formatting, exit codes.
  * Core file generation logic is tested in tm-core's task-file-generator.service.spec.ts.

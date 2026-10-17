@@ -23,7 +23,7 @@ Initialize a Task Master project without prompts, accepting all defaults.
 ## Quick Setup
 
 \`\`\`bash
-task-master init -y
+taskgraph init -y
 \`\`\`
 
 ## What It Does

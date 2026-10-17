@@ -103,7 +103,7 @@ export function wouldRemovalLeaveNoProfiles(projectRoot, profilesToRemove) {
  * Detected IDE profiles (based on directory markers like .cursor, .claude, etc.) are pre-selected.
  * The result is an array of selected profile names.
  *
- * Used by both project initialization (init) and the CLI 'task-master rules setup' command.
+ * Used by both project initialization (init) and the CLI 'taskgraph rules setup' command.
  *
  * @param {string} [projectRoot=process.cwd()] - Project root directory for IDE detection
  * @returns {Promise<string[]>} Array of selected profile names (e.g., ['cursor', 'windsurf'])

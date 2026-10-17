@@ -117,7 +117,7 @@ Organizations can auto-install this marketplace for all team members by adding t
 ```json
 {
   "extraKnownMarketplaces": {
-    "task-master": {
+    "taskgraph": {
       "source": {
         "source": "github",
         "repo": "eyaltoledano/claude-task-master"

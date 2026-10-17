@@ -53,7 +53,7 @@ Task Master will attempt authentication in this order:
 Add Claude Code to your Task Master configuration:
 
 ```javascript
-// In your .taskmaster/config.json or via task-master models command
+// In your .taskmaster/config.json or via taskgraph models command
 {
   "models": {
     "main": "claude-code:sonnet",      // Use Claude Code with Sonnet
@@ -88,19 +88,19 @@ This is only needed in specific scenarios like:
 
 ```bash
 # Use Claude Code for task operations
-task-master add-task --prompt="Implement user authentication system" --research
-task-master expand --id=1 --research
-task-master update-task --id=1.1 --prompt="Add JWT token validation"
+taskgraph add-task --prompt="Implement user authentication system" --research
+taskgraph expand --id=1 --research
+taskgraph update-task --id=1.1 --prompt="Add JWT token validation"
 ```
 
 ### Model Configuration Commands
 
 ```bash
 # Set Claude Code as main model
-task-master models --set-main claude-code:sonnet
+taskgraph models --set-main claude-code:sonnet
 
 # Use interactive setup
-task-master models --setup
+taskgraph models --setup
 # Then select "claude-code" from the provider list
 ```
 
@@ -135,7 +135,7 @@ task-master models --setup
 **Solutions**:
 
 - Use supported models: `sonnet` or `opus`
-- Check model availability: `task-master models --list`
+- Check model availability: `taskgraph models --list`
 - Verify your Claude Code CLI has access to the requested model
 
 ### Debug Steps
@@ -157,7 +157,7 @@ task-master models --setup
 3. **Test Task Master integration**:
 
    ```bash
-   task-master models --test claude-code:sonnet
+   taskgraph models --test claude-code:sonnet
    # Should successfully connect and test the model
    ```
 

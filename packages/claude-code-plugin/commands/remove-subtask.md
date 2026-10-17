@@ -19,12 +19,12 @@ Remove a subtask and optionally convert it back to a standalone task.
 
 ### 1. Delete Subtask
 ```bash
-task-master remove-subtask --id=<parentId.subtaskId>
+taskgraph remove-subtask --id=<parentId.subtaskId>
 ```
 
 ### 2. Convert to Standalone
 ```bash
-task-master remove-subtask --id=<parentId.subtaskId> --convert
+taskgraph remove-subtask --id=<parentId.subtaskId> --convert
 ```
 
 ## Pre-Removal Checks

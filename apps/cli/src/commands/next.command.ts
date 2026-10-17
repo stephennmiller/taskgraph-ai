@@ -200,7 +200,7 @@ export class NextCommand extends Command {
 					})
 				);
 				console.log(
-					`\n${chalk.dim('Tip: Create tasks with')} ${chalk.cyan('task-master parse-prd')} ${chalk.dim('or')} ${chalk.cyan('task-master add-task')}`
+					`\n${chalk.dim('Tip: Create tasks with')} ${chalk.cyan('taskgraph parse-prd')} ${chalk.dim('or')} ${chalk.cyan('taskgraph add-task')}`
 				);
 			} else {
 				// Tasks exist but none are available to work on - just show a simple message
@@ -210,7 +210,7 @@ export class NextCommand extends Command {
 					)
 				);
 				console.log(
-					`\n${chalk.dim('Tip: Try')} ${chalk.cyan('task-master list')} ${chalk.dim('to see all tasks')}`
+					`\n${chalk.dim('Tip: Try')} ${chalk.cyan('taskgraph list')} ${chalk.dim('to see all tasks')}`
 				);
 			}
 			return;

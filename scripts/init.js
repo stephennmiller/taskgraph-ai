@@ -151,8 +151,8 @@ function addShellAliases() {
 
 		// Define aliases we want (hamster/ham aliases are managed by Hamster CLI, not Task Master)
 		const aliases = [
-			{ name: 'tm', line: "alias tm='task-master'" },
-			{ name: 'taskmaster', line: "alias taskmaster='task-master'" }
+			{ name: 'tm', line: "alias tm='taskgraph'" },
+			{ name: 'taskmaster', line: "alias taskmaster='taskgraph'" }
 		];
 
 		// Self-healing: remove any stale hamster/ham aliases that point to task-master
@@ -1027,14 +1027,14 @@ async function createProjectStructure(
 		);
 		try {
 			// Correct command confirmed by you.
-			execSync('npx task-master rules --setup', {
+			execSync('npx taskgraph rules --setup', {
 				stdio: 'inherit',
 				cwd: targetDir
 			});
 			log('success', 'Rule profiles configured.');
 		} catch (error) {
 			log('error', 'Failed to configure rule profiles:', error.message);
-			log('warn', 'You may need to run "task-master rules --setup" manually.');
+			log('warn', 'You may need to run "taskgraph rules --setup" manually.');
 		}
 	} else if (isSilentMode() || dryRun || options?.yes) {
 		// This branch can log why setup was skipped, similar to the model setup logic.
@@ -1097,14 +1097,14 @@ async function createProjectStructure(
 			'Running interactive model setup. Please select your preferred AI models.'
 		);
 		try {
-			execSync('npx task-master models --setup', {
+			execSync('npx taskgraph models --setup', {
 				stdio: 'inherit',
 				cwd: targetDir
 			});
 			log('success', 'AI Models configured.');
 		} catch (error) {
 			log('error', 'Failed to configure AI models:', error.message);
-			log('warn', 'You may need to run "task-master models --setup" manually.');
+			log('warn', 'You may need to run "taskgraph models --setup" manually.');
 		}
 	} else if (selectedStorage === 'cloud' && !dryRun) {
 		console.log(
@@ -1127,7 +1127,7 @@ async function createProjectStructure(
 		log('info', 'Skipping interactive model setup in silent (MCP) mode.');
 		log(
 			'warn',
-			'Please configure AI models using "task-master models --set-..." or the "models" MCP tool.'
+			'Please configure AI models using "taskgraph models --set-..." or the "models" MCP tool.'
 		);
 	} else if (dryRun) {
 		log('info', 'DRY RUN: Skipping interactive model setup.');
@@ -1135,7 +1135,7 @@ async function createProjectStructure(
 		log('info', 'Skipping interactive model setup due to --yes flag.');
 		log(
 			'info',
-			'Default AI models will be used. You can configure different models later using "task-master models --setup" or "task-master models --set-..." commands.'
+			'Default AI models will be used. You can configure different models later using "taskgraph models --setup" or "taskgraph models --set-..." commands.'
 		);
 	}
 	// ====================================
@@ -1237,21 +1237,21 @@ async function createProjectStructure(
 			// Local-specific getting started
 			gettingStartedMessage = `${chalk.cyan.bold('Things you should do next:')}\n\n${chalk.white('1. ')}${chalk.yellow(
 				'Configure AI models and add API keys to `.env`'
-			)}\n${chalk.white('   ├─ ')}${chalk.dim('Models: Use ')}${chalk.cyan('task-master models')}${chalk.dim(' commands')}\n${chalk.white('   └─ ')}${chalk.dim(
+			)}\n${chalk.white('   ├─ ')}${chalk.dim('Models: Use ')}${chalk.cyan('taskgraph models')}${chalk.dim(' commands')}\n${chalk.white('   └─ ')}${chalk.dim(
 				'Keys: Add provider API keys to .env (or .cursor/mcp.json)'
 			)}\n${chalk.white('2. ')}${chalk.yellow(
 				'Discuss your idea with AI and create a PRD'
 			)}\n${chalk.white('   ├─ ')}${chalk.dim('Simple projects: Use ')}${chalk.cyan('example_prd.txt')}${chalk.dim(' template')}\n${chalk.white('   └─ ')}${chalk.dim('Complex systems: Use ')}${chalk.cyan('example_prd_rpg.txt')}${chalk.dim(' template')}\n${chalk.white('3. ')}${chalk.yellow(
 				'Parse your PRD to generate initial tasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('task-master parse-prd .taskmaster/docs/prd.txt')}\n${chalk.white('4. ')}${chalk.yellow(
+			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph parse-prd .taskmaster/docs/prd.txt')}\n${chalk.white('4. ')}${chalk.yellow(
 				'Analyze task complexity'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('task-master analyze-complexity --research')}\n${chalk.white('5. ')}${chalk.yellow(
+			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph analyze-complexity --research')}\n${chalk.white('5. ')}${chalk.yellow(
 				'Expand tasks into subtasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('task-master expand --all --research')}\n${chalk.white('6. ')}${chalk.yellow(
+			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph expand --all --research')}\n${chalk.white('6. ')}${chalk.yellow(
 				'Start working on tasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('task-master next')}\n${chalk.white('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
+			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph next')}\n${chalk.white('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
 				'* Run '
-			)}${chalk.cyan('task-master --help')}${chalk.dim(' to see all available commands')}\n${chalk.dim(
+			)}${chalk.cyan('taskgraph --help')}${chalk.dim(' to see all available commands')}\n${chalk.dim(
 				'* Run '
 			)}${chalk.cyan('tm rules --setup')}${chalk.dim(' to configure AI IDE rules for better integration')}`;
 		}

@@ -870,7 +870,7 @@ async function handleSaveToTask(
 
 		if (!fs.existsSync(tasksPath)) {
 			console.log(
-				chalk.red('❌ Tasks file not found. Please run task-master init first.')
+				chalk.red('❌ Tasks file not found. Please run taskgraph init first.')
 			);
 			return;
 		}

@@ -99,17 +99,17 @@ git branch  # Verify you're on main
 git checkout -b task-004  # For Task 4
 
 # 4. Set task status in Task Master (tasks automatically use current tag context)
-# Use: set_task_status tool or `task-master set-status --id=4 --status=in-progress`
+# Use: set_task_status tool or `taskgraph set-status --id=4 --status=in-progress`
 ```
 
 ### **Phase 2: Task Analysis & Planning**
 ```bash
 # 5. Get task context and expand if needed (uses current tag automatically)
-# Use: get_task tool or `task-master show 4`
-# Use: expand_task tool or `task-master expand --id=4 --research --force` (if complex)
+# Use: get_task tool or `taskgraph show 4`
+# Use: expand_task tool or `taskgraph expand --id=4 --research --force` (if complex)
 
 # 6. Identify next subtask to work on
-# Use: next_task tool or `task-master next`
+# Use: next_task tool or `taskgraph next`
 ```
 
 ### **Phase 3: Subtask Implementation Loop**
@@ -117,11 +117,11 @@ For each subtask, follow this pattern:
 
 ```bash
 # 7. Mark subtask as in-progress
-# Use: set_task_status tool or `task-master set-status --id=4.1 --status=in-progress`
+# Use: set_task_status tool or `taskgraph set-status --id=4.1 --status=in-progress`
 
 # 8. Gather context and research (if needed)
 # Use: update_subtask tool with research flag or:
-# `task-master update-subtask --id=4.1 --prompt="Research findings..." --research`
+# `taskgraph update-subtask --id=4.1 --prompt="Research findings..." --research`
 
 # 9. Collect code context through AI exploration
 # Document findings in subtask using update_subtask
@@ -131,10 +131,10 @@ For each subtask, follow this pattern:
 
 # 11. Update subtask with completion details
 # Use: update_subtask tool or:
-# `task-master update-subtask --id=4.1 --prompt="Implementation complete..."`
+# `taskgraph update-subtask --id=4.1 --prompt="Implementation complete..."`
 
 # 12. Mark subtask as done
-# Use: set_task_status tool or `task-master set-status --id=4.1 --status=done`
+# Use: set_task_status tool or `taskgraph set-status --id=4.1 --status=done`
 
 # 13. Commit the subtask implementation
 git add .
@@ -235,25 +235,25 @@ Task 4: Setup Express.js Server Project - Testing complete"
 ### **Essential Commands for Git Workflow**
 ```bash
 # Task management (uses current tag context automatically)
-task-master show <id>           # Get task/subtask details
-task-master next                # Find next task to work on
-task-master set-status --id=<id> --status=<status>
-task-master update-subtask --id=<id> --prompt="..." --research
+taskgraph show <id>           # Get task/subtask details
+taskgraph next                # Find next task to work on
+taskgraph set-status --id=<id> --status=<status>
+taskgraph update-subtask --id=<id> --prompt="..." --research
 
 # Task expansion (for complex tasks)
-task-master expand --id=<id> --research --force
+taskgraph expand --id=<id> --research --force
 
 # Progress tracking
-task-master list                # View all tasks and status
-task-master list --status=in-progress  # View active tasks
+taskgraph list                # View all tasks and status
+taskgraph list --status=in-progress  # View active tasks
 ```
 
 ### **MCP Tool Equivalents**
 When using Cursor or other MCP-integrated tools:
-- `get_task` instead of `task-master show`
-- `next_task` instead of `task-master next`
-- `set_task_status` instead of `task-master set-status`
-- `update_subtask` instead of `task-master update-subtask`
+- `get_task` instead of `taskgraph show`
+- `next_task` instead of `taskgraph next`
+- `set_task_status` instead of `taskgraph set-status`
+- `update_subtask` instead of `taskgraph update-subtask`
 
 ## **Branch Management Rules**
 
@@ -329,8 +329,8 @@ Mention any dependent tasks or follow-up work needed.
 # 3. Use Task Master's move functionality to reorganize if needed
 
 # Manual git integration available:
-# - Use `task-master add-tag --from-branch` to create tags from current branch
-# - Manually switch contexts with `task-master use-tag <name>`
+# - Use `taskgraph add-tag --from-branch` to create tags from current branch
+# - Manually switch contexts with `taskgraph use-tag <name>`
 # - Simple, predictable workflow without automatic behavior
 ```
 
@@ -368,7 +368,7 @@ git push origin hotfix-urgent-issue
 ```bash
 # If task needs to be abandoned or significantly changed:
 # 1. Update task status
-task-master set-status --id=<id> --status=cancelled
+taskgraph set-status --id=<id> --status=cancelled
 
 # 2. Clean up branch
 git checkout main
@@ -376,7 +376,7 @@ git branch -D task-<id>
 git push origin --delete task-<id>
 
 # 3. Document reasoning in task
-task-master update-task --id=<id> --prompt="Task cancelled due to..."
+taskgraph update-task --id=<id> --prompt="Task cancelled due to..."
 ```
 
 ## **Tagged System Benefits for Git Workflows**

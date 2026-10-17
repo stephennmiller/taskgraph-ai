@@ -12,9 +12,9 @@ import { getBoxWidth } from '../../utils/ui.js';
  */
 export function displaySuggestedNextSteps(): void {
 	const steps = [
-		`${chalk.cyan('1.')} Run ${chalk.yellow('task-master next')} to see what to work on next`,
-		`${chalk.cyan('2.')} Run ${chalk.yellow('task-master expand --id=<id>')} to break down a task into subtasks`,
-		`${chalk.cyan('3.')} Run ${chalk.yellow('task-master set-status --id=<id> --status=done')} to mark a task as complete`
+		`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph next')} to see what to work on next`,
+		`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down a task into subtasks`,
+		`${chalk.cyan('3.')} Run ${chalk.yellow('taskgraph set-status --id=<id> --status=done')} to mark a task as complete`
 	];
 
 	console.log(

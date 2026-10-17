@@ -145,7 +145,7 @@ When implementing a new direct function in `mcp-server/src/core/direct-functions
       ```
 
 7. **Debugging MCP/Core Logic Interaction**:
-    - ✅ **DO**: If an MCP tool fails with unclear errors (like JSON parsing failures), run the equivalent `task-master` CLI command in the terminal. The CLI often provides more detailed error messages originating from the core logic (e.g., `ReferenceError`, stack traces) that are obscured by the MCP layer.
+    - ✅ **DO**: If an MCP tool fails with unclear errors (like JSON parsing failures), run the equivalent `taskgraph` CLI command in the terminal. The CLI often provides more detailed error messages originating from the core logic (e.g., `ReferenceError`, stack traces) that are obscured by the MCP layer.
 
 ## Tool Definition and Execution
 
@@ -411,7 +411,7 @@ Follow these steps to add MCP support for an existing Task Master command (see [
         2.  Receive the result object (typically `{ success, data/error, fromCache }`).
         3.  Pass this result object to the `handleApiResult` utility (from [`tools/utils.js`](mdc:mcp-server/src/tools/utils.js)) for standardized response formatting and error handling.
         4.  Return the formatted response object provided by `handleApiResult`.
-- **CLI Execution as Fallback**: The `executeTaskMasterCommand` utility in [`tools/utils.js`](mdc:mcp-server/src/tools/utils.js) allows executing commands via the CLI (`task-master ...`). This should **only** be used as a fallback if a direct function wrapper is not yet implemented or if a specific command intrinsically requires CLI execution.
+- **CLI Execution as Fallback**: The `executeTaskMasterCommand` utility in [`tools/utils.js`](mdc:mcp-server/src/tools/utils.js) allows executing commands via the CLI (`taskgraph ...`). This should **only** be used as a fallback if a direct function wrapper is not yet implemented or if a specific command intrinsically requires CLI execution.
 - **Centralized Utilities** (See also: [`utilities.mdc`](mdc:.cursor/rules/utilities.mdc)):
     - Use `findTasksJsonPath` (in [`task-master-core.js`](mdc:mcp-server/src/core/task-master-core.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
     - **Leverage MCP Utilities**: The file [`tools/utils.js`](mdc:mcp-server/src/tools/utils.js) contains essential helpers for MCP tool implementation:

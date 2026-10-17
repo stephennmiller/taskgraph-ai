@@ -24,25 +24,25 @@ This pattern is ideal for batch operations like clearing task backlogs, improvin
 Run 10 iterations with the default task-completion preset:
 
 ```bash
-task-master loop -n 10
+taskgraph loop -n 10
 ```
 
 Run 5 iterations with the test-coverage preset:
 
 ```bash
-task-master loop -n 5 --prompt test-coverage
+taskgraph loop -n 5 --prompt test-coverage
 ```
 
 Run iterations with a custom prompt file:
 
 ```bash
-task-master loop -n 10 --prompt ./my-custom-prompt.md
+taskgraph loop -n 10 --prompt ./my-custom-prompt.md
 ```
 
 Filter to specific task tag:
 
 ```bash
-task-master loop -n 10 --tag backend
+taskgraph loop -n 10 --tag backend
 ```
 
 ## How It Works
@@ -115,15 +115,15 @@ The loop command includes five built-in presets for common development workflows
 The standard task completion workflow. Agents work through your Task Master backlog, completing one task per iteration.
 
 ```bash
-task-master loop -n 10 --prompt default
+taskgraph loop -n 10 --prompt default
 ```
 
 **What it does:**
-1. Runs `task-master next` to get the highest priority available task
-2. Reads task details with `task-master show <id>`
+1. Runs `taskgraph next` to get the highest priority available task
+2. Reads task details with `taskgraph show <id>`
 3. Implements the task with the smallest possible change
 4. Runs tests and type checks to verify quality
-5. Marks the task complete with `task-master set-status --id=<id> --status=done`
+5. Marks the task complete with `taskgraph set-status --id=<id> --status=done`
 6. Commits work with a descriptive message
 
 **Completion criteria:** All pending tasks are complete.
@@ -133,7 +133,7 @@ task-master loop -n 10 --prompt default
 Improves test coverage by writing meaningful tests for user-facing behavior - not just chasing coverage numbers.
 
 ```bash
-task-master loop -n 10 --prompt test-coverage
+taskgraph loop -n 10 --prompt test-coverage
 ```
 
 **What it does:**
@@ -152,7 +152,7 @@ task-master loop -n 10 --prompt test-coverage
 Cleans up lint errors and type errors systematically, one fix per iteration.
 
 ```bash
-task-master loop -n 20 --prompt linting
+taskgraph loop -n 20 --prompt linting
 ```
 
 **What it does:**
@@ -172,7 +172,7 @@ task-master loop -n 20 --prompt linting
 Finds duplicated code using detection tools and refactors into shared utilities.
 
 ```bash
-task-master loop -n 10 --prompt duplication
+taskgraph loop -n 10 --prompt duplication
 ```
 
 **What it does:**
@@ -192,7 +192,7 @@ task-master loop -n 10 --prompt duplication
 Targets code smells that increase cognitive load and maintenance burden.
 
 ```bash
-task-master loop -n 10 --prompt entropy
+taskgraph loop -n 10 --prompt entropy
 ```
 
 **Code smells targeted:**
@@ -220,7 +220,7 @@ You can create custom prompt files for specialized workflows that aren't covered
 Pass the file path to the `--prompt` option:
 
 ```bash
-task-master loop -n 10 --prompt ./my-custom-loop.md
+taskgraph loop -n 10 --prompt ./my-custom-loop.md
 ```
 
 The path can be absolute or relative to the current directory.
@@ -311,7 +311,7 @@ The progress file is a shared log that persists notes across loop iterations. Si
 Override with the `--progress-file` option:
 
 ```bash
-task-master loop -n 10 --progress-file ./my-progress.txt
+taskgraph loop -n 10 --progress-file ./my-progress.txt
 ```
 
 ### How It Works
@@ -369,7 +369,7 @@ Here are practical scenarios for using the loop command in your development work
 Run a loop overnight or over the weekend to clear your task backlog while you're away:
 
 ```bash
-task-master loop -n 50 --prompt default --on-complete 'notify-send "Loop complete!"'
+taskgraph loop -n 50 --prompt default --on-complete 'notify-send "Loop complete!"'
 ```
 
 This runs up to 50 iterations, completing tasks one by one. When all tasks are done, you'll get a desktop notification.
@@ -379,7 +379,7 @@ This runs up to 50 iterations, completing tasks one by one. When all tasks are d
 Push your test coverage from 60% to 80% systematically:
 
 ```bash
-task-master loop -n 20 --prompt test-coverage --on-complete 'echo "Coverage target reached!"'
+taskgraph loop -n 20 --prompt test-coverage --on-complete 'echo "Coverage target reached!"'
 ```
 
 Each iteration identifies the most important untested user-facing behavior and writes a meaningful test. The agent prioritizes error handling, API endpoints, and CLI commands over internal utilities.
@@ -389,7 +389,7 @@ Each iteration identifies the most important untested user-facing behavior and w
 Dedicate a day to cleaning up lint errors across your codebase:
 
 ```bash
-task-master loop -n 30 --prompt linting --sleep 3
+taskgraph loop -n 30 --prompt linting --sleep 3
 ```
 
 With `--sleep 3`, iterations run faster for quick fixes. The agent systematically addresses type errors first (they break builds), then security-related lint errors, then others.
@@ -399,7 +399,7 @@ With `--sleep 3`, iterations run faster for quick fixes. The agent systematicall
 Reduce code duplication before opening a PR:
 
 ```bash
-task-master loop -n 10 --prompt duplication --tag backend
+taskgraph loop -n 10 --prompt duplication --tag backend
 ```
 
 The `--tag backend` flag focuses the loop on backend code only. Each iteration finds and refactors one instance of duplicated code into a shared utility.
@@ -410,10 +410,10 @@ Process different parts of your codebase in sequence:
 
 ```bash
 # First, handle critical backend tasks
-task-master loop -n 10 --tag backend --status pending
+taskgraph loop -n 10 --tag backend --status pending
 
 # Then, address frontend tasks
-task-master loop -n 10 --tag frontend --status pending
+taskgraph loop -n 10 --tag frontend --status pending
 ```
 
 ### Custom Migration Script
@@ -422,7 +422,7 @@ For complex migrations, create a custom prompt and run it:
 
 ```bash
 # Create custom-migration.md with your specific steps
-task-master loop -n 20 --prompt ./custom-migration.md --progress-file ./migration-progress.txt
+taskgraph loop -n 20 --prompt ./custom-migration.md --progress-file ./migration-progress.txt
 ```
 
 Use a separate progress file to track migration-specific notes.

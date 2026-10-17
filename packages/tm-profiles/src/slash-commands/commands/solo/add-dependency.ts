@@ -35,7 +35,7 @@ Parse natural language or IDs:
 ## Execution
 
 \`\`\`bash
-task-master add-dependency --id=<task-id> --depends-on=<dependency-id>
+taskgraph add-dependency --id=<task-id> --depends-on=<dependency-id>
 \`\`\`
 
 ## Validation

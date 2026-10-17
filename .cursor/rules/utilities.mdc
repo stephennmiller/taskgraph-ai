@@ -44,7 +44,7 @@ alwaysApply: false
   ```
 
 - **Location**:
-    - **Core CLI Utilities**: Place utilities used primarily by the core `task-master` CLI logic and command modules (`scripts/modules/*`) into [`scripts/modules/utils.js`](mdc:scripts/modules/utils.js).
+    - **Core CLI Utilities**: Place utilities used primarily by the core `taskgraph` CLI logic and command modules (`scripts/modules/*`) into [`scripts/modules/utils.js`](mdc:scripts/modules/utils.js).
     - **MCP Server Utilities**: Place utilities specifically designed to support the MCP server implementation into the appropriate subdirectories within `mcp-server/src/`.
         - Path/Core Logic Helpers: [`mcp-server/src/core/utils/`](mdc:mcp-server/src/core/utils) (e.g., `path-utils.js`).
         - Tool Execution/Response Helpers: [`mcp-server/src/tools/utils.js`](mdc:mcp-server/src/tools/utils.js).
@@ -84,7 +84,7 @@ Taskmaster configuration (excluding API keys) is primarily managed through the `
 
 - **`.taskmasterconfig` File**:
   - ✅ DO: Use this JSON file to store settings like AI model selections (main, research, fallback), parameters (temperature, maxTokens), logging level, default priority/subtasks, etc.
-  - ✅ DO: Manage this file using the `task-master models --setup` CLI command or the `models` MCP tool.
+  - ✅ DO: Manage this file using the `taskgraph models --setup` CLI command or the `models` MCP tool.
   - ✅ DO: Rely on [`config-manager.js`](mdc:scripts/modules/config-manager.js) to load this file (using the correct project root passed from MCP or found via CLI utils), merge with defaults, and provide validated settings.
   - ❌ DON'T: Store API keys in this file.
   - ❌ DON'T: Manually edit this file unless necessary.
@@ -424,7 +424,7 @@ Taskmaster configuration (excluding API keys) is primarily managed through the `
     - Throws a specific error if the `tasks.json` file cannot be located.
     - Updates the `lastFoundProjectRoot` cache on success.
 - **`PROJECT_MARKERS`**: An exported array of common file/directory names used to identify a likely project root during the CLI fallback search.
-- **`getPackagePath()`**: Utility to find the installation path of the `task-master-ai` package itself (potentially removable).
+- **`getPackagePath()`**: Utility to find the installation path of the `taskgraph-ai` package itself (potentially removable).
 
 ## MCP Server Tool Utilities (`mcp-server/src/tools/utils.js`)
 
@@ -489,7 +489,7 @@ These utilities specifically support the implementation and execution of MCP too
     - **Recommendation**: Prefer using the `withNormalizedProjectRoot` HOF in tools instead of calling this directly.
 
 - **`executeTaskMasterCommand(...)`**: 
-    - **Purpose**: Executes `task-master` CLI command as a fallback. 
+    - **Purpose**: Executes `taskgraph` CLI command as a fallback. 
     - **Recommendation**: Deprecated for most uses; prefer direct function calls.
 
 ## Export Organization

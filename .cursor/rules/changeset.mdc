@@ -23,14 +23,14 @@ Changesets is used to manage package versioning and generate accurate `CHANGELOG
 
 ## What NOT to Add a Changeset For
 
-Avoid creating changesets for changes that have **no impact or relevance to external consumers** of the `task-master` package or contributors following **public-facing documentation**. Examples include:
+Avoid creating changesets for changes that have **no impact or relevance to external consumers** of the `taskgraph` package or contributors following **public-facing documentation**. Examples include:
 
 - **Internal Documentation Updates:** Changes *only* to files within `.cursor/rules/` that solely guide internal development practices for this specific repository.
 - **Trivial Chores:** Very minor code cleanup, adding comments that don't clarify behavior, typo fixes in non-user-facing code or internal docs.
 - **Non-Impactful Test Updates:** Minor refactoring of tests, adding tests for existing functionality without fixing bugs.
 - **Local Configuration Changes:** Updates to personal editor settings, local `.env` files, etc.
 
-**Rule of Thumb:** If a user installing or using the `task-master` package wouldn't care about the change, or if a contributor following the main README wouldn't need to know about it for their workflow, you likely don't need a changeset.
+**Rule of Thumb:** If a user installing or using the `taskgraph` package wouldn't care about the change, or if a contributor following the main README wouldn't need to know about it for their workflow, you likely don't need a changeset.
 
 ## How to Run and What It Asks
 

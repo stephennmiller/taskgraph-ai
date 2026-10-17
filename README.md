@@ -213,7 +213,7 @@ Initialize taskmaster-ai in my project
 #### 5. Make sure you have a PRD (Recommended)
 
 For **new projects**: Create your PRD at `.taskmaster/docs/prd.txt`.
-For **existing projects**: You can use `scripts/prd.txt` or migrate with `task-master migrate`
+For **existing projects**: You can use `scripts/prd.txt` or migrate with `taskgraph migrate`
 
 An example PRD template is available after initialization in `.taskmaster/templates/example_prd.txt`.
 
@@ -254,13 +254,13 @@ npm install taskgraph-ai
 
 ```bash
 # If installed globally
-task-master init
+taskgraph init
 
 # If installed locally
-npx task-master init
+npx taskgraph init
 
 # Initialize project with specific rules
-task-master init --rules cursor,windsurf,vscode
+taskgraph init --rules cursor,windsurf,vscode
 ```
 
 This will prompt you for project details and set up a new project with the necessary files and structure.
@@ -269,30 +269,30 @@ This will prompt you for project details and set up a new project with the neces
 
 ```bash
 # Initialize a new project
-task-master init
+taskgraph init
 
 # Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
+taskgraph parse-prd your-prd.txt
 
 # List all tasks
-task-master list
+taskgraph list
 
 # Show the next task to work on
-task-master next
+taskgraph next
 
 # Show specific task(s) - supports comma-separated IDs
-task-master show 1,3,5
+taskgraph show 1,3,5
 
 # Research fresh information with project context
-task-master research "What are the latest best practices for JWT authentication?"
+taskgraph research "What are the latest best practices for JWT authentication?"
 
 # Move tasks between tags (cross-tag movement)
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress
-task-master move --from=5,6,7 --from-tag=backlog --to-tag=done --with-dependencies
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=done --with-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
 
 # Add rules after initialization
-task-master rules add windsurf,roo,vscode
+taskgraph rules add windsurf,roo,vscode
 ```
 
 ## Tool Loading Configuration
@@ -377,7 +377,7 @@ Task Master now supports Claude models through the Claude Code CLI, which requir
 
 ## Troubleshooting
 
-### If `task-master init` doesn't respond
+### If `taskgraph init` doesn't respond
 
 Try running it with Node directly:
 

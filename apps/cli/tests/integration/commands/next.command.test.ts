@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for 'task-master next' command
+ * @fileoverview Integration tests for 'taskgraph next' command
  *
  * Tests the next command which finds the next available task based on dependencies.
  *

@@ -444,8 +444,8 @@ describe('Cross-Tag Task Movement Integration Tests', () => {
 
 			expect(Array.isArray(result.tips)).toBe(true);
 			const expectedTips = [
-				'Run "task-master validate-dependencies" to check for dependency issues.',
-				'Run "task-master fix-dependencies" to automatically repair dangling dependencies.'
+				'Run "taskgraph validate-dependencies" to check for dependency issues.',
+				'Run "taskgraph fix-dependencies" to automatically repair dangling dependencies.'
 			];
 			expect(result.tips).toHaveLength(expectedTips.length);
 			expect(result.tips).toEqual(expect.arrayContaining(expectedTips));

@@ -22,7 +22,7 @@ Creates separate markdown files for each task, perfect for AI agents or document
 ## Execution
 
 \`\`\`bash
-task-master generate
+taskgraph generate
 \`\`\`
 
 ## What It Creates

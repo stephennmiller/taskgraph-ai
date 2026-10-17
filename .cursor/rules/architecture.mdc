@@ -310,7 +310,7 @@ Follow these steps to add MCP support for an existing Task Master command (see [
 
 The `initialize_project` command provides a way to set up a new Task Master project:
 
-- **CLI Command**: `task-master init`
+- **CLI Command**: `taskgraph init`
 - **MCP Tool**: `initialize_project`
 - **Functionality**:
   - Creates necessary directories and files for a new project

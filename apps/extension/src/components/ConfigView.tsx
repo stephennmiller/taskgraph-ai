@@ -280,7 +280,7 @@ export const ConfigView: React.FC<ConfigViewProps> = ({
 						</div>
 					) : (
 						<div className="text-center py-8 text-vscode-foreground/50">
-							No configuration found. Please run `task-master init` in your
+							No configuration found. Please run `taskgraph init` in your
 							project.
 						</div>
 					)}

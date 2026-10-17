@@ -8,7 +8,7 @@ Now that you have Node.js and your first API Key, you are ready to begin install
 <Note>Cursor Users Can Use the One Click Install Below</Note>
 <Accordion title="Quick Install for Cursor 1.0+ (One-Click)">
 
-<a href="cursor://anysphere.cursor-deeplink/mcp/install?name=task-master-ai&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIi0tcGFja2FnZT10YXNrLW1hc3Rlci1haSIsInRhc2stbWFzdGVyLWFpIl0sImVudiI6eyJBTlRIUk9QSUNfQVBJX0tFWSI6IllPVVJfQU5USFJPUElDX0FQSV9LRVlfSEVSRSIsIlBFUlBMRVhJVFlfQVBJX0tFWSI6IllPVVJfUEVSUExFWElUWV9BUElfS0VZX0hFUkUiLCJPUEVOQUlfQVBJX0tFWSI6IllPVVJfT1BFTkFJX0tFWV9IRVJFIiwiR09PR0xFX0FQSV9LRVkiOiJZT1VSX0dPT0dMRV9LRVlfSEVSRSIsIk1JU1RSQUxfQVBJX0tFWSI6IllPVVJfTUlTVFJBTF9LRVlfSEVSRSIsIk9QRU5ST1VURVJfQVBJX0tFWSI6IllPVVJfT1BFTlJPVVRFUl9LRVlfSEVSRSIsIlhBSV9BUElfS0VZIjoiWU9VUl9YQUlfS0VZX0hFUkUiLCJBWlVSRV9PUEVOQUJFX0FQSV9LRVkiOiJZT1VSX0FaVVJFX0tFWV9IRVJFIiwiT0xMQU1BX0FQSV9LRVkiOiJZT1VSX09MTEFNQV9BUElfS0VZX0hFUkUifX0%3D">
+<a href="cursor://anysphere.cursor-deeplink/mcp/install?name=taskgraph-ai&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIi0tcGFja2FnZT10YXNrZ3JhcGgtYWkiLCJ0YXNrZ3JhcGgtYWkiXSwiZW52Ijp7IkFOVEhST1BJQ19BUElfS0VZIjoiWU9VUl9BTlRIUk9QSUNfQVBJX0tFWV9IRVJFIiwiUEVSUExFWElUWV9BUElfS0VZIjoiWU9VUl9QRVJQTEVYSVRZX0FQSV9LRVlfSEVSRSIsIk9QRU5BSV9BUElfS0VZIjoiWU9VUl9PUEVOQUlfS0VZX0hFUkUiLCJHT09HTEVfQVBJX0tFWSI6IllPVVJfR09PR0xFX0tFWV9IRVJFIiwiTUlTVFJBTF9BUElfS0VZIjoiWU9VUl9NSVNUUkFMX0tFWV9IRVJFIiwiT1BFTlJPVVRFUl9BUElfS0VZIjoiWU9VUl9PUEVOUk9VVEVSX0tFWV9IRVJFIiwiWEFJX0FQSV9LRVkiOiJZT1VSX1hBSV9LRVlfSEVSRSIsIkFaVVJFX09QRU5BQkVfQVBJX0tFWSI6IllPVVJfQVpVUkVfS0VZX0hFUkUiLCJPTExBTUFfQVBJX0tFWSI6IllPVVJfT0xMQU1BX0FQSV9LRVlfSEVSRSJ9fQ%3D%3D">
   <img 
     className="block dark:hidden" 
     src="https://cursor.com/deeplink/mcp-install-light.png" 
@@ -36,7 +36,7 @@ cursor://anysphere.cursor-deeplink/mcp/install?name=taskmaster-ai&config=eyJjb21
 For Claude Code users:
 
 ```bash
-claude mcp add taskmaster-ai -- npx -y task-master-ai
+claude mcp add taskmaster-ai -- npx -y taskgraph-ai
 ```
 
 Don't forget to add your API keys to the configuration:
@@ -69,7 +69,7 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
   "mcpServers": {
     "taskmaster-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
         "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
@@ -97,7 +97,7 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
   "servers": {
     "taskmaster-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
         "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
@@ -118,7 +118,7 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
 
 #### 2. (Cursor-only) Enable Taskmaster MCP
 
-Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable task-master-ai with the toggle
+Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable taskgraph-ai with the toggle
 
 #### 3. (Optional) Configure the models you want to use
 
@@ -149,23 +149,23 @@ Initialize taskmaster-ai in my project
 
 ```bash
 # Install globally
-npm install -g task-master-ai
+npm install -g taskgraph-ai
 
 # OR install locally within your project
-npm install task-master-ai
+npm install taskgraph-ai
 ```
 
 ## Initialize a new project
 
 ```bash
 # If installed globally
-task-master init
+taskgraph init
 
 # If installed locally
-npx task-master init
+npx taskgraph init
 
 # Initialize project with specific rules
-task-master init --rules cursor,windsurf,vscode
+taskgraph init --rules cursor,windsurf,vscode
 ```
 
 This will prompt you for project details and set up a new project with the necessary files and structure.

@@ -18,13 +18,13 @@ Move tasks within the same tag context:
 
 ```bash
 # Move a single task
-task-master move --from=5 --to=7
+taskgraph move --from=5 --to=7
 
 # Move a subtask
-task-master move --from=5.2 --to=7.3
+taskgraph move --from=5.2 --to=7.3
 
 # Move multiple tasks
-task-master move --from=5,6,7 --to=10,11,12
+taskgraph move --from=5,6,7 --to=10,11,12
 ```
 
 ### Cross-Tag Moves
@@ -33,10 +33,10 @@ Move tasks between different tag contexts:
 
 ```bash
 # Basic cross-tag move
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 
 # Move multiple tasks
-task-master move --from=5,6,7 --from-tag=backlog --to-tag=done
+taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=done
 ```
 
 ## Dependency Resolution
@@ -48,7 +48,7 @@ When moving tasks between tags, you may encounter cross-tag dependencies. Task M
 Move the main task along with all its dependent tasks:
 
 ```bash
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
 ```
 
 This ensures that all dependent tasks are moved together, maintaining the task relationships.
@@ -58,7 +58,7 @@ This ensures that all dependent tasks are moved together, maintaining the task r
 Break cross-tag dependencies and move only the specified task:
 
 ```bash
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
 ```
 
 This removes the dependency relationships and moves only the specified task.
@@ -88,10 +88,10 @@ Cross-tag dependency conflicts detected:
   • Task 6 depends on 3 (in done)
 
 Resolution options:
-  1. Move with dependencies: task-master move --from=5,6 --from-tag=backlog --to-tag=in-progress --with-dependencies
-  2. Break dependencies: task-master move --from=5,6 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
-  3. Validate and fix dependencies: task-master validate-dependencies && task-master fix-dependencies
-  4. Move dependencies first: task-master move --from=2,3 --from-tag=backlog --to-tag=in-progress
+  1. Move with dependencies: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --with-dependencies
+  2. Break dependencies: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
+  3. Validate and fix dependencies: taskgraph validate-dependencies && taskgraph fix-dependencies
+  4. Move dependencies first: taskgraph move --from=2,3 --from-tag=backlog --to-tag=in-progress
   5. After deciding, re-run the move with either --with-dependencies or --ignore-dependencies
 ```
 
@@ -107,9 +107,9 @@ Subtask movement restriction:
   • They must be promoted to full tasks first
 
 Resolution options:
-  1. Promote subtask to full task: task-master remove-subtask --id=5.2 --convert
-  2. Then move the promoted task: task-master move --from=5 --from-tag=backlog --to-tag=in-progress
-  3. Or move the parent task with all subtasks: task-master move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
+  1. Promote subtask to full task: taskgraph remove-subtask --id=5.2 --convert
+  2. Then move the promoted task: taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+  3. Or move the parent task with all subtasks: taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
 ```
 
 ### Invalid Tag Combinations
@@ -126,8 +126,8 @@ Error details:
 
 Resolution options:
   1. Use different tags for cross-tag moves
-  2. Use within-tag move: task-master move --from=<id> --to=<id> --tag=backlog
-  3. Check available tags: task-master tags
+  2. Use within-tag move: taskgraph move --from=<id> --to=<id> --tag=backlog
+  3. Check available tags: taskgraph tags
 ```
 
 ## Best Practices
@@ -138,10 +138,10 @@ Before moving tasks, validate your dependencies:
 
 ```bash
 # Check for dependency issues
-task-master validate-dependencies
+taskgraph validate-dependencies
 
 # Fix common dependency problems
-task-master fix-dependencies
+taskgraph fix-dependencies
 ```
 
 ### 2. Use Appropriate Flags
@@ -171,10 +171,10 @@ Move multiple tasks at once:
 
 ```bash
 # Move multiple tasks with dependencies
-task-master move --from=5,6,7 --from-tag=backlog --to-tag=in-progress --with-dependencies
+taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=in-progress --with-dependencies
 
 # Move multiple tasks, breaking dependencies
-task-master move --from=5,6,7 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
+taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
 ```
 
 ### Tag Creation
@@ -183,7 +183,7 @@ Target tags are created automatically if they don't exist:
 
 ```bash
 # This will create the "new-feature" tag if it doesn't exist
-task-master move --from=5 --from-tag=backlog --to-tag=new-feature
+taskgraph move --from=5 --from-tag=backlog --to-tag=new-feature
 ```
 
 ### Current Tag Fallback
@@ -192,7 +192,7 @@ If `--from-tag` is not provided, the current tag is used:
 
 ```bash
 # Uses current tag as source
-task-master move --from=5 --to-tag=in-progress
+taskgraph move --from=5 --to-tag=in-progress
 ```
 
 ## MCP Integration
@@ -221,8 +221,8 @@ await moveTask({
 
 ### Common Issues
 
-1. **"Source tag not found"**: Check available tags with `task-master tags`
-2. **"Task not found"**: Verify task IDs with `task-master list`
+1. **"Source tag not found"**: Check available tags with `taskgraph tags`
+2. **"Task not found"**: Verify task IDs with `taskgraph list`
 3. **"Cross-tag dependency conflicts"**: Use dependency resolution flags
 4. **"Cannot move subtask"**: Promote subtask first or move parent task
 
@@ -230,16 +230,16 @@ await moveTask({
 
 ```bash
 # Show move command help
-task-master move --help
+taskgraph move --help
 
 # Check available tags
-task-master tags
+taskgraph tags
 
 # Validate dependencies
-task-master validate-dependencies
+taskgraph validate-dependencies
 
 # Fix dependency issues
-task-master fix-dependencies
+taskgraph fix-dependencies
 ```
 
 ## Examples
@@ -248,17 +248,17 @@ task-master fix-dependencies
 
 ```bash
 # Check for dependencies first
-task-master validate-dependencies
+taskgraph validate-dependencies
 
 # Move with dependencies
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
 ```
 
 ### Scenario 2: Breaking Dependencies
 
 ```bash
 # Move task, breaking cross-tag dependencies
-task-master move --from=5 --from-tag=backlog --to-tag=done --ignore-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=done --ignore-dependencies
 ```
 
 ### Scenario 3: Force Move
@@ -267,19 +267,19 @@ Choose one of these options explicitly:
 
 ```bash
 # Move together with dependencies
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
 
 # Or break dependencies
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
 ```
 
 ### Scenario 4: Moving Subtasks
 
 ```bash
 # Option 1: Promote subtask first
-task-master remove-subtask --id=5.2 --convert
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress
+taskgraph remove-subtask --id=5.2 --convert
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 
 # Option 2: Move parent with all subtasks
-task-master move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
 ```

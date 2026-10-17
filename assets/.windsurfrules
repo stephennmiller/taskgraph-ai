@@ -17,33 +17,33 @@ alwaysApply: true
 
 - **Global CLI Commands**
 
-  - Task Master now provides a global CLI through the `task-master` command
+  - Task Master now provides a global CLI through the `taskgraph` command
   - All functionality from `scripts/dev.js` is available through this interface
   - Install globally with `npm install -g claude-task-master` or use locally via `npx`
-  - Use `task-master <command>` instead of `node scripts/dev.js <command>`
+  - Use `taskgraph <command>` instead of `node scripts/dev.js <command>`
   - Examples:
-    - `task-master list` instead of `node scripts/dev.js list`
-    - `task-master next` instead of `node scripts/dev.js next`
-    - `task-master expand --id=3` instead of `node scripts/dev.js expand --id=3`
+    - `taskgraph list` instead of `node scripts/dev.js list`
+    - `taskgraph next` instead of `node scripts/dev.js next`
+    - `taskgraph expand --id=3` instead of `node scripts/dev.js expand --id=3`
   - All commands accept the same options as their script equivalents
-  - The CLI provides additional commands like `task-master init` for project setup
+  - The CLI provides additional commands like `taskgraph init` for project setup
 
 - **Development Workflow Process**
 
-  - Start new projects by running `task-master init` or `node scripts/dev.js parse-prd --input=<prd-file.txt>` to generate initial tasks.json
-  - Begin coding sessions with `task-master list` to see current tasks, status, and IDs
-  - Analyze task complexity with `task-master analyze-complexity --research` before breaking down tasks
+  - Start new projects by running `taskgraph init` or `node scripts/dev.js parse-prd --input=<prd-file.txt>` to generate initial tasks.json
+  - Begin coding sessions with `taskgraph list` to see current tasks, status, and IDs
+  - Analyze task complexity with `taskgraph analyze-complexity --research` before breaking down tasks
   - Select tasks based on dependencies (all marked 'done'), priority level, and ID order
   - Clarify tasks by checking task files in tasks/ directory or asking for user input
-  - View specific task details using `task-master show <id>` to understand implementation requirements
-  - Break down complex tasks using `task-master expand --id=<id>` with appropriate flags
-  - Clear existing subtasks if needed using `task-master clear-subtasks --id=<id>` before regenerating
+  - View specific task details using `taskgraph show <id>` to understand implementation requirements
+  - Break down complex tasks using `taskgraph expand --id=<id>` with appropriate flags
+  - Clear existing subtasks if needed using `taskgraph clear-subtasks --id=<id>` before regenerating
   - Implement code following task details, dependencies, and project standards
   - Verify tasks according to test strategies before marking as complete
-  - Mark completed tasks with `task-master set-status --id=<id> --status=done`
+  - Mark completed tasks with `taskgraph set-status --id=<id> --status=done`
   - Update dependent tasks when implementation differs from original plan
-  - Generate task files with `task-master generate` after updating tasks.json
-  - Maintain valid dependency structure with `task-master fix-dependencies` when needed
+  - Generate task files with `taskgraph generate` after updating tasks.json
+  - Maintain valid dependency structure with `taskgraph fix-dependencies` when needed
   - Respect dependency chains and task priorities when selecting work
   - Report progress regularly using the list command
 
@@ -99,62 +99,62 @@ alwaysApply: true
 - **Command Reference: parse-prd**
 
   - Legacy Syntax: `node scripts/dev.js parse-prd --input=<prd-file.txt>`
-  - CLI Syntax: `task-master parse-prd --input=<prd-file.txt>`
+  - CLI Syntax: `taskgraph parse-prd --input=<prd-file.txt>`
   - Description: Parses a PRD document and generates a tasks.json file with structured tasks
   - Parameters:
     - `--input=<file>`: Path to the PRD text file (default: sample-prd.txt)
-  - Example: `task-master parse-prd --input=requirements.txt`
+  - Example: `taskgraph parse-prd --input=requirements.txt`
   - Notes: Will overwrite existing tasks.json file. Use with caution.
 
 - **Command Reference: update**
 
   - Legacy Syntax: `node scripts/dev.js update --from=<id> --prompt="<prompt>"`
-  - CLI Syntax: `task-master update --from=<id> --prompt="<prompt>"`
+  - CLI Syntax: `taskgraph update --from=<id> --prompt="<prompt>"`
   - Description: Updates tasks with ID >= specified ID based on the provided prompt
   - Parameters:
     - `--from=<id>`: Task ID from which to start updating (required)
     - `--prompt="<text>"`: Explanation of changes or new context (required)
-  - Example: `task-master update --from=4 --prompt="Now we are using Express instead of Fastify."`
+  - Example: `taskgraph update --from=4 --prompt="Now we are using Express instead of Fastify."`
   - Notes: Only updates tasks not marked as 'done'. Completed tasks remain unchanged.
 
 - **Command Reference: generate**
 
   - Legacy Syntax: `node scripts/dev.js generate`
-  - CLI Syntax: `task-master generate`
+  - CLI Syntax: `taskgraph generate`
   - Description: Generates individual task files based on tasks.json
   - Parameters:
     - `--file=<path>, -f`: Use alternative tasks.json file (default: '.taskmaster/tasks/tasks.json')
     - `--output=<dir>, -o`: Output directory (default: '.taskmaster/tasks')
-  - Example: `task-master generate`
+  - Example: `taskgraph generate`
   - Notes: Overwrites existing task files. Creates output directory if needed.
 
 - **Command Reference: set-status**
 
   - Legacy Syntax: `node scripts/dev.js set-status --id=<id> --status=<status>`
-  - CLI Syntax: `task-master set-status --id=<id> --status=<status>`
+  - CLI Syntax: `taskgraph set-status --id=<id> --status=<status>`
   - Description: Updates the status of a specific task in tasks.json
   - Parameters:
     - `--id=<id>`: ID of the task to update (required)
     - `--status=<status>`: New status value (required)
-  - Example: `task-master set-status --id=3 --status=done`
+  - Example: `taskgraph set-status --id=3 --status=done`
   - Notes: Common values are 'done', 'pending', and 'deferred', but any string is accepted.
 
 - **Command Reference: list**
 
   - Legacy Syntax: `node scripts/dev.js list`
-  - CLI Syntax: `task-master list`
+  - CLI Syntax: `taskgraph list`
   - Description: Lists all tasks in tasks.json with IDs, titles, and status
   - Parameters:
     - `--status=<status>, -s`: Filter by status
     - `--with-subtasks`: Show subtasks for each task
     - `--file=<path>, -f`: Use alternative tasks.json file (default: 'tasks/tasks.json')
-  - Example: `task-master list`
+  - Example: `taskgraph list`
   - Notes: Provides quick overview of project progress. Use at start of sessions.
 
 - **Command Reference: expand**
 
   - Legacy Syntax: `node scripts/dev.js expand --id=<id> [--num=<number>] [--research] [--prompt="<context>"]`
-  - CLI Syntax: `task-master expand --id=<id> [--num=<number>] [--research] [--prompt="<context>"]`
+  - CLI Syntax: `taskgraph expand --id=<id> [--num=<number>] [--research] [--prompt="<context>"]`
   - Description: Expands a task with subtasks for detailed implementation
   - Parameters:
     - `--id=<id>`: ID of task to expand (required unless using --all)
@@ -163,13 +163,13 @@ alwaysApply: true
     - `--research`: Use Perplexity AI for research-backed generation
     - `--prompt="<text>"`: Additional context for subtask generation
     - `--force`: Regenerate subtasks even for tasks that already have them
-  - Example: `task-master expand --id=3 --num=5 --research --prompt="Focus on security aspects"`
+  - Example: `taskgraph expand --id=3 --num=5 --research --prompt="Focus on security aspects"`
   - Notes: Uses complexity report recommendations if available.
 
 - **Command Reference: analyze-complexity**
 
   - Legacy Syntax: `node scripts/dev.js analyze-complexity [options]`
-  - CLI Syntax: `task-master analyze-complexity [options]`
+  - CLI Syntax: `taskgraph analyze-complexity [options]`
   - Description: Analyzes task complexity and generates expansion recommendations
   - Parameters:
     - `--output=<file>, -o`: Output file path (default: scripts/task-complexity-report.json)
@@ -177,21 +177,21 @@ alwaysApply: true
     - `--threshold=<number>, -t`: Minimum score for expansion recommendation (default: 5)
     - `--file=<path>, -f`: Use alternative tasks.json file
     - `--research, -r`: Use Perplexity AI for research-backed analysis
-  - Example: `task-master analyze-complexity --research`
+  - Example: `taskgraph analyze-complexity --research`
   - Notes: Report includes complexity scores, recommended subtasks, and tailored prompts.
 
 - **Command Reference: clear-subtasks**
 
   - Legacy Syntax: `node scripts/dev.js clear-subtasks --id=<id>`
-  - CLI Syntax: `task-master clear-subtasks --id=<id>`
+  - CLI Syntax: `taskgraph clear-subtasks --id=<id>`
   - Description: Removes subtasks from specified tasks to allow regeneration
   - Parameters:
     - `--id=<id>`: ID or comma-separated IDs of tasks to clear subtasks from
     - `--all`: Clear subtasks from all tasks
   - Examples:
-    - `task-master clear-subtasks --id=3`
-    - `task-master clear-subtasks --id=1,2,3`
-    - `task-master clear-subtasks --all`
+    - `taskgraph clear-subtasks --id=3`
+    - `taskgraph clear-subtasks --id=1,2,3`
+    - `taskgraph clear-subtasks --all`
   - Notes:
     - Task files are automatically regenerated after clearing subtasks
     - Can be combined with expand command to immediately generate new subtasks
@@ -228,7 +228,7 @@ alwaysApply: true
 
 - **Determining the Next Task**
 
-  - Run `task-master next` to show the next task to work on
+  - Run `taskgraph next` to show the next task to work on
   - The next command identifies tasks with all dependencies satisfied
   - Tasks are prioritized by priority level, dependency count, and ID
   - The command shows comprehensive task information including:
@@ -243,8 +243,8 @@ alwaysApply: true
 
 - **Viewing Specific Task Details**
 
-  - Run `task-master show <id>` or `task-master show --id=<id>` to view a specific task
-  - Use dot notation for subtasks: `task-master show 1.2` (shows subtask 2 of task 1)
+  - Run `taskgraph show <id>` or `taskgraph show --id=<id>` to view a specific task
+  - Use dot notation for subtasks: `taskgraph show 1.2` (shows subtask 2 of task 1)
   - Displays comprehensive information similar to the next command, but for a specific task
   - For parent tasks, shows all subtasks and their current status
   - For subtasks, shows parent task information and relationship
@@ -253,8 +253,8 @@ alwaysApply: true
 
 - **Managing Task Dependencies**
 
-  - Use `task-master add-dependency --id=<id> --depends-on=<id>` to add a dependency
-  - Use `task-master remove-dependency --id=<id> --depends-on=<id>` to remove a dependency
+  - Use `taskgraph add-dependency --id=<id> --depends-on=<id>` to add a dependency
+  - Use `taskgraph remove-dependency --id=<id> --depends-on=<id>` to remove a dependency
   - The system prevents circular dependencies and duplicate dependency entries
   - Dependencies are checked for existence before being added or removed
   - Task files are automatically regenerated after dependency changes
@@ -263,33 +263,33 @@ alwaysApply: true
 - **Command Reference: add-dependency**
 
   - Legacy Syntax: `node scripts/dev.js add-dependency --id=<id> --depends-on=<id>`
-  - CLI Syntax: `task-master add-dependency --id=<id> --depends-on=<id>`
+  - CLI Syntax: `taskgraph add-dependency --id=<id> --depends-on=<id>`
   - Description: Adds a dependency relationship between two tasks
   - Parameters:
     - `--id=<id>`: ID of task that will depend on another task (required)
     - `--depends-on=<id>`: ID of task that will become a dependency (required)
-  - Example: `task-master add-dependency --id=22 --depends-on=21`
+  - Example: `taskgraph add-dependency --id=22 --depends-on=21`
   - Notes: Prevents circular dependencies and duplicates; updates task files automatically
 
 - **Command Reference: remove-dependency**
 
   - Legacy Syntax: `node scripts/dev.js remove-dependency --id=<id> --depends-on=<id>`
-  - CLI Syntax: `task-master remove-dependency --id=<id> --depends-on=<id>`
+  - CLI Syntax: `taskgraph remove-dependency --id=<id> --depends-on=<id>`
   - Description: Removes a dependency relationship between two tasks
   - Parameters:
     - `--id=<id>`: ID of task to remove dependency from (required)
     - `--depends-on=<id>`: ID of task to remove as a dependency (required)
-  - Example: `task-master remove-dependency --id=22 --depends-on=21`
+  - Example: `taskgraph remove-dependency --id=22 --depends-on=21`
   - Notes: Checks if dependency actually exists; updates task files automatically
 
 - **Command Reference: validate-dependencies**
 
   - Legacy Syntax: `node scripts/dev.js validate-dependencies [options]`
-  - CLI Syntax: `task-master validate-dependencies [options]`
+  - CLI Syntax: `taskgraph validate-dependencies [options]`
   - Description: Checks for and identifies invalid dependencies in tasks.json and task files
   - Parameters:
     - `--file=<path>, -f`: Use alternative tasks.json file (default: 'tasks/tasks.json')
-  - Example: `task-master validate-dependencies`
+  - Example: `taskgraph validate-dependencies`
   - Notes:
     - Reports all non-existent dependencies and self-dependencies without modifying files
     - Provides detailed statistics on task dependency state
@@ -298,11 +298,11 @@ alwaysApply: true
 - **Command Reference: fix-dependencies**
 
   - Legacy Syntax: `node scripts/dev.js fix-dependencies [options]`
-  - CLI Syntax: `task-master fix-dependencies [options]`
+  - CLI Syntax: `taskgraph fix-dependencies [options]`
   - Description: Finds and fixes all invalid dependencies in tasks.json and task files
   - Parameters:
     - `--file=<path>, -f`: Use alternative tasks.json file (default: 'tasks/tasks.json')
-  - Example: `task-master fix-dependencies`
+  - Example: `taskgraph fix-dependencies`
   - Notes:
     - Removes references to non-existent tasks and subtasks
     - Eliminates self-dependencies (tasks depending on themselves)
@@ -312,11 +312,11 @@ alwaysApply: true
 - **Command Reference: complexity-report**
 
   - Legacy Syntax: `node scripts/dev.js complexity-report [options]`
-  - CLI Syntax: `task-master complexity-report [options]`
+  - CLI Syntax: `taskgraph complexity-report [options]`
   - Description: Displays the task complexity analysis report in a formatted, easy-to-read way
   - Parameters:
     - `--file=<path>, -f`: Path to the complexity report file (default: 'scripts/task-complexity-report.json')
-  - Example: `task-master complexity-report`
+  - Example: `taskgraph complexity-report`
   - Notes:
     - Shows tasks organized by complexity score with recommended actions
     - Provides complexity distribution statistics
@@ -325,22 +325,22 @@ alwaysApply: true
 
 - **Command Reference: add-task**
 
-  - CLI Syntax: `task-master add-task [options]`
+  - CLI Syntax: `taskgraph add-task [options]`
   - Description: Add a new task to tasks.json using AI
   - Parameters:
     - `--file=<path>, -f`: Path to the tasks file (default: 'tasks/tasks.json')
     - `--prompt=<text>, -p`: Description of the task to add (required)
     - `--dependencies=<ids>, -d`: Comma-separated list of task IDs this task depends on
     - `--priority=<priority>`: Task priority (high, medium, low) (default: 'medium')
-  - Example: `task-master add-task --prompt="Create user authentication using Auth0"`
+  - Example: `taskgraph add-task --prompt="Create user authentication using Auth0"`
   - Notes: Uses AI to convert description into structured task with appropriate details
 
 - **Command Reference: init**
 
-  - CLI Syntax: `task-master init`
+  - CLI Syntax: `taskgraph init`
   - Description: Initialize a new project with Task Master structure
   - Parameters: None
-  - Example: `task-master init`
+  - Example: `taskgraph init`
   - Notes:
     - Creates initial project structure with required files
     - Prompts for project settings if not provided

@@ -9,7 +9,7 @@ Analyzes your requirements document and generates a complete task breakdown.
 ## Execution
 
 ```bash
-task-master parse-prd --input=$ARGUMENTS
+taskgraph parse-prd --input=$ARGUMENTS
 ```
 
 ## Parsing Process

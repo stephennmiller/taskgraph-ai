@@ -5,9 +5,9 @@ Taskmaster uses two primary methods for configuration:
 1.  **`.taskmaster/config.json` File (Recommended - New Structure)**
 
     - This JSON file stores most configuration settings, including AI model selections, parameters, logging levels, and project defaults.
-    - **Location:** This file is created in the `.taskmaster/` directory when you run the `task-master models --setup` interactive setup or initialize a new project with `task-master init`.
-    - **Migration:** Existing projects with `.taskmasterconfig` in the root will continue to work, but should be migrated to the new structure using `task-master migrate`.
-    - **Management:** Use the `task-master models --setup` command (or `models` MCP tool) to interactively create and manage this file. You can also set specific models directly using `task-master models --set-<role>=<model_id>`, adding `--ollama` or `--openrouter` flags for custom models. Manual editing is possible but not recommended unless you understand the structure.
+    - **Location:** This file is created in the `.taskmaster/` directory when you run the `taskgraph models --setup` interactive setup or initialize a new project with `taskgraph init`.
+    - **Migration:** Existing projects with `.taskmasterconfig` in the root will continue to work, but should be migrated to the new structure using `taskgraph migrate`.
+    - **Management:** Use the `taskgraph models --setup` command (or `models` MCP tool) to interactively create and manage this file. You can also set specific models directly using `taskgraph models --set-<role>=<model_id>`, adding `--ollama` or `--openrouter` flags for custom models. Manual editing is possible but not recommended unless you understand the structure.
     - **Example Structure:**
       ```json
       {
@@ -56,7 +56,7 @@ Taskmaster uses two primary methods for configuration:
 
     - For projects that haven't migrated to the new structure yet.
     - **Location:** Project root directory.
-    - **Migration:** Use `task-master migrate` to move this to `.taskmaster/config.json`.
+    - **Migration:** Use `taskgraph migrate` to move this to `.taskmaster/config.json`.
     - **Deprecation:** While still supported, you'll see warnings encouraging migration to the new structure.
 
 ## MCP Tool Loading Configuration
@@ -97,7 +97,7 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
    ```jsonc
    {
      "mcpServers": {
-       "task-master-ai": {
+       "taskgraph-ai": {
          "env": {
            "TASK_MASTER_TOOLS": "standard",  // Set tool loading mode
            // API keys can still use .env for security
@@ -110,9 +110,9 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
 2. **Via Claude Code CLI**:
 
    ```bash
-   claude mcp add task-master-ai --scope user \
+   claude mcp add taskgraph-ai --scope user \
      --env TASK_MASTER_TOOLS="core" \
-     -- npx -y task-master-ai@latest
+     -- npx -y taskgraph-ai@latest
    ```
 
 3. **In CI/deployment environment variables**:
@@ -172,7 +172,7 @@ Taskmaster includes a tagged task lists system for multi-context task management
 
 Task Master provides manual git integration through the `--from-branch` option:
 
-- **Manual Tag Creation**: Use `task-master add-tag --from-branch` to create a tag based on your current git branch name
+- **Manual Tag Creation**: Use `taskgraph add-tag --from-branch` to create a tag based on your current git branch name
 - **User Control**: No automatic tag switching - you control when and how tags are created
 - **Flexible Workflow**: Supports any git workflow without imposing rigid branch-tag mappings
 
@@ -221,11 +221,11 @@ PERPLEXITY_API_KEY=pplx-your-key-here
 
 ### Configuration Errors
 
-- If Task Master reports errors about missing configuration or cannot find the config file, run `task-master models --setup` in your project root to create or repair the file.
-- For new projects, config will be created at `.taskmaster/config.json`. For legacy projects, you may want to use `task-master migrate` to move to the new structure.
+- If Task Master reports errors about missing configuration or cannot find the config file, run `taskgraph models --setup` in your project root to create or repair the file.
+- For new projects, config will be created at `.taskmaster/config.json`. For legacy projects, you may want to use `taskgraph migrate` to move to the new structure.
 - Ensure API keys are correctly placed in your `.env` file (for CLI) or `.cursor/mcp.json` (for MCP) and are valid for the providers selected in your config file.
 
-### If `task-master init` doesn't respond:
+### If `taskgraph init` doesn't respond:
 
 Try running it with Node directly:
 
@@ -291,13 +291,13 @@ node scripts/init.js
 7. **Setup Commands**:
    ```bash
    # Set MCP provider for main role
-   task-master models set-main --provider mcp --model claude-3-5-sonnet-20241022
+   taskgraph models set-main --provider mcp --model claude-3-5-sonnet-20241022
 
    # Set MCP provider for research role
-   task-master models set-research --provider mcp --model claude-3-opus-20240229
+   taskgraph models set-research --provider mcp --model claude-3-opus-20240229
 
    # Verify configuration
-   task-master models list
+   taskgraph models list
    ```
 
 8. **Troubleshooting**:
@@ -315,9 +315,9 @@ Add a `timeout` parameter to your MCP configuration to extend the timeout limit.
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "--package=task-master-ai", "task-master-ai"],
+      "args": ["-y", "--package=taskgraph-ai", "taskgraph-ai"],
       "timeout": 300,
       "env": {
         "ANTHROPIC_API_KEY": "your-anthropic-api-key"
@@ -339,10 +339,10 @@ When adding taskmaster rules for supported editors, the timeout configuration is
 
 ```bash
 # Automatically includes timeout configuration
-task-master rules add cursor
-task-master rules add roo
-task-master rules add windsurf
-task-master rules add vscode
+taskgraph rules add cursor
+taskgraph rules add roo
+taskgraph rules add windsurf
+taskgraph rules add vscode
 ```
 
 #### Troubleshooting Timeouts
@@ -608,13 +608,13 @@ The Codex CLI provider integrates Task Master with OpenAI's Codex CLI, allowing 
 10. **Setup Commands**:
     ```bash
     # Set Codex CLI for main role
-    task-master models --set-main gpt-5-codex --codex-cli
+    taskgraph models --set-main gpt-5-codex --codex-cli
 
     # Set Codex CLI for fallback role
-    task-master models --set-fallback gpt-5 --codex-cli
+    taskgraph models --set-fallback gpt-5 --codex-cli
 
     # Verify configuration
-    task-master models
+    taskgraph models
     ```
 
 11. **Troubleshooting**:

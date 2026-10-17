@@ -32,7 +32,7 @@ This command does more than just change status - it prepares your environment fo
 ## Execution
 
 \`\`\`bash
-task-master set-status --id=$ARGUMENTS --status=in-progress
+taskgraph set-status --id=$ARGUMENTS --status=in-progress
 \`\`\`
 
 ## Environment Setup

@@ -998,7 +998,7 @@ export class ExportService {
 	}
 
 	/**
-	 * Get the current version of task-master
+	 * Get the current version of this CLI
 	 */
 	private getVersion(): string {
 		// Try to get version from package.json or config

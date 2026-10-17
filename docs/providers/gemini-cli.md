@@ -46,10 +46,10 @@ More details on authentication steps and options can be found in the [gemini-cli
 
 ## Configuration
 
-Use the `task-master init` command to run through the guided initialization:
+Use the `taskgraph init` command to run through the guided initialization:
 
 ```bash
-task-master init
+taskgraph init
 ```
 
 **OR**
@@ -58,10 +58,10 @@ Configure `gemini-cli` as a provider using the Task Master models command:
 
 ```bash
 # Set gemini-cli as your main provider with gemini-2.5-pro
-task-master models --set-main gemini-2.5-pro --gemini-cli
+taskgraph models --set-main gemini-2.5-pro --gemini-cli
 
 # Or use the faster gemini-2.5-flash model
-task-master models --set-main gemini-2.5-flash --gemini-cli
+taskgraph models --set-main gemini-2.5-flash --gemini-cli
 ```
 
 You can also manually edit your `.taskmaster/config.json`:
@@ -120,7 +120,7 @@ Once gemini-cli is installed and authenticated, and Task Master  simply use Task
 
 ```bash
 # The provider will automatically use your OAuth credentials
-task-master parse-prd my-prd.txt
+taskgraph parse-prd my-prd.txt
 ```
 
 ## Troubleshooting
@@ -177,11 +177,11 @@ When you use Task Master commands that require structured output (like `parse-pr
 
 All commands that use structured output benefit from native schema enforcement:
 
-- `task-master parse-prd` - Parse PRD and generate tasks
-- `task-master expand` - Expand tasks into subtasks
-- `task-master add-task` - Add new tasks with AI assistance
-- `task-master update-task` - Update existing tasks
-- `task-master analyze-complexity` - Analyze task complexity
+- `taskgraph parse-prd` - Parse PRD and generate tasks
+- `taskgraph expand` - Expand tasks into subtasks
+- `taskgraph add-task` - Add new tasks with AI assistance
+- `taskgraph update-task` - Update existing tasks
+- `taskgraph analyze-complexity` - Analyze task complexity
 
 ### Requirements
 

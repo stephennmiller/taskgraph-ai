@@ -16,7 +16,7 @@ Parse the status from arguments and list only tasks matching that status.
 
 Based on $ARGUMENTS, run:
 ```bash
-task-master list --status=$ARGUMENTS
+taskgraph list --status=$ARGUMENTS
 ```
 
 ## Enhanced Display

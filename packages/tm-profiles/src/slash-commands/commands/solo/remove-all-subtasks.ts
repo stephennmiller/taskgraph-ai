@@ -22,7 +22,7 @@ Remove all subtasks across the entire project. Use with extreme caution.
 ## Execution
 
 \`\`\`bash
-task-master clear-subtasks --all
+taskgraph clear-subtasks --all
 \`\`\`
 
 ## Pre-Clear Analysis

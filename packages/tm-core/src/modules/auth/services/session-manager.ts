@@ -89,7 +89,7 @@ export class SessionManager {
 
 			// Otherwise, user needs to re-authenticate
 			this.logger.warn('Legacy auth.json found but no valid Supabase session.');
-			this.logger.warn('Please run: task-master auth login');
+			this.logger.warn('Please run: taskgraph auth login');
 		} catch (error) {
 			this.logger.debug('Error during legacy auth migration:', error);
 		}

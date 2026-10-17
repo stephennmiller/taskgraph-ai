@@ -377,7 +377,7 @@ cargo install cargo-tarpaulin  # For coverage
 **Document Testing Setup in Subtasks:**
 ```bash
 # Update subtask with testing framework setup
-task-master update-subtask --id=X.Y --prompt="Testing framework setup:
+taskgraph update-subtask --id=X.Y --prompt="Testing framework setup:
 - Installed [Framework Name] with coverage support
 - Configured [Coverage Tool] with thresholds: 80% lines, 70% branches
 - Created test directory structure: unit/, integration/, e2e/
@@ -394,7 +394,7 @@ task-master update-subtask --id=X.Y --prompt="Testing framework setup:
 [coverage-command]  # e.g., npm run test:coverage
 
 # Update task with verification
-task-master update-subtask --id=X.Y --prompt="Testing framework verified:
+taskgraph update-subtask --id=X.Y --prompt="Testing framework verified:
 - Sample tests running successfully
 - Coverage reporting functional
 - CI/CD integration ready
@@ -420,19 +420,19 @@ npm run test:watch
 ### **TDD Workflow Per Subtask**
 ```bash
 # When starting a new subtask:
-task-master set-status --id=4.1 --status=in-progress
+taskgraph set-status --id=4.1 --status=in-progress
 
 # Begin TDD cycle:
 npm run test:watch  # Keep running during development
 
 # Document TDD progress in subtask:
-task-master update-subtask --id=4.1 --prompt="TDD Progress:
+taskgraph update-subtask --id=4.1 --prompt="TDD Progress:
 - Written 3 failing tests for core functionality
 - Implemented basic feature, tests now passing
 - Adding edge case tests for error handling"
 
 # Complete subtask with test summary:
-task-master update-subtask --id=4.1 --prompt="Implementation complete:
+taskgraph update-subtask --id=4.1 --prompt="Implementation complete:
 - Feature implemented with 8 unit tests
 - Coverage: 95% statements, 88% branches  
 - All tests passing, TDD cycle complete"
@@ -647,13 +647,13 @@ describe('validateInput', () => {
 ### **Feature Development Phase**
 ```bash
 # 1. Start feature development
-task-master set-status --id=X.Y --status=in-progress
+taskgraph set-status --id=X.Y --status=in-progress
 
 # 2. Begin TDD cycle  
 npm run test:watch
 
 # 3. Document test progress in subtask
-task-master update-subtask --id=X.Y --prompt="Test development:
+taskgraph update-subtask --id=X.Y --prompt="Test development:
 - Created test file with 5 failing tests
 - Implemented core functionality
 - Tests passing, adding error scenarios"
@@ -662,7 +662,7 @@ task-master update-subtask --id=X.Y --prompt="Test development:
 npm run test:coverage
 
 # 5. Update subtask with final test status
-task-master update-subtask --id=X.Y --prompt="Testing complete:
+taskgraph update-subtask --id=X.Y --prompt="Testing complete:
 - 12 unit tests with full coverage
 - All edge cases and error scenarios covered
 - Ready for integration testing"
@@ -677,7 +677,7 @@ npm run test:integration
 # Replace placeholder tests with real endpoint calls
 
 # Document integration test results
-task-master update-subtask --id=X.Y --prompt="Integration tests:
+taskgraph update-subtask --id=X.Y --prompt="Integration tests:
 - Updated auth endpoint tests  
 - Database integration verified
 - All HTTP status codes and responses tested"

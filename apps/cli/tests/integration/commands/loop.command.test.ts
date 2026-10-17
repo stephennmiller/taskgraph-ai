@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for 'task-master loop' command
+ * @fileoverview Integration tests for 'taskgraph loop' command
  *
  * Tests the loop command's CLI integration including option parsing,
  * validation errors, and help text. Note: The loop command spawns

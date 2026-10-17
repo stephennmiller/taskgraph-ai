@@ -48,7 +48,7 @@ description: "Learn how to set up and use Task Master with Cursor AI"
       <Step title="Configure with the following details:">
         - Name: "Task Master"
         - Type: "Command"
-        - Command: "npx -y task-master-ai"
+        - Command: "npx -y taskgraph-ai"
       </Step>
       <Step title="Save Settings">
         
@@ -63,13 +63,13 @@ description: "Learn how to set up and use Task Master with Cursor AI"
 In Cursor's AI chat, instruct the agent to generate tasks from your PRD:
 
 ```
-Please use the task-master parse-prd command to generate tasks from my PRD. The PRD is located at scripts/prd.txt.
+Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at scripts/prd.txt.
 ```
 
 The agent will execute:
 
 ```bash
-task-master parse-prd scripts/prd.txt
+taskgraph parse-prd scripts/prd.txt
 ```
 
 This will:
@@ -89,7 +89,7 @@ Please generate individual task files from tasks.json
 The agent will execute:
 
 ```bash
-task-master generate
+taskgraph generate
 ```
 
 This creates individual task files in the `tasks/` directory (e.g., `task_001.txt`, `task_002.txt`), making it easier to reference specific tasks.

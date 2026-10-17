@@ -15,8 +15,8 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
 
     The agent will:
 
-    - Run `task-master list` to see all tasks
-    - Run `task-master next` to determine the next task to work on
+    - Run `taskgraph list` to see all tasks
+    - Run `taskgraph next` to determine the next task to work on
     - Analyze dependencies to determine which tasks are ready to be worked on
     - Prioritize tasks based on priority level and ID order
     - Suggest the next task(s) to implement
@@ -55,7 +55,7 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
     The agent will execute:
 
     ```bash
-    task-master set-status --id=3 --status=done
+    taskgraph set-status --id=3 --status=done
     ```
   </Accordion>
 
@@ -75,7 +75,7 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
     The agent will execute:
 
     ```bash
-    task-master update --from=4 --prompt="Now we are using Express instead of Fastify."
+    taskgraph update --from=4 --prompt="Now we are using Express instead of Fastify."
     ```
 
     This will rewrite or re-scope subsequent tasks in tasks.json while preserving completed work.
@@ -91,7 +91,7 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
     The agent will execute:
 
     ```bash
-    task-master expand --id=5 --num=3
+    taskgraph expand --id=5 --num=3
     ```
 
     You can provide additional context:
@@ -103,7 +103,7 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
     The agent will execute:
 
     ```bash
-    task-master expand --id=5 --prompt="Focus on security aspects"
+    taskgraph expand --id=5 --prompt="Focus on security aspects"
     ```
 
     You can also expand all pending tasks:
@@ -115,7 +115,7 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
     The agent will execute:
 
     ```bash
-    task-master expand --all
+    taskgraph expand --all
     ```
 
     For research-backed subtask generation using Perplexity AI:
@@ -127,7 +127,7 @@ description: "Learn how Task Master and Cursor AI work together to streamline yo
     The agent will execute:
 
     ```bash
-    task-master expand --id=5 --research
+    taskgraph expand --id=5 --research
     ```
   </Accordion>
 </AccordionGroup>

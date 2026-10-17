@@ -376,7 +376,7 @@ describe('rules command', () => {
 	});
 
 	test('should handle rules add <profile> command', async () => {
-		// Simulate: task-master rules add roo
+		// Simulate: taskgraph rules add roo
 		await program.parseAsync(['rules', RULES_ACTIONS.ADD, 'roo'], {
 			from: 'user'
 		});
@@ -392,7 +392,7 @@ describe('rules command', () => {
 	});
 
 	test('should handle rules remove <profile> command', async () => {
-		// Simulate: task-master rules remove roo --force
+		// Simulate: taskgraph rules remove roo --force
 		await program.parseAsync(
 			['rules', RULES_ACTIONS.REMOVE, 'roo', '--force'],
 			{
@@ -455,7 +455,7 @@ describe('rules command', () => {
 	});
 
 	test('should show error for invalid action', async () => {
-		// Simulate: task-master rules invalid-action
+		// Simulate: taskgraph rules invalid-action
 		await program.parseAsync(['rules', 'invalid-action'], { from: 'user' });
 
 		// Should show error for invalid action
@@ -465,7 +465,7 @@ describe('rules command', () => {
 		expect(mockConsoleError).toHaveBeenCalledWith(
 			expect.stringMatching(
 				new RegExp(
-					`For interactive setup, use: task-master rules --${RULES_SETUP_ACTION}`,
+					`For interactive setup, use: taskgraph rules --${RULES_SETUP_ACTION}`,
 					'i'
 				)
 			)
@@ -474,7 +474,7 @@ describe('rules command', () => {
 	});
 
 	test('should show error when no action provided', async () => {
-		// Simulate: task-master rules (no action)
+		// Simulate: taskgraph rules (no action)
 		await program.parseAsync(['rules'], { from: 'user' });
 
 		// Should show error for missing action
@@ -484,7 +484,7 @@ describe('rules command', () => {
 		expect(mockConsoleError).toHaveBeenCalledWith(
 			expect.stringMatching(
 				new RegExp(
-					`For interactive setup, use: task-master rules --${RULES_SETUP_ACTION}`,
+					`For interactive setup, use: taskgraph rules --${RULES_SETUP_ACTION}`,
 					'i'
 				)
 			)

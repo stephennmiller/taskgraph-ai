@@ -41,7 +41,7 @@ export const TASK_FILE_PREFIX = 'task_';
 export const TASK_FILE_EXTENSION = '.txt';
 
 /**
- * Project markers used to identify a task-master project root
+ * Project markers used to identify a taskgraph project root
  * These files/directories indicate that a directory is a Task Master project
  */
 export const PROJECT_MARKERS = [

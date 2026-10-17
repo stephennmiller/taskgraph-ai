@@ -30,7 +30,7 @@ When using this template to **create** a PRD (not parse it), use **code-context-
 - **Gemini CLI** (gemini-cli) - Massive context window for large codebases
 - **Codex/Grok CLI** - Strong code generation with context awareness
 
-**Note:** Once your PRD is created, `task-master parse-prd` works with any configured AI model - it just needs to read the PRD text itself, not your codebase.
+**Note:** Once your PRD is created, `taskgraph parse-prd` works with any configured AI model - it just needs to read the PRD text itself, not your codebase.
 </rpg-method>
 
 ---
@@ -468,7 +468,7 @@ Categories:
 <task-master-integration>
 # How Task Master Uses This PRD
 
-When you run `task-master parse-prd <file>.txt`, the parser:
+When you run `taskgraph parse-prd <file>.txt`, the parser:
 
 1. **Extracts capabilities** → Main tasks
    - Each `### Capability:` becomes a top-level task
@@ -506,6 +506,6 @@ RPG-structured PRDs provide:
 
 1. **Spend time on dependency graph** - This is the most valuable section for Task Master
 2. **Keep features atomic** - Each feature should be independently testable
-3. **Progressive refinement** - Start broad, use `task-master expand` to break down complex tasks
-4. **Use research mode** - `task-master parse-prd --research` leverages AI for better task generation
+3. **Progressive refinement** - Start broad, use `taskgraph expand` to break down complex tasks
+4. **Use research mode** - `taskgraph parse-prd --research` leverages AI for better task generation
 </task-master-integration>

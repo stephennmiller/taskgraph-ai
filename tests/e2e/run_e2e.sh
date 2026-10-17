@@ -278,7 +278,7 @@ log_step() {
   # --- Test Setup (Output to tee) ---
   log_step "Setting up test environment"
 
-  log_step "Creating global npm link for task-master-ai"
+  log_step "Creating global npm link for taskgraph-ai"
   if npm link; then
     log_success "Global link created/updated."
   else
@@ -327,12 +327,12 @@ log_step() {
 
   # --- Test Execution (Output to tee) ---
 
-  log_step "Linking task-master-ai package locally"
-  npm link task-master-ai
+  log_step "Linking taskgraph-ai package locally"
+  npm link taskgraph-ai
   log_success "Package linked locally."
 
   log_step "Initializing Task Master project (non-interactive)"
-  task-master init -y --name="E2E Test $TIMESTAMP" --description="Automated E2E test run"
+  taskgraph init -y --name="E2E Test $TIMESTAMP" --description="Automated E2E test run"
   if [ ! -f ".taskmaster/config.json" ]; then
     log_error "Initialization failed: .taskmaster/config.json not found."
     exit 1
@@ -340,7 +340,7 @@ log_step() {
   log_success "Project initialized."
 
   log_step "Parsing PRD"
-  cmd_output_prd=$(task-master parse-prd ./prd.txt --force 2>&1)
+  cmd_output_prd=$(taskgraph parse-prd ./prd.txt --force 2>&1)
   exit_status_prd=$?
   echo "$cmd_output_prd"
   extract_and_sum_cost "$cmd_output_prd"
@@ -352,7 +352,7 @@ log_step() {
   fi
 
   log_step "Expanding Task 1 (to ensure subtask 1.1 exists)"
-  cmd_output_analyze=$(task-master analyze-complexity --research --output complexity_results.json 2>&1)
+  cmd_output_analyze=$(taskgraph analyze-complexity --research --output complexity_results.json 2>&1)
   exit_status_analyze=$?
   echo "$cmd_output_analyze"
   extract_and_sum_cost "$cmd_output_analyze"
@@ -364,11 +364,11 @@ log_step() {
   fi
 
   log_step "Generating complexity report"
-  task-master complexity-report --file complexity_results.json > complexity_report_formatted.log
+  taskgraph complexity-report --file complexity_results.json > complexity_report_formatted.log
   log_success "Formatted complexity report saved to complexity_report_formatted.log"
 
   log_step "Expanding Task 1 (assuming it exists)"
-  cmd_output_expand1=$(task-master expand --id=1 --cr complexity_results.json 2>&1)
+  cmd_output_expand1=$(taskgraph expand --id=1 --cr complexity_results.json 2>&1)
   exit_status_expand1=$?
   echo "$cmd_output_expand1"
   extract_and_sum_cost "$cmd_output_expand1"
@@ -379,31 +379,31 @@ log_step() {
   fi
 
   log_step "Setting status for Subtask 1.1 (assuming it exists)"
-  task-master set-status --id=1.1 --status=done
+  taskgraph set-status --id=1.1 --status=done
   log_success "Attempted to set status for Subtask 1.1 to 'done'."
 
   log_step "Listing tasks again (after changes)"
-  task-master list --with-subtasks > task_list_after_changes.log
+  taskgraph list --with-subtasks > task_list_after_changes.log
   log_success "Task list after changes saved to task_list_after_changes.log"
 
   # === Start New Test Section: Tag-Aware Expand Testing ===
   log_step "Creating additional tag for expand testing"
-  task-master add-tag feature-expand --description="Tag for testing expand command with tag preservation"
+  taskgraph add-tag feature-expand --description="Tag for testing expand command with tag preservation"
   log_success "Created feature-expand tag."
 
   log_step "Adding task to feature-expand tag"
-  task-master add-task --tag=feature-expand --prompt="Test task for tag-aware expansion" --priority=medium
+  taskgraph add-task --tag=feature-expand --prompt="Test task for tag-aware expansion" --priority=medium
   # Get the new task ID dynamically
   new_expand_task_id=$(jq -r '.["feature-expand"].tasks[-1].id' .taskmaster/tasks/tasks.json)
   log_success "Added task $new_expand_task_id to feature-expand tag."
 
   log_step "Verifying tags exist before expand test"
-  task-master tags > tags_before_expand.log
+  taskgraph tags > tags_before_expand.log
   tag_count_before=$(jq 'keys | length' .taskmaster/tasks/tasks.json)
   log_success "Tag count before expand: $tag_count_before"
 
   log_step "Expanding task in feature-expand tag (testing tag corruption fix)"
-  cmd_output_expand_tagged=$(task-master expand --tag=feature-expand --id="$new_expand_task_id" 2>&1)
+  cmd_output_expand_tagged=$(taskgraph expand --tag=feature-expand --id="$new_expand_task_id" 2>&1)
   exit_status_expand_tagged=$?
   echo "$cmd_output_expand_tagged"
   extract_and_sum_cost "$cmd_output_expand_tagged"
@@ -414,7 +414,7 @@ log_step() {
   fi
 
   log_step "Verifying tag preservation after expand"
-  task-master tags > tags_after_expand.log
+  taskgraph tags > tags_after_expand.log
   tag_count_after=$(jq 'keys | length' .taskmaster/tasks/tasks.json)
   
   if [ "$tag_count_before" -eq "$tag_count_after" ]; then
@@ -440,7 +440,7 @@ log_step() {
   fi
 
   log_step "Testing force expand with tag preservation"
-  cmd_output_force_expand=$(task-master expand --tag=feature-expand --id="$new_expand_task_id" --force 2>&1)
+  cmd_output_force_expand=$(taskgraph expand --tag=feature-expand --id="$new_expand_task_id" --force 2>&1)
   exit_status_force_expand=$?
   echo "$cmd_output_force_expand"
   extract_and_sum_cost "$cmd_output_force_expand"
@@ -455,10 +455,10 @@ log_step() {
 
   log_step "Testing expand --all with tag preservation"
   # Add another task to feature-expand for expand-all testing
-  task-master add-task --tag=feature-expand --prompt="Second task for expand-all testing" --priority=low
+  taskgraph add-task --tag=feature-expand --prompt="Second task for expand-all testing" --priority=low
   second_expand_task_id=$(jq -r '.["feature-expand"].tasks[-1].id' .taskmaster/tasks/tasks.json)
   
-  cmd_output_expand_all=$(task-master expand --tag=feature-expand --all 2>&1)
+  cmd_output_expand_all=$(taskgraph expand --tag=feature-expand --all 2>&1)
   exit_status_expand_all=$?
   echo "$cmd_output_expand_all"
   extract_and_sum_cost "$cmd_output_expand_all"
@@ -477,27 +477,27 @@ log_step() {
 
   # === Test Model Commands ===
   log_step "Checking initial model configuration"
-  task-master models > models_initial_config.log
+  taskgraph models > models_initial_config.log
   log_success "Initial model config saved to models_initial_config.log"
 
   log_step "Setting main model"
-  task-master models --set-main claude-3-7-sonnet-20250219
+  taskgraph models --set-main claude-3-7-sonnet-20250219
   log_success "Set main model."
 
   log_step "Setting research model"
-  task-master models --set-research sonar-pro
+  taskgraph models --set-research sonar-pro
   log_success "Set research model."
 
   log_step "Setting fallback model"
-  task-master models --set-fallback claude-3-5-sonnet-20241022
+  taskgraph models --set-fallback claude-3-5-sonnet-20241022
   log_success "Set fallback model."
 
   log_step "Checking final model configuration"
-  task-master models > models_final_config.log
+  taskgraph models > models_final_config.log
   log_success "Final model config saved to models_final_config.log"
 
   log_step "Resetting main model to default (Claude Sonnet) before provider tests"
-  task-master models --set-main claude-3-7-sonnet-20250219
+  taskgraph models --set-main claude-3-7-sonnet-20250219
   log_success "Main model reset to claude-3-7-sonnet-20250219."
 
   # === End Model Commands Test ===
@@ -562,7 +562,7 @@ log_step() {
 
     # 1. Set the main model for this provider
     log_info "Setting main model to $model for $provider ${flag:+using flag $flag}..."
-    set_model_cmd="task-master models --set-main \"$model\" $flag"
+    set_model_cmd="taskgraph models --set-main \"$model\" $flag"
     echo "Executing: $set_model_cmd"
     if eval $set_model_cmd; then
       log_success "Successfully set main model for $provider."
@@ -577,7 +577,7 @@ log_step() {
     log_info "Running add-task with prompt..."
     add_task_output_file="add_task_raw_output_${provider}_${model//\//_}.log" # Sanitize ID
     # Run add-task and capture ALL output (stdout & stderr) to a file AND a variable
-    add_task_cmd_output=$(task-master add-task --prompt "$add_task_prompt" 2>&1 | tee "$add_task_output_file")
+    add_task_cmd_output=$(taskgraph add-task --prompt "$add_task_prompt" 2>&1 | tee "$add_task_output_file")
     add_task_exit_code=${PIPESTATUS[0]}
 
     # 3. Check for success and extract task ID
@@ -604,7 +604,7 @@ log_step() {
     if [ "$new_task_id" != "FAILED" ] && [ "$new_task_id" != "UNKNOWN_ID_EXTRACTION_FAILED" ]; then
       log_info "Running task show for new task ID: $new_task_id"
       show_output_file="add_task_show_output_${provider}_id_${new_task_id}.log"
-      if task-master show "$new_task_id" > "$show_output_file"; then
+      if taskgraph show "$new_task_id" > "$show_output_file"; then
         log_success "Task show output saved to $show_output_file"
       else
         log_error "task show command failed for ID $new_task_id. Check log."
@@ -623,48 +623,48 @@ log_step() {
   # === End Multi-Provider Add-Task Test ===
 
   log_step "Listing tasks again (after multi-add)"
-  task-master list --with-subtasks > task_list_after_multi_add.log
+  taskgraph list --with-subtasks > task_list_after_multi_add.log
   log_success "Task list after multi-add saved to task_list_after_multi_add.log"
 
 
   # === Resume Core Task Commands Test ===
   log_step "Listing tasks (for core tests)"
-  task-master list > task_list_core_test_start.log
+  taskgraph list > task_list_core_test_start.log
   log_success "Core test initial task list saved."
 
   log_step "Getting next task"
-  task-master next > next_task_core_test.log
+  taskgraph next > next_task_core_test.log
   log_success "Core test next task saved."
 
   log_step "Showing Task 1 details"
-  task-master show 1 > task_1_details_core_test.log
+  taskgraph show 1 > task_1_details_core_test.log
   log_success "Task 1 details saved."
 
   log_step "Adding dependency (Task 2 depends on Task 1)"
-  task-master add-dependency --id=2 --depends-on=1
+  taskgraph add-dependency --id=2 --depends-on=1
   log_success "Added dependency 2->1."
 
   log_step "Validating dependencies (after add)"
-  task-master validate-dependencies > validate_dependencies_after_add_core.log
+  taskgraph validate-dependencies > validate_dependencies_after_add_core.log
   log_success "Dependency validation after add saved."
 
   log_step "Removing dependency (Task 2 depends on Task 1)"
-  task-master remove-dependency --id=2 --depends-on=1
+  taskgraph remove-dependency --id=2 --depends-on=1
   log_success "Removed dependency 2->1."
 
   log_step "Fixing dependencies (should be no-op now)"
-  task-master fix-dependencies > fix_dependencies_output_core.log
+  taskgraph fix-dependencies > fix_dependencies_output_core.log
   log_success "Fix dependencies attempted."
 
   # === Start New Test Section: Validate/Fix Bad Dependencies ===
 
   log_step "Intentionally adding non-existent dependency (1 -> 999)"
-  task-master add-dependency --id=1 --depends-on=999 || log_error "Failed to add non-existent dependency (unexpected)"
+  taskgraph add-dependency --id=1 --depends-on=999 || log_error "Failed to add non-existent dependency (unexpected)"
   # Don't exit even if the above fails, the goal is to test validation
   log_success "Attempted to add dependency 1 -> 999."
 
   log_step "Validating dependencies (expecting non-existent error)"
-  task-master validate-dependencies > validate_deps_non_existent.log 2>&1 || true # Allow command to fail without exiting script
+  taskgraph validate-dependencies > validate_deps_non_existent.log 2>&1 || true # Allow command to fail without exiting script
   if grep -q "Non-existent dependency ID: 999" validate_deps_non_existent.log; then
       log_success "Validation correctly identified non-existent dependency 999."
   else
@@ -672,11 +672,11 @@ log_step() {
   fi
 
   log_step "Fixing dependencies (should remove 1 -> 999)"
-  task-master fix-dependencies > fix_deps_after_non_existent.log
+  taskgraph fix-dependencies > fix_deps_after_non_existent.log
   log_success "Attempted to fix dependencies."
 
   log_step "Validating dependencies (after fix)"
-  task-master validate-dependencies > validate_deps_after_fix_non_existent.log 2>&1 || true # Allow potential failure
+  taskgraph validate-dependencies > validate_deps_after_fix_non_existent.log 2>&1 || true # Allow potential failure
   if grep -q "Non-existent dependency ID: 999" validate_deps_after_fix_non_existent.log; then
       log_error "Validation STILL reports non-existent dependency 999 after fix. Check logs."
   else
@@ -685,13 +685,13 @@ log_step() {
 
 
   log_step "Intentionally adding circular dependency (4 -> 5 -> 4)"
-  task-master add-dependency --id=4 --depends-on=5 || log_error "Failed to add dependency 4->5"
-  task-master add-dependency --id=5 --depends-on=4 || log_error "Failed to add dependency 5->4"
+  taskgraph add-dependency --id=4 --depends-on=5 || log_error "Failed to add dependency 4->5"
+  taskgraph add-dependency --id=5 --depends-on=4 || log_error "Failed to add dependency 5->4"
   log_success "Attempted to add dependencies 4 -> 5 and 5 -> 4."
 
 
   log_step "Validating dependencies (expecting circular error)"
-  task-master validate-dependencies > validate_deps_circular.log 2>&1 || true # Allow command to fail
+  taskgraph validate-dependencies > validate_deps_circular.log 2>&1 || true # Allow command to fail
   # Note: Adjust the grep pattern based on the EXACT error message from validate-dependencies
   if grep -q -E "Circular dependency detected involving task IDs: (4, 5|5, 4)" validate_deps_circular.log; then
       log_success "Validation correctly identified circular dependency between 4 and 5."
@@ -700,11 +700,11 @@ log_step() {
   fi
 
   log_step "Fixing dependencies (should remove one side of 4 <-> 5)"
-  task-master fix-dependencies > fix_deps_after_circular.log
+  taskgraph fix-dependencies > fix_deps_after_circular.log
   log_success "Attempted to fix dependencies."
 
   log_step "Validating dependencies (after fix circular)"
-  task-master validate-dependencies > validate_deps_after_fix_circular.log 2>&1 || true # Allow potential failure
+  taskgraph validate-dependencies > validate_deps_after_fix_circular.log 2>&1 || true # Allow potential failure
   if grep -q -E "Circular dependency detected involving task IDs: (4, 5|5, 4)" validate_deps_after_fix_circular.log; then
       log_error "Validation STILL reports circular dependency 4<->5 after fix. Check logs."
   else
@@ -720,11 +720,11 @@ log_step() {
   ai_task_id=$((manual_task_id + 1))
 
   log_step "Adding Task $manual_task_id (Manual)"
-  task-master add-task --title="Manual E2E Task" --description="Add basic health check endpoint" --priority=low --dependencies=3 # Depends on backend setup
+  taskgraph add-task --title="Manual E2E Task" --description="Add basic health check endpoint" --priority=low --dependencies=3 # Depends on backend setup
   log_success "Added Task $manual_task_id manually."
 
   log_step "Adding Task $ai_task_id (AI)"
-  cmd_output_add_ai=$(task-master add-task --prompt="Implement basic UI styling using CSS variables for colors and spacing" --priority=medium --dependencies=1 2>&1)
+  cmd_output_add_ai=$(taskgraph add-task --prompt="Implement basic UI styling using CSS variables for colors and spacing" --priority=medium --dependencies=1 2>&1)
   exit_status_add_ai=$?
   echo "$cmd_output_add_ai"
   extract_and_sum_cost "$cmd_output_add_ai"
@@ -736,7 +736,7 @@ log_step() {
 
 
   log_step "Updating Task 3 (update-task AI)"
-  cmd_output_update_task3=$(task-master update-task --id=3 --prompt="Update backend server setup: Ensure CORS is configured to allow requests from the frontend origin." 2>&1)
+  cmd_output_update_task3=$(taskgraph update-task --id=3 --prompt="Update backend server setup: Ensure CORS is configured to allow requests from the frontend origin." 2>&1)
   exit_status_update_task3=$?
   echo "$cmd_output_update_task3"
   extract_and_sum_cost "$cmd_output_update_task3"
@@ -747,7 +747,7 @@ log_step() {
   fi
 
   log_step "Updating Tasks from Task 5 (update AI)"
-  cmd_output_update_from5=$(task-master update --from=5 --prompt="Refactor the backend storage module to use a simple JSON file (storage.json) instead of an in-memory object for persistence. Update relevant tasks." 2>&1)
+  cmd_output_update_from5=$(taskgraph update --from=5 --prompt="Refactor the backend storage module to use a simple JSON file (storage.json) instead of an in-memory object for persistence. Update relevant tasks." 2>&1)
   exit_status_update_from5=$?
   echo "$cmd_output_update_from5"
   extract_and_sum_cost "$cmd_output_update_from5"
@@ -758,7 +758,7 @@ log_step() {
   fi
 
   log_step "Expanding Task 8 (AI)"
-  cmd_output_expand8=$(task-master expand --id=8 2>&1)
+  cmd_output_expand8=$(taskgraph expand --id=8 2>&1)
   exit_status_expand8=$?
   echo "$cmd_output_expand8"
   extract_and_sum_cost "$cmd_output_expand8"
@@ -769,7 +769,7 @@ log_step() {
   fi
 
   log_step "Updating Subtask 8.1 (update-subtask AI)"
-  cmd_output_update_subtask81=$(task-master update-subtask --id=8.1 --prompt="Implementation note: Remember to handle potential API errors and display a user-friendly message." 2>&1)
+  cmd_output_update_subtask81=$(taskgraph update-subtask --id=8.1 --prompt="Implementation note: Remember to handle potential API errors and display a user-friendly message." 2>&1)
   exit_status_update_subtask81=$?
   echo "$cmd_output_update_subtask81"
   extract_and_sum_cost "$cmd_output_update_subtask81"
@@ -781,25 +781,25 @@ log_step() {
 
   # Add a couple more subtasks for multi-remove test
   log_step 'Adding subtasks to Task 2 (for multi-remove test)'
-  task-master add-subtask --parent=2 --title="Subtask 2.1 for removal"
-  task-master add-subtask --parent=2 --title="Subtask 2.2 for removal"
+  taskgraph add-subtask --parent=2 --title="Subtask 2.1 for removal"
+  taskgraph add-subtask --parent=2 --title="Subtask 2.2 for removal"
   log_success "Added subtasks 2.1 and 2.2."
 
   log_step "Removing Subtasks 2.1 and 2.2 (multi-ID)"
-  task-master remove-subtask --id=2.1,2.2
+  taskgraph remove-subtask --id=2.1,2.2
   log_success "Removed subtasks 2.1 and 2.2."
 
   log_step "Setting status for Task 1 to done"
-  task-master set-status --id=1 --status=done
+  taskgraph set-status --id=1 --status=done
   log_success "Set status for Task 1 to done."
 
   log_step "Getting next task (after status change)"
-  task-master next > next_task_after_change_core.log
+  taskgraph next > next_task_after_change_core.log
   log_success "Next task after change saved."
 
   # === Start New Test Section: List Filtering ===
   log_step "Listing tasks filtered by status 'done'"
-  task-master list --status=done > task_list_status_done.log
+  taskgraph list --status=done > task_list_status_done.log
   log_success "Filtered list saved to task_list_status_done.log (Manual/LLM check recommended)"
   # Optional assertion: Check if Task 1 ID exists and Task 2 ID does NOT
   # if grep -q "^1\." task_list_status_done.log && ! grep -q "^2\." task_list_status_done.log; then
@@ -810,34 +810,34 @@ log_step() {
   # === End New Test Section ===
 
   log_step "Clearing subtasks from Task 8"
-  task-master clear-subtasks --id=8
+  taskgraph clear-subtasks --id=8
   log_success "Attempted to clear subtasks from Task 8."
 
   log_step "Removing Tasks $manual_task_id and $ai_task_id (multi-ID)"
   # Remove the tasks we added earlier
-  task-master remove-task --id="$manual_task_id,$ai_task_id" -y
+  taskgraph remove-task --id="$manual_task_id,$ai_task_id" -y
   log_success "Removed tasks $manual_task_id and $ai_task_id."
 
   # === Start New Test Section: Subtasks & Dependencies ===
 
   log_step "Expanding Task 2 (to ensure multiple tasks have subtasks)"
-  task-master expand --id=2 # Expand task 2: Backend setup
+  taskgraph expand --id=2 # Expand task 2: Backend setup
   log_success "Attempted to expand Task 2."
 
   log_step "Listing tasks with subtasks (Before Clear All)"
-  task-master list --with-subtasks > task_list_before_clear_all.log
+  taskgraph list --with-subtasks > task_list_before_clear_all.log
   log_success "Task list before clear-all saved."
 
   log_step "Clearing ALL subtasks"
-  task-master clear-subtasks --all
+  taskgraph clear-subtasks --all
   log_success "Attempted to clear all subtasks."
 
   log_step "Listing tasks with subtasks (After Clear All)"
-  task-master list --with-subtasks > task_list_after_clear_all.log
+  taskgraph list --with-subtasks > task_list_after_clear_all.log
   log_success "Task list after clear-all saved. (Manual/LLM check recommended to verify subtasks removed)"
 
   log_step "Expanding Task 3 again (to have subtasks for next test)"
-  task-master expand --id=3
+  taskgraph expand --id=3
   log_success "Attempted to expand Task 3."
   # Verify 3.1 exists 
   if ! jq -e '.master.tasks[] | select(.id == 3) | .subtasks[] | select(.id == 1)' .taskmaster/tasks/tasks.json > /dev/null; then
@@ -846,31 +846,31 @@ log_step() {
   fi
 
   log_step "Adding dependency: Task 4 depends on Subtask 3.1"
-  task-master add-dependency --id=4 --depends-on=3.1
+  taskgraph add-dependency --id=4 --depends-on=3.1
   log_success "Added dependency 4 -> 3.1."
 
   log_step "Showing Task 4 details (after adding subtask dependency)"
-  task-master show 4 > task_4_details_after_dep_add.log
+  taskgraph show 4 > task_4_details_after_dep_add.log
   log_success "Task 4 details saved. (Manual/LLM check recommended for dependency [3.1])"
 
   log_step "Removing dependency: Task 4 depends on Subtask 3.1"
-  task-master remove-dependency --id=4 --depends-on=3.1
+  taskgraph remove-dependency --id=4 --depends-on=3.1
   log_success "Removed dependency 4 -> 3.1."
 
   log_step "Showing Task 4 details (after removing subtask dependency)"
-  task-master show 4 > task_4_details_after_dep_remove.log
+  taskgraph show 4 > task_4_details_after_dep_remove.log
   log_success "Task 4 details saved. (Manual/LLM check recommended to verify dependency removed)"
 
   # === End New Test Section ===
 
   log_step "Generating task files (final)"
-  task-master generate
+  taskgraph generate
   log_success "Generated task files."
   # === End Core Task Commands Test ===
 
   # === AI Commands (Re-test some after changes) ===
   log_step "Analyzing complexity (AI with Research - Final Check)"
-  cmd_output_analyze_final=$(task-master analyze-complexity --research --output complexity_results_final.json 2>&1)
+  cmd_output_analyze_final=$(taskgraph analyze-complexity --research --output complexity_results_final.json 2>&1)
   exit_status_analyze_final=$?
   echo "$cmd_output_analyze_final"
   extract_and_sum_cost "$cmd_output_analyze_final"
@@ -882,13 +882,13 @@ log_step() {
   fi
 
   log_step "Generating complexity report (Non-AI - Final Check)"
-  task-master complexity-report --file complexity_results_final.json > complexity_report_formatted_final.log
+  taskgraph complexity-report --file complexity_results_final.json > complexity_report_formatted_final.log
   log_success "Final Formatted complexity report saved."
 
   # === End AI Commands Re-test ===
 
   log_step "Listing tasks again (final)"
-  task-master list --with-subtasks > task_list_final.log
+  taskgraph list --with-subtasks > task_list_final.log
   log_success "Final task list saved to task_list_final.log"
 
   # --- Test Completion (Output to tee) ---

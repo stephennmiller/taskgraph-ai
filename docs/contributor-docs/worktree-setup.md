@@ -70,7 +70,7 @@ cd ../claude-task-master-worktrees/auto-taskmaster-work/
 claude
 
 # In Claude session
-> Use task-master to get the next task and complete it
+> Use taskgraph to get the next task and complete it
 ```
 
 **Meanwhile in your main directory:**
@@ -149,9 +149,9 @@ Task Master works perfectly in worktrees:
 
 ```bash
 # In any worktree
-task-master list        # Same tasks
-task-master next        # Same task queue
-task-master show 1.2    # Same task data
+taskgraph list        # Same tasks
+taskgraph next        # Same task queue
+taskgraph show 1.2    # Same task data
 
 # Changes are shared (if committed/pushed)
 ```
@@ -162,13 +162,13 @@ Use **tags** to separate task contexts:
 
 ```bash
 # Main directory - use default tag
-task-master list
+taskgraph list
 
 # Worktree 1 - use separate tag
 cd ../claude-task-master-worktrees/auto-main/
-task-master add-tag --name=claude-auto
-task-master use-tag --name=claude-auto
-task-master list  # Shows claude-auto tasks only
+taskgraph add-tag --name=claude-auto
+taskgraph use-tag --name=claude-auto
+taskgraph list  # Shows claude-auto tasks only
 ```
 
 ## Managing Worktrees
@@ -229,7 +229,7 @@ cp ../claude-task-master/run-autonomous-tasks.sh .
 **Monitor from main directory:**
 ```bash
 # In another terminal, in main directory
-watch -n 5 "task-master list"
+watch -n 5 "taskgraph list"
 ```
 
 ### 2. Code Review Workflow

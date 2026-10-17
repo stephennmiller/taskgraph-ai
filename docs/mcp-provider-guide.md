@@ -22,7 +22,7 @@ The **MCP Provider** (`mcp`) provides:
 
 ```bash
 # Set MCP provider for main role  
-task-master models set-main --provider mcp --model claude-3-5-sonnet-20241022
+taskgraph models set-main --provider mcp --model claude-3-5-sonnet-20241022
 ```
 
 For detailed information, see [MCP Provider Documentation](mcp-provider.md).
@@ -178,13 +178,13 @@ The MCP provider works seamlessly with Task Master CLI commands when running in 
 
 ```bash
 # Generate tasks using MCP provider (if configured as main)
-task-master add-task "Implement user authentication"
+taskgraph add-task "Implement user authentication"
 
 # Research using MCP provider (if configured as research)
-task-master research "OAuth 2.0 best practices"
+taskgraph research "OAuth 2.0 best practices"
 
 # Parse PRD using MCP provider
-task-master parse-prd requirements.txt
+taskgraph parse-prd requirements.txt
 ```
 
 ## Architecture Details
@@ -452,7 +452,7 @@ When using Task Master in VS Code with MCP support:
   "servers": {
     "task-master-dev": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "cwd": "/path/to/your/task-master-project",
       "env": {
         "NODE_ENV": "development",

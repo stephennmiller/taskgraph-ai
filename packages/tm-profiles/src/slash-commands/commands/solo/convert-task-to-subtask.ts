@@ -34,7 +34,7 @@ Converts an existing standalone task into a subtask of another task.
 ## Execution
 
 \`\`\`bash
-task-master add-subtask --parent=<parent-id> --task-id=<task-to-convert>
+taskgraph add-subtask --parent=<parent-id> --task-id=<task-to-convert>
 \`\`\`
 
 ## Pre-Conversion Checks

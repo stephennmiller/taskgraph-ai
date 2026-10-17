@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for 'task-master set-status' command
+ * @fileoverview Integration tests for 'taskgraph set-status' command
  *
  * Tests the set-status command which updates task status.
  * Extracted from task-lifecycle.test.ts for better organization.

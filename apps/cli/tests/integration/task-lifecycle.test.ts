@@ -139,7 +139,7 @@ describe('Task Lifecycle Integration Tests', () => {
 		});
 	};
 
-	describe('task-master init', () => {
+	describe('taskgraph init', () => {
 		it('should initialize project structure', () => {
 			// ASSERTION PATTERN:
 			// We verify the actual directory structure was created
@@ -162,7 +162,7 @@ describe('Task Lifecycle Integration Tests', () => {
 		});
 	});
 
-	describe('task-master set-status', () => {
+	describe('taskgraph set-status', () => {
 		it('should update task status from pending to done', () => {
 			// ARRANGE: Create a pending task
 			const testData = {

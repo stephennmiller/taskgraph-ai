@@ -106,10 +106,10 @@ export function displayRecommendedNextTask(
 	// Action commands
 	content.push('');
 	content.push(
-		`${chalk.cyan('Start working:')} ${chalk.yellow(`task-master set-status --id=${task.id} --status=in-progress`)}`
+		`${chalk.cyan('Start working:')} ${chalk.yellow(`taskgraph set-status --id=${task.id} --status=in-progress`)}`
 	);
 	content.push(
-		`${chalk.cyan('View details:')} ${chalk.yellow(`task-master show ${task.id}`)}`
+		`${chalk.cyan('View details:')} ${chalk.yellow(`taskgraph show ${task.id}`)}`
 	);
 
 	// Display in a styled box with orange border

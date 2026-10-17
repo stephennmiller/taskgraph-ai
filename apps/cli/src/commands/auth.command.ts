@@ -301,9 +301,7 @@ Examples:
 			};
 		} else {
 			console.log(chalk.yellow('✗ Not authenticated'));
-			console.log(
-				chalk.gray('\n  Run "task-master auth login" to authenticate')
-			);
+			console.log(chalk.gray('\n  Run "taskgraph auth login" to authenticate'));
 
 			return {
 				success: false,

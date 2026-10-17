@@ -81,15 +81,15 @@ Example workflow:
 
 ```bash
 # Generate the complexity analysis report with research capabilities
-task-master analyze-complexity --research
+taskgraph analyze-complexity --research
 
 # Review the report in a readable format
-task-master complexity-report
+taskgraph complexity-report
 
 # Expand tasks using the optimized recommendations
-task-master expand --id=8
+taskgraph expand --id=8
 # or expand all tasks
-task-master expand --all
+taskgraph expand --all
 ```
 
 ### Finding the Next Task

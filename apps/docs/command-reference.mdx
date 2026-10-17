@@ -7,89 +7,89 @@ description: "A comprehensive reference of all available Task Master commands"
   <Accordion title="Parse PRD">
     ```bash
     # Parse a PRD file and generate tasks
-    task-master parse-prd <prd-file.txt>
+    taskgraph parse-prd <prd-file.txt>
 
     # Limit the number of tasks generated
-    task-master parse-prd <prd-file.txt> --num-tasks=10
+    taskgraph parse-prd <prd-file.txt> --num-tasks=10
     ```
   </Accordion>
 
   <Accordion title="List Tasks">
     ```bash
     # List all tasks
-    task-master list
+    taskgraph list
 
     # List tasks with a specific status
-    task-master list --status=<status>
+    taskgraph list --status=<status>
 
     # List tasks with subtasks
-    task-master list --with-subtasks
+    taskgraph list --with-subtasks
 
     # List tasks with a specific status and include subtasks
-    task-master list --status=<status> --with-subtasks
+    taskgraph list --status=<status> --with-subtasks
 
     # Watch for changes and auto-refresh
-    task-master list --watch
-    task-master list -w
+    taskgraph list --watch
+    taskgraph list -w
 
     # Compact output format
-    task-master list --compact
-    task-master list -c
+    taskgraph list --compact
+    taskgraph list -c
 
     # Watch mode with compact output
-    task-master list -w -c
+    taskgraph list -w -c
 
     # Hide the header
-    task-master list --no-header
+    taskgraph list --no-header
     ```
   </Accordion>
 
   <Accordion title="Show Next Task">
     ```bash
     # Show the next task to work on based on dependencies and status
-    task-master next
+    taskgraph next
     ```
   </Accordion>
 
   <Accordion title="Show Specific Task">
     ```bash
     # Show details of a specific task
-    task-master show <id>
+    taskgraph show <id>
     # or
-    task-master show --id=<id>
+    taskgraph show --id=<id>
 
     # View a specific subtask (e.g., subtask 2 of task 1)
-    task-master show 1.2
+    taskgraph show 1.2
     ```
   </Accordion>
 
   <Accordion title="Update Tasks">
     ```bash
     # Update tasks from a specific ID and provide context
-    task-master update --from=<id> --prompt="<prompt>"
+    taskgraph update --from=<id> --prompt="<prompt>"
     ```
   </Accordion>
 
   <Accordion title="Update a Specific Task">
     ```bash
     # Update a single task by ID with new information
-    task-master update-task --id=<id> --prompt="<prompt>"
+    taskgraph update-task --id=<id> --prompt="<prompt>"
 
     # Use research-backed updates with Perplexity AI
-    task-master update-task --id=<id> --prompt="<prompt>" --research
+    taskgraph update-task --id=<id> --prompt="<prompt>" --research
     ```
   </Accordion>
 
   <Accordion title="Update a Subtask">
     ```bash
     # Append additional information to a specific subtask
-    task-master update-subtask --id=<parentId.subtaskId> --prompt="<prompt>"
+    taskgraph update-subtask --id=<parentId.subtaskId> --prompt="<prompt>"
 
     # Example: Add details about API rate limiting to subtask 2 of task 5
-    task-master update-subtask --id=5.2 --prompt="Add rate limiting of 100 requests per minute"
+    taskgraph update-subtask --id=5.2 --prompt="Add rate limiting of 100 requests per minute"
 
     # Use research-backed updates with Perplexity AI
-    task-master update-subtask --id=<parentId.subtaskId> --prompt="<prompt>" --research
+    taskgraph update-subtask --id=<parentId.subtaskId> --prompt="<prompt>" --research
     ```
 
     Unlike the `update-task` command which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. This is useful for iteratively enhancing subtasks while preserving the original content.
@@ -98,20 +98,20 @@ description: "A comprehensive reference of all available Task Master commands"
   <Accordion title="Generate Task Files">
     ```bash
     # Generate individual task files from tasks.json
-    task-master generate
+    taskgraph generate
     ```
   </Accordion>
 
   <Accordion title="Set Task Status">
     ```bash
     # Set status of a single task
-    task-master set-status --id=<id> --status=<status>
+    taskgraph set-status --id=<id> --status=<status>
 
     # Set status for multiple tasks
-    task-master set-status --id=1,2,3 --status=<status>
+    taskgraph set-status --id=1,2,3 --status=<status>
 
     # Set status for subtasks
-    task-master set-status --id=1.1,1.2 --status=<status>
+    taskgraph set-status --id=1.1,1.2 --status=<status>
     ```
 
     When marking a task as "done", all of its subtasks will automatically be marked as "done" as well.
@@ -120,128 +120,128 @@ description: "A comprehensive reference of all available Task Master commands"
   <Accordion title="Expand Tasks">
     ```bash
     # Expand a specific task with subtasks
-    task-master expand --id=<id> --num=<number>
+    taskgraph expand --id=<id> --num=<number>
 
     # Expand with additional context
-    task-master expand --id=<id> --prompt="<context>"
+    taskgraph expand --id=<id> --prompt="<context>"
 
     # Expand all pending tasks
-    task-master expand --all
+    taskgraph expand --all
 
     # Force regeneration of subtasks for tasks that already have them
-    task-master expand --all --force
+    taskgraph expand --all --force
 
     # Research-backed subtask generation for a specific task
-    task-master expand --id=<id> --research
+    taskgraph expand --id=<id> --research
 
     # Research-backed generation for all tasks
-    task-master expand --all --research
+    taskgraph expand --all --research
     ```
   </Accordion>
 
   <Accordion title="Clear Subtasks">
     ```bash
     # Clear subtasks from a specific task
-    task-master clear-subtasks --id=<id>
+    taskgraph clear-subtasks --id=<id>
 
     # Clear subtasks from multiple tasks
-    task-master clear-subtasks --id=1,2,3
+    taskgraph clear-subtasks --id=1,2,3
 
     # Clear subtasks from all tasks
-    task-master clear-subtasks --all
+    taskgraph clear-subtasks --all
     ```
   </Accordion>
 
   <Accordion title="Analyze Task Complexity">
     ```bash
     # Analyze complexity of all tasks
-    task-master analyze-complexity
+    taskgraph analyze-complexity
 
     # Save report to a custom location
-    task-master analyze-complexity --output=my-report.json
+    taskgraph analyze-complexity --output=my-report.json
 
     # Use a specific LLM model
-    task-master analyze-complexity --model=claude-3-opus-20240229
+    taskgraph analyze-complexity --model=claude-3-opus-20240229
 
     # Set a custom complexity threshold (1-10)
-    task-master analyze-complexity --threshold=6
+    taskgraph analyze-complexity --threshold=6
 
     # Use an alternative tasks file
-    task-master analyze-complexity --file=custom-tasks.json
+    taskgraph analyze-complexity --file=custom-tasks.json
 
     # Use Perplexity AI for research-backed complexity analysis
-    task-master analyze-complexity --research
+    taskgraph analyze-complexity --research
     ```
   </Accordion>
 
   <Accordion title="View Complexity Report">
     ```bash
     # Display the task complexity analysis report
-    task-master complexity-report
+    taskgraph complexity-report
 
     # View a report at a custom location
-    task-master complexity-report --file=my-report.json
+    taskgraph complexity-report --file=my-report.json
     ```
   </Accordion>
 
   <Accordion title="Managing Task Dependencies">
     ```bash
     # Add a dependency to a task
-    task-master add-dependency --id=<id> --depends-on=<id>
+    taskgraph add-dependency --id=<id> --depends-on=<id>
 
     # Remove a dependency from a task
-    task-master remove-dependency --id=<id> --depends-on=<id>
+    taskgraph remove-dependency --id=<id> --depends-on=<id>
 
     # Validate dependencies without fixing them
-    task-master validate-dependencies
+    taskgraph validate-dependencies
 
     # Find and fix invalid dependencies automatically
-    task-master fix-dependencies
+    taskgraph fix-dependencies
     ```
   </Accordion>
 
   <Accordion title="Add a New Task">
     ```bash
     # Add a new task using AI
-    task-master add-task --prompt="Description of the new task"
+    taskgraph add-task --prompt="Description of the new task"
 
     # Add a task with dependencies
-    task-master add-task --prompt="Description" --dependencies=1,2,3
+    taskgraph add-task --prompt="Description" --dependencies=1,2,3
 
     # Add a task with priority
-    task-master add-task --prompt="Description" --priority=high
+    taskgraph add-task --prompt="Description" --priority=high
     ```
   </Accordion>
 
   <Accordion title="Initialize a Project">
     ```bash
     # Initialize a new project with Task Master structure
-    task-master init
+    taskgraph init
     ```
   </Accordion>
 
   <Accordion title="TDD Workflow (Autopilot)">
     ```bash
     # Start autonomous TDD workflow for a task
-    task-master autopilot start <taskId>
+    taskgraph autopilot start <taskId>
 
     # Get next action with context
-    task-master autopilot next
+    taskgraph autopilot next
 
     # Complete phase with test results
-    task-master autopilot complete --results '{"total":N,"passed":N,"failed":N}'
+    taskgraph autopilot complete --results '{"total":N,"passed":N,"failed":N}'
 
     # Commit changes
-    task-master autopilot commit
+    taskgraph autopilot commit
 
     # Check workflow status
-    task-master autopilot status
+    taskgraph autopilot status
 
     # Resume interrupted workflow
-    task-master autopilot resume
+    taskgraph autopilot resume
 
     # Abort workflow
-    task-master autopilot abort
+    taskgraph autopilot abort
     ```
 
     The TDD workflow enforces RED → GREEN → COMMIT cycles for each subtask. See [AI Agent Integration](/tdd-workflow/ai-agent-integration) for details.
@@ -250,25 +250,25 @@ description: "A comprehensive reference of all available Task Master commands"
   <Accordion title="Loop (Autonomous Batch Execution)">
     ```bash
     # Run 10 iterations with the default preset
-    task-master loop -n 10
+    taskgraph loop -n 10
 
     # Use a specific preset
-    task-master loop -n 10 --prompt test-coverage
-    task-master loop -n 10 --prompt linting
-    task-master loop -n 10 --prompt duplication
-    task-master loop -n 10 --prompt entropy
+    taskgraph loop -n 10 --prompt test-coverage
+    taskgraph loop -n 10 --prompt linting
+    taskgraph loop -n 10 --prompt duplication
+    taskgraph loop -n 10 --prompt entropy
 
     # Use a custom prompt file
-    task-master loop -n 10 --prompt ./my-workflow.md
+    taskgraph loop -n 10 --prompt ./my-workflow.md
 
     # Filter to tasks with a specific tag
-    task-master loop -n 10 --tag backend
+    taskgraph loop -n 10 --tag backend
 
     # Custom progress file location
-    task-master loop -n 10 --progress-file ./my-progress.txt
+    taskgraph loop -n 10 --progress-file ./my-progress.txt
 
     # Output as JSON
-    task-master loop -n 10 --json
+    taskgraph loop -n 10 --json
     ```
 
     **Built-in presets:**

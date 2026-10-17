@@ -121,8 +121,8 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 				boxen(
 					chalk.white.bold('Next Steps:') +
 						'\n\n' +
-						`${chalk.cyan('1.')} Run ${chalk.yellow('task-master expand --id=<id>')} to generate new subtasks\n` +
-						`${chalk.cyan('2.')} Run ${chalk.yellow('task-master list --with-subtasks')} to verify changes`,
+						`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to generate new subtasks\n` +
+						`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph list --with-subtasks')} to verify changes`,
 					{
 						padding: 1,
 						borderColor: 'cyan',

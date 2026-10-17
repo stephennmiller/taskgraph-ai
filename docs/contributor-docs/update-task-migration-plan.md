@@ -24,13 +24,13 @@ Migrate and unify `update-tasks.js` and `update-subtask-by-id.js` into a single 
 
 ```bash
 # Update single task (replaces update-task)
-task-master update-task --id=3 --prompt="changes"
+taskgraph update-task --id=3 --prompt="changes"
 
 # Update single subtask (replaces update-subtask)
-task-master update-task --id=3.2 --prompt="implementation notes"
+taskgraph update-task --id=3.2 --prompt="implementation notes"
 
 # Update multiple tasks from ID onwards (replaces update --from)
-task-master update-task --from=3 --prompt="changes"
+taskgraph update-task --from=3 --prompt="changes"
 ```
 
 ### Intelligent Behavior Detection
@@ -1372,8 +1372,8 @@ export interface MergeResult {
 
 ```bash
 # Could maintain old command names as aliases
-task-master update --from=3 --prompt="..."    # Still works, calls update-task
-task-master update-subtask --id=3.2 --prompt="..."  # Still works, calls update-task
+taskgraph update --from=3 --prompt="..."    # Still works, calls update-task
+taskgraph update-subtask --id=3.2 --prompt="..."  # Still works, calls update-task
 ```
 
 ---

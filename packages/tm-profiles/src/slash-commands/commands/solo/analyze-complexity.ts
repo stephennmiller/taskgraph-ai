@@ -27,7 +27,7 @@ Uses AI to analyze tasks and recommend which ones need breakdown.
 ## Execution Options
 
 \`\`\`bash
-task-master analyze-complexity [--research] [--threshold=5]
+taskgraph analyze-complexity [--research] [--threshold=5]
 \`\`\`
 
 ## Analysis Parameters

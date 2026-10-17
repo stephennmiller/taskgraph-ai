@@ -44,7 +44,7 @@ Let me parse your request intelligently:
    - "subtasks tree" → hierarchical view with subtasks
 
 3. **Execute Appropriate Query**
-   Based on parsed intent, run the most specific task-master command
+   Based on parsed intent, run the most specific taskgraph command
 
 4. **Enhanced Display**
    - Group by relevant criteria

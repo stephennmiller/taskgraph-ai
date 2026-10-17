@@ -16,7 +16,7 @@ This command validates task completion and updates project state intelligently.
 ## Execution
 
 ```bash
-task-master set-status --id=$ARGUMENTS --status=done
+taskgraph set-status --id=$ARGUMENTS --status=done
 ```
 
 ## Post-Completion Actions

@@ -33,7 +33,7 @@ This status indicates a task is valid but not currently actionable or prioritize
 ## Execution
 
 \`\`\`bash
-task-master set-status --id=$ARGUMENTS --status=deferred
+taskgraph set-status --id=$ARGUMENTS --status=deferred
 \`\`\`
 
 ## Deferral Management

@@ -22,7 +22,7 @@ Guides you through setting up AI providers for Task Master.
 ## Execution
 
 \`\`\`bash
-task-master models --setup
+taskgraph models --setup
 \`\`\`
 
 ## Setup Process

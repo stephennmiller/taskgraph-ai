@@ -80,7 +80,7 @@ export class TaskLoaderService {
 				errorType: 'task_not_found',
 				errorMessage: `Task with ID "${taskId}" not found`,
 				suggestion:
-					'Use "task-master list" to see available tasks or verify the task ID is correct.'
+					'Use "taskgraph list" to see available tasks or verify the task ID is correct.'
 			};
 		}
 
@@ -171,19 +171,19 @@ export class TaskLoaderService {
 
 		// Add expansion command suggestion
 		suggestions.push(`\nExpand this task using:`);
-		suggestions.push(`  task-master expand --id=${task.id}`);
+		suggestions.push(`  taskgraph expand --id=${task.id}`);
 
 		// If task has complexity analysis, mention it
 		if (task.complexity || task.recommendedSubtasks) {
 			suggestions.push(
 				`\nThis task has complexity analysis available. Consider reviewing it first:`
 			);
-			suggestions.push(`  task-master show ${task.id}`);
+			suggestions.push(`  taskgraph show ${task.id}`);
 		} else {
 			suggestions.push(
 				`\nOr analyze task complexity first to determine optimal subtask count:`
 			);
-			suggestions.push(`  task-master analyze-complexity --from=${task.id}`);
+			suggestions.push(`  taskgraph analyze-complexity --from=${task.id}`);
 		}
 
 		return suggestions.join('\n');

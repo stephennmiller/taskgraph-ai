@@ -70,8 +70,8 @@ export async function moveTaskCrossTagDirect(args, log, context = {}) {
 				code: 'SAME_SOURCE_TARGET_TAG',
 				suggestions: [
 					'Use different tags for cross-tag moves',
-					'Use within-tag move: task-master move --from=<id> --to=<id> --tag=<tag>',
-					'Check available tags: task-master tags'
+					'Use within-tag move: taskgraph move --from=<id> --to=<id> --tag=<tag>',
+					'Check available tags: taskgraph tags'
 				]
 			}
 		};
@@ -145,13 +145,13 @@ export async function moveTaskCrossTagDirect(args, log, context = {}) {
 			suggestions = [
 				'Use --with-dependencies to move dependent tasks together',
 				'Use --ignore-dependencies to break cross-tag dependencies',
-				'Run task-master validate-dependencies to check for issues',
+				'Run taskgraph validate-dependencies to check for issues',
 				'Move dependencies first, then move the main task'
 			];
 		} else if (error.code === 'CANNOT_MOVE_SUBTASK') {
 			errorCode = 'SUBTASK_MOVE_RESTRICTION';
 			suggestions = [
-				'Promote subtask to full task first: task-master remove-subtask --id=<subtaskId> --convert',
+				'Promote subtask to full task first: taskgraph remove-subtask --id=<subtaskId> --convert',
 				'Move the parent task with all subtasks using --with-dependencies'
 			];
 		} else if (
@@ -161,9 +161,9 @@ export async function moveTaskCrossTagDirect(args, log, context = {}) {
 		) {
 			errorCode = 'TAG_OR_TASK_NOT_FOUND';
 			suggestions = [
-				'Check available tags: task-master tags',
-				'Verify task IDs exist: task-master list',
-				'Check task details: task-master show <id>'
+				'Check available tags: taskgraph tags',
+				'Verify task IDs exist: taskgraph list',
+				'Check task details: taskgraph show <id>'
 			];
 		} else if (error.message.includes('cross-tag dependency conflicts')) {
 			// Fallback for legacy error messages
@@ -171,23 +171,23 @@ export async function moveTaskCrossTagDirect(args, log, context = {}) {
 			suggestions = [
 				'Use --with-dependencies to move dependent tasks together',
 				'Use --ignore-dependencies to break cross-tag dependencies',
-				'Run task-master validate-dependencies to check for issues',
+				'Run taskgraph validate-dependencies to check for issues',
 				'Move dependencies first, then move the main task'
 			];
 		} else if (error.message.includes('Cannot move subtask')) {
 			// Fallback for legacy error messages
 			errorCode = 'SUBTASK_MOVE_RESTRICTION';
 			suggestions = [
-				'Promote subtask to full task first: task-master remove-subtask --id=<subtaskId> --convert',
+				'Promote subtask to full task first: taskgraph remove-subtask --id=<subtaskId> --convert',
 				'Move the parent task with all subtasks using --with-dependencies'
 			];
 		} else if (error.message.includes('not found')) {
 			// Fallback for legacy error messages
 			errorCode = 'TAG_OR_TASK_NOT_FOUND';
 			suggestions = [
-				'Check available tags: task-master tags',
-				'Verify task IDs exist: task-master list',
-				'Check task details: task-master show <id>'
+				'Check available tags: taskgraph tags',
+				'Verify task IDs exist: taskgraph list',
+				'Check task details: taskgraph show <id>'
 			];
 		} else if (
 			error.code === 'TASK_ALREADY_EXISTS' ||

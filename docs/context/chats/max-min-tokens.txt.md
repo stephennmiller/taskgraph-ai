@@ -35,7 +35,7 @@ Here's a plan:
 **Phase 2: Error Handling and Refinements**
 
 1.  **Enhanced Error Handling:** Provide clear error messages if prompt tokens exceed input limits, or if API calls fail due to token issues despite our calculations.
-2.  **Validation:** Add validation (perhaps in `config-manager.js` or when `task-master models --setup` is run) to ensure `configured_max_input_tokens` and `configured_max_output_tokens` in `.taskmasterconfig` do not exceed the `model_absolute_max_input_tokens` and `model_absolute_max_output_tokens` from `MODEL_MAP`.
+2.  **Validation:** Add validation (perhaps in `config-manager.js` or when `taskgraph models --setup` is run) to ensure `configured_max_input_tokens` and `configured_max_output_tokens` in `.taskmasterconfig` do not exceed the `model_absolute_max_input_tokens` and `model_absolute_max_output_tokens` from `MODEL_MAP`.
 
 Let's start by inspecting `scripts/modules/config-manager.js` to see how parameters and `MODEL_MAP` are currently handled. This will inform the changes needed for `.taskmasterconfig` and `ai-services-unified.js`.
 

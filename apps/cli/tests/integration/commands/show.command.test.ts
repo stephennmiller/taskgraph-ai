@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for 'task-master show' command
+ * @fileoverview Integration tests for 'taskgraph show' command
  *
  * Tests the show command which displays detailed information about a specific task.
  *

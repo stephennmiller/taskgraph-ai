@@ -194,9 +194,9 @@ For Claude Code integration, configure keys in `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "ANTHROPIC_API_KEY": "your-key-here",
         "PERPLEXITY_API_KEY": "your-key-here",
@@ -227,12 +227,12 @@ After setting up API keys, configure which models to use:
 
 ```bash
 # Interactive model setup
-task-master models --setup
+taskgraph models --setup
 
 # Set specific models
-task-master models --set-main claude-sonnet-5-5
-task-master models --set-research perplexity-llama-3.1-sonar-large-128k-online
-task-master models --set-fallback gpt-4o-mini
+taskgraph models --set-main claude-sonnet-5-5
+taskgraph models --set-research perplexity-llama-3.1-sonar-large-128k-online
+taskgraph models --set-fallback gpt-4o-mini
 ```
 
 ## Security Best Practices
@@ -248,10 +248,10 @@ task-master models --set-fallback gpt-4o-mini
 ### Key Validation
 ```bash
 # Check if keys are properly configured
-task-master models
+taskgraph models
 
 # Test specific provider
-task-master add-task --prompt="test task" --model=claude-sonnet-5-5
+taskgraph add-task --prompt="test task" --model=claude-sonnet-5-5
 ```
 
 ### Common Issues

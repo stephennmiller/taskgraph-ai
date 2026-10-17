@@ -37,7 +37,7 @@ Set `azureBaseURL` in your `.taskmaster/config.json` under the `global` section:
 Or use the CLI:
 
 ```bash
-task-master models --set-azure-base-url "https://your-resource.openai.azure.com/openai"
+taskgraph models --set-azure-base-url "https://your-resource.openai.azure.com/openai"
 ```
 
 <Tip>
@@ -47,7 +47,7 @@ Task Master automatically appends `/openai` to your base URL if needed.
 ### 3. Set Azure as Your Provider
 
 ```bash
-task-master models --set-main azure:gpt-4o
+taskgraph models --set-main azure:gpt-4o
 ```
 
 ## Supported Models
@@ -114,9 +114,9 @@ For Claude Code integration, include your Azure configuration in `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "AZURE_OPENAI_API_KEY": "your-azure-key-here"
       }

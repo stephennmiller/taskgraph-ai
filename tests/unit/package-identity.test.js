@@ -123,4 +123,45 @@ describe('package identity', () => {
 			expect(read(file)).not.toMatch(/['"`]task-master['"`]/);
 		}
 	);
+
+	describe('user-facing messages', () => {
+		// Bare `task-master` as a command, not part of a file name, path, hyphenated name or URL
+		const BARE_COMMAND = /(?<![\w./@:<-])task-master(?![\w\-/:]|\.\w)/;
+		// Quoted identifiers (`'task-master'`) are code, not messages
+		const QUOTED = /(['"`])task-master\1/;
+		const SOURCE_DIRS = [
+			'scripts',
+			'src',
+			'mcp-server/src',
+			'apps/cli/src',
+			'apps/mcp/src',
+			'packages/tm-core/src',
+			'packages/tm-profiles/src'
+		];
+
+		const listSourceFiles = (dir) =>
+			fs
+				.readdirSync(path.join(rootDir, dir), { withFileTypes: true })
+				.flatMap((entry) => {
+					const rel = path.join(dir, entry.name);
+					if (entry.isDirectory()) {
+						return entry.name === 'node_modules' ? [] : listSourceFiles(rel);
+					}
+					return /\.(js|mjs|ts|tsx|sh)$/.test(entry.name) ? [rel] : [];
+				});
+
+		test('source tells users to run taskgraph, not task-master', () => {
+			const offenders = SOURCE_DIRS.flatMap(listSourceFiles).flatMap((file) =>
+				read(file)
+					.split('\n')
+					.map((line, i) => ({ file, line: i + 1, text: line }))
+					// scripts/init.js still cleans up aliases written by earlier installs
+					.filter(({ text }) => !/hamster|ham=/.test(text))
+					.filter(({ text }) => BARE_COMMAND.test(text) && !QUOTED.test(text))
+					.map(({ file, line }) => `${file}:${line}`)
+			);
+
+			expect(offenders).toEqual([]);
+		});
+	});
 });

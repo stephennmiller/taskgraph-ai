@@ -891,7 +891,7 @@ function registerCommands(programInstance) {
 		const commandName = this._name || 'unknown';
 		displayFormattedError(new Error(`Unknown option '${unknownOption}'`), {
 			context: `Running command: ${commandName}`,
-			command: `task-master ${commandName}`,
+			command: `taskgraph ${commandName}`,
 			debug: getDebugFlag()
 		});
 		process.exit(1);
@@ -984,13 +984,13 @@ function registerCommands(programInstance) {
 			} catch (error) {
 				displayFormattedError(error, {
 					context: 'Initializing Task Master for PRD parsing',
-					command: 'task-master parse-prd',
+					command: 'taskgraph parse-prd',
 					debug: getDebugFlag()
 				});
 
 				// Show usage help after error
 				displayInfo(
-					`${chalk.cyan('Usage:')}\n  task-master parse-prd <prd-file.txt> [options]\n\n${chalk.cyan('Options:')}\n  -i, --input <file>       Path to the PRD file\n  -o, --output <file>      Output file path\n  -n, --num-tasks <number> Number of tasks to generate\n  -f, --force              Skip confirmation\n  --append                 Append to existing tasks\n  -r, --research           Use Perplexity AI\n\n${chalk.cyan('Examples:')}\n  task-master parse-prd requirements.txt --num-tasks 15\n  task-master parse-prd --input=requirements.txt\n  task-master parse-prd requirements.txt --research`,
+					`${chalk.cyan('Usage:')}\n  taskgraph parse-prd <prd-file.txt> [options]\n\n${chalk.cyan('Options:')}\n  -i, --input <file>       Path to the PRD file\n  -o, --output <file>      Output file path\n  -n, --num-tasks <number> Number of tasks to generate\n  -f, --force              Skip confirmation\n  --append                 Append to existing tasks\n  -r, --research           Use Perplexity AI\n\n${chalk.cyan('Examples:')}\n  taskgraph parse-prd requirements.txt --num-tasks 15\n  taskgraph parse-prd --input=requirements.txt\n  taskgraph parse-prd requirements.txt --research`,
 					'Parse PRD Help'
 				);
 				process.exit(1);
@@ -1143,7 +1143,7 @@ function registerCommands(programInstance) {
 				);
 				console.log(chalk.yellow('\nTo update multiple tasks:'));
 				console.log(
-					`  task-master update --from=${fromId} --prompt="Your prompt here"`
+					`  taskgraph update --from=${fromId} --prompt="Your prompt here"`
 				);
 				console.log(
 					chalk.yellow(
@@ -1151,7 +1151,7 @@ function registerCommands(programInstance) {
 					)
 				);
 				console.log(
-					`  task-master update-task --id=<id> --prompt="Your prompt here"`
+					`  taskgraph update-task --id=<id> --prompt="Your prompt here"`
 				);
 				process.exit(1);
 			}
@@ -1301,7 +1301,7 @@ function registerCommands(programInstance) {
 					if (tasksPath === TASKMASTER_TASKS_FILE) {
 						console.log(
 							chalk.yellow(
-								'Hint: Run task-master init or task-master parse-prd to create tasks.json first'
+								'Hint: Run taskgraph init or taskgraph parse-prd to create tasks.json first'
 							)
 						);
 					} else {
@@ -1373,9 +1373,7 @@ function registerCommands(programInstance) {
 					error.message.includes('not found')
 				) {
 					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log(
-						'  1. Run task-master list to see all available task IDs'
-					);
+					console.log('  1. Run taskgraph list to see all available task IDs');
 					console.log('  2. Use a valid task ID with the --id parameter');
 				} else if (error.message.includes('API key')) {
 					console.log(
@@ -1432,7 +1430,7 @@ function registerCommands(programInstance) {
 					console.error(chalk.red('Error: --id parameter is required'));
 					console.log(
 						chalk.yellow(
-							'Usage example: task-master update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
+							'Usage example: taskgraph update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
 						)
 					);
 					process.exit(1);
@@ -1451,7 +1449,7 @@ function registerCommands(programInstance) {
 					);
 					console.log(
 						chalk.yellow(
-							'Usage example: task-master update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
+							'Usage example: taskgraph update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
 						)
 					);
 					process.exit(1);
@@ -1468,7 +1466,7 @@ function registerCommands(programInstance) {
 					if (tasksPath === TASKMASTER_TASKS_FILE) {
 						console.log(
 							chalk.yellow(
-								'Hint: Run task-master init or task-master parse-prd to create tasks.json first'
+								'Hint: Run taskgraph init or taskgraph parse-prd to create tasks.json first'
 							)
 						);
 					} else {
@@ -1535,7 +1533,7 @@ function registerCommands(programInstance) {
 				) {
 					console.log(chalk.yellow('\nTo fix this issue:'));
 					console.log(
-						'  1. Run task-master list --with-subtasks to see all available subtask IDs'
+						'  1. Run taskgraph list --with-subtasks to see all available subtask IDs'
 					);
 					console.log(
 						'  2. Use a valid subtask ID with the --id parameter in format "parentId.subtaskId"'
@@ -1599,7 +1597,7 @@ function registerCommands(programInstance) {
 					console.error(chalk.red('Error: --id parameter is required'));
 					console.log(
 						chalk.yellow(
-							'Usage example: task-master scope-up --id=1,2,3 --strength=regular'
+							'Usage example: taskgraph scope-up --id=1,2,3 --strength=regular'
 						)
 					);
 					process.exit(1);
@@ -1670,9 +1668,7 @@ function registerCommands(programInstance) {
 
 				if (error.message.includes('not found')) {
 					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log(
-						'  1. Run task-master list to see all available task IDs'
-					);
+					console.log('  1. Run taskgraph list to see all available task IDs');
 					console.log('  2. Use valid task IDs with the --id parameter');
 				}
 
@@ -1726,7 +1722,7 @@ function registerCommands(programInstance) {
 					console.error(chalk.red('Error: --id parameter is required'));
 					console.log(
 						chalk.yellow(
-							'Usage example: task-master scope-down --id=1,2,3 --strength=regular'
+							'Usage example: taskgraph scope-down --id=1,2,3 --strength=regular'
 						)
 					);
 					process.exit(1);
@@ -1797,9 +1793,7 @@ function registerCommands(programInstance) {
 
 				if (error.message.includes('not found')) {
 					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log(
-						'  1. Run task-master list to see all available task IDs'
-					);
+					console.log('  1. Run taskgraph list to see all available task IDs');
 					console.log('  2. Use valid task IDs with the --id parameter');
 				}
 
@@ -2504,7 +2498,7 @@ ${result.result}
 
 			if (!fs.existsSync(tasksPath)) {
 				console.error(
-					`❌ No tasks.json file found. Please run "task-master init" or create a tasks.json file at ${TASKMASTER_TASKS_FILE}`
+					`❌ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file at ${TASKMASTER_TASKS_FILE}`
 				);
 				process.exit(1);
 			}
@@ -2917,7 +2911,7 @@ ${result.result}
 								chalk.white.bold('Next Steps:') +
 								'\n' +
 								chalk.cyan(
-									`1. Run ${chalk.yellow(`task-master show ${parentId}`)} to see the parent task with all subtasks`
+									`1. Run ${chalk.yellow(`taskgraph show ${parentId}`)} to see the parent task with all subtasks`
 								) +
 								'\n' +
 								chalk.cyan(
@@ -2941,14 +2935,12 @@ ${result.result}
 								'\n\n' +
 								chalk.white('Convert existing task to subtask:') +
 								'\n' +
-								chalk.yellow(
-									`  task-master add-subtask --parent=5 --task-id=8`
-								) +
+								chalk.yellow(`  taskgraph add-subtask --parent=5 --task-id=8`) +
 								'\n\n' +
 								chalk.white('Create new subtask:') +
 								'\n' +
 								chalk.yellow(
-									`  task-master add-subtask --parent=5 --title="Implement login UI" --description="Create the login form"`
+									`  taskgraph add-subtask --parent=5 --title="Implement login UI" --description="Create the login form"`
 								) +
 								'\n\n',
 							{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
@@ -2972,7 +2964,7 @@ ${result.result}
 	function showAddSubtaskHelp() {
 		console.log(
 			boxen(
-				`${chalk.white.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  task-master add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKMASTER_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  task-master add-subtask --parent=5 --task-id=8\n  task-master add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
+				`${chalk.white.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKMASTER_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -3069,7 +3061,7 @@ ${result.result}
 									chalk.white.bold('Next Steps:') +
 									'\n' +
 									chalk.cyan(
-										`1. Run ${chalk.yellow(`task-master show ${result.id}`)} to see details of the new task`
+										`1. Run ${chalk.yellow(`taskgraph show ${result.id}`)} to see details of the new task`
 									) +
 									'\n' +
 									chalk.cyan(
@@ -3120,7 +3112,7 @@ ${result.result}
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
-					`  task-master remove-subtask --id=<parentId.subtaskId> [options]\n\n` +
+					`  taskgraph remove-subtask --id=<parentId.subtaskId> [options]\n\n` +
 					chalk.cyan('Options:') +
 					'\n' +
 					'  -i, --id <id>       Subtask ID(s) to remove in format "parentId.subtaskId" (can be comma-separated, required)\n' +
@@ -3131,9 +3123,9 @@ ${result.result}
 					'  --skip-generate     Skip regenerating task files\n\n' +
 					chalk.cyan('Examples:') +
 					'\n' +
-					'  task-master remove-subtask --id=5.2\n' +
-					'  task-master remove-subtask --id=5.2,6.3,7.1\n' +
-					'  task-master remove-subtask --id=5.2 --convert',
+					'  taskgraph remove-subtask --id=5.2\n' +
+					'  taskgraph remove-subtask --id=5.2,6.3,7.1\n' +
+					'  taskgraph remove-subtask --id=5.2 --convert',
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -3147,7 +3139,7 @@ ${result.result}
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
-					`  task-master tags [options]\n\n` +
+					`  taskgraph tags [options]\n\n` +
 					chalk.cyan('Options:') +
 					'\n' +
 					'  -f, --file <file>   Path to the tasks file (default: "' +
@@ -3156,13 +3148,13 @@ ${result.result}
 					'  --show-metadata     Show detailed metadata for each tag\n\n' +
 					chalk.cyan('Examples:') +
 					'\n' +
-					'  task-master tags\n' +
-					'  task-master tags --show-metadata\n\n' +
+					'  taskgraph tags\n' +
+					'  taskgraph tags --show-metadata\n\n' +
 					chalk.cyan('Related Commands:') +
 					'\n' +
-					'  task-master add-tag <name>      Create a new tag\n' +
-					'  task-master use-tag <name>      Switch to a tag\n' +
-					'  task-master delete-tag <name>   Delete a tag',
+					'  taskgraph add-tag <name>      Create a new tag\n' +
+					'  taskgraph use-tag <name>      Switch to a tag\n' +
+					'  taskgraph delete-tag <name>   Delete a tag',
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -3176,7 +3168,7 @@ ${result.result}
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
-					`  task-master add-tag <tagName> [options]\n\n` +
+					`  taskgraph add-tag <tagName> [options]\n\n` +
 					chalk.cyan('Options:') +
 					'\n' +
 					'  -f, --file <file>        Path to the tasks file (default: "' +
@@ -3187,10 +3179,10 @@ ${result.result}
 					'  -d, --description <text> Optional description for the tag\n\n' +
 					chalk.cyan('Examples:') +
 					'\n' +
-					'  task-master add-tag feature-xyz\n' +
-					'  task-master add-tag feature-xyz --copy-from-current\n' +
-					'  task-master add-tag feature-xyz --copy-from master\n' +
-					'  task-master add-tag feature-xyz -d "Feature XYZ development"',
+					'  taskgraph add-tag feature-xyz\n' +
+					'  taskgraph add-tag feature-xyz --copy-from-current\n' +
+					'  taskgraph add-tag feature-xyz --copy-from master\n' +
+					'  taskgraph add-tag feature-xyz -d "Feature XYZ development"',
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -3204,7 +3196,7 @@ ${result.result}
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
-					`  task-master delete-tag <tagName> [options]\n\n` +
+					`  taskgraph delete-tag <tagName> [options]\n\n` +
 					chalk.cyan('Options:') +
 					'\n' +
 					'  -f, --file <file>   Path to the tasks file (default: "' +
@@ -3213,8 +3205,8 @@ ${result.result}
 					'  -y, --yes           Skip confirmation prompts\n\n' +
 					chalk.cyan('Examples:') +
 					'\n' +
-					'  task-master delete-tag feature-xyz\n' +
-					'  task-master delete-tag feature-xyz --yes\n\n' +
+					'  taskgraph delete-tag feature-xyz\n' +
+					'  taskgraph delete-tag feature-xyz --yes\n\n' +
 					chalk.yellow('Warning:') +
 					'\n' +
 					'  This will permanently delete the tag and all its tasks!',
@@ -3231,7 +3223,7 @@ ${result.result}
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
-					`  task-master use-tag <tagName> [options]\n\n` +
+					`  taskgraph use-tag <tagName> [options]\n\n` +
 					chalk.cyan('Options:') +
 					'\n' +
 					'  -f, --file <file>   Path to the tasks file (default: "' +
@@ -3239,12 +3231,12 @@ ${result.result}
 					'")\n\n' +
 					chalk.cyan('Examples:') +
 					'\n' +
-					'  task-master use-tag feature-xyz\n' +
-					'  task-master use-tag master\n\n' +
+					'  taskgraph use-tag feature-xyz\n' +
+					'  taskgraph use-tag master\n\n' +
 					chalk.cyan('Related Commands:') +
 					'\n' +
-					'  task-master tags                 List all available tags\n' +
-					'  task-master add-tag <name>       Create a new tag',
+					'  taskgraph tags                 List all available tags\n' +
+					'  taskgraph add-tag <name>       Create a new tag',
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -3258,7 +3250,7 @@ ${result.result}
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
-					`  task-master research "<query>" [options]\n\n` +
+					`  taskgraph research "<query>" [options]\n\n` +
 					chalk.cyan('Required:') +
 					'\n' +
 					'  <query>             Research question or prompt (required)\n\n' +
@@ -3275,10 +3267,10 @@ ${result.result}
 					'  --tag <tag>         Specify tag context for task operations\n\n' +
 					chalk.cyan('Examples:') +
 					'\n' +
-					'  task-master research "How should I implement user authentication?"\n' +
-					'  task-master research "What\'s the best approach?" --id=15,23.2\n' +
-					'  task-master research "How does auth work?" --files=src/auth.js --tree\n' +
-					'  task-master research "Implementation steps?" --save-to=15.2 --detail=high',
+					'  taskgraph research "How should I implement user authentication?"\n' +
+					'  taskgraph research "What\'s the best approach?" --id=15,23.2\n' +
+					'  taskgraph research "How does auth work?" --files=src/auth.js --tree\n' +
+					'  taskgraph research "Implementation steps?" --save-to=15.2 --detail=high',
 				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
 			)
 		);
@@ -3317,9 +3309,7 @@ ${result.result}
 			if (!taskIdsString) {
 				console.error(chalk.red('Error: Task ID(s) are required'));
 				console.error(
-					chalk.yellow(
-						'Usage: task-master remove-task --id=<taskId1,taskId2...>'
-					)
+					chalk.yellow('Usage: taskgraph remove-task --id=<taskId1,taskId2...>')
 				);
 				process.exit(1);
 			}
@@ -3659,22 +3649,22 @@ ${result.result}
 			'after',
 			`
 Examples:
-  $ task-master models                              # View current configuration
-  $ task-master models --set-main gpt-4o             # Set main model (provider inferred)
-  $ task-master models --set-research sonar-pro       # Set research model
-  $ task-master models --set-fallback claude-sonnet-5-5 # Set fallback
-  $ task-master models --set-main my-custom-model --ollama  # Set custom Ollama model for main role
-  $ task-master models --set-main anthropic.claude-3-sonnet-20240229-v1:0 --bedrock # Set custom Bedrock model for main role
-  $ task-master models --set-main some/other-model --openrouter # Set custom OpenRouter model for main role
-  $ task-master models --set-main sonnet --claude-code           # Set Claude Code model for main role
-  $ task-master models --set-main gpt-4o --azure # Set custom Azure OpenAI model for main role
-  $ task-master models --set-main claude-sonnet-5-5 --vertex # Set custom Vertex AI model for main role
-  $ task-master models --set-main gemini-2.5-pro --gemini-cli # Set Gemini CLI model for main role
-  $ task-master models --set-main gpt-5-codex --codex-cli     # Set Codex CLI model for main role
-  $ task-master models --set-main qwen3-vl-4b --lmstudio      # Set LM Studio model for main role (defaults to http://localhost:1234/v1)
-  $ task-master models --set-main qwen3-vl-4b --lmstudio --baseURL http://localhost:8000/v1 # Set LM Studio model with custom base URL
-  $ task-master models --set-main my-model --openai-compatible --baseURL http://localhost:8000/v1 # Set custom OpenAI-compatible model with custom endpoint
-  $ task-master models --setup                            # Run interactive setup`
+  $ taskgraph models                              # View current configuration
+  $ taskgraph models --set-main gpt-4o             # Set main model (provider inferred)
+  $ taskgraph models --set-research sonar-pro       # Set research model
+  $ taskgraph models --set-fallback claude-sonnet-5-5 # Set fallback
+  $ taskgraph models --set-main my-custom-model --ollama  # Set custom Ollama model for main role
+  $ taskgraph models --set-main anthropic.claude-3-sonnet-20240229-v1:0 --bedrock # Set custom Bedrock model for main role
+  $ taskgraph models --set-main some/other-model --openrouter # Set custom OpenRouter model for main role
+  $ taskgraph models --set-main sonnet --claude-code           # Set Claude Code model for main role
+  $ taskgraph models --set-main gpt-4o --azure # Set custom Azure OpenAI model for main role
+  $ taskgraph models --set-main claude-sonnet-5-5 --vertex # Set custom Vertex AI model for main role
+  $ taskgraph models --set-main gemini-2.5-pro --gemini-cli # Set Gemini CLI model for main role
+  $ taskgraph models --set-main gpt-5-codex --codex-cli     # Set Codex CLI model for main role
+  $ taskgraph models --set-main qwen3-vl-4b --lmstudio      # Set LM Studio model for main role (defaults to http://localhost:1234/v1)
+  $ taskgraph models --set-main qwen3-vl-4b --lmstudio --baseURL http://localhost:8000/v1 # Set LM Studio model with custom base URL
+  $ taskgraph models --set-main my-model --openai-compatible --baseURL http://localhost:8000/v1 # Set custom OpenAI-compatible model with custom endpoint
+  $ taskgraph models --setup                            # Run interactive setup`
 		)
 		.action(async (options) => {
 			// Initialize TaskMaster
@@ -3907,7 +3897,7 @@ Examples:
 			if (!configExists) {
 				console.log(
 					chalk.yellow(
-						"\\nHint: Run 'task-master models --setup' to create or update your configuration."
+						"\\nHint: Run 'taskgraph models --setup' to create or update your configuration."
 					)
 				);
 			}
@@ -4005,20 +3995,20 @@ Examples:
 						'\n\n' +
 						chalk.yellow.bold('Within-Tag Moves:') +
 						'\n' +
-						chalk.white('  task-master move --from=5 --to=7') +
+						chalk.white('  taskgraph move --from=5 --to=7') +
 						'\n' +
-						chalk.white('  task-master move --from=5.2 --to=7.3') +
+						chalk.white('  taskgraph move --from=5.2 --to=7.3') +
 						'\n' +
-						chalk.white('  task-master move --from=5,6,7 --to=10,11,12') +
+						chalk.white('  taskgraph move --from=5,6,7 --to=10,11,12') +
 						'\n\n' +
 						chalk.yellow.bold('Cross-Tag Moves:') +
 						'\n' +
 						chalk.white(
-							'  task-master move --from=5 --from-tag=backlog --to-tag=in-progress'
+							'  taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress'
 						) +
 						'\n' +
 						chalk.white(
-							'  task-master move --from=5,6 --from-tag=backlog --to-tag=done'
+							'  taskgraph move --from=5,6 --from-tag=backlog --to-tag=done'
 						) +
 						'\n\n' +
 						chalk.yellow.bold('Dependency Resolution:') +
@@ -4026,13 +4016,13 @@ Examples:
 						chalk.white('  # Move with dependencies') +
 						'\n' +
 						chalk.white(
-							'  task-master move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies'
+							'  taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies'
 						) +
 						'\n\n' +
 						chalk.white('  # Break dependencies') +
 						'\n' +
 						chalk.white(
-							'  task-master move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies'
+							'  taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies'
 						) +
 						'\n\n' +
 						'\n' +
@@ -4047,11 +4037,11 @@ Examples:
 						) +
 						'\n' +
 						chalk.white(
-							'  • Check dependencies first: task-master validate-dependencies'
+							'  • Check dependencies first: taskgraph validate-dependencies'
 						) +
 						'\n' +
 						chalk.white(
-							'  • Fix dependency issues: task-master fix-dependencies'
+							'  • Fix dependency issues: taskgraph fix-dependencies'
 						) +
 						'\n\n' +
 						chalk.yellow.bold('Error Resolution:') +
@@ -4065,10 +4055,10 @@ Examples:
 						) +
 						'\n' +
 						chalk.white(
-							'  • Invalid tags: Check available tags with task-master tags'
+							'  • Invalid tags: Check available tags with taskgraph tags'
 						) +
 						'\n\n' +
-						chalk.gray('For more help, run: task-master move --help')
+						chalk.gray('For more help, run: taskgraph move --help')
 				);
 			}
 
@@ -4126,7 +4116,7 @@ Examples:
 					);
 					console.log(
 						chalk.yellow(
-							'Usage: task-master move --from=<sourceId> --to=<destinationId>'
+							'Usage: taskgraph move --from=<sourceId> --to=<destinationId>'
 						)
 					);
 					process.exit(1);
@@ -4144,7 +4134,7 @@ Examples:
 						)
 					);
 					console.log(
-						chalk.yellow('Example: task-master move --from=5,6,7 --to=10,11,12')
+						chalk.yellow('Example: taskgraph move --from=5,6,7 --to=10,11,12')
 					);
 					process.exit(1);
 				}
@@ -4381,7 +4371,7 @@ Examples:
 	programInstance
 		.command('rules [action] [profiles...]')
 		.description(
-			`Add or remove rules for one or more profiles. Valid actions: ${Object.values(RULES_ACTIONS).join(', ')} (e.g., task-master rules ${RULES_ACTIONS.ADD} windsurf roo)`
+			`Add or remove rules for one or more profiles. Valid actions: ${Object.values(RULES_ACTIONS).join(', ')} (e.g., taskgraph rules ${RULES_ACTIONS.ADD} windsurf roo)`
 		)
 		.option(
 			'-f, --force',
@@ -4403,11 +4393,11 @@ Examples:
 			'after',
 			`
 		Examples:
-		$ task-master rules ${RULES_ACTIONS.ADD}                       # Interactive setup with auto-detected IDEs pre-selected
-		$ task-master rules ${RULES_ACTIONS.ADD} -y                    # Auto-detect and install without prompting
-		$ task-master rules ${RULES_ACTIONS.ADD} windsurf roo          # Add specific profiles
-		$ task-master rules ${RULES_ACTIONS.ADD} cursor --mode=team    # Add Cursor rules for team mode only
-		$ task-master rules ${RULES_ACTIONS.REMOVE} windsurf          # Remove Windsurf rule set`
+		$ taskgraph rules ${RULES_ACTIONS.ADD}                       # Interactive setup with auto-detected IDEs pre-selected
+		$ taskgraph rules ${RULES_ACTIONS.ADD} -y                    # Auto-detect and install without prompting
+		$ taskgraph rules ${RULES_ACTIONS.ADD} windsurf roo          # Add specific profiles
+		$ taskgraph rules ${RULES_ACTIONS.ADD} cursor --mode=team    # Add Cursor rules for team mode only
+		$ taskgraph rules ${RULES_ACTIONS.REMOVE} windsurf          # Remove Windsurf rule set`
 		)
 		.action(async (action, profiles, options) => {
 			const taskMaster = initTaskMaster({});
@@ -4418,13 +4408,13 @@ Examples:
 			}
 
 			/**
-			 * 'task-master rules --setup' action:
+			 * 'taskgraph rules --setup' action:
 			 *
 			 * Launches an interactive prompt to select which rule profiles to add to the current project.
 			 * This does NOT perform project initialization or ask about shell aliases—only rules selection.
 			 *
 			 * Example usage:
-			 *   $ task-master rules --setup
+			 *   $ taskgraph rules --setup
 			 *
 			 * Useful for adding rules after project creation.
 			 *
@@ -4469,21 +4459,21 @@ Examples:
 				);
 				console.error(
 					chalk.yellow(
-						`For interactive setup, use: task-master rules --${RULES_SETUP_ACTION}`
+						`For interactive setup, use: taskgraph rules --${RULES_SETUP_ACTION}`
 					)
 				);
 				process.exit(1);
 			}
 
 			/**
-			 * 'task-master rules add' (no profiles):
+			 * 'taskgraph rules add' (no profiles):
 			 *
 			 * - Without -y: Opens interactive setup with auto-detected IDEs pre-selected
 			 * - With -y: Non-interactive mode, installs rules for all detected IDEs
 			 *
 			 * Example usage:
-			 *   $ task-master rules add       # Interactive setup with pre-selection
-			 *   $ task-master rules add -y    # Auto-detect and install without prompting
+			 *   $ taskgraph rules add       # Interactive setup with pre-selection
+			 *   $ taskgraph rules add -y    # Auto-detect and install without prompting
 			 */
 			if (
 				action === RULES_ACTIONS.ADD &&
@@ -4509,9 +4499,9 @@ Examples:
 						console.log(
 							chalk.cyan(
 								'To manually select profiles, run without -y flag:\n' +
-									'  task-master rules add\n\n' +
+									'  taskgraph rules add\n\n' +
 									'Or specify profiles directly:\n' +
-									'  task-master rules add cursor windsurf\n'
+									'  taskgraph rules add cursor windsurf\n'
 							)
 						);
 						return;
@@ -4860,7 +4850,7 @@ Examples:
 					);
 					console.log(
 						chalk.yellow(
-							'Hint: Run task-master init or task-master parse-prd to create tasks.json first'
+							'Hint: Run taskgraph init or taskgraph parse-prd to create tasks.json first'
 						)
 					);
 					process.exit(1);
@@ -4874,8 +4864,8 @@ Examples:
 						)
 					);
 					console.log(chalk.yellow('Usage examples:'));
-					console.log(chalk.cyan('  task-master add-tag my-tag'));
-					console.log(chalk.cyan('  task-master add-tag --from-branch'));
+					console.log(chalk.cyan('  taskgraph add-tag my-tag'));
+					console.log(chalk.cyan('  taskgraph add-tag --from-branch'));
 					process.exit(1);
 				}
 
@@ -5502,7 +5492,7 @@ async function runCLI(argv = process.argv) {
 						chalk.white('. No worries though.\n\n') +
 						chalk.cyan.bold('To create this file, run the interactive setup:') +
 						'\n' +
-						chalk.green('   task-master models --setup') +
+						chalk.green('   taskgraph models --setup') +
 						'\n\n' +
 						chalk.white.bold('Key Points:') +
 						'\n' +
@@ -5517,10 +5507,10 @@ async function runCLI(argv = process.argv) {
 						chalk.red.bold('only') +
 						chalk.white(' for your AI provider API keys.\n\n') +
 						chalk.cyan(
-							'`task-master models` to check your config & available models\n'
+							'`taskgraph models` to check your config & available models\n'
 						) +
 						chalk.cyan(
-							'`task-master models --setup` to adjust the AI models used by Taskmaster'
+							'`taskgraph models --setup` to adjust the AI models used by Taskmaster'
 						),
 					{
 						padding: 1,

@@ -108,7 +108,7 @@ export function findTasksPath(explicitPath = null, args = null, log = null) {
 				!tasksPath.includes('.taskmaster')
 			) {
 				logger.warn?.(
-					`⚠️  DEPRECATION WARNING: Found tasks.json in legacy location '${tasksPath}'. Please migrate to the new .taskmaster directory structure. Run 'task-master migrate' to automatically migrate your project.`
+					`⚠️  DEPRECATION WARNING: Found tasks.json in legacy location '${tasksPath}'. Please migrate to the new .taskmaster directory structure. Run 'taskgraph migrate' to automatically migrate your project.`
 				);
 			} else if (
 				tasksPath.endsWith('tasks.json') &&
@@ -116,7 +116,7 @@ export function findTasksPath(explicitPath = null, args = null, log = null) {
 				!tasksPath.includes('tasks/')
 			) {
 				logger.warn?.(
-					`⚠️  DEPRECATION WARNING: Found tasks.json in legacy root location '${tasksPath}'. Please migrate to the new .taskmaster directory structure. Run 'task-master migrate' to automatically migrate your project.`
+					`⚠️  DEPRECATION WARNING: Found tasks.json in legacy root location '${tasksPath}'. Please migrate to the new .taskmaster directory structure. Run 'taskgraph migrate' to automatically migrate your project.`
 				);
 			}
 
@@ -188,7 +188,7 @@ export function findPRDPath(explicitPath = null, args = null, log = null) {
 				// Issue deprecation warning for legacy paths
 				if (location === 'scripts/' || location === '') {
 					logger.warn?.(
-						`⚠️  DEPRECATION WARNING: Found PRD file in legacy location '${prdPath}'. Please migrate to .taskmaster/docs/ directory. Run 'task-master migrate' to automatically migrate your project.`
+						`⚠️  DEPRECATION WARNING: Found PRD file in legacy location '${prdPath}'. Please migrate to .taskmaster/docs/ directory. Run 'taskgraph migrate' to automatically migrate your project.`
 					);
 				}
 
@@ -273,7 +273,7 @@ export function findComplexityReportPath(
 				// Issue deprecation warning for legacy paths
 				if (location === 'scripts/' || location === '') {
 					logger.warn?.(
-						`⚠️  DEPRECATION WARNING: Found complexity report in legacy location '${reportPath}'. Please migrate to .taskmaster/reports/ directory. Run 'task-master migrate' to automatically migrate your project.`
+						`⚠️  DEPRECATION WARNING: Found complexity report in legacy location '${reportPath}'. Please migrate to .taskmaster/reports/ directory. Run 'taskgraph migrate' to automatically migrate your project.`
 					);
 				}
 
@@ -445,7 +445,7 @@ export function findConfigPath(explicitPath = null, args = null, log = null) {
 			// Issue deprecation warning for legacy paths
 			if (configPath?.endsWith(LEGACY_CONFIG_FILE)) {
 				logger.warn?.(
-					`⚠️  DEPRECATION WARNING: Found configuration in legacy location '${configPath}'. Please migrate to .taskmaster/config.json. Run 'task-master migrate' to automatically migrate your project.`
+					`⚠️  DEPRECATION WARNING: Found configuration in legacy location '${configPath}'. Please migrate to .taskmaster/config.json. Run 'taskgraph migrate' to automatically migrate your project.`
 				);
 			}
 

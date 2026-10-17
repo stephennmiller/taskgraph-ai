@@ -140,7 +140,7 @@ export async function tryExpandViaRemote(
 			// Always add CLI alternative
 			messageLines.push('');
 			messageLines.push(
-				chalk.dim(`Or run: ${chalk.yellow(`task-master show ${taskId}`)}`)
+				chalk.dim(`Or run: ${chalk.yellow(`taskgraph show ${taskId}`)}`)
 			);
 
 			console.log(

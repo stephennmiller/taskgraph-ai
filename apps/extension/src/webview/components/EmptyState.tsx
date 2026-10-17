@@ -32,7 +32,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ currentTag }) => {
 						<div className="space-y-2">
 							<div className="bg-vscode-editor-background rounded p-2 font-mono text-sm">
 								<span className="text-vscode-terminal-ansiYellow">
-									task-master
+									taskgraph
 								</span>{' '}
 								<span className="text-vscode-terminal-ansiCyan">parse-prd</span>{' '}
 								<span className="text-vscode-foreground/70">
@@ -47,7 +47,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ currentTag }) => {
 							</div>
 							<div className="bg-vscode-editor-background rounded p-2 font-mono text-sm">
 								<span className="text-vscode-terminal-ansiYellow">
-									task-master
+									taskgraph
 								</span>{' '}
 								<span className="text-vscode-terminal-ansiCyan">add-task</span>{' '}
 								<span className="text-vscode-terminal-ansiMagenta">
@@ -62,7 +62,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({ currentTag }) => {
 							</div>
 							<div className="bg-vscode-editor-background rounded p-2 font-mono text-sm">
 								<span className="text-vscode-terminal-ansiYellow">
-									task-master
+									taskgraph
 								</span>{' '}
 								<span className="text-vscode-terminal-ansiCyan">add-task</span>{' '}
 								<span className="text-vscode-terminal-ansiMagenta">--help</span>

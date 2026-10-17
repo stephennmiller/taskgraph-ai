@@ -77,8 +77,8 @@ export class BriefsCommand extends Command {
 				'The "briefs" command requires you to be logged in to your Hamster account.',
 			footer:
 				'Working locally instead?\n' +
-				'  → Use "task-master tags" for local tag management.',
-			authCommand: 'task-master auth login'
+				'  → Use "taskgraph tags" for local tag management.',
+			authCommand: 'taskgraph auth login'
 		});
 	}
 

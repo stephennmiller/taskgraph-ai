@@ -34,9 +34,9 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_TOOLS": "core",
         "ANTHROPIC_API_KEY": "your_key_here"
@@ -64,9 +64,9 @@ Loads 15 commonly used tools. Balances functionality with context efficiency.
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_TOOLS": "standard",
         "ANTHROPIC_API_KEY": "your_key_here"
@@ -82,9 +82,9 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_TOOLS": "get_tasks,next_task,set_task_status,update_subtask",
         "ANTHROPIC_API_KEY": "your_key_here"
@@ -100,9 +100,9 @@ Loads all 36 available tools. Use when you need full Task Master functionality.
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_TOOLS": "all",
         "ANTHROPIC_API_KEY": "your_key_here"

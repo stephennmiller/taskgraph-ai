@@ -85,7 +85,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 **Optional Parameters**:
 - `research` (boolean): Enable research mode for latest best practices (default: false)
 
-**Usage**: Used by `task-master parse-prd` command to convert PRD documents into actionable task lists.
+**Usage**: Used by `taskgraph parse-prd` command to convert PRD documents into actionable task lists.
 
 ### 2. add-task.json
 **Purpose**: Generate a new task based on user description  
@@ -103,7 +103,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 - `dependencies` (array): Task dependency IDs
 - `useResearch` (boolean): Use research mode (default: false)
 
-**Usage**: Used by `task-master add-task` command to create new tasks with AI assistance.
+**Usage**: Used by `taskgraph add-task` command to create new tasks with AI assistance.
 
 ### 3. expand-task.json
 **Purpose**: Break down a task into detailed subtasks with three sophisticated strategies  
@@ -126,7 +126,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 2. **research**: Used when `useResearch === true && !expansionPrompt`
 3. **default**: Standard fallback strategy
 
-**Usage**: Used by `task-master expand` command to break complex tasks into manageable subtasks using the most appropriate strategy based on available context and complexity analysis.
+**Usage**: Used by `taskgraph expand` command to break complex tasks into manageable subtasks using the most appropriate strategy based on available context and complexity analysis.
 
 ### 4. update-task.json
 **Purpose**: Update a single task with new information, supporting full updates and append mode  
@@ -143,7 +143,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 - `currentDetails` (string): Current task details for context (default: "(No existing details)")
 - `gatheredContext` (string): Additional project context
 
-**Usage**: Used by `task-master update-task` command to modify existing tasks.
+**Usage**: Used by `taskgraph update-task` command to modify existing tasks.
 
 ### 5. update-tasks.json
 **Purpose**: Update multiple tasks based on new context or changes  
@@ -157,7 +157,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 - `useResearch` (boolean): Use research mode (default: false)
 - `projectContext` (string): Additional project context
 
-**Usage**: Used by `task-master update` command to bulk update multiple tasks.
+**Usage**: Used by `taskgraph update` command to bulk update multiple tasks.
 
 ### 6. update-subtask.json
 **Purpose**: Append information to a subtask by generating only new content  
@@ -174,7 +174,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 - `useResearch` (boolean): Use research mode (default: false)
 - `gatheredContext` (string): Additional project context
 
-**Usage**: Used by `task-master update-subtask` command to log progress and findings on subtasks.
+**Usage**: Used by `taskgraph update-subtask` command to log progress and findings on subtasks.
 
 ### 7. analyze-complexity.json
 **Purpose**: Analyze task complexity and generate expansion recommendations  
@@ -188,7 +188,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 - `threshold` (number): Complexity threshold for expansion recommendation (1-10, default: 5)
 - `useResearch` (boolean): Use research mode for deeper analysis (default: false)
 
-**Usage**: Used by `task-master analyze-complexity` command to determine which tasks need breakdown.
+**Usage**: Used by `taskgraph analyze-complexity` command to determine which tasks need breakdown.
 
 ### 8. research.json
 **Purpose**: Perform AI-powered research with project context  
@@ -205,7 +205,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
   - `taskCount` (number): Number of related tasks
   - `fileCount` (number): Number of related files
 
-**Usage**: Used by `task-master research` command to get contextual information and guidance.
+**Usage**: Used by `taskgraph research` command to get contextual information and guidance.
 
 ## Template Structure
 
