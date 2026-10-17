@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import { renderContent } from '../../utils/content-renderer.js';
 import { getBoxWidth, getComplexityWithColor } from '../../utils/ui.js';
 import { BORDER_COLOR, theme } from '../theme.js';
+import { getSuggestedActions } from './task-detail.component.js';
 
 /**
  * Next task display options
@@ -104,9 +105,15 @@ export function displayRecommendedNextTask(
 
 	// Action commands
 	content.push('');
-	content.push(
-		`${chalk.cyan('Start working:')} ${chalk.yellow(`taskgraph set-status --id=${task.id} --status=in-progress`)}`
-	);
+	// Subtask info isn't available here, so skip the "expand" suggestion
+	for (const action of getSuggestedActions(task.id, task.status, true).slice(
+		0,
+		2
+	)) {
+		content.push(
+			`${chalk.cyan('Next step:')} ${chalk.yellow(action.command)} ${chalk.gray(action.description)}`
+		);
+	}
 	content.push(
 		`${chalk.cyan('View details:')} ${chalk.yellow(`taskgraph show ${task.id}`)}`
 	);
