@@ -66,7 +66,7 @@ Taskmaster uses two primary methods for configuration:
 The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by the Task Master MCP server. This allows you to optimize token usage based on your workflow needs.
 
 > Note
-> Prefer setting `TASK_MASTER_TOOLS` in your MCP client's `env` block (e.g., `.cursor/mcp.json`) or in CI/deployment env. The `.env` file is reserved for API keys/endpoints; avoid persisting non-secret settings there.
+> Prefer setting `TASK_MASTER_TOOLS` in your MCP client's `env` block (e.g., `.mcp.json`) or in CI/deployment env. The `.env` file is reserved for API keys/endpoints; avoid persisting non-secret settings there.
 
 #### Configuration Options
 
@@ -92,7 +92,7 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
 
 #### How to Configure
 
-1. **In MCP configuration files** (`.cursor/mcp.json`, `.vscode/mcp.json`, etc.) - **Recommended**:
+1. **In MCP configuration files** (`.mcp.json`) - **Recommended**:
 
    ```jsonc
    {
@@ -133,7 +133,7 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
 - Used **exclusively** for sensitive API keys and specific endpoint URLs.
 - **Location:**
   - For CLI usage: Create a `.env` file in your project root.
-  - For MCP/Cursor usage: Configure keys in the `env` section of your `.cursor/mcp.json` file.
+  - For MCP usage: Configure keys in the `env` section of your `.mcp.json` file.
 - **Required API Keys (Depending on configured providers):**
   - `ANTHROPIC_API_KEY`: Your Anthropic API key.
   - `PERPLEXITY_API_KEY`: Your Perplexity API key.
@@ -223,7 +223,7 @@ PERPLEXITY_API_KEY=pplx-your-key-here
 
 - If Task Master reports errors about missing configuration or cannot find the config file, run `taskgraph models --setup` in your project root to create or repair the file.
 - For new projects, config will be created at `.taskmaster/config.json`. For legacy projects, you may want to use `taskgraph migrate` to move to the new structure.
-- Ensure API keys are correctly placed in your `.env` file (for CLI) or `.cursor/mcp.json` (for MCP) and are valid for the providers selected in your config file.
+- Ensure API keys are correctly placed in your `.env` file (for CLI) or `.mcp.json` (for MCP) and are valid for the providers selected in your config file.
 
 ### If `taskgraph init` doesn't respond:
 
@@ -247,7 +247,7 @@ node scripts/init.js
 
 1. **Prerequisites**:
    - An active MCP session with sampling capability
-   - MCP client with sampling support (e.g. VS Code)
+   - MCP client with sampling support (e.g. a client that implements MCP sampling)
    - No API keys required (uses session-based authentication)
 
 2. **Configuration**:
@@ -310,7 +310,7 @@ Long-running AI operations in taskmaster-ai can exceed the default 60-second MCP
 
 #### Adding Timeout Configuration
 
-Add a `timeout` parameter to your MCP configuration to extend the timeout limit. The timeout configuration works identically across MCP clients including Cursor, Windsurf, and RooCode:
+Add a `timeout` parameter to your MCP configuration to extend the timeout limit. Claude Code reads it from your `.mcp.json`:
 
 ```json
 {
@@ -333,24 +333,12 @@ Add a `timeout` parameter to your MCP configuration to extend the timeout limit.
 - **Recommended**: 300 seconds provides sufficient time for most AI operations
 - **Format**: Integer value in seconds (not milliseconds)
 
-#### Automatic Setup
-
-When adding taskmaster rules for supported editors, the timeout configuration is automatically included:
-
-```bash
-# Automatically includes timeout configuration
-taskgraph rules add cursor
-taskgraph rules add roo
-taskgraph rules add windsurf
-taskgraph rules add vscode
-```
-
 #### Troubleshooting Timeouts
 
 If you're still experiencing timeout errors:
 
 1. **Verify configuration**: Check that `timeout: 300` is present in your MCP config
-2. **Restart editor**: Restart your editor after making configuration changes
+2. **Restart Claude Code**: Restart Claude Code after making configuration changes
 3. **Increase timeout**: For very complex operations, try `timeout: 600` (10 minutes)
 4. **Check API keys**: Ensure required API keys are properly configured
 

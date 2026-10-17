@@ -116,7 +116,7 @@ Default: `core` (7 tools). Set via `TASK_MASTER_TOOLS` env var.
 |------|-------|-------|
 | `core` | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task` |
 | `standard` | 14 | core + `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report` |
-| `all` | 44+ | standard + dependencies, tags, research, autopilot, scoping, models, rules |
+| `all` | 43 | standard + dependencies, tags, research, autopilot, scoping, models |
 
 **Upgrade when tool unavailable:** Edit MCP config, change `TASK_MASTER_TOOLS` from `"core"` to `"standard"` or `"all"`, restart MCP.
 

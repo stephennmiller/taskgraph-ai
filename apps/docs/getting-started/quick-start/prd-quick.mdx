@@ -37,7 +37,7 @@ Two example PRD templates are available in `.taskmaster/templates/`:
 - `example_prd.md` - Simple template for straightforward projects (`.md` recommended for better editor support)
 - `example_prd_rpg.md` - Advanced RPG (Repository Planning Graph) template for complex projects with dependencies
 
-**Why `.md`?** While both `.txt` and `.md` work, Markdown files provide syntax highlighting, proper rendering in VS Code/GitHub, and better collaboration through formatted documentation.
+**Why `.md`?** While both `.txt` and `.md` work, Markdown files provide syntax highlighting, proper rendering on GitHub, and better collaboration through formatted documentation.
 </Note>
 
 
@@ -47,7 +47,7 @@ You can co-write your PRD with an LLM model using the following workflow:
 2. **Show an example PRD** — share the example PRD so the model understands the expected format. The example uses formatting that work well with Task Master's code. Following the example will yield better results.
 3. **Iterate and refine** — work with the model to shape the draft into a clear and well-structured PRD.
 
-This approach works great in Cursor, or anywhere you use a chat-based LLM.
+This approach works great in Claude Code, or anywhere you use a chat-based LLM.
 
 ### Choosing Between Templates
 
@@ -89,7 +89,7 @@ Place your PRD file in the `.taskmaster/docs` folder in your project.
 
 This is where the Task Master magic begins.
 
-In Cursor's AI chat, instruct the agent to generate tasks from your PRD:
+In Claude Code, instruct the agent to generate tasks from your PRD:
 
 ```
 Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskmaster/docs/<prd-name>.md.

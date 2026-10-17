@@ -36,7 +36,7 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/eyaltoledano)](https://x.com/eyaltoledano)
 [![Twitter Follow](https://img.shields.io/twitter/follow/RalphEcom)](https://x.com/RalphEcom)
 
-A task management system for AI-driven development with Claude, designed to work seamlessly with Cursor AI.
+A task management system for AI-driven development with Claude, built for Claude Code.
 
 ## Documentation
 
@@ -47,7 +47,6 @@ A task management system for AI-driven development with Claude, designed to work
 - [Quick Start Guide](https://tryhamster.com/docs/taskmaster/getting-started/quick-start/quick-start)
 - [Installation](https://tryhamster.com/docs/taskmaster/getting-started/quick-start/installation)
 - [API Keys & Providers](https://tryhamster.com/docs/taskmaster/getting-started/api-keys)
-- [Supported Editors](https://tryhamster.com/docs/taskmaster/ide-setup/supported-editors)
 - [MCP Tools Reference](https://tryhamster.com/docs/taskmaster/capabilities/mcp)
 - [CLI Commands Reference](https://tryhamster.com/docs/taskmaster/capabilities/cli-root-commands)
 - [Task Structure](https://tryhamster.com/docs/taskmaster/capabilities/task-structure)
@@ -67,12 +66,6 @@ A task management system for AI-driven development with Claude, designed to work
 - [Product & Engineering Methods](https://tryhamster.com/methods)
 - [Product & Engineering Skills](https://tryhamster.com/skills)
 - [Hamster Pricing](https://tryhamster.com/pricing)
-
-#### Quick Install for Cursor 1.0+ (One-Click)
-
-[![Add taskgraph-ai MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=taskgraph-ai&config=eyJjb21tYW5kIjoibnB4IC15IC0tcGFja2FnZT10YXNrZ3JhcGgtYWkgdGFza2dyYXBoLW1jcCIsImVudiI6eyJBTlRIUk9QSUNfQVBJX0tFWSI6IllPVVJfQU5USFJPUElDX0FQSV9LRVlfSEVSRSIsIlBFUlBMRVhJVFlfQVBJX0tFWSI6IllPVVJfUEVSUExFWElUWV9BUElfS0VZX0hFUkUiLCJPUEVOQUlfQVBJX0tFWSI6IllPVVJfT1BFTkFJX0tFWV9IRVJFIiwiR09PR0xFX0FQSV9LRVkiOiJZT1VSX0dPT0dMRV9LRVlfSEVSRSIsIk1JU1RSQUxfQVBJX0tFWSI6IllPVVJfTUlTVFJBTF9LRVlfSEVSRSIsIkdST1FfQVBJX0tFWSI6IllPVVJfR1JPUV9LRVlfSEVSRSIsIk9QRU5ST1VURVJfQVBJX0tFWSI6IllPVVJfT1BFTlJPVVRFUl9LRVlfSEVSRSIsIlhBSV9BUElfS0VZIjoiWU9VUl9YQUlfS0VZX0hFUkUiLCJBWlVSRV9PUEVOQUlfQVBJX0tFWSI6IllPVVJfQVpVUkVfS0VZX0hFUkUiLCJPTExBTUFfQVBJX0tFWSI6IllPVVJfT0xMQU1BX0FQSV9LRVlfSEVSRSJ9fQ%3D%3D)
-
-> **Note:** After clicking the link, you'll still need to add your API keys to the configuration. The link installs the MCP server with placeholder keys that you'll need to replace with your actual API keys.
 
 #### Claude Code Quick Install
 
@@ -110,21 +103,13 @@ Using the research model is optional but highly recommended. You will need at le
 
 ### Option 1: MCP (Recommended)
 
-MCP (Model Control Protocol) lets you run Task Master directly from your editor.
+MCP (Model Context Protocol) lets you run Task Master directly from Claude Code.
 
-#### 1. Add your MCP config at the following path depending on your editor
+#### 1. Add Task Master to Claude Code
 
-| Editor       | Scope   | Linux/macOS Path                      | Windows Path                                      | Key          |
-| ------------ | ------- | ------------------------------------- | ------------------------------------------------- | ------------ |
-| **Cursor**   | Global  | `~/.cursor/mcp.json`                  | `%USERPROFILE%\.cursor\mcp.json`                  | `mcpServers` |
-|              | Project | `<project_folder>/.cursor/mcp.json`   | `<project_folder>\.cursor\mcp.json`               | `mcpServers` |
-| **Windsurf** | Global  | `~/.codeium/windsurf/mcp_config.json` | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` | `mcpServers` |
-| **VS Code**  | Project | `<project_folder>/.vscode/mcp.json`   | `<project_folder>\.vscode\mcp.json`               | `servers`    |
-| **Q CLI**    | Global  | `~/.aws/amazonq/mcp.json`             |                                                   | `mcpServers` |
+Register the server with the Claude Code CLI (shown above), or add it to the project's `.mcp.json` (`taskgraph init --rules claude` writes this file for you).
 
 ##### Manual Configuration
-
-###### Cursor & Windsurf & Q Developer CLI (`mcpServers`)
 
 ```json
 {
@@ -152,44 +137,11 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
 
 > 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
 
-> **Note**: If you see `0 tools enabled` in the MCP settings, restart your editor and check that your API keys are correctly configured.
+> **Note**: If you see `0 tools enabled` in the MCP settings, restart Claude Code and check that your API keys are correctly configured.
 
-###### VS Code (`servers` + `type`)
+#### 2. (Optional) Configure the models you want to use
 
-```json
-{
-  "servers": {
-    "taskgraph-ai": {
-      "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
-      "env": {
-        // "TASK_MASTER_TOOLS": "all", // Options: "all", "standard", "core", or comma-separated list of tools
-        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-        "OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-        "GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-        "MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-        "GROQ_API_KEY": "YOUR_GROQ_KEY_HERE",
-        "OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-        "XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-        "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-        "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
-      },
-      "type": "stdio"
-    }
-  }
-}
-```
-
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
-
-#### 2. (Cursor-only) Enable Taskmaster MCP
-
-Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable taskgraph-ai with the toggle
-
-#### 3. (Optional) Configure the models you want to use
-
-In your editor's AI chat pane, say:
+In Claude Code, say:
 
 ```txt
 Change the main, research and fallback models to <model_name>, <model_name> and <model_name> respectively.
@@ -202,15 +154,15 @@ Change the main model to claude-code/sonnet
 
 [Table of available models](docs/models.md) | [Claude Code setup](docs/examples/claude-code-usage.md)
 
-#### 4. Initialize Task Master
+#### 3. Initialize Task Master
 
-In your editor's AI chat pane, say:
+In Claude Code, say:
 
 ```txt
 Initialize taskmaster-ai in my project
 ```
 
-#### 5. Make sure you have a PRD (Recommended)
+#### 4. Make sure you have a PRD (Recommended)
 
 For **new projects**: Create your PRD at `.taskmaster/docs/prd.txt`.
 For **existing projects**: You can use `scripts/prd.txt` or migrate with `taskgraph migrate`
@@ -224,9 +176,9 @@ An example PRD template is available after initialization in `.taskmaster/templa
 
 The more detailed your PRD, the better the generated tasks will be.
 
-#### 6. Common Commands
+#### 5. Common Commands
 
-Use your AI assistant to:
+Use Claude Code to:
 
 - Parse requirements: `Can you parse my PRD at scripts/prd.txt?`
 - Plan next step: `What's the next task I should work on?`
@@ -259,8 +211,8 @@ taskgraph init
 # If installed locally
 npx taskgraph init
 
-# Initialize project with specific rules
-taskgraph init --rules cursor,windsurf,vscode
+# Set up the Claude Code integration (CLAUDE.md import, .mcp.json, slash commands)
+taskgraph init --rules claude
 ```
 
 This will prompt you for project details and set up a new project with the necessary files and structure.
@@ -290,9 +242,6 @@ taskgraph research "What are the latest best practices for JWT authentication?"
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=done --with-dependencies
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
-
-# Add rules after initialization
-taskgraph rules add windsurf,roo,vscode
 ```
 
 ## Tool Loading Configuration
@@ -320,7 +269,7 @@ Add `TASK_MASTER_TOOLS` to your MCP configuration file's `env` section:
 
 ```jsonc
 {
-  "mcpServers": {  // or "servers" for VS Code
+  "mcpServers": {
     "taskgraph-ai": {
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],

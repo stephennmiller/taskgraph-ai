@@ -15,7 +15,7 @@ Welcome to the Task Master documentation. Use the links below to navigate to the
 
 ## Examples & Licensing
 
-- [Example Interactions](examples.md) - Common Cursor AI interaction examples  
+- [Example Interactions](examples.md) - Common Claude Code interaction examples  
 - [Licensing Information](licensing.md) - Detailed information about the license
 
 ## Need More Help?

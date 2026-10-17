@@ -302,58 +302,12 @@ taskgraph delete-tag <tag-name> --yes
 # Initialize a new project with Task Master structure
 taskgraph init
 
-# Initialize a new project applying specific rules
-taskgraph init --rules cursor,windsurf,vscode
+# Set up the Claude Code integration (CLAUDE.md import, .mcp.json, slash commands)
+taskgraph init --rules claude
 ```
 
-- The `--rules` flag allows you to specify one or more rule profiles (e.g., `cursor`, `roo`, `windsurf`, `cline`) to apply during initialization.
-- If omitted, all available rule profiles are installed by default (claude, cline, codex, cursor, roo, trae, vscode, windsurf).
-- You can use multiple comma-separated profiles in a single command.
-
-## Manage Rules
-
-```bash
-# Add rule profiles to your project
-# (e.g., .roo/rules, .windsurf/rules)
-taskgraph rules add <profile1,profile2,...>
-
-# Remove rule sets from your project
-taskgraph rules remove <profile1,profile2,...>
-
-# Remove rule sets bypassing safety check (dangerous)
-taskgraph rules remove <profile1,profile2,...> --force
-
-# Launch interactive rules setup to select rules
-# (does not re-initialize project or ask about shell aliases)
-taskgraph rules setup
-```
-
-- Adding rules creates the profile and rules directory (e.g., `.roo/rules`) and copies/initializes the rules.
-- Removing rules deletes the profile and rules directory and associated MCP config.
-- **Safety Check**: Attempting to remove rule profiles will trigger a critical warning requiring confirmation. Use `--force` to bypass.
-- You can use multiple comma-separated rules in a single command.
-- The `setup` action launches an interactive prompt to select which rules to apply. The list of rules is always current with the available profiles, and no manual updates are needed. This command does **not** re-initialize your project or affect shell aliases; it only manages rules interactively.
-
-**Examples:**
-
-```bash
-taskgraph rules add windsurf,roo,vscode
-taskgraph rules remove windsurf
-taskgraph rules setup
-```
-
-### Interactive Rules Setup
-
-You can launch the interactive rules setup at any time with:
-
-```bash
-taskgraph rules setup
-```
-
-This command opens a prompt where you can select which rule profiles (e.g., Cursor, Roo, Windsurf) you want to add to your project. This does **not** re-initialize your project or ask about shell aliases; it only manages rules.
-
-- Use this command to add rule profiles interactively after project creation.
-- The same interactive prompt is also used during `init` if you don't specify rules with `--rules`.
+- `claude` is the only supported rule profile; any other value is rejected with an error.
+- Without `--rules`, `init` asks whether to set up the Claude Code integration (`--yes` skips the prompt and installs nothing).
 
 ## Configure AI Models
 

@@ -1,6 +1,6 @@
-# Example Cursor AI Interactions
+# Example Claude Code Interactions
 
-Here are some common interactions with Cursor AI when using Task Master:
+Here are some common interactions with Claude Code when using Task Master:
 
 ## Starting a new project
 

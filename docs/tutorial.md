@@ -8,7 +8,7 @@ There are two ways to set up Task Master: using MCP (recommended) or via npm ins
 
 ### Option 1: Using MCP (Recommended)
 
-MCP (Model Control Protocol) provides the easiest way to get started with Task Master directly in your editor.
+MCP (Model Context Protocol) provides the easiest way to get started with Task Master directly in Claude Code.
 
 1. **Install the package**
 
@@ -16,7 +16,7 @@ MCP (Model Control Protocol) provides the easiest way to get started with Task M
 npm i -g taskgraph-ai
 ```
 
-2. **Add the MCP config to your IDE/MCP Client** (Cursor is recommended, but it works with other clients):
+2. **Add the MCP config to your project's `.mcp.json`** (or run `claude mcp add taskgraph-ai -- npx -y taskgraph-ai`):
 
 ```json
 {
@@ -46,7 +46,7 @@ npm i -g taskgraph-ai
 
 We recommend having keys in both places and adding mcp.json to your gitignore so your API keys aren't checked into git.
 
-3. **Enable the MCP** in your editor settings
+3. **Enable the MCP** server in Claude Code (run `/mcp` to check it is connected)
 
 4. **Prompt the AI** to initialize Task Master:
 
@@ -109,13 +109,13 @@ taskgraph list
 taskgraph next
 ```
 
-## Setting up Cursor AI Integration
+## Setting up Claude Code Integration
 
-Task Master is designed to work seamlessly with [Cursor AI](https://www.cursor.so/), providing a structured workflow for AI-driven development.
+Task Master is built for Claude Code, providing a structured workflow for AI-driven development.
 
-### Using Cursor with MCP (Recommended)
+### Using Claude Code with MCP (Recommended)
 
-If you've already set up Task Master with MCP in Cursor, the integration is automatic. You can simply use natural language to interact with Task Master:
+If you've already set up Task Master with MCP in Claude Code, the integration is automatic. You can simply use natural language to interact with Task Master:
 
 ```
 What tasks are available to work on next?
@@ -123,33 +123,19 @@ Can you analyze the complexity of our tasks?
 I'd like to implement task 4. What does it involve?
 ```
 
-### Manual Cursor Setup
+### Manual Setup
 
-If you're not using MCP, you can still set up Cursor integration:
+If you're not using MCP, run `taskgraph init --rules claude`. This:
 
-1. After initializing your project, open it in Cursor
-2. The `.cursor/rules/dev_workflow.mdc` file is automatically loaded by Cursor, providing the AI with knowledge about the task management system
-3. Place your PRD document in the `.taskmaster/docs/` directory (e.g., `.taskmaster/docs/prd.txt`)
-4. Open Cursor's AI chat and switch to Agent mode
+1. Copies Task Master's workflow guide to `.taskmaster/CLAUDE.md` and imports it from your project's `CLAUDE.md`
+2. Writes the `.mcp.json` server entry
+3. Installs the `/tm` slash commands in `.claude/commands/tm`
 
-### Alternative MCP Setup in Cursor
-
-You can also set up the MCP server in Cursor settings:
-
-1. Go to Cursor settings
-2. Navigate to the MCP section
-3. Click on "Add New MCP Server"
-4. Configure with the following details:
-   - Name: "Task Master"
-   - Type: "Command"
-   - Command: "npx -y taskgraph-ai"
-5. Save the settings
-
-Once configured, you can interact with Task Master's task management commands directly through Cursor's interface, providing a more integrated experience.
+Then place your PRD document in the `.taskmaster/docs/` directory (e.g., `.taskmaster/docs/prd.txt`) and start Claude Code in the project.
 
 ## Initial Task Generation
 
-In Cursor's AI chat, instruct the agent to generate tasks from your PRD:
+In Claude Code, instruct the agent to generate tasks from your PRD:
 
 ```
 Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskmaster/docs/prd.txt.
@@ -165,7 +151,7 @@ This will:
 
 - Parse your PRD document
 - Generate a structured `tasks.json` file with tasks, dependencies, priorities, and test strategies
-- The agent will understand this process due to the Cursor rules
+- The agent will understand this process due to the imported `CLAUDE.md` guide
 
 ### Generate Individual Task Files
 
@@ -177,7 +163,7 @@ Please generate individual task files from tasks.json
 
 ## AI-Driven Development Workflow
 
-The Cursor agent is pre-configured (via the rules file) to follow this workflow:
+Claude Code is pre-configured (via the imported `CLAUDE.md` guide) to follow this workflow:
 
 ### 1. Task Discovery and Selection
 
@@ -381,7 +367,7 @@ The agent will execute:
 taskgraph expand --id=5 --research
 ```
 
-## Example Cursor AI Interactions
+## Example Claude Code Interactions
 
 ### Starting a new project
 

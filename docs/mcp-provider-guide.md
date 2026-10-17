@@ -437,48 +437,13 @@ if (session && session.clientCapabilities && session.clientCapabilities.sampling
 
 ## Integration with Development Tools
 
-### VS Code with MCP Extension
+### Claude Code
 
-When using Task Master in VS Code with MCP support:
+When using Task Master in Claude Code:
 
-1. Configure Task Master MCP server in your `.vscode/mcp.json`
+1. Configure the Task Master MCP server in your project's `.mcp.json` (`taskgraph init --rules claude` writes it for you)
 2. Set MCP provider as main/research in `.taskmaster/config.json`
-3. Benefit from integrated AI assistance within your development workflow
-4. Use Task Master tools directly from VS Code's MCP interface
-
-**Example VS Code MCP Configuration:**
-```json
-{
-  "servers": {
-    "task-master-dev": {
-      "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
-      "cwd": "/path/to/your/task-master-project",
-      "env": {
-        "NODE_ENV": "development",
-        "ANTHROPIC_API_KEY": "${env:ANTHROPIC_API_KEY}",
-        "TASK_MASTER_PROJECT_ROOT": "/path/to/your/project"
-      }
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-When using Task Master through Claude Desktop's MCP integration:
-
-1. Configure Task Master as MCP provider in Claude Desktop
-2. Use MCP provider for AI operations within Task Master
-3. Benefit from nested MCP tool calling capabilities
-
-### Cursor and Other MCP Clients
-
-The MCP provider works with any MCP-compatible development environment:
-
-1. Ensure your IDE has MCP client capabilities
-2. Configure Task Master MCP server endpoint
-3. Use MCP provider for enhanced AI-driven development
+3. Use Task Master tools directly from Claude Code
 
 ## Advanced Configuration
 

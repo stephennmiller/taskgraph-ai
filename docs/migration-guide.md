@@ -71,7 +71,7 @@ taskgraph migrate --force
 taskgraph migrate --cleanup
 ```
 
-#### MCP Migration (Cursor/AI Editors)
+#### MCP Migration (Claude Code)
 
 Ask your AI assistant:
 
