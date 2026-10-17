@@ -27,7 +27,7 @@
   <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/dw/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
 </p>
 
-> **TaskGraph** is a fork of [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish, published as `taskgraph-ai` with the `taskgraph` and `taskgraph-mcp` binaries so it can be installed next to the original `task-master-ai`. It keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
+> **TaskGraph** is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish. It is published as `taskgraph-ai` with the `taskgraph` and `taskgraph-mcp` binaries so it can be installed next to the original `task-master-ai`, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
 
 ## Originally by [@eyaltoledano](https://x.com/eyaltoledano) & [@RalphEcom](https://x.com/RalphEcom)
 
