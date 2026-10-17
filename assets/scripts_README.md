@@ -31,7 +31,7 @@ TaskGraph configuration is now managed through two primary methods:
     - Create a `.env` file in your project root for CLI usage.
     - See `assets/env.example` for required key names.
 
-**Important:** Settings like `MODEL`, `MAX_TOKENS`, `TEMPERATURE`, `TASKMASTER_LOG_LEVEL`, etc., are **no longer set via `.env`**. Use `taskgraph models --setup` instead.
+**Important:** Settings like `MODEL`, `MAX_TOKENS`, `TEMPERATURE`, `TASKGRAPH_LOG_LEVEL`, etc., are **no longer set via `.env`**. Use `taskgraph models --setup` instead.
 
 ## How It Works
 
@@ -200,7 +200,7 @@ Notes:
 
 ## Logging
 
-The script supports different logging levels controlled by the `TASKMASTER_LOG_LEVEL` environment variable:
+The script supports different logging levels controlled by the `TASKGRAPH_LOG_LEVEL` environment variable:
 
 - `debug`: Detailed information, typically useful for troubleshooting
 - `info`: Confirmation that things are working as expected (default)

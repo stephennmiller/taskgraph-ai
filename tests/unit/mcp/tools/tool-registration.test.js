@@ -37,7 +37,7 @@ describe('TaskGraph Tool Registration System', () => {
 	let originalEnv;
 
 	beforeEach(() => {
-		originalEnv = process.env.TASK_MASTER_TOOLS;
+		originalEnv = process.env.TASKGRAPH_TOOLS;
 
 		mockServer = {
 			tools: [],
@@ -47,14 +47,14 @@ describe('TaskGraph Tool Registration System', () => {
 			})
 		};
 
-		delete process.env.TASK_MASTER_TOOLS;
+		delete process.env.TASKGRAPH_TOOLS;
 	});
 
 	afterEach(() => {
 		if (originalEnv !== undefined) {
-			process.env.TASK_MASTER_TOOLS = originalEnv;
+			process.env.TASKGRAPH_TOOLS = originalEnv;
 		} else {
-			delete process.env.TASK_MASTER_TOOLS;
+			delete process.env.TASKGRAPH_TOOLS;
 		}
 
 		jest.clearAllMocks();
@@ -122,7 +122,7 @@ describe('TaskGraph Tool Registration System', () => {
 
 	describe('Configuration Modes', () => {
 		it(`should register core tools (${CORE_COUNT}) when toolMode defaults to 'core' (default behavior)`, () => {
-			delete process.env.TASK_MASTER_TOOLS;
+			delete process.env.TASKGRAPH_TOOLS;
 
 			registerTaskMasterTools(mockServer);
 
@@ -131,16 +131,16 @@ describe('TaskGraph Tool Registration System', () => {
 			);
 		});
 
-		it(`should register all tools (${ALL_COUNT}) when TASK_MASTER_TOOLS=all`, () => {
-			process.env.TASK_MASTER_TOOLS = 'all';
+		it(`should register all tools (${ALL_COUNT}) when TASKGRAPH_TOOLS=all`, () => {
+			process.env.TASKGRAPH_TOOLS = 'all';
 
 			registerTaskMasterTools(mockServer, 'all');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(ALL_COUNT);
 		});
 
-		it(`should register exactly ${CORE_COUNT} core tools when TASK_MASTER_TOOLS=core`, () => {
-			process.env.TASK_MASTER_TOOLS = 'core';
+		it(`should register exactly ${CORE_COUNT} core tools when TASKGRAPH_TOOLS=core`, () => {
+			process.env.TASKGRAPH_TOOLS = 'core';
 
 			registerTaskMasterTools(mockServer, 'core');
 
@@ -149,8 +149,8 @@ describe('TaskGraph Tool Registration System', () => {
 			);
 		});
 
-		it(`should register exactly ${STANDARD_COUNT} standard tools when TASK_MASTER_TOOLS=standard`, () => {
-			process.env.TASK_MASTER_TOOLS = 'standard';
+		it(`should register exactly ${STANDARD_COUNT} standard tools when TASKGRAPH_TOOLS=standard`, () => {
+			process.env.TASKGRAPH_TOOLS = 'standard';
 
 			registerTaskMasterTools(mockServer, 'standard');
 
@@ -160,7 +160,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it(`should treat lean as alias for core mode (${CORE_COUNT} tools)`, () => {
-			process.env.TASK_MASTER_TOOLS = 'lean';
+			process.env.TASKGRAPH_TOOLS = 'lean';
 
 			registerTaskMasterTools(mockServer, 'lean');
 
@@ -168,7 +168,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should handle case insensitive configuration values', () => {
-			process.env.TASK_MASTER_TOOLS = 'CORE';
+			process.env.TASKGRAPH_TOOLS = 'CORE';
 
 			registerTaskMasterTools(mockServer, 'CORE');
 
@@ -178,7 +178,7 @@ describe('TaskGraph Tool Registration System', () => {
 
 	describe('Custom Tool Selection and Edge Cases', () => {
 		it('should register specific tools from comma-separated list', () => {
-			process.env.TASK_MASTER_TOOLS = 'get_tasks,next_task,get_task';
+			process.env.TASKGRAPH_TOOLS = 'get_tasks,next_task,get_task';
 
 			registerTaskMasterTools(mockServer, 'get_tasks,next_task,get_task');
 
@@ -186,7 +186,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should handle mixed valid and invalid tool names gracefully', () => {
-			process.env.TASK_MASTER_TOOLS =
+			process.env.TASKGRAPH_TOOLS =
 				'invalid_tool,get_tasks,fake_tool,next_task';
 
 			registerTaskMasterTools(
@@ -198,7 +198,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should fall back to all tools with completely invalid input', () => {
-			process.env.TASK_MASTER_TOOLS = 'completely_invalid';
+			process.env.TASKGRAPH_TOOLS = 'completely_invalid';
 
 			registerTaskMasterTools(mockServer, 'completely_invalid');
 
@@ -206,7 +206,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should use core tools when empty string passed as toolMode', () => {
-			process.env.TASK_MASTER_TOOLS = '';
+			process.env.TASKGRAPH_TOOLS = '';
 
 			registerTaskMasterTools(mockServer);
 
@@ -214,7 +214,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should handle whitespace in comma-separated lists', () => {
-			process.env.TASK_MASTER_TOOLS = ' get_tasks , next_task , get_task ';
+			process.env.TASKGRAPH_TOOLS = ' get_tasks , next_task , get_task ';
 
 			registerTaskMasterTools(mockServer, ' get_tasks , next_task , get_task ');
 
@@ -222,7 +222,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should ignore duplicate tools in list', () => {
-			process.env.TASK_MASTER_TOOLS = 'get_tasks,get_tasks,next_task,get_tasks';
+			process.env.TASKGRAPH_TOOLS = 'get_tasks,get_tasks,next_task,get_tasks';
 
 			registerTaskMasterTools(
 				mockServer,
@@ -233,7 +233,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should fall back to all tools when only commas passed as toolMode', () => {
-			process.env.TASK_MASTER_TOOLS = ',,,';
+			process.env.TASKGRAPH_TOOLS = ',,,';
 
 			registerTaskMasterTools(mockServer, ',,,');
 
@@ -241,7 +241,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should handle single tool selection', () => {
-			process.env.TASK_MASTER_TOOLS = 'get_tasks';
+			process.env.TASKGRAPH_TOOLS = 'get_tasks';
 
 			registerTaskMasterTools(mockServer, 'get_tasks');
 
@@ -303,9 +303,9 @@ describe('TaskGraph Tool Registration System', () => {
 			];
 
 			testCases.forEach((testCase) => {
-				delete process.env.TASK_MASTER_TOOLS;
+				delete process.env.TASKGRAPH_TOOLS;
 				if (testCase.env !== undefined) {
-					process.env.TASK_MASTER_TOOLS = testCase.env;
+					process.env.TASKGRAPH_TOOLS = testCase.env;
 				}
 
 				mockServer.tools = [];
@@ -322,7 +322,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should have optimal performance characteristics', () => {
 			const startTime = Date.now();
 
-			process.env.TASK_MASTER_TOOLS = 'all';
+			process.env.TASKGRAPH_TOOLS = 'all';
 
 			registerTaskMasterTools(mockServer, 'all');
 
@@ -368,7 +368,7 @@ describe('TaskGraph Tool Registration System', () => {
 		});
 
 		it('should handle concurrent registration attempts', () => {
-			process.env.TASK_MASTER_TOOLS = 'core';
+			process.env.TASKGRAPH_TOOLS = 'core';
 
 			registerTaskMasterTools(mockServer, 'core');
 			registerTaskMasterTools(mockServer, 'core');
@@ -415,7 +415,7 @@ describe('TaskGraph Tool Registration System', () => {
 				mockServer.tools = [];
 				mockServer.addTool.mockClear();
 
-				process.env.TASK_MASTER_TOOLS = input;
+				process.env.TASKGRAPH_TOOLS = input;
 
 				expect(() => registerTaskMasterTools(mockServer, input)).not.toThrow();
 

@@ -7,7 +7,7 @@ import rootConfig from '../../vitest.config';
  *
  * Integration tests (.test.ts) spawn CLI processes and need more time.
  * The 30s timeout is reasonable now that auto-update network calls are skipped
- * when TASKMASTER_SKIP_AUTO_UPDATE=1 or NODE_ENV=test.
+ * when TASKGRAPH_SKIP_AUTO_UPDATE=1 or NODE_ENV=test.
  */
 export default mergeConfig(
 	rootConfig,

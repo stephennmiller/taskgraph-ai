@@ -26,13 +26,13 @@ describe('set-status command', () => {
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-status-test-'));
 		process.chdir(testDir);
-		process.env.TASKMASTER_SKIP_AUTO_UPDATE = '1';
+		process.env.TASKGRAPH_SKIP_AUTO_UPDATE = '1';
 
 		binPath = getCliBinPath();
 
 		execSync(`node "${binPath}" init --yes`, {
 			stdio: 'pipe',
-			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
 		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
@@ -55,7 +55,7 @@ describe('set-status command', () => {
 			fs.rmSync(testDir, { recursive: true, force: true });
 		}
 
-		delete process.env.TASKMASTER_SKIP_AUTO_UPDATE;
+		delete process.env.TASKGRAPH_SKIP_AUTO_UPDATE;
 	});
 
 	const readTasks = () => {
@@ -72,7 +72,7 @@ describe('set-status command', () => {
 			`node "${binPath}" set-status --id=${id} --status=${status}`,
 			{
 				stdio: 'pipe',
-				env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 			}
 		);
 	};

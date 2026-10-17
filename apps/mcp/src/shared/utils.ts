@@ -258,7 +258,7 @@ function getProjectRootFromSession(session: any): string | null {
  * Wrapper to normalize project root in args with proper precedence order
  *
  * PRECEDENCE ORDER:
- * 1. TASK_MASTER_PROJECT_ROOT environment variable (from process.env or session)
+ * 1. TASKGRAPH_PROJECT_ROOT environment variable (from process.env or session)
  * 2. args.projectRoot (explicitly provided)
  * 3. Session-based project root resolution
  * 4. Current directory fallback
@@ -275,22 +275,22 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 		let rootSource = 'unknown';
 
 		try {
-			// 1. Check for TASK_MASTER_PROJECT_ROOT environment variable first
-			if (process.env.TASK_MASTER_PROJECT_ROOT) {
-				const envRoot = process.env.TASK_MASTER_PROJECT_ROOT;
+			// 1. Check for TASKGRAPH_PROJECT_ROOT environment variable first
+			if (process.env.TASKGRAPH_PROJECT_ROOT) {
+				const envRoot = process.env.TASKGRAPH_PROJECT_ROOT;
 				normalizedRoot = path.isAbsolute(envRoot)
 					? envRoot
 					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASK_MASTER_PROJECT_ROOT environment variable';
+				rootSource = 'TASKGRAPH_PROJECT_ROOT environment variable';
 				log?.info?.(`Using project root from ${rootSource}: ${normalizedRoot}`);
 			}
-			// Also check session environment variables for TASK_MASTER_PROJECT_ROOT
-			else if (session?.env?.TASK_MASTER_PROJECT_ROOT) {
-				const envRoot = session.env.TASK_MASTER_PROJECT_ROOT;
+			// Also check session environment variables for TASKGRAPH_PROJECT_ROOT
+			else if (session?.env?.TASKGRAPH_PROJECT_ROOT) {
+				const envRoot = session.env.TASKGRAPH_PROJECT_ROOT;
 				normalizedRoot = path.isAbsolute(envRoot)
 					? envRoot
 					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASK_MASTER_PROJECT_ROOT session environment variable';
+				rootSource = 'TASKGRAPH_PROJECT_ROOT session environment variable';
 				log?.info?.(`Using project root from ${rootSource}: ${normalizedRoot}`);
 			}
 			// 2. If no environment variable, try args.projectRoot
@@ -320,7 +320,7 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 						success: false,
 						error: {
 							message:
-								'Could not determine project root. Please provide projectRoot argument or ensure TASK_MASTER_PROJECT_ROOT environment variable is set.'
+								'Could not determine project root. Please provide projectRoot argument or ensure TASKGRAPH_PROJECT_ROOT environment variable is set.'
 						}
 					}
 				});
@@ -462,12 +462,12 @@ export function validateMcpMetadata(
 
 	// Check if metadata updates are allowed via environment variable
 	const allowMetadataUpdates =
-		process.env.TASK_MASTER_ALLOW_METADATA_UPDATES === 'true';
+		process.env.TASKGRAPH_ALLOW_METADATA_UPDATES === 'true';
 	if (!allowMetadataUpdates) {
 		return {
 			parsedMetadata: null,
 			error: errorResponseFn(
-				'Metadata updates are disabled. Set TASK_MASTER_ALLOW_METADATA_UPDATES=true in your MCP server environment to enable metadata modifications.'
+				'Metadata updates are disabled. Set TASKGRAPH_ALLOW_METADATA_UPDATES=true in your MCP server environment to enable metadata modifications.'
 			)
 		};
 	}

@@ -4861,7 +4861,7 @@ async function runCLI(argv = process.argv) {
 
 		// Check for updates BEFORE executing the command (skip entirely in test/CI mode)
 		const skipAutoUpdate =
-			process.env.TASKMASTER_SKIP_AUTO_UPDATE === '1' ||
+			process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1' ||
 			process.env.CI ||
 			process.env.NODE_ENV === 'test';
 

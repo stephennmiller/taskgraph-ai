@@ -67,23 +67,23 @@ export class Logger {
 		// Check for MCP mode
 		if (
 			process.env.MCP_MODE === 'true' ||
-			process.env.TASK_MASTER_MCP === 'true'
+			process.env.TASKGRAPH_MCP === 'true'
 		) {
 			envConfig.mcpMode = true;
 		}
 
 		// Check for silent mode
 		if (
-			process.env.TASK_MASTER_SILENT === 'true' ||
+			process.env.TASKGRAPH_SILENT === 'true' ||
 			process.env.TM_SILENT === 'true'
 		) {
 			envConfig.silent = true;
 		}
 
 		// Check for log level
-		if (process.env.TASK_MASTER_LOG_LEVEL || process.env.TM_LOG_LEVEL) {
+		if (process.env.TASKGRAPH_LOG_LEVEL || process.env.TM_LOG_LEVEL) {
 			const levelStr = (
-				process.env.TASK_MASTER_LOG_LEVEL ||
+				process.env.TASKGRAPH_LOG_LEVEL ||
 				process.env.TM_LOG_LEVEL ||
 				''
 			).toUpperCase();
@@ -95,7 +95,7 @@ export class Logger {
 		// Check for no colors
 		if (
 			process.env.NO_COLOR === 'true' ||
-			process.env.TASK_MASTER_NO_COLOR === 'true'
+			process.env.TASKGRAPH_NO_COLOR === 'true'
 		) {
 			envConfig.colors = false;
 		}

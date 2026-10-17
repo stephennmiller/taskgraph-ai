@@ -95,7 +95,7 @@ export class FileOperations {
 				} catch (err: any) {
 					// Log but don't throw - lock may have been released already
 					// Other errors should be visible for debugging
-					if (process.env.DEBUG || process.env.TASKMASTER_DEBUG === 'true') {
+					if (process.env.DEBUG || process.env.TASKGRAPH_DEBUG === 'true') {
 						console.warn(
 							`[WARN] Lock release warning for ${filePath}: ${err.message}`
 						);
@@ -168,7 +168,7 @@ export class FileOperations {
 				} catch (err: any) {
 					// Log but don't throw - lock may have been released already
 					// Other errors should be visible for debugging
-					if (process.env.DEBUG || process.env.TASKMASTER_DEBUG === 'true') {
+					if (process.env.DEBUG || process.env.TASKGRAPH_DEBUG === 'true') {
 						console.warn(
 							`[WARN] Lock release warning for ${filePath}: ${err.message}`
 						);

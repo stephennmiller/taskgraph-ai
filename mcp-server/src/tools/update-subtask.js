@@ -42,7 +42,7 @@ export function registerUpdateSubtaskTool(server) {
 				.string()
 				.optional()
 				.describe(
-					'JSON string of metadata to merge into subtask metadata. Example: \'{"ticketId": "JIRA-456", "reviewed": true}\'. Requires TASK_MASTER_ALLOW_METADATA_UPDATES=true in MCP environment.'
+					'JSON string of metadata to merge into subtask metadata. Example: \'{"ticketId": "JIRA-456", "reviewed": true}\'. Requires TASKGRAPH_ALLOW_METADATA_UPDATES=true in MCP environment.'
 				),
 			file: z.string().optional().describe('Absolute path to the tasks file'),
 			projectRoot: z

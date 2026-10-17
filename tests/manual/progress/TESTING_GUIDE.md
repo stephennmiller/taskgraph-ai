@@ -59,7 +59,7 @@ Example: 33% → 46% → 60% → 66% → 80% → 93% → 100%
 
 ```bash
 # Debug
-TASKMASTER_DEBUG=true node test-expand.js
+TASKGRAPH_DEBUG=true node test-expand.js
 npm run lint
 ```
 
