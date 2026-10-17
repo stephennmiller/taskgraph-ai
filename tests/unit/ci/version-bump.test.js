@@ -142,7 +142,6 @@ describe('applyVersion', () => {
 
 	it('updates all version files and preserves each file indentation', () => {
 		writeFileSync(join(dir, 'package.json'), '{\n\t"version": "1.0.0"\n}\n');
-		writeFileSync(join(dir, 'manifest.json'), '{\n\t"version": "1.0.0"\n}\n');
 		writeFileSync(
 			join(dir, 'package-lock.json'),
 			'{\n  "version": "1.0.0",\n  "packages": {\n    "": { "version": "1.0.0" }\n  }\n}\n'
@@ -151,9 +150,6 @@ describe('applyVersion', () => {
 		applyVersion(dir, '1.1.0');
 
 		expect(readFileSync(join(dir, 'package.json'), 'utf8')).toBe(
-			'{\n\t"version": "1.1.0"\n}\n'
-		);
-		expect(readFileSync(join(dir, 'manifest.json'), 'utf8')).toBe(
 			'{\n\t"version": "1.1.0"\n}\n'
 		);
 		const lockText = readFileSync(join(dir, 'package-lock.json'), 'utf8');
@@ -168,20 +164,14 @@ describe('applyVersion', () => {
 		// JSON.stringify would expand them and fail the format check.
 		const pkg = (version) =>
 			`{\n\t"name": "x",\n\t"version": "${version}",\n\t"workspaces": ["apps/*", "packages/*", "."],\n\t"nested": { "version": "9.9.9" }\n}\n`;
-		const manifest = (version) =>
-			`{\n\t"version": "${version}",\n\t"args": ["-y", "task-master-ai"]\n}\n`;
 		const lock = (version) =>
 			`{\n  "name": "x",\n  "version": "${version}",\n  "lockfileVersion": 3,\n  "packages": {\n    "": {\n      "name": "x",\n      "version": "${version}",\n      "workspaces": ["apps/*", "."]\n    },\n    "node_modules/dep": {\n      "version": "5.0.0"\n    }\n  }\n}\n`;
 		writeFileSync(join(dir, 'package.json'), pkg('1.0.0'));
-		writeFileSync(join(dir, 'manifest.json'), manifest('1.0.0'));
 		writeFileSync(join(dir, 'package-lock.json'), lock('1.0.0'));
 
 		applyVersion(dir, '1.1.0');
 
 		expect(readFileSync(join(dir, 'package.json'), 'utf8')).toBe(pkg('1.1.0'));
-		expect(readFileSync(join(dir, 'manifest.json'), 'utf8')).toBe(
-			manifest('1.1.0')
-		);
 		expect(readFileSync(join(dir, 'package-lock.json'), 'utf8')).toBe(
 			lock('1.1.0')
 		);
@@ -189,7 +179,6 @@ describe('applyVersion', () => {
 
 	it('throws when a file has no version to update', () => {
 		writeFileSync(join(dir, 'package.json'), '{\n\t"name": "x"\n}\n');
-		writeFileSync(join(dir, 'manifest.json'), '{\n\t"version": "1.0.0"\n}\n');
 		writeFileSync(
 			join(dir, 'package-lock.json'),
 			'{\n  "version": "1.0.0"\n}\n'

@@ -138,11 +138,6 @@ function getTasks() {
   - Handles MCP-specific concerns: tool schemas, parameter validation, response formatting
   - NO business logic, NO data transformations, NO calculations
 
-- **`apps/extension`** (future):
-  - Thin presentation layer ONLY
-  - Calls tm-core methods and displays in VS Code UI
-  - NO business logic
-
 **Examples of violations to avoid:**
 
 - ❌ Creating helper functions in CLI/MCP to parse task IDs → Move to tm-core

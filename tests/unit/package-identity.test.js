@@ -24,7 +24,6 @@ const OLD_REPO_PATHS = [
 // (registry lookups, installs, root detection, MCP launch, release links).
 const IDENTITY_FILES = [
 	'package.json',
-	'manifest.json',
 	'.changeset/config.json',
 	'.github/scripts/utils.mjs',
 	'.github/scripts/check-pre-release-mode.mjs',
@@ -35,11 +34,6 @@ const IDENTITY_FILES = [
 	'apps/cli/src/utils/auto-update/index.ts',
 	'apps/cli/src/utils/auto-update/install.ts',
 	'apps/cli/src/ui/components/brand-banner.component.ts',
-	'apps/extension/package.json',
-	'apps/extension/package.publish.json',
-	'apps/extension/src/utils/configManager.ts',
-	'apps/extension/src/utils/errorHandler.ts',
-	'apps/extension/src/utils/mcpClient.ts',
 	'.mcp.json',
 	'packages/claude-code-plugin/mcp.json',
 	'apps/mcp/src/shared/utils.ts',

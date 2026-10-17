@@ -37,7 +37,7 @@ export default defineConfig(
 		},
 		outDir: 'dist',
 		copy: ['assets'],
-		ignoreWatch: ['node_modules', 'dist', 'tests', 'apps/extension'],
+		ignoreWatch: ['node_modules', 'dist', 'tests'],
 		// Bundle only our workspace packages, keep npm dependencies external
 		noExternal: [/^@tm\//],
 		env: getBuildTimeEnvs()
