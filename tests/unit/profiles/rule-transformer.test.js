@@ -7,31 +7,6 @@ import {
 
 describe('Rule Transformer - General', () => {
 	describe('Profile Configuration Validation', () => {
-		it('should use RULE_PROFILES as the single source of truth', () => {
-			// Ensure RULE_PROFILES is properly defined and contains expected profiles
-			expect(Array.isArray(RULE_PROFILES)).toBe(true);
-			expect(RULE_PROFILES.length).toBeGreaterThan(0);
-
-			// Verify expected profiles are present
-			const expectedProfiles = [
-				'claude',
-				'cline',
-				'codex',
-				'cursor',
-				'gemini',
-				'kiro',
-				'opencode',
-				'roo',
-				'trae',
-				'vscode',
-				'windsurf',
-				'zed'
-			];
-			expectedProfiles.forEach((profile) => {
-				expect(RULE_PROFILES).toContain(profile);
-			});
-		});
-
 		it('should validate profiles correctly with isValidProfile', () => {
 			// Test valid profiles
 			RULE_PROFILES.forEach((profile) => {

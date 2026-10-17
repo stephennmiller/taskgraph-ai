@@ -51,11 +51,7 @@ const IDENTITY_FILES = [
 	'packages/tm-profiles/src/slash-commands/commands/solo/quick-install-taskmaster.ts',
 	'scripts/loop.sh',
 	'src/utils/asset-resolver.js',
-	'src/utils/create-mcp-config.js',
-	'src/profiles/amp.js',
-	'src/profiles/roo.js',
-	'src/profiles/vscode.js',
-	'src/profiles/zed.js'
+	'src/utils/create-mcp-config.js'
 ];
 
 // Places where the CLI refers to itself by binary name at runtime (re-spawning

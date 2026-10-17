@@ -78,10 +78,10 @@ export async function initializeProjectDirect(args, log, context = {}) {
 			options.rulesExplicitlyProvided = true;
 			log.info(`Including rules: ${args.rules.join(', ')}`);
 		} else {
-			// For MCP initialization, default to Cursor profile only
-			options.rules = ['cursor'];
+			// For MCP initialization, default to Claude profile only
+			options.rules = ['claude'];
 			options.rulesExplicitlyProvided = true;
-			log.info(`No rule profiles specified, defaulting to: Cursor`);
+			log.info(`No rule profiles specified, defaulting to: Claude`);
 		}
 
 		log.info(`Initializing project with options: ${JSON.stringify(options)}`);
