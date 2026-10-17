@@ -7,31 +7,6 @@ import {
 
 describe('Rule Transformer - General', () => {
 	describe('Profile Configuration Validation', () => {
-		it('should use RULE_PROFILES as the single source of truth', () => {
-			// Ensure RULE_PROFILES is properly defined and contains expected profiles
-			expect(Array.isArray(RULE_PROFILES)).toBe(true);
-			expect(RULE_PROFILES.length).toBeGreaterThan(0);
-
-			// Verify expected profiles are present
-			const expectedProfiles = [
-				'claude',
-				'cline',
-				'codex',
-				'cursor',
-				'gemini',
-				'kiro',
-				'opencode',
-				'roo',
-				'trae',
-				'vscode',
-				'windsurf',
-				'zed'
-			];
-			expectedProfiles.forEach((profile) => {
-				expect(RULE_PROFILES).toContain(profile);
-			});
-		});
-
 		it('should validate profiles correctly with isValidProfile', () => {
 			// Test valid profiles
 			RULE_PROFILES.forEach((profile) => {
@@ -63,95 +38,32 @@ describe('Rule Transformer - General', () => {
 			RULE_PROFILES.forEach((profile) => {
 				const profileConfig = getRulesProfile(profile);
 
-				// Check required properties
 				expect(profileConfig).toHaveProperty('profileName');
-				expect(profileConfig).toHaveProperty('conversionConfig');
 				expect(profileConfig).toHaveProperty('fileMap');
 				expect(profileConfig).toHaveProperty('rulesDir');
 				expect(profileConfig).toHaveProperty('profileDir');
-
-				// All profiles should have conversionConfig and fileMap objects
-				expect(typeof profileConfig.conversionConfig).toBe('object');
 				expect(typeof profileConfig.fileMap).toBe('object');
-
-				// Check that conversionConfig has required structure for profiles with rules
-				const hasRules = Object.keys(profileConfig.fileMap).length > 0;
-				if (hasRules) {
-					expect(profileConfig.conversionConfig).toHaveProperty('profileTerms');
-					expect(profileConfig.conversionConfig).toHaveProperty('toolNames');
-					expect(profileConfig.conversionConfig).toHaveProperty('toolContexts');
-					expect(profileConfig.conversionConfig).toHaveProperty('toolGroups');
-					expect(profileConfig.conversionConfig).toHaveProperty('docUrls');
-					expect(profileConfig.conversionConfig).toHaveProperty(
-						'fileReferences'
-					);
-
-					// Verify arrays are actually arrays
-					expect(
-						Array.isArray(profileConfig.conversionConfig.profileTerms)
-					).toBe(true);
-					expect(typeof profileConfig.conversionConfig.toolNames).toBe(
-						'object'
-					);
-					expect(
-						Array.isArray(profileConfig.conversionConfig.toolContexts)
-					).toBe(true);
-					expect(Array.isArray(profileConfig.conversionConfig.toolGroups)).toBe(
-						true
-					);
-					expect(Array.isArray(profileConfig.conversionConfig.docUrls)).toBe(
-						true
-					);
-				}
 			});
 		});
 
-		it('should have valid fileMap with required files for each profile', () => {
-			const expectedRuleFiles = [
-				'cursor_rules.mdc',
-				'dev_workflow.mdc',
-				'self_improve.mdc',
-				'taskmaster.mdc'
-			];
-
+		it('should not carry Cursor rule-conversion config', () => {
 			RULE_PROFILES.forEach((profile) => {
 				const profileConfig = getRulesProfile(profile);
 
-				// Check that fileMap exists and is an object
-				expect(profileConfig.fileMap).toBeDefined();
-				expect(typeof profileConfig.fileMap).toBe('object');
-				expect(profileConfig.fileMap).not.toBeNull();
+				expect(profileConfig).not.toHaveProperty('conversionConfig');
+				expect(profileConfig).not.toHaveProperty('globalReplacements');
+				expect(profileConfig).not.toHaveProperty('includeDefaultRules');
+			});
+		});
 
-				const fileMapKeys = Object.keys(profileConfig.fileMap);
+		it('should map each managed asset to a non-empty target path', () => {
+			RULE_PROFILES.forEach((profile) => {
+				const { fileMap } = getRulesProfile(profile);
 
-				// All profiles should have some fileMap entries now
-				expect(fileMapKeys.length).toBeGreaterThan(0);
-
-				// Check if this profile has rule files or asset files
-				const hasRuleFiles = expectedRuleFiles.some((file) =>
-					fileMapKeys.includes(file)
-				);
-				const hasAssetFiles = fileMapKeys.some(
-					(file) => !expectedRuleFiles.includes(file)
-				);
-
-				if (hasRuleFiles) {
-					// Profiles with rule files should have all expected rule files
-					expectedRuleFiles.forEach((expectedFile) => {
-						expect(fileMapKeys).toContain(expectedFile);
-						expect(typeof profileConfig.fileMap[expectedFile]).toBe('string');
-						expect(profileConfig.fileMap[expectedFile].length).toBeGreaterThan(
-							0
-						);
-					});
-				}
-
-				if (hasAssetFiles) {
-					// Profiles with asset files (like Claude/Codex) should have valid asset mappings
-					fileMapKeys.forEach((key) => {
-						expect(typeof profileConfig.fileMap[key]).toBe('string');
-						expect(profileConfig.fileMap[key].length).toBeGreaterThan(0);
-					});
+				expect(Object.keys(fileMap).length).toBeGreaterThan(0);
+				for (const target of Object.values(fileMap)) {
+					expect(typeof target).toBe('string');
+					expect(target.length).toBeGreaterThan(0);
 				}
 			});
 		});

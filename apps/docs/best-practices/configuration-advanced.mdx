@@ -65,7 +65,7 @@ Taskmaster uses two primary methods for configuration:
 - Used **exclusively** for sensitive API keys and specific endpoint URLs.
 - **Location:**
   - For CLI usage: Create a `.env` file in your project root.
-  - For MCP/Cursor usage: Configure keys in the `env` section of your `.cursor/mcp.json` file.
+  - For MCP usage: Configure keys in the `env` section of your `.mcp.json` file.
 - **Required API Keys (Depending on configured providers):**
   - `ANTHROPIC_API_KEY`: Your Anthropic API key.
   - `PERPLEXITY_API_KEY`: Your Perplexity API key.
@@ -157,7 +157,7 @@ PERPLEXITY_API_KEY=pplx-your-key-here
 
 - If Task Master reports errors about missing configuration or cannot find the config file, run `taskgraph models --setup` in your project root to create or repair the file.
 - For new projects, config will be created at `.taskmaster/config.json`. For legacy projects, you may want to use `taskgraph migrate` to move to the new structure.
-- Ensure API keys are correctly placed in your `.env` file (for CLI) or `.cursor/mcp.json` (for MCP) and are valid for the providers selected in your config file.
+- Ensure API keys are correctly placed in your `.env` file (for CLI) or `.mcp.json` (for MCP) and are valid for the providers selected in your config file.
 
 ### If `taskgraph init` doesn't respond:
 

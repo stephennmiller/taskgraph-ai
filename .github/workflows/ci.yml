@@ -18,7 +18,7 @@ permissions:
 env:
   DO_NOT_TRACK: 1
   NODE_ENV: development
-  NODE_VERSION: 22
+  NODE_VERSION: 24
 
 jobs:
   # Single install job that caches node_modules for all other jobs

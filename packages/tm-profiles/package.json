@@ -1,7 +1,7 @@
 {
 	"name": "@tm/profiles",
 	"private": true,
-	"description": "Editor profile management for Task Master - handles commands and rules across different editors",
+	"description": "Claude Code profile management for Task Master - installs slash commands and CLAUDE.md integration",
 	"type": "module",
 	"types": "./src/index.ts",
 	"main": "./dist/index.js",

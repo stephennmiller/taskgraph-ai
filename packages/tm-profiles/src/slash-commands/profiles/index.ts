@@ -6,11 +6,6 @@
  *
  * Supported profiles (with slash commands):
  * - Claude Code: .claude/commands
- * - Cursor: .cursor/commands
- * - Roo Code: .roo/commands
- * - Gemini: .gemini/commands
- * - Codex: .codex/prompts
- * - OpenCode: .opencode/command
  */
 
 // Base profile class and types
@@ -19,33 +14,17 @@ export type { SlashCommandResult } from './base-profile.js';
 
 // Individual profile classes
 import { ClaudeProfile } from './claude-profile.js';
-import { CodexProfile } from './codex-profile.js';
-import { CursorProfile } from './cursor-profile.js';
-import { GeminiProfile } from './gemini-profile.js';
-import { OpenCodeProfile } from './opencode-profile.js';
-import { RooProfile } from './roo-profile.js';
 
 // Re-export base class and all profile classes for direct use
 export { BaseSlashCommandProfile };
 export { ClaudeProfile };
-export { CodexProfile };
-export type { CodexProfileOptions } from './codex-profile.js';
-export { CursorProfile };
-export { GeminiProfile };
-export { OpenCodeProfile };
-export { RooProfile };
 
 /**
  * Singleton instances of all available slash command profiles.
  * Keys are lowercase profile names for case-insensitive lookup.
  */
 const profiles: Record<string, BaseSlashCommandProfile> = {
-	claude: new ClaudeProfile(),
-	codex: new CodexProfile(),
-	cursor: new CursorProfile(),
-	gemini: new GeminiProfile(),
-	opencode: new OpenCodeProfile(),
-	roo: new RooProfile()
+	claude: new ClaudeProfile()
 };
 
 /**
@@ -57,7 +36,7 @@ const profiles: Record<string, BaseSlashCommandProfile> = {
  * @example
  * ```typescript
  * const claudeProfile = getProfile('claude');
- * const cursorProfile = getProfile('CURSOR'); // Case-insensitive
+ * const sameProfile = getProfile('CLAUDE'); // Case-insensitive
  * ```
  */
 export function getProfile(name: string): BaseSlashCommandProfile | undefined {
@@ -89,7 +68,7 @@ export function getAllProfiles(): BaseSlashCommandProfile[] {
  * @example
  * ```typescript
  * const names = getProfileNames();
- * // ['claude', 'cursor', 'roo', 'gemini']
+ * // ['claude']
  * ```
  */
 export function getProfileNames(): string[] {

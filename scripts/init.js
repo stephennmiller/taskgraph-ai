@@ -356,7 +356,7 @@ async function initializeProject(options = {}) {
 		selectedRuleProfiles = [];
 	} else {
 		// If interactive and no rules specified, default to NONE.
-		// The 'rules --setup' wizard will handle selection if user wants it.
+		// The Claude Code integration prompt below opts in.
 		selectedRuleProfiles = [];
 	}
 
@@ -555,13 +555,13 @@ async function initializeProject(options = {}) {
 				const setupRulesInput = await promptQuestion(
 					rl,
 					chalk.cyan(
-						'Set up AI IDE rules for better integration? (Cursor, Windsurf, etc.) (y/N): '
+						'Set up Claude Code integration (CLAUDE.md import)? (y/N): '
 					),
 					(answer) => {
 						const isYes = answer.trim().toLowerCase() === 'y';
 						const icon = isYes ? chalk.green('✓') : chalk.red('✗');
 						return (
-							chalk.cyan('Set up AI IDE rules for better integration?') +
+							chalk.cyan('Set up Claude Code integration?') +
 							' ' +
 							icon +
 							' ' +
@@ -599,7 +599,7 @@ async function initializeProject(options = {}) {
 			// AI IDE rules
 			const rulesIcon = shouldSetupRules ? chalk.green('✓') : chalk.dim('✗');
 			console.log(
-				'  ' + chalk.dim('AI IDE rules:'.padEnd(32)),
+				'  ' + chalk.dim('Claude Code integration:'.padEnd(32)),
 				rulesIcon + ' ' + chalk.dim(shouldSetupRules ? 'Yes' : 'No')
 			);
 
@@ -671,7 +671,7 @@ async function initializeProject(options = {}) {
 				storeGitPrompted,
 				dryRun,
 				{ ...options, shouldSetupRules, preferredLanguage }, // Pass shouldSetupRules and preferredLanguage through options
-				selectedRuleProfiles,
+				shouldSetupRules ? RULE_PROFILES : selectedRuleProfiles,
 				selectedStorage,
 				authCredentials
 			);
@@ -976,10 +976,9 @@ async function createProjectStructure(
 		log('warn', 'Git not available, skipping repository initialization');
 	}
 
-	// Only run the manual transformer if rules were provided via flags.
-	// The interactive `rules --setup` wizard handles its own installation.
-	if (options.rulesExplicitlyProvided || options.yes) {
-		log('info', 'Generating profile rules from command-line flags...');
+	// Install the Claude profile if requested via --rules or the interactive prompt.
+	if (selectedRuleProfiles.length > 0) {
+		log('info', 'Setting up Claude Code integration...');
 		for (const profileName of selectedRuleProfiles) {
 			_processSingleProfile(profileName);
 		}
@@ -1002,54 +1001,6 @@ async function createProjectStructure(
 		npmInstallOptions.stdio = 'ignore';
 		log('info', 'Running npm install silently...'); // Log our own message
 	}
-
-	// === Add Rule Profiles Setup Step ===
-	// Only run if user explicitly said yes (via shouldSetupRules)
-	if (
-		options.shouldSetupRules &&
-		!isSilentMode() &&
-		!dryRun &&
-		!options?.yes &&
-		!options.rulesExplicitlyProvided
-	) {
-		console.log(
-			boxen(chalk.cyan('Configuring Rule Profiles...'), {
-				padding: 0.5,
-				margin: { top: 1, bottom: 0.5 },
-				borderStyle: 'round',
-				borderColor: 'cyan',
-				width: BOX_WIDTH
-			})
-		);
-		log(
-			'info',
-			'Running interactive rules setup. Please select which rule profiles to include.'
-		);
-		try {
-			// Correct command confirmed by you.
-			execSync('npx taskgraph rules --setup', {
-				stdio: 'inherit',
-				cwd: targetDir
-			});
-			log('success', 'Rule profiles configured.');
-		} catch (error) {
-			log('error', 'Failed to configure rule profiles:', error.message);
-			log('warn', 'You may need to run "taskgraph rules --setup" manually.');
-		}
-	} else if (isSilentMode() || dryRun || options?.yes) {
-		// This branch can log why setup was skipped, similar to the model setup logic.
-		if (options.rulesExplicitlyProvided) {
-			log(
-				'debug',
-				'Skipping interactive rules setup because --rules flag was used.'
-			);
-		} else {
-			log('debug', 'Skipping interactive rules setup in non-interactive mode.');
-		}
-	} else if (!options.shouldSetupRules) {
-		log('debug', 'Skipping rules setup - user declined.');
-	}
-	// =====================================
 
 	// === Add Response Language Step ===
 	// Set language directly if provided via interactive prompt
@@ -1178,10 +1129,7 @@ async function createProjectStructure(
 					chalk.white(' to kickoff any AI agent'),
 				chalk.white('  • Run ') +
 					chalk.bold('tm help') +
-					chalk.white(' to explore other available commands'),
-				chalk.white('  • Run ') +
-					chalk.bold('tm rules --setup') +
-					chalk.white(' to configure AI IDE rules for better integration')
+					chalk.white(' to explore other available commands')
 			].join('\n');
 
 			console.log(
@@ -1221,8 +1169,8 @@ async function createProjectStructure(
 			gettingStartedMessage = `${chalk.cyan.bold("Here's how to execute your Hamster briefs with Taskmaster")}\n\n${chalk.white('1. ')}${chalk.yellow(
 				'Create your first brief at'
 			)} ${chalk.cyan.underline('https://tryhamster.com')}\n${chalk.white('   └─ ')}${chalk.dim('Hamster will write your brief and generate the full task plan')}\n${chalk.white('2. ')}${chalk.yellow(
-				'Add rules for your AI IDE(s)'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm rules --setup')}${chalk.dim(' - Opens interactive setup')}\n${chalk.white('3. ')}${chalk.yellow(
+				'Set up Claude Code integration'
+			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph init --rules claude')}${chalk.dim(' - Adds CLAUDE.md import and MCP config')}\n${chalk.white('3. ')}${chalk.yellow(
 				'Connect your brief to Taskmaster'
 			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm context <brief-url> OR tm briefs')}\n${chalk.white('4. ')}${chalk.yellow(
 				'View your tasks from the brief'
@@ -1238,7 +1186,7 @@ async function createProjectStructure(
 			gettingStartedMessage = `${chalk.cyan.bold('Things you should do next:')}\n\n${chalk.white('1. ')}${chalk.yellow(
 				'Configure AI models and add API keys to `.env`'
 			)}\n${chalk.white('   ├─ ')}${chalk.dim('Models: Use ')}${chalk.cyan('taskgraph models')}${chalk.dim(' commands')}\n${chalk.white('   └─ ')}${chalk.dim(
-				'Keys: Add provider API keys to .env (or .cursor/mcp.json)'
+				'Keys: Add provider API keys to .env (or .mcp.json)'
 			)}\n${chalk.white('2. ')}${chalk.yellow(
 				'Discuss your idea with AI and create a PRD'
 			)}\n${chalk.white('   ├─ ')}${chalk.dim('Simple projects: Use ')}${chalk.cyan('example_prd.txt')}${chalk.dim(' template')}\n${chalk.white('   └─ ')}${chalk.dim('Complex systems: Use ')}${chalk.cyan('example_prd_rpg.txt')}${chalk.dim(' template')}\n${chalk.white('3. ')}${chalk.yellow(
@@ -1251,9 +1199,7 @@ async function createProjectStructure(
 				'Start working on tasks'
 			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph next')}\n${chalk.white('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
 				'* Run '
-			)}${chalk.cyan('taskgraph --help')}${chalk.dim(' to see all available commands')}\n${chalk.dim(
-				'* Run '
-			)}${chalk.cyan('tm rules --setup')}${chalk.dim(' to configure AI IDE rules for better integration')}`;
+			)}${chalk.cyan('taskgraph --help')}${chalk.dim(' to see all available commands')}`;
 		}
 
 		console.log(

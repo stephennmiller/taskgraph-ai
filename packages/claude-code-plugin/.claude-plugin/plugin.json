@@ -2,7 +2,7 @@
 	"name": "taskmaster",
 	"description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
 	"author": {
-		"name": "Hamster",
+		"name": "Stephen Miller",
 		"url": "https://github.com/stephennmiller/taskgraph-ai"
 	},
 	"homepage": "https://github.com/stephennmiller/taskgraph-ai#readme",

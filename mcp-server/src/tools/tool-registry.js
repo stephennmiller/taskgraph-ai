@@ -27,7 +27,6 @@ import { registerRemoveTaskTool } from './remove-task.js';
 import { registerRenameTagTool } from './rename-tag.js';
 import { registerResearchTool } from './research.js';
 import { registerResponseLanguageTool } from './response-language.js';
-import { registerRulesTool } from './rules.js';
 import { registerScopeDownTool } from './scope-down.js';
 import { registerScopeUpTool } from './scope-up.js';
 import { registerUpdateSubtaskTool } from './update-subtask.js';
@@ -59,7 +58,6 @@ import {
 export const toolRegistry = {
 	initialize_project: registerInitializeProjectTool,
 	models: registerModelsTool,
-	rules: registerRulesTool,
 	parse_prd: registerParsePRDTool,
 	'response-language': registerResponseLanguageTool,
 	analyze_project_complexity: registerAnalyzeProjectComplexityTool,

@@ -1,41 +1,9 @@
 import fs from 'fs';
 // Claude Code profile for rule-transformer
 import path from 'path';
-import { isSilentMode, log } from '../../scripts/modules/utils.js';
+import { log } from '../../scripts/modules/utils.js';
 import { createProfile } from './base-profile.js';
 import { enableDeferredMcpLoading } from '@tm/profiles';
-
-// Helper function to recursively copy directory (adopted from Roo profile)
-function copyRecursiveSync(src, dest) {
-	const exists = fs.existsSync(src);
-	const stats = exists && fs.statSync(src);
-	const isDirectory = exists && stats.isDirectory();
-	if (isDirectory) {
-		if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
-		fs.readdirSync(src).forEach((childItemName) => {
-			copyRecursiveSync(
-				path.join(src, childItemName),
-				path.join(dest, childItemName)
-			);
-		});
-	} else {
-		fs.copyFileSync(src, dest);
-	}
-}
-
-// Helper function to recursively remove directory
-function removeDirectoryRecursive(dirPath) {
-	if (fs.existsSync(dirPath)) {
-		try {
-			fs.rmSync(dirPath, { recursive: true, force: true });
-			return true;
-		} catch (err) {
-			log('error', `Failed to remove directory ${dirPath}: ${err.message}`);
-			return false;
-		}
-	}
-	return true;
-}
 
 // Lifecycle functions for Claude Code profile
 function onAddRulesProfile(targetDir, assetsDir) {
@@ -125,86 +93,6 @@ function onAddRulesProfile(targetDir, assetsDir) {
 	}
 }
 
-function onRemoveRulesProfile(targetDir) {
-	// Note: .claude directory (commands/agents) are now managed by Claude Code plugin
-	// We no longer remove them here - users should uninstall the plugin separately
-	log(
-		'info',
-		'[Claude] To remove Task Master commands/agents, uninstall the plugin with: /plugin uninstall taskmaster'
-	);
-
-	// Clean up CLAUDE.md import
-	const userClaudeFile = path.join(targetDir, 'CLAUDE.md');
-	const taskMasterClaudeFile = path.join(targetDir, '.taskmaster', 'CLAUDE.md');
-	const importLine = '@./.taskmaster/CLAUDE.md';
-
-	try {
-		// Remove Task Master CLAUDE.md from .taskmaster
-		if (fs.existsSync(taskMasterClaudeFile)) {
-			fs.rmSync(taskMasterClaudeFile, { force: true });
-			log('debug', `[Claude] Removed ${taskMasterClaudeFile}`);
-		}
-
-		// Clean up import from user's CLAUDE.md
-		if (fs.existsSync(userClaudeFile)) {
-			const content = fs.readFileSync(userClaudeFile, 'utf8');
-			const lines = content.split('\n');
-			const filteredLines = [];
-			let skipNextLines = 0;
-
-			// Remove the Task Master section
-			for (let i = 0; i < lines.length; i++) {
-				if (skipNextLines > 0) {
-					skipNextLines--;
-					continue;
-				}
-
-				// Check if this is the start of our Task Master section
-				if (lines[i].includes('## Task Master AI Instructions')) {
-					// Skip this line and the next two lines (bold text and import)
-					skipNextLines = 2;
-					continue;
-				}
-
-				// Also remove standalone import lines (for backward compatibility)
-				if (lines[i].trim() === importLine) {
-					continue;
-				}
-
-				filteredLines.push(lines[i]);
-			}
-
-			// Join back and clean up excessive newlines
-			let updatedContent = filteredLines
-				.join('\n')
-				.replace(/\n{3,}/g, '\n\n')
-				.trim();
-
-			// Check if file only contained our minimal template
-			if (
-				updatedContent === '# Claude Code Instructions' ||
-				updatedContent === ''
-			) {
-				// File only contained our import, remove it
-				fs.rmSync(userClaudeFile, { force: true });
-				log('debug', `[Claude] Removed empty ${userClaudeFile}`);
-			} else {
-				// Write back without the import
-				fs.writeFileSync(userClaudeFile, updatedContent + '\n');
-				log(
-					'debug',
-					`[Claude] Removed Task Master import from ${userClaudeFile}`
-				);
-			}
-		}
-	} catch (err) {
-		log(
-			'error',
-			`[Claude] Failed to remove Claude instructions: ${err.message}`
-		);
-	}
-}
-
 /**
  * Transform standard MCP config format to Claude format
  * @param {Object} mcpConfig - Standard MCP configuration object
@@ -246,9 +134,7 @@ function transformToClaudeFormat(mcpConfig) {
 }
 
 function onPostConvertRulesProfile(targetDir, assetsDir) {
-	// For Claude, post-convert is the same as add since we don't transform rules
-	onAddRulesProfile(targetDir, assetsDir);
-
+	// onAddRulesProfile already ran before this hook; only the MCP config needs converting
 	// Transform MCP configuration to Claude format
 	const mcpConfigPath = path.join(targetDir, '.mcp.json');
 	if (fs.existsSync(mcpConfigPath)) {
@@ -278,24 +164,19 @@ function onPostConvertRulesProfile(targetDir, assetsDir) {
 export const claudeProfile = createProfile({
 	name: 'claude',
 	displayName: 'Claude Code',
-	url: 'claude.ai',
-	docsUrl: 'docs.anthropic.com/en/docs/claude-code',
 	profileDir: '.', // Root directory
 	rulesDir: '.', // No specific rules directory needed
 	mcpConfigName: '.mcp.json', // Place MCP config in project root
-	includeDefaultRules: false,
 	fileMap: {
 		'AGENTS.md': '.taskmaster/CLAUDE.md'
 	},
 	onAdd: onAddRulesProfile,
-	onRemove: onRemoveRulesProfile,
 	onPostConvert: onPostConvertRulesProfile
 });
 
 // Export lifecycle functions separately to avoid naming conflicts
 export {
 	onAddRulesProfile,
-	onRemoveRulesProfile,
 	onPostConvertRulesProfile,
 	transformToClaudeFormat
 };

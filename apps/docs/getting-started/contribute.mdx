@@ -284,8 +284,8 @@ claude-task-master/
 ├── src/                   # Shared utilities and providers and well refactored code (we are slowly moving everything here)
 ├── tests/                 # Test files
 ├── docs/                  # Documentation
-└── .cursor/               # Cursor IDE rules and configuration
-└── assets/							   # Assets like rules and configuration for all IDEs
+└── .claude/               # Claude Code rules (path-scoped dev conventions)
+└── assets/                # Assets installed into user projects (e.g. AGENTS.md)
 ```
 
 ### Key Areas for Contribution
@@ -320,7 +320,6 @@ Include:
 
 ## 💬 Getting Help
 
-- **Discord**: [Join our community](https://discord.gg/taskmasterai)
 - **Issues**: [GitHub Issues](https://github.com/eyaltoledano/claude-task-master/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/eyaltoledano/claude-task-master/discussions)
 

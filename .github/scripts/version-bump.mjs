@@ -126,7 +126,7 @@ function setVersionInText(text, version, file) {
 }
 
 export function applyVersion(rootDir, version) {
-	for (const file of ['package.json', 'manifest.json', 'package-lock.json']) {
+	for (const file of ['package.json', 'package-lock.json']) {
 		const path = join(rootDir, file);
 		writeFileSync(
 			path,

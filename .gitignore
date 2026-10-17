@@ -88,13 +88,6 @@ dev-debug.log
 *.sln
 *.sw?
 
-# VS Code extension test files
-.vscode-test/
-apps/extension/.vscode-test/
-
-# apps/extension
-apps/extension/vsix-build/
-
 # turbo
 .turbo
 

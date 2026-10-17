@@ -1,65 +1,24 @@
 /**
- * @typedef {'amp' | 'claude' | 'cline' | 'codex' | 'cursor' | 'gemini' | 'kiro' | 'opencode' | 'kilo' | 'roo' | 'trae' | 'windsurf' | 'vscode' | 'zed'} RulesProfile
+ * @typedef {'claude'} RulesProfile
  */
 
 /**
- * Available rule profiles for project initialization and rules command
+ * Available rule profiles for project initialization
  *
- * ⚠️  SINGLE SOURCE OF TRUTH: This is the authoritative list of all supported rule profiles.
- * This constant is used directly throughout the codebase (previously aliased as PROFILE_NAMES).
+ * Task Master supports Claude Code only. This is the single source of truth.
  *
  * @type {RulesProfile[]}
- * @description Defines possible rule profile sets:
- * - amp: Amp Code integration
- * - claude: Claude Code integration
- * - cline: Cline IDE rules
- * - codex: Codex integration
- * - cursor: Cursor IDE rules
- * - gemini: Gemini integration
- * - kiro: Kiro IDE rules
- * - opencode: OpenCode integration
- * - kilo: Kilo Code integration
- * - roo: Roo Code IDE rules
- * - trae: Trae IDE rules
- * - vscode: VS Code with GitHub Copilot integration
- * - windsurf: Windsurf IDE rules
- * - zed: Zed IDE rules
- *
- * To add a new rule profile:
- * 1. Add the profile name to this array
- * 2. Create a profile file in src/profiles/{profile}.js
- * 3. Export it as {profile}Profile in src/profiles/index.js
  */
-export const RULE_PROFILES = [
-	'amp',
-	'claude',
-	'cline',
-	'codex',
-	'cursor',
-	'gemini',
-	'kiro',
-	'opencode',
-	'kilo',
-	'roo',
-	'trae',
-	'vscode',
-	'windsurf',
-	'zed'
-];
+export const RULE_PROFILES = ['claude'];
 
 /**
- * Centralized enum for all supported Roo agent modes
- * @type {string[]}
- * @description Available Roo Code IDE modes for rule generation
+ * Names in the list that are not supported rule profiles
+ * @param {string[]} rulesProfiles - Profile names to check
+ * @returns {string[]} The unsupported names, in input order
  */
-export const ROO_MODES = [
-	'architect',
-	'ask',
-	'orchestrator',
-	'code',
-	'debug',
-	'test'
-];
+export function findInvalidRulesProfiles(rulesProfiles) {
+	return rulesProfiles.filter((name) => !isValidRulesProfile(name));
+}
 
 /**
  * Check if a given rule profile is valid

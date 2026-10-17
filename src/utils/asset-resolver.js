@@ -37,7 +37,7 @@ export function getAssetsDir() {
 	for (const assetPath of possiblePaths) {
 		if (fs.existsSync(assetPath)) {
 			// Verify it's actually the assets directory by checking for known files
-			const testFile = path.join(assetPath, 'rules', 'taskmaster.mdc');
+			const testFile = path.join(assetPath, 'AGENTS.md');
 			if (fs.existsSync(testFile)) {
 				return assetPath;
 			}

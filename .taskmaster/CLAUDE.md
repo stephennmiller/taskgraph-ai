@@ -121,7 +121,7 @@ Task Master uses tiered tool loading to optimize context window usage:
 
 **Standard adds (7 more):** `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`
 
-**All tier adds:** Dependency management, tag management, research, autopilot TDD workflow, scope up/down, models, rules
+**All tier adds:** Dependency management, tag management, research, autopilot TDD workflow, scope up/down, models
 
 **To upgrade tiers:** Change `TASK_MASTER_TOOLS` in `.mcp.json` from `"core"` to `"standard"` or `"all"` and restart the MCP connection.
 

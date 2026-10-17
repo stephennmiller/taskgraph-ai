@@ -1,15 +1,12 @@
 /**
  * Tests that generated MCP configs launch this package under the taskgraph-ai
  * key, while configs written by earlier task-master-ai installs are still
- * recognised (left alone on setup, cleaned up on removal).
+ * recognised (left alone on setup).
  */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import {
-	removeTaskMasterMCPConfiguration,
-	setupMCPConfiguration
-} from '../../src/utils/create-mcp-config.js';
+import { setupMCPConfiguration } from '../../src/utils/create-mcp-config.js';
 
 const MCP_PATH = '.cursor/mcp.json';
 
@@ -74,39 +71,6 @@ describe('create-mcp-config', () => {
 			setupMCPConfiguration(projectRoot, MCP_PATH);
 
 			expect(readConfig()).toEqual(current);
-		});
-	});
-
-	describe('removeTaskMasterMCPConfiguration', () => {
-		test.each([
-			['taskgraph-ai', 'taskgraph-ai'],
-			['task-master-ai', 'task-master-ai']
-		])('removes a %s server and keeps the others', (key, pkg) => {
-			writeConfig({
-				mcpServers: {
-					[key]: { command: 'npx', args: ['-y', pkg] },
-					other: { command: 'x', args: ['y'] }
-				}
-			});
-
-			const result = removeTaskMasterMCPConfiguration(projectRoot, MCP_PATH);
-
-			expect(result.removed).toBe(true);
-			expect(Object.keys(readConfig().mcpServers)).toEqual(['other']);
-		});
-
-		test('removes a renamed server that launches either package', () => {
-			writeConfig({
-				mcpServers: {
-					a: { command: 'npx', args: ['-y', 'taskgraph-ai'] },
-					b: { command: 'npx', args: ['-y', 'task-master-ai'] },
-					other: { command: 'x', args: ['y'] }
-				}
-			});
-
-			removeTaskMasterMCPConfiguration(projectRoot, MCP_PATH);
-
-			expect(Object.keys(readConfig().mcpServers)).toEqual(['other']);
 		});
 	});
 });

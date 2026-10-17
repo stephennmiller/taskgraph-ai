@@ -6,8 +6,8 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { SlashCommand, FormattedSlashCommand } from '../types.js';
 import { filterCommandsByMode } from '../commands/index.js';
+import type { FormattedSlashCommand, SlashCommand } from '../types.js';
 
 /** Default namespace for TaskMaster commands */
 export const TM_NAMESPACE = 'tm';
@@ -54,18 +54,18 @@ export interface AddSlashCommandsOptions {
  *
  * @example
  * ```ts
- * import { CursorProfile } from '@tm/profiles';
+ * import { ClaudeProfile } from '@tm/profiles';
  * import { allCommands } from '@tm/profiles';
  *
- * const cursor = new CursorProfile();
- * cursor.addSlashCommands('/path/to/project', allCommands);
+ * const claude = new ClaudeProfile();
+ * claude.addSlashCommands('/path/to/project', allCommands);
  * ```
  */
 export abstract class BaseSlashCommandProfile {
-	/** Profile identifier (lowercase, e.g., 'claude', 'cursor') */
+	/** Profile identifier (lowercase, e.g., 'claude') */
 	abstract readonly name: string;
 
-	/** Display name for UI/logging (e.g., 'Claude Code', 'Cursor') */
+	/** Display name for UI/logging (e.g., 'Claude Code') */
 	abstract readonly displayName: string;
 
 	/** Commands directory relative to project root (e.g., '.claude/commands') */
@@ -77,7 +77,7 @@ export abstract class BaseSlashCommandProfile {
 	/**
 	 * Whether this profile supports nested command directories.
 	 * - true: Commands go in a subdirectory (e.g., `.claude/commands/tm/help.md`)
-	 * - false: Commands use a prefix (e.g., `.opencode/command/tm-help.md`)
+	 * - false: Commands use a prefix (e.g., `.claude/commands/tm-help.md`)
 	 *
 	 * Override in profiles that don't support nested directories.
 	 */
@@ -175,15 +175,15 @@ export abstract class BaseSlashCommandProfile {
 	 *
 	 * @example
 	 * ```ts
-	 * const cursor = new CursorProfile();
+	 * const claude = new ClaudeProfile();
 	 * // Add all commands
-	 * const result = cursor.addSlashCommands('/path/to/project', allCommands);
+	 * const result = claude.addSlashCommands('/path/to/project', allCommands);
 	 *
 	 * // Add only solo mode commands
-	 * const soloResult = cursor.addSlashCommands('/path/to/project', allCommands, { mode: 'solo' });
+	 * const soloResult = claude.addSlashCommands('/path/to/project', allCommands, { mode: 'solo' });
 	 *
 	 * // Add only team mode commands (exclusive)
-	 * const teamResult = cursor.addSlashCommands('/path/to/project', allCommands, { mode: 'team' });
+	 * const teamResult = claude.addSlashCommands('/path/to/project', allCommands, { mode: 'team' });
 	 * ```
 	 */
 	addSlashCommands(
@@ -260,8 +260,8 @@ export abstract class BaseSlashCommandProfile {
 	 *
 	 * @example
 	 * ```ts
-	 * const cursor = new CursorProfile();
-	 * const result = cursor.removeSlashCommands('/path/to/project', allCommands);
+	 * const claude = new ClaudeProfile();
+	 * const result = claude.removeSlashCommands('/path/to/project', allCommands);
 	 * console.log(`Removed ${result.count} commands`);
 	 * ```
 	 */
@@ -354,9 +354,9 @@ export abstract class BaseSlashCommandProfile {
 	 *
 	 * @example
 	 * ```ts
-	 * const cursor = new CursorProfile();
+	 * const claude = new ClaudeProfile();
 	 * // Switch from solo to team mode
-	 * const result = cursor.replaceSlashCommands('/path/to/project', allCommands, 'team');
+	 * const result = claude.replaceSlashCommands('/path/to/project', allCommands, 'team');
 	 * ```
 	 */
 	replaceSlashCommands(
