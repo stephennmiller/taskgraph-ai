@@ -172,9 +172,9 @@ Apply standard software engineering principles:
 - **Documentation location**: Write docs in `apps/docs/` (Mintlify site source), not `docs/`
 - **Documentation URL**: Reference docs at <https://tryhamster.com/docs/taskmaster>, not local file paths
 
-## Changeset Guidelines
+## Versioning & Release Guidelines
 
-- **Add a changeset for code changes** - Run `npx changeset` after making code changes (not needed for docs-only PRs)
-- When creating changesets, remember that it's user-facing, meaning we don't have to get into the specifics of the code, but rather mention what the end-user is getting or fixing from this changeset
+- **Use a conventional-commit PR title** - releases are cut automatically on merge to `main` from commit messages: `feat:` bumps minor, `fix:`/`perf:`/`revert:` bump patch, `!` or a `BREAKING CHANGE:` footer bumps major (one level lower below 1.0.0). `chore:`, `docs:`, `ci:`, `test:` do not release. Do not add a changeset.
+- Keep the PR title user-facing: it becomes the release note, so say what the end-user gets or what is fixed
 - Run `npm run turbo:typecheck` before pushing to ensure TypeScript type checks pass
 - Run `npm run test -w <package-name>` to test a package
