@@ -15,6 +15,7 @@
 	},
 	"workspaces": ["apps/*", "packages/*"],
 	"scripts": {
+		"prepare": "node .githooks/install.mjs",
 		"build": "npm run build:build-config && cross-env NODE_ENV=production tsdown",
 		"dev": "tsdown --watch",
 		"turbo:dev": "turbo dev",

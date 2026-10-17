@@ -1,0 +1,30 @@
+#!/bin/sh
+# Pre-push hook: run the Biome formatter check on the files this branch changed,
+# so unformatted code is caught here instead of failing the Format Check in CI.
+#
+# Installed by `npm install` (the "prepare" script points core.hooksPath here).
+# Skip once with `git push --no-verify`.
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+
+base_ref="${PRE_PUSH_BASE:-origin/main}"
+if ! base=$(git merge-base HEAD "$base_ref" 2>/dev/null); then
+	echo "pre-push: cannot find $base_ref, skipping the format check" >&2
+	exit 0
+fi
+
+# Files Biome formats; deleted files are left out
+files=$(git diff --name-only --diff-filter=ACMR "$base" HEAD |
+	grep -E '\.(js|jsx|ts|tsx|mjs|cjs|json|jsonc)$' || true)
+
+if [ -z "$files" ]; then
+	exit 0
+fi
+
+if ! printf '%s\n' "$files" | tr '\n' '\0' | xargs -0 npx --no-install biome format; then
+	echo "" >&2
+	echo "pre-push: formatting check failed. To fix the files this branch changed:" >&2
+	echo "  git diff --name-only --diff-filter=ACMR $base HEAD | grep -E '\\.(js|jsx|ts|tsx|mjs|cjs|json|jsonc)\$' | xargs npx biome format --write" >&2
+	exit 1
+fi
