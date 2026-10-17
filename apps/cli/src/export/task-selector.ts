@@ -8,6 +8,7 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { validateTasks } from './export-validator.js';
 import type { ExportableTask, TaskSelectionResult } from './types.js';
+import { BORDER_COLOR, theme } from '../ui/theme.js';
 
 /**
  * Choice item for Inquirer checkbox
@@ -151,7 +152,7 @@ export async function showExportPreview(
 		subtaskCount > 0
 			? `${taskCount} tasks + ${subtaskCount} subtasks (${totalCount} total)`
 			: `${taskCount} tasks`;
-	console.log(chalk.white(`  ${taskSummary} ready to export`));
+	console.log(theme.text(`  ${taskSummary} ready to export`));
 
 	// Validation check
 	const validation = validateTasks(tasks);
@@ -188,18 +189,16 @@ export async function showExportPreview(
  */
 export function showUpgradeMessage(tagName?: string): void {
 	const tagLine = tagName
-		? chalk.cyan(`  Exporting tag: ${chalk.white.bold(tagName)}`)
+		? chalk.cyan(`  Exporting tag: ${chalk.bold(tagName)}`)
 		: '';
 
 	const content = [
-		chalk.white.bold('Exporting your tasks to Hamster'),
+		chalk.bold('Exporting your tasks to Hamster'),
 		'',
 		chalk.gray('Your tasks will live on Hamster where you can:'),
-		chalk.white('  • Invite teammates to collaborate on the brief together'),
-		chalk.white('  • Chat with AI alongside your team in real-time'),
-		chalk.white(
-			'  • Draft, refine, align briefs and ship them faster together'
-		),
+		theme.text('  • Invite teammates to collaborate on the brief together'),
+		theme.text('  • Chat with AI alongside your team in real-time'),
+		theme.text('  • Draft, refine, align briefs and ship them faster together'),
 		...(tagLine ? ['', tagLine] : [])
 	].join('\n');
 
@@ -208,7 +207,7 @@ export function showUpgradeMessage(tagName?: string): void {
 			padding: { top: 1, bottom: 1, left: 2, right: 2 },
 			margin: { top: 1, bottom: 1 },
 			borderStyle: 'round',
-			borderColor: 'cyan',
+			borderColor: BORDER_COLOR,
 			dimBorder: true
 		})
 	);

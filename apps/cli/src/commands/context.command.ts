@@ -21,6 +21,7 @@ import {
 } from '../utils/brief-selection.js';
 import { ensureOrgSelected } from '../utils/org-selection.js';
 import * as ui from '../utils/ui.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Result type from context command
@@ -172,7 +173,7 @@ export class ContextCommand extends Command {
 			if (context.orgName || context.orgId) {
 				console.log(chalk.green('✓ Organization'));
 				if (context.orgName) {
-					console.log(chalk.white(`  ${context.orgName}`));
+					console.log(theme.text(`  ${context.orgName}`));
 				}
 				if (context.orgId) {
 					console.log(chalk.gray(`  ID: ${context.orgId}`));
@@ -184,10 +185,10 @@ export class ContextCommand extends Command {
 				if (context.briefName && context.briefId) {
 					const shortId = context.briefId.slice(-8);
 					console.log(
-						chalk.white(`  ${context.briefName} `) + chalk.gray(`(${shortId})`)
+						theme.text(`  ${context.briefName} `) + chalk.gray(`(${shortId})`)
 					);
 				} else if (context.briefName) {
-					console.log(chalk.white(`  ${context.briefName}`));
+					console.log(theme.text(`  ${context.briefName}`));
 				} else if (context.briefId) {
 					console.log(chalk.gray(`  ID: ${context.briefId}`));
 				}

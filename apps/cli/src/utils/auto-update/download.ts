@@ -10,6 +10,7 @@ import cliProgress from 'cli-progress';
 
 import type { TarballInfo } from './types.js';
 import { PACKAGE_NAME } from './constants.js';
+import { theme } from '../../ui/theme.js';
 
 /**
  * Format bytes to human-readable string
@@ -142,7 +143,7 @@ export async function downloadTarballWithProgress(
 			// Create progress bar
 			const progressBar = new cliProgress.SingleBar(
 				{
-					format: `${chalk.blue('Downloading')} ${chalk.cyan('{bar}')} {percentage}% | {downloaded}/{total}`,
+					format: `${theme.brand('Downloading')} ${chalk.cyan('{bar}')} {percentage}% | {downloaded}/{total}`,
 					barCompleteChar: '\u2588',
 					barIncompleteChar: '\u2591',
 					hideCursor: true,
@@ -158,7 +159,7 @@ export async function downloadTarballWithProgress(
 				});
 			} else {
 				// If no content-length, show indeterminate progress
-				console.log(chalk.blue(`Downloading ${PACKAGE_NAME}@${version}...`));
+				console.log(theme.brand(`Downloading ${PACKAGE_NAME}@${version}...`));
 			}
 
 			const fileStream = fs.createWriteStream(destPath);

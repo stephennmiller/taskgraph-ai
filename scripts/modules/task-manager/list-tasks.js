@@ -16,8 +16,10 @@ import {
 	createProgressBar,
 	displayBanner,
 	formatDependenciesWithStatus,
+	BORDER_COLOR,
 	getComplexityWithColor,
-	getStatusWithColor
+	getStatusWithColor,
+	theme
 } from '../ui.js';
 
 /**
@@ -630,7 +632,7 @@ async function listTasks(
 										if (isDone) {
 											return chalk.green.bold(`${task.id}.${depId}`);
 										} else if (isInProgress) {
-											return chalk.hex('#FFA500').bold(`${task.id}.${depId}`);
+											return theme.active.bold(`${task.id}.${depId}`);
 										} else {
 											return chalk.red.bold(`${task.id}.${depId}`);
 										}
@@ -648,7 +650,7 @@ async function listTasks(
 									if (isDone) {
 										return chalk.green.bold(`${depId}`);
 									} else if (isInProgress) {
-										return chalk.hex('#FFA500').bold(`${depId}`);
+										return theme.active.bold(`${depId}`);
 									} else {
 										return chalk.red.bold(`${depId}`);
 									}
@@ -748,7 +750,7 @@ async function listTasks(
 
 			console.log(
 				boxen(
-					chalk.hex('#FF8800').bold(
+					theme.heading(
 						// Use nextItem.id and nextItem.title
 						`🔥 Next Task to Work On: #${nextItem.id} - ${nextItem.title}`
 					) +
@@ -767,7 +769,7 @@ async function listTasks(
 						`${chalk.cyan('View details:')} ${chalk.yellow(`taskgraph show ${nextItem.id}`)}`,
 					{
 						padding: { left: 2, right: 2, top: 1, bottom: 1 },
-						borderColor: '#FF8800',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1, bottom: 1 },
 						title: '⚡ RECOMMENDED NEXT TASK ⚡',
@@ -780,12 +782,12 @@ async function listTasks(
 		} else {
 			console.log(
 				boxen(
-					chalk.hex('#FF8800').bold('No eligible next task found') +
+					theme.heading('No eligible next task found') +
 						'\n\n' +
 						'All pending tasks have dependencies that are not yet completed, or all tasks are done.',
 					{
 						padding: 1,
-						borderColor: '#FF8800',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1, bottom: 1 },
 						title: '⚡ NEXT TASK ⚡',

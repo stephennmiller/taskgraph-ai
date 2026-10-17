@@ -40,6 +40,7 @@ import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Options interface for the list command
@@ -583,7 +584,7 @@ export class ListTasksCommand extends Command {
 			const icon = STATUS_ICONS[task.status];
 			// Show tag in compact format when listing all tags (tasks are TaskWithTag[])
 			const tagPrefix =
-				allTags && 'tagName' in task ? chalk.magenta(`[${task.tagName}] `) : '';
+				allTags && 'tagName' in task ? theme.accent(`[${task.tagName}] `) : '';
 			console.log(`${tagPrefix}${chalk.cyan(task.id)} ${icon} ${task.title}`);
 
 			if (options.withSubtasks && task.subtasks?.length) {

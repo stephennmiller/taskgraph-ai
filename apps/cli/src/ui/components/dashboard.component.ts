@@ -8,6 +8,7 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import { isTaskComplete } from '../../utils/task-status.js';
 import { getComplexityWithColor } from '../../utils/ui.js';
+import { BORDER_COLOR, theme } from '../theme.js';
 
 /**
  * Statistics for task collection
@@ -121,7 +122,7 @@ function createProgressBar(
 		);
 		const actualChars = Math.min(inProgressChars, width - charsUsed);
 		if (actualChars > 0) {
-			bar += chalk.blue('█').repeat(actualChars);
+			bar += theme.brand('█').repeat(actualChars);
 			charsUsed += actualChars;
 		}
 	}
@@ -416,7 +417,7 @@ function formatStatusLine(
 	const firstLine = parts.join('  ');
 	parts.length = 0;
 
-	parts.push(`In Progress: ${chalk.blue(stats.inProgress)}`);
+	parts.push(`In Progress: ${theme.brand(stats.inProgress)}`);
 	parts.push(`Review: ${chalk.magenta(stats.review || 0)}`);
 	parts.push(`Pending: ${chalk.yellow(stats.pending)}`);
 	parts.push(`Blocked: ${chalk.red(stats.blocked)}`);
@@ -454,7 +455,7 @@ export function displayProjectDashboard(
 	const subtaskPercentage = `${subtaskStats.completionPercentage}% ${subtaskStats.completedCount}/${subtaskStats.total}`;
 
 	const content =
-		chalk.white.bold('Project Dashboard') +
+		chalk.bold('Project Dashboard') +
 		'\n' +
 		`Tasks Progress: ${taskProgressBar} ${chalk.yellow(taskPercentage)}\n` +
 		formatStatusLine(taskStats, false) +
@@ -464,9 +465,9 @@ export function displayProjectDashboard(
 		'\n\n' +
 		chalk.cyan.bold('Priority Breakdown:') +
 		'\n' +
-		`${chalk.red('•')} ${chalk.white('High priority:')} ${priorityBreakdown.high}\n` +
-		`${chalk.yellow('•')} ${chalk.white('Medium priority:')} ${priorityBreakdown.medium}\n` +
-		`${chalk.green('•')} ${chalk.white('Low priority:')} ${priorityBreakdown.low}`;
+		`${chalk.red('•')} ${theme.text('High priority:')} ${priorityBreakdown.high}\n` +
+		`${chalk.yellow('•')} ${theme.text('Medium priority:')} ${priorityBreakdown.medium}\n` +
+		`${chalk.green('•')} ${theme.text('Low priority:')} ${priorityBreakdown.low}`;
 
 	return content;
 }
@@ -479,27 +480,25 @@ export function displayDependencyDashboard(
 	nextTask?: NextTaskInfo
 ): string {
 	const content =
-		chalk.white.bold('Dependency Status & Next Task') +
+		chalk.bold('Dependency Status & Next Task') +
 		'\n' +
 		chalk.cyan.bold('Dependency Metrics:') +
 		'\n' +
-		`${chalk.green('•')} ${chalk.white('Tasks with no dependencies:')} ${depStats.tasksWithNoDeps}\n` +
-		`${chalk.green('•')} ${chalk.white('Tasks ready to work on:')} ${depStats.tasksReadyToWork}\n` +
-		`${chalk.yellow('•')} ${chalk.white('Tasks blocked by dependencies:')} ${depStats.tasksBlockedByDeps}\n` +
-		`${chalk.magenta('•')} ${chalk.white('Most depended-on task:')} ${
+		`${chalk.green('•')} ${theme.text('Tasks with no dependencies:')} ${depStats.tasksWithNoDeps}\n` +
+		`${chalk.green('•')} ${theme.text('Tasks ready to work on:')} ${depStats.tasksReadyToWork}\n` +
+		`${chalk.yellow('•')} ${theme.text('Tasks blocked by dependencies:')} ${depStats.tasksBlockedByDeps}\n` +
+		`${theme.accent('•')} ${theme.text('Most depended-on task:')} ${
 			depStats.mostDependedOnTaskId
 				? chalk.cyan(
 						`#${depStats.mostDependedOnTaskId} (${depStats.mostDependedOnCount} dependents)`
 					)
 				: chalk.gray('None')
 		}\n` +
-		`${chalk.blue('•')} ${chalk.white('Avg dependencies per task:')} ${depStats.avgDependenciesPerTask.toFixed(1)}\n\n` +
+		`${theme.brand('•')} ${theme.text('Avg dependencies per task:')} ${depStats.avgDependenciesPerTask.toFixed(1)}\n\n` +
 		chalk.cyan.bold('Next Task to Work On:') +
 		'\n' +
 		`ID: ${nextTask ? chalk.cyan(String(nextTask.id)) : chalk.gray('N/A')} - ${
-			nextTask
-				? chalk.white.bold(nextTask.title)
-				: chalk.yellow('No task available')
+			nextTask ? chalk.bold(nextTask.title) : chalk.yellow('No task available')
 		}\n` +
 		`Priority: ${nextTask?.priority || chalk.gray('N/A')}  Dependencies: ${
 			nextTask?.dependencies?.length
@@ -544,7 +543,7 @@ export function displayDashboards(
 
 		const dashboardBox = boxen(projectDashboardContent, {
 			padding: 1,
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			width: boxContentWidth,
 			dimBorder: false
@@ -552,7 +551,7 @@ export function displayDashboards(
 
 		const dependencyBox = boxen(dependencyDashboardContent, {
 			padding: 1,
-			borderColor: 'magenta',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			width: boxContentWidth,
 			dimBorder: false
@@ -576,14 +575,14 @@ export function displayDashboards(
 		// Show stacked vertically
 		const dashboardBox = boxen(projectDashboardContent, {
 			padding: 1,
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 0, bottom: 1 }
 		});
 
 		const dependencyBox = boxen(dependencyDashboardContent, {
 			padding: 1,
-			borderColor: 'magenta',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 0, bottom: 1 }
 		});

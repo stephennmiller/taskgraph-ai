@@ -11,6 +11,7 @@ import { getComplexityWithColor } from '../formatters/complexity-formatters.js';
 import { getPriorityWithColor } from '../formatters/priority-formatters.js';
 import { getStatusWithColor } from '../formatters/status-formatters.js';
 import { getBoxWidth, truncate } from '../layout/helpers.js';
+import { theme } from '../theme.js';
 
 /**
  * Default priority for tasks/subtasks when not specified
@@ -78,32 +79,32 @@ export function createTaskTable(
 	let colIndex = 0;
 
 	if (showTag) {
-		headers.push(chalk.blue.bold('Tag'));
+		headers.push(theme.brand.bold('Tag'));
 		colWidths.push(baseColWidths[colIndex++]);
 	}
 
 	// Core columns: ID, Title, Status, Priority
 	headers.push(
-		chalk.blue.bold('ID'),
-		chalk.blue.bold('Title'),
-		chalk.blue.bold('Status'),
-		chalk.blue.bold('Priority')
+		theme.brand.bold('ID'),
+		theme.brand.bold('Title'),
+		theme.brand.bold('Status'),
+		theme.brand.bold('Priority')
 	);
 	colWidths.push(...baseColWidths.slice(colIndex, colIndex + 4));
 	colIndex += 4;
 
 	if (showDependencies) {
-		headers.push(chalk.blue.bold('Dependencies'));
+		headers.push(theme.brand.bold('Dependencies'));
 		colWidths.push(baseColWidths[colIndex++]);
 	}
 
 	if (showBlocks) {
-		headers.push(chalk.blue.bold('Blocks'));
+		headers.push(theme.brand.bold('Blocks'));
 		colWidths.push(baseColWidths[colIndex++]);
 	}
 
 	if (showComplexity) {
-		headers.push(chalk.blue.bold('Complexity'));
+		headers.push(theme.brand.bold('Complexity'));
 		colWidths.push(baseColWidths[colIndex] || 12);
 	}
 
@@ -119,7 +120,7 @@ export function createTaskTable(
 
 		// Tag goes first when showing all tags
 		if (showTag) {
-			row.push(chalk.magenta(task.tagName || '-'));
+			row.push(theme.accent(task.tagName || '-'));
 		}
 
 		// Core columns: ID, Title, Status, Priority

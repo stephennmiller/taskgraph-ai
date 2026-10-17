@@ -6,17 +6,18 @@
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { getBoxWidth } from '../layout/helpers.js';
+import { BORDER_COLOR, theme } from '../theme.js';
 
 /**
  * Display a fancy banner
  */
 export function displayBanner(title: string = 'TaskGraph'): void {
 	console.log(
-		boxen(chalk.white.bold(title), {
+		boxen(chalk.bold(title), {
 			padding: 1,
 			margin: { top: 1, bottom: 1 },
 			borderStyle: 'round',
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			textAlignment: 'center'
 		})
 	);
@@ -33,7 +34,7 @@ export function displayErrorBox(message: string, details?: string): void {
 	console.error(
 		boxen(
 			chalk.red.bold('X Error: ') +
-				chalk.white(message) +
+				theme.text(message) +
 				(details ? '\n\n' + chalk.gray(details) : ''),
 			{
 				padding: 1,
@@ -58,7 +59,7 @@ export function displaySuccess(message: string): void {
 
 	console.log(
 		boxen(
-			chalk.green.bold(String.fromCharCode(8730) + ' ') + chalk.white(message),
+			chalk.green.bold(String.fromCharCode(8730) + ' ') + theme.text(message),
 			{
 				padding: 1,
 				borderStyle: 'round',
@@ -76,7 +77,7 @@ export function displayWarning(message: string): void {
 	const boxWidth = getBoxWidth();
 
 	console.log(
-		boxen(chalk.yellow.bold('⚠️ ') + chalk.white(message), {
+		boxen(chalk.yellow.bold('⚠️ ') + theme.text(message), {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'yellow',
@@ -92,10 +93,10 @@ export function displayInfo(message: string): void {
 	const boxWidth = getBoxWidth();
 
 	console.log(
-		boxen(chalk.blue.bold('i ') + chalk.white(message), {
+		boxen(theme.brand.bold('i ') + theme.text(message), {
 			padding: 1,
 			borderStyle: 'round',
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			width: boxWidth
 		})
 	);

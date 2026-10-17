@@ -19,6 +19,7 @@ import { displayTaskDetails } from '../ui/components/task-detail.component.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
+import { BORDER_COLOR, theme } from '../ui/theme.js';
 
 /**
  * CLI-specific options interface for the start command
@@ -215,9 +216,7 @@ export class StartCommand extends Command {
 				? `Subtask #${targetTaskId} - ${task.title}`
 				: `Task #${task.id} - ${task.title}`;
 
-			console.log(
-				chalk.green('🚀 Starting: ') + chalk.white.bold(workItemText)
-			);
+			console.log(chalk.green('🚀 Starting: ') + chalk.bold(workItemText));
 			console.log(chalk.gray('Launching Claude Code...'));
 			console.log(); // Empty line
 		}
@@ -376,13 +375,11 @@ export class StartCommand extends Command {
 				console.log(); // Empty line for spacing
 				console.log(
 					boxen(
-						chalk.white.bold('Claude-Code Prompt:') +
-							'\n\n' +
-							result.executionOutput,
+						chalk.bold('Claude-Code Prompt:') + '\n\n' + result.executionOutput,
 						{
 							padding: 1,
 							borderStyle: 'round',
-							borderColor: 'cyan',
+							borderColor: BORDER_COLOR,
 							width: process.stdout.columns * 0.95 || 100
 						}
 					)
@@ -419,7 +416,7 @@ export class StartCommand extends Command {
 					boxen(
 						chalk.green.bold('🎉 Task Session Complete!') +
 							'\n\n' +
-							chalk.white(workItemText) +
+							theme.text(workItemText) +
 							'\n\n' +
 							chalk.cyan('Next steps:') +
 							'\n' +

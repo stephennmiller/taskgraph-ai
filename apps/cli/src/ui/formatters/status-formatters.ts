@@ -5,6 +5,7 @@
 
 import type { TaskStatus } from '@tm/core';
 import chalk from 'chalk';
+import { theme } from '../theme.js';
 
 /**
  * Module-level task status configuration to avoid recreating on every call
@@ -24,7 +25,7 @@ const TASK_STATUS_CONFIG: Record<
 		tableIcon: '○'
 	},
 	'in-progress': {
-		color: chalk.hex('#FFA500'),
+		color: theme.active,
 		icon: '▶',
 		tableIcon: '▶'
 	},
@@ -95,12 +96,12 @@ const BRIEF_STATUS_CONFIG: Record<
 		tableIcon: '◎'
 	},
 	delivering: {
-		color: chalk.hex('#FFA500'), // orange
+		color: theme.active,
 		icon: '▶',
 		tableIcon: '▶'
 	},
 	delivered: {
-		color: chalk.blue,
+		color: theme.brand,
 		icon: '◆',
 		tableIcon: '◆'
 	},

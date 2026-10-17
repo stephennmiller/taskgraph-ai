@@ -19,6 +19,7 @@ import {
 } from '../utils/brief-selection.js';
 import { ensureOrgSelected } from '../utils/org-selection.js';
 import * as ui from '../utils/ui.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Result type from briefs command
@@ -299,7 +300,7 @@ Note: Briefs must be created through the Hamster Studio web interface.
 				tagDisplay,
 				getBriefStatusWithColor(tag.status, true),
 				chalk.gray(updatedDate),
-				chalk.white(String(tag.taskCount || 0)),
+				theme.text(String(tag.taskCount || 0)),
 				chalk.green(String(tag.completedTasks || 0))
 			]);
 		});
@@ -363,7 +364,7 @@ Note: Briefs must be created through the Hamster Studio web interface.
 		const updatedCol = chalk.gray(updatedDate.padEnd(colWidths.updated));
 
 		// Tasks column
-		const tasksCol = chalk.white(
+		const tasksCol = theme.text(
 			String(brief.taskCount || 0).padStart(colWidths.tasks)
 		);
 

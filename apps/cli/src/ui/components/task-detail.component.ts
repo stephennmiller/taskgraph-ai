@@ -21,6 +21,7 @@ import {
 	getPriorityWithColor,
 	getStatusWithColor
 } from '../../utils/ui.js';
+import { BORDER_COLOR, theme } from '../theme.js';
 
 // ============================================================================
 // Constants and Helper Functions
@@ -48,7 +49,7 @@ function getFileActionIcon(action: RelevantFile['action']): string {
 		case 'modify':
 			return chalk.yellow('✎ MODIFY');
 		case 'reference':
-			return chalk.blue('👁 REFER ');
+			return theme.brand('👁 REFER ');
 		default:
 			return chalk.gray('  FILE  ');
 	}
@@ -75,9 +76,9 @@ export function displayTaskHeader(
 ): void {
 	// Display task header box
 	console.log(
-		boxen(chalk.white.bold(`Task: #${taskId} - ${title}`), {
+		boxen(chalk.bold(`Task: #${taskId} - ${title}`), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round'
 		})
 	);
@@ -124,7 +125,7 @@ export function displayTaskProperties(
 	// Format skills as badges
 	const skillsDisplay =
 		task.skills && task.skills.length > 0
-			? task.skills.map((s) => chalk.magenta(`[${s}]`)).join(' ')
+			? task.skills.map((s) => theme.accent(`[${s}]`)).join(' ')
 			: chalk.gray('N/A');
 
 	// Build the left column (labels) and right column (values)
@@ -167,15 +168,12 @@ export function displayImplementationDetails(details: string): void {
 	const formattedDetails = renderContent(details);
 
 	console.log(
-		boxen(
-			chalk.white.bold('Implementation Details:') + '\n\n' + formattedDetails,
-			{
-				padding: 1,
-				borderStyle: 'round',
-				borderColor: 'cyan',
-				width: terminalWidth
-			}
-		)
+		boxen(chalk.bold('Implementation Details:') + '\n\n' + formattedDetails, {
+			padding: 1,
+			borderStyle: 'round',
+			borderColor: BORDER_COLOR,
+			width: terminalWidth
+		})
 	);
 }
 
@@ -187,10 +185,10 @@ export function displayTestStrategy(testStrategy: string): void {
 	const formattedStrategy = renderContent(testStrategy);
 
 	console.log(
-		boxen(chalk.white.bold('Test Strategy:') + '\n\n' + formattedStrategy, {
+		boxen(chalk.bold('Test Strategy:') + '\n\n' + formattedStrategy, {
 			padding: 1,
 			borderStyle: 'round',
-			borderColor: 'cyan',
+			borderColor: BORDER_COLOR,
 			width: terminalWidth
 		})
 	);
@@ -213,9 +211,9 @@ export function displaySubtasks(
 	const terminalWidth = process.stdout.columns * 0.95 || 100;
 	// Display subtasks header
 	console.log(
-		boxen(chalk.magenta.bold('Subtasks'), {
+		boxen(theme.heading('Subtasks'), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
-			borderColor: 'magenta',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 1, bottom: 0 }
 		})
@@ -224,10 +222,10 @@ export function displaySubtasks(
 	// Create subtasks table
 	const table = new Table({
 		head: [
-			chalk.magenta.bold('ID'),
-			chalk.magenta.bold('Status'),
-			chalk.magenta.bold('Title'),
-			chalk.magenta.bold('Deps')
+			theme.heading('ID'),
+			theme.heading('Status'),
+			theme.heading('Title'),
+			theme.heading('Deps')
 		],
 		style: {
 			head: [],
@@ -281,14 +279,14 @@ export function displayRelevantFiles(files: RelevantFile[]): void {
 	const content = files
 		.map((file) => {
 			const actionIcon = getFileActionIcon(file.action);
-			const path = chalk.white(file.path);
+			const path = theme.text(file.path);
 			const desc = chalk.gray(file.description);
 			return `${actionIcon}  ${path}\n         ${desc}`;
 		})
 		.join('\n\n');
 
 	console.log(
-		boxen(chalk.white.bold('📂 Files to Touch:') + '\n\n' + content, {
+		boxen(chalk.bold('📂 Files to Touch:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'yellow',
@@ -309,16 +307,16 @@ export function displayExistingInfrastructure(
 		.map((infra) => {
 			const name = chalk.cyan.bold(infra.name);
 			const location = chalk.gray(infra.location);
-			const usage = chalk.white(infra.usage);
+			const usage = theme.text(infra.usage);
 			return `${name} → ${location}\n  ↳ ${usage}`;
 		})
 		.join('\n\n');
 
 	console.log(
-		boxen(chalk.white.bold('🔗 Leverage Existing Code:') + '\n\n' + content, {
+		boxen(chalk.bold('🔗 Leverage Existing Code:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			width: terminalWidth
 		})
 	);
@@ -334,7 +332,7 @@ export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
 
 	if (boundaries.included) {
 		content += chalk.green.bold('✅ In Scope:\n');
-		content += chalk.white('   ' + boundaries.included);
+		content += theme.text('   ' + boundaries.included);
 	}
 
 	if (boundaries.excluded) {
@@ -344,10 +342,10 @@ export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
 	}
 
 	console.log(
-		boxen(chalk.white.bold('🎯 Scope Boundaries:') + '\n\n' + content, {
+		boxen(chalk.bold('🎯 Scope Boundaries:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
-			borderColor: 'magenta',
+			borderColor: BORDER_COLOR,
 			width: terminalWidth
 		})
 	);
@@ -359,10 +357,10 @@ export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
 export function displayAcceptanceCriteria(criteria: string[]): void {
 	const terminalWidth = process.stdout.columns * 0.95 || 100;
 
-	const content = criteria.map((c) => chalk.white(`☐ ${c}`)).join('\n');
+	const content = criteria.map((c) => theme.text(`☐ ${c}`)).join('\n');
 
 	console.log(
-		boxen(chalk.white.bold('✓ Acceptance Criteria:') + '\n\n' + content, {
+		boxen(chalk.bold('✓ Acceptance Criteria:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'green',
@@ -380,7 +378,7 @@ export function displayTechnicalConstraints(constraints: string[]): void {
 	const content = constraints.map((c) => chalk.yellow(`▸ ${c}`)).join('\n');
 
 	console.log(
-		boxen(chalk.white.bold('🔒 Technical Constraints:') + '\n\n' + content, {
+		boxen(chalk.bold('🔒 Technical Constraints:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'red',
@@ -398,13 +396,11 @@ export function displayImplementationApproach(approach: string): void {
 
 	console.log(
 		boxen(
-			chalk.white.bold('📋 Implementation Approach:') +
-				'\n\n' +
-				formattedApproach,
+			chalk.bold('📋 Implementation Approach:') + '\n\n' + formattedApproach,
 			{
 				padding: 1,
 				borderStyle: 'round',
-				borderColor: 'cyan',
+				borderColor: BORDER_COLOR,
 				width: terminalWidth
 			}
 		)
@@ -417,10 +413,10 @@ export function displayImplementationApproach(approach: string): void {
 export function displayCodebasePatterns(patterns: string[]): void {
 	const terminalWidth = process.stdout.columns * 0.95 || 100;
 
-	const content = patterns.map((p) => chalk.white(`• ${p}`)).join('\n');
+	const content = patterns.map((p) => theme.text(`• ${p}`)).join('\n');
 
 	console.log(
-		boxen(chalk.white.bold('📐 Codebase Patterns:') + '\n\n' + content, {
+		boxen(chalk.bold('📐 Codebase Patterns:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'gray',
@@ -448,7 +444,7 @@ export function displaySkillsAndCategory(
 		if (output) output += '  ';
 		output +=
 			chalk.gray('Skills: ') +
-			skills.map((s) => chalk.magenta(`[${s}]`)).join(' ');
+			skills.map((s) => theme.accent(`[${s}]`)).join(' ');
 	}
 
 	if (output) {
@@ -528,7 +524,7 @@ export function displayImplementationMetadata(task: Task | Subtask): void {
 export function displaySuggestedActions(taskId: string | number): void {
 	console.log(
 		boxen(
-			chalk.white.bold('Suggested Actions:') +
+			chalk.bold('Suggested Actions:') +
 				'\n\n' +
 				`${chalk.cyan('1.')} Run ${chalk.yellow(`taskgraph set-status --id=${taskId} --status=in-progress`)} to start working\n` +
 				`${chalk.cyan('2.')} Run ${chalk.yellow(`taskgraph expand --id=${taskId}`)} to break down into subtasks\n` +
@@ -570,7 +566,7 @@ export function displayTaskDetails(
 	// Display header - either custom or default
 	if (customHeader) {
 		console.log(
-			boxen(chalk.white.bold(customHeader), {
+			boxen(chalk.bold(customHeader), {
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
 				borderColor: headerColor,
 				borderStyle: 'round',

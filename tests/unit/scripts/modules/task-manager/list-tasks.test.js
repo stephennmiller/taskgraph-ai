@@ -36,7 +36,12 @@ jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
 	stopLoadingIndicator: jest.fn(),
 	createProgressBar: jest.fn(() => ' MOCK_PROGRESS_BAR '),
 	getStatusWithColor: jest.fn((status) => status),
-	getComplexityWithColor: jest.fn((score) => `Score: ${score}`)
+	getComplexityWithColor: jest.fn((score) => `Score: ${score}`),
+	theme: {
+		active: { bold: jest.fn((text) => text) },
+		heading: jest.fn((text) => text)
+	},
+	BORDER_COLOR: 'cyan'
 }));
 
 jest.unstable_mockModule(

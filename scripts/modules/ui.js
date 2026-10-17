@@ -34,8 +34,11 @@ import {
 	truncate
 } from './utils.js';
 
-// Create a color gradient for the banner (still used by warmGradient in other places)
-const warmGradient = gradient(['#fb8b24', '#e36414', '#9a031e']);
+// TaskGraph theme from @tm/cli, re-exported for the legacy task-manager modules
+const { theme, BORDER_COLOR } = ui;
+
+// Brand gradient (used by the init success message)
+const brandGradient = gradient(ui.BANNER_GRADIENT);
 
 /**
  * Display FYI notice about tagged task lists (only if migration occurred)
@@ -261,13 +264,13 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 	if (percent < 25) {
 		completedColor = chalk.red;
 	} else if (percent < 50) {
-		completedColor = chalk.hex('#FFA500'); // Orange
+		completedColor = chalk.yellow;
 	} else if (percent < 75) {
 		completedColor = chalk.yellow;
 	} else if (percent < 100) {
 		completedColor = chalk.green;
 	} else {
-		completedColor = chalk.hex('#006400'); // Dark green
+		completedColor = chalk.green;
 	}
 
 	// Create colored sections
@@ -285,7 +288,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 		// Status colors (matching the statusConfig colors in getStatusWithColor)
 		const statusColors = {
 			pending: chalk.yellow,
-			'in-progress': chalk.hex('#FFA500'), // Orange
+			'in-progress': theme.active,
 			blocked: chalk.red,
 			review: chalk.magenta
 			// Deferred and cancelled are treated as part of the completed section
@@ -338,7 +341,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 	// Effective percentage text color should reflect the highest category
 	const percentTextColor =
 		percent === 100
-			? chalk.hex('#006400') // Dark green for 100%
+			? chalk.green // Green for 100%
 			: effectivePercent === 100
 				? chalk.gray // Gray for 100% with deferred/cancelled
 				: completedColor; // Otherwise match the completed color
@@ -362,7 +365,7 @@ function getStatusWithColor(status, forTable = false) {
 		done: { color: chalk.green, icon: '✓', tableIcon: '✓' },
 		completed: { color: chalk.green, icon: '✓', tableIcon: '✓' },
 		pending: { color: chalk.yellow, icon: '○', tableIcon: '⏱' },
-		'in-progress': { color: chalk.hex('#FFA500'), icon: '🔄', tableIcon: '►' },
+		'in-progress': { color: theme.active, icon: '🔄', tableIcon: '►' },
 		deferred: { color: chalk.gray, icon: 'x', tableIcon: '⏱' },
 		blocked: { color: chalk.red, icon: '!', tableIcon: '✗' },
 		review: { color: chalk.magenta, icon: '?', tableIcon: '?' },
@@ -486,7 +489,7 @@ function formatDependenciesWithStatus(
 				if (isDone) {
 					return chalk.green.bold(depIdStr);
 				} else if (isInProgress) {
-					return chalk.hex('#FFA500').bold(depIdStr);
+					return theme.active.bold(depIdStr);
 				} else {
 					return chalk.red.bold(depIdStr);
 				}
@@ -1170,7 +1173,7 @@ async function displayNextTask(
 							if (isDone) {
 								return chalk.green.bold(`${nextTask.id}.${depId}`);
 							} else if (isInProgress) {
-								return chalk.hex('#FFA500').bold(`${nextTask.id}.${depId}`);
+								return theme.active.bold(`${nextTask.id}.${depId}`);
 							} else {
 								return chalk.red.bold(`${nextTask.id}.${depId}`);
 							}
@@ -1529,7 +1532,7 @@ async function displayTaskById(
 						const color = isDone
 							? chalk.green.bold
 							: isInProgress
-								? chalk.hex('#FFA500').bold
+								? theme.active.bold
 								: chalk.red.bold;
 						return color(`${task.id}.${depId}`);
 					} else if (typeof depId === 'number' && depId < 100) {
@@ -1673,7 +1676,7 @@ async function displayTaskById(
 		);
 
 		const statusCounts =
-			`${chalk.green('✓ Done:')} ${completedSubtasks}  ${chalk.hex('#FFA500')('► In Progress:')} ${inProgressSubtasks}  ${chalk.yellow('○ Pending:')} ${pendingSubtasks}\n` +
+			`${chalk.green('✓ Done:')} ${completedSubtasks}  ${theme.active('► In Progress:')} ${inProgressSubtasks}  ${chalk.yellow('○ Pending:')} ${pendingSubtasks}\n` +
 			`${chalk.red('! Blocked:')} ${blockedSubtasks}  ${chalk.gray('⏱ Deferred:')} ${deferredSubtasks}  ${chalk.gray('✗ Cancelled:')} ${cancelledSubtasks}`;
 
 		console.log(
@@ -2479,7 +2482,7 @@ async function displayMultipleTasksSummary(
 			// Compact subtask count with status indicators
 			subtaskSummary = `${chalk.green(completed)}/${total}`;
 			if (inProgress > 0)
-				subtaskSummary += ` ${chalk.hex('#FFA500')(`+${inProgress}`)}`;
+				subtaskSummary += ` ${theme.active(`+${inProgress}`)}`;
 			if (pending > 0) subtaskSummary += ` ${chalk.yellow(`(${pending})`)}`;
 
 			// Mini progress bar (shorter than usual)
@@ -2812,7 +2815,9 @@ export {
 	displayContextAnalysis,
 	displayCurrentTagIndicator,
 	formatTaskIdForDisplay,
-	warmGradient
+	brandGradient,
+	theme,
+	BORDER_COLOR
 };
 
 /**

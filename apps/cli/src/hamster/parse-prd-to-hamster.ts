@@ -14,6 +14,7 @@ import { ensureAuthenticated } from '../utils/auth-guard.js';
 import { selectBriefFromInput } from '../utils/brief-selection.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Result type from parse PRD to Hamster operation
@@ -183,7 +184,7 @@ export async function parsePrdToHamster(
 		// 5. Display success
 		console.log('');
 		console.log(
-			chalk.green('  ✓ ') + chalk.white.bold(result.brief.title || 'New Brief')
+			chalk.green('  ✓ ') + chalk.bold(result.brief.title || 'New Brief')
 		);
 		if (taskCount > 0) {
 			console.log(chalk.gray(`    ${taskCount} tasks generated`));
@@ -218,9 +219,9 @@ export async function parsePrdToHamster(
 
 		console.log(
 			chalk.green('  ✓ ') +
-				chalk.white('Context set to new brief. Run ') +
+				theme.text('Context set to new brief. Run ') +
 				chalk.cyan('tm list') +
-				chalk.white(' to see your tasks.')
+				theme.text(' to see your tasks.')
 		);
 		console.log('');
 

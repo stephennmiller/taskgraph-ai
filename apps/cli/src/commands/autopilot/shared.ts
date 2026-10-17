@@ -3,6 +3,7 @@
  */
 
 import chalk from 'chalk';
+import { theme } from '../../ui/theme.js';
 
 /**
  * Base options interface for all autopilot commands
@@ -39,7 +40,7 @@ export class OutputFormatter {
 				console.log(chalk.cyan(`${key}:`));
 				this.outputObject(value as Record<string, unknown>, '  ');
 			} else {
-				console.log(chalk.white(`${key}: ${value}`));
+				console.log(theme.text(`${key}: ${value}`));
 			}
 		}
 	}
@@ -134,6 +135,6 @@ export class OutputFormatter {
 			// Don't output info messages in JSON mode
 			return;
 		}
-		console.log(chalk.blue(`ℹ ${message}`));
+		console.log(theme.brand(`ℹ ${message}`));
 	}
 }

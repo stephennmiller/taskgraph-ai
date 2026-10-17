@@ -1,6 +1,6 @@
 /**
  * @fileoverview Brand banner component
- * Displays the fancy TaskGraph ASCII art banner with gradient colors
+ * Displays the TaskGraph ASCII art banner with gradient colors
  * Can be hidden by setting TM_HIDE_BANNER=true
  */
 
@@ -8,9 +8,10 @@ import chalk from 'chalk';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
 import { createLink } from '../formatters/link-formatters.js';
+import { BANNER_GRADIENT, theme } from '../theme.js';
 
-// Create a cool color gradient for the banner
-const coolGradient = gradient(['#00b4d8', '#0077b6', '#03045e']);
+// Brand gradient for the banner
+const coolGradient = gradient(BANNER_GRADIENT);
 
 export interface AsciiBannerOptions {
 	/** Version string to display */
@@ -80,7 +81,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	// Hamster promo
 	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com');
-	console.log(chalk.dim('TaskGraph for teams: ') + chalk.magenta(hamsterLink));
+	console.log(chalk.dim('TaskGraph for teams: ') + theme.accent(hamsterLink));
 	console.log('');
 }
 
@@ -109,6 +110,6 @@ export function displayInitBanner(): void {
 
 	// Hamster promo
 	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com');
-	console.log(chalk.dim('TaskGraph for teams: ') + chalk.magenta(hamsterLink));
+	console.log(chalk.dim('TaskGraph for teams: ') + theme.accent(hamsterLink));
 	console.log('');
 }
