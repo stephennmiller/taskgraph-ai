@@ -2151,13 +2151,9 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 	console.log(chalk.cyan.bold('\nActive Model Configuration:'));
 	const active = configData.activeModels;
 	const activeTable = new Table({
-		head: [
-			'Role',
-			'Provider',
-			'Model ID',
-			'SWE Score',
-			'Cost ($/1M tkns)'
-		].map((h) => chalk.cyan.bold(h)),
+		head: ['Role', 'Provider', 'Model ID', 'SWE Score', 'Cost ($/1M tkns)'].map(
+			(h) => chalk.cyan.bold(h)
+		),
 		colWidths: [10, 14, 30, 18, 20 /*, 28 */], // Adjusted widths
 		style: { head: ['cyan', 'bold'] }
 	});
