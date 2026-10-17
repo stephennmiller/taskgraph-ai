@@ -19,10 +19,10 @@ jobs:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_METRICS_WEBHOOK }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '20'
 
@@ -39,7 +39,7 @@ jobs:
           echo "date_range=Past 14 days ($first_day to $last_day)" >> $GITHUB_ENV
 
       - name: Generate issue metrics
-        uses: github/issue-metrics@v5
+        uses: github/issue-metrics@671528652402b9b8a33da44b5c693b3161bc090f # v5
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEARCH_QUERY: "repo:${{ github.repository }} is:issue created:${{ env.first_day }}..${{ env.last_day }}"
@@ -48,14 +48,14 @@ jobs:
           OUTPUT_FILE: issue_metrics.md
 
       - name: Generate PR created metrics
-        uses: github/issue-metrics@v5
+        uses: github/issue-metrics@671528652402b9b8a33da44b5c693b3161bc090f # v5
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEARCH_QUERY: "repo:${{ github.repository }} is:pr created:${{ env.first_day }}..${{ env.last_day }}"
           OUTPUT_FILE: pr_created_metrics.md
 
       - name: Generate PR merged metrics
-        uses: github/issue-metrics@v5
+        uses: github/issue-metrics@671528652402b9b8a33da44b5c693b3161bc090f # v5
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SEARCH_QUERY: "repo:${{ github.repository }} is:pr is:merged merged:${{ env.first_day }}..${{ env.last_day }}"
@@ -80,7 +80,7 @@ jobs:
         run: node .github/scripts/parse-metrics.mjs
 
       - name: Send to Discord
-        uses: sarisia/actions-status-discord@v1
+        uses: sarisia/actions-status-discord@eb045afee445dc055c18d3d90bd0f244fd062708 # v1
         if: env.DISCORD_WEBHOOK != ''
         with:
           webhook: ${{ env.DISCORD_WEBHOOK }}

@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Create triage prompt
         run: |
@@ -96,7 +96,7 @@ jobs:
           EOF
 
       - name: Run Claude Code for Issue Triage
-        uses: anthropics/claude-code-base-action@beta
+        uses: anthropics/claude-code-base-action@e8132bc5e637a42c27763fc757faa37e1ee43b34 # beta
         with:
           prompt_file: /tmp/claude-prompts/triage-prompt.txt
           allowed_tools: "Bash(gh label list),mcp__github__get_issue,mcp__github__get_issue_comments,mcp__github__update_issue,mcp__github__search_issues,mcp__github__list_issues"
