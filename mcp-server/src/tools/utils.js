@@ -249,7 +249,6 @@ function getProjectRootFromSession(session, log) {
 				); // Go up one level
 
 				if (
-					fs.existsSync(path.join(projectRoot, '.cursor')) ||
 					fs.existsSync(path.join(projectRoot, 'mcp-server')) ||
 					fs.existsSync(path.join(projectRoot, 'package.json'))
 				) {

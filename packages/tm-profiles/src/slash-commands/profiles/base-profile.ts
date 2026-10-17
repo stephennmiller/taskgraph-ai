@@ -77,7 +77,7 @@ export abstract class BaseSlashCommandProfile {
 	/**
 	 * Whether this profile supports nested command directories.
 	 * - true: Commands go in a subdirectory (e.g., `.claude/commands/tm/help.md`)
-	 * - false: Commands use a prefix (e.g., `.example/command/tm-help.md`)
+	 * - false: Commands use a prefix (e.g., `.claude/commands/tm-help.md`)
 	 *
 	 * Override in profiles that don't support nested directories.
 	 */

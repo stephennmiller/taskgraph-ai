@@ -246,9 +246,7 @@ function transformToClaudeFormat(mcpConfig) {
 }
 
 function onPostConvertRulesProfile(targetDir, assetsDir) {
-	// For Claude, post-convert is the same as add since we don't transform rules
-	onAddRulesProfile(targetDir, assetsDir);
-
+	// onAddRulesProfile already ran before this hook; only the MCP config needs converting
 	// Transform MCP configuration to Claude format
 	const mcpConfigPath = path.join(targetDir, '.mcp.json');
 	if (fs.existsSync(mcpConfigPath)) {

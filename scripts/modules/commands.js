@@ -124,7 +124,10 @@ import {
 	stopLoadingIndicator
 } from './ui.js';
 
-import { RULE_PROFILES } from '../../src/constants/profiles.js';
+import {
+	RULE_PROFILES,
+	findInvalidRulesProfiles
+} from '../../src/constants/profiles.js';
 import { getTaskMasterVersion } from '../../src/utils/getVersion.js';
 import { initializeProject } from '../init.js';
 
@@ -3508,7 +3511,7 @@ ${result.result}
 		.option('-a, --author <author>', 'Author name')
 		.option(
 			'-r, --rules <rules...>',
-			'List of rules to add (roo, windsurf, cursor, ...). Accepts comma or space separated values.'
+			'Rule profiles to install (claude). Accepts comma or space separated values.'
 		)
 		.option('--skip-install', 'Skip installing dependencies')
 		.option('--dry-run', 'Show what would be done without making changes')
@@ -3530,6 +3533,15 @@ ${result.result}
 					.map((r) => r.trim())
 					.filter(Boolean);
 				// Only override defaults if user specified valid rules
+				const invalidProfiles = findInvalidRulesProfiles(userSpecifiedProfiles);
+				if (invalidProfiles.length > 0) {
+					console.error(
+						chalk.red(
+							`Unsupported rule profile(s): ${invalidProfiles.join(', ')}. Task Master supports Claude Code only; valid options: ${RULE_PROFILES.join(', ')}`
+						)
+					);
+					process.exit(1);
+				}
 				if (userSpecifiedProfiles.length > 0) {
 					selectedProfiles = userSpecifiedProfiles;
 					rulesExplicitlyProvided = true;

@@ -599,7 +599,7 @@ async function initializeProject(options = {}) {
 			// AI IDE rules
 			const rulesIcon = shouldSetupRules ? chalk.green('✓') : chalk.dim('✗');
 			console.log(
-				'  ' + chalk.dim('AI IDE rules:'.padEnd(32)),
+				'  ' + chalk.dim('Claude Code integration:'.padEnd(32)),
 				rulesIcon + ' ' + chalk.dim(shouldSetupRules ? 'Yes' : 'No')
 			);
 
