@@ -1,0 +1,82 @@
+name: Version Bump
+
+# Runs after CI passes on main. Bumps the version from conventional commits
+# (feat -> minor, fix/perf/revert -> patch, "!" or BREAKING CHANGE -> major;
+# one level lower below 1.0.0), commits the new version, tags it and creates a
+# GitHub Release. Nothing is published to npm.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Serialize runs but never cancel one mid-push.
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    name: Bump version and release
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0 # full history and tags to find the last release
+
+      # If main moved on, the newer commit's own CI run will cover these
+      # commits too (the bump range is "last release tag..HEAD").
+      - name: Skip if main has moved past the tested commit
+        id: fresh
+        env:
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$(git rev-parse HEAD)" = "$TESTED_SHA" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main moved past $TESTED_SHA; a newer run will release."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.fresh.outputs.current == 'true'
+        with:
+          node-version: 22
+
+      - name: Compute and apply version bump
+        id: bump
+        if: steps.fresh.outputs.current == 'true'
+        run: node ./.github/scripts/version-bump.mjs
+
+      - name: Commit, tag and push
+        if: steps.bump.outputs.bumped == 'true'
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+          TAG: ${{ steps.bump.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json manifest.json
+          git commit -m "chore(release): v${VERSION} [skip ci]"
+          git tag "$TAG"
+          # Atomic: either the commit and tag both land, or neither does.
+          git push --atomic origin HEAD:main "$TAG"
+
+      - name: Create GitHub Release
+        if: steps.bump.outputs.bumped == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.bump.outputs.tag }}
+          BASELINE: ${{ steps.bump.outputs.baseline }}
+        run: |
+          gh release create "$TAG" \
+            --verify-tag \
+            --latest \
+            --title "$TAG" \
+            --generate-notes \
+            --notes-start-tag "$BASELINE"

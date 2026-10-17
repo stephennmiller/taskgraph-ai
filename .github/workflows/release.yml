@@ -1,9 +1,6 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch: # Manual trigger is always RC pre-release
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
@@ -21,61 +18,8 @@ jobs:
     steps:
       - run: |
           echo "::error::workflow_dispatch is intended for RC runs on non-main branches only."
-          echo "To create a stable release, push to main with changesets."
+          echo "Stable releases are cut automatically by the Version Bump workflow after CI passes on main."
           exit 1
-
-  # ========== STABLE RELEASE (main branch push only) ==========
-  release:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          registry-url: "https://registry.npmjs.org"
-
-      - name: Update npm for trusted publishing
-        run: npm install -g npm@11
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install dependencies
-        run: npm ci
-        timeout-minutes: 2
-
-      - name: Check pre-release mode
-        run: node ./.github/scripts/check-pre-release-mode.mjs "main"
-
-      - name: Build packages
-        run: npm run turbo:build
-        env:
-          NODE_ENV: production
-          FORCE_COLOR: 1
-          TM_PUBLIC_BASE_DOMAIN: ${{ secrets.TM_PUBLIC_BASE_DOMAIN }}
-          TM_PUBLIC_SUPABASE_URL: ${{ secrets.TM_PUBLIC_SUPABASE_URL }}
-          TM_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.TM_PUBLIC_SUPABASE_ANON_KEY }}
-
-      - name: Create Release Pull Request or Publish
-        uses: changesets/action@v1
-        with:
-          version: npm run version
-          publish: npm run release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
 
   # ========== PRE-RELEASE (manual workflow_dispatch only) ==========
   rc:
