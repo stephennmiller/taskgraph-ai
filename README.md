@@ -59,29 +59,13 @@ For Claude Code users:
 claude mcp add taskgraph-ai -- npx -y taskgraph-ai
 ```
 
-Don't forget to add your API keys to the configuration:
-- in the root .env of your Project
-- in the "env" section of your mcp config for taskmaster-ai
-
-
 ## Requirements
 
-Taskmaster utilizes AI across several commands, and those require a separate API key. You can use a variety of models from different AI providers provided you add your API keys. For example, if you want to use Claude 3.7, you'll need an Anthropic API key.
+Task Master uses [Claude Code](https://docs.claude.com/en/docs/claude-code) for every AI call, so there are no API keys to manage. Install Claude Code and sign in (run `claude` once) before using the AI commands.
 
-You can define 3 types of models to be used: the main model, the research model, and the fallback model (in case either the main or research fail). Whatever model you use, its provider API key must be present in either mcp.json or .env.
+You can define 3 models: the main model, the research model, and the fallback model (used if either of the others fails). The available models are `opus`, `sonnet` and `haiku`.
 
-At least one (1) of the following is required:
-
-- Anthropic API key (Claude API)
-- OpenAI API key
-- Google Gemini API key
-- Perplexity API key (for research model)
-- xAI API Key (for research or main model)
-- OpenRouter API Key (for research or main model)
-- Claude Code (no API key required - requires Claude Code CLI)
-- Codex CLI (OAuth via ChatGPT subscription - requires Codex CLI)
-
-Using the research model is optional but highly recommended. You will need at least ONE API key (unless using Claude Code or Codex CLI with OAuth). Adding all API keys enables you to seamlessly switch between model providers at will.
+The research model runs with web search and fetch access only. It cannot read or change your files and has no shell access.
 
 ## Quick Start
 
@@ -102,26 +86,14 @@ Register the server with the Claude Code CLI (shown above), or add it to the pro
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        // "TASK_MASTER_TOOLS": "all", // Options: "all", "standard", "core", or comma-separated list of tools
-        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-        "OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-        "GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-        "MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-        "GROQ_API_KEY": "YOUR_GROQ_KEY_HERE",
-        "OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-        "XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-        "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-        "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
+        // "TASK_MASTER_TOOLS": "all" // Options: "all", "standard", "core", or comma-separated list of tools
       }
     }
   }
 }
 ```
 
-> **Note:** Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
-
-> **Note**: If you see `0 tools enabled` in the MCP settings, restart Claude Code and check that your API keys are correctly configured.
+> **Note**: If you see `0 tools enabled` in the MCP settings, restart Claude Code and check the server with `/mcp`.
 
 #### 2. (Optional) Configure the models you want to use
 
@@ -131,9 +103,9 @@ In Claude Code, say:
 Change the main, research and fallback models to <model_name>, <model_name> and <model_name> respectively.
 ```
 
-For example, to use Claude Code (no API key required):
+For example:
 ```txt
-Change the main model to claude-code/sonnet
+Change the main model to opus
 ```
 
 [Table of available models](docs/models.md) | [Claude Code setup](docs/examples/claude-code-usage.md)
@@ -258,9 +230,7 @@ Add `TASK_MASTER_TOOLS` to your MCP configuration file's `env` section:
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASK_MASTER_TOOLS": "standard",  // Options: "all", "standard", "core", "lean", or comma-separated list
-        "ANTHROPIC_API_KEY": "your-key-here",
-        // ... other API keys
+        "TASK_MASTER_TOOLS": "standard"  // Options: "all", "standard", "core", "lean", or comma-separated list
       }
     }
   }
@@ -300,11 +270,11 @@ claude mcp add taskgraph-ai --scope user \
 
 ## Claude Code Support
 
-Task Master now supports Claude models through the Claude Code CLI, which requires no API key:
+Task Master runs on Claude Code, which needs no API key:
 
-- **Models**: `claude-code/opus` and `claude-code/sonnet`
-- **Requirements**: Claude Code CLI installed
-- **Benefits**: No API key needed, uses your local Claude instance
+- **Models**: `opus`, `sonnet` and `haiku`
+- **Requirements**: Claude Code CLI installed and signed in
+- **Research**: the research role gets web search and fetch access only, with no file or shell access
 
 [Learn more about Claude Code setup](docs/examples/claude-code-usage.md)
 

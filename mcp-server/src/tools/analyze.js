@@ -39,7 +39,7 @@ export function registerAnalyzeProjectComplexityTool(server) {
 				.boolean()
 				.optional()
 				.default(false)
-				.describe('Use Perplexity AI for research-backed analysis.'),
+				.describe('Use Claude Code web research for research-backed analysis.'),
 			output: z
 				.string()
 				.optional()

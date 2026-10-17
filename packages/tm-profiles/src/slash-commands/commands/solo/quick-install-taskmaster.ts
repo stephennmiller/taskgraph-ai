@@ -25,7 +25,7 @@ taskgraph --version 2>/dev/null || npm install -g taskgraph-ai
 taskgraph --version
 
 # Quick setup check
-taskgraph models --status || echo "Note: You'll need to set up an AI provider API key"
+taskgraph models || echo "Note: Task Master uses Claude Code; make sure it is installed and signed in"
 \`\`\`
 
 If you see "command not found" after installation, you may need to:

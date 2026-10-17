@@ -34,7 +34,7 @@ export function registerUpdateTool(server) {
 			research: z
 				.boolean()
 				.optional()
-				.describe('Use Perplexity AI for research-backed updates'),
+				.describe('Use Claude Code web research for research-backed updates'),
 			file: z
 				.string()
 				.optional()

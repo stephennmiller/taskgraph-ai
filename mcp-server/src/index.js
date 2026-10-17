@@ -5,10 +5,8 @@ import * as Sentry from '@sentry/node';
 import dotenv from 'dotenv';
 import { FastMCP } from 'fastmcp';
 import packageJson from '../../package.json' with { type: 'json' };
-import ProviderRegistry from '../../src/provider-registry/index.js';
 import { initializeSentry } from '../../src/telemetry/sentry.js';
 import logger from './logger.js';
-import { MCPProvider } from './providers/mcp-provider.js';
 import {
 	getToolsConfiguration,
 	registerTaskMasterTools
@@ -114,7 +112,6 @@ class TaskMasterMCPServer {
 				},
 				level: 'info'
 			});
-			this.registerRemoteProvider(event.session);
 		});
 
 		// Start the FastMCP server with increased timeout
@@ -124,52 +121,6 @@ class TaskMasterMCPServer {
 		});
 
 		return this;
-	}
-
-	/**
-	 * Register both MCP providers with the provider registry
-	 */
-	registerRemoteProvider(session) {
-		// Check if the server has at least one session
-		if (session) {
-			// Make sure session has required capabilities
-			if (!session.clientCapabilities || !session.clientCapabilities.sampling) {
-				session.server.sendLoggingMessage({
-					data: {
-						context: session.context,
-						message: `MCP session missing required sampling capabilities, providers not registered`
-					},
-					level: 'info'
-				});
-				return;
-			}
-
-			// Register MCP provider with the Provider Registry
-
-			// Register the unified MCP provider
-			const mcpProvider = new MCPProvider();
-			mcpProvider.setSession(session);
-
-			// Register provider with the registry
-			const providerRegistry = ProviderRegistry.getInstance();
-			providerRegistry.registerProvider('mcp', mcpProvider);
-
-			session.server.sendLoggingMessage({
-				data: {
-					context: session.context,
-					message: `MCP Server connected`
-				},
-				level: 'info'
-			});
-		} else {
-			session.server.sendLoggingMessage({
-				data: {
-					context: session.context,
-					message: `No MCP sessions available, providers not registered`
-				},
-				level: 'warn'
-			});
-		}
 	}
 
 	/**

@@ -52,10 +52,7 @@ try {
 // Log process.env to see if values from mcp.json were loaded automatically
 console.error('\nChecking if process.env already has values from mcp.json:');
 const envVars = [
-	'ANTHROPIC_API_KEY',
-	'PERPLEXITY_API_KEY',
 	'MODEL',
-	'PERPLEXITY_MODEL',
 	'MAX_TOKENS',
 	'TEMPERATURE',
 	'DEFAULT_SUBTASKS',

@@ -3,7 +3,5 @@
  */
 
 export * from './types.js';
-export * from './fetchers.js';
-export * from './custom-providers.js';
 export * from './prompts.js';
 export * from './setup.js';

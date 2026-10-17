@@ -5,8 +5,7 @@ import {
 	ALL_PROVIDERS,
 	AuthManager,
 	CUSTOM_PROVIDERS,
-	CUSTOM_PROVIDERS_ARRAY,
-	VALIDATED_PROVIDERS
+	CUSTOM_PROVIDERS_ARRAY
 } from '@tm/core';
 import chalk from 'chalk';
 import { z } from 'zod';
@@ -18,7 +17,6 @@ import {
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
-import { findMcpServerKey } from '../../src/utils/mcp-server-key.js';
 
 // Calculate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -28,22 +26,21 @@ const __dirname = path.dirname(__filename);
 const DEFAULTS = {
 	models: {
 		main: {
-			provider: 'anthropic',
-			modelId: 'claude-sonnet-5-5',
+			provider: 'claude-code',
+			modelId: 'sonnet',
 			maxTokens: 64000,
 			temperature: 0.2
 		},
 		research: {
-			provider: 'perplexity',
-			modelId: 'sonar',
+			provider: 'claude-code',
+			modelId: 'sonnet',
 			maxTokens: 8700,
 			temperature: 0.1
 		},
 		fallback: {
-			// No default fallback provider/model initially
-			provider: 'anthropic',
-			modelId: 'claude-sonnet-5-5',
-			maxTokens: 120000, // Default parameters if fallback IS configured
+			provider: 'claude-code',
+			modelId: 'sonnet',
+			maxTokens: 64000,
 			temperature: 0.2
 		}
 	},
@@ -54,20 +51,12 @@ const DEFAULTS = {
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'Task Master',
-		ollamaBaseURL: 'http://localhost:11434/api',
-		bedrockBaseURL: 'https://bedrock.us-east-1.amazonaws.com',
 		responseLanguage: 'English',
 		enableCodebaseAnalysis: true,
 		enableProxy: false,
 		anonymousTelemetry: true // Allow users to opt out of Sentry telemetry for local storage
 	},
-	claudeCode: {},
-	codexCli: {},
-	grokCli: {
-		timeout: 120000,
-		workingDirectory: null,
-		defaultModel: 'grok-4-latest'
-	}
+	claudeCode: {}
 };
 
 // --- Internal Config Loading ---
@@ -160,9 +149,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 							: { ...defaults.models.fallback }
 				},
 				global: { ...defaults.global, ...parsedConfig?.global },
-				claudeCode: { ...defaults.claudeCode, ...parsedConfig?.claudeCode },
-				codexCli: { ...defaults.codexCli, ...parsedConfig?.codexCli },
-				grokCli: { ...defaults.grokCli, ...parsedConfig?.grokCli }
+				claudeCode: { ...defaults.claudeCode, ...parsedConfig?.claudeCode }
 			};
 			configSource = `file (${configPath})`; // Update source info
 
@@ -180,7 +167,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			if (!validateProvider(config.models.main.provider)) {
 				console.warn(
 					chalk.yellow(
-						`Warning: Invalid main provider "${config.models.main.provider}" in ${configPath}. Falling back to default.`
+						`Warning: Invalid main provider "${config.models.main.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
 					)
 				);
 				config.models.main = { ...defaults.models.main };
@@ -188,7 +175,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			if (!validateProvider(config.models.research.provider)) {
 				console.warn(
 					chalk.yellow(
-						`Warning: Invalid research provider "${config.models.research.provider}" in ${configPath}. Falling back to default.`
+						`Warning: Invalid research provider "${config.models.research.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
 					)
 				);
 				config.models.research = { ...defaults.models.research };
@@ -199,7 +186,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			) {
 				console.warn(
 					chalk.yellow(
-						`Warning: Invalid fallback provider "${config.models.fallback.provider}" in ${configPath}. Fallback model configuration will be ignored.`
+						`Warning: Invalid fallback provider "${config.models.fallback.provider}" in ${configPath}. Fallback model configuration will be ignored. Run 'taskgraph models --setup' to choose a Claude Code model.`
 					)
 				);
 				config.models.fallback.provider = undefined;
@@ -207,9 +194,6 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			}
 			if (config.claudeCode && !isEmpty(config.claudeCode)) {
 				config.claudeCode = validateClaudeCodeSettings(config.claudeCode);
-			}
-			if (config.codexCli && !isEmpty(config.codexCli)) {
-				config.codexCli = validateCodexCliSettings(config.codexCli);
 			}
 		} catch (error) {
 			// Use console.error for actual errors during parsing
@@ -298,8 +282,7 @@ function getConfig(explicitRoot = null, forceReload = false, options = {}) {
 
 /**
  * Validates if a provider name is supported.
- * Custom providers (azure, vertex, bedrock, openrouter, ollama) are always allowed.
- * Validated providers must exist in the MODEL_MAP from supported-models.json.
+ * Custom providers (claude-code) are always allowed.
  * @param {string} providerName The name of the provider.
  * @returns {boolean} True if the provider is valid, false otherwise.
  */
@@ -307,11 +290,6 @@ function validateProvider(providerName) {
 	// Custom providers are always allowed
 	if (CUSTOM_PROVIDERS_ARRAY.includes(providerName)) {
 		return true;
-	}
-
-	// Validated providers must exist in MODEL_MAP
-	if (VALIDATED_PROVIDERS.includes(providerName)) {
-		return !!(MODEL_MAP && MODEL_MAP[providerName]);
 	}
 
 	// Unknown providers are not allowed
@@ -340,7 +318,7 @@ function validateProviderModelCombination(providerName, modelId) {
 
 /**
  * Gets the list of supported model IDs for a given provider from supported-models.json
- * @param {string} providerName - The name of the provider (e.g., 'claude-code', 'anthropic')
+ * @param {string} providerName - The name of the provider (e.g., 'claude-code')
  * @returns {string[]} Array of supported model IDs, or empty array if provider not found
  */
 export function getSupportedModelsForProvider(providerName) {
@@ -416,60 +394,6 @@ function validateClaudeCodeSettings(settings) {
 	return validatedSettings;
 }
 
-/**
- * Validates Codex CLI provider custom settings
- * Mirrors the ai-sdk-provider-codex-cli options
- * @param {object} settings The settings to validate
- * @returns {object} The validated settings
- */
-function validateCodexCliSettings(settings) {
-	const BaseSettingsSchema = z.object({
-		codexPath: z.string().optional(),
-		cwd: z.string().optional(),
-		approvalMode: z
-			.enum(['untrusted', 'on-failure', 'on-request', 'never'])
-			.optional(),
-		sandboxMode: z
-			.enum(['read-only', 'workspace-write', 'danger-full-access'])
-			.optional(),
-		fullAuto: z.boolean().optional(),
-		dangerouslyBypassApprovalsAndSandbox: z.boolean().optional(),
-		skipGitRepoCheck: z.boolean().optional(),
-		color: z.enum(['always', 'never', 'auto']).optional(),
-		allowNpx: z.boolean().optional(),
-		outputLastMessageFile: z.string().optional(),
-		env: z.record(z.string(), z.string()).optional(),
-		verbose: z.boolean().optional(),
-		logger: z.union([z.object({}).passthrough(), z.literal(false)]).optional(),
-		reasoningEffort: z
-			.enum(['none', 'minimal', 'low', 'medium', 'high', 'xhigh'])
-			.optional()
-	});
-
-	const CommandSpecificSchema = z
-		.record(z.string(), BaseSettingsSchema)
-		.refine(
-			(obj) =>
-				Object.keys(obj || {}).every((k) => AI_COMMAND_NAMES.includes(k)),
-			{ message: 'Invalid command name in commandSpecific' }
-		);
-
-	const SettingsSchema = BaseSettingsSchema.extend({
-		commandSpecific: CommandSpecificSchema.optional()
-	});
-
-	try {
-		return SettingsSchema.parse(settings);
-	} catch (error) {
-		console.warn(
-			chalk.yellow(
-				`Warning: Invalid Codex CLI settings in config: ${error.message}. Falling back to default.`
-			)
-		);
-		return {};
-	}
-}
-
 // --- Claude Code Settings Getters ---
 
 function getClaudeCodeSettings(explicitRoot = null, forceReload = false) {
@@ -478,45 +402,12 @@ function getClaudeCodeSettings(explicitRoot = null, forceReload = false) {
 	return { ...DEFAULTS.claudeCode, ...(config?.claudeCode || {}) };
 }
 
-// --- Codex CLI Settings Getters ---
-
-function getCodexCliSettings(explicitRoot = null, forceReload = false) {
-	const config = getConfig(explicitRoot, forceReload);
-	return { ...DEFAULTS.codexCli, ...(config?.codexCli || {}) };
-}
-
-function getCodexCliSettingsForCommand(
-	commandName,
-	explicitRoot = null,
-	forceReload = false
-) {
-	const settings = getCodexCliSettings(explicitRoot, forceReload);
-	const commandSpecific = settings?.commandSpecific || {};
-	return { ...settings, ...commandSpecific[commandName] };
-}
-
 function getClaudeCodeSettingsForCommand(
 	commandName,
 	explicitRoot = null,
 	forceReload = false
 ) {
 	const settings = getClaudeCodeSettings(explicitRoot, forceReload);
-	const commandSpecific = settings?.commandSpecific || {};
-	return { ...settings, ...commandSpecific[commandName] };
-}
-
-function getGrokCliSettings(explicitRoot = null, forceReload = false) {
-	const config = getConfig(explicitRoot, forceReload);
-	// Ensure Grok CLI defaults are applied if Grok CLI section is missing
-	return { ...DEFAULTS.grokCli, ...(config?.grokCli || {}) };
-}
-
-function getGrokCliSettingsForCommand(
-	commandName,
-	explicitRoot = null,
-	forceReload = false
-) {
-	const settings = getGrokCliSettings(explicitRoot, forceReload);
 	const commandSpecific = settings?.commandSpecific || {};
 	return { ...settings, ...commandSpecific[commandName] };
 }
@@ -604,17 +495,17 @@ function hasCodebaseAnalysis(
 		return false;
 	}
 
+	// The research role only has web tools, so it cannot explore the codebase
+	if (useResearch) {
+		return false;
+	}
+
 	// Then check if a codebase analysis provider is configured
 	const currentProvider = useResearch
 		? getResearchProvider(projectRoot)
 		: getMainProvider(projectRoot);
 
-	return (
-		currentProvider === CUSTOM_PROVIDERS.CLAUDE_CODE ||
-		currentProvider === CUSTOM_PROVIDERS.GEMINI_CLI ||
-		currentProvider === CUSTOM_PROVIDERS.GROK_CLI ||
-		currentProvider === CUSTOM_PROVIDERS.CODEX_CLI
-	);
+	return currentProvider === CUSTOM_PROVIDERS.CLAUDE_CODE;
 }
 
 function getResearchModelId(explicitRoot = null) {
@@ -690,41 +581,6 @@ function getDefaultPriority(explicitRoot = null) {
 function getProjectName(explicitRoot = null) {
 	// Directly return value from config
 	return getGlobalConfig(explicitRoot).projectName;
-}
-
-function getOllamaBaseURL(explicitRoot = null) {
-	// Directly return value from config
-	return getGlobalConfig(explicitRoot).ollamaBaseURL;
-}
-
-function getAzureBaseURL(explicitRoot = null) {
-	// Directly return value from config
-	return getGlobalConfig(explicitRoot).azureBaseURL;
-}
-
-function getBedrockBaseURL(explicitRoot = null) {
-	// Directly return value from config
-	return getGlobalConfig(explicitRoot).bedrockBaseURL;
-}
-
-/**
- * Gets the Google Cloud project ID for Vertex AI from configuration
- * @param {string|null} explicitRoot - Optional explicit path to the project root.
- * @returns {string|null} The project ID or null if not configured
- */
-function getVertexProjectId(explicitRoot = null) {
-	// Return value from config
-	return getGlobalConfig(explicitRoot).vertexProjectId;
-}
-
-/**
- * Gets the Google Cloud location for Vertex AI from configuration
- * @param {string|null} explicitRoot - Optional explicit path to the project root.
- * @returns {string} The location
- */
-function getVertexLocation(explicitRoot = null) {
-	// Return value from config or default
-	return getGlobalConfig(explicitRoot).vertexLocation;
 }
 
 function getResponseLanguage(explicitRoot = null) {
@@ -826,21 +682,10 @@ function getParametersForRole(role, explicitRoot = null) {
 				);
 			}
 		} else {
-			// Special handling for custom OpenRouter models
-			if (providerName === CUSTOM_PROVIDERS.OPENROUTER) {
-				// Use a conservative default for OpenRouter models not in our list
-				const openrouterDefault = 32768;
-				effectiveMaxTokens = Math.min(roleMaxTokens, openrouterDefault);
-				log(
-					'debug',
-					`Custom OpenRouter model ${modelId} detected. Using conservative max_tokens: ${effectiveMaxTokens}`
-				);
-			} else {
-				log(
-					'debug',
-					`No model definitions found for provider ${providerName} in MODEL_MAP. Using role default maxTokens: ${roleMaxTokens}`
-				);
-			}
+			log(
+				'debug',
+				`No model definitions found for provider ${providerName} in MODEL_MAP. Using role default maxTokens: ${roleMaxTokens}`
+			);
 		}
 	} catch (lookupError) {
 		log(
@@ -859,180 +704,14 @@ function getParametersForRole(role, explicitRoot = null) {
 }
 
 /**
- * Checks if the API key for a given provider is set in the environment.
- * Checks process.env first, then session.env if session is provided, then .env file if projectRoot provided.
- * @param {string} providerName - The name of the provider (e.g., 'openai', 'anthropic').
- * @param {object|null} [session=null] - The MCP session object (optional).
- * @param {string|null} [projectRoot=null] - The project root directory (optional, for .env file check).
- * @returns {boolean} True if the API key is set, false otherwise.
+ * Checks whether a provider is ready to use without further setup.
+ * Claude Code authenticates through the local Claude Code CLI, so no API key
+ * is involved; any other provider is unsupported.
+ * @param {string} providerName - The name of the provider.
+ * @returns {boolean} True for the Claude Code provider, false otherwise.
  */
-function isApiKeySet(providerName, session = null, projectRoot = null) {
-	// Define the expected environment variable name for each provider
-
-	// Providers that don't require API keys for authentication
-	const providersWithoutApiKeys = [
-		CUSTOM_PROVIDERS.OLLAMA,
-		CUSTOM_PROVIDERS.BEDROCK,
-		CUSTOM_PROVIDERS.GEMINI_CLI,
-		CUSTOM_PROVIDERS.GROK_CLI,
-		CUSTOM_PROVIDERS.MCP,
-		CUSTOM_PROVIDERS.CODEX_CLI
-	];
-
-	if (providersWithoutApiKeys.includes(providerName?.toLowerCase())) {
-		return true; // Indicate key status is effectively "OK"
-	}
-
-	// Claude Code doesn't require an API key
-	if (providerName?.toLowerCase() === 'claude-code') {
-		return true; // No API key needed
-	}
-
-	// Codex CLI supports OAuth via codex login; API key optional
-	if (providerName?.toLowerCase() === 'codex-cli') {
-		return true; // Treat as OK even without key
-	}
-
-	const keyMap = {
-		openai: 'OPENAI_API_KEY',
-		anthropic: 'ANTHROPIC_API_KEY',
-		google: 'GOOGLE_API_KEY',
-		perplexity: 'PERPLEXITY_API_KEY',
-		mistral: 'MISTRAL_API_KEY',
-		azure: 'AZURE_OPENAI_API_KEY',
-		openrouter: 'OPENROUTER_API_KEY',
-		xai: 'XAI_API_KEY',
-		zai: 'ZAI_API_KEY',
-		'zai-coding': 'ZAI_API_KEY',
-		groq: 'GROQ_API_KEY',
-		vertex: 'GOOGLE_API_KEY', // Vertex uses the same key as Google
-		'claude-code': 'CLAUDE_CODE_API_KEY', // Not actually used, but included for consistency
-		bedrock: 'AWS_ACCESS_KEY_ID' // Bedrock uses AWS credentials
-		// Add other providers as needed
-	};
-
-	const providerKey = providerName?.toLowerCase();
-	if (!providerKey || !keyMap[providerKey]) {
-		log('warn', `Unknown provider name: ${providerName} in isApiKeySet check.`);
-		return false;
-	}
-
-	const envVarName = keyMap[providerKey];
-	const apiKeyValue = resolveEnvVariable(envVarName, session, projectRoot);
-
-	// Check if the key exists, is not empty, and is not a placeholder
-	return (
-		apiKeyValue &&
-		apiKeyValue.trim() !== '' &&
-		!/YOUR_.*_API_KEY_HERE/.test(apiKeyValue) && // General placeholder check
-		!apiKeyValue.includes('KEY_HERE')
-	); // Another common placeholder pattern
-}
-
-/**
- * Checks the API key status within .cursor/mcp.json for a given provider.
- * Reads the mcp.json file, finds the taskgraph-ai server config, and checks the relevant env var.
- * @param {string} providerName The name of the provider.
- * @param {string|null} projectRoot - Optional explicit path to the project root.
- * @returns {boolean} True if the key exists and is not a placeholder, false otherwise.
- */
-function getMcpApiKeyStatus(providerName, projectRoot = null) {
-	const rootDir = projectRoot || findProjectRoot(); // Use existing root finding
-	if (!rootDir) {
-		console.warn(
-			chalk.yellow('Warning: Could not find project root to check mcp.json.')
-		);
-		return false; // Cannot check without root
-	}
-	const mcpConfigPath = path.join(rootDir, '.cursor', 'mcp.json');
-
-	if (!fs.existsSync(mcpConfigPath)) {
-		// console.warn(chalk.yellow('Warning: .cursor/mcp.json not found.'));
-		return false; // File doesn't exist
-	}
-
-	try {
-		const mcpConfigRaw = fs.readFileSync(mcpConfigPath, 'utf-8');
-		const mcpConfig = JSON.parse(mcpConfigRaw);
-
-		const servers = mcpConfig?.mcpServers;
-		const mcpEnv =
-			servers?.[findMcpServerKey(servers)]?.env ||
-			servers?.['taskmaster-ai']?.env;
-		if (!mcpEnv) {
-			return false;
-		}
-
-		let apiKeyToCheck = null;
-		let placeholderValue = null;
-
-		switch (providerName) {
-			case 'anthropic':
-				apiKeyToCheck = mcpEnv.ANTHROPIC_API_KEY;
-				placeholderValue = 'YOUR_ANTHROPIC_API_KEY_HERE';
-				break;
-			case 'openai':
-				apiKeyToCheck = mcpEnv.OPENAI_API_KEY;
-				placeholderValue = 'YOUR_OPENAI_API_KEY_HERE'; // Assuming placeholder matches OPENAI
-				break;
-			case 'openrouter':
-				apiKeyToCheck = mcpEnv.OPENROUTER_API_KEY;
-				placeholderValue = 'YOUR_OPENROUTER_API_KEY_HERE';
-				break;
-			case 'google':
-				apiKeyToCheck = mcpEnv.GOOGLE_API_KEY;
-				placeholderValue = 'YOUR_GOOGLE_API_KEY_HERE';
-				break;
-			case 'perplexity':
-				apiKeyToCheck = mcpEnv.PERPLEXITY_API_KEY;
-				placeholderValue = 'YOUR_PERPLEXITY_API_KEY_HERE';
-				break;
-			case 'xai':
-				apiKeyToCheck = mcpEnv.XAI_API_KEY;
-				placeholderValue = 'YOUR_XAI_API_KEY_HERE';
-				break;
-			case 'zai':
-			case 'zai-coding':
-				apiKeyToCheck = mcpEnv.ZAI_API_KEY;
-				placeholderValue = 'YOUR_ZAI_API_KEY_HERE';
-				break;
-			case 'groq':
-				apiKeyToCheck = mcpEnv.GROQ_API_KEY;
-				placeholderValue = 'YOUR_GROQ_API_KEY_HERE';
-				break;
-			case 'ollama':
-				return true; // No key needed
-			case 'claude-code':
-				return true; // No key needed
-			case 'codex-cli':
-				return true; // OAuth/subscription via Codex CLI
-			case 'mistral':
-				apiKeyToCheck = mcpEnv.MISTRAL_API_KEY;
-				placeholderValue = 'YOUR_MISTRAL_API_KEY_HERE';
-				break;
-			case 'azure':
-				apiKeyToCheck = mcpEnv.AZURE_OPENAI_API_KEY;
-				placeholderValue = 'YOUR_AZURE_OPENAI_API_KEY_HERE';
-				break;
-			case 'vertex':
-				apiKeyToCheck = mcpEnv.GOOGLE_API_KEY; // Vertex uses Google API key
-				placeholderValue = 'YOUR_GOOGLE_API_KEY_HERE';
-				break;
-			case 'bedrock':
-				apiKeyToCheck = mcpEnv.AWS_ACCESS_KEY_ID; // Bedrock uses AWS credentials
-				placeholderValue = 'YOUR_AWS_ACCESS_KEY_ID_HERE';
-				break;
-			default:
-				return false; // Unknown provider
-		}
-
-		return !!apiKeyToCheck && !/KEY_HERE$/.test(apiKeyToCheck);
-	} catch (error) {
-		console.error(
-			chalk.red(`Error reading or parsing .cursor/mcp.json: ${error.message}`)
-		);
-		return false;
-	}
+function isApiKeySet(providerName) {
+	return providerName?.toLowerCase() === CUSTOM_PROVIDERS.CLAUDE_CODE;
 }
 
 /**
@@ -1058,11 +737,6 @@ function getAvailableModels() {
 							.split('-')
 							.map((p) => p.charAt(0).toUpperCase() + p.slice(1));
 						name = nameParts.join(' ');
-						// Handle specific known names better if needed
-						if (modelId === 'gpt-4o') name = 'GPT-4o';
-						if (modelId === 'gpt-4-turbo') name = 'GPT-4 Turbo';
-						if (modelId === 'sonar-pro') name = 'Perplexity Sonar Pro';
-						if (modelId === 'sonar-mini') name = 'Perplexity Sonar Mini';
 					}
 
 					available.push({
@@ -1075,13 +749,6 @@ function getAvailableModels() {
 						max_tokens: modelObj.max_tokens
 					});
 				});
-		} else {
-			// For providers with empty lists (like ollama), maybe add a placeholder or skip
-			available.push({
-				id: `[${provider}-any]`,
-				name: `Any (${provider})`,
-				provider: provider
-			});
 		}
 	}
 	return available;
@@ -1179,19 +846,6 @@ function getAllProviders() {
 	return ALL_PROVIDERS;
 }
 
-function getBaseUrlForRole(role, explicitRoot = null) {
-	const roleConfig = getModelConfigForRole(role, explicitRoot);
-	if (roleConfig && typeof roleConfig.baseURL === 'string') {
-		return roleConfig.baseURL;
-	}
-	const provider = roleConfig?.provider;
-	if (provider) {
-		const envVarName = `${provider.toUpperCase()}_BASE_URL`;
-		return resolveEnvVariable(envVarName, null, explicitRoot);
-	}
-	return undefined;
-}
-
 /**
  * Get the operating mode for rules/commands filtering.
  * Priority order:
@@ -1237,16 +891,6 @@ async function getOperatingMode(explicitMode) {
 	return 'solo';
 }
 
-// Export the providers without API keys array for use in other modules
-export const providersWithoutApiKeys = [
-	CUSTOM_PROVIDERS.OLLAMA,
-	CUSTOM_PROVIDERS.BEDROCK,
-	CUSTOM_PROVIDERS.GEMINI_CLI,
-	CUSTOM_PROVIDERS.GROK_CLI,
-	CUSTOM_PROVIDERS.MCP,
-	CUSTOM_PROVIDERS.CODEX_CLI
-];
-
 export {
 	// Core config access
 	getConfig,
@@ -1256,18 +900,10 @@ export {
 	// Claude Code settings
 	getClaudeCodeSettings,
 	getClaudeCodeSettingsForCommand,
-	// Codex CLI settings
-	getCodexCliSettings,
-	getCodexCliSettingsForCommand,
-	// Grok CLI settings
-	getGrokCliSettings,
-	getGrokCliSettingsForCommand,
 	// Validation
 	validateProvider,
 	validateProviderModelCombination,
 	validateClaudeCodeSettings,
-	validateCodexCliSettings,
-	VALIDATED_PROVIDERS,
 	CUSTOM_PROVIDERS,
 	ALL_PROVIDERS,
 	MODEL_MAP,
@@ -1286,7 +922,6 @@ export {
 	getFallbackModelId,
 	getFallbackMaxTokens,
 	getFallbackTemperature,
-	getBaseUrlForRole,
 	// Global setting getters (No env var overrides)
 	getLogLevel,
 	getDebugFlag,
@@ -1294,9 +929,6 @@ export {
 	getDefaultSubtasks,
 	getDefaultPriority,
 	getProjectName,
-	getOllamaBaseURL,
-	getAzureBaseURL,
-	getBedrockBaseURL,
 	getResponseLanguage,
 	getCodebaseAnalysisEnabled,
 	isCodebaseAnalysisEnabled,
@@ -1309,9 +941,6 @@ export {
 	getOperatingMode,
 	// API Key Checkers (still relevant)
 	isApiKeySet,
-	getMcpApiKeyStatus,
 	// ADD: Function to get all provider names
-	getAllProviders,
-	getVertexProjectId,
-	getVertexLocation
+	getAllProviders
 };

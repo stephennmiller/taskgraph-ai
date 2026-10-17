@@ -29,17 +29,14 @@ taskgraph models
 
 1. **Main Provider**
    - Model ID and name
-   - API key status (configured/missing)
    - Usage: Primary task generation
 
 2. **Research Provider**
    - Model ID and name
-   - API key status
    - Usage: Enhanced research mode
 
 3. **Fallback Provider**
    - Model ID and name
-   - API key status
    - Usage: Backup when main fails
 
 ## Visual Status
@@ -47,21 +44,20 @@ taskgraph models
 \`\`\`
 Task Master AI Model Configuration
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Main:     ✅ claude-sonnet-5-5 (configured)
-Research: ✅ perplexity-sonar (configured)
-Fallback: ⚠️  Not configured (optional)
+Main:     ✅ claude-code / sonnet
+Research: ✅ claude-code / sonnet
+Fallback: ✅ claude-code / sonnet
 
 Available Models:
-- claude-sonnet-5-5
-- gpt-4-turbo
-- gpt-3.5-turbo
-- perplexity-sonar
+- opus
+- sonnet
+- haiku
 \`\`\`
 
 ## Next Actions
 
 Based on configuration:
-- If missing API keys → Suggest setup
+- If Claude Code is missing → Suggest installing and signing in
 - If no research model → Explain benefits
 - If all configured → Show usage tips`,
 	mode: 'solo'

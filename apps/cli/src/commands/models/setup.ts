@@ -3,32 +3,13 @@
  */
 
 import chalk from 'chalk';
-import {
-	getConfig,
-	getModelConfiguration,
-	setModel,
-	writeConfig
-} from '../../lib/model-management.js';
-import {
-	customProviderConfigs,
-	handleCustomProvider
-} from './custom-providers.js';
+import { getModelConfiguration, setModel } from '../../lib/model-management.js';
 import {
 	buildPromptChoices,
 	displaySetupIntro,
 	promptForModel
 } from './prompts.js';
-import type { CurrentModels, CustomProviderId, ModelRole } from './types.js';
-
-/**
- * Check if a value is a custom provider ID
- */
-function isCustomProviderId(value: unknown): value is CustomProviderId {
-	if (typeof value !== 'string') return false;
-	return Object.values(customProviderConfigs).some(
-		(config) => config.id === value
-	);
-}
+import type { CurrentModels, ModelRole } from './types.js';
 
 /**
  * Handle setting a model for a specific role
@@ -39,13 +20,11 @@ async function handleSetModel(
 	currentModel: {
 		modelId?: string | null;
 		provider?: string | null;
-		baseURL?: string | null;
 	} | null,
 	projectRoot: string
 ): Promise<{ success: boolean; modified: boolean }> {
 	const currentModelId = currentModel?.modelId ?? null;
 	const currentProvider = currentModel?.provider ?? null;
-	const currentBaseURL = currentModel?.baseURL ?? null;
 	// Handle cancellation
 	if (selectedValue === '__CANCEL__') {
 		console.log(
@@ -62,39 +41,15 @@ async function handleSetModel(
 
 	let modelIdToSet: string | null = null;
 	let providerHint: string | null = null;
-	let baseURL: string | null = null;
 
-	// Handle custom providers
-	if (isCustomProviderId(selectedValue)) {
-		const result = await handleCustomProvider(
-			selectedValue,
-			role,
-			currentModel,
-			projectRoot
-		);
-		if (!result.success) {
-			return { success: false, modified: false };
-		}
-		if (!result.modelId) {
-			return { success: true, modified: false };
-		}
-		modelIdToSet = result.modelId;
-		providerHint = result.provider;
-		baseURL = result.baseURL || null;
-	}
-	// Handle standard model selection
-	else if (
+	// Handle model selection
+	if (
 		selectedValue &&
 		typeof selectedValue === 'object' &&
 		'id' in selectedValue
 	) {
 		modelIdToSet = selectedValue.id;
 		providerHint = selectedValue.provider;
-	}
-	// Handle disabling fallback
-	else if (selectedValue === null && role === 'fallback') {
-		modelIdToSet = null;
-		providerHint = null;
 	}
 	// Unknown selection
 	else if (selectedValue) {
@@ -109,8 +64,7 @@ async function handleSetModel(
 	// Check if there's actually a change to make
 	if (
 		modelIdToSet === currentModelId &&
-		(providerHint ?? null) === currentProvider &&
-		(baseURL ?? null) === currentBaseURL
+		(providerHint ?? null) === currentProvider
 	) {
 		return { success: true, modified: false };
 	}
@@ -119,8 +73,7 @@ async function handleSetModel(
 	if (modelIdToSet) {
 		const result = await setModel(role, modelIdToSet, {
 			projectRoot,
-			providerHint: providerHint || undefined,
-			baseURL: baseURL || undefined
+			providerHint: providerHint || undefined
 		});
 
 		if (result.success) {
@@ -129,9 +82,6 @@ async function handleSetModel(
 					`Set ${role} model: ${result.data?.provider} / ${result.data?.modelId}`
 				)
 			);
-			if (result.data?.warning) {
-				console.log(chalk.yellow(result.data?.warning));
-			}
 			return { success: true, modified: true };
 		} else {
 			console.error(
@@ -142,30 +92,6 @@ async function handleSetModel(
 			return { success: false, modified: false };
 		}
 	}
-	// Disable fallback model
-	else if (role === 'fallback') {
-		const currentCfg = getConfig(projectRoot);
-		if (currentCfg?.models?.fallback?.modelId) {
-			currentCfg.models.fallback = {
-				...currentCfg.models.fallback,
-				provider: undefined,
-				modelId: undefined
-			};
-			if (writeConfig(currentCfg, projectRoot)) {
-				console.log(chalk.blue('Fallback model disabled.'));
-				return { success: true, modified: true };
-			} else {
-				console.error(
-					chalk.red('Failed to disable fallback model in config file.')
-				);
-				return { success: false, modified: false };
-			}
-		} else {
-			console.log(chalk.blue('Fallback model was already disabled.'));
-			return { success: true, modified: false };
-		}
-	}
-
 	return { success: true, modified: false };
 }
 
@@ -192,24 +118,21 @@ export async function runInteractiveSetup(
 					main: currentConfigResult.data.activeModels.main
 						? {
 								modelId: currentConfigResult.data.activeModels.main.modelId,
-								provider: currentConfigResult.data.activeModels.main.provider,
-								baseURL: currentConfigResult.data.activeModels.main.baseURL
+								provider: currentConfigResult.data.activeModels.main.provider
 							}
 						: null,
 					research: currentConfigResult.data.activeModels.research
 						? {
 								modelId: currentConfigResult.data.activeModels.research.modelId,
 								provider:
-									currentConfigResult.data.activeModels.research.provider,
-								baseURL: currentConfigResult.data.activeModels.research.baseURL
+									currentConfigResult.data.activeModels.research.provider
 							}
 						: null,
 					fallback: currentConfigResult.data.activeModels.fallback
 						? {
 								modelId: currentConfigResult.data.activeModels.fallback.modelId,
 								provider:
-									currentConfigResult.data.activeModels.fallback.provider,
-								baseURL: currentConfigResult.data.activeModels.fallback.baseURL
+									currentConfigResult.data.activeModels.fallback.provider
 							}
 						: null
 				}
@@ -230,11 +153,7 @@ export async function runInteractiveSetup(
 	// Build prompt data
 	const mainPromptData = buildPromptChoices('main', currentModels);
 	const researchPromptData = buildPromptChoices('research', currentModels);
-	const fallbackPromptData = buildPromptChoices(
-		'fallback',
-		currentModels,
-		true
-	);
+	const fallbackPromptData = buildPromptChoices('fallback', currentModels);
 
 	// Display intro
 	displaySetupIntro();

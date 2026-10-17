@@ -324,7 +324,6 @@ jest.unstable_mockModule(
 		// Validation
 		validateProvider: jest.fn(() => true),
 		validateProviderModelCombination: jest.fn(() => true),
-		VALIDATED_PROVIDERS: ['anthropic', 'openai', 'perplexity'],
 		CUSTOM_PROVIDERS: { OLLAMA: 'ollama', BEDROCK: 'bedrock' },
 		ALL_PROVIDERS: ['anthropic', 'openai', 'perplexity', 'ollama', 'bedrock'],
 		MODEL_MAP: {

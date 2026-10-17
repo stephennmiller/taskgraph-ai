@@ -177,8 +177,135 @@ describe('ClaudeCodeProvider', () => {
 						preset: 'claude_code'
 					},
 					// Restores pre-2.0 behavior: enables loading of CLAUDE.md and settings.json
-					settingSources: ['user', 'project', 'local']
+					settingSources: ['user', 'project', 'local'],
+					env: expect.any(Object),
+					// Main/fallback roles may only read the repo (codebase analysis)
+					tools: ['Read', 'Grep', 'Glob'],
+					allowedTools: ['Read', 'Grep', 'Glob'],
+					permissionMode: 'dontAsk',
+					permissionPrompts: 'none',
+					strictMcpConfig: true,
+					mcpServers: {}
 				}
+			});
+		});
+
+		describe('API key handling', () => {
+			const lastEnv = async () => {
+				const { createClaudeCode } = await import(
+					'ai-sdk-provider-claude-code'
+				);
+				return createClaudeCode.mock.calls.at(-1)[0].defaultSettings.env;
+			};
+			const saved = {
+				anthropic: process.env.ANTHROPIC_API_KEY,
+				claudeCode: process.env.CLAUDE_CODE_API_KEY
+			};
+
+			afterEach(() => {
+				for (const [key, value] of [
+					['ANTHROPIC_API_KEY', saved.anthropic],
+					['CLAUDE_CODE_API_KEY', saved.claudeCode]
+				]) {
+					if (value === undefined) delete process.env[key];
+					else process.env[key] = value;
+				}
+			});
+
+			it('withholds ANTHROPIC_API_KEY so Claude Code uses its own sign-in', async () => {
+				process.env.ANTHROPIC_API_KEY = 'sk-ant-should-not-be-used';
+				delete process.env.CLAUDE_CODE_API_KEY;
+
+				provider.getClient({});
+
+				const env = await lastEnv();
+				expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
+				// The process environment itself is left untouched
+				expect(process.env.ANTHROPIC_API_KEY).toBe('sk-ant-should-not-be-used');
+			});
+
+			it('uses CLAUDE_CODE_API_KEY exclusively when it is set', async () => {
+				process.env.ANTHROPIC_API_KEY = 'sk-ant-other';
+				process.env.CLAUDE_CODE_API_KEY = 'sk-ant-claude-code';
+
+				provider.getClient({});
+
+				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('sk-ant-claude-code');
+			});
+		});
+
+		describe('tool restrictions per role', () => {
+			const lastSettings = async () => {
+				const { createClaudeCode } = await import(
+					'ai-sdk-provider-claude-code'
+				);
+				return createClaudeCode.mock.calls.at(-1)[0].defaultSettings;
+			};
+
+			it.each([['main'], ['fallback'], [undefined]])(
+				'gives the %s role read-only repo tools and no web, shell or MCP access',
+				async (role) => {
+					provider.getClient({ role });
+
+					const settings = await lastSettings();
+					expect(settings.tools).toEqual(['Read', 'Grep', 'Glob']);
+					expect(settings.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
+					expect(settings.permissionMode).toBe('dontAsk');
+					expect(settings.permissionPrompts).toBe('none');
+					expect(settings.strictMcpConfig).toBe(true);
+					expect(settings.mcpServers).toEqual({});
+				}
+			);
+
+			it('gives the research role only WebSearch and WebFetch', async () => {
+				provider.getClient({ role: 'research' });
+
+				const settings = await lastSettings();
+				expect(settings.tools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.allowedTools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.permissionMode).toBe('dontAsk');
+				expect(settings.strictMcpConfig).toBe(true);
+				expect(settings.mcpServers).toEqual({});
+			});
+
+			it('does not load user, project or local settings for the research role', async () => {
+				provider.getClient({ role: 'research' });
+
+				const settings = await lastSettings();
+				expect(settings.settingSources).toEqual([]);
+			});
+
+			it('caps research turns unless the config sets maxTurns', async () => {
+				const { getClaudeCodeSettingsForCommand } = await import(
+					'../../../scripts/modules/config-manager.js'
+				);
+
+				provider.getClient({ role: 'research' });
+				expect((await lastSettings()).maxTurns).toBe(8);
+
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({ maxTurns: 3 });
+				provider.getClient({ role: 'research' });
+				expect((await lastSettings()).maxTurns).toBe(3);
+			});
+
+			it('does not let config settings widen the allowed tools', async () => {
+				const { getClaudeCodeSettingsForCommand } = await import(
+					'../../../scripts/modules/config-manager.js'
+				);
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
+					allowedTools: ['Bash', 'Write'],
+					tools: ['Bash'],
+					permissionMode: 'bypassPermissions',
+					mcpServers: { evil: { command: 'x' } }
+				});
+
+				provider.getClient({ role: 'research' });
+
+				const settings = await lastSettings();
+				expect(settings.tools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.allowedTools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.permissionMode).toBe('dontAsk');
+				expect(settings.mcpServers).toEqual({});
 			});
 		});
 

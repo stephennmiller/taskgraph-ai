@@ -25,11 +25,7 @@ import {
 	generateTextService
 } from '../ai-services-unified.js';
 import { createBridgeLogger } from '../bridge-utils.js';
-import {
-	getDebugFlag,
-	hasCodebaseAnalysis,
-	isApiKeySet
-} from '../config-manager.js';
+import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
@@ -90,18 +86,6 @@ async function updateTaskById(
 		const projectRoot = providedProjectRoot || findProjectRoot();
 		if (!projectRoot) {
 			throw new Error('Could not determine project root directory');
-		}
-
-		if (useResearch && !isApiKeySet('perplexity', session)) {
-			report(
-				'warn',
-				'Perplexity research requested but API key not set. Falling back.'
-			);
-			if (outputFormat === 'text')
-				console.log(
-					chalk.yellow('Perplexity AI not available. Falling back to main AI.')
-				);
-			useResearch = false;
 		}
 
 		// --- BRIDGE: Try remote update first (API storage) ---

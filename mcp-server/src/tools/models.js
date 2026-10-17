@@ -15,69 +15,33 @@ export function registerModelsTool(server) {
 	server.addTool({
 		name: 'models',
 		description:
-			'Get information about available AI models or set model configurations. Run without arguments to get the current model configuration and API key status for the selected model providers.',
+			'Get information about available AI models or set model configurations. Task Master uses Claude Code (models: opus, sonnet, haiku). Run without arguments to get the current model configuration.',
 		parameters: z.object({
 			setMain: z
 				.string()
 				.optional()
 				.describe(
-					'Set the primary model for task generation/updates. Model provider API key is required in the MCP config ENV.'
+					'Set the primary model for task generation/updates. One of: opus, sonnet, haiku.'
 				),
 			setResearch: z
 				.string()
 				.optional()
 				.describe(
-					'Set the model for research-backed operations. Model provider API key is required in the MCP config ENV.'
+					'Set the model for research-backed operations. One of: opus, sonnet, haiku.'
 				),
 			setFallback: z
 				.string()
 				.optional()
 				.describe(
-					'Set the model to use if the primary fails. Model provider API key is required in the MCP config ENV.'
+					'Set the model to use if the primary fails. One of: opus, sonnet, haiku.'
 				),
 			listAvailableModels: z
 				.boolean()
 				.optional()
-				.describe(
-					'List all available models not currently in use. Input/output costs values are in dollars (3 is $3.00).'
-				),
+				.describe('List all available models.'),
 			projectRoot: z
 				.string()
-				.describe('The directory of the project. Must be an absolute path.'),
-			openrouter: z
-				.boolean()
-				.optional()
-				.describe('Indicates the set model ID is a custom OpenRouter model.'),
-			ollama: z
-				.boolean()
-				.optional()
-				.describe('Indicates the set model ID is a custom Ollama model.'),
-			bedrock: z
-				.boolean()
-				.optional()
-				.describe('Indicates the set model ID is a custom AWS Bedrock model.'),
-			azure: z
-				.boolean()
-				.optional()
-				.describe('Indicates the set model ID is a custom Azure OpenAI model.'),
-			vertex: z
-				.boolean()
-				.optional()
-				.describe(
-					'Indicates the set model ID is a custom Google Vertex AI model.'
-				),
-			'openai-compatible': z
-				.boolean()
-				.optional()
-				.describe(
-					'Indicates the set model ID is a custom OpenAI-compatible model. Requires baseURL parameter.'
-				),
-			baseURL: z
-				.string()
-				.optional()
-				.describe(
-					'Custom base URL for providers that support it (e.g., https://api.example.com/v1).'
-				)
+				.describe('The directory of the project. Must be an absolute path.')
 		}),
 		annotations: {
 			title: 'Models',

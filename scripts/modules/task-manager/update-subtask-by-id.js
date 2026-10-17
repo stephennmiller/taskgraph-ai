@@ -454,27 +454,16 @@ async function updateSubtaskById(
 		report('error', `Error updating subtask: ${error.message}`);
 		if (outputFormat === 'text') {
 			console.error(chalk.red(`Error: ${error.message}`));
-			if (error.message?.includes('ANTHROPIC_API_KEY')) {
-				console.log(
-					chalk.yellow('\nTo fix this issue, set your Anthropic API key:')
-				);
-				console.log('  export ANTHROPIC_API_KEY=your_api_key_here');
-			} else if (error.message?.includes('PERPLEXITY_API_KEY')) {
-				console.log(chalk.yellow('\nTo fix this issue:'));
-				console.log(
-					'  1. Set your Perplexity API key: export PERPLEXITY_API_KEY=your_api_key_here'
-				);
-				console.log(
-					'  2. Or run without the research flag: taskgraph update-subtask --id=<id> --prompt="..."'
-				);
-			} else if (error.message?.includes('overloaded')) {
+			if (error.message?.includes('overloaded')) {
 				console.log(
 					chalk.yellow(
 						'\nAI model overloaded, and fallback failed or was unavailable:'
 					)
 				);
 				console.log('  1. Try again in a few minutes.');
-				console.log('  2. Ensure PERPLEXITY_API_KEY is set for fallback.');
+				console.log(
+					'  2. Check that Claude Code is installed and signed in: claude --version'
+				);
 			} else if (error.message?.includes('not found')) {
 				console.log(chalk.yellow('\nTo fix this issue:'));
 				console.log(

@@ -60,19 +60,14 @@ This command helps you get Task Master set up globally on your system.
    taskgraph init
    \`\`\`
 
-6. **Configure AI Provider**
-   Ensure you have at least one AI provider API key set:
+6. **Check the AI provider**
+   Task Master uses Claude Code, so no API keys are needed. Make sure Claude Code is installed and signed in:
    \`\`\`bash
-   # Check current configuration
-   taskgraph models --status
+   # Verify Claude Code is available
+   claude --version
 
-   # If no API keys found, guide setup
-   echo "You'll need at least one API key:"
-   echo "- ANTHROPIC_API_KEY for Claude"
-   echo "- OPENAI_API_KEY for GPT models"
-   echo "- PERPLEXITY_API_KEY for research"
-   echo ""
-   echo "Set them in your shell profile or .env file"
+   # Check current model configuration
+   taskgraph models
    \`\`\`
 
 7. **Quick Test**

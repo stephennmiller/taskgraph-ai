@@ -118,21 +118,21 @@ const MOCK_CONFIG_PATH = path.join(
 const DEFAULT_CONFIG = {
 	models: {
 		main: {
-			provider: 'anthropic',
-			modelId: 'claude-sonnet-5-5',
+			provider: 'claude-code',
+			modelId: 'sonnet',
 			maxTokens: 64000,
 			temperature: 0.2
 		},
 		research: {
-			provider: 'perplexity',
-			modelId: 'sonar',
+			provider: 'claude-code',
+			modelId: 'sonnet',
 			maxTokens: 8700,
 			temperature: 0.1
 		},
 		fallback: {
-			provider: 'anthropic',
-			modelId: 'claude-sonnet-5-5',
-			maxTokens: 120000,
+			provider: 'claude-code',
+			modelId: 'sonnet',
+			maxTokens: 64000,
 			temperature: 0.2
 		}
 	},
@@ -144,40 +144,32 @@ const DEFAULT_CONFIG = {
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'Task Master',
-		ollamaBaseURL: 'http://localhost:11434/api',
-		bedrockBaseURL: 'https://bedrock.us-east-1.amazonaws.com',
 		enableCodebaseAnalysis: true,
 		enableProxy: false,
 		responseLanguage: 'English'
 	},
-	claudeCode: {},
-	codexCli: {},
-	grokCli: {
-		timeout: 120000,
-		workingDirectory: null,
-		defaultModel: 'grok-4-latest'
-	}
+	claudeCode: {}
 };
 
 // Other test data (VALID_CUSTOM_CONFIG, PARTIAL_CONFIG, INVALID_PROVIDER_CONFIG)
 const VALID_CUSTOM_CONFIG = {
 	models: {
 		main: {
-			provider: 'openai',
-			modelId: 'gpt-4o',
+			provider: 'claude-code',
+			modelId: 'opus',
 			maxTokens: 4096,
 			temperature: 0.5
 		},
 		research: {
-			provider: 'google',
-			modelId: 'gemini-1.5-pro-latest',
+			provider: 'claude-code',
+			modelId: 'haiku',
 			maxTokens: 8192,
 			temperature: 0.3
 		},
 		fallback: {
-			provider: 'anthropic',
-			modelId: 'claude-3-opus-20240229',
-			maxTokens: 100000,
+			provider: 'claude-code',
+			modelId: 'sonnet',
+			maxTokens: 10000,
 			temperature: 0.4
 		}
 	},
@@ -190,7 +182,7 @@ const VALID_CUSTOM_CONFIG = {
 
 const PARTIAL_CONFIG = {
 	models: {
-		main: { provider: 'openai', modelId: 'gpt-4-turbo' }
+		main: { provider: 'claude-code', modelId: 'opus' }
 	},
 	global: {
 		projectName: 'Partial Project'
@@ -201,8 +193,8 @@ const INVALID_PROVIDER_CONFIG = {
 	models: {
 		main: { provider: 'invalid-provider', modelId: 'some-model' },
 		research: {
-			provider: 'perplexity',
-			modelId: 'llama-3-sonar-large-32k-online'
+			provider: 'claude-code',
+			modelId: 'haiku'
 		}
 	},
 	global: {
@@ -331,14 +323,22 @@ beforeEach(() => {
 // --- Validation Functions ---
 describe('Validation Functions', () => {
 	// Tests for validateProvider and validateProviderModelCombination
-	test('validateProvider should return true for valid providers', () => {
-		expect(configManager.validateProvider('openai')).toBe(true);
-		expect(configManager.validateProvider('anthropic')).toBe(true);
-		expect(configManager.validateProvider('google')).toBe(true);
-		expect(configManager.validateProvider('perplexity')).toBe(true);
-		expect(configManager.validateProvider('ollama')).toBe(true);
-		expect(configManager.validateProvider('openrouter')).toBe(true);
-		expect(configManager.validateProvider('bedrock')).toBe(true);
+	test('validateProvider should return true for the Claude Code provider', () => {
+		expect(configManager.validateProvider('claude-code')).toBe(true);
+	});
+
+	test('validateProvider should reject providers Task Master no longer supports', () => {
+		for (const provider of [
+			'openai',
+			'anthropic',
+			'google',
+			'perplexity',
+			'ollama',
+			'openrouter',
+			'bedrock'
+		]) {
+			expect(configManager.validateProvider(provider)).toBe(false);
+		}
 	});
 
 	test('validateProvider should return false for invalid providers', () => {
@@ -349,38 +349,18 @@ describe('Validation Functions', () => {
 	});
 
 	test('validateProviderModelCombination should validate known good combinations', () => {
-		// Re-load config to ensure MODEL_MAP is populated from mock (now real data)
 		configManager.getConfig(MOCK_PROJECT_ROOT, true);
-		expect(
-			configManager.validateProviderModelCombination('openai', 'gpt-4o')
-		).toBe(true);
-		expect(
-			configManager.validateProviderModelCombination(
-				'anthropic',
-				'claude-3-5-sonnet-20241022'
-			)
-		).toBe(true);
+		for (const modelId of ['opus', 'sonnet', 'haiku']) {
+			expect(
+				configManager.validateProviderModelCombination('claude-code', modelId)
+			).toBe(true);
+		}
 	});
 
 	test('validateProviderModelCombination should return false for known bad combinations', () => {
-		// Re-load config to ensure MODEL_MAP is populated from mock (now real data)
 		configManager.getConfig(MOCK_PROJECT_ROOT, true);
 		expect(
-			configManager.validateProviderModelCombination(
-				'openai',
-				'claude-3-opus-20240229'
-			)
-		).toBe(false);
-	});
-
-	test('validateProviderModelCombination should return true for ollama/openrouter (empty lists in map)', () => {
-		// Re-load config to ensure MODEL_MAP is populated from mock (now real data)
-		configManager.getConfig(MOCK_PROJECT_ROOT, true);
-		expect(
-			configManager.validateProviderModelCombination('ollama', 'any-model')
-		).toBe(false);
-		expect(
-			configManager.validateProviderModelCombination('openrouter', 'any/model')
+			configManager.validateProviderModelCombination('claude-code', 'gpt-4o')
 		).toBe(false);
 	});
 
@@ -644,9 +624,7 @@ describe('getConfig Tests', () => {
 			claudeCode: {
 				...DEFAULT_CONFIG.claudeCode,
 				...VALID_CUSTOM_CONFIG.claudeCode
-			},
-			grokCli: { ...DEFAULT_CONFIG.grokCli },
-			codexCli: { ...DEFAULT_CONFIG.codexCli }
+			}
 		};
 		expect(config).toEqual(expectedMergedConfig);
 		expect(fsExistsSyncSpy).toHaveBeenCalledWith(MOCK_CONFIG_PATH);
@@ -688,9 +666,7 @@ describe('getConfig Tests', () => {
 			claudeCode: {
 				...DEFAULT_CONFIG.claudeCode,
 				...VALID_CUSTOM_CONFIG.claudeCode
-			},
-			grokCli: { ...DEFAULT_CONFIG.grokCli },
-			codexCli: { ...DEFAULT_CONFIG.codexCli }
+			}
 		};
 		expect(config).toEqual(expectedMergedConfig);
 		expect(fsReadFileSyncSpy).toHaveBeenCalledWith(MOCK_CONFIG_PATH, 'utf-8');
@@ -798,9 +774,7 @@ describe('getConfig Tests', () => {
 			claudeCode: {
 				...DEFAULT_CONFIG.claudeCode,
 				...VALID_CUSTOM_CONFIG.claudeCode
-			},
-			grokCli: { ...DEFAULT_CONFIG.grokCli },
-			codexCli: { ...DEFAULT_CONFIG.codexCli }
+			}
 		};
 		expect(config).toEqual(expectedMergedConfig);
 	});
@@ -1051,10 +1025,7 @@ describe('getAllProviders', () => {
 		expect(providers).toEqual(configManager.ALL_PROVIDERS);
 		expect(providers.length).toBe(configManager.ALL_PROVIDERS.length);
 
-		// Verify it includes both validated and custom providers
-		expect(providers).toEqual(
-			expect.arrayContaining(configManager.VALIDATED_PROVIDERS)
-		);
+		// Verify it includes the custom providers
 		expect(providers).toEqual(
 			expect.arrayContaining(Object.values(configManager.CUSTOM_PROVIDERS))
 		);
@@ -1176,3 +1147,33 @@ describe('Configuration Getters', () => {
 
 // Note: Tests for setMainModel, setResearchModel were removed as the functions were removed in the implementation.
 // If similar setter functions exist, add tests for them following the writeConfig pattern.
+
+// --- hasCodebaseAnalysis Tests ---
+describe('hasCodebaseAnalysis', () => {
+	const originalFlag = process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+
+	beforeEach(() => {
+		// Config reads fall back to the defaults (claude-code for every role)
+		fsExistsSyncSpy.mockReturnValue(false);
+	});
+
+	afterEach(() => {
+		if (originalFlag === undefined) {
+			delete process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+		} else {
+			process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS = originalFlag;
+		}
+	});
+
+	test('is true for the main role with Claude Code', () => {
+		expect(configManager.hasCodebaseAnalysis(false, MOCK_PROJECT_ROOT)).toBe(
+			true
+		);
+	});
+
+	test('is false for the research role, which only has web tools', () => {
+		expect(configManager.hasCodebaseAnalysis(true, MOCK_PROJECT_ROOT)).toBe(
+			false
+		);
+	});
+});

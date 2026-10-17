@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import boxen from 'boxen';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import inquirer from 'inquirer';
 
 // Import command registry and utilities from @tm/cli
@@ -48,7 +48,6 @@ import {
 import { moveTasksBetweenTags } from './task-manager/move-task.js';
 
 import {
-	getApiKeyStatusReport,
 	getAvailableModelsList,
 	getModelConfiguration,
 	setModel
@@ -78,7 +77,6 @@ import {
 	getConfig,
 	getDebugFlag,
 	getDefaultNumTasks,
-	isApiKeySet,
 	isConfigFilePresent,
 	setSuppressConfigWarnings
 } from './config-manager.js';
@@ -107,7 +105,6 @@ import { initTaskMaster } from '../../src/task-master.js';
 
 import {
 	confirmTaskOverwrite,
-	displayApiKeyStatus,
 	displayAvailableModels,
 	displayBanner,
 	displayComplexityReport,
@@ -932,7 +929,7 @@ function registerCommands(programInstance) {
 		)
 		.option(
 			'-r, --research',
-			'Use Perplexity AI for research-backed task generation, providing more comprehensive and accurate task breakdown'
+			'Use Claude Code web research for research-backed task generation, providing more comprehensive and accurate task breakdown'
 		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (file, options) => {
@@ -960,7 +957,7 @@ function registerCommands(programInstance) {
 
 				// Show usage help after error
 				displayInfo(
-					`${chalk.cyan('Usage:')}\n  taskgraph parse-prd <prd-file.txt> [options]\n\n${chalk.cyan('Options:')}\n  -i, --input <file>       Path to the PRD file\n  -o, --output <file>      Output file path\n  -n, --num-tasks <number> Number of tasks to generate\n  -f, --force              Skip confirmation\n  --append                 Append to existing tasks\n  -r, --research           Use Perplexity AI\n\n${chalk.cyan('Examples:')}\n  taskgraph parse-prd requirements.txt --num-tasks 15\n  taskgraph parse-prd --input=requirements.txt\n  taskgraph parse-prd requirements.txt --research`,
+					`${chalk.cyan('Usage:')}\n  taskgraph parse-prd <prd-file.txt> [options]\n\n${chalk.cyan('Options:')}\n  -i, --input <file>       Path to the PRD file\n  -o, --output <file>      Output file path\n  -n, --num-tasks <number> Number of tasks to generate\n  -f, --force              Skip confirmation\n  --append                 Append to existing tasks\n  -r, --research           Use Claude Code web research\n\n${chalk.cyan('Examples:')}\n  taskgraph parse-prd requirements.txt --num-tasks 15\n  taskgraph parse-prd --input=requirements.txt\n  taskgraph parse-prd requirements.txt --research`,
 					'Parse PRD Help'
 				);
 				process.exit(1);
@@ -1037,7 +1034,7 @@ function registerCommands(programInstance) {
 				if (research) {
 					console.log(
 						chalk.blue(
-							'Using Perplexity AI for research-backed task generation'
+							'Using Claude Code web research for research-backed task generation'
 						)
 					);
 				}
@@ -1081,7 +1078,7 @@ function registerCommands(programInstance) {
 		)
 		.option(
 			'-r, --research',
-			'Use Perplexity AI for research-backed task updates'
+			'Use Claude Code web research for research-backed task updates'
 		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
@@ -1148,7 +1145,9 @@ function registerCommands(programInstance) {
 
 			if (useResearch) {
 				console.log(
-					chalk.blue('Using Perplexity AI for research-backed task updates')
+					chalk.blue(
+						'Using Claude Code web research for research-backed task updates'
+					)
 				);
 			}
 
@@ -1180,7 +1179,7 @@ function registerCommands(programInstance) {
 		.option('-p, --prompt <text>', 'Prompt (fallback if not using positional)')
 		.option(
 			'-r, --research',
-			'Use Perplexity AI for research-backed task updates'
+			'Use Claude Code web research for research-backed task updates'
 		)
 		.option(
 			'--append',
@@ -1294,21 +1293,9 @@ function registerCommands(programInstance) {
 				}
 
 				if (useResearch) {
-					// Verify Perplexity API key exists if using research
-					if (!isApiKeySet('perplexity')) {
-						console.log(
-							chalk.yellow(
-								'Warning: PERPLEXITY_API_KEY environment variable is missing. Research-backed updates will not be available.'
-							)
-						);
-						console.log(
-							chalk.yellow('Falling back to Claude AI for task update.')
-						);
-					} else {
-						console.log(
-							chalk.blue('Using Perplexity AI for research-backed task update')
-						);
-					}
+					console.log(
+						chalk.blue('Using Claude Code web research for this update')
+					);
 				}
 
 				// Force append mode when connected to Hamster
@@ -1378,7 +1365,10 @@ function registerCommands(programInstance) {
 			'-p, --prompt <text>',
 			'Prompt explaining what information to add (required)'
 		)
-		.option('-r, --research', 'Use Perplexity AI for research-backed updates')
+		.option(
+			'-r, --research',
+			'Use Claude Code web research for research-backed updates'
+		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			try {
@@ -1459,23 +1449,9 @@ function registerCommands(programInstance) {
 				}
 
 				if (useResearch) {
-					// Verify Perplexity API key exists if using research
-					if (!isApiKeySet('perplexity')) {
-						console.log(
-							chalk.yellow(
-								'Warning: PERPLEXITY_API_KEY environment variable is missing. Research-backed updates will not be available.'
-							)
-						);
-						console.log(
-							chalk.yellow('Falling back to Claude AI for subtask update.')
-						);
-					} else {
-						console.log(
-							chalk.blue(
-								'Using Perplexity AI for research-backed subtask update'
-							)
-						);
-					}
+					console.log(
+						chalk.blue('Using Claude Code web research for this update')
+					);
 				}
 
 				const result = await updateSubtaskById(
@@ -1797,7 +1773,7 @@ function registerCommands(programInstance) {
 		)
 		.option(
 			'-r, --research',
-			'Enable research-backed generation (e.g., using Perplexity)',
+			'Enable research-backed generation (web research via Claude Code)',
 			false
 		)
 		.option('-p, --prompt <text>', 'Additional context for subtask generation')
@@ -1973,7 +1949,7 @@ function registerCommands(programInstance) {
 			if (useResearch) {
 				console.log(
 					chalk.blue(
-						'Using Perplexity AI for research-backed complexity analysis'
+						'Using Claude Code web research for research-backed complexity analysis'
 					)
 				);
 			}
@@ -3566,7 +3542,7 @@ ${result.result}
 	// models command
 	programInstance
 		.command('models')
-		.description('Manage AI model configurations')
+		.description('Manage AI model configurations (Claude Code models)')
 		.option(
 			'--set-main <model_id>',
 			'Set the primary model for task generation/updates'
@@ -3580,70 +3556,30 @@ ${result.result}
 			'Set the model to use if the primary fails'
 		)
 		.option('--setup', 'Run interactive setup to configure models')
-		.option(
-			'--openrouter',
-			'Allow setting a custom OpenRouter model ID (use with --set-*) '
-		)
-		.option(
-			'--ollama',
-			'Allow setting a custom Ollama model ID (use with --set-*) '
-		)
-		.option(
-			'--bedrock',
-			'Allow setting a custom Bedrock model ID (use with --set-*) '
-		)
-		.option(
-			'--claude-code',
-			'Allow setting a Claude Code model ID (use with --set-*)'
-		)
-		.option(
-			'--azure',
-			'Allow setting a custom Azure OpenAI model ID (use with --set-*) '
-		)
-		.option(
-			'--vertex',
-			'Allow setting a custom Vertex AI model ID (use with --set-*) '
-		)
-		.option(
-			'--gemini-cli',
-			'Allow setting a Gemini CLI model ID (use with --set-*)'
-		)
-		.option(
-			'--codex-cli',
-			'Allow setting a Codex CLI model ID (use with --set-*)'
-		)
-		.option(
-			'--lmstudio',
-			'Allow setting a custom LM Studio model ID (use with --set-*)'
-		)
-		.option(
-			'--openai-compatible',
-			'Allow setting a custom OpenAI-compatible model ID (use with --set-*)'
-		)
-		.option(
-			'--baseURL <url>',
-			'Custom base URL for openai-compatible, lmstudio, or ollama providers (e.g., http://localhost:8000/v1)'
-		)
+		// Accepted for older scripts; Claude Code is the only provider now
+		.addOption(new Option('--claude-code').hideHelp())
+		// Removed providers: accepted only to explain why they no longer work
+		.addOption(new Option('--openrouter').hideHelp())
+		.addOption(new Option('--ollama').hideHelp())
+		.addOption(new Option('--bedrock').hideHelp())
+		.addOption(new Option('--azure').hideHelp())
+		.addOption(new Option('--vertex').hideHelp())
+		.addOption(new Option('--gemini-cli').hideHelp())
+		.addOption(new Option('--codex-cli').hideHelp())
+		.addOption(new Option('--lmstudio').hideHelp())
+		.addOption(new Option('--openai-compatible').hideHelp())
+		.addOption(new Option('--baseURL <url>').hideHelp())
 		.addHelpText(
 			'after',
 			`
+Task Master uses Claude Code. Available models: opus, sonnet, haiku.
+
 Examples:
   $ taskgraph models                              # View current configuration
-  $ taskgraph models --set-main gpt-4o             # Set main model (provider inferred)
-  $ taskgraph models --set-research sonar-pro       # Set research model
-  $ taskgraph models --set-fallback claude-sonnet-5-5 # Set fallback
-  $ taskgraph models --set-main my-custom-model --ollama  # Set custom Ollama model for main role
-  $ taskgraph models --set-main anthropic.claude-3-sonnet-20240229-v1:0 --bedrock # Set custom Bedrock model for main role
-  $ taskgraph models --set-main some/other-model --openrouter # Set custom OpenRouter model for main role
-  $ taskgraph models --set-main sonnet --claude-code           # Set Claude Code model for main role
-  $ taskgraph models --set-main gpt-4o --azure # Set custom Azure OpenAI model for main role
-  $ taskgraph models --set-main claude-sonnet-5-5 --vertex # Set custom Vertex AI model for main role
-  $ taskgraph models --set-main gemini-2.5-pro --gemini-cli # Set Gemini CLI model for main role
-  $ taskgraph models --set-main gpt-5-codex --codex-cli     # Set Codex CLI model for main role
-  $ taskgraph models --set-main qwen3-vl-4b --lmstudio      # Set LM Studio model for main role (defaults to http://localhost:1234/v1)
-  $ taskgraph models --set-main qwen3-vl-4b --lmstudio --baseURL http://localhost:8000/v1 # Set LM Studio model with custom base URL
-  $ taskgraph models --set-main my-model --openai-compatible --baseURL http://localhost:8000/v1 # Set custom OpenAI-compatible model with custom endpoint
-  $ taskgraph models --setup                            # Run interactive setup`
+  $ taskgraph models --set-main sonnet             # Set main model
+  $ taskgraph models --set-research opus           # Set research model
+  $ taskgraph models --set-fallback haiku          # Set fallback
+  $ taskgraph models --setup                       # Run interactive setup`
 		)
 		.action(async (options) => {
 			// Initialize TaskMaster
@@ -3653,158 +3589,69 @@ Examples:
 
 			const projectRoot = taskMaster.getProjectRoot();
 
-			// Validate flags: cannot use multiple provider flags simultaneously
-			const providerFlags = [
-				options.openrouter,
-				options.ollama,
-				options.bedrock,
-				options.claudeCode,
-				options.geminiCli,
-				options.codexCli,
-				options.lmstudio,
-				options.openaiCompatible
-			].filter(Boolean).length;
-			if (providerFlags > 1) {
+			const removedProviderFlags = [
+				'openrouter',
+				'ollama',
+				'bedrock',
+				'azure',
+				'vertex',
+				'geminiCli',
+				'codexCli',
+				'lmstudio',
+				'openaiCompatible',
+				'baseURL'
+			].filter((flag) => options[flag]);
+			if (removedProviderFlags.length > 0) {
 				console.error(
 					chalk.red(
-						'Error: Cannot use multiple provider flags (--openrouter, --ollama, --bedrock, --claude-code, --gemini-cli, --codex-cli, --lmstudio, --openai-compatible) simultaneously.'
+						'Error: Task Master now uses Claude Code only, so provider flags such as --ollama, --openrouter and --baseURL are no longer supported.'
+					)
+				);
+				console.error(
+					chalk.yellow(
+						'Choose one of the Claude Code models: taskgraph models --set-main <opus|sonnet|haiku>'
 					)
 				);
 				process.exit(1);
 			}
 
-			// Determine the primary action based on flags
-			const isSetup = options.setup;
-			const isSetOperation =
-				options.setMain || options.setResearch || options.setFallback;
-
-			// --- Execute Action ---
-
-			if (isSetup) {
-				// Action 1: Run Interactive Setup
-				console.log(chalk.blue('Starting interactive model setup...')); // Added feedback
+			if (options.setup) {
+				console.log(chalk.blue('Starting interactive model setup...'));
 				try {
-					await runInteractiveSetup(taskMaster.getProjectRoot());
+					await runInteractiveSetup(projectRoot);
 					// runInteractiveSetup logs its own completion/error messages
 				} catch (setupError) {
 					console.error(
-						chalk.red('\\nInteractive setup failed unexpectedly:'),
+						chalk.red('\nInteractive setup failed unexpectedly:'),
 						setupError.message
 					);
 				}
-				// --- IMPORTANT: Exit after setup ---
-				return; // Stop execution here
+				return;
 			}
 
-			if (isSetOperation) {
-				// Action 2: Perform Direct Set Operations
-				let updateOccurred = false; // Track if any update actually happened
+			const requestedChanges = [
+				['main', options.setMain],
+				['research', options.setResearch],
+				['fallback', options.setFallback]
+			].filter(([, modelId]) => modelId);
 
-				if (options.setMain) {
-					const result = await setModel('main', options.setMain, {
-						projectRoot,
-						providerHint: options.openrouter
-							? 'openrouter'
-							: options.ollama
-								? 'ollama'
-								: options.bedrock
-									? 'bedrock'
-									: options.claudeCode
-										? 'claude-code'
-										: options.geminiCli
-											? 'gemini-cli'
-											: options.codexCli
-												? 'codex-cli'
-												: options.lmstudio
-													? 'lmstudio'
-													: options.openaiCompatible
-														? 'openai-compatible'
-														: undefined,
-						baseURL: options.baseURL
-					});
+			if (requestedChanges.length > 0) {
+				let updateOccurred = false;
+
+				for (const [role, modelId] of requestedChanges) {
+					const result = await setModel(role, modelId, { projectRoot });
 					if (result.success) {
 						console.log(chalk.green(`✅ ${result.data.message}`));
-						if (result.data.warning)
-							console.log(chalk.yellow(result.data.warning));
-						updateOccurred = true;
-					} else {
-						console.error(
-							chalk.red(`❌ Error setting main model: ${result.error.message}`)
-						);
-					}
-				}
-				if (options.setResearch) {
-					const result = await setModel('research', options.setResearch, {
-						projectRoot,
-						providerHint: options.openrouter
-							? 'openrouter'
-							: options.ollama
-								? 'ollama'
-								: options.bedrock
-									? 'bedrock'
-									: options.claudeCode
-										? 'claude-code'
-										: options.geminiCli
-											? 'gemini-cli'
-											: options.codexCli
-												? 'codex-cli'
-												: options.lmstudio
-													? 'lmstudio'
-													: options.openaiCompatible
-														? 'openai-compatible'
-														: undefined,
-						baseURL: options.baseURL
-					});
-					if (result.success) {
-						console.log(chalk.green(`✅ ${result.data.message}`));
-						if (result.data.warning)
-							console.log(chalk.yellow(result.data.warning));
 						updateOccurred = true;
 					} else {
 						console.error(
 							chalk.red(
-								`❌ Error setting research model: ${result.error.message}`
-							)
-						);
-					}
-				}
-				if (options.setFallback) {
-					const result = await setModel('fallback', options.setFallback, {
-						projectRoot,
-						providerHint: options.openrouter
-							? 'openrouter'
-							: options.ollama
-								? 'ollama'
-								: options.bedrock
-									? 'bedrock'
-									: options.claudeCode
-										? 'claude-code'
-										: options.geminiCli
-											? 'gemini-cli'
-											: options.codexCli
-												? 'codex-cli'
-												: options.lmstudio
-													? 'lmstudio'
-													: options.openaiCompatible
-														? 'openai-compatible'
-														: undefined,
-						baseURL: options.baseURL
-					});
-					if (result.success) {
-						console.log(chalk.green(`✅ ${result.data.message}`));
-						if (result.data.warning)
-							console.log(chalk.yellow(result.data.warning));
-						updateOccurred = true;
-					} else {
-						console.error(
-							chalk.red(
-								`❌ Error setting fallback model: ${result.error.message}`
+								`❌ Error setting ${role} model: ${result.error.message}`
 							)
 						);
 					}
 				}
 
-				// Optional: Add a final confirmation if any update occurred
 				if (updateOccurred) {
 					console.log(chalk.blue('\nModel configuration updated.'));
 				} else {
@@ -3814,18 +3661,14 @@ Examples:
 						)
 					);
 				}
-
-				// --- IMPORTANT: Exit after set operations ---
-				return; // Stop execution here
+				return;
 			}
 
-			// Action 3: Display Full Status (Only runs if no setup and no set flags)
-			console.log(chalk.blue('Fetching current model configuration...')); // Added feedback
+			// Display full status when no setup or set flags were given
+			console.log(chalk.blue('Fetching current model configuration...'));
 			const configResult = await getModelConfiguration({ projectRoot });
 			const availableResult = await getAvailableModelsList({ projectRoot });
-			const apiKeyStatusResult = await getApiKeyStatusReport({ projectRoot });
 
-			// 1. Display Active Models
 			if (!configResult.success) {
 				console.error(
 					chalk.red(
@@ -3839,18 +3682,6 @@ Examples:
 				);
 			}
 
-			// 2. Display API Key Status
-			if (apiKeyStatusResult.success) {
-				displayApiKeyStatus(apiKeyStatusResult.data.report);
-			} else {
-				console.error(
-					chalk.yellow(
-						`⚠️ Warning: Could not display API Key status: ${apiKeyStatusResult.error.message}`
-					)
-				);
-			}
-
-			// 3. Display Other Available Models (Filtered)
 			if (availableResult.success) {
 				const activeIds = configResult.success
 					? [
@@ -3859,10 +3690,11 @@ Examples:
 							configResult.data.activeModels.fallback?.modelId
 						].filter(Boolean)
 					: [];
-				const displayableAvailable = availableResult.data.models.filter(
-					(m) => !activeIds.includes(m.modelId) && !m.modelId.startsWith('[')
+				displayAvailableModels(
+					availableResult.data.models.filter(
+						(m) => !activeIds.includes(m.modelId)
+					)
 				);
-				displayAvailableModels(displayableAvailable);
 			} else {
 				console.error(
 					chalk.yellow(
@@ -3871,17 +3703,13 @@ Examples:
 				);
 			}
 
-			// 4. Conditional Hint if Config File is Missing
-			const configExists = isConfigFilePresent(projectRoot);
-			if (!configExists) {
+			if (!isConfigFilePresent(projectRoot)) {
 				console.log(
 					chalk.yellow(
-						"\\nHint: Run 'taskgraph models --setup' to create or update your configuration."
+						"\nHint: Run 'taskgraph models --setup' to create or update your configuration."
 					)
 				);
 			}
-			// --- IMPORTANT: Exit after displaying status ---
-			return; // Stop execution here
 		});
 
 	// response-language command

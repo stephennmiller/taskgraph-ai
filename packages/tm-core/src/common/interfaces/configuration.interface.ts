@@ -36,7 +36,7 @@ export interface ModelConfig {
  * AI provider configuration
  */
 export interface ProviderConfig {
-	/** Provider name (e.g., 'anthropic', 'openai', 'perplexity') */
+	/** Provider name (e.g., 'claude-code') */
 	name: string;
 	/** API key for the provider */
 	apiKey?: string;

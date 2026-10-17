@@ -31,7 +31,6 @@ jest.unstable_mockModule('../../src/telemetry/sentry.js', () => ({
 	getAITelemetryConfig: jest.fn(() => undefined)
 }));
 
-const { AzureProvider } = await import('../../src/ai-providers/azure.js');
 const { BaseAIProvider } = await import(
 	'../../src/ai-providers/base-provider.js'
 );
@@ -132,16 +131,5 @@ describe('BaseAIProvider against the real AI SDK', () => {
 		);
 
 		expect(result.object).toEqual({ title: 'Ship it' });
-	});
-});
-
-describe('AzureProvider against the real AI SDK', () => {
-	it('keeps using the Chat Completions API (AI SDK 7 defaults to Responses)', () => {
-		const client = new AzureProvider().getClient({
-			apiKey: 'test-key',
-			baseURL: 'https://example.openai.azure.com/openai'
-		});
-
-		expect(client('my-deployment').provider).toBe('azure.chat');
 	});
 });

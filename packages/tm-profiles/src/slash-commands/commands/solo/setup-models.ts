@@ -28,39 +28,30 @@ taskgraph models --setup
 ## Setup Process
 
 1. **Environment Check**
-   - Detect existing API keys
+   - Confirm Claude Code is installed and signed in
    - Show current configuration
-   - Identify missing providers
 
-2. **Provider Selection**
-   - Choose main provider (required)
-   - Select research provider (recommended)
-   - Configure fallback (optional)
+2. **Model Selection**
+   - Choose the main model (required)
+   - Choose the research model (recommended)
+   - Choose a fallback model (optional)
 
-3. **API Key Configuration**
-   - Prompt for missing keys
-   - Validate key format
-   - Test connectivity
-   - Save configuration
+Task Master uses Claude Code, so no API keys are needed. Available models: opus, sonnet, haiku.
 
 ## Smart Recommendations
 
 Based on your needs:
-- **For best results**: Claude + Perplexity
-- **Budget conscious**: GPT-3.5 + Perplexity
-- **Maximum capability**: GPT-4 + Perplexity + Claude fallback
+- **For best results**: opus for main, sonnet for research
+- **Budget conscious**: haiku for fallback
+- **Balanced**: sonnet for all roles
 
 ## Configuration Storage
 
-Keys can be stored in:
-1. Environment variables (recommended)
-2. \`.env\` file in project
-3. Global \`.taskmaster/config\`
+Model choices are saved in \`.taskmaster/config.json\`.
 
 ## Post-Setup
 
 After configuration:
-- Test each provider
 - Show usage examples
 - Suggest next steps
 - Verify parse-prd works`,
