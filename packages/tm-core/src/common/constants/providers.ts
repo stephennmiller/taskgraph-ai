@@ -1,41 +1,16 @@
 /**
  * Provider validation constants
- * Defines which providers should be validated against the supported-models.json file
+ * Task Master supports a single AI provider: Claude Code.
  */
 
 // Providers that have predefined model lists and should be validated
-export const VALIDATED_PROVIDERS = [
-	'anthropic',
-	'openai',
-	'google',
-	'zai',
-	'zai-coding',
-	'perplexity',
-	'xai',
-	'groq',
-	'mistral',
-	'azure',
-	'openrouter',
-	'bedrock',
-	'ollama'
-] as const;
+export const VALIDATED_PROVIDERS = [] as const;
 
 export type ValidatedProvider = (typeof VALIDATED_PROVIDERS)[number];
 
 // Custom providers object for easy named access
 export const CUSTOM_PROVIDERS = {
-	AZURE: 'azure',
-	VERTEX: 'vertex',
-	BEDROCK: 'bedrock',
-	OPENROUTER: 'openrouter',
-	OLLAMA: 'ollama',
-	LMSTUDIO: 'lmstudio',
-	OPENAI_COMPATIBLE: 'openai-compatible',
-	CLAUDE_CODE: 'claude-code',
-	MCP: 'mcp',
-	GEMINI_CLI: 'gemini-cli',
-	GROK_CLI: 'grok-cli',
-	CODEX_CLI: 'codex-cli'
+	CLAUDE_CODE: 'claude-code'
 } as const;
 
 export type CustomProvider =

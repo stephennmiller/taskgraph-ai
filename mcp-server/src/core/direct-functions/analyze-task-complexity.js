@@ -17,7 +17,7 @@ import { createLogWrapper } from '../../tools/utils.js'; // Import the new utili
  * @param {string} args.tasksJsonPath - Explicit path to the tasks.json file.
  * @param {string} args.outputPath - Explicit absolute path to save the report.
  * @param {string|number} [args.threshold] - Minimum complexity score to recommend expansion (1-10)
- * @param {boolean} [args.research] - Use Perplexity AI for research-backed complexity analysis
+ * @param {boolean} [args.research] - Use Claude Code web research for research-backed complexity analysis
  * @param {string} [args.ids] - Comma-separated list of task IDs to analyze
  * @param {number} [args.from] - Starting task ID in a range to analyze
  * @param {number} [args.to] - Ending task ID in a range to analyze

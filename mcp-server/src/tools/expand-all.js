@@ -36,7 +36,7 @@ export function registerExpandAllTool(server) {
 				.boolean()
 				.optional()
 				.describe(
-					'Enable research-backed subtask generation (e.g., using Perplexity)'
+					'Enable research-backed subtask generation (web research via Claude Code)'
 				),
 			prompt: z
 				.string()

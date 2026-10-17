@@ -3,7 +3,6 @@
  * Direct function for managing AI model configurations via MCP
  */
 
-import { CUSTOM_PROVIDERS_ARRAY } from '@tm/core';
 import {
 	getAvailableModelsList,
 	getModelConfiguration,
@@ -19,15 +18,6 @@ import { createLogWrapper } from '../../tools/utils.js';
 const MODEL_ROLES = ['main', 'research', 'fallback'];
 
 /**
- * Determine provider hint from custom provider flags
- * @param {Object} args - Arguments containing provider flags
- * @returns {string|undefined} Provider hint or undefined if no custom provider flag is set
- */
-function getProviderHint(args) {
-	return CUSTOM_PROVIDERS_ARRAY.find((provider) => args[provider]);
-}
-
-/**
  * Handle setting models for different roles
  * @param {Object} args - Arguments containing role-specific model IDs
  * @param {Object} context - Context object with session, mcpLog, projectRoot
@@ -38,13 +28,7 @@ async function handleModelSetting(args, context) {
 		const roleKey = `set${role.charAt(0).toUpperCase() + role.slice(1)}`; // setMain, setResearch, setFallback
 
 		if (args[roleKey]) {
-			const providerHint = getProviderHint(args);
-
-			return await setModel(role, args[roleKey], {
-				...context,
-				providerHint,
-				...(args.baseURL && { baseURL: args.baseURL })
-			});
+			return await setModel(role, args[roleKey], context);
 		}
 	}
 	return null; // No model setting was requested
@@ -66,25 +50,6 @@ export async function modelsDirect(args, log, context = {}) {
 
 	log.info(`Executing models_direct with args: ${JSON.stringify(args)}`);
 	log.info(`Using project root: ${projectRoot}`);
-
-	// Validate flags: only one custom provider flag can be used simultaneously
-	const customProviderFlags = CUSTOM_PROVIDERS_ARRAY.filter(
-		(provider) => args[provider]
-	);
-
-	if (customProviderFlags.length > 1) {
-		log.error(
-			'Error: Cannot use multiple custom provider flags simultaneously.'
-		);
-		return {
-			success: false,
-			error: {
-				code: 'INVALID_ARGS',
-				message:
-					'Cannot use multiple custom provider flags simultaneously. Choose only one: openrouter, ollama, bedrock, azure, vertex, or openai-compatible.'
-			}
-		};
-	}
 
 	try {
 		enableSilentMode();

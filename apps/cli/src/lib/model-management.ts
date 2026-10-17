@@ -30,13 +30,8 @@ export interface ModelData {
 export interface ModelConfiguration {
 	provider: string;
 	modelId: string;
-	baseURL?: string;
 	sweScore: number | null;
 	cost: ModelCost | null;
-	keyStatus: {
-		cli: boolean;
-		mcp: boolean;
-	};
 }
 
 export interface ModelConfigurationResponse {
@@ -82,7 +77,6 @@ export interface SetModelResponse {
 		provider: string;
 		modelId: string;
 		message: string;
-		warning?: string | null;
 	};
 	error?: {
 		code: string;
@@ -92,8 +86,6 @@ export interface SetModelResponse {
 
 export interface SetModelOptions {
 	providerHint?: string;
-	baseURL?: string;
-	session?: Record<string, string | undefined>;
 	mcpLog?: {
 		info: (...args: unknown[]) => void;
 		warn: (...args: unknown[]) => void;
@@ -160,12 +152,4 @@ export function writeConfig(config: any, projectRoot: string): boolean {
  */
 export function getAvailableModels(): ModelData[] {
 	return configManagerJs.getAvailableModels() as ModelData[];
-}
-
-/**
- * Get Azure base URL from config
- */
-export function getAzureBaseURL(projectRoot?: string | null): string {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	return (configManagerJs.getAzureBaseURL(projectRoot as any) as string) ?? '';
 }

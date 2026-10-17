@@ -9,22 +9,16 @@
 // --- Core Dependencies ---
 import {
 	MODEL_MAP,
-	getAzureBaseURL,
-	getBaseUrlForRole,
-	getBedrockBaseURL,
 	getDebugFlag,
 	getFallbackModelId,
 	getFallbackProvider,
 	getMainModelId,
 	getMainProvider,
-	getOllamaBaseURL,
 	getParametersForRole,
 	getResearchModelId,
 	getResearchProvider,
 	getResponseLanguage,
-	getUserId,
-	getVertexLocation,
-	getVertexProjectId
+	getUserId
 } from './config-manager.js';
 import {
 	findProjectRoot,
@@ -34,57 +28,14 @@ import {
 } from './utils.js';
 
 // Import provider classes
-import {
-	AnthropicAIProvider,
-	AzureProvider,
-	BedrockAIProvider,
-	ClaudeCodeProvider,
-	CodexCliProvider,
-	GeminiCliProvider,
-	GoogleAIProvider,
-	GrokCliProvider,
-	GroqProvider,
-	LMStudioProvider,
-	OllamaAIProvider,
-	OpenAICompatibleProvider,
-	OpenAIProvider,
-	OpenRouterAIProvider,
-	PerplexityAIProvider,
-	VertexAIProvider,
-	XAIProvider,
-	ZAICodingProvider,
-	ZAIProvider
-} from '../../src/ai-providers/index.js';
+import { ClaudeCodeProvider } from '../../src/ai-providers/index.js';
 
 // Import the provider registry
 import ProviderRegistry from '../../src/provider-registry/index.js';
 
 // Create provider instances
 const PROVIDERS = {
-	anthropic: new AnthropicAIProvider(),
-	perplexity: new PerplexityAIProvider(),
-	google: new GoogleAIProvider(),
-	zai: new ZAIProvider(),
-	'zai-coding': new ZAICodingProvider(),
-	lmstudio: new LMStudioProvider(),
-	openai: new OpenAIProvider(),
-	xai: new XAIProvider(),
-	groq: new GroqProvider(),
-	openrouter: new OpenRouterAIProvider(),
-	ollama: new OllamaAIProvider(),
-	'openai-compatible': new OpenAICompatibleProvider({
-		name: 'OpenAI Compatible',
-		apiKeyEnvVar: 'OPENAI_COMPATIBLE_API_KEY',
-		requiresApiKey: true
-		// baseURL will be set per-role from config
-	}),
-	bedrock: new BedrockAIProvider(),
-	azure: new AzureProvider(),
-	vertex: new VertexAIProvider(),
-	'claude-code': new ClaudeCodeProvider(),
-	'codex-cli': new CodexCliProvider(),
-	'gemini-cli': new GeminiCliProvider(),
-	'grok-cli': new GrokCliProvider()
+	'claude-code': new ClaudeCodeProvider()
 };
 
 function _getProvider(providerName) {
@@ -333,44 +284,6 @@ function _getRoleConfiguration(role, projectRoot) {
 }
 
 /**
- * Get Vertex AI specific configuration
- * @param {string} projectRoot - Project root path
- * @param {Object} session - Session object
- * @returns {Object} Vertex AI configuration parameters
- */
-function _getVertexConfiguration(projectRoot, session) {
-	const projectId =
-		getVertexProjectId(projectRoot) ||
-		resolveEnvVariable('VERTEX_PROJECT_ID', session, projectRoot);
-
-	const location =
-		getVertexLocation(projectRoot) ||
-		resolveEnvVariable('VERTEX_LOCATION', session, projectRoot) ||
-		'us-central1';
-
-	const credentialsPath = resolveEnvVariable(
-		'GOOGLE_APPLICATION_CREDENTIALS',
-		session,
-		projectRoot
-	);
-
-	log(
-		'debug',
-		`Using Vertex AI configuration: Project ID=${projectId}, Location=${location}`
-	);
-
-	const credentials = credentialsPath
-		? { keyFile: credentialsPath }
-		: undefined;
-
-	return {
-		projectId,
-		location,
-		...(credentials && { credentials })
-	};
-}
-
-/**
  * Internal helper to resolve the API key for a given provider.
  * @param {string} providerName - The name of the provider (lowercase).
  * @param {object|null} session - Optional MCP session object.
@@ -550,7 +463,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 		let apiKey;
 		let roleParams;
 		let provider;
-		let baseURL;
 		let providerResponse;
 		let telemetryData = null;
 
@@ -599,23 +511,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 				continue;
 			}
 
-			// Get base URL if configured (optional for most providers)
-			baseURL = getBaseUrlForRole(currentRole, effectiveProjectRoot);
-
-			// For Azure, use the global Azure base URL if role-specific URL is not configured
-			if (providerName?.toLowerCase() === 'azure' && !baseURL) {
-				baseURL = getAzureBaseURL(effectiveProjectRoot);
-				log('debug', `Using global Azure base URL: ${baseURL}`);
-			} else if (providerName?.toLowerCase() === 'ollama' && !baseURL) {
-				// For Ollama, use the global Ollama base URL if role-specific URL is not configured
-				baseURL = getOllamaBaseURL(effectiveProjectRoot);
-				log('debug', `Using global Ollama base URL: ${baseURL}`);
-			} else if (providerName?.toLowerCase() === 'bedrock' && !baseURL) {
-				// For Bedrock, use the global Bedrock base URL if role-specific URL is not configured
-				baseURL = getBedrockBaseURL(effectiveProjectRoot);
-				log('debug', `Using global Bedrock base URL: ${baseURL}`);
-			}
-
 			// Get AI parameters for the current role
 			roleParams = getParametersForRole(currentRole, effectiveProjectRoot);
 			apiKey = _resolveApiKey(
@@ -623,17 +518,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 				session,
 				effectiveProjectRoot
 			);
-
-			// Prepare provider-specific configuration
-			let providerSpecificParams = {};
-
-			// Handle Vertex AI specific configuration
-			if (providerName?.toLowerCase() === 'vertex') {
-				providerSpecificParams = _getVertexConfiguration(
-					effectiveProjectRoot,
-					session
-				);
-			}
 
 			const messages = [];
 			const responseLanguage = getResponseLanguage(effectiveProjectRoot);
@@ -673,7 +557,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 				maxTokens: roleParams.maxTokens,
 				temperature: roleParams.temperature,
 				messages,
-				...(baseURL && { baseURL }),
 				...((serviceType === 'generateObject' ||
 					serviceType === 'streamObject') && { schema, objectName }),
 				role: currentRole, // Lets providers restrict capabilities per role
@@ -683,7 +566,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 				...(hamsterUserId && { userId: hamsterUserId }), // Pass Hamster userId if authenticated
 				...(hamsterBriefId && { briefId: hamsterBriefId }), // Pass Hamster briefId if connected
 				...(experimental_transform && { experimental_transform }), // Pass smoothStream or other transforms
-				...providerSpecificParams,
 				...restApiParams
 			};
 

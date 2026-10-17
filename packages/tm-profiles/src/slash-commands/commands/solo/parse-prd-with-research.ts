@@ -20,7 +20,7 @@ Arguments: $ARGUMENTS (PRD file path)
 
 ## Research-Enhanced Parsing
 
-Uses the research AI provider (typically Perplexity) for more comprehensive task generation with current best practices.
+Uses the research role, which runs on Claude Code with web search and fetch access, for more comprehensive task generation with current best practices.
 
 ## Execution
 

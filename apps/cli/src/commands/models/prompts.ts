@@ -5,7 +5,6 @@
 import search, { Separator } from '@inquirer/search';
 import chalk from 'chalk';
 import { getAvailableModels } from '../../lib/model-management.js';
-import { getCustomProviderOptions } from './custom-providers.js';
 import type {
 	CurrentModels,
 	ModelChoice,
@@ -98,9 +97,6 @@ export function buildPromptChoices(
 		);
 	}
 
-	// Get custom provider options
-	const customProviderOptions = getCustomProviderOptions();
-
 	// Build final choices array
 	const systemLength = systemOptions.length;
 	let choices: (ModelChoice | Separator)[];
@@ -109,11 +105,9 @@ export function buildPromptChoices(
 	if (allowNone) {
 		choices = [
 			...systemOptions,
-			new Separator('\n── Standard Models ──'),
+			new Separator('\n── Claude Code Models ──'),
 			{ name: '⚪ None (disable)', value: null, short: 'None' },
-			...roleChoices,
-			new Separator('\n── Custom Providers ──'),
-			...customProviderOptions
+			...roleChoices
 		];
 		const noneOptionIndex = systemLength + 1;
 		defaultIndex =
@@ -123,10 +117,8 @@ export function buildPromptChoices(
 	} else {
 		choices = [
 			...systemOptions,
-			new Separator('\n── Standard Models ──'),
-			...roleChoices,
-			new Separator('\n── Custom Providers ──'),
-			...customProviderOptions
+			new Separator('\n── Claude Code Models ──'),
+			...roleChoices
 		];
 		defaultIndex =
 			currentChoiceIndex !== -1
@@ -192,11 +184,6 @@ export function displaySetupIntro(): void {
 	console.log(chalk.yellow('💡 Navigation tips:'));
 	console.log(chalk.gray('   • Type to search and filter options'));
 	console.log(chalk.gray('   • Use ↑↓ arrow keys to navigate results'));
-	console.log(
-		chalk.gray(
-			'   • Standard models are listed first, custom providers at bottom'
-		)
-	);
 	console.log(chalk.gray('   • Press Enter to select\n'));
 }
 
