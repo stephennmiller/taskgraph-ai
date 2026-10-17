@@ -14,7 +14,6 @@ import { log } from '../../scripts/modules/utils.js';
  * @param {string} [editorConfig.mcpConfigName='mcp.json'] - Name of MCP config file
  * @param {Object} [editorConfig.fileMap={}] - Asset files the profile manages (source asset -> target path)
  * @param {Function} [editorConfig.onAdd] - Lifecycle hook for profile addition
- * @param {Function} [editorConfig.onRemove] - Lifecycle hook for profile removal
  * @param {Function} [editorConfig.onPostConvert] - Lifecycle hook for post-conversion
  * @returns {Object} - Complete profile configuration
  */
@@ -28,7 +27,6 @@ export function createProfile(editorConfig) {
 		mcpConfigName = mcpConfig ? 'mcp.json' : null,
 		fileMap = {},
 		onAdd,
-		onRemove,
 		onPostConvert
 	} = editorConfig;
 
@@ -66,7 +64,6 @@ export function createProfile(editorConfig) {
 		slashCommands,
 		// Optional lifecycle hooks
 		...(onAdd && { onAddRulesProfile: onAdd }),
-		...(onRemove && { onRemoveRulesProfile: onRemove }),
 		...(onPostConvert && { onPostConvertRulesProfile: onPostConvert })
 	};
 }

@@ -186,30 +186,6 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			expect(profile.onAddRulesProfile).toBe(userOnAdd);
 		});
 
-		it('should keep user onRemove hook separate from slashCommands', () => {
-			// Arrange
-			mockGetProfile.mockReturnValue({
-				supportsCommands: true,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
-			});
-
-			const userOnRemove = jest.fn();
-
-			// Act
-			const profile = createProfile({
-				name: 'cursor',
-				displayName: 'Cursor',
-				url: 'cursor.com',
-				docsUrl: 'docs.cursor.com',
-				onRemove: userOnRemove
-			});
-
-			// Assert - Both should exist independently
-			expect(profile.slashCommands).toBeDefined();
-			expect(profile.onRemoveRulesProfile).toBe(userOnRemove);
-		});
-
 		it('should preserve user hooks when profile does not support commands', () => {
 			// Arrange
 			mockGetProfile.mockReturnValue({
@@ -217,7 +193,6 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			});
 
 			const userOnAdd = jest.fn();
-			const userOnRemove = jest.fn();
 
 			// Act
 			const profile = createProfile({
@@ -225,14 +200,12 @@ describe('Base Profile - Declarative Slash Commands', () => {
 				displayName: 'Amp',
 				url: 'amp.rs',
 				docsUrl: 'docs.amp.rs',
-				onAdd: userOnAdd,
-				onRemove: userOnRemove
+				onAdd: userOnAdd
 			});
 
 			// Assert
 			expect(profile.slashCommands).toBeNull();
 			expect(profile.onAddRulesProfile).toBe(userOnAdd);
-			expect(profile.onRemoveRulesProfile).toBe(userOnRemove);
 		});
 	});
 
@@ -266,7 +239,6 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			});
 
 			const userOnAdd = jest.fn();
-			const userOnRemove = jest.fn();
 
 			// Act
 			const profile = createProfile({
@@ -274,14 +246,12 @@ describe('Base Profile - Declarative Slash Commands', () => {
 				displayName: 'Cursor',
 				url: 'cursor.com',
 				docsUrl: 'docs.cursor.com',
-				onAdd: userOnAdd,
-				onRemove: userOnRemove
+				onAdd: userOnAdd
 			});
 
 			// Assert
 			expect(profile.slashCommands).toBeNull();
 			expect(profile.onAddRulesProfile).toBe(userOnAdd);
-			expect(profile.onRemoveRulesProfile).toBe(userOnRemove);
 			expect(mockLog).toHaveBeenCalledWith(
 				'debug',
 				'[Cursor] Slash command profile lookup failed: @tm/profiles not installed'
