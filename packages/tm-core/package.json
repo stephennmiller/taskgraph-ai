@@ -45,10 +45,10 @@
 		"@types/fs-extra": "^11.0.4",
 		"@types/proper-lockfile": "^4.1.4",
 		"@types/node": "^22.10.5",
-		"@vitest/coverage-v8": "^4.0.10",
+		"@vitest/coverage-v8": "^4.1.0",
 		"strip-literal": "3.1.0",
 		"typescript": "^5.9.2",
-		"vitest": "^4.0.10"
+		"vitest": "^4.1.0"
 	},
 	"files": ["src", "README.md", "CHANGELOG.md"],
 	"keywords": ["task-management", "typescript", "ai", "prd", "parser"],
