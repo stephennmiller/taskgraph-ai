@@ -5,7 +5,7 @@ import TaskMasterMCPServer from './src/index.js';
 import logger from './src/logger.js';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // Set MCP mode to silence tm-core console output
 process.env.TASK_MASTER_MCP = 'true';
