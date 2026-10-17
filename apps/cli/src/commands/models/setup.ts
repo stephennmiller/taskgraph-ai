@@ -3,12 +3,7 @@
  */
 
 import chalk from 'chalk';
-import {
-	getConfig,
-	getModelConfiguration,
-	setModel,
-	writeConfig
-} from '../../lib/model-management.js';
+import { getModelConfiguration, setModel } from '../../lib/model-management.js';
 import {
 	buildPromptChoices,
 	displaySetupIntro,
@@ -56,11 +51,6 @@ async function handleSetModel(
 		modelIdToSet = selectedValue.id;
 		providerHint = selectedValue.provider;
 	}
-	// Handle disabling fallback
-	else if (selectedValue === null && role === 'fallback') {
-		modelIdToSet = null;
-		providerHint = null;
-	}
 	// Unknown selection
 	else if (selectedValue) {
 		console.error(
@@ -102,30 +92,6 @@ async function handleSetModel(
 			return { success: false, modified: false };
 		}
 	}
-	// Disable fallback model
-	else if (role === 'fallback') {
-		const currentCfg = getConfig(projectRoot);
-		if (currentCfg?.models?.fallback?.modelId) {
-			currentCfg.models.fallback = {
-				...currentCfg.models.fallback,
-				provider: undefined,
-				modelId: undefined
-			};
-			if (writeConfig(currentCfg, projectRoot)) {
-				console.log(chalk.blue('Fallback model disabled.'));
-				return { success: true, modified: true };
-			} else {
-				console.error(
-					chalk.red('Failed to disable fallback model in config file.')
-				);
-				return { success: false, modified: false };
-			}
-		} else {
-			console.log(chalk.blue('Fallback model was already disabled.'));
-			return { success: true, modified: false };
-		}
-	}
-
 	return { success: true, modified: false };
 }
 
@@ -187,11 +153,7 @@ export async function runInteractiveSetup(
 	// Build prompt data
 	const mainPromptData = buildPromptChoices('main', currentModels);
 	const researchPromptData = buildPromptChoices('research', currentModels);
-	const fallbackPromptData = buildPromptChoices(
-		'fallback',
-		currentModels,
-		true
-	);
+	const fallbackPromptData = buildPromptChoices('fallback', currentModels);
 
 	// Display intro
 	displaySetupIntro();

@@ -85,9 +85,9 @@ describe('Unified AI Services', () => {
 		mockGetMainProvider.mockReturnValue('claude-code');
 		mockGetMainModelId.mockReturnValue('sonnet');
 		mockGetResearchProvider.mockReturnValue('claude-code');
-		mockGetResearchModelId.mockReturnValue('sonnet');
+		mockGetResearchModelId.mockReturnValue('haiku');
 		mockGetFallbackProvider.mockReturnValue('claude-code');
-		mockGetFallbackModelId.mockReturnValue('sonnet');
+		mockGetFallbackModelId.mockReturnValue('opus');
 		mockGetParametersForRole.mockImplementation((role) => {
 			if (role === 'main') return { maxTokens: 100, temperature: 0.5 };
 			if (role === 'research') return { maxTokens: 200, temperature: 0.3 };
@@ -183,6 +183,20 @@ describe('Unified AI Services', () => {
 			).rejects.toThrow('Research failed');
 
 			expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(3);
+		});
+
+		test('should not retry a role that uses a provider/model that already failed', async () => {
+			mockGetFallbackModelId.mockReturnValue('sonnet');
+			mockGetResearchModelId.mockReturnValue('sonnet');
+			mockClaudeProvider.generateText.mockRejectedValue(
+				new Error('Claude Code CLI not available')
+			);
+
+			await expect(
+				generateTextService({ role: 'main', prompt: 'Same model everywhere' })
+			).rejects.toThrow('Claude Code CLI not available');
+
+			expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(1);
 		});
 
 		test('should handle retryable errors correctly', async () => {

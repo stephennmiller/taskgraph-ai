@@ -24,16 +24,18 @@ let _claudeCliChecked = false;
 let _claudeCliAvailable = null;
 
 // Tools each role may use. Everything else is denied (deny by default).
-// Research reaches the web but never the filesystem or a shell, so a hostile
-// page cannot read or change local files. Other roles can read the repo for
-// codebase analysis but cannot reach the web or write anything.
+// Research reaches the web but has no file or shell tools, so a hostile page
+// cannot drive local file access. Other roles can read files for codebase
+// analysis but cannot reach the web or write anything. Main and fallback still
+// load the repo's own Claude settings (CLAUDE.md, hooks), the same trust model
+// as running `claude` in that repo, and Read is not limited to the repo.
 const RESEARCH_TOOLS = ['WebSearch', 'WebFetch'];
 const REPO_READ_TOOLS = ['Read', 'Grep', 'Glob'];
 const DEFAULT_RESEARCH_MAX_TURNS = 8;
 
 /**
  * Settings that confine a Claude Code session to the tools its role needs.
- * Applied after user config so config cannot widen access.
+ * Applied after user config so config cannot widen the tool set.
  * @param {string} [role] - 'main', 'research' or 'fallback'
  * @param {object} settings - Settings from config, used for maxTurns
  * @returns {object} SDK settings
@@ -142,43 +144,32 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			const settings =
 				getClaudeCodeSettingsForCommand(params.commandName) || {};
 
-			// Environment variable isolation to prevent API key conflicts
-			// The ai-sdk-provider-claude-code SDK automatically picks up ANTHROPIC_API_KEY,
-			// which can cause conflicts if that key is intended for the Anthropic provider.
-			const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
-			const claudeCodeKey = process.env.CLAUDE_CODE_API_KEY;
-
-			try {
-				// If CLAUDE_CODE_API_KEY is set, use it exclusively
-				if (claudeCodeKey) {
-					process.env.ANTHROPIC_API_KEY = claudeCodeKey;
-				} else if (originalAnthropicKey) {
-					// If only ANTHROPIC_API_KEY exists, temporarily unset it to force OAuth mode
-					delete process.env.ANTHROPIC_API_KEY;
-				}
-
-				return createClaudeCode({
-					defaultSettings: {
-						// Restore previous default behavior from pre-2.0 versions
-						// These must be inside defaultSettings to be applied by the provider
-						systemPrompt: {
-							type: 'preset',
-							preset: 'claude_code'
-						},
-						// Enable loading of CLAUDE.md and settings.json files
-						settingSources: ['user', 'project', 'local'],
-						...settings,
-						...getRoleRestrictions(params.role, settings)
-					}
-				});
-			} finally {
-				// Restore original environment state
-				if (originalAnthropicKey) {
-					process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
-				} else {
-					delete process.env.ANTHROPIC_API_KEY;
-				}
+			// The SDK reads the environment when a query runs, so the key choice has
+			// to travel with the client rather than be swapped around this call.
+			// CLAUDE_CODE_API_KEY, when set, is used exclusively; otherwise
+			// ANTHROPIC_API_KEY is withheld so Claude Code uses its own sign-in.
+			const env = { ...process.env };
+			if (process.env.CLAUDE_CODE_API_KEY) {
+				env.ANTHROPIC_API_KEY = process.env.CLAUDE_CODE_API_KEY;
+			} else {
+				delete env.ANTHROPIC_API_KEY;
 			}
+
+			return createClaudeCode({
+				defaultSettings: {
+					// Restore previous default behavior from pre-2.0 versions
+					// These must be inside defaultSettings to be applied by the provider
+					systemPrompt: {
+						type: 'preset',
+						preset: 'claude_code'
+					},
+					// Enable loading of CLAUDE.md and settings.json files
+					settingSources: ['user', 'project', 'local'],
+					env,
+					...settings,
+					...getRoleRestrictions(params.role, settings)
+				}
+			});
 		} catch (error) {
 			// Provide more helpful error message
 			const msg = String(error?.message || '');

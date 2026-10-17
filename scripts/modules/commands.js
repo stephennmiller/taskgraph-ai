@@ -1145,7 +1145,9 @@ function registerCommands(programInstance) {
 
 			if (useResearch) {
 				console.log(
-					chalk.blue('Using Claude Code web research for research-backed task updates')
+					chalk.blue(
+						'Using Claude Code web research for research-backed task updates'
+					)
 				);
 			}
 
@@ -1363,7 +1365,10 @@ function registerCommands(programInstance) {
 			'-p, --prompt <text>',
 			'Prompt explaining what information to add (required)'
 		)
-		.option('-r, --research', 'Use Claude Code web research for research-backed updates')
+		.option(
+			'-r, --research',
+			'Use Claude Code web research for research-backed updates'
+		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			try {
@@ -3553,6 +3558,17 @@ ${result.result}
 		.option('--setup', 'Run interactive setup to configure models')
 		// Accepted for older scripts; Claude Code is the only provider now
 		.addOption(new Option('--claude-code').hideHelp())
+		// Removed providers: accepted only to explain why they no longer work
+		.addOption(new Option('--openrouter').hideHelp())
+		.addOption(new Option('--ollama').hideHelp())
+		.addOption(new Option('--bedrock').hideHelp())
+		.addOption(new Option('--azure').hideHelp())
+		.addOption(new Option('--vertex').hideHelp())
+		.addOption(new Option('--gemini-cli').hideHelp())
+		.addOption(new Option('--codex-cli').hideHelp())
+		.addOption(new Option('--lmstudio').hideHelp())
+		.addOption(new Option('--openai-compatible').hideHelp())
+		.addOption(new Option('--baseURL <url>').hideHelp())
 		.addHelpText(
 			'after',
 			`
@@ -3572,6 +3588,32 @@ Examples:
 			});
 
 			const projectRoot = taskMaster.getProjectRoot();
+
+			const removedProviderFlags = [
+				'openrouter',
+				'ollama',
+				'bedrock',
+				'azure',
+				'vertex',
+				'geminiCli',
+				'codexCli',
+				'lmstudio',
+				'openaiCompatible',
+				'baseURL'
+			].filter((flag) => options[flag]);
+			if (removedProviderFlags.length > 0) {
+				console.error(
+					chalk.red(
+						'Error: Task Master now uses Claude Code only, so provider flags such as --ollama, --openrouter and --baseURL are no longer supported.'
+					)
+				);
+				console.error(
+					chalk.yellow(
+						'Choose one of the Claude Code models: taskgraph models --set-main <opus|sonnet|haiku>'
+					)
+				);
+				process.exit(1);
+			}
 
 			if (options.setup) {
 				console.log(chalk.blue('Starting interactive model setup...'));

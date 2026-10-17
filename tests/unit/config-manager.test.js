@@ -360,10 +360,7 @@ describe('Validation Functions', () => {
 	test('validateProviderModelCombination should return false for known bad combinations', () => {
 		configManager.getConfig(MOCK_PROJECT_ROOT, true);
 		expect(
-			configManager.validateProviderModelCombination(
-				'claude-code',
-				'gpt-4o'
-			)
+			configManager.validateProviderModelCombination('claude-code', 'gpt-4o')
 		).toBe(false);
 	});
 
@@ -1028,10 +1025,7 @@ describe('getAllProviders', () => {
 		expect(providers).toEqual(configManager.ALL_PROVIDERS);
 		expect(providers.length).toBe(configManager.ALL_PROVIDERS.length);
 
-		// Verify it includes both validated and custom providers
-		expect(providers).toEqual(
-			expect.arrayContaining(configManager.VALIDATED_PROVIDERS)
-		);
+		// Verify it includes the custom providers
 		expect(providers).toEqual(
 			expect.arrayContaining(Object.values(configManager.CUSTOM_PROVIDERS))
 		);
@@ -1153,3 +1147,33 @@ describe('Configuration Getters', () => {
 
 // Note: Tests for setMainModel, setResearchModel were removed as the functions were removed in the implementation.
 // If similar setter functions exist, add tests for them following the writeConfig pattern.
+
+// --- hasCodebaseAnalysis Tests ---
+describe('hasCodebaseAnalysis', () => {
+	const originalFlag = process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+
+	beforeEach(() => {
+		// Config reads fall back to the defaults (claude-code for every role)
+		fsExistsSyncSpy.mockReturnValue(false);
+	});
+
+	afterEach(() => {
+		if (originalFlag === undefined) {
+			delete process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+		} else {
+			process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS = originalFlag;
+		}
+	});
+
+	test('is true for the main role with Claude Code', () => {
+		expect(configManager.hasCodebaseAnalysis(false, MOCK_PROJECT_ROOT)).toBe(
+			true
+		);
+	});
+
+	test('is false for the research role, which only has web tools', () => {
+		expect(configManager.hasCodebaseAnalysis(true, MOCK_PROJECT_ROOT)).toBe(
+			false
+		);
+	});
+});

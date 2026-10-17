@@ -178,6 +178,7 @@ describe('ClaudeCodeProvider', () => {
 					},
 					// Restores pre-2.0 behavior: enables loading of CLAUDE.md and settings.json
 					settingSources: ['user', 'project', 'local'],
+					env: expect.any(Object),
 					// Main/fallback roles may only read the repo (codebase analysis)
 					tools: ['Read', 'Grep', 'Glob'],
 					allowedTools: ['Read', 'Grep', 'Glob'],
@@ -186,6 +187,50 @@ describe('ClaudeCodeProvider', () => {
 					strictMcpConfig: true,
 					mcpServers: {}
 				}
+			});
+		});
+
+		describe('API key handling', () => {
+			const lastEnv = async () => {
+				const { createClaudeCode } = await import(
+					'ai-sdk-provider-claude-code'
+				);
+				return createClaudeCode.mock.calls.at(-1)[0].defaultSettings.env;
+			};
+			const saved = {
+				anthropic: process.env.ANTHROPIC_API_KEY,
+				claudeCode: process.env.CLAUDE_CODE_API_KEY
+			};
+
+			afterEach(() => {
+				for (const [key, value] of [
+					['ANTHROPIC_API_KEY', saved.anthropic],
+					['CLAUDE_CODE_API_KEY', saved.claudeCode]
+				]) {
+					if (value === undefined) delete process.env[key];
+					else process.env[key] = value;
+				}
+			});
+
+			it('withholds ANTHROPIC_API_KEY so Claude Code uses its own sign-in', async () => {
+				process.env.ANTHROPIC_API_KEY = 'sk-ant-should-not-be-used';
+				delete process.env.CLAUDE_CODE_API_KEY;
+
+				provider.getClient({});
+
+				const env = await lastEnv();
+				expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
+				// The process environment itself is left untouched
+				expect(process.env.ANTHROPIC_API_KEY).toBe('sk-ant-should-not-be-used');
+			});
+
+			it('uses CLAUDE_CODE_API_KEY exclusively when it is set', async () => {
+				process.env.ANTHROPIC_API_KEY = 'sk-ant-other';
+				process.env.CLAUDE_CODE_API_KEY = 'sk-ant-claude-code';
+
+				provider.getClient({});
+
+				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('sk-ant-claude-code');
 			});
 		});
 

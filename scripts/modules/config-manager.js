@@ -5,8 +5,7 @@ import {
 	ALL_PROVIDERS,
 	AuthManager,
 	CUSTOM_PROVIDERS,
-	CUSTOM_PROVIDERS_ARRAY,
-	VALIDATED_PROVIDERS
+	CUSTOM_PROVIDERS_ARRAY
 } from '@tm/core';
 import chalk from 'chalk';
 import { z } from 'zod';
@@ -168,7 +167,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			if (!validateProvider(config.models.main.provider)) {
 				console.warn(
 					chalk.yellow(
-						`Warning: Invalid main provider "${config.models.main.provider}" in ${configPath}. Falling back to default.`
+						`Warning: Invalid main provider "${config.models.main.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
 					)
 				);
 				config.models.main = { ...defaults.models.main };
@@ -176,7 +175,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			if (!validateProvider(config.models.research.provider)) {
 				console.warn(
 					chalk.yellow(
-						`Warning: Invalid research provider "${config.models.research.provider}" in ${configPath}. Falling back to default.`
+						`Warning: Invalid research provider "${config.models.research.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
 					)
 				);
 				config.models.research = { ...defaults.models.research };
@@ -187,7 +186,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 			) {
 				console.warn(
 					chalk.yellow(
-						`Warning: Invalid fallback provider "${config.models.fallback.provider}" in ${configPath}. Fallback model configuration will be ignored.`
+						`Warning: Invalid fallback provider "${config.models.fallback.provider}" in ${configPath}. Fallback model configuration will be ignored. Run 'taskgraph models --setup' to choose a Claude Code model.`
 					)
 				);
 				config.models.fallback.provider = undefined;
@@ -284,7 +283,6 @@ function getConfig(explicitRoot = null, forceReload = false, options = {}) {
 /**
  * Validates if a provider name is supported.
  * Custom providers (claude-code) are always allowed.
- * Validated providers must exist in the MODEL_MAP from supported-models.json.
  * @param {string} providerName The name of the provider.
  * @returns {boolean} True if the provider is valid, false otherwise.
  */
@@ -292,11 +290,6 @@ function validateProvider(providerName) {
 	// Custom providers are always allowed
 	if (CUSTOM_PROVIDERS_ARRAY.includes(providerName)) {
 		return true;
-	}
-
-	// Validated providers must exist in MODEL_MAP
-	if (VALIDATED_PROVIDERS.includes(providerName)) {
-		return !!(MODEL_MAP && MODEL_MAP[providerName]);
 	}
 
 	// Unknown providers are not allowed
@@ -499,6 +492,11 @@ function hasCodebaseAnalysis(
 ) {
 	// First check if the feature is enabled
 	if (!isCodebaseAnalysisEnabled(session, projectRoot)) {
+		return false;
+	}
+
+	// The research role only has web tools, so it cannot explore the codebase
+	if (useResearch) {
 		return false;
 	}
 
@@ -906,7 +904,6 @@ export {
 	validateProvider,
 	validateProviderModelCombination,
 	validateClaudeCodeSettings,
-	VALIDATED_PROVIDERS,
 	CUSTOM_PROVIDERS,
 	ALL_PROVIDERS,
 	MODEL_MAP,

@@ -453,6 +453,8 @@ async function _unifiedServiceRunner(serviceType, params) {
 		sequence = ['main', 'fallback', 'research'];
 	}
 
+	// provider/model pairs that already failed, so identical roles are not retried
+	const failedModels = new Set();
 	let lastError = null;
 	let lastCleanErrorMessage =
 		'AI service call failed for all configured roles.';
@@ -495,6 +497,14 @@ async function _unifiedServiceRunner(serviceType, params) {
 					new Error(
 						`Configuration missing for role '${currentRole}'. Provider: ${providerName}, Model: ${modelId}`
 					);
+				continue;
+			}
+
+			if (failedModels.has(`${providerName}/${modelId}`)) {
+				log(
+					'debug',
+					`Skipping role '${currentRole}': ${providerName}/${modelId} already failed for this request.`
+				);
 				continue;
 			}
 
@@ -636,6 +646,9 @@ async function _unifiedServiceRunner(serviceType, params) {
 			);
 			lastError = error;
 			lastCleanErrorMessage = cleanMessage;
+			if (providerName && modelId) {
+				failedModels.add(`${providerName}/${modelId}`);
+			}
 
 			if (serviceType === 'generateObject') {
 				const lowerCaseMessage = cleanMessage.toLowerCase();
