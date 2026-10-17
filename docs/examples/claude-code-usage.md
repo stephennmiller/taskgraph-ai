@@ -38,7 +38,7 @@ To use the Claude Code provider, update your `.taskmaster/config.json`:
 
 ## Usage
 
-Once configured, you can use Claude Code with all Task Master commands:
+Once configured, you can use Claude Code with all TaskGraph commands:
 
 ```bash
 # Generate tasks from a PRD
@@ -72,7 +72,7 @@ taskgraph set-status --id=task-001 --status=in-progress
 
 ## Advanced Settings
 
-The Claude Code SDK supports additional settings that provide fine-grained control over Claude's behavior.  These settings are implemented in the underlying SDK (`src/ai-providers/custom-sdk/claude-code/`), and can be managed through Task Master's configuration file.
+The Claude Code SDK supports additional settings that provide fine-grained control over Claude's behavior.  These settings are implemented in the underlying SDK (`src/ai-providers/custom-sdk/claude-code/`), and can be managed through TaskGraph's configuration file.
 
 ### Advanced Settings Usage
 

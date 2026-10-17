@@ -15,7 +15,7 @@ export function registerModelsTool(server) {
 	server.addTool({
 		name: 'models',
 		description:
-			'Get information about available AI models or set model configurations. Task Master uses Claude Code (models: opus, sonnet, haiku). Run without arguments to get the current model configuration.',
+			'Get information about available AI models or set model configurations. TaskGraph uses Claude Code (models: opus, sonnet, haiku). Run without arguments to get the current model configuration.',
 		parameters: z.object({
 			setMain: z
 				.string()

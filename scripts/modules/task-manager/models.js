@@ -215,7 +215,7 @@ async function setModel(role, modelId, options = {}) {
 				success: false,
 				error: {
 					code: 'MODEL_NOT_FOUND',
-					message: `Model ID "${modelId}" is not supported. Task Master uses Claude Code; valid models: ${supportedModels.map((m) => m.id).join(', ')}.`
+					message: `Model ID "${modelId}" is not supported. TaskGraph uses Claude Code; valid models: ${supportedModels.map((m) => m.id).join(', ')}.`
 				}
 			};
 		}

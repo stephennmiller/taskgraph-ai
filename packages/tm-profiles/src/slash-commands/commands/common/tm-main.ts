@@ -1,25 +1,25 @@
 /**
  * @fileoverview TM Main Slash Command
- * Task Master Command Reference - comprehensive command structure.
+ * TaskGraph Command Reference - comprehensive command structure.
  */
 
 import { staticCommand } from '../../factories.js';
 
 /**
- * The tm-main slash command - Task Master Main
+ * The tm-main slash command - TaskGraph Main
  *
- * Task Master Command Reference - comprehensive command structure.
+ * TaskGraph Command Reference - comprehensive command structure.
  */
 export const tmMain = staticCommand({
 	name: 'tm-main',
-	description: 'Task Master Main',
-	content: `# Task Master Command Reference
+	description: 'TaskGraph Main',
+	content: `# TaskGraph Command Reference
 
-Comprehensive command structure for Task Master integration with Claude Code.
+Comprehensive command structure for TaskGraph integration with Claude Code.
 
 ## Command Organization
 
-Commands are organized hierarchically to match Task Master's CLI structure while providing enhanced Claude Code integration.
+Commands are organized hierarchically to match TaskGraph's CLI structure while providing enhanced Claude Code integration.
 
 ## Project Setup & Configuration
 

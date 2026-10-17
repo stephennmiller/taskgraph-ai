@@ -299,7 +299,7 @@ export class SupabaseRepository {
 
 	/**
 	 * Maps internal priority to database priority
-	 * Task Master uses 'critical', database uses 'urgent'
+	 * TaskGraph uses 'critical', database uses 'urgent'
 	 */
 	private mapPriorityToDatabase(
 		priority: string

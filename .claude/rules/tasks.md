@@ -7,7 +7,7 @@ paths:
 
 ## Tagged Task Lists System
 
-Task Master now uses a **tagged task lists system** for multi-context task management:
+TaskGraph now uses a **tagged task lists system** for multi-context task management:
 
 - **Data Structure**: Tasks are organized into separate contexts (tags) within `tasks.json`
 - **Legacy Format**: `{"tasks": [...]}`

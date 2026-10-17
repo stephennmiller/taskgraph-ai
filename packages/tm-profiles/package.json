@@ -1,7 +1,7 @@
 {
 	"name": "@tm/profiles",
 	"private": true,
-	"description": "Claude Code profile management for Task Master - installs slash commands and CLAUDE.md integration",
+	"description": "Claude Code profile management for TaskGraph - installs slash commands and CLAUDE.md integration",
 	"type": "module",
 	"types": "./src/index.ts",
 	"main": "./dist/index.js",
@@ -30,6 +30,6 @@
 	},
 	"files": ["src", "README.md", "CHANGELOG.md"],
 	"keywords": ["task-master", "profiles", "editor", "commands", "typescript"],
-	"author": "Task Master AI",
+	"author": "TaskGraph",
 	"version": ""
 }

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Main entry point for @tm/core
- * Provides unified access to all Task Master functionality through TmCore
+ * Provides unified access to all TaskGraph functionality through TmCore
  */
 
 import type { TasksDomain } from './modules/tasks/tasks-domain.js';

@@ -24,7 +24,7 @@
 		"debug": false,
 		"defaultSubtasks": 5,
 		"defaultPriority": "medium",
-		"projectName": "Taskmaster",
+		"projectName": "TaskGraph",
 		"defaultTag": "master",
 		"responseLanguage": "English"
 	}

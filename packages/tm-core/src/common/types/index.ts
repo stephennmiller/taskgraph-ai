@@ -1,5 +1,5 @@
 /**
- * Core type definitions for Task Master
+ * Core type definitions for TaskGraph
  */
 
 /**

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Prompts module exports
- * Context-aware upgrade prompt system for Task Master
+ * Context-aware upgrade prompt system for TaskGraph
  */
 
 // Types

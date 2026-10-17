@@ -67,7 +67,7 @@ export class AuthCommand extends Command {
 				'Authentication token (optional, for SSH/remote environments)'
 			)
 			.option('-y, --yes', 'Skip interactive prompts')
-			.option('--no-header', 'Suppress the Task Master header banner')
+			.option('--no-header', 'Suppress the TaskGraph header banner')
 			.addHelpText(
 				'after',
 				`
@@ -98,7 +98,7 @@ Examples:
 	private addLogoutCommand(): void {
 		this.command('logout')
 			.description('Logout and clear credentials')
-			.option('--no-header', 'Suppress the Task Master header banner')
+			.option('--no-header', 'Suppress the TaskGraph header banner')
 			.action(async (_options?: { header?: boolean }) => {
 				await this.executeLogout();
 			});
@@ -110,7 +110,7 @@ Examples:
 	private addStatusCommand(): void {
 		this.command('status')
 			.description('Display authentication status')
-			.option('--no-header', 'Suppress the Task Master header banner')
+			.option('--no-header', 'Suppress the TaskGraph header banner')
 			.action(async (_options?: { header?: boolean }) => {
 				await this.executeStatus();
 			});
@@ -122,7 +122,7 @@ Examples:
 	private addRefreshCommand(): void {
 		this.command('refresh')
 			.description('Refresh authentication token')
-			.option('--no-header', 'Suppress the Task Master header banner')
+			.option('--no-header', 'Suppress the TaskGraph header banner')
 			.action(async (_options?: { header?: boolean }) => {
 				await this.executeRefresh();
 			});
@@ -387,7 +387,7 @@ Examples:
 		showHeader = true
 	): Promise<AuthResult> {
 		if (showHeader) {
-			ui.displayBanner('Task Master Authentication');
+			ui.displayBanner('TaskGraph Authentication');
 		}
 		const isAuthenticated = await this.authManager.hasValidSession();
 
@@ -560,7 +560,7 @@ Examples:
 		showHeader = true
 	): Promise<AuthResult> {
 		if (showHeader) {
-			ui.displayBanner('Task Master Authentication');
+			ui.displayBanner('TaskGraph Authentication');
 		}
 
 		try {

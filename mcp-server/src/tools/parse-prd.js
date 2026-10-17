@@ -58,7 +58,7 @@ export function registerParsePRDTool(server) {
 				.boolean()
 				.optional()
 				.describe(
-					'Enable Taskmaster to use the research role for potentially more informed task generation. Requires appropriate API key.'
+					'Enable TaskGraph to use the research role for potentially more informed task generation. Requires appropriate API key.'
 				),
 			append: z
 				.boolean()

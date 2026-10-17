@@ -1,6 +1,6 @@
 {
 	"name": "@tm/mcp",
-	"description": "Task Master MCP Tools - TypeScript MCP server tools for AI agent integration",
+	"description": "TaskGraph MCP Tools - TypeScript MCP server tools for AI agent integration",
 	"type": "module",
 	"private": true,
 	"main": "./dist/index.js",

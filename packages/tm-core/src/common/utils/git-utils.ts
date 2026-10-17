@@ -1,5 +1,5 @@
 /**
- * @fileoverview Git utilities for Task Master
+ * @fileoverview Git utilities for TaskGraph
  * Git integration utilities using raw git commands and gh CLI
  */
 

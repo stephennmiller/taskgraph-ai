@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Task Master
+ * TaskGraph
  * Copyright (c) 2025 Eyal Toledano, Ralph Khreish
  *
  * This software is licensed under the MIT License with Commons Clause.
@@ -16,7 +16,7 @@
  */
 
 /**
- * Claude Task Master
+ * TaskGraph
  * A task management system for AI-driven development with Claude
  */
 
@@ -67,10 +67,7 @@ export const version = packageJson.version;
 if (import.meta.url === `file://${process.argv[1]}`) {
 	const program = new Command();
 
-	program
-		.name('taskgraph')
-		.description('Claude Task Master CLI')
-		.version(version);
+	program.name('taskgraph').description('TaskGraph CLI').version(version);
 
 	program
 		.command('init')

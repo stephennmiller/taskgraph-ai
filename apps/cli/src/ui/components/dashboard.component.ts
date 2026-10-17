@@ -1,5 +1,5 @@
 /**
- * @fileoverview Dashboard components for Task Master CLI
+ * @fileoverview Dashboard components for TaskGraph CLI
  * Displays project statistics and dependency information
  */
 

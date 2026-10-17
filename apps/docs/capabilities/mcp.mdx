@@ -5,17 +5,17 @@ sidebarTitle: "MCP Tools"
 
 # MCP Tools
 
-This document provides an overview of the MCP (Machine-to-Machine Communication Protocol) interface for the Task Master application. The MCP interface is defined in the `mcp-server/` directory and exposes the application's core functionalities as a set of tools that can be called remotely.
+This document provides an overview of the MCP (Machine-to-Machine Communication Protocol) interface for the TaskGraph application. The MCP interface is defined in the `mcp-server/` directory and exposes the application's core functionalities as a set of tools that can be called remotely.
 
 ## Core Concepts
 
-The MCP interface is built on top of the `fastmcp` library and registers a set of tools that correspond to the core functionalities of the Task Master application. These tools are defined in the `mcp-server/src/tools/` directory and are registered with the MCP server in `mcp-server/src/tools/index.js`.
+The MCP interface is built on top of the `fastmcp` library and registers a set of tools that correspond to the core functionalities of the TaskGraph application. These tools are defined in the `mcp-server/src/tools/` directory and are registered with the MCP server in `mcp-server/src/tools/index.js`.
 
 Each tool is defined with a name, a description, and a set of parameters that are validated using the `zod` library. The `execute` function of each tool calls the corresponding core logic function from `scripts/modules/task-manager.js`.
 
 ## Configurable Tool Loading
 
-To optimize LLM context usage, you can control which Task Master MCP tools are loaded using the `TASK_MASTER_TOOLS` environment variable. This is particularly useful when working with LLMs that have context limits or when you only need a subset of tools.
+To optimize LLM context usage, you can control which TaskGraph MCP tools are loaded using the `TASK_MASTER_TOOLS` environment variable. This is particularly useful when working with LLMs that have context limits or when you only need a subset of tools.
 
 ### Configuration Modes
 
@@ -95,7 +95,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
 ```
 
 #### All Tools
-Loads all 36 available tools. Use when you need full Task Master functionality.
+Loads all 36 available tools. Use when you need full TaskGraph functionality.
 
 ```json
 {
@@ -124,7 +124,7 @@ Loads all 36 available tools. Use when you need full Task Master functionality.
 When the MCP server starts, it logs which tools were loaded:
 
 ```
-Task Master MCP Server starting...
+TaskGraph MCP Server starting...
 Tool mode configuration: standard
 Loading standard tools
 Registering 15 MCP tools (mode: standard)

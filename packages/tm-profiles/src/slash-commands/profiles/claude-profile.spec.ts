@@ -186,7 +186,7 @@ describe('ClaudeProfile', () => {
 				'help',
 				'Help',
 				'[command]',
-				'Show help for Task Master AI commands...\n\nCommand: $ARGUMENTS'
+				'Show help for TaskGraph commands...\n\nCommand: $ARGUMENTS'
 			);
 
 			// Act
@@ -194,7 +194,7 @@ describe('ClaudeProfile', () => {
 
 			// Assert
 			expect(result.content).toBe(
-				'Help\n\nArguments: $ARGUMENTS\nShow help for Task Master AI commands...\n\nCommand: $ARGUMENTS'
+				'Help\n\nArguments: $ARGUMENTS\nShow help for TaskGraph commands...\n\nCommand: $ARGUMENTS'
 			);
 		});
 

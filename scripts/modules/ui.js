@@ -1,6 +1,6 @@
 /**
  * ui.js
- * User interface functions for the Task Master CLI
+ * User interface functions for the TaskGraph CLI
  */
 
 import fs from 'fs';
@@ -47,7 +47,7 @@ function displayTaggedTasksFYI(data) {
 	console.log(
 		boxen(
 			chalk.white.bold('FYI: ') +
-				chalk.gray('Taskmaster now supports separate task lists per tag. ') +
+				chalk.gray('TaskGraph now supports separate task lists per tag. ') +
 				chalk.cyan(
 					'Use the --tag flag to create/read/update/filter tasks by tag.'
 				),
@@ -549,7 +549,7 @@ function displayHelp() {
 	const terminalWidth = process.stdout.columns || 100; // Default to 100 if can't detect
 
 	console.log(
-		boxen(chalk.white.bold('Task Master CLI'), {
+		boxen(chalk.white.bold('TaskGraph CLI'), {
 			padding: 1,
 			borderColor: 'blue',
 			borderStyle: 'round',
@@ -566,7 +566,7 @@ function displayHelp() {
 				{
 					name: 'init',
 					args: '[--name=<name>] [--description=<desc>] [-y]',
-					desc: 'Initialize a new project with Task Master structure'
+					desc: 'Initialize a new project with TaskGraph structure'
 				},
 				{
 					name: 'models',

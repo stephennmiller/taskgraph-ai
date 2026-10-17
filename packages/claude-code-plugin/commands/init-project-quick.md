@@ -2,7 +2,7 @@ Quick initialization with auto-confirmation.
 
 Arguments: $ARGUMENTS
 
-Initialize a Task Master project without prompts, accepting all defaults.
+Initialize a TaskGraph project without prompts, accepting all defaults.
 
 ## Quick Setup
 
@@ -21,7 +21,7 @@ taskgraph init -y
 ## Smart Defaults
 
 - Project name: Current directory name
-- Description: "Task Master Project"
+- Description: "TaskGraph Project"
 - Model config: Existing environment vars
 - Task structure: Standard format
 

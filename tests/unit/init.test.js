@@ -18,7 +18,7 @@ jest.mock('readline', () => ({
 // Mock figlet for banner display
 jest.mock('figlet', () => ({
 	default: {
-		textSync: jest.fn(() => 'Task Master')
+		textSync: jest.fn(() => 'TaskGraph')
 	}
 }));
 
@@ -79,7 +79,7 @@ describe('Windsurf Rules File Handling', () => {
 					const existingContent = fs.readFileSync(targetPath, 'utf8');
 					const updatedContent =
 						existingContent.trim() +
-						'\n\n# Added by Claude Task Master - Development Workflow Rules\n\n' +
+						'\n\n# Added by TaskGraph - Development Workflow Rules\n\n' +
 						'New content';
 					fs.writeFileSync(targetPath, updatedContent);
 					return;
@@ -121,7 +121,7 @@ describe('Windsurf Rules File Handling', () => {
 		);
 		expect(fs.writeFileSync).toHaveBeenCalledWith(
 			targetPath,
-			expect.stringContaining('Added by Claude Task Master')
+			expect.stringContaining('Added by TaskGraph')
 		);
 	});
 

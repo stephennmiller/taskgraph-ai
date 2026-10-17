@@ -29,6 +29,6 @@
 	},
 	"files": ["src", "README.md"],
 	"keywords": ["temporary", "bridge", "migration"],
-	"author": "Task Master AI",
+	"author": "TaskGraph",
 	"version": ""
 }

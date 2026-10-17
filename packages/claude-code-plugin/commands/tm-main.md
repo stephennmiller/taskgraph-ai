@@ -1,10 +1,10 @@
-# Task Master Command Reference
+# TaskGraph Command Reference
 
-Comprehensive command structure for Task Master integration with Claude Code.
+Comprehensive command structure for TaskGraph integration with Claude Code.
 
 ## Command Organization
 
-Commands are organized hierarchically to match Task Master's CLI structure while providing enhanced Claude Code integration.
+Commands are organized hierarchically to match TaskGraph's CLI structure while providing enhanced Claude Code integration.
 
 ## Project Setup & Configuration
 

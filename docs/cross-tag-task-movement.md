@@ -1,6 +1,6 @@
 # Cross-Tag Task Movement
 
-Task Master now supports moving tasks between different tag contexts, allowing you to organize your work across multiple project contexts, feature branches, or development phases.
+TaskGraph now supports moving tasks between different tag contexts, allowing you to organize your work across multiple project contexts, feature branches, or development phases.
 
 ## Overview
 
@@ -41,7 +41,7 @@ taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=done
 
 ## Dependency Resolution
 
-When moving tasks between tags, you may encounter cross-tag dependencies. Task Master provides several options to handle these:
+When moving tasks between tags, you may encounter cross-tag dependencies. TaskGraph provides several options to handle these:
 
 ### Move with Dependencies
 
@@ -74,7 +74,7 @@ Note: Force moves are no longer supported. Instead, use one of these options:
 
 ## Error Handling
 
-Task Master provides enhanced error messages with specific resolution suggestions:
+TaskGraph provides enhanced error messages with specific resolution suggestions:
 
 ### Cross-Tag Dependency Conflicts
 

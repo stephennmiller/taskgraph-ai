@@ -220,7 +220,7 @@ export class LoopService {
 	private async initProgressFile(config: LoopConfig): Promise<void> {
 		await mkdir(path.dirname(config.progressFile), { recursive: true });
 		const lines = [
-			'# Taskmaster Loop Progress',
+			'# TaskGraph Loop Progress',
 			`# Started: ${new Date().toISOString()}`,
 			...(config.brief ? [`# Brief: ${config.brief}`] : []),
 			`# Preset: ${config.prompt}`,

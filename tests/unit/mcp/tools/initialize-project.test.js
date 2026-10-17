@@ -62,7 +62,7 @@ const registerInitializeProjectTool = (server) => {
 	server.addTool({
 		name: 'initialize_project',
 		description:
-			"Initializes a new Task Master project structure in the current working directory by running 'task-master init'.",
+			"Initializes a new TaskGraph project structure in the current working directory by running 'task-master init'.",
 		parameters: mockZod,
 		execute: async (args, { log }) => {
 			try {
@@ -167,7 +167,7 @@ describe('Initialize Project MCP Tool', () => {
 		// Verify tool properties
 		expect(toolDefinition.name).toBe('initialize_project');
 		expect(toolDefinition.description).toContain(
-			'Initializes a new Task Master project'
+			'Initializes a new TaskGraph project'
 		);
 		expect(toolDefinition).toHaveProperty('parameters');
 		expect(toolDefinition).toHaveProperty('execute');

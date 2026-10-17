@@ -1,11 +1,11 @@
 ---
-description: Guidelines for implementing and maintaining tests for Task Master CLI
+description: Guidelines for implementing and maintaining tests for TaskGraph CLI
 paths:
   - "**/*.test.js"
   - "tests/**/*"
 ---
 
-# Testing Guidelines for Task Master CLI
+# Testing Guidelines for TaskGraph CLI
 
 *Note:* Never use asynchronous operations in tests. Always mock tests properly based on the way the tested functions are defined and used. Do not arbitrarily create tests. Based them on the low-level details and execution of the underlying code being tested. 
 

@@ -71,7 +71,7 @@ const registerListTasksTool = (server) => {
 	const toolConfig = {
 		name: 'get_tasks',
 		description:
-			'Get all tasks from Task Master, optionally filtering by status and including subtasks.',
+			'Get all tasks from TaskGraph, optionally filtering by status and including subtasks.',
 		parameters: mockZod,
 
 		execute: (args, context) => {
@@ -182,7 +182,7 @@ describe('MCP Tool: get-tasks', () => {
 		expect(mockServer.addTool).toHaveBeenCalledWith(
 			expect.objectContaining({
 				name: 'get_tasks',
-				description: expect.stringContaining('Get all tasks from Task Master'),
+				description: expect.stringContaining('Get all tasks from TaskGraph'),
 				parameters: expect.any(Object),
 				execute: expect.any(Function)
 			})

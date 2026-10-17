@@ -1,10 +1,10 @@
 /**
- * Default preset for Taskmaster loop - general task completion
+ * Default preset for TaskGraph loop - general task completion
  * Matches the structure of scripts/loop.sh prompt
  */
 export const DEFAULT_PRESET = `SETUP: If taskgraph command not found, run: npm i -g taskgraph-ai
 
-TASK: Implement ONE task/subtask from the Taskmaster backlog.
+TASK: Implement ONE task/subtask from the TaskGraph backlog.
 
 PROCESS:
 1. Run taskgraph next (or use MCP) to get the next available task/subtask.

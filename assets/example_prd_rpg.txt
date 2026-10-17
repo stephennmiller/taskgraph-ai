@@ -16,7 +16,7 @@ This template teaches you (AI or human) how to create structured, dependency-awa
 - Look at `<example>` blocks to see good vs bad patterns
 - Fill in the content sections with your project details
 - The AI reading this will learn the RPG method by following along
-- Task Master will parse the resulting PRD into dependency-aware tasks
+- TaskGraph will parse the resulting PRD into dependency-aware tasks
 
 ## Recommended Tools for Creating PRDs
 
@@ -197,7 +197,7 @@ project-root/
 
 <dependency-graph>
 <instruction>
-This is THE CRITICAL SECTION for Task Master parsing.
+This is THE CRITICAL SECTION for TaskGraph parsing.
 
 Define explicit dependencies between modules. This creates the topological order for task execution.
 
@@ -466,7 +466,7 @@ Categories:
 ---
 
 <task-master-integration>
-# How Task Master Uses This PRD
+# How TaskGraph Uses This PRD
 
 When you run `taskgraph parse-prd <file>.txt`, the parser:
 
@@ -504,7 +504,7 @@ RPG-structured PRDs provide:
 
 ## Tips for Best Results
 
-1. **Spend time on dependency graph** - This is the most valuable section for Task Master
+1. **Spend time on dependency graph** - This is the most valuable section for TaskGraph
 2. **Keep features atomic** - Each feature should be independently testable
 3. **Progressive refinement** - Start broad, use `taskgraph expand` to break down complex tasks
 4. **Use research mode** - `taskgraph parse-prd --research` leverages AI for better task generation

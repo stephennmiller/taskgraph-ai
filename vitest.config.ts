@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * Root Vitest configuration for Task Master monorepo
+ * Root Vitest configuration for TaskGraph monorepo
  * Provides shared defaults for all packages
  * Individual packages can extend this config with package-specific settings
  */

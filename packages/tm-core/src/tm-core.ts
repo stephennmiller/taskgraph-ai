@@ -1,5 +1,5 @@
 /**
- * @fileoverview TmCore - Unified facade for all Task Master functionality
+ * @fileoverview TmCore - Unified facade for all TaskGraph functionality
  * This is the ONLY entry point for using tm-core
  */
 
@@ -37,7 +37,7 @@ export interface TmCoreOptions {
 }
 
 /**
- * TmCore - Unified facade providing access to all Task Master domains
+ * TmCore - Unified facade providing access to all TaskGraph domains
  *
  * @example Basic usage
  * ```typescript

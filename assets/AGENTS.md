@@ -1,4 +1,4 @@
-# Task Master AI - Agent Integration Guide
+# TaskGraph - Agent Integration Guide
 
 ## Essential Commands
 
@@ -6,7 +6,7 @@
 
 ```bash
 # Project Setup
-taskgraph init                                    # Initialize Task Master in current project
+taskgraph init                                    # Initialize TaskGraph in current project
 taskgraph parse-prd .taskmaster/docs/prd.md       # Generate tasks from PRD document
 taskgraph models --setup                        # Configure AI models interactively
 
@@ -83,7 +83,7 @@ project/
 
 ## MCP Integration
 
-Task Master provides an MCP server that Claude Code can connect to. Configure in `.mcp.json`:
+TaskGraph provides an MCP server that Claude Code can connect to. Configure in `.mcp.json`:
 
 ```json
 {
@@ -153,7 +153,7 @@ complexity_report; // = taskgraph complexity-report
 #### 1. Project Initialization
 
 ```bash
-# Initialize Task Master
+# Initialize TaskGraph
 taskgraph init
 
 # Create or obtain PRD, then parse it (use .md extension for better editor support)
@@ -200,7 +200,7 @@ cd project-docs-worktree && claude
 Create `.claude/commands/taskmaster-next.md`:
 
 ```markdown
-Find the next available Task Master task and show its details.
+Find the next available TaskGraph task and show its details.
 
 Steps:
 
@@ -213,7 +213,7 @@ Steps:
 Create `.claude/commands/taskmaster-complete.md`:
 
 ```markdown
-Complete a Task Master task: $ARGUMENTS
+Complete a TaskGraph task: $ARGUMENTS
 
 Steps:
 
@@ -302,7 +302,7 @@ taskgraph models --set-fallback gpt-4o-mini
 }
 ```
 
-## Claude Code Best Practices with Task Master
+## Claude Code Best Practices with TaskGraph
 
 ### Context Management
 
@@ -325,14 +325,14 @@ taskgraph models --set-fallback gpt-4o-mini
 For large migrations or multi-step processes:
 
 1. Create a markdown PRD file describing the new changes: `touch task-migration-checklist.md` (prds can be .txt or .md)
-2. Use Taskmaster to parse the new prd with `taskgraph parse-prd --append` (also available in MCP)
-3. Use Taskmaster to expand the newly generated tasks into subtasks. Consdier using `analyze-complexity` with the correct --to and --from IDs (the new ids) to identify the ideal subtask amounts for each task. Then expand them.
+2. Use TaskGraph to parse the new prd with `taskgraph parse-prd --append` (also available in MCP)
+3. Use TaskGraph to expand the newly generated tasks into subtasks. Consdier using `analyze-complexity` with the correct --to and --from IDs (the new ids) to identify the ideal subtask amounts for each task. Then expand them.
 4. Work through items systematically, checking them off as completed
 5. Use `taskgraph update-subtask` to log progress on each task/subtask and/or updating/researching them before/during implementation if getting stuck
 
 ### Git Integration
 
-Task Master works well with `gh` CLI:
+TaskGraph works well with `gh` CLI:
 
 ```bash
 # Create PR for completed task
@@ -386,7 +386,7 @@ taskgraph generate
 taskgraph fix-dependencies
 ```
 
-DO NOT RE-INITIALIZE. That will not do anything beyond re-adding the same Taskmaster core files.
+DO NOT RE-INITIALIZE. That will not do anything beyond re-adding the same TaskGraph core files.
 
 ## Important Notes
 
@@ -413,7 +413,7 @@ These commands make AI calls and may take up to a minute:
 ### Claude Code Session Management
 
 - Use `/clear` frequently to maintain focused context
-- Create custom slash commands for repeated Task Master workflows
+- Create custom slash commands for repeated TaskGraph workflows
 - Configure tool allowlist to streamline permissions
 - Use headless mode for automation: `claude -p "taskgraph next"`
 
@@ -432,4 +432,4 @@ These commands make AI calls and may take up to a minute:
 
 ---
 
-_This guide ensures Claude Code has immediate access to Task Master's essential functionality for agentic development workflows._
+_This guide ensures Claude Code has immediate access to TaskGraph's essential functionality for agentic development workflows._

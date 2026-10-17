@@ -5,7 +5,7 @@ sidebarTitle: "PRD Creation and Parsing"
 
 # Writing a PRD
 
-A PRD (Product Requirements Document) is the starting point of every task flow in Task Master. It defines what you're building and why. A clear PRD dramatically improves the quality of your tasks, your model outputs, and your final product — so it’s worth taking the time to get it right.
+A PRD (Product Requirements Document) is the starting point of every task flow in TaskGraph. It defines what you're building and why. A clear PRD dramatically improves the quality of your tasks, your model outputs, and your final product — so it’s worth taking the time to get it right.
 
 <Tip>
 You don’t need to define your whole app up front. You can write a focused PRD just for the next feature or module you’re working on.
@@ -30,7 +30,7 @@ The more context you give the model, the better the breakdown and results.
 
 ---
 
-## Writing a PRD for Task Master
+## Writing a PRD for TaskGraph
 
 <Note>
 Two example PRD templates are available in `.taskmaster/templates/`:
@@ -44,7 +44,7 @@ Two example PRD templates are available in `.taskmaster/templates/`:
 You can co-write your PRD with an LLM model using the following workflow:
 
 1. **Chat about requirements** — explain what you want to build.
-2. **Show an example PRD** — share the example PRD so the model understands the expected format. The example uses formatting that work well with Task Master's code. Following the example will yield better results.
+2. **Show an example PRD** — share the example PRD so the model understands the expected format. The example uses formatting that work well with TaskGraph's code. Following the example will yield better results.
 3. **Iterate and refine** — work with the model to shape the draft into a clear and well-structured PRD.
 
 This approach works great in Claude Code, or anywhere you use a chat-based LLM.
@@ -87,7 +87,7 @@ Place your PRD file in the `.taskmaster/docs` folder in your project.
 
 # Parse your PRD into Tasks
 
-This is where the Task Master magic begins.
+This is where the TaskGraph magic begins.
 
 In Claude Code, instruct the agent to generate tasks from your PRD:
 

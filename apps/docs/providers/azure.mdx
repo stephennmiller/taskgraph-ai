@@ -1,7 +1,7 @@
 ---
 title: "Azure OpenAI"
 sidebarTitle: "Azure OpenAI"
-description: "Configure Task Master to use Azure OpenAI Service"
+description: "Configure TaskGraph to use Azure OpenAI Service"
 ---
 
 Azure OpenAI Service provides enterprise-grade access to OpenAI models through Microsoft Azure.
@@ -41,7 +41,7 @@ taskgraph models --set-azure-base-url "https://your-resource.openai.azure.com/op
 ```
 
 <Tip>
-Task Master automatically appends `/openai` to your base URL if needed.
+TaskGraph automatically appends `/openai` to your base URL if needed.
 </Tip>
 
 ### 3. Set Azure as Your Provider
@@ -52,7 +52,7 @@ taskgraph models --set-main azure:gpt-4o
 
 ## Supported Models
 
-Task Master supports Azure OpenAI models that use the Chat Completions API:
+TaskGraph supports Azure OpenAI models that use the Chat Completions API:
 
 | Model | Notes |
 |-------|-------|

@@ -1,6 +1,6 @@
 /**
  * contextGatherer.js
- * Comprehensive context gathering utility for Task Master AI operations
+ * Comprehensive context gathering utility for TaskGraph operations
  * Supports task context, file context, project tree, and custom context
  */
 

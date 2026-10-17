@@ -4,11 +4,11 @@
 </div>
 
 <p align="center">
-  <img src="./images/logo.png?raw=true" alt="Taskmaster logo">
+  <img src="./images/logo.png?raw=true" alt="TaskGraph logo">
 </p>
 
 <p align="center">
-<b>Taskmaster</b>: A task management system for AI-driven development, designed to work seamlessly with any AI chat.
+<b>TaskGraph</b>: A task management system for AI-driven development, designed to work seamlessly with any AI chat.
 </p>
 
 <p align="center">
@@ -61,7 +61,7 @@ claude mcp add taskgraph-ai -- npx -y taskgraph-ai
 
 ## Requirements
 
-Task Master uses [Claude Code](https://docs.claude.com/en/docs/claude-code) for every AI call, so there are no API keys to manage. Install Claude Code and sign in (run `claude` once) before using the AI commands.
+TaskGraph uses [Claude Code](https://docs.claude.com/en/docs/claude-code) for every AI call, so there are no API keys to manage. Install Claude Code and sign in (run `claude` once) before using the AI commands.
 
 You can define 3 models: the main model, the research model, and the fallback model (used if either of the others fails). The available models are `opus`, `sonnet` and `haiku`.
 
@@ -71,9 +71,9 @@ The research model runs with web search and fetch access only. It cannot read or
 
 ### Option 1: MCP (Recommended)
 
-MCP (Model Context Protocol) lets you run Task Master directly from Claude Code.
+MCP (Model Context Protocol) lets you run TaskGraph directly from Claude Code.
 
-#### 1. Add Task Master to Claude Code
+#### 1. Add TaskGraph to Claude Code
 
 Register the server with the Claude Code CLI (shown above), or add it to the project's `.mcp.json` (`taskgraph init --rules claude` writes this file for you).
 
@@ -110,12 +110,12 @@ Change the main model to opus
 
 [Table of available models](docs/models.md) | [Claude Code setup](docs/examples/claude-code-usage.md)
 
-#### 3. Initialize Task Master
+#### 3. Initialize TaskGraph
 
 In Claude Code, say:
 
 ```txt
-Initialize taskmaster-ai in my project
+Initialize taskgraph in my project
 ```
 
 #### 4. Make sure you have a PRD (Recommended)
@@ -144,7 +144,7 @@ Use Claude Code to:
 - **Research fresh information**: `Research the latest best practices for implementing JWT authentication with Node.js`
 - **Research with context**: `Research React Query v5 migration strategies for our current API implementation in src/api.js`
 
-[More examples on how to use Task Master in chat](docs/examples.md)
+[More examples on how to use TaskGraph in chat](docs/examples.md)
 
 ### Option 2: Using Command Line
 
@@ -204,7 +204,7 @@ taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-depende
 
 ### Optimizing MCP Tool Loading
 
-Task Master's MCP server supports selective tool loading to reduce context window usage. By default, all 36 tools are loaded (~21,000 tokens) to maintain backward compatibility with existing installations.
+TaskGraph's MCP server supports selective tool loading to reduce context window usage. By default, all 36 tools are loaded (~21,000 tokens) to maintain backward compatibility with existing installations.
 
 You can optimize performance by configuring the `TASK_MASTER_TOOLS` environment variable:
 
@@ -270,7 +270,7 @@ claude mcp add taskgraph-ai --scope user \
 
 ## Claude Code Support
 
-Task Master runs on Claude Code, which needs no API key:
+TaskGraph runs on Claude Code, which needs no API key:
 
 - **Models**: `opus`, `sonnet` and `haiku`
 - **Requirements**: Claude Code CLI installed and signed in
@@ -299,24 +299,24 @@ node scripts/init.js
 ## Contributors
 
 <a href="https://github.com/stephennmiller/taskgraph-ai/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=stephennmiller/taskgraph-ai" alt="Task Master project contributors" />
+  <img src="https://contrib.rocks/image?repo=stephennmiller/taskgraph-ai" alt="TaskGraph project contributors" />
 </a>
 
 ## Licensing
 
-Task Master is licensed under the MIT License with Commons Clause. This means you can:
+TaskGraph is licensed under the MIT License with Commons Clause, the same license as Task Master. This means you can:
 
 **Allowed**:
 
-- Use Task Master for any purpose (personal, commercial, academic)
+- Use TaskGraph for any purpose (personal, commercial, academic)
 - Modify the code
 - Distribute copies
-- Create and sell products built using Task Master
+- Create and sell products built using TaskGraph
 
 **Not Allowed**:
 
-- Sell Task Master itself
-- Offer Task Master as a hosted service
-- Create competing products based on Task Master
+- Sell TaskGraph itself
+- Offer TaskGraph as a hosted service
+- Create competing products based on TaskGraph
 
 See the [LICENSE](LICENSE) file for the complete license text and [licensing details](docs/licensing.md) for more information.

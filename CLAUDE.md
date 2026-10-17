@@ -1,8 +1,8 @@
 # Claude Code Instructions
 
-## Task Master AI Instructions
+## TaskGraph Instructions
 
-**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+**Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskmaster/CLAUDE.md
 
 ## Test Guidelines

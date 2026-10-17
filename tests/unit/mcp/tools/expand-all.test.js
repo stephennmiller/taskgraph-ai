@@ -62,7 +62,7 @@ const registerExpandAllTool = (server) => {
 	// Create simplified version of the tool config
 	const toolConfig = {
 		name: 'expand_all',
-		description: 'Use Taskmaster to expand all eligible pending tasks',
+		description: 'Use TaskGraph to expand all eligible pending tasks',
 		parameters: mockZod,
 
 		// Create a simplified mock of the execute function

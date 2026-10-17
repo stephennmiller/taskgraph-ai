@@ -11,7 +11,7 @@ export function registerInitializeProjectTool(server) {
 	server.addTool({
 		name: 'initialize_project',
 		description:
-			'Initializes a new Task Master project structure by calling the core initialization logic. Creates necessary folders and configuration files for Task Master in the current directory.',
+			'Initializes a new TaskGraph project structure by calling the core initialization logic. Creates necessary folders and configuration files for TaskGraph in the current directory.',
 		parameters: z.object({
 			skipInstall: z
 				.boolean()

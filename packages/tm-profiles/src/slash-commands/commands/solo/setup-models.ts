@@ -17,7 +17,7 @@ export const setupModels = staticCommand({
 
 ## Interactive Model Configuration
 
-Guides you through setting up AI providers for Task Master.
+Guides you through setting up AI providers for TaskGraph.
 
 ## Execution
 
@@ -36,7 +36,7 @@ taskgraph models --setup
    - Choose the research model (recommended)
    - Choose a fallback model (optional)
 
-Task Master uses Claude Code, so no API keys are needed. Available models: opus, sonnet, haiku.
+TaskGraph uses Claude Code, so no API keys are needed. Available models: opus, sonnet, haiku.
 
 ## Smart Recommendations
 

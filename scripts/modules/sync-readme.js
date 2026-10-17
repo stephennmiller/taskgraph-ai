@@ -13,13 +13,13 @@ import { findProjectRoot, log } from './utils.js';
 function createBasicReadme(projectName) {
 	return `# ${projectName}
 
-This project is managed using Task Master.
+This project is managed using TaskGraph.
 
 `;
 }
 
 /**
- * Create UTM tracking URL for the Taskmaster product page
+ * Create UTM tracking URL for the TaskGraph product page
  * @param {string} projectRoot - The project root path
  * @returns {string} - UTM tracked URL
  */
@@ -60,9 +60,9 @@ function createStartMarker(options) {
 
 	// Create the export info content
 	const exportInfo =
-		`🎯 **Taskmaster Export** - ${timestamp}\n` +
+		`🎯 **TaskGraph Export** - ${timestamp}\n` +
 		`📋 Export: ${subtasksText} • ${statusText}\n` +
-		`🔗 Powered by [Task Master](${createTaskMasterUrl(projectRoot)})`;
+		`🔗 Powered by [TaskGraph](${createTaskMasterUrl(projectRoot)})`;
 
 	// Create a markdown box using code blocks and emojis to mimic our UI style
 	const boxContent =
@@ -78,7 +78,7 @@ function createStartMarker(options) {
  */
 function createEndMarker() {
 	return (
-		`\n> 📋 **End of Taskmaster Export** - Tasks are synced from your project using the \`sync-readme\` command.\n` +
+		`\n> 📋 **End of TaskGraph Export** - Tasks are synced from your project using the \`sync-readme\` command.\n` +
 		`<!-- TASKMASTER_EXPORT_END -->\n`
 	);
 }

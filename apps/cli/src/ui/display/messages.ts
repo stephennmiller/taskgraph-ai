@@ -10,7 +10,7 @@ import { getBoxWidth } from '../layout/helpers.js';
 /**
  * Display a fancy banner
  */
-export function displayBanner(title: string = 'Task Master'): void {
+export function displayBanner(title: string = 'TaskGraph'): void {
 	console.log(
 		boxen(chalk.white.bold(title), {
 			padding: 1,

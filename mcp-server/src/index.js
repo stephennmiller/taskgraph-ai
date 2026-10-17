@@ -22,12 +22,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Main MCP server class that integrates with Task Master
+ * Main MCP server class that integrates with TaskGraph
  */
 class TaskMasterMCPServer {
 	constructor() {
 		this.options = {
-			name: 'Task Master MCP Server',
+			name: 'TaskGraph MCP Server',
 			version: packageJson.version
 		};
 
@@ -64,7 +64,7 @@ class TaskMasterMCPServer {
 
 		const normalizedToolMode = getToolsConfiguration();
 
-		this.logger.info('Task Master MCP Server starting...');
+		this.logger.info('TaskGraph MCP Server starting...');
 		this.logger.info(`Tool mode configuration: ${normalizedToolMode}`);
 
 		const registrationResult = registerTaskMasterTools(

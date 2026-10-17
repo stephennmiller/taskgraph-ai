@@ -1,6 +1,6 @@
-# Task Master MCP Integration
+# TaskGraph MCP Integration
 
-This document outlines how Task Master CLI functionality is integrated with MCP (Master Control Program) architecture to provide both CLI and programmatic API access to features.
+This document outlines how TaskGraph CLI functionality is integrated with MCP (Master Control Program) architecture to provide both CLI and programmatic API access to features.
 
 ## Architecture Overview
 
@@ -8,7 +8,7 @@ The MCP integration uses a layered approach:
 
 1. **Core Functions** - In `scripts/modules/` contain the main business logic
 2. **Source Parameter** - Core functions check the `source` parameter to determine behavior
-3. **Task Master Core** - In `mcp-server/src/core/task-master-core.js` provides direct function imports
+3. **TaskGraph Core** - In `mcp-server/src/core/task-master-core.js` provides direct function imports
 4. **MCP Tools** - In `mcp-server/src/tools/` register the functions with the MCP server
 
 ```
@@ -155,7 +155,7 @@ export async function newFeature(param1, param2, options = {}) {
 }
 ```
 
-### Task Master Core Update
+### TaskGraph Core Update
 
 ```javascript
 // In mcp-server/src/core/task-master-core.js

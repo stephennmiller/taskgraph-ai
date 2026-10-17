@@ -1,6 +1,6 @@
 /**
  * tool-registration.test.js
- * Comprehensive unit tests for the Task Master MCP tool registration system
+ * Comprehensive unit tests for the TaskGraph MCP tool registration system
  * Tests environment variable control system covering all configuration modes and edge cases
  */
 
@@ -32,7 +32,7 @@ const ALL_COUNT = Object.keys(toolRegistry).length;
 const CORE_COUNT = coreTools.length;
 const STANDARD_COUNT = standardTools.length;
 
-describe('Task Master Tool Registration System', () => {
+describe('TaskGraph Tool Registration System', () => {
 	let mockServer;
 	let originalEnv;
 

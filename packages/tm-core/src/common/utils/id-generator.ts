@@ -1,5 +1,5 @@
 /**
- * @fileoverview ID generation utilities for Task Master
+ * @fileoverview ID generation utilities for TaskGraph
  * Provides functions to generate unique identifiers for tasks and subtasks
  */
 

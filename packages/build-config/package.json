@@ -1,6 +1,6 @@
 {
 	"name": "@tm/build-config",
-	"description": "Shared build configuration for Task Master monorepo",
+	"description": "Shared build configuration for TaskGraph monorepo",
 	"type": "module",
 	"private": true,
 	"main": "./dist/tsdown.base.js",

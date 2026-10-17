@@ -1,6 +1,6 @@
 {
 	"name": "@tm/cli",
-	"description": "Task Master CLI - Command line interface for task management",
+	"description": "TaskGraph CLI - Command line interface for task management",
 	"type": "module",
 	"private": true,
 	"main": "./dist/index.js",

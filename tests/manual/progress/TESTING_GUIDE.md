@@ -1,4 +1,4 @@
-# Task Master Progress Testing Guide
+# TaskGraph Progress Testing Guide
 
 Quick reference for testing streaming/non-streaming functionality with token tracking.
 

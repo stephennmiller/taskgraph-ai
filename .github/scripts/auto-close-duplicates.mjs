@@ -53,7 +53,7 @@ async function closeIssueAsDuplicate(
 
 If this is incorrect, please re-open this issue or create a new one.
 
-🤖 Generated with [Task Master Bot]`
+🤖 Generated with [TaskGraph Bot]`
 		}
 	);
 }

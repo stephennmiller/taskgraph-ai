@@ -30,7 +30,7 @@ describe('get_tasks MCP tool', () => {
 			'../../../../../dist/mcp-server.js'
 		);
 
-		// Initialize Task Master in test directory
+		// Initialize TaskGraph in test directory
 		execSync(`node "${cliPath}" init --yes`, {
 			stdio: 'pipe',
 			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }

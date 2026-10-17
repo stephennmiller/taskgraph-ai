@@ -303,7 +303,7 @@ export interface WorkflowSettings {
 }
 
 /**
- * Main configuration interface for Task Master core
+ * Main configuration interface for TaskGraph core
  */
 export interface IConfiguration {
 	/** Project root path */
@@ -540,7 +540,7 @@ export const DEFAULT_CONFIG_VALUES = {
 		REQUIRE_CLEAN_WORKING_TREE: true,
 		AUTO_STAGE_CHANGES: true,
 		INCLUDE_CO_AUTHOR: true,
-		CO_AUTHOR_NAME: 'TaskMaster AI',
+		CO_AUTHOR_NAME: 'TaskGraph',
 		CO_AUTHOR_EMAIL: 'taskmaster@tryhamster.com',
 		MIN_TESTS: 1,
 		MAX_FAILURES_IN_GREEN: 0,

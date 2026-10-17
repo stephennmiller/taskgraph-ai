@@ -1,6 +1,6 @@
 /**
  * @fileoverview Init Project Slash Command
- * Initialize a new Task Master project.
+ * Initialize a new TaskGraph project.
  */
 
 import { dynamicCommand } from '../../factories.js';
@@ -8,13 +8,13 @@ import { dynamicCommand } from '../../factories.js';
 /**
  * The init-project slash command - Init Project
  *
- * Initialize a new Task Master project.
+ * Initialize a new TaskGraph project.
  */
 export const initProject = dynamicCommand(
 	'init-project',
 	'Init Project',
 	'[prd-file]',
-	`Initialize a new Task Master project.
+	`Initialize a new TaskGraph project.
 
 Arguments: $ARGUMENTS
 

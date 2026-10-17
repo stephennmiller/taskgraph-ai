@@ -594,7 +594,7 @@ describe('shell-utils', () => {
 			expect(result.shellConfigFile).toBe(shellConfigPath);
 			expect(fs.appendFileSync).toHaveBeenCalledWith(
 				shellConfigPath,
-				"\n# Claude Code deferred MCP loading (added by Taskmaster)\nexport ENABLE_EXPERIMENTAL_MCP_CLI='true'\n"
+				"\n# Claude Code deferred MCP loading (added by TaskGraph)\nexport ENABLE_EXPERIMENTAL_MCP_CLI='true'\n"
 			);
 
 			// Cleanup

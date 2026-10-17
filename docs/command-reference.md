@@ -1,4 +1,4 @@
-# Task Master Command Reference
+# TaskGraph Command Reference
 
 Here's a comprehensive reference of all available commands:
 
@@ -248,7 +248,7 @@ taskgraph add-task --prompt="Description" --priority=high
 
 ## Tag Management
 
-Task Master supports tagged task lists for multi-context task management. Each tag represents a separate, isolated context for tasks.
+TaskGraph supports tagged task lists for multi-context task management. Each tag represents a separate, isolated context for tasks.
 
 ```bash
 # List all available tags with task counts and status
@@ -299,7 +299,7 @@ taskgraph delete-tag <tag-name> --yes
 ## Initialize a Project
 
 ```bash
-# Initialize a new project with Task Master structure
+# Initialize a new project with TaskGraph structure
 taskgraph init
 
 # Set up the Claude Code integration (CLAUDE.md import, .mcp.json, slash commands)

@@ -1,6 +1,6 @@
 /**
  * commands.js
- * Command-line interface for the Task Master CLI
+ * Command-line interface for the TaskGraph CLI
  */
 
 import fs from 'fs';
@@ -936,7 +936,7 @@ function registerCommands(programInstance) {
 			// Resolve PRD path: prioritize --input option, then positional argument
 			const prdPath = options.input || file;
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			let taskMaster;
 			try {
 				const initOptions = {
@@ -950,7 +950,7 @@ function registerCommands(programInstance) {
 				taskMaster = initTaskMaster(initOptions);
 			} catch (error) {
 				displayFormattedError(error, {
-					context: 'Initializing Task Master for PRD parsing',
+					context: 'Initializing TaskGraph for PRD parsing',
 					command: 'taskgraph parse-prd',
 					debug: getDebugFlag()
 				});
@@ -1082,7 +1082,7 @@ function registerCommands(programInstance) {
 		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -1188,7 +1188,7 @@ function registerCommands(programInstance) {
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (idArg, promptWords, options) => {
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true,
 					tag: options.tag
@@ -1372,7 +1372,7 @@ function registerCommands(programInstance) {
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true,
 					tag: options.tag
@@ -1527,7 +1527,7 @@ function registerCommands(programInstance) {
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true,
 					tag: options.tag
@@ -1652,7 +1652,7 @@ function registerCommands(programInstance) {
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true,
 					tag: options.tag
@@ -1790,7 +1790,7 @@ function registerCommands(programInstance) {
 		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const initOptions = {
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -1904,7 +1904,7 @@ function registerCommands(programInstance) {
 		.option('--to <id>', 'Ending task ID in a range to analyze')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const initOptions = {
 				tasksPath: options.file || true, // Tasks file is required to analyze
 				tag: options.tag
@@ -2007,7 +2007,7 @@ function registerCommands(programInstance) {
 		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (prompt, options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const initOptions = {
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -2347,7 +2347,7 @@ ${result.result}
 			const taskIds = options.id;
 			const all = options.all;
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -2450,7 +2450,7 @@ ${result.result}
 			}
 
 			// Correctly determine projectRoot
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -2543,7 +2543,7 @@ ${result.result}
 				tag: options.tag
 			};
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster(initOptions);
 
 			const taskId = options.id;
@@ -2600,7 +2600,7 @@ ${result.result}
 				tag: options.tag
 			};
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster(initOptions);
 
 			const taskId = options.id;
@@ -2657,7 +2657,7 @@ ${result.result}
 				tag: options.tag
 			};
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster(initOptions);
 
 			// Resolve tag using standard pattern
@@ -2687,7 +2687,7 @@ ${result.result}
 				tag: options.tag
 			};
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster(initOptions);
 
 			// Resolve tag using standard pattern
@@ -2720,7 +2720,7 @@ ${result.result}
 				initOptions.complexityReportPath = options.file;
 			}
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster(initOptions);
 
 			// Show current tag context
@@ -2754,7 +2754,7 @@ ${result.result}
 		.option('--generate', 'Regenerate task files after adding subtask')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -2936,7 +2936,7 @@ ${result.result}
 		.option('--generate', 'Regenerate task files after removing subtask')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -3238,7 +3238,7 @@ ${result.result}
 		.option('-y, --yes', 'Skip confirmation prompt', false)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -3479,7 +3479,7 @@ ${result.result}
 	// init command (Directly calls the implementation from init.js)
 	programInstance
 		.command('init')
-		.description('Initialize a new project with Task Master structure')
+		.description('Initialize a new project with TaskGraph structure')
 		.option('-y, --yes', 'Skip prompts and use default values')
 		.option('-n, --name <name>', 'Project name')
 		.option('-d, --description <description>', 'Project description')
@@ -3513,7 +3513,7 @@ ${result.result}
 				if (invalidProfiles.length > 0) {
 					console.error(
 						chalk.red(
-							`Unsupported rule profile(s): ${invalidProfiles.join(', ')}. Task Master supports Claude Code only; valid options: ${RULE_PROFILES.join(', ')}`
+							`Unsupported rule profile(s): ${invalidProfiles.join(', ')}. TaskGraph supports Claude Code only; valid options: ${RULE_PROFILES.join(', ')}`
 						)
 					);
 					process.exit(1);
@@ -3572,7 +3572,7 @@ ${result.result}
 		.addHelpText(
 			'after',
 			`
-Task Master uses Claude Code. Available models: opus, sonnet, haiku.
+TaskGraph uses Claude Code. Available models: opus, sonnet, haiku.
 
 Examples:
   $ taskgraph models                              # View current configuration
@@ -3582,7 +3582,7 @@ Examples:
   $ taskgraph models --setup                       # Run interactive setup`
 		)
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || false
 			});
@@ -3604,7 +3604,7 @@ Examples:
 			if (removedProviderFlags.length > 0) {
 				console.error(
 					chalk.red(
-						'Error: Task Master now uses Claude Code only, so provider flags such as --ollama, --openrouter and --baseURL are no longer supported.'
+						'Error: TaskGraph now uses Claude Code only, so provider flags such as --ollama, --openrouter and --baseURL are no longer supported.'
 					)
 				);
 				console.error(
@@ -4111,7 +4111,7 @@ Examples:
 				process.exit(1);
 			}
 
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -4223,7 +4223,7 @@ Examples:
 		)
 		.option('-t, --tag <tag>', 'Tag to use for the task list (default: master)')
 		.action(async (options) => {
-			// Initialize TaskMaster
+			// Initialize TaskGraph
 			const taskMaster = initTaskMaster({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -4295,7 +4295,7 @@ Examples:
 			);
 
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true
 				});
@@ -4449,7 +4449,7 @@ Examples:
 			);
 
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true
 				});
@@ -4521,7 +4521,7 @@ Examples:
 			);
 
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true
 				});
@@ -4579,7 +4579,7 @@ Examples:
 			);
 
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true
 				});
@@ -4643,7 +4643,7 @@ Examples:
 			);
 
 			try {
-				// Initialize TaskMaster
+				// Initialize TaskGraph
 				const taskMaster = initTaskMaster({
 					tasksPath: options.file || true
 				});
@@ -4940,7 +4940,7 @@ async function runCLI(argv = process.argv) {
 				boxen(
 					chalk.red.bold('Configuration Update Required!') +
 						'\n\n' +
-						chalk.white('Taskmaster now uses a ') +
+						chalk.white('TaskGraph now uses a ') +
 						chalk.yellow.bold('configuration file') +
 						chalk.white(
 							' in your project for AI model choices and settings.\n\n' +
@@ -4968,7 +4968,7 @@ async function runCLI(argv = process.argv) {
 							'`taskgraph models` to check your config & available models\n'
 						) +
 						chalk.cyan(
-							'`taskgraph models --setup` to adjust the AI models used by Taskmaster'
+							'`taskgraph models --setup` to adjust the AI models used by TaskGraph'
 						),
 					{
 						padding: 1,

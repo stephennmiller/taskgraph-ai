@@ -5,7 +5,7 @@
 /**
  * Available rule profiles for project initialization
  *
- * Task Master supports Claude Code only. This is the single source of truth.
+ * TaskGraph supports Claude Code only. This is the single source of truth.
  *
  * @type {RulesProfile[]}
  */

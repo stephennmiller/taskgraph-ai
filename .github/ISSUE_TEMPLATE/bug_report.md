@@ -29,7 +29,7 @@ Provide screenshots, logs, or error messages if applicable.
 
 ### Environment
 
-- Task Master version:
+- TaskGraph version:
 - Node.js version:
 - Operating system:
 - IDE (if applicable):

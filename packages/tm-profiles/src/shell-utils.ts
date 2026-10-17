@@ -244,6 +244,6 @@ export function enableDeferredMcpLoading(): ShellConfigResult {
 	return addShellExport(
 		'ENABLE_EXPERIMENTAL_MCP_CLI',
 		'true',
-		'Claude Code deferred MCP loading (added by Taskmaster)'
+		'Claude Code deferred MCP loading (added by TaskGraph)'
 	);
 }

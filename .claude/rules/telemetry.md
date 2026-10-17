@@ -1,5 +1,5 @@
 ---
-description: Guidelines for integrating AI usage telemetry across Task Master.
+description: Guidelines for integrating AI usage telemetry across TaskGraph.
 paths:
   - "scripts/modules/**/*.js"
   - "mcp-server/src/**/*.js"
@@ -7,7 +7,7 @@ paths:
 
 # AI Usage Telemetry Integration
 
-This document outlines the standard pattern for capturing, propagating, and handling AI usage telemetry data (cost, tokens, model, etc.) across the Task Master stack. This ensures consistent telemetry for both CLI and MCP interactions.
+This document outlines the standard pattern for capturing, propagating, and handling AI usage telemetry data (cost, tokens, model, etc.) across the TaskGraph stack. This ensures consistent telemetry for both CLI and MCP interactions.
 
 ## Overview
 

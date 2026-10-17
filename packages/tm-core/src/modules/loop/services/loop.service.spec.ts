@@ -394,7 +394,7 @@ describe('LoopService', () => {
 				// Uses appendFile instead of writeFile to preserve existing progress
 				expect(fsPromises.appendFile).toHaveBeenCalledWith(
 					'/test/progress.txt',
-					expect.stringContaining('# Taskmaster Loop Progress'),
+					expect.stringContaining('# TaskGraph Loop Progress'),
 					'utf-8'
 				);
 			});

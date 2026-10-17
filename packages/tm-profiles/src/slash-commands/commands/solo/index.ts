@@ -1,6 +1,6 @@
 /**
  * @fileoverview Solo Mode Commands
- * Commands that only work with local file-based storage (Taskmaster standalone).
+ * Commands that only work with local file-based storage (TaskGraph standalone).
  */
 
 // PRD parsing

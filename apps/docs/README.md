@@ -1,12 +1,12 @@
-# Task Master Documentation
+# TaskGraph Documentation
 
-Welcome to the Task Master documentation. This documentation site provides comprehensive guides for getting started with Task Master.
+Welcome to the TaskGraph documentation. This documentation site provides comprehensive guides for getting started with TaskGraph.
 
 ## Getting Started
 
 - [Quick Start Guide](/getting-started/quick-start) - Complete setup and first-time usage guide
 - [Requirements](/getting-started/quick-start/requirements) - What you need to get started
-- [Installation](/getting-started/quick-start/installation) - How to install Task Master
+- [Installation](/getting-started/quick-start/installation) - How to install TaskGraph
 
 ## Core Capabilities
 

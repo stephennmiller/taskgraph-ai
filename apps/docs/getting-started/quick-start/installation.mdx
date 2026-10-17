@@ -3,19 +3,19 @@ title: Installation
 sidebarTitle: "Installation"
 ---
 
-Now that you have Node.js and your first API Key, you are ready to begin installing Task Master in one of two ways. 
+Now that you have Node.js and your first API Key, you are ready to begin installing TaskGraph in one of two ways. 
 
 <Accordion title="Claude Code Quick Install">
 
 For Claude Code users:
 
 ```bash
-claude mcp add taskmaster-ai -- npx -y taskgraph-ai
+claude mcp add taskgraph-ai -- npx -y taskgraph-ai
 ```
 
 Don't forget to add your API keys to the configuration:
 - in the root .env of your Project
-- in the "env" section of your mcp config for taskmaster-ai
+- in the "env" section of your mcp config for taskgraph-ai
 
 </Accordion>
 ## Installation Options
@@ -23,9 +23,9 @@ Don't forget to add your API keys to the configuration:
 
 <Accordion title="Option 1: MCP (Recommended)">
 
-MCP (Model Context Protocol) lets you run Task Master directly from Claude Code.
+MCP (Model Context Protocol) lets you run TaskGraph directly from Claude Code.
 
-## 1. Add Task Master to Claude Code
+## 1. Add TaskGraph to Claude Code
 
 Register the server with `claude mcp add` (see Quick Install above), or add it to your project's `.mcp.json`. `taskgraph init --rules claude` writes this file for you.
 
@@ -34,7 +34,7 @@ Register the server with `claude mcp add` (see Quick Install above), or add it t
 ```json
 {
   "mcpServers": {
-    "taskmaster-ai": {
+    "taskgraph-ai": {
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
@@ -70,12 +70,12 @@ For example, to use Claude Code (no API key required):
 Change the main model to claude-code/sonnet
 ```
 
-#### 3. Initialize Task Master
+#### 3. Initialize TaskGraph
 
 In Claude Code, say:
 
 ```txt
-Initialize taskmaster-ai in my project
+Initialize taskgraph in my project
 ```
 
 </Accordion>

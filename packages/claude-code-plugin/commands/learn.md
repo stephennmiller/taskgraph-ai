@@ -1,8 +1,8 @@
-Learn about Task Master capabilities through interactive exploration.
+Learn about TaskGraph capabilities through interactive exploration.
 
 Arguments: $ARGUMENTS
 
-## Interactive Task Master Learning
+## Interactive TaskGraph Learning
 
 Based on your input, I'll help you discover capabilities:
 

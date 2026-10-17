@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { filterCommandsByMode } from '../commands/index.js';
 import type { FormattedSlashCommand, SlashCommand } from '../types.js';
 
-/** Default namespace for TaskMaster commands */
+/** Default namespace for TaskGraph commands */
 export const TM_NAMESPACE = 'tm';
 
 /**
@@ -205,7 +205,7 @@ export abstract class BaseSlashCommandProfile {
 		}
 
 		try {
-			// When mode is specified, first remove ALL existing TaskMaster commands
+			// When mode is specified, first remove ALL existing TaskGraph commands
 			// to ensure clean slate (prevents orphaned commands when switching modes)
 			if (options?.mode) {
 				this.removeSlashCommands(projectRoot, commands, false);
@@ -344,7 +344,7 @@ export abstract class BaseSlashCommandProfile {
 	/**
 	 * Replace slash commands for a new operating mode.
 	 *
-	 * Removes all existing TaskMaster commands and adds commands for the new mode.
+	 * Removes all existing TaskGraph commands and adds commands for the new mode.
 	 * This is useful when switching between solo and team modes.
 	 *
 	 * @param projectRoot - Absolute path to the project root
@@ -364,7 +364,7 @@ export abstract class BaseSlashCommandProfile {
 		commands: SlashCommand[],
 		newMode: 'solo' | 'team'
 	): SlashCommandResult {
-		// Remove all existing TaskMaster commands
+		// Remove all existing TaskGraph commands
 		const removeResult = this.removeSlashCommands(projectRoot, commands);
 		if (!removeResult.success) {
 			return removeResult;

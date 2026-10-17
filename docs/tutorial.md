@@ -1,14 +1,14 @@
-# Task Master Tutorial
+# TaskGraph Tutorial
 
-This tutorial will guide you through setting up and using Task Master for AI-driven development.
+This tutorial will guide you through setting up and using TaskGraph for AI-driven development.
 
 ## Initial Setup
 
-There are two ways to set up Task Master: using MCP (recommended) or via npm installation.
+There are two ways to set up TaskGraph: using MCP (recommended) or via npm installation.
 
 ### Option 1: Using MCP (Recommended)
 
-MCP (Model Context Protocol) provides the easiest way to get started with Task Master directly in Claude Code.
+MCP (Model Context Protocol) provides the easiest way to get started with TaskGraph directly in Claude Code.
 
 1. **Install the package**
 
@@ -21,7 +21,7 @@ npm i -g taskgraph-ai
 ```json
 {
   "mcpServers": {
-    "taskmaster-ai": {
+    "taskgraph-ai": {
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
@@ -48,10 +48,10 @@ We recommend having keys in both places and adding mcp.json to your gitignore so
 
 3. **Enable the MCP** server in Claude Code (run `/mcp` to check it is connected)
 
-4. **Prompt the AI** to initialize Task Master:
+4. **Prompt the AI** to initialize TaskGraph:
 
 ```
-Can you please initialize taskmaster-ai into my project?
+Can you please initialize taskgraph into my project?
 ```
 
 The AI will:
@@ -62,7 +62,7 @@ The AI will:
 
 5. Place your PRD document in the `.taskmaster/docs/` directory (e.g., `.taskmaster/docs/prd.txt`)
 
-6. **Use natural language commands** to interact with Task Master:
+6. **Use natural language commands** to interact with TaskGraph:
 
 ```
 Can you parse my PRD at .taskmaster/docs/prd.txt?
@@ -96,7 +96,7 @@ This will prompt you for project details and set up a new project with the neces
 
 ## Common Commands
 
-After setting up Task Master, you can use these commands (either via AI prompts or CLI):
+After setting up TaskGraph, you can use these commands (either via AI prompts or CLI):
 
 ```bash
 # Parse a PRD and generate tasks
@@ -111,11 +111,11 @@ taskgraph next
 
 ## Setting up Claude Code Integration
 
-Task Master is built for Claude Code, providing a structured workflow for AI-driven development.
+TaskGraph is built for Claude Code, providing a structured workflow for AI-driven development.
 
 ### Using Claude Code with MCP (Recommended)
 
-If you've already set up Task Master with MCP in Claude Code, the integration is automatic. You can simply use natural language to interact with Task Master:
+If you've already set up TaskGraph with MCP in Claude Code, the integration is automatic. You can simply use natural language to interact with TaskGraph:
 
 ```
 What tasks are available to work on next?
@@ -127,7 +127,7 @@ I'd like to implement task 4. What does it involve?
 
 If you're not using MCP, run `taskgraph init --rules claude`. This:
 
-1. Copies Task Master's workflow guide to `.taskmaster/CLAUDE.md` and imports it from your project's `CLAUDE.md`
+1. Copies TaskGraph's workflow guide to `.taskmaster/CLAUDE.md` and imports it from your project's `CLAUDE.md`
 2. Writes the `.mcp.json` server entry
 3. Installs the `/tm` slash commands in `.claude/commands/tm`
 
@@ -284,7 +284,7 @@ You can reorganize tasks in various ways:
 - Moving a subtask to a different parent: `--from=5.2 --to=7.3`
 - Reordering subtasks within the same parent: `--from=5.2 --to=5.4`
 - Moving a task to a new ID position: `--from=5 --to=25` (even if task 25 doesn't exist yet)
-- Moving multiple tasks at once: `--from=10,11,12 --to=16,17,18` (must have same number of IDs, Taskmaster will look through each position)
+- Moving multiple tasks at once: `--from=10,11,12 --to=16,17,18` (must have same number of IDs, TaskGraph will look through each position)
 
 When moving tasks to new IDs:
 
@@ -372,7 +372,7 @@ taskgraph expand --id=5 --research
 ### Starting a new project
 
 ```
-I've just initialized a new project with Claude Task Master. I have a PRD at .taskmaster/docs/prd.txt.
+I've just initialized a new project with TaskGraph. I have a PRD at .taskmaster/docs/prd.txt.
 Can you help me parse it and set up the initial tasks?
 ```
 
@@ -421,7 +421,7 @@ Can you show me the complexity report in a more readable format?
 
 ### Research-Driven Development
 
-Task Master includes a powerful research tool that provides fresh, up-to-date information beyond the AI's knowledge cutoff. This is particularly valuable for:
+TaskGraph includes a powerful research tool that provides fresh, up-to-date information beyond the AI's knowledge cutoff. This is particularly valuable for:
 
 #### Getting Current Best Practices
 
@@ -473,7 +473,7 @@ The research tool automatically includes relevant project context and provides f
 
 ## Git Integration and Tag Management
 
-Task Master supports tagged task lists for multi-context development, which is particularly useful when working with git branches or different project phases.
+TaskGraph supports tagged task lists for multi-context development, which is particularly useful when working with git branches or different project phases.
 
 ### Working with Tags
 
@@ -554,7 +554,7 @@ taskgraph tags --show-metadata
 
 ### Git Workflow Integration
 
-A typical git workflow with Task Master tags:
+A typical git workflow with TaskGraph tags:
 
 1. **Create feature branch**: `git checkout -b feature/user-auth`
 2. **Create matching tag**: Ask agent to run `taskgraph add-tag --from-branch`

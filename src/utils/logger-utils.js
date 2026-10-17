@@ -1,5 +1,5 @@
 /**
- * Logger utility functions for Task Master
+ * Logger utility functions for TaskGraph
  * Provides standardized logging patterns for both CLI and utility contexts
  */
 

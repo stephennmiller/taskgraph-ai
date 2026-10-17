@@ -217,7 +217,7 @@ describe('findProjectRoot - Integration Tests', () => {
 		});
 
 		it('should return package root when package has its own .taskmaster', () => {
-			// Scenario: Nested Task Master initialization
+			// Scenario: Nested TaskGraph initialization
 			//
 			// Structure:
 			//   /tmp/monorepo/.taskmaster
