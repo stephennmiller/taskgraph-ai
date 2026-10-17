@@ -278,12 +278,9 @@ function onPostConvertRulesProfile(targetDir, assetsDir) {
 export const claudeProfile = createProfile({
 	name: 'claude',
 	displayName: 'Claude Code',
-	url: 'claude.ai',
-	docsUrl: 'docs.anthropic.com/en/docs/claude-code',
 	profileDir: '.', // Root directory
 	rulesDir: '.', // No specific rules directory needed
 	mcpConfigName: '.mcp.json', // Place MCP config in project root
-	includeDefaultRules: false,
 	fileMap: {
 		'AGENTS.md': '.taskmaster/CLAUDE.md'
 	},

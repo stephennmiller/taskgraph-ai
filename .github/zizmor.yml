@@ -39,7 +39,6 @@ rules:
   adhoc-packages:
     ignore:
       # Installed from the registry at an exact version, in the publishing job only.
-      # The npm CLI must be upgraded outside the lockfile for trusted publishing, and
-      # `ovsx` is used only to publish. Bump both by hand when updating the release flow.
+      # The npm CLI must be upgraded outside the lockfile for trusted publishing.
+      # Bump it by hand when updating the release flow.
       - release.yml:44
-      - extension-release.yml:81
