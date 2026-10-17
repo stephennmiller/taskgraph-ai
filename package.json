@@ -61,7 +61,7 @@
 	"license": "MIT WITH Commons-Clause",
 	"dependencies": {
 		"@inquirer/search": "^3.0.15",
-		"@sentry/node": "^10.76.2",
+		"@sentry/node": "^11.6.0",
 		"@streamparser/json": "^0.0.22",
 		"@supabase/supabase-js": "^2.57.4",
 		"@types/turndown": "^5.0.6",
