@@ -977,11 +977,7 @@ async function createProjectStructure(
 	}
 
 	// Install the Claude profile if requested via --rules or the interactive prompt.
-	if (
-		options.rulesExplicitlyProvided ||
-		options.yes ||
-		options.shouldSetupRules
-	) {
+	if (selectedRuleProfiles.length > 0) {
 		log('info', 'Setting up Claude Code integration...');
 		for (const profileName of selectedRuleProfiles) {
 			_processSingleProfile(profileName);
