@@ -75,7 +75,7 @@
 		"@aws-sdk/credential-providers": "^3.1152.0",
 		"@inquirer/search": "^3.0.15",
 		"@openrouter/ai-sdk-provider": "^3.1.0",
-		"@sentry/node": "^10.27.0",
+		"@sentry/node": "^10.76.2",
 		"@streamparser/json": "^0.0.22",
 		"@supabase/supabase-js": "^2.57.4",
 		"@types/turndown": "^5.0.6",
