@@ -42,7 +42,8 @@ export const theme = {
 	active: chalk.cyan,
 	/**
 	 * Body text in the terminal's default foreground. Replaces chalk.white,
-	 * which many light themes render as pale gray.
+	 * which many light themes render as pale gray. Plain chalk adds no color
+	 * code, so unlike chalk.reset it never cancels an enclosing bold or italic.
 	 */
-	text: chalk.reset
+	text: chalk
 };
