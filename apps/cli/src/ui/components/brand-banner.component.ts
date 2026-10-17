@@ -80,7 +80,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	// Hamster promo
 	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com');
-	console.log(chalk.dim('Taskmaster for teams: ') + chalk.magenta(hamsterLink));
+	console.log(chalk.dim('TaskGraph for teams: ') + chalk.magenta(hamsterLink));
 	console.log('');
 }
 
@@ -109,6 +109,6 @@ export function displayInitBanner(): void {
 
 	// Hamster promo
 	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com');
-	console.log(chalk.dim('Taskmaster for teams: ') + chalk.magenta(hamsterLink));
+	console.log(chalk.dim('TaskGraph for teams: ') + chalk.magenta(hamsterLink));
 	console.log('');
 }

@@ -9,7 +9,7 @@ Discover the technical capabilities of TaskGraph, including supported models, in
 
 # CLI Interface Synopsis
 
-This document outlines the command-line interface (CLI) for the Task Master application, as defined in `bin/task-master.js` and the `scripts/modules/commands.js` file (which I will assume exists based on the context). This guide is intended for those writing user-facing documentation to understand how users interact with the application from the command line.
+This document outlines the command-line interface (CLI) for the TaskGraph application, as defined in `bin/taskgraph.js` and the `scripts/modules/commands.js` file (which I will assume exists based on the context). This guide is intended for those writing user-facing documentation to understand how users interact with the application from the command line.
 
 ## Entry Point
 
@@ -168,7 +168,6 @@ These functions are crucial for managing the relationships between tasks.
 These functions are for managing the project and its configuration.
 
 -   **`generateTaskFiles()`**: Generates individual task files from `tasks.json`.
--   **`migrateProject()`**: Migrates the project to the new `.taskmaster` directory structure.
 -   **`performResearch(query, options)`**: Performs AI-powered research with project context.
 
 This overview should provide a solid foundation for creating user-facing documentation. For more detailed information on each function, refer to the source code in `scripts/modules/task-manager/`.

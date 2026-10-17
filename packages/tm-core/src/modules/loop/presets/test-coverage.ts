@@ -7,7 +7,7 @@ Find uncovered code and write meaningful tests. ONE test per session.
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (coverage %, what was tested)
+- @.taskgraph/loop-progress.txt - Progress log (coverage %, what was tested)
 
 ## What Makes a Great Test
 

@@ -13,29 +13,29 @@ function onAddRulesProfile(targetDir, assetsDir) {
 		'info',
 		'[Claude] Commands and agents are now available via the TaskGraph plugin'
 	);
-	log('info', '[Claude] Install with: /plugin marketplace add taskmaster');
-	log('info', '[Claude] Then: /plugin install taskmaster@taskmaster');
+	log('info', '[Claude] Install with: /plugin marketplace add taskgraph');
+	log('info', '[Claude] Then: /plugin install taskgraph@taskgraph');
 
 	// Handle CLAUDE.md import for non-destructive integration
 	const sourceFile = path.join(assetsDir, 'AGENTS.md');
 	const userClaudeFile = path.join(targetDir, 'CLAUDE.md');
-	const taskMasterClaudeFile = path.join(targetDir, '.taskmaster', 'CLAUDE.md');
-	const importLine = '@./.taskmaster/CLAUDE.md';
+	const taskGraphClaudeFile = path.join(targetDir, '.taskgraph', 'CLAUDE.md');
+	const importLine = '@./.taskgraph/CLAUDE.md';
 	const importSection = `\n## TaskGraph Instructions\n**Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**\n${importLine}`;
 
 	if (fs.existsSync(sourceFile)) {
 		try {
-			// Ensure .taskmaster directory exists
-			const taskMasterDir = path.join(targetDir, '.taskmaster');
-			if (!fs.existsSync(taskMasterDir)) {
-				fs.mkdirSync(taskMasterDir, { recursive: true });
+			// Ensure .taskgraph directory exists
+			const taskGraphDir = path.join(targetDir, '.taskgraph');
+			if (!fs.existsSync(taskGraphDir)) {
+				fs.mkdirSync(taskGraphDir, { recursive: true });
 			}
 
-			// Copy TaskGraph instructions to .taskmaster/CLAUDE.md
-			fs.copyFileSync(sourceFile, taskMasterClaudeFile);
+			// Copy TaskGraph instructions to .taskgraph/CLAUDE.md
+			fs.copyFileSync(sourceFile, taskGraphClaudeFile);
 			log(
 				'debug',
-				`[Claude] Created TaskGraph instructions at ${taskMasterClaudeFile}`
+				`[Claude] Created TaskGraph instructions at ${taskGraphClaudeFile}`
 			);
 
 			// Handle user's CLAUDE.md
@@ -165,7 +165,7 @@ export const claudeProfile = createProfile({
 	rulesDir: '.', // No specific rules directory needed
 	mcpConfigName: '.mcp.json', // Place MCP config in project root
 	fileMap: {
-		'AGENTS.md': '.taskmaster/CLAUDE.md'
+		'AGENTS.md': '.taskgraph/CLAUDE.md'
 	},
 	onAdd: onAddRulesProfile,
 	onPostConvert: onPostConvertRulesProfile

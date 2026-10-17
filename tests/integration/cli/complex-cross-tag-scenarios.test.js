@@ -19,7 +19,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 		'..',
 		'..',
 		'dist',
-		'task-master.js'
+		'taskgraph.js'
 	);
 
 	beforeEach(() => {
@@ -29,7 +29,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 		// Keep integration timings deterministic
 		process.env.TASKGRAPH_SKIP_AUTO_UPDATE = '1';
 
-		// Initialize task-master
+		// Initialize taskgraph
 		execSync(`node ${binPath} init --yes`, {
 			stdio: 'pipe'
 		});
@@ -123,7 +123,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 		};
 
 		// Write tasks to file
-		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
+		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 		fs.writeFileSync(tasksPath, JSON.stringify(complexTasks, null, 2));
 	});
 

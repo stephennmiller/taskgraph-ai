@@ -117,7 +117,7 @@ When adding keys to `.env` only, the `models` tool will explain that the keys ar
 
 ## CLI Fallback
 
-TaskGraph is also available via CLI commands, by installing with `npm install taskgraph-ai@latest` in a terminal. Running `taskgraph help` will show all available commands, which offer a 1:1 experience with the MCP server. As the AI agent, you should refer to the system prompts and rules provided to you to identify Taskmaster-specific rules that help you understand how and when to use it.
+TaskGraph is also available via CLI commands, by installing with `npm install taskgraph-ai@latest` in a terminal. Running `taskgraph help` will show all available commands, which offer a 1:1 experience with the MCP server. As the AI agent, you should refer to the system prompts and rules provided to you to identify TaskGraph-specific rules that help you understand how and when to use it.
 
 ## Next Steps
 

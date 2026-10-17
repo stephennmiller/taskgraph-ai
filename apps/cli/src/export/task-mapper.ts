@@ -53,7 +53,7 @@ export function mapTask(task: ExportableTask): MappedTask {
 			originalPriority: task.priority,
 			createdAt: task.createdAt,
 			updatedAt: task.updatedAt,
-			source: 'task-master-cli'
+			source: 'taskgraph-cli'
 		}
 	};
 }

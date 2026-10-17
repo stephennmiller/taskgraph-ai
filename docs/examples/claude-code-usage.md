@@ -4,7 +4,7 @@ The Claude Code provider allows you to use Claude models through the Claude Code
 
 ## Configuration
 
-To use the Claude Code provider, update your `.taskmaster/config.json`:
+To use the Claude Code provider, update your `.taskgraph/config.json`:
 
 ```json
 {
@@ -76,7 +76,7 @@ The Claude Code SDK supports additional settings that provide fine-grained contr
 
 ### Advanced Settings Usage
 
-To update settings for Claude Code, update your `.taskmaster/config.json`:
+To update settings for Claude Code, update your `.taskgraph/config.json`:
 
 The Claude Code settings can be specified globally in the `claudeCode` section of the config, or on a per-command basis in the `commandSpecific` section:
 

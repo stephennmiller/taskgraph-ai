@@ -7,8 +7,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
@@ -23,10 +23,10 @@ export class ConfigLoader {
 	private readonly logger = getLogger('ConfigLoader');
 
 	constructor(projectRoot: string) {
-		this.localConfigPath = path.join(projectRoot, '.taskmaster', 'config.json');
+		this.localConfigPath = path.join(projectRoot, '.taskgraph', 'config.json');
 		this.globalConfigPath = path.join(
 			process.env.HOME || '',
-			'.taskmaster',
+			'.taskgraph',
 			'config.json'
 		);
 	}
@@ -94,7 +94,7 @@ export class ConfigLoader {
 				this.logger.debug('No local config.json found, using defaults');
 				return null;
 			}
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to load local configuration',
 				ERROR_CODES.CONFIG_ERROR,
 				{ configPath: this.localConfigPath },
@@ -120,7 +120,7 @@ export class ConfigLoader {
 		//   if (error.code === 'ENOENT') {
 		//     return null;
 		//   }
-		//   throw new TaskMasterError(
+		//   throw new TaskGraphError(
 		//     'Failed to load global configuration',
 		//     ERROR_CODES.CONFIG_ERROR,
 		//     { configPath: this.globalConfigPath },

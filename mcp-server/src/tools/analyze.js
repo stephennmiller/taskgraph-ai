@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
 import { COMPLEXITY_REPORT_FILE } from '../../../src/constants/paths.js';
 import { resolveComplexityReportOutputPath } from '../../../src/utils/path-utils.js';
-import { analyzeTaskComplexityDirect } from '../core/task-master-core.js'; // Assuming core functions are exported via task-master-core.js
+import { analyzeTaskComplexityDirect } from '../core/taskgraph-core.js'; // Assuming core functions are exported via taskgraph-core.js
 import { findTasksPath } from '../core/utils/path-utils.js';
 
 /**

@@ -457,7 +457,7 @@ export class BulkUpdateStrategy extends BaseUpdateStrategy {
 
   async validate(context: IUpdateContext): Promise<void> {
     if (!context.options.from) {
-      throw new TaskMasterError('Bulk mode requires --from parameter');
+      throw new TaskGraphError('Bulk mode requires --from parameter');
     }
     // Additional validations...
   }
@@ -504,7 +504,7 @@ export class SubtaskUpdateStrategy extends BaseUpdateStrategy {
   async validate(context: IUpdateContext): Promise<void> {
     const parsed = TaskIdValidator.parseSubtaskId(context.options.id);
     if (!parsed) {
-      throw new TaskMasterError('Invalid subtask ID format');
+      throw new TaskGraphError('Invalid subtask ID format');
     }
   }
 
@@ -834,7 +834,7 @@ export class UpdateStrategyFactory {
           this.aiService
         );
       default:
-        throw new TaskMasterError(`Unknown update mode: ${mode}`);
+        throw new TaskGraphError(`Unknown update mode: ${mode}`);
     }
   }
 
@@ -848,7 +848,7 @@ export class UpdateStrategyFactory {
     if (options.id !== undefined) {
       return UpdateMode.SINGLE;
     }
-    throw new TaskMasterError('Must provide either --id or --from parameter');
+    throw new TaskGraphError('Must provide either --id or --from parameter');
   }
 }
 ```

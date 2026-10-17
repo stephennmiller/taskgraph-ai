@@ -134,8 +134,8 @@ Commands analyze project state and provide intelligent suggestions based on:
 
 | Old | New |
 |-----|-----|
-| `/project:task-master:list` | `/project:tm/list` |
-| `/project:task-master:complete` | `/project:tm/set-status/to-done` |
+| `/project:taskgraph:list` | `/project:tm/list` |
+| `/project:taskgraph:complete` | `/project:tm/set-status/to-done` |
 | `/project:workflows:auto-implement` | `/project:tm/workflows/auto-implement` |
 
 ## Tips

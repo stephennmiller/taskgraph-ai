@@ -20,7 +20,7 @@ In an AI-driven development process—particularly with tools like [Cursor](http
 
 TaskGraph configuration is now managed through two primary methods:
 
-1.  **`.taskmaster/config.json` File (Project Root - Primary)**
+1.  **`.taskgraph/config.json` File (Project Root - Primary)**
 
     - Stores AI model selections (`main`, `research`, `fallback`), model parameters (`maxTokens`, `temperature`), `logLevel`, `defaultSubtasks`, `defaultPriority`, `projectName`, etc.
     - Managed using the `taskgraph models --setup` command or the `models` MCP tool.
@@ -192,7 +192,7 @@ Notes:
 ## AI Integration (Updated)
 
 - The script now uses a unified AI service layer (`ai-services-unified.js`).
-- Model selection (e.g., Claude vs. Perplexity for `--research`) is determined by the configuration in `.taskmaster/config.json` based on the requested `role` (`main` or `research`).
+- Model selection (e.g., Claude vs. Perplexity for `--research`) is determined by the configuration in `.taskgraph/config.json` based on the requested `role` (`main` or `research`).
 - API keys are automatically resolved from your `.env` file (for CLI) or MCP session environment.
 - To use the research capabilities (e.g., `expand --research`), ensure you have:
   1.  Configured a model for the `research` role using `taskgraph models --setup` (Perplexity models are recommended).

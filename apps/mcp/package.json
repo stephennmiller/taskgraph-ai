@@ -37,14 +37,7 @@
 	"engines": {
 		"node": ">=22.0.0"
 	},
-	"keywords": [
-		"task-master",
-		"mcp",
-		"mcp-server",
-		"ai-agent",
-		"workflow",
-		"tdd"
-	],
+	"keywords": ["taskgraph", "mcp", "mcp-server", "ai-agent", "workflow", "tdd"],
 	"author": "",
 	"license": "MIT",
 	"typesVersions": {

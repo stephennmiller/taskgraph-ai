@@ -60,7 +60,7 @@ describe('Task Lifecycle Integration Tests', () => {
 		});
 
 		// Path where tasks.json will be stored
-		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
+		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 
 		// Create initial tasks.json (init doesn't create it until first task added)
 		const initialTasks = {
@@ -143,21 +143,21 @@ describe('Task Lifecycle Integration Tests', () => {
 		it('should initialize project structure', () => {
 			// ASSERTION PATTERN:
 			// We verify the actual directory structure was created
-			expect(fs.existsSync(path.join(testDir, '.taskmaster'))).toBe(true);
-			expect(fs.existsSync(path.join(testDir, '.taskmaster', 'tasks'))).toBe(
+			expect(fs.existsSync(path.join(testDir, '.taskgraph'))).toBe(true);
+			expect(fs.existsSync(path.join(testDir, '.taskgraph', 'tasks'))).toBe(
 				true
 			);
-			expect(fs.existsSync(path.join(testDir, '.taskmaster', 'docs'))).toBe(
+			expect(fs.existsSync(path.join(testDir, '.taskgraph', 'docs'))).toBe(
 				true
 			);
-			expect(fs.existsSync(path.join(testDir, '.taskmaster', 'reports'))).toBe(
+			expect(fs.existsSync(path.join(testDir, '.taskgraph', 'reports'))).toBe(
 				true
 			);
 			expect(
-				fs.existsSync(path.join(testDir, '.taskmaster', 'config.json'))
+				fs.existsSync(path.join(testDir, '.taskgraph', 'config.json'))
 			).toBe(true);
 			expect(
-				fs.existsSync(path.join(testDir, '.taskmaster', 'state.json'))
+				fs.existsSync(path.join(testDir, '.taskgraph', 'state.json'))
 			).toBe(true);
 		});
 	});

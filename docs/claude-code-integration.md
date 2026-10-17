@@ -53,7 +53,7 @@ TaskGraph will attempt authentication in this order:
 Add Claude Code to your TaskGraph configuration:
 
 ```javascript
-// In your .taskmaster/config.json or via taskgraph models command
+// In your .taskgraph/config.json or via taskgraph models command
 {
   "models": {
     "main": "claude-code:sonnet",      // Use Claude Code with Sonnet

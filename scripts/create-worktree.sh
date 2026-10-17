@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-WORKTREES_DIR="$(cd "$PROJECT_ROOT/.." && pwd)/claude-task-master-worktrees"
+WORKTREES_DIR="$(cd "$PROJECT_ROOT/.." && pwd)/taskgraph-worktrees"
 cd "$PROJECT_ROOT"
 
 # Get branch name (default to current branch with auto/ prefix)

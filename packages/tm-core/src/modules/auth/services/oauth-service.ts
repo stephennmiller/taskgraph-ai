@@ -10,7 +10,7 @@
 
 import os from 'os';
 import type { Session } from '@supabase/supabase-js';
-import { TASKMASTER_VERSION } from '../../../common/constants/index.js';
+import { TASKGRAPH_VERSION } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
 import type { SupabaseAuthClient } from '../../integration/clients/supabase-client.js';
 import { getAuthConfig } from '../config.js';
@@ -265,7 +265,7 @@ export class OAuthService {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'User-Agent': `TaskMasterCLI/${this.getCliVersion()}`
+					'User-Agent': `TaskGraphCLI/${this.getCliVersion()}`
 				},
 				body: JSON.stringify({
 					name: 'TaskGraph CLI',
@@ -326,7 +326,7 @@ export class OAuthService {
 				const response = await fetch(statusUrl, {
 					method: 'GET',
 					headers: {
-						'User-Agent': `TaskMasterCLI/${this.getCliVersion()}`
+						'User-Agent': `TaskGraphCLI/${this.getCliVersion()}`
 					}
 				});
 
@@ -430,7 +430,7 @@ export class OAuthService {
 	 * Get CLI version from centralized constants
 	 */
 	private getCliVersion(): string {
-		return TASKMASTER_VERSION;
+		return TASKGRAPH_VERSION;
 	}
 
 	/**

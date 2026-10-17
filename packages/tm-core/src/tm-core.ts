@@ -15,8 +15,8 @@ import { WorkflowDomain } from './modules/workflow/workflow-domain.js';
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from './common/errors/task-master-error.js';
+	TaskGraphError
+} from './common/errors/taskgraph-error.js';
 import type { IConfiguration } from './common/interfaces/configuration.interface.js';
 import {
 	type Logger,
@@ -137,7 +137,7 @@ export class TmCore {
 	 */
 	private constructor(options: TmCoreOptions) {
 		if (!options.projectPath) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Project path is required',
 				ERROR_CODES.MISSING_CONFIGURATION
 			);
@@ -145,7 +145,7 @@ export class TmCore {
 
 		// Validate that projectPath is absolute
 		if (!path.isAbsolute(options.projectPath)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Project path must be an absolute path, received: "${options.projectPath}"`,
 				ERROR_CODES.INVALID_INPUT
 			);
@@ -198,7 +198,7 @@ export class TmCore {
 				this._logger.error('Failed to initialize TmCore:', error);
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to initialize TmCore',
 				ERROR_CODES.INTERNAL_ERROR,
 				{ operation: 'initialize' },

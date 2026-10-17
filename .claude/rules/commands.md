@@ -10,7 +10,7 @@ paths:
 
 While this document details the implementation of TaskGraph's **CLI commands**, the **preferred method for interacting with TaskGraph in integrated environments (like Claude Code) is through the MCP server tools**. 
 
-- **Use MCP Tools First**: Always prefer using the MCP tools (e.g., `get_tasks`, `add_task`) when interacting programmatically or via an integrated tool. They offer better performance, structured data, and richer error handling. See `taskmaster.md` for a comprehensive list of MCP tools and their corresponding CLI commands.
+- **Use MCP Tools First**: Always prefer using the MCP tools (e.g., `get_tasks`, `add_task`) when interacting programmatically or via an integrated tool. They offer better performance, structured data, and richer error handling. See `taskgraph.md` for a comprehensive list of MCP tools and their corresponding CLI commands.
 - **CLI as Fallback/User Interface**: The `taskgraph` CLI commands described here are primarily intended for:
     - Direct user interaction in the terminal.
     - A fallback mechanism if the MCP server is unavailable or a specific functionality is not exposed via an MCP tool.

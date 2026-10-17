@@ -12,7 +12,6 @@ import expandTask from './task-manager/expand-task.js';
 import findNextTask from './task-manager/find-next-task.js';
 import isTaskDependentOn from './task-manager/is-task-dependent.js';
 import listTasks from './task-manager/list-tasks.js';
-import { migrateProject } from './task-manager/migrate.js';
 import moveTask from './task-manager/move-task.js';
 import parsePRD from './task-manager/parse-prd/index.js';
 import removeSubtask from './task-manager/remove-subtask.js';
@@ -57,7 +56,6 @@ export {
 	setResponseLanguage,
 	moveTask,
 	readComplexityReport,
-	migrateProject,
 	performResearch,
 	scopeUpTask,
 	scopeDownTask,

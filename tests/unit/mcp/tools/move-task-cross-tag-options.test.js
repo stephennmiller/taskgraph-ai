@@ -3,7 +3,7 @@ import { jest } from '@jest/globals';
 // Mocks
 const mockFindTasksPath = jest
 	.fn()
-	.mockReturnValue('/test/path/.taskmaster/tasks/tasks.json');
+	.mockReturnValue('/test/path/.taskgraph/tasks/tasks.json');
 jest.unstable_mockModule(
 	'../../../../mcp-server/src/core/utils/path-utils.js',
 	() => ({

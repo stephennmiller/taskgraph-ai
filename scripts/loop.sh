@@ -27,7 +27,7 @@ for ((i=1; i<=$1; i++)); do
   echo ""
   echo "━━━ Iteration $i of $1 ━━━"
 
-  result=$(docker sandbox run claude -p "@.taskmaster/tasks/tasks.json @.taskmaster/loop-progress.txt @CLAUDE.md \
+  result=$(docker sandbox run claude -p "@.taskgraph/tasks/tasks.json @.taskgraph/loop-progress.txt @CLAUDE.md \
 SETUP: If taskgraph command not found, run: npm i -g taskgraph-ai \
 \
 TASK: Implement ONE task/subtask for the tm loop feature. \
@@ -41,7 +41,7 @@ PROCESS: \
 6. Run npm test -w <package> to verify tests pass. \
 7. Mark complete: taskgraph set-status --id=<id> --status=done \
 8. Commit with message: feat(loop): <what was implemented> (do NOT include loop-progress.txt in commit) \
-9. Append super-concise notes to .taskmaster/loop-progress.txt: task ID, what was done, any learnings. \
+9. Append super-concise notes to .taskgraph/loop-progress.txt: task ID, what was done, any learnings. \
 \
 IMPORTANT: \
 - Complete ONLY ONE task per iteration. \

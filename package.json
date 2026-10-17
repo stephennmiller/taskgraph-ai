@@ -5,7 +5,7 @@
 	"main": "index.js",
 	"type": "module",
 	"bin": {
-		"taskgraph": "dist/task-master.js",
+		"taskgraph": "dist/taskgraph.js",
 		"taskgraph-mcp": "dist/mcp-server.js",
 		"taskgraph-ai": "dist/mcp-server.js"
 	},
@@ -35,7 +35,7 @@
 		"test:ci": "node --experimental-vm-modules node_modules/.bin/jest --coverage --ci",
 		"test:e2e": "./tests/e2e/run_e2e.sh",
 		"test:e2e-report": "./tests/e2e/run_e2e.sh --analyze-log",
-		"postpack": "chmod +x dist/task-master.js dist/mcp-server.js",
+		"postpack": "chmod +x dist/taskgraph.js dist/mcp-server.js",
 		"changeset": "changeset",
 		"publish-packages": "turbo run build lint test && changeset version && changeset publish",
 		"inspector": "npx @modelcontextprotocol/inspector node dist/mcp-server.js",
@@ -122,7 +122,7 @@
 	},
 	"files": [
 		"dist/**",
-		"README-task-master.md",
+		"README-taskgraph.md",
 		"README.md",
 		"LICENSE",
 		"CHANGELOG.md"

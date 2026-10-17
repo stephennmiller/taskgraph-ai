@@ -13,7 +13,7 @@ import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
 import { TaskEntity } from '../entities/task.entity.js';
-import { ERROR_CODES, TaskMasterError } from '../../../common/errors/task-master-error.js';
+import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 import type { ExpandTaskResult } from '../../integration/services/task-expansion.service.js';
 
@@ -170,15 +170,15 @@ export class TaskService {
 				storageType
 			};
 		} catch (error) {
-			// Re-throw all TaskMasterErrors without wrapping
+			// Re-throw all TaskGraphErrors without wrapping
 			// These errors are already user-friendly and have appropriate error codes
-			if (error instanceof TaskMasterError) {
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
 
 			// Only wrap unknown errors
 			this.logger.error('Failed to get task list', error);
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to get task list',
 				ERROR_CODES.INTERNAL_ERROR,
 				{
@@ -202,12 +202,12 @@ export class TaskService {
 			// Delegate to storage layer which handles the specific logic for tasks vs subtasks
 			return await this.storage.loadTask(String(taskId), activeTag);
 		} catch (error) {
-			// Re-throw all TaskMasterErrors without wrapping
-			if (error instanceof TaskMasterError) {
+			// Re-throw all TaskGraphErrors without wrapping
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Failed to get task ${taskId}`,
 				ERROR_CODES.STORAGE_ERROR,
 				{
@@ -540,7 +540,7 @@ export class TaskService {
 	): Promise<void> {
 		// Ensure we have storage
 		if (!this.storage) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Storage not initialized',
 				ERROR_CODES.STORAGE_ERROR
 			);
@@ -559,12 +559,12 @@ export class TaskService {
 			// Direct update - no AI processing
 			await this.storage.updateTask(taskIdStr, updates, activeTag);
 		} catch (error) {
-			// Re-throw all TaskMasterErrors without wrapping
-			if (error instanceof TaskMasterError) {
+			// Re-throw all TaskGraphErrors without wrapping
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Failed to update task ${taskId}`,
 				ERROR_CODES.STORAGE_ERROR,
 				{
@@ -595,7 +595,7 @@ export class TaskService {
 	): Promise<void> {
 		// Ensure we have storage
 		if (!this.storage) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Storage not initialized',
 				ERROR_CODES.STORAGE_ERROR
 			);
@@ -623,12 +623,12 @@ export class TaskService {
 		} catch (error) {
 			// If it's a user-facing error (like NO_BRIEF_SELECTED), don't wrap it
 			if (
-				error instanceof TaskMasterError
+				error instanceof TaskGraphError
 			) {
 				throw error;
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Failed to update task ${taskId} with prompt`,
 				ERROR_CODES.STORAGE_ERROR,
 				{
@@ -666,7 +666,7 @@ export class TaskService {
 	): Promise<ExpandTaskResult | void> {
 		// Ensure we have storage
 		if (!this.storage) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Storage not initialized',
 				ERROR_CODES.STORAGE_ERROR
 			);
@@ -693,12 +693,12 @@ export class TaskService {
 		} catch (error) {
 			// If it's a user-facing error (like NO_BRIEF_SELECTED), don't wrap it
 			if (
-				error instanceof TaskMasterError
+				error instanceof TaskGraphError
 			) {
 				throw error;
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Failed to expand task ${taskId}`,
 				ERROR_CODES.STORAGE_ERROR,
 				{
@@ -728,7 +728,7 @@ export class TaskService {
 	}> {
 		// Ensure we have storage
 		if (!this.storage) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Storage not initialized',
 				ERROR_CODES.STORAGE_ERROR
 			);
@@ -746,12 +746,12 @@ export class TaskService {
 				activeTag
 			);
 		} catch (error) {
-			// Re-throw all TaskMasterErrors without wrapping
-			if (error instanceof TaskMasterError) {
+			// Re-throw all TaskGraphErrors without wrapping
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Failed to update task status for ${taskIdStr}`,
 				ERROR_CODES.STORAGE_ERROR,
 				{
@@ -773,7 +773,7 @@ export class TaskService {
 	async getTagsWithStats() {
 		// Ensure we have storage
 		if (!this.storage) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Storage not initialized',
 				ERROR_CODES.STORAGE_ERROR
 			);
@@ -787,12 +787,12 @@ export class TaskService {
 		try {
 			return await this.storage.getTagsWithStats();
 		} catch (error) {
-			// Re-throw all TaskMasterErrors without wrapping
-			if (error instanceof TaskMasterError) {
+			// Re-throw all TaskGraphErrors without wrapping
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
 
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to get tags with stats',
 				ERROR_CODES.STORAGE_ERROR,
 				{

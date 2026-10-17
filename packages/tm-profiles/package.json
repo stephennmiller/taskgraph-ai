@@ -29,7 +29,7 @@
 		"vitest": "^4.1.0"
 	},
 	"files": ["src", "README.md", "CHANGELOG.md"],
-	"keywords": ["task-master", "profiles", "editor", "commands", "typescript"],
+	"keywords": ["taskgraph", "profiles", "editor", "commands", "typescript"],
 	"author": "TaskGraph",
 	"version": ""
 }

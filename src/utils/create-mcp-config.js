@@ -1,11 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { log } from '../../scripts/modules/utils.js';
-import {
-	MCP_SERVER_KEY,
-	findMcpServerKey,
-	launchesTaskMasterPackage
-} from './mcp-server-key.js';
+import { MCP_SERVER_KEY, launchesTaskGraphPackage } from './mcp-server-key.js';
 
 // Return JSON with existing mcp.json formatting style
 function formatJSONWithTabs(obj) {
@@ -78,8 +74,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 				mcpConfig.mcpServers = {};
 			}
 			// Leave the config alone if any server already launches this package
-			// (including under its previous package name)
-			if (Object.values(mcpConfig.mcpServers).some(launchesTaskMasterPackage)) {
+			if (Object.values(mcpConfig.mcpServers).some(launchesTaskGraphPackage)) {
 				log(
 					'info',
 					'Found existing taskgraph-ai MCP configuration in mcp.json, leaving untouched'
@@ -87,7 +82,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 				return; // Exit early, don't modify the existing configuration
 			}
 			// Add the taskgraph-ai server if it doesn't exist
-			if (!findMcpServerKey(mcpConfig.mcpServers)) {
+			if (!mcpConfig.mcpServers[MCP_SERVER_KEY]) {
 				mcpConfig.mcpServers[MCP_SERVER_KEY] = newMCPServer[MCP_SERVER_KEY];
 				log('info', 'Added taskgraph-ai server to existing MCP configuration');
 			} else {

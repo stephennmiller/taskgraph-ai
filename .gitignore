@@ -78,7 +78,7 @@ dev-debug.log
 # NPMRC
 .npmrc
 
-# Added by Task Master AI
+# Added by TaskGraph AI
 # Editor directories and files
 .idea
 .vscode
@@ -91,7 +91,7 @@ dev-debug.log
 # turbo
 .turbo
 
-# TaskMaster Workflow State (now stored in ~/.taskmaster/sessions/)
+# TaskGraph Workflow State (now stored in ~/.taskgraph/sessions/)
 # No longer needed in .gitignore as state is stored globally
 
 .scannerwork

@@ -45,7 +45,7 @@ export class LoopCommand extends Command {
 			.option(
 				'--progress-file <path>',
 				'Path to progress log file',
-				'.taskmaster/progress.txt'
+				'.taskgraph/progress.txt'
 			)
 			.option('-t, --tag <tag>', 'Only work on tasks with this tag')
 			.option(
@@ -63,7 +63,7 @@ export class LoopCommand extends Command {
 
 	private async execute(options: LoopCommandOptions): Promise<void> {
 		const prompt = options.prompt || 'default';
-		const progressFile = options.progressFile || '.taskmaster/progress.txt';
+		const progressFile = options.progressFile || '.taskgraph/progress.txt';
 
 		try {
 			const projectRoot = path.resolve(getProjectRoot(options.project));

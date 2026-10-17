@@ -140,9 +140,9 @@ export class EnvironmentConfigProvider {
 	/**
 	 * Get all environment variables that match our prefix
 	 */
-	getAllTaskmasterEnvVars(): Record<string, string> {
+	getAllTaskGraphEnvVars(): Record<string, string> {
 		const vars: Record<string, string> = {};
-		const prefix = 'TASKMASTER_';
+		const prefix = 'TASKGRAPH_';
 
 		for (const [key, value] of Object.entries(process.env)) {
 			if (key.startsWith(prefix) && value !== undefined) {

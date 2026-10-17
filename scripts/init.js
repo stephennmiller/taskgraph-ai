@@ -45,13 +45,13 @@ import {
 	ENV_EXAMPLE_FILE,
 	EXAMPLE_PRD_FILE,
 	GITIGNORE_FILE,
-	TASKMASTER_CONFIG_FILE,
-	TASKMASTER_DIR,
-	TASKMASTER_DOCS_DIR,
-	TASKMASTER_REPORTS_DIR,
-	TASKMASTER_STATE_FILE,
-	TASKMASTER_TASKS_DIR,
-	TASKMASTER_TEMPLATES_DIR
+	TASKGRAPH_CONFIG_FILE,
+	TASKGRAPH_DIR,
+	TASKGRAPH_DOCS_DIR,
+	TASKGRAPH_REPORTS_DIR,
+	TASKGRAPH_STATE_FILE,
+	TASKGRAPH_TASKS_DIR,
+	TASKGRAPH_TEMPLATES_DIR
 } from '../src/constants/paths.js';
 
 // Define box width for boxen displays
@@ -149,16 +149,16 @@ function addShellAliases() {
 
 		const configContent = fs.readFileSync(shellConfigFile, 'utf8');
 
-		// Define aliases we want (hamster/ham aliases are managed by Hamster CLI, not Task Master)
+		// Define aliases we want (hamster/ham aliases are managed by Hamster CLI, not TaskGraph)
 		const aliases = [
 			{ name: 'tm', line: "alias tm='taskgraph'" },
-			{ name: 'taskmaster', line: "alias taskmaster='taskgraph'" }
+			{ name: 'taskgraph', line: "alias taskgraph='taskgraph'" }
 		];
 
-		// Self-healing: remove any stale hamster/ham aliases that point to task-master
+		// Self-healing: remove any stale hamster/ham aliases that point to taskgraph
 		const staleAliasPatterns = [
-			/alias hamster='task-master'\n?/g,
-			/alias ham='task-master'\n?/g
+			/alias hamster='taskgraph'\n?/g,
+			/alias ham='taskgraph'\n?/g
 		];
 
 		let cleanedContent = configContent;
@@ -177,7 +177,7 @@ function addShellAliases() {
 			fs.writeFileSync(shellConfigFile, cleanedContent);
 			log(
 				'debug',
-				'Removed stale hamster/ham aliases pointing to task-master (these are managed by Hamster CLI)'
+				'Removed stale hamster/ham aliases pointing to taskgraph (these are managed by Hamster CLI)'
 			);
 		}
 
@@ -214,7 +214,7 @@ ${aliasLines}
 
 // Function to create initial state.json file for tag management
 function createInitialStateFile(targetDir) {
-	const stateFilePath = path.join(targetDir, TASKMASTER_STATE_FILE);
+	const stateFilePath = path.join(targetDir, TASKGRAPH_STATE_FILE);
 
 	// Check if state.json already exists
 	if (fs.existsSync(stateFilePath)) {
@@ -284,17 +284,17 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 		}
 
 		// Handle README.md - offer to preserve or create a different file
-		if (filename === 'README-task-master.md') {
+		if (filename === 'README-taskgraph.md') {
 			log('info', `${targetPath} already exists`);
 			// Create a separate README file specifically for this project
-			const taskMasterReadmePath = path.join(
+			const taskGraphReadmePath = path.join(
 				path.dirname(targetPath),
-				'README-task-master.md'
+				'README-taskgraph.md'
 			);
-			fs.writeFileSync(taskMasterReadmePath, content);
+			fs.writeFileSync(taskGraphReadmePath, content);
 			log(
 				'success',
-				`Created ${taskMasterReadmePath} (preserved original README-task-master.md)`
+				`Created ${taskGraphReadmePath} (preserved original README-taskgraph.md)`
 			);
 			return;
 		}
@@ -366,7 +366,7 @@ async function initializeProject(options = {}) {
 		}
 
 		// Use provided options or defaults
-		const projectName = options.name || 'task-master-project';
+		const projectName = options.name || 'taskgraph-project';
 		const projectDescription =
 			options.description || 'A project managed with TaskGraph';
 		const projectVersion = options.version || '0.1.0';
@@ -419,8 +419,8 @@ async function initializeProject(options = {}) {
 		try {
 			// Track init_started event
 			// TODO: Send to Segment telemetry when implemented
-			const taskmasterId = generateTaskmasterId();
-			log('debug', `Init started - taskmaster_id: ${taskmasterId}`);
+			const taskgraphId = generateTaskGraphId();
+			log('debug', `Init started - taskgraph_id: ${taskgraphId}`);
 
 			// Prompt for storage selection first
 			let selectedStorage = await promptStorageSelection();
@@ -429,7 +429,7 @@ async function initializeProject(options = {}) {
 			// TODO: Send to Segment telemetry when implemented
 			log(
 				'debug',
-				`Storage selected: ${selectedStorage} - taskmaster_id: ${taskmasterId}`
+				`Storage selected: ${selectedStorage} - taskgraph_id: ${taskgraphId}`
 			);
 
 			// If cloud storage selected, trigger OAuth flow
@@ -461,7 +461,7 @@ async function initializeProject(options = {}) {
 						authCredentials = await authenticateWithBrowserMFA(authManager);
 
 						// Track auth_completed event
-						log('debug', `Auth completed - taskmaster_id: ${taskmasterId}`);
+						log('debug', `Auth completed - taskgraph_id: ${taskgraphId}`);
 					}
 
 					// Ensure org is selected (required for all Hamster operations)
@@ -705,10 +705,10 @@ function promptQuestion(rl, question, formatResult) {
 }
 
 /**
- * Generate a unique taskmaster_id for anonymous tracking
+ * Generate a unique taskgraph_id for anonymous tracking
  * @returns {string} UUID string
  */
-function generateTaskmasterId() {
+function generateTaskGraphId() {
 	return randomUUID();
 }
 
@@ -745,7 +745,7 @@ function updateStorageConfig(configPath, selectedStorage, authCredentials) {
 			// This determines which slash commands and rules are installed
 			config.storage.operatingMode = 'team';
 
-			// Note: Access token is stored in ~/.taskmaster/auth.json by AuthManager
+			// Note: Access token is stored in ~/.taskgraph/auth.json by AuthManager
 			// We don't store it in config.json for security reasons
 			log('debug', 'Connected to Hamster Studio');
 		} else {
@@ -801,7 +801,7 @@ async function promptStorageSelection() {
 								'   • Tasks live in a local JSON file, everything stays in your repo'
 							),
 							chalk.white(
-								'   • Upgrade to Hamster to bring the Taskmaster experience to your team'
+								'   • Upgrade to Hamster to bring the TaskGraph experience to your team'
 							),
 							''
 						].join('\n'),
@@ -861,12 +861,12 @@ async function createProjectStructure(
 	const targetDir = process.cwd();
 	log('debug', `Initializing project in ${targetDir}`);
 
-	// Create NEW .taskmaster directory structure (using constants)
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_TASKS_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_DOCS_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_REPORTS_DIR));
-	ensureDirectoryExists(path.join(targetDir, TASKMASTER_TEMPLATES_DIR));
+	// Create NEW .taskgraph directory structure (using constants)
+	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_DIR));
+	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_TASKS_DIR));
+	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_DOCS_DIR));
+	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_REPORTS_DIR));
+	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_TEMPLATES_DIR));
 
 	// Create initial state.json file for tag management
 	createInitialStateFile(targetDir);
@@ -903,16 +903,12 @@ async function createProjectStructure(
 	);
 
 	// Copy config.json with project name to NEW location
-	copyTemplateFile(
-		'config.json',
-		path.join(targetDir, TASKMASTER_CONFIG_FILE),
-		{
-			...replacements
-		}
-	);
+	copyTemplateFile('config.json', path.join(targetDir, TASKGRAPH_CONFIG_FILE), {
+		...replacements
+	});
 
 	// Update config.json with correct maxTokens values from supported-models.json
-	const configPath = path.join(targetDir, TASKMASTER_CONFIG_FILE);
+	const configPath = path.join(targetDir, TASKGRAPH_CONFIG_FILE);
 	if (updateConfigMaxTokens(configPath)) {
 		log('debug', 'Updated config with correct maxTokens values');
 	} else {
@@ -941,7 +937,7 @@ async function createProjectStructure(
 	// Copy example_prd_rpg.txt to templates directory
 	copyTemplateFile(
 		'example_prd_rpg.txt',
-		path.join(targetDir, TASKMASTER_TEMPLATES_DIR, 'example_prd_rpg.txt')
+		path.join(targetDir, TASKGRAPH_TEMPLATES_DIR, 'example_prd_rpg.txt')
 	);
 
 	// Initialize git repository if git is available
@@ -1099,7 +1095,7 @@ async function createProjectStructure(
 			log('debug', 'Shell aliases added successfully');
 		}
 	} else if (addAliases && dryRun) {
-		log('debug', 'DRY RUN: Would add shell aliases (tm, taskmaster)');
+		log('debug', 'DRY RUN: Would add shell aliases (tm, taskgraph)');
 	}
 
 	// Display success message
@@ -1166,7 +1162,7 @@ async function createProjectStructure(
 
 		if (selectedStorage === 'cloud') {
 			// Hamster-specific workflow
-			gettingStartedMessage = `${chalk.cyan.bold("Here's how to execute your Hamster briefs with Taskmaster")}\n\n${chalk.white('1. ')}${chalk.yellow(
+			gettingStartedMessage = `${chalk.cyan.bold("Here's how to execute your Hamster briefs with TaskGraph")}\n\n${chalk.white('1. ')}${chalk.yellow(
 				'Create your first brief at'
 			)} ${chalk.cyan.underline('https://tryhamster.com')}\n${chalk.white('   └─ ')}${chalk.dim('Hamster will write your brief and generate the full task plan')}\n${chalk.white('2. ')}${chalk.yellow(
 				'Set up Claude Code integration'
@@ -1191,7 +1187,7 @@ async function createProjectStructure(
 				'Discuss your idea with AI and create a PRD'
 			)}\n${chalk.white('   ├─ ')}${chalk.dim('Simple projects: Use ')}${chalk.cyan('example_prd.txt')}${chalk.dim(' template')}\n${chalk.white('   └─ ')}${chalk.dim('Complex systems: Use ')}${chalk.cyan('example_prd_rpg.txt')}${chalk.dim(' template')}\n${chalk.white('3. ')}${chalk.yellow(
 				'Parse your PRD to generate initial tasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph parse-prd .taskmaster/docs/prd.txt')}\n${chalk.white('4. ')}${chalk.yellow(
+			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph parse-prd .taskgraph/docs/prd.txt')}\n${chalk.white('4. ')}${chalk.yellow(
 				'Analyze task complexity'
 			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph analyze-complexity --research')}\n${chalk.white('5. ')}${chalk.yellow(
 				'Expand tasks into subtasks'

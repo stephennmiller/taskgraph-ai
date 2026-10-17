@@ -1,6 +1,7 @@
 /**
- * Guards the fork's package identity: the package must not point itself, its
- * auto-updater, or its dev tooling back at upstream's `task-master-ai`.
+ * Guards the package identity: the package, its auto-updater and its dev
+ * tooling must refer to TaskGraph only, and the source must not fall back to
+ * the previous project name.
  */
 import fs from 'fs';
 import path from 'path';
@@ -12,13 +13,8 @@ const rootDir = path.resolve(
 );
 const read = (relPath) => fs.readFileSync(path.join(rootDir, relPath), 'utf8');
 
-const OLD_PACKAGE = 'task-master-ai';
-// Upstream's repo and GitHub paths; the author's x.com credit in the banner is
-// attribution, not wiring, and is intentionally kept.
-const OLD_REPO_PATHS = [
-	'eyaltoledano/claude-task-master',
-	'github.com/eyaltoledano'
-];
+// Built from fragments so this file does not contain the old name itself.
+const PREVIOUS_NAME = new RegExp(['task', '[-_ ]?', 'master'].join(''), 'i');
 
 // Files where the package name or repo owner does real work at runtime
 // (registry lookups, installs, root detection, MCP launch, release links).
@@ -33,27 +29,42 @@ const IDENTITY_FILES = [
 	'apps/cli/src/utils/auto-update/download.ts',
 	'apps/cli/src/utils/auto-update/index.ts',
 	'apps/cli/src/utils/auto-update/install.ts',
+	'apps/cli/src/utils/auto-update/restart.ts',
 	'apps/cli/src/ui/components/brand-banner.component.ts',
 	'.mcp.json',
 	'packages/claude-code-plugin/mcp.json',
 	'apps/mcp/src/shared/utils.ts',
 	'packages/tm-core/src/common/constants/index.ts',
 	'packages/tm-core/src/modules/loop/presets/default.ts',
-	'packages/tm-profiles/src/slash-commands/commands/solo/install-taskmaster.ts',
-	'packages/tm-profiles/src/slash-commands/commands/solo/quick-install-taskmaster.ts',
+	'packages/tm-profiles/src/slash-commands/commands/solo/install-taskgraph.ts',
+	'packages/tm-profiles/src/slash-commands/commands/solo/quick-install-taskgraph.ts',
+	'mcp-server/src/tools/utils.js',
 	'scripts/loop.sh',
+	'scripts/modules/commands.js',
 	'src/utils/asset-resolver.js',
 	'src/utils/create-mcp-config.js'
 ];
 
-// Places where the CLI refers to itself by binary name at runtime (re-spawning
-// after an update, the MCP CLI fallback, commander's program name).
-const SELF_REFERENCING_FILES = [
-	'apps/cli/src/utils/auto-update/restart.ts',
-	'mcp-server/src/tools/utils.js',
-	'index.js',
-	'scripts/modules/commands.js'
+const SOURCE_DIRS = [
+	'scripts',
+	'src',
+	'mcp-server/src',
+	'apps/cli/src',
+	'apps/mcp/src',
+	'packages/tm-core/src',
+	'packages/tm-profiles/src'
 ];
+
+const listSourceFiles = (dir) =>
+	fs
+		.readdirSync(path.join(rootDir, dir), { withFileTypes: true })
+		.flatMap((entry) => {
+			const rel = path.join(dir, entry.name);
+			if (entry.isDirectory()) {
+				return entry.name === 'node_modules' ? [] : listSourceFiles(rel);
+			}
+			return /\.(js|mjs|ts|tsx|sh)$/.test(entry.name) ? [rel] : [];
+		});
 
 describe('package identity', () => {
 	const pkg = JSON.parse(read('package.json'));
@@ -62,7 +73,7 @@ describe('package identity', () => {
 		expect(pkg.name).toBe('taskgraph-ai');
 	});
 
-	test('binaries do not clash with upstream task-master binaries', () => {
+	test('ships the taskgraph binaries', () => {
 		expect(Object.keys(pkg.bin).sort()).toEqual([
 			'taskgraph',
 			'taskgraph-ai',
@@ -76,7 +87,7 @@ describe('package identity', () => {
 		expect(pkg.bin['taskgraph-mcp']).toBe(pkg.bin[pkg.name]);
 	});
 
-	test('repository, homepage and bugs point at the fork', () => {
+	test('repository, homepage and bugs point at this repo', () => {
 		expect(pkg.repository.url).toContain('stephennmiller/');
 		expect(pkg.homepage).toContain('stephennmiller/');
 		expect(pkg.bugs.url).toContain('stephennmiller/');
@@ -94,62 +105,21 @@ describe('package identity', () => {
 		);
 	});
 
-	test.each(IDENTITY_FILES)(
-		'%s does not reference upstream identity',
-		(file) => {
-			const content = read(file);
-			expect(content).not.toContain(OLD_PACKAGE);
-			for (const oldPath of OLD_REPO_PATHS) {
-				expect(content).not.toContain(oldPath);
-			}
-		}
-	);
+	test.each(IDENTITY_FILES)('%s does not use the previous name', (file) => {
+		expect(read(file)).not.toMatch(PREVIOUS_NAME);
+	});
 
-	test.each(SELF_REFERENCING_FILES)(
-		'%s does not call the CLI by upstream binary name',
-		(file) => {
-			expect(read(file)).not.toMatch(/['"`]task-master['"`]/);
-		}
-	);
+	test('source does not use the previous name', () => {
+		const offenders = SOURCE_DIRS.flatMap(listSourceFiles).flatMap((file) =>
+			read(file)
+				.split('\n')
+				.map((text, i) => ({ file, line: i + 1, text }))
+				// Hamster's own URLs and addresses are removed with issue #16
+				.filter(({ text }) => !/tryhamster/.test(text))
+				.filter(({ text }) => PREVIOUS_NAME.test(text))
+				.map(({ file, line }) => `${file}:${line}`)
+		);
 
-	describe('user-facing messages', () => {
-		// Bare `task-master` as a command, not part of a file name, path, hyphenated name or URL
-		const BARE_COMMAND = /(?<![\w./@:<-])task-master(?![\w\-/:]|\.\w)/;
-		// Quoted identifiers (`'task-master'`) are code, not messages
-		const QUOTED = /(['"`])task-master\1/;
-		const SOURCE_DIRS = [
-			'scripts',
-			'src',
-			'mcp-server/src',
-			'apps/cli/src',
-			'apps/mcp/src',
-			'packages/tm-core/src',
-			'packages/tm-profiles/src'
-		];
-
-		const listSourceFiles = (dir) =>
-			fs
-				.readdirSync(path.join(rootDir, dir), { withFileTypes: true })
-				.flatMap((entry) => {
-					const rel = path.join(dir, entry.name);
-					if (entry.isDirectory()) {
-						return entry.name === 'node_modules' ? [] : listSourceFiles(rel);
-					}
-					return /\.(js|mjs|ts|tsx|sh)$/.test(entry.name) ? [rel] : [];
-				});
-
-		test('source tells users to run taskgraph, not task-master', () => {
-			const offenders = SOURCE_DIRS.flatMap(listSourceFiles).flatMap((file) =>
-				read(file)
-					.split('\n')
-					.map((line, i) => ({ file, line: i + 1, text: line }))
-					// scripts/init.js still cleans up aliases written by earlier installs
-					.filter(({ text }) => !/hamster|ham=/.test(text))
-					.filter(({ text }) => BARE_COMMAND.test(text) && !QUOTED.test(text))
-					.map(({ file, line }) => `${file}:${line}`)
-			);
-
-			expect(offenders).toEqual([]);
-		});
+		expect(offenders).toEqual([]);
 	});
 });

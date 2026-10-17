@@ -70,7 +70,7 @@ interface MultiExportResult {
  * Handles task export to Hamster by generating a new brief
  */
 export class ExportCommand extends Command {
-	private taskMasterCore?: TmCore;
+	private taskGraphCore?: TmCore;
 	private promptService?: PromptService;
 	private lastResult?: ExportCommandResult;
 
@@ -110,7 +110,7 @@ export class ExportCommand extends Command {
 	 * Initialize the TmCore and PromptService
 	 */
 	private async initializeServices(): Promise<void> {
-		if (this.taskMasterCore) {
+		if (this.taskGraphCore) {
 			return;
 		}
 
@@ -118,7 +118,7 @@ export class ExportCommand extends Command {
 			const projectRoot = getProjectRoot();
 
 			// Initialize TmCore
-			this.taskMasterCore = await createTmCore({
+			this.taskGraphCore = await createTmCore({
 				projectPath: projectRoot
 			});
 
@@ -156,7 +156,7 @@ export class ExportCommand extends Command {
 			await this.initializeServices();
 
 			// Check if a brief is already in context (meaning we're working with remote tasks)
-			const context = this.taskMasterCore!.auth.getContext();
+			const context = this.taskGraphCore!.auth.getContext();
 			if (context?.briefId) {
 				console.log(
 					chalk.yellow('\n  You are currently connected to a Hamster brief.')
@@ -220,7 +220,7 @@ export class ExportCommand extends Command {
 	private async executeInteractiveTagSelection(options?: any): Promise<void> {
 		try {
 			// Get available local tags from file storage DIRECTLY
-			// (not via taskMasterCore which may be using API storage when connected to a brief)
+			// (not via taskGraphCore which may be using API storage when connected to a brief)
 			const projectRoot = getProjectRoot();
 			if (!projectRoot) {
 				console.log(chalk.yellow('\nNo project root found.\n'));
@@ -418,7 +418,7 @@ export class ExportCommand extends Command {
 			spinner = ora('Creating brief and exporting tasks...').start();
 
 			const result =
-				await this.taskMasterCore!.integration.generateBriefFromTasks({
+				await this.taskGraphCore!.integration.generateBriefFromTasks({
 					tag: options?.tag,
 					options: {
 						// Always generate title/description unless manually specified
@@ -602,7 +602,7 @@ export class ExportCommand extends Command {
 			// TODO: Support exporting specific selected tasks
 			// For now, we export all tasks from the tag
 			const result =
-				await this.taskMasterCore!.integration.generateBriefFromTasks({
+				await this.taskGraphCore!.integration.generateBriefFromTasks({
 					tag: options?.tag,
 					options: {
 						generateTitle: !options?.title,
@@ -730,7 +730,7 @@ export class ExportCommand extends Command {
 				);
 
 				const result =
-					await this.taskMasterCore!.integration.generateBriefFromTasks({
+					await this.taskGraphCore!.integration.generateBriefFromTasks({
 						tag,
 						options: {
 							generateTitle: true,
@@ -989,7 +989,7 @@ export class ExportCommand extends Command {
 	 */
 	private async setContextToBrief(briefUrl: string): Promise<void> {
 		try {
-			if (!this.taskMasterCore) return;
+			if (!this.taskGraphCore) return;
 
 			// Get AuthManager singleton
 			const authManager = AuthManager.getInstance();
@@ -999,7 +999,7 @@ export class ExportCommand extends Command {
 			const result = await selectBriefFromInput(
 				authManager,
 				briefUrl,
-				this.taskMasterCore
+				this.taskGraphCore
 			);
 
 			if (!result.success) {
@@ -1049,7 +1049,7 @@ export class ExportCommand extends Command {
 		const projectRoot = getProjectRoot();
 		if (!projectRoot) return {};
 
-		const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
 
 		try {
 			const stateData = await fs.readFile(statePath, 'utf-8');
@@ -1067,13 +1067,13 @@ export class ExportCommand extends Command {
 		_briefUrl: string,
 		inviteEmails: string[]
 	): Promise<void> {
-		if (!inviteEmails.length || !this.taskMasterCore) return;
+		if (!inviteEmails.length || !this.taskGraphCore) return;
 
 		const spinner = ora('Sending invitations...').start();
 
 		try {
 			// Get org slug from context
-			const context = await this.taskMasterCore.auth.getContext();
+			const context = await this.taskGraphCore.auth.getContext();
 			const orgSlug = context?.orgSlug;
 
 			if (!orgSlug) {
@@ -1089,7 +1089,7 @@ export class ExportCommand extends Command {
 			}
 
 			const inviteResult =
-				await this.taskMasterCore.integration.sendTeamInvitations(
+				await this.taskGraphCore.integration.sendTeamInvitations(
 					orgSlug,
 					inviteEmails,
 					'member'
@@ -1121,7 +1121,7 @@ export class ExportCommand extends Command {
 		const projectRoot = getProjectRoot();
 		if (!projectRoot) return;
 
-		const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
 
 		try {
 			let state: Record<string, any> = {};

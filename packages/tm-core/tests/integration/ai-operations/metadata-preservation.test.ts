@@ -65,10 +65,10 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 
 	beforeEach(() => {
 		// Create a temp directory for each test
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-ai-test-'));
-		// Create .taskmaster/tasks directory structure
-		const taskmasterDir = path.join(tempDir, '.taskmaster', 'tasks');
-		fs.mkdirSync(taskmasterDir, { recursive: true });
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-ai-test-'));
+		// Create .taskgraph/tasks directory structure
+		const taskgraphDir = path.join(tempDir, '.taskgraph', 'tasks');
+		fs.mkdirSync(taskgraphDir, { recursive: true });
 		storage = new FileStorage(tempDir);
 	});
 

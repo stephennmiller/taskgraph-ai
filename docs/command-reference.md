@@ -11,7 +11,7 @@ taskgraph parse-prd <prd-file.txt>
 # Limit the number of tasks generated (default is 10)
 taskgraph parse-prd <prd-file.txt> --num-tasks=5
 
-# Allow task master to determine the number of tasks based on complexity
+# Allow TaskGraph to determine the number of tasks based on complexity
 taskgraph parse-prd <prd-file.txt> --num-tasks=0
 ```
 
@@ -330,19 +330,13 @@ taskgraph models --set-main=my-local-llama --ollama
 # Set a custom OpenRouter model for the research role
 taskgraph models --set-research=google/gemini-pro --openrouter
 
-# Set Codex CLI model for the main role (uses ChatGPT subscription via OAuth)
-taskgraph models --set-main=gpt-5-codex --codex-cli
-
-# Set Codex CLI model for the fallback role
-taskgraph models --set-fallback=gpt-5 --codex-cli
-
 # Run interactive setup to configure models, including custom ones
 taskgraph models --setup
 ```
 
-Configuration is stored in `.taskmaster/config.json` in your project root (legacy `.taskmasterconfig` files are automatically migrated). API keys are still managed via `.env` or MCP configuration. Use `taskgraph models` without flags to see available built-in models. Use `--setup` for a guided experience.
+Configuration is stored in `.taskgraph/config.json` in your project root. API keys are still managed via `.env` or MCP configuration. Use `taskgraph models` without flags to see available built-in models. Use `--setup` for a guided experience.
 
-State is stored in `.taskmaster/state.json` in your project root. It maintains important information like the current tag. Do not manually edit this file.
+State is stored in `.taskgraph/state.json` in your project root. It maintains important information like the current tag. Do not manually edit this file.
 
 ## Research Fresh Information
 
@@ -369,7 +363,7 @@ taskgraph research "How to implement this feature?" --file=custom-tasks.json
 # Research within a specific tag context
 taskgraph research "Database optimization strategies" --tag=feature-branch
 
-# Save research conversation to .taskmaster/docs/research/ directory (for later reference)
+# Save research conversation to .taskgraph/docs/research/ directory (for later reference)
 taskgraph research "Database optimization techniques" --save-file
 
 # Save key findings directly to a task or subtask (recommended for actionable insights)

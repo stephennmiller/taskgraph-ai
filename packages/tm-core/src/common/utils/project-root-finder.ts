@@ -3,7 +3,7 @@ import path from 'node:path';
 import {
 	OTHER_PROJECT_MARKERS,
 	PROJECT_BOUNDARY_MARKERS,
-	TASKMASTER_PROJECT_MARKERS
+	TASKGRAPH_PROJECT_MARKERS
 } from '../constants/paths.js';
 
 function markerExists(dir: string, marker: string): boolean {
@@ -21,9 +21,9 @@ function hasAnyMarker(dir: string, markers: readonly string[]): boolean {
 /**
  * Find the project root by traversing upward from startDir looking for project markers.
  *
- * Search strategy prevents false matches from stray .taskmaster dirs (e.g., in home):
- * 1. If startDir has .taskmaster or a boundary marker (.git, package.json), return immediately
- * 2. Search parents for .taskmaster anchored by a boundary marker (or 1 level up without boundary)
+ * Search strategy prevents false matches from stray .taskgraph dirs (e.g., in home):
+ * 1. If startDir has .taskgraph or a boundary marker (.git, package.json), return immediately
+ * 2. Search parents for .taskgraph anchored by a boundary marker (or 1 level up without boundary)
  * 3. Fall back to searching for other project markers (pyproject.toml, Cargo.toml, etc.)
  * 4. If nothing found, return startDir (supports `tm init` in empty directories)
  */
@@ -34,32 +34,32 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
 	let depth = 0;
 	let projectBoundaryDir: string | null = null;
 
-	// Check startDir first - if it has .taskmaster or a boundary marker, we're done
-	if (hasAnyMarker(currentDir, TASKMASTER_PROJECT_MARKERS)) {
+	// Check startDir first - if it has .taskgraph or a boundary marker, we're done
+	if (hasAnyMarker(currentDir, TASKGRAPH_PROJECT_MARKERS)) {
 		return currentDir;
 	}
 	if (hasAnyMarker(currentDir, PROJECT_BOUNDARY_MARKERS)) {
 		return currentDir;
 	}
 
-	// Search parent directories for .taskmaster
+	// Search parent directories for .taskgraph
 	let searchDir = path.dirname(currentDir);
 	depth = 1;
 
 	while (depth < maxDepth) {
-		const hasTaskmaster = hasAnyMarker(searchDir, TASKMASTER_PROJECT_MARKERS);
+		const hasTaskGraph = hasAnyMarker(searchDir, TASKGRAPH_PROJECT_MARKERS);
 		const hasBoundary = hasAnyMarker(searchDir, PROJECT_BOUNDARY_MARKERS);
 
-		if (hasTaskmaster) {
-			// Accept .taskmaster if anchored by boundary or only 1 level up
+		if (hasTaskGraph) {
+			// Accept .taskgraph if anchored by boundary or only 1 level up
 			if (hasBoundary || depth === 1) {
 				return searchDir;
 			}
-			// Distant .taskmaster without boundary is likely stray (e.g., home dir) - skip it
+			// Distant .taskgraph without boundary is likely stray (e.g., home dir) - skip it
 		}
 
-		if (hasBoundary && !hasTaskmaster) {
-			// Hit project boundary without .taskmaster - stop searching upward
+		if (hasBoundary && !hasTaskGraph) {
+			// Hit project boundary without .taskgraph - stop searching upward
 			projectBoundaryDir = searchDir;
 			break;
 		}
@@ -73,7 +73,7 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
 		depth++;
 	}
 
-	// No .taskmaster found - search for other project markers
+	// No .taskgraph found - search for other project markers
 	currentDir = projectBoundaryDir || path.resolve(startDir);
 	depth = 0;
 
@@ -95,8 +95,8 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
 }
 
 /**
- * Strip .taskmaster (and anything after it) from a path.
- * Prevents double .taskmaster paths when combining with constants that include .taskmaster.
+ * Strip .taskgraph (and anything after it) from a path.
+ * Prevents double .taskgraph paths when combining with constants that include .taskgraph.
  */
 export function normalizeProjectRoot(
 	projectRoot: string | null | undefined
@@ -104,10 +104,10 @@ export function normalizeProjectRoot(
 	if (!projectRoot) return '';
 
 	const segments = String(projectRoot).split(path.sep);
-	const taskmasterIndex = segments.findIndex((s) => s === '.taskmaster');
+	const taskgraphIndex = segments.findIndex((s) => s === '.taskgraph');
 
-	if (taskmasterIndex !== -1) {
-		return segments.slice(0, taskmasterIndex).join(path.sep) || path.sep;
+	if (taskgraphIndex !== -1) {
+		return segments.slice(0, taskgraphIndex).join(path.sep) || path.sep;
 	}
 
 	return String(projectRoot);

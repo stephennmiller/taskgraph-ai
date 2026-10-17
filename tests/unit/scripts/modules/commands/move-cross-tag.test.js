@@ -13,7 +13,7 @@ const mockConfig = {
 	core: {
 		moveTasksBetweenTags: true,
 		readJSON: true,
-		initTaskMaster: true,
+		initTaskGraph: true,
 		findProjectRoot: true
 	},
 	// Console and process mocks
@@ -23,7 +23,7 @@ const mockConfig = {
 		exit: true
 	},
 	// TaskGraph instance mocks
-	taskMaster: {
+	taskGraph: {
 		getCurrentTag: true,
 		getTasksPath: true,
 		getProjectRoot: true
@@ -50,8 +50,8 @@ function createMockFactory(config = mockConfig) {
 	if (config.core?.readJSON) {
 		mocks.readJSON = createMock('readJSON');
 	}
-	if (config.core?.initTaskMaster) {
-		mocks.initTaskMaster = createMock('initTaskMaster');
+	if (config.core?.initTaskGraph) {
+		mocks.initTaskGraph = createMock('initTaskGraph');
 	}
 	if (config.core?.findProjectRoot) {
 		mocks.findProjectRoot = createMock('findProjectRoot');
@@ -87,9 +87,9 @@ function setupMocks(config = mockConfig) {
 		}));
 	}
 
-	if (config.core?.initTaskMaster) {
+	if (config.core?.initTaskGraph) {
 		jest.mock('../../../../../scripts/modules/config-manager.js', () => ({
-			initTaskMaster: mocks.initTaskMaster,
+			initTaskGraph: mocks.initTaskGraph,
 			isApiKeySet: jest.fn(() => true),
 			getConfig: jest.fn(() => ({}))
 		}));
@@ -123,7 +123,7 @@ import { registerCommands } from '../../../../../scripts/modules/commands.js';
 // Extract the handleCrossTagMove function from the commands module
 // This is a simplified version of the actual function for testing
 async function handleCrossTagMove(moveContext, options) {
-	const { sourceId, sourceTag, toTag, taskMaster } = moveContext;
+	const { sourceId, sourceTag, toTag, taskGraph } = moveContext;
 
 	if (!sourceId) {
 		console.error('Error: --from parameter is required for cross-tag moves');
@@ -146,18 +146,18 @@ async function handleCrossTagMove(moveContext, options) {
 	};
 
 	const result = await mocks.moveTasksBetweenTags(
-		taskMaster.getTasksPath(),
+		taskGraph.getTasksPath(),
 		sourceIds,
 		sourceTag,
 		toTag,
 		moveOptions,
-		{ projectRoot: taskMaster.getProjectRoot() }
+		{ projectRoot: taskGraph.getProjectRoot() }
 	);
 
 	// Check if source tag still contains tasks before regenerating files
 	const tasksData = mocks.readJSON(
-		taskMaster.getTasksPath(),
-		taskMaster.getProjectRoot(),
+		taskGraph.getTasksPath(),
+		taskGraph.getProjectRoot(),
 		sourceTag
 	);
 	const sourceTagHasTasks =
@@ -171,7 +171,7 @@ async function handleCrossTagMove(moveContext, options) {
 // ============================================================================
 
 describe('CLI Move Command Cross-Tag Functionality', () => {
-	let mockTaskMaster;
+	let mockTaskGraph;
 	let mockConsoleError;
 	let mockConsoleLog;
 	let mockProcessExit;
@@ -185,13 +185,13 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 		mockProcessExit = jest.spyOn(process, 'exit').mockImplementation();
 
 		// Mock TaskGraph instance
-		mockTaskMaster = {
+		mockTaskGraph = {
 			getCurrentTag: jest.fn().mockReturnValue('master'),
 			getTasksPath: jest.fn().mockReturnValue('/test/path/tasks.json'),
 			getProjectRoot: jest.fn().mockReturnValue('/test/project')
 		};
 
-		mocks.initTaskMaster.mockReturnValue(mockTaskMaster);
+		mocks.initTaskGraph.mockReturnValue(mockTaskGraph);
 		mocks.findProjectRoot.mockReturnValue('/test/project');
 		mocks.readJSON.mockReturnValue({
 			tasks: [
@@ -219,7 +219,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			mocks.moveTasksBetweenTags.mockResolvedValue({
@@ -254,7 +254,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			mocks.moveTasksBetweenTags.mockResolvedValue({
@@ -289,7 +289,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			mocks.moveTasksBetweenTags.mockResolvedValue({
@@ -324,7 +324,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			await expect(handleCrossTagMove(moveContext, options)).rejects.toThrow();
@@ -346,7 +346,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			await expect(handleCrossTagMove(moveContext, options)).rejects.toThrow();
@@ -370,7 +370,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: 'master', // Should use current tag
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			mocks.moveTasksBetweenTags.mockResolvedValue({
@@ -402,7 +402,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			mocks.moveTasksBetweenTags.mockResolvedValue({
@@ -432,7 +432,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 				sourceId: options.from,
 				sourceTag: options.fromTag,
 				toTag: options.toTag,
-				taskMaster: mockTaskMaster
+				taskGraph: mockTaskGraph
 			};
 
 			mocks.moveTasksBetweenTags.mockResolvedValue({

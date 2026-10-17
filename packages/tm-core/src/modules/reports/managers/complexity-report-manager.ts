@@ -30,7 +30,7 @@ export class ComplexityReportManager {
 	 * Get the path to the complexity report file for a given tag
 	 */
 	private getReportPath(tag?: string): string {
-		const reportsDir = path.join(this.projectRoot, '.taskmaster', 'reports');
+		const reportsDir = path.join(this.projectRoot, '.taskgraph', 'reports');
 		const tagSuffix = tag && tag !== 'master' ? `_${tag}` : '';
 		return path.join(reportsDir, `task-complexity-report${tagSuffix}.json`);
 	}

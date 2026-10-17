@@ -28,7 +28,7 @@ describe('Claude onPostConvertRulesProfile', () => {
 		onPostConvertRulesProfile(projectDir, assetsDir);
 
 		expect(fs.existsSync(path.join(projectDir, 'CLAUDE.md'))).toBe(false);
-		expect(fs.existsSync(path.join(projectDir, '.taskmaster'))).toBe(false);
+		expect(fs.existsSync(path.join(projectDir, '.taskgraph'))).toBe(false);
 	});
 
 	it('converts an existing .mcp.json to the Claude format', () => {

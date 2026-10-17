@@ -19,7 +19,7 @@ const mockConfig = {
     moveTasksBetweenTags: true,
     generateTaskFiles: true,
     readJSON: true,
-    initTaskMaster: true,
+    initTaskGraph: true,
     findProjectRoot: true
   }
 };
@@ -47,7 +47,7 @@ function createMockFactory(config = mockConfig) {
 - `moveTasksBetweenTags`: Core move functionality
 - `generateTaskFiles`: File generation after moves
 - `readJSON`: Reading task data
-- `initTaskMaster`: TaskGraph initialization
+- `initTaskGraph`: TaskGraph initialization
 - `findProjectRoot`: Project path resolution
 
 ### Optional Mocks

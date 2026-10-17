@@ -14,7 +14,7 @@ import { jest } from '@jest/globals';
 
 // Mock EVERYTHING
 const mockRemoveTaskDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/task-master-core.js', () => ({
+jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	removeTaskDirect: mockRemoveTaskDirect
 }));
 

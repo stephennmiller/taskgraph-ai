@@ -81,9 +81,9 @@ paths:
 
 ## Configuration Management (via `config-manager.js`)
 
-TaskGraph configuration (excluding API keys) is primarily managed through the `.taskmasterconfig` file located in the project root and accessed via getters in [`scripts/modules/config-manager.js`](../../scripts/modules/config-manager.js).
+TaskGraph configuration (excluding API keys) is primarily managed through the `.taskgraph/config.json` file located in the project root and accessed via getters in [`scripts/modules/config-manager.js`](../../scripts/modules/config-manager.js).
 
-- **`.taskmasterconfig` File**:
+- **`.taskgraph/config.json` File**:
   - ✅ DO: Use this JSON file to store settings like AI model selections (main, research, fallback), parameters (temperature, maxTokens), logging level, default priority/subtasks, etc.
   - ✅ DO: Manage this file using the `taskgraph models --setup` CLI command or the `models` MCP tool.
   - ✅ DO: Rely on [`config-manager.js`](../../scripts/modules/config-manager.js) to load this file (using the correct project root passed from MCP or found via CLI utils), merge with defaults, and provide validated settings.
@@ -102,7 +102,7 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   - ✅ DO: Understand that the unified service layer (`ai-services-unified.js`) internally resolves API keys using `resolveEnvVariable(key, session)` from `utils.js`.
 
 - **Error Handling**:
-  - ✅ DO: Handle potential `ConfigurationError` if the `.taskmasterconfig` file is missing or invalid when accessed via `getConfig` (e.g., in `commands.js` or direct functions).
+  - ✅ DO: Handle potential `ConfigurationError` if the `.taskgraph/config.json` file is missing or invalid when accessed via `getConfig` (e.g., in `commands.js` or direct functions).
 
 ## Logging Utilities (in `scripts/modules/utils.js`)
 
@@ -489,7 +489,7 @@ These utilities specifically support the implementation and execution of MCP too
     - **Purpose**: Legacy function to extract *and normalize* the project root from the session. Replaced by the HOF pattern but potentially still used.
     - **Recommendation**: Prefer using the `withNormalizedProjectRoot` HOF in tools instead of calling this directly.
 
-- **`executeTaskMasterCommand(...)`**: 
+- **`executeTaskGraphCommand(...)`**: 
     - **Purpose**: Executes `taskgraph` CLI command as a fallback. 
     - **Recommendation**: Deprecated for most uses; prefer direct function calls.
 
@@ -541,7 +541,7 @@ export {
   getProjectRoot,
   getProjectRootFromSession,
   handleApiResult,
-  executeTaskMasterCommand,
+  executeTaskGraphCommand,
   processMCPResponseData,
   createContentResponse,
   createErrorResponse,
@@ -635,7 +635,7 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
         writeJSON(filepath, migratedData);
         
         // Set global flag for CLI notice and perform complete migration
-        global.taskMasterMigrationOccurred = true;
+        global.taskGraphMigrationOccurred = true;
         performCompleteTagMigration(filepath);
         
         data = migratedData;
@@ -674,8 +674,8 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     const rootPath = path.parse(currentPath).root;
     
     while (currentPath !== rootPath) {
-      const taskMasterPath = path.join(currentPath, '.taskmaster');
-      if (fs.existsSync(taskMasterPath)) {
+      const taskGraphPath = path.join(currentPath, '.taskgraph');
+      if (fs.existsSync(taskGraphPath)) {
         return currentPath;
       }
       currentPath = path.dirname(currentPath);
@@ -735,7 +735,7 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
       const projectRoot = findProjectRoot();
       if (!projectRoot) return 'master';
       
-      const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+      const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
       if (fs.existsSync(statePath)) {
         const state = readJSON(statePath);
         return state.currentTag || 'master';
@@ -761,13 +761,13 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
       const projectRoot = findProjectRoot(path.dirname(tasksJsonPath)) || path.dirname(tasksJsonPath);
       
       // 1. Migrate config.json - add defaultTag and tags section
-      const configPath = path.join(projectRoot, '.taskmaster', 'config.json');
+      const configPath = path.join(projectRoot, '.taskgraph', 'config.json');
       if (fs.existsSync(configPath)) {
         migrateConfigJson(configPath);
       }
       
       // 2. Create state.json if it doesn't exist
-      const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+      const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
       if (!fs.existsSync(statePath)) {
         createStateJson(statePath);
       }
@@ -843,7 +843,7 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
       const projectRoot = findProjectRoot();
       if (!projectRoot) return;
       
-      const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+      const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
       const state = readJSON(statePath) || {};
       
       state.migrationNoticeShown = false; // Reset to show notice

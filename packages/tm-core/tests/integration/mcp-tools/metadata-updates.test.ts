@@ -26,11 +26,11 @@ describe('MCP Tool Metadata Updates - Integration Tests', () => {
 
 	beforeEach(() => {
 		// Create a temp directory for each test
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-mcp-test-'));
-		// Create .taskmaster/tasks directory structure
-		const taskmasterDir = path.join(tempDir, '.taskmaster', 'tasks');
-		fs.mkdirSync(taskmasterDir, { recursive: true });
-		tasksJsonPath = path.join(taskmasterDir, 'tasks.json');
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-mcp-test-'));
+		// Create .taskgraph/tasks directory structure
+		const taskgraphDir = path.join(tempDir, '.taskgraph', 'tasks');
+		fs.mkdirSync(taskgraphDir, { recursive: true });
+		tasksJsonPath = path.join(taskgraphDir, 'tasks.json');
 	});
 
 	afterEach(() => {

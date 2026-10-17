@@ -40,7 +40,7 @@ Based on your needs:
 Keys can be stored in:
 1. Environment variables (recommended)
 2. `.env` file in project
-3. Global `.taskmaster/config`
+3. Global `.taskgraph/config`
 
 ## Post-Setup
 

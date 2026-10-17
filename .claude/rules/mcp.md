@@ -12,7 +12,7 @@ This document outlines the architecture and implementation patterns for the Task
 
 The MCP server acts as a bridge between external tools (like Claude Code) and the core TaskGraph CLI logic. It leverages FastMCP for the server framework.
 
-- **Flow**: `External Tool (Claude Code)` <-> `FastMCP Server` <-> `MCP Tools` (`mcp-server/src/tools/*.js`) <-> `Core Logic Wrappers` (`mcp-server/src/core/direct-functions/*.js`, exported via `task-master-core.js`) <-> `Core Modules` (`scripts/modules/*.js`)
+- **Flow**: `External Tool (Claude Code)` <-> `FastMCP Server` <-> `MCP Tools` (`mcp-server/src/tools/*.js`) <-> `Core Logic Wrappers` (`mcp-server/src/core/direct-functions/*.js`, exported via `taskgraph-core.js`) <-> `Core Modules` (`scripts/modules/*.js`)
 - **Goal**: Provide a performant and reliable way for external tools to interact with TaskGraph functionality without directly invoking the CLI for every operation.
 
 ## Direct Function Implementation Best Practices
@@ -209,7 +209,7 @@ import {
     createErrorResponse,
     withNormalizedProjectRoot // <<< Import HOF
 } from './utils.js';
-import { yourDirectFunction } from '../core/task-master-core.js';
+import { yourDirectFunction } from '../core/taskgraph-core.js';
 import { findTasksJsonPath } from '../core/utils/path-utils.js'; // If needed
 
 export function registerYourTool(server) {
@@ -260,7 +260,7 @@ The `initialize_project` tool allows integrated clients like Claude Code to set 
 ```javascript
 // In initialize-project.js
 import { z } from "zod";
-import { initializeProjectDirect } from "../core/task-master-core.js";
+import { initializeProjectDirect } from "../core/taskgraph-core.js";
 import { handleApiResult, createErrorResponse } from "./utils.js";
 
 export function registerInitializeProjectTool(server) {
@@ -333,7 +333,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 
 ## Key Principles
 
-- **Prefer Direct Function Calls**: MCP tools should always call `*Direct` wrappers instead of `executeTaskMasterCommand`.
+- **Prefer Direct Function Calls**: MCP tools should always call `*Direct` wrappers instead of `executeTaskGraphCommand`.
 - **Standardized Execution Flow**: Follow the pattern: MCP Tool -> `getProjectRootFromSession` -> `*Direct` Function -> Core Logic / AI Logic.
 - **Path Resolution via Direct Functions**: The `*Direct` function is responsible for finding the exact `tasks.json` path using `findTasksJsonPath`, relying on the `projectRoot` passed in `args`.
 - **AI Logic in Core Modules**: AI interactions (prompt building, calling unified service) reside within the core logic functions (`scripts/modules/*`), not direct functions.
@@ -377,7 +377,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         - ❌ **DON'T**: Call `reportProgress`.
     - Export the wrapper function.
 
-3.  **Update `task-master-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
+3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
@@ -405,25 +405,25 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 ## Parameter Type Handling
 
-- **Prefer Direct Function Calls**: For optimal performance and error handling, MCP tools should utilize direct function wrappers defined in [`task-master-core.js`](../../mcp-server/src/core/task-master-core.js). These wrappers call the underlying logic from the core modules (e.g., [`task-manager.js`](../../scripts/modules/task-manager.js)).
+- **Prefer Direct Function Calls**: For optimal performance and error handling, MCP tools should utilize direct function wrappers defined in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js). These wrappers call the underlying logic from the core modules (e.g., [`task-manager.js`](../../scripts/modules/task-manager.js)).
 - **Standard Tool Execution Pattern**:
     - The `execute` method within each MCP tool (in `mcp-server/src/tools/*.js`) should:
-        1.  Call the corresponding `*Direct` function wrapper (e.g., `listTasksDirect`) from [`task-master-core.js`](../../mcp-server/src/core/task-master-core.js), passing necessary arguments and the logger.
+        1.  Call the corresponding `*Direct` function wrapper (e.g., `listTasksDirect`) from [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js), passing necessary arguments and the logger.
         2.  Receive the result object (typically `{ success, data/error, fromCache }`).
         3.  Pass this result object to the `handleApiResult` utility (from [`tools/utils.js`](../../mcp-server/src/tools/utils.js)) for standardized response formatting and error handling.
         4.  Return the formatted response object provided by `handleApiResult`.
-- **CLI Execution as Fallback**: The `executeTaskMasterCommand` utility in [`tools/utils.js`](../../mcp-server/src/tools/utils.js) allows executing commands via the CLI (`taskgraph ...`). This should **only** be used as a fallback if a direct function wrapper is not yet implemented or if a specific command intrinsically requires CLI execution.
+- **CLI Execution as Fallback**: The `executeTaskGraphCommand` utility in [`tools/utils.js`](../../mcp-server/src/tools/utils.js) allows executing commands via the CLI (`taskgraph ...`). This should **only** be used as a fallback if a direct function wrapper is not yet implemented or if a specific command intrinsically requires CLI execution.
 - **Centralized Utilities** (See also: `utilities.md`):
-    - Use `findTasksJsonPath` (in [`task-master-core.js`](../../mcp-server/src/core/task-master-core.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
+    - Use `findTasksJsonPath` (in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
     - **Leverage MCP Utilities**: The file [`tools/utils.js`](../../mcp-server/src/tools/utils.js) contains essential helpers for MCP tool implementation:
         - `getProjectRoot`: Normalizes project paths.
         - `handleApiResult`: Takes the raw result from a `*Direct` function and formats it into a standard MCP success or error response, automatically handling data processing via `processMCPResponseData`. This is called by the tool's `execute` method.
         - `createContentResponse`/`createErrorResponse`: Used by `handleApiResult` to format successful/error MCP responses.
         - `processMCPResponseData`: Filters/cleans data (e.g., removing `details`, `testStrategy`) before it's sent in the MCP response. Called by `handleApiResult`.
-        - `getCachedOrExecute`: **Used inside `*Direct` functions** in `task-master-core.js` to implement caching logic.
-        - `executeTaskMasterCommand`: Fallback for executing CLI commands.
+        - `getCachedOrExecute`: **Used inside `*Direct` functions** in `taskgraph-core.js` to implement caching logic.
+        - `executeTaskGraphCommand`: Fallback for executing CLI commands.
 - **Caching**: To improve performance for frequently called read operations (like `listTasks`, `showTask`, `nextTask`), a caching layer using `lru-cache` is implemented.
-    - **Caching logic resides *within* the direct function wrappers** in [`task-master-core.js`](../../mcp-server/src/core/task-master-core.js) using the `getCachedOrExecute` utility from [`tools/utils.js`](../../mcp-server/src/tools/utils.js).
+    - **Caching logic resides *within* the direct function wrappers** in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js) using the `getCachedOrExecute` utility from [`tools/utils.js`](../../mcp-server/src/tools/utils.js).
     - Generate unique cache keys based on function arguments that define a distinct call (e.g., file path, filters).
     - The `getCachedOrExecute` utility handles checking the cache, executing the core logic function on a cache miss, storing the result, and returning the data along with a `fromCache` flag.
     - Cache statistics can be monitored using the `cacheStats` MCP tool (implemented via `getCacheStatsDirect`).
@@ -441,7 +441,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
    - [ ] Handle all parameter validations and type conversions
    - [ ] Implement path resolving for relative paths
    - [ ] Add appropriate error handling with standardized error codes
-   - [ ] Add to imports/exports in `task-master-core.js`
+   - [ ] Add to imports/exports in `taskgraph-core.js`
 
 3. **MCP Tool Implementation**:
    - [ ] Create new file in `mcp-server/src/tools/` with kebab-case naming
@@ -515,7 +515,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
   - MCP Tool Name: `list_tasks`
 
 - **Mapping**:
-  - The `directFunctions` map in `task-master-core.js` maps the core function name (in camelCase) to its direct implementation:
+  - The `directFunctions` map in `taskgraph-core.js` maps the core function name (in camelCase) to its direct implementation:
     ```javascript
     export const directFunctions = {
       list: listTasksDirect,

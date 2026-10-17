@@ -45,7 +45,7 @@ Every CLI command that operates on tasks must follow this exact pattern:
 programInstance
   .command('command-name')
   .description('Command description')
-  .option('-f, --file <file>', 'Path to the tasks file', TASKMASTER_TASKS_FILE)
+  .option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
   .option('--tag <tag>', 'Specify tag context for task operations') // REQUIRED
   .action(async (options) => {
     // 1. Find project root
@@ -208,15 +208,15 @@ Test each command with:
 
 ```bash
 # Test with explicit tag
-node bin/task-master command-name --tag test-tag
+node bin/taskgraph command-name --tag test-tag
 
 # Test with active tag (should use current active tag)
-node bin/task-master use-tag test-tag
-node bin/task-master command-name
+node bin/taskgraph use-tag test-tag
+node bin/taskgraph command-name
 
 # Test with master tag (default)
-node bin/task-master use-tag master  
-node bin/task-master command-name
+node bin/taskgraph use-tag master  
+node bin/taskgraph command-name
 ```
 
 ## Migration Strategy

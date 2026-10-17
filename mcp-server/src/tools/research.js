@@ -10,7 +10,7 @@ import {
 } from '@tm/mcp';
 import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
-import { researchDirect } from '../core/task-master-core.js';
+import { researchDirect } from '../core/taskgraph-core.js';
 
 /**
  * Register the research tool with the MCP server
@@ -59,7 +59,7 @@ export function registerResearchTool(server) {
 				.boolean()
 				.optional()
 				.describe(
-					'Save research results to .taskmaster/docs/research/ directory (default: false)'
+					'Save research results to .taskgraph/docs/research/ directory (default: false)'
 				),
 			projectRoot: z
 				.string()

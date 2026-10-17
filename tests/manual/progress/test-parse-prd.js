@@ -201,12 +201,12 @@ function createTestConfig() {
 		}
 	};
 
-	const taskmasterDir = path.join(__dirname, '.taskmaster');
-	const configPath = path.join(taskmasterDir, 'config.json');
+	const taskgraphDir = path.join(__dirname, '.taskgraph');
+	const configPath = path.join(taskgraphDir, 'config.json');
 
-	// Create .taskmaster directory if it doesn't exist
-	if (!fs.existsSync(taskmasterDir)) {
-		fs.mkdirSync(taskmasterDir, { recursive: true });
+	// Create .taskgraph directory if it doesn't exist
+	if (!fs.existsSync(taskgraphDir)) {
+		fs.mkdirSync(taskgraphDir, { recursive: true });
 	}
 
 	fs.writeFileSync(configPath, JSON.stringify(testConfig, null, 2));

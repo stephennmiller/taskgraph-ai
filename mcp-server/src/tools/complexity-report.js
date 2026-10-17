@@ -11,7 +11,7 @@ import {
 import { z } from 'zod';
 import { getCurrentTag } from '../../../scripts/modules/utils.js';
 import { COMPLEXITY_REPORT_FILE } from '../../../src/constants/paths.js';
-import { complexityReportDirect } from '../core/task-master-core.js';
+import { complexityReportDirect } from '../core/taskgraph-core.js';
 import { findComplexityReportPath } from '../core/utils/path-utils.js';
 
 /**

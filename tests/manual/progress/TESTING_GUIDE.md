@@ -24,7 +24,7 @@ node scripts/dev.js analyze-complexity --research
 node scripts/dev.js expand --id=1 --force
 node scripts/dev.js expand --all --force
 
-task-master [command]                          # Global CLI (non-streaming)
+taskgraph [command]                          # Global CLI (non-streaming)
 ```
 
 ## ✅ Success Indicators

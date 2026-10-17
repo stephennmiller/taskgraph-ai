@@ -32,7 +32,7 @@ Find duplicated code and refactor into shared utilities. ONE refactor per sessio
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (clones refactored, duplication %)
+- @.taskgraph/loop-progress.txt - Progress log (clones refactored, duplication %)
 
 ## Process
 
@@ -66,7 +66,7 @@ Find code smells and clean them up. ONE cleanup per session.
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (smells fixed, areas cleaned)
+- @.taskgraph/loop-progress.txt - Progress log (smells fixed, areas cleaned)
 
 ## Code Smells to Target
 
@@ -108,7 +108,7 @@ Fix lint errors and type errors one by one. ONE fix per session.
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (errors fixed, remaining count)
+- @.taskgraph/loop-progress.txt - Progress log (errors fixed, remaining count)
 
 ## Process
 
@@ -142,7 +142,7 @@ Find uncovered code and write meaningful tests. ONE test per session.
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (coverage %, what was tested)
+- @.taskgraph/loop-progress.txt - Progress log (coverage %, what was tested)
 
 ## What Makes a Great Test
 

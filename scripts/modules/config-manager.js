@@ -10,10 +10,7 @@ import {
 import chalk from 'chalk';
 import { z } from 'zod';
 import { AI_COMMAND_NAMES } from '../../src/constants/commands.js';
-import {
-	LEGACY_CONFIG_FILE,
-	TASKMASTER_DIR
-} from '../../src/constants/paths.js';
+import { TASKGRAPH_DIR } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
@@ -116,9 +113,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 	let configExists = false;
 
 	// During initialization (no project markers), skip config file search entirely
-	const hasProjectMarkers =
-		fs.existsSync(path.join(rootToUse, TASKMASTER_DIR)) ||
-		fs.existsSync(path.join(rootToUse, LEGACY_CONFIG_FILE));
+	const hasProjectMarkers = fs.existsSync(path.join(rootToUse, TASKGRAPH_DIR));
 
 	if (hasProjectMarkers) {
 		// Only try to find config if we have project markers
@@ -128,8 +123,6 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 
 	if (configPath) {
 		configExists = true;
-		const isLegacy = configPath.endsWith(LEGACY_CONFIG_FILE);
-
 		try {
 			const rawData = fs.readFileSync(configPath, 'utf-8');
 			const parsedConfig = JSON.parse(rawData);
@@ -152,15 +145,6 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 				claudeCode: { ...defaults.claudeCode, ...parsedConfig?.claudeCode }
 			};
 			configSource = `file (${configPath})`; // Update source info
-
-			// Issue deprecation warning if using legacy config file
-			if (isLegacy) {
-				console.warn(
-					chalk.yellow(
-						`⚠️  DEPRECATION WARNING: Found configuration in legacy location '${configPath}'. Please migrate to .taskmaster/config.json. Run 'taskgraph migrate' to automatically migrate your project.`
-					)
-				);
-			}
 
 			// --- Validation (Warn if file content is invalid) ---
 			// Use log.warn for consistency
@@ -222,15 +206,12 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 				);
 			} else {
 				// Don't warn about missing config during initialization
-				// Only warn if this looks like an existing project (has .taskmaster dir or legacy config marker)
-				const hasTaskmasterDir = fs.existsSync(
-					path.join(rootToUse, TASKMASTER_DIR)
-				);
-				const hasLegacyMarker = fs.existsSync(
-					path.join(rootToUse, LEGACY_CONFIG_FILE)
+				// Only warn if this looks like an existing project (has .taskgraph dir)
+				const hasTaskGraphDir = fs.existsSync(
+					path.join(rootToUse, TASKGRAPH_DIR)
 				);
 
-				if (hasTaskmasterDir || hasLegacyMarker) {
+				if (hasTaskGraphDir) {
 					console.warn(
 						chalk.yellow(
 							`Warning: Configuration file not found at derived root (${rootToUse}). Using defaults.`
@@ -778,14 +759,14 @@ function writeConfig(config, explicitRoot = null) {
 	}
 	// ---> End determine root path logic <---
 
-	// Use new config location: .taskmaster/config.json
-	const taskmasterDir = path.join(rootPath, '.taskmaster');
-	const configPath = path.join(taskmasterDir, 'config.json');
+	// Use new config location: .taskgraph/config.json
+	const taskgraphDir = path.join(rootPath, '.taskgraph');
+	const configPath = path.join(taskgraphDir, 'config.json');
 
 	try {
-		// Ensure .taskmaster directory exists
-		if (!fs.existsSync(taskmasterDir)) {
-			fs.mkdirSync(taskmasterDir, { recursive: true });
+		// Ensure .taskgraph directory exists
+		if (!fs.existsSync(taskgraphDir)) {
+			fs.mkdirSync(taskgraphDir, { recursive: true });
 		}
 
 		fs.writeFileSync(configPath, JSON.stringify(config, null, 2));

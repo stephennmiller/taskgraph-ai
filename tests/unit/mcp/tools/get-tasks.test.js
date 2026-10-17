@@ -13,7 +13,7 @@ import {
 
 // Mock EVERYTHING
 const mockListTasksDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/task-master-core.js', () => ({
+jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	listTasksDirect: mockListTasksDirect
 }));
 

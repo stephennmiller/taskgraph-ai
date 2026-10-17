@@ -60,7 +60,7 @@ function getTagInfo(projectRoot, log) {
 		try {
 			const tasksJsonPath = path.join(
 				projectRoot,
-				'.taskmaster',
+				'.taskgraph',
 				'tasks',
 				'tasks.json'
 			);
@@ -332,7 +332,7 @@ async function handleApiResult(
  * @param {Object|null} customEnv - Optional object containing environment variables to pass to the child process
  * @returns {Object} - The result of the command execution
  */
-function executeTaskMasterCommand(
+function executeTaskGraphCommand(
 	command,
 	log,
 	args = [],
@@ -834,7 +834,7 @@ export {
 	getProjectRootFromSession,
 	getTagInfo,
 	handleApiResult,
-	executeTaskMasterCommand,
+	executeTaskGraphCommand,
 	getCachedOrExecute,
 	processMCPResponseData,
 	createContentResponse,

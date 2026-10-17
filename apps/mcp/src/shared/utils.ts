@@ -106,7 +106,7 @@ export function checkProgressCapability(
 export function getCurrentTag(projectRoot: string): string | null {
 	try {
 		// Try to read current tag from state.json
-		const stateJsonPath = path.join(projectRoot, '.taskmaster', 'state.json');
+		const stateJsonPath = path.join(projectRoot, '.taskgraph', 'state.json');
 
 		if (fs.existsSync(stateJsonPath)) {
 			const stateData = JSON.parse(fs.readFileSync(stateJsonPath, 'utf-8'));

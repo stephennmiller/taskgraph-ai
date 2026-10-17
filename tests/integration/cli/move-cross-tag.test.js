@@ -141,7 +141,7 @@ describe('Cross-Tag Move CLI Integration', () => {
 
 			const tasksPath = path.join(
 				utilsModule.findProjectRoot(),
-				'.taskmaster',
+				'.taskgraph',
 				'tasks',
 				'tasks.json'
 			);
@@ -213,12 +213,12 @@ describe('Cross-Tag Move CLI Integration', () => {
 					console.error(chalk.red(`Error: ${error.message}`));
 					console.log(
 						chalk.yellow(
-							'For within-tag moves, use: task-master move --from=<sourceId> --to=<destinationId>'
+							'For within-tag moves, use: taskgraph move --from=<sourceId> --to=<destinationId>'
 						)
 					);
 					console.log(
 						chalk.yellow(
-							'For cross-tag moves, use different tags: task-master move --from=<sourceId> --from-tag=<sourceTag> --to-tag=<targetTag>'
+							'For cross-tag moves, use different tags: taskgraph move --from=<sourceId> --from-tag=<sourceTag> --to-tag=<targetTag>'
 						)
 					);
 					throw error;
@@ -436,8 +436,8 @@ describe('Cross-Tag Move CLI Integration', () => {
 			mockMoveTasksBetweenTags.mockResolvedValue({
 				message: 'ok',
 				tips: [
-					'Run "task-master validate-dependencies" to check for dependency issues.',
-					'Run "task-master fix-dependencies" to automatically repair dangling dependencies.'
+					'Run "taskgraph validate-dependencies" to check for dependency issues.',
+					'Run "taskgraph fix-dependencies" to automatically repair dangling dependencies.'
 				]
 			});
 
@@ -519,7 +519,7 @@ describe('Cross-Tag Move CLI Integration', () => {
 		// Mock getCurrentTag to return 'master'
 		utilsModule.getCurrentTag.mockReturnValue('master');
 
-		// Simulate command: task-master move --from=1 --to-tag=in-progress
+		// Simulate command: taskgraph move --from=1 --to-tag=in-progress
 		// (no --from-tag provided, should use current tag 'master')
 		await moveAction({
 			from: '1',
@@ -531,7 +531,7 @@ describe('Cross-Tag Move CLI Integration', () => {
 
 		// Verify that moveTasksBetweenTags was called with 'master' as source tag
 		expect(mockMoveTasksBetweenTags).toHaveBeenCalledWith(
-			expect.stringContaining('.taskmaster/tasks/tasks.json'),
+			expect.stringContaining('.taskgraph/tasks/tasks.json'),
 			[1], // parseInt converts string to number
 			'master', // Should use current tag as fallback
 			'in-progress',

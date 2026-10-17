@@ -58,7 +58,7 @@ describe('ConfigLoader', () => {
 			const result = await configLoader.loadLocalConfig();
 
 			expect(fsPromises.readFile).toHaveBeenCalledWith(
-				'/test/project/.taskmaster/config.json',
+				'/test/project/.taskgraph/config.json',
 				'utf-8'
 			);
 			expect(result).toEqual(mockConfig);
@@ -74,7 +74,7 @@ describe('ConfigLoader', () => {
 			expect(result).toBeNull();
 		});
 
-		it('should throw TaskMasterError for other file errors', async () => {
+		it('should throw TaskGraphError for other file errors', async () => {
 			const error = new Error('Permission denied');
 			vi.mocked(fsPromises.readFile).mockRejectedValue(error);
 
@@ -104,7 +104,7 @@ describe('ConfigLoader', () => {
 			const result = await configLoader.hasLocalConfig();
 
 			expect(fsPromises.access).toHaveBeenCalledWith(
-				'/test/project/.taskmaster/config.json'
+				'/test/project/.taskgraph/config.json'
 			);
 			expect(result).toBe(true);
 		});
@@ -125,7 +125,7 @@ describe('ConfigLoader', () => {
 			const result = await configLoader.hasGlobalConfig();
 
 			expect(fsPromises.access).toHaveBeenCalledWith(
-				expect.stringContaining('.taskmaster/config.json')
+				expect.stringContaining('.taskgraph/config.json')
 			);
 			expect(result).toBe(true);
 		});

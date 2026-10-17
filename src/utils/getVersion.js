@@ -5,6 +5,6 @@ import packageJson from '../../package.json' with { type: 'json' };
  * Returns 'unknown' if not found or on error.
  * @returns {string} The version string or 'unknown'.
  */
-export function getTaskMasterVersion() {
+export function getTaskGraphVersion() {
 	return packageJson.version || 'unknown';
 }

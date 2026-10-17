@@ -36,10 +36,10 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 
 	beforeEach(() => {
 		// Create a temp directory for each test
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-test-'));
-		// Create .taskmaster/tasks directory structure
-		const taskmasterDir = path.join(tempDir, '.taskmaster', 'tasks');
-		fs.mkdirSync(taskmasterDir, { recursive: true });
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-test-'));
+		// Create .taskgraph/tasks directory structure
+		const taskgraphDir = path.join(tempDir, '.taskgraph', 'tasks');
+		fs.mkdirSync(taskgraphDir, { recursive: true });
 		storage = new FileStorage(tempDir);
 	});
 
@@ -419,7 +419,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// Read raw file to verify format
-			const filePath = path.join(tempDir, '.taskmaster', 'tasks', 'tasks.json');
+			const filePath = path.join(tempDir, '.taskgraph', 'tasks', 'tasks.json');
 			const rawContent = fs.readFileSync(filePath, 'utf-8');
 			const parsed = JSON.parse(rawContent);
 
@@ -428,7 +428,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 
 		it('should load metadata from pre-existing JSON file', async () => {
 			// Write a tasks.json file manually
-			const tasksDir = path.join(tempDir, '.taskmaster', 'tasks');
+			const tasksDir = path.join(tempDir, '.taskgraph', 'tasks');
 			const filePath = path.join(tasksDir, 'tasks.json');
 
 			const fileContent = {

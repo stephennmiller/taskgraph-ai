@@ -1,4 +1,4 @@
-# @task-master/tm-core
+# @taskgraph/tm-core
 
 Core library for TaskGraph - providing task management and orchestration capabilities with TypeScript support.
 
@@ -20,7 +20,7 @@ Core library for TaskGraph - providing task management and orchestration capabil
 ## Installation
 
 ```bash
-npm install @task-master/tm-core
+npm install @taskgraph/tm-core
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ npm install @task-master/tm-core
 ### Basic Usage
 
 ```typescript
-import { generateTaskId, PlaceholderTask } from '@task-master/tm-core';
+import { generateTaskId, PlaceholderTask } from '@taskgraph/tm-core';
 
 // Generate a unique task ID
 const taskId = generateTaskId();
@@ -48,22 +48,22 @@ You can import specific modules to reduce bundle size:
 
 ```typescript
 // Import types only
-import type { TaskId, TaskStatus } from '@task-master/tm-core/types';
+import type { TaskId, TaskStatus } from '@taskgraph/tm-core/types';
 
 // Import utilities
-import { generateTaskId, formatDate } from '@task-master/tm-core/utils';
+import { generateTaskId, formatDate } from '@taskgraph/tm-core/utils';
 
 // Import providers (AI providers coming soon)
-// import { AIProvider } from '@task-master/tm-core/providers';
+// import { AIProvider } from '@taskgraph/tm-core/providers';
 
 // Import storage
-import { PlaceholderStorage } from '@task-master/tm-core/storage';
+import { PlaceholderStorage } from '@taskgraph/tm-core/storage';
 
 // Import parsers
-import { PlaceholderParser } from '@task-master/tm-core/parser';
+import { PlaceholderParser } from '@taskgraph/tm-core/parser';
 
 // Import errors
-import { TmCoreError, TaskNotFoundError } from '@task-master/tm-core/errors';
+import { TmCoreError, TaskNotFoundError } from '@taskgraph/tm-core/errors';
 ```
 
 ## Architecture
@@ -127,10 +127,10 @@ This package supports both ESM and CommonJS formats automatically:
 
 ```javascript
 // ESM
-import { generateTaskId } from '@task-master/tm-core';
+import { generateTaskId } from '@taskgraph/tm-core';
 
 // CommonJS
-const { generateTaskId } = require('@task-master/tm-core');
+const { generateTaskId } = require('@taskgraph/tm-core');
 ```
 
 ## Roadmap

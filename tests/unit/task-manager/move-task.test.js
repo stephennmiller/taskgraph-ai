@@ -7,7 +7,7 @@ const TASKS = path.join(TMP, 'tasks.json');
 
 function seed(initialTasks) {
 	fs.rmSync(TMP, { recursive: true, force: true });
-	fs.mkdirSync(path.join(TMP, '.taskmaster'), { recursive: true });
+	fs.mkdirSync(path.join(TMP, '.taskgraph'), { recursive: true });
 	fs.writeFileSync(
 		TASKS,
 		JSON.stringify(

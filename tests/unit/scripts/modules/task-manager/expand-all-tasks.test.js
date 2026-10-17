@@ -279,7 +279,7 @@ describe('expandAllTasks', () => {
 		test('should pass complexityReportPath to expandTask when provided in context', async () => {
 			// Arrange
 			const mockComplexityReportPath =
-				'/test/project/.taskmaster/reports/task-complexity-report.json';
+				'/test/project/.taskgraph/reports/task-complexity-report.json';
 			mockExpandTask.mockResolvedValue({
 				telemetryData: { commandName: 'expand-task', totalCost: 0.05 }
 			});

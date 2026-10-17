@@ -13,7 +13,7 @@ export class PathResolver {
 	private readonly tasksFilePath: string;
 
 	constructor(projectPath: string) {
-		this.basePath = path.join(projectPath, '.taskmaster');
+		this.basePath = path.join(projectPath, '.taskgraph');
 		this.tasksDir = path.join(this.basePath, 'tasks');
 		this.tasksFilePath = path.join(this.tasksDir, 'tasks.json');
 	}

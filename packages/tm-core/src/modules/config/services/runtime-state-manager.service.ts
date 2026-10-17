@@ -7,8 +7,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
 
@@ -34,7 +34,7 @@ export class RuntimeStateManager {
 	private readonly logger = getLogger('RuntimeStateManager');
 
 	constructor(projectRoot: string) {
-		this.stateFilePath = path.join(projectRoot, '.taskmaster', 'state.json');
+		this.stateFilePath = path.join(projectRoot, '.taskgraph', 'state.json');
 		this.currentState = {
 			currentTag: DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG
 		};
@@ -104,7 +104,7 @@ export class RuntimeStateManager {
 				'utf-8'
 			);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to save runtime state',
 				ERROR_CODES.CONFIG_ERROR,
 				{ statePath: this.stateFilePath },

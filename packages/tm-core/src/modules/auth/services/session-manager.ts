@@ -19,7 +19,7 @@ export class SessionManager {
 	private readonly logger = getLogger('SessionManager');
 	private readonly LEGACY_AUTH_FILE = path.join(
 		os.homedir(),
-		'.taskmaster',
+		'.taskgraph',
 		'auth.json'
 	);
 	private initializationPromise: Promise<void>;

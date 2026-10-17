@@ -148,7 +148,7 @@ async function performResearch(
 		try {
 			const tasksPath = path.join(
 				projectRoot,
-				'.taskmaster',
+				'.taskgraph',
 				'tasks',
 				'tasks.json'
 			);
@@ -863,7 +863,7 @@ async function handleSaveToTask(
 		// Try to save - first validate the ID exists
 		const tasksPath = path.join(
 			projectRoot,
-			'.taskmaster',
+			'.taskgraph',
 			'tasks',
 			'tasks.json'
 		);
@@ -955,7 +955,7 @@ async function handleSaveToTask(
 }
 
 /**
- * Handle saving conversation to a file in .taskmaster/docs/research/
+ * Handle saving conversation to a file in .taskgraph/docs/research/
  * @param {Array} conversationHistory - Array of conversation exchanges
  * @param {string} projectRoot - Project root directory
  * @param {Object} context - Execution context
@@ -972,7 +972,7 @@ async function handleSaveToFile(
 		// Create research directory if it doesn't exist
 		const researchDir = path.join(
 			projectRoot,
-			'.taskmaster',
+			'.taskgraph',
 			'docs',
 			'research'
 		);

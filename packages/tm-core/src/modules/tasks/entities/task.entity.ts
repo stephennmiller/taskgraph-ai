@@ -2,7 +2,7 @@
  * @fileoverview Task entity with business rules and domain logic
  */
 
-import { ERROR_CODES, TaskMasterError } from '../../../common/errors/task-master-error.js';
+import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import type {
 	Subtask,
 	Task,
@@ -83,35 +83,35 @@ export class TaskEntity implements Task {
 			data.id === null ||
 			(typeof data.id !== 'string' && typeof data.id !== 'number')
 		) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Task ID is required and must be a string or number',
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
 
 		if (!data.title || data.title.trim().length === 0) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Task title is required',
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
 
 		if (!data.description || data.description.trim().length === 0) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Task description is required',
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
 
 		if (!this.isValidStatus(data.status)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Invalid task status: ${data.status}`,
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
 
 		if (!this.isValidPriority(data.priority)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Invalid task priority: ${data.priority}`,
 				ERROR_CODES.VALIDATION_ERROR
 			);
@@ -167,7 +167,7 @@ export class TaskEntity implements Task {
 	 */
 	markAsComplete(): void {
 		if (!this.canComplete()) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Task cannot be marked as complete',
 				ERROR_CODES.TASK_STATUS_ERROR,
 				{
@@ -216,7 +216,7 @@ export class TaskEntity implements Task {
 	 */
 	updateStatus(newStatus: TaskStatus): void {
 		if (!this.isValidStatus(newStatus)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Invalid status: ${newStatus}`,
 				ERROR_CODES.VALIDATION_ERROR
 			);
@@ -224,7 +224,7 @@ export class TaskEntity implements Task {
 
 		// Business rule: Cannot move from done to pending
 		if (this.status === 'done' && newStatus === 'pending') {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Cannot move completed task back to pending',
 				ERROR_CODES.TASK_STATUS_ERROR
 			);

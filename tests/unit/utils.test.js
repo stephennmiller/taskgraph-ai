@@ -646,7 +646,7 @@ describe('CLI Flag Format Validation', () => {
 	test('detectCamelCaseFlags should identify camelCase flags', () => {
 		const args = [
 			'node',
-			'task-master',
+			'taskgraph',
 			'add-task',
 			'--promptText=test',
 			'--userID=123'
@@ -667,7 +667,7 @@ describe('CLI Flag Format Validation', () => {
 	test('detectCamelCaseFlags should not flag kebab-case flags', () => {
 		const args = [
 			'node',
-			'task-master',
+			'taskgraph',
 			'add-task',
 			'--prompt-text=test',
 			'--user-id=123'
@@ -680,7 +680,7 @@ describe('CLI Flag Format Validation', () => {
 	test('detectCamelCaseFlags should respect single-word flags', () => {
 		const args = [
 			'node',
-			'task-master',
+			'taskgraph',
 			'add-task',
 			'--prompt=test',
 			'--file=test.json',
@@ -715,33 +715,33 @@ test('slugifyTagForFilePath should create filesystem-safe tag names', () => {
 });
 
 test('getTagAwareFilePath should use slugified tags in file paths', () => {
-	const basePath = '.taskmaster/reports/complexity-report.json';
+	const basePath = '.taskgraph/reports/complexity-report.json';
 	const projectRoot = '/test/project';
 
 	// Master tag should not be slugified
 	expect(getTagAwareFilePath(basePath, 'master', projectRoot)).toBe(
-		'/test/project/.taskmaster/reports/complexity-report.json'
+		'/test/project/.taskgraph/reports/complexity-report.json'
 	);
 
 	// Null/undefined tags should use base path
 	expect(getTagAwareFilePath(basePath, null, projectRoot)).toBe(
-		'/test/project/.taskmaster/reports/complexity-report.json'
+		'/test/project/.taskgraph/reports/complexity-report.json'
 	);
 
 	// Regular tag should be slugified
 	expect(getTagAwareFilePath(basePath, 'feature-branch', projectRoot)).toBe(
-		'/test/project/.taskmaster/reports/complexity-report_feature-branch.json'
+		'/test/project/.taskgraph/reports/complexity-report_feature-branch.json'
 	);
 
 	// Tag with special characters should be slugified
 	expect(getTagAwareFilePath(basePath, 'feature/user-auth', projectRoot)).toBe(
-		'/test/project/.taskmaster/reports/complexity-report_feature-user-auth.json'
+		'/test/project/.taskgraph/reports/complexity-report_feature-user-auth.json'
 	);
 
 	// Tag with spaces and special characters
 	expect(
 		getTagAwareFilePath(basePath, 'Feature Branch @Test', projectRoot)
 	).toBe(
-		'/test/project/.taskmaster/reports/complexity-report_feature-branch-test.json'
+		'/test/project/.taskgraph/reports/complexity-report_feature-branch-test.json'
 	);
 });

@@ -13,7 +13,7 @@ import { resolveTag } from '../../../scripts/modules/utils.js';
 import {
 	moveTaskCrossTagDirect,
 	moveTaskDirect
-} from '../core/task-master-core.js';
+} from '../core/taskgraph-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
 
 /**

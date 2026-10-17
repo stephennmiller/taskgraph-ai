@@ -12,7 +12,7 @@ import {
 	enableSilentMode,
 	isSilentMode
 } from '../../../../scripts/modules/utils.js';
-import { TASKMASTER_TASKS_FILE } from '../../../../src/constants/paths.js';
+import { TASKGRAPH_TASKS_FILE } from '../../../../src/constants/paths.js';
 import { createLogWrapper } from '../../tools/utils.js';
 import { resolvePrdPath, resolveProjectPath } from '../utils/path-utils.js';
 
@@ -85,8 +85,8 @@ export async function parsePRDDirect(args, log, context = {}) {
 		? path.isAbsolute(outputArg)
 			? outputArg
 			: path.resolve(projectRoot, outputArg)
-		: resolveProjectPath(TASKMASTER_TASKS_FILE, args) ||
-			path.resolve(projectRoot, TASKMASTER_TASKS_FILE);
+		: resolveProjectPath(TASKGRAPH_TASKS_FILE, args) ||
+			path.resolve(projectRoot, TASKGRAPH_TASKS_FILE);
 
 	// Check if input file exists
 	if (!fs.existsSync(inputPath)) {

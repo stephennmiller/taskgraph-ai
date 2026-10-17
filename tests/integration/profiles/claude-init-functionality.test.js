@@ -26,7 +26,7 @@ describe('Claude Profile Initialization Functionality', () => {
 		expect(claudeProfileContent).toContain("rulesDir: '.'"); // non-default
 		expect(claudeProfileContent).toContain("mcpConfigName: '.mcp.json'"); // non-default
 		expect(claudeProfileContent).toContain(
-			"'AGENTS.md': '.taskmaster/CLAUDE.md'"
+			"'AGENTS.md': '.taskgraph/CLAUDE.md'"
 		);
 
 		// Check the final computed properties on the profile object
@@ -37,7 +37,7 @@ describe('Claude Profile Initialization Functionality', () => {
 		expect(claudeProfile.mcpConfig).toBe(true); // default from base profile
 		expect(claudeProfile.mcpConfigName).toBe('.mcp.json'); // explicitly set
 		expect(claudeProfile.mcpConfigPath).toBe('.mcp.json'); // computed
-		expect(claudeProfile.fileMap['AGENTS.md']).toBe('.taskmaster/CLAUDE.md');
+		expect(claudeProfile.fileMap['AGENTS.md']).toBe('.taskgraph/CLAUDE.md');
 	});
 
 	test('claude.js has lifecycle functions for file management', () => {
@@ -47,10 +47,10 @@ describe('Claude Profile Initialization Functionality', () => {
 		);
 	});
 
-	test('claude.js handles .claude directory and .taskmaster/CLAUDE.md import in lifecycle functions', () => {
+	test('claude.js handles .claude directory and .taskgraph/CLAUDE.md import in lifecycle functions', () => {
 		expect(claudeProfileContent).toContain('.claude');
-		expect(claudeProfileContent).toContain('.taskmaster/CLAUDE.md');
-		expect(claudeProfileContent).toContain('@./.taskmaster/CLAUDE.md');
+		expect(claudeProfileContent).toContain('.taskgraph/CLAUDE.md');
+		expect(claudeProfileContent).toContain('@./.taskgraph/CLAUDE.md');
 	});
 
 	test('claude.js has proper error handling in lifecycle functions', () => {
@@ -64,9 +64,9 @@ describe('transformToClaudeFormat', () => {
 	test('should add type: stdio to MCP server configs', () => {
 		const input = {
 			mcpServers: {
-				'task-master-ai': {
+				'taskgraph-ai': {
 					command: 'npx',
-					args: ['-y', 'task-master-ai'],
+					args: ['-y', 'taskgraph-ai'],
 					env: { ANTHROPIC_API_KEY: 'test-key' }
 				}
 			}
@@ -74,10 +74,10 @@ describe('transformToClaudeFormat', () => {
 
 		const result = transformToClaudeFormat(input);
 
-		expect(result.mcpServers['task-master-ai']).toEqual({
+		expect(result.mcpServers['taskgraph-ai']).toEqual({
 			type: 'stdio',
 			command: 'npx',
-			args: ['-y', 'task-master-ai'],
+			args: ['-y', 'taskgraph-ai'],
 			env: { ANTHROPIC_API_KEY: 'test-key' }
 		});
 	});

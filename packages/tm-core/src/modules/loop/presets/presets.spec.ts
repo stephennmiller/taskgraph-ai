@@ -198,9 +198,9 @@ describe('Preset Structure Validation', () => {
 			'%s contains @ file reference pattern',
 			(preset) => {
 				const content = getPreset(preset);
-				// Check for @ file reference pattern (e.g., @.taskmaster/ or @./)
+				// Check for @ file reference pattern (e.g., @.taskgraph/ or @./)
 				// Note: default preset uses context header injection instead
-				expect(content).toMatch(/@\.taskmaster\/|@\.\//);
+				expect(content).toMatch(/@\.taskgraph\/|@\.\//);
 			}
 		);
 

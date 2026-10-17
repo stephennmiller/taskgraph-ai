@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type { Task, TaskStatus } from '../../../common/types/index.js';
 import { AuthDomain } from '../../auth/auth-domain.js';
 import type { AuthManager } from '../../auth/managers/auth-manager.js';
@@ -381,7 +381,7 @@ export class ExportService {
 		const isAuthenticated = await this.authManager.hasValidSession();
 		// Validate authentication
 		if (!isAuthenticated) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Authentication required for export',
 				ERROR_CODES.AUTHENTICATION_ERROR
 			);
@@ -396,14 +396,14 @@ export class ExportService {
 
 		// Validate we have necessary IDs
 		if (!orgId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Organization ID is required for export. Use "tm context org" to select one.',
 				ERROR_CODES.MISSING_CONFIGURATION
 			);
 		}
 
 		if (!briefId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Brief ID is required for export. Use "tm context brief" or provide --brief flag.',
 				ERROR_CODES.MISSING_CONFIGURATION
 			);
@@ -485,7 +485,7 @@ export class ExportService {
 		// Extract brief ID from input
 		const briefId = this.extractBriefId(briefInput);
 		if (!briefId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Invalid brief ID or URL provided',
 				ERROR_CODES.VALIDATION_ERROR
 			);
@@ -494,7 +494,7 @@ export class ExportService {
 		// Fetch brief to get organization
 		const brief = await this.authManager.getBrief(briefId);
 		if (!brief) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Brief not found or you do not have access',
 				ERROR_CODES.NOT_FOUND
 			);
@@ -673,7 +673,7 @@ export class ExportService {
 
 			// Prepare request body
 			const requestBody = {
-				source: 'task-master-cli',
+				source: 'taskgraph-cli',
 				options: {
 					dryRun: false,
 					stopOnError: false
@@ -809,7 +809,7 @@ export class ExportService {
 	): Promise<GenerateBriefResult> {
 		const isAuthenticated = await this.authManager.hasValidSession();
 		if (!isAuthenticated) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Authentication required for export',
 				ERROR_CODES.AUTHENTICATION_ERROR
 			);
@@ -870,7 +870,7 @@ export class ExportService {
 		return this.callGenerateBriefEndpoint({
 			tasks: importTasks,
 			source: {
-				tool: 'task-master',
+				tool: 'taskgraph',
 				version: this.getVersion(),
 				tag: tag,
 				projectName: projectName
@@ -1042,7 +1042,7 @@ export class ExportService {
 		const apiBaseUrl = authDomain.getApiBaseUrl();
 
 		if (!apiBaseUrl) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Export API endpoint not configured. Please set TM_PUBLIC_BASE_DOMAIN environment variable.',
 				ERROR_CODES.MISSING_CONFIGURATION,
 				{ operation: 'generateBriefFromTasks' }
@@ -1054,7 +1054,7 @@ export class ExportService {
 		// Get auth token
 		const accessToken = await this.authManager.getAccessToken();
 		if (!accessToken) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Not authenticated',
 				ERROR_CODES.AUTHENTICATION_ERROR
 			);
@@ -1180,7 +1180,7 @@ export class ExportService {
 
 		const isAuthenticated = await this.authManager.hasValidSession();
 		if (!isAuthenticated) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Authentication required for PRD import',
 				ERROR_CODES.AUTHENTICATION_ERROR
 			);
@@ -1227,7 +1227,7 @@ export class ExportService {
 		const apiBaseUrl = authDomain.getApiBaseUrl();
 
 		if (!apiBaseUrl) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'API endpoint not configured. Please set TM_PUBLIC_BASE_DOMAIN environment variable.',
 				ERROR_CODES.MISSING_CONFIGURATION,
 				{ operation: 'generateBriefFromPrd' }
@@ -1239,7 +1239,7 @@ export class ExportService {
 		// Get auth token
 		const accessToken = await this.authManager.getAccessToken();
 		if (!accessToken) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Not authenticated',
 				ERROR_CODES.AUTHENTICATION_ERROR
 			);

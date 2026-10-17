@@ -126,11 +126,7 @@ describe('SessionManager', () => {
 	});
 
 	describe('Legacy Migration', () => {
-		const LEGACY_AUTH_FILE = path.join(
-			os.homedir(),
-			'.taskmaster',
-			'auth.json'
-		);
+		const LEGACY_AUTH_FILE = path.join(os.homedir(), '.taskgraph', 'auth.json');
 
 		it('should delete legacy file if valid session exists', async () => {
 			// Setup all mocks before creating SessionManager

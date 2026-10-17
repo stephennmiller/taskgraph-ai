@@ -62,7 +62,7 @@ The loop exits early when:
 
 ## Progress File
 
-Each iteration's agent has access to a shared progress file (default: `.taskmaster/loop-progress.txt`) via the `@` file reference syntax. Agents append notes about what they completed, allowing subsequent iterations to build on previous work.
+Each iteration's agent has access to a shared progress file (default: `.taskgraph/loop-progress.txt`) via the `@` file reference syntax. Agents append notes about what they completed, allowing subsequent iterations to build on previous work.
 
 Example progress file content:
 
@@ -81,7 +81,7 @@ Example progress file content:
 | ------------------------ | ------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `-n, --iterations`       | number | `10`                            | Maximum number of iterations to run.                                                                          |
 | `-p, --prompt`           | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
-| `--progress-file`        | string | `.taskmaster/loop-progress.txt` | Path to the progress log file where iteration notes are appended.                                             |
+| `--progress-file`        | string | `.taskgraph/loop-progress.txt` | Path to the progress log file where iteration notes are appended.                                             |
 | `--sleep`                | number | `5`                             | Seconds to wait between iterations. Gives the system time to settle before spawning the next agent.          |
 | `--on-complete`          | string | -                               | Shell command to run when all tasks complete (status becomes `all_complete`). Example: `--on-complete 'notify-send "Done!"'` |
 | `-t, --tag`              | string | -                               | Filter to only work on tasks with this tag.                                                                   |
@@ -236,8 +236,8 @@ Brief description of what this loop does.
 
 ## Files Available
 
-- @.taskmaster/tasks/tasks.json - Your task backlog
-- @.taskmaster/loop-progress.txt - Progress log from previous iterations
+- @.taskgraph/tasks/tasks.json - Your task backlog
+- @.taskgraph/loop-progress.txt - Progress log from previous iterations
 - @path/to/other/file.ts - Any other files the agent needs
 
 ## Process
@@ -264,7 +264,7 @@ The `@` prefix makes files available to the agent. Claude Code will read these f
 
 - @src/index.ts - Main entry point
 - @package.json - Dependencies and scripts
-- @.taskmaster/loop-progress.txt - Progress from previous iterations
+- @.taskgraph/loop-progress.txt - Progress from previous iterations
 ```
 
 Without the `@` prefix, file paths are just text. With `@`, the agent can actually read and reference the file contents.
@@ -293,7 +293,7 @@ When either marker is detected, the loop exits early. The reason text is capture
 
 1. **Be specific**: Clearly define what "done" means for your workflow
 2. **One task per iteration**: Instruct agents to complete exactly one unit of work
-3. **Use the progress file**: Reference `@.taskmaster/loop-progress.txt` so agents can see what previous iterations accomplished
+3. **Use the progress file**: Reference `@.taskgraph/loop-progress.txt` so agents can see what previous iterations accomplished
 4. **Include quality checks**: Add steps for running tests or type checks before completing
 5. **Define completion criteria**: Tell agents exactly when to output `<loop-complete>`
 6. **Handle edge cases**: Define when to output `<loop-blocked>` to avoid infinite loops
@@ -305,7 +305,7 @@ The progress file is a shared log that persists notes across loop iterations. Si
 ### Default Location
 
 ```
-.taskmaster/loop-progress.txt
+.taskgraph/loop-progress.txt
 ```
 
 Override with the `--progress-file` option:
@@ -346,7 +346,7 @@ Always include the progress file in your `## Files Available` section:
 ```markdown
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log from previous iterations
+- @.taskgraph/loop-progress.txt - Progress log from previous iterations
 ```
 
 And instruct agents to append notes:

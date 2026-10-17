@@ -7,7 +7,7 @@
 ```bash
 # Project Setup
 taskgraph init                                    # Initialize TaskGraph in current project
-taskgraph parse-prd .taskmaster/docs/prd.md       # Generate tasks from PRD document
+taskgraph parse-prd .taskgraph/docs/prd.md       # Generate tasks from PRD document
 taskgraph models --setup                        # Configure AI models interactively
 
 # Daily Development Workflow
@@ -39,10 +39,10 @@ taskgraph generate                                         # Update task markdow
 
 ### Core Files
 
-- `.taskmaster/tasks/tasks.json` - Main task data file (auto-managed)
-- `.taskmaster/config.json` - AI model configuration (use `taskgraph models` to modify)
-- `.taskmaster/docs/prd.md` - Product Requirements Document for parsing (`.md` extension recommended for better editor support)
-- `.taskmaster/tasks/*.txt` - Individual task files (auto-generated from tasks.json)
+- `.taskgraph/tasks/tasks.json` - Main task data file (auto-managed)
+- `.taskgraph/config.json` - AI model configuration (use `taskgraph models` to modify)
+- `.taskgraph/docs/prd.md` - Product Requirements Document for parsing (`.md` extension recommended for better editor support)
+- `.taskgraph/tasks/*.txt` - Individual task files (auto-generated from tasks.json)
 - `.env` - API keys for CLI usage
 
 **PRD File Format:** While both `.txt` and `.md` extensions work, **`.md` is recommended** because:
@@ -61,7 +61,7 @@ taskgraph generate                                         # Update task markdow
 
 ```
 project/
-├── .taskmaster/
+├── .taskgraph/
 │   ├── tasks/              # Task files directory
 │   │   ├── tasks.json      # Main task database
 │   │   ├── task-1.md      # Individual task files
@@ -123,7 +123,7 @@ Default: `core` (7 tools). Set via `TASKGRAPH_TOOLS` env var.
 ### Essential MCP Tools
 
 ```javascript
-help; // = shows available taskmaster commands
+help; // = shows available taskgraph commands
 // Project setup
 initialize_project; // = taskgraph init
 parse_prd; // = taskgraph parse-prd
@@ -157,7 +157,7 @@ complexity_report; // = taskgraph complexity-report
 taskgraph init
 
 # Create or obtain PRD, then parse it (use .md extension for better editor support)
-taskgraph parse-prd .taskmaster/docs/prd.md
+taskgraph parse-prd .taskgraph/docs/prd.md
 
 # Analyze complexity and expand tasks
 taskgraph analyze-complexity --research
@@ -197,7 +197,7 @@ cd project-docs-worktree && claude
 
 ### Custom Slash Commands
 
-Create `.claude/commands/taskmaster-next.md`:
+Create `.claude/commands/taskgraph-next.md`:
 
 ```markdown
 Find the next available TaskGraph task and show its details.
@@ -210,7 +210,7 @@ Steps:
 4. Suggest the first implementation step
 ```
 
-Create `.claude/commands/taskmaster-complete.md`:
+Create `.claude/commands/taskgraph-complete.md`:
 
 ```markdown
 Complete a TaskGraph task: $ARGUMENTS
@@ -406,7 +406,7 @@ These commands make AI calls and may take up to a minute:
 ### File Management
 
 - Never manually edit `tasks.json` - use commands instead
-- Never manually edit `.taskmaster/config.json` - use `taskgraph models`
+- Never manually edit `.taskgraph/config.json` - use `taskgraph models`
 - Task markdown files in `tasks/` are auto-generated
 - Run `taskgraph generate` after manual changes to tasks.json
 

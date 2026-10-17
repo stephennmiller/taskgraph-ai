@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type {
 	AIModel,
 	AIOptions,
@@ -77,7 +77,7 @@ export abstract class BaseProvider implements IAIProvider {
 
 	constructor(config: BaseProviderConfig) {
 		if (!config.apiKey) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'API key is required',
 				ERROR_CODES.AUTHENTICATION_ERROR
 			);
@@ -97,7 +97,7 @@ export abstract class BaseProvider implements IAIProvider {
 		// Validate input
 		const validation = this.validateInput(prompt, options);
 		if (!validation.valid) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				validation.error || 'Invalid input',
 				ERROR_CODES.VALIDATION_ERROR
 			);
@@ -259,14 +259,14 @@ export abstract class BaseProvider implements IAIProvider {
 	 * Handle errors with proper wrapping
 	 */
 	protected handleError(error: unknown): never {
-		if (error instanceof TaskMasterError) {
+		if (error instanceof TaskGraphError) {
 			throw error;
 		}
 
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		const errorCode = this.getErrorCode(error);
 
-		throw new TaskMasterError(
+		throw new TaskGraphError(
 			`${this.getName()} provider error: ${errorMessage}`,
 			errorCode,
 			{

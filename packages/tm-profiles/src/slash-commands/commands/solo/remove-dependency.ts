@@ -71,7 +71,7 @@ After removing:
 ## Example
 
 \`\`\`
-/taskmaster:remove-dependency 5 from 3
+/taskgraph:remove-dependency 5 from 3
 → Removed: Task #5 no longer depends on #3
 → Task #5 is now UNBLOCKED and ready to start
 → Warning: Consider if #5 still needs #2 completed first

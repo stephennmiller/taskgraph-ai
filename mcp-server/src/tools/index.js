@@ -37,7 +37,7 @@ export function getToolsConfiguration() {
  * @param {string} toolMode - The tool mode configuration (defaults to 'all')
  * @returns {Object} Object containing registered tools, failed tools, and normalized mode
  */
-export function registerTaskMasterTools(server, toolMode = 'core') {
+export function registerTaskGraphTools(server, toolMode = 'core') {
 	const registeredTools = [];
 	const failedTools = [];
 
@@ -236,5 +236,5 @@ export {
 };
 
 export default {
-	registerTaskMasterTools
+	registerTaskGraphTools
 };

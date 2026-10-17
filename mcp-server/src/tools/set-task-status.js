@@ -11,10 +11,7 @@ import {
 import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
 import { TASK_STATUS_OPTIONS } from '../../../src/constants/task-status.js';
-import {
-	nextTaskDirect,
-	setTaskStatusDirect
-} from '../core/task-master-core.js';
+import { nextTaskDirect, setTaskStatusDirect } from '../core/taskgraph-core.js';
 import {
 	findComplexityReportPath,
 	findTasksPath
