@@ -10,7 +10,9 @@ describe('displayRecommendedNextTask - suggested commands', () => {
 
 	const render = (status: string): string => {
 		displayRecommendedNextTask({ id: 7, title: 'Wire up auth', status });
-		return stripAnsi(logSpy.mock.calls.map((call) => call.join(' ')).join('\n'));
+		return stripAnsi(
+			logSpy.mock.calls.map((call: unknown[]) => call.join(' ')).join('\n')
+		);
 	};
 
 	beforeEach(() => {
