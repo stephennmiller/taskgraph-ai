@@ -66,7 +66,7 @@ Environment Variables:
 	console.log('[DEBUG] GitHub token found');
 
 	const owner = process.env.GITHUB_REPOSITORY_OWNER || 'stephennmiller';
-	const repo = process.env.GITHUB_REPOSITORY_NAME || 'claude-task-master';
+	const repo = process.env.GITHUB_REPOSITORY_NAME || 'taskgraph-ai';
 	const dryRun = process.env.DRY_RUN !== 'false';
 	const daysBack = parseInt(process.env.DAYS_BACK || '90', 10);
 

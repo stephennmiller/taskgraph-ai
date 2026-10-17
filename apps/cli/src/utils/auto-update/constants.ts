@@ -9,4 +9,4 @@ export const PACKAGE_NAME = 'taskgraph-ai';
 export const BIN_NAME = 'taskgraph';
 
 /** GitHub repository (owner/name) hosting the changelog */
-export const REPO_SLUG = 'stephennmiller/claude-task-master';
+export const REPO_SLUG = 'stephennmiller/taskgraph-ai';

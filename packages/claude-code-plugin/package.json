@@ -15,12 +15,12 @@
 	],
 	"author": {
 		"name": "Eyal Toledano",
-		"url": "https://github.com/eyaltoledano/claude-task-master"
+		"url": "https://github.com/stephennmiller/taskgraph-ai"
 	},
 	"license": "MIT WITH Commons-Clause",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/eyaltoledano/claude-task-master.git",
+		"url": "git+https://github.com/stephennmiller/taskgraph-ai.git",
 		"directory": "packages/claude-code-plugin"
 	}
 }

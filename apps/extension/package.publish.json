@@ -42,7 +42,7 @@
 		"boards",
 		"cards"
 	],
-	"repository": "https://github.com/stephennmiller/claude-task-master",
+	"repository": "https://github.com/stephennmiller/taskgraph-ai",
 	"activationEvents": ["onStartupFinished", "workspaceContains:.taskmaster/**"],
 	"main": "./dist/extension.js",
 	"contributes": {

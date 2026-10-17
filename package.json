@@ -131,11 +131,11 @@
 	"packageManager": "npm@10.9.2",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/stephennmiller/claude-task-master.git"
+		"url": "git+https://github.com/stephennmiller/taskgraph-ai.git"
 	},
-	"homepage": "https://github.com/stephennmiller/claude-task-master#readme",
+	"homepage": "https://github.com/stephennmiller/taskgraph-ai#readme",
 	"bugs": {
-		"url": "https://github.com/stephennmiller/claude-task-master/issues"
+		"url": "https://github.com/stephennmiller/taskgraph-ai/issues"
 	},
 	"files": [
 		"dist/**",

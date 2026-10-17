@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/stephennmiller/claude-task-master/actions/workflows/ci.yml"><img src="https://github.com/stephennmiller/claude-task-master/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/stephennmiller/claude-task-master/stargazers"><img src="https://img.shields.io/github/stars/stephennmiller/claude-task-master?style=social" alt="GitHub stars"></a>
+  <a href="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml"><img src="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/stephennmiller/taskgraph-ai/stargazers"><img src="https://img.shields.io/github/stars/stephennmiller/taskgraph-ai?style=social" alt="GitHub stars"></a>
   <a href="https://badge.fury.io/js/taskgraph-ai"><img src="https://badge.fury.io/js/taskgraph-ai.svg" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg" alt="License"></a>
 </p>
@@ -382,14 +382,14 @@ Task Master now supports Claude models through the Claude Code CLI, which requir
 Try running it with Node directly:
 
 ```bash
-node node_modules/claude-task-master/scripts/init.js
+node node_modules/taskgraph-ai/scripts/init.js
 ```
 
 Or clone the repository and run:
 
 ```bash
-git clone https://github.com/stephennmiller/claude-task-master.git
-cd claude-task-master
+git clone https://github.com/stephennmiller/taskgraph-ai.git
+cd taskgraph-ai
 node scripts/init.js
 ```
 
@@ -401,13 +401,13 @@ node scripts/init.js
 
 ## Contributors
 
-<a href="https://github.com/stephennmiller/claude-task-master/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=stephennmiller/claude-task-master" alt="Task Master project contributors" />
+<a href="https://github.com/stephennmiller/taskgraph-ai/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=stephennmiller/taskgraph-ai" alt="Task Master project contributors" />
 </a>
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=stephennmiller/claude-task-master&type=Timeline)](https://www.star-history.com/#stephennmiller/claude-task-master&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=stephennmiller/taskgraph-ai&type=Timeline)](https://www.star-history.com/#stephennmiller/taskgraph-ai&Timeline)
 
 ## Licensing
 

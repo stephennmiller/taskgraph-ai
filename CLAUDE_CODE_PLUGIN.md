@@ -10,7 +10,7 @@ Once this repository is pushed to GitHub, users can install with:
 
 ```bash
 # Add the marketplace
-/plugin marketplace add eyaltoledano/claude-task-master
+/plugin marketplace add stephennmiller/taskgraph-ai
 
 # Install the plugin
 /plugin install taskmaster@taskmaster
@@ -20,7 +20,7 @@ Once this repository is pushed to GitHub, users can install with:
 
 ```bash
 # From the project root directory
-cd /path/to/claude-task-master
+cd /path/to/taskgraph-ai
 
 # Build the plugin first
 cd packages/claude-code-plugin
@@ -35,7 +35,7 @@ cd ../..
 ## Marketplace Structure
 
 ```
-claude-task-master/
+taskgraph-ai/
 ├── .claude-plugin/
 │   └── marketplace.json        # Marketplace manifest (at repo root)
 │
@@ -120,7 +120,7 @@ Organizations can auto-install this marketplace for all team members by adding t
     "taskgraph": {
       "source": {
         "source": "github",
-        "repo": "eyaltoledano/claude-task-master"
+        "repo": "stephennmiller/taskgraph-ai"
       }
     }
   },

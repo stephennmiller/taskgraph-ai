@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "stephennmiller/claude-task-master"
+      "repo": "stephennmiller/taskgraph-ai"
     }
   ],
   "commit": false,
