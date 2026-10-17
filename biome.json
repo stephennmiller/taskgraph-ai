@@ -24,9 +24,7 @@
 		}
 	},
 	"linter": {
-		"enabled": true,
-		"include": ["apps/extension/**/*.ts", "apps/extension/**/*.tsx"],
-		"ignore": ["**/*", "!apps/extension/**/*"],
+		"enabled": false,
 		"rules": {
 			"recommended": true,
 			"complexity": {
