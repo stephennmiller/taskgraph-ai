@@ -59,6 +59,8 @@ npm run format-check
 npm run format
 ```
 
+`npm install` also installs a pre-push hook (`.githooks/pre-push`) that runs the formatter check on the files your branch changed, so a formatting failure shows up before CI does.
+
 ### 5. Create a Changeset
 
 **Required for most changes**:
