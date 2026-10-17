@@ -7,9 +7,9 @@ import { promises as fs } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import type {
-	LanguageModelV2,
-	LanguageModelV2CallOptions,
-	LanguageModelV2CallWarning
+	LanguageModelV4,
+	LanguageModelV4CallOptions,
+	SharedV4Warning
 } from '@ai-sdk/provider';
 import { NoSuchModelError } from '@ai-sdk/provider';
 import { generateId } from '@ai-sdk/provider-utils';
@@ -35,8 +35,8 @@ import type {
 /**
  * Grok CLI Language Model implementation for AI SDK v5
  */
-export class GrokCliLanguageModel implements LanguageModelV2 {
-	readonly specificationVersion = 'v2' as const;
+export class GrokCliLanguageModel implements LanguageModelV4 {
+	readonly specificationVersion = 'v4' as const;
 	readonly defaultObjectGenerationMode = 'json' as const;
 	readonly supportsImageUrls = false;
 	readonly supportsStructuredOutputs = false;
@@ -191,10 +191,10 @@ export class GrokCliLanguageModel implements LanguageModelV2 {
 	 * Generate comprehensive warnings for unsupported parameters and validation issues
 	 */
 	private generateAllWarnings(
-		options: LanguageModelV2CallOptions,
+		options: LanguageModelV4CallOptions,
 		prompt: string
-	): LanguageModelV2CallWarning[] {
-		const warnings: LanguageModelV2CallWarning[] = [];
+	): SharedV4Warning[] {
+		const warnings: SharedV4Warning[] = [];
 		const unsupportedParams: string[] = [];
 
 		// Check for unsupported parameters
@@ -214,15 +214,8 @@ export class GrokCliLanguageModel implements LanguageModelV2 {
 			// Add a warning for each unsupported parameter
 			for (const param of unsupportedParams) {
 				warnings.push({
-					type: 'unsupported-setting',
-					setting: param as
-						| 'temperature'
-						| 'topP'
-						| 'topK'
-						| 'presencePenalty'
-						| 'frequencyPenalty'
-						| 'stopSequences'
-						| 'seed',
+					type: 'unsupported',
+					feature: param,
 					details: `Grok CLI does not support the ${param} parameter. It will be ignored.`
 				});
 			}
@@ -250,7 +243,7 @@ export class GrokCliLanguageModel implements LanguageModelV2 {
 	/**
 	 * Generate text using Grok CLI
 	 */
-	async doGenerate(options: LanguageModelV2CallOptions) {
+	async doGenerate(options: LanguageModelV4CallOptions) {
 		// Handle abort signal early
 		if (options.abortSignal?.aborted) {
 			throw options.abortSignal.reason || new Error('Request aborted');
@@ -345,18 +338,20 @@ export class GrokCliLanguageModel implements LanguageModelV2 {
 						text: text || ''
 					}
 				],
-				usage: response.usage
-					? {
-							inputTokens: response.usage.promptTokens,
-							outputTokens: response.usage.completionTokens,
-							totalTokens: response.usage.totalTokens
-						}
-					: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-				finishReason: 'stop' as const,
-				rawCall: {
-					rawPrompt: prompt,
-					rawSettings: args
+				usage: {
+					inputTokens: {
+						total: response.usage?.promptTokens ?? 0,
+						noCache: response.usage?.promptTokens ?? 0,
+						cacheRead: undefined,
+						cacheWrite: undefined
+					},
+					outputTokens: {
+						total: response.usage?.completionTokens ?? 0,
+						text: response.usage?.completionTokens ?? 0,
+						reasoning: undefined
+					}
 				},
+				finishReason: { unified: 'stop' as const, raw: 'stop' },
 				warnings: warnings,
 				response: {
 					id: generateId(),
@@ -397,7 +392,7 @@ export class GrokCliLanguageModel implements LanguageModelV2 {
 	 * Note: Grok CLI doesn't natively support streaming, so this simulates streaming
 	 * by generating the full response and then streaming it in chunks
 	 */
-	async doStream(options: LanguageModelV2CallOptions) {
+	async doStream(options: LanguageModelV4CallOptions) {
 		const prompt = createPromptFromMessages(options.prompt);
 		const warnings = this.generateAllWarnings(options, prompt);
 

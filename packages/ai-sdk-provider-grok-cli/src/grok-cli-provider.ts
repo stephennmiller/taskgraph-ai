@@ -2,20 +2,20 @@
  * Grok CLI provider implementation for AI SDK v5
  */
 
-import type { LanguageModelV2, ProviderV2 } from '@ai-sdk/provider';
+import type { LanguageModelV4, ProviderV4 } from '@ai-sdk/provider';
 import { NoSuchModelError } from '@ai-sdk/provider';
 import { GrokCliLanguageModel } from './grok-cli-language-model.js';
 import type { GrokCliModelId, GrokCliSettings } from './types.js';
 
 /**
- * Grok CLI provider interface that extends the AI SDK's ProviderV2
+ * Grok CLI provider interface that extends the AI SDK's ProviderV4
  */
-export interface GrokCliProvider extends ProviderV2 {
+export interface GrokCliProvider extends ProviderV4 {
 	/**
 	 * Creates a language model instance for the specified model ID.
 	 * This is a shorthand for calling `languageModel()`.
 	 */
-	(modelId: GrokCliModelId, settings?: GrokCliSettings): LanguageModelV2;
+	(modelId: GrokCliModelId, settings?: GrokCliSettings): LanguageModelV4;
 
 	/**
 	 * Creates a language model instance for text generation.
@@ -23,14 +23,14 @@ export interface GrokCliProvider extends ProviderV2 {
 	languageModel(
 		modelId: GrokCliModelId,
 		settings?: GrokCliSettings
-	): LanguageModelV2;
+	): LanguageModelV4;
 
 	/**
 	 * Alias for `languageModel()` to maintain compatibility with AI SDK patterns.
 	 */
-	chat(modelId: GrokCliModelId, settings?: GrokCliSettings): LanguageModelV2;
+	chat(modelId: GrokCliModelId, settings?: GrokCliSettings): LanguageModelV4;
 
-	textEmbeddingModel(modelId: string): never;
+	embeddingModel(modelId: string): never;
 	imageModel(modelId: string): never;
 }
 
@@ -55,7 +55,7 @@ export function createGrokCli(
 	const createModel = (
 		modelId: GrokCliModelId,
 		settings: GrokCliSettings = {}
-	): LanguageModelV2 => {
+	): LanguageModelV4 => {
 		const mergedSettings = {
 			...options.defaultSettings,
 			...settings
@@ -80,14 +80,15 @@ export function createGrokCli(
 		return createModel(modelId, settings);
 	};
 
+	provider.specificationVersion = 'v4' as const;
 	provider.languageModel = createModel;
 	provider.chat = createModel; // Alias for languageModel
 
-	// Add textEmbeddingModel method that throws NoSuchModelError
-	provider.textEmbeddingModel = (modelId: string) => {
+	// Add embeddingModel method that throws NoSuchModelError
+	provider.embeddingModel = (modelId: string) => {
 		throw new NoSuchModelError({
 			modelId,
-			modelType: 'textEmbeddingModel'
+			modelType: 'embeddingModel'
 		});
 	};
 

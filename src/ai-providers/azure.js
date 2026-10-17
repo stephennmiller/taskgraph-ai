@@ -82,11 +82,15 @@ export class AzureProvider extends BaseAIProvider {
 			const normalizedBaseURL = this.normalizeBaseURL(baseURL);
 			const fetchImpl = this.createProxyFetch();
 
-			return createAzure({
+			const azure = createAzure({
 				apiKey,
 				baseURL: normalizedBaseURL,
 				...(fetchImpl && { fetch: fetchImpl })
 			});
+
+			// AI SDK 7 defaults azure(model) to the Responses API. Keep Chat
+			// Completions so existing deployments that lack Responses keep working.
+			return (modelId) => azure.chat(modelId);
 		} catch (error) {
 			this.handleError('client initialization', error);
 		}

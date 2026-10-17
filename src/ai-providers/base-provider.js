@@ -303,6 +303,32 @@ export class BaseAIProvider {
 	}
 
 	/**
+	 * AI SDK 7 rejects system messages inside `messages`; they must be passed as
+	 * `instructions`. Splits system-role messages out of the conversation.
+	 * @param {Array<{role: string, content: any}>} messages
+	 * @returns {{messages: Array, instructions?: string}}
+	 */
+	prepareMessages(messages) {
+		const systemMessages = messages.filter((m) => m.role === 'system');
+		if (systemMessages.length === 0) {
+			return { messages };
+		}
+
+		const instructions = systemMessages
+			.map((m) =>
+				typeof m.content === 'string'
+					? m.content
+					: m.content.map((part) => part.text ?? '').join('')
+			)
+			.join('\n\n');
+
+		return {
+			instructions,
+			messages: messages.filter((m) => m.role !== 'system')
+		};
+	}
+
+	/**
 	 * Generates text using the provider's model
 	 */
 	async generateText(params) {
@@ -336,7 +362,7 @@ export class BaseAIProvider {
 
 			const result = await generateText({
 				model: client(params.modelId),
-				messages: params.messages,
+				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
@@ -400,7 +426,7 @@ export class BaseAIProvider {
 
 			const stream = await streamText({
 				model: client(params.modelId),
-				messages: params.messages,
+				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
@@ -462,7 +488,7 @@ export class BaseAIProvider {
 
 			const result = await streamObject({
 				model: client(params.modelId),
-				messages: params.messages,
+				...this.prepareMessages(params.messages),
 				schema,
 				mode: params.mode || 'auto',
 				maxOutputTokens: params.maxTokens,
@@ -528,7 +554,7 @@ export class BaseAIProvider {
 
 			const result = await generateObject({
 				model: client(params.modelId),
-				messages: params.messages,
+				...this.prepareMessages(params.messages),
 				schema,
 				mode: this.needsExplicitJsonSchema ? 'json' : 'auto',
 				schemaName: params.objectName,

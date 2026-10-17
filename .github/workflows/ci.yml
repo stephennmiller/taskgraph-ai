@@ -18,7 +18,7 @@ permissions:
 env:
   DO_NOT_TRACK: 1
   NODE_ENV: development
-  NODE_VERSION: 20
+  NODE_VERSION: 22
 
 jobs:
   # Single install job that caches node_modules for all other jobs
@@ -175,7 +175,13 @@ jobs:
 
       - name: Run Tests
         run: |
-          npm run test:coverage -- --coverageThreshold '{"global":{"branches":0,"functions":0,"lines":0,"statements":0}}' --detectOpenHandles --forceExit
+          npm run test:coverage -- --coverageThreshold '{"global":{"branches":0,"functions":0,"lines":0,"statements":0}}' --maxWorkers=2 --forceExit
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Run AI SDK contract tests
+        run: npm run test:sdk-contract
         env:
           NODE_ENV: test
           CI: true

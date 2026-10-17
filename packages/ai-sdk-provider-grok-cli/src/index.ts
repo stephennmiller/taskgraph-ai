@@ -17,7 +17,7 @@ export type {
 
 /**
  * Language model implementation for Grok CLI.
- * This class implements the AI SDK's LanguageModelV2 interface.
+ * This class implements the AI SDK's LanguageModelV4 interface.
  */
 export { GrokCliLanguageModel } from './grok-cli-language-model.js';
 

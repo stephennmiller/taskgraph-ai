@@ -17,6 +17,9 @@ export default {
 	// The glob patterns Jest uses to detect test files
 	testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
 
+	// Real-SDK contract tests run separately via `npm run test:sdk-contract`
+	testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/sdk-contract/'],
+
 	// Transform files
 	preset: 'ts-jest/presets/default-esm',
 	extensionsToTreatAsEsm: ['.ts'],
