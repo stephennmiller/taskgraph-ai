@@ -9,10 +9,15 @@ on:
       - 'scripts/modules/supported-models.json'
       - 'docs/scripts/models-json-to-markdown.js'
 
+# No workflow-level grant: the job declares what it needs.
+permissions: {}
+
 jobs:
   update_markdown:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write # actions-js/push commits the regenerated docs/models.md
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

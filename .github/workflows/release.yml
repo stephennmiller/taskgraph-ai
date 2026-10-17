@@ -5,10 +5,8 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+# No workflow-level grant: each job declares exactly what it needs.
+permissions: {}
 
 jobs:
   # ========== GUARD: Fail fast if workflow_dispatch on main ==========
@@ -27,6 +25,10 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write # git-auto-commit-action pushes the RC version bump
+      pull-requests: write
+      id-token: write # npm trusted publishing and provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -39,7 +41,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Update npm for trusted publishing
-        run: npm install -g npm@11
+        run: npm install -g npm@11.21.0
 
       - name: Cache node_modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6

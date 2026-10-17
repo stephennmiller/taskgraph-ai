@@ -35,10 +35,12 @@ jobs:
           first_day=$(date -d "14 days ago" +%Y-%m-%d)
           last_day=$(date +%Y-%m-%d)
 
-          echo "first_day=$first_day" >> $GITHUB_ENV
-          echo "last_day=$last_day" >> $GITHUB_ENV
-          echo "week_of=$(date -d '7 days ago' +'Week of %B %d, %Y')" >> $GITHUB_ENV
-          echo "date_range=Past 14 days ($first_day to $last_day)" >> $GITHUB_ENV
+          {
+            echo "first_day=$first_day"
+            echo "last_day=$last_day"
+            echo "week_of=$(date -d '7 days ago' +'Week of %B %d, %Y')"
+            echo "date_range=Past 14 days ($first_day to $last_day)"
+          } >> "$GITHUB_ENV"
 
       - name: Generate issue metrics
         uses: github/issue-metrics@671528652402b9b8a33da44b5c693b3161bc090f # v5
@@ -67,7 +69,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           echo "Listing markdown files in workspace:"
-          ls -la *.md || true
+          ls -la ./*.md || true
           for f in issue_metrics.md pr_created_metrics.md pr_merged_metrics.md; do
             if [ -f "$f" ]; then
               echo "== $f (first 10 lines) =="
