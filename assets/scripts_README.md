@@ -18,7 +18,7 @@ In an AI-driven development process—particularly with tools like [Cursor](http
 
 ## Configuration (Updated)
 
-Task Master configuration is now managed through two primary methods:
+TaskGraph configuration is now managed through two primary methods:
 
 1.  **`.taskmaster/config.json` File (Project Root - Primary)**
 

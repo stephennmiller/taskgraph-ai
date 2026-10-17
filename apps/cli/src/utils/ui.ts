@@ -1,5 +1,5 @@
 /**
- * @fileoverview UI utilities for Task Master CLI (Re-export module)
+ * @fileoverview UI utilities for TaskGraph CLI (Re-export module)
  *
  * @deprecated: This file is kept for backward compatibility.
  * All functionality has been moved to organized modules under src/ui/:

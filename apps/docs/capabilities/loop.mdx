@@ -104,7 +104,7 @@ The loop command includes five built-in presets for common development workflows
 
 | Preset | Purpose | Completion Marker |
 | ------ | ------- | ----------------- |
-| `default` | Complete tasks from Task Master backlog | `ALL_TASKS_DONE` |
+| `default` | Complete tasks from TaskGraph backlog | `ALL_TASKS_DONE` |
 | `test-coverage` | Write meaningful tests for uncovered code | `COVERAGE_TARGET` |
 | `linting` | Fix lint and type errors one by one | `ZERO_ERRORS` |
 | `duplication` | Refactor duplicated code into shared utilities | `LOW_DUPLICATION` |
@@ -112,7 +112,7 @@ The loop command includes five built-in presets for common development workflows
 
 ### default
 
-The standard task completion workflow. Agents work through your Task Master backlog, completing one task per iteration.
+The standard task completion workflow. Agents work through your TaskGraph backlog, completing one task per iteration.
 
 ```bash
 taskgraph loop -n 10 --prompt default

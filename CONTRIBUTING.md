@@ -1,6 +1,6 @@
-# Contributing to Task Master
+# Contributing to TaskGraph
 
-Thank you for your interest in contributing to Task Master! We're excited to work with you and appreciate your help in making this project better. 🚀
+Thank you for your interest in contributing to TaskGraph! We're excited to work with you and appreciate your help in making this project better. 🚀
 
 ## 🤝 Our Collaborative Approach
 
@@ -304,7 +304,7 @@ claude-task-master/
 
 Include:
 
-- Task Master version
+- TaskGraph version
 - Node.js version
 - Operating system
 - Steps to reproduce
@@ -331,6 +331,6 @@ By contributing, you agree that your contributions will be licensed under the sa
 
 ---
 
-**Thank you for contributing to Task Master!** 🎉
+**Thank you for contributing to TaskGraph!** 🎉
 
 Your contributions help make AI-driven development more accessible and efficient for everyone.

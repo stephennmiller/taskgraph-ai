@@ -35,7 +35,7 @@ describe('Task Lifecycle Integration Tests', () => {
 	 * Before each test, we:
 	 * 1. Create an isolated temp directory (no cross-test pollution)
 	 * 2. Change into it (CLI commands run in this context)
-	 * 3. Initialize a fresh Task Master project
+	 * 3. Initialize a fresh TaskGraph project
 	 * 4. Skip auto-updates for deterministic timing
 	 */
 	beforeEach(() => {
@@ -50,7 +50,7 @@ describe('Task Lifecycle Integration Tests', () => {
 		// Binary is built to root dist/ directory, not apps/cli/dist/
 		binPath = getCliBinPath();
 
-		// Initialize a fresh Task Master project
+		// Initialize a fresh TaskGraph project
 		execSync(`node "${binPath}" init --yes`, {
 			stdio: 'pipe',
 			env: {

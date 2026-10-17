@@ -1,6 +1,6 @@
 /**
  * @fileoverview Brand banner component
- * Displays the fancy Task Master ASCII art banner with gradient colors
+ * Displays the fancy TaskGraph ASCII art banner with gradient colors
  * Can be hidden by setting TM_HIDE_BANNER=true
  */
 
@@ -46,14 +46,14 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	// Render ASCII banner
 	try {
-		const bannerText = figlet.textSync('Task Master', {
+		const bannerText = figlet.textSync('TaskGraph', {
 			font: 'Standard',
 			horizontalLayout: 'default',
 			verticalLayout: 'default'
 		});
 		console.log(coolGradient(bannerText));
 	} catch {
-		console.log(coolGradient('=== Task Master ==='));
+		console.log(coolGradient('=== TaskGraph ==='));
 	}
 
 	// Credits line with version right-aligned
@@ -93,14 +93,14 @@ export function displayInitBanner(): void {
 
 	// Render ASCII banner
 	try {
-		const bannerText = figlet.textSync('Task Master', {
+		const bannerText = figlet.textSync('TaskGraph', {
 			font: 'Standard',
 			horizontalLayout: 'default',
 			verticalLayout: 'default'
 		});
 		console.log(coolGradient(bannerText));
 	} catch {
-		console.log(coolGradient('=== Task Master ==='));
+		console.log(coolGradient('=== TaskGraph ==='));
 	}
 
 	// Credits line

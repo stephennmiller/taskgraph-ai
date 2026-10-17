@@ -4,8 +4,8 @@
  */
 
 /**
- * Operating mode for Task Master
- * - 'solo': Local file-based storage (Taskmaster standalone)
+ * Operating mode for TaskGraph
+ * - 'solo': Local file-based storage (TaskGraph standalone)
  * - 'team': API-based storage via Hamster (collaborative features)
  * - 'common': Works in both modes
  */

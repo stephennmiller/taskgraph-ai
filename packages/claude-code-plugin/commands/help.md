@@ -1,10 +1,10 @@
-Show help for Task Master AI commands.
+Show help for TaskGraph commands.
 
 Arguments: $ARGUMENTS
 
-Display help for Task Master commands. If arguments provided, show specific command help.
+Display help for TaskGraph commands. If arguments provided, show specific command help.
 
-## Task Master AI Command Help
+## TaskGraph Command Help
 
 ### Quick Navigation
 
@@ -77,7 +77,7 @@ Type `/taskmaster:` and use tab completion to explore all commands.
 - `/taskmaster:project-status` - Project dashboard
 - `/taskmaster:sync-readme` - Sync README with tasks
 - `/taskmaster:learn` - Interactive learning
-- `/taskmaster:tm-main` - Main Task Master interface
+- `/taskmaster:tm-main` - Main TaskGraph interface
 
 ### Quick Start Examples
 

@@ -1,10 +1,10 @@
 # @task-master/tm-core
 
-Core library for Task Master AI - providing task management and orchestration capabilities with TypeScript support.
+Core library for TaskGraph - providing task management and orchestration capabilities with TypeScript support.
 
 ## Overview
 
-`tm-core` is the foundational library that powers Task Master AI's task management system. It provides a comprehensive set of tools for creating, managing, and orchestrating tasks with AI integration.
+`tm-core` is the foundational library that powers TaskGraph's task management system. It provides a comprehensive set of tools for creating, managing, and orchestrating tasks with AI integration.
 
 ## Features
 
@@ -215,7 +215,7 @@ This is the initial package structure. The following features are planned for im
 
 ## Contributing
 
-This package is part of the Task Master AI project. Please refer to the main project's contributing guidelines.
+This package is part of the TaskGraph project. Please refer to the main project's contributing guidelines.
 
 ## License
 
@@ -223,4 +223,4 @@ MIT - See the main project's LICENSE file for details.
 
 ## Support
 
-For questions and support, please refer to the main Task Master AI documentation.
+For questions and support, please refer to the main TaskGraph documentation.

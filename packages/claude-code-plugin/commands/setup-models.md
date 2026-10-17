@@ -2,7 +2,7 @@ Run interactive setup to configure AI models.
 
 ## Interactive Model Configuration
 
-Guides you through setting up AI providers for Task Master.
+Guides you through setting up AI providers for TaskGraph.
 
 ## Execution
 

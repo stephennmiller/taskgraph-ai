@@ -84,7 +84,7 @@ const DEFAULT_CONFIG = {
 		debug: false,
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
-		projectName: 'Task Master',
+		projectName: 'TaskGraph',
 		ollamaBaseURL: 'http://localhost:11434/api'
 	}
 };

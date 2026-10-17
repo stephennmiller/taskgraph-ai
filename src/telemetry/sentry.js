@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 /**
- * Sentry initialization and configuration for Task Master
+ * Sentry initialization and configuration for TaskGraph
  * Provides error tracking and AI operation monitoring
  */
 import * as Sentry from '@sentry/node';
@@ -62,7 +62,7 @@ export function initializeSentry(options = {}) {
 		setSuppressConfigWarnings(false);
 	}
 
-	// Use internal Sentry DSN for Task Master telemetry
+	// Use internal Sentry DSN for TaskGraph telemetry
 	// This is a public client-side DSN and is safe to hardcode
 	const dsn =
 		options.dsn ||

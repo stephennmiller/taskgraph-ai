@@ -1,4 +1,4 @@
-Initialize a new Task Master project.
+Initialize a new TaskGraph project.
 
 Arguments: $ARGUMENTS
 

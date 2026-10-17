@@ -1,6 +1,6 @@
 # Codex CLI Provider
 
-The `codex-cli` provider integrates Task Master with OpenAI's Codex CLI via the community AI SDK provider [`ai-sdk-provider-codex-cli`](https://github.com/ben-vargas/ai-sdk-provider-codex-cli). It uses your ChatGPT subscription (OAuth) via `codex login`, with optional `OPENAI_CODEX_API_KEY` support.
+The `codex-cli` provider integrates TaskGraph with OpenAI's Codex CLI via the community AI SDK provider [`ai-sdk-provider-codex-cli`](https://github.com/ben-vargas/ai-sdk-provider-codex-cli). It uses your ChatGPT subscription (OAuth) via `codex login`, with optional `OPENAI_CODEX_API_KEY` support.
 
 ## Why Use Codex CLI?
 
@@ -23,7 +23,7 @@ npm install -g @openai/codex
 # 2. Authenticate with your ChatGPT account
 codex login
 
-# 3. Configure Task Master to use Codex CLI
+# 3. Configure TaskGraph to use Codex CLI
 taskgraph models --set-main gpt-5-codex --codex-cli
 ```
 
@@ -32,7 +32,7 @@ taskgraph models --set-main gpt-5-codex --codex-cli
 - **Node.js**: >= 20.0.0
 - **Codex CLI**: >= 0.42.0 (>= 0.44.0 recommended)
 - **ChatGPT Subscription**: Required for OAuth access (Plus, Pro, Business, Edu, or Enterprise)
-- **Task Master**: >= 0.27.3 (version with Codex CLI support)
+- **TaskGraph**: >= 0.27.3 (version with Codex CLI support)
 
 ### Checking Your Versions
 
@@ -43,7 +43,7 @@ node --version
 # Check Codex CLI version
 codex --version
 
-# Check Task Master version
+# Check TaskGraph version
 taskgraph --version
 ```
 
@@ -61,7 +61,7 @@ codex --version
 
 Expected output: `v0.44.0` or higher
 
-### Install Task Master (if not already installed)
+### Install TaskGraph (if not already installed)
 
 ```bash
 # Install globally
@@ -86,7 +86,7 @@ This will:
 1. Open a browser window for OAuth authentication
 2. Prompt you to log in with your ChatGPT account
 3. Store authentication credentials locally
-4. Allow Task Master to automatically use these credentials
+4. Allow TaskGraph to automatically use these credentials
 
 To verify your authentication:
 ```bash
@@ -258,7 +258,7 @@ The `codexCli` section allows you to customize Codex CLI behavior:
 
 ### Command-Specific Settings
 
-Override settings for specific Task Master commands:
+Override settings for specific TaskGraph commands:
 
 ```json
 {
@@ -299,9 +299,9 @@ taskgraph models --set-research gpt-5 --codex-cli
 taskgraph models
 ```
 
-### Using Codex CLI with Task Master Commands
+### Using Codex CLI with TaskGraph Commands
 
-Once configured, use Task Master commands as normal:
+Once configured, use TaskGraph commands as normal:
 
 ```bash
 # Parse a PRD with Codex CLI
@@ -348,7 +348,7 @@ To verify or configure:
 
 ### "codex: command not found" Error
 
-**Symptoms**: Task Master reports that the Codex CLI is not found.
+**Symptoms**: TaskGraph reports that the Codex CLI is not found.
 
 **Solutions**:
 1. **Install Codex CLI globally**:
@@ -502,7 +502,7 @@ To verify or configure:
 - **OAuth subscription required**: No API key needed for basic operation, but requires active ChatGPT subscription
 - **Model selection**: GPT-5 family models available via OAuth (`gpt-5`, `gpt-5-codex`, `gpt-5.1`, `gpt-5.1-codex-max`, `gpt-5.2`)
 - **Pricing information**: Not available for OAuth models (shows as "Unknown" in cost calculations)
-- **No automatic dependency**: The `@openai/codex` package is not added to Task Master's dependencies - install it globally or enable `allowNpx`
+- **No automatic dependency**: The `@openai/codex` package is not added to TaskGraph's dependencies - install it globally or enable `allowNpx`
 - **Codebase analysis**: Automatically enabled when using `codex-cli` provider
 - **Safety first**: Default settings prioritize safety with `approvalMode: "on-failure"` and `sandboxMode: "workspace-write"`
 

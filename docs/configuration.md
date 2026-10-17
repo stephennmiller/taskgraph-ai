@@ -1,6 +1,6 @@
 # Configuration
 
-Taskmaster uses two primary methods for configuration:
+TaskGraph uses two primary methods for configuration:
 
 1.  **`.taskmaster/config.json` File (Recommended - New Structure)**
 
@@ -83,7 +83,7 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
 
 - **`all`**: Loads all 36 available tools (~21,000 tokens)
   - Best for: Users who need the complete feature set
-  - Use when: Working with complex projects requiring all Task Master features
+  - Use when: Working with complex projects requiring all TaskGraph features
 
 - **Custom list**: Comma-separated list of specific tool names
   - Best for: Specialized workflows requiring specific tools
@@ -156,7 +156,7 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
 
 ## Tagged Task Lists Configuration (v0.17+)
 
-Taskmaster includes a tagged task lists system for multi-context task management.
+TaskGraph includes a tagged task lists system for multi-context task management.
 
 ### Global Tag Settings
 
@@ -170,7 +170,7 @@ Taskmaster includes a tagged task lists system for multi-context task management
 
 ### Git Integration
 
-Task Master provides manual git integration through the `--from-branch` option:
+TaskGraph provides manual git integration through the `--from-branch` option:
 
 - **Manual Tag Creation**: Use `taskgraph add-tag --from-branch` to create a tag based on your current git branch name
 - **User Control**: No automatic tag switching - you control when and how tags are created
@@ -178,7 +178,7 @@ Task Master provides manual git integration through the `--from-branch` option:
 
 ## State Management File
 
-Taskmaster uses `.taskmaster/state.json` to track tagged system runtime information:
+TaskGraph uses `.taskmaster/state.json` to track tagged system runtime information:
 
 ```json
 {
@@ -221,7 +221,7 @@ PERPLEXITY_API_KEY=pplx-your-key-here
 
 ### Configuration Errors
 
-- If Task Master reports errors about missing configuration or cannot find the config file, run `taskgraph models --setup` in your project root to create or repair the file.
+- If TaskGraph reports errors about missing configuration or cannot find the config file, run `taskgraph models --setup` in your project root to create or repair the file.
 - For new projects, config will be created at `.taskmaster/config.json`. For legacy projects, you may want to use `taskgraph migrate` to move to the new structure.
 - Ensure API keys are correctly placed in your `.env` file (for CLI) or `.mcp.json` (for MCP) and are valid for the providers selected in your config file.
 
@@ -245,7 +245,7 @@ node scripts/init.js
 
 ### MCP Timeout Configuration
 
-Long-running AI operations in taskmaster-ai can exceed the default 60-second MCP timeout. Operations like `parse_prd`, `expand_task`, `research`, and `analyze_project_complexity` may take 2-5 minutes to complete.
+Long-running AI operations in taskgraph-ai can exceed the default 60-second MCP timeout. Operations like `parse_prd`, `expand_task`, `research`, and `analyze_project_complexity` may take 2-5 minutes to complete.
 
 #### Adding Timeout Configuration
 

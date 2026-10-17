@@ -1,5 +1,5 @@
 /**
- * Path utility functions for Task Master
+ * Path utility functions for TaskGraph
  * Provides centralized path resolution logic for both CLI and MCP use cases
  *
  * NOTE: This file is a legacy wrapper around @tm/core utilities.

@@ -1,15 +1,15 @@
-# Task Master Commands for Claude Code
+# TaskGraph Commands for Claude Code
 
-Complete guide to using Task Master through Claude Code's slash commands.
+Complete guide to using TaskGraph through Claude Code's slash commands.
 
 ## Overview
 
-All Task Master functionality is available through the `/project:tm/` namespace with natural language support and intelligent features.
+All TaskGraph functionality is available through the `/project:tm/` namespace with natural language support and intelligent features.
 
 ## Quick Start
 
 ```bash
-# Install Task Master
+# Install TaskGraph
 /project:tm/setup/quick-install
 
 # Initialize project
@@ -24,7 +24,7 @@ All Task Master functionality is available through the `/project:tm/` namespace 
 
 ## Command Structure
 
-Commands are organized hierarchically to match Task Master's CLI:
+Commands are organized hierarchically to match TaskGraph's CLI:
 - Main commands at `/project:tm/[command]`
 - Subcommands for specific operations `/project:tm/[command]/[subcommand]`
 - Natural language arguments accepted throughout

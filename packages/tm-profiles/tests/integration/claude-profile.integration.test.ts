@@ -205,35 +205,35 @@ describe('ClaudeProfile Integration Tests', () => {
 	});
 
 	describe('removeSlashCommands', () => {
-		it('should remove only TaskMaster commands and preserve user files', async () => {
-			// Add TaskMaster commands
+		it('should remove only TaskGraph commands and preserve user files', async () => {
+			// Add TaskGraph commands
 			const tmCommands = [
 				staticCommand({
 					name: 'tm-cmd1',
-					description: 'TaskMaster command 1',
+					description: 'TaskGraph command 1',
 					content: 'TM Content 1'
 				}),
 				staticCommand({
 					name: 'tm-cmd2',
-					description: 'TaskMaster command 2',
+					description: 'TaskGraph command 2',
 					content: 'TM Content 2'
 				})
 			];
 
 			claudeProfile.addSlashCommands(tempDir, tmCommands);
 
-			// TaskMaster commands go to .claude/commands/tm/ subdirectory
+			// TaskGraph commands go to .claude/commands/tm/ subdirectory
 			const tmDir = path.join(tempDir, '.claude', 'commands', 'tm');
 			const userFilePath = path.join(tmDir, 'user-custom.md');
 			fs.writeFileSync(userFilePath, 'User custom command\n\nUser content');
 
-			// Remove TaskMaster commands
+			// Remove TaskGraph commands
 			const result = claudeProfile.removeSlashCommands(tempDir, tmCommands);
 
 			expect(result.success).toBe(true);
 			expect(result.count).toBe(2);
 
-			// Verify TaskMaster files are removed
+			// Verify TaskGraph files are removed
 			expect(fs.existsSync(path.join(tmDir, 'tm-cmd1.md'))).toBe(false);
 			expect(fs.existsSync(path.join(tmDir, 'tm-cmd2.md'))).toBe(false);
 
@@ -258,7 +258,7 @@ describe('ClaudeProfile Integration Tests', () => {
 			const tmDir = path.join(tempDir, '.claude', 'commands', 'tm');
 			expect(fs.existsSync(tmDir)).toBe(true);
 
-			// Remove all TaskMaster commands
+			// Remove all TaskGraph commands
 			claudeProfile.removeSlashCommands(tempDir, testCommands);
 
 			// tm directory should be removed when empty
@@ -269,7 +269,7 @@ describe('ClaudeProfile Integration Tests', () => {
 			const tmCommands = [
 				staticCommand({
 					name: 'tm-cmd',
-					description: 'TaskMaster command',
+					description: 'TaskGraph command',
 					content: 'TM Content'
 				})
 			];
@@ -281,7 +281,7 @@ describe('ClaudeProfile Integration Tests', () => {
 			const userFilePath = path.join(tmDir, 'my-command.md');
 			fs.writeFileSync(userFilePath, 'My custom command');
 
-			// Remove TaskMaster commands
+			// Remove TaskGraph commands
 			const result = claudeProfile.removeSlashCommands(tempDir, tmCommands);
 
 			// Directory should still exist because user file remains

@@ -1,9 +1,9 @@
 ---
-description: Guidelines for integrating new features into the Task Master CLI
+description: Guidelines for integrating new features into the TaskGraph CLI
 paths:
   - "scripts/modules/*.js"
 ---
-# Task Master Feature Integration Guidelines
+# TaskGraph Feature Integration Guidelines
 
 ## Feature Placement Decision Process
 
@@ -505,7 +505,7 @@ For more information on module structure, see [`MODULE_PLAN.md`](../../scripts/m
 
 ## Adding MCP Server Support for Commands
 
-Integrating Task Master commands with the MCP server (for use by tools like Claude Code) follows a specific pattern distinct from the CLI command implementation, prioritizing performance and reliability.
+Integrating TaskGraph commands with the MCP server (for use by tools like Claude Code) follows a specific pattern distinct from the CLI command implementation, prioritizing performance and reliability.
 
 - **Goal**: Leverage direct function calls to core logic, avoiding CLI overhead.
 - **Reference**: See `mcp.md` for full details.
@@ -614,7 +614,7 @@ When implementing project initialization commands:
    export function registerInitializeProjectTool(server) {
      server.addTool({
        name: "initialize_project",
-       description: "Initialize a new Task Master project",
+       description: "Initialize a new TaskGraph project",
        parameters: z.object({
          projectName: z.string().optional().describe("The name for the new project"),
          projectDescription: z.string().optional().describe("A brief description"),
@@ -688,7 +688,7 @@ When implementing project initialization commands:
       try {
         const projectRoot = findProjectRoot();
         if (!projectRoot) {
-          console.error('Not in a Task Master project directory');
+          console.error('Not in a TaskGraph project directory');
           process.exit(1);
         }
         
@@ -917,4 +917,4 @@ When implementing project initialization commands:
   - ✅ DO: Ensure tagged system features work with flags
   - ✅ DO: Provide clear documentation about flag usage
 
-By following these guidelines, new features will integrate smoothly with the Task Master ecosystem while supporting the enhanced tagged task lists system for multi-context development workflows.
+By following these guidelines, new features will integrate smoothly with the TaskGraph ecosystem while supporting the enhanced tagged task lists system for multi-context development workflows.

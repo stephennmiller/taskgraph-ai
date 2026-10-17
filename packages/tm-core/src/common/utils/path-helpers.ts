@@ -1,6 +1,6 @@
 /**
- * @fileoverview Path construction utilities for Task Master
- * Provides standardized paths for Task Master project structure
+ * @fileoverview Path construction utilities for TaskGraph
+ * Provides standardized paths for TaskGraph project structure
  */
 
 import { join, resolve } from 'node:path';
@@ -8,7 +8,7 @@ import { TASKMASTER_TASKS_FILE } from '../constants/paths.js';
 import { findProjectRoot } from './project-root-finder.js';
 
 /**
- * Get standard Task Master project paths
+ * Get standard TaskGraph project paths
  * Automatically detects project root using smart detection
  *
  * @param projectPath - Optional explicit project path (if not provided, auto-detects)

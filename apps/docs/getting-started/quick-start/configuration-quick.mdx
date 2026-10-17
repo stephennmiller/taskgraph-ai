@@ -4,11 +4,11 @@ sidebarTitle: "Configuration"
 
 ---
 
-Before getting started with Task Master, you'll need to set up your API keys. There are a couple of ways to do this depending on whether you're using the CLI or working inside MCP. It's also a good time to start getting familiar with the other configuration options available — even if you don’t need to adjust them yet, knowing what’s possible will help down the line.
+Before getting started with TaskGraph, you'll need to set up your API keys. There are a couple of ways to do this depending on whether you're using the CLI or working inside MCP. It's also a good time to start getting familiar with the other configuration options available — even if you don’t need to adjust them yet, knowing what’s possible will help down the line.
 
 ## API Key Setup
 
-Task Master uses environment variables to securely store provider API keys and optional endpoint URLs.
+TaskGraph uses environment variables to securely store provider API keys and optional endpoint URLs.
 
 ### MCP Usage: mcp.json file
 
@@ -38,7 +38,7 @@ For MCP usage: Configure keys in the env section of your .mcp.json file.
 ```
 
 <Tip>
-**Optimize Context Usage**: You can control which Task Master MCP tools are loaded using the `TASK_MASTER_TOOLS` environment variable. This helps reduce LLM context usage by only loading the tools you need.
+**Optimize Context Usage**: You can control which TaskGraph MCP tools are loaded using the `TASK_MASTER_TOOLS` environment variable. This helps reduce LLM context usage by only loading the tools you need.
 
 Options:
 - `core` or `lean` (default) - 7 essential tools
@@ -85,7 +85,7 @@ PERPLEXITY_API_KEY=pplx-your-key-here
 
 ## What Else Can Be Configured?
 
-The main configuration file (`.taskmaster/config.json`) allows you to control nearly every aspect of Task Master’s behavior. Here’s a high-level look at what you can customize:
+The main configuration file (`.taskmaster/config.json`) allows you to control nearly every aspect of TaskGraph’s behavior. Here’s a high-level look at what you can customize:
 
 <Tip>
 You don’t need to configure everything up front. Most settings can be left as defaults or updated later as your workflow evolves.

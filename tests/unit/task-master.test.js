@@ -13,7 +13,7 @@ import {
 	TASKMASTER_DIR,
 	TASKMASTER_TASKS_FILE
 } from '../../src/constants/paths.js';
-import { TaskMaster, initTaskMaster } from '../../src/task-master.js';
+import { TaskGraph, initTaskMaster } from '../../src/task-master.js';
 
 // Mock the console to prevent noise during tests
 jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -57,7 +57,7 @@ describe('initTaskMaster', () => {
 
 			// Assert
 			expect(taskMaster.getProjectRoot()).toBe(tempDir);
-			expect(taskMaster).toBeInstanceOf(TaskMaster);
+			expect(taskMaster).toBeInstanceOf(TaskGraph);
 		});
 
 		test('should find project root when legacy config file exists', () => {
@@ -373,7 +373,7 @@ describe('initTaskMaster', () => {
 		});
 	});
 
-	describe('TaskMaster class methods', () => {
+	describe('TaskGraph class methods', () => {
 		test('should return all paths via getAllPaths method', () => {
 			// Arrange - Setup project with all files
 			const taskMasterDir = path.join(tempDir, TASKMASTER_DIR);

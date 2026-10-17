@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Task Master
+ * TaskGraph
  * Copyright (c) 2025 Eyal Toledano, Ralph Khreish
  *
  * This software is licensed under the MIT License with Commons Clause.
@@ -16,7 +16,7 @@
  */
 
 /**
- * Claude Task Master CLI
+ * TaskGraph CLI
  * Main entry point for globally installed package
  */
 

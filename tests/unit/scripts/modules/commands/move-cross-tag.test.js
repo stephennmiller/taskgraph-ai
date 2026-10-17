@@ -22,7 +22,7 @@ const mockConfig = {
 		log: true,
 		exit: true
 	},
-	// TaskMaster instance mocks
+	// TaskGraph instance mocks
 	taskMaster: {
 		getCurrentTag: true,
 		getTasksPath: true,
@@ -184,7 +184,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 		mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
 		mockProcessExit = jest.spyOn(process, 'exit').mockImplementation();
 
-		// Mock TaskMaster instance
+		// Mock TaskGraph instance
 		mockTaskMaster = {
 			getCurrentTag: jest.fn().mockReturnValue('master'),
 			getTasksPath: jest.fn().mockReturnValue('/test/path/tasks.json'),

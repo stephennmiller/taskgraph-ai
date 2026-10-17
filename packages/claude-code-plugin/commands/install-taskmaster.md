@@ -1,13 +1,13 @@
-Check if Task Master is installed and install it if needed.
+Check if TaskGraph is installed and install it if needed.
 
-This command helps you get Task Master set up globally on your system.
+This command helps you get TaskGraph set up globally on your system.
 
 ## Detection and Installation Process
 
 1. **Check Current Installation**
    ```bash
    # Check if taskgraph command exists
-   which taskgraph || echo "Task Master not found"
+   which taskgraph || echo "TaskGraph not found"
    
    # Check npm global packages
    npm list -g taskgraph-ai
@@ -24,7 +24,7 @@ This command helps you get Task Master set up globally on your system.
    # Check Node version (need 16+)
    ```
 
-3. **Install Task Master Globally**
+3. **Install TaskGraph Globally**
    If not installed, run:
    ```bash
    npm install -g taskgraph-ai
@@ -101,7 +101,7 @@ nvm use 20
 
 Once installed, you should see:
 ```
-✅ Task Master v0.16.2 (or higher) installed
+✅ TaskGraph v0.16.2 (or higher) installed
 ✅ Command 'taskgraph' available globally
 ✅ AI provider configured
 ✅ Ready to use slash commands!
@@ -114,4 +114,4 @@ Try: /project:task-master:init your-prd.md
 After installation:
 1. Run `/project:utils:check-health` to verify setup
 2. Configure AI providers with `/project:task-master:models`
-3. Start using Task Master commands!
+3. Start using TaskGraph commands!

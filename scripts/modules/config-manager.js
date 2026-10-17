@@ -50,7 +50,7 @@ const DEFAULTS = {
 		defaultNumTasks: 10,
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
-		projectName: 'Task Master',
+		projectName: 'TaskGraph',
 		responseLanguage: 'English',
 		enableCodebaseAnalysis: true,
 		enableProxy: false,

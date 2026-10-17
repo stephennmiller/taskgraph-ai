@@ -96,14 +96,14 @@ export class LoopCommand extends Command {
 				this.handleSandboxAuth();
 			}
 
-			console.log(chalk.cyan('Starting Task Master Loop...'));
+			console.log(chalk.cyan('Starting TaskGraph Loop...'));
 			console.log(chalk.dim(`Preset: ${prompt}`));
 			console.log(chalk.dim(`Max iterations: ${iterations}`));
 			console.log(
 				chalk.dim(`Mode: ${options.sandbox ? 'Docker sandbox' : 'Claude CLI'}`)
 			);
 
-			// Show next task only for default preset (other presets don't use Task Master tasks)
+			// Show next task only for default preset (other presets don't use TaskGraph tasks)
 			if (prompt === 'default') {
 				const nextTask = await this.tmCore.tasks.getNext(options.tag);
 				if (nextTask) {

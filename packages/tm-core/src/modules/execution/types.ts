@@ -1,5 +1,5 @@
 /**
- * Executor types and interfaces for Task Master
+ * Executor types and interfaces for TaskGraph
  */
 
 import type { Task } from '../../common/types/index.js';

@@ -1,6 +1,6 @@
 # Task Structure
 
-Tasks in Task Master follow a specific format designed to provide comprehensive information for both humans and AI assistants.
+Tasks in TaskGraph follow a specific format designed to provide comprehensive information for both humans and AI assistants.
 
 ## Task Fields in tasks.json
 
@@ -140,11 +140,11 @@ The `show` command:
 
 # Task Structure Documentation
 
-Task Master uses a structured JSON format to organize and manage tasks. As of version 0.16.2, Task Master introduces **Tagged Task Lists** for multi-context task management while maintaining full backward compatibility.
+TaskGraph uses a structured JSON format to organize and manage tasks. As of version 0.16.2, TaskGraph introduces **Tagged Task Lists** for multi-context task management while maintaining full backward compatibility.
 
 ## Tagged Task Lists System
 
-Task Master now organizes tasks into separate contexts called **tags**. This enables working across multiple contexts such as different branches, environments, or project phases without conflicts.
+TaskGraph now organizes tasks into separate contexts called **tags**. This enables working across multiple contexts such as different branches, environments, or project phases without conflicts.
 
 ### Data Structure Overview
 
@@ -366,7 +366,7 @@ Task Master automatically determines the current tag context based on:
 
 ## Data Validation
 
-Task Master validates the following aspects of task data:
+TaskGraph validates the following aspects of task data:
 
 ### Required Validations
 
@@ -393,7 +393,7 @@ Task Master can generate individual markdown files for each task based on the JS
 
 ## Migration Process
 
-When Task Master encounters a legacy format `tasks.json` file:
+When TaskGraph encounters a legacy format `tasks.json` file:
 
 1. **Detection**: Automatically detects `{"tasks": [...]}` format
 2. **Transformation**: Converts to `{"master": {"tasks": [...]}}` format

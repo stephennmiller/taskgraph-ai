@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: 🐛 Bug Fix
     url: https://github.com/stephennmiller/taskgraph-ai/compare/main...HEAD?template=bugfix.md
-    about: Fix a bug in Task Master
+    about: Fix a bug in TaskGraph
   - name: ✨ New Feature
     url: https://github.com/stephennmiller/taskgraph-ai/compare/main...HEAD?template=feature.md
-    about: Add a new feature to Task Master
+    about: Add a new feature to TaskGraph

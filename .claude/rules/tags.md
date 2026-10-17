@@ -5,7 +5,7 @@ paths:
 ---
 # Tagged Task Lists Command Patterns
 
-This document outlines the standardized patterns that **ALL** Task Master commands must follow to properly support the tagged task lists system.
+This document outlines the standardized patterns that **ALL** TaskGraph commands must follow to properly support the tagged task lists system.
 
 ## Core Principles
 
@@ -226,4 +226,4 @@ node bin/task-master command-name
 3. **Test Phase**: Verify tag resolution works correctly
 4. **Document Phase**: Update command documentation with tag support
 
-This ensures consistent, predictable behavior across all Task Master commands and prevents tag deletion bugs.
+This ensures consistent, predictable behavior across all TaskGraph commands and prevents tag deletion bugs.

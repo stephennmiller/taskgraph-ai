@@ -195,7 +195,7 @@ function createTestConfig() {
 			debug: false,
 			defaultSubtasks: 5,
 			defaultPriority: 'medium',
-			projectName: 'Task Master Test',
+			projectName: 'TaskGraph Test',
 			ollamaBaseURL: 'http://localhost:11434/api',
 			bedrockBaseURL: 'https://bedrock.us-east-1.amazonaws.com'
 		}
@@ -498,7 +498,7 @@ async function main() {
 	const testType = args[0] || 'streaming';
 	const numTasks = parseInt(args[1]) || 8;
 
-	console.log(chalk.bold.cyan('🚀 Task Master PRD Streaming Tests\n'));
+	console.log(chalk.bold.cyan('🚀 TaskGraph PRD Streaming Tests\n'));
 	console.log(chalk.blue(`Test type: ${testType}`));
 	console.log(chalk.blue(`Number of tasks: ${numTasks}\n`));
 

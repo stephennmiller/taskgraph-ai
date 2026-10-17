@@ -1,5 +1,5 @@
 /**
- * Authentication manager for Task Master CLI
+ * Authentication manager for TaskGraph CLI
  * Lightweight coordinator that delegates to focused services
  */
 

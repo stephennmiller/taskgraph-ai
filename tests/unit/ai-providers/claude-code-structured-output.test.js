@@ -323,7 +323,7 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 		 * for Claude Code operations.
 		 */
 
-		it('should work with Task Master command schemas', async () => {
+		it('should work with TaskGraph command schemas', async () => {
 			// This simulates the expand-task schema pattern
 			const expandTaskSchema = z.object({
 				subtasks: z.array(

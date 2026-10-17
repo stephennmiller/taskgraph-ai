@@ -1,6 +1,6 @@
 /**
  * @fileoverview Slash Commands Index
- * Exports all TaskMaster slash commands organized by operating mode.
+ * Exports all TaskGraph slash commands organized by operating mode.
  */
 
 import type { SlashCommand } from '../types.js';
@@ -63,7 +63,7 @@ import {
 } from './common/index.js';
 
 /**
- * All TaskMaster slash commands
+ * All TaskGraph slash commands
  * Add new commands here to have them automatically distributed to all profiles.
  */
 export const allCommands: SlashCommand[] = [

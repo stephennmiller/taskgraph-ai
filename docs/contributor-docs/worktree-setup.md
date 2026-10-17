@@ -10,7 +10,7 @@ Instead of Docker complexity, use git worktrees to create isolated working direc
 ✅ **Simple** - No Docker, no containers, just git
 ✅ **Fast** - Instant setup, shared git history
 ✅ **Flexible** - Each worktree can be on a different branch
-✅ **Task Master Works** - Full access to `.taskmaster/` in each worktree
+✅ **TaskGraph Works** - Full access to `.taskmaster/` in each worktree
 
 ## Quick Start
 
@@ -143,9 +143,9 @@ All worktrees share the same `.git`:
 - Git history is shared
 - Only the working files differ
 
-## Task Master in Worktrees
+## TaskGraph in Worktrees
 
-Task Master works perfectly in worktrees:
+TaskGraph works perfectly in worktrees:
 
 ```bash
 # In any worktree
@@ -209,7 +209,7 @@ git pull
 
 ## Common Workflows
 
-### 1. Autonomous Claude with Task Master
+### 1. Autonomous Claude with TaskGraph
 
 **Setup:**
 ```bash

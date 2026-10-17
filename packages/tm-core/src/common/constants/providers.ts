@@ -1,6 +1,6 @@
 /**
  * Provider constants
- * Task Master supports a single AI provider: Claude Code.
+ * TaskGraph supports a single AI provider: Claude Code.
  */
 
 // Custom providers object for easy named access

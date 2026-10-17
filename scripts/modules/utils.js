@@ -1,6 +1,6 @@
 /**
  * utils.js
- * Utility functions for the Task Master CLI
+ * Utility functions for the TaskGraph CLI
  */
 
 import fs from 'fs';
@@ -1753,7 +1753,7 @@ function aggregateTelemetry(telemetryArray, overallCommandName) {
 }
 
 /**
- * @deprecated Use TaskMaster.getCurrentTag() instead
+ * @deprecated Use TaskGraph.getCurrentTag() instead
  * Gets the current tag from state.json or falls back to defaultTag from config
  * @param {string} projectRoot - The project root directory (required)
  * @returns {string} The current tag name

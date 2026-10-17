@@ -1,11 +1,11 @@
 ---
-description: Describes the high-level architecture of the Task Master CLI application.
+description: Describes the high-level architecture of the TaskGraph CLI application.
 paths:
   - "scripts/modules/*.js"
 ---
 # Application Architecture Overview
 
-- **Modular Structure**: The Task Master CLI is built using a modular architecture, with distinct modules responsible for different aspects of the application. This promotes separation of concerns, maintainability, and testability.
+- **Modular Structure**: The TaskGraph CLI is built using a modular architecture, with distinct modules responsible for different aspects of the application. This promotes separation of concerns, maintainability, and testability.
 
 - **Main Modules and Responsibilities**:
 
@@ -80,12 +80,12 @@ paths:
       - Manages MCP caching and response formatting.
 
   - **[`init.js`](../../scripts/init.js): Project Initialization Logic**
-    - **Purpose**: Sets up new Task Master project structure.
+    - **Purpose**: Sets up new TaskGraph project structure.
     - **Responsibilities**: Creates directories, copies templates, manages `package.json`, sets up `.mcp.json`, initializes state.json for tagged system.
 
 ## Tagged Task Lists System Architecture
 
-**Data Structure**: Task Master now uses a tagged task lists system where the `tasks.json` file contains multiple named task lists as top-level keys:
+**Data Structure**: TaskGraph now uses a tagged task lists system where the `tasks.json` file contains multiple named task lists as top-level keys:
 
 ```json
 {
@@ -268,11 +268,11 @@ By following these patterns consistently, direct functions will properly manage 
   - **Backward Compatibility**: Seamless migration and tag resolution ensure existing workflows continue unchanged.
   - **Clarity**: The modular structure provides a clear separation of concerns, making the codebase easier to navigate and understand for developers.
 
-This architectural overview should help AI models understand the structure and organization of the Task Master CLI codebase, enabling them to more effectively assist with code generation, modification, and understanding.
+This architectural overview should help AI models understand the structure and organization of the TaskGraph CLI codebase, enabling them to more effectively assist with code generation, modification, and understanding.
 
 ## Implementing MCP Support for a Command
 
-Follow these steps to add MCP support for an existing Task Master command (see `new-features.md` for more detail):
+Follow these steps to add MCP support for an existing TaskGraph command (see `new-features.md` for more detail):
 
 1.  **Ensure Core Logic Exists**: Verify the core functionality is implemented and exported from the relevant module in `scripts/modules/`.
 
@@ -308,7 +308,7 @@ Follow these steps to add MCP support for an existing Task Master command (see `
 
 ## Project Initialization
 
-The `initialize_project` command provides a way to set up a new Task Master project:
+The `initialize_project` command provides a way to set up a new TaskGraph project:
 
 - **CLI Command**: `taskgraph init`
 - **MCP Tool**: `initialize_project`

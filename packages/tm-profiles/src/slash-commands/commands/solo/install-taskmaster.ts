@@ -1,28 +1,28 @@
 /**
- * @fileoverview Install TaskMaster Slash Command
- * Check if Task Master is installed and install it if needed.
+ * @fileoverview Install TaskGraph Slash Command
+ * Check if TaskGraph is installed and install it if needed.
  */
 
 import { staticCommand } from '../../factories.js';
 
 /**
- * The install-taskmaster slash command - Install TaskMaster
+ * The install-taskmaster slash command - Install TaskGraph
  *
- * Check if Task Master is installed and install it if needed.
+ * Check if TaskGraph is installed and install it if needed.
  */
 export const installTaskmaster = staticCommand({
 	name: 'install-taskmaster',
-	description: 'Install TaskMaster',
-	content: `Check if Task Master is installed and install it if needed.
+	description: 'Install TaskGraph',
+	content: `Check if TaskGraph is installed and install it if needed.
 
-This command helps you get Task Master set up globally on your system.
+This command helps you get TaskGraph set up globally on your system.
 
 ## Detection and Installation Process
 
 1. **Check Current Installation**
    \`\`\`bash
    # Check if taskgraph command exists
-   which taskgraph || echo "Task Master not found"
+   which taskgraph || echo "TaskGraph not found"
 
    # Check npm global packages
    npm list -g taskgraph-ai
@@ -39,7 +39,7 @@ This command helps you get Task Master set up globally on your system.
    # Check Node version (need 16+)
    \`\`\`
 
-3. **Install Task Master Globally**
+3. **Install TaskGraph Globally**
    If not installed, run:
    \`\`\`bash
    npm install -g taskgraph-ai
@@ -61,7 +61,7 @@ This command helps you get Task Master set up globally on your system.
    \`\`\`
 
 6. **Check the AI provider**
-   Task Master uses Claude Code, so no API keys are needed. Make sure Claude Code is installed and signed in:
+   TaskGraph uses Claude Code, so no API keys are needed. Make sure Claude Code is installed and signed in:
    \`\`\`bash
    # Verify Claude Code is available
    claude --version
@@ -111,7 +111,7 @@ nvm use 20
 
 Once installed, you should see:
 \`\`\`
-✅ Task Master installed
+✅ TaskGraph installed
 ✅ Command 'taskgraph' available globally
 ✅ AI provider configured
 ✅ Ready to use slash commands!
@@ -124,6 +124,6 @@ Try: /taskmaster:init your-prd.md
 After installation:
 1. Run \`/taskmaster:status\` to verify setup
 2. Configure AI providers with \`/taskmaster:setup-models\`
-3. Start using Task Master commands!`,
+3. Start using TaskGraph commands!`,
 	mode: 'solo'
 });

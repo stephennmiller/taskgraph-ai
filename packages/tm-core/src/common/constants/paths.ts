@@ -1,5 +1,5 @@
 /**
- * @fileoverview Path constants for Task Master Core
+ * @fileoverview Path constants for TaskGraph Core
  * Defines all file paths and directory structure constants
  */
 
@@ -10,30 +10,30 @@ export const TASKMASTER_DOCS_DIR = '.taskmaster/docs';
 export const TASKMASTER_REPORTS_DIR = '.taskmaster/reports';
 export const TASKMASTER_TEMPLATES_DIR = '.taskmaster/templates';
 
-// Task Master configuration files
+// TaskGraph configuration files
 export const TASKMASTER_CONFIG_FILE = '.taskmaster/config.json';
 export const TASKMASTER_STATE_FILE = '.taskmaster/state.json';
 export const LEGACY_CONFIG_FILE = '.taskmasterconfig';
 
-// Task Master report files
+// TaskGraph report files
 export const COMPLEXITY_REPORT_FILE =
 	'.taskmaster/reports/task-complexity-report.json';
 export const LEGACY_COMPLEXITY_REPORT_FILE =
 	'scripts/task-complexity-report.json';
 
-// Task Master PRD file paths
+// TaskGraph PRD file paths
 export const PRD_FILE = '.taskmaster/docs/prd.txt';
 export const LEGACY_PRD_FILE = 'scripts/prd.txt';
 
-// Task Master template files
+// TaskGraph template files
 export const EXAMPLE_PRD_FILE = '.taskmaster/templates/example_prd.txt';
 export const LEGACY_EXAMPLE_PRD_FILE = 'scripts/example_prd.txt';
 
-// Task Master task file paths
+// TaskGraph task file paths
 export const TASKMASTER_TASKS_FILE = '.taskmaster/tasks/tasks.json';
 export const LEGACY_TASKS_FILE = 'tasks/tasks.json';
 
-// General project files (not Task Master specific but commonly used)
+// General project files (not TaskGraph specific but commonly used)
 export const ENV_EXAMPLE_FILE = '.env.example';
 export const GITIGNORE_FILE = '.gitignore';
 
@@ -42,11 +42,11 @@ export const TASK_FILE_PREFIX = 'task_';
 export const TASK_FILE_EXTENSION = '.txt';
 
 /**
- * Task Master specific markers (absolute highest priority)
- * ONLY truly Task Master-specific markers that uniquely identify a Task Master project
+ * TaskGraph specific markers (absolute highest priority)
+ * ONLY truly Task Master-specific markers that uniquely identify a TaskGraph project
  */
 export const TASKMASTER_PROJECT_MARKERS = [
-	'.taskmaster', // Task Master directory
+	'.taskmaster', // TaskGraph directory
 	TASKMASTER_CONFIG_FILE, // .taskmaster/config.json
 	TASKMASTER_TASKS_FILE, // .taskmaster/tasks/tasks.json
 	LEGACY_CONFIG_FILE // .taskmasterconfig (legacy but still Task Master-specific)
@@ -54,7 +54,7 @@ export const TASKMASTER_PROJECT_MARKERS = [
 
 /**
  * Project boundary markers - these indicate a project root and STOP upward traversal
- * during Task Master marker search. If we hit one of these without finding .taskmaster,
+ * during TaskGraph marker search. If we hit one of these without finding .taskmaster,
  * we shouldn't traverse beyond it (prevents finding .taskmaster in home directory).
  *
  * Ordered by reliability: VCS markers first, then platform-specific, then language-specific
@@ -148,7 +148,7 @@ export const PROJECT_BOUNDARY_MARKERS = [
 ] as const;
 
 /**
- * Other project markers (only checked if no Task Master markers found)
+ * Other project markers (only checked if no TaskGraph markers found)
  * Includes generic task files that could belong to any task runner/build system
  */
 export const OTHER_PROJECT_MARKERS = [

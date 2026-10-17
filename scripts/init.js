@@ -1,5 +1,5 @@
 /**
- * Task Master
+ * TaskGraph
  * Copyright (c) 2025 Eyal Toledano, Ralph Khreish
  *
  * This software is licensed under the MIT License with Commons Clause.
@@ -167,9 +167,9 @@ function addShellAliases() {
 		}
 		const removedStale = cleanedContent !== configContent;
 
-		// Clean up empty "Task Master aliases" comment blocks left behind
+		// Clean up empty "TaskGraph aliases" comment blocks left behind
 		cleanedContent = cleanedContent.replace(
-			/\n# Task Master aliases added on [^\n]*\n(?=\s*\n|$)/g,
+			/\n# (?:Task Master|TaskGraph) aliases added on [^\n]*\n(?=\s*\n|$)/g,
 			'\n'
 		);
 
@@ -188,14 +188,14 @@ function addShellAliases() {
 		);
 
 		if (missingAliases.length === 0) {
-			log('debug', 'All Task Master aliases already exist.');
+			log('debug', 'All TaskGraph aliases already exist.');
 			return true;
 		}
 
 		// Build alias block with only missing aliases
 		const aliasLines = missingAliases.map((a) => a.line).join('\n');
 		const aliasBlock = `
-# Task Master aliases added on ${new Date().toLocaleDateString()}
+# TaskGraph aliases added on ${new Date().toLocaleDateString()}
 ${aliasLines}
 `;
 
@@ -274,7 +274,7 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 
 			if (newLines.length > 0) {
 				// Add a comment to separate the original content from our additions
-				const updatedContent = `${existingContent.trim()}\n\n# Added by Taskmaster\n${newLines.join('\n')}`;
+				const updatedContent = `${existingContent.trim()}\n\n# Added by TaskGraph\n${newLines.join('\n')}`;
 				fs.writeFileSync(targetPath, updatedContent);
 				log('success', `Updated ${targetPath} with additional entries`);
 			} else {
@@ -368,7 +368,7 @@ async function initializeProject(options = {}) {
 		// Use provided options or defaults
 		const projectName = options.name || 'task-master-project';
 		const projectDescription =
-			options.description || 'A project managed with Taskmaster';
+			options.description || 'A project managed with TaskGraph';
 		const projectVersion = options.version || '0.1.0';
 		const authorName = options.author || 'Vibe coder';
 		const dryRun = options.dryRun || false;
@@ -378,7 +378,7 @@ async function initializeProject(options = {}) {
 
 		if (dryRun) {
 			log('info', 'DRY RUN MODE: No files will be modified');
-			log('info', 'Would initialize Task Master project');
+			log('info', 'Would initialize TaskGraph project');
 			log('info', 'Would create/update necessary project files');
 
 			// Show flag-specific behavior
@@ -585,7 +585,7 @@ async function initializeProject(options = {}) {
 			const preferredLanguage = languageInput.trim() || 'English';
 
 			// Confirm settings with cleaner formatting
-			console.log('\n' + chalk.bold('Taskmaster Project Settings:'));
+			console.log('\n' + chalk.bold('TaskGraph Project Settings:'));
 			console.log(chalk.dim('─'.repeat(50)));
 
 			// Storage
@@ -645,7 +645,7 @@ async function initializeProject(options = {}) {
 
 			if (dryRun) {
 				log('info', 'DRY RUN MODE: No files will be modified');
-				log('info', 'Would initialize Task Master project');
+				log('info', 'Would initialize TaskGraph project');
 				log('info', 'Would create/update necessary project files');
 
 				// Show flag-specific behavior
@@ -752,7 +752,7 @@ function updateStorageConfig(configPath, selectedStorage, authCredentials) {
 			// Configure for local file storage
 			config.storage.type = 'file';
 
-			// Set operating mode to 'solo' for local storage (Taskmaster standalone)
+			// Set operating mode to 'solo' for local storage (TaskGraph standalone)
 			// This determines which slash commands and rules are installed
 			config.storage.operatingMode = 'solo';
 
@@ -789,7 +789,7 @@ async function promptStorageSelection() {
 				choices: [
 					{
 						name: [
-							chalk.bold('Solo (Taskmaster)'),
+							chalk.bold('Solo (TaskGraph)'),
 							'',
 							chalk.white(
 								'   • Parse your own PRDs into structured task lists and build with any IDE or background agents'
@@ -806,7 +806,7 @@ async function promptStorageSelection() {
 							''
 						].join('\n'),
 						value: 'local',
-						short: 'Solo (Taskmaster)'
+						short: 'Solo (TaskGraph)'
 					},
 
 					{
@@ -823,7 +823,7 @@ async function promptStorageSelection() {
 								'   • One brief, one plan, one source of truth for execution'
 							),
 							chalk.white(
-								'   • Access tasks on Taskmaster and execute with any AI agent'
+								'   • Access tasks on TaskGraph and execute with any AI agent'
 							),
 							''
 						].join('\n'),
@@ -879,7 +879,7 @@ async function createProjectStructure(
 	// Helper function to create rule profiles
 	// Derives operating mode from storage selection:
 	// - 'cloud' (Hamster) -> 'team' mode
-	// - 'local' (Taskmaster standalone) -> 'solo' mode
+	// - 'local' (TaskGraph standalone) -> 'solo' mode
 	const operatingMode = selectedStorage === 'cloud' ? 'team' : 'solo';
 
 	function _processSingleProfile(profileName) {
@@ -1118,12 +1118,12 @@ async function createProjectStructure(
 				chalk.white("Your team's workspace is ready to go ham!\n"),
 				chalk.dim('Draft together. Align once. Build with agents.'),
 				'',
-				chalk.cyan('How to orchestrate with Taskmaster:'),
+				chalk.cyan('How to orchestrate with TaskGraph:'),
 				chalk.white('  • Create your first brief at: ') +
 					chalk.underline.cyan('https://tryhamster.com'),
 				chalk.white('  • Connect your brief using ') +
 					chalk.bold('tm context <brief-url>') +
-					chalk.white(' to access tasks in Taskmaster'),
+					chalk.white(' to access tasks in TaskGraph'),
 				chalk.white('  • Orchestrate and implement tasks using ') +
 					chalk.bold('tm next') +
 					chalk.white(' to kickoff any AI agent'),
@@ -1171,7 +1171,7 @@ async function createProjectStructure(
 			)} ${chalk.cyan.underline('https://tryhamster.com')}\n${chalk.white('   └─ ')}${chalk.dim('Hamster will write your brief and generate the full task plan')}\n${chalk.white('2. ')}${chalk.yellow(
 				'Set up Claude Code integration'
 			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph init --rules claude')}${chalk.dim(' - Adds CLAUDE.md import and MCP config')}\n${chalk.white('3. ')}${chalk.yellow(
-				'Connect your brief to Taskmaster'
+				'Connect your brief to TaskGraph'
 			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm context <brief-url> OR tm briefs')}\n${chalk.white('4. ')}${chalk.yellow(
 				'View your tasks from the brief'
 			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm list')}${chalk.dim(' or ')}${chalk.cyan('tm list all')}${chalk.dim(' (with subtasks)')}\n${chalk.white('5. ')}${chalk.yellow(

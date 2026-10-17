@@ -1,6 +1,6 @@
-# Task Master Prompt Management System
+# TaskGraph Prompt Management System
 
-This directory contains the centralized prompt templates for all AI-powered features in Task Master.
+This directory contains the centralized prompt templates for all AI-powered features in TaskGraph.
 
 ## Overview
 

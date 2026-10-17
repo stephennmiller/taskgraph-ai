@@ -1,5 +1,5 @@
 /**
- * Base tsdown configuration for Task Master monorepo
+ * Base tsdown configuration for TaskGraph monorepo
  * Provides shared configuration that can be extended by individual packages
  */
 import type { UserConfig } from 'tsdown';

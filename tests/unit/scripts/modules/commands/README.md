@@ -47,13 +47,13 @@ function createMockFactory(config = mockConfig) {
 - `moveTasksBetweenTags`: Core move functionality
 - `generateTaskFiles`: File generation after moves
 - `readJSON`: Reading task data
-- `initTaskMaster`: TaskMaster initialization
+- `initTaskMaster`: TaskGraph initialization
 - `findProjectRoot`: Project path resolution
 
 ### Optional Mocks
 
 - Console methods: `error`, `log`, `exit`
-- TaskMaster instance methods: `getCurrentTag`, `getTasksPath`, `getProjectRoot`
+- TaskGraph instance methods: `getCurrentTag`, `getTasksPath`, `getProjectRoot`
 
 ## Usage Examples
 

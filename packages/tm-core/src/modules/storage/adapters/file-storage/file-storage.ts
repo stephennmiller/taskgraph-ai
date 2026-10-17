@@ -1,5 +1,5 @@
 /**
- * @fileoverview Refactored file-based storage implementation for Task Master
+ * @fileoverview Refactored file-based storage implementation for TaskGraph
  */
 
 import fs from 'node:fs';

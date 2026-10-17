@@ -1,4 +1,4 @@
-Quick install Task Master globally if not already installed.
+Quick install TaskGraph globally if not already installed.
 
 Execute this streamlined installation:
 
@@ -17,6 +17,6 @@ If you see "command not found" after installation, you may need to:
 1. Restart your terminal
 2. Or add npm global bin to PATH: `export PATH=$(npm bin -g):$PATH`
 
-Once installed, you can use all the Task Master commands!
+Once installed, you can use all the TaskGraph commands!
 
 Quick test: Run `/project:help` to see all available commands.

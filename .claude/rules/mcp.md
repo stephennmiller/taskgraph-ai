@@ -1,19 +1,19 @@
 ---
-description: Guidelines for implementing and interacting with the Task Master MCP Server
+description: Guidelines for implementing and interacting with the TaskGraph MCP Server
 paths:
   - "mcp-server/src/**/*"
   - "scripts/modules/**/*"
 ---
-# Task Master MCP Server Guidelines
+# TaskGraph MCP Server Guidelines
 
-This document outlines the architecture and implementation patterns for the Task Master Model Context Protocol (MCP) server, designed for integration with tools like Claude Code.
+This document outlines the architecture and implementation patterns for the TaskGraph Model Context Protocol (MCP) server, designed for integration with tools like Claude Code.
 
 ## Architecture Overview (See also: `architecture.md`)
 
-The MCP server acts as a bridge between external tools (like Claude Code) and the core Task Master CLI logic. It leverages FastMCP for the server framework.
+The MCP server acts as a bridge between external tools (like Claude Code) and the core TaskGraph CLI logic. It leverages FastMCP for the server framework.
 
 - **Flow**: `External Tool (Claude Code)` <-> `FastMCP Server` <-> `MCP Tools` (`mcp-server/src/tools/*.js`) <-> `Core Logic Wrappers` (`mcp-server/src/core/direct-functions/*.js`, exported via `task-master-core.js`) <-> `Core Modules` (`scripts/modules/*.js`)
-- **Goal**: Provide a performant and reliable way for external tools to interact with Task Master functionality without directly invoking the CLI for every operation.
+- **Goal**: Provide a performant and reliable way for external tools to interact with TaskGraph functionality without directly invoking the CLI for every operation.
 
 ## Direct Function Implementation Best Practices
 
@@ -255,7 +255,7 @@ By using this HOF, the core logic within the `execute` method and any downstream
 
 ### Project Initialization Tool
 
-The `initialize_project` tool allows integrated clients like Claude Code to set up a new Task Master project:
+The `initialize_project` tool allows integrated clients like Claude Code to set up a new TaskGraph project:
 
 ```javascript
 // In initialize-project.js
@@ -266,7 +266,7 @@ import { handleApiResult, createErrorResponse } from "./utils.js";
 export function registerInitializeProjectTool(server) {
   server.addTool({
     name: "initialize_project",
-    description: "Initialize a new Task Master project",
+    description: "Initialize a new TaskGraph project",
     parameters: z.object({
       projectName: z.string().optional().describe("The name for the new project"),
       projectDescription: z.string().optional().describe("A brief description"),
@@ -308,7 +308,7 @@ log.info('Progress: 50% - AI call initiated...'); // Example progress logging
 The `session` object (destructured from `context`) contains authenticated session data and client information.
 
 - **Authentication**: Access user-specific data (`session.userId`, etc.) if authentication is implemented.
-- **Project Root**: The primary use in Task Master is accessing `session.roots` to determine the client's project root directory via the `getProjectRootFromSession` utility (from [`tools/utils.js`](../../mcp-server/src/tools/utils.js)). See the Standard Tool Execution Pattern above.
+- **Project Root**: The primary use in TaskGraph is accessing `session.roots` to determine the client's project root directory via the `getProjectRootFromSession` utility (from [`tools/utils.js`](../../mcp-server/src/tools/utils.js)). See the Standard Tool Execution Pattern above.
 - **Environment Variables**: The `session.env` object provides access to environment variables set in the MCP client configuration (e.g., `.mcp.json`). This is the **primary mechanism** for the unified AI service layer (`ai-services-unified.js`) to securely access **API keys** when called from MCP context.
 - **Capabilities**: Can be used to check client capabilities (`session.clientCapabilities`).
 
@@ -316,7 +316,7 @@ The `session` object (destructured from `context`) contains authenticated sessio
 
 These functions, located in `mcp-server/src/core/direct-functions/`, form the core logic execution layer for MCP tools.
 
-- **Purpose**: Bridge MCP tools and core Task Master modules (`scripts/modules/*`). Handle AI interactions if applicable.
+- **Purpose**: Bridge MCP tools and core TaskGraph modules (`scripts/modules/*`). Handle AI interactions if applicable.
 - **Responsibilities**:
   - Receive `args` (including `projectRoot`), `log`, and optionally `{ session }` context.
   - Find `tasks.json` using `findTasksJsonPath`.
@@ -357,7 +357,7 @@ Resources provide LLMs with static or dynamic data without executing tools.
 
 ## Implementing MCP Support for a Command
 
-Follow these steps to add MCP support for an existing Task Master command (see `new-features.md` for more detail):
+Follow these steps to add MCP support for an existing TaskGraph command (see `new-features.md` for more detail):
 
 1.  **Ensure Core Logic Exists**: Verify the core functionality is implemented and exported from the relevant module in `scripts/modules/`. Ensure the core function can suppress console output (e.g., via an `outputFormat` parameter).
 
@@ -481,7 +481,7 @@ Follow these steps to add MCP support for an existing Task Master command (see `
   - ✅ DO: Include the cache status in result logs
   - ❌ DON'T: Log entire large data structures or sensitive information
 
-- The MCP server integrates with Task Master core functions through three layers:
+- The MCP server integrates with TaskGraph core functions through three layers:
   1. Tool Definitions (`mcp-server/src/tools/*.js`) - Define parameters and validation
   2. Direct Functions (`mcp-server/src/core/direct-functions/*.js`) - Handle core logic integration
   3. Core Functions (`scripts/modules/*.js`) - Implement the actual functionality

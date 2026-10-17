@@ -1,13 +1,13 @@
 ---
 title: "AI Agent Integration Guide"
-description: "Complete guide for integrating AI agents with TaskMaster's autonomous TDD workflow system"
+description: "Complete guide for integrating AI agents with TaskGraph's autonomous TDD workflow system"
 ---
 
-Complete guide for integrating AI agents with TaskMaster's autonomous TDD workflow system.
+Complete guide for integrating AI agents with TaskGraph's autonomous TDD workflow system.
 
 ## Overview
 
-TaskMaster provides a complete TDD workflow orchestration system that enables AI agents to autonomously implement features following strict Test-Driven Development practices. The system manages workflow state, git operations, test validation, and progress tracking.
+TaskGraph provides a complete TDD workflow orchestration system that enables AI agents to autonomously implement features following strict Test-Driven Development practices. The system manages workflow state, git operations, test validation, and progress tracking.
 
 ### Key Features
 
@@ -29,7 +29,7 @@ TaskMaster provides a complete TDD workflow orchestration system that enables AI
               │ Uses CLI or MCP
               │
 ┌─────────────▼───────────────────────────────────────┐
-│            TaskMaster Interface                      │
+│            TaskGraph Interface                      │
 │  ┌──────────────┐         ┌──────────────┐         │
 │  │ CLI Commands │         │  MCP Tools   │         │
 │  └──────┬───────┘         └──────┬───────┘         │
@@ -81,7 +81,7 @@ TaskMaster provides a complete TDD workflow orchestration system that enables AI
 
 ### Prerequisites
 
-1. TaskMaster initialized project with subtasks
+1. TaskGraph initialized project with subtasks
 2. Git repository with clean working tree
 3. Test framework configured (vitest, jest, etc.)
 
@@ -430,9 +430,9 @@ PREFLIGHT → BRANCH_SETUP → SUBTASK_LOOP → FINALIZE → COMPLETE
 
 ## Responsibility Matrix
 
-Clear division of responsibilities between AI Agent and TaskMaster.
+Clear division of responsibilities between AI Agent and TaskGraph.
 
-| Responsibility | AI Agent | TaskMaster |
+| Responsibility | AI Agent | TaskGraph |
 |---------------|----------|------------|
 | **Workflow Orchestration** | | ✓ |
 | Start/resume workflow | Call CLI/MCP | Execute & validate |
@@ -447,7 +447,7 @@ Clear division of responsibilities between AI Agent and TaskMaster.
 | **Implementation** | | |
 | Write implementation code | ✓ | |
 | Ensure tests pass | ✓ | |
-| Follow TDD cycle | ✓ (guided by TaskMaster) | Enforce rules |
+| Follow TDD cycle | ✓ (guided by TaskGraph) | Enforce rules |
 | **Git Operations** | | |
 | Create workflow branch | Request | ✓ Execute |
 | Stage files | Request (optional) | ✓ Execute |
@@ -465,12 +465,12 @@ Clear division of responsibilities between AI Agent and TaskMaster.
 2. **Write test code** that validates the requirement
 3. **Run test suite** using project's test command
 4. **Parse test output** into JSON format
-5. **Report results** to TaskMaster for validation
+5. **Report results** to TaskGraph for validation
 6. **Write implementation** to satisfy tests
 7. **Request commits** when GREEN phase complete
 8. **Handle errors** and retry within attempt limits
 
-### TaskMaster Responsibilities
+### TaskGraph Responsibilities
 
 1. **Manage workflow state machine**
 2. **Enforce TDD rules** (RED must fail, GREEN must pass)
@@ -1009,5 +1009,5 @@ I have an in-progress workflow. Please:
 
 - [Command Reference](/command-reference) - Complete CLI command documentation
 - [MCP Provider Guide](/capabilities/mcp) - MCP integration details
-- [Task Structure](/capabilities/task-structure) - Understanding TaskMaster's task system
+- [Task Structure](/capabilities/task-structure) - Understanding TaskGraph's task system
 - [Configuration](/configuration) - Project configuration options

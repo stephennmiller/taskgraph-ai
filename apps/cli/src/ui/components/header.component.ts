@@ -1,5 +1,5 @@
 /**
- * @fileoverview Task Master header component
+ * @fileoverview TaskGraph header component
  * Displays the banner, version, project info, and file path
  */
 
@@ -28,7 +28,7 @@ export interface HeaderOptions {
 }
 
 /**
- * Display the Task Master header with project info
+ * Display the TaskGraph header with project info
  */
 export function displayHeader(options: HeaderOptions = {}): void {
 	const { filePath, tag, storageType, briefInfo } = options;

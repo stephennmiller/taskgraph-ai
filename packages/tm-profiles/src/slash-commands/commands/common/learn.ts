@@ -1,6 +1,6 @@
 /**
  * @fileoverview Learn Slash Command
- * Learn about Task Master capabilities through interactive exploration.
+ * Learn about TaskGraph capabilities through interactive exploration.
  */
 
 import { dynamicCommand } from '../../factories.js';
@@ -8,17 +8,17 @@ import { dynamicCommand } from '../../factories.js';
 /**
  * The learn slash command - Learn
  *
- * Learn about Task Master capabilities through interactive exploration.
+ * Learn about TaskGraph capabilities through interactive exploration.
  */
 export const learn = dynamicCommand(
 	'learn',
 	'Learn',
 	'[topic]',
-	`Learn about Task Master capabilities through interactive exploration.
+	`Learn about TaskGraph capabilities through interactive exploration.
 
 Arguments: $ARGUMENTS
 
-## Interactive Task Master Learning
+## Interactive TaskGraph Learning
 
 Based on your input, I'll help you discover capabilities:
 

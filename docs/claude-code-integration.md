@@ -2,11 +2,11 @@
 
 # Claude Code Integration Guide
 
-This guide covers how to use Task Master with Claude Code AI SDK integration for enhanced AI-powered development workflows.
+This guide covers how to use TaskGraph with Claude Code AI SDK integration for enhanced AI-powered development workflows.
 
 ## Overview
 
-Claude Code integration allows Task Master to leverage the Claude Code CLI for AI operations without requiring direct API keys. The integration uses OAuth tokens managed by the Claude Code CLI itself.
+Claude Code integration allows TaskGraph to leverage the Claude Code CLI for AI operations without requiring direct API keys. The integration uses OAuth tokens managed by the Claude Code CLI itself.
 
 ## Authentication Setup
 
@@ -30,11 +30,11 @@ The Claude Code provider uses token authentication managed by the Claude Code CL
    This command will:
    - Guide you through OAuth authentication
    - Store the token securely for CLI usage
-   - Enable Task Master to use Claude Code without manual API key configuration
+   - Enable TaskGraph to use Claude Code without manual API key configuration
 
 ### Authentication Priority
 
-Task Master will attempt authentication in this order:
+TaskGraph will attempt authentication in this order:
 
 1. **Environment Variable** (optional): `CLAUDE_CODE_OAUTH_TOKEN`
    - Useful for CI/CD environments or when you want to override the default token
@@ -50,7 +50,7 @@ Task Master will attempt authentication in this order:
 
 ### Basic Configuration
 
-Add Claude Code to your Task Master configuration:
+Add Claude Code to your TaskGraph configuration:
 
 ```javascript
 // In your .taskmaster/config.json or via taskgraph models command
@@ -110,7 +110,7 @@ taskgraph models --setup
 
 #### 1. "Claude Code CLI not available" Error
 
-**Problem**: Task Master cannot connect to Claude Code CLI.
+**Problem**: TaskGraph cannot connect to Claude Code CLI.
 
 **Solutions**:
 
@@ -154,7 +154,7 @@ taskgraph models --setup
    # Should confirm token is valid
    ```
 
-3. **Test Task Master integration**:
+3. **Test TaskGraph integration**:
 
    ```bash
    taskgraph models --test claude-code:sonnet
@@ -162,7 +162,7 @@ taskgraph models --setup
    ```
 
 4. **Check logs**:
-   - Task Master logs will show detailed error messages
+   - TaskGraph logs will show detailed error messages
    - Use `--verbose` flag for more detailed output
 
 ### Environment-Specific Configuration
@@ -184,11 +184,11 @@ For automated environments:
 
 1. Set up a service account token or use environment variables
 2. Ensure Claude Code CLI is available in the pipeline environment
-3. Configure authentication before running Task Master commands
+3. Configure authentication before running TaskGraph commands
 
 ## Integration with AI SDK
 
-Task Master's Claude Code integration uses the official `ai-sdk-provider-claude-code` package, providing:
+TaskGraph's Claude Code integration uses the official `ai-sdk-provider-claude-code` package, providing:
 
 - **Streaming Support**: Real-time token streaming for interactive experiences
 - **Full AI SDK Compatibility**: Works with generateText, streamText, and other AI SDK functions
@@ -198,7 +198,7 @@ Task Master's Claude Code integration uses the official `ai-sdk-provider-claude-
 
 ## Native Structured Outputs (v2.2.0+)
 
-As of `ai-sdk-provider-claude-code` v2.2.0, Claude Code supports **native structured outputs** via the Claude Agent SDK's `outputFormat` option. This provides significant benefits for Task Master's structured data generation:
+As of `ai-sdk-provider-claude-code` v2.2.0, Claude Code supports **native structured outputs** via the Claude Agent SDK's `outputFormat` option. This provides significant benefits for TaskGraph's structured data generation:
 
 ### Key Benefits
 
@@ -209,7 +209,7 @@ As of `ai-sdk-provider-claude-code` v2.2.0, Claude Code supports **native struct
 
 ### How It Works
 
-When Task Master calls `generateObject()` or `streamObject()` with a Zod schema, the Claude Code provider:
+When TaskGraph calls `generateObject()` or `streamObject()` with a Zod schema, the Claude Code provider:
 
 1. Sets `mode: 'json'` (via `needsExplicitJsonSchema = true`)
 2. Passes the schema to the SDK
@@ -248,7 +248,7 @@ console.log(result.mainResult);
 
 ### Supported Commands
 
-All Task Master commands that generate structured data benefit from native schema support:
+All TaskGraph commands that generate structured data benefit from native schema support:
 
 - `parse-prd` - Parsing PRD documents into tasks
 - `add-task` - Creating new tasks
@@ -289,5 +289,5 @@ If you encounter issues:
 
 1. Check the Claude Code CLI documentation
 2. Verify your authentication setup with `claude setup-token --verify`
-3. Review Task Master logs for detailed error messages
-4. Open an issue with both Task Master and Claude Code version information
+3. Review TaskGraph logs for detailed error messages
+4. Open an issue with both TaskGraph and Claude Code version information

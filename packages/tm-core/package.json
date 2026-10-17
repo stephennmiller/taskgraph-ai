@@ -1,7 +1,7 @@
 {
 	"name": "@tm/core",
 	"private": true,
-	"description": "Core library for Task Master - TypeScript task management system",
+	"description": "Core library for TaskGraph - TypeScript task management system",
 	"type": "module",
 	"types": "./src/index.ts",
 	"main": "./dist/index.js",
@@ -52,6 +52,6 @@
 	},
 	"files": ["src", "README.md", "CHANGELOG.md"],
 	"keywords": ["task-management", "typescript", "ai", "prd", "parser"],
-	"author": "Task Master AI",
+	"author": "TaskGraph",
 	"version": ""
 }

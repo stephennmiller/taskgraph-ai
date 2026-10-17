@@ -145,7 +145,7 @@ export class SetStatusCommand extends Command {
 				process.exit(1);
 			}
 
-			// Initialize TaskMaster core
+			// Initialize TaskGraph core
 			this.tmCore = await createTmCore({
 				projectPath: getProjectRoot(options.project)
 			});

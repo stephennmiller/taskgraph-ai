@@ -268,7 +268,7 @@ export class OAuthService {
 					'User-Agent': `TaskMasterCLI/${this.getCliVersion()}`
 				},
 				body: JSON.stringify({
-					name: 'Task Master CLI',
+					name: 'TaskGraph CLI',
 					version: this.getCliVersion(),
 					device: os.hostname(),
 					user: os.userInfo().username,

@@ -331,7 +331,7 @@ log_step() {
   npm link taskgraph-ai
   log_success "Package linked locally."
 
-  log_step "Initializing Task Master project (non-interactive)"
+  log_step "Initializing TaskGraph project (non-interactive)"
   taskgraph init -y --name="E2E Test $TIMESTAMP" --description="Automated E2E test run"
   if [ ! -f ".taskmaster/config.json" ]; then
     log_error "Initialization failed: .taskmaster/config.json not found."

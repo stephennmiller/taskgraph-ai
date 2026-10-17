@@ -1,4 +1,4 @@
-# Taskmaster AI - Claude Code Marketplace
+# TaskGraph - Claude Code Marketplace
 
 This repository includes a Claude Code plugin marketplace in `.claude-plugin/marketplace.json`.
 

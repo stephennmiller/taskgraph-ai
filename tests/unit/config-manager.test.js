@@ -143,7 +143,7 @@ const DEFAULT_CONFIG = {
 		defaultNumTasks: 10,
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
-		projectName: 'Task Master',
+		projectName: 'TaskGraph',
 		enableCodebaseAnalysis: true,
 		enableProxy: false,
 		responseLanguage: 'English'
@@ -327,7 +327,7 @@ describe('Validation Functions', () => {
 		expect(configManager.validateProvider('claude-code')).toBe(true);
 	});
 
-	test('validateProvider should reject providers Task Master no longer supports', () => {
+	test('validateProvider should reject providers TaskGraph no longer supports', () => {
 		for (const provider of [
 			'openai',
 			'anthropic',

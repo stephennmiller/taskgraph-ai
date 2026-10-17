@@ -17,7 +17,7 @@ export const viewModels = staticCommand({
 
 ## Model Configuration Display
 
-Shows the currently configured AI providers and models for Task Master.
+Shows the currently configured AI providers and models for TaskGraph.
 
 ## Execution
 
@@ -42,7 +42,7 @@ taskgraph models
 ## Visual Status
 
 \`\`\`
-Task Master AI Model Configuration
+TaskGraph Model Configuration
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Main:     ✅ claude-code / sonnet
 Research: ✅ claude-code / sonnet

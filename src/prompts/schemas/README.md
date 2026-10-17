@@ -1,6 +1,6 @@
-# Task Master JSON Schemas
+# TaskGraph JSON Schemas
 
-This directory contains JSON schemas for validating Task Master prompt templates. These schemas provide IDE support, validation, and better developer experience when working with prompt templates.
+This directory contains JSON schemas for validating TaskGraph prompt templates. These schemas provide IDE support, validation, and better developer experience when working with prompt templates.
 
 ## Overview
 
@@ -15,7 +15,7 @@ The schema system provides:
 
 ### `prompt-template.schema.json` (Main Schema)
 **Version**: 1.0.0  
-**Purpose**: Main schema for Task Master prompt template files
+**Purpose**: Main schema for TaskGraph prompt template files
 
 **Validates**:
 - Template metadata (id, version, description)
@@ -164,7 +164,7 @@ For other development environments:
   "version": "1.0.0",
   "description": "Example prompt template with comprehensive validation",
   "metadata": {
-    "author": "Task Master Team",
+    "author": "TaskGraph Team",
     "category": "task",
     "tags": ["example", "validation"]
   },

@@ -1,7 +1,7 @@
 /**
- * Duplication preset for Taskmaster loop - code deduplication
+ * Duplication preset for TaskGraph loop - code deduplication
  */
-export const DUPLICATION_PRESET = `# Taskmaster Loop - Duplication
+export const DUPLICATION_PRESET = `# TaskGraph Loop - Duplication
 
 Find duplicated code and refactor into shared utilities. ONE refactor per session.
 

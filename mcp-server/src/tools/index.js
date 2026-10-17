@@ -1,6 +1,6 @@
 /**
  * tools/index.js
- * Export all Task Master CLI tools for MCP server
+ * Export all TaskGraph CLI tools for MCP server
  */
 
 import logger from '../logger.js';
@@ -31,7 +31,7 @@ export function getToolsConfiguration() {
 }
 
 /**
- * Register Task Master tools with the MCP server
+ * Register TaskGraph tools with the MCP server
  * Supports selective tool loading via TASK_MASTER_TOOLS environment variable
  * @param {Object} server - FastMCP server instance
  * @param {string} toolMode - The tool mode configuration (defaults to 'all')

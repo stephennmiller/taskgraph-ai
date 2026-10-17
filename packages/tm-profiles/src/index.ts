@@ -1,5 +1,5 @@
 /**
- * @fileoverview TaskMaster Profiles Package
+ * @fileoverview TaskGraph Profiles Package
  * Provides slash commands and shell utilities for the Claude Code profile.
  */
 

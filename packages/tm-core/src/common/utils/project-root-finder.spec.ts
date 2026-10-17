@@ -31,7 +31,7 @@ describe('findProjectRoot', () => {
 		}
 	});
 
-	describe('Task Master marker detection', () => {
+	describe('TaskGraph marker detection', () => {
 		it('should find .taskmaster directory in current directory', () => {
 			const taskmasterDir = path.join(tempDir, '.taskmaster');
 			fs.mkdirSync(taskmasterDir);
@@ -146,7 +146,7 @@ describe('findProjectRoot', () => {
 
 		it('should find .taskmaster when at SAME level as project boundary', () => {
 			// Scenario: /project/.taskmaster AND /project/.git
-			// This is a properly initialized Task Master project
+			// This is a properly initialized TaskGraph project
 			const projectDir = tempDir;
 			const taskmasterDir = path.join(projectDir, '.taskmaster');
 			const gitDir = path.join(projectDir, '.git');
@@ -208,9 +208,9 @@ describe('findProjectRoot', () => {
 			expect(result).toBe(pkgDir);
 		});
 
-		it('should return package root when package HAS .taskmaster (nested Task Master)', () => {
+		it('should return package root when package HAS .taskmaster (nested TaskGraph)', () => {
 			// Scenario: /monorepo/.taskmaster, /monorepo/packages/pkg/.taskmaster
-			// Package has its own Task Master initialization
+			// Package has its own TaskGraph initialization
 			const monorepoRoot = tempDir;
 			const pkgDir = path.join(tempDir, 'packages', 'pkg');
 
@@ -223,7 +223,7 @@ describe('findProjectRoot', () => {
 		});
 	});
 
-	describe('Other project marker detection (when no Task Master markers)', () => {
+	describe('Other project marker detection (when no TaskGraph markers)', () => {
 		it('should find .git directory', () => {
 			const gitDir = path.join(tempDir, '.git');
 			fs.mkdirSync(gitDir);

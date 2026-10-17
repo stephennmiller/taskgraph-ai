@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Task Master Prompt Template Testing Tool
+ * TaskGraph Prompt Template Testing Tool
  *
  * Interactive menu system for testing prompt templates with realistic data.
  * Tests all 8 prompt templates with multiple variants and error conditions.
@@ -523,7 +523,7 @@ class PromptTestMenu {
 
 	async start() {
 		console.log(
-			`${colors.cyan}${colors.bright}=== Task Master Prompt Template Testing Menu ===${colors.reset}\n`
+			`${colors.cyan}${colors.bright}=== TaskGraph Prompt Template Testing Menu ===${colors.reset}\n`
 		);
 		await this.showMainMenu();
 	}
@@ -531,7 +531,7 @@ class PromptTestMenu {
 	async showMainMenu() {
 		console.clear();
 		console.log(
-			`${colors.cyan}=== Task Master Prompt Template Testing Menu ===${colors.reset}\n`
+			`${colors.cyan}=== TaskGraph Prompt Template Testing Menu ===${colors.reset}\n`
 		);
 
 		console.log('Main Menu:');
@@ -881,7 +881,7 @@ function getTestDataForTemplate(templateKey, variant) {
 
 // Run all comprehensive tests
 async function runComprehensiveTests(generateDetailed = false) {
-	console.log('Task Master Prompt Template Comprehensive Test');
+	console.log('TaskGraph Prompt Template Comprehensive Test');
 	console.log('=============================================\n');
 
 	let passed = 0;
@@ -1337,7 +1337,7 @@ async function main() {
 	const args = process.argv.slice(2);
 
 	if (args.includes('--help') || args.includes('-h')) {
-		console.log(`Task Master Prompt Template Testing Tool
+		console.log(`TaskGraph Prompt Template Testing Tool
 
 Usage:
   node prompt-test.js [options]
@@ -1462,7 +1462,7 @@ function generateHTMLReport(testResults, templateResults = []) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task Master Prompt Template Test Report</title>
+    <title>TaskGraph Prompt Template Test Report</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -1603,7 +1603,7 @@ function generateHTMLReport(testResults, templateResults = []) {
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">Task Master Prompt Template Test Report</h1>
+            <h1 class="title">TaskGraph Prompt Template Test Report</h1>
             <p class="subtitle">Generated on ${timestamp}</p>
         </div>
         
@@ -1801,7 +1801,7 @@ function generateHTMLReport(testResults, templateResults = []) {
 
 	html += `
         <div class="footer">
-            <p>Task Master Prompt Template Testing Tool</p>
+            <p>TaskGraph Prompt Template Testing Tool</p>
         </div>
     </div>
 </body>

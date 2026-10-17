@@ -2,7 +2,7 @@ View current AI model configuration.
 
 ## Model Configuration Display
 
-Shows the currently configured AI providers and models for Task Master.
+Shows the currently configured AI providers and models for TaskGraph.
 
 ## Execution
 
@@ -30,7 +30,7 @@ taskgraph models
 ## Visual Status
 
 ```
-Task Master AI Model Configuration
+TaskGraph Model Configuration
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Main:     ✅ claude-sonnet-5-5 (configured)
 Research: ✅ perplexity-sonar (configured)  

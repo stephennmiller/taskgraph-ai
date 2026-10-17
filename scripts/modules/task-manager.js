@@ -1,6 +1,6 @@
 /**
  * task-manager.js
- * Task management functions for the Task Master CLI
+ * Task management functions for the TaskGraph CLI
  */
 
 import addSubtask from './task-manager/add-subtask.js';

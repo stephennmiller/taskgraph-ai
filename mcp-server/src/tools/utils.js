@@ -1,6 +1,6 @@
 /**
  * tools/utils.js
- * Utility functions for Task Master CLI integration
+ * Utility functions for TaskGraph CLI integration
  */
 
 import { spawnSync } from 'child_process';

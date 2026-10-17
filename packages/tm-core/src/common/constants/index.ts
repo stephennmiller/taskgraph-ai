@@ -1,5 +1,5 @@
 /**
- * @fileoverview Constants for Task Master Core
+ * @fileoverview Constants for TaskGraph Core
  * Single source of truth for all constant values
  */
 
@@ -13,7 +13,7 @@ import type {
 import packageJson from '../../../../../package.json' with { type: 'json' };
 
 /**
- * Task Master version from root package.json
+ * TaskGraph version from root package.json
  * Centralized to avoid fragile relative paths throughout the codebase
  */
 export const TASKMASTER_VERSION = packageJson.version || 'unknown';

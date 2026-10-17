@@ -1,11 +1,11 @@
 # Example Claude Code Interactions
 
-Here are some common interactions with Claude Code when using Task Master:
+Here are some common interactions with Claude Code when using TaskGraph:
 
 ## Starting a new project
 
 ```
-I've just initialized a new project with Claude Task Master. I have a PRD at .taskmaster/docs/prd.txt.
+I've just initialized a new project with TaskGraph. I have a PRD at .taskmaster/docs/prd.txt.
 Can you help me parse it and set up the initial tasks?
 ```
 

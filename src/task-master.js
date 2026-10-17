@@ -1,7 +1,7 @@
 /**
  * task-master.js
- * This module provides a centralized path management system for the Task Master application.
- * It exports the TaskMaster class and the initTaskMaster factory function to create a single,
+ * This module provides a centralized path management system for the TaskGraph application.
+ * It exports the TaskGraph class and the initTaskMaster factory function to create a single,
  * authoritative source for all critical file and directory paths, resolving circular dependencies.
  */
 
@@ -20,10 +20,10 @@ import {
 import { findProjectRoot } from './utils/path-utils.js';
 
 /**
- * TaskMaster class manages all the paths for the application.
+ * TaskGraph class manages all the paths for the application.
  * An instance of this class is created by the initTaskMaster function.
  */
-export class TaskMaster {
+export class TaskGraph {
 	#paths;
 	#tag;
 
@@ -146,7 +146,7 @@ export class TaskMaster {
 }
 
 /**
- * Initializes a TaskMaster instance with resolved paths.
+ * Initializes a TaskGraph instance with resolved paths.
  * This function centralizes path resolution logic.
  *
  * @param {object} [overrides={}] - An object with possible path overrides.
@@ -157,7 +157,7 @@ export class TaskMaster {
  * @param {string} [overrides.configPath]
  * @param {string} [overrides.statePath]
  * @param {string} [overrides.tag]
- * @returns {TaskMaster} An initialized TaskMaster instance.
+ * @returns {TaskGraph} An initialized TaskGraph instance.
  */
 export function initTaskMaster(overrides = {}) {
 	const resolvePath = (
@@ -253,7 +253,7 @@ export function initTaskMaster(overrides = {}) {
 		paths.projectRoot = findProjectRoot();
 	}
 
-	// TaskMaster Directory
+	// TaskGraph Directory
 	if ('taskMasterDir' in overrides) {
 		paths.taskMasterDir = resolvePath(
 			'taskmaster directory',
@@ -346,5 +346,5 @@ export function initTaskMaster(overrides = {}) {
 		);
 	}
 
-	return new TaskMaster(paths, overrides.tag);
+	return new TaskGraph(paths, overrides.tag);
 }

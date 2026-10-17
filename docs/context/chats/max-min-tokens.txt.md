@@ -1,4 +1,4 @@
-We want to refine how Task Master handles AI model token limits to be more precise, by:
+We want to refine how TaskGraph handles AI model token limits to be more precise, by:
 
 1.  Distinguishing between `maxInputTokens` and `maxOutputTokens` in the configuration.
 2.  Dynamically adjusting the `maxOutputTokens` for an API call based on the actual prompt length to stay within the model's total context window (or respecting separate input/output limits if the API and model support that).
