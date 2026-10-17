@@ -22,6 +22,7 @@ permissions:
 jobs:
   setup:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -48,6 +49,7 @@ jobs:
   typecheck:
     needs: setup
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -78,6 +80,7 @@ jobs:
   build:
     needs: setup
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 

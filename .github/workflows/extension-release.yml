@@ -13,6 +13,7 @@ concurrency: extension-release-${{ github.ref }}
 jobs:
   publish-extension:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: extension-release
     steps:
       - uses: actions/checkout@v7
@@ -101,6 +102,7 @@ jobs:
     needs: publish-extension
     if: success()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Success Notification
         run: |

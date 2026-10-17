@@ -14,6 +14,7 @@ permissions:
 jobs:
   weekly-metrics:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_METRICS_WEBHOOK }}
     steps:

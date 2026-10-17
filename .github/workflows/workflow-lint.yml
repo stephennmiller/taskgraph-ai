@@ -59,6 +59,30 @@ jobs:
       - name: Run actionlint
         run: '"$RUNNER_TEMP/actionlint" -color'
 
+  # Every job must set timeout-minutes (an unset one defaults to 6 hours). Needs
+  # js-yaml, hence `npm ci`; --ignore-scripts skips husky's `prepare`.
+  job-timeouts:
+    name: job timeouts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check every job sets timeout-minutes
+        run: node .github/scripts/check-job-timeouts.mjs
+
   zizmor:
     name: zizmor
     runs-on: ubuntu-latest

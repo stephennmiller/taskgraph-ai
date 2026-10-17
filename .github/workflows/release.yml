@@ -15,6 +15,7 @@ jobs:
   dispatch-guard:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - run: |
           echo "::error::workflow_dispatch is intended for RC runs on non-main branches only."
@@ -25,6 +26,7 @@ jobs:
   rc:
     if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:

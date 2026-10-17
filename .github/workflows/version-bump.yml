@@ -23,6 +23,7 @@ jobs:
     name: Bump version and release
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       # main's ruleset requires PRs and the GitHub Actions app can't be a bypass
       # actor on a user-owned repo, so pushes use a fine-grained PAT owned by a

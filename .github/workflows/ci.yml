@@ -25,6 +25,7 @@ jobs:
   install:
     name: Install Dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -48,6 +49,7 @@ jobs:
   format-check:
     name: Format Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: install
     steps:
       - uses: actions/checkout@v7
@@ -106,6 +108,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: install
     steps:
       - uses: actions/checkout@v7
