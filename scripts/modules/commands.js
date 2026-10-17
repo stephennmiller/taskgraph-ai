@@ -78,7 +78,6 @@ import {
 	getConfig,
 	getDebugFlag,
 	getDefaultNumTasks,
-	getOperatingMode,
 	isApiKeySet,
 	isConfigFilePresent,
 	setSuppressConfigWarnings
@@ -106,10 +105,6 @@ import {
 
 import { initTaskMaster } from '../../src/task-master.js';
 
-import {
-	confirmProfilesRemove,
-	confirmRemoveAllRemainingProfiles
-} from '../../src/ui/confirm.js';
 import {
 	confirmTaskOverwrite,
 	displayApiKeyStatus,
