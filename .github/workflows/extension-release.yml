@@ -17,6 +17,8 @@ jobs:
     environment: extension-release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
@@ -74,8 +76,9 @@ jobs:
 
       - name: Publish to VS Code Marketplace
         working-directory: apps/extension/vsix-build
-        run: npx vsce publish --packagePath "${{ steps.vsix-info.outputs.vsix-filename }}"
+        run: npx vsce publish --packagePath "$VSIX_FILENAME"
         env:
+          VSIX_FILENAME: ${{ steps.vsix-info.outputs.vsix-filename }}
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           FORCE_COLOR: 1
 
@@ -84,8 +87,9 @@ jobs:
 
       - name: Publish to Open VSX Registry
         working-directory: apps/extension/vsix-build
-        run: ovsx publish "${{ steps.vsix-info.outputs.vsix-filename }}"
+        run: ovsx publish "$VSIX_FILENAME"
         env:
+          VSIX_FILENAME: ${{ steps.vsix-info.outputs.vsix-filename }}
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
           FORCE_COLOR: 1
 
@@ -105,8 +109,10 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Success Notification
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          echo "🎉 Extension ${{ github.ref_name }} successfully published!"
+          echo "🎉 Extension $REF_NAME successfully published!"
           echo "📦 Available on VS Code Marketplace"
           echo "🌍 Available on Open VSX Registry"
-          echo "🏷️ GitHub release created: ${{ github.ref_name }}"
+          echo "🏷️ GitHub release created: $REF_NAME"

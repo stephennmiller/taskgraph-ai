@@ -1,0 +1,26 @@
+# zizmor config. Each ignore below is a triaged finding, not a suppression of
+# something unread: the reason is stated so the next audit does not re-litigate it.
+#
+# Entries are `file:line` so a NEW finding of the same rule in the same file still
+# surfaces. The trade-off: editing one of these files above the ignored line shifts
+# it and re-surfaces the finding. Re-triage it and update the line here.
+rules:
+  artipacked:
+    ignore:
+      # These jobs push with the credentials `actions/checkout` persists, so
+      # `persist-credentials: false` would break them.
+      # `changeset publish` plus git-auto-commit-action push the release commit.
+      - release.yml:31
+      # Checks out with RELEASE_TOKEN and runs `git push --atomic origin HEAD:main <tag>`.
+      - version-bump.yml:40
+      # actions-js/push pushes the regenerated docs/models.md.
+      - update-models-md.yml:17
+      # peter-evans/create-pull-request pushes the docs branch.
+      - claude-docs-updater.yml:31
+      # The Claude action workflows. Their checkout feeds an action that does its own
+      # git operations, and edits to them cannot be tested end to end before merge
+      # (the action is expected to refuse a workflow file that differs from the
+      # default branch's copy). Left alone deliberately; revisit if that changes.
+      - claude.yml:28
+      - claude-dedupe-issues.yml:23
+      - claude-issue-triage.yml:17
