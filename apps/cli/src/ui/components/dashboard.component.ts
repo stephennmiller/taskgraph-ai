@@ -360,7 +360,7 @@ function calculateStatusBreakdown(stats: TaskStatistics): StatusBreakdown {
  * @param stats - The statistics object containing counts
  * @param isSubtask - Whether this is for subtasks (affects "Done" vs "Completed" label)
  */
-function formatStatusLine(
+export function formatStatusLine(
 	stats: TaskStatistics,
 	isSubtask: boolean = false,
 	compact: boolean = false
@@ -383,8 +383,14 @@ function formatStatusLine(
 		`${BAR_SEGMENTS.deferred} Deferred: ${chalk.gray(stats.deferred)}`
 	);
 
-	// Add line break for second row
-	const firstLine = parts.join('  ');
+	// Narrow boxes get two statuses per line so nothing wraps mid-label
+	const joinRow = (row: string[]) =>
+		compact
+			? row.slice(0, 2).join('  ') +
+				(row.length > 2 ? '\n' + row.slice(2).join('  ') : '')
+			: row.join('  ');
+
+	const firstLine = joinRow(parts);
 	parts.length = 0;
 
 	parts.push(
@@ -396,12 +402,7 @@ function formatStatusLine(
 	parts.push(`${BAR_SEGMENTS.pending} Pending: ${chalk.yellow(stats.pending)}`);
 	parts.push(`${BAR_SEGMENTS.blocked} Blocked: ${chalk.red(stats.blocked)}`);
 
-	// Narrow boxes get two statuses per line so nothing wraps mid-label
-	const secondLine = compact
-		? parts.slice(0, 2).join('  ') + '\n' + parts.slice(2).join('  ')
-		: parts.join('  ');
-
-	return firstLine + '\n' + secondLine;
+	return firstLine + '\n' + joinRow(parts);
 }
 
 /**
