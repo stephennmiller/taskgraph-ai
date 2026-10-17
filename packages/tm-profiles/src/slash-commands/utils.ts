@@ -9,17 +9,17 @@ import path from 'path';
  * based on a known relative path structure.
  *
  * This is useful when lifecycle hooks receive a nested directory
- * (like `.roo/rules`) and need to get back to the project root
+ * (like `.claude/rules`) and need to get back to the project root
  * to place commands in the correct location.
  *
  * @param targetDir - The target directory (usually rulesDir)
- * @param relativePath - The relative path from project root (e.g., ".roo/rules")
+ * @param relativePath - The relative path from project root (e.g., ".claude/rules")
  * @returns The project root directory
  *
  * @example
  * ```typescript
- * // If targetDir is "/project/.roo/rules" and relativePath is ".roo/rules"
- * const projectRoot = resolveProjectRoot("/project/.roo/rules", ".roo/rules");
+ * // If targetDir is "/project/.claude/rules" and relativePath is ".claude/rules"
+ * const projectRoot = resolveProjectRoot("/project/.claude/rules", ".claude/rules");
  * // Returns: "/project"
  *
  * // If relativePath is "." then targetDir is already project root

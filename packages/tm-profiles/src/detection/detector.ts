@@ -4,7 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { IDE_MARKERS } from './profiles-map.js';
-import type { DetectionResult, DetectionOptions } from './types.js';
+import type { DetectionOptions, DetectionResult } from './types.js';
 
 /**
  * Detect installed IDEs by checking for marker directories/files.
@@ -15,7 +15,7 @@ import type { DetectionResult, DetectionOptions } from './types.js';
  * @example
  * ```typescript
  * const detected = detectInstalledIDEs({ projectRoot: '/path/to/project' });
- * // Returns: [{ profileName: 'cursor', markerPath: '.cursor', displayName: 'Cursor', exists: true }]
+ * // Returns: [{ profileName: 'claude', markerPath: '.claude', displayName: 'Claude Code', exists: true }]
  * ```
  */
 export function detectInstalledIDEs(
@@ -56,12 +56,12 @@ export function detectInstalledIDEs(
  * Get profile names that should be pre-selected based on detected IDEs.
  *
  * @param options - Detection options including project root
- * @returns Array of profile names (e.g., ['cursor', 'claude'])
+ * @returns Array of profile names (e.g., ['claude'])
  *
  * @example
  * ```typescript
  * const profiles = getPreSelectedProfiles({ projectRoot: '/path/to/project' });
- * // Returns: ['cursor', 'claude']
+ * // Returns: ['claude']
  * ```
  */
 export function getPreSelectedProfiles(options: DetectionOptions): string[] {
@@ -71,7 +71,7 @@ export function getPreSelectedProfiles(options: DetectionOptions): string[] {
 /**
  * Detect a specific profile's IDE marker.
  *
- * @param profileName - Profile to check (e.g., 'cursor')
+ * @param profileName - Profile to check (e.g., 'claude')
  * @param projectRoot - Project root directory
  * @returns Detection result if found, null otherwise
  */

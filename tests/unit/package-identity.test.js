@@ -41,8 +41,6 @@ const IDENTITY_FILES = [
 	'apps/extension/src/utils/errorHandler.ts',
 	'apps/extension/src/utils/mcpClient.ts',
 	'.mcp.json',
-	'.kiro/settings/mcp.json',
-	'.cursor/mcp.json',
 	'packages/claude-code-plugin/mcp.json',
 	'apps/mcp/src/shared/utils.ts',
 	'packages/tm-core/src/common/constants/index.ts',

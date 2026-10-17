@@ -19,17 +19,12 @@ export type { StaticCommandOptions } from './factories.js';
 // Commands
 export { allCommands, goham } from './commands/index.js';
 
-// Profiles - self-contained profile classes for each editor
+// Profiles - self-contained profile classes
 export {
 	// Base class
 	BaseSlashCommandProfile,
-	// Profile classes (editors that support slash commands)
+	// Profile classes (Claude Code)
 	ClaudeProfile,
-	CodexProfile,
-	CursorProfile,
-	OpenCodeProfile,
-	RooProfile,
-	GeminiProfile,
 	// Utility functions
 	getProfile,
 	getAllProfiles,

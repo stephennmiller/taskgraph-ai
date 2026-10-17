@@ -6,11 +6,11 @@
  * Result of detecting an IDE marker in the project
  */
 export interface DetectionResult {
-	/** Profile name (e.g., 'cursor', 'claude') */
+	/** Profile name (e.g., 'claude') */
 	profileName: string;
-	/** The marker path that was found (e.g., '.cursor') */
+	/** The marker path that was found (e.g., '.claude') */
 	markerPath: string;
-	/** Human-readable display name (e.g., 'Cursor', 'Claude Code') */
+	/** Human-readable display name (e.g., 'Claude Code', 'Claude Code') */
 	displayName: string;
 	/** Whether the marker exists */
 	exists: boolean;
