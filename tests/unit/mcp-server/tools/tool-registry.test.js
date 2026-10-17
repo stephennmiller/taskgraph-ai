@@ -107,7 +107,7 @@ describe('tool-registry', () => {
 		});
 	});
 
-	describe('TASK_MASTER_TOOLS behavior simulation', () => {
+	describe('TASKGRAPH_TOOLS behavior simulation', () => {
 		it('should allow filtering to core tools only', () => {
 			const coreToolSet = new Set(coreTools);
 			expect(coreToolSet.has('get_tasks')).toBe(true);

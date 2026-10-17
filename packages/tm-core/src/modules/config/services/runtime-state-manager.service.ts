@@ -59,8 +59,8 @@ export class RuntimeStateManager {
 			};
 
 			// Apply environment variable override for current tag
-			if (process.env.TASKMASTER_TAG) {
-				state.currentTag = process.env.TASKMASTER_TAG;
+			if (process.env.TASKGRAPH_TAG) {
+				state.currentTag = process.env.TASKGRAPH_TAG;
 			}
 
 			this.currentState = state;
@@ -71,8 +71,8 @@ export class RuntimeStateManager {
 				this.logger.debug('No state.json found, using default state');
 
 				// Check environment variable
-				if (process.env.TASKMASTER_TAG) {
-					this.currentState.currentTag = process.env.TASKMASTER_TAG;
+				if (process.env.TASKGRAPH_TAG) {
+					this.currentState.currentTag = process.env.TASKGRAPH_TAG;
 				}
 
 				return this.currentState;

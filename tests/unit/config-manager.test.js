@@ -1150,7 +1150,7 @@ describe('Configuration Getters', () => {
 
 // --- hasCodebaseAnalysis Tests ---
 describe('hasCodebaseAnalysis', () => {
-	const originalFlag = process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+	const originalFlag = process.env.TASKGRAPH_ENABLE_CODEBASE_ANALYSIS;
 
 	beforeEach(() => {
 		// Config reads fall back to the defaults (claude-code for every role)
@@ -1159,9 +1159,9 @@ describe('hasCodebaseAnalysis', () => {
 
 	afterEach(() => {
 		if (originalFlag === undefined) {
-			delete process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+			delete process.env.TASKGRAPH_ENABLE_CODEBASE_ANALYSIS;
 		} else {
-			process.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS = originalFlag;
+			process.env.TASKGRAPH_ENABLE_CODEBASE_ANALYSIS = originalFlag;
 		}
 	});
 

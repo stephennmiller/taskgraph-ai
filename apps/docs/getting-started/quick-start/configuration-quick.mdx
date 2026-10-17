@@ -38,7 +38,7 @@ For MCP usage: Configure keys in the env section of your .mcp.json file.
 ```
 
 <Tip>
-**Optimize Context Usage**: You can control which TaskGraph MCP tools are loaded using the `TASK_MASTER_TOOLS` environment variable. This helps reduce LLM context usage by only loading the tools you need.
+**Optimize Context Usage**: You can control which TaskGraph MCP tools are loaded using the `TASKGRAPH_TOOLS` environment variable. This helps reduce LLM context usage by only loading the tools you need.
 
 Options:
 - `core` or `lean` (default) - 7 essential tools
@@ -48,7 +48,7 @@ Options:
 Example:
 ```json
 "env": {
-  "TASK_MASTER_TOOLS": "standard",
+  "TASKGRAPH_TOOLS": "standard",
   "ANTHROPIC_API_KEY": "your_key_here"
 }
 ```

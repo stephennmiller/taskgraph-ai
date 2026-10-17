@@ -459,7 +459,7 @@ function getResearchProvider(explicitRoot = null) {
 function isCodebaseAnalysisEnabled(session = null, projectRoot = null) {
 	// Priority 1: Environment variable
 	const envFlag = resolveEnvVariable(
-		'TASKMASTER_ENABLE_CODEBASE_ANALYSIS',
+		'TASKGRAPH_ENABLE_CODEBASE_ANALYSIS',
 		session,
 		projectRoot
 	);
@@ -468,8 +468,8 @@ function isCodebaseAnalysisEnabled(session = null, projectRoot = null) {
 	}
 
 	// Priority 2: MCP session environment
-	if (session?.env?.TASKMASTER_ENABLE_CODEBASE_ANALYSIS) {
-		const mcpFlag = session.env.TASKMASTER_ENABLE_CODEBASE_ANALYSIS;
+	if (session?.env?.TASKGRAPH_ENABLE_CODEBASE_ANALYSIS) {
+		const mcpFlag = session.env.TASKGRAPH_ENABLE_CODEBASE_ANALYSIS;
 		return mcpFlag.toLowerCase() === 'true' || mcpFlag === '1';
 	}
 
@@ -607,7 +607,7 @@ function getAnonymousTelemetryEnabled(explicitRoot = null) {
 function isProxyEnabled(session = null, projectRoot = null) {
 	// Priority 1: Environment variable
 	const envFlag = resolveEnvVariable(
-		'TASKMASTER_ENABLE_PROXY',
+		'TASKGRAPH_ENABLE_PROXY',
 		session,
 		projectRoot
 	);
@@ -616,8 +616,8 @@ function isProxyEnabled(session = null, projectRoot = null) {
 	}
 
 	// Priority 2: MCP session environment (explicit check for parity with other flags)
-	if (session?.env?.TASKMASTER_ENABLE_PROXY) {
-		const mcpFlag = session.env.TASKMASTER_ENABLE_PROXY;
+	if (session?.env?.TASKGRAPH_ENABLE_PROXY) {
+		const mcpFlag = session.env.TASKGRAPH_ENABLE_PROXY;
 		return mcpFlag.toLowerCase() === 'true' || mcpFlag === '1';
 	}
 

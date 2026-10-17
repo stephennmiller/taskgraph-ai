@@ -47,7 +47,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 	log('info', `Setting up MCP configuration at ${mcpPath}...`);
 
 	// New MCP config to be added - references the installed package
-	// TASK_MASTER_TOOLS: "core" loads essential daily workflow tools (7 tools, default)
+	// TASKGRAPH_TOOLS: "core" loads essential daily workflow tools (7 tools, default)
 	// Options: "core" (7 essential tools), "standard" (14 common tools), "all" (44+ tools)
 	// See agent rules for tool tier details and how to upgrade if needed
 	const newMCPServer = {
@@ -55,7 +55,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 			command: 'npx',
 			args: ['-y', MCP_SERVER_KEY],
 			env: {
-				TASK_MASTER_TOOLS: 'core'
+				TASKGRAPH_TOOLS: 'core'
 			}
 		}
 	};

@@ -67,8 +67,8 @@ const LOG_LEVELS = {
 };
 
 // Determine log level from environment variable or default to 'info'
-const LOG_LEVEL = process.env.TASKMASTER_LOG_LEVEL
-	? LOG_LEVELS[process.env.TASKMASTER_LOG_LEVEL.toLowerCase()]
+const LOG_LEVEL = process.env.TASKGRAPH_LOG_LEVEL
+	? LOG_LEVELS[process.env.TASKGRAPH_LOG_LEVEL.toLowerCase()]
 	: LOG_LEVELS.info; // Default to info
 
 /**
@@ -169,7 +169,7 @@ function addShellAliases() {
 
 		// Clean up empty "TaskGraph aliases" comment blocks left behind
 		cleanedContent = cleanedContent.replace(
-			/\n# (?:Task Master|TaskGraph) aliases added on [^\n]*\n(?=\s*\n|$)/g,
+			/\n# TaskGraph aliases added on [^\n]*\n(?=\s*\n|$)/g,
 			'\n'
 		);
 

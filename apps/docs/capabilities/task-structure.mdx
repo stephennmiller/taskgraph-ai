@@ -152,7 +152,7 @@ The `update_task` and `update_subtask` MCP tools support a `metadata` parameter 
 
 **To enable MCP metadata updates:**
 
-Add `TASK_MASTER_ALLOW_METADATA_UPDATES=true` to your MCP server environment configuration in `.mcp.json`:
+Add `TASKGRAPH_ALLOW_METADATA_UPDATES=true` to your MCP server environment configuration in `.mcp.json`:
 
 ```json
 {
@@ -161,7 +161,7 @@ Add `TASK_MASTER_ALLOW_METADATA_UPDATES=true` to your MCP server environment con
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASK_MASTER_ALLOW_METADATA_UPDATES": "true",
+        "TASKGRAPH_ALLOW_METADATA_UPDATES": "true",
         "ANTHROPIC_API_KEY": "your_key_here"
       }
     }

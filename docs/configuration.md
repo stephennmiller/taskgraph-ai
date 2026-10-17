@@ -61,12 +61,12 @@ TaskGraph uses two primary methods for configuration:
 
 ## MCP Tool Loading Configuration
 
-### TASK_MASTER_TOOLS Environment Variable
+### TASKGRAPH_TOOLS Environment Variable
 
-The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by the Task Master MCP server. This allows you to optimize token usage based on your workflow needs.
+The `TASKGRAPH_TOOLS` environment variable controls which tools are loaded by the Task Master MCP server. This allows you to optimize token usage based on your workflow needs.
 
 > Note
-> Prefer setting `TASK_MASTER_TOOLS` in your MCP client's `env` block (e.g., `.mcp.json`) or in CI/deployment env. The `.env` file is reserved for API keys/endpoints; avoid persisting non-secret settings there.
+> Prefer setting `TASKGRAPH_TOOLS` in your MCP client's `env` block (e.g., `.mcp.json`) or in CI/deployment env. The `.env` file is reserved for API keys/endpoints; avoid persisting non-secret settings there.
 
 #### Configuration Options
 
@@ -99,7 +99,7 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
      "mcpServers": {
        "taskgraph-ai": {
          "env": {
-           "TASK_MASTER_TOOLS": "standard",  // Set tool loading mode
+           "TASKGRAPH_TOOLS": "standard",  // Set tool loading mode
            // API keys can still use .env for security
          }
        }
@@ -111,19 +111,19 @@ The `TASK_MASTER_TOOLS` environment variable controls which tools are loaded by 
 
    ```bash
    claude mcp add taskgraph-ai --scope user \
-     --env TASK_MASTER_TOOLS="core" \
+     --env TASKGRAPH_TOOLS="core" \
      -- npx -y taskgraph-ai@latest
    ```
 
 3. **In CI/deployment environment variables**:
    ```bash
-   export TASK_MASTER_TOOLS="standard"
+   export TASKGRAPH_TOOLS="standard"
    node mcp-server/server.js
    ```
 
 #### Tool Loading Behavior
 
-- When `TASK_MASTER_TOOLS` is unset or empty, the system defaults to `"core"`
+- When `TASKGRAPH_TOOLS` is unset or empty, the system defaults to `"core"`
 - Invalid tool names in a user-specified list are ignored (a warning is emitted for each)
 - If every tool name in a custom list is invalid, the system falls back to `"all"`
 - Tool names are case-insensitive (e.g., `"CORE"`, `"core"`, and `"Core"` are treated identically)

@@ -325,13 +325,13 @@ export async function performAutoUpdate(
 	latestVersion: string
 ): Promise<boolean> {
 	if (
-		process.env.TASKMASTER_SKIP_AUTO_UPDATE === '1' ||
+		process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1' ||
 		process.env.CI ||
 		process.env.NODE_ENV === 'test'
 	) {
 		const reason =
-			process.env.TASKMASTER_SKIP_AUTO_UPDATE === '1'
-				? 'TASKMASTER_SKIP_AUTO_UPDATE=1'
+			process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1'
+				? 'TASKGRAPH_SKIP_AUTO_UPDATE=1'
 				: process.env.CI
 					? 'CI environment'
 					: 'NODE_ENV=test';

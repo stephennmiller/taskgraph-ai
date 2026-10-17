@@ -1112,7 +1112,7 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
   }
   
   function getDebugFlag() {
-    const debugFlag = resolveEnvVariable('TASKMASTER_DEBUG') || 
+    const debugFlag = resolveEnvVariable('TASKGRAPH_DEBUG') || 
                      resolveEnvVariable('DEBUG') || 
                      'false';
     return debugFlag.toLowerCase() === 'true';

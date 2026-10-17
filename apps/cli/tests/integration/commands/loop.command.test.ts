@@ -31,13 +31,13 @@ describe('loop command', () => {
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-loop-test-'));
 		process.chdir(testDir);
-		process.env.TASKMASTER_SKIP_AUTO_UPDATE = '1';
+		process.env.TASKGRAPH_SKIP_AUTO_UPDATE = '1';
 
 		binPath = getCliBinPath();
 
 		execSync(`node "${binPath}" init --yes`, {
 			stdio: 'pipe',
-			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
 		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
@@ -69,7 +69,7 @@ describe('loop command', () => {
 			fs.rmSync(testDir, { recursive: true, force: true });
 		}
 
-		delete process.env.TASKMASTER_SKIP_AUTO_UPDATE;
+		delete process.env.TASKGRAPH_SKIP_AUTO_UPDATE;
 	});
 
 	const runLoop = (args = ''): { output: string; exitCode: number } => {
@@ -78,7 +78,7 @@ describe('loop command', () => {
 				encoding: 'utf-8',
 				stdio: 'pipe',
 				timeout: 5000, // Short timeout since we can't actually run claude
-				env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 			});
 			return { output, exitCode: 0 };
 		} catch (error: any) {
@@ -94,7 +94,7 @@ describe('loop command', () => {
 			const output = execSync(`node "${binPath}" loop --help`, {
 				encoding: 'utf-8',
 				stdio: 'pipe',
-				env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 			});
 			return { output, exitCode: 0 };
 		} catch (error: any) {

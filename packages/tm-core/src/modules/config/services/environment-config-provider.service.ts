@@ -32,17 +32,17 @@ export class EnvironmentConfigProvider {
 	 */
 	private static readonly DEFAULT_MAPPINGS: EnvMapping[] = [
 		{
-			env: 'TASKMASTER_STORAGE_TYPE',
+			env: 'TASKGRAPH_STORAGE_TYPE',
 			path: ['storage', 'type'],
 			validate: (v: string) => ['file', 'api'].includes(v)
 		},
-		{ env: 'TASKMASTER_API_ENDPOINT', path: ['storage', 'apiEndpoint'] },
-		{ env: 'TASKMASTER_API_TOKEN', path: ['storage', 'apiAccessToken'] },
-		{ env: 'TASKMASTER_MODEL_MAIN', path: ['models', 'main'] },
-		{ env: 'TASKMASTER_MODEL_RESEARCH', path: ['models', 'research'] },
-		{ env: 'TASKMASTER_MODEL_FALLBACK', path: ['models', 'fallback'] },
+		{ env: 'TASKGRAPH_API_ENDPOINT', path: ['storage', 'apiEndpoint'] },
+		{ env: 'TASKGRAPH_API_TOKEN', path: ['storage', 'apiAccessToken'] },
+		{ env: 'TASKGRAPH_MODEL_MAIN', path: ['models', 'main'] },
+		{ env: 'TASKGRAPH_MODEL_RESEARCH', path: ['models', 'research'] },
+		{ env: 'TASKGRAPH_MODEL_FALLBACK', path: ['models', 'fallback'] },
 		{
-			env: 'TASKMASTER_RESPONSE_LANGUAGE',
+			env: 'TASKGRAPH_RESPONSE_LANGUAGE',
 			path: ['custom', 'responseLanguage']
 		}
 	];
@@ -51,7 +51,7 @@ export class EnvironmentConfigProvider {
 	 * Runtime state mappings (separate from configuration)
 	 */
 	private static readonly RUNTIME_STATE_MAPPINGS: EnvMapping[] = [
-		{ env: 'TASKMASTER_TAG', path: ['activeTag'], isRuntimeState: true }
+		{ env: 'TASKGRAPH_TAG', path: ['activeTag'], isRuntimeState: true }
 	];
 
 	private mappings: EnvMapping[];

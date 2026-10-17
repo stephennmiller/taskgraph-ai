@@ -33,7 +33,7 @@ describe('generate MCP tool', () => {
 		// Initialize TaskGraph in test directory
 		execSync(`node "${cliPath}" init --yes`, {
 			stdio: 'pipe',
-			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
 		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
@@ -75,7 +75,7 @@ describe('generate MCP tool', () => {
 			{
 				encoding: 'utf-8',
 				stdio: 'pipe',
-				env: { ...process.env, TASK_MASTER_TOOLS: 'all' }
+				env: { ...process.env, TASKGRAPH_TOOLS: 'all' }
 			}
 		);
 

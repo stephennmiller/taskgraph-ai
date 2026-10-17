@@ -92,7 +92,7 @@ TaskGraph provides an MCP server that Claude Code can connect to. Configure in `
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASK_MASTER_TOOLS": "core",
+        "TASKGRAPH_TOOLS": "core",
         "ANTHROPIC_API_KEY": "your_key_here",
         "PERPLEXITY_API_KEY": "your_key_here",
         "OPENAI_API_KEY": "OPENAI_API_KEY_HERE",
@@ -110,7 +110,7 @@ TaskGraph provides an MCP server that Claude Code can connect to. Configure in `
 
 ### MCP Tool Tiers
 
-Default: `core` (7 tools). Set via `TASK_MASTER_TOOLS` env var.
+Default: `core` (7 tools). Set via `TASKGRAPH_TOOLS` env var.
 
 | Tier | Count | Tools |
 |------|-------|-------|
@@ -118,7 +118,7 @@ Default: `core` (7 tools). Set via `TASK_MASTER_TOOLS` env var.
 | `standard` | 14 | core + `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report` |
 | `all` | 43 | standard + dependencies, tags, research, autopilot, scoping, models |
 
-**Upgrade when tool unavailable:** Edit MCP config, change `TASK_MASTER_TOOLS` from `"core"` to `"standard"` or `"all"`, restart MCP.
+**Upgrade when tool unavailable:** Edit MCP config, change `TASKGRAPH_TOOLS` from `"core"` to `"standard"` or `"all"`, restart MCP.
 
 ### Essential MCP Tools
 

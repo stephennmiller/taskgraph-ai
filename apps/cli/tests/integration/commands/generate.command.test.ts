@@ -26,13 +26,13 @@ describe('generate command', () => {
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-generate-test-'));
 		process.chdir(testDir);
-		process.env.TASKMASTER_SKIP_AUTO_UPDATE = '1';
+		process.env.TASKGRAPH_SKIP_AUTO_UPDATE = '1';
 
 		binPath = getCliBinPath();
 
 		execSync(`node "${binPath}" init --yes`, {
 			stdio: 'pipe',
-			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
 		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
@@ -55,7 +55,7 @@ describe('generate command', () => {
 			fs.rmSync(testDir, { recursive: true, force: true });
 		}
 
-		delete process.env.TASKMASTER_SKIP_AUTO_UPDATE;
+		delete process.env.TASKGRAPH_SKIP_AUTO_UPDATE;
 	});
 
 	const writeTasks = (tasksData: any) => {
@@ -67,7 +67,7 @@ describe('generate command', () => {
 			const output = execSync(`node "${binPath}" generate ${args}`, {
 				encoding: 'utf-8',
 				stdio: 'pipe',
-				env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 			});
 			return { output, exitCode: 0 };
 		} catch (error: any) {

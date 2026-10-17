@@ -2,7 +2,7 @@
  * @fileoverview Integration tests for MCP tool metadata updates
  *
  * Tests that metadata updates via update-task and update-subtask MCP tools
- * work correctly with the TASK_MASTER_ALLOW_METADATA_UPDATES flag.
+ * work correctly with the TASKGRAPH_ALLOW_METADATA_UPDATES flag.
  *
  * These tests validate the metadata flow from MCP tool layer through
  * direct functions to the legacy scripts and storage layer.
@@ -37,7 +37,7 @@ describe('MCP Tool Metadata Updates - Integration Tests', () => {
 		// Clean up temp directory
 		fs.rmSync(tempDir, { recursive: true, force: true });
 		// Reset env vars
-		delete process.env.TASK_MASTER_ALLOW_METADATA_UPDATES;
+		delete process.env.TASKGRAPH_ALLOW_METADATA_UPDATES;
 	});
 
 	describe('metadata JSON validation', () => {
@@ -89,32 +89,32 @@ describe('MCP Tool Metadata Updates - Integration Tests', () => {
 		});
 	});
 
-	describe('TASK_MASTER_ALLOW_METADATA_UPDATES flag', () => {
+	describe('TASKGRAPH_ALLOW_METADATA_UPDATES flag', () => {
 		it('should block metadata updates when flag is not set', () => {
-			delete process.env.TASK_MASTER_ALLOW_METADATA_UPDATES;
+			delete process.env.TASKGRAPH_ALLOW_METADATA_UPDATES;
 			const allowMetadataUpdates =
-				process.env.TASK_MASTER_ALLOW_METADATA_UPDATES === 'true';
+				process.env.TASKGRAPH_ALLOW_METADATA_UPDATES === 'true';
 			expect(allowMetadataUpdates).toBe(false);
 		});
 
 		it('should block metadata updates when flag is set to false', () => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'false';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'false';
 			const allowMetadataUpdates =
-				process.env.TASK_MASTER_ALLOW_METADATA_UPDATES === 'true';
+				process.env.TASKGRAPH_ALLOW_METADATA_UPDATES === 'true';
 			expect(allowMetadataUpdates).toBe(false);
 		});
 
 		it('should allow metadata updates when flag is set to true', () => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'true';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'true';
 			const allowMetadataUpdates =
-				process.env.TASK_MASTER_ALLOW_METADATA_UPDATES === 'true';
+				process.env.TASKGRAPH_ALLOW_METADATA_UPDATES === 'true';
 			expect(allowMetadataUpdates).toBe(true);
 		});
 
 		it('should be case-sensitive (TRUE should not work)', () => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'TRUE';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'TRUE';
 			const allowMetadataUpdates =
-				process.env.TASK_MASTER_ALLOW_METADATA_UPDATES === 'true';
+				process.env.TASKGRAPH_ALLOW_METADATA_UPDATES === 'true';
 			expect(allowMetadataUpdates).toBe(false);
 		});
 	});
@@ -330,9 +330,9 @@ describe('MCP Tool Metadata Updates - Integration Tests', () => {
 	describe('error message formatting', () => {
 		it('should provide clear error for disabled metadata updates', () => {
 			const errorMessage =
-				'Metadata updates are disabled. Set TASK_MASTER_ALLOW_METADATA_UPDATES=true in your MCP server environment to enable metadata modifications.';
+				'Metadata updates are disabled. Set TASKGRAPH_ALLOW_METADATA_UPDATES=true in your MCP server environment to enable metadata modifications.';
 
-			expect(errorMessage).toContain('TASK_MASTER_ALLOW_METADATA_UPDATES');
+			expect(errorMessage).toContain('TASKGRAPH_ALLOW_METADATA_UPDATES');
 			expect(errorMessage).toContain('true');
 			expect(errorMessage).toContain('MCP server environment');
 		});
@@ -376,7 +376,7 @@ describe('validateMcpMetadata function', () => {
 	};
 
 	afterEach(() => {
-		delete process.env.TASK_MASTER_ALLOW_METADATA_UPDATES;
+		delete process.env.TASKGRAPH_ALLOW_METADATA_UPDATES;
 	});
 
 	describe('when metadataString is null/undefined', () => {
@@ -399,9 +399,9 @@ describe('validateMcpMetadata function', () => {
 		});
 	});
 
-	describe('when TASK_MASTER_ALLOW_METADATA_UPDATES is not set', () => {
+	describe('when TASKGRAPH_ALLOW_METADATA_UPDATES is not set', () => {
 		beforeEach(() => {
-			delete process.env.TASK_MASTER_ALLOW_METADATA_UPDATES;
+			delete process.env.TASKGRAPH_ALLOW_METADATA_UPDATES;
 		});
 
 		it('should return error when flag is not set', () => {
@@ -412,12 +412,12 @@ describe('validateMcpMetadata function', () => {
 			expect(result.error).toBeDefined();
 			expect(result.error?.isError).toBe(true);
 			expect(getErrorText(result.error)).toContain(
-				'TASK_MASTER_ALLOW_METADATA_UPDATES'
+				'TASKGRAPH_ALLOW_METADATA_UPDATES'
 			);
 		});
 
 		it('should return error when flag is set to "false"', () => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'false';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'false';
 			const result = validateMcpMetadata(
 				'{"key": "value"}',
 				mockCreateErrorResponse
@@ -427,7 +427,7 @@ describe('validateMcpMetadata function', () => {
 		});
 
 		it('should return error when flag is "TRUE" (case sensitive)', () => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'TRUE';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'TRUE';
 			const result = validateMcpMetadata(
 				'{"key": "value"}',
 				mockCreateErrorResponse
@@ -437,7 +437,7 @@ describe('validateMcpMetadata function', () => {
 		});
 
 		it('should return error when flag is "True" (case sensitive)', () => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'True';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'True';
 			const result = validateMcpMetadata(
 				'{"key": "value"}',
 				mockCreateErrorResponse
@@ -447,9 +447,9 @@ describe('validateMcpMetadata function', () => {
 		});
 	});
 
-	describe('when TASK_MASTER_ALLOW_METADATA_UPDATES is "true"', () => {
+	describe('when TASKGRAPH_ALLOW_METADATA_UPDATES is "true"', () => {
 		beforeEach(() => {
-			process.env.TASK_MASTER_ALLOW_METADATA_UPDATES = 'true';
+			process.env.TASKGRAPH_ALLOW_METADATA_UPDATES = 'true';
 		});
 
 		it('should return parsed metadata for valid JSON object', () => {

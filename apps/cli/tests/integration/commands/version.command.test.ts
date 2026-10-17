@@ -22,7 +22,7 @@ describe('--version', () => {
 
 		const output = execFileSync('node', [getCliBinPath(), '--version'], {
 			encoding: 'utf8',
-			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
 		expect(output.trim()).toBe(version);

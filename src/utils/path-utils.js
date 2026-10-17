@@ -143,7 +143,7 @@ export function findPRDPath(explicitPath = null, args = null, log = null) {
 		// Use original cwd if available (set by dev.js), otherwise current cwd
 		// This ensures relative paths are resolved from where the user invoked the command
 		const cwdForResolution =
-			process.env.TASKMASTER_ORIGINAL_CWD || process.cwd();
+			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
 
 		const resolvedPath = path.isAbsolute(explicitPath)
 			? explicitPath
@@ -219,7 +219,7 @@ export function findComplexityReportPath(
 	if (explicitPath) {
 		// Use original cwd if available (set by dev.js), otherwise current cwd
 		const cwdForResolution =
-			process.env.TASKMASTER_ORIGINAL_CWD || process.cwd();
+			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
 
 		const resolvedPath = path.isAbsolute(explicitPath)
 			? explicitPath
@@ -304,7 +304,7 @@ export function resolveTasksOutputPath(
 	if (explicitPath) {
 		// Use original cwd if available (set by dev.js), otherwise current cwd
 		const cwdForResolution =
-			process.env.TASKMASTER_ORIGINAL_CWD || process.cwd();
+			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
 
 		const resolvedPath = path.isAbsolute(explicitPath)
 			? explicitPath
@@ -354,7 +354,7 @@ export function resolveComplexityReportOutputPath(
 	if (explicitPath) {
 		// Use original cwd if available (set by dev.js), otherwise current cwd
 		const cwdForResolution =
-			process.env.TASKMASTER_ORIGINAL_CWD || process.cwd();
+			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
 
 		const resolvedPath = path.isAbsolute(explicitPath)
 			? explicitPath
@@ -407,7 +407,7 @@ export function findConfigPath(explicitPath = null, args = null, log = null) {
 	if (explicitPath) {
 		// Use original cwd if available (set by dev.js), otherwise current cwd
 		const cwdForResolution =
-			process.env.TASKMASTER_ORIGINAL_CWD || process.cwd();
+			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
 
 		const resolvedPath = path.isAbsolute(explicitPath)
 			? explicitPath

@@ -14,25 +14,25 @@ import {
 } from './tool-registry.js';
 
 /**
- * Helper function to safely read and normalize the TASK_MASTER_TOOLS environment variable
+ * Helper function to safely read and normalize the TASKGRAPH_TOOLS environment variable
  * @returns {string} The tools configuration string, defaults to 'core'
  */
 export function getToolsConfiguration() {
-	const rawValue = process.env.TASK_MASTER_TOOLS;
+	const rawValue = process.env.TASKGRAPH_TOOLS;
 
 	if (!rawValue || rawValue.trim() === '') {
-		logger.debug('No TASK_MASTER_TOOLS env var found, defaulting to "core"');
+		logger.debug('No TASKGRAPH_TOOLS env var found, defaulting to "core"');
 		return 'core';
 	}
 
 	const normalizedValue = rawValue.trim();
-	logger.debug(`TASK_MASTER_TOOLS env var: "${normalizedValue}"`);
+	logger.debug(`TASKGRAPH_TOOLS env var: "${normalizedValue}"`);
 	return normalizedValue;
 }
 
 /**
  * Register TaskGraph tools with the MCP server
- * Supports selective tool loading via TASK_MASTER_TOOLS environment variable
+ * Supports selective tool loading via TASKGRAPH_TOOLS environment variable
  * @param {Object} server - FastMCP server instance
  * @param {string} toolMode - The tool mode configuration (defaults to 'all')
  * @returns {Object} Object containing registered tools, failed tools, and normalized mode
@@ -185,7 +185,7 @@ export function registerTaskMasterTools(server, toolMode = 'core') {
 		};
 	} catch (error) {
 		logger.error(
-			`Error parsing TASK_MASTER_TOOLS environment variable: ${error.message}`
+			`Error parsing TASKGRAPH_TOOLS environment variable: ${error.message}`
 		);
 		logger.info('Falling back to loading all tools');
 

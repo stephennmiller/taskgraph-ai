@@ -106,20 +106,20 @@ function getTagInfo(projectRoot, log) {
  */
 function getProjectRoot(projectRootRaw, log) {
 	// PRECEDENCE ORDER:
-	// 1. Environment variable override (TASK_MASTER_PROJECT_ROOT)
+	// 1. Environment variable override (TASKGRAPH_PROJECT_ROOT)
 	// 2. Explicitly provided projectRoot in args
 	// 3. Previously found/cached project root
 	// 4. Current directory if it has project markers
 	// 5. Current directory with warning
 
 	// 1. Check for environment variable override
-	if (process.env.TASK_MASTER_PROJECT_ROOT) {
-		const envRoot = process.env.TASK_MASTER_PROJECT_ROOT;
+	if (process.env.TASKGRAPH_PROJECT_ROOT) {
+		const envRoot = process.env.TASKGRAPH_PROJECT_ROOT;
 		const absolutePath = path.isAbsolute(envRoot)
 			? envRoot
 			: path.resolve(process.cwd(), envRoot);
 		log.info(
-			`Using project root from TASK_MASTER_PROJECT_ROOT environment variable: ${absolutePath}`
+			`Using project root from TASKGRAPH_PROJECT_ROOT environment variable: ${absolutePath}`
 		);
 		return absolutePath;
 	}
@@ -161,7 +161,7 @@ function getProjectRoot(projectRootRaw, log) {
 		`No taskgraph project detected in current directory. Using ${currentDir} as project root.`
 	);
 	log.warn(
-		'Consider using --project-root to specify the correct project location or set TASK_MASTER_PROJECT_ROOT environment variable.'
+		'Consider using --project-root to specify the correct project location or set TASKGRAPH_PROJECT_ROOT environment variable.'
 	);
 	return currentDir;
 }
@@ -678,7 +678,7 @@ function getRawProjectRootFromSession(session, log) {
 /**
  * Higher-order function to wrap MCP tool execute methods.
  * Ensures args.projectRoot is present and normalized before execution.
- * Uses TASK_MASTER_PROJECT_ROOT environment variable with proper precedence.
+ * Uses TASKGRAPH_PROJECT_ROOT environment variable with proper precedence.
  * @param {Function} executeFn - The original async execute(args, context) function.
  * @returns {Function} The wrapped async execute function.
  */
@@ -690,27 +690,27 @@ function withNormalizedProjectRoot(executeFn) {
 
 		try {
 			// PRECEDENCE ORDER:
-			// 1. TASK_MASTER_PROJECT_ROOT environment variable (from process.env or session)
+			// 1. TASKGRAPH_PROJECT_ROOT environment variable (from process.env or session)
 			// 2. args.projectRoot (explicitly provided)
 			// 3. Session-based project root resolution
 			// 4. Current directory fallback
 
-			// 1. Check for TASK_MASTER_PROJECT_ROOT environment variable first
-			if (process.env.TASK_MASTER_PROJECT_ROOT) {
-				const envRoot = process.env.TASK_MASTER_PROJECT_ROOT;
+			// 1. Check for TASKGRAPH_PROJECT_ROOT environment variable first
+			if (process.env.TASKGRAPH_PROJECT_ROOT) {
+				const envRoot = process.env.TASKGRAPH_PROJECT_ROOT;
 				normalizedRoot = path.isAbsolute(envRoot)
 					? envRoot
 					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASK_MASTER_PROJECT_ROOT environment variable';
+				rootSource = 'TASKGRAPH_PROJECT_ROOT environment variable';
 				log.info(`Using project root from ${rootSource}: ${normalizedRoot}`);
 			}
-			// Also check session environment variables for TASK_MASTER_PROJECT_ROOT
-			else if (session?.env?.TASK_MASTER_PROJECT_ROOT) {
-				const envRoot = session.env.TASK_MASTER_PROJECT_ROOT;
+			// Also check session environment variables for TASKGRAPH_PROJECT_ROOT
+			else if (session?.env?.TASKGRAPH_PROJECT_ROOT) {
+				const envRoot = session.env.TASKGRAPH_PROJECT_ROOT;
 				normalizedRoot = path.isAbsolute(envRoot)
 					? envRoot
 					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASK_MASTER_PROJECT_ROOT session environment variable';
+				rootSource = 'TASKGRAPH_PROJECT_ROOT session environment variable';
 				log.info(`Using project root from ${rootSource}: ${normalizedRoot}`);
 			}
 			// 2. If no environment variable, try args.projectRoot
@@ -734,7 +734,7 @@ function withNormalizedProjectRoot(executeFn) {
 					'Could not determine project root from environment, args, or session.'
 				);
 				return createErrorResponse(
-					'Could not determine project root. Please provide projectRoot argument or ensure TASK_MASTER_PROJECT_ROOT environment variable is set.'
+					'Could not determine project root. Please provide projectRoot argument or ensure TASKGRAPH_PROJECT_ROOT environment variable is set.'
 				);
 			}
 

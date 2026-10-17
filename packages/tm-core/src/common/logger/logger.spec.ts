@@ -13,24 +13,24 @@ describe('Logger - MCP Integration', () => {
 		// Save original environment
 		originalEnv = {
 			MCP_MODE: process.env.MCP_MODE,
-			TASK_MASTER_MCP: process.env.TASK_MASTER_MCP,
-			TASK_MASTER_SILENT: process.env.TASK_MASTER_SILENT,
+			TASKGRAPH_MCP: process.env.TASKGRAPH_MCP,
+			TASKGRAPH_SILENT: process.env.TASKGRAPH_SILENT,
 			TM_SILENT: process.env.TM_SILENT,
-			TASK_MASTER_LOG_LEVEL: process.env.TASK_MASTER_LOG_LEVEL,
+			TASKGRAPH_LOG_LEVEL: process.env.TASKGRAPH_LOG_LEVEL,
 			TM_LOG_LEVEL: process.env.TM_LOG_LEVEL,
 			NO_COLOR: process.env.NO_COLOR,
-			TASK_MASTER_NO_COLOR: process.env.TASK_MASTER_NO_COLOR
+			TASKGRAPH_NO_COLOR: process.env.TASKGRAPH_NO_COLOR
 		};
 
 		// Clear environment variables for clean tests
 		delete process.env.MCP_MODE;
-		delete process.env.TASK_MASTER_MCP;
-		delete process.env.TASK_MASTER_SILENT;
+		delete process.env.TASKGRAPH_MCP;
+		delete process.env.TASKGRAPH_SILENT;
 		delete process.env.TM_SILENT;
-		delete process.env.TASK_MASTER_LOG_LEVEL;
+		delete process.env.TASKGRAPH_LOG_LEVEL;
 		delete process.env.TM_LOG_LEVEL;
 		delete process.env.NO_COLOR;
-		delete process.env.TASK_MASTER_NO_COLOR;
+		delete process.env.TASKGRAPH_NO_COLOR;
 	});
 
 	afterEach(() => {
@@ -371,8 +371,8 @@ describe('Logger - MCP Integration', () => {
 		});
 
 		it('should detect log level from environment', () => {
-			const originalEnv = process.env.TASK_MASTER_LOG_LEVEL;
-			process.env.TASK_MASTER_LOG_LEVEL = 'DEBUG';
+			const originalEnv = process.env.TASKGRAPH_LOG_LEVEL;
+			process.env.TASKGRAPH_LOG_LEVEL = 'DEBUG';
 
 			const logger = new Logger();
 			const config = logger.getConfig();
@@ -380,9 +380,9 @@ describe('Logger - MCP Integration', () => {
 
 			// Cleanup
 			if (originalEnv === undefined) {
-				delete process.env.TASK_MASTER_LOG_LEVEL;
+				delete process.env.TASKGRAPH_LOG_LEVEL;
 			} else {
-				process.env.TASK_MASTER_LOG_LEVEL = originalEnv;
+				process.env.TASKGRAPH_LOG_LEVEL = originalEnv;
 			}
 		});
 	});

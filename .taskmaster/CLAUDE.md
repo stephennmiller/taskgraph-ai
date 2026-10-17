@@ -91,7 +91,7 @@ TaskGraph provides an MCP server that Claude Code can connect to. Configure in `
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASK_MASTER_TOOLS": "core",
+        "TASKGRAPH_TOOLS": "core",
         "ANTHROPIC_API_KEY": "your_key_here",
         "PERPLEXITY_API_KEY": "your_key_here",
         "OPENAI_API_KEY": "OPENAI_API_KEY_HERE",
@@ -123,7 +123,7 @@ TaskGraph uses tiered tool loading to optimize context window usage:
 
 **All tier adds:** Dependency management, tag management, research, autopilot TDD workflow, scope up/down, models
 
-**To upgrade tiers:** Change `TASK_MASTER_TOOLS` in `.mcp.json` from `"core"` to `"standard"` or `"all"` and restart the MCP connection.
+**To upgrade tiers:** Change `TASKGRAPH_TOOLS` in `.mcp.json` from `"core"` to `"standard"` or `"all"` and restart the MCP connection.
 
 ### Essential MCP Tools
 

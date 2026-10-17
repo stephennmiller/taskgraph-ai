@@ -44,7 +44,7 @@ describe('Task Lifecycle Integration Tests', () => {
 		process.chdir(testDir);
 
 		// Disable auto-update checks for deterministic test timing
-		process.env.TASKMASTER_SKIP_AUTO_UPDATE = '1';
+		process.env.TASKGRAPH_SKIP_AUTO_UPDATE = '1';
 
 		// Path to the compiled CLI binary we're testing
 		// Binary is built to root dist/ directory, not apps/cli/dist/
@@ -55,7 +55,7 @@ describe('Task Lifecycle Integration Tests', () => {
 			stdio: 'pipe',
 			env: {
 				...process.env,
-				TASKMASTER_SKIP_AUTO_UPDATE: '1'
+				TASKGRAPH_SKIP_AUTO_UPDATE: '1'
 			}
 		});
 
@@ -99,7 +99,7 @@ describe('Task Lifecycle Integration Tests', () => {
 		}
 
 		// Clean up environment
-		delete process.env.TASKMASTER_SKIP_AUTO_UPDATE;
+		delete process.env.TASKGRAPH_SKIP_AUTO_UPDATE;
 	});
 
 	/**
@@ -129,13 +129,13 @@ describe('Task Lifecycle Integration Tests', () => {
 	 * TEST HELPER: Run a CLI command with auto-update disabled
 	 *
 	 * EDUCATIONAL NOTE:
-	 * This helper ensures TASKMASTER_SKIP_AUTO_UPDATE is always set,
+	 * This helper ensures TASKGRAPH_SKIP_AUTO_UPDATE is always set,
 	 * avoiding repetition and ensuring consistent test behavior.
 	 */
 	const runCommand = (command: string, options: any = {}) => {
 		return execSync(`node "${binPath}" ${command}`, {
 			...options,
-			env: { ...process.env, TASKMASTER_SKIP_AUTO_UPDATE: '1' }
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 	};
 

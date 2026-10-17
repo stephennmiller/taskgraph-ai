@@ -86,7 +86,7 @@ Register the server with the Claude Code CLI (shown above), or add it to the pro
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        // "TASK_MASTER_TOOLS": "all" // Options: "all", "standard", "core", or comma-separated list of tools
+        // "TASKGRAPH_TOOLS": "all" // Options: "all", "standard", "core", or comma-separated list of tools
       }
     }
   }
@@ -206,7 +206,7 @@ taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-depende
 
 TaskGraph's MCP server supports selective tool loading to reduce context window usage. By default, all 36 tools are loaded (~21,000 tokens) to maintain backward compatibility with existing installations.
 
-You can optimize performance by configuring the `TASK_MASTER_TOOLS` environment variable:
+You can optimize performance by configuring the `TASKGRAPH_TOOLS` environment variable:
 
 ### Available Modes
 
@@ -221,7 +221,7 @@ You can optimize performance by configuring the `TASK_MASTER_TOOLS` environment 
 
 #### Method 1: Environment Variable in MCP Configuration
 
-Add `TASK_MASTER_TOOLS` to your MCP configuration file's `env` section:
+Add `TASKGRAPH_TOOLS` to your MCP configuration file's `env` section:
 
 ```jsonc
 {
@@ -230,7 +230,7 @@ Add `TASK_MASTER_TOOLS` to your MCP configuration file's `env` section:
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASK_MASTER_TOOLS": "standard"  // Options: "all", "standard", "core", "lean", or comma-separated list
+        "TASKGRAPH_TOOLS": "standard"  // Options: "all", "standard", "core", "lean", or comma-separated list
       }
     }
   }
@@ -244,12 +244,12 @@ For Claude Code users, you can set the mode during installation:
 ```bash
 # Core mode example (~70% token reduction)
 claude mcp add taskgraph-ai --scope user \
-  --env TASK_MASTER_TOOLS="core" \
+  --env TASKGRAPH_TOOLS="core" \
   -- npx -y taskgraph-ai@latest
 
 # Custom tools example
 claude mcp add taskgraph-ai --scope user \
-  --env TASK_MASTER_TOOLS="get_tasks,next_task,set_task_status" \
+  --env TASKGRAPH_TOOLS="get_tasks,next_task,set_task_status" \
   -- npx -y taskgraph-ai@latest
 ```
 

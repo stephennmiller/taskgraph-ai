@@ -17,12 +17,12 @@ describe('RuntimeStateManager', () => {
 		stateManager = new RuntimeStateManager(testProjectRoot);
 		vi.clearAllMocks();
 		// Clear environment variables
-		delete process.env.TASKMASTER_TAG;
+		delete process.env.TASKGRAPH_TAG;
 	});
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-		delete process.env.TASKMASTER_TAG;
+		delete process.env.TASKGRAPH_TAG;
 	});
 
 	describe('loadState', () => {
@@ -49,7 +49,7 @@ describe('RuntimeStateManager', () => {
 			const mockState = { activeTag: 'file-tag' };
 			vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(mockState));
 
-			process.env.TASKMASTER_TAG = 'env-tag';
+			process.env.TASKGRAPH_TAG = 'env-tag';
 
 			const state = await stateManager.loadState();
 
@@ -71,7 +71,7 @@ describe('RuntimeStateManager', () => {
 			error.code = 'ENOENT';
 			vi.mocked(fs.readFile).mockRejectedValue(error);
 
-			process.env.TASKMASTER_TAG = 'env-tag';
+			process.env.TASKGRAPH_TAG = 'env-tag';
 
 			const state = await stateManager.loadState();
 

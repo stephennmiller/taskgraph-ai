@@ -899,14 +899,14 @@ function migrateConfigJson(configPath) {
 
 		if (modified) {
 			fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf8');
-			if (process.env.TASKMASTER_DEBUG === 'true') {
+			if (process.env.TASKGRAPH_DEBUG === 'true') {
 				console.log(
 					'[DEBUG] Updated config.json with tagged task system settings'
 				);
 			}
 		}
 	} catch (error) {
-		if (process.env.TASKMASTER_DEBUG === 'true') {
+		if (process.env.TASKGRAPH_DEBUG === 'true') {
 			console.warn(`[WARN] Error migrating config.json: ${error.message}`);
 		}
 	}
@@ -926,11 +926,11 @@ function createStateJson(statePath) {
 		};
 
 		fs.writeFileSync(statePath, JSON.stringify(initialState, null, 2), 'utf8');
-		if (process.env.TASKMASTER_DEBUG === 'true') {
+		if (process.env.TASKGRAPH_DEBUG === 'true') {
 			console.log('[DEBUG] Created initial state.json for tagged task system');
 		}
 	} catch (error) {
-		if (process.env.TASKMASTER_DEBUG === 'true') {
+		if (process.env.TASKGRAPH_DEBUG === 'true') {
 			console.warn(`[WARN] Error creating state.json: ${error.message}`);
 		}
 	}
@@ -960,14 +960,14 @@ function markMigrationForNotice(tasksJsonPath) {
 				fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2), 'utf8');
 			}
 		} catch (stateError) {
-			if (process.env.TASKMASTER_DEBUG === 'true') {
+			if (process.env.TASKGRAPH_DEBUG === 'true') {
 				console.warn(
 					`[WARN] Error updating state for migration notice: ${stateError.message}`
 				);
 			}
 		}
 	} catch (error) {
-		if (process.env.TASKMASTER_DEBUG === 'true') {
+		if (process.env.TASKGRAPH_DEBUG === 'true') {
 			console.warn(
 				`[WARN] Error marking migration for notice: ${error.message}`
 			);
@@ -1020,7 +1020,7 @@ async function modifyJSON(filepath, modifier) {
  * @param {string} tag - Optional tag for tag context
  */
 function writeJSON(filepath, data, projectRoot = null, tag = null) {
-	const isDebug = process.env.TASKMASTER_DEBUG === 'true';
+	const isDebug = process.env.TASKGRAPH_DEBUG === 'true';
 
 	try {
 		// Use file locking to prevent concurrent write race conditions

@@ -30,7 +30,7 @@ dotenv.config({ path: join(projectRoot, '.env') });
 initializeSentry({ projectRoot });
 
 // Make original cwd available to commands that need it
-process.env.TASKMASTER_ORIGINAL_CWD = originalCwd;
+process.env.TASKGRAPH_ORIGINAL_CWD = originalCwd;
 
 // Add at the very beginning of the file
 if (process.env.DEBUG === '1') {
