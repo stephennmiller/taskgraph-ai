@@ -1,5 +1,5 @@
 /**
- * @fileoverview Auto-update utilities for task-master-ai CLI
+ * @fileoverview Auto-update utilities for taskgraph-ai CLI
  *
  * This module provides functionality for:
  * - Checking for updates from npm registry

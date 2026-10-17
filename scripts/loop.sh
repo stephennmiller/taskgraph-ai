@@ -1,5 +1,5 @@
 #!/bin/bash
-# Keeping here for reference, but using the new task-master loop command instead
+# Keeping here for reference, but using the new taskgraph loop command instead
 set -e
 
 if [ -z "$1" ]; then
@@ -28,18 +28,18 @@ for ((i=1; i<=$1; i++)); do
   echo "━━━ Iteration $i of $1 ━━━"
 
   result=$(docker sandbox run claude -p "@.taskmaster/tasks/tasks.json @.taskmaster/loop-progress.txt @CLAUDE.md \
-SETUP: If task-master command not found, run: npm i -g task-master-ai \
+SETUP: If taskgraph command not found, run: npm i -g taskgraph-ai \
 \
 TASK: Implement ONE task/subtask for the tm loop feature. \
 \
 PROCESS: \
-1. Run task-master next (or use MCP) to get the next available task/subtask. \
-2. Read task details with task-master show <id>. \
+1. Run taskgraph next (or use MCP) to get the next available task/subtask. \
+2. Read task details with taskgraph show <id>. \
 3. Implement following codebase patterns (CLI in apps/cli/src/commands/, core in packages/tm-core/src/modules/). \
 4. Write tests alongside implementation. \
 5. Run npm run turbo:typecheck to verify types. \
 6. Run npm test -w <package> to verify tests pass. \
-7. Mark complete: task-master set-status --id=<id> --status=done \
+7. Mark complete: taskgraph set-status --id=<id> --status=done \
 8. Commit with message: feat(loop): <what was implemented> (do NOT include loop-progress.txt in commit) \
 9. Append super-concise notes to .taskmaster/loop-progress.txt: task ID, what was done, any learnings. \
 \

@@ -12,6 +12,8 @@ import chalk from 'chalk';
 import cliProgress from 'cli-progress';
 import ora from 'ora';
 
+import { PACKAGE_NAME } from './constants.js';
+
 import { downloadTarballWithProgress, fetchTarballInfo } from './download.js';
 
 /** Installation phases with weights (how much of the progress bar each phase takes) */
@@ -247,7 +249,7 @@ async function performDirectNpmInstall(
 ): Promise<boolean> {
 	const spinner = ora({
 		text: chalk.blue(
-			`Updating task-master-ai to version ${chalk.green(latestVersion)}`
+			`Updating ${PACKAGE_NAME} to version ${chalk.green(latestVersion)}`
 		),
 		spinner: 'dots',
 		color: 'blue'
@@ -259,7 +261,7 @@ async function performDirectNpmInstall(
 			[
 				'install',
 				'-g',
-				`task-master-ai@${latestVersion}`,
+				`${PACKAGE_NAME}@${latestVersion}`,
 				'--no-fund',
 				'--no-audit',
 				'--loglevel=warn'
@@ -273,7 +275,7 @@ async function performDirectNpmInstall(
 
 		updateProcess.stdout.on('data', () => {
 			spinner.text = chalk.blue(
-				`Installing task-master-ai@${latestVersion}...`
+				`Installing ${PACKAGE_NAME}@${latestVersion}...`
 			);
 		});
 
@@ -293,7 +295,7 @@ async function performDirectNpmInstall(
 				spinner.fail(chalk.red('Auto-update failed'));
 				console.log(
 					chalk.cyan(
-						`Please run manually: npm install -g task-master-ai@${latestVersion}`
+						`Please run manually: npm install -g ${PACKAGE_NAME}@${latestVersion}`
 					)
 				);
 				if (errorOutput) {
@@ -308,7 +310,7 @@ async function performDirectNpmInstall(
 			console.log(chalk.red('Error:'), error.message);
 			console.log(
 				chalk.cyan(
-					`Please run manually: npm install -g task-master-ai@${latestVersion}`
+					`Please run manually: npm install -g ${PACKAGE_NAME}@${latestVersion}`
 				)
 			);
 			resolve(false);
@@ -317,7 +319,7 @@ async function performDirectNpmInstall(
 }
 
 /**
- * Automatically update task-master-ai to the latest version
+ * Automatically update taskgraph-ai to the latest version
  */
 export async function performAutoUpdate(
 	latestVersion: string
@@ -347,7 +349,10 @@ export async function performAutoUpdate(
 
 	// Create temp directory for tarball
 	const tempDir = os.tmpdir();
-	const tarballPath = path.join(tempDir, `task-master-ai-${latestVersion}.tgz`);
+	const tarballPath = path.join(
+		tempDir,
+		`${PACKAGE_NAME}-${latestVersion}.tgz`
+	);
 
 	// Download tarball with progress
 	const downloadSuccess = await downloadTarballWithProgress(
@@ -368,7 +373,7 @@ export async function performAutoUpdate(
 	if (!installSuccess) {
 		console.log(
 			chalk.cyan(
-				`Please run manually: npm install -g task-master-ai@${latestVersion}`
+				`Please run manually: npm install -g ${PACKAGE_NAME}@${latestVersion}`
 			)
 		);
 		return false;

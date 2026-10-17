@@ -62,7 +62,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	// Version with clickable link to GitHub release
 	const cleanVersion = version ? version.replace(/^v/, '') : '';
-	const releaseUrl = `https://github.com/eyaltoledano/claude-task-master/releases/tag/task-master-ai%40${cleanVersion}`;
+	const releaseUrl = `https://github.com/stephennmiller/claude-task-master/releases/tag/taskgraph-ai%40${cleanVersion}`;
 	const versionLink = version
 		? createLink(`v${cleanVersion}`, releaseUrl, { color: 'gray' })
 		: '';

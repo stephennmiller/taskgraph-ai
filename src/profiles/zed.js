@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { isSilentMode, log } from '../../scripts/modules/utils.js';
 import { createProfile } from './base-profile.js';
+import { findMcpServerKey } from '../utils/mcp-server-key.js';
 
 /**
  * Transform standard MCP config format to Zed format
@@ -60,13 +61,11 @@ function onRemoveRulesProfile(targetDir) {
 		const configContent = fs.readFileSync(mcpConfigPath, 'utf8');
 		const config = JSON.parse(configContent);
 
-		// Check if it has the context_servers section and task-master-ai server
-		if (
-			config['context_servers'] &&
-			config['context_servers']['task-master-ai']
-		) {
-			// Remove task-master-ai server
-			delete config['context_servers']['task-master-ai'];
+		// Check if it has the context_servers section and our server
+		const serverKey = findMcpServerKey(config['context_servers']);
+		if (serverKey) {
+			// Remove our server
+			delete config['context_servers'][serverKey];
 
 			// Check if there are other MCP servers in context_servers
 			const remainingServers = Object.keys(config['context_servers']);
@@ -142,12 +141,10 @@ function onPostConvertRulesProfile(targetDir, assetsDir) {
 		// Transform to Zed format
 		const zedConfig = transformToZedFormat(mcpConfig);
 
-		// Add "source": "custom" to task-master-ai server for Zed
-		if (
-			zedConfig['context_servers'] &&
-			zedConfig['context_servers']['task-master-ai']
-		) {
-			zedConfig['context_servers']['task-master-ai'].source = 'custom';
+		// Add "source": "custom" to our server for Zed
+		const serverKey = findMcpServerKey(zedConfig['context_servers']);
+		if (serverKey) {
+			zedConfig['context_servers'][serverKey].source = 'custom';
 		}
 
 		// Write back the transformed config with proper formatting

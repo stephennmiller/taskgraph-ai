@@ -18,6 +18,7 @@ import {
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
+import { findMcpServerKey } from '../../src/utils/mcp-server-key.js';
 
 // Calculate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -930,7 +931,7 @@ function isApiKeySet(providerName, session = null, projectRoot = null) {
 
 /**
  * Checks the API key status within .cursor/mcp.json for a given provider.
- * Reads the mcp.json file, finds the taskmaster-ai server config, and checks the relevant env var.
+ * Reads the mcp.json file, finds the taskgraph-ai server config, and checks the relevant env var.
  * @param {string} providerName The name of the provider.
  * @param {string|null} projectRoot - Optional explicit path to the project root.
  * @returns {boolean} True if the key exists and is not a placeholder, false otherwise.
@@ -954,9 +955,10 @@ function getMcpApiKeyStatus(providerName, projectRoot = null) {
 		const mcpConfigRaw = fs.readFileSync(mcpConfigPath, 'utf-8');
 		const mcpConfig = JSON.parse(mcpConfigRaw);
 
+		const servers = mcpConfig?.mcpServers;
 		const mcpEnv =
-			mcpConfig?.mcpServers?.['task-master-ai']?.env ||
-			mcpConfig?.mcpServers?.['taskmaster-ai']?.env;
+			servers?.[findMcpServerKey(servers)]?.env ||
+			servers?.['taskmaster-ai']?.env;
 		if (!mcpEnv) {
 			return false;
 		}

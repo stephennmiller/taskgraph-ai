@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "eyaltoledano/claude-task-master"
+      "repo": "stephennmiller/claude-task-master"
     }
   ],
   "commit": false,

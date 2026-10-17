@@ -35,7 +35,7 @@ function getVersionInfo() {
 	// Use the imported packageJson directly
 	cachedVersionInfo = {
 		version: packageJson.version || 'unknown',
-		name: packageJson.name || 'task-master-ai'
+		name: packageJson.name || 'taskgraph-ai'
 	};
 	return cachedVersionInfo;
 }
@@ -364,9 +364,9 @@ function executeTaskMasterCommand(
 		// Log the environment being passed (optional, for debugging)
 		// log.info(`Spawn options env: ${JSON.stringify(spawnOptions.env)}`);
 
-		// Execute the command using the global task-master CLI or local script
+		// Execute the command using the global taskgraph CLI or local script
 		// Try the global CLI first
-		let result = spawnSync('task-master', fullArgs, spawnOptions);
+		let result = spawnSync('taskgraph', fullArgs, spawnOptions);
 
 		// If global CLI is not available, try fallback to the local script
 		if (result.error && result.error.code === 'ENOENT') {

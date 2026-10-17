@@ -20,7 +20,7 @@ import type { ToolContext } from './types.js';
 export function getVersionInfo() {
 	return {
 		version: packageJson.version || 'unknown',
-		name: packageJson.name || 'task-master-ai'
+		name: packageJson.name || 'taskgraph-ai'
 	};
 }
 

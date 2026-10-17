@@ -5361,7 +5361,7 @@ async function launchREPL() {
 function setupCLI() {
 	// Create a new program instance
 	const programInstance = new Command()
-		.name('task-master')
+		.name('taskgraph')
 		.description('AI-driven development task management')
 		.version(process.env.TM_PUBLIC_VERSION || 'unknown')
 		.helpOption('-h, --help', 'Display help')

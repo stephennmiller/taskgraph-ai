@@ -118,7 +118,7 @@ describe('Commands Module - CLI Setup and Integration', () => {
 		test('should return Commander program instance', () => {
 			const program = setupCLI();
 			expect(program).toBeDefined();
-			expect(program.name()).toBe('task-master');
+			expect(program.name()).toBe('taskgraph');
 		});
 
 		test('should return version that matches package.json when TM_PUBLIC_VERSION is set', () => {

@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { log } from '../../scripts/modules/utils.js';
 import { COMMON_TOOL_MAPPINGS, createProfile } from './base-profile.js';
+import { findMcpServerKey } from '../utils/mcp-server-key.js';
 
 /**
  * Transform standard MCP config format to VS Code format
@@ -114,10 +115,11 @@ function onRemoveRulesProfile(targetDir) {
 		const configContent = fs.readFileSync(vscodeConfigPath, 'utf8');
 		const config = JSON.parse(configContent);
 
-		// Check if it has the servers section and task-master-ai server
-		if (config.servers && config.servers['task-master-ai']) {
-			// Remove task-master-ai server
-			delete config.servers['task-master-ai'];
+		// Check if it has the servers section and our server
+		const serverKey = findMcpServerKey(config.servers);
+		if (serverKey) {
+			// Remove our server
+			delete config.servers[serverKey];
 
 			// Check if there are other MCP servers
 			const remainingServers = Object.keys(config.servers);

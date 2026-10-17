@@ -1,15 +1,15 @@
 {
 	"manifest_version": "0.3",
-	"name": "Claude Task Master",
+	"name": "TaskGraph",
 	"version": "0.43.2",
 	"description": "AI-powered task management for structured development workflows. Parse PRDs, generate tasks with AI, track dependencies, and manage complexity.",
 	"author": {
-		"name": "Eyal Toledano",
-		"url": "https://github.com/eyaltoledano"
+		"name": "Stephen Miller",
+		"url": "https://github.com/stephennmiller"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/eyaltoledano/claude-task-master"
+		"url": "https://github.com/stephennmiller/claude-task-master"
 	},
 	"icon": "icon.png",
 	"server": {
@@ -17,10 +17,7 @@
 		"entry_point": "dist/mcp-server.js",
 		"mcp_config": {
 			"command": "npx",
-			"args": [
-				"-y",
-				"task-master-ai"
-			],
+			"args": ["-y", "taskgraph-ai"],
 			"env": {
 				"ANTHROPIC_API_KEY": "${user_config.anthropic_api_key}",
 				"PERPLEXITY_API_KEY": "${user_config.perplexity_api_key}",

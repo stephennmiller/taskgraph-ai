@@ -7,6 +7,8 @@ import process from 'process';
 
 import chalk from 'chalk';
 
+import { BIN_NAME } from './constants.js';
+
 /**
  * Restart the CLI with the newly installed version
  * @param argv - Original command-line arguments (process.argv)
@@ -16,8 +18,8 @@ export function restartWithNewVersion(argv: string[]): void {
 
 	console.log(chalk.dim('Restarting with updated version...\n'));
 
-	// Spawn the updated task-master command
-	const child = spawn('task-master', args, {
+	// Spawn the updated CLI binary
+	const child = spawn(BIN_NAME, args, {
 		stdio: 'inherit', // Inherit stdin/stdout/stderr so it looks seamless
 		detached: false,
 		shell: process.platform === 'win32' // Windows compatibility

@@ -21,7 +21,7 @@ export const TASKMASTER_VERSION = packageJson.version || 'unknown';
 /**
  * Package name from root package.json
  */
-export const PACKAGE_NAME = packageJson.name || 'task-master-ai';
+export const PACKAGE_NAME = packageJson.name || 'taskgraph-ai';
 
 /**
  * Valid task status values

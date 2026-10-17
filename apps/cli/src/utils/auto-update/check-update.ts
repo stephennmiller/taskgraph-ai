@@ -10,6 +10,8 @@ import https from 'https';
 import os from 'node:os';
 import path from 'node:path';
 
+import { PACKAGE_NAME } from './constants.js';
+
 import { fetchChangelogHighlights } from './changelog.js';
 import type { UpdateInfo } from './types.js';
 import { compareVersions, getCurrentVersion } from './version.js';
@@ -95,11 +97,11 @@ function fetchLatestVersion(currentVersion: string): Promise<string | null> {
 		const req = https.request(
 			{
 				hostname: 'registry.npmjs.org',
-				path: '/task-master-ai',
+				path: `/${PACKAGE_NAME}`,
 				method: 'GET',
 				headers: {
 					Accept: 'application/vnd.npm.install-v1+json',
-					'User-Agent': `task-master-ai/${currentVersion}`
+					'User-Agent': `${PACKAGE_NAME}/${currentVersion}`
 				}
 			},
 			(res) => {
@@ -150,7 +152,7 @@ function buildUpdateInfo(
 }
 
 /**
- * Check for newer version of task-master-ai
+ * Check for newer version of taskgraph-ai
  * Uses a 1-hour cache to avoid hitting npm on every CLI invocation
  */
 export async function checkForUpdate(

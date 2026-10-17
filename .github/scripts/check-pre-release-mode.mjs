@@ -17,7 +17,7 @@ function findRootDir(startDir) {
 				const pkg = JSON.parse(
 					readFileSync(join(currentDir, 'package.json'), 'utf8')
 				);
-				if (pkg.name === 'task-master-ai' || pkg.repository) {
+				if (pkg.name === 'taskgraph-ai' || pkg.repository) {
 					return currentDir;
 				}
 			} catch {}

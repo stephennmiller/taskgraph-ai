@@ -1,9 +1,9 @@
 {
 	"mcpServers": {
-		"task-master-ai": {
+		"taskgraph-ai": {
 			"type": "stdio",
 			"command": "npx",
-			"args": ["-y", "task-master-ai"],
+			"args": ["-y", "taskgraph-ai"],
 			"env": {
 				"TASK_MASTER_TOOLS": "all"
 			}

@@ -11,7 +11,7 @@ process.env.FORCE_VERSION = '0.9.30';
 
 // Create a mock package.json in memory for testing
 const mockPackageJson = {
-	name: 'task-master-ai',
+	name: 'taskgraph-ai',
 	version: '0.9.30'
 };
 

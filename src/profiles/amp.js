@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { isSilentMode, log } from '../../scripts/modules/utils.js';
 import { createProfile } from './base-profile.js';
+import { findMcpServerKey } from '../utils/mcp-server-key.js';
 
 /**
  * Transform standard MCP config format to Amp format
@@ -159,13 +160,11 @@ function onRemoveRulesProfile(targetDir) {
 		const configContent = fs.readFileSync(mcpConfigPath, 'utf8');
 		const config = JSON.parse(configContent);
 
-		// Check if it has the amp.mcpServers section and task-master-ai server
-		if (
-			config['amp.mcpServers'] &&
-			config['amp.mcpServers']['task-master-ai']
-		) {
-			// Remove task-master-ai server
-			delete config['amp.mcpServers']['task-master-ai'];
+		// Check if it has the amp.mcpServers section and our server
+		const serverKey = findMcpServerKey(config['amp.mcpServers']);
+		if (serverKey) {
+			// Remove our server
+			delete config['amp.mcpServers'][serverKey];
 
 			// Check if there are other MCP servers in amp.mcpServers
 			const remainingServers = Object.keys(config['amp.mcpServers']);

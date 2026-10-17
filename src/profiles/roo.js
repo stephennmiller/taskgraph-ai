@@ -7,6 +7,7 @@ import { COMMON_TOOL_MAPPINGS, createProfile } from './base-profile.js';
 
 // Import the shared MCP configuration helper
 import { formatJSONWithTabs } from '../utils/create-mcp-config.js';
+import { findMcpServerKey } from '../utils/mcp-server-key.js';
 
 // Roo-specific MCP configuration enhancements
 function enhanceRooMCPConfiguration(mcpPath) {
@@ -19,8 +20,9 @@ function enhanceRooMCPConfiguration(mcpPath) {
 		// Read the existing configuration
 		const mcpConfig = JSON.parse(fs.readFileSync(mcpPath, 'utf8'));
 
-		if (mcpConfig.mcpServers && mcpConfig.mcpServers['task-master-ai']) {
-			const server = mcpConfig.mcpServers['task-master-ai'];
+		const serverKey = findMcpServerKey(mcpConfig.mcpServers);
+		if (serverKey) {
+			const server = mcpConfig.mcpServers[serverKey];
 
 			// Add Roo-specific timeout enhancement for long-running AI operations
 			server.timeout = 300;
@@ -32,7 +34,7 @@ function enhanceRooMCPConfiguration(mcpPath) {
 				`[Roo] Enhanced MCP configuration with timeout at ${mcpPath}`
 			);
 		} else {
-			log('warn', `[Roo] task-master-ai server not found in MCP configuration`);
+			log('warn', `[Roo] taskgraph-ai server not found in MCP configuration`);
 		}
 	} catch (error) {
 		log('error', `[Roo] Failed to enhance MCP configuration: ${error.message}`);

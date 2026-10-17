@@ -29,14 +29,8 @@ export function getAssetsDir() {
 		// When installed as npm package - assets at package root
 		path.join(process.cwd(), 'assets'),
 		// For npx usage - check node_modules
-		path.join(
-			process.cwd(),
-			'node_modules',
-			'task-master-ai',
-			'dist',
-			'assets'
-		),
-		path.join(process.cwd(), 'node_modules', 'task-master-ai', 'assets')
+		path.join(process.cwd(), 'node_modules', 'taskgraph-ai', 'dist', 'assets'),
+		path.join(process.cwd(), 'node_modules', 'taskgraph-ai', 'assets')
 	];
 
 	// Find the first existing assets directory

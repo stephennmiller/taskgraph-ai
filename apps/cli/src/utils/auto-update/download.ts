@@ -9,6 +9,7 @@ import chalk from 'chalk';
 import cliProgress from 'cli-progress';
 
 import type { TarballInfo } from './types.js';
+import { PACKAGE_NAME } from './constants.js';
 
 /**
  * Format bytes to human-readable string
@@ -28,11 +29,11 @@ export async function fetchTarballInfo(
 	return new Promise((resolve) => {
 		const options = {
 			hostname: 'registry.npmjs.org',
-			path: `/task-master-ai/${version}`,
+			path: `/${PACKAGE_NAME}/${version}`,
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
-				'User-Agent': `task-master-ai/${version}`
+				'User-Agent': `${PACKAGE_NAME}/${version}`
 			}
 		};
 
@@ -104,7 +105,7 @@ export async function downloadTarballWithProgress(
 			path: url.pathname,
 			method: 'GET',
 			headers: {
-				'User-Agent': `task-master-ai/${version}`
+				'User-Agent': `${PACKAGE_NAME}/${version}`
 			}
 		};
 
@@ -157,7 +158,7 @@ export async function downloadTarballWithProgress(
 				});
 			} else {
 				// If no content-length, show indeterminate progress
-				console.log(chalk.blue(`Downloading task-master-ai@${version}...`));
+				console.log(chalk.blue(`Downloading ${PACKAGE_NAME}@${version}...`));
 			}
 
 			const fileStream = fs.createWriteStream(destPath);

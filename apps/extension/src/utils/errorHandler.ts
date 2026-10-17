@@ -623,7 +623,7 @@ ${errorDetails.context ? JSON.stringify(errorDetails.context, null, 2) : 'None'}
 
     `);
 
-		const issueUrl = `https://github.com/eyaltoledano/claude-task-master/issues/new?title=${issueTitle}&body=${issueBody}`;
+		const issueUrl = `https://github.com/stephennmiller/claude-task-master/issues/new?title=${issueTitle}&body=${issueBody}`;
 		await vscode.env.openExternal(vscode.Uri.parse(issueUrl));
 	}
 

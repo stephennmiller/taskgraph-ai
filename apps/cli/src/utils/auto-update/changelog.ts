@@ -3,6 +3,7 @@
  */
 
 import https from 'https';
+import { PACKAGE_NAME, REPO_SLUG } from './constants.js';
 
 /**
  * Fetch CHANGELOG.md from GitHub and extract highlights for a specific version
@@ -13,10 +14,10 @@ export async function fetchChangelogHighlights(
 	return new Promise((resolve) => {
 		const options = {
 			hostname: 'raw.githubusercontent.com',
-			path: '/eyaltoledano/claude-task-master/main/CHANGELOG.md',
+			path: `/${REPO_SLUG}/main/CHANGELOG.md`,
 			method: 'GET',
 			headers: {
-				'User-Agent': `task-master-ai/${version}`
+				'User-Agent': `${PACKAGE_NAME}/${version}`
 			}
 		};
 

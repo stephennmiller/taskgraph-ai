@@ -9,9 +9,9 @@ Configure Task Master MCP server in `~/.gemini/settings.json`:
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"]
+      "args": ["-y", "taskgraph-ai"]
     }
   }
 }

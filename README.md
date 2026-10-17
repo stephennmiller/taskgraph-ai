@@ -1,7 +1,6 @@
 <a name="readme-top"></a>
 
 <div align='center'>
-<a href="https://trendshift.io/repositories/13971" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13971" alt="eyaltoledano%2Fclaude-task-master | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 </div>
 
 <p align="center">
@@ -18,19 +17,21 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/eyaltoledano/claude-task-master/actions/workflows/ci.yml"><img src="https://github.com/eyaltoledano/claude-task-master/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/eyaltoledano/claude-task-master/stargazers"><img src="https://img.shields.io/github/stars/eyaltoledano/claude-task-master?style=social" alt="GitHub stars"></a>
-  <a href="https://badge.fury.io/js/task-master-ai"><img src="https://badge.fury.io/js/task-master-ai.svg" alt="npm version"></a>
+  <a href="https://github.com/stephennmiller/claude-task-master/actions/workflows/ci.yml"><img src="https://github.com/stephennmiller/claude-task-master/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/stephennmiller/claude-task-master/stargazers"><img src="https://img.shields.io/github/stars/stephennmiller/claude-task-master?style=social" alt="GitHub stars"></a>
+  <a href="https://badge.fury.io/js/taskgraph-ai"><img src="https://badge.fury.io/js/taskgraph-ai.svg" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg" alt="License"></a>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/task-master-ai"><img src="https://img.shields.io/npm/d18m/task-master-ai?style=flat" alt="NPM Downloads"></a>
-  <a href="https://www.npmjs.com/package/task-master-ai"><img src="https://img.shields.io/npm/dm/task-master-ai?style=flat" alt="NPM Downloads"></a>
-  <a href="https://www.npmjs.com/package/task-master-ai"><img src="https://img.shields.io/npm/dw/task-master-ai?style=flat" alt="NPM Downloads"></a>
+  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/d18m/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
+  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/dm/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
+  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/dw/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
 </p>
 
-## By [@eyaltoledano](https://x.com/eyaltoledano) & [@RalphEcom](https://x.com/RalphEcom)
+> **TaskGraph** is a fork of [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish, published as `taskgraph-ai` with the `taskgraph` and `taskgraph-mcp` binaries so it can be installed next to the original `task-master-ai`. It keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
+
+## Originally by [@eyaltoledano](https://x.com/eyaltoledano) & [@RalphEcom](https://x.com/RalphEcom)
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/eyaltoledano)](https://x.com/eyaltoledano)
 [![Twitter Follow](https://img.shields.io/twitter/follow/RalphEcom)](https://x.com/RalphEcom)
@@ -69,7 +70,7 @@ A task management system for AI-driven development with Claude, designed to work
 
 #### Quick Install for Cursor 1.0+ (One-Click)
 
-[![Add task-master-ai MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=task-master-ai&config=eyJjb21tYW5kIjoibnB4IC15IC0tcGFja2FnZT10YXNrLW1hc3Rlci1haSB0YXNrLW1hc3Rlci1haSIsImVudiI6eyJBTlRIUk9QSUNfQVBJX0tFWSI6IllPVVJfQU5USFJPUElDX0FQSV9LRVlfSEVSRSIsIlBFUlBMRVhJVFlfQVBJX0tFWSI6IllPVVJfUEVSUExFWElUWV9BUElfS0VZX0hFUkUiLCJPUEVOQUlfQVBJX0tFWSI6IllPVVJfT1BFTkFJX0tFWV9IRVJFIiwiR09PR0xFX0FQSV9LRVkiOiJZT1VSX0dPT0dMRV9LRVlfSEVSRSIsIk1JU1RSQUxfQVBJX0tFWSI6IllPVVJfTUlTVFJBTF9LRVlfSEVSRSIsIkdST1FfQVBJX0tFWSI6IllPVVJfR1JPUV9LRVlfSEVSRSIsIk9QRU5ST1VURVJfQVBJX0tFWSI6IllPVVJfT1BFTlJPVVRFUl9LRVlfSEVSRSIsIlhBSV9BUElfS0VZIjoiWU9VUl9YQUlfS0VZX0hFUkUiLCJBWlVSRV9PUEVOQUlfQVBJX0tFWSI6IllPVVJfQVpVUkVfS0VZX0hFUkUiLCJPTExBTUFfQVBJX0tFWSI6IllPVVJfT0xMQU1BX0FQSV9LRVlfSEVSRSJ9fQ%3D%3D)
+[![Add taskgraph-ai MCP server to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=taskgraph-ai&config=eyJjb21tYW5kIjoibnB4IC15IC0tcGFja2FnZT10YXNrZ3JhcGgtYWkgdGFza2dyYXBoLW1jcCIsImVudiI6eyJBTlRIUk9QSUNfQVBJX0tFWSI6IllPVVJfQU5USFJPUElDX0FQSV9LRVlfSEVSRSIsIlBFUlBMRVhJVFlfQVBJX0tFWSI6IllPVVJfUEVSUExFWElUWV9BUElfS0VZX0hFUkUiLCJPUEVOQUlfQVBJX0tFWSI6IllPVVJfT1BFTkFJX0tFWV9IRVJFIiwiR09PR0xFX0FQSV9LRVkiOiJZT1VSX0dPT0dMRV9LRVlfSEVSRSIsIk1JU1RSQUxfQVBJX0tFWSI6IllPVVJfTUlTVFJBTF9LRVlfSEVSRSIsIkdST1FfQVBJX0tFWSI6IllPVVJfR1JPUV9LRVlfSEVSRSIsIk9QRU5ST1VURVJfQVBJX0tFWSI6IllPVVJfT1BFTlJPVVRFUl9LRVlfSEVSRSIsIlhBSV9BUElfS0VZIjoiWU9VUl9YQUlfS0VZX0hFUkUiLCJBWlVSRV9PUEVOQUlfQVBJX0tFWSI6IllPVVJfQVpVUkVfS0VZX0hFUkUiLCJPTExBTUFfQVBJX0tFWSI6IllPVVJfT0xMQU1BX0FQSV9LRVlfSEVSRSJ9fQ%3D%3D)
 
 > **Note:** After clicking the link, you'll still need to add your API keys to the configuration. The link installs the MCP server with placeholder keys that you'll need to replace with your actual API keys.
 
@@ -78,7 +79,7 @@ A task management system for AI-driven development with Claude, designed to work
 For Claude Code users:
 
 ```bash
-claude mcp add taskmaster-ai -- npx -y task-master-ai
+claude mcp add taskgraph-ai -- npx -y taskgraph-ai
 ```
 
 Don't forget to add your API keys to the configuration:
@@ -128,9 +129,9 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
 ```json
 {
   "mcpServers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         // "TASK_MASTER_TOOLS": "all", // Options: "all", "standard", "core", or comma-separated list of tools
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
@@ -158,9 +159,9 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
 ```json
 {
   "servers": {
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         // "TASK_MASTER_TOOLS": "all", // Options: "all", "standard", "core", or comma-separated list of tools
         "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
@@ -184,7 +185,7 @@ MCP (Model Control Protocol) lets you run Task Master directly from your editor.
 
 #### 2. (Cursor-only) Enable Taskmaster MCP
 
-Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable task-master-ai with the toggle
+Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable taskgraph-ai with the toggle
 
 #### 3. (Optional) Configure the models you want to use
 
@@ -243,10 +244,10 @@ Use your AI assistant to:
 
 ```bash
 # Install globally
-npm install -g task-master-ai
+npm install -g taskgraph-ai
 
 # OR install locally within your project
-npm install task-master-ai
+npm install taskgraph-ai
 ```
 
 #### Initialize a new project
@@ -320,9 +321,9 @@ Add `TASK_MASTER_TOOLS` to your MCP configuration file's `env` section:
 ```jsonc
 {
   "mcpServers": {  // or "servers" for VS Code
-    "task-master-ai": {
+    "taskgraph-ai": {
       "command": "npx",
-      "args": ["-y", "task-master-ai"],
+      "args": ["-y", "taskgraph-ai"],
       "env": {
         "TASK_MASTER_TOOLS": "standard",  // Options: "all", "standard", "core", "lean", or comma-separated list
         "ANTHROPIC_API_KEY": "your-key-here",
@@ -339,14 +340,14 @@ For Claude Code users, you can set the mode during installation:
 
 ```bash
 # Core mode example (~70% token reduction)
-claude mcp add task-master-ai --scope user \
+claude mcp add taskgraph-ai --scope user \
   --env TASK_MASTER_TOOLS="core" \
-  -- npx -y task-master-ai@latest
+  -- npx -y taskgraph-ai@latest
 
 # Custom tools example
-claude mcp add task-master-ai --scope user \
+claude mcp add taskgraph-ai --scope user \
   --env TASK_MASTER_TOOLS="get_tasks,next_task,set_task_status" \
-  -- npx -y task-master-ai@latest
+  -- npx -y taskgraph-ai@latest
 ```
 
 ### Tool Sets Details
@@ -387,7 +388,7 @@ node node_modules/claude-task-master/scripts/init.js
 Or clone the repository and run:
 
 ```bash
-git clone https://github.com/eyaltoledano/claude-task-master.git
+git clone https://github.com/stephennmiller/claude-task-master.git
 cd claude-task-master
 node scripts/init.js
 ```
@@ -400,13 +401,13 @@ node scripts/init.js
 
 ## Contributors
 
-<a href="https://github.com/eyaltoledano/claude-task-master/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=eyaltoledano/claude-task-master" alt="Task Master project contributors" />
+<a href="https://github.com/stephennmiller/claude-task-master/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=stephennmiller/claude-task-master" alt="Task Master project contributors" />
 </a>
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=eyaltoledano/claude-task-master&type=Timeline)](https://www.star-history.com/#eyaltoledano/claude-task-master&Timeline)
+[![Star History Chart](https://api.star-history.com/svg?repos=stephennmiller/claude-task-master&type=Timeline)](https://www.star-history.com/#stephennmiller/claude-task-master&Timeline)
 
 ## Licensing
 
