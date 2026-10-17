@@ -5,8 +5,8 @@ on:
     tags:
       - "extension@*"
 
-permissions:
-  contents: write
+# No workflow-level grant: each job declares exactly what it needs.
+permissions: {}
 
 concurrency: extension-release-${{ github.ref }}
 
@@ -15,24 +15,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: extension-release
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
+      # This job publishes to the VS Code Marketplace and Open VSX, so it must not
+      # restore or save a cache a lower-trust workflow could have poisoned.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 20
-
-      - name: Cache node_modules
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
-        with:
-          path: |
-            node_modules
-            */*/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          package-manager-cache: false
 
       - name: Install Monorepo Dependencies
         run: npm ci
@@ -83,7 +78,7 @@ jobs:
           FORCE_COLOR: 1
 
       - name: Install Open VSX CLI
-        run: npm install -g ovsx
+        run: npm install -g ovsx@1.2.0
 
       - name: Publish to Open VSX Registry
         working-directory: apps/extension/vsix-build

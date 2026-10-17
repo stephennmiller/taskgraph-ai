@@ -10,11 +10,11 @@ rules:
       # These jobs push with the credentials `actions/checkout` persists, so
       # `persist-credentials: false` would break them.
       # `changeset publish` plus git-auto-commit-action push the release commit.
-      - release.yml:31
+      - release.yml:33
       # Checks out with RELEASE_TOKEN and runs `git push --atomic origin HEAD:main <tag>`.
       - version-bump.yml:40
       # actions-js/push pushes the regenerated docs/models.md.
-      - update-models-md.yml:17
+      - update-models-md.yml:22
       # peter-evans/create-pull-request pushes the docs branch.
       - claude-docs-updater.yml:31
       # The Claude action workflows. Their checkout feeds an action that does its own
@@ -24,3 +24,22 @@ rules:
       - claude.yml:28
       - claude-dedupe-issues.yml:23
       - claude-issue-triage.yml:17
+  dangerous-triggers:
+    ignore:
+      # `issue_comment` is needed to answer "@claude" comments. The job only runs when
+      # the body contains "@claude", and claude-code-action refuses any actor without
+      # write access to the repo (checkWritePermissions; `allowed_non_write_users` is
+      # not set here). The comment text is never interpolated into a `run:` script.
+      - claude.yml:4
+      # `workflow_run` is needed to release only after CI passes on main. The job is
+      # gated on `workflow_run.conclusion == 'success'` and `workflow_run.event == 'push'`
+      # with `branches: [main]`, checks out `main` (not the triggering run's head), and
+      # fails early if RELEASE_TOKEN is unset. No PR-controlled code is checked out or run.
+      - version-bump.yml:8
+  adhoc-packages:
+    ignore:
+      # Installed from the registry at an exact version, in the publishing job only.
+      # The npm CLI must be upgraded outside the lockfile for trusted publishing, and
+      # `ovsx` is used only to publish. Bump both by hand when updating the release flow.
+      - release.yml:44
+      - extension-release.yml:81
