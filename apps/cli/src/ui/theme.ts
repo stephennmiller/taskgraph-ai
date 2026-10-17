@@ -37,9 +37,9 @@ export const theme = {
 	/** Section headings and box titles */
 	heading: chalk.cyan.bold,
 	/** Secondary labels such as tags and skills */
-	accent: chalk.cyan,
-	/** In-progress / actively worked status */
-	active: chalk.cyan,
+	accent: chalk.magenta,
+	/** In-progress / actively worked status (bold, so it differs from plain cyan IDs) */
+	active: chalk.cyan.bold,
 	/**
 	 * Body text in the terminal's default foreground. Replaces chalk.white,
 	 * which many light themes render as pale gray. Plain chalk adds no color

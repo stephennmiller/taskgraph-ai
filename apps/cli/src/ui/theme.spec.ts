@@ -15,6 +15,16 @@ describe('theme', () => {
 		chalk.level = originalLevel;
 	});
 
+	describe('roles', () => {
+		it('renders brand, accent and active text differently', () => {
+			const rendered = [theme.brand, theme.accent, theme.active].map((style) =>
+				style('x')
+			);
+
+			expect(new Set(rendered).size).toBe(rendered.length);
+		});
+	});
+
 	describe('text', () => {
 		it('does not reset enclosing styles when nested inside bold text', () => {
 			const output = theme.text.bold(`Title ${theme.text.italic('emph')} here`);
