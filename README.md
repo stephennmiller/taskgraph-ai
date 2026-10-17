@@ -38,7 +38,7 @@ A task management system for AI-driven development with Claude, built for Claude
 
 ## Documentation
 
-📚 **[View the documentation](docs/README.md)**
+**[View the documentation](docs/README.md)**
 
 ### Quick Links
 
@@ -119,7 +119,7 @@ Register the server with the Claude Code CLI (shown above), or add it to the pro
 }
 ```
 
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
+> **Note:** Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
 
 > **Note**: If you see `0 tools enabled` in the MCP settings, restart Claude Code and check that your API keys are correctly configured.
 
@@ -336,14 +336,14 @@ node scripts/init.js
 
 Task Master is licensed under the MIT License with Commons Clause. This means you can:
 
-✅ **Allowed**:
+**Allowed**:
 
 - Use Task Master for any purpose (personal, commercial, academic)
 - Modify the code
 - Distribute copies
 - Create and sell products built using Task Master
 
-❌ **Not Allowed**:
+**Not Allowed**:
 
 - Sell Task Master itself
 - Offer Task Master as a hosted service
