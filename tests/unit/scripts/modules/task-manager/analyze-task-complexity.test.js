@@ -197,18 +197,17 @@ jest.unstable_mockModule(
 
 // Mock fs module
 const mockWriteFileSync = jest.fn();
-jest.unstable_mockModule('fs', () => ({
-	default: {
+jest.unstable_mockModule('fs', () => {
+	// Keep the real exports (e.g. constants) so Jest 30's node:fs resolution works
+	const actualFs = jest.requireActual('fs');
+	const mocked = {
 		existsSync: jest.fn(() => false),
 		readFileSync: jest.fn(),
 		writeFileSync: mockWriteFileSync,
 		unlinkSync: jest.fn()
-	},
-	existsSync: jest.fn(() => false),
-	readFileSync: jest.fn(),
-	writeFileSync: mockWriteFileSync,
-	unlinkSync: jest.fn()
-}));
+	};
+	return { ...actualFs, ...mocked, default: { ...actualFs, ...mocked } };
+});
 
 jest.unstable_mockModule(
 	'../../../../../scripts/modules/prompt-manager.js',
