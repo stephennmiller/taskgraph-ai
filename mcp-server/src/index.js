@@ -14,7 +14,7 @@ import {
 	registerTaskMasterTools
 } from './tools/index.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // Initialize Sentry after .env is loaded
 initializeSentry();

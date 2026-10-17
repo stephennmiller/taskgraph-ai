@@ -400,7 +400,7 @@ export function withToolContext<TArgs extends { projectRoot?: string }>(
 			// This ensures project-specific env vars are available to tool execution
 			const envPath = path.join(args.projectRoot, '.env');
 			if (fs.existsSync(envPath)) {
-				dotenv.config({ path: envPath });
+				dotenv.config({ path: envPath, quiet: true });
 			}
 
 			// Create tmCore instance
