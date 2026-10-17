@@ -460,4 +460,4 @@ taskgraph complexity-report
 
 ---
 
-For more examples and advanced usage, see the [full documentation](https://tryhamster.com/docs/taskmaster).
+For more examples and advanced usage, see the [full documentation](../README.md).

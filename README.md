@@ -4,7 +4,7 @@
 </div>
 
 <p align="center">
-  <a href="https://tryhamster.com/product/taskmaster"><img src="./images/logo.png?raw=true" alt="Taskmaster logo"></a>
+  <img src="./images/logo.png?raw=true" alt="Taskmaster logo">
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://discord.gg/taskmasterai" target="_blank"><img src="https://dcbadge.limes.pink/api/server/https://discord.gg/taskmasterai?style=flat" alt="Discord"></a> |
-  <a href="https://tryhamster.com/docs/taskmaster" target="_blank">Docs</a>
+  <a href="./docs/README.md">Docs</a>
 </p>
 
 <p align="center">
@@ -40,32 +40,18 @@ A task management system for AI-driven development with Claude, built for Claude
 
 ## Documentation
 
-📚 **[View Full Documentation](https://tryhamster.com/docs/taskmaster)**
+📚 **[View the documentation](docs/README.md)**
 
 ### Quick Links
 
-- [Quick Start Guide](https://tryhamster.com/docs/taskmaster/getting-started/quick-start/quick-start)
-- [Installation](https://tryhamster.com/docs/taskmaster/getting-started/quick-start/installation)
-- [API Keys & Providers](https://tryhamster.com/docs/taskmaster/getting-started/api-keys)
-- [MCP Tools Reference](https://tryhamster.com/docs/taskmaster/capabilities/mcp)
-- [CLI Commands Reference](https://tryhamster.com/docs/taskmaster/capabilities/cli-root-commands)
-- [Task Structure](https://tryhamster.com/docs/taskmaster/capabilities/task-structure)
-- [Task Dependencies](https://tryhamster.com/docs/taskmaster/task-workflow/dependencies)
-- [Tags & Workstreams](https://tryhamster.com/docs/taskmaster/task-workflow/tags)
-- [Research Command](https://tryhamster.com/docs/taskmaster/task-workflow/research)
-- [Loop Command](https://tryhamster.com/docs/taskmaster/automation/loop)
-- [AI Providers Overview](https://tryhamster.com/docs/taskmaster/ai-providers/overview)
-- [Team Collaboration](https://tryhamster.com/docs/taskmaster/team/overview)
-- [Best Practices](https://tryhamster.com/docs/taskmaster/best-practices/index)
-- [FAQ](https://tryhamster.com/docs/taskmaster/getting-started/faq)
+- [Tutorial](docs/tutorial.md)
+- [Command Reference](docs/command-reference.md)
+- [Configuration](docs/configuration.md)
+- [Task Structure](docs/task-structure.md)
+- [Examples](docs/examples.md)
+- [Models](docs/models.md)
+- [Migration Guide](docs/migration-guide.md)
 - [Changelog](CHANGELOG.md)
-
-### More from Hamster
-
-- [Hamster Studio](https://tryhamster.com/product/studio)
-- [Product & Engineering Methods](https://tryhamster.com/methods)
-- [Product & Engineering Skills](https://tryhamster.com/skills)
-- [Hamster Pricing](https://tryhamster.com/pricing)
 
 #### Claude Code Quick Install
 
@@ -341,12 +327,6 @@ git clone https://github.com/stephennmiller/taskgraph-ai.git
 cd taskgraph-ai
 node scripts/init.js
 ```
-
-## Join Our Team
-
-<a href="https://tryhamster.com" target="_blank">
-  <img src="./images/hamster-hiring.png" alt="Join Hamster's founding team" />
-</a>
 
 ## Contributors
 

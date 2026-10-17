@@ -165,7 +165,7 @@ Apply standard software engineering principles:
 ## Documentation Guidelines
 
 - **Documentation location**: Write docs in `apps/docs/` (Mintlify site source), not `docs/`
-- **Documentation URL**: Reference docs at <https://tryhamster.com/docs/taskmaster>, not local file paths
+- **Documentation links**: Link to files in this repo (`docs/`, `apps/docs/`), not external sites
 
 ## Versioning & Release Guidelines
 
