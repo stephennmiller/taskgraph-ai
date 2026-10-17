@@ -39,6 +39,10 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    ignore:
+      # tsdown 0.23 emits .mjs entry files, but package.json bin, postpack
+      # and the tests expect .js. Upgrade it by hand in its own PR (#19).
+      - dependency-name: 'tsdown'
     commit-message:
       prefix: 'chore'
       include: 'scope'
