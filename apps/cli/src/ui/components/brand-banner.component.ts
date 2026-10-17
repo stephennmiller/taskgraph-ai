@@ -57,30 +57,43 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 		console.log(coolGradient('=== TaskGraph ==='));
 	}
 
-	// Credits line with version right-aligned
-	const xLink = createLink('x.com/eyaltoledano', 'https://x.com/eyaltoledano');
+	// Credits line with version right-aligned. Link text already names the
+	// destination, so unsupported terminals get the text without the long URL.
+	const creditText = 'x.com/eyaltoledano';
+	const xLink = createLink(creditText, 'https://x.com/eyaltoledano', {
+		textOnlyFallback: true
+	});
 	const byText = chalk.dim('by ') + chalk.cyan(xLink);
 
 	// Version with clickable link to GitHub release
 	const cleanVersion = version ? version.replace(/^v/, '') : '';
 	const releaseUrl = `https://github.com/stephennmiller/taskgraph-ai/releases/tag/taskgraph-ai%40${cleanVersion}`;
 	const versionLink = version
-		? createLink(`v${cleanVersion}`, releaseUrl, { color: 'gray' })
+		? createLink(`v${cleanVersion}`, releaseUrl, {
+				color: 'gray',
+				textOnlyFallback: true
+			})
 		: '';
 
 	if (versionLink) {
-		// Calculate spacing for right alignment
-		const byLength = 22; // "by x.com/eyaltoledano" approximate visible length
+		// Right-align the version when it fits; otherwise put it on its own line
+		const byLength = `by ${creditText}`.length;
 		const versionLength = cleanVersion.length + 1; // "v" + version
-		const termWidth = getTerminalWidth();
-		const spacing = Math.max(2, termWidth - byLength - versionLength - 2);
-		console.log(byText + ' '.repeat(spacing) + versionLink);
+		const spacing = getTerminalWidth() - byLength - versionLength - 1;
+		if (spacing >= 2) {
+			console.log(byText + ' '.repeat(spacing) + versionLink);
+		} else {
+			console.log(byText);
+			console.log(versionLink);
+		}
 	} else {
 		console.log(byText);
 	}
 
 	// Hamster promo
-	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com');
+	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com', {
+		textOnlyFallback: true
+	});
 	console.log(chalk.dim('TaskGraph for teams: ') + theme.accent(hamsterLink));
 	console.log('');
 }
@@ -105,11 +118,15 @@ export function displayInitBanner(): void {
 	}
 
 	// Credits line
-	const xLink = createLink('x.com/eyaltoledano', 'https://x.com/eyaltoledano');
+	const xLink = createLink('x.com/eyaltoledano', 'https://x.com/eyaltoledano', {
+		textOnlyFallback: true
+	});
 	console.log(chalk.dim('by ') + chalk.cyan(xLink));
 
 	// Hamster promo
-	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com');
+	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com', {
+		textOnlyFallback: true
+	});
 	console.log(chalk.dim('TaskGraph for teams: ') + theme.accent(hamsterLink));
 	console.log('');
 }

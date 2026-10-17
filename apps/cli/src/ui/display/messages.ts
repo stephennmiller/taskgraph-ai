@@ -77,7 +77,7 @@ export function displayWarning(message: string): void {
 	const boxWidth = getBoxWidth();
 
 	console.log(
-		boxen(chalk.yellow.bold('⚠️ ') + theme.text(message), {
+		boxen(chalk.yellow.bold('⚠ ') + theme.text(message), {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'yellow',

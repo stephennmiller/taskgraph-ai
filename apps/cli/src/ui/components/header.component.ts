@@ -36,7 +36,7 @@ export function displayHeader(options: HeaderOptions = {}): void {
 	// Display different header based on storage type
 	if (storageType === 'api' && briefInfo) {
 		// API storage: Show brief information
-		const briefDisplay = `🏷  Brief: ${chalk.cyan(briefInfo.briefName)} ${chalk.gray(`(${briefInfo.briefId})`)}`;
+		const briefDisplay = `Brief: ${chalk.cyan(briefInfo.briefName)} ${chalk.gray(`(${briefInfo.briefId})`)}`;
 		console.log(briefDisplay);
 
 		// Construct and display the brief URL or ID
@@ -66,9 +66,9 @@ export function displayHeader(options: HeaderOptions = {}): void {
 		let tagInfo = '';
 
 		if (tag && tag !== 'master') {
-			tagInfo = `🏷  tag: ${chalk.cyan(tag)}`;
+			tagInfo = `tag: ${chalk.cyan(tag)}`;
 		} else {
-			tagInfo = `🏷  tag: ${chalk.cyan('master')}`;
+			tagInfo = `tag: ${chalk.cyan('master')}`;
 		}
 
 		console.log(tagInfo);

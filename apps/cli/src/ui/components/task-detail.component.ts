@@ -22,22 +22,11 @@ import {
 	getStatusWithColor
 } from '../../utils/ui.js';
 import { BORDER_COLOR, theme } from '../theme.js';
+import { getContentWidth, planColumns } from '../layout/helpers.js';
 
 // ============================================================================
 // Constants and Helper Functions
 // ============================================================================
-
-/**
- * Icons for task categories
- */
-const CATEGORY_ICONS: Record<TaskCategory, string> = {
-	research: '🔍',
-	design: '🎨',
-	development: '🔧',
-	testing: '🧪',
-	documentation: '📝',
-	review: '👀'
-};
 
 /**
  * Get icon for file action
@@ -49,18 +38,17 @@ function getFileActionIcon(action: RelevantFile['action']): string {
 		case 'modify':
 			return chalk.yellow('✎ MODIFY');
 		case 'reference':
-			return theme.brand('👁 REFER ');
+			return theme.brand('◇ REFER ');
 		default:
 			return chalk.gray('  FILE  ');
 	}
 }
 
 /**
- * Get category display with icon
+ * Get category display
  */
 function getCategoryDisplay(category: TaskCategory): string {
-	const icon = CATEGORY_ICONS[category] || '📋';
-	return `${icon} ${category}`;
+	return category;
 }
 
 // ============================================================================
@@ -91,7 +79,7 @@ export function displayTaskProperties(
 	task: Task | Subtask,
 	originalTaskId?: string
 ): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 	// Create table for task properties - simple 2-column layout
 	const table = new Table({
 		head: [],
@@ -99,10 +87,11 @@ export function displayTaskProperties(
 			head: [],
 			border: ['grey']
 		},
-		colWidths: [
-			Math.floor(terminalWidth * 0.2),
-			Math.floor(terminalWidth * 0.8)
-		],
+		// Label column fits the longest label ("Dependencies:"); values take the rest
+		colWidths: planColumns(terminalWidth, [
+			{ key: 'label', width: 16 },
+			{ key: 'value', width: 'flex' }
+		]).widths,
 		wordWrap: true
 	});
 
@@ -164,7 +153,7 @@ export function displayTaskProperties(
  * Display implementation details in a box
  */
 export function displayImplementationDetails(details: string): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 	const formattedDetails = renderContent(details);
 
 	console.log(
@@ -181,7 +170,7 @@ export function displayImplementationDetails(details: string): void {
  * Display test strategy in a box
  */
 export function displayTestStrategy(testStrategy: string): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 	const formattedStrategy = renderContent(testStrategy);
 
 	console.log(
@@ -208,7 +197,7 @@ export function displaySubtasks(
 	parentTaskId?: string | number,
 	storageType?: Exclude<StorageType, 'auto'>
 ): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 	// Display subtasks header
 	console.log(
 		boxen(theme.heading('Subtasks'), {
@@ -231,12 +220,12 @@ export function displaySubtasks(
 			head: [],
 			border: ['grey']
 		},
-		colWidths: [
-			Math.floor(terminalWidth * 0.1),
-			Math.floor(terminalWidth * 0.15),
-			Math.floor(terminalWidth * 0.6),
-			Math.floor(terminalWidth * 0.15)
-		],
+		colWidths: planColumns(terminalWidth, [
+			{ key: 'id', width: 10 },
+			{ key: 'status', width: 15 },
+			{ key: 'title', width: 'flex' },
+			{ key: 'deps', width: 8 }
+		]).widths,
 		wordWrap: true
 	});
 
@@ -274,7 +263,7 @@ export function displaySubtasks(
  * Display relevant files in a structured format
  */
 export function displayRelevantFiles(files: RelevantFile[]): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 
 	const content = files
 		.map((file) => {
@@ -286,7 +275,7 @@ export function displayRelevantFiles(files: RelevantFile[]): void {
 		.join('\n\n');
 
 	console.log(
-		boxen(chalk.bold('📂 Files to Touch:') + '\n\n' + content, {
+		boxen(chalk.bold('Files to Touch:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'yellow',
@@ -301,7 +290,7 @@ export function displayRelevantFiles(files: RelevantFile[]): void {
 export function displayExistingInfrastructure(
 	infrastructure: ExistingInfrastructure[]
 ): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 
 	const content = infrastructure
 		.map((infra) => {
@@ -313,7 +302,7 @@ export function displayExistingInfrastructure(
 		.join('\n\n');
 
 	console.log(
-		boxen(chalk.bold('🔗 Leverage Existing Code:') + '\n\n' + content, {
+		boxen(chalk.bold('Leverage Existing Code:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: BORDER_COLOR,
@@ -326,23 +315,23 @@ export function displayExistingInfrastructure(
  * Display scope boundaries (what's in/out of scope)
  */
 export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 
 	let content = '';
 
 	if (boundaries.included) {
-		content += chalk.green.bold('✅ In Scope:\n');
+		content += chalk.green.bold('✓ In Scope:\n');
 		content += theme.text('   ' + boundaries.included);
 	}
 
 	if (boundaries.excluded) {
 		if (content) content += '\n\n';
-		content += chalk.red.bold('⛔ Out of Scope:\n');
+		content += chalk.red.bold('✗ Out of Scope:\n');
 		content += chalk.gray('   ' + boundaries.excluded);
 	}
 
 	console.log(
-		boxen(chalk.bold('🎯 Scope Boundaries:') + '\n\n' + content, {
+		boxen(chalk.bold('Scope Boundaries:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: BORDER_COLOR,
@@ -355,12 +344,12 @@ export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
  * Display acceptance criteria as a checklist
  */
 export function displayAcceptanceCriteria(criteria: string[]): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 
 	const content = criteria.map((c) => theme.text(`☐ ${c}`)).join('\n');
 
 	console.log(
-		boxen(chalk.bold('✓ Acceptance Criteria:') + '\n\n' + content, {
+		boxen(chalk.bold('Acceptance Criteria:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'green',
@@ -373,12 +362,12 @@ export function displayAcceptanceCriteria(criteria: string[]): void {
  * Display technical constraints
  */
 export function displayTechnicalConstraints(constraints: string[]): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 
 	const content = constraints.map((c) => chalk.yellow(`▸ ${c}`)).join('\n');
 
 	console.log(
-		boxen(chalk.bold('🔒 Technical Constraints:') + '\n\n' + content, {
+		boxen(chalk.bold('Technical Constraints:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'red',
@@ -391,19 +380,16 @@ export function displayTechnicalConstraints(constraints: string[]): void {
  * Display implementation approach (step-by-step guide)
  */
 export function displayImplementationApproach(approach: string): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 	const formattedApproach = renderContent(approach);
 
 	console.log(
-		boxen(
-			chalk.bold('📋 Implementation Approach:') + '\n\n' + formattedApproach,
-			{
-				padding: 1,
-				borderStyle: 'round',
-				borderColor: BORDER_COLOR,
-				width: terminalWidth
-			}
-		)
+		boxen(chalk.bold('Implementation Approach:') + '\n\n' + formattedApproach, {
+			padding: 1,
+			borderStyle: 'round',
+			borderColor: BORDER_COLOR,
+			width: terminalWidth
+		})
 	);
 }
 
@@ -411,12 +397,12 @@ export function displayImplementationApproach(approach: string): void {
  * Display codebase patterns to follow
  */
 export function displayCodebasePatterns(patterns: string[]): void {
-	const terminalWidth = process.stdout.columns * 0.95 || 100;
+	const terminalWidth = getContentWidth();
 
 	const content = patterns.map((p) => theme.text(`• ${p}`)).join('\n');
 
 	console.log(
-		boxen(chalk.bold('📐 Codebase Patterns:') + '\n\n' + content, {
+		boxen(chalk.bold('Codebase Patterns:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
 			borderColor: 'gray',
@@ -518,25 +504,112 @@ export function displayImplementationMetadata(task: Task | Subtask): void {
 // Suggested Actions
 // ============================================================================
 
+export interface SuggestedAction {
+	command: string;
+	description: string;
+}
+
+/**
+ * Pick next-step suggestions that fit the task's current status, so the CLI
+ * never suggests starting a task that is already started or finished.
+ */
+export function getSuggestedActions(
+	taskId: string | number,
+	status: string | undefined,
+	hasSubtasks: boolean
+): SuggestedAction[] {
+	const id = String(taskId);
+	const isSubtask = id.includes('.');
+	const logProgress: SuggestedAction = isSubtask
+		? {
+				command: `taskgraph update-subtask --id=${id} --prompt="..."`,
+				description: 'to log progress notes'
+			}
+		: {
+				command: `taskgraph update-task --id=${id} --prompt="..."`,
+				description: 'to update details'
+			};
+	const expand: SuggestedAction[] =
+		!isSubtask && !hasSubtasks
+			? [
+					{
+						command: `taskgraph expand --id=${id}`,
+						description: 'to break down into subtasks'
+					}
+				]
+			: [];
+
+	switch (status) {
+		case 'in-progress':
+			return [
+				logProgress,
+				{
+					command: `taskgraph set-status --id=${id} --status=done`,
+					description: 'when it is finished'
+				},
+				...expand
+			];
+		case 'review':
+			return [
+				{
+					command: `taskgraph set-status --id=${id} --status=done`,
+					description: 'once the review passes'
+				},
+				{
+					command: `taskgraph set-status --id=${id} --status=in-progress`,
+					description: 'if it needs more work'
+				}
+			];
+		case 'done':
+		case 'completed':
+		case 'cancelled':
+			return [
+				{
+					command: 'taskgraph next',
+					description: 'to find the next task to work on'
+				}
+			];
+		case 'blocked':
+		case 'deferred':
+			return [
+				{
+					command: `taskgraph set-status --id=${id} --status=pending`,
+					description: 'when it is ready to pick up again'
+				},
+				logProgress
+			];
+		default:
+			return [
+				{
+					command: `taskgraph set-status --id=${id} --status=in-progress`,
+					description: 'to start working'
+				},
+				...expand,
+				logProgress
+			];
+	}
+}
+
 /**
  * Display suggested actions
  */
-export function displaySuggestedActions(taskId: string | number): void {
+export function displaySuggestedActions(
+	taskId: string | number,
+	status?: string,
+	hasSubtasks: boolean = false
+): void {
+	const lines = getSuggestedActions(taskId, status, hasSubtasks).map(
+		(action, index) =>
+			`${chalk.cyan(`${index + 1}.`)} Run ${chalk.yellow(action.command)} ${action.description}`
+	);
 	console.log(
-		boxen(
-			chalk.bold('Suggested Actions:') +
-				'\n\n' +
-				`${chalk.cyan('1.')} Run ${chalk.yellow(`taskgraph set-status --id=${taskId} --status=in-progress`)} to start working\n` +
-				`${chalk.cyan('2.')} Run ${chalk.yellow(`taskgraph expand --id=${taskId}`)} to break down into subtasks\n` +
-				`${chalk.cyan('3.')} Run ${chalk.yellow(`taskgraph update-task --id=${taskId} --prompt="..."`)} to update details`,
-			{
-				padding: 1,
-				margin: { top: 1 },
-				borderStyle: 'round',
-				borderColor: 'green',
-				width: process.stdout.columns * 0.95 || 100
-			}
-		)
+		boxen(chalk.bold('Suggested Actions:') + '\n\n' + lines.join('\n'), {
+			padding: 1,
+			margin: { top: 1 },
+			borderStyle: 'round',
+			borderColor: 'green',
+			width: getContentWidth()
+		})
 	);
 }
 
@@ -558,7 +631,7 @@ export function displayTaskDetails(
 		statusFilter,
 		showSuggestedActions = false,
 		customHeader,
-		headerColor = 'blue',
+		headerColor = BORDER_COLOR,
 		originalTaskId,
 		storageType
 	} = options || {};
@@ -617,6 +690,10 @@ export function displayTaskDetails(
 	if (showSuggestedActions) {
 		console.log(); // Empty line for spacing
 		const actionTaskId = originalTaskId || task.id;
-		displaySuggestedActions(actionTaskId);
+		displaySuggestedActions(
+			actionTaskId,
+			task.status,
+			Boolean(task.subtasks && task.subtasks.length > 0)
+		);
 	}
 }

@@ -274,7 +274,7 @@ export class SetStatusCommand extends Command {
 			const update = result.updatedTasks[0];
 			console.log(
 				boxen(
-					chalk.bold(`✅ Successfully updated task ${update.taskId}`) +
+					chalk.bold(`✓ Updated task ${update.taskId}`) +
 						'\n\n' +
 						`${theme.brand('From:')} ${this.getStatusDisplay(update.oldStatus)}\n` +
 						`${theme.brand('To:')}   ${this.getStatusDisplay(update.newStatus)}`,
@@ -290,9 +290,7 @@ export class SetStatusCommand extends Command {
 			// Multiple task updates
 			console.log(
 				boxen(
-					chalk.bold(
-						`✅ Successfully updated ${result.updatedTasks.length} tasks`
-					) +
+					chalk.bold(`✓ Updated ${result.updatedTasks.length} tasks`) +
 						'\n\n' +
 						result.updatedTasks
 							.map(

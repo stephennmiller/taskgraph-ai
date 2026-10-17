@@ -204,11 +204,11 @@ async function installFromTarball(tarballPath: string): Promise<boolean> {
 
 			if (code === 0) {
 				console.log(
-					chalk.green('✔') + chalk.green(' Update installed successfully')
+					chalk.green('✓') + chalk.green(' Update installed successfully')
 				);
 				resolve(true);
 			} else {
-				console.log(chalk.red('✖') + chalk.red(' Installation failed'));
+				console.log(chalk.red('✗') + chalk.red(' Installation failed'));
 				if (errorOutput) {
 					// Only show actual errors, not progress messages
 					const actualErrors = errorOutput
@@ -235,7 +235,7 @@ async function installFromTarball(tarballPath: string): Promise<boolean> {
 
 			// Cleanup tarball
 			fs.unlink(tarballPath, () => {});
-			console.log(chalk.red('✖') + chalk.red(' Installation failed'));
+			console.log(chalk.red('✗') + chalk.red(' Installation failed'));
 			console.log(chalk.red('Error:'), error.message);
 			resolve(false);
 		});

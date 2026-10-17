@@ -216,7 +216,7 @@ export class StartCommand extends Command {
 				? `Subtask #${targetTaskId} - ${task.title}`
 				: `Task #${task.id} - ${task.title}`;
 
-			console.log(chalk.green('🚀 Starting: ') + chalk.bold(workItemText));
+			console.log(chalk.green('Starting: ') + chalk.bold(workItemText));
 			console.log(chalk.gray('Launching Claude Code...'));
 			console.log(); // Empty line
 		}
@@ -272,7 +272,7 @@ export class StartCommand extends Command {
 	}): Promise<void> {
 		return new Promise((resolve, reject) => {
 			// Don't show the full command with args as it can be very long
-			console.log(chalk.green('🚀 Launching Claude Code...'));
+			console.log(chalk.green('Launching Claude Code…'));
 			console.log(); // Add space before Claude takes over
 
 			const childProcess = spawn(command.executable, command.args, {
@@ -390,7 +390,7 @@ export class StartCommand extends Command {
 			console.log(
 				boxen(
 					chalk.yellow(
-						'🔍 Dry run - claude-code would be launched with the above prompt'
+						'Dry run - claude-code would be launched with the above prompt'
 					),
 					{
 						padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -414,7 +414,7 @@ export class StartCommand extends Command {
 				// Post-execution message (shown after Claude Code exits)
 				console.log(
 					boxen(
-						chalk.green.bold('🎉 Task Session Complete!') +
+						chalk.green.bold('✓ Task session complete') +
 							'\n\n' +
 							theme.text(workItemText) +
 							'\n\n' +
@@ -438,7 +438,7 @@ export class StartCommand extends Command {
 				console.log(
 					boxen(
 						chalk.red(
-							'❌ Failed to launch claude-code' +
+							'✗ Failed to launch claude-code' +
 								(result.error ? `\nError: ${result.error}` : '')
 						),
 						{

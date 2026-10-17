@@ -8,6 +8,8 @@
  * It imports functionality from the modules directory and provides a CLI.
  */
 
+// Must stay first: disables color before chalk loads when NO_COLOR is set
+import './modules/no-color.js';
 import { join } from 'node:path';
 import { AuthManager, findProjectRoot } from '@tm/core';
 import { setSuppressConfigWarnings } from './modules/config-manager.js';

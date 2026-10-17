@@ -120,7 +120,7 @@ export class AuthCountdownTimer {
  */
 export function displayMFARequired(): void {
 	console.log(
-		chalk.yellow('\n⚠️  Multi-factor authentication is enabled on your account')
+		chalk.yellow('\n⚠ Multi-factor authentication is enabled on your account')
 	);
 	console.log(
 		theme.text('  Please enter the 6-digit code from your authenticator app\n')

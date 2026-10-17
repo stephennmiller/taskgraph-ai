@@ -1,27 +1,27 @@
 /**
  * @fileoverview TaskGraph terminal theme
  *
- * Brand colors are truecolor hex; chalk downsamples them on 256- and 16-color
- * terminals (the primary and accent blues fall back to ANSI cyan).
- * Semantic colors (success, warning, error, muted) stay on the terminal's own
- * ANSI palette so they follow whatever theme the user has configured.
+ * Text uses the terminal's own ANSI palette, so it follows whatever theme the
+ * user has configured. No single fixed color reaches 4.5:1 contrast on both
+ * dark and light backgrounds, so brand hex colors are reserved for non-text
+ * elements (box borders) and the large banner, where 3:1 is enough.
  *
- * The brand blues keep at least 3:1 contrast on both dark (#0D1117, #1E1E1E)
- * and light (#FFFFFF, #FDF6E3) terminal backgrounds.
+ * Brand blues and their contrast on #0D1117 / #1E1E1E / #FFFFFF / #FDF6E3:
+ *   accent  #0096C7  5.6 / 4.9 / 3.4 / 3.1
+ *   primary #0088CC  4.9 / 4.3 / 3.9 / 3.6
+ *   deep    #0080C0  4.4 / 3.8 / 4.3 / 4.0
+ * All three fall back to ANSI cyan on 16-color terminals.
  */
 
 import chalk from 'chalk';
 
 export const BRAND_COLORS = {
-	/** Brand text: headings, highlights, in-progress work */
 	primary: '#0088CC',
-	/** Box borders and decorative accents */
 	accent: '#0096C7',
-	/** Deepest stop of the banner gradient */
-	deep: '#0077B6'
+	deep: '#0080C0'
 } as const;
 
-/** Gradient for the ASCII banner */
+/** Gradient for the ASCII banner (large text, 3:1 minimum) */
 export const BANNER_GRADIENT = [
 	BRAND_COLORS.accent,
 	BRAND_COLORS.primary,
@@ -33,13 +33,13 @@ export const BORDER_COLOR = BRAND_COLORS.accent;
 
 export const theme = {
 	/** Brand-colored text */
-	brand: chalk.hex(BRAND_COLORS.primary),
+	brand: chalk.cyan,
 	/** Section headings and box titles */
-	heading: chalk.hex(BRAND_COLORS.primary).bold,
+	heading: chalk.cyan.bold,
 	/** Secondary labels such as tags and skills */
-	accent: chalk.hex(BRAND_COLORS.accent),
+	accent: chalk.cyan,
 	/** In-progress / actively worked status */
-	active: chalk.hex(BRAND_COLORS.primary),
+	active: chalk.cyan,
 	/**
 	 * Body text in the terminal's default foreground. Replaces chalk.white,
 	 * which many light themes render as pale gray.

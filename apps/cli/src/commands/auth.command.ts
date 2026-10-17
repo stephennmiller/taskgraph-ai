@@ -219,7 +219,7 @@ Examples:
 	 * Display authentication status
 	 */
 	private async displayStatus(): Promise<AuthResult> {
-		console.log(chalk.cyan('\n🔐 Authentication Status\n'));
+		console.log(chalk.cyan('\nAuthentication status\n'));
 
 		// Check if user has valid session
 		const hasSession = await this.authManager.hasValidSession();
@@ -446,14 +446,14 @@ Examples:
 						}
 					} else {
 						console.log(
-							chalk.yellow('⚠️ Context setup was skipped or encountered issues')
+							chalk.yellow('⚠ Context setup was skipped or encountered issues')
 						);
 						console.log(
 							chalk.gray('  You can set up context later with "tm context"')
 						);
 					}
 				} catch (contextError) {
-					console.log(chalk.yellow('⚠️ Context setup encountered an error'));
+					console.log(chalk.yellow('⚠ Context setup encountered an error'));
 					console.log(
 						chalk.gray('  You can set up context later with "tm context"')
 					);
@@ -588,14 +588,14 @@ Examples:
 						}
 					} else {
 						console.log(
-							chalk.yellow('⚠️ Context setup was skipped or encountered issues')
+							chalk.yellow('⚠ Context setup was skipped or encountered issues')
 						);
 						console.log(
 							chalk.gray('  You can set up context later with "tm context"')
 						);
 					}
 				} catch (contextError) {
-					console.log(chalk.yellow('⚠️ Context setup encountered an error'));
+					console.log(chalk.yellow('⚠ Context setup encountered an error'));
 					console.log(
 						chalk.gray('  You can set up context later with "tm context"')
 					);

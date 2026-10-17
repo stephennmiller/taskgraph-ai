@@ -166,7 +166,7 @@ export class ContextCommand extends Command {
 		const context = this.authManager.getContext();
 
 		if (showHeader) {
-			console.log(chalk.cyan('\n🌍 Workspace Context\n'));
+			console.log(chalk.cyan('\nWorkspace context\n'));
 		}
 
 		if (context && (context.orgId || context.briefId)) {

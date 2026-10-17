@@ -38,7 +38,7 @@ export function displayRecommendedNextTask(
 					padding: 1,
 					borderStyle: 'round',
 					borderColor: 'yellow',
-					title: '⚠️ NO TASKS AVAILABLE ⚠️',
+					title: 'No tasks available',
 					titleAlignment: 'center'
 				})
 			);
@@ -58,7 +58,7 @@ export function displayRecommendedNextTask(
 
 	// Task header with ID and title
 	content.push(
-		`🔥 ${theme.heading('Next Task to Work On:')} ${chalk.yellow(`#${task.id}`)}${theme.heading(` - ${task.title}`)}`
+		`${theme.heading('Next task:')} ${chalk.yellow(`#${task.id}`)}${theme.heading(` - ${task.title}`)}`
 	);
 	content.push('');
 
@@ -118,7 +118,7 @@ export function displayRecommendedNextTask(
 			margin: { top: 1, bottom: 1 },
 			borderStyle: 'round',
 			borderColor: BORDER_COLOR,
-			title: theme.heading('⚡ RECOMMENDED NEXT TASK ⚡'),
+			title: theme.heading('Next task'),
 			titleAlignment: 'center',
 			width: getBoxWidth(0.97),
 			fullscreen: false

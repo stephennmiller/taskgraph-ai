@@ -50,7 +50,7 @@ export function buildPromptChoices(
 	const noChangeOption: ModelChoice | null =
 		currentModel?.modelId && currentModel?.provider
 			? {
-					name: `✔ No change to current ${role} model (${currentModel.provider}/${currentModel.modelId})`,
+					name: `✓ No change to current ${role} model (${currentModel.provider}/${currentModel.modelId})`,
 					value: '__NO_CHANGE__',
 					short: 'No change'
 				}
@@ -106,7 +106,7 @@ export function buildPromptChoices(
 		choices = [
 			...systemOptions,
 			new Separator('\n── Claude Code Models ──'),
-			{ name: '⚪ None (disable)', value: null, short: 'None' },
+			{ name: '○ None (disable)', value: null, short: 'None' },
 			...roleChoices
 		];
 		const noneOptionIndex = systemLength + 1;
@@ -179,9 +179,9 @@ export function createSearchSource(
  * Display introductory message for interactive setup
  */
 export function displaySetupIntro(): void {
-	console.log(chalk.cyan('\n🎯 Interactive Model Setup'));
+	console.log(chalk.cyan('\nInteractive model setup'));
 	console.log(chalk.gray('━'.repeat(50)));
-	console.log(chalk.yellow('💡 Navigation tips:'));
+	console.log(chalk.yellow('Navigation tips:'));
 	console.log(chalk.gray('   • Type to search and filter options'));
 	console.log(chalk.gray('   • Use ↑↓ arrow keys to navigate results'));
 	console.log(chalk.gray('   • Press Enter to select\n'));

@@ -105,7 +105,7 @@ export async function ensureAuthenticated(
 		options.message || `You're not logged in. Log in to ${actionName}?`;
 
 	console.log('');
-	console.log(chalk.yellow('🔒 Authentication Required'));
+	console.log(chalk.yellow('Authentication required'));
 	console.log('');
 
 	// Skip confirmation if requested

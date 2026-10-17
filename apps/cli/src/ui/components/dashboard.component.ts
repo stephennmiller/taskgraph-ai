@@ -64,6 +64,21 @@ export interface StatusBreakdown {
 }
 
 /**
+ * Progress bar segment per status: a distinct character and color, so the
+ * bar can be read without relying on color. The counts line shows the same
+ * characters as a legend.
+ */
+const BAR_SEGMENTS = {
+	done: chalk.green('█'),
+	cancelled: chalk.gray('─'),
+	deferred: chalk.gray('─'),
+	inProgress: theme.active('▓'),
+	review: chalk.magenta('▒'),
+	pending: chalk.yellow('░'),
+	blocked: chalk.red('!')
+};
+
+/**
  * Create a progress bar with color-coded status segments
  */
 function createProgressBar(
@@ -75,91 +90,41 @@ function createProgressBar(
 	if (!statusBreakdown) {
 		const filled = Math.round((completionPercentage / 100) * width);
 		const empty = width - filled;
-		return chalk.green('█').repeat(filled) + chalk.gray('░').repeat(empty);
+		return BAR_SEGMENTS.done.repeat(filled) + chalk.gray('░').repeat(empty);
 	}
 
-	// Build the bar with different colored sections
+	// Build the bar from one segment per status. Each status has its own
+	// character as well as its own color, so the bar reads without color.
 	// Order matches the status display: Done, Cancelled, Deferred, In Progress, Review, Pending, Blocked
 	let bar = '';
 	let charsUsed = 0;
 
-	// 1. Green filled blocks for done tasks only
 	// Note: completionPercentage includes cancelled, but we show them separately in the bar
-	if (statusBreakdown.done && statusBreakdown.done > 0) {
-		const doneChars = Math.round((statusBreakdown.done / 100) * width);
-		if (doneChars > 0) {
-			bar += chalk.green('█').repeat(doneChars);
-			charsUsed += doneChars;
-		}
-	}
+	const segments: Array<[number | undefined, string]> = [
+		[statusBreakdown.done, BAR_SEGMENTS.done],
+		[statusBreakdown.cancelled, BAR_SEGMENTS.cancelled],
+		[statusBreakdown.deferred, BAR_SEGMENTS.deferred],
+		[statusBreakdown['in-progress'], BAR_SEGMENTS.inProgress],
+		[statusBreakdown.review, BAR_SEGMENTS.review],
+		[statusBreakdown.pending, BAR_SEGMENTS.pending],
+		[statusBreakdown.blocked, BAR_SEGMENTS.blocked]
+	];
 
-	// 2. Gray filled blocks for cancelled (terminal complete, but visually distinct)
-	if (statusBreakdown.cancelled && charsUsed < width) {
-		const cancelledChars = Math.round(
-			(statusBreakdown.cancelled / 100) * width
+	for (const [percentage, glyph] of segments) {
+		if (!percentage || charsUsed >= width) continue;
+		const chars = Math.min(
+			Math.round((percentage / 100) * width),
+			width - charsUsed
 		);
-		const actualChars = Math.min(cancelledChars, width - charsUsed);
-		if (actualChars > 0) {
-			bar += chalk.gray('█').repeat(actualChars);
-			charsUsed += actualChars;
+		if (chars > 0) {
+			bar += glyph.repeat(chars);
+			charsUsed += chars;
 		}
 	}
 
-	// 3. Gray filled blocks for deferred (won't be done now)
-	if (statusBreakdown.deferred && charsUsed < width) {
-		const deferredChars = Math.round((statusBreakdown.deferred / 100) * width);
-		const actualChars = Math.min(deferredChars, width - charsUsed);
-		if (actualChars > 0) {
-			bar += chalk.gray('█').repeat(actualChars);
-			charsUsed += actualChars;
-		}
-	}
-
-	// 4. Blue filled blocks for in-progress (actively working)
-	if (statusBreakdown['in-progress'] && charsUsed < width) {
-		const inProgressChars = Math.round(
-			(statusBreakdown['in-progress'] / 100) * width
-		);
-		const actualChars = Math.min(inProgressChars, width - charsUsed);
-		if (actualChars > 0) {
-			bar += theme.brand('█').repeat(actualChars);
-			charsUsed += actualChars;
-		}
-	}
-
-	// 5. Magenta empty blocks for review (almost done)
-	if (statusBreakdown.review && charsUsed < width) {
-		const reviewChars = Math.round((statusBreakdown.review / 100) * width);
-		const actualChars = Math.min(reviewChars, width - charsUsed);
-		if (actualChars > 0) {
-			bar += chalk.magenta('░').repeat(actualChars);
-			charsUsed += actualChars;
-		}
-	}
-
-	// 6. Yellow empty blocks for pending (ready to start)
-	if (statusBreakdown.pending && charsUsed < width) {
-		const pendingChars = Math.round((statusBreakdown.pending / 100) * width);
-		const actualChars = Math.min(pendingChars, width - charsUsed);
-		if (actualChars > 0) {
-			bar += chalk.yellow('░').repeat(actualChars);
-			charsUsed += actualChars;
-		}
-	}
-
-	// 7. Red empty blocks for blocked (can't start yet)
-	if (statusBreakdown.blocked && charsUsed < width) {
-		const blockedChars = Math.round((statusBreakdown.blocked / 100) * width);
-		const actualChars = Math.min(blockedChars, width - charsUsed);
-		if (actualChars > 0) {
-			bar += chalk.red('░').repeat(actualChars);
-			charsUsed += actualChars;
-		}
-	}
-
-	// Fill any remaining space with gray empty yellow blocks
+	// Fill any rounding remainder as pending
 	if (charsUsed < width) {
-		bar += chalk.yellow('░').repeat(width - charsUsed);
+		bar += BAR_SEGMENTS.pending.repeat(width - charsUsed);
 	}
 
 	return bar;
@@ -397,32 +362,44 @@ function calculateStatusBreakdown(stats: TaskStatistics): StatusBreakdown {
  */
 function formatStatusLine(
 	stats: TaskStatistics,
-	isSubtask: boolean = false
+	isSubtask: boolean = false,
+	compact: boolean = false
 ): string {
 	const parts: string[] = [];
 
 	// Order: Done, Cancelled, Deferred, In Progress, Review, Pending, Blocked
 	if (isSubtask) {
 		parts.push(
-			`Completed: ${chalk.green(`${stats.completedCount}/${stats.total}`)}`
+			`${BAR_SEGMENTS.done} Completed: ${chalk.green(`${stats.completedCount}/${stats.total}`)}`
 		);
 	} else {
-		parts.push(`Done: ${chalk.green(stats.done)}`);
+		parts.push(`${BAR_SEGMENTS.done} Done: ${chalk.green(stats.done)}`);
 	}
 
-	parts.push(`Cancelled: ${chalk.gray(stats.cancelled)}`);
-	parts.push(`Deferred: ${chalk.gray(stats.deferred)}`);
+	parts.push(
+		`${BAR_SEGMENTS.cancelled} Cancelled: ${chalk.gray(stats.cancelled)}`
+	);
+	parts.push(
+		`${BAR_SEGMENTS.deferred} Deferred: ${chalk.gray(stats.deferred)}`
+	);
 
 	// Add line break for second row
 	const firstLine = parts.join('  ');
 	parts.length = 0;
 
-	parts.push(`In Progress: ${theme.brand(stats.inProgress)}`);
-	parts.push(`Review: ${chalk.magenta(stats.review || 0)}`);
-	parts.push(`Pending: ${chalk.yellow(stats.pending)}`);
-	parts.push(`Blocked: ${chalk.red(stats.blocked)}`);
+	parts.push(
+		`${BAR_SEGMENTS.inProgress} In Progress: ${theme.active(stats.inProgress)}`
+	);
+	parts.push(
+		`${BAR_SEGMENTS.review} Review: ${chalk.magenta(stats.review || 0)}`
+	);
+	parts.push(`${BAR_SEGMENTS.pending} Pending: ${chalk.yellow(stats.pending)}`);
+	parts.push(`${BAR_SEGMENTS.blocked} Blocked: ${chalk.red(stats.blocked)}`);
 
-	const secondLine = parts.join('  ');
+	// Narrow boxes get two statuses per line so nothing wraps mid-label
+	const secondLine = compact
+		? parts.slice(0, 2).join('  ') + '\n' + parts.slice(2).join('  ')
+		: parts.join('  ');
 
 	return firstLine + '\n' + secondLine;
 }
@@ -433,21 +410,23 @@ function formatStatusLine(
 export function displayProjectDashboard(
 	taskStats: TaskStatistics,
 	subtaskStats: TaskStatistics,
-	priorityBreakdown: Record<TaskPriority, number>
+	priorityBreakdown: Record<TaskPriority, number>,
+	compact: boolean = false
 ): string {
 	// Calculate status breakdowns using the helper function
 	const taskStatusBreakdown = calculateStatusBreakdown(taskStats);
 	const subtaskStatusBreakdown = calculateStatusBreakdown(subtaskStats);
 
 	// Create progress bars with the breakdowns
+	const barWidth = compact ? 16 : 30;
 	const taskProgressBar = createProgressBar(
 		taskStats.completionPercentage,
-		30,
+		barWidth,
 		taskStatusBreakdown
 	);
 	const subtaskProgressBar = createProgressBar(
 		subtaskStats.completionPercentage,
-		30,
+		barWidth,
 		subtaskStatusBreakdown
 	);
 
@@ -458,10 +437,10 @@ export function displayProjectDashboard(
 		chalk.bold('Project Dashboard') +
 		'\n' +
 		`Tasks Progress: ${taskProgressBar} ${chalk.yellow(taskPercentage)}\n` +
-		formatStatusLine(taskStats, false) +
+		formatStatusLine(taskStats, false, compact) +
 		'\n\n' +
 		`Subtasks Progress: ${subtaskProgressBar} ${chalk.cyan(subtaskPercentage)}\n` +
-		formatStatusLine(subtaskStats, true) +
+		formatStatusLine(subtaskStats, true, compact) +
 		'\n\n' +
 		chalk.cyan.bold('Priority Breakdown:') +
 		'\n' +
@@ -495,7 +474,7 @@ export function displayDependencyDashboard(
 				: chalk.gray('None')
 		}\n` +
 		`${theme.brand('•')} ${theme.text('Avg dependencies per task:')} ${depStats.avgDependenciesPerTask.toFixed(1)}\n\n` +
-		chalk.cyan.bold('Next Task to Work On:') +
+		chalk.cyan.bold('Next Task:') +
 		'\n' +
 		`ID: ${nextTask ? chalk.cyan(String(nextTask.id)) : chalk.gray('N/A')} - ${
 			nextTask ? chalk.bold(nextTask.title) : chalk.yellow('No task available')
@@ -520,27 +499,34 @@ export function displayDashboards(
 	depStats: DependencyStatistics,
 	nextTask?: NextTaskInfo
 ): void {
+	// Get terminal width
+	const terminalWidth = process.stdout.columns || 80;
+	// Each side-by-side box needs ~58 columns for its content to fit unwrapped
+	const minDashboardWidth = 58;
+	const minDependencyWidth = 58;
+	const totalMinWidth = minDashboardWidth + minDependencyWidth + 4;
+	const sideBySide = terminalWidth >= totalMinWidth;
+	const halfWidth = Math.floor(terminalWidth / 2);
+	const boxContentWidth = halfWidth - 4;
+
+	// Text width inside a box (minus 2 border and 6 padding columns). The full
+	// progress bar and status line need about 60 columns; use the compact form below that.
+	const innerWidth = (sideBySide ? boxContentWidth : terminalWidth) - 8;
+	const compact = innerWidth < 60;
+
 	const projectDashboardContent = displayProjectDashboard(
 		taskStats,
 		subtaskStats,
-		priorityBreakdown
+		priorityBreakdown,
+		compact
 	);
 	const dependencyDashboardContent = displayDependencyDashboard(
 		depStats,
 		nextTask
 	);
 
-	// Get terminal width
-	const terminalWidth = process.stdout.columns || 80;
-	const minDashboardWidth = 50;
-	const minDependencyWidth = 50;
-	const totalMinWidth = minDashboardWidth + minDependencyWidth + 4;
-
 	// If terminal is wide enough, show side by side
-	if (terminalWidth >= totalMinWidth) {
-		const halfWidth = Math.floor(terminalWidth / 2);
-		const boxContentWidth = halfWidth - 4;
-
+	if (sideBySide) {
 		const dashboardBox = boxen(projectDashboardContent, {
 			padding: 1,
 			borderColor: BORDER_COLOR,
