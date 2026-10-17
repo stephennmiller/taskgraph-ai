@@ -399,6 +399,9 @@ describe('Unified AI Services', () => {
 				fakeProjectRoot
 			);
 			expect(mockAnthropicProvider.generateText).toHaveBeenCalledTimes(1);
+			expect(mockAnthropicProvider.generateText).toHaveBeenCalledWith(
+				expect.objectContaining({ role: 'main' })
+			);
 			expect(mockPerplexityProvider.generateText).not.toHaveBeenCalled();
 		});
 

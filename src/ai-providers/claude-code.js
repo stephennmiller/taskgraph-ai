@@ -23,6 +23,42 @@ import { BaseAIProvider } from './base-provider.js';
 let _claudeCliChecked = false;
 let _claudeCliAvailable = null;
 
+// Tools each role may use. Everything else is denied (deny by default).
+// Research reaches the web but never the filesystem or a shell, so a hostile
+// page cannot read or change local files. Other roles can read the repo for
+// codebase analysis but cannot reach the web or write anything.
+const RESEARCH_TOOLS = ['WebSearch', 'WebFetch'];
+const REPO_READ_TOOLS = ['Read', 'Grep', 'Glob'];
+const DEFAULT_RESEARCH_MAX_TURNS = 8;
+
+/**
+ * Settings that confine a Claude Code session to the tools its role needs.
+ * Applied after user config so config cannot widen access.
+ * @param {string} [role] - 'main', 'research' or 'fallback'
+ * @param {object} settings - Settings from config, used for maxTurns
+ * @returns {object} SDK settings
+ */
+function getRoleRestrictions(role, settings) {
+	const isResearch = role === 'research';
+	const tools = isResearch ? RESEARCH_TOOLS : REPO_READ_TOOLS;
+
+	return {
+		tools: [...tools],
+		allowedTools: [...tools],
+		// Anything not listed is denied instead of prompting
+		permissionMode: 'dontAsk',
+		permissionPrompts: 'none',
+		// Ignore MCP servers from user settings and claude.ai connectors
+		strictMcpConfig: true,
+		mcpServers: {},
+		...(isResearch && {
+			// Do not inherit user hooks, CLAUDE.md or permission rules
+			settingSources: [],
+			maxTurns: settings.maxTurns ?? DEFAULT_RESEARCH_MAX_TURNS
+		})
+	};
+}
+
 /**
  * Provider for Claude Code CLI integration via AI SDK
  *
@@ -97,6 +133,7 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 	 * Creates a Claude Code client instance
 	 * @param {object} params - Client parameters
 	 * @param {string} [params.commandName] - Command name for settings lookup
+	 * @param {string} [params.role] - AI role ('main', 'research', 'fallback') used to restrict tools
 	 * @returns {Function} Claude Code provider function
 	 * @throws {Error} If Claude Code CLI is not available or client creation fails
 	 */
@@ -130,7 +167,8 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 						},
 						// Enable loading of CLAUDE.md and settings.json files
 						settingSources: ['user', 'project', 'local'],
-						...settings
+						...settings,
+						...getRoleRestrictions(params.role, settings)
 					}
 				});
 			} finally {

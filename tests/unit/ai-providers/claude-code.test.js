@@ -177,8 +177,90 @@ describe('ClaudeCodeProvider', () => {
 						preset: 'claude_code'
 					},
 					// Restores pre-2.0 behavior: enables loading of CLAUDE.md and settings.json
-					settingSources: ['user', 'project', 'local']
+					settingSources: ['user', 'project', 'local'],
+					// Main/fallback roles may only read the repo (codebase analysis)
+					tools: ['Read', 'Grep', 'Glob'],
+					allowedTools: ['Read', 'Grep', 'Glob'],
+					permissionMode: 'dontAsk',
+					permissionPrompts: 'none',
+					strictMcpConfig: true,
+					mcpServers: {}
 				}
+			});
+		});
+
+		describe('tool restrictions per role', () => {
+			const lastSettings = async () => {
+				const { createClaudeCode } = await import(
+					'ai-sdk-provider-claude-code'
+				);
+				return createClaudeCode.mock.calls.at(-1)[0].defaultSettings;
+			};
+
+			it.each([['main'], ['fallback'], [undefined]])(
+				'gives the %s role read-only repo tools and no web, shell or MCP access',
+				async (role) => {
+					provider.getClient({ role });
+
+					const settings = await lastSettings();
+					expect(settings.tools).toEqual(['Read', 'Grep', 'Glob']);
+					expect(settings.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
+					expect(settings.permissionMode).toBe('dontAsk');
+					expect(settings.permissionPrompts).toBe('none');
+					expect(settings.strictMcpConfig).toBe(true);
+					expect(settings.mcpServers).toEqual({});
+				}
+			);
+
+			it('gives the research role only WebSearch and WebFetch', async () => {
+				provider.getClient({ role: 'research' });
+
+				const settings = await lastSettings();
+				expect(settings.tools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.allowedTools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.permissionMode).toBe('dontAsk');
+				expect(settings.strictMcpConfig).toBe(true);
+				expect(settings.mcpServers).toEqual({});
+			});
+
+			it('does not load user, project or local settings for the research role', async () => {
+				provider.getClient({ role: 'research' });
+
+				const settings = await lastSettings();
+				expect(settings.settingSources).toEqual([]);
+			});
+
+			it('caps research turns unless the config sets maxTurns', async () => {
+				const { getClaudeCodeSettingsForCommand } = await import(
+					'../../../scripts/modules/config-manager.js'
+				);
+
+				provider.getClient({ role: 'research' });
+				expect((await lastSettings()).maxTurns).toBe(8);
+
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({ maxTurns: 3 });
+				provider.getClient({ role: 'research' });
+				expect((await lastSettings()).maxTurns).toBe(3);
+			});
+
+			it('does not let config settings widen the allowed tools', async () => {
+				const { getClaudeCodeSettingsForCommand } = await import(
+					'../../../scripts/modules/config-manager.js'
+				);
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
+					allowedTools: ['Bash', 'Write'],
+					tools: ['Bash'],
+					permissionMode: 'bypassPermissions',
+					mcpServers: { evil: { command: 'x' } }
+				});
+
+				provider.getClient({ role: 'research' });
+
+				const settings = await lastSettings();
+				expect(settings.tools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.allowedTools).toEqual(['WebSearch', 'WebFetch']);
+				expect(settings.permissionMode).toBe('dontAsk');
+				expect(settings.mcpServers).toEqual({});
 			});
 		});
 
