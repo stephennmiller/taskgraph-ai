@@ -88,17 +88,51 @@ function readJson(path) {
 	return { data: JSON.parse(text), indent };
 }
 
-function writeJson(path, data, indent) {
-	writeFileSync(path, JSON.stringify(data, null, indent) + '\n', 'utf8');
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Edits only the version values in the file's text. Re-serializing with
+// JSON.stringify would expand short arrays (e.g. "workspaces"), which fails
+// the repo's biome format check, so everything else is left byte-for-byte.
+function setVersionInText(text, version, file) {
+	const indent = /^[ \t]+/m.exec(text)?.[0] ?? '\t';
+	const topLevel = new RegExp(
+		`^(${escapeRegExp(indent)}"version"\\s*:\\s*")[^"]*(")`,
+		'm'
+	);
+	if (!topLevel.test(text)) {
+		throw new Error(`${file}: no top-level "version" found to update`);
+	}
+	let updated = text.replace(topLevel, (_, a, b) => `${a}${version}${b}`);
+
+	const hasRootPackage = Boolean(JSON.parse(text).packages?.['']);
+	if (hasRootPackage) {
+		const rootEntry =
+			/("packages"\s*:\s*\{\s*""\s*:\s*\{[^{}]*?"version"\s*:\s*")[^"]*(")/;
+		if (!rootEntry.test(updated)) {
+			throw new Error(`${file}: no packages[""] "version" found to update`);
+		}
+		updated = updated.replace(rootEntry, (_, a, b) => `${a}${version}${b}`);
+	}
+
+	const parsed = JSON.parse(updated);
+	const rootVersion = parsed.packages?.['']?.version;
+	if (
+		parsed.version !== version ||
+		(hasRootPackage && rootVersion !== version)
+	) {
+		throw new Error(`${file}: version update did not apply cleanly`);
+	}
+	return updated;
 }
 
 export function applyVersion(rootDir, version) {
 	for (const file of ['package.json', 'manifest.json', 'package-lock.json']) {
 		const path = join(rootDir, file);
-		const { data, indent } = readJson(path);
-		data.version = version;
-		if (data.packages?.['']) data.packages[''].version = version;
-		writeJson(path, data, indent);
+		writeFileSync(
+			path,
+			setVersionInText(readFileSync(path, 'utf8'), version, file),
+			'utf8'
+		);
 	}
 }
 
