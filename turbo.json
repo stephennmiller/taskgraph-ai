@@ -1,9 +1,13 @@
 {
 	"$schema": "https://turbo.build/schema.json",
-	"extends": ["//"],
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
+			"outputs": ["dist/**"],
+			"outputLogs": "new-only",
+			"env": ["NODE_ENV", "TM_PUBLIC_*"]
+		},
+		"//#build": {
 			"outputs": ["dist/**"],
 			"outputLogs": "new-only",
 			"env": ["NODE_ENV", "TM_PUBLIC_*"]
@@ -47,6 +51,11 @@
 				"!{packages,apps}/**/dist/**",
 				"!{packages,apps}/**/node_modules/**"
 			],
+			"outputLogs": "new-only",
+			"cache": false
+		},
+		"//#test": {
+			"dependsOn": ["//#build"],
 			"outputLogs": "new-only",
 			"cache": false
 		},
