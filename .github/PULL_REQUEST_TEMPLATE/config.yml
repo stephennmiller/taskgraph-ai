@@ -6,6 +6,3 @@ contact_links:
   - name: ✨ New Feature
     url: https://github.com/stephennmiller/taskgraph-ai/compare/main...HEAD?template=feature.md
     about: Add a new feature to Task Master
-  - name: 🔌 New Integration
-    url: https://github.com/stephennmiller/taskgraph-ai/compare/main...HEAD?template=integration.md
-    about: Add support for a new tool, IDE, or platform
