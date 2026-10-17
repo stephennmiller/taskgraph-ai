@@ -1,0 +1,77 @@
+name: Workflow Lint
+
+# Lints the workflows themselves: actionlint (syntax, expression and shellcheck
+# errors) and zizmor (injection, excessive permissions, credential persistence,
+# unpinned refs). ADVISORY and path-filtered, so it is deliberately NOT a
+# required check -- a required check behind a path filter would sit Pending
+# forever on every PR that does not touch .github/.
+#
+# Existing workflows predate this check and carry findings (floating action
+# tags, missing persist-credentials: false, shellcheck notes). Annotations on
+# those are expected until they are cleaned up separately; this workflow's job
+# is to keep NEW workflow changes honest.
+#
+# The repo has no GitHub Advanced Security, so zizmor reports via annotations
+# (advanced-security: false) instead of uploading SARIF.
+#
+# zizmor's own version rides on the pinned action (it carries hash-locked
+# wheels), so Dependabot bumping the `uses:` SHA is the only upgrade path.
+# Known gap: ACTIONLINT_VERSION and its sha256 are bumped by hand (Dependabot
+# only tracks the `uses:` pins). Bump the sha256 from the release's
+# actionlint_<version>_checksums.txt.
+on:
+  pull_request:
+    paths:
+      - '.github/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  ACTIONLINT_VERSION: '1.7.12'
+  ACTIONLINT_SHA256: '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' # actionlint_1.7.12_linux_amd64.tar.gz
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint (sha256-verified)
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+          echo "${ACTIONLINT_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" actionlint
+
+      - name: Run actionlint
+        run: '"$RUNNER_TEMP/actionlint" -color'
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@f9597c869b2e67095f9b527070297a13a6efe928 # v0.7.0
+        with:
+          inputs: .github
+          advanced-security: false
+          annotations: true

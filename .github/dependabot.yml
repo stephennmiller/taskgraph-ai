@@ -1,0 +1,44 @@
+# Dependabot configuration.
+#
+# Version updates for GitHub Actions and npm. Both are monthly and grouped into
+# one PR each: the release workflow cuts a release from commit messages on merge,
+# so a stream of single-package bump PRs is noise.
+#
+# The `ci` and `chore` prefixes keep these out of the release: neither type
+# bumps the version (see the Versioning section of CLAUDE.md). A dependency
+# bump that users must receive is promoted to `fix:` by hand.
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    # Skip releases younger than 7 days: a freshly published (possibly
+    # compromised) version is not proposed until it has had time to be caught.
+    # Security updates ignore cooldown.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: 'ci'
+
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      # Minor/patch only: majors (the AI SDK 7 move, for example) need a human
+      # decision and their own PR.
+      npm-minor-patch:
+        update-types:
+          - 'minor'
+          - 'patch'
+    commit-message:
+      prefix: 'chore'
+      include: 'scope'
