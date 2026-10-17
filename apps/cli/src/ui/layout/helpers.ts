@@ -24,7 +24,8 @@ export function getBoxWidth(
  * output is not a terminal (for example, piped to a file).
  */
 export function getContentWidth(): number {
-	return Math.floor((process.stdout.columns || 105) * 0.95);
+	const columns = process.stdout.columns;
+	return columns ? Math.floor(columns * 0.95) : 100;
 }
 
 export interface ColumnSpec {

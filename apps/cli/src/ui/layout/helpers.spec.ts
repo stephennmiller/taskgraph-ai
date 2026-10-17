@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
-import { getBoxWidth, planColumns } from './helpers.js';
+import { getBoxWidth, getContentWidth, planColumns } from './helpers.js';
 
 describe('Layout Helpers', () => {
 	describe('getBoxWidth', () => {
@@ -196,6 +196,34 @@ describe('Layout Helpers', () => {
 				'deps',
 				'complexity'
 			]);
+		});
+	});
+	describe('getContentWidth', () => {
+		const setColumns = (value: number | undefined) =>
+			Object.defineProperty(process.stdout, 'columns', {
+				value,
+				configurable: true,
+				writable: true
+			});
+		let original: PropertyDescriptor | undefined;
+
+		beforeEach(() => {
+			original = Object.getOwnPropertyDescriptor(process.stdout, 'columns');
+		});
+
+		afterEach(() => {
+			if (original) Object.defineProperty(process.stdout, 'columns', original);
+			else delete (process.stdout as { columns?: number }).columns;
+		});
+
+		it('uses 95% of the terminal width', () => {
+			setColumns(120);
+			expect(getContentWidth()).toBe(114);
+		});
+
+		it('falls back to 100 columns when output is not a terminal', () => {
+			setColumns(undefined);
+			expect(getContentWidth()).toBe(100);
 		});
 	});
 });
