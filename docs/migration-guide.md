@@ -228,7 +228,7 @@ If you encounter issues during migration:
 1. **Check the logs:** Add `--debug` flag for detailed output
 2. **Backup first:** Always use `--backup` option for safety
 3. **Test with dry-run:** Use `--dry-run` to preview changes
-4. **Ask for help:** Use our Discord community or GitHub issues
+4. **Ask for help:** Open a GitHub issue
 
 ---
 

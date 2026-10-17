@@ -12,13 +12,11 @@
 </p>
 
 <p align="center">
-  <a href="https://discord.gg/taskmasterai" target="_blank"><img src="https://dcbadge.limes.pink/api/server/https://discord.gg/taskmasterai?style=flat" alt="Discord"></a> |
   <a href="./docs/README.md">Docs</a>
 </p>
 
 <p align="center">
   <a href="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml"><img src="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/stephennmiller/taskgraph-ai/stargazers"><img src="https://img.shields.io/github/stars/stephennmiller/taskgraph-ai?style=social" alt="GitHub stars"></a>
   <a href="https://badge.fury.io/js/taskgraph-ai"><img src="https://badge.fury.io/js/taskgraph-ai.svg" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg" alt="License"></a>
 </p>
@@ -333,10 +331,6 @@ node scripts/init.js
 <a href="https://github.com/stephennmiller/taskgraph-ai/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=stephennmiller/taskgraph-ai" alt="Task Master project contributors" />
 </a>
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=stephennmiller/taskgraph-ai&type=Timeline)](https://www.star-history.com/#stephennmiller/taskgraph-ai&Timeline)
 
 ## Licensing
 
