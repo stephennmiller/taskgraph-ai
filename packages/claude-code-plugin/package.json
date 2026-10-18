@@ -1,7 +1,7 @@
 {
 	"name": "@tm/claude-code-plugin",
 	"version": "0.0.10",
-	"description": "TaskGraph plugin for Claude Code - AI-powered task management with commands, agents, and MCP integration",
+	"description": "TaskGraph plugin for Claude Code - AI-powered task management with commands and agents",
 	"type": "module",
 	"private": true,
 	"keywords": [
@@ -9,7 +9,6 @@
 		"plugin",
 		"task-management",
 		"ai",
-		"mcp",
 		"workflow",
 		"productivity"
 	],
