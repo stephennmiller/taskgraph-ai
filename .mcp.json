@@ -2,8 +2,8 @@
 	"mcpServers": {
 		"taskgraph-ai": {
 			"type": "stdio",
-			"command": "npx",
-			"args": ["-y", "taskgraph-ai"],
+			"command": "node",
+			"args": ["dist/mcp-server.js"],
 			"env": {
 				"TASKGRAPH_TOOLS": "all"
 			}

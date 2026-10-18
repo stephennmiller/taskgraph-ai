@@ -97,7 +97,7 @@ The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<nam
 /plugin install taskgraph@taskgraph
 ```
 
-Its bundled MCP server also starts with `npx`, so `/mcp` shows it as failed until the package is published. For now, the slash commands from step 3 are the better choice; install the plugin only if you want the agents.
+The plugin does not register an MCP server. The tools come from the server you added in step 2. Its slash commands overlap with the ones from step 3, so install the plugin only if you want the agents.
 
 ## How to use it
 
@@ -214,6 +214,7 @@ In Claude Code, say `Change the main model to opus`, or run `taskgraph models --
 ## Troubleshooting
 
 - **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `node /path/to/taskgraph-ai/dist/mcp-server.js` starts on its own in a terminal (it waits for input; press Ctrl+C to stop). If `dist/` is missing or stale, run `npm run build`.
+- **Working on TaskGraph itself:** this repository's `.mcp.json` starts `dist/mcp-server.js` relative to the repo, so run `npm run build` first or the server won't connect.
 - **AI commands fail:** run `claude` once and make sure you're signed in.
 - **Fewer tools than expected:** `TASKGRAPH_TOOLS` defaults to `core`. Set `standard` or `all`.
 - **Commands behave oddly after `git pull`:** run `npm run build` again; the CLI and server run from `dist/`.
