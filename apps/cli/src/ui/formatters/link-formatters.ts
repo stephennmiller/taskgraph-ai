@@ -16,7 +16,7 @@ export function createLink(
 	text: string,
 	url: string,
 	options?: {
-		color?: 'cyan' | 'blue' | 'gray' | 'green' | 'yellow';
+		color?: 'cyan' | 'blue' | 'dim' | 'green' | 'yellow';
 		/** When links are unsupported, show only the text instead of "text (url)" */
 		textOnlyFallback?: boolean;
 	}
@@ -39,7 +39,7 @@ export function createLink(
  */
 export function createUrlLink(
 	url: string,
-	options?: { color?: 'cyan' | 'blue' | 'gray' | 'green' | 'yellow' }
+	options?: { color?: 'cyan' | 'blue' | 'dim' | 'green' | 'yellow' }
 ): string {
 	return createLink(url, url, options);
 }

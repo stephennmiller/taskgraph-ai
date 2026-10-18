@@ -6,6 +6,7 @@
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { getBoxWidth } from '../../utils/ui.js';
+import { MUTED_BOX_BORDER } from '../theme.js';
 
 /**
  * Display suggested next steps section
@@ -22,7 +23,7 @@ export function displaySuggestedNextSteps(): void {
 			padding: 1,
 			margin: { top: 0, bottom: 1 },
 			borderStyle: 'round',
-			borderColor: 'gray',
+			...MUTED_BOX_BORDER,
 			width: getBoxWidth(0.97)
 		})
 	);

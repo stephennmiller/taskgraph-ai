@@ -21,7 +21,12 @@ import {
 	getPriorityWithColor,
 	getStatusWithColor
 } from '../../utils/ui.js';
-import { BORDER_COLOR, theme } from '../theme.js';
+import {
+	BORDER_COLOR,
+	MUTED_BOX_BORDER,
+	TABLE_BORDER,
+	theme
+} from '../theme.js';
 import { getContentWidth, planColumns } from '../layout/helpers.js';
 
 // ============================================================================
@@ -85,7 +90,7 @@ export function displayTaskProperties(
 		head: [],
 		style: {
 			head: [],
-			border: ['grey']
+			border: TABLE_BORDER
 		},
 		// Label column fits the longest label ("Dependencies:"); values take the rest
 		colWidths: planColumns(terminalWidth, [
@@ -218,7 +223,7 @@ export function displaySubtasks(
 		],
 		style: {
 			head: [],
-			border: ['grey']
+			border: TABLE_BORDER
 		},
 		colWidths: planColumns(terminalWidth, [
 			{ key: 'id', width: 10 },
@@ -405,7 +410,7 @@ export function displayCodebasePatterns(patterns: string[]): void {
 		boxen(chalk.bold('Codebase Patterns:') + '\n\n' + content, {
 			padding: 1,
 			borderStyle: 'round',
-			borderColor: 'gray',
+			...MUTED_BOX_BORDER,
 			width: terminalWidth
 		})
 	);

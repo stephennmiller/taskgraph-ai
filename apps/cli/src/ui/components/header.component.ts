@@ -44,7 +44,7 @@ export function displayHeader(options: HeaderOptions = {}): void {
 		if (briefInfo.webAppUrl && briefInfo.orgSlug) {
 			const briefUrl = `${briefInfo.webAppUrl}/home/${briefInfo.orgSlug}/briefs/${briefInfo.briefId}/plan`;
 			console.log(
-				`Listing tasks from: ${createUrlLink(briefUrl, { color: 'gray' })}`
+				`Listing tasks from: ${createUrlLink(briefUrl, { color: 'dim' })}`
 			);
 		} else if (briefInfo.webAppUrl) {
 			// Show web app URL and brief ID if org slug is missing

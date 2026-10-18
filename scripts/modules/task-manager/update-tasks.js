@@ -18,7 +18,7 @@ import {
 	stopLoadingIndicator
 } from '../ui.js';
 
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
+import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
@@ -130,7 +130,8 @@ async function updateTasks(
 					chalk.cyan.bold('Title'),
 					chalk.cyan.bold('Status')
 				],
-				colWidths: [5, 70, 20]
+				colWidths: [5, 70, 20],
+				style: { border: TABLE_BORDER }
 			});
 
 			tasksToUpdate.forEach((task) => {

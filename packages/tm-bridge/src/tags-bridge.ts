@@ -114,7 +114,8 @@ export async function tryListTagsViaRemote(
 				const table = new Table({
 					head: headers,
 					colWidths: colWidths,
-					wordWrap: true
+					wordWrap: true,
+					style: { border: ui.TABLE_BORDER }
 				});
 
 				// Add rows

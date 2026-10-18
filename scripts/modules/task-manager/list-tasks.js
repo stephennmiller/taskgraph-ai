@@ -11,6 +11,7 @@ import {
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
+import { MUTED_BOX_BORDER } from '@tm/cli/theme';
 import { createTmCore } from '@tm/core';
 import {
 	BORDER_COLOR,
@@ -808,7 +809,7 @@ async function listTasks(
 					`${chalk.cyan('3.')} Run ${chalk.yellow('taskgraph set-status --id=<id> --status=done')} to mark a task as complete`,
 				{
 					padding: 1,
-					borderColor: 'gray',
+					...MUTED_BOX_BORDER,
 					borderStyle: 'round',
 					margin: { top: 1 }
 				}

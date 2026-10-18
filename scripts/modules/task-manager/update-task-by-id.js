@@ -19,7 +19,7 @@ import {
 } from '../ui.js';
 
 import { tryUpdateViaRemote } from '@tm/bridge';
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
+import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -222,7 +222,8 @@ async function updateTaskById(
 					chalk.cyan.bold('Title'),
 					chalk.cyan.bold('Status')
 				],
-				colWidths: [5, 60, 10]
+				colWidths: [5, 60, 10],
+				style: { border: TABLE_BORDER }
 			});
 
 			table.push([

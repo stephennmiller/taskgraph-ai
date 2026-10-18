@@ -41,7 +41,9 @@ export {
 	theme,
 	BRAND_COLORS,
 	BANNER_GRADIENT,
-	BORDER_COLOR
+	BORDER_COLOR,
+	TABLE_BORDER,
+	MUTED_BOX_BORDER
 } from './theme.js';
 
 // Layout helpers

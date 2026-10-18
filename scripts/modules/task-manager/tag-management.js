@@ -10,7 +10,7 @@ import {
 	tryListTagsViaRemote,
 	tryUseTagViaRemote
 } from '@tm/bridge';
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
+import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { filterReadyTasks, isTaskComplete } from '@tm/core';
 import { displayBanner, getStatusWithColor } from '../ui.js';
 import {
@@ -718,7 +718,8 @@ async function tags(
 			const table = new Table({
 				head: headers,
 				colWidths: colWidths,
-				wordWrap: true
+				wordWrap: true,
+				style: { border: TABLE_BORDER }
 			});
 
 			// Add rows
