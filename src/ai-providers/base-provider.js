@@ -353,9 +353,7 @@ export class BaseAIProvider {
 				command: commandName,
 				outputType: params.outputType,
 				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot),
-				userId: params.userId, // Hamster user ID if authenticated
-				briefId: params.briefId // Hamster brief ID if connected
+				projectHash: hashProjectRoot(params.projectRoot)
 			};
 
 			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
@@ -417,9 +415,7 @@ export class BaseAIProvider {
 				command: commandName,
 				outputType: params.outputType,
 				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot),
-				userId: params.userId, // Hamster user ID if authenticated
-				briefId: params.briefId // Hamster brief ID if connected
+				projectHash: hashProjectRoot(params.projectRoot)
 			};
 
 			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
@@ -477,9 +473,7 @@ export class BaseAIProvider {
 				command: commandName,
 				outputType: params.outputType,
 				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot),
-				userId: params.userId, // Hamster user ID if authenticated
-				briefId: params.briefId // Hamster brief ID if connected
+				projectHash: hashProjectRoot(params.projectRoot)
 			};
 
 			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
@@ -543,9 +537,7 @@ export class BaseAIProvider {
 				command: commandName,
 				outputType: params.outputType,
 				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot),
-				userId: params.userId, // Hamster user ID if authenticated
-				briefId: params.briefId // Hamster brief ID if connected
+				projectHash: hashProjectRoot(params.projectRoot)
 			};
 
 			const telemetryConfig = getAITelemetryConfig(functionId, metadata);

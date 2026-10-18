@@ -434,10 +434,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 	const effectiveProjectRoot = projectRoot || findProjectRoot();
 	const userId = getUserId(effectiveProjectRoot);
 
-	// Extract Hamster context from session if authenticated
-	const hamsterUserId = session?.user?.id || session?.userId;
-	const hamsterBriefId = session?.context?.briefId || session?.briefId;
-
 	let sequence;
 	if (initialRole === 'main') {
 		sequence = ['main', 'fallback', 'research'];
@@ -573,8 +569,6 @@ async function _unifiedServiceRunner(serviceType, params) {
 				...(commandName && { commandName }), // Pass commandName for Sentry telemetry functionId
 				...(outputType && { outputType }), // Pass outputType for Sentry telemetry metadata
 				...(projectRoot && { projectRoot }), // Pass projectRoot for Sentry telemetry hashing
-				...(hamsterUserId && { userId: hamsterUserId }), // Pass Hamster userId if authenticated
-				...(hamsterBriefId && { briefId: hamsterBriefId }), // Pass Hamster briefId if connected
 				...(experimental_transform && { experimental_transform }), // Pass smoothStream or other transforms
 				...restApiParams
 			};

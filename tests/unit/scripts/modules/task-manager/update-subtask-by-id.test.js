@@ -85,11 +85,6 @@ jest.unstable_mockModule(
 	})
 );
 
-// Mock @tm/bridge module
-jest.unstable_mockModule('@tm/bridge', () => ({
-	tryUpdateViaRemote: jest.fn().mockResolvedValue(null)
-}));
-
 // Mock bridge-utils module
 jest.unstable_mockModule(
 	'../../../../../scripts/modules/bridge-utils.js',

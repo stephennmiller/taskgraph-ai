@@ -477,11 +477,6 @@ jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
 
 // fs module already mocked at top of file with shared spy references
 
-// Mock @tm/bridge module
-jest.unstable_mockModule('@tm/bridge', () => ({
-	tryExpandViaRemote: jest.fn().mockResolvedValue(null)
-}));
-
 // Mock bridge-utils module
 jest.unstable_mockModule(
 	'../../../../../scripts/modules/bridge-utils.js',

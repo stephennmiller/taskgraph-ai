@@ -41,8 +41,6 @@ export function initializeSentry(options = {}) {
 	}
 
 	// Check if user has opted out of anonymous telemetry
-	// This applies to local storage users only
-	// Hamster users don't use local config (API storage), so this check doesn't affect them
 	// Suppress config warnings during this check to avoid noisy output at startup
 	setSuppressConfigWarnings(true);
 	try {
@@ -115,8 +113,6 @@ export function initializeSentry(options = {}) {
  * @param {string} [metadata.outputType] - Output type: 'cli' or 'mcp'
  * @param {string} [metadata.tag] - Task tag being operated on
  * @param {string} [metadata.taskId] - Specific task ID if applicable
- * @param {string} [metadata.userId] - Hamster user ID if authenticated
- * @param {string} [metadata.briefId] - Hamster brief ID if connected
  * @param {string} [metadata.projectHash] - Privacy-safe hash of project root
  * @returns {object|null} Telemetry configuration or null if Sentry not initialized
  */
@@ -148,8 +144,6 @@ export function getAITelemetryConfig(functionId, metadata = {}) {
 		if (metadata.outputType) config.metadata.outputType = metadata.outputType;
 		if (metadata.tag) config.metadata.tag = metadata.tag;
 		if (metadata.taskId) config.metadata.taskId = metadata.taskId;
-		if (metadata.userId) config.metadata.userId = metadata.userId;
-		if (metadata.briefId) config.metadata.briefId = metadata.briefId;
 		if (metadata.projectHash)
 			config.metadata.projectHash = metadata.projectHash;
 	}

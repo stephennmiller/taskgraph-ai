@@ -20,7 +20,7 @@ import {
 	restartWithNewVersion,
 	runInteractiveSetup
 } from '@tm/cli';
-import { findProjectRoot, log, readJSON } from './utils.js';
+import { log, readJSON } from './utils.js';
 
 import {
 	addSubtask,
@@ -68,16 +68,12 @@ import {
 	validateDependenciesCommand
 } from './dependency-manager.js';
 
-import { checkAndBlockIfAuthenticated, ensureOrgSelected } from '@tm/cli';
-import { LOCAL_ONLY_COMMANDS } from '@tm/core';
-
 import {
 	ConfigurationError,
 	getConfig,
 	getDebugFlag,
 	getDefaultNumTasks,
-	isConfigFilePresent,
-	setSuppressConfigWarnings
+	isConfigFilePresent
 } from './config-manager.js';
 
 import {
@@ -87,12 +83,7 @@ import {
 	displayWarning
 } from './error-formatter.js';
 
-import {
-	AuthDomain,
-	AuthManager,
-	CUSTOM_PROVIDERS,
-	createTmCore
-} from '@tm/core';
+import { CUSTOM_PROVIDERS } from '@tm/core';
 
 import {
 	COMPLEXITY_REPORT_FILE,
@@ -129,726 +120,6 @@ import { getTaskGraphVersion } from '../../src/utils/getVersion.js';
 import { initializeProject } from '../init.js';
 
 /**
- * Check if the user is connected to a Hamster brief
- * @returns {boolean} True if connected to Hamster (has brief context OR has API storage configured)
- */
-function isConnectedToHamster() {
-	try {
-		const authManager = AuthManager.getInstance();
-		const context = authManager.getContext();
-
-		// Check if user has a brief context
-		if (context && context.briefId) {
-			return true;
-		}
-
-		// Fallback: Check if storage type is 'api' (user selected Hamster during init)
-		// Suppress warnings during this check since we're detecting API mode
-		setSuppressConfigWarnings(true);
-		try {
-			const config = getConfig(null, false, { storageType: 'api' });
-			if (config?.storage?.type === 'api') {
-				return true;
-			}
-		} catch {
-			// Config check failed, continue
-		} finally {
-			setSuppressConfigWarnings(false);
-		}
-
-		return false;
-	} catch {
-		return false;
-	}
-}
-
-/**
- * Prompt user about using Hamster for collaborative PRD management
- * Only shown to users who are not already connected to Hamster
- * @returns {Promise<'local'|'hamster'>} User's choice
- */
-async function promptHamsterCollaboration() {
-	// Skip prompt in non-interactive mode only
-	if (!process.stdin.isTTY) {
-		return 'local';
-	}
-
-	console.log(
-		'\n' +
-			theme.text.bold(
-				'Your tasks are only as good as the context behind them.'
-			) +
-			'\n\n' +
-			chalk.dim(
-				'Parse locally and tasks will be stored in a JSON file. Bring it to Hamster and your brief\nbecomes part of a living system connected to your team, your codebase and your agents.\nNow your entire team can go as fast as you can with TaskGraph.'
-			) +
-			'\n'
-	);
-
-	const { choice } = await inquirer.prompt([
-		{
-			type: 'list',
-			name: 'choice',
-			message: chalk.cyan('How would you like to parse your PRD?\n'),
-			choices: [
-				{
-					name: [
-						chalk.bold('Parse locally'),
-						'',
-						theme.text(
-							'   • Your PRD becomes a task list in a local JSON file'
-						),
-						theme.text(
-							'   • Great for quick prototyping and for vibing on your own'
-						),
-						theme.text('   • You can always export to Hamster later'),
-						''
-					].join('\n'),
-					value: 'local',
-					short: 'Parse locally'
-				},
-				{
-					name: [
-						chalk.bold('Bring it to Hamster'),
-						'',
-						theme.text(
-							'   • Your PRD will become a living brief you can refine with your team'
-						),
-						theme.text(
-							'   • Hamster will generate tasks automatically, ready to execute in TaskGraph'
-						),
-						theme.text(
-							'   • Hamster will automatically analyze complexity and expand tasks as needed'
-						),
-						theme.text(
-							'   • Invite your teammates to collaborate on a single source of truth'
-						),
-						theme.text(
-							'   • AI inference handled by Hamster, no API keys needed - just a Hamster account!'
-						),
-						''
-					].join('\n'),
-					value: 'hamster',
-					short: 'Bring it to Hamster'
-				}
-			],
-			default: 'local',
-			pageSize: 20
-		}
-	]);
-
-	return choice;
-}
-
-/**
- * Handle parsing PRD to Hamster
- * Creates a brief from the PRD content and sets context
- * @param {string} prdPath - Path to the PRD file
- */
-async function handleParsePrdToHamster(prdPath) {
-	const ora = (await import('ora')).default;
-	const open = (await import('open')).default;
-	let spinner;
-	let authSpinner;
-
-	try {
-		// Check if user is authenticated
-		const authDomain = new AuthDomain();
-		const isAuthenticated = await authDomain.hasValidSession();
-
-		if (!isAuthenticated) {
-			console.log('');
-			console.log(chalk.yellow('🔒 Authentication Required'));
-			console.log('');
-
-			const { shouldLogin } = await inquirer.prompt([
-				{
-					type: 'confirm',
-					name: 'shouldLogin',
-					message: "You're not logged in. Log in to create a brief on Hamster?",
-					default: true
-				}
-			]);
-
-			if (!shouldLogin) {
-				console.log(theme.muted('\n  Cancelled.\n'));
-				return;
-			}
-
-			// 10 minute timeout to allow for email confirmation during sign-up
-			const AUTH_TIMEOUT_MS = 10 * 60 * 1000;
-			let countdownInterval = null;
-
-			const startCountdown = (totalMs) => {
-				const startTime = Date.now();
-				const endTime = startTime + totalMs;
-
-				const updateCountdown = () => {
-					const remaining = Math.max(0, endTime - Date.now());
-					const mins = Math.floor(remaining / 60000);
-					const secs = Math.floor((remaining % 60000) / 1000);
-					const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-					if (authSpinner) {
-						authSpinner.text = `Waiting for authentication... ${chalk.cyan(timeStr)} remaining`;
-					}
-
-					if (remaining <= 0 && countdownInterval) {
-						clearInterval(countdownInterval);
-					}
-				};
-
-				authSpinner = ora({
-					text: `Waiting for authentication... ${chalk.cyan('10:00')} remaining`,
-					spinner: 'dots'
-				}).start();
-
-				countdownInterval = setInterval(updateCountdown, 1000);
-			};
-
-			const stopCountdown = (success) => {
-				if (countdownInterval) {
-					clearInterval(countdownInterval);
-					countdownInterval = null;
-				}
-				if (authSpinner) {
-					if (success) {
-						authSpinner.succeed('Authentication successful!');
-					} else {
-						authSpinner.fail('Authentication failed');
-					}
-					authSpinner = null;
-				}
-			};
-
-			// Trigger OAuth flow
-			try {
-				await authDomain.authenticateWithOAuth({
-					openBrowser: async (authUrl) => {
-						await open(authUrl);
-					},
-					timeout: AUTH_TIMEOUT_MS,
-					onAuthUrl: (authUrl) => {
-						console.log(theme.brand.bold('\n[auth] Browser Authentication\n'));
-						console.log(
-							theme.text('  Opening your browser to authenticate...')
-						);
-						console.log(theme.muted("  If the browser doesn't open, visit:"));
-						console.log(chalk.cyan.underline(`  ${authUrl}\n`));
-					},
-					onWaitingForAuth: () => {
-						console.log(
-							chalk.dim(
-								'  If you signed up, check your email to confirm your account.'
-							)
-						);
-						console.log(
-							chalk.dim(
-								'  The CLI will automatically detect when you log in.\n'
-							)
-						);
-						startCountdown(AUTH_TIMEOUT_MS);
-					},
-					onSuccess: () => {
-						stopCountdown(true);
-					},
-					onError: () => {
-						stopCountdown(false);
-					}
-				});
-			} catch (authError) {
-				stopCountdown(false);
-				console.error(
-					chalk.red(
-						`\n  Authentication failed: ${authError.message || 'Unknown error'}\n`
-					)
-				);
-				return;
-			}
-		}
-
-		const authManager = AuthManager.getInstance();
-
-		// Always prompt for organization selection for parse-prd
-		// This allows users to choose which org to create the brief in
-		// even if they have one already selected in context
-		const orgResult = await ensureOrgSelected(authManager, {
-			promptMessage: 'Select an organization to create the brief in:',
-			forceSelection: true
-		});
-		if (!orgResult.success) {
-			console.error(
-				chalk.red(
-					`\n  ${orgResult.message || 'Organization selection cancelled.'}\n`
-				)
-			);
-			return;
-		}
-
-		// Read PRD file content
-		const prdContent = fs.readFileSync(prdPath, 'utf-8');
-		if (!prdContent.trim()) {
-			console.error(chalk.red('\n  PRD file is empty.\n'));
-			return;
-		}
-
-		// Initialize TmCore
-		const projectRoot = findProjectRoot() || process.cwd();
-		const tmCore = await createTmCore({ projectPath: projectRoot });
-
-		// Ask about inviting collaborators BEFORE creating brief
-		let inviteEmails = [];
-		const { wantsToInvite } = await inquirer.prompt([
-			{
-				type: 'confirm',
-				name: 'wantsToInvite',
-				message: 'Want to invite teammates to collaborate on this brief?',
-				default: false
-			}
-		]);
-
-		if (wantsToInvite) {
-			const { emails } = await inquirer.prompt([
-				{
-					type: 'input',
-					name: 'emails',
-					message: 'Enter email addresses to invite (comma-separated, max 10):',
-					validate: (input) => {
-						if (!input.trim()) return true;
-						const emailList = input
-							.split(',')
-							.map((e) => e.trim())
-							.filter(Boolean);
-						if (emailList.length > 10) {
-							return 'Maximum 10 email addresses allowed';
-						}
-						return true;
-					}
-				}
-			]);
-			inviteEmails = emails
-				.split(',')
-				.map((e) => e.trim())
-				.filter(Boolean)
-				.slice(0, 10);
-		}
-
-		// Create brief from PRD (invitations are sent separately now)
-		spinner = ora('Creating brief from your PRD...').start();
-
-		const result = await tmCore.integration.generateBriefFromPrd({
-			prdContent,
-			options: {
-				generateTitle: true,
-				generateDescription: true
-			}
-		});
-
-		if (!result.success || !result.brief) {
-			spinner.fail('Failed to create brief');
-			const errorMsg = result.error?.message || 'Unknown error occurred';
-			console.error(chalk.red(`\n  ${errorMsg}\n`));
-			return;
-		}
-
-		// Brief created! Show it immediately
-		spinner.succeed('Brief created!');
-		console.log('');
-		console.log(
-			chalk.green('  ✓ ') + theme.text.bold(result.brief.title || 'New Brief')
-		);
-		console.log('');
-		// Create clickable URL
-		const briefUrl = result.brief.url;
-		// ANSI hyperlink: \x1b]8;;URL\x07TEXT\x1b]8;;\x07
-		const clickableUrl = `\x1b]8;;${briefUrl}\x07${chalk.cyan.underline(briefUrl)}\x1b]8;;\x07`;
-		console.log(`  ${clickableUrl}`);
-		console.log('');
-
-		// Send invitations immediately after brief creation (before polling)
-		// Extract org slug from brief URL for invitations
-		const urlMatch = result.brief.url.match(
-			/^(https?:\/\/[^/]+)\/home\/([^/]+)\/briefs\//
-		);
-		const orgSlug = urlMatch ? urlMatch[2] : null;
-
-		if (inviteEmails.length > 0 && orgSlug) {
-			const inviteSpinner = ora('Sending invitations...').start();
-			try {
-				const inviteResult = await tmCore.integration.sendTeamInvitations(
-					orgSlug,
-					inviteEmails,
-					'member'
-				);
-
-				if (inviteResult.success && inviteResult.invitations) {
-					inviteSpinner.succeed('Invitations sent!');
-					console.log('');
-					console.log(chalk.cyan('  Team Invitations:'));
-					for (const inv of inviteResult.invitations) {
-						if (inv.status === 'sent') {
-							console.log(chalk.green(`    ${inv.email}: Invitation sent`));
-						} else if (inv.status === 'already_member') {
-							console.log(
-								theme.muted(`    ${inv.email}: Already a team member`)
-							);
-						} else if (inv.status === 'failed') {
-							console.log(chalk.red(`    ${inv.email}: Failed to send`));
-						} else if (inv.status === 'already_invited') {
-							console.log(theme.muted(`    ${inv.email}: Already invited`));
-						}
-					}
-					console.log('');
-				} else {
-					inviteSpinner.fail('Failed to send invitations');
-					const errorMsg =
-						inviteResult.error?.message || 'Unknown error occurred';
-					console.error(chalk.red(`  ${errorMsg}`));
-					console.log('');
-				}
-			} catch (inviteError) {
-				inviteSpinner.fail('Failed to send invitations');
-				console.error(chalk.red(`  ${inviteError.message}`));
-				console.log('');
-			}
-		}
-
-		// Now poll for task generation
-		spinner = ora('Generating tasks from your PRD...').start();
-		const briefId = result.brief.id;
-		const maxWait = 180000; // 3 minutes
-		const pollInterval = 3000; // 3 seconds between polls
-		const startTime = Date.now();
-		let taskCount = 0;
-		let briefStatus = result.brief.status;
-
-		// Progress calculation helper
-		const calculateProgress = (prog) => {
-			if (!prog) return 0;
-			const phase = prog.phase || prog.currentPhase || '';
-			const parentGen =
-				prog.parentTasksGenerated || prog.progress?.parentTasksGenerated || 0;
-			const parentProc =
-				prog.parentTasksProcessed || prog.progress?.parentTasksProcessed || 0;
-			const totalParent =
-				prog.totalParentTasks || prog.progress?.totalParentTasks || 0;
-
-			if (phase === 'queued') return 0;
-			if (phase === 'analyzing') return 5;
-			if (phase === 'generating_tasks' && totalParent > 0) {
-				return 10 + Math.floor((parentGen / totalParent) * 40);
-			}
-			if (phase === 'processing_tasks' && totalParent > 0) {
-				return 50 + Math.floor((parentProc / totalParent) * 40);
-			}
-			if (phase === 'generating_subtasks') return 90;
-			if (phase === 'complete') return 100;
-			return 0;
-		};
-
-		// Progress bar renderer
-		const renderProgressBar = (percent, width = 30) => {
-			const filled = Math.floor((percent / 100) * width);
-			const empty = width - filled;
-			return chalk.cyan('█'.repeat(filled)) + theme.muted('░'.repeat(empty));
-		};
-
-		// Poll until status is 'ready' or 'failed' or we timeout
-		const isStillGenerating = (s) =>
-			s === 'generating' || s === 'pending' || s === 'pending_plan';
-
-		while (isStillGenerating(briefStatus) && Date.now() - startTime < maxWait) {
-			await new Promise((resolve) => setTimeout(resolve, pollInterval));
-
-			try {
-				const statusResult = await tmCore.integration.getBriefStatus(briefId);
-				if (statusResult.success && statusResult.status) {
-					const status = statusResult.status;
-					briefStatus = status.status;
-
-					// Update spinner with progress bar
-					if (status.progress) {
-						const prog = status.progress;
-						const parentGen =
-							prog.parentTasksGenerated ||
-							prog.progress?.parentTasksGenerated ||
-							0;
-						const parentProc =
-							prog.parentTasksProcessed ||
-							prog.progress?.parentTasksProcessed ||
-							0;
-						const totalParent =
-							prog.totalParentTasks || prog.progress?.totalParentTasks || 0;
-						const subtaskGen =
-							prog.subtasksGenerated || prog.progress?.subtasksGenerated || 0;
-						taskCount = parentGen + subtaskGen;
-
-						const percent = calculateProgress(prog);
-						const progressBar = renderProgressBar(percent);
-						const phase = prog.phase || prog.currentPhase || 'generating';
-
-						let statusText = `${progressBar} ${percent}%`;
-						if (phase === 'generating_tasks' && totalParent > 0) {
-							statusText += ` • Generating tasks (${parentGen}/${totalParent})`;
-						} else if (phase === 'processing_tasks' && totalParent > 0) {
-							statusText += ` • Processing (${parentProc}/${totalParent})`;
-							if (subtaskGen > 0) {
-								statusText += ` • ${subtaskGen} subtasks`;
-							}
-						} else if (phase === 'generating_subtasks') {
-							statusText += ` • ${subtaskGen} subtasks generated`;
-						} else if (prog.message) {
-							statusText += ` • ${prog.message}`;
-						}
-
-						spinner.text = statusText;
-					}
-
-					// Check for completion states
-					if (status.status === 'ready' || status.status === 'completed') {
-						break;
-					}
-					if (status.status === 'failed') {
-						spinner.fail('Task generation failed');
-						const errorMsg =
-							status.error || 'Task generation failed on Hamster.';
-						console.error(chalk.red(`\n  ${errorMsg}\n`));
-						return;
-					}
-				}
-			} catch {
-				// Continue polling on error
-			}
-		}
-
-		// Check if we timed out while still generating
-		if (isStillGenerating(briefStatus)) {
-			spinner.warn('Task generation is still in progress');
-			console.log('');
-			console.log(
-				chalk.yellow('  Tasks are still being generated in the background.')
-			);
-			console.log(theme.text('  Check the brief URL above for progress.'));
-		} else {
-			spinner.succeed(
-				taskCount > 0
-					? `Done! ${taskCount} tasks generated`
-					: 'Task generation complete'
-			);
-		}
-		console.log('');
-
-		// Show invite URL for adding more teammates later (orgSlug already extracted above)
-		if (orgSlug) {
-			const urlParts = result.brief.url.match(/^(https?:\/\/[^/]+)/);
-			const baseUrl = urlParts ? urlParts[1] : '';
-			const membersUrl = `${baseUrl}/home/${orgSlug}/members`;
-			const clickableMembersUrl = `\x1b]8;;${membersUrl}\x07${chalk.cyan.underline(membersUrl)}\x1b]8;;\x07`;
-			console.log(
-				theme.muted('  Invite more teammates: ') + clickableMembersUrl
-			);
-			console.log('');
-		}
-
-		// Set context to the new brief using resolveBrief (same as tm context <url>)
-		try {
-			const brief = await tmCore.tasks.resolveBrief(result.brief.url);
-			const briefName =
-				brief.document?.title || `Brief ${brief.id.slice(0, 8)}`;
-
-			// Get org info for complete context
-			let orgName;
-			try {
-				const org = await authManager.getOrganization(brief.accountId);
-				orgName = org?.name;
-			} catch {
-				// Non-fatal if org lookup fails
-			}
-
-			await authManager.updateContext({
-				orgId: brief.accountId,
-				orgName,
-				orgSlug,
-				briefId: brief.id,
-				briefName,
-				briefStatus: brief.status,
-				briefUpdatedAt: brief.updatedAt
-			});
-
-			console.log(
-				chalk.green('  ✓ ') +
-					theme.text('Context set! Run ') +
-					chalk.cyan('tm list') +
-					theme.text(' to see your tasks.')
-			);
-		} catch (contextError) {
-			// Log the actual error for debugging
-			log('debug', `Context auto-set failed: ${contextError.message}`);
-			console.log(
-				chalk.yellow('  Could not auto-set context. Run ') +
-					chalk.cyan(`tm context ${result.brief.url}`) +
-					chalk.yellow(' to connect.')
-			);
-		}
-		console.log('');
-	} catch (error) {
-		if (spinner?.isSpinning) spinner.fail('Failed');
-		console.error(chalk.red(`\n  Error: ${error.message}\n`));
-	}
-}
-
-/**
- * Helper to create aligned command entries
- */
-function createCommandEntry(command, description, indent = '  ') {
-	const cmdColumn = 47; // Fixed column width for commands
-	const paddingNeeded = Math.max(1, cmdColumn - indent.length - command.length);
-	return (
-		chalk.cyan(indent + command) +
-		' '.repeat(paddingNeeded) +
-		theme.muted(description)
-	);
-}
-
-/**
- * Display Hamster-specific help (simplified command list)
- */
-function displayHamsterHelp() {
-	// Calculate box width (use 90% of terminal width, min 80, max 120)
-	const terminalWidth = process.stdout.columns || 80;
-	const boxWidth = Math.min(120, Math.max(80, Math.floor(terminalWidth * 0.9)));
-
-	console.log(
-		boxen(
-			chalk.cyan.bold('TaskGraph CLI - Connected to Hamster\n\n') +
-				theme.text(
-					'TaskGraph syncs tasks from your Hamster brief and provides a CLI\n'
-				) +
-				theme.text(
-					'interface to execute the plan. Commands can be used by humans or AI agents.\n\n'
-				) +
-				chalk.dim(
-					'Tasks are managed in Hamster Studio. Changes sync automatically.\n'
-				) +
-				chalk.dim(
-					'Use these commands to view tasks and update their status:\n\n'
-				) +
-				boxen('  Task Management  ', {
-					padding: 0,
-					borderStyle: 'round',
-					borderColor: 'yellow'
-				}) +
-				'\n' +
-				createCommandEntry('list', 'View all tasks from the brief\n') +
-				createCommandEntry(
-					'list <status>',
-					'Filter by status (e.g., pending, done, in-progress)\n'
-				) +
-				createCommandEntry(
-					'list all',
-					'View all tasks with subtasks expanded\n'
-				) +
-				createCommandEntry('show <id>', 'Show detailed task/subtask info\n') +
-				createCommandEntry('next', 'See the next task to work on\n') +
-				createCommandEntry(
-					'set-status|status <id> <status>',
-					'Update task status (pending, in-progress, done)\n'
-				) +
-				createCommandEntry(
-					'update-task <id> <prompt>',
-					'Add information to a task\n'
-				) +
-				'\n' +
-				boxen('  Authentication & Context  ', {
-					padding: 0,
-					borderStyle: 'round',
-					borderColor: 'yellow'
-				}) +
-				'\n' +
-				createCommandEntry('auth login', 'Log in to Hamster\n') +
-				createCommandEntry('auth logout', 'Log out from Hamster\n') +
-				createCommandEntry('auth refresh', 'Refresh authentication token\n') +
-				createCommandEntry('auth status', 'Check authentication status\n') +
-				createCommandEntry('briefs', 'View and select from your briefs\n') +
-				createCommandEntry('context', 'Show current brief context\n') +
-				createCommandEntry('context org', 'Switch organization\n') +
-				createCommandEntry(
-					'context brief <url>',
-					'Switch to a different brief\n'
-				) +
-				'\n' +
-				boxen('  Configuration  ', {
-					padding: 0,
-					borderStyle: 'round',
-					borderColor: 'yellow'
-				}) +
-				'\n' +
-				boxen('  Examples  ', {
-					padding: 0,
-					borderStyle: 'round',
-					borderColor: 'yellow'
-				}) +
-				'\n' +
-				createCommandEntry('tm list', 'See all tasks\n', '  ').replace(
-					chalk.cyan('  tm'),
-					chalk.dim('  tm')
-				) +
-				createCommandEntry(
-					'tm list done',
-					'See completed tasks\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm list in-progress',
-					'See tasks in progress\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm list all',
-					'View with all subtasks\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm show HAM-1,HAM-2',
-					'View multiple tasks\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm status HAM-1,HAM-2 in-progress',
-					'Start tasks\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm status HAM-1 done',
-					'Mark task complete\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm update-task HAM-1 <content>',
-					'Add info/context/breadcrumbs to task\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				createCommandEntry(
-					'tm briefs',
-					'View briefs and select one\n\n',
-					'  '
-				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				theme.text.bold('» Need more commands?\n') +
-				theme.muted(
-					'Advanced features (models, tags, PRD parsing) are managed in Hamster Studio.'
-				),
-			{
-				padding: 1,
-				margin: { top: 1 },
-				borderStyle: 'round',
-				borderColor: 'cyan',
-				width: boxWidth
-			}
-		)
-	);
-}
-
-/**
  * Configure and register CLI commands
  * @param {Object} program - Commander program instance
  */
@@ -864,47 +135,17 @@ function registerCommands(programInstance) {
 		process.exit(1);
 	});
 
-	// Add help command alias - context-aware (Hamster vs Local)
+	// Add help command alias
 	programInstance
 		.command('help')
-		.description('Show help information (Hamster-aware)')
+		.description('Show help information')
 		.action(() => {
-			if (isConnectedToHamster()) {
-				displayHamsterHelp();
-			} else {
-				programInstance.help();
-			}
+			programInstance.help();
 		});
 
-	// Override default help to be Hamster-aware
 	programInstance.configureHelp({
 		helpWidth: 120,
 		sortSubcommands: false
-	});
-	const originalHelp = programInstance.help.bind(programInstance);
-	programInstance.help = function () {
-		if (isConnectedToHamster()) {
-			displayHamsterHelp();
-		} else {
-			originalHelp();
-		}
-	};
-
-	// Add global command guard for local-only commands
-	programInstance.hook('preAction', async (thisCommand, actionCommand) => {
-		const commandName = actionCommand.name();
-
-		// Only check if it's a local-only command
-		if (LOCAL_ONLY_COMMANDS.includes(commandName)) {
-			const taskGraph = initTaskGraph(actionCommand.opts());
-			const isBlocked = await checkAndBlockIfAuthenticated(
-				commandName,
-				taskGraph.getProjectRoot()
-			);
-			if (isBlocked) {
-				process.exit(1);
-			}
-		}
 	});
 
 	// parse-prd command
@@ -975,14 +216,6 @@ function registerCommands(programInstance) {
 
 			// Show current tag context
 			await displayCurrentTagIndicator(tag);
-
-			// Prompt about Hamster collaboration (only for local users)
-			const collaborationChoice = await promptHamsterCollaboration();
-			if (collaborationChoice === 'hamster') {
-				// User chose Hamster - send PRD to Hamster for brief creation
-				await handleParsePrdToHamster(taskGraph.getPrdPath());
-				return;
-			}
 
 			// Helper function to check if there are existing tasks in the target tag and confirm overwrite
 			async function confirmOverwriteIfNeeded() {
@@ -1134,10 +367,7 @@ function registerCommands(programInstance) {
 				)
 			);
 
-			// Only show tasks file path for local storage
-			if (!isConnectedToHamster()) {
-				console.log(theme.brand(`Tasks file: ${tasksPath}`));
-			}
+			console.log(theme.brand(`Tasks file: ${tasksPath}`));
 
 			if (useResearch) {
 				console.log(
@@ -1279,10 +509,7 @@ function registerCommands(programInstance) {
 					theme.brand(`Updating task ${taskId} with prompt: "${prompt}"`)
 				);
 
-				// Only show tasks file path for local storage
-				if (!isConnectedToHamster()) {
-					console.log(theme.brand(`Tasks file: ${tasksPath}`));
-				}
+				console.log(theme.brand(`Tasks file: ${tasksPath}`));
 
 				if (useResearch) {
 					console.log(
@@ -1290,10 +517,7 @@ function registerCommands(programInstance) {
 					);
 				}
 
-				// Force append mode when connected to Hamster
-				const shouldAppend = isConnectedToHamster()
-					? true
-					: options.append || false;
+				const shouldAppend = options.append || false;
 
 				const result = await updateTaskById(
 					taskGraph.getTasksPath(),
@@ -1431,10 +655,7 @@ function registerCommands(programInstance) {
 					theme.brand(`Updating subtask ${subtaskId} with prompt: "${prompt}"`)
 				);
 
-				// Only show tasks file path for local storage
-				if (!isConnectedToHamster()) {
-					console.log(theme.brand(`Tasks file: ${tasksPath}`));
-				}
+				console.log(theme.brand(`Tasks file: ${tasksPath}`));
 
 				if (useResearch) {
 					console.log(
@@ -4597,11 +3818,7 @@ async function launchREPL() {
 		// TUI coming soon - show help for now
 		console.log(chalk.yellow('TUI mode coming soon!'));
 		console.log(chalk.dim('Showing help instead...\n'));
-		if (isConnectedToHamster()) {
-			displayHamsterHelp();
-		} else {
-			displayHelp();
-		}
+		displayHelp();
 		return;
 	}
 
@@ -4611,37 +3828,12 @@ async function launchREPL() {
 
 	// Get current context
 	let tag = 'master';
-	let storageType = 'local';
-	let brief = undefined;
-	let authState = { isAuthenticated: false };
 	let projectRoot = process.cwd();
 
 	try {
 		const taskGraph = initTaskGraph({});
 		tag = taskGraph.getCurrentTag();
 		projectRoot = taskGraph.getProjectRoot() || process.cwd();
-
-		// Check if connected to Hamster
-		const authManager = AuthManager.getInstance();
-		const context = authManager.getContext();
-		const storedContext = authManager.getStoredContext();
-
-		// Build auth state from stored context
-		if (storedContext && storedContext.email) {
-			authState = {
-				isAuthenticated: true,
-				email: storedContext.email,
-				userId: storedContext.userId
-			};
-		}
-
-		if (context && context.briefId) {
-			storageType = 'api';
-			brief = {
-				id: context.briefId,
-				name: context.briefName || tag
-			};
-		}
 	} catch (error) {
 		// Use defaults
 	}
@@ -4658,9 +3850,6 @@ async function launchREPL() {
 		showBanner: true,
 		showSplash: isInteractive,
 		initialTag: tag,
-		storageType: storageType,
-		brief: brief,
-		authState: authState,
 		isInteractive: isInteractive,
 		projectRoot: projectRoot,
 		onExit: () => {
@@ -4705,12 +3894,7 @@ function setupCLI() {
 			return originalHelpInformation();
 		}
 		// If this is the main program help, use our custom display
-		// Check if connected to Hamster and show appropriate help
-		if (isConnectedToHamster()) {
-			displayHamsterHelp();
-		} else {
-			displayHelp();
-		}
+		displayHelp();
 		return '';
 	};
 
