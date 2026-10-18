@@ -4,10 +4,7 @@
 	"private": true,
 	"description": "TaskGraph documentation powered by Mintlify",
 	"scripts": {
-		"dev": "mintlify dev",
-		"preview": "mintlify preview"
-	},
-	"devDependencies": {
-		"mintlify": "^4.2.243"
+		"dev": "npx --yes mintlify@4 dev",
+		"preview": "npx --yes mintlify@4 preview"
 	}
 }
