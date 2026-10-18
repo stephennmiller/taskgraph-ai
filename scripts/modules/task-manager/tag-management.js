@@ -10,6 +10,7 @@ import {
 	tryListTagsViaRemote,
 	tryUseTagViaRemote
 } from '@tm/bridge';
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import { filterReadyTasks, isTaskComplete } from '@tm/core';
 import { displayBanner, getStatusWithColor } from '../ui.js';
 import {
@@ -731,7 +732,7 @@ async function tags(
 				row.push(tagDisplay);
 
 				if (showTaskCounts) {
-					row.push(chalk.white(tag.tasks.length.toString()));
+					row.push(theme.text(tag.tasks.length.toString()));
 					row.push(
 						tag.readyTasks > 0
 							? chalk.yellow(tag.readyTasks.toString())
@@ -754,11 +755,11 @@ async function tags(
 
 			// console.log(
 			// 	boxen(
-			// 		chalk.white.bold('Available Tags') +
+			// 		theme.text.bold('Available Tags') +
 			// 			`\n\nCurrent Tag: ${chalk.green.bold(currentTag)}`,
 			// 		{
 			// 			padding: { top: 0, bottom: 1, left: 1, right: 1 },
-			// 			borderColor: 'blue',
+			// 			borderColor: BORDER_COLOR,
 			// 			borderStyle: 'round',
 			// 			margin: { top: 1, bottom: 0 }
 			// 		}
@@ -887,7 +888,7 @@ async function useTag(
 		if (outputFormat === 'text') {
 			let nextTaskInfo = '';
 			if (nextTask) {
-				nextTaskInfo = `\nNext Task: ${chalk.cyan(`#${nextTask.id}`)} - ${chalk.white(nextTask.title)}`;
+				nextTaskInfo = `\nNext Task: ${chalk.cyan(`#${nextTask.id}`)} - ${theme.text(nextTask.title)}`;
 			} else {
 				nextTaskInfo = `\nNext Task: ${chalk.gray('No eligible tasks available')}`;
 			}

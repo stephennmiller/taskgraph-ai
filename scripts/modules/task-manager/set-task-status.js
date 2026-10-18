@@ -2,6 +2,7 @@ import path from 'path';
 import boxen from 'boxen';
 import chalk from 'chalk';
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import {
 	TASK_STATUS_OPTIONS,
 	isValidTaskStatus
@@ -43,9 +44,9 @@ async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
 		// Only display UI elements if not in MCP mode
 		if (!isMcpMode) {
 			console.log(
-				boxen(chalk.white.bold(`Updating Task Status to: ${newStatus}`), {
+				boxen(theme.text.bold(`Updating Task Status to: ${newStatus}`), {
 					padding: 1,
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round'
 				})
 			);
@@ -139,7 +140,7 @@ async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
 
 				console.log(
 					boxen(
-						chalk.white.bold(`Successfully updated task ${id} status:`) +
+						theme.text.bold(`Successfully updated task ${id} status:`) +
 							'\n' +
 							`From: ${chalk.yellow(oldStatus)}\n` +
 							`To:   ${chalk.green(updatedStatus)}`,

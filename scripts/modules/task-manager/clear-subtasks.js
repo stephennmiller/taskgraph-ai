@@ -3,6 +3,7 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import { displayBanner } from '../ui.js';
 import { isSilentMode, log, readJSON, truncate, writeJSON } from '../utils.js';
 
@@ -25,9 +26,9 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 
 	if (!isSilentMode()) {
 		console.log(
-			boxen(chalk.white.bold('Clearing Subtasks'), {
+			boxen(theme.text.bold('Clearing Subtasks'), {
 				padding: 1,
-				borderColor: 'blue',
+				borderColor: BORDER_COLOR,
 				borderStyle: 'round',
 				margin: { top: 1, bottom: 1 }
 			})
@@ -90,10 +91,10 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 		// Show summary table
 		if (!isSilentMode()) {
 			console.log(
-				boxen(chalk.white.bold('Subtask Clearing Summary:'), {
+				boxen(theme.text.bold('Subtask Clearing Summary:'), {
 					padding: { left: 2, right: 2, top: 0, bottom: 0 },
 					margin: { top: 1, bottom: 0 },
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round'
 				})
 			);
@@ -119,7 +120,7 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 			// Next steps suggestion
 			console.log(
 				boxen(
-					chalk.white.bold('Next Steps:') +
+					theme.text.bold('Next Steps:') +
 						'\n\n' +
 						`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to generate new subtasks\n` +
 						`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph list --with-subtasks')} to verify changes`,

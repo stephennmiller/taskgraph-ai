@@ -18,6 +18,7 @@ import {
 	stopLoadingIndicator
 } from '../ui.js';
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
@@ -141,9 +142,9 @@ async function updateTasks(
 			});
 
 			console.log(
-				boxen(chalk.white.bold(`Updating ${tasksToUpdate.length} tasks`), {
+				boxen(theme.text.bold(`Updating ${tasksToUpdate.length} tasks`), {
 					padding: 1,
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round',
 					margin: { top: 1, bottom: 0 }
 				})
@@ -156,21 +157,21 @@ async function updateTasks(
 				boxen(
 					chalk.cyan.bold('How Completed Subtasks Are Handled:') +
 						'\n\n' +
-						chalk.white(
+						theme.text(
 							'• Subtasks marked as "done" or "completed" will be preserved\n'
 						) +
-						chalk.white(
+						theme.text(
 							'• New subtasks will build upon what has already been completed\n'
 						) +
-						chalk.white(
+						theme.text(
 							'• If completed work needs revision, a new subtask will be created instead of modifying done items\n'
 						) +
-						chalk.white(
+						theme.text(
 							'• This approach maintains a clear record of completed work and new requirements'
 						),
 					{
 						padding: 1,
-						borderColor: 'blue',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1, bottom: 1 }
 					}

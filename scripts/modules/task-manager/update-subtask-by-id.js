@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 
 import { tryUpdateViaRemote } from '@tm/bridge';
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
@@ -242,9 +243,9 @@ async function updateSubtaskById(
 				getStatusWithColor(subtask.status)
 			]);
 			console.log(
-				boxen(chalk.white.bold(`Updating Subtask #${subtaskId}`), {
+				boxen(theme.text.bold(`Updating Subtask #${subtaskId}`), {
 					padding: 1,
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round',
 					margin: { top: 1, bottom: 0 }
 				})
@@ -425,13 +426,13 @@ async function updateSubtaskById(
 				boxen(
 					chalk.green(`Successfully updated subtask #${subtaskId}`) +
 						'\n\n' +
-						chalk.white.bold('Title:') +
+						theme.text.bold('Title:') +
 						' ' +
 						updatedSubtask.title +
 						'\n\n' +
-						chalk.white.bold('Newly Added Snippet:') +
+						theme.text.bold('Newly Added Snippet:') +
 						'\n' +
-						chalk.white(newlyAddedSnippet),
+						theme.text(newlyAddedSnippet),
 					{ padding: 1, borderColor: 'green', borderStyle: 'round' }
 				)
 			);

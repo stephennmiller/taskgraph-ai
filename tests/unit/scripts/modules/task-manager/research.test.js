@@ -27,7 +27,11 @@ jest.unstable_mockModule('marked', () => ({
 
 // Mock UI-affecting external libs to minimal no-op implementations
 jest.unstable_mockModule('chalk', () => ({
-	default: {
+	// Callable like the real chalk: theme.text is plain chalk
+	default: Object.assign(jest.fn((text) => text), {
+		bold: jest.fn((text) => text),
+		italic: jest.fn((text) => text),
+		magenta: jest.fn((text) => text),
 		white: Object.assign(
 			jest.fn((text) => text),
 			{
@@ -68,7 +72,7 @@ jest.unstable_mockModule('chalk', () => ({
 				strikethrough: jest.fn((text) => text)
 			}
 		)
-	}
+	})
 }));
 
 jest.unstable_mockModule('boxen', () => ({ default: (text) => text }));

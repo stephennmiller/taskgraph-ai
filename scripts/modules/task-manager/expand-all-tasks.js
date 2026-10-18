@@ -1,3 +1,4 @@
+import { theme } from '@tm/cli/theme';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { getDebugFlag } from '../config-manager.js';
@@ -195,7 +196,7 @@ async function expandAllTasks(
 
 		if (outputFormat === 'text') {
 			const summaryContent =
-				`${chalk.white.bold('Expansion Summary:')}\n\n` +
+				`${theme.text.bold('Expansion Summary:')}\n\n` +
 				`${chalk.cyan('-')} Attempted: ${chalk.bold(tasksToExpandCount)}\n` +
 				`${chalk.green('-')} Expanded:  ${chalk.bold(expandedCount)}\n` +
 				`${chalk.gray('-')} Skipped:   ${chalk.bold(skippedCount)}\n` +

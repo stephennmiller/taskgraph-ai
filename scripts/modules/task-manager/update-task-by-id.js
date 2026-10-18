@@ -19,6 +19,7 @@ import {
 } from '../ui.js';
 
 import { tryUpdateViaRemote } from '@tm/bridge';
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -147,15 +148,13 @@ async function updateTaskById(
 							`Task ${taskId} is already marked as ${taskToUpdate.status} and cannot be updated.`
 						) +
 							'\n\n' +
-							chalk.white(
+							theme.text(
 								'Completed tasks are locked to maintain consistency. To modify a completed task, you must first:'
 							) +
 							'\n' +
-							chalk.white(
-								'1. Change its status to "pending" or "in-progress"'
-							) +
+							theme.text('1. Change its status to "pending" or "in-progress"') +
 							'\n' +
-							chalk.white('2. Then run the update-task command'),
+							theme.text('2. Then run the update-task command'),
 						{ padding: 1, borderColor: 'yellow', borderStyle: 'round' }
 					)
 				);
@@ -233,9 +232,9 @@ async function updateTaskById(
 			]);
 
 			console.log(
-				boxen(chalk.white.bold(`Updating Task #${taskId}`), {
+				boxen(theme.text.bold(`Updating Task #${taskId}`), {
 					padding: 1,
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round',
 					margin: { top: 1, bottom: 0 }
 				})
@@ -248,21 +247,21 @@ async function updateTaskById(
 				boxen(
 					chalk.cyan.bold('How Completed Subtasks Are Handled:') +
 						'\n\n' +
-						chalk.white(
+						theme.text(
 							'• Subtasks marked as "done" or "completed" will be preserved\n'
 						) +
-						chalk.white(
+						theme.text(
 							'• New subtasks will build upon what has already been completed\n'
 						) +
-						chalk.white(
+						theme.text(
 							'• If completed work needs revision, a new subtask will be created instead of modifying done items\n'
 						) +
-						chalk.white(
+						theme.text(
 							'• This approach maintains a clear record of completed work and new requirements'
 						),
 					{
 						padding: 1,
-						borderColor: 'blue',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1, bottom: 1 }
 					}
@@ -423,13 +422,13 @@ async function updateTaskById(
 						boxen(
 							chalk.green(`Successfully appended to task #${taskId}`) +
 								'\n\n' +
-								chalk.white.bold('Title:') +
+								theme.text.bold('Title:') +
 								' ' +
 								taskToUpdate.title +
 								'\n\n' +
-								chalk.white.bold('Newly Added Content:') +
+								theme.text.bold('Newly Added Content:') +
 								'\n' +
-								chalk.white(newlyAddedSnippet),
+								theme.text(newlyAddedSnippet),
 							{ padding: 1, borderColor: 'green', borderStyle: 'round' }
 						)
 					);
