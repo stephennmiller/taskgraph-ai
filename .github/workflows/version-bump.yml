@@ -2,8 +2,8 @@ name: Version Bump
 
 # Runs after CI passes on main. Bumps the version from conventional commits
 # (feat -> minor, fix/perf/revert -> patch, "!" or BREAKING CHANGE -> major;
-# one level lower below 1.0.0), commits the new version, tags it and creates a
-# GitHub Release. Nothing is published to npm.
+# one level lower below 1.0.0), commits the new version, tags it, creates a
+# GitHub Release and stages the build on npm for a maintainer to approve.
 on:
   workflow_run:
     workflows: [CI]
@@ -94,3 +94,52 @@ jobs:
             --title "$TAG" \
             --generate-notes \
             --notes-start-tag "$BASELINE"
+
+    # Placed after the steps so the lines above keep the positions that
+    # .github/zizmor.yml ignores by line number.
+    outputs:
+      bumped: ${{ steps.bump.outputs.bumped }}
+      tag: ${{ steps.bump.outputs.tag }}
+
+  # Uploads the tagged build to npm as a STAGED release. `npm stage publish`
+  # defers proof-of-presence (2FA): nothing is installable until a maintainer
+  # runs `npm stage approve <stage-id>` (list them with `npm stage list
+  # taskgraph-ai`). Authenticates with npm trusted publishing (OIDC), so there
+  # is no npm token. The trusted publisher on npmjs.com must name this file,
+  # version-bump.yml, with no environment, and needs only the default "stage
+  # publish" permission (leave "Allow npm publish" and "Allow npm dist-tag"
+  # unchecked).
+  publish:
+    name: Stage npm release
+    needs: bump
+    if: needs.bump.outputs.bumped == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) and provenance
+    steps:
+      # The tag this run just pushed, so the package is built from exactly the
+      # version-bump commit and not from whatever main has moved on to.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.bump.outputs.tag }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Update npm for trusted publishing
+        run: npm install -g npm@11.21.0
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Stage release on npm
+        run: npm stage publish

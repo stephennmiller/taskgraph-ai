@@ -35,6 +35,8 @@ rules:
       # gated on `workflow_run.conclusion == 'success'` and `workflow_run.event == 'push'`
       # with `branches: [main]`, checks out `main` (not the triggering run's head), and
       # fails early if RELEASE_TOKEN is unset. No PR-controlled code is checked out or run.
+      # The publish job checks out the release tag this run pushed, never PR code, and
+      # has no secrets: it authenticates to npm with OIDC trusted publishing.
       - version-bump.yml:8
   adhoc-packages:
     ignore:
@@ -42,3 +44,5 @@ rules:
       # The npm CLI must be upgraded outside the lockfile for trusted publishing.
       # Bump it by hand when updating the release flow.
       - release.yml:44
+      # Same reason, in the job that stages the npm release.
+      - version-bump.yml:136
