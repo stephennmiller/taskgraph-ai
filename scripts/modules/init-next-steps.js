@@ -2,8 +2,7 @@ import { theme } from '@tm/cli/theme';
 import chalk from 'chalk';
 
 /**
- * Build the "next steps" text shown after `taskgraph init` for a local
- * (non-Hamster) project.
+ * Build the "next steps" text shown after `taskgraph init`.
  * @returns {string} Chalk-styled message for display in a box
  */
 export function getLocalGettingStartedMessage() {
