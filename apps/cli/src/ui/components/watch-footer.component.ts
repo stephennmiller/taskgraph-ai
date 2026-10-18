@@ -6,24 +6,16 @@ import chalk from 'chalk';
 import { formatTime } from '@tm/core';
 import { theme } from '../theme.js';
 
-/**
- * Get display label for storage source
- */
-function getSourceLabel(storageType: 'api' | 'file'): string {
-	return storageType === 'api' ? 'Hamster Studio' : 'tasks.json';
-}
+/** Display label for the watched task file */
+const SOURCE_LABEL = 'tasks.json';
 
 /**
  * Display watch status footer
  */
-export function displayWatchFooter(
-	storageType: 'api' | 'file',
-	lastSync: Date
-): void {
+export function displayWatchFooter(lastSync: Date): void {
 	const syncTime = formatTime(lastSync);
-	const source = getSourceLabel(storageType);
 
-	console.log(chalk.dim(`\nWatching ${source} for changes...`));
+	console.log(chalk.dim(`\nWatching ${SOURCE_LABEL} for changes...`));
 	console.log(theme.muted(`Last synced: ${syncTime}`));
 	console.log(chalk.dim('Press Ctrl+C to exit'));
 }
@@ -31,12 +23,8 @@ export function displayWatchFooter(
 /**
  * Display sync notification message
  */
-export function displaySyncMessage(
-	storageType: 'api' | 'file',
-	syncTime: Date
-): void {
+export function displaySyncMessage(syncTime: Date): void {
 	const formattedTime = formatTime(syncTime);
-	const source = getSourceLabel(storageType);
 
-	console.log(theme.brand(`\nℹ ${source} updated at ${formattedTime}`));
+	console.log(theme.brand(`\nℹ ${SOURCE_LABEL} updated at ${formattedTime}`));
 }

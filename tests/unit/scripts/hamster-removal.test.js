@@ -41,4 +41,17 @@ describe('Hamster integration', () => {
 	it('is not referenced from scripts/ or src/', () => {
 		expect(findOffenders()).toEqual([]);
 	});
+
+	it('no longer ships the @tm/bridge package', () => {
+		// Only tracked content: a stale local node_modules/ or coverage/ is ignored
+		expect(
+			fs.existsSync(path.join(ROOT, 'packages/tm-bridge/package.json'))
+		).toBe(false);
+		expect(fs.existsSync(path.join(ROOT, 'packages/tm-bridge/src'))).toBe(
+			false
+		);
+		expect(
+			fs.readFileSync(path.join(ROOT, 'tsconfig.json'), 'utf8')
+		).not.toContain('@tm/bridge');
+	});
 });

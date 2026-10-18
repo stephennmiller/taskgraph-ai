@@ -5,17 +5,11 @@
 
 import type { Command } from 'commander';
 
-import { AuthCommand } from './commands/auth.command.js';
 import { AutopilotCommand } from './commands/autopilot/index.js';
-import { BriefsCommand } from './commands/briefs.command.js';
-import { ContextCommand } from './commands/context.command.js';
-import { ExportCommand, ExportTagCommand } from './commands/export.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 // Import all commands
 import { ListTasksCommand } from './commands/list.command.js';
 import { LoopCommand } from './commands/loop.command.js';
-import { LoginCommand } from './commands/login.command.js';
-import { LogoutCommand } from './commands/logout.command.js';
 import { NextCommand } from './commands/next.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
 import { ShowCommand } from './commands/show.command.js';
@@ -29,7 +23,7 @@ export interface CommandMetadata {
 	name: string;
 	description: string;
 	commandClass: typeof Command;
-	category?: 'task' | 'auth' | 'utility' | 'development';
+	category?: 'task' | 'utility' | 'development';
 }
 
 /**
@@ -72,18 +66,6 @@ export class CommandRegistry {
 			category: 'task'
 		},
 		{
-			name: 'export',
-			description: 'Export tasks to Hamster by creating a new brief',
-			commandClass: ExportCommand as any,
-			category: 'task'
-		},
-		{
-			name: 'export-tag',
-			description: 'Export a specific tag to Hamster',
-			commandClass: ExportTagCommand as any,
-			category: 'task'
-		},
-		{
 			name: 'autopilot',
 			description:
 				'AI agent orchestration for TDD workflow (start, resume, next, complete, commit, status, abort)',
@@ -96,42 +78,10 @@ export class CommandRegistry {
 			commandClass: LoopCommand as any,
 			category: 'development'
 		},
-
-		// Authentication & Context Commands
-		{
-			name: 'auth',
-			description: 'Manage authentication with tryhamster.com',
-			commandClass: AuthCommand as any,
-			category: 'auth'
-		},
-		{
-			name: 'login',
-			description: 'Login to Hamster (alias for "auth login")',
-			commandClass: LoginCommand as any,
-			category: 'auth'
-		},
-		{
-			name: 'logout',
-			description: 'Logout from Hamster (alias for "auth logout")',
-			commandClass: LogoutCommand as any,
-			category: 'auth'
-		},
-		{
-			name: 'context',
-			description: 'Manage workspace context (organization/brief)',
-			commandClass: ContextCommand as any,
-			category: 'auth'
-		},
 		{
 			name: 'tags',
 			description: 'Manage tags for task organization',
 			commandClass: TagsCommand as any,
-			category: 'task'
-		},
-		{
-			name: 'briefs',
-			description: 'Manage briefs (Hamster only)',
-			commandClass: BriefsCommand as any,
 			category: 'task'
 		},
 		{
@@ -159,7 +109,7 @@ export class CommandRegistry {
 	 */
 	static registerByCategory(
 		program: Command,
-		category: 'task' | 'auth' | 'utility' | 'development'
+		category: 'task' | 'utility' | 'development'
 	): void {
 		const categoryCommands = this.commands.filter(
 			(cmd) => cmd.category === category
@@ -218,7 +168,7 @@ export class CommandRegistry {
 	 * Get commands by category
 	 */
 	static getCommandsByCategory(
-		category: 'task' | 'auth' | 'utility' | 'development'
+		category: 'task' | 'utility' | 'development'
 	): CommandMetadata[] {
 		return this.commands.filter((cmd) => cmd.category === category);
 	}
@@ -271,7 +221,6 @@ export class CommandRegistry {
 	static getFormattedCommandList(): string {
 		const categories = {
 			task: 'Task Management',
-			auth: 'Authentication & Context',
 			utility: 'Utilities',
 			development: 'Development'
 		};
@@ -309,7 +258,7 @@ export function registerAllCommands(program: Command): void {
  */
 export function registerCommandsByCategory(
 	program: Command,
-	category: 'task' | 'auth' | 'utility' | 'development'
+	category: 'task' | 'utility' | 'development'
 ): void {
 	CommandRegistry.registerByCategory(program, category);
 }
