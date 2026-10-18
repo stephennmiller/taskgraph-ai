@@ -80,9 +80,27 @@ project/
 └── CLAUDE.md            # This file - auto-loaded by Claude Code
 ```
 
-## MCP Integration
+## Slash Commands & CLI (Preferred)
 
-TaskGraph provides an MCP server that Claude Code can connect to. Configure in `.mcp.json`:
+Use slash commands or the `taskgraph` CLI first. They need no MCP server and load no extra tool definitions into context. Only fall back to the MCP tools below when a command you need has no slash command or CLI equivalent.
+
+After `taskgraph init --rules claude`, the slash commands live under `/tm:` (type `/tm` to list them):
+
+| Task | Slash command | CLI |
+|------|---------------|-----|
+| Find next task | `/tm:next-task` | `taskgraph next` |
+| View a task | `/tm:show-task <id>` | `taskgraph show <id>` |
+| List tasks | `/tm:list-tasks` | `taskgraph list` |
+| Parse a PRD | `/tm:parse-prd` | `taskgraph parse-prd <file>` |
+| Add a task | `/tm:add-task` | `taskgraph add-task --prompt="..."` |
+| Break into subtasks | `/tm:expand-task <id>` | `taskgraph expand --id=<id>` |
+| Change status | `/tm:to-in-progress <id>`, `/tm:to-done <id>`, `/tm:to-review <id>` | `taskgraph set-status --id=<id> --status=<status>` |
+| Update a task | `/tm:update-task <id>` | `taskgraph update-task --id=<id> --prompt="..."` |
+| Check complexity | `/tm:analyze-complexity` | `taskgraph analyze-complexity` |
+
+## MCP Integration (Optional)
+
+TaskGraph also provides an MCP server that Claude Code can connect to. It is optional; the slash commands and CLI above cover the same workflow. To use it, configure `.mcp.json`:
 
 ```json
 {
@@ -374,12 +392,12 @@ taskgraph models
 taskgraph models --set-fallback gpt-4o-mini
 ```
 
-### MCP Connection Issues
+### MCP Connection Issues (only if you use MCP)
 
 - Check `.mcp.json` configuration
 - Verify Node.js installation
 - Use `--mcp-debug` flag when starting Claude Code
-- Use CLI as fallback if MCP unavailable
+- Slash commands and the CLI work without MCP; use them if the server will not connect
 
 ### Task File Sync Issues
 

@@ -10,7 +10,7 @@ You are a Quality Assurance specialist that rigorously verifies task implementat
 ## Core Responsibilities
 
 1. **Task Specification Review**
-   - Retrieve task details using MCP tool `mcp__taskgraph-ai__get_task`. This needs the TaskGraph MCP server registered under the name `taskgraph-ai` (the plugin does not register one). If that tool is unavailable, tell the user to add the server, or fall back to `taskgraph show <id>` in Bash
+   - Retrieve task details with `taskgraph show <id>` in Bash. If the TaskGraph MCP server happens to be registered under the name `taskgraph-ai` (the plugin does not register one), `mcp__taskgraph-ai__get_task` returns the same details, but the CLI is the default and needs no setup
    - Understand the requirements, test strategy, and success criteria
    - Review any subtasks and their individual requirements
 
@@ -44,7 +44,7 @@ You are a Quality Assurance specialist that rigorously verifies task implementat
 
 1. **Retrieve Task Information**
    ```
-   Use mcp__taskgraph-ai__get_task to get full task details
+   Run `taskgraph show <id>` to get full task details (or `mcp__taskgraph-ai__get_task` if the MCP server is registered)
    Note the implementation requirements and test strategy
    ```
 
@@ -148,7 +148,7 @@ verification_report:
 - `Read`: Examine implementation files (READ-ONLY)
 - `Bash`: Run tests and verification commands
 - `Grep`: Search for patterns in code
-- `mcp__taskgraph-ai__get_task`: Get task details
+- `taskgraph show <id>` (via `Bash`): Get task details. `mcp__taskgraph-ai__get_task` is an optional equivalent
 - **NEVER use Write/Edit** - you only verify, not fix
 
 ## Integration with Workflow

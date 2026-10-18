@@ -20,7 +20,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 - **Plan from a PRD:** generate tasks and subtasks, with dependencies, priorities and test strategies.
 - **Always know what's next:** `next` picks the first unblocked task.
-- **Stay in Claude Code:** talk to it in plain language over MCP, or use slash commands.
+- **Stay in Claude Code:** use slash commands (`/tm:next-task`) or the `taskgraph` CLI. An MCP server is available if you want plain-language control, but it is optional.
 - **No API keys:** every AI call runs through your signed-in Claude Code.
 
 > **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
@@ -44,9 +44,42 @@ npm install
 npm run build
 ```
 
-This creates `dist/mcp-server.js` (the MCP server) and `dist/taskgraph.js` (the CLI). The steps below call the folder `/path/to/taskgraph-ai`; use your real path. After pulling new changes, run `npm run build` again.
+This creates `dist/taskgraph.js` (the CLI) and `dist/mcp-server.js` (the optional MCP server). The steps below call the folder `/path/to/taskgraph-ai`; use your real path. After pulling new changes, run `npm run build` again.
 
-### 2. Add the MCP server
+### 2. Initialize your project
+
+From your own project folder:
+
+```bash
+node /path/to/taskgraph-ai/dist/taskgraph.js init --rules claude
+```
+
+This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and 46 slash commands in `.claude/commands/tm/`. Don't run it twice; it only re-adds the same files.
+
+`init` also writes a `.mcp.json` that starts the server with `npx -y taskgraph-ai`, which won't work until the package is published. Delete that file, or if you add the MCP server (step 5), change it to the `node` command shown there.
+
+### 3. Add a shell alias
+
+A shell alias keeps the commands in the rest of this README short:
+
+```bash
+alias taskgraph="node /path/to/taskgraph-ai/dist/taskgraph.js"
+```
+
+### 4. (Optional) Install the plugin
+
+The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
+
+```txt
+/plugin marketplace add stephennmiller/taskgraph-ai
+/plugin install taskgraph@taskgraph
+```
+
+The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 5). Its slash commands overlap with the ones from step 2, so install the plugin only if you want the agents.
+
+### 5. (Optional) Add the MCP server
+
+Skip this unless you want to drive TaskGraph in plain language. Slash commands and the CLI do everything without it.
 
 ```bash
 claude mcp add taskgraph-ai --scope user \
@@ -70,36 +103,9 @@ To share the setup with your team instead, put it in the project's `.mcp.json`:
 }
 ```
 
-### 3. Initialize your project
-
-From your own project folder:
-
-```bash
-node /path/to/taskgraph-ai/dist/taskgraph.js init --rules claude
-```
-
-This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and 46 slash commands in `.claude/commands/tm/`. Don't run it twice; it only re-adds the same files.
-
-`init` also writes a `.mcp.json` that starts the server with `npx -y taskgraph-ai`, which won't work until the package is published. Delete that file (step 2 already registered the server), or change it to the `node` command shown above.
-
-A shell alias keeps the commands in the rest of this README short:
-
-```bash
-alias taskgraph="node /path/to/taskgraph-ai/dist/taskgraph.js"
-```
-
-### 4. (Optional) Install the plugin
-
-The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
-
-```txt
-/plugin marketplace add stephennmiller/taskgraph-ai
-/plugin install taskgraph@taskgraph
-```
-
-The plugin does not register an MCP server. The tools come from the server you added in step 2, and the `task-checker` agent needs it registered under the name `taskgraph-ai`. Its slash commands overlap with the ones from step 3, so install the plugin only if you want the agents.
-
 ## How to use it
+
+The examples below use slash commands (`/tm:...`), with the CLI equivalent in each table. If you added the optional MCP server, you can say the same things in plain language instead.
 
 ### 1. Write a PRD
 
@@ -108,41 +114,42 @@ Create `.taskgraph/docs/prd.md` describing what you want to build. The more deta
 ### 2. Generate tasks
 
 ```txt
-Parse my PRD at .taskgraph/docs/prd.md
+/tm:parse-prd .taskgraph/docs/prd.md
 ```
 
 Then, optionally, check how big each task is and break the big ones down:
 
 ```txt
-Analyze the complexity of my tasks, then expand them
+/tm:analyze-complexity
+/tm:expand-all-tasks
 ```
 
 ### 3. Work through them
 
-| Say this in Claude Code | What happens |
-|---|---|
-| `What's the next task I should work on?` | Shows the first unblocked, pending task |
-| `Show me tasks 1, 3 and 5` | Full details for each |
-| `Implement task 3` | Claude Code does the work, guided by the task |
-| `Mark task 3 as done` | Updates status and unlocks dependent tasks |
-| `Expand task 4` | Splits it into subtasks |
-| `Add a task to <what you want>` | Creates a task with AI help |
-| `Update task 5: we now use Postgres` | Rewrites it for the new direction |
-| `Research JWT best practices for our API in src/api.js` | Web research with project context |
+| Slash command | CLI | What happens |
+|---|---|---|
+| `/tm:next-task` | `taskgraph next` | Shows the first unblocked, pending task |
+| `/tm:show-task 1` | `taskgraph show 1,3,5` | Full details for each task |
+| `/tm:to-in-progress 3`, then ask Claude to implement it | `taskgraph set-status --id=3 --status=in-progress` | Claude Code does the work, guided by the task |
+| `/tm:to-done 3` | `taskgraph set-status --id=3 --status=done` | Updates status and unlocks dependent tasks |
+| `/tm:expand-task 4` | `taskgraph expand --id=4` | Splits it into subtasks |
+| `/tm:add-task <what you want>` | `taskgraph add-task --prompt="..."` | Creates a task with AI help |
+| `/tm:update-task 5 we now use Postgres` | `taskgraph update-task --id=5 --prompt="..."` | Rewrites it for the new direction |
+| (CLI only) | `taskgraph research "JWT best practices"` | Web research with project context |
 
 The loop is simple: **next, implement, done, next.** Task IDs look like `3` for a task and `3.2` for a subtask.
 
-Research, tags and the dependency tools are only loaded with `TASKGRAPH_TOOLS=all` (see [MCP tool tiers](#mcp-tool-tiers)); everything else here works with `standard`.
+If you use the MCP server instead, research, tags and the dependency tools are only loaded with `TASKGRAPH_TOOLS=all` (see [MCP tool tiers](#mcp-tool-tiers)); everything else here works with `standard`.
 
 ### 4. Keep it organized
 
-- **Tags** keep separate task lists per branch, feature or experiment: `list_tags`, `add_tag`, `use_tag`.
-- **Dependencies** decide what counts as "next". Run `validate_dependencies` or `fix_dependencies` if the graph looks wrong.
+- **Tags** keep separate task lists per branch, feature or experiment: `taskgraph tags`, `taskgraph tags add`, `taskgraph tags use` (MCP: `list_tags`, `add_tag`, `use_tag`).
+- **Dependencies** decide what counts as "next". Run `/tm:validate-dependencies` or `/tm:fix-dependencies` if the graph looks wrong.
 - **Statuses:** `pending`, `in-progress`, `done`, `review`, `deferred`, `cancelled`.
 
 ## Commands
 
-You can do everything three ways: in plain language over MCP (above), with slash commands, or with the `taskgraph` CLI.
+Slash commands and the `taskgraph` CLI cover everything. The MCP server (optional) lets you do the same in plain language.
 
 ### Slash commands
 
@@ -186,7 +193,7 @@ Every command, flag and example is in the [command reference](docs/command-refer
 
 ## MCP tool tiers
 
-Each tool you load costs context. `TASKGRAPH_TOOLS` controls how many are registered. If it's unset, you get `core`.
+Only relevant if you added the optional MCP server. Each tool you load costs context. `TASKGRAPH_TOOLS` controls how many are registered. If it's unset, you get `core`.
 
 | Value | Tools | Includes |
 |---|---|---|
