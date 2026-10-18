@@ -59,8 +59,8 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	// Credits line with version right-aligned. Link text already names the
 	// destination, so unsupported terminals get the text without the long URL.
-	const creditText = 'x.com/eyaltoledano';
-	const xLink = createLink(creditText, 'https://x.com/eyaltoledano', {
+	const creditText = 'x.com/stephennmiller_';
+	const xLink = createLink(creditText, 'https://x.com/stephennmiller_', {
 		textOnlyFallback: true
 	});
 	const byText = chalk.dim('by ') + chalk.cyan(xLink);
@@ -118,9 +118,11 @@ export function displayInitBanner(): void {
 	}
 
 	// Credits line
-	const xLink = createLink('x.com/eyaltoledano', 'https://x.com/eyaltoledano', {
-		textOnlyFallback: true
-	});
+	const xLink = createLink(
+		'x.com/stephennmiller_',
+		'https://x.com/stephennmiller_',
+		{ textOnlyFallback: true }
+	);
 	console.log(chalk.dim('by ') + chalk.cyan(xLink));
 
 	// Hamster promo
