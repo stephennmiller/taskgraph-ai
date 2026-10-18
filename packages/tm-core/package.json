@@ -33,9 +33,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@supabase/supabase-js": "^2.57.4",
-		"date-fns": "^4.1.0",
-		"fs-extra": "^11.3.2",
+		"@supabase/supabase-js": "^2.117.3",
+		"date-fns": "^4.4.0",
+		"fs-extra": "^11.4.1",
 		"proper-lockfile": "^4.1.2",
 		"simple-git": "^4.0.2",
 		"steno": "^4.0.2",
