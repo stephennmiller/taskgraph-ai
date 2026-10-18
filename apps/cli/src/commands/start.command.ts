@@ -178,7 +178,7 @@ export class StartCommand extends Command {
 		// Validate format
 		if (options.format && !['text', 'json'].includes(options.format)) {
 			console.error(chalk.red(`Invalid format: ${options.format}`));
-			console.error(chalk.gray(`Valid formats: text, json`));
+			console.error(theme.muted(`Valid formats: text, json`));
 			return false;
 		}
 
@@ -217,7 +217,7 @@ export class StartCommand extends Command {
 				: `Task #${task.id} - ${task.title}`;
 
 			console.log(chalk.green('Starting: ') + chalk.bold(workItemText));
-			console.log(chalk.gray('Launching Claude Code...'));
+			console.log(theme.muted('Launching Claude Code...'));
 			console.log(); // Empty line
 		}
 	}
@@ -451,7 +451,7 @@ export class StartCommand extends Command {
 			}
 		}
 
-		console.log(`\n${chalk.gray('Storage: ' + result.storageType)}`);
+		console.log(`\n${theme.muted('Storage: ' + result.storageType)}`);
 	}
 
 	/**

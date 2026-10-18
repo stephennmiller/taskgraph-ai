@@ -127,7 +127,7 @@ function getStatusIcon(status?: string): string {
 		case 'blocked':
 			return chalk.red('✗');
 		default:
-			return chalk.gray('○');
+			return theme.muted('○');
 	}
 }
 
@@ -159,7 +159,7 @@ export async function showExportPreview(
 	if (validation.warnings.length > 0) {
 		console.log(chalk.yellow(`  ${validation.warnings.length} warning(s):`));
 		for (const warning of validation.warnings) {
-			console.log(chalk.gray(`    - ${warning}`));
+			console.log(theme.muted(`    - ${warning}`));
 		}
 	}
 
@@ -195,7 +195,7 @@ export function showUpgradeMessage(tagName?: string): void {
 	const content = [
 		chalk.bold('Exporting your tasks to Hamster'),
 		'',
-		chalk.gray('Your tasks will live on Hamster where you can:'),
+		theme.muted('Your tasks will live on Hamster where you can:'),
 		theme.text('  • Invite teammates to collaborate on the brief together'),
 		theme.text('  • Chat with AI alongside your team in real-time'),
 		theme.text('  • Draft, refine, align briefs and ship them faster together'),

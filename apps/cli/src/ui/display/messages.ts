@@ -35,7 +35,7 @@ export function displayErrorBox(message: string, details?: string): void {
 		boxen(
 			chalk.red.bold('X Error: ') +
 				theme.text(message) +
-				(details ? '\n\n' + chalk.gray(details) : ''),
+				(details ? '\n\n' + theme.muted(details) : ''),
 			{
 				padding: 1,
 				borderStyle: 'round',

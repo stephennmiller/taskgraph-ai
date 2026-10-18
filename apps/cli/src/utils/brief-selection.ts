@@ -6,7 +6,7 @@
 import search from '@inquirer/search';
 import type { AuthManager } from '@tm/core';
 import { formatRelativeTime } from '@tm/core';
-import chalk from 'chalk';
+import { theme } from '../ui/theme.js';
 import ora, { type Ora } from 'ora';
 import { getBriefStatusWithColor } from '../ui/formatters/status-formatters.js';
 import * as ui from './ui.js';
@@ -119,20 +119,20 @@ export async function selectBriefInteractive(
 						const description = brief.document?.description || '';
 						const taskCountDisplay =
 							brief.taskCount !== undefined && brief.taskCount > 0
-								? chalk.gray(
+								? theme.muted(
 										` (${brief.taskCount} ${brief.taskCount === 1 ? 'task' : 'tasks'})`
 									)
 								: '';
 
 						const updatedAtDisplay = brief.updatedAt
-							? chalk.gray(` • ${formatRelativeTime(brief.updatedAt)}`)
+							? theme.muted(` • ${formatRelativeTime(brief.updatedAt)}`)
 							: '';
 
 						groupedOptions.push({
-							name: `  ${title}${taskCountDisplay} ${chalk.gray(`(${shortId})`)}${updatedAtDisplay}`,
+							name: `  ${title}${taskCountDisplay} ${theme.muted(`(${shortId})`)}${updatedAtDisplay}`,
 							value: brief,
 							description: description
-								? chalk.gray(`  ${description.slice(0, 80)}`)
+								? theme.muted(`  ${description.slice(0, 80)}`)
 								: undefined
 						});
 					});
@@ -159,20 +159,20 @@ export async function selectBriefInteractive(
 						const description = brief.document?.description || '';
 						const taskCountDisplay =
 							brief.taskCount !== undefined && brief.taskCount > 0
-								? chalk.gray(
+								? theme.muted(
 										` (${brief.taskCount} ${brief.taskCount === 1 ? 'task' : 'tasks'})`
 									)
 								: '';
 
 						const updatedAtDisplay = brief.updatedAt
-							? chalk.gray(` • ${formatRelativeTime(brief.updatedAt)}`)
+							? theme.muted(` • ${formatRelativeTime(brief.updatedAt)}`)
 							: '';
 
 						groupedOptions.push({
-							name: `  ${title}${taskCountDisplay} ${chalk.gray(`(${shortId})`)}${updatedAtDisplay}`,
+							name: `  ${title}${taskCountDisplay} ${theme.muted(`(${shortId})`)}${updatedAtDisplay}`,
 							value: brief,
 							description: description
-								? chalk.gray(`  ${description.slice(0, 80)}`)
+								? theme.muted(`  ${description.slice(0, 80)}`)
 								: undefined
 						});
 					});
@@ -272,7 +272,7 @@ export async function selectBriefFromInput(
 
 		spinner.succeed('Context set from brief');
 		console.log(
-			chalk.gray(
+			theme.muted(
 				`  Organization: ${orgName || brief.accountId}\n  Brief: ${briefName}`
 			)
 		);

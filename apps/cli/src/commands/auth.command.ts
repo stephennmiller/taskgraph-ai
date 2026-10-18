@@ -9,6 +9,7 @@ import {
 	AuthenticationError
 } from '@tm/core';
 import chalk from 'chalk';
+import { theme } from '../ui/theme.js';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import ora from 'ora';
@@ -233,9 +234,9 @@ Examples:
 			const contextStore = this.authManager.getStoredContext();
 
 			console.log(chalk.green('✓ Authenticated'));
-			console.log(chalk.gray(`  Email: ${contextStore?.email || 'N/A'}`));
-			console.log(chalk.gray(`  User ID: ${contextStore?.userId || 'N/A'}`));
-			console.log(chalk.gray(`  Token Type: standard`));
+			console.log(theme.muted(`  Email: ${contextStore?.email || 'N/A'}`));
+			console.log(theme.muted(`  User ID: ${contextStore?.userId || 'N/A'}`));
+			console.log(theme.muted(`  Token Type: standard`));
 
 			// Display expiration info
 			if (session?.expires_at) {
@@ -249,13 +250,13 @@ Examples:
 					// Token is still valid
 					if (hoursRemaining > 0) {
 						console.log(
-							chalk.gray(
+							theme.muted(
 								`  Expires at: ${expiresAt.toLocaleString()} (${hoursRemaining} hours remaining)`
 							)
 						);
 					} else {
 						console.log(
-							chalk.gray(
+							theme.muted(
 								`  Expires at: ${expiresAt.toLocaleString()} (${minutesRemaining} minutes remaining)`
 							)
 						);
@@ -270,12 +271,12 @@ Examples:
 
 			// Display context if available
 			if (context) {
-				console.log(chalk.gray('\n  Context:'));
+				console.log(theme.muted('\n  Context:'));
 				if (context.orgName) {
-					console.log(chalk.gray(`    Organization: ${context.orgName}`));
+					console.log(theme.muted(`    Organization: ${context.orgName}`));
 				}
 				if (context.briefName) {
-					console.log(chalk.gray(`    Brief: ${context.briefName}`));
+					console.log(theme.muted(`    Brief: ${context.briefName}`));
 				}
 			}
 
@@ -301,7 +302,9 @@ Examples:
 			};
 		} else {
 			console.log(chalk.yellow('✗ Not authenticated'));
-			console.log(chalk.gray('\n  Run "taskgraph auth login" to authenticate'));
+			console.log(
+				theme.muted('\n  Run "taskgraph auth login" to authenticate')
+			);
 
 			return {
 				success: false,
@@ -348,7 +351,7 @@ Examples:
 			spinner.succeed('Token refreshed successfully');
 
 			console.log(
-				chalk.gray(
+				theme.muted(
 					`  New expiration: ${credentials.expiresAt ? new Date(credentials.expiresAt).toLocaleString() : 'Never'}`
 				)
 			);
@@ -408,8 +411,8 @@ Examples:
 				ui.displaySuccess('Using existing authentication');
 
 				if (credentials) {
-					console.log(chalk.gray(`  Email: ${credentials.email || 'N/A'}`));
-					console.log(chalk.gray(`  User ID: ${credentials.userId}`));
+					console.log(theme.muted(`  Email: ${credentials.email || 'N/A'}`));
+					console.log(theme.muted(`  User ID: ${credentials.userId}`));
 				}
 
 				return {
@@ -427,7 +430,9 @@ Examples:
 
 			// Display user info (auth success message is already shown by authenticateWithBrowserMFA)
 			console.log(
-				chalk.gray(`  Logged in as: ${credentials.email || credentials.userId}`)
+				theme.muted(
+					`  Logged in as: ${credentials.email || credentials.userId}`
+				)
 			);
 
 			// Post-auth: Set up workspace context (skip if --yes flag is used)
@@ -449,21 +454,21 @@ Examples:
 							chalk.yellow('⚠ Context setup was skipped or encountered issues')
 						);
 						console.log(
-							chalk.gray('  You can set up context later with "tm context"')
+							theme.muted('  You can set up context later with "tm context"')
 						);
 					}
 				} catch (contextError) {
 					console.log(chalk.yellow('⚠ Context setup encountered an error'));
 					console.log(
-						chalk.gray('  You can set up context later with "tm context"')
+						theme.muted('  You can set up context later with "tm context"')
 					);
 					if (process.env.DEBUG) {
-						console.error(chalk.gray((contextError as Error).message));
+						console.error(theme.muted((contextError as Error).message));
 					}
 				}
 			} else {
 				console.log(
-					chalk.gray(
+					theme.muted(
 						'\n  Skipped interactive setup. Use "tm context" to configure later.'
 					)
 				);
@@ -569,7 +574,9 @@ Examples:
 
 			// Display user info (auth success message is already shown by authenticateWithToken spinner)
 			console.log(
-				chalk.gray(`  Logged in as: ${credentials.email || credentials.userId}`)
+				theme.muted(
+					`  Logged in as: ${credentials.email || credentials.userId}`
+				)
 			);
 
 			// Post-auth: Set up workspace context (skip if --yes flag is used)
@@ -591,21 +598,21 @@ Examples:
 							chalk.yellow('⚠ Context setup was skipped or encountered issues')
 						);
 						console.log(
-							chalk.gray('  You can set up context later with "tm context"')
+							theme.muted('  You can set up context later with "tm context"')
 						);
 					}
 				} catch (contextError) {
 					console.log(chalk.yellow('⚠ Context setup encountered an error'));
 					console.log(
-						chalk.gray('  You can set up context later with "tm context"')
+						theme.muted('  You can set up context later with "tm context"')
 					);
 					if (process.env.DEBUG) {
-						console.error(chalk.gray((contextError as Error).message));
+						console.error(theme.muted((contextError as Error).message));
 					}
 				}
 			} else {
 				console.log(
-					chalk.gray(
+					theme.muted(
 						'\n  Skipped interactive setup. Use "tm context" to configure later.'
 					)
 				);

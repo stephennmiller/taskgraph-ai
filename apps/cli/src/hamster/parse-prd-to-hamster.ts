@@ -187,7 +187,7 @@ export async function parsePrdToHamster(
 			chalk.green('  ✓ ') + chalk.bold(result.brief.title || 'New Brief')
 		);
 		if (taskCount > 0) {
-			console.log(chalk.gray(`    ${taskCount} tasks generated`));
+			console.log(theme.muted(`    ${taskCount} tasks generated`));
 		}
 		console.log('');
 		console.log(`    ${createUrlLink(result.brief.url)}`);
@@ -306,7 +306,9 @@ function showInviteUrl(briefUrl: string): void {
 	if (urlMatch) {
 		const [, baseUrl, orgSlug] = urlMatch;
 		const membersUrl = `${baseUrl}/home/${orgSlug}/members`;
-		console.log(chalk.gray('  Invite teammates: ') + createUrlLink(membersUrl));
+		console.log(
+			theme.muted('  Invite teammates: ') + createUrlLink(membersUrl)
+		);
 		console.log('');
 	}
 }

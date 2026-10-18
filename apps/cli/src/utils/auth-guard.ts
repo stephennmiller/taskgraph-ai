@@ -11,6 +11,7 @@
 
 import { type AuthCredentials, AuthDomain, AuthManager } from '@tm/core';
 import chalk from 'chalk';
+import { theme } from '../ui/theme.js';
 import inquirer from 'inquirer';
 import { authenticateWithBrowserMFA } from './auth-ui.js';
 import { ensureOrgSelected } from './org-selection.js';
@@ -133,7 +134,7 @@ export async function ensureAuthenticated(
 
 		// Display user info (auth success message is already shown by authenticateWithBrowserMFA)
 		if (credentials.email) {
-			console.log(chalk.gray(`  Logged in as: ${credentials.email}`));
+			console.log(theme.muted(`  Logged in as: ${credentials.email}`));
 		}
 		console.log('');
 

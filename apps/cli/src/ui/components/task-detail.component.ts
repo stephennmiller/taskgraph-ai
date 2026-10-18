@@ -40,7 +40,7 @@ function getFileActionIcon(action: RelevantFile['action']): string {
 		case 'reference':
 			return theme.brand('◇ REFER ');
 		default:
-			return chalk.gray('  FILE  ');
+			return theme.muted('  FILE  ');
 	}
 }
 
@@ -109,13 +109,13 @@ export function displayTaskProperties(
 	// Format category with icon
 	const categoryDisplay = task.category
 		? `${getCategoryDisplay(task.category)}`
-		: chalk.gray('N/A');
+		: theme.muted('N/A');
 
 	// Format skills as badges
 	const skillsDisplay =
 		task.skills && task.skills.length > 0
 			? task.skills.map((s) => theme.accent(`[${s}]`)).join(' ')
-			: chalk.gray('N/A');
+			: theme.muted('N/A');
 
 	// Build the left column (labels) and right column (values)
 	const labels = [
@@ -138,7 +138,7 @@ export function displayTaskProperties(
 		deps,
 		typeof task.complexity === 'number'
 			? getComplexityWithColor(task.complexity)
-			: chalk.gray('N/A'),
+			: theme.muted('N/A'),
 		categoryDisplay,
 		skillsDisplay,
 		renderedDescription
@@ -269,7 +269,7 @@ export function displayRelevantFiles(files: RelevantFile[]): void {
 		.map((file) => {
 			const actionIcon = getFileActionIcon(file.action);
 			const path = theme.text(file.path);
-			const desc = chalk.gray(file.description);
+			const desc = theme.muted(file.description);
 			return `${actionIcon}  ${path}\n         ${desc}`;
 		})
 		.join('\n\n');
@@ -295,7 +295,7 @@ export function displayExistingInfrastructure(
 	const content = infrastructure
 		.map((infra) => {
 			const name = chalk.cyan.bold(infra.name);
-			const location = chalk.gray(infra.location);
+			const location = theme.muted(infra.location);
 			const usage = theme.text(infra.usage);
 			return `${name} → ${location}\n  ↳ ${usage}`;
 		})
@@ -327,7 +327,7 @@ export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
 	if (boundaries.excluded) {
 		if (content) content += '\n\n';
 		content += chalk.red.bold('✗ Out of Scope:\n');
-		content += chalk.gray('   ' + boundaries.excluded);
+		content += theme.muted('   ' + boundaries.excluded);
 	}
 
 	console.log(
@@ -422,14 +422,14 @@ export function displaySkillsAndCategory(
 
 	if (category) {
 		output +=
-			chalk.gray('Category: ') +
+			theme.muted('Category: ') +
 			chalk.cyan(`[${getCategoryDisplay(category)}]`);
 	}
 
 	if (skills && skills.length > 0) {
 		if (output) output += '  ';
 		output +=
-			chalk.gray('Skills: ') +
+			theme.muted('Skills: ') +
 			skills.map((s) => theme.accent(`[${s}]`)).join(' ');
 	}
 
@@ -679,7 +679,7 @@ export function displayTaskDetails(
 
 		if (filteredSubtasks.length === 0 && statusFilter) {
 			console.log(); // Empty line for spacing
-			console.log(chalk.gray(`  No subtasks with status '${statusFilter}'`));
+			console.log(theme.muted(`  No subtasks with status '${statusFilter}'`));
 		} else if (filteredSubtasks.length > 0) {
 			console.log(); // Empty line for spacing
 			displaySubtasks(filteredSubtasks, task.id, storageType);

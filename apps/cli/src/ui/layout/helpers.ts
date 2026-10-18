@@ -4,6 +4,7 @@
  */
 
 import chalk from 'chalk';
+import { theme } from '../theme.js';
 
 /**
  * Calculate box width as percentage of terminal width
@@ -104,14 +105,14 @@ export function createProgressBar(
 	width: number = 30
 ): string {
 	if (total === 0) {
-		return chalk.gray('No tasks');
+		return theme.muted('No tasks');
 	}
 
 	const percentage = Math.round((completed / total) * 100);
 	const filled = Math.round((completed / total) * width);
 	const empty = width - filled;
 
-	const bar = chalk.green('█').repeat(filled) + chalk.gray('░').repeat(empty);
+	const bar = chalk.green('█').repeat(filled) + theme.muted('░').repeat(empty);
 
 	return `${bar} ${chalk.cyan(`${percentage}%`)} (${completed}/${total})`;
 }

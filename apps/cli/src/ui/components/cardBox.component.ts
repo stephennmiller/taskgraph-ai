@@ -60,7 +60,7 @@ export function displayCardBox(config: CardBoxConfig): string {
 
 	// Add footer if provided
 	if (footer) {
-		sections.push(chalk.gray(footer));
+		sections.push(theme.muted(footer));
 	}
 
 	// Join sections with double newlines

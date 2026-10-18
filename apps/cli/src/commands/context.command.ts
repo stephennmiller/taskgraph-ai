@@ -176,7 +176,7 @@ export class ContextCommand extends Command {
 					console.log(theme.text(`  ${context.orgName}`));
 				}
 				if (context.orgId) {
-					console.log(chalk.gray(`  ID: ${context.orgId}`));
+					console.log(theme.muted(`  ID: ${context.orgId}`));
 				}
 			}
 
@@ -185,18 +185,18 @@ export class ContextCommand extends Command {
 				if (context.briefName && context.briefId) {
 					const shortId = context.briefId.slice(-8);
 					console.log(
-						theme.text(`  ${context.briefName} `) + chalk.gray(`(${shortId})`)
+						theme.text(`  ${context.briefName} `) + theme.muted(`(${shortId})`)
 					);
 				} else if (context.briefName) {
 					console.log(theme.text(`  ${context.briefName}`));
 				} else if (context.briefId) {
-					console.log(chalk.gray(`  ID: ${context.briefId}`));
+					console.log(theme.muted(`  ID: ${context.briefId}`));
 				}
 
 				// Show brief status if available
 				if (context.briefStatus) {
 					const statusDisplay = getBriefStatusWithColor(context.briefStatus);
-					console.log(chalk.gray(`  Status: `) + statusDisplay);
+					console.log(theme.muted(`  Status: `) + statusDisplay);
 				}
 
 				// Show brief updated date if available
@@ -210,13 +210,13 @@ export class ContextCommand extends Command {
 						hour: '2-digit',
 						minute: '2-digit'
 					});
-					console.log(chalk.gray(`  Updated: ${updatedDate}`));
+					console.log(theme.muted(`  Updated: ${updatedDate}`));
 				}
 			}
 
 			if (context.updatedAt) {
 				console.log(
-					chalk.gray(
+					theme.muted(
 						`\n  Last updated: ${new Date(context.updatedAt).toLocaleString()}`
 					)
 				);
@@ -231,9 +231,9 @@ export class ContextCommand extends Command {
 		} else {
 			console.log(chalk.yellow('✗ No context selected'));
 			console.log(
-				chalk.gray('\n  Run "tm context org" to select an organization')
+				theme.muted('\n  Run "tm context org" to select an organization')
 			);
-			console.log(chalk.gray('  Run "tm context brief" to select a brief'));
+			console.log(theme.muted('  Run "tm context brief" to select a brief'));
 
 			return {
 				success: true,
@@ -575,12 +575,12 @@ export class ContextCommand extends Command {
 			// Display what was set
 			if (context.orgName || context.orgId) {
 				console.log(
-					chalk.gray(`  Organization: ${context.orgName || context.orgId}`)
+					theme.muted(`  Organization: ${context.orgName || context.orgId}`)
 				);
 			}
 			if (context.briefName || context.briefId) {
 				console.log(
-					chalk.gray(`  Brief: ${context.briefName || context.briefId}`)
+					theme.muted(`  Brief: ${context.briefName || context.briefId}`)
 				);
 			}
 

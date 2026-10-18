@@ -285,8 +285,8 @@ Note: Briefs must be created through the Hamster Studio web interface.
 		tags.forEach((tag) => {
 			const shortId = tag.briefId ? tag.briefId.slice(-8) : 'unknown';
 			const tagDisplay = tag.isCurrent
-				? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${chalk.gray(`(current - ${shortId})`)}`
-				: `  ${tag.name} ${chalk.gray(`(${shortId})`)}`;
+				? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${theme.muted(`(current - ${shortId})`)}`
+				: `  ${tag.name} ${theme.muted(`(${shortId})`)}`;
 
 			const updatedDate = tag.updatedAt
 				? new Date(tag.updatedAt).toLocaleDateString('en-US', {
@@ -294,12 +294,12 @@ Note: Briefs must be created through the Hamster Studio web interface.
 						day: 'numeric',
 						year: 'numeric'
 					})
-				: chalk.gray('N/A');
+				: theme.muted('N/A');
 
 			table.push([
 				tagDisplay,
 				getBriefStatusWithColor(tag.status, true),
-				chalk.gray(updatedDate),
+				theme.muted(updatedDate),
 				theme.text(String(tag.taskCount || 0)),
 				chalk.green(String(tag.completedTasks || 0))
 			]);
@@ -339,8 +339,8 @@ Note: Briefs must be created through the Hamster Studio web interface.
 
 		const nameText = isCurrent ? chalk.green.bold(displayName) : displayName;
 		const idText = isCurrent
-			? chalk.gray(`(current)`)
-			: chalk.gray(`(${shortId})`);
+			? theme.muted(`(current)`)
+			: theme.muted(`(${shortId})`);
 
 		// Calculate visual length and pad
 		const nameVisualLength = 2 + displayName.length + 1 + idSuffix.length;
@@ -361,7 +361,7 @@ Note: Briefs must be created through the Hamster Studio web interface.
 					year: 'numeric'
 				})
 			: 'N/A';
-		const updatedCol = chalk.gray(updatedDate.padEnd(colWidths.updated));
+		const updatedCol = theme.muted(updatedDate.padEnd(colWidths.updated));
 
 		// Tasks column
 		const tasksCol = theme.text(
@@ -407,7 +407,7 @@ Note: Briefs must be created through the Hamster Studio web interface.
 				chalk.cyan.bold('Tasks'.padStart(colWidths.tasks + 2)) +
 				chalk.cyan.bold('Done'.padStart(colWidths.done + 2));
 
-			const separator = chalk.gray('─'.repeat(usableWidth));
+			const separator = theme.muted('─'.repeat(usableWidth));
 
 			// Build choices as table rows
 			const choices: any[] = [

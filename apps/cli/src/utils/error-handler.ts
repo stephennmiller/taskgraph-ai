@@ -9,6 +9,7 @@ import {
 	AUTH_ERROR_MESSAGES
 } from '@tm/core';
 import chalk from 'chalk';
+import { theme } from '../ui/theme.js';
 
 /**
  * Check if debug mode is enabled via environment variable
@@ -43,8 +44,8 @@ export function displayError(
 
 		// Show stack trace in debug mode or if forced
 		if ((isDebugMode() || options.forceStack) && error.stack) {
-			console.error(chalk.gray('\nStack trace:'));
-			console.error(chalk.gray(error.stack));
+			console.error(theme.muted('\nStack trace:'));
+			console.error(theme.muted(error.stack));
 		}
 	} else if (error instanceof AuthenticationError) {
 		// Handle AuthenticationError with clean message (no "Error:" prefix)
@@ -52,8 +53,8 @@ export function displayError(
 
 		// Show stack trace in debug mode or if forced
 		if ((isDebugMode() || options.forceStack) && error.stack) {
-			console.error(chalk.gray('\nStack trace:'));
-			console.error(chalk.gray(error.stack));
+			console.error(theme.muted('\nStack trace:'));
+			console.error(theme.muted(error.stack));
 		}
 	} else if (isSupabaseAuthError(error)) {
 		// Handle raw Supabase auth errors with user-friendly messages
@@ -65,8 +66,8 @@ export function displayError(
 
 		// Show stack trace in debug mode or if forced
 		if ((isDebugMode() || options.forceStack) && error.stack) {
-			console.error(chalk.gray('\nStack trace:'));
-			console.error(chalk.gray(error.stack));
+			console.error(theme.muted('\nStack trace:'));
+			console.error(theme.muted(error.stack));
 		}
 	} else {
 		// For other errors, show the message
@@ -75,8 +76,8 @@ export function displayError(
 
 		// Show stack trace in debug mode or if forced
 		if ((isDebugMode() || options.forceStack) && error?.stack) {
-			console.error(chalk.gray('\nStack trace:'));
-			console.error(chalk.gray(error.stack));
+			console.error(theme.muted('\nStack trace:'));
+			console.error(theme.muted(error.stack));
 		}
 	}
 

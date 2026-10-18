@@ -5,6 +5,7 @@
 
 import type { AuthManager } from '@tm/core';
 import chalk from 'chalk';
+import { theme } from '../ui/theme.js';
 import inquirer from 'inquirer';
 import * as ui from './ui.js';
 
@@ -94,7 +95,7 @@ export async function ensureOrgSelected(
 			});
 			if (!silent) {
 				console.log(
-					chalk.gray(`  Auto-selected organization: ${orgs[0].name}`)
+					theme.muted(`  Auto-selected organization: ${orgs[0].name}`)
 				);
 			}
 			return {

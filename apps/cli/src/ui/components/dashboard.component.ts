@@ -70,8 +70,8 @@ export interface StatusBreakdown {
  */
 const BAR_SEGMENTS = {
 	done: chalk.green('█'),
-	cancelled: chalk.gray('─'),
-	deferred: chalk.gray('─'),
+	cancelled: theme.muted('─'),
+	deferred: theme.muted('─'),
 	inProgress: theme.active('▓'),
 	review: chalk.magenta('▒'),
 	pending: chalk.yellow('░'),
@@ -90,7 +90,7 @@ function createProgressBar(
 	if (!statusBreakdown) {
 		const filled = Math.round((completionPercentage / 100) * width);
 		const empty = width - filled;
-		return BAR_SEGMENTS.done.repeat(filled) + chalk.gray('░').repeat(empty);
+		return BAR_SEGMENTS.done.repeat(filled) + theme.muted('░').repeat(empty);
 	}
 
 	// Build the bar from one segment per status. Each status has its own
@@ -377,10 +377,10 @@ export function formatStatusLine(
 	}
 
 	parts.push(
-		`${BAR_SEGMENTS.cancelled} Cancelled: ${chalk.gray(stats.cancelled)}`
+		`${BAR_SEGMENTS.cancelled} Cancelled: ${theme.muted(stats.cancelled)}`
 	);
 	parts.push(
-		`${BAR_SEGMENTS.deferred} Deferred: ${chalk.gray(stats.deferred)}`
+		`${BAR_SEGMENTS.deferred} Deferred: ${theme.muted(stats.deferred)}`
 	);
 
 	// Narrow boxes get two statuses per line so nothing wraps mid-label
@@ -472,20 +472,20 @@ export function displayDependencyDashboard(
 				? chalk.cyan(
 						`#${depStats.mostDependedOnTaskId} (${depStats.mostDependedOnCount} dependents)`
 					)
-				: chalk.gray('None')
+				: theme.muted('None')
 		}\n` +
 		`${theme.brand('•')} ${theme.text('Avg dependencies per task:')} ${depStats.avgDependenciesPerTask.toFixed(1)}\n\n` +
 		chalk.cyan.bold('Next Task:') +
 		'\n' +
-		`ID: ${nextTask ? chalk.cyan(String(nextTask.id)) : chalk.gray('N/A')} - ${
+		`ID: ${nextTask ? chalk.cyan(String(nextTask.id)) : theme.muted('N/A')} - ${
 			nextTask ? chalk.bold(nextTask.title) : chalk.yellow('No task available')
 		}\n` +
-		`Priority: ${nextTask?.priority || chalk.gray('N/A')}  Dependencies: ${
+		`Priority: ${nextTask?.priority || theme.muted('N/A')}  Dependencies: ${
 			nextTask?.dependencies?.length
 				? chalk.cyan(nextTask.dependencies.join(', '))
-				: chalk.gray('None')
+				: theme.muted('None')
 		}\n` +
-		`Complexity: ${nextTask?.complexity !== undefined ? getComplexityWithColor(nextTask.complexity) : chalk.gray('N/A')}`;
+		`Complexity: ${nextTask?.complexity !== undefined ? getComplexityWithColor(nextTask.complexity) : theme.muted('N/A')}`;
 
 	return content;
 }
