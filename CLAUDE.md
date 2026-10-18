@@ -82,14 +82,17 @@ Structure tests as Arrange, Act, Assert.
 #### What to Mock
 
 **Unit tests** (`.spec.ts` - test single unit in isolation):
+
 - **@tm/core**: Mock only external I/O (APIs, filesystem). Use real internal services.
 - **apps/cli**: Mock tm-core responses. Use real Commander/chalk/inquirer/other npm packages (test display logic).
 - **apps/mcp**: Mock tm-core responses. Use real MCP framework (test response formatting).
 
 **Integration tests** (`tests/integration/` - test multiple units together):
+
 - **All packages**: Use real tm-core, mock only external boundaries (APIs, DB, filesystem).
 
 **Never mock**:
+
 - Internal utilities/helpers in the same package
 - Standard frameworks (Commander, Express) - let them run
 - Standard library
