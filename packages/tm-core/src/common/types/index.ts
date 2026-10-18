@@ -2,14 +2,6 @@
  * Core type definitions for TaskGraph
  */
 
-/**
- * Storage type options
- * - 'file': Local file system storage
- * - 'api': Remote API storage (Hamster integration)
- * - 'auto': Automatically detect based on auth status
- */
-export type StorageType = 'file' | 'api' | 'auto';
-
 // ============================================================================
 // Type Literals
 // ============================================================================
@@ -38,7 +30,7 @@ export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TaskComplexity = 'simple' | 'moderate' | 'complex' | 'very-complex';
 
 // ============================================================================
-// AI Metadata Types (from Supabase task metadata)
+// AI Metadata Types
 // ============================================================================
 
 /**

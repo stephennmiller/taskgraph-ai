@@ -96,7 +96,7 @@ function getTasks() {
 #### What to Mock
 
 **Unit tests** (`.spec.ts` - test single unit in isolation):
-- **@tm/core**: Mock only external I/O (Supabase, APIs, filesystem). Use real internal services.
+- **@tm/core**: Mock only external I/O (APIs, filesystem). Use real internal services.
 - **apps/cli**: Mock tm-core responses. Use real Commander/chalk/inquirer/other npm packages (test display logic).
 - **apps/mcp**: Mock tm-core responses. Use real MCP framework (test response formatting).
 

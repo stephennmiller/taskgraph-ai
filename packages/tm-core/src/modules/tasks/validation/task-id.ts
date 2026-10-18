@@ -9,13 +9,13 @@
  * - Subtasks: "1.2", "15.3"
  * - Sub-subtasks: "1.2.3", "15.3.1"
  *
- * API STORAGE (Hamster):
+ * PREFIXED IDS:
  * - Main tasks: "HAM-1", "ham-1", "HAM1", "ham1" (all normalized to "HAM-1")
  * - Variable-length prefixes: "PROJ-456", "TAS-1", "abc-999"
- * - No subtasks (API doesn't use dot notation)
+ * - No subtasks (no dot notation)
  *
  * NOT supported:
- * - API subtasks: "HAM-1.2" (doesn't exist)
+ * - Prefixed subtasks: "HAM-1.2"
  */
 
 import { z } from 'zod';

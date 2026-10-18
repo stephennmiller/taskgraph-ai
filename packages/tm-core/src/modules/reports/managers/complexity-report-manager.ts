@@ -1,6 +1,6 @@
 /**
  * @fileoverview ComplexityReportManager - Handles loading and managing complexity analysis reports
- * Follows the same pattern as ConfigManager and AuthManager
+ * Follows the same pattern as ConfigManager
  */
 
 import fs from 'node:fs/promises';

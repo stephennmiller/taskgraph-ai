@@ -63,7 +63,6 @@
 		"@inquirer/search": "^3.0.15",
 		"@sentry/node": "^11.6.0",
 		"@streamparser/json": "^0.0.26",
-		"@supabase/supabase-js": "^2.117.3",
 		"@types/turndown": "^5.0.6",
 		"ai": "^7.0.143",
 		"ai-sdk-provider-claude-code": "^4.3.3",

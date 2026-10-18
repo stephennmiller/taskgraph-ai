@@ -3,11 +3,7 @@
  * This file defines the contract for configuration management
  */
 
-import type {
-	StorageType,
-	TaskComplexity,
-	TaskPriority
-} from '../types/index.js';
+import type { TaskComplexity, TaskPriority } from '../types/index.js';
 
 /**
  * Conventional Commit types allowed in workflow
@@ -102,36 +98,17 @@ export interface TagSettings {
  * This is what getStorageConfig() returns and what StorageFactory expects
  */
 export interface RuntimeStorageConfig {
-	/** Storage backend type */
-	type: StorageType;
+	/** Storage backend type: tasks are stored in a local file */
+	type: 'file';
 	/** Base path for file storage (if configured) */
 	basePath?: string;
-	/** API endpoint for API storage (Hamster integration) */
-	apiEndpoint?: string;
-	/** Access token for API authentication */
-	apiAccessToken?: string;
-	/**
-	 * Indicates whether API is configured (has endpoint or token)
-	 * @computed Derived automatically from presence of apiEndpoint or apiAccessToken
-	 * @internal Should not be set manually - computed by ConfigManager
-	 */
-	readonly apiConfigured: boolean;
 }
 
 /**
  * Storage and persistence settings
  * Extended storage settings including file operation preferences
  */
-export interface StorageSettings
-	extends Omit<RuntimeStorageConfig, 'apiConfigured'> {
-	/** Base path for file storage */
-	basePath?: string;
-	/**
-	 * Indicates whether API is configured
-	 * @computed Derived automatically from presence of apiEndpoint or apiAccessToken
-	 * @internal Should not be set manually in user config - computed by ConfigManager
-	 */
-	readonly apiConfigured?: boolean;
+export interface StorageSettings extends RuntimeStorageConfig {
 	/** Enable automatic backups */
 	enableBackup: boolean;
 	/**
@@ -563,7 +540,7 @@ export const DEFAULT_CONFIG_VALUES = {
 		ABORT_ON_MAX_ATTEMPTS: false
 	},
 	STORAGE: {
-		TYPE: 'auto' as const,
+		TYPE: 'file' as const,
 		ENCODING: 'utf8' as BufferEncoding,
 		MAX_BACKUPS: 5
 	},

@@ -84,10 +84,9 @@ class ConfigurationError extends Error {
 	}
 }
 
-function _loadAndValidateConfig(explicitRoot = null, options = {}) {
+function _loadAndValidateConfig(explicitRoot = null) {
 	const defaults = DEFAULTS; // Use the defined defaults
 	let rootToUse = explicitRoot;
-	const { storageType } = options;
 	let configSource = explicitRoot
 		? `explicit root (${explicitRoot})`
 		: 'defaults (no root provided yet)';
@@ -117,7 +116,7 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 	if (hasProjectMarkers) {
 		// Only try to find config if we have project markers
 		// This prevents the repeated warnings during init
-		configPath = findConfigPath(null, { projectRoot: rootToUse, storageType });
+		configPath = findConfigPath(null, { projectRoot: rootToUse });
 	}
 
 	if (configPath) {
@@ -190,10 +189,8 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
 		}
 	} else {
 		// Config file doesn't exist at the determined rootToUse.
-		// Skip warnings if:
-		// 1. Global suppress flag is set (during API mode detection)
-		// 2. storageType is explicitly 'api' (remote storage mode - no local config expected)
-		const shouldWarn = !isConfigWarningSuppressed() && storageType !== 'api';
+		// Skip warnings if the global suppress flag is set
+		const shouldWarn = !isConfigWarningSuppressed();
 
 		if (shouldWarn) {
 			if (explicitRoot) {
@@ -232,11 +229,9 @@ function _loadAndValidateConfig(explicitRoot = null, options = {}) {
  * Handles MCP initialization context gracefully.
  * @param {string|null} explicitRoot - Optional explicit path to the project root.
  * @param {boolean} forceReload - Force reloading the config file.
- * @param {object} options - Optional configuration options.
- * @param {'api'|'file'|'auto'} [options.storageType] - Storage type to suppress warnings for API mode.
  * @returns {object} The loaded configuration object.
  */
-function getConfig(explicitRoot = null, forceReload = false, options = {}) {
+function getConfig(explicitRoot = null, forceReload = false) {
 	// Determine if a reload is necessary
 	const needsLoad =
 		!loadedConfig ||
@@ -244,7 +239,7 @@ function getConfig(explicitRoot = null, forceReload = false, options = {}) {
 		(explicitRoot && explicitRoot !== loadedConfigRoot);
 
 	if (needsLoad) {
-		const newConfig = _loadAndValidateConfig(explicitRoot, options); // _load handles null explicitRoot
+		const newConfig = _loadAndValidateConfig(explicitRoot); // _load handles null explicitRoot
 
 		// Only update the global cache if loading was forced or if an explicit root
 		// was provided (meaning we attempted to load a specific project's config).

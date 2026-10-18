@@ -11,6 +11,7 @@ import type {
 	RuntimeStorageConfig
 } from '../../../common/interfaces/configuration.interface.js';
 import { DEFAULT_CONFIG_VALUES as DEFAULTS } from '../../../common/interfaces/configuration.interface.js';
+import { getLogger } from '../../../common/logger/index.js';
 import { ConfigLoader } from '../services/config-loader.service.js';
 import {
 	CONFIG_PRECEDENCE,
@@ -141,24 +142,18 @@ export class ConfigManager {
 	getStorageConfig(): RuntimeStorageConfig {
 		const storage = this.config.storage;
 
-		// Return the configured type (including 'auto')
-		const storageType = storage?.type || 'auto';
-		const basePath = storage?.basePath ?? this.projectRoot;
-
-		if (storageType === 'api' || storageType === 'auto') {
-			return {
-				type: storageType,
-				basePath,
-				apiEndpoint: storage?.apiEndpoint,
-				apiAccessToken: storage?.apiAccessToken,
-				apiConfigured: Boolean(storage?.apiEndpoint || storage?.apiAccessToken)
-			};
+		// Tasks are always stored in a local file. Configs written for the
+		// removed cloud storage ('api' or 'auto') fall back to it with a warning.
+		const configuredType: string | undefined = storage?.type;
+		if (configuredType && configuredType !== 'file') {
+			getLogger('ConfigManager').warn(
+				`Storage type "${configuredType}" is no longer supported; using local file storage (.taskgraph/tasks/tasks.json).`
+			);
 		}
 
 		return {
-			type: storageType,
-			basePath,
-			apiConfigured: false
+			type: 'file',
+			basePath: storage?.basePath ?? this.projectRoot
 		};
 	}
 
@@ -187,14 +182,6 @@ export class ConfigManager {
 	 */
 	getProjectRoot(): string {
 		return this.projectRoot;
-	}
-
-	/**
-	 * Check if explicitly configured to use API storage
-	 * Excludes 'auto' type
-	 */
-	isApiExplicitlyConfigured(): boolean {
-		return this.getStorageConfig().type === 'api';
 	}
 
 	// ==================== Runtime State ====================

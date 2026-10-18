@@ -52,13 +52,6 @@ export class ConfigDomain {
 		return this.configManager.getProjectRoot();
 	}
 
-	/**
-	 * Check if API is explicitly configured
-	 */
-	isApiExplicitlyConfigured(): boolean {
-		return this.configManager.isApiExplicitlyConfigured();
-	}
-
 	// ========== Runtime State ==========
 
 	/**

@@ -20,8 +20,6 @@ function createMockStorage(tasks: Task[] = []): IStorage {
 		saveTasks: vi.fn(),
 		appendTasks: vi.fn(),
 		updateTask: vi.fn(),
-		updateTaskWithPrompt: vi.fn(),
-		expandTaskWithPrompt: vi.fn(),
 		updateTaskStatus: vi.fn(),
 		deleteTask: vi.fn(),
 		exists: vi.fn().mockResolvedValue(true),
@@ -35,8 +33,6 @@ function createMockStorage(tasks: Task[] = []): IStorage {
 		initialize: vi.fn(),
 		close: vi.fn(),
 		getStats: vi.fn(),
-		getStorageType: vi.fn().mockReturnValue('file'),
-		getCurrentBriefName: vi.fn().mockReturnValue(null),
 		getTagsWithStats: vi.fn(),
 		watch: vi.fn().mockResolvedValue({ unsubscribe: vi.fn() })
 	};

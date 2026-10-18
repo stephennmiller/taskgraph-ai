@@ -6,8 +6,7 @@
 import type {
 	Task,
 	TaskFilter,
-	TaskStatus,
-	StorageType
+	TaskStatus
 } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
@@ -15,7 +14,6 @@ import { StorageFactory } from '../../storage/services/storage-factory.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
-import type { ExpandTaskResult } from '../../integration/services/task-expansion.service.js';
 
 /**
  * Result returned by getTaskList
@@ -27,10 +25,8 @@ export interface TaskListResult {
 	total: number;
 	/** Number of tasks after filtering */
 	filtered: number;
-	/** The tag/brief name for these tasks (brief name for API storage, tag for file storage) */
+	/** The tag these tasks belong to */
 	tag?: string;
-	/** Storage type being used */
-	storageType: StorageType;
 }
 
 /**
@@ -154,20 +150,11 @@ export class TaskService {
 			// Convert back to plain objects
 			const tasks = filteredEntities.map((entity) => entity.toJSON());
 
-			// For API storage, use brief name. For file storage, use tag.
-			// This way consumers don't need to know about the difference.
-			const storageType = this.getStorageType();
-			const tagOrBrief =
-				storageType === 'api'
-					? this.storage.getCurrentBriefName() || tag
-					: tag;
-
 			return {
 				tasks,
 				total: allTasks.length,
 				filtered: filteredEntities.length,
-				tag: tagOrBrief, // For API: brief name, For file: tag
-				storageType
+				tag
 			};
 		} catch (error) {
 			// Re-throw all TaskGraphErrors without wrapping
@@ -246,7 +233,6 @@ export class TaskService {
 		byStatus: Record<TaskStatus, number>;
 		withSubtasks: number;
 		blocked: number;
-		storageType: StorageType;
 	}> {
 		const result = await this.getTaskList({
 			tag,
@@ -257,8 +243,7 @@ export class TaskService {
 			total: result.total,
 			byStatus: {} as Record<TaskStatus, number>,
 			withSubtasks: 0,
-			blocked: 0,
-			storageType: result.storageType
+			blocked: 0
 		};
 
 		// Initialize all statuses
@@ -486,15 +471,6 @@ export class TaskService {
 	}
 
 	/**
-	 * Get current storage type (resolved at runtime)
-	 * Returns the actual storage type being used, never 'auto'
-	 */
-	getStorageType(): 'file' | 'api' {
-		// Storage interface guarantees this method exists
-		return this.storage.getStorageType();
-	}
-
-	/**
 	 * Get the storage instance
 	 * Internal use only - used by other services in the tasks module
 	 */
@@ -503,20 +479,9 @@ export class TaskService {
 	}
 
 	/**
-	 * Get current active tag
-	 * For API storage, uses the brief ID from auth context
-	 * For file storage, uses the tag from local config/state
+	 * Get current active tag from local config/state
 	 */
 	getActiveTag(): string {
-		// For API storage, use brief ID from auth context if available
-		if (this.initialized && this.getStorageType() === 'api') {
-			const briefName = this.storage.getCurrentBriefName();
-			if (briefName) {
-				return briefName;
-			}
-		}
-
-		// Fall back to config-based tag resolution
 		return this.configManager.getActiveTag();
 	}
 
@@ -572,141 +537,6 @@ export class TaskService {
 					resource: 'task',
 					taskId: taskIdStr,
 					tag: activeTag
-				},
-				error as Error
-			);
-		}
-	}
-
-	/**
-	 * Update a task using AI-powered prompt (natural language update)
-	 * @param taskId - Task ID (supports numeric, alphanumeric, and subtask IDs)
-	 * @param prompt - Natural language prompt describing the update
-	 * @param tag - Optional tag context
-	 * @param options - Optional update options
-	 * @param options.useResearch - Use research AI for file storage updates
-	 * @param options.mode - Update mode for API storage: 'append', 'update', or 'rewrite'
-	 */
-	async updateTaskWithPrompt(
-		taskId: string | number,
-		prompt: string,
-		tag?: string,
-		options?: { mode?: 'append' | 'update' | 'rewrite'; useResearch?: boolean }
-	): Promise<void> {
-		// Ensure we have storage
-		if (!this.storage) {
-			throw new TaskGraphError(
-				'Storage not initialized',
-				ERROR_CODES.STORAGE_ERROR
-			);
-		}
-
-		// Auto-initialize if needed
-		if (!this.initialized) {
-			await this.initialize();
-		}
-
-		// Use provided tag or get active tag
-		const activeTag = tag || this.getActiveTag();
-		const taskIdStr = String(taskId);
-
-		try {
-			// AI-powered update - send prompt to storage layer
-			// API storage: sends prompt to backend for server-side AI processing
-			// File storage: must use client-side AI logic before calling this
-			await this.storage.updateTaskWithPrompt(
-				taskIdStr,
-				prompt,
-				activeTag,
-				options
-			);
-		} catch (error) {
-			// If it's a user-facing error (like NO_BRIEF_SELECTED), don't wrap it
-			if (
-				error instanceof TaskGraphError
-			) {
-				throw error;
-			}
-
-			throw new TaskGraphError(
-				`Failed to update task ${taskId} with prompt`,
-				ERROR_CODES.STORAGE_ERROR,
-				{
-					operation: 'updateTaskWithPrompt',
-					resource: 'task',
-					taskId: taskIdStr,
-					tag: activeTag,
-					promptLength: prompt.length
-				},
-				error as Error
-			);
-		}
-	}
-
-	/**
-	 * Expand a task into subtasks using AI-powered generation
-	 * @param taskId - Task ID to expand (supports numeric and alphanumeric IDs)
-	 * @param tag - Optional tag context
-	 * @param options - Optional expansion options
-	 * @param options.numSubtasks - Number of subtasks to generate
-	 * @param options.useResearch - Use research AI for generation
-	 * @param options.additionalContext - Additional context for generation
-	 * @param options.force - Force regeneration even if subtasks exist
-	 * @returns ExpandTaskResult when using API storage, void for file storage
-	 */
-	async expandTaskWithPrompt(
-		taskId: string | number,
-		tag?: string,
-		options?: {
-			numSubtasks?: number;
-			useResearch?: boolean;
-			additionalContext?: string;
-			force?: boolean;
-		}
-	): Promise<ExpandTaskResult | void> {
-		// Ensure we have storage
-		if (!this.storage) {
-			throw new TaskGraphError(
-				'Storage not initialized',
-				ERROR_CODES.STORAGE_ERROR
-			);
-		}
-
-		// Auto-initialize if needed
-		if (!this.initialized) {
-			await this.initialize();
-		}
-
-		// Use provided tag or get active tag
-		const activeTag = tag || this.getActiveTag();
-		const taskIdStr = String(taskId);
-
-		try {
-			// AI-powered expansion - send to storage layer
-			// API storage: sends request to backend for server-side AI processing
-			// File storage: must use client-side AI logic before calling this
-			return await this.storage.expandTaskWithPrompt(
-				taskIdStr,
-				activeTag,
-				options
-			);
-		} catch (error) {
-			// If it's a user-facing error (like NO_BRIEF_SELECTED), don't wrap it
-			if (
-				error instanceof TaskGraphError
-			) {
-				throw error;
-			}
-
-			throw new TaskGraphError(
-				`Failed to expand task ${taskId}`,
-				ERROR_CODES.STORAGE_ERROR,
-				{
-					operation: 'expandTaskWithPrompt',
-					resource: 'task',
-					taskId: taskIdStr,
-					tag: activeTag,
-					numSubtasks: options?.numSubtasks
 				},
 				error as Error
 			);
