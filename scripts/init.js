@@ -32,6 +32,7 @@ import {
 	convertAllRulesToProfileRules,
 	getRulesProfile
 } from '../src/utils/rule-transformer.js';
+import { getLocalGettingStartedMessage } from './modules/init-next-steps.js';
 import { brandGradient } from './modules/ui.js';
 import { updateConfigMaxTokens } from './modules/update-config-tokens.js';
 import { isSilentMode } from './modules/utils.js';
@@ -1180,23 +1181,7 @@ async function createProjectStructure(
 			)}${chalk.cyan('tm help')}${chalk.dim(' to see all available commands')}`;
 		} else {
 			// Local-specific getting started
-			gettingStartedMessage = `${chalk.cyan.bold('Things you should do next:')}\n\n${theme.text('1. ')}${chalk.yellow(
-				'Configure AI models and add API keys to `.env`'
-			)}\n${theme.text('   ├─ ')}${chalk.dim('Models: Use ')}${chalk.cyan('taskgraph models')}${chalk.dim(' commands')}\n${theme.text('   └─ ')}${chalk.dim(
-				'Keys: Add provider API keys to .env (or .mcp.json)'
-			)}\n${theme.text('2. ')}${chalk.yellow(
-				'Discuss your idea with AI and create a PRD'
-			)}\n${theme.text('   ├─ ')}${chalk.dim('Simple projects: Use ')}${chalk.cyan('example_prd.txt')}${chalk.dim(' template')}\n${theme.text('   └─ ')}${chalk.dim('Complex systems: Use ')}${chalk.cyan('example_prd_rpg.txt')}${chalk.dim(' template')}\n${theme.text('3. ')}${chalk.yellow(
-				'Parse your PRD to generate initial tasks'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph parse-prd .taskgraph/docs/prd.txt')}\n${theme.text('4. ')}${chalk.yellow(
-				'Analyze task complexity'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph analyze-complexity --research')}\n${theme.text('5. ')}${chalk.yellow(
-				'Expand tasks into subtasks'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph expand --all --research')}\n${theme.text('6. ')}${chalk.yellow(
-				'Start working on tasks'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph next')}\n${theme.text('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
-				'* Run '
-			)}${chalk.cyan('taskgraph --help')}${chalk.dim(' to see all available commands')}`;
+			gettingStartedMessage = getLocalGettingStartedMessage();
 		}
 
 		console.log(
