@@ -41,6 +41,12 @@ export const theme = {
 	/** In-progress / actively worked status (bold, so it differs from plain cyan IDs) */
 	active: chalk.cyan.bold,
 	/**
+	 * De-emphasized text such as low priority or inactive statuses. Dims the
+	 * default foreground instead of using chalk.gray (bright black), which is
+	 * nearly invisible on Solarized Dark and similar themes.
+	 */
+	muted: chalk.dim,
+	/**
 	 * Body text in the terminal's default foreground. Replaces chalk.white,
 	 * which many light themes render as pale gray. Plain chalk adds no color
 	 * code, so unlike chalk.reset it never cancels an enclosing bold or italic.
