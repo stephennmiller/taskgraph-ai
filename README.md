@@ -24,10 +24,39 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 - **No API keys:** every AI call runs through your signed-in Claude Code.
 
 <p align="center">
-  <a href="images/demo/taskgraph-demo.mp4"><img src="images/demo/taskgraph-demo-poster.png" alt="TaskGraph demo: initialize a project, turn a PRD into tasks, and pick up where you left off in a new Claude Code session" width="720"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.webp" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="720"></a>
   <br>
-  <sub><a href="images/demo/taskgraph-demo.mp4">▶ Watch the 1-minute demo</a></sub>
+  <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
+
+<details>
+<summary><b>See the full workflow</b> (4 short clips)</summary>
+
+<p align="center">
+  <a href="images/demo/01-setup.mp4"><img src="images/demo/01-setup.webp" alt="Running taskgraph init --rules claude in a project" width="720"></a>
+  <br>
+  <sub>1. Set it up in your project · <a href="images/demo/01-setup.mp4">MP4</a></sub>
+</p>
+
+<p align="center">
+  <a href="images/demo/02-prd-to-tasks.mp4"><img src="images/demo/02-prd-to-tasks.webp" alt="Claude Code running /tm:parse-prd to turn a PRD into 8 dependent tasks" width="720"></a>
+  <br>
+  <sub>2. Turn your PRD into a plan · <a href="images/demo/02-prd-to-tasks.mp4">MP4</a></sub>
+</p>
+
+<p align="center">
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.webp" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="720"></a>
+  <br>
+  <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
+</p>
+
+<p align="center">
+  <a href="images/demo/04-terminal.mp4"><img src="images/demo/04-terminal.webp" alt="The taskgraph list dashboard and task table in a terminal" width="720"></a>
+  <br>
+  <sub>4. Or drive it from your terminal · <a href="images/demo/04-terminal.mp4">MP4</a></sub>
+</p>
+
+</details>
 
 > **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
 
