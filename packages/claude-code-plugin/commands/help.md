@@ -1,3 +1,8 @@
+---
+description: "Show help for TaskGraph commands."
+argument-hint: "[arguments]"
+---
+
 Show help for TaskGraph commands.
 
 Arguments: $ARGUMENTS

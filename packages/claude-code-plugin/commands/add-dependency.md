@@ -1,3 +1,8 @@
+---
+description: "Add a dependency between tasks."
+argument-hint: "[arguments]"
+---
+
 Add a dependency between tasks.
 
 Arguments: $ARGUMENTS

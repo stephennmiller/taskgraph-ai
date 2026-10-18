@@ -1,3 +1,8 @@
+---
+description: "List tasks with intelligent argument parsing."
+argument-hint: "[arguments]"
+---
+
 List tasks with intelligent argument parsing.
 
 Parse arguments to determine filters and display options:

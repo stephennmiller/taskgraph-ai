@@ -1,3 +1,8 @@
+---
+description: "Start working on a task by setting its status to in-progress."
+argument-hint: "[task ID]"
+---
+
 Start working on a task by setting its status to in-progress.
 
 Arguments: $ARGUMENTS (task ID)

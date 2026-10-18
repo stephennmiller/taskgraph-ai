@@ -1,3 +1,8 @@
+---
+description: "Intelligently determine and prepare the next action based on comprehensive context."
+argument-hint: "[arguments]"
+---
+
 Intelligently determine and prepare the next action based on comprehensive context.
 
 This enhanced version of 'next' considers:

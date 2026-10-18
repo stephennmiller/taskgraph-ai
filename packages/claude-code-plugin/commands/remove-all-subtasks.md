@@ -1,3 +1,7 @@
+---
+description: "Clear all subtasks from all tasks globally."
+---
+
 Clear all subtasks from all tasks globally.
 
 ## Global Subtask Clearing

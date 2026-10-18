@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph",
-	"description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
+	"description": "Task management for AI-driven development in Claude Code: slash commands, orchestration agents and the TaskGraph MCP server.",
 	"author": {
 		"name": "Stephen Miller",
 		"url": "https://github.com/stephennmiller/taskgraph-ai"

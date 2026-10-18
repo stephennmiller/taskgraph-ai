@@ -1,3 +1,7 @@
+---
+description: "View current AI model configuration."
+---
+
 View current AI model configuration.
 
 ## Model Configuration Display

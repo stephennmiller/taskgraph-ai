@@ -1,3 +1,8 @@
+---
+description: "Update a single specific task with new information."
+argument-hint: "[arguments]"
+---
+
 Update a single specific task with new information.
 
 Arguments: $ARGUMENTS

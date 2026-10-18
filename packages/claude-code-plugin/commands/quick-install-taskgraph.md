@@ -1,3 +1,7 @@
+---
+description: "Quick install TaskGraph globally if not already installed."
+---
+
 Quick install TaskGraph globally if not already installed.
 
 Execute this streamlined installation:

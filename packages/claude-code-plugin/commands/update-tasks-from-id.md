@@ -1,3 +1,8 @@
+---
+description: "Update multiple tasks starting from a specific ID."
+argument-hint: "[arguments]"
+---
+
 Update multiple tasks starting from a specific ID.
 
 Arguments: $ARGUMENTS

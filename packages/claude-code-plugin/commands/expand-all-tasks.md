@@ -1,3 +1,7 @@
+---
+description: "Expand all pending tasks that need subtasks."
+---
+
 Expand all pending tasks that need subtasks.
 
 ## Bulk Task Expansion

@@ -1,3 +1,8 @@
+---
+description: "Advanced project analysis with actionable insights and recommendations."
+argument-hint: "[arguments]"
+---
+
 Advanced project analysis with actionable insights and recommendations.
 
 Arguments: $ARGUMENTS

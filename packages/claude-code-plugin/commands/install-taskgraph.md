@@ -1,3 +1,7 @@
+---
+description: "Check if TaskGraph is installed and install it if needed."
+---
+
 Check if TaskGraph is installed and install it if needed.
 
 This command helps you get TaskGraph set up globally on your system.

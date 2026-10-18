@@ -1,3 +1,8 @@
+---
+description: "Enhanced status command with comprehensive project insights."
+argument-hint: "[arguments]"
+---
+
 Enhanced status command with comprehensive project insights.
 
 Arguments: $ARGUMENTS

@@ -1,3 +1,8 @@
+---
+description: "Display the task complexity analysis report."
+argument-hint: "[arguments]"
+---
+
 Display the task complexity analysis report.
 
 Arguments: $ARGUMENTS

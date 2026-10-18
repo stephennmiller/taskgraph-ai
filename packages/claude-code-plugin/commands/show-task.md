@@ -1,3 +1,8 @@
+---
+description: "Show detailed task information with rich context and insights."
+argument-hint: "[arguments]"
+---
+
 Show detailed task information with rich context and insights.
 
 Arguments: $ARGUMENTS

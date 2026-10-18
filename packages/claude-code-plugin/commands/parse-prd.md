@@ -1,3 +1,8 @@
+---
+description: "Parse a PRD document to generate tasks."
+argument-hint: "[PRD file path]"
+---
+
 Parse a PRD document to generate tasks.
 
 Arguments: $ARGUMENTS (PRD file path)

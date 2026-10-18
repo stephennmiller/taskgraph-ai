@@ -1,3 +1,8 @@
+---
+description: "Defer a task for later consideration."
+argument-hint: "[task ID]"
+---
+
 Defer a task for later consideration.
 
 Arguments: $ARGUMENTS (task ID)

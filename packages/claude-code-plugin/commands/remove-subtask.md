@@ -1,3 +1,8 @@
+---
+description: "Remove a subtask from its parent task."
+argument-hint: "[arguments]"
+---
+
 Remove a subtask from its parent task.
 
 Arguments: $ARGUMENTS

@@ -1,3 +1,8 @@
+---
+description: "TaskGraph Command Reference"
+argument-hint: "[arguments]"
+---
+
 # TaskGraph Command Reference
 
 Comprehensive command structure for TaskGraph integration with Claude Code.

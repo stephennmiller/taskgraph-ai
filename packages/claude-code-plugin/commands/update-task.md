@@ -1,3 +1,8 @@
+---
+description: "Update tasks with intelligent field detection and bulk operations."
+argument-hint: "[arguments]"
+---
+
 Update tasks with intelligent field detection and bulk operations.
 
 Arguments: $ARGUMENTS

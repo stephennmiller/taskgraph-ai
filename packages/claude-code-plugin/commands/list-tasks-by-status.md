@@ -1,3 +1,8 @@
+---
+description: "List tasks filtered by a specific status."
+argument-hint: "[arguments]"
+---
+
 List tasks filtered by a specific status.
 
 Arguments: $ARGUMENTS

@@ -32,7 +32,7 @@ const IDENTITY_FILES = [
 	'apps/cli/src/utils/auto-update/restart.ts',
 	'apps/cli/src/ui/components/brand-banner.component.ts',
 	'.mcp.json',
-	'packages/claude-code-plugin/mcp.json',
+	'packages/claude-code-plugin/.mcp.json',
 	'apps/mcp/src/shared/utils.ts',
 	'packages/tm-core/src/common/constants/index.ts',
 	'packages/tm-core/src/modules/loop/presets/default.ts',

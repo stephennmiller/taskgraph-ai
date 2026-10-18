@@ -1,3 +1,8 @@
+---
+description: "Parse PRD with enhanced research mode for better task generation."
+argument-hint: "[PRD file path]"
+---
+
 Parse PRD with enhanced research mode for better task generation.
 
 Arguments: $ARGUMENTS (PRD file path)

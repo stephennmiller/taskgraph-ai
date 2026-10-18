@@ -1,3 +1,8 @@
+---
+description: "Enhanced auto-implementation with intelligent code generation and testing."
+argument-hint: "[arguments]"
+---
+
 Enhanced auto-implementation with intelligent code generation and testing.
 
 Arguments: $ARGUMENTS
