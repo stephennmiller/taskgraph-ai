@@ -97,7 +97,7 @@ The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<nam
 /plugin install taskgraph@taskgraph
 ```
 
-The plugin does not register an MCP server. The tools come from the server you added in step 2. Its slash commands overlap with the ones from step 3, so install the plugin only if you want the agents.
+The plugin does not register an MCP server. The tools come from the server you added in step 2, and the `task-checker` agent needs it registered under the name `taskgraph-ai`. Its slash commands overlap with the ones from step 3, so install the plugin only if you want the agents.
 
 ## How to use it
 
