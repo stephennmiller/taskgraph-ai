@@ -14,6 +14,7 @@ import {
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 
+import { theme } from '@tm/cli/theme';
 import { TASKGRAPH_TASKS_FILE } from '../../../src/constants/paths.js';
 import { resolveComplexityReportOutputPath } from '../../../src/utils/path-utils.js';
 import {
@@ -81,7 +82,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 	if (outputFormat === 'text') {
 		console.log(
-			chalk.blue(
+			theme.brand(
 				'Analyzing task complexity and generating expansion recommendations...'
 			)
 		);
@@ -235,7 +236,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 			reportLog(filterMsg, 'info');
 			if (outputFormat === 'text') {
-				console.log(chalk.blue(filterMsg));
+				console.log(theme.brand(filterMsg));
 			}
 		} else if (skippedCount > 0) {
 			const skipMessage = `Skipping ${skippedCount} tasks marked as done/cancelled/deferred. Analyzing ${tasksData.tasks.length} active tasks.`;
@@ -346,7 +347,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 				console.log(
 					boxen(
-						chalk.white.bold('Suggested Next Steps:') +
+						theme.text.bold('Suggested Next Steps:') +
 							'\n\n' +
 							`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph complexity-report')} to review detailed findings\n` +
 							`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down complex tasks\n` +
@@ -565,7 +566,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 				console.log(
 					boxen(
-						chalk.white.bold('Suggested Next Steps:') +
+						theme.text.bold('Suggested Next Steps:') +
 							'\n\n' +
 							`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph complexity-report')} to review detailed findings\n` +
 							`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down complex tasks\n` +

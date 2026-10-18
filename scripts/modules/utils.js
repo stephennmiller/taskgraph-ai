@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { theme } from '@tm/cli/theme';
 // Import FileOperations from tm-core for atomic file modifications
 import { FileOperations } from '@tm/core';
 import chalk from 'chalk';
@@ -486,7 +487,7 @@ function log(level, ...args) {
 	// Use text prefixes instead of emojis
 	const prefixes = {
 		debug: chalk.gray('[DEBUG]'),
-		info: chalk.blue('[INFO]'),
+		info: theme.brand('[INFO]'),
 		warn: chalk.yellow('[WARN]'),
 		error: chalk.red('[ERROR]'),
 		success: chalk.green('[SUCCESS]')

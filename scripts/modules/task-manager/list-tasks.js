@@ -13,10 +13,10 @@ import findNextTask from './find-next-task.js';
 
 import { createTmCore } from '@tm/core';
 import {
+	BORDER_COLOR,
 	createProgressBar,
 	displayBanner,
 	formatDependenciesWithStatus,
-	BORDER_COLOR,
 	getComplexityWithColor,
 	getStatusWithColor,
 	theme
@@ -425,7 +425,7 @@ async function listTasks(
 			// Create boxen options with precise widths
 			const dashboardBox = boxen(projectDashboardContent, {
 				padding: 1,
-				borderColor: 'blue',
+				borderColor: BORDER_COLOR,
 				borderStyle: 'round',
 				width: boxContentWidth,
 				dimBorder: false
@@ -470,7 +470,7 @@ async function listTasks(
 			// Terminal too narrow, show boxes stacked vertically
 			const dashboardBox = boxen(projectDashboardContent, {
 				padding: 1,
-				borderColor: 'blue',
+				borderColor: BORDER_COLOR,
 				borderStyle: 'round',
 				margin: { top: 0, bottom: 1 }
 			});

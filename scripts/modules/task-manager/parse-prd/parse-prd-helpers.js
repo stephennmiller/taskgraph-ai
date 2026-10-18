@@ -4,6 +4,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { theme } from '@tm/cli/theme';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { displayParsePrdSummary } from '../../../../src/ui/parse-prd.js';
@@ -404,7 +405,7 @@ export function displayNonStreamingCliOutput({
 
 	console.log(
 		boxen(
-			chalk.white.bold('Next Steps:') +
+			theme.text.bold('Next Steps:') +
 				'\n\n' +
 				`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph list')} to view all tasks\n` +
 				`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down a task into subtasks`,

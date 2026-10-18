@@ -41,6 +41,7 @@ import { insideGitWorkTree } from './modules/utils/git-utils.js';
 import { assetExists, readAsset } from '../src/utils/asset-resolver.js';
 
 import { execSync } from 'child_process';
+import { theme } from '@tm/cli/theme';
 import {
 	ENV_EXAMPLE_FILE,
 	EXAMPLE_PRD_FILE,
@@ -84,7 +85,7 @@ function displayBanner() {
 function log(level, ...args) {
 	const icons = {
 		debug: chalk.gray('•'),
-		info: chalk.blue('→'),
+		info: theme.brand('→'),
 		warn: chalk.yellow('!'),
 		error: chalk.red('✗'),
 		success: chalk.green('✓')
@@ -102,7 +103,7 @@ function log(level, ...args) {
 			} else if (level === 'success') {
 				console.log(icon, chalk.green(...args));
 			} else if (level === 'info') {
-				console.log(icon, chalk.blue(...args));
+				console.log(icon, theme.brand(...args));
 			} else {
 				console.log(icon, ...args);
 			}
@@ -447,9 +448,9 @@ async function initializeProject(options = {}) {
 						// Use shared browser auth with MFA support
 						// This is the SAME auth flow used by 'tm auth login' and 'tm parse-prd'
 						log('info', 'Starting authentication flow...');
-						console.log(chalk.blue('\n🔐 Authentication Required\n'));
+						console.log(theme.brand('\n🔐 Authentication Required\n'));
 						console.log(
-							chalk.white(
+							theme.text(
 								'  Selecting cloud storage will open your browser for authentication.'
 							)
 						);
@@ -591,7 +592,7 @@ async function initializeProject(options = {}) {
 			// Storage
 			console.log(
 				'  ' + chalk.dim('Storage:'.padEnd(32)),
-				chalk.white(
+				theme.text(
 					selectedStorage === 'cloud' ? 'Hamster Studio' : 'Local File Storage'
 				)
 			);
@@ -606,7 +607,7 @@ async function initializeProject(options = {}) {
 			// Response language
 			console.log(
 				'  ' + chalk.dim('Response language:'.padEnd(32)),
-				chalk.white(preferredLanguage)
+				theme.text(preferredLanguage)
 			);
 
 			// Only show Git-related settings for local storage
@@ -785,22 +786,22 @@ async function promptStorageSelection() {
 			{
 				type: 'list',
 				name: 'storageType',
-				message: chalk.white('How do you want to build it?\n'),
+				message: theme.text('How do you want to build it?\n'),
 				choices: [
 					{
 						name: [
 							chalk.bold('Solo (TaskGraph)'),
 							'',
-							chalk.white(
+							theme.text(
 								'   • Parse your own PRDs into structured task lists and build with any IDE or background agents'
 							),
-							chalk.white(
+							theme.text(
 								'   • Agents execute tasks with precision, no scope creep, no going off-track'
 							),
-							chalk.white(
+							theme.text(
 								'   • Tasks live in a local JSON file, everything stays in your repo'
 							),
-							chalk.white(
+							theme.text(
 								'   • Upgrade to Hamster to bring the TaskGraph experience to your team'
 							),
 							''
@@ -813,16 +814,16 @@ async function promptStorageSelection() {
 						name: [
 							chalk.bold('Together (Hamster)'),
 							'',
-							chalk.white(
+							theme.text(
 								'   • Write a brief with your team. Hamster refines it into a plan.'
 							),
-							chalk.white(
+							theme.text(
 								'   • Your team drafts, refines, and aligns on the same page before executing'
 							),
-							chalk.white(
+							theme.text(
 								'   • One brief, one plan, one source of truth for execution'
 							),
-							chalk.white(
+							theme.text(
 								'   • Access tasks on TaskGraph and execute with any AI agent'
 							),
 							''
@@ -1057,7 +1058,7 @@ async function createProjectStructure(
 		console.log(
 			boxen(
 				chalk.green.bold('✓ AI Models Managed by Hamster - go ham!\n\n') +
-					chalk.white('Hamster handles all AI model configuration for you.\n') +
+					theme.text('Hamster handles all AI model configuration for you.\n') +
 					chalk.dim('• Optimized model selection for your tasks\n') +
 					chalk.dim('• No API keys required\n') +
 					chalk.dim('• No extra costs'),
@@ -1111,21 +1112,21 @@ async function createProjectStructure(
 			const welcomeMessage = [
 				chalk.green.bold('✓ Connected to Hamster Studio'),
 				'',
-				chalk.white("Your team's workspace is ready to go ham!\n"),
+				theme.text("Your team's workspace is ready to go ham!\n"),
 				chalk.dim('Draft together. Align once. Build with agents.'),
 				'',
 				chalk.cyan('How to orchestrate with TaskGraph:'),
-				chalk.white('  • Create your first brief at: ') +
+				theme.text('  • Create your first brief at: ') +
 					chalk.underline.cyan('https://tryhamster.com'),
-				chalk.white('  • Connect your brief using ') +
+				theme.text('  • Connect your brief using ') +
 					chalk.bold('tm context <brief-url>') +
-					chalk.white(' to access tasks in TaskGraph'),
-				chalk.white('  • Orchestrate and implement tasks using ') +
+					theme.text(' to access tasks in TaskGraph'),
+				theme.text('  • Orchestrate and implement tasks using ') +
 					chalk.bold('tm next') +
-					chalk.white(' to kickoff any AI agent'),
-				chalk.white('  • Run ') +
+					theme.text(' to kickoff any AI agent'),
+				theme.text('  • Run ') +
 					chalk.bold('tm help') +
-					chalk.white(' to explore other available commands')
+					theme.text(' to explore other available commands')
 			].join('\n');
 
 			console.log(
@@ -1162,38 +1163,38 @@ async function createProjectStructure(
 
 		if (selectedStorage === 'cloud') {
 			// Hamster-specific workflow
-			gettingStartedMessage = `${chalk.cyan.bold("Here's how to execute your Hamster briefs with TaskGraph")}\n\n${chalk.white('1. ')}${chalk.yellow(
+			gettingStartedMessage = `${chalk.cyan.bold("Here's how to execute your Hamster briefs with TaskGraph")}\n\n${theme.text('1. ')}${chalk.yellow(
 				'Create your first brief at'
-			)} ${chalk.cyan.underline('https://tryhamster.com')}\n${chalk.white('   └─ ')}${chalk.dim('Hamster will write your brief and generate the full task plan')}\n${chalk.white('2. ')}${chalk.yellow(
+			)} ${chalk.cyan.underline('https://tryhamster.com')}\n${theme.text('   └─ ')}${chalk.dim('Hamster will write your brief and generate the full task plan')}\n${theme.text('2. ')}${chalk.yellow(
 				'Set up Claude Code integration'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph init --rules claude')}${chalk.dim(' - Adds CLAUDE.md import and MCP config')}\n${chalk.white('3. ')}${chalk.yellow(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph init --rules claude')}${chalk.dim(' - Adds CLAUDE.md import and MCP config')}\n${theme.text('3. ')}${chalk.yellow(
 				'Connect your brief to TaskGraph'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm context <brief-url> OR tm briefs')}\n${chalk.white('4. ')}${chalk.yellow(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm context <brief-url> OR tm briefs')}\n${theme.text('4. ')}${chalk.yellow(
 				'View your tasks from the brief'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm list')}${chalk.dim(' or ')}${chalk.cyan('tm list all')}${chalk.dim(' (with subtasks)')}\n${chalk.white('5. ')}${chalk.yellow(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm list')}${chalk.dim(' or ')}${chalk.cyan('tm list all')}${chalk.dim(' (with subtasks)')}\n${theme.text('5. ')}${chalk.yellow(
 				'Work on tasks with any AI coding assistant or background agent'
-			)}\n${chalk.white('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm next')}${chalk.dim(' - Find the next task to work on')}\n${chalk.white('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm show <id>')}${chalk.dim(' - View task details')}\n${chalk.white('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm status <id> in-progress')}${chalk.dim(' - Mark task started')}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm status <id> done')}${chalk.dim(' - Mark task complete')}\n${chalk.white('6. ')}${chalk.yellow(
+			)}\n${theme.text('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm next')}${chalk.dim(' - Find the next task to work on')}\n${theme.text('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm show <id>')}${chalk.dim(' - View task details')}\n${theme.text('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm status <id> in-progress')}${chalk.dim(' - Mark task started')}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm status <id> done')}${chalk.dim(' - Mark task complete')}\n${theme.text('6. ')}${chalk.yellow(
 				'Add notes or updates to tasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm update-task <id> <notes>')}\n${chalk.white('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm update-task <id> <notes>')}\n${theme.text('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
 				'* Run '
 			)}${chalk.cyan('tm help')}${chalk.dim(' to see all available commands')}`;
 		} else {
 			// Local-specific getting started
-			gettingStartedMessage = `${chalk.cyan.bold('Things you should do next:')}\n\n${chalk.white('1. ')}${chalk.yellow(
+			gettingStartedMessage = `${chalk.cyan.bold('Things you should do next:')}\n\n${theme.text('1. ')}${chalk.yellow(
 				'Configure AI models and add API keys to `.env`'
-			)}\n${chalk.white('   ├─ ')}${chalk.dim('Models: Use ')}${chalk.cyan('taskgraph models')}${chalk.dim(' commands')}\n${chalk.white('   └─ ')}${chalk.dim(
+			)}\n${theme.text('   ├─ ')}${chalk.dim('Models: Use ')}${chalk.cyan('taskgraph models')}${chalk.dim(' commands')}\n${theme.text('   └─ ')}${chalk.dim(
 				'Keys: Add provider API keys to .env (or .mcp.json)'
-			)}\n${chalk.white('2. ')}${chalk.yellow(
+			)}\n${theme.text('2. ')}${chalk.yellow(
 				'Discuss your idea with AI and create a PRD'
-			)}\n${chalk.white('   ├─ ')}${chalk.dim('Simple projects: Use ')}${chalk.cyan('example_prd.txt')}${chalk.dim(' template')}\n${chalk.white('   └─ ')}${chalk.dim('Complex systems: Use ')}${chalk.cyan('example_prd_rpg.txt')}${chalk.dim(' template')}\n${chalk.white('3. ')}${chalk.yellow(
+			)}\n${theme.text('   ├─ ')}${chalk.dim('Simple projects: Use ')}${chalk.cyan('example_prd.txt')}${chalk.dim(' template')}\n${theme.text('   └─ ')}${chalk.dim('Complex systems: Use ')}${chalk.cyan('example_prd_rpg.txt')}${chalk.dim(' template')}\n${theme.text('3. ')}${chalk.yellow(
 				'Parse your PRD to generate initial tasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph parse-prd .taskgraph/docs/prd.txt')}\n${chalk.white('4. ')}${chalk.yellow(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph parse-prd .taskgraph/docs/prd.txt')}\n${theme.text('4. ')}${chalk.yellow(
 				'Analyze task complexity'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph analyze-complexity --research')}\n${chalk.white('5. ')}${chalk.yellow(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph analyze-complexity --research')}\n${theme.text('5. ')}${chalk.yellow(
 				'Expand tasks into subtasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph expand --all --research')}\n${chalk.white('6. ')}${chalk.yellow(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph expand --all --research')}\n${theme.text('6. ')}${chalk.yellow(
 				'Start working on tasks'
-			)}\n${chalk.white('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph next')}\n${chalk.white('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
+			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph next')}\n${theme.text('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
 				'* Run '
 			)}${chalk.cyan('taskgraph --help')}${chalk.dim(' to see all available commands')}`;
 		}

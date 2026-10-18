@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import {
 	DEFAULT_TASK_PRIORITY,
 	TASK_PRIORITY_OPTIONS,
@@ -294,9 +295,9 @@ async function addTask(
 		// Only show UI box for CLI mode
 		if (outputFormat === 'text') {
 			console.log(
-				boxen(chalk.white.bold(`Creating New Task #${newTaskId}`), {
+				boxen(theme.text.bold(`Creating New Task #${newTaskId}`), {
 					padding: 1,
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round',
 					margin: { top: 1, bottom: 1 }
 				})
@@ -598,17 +599,17 @@ async function addTask(
 			// Prepare dependency display string
 			let dependencyDisplay = '';
 			if (newTask.dependencies.length > 0) {
-				dependencyDisplay = chalk.white('Dependencies:') + '\n';
+				dependencyDisplay = theme.text('Dependencies:') + '\n';
 				newTask.dependencies.forEach((dep) => {
 					const isAiAdded = aiAddedDeps.includes(dep);
 					const depType = isAiAdded ? chalk.yellow(' (AI suggested)') : '';
 					dependencyDisplay +=
-						chalk.white(
+						theme.text(
 							`  - ${dep}: ${depTitles[dep] || 'Unknown task'}${depType}`
 						) + '\n';
 				});
 			} else {
-				dependencyDisplay = chalk.white('Dependencies: None') + '\n';
+				dependencyDisplay = theme.text('Dependencies: None') + '\n';
 			}
 
 			// Add info about removed dependencies if any
@@ -627,7 +628,7 @@ async function addTask(
 			let dependencyAnalysis = '';
 			if (aiAddedDeps.length > 0 || aiRemovedDeps.length > 0) {
 				dependencyAnalysis =
-					'\n' + chalk.white.bold('Dependency Analysis:') + '\n';
+					'\n' + theme.text.bold('Dependency Analysis:') + '\n';
 				if (aiAddedDeps.length > 0) {
 					dependencyAnalysis +=
 						chalk.green(
@@ -645,20 +646,20 @@ async function addTask(
 			// Show success message box
 			console.log(
 				boxen(
-					chalk.white.bold(`Task ${newTaskId} Created Successfully`) +
+					theme.text.bold(`Task ${newTaskId} Created Successfully`) +
 						'\n\n' +
-						chalk.white(`Title: ${newTask.title}`) +
+						theme.text(`Title: ${newTask.title}`) +
 						'\n' +
-						chalk.white(`Status: ${getStatusWithColor(newTask.status)}`) +
+						theme.text(`Status: ${getStatusWithColor(newTask.status)}`) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							`Priority: ${chalk[getPriorityColor(newTask.priority)](newTask.priority)}`
 						) +
 						'\n\n' +
 						dependencyDisplay +
 						dependencyAnalysis +
 						'\n' +
-						chalk.white.bold('Next Steps:') +
+						theme.text.bold('Next Steps:') +
 						'\n' +
 						chalk.cyan(
 							`1. Run ${chalk.yellow(`taskgraph show ${newTaskId}`)} to see complete task details`

@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import { smoothStream } from 'ai';
 import boxen from 'boxen';
 import chalk from 'chalk';
@@ -38,16 +39,16 @@ marked.use(
 		},
 		blockquote: chalk.gray.italic,
 		html: chalk.gray,
-		heading: chalk.white.bold,
+		heading: theme.text.bold,
 		hr: chalk.gray,
-		listitem: chalk.white,
-		paragraph: chalk.white,
-		strong: chalk.white.bold,
-		em: chalk.white.italic,
+		listitem: theme.text,
+		paragraph: theme.text,
+		strong: theme.text.bold,
+		em: theme.text.italic,
 		codespan: chalk.cyan,
 		del: chalk.dim.strikethrough,
-		link: chalk.blue,
-		href: chalk.blue.underline,
+		link: theme.brand,
+		href: theme.brand.underline,
 		showSectionPrefix: false,
 		unescape: true,
 		emoji: false,
@@ -365,7 +366,7 @@ async function performResearch(
 					chalk.green.bold('Research Results') +
 						'\n\n' +
 						chalk.gray('Query: ') +
-						chalk.white(query) +
+						theme.text(query) +
 						'\n' +
 						chalk.gray('Detail Level: ') +
 						chalk.cyan(detailLevel),
@@ -538,7 +539,7 @@ function displayDetailedTokenBreakdown(
 					task.title.length > 30
 						? task.title.substring(0, 30) + '...'
 						: task.title;
-				return `  ${chalk.gray(task.id)} ${chalk.white(titleDisplay)} ${chalk.yellow(task.tokens.toLocaleString())} tokens`;
+				return `  ${chalk.gray(task.id)} ${theme.text(titleDisplay)} ${chalk.yellow(task.tokens.toLocaleString())} tokens`;
 			})
 			.join('\n');
 
@@ -606,12 +607,12 @@ function displayDetailedTokenBreakdown(
 	if (parts.length > 0) {
 		const content = parts.join('\n\n');
 		const tokenBox = boxen(content, {
-			title: chalk.blue.bold('Context Analysis'),
+			title: theme.brand.bold('Context Analysis'),
 			titleAlignment: 'left',
 			padding: { top: 1, bottom: 1, left: 2, right: 2 },
 			margin: { top: 0, bottom: 1 },
 			borderStyle: 'single',
-			borderColor: 'blue'
+			borderColor: BORDER_COLOR
 		});
 		console.log(tokenBox);
 	}
@@ -635,7 +636,7 @@ async function displayResearchResults(
 		chalk.green.bold('Research Results') +
 			'\n\n' +
 			chalk.gray('Query: ') +
-			chalk.white(query) +
+			theme.text(query) +
 			'\n' +
 			chalk.gray('Detail Level: ') +
 			chalk.cyan(detailLevel),
@@ -902,7 +903,7 @@ async function handleSaveToTask(
 			}
 
 			// Save to subtask using updateSubtaskById
-			console.log(chalk.blue('💾 Saving research conversation to subtask...'));
+			console.log(theme.brand('💾 Saving research conversation to subtask...'));
 
 			await updateSubtaskById(
 				tasksPath,
@@ -929,7 +930,7 @@ async function handleSaveToTask(
 			}
 
 			// Save to task using updateTaskById with append mode
-			console.log(chalk.blue('💾 Saving research conversation to task...'));
+			console.log(theme.brand('💾 Saving research conversation to task...'));
 
 			await updateTaskById(
 				tasksPath,

@@ -6,7 +6,8 @@
 	"main": "./dist/index.js",
 	"types": "./src/index.ts",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./theme": "./src/ui/theme.ts"
 	},
 	"files": ["dist", "README.md"],
 	"scripts": {

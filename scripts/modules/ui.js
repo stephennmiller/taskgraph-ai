@@ -556,7 +556,7 @@ function displayHelp() {
 	console.log(
 		boxen(chalk.bold('TaskGraph CLI'), {
 			padding: 1,
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 1, bottom: 1 }
 		})
@@ -1025,7 +1025,7 @@ async function displayNextTask(
 	console.log(
 		boxen(chalk.bold(`Next Task: #${nextTask.id} - ${nextTask.title}`), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 1, bottom: 0 }
 		})
@@ -1385,7 +1385,7 @@ async function displayTaskById(
 	console.log(
 		boxen(chalk.bold(`Task: #${task.id} - ${task.title}`), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 1, bottom: 0 }
 		})
@@ -1681,7 +1681,7 @@ async function displayTaskById(
 					`${chalk.cyan('Progress:')} ${createProgressBar(completionPercentage, progressBarLength, statusBreakdown)}`,
 				{
 					padding: { top: 0, bottom: 0, left: 1, right: 1 },
-					borderColor: 'blue',
+					borderColor: BORDER_COLOR,
 					borderStyle: 'round',
 					margin: { top: 1, bottom: 0 },
 					width: Math.min(availableWidth - 10, 100),
@@ -1850,7 +1850,7 @@ async function displayComplexityReport(reportPath) {
 	console.log(
 		boxen(chalk.bold('Task Complexity Analysis Report'), {
 			padding: 1,
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			margin: { top: 1, bottom: 1 }
 		})
@@ -2295,7 +2295,7 @@ function displayAiUsageSummary(telemetryData, outputType = 'cli') {
 		isUnknownCost
 	} = telemetryData;
 
-	let summary = chalk.bold.blue('AI Usage Summary:') + '\n';
+	let summary = theme.brand.bold('AI Usage Summary:') + '\n';
 	summary += chalk.gray(`  Command: ${commandName}\n`);
 	summary += chalk.gray(`  Provider: ${providerName}\n`);
 	summary += chalk.gray(`  Model: ${modelUsed}\n`);
@@ -2311,7 +2311,7 @@ function displayAiUsageSummary(telemetryData, outputType = 'cli') {
 		boxen(summary, {
 			padding: 1,
 			margin: { top: 1 },
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			borderStyle: 'round',
 			title: 'Telemetry',
 			titleAlignment: 'center'
@@ -2402,7 +2402,7 @@ async function displayMultipleTasksSummary(
 			),
 			{
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
-				borderColor: 'blue',
+				borderColor: BORDER_COLOR,
 				borderStyle: 'round',
 				margin: { top: 1, bottom: 0 }
 			}
@@ -2576,7 +2576,7 @@ async function displayMultipleTasksSummary(
 						chalk.gray('Or type a task ID to view details'),
 					{
 						padding: { top: 0, bottom: 0, left: 1, right: 1 },
-						borderColor: 'blue',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1 }
 					}
@@ -2783,7 +2783,7 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 			padding: { top: 1, bottom: 1, left: 2, right: 2 },
 			margin: { top: 1, bottom: 0 },
 			borderStyle: 'round',
-			borderColor: 'blue',
+			borderColor: BORDER_COLOR,
 			title: chalk.cyan('Context gathering'),
 			titleAlignment: 'center'
 		})

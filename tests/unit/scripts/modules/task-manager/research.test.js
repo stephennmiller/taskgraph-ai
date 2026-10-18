@@ -27,48 +27,55 @@ jest.unstable_mockModule('marked', () => ({
 
 // Mock UI-affecting external libs to minimal no-op implementations
 jest.unstable_mockModule('chalk', () => ({
-	default: {
-		white: Object.assign(
-			jest.fn((text) => text),
-			{
-				bold: jest.fn((text) => text)
-			}
-		),
-		cyan: Object.assign(
-			jest.fn((text) => text),
-			{
-				bold: jest.fn((text) => text)
-			}
-		),
-		green: Object.assign(
-			jest.fn((text) => text),
-			{
-				bold: jest.fn((text) => text)
-			}
-		),
-		yellow: jest.fn((text) => text),
-		red: jest.fn((text) => text),
-		gray: Object.assign(
-			jest.fn((text) => text),
-			{
-				italic: jest.fn((text) => text),
-				dim: jest.fn((text) => text)
-			}
-		),
-		blue: Object.assign(
-			jest.fn((text) => text),
-			{
-				bold: jest.fn((text) => text),
-				underline: jest.fn((text) => text)
-			}
-		),
-		dim: Object.assign(
-			jest.fn((text) => text),
-			{
-				strikethrough: jest.fn((text) => text)
-			}
-		)
-	}
+	// Callable like the real chalk: theme.text is plain chalk
+	default: Object.assign(
+		jest.fn((text) => text),
+		{
+			bold: jest.fn((text) => text),
+			italic: jest.fn((text) => text),
+			magenta: jest.fn((text) => text),
+			white: Object.assign(
+				jest.fn((text) => text),
+				{
+					bold: jest.fn((text) => text)
+				}
+			),
+			cyan: Object.assign(
+				jest.fn((text) => text),
+				{
+					bold: jest.fn((text) => text)
+				}
+			),
+			green: Object.assign(
+				jest.fn((text) => text),
+				{
+					bold: jest.fn((text) => text)
+				}
+			),
+			yellow: jest.fn((text) => text),
+			red: jest.fn((text) => text),
+			gray: Object.assign(
+				jest.fn((text) => text),
+				{
+					italic: jest.fn((text) => text),
+					dim: jest.fn((text) => text)
+				}
+			),
+			blue: Object.assign(
+				jest.fn((text) => text),
+				{
+					bold: jest.fn((text) => text),
+					underline: jest.fn((text) => text)
+				}
+			),
+			dim: Object.assign(
+				jest.fn((text) => text),
+				{
+					strikethrough: jest.fn((text) => text)
+				}
+			)
+		}
+	)
 }));
 
 jest.unstable_mockModule('boxen', () => ({ default: (text) => text }));
