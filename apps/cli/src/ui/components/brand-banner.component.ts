@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
 import { createLink } from '../formatters/link-formatters.js';
-import { BANNER_GRADIENT, theme } from '../theme.js';
+import { BANNER_GRADIENT } from '../theme.js';
 
 // Brand gradient for the banner
 const coolGradient = gradient(BANNER_GRADIENT);
@@ -90,11 +90,6 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 		console.log(byText);
 	}
 
-	// Hamster promo
-	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com', {
-		textOnlyFallback: true
-	});
-	console.log(chalk.dim('TaskGraph for teams: ') + theme.accent(hamsterLink));
 	console.log('');
 }
 
@@ -124,11 +119,5 @@ export function displayInitBanner(): void {
 		{ textOnlyFallback: true }
 	);
 	console.log(chalk.dim('by ') + chalk.cyan(xLink));
-
-	// Hamster promo
-	const hamsterLink = createLink('tryhamster.com', 'https://tryhamster.com', {
-		textOnlyFallback: true
-	});
-	console.log(chalk.dim('TaskGraph for teams: ') + theme.accent(hamsterLink));
 	console.log('');
 }

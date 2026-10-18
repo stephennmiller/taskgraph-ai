@@ -44,11 +44,19 @@ describe('brand banner credits', () => {
 		expect(output).not.toContain('eyaltoledano');
 	});
 
-	it('keeps the Hamster line unchanged', () => {
+	it('has no Hamster promo line on the full banner', () => {
 		const output = captureBanner(() =>
 			displayAsciiBanner({ version: '1.2.3' })
 		);
 
-		expect(output).toContain('tryhamster.com');
+		expect(output).not.toContain('tryhamster.com');
+		expect(output).not.toContain('TaskGraph for teams');
+	});
+
+	it('has no Hamster promo line on the init banner', () => {
+		const output = captureBanner(() => displayInitBanner());
+
+		expect(output).not.toContain('tryhamster.com');
+		expect(output).not.toContain('TaskGraph for teams');
 	});
 });
