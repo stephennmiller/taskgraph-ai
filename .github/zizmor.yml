@@ -12,7 +12,7 @@ rules:
       # `changeset publish` plus git-auto-commit-action push the release commit.
       - release.yml:33
       # Checks out with RELEASE_TOKEN and runs `git push --atomic origin HEAD:main <tag>`.
-      - version-bump.yml:40
+      - version-bump.yml:42
       # actions-js/push pushes the regenerated docs/models.md.
       - update-models-md.yml:22
       # peter-evans/create-pull-request pushes the docs branch.
@@ -45,4 +45,4 @@ rules:
       # Bump it by hand when updating the release flow.
       - release.yml:44
       # Same reason, in the job that stages the npm release.
-      - version-bump.yml:136
+      - version-bump.yml:138

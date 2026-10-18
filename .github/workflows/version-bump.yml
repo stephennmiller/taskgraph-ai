@@ -15,8 +15,8 @@ concurrency:
   group: version-bump
   cancel-in-progress: false
 
-permissions:
-  contents: write
+# No workflow-level grant: each job declares exactly what it needs.
+permissions: {}
 
 jobs:
   bump:
@@ -24,6 +24,8 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write # push the release commit and tag, create the GitHub Release
     steps:
       # main's ruleset requires PRs and the GitHub Actions app can't be a bypass
       # actor on a user-owned repo, so pushes use a fine-grained PAT owned by a
