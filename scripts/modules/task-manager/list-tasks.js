@@ -11,6 +11,7 @@ import {
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
+import { getSuggestedActions } from '@tm/cli/suggested-actions';
 import { MUTED_BOX_BORDER } from '@tm/cli/theme';
 import { createTmCore } from '@tm/core';
 import {
@@ -746,6 +747,19 @@ async function listTasks(
 					.join('\n');
 			}
 
+			// Suggest steps that fit the next item's status (never "start" a started task)
+			const nextStepsSection = getSuggestedActions(
+				nextItem.id,
+				nextItem.status,
+				Boolean(parentTaskForSubtasks?.subtasks?.length)
+			)
+				.slice(0, 2)
+				.map(
+					(action) =>
+						`${chalk.cyan('Next step:')} ${chalk.yellow(action.command)} ${theme.muted(action.description)}`
+				)
+				.join('\n');
+
 			console.log(
 				boxen(
 					theme.heading(
@@ -761,8 +775,7 @@ async function listTasks(
 						`${chalk.reset('Description:')} ${getWorkItemDescription(nextItem, data.tasks)}` +
 						subtasksSection + // <-- Subtasks are handled above now
 						'\n\n' +
-						// Use nextItem.id
-						`${chalk.cyan('Start working:')} ${chalk.yellow(`taskgraph set-status --id=${nextItem.id} --status=in-progress`)}\n` +
+						`${nextStepsSection}\n` +
 						// Use nextItem.id
 						`${chalk.cyan('View details:')} ${chalk.yellow(`taskgraph show ${nextItem.id}`)}`,
 					{
