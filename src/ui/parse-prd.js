@@ -27,7 +27,7 @@ const PRIORITIES = {
 const PRIORITY_COLORS = {
 	[PRIORITIES.HIGH]: chalk.red,
 	[PRIORITIES.MEDIUM]: chalk.yellow,
-	[PRIORITIES.LOW]: chalk.gray
+	[PRIORITIES.LOW]: theme.muted
 };
 
 // Reusable box styles
@@ -304,7 +304,7 @@ function createPriorityBar(barDistribution) {
 		0
 	);
 	if (totalChars < CONSTANTS.BAR_WIDTH) {
-		bar += chalk.gray('░'.repeat(CONSTANTS.BAR_WIDTH - totalChars));
+		bar += theme.muted('░'.repeat(CONSTANTS.BAR_WIDTH - totalChars));
 	}
 
 	return bar;

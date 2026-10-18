@@ -271,7 +271,7 @@ async function handleParsePrdToHamster(prdPath) {
 			]);
 
 			if (!shouldLogin) {
-				console.log(chalk.gray('\n  Cancelled.\n'));
+				console.log(theme.muted('\n  Cancelled.\n'));
 				return;
 			}
 
@@ -333,7 +333,7 @@ async function handleParsePrdToHamster(prdPath) {
 						console.log(
 							theme.text('  Opening your browser to authenticate...')
 						);
-						console.log(chalk.gray("  If the browser doesn't open, visit:"));
+						console.log(theme.muted("  If the browser doesn't open, visit:"));
 						console.log(chalk.cyan.underline(`  ${authUrl}\n`));
 					},
 					onWaitingForAuth: () => {
@@ -490,12 +490,12 @@ async function handleParsePrdToHamster(prdPath) {
 							console.log(chalk.green(`    ${inv.email}: Invitation sent`));
 						} else if (inv.status === 'already_member') {
 							console.log(
-								chalk.gray(`    ${inv.email}: Already a team member`)
+								theme.muted(`    ${inv.email}: Already a team member`)
 							);
 						} else if (inv.status === 'failed') {
 							console.log(chalk.red(`    ${inv.email}: Failed to send`));
 						} else if (inv.status === 'already_invited') {
-							console.log(chalk.gray(`    ${inv.email}: Already invited`));
+							console.log(theme.muted(`    ${inv.email}: Already invited`));
 						}
 					}
 					console.log('');
@@ -550,7 +550,7 @@ async function handleParsePrdToHamster(prdPath) {
 		const renderProgressBar = (percent, width = 30) => {
 			const filled = Math.floor((percent / 100) * width);
 			const empty = width - filled;
-			return chalk.cyan('█'.repeat(filled)) + chalk.gray('░'.repeat(empty));
+			return chalk.cyan('█'.repeat(filled)) + theme.muted('░'.repeat(empty));
 		};
 
 		// Poll until status is 'ready' or 'failed' or we timeout
@@ -645,7 +645,7 @@ async function handleParsePrdToHamster(prdPath) {
 			const membersUrl = `${baseUrl}/home/${orgSlug}/members`;
 			const clickableMembersUrl = `\x1b]8;;${membersUrl}\x07${chalk.cyan.underline(membersUrl)}\x1b]8;;\x07`;
 			console.log(
-				chalk.gray('  Invite more teammates: ') + clickableMembersUrl
+				theme.muted('  Invite more teammates: ') + clickableMembersUrl
 			);
 			console.log('');
 		}
@@ -706,7 +706,7 @@ function createCommandEntry(command, description, indent = '  ') {
 	return (
 		chalk.cyan(indent + command) +
 		' '.repeat(paddingNeeded) +
-		chalk.gray(description)
+		theme.muted(description)
 	);
 }
 
@@ -834,7 +834,7 @@ function displayHamsterHelp() {
 					'  '
 				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
 				theme.text.bold('» Need more commands?\n') +
-				chalk.gray(
+				theme.muted(
 					'Advanced features (models, tags, PRD parsing) are managed in Hamster Studio.'
 				),
 			{
@@ -2151,29 +2151,29 @@ function registerCommands(programInstance) {
 
 			if (validatedParams.taskIds.length > 0) {
 				console.log(
-					chalk.gray(`Task context: ${validatedParams.taskIds.join(', ')}`)
+					theme.muted(`Task context: ${validatedParams.taskIds.join(', ')}`)
 				);
 			}
 
 			if (validatedParams.filePaths.length > 0) {
 				console.log(
-					chalk.gray(`File context: ${validatedParams.filePaths.join(', ')}`)
+					theme.muted(`File context: ${validatedParams.filePaths.join(', ')}`)
 				);
 			}
 
 			if (validatedParams.customContext) {
 				console.log(
-					chalk.gray(
+					theme.muted(
 						`Custom context: ${validatedParams.customContext.substring(0, 50)}${validatedParams.customContext.length > 50 ? '...' : ''}`
 					)
 				);
 			}
 
 			if (validatedParams.includeProjectTree) {
-				console.log(chalk.gray('Including project file tree'));
+				console.log(theme.muted('Including project file tree'));
 			}
 
-			console.log(chalk.gray(`Detail level: ${validatedParams.detailLevel}`));
+			console.log(theme.muted(`Detail level: ${validatedParams.detailLevel}`));
 
 			try {
 				// Import the research function
@@ -3294,7 +3294,7 @@ ${result.result}
 							// Optionally show parent context if available
 							if (task.parentTask) {
 								console.log(
-									chalk.gray(
+									theme.muted(
 										`    (Parent: ${task.parentTask.id} - ${task.parentTask.title || '(no title)'})`
 									)
 								);
@@ -3801,7 +3801,7 @@ Examples:
 							'  • Invalid tags: Check available tags with taskgraph tags'
 						) +
 						'\n\n' +
-						chalk.gray('For more help, run: taskgraph move --help')
+						theme.muted('For more help, run: taskgraph move --help')
 				);
 			}
 
@@ -4188,7 +4188,7 @@ Examples:
 				)
 			);
 			console.log(
-				chalk.gray('  This command will be removed in a future version.\n')
+				theme.muted('  This command will be removed in a future version.\n')
 			);
 
 			try {
@@ -4338,7 +4338,7 @@ Examples:
 				)
 			);
 			console.log(
-				chalk.gray('  This command will be removed in a future version.\n')
+				theme.muted('  This command will be removed in a future version.\n')
 			);
 
 			try {
@@ -4406,7 +4406,7 @@ Examples:
 				)
 			);
 			console.log(
-				chalk.gray('  This command will be removed in a future version.\n')
+				theme.muted('  This command will be removed in a future version.\n')
 			);
 
 			try {
@@ -4460,7 +4460,7 @@ Examples:
 				)
 			);
 			console.log(
-				chalk.gray('  This command will be removed in a future version.\n')
+				theme.muted('  This command will be removed in a future version.\n')
 			);
 
 			try {
@@ -4520,7 +4520,7 @@ Examples:
 				)
 			);
 			console.log(
-				chalk.gray('  This command will be removed in a future version.\n')
+				theme.muted('  This command will be removed in a future version.\n')
 			);
 
 			try {

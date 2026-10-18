@@ -12,7 +12,7 @@ jest.unstable_mockModule('chalk', () => ({
 			red: jest.fn((str) => str),
 			yellow: jest.fn((str) => str),
 			green: jest.fn((str) => str),
-			gray: jest.fn((str) => str),
+			dim: jest.fn((str) => str),
 			white: jest.fn((str) => str),
 			cyan: Object.assign(
 				jest.fn((str) => str),

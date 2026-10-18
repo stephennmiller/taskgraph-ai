@@ -380,9 +380,9 @@ async function listTasks(
 			chalk.bold('Project Dashboard') +
 			'\n' +
 			`Tasks Progress: ${chalk.greenBright(taskProgressBar)} ${completionPercentage.toFixed(0)}%\n` +
-			`${chalk.green('█')} Done: ${chalk.green(doneCount)}  ${chalk.cyan('▓')} In Progress: ${chalk.cyan(inProgressCount)}  ${chalk.yellow('░')} Pending: ${chalk.yellow(pendingCount)}  ${chalk.red('!')} Blocked: ${chalk.red(blockedCount)}  ${chalk.gray('─')} Deferred: ${chalk.gray(deferredCount)}  ${chalk.gray('─')} Cancelled: ${chalk.gray(cancelledCount)}\n\n` +
+			`${chalk.green('█')} Done: ${chalk.green(doneCount)}  ${chalk.cyan('▓')} In Progress: ${chalk.cyan(inProgressCount)}  ${chalk.yellow('░')} Pending: ${chalk.yellow(pendingCount)}  ${chalk.red('!')} Blocked: ${chalk.red(blockedCount)}  ${theme.muted('─')} Deferred: ${theme.muted(deferredCount)}  ${theme.muted('─')} Cancelled: ${theme.muted(cancelledCount)}\n\n` +
 			`Subtasks Progress: ${chalk.cyan(subtaskProgressBar)} ${subtaskCompletionPercentage.toFixed(0)}%\n` +
-			`${chalk.green('█')} Completed: ${chalk.green(completedSubtasks)}/${totalSubtasks}  ${chalk.cyan('▓')} In Progress: ${chalk.cyan(inProgressSubtasks)}  ${chalk.yellow('░')} Pending: ${chalk.yellow(pendingSubtasks)}  ${chalk.red('!')} Blocked: ${chalk.red(blockedSubtasks)}  ${chalk.gray('─')} Deferred: ${chalk.gray(deferredSubtasks)}  ${chalk.gray('─')} Cancelled: ${chalk.gray(cancelledSubtasks)}\n\n` +
+			`${chalk.green('█')} Completed: ${chalk.green(completedSubtasks)}/${totalSubtasks}  ${chalk.cyan('▓')} In Progress: ${chalk.cyan(inProgressSubtasks)}  ${chalk.yellow('░')} Pending: ${chalk.yellow(pendingSubtasks)}  ${chalk.red('!')} Blocked: ${chalk.red(blockedSubtasks)}  ${theme.muted('─')} Deferred: ${theme.muted(deferredSubtasks)}  ${theme.muted('─')} Cancelled: ${theme.muted(cancelledSubtasks)}\n\n` +
 			chalk.cyan.bold('Priority Breakdown:') +
 			'\n' +
 			`${chalk.red('•')} ${chalk.reset('High priority:')} ${data.tasks.filter((t) => t.priority === 'high').length}\n` +
@@ -397,7 +397,7 @@ async function listTasks(
 			`${chalk.green('•')} ${chalk.reset('Tasks with no dependencies:')} ${tasksWithNoDeps}\n` +
 			`${chalk.green('•')} ${chalk.reset('Tasks ready to work on:')} ${tasksReadyToWork}\n` +
 			`${chalk.yellow('•')} ${chalk.reset('Tasks blocked by dependencies:')} ${tasksWithUnsatisfiedDeps}\n` +
-			`${chalk.magenta('•')} ${chalk.reset('Most depended-on task:')} ${mostDependedOnTask ? chalk.cyan(`#${mostDependedOnTaskId} (${maxDependents} dependents)`) : chalk.gray('None')}\n` +
+			`${chalk.magenta('•')} ${chalk.reset('Most depended-on task:')} ${mostDependedOnTask ? chalk.cyan(`#${mostDependedOnTaskId} (${maxDependents} dependents)`) : theme.muted('None')}\n` +
 			`${chalk.cyan('•')} ${chalk.reset('Avg dependencies per task:')} ${avgDependenciesPerTask.toFixed(1)}\n\n` +
 			chalk.cyan.bold('Next Task:') +
 			'\n' +
@@ -405,7 +405,7 @@ async function listTasks(
 ` +
 			`Priority: ${nextItem ? chalk.reset(nextItem.priority || 'medium') : ''}  Dependencies: ${nextItem ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : ''}
 ` +
-			`Complexity: ${nextItem && nextItem.complexityScore ? getComplexityWithColor(nextItem.complexityScore) : chalk.gray('N/A')}`;
+			`Complexity: ${nextItem && nextItem.complexityScore ? getComplexityWithColor(nextItem.complexityScore) : theme.muted('N/A')}`;
 
 		// Calculate width for side-by-side display
 		// Box borders, padding take approximately 4 chars on each side
@@ -579,7 +579,7 @@ async function listTasks(
 					complexityReport
 				);
 			} else {
-				depText = chalk.gray('None');
+				depText = theme.muted('None');
 			}
 
 			// Clean up any ANSI codes or confusing characters
@@ -590,7 +590,7 @@ async function listTasks(
 				{
 					high: chalk.red,
 					medium: chalk.yellow,
-					low: chalk.gray
+					low: theme.muted
 				}[task.priority || 'medium'] || chalk.reset;
 
 			// Format status
@@ -605,7 +605,7 @@ async function listTasks(
 				depText,
 				task.complexityScore
 					? getComplexityWithColor(task.complexityScore)
-					: chalk.gray('N/A')
+					: theme.muted('N/A')
 			]);
 
 			// Add subtasks if requested
@@ -659,7 +659,7 @@ async function listTasks(
 							})
 							.join(', ');
 
-						subtaskDepText = formattedDeps || chalk.gray('None');
+						subtaskDepText = formattedDeps || theme.muted('None');
 					}
 
 					// Add the subtask row without truncating dependencies
@@ -670,8 +670,8 @@ async function listTasks(
 						chalk.dim('-'),
 						subtaskDepText,
 						subtask.complexityScore
-							? chalk.gray(`${subtask.complexityScore}`)
-							: chalk.gray('N/A')
+							? theme.muted(`${subtask.complexityScore}`)
+							: theme.muted('N/A')
 					]);
 				});
 			}
@@ -708,7 +708,7 @@ async function listTasks(
 		const priorityColors = {
 			high: chalk.red.bold,
 			medium: chalk.yellow,
-			low: chalk.gray
+			low: theme.muted
 		};
 
 		// Show next task box in a prominent color
@@ -736,9 +736,9 @@ async function listTasks(
 							completed: chalk.green,
 							pending: chalk.yellow,
 							'in-progress': chalk.cyan,
-							deferred: chalk.gray,
+							deferred: theme.muted,
 							blocked: chalk.red,
-							cancelled: chalk.gray
+							cancelled: theme.muted
 						};
 						const statusColor =
 							statusColors[status.toLowerCase()] || chalk.reset;
@@ -757,7 +757,7 @@ async function listTasks(
 						'\n\n' +
 						// Use nextItem.priority, nextItem.status, nextItem.dependencies
 						`${chalk.reset('Priority:')} ${priorityColors[nextItem.priority || 'medium'](nextItem.priority || 'medium')}   ${chalk.reset('Status:')} ${getStatusWithColor(nextItem.status, true)}\n` +
-						`${chalk.reset('Dependencies:')} ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : chalk.gray('None')}\n\n` +
+						`${chalk.reset('Dependencies:')} ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : theme.muted('None')}\n\n` +
 						// Use nextTask.description (Note: findNextTask doesn't return description, need to fetch original task/subtask for this)
 						// *** Fetching original item for description and details ***
 						`${chalk.reset('Description:')} ${getWorkItemDescription(nextItem, data.tasks)}` +
@@ -1005,7 +1005,7 @@ function formatCompactDependencies(dependencies) {
 	if (dependencies.length > 5) {
 		const visible = dependencies.slice(0, 5).join(',');
 		const remaining = dependencies.length - 5;
-		return ` → ${chalk.cyan(visible)}${chalk.gray('... (+' + remaining + ' more)')}`;
+		return ` → ${chalk.cyan(visible)}${theme.muted('... (+' + remaining + ' more)')}`;
 	} else {
 		return ` → ${chalk.cyan(dependencies.join(','))}`;
 	}
@@ -1029,7 +1029,7 @@ function formatCompactTask(task, maxTitleLength = 50) {
 	const priorityColors = {
 		high: chalk.red,
 		medium: chalk.yellow,
-		low: chalk.gray
+		low: theme.muted
 	};
 	const priorityColor = priorityColors[priority] || chalk.reset;
 

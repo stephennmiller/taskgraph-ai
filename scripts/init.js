@@ -84,7 +84,7 @@ function displayBanner() {
 // Logging function with icons and colors
 function log(level, ...args) {
 	const icons = {
-		debug: chalk.gray('•'),
+		debug: theme.muted('•'),
 		info: theme.brand('→'),
 		warn: chalk.yellow('!'),
 		error: chalk.red('✗'),
@@ -455,7 +455,7 @@ async function initializeProject(options = {}) {
 							)
 						);
 						console.log(
-							chalk.gray('  This enables sync across devices with Hamster.\n')
+							theme.muted('  This enables sync across devices with Hamster.\n')
 						);
 
 						// Use shared auth utility - handles MFA automatically

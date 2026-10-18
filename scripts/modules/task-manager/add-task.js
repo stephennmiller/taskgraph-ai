@@ -615,12 +615,12 @@ async function addTask(
 			// Add info about removed dependencies if any
 			if (aiRemovedDeps.length > 0) {
 				dependencyDisplay +=
-					chalk.gray('\nUser-specified dependencies that were not used:') +
+					theme.muted('\nUser-specified dependencies that were not used:') +
 					'\n';
 				aiRemovedDeps.forEach((dep) => {
 					const depTask = allTasks.find((t) => t.id === dep);
 					const title = depTask ? truncate(depTask.title, 30) : 'Unknown task';
-					dependencyDisplay += chalk.gray(`  - ${dep}: ${title}`) + '\n';
+					dependencyDisplay += theme.muted(`  - ${dep}: ${title}`) + '\n';
 				});
 			}
 

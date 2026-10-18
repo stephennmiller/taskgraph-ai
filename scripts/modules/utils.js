@@ -486,7 +486,7 @@ function log(level, ...args) {
 
 	// Use text prefixes instead of emojis
 	const prefixes = {
-		debug: chalk.gray('[DEBUG]'),
+		debug: theme.muted('[DEBUG]'),
 		info: theme.brand('[INFO]'),
 		warn: chalk.yellow('[WARN]'),
 		error: chalk.red('[ERROR]'),

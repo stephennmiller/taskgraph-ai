@@ -582,7 +582,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 				if (getDebugFlag(session)) {
 					console.debug(
-						chalk.gray(
+						theme.muted(
 							`Final analysis object: ${JSON.stringify(report, null, 2)}`
 						)
 					);

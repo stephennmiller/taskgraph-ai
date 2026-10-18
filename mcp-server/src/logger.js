@@ -27,7 +27,7 @@ function log(level, ...args) {
 
 	// Use text prefixes instead of emojis
 	const prefixes = {
-		debug: chalk.gray('[DEBUG]'),
+		debug: chalk.dim('[DEBUG]'),
 		info: chalk.blue('[INFO]'),
 		warn: chalk.yellow('[WARN]'),
 		error: chalk.red('[ERROR]'),
@@ -62,7 +62,7 @@ function log(level, ...args) {
 					break;
 				case 'debug':
 					coloredArgs = args.map((arg) =>
-						typeof arg === 'string' ? chalk.gray(arg) : arg
+						typeof arg === 'string' ? chalk.dim(arg) : arg
 					);
 					break;
 				// default: use original args (no color)

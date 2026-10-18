@@ -37,10 +37,10 @@ marked.use(
 				.map((line) => '    ' + chalk.cyan(line))
 				.join('\n');
 		},
-		blockquote: chalk.gray.italic,
-		html: chalk.gray,
+		blockquote: theme.muted.italic,
+		html: theme.muted,
 		heading: theme.text.bold,
-		hr: chalk.gray,
+		hr: theme.muted,
 		listitem: theme.text,
 		paragraph: theme.text,
 		strong: theme.text.bold,
@@ -190,7 +190,7 @@ async function performResearch(
 							.map((id) => id.toString());
 
 						console.log(
-							chalk.gray('Provided tasks: ') +
+							theme.muted('Provided tasks: ') +
 								chalk.cyan(sortedProvidedIds.join(', '))
 						);
 
@@ -201,13 +201,13 @@ async function performResearch(
 								.map((id) => id.toString());
 
 							console.log(
-								chalk.gray('+ Auto-discovered related tasks: ') +
+								theme.muted('+ Auto-discovered related tasks: ') +
 									chalk.cyan(sortedAutoIds.join(', '))
 							);
 						}
 					} else {
 						console.log(
-							chalk.gray('Auto-discovered relevant tasks: ') +
+							theme.muted('Auto-discovered relevant tasks: ') +
 								chalk.cyan(sortedTaskIds.join(', '))
 						);
 					}
@@ -324,10 +324,10 @@ async function performResearch(
 					if (displayChunk) {
 						if (inThinkTag) {
 							// Reasoning content in muted gray
-							process.stdout.write(chalk.gray.dim(displayChunk));
+							process.stdout.write(theme.muted(displayChunk));
 						} else {
 							// Regular response content (also muted during streaming)
-							process.stdout.write(chalk.gray.dim(displayChunk));
+							process.stdout.write(theme.muted(displayChunk));
 						}
 					}
 				}
@@ -365,10 +365,10 @@ async function performResearch(
 				const header = boxen(
 					chalk.green.bold('Research Results') +
 						'\n\n' +
-						chalk.gray('Query: ') +
+						theme.muted('Query: ') +
 						theme.text(query) +
 						'\n' +
-						chalk.gray('Detail Level: ') +
+						theme.muted('Detail Level: ') +
 						chalk.cyan(detailLevel),
 					{
 						padding: { top: 1, bottom: 1, left: 2, right: 2 },
@@ -539,14 +539,14 @@ function displayDetailedTokenBreakdown(
 					task.title.length > 30
 						? task.title.substring(0, 30) + '...'
 						: task.title;
-				return `  ${chalk.gray(task.id)} ${theme.text(titleDisplay)} ${chalk.yellow(task.tokens.toLocaleString())} tokens`;
+				return `  ${theme.muted(task.id)} ${theme.text(titleDisplay)} ${chalk.yellow(task.tokens.toLocaleString())} tokens`;
 			})
 			.join('\n');
 
 		parts.push(
 			chalk.cyan('Tasks: ') +
 				chalk.yellow(totalTaskTokens.toLocaleString()) +
-				chalk.gray(` (${tokenBreakdown.tasks.length} items)`) +
+				theme.muted(` (${tokenBreakdown.tasks.length} items)`) +
 				'\n' +
 				taskDetails
 		);
@@ -564,14 +564,14 @@ function displayDetailedTokenBreakdown(
 					file.path.length > 40
 						? '...' + file.path.substring(file.path.length - 37)
 						: file.path;
-				return `  ${chalk.gray(pathDisplay)} ${chalk.yellow(file.tokens.toLocaleString())} tokens ${chalk.gray(`(${file.sizeKB}KB)`)}`;
+				return `  ${theme.muted(pathDisplay)} ${chalk.yellow(file.tokens.toLocaleString())} tokens ${theme.muted(`(${file.sizeKB}KB)`)}`;
 			})
 			.join('\n');
 
 		parts.push(
 			chalk.cyan('Files: ') +
 				chalk.yellow(totalFileTokens.toLocaleString()) +
-				chalk.gray(` (${tokenBreakdown.files.length} files)`) +
+				theme.muted(` (${tokenBreakdown.files.length} files)`) +
 				'\n' +
 				fileDetails
 		);
@@ -582,7 +582,7 @@ function displayDetailedTokenBreakdown(
 		parts.push(
 			chalk.cyan('Project Tree: ') +
 				chalk.yellow(tokenBreakdown.projectTree.tokens.toLocaleString()) +
-				chalk.gray(
+				theme.muted(
 					` (${tokenBreakdown.projectTree.fileCount} files, ${tokenBreakdown.projectTree.dirCount} dirs)`
 				)
 		);
@@ -591,14 +591,14 @@ function displayDetailedTokenBreakdown(
 	// Prompts breakdown
 	const totalPromptTokens = systemPromptTokens + userPromptTokens;
 	const promptDetails = [
-		`  ${chalk.gray('System:')} ${chalk.yellow(systemPromptTokens.toLocaleString())} tokens`,
-		`  ${chalk.gray('User:')} ${chalk.yellow(userPromptTokens.toLocaleString())} tokens`
+		`  ${theme.muted('System:')} ${chalk.yellow(systemPromptTokens.toLocaleString())} tokens`,
+		`  ${theme.muted('User:')} ${chalk.yellow(userPromptTokens.toLocaleString())} tokens`
 	].join('\n');
 
 	parts.push(
 		chalk.cyan('Prompts: ') +
 			chalk.yellow(totalPromptTokens.toLocaleString()) +
-			chalk.gray(' (generated)') +
+			theme.muted(' (generated)') +
 			'\n' +
 			promptDetails
 	);
@@ -635,10 +635,10 @@ async function displayResearchResults(
 	const header = boxen(
 		chalk.green.bold('Research Results') +
 			'\n\n' +
-			chalk.gray('Query: ') +
+			theme.muted('Query: ') +
 			theme.text(query) +
 			'\n' +
-			chalk.gray('Detail Level: ') +
+			theme.muted('Detail Level: ') +
 			chalk.cyan(detailLevel),
 		{
 			padding: { top: 1, bottom: 1, left: 2, right: 2 },
@@ -768,7 +768,7 @@ async function handleFollowUpQuestions(
 					continue;
 				}
 
-				console.log('\n' + chalk.gray('─'.repeat(60)) + '\n');
+				console.log('\n' + theme.muted('─'.repeat(60)) + '\n');
 
 				// Build cumulative conversation context from all previous exchanges
 				const conversationContext =

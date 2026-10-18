@@ -204,7 +204,7 @@ async function createTag(
 						(copyFromCurrent || copyFromTag
 							? `\nSource Tag: ${chalk.cyan(copyFromTag || getCurrentTag(projectRoot))}`
 							: '') +
-						(description ? `\nDescription: ${chalk.gray(description)}` : ''),
+						(description ? `\nDescription: ${theme.muted(description)}` : ''),
 					{
 						padding: 1,
 						borderColor: 'green',
@@ -727,7 +727,7 @@ async function tags(
 
 				// Tag name with current indicator
 				const tagDisplay = tag.isCurrent
-					? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${chalk.gray('(current)')}`
+					? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${theme.muted('(current)')}`
 					: `  ${tag.name}`;
 				row.push(tagDisplay);
 
@@ -736,7 +736,7 @@ async function tags(
 					row.push(
 						tag.readyTasks > 0
 							? chalk.yellow(tag.readyTasks.toString())
-							: chalk.gray('0')
+							: theme.muted('0')
 					);
 					row.push(chalk.green(tag.completedTasks.toString()));
 				}
@@ -746,8 +746,8 @@ async function tags(
 						tag.created !== 'Unknown'
 							? new Date(tag.created).toLocaleDateString()
 							: 'Unknown';
-					row.push(chalk.gray(createdDate));
-					row.push(chalk.gray(truncate(tag.description, 50)));
+					row.push(theme.muted(createdDate));
+					row.push(theme.muted(truncate(tag.description, 50)));
 				}
 
 				table.push(row);
@@ -890,7 +890,7 @@ async function useTag(
 			if (nextTask) {
 				nextTaskInfo = `\nNext Task: ${chalk.cyan(`#${nextTask.id}`)} - ${theme.text(nextTask.title)}`;
 			} else {
-				nextTaskInfo = `\nNext Task: ${chalk.gray('No eligible tasks available')}`;
+				nextTaskInfo = `\nNext Task: ${theme.muted('No eligible tasks available')}`;
 			}
 
 			console.log(
@@ -1217,7 +1217,7 @@ async function copyTag(
 						`\n\nSource Tag: ${chalk.cyan(sourceName)}` +
 						`\nTarget Tag: ${chalk.green.bold(targetName)}` +
 						`\nTasks Copied: ${chalk.yellow(sourceTasks.length)}` +
-						(description ? `\nDescription: ${chalk.gray(description)}` : ''),
+						(description ? `\nDescription: ${theme.muted(description)}` : ''),
 					{
 						padding: 1,
 						borderColor: 'green',

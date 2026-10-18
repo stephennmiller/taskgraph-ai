@@ -348,13 +348,13 @@ export function displayFormattedError(error, options = {}) {
 		formattedError.context !== 'Unknown operation'
 	) {
 		content +=
-			chalk.gray('Context: ') + theme.text(formattedError.context) + '\n\n';
+			theme.muted('Context: ') + theme.text(formattedError.context) + '\n\n';
 	}
 
 	// Add command if available
 	if (formattedError.command) {
 		content +=
-			chalk.gray('Command: ') + chalk.cyan(formattedError.command) + '\n\n';
+			theme.muted('Command: ') + chalk.cyan(formattedError.command) + '\n\n';
 	}
 
 	// Add hints
@@ -367,7 +367,7 @@ export function displayFormattedError(error, options = {}) {
 
 	// Add error code if available
 	if (formattedError.code) {
-		content += '\n' + chalk.gray(`Error Code: ${formattedError.code}`);
+		content += '\n' + theme.muted(`Error Code: ${formattedError.code}`);
 	}
 
 	// Display in a box
@@ -383,7 +383,7 @@ export function displayFormattedError(error, options = {}) {
 
 	// Display stack trace in debug mode
 	if (options.debug && formattedError.stack) {
-		console.log(chalk.gray('Stack Trace:'));
+		console.log(theme.muted('Stack Trace:'));
 		console.log(chalk.dim(formattedError.stack));
 		console.log();
 	}
