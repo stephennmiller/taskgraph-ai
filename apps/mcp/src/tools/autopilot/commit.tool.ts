@@ -41,7 +41,6 @@ export function registerAutopilotCommitTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(
-			'autopilot-commit',
 			async (args: CommitArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot, files, customMessage } = args;
 

@@ -5,7 +5,6 @@
 
 import path from 'node:path';
 import { type Task, type TmCore, createTmCore } from '@tm/core';
-import type { StorageType } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -31,7 +30,6 @@ export interface NextTaskResult {
 	task: Task | null;
 	found: boolean;
 	tag: string;
-	storageType: Exclude<StorageType, 'auto'>;
 	hasAnyTasks?: boolean;
 }
 
@@ -131,9 +129,6 @@ export class NextCommand extends Command {
 		// Call tm-core to get next task
 		const task = await this.tmCore.tasks.getNext(options.tag);
 
-		// Get storage type and active tag
-		const storageType = this.tmCore.tasks.getStorageType();
-
 		const activeTag = options.tag || this.tmCore.config.getActiveTag();
 
 		// Check if there are ANY tasks at all
@@ -144,7 +139,6 @@ export class NextCommand extends Command {
 			task,
 			found: task !== null,
 			tag: activeTag,
-			storageType,
 			hasAnyTasks
 		};
 	}
@@ -181,11 +175,7 @@ export class NextCommand extends Command {
 	 * Display in text format
 	 */
 	private displayText(result: NextTaskResult): void {
-		// Display header with storage info
-		displayCommandHeader(this.tmCore, {
-			tag: result.tag || 'master',
-			storageType: result.storageType
-		});
+		displayCommandHeader({ tag: result.tag || 'master' });
 
 		if (!result.found || !result.task) {
 			// Only show warning box if there are literally NO tasks at all
@@ -224,8 +214,7 @@ export class NextCommand extends Command {
 		displayTaskDetails(task, {
 			customHeader,
 			headerColor: 'green',
-			showSuggestedActions: true,
-			storageType: result.storageType
+			showSuggestedActions: true
 		});
 	}
 

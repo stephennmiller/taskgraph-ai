@@ -30,7 +30,6 @@ export function registerAutopilotResumeTool(server: FastMCP) {
 			readOnlyHint: true
 		},
 		execute: withToolContext(
-			'autopilot-resume',
 			async (args: ResumeWorkflowArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot } = args;
 

@@ -20,7 +20,6 @@ import {
 	type TmCore,
 	type WatchSubscription
 } from '@tm/core';
-import type { StorageType } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
@@ -74,7 +73,6 @@ export interface ListTasksResult {
 	total: number;
 	filtered: number;
 	tag?: string;
-	storageType: Exclude<StorageType, 'auto'>;
 	allTags?: boolean;
 }
 
@@ -473,7 +471,6 @@ export class ListTasksCommand extends Command {
 			tasks: filteredTasks,
 			total: totalTaskCount,
 			filtered: filteredTasks.length,
-			storageType: this.tmCore.tasks.getStorageType(),
 			allTags: true
 		};
 	}
@@ -552,7 +549,6 @@ export class ListTasksCommand extends Command {
 						total: data.total,
 						filtered: data.filtered,
 						tag: data.allTags ? 'all' : data.tag,
-						storageType: data.storageType,
 						allTags: data.allTags || false
 					}
 				},
@@ -569,14 +565,11 @@ export class ListTasksCommand extends Command {
 		data: ListTasksResult,
 		options: ListCommandOptions
 	): void {
-		const { tasks, tag, storageType, allTags } = data;
+		const { tasks, tag, allTags } = data;
 
 		// Display header unless --no-header is set
 		if (options.noHeader !== true) {
-			displayCommandHeader(this.tmCore, {
-				tag: allTags ? 'all tags' : tag || 'master',
-				storageType
-			});
+			displayCommandHeader({ tag: allTags ? 'all tags' : tag || 'master' });
 		}
 
 		for (const task of tasks) {
@@ -604,14 +597,11 @@ export class ListTasksCommand extends Command {
 		data: ListTasksResult,
 		options: ListCommandOptions
 	): void {
-		const { tasks, tag, storageType, allTags } = data;
+		const { tasks, tag, allTags } = data;
 
 		// Display header unless --no-header is set
 		if (options.noHeader !== true) {
-			displayCommandHeader(this.tmCore, {
-				tag: allTags ? 'all tags' : tag || 'master',
-				storageType
-			});
+			displayCommandHeader({ tag: allTags ? 'all tags' : tag || 'master' });
 		}
 
 		// No tasks message

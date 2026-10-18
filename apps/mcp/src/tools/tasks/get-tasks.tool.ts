@@ -44,9 +44,7 @@ export function registerGetTasksTool(server: FastMCP) {
 			title: 'Get Tasks',
 			readOnlyHint: true
 		},
-		execute: withToolContext(
-			'get-tasks',
-			async (args: GetTasksArgs, { log, tmCore }: ToolContext) => {
+		execute: withToolContext(async (args: GetTasksArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot, status, withSubtasks, tag } = args;
 
 				try {

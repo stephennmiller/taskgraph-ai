@@ -54,8 +54,7 @@ describe('ShowCommand', () => {
 						description: 'Test description'
 					},
 					isSubtask: false
-				}),
-				getStorageType: vi.fn().mockReturnValue('json')
+				})
 			} as any,
 			config: {
 				getActiveTag: vi.fn().mockReturnValue('master')
@@ -92,7 +91,7 @@ describe('ShowCommand', () => {
 			const parsed = JSON.parse(output);
 			expect(parsed).toHaveProperty('task');
 			expect(parsed).toHaveProperty('found');
-			expect(parsed).toHaveProperty('storageType');
+			expect(parsed).not.toHaveProperty('storageType');
 		});
 
 		it('should override --format when --json is set', async () => {
@@ -176,8 +175,7 @@ describe('ShowCommand', () => {
 						{ id: '1', title: 'Task 1' },
 						{ id: '2', title: 'Task 2' }
 					],
-					notFound: [],
-					storageType: 'json'
+					notFound: []
 				});
 
 			await (command as any).executeCommand('1,2', {

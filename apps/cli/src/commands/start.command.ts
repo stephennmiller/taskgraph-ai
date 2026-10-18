@@ -7,7 +7,6 @@
 import { spawn } from 'child_process';
 import {
 	type StartTaskResult as CoreStartTaskResult,
-	type StorageType,
 	type TmCore,
 	createTmCore
 } from '@tm/core';
@@ -34,12 +33,9 @@ export interface StartCommandOptions {
 }
 
 /**
- * CLI-specific result type from start command
- * Extends the core result with CLI-specific display information
+ * Result type from start command
  */
-export interface StartCommandResult extends CoreStartTaskResult {
-	storageType?: Exclude<StorageType, 'auto'>;
-}
+export type StartCommandResult = CoreStartTaskResult;
 
 /**
  * StartCommand extending Commander's Command class
@@ -150,11 +146,7 @@ export class StartCommand extends Command {
 				await this.executeChildProcess(coreResult.command);
 			}
 
-			// Convert core result to CLI result with storage type (resolved, not config value)
-			const result: StartCommandResult = {
-				...coreResult,
-				storageType: this.tmCore?.tasks.getStorageType()
-			};
+			const result: StartCommandResult = coreResult;
 
 			// Store result for programmatic access
 			this.setLastResult(result);
@@ -366,8 +358,7 @@ export class StartCommand extends Command {
 
 			displayTaskDetails(task, {
 				customHeader: headerText,
-				headerColor: 'yellow',
-				storageType: result.storageType
+				headerColor: 'yellow'
 			});
 
 			// Show claude-code prompt
@@ -450,8 +441,6 @@ export class StartCommand extends Command {
 				);
 			}
 		}
-
-		console.log(`\n${theme.muted('Storage: ' + result.storageType)}`);
 	}
 
 	/**

@@ -38,7 +38,6 @@ export function registerAutopilotCompleteTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(
-			'autopilot-complete-phase',
 			async (args: CompletePhaseArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot, testResults } = args;
 
