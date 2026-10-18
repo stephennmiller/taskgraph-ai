@@ -23,6 +23,12 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 - **Stay in Claude Code:** use slash commands (`/tm:next-task`) or the `taskgraph` CLI. An MCP server is available if you want plain-language control, but it is optional.
 - **No API keys:** every AI call runs through your signed-in Claude Code.
 
+<p align="center">
+  <a href="images/demo/taskgraph-demo.mp4"><img src="images/demo/taskgraph-demo-poster.png" alt="TaskGraph demo: initialize a project, turn a PRD into tasks, and pick up where you left off in a new Claude Code session" width="720"></a>
+  <br>
+  <sub><a href="images/demo/taskgraph-demo.mp4">▶ Watch the 1-minute demo</a></sub>
+</p>
+
 > **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
 
 ## Contents
