@@ -199,7 +199,7 @@ async function expandAllTasks(
 				`${theme.text.bold('Expansion Summary:')}\n\n` +
 				`${chalk.cyan('-')} Attempted: ${chalk.bold(tasksToExpandCount)}\n` +
 				`${chalk.green('-')} Expanded:  ${chalk.bold(expandedCount)}\n` +
-				`${chalk.gray('-')} Skipped:   ${chalk.bold(skippedCount)}\n` +
+				`${theme.muted('-')} Skipped:   ${chalk.bold(skippedCount)}\n` +
 				`${chalk.red('-')} Failed:    ${chalk.bold(failedCount)}`;
 
 			console.log(

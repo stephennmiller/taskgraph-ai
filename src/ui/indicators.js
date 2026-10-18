@@ -25,7 +25,7 @@ class IndicatorConfig {
 	}
 
 	getColor(level) {
-		return this.colors[level] || chalk.gray;
+		return this.colors[level] || theme.muted;
 	}
 
 	getLevelFromScore(score) {
@@ -65,7 +65,7 @@ const VISUAL_STYLES = {
 const PRIORITY_CONFIG = new IndicatorConfig('priority', [HIGH, MEDIUM, LOW], {
 	[HIGH]: chalk.red,
 	[MEDIUM]: chalk.yellow,
-	[LOW]: chalk.gray
+	[LOW]: theme.muted
 });
 
 /**

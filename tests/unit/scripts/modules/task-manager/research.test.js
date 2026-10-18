@@ -54,11 +54,10 @@ jest.unstable_mockModule('chalk', () => ({
 			),
 			yellow: jest.fn((text) => text),
 			red: jest.fn((text) => text),
-			gray: Object.assign(
+			dim: Object.assign(
 				jest.fn((text) => text),
 				{
-					italic: jest.fn((text) => text),
-					dim: jest.fn((text) => text)
+					italic: jest.fn((text) => text)
 				}
 			),
 			blue: Object.assign(

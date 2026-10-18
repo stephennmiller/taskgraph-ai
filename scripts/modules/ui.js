@@ -50,7 +50,7 @@ function displayTaggedTasksFYI(data) {
 	console.log(
 		boxen(
 			chalk.bold('FYI: ') +
-				chalk.gray('TaskGraph now supports separate task lists per tag. ') +
+				theme.muted('TaskGraph now supports separate task lists per tag. ') +
 				chalk.cyan(
 					'Use the --tag flag to create/read/update/filter tasks by tag.'
 				),
@@ -117,11 +117,11 @@ async function displayCurrentTagIndicator(tag, options = {}) {
 
 	if (storageType === 'api' && briefInfo) {
 		// API storage: Show brief information (matching new CLI pattern)
-		displayText = `[brief] ${chalk.cyan(briefInfo.briefName)} ${chalk.gray(`(${briefInfo.briefId})`)}`;
+		displayText = `[brief] ${chalk.cyan(briefInfo.briefName)} ${theme.muted(`(${briefInfo.briefId})`)}`;
 	} else {
 		// File storage: Show tag information
 		displayText = dim
-			? chalk.gray(`[tag] ${tag}`)
+			? theme.muted(`[tag] ${tag}`)
 			: chalk.dim('[tag] ') + chalk.cyan(tag);
 	}
 
@@ -277,7 +277,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 	const completedSection = completedColor('█'.repeat(trueCompletedFilled));
 
 	// Gray section for deferred/cancelled items
-	const deferredCancelledSection = chalk.gray(
+	const deferredCancelledSection = theme.muted(
 		'─'.repeat(deferredCancelledFilled)
 	);
 
@@ -305,7 +305,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 
 		// If no remaining tasks with tracked statuses, just use gray
 		if (totalRemaining <= 0) {
-			remainingSection = chalk.gray('░'.repeat(empty));
+			remainingSection = theme.muted('░'.repeat(empty));
 		} else {
 			// Track how many characters we've added
 			let addedChars = 0;
@@ -324,7 +324,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 
 				// Add the section for this status
 				const segment =
-					statusSegments[status] || ((n) => chalk.gray('░'.repeat(n)));
+					statusSegments[status] || ((n) => theme.muted('░'.repeat(n)));
 				remainingSection += segment(actualChars);
 
 				addedChars += actualChars;
@@ -332,12 +332,12 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 
 			// If we have any remaining space due to rounding, fill with gray
 			if (addedChars < empty) {
-				remainingSection += chalk.gray('░'.repeat(empty - addedChars));
+				remainingSection += theme.muted('░'.repeat(empty - addedChars));
 			}
 		}
 	} else {
 		// Default to gray for the empty section if no breakdown provided
-		remainingSection = chalk.gray('░'.repeat(empty));
+		remainingSection = theme.muted('░'.repeat(empty));
 	}
 
 	// Effective percentage text color should reflect the highest category
@@ -345,7 +345,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 		percent === 100
 			? chalk.green // Green for 100%
 			: effectivePercent === 100
-				? chalk.gray // Gray for 100% with deferred/cancelled
+				? theme.muted // Gray for 100% with deferred/cancelled
 				: completedColor; // Otherwise match the completed color
 
 	// Build the complete progress bar
@@ -360,7 +360,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
  */
 function getStatusWithColor(status, forTable = false) {
 	if (!status) {
-		return chalk.gray('? unknown');
+		return theme.muted('? unknown');
 	}
 
 	const statusConfig = {
@@ -368,10 +368,10 @@ function getStatusWithColor(status, forTable = false) {
 		completed: { color: chalk.green, icon: '✓', tableIcon: '✓' },
 		pending: { color: chalk.yellow, icon: '○', tableIcon: '⏱' },
 		'in-progress': { color: theme.active, icon: '▶', tableIcon: '▶' },
-		deferred: { color: chalk.gray, icon: 'x', tableIcon: '⏱' },
+		deferred: { color: theme.muted, icon: 'x', tableIcon: '⏱' },
 		blocked: { color: chalk.red, icon: '!', tableIcon: '✗' },
 		review: { color: chalk.magenta, icon: '?', tableIcon: '?' },
-		cancelled: { color: chalk.gray, icon: 'x', tableIcon: 'x' }
+		cancelled: { color: theme.muted, icon: 'x', tableIcon: 'x' }
 	};
 
 	const config = statusConfig[status.toLowerCase()] || {
@@ -418,7 +418,7 @@ function formatDependenciesWithStatus(
 		!Array.isArray(dependencies) ||
 		dependencies.length === 0
 	) {
-		return forConsole ? chalk.gray('None') : 'None';
+		return forConsole ? theme.muted('None') : 'None';
 	}
 
 	const formattedDeps = dependencies.map((depId) => {
@@ -1049,7 +1049,7 @@ async function displayNextTask(
 	const priorityColors = {
 		high: chalk.red.bold,
 		medium: chalk.yellow,
-		low: chalk.gray
+		low: theme.muted
 	};
 	const priorityColor =
 		priorityColors[nextTask.priority || 'medium'] || chalk.reset;
@@ -1075,7 +1075,7 @@ async function displayNextTask(
 			chalk.cyan.bold('Complexity:'),
 			nextTask.complexityScore
 				? getComplexityWithColor(nextTask.complexityScore)
-				: chalk.gray('N/A')
+				: theme.muted('N/A')
 		],
 		[chalk.cyan.bold('Description:'), nextTask.description]
 	);
@@ -1343,7 +1343,7 @@ async function displayTaskById(
 				chalk.cyan.bold('Complexity:'),
 				task.complexityScore
 					? getComplexityWithColor(task.complexityScore)
-					: chalk.gray('N/A')
+					: theme.muted('N/A')
 			],
 			[
 				chalk.cyan.bold('Description:'),
@@ -1406,7 +1406,7 @@ async function displayTaskById(
 	const priorityColors = {
 		high: chalk.red.bold,
 		medium: chalk.yellow,
-		low: chalk.gray
+		low: theme.muted
 	};
 	const priorityColor =
 		priorityColors[task.priority || 'medium'] || chalk.reset;
@@ -1431,7 +1431,7 @@ async function displayTaskById(
 			chalk.cyan.bold('Complexity:'),
 			task.complexityScore
 				? getComplexityWithColor(task.complexityScore)
-				: chalk.gray('N/A')
+				: theme.muted('N/A')
 		],
 		[chalk.cyan.bold('Description:'), task.description]
 	);
@@ -1670,7 +1670,7 @@ async function displayTaskById(
 
 		const statusCounts =
 			`${chalk.green('✓ Done:')} ${completedSubtasks}  ${theme.active('▶ In Progress:')} ${inProgressSubtasks}  ${chalk.yellow('○ Pending:')} ${pendingSubtasks}\n` +
-			`${chalk.red('! Blocked:')} ${blockedSubtasks}  ${chalk.gray('x Deferred:')} ${deferredSubtasks}  ${chalk.gray('✗ Cancelled:')} ${cancelledSubtasks}`;
+			`${chalk.red('! Blocked:')} ${blockedSubtasks}  ${theme.muted('x Deferred:')} ${deferredSubtasks}  ${theme.muted('✗ Cancelled:')} ${cancelledSubtasks}`;
 
 		console.log(
 			boxen(
@@ -2120,15 +2120,15 @@ const formatSweScoreWithTertileStars = (score, allModels) => {
 		.filter((s) => s !== null && s !== undefined && s > 0);
 	const sortedScores = [...validScores].sort((a, b) => b - a);
 	const n = sortedScores.length;
-	let stars = chalk.gray('☆☆☆');
+	let stars = theme.muted('☆☆☆');
 
 	if (n > 0) {
 		const topThirdIndex = Math.max(0, Math.floor(n / 3) - 1);
 		const midThirdIndex = Math.max(0, Math.floor((2 * n) / 3) - 1);
 		if (score >= sortedScores[topThirdIndex]) stars = chalk.yellow('★★★');
 		else if (score >= sortedScores[midThirdIndex])
-			stars = chalk.yellow('★★') + chalk.gray('☆');
-		else stars = chalk.yellow('★') + chalk.gray('☆☆');
+			stars = chalk.yellow('★★') + theme.muted('☆');
+		else stars = chalk.yellow('★') + theme.muted('☆☆');
 	}
 	return `${formattedPercentage} ${stars}`;
 };
@@ -2199,10 +2199,10 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 	} else {
 		activeTable.push([
 			chalk.reset('Fallback'),
-			chalk.gray('-'),
-			chalk.gray('(Not Set)'),
-			chalk.gray('-'),
-			chalk.gray('-')
+			theme.muted('-'),
+			theme.muted('(Not Set)'),
+			theme.muted('-'),
+			theme.muted('-')
 			// chalk.gray('-') // Removed
 		]);
 	}
@@ -2216,7 +2216,7 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 function displayAvailableModels(availableModels) {
 	if (!availableModels || availableModels.length === 0) {
 		console.log(
-			chalk.gray('\n(No other models available or all are configured)')
+			theme.muted('\n(No other models available or all are configured)')
 		);
 		return;
 	}
@@ -2296,16 +2296,16 @@ function displayAiUsageSummary(telemetryData, outputType = 'cli') {
 	} = telemetryData;
 
 	let summary = theme.brand.bold('AI Usage Summary:') + '\n';
-	summary += chalk.gray(`  Command: ${commandName}\n`);
-	summary += chalk.gray(`  Provider: ${providerName}\n`);
-	summary += chalk.gray(`  Model: ${modelUsed}\n`);
-	summary += chalk.gray(
+	summary += theme.muted(`  Command: ${commandName}\n`);
+	summary += theme.muted(`  Provider: ${providerName}\n`);
+	summary += theme.muted(`  Model: ${modelUsed}\n`);
+	summary += theme.muted(
 		`  Tokens: ${totalTokens} (Input: ${inputTokens}, Output: ${outputTokens})\n`
 	);
 
 	// Show "Unknown" if pricing data is not available, otherwise show the cost
 	const costDisplay = isUnknownCost ? 'Unknown' : `$${totalCost.toFixed(6)}`;
-	summary += chalk.gray(`  Est. Cost: ${costDisplay}`);
+	summary += theme.muted(`  Est. Cost: ${costDisplay}`);
 
 	console.log(
 		boxen(summary, {
@@ -2451,9 +2451,9 @@ async function displayMultipleTasksSummary(
 				`${parentId}.${task.id}`,
 				truncate(task.title, Math.floor(availableWidth * 0.35) - 3),
 				getStatusWithColor(task.status || 'pending', true),
-				chalk.gray('(subtask)'),
-				chalk.gray('N/A'),
-				chalk.gray('N/A')
+				theme.muted('(subtask)'),
+				theme.muted('N/A'),
+				theme.muted('N/A')
 			]);
 			return;
 		}
@@ -2462,14 +2462,14 @@ async function displayMultipleTasksSummary(
 		const priorityColors = {
 			high: chalk.red.bold,
 			medium: chalk.yellow,
-			low: chalk.gray
+			low: theme.muted
 		};
 		const priorityColor =
 			priorityColors[task.priority || 'medium'] || chalk.reset;
 
 		// Calculate subtask summary
-		let subtaskSummary = chalk.gray('None');
-		let progressBar = chalk.gray('N/A');
+		let subtaskSummary = theme.muted('None');
+		let progressBar = theme.muted('N/A');
 
 		if (task.subtasks && task.subtasks.length > 0) {
 			const total = task.subtasks.length;
@@ -2573,7 +2573,7 @@ async function displayMultipleTasksSummary(
 						chalk.cyan('6.') +
 						' Generate task files' +
 						'\n' +
-						chalk.gray('Or type a task ID to view details'),
+						theme.muted('Or type a task ID to view details'),
 					{
 						padding: { top: 0, bottom: 0, left: 1, right: 1 },
 						borderColor: BORDER_COLOR,
@@ -2651,7 +2651,9 @@ async function displayMultipleTasksSummary(
 						}
 					});
 					if (!hasDependencies) {
-						console.log(chalk.gray('No dependencies found for selected tasks'));
+						console.log(
+							theme.muted('No dependencies found for selected tasks')
+						);
 					}
 					break;
 				}
@@ -2664,7 +2666,7 @@ async function displayMultipleTasksSummary(
 				default:
 					if (actionChoice.trim().length > 0) {
 						console.log(chalk.yellow(`Invalid choice: ${actionChoice.trim()}`));
-						console.log(chalk.gray('Please choose 1-6 or type a task ID'));
+						console.log(theme.muted('Please choose 1-6 or type a task ID'));
 					}
 			}
 		} else {
@@ -2715,13 +2717,13 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 
 	// Query info
 	analysisContent +=
-		chalk.gray('Query: ') + chalk.reset(`"${semanticQuery}"`) + '\n';
+		theme.muted('Query: ') + chalk.reset(`"${semanticQuery}"`) + '\n';
 	analysisContent +=
-		chalk.gray('Context size: ') +
+		theme.muted('Context size: ') +
 		chalk.cyan(`${contextSize.toLocaleString()} characters`) +
 		'\n';
 	analysisContent +=
-		chalk.gray('Tasks found: ') +
+		theme.muted('Tasks found: ') +
 		chalk.yellow(`${allRelevantTasks.length} relevant tasks`) +
 		'\n\n';
 

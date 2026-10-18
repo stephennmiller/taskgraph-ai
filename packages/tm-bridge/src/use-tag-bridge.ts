@@ -112,7 +112,7 @@ export async function tryUseTagViaRemote(
 							: '') +
 						chalk.white(`Current Tag: ${chalk.green.bold(currentTag)}`) +
 						'\n' +
-						chalk.gray(`Brief ID: ${briefId}`) +
+						chalk.dim(`Brief ID: ${briefId}`) +
 						'\n' +
 						chalk.white(`Available Tasks: ${chalk.yellow(taskCount)}`),
 					{

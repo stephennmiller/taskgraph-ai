@@ -39,7 +39,8 @@ jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
 	getComplexityWithColor: jest.fn((score) => `Score: ${score}`),
 	theme: {
 		active: { bold: jest.fn((text) => text) },
-		heading: jest.fn((text) => text)
+		heading: jest.fn((text) => text),
+		muted: jest.fn((text) => text)
 	},
 	BORDER_COLOR: 'cyan'
 }));

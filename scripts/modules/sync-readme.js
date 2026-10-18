@@ -173,7 +173,7 @@ export async function syncTasksToReadme(projectRoot = null, options = {}) {
 				`📋 Export details: ${withSubtasks ? 'with' : 'without'} subtasks${status ? `, status: ${status}` : ''}`
 			)
 		);
-		console.log(chalk.gray(`📍 Location: ${readmePath}`));
+		console.log(chalk.dim(`📍 Location: ${readmePath}`));
 
 		return true;
 	} catch (error) {

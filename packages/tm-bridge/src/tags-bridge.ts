@@ -124,8 +124,8 @@ export async function tryListTagsViaRemote(
 					// Tag name with current indicator and short ID (last 8 chars)
 					const shortId = tag.briefId ? tag.briefId.slice(-8) : 'unknown';
 					const tagDisplay = tag.isCurrent
-						? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${chalk.gray(`(current - ${shortId})`)}`
-						: `  ${tag.name} ${chalk.gray(`(${shortId})`)}`;
+						? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${chalk.dim(`(current - ${shortId})`)}`
+						: `  ${tag.name} ${chalk.dim(`(${shortId})`)}`;
 					row.push(tagDisplay);
 
 					row.push(ui.getBriefStatusWithColor(tag.status, true));
@@ -139,8 +139,8 @@ export async function tryListTagsViaRemote(
 								hour: '2-digit',
 								minute: '2-digit'
 							})
-						: chalk.gray('N/A');
-					row.push(chalk.gray(updatedDate));
+						: chalk.dim('N/A');
+					row.push(chalk.dim(updatedDate));
 
 					// Task counts
 					row.push(chalk.white(tag.taskCount.toString()));

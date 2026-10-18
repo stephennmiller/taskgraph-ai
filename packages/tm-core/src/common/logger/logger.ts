@@ -143,7 +143,7 @@ export class Logger {
 		if (this.config.timestamp) {
 			const timestamp = new Date().toISOString();
 			formatted += this.config.colors
-				? chalk.gray(`[${timestamp}] `)
+				? chalk.dim(`[${timestamp}] `)
 				: `[${timestamp}] `;
 		}
 
@@ -168,7 +168,7 @@ export class Logger {
 					// Info stays default color
 					break;
 				case LogLevel.DEBUG:
-					message = chalk.gray(message);
+					message = chalk.dim(message);
 					break;
 			}
 		}
