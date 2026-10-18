@@ -46,20 +46,13 @@ export function getRulesProfile(name) {
 }
 
 /**
- * @typedef {Object} ConvertRulesOptions
- * @property {'solo' | 'team'} [mode] - Operating mode to filter slash commands
- */
-
-/**
  * Install a profile into a project
  * @param {string} projectRoot - The project root directory
  * @param {Object} profile - The profile configuration
- * @param {ConvertRulesOptions} [options] - Options including mode filtering
  * @returns {{success: number, failed: number}} Result counts
  */
-export function convertAllRulesToProfileRules(projectRoot, profile, options) {
+export function convertAllRulesToProfileRules(projectRoot, profile) {
 	const targetDir = path.join(projectRoot, profile.rulesDir);
-	const mode = options?.mode;
 
 	let failed = 0;
 
@@ -115,17 +108,14 @@ export function convertAllRulesToProfileRules(projectRoot, profile, options) {
 	// 4. Add slash commands (if profile supports them)
 	if (profile.slashCommands) {
 		try {
-			// Pass mode option for filtering commands by operating mode
-			const slashCommandOptions = mode ? { mode } : undefined;
 			const result = profile.slashCommands.profile.addSlashCommands(
 				projectRoot,
-				profile.slashCommands.commands,
-				slashCommandOptions
+				profile.slashCommands.commands
 			);
 			if (result.success) {
 				log(
 					'debug',
-					`[Rule Transformer] Created ${result.count} slash commands in ${result.directory}${mode ? ` (mode: ${mode})` : ''}`
+					`[Rule Transformer] Created ${result.count} slash commands in ${result.directory}`
 				);
 			} else {
 				log(

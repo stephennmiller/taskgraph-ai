@@ -120,6 +120,5 @@ Remove anyway? (y/n)
 - Impact preview
 - Removal logging
 - Suggest alternatives
-- No cascade delete of dependents`,
-	'solo'
+- No cascade delete of dependents`
 );

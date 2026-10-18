@@ -43,15 +43,7 @@ const fileCore = createTaskGraphCore(path, {
   storage: { type: 'file' } 
 });
 
-const apiCore = createTaskGraphCore(path, { 
-  storage: { 
-    type: 'api',
-    apiEndpoint: 'https://hamster.ai',
-    apiAccessToken: 'xxx' 
-  } 
-});
-
-// Identical usage
+// Usage
 const result = await core.listTasks({ 
   filter: { status: 'pending' } 
 });
@@ -147,8 +139,7 @@ const result = await tmCore.getTaskList(options);
 
 ### Immediate (Complete ListTasks Integration)
 1. Create npm script to test integration example
-2. Add mock Hamster API for testing
-3. Create migration guide for CLI
+2. Create migration guide for CLI
 
 ### Phase 1 Remaining Work
 Based on this POC success, implement remaining operations:

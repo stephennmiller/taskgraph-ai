@@ -130,6 +130,5 @@ Use report for:
 After viewing:
 /taskgraph:expand 5
 → Expand high-complexity task
-\`\`\``,
-	'solo'
+\`\`\``
 );

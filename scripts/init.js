@@ -654,16 +654,10 @@ async function createProjectStructure(
 	};
 
 	// Helper function to create rule profiles
-	// 'solo' installs the standalone slash commands and rules
-	const operatingMode = 'solo';
-
 	function _processSingleProfile(profileName) {
 		const profile = getRulesProfile(profileName);
 		if (profile) {
-			// Pass operating mode to filter rules and slash commands
-			convertAllRulesToProfileRules(targetDir, profile, {
-				mode: operatingMode
-			});
+			convertAllRulesToProfileRules(targetDir, profile);
 			// Also triggers MCP config setup (if applicable)
 		} else {
 			log('warn', `Unknown rule profile: ${profileName}`);

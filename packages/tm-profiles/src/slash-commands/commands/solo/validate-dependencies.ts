@@ -83,6 +83,5 @@ For each issue found:
 After validation:
 - Run \`/taskgraph:fix-dependencies\` to auto-fix
 - Manually adjust problematic dependencies
-- Rerun to verify fixes`,
-	mode: 'solo'
+- Rerun to verify fixes`
 });

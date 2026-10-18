@@ -53,6 +53,5 @@ When setting to review:
    - Create review reminders
    - Track review duration
    - Suggest reviewers based on expertise
-   - Prepare rollback plan if needed`,
-	'solo'
+   - Prepare rollback plan if needed`
 );

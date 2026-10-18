@@ -63,6 +63,5 @@ After bulk expansion:
 - Summary of tasks expanded
 - New subtask count
 - Updated complexity metrics
-- Suggested task order`,
-	mode: 'solo'
+- Suggested task order`
 });

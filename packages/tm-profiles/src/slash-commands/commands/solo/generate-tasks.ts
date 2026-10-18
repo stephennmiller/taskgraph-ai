@@ -125,6 +125,5 @@ Ready for:
 - Easy task sharing
 - AI tool compatibility
 - Offline task access
-- Backup redundancy`,
-	mode: 'solo'
+- Backup redundancy`
 });

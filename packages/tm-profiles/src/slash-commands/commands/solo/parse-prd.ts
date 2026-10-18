@@ -62,6 +62,5 @@ After parsing:
 1. Display task summary
 2. Show dependency graph
 3. Suggest task expansion for complex items
-4. Recommend sprint planning`,
-	'solo'
+4. Recommend sprint planning`
 );

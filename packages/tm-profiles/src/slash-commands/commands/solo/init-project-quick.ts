@@ -59,6 +59,5 @@ After quick init:
    /taskgraph:add-task create initial setup
    \`\`\`
 
-Perfect for rapid project setup!`,
-	'solo'
+Perfect for rapid project setup!`
 );

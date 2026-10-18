@@ -184,7 +184,7 @@ export class ListTasksCommand extends Command {
 
 	/**
 	 * Watch for changes and update list
-	 * Uses tm-core's unified watch API which handles both file and API storage
+	 * Uses tm-core's watch API on the tasks file
 	 */
 	private async watchTasks(options: ListCommandOptions): Promise<void> {
 		if (!this.tmCore) {

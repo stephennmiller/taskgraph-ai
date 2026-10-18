@@ -60,6 +60,5 @@ When deferring:
 - Monitor deferral duration
 - Alert when criteria met
 - Prevent scope creep
-- Regular review cycles`,
-	'solo'
+- Regular review cycles`
 );

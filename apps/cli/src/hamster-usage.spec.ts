@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 const SRC_ROOT = dirname(fileURLToPath(import.meta.url));
 const THIS_FILE = basename(fileURLToPath(import.meta.url));
 const HAMSTER =
-	/hamster|@tm\/bridge|AuthManager|AuthDomain|auth-guard|auth-helpers|auth-ui|brief-selection|org-selection|checkAndBlockIfAuthenticated|ensureOrgSelected|authenticateWithBrowserMFA/i;
+	/hamster|@tm\/bridge|AuthManager|AuthDomain|auth-guard|auth-helpers|auth-ui|brief-selection|org-selection|checkAndBlockIfAuthenticated|ensureOrgSelected|authenticateWithBrowserMFA|\bbriefs?\b|API storage/i;
 
 function sourceFiles(dir: string): string[] {
 	return readdirSync(dir).flatMap((name) => {

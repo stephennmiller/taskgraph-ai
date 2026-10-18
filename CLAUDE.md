@@ -148,7 +148,7 @@ function getTasks() {
 **Correct approach:**
 
 - ✅ Add method to TasksDomain: `tasks.get(taskId)` (automatically handles task and subtask IDs)
-- ✅ CLI calls: `await tmCore.tasks.get(taskId)` (supports "1", "1.2", "HAM-123", "HAM-123.2")
+- ✅ CLI calls: `await tmCore.tasks.get(taskId)` (supports "1" and "1.2")
 - ✅ MCP calls: `await tmCore.tasks.get(taskId)` (same intelligent ID parsing)
 - ✅ Single source of truth in tm-core
 

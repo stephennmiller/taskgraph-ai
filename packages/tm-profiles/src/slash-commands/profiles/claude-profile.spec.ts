@@ -54,13 +54,13 @@ describe('ClaudeProfile', () => {
 		it('should append .md extension to command name', () => {
 			// Arrange
 			const profile = new ClaudeProfile();
-			const commandName = 'goham';
+			const commandName = 'review';
 
 			// Act
 			const result = profile.getFilename(commandName);
 
 			// Assert
-			expect(result).toBe('goham.md');
+			expect(result).toBe('review.md');
 		});
 
 		it('should handle command names with hyphens', () => {
@@ -93,8 +93,8 @@ describe('ClaudeProfile', () => {
 			// Arrange
 			const profile = new ClaudeProfile();
 			const command = staticCommand({
-				name: 'goham',
-				description: 'Start Working with Hamster Brief',
+				name: 'review',
+				description: 'Review the changes',
 				content: '# Start Working...'
 			});
 
@@ -102,9 +102,7 @@ describe('ClaudeProfile', () => {
 			const result = profile.format(command);
 
 			// Assert
-			expect(result.content).toBe(
-				'Start Working with Hamster Brief\n# Start Working...'
-			);
+			expect(result.content).toBe('Review the changes\n# Start Working...');
 		});
 
 		it('should return correct filename for static command', () => {
@@ -161,9 +159,9 @@ describe('ClaudeProfile', () => {
 			// Arrange
 			const profile = new ClaudeProfile();
 			const command = staticCommand({
-				name: 'goham',
-				description: 'Start Working with Hamster Brief',
-				argumentHint: '[brief-url]',
+				name: 'review',
+				description: 'Review the changes',
+				argumentHint: '[pull-request-url]',
 				content: '# Start Working...'
 			});
 
@@ -173,7 +171,7 @@ describe('ClaudeProfile', () => {
 			// Assert
 			// Static commands with argumentHint should include Arguments line
 			expect(result.content).toBe(
-				'Start Working with Hamster Brief\n\nArguments: $ARGUMENTS\n# Start Working...'
+				'Review the changes\n\nArguments: $ARGUMENTS\n# Start Working...'
 			);
 		});
 	});

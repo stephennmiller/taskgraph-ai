@@ -99,6 +99,5 @@ Suggest alternatives:
 → Cleared all subtasks from task #5
 → Updated parent task estimates
 → Suggestion: Consider re-expanding with better breakdown
-\`\`\``,
-	'solo'
+\`\`\``
 );

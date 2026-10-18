@@ -91,6 +91,5 @@ Intelligent defaults based on:
 - Historical data
 - Current sprint/phase
 
-Result: High-quality tasks from minimal input.`,
-	'solo'
+Result: High-quality tasks from minimal input.`
 );

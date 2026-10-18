@@ -68,6 +68,5 @@ When cancelling:
 - Keep for reference
 - Tag with cancellation reason
 - Link to replacement if any
-- Maintain audit trail`,
-	'solo'
+- Maintain audit trail`
 );

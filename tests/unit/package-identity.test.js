@@ -113,8 +113,6 @@ describe('package identity', () => {
 			read(file)
 				.split('\n')
 				.map((text, i) => ({ file, line: i + 1, text }))
-				// Hamster's own URLs and addresses are removed with issue #16
-				.filter(({ text }) => !/tryhamster/.test(text))
 				.filter(({ text }) => PREVIOUS_NAME.test(text))
 				.map(({ file, line }) => `${file}:${line}`)
 		);
