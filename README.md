@@ -4,7 +4,10 @@
 </div>
 
 <p align="center">
-  <img src="./images/logo.png?raw=true" alt="TaskGraph logo">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./images/taskgraph-logo-dark.png">
+    <img src="./images/taskgraph-logo.png" alt="TaskGraph logo" width="640">
+  </picture>
 </p>
 
 <p align="center">
