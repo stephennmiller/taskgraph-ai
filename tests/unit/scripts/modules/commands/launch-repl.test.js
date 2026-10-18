@@ -2,9 +2,13 @@ import { jest } from '@jest/globals';
 
 // `react` is not a declared dependency, so it must never be imported while the
 // TUI is still a "coming soon" placeholder (regression test for #1725).
-jest.unstable_mockModule('react', () => {
-	throw new Error("Cannot find package 'react'");
-});
+jest.unstable_mockModule(
+	'react',
+	() => {
+		throw new Error("Cannot find package 'react'");
+	},
+	{ virtual: true }
+);
 
 const { launchREPL } = await import(
 	'../../../../../scripts/modules/commands.js'
