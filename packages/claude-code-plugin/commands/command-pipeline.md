@@ -1,3 +1,8 @@
+---
+description: "Execute a pipeline of commands based on a specification."
+argument-hint: "[arguments]"
+---
+
 Execute a pipeline of commands based on a specification.
 
 Arguments: $ARGUMENTS

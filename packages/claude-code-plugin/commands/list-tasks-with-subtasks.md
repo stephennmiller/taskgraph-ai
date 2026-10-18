@@ -1,3 +1,7 @@
+---
+description: "List all tasks including their subtasks in a hierarchical view."
+---
+
 List all tasks including their subtasks in a hierarchical view.
 
 This command shows all tasks with their nested subtasks, providing a complete project overview.

@@ -1,3 +1,8 @@
+---
+description: "Set a task's status to review."
+argument-hint: "[task ID]"
+---
+
 Set a task's status to review.
 
 Arguments: $ARGUMENTS (task ID)

@@ -1,3 +1,7 @@
+---
+description: "Automatically fix dependency issues found during validation."
+---
+
 Automatically fix dependency issues found during validation.
 
 ## Automatic Dependency Repair

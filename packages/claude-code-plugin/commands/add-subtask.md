@@ -1,3 +1,8 @@
+---
+description: "Add a subtask to a parent task."
+argument-hint: "[arguments]"
+---
+
 Add a subtask to a parent task.
 
 Arguments: $ARGUMENTS

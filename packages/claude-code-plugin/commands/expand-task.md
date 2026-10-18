@@ -1,3 +1,8 @@
+---
+description: "Break down a complex task into subtasks."
+argument-hint: "[task ID]"
+---
+
 Break down a complex task into subtasks.
 
 Arguments: $ARGUMENTS (task ID)

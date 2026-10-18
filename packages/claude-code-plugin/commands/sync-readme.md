@@ -1,3 +1,8 @@
+---
+description: "Export tasks to README.md with professional formatting."
+argument-hint: "[arguments]"
+---
+
 Export tasks to README.md with professional formatting.
 
 Arguments: $ARGUMENTS

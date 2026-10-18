@@ -1,3 +1,8 @@
+---
+description: "Cancel a task permanently."
+argument-hint: "[task ID]"
+---
+
 Cancel a task permanently.
 
 Arguments: $ARGUMENTS (task ID)

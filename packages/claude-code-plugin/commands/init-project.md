@@ -1,3 +1,8 @@
+---
+description: "Initialize a new TaskGraph project."
+argument-hint: "[arguments]"
+---
+
 Initialize a new TaskGraph project.
 
 Arguments: $ARGUMENTS

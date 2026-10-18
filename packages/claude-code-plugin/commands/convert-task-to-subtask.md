@@ -1,3 +1,8 @@
+---
+description: "Convert an existing task into a subtask."
+argument-hint: "[arguments]"
+---
+
 Convert an existing task into a subtask.
 
 Arguments: $ARGUMENTS

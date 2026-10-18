@@ -1,3 +1,8 @@
+---
+description: "Clear all subtasks from a specific task."
+argument-hint: "[task ID]"
+---
+
 Clear all subtasks from a specific task.
 
 Arguments: $ARGUMENTS (task ID)

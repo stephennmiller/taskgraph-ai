@@ -1,3 +1,8 @@
+---
+description: "Analyze task complexity and generate expansion recommendations."
+argument-hint: "[arguments]"
+---
+
 Analyze task complexity and generate expansion recommendations.
 
 Arguments: $ARGUMENTS

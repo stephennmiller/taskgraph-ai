@@ -1,3 +1,8 @@
+---
+description: "Execute an intelligent workflow based on current project state and recent commands."
+argument-hint: "[arguments]"
+---
+
 Execute an intelligent workflow based on current project state and recent commands.
 
 This command analyzes:

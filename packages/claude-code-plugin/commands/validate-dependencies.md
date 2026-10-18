@@ -1,3 +1,7 @@
+---
+description: "Validate all task dependencies for issues."
+---
+
 Validate all task dependencies for issues.
 
 ## Dependency Validation

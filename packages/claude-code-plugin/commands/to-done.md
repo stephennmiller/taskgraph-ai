@@ -1,3 +1,8 @@
+---
+description: "Mark a task as completed."
+argument-hint: "[task ID]"
+---
+
 Mark a task as completed.
 
 Arguments: $ARGUMENTS (task ID)

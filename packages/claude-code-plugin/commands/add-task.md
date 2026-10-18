@@ -1,3 +1,8 @@
+---
+description: "Add new tasks with intelligent parsing and context awareness."
+argument-hint: "[arguments]"
+---
+
 Add new tasks with intelligent parsing and context awareness.
 
 Arguments: $ARGUMENTS

@@ -1,3 +1,8 @@
+---
+description: "Remove a task permanently from the project."
+argument-hint: "[task ID]"
+---
+
 Remove a task permanently from the project.
 
 Arguments: $ARGUMENTS (task ID)

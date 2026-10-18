@@ -1,3 +1,8 @@
+---
+description: "Learn about TaskGraph capabilities through interactive exploration."
+argument-hint: "[arguments]"
+---
+
 Learn about TaskGraph capabilities through interactive exploration.
 
 Arguments: $ARGUMENTS

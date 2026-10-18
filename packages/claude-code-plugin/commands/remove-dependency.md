@@ -1,3 +1,8 @@
+---
+description: "Remove a dependency between tasks."
+argument-hint: "[arguments]"
+---
+
 Remove a dependency between tasks.
 
 Arguments: $ARGUMENTS

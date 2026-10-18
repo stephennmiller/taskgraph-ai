@@ -1,3 +1,7 @@
+---
+description: "Run interactive setup to configure AI models."
+---
+
 Run interactive setup to configure AI models.
 
 ## Interactive Model Configuration

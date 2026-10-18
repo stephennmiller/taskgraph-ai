@@ -1,3 +1,8 @@
+---
+description: "Set a task's status to pending."
+argument-hint: "[task ID]"
+---
+
 Set a task's status to pending.
 
 Arguments: $ARGUMENTS (task ID)

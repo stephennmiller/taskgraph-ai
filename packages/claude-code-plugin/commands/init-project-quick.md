@@ -1,3 +1,8 @@
+---
+description: "Quick initialization with auto-confirmation."
+argument-hint: "[arguments]"
+---
+
 Quick initialization with auto-confirmation.
 
 Arguments: $ARGUMENTS
