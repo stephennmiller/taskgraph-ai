@@ -32,8 +32,7 @@ export interface StartWorkflowOptions {
 	}>;
 	maxAttempts?: number;
 	force?: boolean;
-	tag?: string; // Optional tag for branch naming (local storage)
-	orgSlug?: string; // Optional org slug for branch naming (API storage, takes precedence over tag)
+	tag?: string; // Optional tag for branch naming
 }
 
 /**
@@ -162,8 +161,7 @@ export class WorkflowService {
 			subtasks,
 			maxAttempts = 3,
 			force,
-			tag,
-			orgSlug
+			tag
 		} = options;
 
 		// Check for existing workflow
@@ -233,7 +231,7 @@ export class WorkflowService {
 		await this.orchestrator.transition({ type: 'PREFLIGHT_COMPLETE' });
 
 		// Create git branch with descriptive name
-		const branchName = this.generateBranchName(taskId, taskTitle, tag, orgSlug);
+		const branchName = this.generateBranchName(taskId, taskTitle, tag);
 
 		// Check if we're already on the target branch
 		const currentBranch = await gitAdapter.getCurrentBranch();
@@ -559,14 +557,13 @@ export class WorkflowService {
 
 	/**
 	 * Generate a descriptive git branch name
-	 * Format: tm/<namespace>/task-<id>-<title> where namespace is orgSlug (API) or tag (local)
+	 * Format: tm/<namespace>/task-<id>-<title> where namespace is the tag
 	 * All branches are prefixed with 'tm/' to avoid conflicts with existing branches
 	 */
 	private generateBranchName(
 		taskId: string,
 		taskTitle: string,
-		tag?: string,
-		orgSlug?: string
+		tag?: string
 	): string {
 		// Sanitize task title for branch name
 		const sanitizedTitle = taskTitle
@@ -578,9 +575,7 @@ export class WorkflowService {
 		// Format task ID for branch name
 		const formattedTaskId = taskId.replace(/\./g, '-');
 
-		// Priority: orgSlug (API storage) > tag (local storage) > none
-		const namespace = orgSlug || tag;
-		const prefix = namespace ? `tm/${namespace}` : 'tm';
+		const prefix = tag ? `tm/${tag}` : 'tm';
 
 		return `${prefix}/task-${formattedTaskId}-${sanitizedTitle}`;
 	}

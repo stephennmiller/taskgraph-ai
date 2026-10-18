@@ -172,40 +172,38 @@ describe('ConfigManager', () => {
 			const storage = manager.getStorageConfig();
 			expect(storage).toEqual({
 				type: 'file',
-				basePath: testProjectRoot,
-				apiConfigured: false
+				basePath: testProjectRoot
 			});
 		});
 
-		it('should return API storage configuration when configured', async () => {
-			// Create a new instance with API storage config
-			vi.mocked(ConfigMerger).mockImplementationOnce(function (this: any) {
-				this.addSource = vi.fn();
-				this.clearSources = vi.fn();
-				this.merge = vi.fn().mockReturnValue({
-					storage: {
-						type: 'api',
-						apiEndpoint: 'https://api.example.com',
-						apiAccessToken: 'token123'
-					}
+		it.each(['api', 'auto'])(
+			'should fall back to file storage when an old config asks for "%s"',
+			async (oldType) => {
+				// Create a new instance with a config written for the removed cloud storage
+				vi.mocked(ConfigMerger).mockImplementationOnce(function (this: any) {
+					this.addSource = vi.fn();
+					this.clearSources = vi.fn();
+					this.merge = vi.fn().mockReturnValue({
+						storage: {
+							type: oldType,
+							apiEndpoint: 'https://api.example.com',
+							apiAccessToken: 'token123'
+						}
+					});
+					this.getSources = vi.fn().mockReturnValue([]);
+					this.hasSource = vi.fn().mockReturnValue(false);
+					this.removeSource = vi.fn().mockReturnValue(false);
+					return this;
+				} as any);
+
+				const oldConfigManager = await ConfigManager.create(testProjectRoot);
+
+				expect(oldConfigManager.getStorageConfig()).toEqual({
+					type: 'file',
+					basePath: testProjectRoot
 				});
-				this.getSources = vi.fn().mockReturnValue([]);
-				this.hasSource = vi.fn().mockReturnValue(false);
-				this.removeSource = vi.fn().mockReturnValue(false);
-				return this;
-			} as any);
-
-			const apiManager = await ConfigManager.create(testProjectRoot);
-
-			const storage = apiManager.getStorageConfig();
-			expect(storage).toEqual({
-				type: 'api',
-				apiEndpoint: 'https://api.example.com',
-				apiAccessToken: 'token123',
-				basePath: testProjectRoot,
-				apiConfigured: true
-			});
-		});
+			}
+		);
 
 		it('should return model configuration', () => {
 			const models = manager.getModelConfig();
@@ -246,23 +244,6 @@ describe('ConfigManager', () => {
 
 		it('should return project root', () => {
 			expect(manager.getProjectRoot()).toBe(testProjectRoot);
-		});
-
-		it('should check if API is explicitly configured', () => {
-			expect(manager.isApiExplicitlyConfigured()).toBe(false);
-		});
-
-		it('should detect when API is explicitly configured', () => {
-			// Update config for current instance
-			(manager as any).config = {
-				storage: {
-					type: 'api',
-					apiEndpoint: 'https://api.example.com',
-					apiAccessToken: 'token'
-				}
-			};
-
-			expect(manager.isApiExplicitlyConfigured()).toBe(true);
 		});
 	});
 

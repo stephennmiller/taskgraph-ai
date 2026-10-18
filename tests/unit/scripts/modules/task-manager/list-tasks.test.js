@@ -163,8 +163,7 @@ describe('listTasks', () => {
 		const defaultSampleTasks = JSON.parse(JSON.stringify(sampleTasks));
 		readJSON.mockReturnValue(defaultSampleTasks);
 		mockTasksList.mockResolvedValue({
-			tasks: defaultSampleTasks.tasks,
-			storageType: 'file'
+			tasks: defaultSampleTasks.tasks
 		});
 		readComplexityReport.mockReturnValue(null);
 		validateAndFixDependencies.mockImplementation(() => {});
@@ -808,8 +807,7 @@ describe('listTasks', () => {
 		test('should handle empty task list in compact format', async () => {
 			// Mock tm-core to return empty task list
 			mockTasksList.mockResolvedValue({
-				tasks: [],
-				storageType: 'file'
+				tasks: []
 			});
 			readJSON.mockReturnValue({ tasks: [] });
 			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
@@ -854,8 +852,7 @@ describe('listTasks', () => {
 
 			// Mock tm-core to return test data
 			mockTasksList.mockResolvedValue({
-				tasks: tasksWithDeps.tasks,
-				storageType: 'file'
+				tasks: tasksWithDeps.tasks
 			});
 			readJSON.mockReturnValue(tasksWithDeps);
 			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();

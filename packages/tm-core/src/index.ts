@@ -19,7 +19,6 @@ import type { TasksDomain } from './modules/tasks/tasks-domain.js';
  * });
  *
  * // Access domains
- * await tmcore.auth.login({ ... });
  * const tasks = await tmcore.tasks.list();
  * await tmcore.workflow.start({ taskId: '1' });
  * await tmcore.git.commit('feat: add feature');
@@ -90,33 +89,6 @@ export type {
 // Task domain result types
 export type TaskWithSubtaskResult = Awaited<ReturnType<TasksDomain['get']>>;
 
-// Auth types
-export type {
-	AuthCredentials,
-	OAuthFlowOptions,
-	UserContext
-} from './modules/auth/types.js';
-export { AuthenticationError } from './modules/auth/types.js';
-
-// Auth constants
-export {
-	AUTH_TIMEOUT_MS,
-	MFA_MAX_ATTEMPTS,
-	LOCAL_ONLY_COMMANDS,
-	type LocalOnlyCommand
-} from './modules/auth/index.js';
-
-// Auth error utilities (shared with CLI)
-export {
-	isSupabaseAuthError,
-	AUTH_ERROR_MESSAGES,
-	isRecoverableStaleSessionError
-} from './modules/auth/index.js';
-
-// Brief types
-export type { Brief } from './modules/briefs/types.js';
-export type { TagWithStats } from './modules/briefs/services/brief-service.js';
-
 // Workflow types
 export type {
 	StartWorkflowOptions,
@@ -134,13 +106,6 @@ export type {
 
 // Git types
 export type { CommitMessageOptions } from './modules/git/services/commit-message-generator.js';
-
-// Integration types
-export type {
-	ExportTasksOptions,
-	ExportResult,
-	ImportTask
-} from './modules/integration/services/export.service.js';
 
 // Reports types
 export type {
@@ -160,30 +125,7 @@ export type {
 } from './modules/loop/index.js';
 export { LoopDomain, PRESET_NAMES } from './modules/loop/index.js';
 
-// Prompts types
-export type {
-	PromptAction,
-	PromptDisplayOptions,
-	PromptDisplayResult,
-	PromptMetrics,
-	PromptState,
-	PromptStateStore,
-	PromptType,
-	TriggerCondition,
-	TriggerEvaluationResult,
-	TriggerType,
-	UpgradePromptConfig
-} from './modules/prompts/index.js';
-
 // ========== Advanced API (for CLI/Extension/MCP) ==========
-
-// Auth - Advanced
-export { AuthManager } from './modules/auth/managers/auth-manager.js';
-export { AuthDomain } from './modules/auth/auth-domain.js';
-
-// Briefs - Advanced
-export { BriefsDomain } from './modules/briefs/briefs-domain.js';
-export { BriefService } from './modules/briefs/services/brief-service.js';
 
 // Workflow - Advanced
 export { WorkflowOrchestrator } from './modules/workflow/orchestrators/workflow-orchestrator.js';
@@ -218,34 +160,6 @@ export {
 	type InvalidDependency,
 	type BuildBlocksMapResult
 } from './modules/tasks/utils/index.js';
-
-// Integration - Advanced
-export {
-	ExportService,
-	type GenerateBriefOptions,
-	type GenerateBriefResult,
-	type GenerateBriefFromPrdOptions,
-	type GenerateBriefFromPrdResult,
-	type BriefStatusResult,
-	type BriefStatusResponse,
-	type BriefGenerationProgress,
-	type SendTeamInvitationsResult,
-	type InvitationResult
-} from './modules/integration/services/export.service.js';
-
-// Prompts - Advanced
-export { PromptService } from './modules/prompts/services/prompt-service.js';
-export { PromptStateManager } from './modules/prompts/services/prompt-state-manager.js';
-export {
-	TriggerEvaluator,
-	type TriggerContext
-} from './modules/prompts/services/trigger-evaluator.js';
-export {
-	DEFAULT_PROMPT_CONFIG,
-	DEFAULT_TRIGGER_CONDITIONS,
-	PROMPT_STATE_KEY,
-	PROMPT_STATE_VERSION
-} from './modules/prompts/constants.js';
 
 // ========== Testing Utilities ==========
 

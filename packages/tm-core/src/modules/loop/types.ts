@@ -76,14 +76,6 @@ export interface LoopConfig {
 	 */
 	verbose?: boolean;
 	/**
-	 * Brief title describing the current initiative/goal (optional)
-	 *
-	 * If provided, included in the progress file header to give Claude
-	 * context about the bigger picture across iterations.
-	 * Example: "Implement streaming output for loop command"
-	 */
-	brief?: string;
-	/**
 	 * Output callbacks for presentation layer (CLI/MCP).
 	 * If not provided, the service runs silently (no console output).
 	 */

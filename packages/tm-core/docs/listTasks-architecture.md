@@ -34,12 +34,11 @@
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │              Storage Layer (IStorage)                │   │
 │  │                                                      │   │
-│  │  ┌──────────────┐        ┌──────────────┐          │   │
-│  │  │ FileStorage  │        │ ApiStorage   │          │   │
-│  │  │              │        │ (Hamster)    │          │   │
-│  │  └──────────────┘        └──────────────┘          │   │
+│  │  ┌──────────────┐                                  │   │
+│  │  │ FileStorage  │                                  │   │
+│  │  └──────────────┘                                  │   │
 │  │                                                      │   │
-│  │  StorageFactory.create() selects based on config    │   │
+│  │  StorageFactory creates the file storage            │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
@@ -85,9 +84,9 @@ const result = await tmCore.listTasks({
 
 ### 3. Storage Selection
 ```typescript
-// StorageFactory automatically selects storage
-const storage = StorageFactory.create(config, projectPath);
-// Returns either FileStorage or ApiStorage based on config
+// StorageFactory creates the storage from the runtime storage config
+const storage = await StorageFactory.createFromStorageConfig(storageConfig, projectPath);
+// Always returns FileStorage
 ```
 
 ### 4. Data Loading
@@ -95,11 +94,6 @@ const storage = StorageFactory.create(config, projectPath);
 // FileStorage
 - Reads from .taskgraph/tasks/tasks.json (or tag-specific file)
 - Local file system operations
-
-// ApiStorage (Hamster)
-- Makes HTTP requests to Hamster API
-- Uses access token from config
-- Handles retries and rate limiting
 ```
 
 ### 5. Entity Processing
@@ -140,8 +134,6 @@ interface ListTasksResult {
 - [x] Unit tests for TaskEntity
 - [x] Unit tests for BaseProvider
 - [x] Integration tests for listTasks with FileStorage
-- [ ] Integration tests for listTasks with ApiStorage (mock API)
-- [ ] E2E tests with real Hamster API (optional)
 
 ## Benefits of This Architecture
 

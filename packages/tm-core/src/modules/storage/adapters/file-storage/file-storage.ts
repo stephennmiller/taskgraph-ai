@@ -58,21 +58,6 @@ export class FileStorage implements IStorage {
 	}
 
 	/**
-	 * Get the storage type
-	 */
-	getStorageType(): 'file' {
-		return 'file';
-	}
-
-	/**
-	 * Get the current brief name (not applicable for file storage)
-	 * @returns null (file storage doesn't use briefs)
-	 */
-	getCurrentBriefName(): null {
-		return null;
-	}
-
-	/**
 	 * Get statistics about the storage
 	 */
 	async getStats(): Promise<StorageStats> {
@@ -407,42 +392,6 @@ export class FileStorage implements IStorage {
 			id: String(taskId) // Keep consistent with normalizeTaskIds
 		};
 		await this.saveTasks(tasks, tag);
-	}
-
-	/**
-	 * Update task with AI-powered prompt
-	 * For file storage, this should NOT be called - client must handle AI processing first
-	 */
-	async updateTaskWithPrompt(
-		_taskId: string,
-		_prompt: string,
-		_tag?: string,
-		_options?: { useResearch?: boolean; mode?: 'append' | 'update' | 'rewrite' }
-	): Promise<void> {
-		throw new Error(
-			'File storage does not support updateTaskWithPrompt. ' +
-				'Client-side AI logic must process the prompt before calling updateTask().'
-		);
-	}
-
-	/**
-	 * Expand task into subtasks with AI-powered generation
-	 * For file storage, this should NOT be called - client must handle AI processing first
-	 */
-	async expandTaskWithPrompt(
-		_taskId: string,
-		_tag?: string,
-		_options?: {
-			numSubtasks?: number;
-			useResearch?: boolean;
-			additionalContext?: string;
-			force?: boolean;
-		}
-	): Promise<void> {
-		throw new Error(
-			'File storage does not support expandTaskWithPrompt. ' +
-				'Client-side AI logic must process the expansion before calling updateTask().'
-		);
 	}
 
 	/**

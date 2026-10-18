@@ -826,41 +826,4 @@ describe('Autopilot Workflow Integration', () => {
 			expect(exists).toBe(false);
 		});
 	});
-
-	describe('Team/API Storage', () => {
-		it('should use orgSlug for branch naming when provided (API storage mode)', async () => {
-			await workflowService.startWorkflow({
-				taskId: '1',
-				taskTitle: 'Team Feature',
-				subtasks: [{ id: 'HAM-2', title: 'Implement', status: 'pending' }],
-				orgSlug: 'acme-corp'
-			});
-
-			const currentBranch = execSync('git branch --show-current', {
-				cwd: testProjectDir,
-				encoding: 'utf-8'
-			}).trim();
-
-			expect(currentBranch).toBe('tm/acme-corp/task-1-team-feature');
-		});
-
-		it('should prioritize orgSlug over tag for branch naming', async () => {
-			await workflowService.startWorkflow({
-				taskId: '1',
-				taskTitle: 'Priority Test',
-				subtasks: [{ id: '1.1', title: 'Task', status: 'pending' }],
-				tag: 'local-tag',
-				orgSlug: 'team-slug'
-			});
-
-			const currentBranch = execSync('git branch --show-current', {
-				cwd: testProjectDir,
-				encoding: 'utf-8'
-			}).trim();
-
-			// orgSlug should take precedence over tag
-			expect(currentBranch).toBe('tm/team-slug/task-1-priority-test');
-			expect(currentBranch).not.toContain('local-tag');
-		});
-	});
 });

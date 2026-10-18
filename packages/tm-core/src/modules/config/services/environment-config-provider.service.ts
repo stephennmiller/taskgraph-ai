@@ -31,13 +31,6 @@ export class EnvironmentConfigProvider {
 	 * Default environment variable mappings
 	 */
 	private static readonly DEFAULT_MAPPINGS: EnvMapping[] = [
-		{
-			env: 'TASKGRAPH_STORAGE_TYPE',
-			path: ['storage', 'type'],
-			validate: (v: string) => ['file', 'api'].includes(v)
-		},
-		{ env: 'TASKGRAPH_API_ENDPOINT', path: ['storage', 'apiEndpoint'] },
-		{ env: 'TASKGRAPH_API_TOKEN', path: ['storage', 'apiAccessToken'] },
 		{ env: 'TASKGRAPH_MODEL_MAIN', path: ['models', 'main'] },
 		{ env: 'TASKGRAPH_MODEL_RESEARCH', path: ['models', 'research'] },
 		{ env: 'TASKGRAPH_MODEL_FALLBACK', path: ['models', 'fallback'] },

@@ -11,7 +11,7 @@ const ROOT = path.resolve(import.meta.dirname, '../../..');
 const SCAN_DIRS = ['scripts', 'src'];
 
 const HAMSTER =
-	/hamster|@tm\/bridge|AuthManager|AuthDomain|checkAndBlockIfAuthenticated|ensureOrgSelected/i;
+	/hamster|@tm\/bridge|AuthManager|AuthDomain|checkAndBlockIfAuthenticated|ensureOrgSelected|storageType/i;
 
 function listJsFiles(dir) {
 	return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

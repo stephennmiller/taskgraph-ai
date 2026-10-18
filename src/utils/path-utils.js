@@ -382,10 +382,8 @@ export function findConfigPath(explicitPath = null, args = null, log = null) {
 	}
 
 	// Only warn once per command execution to prevent spam during init
-	// Skip warning if:
-	// Global suppress flag is set (during API mode detection)
-	const shouldSkipWarning =
-		isConfigWarningSuppressed() || args?.storageType === 'api';
+	// Skip warning if the global suppress flag is set
+	const shouldSkipWarning = isConfigWarningSuppressed();
 
 	if (!shouldSkipWarning) {
 		const warningKey = `config_warning_${projectRoot}`;
