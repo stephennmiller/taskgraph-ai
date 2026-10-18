@@ -45,15 +45,6 @@ export function createUrlLink(
 }
 
 /**
- * Creates a clickable brief ID link
- * @param briefId - The brief ID (e.g., "HAM-123")
- * @param briefUrl - The full URL to the brief
- */
-export function createBriefLink(briefId: string, briefUrl: string): string {
-	return createLink(briefId, briefUrl, { color: 'cyan' });
-}
-
-/**
  * Creates a clickable task ID link
  * @param taskId - The task ID (e.g., "TAS-67")
  * @param taskUrl - The full URL to the task

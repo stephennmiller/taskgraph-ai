@@ -62,6 +62,5 @@ After expansion:
 1. Show subtask hierarchy
 2. Update time estimates
 3. Suggest implementation order
-4. Highlight critical path`,
-	'solo'
+4. Highlight critical path`
 );

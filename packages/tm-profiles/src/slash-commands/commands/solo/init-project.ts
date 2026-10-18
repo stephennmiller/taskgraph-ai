@@ -63,6 +63,5 @@ If PRD file provided:
 \`\`\`
 /taskgraph:init my-prd.md
 → Automatically runs parse-prd after init
-\`\`\``,
-	'solo'
+\`\`\``
 );

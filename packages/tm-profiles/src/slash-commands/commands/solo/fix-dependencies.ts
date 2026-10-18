@@ -93,6 +93,5 @@ Run '/taskgraph:validate-dependencies' to verify fixes
 - Preview mode available
 - Rollback capability
 - Change logging
-- No data loss`,
-	mode: 'solo'
+- No data loss`
 });

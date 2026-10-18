@@ -61,6 +61,5 @@ Research mode typically:
 - New technology domains
 - Complex requirements
 - Regulatory compliance needed
-- Best practices crucial`,
-	'solo'
+- Best practices crucial`
 );

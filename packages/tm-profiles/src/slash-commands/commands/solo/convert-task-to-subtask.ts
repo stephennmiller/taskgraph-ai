@@ -84,6 +84,5 @@ After:  #5.1 "Implement validation" (subtask of #5)
 - Show new task hierarchy
 - List updated dependencies
 - Verify project integrity
-- Suggest related conversions`,
-	'solo'
+- Suggest related conversions`
 );

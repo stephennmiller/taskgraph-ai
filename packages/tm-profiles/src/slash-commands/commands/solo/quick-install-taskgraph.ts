@@ -34,6 +34,5 @@ If you see "command not found" after installation, you may need to:
 
 Once installed, you can use all the TaskGraph commands!
 
-Quick test: Run \`/taskgraph:help\` to see all available commands.`,
-	mode: 'solo'
+Quick test: Run \`/taskgraph:help\` to see all available commands.`
 });

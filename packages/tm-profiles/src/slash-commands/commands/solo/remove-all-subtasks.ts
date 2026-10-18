@@ -105,6 +105,5 @@ Next steps:
 - Review updated task list
 - Re-expand complex tasks as needed
 - Check project timeline
-\`\`\``,
-	mode: 'solo'
+\`\`\``
 });

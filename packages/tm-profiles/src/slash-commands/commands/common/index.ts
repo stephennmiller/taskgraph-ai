@@ -1,6 +1,6 @@
 /**
  * @fileoverview Common Commands
- * Commands that work in both solo and team modes.
+ * Commands for viewing and updating tasks.
  */
 
 // Display

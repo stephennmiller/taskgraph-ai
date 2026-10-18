@@ -17,7 +17,7 @@ export { staticCommand, dynamicCommand } from './factories.js';
 export type { StaticCommandOptions } from './factories.js';
 
 // Commands
-export { allCommands, goham } from './commands/index.js';
+export { allCommands } from './commands/index.js';
 
 // Profiles - self-contained profile classes
 export {

@@ -3,11 +3,7 @@
  * Simple functions to create type-safe slash command objects.
  */
 
-import type {
-	StaticSlashCommand,
-	DynamicSlashCommand,
-	OperatingMode
-} from './types.js';
+import type { StaticSlashCommand, DynamicSlashCommand } from './types.js';
 
 /**
  * Options for creating a static slash command
@@ -18,8 +14,6 @@ export interface StaticCommandOptions {
 	content: string;
 	/** Optional argument hint for documentation (command doesn't use $ARGUMENTS) */
 	argumentHint?: string;
-	/** Operating mode - defaults to 'common' */
-	mode?: OperatingMode;
 }
 
 /**
@@ -35,25 +29,24 @@ export interface StaticCommandOptions {
  * });
  *
  * // Static command with optional argument hint
- * const goham = staticCommand({
- *   name: 'goham',
- *   description: 'Start Working with Hamster Brief',
- *   argumentHint: '[brief-url]',
- *   content: '# Start Working...'
+ * const review = staticCommand({
+ *   name: 'review',
+ *   description: 'Review the current changes',
+ *   argumentHint: '[pull-request-url]',
+ *   content: '# Review...'
  * });
  * ```
  */
 export function staticCommand(
 	options: StaticCommandOptions
 ): StaticSlashCommand {
-	const { name, description, content, argumentHint, mode } = options;
+	const { name, description, content, argumentHint } = options;
 	return {
 		type: 'static',
 		metadata: {
 			name,
 			description,
-			...(argumentHint && { argumentHint }),
-			...(mode && { mode })
+			...(argumentHint && { argumentHint })
 		},
 		content
 	};
@@ -66,11 +59,11 @@ export function staticCommand(
  *
  * @example
  * ```ts
- * const goham = dynamicCommand(
- *   'goham',
- *   'Start Working with Hamster Brief',
- *   '[brief-url]',
- *   '# Start Working\n\nBrief URL: $ARGUMENTS'
+ * const review = dynamicCommand(
+ *   'review',
+ *   'Review a pull request',
+ *   '[pull-request-url]',
+ *   '# Review\n\nPull request: $ARGUMENTS'
  * );
  * ```
  *
@@ -80,8 +73,7 @@ export function dynamicCommand(
 	name: string,
 	description: string,
 	argumentHint: string,
-	content: string,
-	mode?: OperatingMode
+	content: string
 ): DynamicSlashCommand {
 	if (!content.includes('$ARGUMENTS')) {
 		throw new Error(
@@ -94,8 +86,7 @@ export function dynamicCommand(
 		metadata: {
 			name,
 			description,
-			argumentHint,
-			...(mode && { mode })
+			argumentHint
 		},
 		content
 	};

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Tags Command - Manage task organization with tags
- * Provides tag/brief management with file and API storage support
+ * Provides tag management for the local tasks file
  */
 
 import type { TmCore } from '@tm/core';
@@ -67,7 +67,7 @@ interface LegacyCreateTagOptions {
 }
 
 /**
- * TagsCommand - Manage tags/briefs for task organization
+ * TagsCommand - Manage tags for task organization
  */
 export class TagsCommand extends Command {
 	private tmCore?: TmCore;
@@ -136,8 +136,6 @@ Examples:
   $ tm tags add feature-auth         # Create new tag
   $ tm tags add sprint-2 --copy-from sprint-1  # Create with tasks copied
   $ tm tags add --from-branch        # Create from current git branch
-
-Note: When using API storage, this will redirect you to the web UI to create a brief.
 `
 			)
 			.action(async (name, options) => {
@@ -158,8 +156,6 @@ Note: When using API storage, this will redirect you to the web UI to create a b
 Examples:
   $ tm tags use feature-auth    # Switch by name
   $ tm tags use abc123          # Switch by ID (last 8 chars)
-
-Note: For API storage, this switches the active brief in your context.
 `
 			)
 			.action(async (name) => {

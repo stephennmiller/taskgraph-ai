@@ -4,14 +4,6 @@
  */
 
 /**
- * Operating mode for TaskGraph
- * - 'solo': Local file-based storage (TaskGraph standalone)
- * - 'team': API-based storage via Hamster (collaborative features)
- * - 'common': Works in both modes
- */
-export type OperatingMode = 'solo' | 'team' | 'common';
-
-/**
  * Base metadata shared by all slash commands
  */
 export interface SlashCommandMetadata {
@@ -19,10 +11,8 @@ export interface SlashCommandMetadata {
 	readonly name: string;
 	/** Short description shown in command picker */
 	readonly description: string;
-	/** Optional hint for arguments (e.g., "[brief-url]") */
+	/** Optional hint for arguments (e.g., "[tag]") */
 	readonly argumentHint?: string;
-	/** Operating mode - defaults to 'common' if not specified */
-	readonly mode?: OperatingMode;
 }
 
 /**
@@ -59,7 +49,7 @@ export type SlashCommand = StaticSlashCommand | DynamicSlashCommand;
  * Formatted command output ready to be written to file
  */
 export interface FormattedSlashCommand {
-	/** Filename (e.g., "goham.md") */
+	/** Filename (e.g., "next-task.md") */
 	readonly filename: string;
 	/** Formatted content for the target editor */
 	readonly content: string;

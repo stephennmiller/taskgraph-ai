@@ -59,6 +59,5 @@ Available Models:
 Based on configuration:
 - If Claude Code is missing → Suggest installing and signing in
 - If no research model → Explain benefits
-- If all configured → Show usage tips`,
-	mode: 'solo'
+- If all configured → Show usage tips`
 });

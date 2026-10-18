@@ -7,13 +7,7 @@
 export * from './components/index.js';
 
 // Status formatters
-export {
-	getStatusWithColor,
-	getBriefStatusWithColor,
-	getBriefStatusIcon,
-	getBriefStatusColor,
-	capitalizeStatus
-} from './formatters/status-formatters.js';
+export { getStatusWithColor } from './formatters/status-formatters.js';
 
 // Priority formatters
 export { getPriorityWithColor } from './formatters/priority-formatters.js';
@@ -31,7 +25,6 @@ export { formatDependenciesWithStatus } from './formatters/dependency-formatters
 export {
 	createLink,
 	createUrlLink,
-	createBriefLink,
 	createTaskLink,
 	supportsLinks
 } from './formatters/link-formatters.js';

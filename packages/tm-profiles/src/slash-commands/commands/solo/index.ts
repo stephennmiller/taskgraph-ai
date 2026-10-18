@@ -1,6 +1,6 @@
 /**
- * @fileoverview Solo Mode Commands
- * Commands that only work with local file-based storage (TaskGraph standalone).
+ * @fileoverview Task Commands
+ * Commands that read and change the local tasks file.
  */
 
 // PRD parsing

@@ -124,6 +124,5 @@ Try: /taskgraph:init your-prd.md
 After installation:
 1. Run \`/taskgraph:status\` to verify setup
 2. Configure AI providers with \`/taskgraph:setup-models\`
-3. Start using TaskGraph commands!`,
-	mode: 'solo'
+3. Start using TaskGraph commands!`
 });

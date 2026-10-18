@@ -134,6 +134,5 @@ After analysis:
 /taskgraph:expand 5    # Expand specific task
 /taskgraph:expand-all  # Expand all recommended
 /taskgraph:complexity-report  # View detailed report
-\`\`\``,
-	'solo'
+\`\`\``
 );

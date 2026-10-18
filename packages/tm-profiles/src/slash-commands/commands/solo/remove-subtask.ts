@@ -97,6 +97,5 @@ Confirm deletion? (y/n)
 - Update parent task status
 - Recalculate estimates
 - Show updated hierarchy
-- Suggest next actions`,
-	'solo'
+- Suggest next actions`
 );

@@ -64,11 +64,7 @@ listTasks(tasksPath, statusFilter, reportPath, withSubtasks, outputFormat, conte
 ```typescript
 // Our new implementation
 const tmCore = createTaskGraphCore(projectPath, { 
-  storage: { 
-    type: 'api',  // or 'file'
-    apiEndpoint: 'https://tryhamster.com',
-    apiAccessToken: 'xxx'
-  }
+  storage: { type: 'file' }
 });
 
 const result = await tmCore.listTasks({
@@ -148,6 +144,4 @@ interface ListTasksResult {
 
 1. Create a simple CLI wrapper that uses tm-core
 2. Test with file storage (existing functionality)
-3. Test with mock API storage
-4. Integrate with actual Hamster API when available
-5. Migrate other commands (addTask, updateTask, etc.) following same pattern
+3. Migrate other commands (addTask, updateTask, etc.) following same pattern

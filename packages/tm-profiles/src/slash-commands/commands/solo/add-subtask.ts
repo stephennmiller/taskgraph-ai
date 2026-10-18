@@ -89,6 +89,5 @@ taskgraph add-subtask --parent=<id> --task-id=<existing-id>
 - Show updated task hierarchy
 - Suggest logical next subtasks
 - Update complexity estimates
-- Recommend subtask order`,
-	'solo'
+- Recommend subtask order`
 );

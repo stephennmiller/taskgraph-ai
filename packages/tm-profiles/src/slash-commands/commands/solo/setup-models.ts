@@ -54,6 +54,5 @@ Model choices are saved in \`.taskgraph/config.json\`.
 After configuration:
 - Show usage examples
 - Suggest next steps
-- Verify parse-prd works`,
-	mode: 'solo'
+- Verify parse-prd works`
 });
