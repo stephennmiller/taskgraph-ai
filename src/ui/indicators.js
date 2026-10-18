@@ -3,6 +3,7 @@
  * UI functions for displaying priority and complexity indicators in different contexts
  */
 
+import { theme } from '@tm/cli/theme';
 import chalk from 'chalk';
 import { TASK_PRIORITY_OPTIONS } from '../constants/task-priority.js';
 
@@ -79,7 +80,7 @@ function generateCliIndicator(intensity, color) {
 		if (i < intensity) {
 			indicator += color(filled);
 		} else {
-			indicator += chalk.white(empty);
+			indicator += theme.text(empty);
 		}
 	}
 	return indicator;

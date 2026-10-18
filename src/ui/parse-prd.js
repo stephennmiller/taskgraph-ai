@@ -3,6 +3,7 @@
  * UI functions specifically for PRD parsing operations
  */
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
@@ -34,12 +35,12 @@ const BOX_STYLES = {
 	main: {
 		padding: { top: 1, bottom: 1, left: 2, right: 2 },
 		margin: { top: 0, bottom: 0 },
-		borderColor: 'blue',
+		borderColor: BORDER_COLOR,
 		borderStyle: 'round'
 	},
 	summary: {
 		padding: { top: 1, right: 1, bottom: 1, left: 1 },
-		borderColor: 'blue',
+		borderColor: BORDER_COLOR,
 		borderStyle: 'round',
 		margin: { top: 1, right: 1, bottom: 1, left: 0 }
 	},
@@ -90,11 +91,11 @@ function buildMainMessage({
 		'\n' +
 		chalk.dim(modelLine) +
 		'\n\n' +
-		chalk.blue(`Input: ${prdFilePath}`) +
+		theme.brand(`Input: ${prdFilePath}`) +
 		'\n' +
-		chalk.blue(`Output: ${outputPath}`) +
+		theme.brand(`Output: ${outputPath}`) +
 		'\n' +
-		chalk.blue(`Tasks to ${append ? 'Append' : 'Generate'}: ${numTasks}`)
+		theme.brand(`Tasks to ${append ? 'Append' : 'Generate'}: ${numTasks}`)
 	);
 }
 
@@ -439,21 +440,21 @@ function displayFallbackWarning() {
 	const warningContent =
 		chalk.yellow.bold('⚠️ Fallback Parsing Used') +
 		'\n\n' +
-		chalk.white(
+		theme.text(
 			'The system used fallback parsing to complete task generation.'
 		) +
 		'\n' +
-		chalk.white(
+		theme.text(
 			'This typically happens when streaming JSON parsing is incomplete.'
 		) +
 		'\n' +
-		chalk.white('Your tasks were successfully generated, but consider:') +
+		theme.text('Your tasks were successfully generated, but consider:') +
 		'\n' +
-		chalk.white('• Reviewing task completeness') +
+		theme.text('• Reviewing task completeness') +
 		'\n' +
-		chalk.white('• Checking for any missing details') +
+		theme.text('• Checking for any missing details') +
 		'\n\n' +
-		chalk.white("This is normal and usually doesn't indicate any issues.");
+		theme.text("This is normal and usually doesn't indicate any issues.");
 
 	console.log(boxen(warningContent, BOX_STYLES.warning));
 }
@@ -463,7 +464,7 @@ function displayFallbackWarning() {
  */
 function displayNextSteps() {
 	const stepsContent =
-		chalk.white.bold('Next Steps:') +
+		theme.text.bold('Next Steps:') +
 		'\n\n' +
 		`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph list')} to view all tasks\n` +
 		`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down a task into subtasks\n` +

@@ -5,14 +5,23 @@ import { jest } from '@jest/globals';
 
 // Mock chalk using unstable_mockModule for ESM compatibility
 jest.unstable_mockModule('chalk', () => ({
-	default: {
-		red: jest.fn((str) => str),
-		yellow: jest.fn((str) => str),
-		green: jest.fn((str) => str),
-		gray: jest.fn((str) => str),
-		white: jest.fn((str) => str),
-		hex: jest.fn(() => jest.fn((str) => str))
-	}
+	// Callable like the real chalk: the theme uses chalk, chalk.cyan(.bold) and chalk.magenta
+	default: Object.assign(
+		jest.fn((str) => str),
+		{
+			red: jest.fn((str) => str),
+			yellow: jest.fn((str) => str),
+			green: jest.fn((str) => str),
+			gray: jest.fn((str) => str),
+			white: jest.fn((str) => str),
+			cyan: Object.assign(
+				jest.fn((str) => str),
+				{ bold: jest.fn((str) => str) }
+			),
+			magenta: jest.fn((str) => str),
+			hex: jest.fn(() => jest.fn((str) => str))
+		}
+	)
 }));
 
 // Import after mocking
