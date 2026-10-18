@@ -23,21 +23,24 @@ paths:
    */
   function displayTaskInfo(task) {
     console.log(boxen(
-      chalk.white.bold(`Task: #${task.id} - ${task.title}`),
-      { padding: 1, borderColor: 'blue', borderStyle: 'round' }
+      theme.text.bold(`Task: #${task.id} - ${task.title}`),
+      { padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
     ));
   }
   ```
 
 ## Visual Styling Standards
 
-- **Color Scheme**:
-  - Use `chalk.blue` for informational messages
+- **Color Scheme** (text follows the terminal's own palette; see `apps/cli/src/ui/theme.ts`):
   - Use `chalk.green` for success messages
   - Use `chalk.yellow` for warnings
   - Use `chalk.red` for errors
-  - Use `chalk.cyan` for prompts and highlights
+  - Use `chalk.cyan` / `theme.brand` for prompts, highlights and informational messages
   - Use `chalk.magenta` for subtask-related information
+  - Use `theme.text` for body text and `theme.muted` for de-emphasized text
+  - DON'T use `chalk.white`, `chalk.blue`, `chalk.gray` or `chalk.grey`: white is pale gray on many light themes, blue is hard to read on dark ones, and gray is bright black, nearly invisible on Solarized Dark
+  - DON'T name `'gray'` / `'grey'` as a color in options either (`borderColor`, `createLink` `color`, `style.border`). Use `theme.muted`, `chalk.dim`, `TABLE_BORDER` or `MUTED_BOX_BORDER`
+  - `tests/unit/scripts/theme-usage.test.js` and `apps/cli/src/ui/gray-usage.spec.ts` fail on these
 
 - **Box Styling**:
   ```javascript
@@ -57,10 +60,10 @@ paths:
     borderStyle: 'round'
   })
 
-  // For information:
+  // For information (BORDER_COLOR from '@tm/cli/theme'):
   boxen(content, { 
     padding: 1, 
-    borderColor: 'blue', 
+    borderColor: BORDER_COLOR, 
     borderStyle: 'round', 
     margin: { top: 1, bottom: 1 } 
   })
@@ -83,7 +86,9 @@ paths:
       chalk.cyan.bold('Priority'),
       chalk.cyan.bold('Dependencies')
     ],
-    colWidths: [5, 40, 15, 10, 20]
+    colWidths: [5, 40, 15, 10, 20],
+    // cli-table3 borders default to 'grey' (bright black, invisible on Solarized Dark)
+    style: { border: TABLE_BORDER } // from '@tm/cli/theme'
   });
   
   // Add content rows
@@ -212,8 +217,8 @@ paths:
     // Header with query info
     const header = boxen(
       chalk.green.bold('Research Results') + '\n\n' +
-      chalk.gray('Query: ') + chalk.white(query) + '\n' +
-      chalk.gray('Detail Level: ') + chalk.cyan(detailLevel),
+      theme.muted('Query: ') + theme.text(query) + '\n' +
+      theme.muted('Detail Level: ') + chalk.cyan(detailLevel),
       {
         padding: { top: 1, bottom: 1, left: 2, right: 2 },
         margin: { top: 1, bottom: 0 },
@@ -229,7 +234,7 @@ paths:
       padding: { top: 1, bottom: 1, left: 2, right: 2 },
       margin: { top: 0, bottom: 1 },
       borderStyle: 'single',
-      borderColor: 'gray'
+      ...MUTED_BOX_BORDER // dimmed border; borderColor: 'gray' is bright black
     });
     console.log(contentBox);
     

@@ -146,7 +146,7 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   
   function log(level, ...args) {
     const icons = {
-      debug: chalk.gray('🔍'),
+      debug: chalk.dim('🔍'),
       info: chalk.blue('ℹ️'),
       warn: chalk.yellow('⚠️'),
       error: chalk.red('❌'),

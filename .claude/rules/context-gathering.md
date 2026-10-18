@@ -172,8 +172,8 @@ function displayResults(result, query, detailLevel, tokenBreakdown) {
     // Header with query info
     const header = boxen(
         chalk.green.bold('Research Results') + '\n\n' +
-        chalk.gray('Query: ') + chalk.white(query) + '\n' +
-        chalk.gray('Detail Level: ') + chalk.cyan(detailLevel),
+        theme.muted('Query: ') + theme.text(query) + '\n' +
+        theme.muted('Detail Level: ') + chalk.cyan(detailLevel),
         {
             padding: { top: 1, bottom: 1, left: 2, right: 2 },
             margin: { top: 1, bottom: 0 },
@@ -191,7 +191,7 @@ function displayResults(result, query, detailLevel, tokenBreakdown) {
         padding: { top: 1, bottom: 1, left: 2, right: 2 },
         margin: { top: 0, bottom: 1 },
         borderStyle: 'single',
-        borderColor: 'gray'
+        ...MUTED_BOX_BORDER // dimmed border; borderColor: 'gray' is bright black
     });
     console.log(contentBox);
     
