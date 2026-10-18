@@ -30,9 +30,9 @@ const TASK_STATUS_CONFIG: Record<
 		tableIcon: '▶'
 	},
 	deferred: {
-		color: chalk.gray,
-		icon: 'x',
-		tableIcon: 'x'
+		color: theme.muted,
+		icon: '–',
+		tableIcon: '–'
 	},
 	review: {
 		color: chalk.magenta,
@@ -40,7 +40,7 @@ const TASK_STATUS_CONFIG: Record<
 		tableIcon: '?'
 	},
 	cancelled: {
-		color: chalk.gray,
+		color: theme.muted,
 		icon: 'x',
 		tableIcon: 'x'
 	},
@@ -81,7 +81,7 @@ const BRIEF_STATUS_CONFIG: Record<
 	{ color: (text: string) => string; icon: string; tableIcon: string }
 > = {
 	draft: {
-		color: chalk.gray,
+		color: theme.muted,
 		icon: '○',
 		tableIcon: '○'
 	},
@@ -111,7 +111,7 @@ const BRIEF_STATUS_CONFIG: Record<
 		tableIcon: '✓'
 	},
 	archived: {
-		color: chalk.gray,
+		color: theme.muted,
 		icon: '■',
 		tableIcon: '■'
 	}
@@ -150,7 +150,7 @@ export function getBriefStatusIcon(
 export function getBriefStatusColor(
 	status: string | undefined
 ): (text: string) => string {
-	if (!status) return chalk.gray;
+	if (!status) return theme.muted;
 	return getBriefStatusConfig(status).color;
 }
 
@@ -170,7 +170,7 @@ export function getBriefStatusWithColor(
 	forTable: boolean = false
 ): string {
 	if (!status) {
-		return chalk.gray('○ Unknown');
+		return theme.muted('○ Unknown');
 	}
 
 	const config = getBriefStatusConfig(status);

@@ -37,7 +37,8 @@ export type TaskTableItem = (Task | Subtask) & {
  * dropOrder first, when the terminal is too narrow to show them all.
  */
 const TASK_TABLE_COLUMNS: (ColumnSpec & { header: string })[] = [
-	{ key: 'tag', header: 'Tag', width: 12, dropOrder: 2 },
+	// Never dropped: the column only shows when requested, and IDs repeat across tags
+	{ key: 'tag', header: 'Tag', width: 12 },
 	{ key: 'id', header: 'ID', width: 10 },
 	{ key: 'title', header: 'Title', width: 'flex' },
 	{ key: 'status', header: 'Status', width: 15 },

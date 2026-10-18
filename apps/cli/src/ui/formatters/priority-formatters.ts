@@ -14,7 +14,7 @@ const PRIORITY_COLORS: Record<TaskPriority, (text: string) => string> = {
 	critical: chalk.red.bold,
 	high: chalk.red,
 	medium: chalk.yellow,
-	low: chalk.gray
+	low: theme.muted
 };
 
 /**

@@ -131,7 +131,7 @@ export function getDisplayPriority(priority?: string): string {
 		low: '↓ Low',
 		medium: '→ Medium',
 		high: '↑ High',
-		urgent: '⇈ Urgent'
+		urgent: '↑↑ Urgent'
 	};
 	return displayMap[mapped] || '→ Medium';
 }
