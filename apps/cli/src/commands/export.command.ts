@@ -31,6 +31,7 @@ import { selectBriefFromInput } from '../utils/brief-selection.js';
 import { displayError } from '../utils/error-handler.js';
 import { ensureOrgSelected } from '../utils/org-selection.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Exported tag tracking in state.json
@@ -781,7 +782,7 @@ export class ExportCommand extends Command {
 				)
 			);
 			for (const result of successful) {
-				console.log(chalk.white(`    ${result.tag}`));
+				console.log(theme.text(`    ${result.tag}`));
 				if (result.brief) {
 					console.log(chalk.gray(`      ${result.brief.title}`));
 					console.log(`      ${createUrlLink(result.brief.url)}`);
@@ -860,7 +861,7 @@ export class ExportCommand extends Command {
 		const previewTasks = tasks.slice(0, 10);
 		for (const task of previewTasks) {
 			const statusIcon = this.getStatusIcon(task.status);
-			console.log(chalk.white(`  ${statusIcon} [${task.id}] ${task.title}`));
+			console.log(theme.text(`  ${statusIcon} [${task.id}] ${task.title}`));
 		}
 
 		if (tasks.length > 10) {
@@ -876,7 +877,7 @@ export class ExportCommand extends Command {
 		if (!result.brief) return;
 
 		console.log('');
-		console.log(chalk.green('  Done! ') + chalk.white.bold(result.brief.title));
+		console.log(chalk.green('  Done! ') + chalk.bold(result.brief.title));
 		console.log(chalk.gray(`  ${result.brief.taskCount} tasks exported`));
 		console.log('');
 		console.log(`  ${createUrlLink(result.brief.url)}`);

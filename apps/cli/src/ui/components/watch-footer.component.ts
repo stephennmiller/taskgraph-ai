@@ -4,6 +4,7 @@
 
 import chalk from 'chalk';
 import { formatTime } from '@tm/core';
+import { theme } from '../theme.js';
 
 /**
  * Get display label for storage source
@@ -37,5 +38,5 @@ export function displaySyncMessage(
 	const formattedTime = formatTime(syncTime);
 	const source = getSourceLabel(storageType);
 
-	console.log(chalk.blue(`\nℹ ${source} updated at ${formattedTime}`));
+	console.log(theme.brand(`\nℹ ${source} updated at ${formattedTime}`));
 }

@@ -34,8 +34,11 @@ import {
 	truncate
 } from './utils.js';
 
-// Create a color gradient for the banner (still used by warmGradient in other places)
-const warmGradient = gradient(['#fb8b24', '#e36414', '#9a031e']);
+// TaskGraph theme from @tm/cli, re-exported for the legacy task-manager modules
+const { theme, BORDER_COLOR } = ui;
+
+// Brand gradient (used by the init success message)
+const brandGradient = gradient(ui.BANNER_GRADIENT);
 
 /**
  * Display FYI notice about tagged task lists (only if migration occurred)
@@ -46,7 +49,7 @@ function displayTaggedTasksFYI(data) {
 
 	console.log(
 		boxen(
-			chalk.white.bold('FYI: ') +
+			chalk.bold('FYI: ') +
 				chalk.gray('TaskGraph now supports separate task lists per tag. ') +
 				chalk.cyan(
 					'Use the --tag flag to create/read/update/filter tasks by tag.'
@@ -261,13 +264,13 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 	if (percent < 25) {
 		completedColor = chalk.red;
 	} else if (percent < 50) {
-		completedColor = chalk.hex('#FFA500'); // Orange
+		completedColor = chalk.yellow;
 	} else if (percent < 75) {
 		completedColor = chalk.yellow;
 	} else if (percent < 100) {
 		completedColor = chalk.green;
 	} else {
-		completedColor = chalk.hex('#006400'); // Dark green
+		completedColor = chalk.green;
 	}
 
 	// Create colored sections
@@ -275,19 +278,20 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 
 	// Gray section for deferred/cancelled items
 	const deferredCancelledSection = chalk.gray(
-		'█'.repeat(deferredCancelledFilled)
+		'─'.repeat(deferredCancelledFilled)
 	);
 
 	// If we have a status breakdown, create a multi-colored remaining section
 	let remainingSection = '';
 
 	if (statusBreakdown && empty > 0) {
-		// Status colors (matching the statusConfig colors in getStatusWithColor)
-		const statusColors = {
-			pending: chalk.yellow,
-			'in-progress': chalk.hex('#FFA500'), // Orange
-			blocked: chalk.red,
-			review: chalk.magenta
+		// Each status gets its own character as well as its own color, so the
+		// bar reads without color (matches the apps/cli dashboard)
+		const statusSegments = {
+			pending: (n) => chalk.yellow('░'.repeat(n)),
+			'in-progress': (n) => theme.active('▓'.repeat(n)),
+			blocked: (n) => chalk.red('!'.repeat(n)),
+			review: (n) => chalk.magenta('▒'.repeat(n))
 			// Deferred and cancelled are treated as part of the completed section
 		};
 
@@ -318,9 +322,10 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 				// Make sure we don't exceed the total length due to rounding
 				const actualChars = Math.min(statusChars, empty - addedChars);
 
-				// Add colored section for this status
-				const colorFn = statusColors[status] || chalk.gray;
-				remainingSection += colorFn('░'.repeat(actualChars));
+				// Add the section for this status
+				const segment =
+					statusSegments[status] || ((n) => chalk.gray('░'.repeat(n)));
+				remainingSection += segment(actualChars);
 
 				addedChars += actualChars;
 			}
@@ -338,7 +343,7 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
 	// Effective percentage text color should reflect the highest category
 	const percentTextColor =
 		percent === 100
-			? chalk.hex('#006400') // Dark green for 100%
+			? chalk.green // Green for 100%
 			: effectivePercent === 100
 				? chalk.gray // Gray for 100% with deferred/cancelled
 				: completedColor; // Otherwise match the completed color
@@ -355,23 +360,23 @@ function createProgressBar(percent, length = 30, statusBreakdown = null) {
  */
 function getStatusWithColor(status, forTable = false) {
 	if (!status) {
-		return chalk.gray('❓ unknown');
+		return chalk.gray('? unknown');
 	}
 
 	const statusConfig = {
 		done: { color: chalk.green, icon: '✓', tableIcon: '✓' },
 		completed: { color: chalk.green, icon: '✓', tableIcon: '✓' },
 		pending: { color: chalk.yellow, icon: '○', tableIcon: '⏱' },
-		'in-progress': { color: chalk.hex('#FFA500'), icon: '🔄', tableIcon: '►' },
+		'in-progress': { color: theme.active, icon: '▶', tableIcon: '▶' },
 		deferred: { color: chalk.gray, icon: 'x', tableIcon: '⏱' },
 		blocked: { color: chalk.red, icon: '!', tableIcon: '✗' },
 		review: { color: chalk.magenta, icon: '?', tableIcon: '?' },
-		cancelled: { color: chalk.gray, icon: '❌', tableIcon: 'x' }
+		cancelled: { color: chalk.gray, icon: 'x', tableIcon: 'x' }
 	};
 
 	const config = statusConfig[status.toLowerCase()] || {
 		color: chalk.red,
-		icon: '❌',
+		icon: '✗',
 		tableIcon: '✗'
 	};
 
@@ -486,7 +491,7 @@ function formatDependenciesWithStatus(
 				if (isDone) {
 					return chalk.green.bold(depIdStr);
 				} else if (isInProgress) {
-					return chalk.hex('#FFA500').bold(depIdStr);
+					return theme.active.bold(depIdStr);
 				} else {
 					return chalk.red.bold(depIdStr);
 				}
@@ -549,7 +554,7 @@ function displayHelp() {
 	const terminalWidth = process.stdout.columns || 100; // Default to 100 if can't detect
 
 	console.log(
-		boxen(chalk.white.bold('TaskGraph CLI'), {
+		boxen(chalk.bold('TaskGraph CLI'), {
 			padding: 1,
 			borderColor: 'blue',
 			borderStyle: 'round',
@@ -851,7 +856,7 @@ function displayHelp() {
 		category.commands.forEach((cmd, index) => {
 			commandTable.push([
 				`${chalk.yellow.bold(cmd.name)}${chalk.reset('')}`,
-				`${chalk.white(cmd.args)}${chalk.reset('')}`,
+				`${chalk.reset(cmd.args)}${chalk.reset('')}`,
 				`${chalk.dim(cmd.desc)}${chalk.reset('')}`
 			]);
 		});
@@ -907,12 +912,12 @@ function displayHelp() {
 	configTable.push(
 		[
 			`${chalk.yellow(TASKGRAPH_CONFIG_FILE)}${chalk.reset('')}`,
-			`${chalk.white('AI model configuration file (project root)')}${chalk.reset('')}`,
+			`${chalk.reset('AI model configuration file (project root)')}${chalk.reset('')}`,
 			`${chalk.dim('Managed by models cmd')}${chalk.reset('')}`
 		],
 		[
 			`${chalk.yellow('Claude Code')}${chalk.reset('')}`,
-			`${chalk.white('Install and sign in to Claude Code (no API keys needed)')}${chalk.reset('')}`,
+			`${chalk.reset('Install and sign in to Claude Code (no API keys needed)')}${chalk.reset('')}`,
 			`${chalk.dim('Required on PATH')}${chalk.reset('')}`
 		]
 	);
@@ -923,22 +928,22 @@ function displayHelp() {
 	// Show helpful hints
 	console.log(
 		boxen(
-			chalk.white.bold('Quick Start:') +
+			chalk.bold('Quick Start:') +
 				'\n\n' +
 				chalk.cyan('1. Create Project: ') +
-				chalk.white('taskgraph init') +
+				chalk.reset('taskgraph init') +
 				'\n' +
 				chalk.cyan('2. Setup Models: ') +
-				chalk.white('taskgraph models --setup') +
+				chalk.reset('taskgraph models --setup') +
 				'\n' +
 				chalk.cyan('3. Parse PRD: ') +
-				chalk.white('taskgraph parse-prd --input=<prd-file>') +
+				chalk.reset('taskgraph parse-prd --input=<prd-file>') +
 				'\n' +
 				chalk.cyan('4. List Tasks: ') +
-				chalk.white('taskgraph list') +
+				chalk.reset('taskgraph list') +
 				'\n' +
 				chalk.cyan('5. Find Next Task: ') +
-				chalk.white('taskgraph next'),
+				chalk.reset('taskgraph next'),
 			{
 				padding: 1,
 				borderColor: 'yellow',
@@ -1018,7 +1023,7 @@ async function displayNextTask(
 
 	// Display the task in a nice format
 	console.log(
-		boxen(chalk.white.bold(`Next Task: #${nextTask.id} - ${nextTask.title}`), {
+		boxen(chalk.bold(`Next Task: #${nextTask.id} - ${nextTask.title}`), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
 			borderColor: 'blue',
 			borderStyle: 'round',
@@ -1047,7 +1052,7 @@ async function displayNextTask(
 		low: chalk.gray
 	};
 	const priorityColor =
-		priorityColors[nextTask.priority || 'medium'] || chalk.white;
+		priorityColors[nextTask.priority || 'medium'] || chalk.reset;
 
 	// Add task details to table
 	taskTable.push(
@@ -1080,15 +1085,12 @@ async function displayNextTask(
 	// If task has details, show them in a separate box
 	if (nextTask.details && nextTask.details.trim().length > 0) {
 		console.log(
-			boxen(
-				chalk.white.bold('Implementation Details:') + '\n\n' + nextTask.details,
-				{
-					padding: { top: 0, bottom: 0, left: 1, right: 1 },
-					borderColor: 'cyan',
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				}
-			)
+			boxen(chalk.bold('Implementation Details:') + '\n\n' + nextTask.details, {
+				padding: { top: 0, bottom: 0, left: 1, right: 1 },
+				borderColor: 'cyan',
+				borderStyle: 'round',
+				margin: { top: 1, bottom: 0 }
+			})
 		);
 	}
 
@@ -1098,7 +1100,7 @@ async function displayNextTask(
 	// Show subtasks if they exist (only for parent tasks)
 	if (!isSubtask && nextTask.subtasks && nextTask.subtasks.length > 0) {
 		console.log(
-			boxen(chalk.white.bold('Subtasks'), {
+			boxen(chalk.bold('Subtasks'), {
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
 				margin: { top: 1, bottom: 0 },
 				borderColor: 'magenta',
@@ -1148,8 +1150,8 @@ async function displayNextTask(
 					done: chalk.green,
 					completed: chalk.green,
 					pending: chalk.yellow,
-					'in-progress': chalk.blue
-				}[st.status || 'pending'] || chalk.white;
+					'in-progress': chalk.cyan
+				}[st.status || 'pending'] || chalk.reset;
 
 			// Format subtask dependencies
 			let subtaskDeps = 'None';
@@ -1170,7 +1172,7 @@ async function displayNextTask(
 							if (isDone) {
 								return chalk.green.bold(`${nextTask.id}.${depId}`);
 							} else if (isInProgress) {
-								return chalk.hex('#FFA500').bold(`${nextTask.id}.${depId}`);
+								return theme.active.bold(`${nextTask.id}.${depId}`);
 							} else {
 								return chalk.red.bold(`${nextTask.id}.${depId}`);
 							}
@@ -1184,7 +1186,7 @@ async function displayNextTask(
 				subtaskDeps =
 					formattedDeps.length === 1
 						? formattedDeps[0]
-						: formattedDeps.join(chalk.white(', '));
+						: formattedDeps.join(chalk.reset(', '));
 			}
 
 			subtaskTable.push([
@@ -1204,7 +1206,7 @@ async function displayNextTask(
 			boxen(
 				chalk.yellow('No subtasks found. Consider breaking down this task:') +
 					'\n' +
-					chalk.white(
+					chalk.reset(
 						`Run: ${chalk.cyan(`taskgraph expand --id=${nextTask.id}`)}`
 					),
 				{
@@ -1218,7 +1220,7 @@ async function displayNextTask(
 	}
 
 	// Show action suggestions
-	let suggestedActionsContent = chalk.white.bold('Suggested Actions:') + '\n';
+	let suggestedActionsContent = chalk.bold('Suggested Actions:') + '\n';
 	if (isSubtask) {
 		// Suggested actions for a subtask
 		suggestedActionsContent +=
@@ -1302,7 +1304,7 @@ async function displayTaskById(
 	if (task.isSubtask || task.parentTask) {
 		console.log(
 			boxen(
-				chalk.white.bold(
+				chalk.bold(
 					`Subtask: #${task.parentTask.id}.${task.id} - ${task.title}`
 				),
 				{
@@ -1352,21 +1354,18 @@ async function displayTaskById(
 
 		if (task.details && task.details.trim().length > 0) {
 			console.log(
-				boxen(
-					chalk.white.bold('Implementation Details:') + '\n\n' + task.details,
-					{
-						padding: { top: 0, bottom: 0, left: 1, right: 1 },
-						borderColor: 'cyan',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 0 }
-					}
-				)
+				boxen(chalk.bold('Implementation Details:') + '\n\n' + task.details, {
+					padding: { top: 0, bottom: 0, left: 1, right: 1 },
+					borderColor: 'cyan',
+					borderStyle: 'round',
+					margin: { top: 1, bottom: 0 }
+				})
 			);
 		}
 
 		console.log(
 			boxen(
-				chalk.white.bold('Suggested Actions:') +
+				chalk.bold('Suggested Actions:') +
 					'\n' +
 					`${chalk.cyan('1.')} Mark as in-progress: ${chalk.yellow(`taskgraph set-status ${task.parentTask.id}.${task.id} in-progress`)}\n` +
 					`${chalk.cyan('2.')} Mark as done when completed: ${chalk.yellow(`taskgraph set-status ${task.parentTask.id}.${task.id} done`)}\n` +
@@ -1384,7 +1383,7 @@ async function displayTaskById(
 
 	// --- Display Regular Task Details ---
 	console.log(
-		boxen(chalk.white.bold(`Task: #${task.id} - ${task.title}`), {
+		boxen(chalk.bold(`Task: #${task.id} - ${task.title}`), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
 			borderColor: 'blue',
 			borderStyle: 'round',
@@ -1410,7 +1409,7 @@ async function displayTaskById(
 		low: chalk.gray
 	};
 	const priorityColor =
-		priorityColors[task.priority || 'medium'] || chalk.white;
+		priorityColors[task.priority || 'medium'] || chalk.reset;
 	taskTable.push(
 		[chalk.cyan.bold('ID:'), task.id.toString()],
 		[chalk.cyan.bold('Title:'), task.title],
@@ -1440,20 +1439,17 @@ async function displayTaskById(
 
 	if (task.details && task.details.trim().length > 0) {
 		console.log(
-			boxen(
-				chalk.white.bold('Implementation Details:') + '\n\n' + task.details,
-				{
-					padding: { top: 0, bottom: 0, left: 1, right: 1 },
-					borderColor: 'cyan',
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				}
-			)
+			boxen(chalk.bold('Implementation Details:') + '\n\n' + task.details, {
+				padding: { top: 0, bottom: 0, left: 1, right: 1 },
+				borderColor: 'cyan',
+				borderStyle: 'round',
+				margin: { top: 1, bottom: 0 }
+			})
 		);
 	}
 	if (task.testStrategy && task.testStrategy.trim().length > 0) {
 		console.log(
-			boxen(chalk.white.bold('Test Strategy:') + '\n\n' + task.testStrategy, {
+			boxen(chalk.bold('Test Strategy:') + '\n\n' + task.testStrategy, {
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
 				borderColor: 'cyan',
 				borderStyle: 'round',
@@ -1465,7 +1461,7 @@ async function displayTaskById(
 	// --- Subtask Table Display (uses filtered list: task.subtasks) ---
 	if (task.subtasks && task.subtasks.length > 0) {
 		console.log(
-			boxen(chalk.white.bold('Subtasks'), {
+			boxen(chalk.bold('Subtasks'), {
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
 				margin: { top: 1, bottom: 0 },
 				borderColor: 'magenta',
@@ -1508,9 +1504,9 @@ async function displayTaskById(
 				done: chalk.green,
 				completed: chalk.green,
 				pending: chalk.yellow,
-				'in-progress': chalk.blue
+				'in-progress': chalk.cyan
 			};
-			const statusColor = statusColorMap[st.status || 'pending'] || chalk.white;
+			const statusColor = statusColorMap[st.status || 'pending'] || chalk.reset;
 			let subtaskDeps = 'None';
 			if (st.dependencies && st.dependencies.length > 0) {
 				const formattedDeps = st.dependencies.map((depId) => {
@@ -1529,7 +1525,7 @@ async function displayTaskById(
 						const color = isDone
 							? chalk.green.bold
 							: isInProgress
-								? chalk.hex('#FFA500').bold
+								? theme.active.bold
 								: chalk.red.bold;
 						return color(`${task.id}.${depId}`);
 					} else if (typeof depId === 'number' && depId < 100) {
@@ -1540,7 +1536,7 @@ async function displayTaskById(
 				subtaskDeps =
 					formattedDeps.length === 1
 						? formattedDeps[0]
-						: formattedDeps.join(chalk.white(', '));
+						: formattedDeps.join(chalk.reset(', '));
 			}
 			subtaskTable.push([
 				`${task.id}.${st.id}`,
@@ -1608,7 +1604,7 @@ async function displayTaskById(
 				boxen(
 					chalk.yellow('No subtasks found. Consider breaking down this task:') +
 						'\n' +
-						chalk.white(
+						chalk.reset(
 							`Run: ${chalk.cyan(`taskgraph expand --id=${task.id}`)}`
 						),
 					{
@@ -1673,12 +1669,12 @@ async function displayTaskById(
 		);
 
 		const statusCounts =
-			`${chalk.green('✓ Done:')} ${completedSubtasks}  ${chalk.hex('#FFA500')('► In Progress:')} ${inProgressSubtasks}  ${chalk.yellow('○ Pending:')} ${pendingSubtasks}\n` +
-			`${chalk.red('! Blocked:')} ${blockedSubtasks}  ${chalk.gray('⏱ Deferred:')} ${deferredSubtasks}  ${chalk.gray('✗ Cancelled:')} ${cancelledSubtasks}`;
+			`${chalk.green('✓ Done:')} ${completedSubtasks}  ${theme.active('▶ In Progress:')} ${inProgressSubtasks}  ${chalk.yellow('○ Pending:')} ${pendingSubtasks}\n` +
+			`${chalk.red('! Blocked:')} ${blockedSubtasks}  ${chalk.gray('x Deferred:')} ${deferredSubtasks}  ${chalk.gray('✗ Cancelled:')} ${cancelledSubtasks}`;
 
 		console.log(
 			boxen(
-				chalk.white.bold('Subtask Progress:') +
+				chalk.bold('Subtask Progress:') +
 					'\n\n' +
 					`${chalk.cyan('Completed:')} ${completedSubtasks}/${totalSubtasks} (${completionPercentage.toFixed(1)}%)\n` +
 					`${statusCounts}\n` +
@@ -1699,15 +1695,26 @@ async function displayTaskById(
 	const actions = [];
 	let actionNumber = 1;
 
-	// Basic actions
-	actions.push(
-		`${chalk.cyan(`${actionNumber}.`)} Mark as in-progress: ${chalk.yellow(`taskgraph set-status ${task.id} in-progress`)}`
-	);
-	actionNumber++;
-	actions.push(
-		`${chalk.cyan(`${actionNumber}.`)} Mark as done when completed: ${chalk.yellow(`taskgraph set-status ${task.id} done`)}`
-	);
-	actionNumber++;
+	// Basic actions, matched to the current status so we never suggest
+	// starting a task that is already started or finished
+	const isFinished = ['done', 'completed', 'cancelled'].includes(task.status);
+	if (isFinished) {
+		actions.push(
+			`${chalk.cyan(`${actionNumber}.`)} Find the next task: ${chalk.yellow('taskgraph next')}`
+		);
+		actionNumber++;
+	} else {
+		if (task.status !== 'in-progress') {
+			actions.push(
+				`${chalk.cyan(`${actionNumber}.`)} Mark as in-progress: ${chalk.yellow(`taskgraph set-status ${task.id} in-progress`)}`
+			);
+			actionNumber++;
+		}
+		actions.push(
+			`${chalk.cyan(`${actionNumber}.`)} Mark as done when completed: ${chalk.yellow(`taskgraph set-status ${task.id} done`)}`
+		);
+		actionNumber++;
+	}
 
 	// Subtask-related action
 	if (subtasksForProgress && subtasksForProgress.length > 0) {
@@ -1764,7 +1771,7 @@ async function displayTaskById(
 	}
 
 	console.log(
-		boxen(chalk.white.bold('Suggested Actions:') + '\n' + actions.join('\n'), {
+		boxen(chalk.bold('Suggested Actions:') + '\n' + actions.join('\n'), {
 			padding: { top: 0, bottom: 0, left: 1, right: 1 },
 			borderColor: 'green',
 			borderStyle: 'round',
@@ -1808,11 +1815,11 @@ async function displayComplexityReport(reportPath) {
 
 		if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
 			// Call the analyze-complexity command
-			console.log(chalk.blue('Generating complexity report...'));
+			console.log(chalk.cyan('Generating complexity report...'));
 			const tasksPath = TASKGRAPH_TASKS_FILE;
 			if (!fs.existsSync(tasksPath)) {
 				console.error(
-					'❌ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file.'
+					'✗ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file.'
 				);
 				return null;
 			}
@@ -1841,7 +1848,7 @@ async function displayComplexityReport(reportPath) {
 
 	// Display report header
 	console.log(
-		boxen(chalk.white.bold('Task Complexity Analysis Report'), {
+		boxen(chalk.bold('Task Complexity Analysis Report'), {
 			padding: 1,
 			borderColor: 'blue',
 			borderStyle: 'round',
@@ -1916,7 +1923,7 @@ async function displayComplexityReport(reportPath) {
 
 	console.log(
 		boxen(
-			chalk.white.bold('Complexity Distribution\n\n') +
+			chalk.bold('Complexity Distribution\n\n') +
 				`${chalk.green.bold('Low (1-4):')} ${complexityDistribution[0]} tasks (${percentLow}%)\n` +
 				`${chalk.yellow.bold('Medium (5-7):')} ${complexityDistribution[1]} tasks (${percentMedium}%)\n` +
 				`${chalk.red.bold('High (8-10):')} ${complexityDistribution[2]} tasks (${percentHigh}%)`,
@@ -2008,7 +2015,7 @@ async function displayComplexityReport(reportPath) {
 	// Show action suggestions
 	console.log(
 		boxen(
-			chalk.white.bold('Suggested Actions:') +
+			chalk.bold('Suggested Actions:') +
 				'\n\n' +
 				`${chalk.cyan('1.')} Expand all complex tasks: ${chalk.yellow(`taskgraph expand --all`)}\n` +
 				`${chalk.cyan('2.')} Expand a specific task: ${chalk.yellow(`taskgraph expand --id=<id>`)}\n` +
@@ -2159,7 +2166,7 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 	});
 
 	activeTable.push([
-		chalk.white('Main'),
+		chalk.reset('Main'),
 		active.main.provider,
 		active.main.modelId,
 		formatSweScoreWithTertileStars(active.main.sweScore, allAvailableModels),
@@ -2167,7 +2174,7 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 		// getCombinedStatus(active.main.keyStatus) // Removed
 	]);
 	activeTable.push([
-		chalk.white('Research'),
+		chalk.reset('Research'),
 		active.research.provider,
 		active.research.modelId,
 		formatSweScoreWithTertileStars(
@@ -2179,7 +2186,7 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 	]);
 	if (active.fallback && active.fallback.provider && active.fallback.modelId) {
 		activeTable.push([
-			chalk.white('Fallback'),
+			chalk.reset('Fallback'),
 			active.fallback.provider,
 			active.fallback.modelId,
 			formatSweScoreWithTertileStars(
@@ -2191,7 +2198,7 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 		]);
 	} else {
 		activeTable.push([
-			chalk.white('Fallback'),
+			chalk.reset('Fallback'),
 			chalk.gray('-'),
 			chalk.gray('(Not Set)'),
 			chalk.gray('-'),
@@ -2236,7 +2243,7 @@ function displayAvailableModels(availableModels) {
 	// --- Suggested Actions Section (moved here from models command) ---
 	console.log(
 		boxen(
-			chalk.white.bold('Next Steps:') +
+			chalk.bold('Next Steps:') +
 				'\n' +
 				chalk.cyan(
 					`1. Set main model: ${chalk.yellow('taskgraph models --set-main <model_id>')}`
@@ -2306,7 +2313,7 @@ function displayAiUsageSummary(telemetryData, outputType = 'cli') {
 			margin: { top: 1 },
 			borderColor: 'blue',
 			borderStyle: 'round',
-			title: '💡 Telemetry',
+			title: 'Telemetry',
 			titleAlignment: 'center'
 		})
 	);
@@ -2390,7 +2397,7 @@ async function displayMultipleTasksSummary(
 	// Display header
 	console.log(
 		boxen(
-			chalk.white.bold(
+			chalk.bold(
 				`Task Summary (${foundTasks.length} task${foundTasks.length === 1 ? '' : 's'})`
 			),
 			{
@@ -2458,7 +2465,7 @@ async function displayMultipleTasksSummary(
 			low: chalk.gray
 		};
 		const priorityColor =
-			priorityColors[task.priority || 'medium'] || chalk.white;
+			priorityColors[task.priority || 'medium'] || chalk.reset;
 
 		// Calculate subtask summary
 		let subtaskSummary = chalk.gray('None');
@@ -2479,7 +2486,7 @@ async function displayMultipleTasksSummary(
 			// Compact subtask count with status indicators
 			subtaskSummary = `${chalk.green(completed)}/${total}`;
 			if (inProgress > 0)
-				subtaskSummary += ` ${chalk.hex('#FFA500')(`+${inProgress}`)}`;
+				subtaskSummary += ` ${theme.active(`+${inProgress}`)}`;
 			if (pending > 0) subtaskSummary += ` ${chalk.yellow(`(${pending})`)}`;
 
 			// Mini progress bar (shorter than usual)
@@ -2512,7 +2519,7 @@ async function displayMultipleTasksSummary(
 	if (foundTasks.length > 1) {
 		console.log(
 			boxen(
-				chalk.white.bold('Interactive Options:') +
+				chalk.bold('Interactive Options:') +
 					'\n' +
 					chalk.cyan('• Press Enter to view available actions for all tasks') +
 					'\n' +
@@ -2546,7 +2553,7 @@ async function displayMultipleTasksSummary(
 			// Show action menu for selected tasks
 			console.log(
 				boxen(
-					chalk.white.bold('Available Actions for Selected Tasks:') +
+					chalk.bold('Available Actions for Selected Tasks:') +
 						'\n' +
 						chalk.cyan('1.') +
 						' Mark all as in-progress' +
@@ -2591,7 +2598,7 @@ async function displayMultipleTasksSummary(
 			switch (actionChoice.trim()) {
 				case '1':
 					console.log(
-						chalk.blue(
+						chalk.cyan(
 							`\n→ Command: taskgraph set-status ${taskIdList} in-progress`
 						)
 					);
@@ -2603,14 +2610,14 @@ async function displayMultipleTasksSummary(
 					break;
 				case '2':
 					console.log(
-						chalk.blue(`\n→ Command: taskgraph set-status ${taskIdList} done`)
+						chalk.cyan(`\n→ Command: taskgraph set-status ${taskIdList} done`)
 					);
 					console.log(
 						chalk.green('✓ Copy and run this command to mark all tasks as done')
 					);
 					break;
 				case '3':
-					console.log(chalk.blue(`\n→ Command: taskgraph next`));
+					console.log(chalk.cyan(`\n→ Command: taskgraph next`));
 					console.log(
 						chalk.green(
 							'✓ Copy and run this command to see the next available task'
@@ -2619,7 +2626,7 @@ async function displayMultipleTasksSummary(
 					break;
 				case '4':
 					console.log(
-						chalk.blue(
+						chalk.cyan(
 							`\n→ Command: taskgraph expand --id=${taskIdList} --research`
 						)
 					);
@@ -2631,7 +2638,7 @@ async function displayMultipleTasksSummary(
 					break;
 				case '5': {
 					// Show dependency visualization
-					console.log(chalk.white.bold('\nDependency Relationships:'));
+					console.log(chalk.bold('\nDependency Relationships:'));
 					let hasDependencies = false;
 					foundTasks.forEach((task) => {
 						if (task.dependencies && task.dependencies.length > 0) {
@@ -2649,7 +2656,7 @@ async function displayMultipleTasksSummary(
 					break;
 				}
 				case '6':
-					console.log(chalk.blue(`\n→ Command: taskgraph generate`));
+					console.log(chalk.cyan(`\n→ Command: taskgraph generate`));
 					console.log(
 						chalk.green('✓ Copy and run this command to generate task files')
 					);
@@ -2675,7 +2682,7 @@ async function displayMultipleTasksSummary(
 		const task = foundTasks[0];
 		console.log(
 			boxen(
-				chalk.white.bold('Suggested Actions:') +
+				chalk.bold('Suggested Actions:') +
 					'\n' +
 					`${chalk.cyan('1.')} View full details: ${chalk.yellow(`taskgraph show ${task.id}`)}\n` +
 					`${chalk.cyan('2.')} Mark as in-progress: ${chalk.yellow(`taskgraph set-status ${task.id} in-progress`)}\n` +
@@ -2704,11 +2711,11 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 		analysisData;
 
 	// Create the context analysis display
-	let analysisContent = chalk.white.bold('Context Analysis') + '\n\n';
+	let analysisContent = chalk.bold('Context Analysis') + '\n\n';
 
 	// Query info
 	analysisContent +=
-		chalk.gray('Query: ') + chalk.white(`"${semanticQuery}"`) + '\n';
+		chalk.gray('Query: ') + chalk.reset(`"${semanticQuery}"`) + '\n';
 	analysisContent +=
 		chalk.gray('Context size: ') +
 		chalk.cyan(`${contextSize.toLocaleString()} characters`) +
@@ -2720,7 +2727,7 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 
 	// High relevance matches
 	if (highRelevance.length > 0) {
-		analysisContent += chalk.green.bold('🎯 High Relevance Matches:') + '\n';
+		analysisContent += chalk.green.bold('High relevance matches:') + '\n';
 		highRelevance.slice(0, 3).forEach((task) => {
 			analysisContent +=
 				chalk.green(`  • Task ${task.id}: ${truncate(task.title, 50)}`) + '\n';
@@ -2736,7 +2743,7 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 
 	// Medium relevance matches
 	if (mediumRelevance.length > 0) {
-		analysisContent += chalk.yellow.bold('📋 Medium Relevance Matches:') + '\n';
+		analysisContent += chalk.yellow.bold('Medium relevance matches:') + '\n';
 		mediumRelevance.slice(0, 3).forEach((task) => {
 			analysisContent +=
 				chalk.yellow(`  • Task ${task.id}: ${truncate(task.title, 50)}`) + '\n';
@@ -2758,7 +2765,7 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 	);
 
 	if (recentTasksNotInRelevance.length > 0) {
-		analysisContent += chalk.cyan.bold('🕒 Recent Tasks (for context):') + '\n';
+		analysisContent += chalk.cyan.bold('Recent tasks (for context):') + '\n';
 		recentTasksNotInRelevance.slice(0, 2).forEach((task) => {
 			analysisContent +=
 				chalk.cyan(`  • Task ${task.id}: ${truncate(task.title, 50)}`) + '\n';
@@ -2777,7 +2784,7 @@ function displayContextAnalysis(analysisData, semanticQuery, contextSize) {
 			margin: { top: 1, bottom: 0 },
 			borderStyle: 'round',
 			borderColor: 'blue',
-			title: chalk.blue('🔍 Context Gathering'),
+			title: chalk.cyan('Context gathering'),
 			titleAlignment: 'center'
 		})
 	);
@@ -2812,7 +2819,9 @@ export {
 	displayContextAnalysis,
 	displayCurrentTagIndicator,
 	formatTaskIdForDisplay,
-	warmGradient
+	brandGradient,
+	theme,
+	BORDER_COLOR
 };
 
 /**
@@ -2829,7 +2838,7 @@ export function displayCrossTagDependencyError(
 	sourceIds
 ) {
 	console.log(
-		chalk.red(`\n❌ Cannot move tasks from "${sourceTag}" to "${targetTag}"`)
+		chalk.red(`\n✗ Cannot move tasks from "${sourceTag}" to "${targetTag}"`)
 	);
 	console.log(chalk.yellow(`\nCross-tag dependency conflicts detected:`));
 
@@ -2895,7 +2904,7 @@ export function displaySubtaskMoveError(taskId, sourceTag, targetTag) {
 			// Invalid format - log warning and use the original taskId
 			console.log(
 				chalk.yellow(
-					`\n⚠️  Warning: Unexpected taskId format "${safeTaskId}". Using as-is for command suggestions.`
+					`\n⚠ Warning: Unexpected taskId format "${safeTaskId}". Using as-is for command suggestions.`
 				)
 			);
 			parentId = safeTaskId;
@@ -2903,7 +2912,7 @@ export function displaySubtaskMoveError(taskId, sourceTag, targetTag) {
 	}
 
 	console.log(
-		chalk.red(`\n❌ Cannot move subtask ${displayTaskId} directly between tags`)
+		chalk.red(`\n✗ Cannot move subtask ${displayTaskId} directly between tags`)
 	);
 	console.log(chalk.yellow(`\nSubtask movement restriction:`));
 	console.log(`  • Subtasks cannot be moved directly between tags`);
@@ -2934,7 +2943,7 @@ export function displayInvalidTagCombinationError(
 	targetTag,
 	reason
 ) {
-	console.log(chalk.red(`\n❌ Invalid tag combination`));
+	console.log(chalk.red(`\n✗ Invalid tag combination`));
 	console.log(chalk.yellow(`\nError details:`));
 	console.log(`  • Source tag: "${sourceTag}"`);
 	console.log(`  • Target tag: "${targetTag}"`);
@@ -2955,20 +2964,20 @@ export function displayInvalidTagCombinationError(
 export function displayDependencyValidationHints(context = 'general') {
 	const hints = {
 		'before-move': [
-			'💡 Tip: Run "taskgraph validate-dependencies" to check for dependency issues before moving tasks',
-			'💡 Tip: Use "taskgraph fix-dependencies" to automatically resolve common dependency problems',
-			'💡 Tip: Consider using --with-dependencies flag to move dependent tasks together'
+			'Tip: Run "taskgraph validate-dependencies" to check for dependency issues before moving tasks',
+			'Tip: Use "taskgraph fix-dependencies" to automatically resolve common dependency problems',
+			'Tip: Consider using --with-dependencies flag to move dependent tasks together'
 		],
 		'after-error': [
-			'🔧 Quick fix: Run "taskgraph validate-dependencies" to identify specific issues',
-			'🔧 Quick fix: Use "taskgraph fix-dependencies" to automatically resolve problems',
-			'🔧 Quick fix: Check "taskgraph show <id>" to see task dependencies before moving'
+			'Quick fix: Run "taskgraph validate-dependencies" to identify specific issues',
+			'Quick fix: Use "taskgraph fix-dependencies" to automatically resolve problems',
+			'Quick fix: Check "taskgraph show <id>" to see task dependencies before moving'
 		],
 		general: [
-			'💡 Use "taskgraph validate-dependencies" to check for dependency issues',
-			'💡 Use "taskgraph fix-dependencies" to automatically resolve problems',
-			'💡 Use "taskgraph show <id>" to view task dependencies',
-			'💡 Use --with-dependencies flag to move dependent tasks together'
+			'Tip: Use "taskgraph validate-dependencies" to check for dependency issues',
+			'Tip: Use "taskgraph fix-dependencies" to automatically resolve problems',
+			'Tip: Use "taskgraph show <id>" to view task dependencies',
+			'Tip: Use --with-dependencies flag to move dependent tasks together'
 		]
 	};
 

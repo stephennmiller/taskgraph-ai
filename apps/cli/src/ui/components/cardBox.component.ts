@@ -1,5 +1,6 @@
 import boxen from 'boxen';
 import chalk from 'chalk';
+import { BORDER_COLOR, theme } from '../theme.js';
 
 /**
  * Level/variant for the card box styling
@@ -36,8 +37,8 @@ export function displayCardBox(config: CardBoxConfig): string {
 	const { header, body, callToAction, footer, level = 'warn' } = config;
 
 	// Determine colors based on level
-	const headerColor = level === 'info' ? chalk.blue.bold : chalk.yellow.bold;
-	const borderColor = level === 'info' ? 'blue' : 'yellow';
+	const headerColor = level === 'info' ? theme.heading : chalk.yellow.bold;
+	const borderColor = level === 'info' ? BORDER_COLOR : 'yellow';
 
 	// Build the content sections
 	const sections: string[] = [
@@ -45,7 +46,7 @@ export function displayCardBox(config: CardBoxConfig): string {
 		headerColor(header),
 
 		// Body paragraphs
-		...body.map((paragraph) => chalk.white(paragraph))
+		...body.map((paragraph) => theme.text(paragraph))
 	];
 
 	// Add call to action if provided
@@ -53,7 +54,7 @@ export function displayCardBox(config: CardBoxConfig): string {
 		sections.push(
 			chalk.cyan(callToAction.label) +
 				'\n' +
-				chalk.blue.underline(callToAction.action)
+				theme.brand.underline(callToAction.action)
 		);
 	}
 

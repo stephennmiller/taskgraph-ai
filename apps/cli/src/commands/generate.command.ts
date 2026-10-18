@@ -184,7 +184,7 @@ export class GenerateCommand extends Command {
 					padding: 1,
 					borderStyle: 'round',
 					borderColor: 'red',
-					title: '❌ GENERATION FAILED',
+					title: 'Generation failed',
 					titleAlignment: 'center'
 				})
 			);
@@ -198,7 +198,7 @@ export class GenerateCommand extends Command {
 					padding: 1,
 					borderStyle: 'round',
 					borderColor: 'yellow',
-					title: '⚠️ NO TASKS',
+					title: 'No tasks',
 					titleAlignment: 'center'
 				})
 			);
@@ -218,7 +218,7 @@ export class GenerateCommand extends Command {
 				padding: 1,
 				borderStyle: 'round',
 				borderColor: 'green',
-				title: '📄 TASK FILES GENERATED',
+				title: 'Task files generated',
 				titleAlignment: 'center'
 			})
 		);

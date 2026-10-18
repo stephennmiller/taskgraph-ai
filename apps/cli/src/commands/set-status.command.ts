@@ -15,6 +15,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Valid task status values for validation
@@ -273,10 +274,10 @@ export class SetStatusCommand extends Command {
 			const update = result.updatedTasks[0];
 			console.log(
 				boxen(
-					chalk.white.bold(`✅ Successfully updated task ${update.taskId}`) +
+					chalk.bold(`✓ Updated task ${update.taskId}`) +
 						'\n\n' +
-						`${chalk.blue('From:')} ${this.getStatusDisplay(update.oldStatus)}\n` +
-						`${chalk.blue('To:')}   ${this.getStatusDisplay(update.newStatus)}`,
+						`${theme.brand('From:')} ${this.getStatusDisplay(update.oldStatus)}\n` +
+						`${theme.brand('To:')}   ${this.getStatusDisplay(update.newStatus)}`,
 					{
 						padding: 1,
 						borderColor: 'green',
@@ -289,9 +290,7 @@ export class SetStatusCommand extends Command {
 			// Multiple task updates
 			console.log(
 				boxen(
-					chalk.white.bold(
-						`✅ Successfully updated ${result.updatedTasks.length} tasks`
-					) +
+					chalk.bold(`✓ Updated ${result.updatedTasks.length} tasks`) +
 						'\n\n' +
 						result.updatedTasks
 							.map(
@@ -316,7 +315,7 @@ export class SetStatusCommand extends Command {
 	private getStatusDisplay(status: TaskStatus): string {
 		const statusColors: Record<TaskStatus, (text: string) => string> = {
 			pending: chalk.yellow,
-			'in-progress': chalk.blue,
+			'in-progress': theme.brand,
 			done: chalk.green,
 			deferred: chalk.gray,
 			cancelled: chalk.red,
@@ -325,7 +324,7 @@ export class SetStatusCommand extends Command {
 			completed: chalk.green
 		};
 
-		const colorFn = statusColors[status] || chalk.white;
+		const colorFn = statusColors[status] || theme.text;
 		return colorFn(status);
 	}
 

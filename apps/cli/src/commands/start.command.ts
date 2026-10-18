@@ -19,6 +19,7 @@ import { displayTaskDetails } from '../ui/components/task-detail.component.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
+import { BORDER_COLOR, theme } from '../ui/theme.js';
 
 /**
  * CLI-specific options interface for the start command
@@ -215,9 +216,7 @@ export class StartCommand extends Command {
 				? `Subtask #${targetTaskId} - ${task.title}`
 				: `Task #${task.id} - ${task.title}`;
 
-			console.log(
-				chalk.green('🚀 Starting: ') + chalk.white.bold(workItemText)
-			);
+			console.log(chalk.green('Starting: ') + chalk.bold(workItemText));
 			console.log(chalk.gray('Launching Claude Code...'));
 			console.log(); // Empty line
 		}
@@ -273,7 +272,7 @@ export class StartCommand extends Command {
 	}): Promise<void> {
 		return new Promise((resolve, reject) => {
 			// Don't show the full command with args as it can be very long
-			console.log(chalk.green('🚀 Launching Claude Code...'));
+			console.log(chalk.green('Launching Claude Code…'));
 			console.log(); // Add space before Claude takes over
 
 			const childProcess = spawn(command.executable, command.args, {
@@ -376,13 +375,11 @@ export class StartCommand extends Command {
 				console.log(); // Empty line for spacing
 				console.log(
 					boxen(
-						chalk.white.bold('Claude-Code Prompt:') +
-							'\n\n' +
-							result.executionOutput,
+						chalk.bold('Claude-Code Prompt:') + '\n\n' + result.executionOutput,
 						{
 							padding: 1,
 							borderStyle: 'round',
-							borderColor: 'cyan',
+							borderColor: BORDER_COLOR,
 							width: process.stdout.columns * 0.95 || 100
 						}
 					)
@@ -393,7 +390,7 @@ export class StartCommand extends Command {
 			console.log(
 				boxen(
 					chalk.yellow(
-						'🔍 Dry run - claude-code would be launched with the above prompt'
+						'Dry run - claude-code would be launched with the above prompt'
 					),
 					{
 						padding: { top: 0, bottom: 0, left: 1, right: 1 },
@@ -417,9 +414,9 @@ export class StartCommand extends Command {
 				// Post-execution message (shown after Claude Code exits)
 				console.log(
 					boxen(
-						chalk.green.bold('🎉 Task Session Complete!') +
+						chalk.green.bold('✓ Task session complete') +
 							'\n\n' +
-							chalk.white(workItemText) +
+							theme.text(workItemText) +
 							'\n\n' +
 							chalk.cyan('Next steps:') +
 							'\n' +
@@ -441,7 +438,7 @@ export class StartCommand extends Command {
 				console.log(
 					boxen(
 						chalk.red(
-							'❌ Failed to launch claude-code' +
+							'✗ Failed to launch claude-code' +
 								(result.error ? `\nError: ${result.error}` : '')
 						),
 						{

@@ -15,13 +15,18 @@ import terminalLink from 'terminal-link';
 export function createLink(
 	text: string,
 	url: string,
-	options?: { color?: 'cyan' | 'blue' | 'gray' | 'green' | 'yellow' }
+	options?: {
+		color?: 'cyan' | 'blue' | 'gray' | 'green' | 'yellow';
+		/** When links are unsupported, show only the text instead of "text (url)" */
+		textOnlyFallback?: boolean;
+	}
 ): string {
 	const colorFn = options?.color ? chalk[options.color] : chalk.cyan;
 
 	// terminal-link automatically falls back to plain text if unsupported
 	const link = terminalLink(text, url, {
-		fallback: (displayText, linkUrl) => `${displayText} (${linkUrl})`
+		fallback: (displayText, linkUrl) =>
+			options?.textOnlyFallback ? displayText : `${displayText} (${linkUrl})`
 	});
 
 	return colorFn(link);

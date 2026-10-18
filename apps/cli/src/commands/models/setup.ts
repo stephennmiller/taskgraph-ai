@@ -4,6 +4,7 @@
 
 import chalk from 'chalk';
 import { getModelConfiguration, setModel } from '../../lib/model-management.js';
+import { theme } from '../../ui/theme.js';
 import {
 	buildPromptChoices,
 	displaySetupIntro,
@@ -78,7 +79,7 @@ async function handleSetModel(
 
 		if (result.success) {
 			console.log(
-				chalk.blue(
+				theme.brand(
 					`Set ${role} model: ${result.data?.provider} / ${result.data?.modelId}`
 				)
 			);

@@ -20,6 +20,71 @@ export function getBoxWidth(
 }
 
 /**
+ * Usable width for boxes and tables: 95% of the terminal, or 100 columns when
+ * output is not a terminal (for example, piped to a file).
+ */
+export function getContentWidth(): number {
+	return Math.floor((process.stdout.columns || 105) * 0.95);
+}
+
+export interface ColumnSpec {
+	key: string;
+	/** Fixed width including cell padding, or 'flex' for the column that takes the remaining space (one per table) */
+	width: number | 'flex';
+	/** Optional columns are hidden in ascending dropOrder when the table does not fit */
+	dropOrder?: number;
+}
+
+export interface ColumnPlan {
+	keys: string[];
+	widths: number[];
+	hidden: string[];
+}
+
+/**
+ * Fit table columns into a total width. Hides optional columns (lowest
+ * dropOrder first) until the table fits, then gives the flexible column all
+ * remaining space. Accounts for the vertical borders cli-table3 draws.
+ */
+export function planColumns(
+	totalWidth: number,
+	specs: ColumnSpec[],
+	flexMin: number = 20
+): ColumnPlan {
+	const needed = (cols: ColumnSpec[]) =>
+		cols.reduce((sum, c) => sum + (c.width === 'flex' ? flexMin : c.width), 0) +
+		cols.length +
+		1;
+
+	let active = [...specs];
+	const hidden: string[] = [];
+	const droppable = specs
+		.filter((c) => c.dropOrder !== undefined)
+		.sort((a, b) => (a.dropOrder ?? 0) - (b.dropOrder ?? 0));
+
+	for (const col of droppable) {
+		if (needed(active) <= totalWidth) break;
+		active = active.filter((c) => c !== col);
+		hidden.push(col.key);
+	}
+
+	const fixedSum = active.reduce(
+		(sum, c) => sum + (c.width === 'flex' ? 0 : c.width),
+		0
+	);
+	const flexWidth = Math.max(
+		flexMin,
+		totalWidth - fixedSum - active.length - 1
+	);
+
+	return {
+		keys: active.map((c) => c.key),
+		widths: active.map((c) => (c.width === 'flex' ? flexWidth : c.width)),
+		hidden
+	};
+}
+
+/**
  * Truncate text to specified length
  */
 export function truncate(text: string, maxLength: number): string {

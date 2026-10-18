@@ -19,6 +19,7 @@ import inquirer from 'inquirer';
 import open from 'open';
 import ora, { type Ora } from 'ora';
 import * as ui from './ui.js';
+import { theme } from '../ui/theme.js';
 
 // Re-export constants for convenience
 export { AUTH_TIMEOUT_MS, MFA_MAX_ATTEMPTS };
@@ -119,10 +120,10 @@ export class AuthCountdownTimer {
  */
 export function displayMFARequired(): void {
 	console.log(
-		chalk.yellow('\n⚠️  Multi-factor authentication is enabled on your account')
+		chalk.yellow('\n⚠ Multi-factor authentication is enabled on your account')
 	);
 	console.log(
-		chalk.white('  Please enter the 6-digit code from your authenticator app\n')
+		theme.text('  Please enter the 6-digit code from your authenticator app\n')
 	);
 }
 
@@ -192,8 +193,8 @@ export function displayInvalidMFACode(remaining: number): void {
  * @param authUrl - The OAuth URL to display
  */
 export function displayAuthInstructions(authUrl: string): void {
-	console.log(chalk.blue.bold('\n[auth] Browser Authentication\n'));
-	console.log(chalk.white('  Opening your browser to authenticate...'));
+	console.log(theme.brand.bold('\n[auth] Browser Authentication\n'));
+	console.log(theme.text('  Opening your browser to authenticate...'));
 	console.log(chalk.gray("  If the browser doesn't open, visit:"));
 	console.log(chalk.cyan.underline(`  ${authUrl}\n`));
 }

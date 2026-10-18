@@ -62,9 +62,9 @@ const VISUAL_STYLES = {
  * Priority configuration
  */
 const PRIORITY_CONFIG = new IndicatorConfig('priority', [HIGH, MEDIUM, LOW], {
-	[HIGH]: chalk.hex('#CC0000'),
-	[MEDIUM]: chalk.hex('#FF8800'),
-	[LOW]: chalk.yellow
+	[HIGH]: chalk.red,
+	[MEDIUM]: chalk.yellow,
+	[LOW]: chalk.gray
 });
 
 /**
@@ -201,8 +201,8 @@ const COMPLEXITY_CONFIG = new IndicatorConfig(
 	'complexity',
 	['high', 'medium', 'low'],
 	{
-		high: chalk.hex('#CC0000'),
-		medium: chalk.hex('#FF8800'),
+		high: chalk.red,
+		medium: chalk.yellow,
 		low: chalk.green
 	},
 	{

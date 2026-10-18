@@ -87,7 +87,7 @@ describe('Autopilot Shared Utilities', () => {
 				formatter.warning('Warning message');
 
 				expect(consoleWarnSpy).toHaveBeenCalledWith(
-					expect.stringContaining('⚠️ Warning message')
+					expect.stringContaining('⚠ Warning message')
 				);
 				consoleWarnSpy.mockRestore();
 			});

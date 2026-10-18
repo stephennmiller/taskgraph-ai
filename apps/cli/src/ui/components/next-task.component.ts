@@ -8,6 +8,7 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import { renderContent } from '../../utils/content-renderer.js';
 import { getBoxWidth, getComplexityWithColor } from '../../utils/ui.js';
+import { BORDER_COLOR, theme } from '../theme.js';
 
 /**
  * Next task display options
@@ -37,7 +38,7 @@ export function displayRecommendedNextTask(
 					padding: 1,
 					borderStyle: 'round',
 					borderColor: 'yellow',
-					title: '⚠️ NO TASKS AVAILABLE ⚠️',
+					title: 'No tasks available',
 					titleAlignment: 'center'
 				})
 			);
@@ -57,7 +58,7 @@ export function displayRecommendedNextTask(
 
 	// Task header with ID and title
 	content.push(
-		`🔥 ${chalk.hex('#FF8800').bold('Next Task to Work On:')} ${chalk.yellow(`#${task.id}`)}${chalk.hex('#FF8800').bold(` - ${task.title}`)}`
+		`${theme.heading('Next task:')} ${chalk.yellow(`#${task.id}`)}${theme.heading(` - ${task.title}`)}`
 	);
 	content.push('');
 
@@ -77,7 +78,7 @@ export function displayRecommendedNextTask(
 			task.status === 'pending'
 				? chalk.yellow('○ pending')
 				: task.status === 'in-progress'
-					? chalk.blue('▶ in-progress')
+					? theme.brand('▶ in-progress')
 					: chalk.gray(task.status);
 		statusLine.push(`Status: ${statusDisplay}`);
 	}
@@ -98,9 +99,7 @@ export function displayRecommendedNextTask(
 	// Description if available (render HTML from Hamster properly)
 	if (task.description) {
 		content.push('');
-		content.push(
-			`Description: ${chalk.white(renderContent(task.description))}`
-		);
+		content.push(`Description: ${theme.text(renderContent(task.description))}`);
 	}
 
 	// Action commands
@@ -118,8 +117,8 @@ export function displayRecommendedNextTask(
 			padding: 1,
 			margin: { top: 1, bottom: 1 },
 			borderStyle: 'round',
-			borderColor: '#FFA500', // Orange color
-			title: chalk.hex('#FFA500')('⚡ RECOMMENDED NEXT TASK ⚡'),
+			borderColor: BORDER_COLOR,
+			title: theme.heading('Next task'),
 			titleAlignment: 'center',
 			width: getBoxWidth(0.97),
 			fullscreen: false

@@ -5,7 +5,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
-import { getBoxWidth } from './helpers.js';
+import { getBoxWidth, planColumns } from './helpers.js';
 
 describe('Layout Helpers', () => {
 	describe('getBoxWidth', () => {
@@ -153,6 +153,49 @@ describe('Layout Helpers', () => {
 			const width3 = getBoxWidth(0.9, 40);
 			expect(width1).toBe(width2);
 			expect(width2).toBe(width3);
+		});
+	});
+
+	describe('planColumns', () => {
+		const specs = [
+			{ key: 'id', width: 10 },
+			{ key: 'title', width: 'flex' as const },
+			{ key: 'status', width: 15 },
+			{ key: 'deps', width: 14, dropOrder: 2 },
+			{ key: 'blocks', width: 10, dropOrder: 0 },
+			{ key: 'complexity', width: 12, dropOrder: 1 }
+		];
+		const totalOf = (widths: number[]) =>
+			widths.reduce((a, b) => a + b, 0) + widths.length + 1;
+
+		it('keeps every column and fills the width when there is room', () => {
+			const plan = planColumns(120, specs);
+			expect(plan.hidden).toEqual([]);
+			expect(totalOf(plan.widths)).toBe(120);
+		});
+
+		it('hides optional columns in drop order until the table fits', () => {
+			const plan = planColumns(76, specs);
+			expect(plan.hidden).toEqual(['blocks', 'complexity']);
+			expect(plan.keys).toEqual(['id', 'title', 'status', 'deps']);
+			expect(totalOf(plan.widths)).toBe(76);
+		});
+
+		it('never shrinks the flexible column below its minimum', () => {
+			const plan = planColumns(30, specs);
+			expect(plan.hidden).toEqual(['blocks', 'complexity', 'deps']);
+			expect(plan.widths[plan.keys.indexOf('title')]).toBe(20);
+		});
+
+		it('keeps display order for the columns it keeps', () => {
+			const plan = planColumns(85, specs);
+			expect(plan.keys).toEqual([
+				'id',
+				'title',
+				'status',
+				'deps',
+				'complexity'
+			]);
 		});
 	});
 });

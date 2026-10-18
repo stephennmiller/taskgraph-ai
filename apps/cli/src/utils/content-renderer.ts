@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import { MarkedExtension, marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import TurndownService from 'turndown';
+import { theme } from '../ui/theme.js';
 
 // Initialize turndown for HTML to Markdown conversion
 const turndownService = new TurndownService({
@@ -28,16 +29,16 @@ marked.use(
 		},
 		blockquote: chalk.gray.italic,
 		html: chalk.gray, // Any remaining HTML will be grayed out (should be rare after turndown)
-		heading: chalk.white.bold, // White bold for headings
+		heading: theme.text.bold, // White bold for headings
 		hr: chalk.gray,
-		listitem: chalk.white, // White for list items
-		paragraph: chalk.white, // White for paragraphs (default text color)
-		strong: chalk.white.bold, // White bold for strong text
-		em: chalk.white.italic, // White italic for emphasis
+		listitem: theme.text, // White for list items
+		paragraph: theme.text, // White for paragraphs (default text color)
+		strong: theme.text.bold, // White bold for strong text
+		em: theme.text.italic, // White italic for emphasis
 		codespan: chalk.cyan, // Cyan for inline code (no background)
 		del: chalk.dim.strikethrough,
-		link: chalk.blue,
-		href: chalk.blue.underline,
+		link: theme.brand,
+		href: theme.brand.underline,
 		// Add more explicit code block handling
 		showSectionPrefix: false,
 		unescape: true,

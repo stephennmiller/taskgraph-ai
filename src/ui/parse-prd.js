@@ -22,10 +22,11 @@ const PRIORITIES = {
 	LOW: 'low'
 };
 
+// Matches the CLI's priority colors: high red, medium yellow, low gray
 const PRIORITY_COLORS = {
-	[PRIORITIES.HIGH]: '#CC0000',
-	[PRIORITIES.MEDIUM]: '#FF8800',
-	[PRIORITIES.LOW]: '#FFCC00'
+	[PRIORITIES.HIGH]: chalk.red,
+	[PRIORITIES.MEDIUM]: chalk.yellow,
+	[PRIORITIES.LOW]: chalk.gray
 };
 
 // Reusable box styles
@@ -287,13 +288,15 @@ function calculateBarDistribution(priorityStats, totalTasks) {
 function createPriorityBar(barDistribution) {
 	let bar = '';
 
-	bar += chalk.hex(PRIORITY_COLORS[PRIORITIES.HIGH])(
+	bar += PRIORITY_COLORS[PRIORITIES.HIGH](
 		'█'.repeat(barDistribution[PRIORITIES.HIGH])
 	);
-	bar += chalk.hex(PRIORITY_COLORS[PRIORITIES.MEDIUM])(
+	bar += PRIORITY_COLORS[PRIORITIES.MEDIUM](
 		'█'.repeat(barDistribution[PRIORITIES.MEDIUM])
 	);
-	bar += chalk.yellow('█'.repeat(barDistribution[PRIORITIES.LOW]));
+	bar += PRIORITY_COLORS[PRIORITIES.LOW](
+		'█'.repeat(barDistribution[PRIORITIES.LOW])
+	);
 
 	const totalChars = Object.values(barDistribution).reduce(
 		(sum, val) => sum + val,
@@ -316,12 +319,7 @@ function buildPriorityRow(priorityStats) {
 
 	Object.entries(PRIORITIES).forEach(([key, priority]) => {
 		const stats = priorityStats[priority];
-		const color =
-			priority === PRIORITIES.HIGH
-				? chalk.hex(PRIORITY_COLORS[PRIORITIES.HIGH])
-				: priority === PRIORITIES.MEDIUM
-					? chalk.hex(PRIORITY_COLORS[PRIORITIES.MEDIUM])
-					: chalk.yellow;
+		const color = PRIORITY_COLORS[priority];
 
 		const label = key.charAt(0) + key.slice(1).toLowerCase();
 		parts.push(

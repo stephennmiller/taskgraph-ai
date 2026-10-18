@@ -97,16 +97,16 @@ describe('UI Module', () => {
 			expect(result).toContain('x');
 		});
 
-		test('should return in-progress status with emoji for console output', () => {
+		test('should return in-progress status with icon for console output', () => {
 			const result = getStatusWithColor('in-progress');
 			expect(result).toMatch(/in-progress/);
-			expect(result).toContain('🔄');
+			expect(result).toContain('▶');
 		});
 
-		test('should return unknown status with emoji for console output', () => {
+		test('should return unknown status with icon for console output', () => {
 			const result = getStatusWithColor('unknown');
 			expect(result).toMatch(/unknown/);
-			expect(result).toContain('❌');
+			expect(result).toContain('✗');
 		});
 
 		test('should use simple icons when forTable is true', () => {

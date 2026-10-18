@@ -18,15 +18,12 @@ export function displaySuggestedNextSteps(): void {
 	];
 
 	console.log(
-		boxen(
-			chalk.white.bold('Suggested Next Steps:') + '\n\n' + steps.join('\n'),
-			{
-				padding: 1,
-				margin: { top: 0, bottom: 1 },
-				borderStyle: 'round',
-				borderColor: 'gray',
-				width: getBoxWidth(0.97)
-			}
-		)
+		boxen(chalk.bold('Suggested Next Steps:') + '\n\n' + steps.join('\n'), {
+			padding: 1,
+			margin: { top: 0, bottom: 1 },
+			borderStyle: 'round',
+			borderColor: 'gray',
+			width: getBoxWidth(0.97)
+		})
 	);
 }

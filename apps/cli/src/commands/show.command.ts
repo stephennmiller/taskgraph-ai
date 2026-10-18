@@ -13,6 +13,7 @@ import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Options interface for the show command
@@ -308,7 +309,7 @@ export class ShowCommand extends Command {
 		});
 
 		if (result.notFound.length > 0) {
-			console.log(chalk.yellow(`\n⚠️ Not found: ${result.notFound.join(', ')}`));
+			console.log(chalk.yellow(`\n⚠ Not found: ${result.notFound.join(', ')}`));
 		}
 
 		if (result.tasks.length === 0) {
@@ -317,7 +318,7 @@ export class ShowCommand extends Command {
 		}
 
 		// Task table
-		console.log(chalk.blue.bold(`\n📋 Tasks:\n`));
+		console.log(theme.brand.bold(`\nTasks:\n`));
 		console.log(
 			ui.createTaskTable(result.tasks, {
 				showSubtasks: true,

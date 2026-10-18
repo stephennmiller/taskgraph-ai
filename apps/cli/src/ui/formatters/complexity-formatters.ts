@@ -13,9 +13,9 @@ function getComplexityLevel(score: number): {
 	label: string;
 } {
 	if (score >= 7) {
-		return { color: chalk.hex('#CC0000'), label: 'High' };
+		return { color: chalk.red, label: 'High' };
 	} else if (score >= 4) {
-		return { color: chalk.hex('#FF8800'), label: 'Medium' };
+		return { color: chalk.yellow, label: 'Medium' };
 	} else {
 		return { color: chalk.green, label: 'Low' };
 	}

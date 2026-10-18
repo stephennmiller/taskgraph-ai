@@ -16,8 +16,10 @@ import {
 	createProgressBar,
 	displayBanner,
 	formatDependenciesWithStatus,
+	BORDER_COLOR,
 	getComplexityWithColor,
-	getStatusWithColor
+	getStatusWithColor,
+	theme
 } from '../ui.js';
 
 /**
@@ -375,33 +377,33 @@ async function listTasks(
 
 		// Create dashboard content
 		const projectDashboardContent =
-			chalk.white.bold('Project Dashboard') +
+			chalk.bold('Project Dashboard') +
 			'\n' +
 			`Tasks Progress: ${chalk.greenBright(taskProgressBar)} ${completionPercentage.toFixed(0)}%\n` +
-			`Done: ${chalk.green(doneCount)}  In Progress: ${chalk.blue(inProgressCount)}  Pending: ${chalk.yellow(pendingCount)}  Blocked: ${chalk.red(blockedCount)}  Deferred: ${chalk.gray(deferredCount)}  Cancelled: ${chalk.gray(cancelledCount)}\n\n` +
+			`${chalk.green('█')} Done: ${chalk.green(doneCount)}  ${chalk.cyan('▓')} In Progress: ${chalk.cyan(inProgressCount)}  ${chalk.yellow('░')} Pending: ${chalk.yellow(pendingCount)}  ${chalk.red('!')} Blocked: ${chalk.red(blockedCount)}  ${chalk.gray('─')} Deferred: ${chalk.gray(deferredCount)}  ${chalk.gray('─')} Cancelled: ${chalk.gray(cancelledCount)}\n\n` +
 			`Subtasks Progress: ${chalk.cyan(subtaskProgressBar)} ${subtaskCompletionPercentage.toFixed(0)}%\n` +
-			`Completed: ${chalk.green(completedSubtasks)}/${totalSubtasks}  In Progress: ${chalk.blue(inProgressSubtasks)}  Pending: ${chalk.yellow(pendingSubtasks)}  Blocked: ${chalk.red(blockedSubtasks)}  Deferred: ${chalk.gray(deferredSubtasks)}  Cancelled: ${chalk.gray(cancelledSubtasks)}\n\n` +
+			`${chalk.green('█')} Completed: ${chalk.green(completedSubtasks)}/${totalSubtasks}  ${chalk.cyan('▓')} In Progress: ${chalk.cyan(inProgressSubtasks)}  ${chalk.yellow('░')} Pending: ${chalk.yellow(pendingSubtasks)}  ${chalk.red('!')} Blocked: ${chalk.red(blockedSubtasks)}  ${chalk.gray('─')} Deferred: ${chalk.gray(deferredSubtasks)}  ${chalk.gray('─')} Cancelled: ${chalk.gray(cancelledSubtasks)}\n\n` +
 			chalk.cyan.bold('Priority Breakdown:') +
 			'\n' +
-			`${chalk.red('•')} ${chalk.white('High priority:')} ${data.tasks.filter((t) => t.priority === 'high').length}\n` +
-			`${chalk.yellow('•')} ${chalk.white('Medium priority:')} ${data.tasks.filter((t) => t.priority === 'medium').length}\n` +
-			`${chalk.green('•')} ${chalk.white('Low priority:')} ${data.tasks.filter((t) => t.priority === 'low').length}`;
+			`${chalk.red('•')} ${chalk.reset('High priority:')} ${data.tasks.filter((t) => t.priority === 'high').length}\n` +
+			`${chalk.yellow('•')} ${chalk.reset('Medium priority:')} ${data.tasks.filter((t) => t.priority === 'medium').length}\n` +
+			`${chalk.green('•')} ${chalk.reset('Low priority:')} ${data.tasks.filter((t) => t.priority === 'low').length}`;
 
 		const dependencyDashboardContent =
-			chalk.white.bold('Dependency Status & Next Task') +
+			chalk.bold('Dependency Status & Next Task') +
 			'\n' +
 			chalk.cyan.bold('Dependency Metrics:') +
 			'\n' +
-			`${chalk.green('•')} ${chalk.white('Tasks with no dependencies:')} ${tasksWithNoDeps}\n` +
-			`${chalk.green('•')} ${chalk.white('Tasks ready to work on:')} ${tasksReadyToWork}\n` +
-			`${chalk.yellow('•')} ${chalk.white('Tasks blocked by dependencies:')} ${tasksWithUnsatisfiedDeps}\n` +
-			`${chalk.magenta('•')} ${chalk.white('Most depended-on task:')} ${mostDependedOnTask ? chalk.cyan(`#${mostDependedOnTaskId} (${maxDependents} dependents)`) : chalk.gray('None')}\n` +
-			`${chalk.blue('•')} ${chalk.white('Avg dependencies per task:')} ${avgDependenciesPerTask.toFixed(1)}\n\n` +
-			chalk.cyan.bold('Next Task to Work On:') +
+			`${chalk.green('•')} ${chalk.reset('Tasks with no dependencies:')} ${tasksWithNoDeps}\n` +
+			`${chalk.green('•')} ${chalk.reset('Tasks ready to work on:')} ${tasksReadyToWork}\n` +
+			`${chalk.yellow('•')} ${chalk.reset('Tasks blocked by dependencies:')} ${tasksWithUnsatisfiedDeps}\n` +
+			`${chalk.magenta('•')} ${chalk.reset('Most depended-on task:')} ${mostDependedOnTask ? chalk.cyan(`#${mostDependedOnTaskId} (${maxDependents} dependents)`) : chalk.gray('None')}\n` +
+			`${chalk.cyan('•')} ${chalk.reset('Avg dependencies per task:')} ${avgDependenciesPerTask.toFixed(1)}\n\n` +
+			chalk.cyan.bold('Next Task:') +
 			'\n' +
-			`ID: ${chalk.cyan(nextItem ? nextItem.id : 'N/A')} - ${nextItem ? chalk.white.bold(truncate(nextItem.title, 40)) : chalk.yellow('No task available')}
+			`ID: ${chalk.cyan(nextItem ? nextItem.id : 'N/A')} - ${nextItem ? chalk.bold(truncate(nextItem.title, 40)) : chalk.yellow('No task available')}
 ` +
-			`Priority: ${nextItem ? chalk.white(nextItem.priority || 'medium') : ''}  Dependencies: ${nextItem ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : ''}
+			`Priority: ${nextItem ? chalk.reset(nextItem.priority || 'medium') : ''}  Dependencies: ${nextItem ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : ''}
 ` +
 			`Complexity: ${nextItem && nextItem.complexityScore ? getComplexityWithColor(nextItem.complexityScore) : chalk.gray('N/A')}`;
 
@@ -589,7 +591,7 @@ async function listTasks(
 					high: chalk.red,
 					medium: chalk.yellow,
 					low: chalk.gray
-				}[task.priority || 'medium'] || chalk.white;
+				}[task.priority || 'medium'] || chalk.reset;
 
 			// Format status
 			const status = getStatusWithColor(task.status, true);
@@ -630,7 +632,7 @@ async function listTasks(
 										if (isDone) {
 											return chalk.green.bold(`${task.id}.${depId}`);
 										} else if (isInProgress) {
-											return chalk.hex('#FFA500').bold(`${task.id}.${depId}`);
+											return theme.active.bold(`${task.id}.${depId}`);
 										} else {
 											return chalk.red.bold(`${task.id}.${depId}`);
 										}
@@ -648,7 +650,7 @@ async function listTasks(
 									if (isDone) {
 										return chalk.green.bold(`${depId}`);
 									} else if (isInProgress) {
-										return chalk.hex('#FFA500').bold(`${depId}`);
+										return theme.active.bold(`${depId}`);
 									} else {
 										return chalk.red.bold(`${depId}`);
 									}
@@ -689,7 +691,7 @@ async function listTasks(
 			);
 			filteredTasks.forEach((task) => {
 				console.log(
-					`${chalk.cyan(task.id)}: ${chalk.white(task.title)} - ${getStatusWithColor(task.status)}`
+					`${chalk.cyan(task.id)}: ${chalk.reset(task.title)} - ${getStatusWithColor(task.status)}`
 				);
 			});
 		}
@@ -722,7 +724,7 @@ async function listTasks(
 				parentTaskForSubtasks.subtasks &&
 				parentTaskForSubtasks.subtasks.length > 0
 			) {
-				subtasksSection = `\n\n${chalk.white.bold('Subtasks:')}\n`;
+				subtasksSection = `\n\n${chalk.bold('Subtasks:')}\n`;
 				subtasksSection += parentTaskForSubtasks.subtasks
 					.map((subtask) => {
 						// Add complexity to subtask before display
@@ -733,13 +735,13 @@ async function listTasks(
 							done: chalk.green,
 							completed: chalk.green,
 							pending: chalk.yellow,
-							'in-progress': chalk.blue,
+							'in-progress': chalk.cyan,
 							deferred: chalk.gray,
 							blocked: chalk.red,
 							cancelled: chalk.gray
 						};
 						const statusColor =
-							statusColors[status.toLowerCase()] || chalk.white;
+							statusColors[status.toLowerCase()] || chalk.reset;
 						// Ensure subtask ID is displayed correctly using parent ID from the original task object
 						return `${chalk.cyan(`${parentTaskForSubtasks.id}.${subtask.id}`)} [${statusColor(status)}] ${subtask.title}`;
 					})
@@ -748,17 +750,17 @@ async function listTasks(
 
 			console.log(
 				boxen(
-					chalk.hex('#FF8800').bold(
+					theme.heading(
 						// Use nextItem.id and nextItem.title
-						`🔥 Next Task to Work On: #${nextItem.id} - ${nextItem.title}`
+						`Next task: #${nextItem.id} - ${nextItem.title}`
 					) +
 						'\n\n' +
 						// Use nextItem.priority, nextItem.status, nextItem.dependencies
-						`${chalk.white('Priority:')} ${priorityColors[nextItem.priority || 'medium'](nextItem.priority || 'medium')}   ${chalk.white('Status:')} ${getStatusWithColor(nextItem.status, true)}\n` +
-						`${chalk.white('Dependencies:')} ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : chalk.gray('None')}\n\n` +
+						`${chalk.reset('Priority:')} ${priorityColors[nextItem.priority || 'medium'](nextItem.priority || 'medium')}   ${chalk.reset('Status:')} ${getStatusWithColor(nextItem.status, true)}\n` +
+						`${chalk.reset('Dependencies:')} ${nextItem.dependencies && nextItem.dependencies.length > 0 ? formatDependenciesWithStatus(nextItem.dependencies, data.tasks, true, complexityReport) : chalk.gray('None')}\n\n` +
 						// Use nextTask.description (Note: findNextTask doesn't return description, need to fetch original task/subtask for this)
 						// *** Fetching original item for description and details ***
-						`${chalk.white('Description:')} ${getWorkItemDescription(nextItem, data.tasks)}` +
+						`${chalk.reset('Description:')} ${getWorkItemDescription(nextItem, data.tasks)}` +
 						subtasksSection + // <-- Subtasks are handled above now
 						'\n\n' +
 						// Use nextItem.id
@@ -767,10 +769,10 @@ async function listTasks(
 						`${chalk.cyan('View details:')} ${chalk.yellow(`taskgraph show ${nextItem.id}`)}`,
 					{
 						padding: { left: 2, right: 2, top: 1, bottom: 1 },
-						borderColor: '#FF8800',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1, bottom: 1 },
-						title: '⚡ RECOMMENDED NEXT TASK ⚡',
+						title: 'Next task',
 						titleAlignment: 'center',
 						width: terminalWidth - 4,
 						fullscreen: false
@@ -780,15 +782,15 @@ async function listTasks(
 		} else {
 			console.log(
 				boxen(
-					chalk.hex('#FF8800').bold('No eligible next task found') +
+					theme.heading('No eligible next task found') +
 						'\n\n' +
 						'All pending tasks have dependencies that are not yet completed, or all tasks are done.',
 					{
 						padding: 1,
-						borderColor: '#FF8800',
+						borderColor: BORDER_COLOR,
 						borderStyle: 'round',
 						margin: { top: 1, bottom: 1 },
-						title: '⚡ NEXT TASK ⚡',
+						title: 'Next task',
 						titleAlignment: 'center',
 						width: terminalWidth - 4 // Use full terminal width minus a small margin
 					}
@@ -799,7 +801,7 @@ async function listTasks(
 		// Show next steps
 		console.log(
 			boxen(
-				chalk.white.bold('Suggested Next Steps:') +
+				chalk.bold('Suggested Next Steps:') +
 					'\n\n' +
 					`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph next')} to see what to work on next\n` +
 					`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down a task into subtasks\n` +
@@ -1029,12 +1031,12 @@ function formatCompactTask(task, maxTitleLength = 50) {
 		medium: chalk.yellow,
 		low: chalk.gray
 	};
-	const priorityColor = priorityColors[priority] || chalk.white;
+	const priorityColor = priorityColors[priority] || chalk.reset;
 
 	// Format dependencies using shared helper
 	const depsText = formatCompactDependencies(task.dependencies);
 
-	return `${chalk.cyan(task.id)} ${coloredStatus} ${chalk.white(title)} ${priorityColor('(' + priority + ')')}${depsText}`;
+	return `${chalk.cyan(task.id)} ${coloredStatus} ${chalk.reset(title)} ${priorityColor('(' + priority + ')')}${depsText}`;
 }
 
 /**

@@ -43,7 +43,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move tasks from "in-progress" to "done"'
+					'✗ Cannot move tasks from "in-progress" to "done"'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -70,7 +70,7 @@ describe('Cross-Tag Error Display Functions', () => {
 			displayCrossTagDependencyError([], 'backlog', 'done', '1');
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('❌ Cannot move tasks from "backlog" to "done"')
+				expect.stringContaining('✗ Cannot move tasks from "backlog" to "done"')
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining('Cross-tag dependency conflicts detected:')
@@ -84,7 +84,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 5.2 directly between tags'
+					'✗ Cannot move subtask 5.2 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -108,7 +108,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 5.2.1 directly between tags'
+					'✗ Cannot move subtask 5.2.1 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -121,7 +121,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 10.3.2.1 directly between tags'
+					'✗ Cannot move subtask 10.3.2.1 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -134,7 +134,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 15.1 directly between tags'
+					'✗ Cannot move subtask 15.1 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -147,7 +147,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask invalid-id directly between tags'
+					'✗ Cannot move subtask invalid-id directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -160,7 +160,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					`❌ Cannot move subtask ${formatTaskIdForDisplay('')} directly between tags`
+					`✗ Cannot move subtask ${formatTaskIdForDisplay('')} directly between tags`
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -175,7 +175,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask null directly between tags'
+					'✗ Cannot move subtask null directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -188,7 +188,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask undefined directly between tags'
+					'✗ Cannot move subtask undefined directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -201,7 +201,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 5.2@test directly between tags'
+					'✗ Cannot move subtask 5.2@test directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -214,7 +214,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 123.456 directly between tags'
+					'✗ Cannot move subtask 123.456 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -227,7 +227,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 7.3 directly between tags'
+					'✗ Cannot move subtask 7.3 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -243,7 +243,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 9.1 directly between tags'
+					'✗ Cannot move subtask 9.1 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -259,7 +259,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 12.4 directly between tags'
+					'✗ Cannot move subtask 12.4 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -279,7 +279,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask 3.2.1 directly between tags'
+					'✗ Cannot move subtask 3.2.1 directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -296,7 +296,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					`❌ Cannot move subtask ${longId} directly between tags`
+					`✗ Cannot move subtask ${longId} directly between tags`
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -309,7 +309,7 @@ describe('Cross-Tag Error Display Functions', () => {
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'❌ Cannot move subtask  5.2  directly between tags'
+					'✗ Cannot move subtask  5.2  directly between tags'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
@@ -327,7 +327,7 @@ describe('Cross-Tag Error Display Functions', () => {
 			);
 
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('❌ Invalid tag combination')
+				expect.stringContaining('✗ Invalid tag combination')
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining('Error details:')
@@ -357,10 +357,10 @@ describe('Cross-Tag Error Display Functions', () => {
 				expect.stringContaining('Helpful hints:')
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('💡 Use "taskgraph validate-dependencies"')
+				expect.stringContaining('Tip: Use "taskgraph validate-dependencies"')
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('💡 Use "taskgraph fix-dependencies"')
+				expect.stringContaining('Tip: Use "taskgraph fix-dependencies"')
 			);
 		});
 
@@ -371,10 +371,10 @@ describe('Cross-Tag Error Display Functions', () => {
 				expect.stringContaining('Helpful hints:')
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('💡 Tip: Run "taskgraph validate-dependencies"')
+				expect.stringContaining('Tip: Run "taskgraph validate-dependencies"')
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('💡 Tip: Use "taskgraph fix-dependencies"')
+				expect.stringContaining('Tip: Use "taskgraph fix-dependencies"')
 			);
 		});
 
@@ -386,13 +386,11 @@ describe('Cross-Tag Error Display Functions', () => {
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
 				expect.stringContaining(
-					'🔧 Quick fix: Run "taskgraph validate-dependencies"'
+					'Quick fix: Run "taskgraph validate-dependencies"'
 				)
 			);
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining(
-					'🔧 Quick fix: Use "taskgraph fix-dependencies"'
-				)
+				expect.stringContaining('Quick fix: Use "taskgraph fix-dependencies"')
 			);
 		});
 
@@ -404,7 +402,7 @@ describe('Cross-Tag Error Display Functions', () => {
 			);
 			// Should fall back to general hints
 			expect(mockConsoleLog).toHaveBeenCalledWith(
-				expect.stringContaining('💡 Use "taskgraph validate-dependencies"')
+				expect.stringContaining('Tip: Use "taskgraph validate-dependencies"')
 			);
 		});
 	});

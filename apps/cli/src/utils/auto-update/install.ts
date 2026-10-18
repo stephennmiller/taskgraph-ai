@@ -15,6 +15,7 @@ import ora from 'ora';
 import { PACKAGE_NAME } from './constants.js';
 
 import { downloadTarballWithProgress, fetchTarballInfo } from './download.js';
+import { theme } from '../../ui/theme.js';
 
 /** Installation phases with weights (how much of the progress bar each phase takes) */
 const INSTALL_PHASES = [
@@ -78,7 +79,7 @@ async function installFromTarball(tarballPath: string): Promise<boolean> {
 	// Create progress bar
 	const progressBar = new cliProgress.SingleBar(
 		{
-			format: `${chalk.blue('Installing')} ${chalk.cyan('{bar}')} {percentage}% | {phase}`,
+			format: `${theme.brand('Installing')} ${chalk.cyan('{bar}')} {percentage}% | {phase}`,
 			barCompleteChar: '\u2588',
 			barIncompleteChar: '\u2591',
 			hideCursor: true,
@@ -203,11 +204,11 @@ async function installFromTarball(tarballPath: string): Promise<boolean> {
 
 			if (code === 0) {
 				console.log(
-					chalk.green('✔') + chalk.green(' Update installed successfully')
+					chalk.green('✓') + chalk.green(' Update installed successfully')
 				);
 				resolve(true);
 			} else {
-				console.log(chalk.red('✖') + chalk.red(' Installation failed'));
+				console.log(chalk.red('✗') + chalk.red(' Installation failed'));
 				if (errorOutput) {
 					// Only show actual errors, not progress messages
 					const actualErrors = errorOutput
@@ -234,7 +235,7 @@ async function installFromTarball(tarballPath: string): Promise<boolean> {
 
 			// Cleanup tarball
 			fs.unlink(tarballPath, () => {});
-			console.log(chalk.red('✖') + chalk.red(' Installation failed'));
+			console.log(chalk.red('✗') + chalk.red(' Installation failed'));
 			console.log(chalk.red('Error:'), error.message);
 			resolve(false);
 		});
@@ -248,7 +249,7 @@ async function performDirectNpmInstall(
 	latestVersion: string
 ): Promise<boolean> {
 	const spinner = ora({
-		text: chalk.blue(
+		text: theme.brand(
 			`Updating ${PACKAGE_NAME} to version ${chalk.green(latestVersion)}`
 		),
 		spinner: 'dots',
@@ -274,7 +275,7 @@ async function performDirectNpmInstall(
 		let errorOutput = '';
 
 		updateProcess.stdout.on('data', () => {
-			spinner.text = chalk.blue(
+			spinner.text = theme.brand(
 				`Installing ${PACKAGE_NAME}@${latestVersion}...`
 			);
 		});

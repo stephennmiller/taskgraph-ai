@@ -17,6 +17,7 @@ import { Command } from 'commander';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import { theme } from '../ui/theme.js';
 
 export interface LoopCommandOptions {
 	iterations?: string;
@@ -108,8 +109,8 @@ export class LoopCommand extends Command {
 				const nextTask = await this.tmCore.tasks.getNext(options.tag);
 				if (nextTask) {
 					console.log(
-						chalk.white(
-							`Next task to work on: ${chalk.white(nextTask.id)} - ${nextTask.title}`
+						theme.text(
+							`Next task to work on: ${theme.text(nextTask.id)} - ${nextTask.title}`
 						)
 					);
 				} else {

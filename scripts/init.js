@@ -32,7 +32,7 @@ import {
 	convertAllRulesToProfileRules,
 	getRulesProfile
 } from '../src/utils/rule-transformer.js';
-import { warmGradient } from './modules/ui.js';
+import { brandGradient } from './modules/ui.js';
 import { updateConfigMaxTokens } from './modules/update-config-tokens.js';
 import { isSilentMode } from './modules/utils.js';
 import { insideGitWorkTree } from './modules/utils/git-utils.js';
@@ -1140,7 +1140,7 @@ async function createProjectStructure(
 		} else {
 			console.log(
 				boxen(
-					`${warmGradient.multiline(
+					`${brandGradient.multiline(
 						figlet.textSync('Success!', { font: 'Standard' })
 					)}\n${chalk.green('Project initialized successfully!')}`,
 					{

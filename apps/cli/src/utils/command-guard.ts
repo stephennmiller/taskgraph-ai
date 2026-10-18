@@ -6,6 +6,7 @@
 import { type LocalOnlyCommand, type TmCore, createTmCore } from '@tm/core';
 import chalk from 'chalk';
 import { displayCardBox } from '../ui/components/cardBox.component.js';
+import { theme } from '../ui/theme.js';
 
 /**
  * Command-specific messaging configuration
@@ -39,7 +40,7 @@ function getCommandMessage(commandName: LocalOnlyCommand): CommandMessage {
 		return {
 			header: 'Hamster Manages Dependencies',
 			getBody: (briefName) => [
-				`Hamster handles dependencies for the ${chalk.blue(`"${briefName}"`)} Brief.`,
+				`Hamster handles dependencies for the ${theme.brand(`"${briefName}"`)} Brief.`,
 				`To manage dependencies manually, log out with ${chalk.cyan('tm auth logout')} and work locally.`
 			],
 			footer:
@@ -52,7 +53,7 @@ function getCommandMessage(commandName: LocalOnlyCommand): CommandMessage {
 		return {
 			header: 'Hamster Manages Subtasks',
 			getBody: (briefName) => [
-				`Hamster handles subtask management for the ${chalk.blue(`"${briefName}"`)} Brief.`,
+				`Hamster handles subtask management for the ${theme.brand(`"${briefName}"`)} Brief.`,
 				`To manage subtasks manually, log out with ${chalk.cyan('tm auth logout')} and work locally.`
 			],
 			footer:
@@ -65,7 +66,7 @@ function getCommandMessage(commandName: LocalOnlyCommand): CommandMessage {
 		return {
 			header: 'Hamster Manages AI Models',
 			getBody: (briefName) => [
-				`Hamster configures AI models automatically for the ${chalk.blue(`"${briefName}"`)} Brief.`,
+				`Hamster configures AI models automatically for the ${theme.brand(`"${briefName}"`)} Brief.`,
 				`To configure models manually, log out with ${chalk.cyan('tm auth logout')} and work locally.`
 			],
 			footer:
@@ -77,7 +78,7 @@ function getCommandMessage(commandName: LocalOnlyCommand): CommandMessage {
 	return {
 		header: 'Command Not Available in Hamster',
 		getBody: (briefName) => [
-			`The ${chalk.cyan(commandName)} command is managed by Hamster for the ${chalk.blue(`"${briefName}"`)} Brief.`,
+			`The ${chalk.cyan(commandName)} command is managed by Hamster for the ${theme.brand(`"${briefName}"`)} Brief.`,
 			`To use this command, log out with ${chalk.cyan('tm auth logout')} and work locally.`
 		],
 		footer:

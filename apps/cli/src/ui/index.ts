@@ -36,6 +36,14 @@ export {
 	supportsLinks
 } from './formatters/link-formatters.js';
 
+// Terminal theme (brand colors)
+export {
+	theme,
+	BRAND_COLORS,
+	BANNER_GRADIENT,
+	BORDER_COLOR
+} from './theme.js';
+
 // Layout helpers
 export {
 	getBoxWidth,

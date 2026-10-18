@@ -4,6 +4,7 @@
 
 import boxen from 'boxen';
 import chalk from 'chalk';
+import { theme } from '../../ui/theme.js';
 
 /**
  * Display upgrade notification message
@@ -13,7 +14,7 @@ export function displayUpgradeNotification(
 	latestVersion: string,
 	highlights?: string[]
 ) {
-	let content = `${chalk.blue.bold('Update Available!')} ${chalk.dim(currentVersion)} → ${chalk.green(latestVersion)}`;
+	let content = `${theme.brand.bold('Update Available!')} ${chalk.dim(currentVersion)} → ${chalk.green(latestVersion)}`;
 
 	if (highlights && highlights.length > 0) {
 		content += '\n\n' + chalk.bold("What's New:");
