@@ -54,7 +54,7 @@ export class OutputFormatter {
 				console.log(chalk.cyan(`${indent}${key}:`));
 				this.outputObject(value as Record<string, unknown>, indent + '  ');
 			} else {
-				console.log(chalk.gray(`${indent}${key}: ${value}`));
+				console.log(theme.muted(`${indent}${key}: ${value}`));
 			}
 		}
 	}
@@ -78,7 +78,7 @@ export class OutputFormatter {
 			console.error(chalk.red(`Error: ${message}`));
 			if (details) {
 				for (const [key, value] of Object.entries(details)) {
-					console.error(chalk.gray(`  ${key}: ${value}`));
+					console.error(theme.muted(`  ${key}: ${value}`));
 				}
 			}
 		}

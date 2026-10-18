@@ -36,7 +36,7 @@ async function handleSetModel(
 
 	// Handle no change
 	if (selectedValue === '__NO_CHANGE__') {
-		console.log(chalk.gray(`No change selected for ${role} model.`));
+		console.log(theme.muted(`No change selected for ${role} model.`));
 		return { success: true, modified: false };
 	}
 

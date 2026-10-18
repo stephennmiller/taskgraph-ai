@@ -24,7 +24,7 @@ export function displayWatchFooter(
 	const source = getSourceLabel(storageType);
 
 	console.log(chalk.dim(`\nWatching ${source} for changes...`));
-	console.log(chalk.gray(`Last synced: ${syncTime}`));
+	console.log(theme.muted(`Last synced: ${syncTime}`));
 	console.log(chalk.dim('Press Ctrl+C to exit'));
 }
 

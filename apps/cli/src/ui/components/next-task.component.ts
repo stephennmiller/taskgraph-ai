@@ -71,7 +71,7 @@ export function displayRecommendedNextTask(
 				? chalk.red
 				: task.priority === 'medium'
 					? chalk.yellow
-					: chalk.gray;
+					: theme.muted;
 		statusLine.push(`Priority: ${priorityColor.bold(task.priority)}`);
 	}
 	if (task.status) {
@@ -80,7 +80,7 @@ export function displayRecommendedNextTask(
 				? chalk.yellow('○ pending')
 				: task.status === 'in-progress'
 					? theme.brand('▶ in-progress')
-					: chalk.gray(task.status);
+					: theme.muted(task.status);
 		statusLine.push(`Status: ${statusDisplay}`);
 	}
 	content.push(statusLine.join('  '));
@@ -88,7 +88,7 @@ export function displayRecommendedNextTask(
 	// Dependencies
 	const depsDisplay =
 		!task.dependencies || task.dependencies.length === 0
-			? chalk.gray('None')
+			? theme.muted('None')
 			: chalk.cyan(task.dependencies.join(', '));
 	content.push(`Dependencies: ${depsDisplay}`);
 
@@ -111,7 +111,7 @@ export function displayRecommendedNextTask(
 		2
 	)) {
 		content.push(
-			`${chalk.cyan('Next step:')} ${chalk.yellow(action.command)} ${chalk.gray(action.description)}`
+			`${chalk.cyan('Next step:')} ${chalk.yellow(action.command)} ${theme.muted(action.description)}`
 		);
 	}
 	content.push(

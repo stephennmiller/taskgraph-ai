@@ -160,7 +160,7 @@ export class SetStatusCommand extends Command {
 				if (!parseResult.success) {
 					console.error(
 						chalk.red(`Invalid task ID: ${rawId}`),
-						chalk.gray(`- ${parseResult.error.issues[0]?.message}`)
+						theme.muted(`- ${parseResult.error.issues[0]?.message}`)
 					);
 					process.exit(1);
 				}
@@ -317,7 +317,7 @@ export class SetStatusCommand extends Command {
 			pending: chalk.yellow,
 			'in-progress': theme.brand,
 			done: chalk.green,
-			deferred: chalk.gray,
+			deferred: theme.muted,
 			cancelled: chalk.red,
 			blocked: chalk.red,
 			review: chalk.magenta,

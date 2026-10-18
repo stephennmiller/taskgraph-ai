@@ -4,6 +4,7 @@
  */
 
 import chalk from 'chalk';
+import { theme } from '../theme.js';
 import { createUrlLink } from '../formatters/link-formatters.js';
 
 /**
@@ -36,7 +37,7 @@ export function displayHeader(options: HeaderOptions = {}): void {
 	// Display different header based on storage type
 	if (storageType === 'api' && briefInfo) {
 		// API storage: Show brief information
-		const briefDisplay = `Brief: ${chalk.cyan(briefInfo.briefName)} ${chalk.gray(`(${briefInfo.briefId})`)}`;
+		const briefDisplay = `Brief: ${chalk.cyan(briefInfo.briefName)} ${theme.muted(`(${briefInfo.briefId})`)}`;
 		console.log(briefDisplay);
 
 		// Construct and display the brief URL or ID

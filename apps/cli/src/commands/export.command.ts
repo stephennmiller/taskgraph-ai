@@ -163,7 +163,7 @@ export class ExportCommand extends Command {
 					chalk.yellow('\n  You are currently connected to a Hamster brief.')
 				);
 				console.log(
-					chalk.gray(
+					theme.muted(
 						'  Tasks in this context already live on Hamster - export is unnecessary.\n'
 					)
 				);
@@ -260,11 +260,11 @@ export class ExportCommand extends Command {
 						'\n  All local tags have already been exported to Hamster.\n'
 					)
 				);
-				console.log(chalk.gray('  Previously exported briefs:'));
+				console.log(theme.muted('  Previously exported briefs:'));
 				for (const tag of tagsResult.tags) {
 					if (exportedTags[tag.name]) {
 						console.log(
-							chalk.gray(
+							theme.muted(
 								`    - ${tag.name}: ${exportedTags[tag.name].briefUrl}`
 							)
 						);
@@ -296,10 +296,10 @@ export class ExportCommand extends Command {
 				const taskInfo = `${tag.taskCount} tasks, ${tag.completedTasks} done`;
 				const currentMarker = tag.isCurrent ? chalk.cyan(' (current)') : '';
 				const exportedMarker = isExported
-					? chalk.gray(' [already exported]')
+					? theme.muted(' [already exported]')
 					: '';
 				return {
-					name: `${tag.name}${currentMarker}${exportedMarker} - ${chalk.gray(taskInfo)}`,
+					name: `${tag.name}${currentMarker}${exportedMarker} - ${theme.muted(taskInfo)}`,
 					value: tag.name,
 					short: tag.name,
 					checked: tag.isCurrent && !isExported, // Pre-select current tag only if not exported
@@ -328,7 +328,7 @@ export class ExportCommand extends Command {
 			]);
 
 			if (selectedTags.length === 0) {
-				console.log(chalk.gray('\n  Export cancelled.\n'));
+				console.log(theme.muted('\n  Export cancelled.\n'));
 				this.lastResult = {
 					success: false,
 					action: 'cancelled',
@@ -345,7 +345,7 @@ export class ExportCommand extends Command {
 				forceSelection: true
 			});
 			if (!orgResult.success) {
-				console.log(chalk.gray('\n  Export cancelled.\n'));
+				console.log(theme.muted('\n  Export cancelled.\n'));
 				this.lastResult = {
 					success: false,
 					action: 'cancelled',
@@ -462,7 +462,7 @@ export class ExportCommand extends Command {
 				const errorMsg = result.error?.message || 'Unknown error occurred';
 				console.error(chalk.red(`\n${errorMsg}`));
 				if (result.error?.code) {
-					console.error(chalk.gray(`  Error code: ${result.error.code}`));
+					console.error(theme.muted(`  Error code: ${result.error.code}`));
 				}
 			}
 
@@ -645,7 +645,7 @@ export class ExportCommand extends Command {
 				const errorMsg = result.error?.message || 'Unknown error occurred';
 				console.error(chalk.red(`\n${errorMsg}`));
 				if (result.error?.code) {
-					console.error(chalk.gray(`  Error code: ${result.error.code}`));
+					console.error(theme.muted(`  Error code: ${result.error.code}`));
 				}
 			}
 
@@ -672,7 +672,7 @@ export class ExportCommand extends Command {
 
 		// Show which tags will be exported
 		for (const tag of tags) {
-			console.log(chalk.gray(`    - ${tag}`));
+			console.log(theme.muted(`    - ${tag}`));
 		}
 		console.log('');
 
@@ -784,14 +784,14 @@ export class ExportCommand extends Command {
 			for (const result of successful) {
 				console.log(theme.text(`    ${result.tag}`));
 				if (result.brief) {
-					console.log(chalk.gray(`      ${result.brief.title}`));
+					console.log(theme.muted(`      ${result.brief.title}`));
 					console.log(`      ${createUrlLink(result.brief.url)}`);
 					const taskInfo =
 						result.parentTaskCount !== undefined &&
 						result.subtaskCount !== undefined
 							? `${result.parentTaskCount} tasks, ${result.subtaskCount} subtasks`
 							: `${result.brief.taskCount} tasks`;
-					console.log(chalk.gray(`      ${taskInfo}`));
+					console.log(theme.muted(`      ${taskInfo}`));
 				}
 				console.log('');
 			}
@@ -827,7 +827,7 @@ export class ExportCommand extends Command {
 				name: `${r.tag} - ${r.brief?.title}`,
 				value: r.brief?.url
 			}));
-			briefChoices.push({ name: chalk.gray('Skip'), value: '__skip__' });
+			briefChoices.push({ name: theme.muted('Skip'), value: '__skip__' });
 
 			const { selectedBrief } = await inquirer.prompt<{
 				selectedBrief: string;
@@ -865,7 +865,7 @@ export class ExportCommand extends Command {
 		}
 
 		if (tasks.length > 10) {
-			console.log(chalk.gray(`  ... and ${tasks.length - 10} more tasks`));
+			console.log(theme.muted(`  ... and ${tasks.length - 10} more tasks`));
 		}
 		console.log('');
 	}
@@ -878,7 +878,7 @@ export class ExportCommand extends Command {
 
 		console.log('');
 		console.log(chalk.green('  Done! ') + chalk.bold(result.brief.title));
-		console.log(chalk.gray(`  ${result.brief.taskCount} tasks exported`));
+		console.log(theme.muted(`  ${result.brief.taskCount} tasks exported`));
 		console.log('');
 		console.log(`  ${createUrlLink(result.brief.url)}`);
 
@@ -949,7 +949,7 @@ export class ExportCommand extends Command {
 					console.log(chalk.green(`    ${inv.email}: Invitation sent`));
 					break;
 				case 'already_member':
-					console.log(chalk.gray(`    ${inv.email}: Already a team member`));
+					console.log(theme.muted(`    ${inv.email}: Already a team member`));
 					break;
 				case 'already_invited':
 					console.log(
@@ -979,7 +979,7 @@ export class ExportCommand extends Command {
 			const [, baseUrl, orgSlug] = urlMatch;
 			const membersUrl = `${baseUrl}/home/${orgSlug}/members`;
 			console.log(
-				chalk.gray('  Invite teammates: ') + createUrlLink(membersUrl) + '\n'
+				theme.muted('  Invite teammates: ') + createUrlLink(membersUrl) + '\n'
 			);
 		}
 	}
@@ -1025,7 +1025,7 @@ export class ExportCommand extends Command {
 			case 'blocked':
 				return chalk.red('⊘');
 			default:
-				return chalk.gray('○');
+				return theme.muted('○');
 		}
 	}
 

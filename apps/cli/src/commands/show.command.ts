@@ -114,7 +114,7 @@ export class ShowCommand extends Command {
 				if (!parseResult.success) {
 					console.error(
 						chalk.red(`Invalid task ID: ${rawId}`),
-						chalk.gray(`- ${parseResult.error.issues[0]?.message}`)
+						theme.muted(`- ${parseResult.error.issues[0]?.message}`)
 					);
 					process.exit(1);
 				}
@@ -146,7 +146,7 @@ export class ShowCommand extends Command {
 		// Validate format
 		if (options.format && !['text', 'json'].includes(options.format)) {
 			console.error(chalk.red(`Invalid format: ${options.format}`));
-			console.error(chalk.gray(`Valid formats: text, json`));
+			console.error(theme.muted(`Valid formats: text, json`));
 			return false;
 		}
 

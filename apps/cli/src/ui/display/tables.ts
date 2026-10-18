@@ -106,19 +106,19 @@ export function createTaskTable(
 				// For table display, show simple format without status icons
 				dependencies:
 					!task.dependencies || task.dependencies.length === 0
-						? chalk.gray('-')
+						? theme.muted('-')
 						: chalk.cyan(task.dependencies.map((d) => String(d)).join(', ')),
 				// Gray out blocks for completed tasks (no longer blocking)
 				blocks: !blocksText
-					? chalk.gray('-')
+					? theme.muted('-')
 					: isTaskComplete(task.status)
-						? chalk.gray(blocksText)
+						? theme.muted(blocksText)
 						: chalk.yellow(blocksText),
 				// Show complexity score from report if available
 				complexity:
 					typeof task.complexity === 'number'
 						? getComplexityWithColor(task.complexity)
-						: chalk.gray('N/A')
+						: theme.muted('N/A')
 			})
 		);
 
@@ -128,19 +128,19 @@ export function createTaskTable(
 				table.push(
 					pick({
 						// Subtasks inherit parent's tag, just show dash
-						tag: chalk.gray('-'),
-						id: chalk.gray(` └─ ${subtask.id}`),
-						title: chalk.gray(truncate(subtask.title, width('title') - 6)),
-						status: chalk.gray(getStatusWithColor(subtask.status, true)),
-						priority: chalk.gray(subtask.priority || DEFAULT_PRIORITY),
-						dependencies: chalk.gray(
+						tag: theme.muted('-'),
+						id: theme.muted(` └─ ${subtask.id}`),
+						title: theme.muted(truncate(subtask.title, width('title') - 6)),
+						status: theme.muted(getStatusWithColor(subtask.status, true)),
+						priority: theme.muted(subtask.priority || DEFAULT_PRIORITY),
+						dependencies: theme.muted(
 							subtask.dependencies && subtask.dependencies.length > 0
 								? subtask.dependencies.map((dep) => String(dep)).join(', ')
 								: '-'
 						),
 						// Subtasks don't typically have blocks, show dash
-						blocks: chalk.gray('-'),
-						complexity: chalk.gray(
+						blocks: theme.muted('-'),
+						complexity: theme.muted(
 							typeof subtask.complexity === 'number'
 								? getComplexityWithColor(subtask.complexity)
 								: '--'
@@ -155,7 +155,7 @@ export function createTaskTable(
 	const hiddenNote =
 		plan.hidden.length > 0
 			? '\n' +
-				chalk.gray(
+				theme.muted(
 					`Hidden to fit width: ${plan.hidden
 						.map(
 							(key) => TASK_TABLE_COLUMNS.find((col) => col.key === key)?.header

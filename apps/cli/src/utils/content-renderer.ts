@@ -27,10 +27,10 @@ marked.use(
 				.map((line) => '    ' + chalk.cyan(line))
 				.join('\n');
 		},
-		blockquote: chalk.gray.italic,
-		html: chalk.gray, // Any remaining HTML will be grayed out (should be rare after turndown)
+		blockquote: theme.muted.italic,
+		html: theme.muted, // Any remaining HTML will be grayed out (should be rare after turndown)
 		heading: theme.text.bold, // White bold for headings
-		hr: chalk.gray,
+		hr: theme.muted,
 		listitem: theme.text, // White for list items
 		paragraph: theme.text, // White for paragraphs (default text color)
 		strong: theme.text.bold, // White bold for strong text

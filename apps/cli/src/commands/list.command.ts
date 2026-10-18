@@ -265,7 +265,7 @@ export class ListTasksCommand extends Command {
 			!OUTPUT_FORMATS.includes(options.format as OutputFormat)
 		) {
 			console.error(chalk.red(`Invalid format: ${options.format}`));
-			console.error(chalk.gray(`Valid formats: ${OUTPUT_FORMATS.join(', ')}`));
+			console.error(theme.muted(`Valid formats: ${OUTPUT_FORMATS.join(', ')}`));
 			return false;
 		}
 
@@ -277,7 +277,7 @@ export class ListTasksCommand extends Command {
 				if (status !== 'all' && !TASK_STATUSES.includes(status as TaskStatus)) {
 					console.error(chalk.red(`Invalid status: ${status}`));
 					console.error(
-						chalk.gray(`Valid statuses: ${TASK_STATUSES.join(', ')}`)
+						theme.muted(`Valid statuses: ${TASK_STATUSES.join(', ')}`)
 					);
 					return false;
 				}
@@ -288,7 +288,7 @@ export class ListTasksCommand extends Command {
 		if (options.allTags && options.watch) {
 			console.error(chalk.red('--all-tags cannot be used with --watch mode'));
 			console.error(
-				chalk.gray(
+				theme.muted(
 					'Use --all-tags without --watch, or --watch without --all-tags'
 				)
 			);
@@ -438,7 +438,7 @@ export class ListTasksCommand extends Command {
 				)
 			);
 			failedTags.forEach(({ name, error }) => {
-				console.warn(chalk.gray(`  ${name}: ${error}`));
+				console.warn(theme.muted(`  ${name}: ${error}`));
 			});
 		}
 
@@ -500,12 +500,12 @@ export class ListTasksCommand extends Command {
 		);
 		invalidDependencies.slice(0, 5).forEach(({ taskId, depId }) => {
 			console.warn(
-				chalk.gray(`  Task ${taskId} depends on non-existent task ${depId}`)
+				theme.muted(`  Task ${taskId} depends on non-existent task ${depId}`)
 			);
 		});
 		if (invalidDependencies.length > 5) {
 			console.warn(
-				chalk.gray(`  ...and ${invalidDependencies.length - 5} more`)
+				theme.muted(`  ...and ${invalidDependencies.length - 5} more`)
 			);
 		}
 	}
@@ -591,7 +591,7 @@ export class ListTasksCommand extends Command {
 				for (const subtask of task.subtasks) {
 					const subIcon = STATUS_ICONS[subtask.status];
 					console.log(
-						`  ${chalk.gray(String(subtask.id))} ${subIcon} ${chalk.gray(subtask.title)}`
+						`  ${theme.muted(String(subtask.id))} ${subIcon} ${theme.muted(subtask.title)}`
 					);
 				}
 			}

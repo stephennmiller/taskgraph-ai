@@ -195,7 +195,7 @@ export function displayInvalidMFACode(remaining: number): void {
 export function displayAuthInstructions(authUrl: string): void {
 	console.log(theme.brand.bold('\n[auth] Browser Authentication\n'));
 	console.log(theme.text('  Opening your browser to authenticate...'));
-	console.log(chalk.gray("  If the browser doesn't open, visit:"));
+	console.log(theme.muted("  If the browser doesn't open, visit:"));
 	console.log(chalk.cyan.underline(`  ${authUrl}\n`));
 }
 

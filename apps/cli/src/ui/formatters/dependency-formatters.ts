@@ -5,6 +5,7 @@
 
 import type { Task } from '@tm/core';
 import chalk from 'chalk';
+import { theme } from '../theme.js';
 
 /**
  * Format dependencies with their status
@@ -14,7 +15,7 @@ export function formatDependenciesWithStatus(
 	tasks: Task[]
 ): string {
 	if (!dependencies || dependencies.length === 0) {
-		return chalk.gray('none');
+		return theme.muted('none');
 	}
 
 	const taskMap = new Map(tasks.map((t) => [t.id.toString(), t]));

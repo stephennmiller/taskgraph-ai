@@ -4,6 +4,7 @@
 
 import search, { Separator } from '@inquirer/search';
 import chalk from 'chalk';
+import { theme } from '../../ui/theme.js';
 import { getAvailableModels } from '../../lib/model-management.js';
 import type {
 	CurrentModels,
@@ -72,7 +73,7 @@ export function buildPromptChoices(
 					return {
 						name: `${provider} / ${displayName} ${
 							m.cost_per_1m_tokens
-								? chalk.gray(
+								? theme.muted(
 										`($${m.cost_per_1m_tokens.input.toFixed(2)} input | $${m.cost_per_1m_tokens.output.toFixed(2)} output)`
 									)
 								: ''
@@ -180,11 +181,11 @@ export function createSearchSource(
  */
 export function displaySetupIntro(): void {
 	console.log(chalk.cyan('\nInteractive model setup'));
-	console.log(chalk.gray('━'.repeat(50)));
+	console.log(theme.muted('━'.repeat(50)));
 	console.log(chalk.yellow('Navigation tips:'));
-	console.log(chalk.gray('   • Type to search and filter options'));
-	console.log(chalk.gray('   • Use ↑↓ arrow keys to navigate results'));
-	console.log(chalk.gray('   • Press Enter to select\n'));
+	console.log(theme.muted('   • Type to search and filter options'));
+	console.log(theme.muted('   • Use ↑↓ arrow keys to navigate results'));
+	console.log(theme.muted('   • Press Enter to select\n'));
 }
 
 /**

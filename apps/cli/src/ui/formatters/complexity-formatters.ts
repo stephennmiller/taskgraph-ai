@@ -4,6 +4,7 @@
  */
 
 import chalk from 'chalk';
+import { theme } from '../theme.js';
 
 /**
  * Get complexity color and label based on score thresholds
@@ -29,7 +30,7 @@ export function getComplexityWithColor(complexity: number | string): string {
 		typeof complexity === 'string' ? Number(complexity.trim()) : complexity;
 
 	if (isNaN(score)) {
-		return chalk.gray('N/A');
+		return theme.muted('N/A');
 	}
 
 	const { color } = getComplexityLevel(score);
@@ -41,7 +42,7 @@ export function getComplexityWithColor(complexity: number | string): string {
  */
 export function getComplexityWithScore(complexity: number | undefined): string {
 	if (typeof complexity !== 'number') {
-		return chalk.gray('N/A');
+		return theme.muted('N/A');
 	}
 
 	const { color, label } = getComplexityLevel(complexity);
