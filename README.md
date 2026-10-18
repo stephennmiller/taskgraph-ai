@@ -31,42 +31,29 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 ## Set up in Claude Code
 
-> **Install from source for now.** `taskgraph-ai` isn't published to npm yet, so `npx -y taskgraph-ai` and `npm install -g taskgraph-ai` don't work. Build it once from this repository (step 1). When the package is published, `npx -y taskgraph-ai` replaces `node /path/to/taskgraph-ai/dist/mcp-server.js` everywhere below.
-
 You need [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (run `claude` once) and Node.js 22 or later.
 
-### 1. Build from source
+### 1. Install
 
 ```bash
-git clone https://github.com/stephennmiller/taskgraph-ai.git
-cd taskgraph-ai
-npm install
-npm run build
+npm install -g taskgraph-ai
 ```
 
-This creates `dist/taskgraph.js` (the CLI) and `dist/mcp-server.js` (the optional MCP server). The steps below call the folder `/path/to/taskgraph-ai`; use your real path. After pulling new changes, run `npm run build` again.
+This gives you the `taskgraph` command (the CLI) and `taskgraph-mcp`, the optional MCP server. To skip the install, run any command through npx, for example `npx -y -p taskgraph-ai taskgraph list`. To build from source instead, see [Working on TaskGraph itself](#troubleshooting).
 
 ### 2. Initialize your project
 
 From your own project folder:
 
 ```bash
-node /path/to/taskgraph-ai/dist/taskgraph.js init --rules claude
+taskgraph init --rules claude
 ```
 
 This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and 46 slash commands in `.claude/commands/tm/`. Don't run it twice; it only re-adds the same files.
 
-`init` also writes a `.mcp.json` that starts the server with `npx -y taskgraph-ai`, which won't work until the package is published. Delete that file, or if you add the MCP server (step 5), change it to the `node` command shown there.
+`init` also writes a `.mcp.json` that registers the MCP server with the 7 `core` tools. Delete that file if you only want the slash commands and CLI; see step 4 to keep and configure the server.
 
-### 3. Add a shell alias
-
-A shell alias keeps the commands in the rest of this README short:
-
-```bash
-alias taskgraph="node /path/to/taskgraph-ai/dist/taskgraph.js"
-```
-
-### 4. (Optional) Install the plugin
+### 3. (Optional) Install the plugin
 
 The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
 
@@ -75,16 +62,16 @@ The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<nam
 /plugin install taskgraph@taskgraph
 ```
 
-The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 5). Its slash commands overlap with the ones from step 2, so install the plugin only if you want the agents.
+The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 4). Its slash commands overlap with the ones from step 2, so install the plugin only if you want the agents.
 
-### 5. (Optional) Add the MCP server
+### 4. (Optional) Add the MCP server
 
 Skip this unless you want to drive TaskGraph in plain language. Slash commands and the CLI do everything without it.
 
 ```bash
 claude mcp add taskgraph-ai --scope user \
   --env TASKGRAPH_TOOLS=standard \
-  -- node /path/to/taskgraph-ai/dist/mcp-server.js
+  -- npx -y taskgraph-ai
 ```
 
 Restart Claude Code and run `/mcp`; `taskgraph-ai` should show as connected. `standard` loads 14 tools, enough for everything in [How to use it](#how-to-use-it). See [MCP tool tiers](#mcp-tool-tiers) for the others.
@@ -95,8 +82,8 @@ To share the setup with your team instead, put it in the project's `.mcp.json`:
 {
   "mcpServers": {
     "taskgraph-ai": {
-      "command": "node",
-      "args": ["/path/to/taskgraph-ai/dist/mcp-server.js"],
+      "command": "npx",
+      "args": ["-y", "taskgraph-ai"],
       "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
@@ -207,7 +194,7 @@ Set it when you add the server:
 ```bash
 claude mcp add taskgraph-ai --scope user \
   --env TASKGRAPH_TOOLS=all \
-  -- node /path/to/taskgraph-ai/dist/mcp-server.js
+  -- npx -y taskgraph-ai
 ```
 
 Or edit the `env` block in `.mcp.json`, then restart Claude Code.
@@ -220,8 +207,8 @@ In Claude Code, say `Change the main model to opus`, or run `taskgraph models --
 
 ## Troubleshooting
 
-- **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `node /path/to/taskgraph-ai/dist/mcp-server.js` starts on its own in a terminal (it waits for input; press Ctrl+C to stop). If `dist/` is missing or stale, run `npm run build`.
-- **Working on TaskGraph itself:** this repository's `.mcp.json` starts `dist/mcp-server.js` relative to the repo, so run `npm run build` first or the server won't connect.
+- **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `npx -y taskgraph-ai` starts on its own in a terminal (it waits for input; press Ctrl+C to stop).
+- **Working on TaskGraph itself:** build from source with `git clone https://github.com/stephennmiller/taskgraph-ai.git && cd taskgraph-ai && npm install && npm run build`, then run `node dist/taskgraph.js` for the CLI. This repository's own `.mcp.json` starts `dist/mcp-server.js` relative to the repo, so run `npm run build` first or the server won't connect.
 - **AI commands fail:** run `claude` once and make sure you're signed in.
 - **Fewer tools than expected:** `TASKGRAPH_TOOLS` defaults to `core`. Set `standard` or `all`.
 - **Commands behave oddly after `git pull`:** run `npm run build` again; the CLI and server run from `dist/`.
