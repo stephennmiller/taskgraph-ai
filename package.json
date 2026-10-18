@@ -1,7 +1,7 @@
 {
 	"name": "taskgraph-ai",
 	"version": "0.50.0",
-	"description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
+	"description": "Task management for AI-driven development, built for Claude Code: plan from a PRD, then work tasks one at a time with slash commands, a CLI or an MCP server.",
 	"main": "index.js",
 	"type": "module",
 	"bin": {
