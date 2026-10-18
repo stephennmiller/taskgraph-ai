@@ -5,6 +5,20 @@
 **Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskgraph/CLAUDE.md
 
+## Commands
+
+```bash
+npm run build                     # tsdown production build
+npm run turbo:typecheck           # run before pushing
+npm run format-check              # Biome; `npm run format` to fix
+npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp)
+npm run test:coverage -w @tm/core # coverage (also @tm/cli); Vitest
+npm run test:e2e -w @tm/cli       # CLI e2e (Vitest, apps/cli/tests/e2e)
+npm test                          # root tests/ suite (Jest, ESM via --experimental-vm-modules)
+```
+
+`npm install` points git at `.githooks/`. The pre-push hook runs `biome format` on files changed since `origin/main`. Fix with `npm run format`; `git push --no-verify` skips it once.
+
 ## Test Guidelines
 
 ### Test File Placement
@@ -12,7 +26,7 @@
 - **Package & tests**: Place in `packages/<package-name>/src/<module>/<file>.spec.ts` or `apps/<app-name>/src/<module>/<file.spec.ts>` alongside source
 - **Package integration tests**: Place in `packages/<package-name>/tests/integration/<module>/<file>.test.ts` or `apps/<app-name>/tests/integration/<module>/<file>.test.ts` alongside source
 - **Isolated unit tests**: Use `tests/unit/packages/<package-name>/` only when parallel placement isn't possible
-- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`
+- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the legacy root `tests/` suite is still Jest + `.js` until the Vitest migration (#71) lands. New tests go in packages/apps, not there.
 
 ### Synchronous Tests
 
@@ -53,32 +67,6 @@
 - Pure configuration objects
 - Code that just delegates to another tested function
 
-**Examples:**
-
-```javascript
-// ✅ WRITE A TEST - Bug fix with regression prevention
-it('should use correct baseURL from defaultBaseURL config', () => {
-  const provider = new ZAIProvider();
-  expect(provider.defaultBaseURL).toBe('https://api.z.ai/api/paas/v4/');
-});
-
-// ✅ WRITE A TEST - Business logic with edge cases
-it('should parse subtask IDs correctly', () => {
-  expect(parseTaskId('1.2.3')).toEqual({ taskId: 1, subtaskId: 2, subSubtaskId: 3 });
-  expect(parseTaskId('invalid')).toBeNull();
-});
-
-// ❌ SKIP TEST - Trivial getter
-class Task {
-  get id() { return this._id; } // No test needed
-}
-
-// ❌ SKIP TEST - Pure delegation
-function getTasks() {
-  return taskManager.getTasks(); // Already tested in taskManager
-}
-```
-
 **Bug Fix Workflow:**
 
 1. Encounter a bug
@@ -89,21 +77,22 @@ function getTasks() {
 
 ### Testing Guidelines
 
-**Principles**: FIRST (Fast, Independent, Repeatable, Self-validating, Timely)
-**Structure**: AAA (Arrange, Act, Assert)
-**Coverage**: Right-BICEP (Right results, Boundary, Inverse, Cross-check, Error conditions, Performance)
+Structure tests as Arrange, Act, Assert.
 
 #### What to Mock
 
 **Unit tests** (`.spec.ts` - test single unit in isolation):
+
 - **@tm/core**: Mock only external I/O (APIs, filesystem). Use real internal services.
 - **apps/cli**: Mock tm-core responses. Use real Commander/chalk/inquirer/other npm packages (test display logic).
 - **apps/mcp**: Mock tm-core responses. Use real MCP framework (test response formatting).
 
 **Integration tests** (`tests/integration/` - test multiple units together):
+
 - **All packages**: Use real tm-core, mock only external boundaries (APIs, DB, filesystem).
 
 **Never mock**:
+
 - Internal utilities/helpers in the same package
 - Standard frameworks (Commander, Express) - let them run
 - Standard library
@@ -115,6 +104,16 @@ function getTasks() {
 **Anti-pattern**: Heavily mocked tests don't verify real behavior—they verify that you wired up mocks correctly. You end up writing orchestration code to satisfy tests, rather than tests that validate your actual implementation. If testing is hard, move the logic to where it's naturally testable.
 
 ## Architecture Guidelines
+
+### Workspaces
+
+- `packages/tm-core` (`@tm/core`): all business logic
+- `apps/cli` (`@tm/cli`), `apps/mcp` (`@tm/mcp`): thin presentation layers over tm-core
+- `packages/tm-profiles` (`@tm/profiles`): slash-command definitions (`common/` and `solo/` sets), the Claude profile, and shell utils
+- `packages/claude-code-plugin` (`@tm/claude-code-plugin`): the Claude Code plugin, markdown only (`commands/`, `agents/`, `.claude-plugin/plugin.json`), no TypeScript
+- `packages/build-config` (`@tm/build-config`): shared tsdown base config, compiled with `tsc` and imported by the root `tsdown.config.ts`; `npm run build` builds it first
+- `apps/docs`: Mintlify docs source (not a code package)
+- `apps/extension`, `packages/tm-bridge`, `packages/ai-sdk-provider-grok-cli` hold only untracked build artifacts and have no `package.json`. Don't add code there.
 
 ### Business Logic Separation
 
@@ -152,15 +151,9 @@ function getTasks() {
 - ✅ MCP calls: `await tmCore.tasks.get(taskId)` (same intelligent ID parsing)
 - ✅ Single source of truth in tm-core
 
-## Code Quality & Reusability Guidelines
+## Code Quality
 
-Apply standard software engineering principles:
-
-- **DRY (Don't Repeat Yourself)**: Extract patterns that appear 2+ times into reusable components or utilities
-- **YAGNI (You Aren't Gonna Need It)**: Don't over-engineer. Create abstractions when duplication appears, not before
-- **Maintainable**: Single source of truth. Change once, update everywhere
-- **Readable**: Clear naming, proper structure, export from index files
-- **Flexible**: Accept configuration options with sensible defaults
+Extract a pattern into a shared utility once it appears twice, not before. Export new modules from the package's index file.
 
 ## Documentation Guidelines
 
@@ -169,7 +162,5 @@ Apply standard software engineering principles:
 
 ## Versioning & Release Guidelines
 
-- **Use a conventional-commit PR title** - releases are cut automatically on merge to `main` from commit messages: `feat:` bumps minor, `fix:`/`perf:`/`revert:` bump patch, `!` or a `BREAKING CHANGE:` footer bumps major (one level lower below 1.0.0). `chore:`, `docs:`, `ci:`, `test:` do not release. Do not add a changeset.
+- **Use a conventional-commit PR title** - releases are cut automatically on merge to `main` from commit messages: `feat:` bumps minor, `fix:`/`perf:`/`revert:` bump patch, `!` or a `BREAKING CHANGE:` footer bumps major (one level lower below 1.0.0). `chore:`, `docs:`, `ci:`, `test:` do not release. Do not add a changeset: `.changeset/` is only read by the release workflow (`.github/workflows/release.yml`), and `version-bump.yml` bumps from commits.
 - Keep the PR title user-facing: it becomes the release note, so say what the end-user gets or what is fixed
-- Run `npm run turbo:typecheck` before pushing to ensure TypeScript type checks pass
-- Run `npm run test -w <package-name>` to test a package
