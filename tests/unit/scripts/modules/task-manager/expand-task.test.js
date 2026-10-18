@@ -197,11 +197,6 @@ jest.unstable_mockModule('cli-table3', () => ({
 	}))
 }));
 
-// Mock @tm/bridge module
-jest.unstable_mockModule('@tm/bridge', () => ({
-	tryExpandViaRemote: jest.fn().mockResolvedValue(null)
-}));
-
 // Mock bridge-utils module
 jest.unstable_mockModule(
 	'../../../../../scripts/modules/bridge-utils.js',
@@ -242,8 +237,6 @@ const { generateObjectService } = await import(
 const { getDefaultSubtasks } = await import(
 	'../../../../../scripts/modules/config-manager.js'
 );
-
-const { tryExpandViaRemote } = await import('@tm/bridge');
 
 // Import the module under test
 const { default: expandTask } = await import(
@@ -1359,126 +1352,6 @@ describe('expandTask', () => {
 			expect(generateObjectService).toHaveBeenCalled();
 			const callArgs = generateObjectService.mock.calls[0][0];
 			expect(callArgs.systemPrompt).toContain('7 specific subtasks');
-		});
-	});
-
-	describe('Remote Expansion via Bridge', () => {
-		const tasksPath = '/fake/path/tasks.json';
-		const taskId = '2';
-		const context = { tag: 'master' };
-
-		test('should use remote expansion result when tryExpandViaRemote succeeds', async () => {
-			// Arrange - Mock successful remote expansion
-			const remoteResult = {
-				success: true,
-				message: 'Task expanded successfully via remote',
-				data: {
-					subtasks: [
-						{
-							id: 1,
-							title: 'Remote Subtask 1',
-							description: 'First remote subtask',
-							status: 'pending',
-							dependencies: []
-						},
-						{
-							id: 2,
-							title: 'Remote Subtask 2',
-							description: 'Second remote subtask',
-							status: 'pending',
-							dependencies: [1]
-						}
-					]
-				}
-			};
-			tryExpandViaRemote.mockResolvedValue(remoteResult);
-
-			// Act
-			const result = await expandTask(
-				tasksPath,
-				taskId,
-				2,
-				false,
-				'',
-				context,
-				false
-			);
-
-			// Assert - Should use remote result and NOT call local AI service
-			expect(tryExpandViaRemote).toHaveBeenCalled();
-			expect(generateObjectService).not.toHaveBeenCalled();
-			expect(result).toEqual(remoteResult);
-		});
-
-		test('should fallback to local expansion when tryExpandViaRemote returns null', async () => {
-			// Arrange - Mock remote returning null (no remote available)
-			tryExpandViaRemote.mockResolvedValue(null);
-
-			// Act
-			await expandTask(tasksPath, taskId, 3, false, '', context, false);
-
-			// Assert - Should fallback to local expansion
-			expect(tryExpandViaRemote).toHaveBeenCalled();
-			expect(generateObjectService).toHaveBeenCalled();
-			expect(writeJSON).toHaveBeenCalled();
-		});
-
-		test('should propagate error when tryExpandViaRemote throws error', async () => {
-			// Arrange - Mock remote throwing error (it re-throws, doesn't return null)
-			tryExpandViaRemote.mockImplementation(() =>
-				Promise.reject(new Error('Remote expansion service unavailable'))
-			);
-
-			// Act & Assert - Should propagate the error (not fallback to local)
-			await expect(
-				expandTask(tasksPath, taskId, 3, false, '', context, false)
-			).rejects.toThrow('Remote expansion service unavailable');
-
-			expect(tryExpandViaRemote).toHaveBeenCalled();
-			// Local expansion should NOT be called when remote throws
-			expect(generateObjectService).not.toHaveBeenCalled();
-		});
-
-		test('should pass correct parameters to tryExpandViaRemote', async () => {
-			// Arrange
-			const taskIdStr = '2'; // Use task 2 which exists in master tag
-			const numSubtasks = 5;
-			const additionalContext = 'Extra context for expansion';
-			const useResearch = false; // Note: useResearch is the 4th param, not 7th
-			const force = true; // Note: force is the 7th param
-			const contextObj = {
-				tag: 'master', // Use master tag where task 2 exists
-				projectRoot: '/mock/project'
-			};
-			tryExpandViaRemote.mockResolvedValue(null);
-
-			// Act
-			await expandTask(
-				tasksPath,
-				taskIdStr,
-				numSubtasks,
-				useResearch, // 4th param
-				additionalContext, // 5th param
-				contextObj, // 6th param
-				force // 7th param
-			);
-
-			// Assert - Verify tryExpandViaRemote was called with correct params
-			// Note: The actual call has a flat structure, not nested context
-			expect(tryExpandViaRemote).toHaveBeenCalledWith(
-				expect.objectContaining({
-					taskId: taskIdStr,
-					numSubtasks,
-					additionalContext,
-					useResearch,
-					force,
-					projectRoot: '/mock/project',
-					tag: 'master',
-					isMCP: expect.any(Boolean),
-					outputFormat: expect.any(String),
-					report: expect.any(Function)
-				})
-			);
 		});
 	});
 });

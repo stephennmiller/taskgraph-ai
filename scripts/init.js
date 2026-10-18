@@ -17,14 +17,11 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { authenticateWithBrowserMFA, ensureOrgSelected, ui } from '@tm/cli';
-import { AuthManager } from '@tm/core';
+import { ui } from '@tm/cli';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
-import inquirer from 'inquirer';
-import open from 'open';
 import ora from 'ora';
 import { RULE_PROFILES } from '../src/constants/profiles.js';
 import { manageGitignoreFile } from '../src/utils/manage-gitignore.js';
@@ -151,42 +148,15 @@ function addShellAliases() {
 
 		const configContent = fs.readFileSync(shellConfigFile, 'utf8');
 
-		// Define aliases we want (hamster/ham aliases are managed by Hamster CLI, not TaskGraph)
+		// Define the aliases we want
 		const aliases = [
 			{ name: 'tm', line: "alias tm='taskgraph'" },
 			{ name: 'taskgraph', line: "alias taskgraph='taskgraph'" }
 		];
 
-		// Self-healing: remove any stale hamster/ham aliases that point to taskgraph
-		const staleAliasPatterns = [
-			/alias hamster='taskgraph'\n?/g,
-			/alias ham='taskgraph'\n?/g
-		];
-
-		let cleanedContent = configContent;
-		for (const pattern of staleAliasPatterns) {
-			cleanedContent = cleanedContent.replace(pattern, '');
-		}
-		const removedStale = cleanedContent !== configContent;
-
-		// Clean up empty "TaskGraph aliases" comment blocks left behind
-		cleanedContent = cleanedContent.replace(
-			/\n# TaskGraph aliases added on [^\n]*\n(?=\s*\n|$)/g,
-			'\n'
-		);
-
-		if (removedStale) {
-			fs.writeFileSync(shellConfigFile, cleanedContent);
-			log(
-				'debug',
-				'Removed stale hamster/ham aliases pointing to taskgraph (these are managed by Hamster CLI)'
-			);
-		}
-
 		// Check which aliases are missing
-		const currentContent = removedStale ? cleanedContent : configContent;
 		const missingAliases = aliases.filter(
-			(alias) => !currentContent.includes(alias.line)
+			(alias) => !configContent.includes(alias.line)
 		);
 
 		if (missingAliases.length === 0) {
@@ -398,19 +368,13 @@ async function initializeProject(options = {}) {
 			};
 		}
 
-		// Default to local storage in non-interactive mode unless explicitly specified
-		const selectedStorage = options.storage || 'local';
-		const authCredentials = null; // No auth in non-interactive mode
-
 		await createProjectStructure(
 			true, // Always add aliases
 			initGit,
 			storeTasksInGit,
 			dryRun,
 			{ ...options, preferredLanguage: 'English' }, // Default to English in non-interactive mode
-			selectedRuleProfiles,
-			selectedStorage,
-			authCredentials
+			selectedRuleProfiles
 		);
 	} else {
 		// Interactive logic
@@ -424,131 +388,60 @@ async function initializeProject(options = {}) {
 			const taskgraphId = generateTaskGraphId();
 			log('debug', `Init started - taskgraph_id: ${taskgraphId}`);
 
-			// Prompt for storage selection first
-			let selectedStorage = await promptStorageSelection();
-
-			// Track storage_selected event
-			// TODO: Send to Segment telemetry when implemented
-			log(
-				'debug',
-				`Storage selected: ${selectedStorage} - taskgraph_id: ${taskgraphId}`
-			);
-
-			// If cloud storage selected, trigger OAuth flow
-			let authCredentials = null;
-			if (selectedStorage === 'cloud') {
-				try {
-					const authManager = AuthManager.getInstance();
-
-					// Check if already authenticated
-					const existingCredentials = await authManager.getAuthCredentials();
-					if (existingCredentials) {
-						log('success', 'Already authenticated with Hamster');
-						authCredentials = existingCredentials;
-					} else {
-						// Use shared browser auth with MFA support
-						// This is the SAME auth flow used by 'tm auth login' and 'tm parse-prd'
-						log('info', 'Starting authentication flow...');
-						console.log(theme.brand('\n🔐 Authentication Required\n'));
-						console.log(
-							theme.text(
-								'  Selecting cloud storage will open your browser for authentication.'
-							)
-						);
-						console.log(
-							theme.muted('  This enables sync across devices with Hamster.\n')
-						);
-
-						// Use shared auth utility - handles MFA automatically
-						authCredentials = await authenticateWithBrowserMFA(authManager);
-
-						// Track auth_completed event
-						log('debug', `Auth completed - taskgraph_id: ${taskgraphId}`);
-					}
-
-					// Ensure org is selected (required for all Hamster operations)
-					// This runs for both new auth AND existing auth
-					// Uses shared utility from @tm/cli
-					const orgResult = await ensureOrgSelected(authManager, {
-						promptMessage: 'Select an organization to continue:'
-					});
-					if (!orgResult.success) {
-						log('warn', orgResult.message || 'Organization selection required');
-					}
-				} catch (authError) {
-					log(
-						'error',
-						`Failed to authenticate: ${authError.message}. Falling back to local storage.`
-					);
-					// Fall back to local storage if auth fails
-					selectedStorage = 'local';
-				}
-			}
-
 			rl = readline.createInterface({
 				input: process.stdin,
 				output: process.stdout
 			});
 
-			// Git-related prompts only make sense for local storage
-			// If cloud storage is selected, tasks are stored in Hamster, not Git
 			let initGitPrompted = true; // Default to true
 			let storeGitPrompted = true; // Default to true
 
-			if (selectedStorage === 'local') {
-				// Prompt for Git initialization (skip if --git or --no-git flag was provided)
-				if (options.initGit !== undefined) {
-					initGitPrompted = options.initGit; // Use flag value if provided
-				} else {
-					const gitInitInput = await promptQuestion(
-						rl,
-						chalk.cyan('Initialize a Git repository in project root? (Y/n): '),
-						(answer) => {
-							const isYes = answer.trim().toLowerCase() !== 'n';
-							const icon = isYes ? chalk.green('✓') : chalk.red('✗');
-							return (
-								chalk.cyan('Initialize a Git repository in project root?') +
-								' ' +
-								icon +
-								' ' +
-								chalk.dim(isYes ? 'Yes' : 'No')
-							);
-						}
-					);
-					initGitPrompted = gitInitInput.trim().toLowerCase() !== 'n';
-				}
-
-				// Prompt for Git tasks storage (skip if --git-tasks or --no-git-tasks flag was provided)
-				if (options.storeTasksInGit !== undefined) {
-					storeGitPrompted = options.storeTasksInGit; // Use flag value if provided
-				} else {
-					const gitTasksInput = await promptQuestion(
-						rl,
-						chalk.cyan(
-							'Store tasks in Git (tasks.json and tasks/ directory)? (Y/n): '
-						),
-						(answer) => {
-							const isYes = answer.trim().toLowerCase() !== 'n';
-							const icon = isYes ? chalk.green('✓') : chalk.red('✗');
-							return (
-								chalk.cyan(
-									'Store tasks in Git (tasks.json and tasks/ directory)?'
-								) +
-								' ' +
-								icon +
-								' ' +
-								chalk.dim(isYes ? 'Yes' : 'No')
-							);
-						}
-					);
-					storeGitPrompted = gitTasksInput.trim().toLowerCase() !== 'n';
-				}
+			// Prompt for Git initialization (skip if --git or --no-git flag was provided)
+			if (options.initGit !== undefined) {
+				initGitPrompted = options.initGit; // Use flag value if provided
 			} else {
-				// Cloud storage: skip Git prompts, but initialize Git repo anyway
-				// (users may still want version control for their code)
-				initGitPrompted = true;
-				// Tasks are in cloud, so don't store them in Git
-				storeGitPrompted = false;
+				const gitInitInput = await promptQuestion(
+					rl,
+					chalk.cyan('Initialize a Git repository in project root? (Y/n): '),
+					(answer) => {
+						const isYes = answer.trim().toLowerCase() !== 'n';
+						const icon = isYes ? chalk.green('✓') : chalk.red('✗');
+						return (
+							chalk.cyan('Initialize a Git repository in project root?') +
+							' ' +
+							icon +
+							' ' +
+							chalk.dim(isYes ? 'Yes' : 'No')
+						);
+					}
+				);
+				initGitPrompted = gitInitInput.trim().toLowerCase() !== 'n';
+			}
+
+			// Prompt for Git tasks storage (skip if --git-tasks or --no-git-tasks flag was provided)
+			if (options.storeTasksInGit !== undefined) {
+				storeGitPrompted = options.storeTasksInGit; // Use flag value if provided
+			} else {
+				const gitTasksInput = await promptQuestion(
+					rl,
+					chalk.cyan(
+						'Store tasks in Git (tasks.json and tasks/ directory)? (Y/n): '
+					),
+					(answer) => {
+						const isYes = answer.trim().toLowerCase() !== 'n';
+						const icon = isYes ? chalk.green('✓') : chalk.red('✗');
+						return (
+							chalk.cyan(
+								'Store tasks in Git (tasks.json and tasks/ directory)?'
+							) +
+							' ' +
+							icon +
+							' ' +
+							chalk.dim(isYes ? 'Yes' : 'No')
+						);
+					}
+				);
+				storeGitPrompted = gitTasksInput.trim().toLowerCase() !== 'n';
 			}
 
 			// Prompt for AI IDE rules setup (only if not explicitly provided via --rules)
@@ -590,14 +483,6 @@ async function initializeProject(options = {}) {
 			console.log('\n' + chalk.bold('TaskGraph Project Settings:'));
 			console.log(chalk.dim('─'.repeat(50)));
 
-			// Storage
-			console.log(
-				'  ' + chalk.dim('Storage:'.padEnd(32)),
-				theme.text(
-					selectedStorage === 'cloud' ? 'Hamster Studio' : 'Local File Storage'
-				)
-			);
-
 			// AI IDE rules
 			const rulesIcon = shouldSetupRules ? chalk.green('✓') : chalk.dim('✗');
 			console.log(
@@ -611,22 +496,17 @@ async function initializeProject(options = {}) {
 				theme.text(preferredLanguage)
 			);
 
-			// Only show Git-related settings for local storage
-			if (selectedStorage === 'local') {
-				const gitIcon = initGitPrompted ? chalk.green('✓') : chalk.dim('✗');
-				console.log(
-					'  ' + chalk.dim('Initialize Git repository:'.padEnd(32)),
-					gitIcon + ' ' + chalk.dim(initGitPrompted ? 'Yes' : 'No')
-				);
+			const gitIcon = initGitPrompted ? chalk.green('✓') : chalk.dim('✗');
+			console.log(
+				'  ' + chalk.dim('Initialize Git repository:'.padEnd(32)),
+				gitIcon + ' ' + chalk.dim(initGitPrompted ? 'Yes' : 'No')
+			);
 
-				const gitTasksIcon = storeGitPrompted
-					? chalk.green('✓')
-					: chalk.dim('✗');
-				console.log(
-					'  ' + chalk.dim('Store tasks in Git:'.padEnd(32)),
-					gitTasksIcon + ' ' + chalk.dim(storeGitPrompted ? 'Yes' : 'No')
-				);
-			}
+			const gitTasksIcon = storeGitPrompted ? chalk.green('✓') : chalk.dim('✗');
+			console.log(
+				'  ' + chalk.dim('Store tasks in Git:'.padEnd(32)),
+				gitTasksIcon + ' ' + chalk.dim(storeGitPrompted ? 'Yes' : 'No')
+			);
 
 			console.log(chalk.dim('─'.repeat(50)));
 
@@ -673,9 +553,7 @@ async function initializeProject(options = {}) {
 				storeGitPrompted,
 				dryRun,
 				{ ...options, shouldSetupRules, preferredLanguage }, // Pass shouldSetupRules and preferredLanguage through options
-				shouldSetupRules ? RULE_PROFILES : selectedRuleProfiles,
-				selectedStorage,
-				authCredentials
+				shouldSetupRules ? RULE_PROFILES : selectedRuleProfiles
 			);
 			rl.close();
 		} catch (error) {
@@ -715,12 +593,10 @@ function generateTaskGraphId() {
 }
 
 /**
- * Update config.json with storage configuration
+ * Update config.json with the local file storage configuration
  * @param {string} configPath - Path to config.json file
- * @param {string} selectedStorage - Storage type ('cloud' or 'local')
- * @param {object|null} authCredentials - Auth credentials if cloud storage selected
  */
-function updateStorageConfig(configPath, selectedStorage, authCredentials) {
+function updateStorageConfig(configPath) {
 	try {
 		if (!fs.existsSync(configPath)) {
 			log('warn', 'Config file does not exist, skipping storage configuration');
@@ -735,117 +611,18 @@ function updateStorageConfig(configPath, selectedStorage, authCredentials) {
 			config.storage = {};
 		}
 
-		if (selectedStorage === 'cloud') {
-			// Configure for API/cloud storage
-			config.storage.type = 'api';
-			config.storage.apiEndpoint =
-				process.env.TM_BASE_DOMAIN ||
-				process.env.TM_PUBLIC_BASE_DOMAIN ||
-				'https://tryhamster.com/api';
+		config.storage.type = 'file';
 
-			// Set operating mode to 'team' for cloud storage (Hamster)
-			// This determines which slash commands and rules are installed
-			config.storage.operatingMode = 'team';
+		// 'solo' selects the standalone slash commands and rules
+		config.storage.operatingMode = 'solo';
 
-			// Note: Access token is stored in ~/.taskgraph/auth.json by AuthManager
-			// We don't store it in config.json for security reasons
-			log('debug', 'Connected to Hamster Studio');
-		} else {
-			// Configure for local file storage
-			config.storage.type = 'file';
-
-			// Set operating mode to 'solo' for local storage (TaskGraph standalone)
-			// This determines which slash commands and rules are installed
-			config.storage.operatingMode = 'solo';
-
-			log('debug', 'Configured storage for local file storage');
-		}
+		log('debug', 'Configured storage for local file storage');
 
 		// Write updated config back to file
 		fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 		log('debug', 'Storage configuration updated in config.json');
 	} catch (error) {
 		log('error', `Failed to update storage configuration: ${error.message}`);
-	}
-}
-
-/**
- * Prompt user to select storage backend (Hamster cloud or local)
- * @returns {Promise<'cloud'|'local'>} Selected storage type
- */
-async function promptStorageSelection() {
-	if (isSilentMode()) {
-		// Default to local in silent mode
-		return 'local';
-	}
-
-	try {
-		// Display header
-		console.log(chalk.bold.cyan('You need a plan before you execute.\n'));
-
-		const { storageType } = await inquirer.prompt([
-			{
-				type: 'list',
-				name: 'storageType',
-				message: theme.text('How do you want to build it?\n'),
-				choices: [
-					{
-						name: [
-							chalk.bold('Solo (TaskGraph)'),
-							'',
-							theme.text(
-								'   • Parse your own PRDs into structured task lists and build with any IDE or background agents'
-							),
-							theme.text(
-								'   • Agents execute tasks with precision, no scope creep, no going off-track'
-							),
-							theme.text(
-								'   • Tasks live in a local JSON file, everything stays in your repo'
-							),
-							theme.text(
-								'   • Upgrade to Hamster to bring the TaskGraph experience to your team'
-							),
-							''
-						].join('\n'),
-						value: 'local',
-						short: 'Solo (TaskGraph)'
-					},
-
-					{
-						name: [
-							chalk.bold('Together (Hamster)'),
-							'',
-							theme.text(
-								'   • Write a brief with your team. Hamster refines it into a plan.'
-							),
-							theme.text(
-								'   • Your team drafts, refines, and aligns on the same page before executing'
-							),
-							theme.text(
-								'   • One brief, one plan, one source of truth for execution'
-							),
-							theme.text(
-								'   • Access tasks on TaskGraph and execute with any AI agent'
-							),
-							''
-						].join('\n'),
-						value: 'cloud',
-						short: 'Together (Hamster)'
-					}
-				],
-				default: 'local',
-				pageSize: 20 // Increase page size to show both options without scrolling
-			}
-		]);
-
-		return storageType;
-	} catch (error) {
-		// Handle Ctrl+C or other interruptions
-		if (error.isTtyError || error.name === 'ExitPromptError') {
-			log('warn', 'Storage selection cancelled, defaulting to local storage');
-			return 'local';
-		}
-		throw error;
 	}
 }
 
@@ -856,9 +633,7 @@ async function createProjectStructure(
 	storeTasksInGit,
 	dryRun,
 	options,
-	selectedRuleProfiles = RULE_PROFILES,
-	selectedStorage = 'local',
-	authCredentials = null
+	selectedRuleProfiles = RULE_PROFILES
 ) {
 	const targetDir = process.cwd();
 	log('debug', `Initializing project in ${targetDir}`);
@@ -879,10 +654,8 @@ async function createProjectStructure(
 	};
 
 	// Helper function to create rule profiles
-	// Derives operating mode from storage selection:
-	// - 'cloud' (Hamster) -> 'team' mode
-	// - 'local' (TaskGraph standalone) -> 'solo' mode
-	const operatingMode = selectedStorage === 'cloud' ? 'team' : 'solo';
+	// 'solo' installs the standalone slash commands and rules
+	const operatingMode = 'solo';
 
 	function _processSingleProfile(profileName) {
 		const profile = getRulesProfile(profileName);
@@ -918,7 +691,7 @@ async function createProjectStructure(
 	}
 
 	// Update config.json with storage configuration
-	updateStorageConfig(configPath, selectedStorage, authCredentials);
+	updateStorageConfig(configPath);
 
 	// Copy .gitignore with GitTasks preference
 	try {
@@ -1024,14 +797,7 @@ async function createProjectStructure(
 	// =====================================
 
 	// === Add Model Configuration Step ===
-	// Only configure models for local storage (need API keys for direct AI usage)
-	// Cloud storage (Hamster) manages AI models on the backend - no API keys or extra costs needed
-	if (
-		!isSilentMode() &&
-		!dryRun &&
-		!options?.yes &&
-		selectedStorage === 'local'
-	) {
+	if (!isSilentMode() && !dryRun && !options?.yes) {
 		console.log(
 			boxen(chalk.cyan('Configuring AI Models...'), {
 				padding: 0.5,
@@ -1055,23 +821,6 @@ async function createProjectStructure(
 			log('error', 'Failed to configure AI models:', error.message);
 			log('warn', 'You may need to run "taskgraph models --setup" manually.');
 		}
-	} else if (selectedStorage === 'cloud' && !dryRun) {
-		console.log(
-			boxen(
-				chalk.green.bold('✓ AI Models Managed by Hamster - go ham!\n\n') +
-					theme.text('Hamster handles all AI model configuration for you.\n') +
-					chalk.dim('• Optimized model selection for your tasks\n') +
-					chalk.dim('• No API keys required\n') +
-					chalk.dim('• No extra costs'),
-				{
-					padding: 1,
-					margin: { top: 1, bottom: 0.5 },
-					borderStyle: 'round',
-					borderColor: 'cyan',
-					width: BOX_WIDTH
-				}
-			)
-		);
 	} else if (isSilentMode() && !dryRun) {
 		log('info', 'Skipping interactive model setup in silent (MCP) mode.');
 		log(
@@ -1102,87 +851,25 @@ async function createProjectStructure(
 
 	// Display success message
 	if (!isSilentMode()) {
-		// Show elegant welcome message for Hamster, regular success for local
-		if (selectedStorage === 'cloud') {
-			// High-fidelity hamster pixel art (displayed without box)
-			const hamsterArt = readAsset('hamster-art.txt', 'utf8');
-			console.log('\n' + chalk.cyan(hamsterArt));
-			console.log('');
-
-			// Box with connection message and next steps
-			const welcomeMessage = [
-				chalk.green.bold('✓ Connected to Hamster Studio'),
-				'',
-				theme.text("Your team's workspace is ready to go ham!\n"),
-				chalk.dim('Draft together. Align once. Build with agents.'),
-				'',
-				chalk.cyan('How to orchestrate with TaskGraph:'),
-				theme.text('  • Create your first brief at: ') +
-					chalk.underline.cyan('https://tryhamster.com'),
-				theme.text('  • Connect your brief using ') +
-					chalk.bold('tm context <brief-url>') +
-					theme.text(' to access tasks in TaskGraph'),
-				theme.text('  • Orchestrate and implement tasks using ') +
-					chalk.bold('tm next') +
-					theme.text(' to kickoff any AI agent'),
-				theme.text('  • Run ') +
-					chalk.bold('tm help') +
-					theme.text(' to explore other available commands')
-			].join('\n');
-
-			console.log(
-				boxen(welcomeMessage, {
+		console.log(
+			boxen(
+				`${brandGradient.multiline(
+					figlet.textSync('Success!', { font: 'Standard' })
+				)}\n${chalk.green('Project initialized successfully!')}`,
+				{
 					padding: 1,
-					margin: { top: 1, bottom: 0, left: 0, right: 0 },
-					borderStyle: 'round',
-					borderColor: 'cyan',
+					margin: 1,
+					borderStyle: 'double',
+					borderColor: 'green',
 					width: BOX_WIDTH
-				})
-			);
-		} else {
-			console.log(
-				boxen(
-					`${brandGradient.multiline(
-						figlet.textSync('Success!', { font: 'Standard' })
-					)}\n${chalk.green('Project initialized successfully!')}`,
-					{
-						padding: 1,
-						margin: 1,
-						borderStyle: 'double',
-						borderColor: 'green',
-						width: BOX_WIDTH
-					}
-				)
-			);
-		}
+				}
+			)
+		);
 	}
 
 	// Display next steps in a nice box
 	if (!isSilentMode()) {
-		// Different Getting Started for Hamster vs Local
-		let gettingStartedMessage;
-
-		if (selectedStorage === 'cloud') {
-			// Hamster-specific workflow
-			gettingStartedMessage = `${chalk.cyan.bold("Here's how to execute your Hamster briefs with TaskGraph")}\n\n${theme.text('1. ')}${chalk.yellow(
-				'Create your first brief at'
-			)} ${chalk.cyan.underline('https://tryhamster.com')}\n${theme.text('   └─ ')}${chalk.dim('Hamster will write your brief and generate the full task plan')}\n${theme.text('2. ')}${chalk.yellow(
-				'Set up Claude Code integration'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('taskgraph init --rules claude')}${chalk.dim(' - Adds CLAUDE.md import and MCP config')}\n${theme.text('3. ')}${chalk.yellow(
-				'Connect your brief to TaskGraph'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm context <brief-url> OR tm briefs')}\n${theme.text('4. ')}${chalk.yellow(
-				'View your tasks from the brief'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm list')}${chalk.dim(' or ')}${chalk.cyan('tm list all')}${chalk.dim(' (with subtasks)')}\n${theme.text('5. ')}${chalk.yellow(
-				'Work on tasks with any AI coding assistant or background agent'
-			)}\n${theme.text('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm next')}${chalk.dim(' - Find the next task to work on')}\n${theme.text('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm show <id>')}${chalk.dim(' - View task details')}\n${theme.text('   ├─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm status <id> in-progress')}${chalk.dim(' - Mark task started')}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm status <id> done')}${chalk.dim(' - Mark task complete')}\n${theme.text('6. ')}${chalk.yellow(
-				'Add notes or updates to tasks'
-			)}\n${theme.text('   └─ ')}${chalk.dim('CLI: ')}${chalk.cyan('tm update-task <id> <notes>')}\n${theme.text('7. ')}${chalk.green.bold('Ship it!')}\n\n${chalk.dim(
-				'* Run '
-			)}${chalk.cyan('tm help')}${chalk.dim(' to see all available commands')}`;
-		} else {
-			// Local-specific getting started
-			gettingStartedMessage = getLocalGettingStartedMessage();
-		}
+		const gettingStartedMessage = getLocalGettingStartedMessage();
 
 		console.log(
 			boxen(chalk.yellow.bold('Workflow\n') + '\n' + gettingStartedMessage, {

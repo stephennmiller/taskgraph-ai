@@ -4,7 +4,6 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 
-import { tryUpdateViaRemote } from '@tm/bridge';
 import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
@@ -93,34 +92,7 @@ async function updateSubtaskById(
 			throw new Error('Could not determine project root directory');
 		}
 
-		// --- BRIDGE: Try remote update first (API storage) ---
-		// In API storage, subtask IDs like "HAM-2611" are just regular task IDs
-		// So update-subtask and update-task work identically
-		const remoteResult = await tryUpdateViaRemote({
-			taskId: subtaskId,
-			prompt,
-			projectRoot,
-			tag,
-			appendMode: true, // Subtask updates are always append mode
-			useResearch,
-			metadata,
-			isMCP,
-			outputFormat,
-			report
-		});
-
-		// If remote handled it, return the result
-		if (remoteResult) {
-			return {
-				updatedSubtask: { id: subtaskId },
-				telemetryData: remoteResult.telemetryData,
-				tagInfo: remoteResult.tagInfo
-			};
-		}
-		// Otherwise fall through to file-based logic below
-		// --- End BRIDGE ---
-
-		// For file storage, validate the subtask ID format (must contain a dot)
+		// Validate the subtask ID format (must contain a dot)
 		if (!subtaskId.includes('.')) {
 			throw new Error(
 				`Invalid subtask ID format: ${subtaskId}. In solo mode, subtask ID must be in format "parentId.subtaskId" (e.g., "5.2").`
