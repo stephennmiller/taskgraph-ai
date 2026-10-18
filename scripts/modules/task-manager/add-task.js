@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
+import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import {
 	DEFAULT_TASK_PRIORITY,
 	TASK_PRIORITY_OPTIONS,
@@ -553,7 +553,8 @@ async function addTask(
 					chalk.cyan.bold('Title'),
 					chalk.cyan.bold('Description')
 				],
-				colWidths: [5, 30, 50] // Adjust widths as needed
+				colWidths: [5, 30, 50], // Adjust widths as needed
+				style: { border: TABLE_BORDER }
 			});
 
 			table.push([
@@ -571,7 +572,7 @@ async function addTask(
 					case 'high':
 						return 'red';
 					case 'low':
-						return 'gray';
+						return 'dim';
 					default:
 						return 'yellow';
 				}

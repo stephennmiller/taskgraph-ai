@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 
 import { tryUpdateViaRemote } from '@tm/bridge';
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
+import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
@@ -235,7 +235,8 @@ async function updateSubtaskById(
 					chalk.cyan.bold('Title'),
 					chalk.cyan.bold('Status')
 				],
-				colWidths: [10, 55, 10]
+				colWidths: [10, 55, 10],
+				style: { border: TABLE_BORDER }
 			});
 			table.push([
 				subtaskId,

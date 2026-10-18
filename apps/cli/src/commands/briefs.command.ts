@@ -19,7 +19,7 @@ import {
 } from '../utils/brief-selection.js';
 import { ensureOrgSelected } from '../utils/org-selection.js';
 import * as ui from '../utils/ui.js';
-import { theme } from '../ui/theme.js';
+import { TABLE_BORDER, theme } from '../ui/theme.js';
 
 /**
  * Result type from briefs command
@@ -279,7 +279,8 @@ Note: Briefs must be created through the Hamster Studio web interface.
 				chalk.cyan.bold('Completed')
 			],
 			colWidths: colWidths,
-			wordWrap: true
+			wordWrap: true,
+			style: { border: TABLE_BORDER }
 		});
 
 		tags.forEach((tag) => {

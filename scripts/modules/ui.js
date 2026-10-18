@@ -35,7 +35,7 @@ import {
 } from './utils.js';
 
 // TaskGraph theme from @tm/cli, re-exported for the legacy task-manager modules
-const { theme, BORDER_COLOR } = ui;
+const { theme, BORDER_COLOR, TABLE_BORDER } = ui;
 
 // Brand gradient (used by the init success message)
 const brandGradient = gradient(ui.BANNER_GRADIENT);
@@ -2162,7 +2162,7 @@ function displayModelConfiguration(configData, allAvailableModels = []) {
 			(h) => chalk.cyan.bold(h)
 		),
 		colWidths: [10, 14, 30, 18, 20 /*, 28 */], // Adjusted widths
-		style: { head: ['cyan', 'bold'] }
+		style: { head: ['cyan', 'bold'], border: TABLE_BORDER }
 	});
 
 	activeTable.push([
@@ -2227,7 +2227,7 @@ function displayAvailableModels(availableModels) {
 			chalk.cyan.bold(h)
 		),
 		colWidths: [15, 40, 18, 25],
-		style: { head: ['cyan', 'bold'] }
+		style: { head: ['cyan', 'bold'], border: TABLE_BORDER }
 	});
 
 	availableModels.forEach((model) => {

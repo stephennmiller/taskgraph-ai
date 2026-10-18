@@ -70,7 +70,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 	const releaseUrl = `https://github.com/stephennmiller/taskgraph-ai/releases/tag/taskgraph-ai%40${cleanVersion}`;
 	const versionLink = version
 		? createLink(`v${cleanVersion}`, releaseUrl, {
-				color: 'gray',
+				color: 'dim',
 				textOnlyFallback: true
 			})
 		: '';

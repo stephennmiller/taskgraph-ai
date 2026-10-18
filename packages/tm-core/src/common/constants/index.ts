@@ -116,7 +116,7 @@ export const STATUS_COLORS: Record<TaskStatus, string> = {
 	pending: 'yellow',
 	'in-progress': 'blue',
 	done: 'green',
-	deferred: 'gray',
+	deferred: 'dim',
 	cancelled: 'red',
 	blocked: 'magenta',
 	review: 'cyan',
