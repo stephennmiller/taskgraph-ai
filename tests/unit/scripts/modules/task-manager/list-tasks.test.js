@@ -881,4 +881,40 @@ describe('listTasks', () => {
 			consoleSpy.mockRestore();
 		});
 	});
+
+	describe('Next task box suggestions', () => {
+		const renderNextTaskBox = async (subtaskStatus) => {
+			const data = JSON.parse(JSON.stringify(sampleTasks));
+			data.tasks[2].subtasks[1].status = subtaskStatus;
+			readJSON.mockReturnValue(data);
+			mockTasksList.mockResolvedValue({ tasks: data.tasks });
+
+			await listTasks('tasks/tasks.json', null, null, false, 'text', {
+				tag: 'master'
+			});
+
+			return stripAnsiCodes(
+				console.log.mock.calls.map((call) => call.join(' ')).join('\n')
+			);
+		};
+
+		test('suggests starting a pending next task', async () => {
+			const output = await renderNextTaskBox('pending');
+
+			expect(output).toContain('Next task: #3.2');
+			expect(output).toContain(
+				'taskgraph set-status --id=3.2 --status=in-progress'
+			);
+		});
+
+		test('does not suggest starting a next task that is already in progress', async () => {
+			const output = await renderNextTaskBox('in-progress');
+
+			expect(output).toContain('Next task: #3.2');
+			expect(output).not.toContain(
+				'taskgraph set-status --id=3.2 --status=in-progress'
+			);
+			expect(output).toContain('taskgraph set-status --id=3.2 --status=done');
+		});
+	});
 });
