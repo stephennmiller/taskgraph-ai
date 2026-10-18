@@ -21,13 +21,6 @@ describe('Task ID Validation', () => {
 			expect(TASK_ID_PATTERN.test('999')).toBe(true);
 		});
 
-		it('matches alphanumeric display IDs', () => {
-			expect(TASK_ID_PATTERN.test('HAM-123')).toBe(true);
-			expect(TASK_ID_PATTERN.test('PROJ-456')).toBe(true);
-			expect(TASK_ID_PATTERN.test('TAS-1')).toBe(true);
-			expect(TASK_ID_PATTERN.test('abc-999')).toBe(true);
-		});
-
 		it('matches subtask IDs', () => {
 			expect(TASK_ID_PATTERN.test('1.2')).toBe(true);
 			expect(TASK_ID_PATTERN.test('15.3')).toBe(true);
@@ -38,9 +31,12 @@ describe('Task ID Validation', () => {
 			expect(TASK_ID_PATTERN.test('15.3.1')).toBe(true);
 		});
 
-		it('rejects alphanumeric subtasks (not supported)', () => {
+		it('rejects prefixed IDs', () => {
+			expect(TASK_ID_PATTERN.test('HAM-123')).toBe(false);
+			expect(TASK_ID_PATTERN.test('PROJ-456')).toBe(false);
+			expect(TASK_ID_PATTERN.test('abc-999')).toBe(false);
+			expect(TASK_ID_PATTERN.test('ham1')).toBe(false);
 			expect(TASK_ID_PATTERN.test('HAM-123.2')).toBe(false);
-			expect(TASK_ID_PATTERN.test('PROJ-456.1.2')).toBe(false);
 		});
 
 		it('rejects invalid formats', () => {
@@ -59,14 +55,13 @@ describe('Task ID Validation', () => {
 			expect(isValidTaskIdFormat('1')).toBe(true);
 			expect(isValidTaskIdFormat('1.2')).toBe(true);
 			expect(isValidTaskIdFormat('1.2.3')).toBe(true);
-			expect(isValidTaskIdFormat('HAM-123')).toBe(true);
 		});
 
 		it('returns false for invalid IDs', () => {
 			expect(isValidTaskIdFormat('')).toBe(false);
 			expect(isValidTaskIdFormat('abc')).toBe(false);
 			expect(isValidTaskIdFormat('1.a')).toBe(false);
-			expect(isValidTaskIdFormat('HAM-123.2')).toBe(false);
+			expect(isValidTaskIdFormat('HAM-123')).toBe(false);
 		});
 	});
 
@@ -74,44 +69,40 @@ describe('Task ID Validation', () => {
 		it('parses valid single IDs', () => {
 			expect(taskIdSchema.parse('1')).toBe('1');
 			expect(taskIdSchema.parse('15.2')).toBe('15.2');
-			expect(taskIdSchema.parse('HAM-123')).toBe('HAM-123');
 		});
 
 		it('throws on invalid IDs', () => {
 			expect(() => taskIdSchema.parse('')).toThrow();
 			expect(() => taskIdSchema.parse('abc')).toThrow();
-			expect(() => taskIdSchema.parse('HAM-123.2')).toThrow();
+			expect(() => taskIdSchema.parse('HAM-123')).toThrow();
 		});
 	});
 
 	describe('taskIdsSchema', () => {
 		it('parses single ID', () => {
 			expect(taskIdsSchema.parse('1')).toBe('1');
-			expect(taskIdsSchema.parse('HAM-123')).toBe('HAM-123');
 		});
 
 		it('parses comma-separated IDs', () => {
 			expect(taskIdsSchema.parse('1,2,3')).toBe('1,2,3');
 			expect(taskIdsSchema.parse('1.2, 3.4')).toBe('1.2, 3.4');
-			expect(taskIdsSchema.parse('HAM-123, PROJ-456')).toBe('HAM-123, PROJ-456');
 		});
 
 		it('throws on invalid IDs', () => {
 			expect(() => taskIdsSchema.parse('abc')).toThrow();
 			expect(() => taskIdsSchema.parse('1,abc,3')).toThrow();
-			expect(() => taskIdsSchema.parse('HAM-123.2')).toThrow();
+			expect(() => taskIdsSchema.parse('1,HAM-123')).toThrow();
 		});
 	});
 
 	describe('parseTaskIds', () => {
 		it('parses single ID', () => {
 			expect(parseTaskIds('1')).toEqual(['1']);
-			expect(parseTaskIds('HAM-123')).toEqual(['HAM-123']);
 		});
 
 		it('parses comma-separated IDs', () => {
 			expect(parseTaskIds('1, 2, 3')).toEqual(['1', '2', '3']);
-			expect(parseTaskIds('HAM-123, PROJ-456')).toEqual(['HAM-123', 'PROJ-456']);
+			expect(parseTaskIds('1.2,3.4')).toEqual(['1.2', '3.4']);
 		});
 
 		it('trims whitespace', () => {
@@ -124,7 +115,7 @@ describe('Task ID Validation', () => {
 
 		it('throws on invalid IDs', () => {
 			expect(() => parseTaskIds('abc')).toThrow(/Invalid task ID format/);
-			expect(() => parseTaskIds('HAM-123.2')).toThrow(/Invalid task ID format/);
+			expect(() => parseTaskIds('HAM-123')).toThrow(/Invalid task ID format/);
 		});
 
 		it('throws on empty input', () => {
@@ -141,12 +132,11 @@ describe('Task ID Validation', () => {
 		it('returns same ID for main tasks', () => {
 			expect(extractParentId('1')).toBe('1');
 			expect(extractParentId('15')).toBe('15');
-			expect(extractParentId('HAM-123')).toBe('HAM-123');
 		});
 	});
 
 	describe('isSubtaskId', () => {
-		it('returns true for numeric subtask IDs (local storage)', () => {
+		it('returns true for subtask IDs', () => {
 			expect(isSubtaskId('1.2')).toBe(true);
 			expect(isSubtaskId('1.2.3')).toBe(true);
 		});
@@ -154,12 +144,6 @@ describe('Task ID Validation', () => {
 		it('returns false for main task IDs', () => {
 			expect(isSubtaskId('1')).toBe(false);
 			expect(isSubtaskId('15')).toBe(false);
-		});
-
-		it('returns false for alphanumeric IDs (remote subtasks use separate IDs)', () => {
-			// In remote mode, subtasks have their own alphanumeric IDs (HAM-2, HAM-3)
-			// not dot notation, so HAM-123 is never a "subtask ID" in the dot-notation sense
-			expect(isSubtaskId('HAM-123')).toBe(false);
 		});
 	});
 });

@@ -442,26 +442,21 @@ function registerCommands(programInstance) {
 					process.exit(1);
 				}
 
-				// Parse the task ID and validate it's a number or a string like ham-123 or tas-456
-				// Accept valid task IDs:
-				// - positive integers (e.g. 1,2,3)
-				// - strings like ham-123, ham-1, tas-456, etc
+				// Validate the task ID is a positive integer (e.g. 1,2,3)
 				// Disallow decimals and invalid formats
-				const validId =
-					/^\d+$/.test(taskId) || // plain positive integer
-					/^[a-z]+-\d+$/i.test(taskId); // label-number format (e.g., ham-123)
+				const validId = /^\d+$/.test(taskId);
 
 				if (!validId) {
 					console.error(
 						chalk.red(
-							`Error: Invalid task ID: ${taskId}. Task ID must be a positive integer or in the form "ham-123".`
+							`Error: Invalid task ID: ${taskId}. Task ID must be a positive integer.`
 						)
 					);
 					console.log(
 						chalk.yellow(
 							'Usage examples:\n' +
 								'  tm update-task 1 Added implementation details\n' +
-								'  tm update-task TAS-123 Fixed the auth bug'
+								'  tm update-task 7 Fixed the auth bug'
 						)
 					);
 					process.exit(1);
@@ -609,8 +604,7 @@ function registerCommands(programInstance) {
 				}
 
 				// Get subtask ID - validation happens in the core function
-				// In API storage, subtask IDs like "HAM-2611" are valid
-				// In file storage, subtask IDs must be in format "parentId.subtaskId"
+				// Subtask IDs must be in format "parentId.subtaskId"
 				const subtaskId = options.id;
 
 				if (!options.prompt) {

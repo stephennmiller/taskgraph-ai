@@ -4,7 +4,6 @@
  */
 
 // Export ID generation utilities
-// Note: normalizeDisplayId is now exported from common/schemas/task-id.schema.ts
 export {
 	generateTaskId as generateId, // Alias for backward compatibility
 	generateTaskId,
