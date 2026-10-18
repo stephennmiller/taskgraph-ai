@@ -7,7 +7,6 @@ import fs from 'fs';
 import readline from 'readline';
 // Import brand banner from @tm/cli
 import { ui } from '@tm/cli';
-import { AuthManager } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
@@ -71,59 +70,19 @@ function displayTaggedTasksFYI(data) {
  * @param {Object} options - Display options
  * @param {boolean} [options.skipIfMaster=false] - Don't show indicator if tag is 'master'
  * @param {boolean} [options.dim=false] - Use dimmed styling
- * @param {'api'|'file'} [options.storageType] - Storage type (auto-detected if not provided)
- * @param {Object} [options.briefInfo] - Brief info for API storage (auto-detected if not provided)
- * @param {string} [options.briefInfo.briefId] - Brief ID
- * @param {string} [options.briefInfo.briefName] - Brief name
  */
 async function displayCurrentTagIndicator(tag, options = {}) {
 	if (isSilentMode()) return;
 
-	let { skipIfMaster = false, dim = false, storageType, briefInfo } = options;
+	const { skipIfMaster = false, dim = false } = options;
 
 	// Skip display for master tag only if explicitly requested
 	if (skipIfMaster && tag === 'master') return;
 
-	// Auto-detect storage type and brief info if not provided
-	if (!storageType || !briefInfo) {
-		try {
-			const authManager = AuthManager.getInstance();
-			const context = authManager.getContext();
-
-			if (context && context.briefId) {
-				storageType = 'api';
-				briefInfo = {
-					briefId: context.briefId,
-					briefName: context.briefName || tag
-				};
-			} else {
-				storageType = 'file';
-			}
-		} catch (error) {
-			// Fallback to file storage if AuthManager is not available
-			log('debug', `Failed to detect storage type: ${error.message}`);
-			storageType = 'file';
-		}
-	}
-
-	// Validate storageType - default to 'file' for unknown values
-	if (storageType !== 'api' && storageType !== 'file') {
-		storageType = 'file';
-	}
-
-	// Display different indicator based on storage type
 	// Using ASCII characters for consistent cross-platform display
-	let displayText;
-
-	if (storageType === 'api' && briefInfo) {
-		// API storage: Show brief information (matching new CLI pattern)
-		displayText = `[brief] ${chalk.cyan(briefInfo.briefName)} ${theme.muted(`(${briefInfo.briefId})`)}`;
-	} else {
-		// File storage: Show tag information
-		displayText = dim
-			? theme.muted(`[tag] ${tag}`)
-			: chalk.dim('[tag] ') + chalk.cyan(tag);
-	}
+	const displayText = dim
+		? theme.muted(`[tag] ${tag}`)
+		: chalk.dim('[tag] ') + chalk.cyan(tag);
 
 	console.log(displayText);
 }

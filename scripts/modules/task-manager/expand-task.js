@@ -11,7 +11,6 @@ import {
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 
-import { tryExpandViaRemote } from '@tm/bridge';
 import { createBridgeLogger } from '../bridge-utils.js';
 import {
 	getDebugFlag,
@@ -71,27 +70,6 @@ async function expandTask(
 	}
 
 	try {
-		// --- BRIDGE: Try remote expansion first (API storage) ---
-		const remoteResult = await tryExpandViaRemote({
-			taskId,
-			numSubtasks,
-			useResearch,
-			additionalContext,
-			force,
-			projectRoot,
-			tag,
-			isMCP,
-			outputFormat,
-			report
-		});
-
-		// If remote handled it, return the result
-		if (remoteResult) {
-			return remoteResult;
-		}
-		// Otherwise fall through to file-based logic below
-		// --- End BRIDGE ---
-
 		// --- Task Loading/Filtering (Unchanged) ---
 		logger.info(`Reading tasks from ${tasksPath}`);
 		const data = readJSON(tasksPath, projectRoot, tag);

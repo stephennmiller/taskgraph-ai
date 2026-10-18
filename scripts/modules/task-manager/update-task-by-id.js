@@ -18,7 +18,6 @@ import {
 	stopLoadingIndicator
 } from '../ui.js';
 
-import { tryUpdateViaRemote } from '@tm/bridge';
 import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
@@ -89,28 +88,7 @@ async function updateTaskById(
 			throw new Error('Could not determine project root directory');
 		}
 
-		// --- BRIDGE: Try remote update first (API storage) ---
-		const remoteResult = await tryUpdateViaRemote({
-			taskId,
-			prompt,
-			projectRoot,
-			tag,
-			appendMode,
-			useResearch,
-			metadata,
-			isMCP,
-			outputFormat,
-			report
-		});
-
-		// If remote handled it, return the result
-		if (remoteResult) {
-			return remoteResult;
-		}
-		// Otherwise fall through to file-based logic below
-		// --- End BRIDGE ---
-
-		// For file storage, ensure the tasks file exists
+		// Ensure the tasks file exists
 		if (!fs.existsSync(tasksPath))
 			throw new Error(`Tasks file not found: ${tasksPath}`);
 		// --- End Input Validations ---

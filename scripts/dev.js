@@ -11,8 +11,7 @@
 // Must stay first: disables color before chalk loads when NO_COLOR is set
 import './modules/no-color.js';
 import { join } from 'node:path';
-import { AuthManager, findProjectRoot } from '@tm/core';
-import { setSuppressConfigWarnings } from './modules/config-manager.js';
+import { findProjectRoot } from '@tm/core';
 
 import dotenv from 'dotenv';
 import { initializeSentry } from '../src/telemetry/sentry.js';
@@ -37,19 +36,6 @@ process.env.TASKGRAPH_ORIGINAL_CWD = originalCwd;
 // Add at the very beginning of the file
 if (process.env.DEBUG === '1') {
 	console.error('DEBUG - dev.js received args:', process.argv.slice(2));
-}
-
-// Suppress config warnings if user is authenticated (API mode)
-// When authenticated, we don't need local config - everything is remote
-try {
-	const authManager = AuthManager.getInstance();
-	const hasValidSession = await authManager.hasValidSession();
-	if (hasValidSession) {
-		setSuppressConfigWarnings(true);
-	}
-} catch {
-	setSuppressConfigWarnings(false);
-	// Auth check failed, continue without suppressing
 }
 
 // Use dynamic import to ensure dotenv.config() runs before module-level code executes

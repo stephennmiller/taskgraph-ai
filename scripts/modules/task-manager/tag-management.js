@@ -5,11 +5,6 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import inquirer from 'inquirer';
 
-import {
-	tryAddTagViaRemote,
-	tryListTagsViaRemote,
-	tryUseTagViaRemote
-} from '@tm/bridge';
 import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
 import { filterReadyTasks, isTaskComplete } from '@tm/core';
 import { displayBanner, getStatusWithColor } from '../ui.js';
@@ -59,28 +54,6 @@ async function createTag(
 		success: (...args) => log('success', ...args)
 	};
 
-	// Check if API storage should handle this via remote
-	const remoteResult = await tryAddTagViaRemote({
-		tagName,
-		projectRoot: projectRoot || findProjectRoot(),
-		isMCP: !!mcpLog,
-		outputFormat,
-		report: (level, ...args) => logFn[level](...args)
-	});
-
-	// If remote handled it, return the result
-	if (remoteResult) {
-		if (!remoteResult.success) {
-			throw new Error(remoteResult.message || 'Remote tag creation failed');
-		}
-		if (outputFormat === 'json') {
-			return remoteResult;
-		}
-		// For text output, the bridge already displayed the message
-		return remoteResult;
-	}
-
-	// Otherwise, continue with file-based logic below
 	try {
 		// Validate tag name
 		if (!tagName || typeof tagName !== 'string') {
@@ -565,32 +538,6 @@ async function tags(
 	try {
 		logFn.info('Listing available tags');
 
-		// Try API storage first via bridge
-		const bridgeResult = await tryListTagsViaRemote({
-			projectRoot,
-			showMetadata,
-			isMCP: !!mcpLog,
-			outputFormat,
-			report: (level, ...args) => {
-				if (logFn[level]) {
-					logFn[level](...args);
-				} else {
-					logFn.info(...args);
-				}
-			}
-		});
-
-		// If bridge handled it (API storage), return the result
-		if (bridgeResult) {
-			logFn.success(`Found ${bridgeResult.totalTags} tags via API storage`);
-			return {
-				tags: bridgeResult.tags,
-				currentTag: bridgeResult.currentTag,
-				totalTags: bridgeResult.totalTags
-			};
-		}
-
-		// Fall through to file storage logic
 		logFn.info('Using file storage for tags');
 
 		// Read current tasks data
@@ -818,30 +765,6 @@ async function useTag(
 
 		logFn.info(`Switching to tag: ${tagName}`);
 
-		// Try API storage first via bridge
-		const bridgeResult = await tryUseTagViaRemote({
-			tagName,
-			projectRoot,
-			isMCP: !!mcpLog,
-			outputFormat,
-			report: (level, ...args) => {
-				if (logFn[level]) {
-					logFn[level](...args);
-				} else {
-					logFn.info(...args);
-				}
-			}
-		});
-
-		// If bridge handled it (API storage), return the result
-		if (bridgeResult) {
-			logFn.success(
-				`Successfully switched to tag "${tagName}" via API storage`
-			);
-			return bridgeResult;
-		}
-
-		// Fall through to file storage logic
 		logFn.info('Using file storage for tag switch');
 
 		// Read current tasks data to verify tag exists

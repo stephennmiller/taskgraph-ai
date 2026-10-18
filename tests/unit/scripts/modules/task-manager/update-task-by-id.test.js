@@ -76,11 +76,6 @@ jest.unstable_mockModule(
 	})
 );
 
-// Mock @tm/bridge module
-jest.unstable_mockModule('@tm/bridge', () => ({
-	tryUpdateViaRemote: jest.fn().mockResolvedValue(null)
-}));
-
 // Mock bridge-utils module
 jest.unstable_mockModule(
 	'../../../../../scripts/modules/bridge-utils.js',
@@ -146,7 +141,6 @@ jest.unstable_mockModule(
 const { readJSON, log } = await import(
 	'../../../../../scripts/modules/utils.js'
 );
-const { tryUpdateViaRemote } = await import('@tm/bridge');
 const { createBridgeLogger } = await import(
 	'../../../../../scripts/modules/bridge-utils.js'
 );
@@ -431,190 +425,6 @@ describe('updateTaskById success path with generateObjectService', () => {
 	});
 });
 
-describe('Remote Update via Bridge', () => {
-	let fs;
-	let generateObjectService;
-
-	beforeEach(async () => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
-			throw new Error('process.exit called');
-		});
-		fs = await import('fs');
-		const aiServices = await import(
-			'../../../../../scripts/modules/ai-services-unified.js'
-		);
-		generateObjectService = aiServices.generateObjectService;
-	});
-
-	test('should use remote update result when tryUpdateViaRemote succeeds', async () => {
-		// Arrange - Mock successful remote update
-		const remoteResult = {
-			success: true,
-			message: 'Task updated successfully via remote',
-			data: {
-				task: {
-					id: 1,
-					title: 'Updated via Remote',
-					description: 'Updated description from remote',
-					status: 'in-progress',
-					dependencies: [],
-					priority: 'high',
-					details: 'Remote update details',
-					testStrategy: 'Remote test strategy',
-					subtasks: []
-				}
-			}
-		};
-		tryUpdateViaRemote.mockResolvedValue(remoteResult);
-
-		fs.existsSync.mockReturnValue(true);
-		readJSON.mockReturnValue({
-			tag: 'master',
-			tasks: [
-				{
-					id: 1,
-					title: 'Original Task',
-					description: 'Original description',
-					status: 'pending',
-					dependencies: [],
-					priority: 'medium',
-					details: 'Original details',
-					testStrategy: 'Original test strategy',
-					subtasks: []
-				}
-			]
-		});
-
-		// Act
-		const result = await updateTaskById(
-			'tasks/tasks.json',
-			1,
-			'Update this task',
-			false,
-			{ tag: 'master' },
-			'json'
-		);
-
-		// Assert - Should use remote result and NOT call local AI service
-		expect(tryUpdateViaRemote).toHaveBeenCalled();
-		expect(generateObjectService).not.toHaveBeenCalled();
-		expect(result).toEqual(remoteResult);
-	});
-
-	test('should fallback to local update when tryUpdateViaRemote returns null', async () => {
-		// Arrange - Mock remote returning null (no remote available)
-		tryUpdateViaRemote.mockResolvedValue(null);
-
-		fs.existsSync.mockReturnValue(true);
-		readJSON.mockReturnValue({
-			tag: 'master',
-			tasks: [
-				{
-					id: 1,
-					title: 'Task',
-					description: 'Description',
-					status: 'pending',
-					dependencies: [],
-					priority: 'medium',
-					details: 'Details',
-					testStrategy: 'Test strategy',
-					subtasks: []
-				}
-			]
-		});
-
-		generateObjectService.mockResolvedValue({
-			mainResult: {
-				task: {
-					id: 1,
-					title: 'Updated Task',
-					description: 'Updated description',
-					status: 'in-progress',
-					dependencies: [],
-					priority: 'high',
-					details: 'Updated details',
-					testStrategy: 'Updated test strategy',
-					subtasks: []
-				}
-			},
-			telemetryData: {}
-		});
-
-		// Act
-		await updateTaskById(
-			'tasks/tasks.json',
-			1,
-			'Update this task',
-			false,
-			{ tag: 'master' },
-			'json'
-		);
-
-		// Assert - Should fallback to local update
-		expect(tryUpdateViaRemote).toHaveBeenCalled();
-		expect(generateObjectService).toHaveBeenCalled();
-	});
-
-	test('should propagate error when tryUpdateViaRemote throws error', async () => {
-		// Arrange - Mock remote throwing error (it re-throws, doesn't return null)
-		tryUpdateViaRemote.mockImplementation(() =>
-			Promise.reject(new Error('Remote update service unavailable'))
-		);
-
-		fs.existsSync.mockReturnValue(true);
-		readJSON.mockReturnValue({
-			tag: 'master',
-			tasks: [
-				{
-					id: 1,
-					title: 'Task',
-					description: 'Description',
-					status: 'pending',
-					dependencies: [],
-					priority: 'medium',
-					details: 'Details',
-					testStrategy: 'Test strategy',
-					subtasks: []
-				}
-			]
-		});
-
-		generateObjectService.mockResolvedValue({
-			mainResult: {
-				task: {
-					id: 1,
-					title: 'Updated Task',
-					description: 'Updated description',
-					status: 'in-progress',
-					dependencies: [],
-					priority: 'high',
-					details: 'Updated details',
-					testStrategy: 'Updated test strategy',
-					subtasks: []
-				}
-			},
-			telemetryData: {}
-		});
-
-		// Act & Assert - Should propagate the error (not fallback to local)
-		await expect(
-			updateTaskById(
-				'tasks/tasks.json',
-				1,
-				'Update this task',
-				false,
-				{ tag: 'master' },
-				'json'
-			)
-		).rejects.toThrow('Remote update service unavailable');
-
-		expect(tryUpdateViaRemote).toHaveBeenCalled();
-		// Local update should NOT be called when remote throws
-		expect(generateObjectService).not.toHaveBeenCalled();
-	});
-});
-
 describe('Prompt Manager Integration', () => {
 	let fs;
 	let generateObjectService;
@@ -629,7 +439,6 @@ describe('Prompt Manager Integration', () => {
 			'../../../../../scripts/modules/ai-services-unified.js'
 		);
 		generateObjectService = aiServices.generateObjectService;
-		tryUpdateViaRemote.mockResolvedValue(null); // No remote
 	});
 
 	test('should use prompt manager to load update prompts', async () => {
@@ -700,7 +509,6 @@ describe('Context Gathering Integration', () => {
 			'../../../../../scripts/modules/ai-services-unified.js'
 		);
 		generateObjectService = aiServices.generateObjectService;
-		tryUpdateViaRemote.mockResolvedValue(null); // No remote
 	});
 
 	test('should gather project context when projectRoot is provided', async () => {
@@ -778,7 +586,6 @@ describe('Fuzzy Task Search Integration', () => {
 			'../../../../../scripts/modules/ai-services-unified.js'
 		);
 		generateObjectService = aiServices.generateObjectService;
-		tryUpdateViaRemote.mockResolvedValue(null); // No remote
 	});
 
 	test('should use fuzzy search to find related tasks for context', async () => {
