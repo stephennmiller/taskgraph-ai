@@ -5,6 +5,18 @@
 **Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskgraph/CLAUDE.md
 
+## Commands
+
+```bash
+npm run build                     # tsdown production build
+npm run turbo:typecheck           # run before pushing
+npm run format-check              # Biome; `npm run format` to fix
+npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp)
+npm test                          # root tests/ suite (Jest, ESM via --experimental-vm-modules)
+```
+
+`npm install` points git at `.githooks/`. The pre-push hook runs `biome format` on files changed since `origin/main`. Fix with `npm run format`; `git push --no-verify` skips it once.
+
 ## Test Guidelines
 
 ### Test File Placement
@@ -12,7 +24,7 @@
 - **Package & tests**: Place in `packages/<package-name>/src/<module>/<file>.spec.ts` or `apps/<app-name>/src/<module>/<file.spec.ts>` alongside source
 - **Package integration tests**: Place in `packages/<package-name>/tests/integration/<module>/<file>.test.ts` or `apps/<app-name>/tests/integration/<module>/<file>.test.ts` alongside source
 - **Isolated unit tests**: Use `tests/unit/packages/<package-name>/` only when parallel placement isn't possible
-- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`
+- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the legacy root `tests/` suite is still Jest + `.js` until the Vitest migration (#71) lands. New tests go in packages/apps, not there.
 
 ### Synchronous Tests
 
