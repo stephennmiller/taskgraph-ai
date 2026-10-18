@@ -10,11 +10,11 @@ Here's a plan:
 
 **Phase 1: Configuration and Core Logic Updates**
 
-1.  **Update `.taskmasterconfig` Structure:**
-    - I'll modify the `models` section in your `.taskmasterconfig`. For each role (`main`, `research`, `fallback`), `maxTokens` will be replaced with `maxInputTokens` and `maxOutputTokens`.
+1.  **Update `.taskgraph/config.json` Structure:**
+    - I'll modify the `models` section in your `.taskgraph/config.json`. For each role (`main`, `research`, `fallback`), `maxTokens` will be replaced with `maxInputTokens` and `maxOutputTokens`.
       - We'll need to decide on reasonable default values for these new fields. We can look at the current `maxTokens` and the model's known limits to make an initial guess.
 2.  **Update `MODEL_MAP` in `ai-services-unified.js`:**
-    - This array already stores cost data. We need to ensure it also stores the _absolute_ maximum input and output tokens for each model listed (e.g., `model_max_input_tokens`, `model_max_output_tokens`). If these fields are not present, they will need to be added. The values in `.taskmasterconfig` will then represent user-defined operational limits, which should ideally be validated against these absolute maximums.
+    - This array already stores cost data. We need to ensure it also stores the _absolute_ maximum input and output tokens for each model listed (e.g., `model_max_input_tokens`, `model_max_output_tokens`). If these fields are not present, they will need to be added. The values in `.taskgraph/config.json` will then represent user-defined operational limits, which should ideally be validated against these absolute maximums.
 3.  **Update `config-manager.js`:**
     - Getter functions like `getParametersForRole` will be updated to fetch `maxInputTokens` and `maxOutputTokens` instead of the singular `maxTokens`.
     - New getters might be needed if we want to access the model's absolute limits directly from `MODEL_MAP` via `config-manager.js`.
@@ -35,16 +35,16 @@ Here's a plan:
 **Phase 2: Error Handling and Refinements**
 
 1.  **Enhanced Error Handling:** Provide clear error messages if prompt tokens exceed input limits, or if API calls fail due to token issues despite our calculations.
-2.  **Validation:** Add validation (perhaps in `config-manager.js` or when `taskgraph models --setup` is run) to ensure `configured_max_input_tokens` and `configured_max_output_tokens` in `.taskmasterconfig` do not exceed the `model_absolute_max_input_tokens` and `model_absolute_max_output_tokens` from `MODEL_MAP`.
+2.  **Validation:** Add validation (perhaps in `config-manager.js` or when `taskgraph models --setup` is run) to ensure `configured_max_input_tokens` and `configured_max_output_tokens` in `.taskgraph/config.json` do not exceed the `model_absolute_max_input_tokens` and `model_absolute_max_output_tokens` from `MODEL_MAP`.
 
-Let's start by inspecting `scripts/modules/config-manager.js` to see how parameters and `MODEL_MAP` are currently handled. This will inform the changes needed for `.taskmasterconfig` and `ai-services-unified.js`.
+Let's start by inspecting `scripts/modules/config-manager.js` to see how parameters and `MODEL_MAP` are currently handled. This will inform the changes needed for `.taskgraph/config.json` and `ai-services-unified.js`.
 
 I will now read `scripts/modules/config-manager.js`.
 
 Okay, I've reviewed `scripts/modules/config-manager.js`. Here's what I've gathered and how it impacts the plan:
 
 - **`MODEL_MAP` Source:** `MODEL_MAP` is loaded from `supported-models.json`. This is excellent, as it means we can update the model capabilities (including new token limits) in a structured JSON file.
-- **Configuration Loading:** `_loadAndValidateConfig` handles loading `.taskmasterconfig` and merging it with `DEFAULTS`.
+- **Configuration Loading:** `_loadAndValidateConfig` handles loading `.taskgraph/config.json` and merging it with `DEFAULTS`.
 - **Getters:** There are specific getters for `maxTokens` for each role (e.g., `getMainMaxTokens`). We will need to update these.
 - **`getParametersForRole`:** This function already exists and is a good candidate for returning the new `maxInputTokens` and `maxOutputTokens`.
 
@@ -78,17 +78,17 @@ Here's the refined plan:
 
     - I will need to find the official input/output token limits for the models currently in your `MODEL_MAP`. If you have this information handy, it would speed things up. Otherwise, I can make educated guesses or search for them.
 
-2.  **Update `.taskmasterconfig` (Defaults and User File):**
+2.  **Update `.taskgraph/config.json` (Defaults and User File):**
     - In `scripts/modules/config-manager.js`, modify the `DEFAULTS` object. For each role (`main`, `research`, `fallback`), replace `maxTokens` with:
       - `maxInputTokens`: A sensible default (e.g., a large portion of the model's capability, but user-configurable).
       - `maxOutputTokens`: A sensible default for generation (e.g., 4096 or 8192).
-    - You will then need to manually update your existing `.taskmasterconfig` file to reflect this new structure. I can provide the snippet for you to paste.
+    - You will then need to manually update your existing `.taskgraph/config.json` file to reflect this new structure. I can provide the snippet for you to paste.
 3.  **Update `config-manager.js`:**
     - Modify `getParametersForRole(role, explicitRoot = null)`:
       - It currently fetches `maxTokens` and `temperature`.
       - Update it to fetch `maxInputTokens`, `maxOutputTokens`, and `temperature` from the loaded config for the given role.
     - Remove the role-specific `getMaxTokens` functions (e.g., `getMainMaxTokens`, `getResearchMaxTokens`, `getFallbackMaxTokens`). The `getParametersForRole` will be the central way to get these.
-    - (Optional, for later validation) Consider adding a new function `getModelCapabilities(providerName, modelId)` that reads from `MODEL_MAP` to return the absolute `maxInputTokens` and `maxOutputTokens` for a given model. This would be useful for validating the user's settings in `.taskmasterconfig`.
+    - (Optional, for later validation) Consider adding a new function `getModelCapabilities(providerName, modelId)` that reads from `MODEL_MAP` to return the absolute `maxInputTokens` and `maxOutputTokens` for a given model. This would be useful for validating the user's settings in `.taskgraph/config.json`.
 
 **Phase 2: Core Logic in `ai-services-unified.js`**
 
@@ -177,7 +177,7 @@ Here's the refined plan:
 1.  **Modify `supported-models.json`:** I need the content of this file to propose the new `maxInputTokens` and `maxOutputTokens` fields. Please provide it.
 2.  **Decide on Tokenizer Strategy:** What are your thoughts on the token counting? Are you aware of any utilities within Vercel AI SDK for this, or should we plan to integrate `tiktoken` initially?
 
-Once I have the content of `supported-models.json`, I can draft the changes for it and then proceed to `config-manager.js` and `.taskmasterconfig`.
+Once I have the content of `supported-models.json`, I can draft the changes for it and then proceed to `config-manager.js` and `.taskgraph/config.json`.
 
 ```json
         // Before
@@ -282,7 +282,7 @@ If a model _only_ specifies a total context window, we'll have to make a reasona
     "cost_per_1m_tokens": { "input": 3.0, "output": 15.0 },
     "allowed_roles": ["main", "fallback"],
     "contextWindowTokens": 200000, // From Anthropic's documentation
-    "maxOutputTokens": 8192     // Anthropic default, user can override in .taskmasterconfig
+    "maxOutputTokens": 8192     // Anthropic default, user can override in .taskgraph/config.json
 }
 
 // For a model like OpenAI GPT-4o
@@ -317,7 +317,7 @@ I will now generate the proposed changes for `scripts/modules/supported-models.j
 
 After this, we'll move to:
 
-1.  Updating `.taskmasterconfig` defaults in `config-manager.js` and providing you the snippet for your user file.
+1.  Updating `.taskgraph/config.json` defaults in `config-manager.js` and providing you the snippet for your user file.
 2.  Updating `config-manager.js` getters.
 3.  Implementing the logic in `ai-services-unified.js`.
 
@@ -329,7 +329,7 @@ After this, we'll move to:
     "cost_per_1m_tokens": { "input": 3.0, "output": 15.0 },
     "allowed_roles": ["main", "fallback"],
     "contextWindowTokens": 200000, // From Anthropic's documentation
-    "maxOutputTokens": 8192     // Anthropic default, user can override in .taskmasterconfig
+    "maxOutputTokens": 8192     // Anthropic default, user can override in .taskgraph/config.json
 }
 
 // For a model like OpenAI GPT-4o
@@ -352,7 +352,7 @@ After this, we'll move to:
     "cost_per_1m_tokens": { "input": 3.0, "output": 15.0 },
     "allowed_roles": ["main", "fallback"],
     "contextWindowTokens": 200000, // From Anthropic's documentation
-    "maxOutputTokens": 8192     // Anthropic default, user can override in .taskmasterconfig
+    "maxOutputTokens": 8192     // Anthropic default, user can override in .taskgraph/config.json
 }
 
 // For a model like OpenAI GPT-4o

@@ -5,7 +5,7 @@
 
 import { createErrorResponse, handleApiResult, withToolContext } from '@tm/mcp';
 import { z } from 'zod';
-import { modelsDirect } from '../core/task-master-core.js';
+import { modelsDirect } from '../core/taskgraph-core.js';
 
 /**
  * Register the models tool with the MCP server

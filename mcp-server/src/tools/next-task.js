@@ -10,7 +10,7 @@ import {
 } from '@tm/mcp';
 import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
-import { nextTaskDirect } from '../core/task-master-core.js';
+import { nextTaskDirect } from '../core/taskgraph-core.js';
 import {
 	resolveComplexityReportPath,
 	resolveTasksPath

@@ -22,7 +22,7 @@ describe('File Locking and Atomic Writes', () => {
 
 	beforeEach(async () => {
 		// Create a temp directory for each test
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-test-'));
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-test-'));
 		testFilePath = path.join(tempDir, 'tasks.json');
 
 		// Initialize with empty tasks structure
@@ -512,13 +512,13 @@ describe('readJSON', () => {
 	let utils;
 
 	beforeEach(async () => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-test-'));
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-test-'));
 		testFilePath = path.join(tempDir, 'tasks.json');
 
-		// Create .taskmaster directory for state.json
-		fs.mkdirSync(path.join(tempDir, '.taskmaster'), { recursive: true });
+		// Create .taskgraph directory for state.json
+		fs.mkdirSync(path.join(tempDir, '.taskgraph'), { recursive: true });
 		fs.writeFileSync(
-			path.join(tempDir, '.taskmaster', 'state.json'),
+			path.join(tempDir, '.taskgraph', 'state.json'),
 			JSON.stringify({
 				currentTag: 'master'
 			})
@@ -560,7 +560,7 @@ describe('Lock file stale detection', () => {
 	let utils;
 
 	beforeEach(async () => {
-		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-test-'));
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-test-'));
 		testFilePath = path.join(tempDir, 'tasks.json');
 		fs.writeFileSync(testFilePath, '{}');
 		utils = await import(utilsPath + `?cachebust=${Date.now()}`);

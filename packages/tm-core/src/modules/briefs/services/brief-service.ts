@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { TaskRepository } from '../../tasks/repositories/task-repository.interface.js';
 import type { Brief } from '../types.js';
 
@@ -216,7 +216,7 @@ export class BriefService {
 		nameOrId: string
 	): asserts brief is Brief {
 		if (!brief) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Brief "${nameOrId}" not found in organization`,
 				ERROR_CODES.NOT_FOUND
 			);

@@ -14,7 +14,7 @@ import {
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 
-import { LEGACY_TASKS_FILE } from '../../../src/constants/paths.js';
+import { TASKGRAPH_TASKS_FILE } from '../../../src/constants/paths.js';
 import { resolveComplexityReportOutputPath } from '../../../src/utils/path-utils.js';
 import {
 	getDebugFlag,
@@ -47,7 +47,7 @@ import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
  */
 async function analyzeTaskComplexity(options, context = {}) {
 	const { session, mcpLog } = context;
-	const tasksPath = options.file || LEGACY_TASKS_FILE;
+	const tasksPath = options.file || TASKGRAPH_TASKS_FILE;
 	const thresholdScore = parseFloat(options.threshold || '5');
 	const useResearch = options.research || false;
 	const projectRoot = options.projectRoot;
@@ -607,7 +607,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 				if (aiError.message.includes('API key')) {
 					console.log(
 						chalk.yellow(
-							'\nPlease ensure your API keys are correctly configured in .env or ~/.taskmaster/.env'
+							'\nPlease ensure your API keys are correctly configured in .env or ~/.taskgraph/.env'
 						)
 					);
 					console.log(

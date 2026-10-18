@@ -21,4 +21,4 @@ Welcome to the TaskGraph documentation. This documentation site provides compreh
 
 ## Need More Help?
 
-If you can't find what you're looking for in these docs, please check the root README.md or visit our [GitHub repository](https://github.com/eyaltoledano/claude-task-master).
+If you can't find what you're looking for in these docs, please check the root README.md or visit our [GitHub repository](https://github.com/stephennmiller/taskgraph-ai).

@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type { AuthManager } from '../../auth/managers/auth-manager.js';
 
 export interface ApiClientOptions {
@@ -36,7 +36,7 @@ export class ApiClient {
 		// Get auth session
 		const session = await authManager.supabaseClient.getSession();
 		if (!session) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Not authenticated',
 				ERROR_CODES.AUTHENTICATION_ERROR,
 				{ operation: 'api-request', endpoint }
@@ -69,15 +69,15 @@ export class ApiClient {
 			// Parse successful response
 			return (await response.json()) as T;
 		} catch (error) {
-			// If it's already a TaskMasterError, re-throw
-			if (error instanceof TaskMasterError) {
+			// If it's already a TaskGraphError, re-throw
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
 
 			// Wrap other errors
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				errorMessage,
 				ERROR_CODES.API_ERROR,
 				{ operation: 'api-request', endpoint },
@@ -105,7 +105,7 @@ export class ApiClient {
 			errorMessage = (await response.text()) || response.statusText;
 		}
 
-		throw new TaskMasterError(errorMessage, ERROR_CODES.API_ERROR, {
+		throw new TaskGraphError(errorMessage, ERROR_CODES.API_ERROR, {
 			operation: 'api-request',
 			endpoint,
 			statusCode: response.status

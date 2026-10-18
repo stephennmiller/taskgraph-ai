@@ -155,7 +155,7 @@ describe('Commands Module - CLI Setup and Integration', () => {
 
 	describe('CLI Flag Format Validation', () => {
 		test('should detect camelCase flags correctly', () => {
-			const args = ['node', 'task-master', '--camelCase', '--kebab-case'];
+			const args = ['node', 'taskgraph', '--camelCase', '--kebab-case'];
 			const camelCaseFlags = args.filter(
 				(arg) =>
 					arg.startsWith('--') && /[A-Z]/.test(arg) && !arg.includes('-[A-Z]')
@@ -165,7 +165,7 @@ describe('Commands Module - CLI Setup and Integration', () => {
 		});
 
 		test('should accept kebab-case flags correctly', () => {
-			const args = ['node', 'task-master', '--kebab-case'];
+			const args = ['node', 'taskgraph', '--kebab-case'];
 			const camelCaseFlags = args.filter(
 				(arg) =>
 					arg.startsWith('--') && /[A-Z]/.test(arg) && !arg.includes('-[A-Z]')
@@ -183,7 +183,7 @@ describe('Commands Module - CLI Setup and Integration', () => {
 		test('detectCamelCaseFlags should identify camelCase flags', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--promptText=test',
 				'--userID=123'
@@ -204,7 +204,7 @@ describe('Commands Module - CLI Setup and Integration', () => {
 		test('detectCamelCaseFlags should not flag kebab-case flags', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--prompt-text=test',
 				'--user-id=123'
@@ -217,7 +217,7 @@ describe('Commands Module - CLI Setup and Integration', () => {
 		test('detectCamelCaseFlags should respect single-word flags', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--prompt=test',
 				'--file=test.json',

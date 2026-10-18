@@ -9,7 +9,7 @@ import { initializeSentry } from '../../src/telemetry/sentry.js';
 import logger from './logger.js';
 import {
 	getToolsConfiguration,
-	registerTaskMasterTools
+	registerTaskGraphTools
 } from './tools/index.js';
 
 dotenv.config({ quiet: true });
@@ -24,7 +24,7 @@ const __dirname = path.dirname(__filename);
 /**
  * Main MCP server class that integrates with TaskGraph
  */
-class TaskMasterMCPServer {
+class TaskGraphMCPServer {
 	constructor() {
 		this.options = {
 			name: 'TaskGraph MCP Server',
@@ -67,7 +67,7 @@ class TaskMasterMCPServer {
 		this.logger.info('TaskGraph MCP Server starting...');
 		this.logger.info(`Tool mode configuration: ${normalizedToolMode}`);
 
-		const registrationResult = registerTaskMasterTools(
+		const registrationResult = registerTaskGraphTools(
 			this.server,
 			normalizedToolMode
 		);
@@ -133,4 +133,4 @@ class TaskMasterMCPServer {
 	}
 }
 
-export default TaskMasterMCPServer;
+export default TaskGraphMCPServer;

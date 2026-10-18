@@ -51,7 +51,7 @@ export async function parsePrdToHamster(
 	options: ParsePrdToHamsterOptions
 ): Promise<ParsePrdToHamsterResult> {
 	let spinner: Ora | undefined;
-	let taskMasterCore: TmCore | undefined;
+	let taskGraphCore: TmCore | undefined;
 
 	try {
 		// 1. Ensure user is authenticated
@@ -84,7 +84,7 @@ export async function parsePrdToHamster(
 			};
 		}
 
-		taskMasterCore = await createTmCore({ projectPath: projectRoot });
+		taskGraphCore = await createTmCore({ projectPath: projectRoot });
 
 		// 3. Read PRD file content
 		const prdPath = path.isAbsolute(options.prdPath)
@@ -113,7 +113,7 @@ export async function parsePrdToHamster(
 		// 4. Create brief from PRD
 		spinner = ora('Creating brief from your PRD...').start();
 
-		const result = await taskMasterCore.integration.generateBriefFromPrd({
+		const result = await taskGraphCore.integration.generateBriefFromPrd({
 			prdContent,
 			options: {
 				generateTitle: !options.title,
@@ -150,7 +150,7 @@ export async function parsePrdToHamster(
 
 			try {
 				// Poll brief status
-				const briefInfo = await taskMasterCore.auth.getBrief(briefId);
+				const briefInfo = await taskGraphCore.auth.getBrief(briefId);
 				if (briefInfo) {
 					const newStatus = (briefInfo as any).plan_generation_status as string;
 					if (newStatus) briefStatus = newStatus as typeof briefStatus;
@@ -206,7 +206,7 @@ export async function parsePrdToHamster(
 			]);
 
 			if (wantsToInvite) {
-				await promptAndSendInvites(taskMasterCore, result.brief.id);
+				await promptAndSendInvites(taskGraphCore, result.brief.id);
 			}
 		}
 
@@ -214,7 +214,7 @@ export async function parsePrdToHamster(
 		showInviteUrl(result.brief.url);
 
 		// 8. Set context to the new brief
-		await setContextToBrief(taskMasterCore, result.brief.url);
+		await setContextToBrief(taskGraphCore, result.brief.url);
 
 		console.log(
 			chalk.green('  ✓ ') +

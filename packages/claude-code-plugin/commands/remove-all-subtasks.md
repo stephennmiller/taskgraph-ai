@@ -82,7 +82,7 @@ Before clearing all:
 Global Subtask Clear Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Removed: 47 subtasks from 12 tasks
-Backup saved: .taskmaster/backup/subtasks-20240115.json
+Backup saved: .taskgraph/backup/subtasks-20240115.json
 Parent tasks updated: 12
 Time estimates adjusted: Yes
 

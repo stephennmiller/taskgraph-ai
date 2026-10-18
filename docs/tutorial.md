@@ -60,12 +60,12 @@ The AI will:
 - Set up initial configuration files
 - Guide you through the rest of the process
 
-5. Place your PRD document in the `.taskmaster/docs/` directory (e.g., `.taskmaster/docs/prd.txt`)
+5. Place your PRD document in the `.taskgraph/docs/` directory (e.g., `.taskgraph/docs/prd.txt`)
 
 6. **Use natural language commands** to interact with TaskGraph:
 
 ```
-Can you parse my PRD at .taskmaster/docs/prd.txt?
+Can you parse my PRD at .taskgraph/docs/prd.txt?
 What's the next task I should work on?
 Can you help me implement task 3?
 ```
@@ -127,24 +127,24 @@ I'd like to implement task 4. What does it involve?
 
 If you're not using MCP, run `taskgraph init --rules claude`. This:
 
-1. Copies TaskGraph's workflow guide to `.taskmaster/CLAUDE.md` and imports it from your project's `CLAUDE.md`
+1. Copies TaskGraph's workflow guide to `.taskgraph/CLAUDE.md` and imports it from your project's `CLAUDE.md`
 2. Writes the `.mcp.json` server entry
 3. Installs the `/tm` slash commands in `.claude/commands/tm`
 
-Then place your PRD document in the `.taskmaster/docs/` directory (e.g., `.taskmaster/docs/prd.txt`) and start Claude Code in the project.
+Then place your PRD document in the `.taskgraph/docs/` directory (e.g., `.taskgraph/docs/prd.txt`) and start Claude Code in the project.
 
 ## Initial Task Generation
 
 In Claude Code, instruct the agent to generate tasks from your PRD:
 
 ```
-Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskmaster/docs/prd.txt.
+Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskgraph/docs/prd.txt.
 ```
 
 The agent will execute:
 
 ```bash
-taskgraph parse-prd .taskmaster/docs/prd.txt
+taskgraph parse-prd .taskgraph/docs/prd.txt
 ```
 
 This will:
@@ -372,7 +372,7 @@ taskgraph expand --id=5 --research
 ### Starting a new project
 
 ```
-I've just initialized a new project with TaskGraph. I have a PRD at .taskmaster/docs/prd.txt.
+I've just initialized a new project with TaskGraph. I have a PRD at .taskgraph/docs/prd.txt.
 Can you help me parse it and set up the initial tasks?
 ```
 

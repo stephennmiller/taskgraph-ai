@@ -4,7 +4,7 @@
  * These tests verify real-world scenarios for project root detection,
  * particularly edge cases around:
  * - Empty directories (tm init scenario)
- * - .taskmaster in home/parent directories that should be ignored
+ * - .taskgraph in home/parent directories that should be ignored
  * - Monorepo detection
  */
 
@@ -30,23 +30,23 @@ describe('findProjectRoot - Integration Tests', () => {
 	});
 
 	describe('Empty directory scenarios (tm init)', () => {
-		it('should find .taskmaster in immediate parent (depth=1) even without boundary marker', () => {
-			// Scenario: User is in a subdirectory of a project that only has .taskmaster
+		it('should find .taskgraph in immediate parent (depth=1) even without boundary marker', () => {
+			// Scenario: User is in a subdirectory of a project that only has .taskgraph
 			// (no .git or package.json). This is a valid use case for projects where
 			// user ran `tm init` but not `git init`.
 			//
 			// Structure:
-			//   /project/.taskmaster
+			//   /project/.taskgraph
 			//   /project/src/ (start here)
 			//
 			// NOTE: For `tm init` command specifically, the command should use
 			// process.cwd() directly instead of findProjectRoot() to avoid
-			// finding a stray .taskmaster in a parent directory.
+			// finding a stray .taskgraph in a parent directory.
 
 			const projectDir = tempDir;
 			const srcDir = path.join(projectDir, 'src');
 
-			fs.mkdirSync(path.join(projectDir, '.taskmaster'));
+			fs.mkdirSync(path.join(projectDir, '.taskgraph'));
 			fs.mkdirSync(srcDir);
 
 			const result = findProjectRoot(srcDir);
@@ -71,18 +71,18 @@ describe('findProjectRoot - Integration Tests', () => {
 			expect(result).toBe(emptyProjectDir);
 		});
 
-		it('should return startDir when no boundary markers exist but .taskmaster exists in distant parent', () => {
-			// Scenario: Deep directory structure with .taskmaster only at top level
+		it('should return startDir when no boundary markers exist but .taskgraph exists in distant parent', () => {
+			// Scenario: Deep directory structure with .taskgraph only at top level
 			// No boundary markers (.git, package.json, etc.) anywhere
 			//
 			// Structure:
-			//   /tmp/home/.taskmaster (should be IGNORED - too far up)
+			//   /tmp/home/.taskgraph (should be IGNORED - too far up)
 			//   /tmp/home/code/projects/my-app/ (empty - no markers)
 
 			const homeDir = tempDir;
 			const deepProjectDir = path.join(homeDir, 'code', 'projects', 'my-app');
 
-			fs.mkdirSync(path.join(homeDir, '.taskmaster'));
+			fs.mkdirSync(path.join(homeDir, '.taskgraph'));
 			fs.mkdirSync(deepProjectDir, { recursive: true });
 
 			const result = findProjectRoot(deepProjectDir);
@@ -93,16 +93,16 @@ describe('findProjectRoot - Integration Tests', () => {
 	});
 
 	describe('Project with boundary markers', () => {
-		it('should find .taskmaster when at same level as .git', () => {
-			// Scenario: Normal project setup with both .taskmaster and .git
+		it('should find .taskgraph when at same level as .git', () => {
+			// Scenario: Normal project setup with both .taskgraph and .git
 			//
 			// Structure:
-			//   /tmp/project/.taskmaster
+			//   /tmp/project/.taskgraph
 			//   /tmp/project/.git
 
 			const projectDir = tempDir;
 
-			fs.mkdirSync(path.join(projectDir, '.taskmaster'));
+			fs.mkdirSync(path.join(projectDir, '.taskgraph'));
 			fs.mkdirSync(path.join(projectDir, '.git'));
 
 			const result = findProjectRoot(projectDir);
@@ -110,18 +110,18 @@ describe('findProjectRoot - Integration Tests', () => {
 			expect(result).toBe(projectDir);
 		});
 
-		it('should find .taskmaster in parent when subdirectory has no markers', () => {
+		it('should find .taskgraph in parent when subdirectory has no markers', () => {
 			// Scenario: Running from a subdirectory of an initialized project
 			//
 			// Structure:
-			//   /tmp/project/.taskmaster
+			//   /tmp/project/.taskgraph
 			//   /tmp/project/.git
 			//   /tmp/project/src/components/ (no markers)
 
 			const projectDir = tempDir;
 			const srcDir = path.join(projectDir, 'src', 'components');
 
-			fs.mkdirSync(path.join(projectDir, '.taskmaster'));
+			fs.mkdirSync(path.join(projectDir, '.taskgraph'));
 			fs.mkdirSync(path.join(projectDir, '.git'));
 			fs.mkdirSync(srcDir, { recursive: true });
 
@@ -130,18 +130,18 @@ describe('findProjectRoot - Integration Tests', () => {
 			expect(result).toBe(projectDir);
 		});
 
-		it('should stop at .git and NOT find .taskmaster beyond it', () => {
-			// Scenario: Project has .git but no .taskmaster, parent has .taskmaster
-			// Should use project with .git, not parent with .taskmaster
+		it('should stop at .git and NOT find .taskgraph beyond it', () => {
+			// Scenario: Project has .git but no .taskgraph, parent has .taskgraph
+			// Should use project with .git, not parent with .taskgraph
 			//
 			// Structure:
-			//   /tmp/home/.taskmaster (should be IGNORED)
+			//   /tmp/home/.taskgraph (should be IGNORED)
 			//   /tmp/home/my-project/.git (boundary marker)
 
 			const homeDir = tempDir;
 			const projectDir = path.join(homeDir, 'my-project');
 
-			fs.mkdirSync(path.join(homeDir, '.taskmaster'));
+			fs.mkdirSync(path.join(homeDir, '.taskgraph'));
 			fs.mkdirSync(path.join(projectDir, '.git'), { recursive: true });
 
 			const result = findProjectRoot(projectDir);
@@ -149,17 +149,17 @@ describe('findProjectRoot - Integration Tests', () => {
 			expect(result).toBe(projectDir);
 		});
 
-		it('should stop at package.json and NOT find .taskmaster beyond it', () => {
-			// Scenario: JS project with package.json but no .taskmaster
+		it('should stop at package.json and NOT find .taskgraph beyond it', () => {
+			// Scenario: JS project with package.json but no .taskgraph
 			//
 			// Structure:
-			//   /tmp/home/.taskmaster (should be IGNORED)
+			//   /tmp/home/.taskgraph (should be IGNORED)
 			//   /tmp/home/my-project/package.json (boundary)
 
 			const homeDir = tempDir;
 			const projectDir = path.join(homeDir, 'my-project');
 
-			fs.mkdirSync(path.join(homeDir, '.taskmaster'));
+			fs.mkdirSync(path.join(homeDir, '.taskgraph'));
 			fs.mkdirSync(projectDir);
 			fs.writeFileSync(path.join(projectDir, 'package.json'), '{}');
 
@@ -170,11 +170,11 @@ describe('findProjectRoot - Integration Tests', () => {
 	});
 
 	describe('Monorepo scenarios', () => {
-		it('should find monorepo root .taskmaster from package subdirectory', () => {
-			// Scenario: Monorepo with .taskmaster at root, packages without their own markers
+		it('should find monorepo root .taskgraph from package subdirectory', () => {
+			// Scenario: Monorepo with .taskgraph at root, packages without their own markers
 			//
 			// Structure:
-			//   /tmp/monorepo/.taskmaster
+			//   /tmp/monorepo/.taskgraph
 			//   /tmp/monorepo/.git
 			//   /tmp/monorepo/packages/my-package/src/
 
@@ -186,7 +186,7 @@ describe('findProjectRoot - Integration Tests', () => {
 				'src'
 			);
 
-			fs.mkdirSync(path.join(monorepoRoot, '.taskmaster'));
+			fs.mkdirSync(path.join(monorepoRoot, '.taskgraph'));
 			fs.mkdirSync(path.join(monorepoRoot, '.git'));
 			fs.mkdirSync(packageSrcDir, { recursive: true });
 
@@ -200,13 +200,13 @@ describe('findProjectRoot - Integration Tests', () => {
 			// Package should be treated as its own project
 			//
 			// Structure:
-			//   /tmp/monorepo/.taskmaster
+			//   /tmp/monorepo/.taskgraph
 			//   /tmp/monorepo/packages/my-package/package.json (boundary)
 
 			const monorepoRoot = tempDir;
 			const packageDir = path.join(monorepoRoot, 'packages', 'my-package');
 
-			fs.mkdirSync(path.join(monorepoRoot, '.taskmaster'));
+			fs.mkdirSync(path.join(monorepoRoot, '.taskgraph'));
 			fs.mkdirSync(packageDir, { recursive: true });
 			fs.writeFileSync(path.join(packageDir, 'package.json'), '{}');
 
@@ -216,22 +216,22 @@ describe('findProjectRoot - Integration Tests', () => {
 			expect(result).toBe(packageDir);
 		});
 
-		it('should return package root when package has its own .taskmaster', () => {
+		it('should return package root when package has its own .taskgraph', () => {
 			// Scenario: Nested TaskGraph initialization
 			//
 			// Structure:
-			//   /tmp/monorepo/.taskmaster
-			//   /tmp/monorepo/packages/my-package/.taskmaster
+			//   /tmp/monorepo/.taskgraph
+			//   /tmp/monorepo/packages/my-package/.taskgraph
 
 			const monorepoRoot = tempDir;
 			const packageDir = path.join(monorepoRoot, 'packages', 'my-package');
 
-			fs.mkdirSync(path.join(monorepoRoot, '.taskmaster'));
-			fs.mkdirSync(path.join(packageDir, '.taskmaster'), { recursive: true });
+			fs.mkdirSync(path.join(monorepoRoot, '.taskgraph'));
+			fs.mkdirSync(path.join(packageDir, '.taskgraph'), { recursive: true });
 
 			const result = findProjectRoot(packageDir);
 
-			// Package has its own .taskmaster, so it should be returned
+			// Package has its own .taskgraph, so it should be returned
 			expect(result).toBe(packageDir);
 		});
 	});
@@ -241,25 +241,25 @@ describe('findProjectRoot - Integration Tests', () => {
 			// IMPORTANT: For .env loading (e.g., TM_BASE_DOMAIN for auth),
 			// the code should use process.cwd() directly, NOT findProjectRoot().
 			//
-			// findProjectRoot() is designed to find the .taskmaster directory
-			// for task storage. It will traverse up to find .taskmaster in parent
+			// findProjectRoot() is designed to find the .taskgraph directory
+			// for task storage. It will traverse up to find .taskgraph in parent
 			// directories when appropriate.
 			//
 			// For environment variables, we want to load from WHERE the user
-			// is running the command, not where .taskmaster is located.
+			// is running the command, not where .taskgraph is located.
 			//
 			// This test documents this design decision and verifies findProjectRoot
-			// behavior when .taskmaster is in immediate parent (depth=1).
+			// behavior when .taskgraph is in immediate parent (depth=1).
 
 			const projectDir = tempDir;
 			const subDir = path.join(projectDir, 'subdir');
 
-			fs.mkdirSync(path.join(projectDir, '.taskmaster'));
+			fs.mkdirSync(path.join(projectDir, '.taskgraph'));
 			fs.mkdirSync(subDir);
 
 			const result = findProjectRoot(subDir);
 
-			// findProjectRoot WILL find parent's .taskmaster (depth=1 is trusted)
+			// findProjectRoot WILL find parent's .taskgraph (depth=1 is trusted)
 			// This is correct for task storage - we want to use the parent's tasks.json
 			// For .env loading, callers should use process.cwd() instead
 			expect(result).toBe(projectDir);

@@ -38,8 +38,8 @@ The standard pattern for adding a feature follows this workflow:
 4. **UI Components**: Add any display functions to [`ui.js`](../../scripts/modules/ui.js) following `ui.md`. Consider enhanced formatting with syntax highlighting for code blocks.
 5. **Command Integration**: Add the CLI command to [`commands.js`](../../scripts/modules/commands.js) following `commands.md`.
 6. **Testing**: Write tests for all components of the feature (following `tests.md`)
-7. **Configuration**: Update configuration settings or add new ones in [`config-manager.js`](../../scripts/modules/config-manager.js) and ensure getters/setters are appropriate. Update documentation in `utilities.md` and `taskmaster.md`. Update the `.taskmasterconfig` structure if needed.
-8. **Documentation**: Update help text and documentation in `dev-workflow.md` and `taskmaster.md`.
+7. **Configuration**: Update configuration settings or add new ones in [`config-manager.js`](../../scripts/modules/config-manager.js) and ensure getters/setters are appropriate. Update documentation in `utilities.md` and `taskgraph.md`. Update the `.taskgraph/config.json` structure if needed.
+8. **Documentation**: Update help text and documentation in `dev-workflow.md` and `taskgraph.md`.
 
 ## Critical Checklist for New Features
 
@@ -525,7 +525,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
     - Format the return as `{ success: true/false, data/error, fromCache: boolean }`.
     - Export the wrapper function.
 
-3.  **Update `task-master-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
+3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
@@ -609,7 +609,7 @@ When implementing project initialization commands:
    ```javascript
    // In initialize-project.js MCP tool:
    import { z } from "zod";
-   import { initializeProjectDirect } from "../core/task-master-core.js";
+   import { initializeProjectDirect } from "../core/taskgraph-core.js";
    
    export function registerInitializeProjectTool(server) {
      server.addTool({
@@ -696,7 +696,7 @@ When implementing project initialization commands:
         const targetTag = options.tag || getCurrentTag() || 'master';
         
         const result = await newFeatureCore(
-          path.join(projectRoot, '.taskmaster', 'tasks', 'tasks.json'),
+          path.join(projectRoot, '.taskgraph', 'tasks', 'tasks.json'),
           { param: options.param },
           { 
             force: options.force,

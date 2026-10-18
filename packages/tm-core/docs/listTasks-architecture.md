@@ -18,8 +18,8 @@
 │                      tm-core Package                         │
 │                                                              │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │            TaskMasterCore (Facade)                   │   │
-│  │  src/task-master-core.ts                            │   │
+│  │            TaskGraphCore (Facade)                   │   │
+│  │  src/taskgraph-core.ts                            │   │
 │  │                                                      │   │
 │  │  - listTasks(options)                               │   │
 │  │    • tag filtering                                  │   │
@@ -61,10 +61,10 @@
 listTasks(tasksPath, statusFilter, reportPath, withSubtasks, outputFormat, context)
 ```
 
-### 2. TaskMasterCore Processing
+### 2. TaskGraphCore Processing
 ```typescript
 // Our new implementation
-const tmCore = createTaskMasterCore(projectPath, { 
+const tmCore = createTaskGraphCore(projectPath, { 
   storage: { 
     type: 'api',  // or 'file'
     apiEndpoint: 'https://tryhamster.com',
@@ -93,7 +93,7 @@ const storage = StorageFactory.create(config, projectPath);
 ### 4. Data Loading
 ```typescript
 // FileStorage
-- Reads from .taskmaster/tasks/tasks.json (or tag-specific file)
+- Reads from .taskgraph/tasks/tasks.json (or tag-specific file)
 - Local file system operations
 
 // ApiStorage (Hamster)
@@ -128,11 +128,11 @@ interface ListTasksResult {
 
 ### 1. CLI Integration
 - [ ] Update `scripts/modules/task-manager/list-tasks.js` to use tm-core
-- [ ] Map CLI options to TaskMasterCore options
+- [ ] Map CLI options to TaskGraphCore options
 - [ ] Handle output formatting in CLI layer
 
 ### 2. Configuration Loading
-- [ ] Load `.taskmaster/config.json` for storage settings
+- [ ] Load `.taskgraph/config.json` for storage settings
 - [ ] Support environment variables for API tokens
 - [ ] Handle storage type selection
 
@@ -150,7 +150,7 @@ interface ListTasksResult {
 3. **Testability**: Each layer can be tested independently
 4. **Extensibility**: Easy to add new storage types (database, cloud, etc.)
 5. **Type Safety**: Full TypeScript support throughout
-6. **Error Handling**: Consistent error handling with TaskMasterError
+6. **Error Handling**: Consistent error handling with TaskGraphError
 
 ## Next Steps
 

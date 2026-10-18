@@ -7,7 +7,7 @@ Fix lint errors and type errors one by one. ONE fix per session.
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (errors fixed, remaining count)
+- @.taskgraph/loop-progress.txt - Progress log (errors fixed, remaining count)
 
 ## Process
 

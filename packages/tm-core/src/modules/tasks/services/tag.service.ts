@@ -5,7 +5,7 @@
 
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { TagInfo } from '../../../common/interfaces/storage.interface.js';
-import { TaskMasterError, ERROR_CODES } from '../../../common/errors/task-master-error.js';
+import { TaskGraphError, ERROR_CODES } from '../../../common/errors/taskgraph-error.js';
 
 /**
  * Options for creating a new tag
@@ -58,11 +58,11 @@ export class TagService {
 
 	/**
 	 * Validate tag name format and restrictions
-	 * @throws {TaskMasterError} if validation fails
+	 * @throws {TaskGraphError} if validation fails
 	 */
 	private validateTagName(name: string, context = 'Tag name'): void {
 		if (!name || typeof name !== 'string') {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`${context} is required and must be a string`,
 				ERROR_CODES.VALIDATION_ERROR
 			);
@@ -70,7 +70,7 @@ export class TagService {
 
 		// Check length
 		if (name.length > MAX_TAG_NAME_LENGTH) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`${context} must be ${MAX_TAG_NAME_LENGTH} characters or less`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: name, maxLength: MAX_TAG_NAME_LENGTH }
@@ -79,7 +79,7 @@ export class TagService {
 
 		// Check format: alphanumeric, hyphens, underscores only
 		if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`${context} can only contain letters, numbers, hyphens, and underscores`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: name }
@@ -88,7 +88,7 @@ export class TagService {
 
 		// Check reserved names
 		if (RESERVED_TAG_NAMES.includes(name.toLowerCase())) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`"${name}" is a reserved tag name`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: name, reserved: true }
@@ -98,13 +98,13 @@ export class TagService {
 
 	/**
 	 * Check if storage supports tag mutation operations
-	 * @throws {TaskMasterError} if operation not supported
+	 * @throws {TaskGraphError} if operation not supported
 	 */
 	private checkTagMutationSupport(operation: string): void {
 		const storageType = this.storage.getStorageType();
 
 		if (storageType === 'api') {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`${operation} is not supported with API storage. Use the web interface at Hamster Studio.`,
 				ERROR_CODES.NOT_IMPLEMENTED,
 				{ storageType: 'api', operation }
@@ -127,7 +127,7 @@ export class TagService {
 		// Check if tag already exists
 		const allTags = await this.storage.getAllTags();
 		if (allTags.includes(name)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Tag "${name}" already exists`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: name }
@@ -136,7 +136,7 @@ export class TagService {
 
 		// Validate copyFromTag if provided
 		if (options.copyFromTag && !allTags.includes(options.copyFromTag)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Cannot copy from missing tag "${options.copyFromTag}"`,
 				ERROR_CODES.NOT_FOUND,
 				{ tagName: options.copyFromTag }
@@ -189,7 +189,7 @@ export class TagService {
 
 		// Cannot delete master tag
 		if (name === 'master') {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Cannot delete the "master" tag',
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: name, protected: true }
@@ -202,7 +202,7 @@ export class TagService {
 		// Check if tag exists
 		const allTags = await this.storage.getAllTags();
 		if (!allTags.includes(name)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Tag "${name}" does not exist`,
 				ERROR_CODES.NOT_FOUND,
 				{ tagName: name }
@@ -225,7 +225,7 @@ export class TagService {
 
 		// Cannot rename master tag
 		if (oldName === 'master') {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Cannot rename the "master" tag',
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: oldName, protected: true }
@@ -238,7 +238,7 @@ export class TagService {
 		// Check if old tag exists
 		const allTags = await this.storage.getAllTags();
 		if (!allTags.includes(oldName)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Tag "${oldName}" does not exist`,
 				ERROR_CODES.NOT_FOUND,
 				{ tagName: oldName }
@@ -247,7 +247,7 @@ export class TagService {
 
 		// Check if new name already exists
 		if (allTags.includes(newName)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Tag "${newName}" already exists`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: newName }
@@ -277,7 +277,7 @@ export class TagService {
 		// Check if source tag exists
 		const allTags = await this.storage.getAllTags();
 		if (!allTags.includes(sourceName)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Source tag "${sourceName}" does not exist`,
 				ERROR_CODES.NOT_FOUND,
 				{ tagName: sourceName }
@@ -286,7 +286,7 @@ export class TagService {
 
 		// Check if target name already exists
 		if (allTags.includes(targetName)) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				`Target tag "${targetName}" already exists`,
 				ERROR_CODES.VALIDATION_ERROR,
 				{ tagName: targetName }

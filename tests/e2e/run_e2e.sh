@@ -47,21 +47,21 @@ fi
 
 
 # --- Configuration ---
-# Assumes script is run from the project root (claude-task-master)
-TASKMASTER_SOURCE_DIR="." # Current directory is the source
+# Assumes script is run from the project root (taskgraph-ai)
+TASKGRAPH_SOURCE_DIR="." # Current directory is the source
 # Base directory for test runs, relative to project root
-BASE_TEST_DIR="$TASKMASTER_SOURCE_DIR/tests/e2e/_runs"
+BASE_TEST_DIR="$TASKGRAPH_SOURCE_DIR/tests/e2e/_runs"
 # Log directory, relative to project root
-LOG_DIR="$TASKMASTER_SOURCE_DIR/tests/e2e/log"
+LOG_DIR="$TASKGRAPH_SOURCE_DIR/tests/e2e/log"
 # Path to the sample PRD, relative to project root
-SAMPLE_PRD_SOURCE="$TASKMASTER_SOURCE_DIR/tests/fixtures/sample-prd.txt"
+SAMPLE_PRD_SOURCE="$TASKGRAPH_SOURCE_DIR/tests/fixtures/sample-prd.txt"
 # Path to the main .env file in the source directory
-MAIN_ENV_FILE="$TASKMASTER_SOURCE_DIR/.env"
+MAIN_ENV_FILE="$TASKGRAPH_SOURCE_DIR/.env"
 # ---
 
 # <<< Source the helper script >>>
 # shellcheck source=tests/e2e/e2e_helpers.sh
-source "$TASKMASTER_SOURCE_DIR/tests/e2e/e2e_helpers.sh"
+source "$TASKGRAPH_SOURCE_DIR/tests/e2e/e2e_helpers.sh"
 
 # ==========================================
 # >>> Global Helper Functions Defined in run_e2e.sh <<<
@@ -119,7 +119,7 @@ if [ "$#" -ge 1 ] && [ "$1" == "--analyze-log" ]; then
     echo "[INFO] Log file not specified. Attempting to find the latest log..."
     # Find the latest log file in the LOG_DIR
     # Ensure LOG_DIR is absolute for ls to work correctly regardless of PWD
-    ABS_LOG_DIR="$(cd "$TASKMASTER_SOURCE_DIR/$LOG_DIR" && pwd)"
+    ABS_LOG_DIR="$(cd "$TASKGRAPH_SOURCE_DIR/$LOG_DIR" && pwd)"
     LATEST_LOG=$(ls -t "$ABS_LOG_DIR"/e2e_run_*.log 2>/dev/null | head -n 1)
 
     if [ -z "$LATEST_LOG" ]; then
@@ -149,9 +149,9 @@ if [ "$#" -ge 1 ] && [ "$1" == "--analyze-log" ]; then
   fi
 
   # Construct the expected run directory path relative to project root
-  EXPECTED_RUN_DIR="$TASKMASTER_SOURCE_DIR/tests/e2e/_runs/run_$timestamp_match"
+  EXPECTED_RUN_DIR="$TASKGRAPH_SOURCE_DIR/tests/e2e/_runs/run_$timestamp_match"
   # Make it absolute
-  EXPECTED_RUN_DIR_ABS="$(cd "$TASKMASTER_SOURCE_DIR" && pwd)/tests/e2e/_runs/run_$timestamp_match"
+  EXPECTED_RUN_DIR_ABS="$(cd "$TASKGRAPH_SOURCE_DIR" && pwd)/tests/e2e/_runs/run_$timestamp_match"
 
   if [ ! -d "$EXPECTED_RUN_DIR_ABS" ]; then
     echo "[ERROR] Corresponding test run directory not found: $EXPECTED_RUN_DIR_ABS" >&2
@@ -166,7 +166,7 @@ if [ "$#" -ge 1 ] && [ "$1" == "--analyze-log" ]; then
 
   # Call the analysis function (sourced from helpers)
   echo "[INFO] Calling analyze_log_with_llm function..."
-  analyze_log_with_llm "$LOG_TO_ANALYZE" "$(cd "$ORIGINAL_DIR/$TASKMASTER_SOURCE_DIR" && pwd)" # Pass absolute project root
+  analyze_log_with_llm "$LOG_TO_ANALYZE" "$(cd "$ORIGINAL_DIR/$TASKGRAPH_SOURCE_DIR" && pwd)" # Pass absolute project root
   ANALYSIS_EXIT_CODE=$?
 
   # Return to original directory
@@ -333,8 +333,8 @@ log_step() {
 
   log_step "Initializing TaskGraph project (non-interactive)"
   taskgraph init -y --name="E2E Test $TIMESTAMP" --description="Automated E2E test run"
-  if [ ! -f ".taskmaster/config.json" ]; then
-    log_error "Initialization failed: .taskmaster/config.json not found."
+  if [ ! -f ".taskgraph/config.json" ]; then
+    log_error "Initialization failed: .taskgraph/config.json not found."
     exit 1
   fi
   log_success "Project initialized."
@@ -344,8 +344,8 @@ log_step() {
   exit_status_prd=$?
   echo "$cmd_output_prd"
   extract_and_sum_cost "$cmd_output_prd"
-  if [ $exit_status_prd -ne 0 ] || [ ! -s ".taskmaster/tasks/tasks.json" ]; then
-    log_error "Parsing PRD failed: .taskmaster/tasks/tasks.json not found or is empty. Exit status: $exit_status_prd"
+  if [ $exit_status_prd -ne 0 ] || [ ! -s ".taskgraph/tasks/tasks.json" ]; then
+    log_error "Parsing PRD failed: .taskgraph/tasks/tasks.json not found or is empty. Exit status: $exit_status_prd"
     exit 1
   else
     log_success "PRD parsed successfully."
@@ -394,12 +394,12 @@ log_step() {
   log_step "Adding task to feature-expand tag"
   taskgraph add-task --tag=feature-expand --prompt="Test task for tag-aware expansion" --priority=medium
   # Get the new task ID dynamically
-  new_expand_task_id=$(jq -r '.["feature-expand"].tasks[-1].id' .taskmaster/tasks/tasks.json)
+  new_expand_task_id=$(jq -r '.["feature-expand"].tasks[-1].id' .taskgraph/tasks/tasks.json)
   log_success "Added task $new_expand_task_id to feature-expand tag."
 
   log_step "Verifying tags exist before expand test"
   taskgraph tags > tags_before_expand.log
-  tag_count_before=$(jq 'keys | length' .taskmaster/tasks/tasks.json)
+  tag_count_before=$(jq 'keys | length' .taskgraph/tasks/tasks.json)
   log_success "Tag count before expand: $tag_count_before"
 
   log_step "Expanding task in feature-expand tag (testing tag corruption fix)"
@@ -415,7 +415,7 @@ log_step() {
 
   log_step "Verifying tag preservation after expand"
   taskgraph tags > tags_after_expand.log
-  tag_count_after=$(jq 'keys | length' .taskmaster/tasks/tasks.json)
+  tag_count_after=$(jq 'keys | length' .taskgraph/tasks/tasks.json)
   
   if [ "$tag_count_before" -eq "$tag_count_after" ]; then
     log_success "Tag count preserved: $tag_count_after (no corruption detected)"
@@ -424,7 +424,7 @@ log_step() {
   fi
 
   log_step "Verifying master tag still exists and has tasks"
-  master_task_count=$(jq -r '.master.tasks | length' .taskmaster/tasks/tasks.json 2>/dev/null || echo "0")
+  master_task_count=$(jq -r '.master.tasks | length' .taskgraph/tasks/tasks.json 2>/dev/null || echo "0")
   if [ "$master_task_count" -gt "0" ]; then
     log_success "Master tag preserved with $master_task_count tasks"
   else
@@ -432,7 +432,7 @@ log_step() {
   fi
 
   log_step "Verifying feature-expand tag has expanded subtasks"
-  expanded_subtask_count=$(jq -r ".\"feature-expand\".tasks[] | select(.id == $new_expand_task_id) | .subtasks | length" .taskmaster/tasks/tasks.json 2>/dev/null || echo "0")
+  expanded_subtask_count=$(jq -r ".\"feature-expand\".tasks[] | select(.id == $new_expand_task_id) | .subtasks | length" .taskgraph/tasks/tasks.json 2>/dev/null || echo "0")
   if [ "$expanded_subtask_count" -gt "0" ]; then
     log_success "Expand successful: $expanded_subtask_count subtasks created in feature-expand tag"
   else
@@ -446,7 +446,7 @@ log_step() {
   extract_and_sum_cost "$cmd_output_force_expand"
   
   # Verify tags still preserved after force expand
-  tag_count_after_force=$(jq 'keys | length' .taskmaster/tasks/tasks.json)
+  tag_count_after_force=$(jq 'keys | length' .taskgraph/tasks/tasks.json)
   if [ "$tag_count_before" -eq "$tag_count_after_force" ]; then
     log_success "Force expand preserved all tags"
   else
@@ -456,7 +456,7 @@ log_step() {
   log_step "Testing expand --all with tag preservation"
   # Add another task to feature-expand for expand-all testing
   taskgraph add-task --tag=feature-expand --prompt="Second task for expand-all testing" --priority=low
-  second_expand_task_id=$(jq -r '.["feature-expand"].tasks[-1].id' .taskmaster/tasks/tasks.json)
+  second_expand_task_id=$(jq -r '.["feature-expand"].tasks[-1].id' .taskgraph/tasks/tasks.json)
   
   cmd_output_expand_all=$(taskgraph expand --tag=feature-expand --all 2>&1)
   exit_status_expand_all=$?
@@ -464,7 +464,7 @@ log_step() {
   extract_and_sum_cost "$cmd_output_expand_all"
   
   # Verify tags preserved after expand-all
-  tag_count_after_all=$(jq 'keys | length' .taskmaster/tasks/tasks.json)
+  tag_count_after_all=$(jq 'keys | length' .taskgraph/tasks/tasks.json)
   if [ "$tag_count_before" -eq "$tag_count_after_all" ]; then
     log_success "Expand --all preserved all tags"
   else
@@ -715,7 +715,7 @@ log_step() {
 
   # Find the next available task ID dynamically instead of hardcoding 11, 12
   # Assuming tasks are added sequentially and we didn't remove any core tasks yet
-  last_task_id=$(jq '[.master.tasks[].id] | max' .taskmaster/tasks/tasks.json)
+  last_task_id=$(jq '[.master.tasks[].id] | max' .taskgraph/tasks/tasks.json)
   manual_task_id=$((last_task_id + 1))
   ai_task_id=$((manual_task_id + 1))
 
@@ -840,7 +840,7 @@ log_step() {
   taskgraph expand --id=3
   log_success "Attempted to expand Task 3."
   # Verify 3.1 exists 
-  if ! jq -e '.master.tasks[] | select(.id == 3) | .subtasks[] | select(.id == 1)' .taskmaster/tasks/tasks.json > /dev/null; then
+  if ! jq -e '.master.tasks[] | select(.id == 3) | .subtasks[] | select(.id == 1)' .taskgraph/tasks/tasks.json > /dev/null; then
       log_error "Subtask 3.1 not found in tasks.json after expanding Task 3."
       exit 1
   fi
@@ -946,11 +946,11 @@ echo "-------------------------"
 # Run this *after* the main execution block and tee pipe finish writing the log file
 if [ -d "$TEST_RUN_DIR" ]; then
   # Define absolute path to source dir if not already defined (though it should be by setup)
-  TASKMASTER_SOURCE_DIR_ABS=${TASKMASTER_SOURCE_DIR_ABS:-$(cd "$ORIGINAL_DIR/$TASKMASTER_SOURCE_DIR" && pwd)}
+  TASKGRAPH_SOURCE_DIR_ABS=${TASKGRAPH_SOURCE_DIR_ABS:-$(cd "$ORIGINAL_DIR/$TASKGRAPH_SOURCE_DIR" && pwd)}
 
   cd "$TEST_RUN_DIR"
   # Pass the absolute source directory path
-  analyze_log_with_llm "$LOG_FILE" "$TASKMASTER_SOURCE_DIR_ABS"
+  analyze_log_with_llm "$LOG_FILE" "$TASKGRAPH_SOURCE_DIR_ABS"
   ANALYSIS_EXIT_CODE=$? # Capture the exit code of the analysis function
   # Optional: cd back again if needed
   cd "$ORIGINAL_DIR" # Ensure we change back to the original directory

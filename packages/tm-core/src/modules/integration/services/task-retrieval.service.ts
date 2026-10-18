@@ -6,8 +6,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 import type { Task } from '../../../common/types/index.js';
 import { AuthManager } from '../../auth/managers/auth-manager.js';
@@ -63,7 +63,7 @@ export class TaskRetrievalService {
 			const task = await this.repository.getTask(this.projectId, taskId);
 
 			if (!task) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Task ${taskId} not found`,
 					ERROR_CODES.TASK_NOT_FOUND,
 					{
@@ -98,8 +98,8 @@ export class TaskRetrievalService {
 
 			return task;
 		} catch (error) {
-			// If it's already a TaskMasterError, just add context and re-throw
-			if (error instanceof TaskMasterError) {
+			// If it's already a TaskGraphError, just add context and re-throw
+			if (error instanceof TaskGraphError) {
 				throw error.withContext({
 					operation: 'getTask',
 					taskId
@@ -109,7 +109,7 @@ export class TaskRetrievalService {
 			// For other errors, wrap them
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				errorMessage,
 				ERROR_CODES.STORAGE_ERROR,
 				{

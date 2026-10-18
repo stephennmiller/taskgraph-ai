@@ -50,7 +50,7 @@
 	"engines": {
 		"node": ">=22.0.0"
 	},
-	"keywords": ["task-master", "cli", "task-management", "productivity"],
+	"keywords": ["taskgraph", "cli", "task-management", "productivity"],
 	"author": "",
 	"license": "MIT",
 	"typesVersions": {

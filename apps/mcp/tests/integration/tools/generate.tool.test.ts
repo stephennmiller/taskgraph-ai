@@ -24,7 +24,7 @@ describe('generate MCP tool', () => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-generate-'));
 		process.chdir(testDir);
 
-		cliPath = path.resolve(__dirname, '../../../../../dist/task-master.js');
+		cliPath = path.resolve(__dirname, '../../../../../dist/taskgraph.js');
 		mcpServerPath = path.resolve(
 			__dirname,
 			'../../../../../dist/mcp-server.js'
@@ -36,7 +36,7 @@ describe('generate MCP tool', () => {
 			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
-		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
+		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 
 		// Create initial empty tasks file using fixtures
 		const initialTasks = createTasksFile();
@@ -195,7 +195,7 @@ describe('generate MCP tool', () => {
 		expect(response.data.count).toBe(1);
 
 		// Verify tag-specific file was created
-		const outputDir = path.join(testDir, '.taskmaster', 'tasks');
+		const outputDir = path.join(testDir, '.taskgraph', 'tasks');
 		expect(
 			fs.existsSync(path.join(outputDir, 'task_001_feature-branch.md'))
 		).toBe(true);

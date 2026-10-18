@@ -33,7 +33,7 @@ The more context you give the model, the better the breakdown and results.
 ## Writing a PRD for TaskGraph
 
 <Note>
-Two example PRD templates are available in `.taskmaster/templates/`:
+Two example PRD templates are available in `.taskgraph/templates/`:
 - `example_prd.md` - Simple template for straightforward projects (`.md` recommended for better editor support)
 - `example_prd_rpg.md` - Advanced RPG (Repository Planning Graph) template for complex projects with dependencies
 
@@ -76,7 +76,7 @@ For complex projects, using the RPG template with a code-context-aware ai agent 
 
 ## Where to Save Your PRD
 
-Place your PRD file in the `.taskmaster/docs` folder in your project.
+Place your PRD file in the `.taskgraph/docs` folder in your project.
 
 - You can have **multiple PRDs** per project.
 - Name your PRDs clearly so they're easy to reference later.
@@ -92,13 +92,13 @@ This is where the TaskGraph magic begins.
 In Claude Code, instruct the agent to generate tasks from your PRD:
 
 ```
-Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskmaster/docs/<prd-name>.md.
+Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskgraph/docs/<prd-name>.md.
 ```
 
 The agent will execute the following command which you can alternatively paste into the CLI:
 
 ```bash
-taskgraph parse-prd .taskmaster/docs/<prd-name>.md
+taskgraph parse-prd .taskgraph/docs/<prd-name>.md
 ```
 
 This will:

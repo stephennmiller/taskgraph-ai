@@ -138,7 +138,7 @@ describe('TaskFileGeneratorService', () => {
 
 			expect(result.success).toBe(true);
 			expect(result.count).toBe(3);
-			expect(result.directory).toContain('.taskmaster/tasks');
+			expect(result.directory).toContain('.taskgraph/tasks');
 
 			// Verify files were created
 			const outputDir = result.directory;

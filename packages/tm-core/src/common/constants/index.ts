@@ -16,7 +16,7 @@ import packageJson from '../../../../../package.json' with { type: 'json' };
  * TaskGraph version from root package.json
  * Centralized to avoid fragile relative paths throughout the codebase
  */
-export const TASKMASTER_VERSION = packageJson.version || 'unknown';
+export const TASKGRAPH_VERSION = packageJson.version || 'unknown';
 
 /**
  * Package name from root package.json

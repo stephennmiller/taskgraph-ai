@@ -24,7 +24,7 @@ describe('get_tasks MCP tool', () => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-get-tasks-'));
 		process.chdir(testDir);
 
-		cliPath = path.resolve(__dirname, '../../../../../dist/task-master.js');
+		cliPath = path.resolve(__dirname, '../../../../../dist/taskgraph.js');
 		mcpServerPath = path.resolve(
 			__dirname,
 			'../../../../../dist/mcp-server.js'
@@ -36,7 +36,7 @@ describe('get_tasks MCP tool', () => {
 			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
-		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
+		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 
 		// Create initial empty tasks file using fixtures
 		const initialTasks = createTasksFile();

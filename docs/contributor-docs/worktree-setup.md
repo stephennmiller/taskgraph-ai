@@ -10,7 +10,7 @@ Instead of Docker complexity, use git worktrees to create isolated working direc
 ✅ **Simple** - No Docker, no containers, just git
 ✅ **Fast** - Instant setup, shared git history
 ✅ **Flexible** - Each worktree can be on a different branch
-✅ **TaskGraph Works** - Full access to `.taskmaster/` in each worktree
+✅ **TaskGraph Works** - Full access to `.taskgraph/` in each worktree
 
 ## Quick Start
 
@@ -24,13 +24,13 @@ Instead of Docker complexity, use git worktrees to create isolated working direc
 ./scripts/create-worktree.sh feature/my-feature
 ```
 
-This creates a worktree in `../claude-task-master-worktrees/<branch-name>/`
+This creates a worktree in `../taskgraph-worktrees/<branch-name>/`
 
 ### 2. Open in Your Editor
 
 ```bash
 # Navigate to the worktree
-cd ../claude-task-master-worktrees/auto-main/  # (or whatever branch)
+cd ../taskgraph-worktrees/auto-main/  # (or whatever branch)
 
 # Open with your preferred AI editor
 cursor .        # Cursor
@@ -50,7 +50,7 @@ cursor .
 
 **Worktree directory**:
 ```bash
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 # Different files, different branch, same git repo
 claude
 ```
@@ -61,10 +61,10 @@ claude
 
 ```bash
 # Create worktree
-./scripts/create-worktree.sh auto/taskmaster-work
+./scripts/create-worktree.sh auto/taskgraph-work
 
 # Navigate there
-cd ../claude-task-master-worktrees/auto-taskmaster-work/
+cd ../taskgraph-worktrees/auto-taskgraph-work/
 
 # Start Claude
 claude
@@ -89,15 +89,15 @@ cursor .
 ./scripts/create-worktree.sh windsurf/feature-c
 
 # Terminal 1
-cd ../claude-task-master-worktrees/cursor-feature-a/
+cd ../taskgraph-worktrees/cursor-feature-a/
 cursor .
 
 # Terminal 2
-cd ../claude-task-master-worktrees/claude-feature-b/
+cd ../taskgraph-worktrees/claude-feature-b/
 claude
 
 # Terminal 3
-cd ../claude-task-master-worktrees/windsurf-feature-c/
+cd ../taskgraph-worktrees/windsurf-feature-c/
 windsurf .
 ```
 
@@ -108,7 +108,7 @@ windsurf .
 cursor .
 
 # Worktree: Have Claude write tests
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 claude -p "Write tests for the recent changes in the main branch"
 ```
 
@@ -117,21 +117,21 @@ claude -p "Write tests for the recent changes in the main branch"
 ### Directory Structure
 
 ```
-/Volumes/Workspace/workspace/contrib/task-master/
-├── claude-task-master/              # Main directory (this one)
+/Volumes/Workspace/workspace/contrib/taskgraph/
+├── taskgraph-ai/              # Main directory (this one)
 │   ├── .git/                        # Shared git repo
-│   ├── .taskmaster/                 # Synced via git
+│   ├── .taskgraph/                 # Synced via git
 │   └── your code...
 │
-└── claude-task-master-worktrees/    # Worktrees directory
+└── taskgraph-worktrees/    # Worktrees directory
     ├── auto-main/                   # Worktree 1
     │   ├── .git -> (points to main .git)
-    │   ├── .taskmaster/             # Same tasks, synced
+    │   ├── .taskgraph/             # Same tasks, synced
     │   └── your code... (on branch auto/main)
     │
     └── feature-x/                   # Worktree 2
         ├── .git -> (points to main .git)
-        ├── .taskmaster/
+        ├── .taskgraph/
         └── your code... (on branch feature/x)
 ```
 
@@ -165,7 +165,7 @@ Use **tags** to separate task contexts:
 taskgraph list
 
 # Worktree 1 - use separate tag
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 taskgraph add-tag --name=claude-auto
 taskgraph use-tag --name=claude-auto
 taskgraph list  # Shows claude-auto tasks only
@@ -186,10 +186,10 @@ git worktree list
 
 ```bash
 # Remove specific worktree
-git worktree remove ../claude-task-master-worktrees/auto-main/
+git worktree remove ../taskgraph-worktrees/auto-main/
 
 # Or if there are uncommitted changes, force it
-git worktree remove --force ../claude-task-master-worktrees/auto-main/
+git worktree remove --force ../taskgraph-worktrees/auto-main/
 ```
 
 ### Sync Changes Between Worktrees
@@ -214,13 +214,13 @@ git pull
 **Setup:**
 ```bash
 ./scripts/create-worktree.sh auto/claude-work
-cd ../claude-task-master-worktrees/auto-claude-work/
+cd ../taskgraph-worktrees/auto-claude-work/
 ```
 
 **Run:**
 ```bash
 # Copy the autonomous script
-cp ../claude-task-master/run-autonomous-tasks.sh .
+cp ../taskgraph-ai/run-autonomous-tasks.sh .
 
 # Run Claude autonomously
 ./run-autonomous-tasks.sh
@@ -244,7 +244,7 @@ git commit -m "feat: new feature"
 
 **Worktree:**
 ```bash
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 git pull
 
 # Have Claude review
@@ -256,7 +256,7 @@ claude -p "Review the latest commit and suggest improvements"
 **Worktree 1 (Backend):**
 ```bash
 ./scripts/create-worktree.sh backend/api
-cd ../claude-task-master-worktrees/backend-api/
+cd ../taskgraph-worktrees/backend-api/
 cursor .
 # Work on API
 ```
@@ -264,7 +264,7 @@ cursor .
 **Worktree 2 (Frontend):**
 ```bash
 ./scripts/create-worktree.sh frontend/ui
-cd ../claude-task-master-worktrees/frontend-ui/
+cd ../taskgraph-worktrees/frontend-ui/
 windsurf .
 # Work on UI
 ```
@@ -303,7 +303,7 @@ Each worktree can have different `node_modules`:
 npm install
 
 # Worktree (different dependencies)
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 npm install
 # Installs independently
 ```
@@ -316,7 +316,7 @@ Each worktree can have its own `.env`:
 echo "API_URL=http://localhost:3000" > .env
 
 # Worktree
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 echo "API_URL=http://localhost:4000" > .env
 # Different config!
 ```
@@ -330,11 +330,11 @@ echo "API_URL=http://localhost:4000" > .env
 ./scripts/list-worktrees.sh
 
 # Remove each one
-git worktree remove ../claude-task-master-worktrees/auto-main/
-git worktree remove ../claude-task-master-worktrees/feature-x/
+git worktree remove ../taskgraph-worktrees/auto-main/
+git worktree remove ../taskgraph-worktrees/feature-x/
 
 # Or remove all at once (careful!)
-rm -rf ../claude-task-master-worktrees/
+rm -rf ../taskgraph-worktrees/
 git worktree prune  # Clean up git's worktree metadata
 ```
 
@@ -352,7 +352,7 @@ git push origin --delete auto/claude-work
 
 ```bash
 # Remove the existing worktree first
-git worktree remove ../claude-task-master-worktrees/auto-main/
+git worktree remove ../taskgraph-worktrees/auto-main/
 ```
 
 ### "Branch already checked out"
@@ -380,7 +380,7 @@ git pull
 
 Each worktree needs its own `node_modules`:
 ```bash
-cd ../claude-task-master-worktrees/auto-main/
+cd ../taskgraph-worktrees/auto-main/
 npm install
 ```
 
@@ -408,7 +408,7 @@ npm install
 ./scripts/create-worktree.sh auto/claude-work
 
 # 2. Open in AI editor
-cd ../claude-task-master-worktrees/auto-claude-work/
+cd ../taskgraph-worktrees/auto-claude-work/
 cursor .   # or claude, windsurf, code, etc.
 
 # 3. Work in parallel

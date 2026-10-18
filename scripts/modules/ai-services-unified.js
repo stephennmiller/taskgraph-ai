@@ -154,7 +154,7 @@ function _readAvailableTags(projectRoot) {
 		const fs = require('fs');
 		const tasksPath = path.join(
 			projectRoot,
-			'.taskmaster',
+			'.taskgraph',
 			'tasks',
 			'tasks.json'
 		);

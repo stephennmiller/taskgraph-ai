@@ -40,7 +40,7 @@ paths:
     - **Purpose**: Centralized interface for all LLM interactions using Vercel AI SDK.
     - **Responsibilities** (See also: `ai-services.md`):
       - Exports `generateTextService`, `generateObjectService`.
-      - Handles provider/model selection based on `role` and `.taskmasterconfig`.
+      - Handles provider/model selection based on `role` and `.taskgraph/config.json`.
       - Resolves API keys (from `.env` or `session.env`).
       - Implements fallback and retry logic.
       - Orchestrates calls to provider-specific implementations (`src/ai-providers/`).
@@ -53,7 +53,7 @@ paths:
   - **[`config-manager.js`](../../scripts/modules/config-manager.js): Configuration Management**
     - **Purpose**: Loads, validates, and provides access to configuration.
     - **Responsibilities** (See also: `utilities.md`):
-      - Reads and merges `.taskmasterconfig` with defaults.
+      - Reads and merges `.taskgraph/config.json` with defaults.
       - Provides getters (e.g., `getMainProvider`, `getLogLevel`, `getDefaultSubtasks`) for accessing settings.
       - **Tag Configuration**: Manages `global.defaultTag` and `tags` section for tag system settings.
       - **Note**: Does **not** store or directly handle API keys (keys are in `.env` or MCP `session.env`).
@@ -103,14 +103,14 @@ paths:
 - **Silent Migration**: Automatically transforms legacy `{"tasks": [...]}` format to tagged format `{"master": {"tasks": [...]}}` on first read
 - **Tag Resolution Layer**: Provides 100% backward compatibility by intercepting tagged format and returning legacy format to existing code
 - **Configuration Integration**: `global.defaultTag` and `tags` section in config.json manage tag system settings
-- **State Management**: `.taskmaster/state.json` tracks current tag, migration status, and tag-branch mappings
+- **State Management**: `.taskgraph/state.json` tracks current tag, migration status, and tag-branch mappings
 - **Migration Notice**: User-friendly notification system for seamless migration experience
 
 **Backward Compatibility**: All existing CLI commands and MCP tools continue to work unchanged. The tag resolution layer ensures that existing code receives the expected legacy format while the underlying storage uses the new tagged structure.
 
 - **Data Flow and Module Dependencies (Updated)**:
 
-  - **CLI**: `bin/task-master.js` -> `scripts/dev.js` (loads `.env`) -> `scripts/modules/commands.js` -> Core Logic (`scripts/modules/*`) -> **Tag Resolution Layer** -> Unified AI Service (`ai-services-unified.js`) -> Provider Adapters -> LLM API.
+  - **CLI**: `bin/taskgraph.js` -> `scripts/dev.js` (loads `.env`) -> `scripts/modules/commands.js` -> Core Logic (`scripts/modules/*`) -> **Tag Resolution Layer** -> Unified AI Service (`ai-services-unified.js`) -> Provider Adapters -> LLM API.
   - **MCP**: External Tool -> `mcp-server/server.js` -> Tool (`mcp-server/src/tools/*`) -> Direct Function (`mcp-server/src/core/direct-functions/*`) -> Core Logic (`scripts/modules/*`) -> **Tag Resolution Layer** -> Unified AI Service (`ai-services-unified.js`) -> Provider Adapters -> LLM API.
   - **Configuration**: Core logic needing non-AI settings calls `config-manager.js` getters (passing `session.env` via `explicitRoot` if from MCP). Unified AI Service internally calls `config-manager.js` getters (using `role`) for AI params and `utils.js` (`resolveEnvVariable` with `session.env`) for API keys.
 
@@ -289,7 +289,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - Export the wrapper function.
     - **Note**: Tag-aware MCP tools are fully implemented with complete tag management support.
 
-3.  **Update `task-master-core.js` with Import/Export**: Add imports/exports for the new `*Direct` function.
+3.  **Update `taskgraph-core.js` with Import/Export**: Add imports/exports for the new `*Direct` function.
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.

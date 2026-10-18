@@ -22,7 +22,7 @@ export function isDebugMode(): boolean {
 
 /**
  * Display an error to the user with optional stack trace in debug mode
- * Handles both TaskMasterError instances and regular errors
+ * Handles both TaskGraphError instances and regular errors
  *
  * @param error - The error to display
  * @param options - Display options
@@ -36,7 +36,7 @@ export function displayError(
 		forceStack?: boolean;
 	} = {}
 ): void {
-	// Check if it's a TaskMasterError with sanitized details
+	// Check if it's a TaskGraphError with sanitized details
 	if (error?.getSanitizedDetails) {
 		const sanitized = error.getSanitizedDetails();
 		console.error(chalk.red(`\n${sanitized.message}`));

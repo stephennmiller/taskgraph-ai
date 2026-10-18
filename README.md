@@ -48,7 +48,6 @@ A task management system for AI-driven development with Claude, built for Claude
 - [Task Structure](docs/task-structure.md)
 - [Examples](docs/examples.md)
 - [Models](docs/models.md)
-- [Migration Guide](docs/migration-guide.md)
 - [Changelog](CHANGELOG.md)
 
 #### Claude Code Quick Install
@@ -120,10 +119,9 @@ Initialize taskgraph in my project
 
 #### 4. Make sure you have a PRD (Recommended)
 
-For **new projects**: Create your PRD at `.taskmaster/docs/prd.txt`.
-For **existing projects**: You can use `scripts/prd.txt` or migrate with `taskgraph migrate`
+For **new projects**: Create your PRD at `.taskgraph/docs/prd.txt`.
 
-An example PRD template is available after initialization in `.taskmaster/templates/example_prd.txt`.
+An example PRD template is available after initialization in `.taskgraph/templates/example_prd.txt`.
 
 > [!NOTE]
 > While a PRD is recommended for complex projects, you can always create individual tasks by asking "Can you help me implement [description of what you want to do]?" in chat.
@@ -136,7 +134,7 @@ The more detailed your PRD, the better the generated tasks will be.
 
 Use Claude Code to:
 
-- Parse requirements: `Can you parse my PRD at scripts/prd.txt?`
+- Parse requirements: `Can you parse my PRD at .taskgraph/docs/prd.txt?`
 - Plan next step: `What's the next task I should work on?`
 - Implement a task: `Can you help me implement task 3?`
 - View multiple tasks: `Can you show me tasks 1, 3, and 5?`

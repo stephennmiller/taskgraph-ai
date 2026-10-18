@@ -1,5 +1,5 @@
 {
-	"name": "taskmaster",
+	"name": "taskgraph",
 	"owner": {
 		"name": "Stephen Miller"
 	},
@@ -9,7 +9,7 @@
 	},
 	"plugins": [
 		{
-			"name": "taskmaster",
+			"name": "taskgraph",
 			"source": "./packages/claude-code-plugin",
 			"description": "AI-powered task management system for ambitious development workflows with intelligent orchestration, complexity analysis, and automated coordination",
 			"author": {

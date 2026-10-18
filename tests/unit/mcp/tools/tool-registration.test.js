@@ -20,7 +20,7 @@ import {
 	validateToolStructure
 } from '../../../helpers/tool-counts.js';
 
-import { registerTaskMasterTools } from '../../../../mcp-server/src/tools/index.js';
+import { registerTaskGraphTools } from '../../../../mcp-server/src/tools/index.js';
 import {
 	coreTools,
 	standardTools,
@@ -124,7 +124,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it(`should register core tools (${CORE_COUNT}) when toolMode defaults to 'core' (default behavior)`, () => {
 			delete process.env.TASKGRAPH_TOOLS;
 
-			registerTaskMasterTools(mockServer);
+			registerTaskGraphTools(mockServer);
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(
 				EXPECTED_TOOL_COUNTS.core
@@ -134,7 +134,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it(`should register all tools (${ALL_COUNT}) when TASKGRAPH_TOOLS=all`, () => {
 			process.env.TASKGRAPH_TOOLS = 'all';
 
-			registerTaskMasterTools(mockServer, 'all');
+			registerTaskGraphTools(mockServer, 'all');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(ALL_COUNT);
 		});
@@ -142,7 +142,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it(`should register exactly ${CORE_COUNT} core tools when TASKGRAPH_TOOLS=core`, () => {
 			process.env.TASKGRAPH_TOOLS = 'core';
 
-			registerTaskMasterTools(mockServer, 'core');
+			registerTaskGraphTools(mockServer, 'core');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(
 				EXPECTED_TOOL_COUNTS.core
@@ -152,7 +152,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it(`should register exactly ${STANDARD_COUNT} standard tools when TASKGRAPH_TOOLS=standard`, () => {
 			process.env.TASKGRAPH_TOOLS = 'standard';
 
-			registerTaskMasterTools(mockServer, 'standard');
+			registerTaskGraphTools(mockServer, 'standard');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(
 				EXPECTED_TOOL_COUNTS.standard
@@ -162,7 +162,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it(`should treat lean as alias for core mode (${CORE_COUNT} tools)`, () => {
 			process.env.TASKGRAPH_TOOLS = 'lean';
 
-			registerTaskMasterTools(mockServer, 'lean');
+			registerTaskGraphTools(mockServer, 'lean');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(CORE_COUNT);
 		});
@@ -170,7 +170,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should handle case insensitive configuration values', () => {
 			process.env.TASKGRAPH_TOOLS = 'CORE';
 
-			registerTaskMasterTools(mockServer, 'CORE');
+			registerTaskGraphTools(mockServer, 'CORE');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(CORE_COUNT);
 		});
@@ -180,7 +180,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should register specific tools from comma-separated list', () => {
 			process.env.TASKGRAPH_TOOLS = 'get_tasks,next_task,get_task';
 
-			registerTaskMasterTools(mockServer, 'get_tasks,next_task,get_task');
+			registerTaskGraphTools(mockServer, 'get_tasks,next_task,get_task');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(3);
 		});
@@ -189,7 +189,7 @@ describe('TaskGraph Tool Registration System', () => {
 			process.env.TASKGRAPH_TOOLS =
 				'invalid_tool,get_tasks,fake_tool,next_task';
 
-			registerTaskMasterTools(
+			registerTaskGraphTools(
 				mockServer,
 				'invalid_tool,get_tasks,fake_tool,next_task'
 			);
@@ -200,7 +200,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should fall back to all tools with completely invalid input', () => {
 			process.env.TASKGRAPH_TOOLS = 'completely_invalid';
 
-			registerTaskMasterTools(mockServer, 'completely_invalid');
+			registerTaskGraphTools(mockServer, 'completely_invalid');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(ALL_COUNT);
 		});
@@ -208,7 +208,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should use core tools when empty string passed as toolMode', () => {
 			process.env.TASKGRAPH_TOOLS = '';
 
-			registerTaskMasterTools(mockServer);
+			registerTaskGraphTools(mockServer);
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(CORE_COUNT);
 		});
@@ -216,7 +216,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should handle whitespace in comma-separated lists', () => {
 			process.env.TASKGRAPH_TOOLS = ' get_tasks , next_task , get_task ';
 
-			registerTaskMasterTools(mockServer, ' get_tasks , next_task , get_task ');
+			registerTaskGraphTools(mockServer, ' get_tasks , next_task , get_task ');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(3);
 		});
@@ -224,7 +224,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should ignore duplicate tools in list', () => {
 			process.env.TASKGRAPH_TOOLS = 'get_tasks,get_tasks,next_task,get_tasks';
 
-			registerTaskMasterTools(
+			registerTaskGraphTools(
 				mockServer,
 				'get_tasks,get_tasks,next_task,get_tasks'
 			);
@@ -235,7 +235,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should fall back to all tools when only commas passed as toolMode', () => {
 			process.env.TASKGRAPH_TOOLS = ',,,';
 
-			registerTaskMasterTools(mockServer, ',,,');
+			registerTaskGraphTools(mockServer, ',,,');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(ALL_COUNT);
 		});
@@ -243,7 +243,7 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should handle single tool selection', () => {
 			process.env.TASKGRAPH_TOOLS = 'get_tasks';
 
-			registerTaskMasterTools(mockServer, 'get_tasks');
+			registerTaskGraphTools(mockServer, 'get_tasks');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(1);
 		});
@@ -311,7 +311,7 @@ describe('TaskGraph Tool Registration System', () => {
 				mockServer.tools = [];
 				mockServer.addTool.mockClear();
 
-				registerTaskMasterTools(mockServer, testCase.toolMode);
+				registerTaskGraphTools(mockServer, testCase.toolMode);
 
 				expect(mockServer.addTool).toHaveBeenCalledTimes(
 					testCase.expectedCount
@@ -324,7 +324,7 @@ describe('TaskGraph Tool Registration System', () => {
 
 			process.env.TASKGRAPH_TOOLS = 'all';
 
-			registerTaskMasterTools(mockServer, 'all');
+			registerTaskGraphTools(mockServer, 'all');
 
 			const endTime = Date.now();
 			const executionTime = endTime - startTime;
@@ -370,9 +370,9 @@ describe('TaskGraph Tool Registration System', () => {
 		it('should handle concurrent registration attempts', () => {
 			process.env.TASKGRAPH_TOOLS = 'core';
 
-			registerTaskMasterTools(mockServer, 'core');
-			registerTaskMasterTools(mockServer, 'core');
-			registerTaskMasterTools(mockServer, 'core');
+			registerTaskGraphTools(mockServer, 'core');
+			registerTaskGraphTools(mockServer, 'core');
+			registerTaskGraphTools(mockServer, 'core');
 
 			expect(mockServer.addTool).toHaveBeenCalledTimes(CORE_COUNT * 3);
 		});
@@ -417,7 +417,7 @@ describe('TaskGraph Tool Registration System', () => {
 
 				process.env.TASKGRAPH_TOOLS = input;
 
-				expect(() => registerTaskMasterTools(mockServer, input)).not.toThrow();
+				expect(() => registerTaskGraphTools(mockServer, input)).not.toThrow();
 
 				expect(mockServer.addTool).toHaveBeenCalledTimes(ALL_COUNT);
 			});

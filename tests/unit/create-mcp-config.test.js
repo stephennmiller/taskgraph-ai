@@ -1,7 +1,6 @@
 /**
  * Tests that generated MCP configs launch this package under the taskgraph-ai
- * key, while configs written by earlier task-master-ai installs are still
- * recognised (left alone on setup).
+ * key and leave an existing taskgraph-ai install alone.
  */
 import fs from 'fs';
 import os from 'os';
@@ -45,19 +44,6 @@ describe('create-mcp-config', () => {
 				'other',
 				'taskgraph-ai'
 			]);
-		});
-
-		test('leaves an existing task-master-ai install untouched', () => {
-			const legacy = {
-				mcpServers: {
-					'task-master-ai': { command: 'npx', args: ['-y', 'task-master-ai'] }
-				}
-			};
-			writeConfig(legacy);
-
-			setupMCPConfiguration(projectRoot, MCP_PATH);
-
-			expect(readConfig()).toEqual(legacy);
 		});
 
 		test('leaves an existing taskgraph-ai install untouched', () => {

@@ -64,7 +64,7 @@ Create a secure user authentication system with login, logout, and session manag
 
 Creates structure:
 \`\`\`
-.taskmaster/
+.taskgraph/
 └── tasks/
     ├── task_001.md
     ├── task_002.md
@@ -106,7 +106,7 @@ Creates structure:
 Task File Generation Complete
 ━━━━━━━━━━━━━━━━━━━━━━━━━━
 Generated: 45 task files
-Location: .taskmaster/tasks/
+Location: .taskgraph/tasks/
 Total size: 156 KB
 
 New files: 5

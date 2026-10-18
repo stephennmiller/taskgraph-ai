@@ -11,7 +11,7 @@ Changesets are a way to track changes to packages in your repository. Each chang
 - Connects these changes with release notes
 - Automates the versioning and publishing process
 
-## How to Use Changesets in Task Master
+## How to Use Changesets in TaskGraph
 
 ### 2. Making Changes
 

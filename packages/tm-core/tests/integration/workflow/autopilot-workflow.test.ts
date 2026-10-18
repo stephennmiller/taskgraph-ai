@@ -11,7 +11,7 @@
  * These tests create temporary project directories and verify the workflow
  * state machine operates correctly with actual file I/O.
  *
- * NOTE: Workflow state is stored in ~/.taskmaster/{project-id}/sessions/
+ * NOTE: Workflow state is stored in ~/.taskgraph/{project-id}/sessions/
  * based on the project path. Tests clean up their state files in afterEach.
  *
  * @integration
@@ -82,7 +82,7 @@ describe('Autopilot Workflow Integration', () => {
 		);
 
 		// Override HOME so os.homedir() returns our temp directory
-		// This prevents tests from polluting the real ~/.taskmaster/
+		// This prevents tests from polluting the real ~/.taskgraph/
 		process.env.HOME = testHomeDir;
 
 		// Create state manager AFTER setting HOME (uses os.homedir() internally)
@@ -145,9 +145,9 @@ describe('Autopilot Workflow Integration', () => {
 
 			const statePath = getExpectedStatePath();
 
-			// State file should be in temp home directory (not real ~/.taskmaster/)
+			// State file should be in temp home directory (not real ~/.taskgraph/)
 			expect(statePath).toContain(testHomeDir);
-			expect(statePath).toContain('.taskmaster');
+			expect(statePath).toContain('.taskgraph');
 			expect(statePath).toContain('sessions');
 			expect(statePath).toContain('workflow-state.json');
 
@@ -165,9 +165,9 @@ describe('Autopilot Workflow Integration', () => {
 			const statePath = getExpectedStatePath();
 
 			// Should contain sanitized project path as identifier
-			// The path should be like: ~/.taskmaster/-tmp-...-tm-workflow-project-.../sessions/workflow-state.json
+			// The path should be like: ~/.taskgraph/-tmp-...-tm-workflow-project-.../sessions/workflow-state.json
 			expect(statePath).toMatch(
-				/\.taskmaster\/-[^/]+\/sessions\/workflow-state\.json$/
+				/\.taskgraph\/-[^/]+\/sessions\/workflow-state\.json$/
 			);
 		});
 	});

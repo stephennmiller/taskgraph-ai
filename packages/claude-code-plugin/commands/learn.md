@@ -23,13 +23,13 @@ Based on your project state:
 **No tasks yet?**
 ```
 You'll want to start with:
-1. /project:task-master:init <prd-file>
+1. /project:taskgraph:init <prd-file>
    → Creates tasks from requirements
    
-2. /project:task-master:parse-prd <file>
+2. /project:taskgraph:parse-prd <file>
    → Alternative task generation
 
-Try: /project:task-master:init demo-prd.md
+Try: /project:taskgraph:init demo-prd.md
 ```
 
 **Have tasks?**
@@ -47,25 +47,25 @@ Let me analyze what you might need...
 - 🔍 Analysis: validate-deps, show dependencies
 
 **By Scenario:**
-- "I want to see what to work on" → `/project:task-master:next`
-- "I need to break this down" → `/project:task-master:expand <id>`
-- "Show me everything" → `/project:task-master:status`
+- "I want to see what to work on" → `/project:taskgraph:next`
+- "I need to break this down" → `/project:taskgraph:expand <id>`
+- "Show me everything" → `/project:taskgraph:status`
 - "Just do it for me" → `/project:workflows:auto-implement`
 
 ### 4. **Power User Patterns**
 
 **Command Chaining:**
 ```
-/project:task-master:next
-/project:task-master:start <id>
+/project:taskgraph:next
+/project:taskgraph:start <id>
 /project:workflows:auto-implement
 ```
 
 **Smart Filters:**
 ```
-/project:task-master:list pending high
-/project:task-master:list blocked
-/project:task-master:list 1-5 tree
+/project:taskgraph:list pending high
+/project:taskgraph:list blocked
+/project:taskgraph:list 1-5 tree
 ```
 
 **Automation:**

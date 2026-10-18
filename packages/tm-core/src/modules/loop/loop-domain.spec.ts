@@ -33,7 +33,7 @@ describe('LoopDomain', () => {
 			const domain = new LoopDomain(customManager);
 			// Verify by checking buildConfig output
 			const config = (domain as any).buildConfig({});
-			expect(config.progressFile).toBe('/custom/root/.taskmaster/progress.txt');
+			expect(config.progressFile).toBe('/custom/root/.taskgraph/progress.txt');
 		});
 
 		it('should call getProjectRoot on ConfigManager', () => {
@@ -59,9 +59,7 @@ describe('LoopDomain', () => {
 
 		it('should construct progressFile from projectRoot', () => {
 			const config = (loopDomain as any).buildConfig({});
-			expect(config.progressFile).toBe(
-				'/test/project/.taskmaster/progress.txt'
-			);
+			expect(config.progressFile).toBe('/test/project/.taskgraph/progress.txt');
 		});
 
 		it('should respect provided iterations', () => {

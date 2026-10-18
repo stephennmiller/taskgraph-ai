@@ -68,7 +68,7 @@ Phase 2 (Core): algorithms, pipelines (depend on Phase 1)
 Phase 3 (API): routes, handlers (depend on Phase 2)
 ```
 
-Task Master automatically orders tasks based on this dependency chain.
+TaskGraph automatically orders tasks based on this dependency chain.
 
 ### 4. Progressive Refinement
 
@@ -162,7 +162,7 @@ Use a code-context-aware tool to fill out the template:
 
 ```bash
 # In Claude Code
-"Create a PRD using @.taskmaster/templates/example_prd_rpg.txt for [your project]"
+"Create a PRD using @.taskgraph/templates/example_prd_rpg.txt for [your project]"
 ```
 
 **Why code context matters:** The AI needs to understand your existing codebase to make informed decisions about:
@@ -177,7 +177,7 @@ Use a code-context-aware tool to fill out the template:
 ### Step 2: Parse PRD into Tasks
 
 ```bash
-taskgraph parse-prd .taskmaster/docs/your-prd.md --research
+taskgraph parse-prd .taskgraph/docs/your-prd.md --research
 ```
 
 TaskGraph will:
@@ -302,8 +302,8 @@ Without test strategy, the AI won't know what to test during implementation.
 1. **Discuss idea with AI**: Explain your project concept
 2. **Reference RPG template**: Show AI the `example_prd_rpg.md`
 3. **Co-create PRD**: Work through each section with AI guidance
-4. **Save to docs**: Place in `.taskmaster/docs/your-project.md` (use `.md` for better editor support)
-5. **Parse PRD**: `taskgraph parse-prd .taskmaster/docs/your-project.md --research`
+4. **Save to docs**: Place in `.taskgraph/docs/your-project.md` (use `.md` for better editor support)
+5. **Parse PRD**: `taskgraph parse-prd .taskgraph/docs/your-project.md --research`
 6. **Analyze**: `taskgraph analyze-complexity --research`
 7. **Expand**: `taskgraph expand --all --research`
 8. **Start work**: `taskgraph next`

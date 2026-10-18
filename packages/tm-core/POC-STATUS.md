@@ -18,7 +18,7 @@ We've successfully implemented a complete end-to-end proof of concept for the `g
 - Handles all filtering and task processing
 - Manages storage lifecycle
 
-#### Facade Layer (TaskMasterCore)
+#### Facade Layer (TaskGraphCore)
 - Simplified API for consumers
 - Delegates to TaskService for operations
 - Backwards compatible `listTasks()` method
@@ -40,11 +40,11 @@ We've successfully implemented a complete end-to-end proof of concept for the `g
 
 ```typescript
 // Same API works with different backends
-const fileCore = createTaskMasterCore(path, { 
+const fileCore = createTaskGraphCore(path, { 
   storage: { type: 'file' } 
 });
 
-const apiCore = createTaskMasterCore(path, { 
+const apiCore = createTaskGraphCore(path, { 
   storage: { 
     type: 'api',
     apiEndpoint: 'https://hamster.ai',
@@ -86,7 +86,7 @@ const result = await core.listTasks({
 - AI providers follow same pattern (BaseProvider)
 
 ### ✅ Error Handling
-- Consistent `TaskMasterError` with codes
+- Consistent `TaskGraphError` with codes
 - Context preservation
 - User-friendly messages
 
@@ -108,7 +108,7 @@ listTasks(tasksPath, statusFilter, reportPath, withSubtasks, outputFormat, conte
 ### New Integration Structure
 ```javascript
 // Using tm-core with proper separation of concerns
-const tmCore = createTaskMasterCore(projectPath, config);
+const tmCore = createTaskGraphCore(projectPath, config);
 const result = await tmCore.getTaskList(options);
 // CLI only handles formatting result for display
 
@@ -172,7 +172,7 @@ Based on this POC success, implement remaining operations:
 2. **Storage Factory Pattern** - Clean abstraction for multiple backends
 3. **Entity Pattern** - Business logic encapsulation
 4. **Template Method Pattern** - BaseProvider for AI providers
-5. **Comprehensive Error Handling** - TaskMasterError with context
+5. **Comprehensive Error Handling** - TaskGraphError with context
 
 ### Improvements Made
 1. Migrated from Jest to Vitest (faster)

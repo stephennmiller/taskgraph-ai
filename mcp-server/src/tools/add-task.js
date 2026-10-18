@@ -10,7 +10,7 @@ import {
 } from '@tm/mcp';
 import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
-import { addTaskDirect } from '../core/task-master-core.js';
+import { addTaskDirect } from '../core/taskgraph-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
 
 /**

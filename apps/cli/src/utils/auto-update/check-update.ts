@@ -24,7 +24,7 @@ import { compareVersions, getCurrentVersion } from './version.js';
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 /** Cache file name */
-const CACHE_FILENAME = 'taskmaster-update-cache.json';
+const CACHE_FILENAME = 'taskgraph-update-cache.json';
 
 interface UpdateCache {
 	timestamp: number;

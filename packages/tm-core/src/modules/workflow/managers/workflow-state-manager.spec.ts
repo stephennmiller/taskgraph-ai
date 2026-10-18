@@ -11,17 +11,17 @@ describe('WorkflowStateManager', () => {
 	describe('getProjectIdentifier', () => {
 		it('should sanitize paths like Claude Code', () => {
 			const projectRoot =
-				'/Volumes/Workspace/workspace/contrib/task-master/demos/nextjs-todo-tdd';
+				'/Volumes/Workspace/workspace/contrib/taskgraph/demos/nextjs-todo-tdd';
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
 			const homeDir = os.homedir();
 
-			// Expected structure: ~/.taskmaster/{project-id}/sessions/
+			// Expected structure: ~/.taskgraph/{project-id}/sessions/
 			const expectedPath = path.join(
 				homeDir,
-				'.taskmaster',
-				'-Volumes-Workspace-workspace-contrib-task-master-demos-nextjs-todo-tdd',
+				'.taskgraph',
+				'-Volumes-Workspace-workspace-contrib-taskgraph-demos-nextjs-todo-tdd',
 				'sessions'
 			);
 
@@ -33,7 +33,7 @@ describe('WorkflowStateManager', () => {
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
-			// Extract project ID from: ~/.taskmaster/{project-id}/sessions/
+			// Extract project ID from: ~/.taskgraph/{project-id}/sessions/
 			const projectId = sessionDir.split(path.sep).slice(-2, -1)[0];
 
 			// Case should be preserved
@@ -48,7 +48,7 @@ describe('WorkflowStateManager', () => {
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
-			// Extract project ID from: ~/.taskmaster/{project-id}/sessions/
+			// Extract project ID from: ~/.taskgraph/{project-id}/sessions/
 			const projectId = sessionDir.split(path.sep).slice(-2, -1)[0];
 
 			// Special chars should be replaced with dashes
@@ -56,13 +56,13 @@ describe('WorkflowStateManager', () => {
 		});
 
 		it('should create unique identifiers for different paths', () => {
-			const project1 = '/Users/alice/task-master';
-			const project2 = '/Users/bob/task-master';
+			const project1 = '/Users/alice/taskgraph';
+			const project2 = '/Users/bob/taskgraph';
 
 			const manager1 = new WorkflowStateManager(project1);
 			const manager2 = new WorkflowStateManager(project2);
 
-			// Extract project IDs from: ~/.taskmaster/{project-id}/sessions/
+			// Extract project IDs from: ~/.taskgraph/{project-id}/sessions/
 			const id1 = manager1.getSessionDir().split(path.sep).slice(-2, -1)[0];
 			const id2 = manager2.getSessionDir().split(path.sep).slice(-2, -1)[0];
 
@@ -77,7 +77,7 @@ describe('WorkflowStateManager', () => {
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
-			// Extract project ID from: ~/.taskmaster/{project-id}/sessions/
+			// Extract project ID from: ~/.taskgraph/{project-id}/sessions/
 			const projectId = sessionDir.split(path.sep).slice(-2, -1)[0];
 
 			// Multiple dashes should be collapsed to single dash
@@ -90,7 +90,7 @@ describe('WorkflowStateManager', () => {
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
-			// Extract project ID from: ~/.taskmaster/{project-id}/sessions/
+			// Extract project ID from: ~/.taskgraph/{project-id}/sessions/
 			const projectId = sessionDir.split(path.sep).slice(-2, -1)[0];
 
 			// Should not end with dash
@@ -102,7 +102,7 @@ describe('WorkflowStateManager', () => {
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
-			// Extract project ID from: ~/.taskmaster/{project-id}/sessions/
+			// Extract project ID from: ~/.taskgraph/{project-id}/sessions/
 			const projectId = sessionDir.split(path.sep).slice(-2, -1)[0];
 
 			// Should start with dash like Claude Code's pattern
@@ -111,16 +111,16 @@ describe('WorkflowStateManager', () => {
 	});
 
 	describe('session paths', () => {
-		it('should place sessions in global ~/.taskmaster/{project-id}/sessions/', () => {
+		it('should place sessions in global ~/.taskgraph/{project-id}/sessions/', () => {
 			const projectRoot = '/some/project';
 			const manager = new WorkflowStateManager(projectRoot);
 
 			const sessionDir = manager.getSessionDir();
 			const homeDir = os.homedir();
 
-			// Should be: ~/.taskmaster/{project-id}/sessions/
-			expect(sessionDir).toContain(path.join(homeDir, '.taskmaster'));
-			expect(sessionDir).toMatch(/\.taskmaster\/.*\/sessions$/);
+			// Should be: ~/.taskgraph/{project-id}/sessions/
+			expect(sessionDir).toContain(path.join(homeDir, '.taskgraph'));
+			expect(sessionDir).toMatch(/\.taskgraph\/.*\/sessions$/);
 		});
 
 		it('should include workflow-state.json in session dir', () => {

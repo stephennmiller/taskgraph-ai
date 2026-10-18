@@ -1,7 +1,7 @@
 /**
  * @fileoverview WorkflowStateManager - Manages persistence of TDD workflow state
  *
- * Stores workflow state in global user directory (~/.taskmaster/{project-id}/sessions/)
+ * Stores workflow state in global user directory (~/.taskgraph/{project-id}/sessions/)
  * to avoid git conflicts and support multiple worktrees.
  * Each project gets its own directory for organizing workflow-related data.
  */
@@ -36,11 +36,11 @@ export class WorkflowStateManager {
 		this.projectRoot = path.resolve(projectRoot);
 		this.maxBackups = maxBackups;
 
-		// Create project-specific directory in global .taskmaster
-		// Structure: ~/.taskmaster/{project-id}/sessions/
+		// Create project-specific directory in global .taskgraph
+		// Structure: ~/.taskgraph/{project-id}/sessions/
 		const projectId = this.getProjectIdentifier(this.projectRoot);
 		const homeDir = os.homedir();
-		const projectDir = path.join(homeDir, '.taskmaster', projectId);
+		const projectDir = path.join(homeDir, '.taskgraph', projectId);
 		this.sessionDir = path.join(projectDir, 'sessions');
 
 		this.statePath = path.join(this.sessionDir, 'workflow-state.json');

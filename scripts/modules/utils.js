@@ -5,17 +5,13 @@
 
 import fs from 'fs';
 import path from 'path';
-import chalk from 'chalk';
-import dotenv from 'dotenv';
-import {
-	COMPLEXITY_REPORT_FILE,
-	LEGACY_COMPLEXITY_REPORT_FILE,
-	LEGACY_CONFIG_FILE
-} from '../../src/constants/paths.js';
-// Import specific config getters needed here
-import { getDebugFlag, getLogLevel } from './config-manager.js';
 // Import FileOperations from tm-core for atomic file modifications
 import { FileOperations } from '@tm/core';
+import chalk from 'chalk';
+import dotenv from 'dotenv';
+import { COMPLEXITY_REPORT_FILE } from '../../src/constants/paths.js';
+// Import specific config getters needed here
+import { getDebugFlag, getLogLevel } from './config-manager.js';
 import * as gitUtils from './utils/git-utils.js';
 
 // Global silent mode flag
@@ -362,7 +358,7 @@ function slugifyTagForFilePath(tagName) {
 /**
  * Resolves a file path to be tag-aware, following the pattern used by other commands.
  * For non-master tags, appends _slugified-tagname before the file extension.
- * @param {string} basePath - The base file path (e.g., '.taskmaster/reports/task-complexity-report.json')
+ * @param {string} basePath - The base file path (e.g., '.taskgraph/reports/task-complexity-report.json')
  * @param {string|null} tag - The tag name (null, undefined, or 'master' uses base path)
  * @param {string} [projectRoot='.'] - The project root directory
  * @returns {string} The resolved file path
@@ -387,12 +383,12 @@ function getTagAwareFilePath(basePath, tag, projectRoot = '.') {
 /**
  * Recursively searches upwards for project root starting from a given directory.
  * @param {string} [startDir=process.cwd()] - The directory to start searching from.
- * @param {string[]} [markers=['package.json', '.git', LEGACY_CONFIG_FILE]] - Marker files/dirs to look for.
+ * @param {string[]} [markers=['package.json', 'pyproject.toml', '.git']] - Marker files/dirs to look for.
  * @returns {string|null} The path to the project root, or null if not found.
  */
 function findProjectRoot(
 	startDir = process.cwd(),
-	markers = ['package.json', 'pyproject.toml', '.git', LEGACY_CONFIG_FILE]
+	markers = ['package.json', 'pyproject.toml', '.git']
 ) {
 	let currentPath = path.resolve(startDir);
 	const rootPath = path.parse(currentPath).root;
@@ -852,13 +848,13 @@ function performCompleteTagMigration(tasksJsonPath) {
 			path.dirname(tasksJsonPath);
 
 		// 1. Migrate config.json - add defaultTag and tags section
-		const configPath = path.join(projectRoot, '.taskmaster', 'config.json');
+		const configPath = path.join(projectRoot, '.taskgraph', 'config.json');
 		if (fs.existsSync(configPath)) {
 			migrateConfigJson(configPath);
 		}
 
 		// 2. Create state.json if it doesn't exist
-		const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
 		if (!fs.existsSync(statePath)) {
 			createStateJson(statePath);
 		}
@@ -943,7 +939,7 @@ function createStateJson(statePath) {
 function markMigrationForNotice(tasksJsonPath) {
 	try {
 		const projectRoot = path.dirname(path.dirname(tasksJsonPath));
-		const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
 
 		// Ensure state.json exists
 		if (!fs.existsSync(statePath)) {
@@ -1224,14 +1220,7 @@ function readComplexityReport(customPath = null) {
 		if (customPath) {
 			reportPath = customPath;
 		} else {
-			// Try new location first, then fall back to legacy
-			const newPath = path.join(process.cwd(), COMPLEXITY_REPORT_FILE);
-			const legacyPath = path.join(
-				process.cwd(),
-				LEGACY_COMPLEXITY_REPORT_FILE
-			);
-
-			reportPath = fs.existsSync(newPath) ? newPath : legacyPath;
+			reportPath = path.join(process.cwd(), COMPLEXITY_REPORT_FILE);
 		}
 
 		if (!fs.existsSync(reportPath)) {
@@ -1765,7 +1754,7 @@ function getCurrentTag(projectRoot) {
 
 	try {
 		// Try to read current tag from state.json using fs directly
-		const statePath = path.join(projectRoot, '.taskmaster', 'state.json');
+		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
 		if (fs.existsSync(statePath)) {
 			const rawState = fs.readFileSync(statePath, 'utf8');
 			const stateData = JSON.parse(rawState);
@@ -1779,7 +1768,7 @@ function getCurrentTag(projectRoot) {
 
 	// Fall back to defaultTag from config using fs directly
 	try {
-		const configPath = path.join(projectRoot, '.taskmaster', 'config.json');
+		const configPath = path.join(projectRoot, '.taskgraph', 'config.json');
 		if (fs.existsSync(configPath)) {
 			const rawConfig = fs.readFileSync(configPath, 'utf8');
 			const configData = JSON.parse(rawConfig);

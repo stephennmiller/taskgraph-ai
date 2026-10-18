@@ -33,8 +33,8 @@ export { validateDependencies } from './validate-dependencies.js';
 // Configuration
 export { setupModels } from './setup-models.js';
 export { viewModels } from './view-models.js';
-export { installTaskmaster } from './install-taskmaster.js';
-export { quickInstallTaskmaster } from './quick-install-taskmaster.js';
+export { installTaskGraph } from './install-taskgraph.js';
+export { quickInstallTaskGraph } from './quick-install-taskgraph.js';
 
 // Status (solo-only)
 export { toReview } from './to-review.js';

@@ -10,7 +10,7 @@ import { findProjectRoot as findProjectRootCore } from '@tm/core';
  * Get the project root directory with fallback to provided path
  *
  * This function intelligently detects the project root by looking for markers like:
- * - .taskmaster directory (highest priority)
+ * - .taskgraph directory (highest priority)
  * - .git directory
  * - package.json
  * - Other project markers

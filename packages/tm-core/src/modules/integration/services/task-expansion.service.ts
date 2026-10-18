@@ -6,8 +6,8 @@
 import { z } from 'zod';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 import { AuthManager } from '../../auth/managers/auth-manager.js';
 import { ApiClient } from '../../storage/utils/api-client.js';
@@ -92,7 +92,7 @@ export class TaskExpansionService {
 			const task = await this.repository.getTask(this.projectId, taskId);
 
 			if (!task) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Task ${taskId} not found`,
 					ERROR_CODES.TASK_NOT_FOUND,
 					{
@@ -138,7 +138,7 @@ export class TaskExpansionService {
 
 			// Validate that task has a database UUID (required for API calls)
 			if (!task.databaseId) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Task ${taskId} is missing a database ID. Task expansion requires tasks to be synced with the remote database.`,
 					ERROR_CODES.VALIDATION_ERROR,
 					{
@@ -154,7 +154,7 @@ export class TaskExpansionService {
 			const uuidSchema = z.uuid();
 			const validation = uuidSchema.safeParse(task.databaseId);
 			if (!validation.success) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Task ${taskId} has an invalid database ID format: ${task.databaseId}`,
 					ERROR_CODES.VALIDATION_ERROR,
 					{
@@ -197,8 +197,8 @@ export class TaskExpansionService {
 				taskLink
 			};
 		} catch (error) {
-			// If it's already a TaskMasterError, just add context and re-throw
-			if (error instanceof TaskMasterError) {
+			// If it's already a TaskGraphError, just add context and re-throw
+			if (error instanceof TaskGraphError) {
 				throw error.withContext({
 					operation: 'expandTask',
 					taskId,
@@ -210,7 +210,7 @@ export class TaskExpansionService {
 			// For other errors, wrap them
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				errorMessage,
 				ERROR_CODES.STORAGE_ERROR,
 				{

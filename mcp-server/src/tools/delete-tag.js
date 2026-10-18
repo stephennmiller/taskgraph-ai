@@ -9,7 +9,7 @@ import {
 	withNormalizedProjectRoot
 } from '@tm/mcp';
 import { z } from 'zod';
-import { deleteTagDirect } from '../core/task-master-core.js';
+import { deleteTagDirect } from '../core/taskgraph-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
 
 /**

@@ -58,7 +58,7 @@ export class TaskFileGeneratorService {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const outputDir =
 			options.outputDir ||
-			path.join(this.projectPath, '.taskmaster', 'tasks');
+			path.join(this.projectPath, '.taskgraph', 'tasks');
 
 		try {
 			// Ensure output directory exists

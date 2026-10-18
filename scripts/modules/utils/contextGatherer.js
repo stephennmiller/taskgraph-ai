@@ -25,7 +25,7 @@ export class ContextGatherer {
 		this.projectRoot = projectRoot;
 		this.tasksPath = path.join(
 			projectRoot,
-			'.taskmaster',
+			'.taskgraph',
 			'tasks',
 			'tasks.json'
 		);

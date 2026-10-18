@@ -72,7 +72,7 @@
 			"anchors": [
 				{
 					"anchor": "Github",
-					"href": "https://github.com/eyaltoledano/claude-task-master",
+					"href": "https://github.com/stephennmiller/taskgraph-ai",
 					"icon": "github"
 				}
 			]
@@ -84,8 +84,8 @@
 	},
 	"footer": {
 		"socials": {
-			"x": "https://x.com/TaskmasterAI",
-			"github": "https://github.com/eyaltoledano/claude-task-master"
+			"x": "https://x.com/TaskGraphAI",
+			"github": "https://github.com/stephennmiller/taskgraph-ai"
 		}
 	}
 }

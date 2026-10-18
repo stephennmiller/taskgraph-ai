@@ -3,7 +3,7 @@ import { jest } from '@jest/globals';
 // Mock the utils functions
 const mockFindTasksPath = jest
 	.fn()
-	.mockReturnValue('/test/path/.taskmaster/tasks/tasks.json');
+	.mockReturnValue('/test/path/.taskgraph/tasks/tasks.json');
 jest.mock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
 	findTasksPath: mockFindTasksPath
 }));
@@ -37,7 +37,7 @@ describe('MCP Cross-Tag Move Direct Function', () => {
 		it('should verify that mocks are working', () => {
 			// Test that findTasksPath mock is working
 			expect(mockFindTasksPath()).toBe(
-				'/test/path/.taskmaster/tasks/tasks.json'
+				'/test/path/.taskgraph/tasks/tasks.json'
 			);
 
 			// Test that readJSON mock is working

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
-import TaskMasterMCPServer from './src/index.js';
+import TaskGraphMCPServer from './src/index.js';
 import logger from './src/logger.js';
 
 // Load environment variables
@@ -14,7 +14,7 @@ process.env.TASKGRAPH_MCP = 'true';
  * Start the MCP server
  */
 async function startServer() {
-	const server = new TaskMasterMCPServer();
+	const server = new TaskGraphMCPServer();
 
 	// Handle graceful shutdown
 	process.on('SIGINT', async () => {

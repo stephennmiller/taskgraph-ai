@@ -4,7 +4,7 @@
  */
 
 import { join, resolve } from 'node:path';
-import { TASKMASTER_TASKS_FILE } from '../constants/paths.js';
+import { TASKGRAPH_TASKS_FILE } from '../constants/paths.js';
 import { findProjectRoot } from './project-root-finder.js';
 
 /**
@@ -22,7 +22,7 @@ import { findProjectRoot } from './project-root-finder.js';
  * // Or specify explicit path
  * const { projectRoot, tasksPath } = getProjectPaths('./my-project');
  * // projectRoot: '/absolute/path/to/my-project'
- * // tasksPath: '/absolute/path/to/my-project/.taskmaster/tasks/tasks.json'
+ * // tasksPath: '/absolute/path/to/my-project/.taskgraph/tasks/tasks.json'
  * ```
  */
 export function getProjectPaths(projectPath?: string): {
@@ -35,6 +35,6 @@ export function getProjectPaths(projectPath?: string): {
 
 	return {
 		projectRoot,
-		tasksPath: join(projectRoot, TASKMASTER_TASKS_FILE)
+		tasksPath: join(projectRoot, TASKGRAPH_TASKS_FILE)
 	};
 }

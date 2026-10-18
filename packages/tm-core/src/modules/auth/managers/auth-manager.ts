@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/index.js';
 import type { Brief } from '../../briefs/types.js';
 import { SupabaseAuthClient } from '../../integration/clients/supabase-client.js';
@@ -360,7 +360,7 @@ export class AuthManager {
 
 	/**
 	 * Ensure a brief is selected in the current context
-	 * Throws a TaskMasterError if no brief is selected
+	 * Throws a TaskGraphError if no brief is selected
 	 * @param operation - The operation name for error context
 	 * @returns The current user context with a guaranteed briefId
 	 */
@@ -368,7 +368,7 @@ export class AuthManager {
 		const context = this.getContext();
 
 		if (!context?.briefId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'No brief selected',
 				ERROR_CODES.NO_BRIEF_SELECTED,
 				{

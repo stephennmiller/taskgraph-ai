@@ -6,8 +6,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../../common/errors/taskgraph-error.js';
 import type {
 	IStorage,
 	LoadTasksOptions,
@@ -629,7 +629,7 @@ export class FileStorage implements IStorage {
 				if (format === 'legacy') {
 					// Legacy format - add new tag key
 					if (tagName in existingData) {
-						throw new TaskMasterError(
+						throw new TaskGraphError(
 							`Tag ${tagName} already exists`,
 							ERROR_CODES.VALIDATION_ERROR
 						);
@@ -934,7 +934,7 @@ export class FileStorage implements IStorage {
 		// Ensure file exists before watching
 		const fileExists = await this.fileOps.exists(tasksPath);
 		if (!fileExists) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Tasks file not found. Initialize the project first.',
 				ERROR_CODES.NOT_FOUND,
 				{ path: tasksPath }

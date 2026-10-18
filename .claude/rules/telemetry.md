@@ -145,7 +145,7 @@ These are the exposed endpoints for MCP clients.
 
 - **Example Snippet (MCP Tool `some_ai_action.js`)**:
   ```javascript
-  import { someAiActionDirect } from '../core/task-master-core.js';
+  import { someAiActionDirect } from '../core/taskgraph-core.js';
   import { handleApiResult, withNormalizedProjectRoot } from './utils.js';
   // ... zod for parameters ...
 

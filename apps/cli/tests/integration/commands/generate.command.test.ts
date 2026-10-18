@@ -35,7 +35,7 @@ describe('generate command', () => {
 			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
-		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
+		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 
 		// Use fixture to create initial empty tasks file
 		const initialTasks = createTasksFile();
@@ -192,7 +192,7 @@ describe('generate command', () => {
 		expect(exitCode).toBe(0);
 
 		// Should create tag-specific file
-		const outputDir = path.join(testDir, '.taskmaster', 'tasks');
+		const outputDir = path.join(testDir, '.taskgraph', 'tasks');
 		expect(
 			fs.existsSync(path.join(outputDir, 'task_001_feature-branch.md'))
 		).toBe(true);
@@ -207,7 +207,7 @@ describe('generate command', () => {
 		const { output, exitCode } = runGenerate();
 
 		expect(exitCode).toBe(0);
-		expect(output).toContain('.taskmaster/tasks');
+		expect(output).toContain('.taskgraph/tasks');
 	});
 
 	it('should exit with non-zero code for invalid --format value', () => {

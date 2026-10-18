@@ -8,7 +8,7 @@ Find code smells and clean them up. ONE cleanup per session.
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (smells fixed, areas cleaned)
+- @.taskgraph/loop-progress.txt - Progress log (smells fixed, areas cleaned)
 
 ## Code Smells to Target
 

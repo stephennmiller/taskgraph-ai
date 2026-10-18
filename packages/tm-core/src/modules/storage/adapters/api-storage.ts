@@ -6,8 +6,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type {
 	IStorage,
 	LoadTasksOptions,
@@ -96,7 +96,7 @@ export class ApiStorage implements IStorage {
 				config.supabaseClient
 			) as unknown as TaskRepository;
 		} else {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Either repository or supabaseClient must be provided',
 				ERROR_CODES.MISSING_CONFIGURATION
 			);
@@ -112,14 +112,14 @@ export class ApiStorage implements IStorage {
 	 */
 	private validateConfig(config: ApiStorageConfig): void {
 		if (!config.projectId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Project ID is required for API storage',
 				ERROR_CODES.MISSING_CONFIGURATION
 			);
 		}
 
 		if (!config.repository && !config.supabaseClient) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Either repository or supabaseClient must be provided',
 				ERROR_CODES.MISSING_CONFIGURATION
 			);
@@ -137,7 +137,7 @@ export class ApiStorage implements IStorage {
 			await this.loadTagsIntoCache();
 			this.initialized = true;
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to initialize API storage',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'initialize' },
@@ -197,7 +197,7 @@ export class ApiStorage implements IStorage {
 				this.projectId
 			);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to get tags with stats from API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'getTagsWithStats' },
@@ -300,7 +300,7 @@ export class ApiStorage implements IStorage {
 				this.repository.bulkCreateTasks(this.projectId, tasks)
 			);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to save tasks to API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'saveTasks', tag, taskCount: tasks.length },
@@ -356,7 +356,7 @@ export class ApiStorage implements IStorage {
 				}
 			}
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to save task to API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'saveTask', taskId: task.id, tag },
@@ -385,7 +385,7 @@ export class ApiStorage implements IStorage {
 				}
 			}
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to delete task from API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'deleteTask', taskId, tag },
@@ -414,7 +414,7 @@ export class ApiStorage implements IStorage {
 			// No brief selected, return empty array
 			return [];
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to list tags from API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'listTags' },
@@ -440,7 +440,7 @@ export class ApiStorage implements IStorage {
 			const systemTag = await this.repository.getTag(this.projectId, '_system');
 			return (systemTag?.metadata as TaskMetadata) || null;
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to load metadata from API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'loadMetadata', tag },
@@ -490,7 +490,7 @@ export class ApiStorage implements IStorage {
 				}
 			}
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to save metadata to API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'saveMetadata', tag },
@@ -543,7 +543,7 @@ export class ApiStorage implements IStorage {
 				this.tagsCache.set(tag, tagData);
 			}
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to append tasks to API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'appendTasks', tag, taskCount: tasks.length },
@@ -567,7 +567,7 @@ export class ApiStorage implements IStorage {
 				this.repository.updateTask(this.projectId, taskId, updates)
 			);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to update task via API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'updateTask', taskId, tag },
@@ -617,8 +617,8 @@ export class ApiStorage implements IStorage {
 				this.logger.info(`  ${result.message}`);
 			}
 		} catch (error) {
-			// If it's already a TaskMasterError, just add context and re-throw
-			if (error instanceof TaskMasterError) {
+			// If it's already a TaskGraphError, just add context and re-throw
+			if (error instanceof TaskGraphError) {
 				throw error.withContext({
 					operation: 'updateTaskWithPrompt',
 					taskId,
@@ -631,7 +631,7 @@ export class ApiStorage implements IStorage {
 			// For other errors, wrap them
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				errorMessage,
 				ERROR_CODES.STORAGE_ERROR,
 				{
@@ -739,7 +739,7 @@ export class ApiStorage implements IStorage {
 		tagName: string,
 		_options?: { copyFrom?: string; description?: string }
 	): Promise<void> {
-		throw new TaskMasterError(
+		throw new TaskGraphError(
 			'Tag creation is not supported with API storage. Please create briefs through Hamster Studio.',
 			ERROR_CODES.NOT_IMPLEMENTED,
 			{ storageType: 'api', operation: 'createTag', tagName }
@@ -759,7 +759,7 @@ export class ApiStorage implements IStorage {
 
 			this.tagsCache.delete(tag);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to delete tag via API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'deleteTag', tag },
@@ -791,7 +791,7 @@ export class ApiStorage implements IStorage {
 			this.tagsCache.delete(oldTag);
 			this.tagsCache.set(newTag, newTagData);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to rename tag via API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'renameTag', oldTag, newTag },
@@ -819,7 +819,7 @@ export class ApiStorage implements IStorage {
 			// Update cache
 			this.tagsCache.set(targetTag, targetData);
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to copy tag via API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'copyTag', sourceTag, targetTag },
@@ -852,7 +852,7 @@ export class ApiStorage implements IStorage {
 				tagStats
 			};
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to get stats from API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'getStats' },
@@ -878,7 +878,7 @@ export class ApiStorage implements IStorage {
 			// For now, return a backup identifier
 			return `backup-${this.projectId}-${Date.now()}`;
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to create backup via API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'backup' },
@@ -895,7 +895,7 @@ export class ApiStorage implements IStorage {
 
 		// This would restore from a backup service
 		// Implementation depends on backup strategy
-		throw new TaskMasterError(
+		throw new TaskGraphError(
 			'Restore not implemented for API storage',
 			ERROR_CODES.NOT_IMPLEMENTED,
 			{ operation: 'restore', backupId }
@@ -927,7 +927,7 @@ export class ApiStorage implements IStorage {
 			// Clear cache
 			this.tagsCache.clear();
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to clear data via API',
 				ERROR_CODES.STORAGE_ERROR,
 				{ operation: 'clear' },
@@ -962,7 +962,7 @@ export class ApiStorage implements IStorage {
 		const context = authManager.getContext();
 
 		if (!context?.briefId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'No brief context found for watching. Please connect to a brief first.',
 				ERROR_CODES.NO_BRIEF_SELECTED,
 				{ operation: 'watch' }
@@ -1048,7 +1048,7 @@ export class ApiStorage implements IStorage {
 				process.env.TM_BASE_DOMAIN || process.env.TM_PUBLIC_BASE_DOMAIN;
 
 			if (!apiEndpoint) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					'API endpoint not configured. Please set TM_PUBLIC_BASE_DOMAIN environment variable.',
 					ERROR_CODES.MISSING_CONFIGURATION,
 					{ operation: 'getApiClient' }
@@ -1136,13 +1136,13 @@ export class ApiStorage implements IStorage {
 	): never {
 		// If it's already a NO_BRIEF_SELECTED error, don't wrap it
 		if (
-			error instanceof TaskMasterError &&
+			error instanceof TaskGraphError &&
 			error.is(ERROR_CODES.NO_BRIEF_SELECTED)
 		) {
 			throw error;
 		}
 
-		throw new TaskMasterError(
+		throw new TaskGraphError(
 			message,
 			ERROR_CODES.STORAGE_ERROR,
 			context,

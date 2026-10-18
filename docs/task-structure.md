@@ -46,7 +46,7 @@ The `analyze-complexity` command:
 - Recommends optimal number of subtasks based on configured DEFAULT_SUBTASKS
 - Generates tailored prompts for expanding each task
 - Creates a comprehensive JSON report with ready-to-use commands
-- Saves the report to scripts/task-complexity-report.json by default
+- Saves the report to .taskgraph/reports/task-complexity-report.json by default
 
 The generated report contains:
 
@@ -352,9 +352,9 @@ Here's a complete example showing the tagged task structure:
 
 ### Current Tag Resolution
 
-Task Master automatically determines the current tag context based on:
+TaskGraph automatically determines the current tag context based on:
 
-1. **State Configuration**: Current tag stored in `.taskmaster/state.json`
+1. **State Configuration**: Current tag stored in `.taskgraph/state.json`
 2. **Default Fallback**: "master" tag when no context is specified
 3. **Future Enhancement**: Git branch-based tag switching (Part 2)
 
@@ -383,7 +383,7 @@ TaskGraph validates the following aspects of task data:
 
 ## File Generation
 
-Task Master can generate individual markdown files for each task based on the JSON structure. These files include:
+TaskGraph can generate individual markdown files for each task based on the JSON structure. These files include:
 
 - **Task Overview**: ID, title, status, dependencies
 - **Tag Context**: Which tag the task belongs to
@@ -397,8 +397,8 @@ When TaskGraph encounters a legacy format `tasks.json` file:
 
 1. **Detection**: Automatically detects `{"tasks": [...]}` format
 2. **Transformation**: Converts to `{"master": {"tasks": [...]}}` format
-3. **Configuration**: Updates `.taskmaster/config.json` with tagged system settings
-4. **State Creation**: Creates `.taskmaster/state.json` for tag management
+3. **Configuration**: Updates `.taskgraph/config.json` with tagged system settings
+4. **State Creation**: Creates `.taskgraph/state.json` for tag management
 5. **Notification**: Shows one-time friendly notice about the new system
 6. **Preservation**: All existing task data is preserved exactly as-is
 

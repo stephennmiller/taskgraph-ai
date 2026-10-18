@@ -4,8 +4,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type {
 	IConfiguration,
 	RuntimeStorageConfig,
@@ -70,7 +70,7 @@ export class StorageFactory {
 					const authManager = AuthManager.getInstance();
 					const hasSession = await authManager.hasValidSession();
 					if (!hasSession) {
-						throw new TaskMasterError(
+						throw new TaskGraphError(
 							`API storage not fully configured (${missing.join(', ') || 'credentials missing'}). Run: tm auth login, or set the missing field(s).`,
 							ERROR_CODES.MISSING_CONFIGURATION,
 							{ storageType: 'api', missing }
@@ -93,7 +93,7 @@ export class StorageFactory {
 
 						// Validate that apiEndpoint is defined
 						if (!nextStorage.apiEndpoint) {
-							throw new TaskMasterError(
+							throw new TaskGraphError(
 								'API endpoint could not be determined.',
 								ERROR_CODES.MISSING_CONFIGURATION,
 								{ storageType: 'api' }
@@ -153,7 +153,7 @@ export class StorageFactory {
 				return StorageFactory.createFileStorage(projectPath, config);
 
 			default:
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Unknown storage type: ${storageType}`,
 					ERROR_CODES.INVALID_INPUT,
 					{ storageType }

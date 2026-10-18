@@ -7,8 +7,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
 
@@ -34,8 +34,8 @@ export class ConfigPersistence {
 	private readonly logger = getLogger('ConfigPersistence');
 
 	constructor(projectRoot: string) {
-		this.localConfigPath = path.join(projectRoot, '.taskmaster', 'config.json');
-		this.backupDir = path.join(projectRoot, '.taskmaster', 'backups');
+		this.localConfigPath = path.join(projectRoot, '.taskgraph', 'config.json');
+		this.backupDir = path.join(projectRoot, '.taskgraph', 'backups');
 	}
 
 	/**
@@ -69,7 +69,7 @@ export class ConfigPersistence {
 				await fs.writeFile(this.localConfigPath, jsonContent, 'utf-8');
 			}
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to save configuration',
 				ERROR_CODES.CONFIG_ERROR,
 				{ configPath: this.localConfigPath },
@@ -142,7 +142,7 @@ export class ConfigPersistence {
 			await fs.unlink(this.localConfigPath);
 		} catch (error: any) {
 			if (error.code !== 'ENOENT') {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					'Failed to delete configuration',
 					ERROR_CODES.CONFIG_ERROR,
 					{ configPath: this.localConfigPath },
@@ -177,7 +177,7 @@ export class ConfigPersistence {
 			const backupContent = await fs.readFile(backupPath, 'utf-8');
 			await fs.writeFile(this.localConfigPath, backupContent, 'utf-8');
 		} catch (error) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to restore from backup',
 				ERROR_CODES.CONFIG_ERROR,
 				{ backupPath },

@@ -42,7 +42,7 @@ export class GenerateCommand extends Command {
 			.option('-t, --tag <tag>', 'Tag context for task operations')
 			.option(
 				'-o, --output <dir>',
-				'Output directory for generated files (defaults to .taskmaster/tasks)'
+				'Output directory for generated files (defaults to .taskgraph/tasks)'
 			)
 			.option(
 				'-p, --project <path>',

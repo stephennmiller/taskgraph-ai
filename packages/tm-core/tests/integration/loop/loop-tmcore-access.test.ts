@@ -39,9 +39,9 @@ describe('LoopDomain Access via TmCore', () => {
 			path.join(os.tmpdir(), 'tm-loop-access-test-')
 		);
 
-		// Create minimal taskmaster config structure
-		const taskmasterDir = path.join(testProjectDir, '.taskmaster');
-		const tasksDir = path.join(taskmasterDir, 'tasks');
+		// Create minimal taskgraph config structure
+		const taskgraphDir = path.join(testProjectDir, '.taskgraph');
+		const tasksDir = path.join(taskgraphDir, 'tasks');
 		fs.mkdirSync(tasksDir, { recursive: true });
 
 		// Create empty tasks.json for TasksDomain initialization
@@ -57,7 +57,7 @@ describe('LoopDomain Access via TmCore', () => {
 
 		// Create config.json
 		fs.writeFileSync(
-			path.join(taskmasterDir, 'config.json'),
+			path.join(taskgraphDir, 'config.json'),
 			JSON.stringify({
 				models: {
 					main: { id: 'test-model', provider: 'test' },

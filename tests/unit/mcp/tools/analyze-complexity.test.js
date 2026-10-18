@@ -14,7 +14,7 @@ import { jest } from '@jest/globals';
 
 // Mock EVERYTHING
 const mockAnalyzeTaskComplexityDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/task-master-core.js', () => ({
+jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	analyzeTaskComplexityDirect: mockAnalyzeTaskComplexityDirect
 }));
 
@@ -33,7 +33,7 @@ jest.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 		success: true,
 		data: content
 	})),
-	executeTaskMasterCommand: jest.fn()
+	executeTaskGraphCommand: jest.fn()
 }));
 
 // This is a more complex mock of Zod to test actual validation

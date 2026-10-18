@@ -465,7 +465,7 @@ Categories:
 
 ---
 
-<task-master-integration>
+<taskgraph-integration>
 # How TaskGraph Uses This PRD
 
 When you run `taskgraph parse-prd <file>.txt`, the parser:
@@ -508,4 +508,4 @@ RPG-structured PRDs provide:
 2. **Keep features atomic** - Each feature should be independently testable
 3. **Progressive refinement** - Start broad, use `taskgraph expand` to break down complex tasks
 4. **Use research mode** - `taskgraph parse-prd --research` leverages AI for better task generation
-</task-master-integration>
+</taskgraph-integration>

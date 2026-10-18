@@ -14,11 +14,11 @@ import Table from 'cli-table3';
 import gradient from 'gradient-string';
 import ora from 'ora';
 import {
-	TASKMASTER_CONFIG_FILE,
-	TASKMASTER_TASKS_FILE
+	TASKGRAPH_CONFIG_FILE,
+	TASKGRAPH_TASKS_FILE
 } from '../../src/constants/paths.js';
 import { TASK_STATUS_OPTIONS } from '../../src/constants/task-status.js';
-import { getTaskMasterVersion } from '../../src/utils/getVersion.js';
+import { getTaskGraphVersion } from '../../src/utils/getVersion.js';
 import { getDefaultSubtasks, getProjectName } from './config-manager.js';
 import {
 	analyzeTaskComplexity,
@@ -132,7 +132,7 @@ async function displayCurrentTagIndicator(tag, options = {}) {
 function displayAsciiBanner() {
 	if (isSilentMode()) return;
 	ui.displayAsciiBanner({
-		version: getTaskMasterVersion(),
+		version: getTaskGraphVersion(),
 		projectName: getProjectName(null)
 	});
 }
@@ -906,7 +906,7 @@ function displayHelp() {
 
 	configTable.push(
 		[
-			`${chalk.yellow(TASKMASTER_CONFIG_FILE)}${chalk.reset('')}`,
+			`${chalk.yellow(TASKGRAPH_CONFIG_FILE)}${chalk.reset('')}`,
 			`${chalk.white('AI model configuration file (project root)')}${chalk.reset('')}`,
 			`${chalk.dim('Managed by models cmd')}${chalk.reset('')}`
 		],
@@ -1809,7 +1809,7 @@ async function displayComplexityReport(reportPath) {
 		if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
 			// Call the analyze-complexity command
 			console.log(chalk.blue('Generating complexity report...'));
-			const tasksPath = TASKMASTER_TASKS_FILE;
+			const tasksPath = TASKGRAPH_TASKS_FILE;
 			if (!fs.existsSync(tasksPath)) {
 				console.error(
 					'❌ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file.'

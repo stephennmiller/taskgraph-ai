@@ -3,7 +3,7 @@
 ## TaskGraph Instructions
 
 **Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
-@./.taskmaster/CLAUDE.md
+@./.taskgraph/CLAUDE.md
 
 ## Test Guidelines
 

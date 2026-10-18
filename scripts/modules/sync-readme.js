@@ -23,7 +23,7 @@ This project is managed using TaskGraph.
  * @param {string} projectRoot - The project root path
  * @returns {string} - UTM tracked URL
  */
-function createTaskMasterUrl(projectRoot) {
+function createTaskGraphUrl(projectRoot) {
 	// Get the actual folder name from the project root path
 	const folderName = path.basename(projectRoot);
 
@@ -41,7 +41,7 @@ function createTaskMasterUrl(projectRoot) {
 		utm_content: 'task-export-link'
 	});
 
-	return `https://tryhamster.com/product/taskmaster?${utmParams.toString()}`;
+	return `https://github.com/stephennmiller/taskgraph-ai?${utmParams.toString()}`;
 }
 
 /**
@@ -62,11 +62,11 @@ function createStartMarker(options) {
 	const exportInfo =
 		`🎯 **TaskGraph Export** - ${timestamp}\n` +
 		`📋 Export: ${subtasksText} • ${statusText}\n` +
-		`🔗 Powered by [TaskGraph](${createTaskMasterUrl(projectRoot)})`;
+		`🔗 Powered by [TaskGraph](${createTaskGraphUrl(projectRoot)})`;
 
 	// Create a markdown box using code blocks and emojis to mimic our UI style
 	const boxContent =
-		`<!-- TASKMASTER_EXPORT_START -->\n` +
+		`<!-- TASKGRAPH_EXPORT_START -->\n` +
 		`> ${exportInfo.split('\n').join('\n> ')}\n\n`;
 
 	return boxContent;
@@ -79,7 +79,7 @@ function createStartMarker(options) {
 function createEndMarker() {
 	return (
 		`\n> 📋 **End of TaskGraph Export** - Tasks are synced from your project using the \`sync-readme\` command.\n` +
-		`<!-- TASKMASTER_EXPORT_END -->\n`
+		`<!-- TASKGRAPH_EXPORT_END -->\n`
 	);
 }
 
@@ -101,7 +101,7 @@ export async function syncTasksToReadme(projectRoot = null, options = {}) {
 		// Get current tasks using the list-tasks functionality with markdown-readme format
 		const tasksOutput = await listTasks(
 			tasksPath ||
-				path.join(actualProjectRoot, '.taskmaster', 'tasks', 'tasks.json'),
+				path.join(actualProjectRoot, '.taskgraph', 'tasks', 'tasks.json'),
 			status,
 			null,
 			withSubtasks,
@@ -147,8 +147,8 @@ export async function syncTasksToReadme(projectRoot = null, options = {}) {
 		}
 
 		// Check if export markers exist and replace content between them
-		const startComment = '<!-- TASKMASTER_EXPORT_START -->';
-		const endComment = '<!-- TASKMASTER_EXPORT_END -->';
+		const startComment = '<!-- TASKGRAPH_EXPORT_START -->';
+		const endComment = '<!-- TASKGRAPH_EXPORT_END -->';
 
 		let updatedContent;
 		const startIndex = readmeContent.indexOf(startComment);

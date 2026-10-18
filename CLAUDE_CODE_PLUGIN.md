@@ -13,7 +13,7 @@ Once this repository is pushed to GitHub, users can install with:
 /plugin marketplace add stephennmiller/taskgraph-ai
 
 # Install the plugin
-/plugin install taskmaster@taskmaster
+/plugin install taskgraph@taskgraph
 ```
 
 ### Local Development/Testing
@@ -29,7 +29,7 @@ cd ../..
 
 # In Claude Code
 /plugin marketplace add .
-/plugin install taskmaster@taskmaster
+/plugin install taskgraph@taskgraph
 ```
 
 ## Marketplace Structure
@@ -50,7 +50,7 @@ taskgraph-ai/
 
 ## Available Plugins
 
-### taskmaster
+### taskgraph
 
 AI-powered task management system for ambitious development workflows.
 
@@ -94,7 +94,7 @@ To add more plugins to this marketplace:
 
 2. **Commit and push** the changes
 
-3. **Users update** with: `/plugin marketplace update taskmaster`
+3. **Users update** with: `/plugin marketplace update taskgraph`
 
 ### Marketplace Versioning
 
@@ -125,8 +125,8 @@ Organizations can auto-install this marketplace for all team members by adding t
     }
   },
   "enabledPlugins": {
-    "taskmaster": {
-      "marketplace": "taskmaster"
+    "taskgraph": {
+      "marketplace": "taskgraph"
     }
   }
 }

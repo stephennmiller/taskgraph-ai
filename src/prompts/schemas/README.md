@@ -128,7 +128,7 @@ The VS Code profile automatically configures schema validation:
     {
       "fileMatch": [
         "src/prompts/**/*.json",
-        ".taskmaster/prompts/**/*.json",
+        ".taskgraph/prompts/**/*.json",
         "prompts/**/*.json"
       ],
       "url": "./src/prompts/schemas/prompt-template.schema.json"
@@ -148,11 +148,11 @@ For other development environments:
 
 **Schema URLs**:
 - **Local Development**: `./src/prompts/schemas/prompt-template.schema.json`
-- **GitHub Reference**: `https://github.com/eyaltoledano/claude-task-master/blob/main/src/prompts/schemas/prompt-template.schema.json`
+- **GitHub Reference**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/src/prompts/schemas/prompt-template.schema.json`
 
 **File Patterns**:
 - `src/prompts/**/*.json`
-- `.taskmaster/prompts/**/*.json`
+- `.taskgraph/prompts/**/*.json`
 - `prompts/**/*.json`
 
 ## Validation Examples
@@ -392,7 +392,7 @@ The schema includes custom validation for:
 
 ### Current Schema Locations
 - **Local Development**: `./src/prompts/schemas/prompt-template.schema.json`
-- **GitHub Blob**: `https://github.com/eyaltoledano/claude-task-master/blob/main/src/prompts/schemas/prompt-template.schema.json`
+- **GitHub Blob**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/src/prompts/schemas/prompt-template.schema.json`
 - **Schema ID**: Used for internal references and validation
 
 ### URL Usage Guidelines

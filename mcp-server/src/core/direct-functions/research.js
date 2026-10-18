@@ -22,7 +22,7 @@ import { createLogWrapper } from '../../tools/utils.js';
  * @param {boolean} [args.includeProjectTree=false] - Include project file tree in context
  * @param {string} [args.detailLevel='medium'] - Detail level: 'low', 'medium', 'high'
  * @param {string} [args.saveTo] - Automatically save to task/subtask ID (e.g., "15" or "15.2")
- * @param {boolean} [args.saveToFile=false] - Save research results to .taskmaster/docs/research/ directory
+ * @param {boolean} [args.saveToFile=false] - Save research results to .taskgraph/docs/research/ directory
  * @param {string} [args.projectRoot] - Project root path
  * @param {string} [args.tag] - Tag for the task (optional)
  * @param {Object} log - Logger object
@@ -158,7 +158,7 @@ ${result.result}`;
 
 					const tasksPath = path.join(
 						projectRoot,
-						'.taskmaster',
+						'.taskgraph',
 						'tasks',
 						'tasks.json'
 					);
@@ -190,7 +190,7 @@ ${result.result}`;
 					const taskIdNum = parseInt(saveTo, 10);
 					const tasksPath = path.join(
 						projectRoot,
-						'.taskmaster',
+						'.taskgraph',
 						'tasks',
 						'tasks.json'
 					);

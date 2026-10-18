@@ -81,7 +81,7 @@ For each issue found:
 ## Next Steps
 
 After validation:
-- Run \`/taskmaster:fix-dependencies\` to auto-fix
+- Run \`/taskgraph:fix-dependencies\` to auto-fix
 - Manually adjust problematic dependencies
 - Rerun to verify fixes`,
 	mode: 'solo'

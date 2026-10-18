@@ -47,7 +47,7 @@ Based on your needs:
 
 ## Configuration Storage
 
-Model choices are saved in \`.taskmaster/config.json\`.
+Model choices are saved in \`.taskgraph/config.json\`.
 
 ## Post-Setup
 

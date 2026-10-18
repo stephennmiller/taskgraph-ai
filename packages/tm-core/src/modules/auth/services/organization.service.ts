@@ -6,8 +6,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/index.js';
 import type { Database } from '../../../common/types/database.types.js';
 import type { Brief } from '../../briefs/types.js';
@@ -66,7 +66,7 @@ export class OrganizationService {
 				`);
 
 			if (error) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Failed to fetch organizations: ${error.message}`,
 					ERROR_CODES.API_ERROR,
 					{ operation: 'getOrganizations' },
@@ -86,10 +86,10 @@ export class OrganizationService {
 				slug: org.slug ?? org.id ?? '' // Use ID as fallback if slug is null
 			}));
 		} catch (error) {
-			if (error instanceof TaskMasterError) {
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to fetch organizations',
 				ERROR_CODES.API_ERROR,
 				{ operation: 'getOrganizations' },
@@ -118,7 +118,7 @@ export class OrganizationService {
 					// No rows found
 					return null;
 				}
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Failed to fetch organization: ${error.message}`,
 					ERROR_CODES.API_ERROR,
 					{ operation: 'getOrganization', orgId },
@@ -138,10 +138,10 @@ export class OrganizationService {
 				slug: accountData.slug || accountData.id
 			};
 		} catch (error) {
-			if (error instanceof TaskMasterError) {
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to fetch organization',
 				ERROR_CODES.API_ERROR,
 				{ operation: 'getOrganization', orgId },
@@ -175,7 +175,7 @@ export class OrganizationService {
 				.order('updated_at', { ascending: false });
 
 			if (error) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Failed to fetch briefs: ${error.message}`,
 					ERROR_CODES.API_ERROR,
 					{ operation: 'getBriefs', orgId },
@@ -208,10 +208,10 @@ export class OrganizationService {
 					: undefined
 			}));
 		} catch (error) {
-			if (error instanceof TaskMasterError) {
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to fetch briefs',
 				ERROR_CODES.API_ERROR,
 				{ operation: 'getBriefs', orgId },
@@ -249,7 +249,7 @@ export class OrganizationService {
 					// No rows found
 					return null;
 				}
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Failed to fetch brief: ${error.message}`,
 					ERROR_CODES.API_ERROR,
 					{ operation: 'getBrief', briefId },
@@ -279,10 +279,10 @@ export class OrganizationService {
 					: undefined
 			};
 		} catch (error) {
-			if (error instanceof TaskMasterError) {
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to fetch brief',
 				ERROR_CODES.API_ERROR,
 				{ operation: 'getBrief', briefId },
@@ -339,7 +339,7 @@ export class OrganizationService {
 				.order('created_at', { ascending: true });
 
 			if (error) {
-				throw new TaskMasterError(
+				throw new TaskGraphError(
 					`Failed to fetch tasks: ${error.message}`,
 					ERROR_CODES.API_ERROR,
 					{ operation: 'getTasks', briefId },
@@ -372,10 +372,10 @@ export class OrganizationService {
 					: undefined
 			}));
 		} catch (error) {
-			if (error instanceof TaskMasterError) {
+			if (error instanceof TaskGraphError) {
 				throw error;
 			}
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Failed to fetch tasks',
 				ERROR_CODES.API_ERROR,
 				{ operation: 'getTasks', briefId },

@@ -7,7 +7,7 @@ Find duplicated code and refactor into shared utilities. ONE refactor per sessio
 
 ## Files Available
 
-- @.taskmaster/loop-progress.txt - Progress log (clones refactored, duplication %)
+- @.taskgraph/loop-progress.txt - Progress log (clones refactored, duplication %)
 
 ## Process
 

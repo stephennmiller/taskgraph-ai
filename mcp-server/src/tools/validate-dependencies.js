@@ -6,7 +6,7 @@
 import { createErrorResponse, handleApiResult, withToolContext } from '@tm/mcp';
 import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
-import { validateDependenciesDirect } from '../core/task-master-core.js';
+import { validateDependenciesDirect } from '../core/taskgraph-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
 
 /**

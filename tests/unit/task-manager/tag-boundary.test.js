@@ -9,12 +9,12 @@ import {
 // Temporary workspace for each test run
 const TEMP_DIR = path.join(process.cwd(), '.tmp_tag_boundary');
 const TASKS_PATH = path.join(TEMP_DIR, 'tasks.json');
-const STATE_PATH = path.join(TEMP_DIR, '.taskmaster', 'state.json');
+const STATE_PATH = path.join(TEMP_DIR, '.taskgraph', 'state.json');
 
 function seedWorkspace() {
 	// Reset temp dir
 	fs.rmSync(TEMP_DIR, { recursive: true, force: true });
-	fs.mkdirSync(path.join(TEMP_DIR, '.taskmaster'), {
+	fs.mkdirSync(path.join(TEMP_DIR, '.taskgraph'), {
 		recursive: true,
 		force: true
 	});

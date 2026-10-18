@@ -12,7 +12,7 @@ taskgraph init -y
 
 ## What It Does
 
-1. Creates `.taskmaster/` directory structure
+1. Creates `.taskgraph/` directory structure
 2. Initializes empty `tasks.json`
 3. Sets up default configuration
 4. Uses directory name as project name
@@ -30,17 +30,17 @@ taskgraph init -y
 After quick init:
 1. Configure AI models if needed:
    ```
-   /taskmaster:models/setup
+   /taskgraph:models/setup
    ```
 
 2. Parse PRD if available:
    ```
-   /taskmaster:parse-prd <file>
+   /taskgraph:parse-prd <file>
    ```
 
 3. Or create first task:
    ```
-   /taskmaster:add-task create initial setup
+   /taskgraph:add-task create initial setup
    ```
 
 Perfect for rapid project setup!

@@ -51,7 +51,7 @@ export function initializeSentry(options = {}) {
 		if (!telemetryEnabled) {
 			console.log(
 				'✓ Anonymous telemetry disabled per user preference. ' +
-					'Set anonymousTelemetry: true in .taskmaster/config.json to re-enable.'
+					'Set anonymousTelemetry: true in .taskgraph/config.json to re-enable.'
 			);
 			return;
 		}

@@ -38,7 +38,7 @@ describe('RuntimeStateManager', () => {
 			const state = await stateManager.loadState();
 
 			expect(fs.readFile).toHaveBeenCalledWith(
-				'/test/project/.taskmaster/state.json',
+				'/test/project/.taskgraph/state.json',
 				'utf-8'
 			);
 			expect(state.currentTag).toBe('feature-branch');
@@ -105,13 +105,13 @@ describe('RuntimeStateManager', () => {
 			await stateManager.setCurrentTag('test-tag');
 
 			// Verify mkdir was called
-			expect(fs.mkdir).toHaveBeenCalledWith('/test/project/.taskmaster', {
+			expect(fs.mkdir).toHaveBeenCalledWith('/test/project/.taskgraph', {
 				recursive: true
 			});
 
 			// Verify writeFile was called with correct data
 			expect(fs.writeFile).toHaveBeenCalledWith(
-				'/test/project/.taskmaster/state.json',
+				'/test/project/.taskgraph/state.json',
 				expect.stringContaining('"currentTag": "test-tag"'),
 				'utf-8'
 			);
@@ -124,7 +124,7 @@ describe('RuntimeStateManager', () => {
 			);
 		});
 
-		it('should throw TaskMasterError on save failure', async () => {
+		it('should throw TaskGraphError on save failure', async () => {
 			vi.mocked(fs.mkdir).mockRejectedValue(new Error('Disk full'));
 
 			await expect(stateManager.saveState()).rejects.toThrow(
@@ -230,7 +230,7 @@ describe('RuntimeStateManager', () => {
 			await stateManager.clearState();
 
 			expect(fs.unlink).toHaveBeenCalledWith(
-				'/test/project/.taskmaster/state.json'
+				'/test/project/.taskgraph/state.json'
 			);
 			expect(stateManager.getCurrentTag()).toBe(
 				DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG

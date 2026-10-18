@@ -32,28 +32,28 @@ describe('findProjectRoot', () => {
 	});
 
 	describe('TaskGraph marker detection', () => {
-		it('should find .taskmaster directory in current directory', () => {
-			const taskmasterDir = path.join(tempDir, '.taskmaster');
-			fs.mkdirSync(taskmasterDir);
+		it('should find .taskgraph directory in current directory', () => {
+			const taskgraphDir = path.join(tempDir, '.taskgraph');
+			fs.mkdirSync(taskgraphDir);
 
 			const result = findProjectRoot(tempDir);
 			expect(result).toBe(tempDir);
 		});
 
-		it('should find .taskmaster directory in parent directory', () => {
+		it('should find .taskgraph directory in parent directory', () => {
 			const parentDir = tempDir;
 			const childDir = path.join(tempDir, 'child');
-			const taskmasterDir = path.join(parentDir, '.taskmaster');
+			const taskgraphDir = path.join(parentDir, '.taskgraph');
 
-			fs.mkdirSync(taskmasterDir);
+			fs.mkdirSync(taskgraphDir);
 			fs.mkdirSync(childDir);
 
 			const result = findProjectRoot(childDir);
 			expect(result).toBe(parentDir);
 		});
 
-		it('should find .taskmaster/config.json marker', () => {
-			const configDir = path.join(tempDir, '.taskmaster');
+		it('should find .taskgraph/config.json marker', () => {
+			const configDir = path.join(tempDir, '.taskgraph');
 			fs.mkdirSync(configDir);
 			fs.writeFileSync(path.join(configDir, 'config.json'), '{}');
 
@@ -61,17 +61,10 @@ describe('findProjectRoot', () => {
 			expect(result).toBe(tempDir);
 		});
 
-		it('should find .taskmaster/tasks/tasks.json marker', () => {
-			const tasksDir = path.join(tempDir, '.taskmaster', 'tasks');
+		it('should find .taskgraph/tasks/tasks.json marker', () => {
+			const tasksDir = path.join(tempDir, '.taskgraph', 'tasks');
 			fs.mkdirSync(tasksDir, { recursive: true });
 			fs.writeFileSync(path.join(tasksDir, 'tasks.json'), '{}');
-
-			const result = findProjectRoot(tempDir);
-			expect(result).toBe(tempDir);
-		});
-
-		it('should find .taskmasterconfig (legacy) marker', () => {
-			fs.writeFileSync(path.join(tempDir, '.taskmasterconfig'), '{}');
 
 			const result = findProjectRoot(tempDir);
 			expect(result).toBe(tempDir);
@@ -79,63 +72,63 @@ describe('findProjectRoot', () => {
 	});
 
 	describe('Project boundary behavior', () => {
-		it('should find .taskmaster in parent when child has NO boundary markers', () => {
-			// Scenario: /project/.taskmaster and /project/apps (no markers)
-			// This is a simple subdirectory, should find .taskmaster in parent
+		it('should find .taskgraph in parent when child has NO boundary markers', () => {
+			// Scenario: /project/.taskgraph and /project/apps (no markers)
+			// This is a simple subdirectory, should find .taskgraph in parent
 			const projectRoot = tempDir;
 			const appsDir = path.join(tempDir, 'apps');
-			const taskmasterDir = path.join(projectRoot, '.taskmaster');
+			const taskgraphDir = path.join(projectRoot, '.taskgraph');
 
-			fs.mkdirSync(taskmasterDir);
+			fs.mkdirSync(taskgraphDir);
 			fs.mkdirSync(appsDir);
 
 			const result = findProjectRoot(appsDir);
 			expect(result).toBe(projectRoot);
 		});
 
-		it('should stop at project boundary (.git) and NOT find .taskmaster in distant parent', () => {
-			// Scenario: /home/.taskmaster (should be ignored!) and /home/code/project/.git
-			// This is the user's reported issue - .taskmaster in home dir should NOT be found
+		it('should stop at project boundary (.git) and NOT find .taskgraph in distant parent', () => {
+			// Scenario: /home/.taskgraph (should be ignored!) and /home/code/project/.git
+			// This is the user's reported issue - .taskgraph in home dir should NOT be found
 			const homeDir = tempDir;
 			const codeDir = path.join(tempDir, 'code');
 			const projectDir = path.join(codeDir, 'project');
-			const taskmasterInHome = path.join(homeDir, '.taskmaster');
+			const taskgraphInHome = path.join(homeDir, '.taskgraph');
 
-			fs.mkdirSync(taskmasterInHome);
+			fs.mkdirSync(taskgraphInHome);
 			fs.mkdirSync(codeDir);
 			fs.mkdirSync(projectDir);
 			fs.mkdirSync(path.join(projectDir, '.git')); // Project boundary
 
 			const result = findProjectRoot(projectDir);
-			// Should return project (with .git), NOT home (with .taskmaster)
+			// Should return project (with .git), NOT home (with .taskgraph)
 			expect(result).toBe(projectDir);
 		});
 
-		it('should stop at project boundary (package.json) and NOT find .taskmaster beyond', () => {
-			// Scenario: /home/.taskmaster and /home/code/project/package.json
+		it('should stop at project boundary (package.json) and NOT find .taskgraph beyond', () => {
+			// Scenario: /home/.taskgraph and /home/code/project/package.json
 			const homeDir = tempDir;
 			const codeDir = path.join(tempDir, 'code');
 			const projectDir = path.join(codeDir, 'project');
-			const taskmasterInHome = path.join(homeDir, '.taskmaster');
+			const taskgraphInHome = path.join(homeDir, '.taskgraph');
 
-			fs.mkdirSync(taskmasterInHome);
+			fs.mkdirSync(taskgraphInHome);
 			fs.mkdirSync(codeDir);
 			fs.mkdirSync(projectDir);
 			fs.writeFileSync(path.join(projectDir, 'package.json'), '{}'); // Project boundary
 
 			const result = findProjectRoot(projectDir);
-			// Should return project (with package.json), NOT home (with .taskmaster)
+			// Should return project (with package.json), NOT home (with .taskgraph)
 			expect(result).toBe(projectDir);
 		});
 
-		it('should stop at project boundary (lock file) and NOT find .taskmaster beyond', () => {
-			// Scenario: /home/.taskmaster and /home/code/project/package-lock.json
+		it('should stop at project boundary (lock file) and NOT find .taskgraph beyond', () => {
+			// Scenario: /home/.taskgraph and /home/code/project/package-lock.json
 			const homeDir = tempDir;
 			const codeDir = path.join(tempDir, 'code');
 			const projectDir = path.join(codeDir, 'project');
-			const taskmasterInHome = path.join(homeDir, '.taskmaster');
+			const taskgraphInHome = path.join(homeDir, '.taskgraph');
 
-			fs.mkdirSync(taskmasterInHome);
+			fs.mkdirSync(taskgraphInHome);
 			fs.mkdirSync(codeDir);
 			fs.mkdirSync(projectDir);
 			fs.writeFileSync(path.join(projectDir, 'package-lock.json'), '{}'); // Project boundary
@@ -144,48 +137,48 @@ describe('findProjectRoot', () => {
 			expect(result).toBe(projectDir);
 		});
 
-		it('should find .taskmaster when at SAME level as project boundary', () => {
-			// Scenario: /project/.taskmaster AND /project/.git
+		it('should find .taskgraph when at SAME level as project boundary', () => {
+			// Scenario: /project/.taskgraph AND /project/.git
 			// This is a properly initialized TaskGraph project
 			const projectDir = tempDir;
-			const taskmasterDir = path.join(projectDir, '.taskmaster');
+			const taskgraphDir = path.join(projectDir, '.taskgraph');
 			const gitDir = path.join(projectDir, '.git');
 
-			fs.mkdirSync(taskmasterDir);
+			fs.mkdirSync(taskgraphDir);
 			fs.mkdirSync(gitDir);
 
 			const result = findProjectRoot(projectDir);
-			// Should return project (has both .taskmaster and .git)
+			// Should return project (has both .taskgraph and .git)
 			expect(result).toBe(projectDir);
 		});
 
-		it('should find .taskmaster when at same level as boundary, called from subdirectory', () => {
-			// Scenario: /project/.taskmaster, /project/.git, called from /project/src
+		it('should find .taskgraph when at same level as boundary, called from subdirectory', () => {
+			// Scenario: /project/.taskgraph, /project/.git, called from /project/src
 			// This is a typical monorepo setup
 			const projectDir = tempDir;
 			const srcDir = path.join(projectDir, 'src');
-			const taskmasterDir = path.join(projectDir, '.taskmaster');
+			const taskgraphDir = path.join(projectDir, '.taskgraph');
 			const gitDir = path.join(projectDir, '.git');
 
-			fs.mkdirSync(taskmasterDir);
+			fs.mkdirSync(taskgraphDir);
 			fs.mkdirSync(gitDir);
 			fs.mkdirSync(srcDir);
 
 			const result = findProjectRoot(srcDir);
-			// Should find project root with .taskmaster (boundary and .taskmaster at same level)
+			// Should find project root with .taskgraph (boundary and .taskgraph at same level)
 			expect(result).toBe(projectDir);
 		});
 	});
 
 	describe('Monorepo behavior', () => {
-		it('should find .taskmaster in monorepo root when package has no boundary markers', () => {
-			// Scenario: /monorepo/.taskmaster, /monorepo/.git, /monorepo/packages/pkg/src
+		it('should find .taskgraph in monorepo root when package has no boundary markers', () => {
+			// Scenario: /monorepo/.taskgraph, /monorepo/.git, /monorepo/packages/pkg/src
 			// pkg directory has no markers
 			const monorepoRoot = tempDir;
 			const pkgDir = path.join(tempDir, 'packages', 'pkg');
 			const srcDir = path.join(pkgDir, 'src');
 
-			fs.mkdirSync(path.join(monorepoRoot, '.taskmaster'));
+			fs.mkdirSync(path.join(monorepoRoot, '.taskgraph'));
 			fs.mkdirSync(path.join(monorepoRoot, '.git'));
 			fs.mkdirSync(srcDir, { recursive: true });
 
@@ -194,12 +187,12 @@ describe('findProjectRoot', () => {
 		});
 
 		it('should return package root when package HAS its own boundary marker', () => {
-			// Scenario: /monorepo/.taskmaster, /monorepo/packages/pkg/package.json
+			// Scenario: /monorepo/.taskgraph, /monorepo/packages/pkg/package.json
 			// When a package has its own project marker, it's treated as its own project
 			const monorepoRoot = tempDir;
 			const pkgDir = path.join(tempDir, 'packages', 'pkg');
 
-			fs.mkdirSync(path.join(monorepoRoot, '.taskmaster'));
+			fs.mkdirSync(path.join(monorepoRoot, '.taskgraph'));
 			fs.mkdirSync(pkgDir, { recursive: true });
 			fs.writeFileSync(path.join(pkgDir, 'package.json'), '{}'); // Package has its own marker
 
@@ -208,17 +201,17 @@ describe('findProjectRoot', () => {
 			expect(result).toBe(pkgDir);
 		});
 
-		it('should return package root when package HAS .taskmaster (nested TaskGraph)', () => {
-			// Scenario: /monorepo/.taskmaster, /monorepo/packages/pkg/.taskmaster
+		it('should return package root when package HAS .taskgraph (nested TaskGraph)', () => {
+			// Scenario: /monorepo/.taskgraph, /monorepo/packages/pkg/.taskgraph
 			// Package has its own TaskGraph initialization
 			const monorepoRoot = tempDir;
 			const pkgDir = path.join(tempDir, 'packages', 'pkg');
 
-			fs.mkdirSync(path.join(monorepoRoot, '.taskmaster'));
-			fs.mkdirSync(path.join(pkgDir, '.taskmaster'), { recursive: true });
+			fs.mkdirSync(path.join(monorepoRoot, '.taskgraph'));
+			fs.mkdirSync(path.join(pkgDir, '.taskgraph'), { recursive: true });
 
 			const result = findProjectRoot(pkgDir);
-			// Returns package (has its own .taskmaster)
+			// Returns package (has its own .taskgraph)
 			expect(result).toBe(pkgDir);
 		});
 	});
@@ -295,24 +288,24 @@ describe('findProjectRoot', () => {
 });
 
 describe('normalizeProjectRoot', () => {
-	it('should remove .taskmaster from path', () => {
-		const result = normalizeProjectRoot('/project/.taskmaster');
+	it('should remove .taskgraph from path', () => {
+		const result = normalizeProjectRoot('/project/.taskgraph');
 		expect(result).toBe('/project');
 	});
 
-	it('should remove .taskmaster/subdirectory from path', () => {
-		const result = normalizeProjectRoot('/project/.taskmaster/tasks');
+	it('should remove .taskgraph/subdirectory from path', () => {
+		const result = normalizeProjectRoot('/project/.taskgraph/tasks');
 		expect(result).toBe('/project');
 	});
 
-	it('should return unchanged path if no .taskmaster', () => {
+	it('should return unchanged path if no .taskgraph', () => {
 		const result = normalizeProjectRoot('/project/src');
 		expect(result).toBe('/project/src');
 	});
 
 	it('should handle paths with native separators', () => {
 		// Use native path separators for the test
-		const testPath = ['project', '.taskmaster', 'tasks'].join(path.sep);
+		const testPath = ['project', '.taskgraph', 'tasks'].join(path.sep);
 		const expectedPath = 'project';
 		const result = normalizeProjectRoot(testPath);
 		expect(result).toBe(expectedPath);
@@ -333,9 +326,9 @@ describe('normalizeProjectRoot', () => {
 		expect(result).toBe('');
 	});
 
-	it('should handle root .taskmaster', () => {
+	it('should handle root .taskgraph', () => {
 		const sep = path.sep;
-		const result = normalizeProjectRoot(`${sep}.taskmaster`);
+		const result = normalizeProjectRoot(`${sep}.taskgraph`);
 		expect(result).toBe(sep);
 	});
 });

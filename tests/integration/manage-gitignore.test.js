@@ -483,7 +483,7 @@ jspm_packages/
 # next.js build output
 .next`;
 
-			const taskMasterTemplate = `# Logs
+			const taskGraphTemplate = `# Logs
 logs
 *.log
 
@@ -503,7 +503,7 @@ tasks/ `;
 
 			fs.writeFileSync(testGitignorePath, existingNodeGitignore);
 
-			manageGitignoreFile(testGitignorePath, taskMasterTemplate, false);
+			manageGitignoreFile(testGitignorePath, taskGraphTemplate, false);
 
 			const content = fs.readFileSync(testGitignorePath, 'utf8');
 

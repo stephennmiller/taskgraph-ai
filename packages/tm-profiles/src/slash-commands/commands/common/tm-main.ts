@@ -23,11 +23,11 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 
 ## Project Setup & Configuration
 
-### \`/taskmaster:init\`
+### \`/taskgraph:init\`
 - \`init-project\` - Initialize new project (handles PRD files intelligently)
 - \`init-project-quick\` - Quick setup with auto-confirmation (-y flag)
 
-### \`/taskmaster:models\`
+### \`/taskgraph:models\`
 - \`view-models\` - View current AI model configuration
 - \`setup-models\` - Interactive model configuration
 - \`set-main\` - Set primary generation model
@@ -36,21 +36,21 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 
 ## Task Generation
 
-### \`/taskmaster:parse-prd\`
+### \`/taskgraph:parse-prd\`
 - \`parse-prd\` - Generate tasks from PRD document
 - \`parse-prd-with-research\` - Enhanced parsing with research mode
 
-### \`/taskmaster:generate\`
+### \`/taskgraph:generate\`
 - \`generate-tasks\` - Create individual task files from tasks.json
 
 ## Task Management
 
-### \`/taskmaster:list\`
+### \`/taskgraph:list\`
 - \`list-tasks\` - Smart listing with natural language filters
 - \`list-tasks-with-subtasks\` - Include subtasks in hierarchical view
 - \`list-tasks-by-status\` - Filter by specific status
 
-### \`/taskmaster:set-status\`
+### \`/taskgraph:set-status\`
 - \`to-pending\` - Reset task to pending
 - \`to-in-progress\` - Start working on task
 - \`to-done\` - Mark task complete
@@ -58,103 +58,103 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - \`to-deferred\` - Defer task
 - \`to-cancelled\` - Cancel task
 
-### \`/taskmaster:sync-readme\`
+### \`/taskgraph:sync-readme\`
 - \`sync-readme\` - Export tasks to README.md with formatting
 
-### \`/taskmaster:update\`
+### \`/taskgraph:update\`
 - \`update-task\` - Update tasks with natural language
 - \`update-tasks-from-id\` - Update multiple tasks from a starting point
 - \`update-single-task\` - Update specific task
 
-### \`/taskmaster:add-task\`
+### \`/taskgraph:add-task\`
 - \`add-task\` - Add new task with AI assistance
 
-### \`/taskmaster:remove-task\`
+### \`/taskgraph:remove-task\`
 - \`remove-task\` - Remove task with confirmation
 
 ## Subtask Management
 
-### \`/taskmaster:add-subtask\`
+### \`/taskgraph:add-subtask\`
 - \`add-subtask\` - Add new subtask to parent
 - \`convert-task-to-subtask\` - Convert existing task to subtask
 
-### \`/taskmaster:remove-subtask\`
+### \`/taskgraph:remove-subtask\`
 - \`remove-subtask\` - Remove subtask (with optional conversion)
 
-### \`/taskmaster:clear-subtasks\`
+### \`/taskgraph:clear-subtasks\`
 - \`clear-subtasks\` - Clear subtasks from specific task
 - \`clear-all-subtasks\` - Clear all subtasks globally
 
 ## Task Analysis & Breakdown
 
-### \`/taskmaster:analyze-complexity\`
+### \`/taskgraph:analyze-complexity\`
 - \`analyze-complexity\` - Analyze and generate expansion recommendations
 
-### \`/taskmaster:complexity-report\`
+### \`/taskgraph:complexity-report\`
 - \`complexity-report\` - Display complexity analysis report
 
-### \`/taskmaster:expand\`
+### \`/taskgraph:expand\`
 - \`expand-task\` - Break down specific task
 - \`expand-all-tasks\` - Expand all eligible tasks
 - \`with-research\` - Enhanced expansion
 
 ## Task Navigation
 
-### \`/taskmaster:next\`
+### \`/taskgraph:next\`
 - \`next-task\` - Intelligent next task recommendation
 
-### \`/taskmaster:show\`
+### \`/taskgraph:show\`
 - \`show-task\` - Display detailed task information
 
-### \`/taskmaster:status\`
+### \`/taskgraph:status\`
 - \`project-status\` - Comprehensive project dashboard
 
 ## Dependency Management
 
-### \`/taskmaster:add-dependency\`
+### \`/taskgraph:add-dependency\`
 - \`add-dependency\` - Add task dependency
 
-### \`/taskmaster:remove-dependency\`
+### \`/taskgraph:remove-dependency\`
 - \`remove-dependency\` - Remove task dependency
 
-### \`/taskmaster:validate-dependencies\`
+### \`/taskgraph:validate-dependencies\`
 - \`validate-dependencies\` - Check for dependency issues
 
-### \`/taskmaster:fix-dependencies\`
+### \`/taskgraph:fix-dependencies\`
 - \`fix-dependencies\` - Automatically fix dependency problems
 
 ## Workflows & Automation
 
-### \`/taskmaster:workflows\`
+### \`/taskgraph:workflows\`
 - \`smart-workflow\` - Context-aware intelligent workflow execution
 - \`command-pipeline\` - Chain multiple commands together
 - \`auto-implement-tasks\` - Advanced auto-implementation with code generation
 
 ## Utilities
 
-### \`/taskmaster:utils\`
+### \`/taskgraph:utils\`
 - \`analyze-project\` - Deep project analysis and insights
 
-### \`/taskmaster:setup\`
-- \`install-taskmaster\` - Comprehensive installation guide
-- \`quick-install-taskmaster\` - One-line global installation
+### \`/taskgraph:setup\`
+- \`install-taskgraph\` - Comprehensive installation guide
+- \`quick-install-taskgraph\` - One-line global installation
 
 ## Usage Patterns
 
 ### Natural Language
 Most commands accept natural language arguments:
 \`\`\`
-/taskmaster:add-task create user authentication system
-/taskmaster:update mark all API tasks as high priority
-/taskmaster:list show blocked tasks
+/taskgraph:add-task create user authentication system
+/taskgraph:update mark all API tasks as high priority
+/taskgraph:list show blocked tasks
 \`\`\`
 
 ### ID-Based Commands
 Commands requiring IDs intelligently parse from $ARGUMENTS:
 \`\`\`
-/taskmaster:show 45
-/taskmaster:expand 23
-/taskmaster:set-status/to-done 67
+/taskgraph:show 45
+/taskgraph:expand 23
+/taskgraph:set-status/to-done 67
 \`\`\`
 
 ### Smart Defaults

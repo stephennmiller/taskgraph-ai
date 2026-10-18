@@ -79,13 +79,13 @@ taskgraph remove-subtask --id=<parentId.subtaskId> --convert
 ## Example Flows
 
 \`\`\`
-/taskmaster:remove-subtask 5.1
+/taskgraph:remove-subtask 5.1
 → Warning: Subtask #5.1 is in-progress
 → This will delete all subtask data
 → Parent task #5 will be updated
 Confirm deletion? (y/n)
 
-/taskmaster:remove-subtask 5.1 convert
+/taskgraph:remove-subtask 5.1 convert
 → Converting subtask #5.1 to standalone task #89
 → Preserved: All task data and history
 → Updated: 2 dependency references

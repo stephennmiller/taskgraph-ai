@@ -8,7 +8,7 @@ The MCP integration uses a layered approach:
 
 1. **Core Functions** - In `scripts/modules/` contain the main business logic
 2. **Source Parameter** - Core functions check the `source` parameter to determine behavior
-3. **TaskGraph Core** - In `mcp-server/src/core/task-master-core.js` provides direct function imports
+3. **TaskGraph Core** - In `mcp-server/src/core/taskgraph-core.js` provides direct function imports
 4. **MCP Tools** - In `mcp-server/src/tools/` register the functions with the MCP server
 
 ```
@@ -109,7 +109,7 @@ When adding new features, follow these steps to ensure CLI and MCP compatibility
 
 1. **Implement Core Logic** in the appropriate module file
 2. **Add Source Parameter Support** using the pattern above
-3. **Add to task-master-core.js** to make it available for direct import
+3. **Add to taskgraph-core.js** to make it available for direct import
 4. **Update Command Map** in `mcp-server/src/tools/utils.js`
 5. **Create Tool Implementation** in `mcp-server/src/tools/`
 6. **Register the Tool** in `mcp-server/src/tools/index.js`
@@ -158,7 +158,7 @@ export async function newFeature(param1, param2, options = {}) {
 ### TaskGraph Core Update
 
 ```javascript
-// In mcp-server/src/core/task-master-core.js
+// In mcp-server/src/core/taskgraph-core.js
 import { newFeature } from '../../../scripts/modules/task-manager.js';
 
 // Add to exports
@@ -188,7 +188,7 @@ const commandMap = {
 // In mcp-server/src/tools/newFeature.js
 import { z } from 'zod';
 import {
-	executeTaskMasterCommand,
+	executeTaskGraphCommand,
 	createContentResponse,
 	createErrorResponse
 } from './utils.js';
@@ -215,7 +215,7 @@ export function registerNewFeatureTool(server) {
 				const projectRoot = args.projectRoot;
 
 				// Execute the command
-				const result = await executeTaskMasterCommand(
+				const result = await executeTaskGraphCommand(
 					'new-feature',
 					log,
 					cmdArgs,
@@ -242,7 +242,7 @@ export function registerNewFeatureTool(server) {
 // In mcp-server/src/tools/index.js
 import { registerNewFeatureTool } from './newFeature.js';
 
-export function registerTaskMasterTools(server) {
+export function registerTaskGraphTools(server) {
 	// ... existing registrations
 	registerNewFeatureTool(server);
 }

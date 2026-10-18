@@ -34,7 +34,7 @@ describe('next command', () => {
 			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 
-		tasksPath = path.join(testDir, '.taskmaster', 'tasks', 'tasks.json');
+		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 
 		// Use fixture to create initial empty tasks file
 		const initialTasks = createTasksFile();

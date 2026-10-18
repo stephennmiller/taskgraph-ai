@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 
 export interface ParsedBriefUrl {
 	orgSlug: string | null;
@@ -129,21 +129,21 @@ export class BriefUrlParser {
 	 * @param parsed - Parsed URL components
 	 * @param requireOrg - Whether org slug is required
 	 * @param requireBrief - Whether brief ID is required
-	 * @throws TaskMasterError if required components are missing
+	 * @throws TaskGraphError if required components are missing
 	 */
 	static validate(
 		parsed: ParsedBriefUrl,
 		options: { requireOrg?: boolean; requireBrief?: boolean } = {}
 	): void {
 		if (options.requireOrg && !parsed.orgSlug) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Organization slug could not be extracted from input',
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
 
 		if (options.requireBrief && !parsed.briefId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'Brief identifier could not be extracted from input',
 				ERROR_CODES.VALIDATION_ERROR
 			);

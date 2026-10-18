@@ -122,7 +122,7 @@ For each high-complexity task:
 ## Integration
 
 Results are:
-- Saved to \`.taskmaster/reports/complexity-analysis.md\`
+- Saved to \`.taskgraph/reports/complexity-analysis.md\`
 - Used by expand command
 - Inform sprint planning
 - Guide resource allocation
@@ -131,9 +131,9 @@ Results are:
 
 After analysis:
 \`\`\`
-/taskmaster:expand 5    # Expand specific task
-/taskmaster:expand-all  # Expand all recommended
-/taskmaster:complexity-report  # View detailed report
+/taskgraph:expand 5    # Expand specific task
+/taskgraph:expand-all  # Expand all recommended
+/taskgraph:complexity-report  # View detailed report
 \`\`\``,
 	'solo'
 );

@@ -11,7 +11,7 @@ import {
 } from '@tm/mcp';
 import { z } from 'zod';
 import { resolveTag } from '../../../scripts/modules/utils.js';
-import { updateTaskByIdDirect } from '../core/task-master-core.js';
+import { updateTaskByIdDirect } from '../core/taskgraph-core.js';
 import { findTasksPath } from '../core/utils/path-utils.js';
 
 /**

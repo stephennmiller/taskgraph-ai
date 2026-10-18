@@ -5,8 +5,8 @@
 
 import {
 	ERROR_CODES,
-	TaskMasterError
-} from '../../common/errors/task-master-error.js';
+	TaskGraphError
+} from '../../common/errors/taskgraph-error.js';
 import { AuthManager } from '../auth/managers/auth-manager.js';
 import type { TaskRepository } from '../tasks/repositories/task-repository.interface.js';
 import { BriefService, type TagWithStats } from './services/brief-service.js';
@@ -70,7 +70,7 @@ export class BriefsDomain {
 		}
 
 		if (!resolvedOrgId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'No organization selected. Run "tm context org" first.',
 				ERROR_CODES.CONFIG_ERROR
 			);
@@ -123,7 +123,7 @@ export class BriefsDomain {
 		const context = this.authManager.getContext();
 
 		if (!context?.orgId) {
-			throw new TaskMasterError(
+			throw new TaskGraphError(
 				'No organization context available',
 				ERROR_CODES.MISSING_CONFIGURATION,
 				{

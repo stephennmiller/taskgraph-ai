@@ -55,7 +55,7 @@ describe('Kebab Case Validation', () => {
 		test('should properly detect camelCase flags', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--promptText=test',
 				'--userID=123'
@@ -76,7 +76,7 @@ describe('Kebab Case Validation', () => {
 		test('should not flag kebab-case or lowercase flags', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--prompt=test',
 				'--user-id=123'
@@ -89,7 +89,7 @@ describe('Kebab Case Validation', () => {
 		test('should not flag any single-word flags regardless of case', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--prompt=test', // lowercase
 				'--PROMPT=test', // uppercase
@@ -106,7 +106,7 @@ describe('Kebab Case Validation', () => {
 		test('should handle mixed case flags correctly', () => {
 			const args = [
 				'node',
-				'task-master',
+				'taskgraph',
 				'add-task',
 				'--prompt=test', // single word, should pass
 				'--promptText=test', // camelCase, should flag

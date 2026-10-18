@@ -55,7 +55,7 @@ fs.writeFileSync = mockWriteFileSync;
 
 // --- Test Data (Keep as is, ensure DEFAULT_CONFIG is accurate) ---
 const MOCK_PROJECT_ROOT = '/mock/project';
-const MOCK_CONFIG_PATH = path.join(MOCK_PROJECT_ROOT, '.taskmasterconfig');
+const MOCK_CONFIG_PATH = path.join(MOCK_PROJECT_ROOT, '.taskgraph/config.json');
 
 // Updated DEFAULT_CONFIG reflecting the implementation
 const DEFAULT_CONFIG = {
@@ -194,7 +194,7 @@ describe('Config Manager Module', () => {
 				// Return the REAL file content stringified
 				return REAL_SUPPORTED_MODELS_CONTENT;
 			} else if (filePath === MOCK_CONFIG_PATH) {
-				// Still mock the .taskmasterconfig reads
+				// Still mock the .taskgraph/config.json reads
 				return JSON.stringify(DEFAULT_CONFIG); // Default behavior
 			}
 			// Throw for unexpected reads - helps catch errors
@@ -278,7 +278,7 @@ describe('Config Manager Module', () => {
 
 	// --- getConfig Tests ---
 	describe('getConfig Tests', () => {
-		test('should return default config if .taskmasterconfig does not exist', () => {
+		test('should return default config if .taskgraph/config.json does not exist', () => {
 			// Arrange
 			mockExistsSync.mockReturnValue(false);
 			// findProjectRoot mock is set in beforeEach

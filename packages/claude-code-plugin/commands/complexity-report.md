@@ -16,7 +16,7 @@ taskgraph complexity-report [--file=<path>]
 
 ## Report Location
 
-Default: `.taskmaster/reports/complexity-analysis.md`
+Default: `.taskgraph/reports/complexity-analysis.md`
 Custom: Specify with --file parameter
 
 ## Report Contents
@@ -105,13 +105,13 @@ Use report for:
 ## Example Usage
 
 ```
-/taskmaster:complexity-report
+/taskgraph:complexity-report
 → Opens latest analysis
 
-/taskmaster:complexity-report --file=archived/2024-01-01.md
+/taskgraph:complexity-report --file=archived/2024-01-01.md
 → View historical analysis
 
 After viewing:
-/taskmaster:expand 5
+/taskgraph:expand 5
 → Expand high-complexity task
 ```

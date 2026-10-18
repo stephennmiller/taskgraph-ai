@@ -8,7 +8,7 @@ We're using Commander.js's native class pattern instead of custom abstractions. 
 ```
 @tm/core (Business Logic)          @tm/cli (Presentation)
 ┌─────────────────────┐            ┌──────────────────────────┐
-│ TaskMasterCore      │◄───────────│ ListTasksCommand         │
+│ TaskGraphCore      │◄───────────│ ListTasksCommand         │
 │ - getTaskList()     │            │ extends Commander.Command│
 │ - getTask()         │            │ - display logic only     │
 │ - getNextTask()     │            │ - formatting             │
@@ -47,7 +47,7 @@ export class ListTasksCommand extends Command {
 
 ```typescript
 // apps/cli/src/cli-commander.ts
-class TaskMasterCLI extends Command {
+class TaskGraphCLI extends Command {
   createCommand(name?: string): Command {
     switch (name) {
       case 'list':

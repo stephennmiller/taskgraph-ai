@@ -49,7 +49,7 @@ TaskGraph provides a complete TDD workflow orchestration system that enables AI 
           │ Persists to
           │
 ┌─────────▼───────────────────────────────────────────┐
-│  .taskmaster/workflow-state.json                     │
+│  .taskgraph/workflow-state.json                     │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -860,7 +860,7 @@ async function completePhase(projectRoot: string, results: TestResults) {
 **Solution:**
 ```bash
 # Check state file
-cat .taskmaster/workflow-state.json
+cat .taskgraph/workflow-state.json
 
 # If corrupted, abort and restart
 tm autopilot abort --force
@@ -900,15 +900,15 @@ tm autopilot start 7
 
 ### Permission Issues
 
-**Problem:** Cannot write to .taskmaster directory
+**Problem:** Cannot write to .taskgraph directory
 
 **Solution:**
 ```bash
 # Check directory permissions
-ls -la .taskmaster/
+ls -la .taskgraph/
 
 # Fix permissions
-chmod -R u+w .taskmaster/
+chmod -R u+w .taskgraph/
 ```
 
 ### State Persistence Failures
@@ -918,13 +918,13 @@ chmod -R u+w .taskmaster/
 **Solution:**
 ```bash
 # Check file system permissions
-ls -la .taskmaster/workflow-state.json
+ls -la .taskgraph/workflow-state.json
 
 # Verify state is being written
 tm autopilot status --json | jq .
 
 # If all else fails, reinstall
-rm -rf .taskmaster/
+rm -rf .taskgraph/
 tm init
 ```
 
