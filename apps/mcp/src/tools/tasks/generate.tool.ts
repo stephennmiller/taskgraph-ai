@@ -37,9 +37,7 @@ export function registerGenerateTool(server: FastMCP) {
 			title: 'Generate Task Files',
 			destructiveHint: true
 		},
-		execute: withToolContext(
-			'generate',
-			async (args: GenerateArgs, { log, tmCore }: ToolContext) => {
+		execute: withToolContext(async (args: GenerateArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot, tag, output } = args;
 
 				try {

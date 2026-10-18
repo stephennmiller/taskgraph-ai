@@ -7,7 +7,6 @@ import type {
 	ExistingInfrastructure,
 	RelevantFile,
 	ScopeBoundaries,
-	StorageType,
 	Subtask,
 	Task,
 	TaskCategory
@@ -199,8 +198,7 @@ export function displaySubtasks(
 		description?: string;
 		dependencies?: string[];
 	}>,
-	parentTaskId?: string | number,
-	storageType?: Exclude<StorageType, 'auto'>
+	parentTaskId?: string | number
 ): void {
 	const terminalWidth = getContentWidth();
 	// Display subtasks header
@@ -235,13 +233,10 @@ export function displaySubtasks(
 	});
 
 	subtasks.forEach((subtask) => {
-		// Format subtask ID based on storage type:
-		// - File storage: Show parent prefix (e.g., 10.1, 10.2)
-		// - API storage: Show subtask ID only (e.g., 1, 2)
-		const subtaskId =
-			storageType === 'file' && parentTaskId
-				? `${parentTaskId}.${subtask.id}`
-				: String(subtask.id);
+		// Show the parent prefix (e.g., 10.1, 10.2)
+		const subtaskId = parentTaskId
+			? `${parentTaskId}.${subtask.id}`
+			: String(subtask.id);
 
 		// Format dependencies
 		const deps =
@@ -629,7 +624,6 @@ export function displayTaskDetails(
 		customHeader?: string;
 		headerColor?: string;
 		originalTaskId?: string;
-		storageType?: Exclude<StorageType, 'auto'>;
 	}
 ): void {
 	const {
@@ -637,8 +631,7 @@ export function displayTaskDetails(
 		showSuggestedActions = false,
 		customHeader,
 		headerColor = BORDER_COLOR,
-		originalTaskId,
-		storageType
+		originalTaskId
 	} = options || {};
 
 	// Display header - either custom or default
@@ -687,7 +680,7 @@ export function displayTaskDetails(
 			console.log(theme.muted(`  No subtasks with status '${statusFilter}'`));
 		} else if (filteredSubtasks.length > 0) {
 			console.log(); // Empty line for spacing
-			displaySubtasks(filteredSubtasks, task.id, storageType);
+			displaySubtasks(filteredSubtasks, task.id);
 		}
 	}
 

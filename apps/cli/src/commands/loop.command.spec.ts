@@ -88,12 +88,8 @@ describe('LoopCommand', () => {
 				})
 			},
 			tasks: {
-				getStorageType: vi.fn().mockReturnValue('local'),
 				getNext: vi.fn().mockResolvedValue({ id: '1', title: 'Test Task' }),
 				getCount: vi.fn().mockResolvedValue(0)
-			},
-			auth: {
-				getContext: vi.fn().mockReturnValue(null)
 			}
 		};
 

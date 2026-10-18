@@ -166,15 +166,10 @@ export class GenerateCommand extends Command {
 		result: GenerateTaskFilesResult,
 		options: GenerateCommandOptions
 	): void {
-		// Display header with storage info
 		if (this.tmCore) {
-			const storageType = this.tmCore.tasks.getStorageType();
 			const activeTag = options.tag || this.tmCore.config.getActiveTag();
 
-			displayCommandHeader(this.tmCore, {
-				tag: activeTag,
-				storageType
-			});
+			displayCommandHeader({ tag: activeTag });
 		}
 
 		if (!result.success) {

@@ -87,10 +87,7 @@ export class LoopCommand extends Command {
 
 			this.validateIterations(String(iterations));
 
-			displayCommandHeader(this.tmCore, {
-				tag: options.tag || 'master',
-				storageType: this.tmCore.tasks.getStorageType()
-			});
+			displayCommandHeader({ tag: options.tag || 'master' });
 
 			// Only check sandbox auth when --sandbox flag is used
 			if (options.sandbox) {
@@ -119,9 +116,6 @@ export class LoopCommand extends Command {
 			}
 			console.log();
 
-			// Auto-detect brief name from auth context (if available)
-			const briefName = this.tmCore.auth.getContext()?.briefName;
-
 			const config: Partial<LoopConfig> = {
 				iterations,
 				prompt,
@@ -132,7 +126,6 @@ export class LoopCommand extends Command {
 				// Domain defaults to false (library consumers opt-in explicitly)
 				includeOutput: options.output ?? true,
 				verbose: options.verbose ?? false,
-				brief: briefName,
 				callbacks: this.createOutputCallbacks()
 			};
 

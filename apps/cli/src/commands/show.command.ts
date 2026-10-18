@@ -4,7 +4,7 @@
  */
 
 import { type Task, type TmCore, createTmCore, TaskIdSchema } from '@tm/core';
-import type { StorageType, Subtask } from '@tm/core';
+import type { Subtask } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -33,7 +33,6 @@ export interface ShowCommandOptions {
 export interface ShowTaskResult {
 	task: Task | Subtask | null;
 	found: boolean;
-	storageType: Exclude<StorageType, 'auto'>;
 	originalTaskId?: string; // The original task ID requested (for subtasks like "104.1")
 }
 
@@ -43,7 +42,6 @@ export interface ShowTaskResult {
 export interface ShowMultipleTasksResult {
 	tasks: (Task | Subtask)[];
 	notFound: string[];
-	storageType: Exclude<StorageType, 'auto'>;
 }
 
 /**
@@ -176,13 +174,9 @@ export class ShowCommand extends Command {
 		// Get the task
 		const result = await this.tmCore.tasks.get(taskId);
 
-		// Get storage type
-		const storageType = this.tmCore.tasks.getStorageType();
-
 		return {
 			task: result.task,
 			found: result.task !== null,
-			storageType: storageType as Exclude<StorageType, 'auto'>,
 			originalTaskId: result.isSubtask ? taskId : undefined
 		};
 	}
@@ -211,13 +205,9 @@ export class ShowCommand extends Command {
 			}
 		}
 
-		// Get storage type (resolved, not config value)
-		const storageType = this.tmCore.tasks.getStorageType();
-
 		return {
 			tasks,
-			notFound,
-			storageType
+			notFound
 		};
 	}
 
@@ -275,12 +265,8 @@ export class ShowCommand extends Command {
 			return;
 		}
 
-		// Display header with storage info
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
-		displayCommandHeader(this.tmCore, {
-			tag: activeTag,
-			storageType: result.storageType
-		});
+		displayCommandHeader({ tag: activeTag });
 
 		console.log(); // Add spacing
 
@@ -289,8 +275,7 @@ export class ShowCommand extends Command {
 		displayTaskDetails(result.task, {
 			statusFilter: options.status,
 			showSuggestedActions: true,
-			originalTaskId: result.originalTaskId,
-			storageType: result.storageType
+			originalTaskId: result.originalTaskId
 		});
 	}
 
@@ -301,12 +286,8 @@ export class ShowCommand extends Command {
 		result: ShowMultipleTasksResult,
 		_options: ShowCommandOptions
 	): void {
-		// Display header with storage info
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
-		displayCommandHeader(this.tmCore, {
-			tag: activeTag,
-			storageType: result.storageType
-		});
+		displayCommandHeader({ tag: activeTag });
 
 		if (result.notFound.length > 0) {
 			console.log(chalk.yellow(`\n⚠ Not found: ${result.notFound.join(', ')}`));

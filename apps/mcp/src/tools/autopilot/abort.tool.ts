@@ -30,7 +30,6 @@ export function registerAutopilotAbortTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(
-			'autopilot-abort',
 			async (args: AbortArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot } = args;
 

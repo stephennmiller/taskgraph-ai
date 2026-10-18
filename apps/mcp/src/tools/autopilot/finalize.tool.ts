@@ -30,7 +30,6 @@ export function registerAutopilotFinalizeTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(
-			'autopilot-finalize',
 			async (args: FinalizeArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot } = args;
 

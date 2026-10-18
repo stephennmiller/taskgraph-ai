@@ -73,10 +73,6 @@ export class StartCommand extends Command {
 			// Get current tag from ConfigManager
 			const currentTag = tmCore.config.getActiveTag();
 
-			// Get org slug from auth context (for API storage mode)
-			const authContext = tmCore.auth.getContext();
-			const orgSlug = authContext?.orgSlug;
-
 			// Load task
 			formatter.info(`Loading task ${taskId}...`);
 			const { task } = await tmCore.tasks.get(taskId);
@@ -111,8 +107,7 @@ export class StartCommand extends Command {
 				})),
 				maxAttempts,
 				force: mergedOptions.force,
-				tag: currentTag,
-				orgSlug
+				tag: currentTag
 			});
 
 			// Output success

@@ -38,9 +38,7 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 			title: 'Set Task Status',
 			destructiveHint: true
 		},
-		execute: withToolContext(
-			'set-task-status',
-			async (args: SetTaskStatusArgs, { log, tmCore }: ToolContext) => {
+		execute: withToolContext(async (args: SetTaskStatusArgs, { log, tmCore }: ToolContext) => {
 				const { id, status, projectRoot, tag } = args;
 
 				try {

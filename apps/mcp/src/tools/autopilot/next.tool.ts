@@ -30,7 +30,6 @@ export function registerAutopilotNextTool(server: FastMCP) {
 			readOnlyHint: true
 		},
 		execute: withToolContext(
-			'autopilot-next',
 			async (args: NextActionArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot } = args;
 

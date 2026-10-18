@@ -57,10 +57,8 @@ describe('ListTasksCommand', () => {
 				list: vi.fn().mockResolvedValue({
 					tasks: [{ id: '1', title: 'Test Task', status: 'pending' }],
 					total: 1,
-					filtered: 1,
-					storageType: 'json'
-				}),
-				getStorageType: vi.fn().mockReturnValue('json')
+					filtered: 1
+				})
 			} as any,
 			config: {
 				getActiveTag: vi.fn().mockReturnValue('master')
@@ -198,10 +196,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 4,
-						filtered: 4,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 4
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -238,10 +234,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 3,
-						filtered: 3,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 3
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -277,10 +271,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 5,
-						filtered: 5,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 5
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -322,10 +314,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 4,
-						filtered: 4,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 4
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -366,10 +356,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 6,
-						filtered: 6,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 6
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -412,10 +400,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 4,
-						filtered: 4,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 4
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -473,10 +459,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 2,
-						filtered: 2,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 2
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -522,10 +506,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 3,
-						filtered: 3,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 3
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -571,10 +553,8 @@ describe('ListTasksCommand', () => {
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 1,
-						filtered: 1,
-						storageType: 'json'
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+						filtered: 1
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -630,8 +610,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			const featureBTasksResponse = {
@@ -650,8 +629,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			const listMock = vi
@@ -667,8 +645,7 @@ describe('ListTasksCommand', () => {
 							{ name: 'feature-a', taskCount: 2 },
 							{ name: 'feature-b', taskCount: 2 }
 						]
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -718,8 +695,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			// Tag B: Task 1 is pending (ready), Task 2 depends on Task 1 (not ready)
@@ -740,8 +716,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			const listMock = vi
@@ -757,8 +732,7 @@ describe('ListTasksCommand', () => {
 							{ name: 'tag-a', taskCount: 2 },
 							{ name: 'tag-b', taskCount: 2 }
 						]
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -823,8 +797,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			// Tag B: Task 1 blocks nothing (no other tasks depend on it)
@@ -838,8 +811,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 1,
-				filtered: 1,
-				storageType: 'json'
+				filtered: 1
 			};
 
 			const listMock = vi
@@ -855,8 +827,7 @@ describe('ListTasksCommand', () => {
 							{ name: 'tag-a', taskCount: 2 },
 							{ name: 'tag-b', taskCount: 1 }
 						]
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')
@@ -893,8 +864,7 @@ describe('ListTasksCommand', () => {
 					{ id: '2', title: 'Tag A Task 2', status: 'done', dependencies: [] }
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			const tagBTasksResponse = {
@@ -913,8 +883,7 @@ describe('ListTasksCommand', () => {
 					}
 				],
 				total: 2,
-				filtered: 2,
-				storageType: 'json'
+				filtered: 2
 			};
 
 			const listMock = vi
@@ -930,8 +899,7 @@ describe('ListTasksCommand', () => {
 							{ name: 'tag-a', taskCount: 2 },
 							{ name: 'tag-b', taskCount: 2 }
 						]
-					}),
-					getStorageType: vi.fn().mockReturnValue('json')
+					})
 				},
 				config: {
 					getActiveTag: vi.fn().mockReturnValue('master')

@@ -30,7 +30,6 @@ export function registerAutopilotStatusTool(server: FastMCP) {
 			readOnlyHint: true
 		},
 		execute: withToolContext(
-			'autopilot-status',
 			async (args: StatusArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot } = args;
 

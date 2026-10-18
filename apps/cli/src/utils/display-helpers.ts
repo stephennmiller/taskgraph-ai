@@ -3,41 +3,18 @@
  * Provides DRY utilities for displaying headers and other command output
  */
 
-import type { TmCore } from '@tm/core';
-import type { StorageType } from '@tm/core';
+import path from 'node:path';
 import { displayHeader } from '../ui/index.js';
 
+/** Where tasks are stored, relative to the project root */
+const TASKS_FILE_PATH = path.join('.taskgraph', 'tasks', 'tasks.json');
+
 /**
- * Display the command header with appropriate storage information
- * Handles both API and file storage displays
+ * Display the command header: the active tag and the tasks file it reads from
  */
-export function displayCommandHeader(
-	tmCore: TmCore | undefined,
-	options: {
-		tag?: string;
-		storageType: Exclude<StorageType, 'auto'>;
-	}
-): void {
-	if (!tmCore) {
-		// Fallback display if tmCore is not available
-		displayHeader({
-			tag: options.tag || 'master',
-			storageType: options.storageType
-		});
-		return;
-	}
-
-	// Get the resolved storage type from tasks domain
-	const resolvedStorageType = tmCore.tasks.getStorageType();
-
-	// Get storage display info from tm-core (single source of truth)
-	const displayInfo = tmCore.auth.getStorageDisplayInfo(resolvedStorageType);
-
-	// Display header with computed display info
+export function displayCommandHeader(options: { tag?: string }): void {
 	displayHeader({
 		tag: options.tag || 'master',
-		filePath: displayInfo.filePath,
-		storageType: displayInfo.storageType,
-		briefInfo: displayInfo.briefInfo
+		filePath: TASKS_FILE_PATH
 	});
 }

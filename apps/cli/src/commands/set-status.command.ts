@@ -9,7 +9,6 @@ import {
 	createTmCore,
 	TaskIdSchema
 } from '@tm/core';
-import type { StorageType } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -51,7 +50,6 @@ export interface SetStatusResult {
 		oldStatus: TaskStatus;
 		newStatus: TaskStatus;
 	}>;
-	storageType: Exclude<StorageType, 'auto'>;
 }
 
 /**
@@ -215,8 +213,7 @@ export class SetStatusCommand extends Command {
 			// Store result for potential reuse
 			this.lastResult = {
 				success: true,
-				updatedTasks,
-				storageType: this.tmCore.tasks.getStorageType()
+				updatedTasks
 			};
 
 			// Display results

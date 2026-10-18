@@ -5,11 +5,7 @@
 import dotenv from 'dotenv';
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-	LOCAL_ONLY_COMMANDS,
-	type LocalOnlyCommand,
-	createTmCore
-} from '@tm/core';
+import { createTmCore } from '@tm/core';
 import type { ContentResult, Context } from 'fastmcp';
 import packageJson from '../../../../package.json' with { type: 'json' };
 import type { ToolContext } from './types.js';
@@ -364,11 +360,9 @@ export type ToolExecuteFn<TArgs = any, TResult = any> = (
  * Higher-order function that wraps MCP tool execution with:
  * - Normalized project root (via withNormalizedProjectRoot)
  * - TmCore instance creation
- * - Command guard check (for local-only commands)
  *
- * Use this for ALL MCP tools to provide consistent context and auth checking.
+ * Use this for ALL MCP tools to provide a consistent context.
  *
- * @param commandName - Name of the command (used for guard check)
  * @param executeFn - Tool execution function that receives args and enhanced context
  * @returns Wrapped execute function
  *
@@ -378,9 +372,8 @@ export type ToolExecuteFn<TArgs = any, TResult = any> = (
  *   server.addTool({
  *     name: 'add_dependency',
  *     parameters: AddDependencySchema,
- *     execute: withToolContext('add-dependency', async (args, context) => {
+ *     execute: withToolContext(async (args, context) => {
  *       // context.tmCore is already available
- *       // Auth guard already checked
  *       // Just implement the tool logic!
  *     })
  *   });
@@ -388,7 +381,6 @@ export type ToolExecuteFn<TArgs = any, TResult = any> = (
  * ```
  */
 export function withToolContext<TArgs extends { projectRoot?: string }>(
-	commandName: string,
 	executeFn: ToolExecuteFn<TArgs & { projectRoot: string }, ContentResult>
 ) {
 	return withNormalizedProjectRoot(
@@ -408,27 +400,6 @@ export function withToolContext<TArgs extends { projectRoot?: string }>(
 				projectPath: args.projectRoot,
 				loggerConfig: { mcpMode: true, logCallback: context.log }
 			});
-
-			// Check if this is a local-only command that needs auth guard
-			if (LOCAL_ONLY_COMMANDS.includes(commandName as LocalOnlyCommand)) {
-				const authResult = await tmCore.auth.guardCommand(
-					commandName,
-					tmCore.tasks.getStorageType()
-				);
-
-				if (authResult.isBlocked) {
-					const errorMsg = `You're working on the ${authResult.briefName} Brief in Hamster so this command is managed for you. This command is only available for local file storage. Log out with 'tm auth logout' to use local commands.`;
-					context.log.info(errorMsg);
-					return handleApiResult({
-						result: {
-							success: false,
-							error: { message: errorMsg }
-						},
-						log: context.log,
-						projectRoot: args.projectRoot
-					});
-				}
-			}
 
 			// Create enhanced context with tmCore
 			const enhancedContext: ToolContext = {

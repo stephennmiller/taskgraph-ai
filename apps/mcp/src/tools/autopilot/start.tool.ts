@@ -44,7 +44,6 @@ export function registerAutopilotStartTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(
-			'autopilot-start',
 			async (args: StartWorkflowArgs, { log, tmCore }: ToolContext) => {
 				const { taskId: rawTaskId, projectRoot, maxAttempts, force } = args;
 				// Normalize task ID (e.g., "ham1" → "HAM-1")
@@ -57,10 +56,6 @@ export function registerAutopilotStartTool(server: FastMCP) {
 
 					// Get current tag from ConfigManager
 					const currentTag = tmCore.config.getActiveTag();
-
-					// Get org slug from auth context (for API storage mode)
-					const authContext = tmCore.auth.getContext();
-					const orgSlug = authContext?.orgSlug;
 
 					const taskResult = await tmCore.tasks.get(taskId);
 
@@ -120,8 +115,7 @@ export function registerAutopilotStartTool(server: FastMCP) {
 						})),
 						maxAttempts,
 						force,
-						tag: currentTag, // Pass current tag for branch naming (local storage)
-						orgSlug // Pass org slug for branch naming (API storage, takes precedence)
+						tag: currentTag // Pass current tag for branch naming
 					});
 
 					log.info(`Workflow started successfully for task ${taskId}`);
