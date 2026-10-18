@@ -8,7 +8,7 @@
  * - Main tasks: "1", "2", "3" (numeric only)
  * - Subtasks: "1.1", "1.2" (one level only, no "1.2.3")
  *
- * API STORAGE (Hamster):
+ * PREFIXED IDS:
  * - Main tasks only: "HAM-1", "HAM-2" (3 letters + hyphen + number)
  * - Input accepts: "ham-1", "HAM-1", "ham1", "HAM1" (permissive input)
  * - Output always: "HAM-1" format (uppercase with hyphen)

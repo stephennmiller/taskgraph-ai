@@ -97,25 +97,7 @@ export class TagService {
 	}
 
 	/**
-	 * Check if storage supports tag mutation operations
-	 * @throws {TaskGraphError} if operation not supported
-	 */
-	private checkTagMutationSupport(operation: string): void {
-		const storageType = this.storage.getStorageType();
-
-		if (storageType === 'api') {
-			throw new TaskGraphError(
-				`${operation} is not supported with API storage. Use the web interface at Hamster Studio.`,
-				ERROR_CODES.NOT_IMPLEMENTED,
-				{ storageType: 'api', operation }
-			);
-		}
-	}
-
-	/**
-	 * Create a new tag
-	 * For API storage: throws error (client should redirect to web UI)
-	 * For file storage: creates tag with optional task copying
+	 * Create a new tag, with optional task copying
 	 */
 	async createTag(
 		name: string,
@@ -142,10 +124,6 @@ export class TagService {
 				{ tagName: options.copyFromTag }
 			);
 		}
-
-		// For API storage, we can't create tags via CLI
-		// The client (CLI/bridge) should handle redirecting to web UI
-		this.checkTagMutationSupport('Tag creation');
 
 		// Determine which tag to copy from
 		let copyFrom: string | undefined;
@@ -178,7 +156,6 @@ export class TagService {
 	/**
 	 * Delete an existing tag
 	 * Cannot delete master tag
-	 * For API storage: throws error (client should redirect to web UI)
 	 */
 	async deleteTag(
 		name: string,
@@ -195,9 +172,6 @@ export class TagService {
 				{ tagName: name, protected: true }
 			);
 		}
-
-		// For API storage, we can't delete tags via CLI
-		this.checkTagMutationSupport('Tag deletion');
 
 		// Check if tag exists
 		const allTags = await this.storage.getAllTags();
@@ -216,7 +190,6 @@ export class TagService {
 	/**
 	 * Rename an existing tag
 	 * Cannot rename master tag
-	 * For API storage: throws error (client should redirect to web UI)
 	 */
 	async renameTag(oldName: string, newName: string): Promise<void> {
 		// Validate both names
@@ -231,9 +204,6 @@ export class TagService {
 				{ tagName: oldName, protected: true }
 			);
 		}
-
-		// For API storage, we can't rename tags via CLI
-		this.checkTagMutationSupport('Tag renaming');
 
 		// Check if old tag exists
 		const allTags = await this.storage.getAllTags();
@@ -260,7 +230,6 @@ export class TagService {
 
 	/**
 	 * Copy an existing tag to create a new tag with the same tasks
-	 * For API storage: throws error (client should show alternative)
 	 */
 	async copyTag(
 		sourceName: string,
@@ -270,9 +239,6 @@ export class TagService {
 		// Validate both names
 		this.validateTagName(sourceName, 'Source tag name');
 		this.validateTagName(targetName, 'Target tag name');
-
-		// For API storage, we can't copy tags via CLI
-		this.checkTagMutationSupport('Tag copying');
 
 		// Check if source tag exists
 		const allTags = await this.storage.getAllTags();
@@ -299,7 +265,6 @@ export class TagService {
 
 	/**
 	 * Get all tags with statistics
-	 * Works with both file and API storage
 	 */
 	async getTagsWithStats() {
 		return await this.storage.getTagsWithStats();

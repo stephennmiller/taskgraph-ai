@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph-ai",
-	"version": "0.49.1",
+	"version": "0.50.0",
 	"description": "Task management for AI-driven development, built for Claude Code: plan from a PRD, then work tasks one at a time with slash commands, a CLI or an MCP server.",
 	"main": "index.js",
 	"type": "module",
@@ -63,7 +63,6 @@
 		"@inquirer/search": "^3.0.15",
 		"@sentry/node": "^11.6.0",
 		"@streamparser/json": "^0.0.26",
-		"@supabase/supabase-js": "^2.117.3",
 		"@types/turndown": "^5.0.6",
 		"ai": "^7.0.143",
 		"ai-sdk-provider-claude-code": "^4.3.3",

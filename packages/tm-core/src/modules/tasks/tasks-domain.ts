@@ -4,8 +4,6 @@
  */
 
 import type { ConfigManager } from '../config/managers/config-manager.js';
-import type { AuthDomain } from '../auth/auth-domain.js';
-import { BriefsDomain } from '../briefs/briefs-domain.js';
 import { TaskService } from './services/task-service.js';
 import { TaskExecutionService } from './services/task-execution-service.js';
 import { TaskLoaderService } from './services/task-loader.service.js';
@@ -35,7 +33,6 @@ import type {
 	PreflightResult
 } from './services/preflight-checker.service.js';
 import type { TaskValidationResult } from './services/task-loader.service.js';
-import type { ExpandTaskResult } from '../integration/services/task-expansion.service.js';
 import type {
 	WatchEvent,
 	WatchOptions,
@@ -50,20 +47,18 @@ export class TasksDomain {
 	private executionService: TaskExecutionService;
 	private loaderService: TaskLoaderService;
 	private preflightChecker: PreflightChecker;
-	private briefsDomain: BriefsDomain;
 	private tagService!: TagService;
 	private taskFileGenerator!: TaskFileGeneratorService;
 	private projectRoot: string;
 	private configManager: ConfigManager;
 
-	constructor(configManager: ConfigManager, _authDomain?: AuthDomain) {
+	constructor(configManager: ConfigManager) {
 		this.projectRoot = configManager.getProjectRoot();
 		this.configManager = configManager;
 		this.taskService = new TaskService(configManager);
 		this.executionService = new TaskExecutionService(this.taskService);
 		this.loaderService = new TaskLoaderService(this.taskService);
 		this.preflightChecker = new PreflightChecker(this.projectRoot);
-		this.briefsDomain = new BriefsDomain();
 	}
 
 	async initialize(): Promise<void> {
@@ -205,41 +200,6 @@ export class TasksDomain {
 	}
 
 	/**
-	 * Update task using AI-powered prompt (natural language update)
-	 * @param taskId - Task ID (supports numeric, alphanumeric like TAS-49, and subtask IDs like 1.2)
-	 * @param prompt - Natural language prompt describing the update
-	 * @param tag - Optional tag context
-	 * @param options - Optional update options
-	 * @param options.useResearch - Use research AI for file storage updates
-	 * @param options.mode - Update mode for API storage: 'append', 'update', or 'rewrite'
-	 */
-	async updateWithPrompt(
-		taskId: string | number,
-		prompt: string,
-		tag?: string,
-		options?: { mode?: 'append' | 'update' | 'rewrite'; useResearch?: boolean }
-	): Promise<void> {
-		return this.taskService.updateTaskWithPrompt(taskId, prompt, tag, options);
-	}
-
-	/**
-	 * Expand task into subtasks using AI
-	 * @returns ExpandTaskResult when using API storage, void for file storage
-	 */
-	async expand(
-		taskId: string | number,
-		tag?: string,
-		options?: {
-			numSubtasks?: number;
-			useResearch?: boolean;
-			additionalContext?: string;
-			force?: boolean;
-		}
-	): Promise<ExpandTaskResult | void> {
-		return this.taskService.expandTaskWithPrompt(taskId, tag, options);
-	}
-
-	/**
 	 * Update task status
 	 */
 	async updateStatus(taskId: string, status: TaskStatus, tag?: string) {
@@ -251,40 +211,6 @@ export class TasksDomain {
 	 */
 	async setActiveTag(tag: string): Promise<void> {
 		return this.taskService.setActiveTag(tag);
-	}
-
-	/**
-	 * Resolve a brief by ID, name, or partial match without switching
-	 * Returns the full brief object
-	 *
-	 * Supports:
-	 * - Full UUID
-	 * - Last 8 characters of UUID
-	 * - Brief name (exact or partial match)
-	 *
-	 * Only works with API storage (briefs).
-	 *
-	 * @param briefIdOrName - Brief identifier
-	 * @param orgId - Optional organization ID
-	 * @returns The resolved brief object
-	 */
-	async resolveBrief(briefIdOrName: string, orgId?: string): Promise<any> {
-		return this.briefsDomain.resolveBrief(briefIdOrName, orgId);
-	}
-
-	/**
-	 * Switch to a different tag/brief context
-	 * For file storage: updates active tag in state
-	 * For API storage: looks up brief by name and updates auth context
-	 */
-	async switchTag(tagName: string): Promise<void> {
-		const storageType = this.taskService.getStorageType();
-
-		if (storageType === 'file') {
-			await this.setActiveTag(tagName);
-		} else {
-			await this.briefsDomain.switchBrief(tagName);
-		}
 	}
 
 	// ========== Task Execution ==========
@@ -373,9 +299,7 @@ export class TasksDomain {
 	// ========== Tag Management ==========
 
 	/**
-	 * Create a new tag
-	 * For file storage: creates tag locally with optional task copying
-	 * For API storage: throws error (client should redirect to web UI)
+	 * Create a new tag, with optional task copying
 	 */
 	async createTag(name: string, options?: CreateTagOptions) {
 		return this.tagService.createTag(name, options);
@@ -384,8 +308,6 @@ export class TasksDomain {
 	/**
 	 * Delete an existing tag
 	 * Cannot delete master tag
-	 * For file storage: deletes tag locally
-	 * For API storage: throws error (client should redirect to web UI)
 	 */
 	async deleteTag(name: string, options?: DeleteTagOptions) {
 		return this.tagService.deleteTag(name, options);
@@ -394,8 +316,6 @@ export class TasksDomain {
 	/**
 	 * Rename an existing tag
 	 * Cannot rename master tag
-	 * For file storage: renames tag locally
-	 * For API storage: throws error (client should redirect to web UI)
 	 */
 	async renameTag(oldName: string, newName: string) {
 		return this.tagService.renameTag(oldName, newName);
@@ -403,8 +323,6 @@ export class TasksDomain {
 
 	/**
 	 * Copy an existing tag to create a new tag with the same tasks
-	 * For file storage: copies tag locally
-	 * For API storage: throws error (client should show alternative)
 	 */
 	async copyTag(source: string, target: string, options?: CopyTagOptions) {
 		return this.tagService.copyTag(source, target, options);
@@ -412,28 +330,16 @@ export class TasksDomain {
 
 	/**
 	 * Get all tags with detailed statistics including task counts
-	 * For API storage, returns briefs with task counts
-	 * For file storage, returns tags from tasks.json with counts
 	 */
 	async getTagsWithStats() {
 		return this.tagService.getTagsWithStats();
-	}
-
-	// ========== Storage Information ==========
-
-	/**
-	 * Get the resolved storage type (actual type being used at runtime)
-	 */
-	getStorageType(): 'file' | 'api' {
-		return this.taskService.getStorageType();
 	}
 
 	// ========== Watch ==========
 
 	/**
 	 * Watch for changes to tasks
-	 * For file storage: uses fs.watch on tasks.json with debouncing
-	 * For API storage: uses Supabase Realtime subscriptions
+	 * Uses fs.watch on tasks.json with debouncing
 	 *
 	 * @param callback - Function called when tasks change
 	 * @param options - Watch options (debounce, tag)
@@ -453,26 +359,12 @@ export class TasksDomain {
 	 * Generate individual task markdown files from tasks.json
 	 * This writes .md files for each task in the tasks directory.
 	 *
-	 * Note: Only applicable for file storage. API storage throws an error.
-	 *
 	 * @param options - Generation options (tag, outputDir)
 	 * @returns Result with count of generated files and cleanup info
 	 */
 	async generateTaskFiles(
 		options?: GenerateTaskFilesOptions
 	): Promise<GenerateTaskFilesResult> {
-		// Only file storage supports task file generation
-		if (this.getStorageType() === 'api') {
-			return {
-				success: false,
-				count: 0,
-				directory: '',
-				orphanedFilesRemoved: 0,
-				error:
-					'Task file generation is only available for local file storage. API storage manages tasks in the cloud.'
-			};
-		}
-
 		return this.taskFileGenerator.generateTaskFiles(options);
 	}
 

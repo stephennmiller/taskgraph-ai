@@ -222,7 +222,6 @@ export class LoopService {
 		const lines = [
 			'# TaskGraph Loop Progress',
 			`# Started: ${new Date().toISOString()}`,
-			...(config.brief ? [`# Brief: ${config.brief}`] : []),
 			`# Preset: ${config.prompt}`,
 			`# Max Iterations: ${config.iterations}`,
 			...(config.tag ? [`# Tag: ${config.tag}`] : []),

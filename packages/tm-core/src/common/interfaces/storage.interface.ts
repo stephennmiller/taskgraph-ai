@@ -3,7 +3,6 @@
  * This file defines the contract for all storage implementations
  */
 
-import type { ExpandTaskResult } from '../../modules/integration/services/task-expansion.service.js';
 import type { Task, TaskMetadata, TaskStatus } from '../types/index.js';
 
 /**
@@ -75,45 +74,6 @@ export interface IStorage {
 		updates: Partial<Task>,
 		tag?: string
 	): Promise<void>;
-
-	/**
-	 * Update a task using AI-powered prompt (natural language update)
-	 * @param taskId - ID of the task to update
-	 * @param prompt - Natural language prompt describing the update
-	 * @param tag - Optional tag context for the task
-	 * @param options - Optional update options
-	 * @param options.useResearch - Whether to use research capabilities (for file storage)
-	 * @param options.mode - Update mode: 'append' adds info, 'update' makes targeted changes, 'rewrite' restructures (for API storage)
-	 * @returns Promise that resolves when update is complete
-	 */
-	updateTaskWithPrompt(
-		taskId: string,
-		prompt: string,
-		tag?: string,
-		options?: { useResearch?: boolean; mode?: 'append' | 'update' | 'rewrite' }
-	): Promise<void>;
-
-	/**
-	 * Expand task into subtasks using AI-powered generation
-	 * @param taskId - ID of the task to expand
-	 * @param tag - Optional tag context for the task
-	 * @param options - Optional expansion options
-	 * @param options.numSubtasks - Number of subtasks to generate
-	 * @param options.useResearch - Whether to use research capabilities
-	 * @param options.additionalContext - Additional context for generation
-	 * @param options.force - Force regeneration even if subtasks exist
-	 * @returns ExpandTaskResult for API storage, void for file storage
-	 */
-	expandTaskWithPrompt(
-		taskId: string,
-		tag?: string,
-		options?: {
-			numSubtasks?: number;
-			useResearch?: boolean;
-			additionalContext?: string;
-			force?: boolean;
-		}
-	): Promise<ExpandTaskResult | void>;
 
 	/**
 	 * Update task or subtask status by ID
@@ -219,18 +179,6 @@ export interface IStorage {
 	getStats(): Promise<StorageStats>;
 
 	/**
-	 * Get the storage type identifier
-	 * @returns The type of storage implementation ('file' or 'api')
-	 */
-	getStorageType(): 'file' | 'api';
-
-	/**
-	 * Get the current brief name (only applicable for API storage)
-	 * @returns The brief name if using API storage with a selected brief, null otherwise
-	 */
-	getCurrentBriefName(): string | null;
-
-	/**
 	 * Get all tags with detailed statistics including task counts
 	 * @returns Promise that resolves to tags with statistics
 	 */
@@ -275,10 +223,8 @@ export interface TagInfo {
 
 	/** Tag description */
 	description?: string;
-	/** Brief/Tag status (for API storage briefs) */
+	/** Tag status */
 	status?: string;
-	/** Brief ID/UUID (for API storage) */
-	briefId?: string;
 }
 
 /**
@@ -387,22 +333,6 @@ export abstract class BaseStorage implements IStorage {
 		updates: Partial<Task>,
 		tag?: string
 	): Promise<void>;
-	abstract updateTaskWithPrompt(
-		taskId: string,
-		prompt: string,
-		tag?: string,
-		options?: { useResearch?: boolean; mode?: 'append' | 'update' | 'rewrite' }
-	): Promise<void>;
-	abstract expandTaskWithPrompt(
-		taskId: string,
-		tag?: string,
-		options?: {
-			numSubtasks?: number;
-			useResearch?: boolean;
-			additionalContext?: string;
-			force?: boolean;
-		}
-	): Promise<ExpandTaskResult | void>;
 	abstract updateTaskStatus(
 		taskId: string,
 		newStatus: TaskStatus,
@@ -423,8 +353,6 @@ export abstract class BaseStorage implements IStorage {
 	abstract initialize(): Promise<void>;
 	abstract close(): Promise<void>;
 	abstract getStats(): Promise<StorageStats>;
-	abstract getStorageType(): 'file' | 'api';
-	abstract getCurrentBriefName(): string | null;
 	abstract getTagsWithStats(): Promise<TagsWithStatsResult>;
 	abstract watch(
 		callback: (event: WatchEvent) => void,

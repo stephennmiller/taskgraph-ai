@@ -5,7 +5,6 @@
 
 // Export storage implementations
 export { FileStorage } from './adapters/file-storage/index.js';
-export { ApiStorage, type ApiStorageConfig } from './adapters/api-storage.js';
 export { StorageFactory } from './services/storage-factory.js';
 
 // Export activity logger

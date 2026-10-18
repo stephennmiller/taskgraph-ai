@@ -176,21 +176,15 @@ function generateHints(errorType, error, context) {
 				hints.push('Verify the API key has not expired or been revoked');
 			} else if (message.includes('token')) {
 				hints.push('Your authentication token may have expired');
-				hints.push('Try running: tm auth refresh');
+				hints.push('Check the provider key in your .env file');
 			} else {
 				hints.push('Verify your credentials are correctly configured');
-				hints.push('Check the authentication status with: tm auth status');
+				hints.push('Check that the provider key is set in your .env file');
 			}
 			break;
 
 		case ERROR_TYPES.VALIDATION:
-			if (message.includes('brief id')) {
-				hints.push('Brief IDs are case-insensitive (e.g., "ham32" = "HAM-32")');
-				hints.push('Check the brief ID format: usually LETTERS-NUMBERS');
-			} else if (
-				message.includes('task id') ||
-				message.includes('invalid id')
-			) {
+			if (message.includes('task id') || message.includes('invalid id')) {
 				hints.push('Task IDs should be numbers (e.g., 1, 2, 3)');
 				hints.push('Subtask IDs use dot notation (e.g., 1.1, 2.3)');
 			} else {

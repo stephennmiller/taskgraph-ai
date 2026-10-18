@@ -32,8 +32,7 @@ We've successfully implemented a complete end-to-end proof of concept for the `g
 #### Infrastructure Layer (Storage)
 - `IStorage` interface for abstraction
 - `FileStorage` for local files (handles 'master' tag correctly)
-- `ApiStorage` for Hamster integration
-- `StorageFactory` for automatic selection
+- `StorageFactory` creates the storage
 - **NO business logic** - only persistence
 
 ### 2. Storage Abstraction Benefits

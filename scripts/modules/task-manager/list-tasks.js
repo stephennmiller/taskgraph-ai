@@ -52,14 +52,11 @@ async function listTasks(
 				projectPath: projectRoot || process.cwd()
 			});
 
-			// Load tasks via tm-core tasks domain (supports both file and API storage)
+			// Load tasks via tm-core tasks domain
 			const result = await tmCore.tasks.list({ tag });
 			data = { tasks: result.tasks };
 
-			log(
-				'debug',
-				`Loaded ${result.tasks.length} tasks via tm-core (${result.storageType} storage)`
-			);
+			log('debug', `Loaded ${result.tasks.length} tasks via tm-core`);
 		} catch (storageError) {
 			log(
 				'warn',
