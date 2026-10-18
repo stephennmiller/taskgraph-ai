@@ -57,7 +57,7 @@ marked.setOptions({
 
 /**
  * Convert HTML content to Markdown, then render for terminal
- * Handles tiptap HTML from Hamster gracefully
+ * Handles tiptap HTML gracefully
  */
 export function renderContent(content: string): string {
 	if (!content) return '';

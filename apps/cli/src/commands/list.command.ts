@@ -200,8 +200,7 @@ export class ListTasksCommand extends Command {
 		console.clear();
 		this.displayResults(result, options);
 
-		const storageType = result.storageType;
-		displayWatchFooter(storageType, lastSync);
+		displayWatchFooter(lastSync);
 
 		let subscription: WatchSubscription | undefined;
 
@@ -220,8 +219,8 @@ export class ListTasksCommand extends Command {
 							this.displayResults(result, options);
 
 							// Show sync message with timestamp
-							displaySyncMessage(storageType, lastSync);
-							displayWatchFooter(storageType, lastSync);
+							displaySyncMessage(lastSync);
+							displayWatchFooter(lastSync);
 						} catch (refreshError: unknown) {
 							// Log warning but continue watching - don't crash on transient errors
 							const message =

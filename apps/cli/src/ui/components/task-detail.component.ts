@@ -108,7 +108,7 @@ export function displayTaskProperties(
 	// Use originalTaskId if provided (for subtasks like "104.1")
 	const displayId = originalTaskId || String(task.id);
 
-	// Render description with markdown/HTML support (handles tiptap HTML from Hamster)
+	// Render description with markdown/HTML support (handles tiptap HTML)
 	const renderedDescription = renderContent(task.description || '');
 
 	// Format category with icon

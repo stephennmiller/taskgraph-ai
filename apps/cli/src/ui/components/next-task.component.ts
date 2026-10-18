@@ -97,7 +97,7 @@ export function displayRecommendedNextTask(
 		content.push(`Complexity: ${getComplexityWithColor(task.complexity)}`);
 	}
 
-	// Description if available (render HTML from Hamster properly)
+	// Description if available (render HTML properly)
 	if (task.description) {
 		content.push('');
 		content.push(`Description: ${theme.text(renderContent(task.description))}`);

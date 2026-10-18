@@ -7,13 +7,9 @@
 export { ListTasksCommand } from './commands/list.command.js';
 export { ShowCommand } from './commands/show.command.js';
 export { NextCommand } from './commands/next.command.js';
-export { AuthCommand } from './commands/auth.command.js';
-export { ContextCommand } from './commands/context.command.js';
 export { StartCommand } from './commands/start.command.js';
 export { SetStatusCommand } from './commands/set-status.command.js';
-export { ExportCommand } from './commands/export.command.js';
 export { TagsCommand } from './commands/tags.command.js';
-export { BriefsCommand } from './commands/briefs.command.js';
 export { LoopCommand } from './commands/loop.command.js';
 
 // Command Registry
