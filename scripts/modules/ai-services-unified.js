@@ -566,9 +566,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 				...((serviceType === 'generateObject' ||
 					serviceType === 'streamObject') && { schema, objectName }),
 				role: currentRole, // Lets providers restrict capabilities per role
-				...(commandName && { commandName }), // Pass commandName for Sentry telemetry functionId
-				...(outputType && { outputType }), // Pass outputType for Sentry telemetry metadata
-				...(projectRoot && { projectRoot }), // Pass projectRoot for Sentry telemetry hashing
+				...(commandName && { commandName }), // Providers look up per-command settings by name
 				...(experimental_transform && { experimental_transform }), // Pass smoothStream or other transforms
 				...restApiParams
 			};

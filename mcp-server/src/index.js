@@ -1,11 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import * as Sentry from '@sentry/node';
 import dotenv from 'dotenv';
 import { FastMCP } from 'fastmcp';
 import packageJson from '../../package.json' with { type: 'json' };
-import { initializeSentry } from '../../src/telemetry/sentry.js';
 import logger from './logger.js';
 import {
 	getToolsConfiguration,
@@ -13,9 +11,6 @@ import {
 } from './tools/index.js';
 
 dotenv.config({ quiet: true });
-
-// Initialize Sentry after .env is loaded
-initializeSentry();
 
 // Constants
 const __filename = fileURLToPath(import.meta.url);
@@ -33,18 +28,6 @@ class TaskGraphMCPServer {
 
 		// Create FastMCP instance
 		const fastmcpServer = new FastMCP(this.options);
-
-		// Wrap the underlying MCP server with Sentry instrumentation
-		// FastMCP exposes the internal MCP server via _mcpServer property
-		if (fastmcpServer._mcpServer && Sentry.wrapMcpServerWithSentry) {
-			try {
-				fastmcpServer._mcpServer = Sentry.wrapMcpServerWithSentry(
-					fastmcpServer._mcpServer
-				);
-			} catch (error) {
-				logger.warn(`Failed to wrap MCP server with Sentry: ${error.message}`);
-			}
-		}
 
 		this.server = fastmcpServer;
 		this.initialized = false;

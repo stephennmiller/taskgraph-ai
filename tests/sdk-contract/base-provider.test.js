@@ -10,9 +10,7 @@ import { z } from 'zod';
 // Runs in its own jest process (`npm run test:sdk-contract`): the real SDK stack
 // leaves process-level state that breaks unrelated suites sharing a worker.
 //
-// Only app-side modules are mocked: utils (as in base-provider.test.js) and
-// Sentry telemetry. Running the real telemetry code leaves process-level state
-// that breaks later suites in the same jest worker (signal-exit errors). The
+// Only the app-side utils module is mocked (as in base-provider.test.js). The
 // `ai` package itself stays real.
 jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
 	log: jest.fn(),
@@ -24,11 +22,6 @@ jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
 			(typeof val === 'object' && Object.keys(val).length === 0)
 	),
 	resolveEnvVariable: jest.fn((key) => process.env[key])
-}));
-
-jest.unstable_mockModule('../../src/telemetry/sentry.js', () => ({
-	hashProjectRoot: jest.fn(() => 'hash'),
-	getAITelemetryConfig: jest.fn(() => undefined)
 }));
 
 const { BaseAIProvider } = await import(
