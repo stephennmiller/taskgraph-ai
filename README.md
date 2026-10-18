@@ -1,8 +1,5 @@
 <a name="readme-top"></a>
 
-<div align='center'>
-</div>
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./images/taskgraph-logo-dark.png">
@@ -11,75 +8,42 @@
 </p>
 
 <p align="center">
-<b>TaskGraph</b>: A task management system for AI-driven development, designed to work seamlessly with any AI chat.
-</p>
-
-<p align="center">
-  <a href="./docs/README.md">Docs</a>
+<b>TaskGraph</b>: task management for AI-driven development, built for Claude Code.
 </p>
 
 <p align="center">
   <a href="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml"><img src="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://badge.fury.io/js/taskgraph-ai"><img src="https://badge.fury.io/js/taskgraph-ai.svg" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://badge.fury.io/js/taskgraph-ai.svg" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg" alt="License"></a>
-</p>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/d18m/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
   <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/dm/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
-  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/dw/taskgraph-ai?style=flat" alt="NPM Downloads"></a>
 </p>
 
-> **TaskGraph** is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish. It is published as `taskgraph-ai` with the `taskgraph` and `taskgraph-mcp` binaries so it can be installed next to the original `task-master-ai`, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
+TaskGraph turns a product requirements document (PRD) into a dependency-aware task list, then walks Claude Code through it one task at a time. You describe what to build, TaskGraph plans the work, and Claude Code implements it, with the plan and progress stored in your repo.
 
-## Originally by [@eyaltoledano](https://x.com/eyaltoledano) & [@RalphEcom](https://x.com/RalphEcom)
+- **Plan from a PRD:** generate tasks and subtasks, with dependencies, priorities and test strategies.
+- **Always know what's next:** `next` picks the first unblocked task.
+- **Stay in Claude Code:** talk to it in plain language over MCP, or use slash commands.
+- **No API keys:** every AI call runs through your signed-in Claude Code.
 
-[![Twitter Follow](https://img.shields.io/twitter/follow/eyaltoledano)](https://x.com/eyaltoledano)
-[![Twitter Follow](https://img.shields.io/twitter/follow/RalphEcom)](https://x.com/RalphEcom)
+> **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is published as `taskgraph-ai` with the `taskgraph` and `taskgraph-mcp` binaries, so it installs next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
 
-A task management system for AI-driven development with Claude, built for Claude Code.
+## Contents
 
-## Documentation
+[Set up in Claude Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) · [Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models) · [Troubleshooting](#troubleshooting) · [Docs](#documentation) · [Licensing](#licensing)
 
-**[View the documentation](docs/README.md)**
+## Set up in Claude Code
 
-### Quick Links
+You need [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (run `claude` once) and Node.js 18 or later.
 
-- [Tutorial](docs/tutorial.md)
-- [Command Reference](docs/command-reference.md)
-- [Configuration](docs/configuration.md)
-- [Task Structure](docs/task-structure.md)
-- [Examples](docs/examples.md)
-- [Models](docs/models.md)
-- [Changelog](CHANGELOG.md)
-
-#### Claude Code Quick Install
-
-For Claude Code users:
+### 1. Add the MCP server (recommended)
 
 ```bash
 claude mcp add taskgraph-ai -- npx -y taskgraph-ai
 ```
 
-## Requirements
+Restart Claude Code and run `/mcp` to check that `taskgraph-ai` is connected. This loads the 7 core tools, which is enough for daily use. To load more, see [MCP tool tiers](#mcp-tool-tiers).
 
-TaskGraph uses [Claude Code](https://docs.claude.com/en/docs/claude-code) for every AI call, so there are no API keys to manage. Install Claude Code and sign in (run `claude` once) before using the AI commands.
-
-You can define 3 models: the main model, the research model, and the fallback model (used if either of the others fails). The available models are `opus`, `sonnet` and `haiku`.
-
-The research model runs with web search and fetch access only. It cannot read or change your files and has no shell access.
-
-## Quick Start
-
-### Option 1: MCP (Recommended)
-
-MCP (Model Context Protocol) lets you run TaskGraph directly from Claude Code.
-
-#### 1. Add TaskGraph to Claude Code
-
-Register the server with the Claude Code CLI (shown above), or add it to the project's `.mcp.json` (`taskgraph init --rules claude` writes this file for you).
-
-##### Manual Configuration
+To share the setup with your team, put it in the project's `.mcp.json` instead:
 
 ```json
 {
@@ -87,32 +51,13 @@ Register the server with the Claude Code CLI (shown above), or add it to the pro
     "taskgraph-ai": {
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
-      "env": {
-        // "TASKGRAPH_TOOLS": "all" // Options: "all", "standard", "core", or comma-separated list of tools
-      }
+      "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
 }
 ```
 
-> **Note**: If you see `0 tools enabled` in the MCP settings, restart Claude Code and check the server with `/mcp`.
-
-#### 2. (Optional) Configure the models you want to use
-
-In Claude Code, say:
-
-```txt
-Change the main, research and fallback models to <model_name>, <model_name> and <model_name> respectively.
-```
-
-For example:
-```txt
-Change the main model to opus
-```
-
-[Table of available models](docs/models.md) | [Claude Code setup](docs/examples/claude-code-usage.md)
-
-#### 3. Initialize TaskGraph
+### 2. Initialize your project
 
 In Claude Code, say:
 
@@ -120,182 +65,156 @@ In Claude Code, say:
 Initialize taskgraph in my project
 ```
 
-#### 4. Make sure you have a PRD (Recommended)
+This creates a `.taskgraph/` folder for tasks, docs and config. Don't run it twice; it only re-adds the same files.
 
-For **new projects**: Create your PRD at `.taskgraph/docs/prd.txt`.
-
-An example PRD template is available after initialization in `.taskgraph/templates/example_prd.txt`.
-
-> [!NOTE]
-> While a PRD is recommended for complex projects, you can always create individual tasks by asking "Can you help me implement [description of what you want to do]?" in chat.
-
-**Always start with a detailed PRD.**
-
-The more detailed your PRD, the better the generated tasks will be.
-
-#### 5. Common Commands
-
-Use Claude Code to:
-
-- Parse requirements: `Can you parse my PRD at .taskgraph/docs/prd.txt?`
-- Plan next step: `What's the next task I should work on?`
-- Implement a task: `Can you help me implement task 3?`
-- View multiple tasks: `Can you show me tasks 1, 3, and 5?`
-- Expand a task: `Can you help me expand task 4?`
-- **Research fresh information**: `Research the latest best practices for implementing JWT authentication with Node.js`
-- **Research with context**: `Research React Query v5 migration strategies for our current API implementation in src/api.js`
-
-[More examples on how to use TaskGraph in chat](docs/examples.md)
-
-### Option 2: Using Command Line
-
-#### Installation
+### 3. (Optional) Add slash commands to the project
 
 ```bash
-# Install globally
-npm install -g taskgraph-ai
-
-# OR install locally within your project
-npm install taskgraph-ai
+npx taskgraph-ai init --rules claude   # or: taskgraph init --rules claude
 ```
 
-#### Initialize a new project
+This adds a `CLAUDE.md` import with TaskGraph's workflow guide and slash commands under `.claude/commands/tm/`. See [Commands](#commands).
 
-```bash
-# If installed globally
-taskgraph init
+### 4. (Optional) Install the plugin
 
-# If installed locally
-npx taskgraph init
+The Claude Code plugin adds 46 slash commands and three agents (`task-orchestrator`, `task-executor`, `task-checker`), and registers the TaskGraph MCP server for you.
 
-# Set up the Claude Code integration (CLAUDE.md import, .mcp.json, slash commands)
-taskgraph init --rules claude
+```txt
+/plugin marketplace add stephennmiller/taskgraph-ai
+/plugin install taskgraph@taskgraph
 ```
 
-This will prompt you for project details and set up a new project with the necessary files and structure.
+If you install the plugin, skip step 1 so the server isn't registered twice. Its server uses the default `core` tools; see [MCP tool tiers](#mcp-tool-tiers) to load more.
 
-#### Common Commands
+### CLI install (alternative)
 
 ```bash
-# Initialize a new project
-taskgraph init
+npm install -g taskgraph-ai   # global
+taskgraph init                # then run in your project
+```
 
-# Parse a PRD and generate tasks
-taskgraph parse-prd your-prd.txt
+## How to use it
 
-# List all tasks
-taskgraph list
+### 1. Write a PRD
 
-# Show the next task to work on
-taskgraph next
+Create `.taskgraph/docs/prd.md` describing what you want to build. The more detail you give, the better the tasks. Skipping the PRD is fine for small jobs; just ask Claude to add a task.
 
-# Show specific task(s) - supports comma-separated IDs
-taskgraph show 1,3,5
+### 2. Generate tasks
 
-# Research fresh information with project context
-taskgraph research "What are the latest best practices for JWT authentication?"
+```txt
+Parse my PRD at .taskgraph/docs/prd.md
+```
 
-# Move tasks between tags (cross-tag movement)
+Then, optionally, check how big each task is and break the big ones down:
+
+```txt
+Analyze the complexity of my tasks, then expand them
+```
+
+### 3. Work through them
+
+| Say this in Claude Code | What happens |
+|---|---|
+| `What's the next task I should work on?` | Shows the first unblocked, pending task |
+| `Show me tasks 1, 3 and 5` | Full details for each |
+| `Implement task 3` | Claude Code does the work, guided by the task |
+| `Mark task 3 as done` | Updates status and unlocks dependent tasks |
+| `Expand task 4` | Splits it into subtasks |
+| `Add a task to <what you want>` | Creates a task with AI help |
+| `Update task 5: we now use Postgres` | Rewrites it for the new direction |
+| `Research JWT best practices for our API in src/api.js` | Web research with project context |
+
+The loop is simple: **next, implement, done, next.** Task IDs look like `3` for a task and `3.2` for a subtask.
+
+### 4. Keep it organized
+
+- **Tags** keep separate task lists per branch, feature or experiment: `list_tags`, `add_tag`, `use_tag`.
+- **Dependencies** decide what counts as "next". Run `validate_dependencies` or `fix_dependencies` if the graph looks wrong.
+- **Statuses:** `pending`, `in-progress`, `done`, `review`, `deferred`, `cancelled`.
+
+## Commands
+
+You can do everything three ways: in plain language over MCP (above), with slash commands, or with the `taskgraph` CLI.
+
+### Slash commands
+
+After `taskgraph init --rules claude` they appear as `/tm:<name>` (type `/tm` to see them). The plugin provides the same set as `/taskgraph:<name>`.
+
+| Purpose | Commands |
+|---|---|
+| Set up | `init-project`, `init-project-quick`, `install-taskgraph`, `setup-models`, `view-models` |
+| Plan | `parse-prd`, `parse-prd-with-research`, `analyze-complexity`, `complexity-report`, `analyze-project` |
+| See | `list-tasks`, `list-tasks-by-status`, `list-tasks-with-subtasks`, `next-task`, `show-task`, `project-status` |
+| Change status | `to-pending`, `to-in-progress`, `to-done`, `to-review`, `to-deferred`, `to-cancelled` |
+| Edit | `add-task`, `update-task`, `update-single-task`, `update-tasks-from-id`, `remove-task`, `convert-task-to-subtask` |
+| Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `remove-subtasks`, `remove-all-subtasks` |
+| Dependencies | `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
+| Workflows | `smart-workflow`, `command-pipeline`, `auto-implement-tasks`, `sync-readme`, `learn`, `help` |
+
+### CLI cheat sheet
+
+```bash
+taskgraph parse-prd .taskgraph/docs/prd.md   # generate tasks from a PRD
+taskgraph list                               # all tasks and their status
+taskgraph next                               # next task to work on
+taskgraph show 1,3,5                         # one or more tasks
+taskgraph set-status --id=3 --status=done    # change status
+taskgraph add-task --prompt="..." --research # add a task
+taskgraph expand --id=4 --research           # split into subtasks
+taskgraph expand --all                       # expand every eligible task
+taskgraph update-task --id=5 --prompt="..."  # change one task
+taskgraph update --from=5 --prompt="..."     # change task 5 onward
+taskgraph update-subtask --id=3.2 --prompt="notes"
+taskgraph analyze-complexity --research
+taskgraph complexity-report
+taskgraph add-dependency --id=5 --depends-on=3
+taskgraph validate-dependencies
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
-taskgraph move --from=5,6,7 --from-tag=backlog --to-tag=done --with-dependencies
-taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
+taskgraph research "latest JWT best practices"
+taskgraph models --setup                     # choose models
 ```
 
-## Tool Loading Configuration
+Every command, flag and example is in the [command reference](docs/command-reference.md).
 
-### Optimizing MCP Tool Loading
+## MCP tool tiers
 
-TaskGraph's MCP server supports selective tool loading to reduce context window usage. By default, all 36 tools are loaded (~21,000 tokens) to maintain backward compatibility with existing installations.
+Each tool you load costs context. `TASKGRAPH_TOOLS` controls how many are registered. If it's unset, you get `core`.
 
-You can optimize performance by configuring the `TASKGRAPH_TOOLS` environment variable:
+| Value | Tools | Includes |
+|---|---|---|
+| `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task` |
+| `standard` | 14 | core, plus `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report` |
+| `all` | 42 | everything: updates, dependencies, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
+| a list | custom | e.g. `get_tasks,next_task,set_task_status` |
 
-### Available Modes
-
-| Mode | Tools | Context Usage | Use Case |
-|------|-------|--------------|----------|
-| `all` (default) | 36 | ~21,000 tokens | Complete feature set - all tools available |
-| `standard` | 15 | ~10,000 tokens | Common task management operations |
-| `core` (or `lean`) | 7 | ~5,000 tokens | Essential daily development workflow |
-| `custom` | Variable | Variable | Comma-separated list of specific tools |
-
-### Configuration Methods
-
-#### Method 1: Environment Variable in MCP Configuration
-
-Add `TASKGRAPH_TOOLS` to your MCP configuration file's `env` section:
-
-```jsonc
-{
-  "mcpServers": {
-    "taskgraph-ai": {
-      "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
-      "env": {
-        "TASKGRAPH_TOOLS": "standard"  // Options: "all", "standard", "core", "lean", or comma-separated list
-      }
-    }
-  }
-}
-```
-
-#### Method 2: Claude Code CLI (One-Time Setup)
-
-For Claude Code users, you can set the mode during installation:
+Set it when you add the server:
 
 ```bash
-# Core mode example (~70% token reduction)
 claude mcp add taskgraph-ai --scope user \
-  --env TASKGRAPH_TOOLS="core" \
-  -- npx -y taskgraph-ai@latest
-
-# Custom tools example
-claude mcp add taskgraph-ai --scope user \
-  --env TASKGRAPH_TOOLS="get_tasks,next_task,set_task_status" \
+  --env TASKGRAPH_TOOLS=standard \
   -- npx -y taskgraph-ai@latest
 ```
 
-### Tool Sets Details
+Or edit the `env` block in `.mcp.json`, then restart Claude Code.
 
-**Core Tools (7):** `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task`
+## Models
 
-**Standard Tools (15):** All core tools plus `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `generate`, `add_task`, `complexity_report`
+TaskGraph uses three roles: **main**, **research** and **fallback** (used if either of the others fails). The choices are `opus`, `sonnet` and `haiku`. The research role gets web search and fetch only. It cannot read or change your files and has no shell.
 
-**All Tools (36):** Complete set including project setup, task management, analysis, dependencies, tags, research, and more
-
-### Recommendations
-
-- **New users**: Start with `"standard"` mode for a good balance
-- **Large projects**: Use `"core"` mode to minimize token usage
-- **Complex workflows**: Use `"all"` mode or custom selection
-- **Backward compatibility**: If not specified, defaults to `"all"` mode
-
-## Claude Code Support
-
-TaskGraph runs on Claude Code, which needs no API key:
-
-- **Models**: `opus`, `sonnet` and `haiku`
-- **Requirements**: Claude Code CLI installed and signed in
-- **Research**: the research role gets web search and fetch access only, with no file or shell access
-
-[Learn more about Claude Code setup](docs/examples/claude-code-usage.md)
+In Claude Code, say `Change the main model to opus`, or run `taskgraph models --setup`. Details are in [Models](docs/models.md) and the [Claude Code guide](docs/examples/claude-code-usage.md).
 
 ## Troubleshooting
 
-### If `taskgraph init` doesn't respond
+- **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `npx -y taskgraph-ai` starts on its own in a terminal.
+- **AI commands fail:** run `claude` once and make sure you're signed in.
+- **Fewer tools than expected:** `TASKGRAPH_TOOLS` defaults to `core`. Set `standard` or `all`.
+- **`taskgraph init` doesn't respond:** run `node node_modules/taskgraph-ai/scripts/init.js`.
+- **Task files look out of sync:** run `taskgraph fix-dependencies`, or ask Claude to fix dependencies.
+- Don't hand-edit `.taskgraph/tasks/tasks.json` or `.taskgraph/config.json`; use the commands.
 
-Try running it with Node directly:
+## Documentation
 
-```bash
-node node_modules/taskgraph-ai/scripts/init.js
-```
-
-Or clone the repository and run:
-
-```bash
-git clone https://github.com/stephennmiller/taskgraph-ai.git
-cd taskgraph-ai
-node scripts/init.js
-```
+[Tutorial](docs/tutorial.md) · [Command reference](docs/command-reference.md) · [Configuration](docs/configuration.md) · [Task structure](docs/task-structure.md) · [Examples](docs/examples.md) · [Models](docs/models.md) · [Plugin](CLAUDE_CODE_PLUGIN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## Contributors
 
@@ -305,19 +224,10 @@ node scripts/init.js
 
 ## Licensing
 
-TaskGraph is licensed under the MIT License with Commons Clause, the same license as Task Master. This means you can:
+TaskGraph is licensed under the MIT License with Commons Clause, the same license as Task Master.
 
-**Allowed**:
+**Allowed:** use it for any purpose (personal, commercial, academic), modify it, distribute copies, and sell products built with it.
 
-- Use TaskGraph for any purpose (personal, commercial, academic)
-- Modify the code
-- Distribute copies
-- Create and sell products built using TaskGraph
+**Not allowed:** selling TaskGraph itself, offering it as a hosted service, or creating competing products based on it.
 
-**Not Allowed**:
-
-- Sell TaskGraph itself
-- Offer TaskGraph as a hosted service
-- Create competing products based on TaskGraph
-
-See the [LICENSE](LICENSE) file for the complete license text and [licensing details](docs/licensing.md) for more information.
+See [LICENSE](LICENSE) and [licensing details](docs/licensing.md).
