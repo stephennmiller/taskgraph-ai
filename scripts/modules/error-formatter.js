@@ -3,6 +3,7 @@
  * Professional error message formatting with context-specific hints and sanitization
  */
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import boxen from 'boxen';
 import chalk from 'chalk';
 
@@ -339,7 +340,7 @@ export function displayFormattedError(error, options = {}) {
 	let content = chalk.red.bold('✗ Error\n\n');
 
 	// Add error message
-	content += chalk.white(formattedError.message) + '\n\n';
+	content += theme.text(formattedError.message) + '\n\n';
 
 	// Add context if available
 	if (
@@ -347,7 +348,7 @@ export function displayFormattedError(error, options = {}) {
 		formattedError.context !== 'Unknown operation'
 	) {
 		content +=
-			chalk.gray('Context: ') + chalk.white(formattedError.context) + '\n\n';
+			chalk.gray('Context: ') + theme.text(formattedError.context) + '\n\n';
 	}
 
 	// Add command if available
@@ -395,7 +396,7 @@ export function displayFormattedError(error, options = {}) {
  */
 export function displayWarning(message, hints = []) {
 	let content = chalk.yellow.bold('⚠ Warning\n\n');
-	content += chalk.white(message);
+	content += theme.text(message);
 
 	if (hints && hints.length > 0) {
 		content += '\n\n' + chalk.yellow.bold('Suggestions:\n');
@@ -421,15 +422,15 @@ export function displayWarning(message, hints = []) {
  * @param {string} [title] - Optional title
  */
 export function displayInfo(message, title = 'Info') {
-	let content = chalk.blue.bold(`ℹ ${title}\n\n`);
-	content += chalk.white(message);
+	let content = theme.brand.bold(`ℹ ${title}\n\n`);
+	content += theme.text(message);
 
 	console.log(
 		'\n' +
 			boxen(content.trim(), {
 				padding: { top: 1, bottom: 1, left: 2, right: 2 },
 				borderStyle: 'round',
-				borderColor: 'blue'
+				borderColor: BORDER_COLOR
 			}) +
 			'\n'
 	);
@@ -442,7 +443,7 @@ export function displayInfo(message, title = 'Info') {
  */
 export function displaySuccess(message, nextSteps = []) {
 	let content = chalk.green.bold('✓ Success\n\n');
-	content += chalk.white(message);
+	content += theme.text(message);
 
 	if (nextSteps && nextSteps.length > 0) {
 		content += '\n\n' + chalk.cyan.bold('Next Steps:\n');

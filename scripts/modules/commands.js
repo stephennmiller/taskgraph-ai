@@ -120,6 +120,7 @@ import {
 	stopLoadingIndicator
 } from './ui.js';
 
+import { BORDER_COLOR, theme } from '@tm/cli/theme';
 import {
 	RULE_PROFILES,
 	findInvalidRulesProfiles
@@ -174,7 +175,7 @@ async function promptHamsterCollaboration() {
 
 	console.log(
 		'\n' +
-			chalk.bold.white(
+			theme.text.bold(
 				'Your tasks are only as good as the context behind them.'
 			) +
 			'\n\n' +
@@ -194,13 +195,13 @@ async function promptHamsterCollaboration() {
 					name: [
 						chalk.bold('Parse locally'),
 						'',
-						chalk.white(
+						theme.text(
 							'   • Your PRD becomes a task list in a local JSON file'
 						),
-						chalk.white(
+						theme.text(
 							'   • Great for quick prototyping and for vibing on your own'
 						),
-						chalk.white('   • You can always export to Hamster later'),
+						theme.text('   • You can always export to Hamster later'),
 						''
 					].join('\n'),
 					value: 'local',
@@ -210,19 +211,19 @@ async function promptHamsterCollaboration() {
 					name: [
 						chalk.bold('Bring it to Hamster'),
 						'',
-						chalk.white(
+						theme.text(
 							'   • Your PRD will become a living brief you can refine with your team'
 						),
-						chalk.white(
+						theme.text(
 							'   • Hamster will generate tasks automatically, ready to execute in TaskGraph'
 						),
-						chalk.white(
+						theme.text(
 							'   • Hamster will automatically analyze complexity and expand tasks as needed'
 						),
-						chalk.white(
+						theme.text(
 							'   • Invite your teammates to collaborate on a single source of truth'
 						),
-						chalk.white(
+						theme.text(
 							'   • AI inference handled by Hamster, no API keys needed - just a Hamster account!'
 						),
 						''
@@ -328,9 +329,9 @@ async function handleParsePrdToHamster(prdPath) {
 					},
 					timeout: AUTH_TIMEOUT_MS,
 					onAuthUrl: (authUrl) => {
-						console.log(chalk.blue.bold('\n[auth] Browser Authentication\n'));
+						console.log(theme.brand.bold('\n[auth] Browser Authentication\n'));
 						console.log(
-							chalk.white('  Opening your browser to authenticate...')
+							theme.text('  Opening your browser to authenticate...')
 						);
 						console.log(chalk.gray("  If the browser doesn't open, visit:"));
 						console.log(chalk.cyan.underline(`  ${authUrl}\n`));
@@ -454,7 +455,7 @@ async function handleParsePrdToHamster(prdPath) {
 		spinner.succeed('Brief created!');
 		console.log('');
 		console.log(
-			chalk.green('  ✓ ') + chalk.white.bold(result.brief.title || 'New Brief')
+			chalk.green('  ✓ ') + theme.text.bold(result.brief.title || 'New Brief')
 		);
 		console.log('');
 		// Create clickable URL
@@ -627,7 +628,7 @@ async function handleParsePrdToHamster(prdPath) {
 			console.log(
 				chalk.yellow('  Tasks are still being generated in the background.')
 			);
-			console.log(chalk.white('  Check the brief URL above for progress.'));
+			console.log(theme.text('  Check the brief URL above for progress.'));
 		} else {
 			spinner.succeed(
 				taskCount > 0
@@ -676,9 +677,9 @@ async function handleParsePrdToHamster(prdPath) {
 
 			console.log(
 				chalk.green('  ✓ ') +
-					chalk.white('Context set! Run ') +
+					theme.text('Context set! Run ') +
 					chalk.cyan('tm list') +
-					chalk.white(' to see your tasks.')
+					theme.text(' to see your tasks.')
 			);
 		} catch (contextError) {
 			// Log the actual error for debugging
@@ -720,10 +721,10 @@ function displayHamsterHelp() {
 	console.log(
 		boxen(
 			chalk.cyan.bold('TaskGraph CLI - Connected to Hamster\n\n') +
-				chalk.white(
+				theme.text(
 					'TaskGraph syncs tasks from your Hamster brief and provides a CLI\n'
 				) +
-				chalk.white(
+				theme.text(
 					'interface to execute the plan. Commands can be used by humans or AI agents.\n\n'
 				) +
 				chalk.dim(
@@ -832,7 +833,7 @@ function displayHamsterHelp() {
 					'View briefs and select one\n\n',
 					'  '
 				).replace(chalk.cyan('  tm'), chalk.dim('  tm')) +
-				chalk.white.bold('» Need more commands?\n') +
+				theme.text.bold('» Need more commands?\n') +
 				chalk.gray(
 					'Advanced features (models, tags, PRD parsing) are managed in Hamster Studio.'
 				),
@@ -1025,14 +1026,14 @@ function registerCommands(programInstance) {
 			try {
 				if (!(await confirmOverwriteIfNeeded())) return;
 
-				console.log(chalk.blue(`Parsing PRD file: ${taskGraph.getPrdPath()}`));
-				console.log(chalk.blue(`Generating ${numTasks} tasks...`));
+				console.log(theme.brand(`Parsing PRD file: ${taskGraph.getPrdPath()}`));
+				console.log(theme.brand(`Generating ${numTasks} tasks...`));
 				if (append) {
-					console.log(chalk.blue('Appending to existing tasks...'));
+					console.log(theme.brand('Appending to existing tasks...'));
 				}
 				if (research) {
 					console.log(
-						chalk.blue(
+						theme.brand(
 							'Using Claude Code web research for research-backed task generation'
 						)
 					);
@@ -1128,19 +1129,19 @@ function registerCommands(programInstance) {
 			}
 
 			console.log(
-				chalk.blue(
+				theme.brand(
 					`Updating tasks from ID >= ${fromId} with prompt: "${prompt}"`
 				)
 			);
 
 			// Only show tasks file path for local storage
 			if (!isConnectedToHamster()) {
-				console.log(chalk.blue(`Tasks file: ${tasksPath}`));
+				console.log(theme.brand(`Tasks file: ${tasksPath}`));
 			}
 
 			if (useResearch) {
 				console.log(
-					chalk.blue(
+					theme.brand(
 						'Using Claude Code web research for research-backed task updates'
 					)
 				);
@@ -1275,17 +1276,17 @@ function registerCommands(programInstance) {
 				}
 
 				console.log(
-					chalk.blue(`Updating task ${taskId} with prompt: "${prompt}"`)
+					theme.brand(`Updating task ${taskId} with prompt: "${prompt}"`)
 				);
 
 				// Only show tasks file path for local storage
 				if (!isConnectedToHamster()) {
-					console.log(chalk.blue(`Tasks file: ${tasksPath}`));
+					console.log(theme.brand(`Tasks file: ${tasksPath}`));
 				}
 
 				if (useResearch) {
 					console.log(
-						chalk.blue('Using Claude Code web research for this update')
+						theme.brand('Using Claude Code web research for this update')
 					);
 				}
 
@@ -1427,17 +1428,17 @@ function registerCommands(programInstance) {
 				}
 
 				console.log(
-					chalk.blue(`Updating subtask ${subtaskId} with prompt: "${prompt}"`)
+					theme.brand(`Updating subtask ${subtaskId} with prompt: "${prompt}"`)
 				);
 
 				// Only show tasks file path for local storage
 				if (!isConnectedToHamster()) {
-					console.log(chalk.blue(`Tasks file: ${tasksPath}`));
+					console.log(theme.brand(`Tasks file: ${tasksPath}`));
 				}
 
 				if (useResearch) {
 					console.log(
-						chalk.blue('Using Claude Code web research for this update')
+						theme.brand('Using Claude Code web research for this update')
 					);
 				}
 
@@ -1561,13 +1562,13 @@ function registerCommands(programInstance) {
 				}
 
 				console.log(
-					chalk.blue(
+					theme.brand(
 						`Scoping up ${taskIds.length} task(s): ${taskIds.join(', ')}`
 					)
 				);
-				console.log(chalk.blue(`Strength level: ${options.strength}`));
+				console.log(theme.brand(`Strength level: ${options.strength}`));
 				if (options.prompt) {
-					console.log(chalk.blue(`Custom instructions: ${options.prompt}`));
+					console.log(theme.brand(`Custom instructions: ${options.prompt}`));
 				}
 
 				const context = {
@@ -1682,13 +1683,13 @@ function registerCommands(programInstance) {
 				}
 
 				console.log(
-					chalk.blue(
+					theme.brand(
 						`Scoping down ${taskIds.length} task(s): ${taskIds.join(', ')}`
 					)
 				);
-				console.log(chalk.blue(`Strength level: ${options.strength}`));
+				console.log(theme.brand(`Strength level: ${options.strength}`));
 				if (options.prompt) {
-					console.log(chalk.blue(`Custom instructions: ${options.prompt}`));
+					console.log(theme.brand(`Custom instructions: ${options.prompt}`));
 				}
 
 				const context = {
@@ -1788,7 +1789,7 @@ function registerCommands(programInstance) {
 
 			if (options.all) {
 				// --- Handle expand --all ---
-				console.log(chalk.blue('Expanding all pending tasks...'));
+				console.log(theme.brand('Expanding all pending tasks...'));
 				// Updated call to the refactored expandAllTasks
 				try {
 					const result = await expandAllTasks(
@@ -1819,7 +1820,7 @@ function registerCommands(programInstance) {
 					process.exit(1);
 				}
 
-				console.log(chalk.blue(`Expanding task ${options.id}...`));
+				console.log(theme.brand(`Expanding task ${options.id}...`));
 				try {
 					// Call the refactored expandTask function
 					await expandTask(
@@ -1905,25 +1906,25 @@ function registerCommands(programInstance) {
 			const outputPath = taskGraph.getComplexityReportPath();
 
 			console.log(
-				chalk.blue(
+				theme.brand(
 					`Analyzing task complexity from: ${taskGraph.getTasksPath()}`
 				)
 			);
-			console.log(chalk.blue(`Output report will be saved to: ${outputPath}`));
+			console.log(theme.brand(`Output report will be saved to: ${outputPath}`));
 
 			if (options.id) {
-				console.log(chalk.blue(`Analyzing specific task IDs: ${options.id}`));
+				console.log(theme.brand(`Analyzing specific task IDs: ${options.id}`));
 			} else if (options.from || options.to) {
 				const fromStr = options.from ? options.from : 'first';
 				const toStr = options.to ? options.to : 'last';
 				console.log(
-					chalk.blue(`Analyzing tasks in range: ${fromStr} to ${toStr}`)
+					theme.brand(`Analyzing tasks in range: ${fromStr} to ${toStr}`)
 				);
 			}
 
 			if (useResearch) {
 				console.log(
-					chalk.blue(
+					theme.brand(
 						'Using Claude Code web research for research-backed complexity analysis'
 					)
 				);
@@ -2146,7 +2147,7 @@ function registerCommands(programInstance) {
 			};
 
 			// Display what we're about to do
-			console.log(chalk.blue(`Researching: "${validatedParams.prompt}"`));
+			console.log(theme.brand(`Researching: "${validatedParams.prompt}"`));
 
 			if (validatedParams.taskIds.length > 0) {
 				console.log(
@@ -2440,12 +2441,12 @@ ${result.result}
 				};
 				// Restore specific logging for manual creation
 				console.log(
-					chalk.blue(`Creating task manually with title: "${options.title}"`)
+					theme.brand(`Creating task manually with title: "${options.title}"`)
 				);
 			} else {
 				// Restore specific logging for AI creation
 				console.log(
-					chalk.blue(`Creating task with AI using prompt: "${options.prompt}"`)
+					theme.brand(`Creating task with AI using prompt: "${options.prompt}"`)
 				);
 			}
 
@@ -2455,11 +2456,11 @@ ${result.result}
 				: [];
 			if (dependenciesArray.length > 0) {
 				console.log(
-					chalk.blue(`Dependencies: [${dependenciesArray.join(', ')}]`)
+					theme.brand(`Dependencies: [${dependenciesArray.join(', ')}]`)
 				);
 			}
 			if (options.priority) {
-				console.log(chalk.blue(`Priority: ${options.priority}`));
+				console.log(theme.brand(`Priority: ${options.priority}`));
 			}
 
 			const context = {
@@ -2740,7 +2741,7 @@ ${result.result}
 				if (existingTaskId) {
 					// Convert existing task to subtask
 					console.log(
-						chalk.blue(
+						theme.brand(
 							`Converting task ${existingTaskId} to a subtask of ${parentId}...`
 						)
 					);
@@ -2760,7 +2761,7 @@ ${result.result}
 				} else if (options.title) {
 					// Create new subtask with provided data
 					console.log(
-						chalk.blue(`Creating new subtask for parent task ${parentId}...`)
+						theme.brand(`Creating new subtask for parent task ${parentId}...`)
 					);
 
 					const newSubtaskData = {
@@ -2788,20 +2789,20 @@ ${result.result}
 					// Display success message and suggested next steps
 					console.log(
 						boxen(
-							chalk.white.bold(
+							theme.text.bold(
 								`Subtask ${parentId}.${subtask.id} Added Successfully`
 							) +
 								'\n\n' +
-								chalk.white(`Title: ${subtask.title}`) +
+								theme.text(`Title: ${subtask.title}`) +
 								'\n' +
-								chalk.white(`Status: ${getStatusWithColor(subtask.status)}`) +
+								theme.text(`Status: ${getStatusWithColor(subtask.status)}`) +
 								'\n' +
 								(dependencies.length > 0
-									? chalk.white(`Dependencies: ${dependencies.join(', ')}`) +
+									? theme.text(`Dependencies: ${dependencies.join(', ')}`) +
 										'\n'
 									: '') +
 								'\n' +
-								chalk.white.bold('Next Steps:') +
+								theme.text.bold('Next Steps:') +
 								'\n' +
 								chalk.cyan(
 									`1. Run ${chalk.yellow(`taskgraph show ${parentId}`)} to see the parent task with all subtasks`
@@ -2824,19 +2825,19 @@ ${result.result}
 					);
 					console.log(
 						boxen(
-							chalk.white.bold('Usage Examples:') +
+							theme.text.bold('Usage Examples:') +
 								'\n\n' +
-								chalk.white('Convert existing task to subtask:') +
+								theme.text('Convert existing task to subtask:') +
 								'\n' +
 								chalk.yellow(`  taskgraph add-subtask --parent=5 --task-id=8`) +
 								'\n\n' +
-								chalk.white('Create new subtask:') +
+								theme.text('Create new subtask:') +
 								'\n' +
 								chalk.yellow(
 									`  taskgraph add-subtask --parent=5 --title="Implement login UI" --description="Create the login form"`
 								) +
 								'\n\n',
-							{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+							{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 						)
 					);
 					process.exit(1);
@@ -2857,8 +2858,8 @@ ${result.result}
 	function showAddSubtaskHelp() {
 		console.log(
 			boxen(
-				`${chalk.white.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -2916,10 +2917,10 @@ ${result.result}
 						process.exit(1);
 					}
 
-					console.log(chalk.blue(`Removing subtask ${subtaskId}...`));
+					console.log(theme.brand(`Removing subtask ${subtaskId}...`));
 					if (convertToTask) {
 						console.log(
-							chalk.blue('The subtask will be converted to a standalone task')
+							theme.brand('The subtask will be converted to a standalone task')
 						);
 					}
 
@@ -2935,19 +2936,19 @@ ${result.result}
 						// Display success message and next steps for converted task
 						console.log(
 							boxen(
-								chalk.white.bold(
+								theme.text.bold(
 									`Subtask ${subtaskId} Converted to Task #${result.id}`
 								) +
 									'\n\n' +
-									chalk.white(`Title: ${result.title}`) +
+									theme.text(`Title: ${result.title}`) +
 									'\n' +
-									chalk.white(`Status: ${getStatusWithColor(result.status)}`) +
+									theme.text(`Status: ${getStatusWithColor(result.status)}`) +
 									'\n' +
-									chalk.white(
+									theme.text(
 										`Dependencies: ${result.dependencies.join(', ')}`
 									) +
 									'\n\n' +
-									chalk.white.bold('Next Steps:') +
+									theme.text.bold('Next Steps:') +
 									'\n' +
 									chalk.cyan(
 										`1. Run ${chalk.yellow(`taskgraph show ${result.id}`)} to see details of the new task`
@@ -2968,9 +2969,9 @@ ${result.result}
 						// Display success message for deleted subtask
 						console.log(
 							boxen(
-								chalk.white.bold(`Subtask ${subtaskId} Removed`) +
+								theme.text.bold(`Subtask ${subtaskId} Removed`) +
 									'\n\n' +
-									chalk.white('The subtask has been successfully deleted.'),
+									theme.text('The subtask has been successfully deleted.'),
 								{
 									padding: 1,
 									borderColor: 'green',
@@ -2997,7 +2998,7 @@ ${result.result}
 	function showRemoveSubtaskHelp() {
 		console.log(
 			boxen(
-				chalk.white.bold('Remove Subtask Command Help') +
+				theme.text.bold('Remove Subtask Command Help') +
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
@@ -3015,7 +3016,7 @@ ${result.result}
 					'  taskgraph remove-subtask --id=5.2\n' +
 					'  taskgraph remove-subtask --id=5.2,6.3,7.1\n' +
 					'  taskgraph remove-subtask --id=5.2 --convert',
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -3024,7 +3025,7 @@ ${result.result}
 	function showTagsHelp() {
 		console.log(
 			boxen(
-				chalk.white.bold('Tags Command Help') +
+				theme.text.bold('Tags Command Help') +
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
@@ -3044,7 +3045,7 @@ ${result.result}
 					'  taskgraph add-tag <name>      Create a new tag\n' +
 					'  taskgraph use-tag <name>      Switch to a tag\n' +
 					'  taskgraph delete-tag <name>   Delete a tag',
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -3053,7 +3054,7 @@ ${result.result}
 	function showAddTagHelp() {
 		console.log(
 			boxen(
-				chalk.white.bold('Add Tag Command Help') +
+				theme.text.bold('Add Tag Command Help') +
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
@@ -3072,7 +3073,7 @@ ${result.result}
 					'  taskgraph add-tag feature-xyz --copy-from-current\n' +
 					'  taskgraph add-tag feature-xyz --copy-from master\n' +
 					'  taskgraph add-tag feature-xyz -d "Feature XYZ development"',
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -3081,7 +3082,7 @@ ${result.result}
 	function showDeleteTagHelp() {
 		console.log(
 			boxen(
-				chalk.white.bold('Delete Tag Command Help') +
+				theme.text.bold('Delete Tag Command Help') +
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
@@ -3099,7 +3100,7 @@ ${result.result}
 					chalk.yellow('Warning:') +
 					'\n' +
 					'  This will permanently delete the tag and all its tasks!',
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -3108,7 +3109,7 @@ ${result.result}
 	function showUseTagHelp() {
 		console.log(
 			boxen(
-				chalk.white.bold('Use Tag Command Help') +
+				theme.text.bold('Use Tag Command Help') +
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
@@ -3126,7 +3127,7 @@ ${result.result}
 					'\n' +
 					'  taskgraph tags                 List all available tags\n' +
 					'  taskgraph add-tag <name>       Create a new tag',
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -3135,7 +3136,7 @@ ${result.result}
 	function showResearchHelp() {
 		console.log(
 			boxen(
-				chalk.white.bold('Research Command Help') +
+				theme.text.bold('Research Command Help') +
 					'\n\n' +
 					chalk.cyan('Usage:') +
 					'\n' +
@@ -3160,7 +3161,7 @@ ${result.result}
 					'  taskgraph research "What\'s the best approach?" --id=15,23.2\n' +
 					'  taskgraph research "How does auth work?" --files=src/auth.js --tree\n' +
 					'  taskgraph research "Implementation steps?" --save-to=15.2 --detail=high',
-				{ padding: 1, borderColor: 'blue', borderStyle: 'round' }
+				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
 	}
@@ -3269,7 +3270,7 @@ ${result.result}
 				}
 
 				if (existingTasksToRemove.length === 0) {
-					console.log(chalk.blue('No existing tasks found to remove.'));
+					console.log(theme.brand('No existing tasks found to remove.'));
 					process.exit(0);
 				}
 
@@ -3288,7 +3289,7 @@ ${result.result}
 						if (task.isSubtask) {
 							// Subtask - title is directly on the task object
 							console.log(
-								chalk.white(`  Subtask ${id}: ${task.title || '(no title)'}`)
+								theme.text(`  Subtask ${id}: ${task.title || '(no title)'}`)
 							);
 							// Optionally show parent context if available
 							if (task.parentTask) {
@@ -3301,7 +3302,7 @@ ${result.result}
 						} else {
 							// Main task - title is directly on the task object
 							console.log(
-								chalk.white.bold(`  Task ${id}: ${task.title || '(no title)'}`)
+								theme.text.bold(`  Task ${id}: ${task.title || '(no title)'}`)
 							);
 						}
 					});
@@ -3339,7 +3340,7 @@ ${result.result}
 					]);
 
 					if (!confirm) {
-						console.log(chalk.blue('Task deletion cancelled.'));
+						console.log(theme.brand('Task deletion cancelled.'));
 						process.exit(0);
 					}
 				}
@@ -3555,7 +3556,7 @@ Examples:
 			}
 
 			if (options.setup) {
-				console.log(chalk.blue('Starting interactive model setup...'));
+				console.log(theme.brand('Starting interactive model setup...'));
 				try {
 					await runInteractiveSetup(projectRoot);
 					// runInteractiveSetup logs its own completion/error messages
@@ -3592,7 +3593,7 @@ Examples:
 				}
 
 				if (updateOccurred) {
-					console.log(chalk.blue('\nModel configuration updated.'));
+					console.log(theme.brand('\nModel configuration updated.'));
 				} else {
 					console.log(
 						chalk.yellow(
@@ -3604,7 +3605,7 @@ Examples:
 			}
 
 			// Display full status when no setup or set flags were given
-			console.log(chalk.blue('Fetching current model configuration...'));
+			console.log(theme.brand('Fetching current model configuration...'));
 			const configResult = await getModelConfiguration({ projectRoot });
 			const availableResult = await getAvailableModelsList({ projectRoot });
 
@@ -3664,7 +3665,7 @@ Examples:
 			let responseLanguage = response !== undefined ? response : 'English';
 			if (setup) {
 				console.log(
-					chalk.blue('Starting interactive response language setup...')
+					theme.brand('Starting interactive response language setup...')
 				);
 				try {
 					const userResponse = await inquirer.prompt([
@@ -3677,7 +3678,7 @@ Examples:
 					]);
 
 					console.log(
-						chalk.blue(
+						theme.brand(
 							'Response language set to:',
 							userResponse.responseLanguage
 						)
@@ -3731,72 +3732,72 @@ Examples:
 			// Helper function to show move command help - defined in scope for proper encapsulation
 			function showMoveHelp() {
 				console.log(
-					chalk.white.bold('Move Command Help') +
+					theme.text.bold('Move Command Help') +
 						'\n\n' +
 						chalk.cyan('Move tasks between tags or reorder within tags.') +
 						'\n\n' +
 						chalk.yellow.bold('Within-Tag Moves:') +
 						'\n' +
-						chalk.white('  taskgraph move --from=5 --to=7') +
+						theme.text('  taskgraph move --from=5 --to=7') +
 						'\n' +
-						chalk.white('  taskgraph move --from=5.2 --to=7.3') +
+						theme.text('  taskgraph move --from=5.2 --to=7.3') +
 						'\n' +
-						chalk.white('  taskgraph move --from=5,6,7 --to=10,11,12') +
+						theme.text('  taskgraph move --from=5,6,7 --to=10,11,12') +
 						'\n\n' +
 						chalk.yellow.bold('Cross-Tag Moves:') +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress'
 						) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  taskgraph move --from=5,6 --from-tag=backlog --to-tag=done'
 						) +
 						'\n\n' +
 						chalk.yellow.bold('Dependency Resolution:') +
 						'\n' +
-						chalk.white('  # Move with dependencies') +
+						theme.text('  # Move with dependencies') +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies'
 						) +
 						'\n\n' +
-						chalk.white('  # Break dependencies') +
+						theme.text('  # Break dependencies') +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --ignore-dependencies'
 						) +
 						'\n\n' +
 						'\n' +
 						chalk.yellow.bold('Best Practices:') +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Use --with-dependencies to move dependent tasks together'
 						) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Use --ignore-dependencies to break cross-tag dependencies'
 						) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Check dependencies first: taskgraph validate-dependencies'
 						) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Fix dependency issues: taskgraph fix-dependencies'
 						) +
 						'\n\n' +
 						chalk.yellow.bold('Error Resolution:') +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Cross-tag dependency conflicts: Use --with-dependencies or --ignore-dependencies'
 						) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Subtask movement: Promote subtask first with remove-subtask --convert'
 						) +
 						'\n' +
-						chalk.white(
+						theme.text(
 							'  • Invalid tags: Check available tags with taskgraph tags'
 						) +
 						'\n\n' +
@@ -3823,7 +3824,7 @@ Examples:
 				};
 
 				console.log(
-					chalk.blue(
+					theme.brand(
 						`Moving tasks ${sourceIds.join(', ')} from "${sourceTag}" to "${toTag}"...`
 					)
 				);
@@ -3842,7 +3843,7 @@ Examples:
 				// Print any tips returned from the move operation (e.g., after ignoring dependencies)
 				if (Array.isArray(result.tips) && result.tips.length > 0) {
 					console.log('\n' + chalk.yellow.bold('Next Steps:'));
-					result.tips.forEach((t) => console.log(chalk.white(`  • ${t}`)));
+					result.tips.forEach((t) => console.log(theme.text(`  • ${t}`)));
 				}
 			}
 
@@ -3884,7 +3885,7 @@ Examples:
 				// If moving multiple tasks
 				if (sourceIds.length > 1) {
 					console.log(
-						chalk.blue(
+						theme.brand(
 							`Moving multiple tasks: ${sourceIds.join(', ')} to ${destinationIds.join(', ')}...`
 						)
 					);
@@ -3922,7 +3923,7 @@ Examples:
 						}
 
 						console.log(
-							chalk.blue(`Moving task/subtask ${fromId} to ${toId}...`)
+							theme.brand(`Moving task/subtask ${fromId} to ${toId}...`)
 						);
 						try {
 							await moveTask(
@@ -3987,7 +3988,9 @@ Examples:
 				} else {
 					// Moving a single task (existing logic)
 					console.log(
-						chalk.blue(`Moving task/subtask ${sourceId} to ${destinationId}...`)
+						theme.brand(
+							`Moving task/subtask ${sourceId} to ${destinationId}...`
+						)
 					);
 
 					const result = await moveTask(
@@ -4091,15 +4094,15 @@ Examples:
 						'\n' +
 							chalk.yellow.bold('Conflict: ID already exists in target tag') +
 							'\n' +
-							chalk.white(
+							theme.text(
 								'  • Choose a different target tag without conflicting IDs'
 							) +
 							'\n' +
-							chalk.white(
+							theme.text(
 								'  • Move a different set of IDs (avoid existing ones)'
 							) +
 							'\n' +
-							chalk.white(
+							theme.text(
 								'  • If needed, move within-tag to a new ID first, then cross-tag move'
 							)
 					);
@@ -4133,7 +4136,7 @@ Examples:
 			const tag = taskGraph.getCurrentTag();
 
 			console.log(
-				chalk.blue(
+				theme.brand(
 					`📝 Syncing tasks to README.md${withSubtasks ? ' (with subtasks)' : ''}${status ? ` (status: ${status})` : ''}...`
 				)
 			);
@@ -4818,30 +4821,30 @@ async function runCLI(argv = process.argv) {
 				boxen(
 					chalk.red.bold('Configuration Update Required!') +
 						'\n\n' +
-						chalk.white('TaskGraph now uses a ') +
+						theme.text('TaskGraph now uses a ') +
 						chalk.yellow.bold('configuration file') +
-						chalk.white(
+						theme.text(
 							' in your project for AI model choices and settings.\n\n' +
 								'This file appears to be '
 						) +
 						chalk.red.bold('missing') +
-						chalk.white('. No worries though.\n\n') +
+						theme.text('. No worries though.\n\n') +
 						chalk.cyan.bold('To create this file, run the interactive setup:') +
 						'\n' +
 						chalk.green('   taskgraph models --setup') +
 						'\n\n' +
-						chalk.white.bold('Key Points:') +
+						theme.text.bold('Key Points:') +
 						'\n' +
-						chalk.white('*   ') +
+						theme.text('*   ') +
 						chalk.yellow.bold('Configuration file') +
-						chalk.white(
+						theme.text(
 							': Stores your AI model settings (do not manually edit)\n'
 						) +
-						chalk.white('*   ') +
+						theme.text('*   ') +
 						chalk.yellow.bold('.env & .mcp.json') +
-						chalk.white(': Still used ') +
+						theme.text(': Still used ') +
 						chalk.red.bold('only') +
-						chalk.white(' for your AI provider API keys.\n\n') +
+						theme.text(' for your AI provider API keys.\n\n') +
 						chalk.cyan(
 							'`taskgraph models` to check your config & available models\n'
 						) +
