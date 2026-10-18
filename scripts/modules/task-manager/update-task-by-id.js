@@ -33,7 +33,7 @@ import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
 /**
  * Update a task by ID with new information using the unified AI service.
  * @param {string} tasksPath - Path to the tasks.json file
- * @param {string|number} taskId - ID of the task to update (supports numeric, alphanumeric like HAM-123, and subtask IDs like 1.2)
+ * @param {string|number} taskId - ID of the task to update (supports numeric and subtask IDs like 1.2)
  * @param {string} prompt - Prompt for generating updated task information
  * @param {boolean} [useResearch=false] - Whether to use the research AI role.
  * @param {Object} context - Context object containing session and mcpLog.
@@ -67,7 +67,7 @@ async function updateTaskById(
 		report('info', `Updating single task ${taskId} with prompt: "${prompt}"`);
 
 		// --- Input Validations ---
-		// Note: taskId can be a number (1), string with dot (1.2), or display ID (HAM-123)
+		// Note: taskId can be a number (1) or a string with a dot (1.2)
 		// So we don't validate it as strictly anymore
 		if (taskId === null || taskId === undefined || String(taskId).trim() === '')
 			throw new Error('Task ID cannot be empty.');
@@ -97,12 +97,12 @@ async function updateTaskById(
 		const data = readJSON(tasksPath, projectRoot, tag);
 		if (!data || !data.tasks)
 			throw new Error(`No valid tasks found in ${tasksPath}.`);
-		// File storage requires a strict numeric task ID
+		// A strict numeric task ID is required
 		const idStr = String(taskId).trim();
 		if (!/^\d+$/.test(idStr)) {
 			throw new Error(
-				'For file storage, taskId must be a positive integer. ' +
-					'Use update-subtask-by-id for IDs like "1.2", or run in API storage for display IDs (e.g., "HAM-123").'
+				'taskId must be a positive integer. ' +
+					'Use update-subtask-by-id for IDs like "1.2".'
 			);
 		}
 		const numericTaskId = Number(idStr);

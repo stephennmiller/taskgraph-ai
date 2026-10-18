@@ -3,15 +3,15 @@
  * Initialize and start a new TDD workflow for a task
  */
 
-import { MainTaskIdSchemaForMcp, normalizeDisplayId } from '@tm/core';
+import { MainTaskIdSchema } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
 import { handleApiResult, withToolContext } from '../../shared/utils.js';
 
 const StartWorkflowSchema = z.object({
-	taskId: MainTaskIdSchemaForMcp.describe(
-		'Main task ID to start workflow for (e.g., "1", "2", "HAM-123"). Subtask IDs (e.g., "2.3", "1.1") are not allowed.'
+	taskId: MainTaskIdSchema.describe(
+		'Main task ID to start workflow for (e.g., "1", "2"). Subtask IDs (e.g., "2.3", "1.1") are not allowed.'
 	),
 	projectRoot: z
 		.string()
@@ -45,9 +45,7 @@ export function registerAutopilotStartTool(server: FastMCP) {
 		},
 		execute: withToolContext(
 			async (args: StartWorkflowArgs, { log, tmCore }: ToolContext) => {
-				const { taskId: rawTaskId, projectRoot, maxAttempts, force } = args;
-				// Normalize task ID (e.g., "ham1" → "HAM-1")
-				const taskId = normalizeDisplayId(rawTaskId);
+				const { taskId, projectRoot, maxAttempts, force } = args;
 
 				try {
 					log.info(

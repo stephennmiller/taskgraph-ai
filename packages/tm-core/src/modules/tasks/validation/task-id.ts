@@ -3,32 +3,19 @@
  * Provides validation for task IDs used in MCP tools and CLI
  *
  * Supported formats:
- *
- * FILE STORAGE (local):
  * - Main tasks: "1", "2", "15"
  * - Subtasks: "1.2", "15.3"
  * - Sub-subtasks: "1.2.3", "15.3.1"
- *
- * PREFIXED IDS:
- * - Main tasks: "HAM-1", "ham-1", "HAM1", "ham1" (all normalized to "HAM-1")
- * - Variable-length prefixes: "PROJ-456", "TAS-1", "abc-999"
- * - No subtasks (no dot notation)
- *
- * NOT supported:
- * - Prefixed subtasks: "HAM-1.2"
  */
 
 import { z } from 'zod';
-import { normalizeDisplayId } from '../../../common/schemas/task-id.schema.js';
 
 /**
  * Pattern for validating a single task ID
- * Permissive input - accepts with or without hyphen for API IDs
  * - Numeric: "1", "15", "999"
  * - Numeric subtasks: "1.2", "1.2.3" (multi-level supported)
- * - API display IDs: "HAM-1", "PROJ-456", "TAS-1", "abc-999"
  */
-export const TASK_ID_PATTERN = /^(\d+(\.\d+)*|[A-Za-z]+-?\d+)$/;
+export const TASK_ID_PATTERN = /^\d+(\.\d+)*$/;
 
 /**
  * Validates a single task ID string
@@ -41,10 +28,7 @@ export const TASK_ID_PATTERN = /^(\d+(\.\d+)*|[A-Za-z]+-?\d+)$/;
  * isValidTaskIdFormat("1");        // true
  * isValidTaskIdFormat("1.2");      // true
  * isValidTaskIdFormat("1.2.3");    // true (multi-level subtasks)
- * isValidTaskIdFormat("HAM-1");    // true
- * isValidTaskIdFormat("PROJ-456"); // true (variable-length prefix)
- * isValidTaskIdFormat("ham1");     // true (permissive input)
- * isValidTaskIdFormat("HAM-1.2");  // false (no API subtasks)
+ * isValidTaskIdFormat("ABC-1");    // false (prefixed IDs are not supported)
  * isValidTaskIdFormat("abc");      // false
  * ```
  */
@@ -54,8 +38,7 @@ export function isValidTaskIdFormat(id: string): boolean {
 
 /**
  * Zod schema for a single task ID
- * Validates format: numeric, alphanumeric display ID, or numeric subtask
- * Note: Use parseTaskIds() for normalization (e.g., "ham1" → "HAM-1")
+ * Validates format: numeric task or numeric subtask
  * This schema is used in MCP tool definitions which can't have transforms.
  */
 export const taskIdSchema = z
@@ -63,23 +46,20 @@ export const taskIdSchema = z
 	.min(1, 'Task ID cannot be empty')
 	.refine(isValidTaskIdFormat, {
 		message:
-			"Invalid task ID format. Expected numeric (e.g., '15'), subtask (e.g., '15.2'), or display ID (e.g., 'HAM-123')"
+			"Invalid task ID format. Expected numeric (e.g., '15') or subtask (e.g., '15.2')"
 	});
 
 /**
  * Zod schema for comma-separated task IDs
  * Validates that each ID in the comma-separated list is valid
- * Permissive input - accepts "ham1", "HAM1", "ham-1" etc.
  *
  * @example
  * ```typescript
  * taskIdsSchema.parse("1");        // valid
  * taskIdsSchema.parse("1,2,3");    // valid
  * taskIdsSchema.parse("1.2, 3.4"); // valid (spaces trimmed)
- * taskIdsSchema.parse("HAM-123");  // valid
- * taskIdsSchema.parse("ham1");     // valid (permissive input)
  * taskIdsSchema.parse("abc");      // throws
- * taskIdsSchema.parse("HAM-1.2");  // throws (API subtasks not supported)
+ * taskIdsSchema.parse("ABC-123");  // throws (prefixed IDs are not supported)
  * ```
  */
 export const taskIdsSchema = z
@@ -95,26 +75,23 @@ export const taskIdsSchema = z
 		},
 		{
 			message:
-				"Invalid task ID format. Expected numeric (e.g., '15'), subtask (e.g., '15.2'), or display ID (e.g., 'HAM-123'). Multiple IDs should be comma-separated."
+				"Invalid task ID format. Expected numeric (e.g., '15') or subtask (e.g., '15.2'). Multiple IDs should be comma-separated."
 		}
 	);
 
 /**
  * Parse and validate comma-separated task IDs
- * Returns normalized IDs (e.g., "ham1" → "HAM-1")
  *
  * @param input - Comma-separated task ID string
- * @returns Array of validated and normalized task IDs
+ * @returns Array of validated task IDs
  * @throws Error if any ID is invalid
  *
  * @example
  * ```typescript
  * parseTaskIds("1, 2, 3");     // ["1", "2", "3"]
  * parseTaskIds("1.2,3.4");     // ["1.2", "3.4"]
- * parseTaskIds("HAM-123");     // ["HAM-123"]
- * parseTaskIds("ham1,ham2");   // ["HAM-1", "HAM-2"] (normalized)
  * parseTaskIds("invalid");     // throws Error
- * parseTaskIds("HAM-1.2");     // throws Error (API subtasks not supported)
+ * parseTaskIds("ABC-123");     // throws Error (prefixed IDs are not supported)
  * ```
  */
 export function parseTaskIds(input: string): string[] {
@@ -130,12 +107,11 @@ export function parseTaskIds(input: string): string[] {
 	const invalidIds = ids.filter((id) => !isValidTaskIdFormat(id));
 	if (invalidIds.length > 0) {
 		throw new Error(
-			`Invalid task ID format: ${invalidIds.join(', ')}. Expected numeric (e.g., '15'), subtask (e.g., '15.2'), or display ID (e.g., 'HAM-123')`
+			`Invalid task ID format: ${invalidIds.join(', ')}. Expected numeric (e.g., '15') or subtask (e.g., '15.2')`
 		);
 	}
 
-	// Normalize all IDs (e.g., "ham1" → "HAM-1")
-	return ids.map(normalizeDisplayId);
+	return ids;
 }
 
 /**

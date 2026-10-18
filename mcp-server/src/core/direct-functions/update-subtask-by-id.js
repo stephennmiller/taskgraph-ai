@@ -50,9 +50,8 @@ export async function updateSubtaskByIdDirect(args, log, context = {}) {
 		}
 
 		// Basic validation - ID must be present
-		// In API storage, subtask IDs like "HAM-2611" are valid (no dot required)
-		// In file storage, subtask IDs must be in format "parentId.subtaskId"
-		// The core function handles storage-specific validation
+		// Subtask IDs must be in format "parentId.subtaskId"
+		// The core function handles the format validation
 		if (!id || typeof id !== 'string' || !id.trim()) {
 			const errorMessage = 'Subtask ID cannot be empty.';
 			logWrapper.error(errorMessage);

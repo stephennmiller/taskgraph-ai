@@ -87,8 +87,8 @@ export class TasksDomain {
 	/**
 	 * Get a single task by ID
 	 * Automatically handles all ID formats:
-	 * - Simple task IDs (e.g., "1", "HAM-123")
-	 * - Subtask IDs with dot notation (e.g., "1.2", "HAM-123.2")
+	 * - Simple task IDs (e.g., "1")
+	 * - Subtask IDs with dot notation (e.g., "1.2")
 	 *
 	 * @returns Discriminated union indicating task/subtask with proper typing
 	 */
