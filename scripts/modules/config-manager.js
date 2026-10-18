@@ -49,8 +49,7 @@ const DEFAULTS = {
 		projectName: 'TaskGraph',
 		responseLanguage: 'English',
 		enableCodebaseAnalysis: true,
-		enableProxy: false,
-		anonymousTelemetry: true // Allow users to opt out of Sentry telemetry for local storage
+		enableProxy: false
 	},
 	claudeCode: {}
 };
@@ -573,12 +572,6 @@ function getProxyEnabled(explicitRoot = null) {
 	return getGlobalConfig(explicitRoot).enableProxy === true;
 }
 
-function getAnonymousTelemetryEnabled(explicitRoot = null) {
-	// Return boolean-safe value with default true (opt-in by default)
-	const config = getGlobalConfig(explicitRoot);
-	return config.anonymousTelemetry !== false; // Default true if undefined
-}
-
 function isProxyEnabled(session = null, projectRoot = null) {
 	// Priority 1: Environment variable
 	const envFlag = resolveEnvVariable(
@@ -864,7 +857,6 @@ export {
 	isCodebaseAnalysisEnabled,
 	getProxyEnabled,
 	isProxyEnabled,
-	getAnonymousTelemetryEnabled,
 	getParametersForRole,
 	getUserId,
 	// Operating mode

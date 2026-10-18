@@ -3,7 +3,6 @@ import { jsonrepair } from 'jsonrepair';
 import { EnvHttpProxyAgent } from 'undici';
 import { isProxyEnabled } from '../../scripts/modules/config-manager.js';
 import { findProjectRoot, log } from '../../scripts/modules/utils.js';
-import { getAITelemetryConfig, hashProjectRoot } from '../telemetry/sentry.js';
 
 const {
 	JSONParseError,
@@ -343,29 +342,13 @@ export class BaseAIProvider {
 
 			const client = await this.getClient(params);
 
-			// Get Sentry telemetry config with function ID and metadata for better tracing
-			// Format: provider.model.command.method
-			const commandName = params.commandName || 'unknown';
-			const functionId = `${this.name}.${params.modelId}.${commandName}.generateText`;
-
-			// Build telemetry metadata for enhanced filtering/grouping in Sentry
-			const metadata = {
-				command: commandName,
-				outputType: params.outputType,
-				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot)
-			};
-
-			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
-
 			const result = await generateText({
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
-					: {}),
-				...(telemetryConfig && { experimental_telemetry: telemetryConfig })
+					: {})
 			});
 
 			log(
@@ -405,21 +388,6 @@ export class BaseAIProvider {
 
 			const client = await this.getClient(params);
 
-			// Get Sentry telemetry config with function ID and metadata for better tracing
-			// Format: provider.model.command.method
-			const commandName = params.commandName || 'unknown';
-			const functionId = `${this.name}.${params.modelId}.${commandName}.streamText`;
-
-			// Build telemetry metadata for enhanced filtering/grouping in Sentry
-			const metadata = {
-				command: commandName,
-				outputType: params.outputType,
-				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot)
-			};
-
-			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
-
 			const stream = await streamText({
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
@@ -427,7 +395,6 @@ export class BaseAIProvider {
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
 					: {}),
-				...(telemetryConfig && { experimental_telemetry: telemetryConfig }),
 				...(params.experimental_transform && {
 					experimental_transform: params.experimental_transform
 				})
@@ -463,21 +430,6 @@ export class BaseAIProvider {
 
 			const client = await this.getClient(params);
 
-			// Get Sentry telemetry config with function ID and metadata for better tracing
-			// Format: provider.model.command.method
-			const commandName = params.commandName || 'unknown';
-			const functionId = `${this.name}.${params.modelId}.${commandName}.streamObject`;
-
-			// Build telemetry metadata for enhanced filtering/grouping in Sentry
-			const metadata = {
-				command: commandName,
-				outputType: params.outputType,
-				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot)
-			};
-
-			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
-
 			const schema = buildSafeSchema(params.schema);
 
 			const result = await streamObject({
@@ -488,8 +440,7 @@ export class BaseAIProvider {
 				maxOutputTokens: params.maxTokens,
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
-					: {}),
-				...(telemetryConfig && { experimental_telemetry: telemetryConfig })
+					: {})
 			});
 
 			log(
@@ -527,21 +478,6 @@ export class BaseAIProvider {
 
 			const client = await this.getClient(params);
 
-			// Get Sentry telemetry config with function ID and metadata for better tracing
-			// Format: provider.model.command.method.objectName
-			const commandName = params.commandName || 'unknown';
-			const functionId = `${this.name}.${params.modelId}.${commandName}.generateObject.${params.objectName}`;
-
-			// Build telemetry metadata for enhanced filtering/grouping in Sentry
-			const metadata = {
-				command: commandName,
-				outputType: params.outputType,
-				tag: params.tag,
-				projectHash: hashProjectRoot(params.projectRoot)
-			};
-
-			const telemetryConfig = getAITelemetryConfig(functionId, metadata);
-
 			const schema = buildSafeSchema(params.schema);
 
 			const result = await generateObject({
@@ -554,8 +490,7 @@ export class BaseAIProvider {
 				maxTokens: params.maxTokens,
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
-					: {}),
-				...(telemetryConfig && { experimental_telemetry: telemetryConfig })
+					: {})
 			});
 
 			log(
