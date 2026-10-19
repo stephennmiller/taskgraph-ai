@@ -218,7 +218,7 @@ jobs:
 
       - name: Run Tests
         run: |
-          npm run test:coverage -- --coverageThreshold '{"global":{"branches":0,"functions":0,"lines":0,"statements":0}}' --maxWorkers=2 --forceExit
+          npm run test:coverage -- --maxWorkers=2
         env:
           NODE_ENV: test
           CI: true

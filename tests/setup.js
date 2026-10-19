@@ -1,5 +1,5 @@
 /**
- * Jest setup file
+ * Vitest setup file
  *
  * This file is run before each test suite to set up the test environment.
  */

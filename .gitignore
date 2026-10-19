@@ -24,9 +24,6 @@ lerna-debug.log*
 coverage/
 *.lcov
 
-# Jest cache
-.jest/
-
 # Test temporary files and directories
 tests/temp/
 tests/e2e/_runs/
