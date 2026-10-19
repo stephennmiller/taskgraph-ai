@@ -32,6 +32,12 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    ignore:
+      # TypeScript 7 is the native-compiler rewrite: it removes tsconfig options
+      # we use (`baseUrl`) and needs every workspace tsconfig and the build tooling
+      # reviewed. Migrate on purpose, not through a bump PR.
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
     groups:
       # Minor/patch only: majors (the AI SDK 7 move, for example) need a human
       # decision and their own PR.
