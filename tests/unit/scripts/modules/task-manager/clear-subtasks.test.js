@@ -1,60 +1,62 @@
 /**
  * Tests for the clear-subtasks.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	findTaskById: jest.fn(),
-	isSilentMode: jest.fn(() => false),
-	truncate: jest.fn((text) => text),
-	ensureTagMetadata: jest.fn()
+	findTaskById: vi.fn(),
+	isSilentMode: vi.fn(() => false),
+	truncate: vi.fn((text) => text),
+	ensureTagMetadata: vi.fn()
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn()
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn()
 }));
 
 // Mock external UI libraries
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	default: {
 		white: {
-			bold: jest.fn((text) => text)
+			bold: vi.fn((text) => text)
 		},
 		cyan: Object.assign(
-			jest.fn((text) => text),
+			vi.fn((text) => text),
 			{
-				bold: jest.fn((text) => text)
+				bold: vi.fn((text) => text)
 			}
 		),
-		green: jest.fn((text) => text),
-		yellow: jest.fn((text) => text),
-		bold: jest.fn((text) => text)
+		green: vi.fn((text) => text),
+		yellow: vi.fn((text) => text),
+		bold: vi.fn((text) => text)
 	}
 }));
 
-jest.unstable_mockModule('boxen', () => ({
-	default: jest.fn((text) => text)
+vi.doMock('boxen', () => ({
+	default: vi.fn((text) => text)
 }));
 
-jest.unstable_mockModule('cli-table3', () => ({
-	default: jest.fn().mockImplementation(() => ({
-		push: jest.fn(),
-		toString: jest.fn(() => 'mocked table')
-	}))
+vi.doMock('cli-table3', () => ({
+	default: vi.fn().mockImplementation(function () {
+		return {
+			push: vi.fn(),
+			toString: vi.fn(() => 'mocked table')
+		};
+	})
 }));
 
 // Mock process.exit to prevent Jest worker crashes
-const mockExit = jest.spyOn(process, 'exit').mockImplementation((code) => {
+const mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
 	throw new Error(`process.exit called with "${code}"`);
 });
 
@@ -88,7 +90,7 @@ describe('clearSubtasks', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockExit.mockClear();
 		readJSON.mockImplementation((tasksPath, projectRoot, tag) => {
 			// Ensure tag contract is honoured

@@ -1,7 +1,7 @@
 /**
  * Tests for the updateSingleTaskStatus function
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Import test fixtures
 import {

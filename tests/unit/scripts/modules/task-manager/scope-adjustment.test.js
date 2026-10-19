@@ -1,44 +1,38 @@
 /**
  * Tests for scope-adjustment.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock dependencies using unstable_mockModule for ES modules
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	log: jest.fn(),
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	getCurrentTag: jest.fn(() => 'master'),
-	readComplexityReport: jest.fn(),
-	findTaskInComplexityReport: jest.fn(),
-	findProjectRoot: jest.fn()
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	log: vi.fn(),
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	getCurrentTag: vi.fn(() => 'master'),
+	readComplexityReport: vi.fn(),
+	findTaskInComplexityReport: vi.fn(),
+	findProjectRoot: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateObjectService: jest.fn(),
-		generateTextService: jest.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateObjectService: vi.fn(),
+	generateTextService: vi.fn()
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/task-manager.js',
-	() => ({
-		findTaskById: jest.fn(),
-		taskExists: jest.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/task-manager.js', () => ({
+	findTaskById: vi.fn(),
+	taskExists: vi.fn()
+}));
 
-jest.unstable_mockModule(
+vi.doMock(
 	'../../../../../scripts/modules/task-manager/analyze-task-complexity.js',
 	() => ({
-		default: jest.fn()
+		default: vi.fn()
 	})
 );
 
-jest.unstable_mockModule('../../../../../src/utils/path-utils.js', () => ({
-	findComplexityReportPath: jest.fn()
+vi.doMock('../../../../../src/utils/path-utils.js', () => ({
+	findComplexityReportPath: vi.fn()
 }));
 
 // Import modules after mocking
@@ -61,7 +55,7 @@ const { scopeUpTask, scopeDownTask, validateStrength } = await import(
 
 describe('Scope Adjustment Commands', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('scopeUpTask', () => {

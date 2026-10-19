@@ -2,17 +2,12 @@ import path from 'path';
 /**
  * Tests for the removeSubtask function
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock dependencies
-const mockReadJSON = jest.fn();
-const mockWriteJSON = jest.fn();
-const mockGenerateTaskFiles = jest.fn();
-
-// Mock path module
-jest.mock('path', () => ({
-	dirname: jest.fn()
-}));
+const mockReadJSON = vi.fn();
+const mockWriteJSON = vi.fn();
+const mockGenerateTaskFiles = vi.fn();
 
 // Define test version of the removeSubtask function
 const testRemoveSubtask = (
@@ -110,7 +105,7 @@ const testRemoveSubtask = (
 describe('removeSubtask function', () => {
 	// Reset mocks before each test
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Default mock implementations
 		mockReadJSON.mockImplementation((p, root, tag) => {
