@@ -28,7 +28,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 - **No API keys:** every AI call runs through your signed-in Claude Code.
 
 <p align="center">
-  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.webp" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="720"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="820"></a>
   <br>
   <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
@@ -37,25 +37,25 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 <summary><b>See the full workflow</b> (4 short clips)</summary>
 
 <p align="center">
-  <a href="images/demo/01-setup.mp4"><img src="images/demo/01-setup.webp" alt="Running taskgraph init --rules claude in a project" width="720"></a>
+  <a href="images/demo/01-setup.mp4"><img src="images/demo/01-setup.svg" alt="Running taskgraph init --rules claude in a project" width="820"></a>
   <br>
   <sub>1. Set it up in your project · <a href="images/demo/01-setup.mp4">MP4</a></sub>
 </p>
 
 <p align="center">
-  <a href="images/demo/02-prd-to-tasks.mp4"><img src="images/demo/02-prd-to-tasks.webp" alt="Claude Code running /tm:parse-prd to turn a PRD into 8 dependent tasks" width="720"></a>
+  <a href="images/demo/02-prd-to-tasks.mp4"><img src="images/demo/02-prd-to-tasks.svg" alt="Claude Code running /tm:parse-prd to turn a PRD into 8 dependent tasks" width="820"></a>
   <br>
   <sub>2. Turn your PRD into a plan · <a href="images/demo/02-prd-to-tasks.mp4">MP4</a></sub>
 </p>
 
 <p align="center">
-  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.webp" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="720"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="820"></a>
   <br>
   <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
 
 <p align="center">
-  <a href="images/demo/04-terminal.mp4"><img src="images/demo/04-terminal.webp" alt="The taskgraph list dashboard and task table in a terminal" width="720"></a>
+  <a href="images/demo/04-terminal.mp4"><img src="images/demo/04-terminal.svg" alt="The taskgraph list dashboard and task table in a terminal" width="820"></a>
   <br>
   <sub>4. Or drive it from your terminal · <a href="images/demo/04-terminal.mp4">MP4</a></sub>
 </p>
@@ -130,6 +130,13 @@ To share the setup with your team instead, put it in the project's `.mcp.json`:
 ```
 
 ## How to use it
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/how-it-works-dark.svg">
+    <img src="images/how-it-works.svg" alt="parse-prd turns your PRD into a task graph stored in .taskgraph/tasks/tasks.json in your repo. Each Claude Code session reads and updates that file, so a new session picks up the next task and the notes from the last one." width="820">
+  </picture>
+</p>
 
 The examples below use slash commands (`/tm:...`), with the CLI equivalent in each table. If you added the optional MCP server, you can say the same things in plain language instead.
 
