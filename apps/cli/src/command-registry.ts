@@ -9,6 +9,7 @@ import { AutopilotCommand } from './commands/autopilot/index.js';
 import { GenerateCommand } from './commands/generate.command.js';
 // Import all commands
 import { ListTasksCommand } from './commands/list.command.js';
+import { GithubCommand } from './commands/github/github.command.js';
 import { LoopCommand } from './commands/loop.command.js';
 import { NextCommand } from './commands/next.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
@@ -88,6 +89,12 @@ export class CommandRegistry {
 			name: 'generate',
 			description: 'Generate individual task files from tasks.json',
 			commandClass: GenerateCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'github',
+			description: 'Push tasks to GitHub Issues (status, push, unlink)',
+			commandClass: GithubCommand as any,
 			category: 'utility'
 		}
 	];
