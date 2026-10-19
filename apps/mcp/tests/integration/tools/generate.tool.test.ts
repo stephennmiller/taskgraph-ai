@@ -71,11 +71,12 @@ describe('generate MCP tool', () => {
 			.join(' ');
 
 		const output = execSync(
-			`npx @modelcontextprotocol/inspector --cli node "${mcpServerPath}" --method tools/call --tool-name ${toolName} ${toolArgs}`,
+			// The inspector only forwards env vars given with -e to the server it
+			// spawns, so `generate` (an "all"-tier tool) needs the flag here.
+			`npx @modelcontextprotocol/inspector --cli -e TASKGRAPH_TOOLS=all node "${mcpServerPath}" --method tools/call --tool-name ${toolName} ${toolArgs}`,
 			{
 				encoding: 'utf-8',
-				stdio: 'pipe',
-				env: { ...process.env, TASKGRAPH_TOOLS: 'all' }
+				stdio: 'pipe'
 			}
 		);
 

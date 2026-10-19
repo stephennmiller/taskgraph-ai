@@ -4,13 +4,14 @@ Welcome to the TaskGraph documentation. This documentation site provides compreh
 
 ## Getting Started
 
-- [Quick Start Guide](/getting-started/quick-start) - Complete setup and first-time usage guide
+- [Quick Start Guide](/getting-started/quick-start/quick-start) - Complete setup and first-time usage guide
 - [Requirements](/getting-started/quick-start/requirements) - What you need to get started
 - [Installation](/getting-started/quick-start/installation) - How to install TaskGraph
+- [Upgrading](/upgrading) - Moving from Task Master or a release before 0.47
 
 ## Core Capabilities
 
-- [MCP Tools](/capabilities/mcp) - Model Control Protocol integration
+- [MCP Tools](/capabilities/mcp) - Model Context Protocol integration
 - [CLI Commands](/capabilities/cli-root-commands) - Command line interface reference
 - [Task Structure](/capabilities/task-structure) - Understanding tasks and subtasks
 

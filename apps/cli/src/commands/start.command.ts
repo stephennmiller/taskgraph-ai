@@ -13,11 +13,12 @@ import {
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import ora, { type Ora } from 'ora';
+import type { Ora } from 'ora';
 import { displayTaskDetails } from '../ui/components/task-detail.component.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
+import { createSpinner } from '../ui/spinner.js';
 import { BORDER_COLOR, theme } from '../ui/theme.js';
 
 /**
@@ -94,7 +95,7 @@ export class StartCommand extends Command {
 			}
 
 			// Initialize tm-core with spinner
-			spinner = ora('Initializing TaskGraph...').start();
+			spinner = createSpinner('Initializing TaskGraph...').start();
 			await this.initializeCore(getProjectRoot(options.project));
 			spinner.succeed('TaskGraph initialized');
 
@@ -103,7 +104,7 @@ export class StartCommand extends Command {
 			let targetTaskId = idArg;
 
 			if (!targetTaskId) {
-				spinner = ora('Finding next available task...').start();
+				spinner = createSpinner('Finding next available task...').start();
 				targetTaskId = await this.performGetNextTask();
 				if (targetTaskId) {
 					spinner.succeed(`Found next task: #${targetTaskId}`);
@@ -123,7 +124,7 @@ export class StartCommand extends Command {
 			}
 
 			// Use tm-core's startTask method with spinner
-			spinner = ora('Preparing task execution...').start();
+			spinner = createSpinner('Preparing task execution...').start();
 			const coreResult = await this.performStartTask(targetTaskId, options);
 
 			if (coreResult.started) {
@@ -228,7 +229,9 @@ export class StartCommand extends Command {
 		// Show spinner for status update if enabled
 		let statusSpinner: Ora | null = null;
 		if (!options.noStatusUpdate && !options.dryRun) {
-			statusSpinner = ora('Updating task status to in-progress...').start();
+			statusSpinner = createSpinner(
+				'Updating task status to in-progress...'
+			).start();
 		}
 
 		// Get execution command from tm-core (instead of executing directly)

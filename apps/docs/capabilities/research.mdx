@@ -1,0 +1,35 @@
+---
+title: Research
+sidebarTitle: "Research"
+description: "Web research from Claude Code with no extra API keys, plus optional Context7 library docs"
+---
+
+# Research
+
+TaskGraph handles research with Claude Code's own `WebSearch` and `WebFetch` tools. No Perplexity or other research API key is needed.
+
+## CLI
+
+```bash
+taskgraph research "How do I paginate with the GitHub REST API?"
+```
+
+The `research` role runs through the Claude Code provider with only `WebSearch` and `WebFetch` allowed. It has no file or shell tools and loads no MCP servers, so a hostile web page cannot reach your files. It uses your existing Claude Code login and needs no API key.
+
+The `--research` flag on commands such as `add-task`, `expand`, and `parse-prd` uses the same role.
+
+## Claude Code plugin skill
+
+The TaskGraph plugin ships a `research` skill (`skills/research/SKILL.md`). Claude Code loads it automatically when you install the plugin, and invokes it when a task needs current information, library documentation, or a comparison of options. It searches, reads the best sources in full, and answers with a short summary and source links.
+
+## Optional: Context7 for library docs
+
+[Context7](https://github.com/upstash/context7) is an MCP server that serves current library documentation. The research skill uses it when it is available. It is optional: without it, the skill uses the web tools only and nothing breaks.
+
+To enable it:
+
+```bash
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+```
+
+Restart Claude Code afterwards. Context7 applies to the plugin skill in an interactive Claude Code session. `taskgraph research` does not load MCP servers, so it never uses Context7.

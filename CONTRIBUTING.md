@@ -158,14 +158,14 @@ Example:
 
 ```bash
 # Changeset summary (user-facing)
-"Add support for custom Ollama models"
+"Add a haiku option to the interactive model setup"
 
 # Git commit message (developer-facing)
-"feat(models): implement custom Ollama model validation
+"feat(models): add haiku to the interactive model setup
 
-- Add model validation for custom Ollama endpoints
-- Update configuration schema to support custom models
-- Add tests for new validation logic"
+- List haiku alongside opus and sonnet in the setup prompt
+- Validate the chosen model ID against the Claude Code model list
+- Add tests for the new prompt choices"
 ```
 
 ## 🔧 Development Setup
@@ -183,11 +183,9 @@ Example:
    cp .env.example .env
    ```
 
-2. **Add your API keys** (for testing AI features):
+2. **Sign in to Claude Code** (for testing AI features). No provider API keys are needed:
    ```bash
-   ANTHROPIC_API_KEY=your_key_here
-   OPENAI_API_KEY=your_key_here
-   # Add others as needed
+   claude
    ```
 
 ### Running Tests
@@ -285,7 +283,7 @@ taskgraph-ai/
 ├── scripts/               # Core task management logic
 ├── src/                   # Shared utilities and providers and well refactored code (we are slowly moving everything here)
 ├── tests/                 # Test files
-├── docs/                  # Documentation
+├── docs/                  # Contributor notes (user docs live in apps/docs/)
 └── .claude/               # Claude Code rules (path-scoped dev conventions)
 └── assets/                # Assets installed into user projects (e.g. AGENTS.md)
 ```

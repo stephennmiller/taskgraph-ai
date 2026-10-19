@@ -10,11 +10,11 @@ import process from 'process';
 
 import chalk from 'chalk';
 import cliProgress from 'cli-progress';
-import ora from 'ora';
 
 import { PACKAGE_NAME } from './constants.js';
 
 import { downloadTarballWithProgress, fetchTarballInfo } from './download.js';
+import { createSpinner } from '../../ui/spinner.js';
 import { theme } from '../../ui/theme.js';
 
 /** Installation phases with weights (how much of the progress bar each phase takes) */
@@ -248,13 +248,11 @@ async function installFromTarball(tarballPath: string): Promise<boolean> {
 async function performDirectNpmInstall(
 	latestVersion: string
 ): Promise<boolean> {
-	const spinner = ora({
-		text: theme.brand(
+	const spinner = createSpinner(
+		theme.brand(
 			`Updating ${PACKAGE_NAME} to version ${chalk.green(latestVersion)}`
-		),
-		spinner: 'dots',
-		color: 'blue'
-	}).start();
+		)
+	).start();
 
 	return new Promise((resolve) => {
 		const updateProcess = spawn(

@@ -11,7 +11,6 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import gradient from 'gradient-string';
-import ora from 'ora';
 import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
@@ -107,10 +106,7 @@ function displayAsciiBanner() {
 function startLoadingIndicator(message) {
 	if (isSilentMode()) return null;
 
-	const spinner = ora({
-		text: message,
-		color: 'cyan'
-	}).start();
+	const spinner = ui.createSpinner(message).start();
 
 	return spinner;
 }

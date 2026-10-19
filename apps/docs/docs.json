@@ -15,7 +15,7 @@
 				"groups": [
 					{
 						"group": "Welcome",
-						"pages": ["introduction"]
+						"pages": ["introduction", "upgrading"]
 					},
 					{
 						"group": "Getting Started",
@@ -33,6 +33,9 @@
 								]
 							},
 							"getting-started/api-keys",
+							"configuration",
+							"tutorial",
+							"examples",
 							"getting-started/faq",
 							"getting-started/contribute"
 						]
@@ -51,12 +54,9 @@
 							"capabilities/mcp",
 							"capabilities/cli-root-commands",
 							"capabilities/task-structure",
-							"capabilities/loop"
+							"capabilities/loop",
+							"capabilities/research"
 						]
-					},
-					{
-						"group": "AI Providers",
-						"pages": ["providers/azure"]
 					},
 					{
 						"group": "TDD Workflow (Autopilot)",
@@ -78,6 +78,12 @@
 			]
 		}
 	},
+	"redirects": [
+		{
+			"source": "/command-reference",
+			"destination": "/capabilities/cli-root-commands"
+		}
+	],
 	"logo": {
 		"light": "/logo/light.png",
 		"dark": "/logo/dark.png"

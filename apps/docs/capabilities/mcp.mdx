@@ -38,8 +38,7 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_TOOLS": "core",
-        "ANTHROPIC_API_KEY": "your_key_here"
+        "TASKGRAPH_TOOLS": "core"
       }
     }
   }
@@ -49,7 +48,7 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
 You can also use `"lean"` as an alias for `"core"`. If `TASKGRAPH_TOOLS` is not set, core tools are loaded by default.
 
 #### Standard Tools
-Loads 15 commonly used tools. Balances functionality with context efficiency.
+Loads 14 commonly used tools. Balances functionality with context efficiency.
 
 **Standard tools include all core tools plus:**
 - `initialize_project` - Set up new projects
@@ -57,7 +56,6 @@ Loads 15 commonly used tools. Balances functionality with context efficiency.
 - `expand_all` - Expand all eligible tasks
 - `add_subtask` - Add subtasks manually
 - `remove_task` - Remove tasks
-- `generate` - Generate task markdown files
 - `add_task` - Create new tasks
 - `complexity_report` - View complexity analysis
 
@@ -68,8 +66,7 @@ Loads 15 commonly used tools. Balances functionality with context efficiency.
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_TOOLS": "standard",
-        "ANTHROPIC_API_KEY": "your_key_here"
+        "TASKGRAPH_TOOLS": "standard"
       }
     }
   }
@@ -86,8 +83,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_TOOLS": "get_tasks,next_task,set_task_status,update_subtask",
-        "ANTHROPIC_API_KEY": "your_key_here"
+        "TASKGRAPH_TOOLS": "get_tasks,next_task,set_task_status,update_subtask"
       }
     }
   }
@@ -95,7 +91,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
 ```
 
 #### All Tools
-Loads all 36 available tools. Use when you need full TaskGraph functionality.
+Loads all available (43) tools. Use when you need full TaskGraph functionality.
 
 ```json
 {
@@ -104,8 +100,7 @@ Loads all 36 available tools. Use when you need full TaskGraph functionality.
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_TOOLS": "all",
-        "ANTHROPIC_API_KEY": "your_key_here"
+        "TASKGRAPH_TOOLS": "all"
       }
     }
   }
@@ -127,8 +122,8 @@ When the MCP server starts, it logs which tools were loaded:
 TaskGraph MCP Server starting...
 Tool mode configuration: standard
 Loading standard tools
-Registering 15 MCP tools (mode: standard)
-Successfully registered 15/15 tools
+Registering 14 MCP tools (mode: standard)
+Successfully registered 14/14 tools
 ```
 
 ## Tool Categories

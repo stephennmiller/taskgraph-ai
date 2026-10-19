@@ -118,7 +118,10 @@ jest.unstable_mockModule('../../src/ui/parse-prd.js', () => ({
 }));
 
 jest.unstable_mockModule('../../scripts/modules/ui.js', () => ({
-	displayAiUsageSummary: jest.fn()
+	displayAiUsageSummary: jest.fn(),
+	startLoadingIndicator: jest.fn(),
+	succeedLoadingIndicator: jest.fn(),
+	failLoadingIndicator: jest.fn()
 }));
 
 // Mock stream parser

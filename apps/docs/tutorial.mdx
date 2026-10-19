@@ -1,106 +1,53 @@
-# TaskGraph Tutorial
+---
+title: "Tutorial"
+description: "Set up TaskGraph and use it for AI-driven development in Claude Code"
+---
 
 This tutorial will guide you through setting up and using TaskGraph for AI-driven development.
 
 ## Initial Setup
 
-There are two ways to set up TaskGraph: using MCP (recommended) or via npm installation.
-
-### Option 1: Using MCP (Recommended)
-
-MCP (Model Context Protocol) provides the easiest way to get started with TaskGraph directly in Claude Code.
+You need [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (run `claude` once) and Node.js 22 or later. TaskGraph needs no API keys.
 
 1. **Install the package**
 
 ```bash
-npm i -g taskgraph-ai
+npm install -g taskgraph-ai
 ```
 
-2. **Add the MCP config to your project's `.mcp.json`** (or run `claude mcp add taskgraph-ai -- npx -y taskgraph-ai`):
+2. **Initialize your project** from its folder:
 
-```json
-{
-  "mcpServers": {
-    "taskgraph-ai": {
-      "command": "npx",
-      "args": ["-y", "taskgraph-ai"],
-      "env": {
-        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-        "OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-        "GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-        "MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-        "OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-        "XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-        "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE"
-      }
-    }
-  }
-}
+```bash
+taskgraph init --rules claude
 ```
 
-**IMPORTANT:** An API key is _required_ for each AI provider you plan on using. Run the `taskgraph models` command to see your selected models and the status of your API keys across .env and mcp.json
+This creates `.taskgraph/`, imports TaskGraph's workflow guide from your project's `CLAUDE.md`, installs the `/tm` slash commands in `.claude/commands/tm`, and writes a `.mcp.json` entry for the MCP server.
 
-**To use AI commands in CLI** you MUST have API keys in the .env file
-**To use AI commands in MCP** you MUST have API keys in the .mcp.json file (or MCP config equivalent)
+3. **(Optional) Use the MCP server.** Slash commands and the CLI do everything without it. To drive TaskGraph in plain language, register the server and run `/mcp` in Claude Code to check that it is connected:
 
-We recommend having keys in both places and adding mcp.json to your gitignore so your API keys aren't checked into git.
-
-3. **Enable the MCP** server in Claude Code (run `/mcp` to check it is connected)
-
-4. **Prompt the AI** to initialize TaskGraph:
-
-```
-Can you please initialize taskgraph into my project?
+```bash
+claude mcp add taskgraph-ai --scope user \
+  --env TASKGRAPH_TOOLS=standard \
+  -- npx -y taskgraph-ai
 ```
 
-The AI will:
+4. **Place your PRD** in `.taskgraph/docs/` (for example `.taskgraph/docs/prd.md`).
 
-- Create necessary project structure
-- Set up initial configuration files
-- Guide you through the rest of the process
-
-5. Place your PRD document in the `.taskgraph/docs/` directory (e.g., `.taskgraph/docs/prd.txt`)
-
-6. **Use natural language commands** to interact with TaskGraph:
+5. **Talk to Claude Code** (or use `/tm:` slash commands or the CLI):
 
 ```
-Can you parse my PRD at .taskgraph/docs/prd.txt?
+Can you parse my PRD at .taskgraph/docs/prd.md?
 What's the next task I should work on?
 Can you help me implement task 3?
 ```
 
-### Option 2: Manual Installation
-
-If you prefer to use the command line interface directly:
-
-```bash
-# Install globally
-npm install -g taskgraph-ai
-
-# OR install locally within your project
-npm install taskgraph-ai
-```
-
-Initialize a new project:
-
-```bash
-# If installed globally
-taskgraph init
-
-# If installed locally
-npx taskgraph init
-```
-
-This will prompt you for project details and set up a new project with the necessary files and structure.
-
 ## Common Commands
 
-After setting up TaskGraph, you can use these commands (either via AI prompts or CLI):
+After setting up TaskGraph, you can use these commands via slash commands, AI prompts or the CLI:
 
 ```bash
 # Parse a PRD and generate tasks
-taskgraph parse-prd your-prd.txt
+taskgraph parse-prd .taskgraph/docs/prd.md
 
 # List all tasks
 taskgraph list
@@ -109,42 +56,18 @@ taskgraph list
 taskgraph next
 ```
 
-## Setting up Claude Code Integration
-
-TaskGraph is built for Claude Code, providing a structured workflow for AI-driven development.
-
-### Using Claude Code with MCP (Recommended)
-
-If you've already set up TaskGraph with MCP in Claude Code, the integration is automatic. You can simply use natural language to interact with TaskGraph:
-
-```
-What tasks are available to work on next?
-Can you analyze the complexity of our tasks?
-I'd like to implement task 4. What does it involve?
-```
-
-### Manual Setup
-
-If you're not using MCP, run `taskgraph init --rules claude`. This:
-
-1. Copies TaskGraph's workflow guide to `.taskgraph/CLAUDE.md` and imports it from your project's `CLAUDE.md`
-2. Writes the `.mcp.json` server entry
-3. Installs the `/tm` slash commands in `.claude/commands/tm`
-
-Then place your PRD document in the `.taskgraph/docs/` directory (e.g., `.taskgraph/docs/prd.txt`) and start Claude Code in the project.
-
 ## Initial Task Generation
 
 In Claude Code, instruct the agent to generate tasks from your PRD:
 
 ```
-Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskgraph/docs/prd.txt.
+Please use the taskgraph parse-prd command to generate tasks from my PRD. The PRD is located at .taskgraph/docs/prd.md.
 ```
 
 The agent will execute:
 
 ```bash
-taskgraph parse-prd .taskgraph/docs/prd.txt
+taskgraph parse-prd .taskgraph/docs/prd.md
 ```
 
 This will:
@@ -372,7 +295,7 @@ taskgraph expand --id=5 --research
 ### Starting a new project
 
 ```
-I've just initialized a new project with TaskGraph. I have a PRD at .taskgraph/docs/prd.txt.
+I've just initialized a new project with TaskGraph. I have a PRD at .taskgraph/docs/prd.md.
 Can you help me parse it and set up the initial tasks?
 ```
 
@@ -487,7 +410,7 @@ The agent will execute:
 
 ```bash
 # Create a tag based on your current git branch
-taskgraph add-tag --from-branch
+taskgraph tags add <name> --from-branch
 ```
 
 Or you can create a tag with a specific name:
@@ -499,7 +422,7 @@ Create a new tag called 'user-auth' for authentication-related tasks.
 The agent will execute:
 
 ```bash
-taskgraph add-tag user-auth --description="User authentication feature tasks"
+taskgraph tags add user-auth --description="User authentication feature tasks"
 ```
 
 ### Switching Between Contexts
@@ -513,7 +436,7 @@ Switch to the 'user-auth' tag context so I can work on authentication tasks.
 The agent will execute:
 
 ```bash
-taskgraph use-tag user-auth
+taskgraph tags use user-auth
 ```
 
 ### Copying Tasks Between Tags
@@ -527,7 +450,7 @@ Copy all tasks from the current tag to a new 'testing' tag for QA work.
 The agent will execute:
 
 ```bash
-taskgraph add-tag testing --copy-from-current --description="QA and testing tasks"
+taskgraph tags add testing --copy-from=master --description="QA and testing tasks"
 ```
 
 ### Tag Management
@@ -557,9 +480,9 @@ taskgraph tags --show-metadata
 A typical git workflow with TaskGraph tags:
 
 1. **Create feature branch**: `git checkout -b feature/user-auth`
-2. **Create matching tag**: Ask agent to run `taskgraph add-tag --from-branch`
+2. **Create matching tag**: Ask the agent to run `taskgraph tags add <name> --from-branch`
 3. **Work in isolated context**: All task operations work within the new tag
-4. **Switch contexts as needed**: Use `taskgraph use-tag <name>` to switch between different work streams
-5. **Merge and cleanup**: After merging the branch, optionally delete the tag with `taskgraph delete-tag <name>`
+4. **Switch contexts as needed**: Use `taskgraph tags use <name>` to switch between different work streams
+5. **Merge and cleanup**: After merging the branch, optionally delete the tag with `taskgraph tags remove <name>`
 
 This workflow ensures your task management stays organized and conflicts are minimized when working with teams or multiple features simultaneously.

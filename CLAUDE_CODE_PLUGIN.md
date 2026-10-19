@@ -1,118 +1,72 @@
-# TaskGraph - Claude Code Marketplace
+# TaskGraph - Claude Code Plugin
 
-This repository includes a Claude Code plugin marketplace in `.claude-plugin/marketplace.json`.
+This repository is a Claude Code plugin marketplace. The marketplace manifest is `.claude-plugin/marketplace.json`, and it lists one plugin, `taskgraph`, whose source is `packages/claude-code-plugin`.
+
+The plugin adds TaskGraph's slash commands and agents to Claude Code. It needs the `taskgraph` CLI on your `PATH` (`npm install -g taskgraph-ai`) and a signed-in Claude Code. No API keys are required.
 
 ## Installation
 
-### From GitHub (Public Repository)
+### From GitHub
 
-Once this repository is pushed to GitHub, users can install with:
-
-```bash
-# Add the marketplace
+```txt
 /plugin marketplace add stephennmiller/taskgraph-ai
-
-# Install the plugin
 /plugin install taskgraph@taskgraph
 ```
 
-### Local Development/Testing
+### Local development
 
-```bash
-# From the project root directory
-cd /path/to/taskgraph-ai
+The plugin is plain markdown, so there is no build step. From a clone of this repository, in Claude Code:
 
-# Build the plugin first
-cd packages/claude-code-plugin
-npm run build
-cd ../..
-
-# In Claude Code
+```txt
 /plugin marketplace add .
 /plugin install taskgraph@taskgraph
 ```
 
-## Marketplace Structure
+## What the plugin contains
 
 ```
 taskgraph-ai/
 ├── .claude-plugin/
-│   └── marketplace.json        # Marketplace manifest (at repo root)
-│
-├── packages/claude-code-plugin/
-│   ├── src/build.ts           # Build tooling
-│   └── [generated plugin files]
-│
-└── assets/claude/              # Plugin source files
-    ├── commands/
-    └── agents/
+│   └── marketplace.json        # Marketplace manifest (repo root)
+└── packages/claude-code-plugin/
+    ├── commands/               # 46 slash commands
+    └── agents/                 # 3 agents
 ```
 
-## Available Plugins
+### Slash commands
 
-### taskgraph
+The plugin provides 46 slash commands, invoked as `/taskgraph:<name>`. For example:
 
-AI-powered task management system for ambitious development workflows.
-
-**Features:**
-
-- 49 slash commands for comprehensive task management
-- 3 specialized AI agents (orchestrator, executor, checker)
-- MCP server integration
-- Complexity analysis and auto-expansion
-- Dependency management and validation
-- Automated workflow capabilities
-
-**Quick Start:**
-
-```bash
-/tm:init
-/tm:parse-prd
-/tm:next
+```txt
+/taskgraph:parse-prd .taskgraph/docs/prd.md
+/taskgraph:next-task
+/taskgraph:show-task 3
+/taskgraph:to-done 3
 ```
 
-## For Contributors
+`taskgraph init --rules claude` installs a nearly identical set under `/tm:<name>` in your project. The two overlap, so install the plugin only if you want the agents or want the commands available in every project.
 
-### Adding New Plugins
+### Agents
 
-To add more plugins to this marketplace:
+- `task-orchestrator`: plans and coordinates work across tasks
+- `task-executor`: implements a task
+- `task-checker`: verifies a finished task (uses the `taskgraph show` CLI, or the MCP tool if you registered the server as `taskgraph-ai`)
 
-1. **Update marketplace.json**:
+The plugin does not register an MCP server. To add one, see the [README](README.md#4-optional-add-the-mcp-server).
 
-   ```json
-   {
-     "plugins": [
-       {
-         "name": "new-plugin",
-         "source": "./path/to/plugin",
-         "description": "Plugin description",
-         "version": "1.0.0"
-       }
-     ]
-   }
-   ```
+## For contributors
 
-2. **Commit and push** the changes
+To change the plugin, edit the files under `packages/claude-code-plugin/commands/` or `agents/`, then commit and push. Users get the update with:
 
-3. **Users update** with: `/plugin marketplace update taskgraph`
-
-### Marketplace Versioning
-
-The marketplace version is tracked in `.claude-plugin/marketplace.json`:
-
-```json
-{
-  "metadata": {
-    "version": "1.0.0"
-  }
-}
+```txt
+/plugin marketplace update taskgraph
 ```
 
-Increment the version when adding or updating plugins.
+The marketplace version lives in `.claude-plugin/marketplace.json` under `metadata.version`. Increment it when you add or update plugins.
 
-## Team Configuration
+## Team configuration
 
-Organizations can auto-install this marketplace for all team members by adding to `.claude/settings.json`:
+Organizations can auto-install this marketplace for all team members by adding this to `.claude/settings.json`:
 
 ```json
 {
