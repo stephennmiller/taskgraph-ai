@@ -59,7 +59,7 @@
 	"author": "Eyal Toledano",
 	"license": "MIT WITH Commons-Clause",
 	"dependencies": {
-		"@inquirer/search": "^3.0.15",
+		"@inquirer/search": "^4.3.4",
 		"@streamparser/json": "^0.0.26",
 		"@types/turndown": "^5.0.6",
 		"ai": "^7.0.143",
