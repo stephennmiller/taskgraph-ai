@@ -7,6 +7,7 @@ import type { Command } from 'commander';
 
 import { AutopilotCommand } from './commands/autopilot/index.js';
 import { GenerateCommand } from './commands/generate.command.js';
+import { GraphCommand } from './commands/graph.command.js';
 // Import all commands
 import { ListTasksCommand } from './commands/list.command.js';
 import { GithubCommand } from './commands/github/github.command.js';
@@ -52,6 +53,12 @@ export class CommandRegistry {
 			name: 'next',
 			description: 'Find the next available task to work on',
 			commandClass: NextCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'graph',
+			description: 'Show tasks as a dependency tree',
+			commandClass: GraphCommand as any,
 			category: 'task'
 		},
 		{

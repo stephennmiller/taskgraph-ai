@@ -11,5 +11,7 @@ export type {
 export { GhCliClient } from './adapters/gh-cli-client.js';
 export { renderIssue, hashIssue } from './services/issue-renderer.js';
 export { planSync, getLink } from './services/sync-planner.js';
+export { planPull } from './services/pull-planner.js';
+export { statusFromIssue, sameStatus } from './services/issue-status.js';
 export { executePush } from './services/push-executor.js';
 export type * from './types.js';

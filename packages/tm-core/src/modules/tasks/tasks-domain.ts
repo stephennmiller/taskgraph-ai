@@ -21,6 +21,10 @@ import type {
 } from './services/tag.service.js';
 
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
+import {
+	buildDependencyTree,
+	type DependencyTree
+} from '../dependencies/index.js';
 import type {
 	TaskListResult,
 	GetTaskListOptions
@@ -147,6 +151,17 @@ export class TasksDomain {
 	 */
 	async getNext(tag?: string): Promise<Task | null> {
 		return this.taskService.getNextTask(tag);
+	}
+
+	/**
+	 * Lay tasks out as a dependency tree for display (each task once, under
+	 * its deepest dependency). Pass rootId for one task and what depends on it.
+	 */
+	async getDependencyTree(
+		options: { tag?: string; rootId?: string } = {}
+	): Promise<DependencyTree> {
+		const { tasks } = await this.list({ tag: options.tag });
+		return buildDependencyTree(tasks, { rootId: options.rootId });
 	}
 
 	/**

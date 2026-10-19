@@ -1,0 +1,109 @@
+---
+title: GitHub Sync
+sidebarTitle: "GitHub Sync"
+description: "Push your tasks to GitHub Issues from the CLI or an MCP client, with a preview first, and pull issue status back"
+---
+
+# GitHub Sync
+
+TaskGraph can mirror your tasks as GitHub Issues. Pushing is one way: TaskGraph writes the issues. Pulling is optional and reads status only: whether an issue was closed, reopened or relabelled. Nothing else is read back from GitHub. It runs through the [`gh` CLI](https://cli.github.com), so there is no token to configure.
+
+## Requirements
+
+- `gh` installed and signed in (`gh auth status` should succeed)
+- A project whose git remote points at the GitHub repository you want to write to, or an explicit `--repo owner/name`
+
+Run `taskgraph github status` to check both.
+
+## CLI
+
+```bash
+taskgraph github status                 # gh available? which repo? how many tasks are linked?
+taskgraph github push --dry-run         # show the plan, write nothing
+taskgraph github push                   # show the plan, ask, then write
+taskgraph github push --all-tags -y     # every tag, no confirmation
+taskgraph github push --id 1,2          # only top-level tasks 1 and 2
+taskgraph github pull --dry-run         # show which task statuses would change
+taskgraph github pull                   # show the plan, ask, then update the tasks
+taskgraph github unlink 3               # forget the issue task 3 is linked to
+```
+
+`push` works on the active tag unless you pass `--tag <name>` or `--all-tags`. Without `--yes` it prints the plan and asks before writing, and it refuses to write at all when it cannot ask (piped output or `--json`). Other options:
+
+| Option | Effect |
+|--------|--------|
+| `--repo <owner/name>` | Write to this repository instead of the detected one |
+| `--include-details` | Add the task `details` and `testStrategy` fields to issue bodies (left out by default) |
+| `--close-orphans` | Close open issues whose task no longer exists |
+| `--json` | Machine-readable output |
+
+## Pulling status
+
+`taskgraph github pull` reads the issues once and updates task statuses. It never writes to GitHub. It takes the same `--tag`, `--all-tags`, `--id`, `--repo`, `--dry-run`, `--yes` and `--json` options as `push`, and it asks before changing a status unless you pass `--yes`.
+
+| On GitHub | Task status |
+|-----------|-------------|
+| Closed (as completed) | `done` |
+| Closed as not planned | `cancelled` |
+| Open with a `taskgraph:status/<x>` label | `<x>` |
+| Open with no status label (it was reopened) | `pending` |
+
+For each linked task, pull compares three statuses: the one at the last push or pull, the task's status now, and the issue's status.
+
+- **Only the issue changed:** the task takes the issue's status.
+- **Only the task changed:** nothing happens. A push sends it to GitHub.
+- **Both changed to the same status:** pull records them as in sync.
+- **Both changed to different statuses:** this is a conflict. The task keeps its local status and is listed in the plan. Run `taskgraph github push` to overwrite GitHub with it.
+
+Tasks that were never pushed, or whose issue is gone, are skipped.
+
+## MCP tools
+
+There is no MCP tool for pull, because it changes your local tasks. Use the CLI. Both tools below are in the `all` tier. Set `TASKGRAPH_TOOLS` to `all` (see [MCP Tools](/capabilities/mcp)) to load them.
+
+### `github_status`
+
+Read-only. Reports whether `gh` is usable, the repository that would be used, and the counts of linked and unlinked tasks.
+
+| Parameter | Description |
+|-----------|-------------|
+| `projectRoot` | Absolute path to the project |
+| `repo` | Optional `owner/name` to check instead of the detected repository |
+
+### `github_push`
+
+Creates, updates and closes issues. **It is a preview unless you pass `dryRun: false`**, so an agent that calls it without thinking cannot write to your repository. The intended flow is to call it once, read the plan, then call it again with `dryRun: false`.
+
+| Parameter | Description |
+|-----------|-------------|
+| `projectRoot` | Absolute path to the project |
+| `dryRun` | Defaults to `true`. Pass `false` to write |
+| `tag` | Tag to push. Defaults to the active tag |
+| `allTags` | Push every tag. Cannot be combined with `tag` |
+| `id` | Comma-separated top-level task IDs to push |
+| `repo` | Optional `owner/name` |
+| `includeDetails` | Include `details` and `testStrategy` in bodies |
+| `closeOrphans` | Close open issues whose task is gone |
+
+The result has the plan (one step per task: `create`, `update`, `skip` or `close`, with a reason), the counts, and any orphan issues.
+
+## What an issue looks like
+
+- **Title:** `[<id>] <task title>`
+- **Body:** a hidden marker, the description, `Blocked by #N` lines for dependencies that already have issues, and a `### Subtasks` checklist. Subtasks are part of the parent's issue, not separate issues.
+- **Labels:** `taskgraph`, `taskgraph:priority/<priority>`, `taskgraph:status/<status>` while the task is open, and `taskgraph:tag/<tag>`. TaskGraph creates missing labels.
+- **State:** `done` closes the issue as completed, `cancelled` closes it as not planned, anything else is open.
+
+An unchanged task is skipped, so running `push` again is cheap and safe.
+
+## How tasks stay linked
+
+After the first push, each task stores its issue in its `metadata.github` field. If that is lost, the next push finds the issue again through the hidden marker in its body and relinks it, so a task is not duplicated.
+
+`unlink` removes the stored link and leaves the issue alone. The marker is still in the issue body, so the next push relinks it. Remove the marker from the issue if you want the task to get a new one.
+
+## Limits
+
+- **Content is one way.** Only status is read back, by `pull`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
+- **Orphans are reported, not closed,** unless you pass `--close-orphans` or `closeOrphans: true`.
+- **`--id` and `id` match top-level tasks.** Subtasks follow their parent.

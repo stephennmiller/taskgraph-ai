@@ -64,6 +64,9 @@ export * from './utils/time.utils.js';
 // Task validation schemas
 export * from './modules/tasks/validation/index.js';
 
+// Dependency tree layout
+export * from './modules/dependencies/index.js';
+
 // Zod schemas for validation
 export * from './common/schemas/index.js';
 
@@ -137,6 +140,11 @@ export type {
 	GitHubDomainOptions,
 	GitHubLink,
 	GitHubStatus,
+	PullAction,
+	PullOptions,
+	PullPlan,
+	PullResult,
+	PullStep,
 	PushOptions,
 	PushPlan,
 	PushResult,

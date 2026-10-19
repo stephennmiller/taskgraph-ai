@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph-ai",
-	"version": "0.52.5",
+	"version": "0.52.7",
 	"description": "Task management for AI-driven development, built for Claude Code: plan from a PRD, then work tasks one at a time with slash commands, a CLI or an MCP server.",
 	"main": "index.js",
 	"type": "module",
@@ -13,7 +13,10 @@
 		"provenance": true,
 		"access": "public"
 	},
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
 		"prepare": "node .githooks/install.mjs",
 		"build": "npm run build:build-config && cross-env NODE_ENV=production tsdown",
@@ -54,12 +57,16 @@
 		"anthropic",
 		"llm",
 		"mcp",
-		"context"
+		"context",
+		"claude-code",
+		"model-context-protocol",
+		"prd",
+		"task-graph"
 	],
 	"author": "Eyal Toledano",
 	"license": "MIT WITH Commons-Clause",
 	"dependencies": {
-		"@inquirer/search": "^3.0.15",
+		"@inquirer/search": "^4.3.4",
 		"@streamparser/json": "^0.0.26",
 		"@types/turndown": "^5.0.6",
 		"ai": "^7.0.143",
@@ -124,7 +131,7 @@
 		"qs": "^6.16.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.5.15",
 		"@changesets/changelog-github": "^1.0.1",
 		"@changesets/cli": "^3.0.3",
 		"@manypkg/cli": "^0.25.1",

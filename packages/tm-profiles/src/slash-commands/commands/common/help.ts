@@ -47,6 +47,7 @@ Type \`/taskgraph:\` and use tab completion to explore all commands.
 - \`/taskgraph:list-tasks\` - List all tasks
 - \`/taskgraph:list-tasks-by-status\` - List tasks filtered by status
 - \`/taskgraph:list-tasks-with-subtasks\` - List tasks with subtasks
+- \`/taskgraph:graph\` - Show tasks as a dependency tree
 - \`/taskgraph:show-task\` - Display task details
 - \`/taskgraph:add-task\` - Create new task
 - \`/taskgraph:update-task\` - Update single task
