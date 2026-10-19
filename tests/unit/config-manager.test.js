@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock modules first before any imports
-jest.mock('fs', () => ({
-	existsSync: jest.fn((filePath) => {
+vi.doMock('fs', () => ({
+	existsSync: vi.fn((filePath) => {
 		// Prevent Jest internal file access
 		if (
 			filePath.includes('jest-message-util') ||
@@ -15,51 +15,51 @@ jest.mock('fs', () => ({
 		}
 		return false; // Default to false for config discovery prevention
 	}),
-	readFileSync: jest.fn(() => '{}'),
-	writeFileSync: jest.fn(),
-	mkdirSync: jest.fn()
+	readFileSync: vi.fn(() => '{}'),
+	writeFileSync: vi.fn(),
+	mkdirSync: vi.fn()
 }));
 
-jest.mock('path', () => ({
-	join: jest.fn((dir, file) => `${dir}/${file}`),
-	dirname: jest.fn((filePath) => filePath.split('/').slice(0, -1).join('/')),
-	resolve: jest.fn((...paths) => paths.join('/')),
-	basename: jest.fn((filePath) => filePath.split('/').pop())
+vi.doMock('path', () => ({
+	join: vi.fn((dir, file) => `${dir}/${file}`),
+	dirname: vi.fn((filePath) => filePath.split('/').slice(0, -1).join('/')),
+	resolve: vi.fn((...paths) => paths.join('/')),
+	basename: vi.fn((filePath) => filePath.split('/').pop())
 }));
 
-jest.mock('chalk', () => ({
-	red: jest.fn((text) => text),
-	blue: jest.fn((text) => text),
-	green: jest.fn((text) => text),
-	yellow: jest.fn((text) => text),
-	white: jest.fn(() => ({
-		bold: jest.fn((text) => text)
+vi.doMock('chalk', () => ({
+	red: vi.fn((text) => text),
+	blue: vi.fn((text) => text),
+	green: vi.fn((text) => text),
+	yellow: vi.fn((text) => text),
+	white: vi.fn(() => ({
+		bold: vi.fn((text) => text)
 	})),
-	reset: jest.fn((text) => text),
-	dim: jest.fn((text) => text) // Add dim function to prevent chalk errors
+	reset: vi.fn((text) => text),
+	dim: vi.fn((text) => text) // Add dim function to prevent chalk errors
 }));
 
 // Mock console to prevent Jest internal access
 const mockConsole = {
-	log: jest.fn(),
-	info: jest.fn(),
-	warn: jest.fn(),
-	error: jest.fn()
+	log: vi.fn(),
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn()
 };
 global.console = mockConsole;
 
 // --- Define Mock Function Instances ---
-const mockFindConfigPath = jest.fn(() => null); // Default to null, can be overridden in tests
+const mockFindConfigPath = vi.fn(() => null); // Default to null, can be overridden in tests
 
 // Mock path-utils to prevent config file path discovery and logging
-jest.mock('../../src/utils/path-utils.js', () => ({
+vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
-	findProjectRoot: jest.fn(() => '/mock/project'),
+	findProjectRoot: vi.fn(() => '/mock/project'),
 	findConfigPath: mockFindConfigPath, // Use the mock function instance
-	findTasksPath: jest.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: jest.fn(() => null),
-	resolveTasksOutputPath: jest.fn(() => '/mock/tasks.json'),
-	resolveComplexityReportOutputPath: jest.fn(() => '/mock/report.json')
+	findTasksPath: vi.fn(() => '/mock/tasks.json'),
+	findComplexityReportPath: vi.fn(() => null),
+	resolveTasksOutputPath: vi.fn(() => '/mock/tasks.json'),
+	resolveComplexityReportOutputPath: vi.fn(() => '/mock/report.json')
 }));
 
 // --- Read REAL supported-models.json data BEFORE mocks ---
@@ -88,18 +88,18 @@ try {
 }
 
 // --- Define Mock Function Instances ---
-const mockFindProjectRoot = jest.fn();
-const mockLog = jest.fn();
+const mockFindProjectRoot = vi.fn();
+const mockLog = vi.fn();
 
 // --- Mock Dependencies BEFORE importing the module under test ---
 
 // Mock the 'utils.js' module using a factory function
-jest.mock('../../scripts/modules/utils.js', () => ({
+vi.doMock('../../scripts/modules/utils.js', () => ({
 	__esModule: true, // Indicate it's an ES module mock
 	findProjectRoot: mockFindProjectRoot, // Use the mock function instance
 	log: mockLog, // Use the mock function instance
 	// Include other necessary exports from utils if config-manager uses them directly
-	resolveEnvVariable: jest.fn() // Example if needed
+	resolveEnvVariable: vi.fn() // Example if needed
 }));
 
 // Import the mocked 'fs' module to allow spying on its functions
@@ -262,28 +262,28 @@ let fsExistsSyncSpy;
 
 beforeAll(() => {
 	// Set up console spies
-	consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-	consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+	consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+	consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterAll(() => {
 	// Restore all spies
-	jest.restoreAllMocks();
+	vi.restoreAllMocks();
 });
 
 // Reset mocks before each test for isolation
 beforeEach(() => {
 	// Clear all mock calls and reset implementations between tests
-	jest.clearAllMocks();
+	vi.clearAllMocks();
 	// Reset the external mock instances for utils
 	mockFindProjectRoot.mockReset();
 	mockLog.mockReset();
 	mockFindConfigPath.mockReset();
 
 	// --- Set up spies ON the imported 'fs' mock ---
-	fsExistsSyncSpy = jest.spyOn(fsMocked, 'existsSync');
-	fsReadFileSyncSpy = jest.spyOn(fsMocked, 'readFileSync');
-	fsWriteFileSyncSpy = jest.spyOn(fsMocked, 'writeFileSync');
+	fsExistsSyncSpy = vi.spyOn(fsMocked, 'existsSync');
+	fsReadFileSyncSpy = vi.spyOn(fsMocked, 'readFileSync');
+	fsWriteFileSyncSpy = vi.spyOn(fsMocked, 'writeFileSync');
 
 	// --- Default Mock Implementations ---
 	mockFindProjectRoot.mockReturnValue(MOCK_PROJECT_ROOT); // Default for utils.findProjectRoot
