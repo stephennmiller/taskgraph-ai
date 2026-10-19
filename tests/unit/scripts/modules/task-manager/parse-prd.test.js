@@ -1,271 +1,259 @@
 /**
  * Tests for the parse-prd.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	sanitizePrompt: jest.fn((prompt) => prompt),
-	truncate: jest.fn((text) => text),
-	isSilentMode: jest.fn(() => false),
-	enableSilentMode: jest.fn(),
-	disableSilentMode: jest.fn(),
-	findTaskById: jest.fn(),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	getCurrentTag: jest.fn(() => 'master'),
-	promptYesNo: jest.fn()
+	sanitizePrompt: vi.fn((prompt) => prompt),
+	truncate: vi.fn((text) => text),
+	isSilentMode: vi.fn(() => false),
+	enableSilentMode: vi.fn(),
+	disableSilentMode: vi.fn(),
+	findTaskById: vi.fn(),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	getCurrentTag: vi.fn(() => 'master'),
+	promptYesNo: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateObjectService: jest.fn().mockResolvedValue({
-			tasks: [
-				{
-					id: 1,
-					title: 'Test Task 1',
-					priority: 'high',
-					description: 'Test description 1',
-					status: 'pending',
-					dependencies: []
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateObjectService: vi.fn().mockResolvedValue({
+		tasks: [
+			{
+				id: 1,
+				title: 'Test Task 1',
+				priority: 'high',
+				description: 'Test description 1',
+				status: 'pending',
+				dependencies: []
+			},
+			{
+				id: 2,
+				title: 'Test Task 2',
+				priority: 'medium',
+				description: 'Test description 2',
+				status: 'pending',
+				dependencies: []
+			},
+			{
+				id: 3,
+				title: 'Test Task 3',
+				priority: 'low',
+				description: 'Test description 3',
+				status: 'pending',
+				dependencies: []
+			}
+		]
+	}),
+	streamObjectService: vi.fn().mockImplementation(async () => {
+		// Return an object with partialObjectStream as a getter that returns the async generator
+		return {
+			mainResult: {
+				get partialObjectStream() {
+					return (async function* () {
+						yield { tasks: [] };
+						yield {
+							tasks: [
+								{
+									id: 1,
+									title: 'Test Task 1',
+									priority: 'high',
+									description: 'Test description 1',
+									status: 'pending',
+									dependencies: []
+								}
+							]
+						};
+						yield {
+							tasks: [
+								{
+									id: 1,
+									title: 'Test Task 1',
+									priority: 'high',
+									description: 'Test description 1',
+									status: 'pending',
+									dependencies: []
+								},
+								{
+									id: 2,
+									title: 'Test Task 2',
+									priority: 'medium',
+									description: 'Test description 2',
+									status: 'pending',
+									dependencies: []
+								}
+							]
+						};
+						yield {
+							tasks: [
+								{
+									id: 1,
+									title: 'Test Task 1',
+									priority: 'high',
+									description: 'Test description 1',
+									status: 'pending',
+									dependencies: []
+								},
+								{
+									id: 2,
+									title: 'Test Task 2',
+									priority: 'medium',
+									description: 'Test description 2',
+									status: 'pending',
+									dependencies: []
+								},
+								{
+									id: 3,
+									title: 'Test Task 3',
+									priority: 'low',
+									description: 'Test description 3',
+									status: 'pending',
+									dependencies: []
+								}
+							]
+						};
+					})();
 				},
-				{
-					id: 2,
-					title: 'Test Task 2',
-					priority: 'medium',
-					description: 'Test description 2',
-					status: 'pending',
-					dependencies: []
-				},
-				{
-					id: 3,
-					title: 'Test Task 3',
-					priority: 'low',
-					description: 'Test description 3',
-					status: 'pending',
-					dependencies: []
-				}
-			]
-		}),
-		streamObjectService: jest.fn().mockImplementation(async () => {
-			// Return an object with partialObjectStream as a getter that returns the async generator
-			return {
-				mainResult: {
-					get partialObjectStream() {
-						return (async function* () {
-							yield { tasks: [] };
-							yield {
-								tasks: [
-									{
-										id: 1,
-										title: 'Test Task 1',
-										priority: 'high',
-										description: 'Test description 1',
-										status: 'pending',
-										dependencies: []
-									}
-								]
-							};
-							yield {
-								tasks: [
-									{
-										id: 1,
-										title: 'Test Task 1',
-										priority: 'high',
-										description: 'Test description 1',
-										status: 'pending',
-										dependencies: []
-									},
-									{
-										id: 2,
-										title: 'Test Task 2',
-										priority: 'medium',
-										description: 'Test description 2',
-										status: 'pending',
-										dependencies: []
-									}
-								]
-							};
-							yield {
-								tasks: [
-									{
-										id: 1,
-										title: 'Test Task 1',
-										priority: 'high',
-										description: 'Test description 1',
-										status: 'pending',
-										dependencies: []
-									},
-									{
-										id: 2,
-										title: 'Test Task 2',
-										priority: 'medium',
-										description: 'Test description 2',
-										status: 'pending',
-										dependencies: []
-									},
-									{
-										id: 3,
-										title: 'Test Task 3',
-										priority: 'low',
-										description: 'Test description 3',
-										status: 'pending',
-										dependencies: []
-									}
-								]
-							};
-						})();
-					},
-					usage: Promise.resolve({
-						promptTokens: 100,
-						completionTokens: 200,
-						totalTokens: 300
-					}),
-					object: Promise.resolve({
-						tasks: [
-							{
-								id: 1,
-								title: 'Test Task 1',
-								priority: 'high',
-								description: 'Test description 1',
-								status: 'pending',
-								dependencies: []
-							},
-							{
-								id: 2,
-								title: 'Test Task 2',
-								priority: 'medium',
-								description: 'Test description 2',
-								status: 'pending',
-								dependencies: []
-							},
-							{
-								id: 3,
-								title: 'Test Task 3',
-								priority: 'low',
-								description: 'Test description 3',
-								status: 'pending',
-								dependencies: []
-							}
-						]
-					})
-				},
-				providerName: 'anthropic',
-				modelId: 'claude-3-5-sonnet-20241022',
-				telemetryData: {}
-			};
-		})
+				usage: Promise.resolve({
+					promptTokens: 100,
+					completionTokens: 200,
+					totalTokens: 300
+				}),
+				object: Promise.resolve({
+					tasks: [
+						{
+							id: 1,
+							title: 'Test Task 1',
+							priority: 'high',
+							description: 'Test description 1',
+							status: 'pending',
+							dependencies: []
+						},
+						{
+							id: 2,
+							title: 'Test Task 2',
+							priority: 'medium',
+							description: 'Test description 2',
+							status: 'pending',
+							dependencies: []
+						},
+						{
+							id: 3,
+							title: 'Test Task 3',
+							priority: 'low',
+							description: 'Test description 3',
+							status: 'pending',
+							dependencies: []
+						}
+					]
+				})
+			},
+			providerName: 'anthropic',
+			modelId: 'claude-3-5-sonnet-20241022',
+			telemetryData: {}
+		};
 	})
-);
-
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	getStatusWithColor: jest.fn((status) => status),
-	startLoadingIndicator: jest.fn(),
-	stopLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDebugFlag: jest.fn(() => false),
-		getMainModelId: jest.fn(() => 'claude-3-5-sonnet'),
-		getResearchModelId: jest.fn(() => 'claude-3-5-sonnet'),
-		getParametersForRole: jest.fn(() => ({
-			provider: 'anthropic',
-			modelId: 'claude-3-5-sonnet'
-		})),
-		getDefaultNumTasks: jest.fn(() => 10),
-		getDefaultPriority: jest.fn(() => 'medium'),
-		getMainProvider: jest.fn(() => 'openai'),
-		getResearchProvider: jest.fn(() => 'perplexity'),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	getStatusWithColor: vi.fn((status) => status),
+	startLoadingIndicator: vi.fn(),
+	stopLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn()
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/task-manager/models.js',
-	() => ({
-		getModelConfiguration: jest.fn(() => ({
-			model: 'mock-model',
-			maxTokens: 4000,
-			temperature: 0.7
-		}))
-	})
-);
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false),
+	getMainModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getResearchModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getParametersForRole: vi.fn(() => ({
+		provider: 'anthropic',
+		modelId: 'claude-3-5-sonnet'
+	})),
+	getDefaultNumTasks: vi.fn(() => 10),
+	getDefaultPriority: vi.fn(() => 'medium'),
+	getMainProvider: vi.fn(() => 'openai'),
+	getResearchProvider: vi.fn(() => 'perplexity'),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockImplementation((templateName, params) => {
-				// Create dynamic mock prompts based on the parameters
-				const { numTasks } = params || {};
-				let numTasksText = '';
+vi.doMock('../../../../../scripts/modules/task-manager/models.js', () => ({
+	getModelConfiguration: vi.fn(() => ({
+		model: 'mock-model',
+		maxTokens: 4000,
+		temperature: 0.7
+	}))
+}));
 
-				if (numTasks > 0) {
-					numTasksText = `approximately ${numTasks}`;
-				} else {
-					numTasksText = 'an appropriate number of';
-				}
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockImplementation((templateName, params) => {
+			// Create dynamic mock prompts based on the parameters
+			const { numTasks } = params || {};
+			let numTasksText = '';
 
-				return Promise.resolve({
-					systemPrompt: 'Mocked system prompt for parse-prd',
-					userPrompt: `Generate ${numTasksText} top-level development tasks from the PRD content.`
-				});
-			})
+			if (numTasks > 0) {
+				numTasksText = `approximately ${numTasks}`;
+			} else {
+				numTasksText = 'an appropriate number of';
+			}
+
+			return Promise.resolve({
+				systemPrompt: 'Mocked system prompt for parse-prd',
+				userPrompt: `Generate ${numTasksText} top-level development tasks from the PRD content.`
+			});
 		})
 	})
-);
+}));
 
 // Mock fs module
-jest.unstable_mockModule('fs', () => ({
+vi.doMock('fs', () => ({
 	default: {
-		readFileSync: jest.fn(),
-		existsSync: jest.fn(),
-		mkdirSync: jest.fn(),
-		writeFileSync: jest.fn(),
+		readFileSync: vi.fn(),
+		existsSync: vi.fn(),
+		mkdirSync: vi.fn(),
+		writeFileSync: vi.fn(),
 		promises: {
-			readFile: jest.fn()
+			readFile: vi.fn()
 		}
 	},
-	readFileSync: jest.fn(),
-	existsSync: jest.fn(),
-	mkdirSync: jest.fn(),
-	writeFileSync: jest.fn()
+	readFileSync: vi.fn(),
+	existsSync: vi.fn(),
+	mkdirSync: vi.fn(),
+	writeFileSync: vi.fn()
 }));
 
 // Mock path module
-jest.unstable_mockModule('path', () => ({
+vi.doMock('path', () => ({
 	default: {
-		dirname: jest.fn(),
-		join: jest.fn((dir, file) => `${dir}/${file}`)
+		dirname: vi.fn(),
+		join: vi.fn((dir, file) => `${dir}/${file}`)
 	},
-	dirname: jest.fn(),
-	join: jest.fn((dir, file) => `${dir}/${file}`)
+	dirname: vi.fn(),
+	join: vi.fn((dir, file) => `${dir}/${file}`)
 }));
 
 // Mock JSONParser for streaming tests
-jest.unstable_mockModule('@streamparser/json', () => ({
-	JSONParser: jest.fn().mockImplementation(() => ({
-		onValue: jest.fn(),
-		onError: jest.fn(),
-		write: jest.fn(),
-		end: jest.fn()
+vi.doMock('@streamparser/json', () => ({
+	JSONParser: vi.fn().mockImplementation(() => ({
+		onValue: vi.fn(),
+		onError: vi.fn(),
+		write: vi.fn(),
+		end: vi.fn()
 	}))
 }));
 
 // Mock stream-parser functions
-jest.unstable_mockModule('../../../../../src/utils/stream-parser.js', () => {
+vi.doMock('../../../../../src/utils/stream-parser.js', () => {
 	// Define mock StreamingError class
 	class StreamingError extends Error {
 		constructor(message, code) {
@@ -283,44 +271,41 @@ jest.unstable_mockModule('../../../../../src/utils/stream-parser.js', () => {
 	};
 
 	return {
-		parseStream: jest.fn().mockResolvedValue({
+		parseStream: vi.fn().mockResolvedValue({
 			items: [{ id: 1, title: 'Test Task', priority: 'high' }],
 			accumulatedText:
 				'{"tasks":[{"id":1,"title":"Test Task","priority":"high"}]}',
 			estimatedTokens: 50,
 			usedFallback: false
 		}),
-		createTaskProgressCallback: jest.fn().mockReturnValue(jest.fn()),
-		createConsoleProgressCallback: jest.fn().mockReturnValue(jest.fn()),
+		createTaskProgressCallback: vi.fn().mockReturnValue(vi.fn()),
+		createConsoleProgressCallback: vi.fn().mockReturnValue(vi.fn()),
 		StreamingError,
 		STREAMING_ERROR_CODES
 	};
 });
 
 // Mock progress tracker to prevent intervals
-jest.unstable_mockModule(
-	'../../../../../src/progress/parse-prd-tracker.js',
-	() => ({
-		createParsePrdTracker: jest.fn().mockReturnValue({
-			start: jest.fn(),
-			stop: jest.fn(),
-			cleanup: jest.fn(),
-			updateTokens: jest.fn(),
-			addTaskLine: jest.fn(),
-			trackTaskPriority: jest.fn(),
-			getSummary: jest.fn().mockReturnValue({
-				taskPriorities: { high: 0, medium: 0, low: 0 },
-				elapsedTime: 0,
-				actionVerb: 'generated'
-			})
+vi.doMock('../../../../../src/progress/parse-prd-tracker.js', () => ({
+	createParsePrdTracker: vi.fn().mockReturnValue({
+		start: vi.fn(),
+		stop: vi.fn(),
+		cleanup: vi.fn(),
+		updateTokens: vi.fn(),
+		addTaskLine: vi.fn(),
+		trackTaskPriority: vi.fn(),
+		getSummary: vi.fn().mockReturnValue({
+			taskPriorities: { high: 0, medium: 0, low: 0 },
+			elapsedTime: 0,
+			actionVerb: 'generated'
 		})
 	})
-);
+}));
 
 // Mock UI functions to prevent any display delays
-jest.unstable_mockModule('../../../../../src/ui/parse-prd.js', () => ({
-	displayParsePrdStart: jest.fn(),
-	displayParsePrdSummary: jest.fn()
+vi.doMock('../../../../../src/ui/parse-prd.js', () => ({
+	displayParsePrdStart: vi.fn(),
+	displayParsePrdSummary: vi.fn()
 }));
 
 // Import the mocked modules
@@ -412,7 +397,7 @@ describe('parsePRD', () => {
 
 	beforeEach(() => {
 		// Reset all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Set up mocks for fs, path and other modules
 		fs.default.readFileSync.mockReturnValue(samplePRDContent);
@@ -456,18 +441,18 @@ describe('parsePRD', () => {
 		promptYesNo.mockResolvedValue(true); // Default to "yes" for confirmation
 
 		// Mock process.exit to prevent actual exit and throw error instead for CLI tests
-		jest.spyOn(process, 'exit').mockImplementation((code) => {
+		vi.spyOn(process, 'exit').mockImplementation((code) => {
 			throw new Error(`process.exit was called with code ${code}`);
 		});
 
 		// Mock console.error to prevent output
-		jest.spyOn(console, 'error').mockImplementation(() => {});
-		jest.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
 	afterEach(() => {
 		// Restore all mocks after each test
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	test('should parse a PRD file and generate tasks', async () => {
@@ -486,11 +471,11 @@ describe('parsePRD', () => {
 		const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 			tag: 'master',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -538,11 +523,11 @@ describe('parsePRD', () => {
 		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 			tag: 'master',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -569,11 +554,11 @@ describe('parsePRD', () => {
 			parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			})
 		).rejects.toThrow('Test error in AI API call');
@@ -591,11 +576,11 @@ describe('parsePRD', () => {
 		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 			tag: 'master',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -615,11 +600,11 @@ describe('parsePRD', () => {
 			force: true,
 			tag: 'master',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -646,11 +631,11 @@ describe('parsePRD', () => {
 			parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			})
 		).rejects.toThrow('already contains');
@@ -701,11 +686,11 @@ describe('parsePRD', () => {
 			tag: 'master',
 			append: true,
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -791,14 +776,14 @@ describe('parsePRD', () => {
 			});
 
 			// Mock progress reporting function
-			const mockReportProgress = jest.fn(() => Promise.resolve());
+			const mockReportProgress = vi.fn(() => Promise.resolve());
 
 			// Mock JSONParser instance
 			const mockParser = {
-				onValue: jest.fn(),
-				onError: jest.fn(),
-				write: jest.fn(),
-				end: jest.fn()
+				onValue: vi.fn(),
+				onError: vi.fn(),
+				write: vi.fn(),
+				end: vi.fn()
 			};
 			JSONParser.mockReturnValue(mockParser);
 
@@ -833,7 +818,7 @@ describe('parsePRD', () => {
 			});
 
 			// Mock progress reporting function
-			const mockReportProgress = jest.fn(() => Promise.resolve());
+			const mockReportProgress = vi.fn(() => Promise.resolve());
 
 			// Mock streamObjectService to return a stream that fails during processing
 			streamObjectService.mockImplementationOnce(async () => {
@@ -916,11 +901,11 @@ describe('parsePRD', () => {
 			// Call the function without reportProgress but with mcpLog to force non-streaming path
 			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -947,7 +932,7 @@ describe('parsePRD', () => {
 			});
 
 			// Mock progress reporting function
-			const mockReportProgress = jest.fn(() => Promise.resolve());
+			const mockReportProgress = vi.fn(() => Promise.resolve());
 
 			// Call with reportProgress + research - with streaming disabled, should use non-streaming
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
@@ -976,11 +961,11 @@ describe('parsePRD', () => {
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 				research: true,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1027,7 +1012,7 @@ describe('parsePRD', () => {
 			});
 
 			// Mock progress reporting function
-			const mockReportProgress = jest.fn(() => Promise.resolve());
+			const mockReportProgress = vi.fn(() => Promise.resolve());
 
 			// Mock parseStream to return usedFallback: true
 			parseStream.mockResolvedValueOnce({
@@ -1083,7 +1068,7 @@ describe('parsePRD', () => {
 
 			for (const errorConfig of streamingErrors) {
 				// Clear mocks for each iteration
-				jest.clearAllMocks();
+				vi.clearAllMocks();
 
 				// Setup mocks again
 				fs.default.existsSync.mockImplementation((path) => {
@@ -1102,7 +1087,7 @@ describe('parsePRD', () => {
 				streamTextService.mockRejectedValueOnce(error);
 
 				// Mock progress reporting function
-				const mockReportProgress = jest.fn(() => Promise.resolve());
+				const mockReportProgress = vi.fn(() => Promise.resolve());
 
 				// Call with streaming (should fallback to non-streaming)
 				const result = await parsePRD(
@@ -1139,12 +1124,12 @@ describe('parsePRD', () => {
 
 			// Mock progress tracker methods
 			const mockProgressTracker = {
-				start: jest.fn(),
-				stop: jest.fn(),
-				cleanup: jest.fn(),
-				addTaskLine: jest.fn(),
-				updateTokens: jest.fn(),
-				getSummary: jest.fn().mockReturnValue({
+				start: vi.fn(),
+				stop: vi.fn(),
+				cleanup: vi.fn(),
+				addTaskLine: vi.fn(),
+				updateTokens: vi.fn(),
+				getSummary: vi.fn().mockReturnValue({
 					taskPriorities: { high: 1, medium: 0, low: 0 },
 					elapsedTime: 1000,
 					actionVerb: 'generated'
@@ -1178,7 +1163,7 @@ describe('parsePRD', () => {
 			});
 
 			// Mock progress reporting function
-			const mockReportProgress = jest.fn(() => Promise.resolve());
+			const mockReportProgress = vi.fn(() => Promise.resolve());
 
 			// Mock parseStream to call onProgress
 			parseStream.mockImplementation(async (stream, options) => {
@@ -1224,7 +1209,7 @@ describe('parsePRD', () => {
 			});
 
 			// Mock progress reporting function
-			const mockReportProgress = jest.fn(() => Promise.resolve());
+			const mockReportProgress = vi.fn(() => Promise.resolve());
 
 			// Mock streamTextService to fail with NON-streaming error
 			streamTextService.mockRejectedValueOnce(
@@ -1259,11 +1244,11 @@ describe('parsePRD', () => {
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 0, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1288,11 +1273,11 @@ describe('parsePRD', () => {
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 5, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1317,11 +1302,11 @@ describe('parsePRD', () => {
 			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 0, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1346,11 +1331,11 @@ describe('parsePRD', () => {
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', -5, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1376,11 +1361,11 @@ describe('parsePRD', () => {
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', null, {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1402,11 +1387,11 @@ describe('parsePRD', () => {
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 'invalid', {
 				tag: 'master',
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
