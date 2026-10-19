@@ -1,26 +1,26 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock console methods to avoid chalk issues
 const mockConsole = {
-	log: jest.fn(),
-	info: jest.fn(),
-	warn: jest.fn(),
-	error: jest.fn(),
-	clear: jest.fn()
+	log: vi.fn(),
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn(),
+	clear: vi.fn()
 };
 const originalConsole = global.console;
 global.console = mockConsole;
 
 // Mock the utils logger
-const mockLog = jest.fn();
-await jest.unstable_mockModule('../../../scripts/modules/utils.js', () => ({
+const mockLog = vi.fn();
+await vi.doMock('../../../scripts/modules/utils.js', () => ({
 	default: undefined,
 	log: mockLog,
 	isSilentMode: () => false
 }));
 
 // Mock @tm/profiles module
-const mockGetProfile = jest.fn();
+const mockGetProfile = vi.fn();
 const mockAllCommands = [
 	{
 		type: 'static',
@@ -38,7 +38,7 @@ const mockAllCommands = [
 	}
 ];
 
-await jest.unstable_mockModule('@tm/profiles', () => ({
+await vi.doMock('@tm/profiles', () => ({
 	getProfile: mockGetProfile,
 	allCommands: mockAllCommands
 }));
@@ -48,7 +48,7 @@ const { createProfile } = await import('../../../src/profiles/base-profile.js');
 
 describe('Base Profile - Declarative Slash Commands', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	afterAll(() => {
@@ -60,8 +60,8 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			// Arrange - Mock a profile that supports commands
 			const mockSlashProfile = {
 				supportsCommands: true,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
+				addSlashCommands: vi.fn(),
+				removeSlashCommands: vi.fn()
 			};
 			mockGetProfile.mockReturnValue(mockSlashProfile);
 
@@ -81,8 +81,8 @@ describe('Base Profile - Declarative Slash Commands', () => {
 
 		it('should include profile methods in slashCommands config', () => {
 			// Arrange
-			const mockAddSlashCommands = jest.fn();
-			const mockRemoveSlashCommands = jest.fn();
+			const mockAddSlashCommands = vi.fn();
+			const mockRemoveSlashCommands = vi.fn();
 			mockGetProfile.mockReturnValue({
 				supportsCommands: true,
 				addSlashCommands: mockAddSlashCommands,
@@ -112,8 +112,8 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			// Arrange - Mock a profile that does NOT support commands
 			mockGetProfile.mockReturnValue({
 				supportsCommands: false,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
+				addSlashCommands: vi.fn(),
+				removeSlashCommands: vi.fn()
 			});
 
 			// Act
@@ -166,11 +166,11 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			// Arrange
 			mockGetProfile.mockReturnValue({
 				supportsCommands: true,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
+				addSlashCommands: vi.fn(),
+				removeSlashCommands: vi.fn()
 			});
 
-			const userOnAdd = jest.fn();
+			const userOnAdd = vi.fn();
 
 			// Act
 			const profile = createProfile({
@@ -192,7 +192,7 @@ describe('Base Profile - Declarative Slash Commands', () => {
 				supportsCommands: false
 			});
 
-			const userOnAdd = jest.fn();
+			const userOnAdd = vi.fn();
 
 			// Act
 			const profile = createProfile({
@@ -238,7 +238,7 @@ describe('Base Profile - Declarative Slash Commands', () => {
 				throw new Error('@tm/profiles not installed');
 			});
 
-			const userOnAdd = jest.fn();
+			const userOnAdd = vi.fn();
 
 			// Act
 			const profile = createProfile({
@@ -264,8 +264,8 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			// Arrange
 			mockGetProfile.mockReturnValue({
 				supportsCommands: true,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
+				addSlashCommands: vi.fn(),
+				removeSlashCommands: vi.fn()
 			});
 
 			// Act
@@ -315,8 +315,8 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			// Arrange
 			const rooSlashProfile = {
 				supportsCommands: true,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
+				addSlashCommands: vi.fn(),
+				removeSlashCommands: vi.fn()
 			};
 			mockGetProfile.mockReturnValue(rooSlashProfile);
 
@@ -340,8 +340,8 @@ describe('Base Profile - Declarative Slash Commands', () => {
 			// Arrange
 			const opencodeSlashProfile = {
 				supportsCommands: true,
-				addSlashCommands: jest.fn(),
-				removeSlashCommands: jest.fn()
+				addSlashCommands: vi.fn(),
+				removeSlashCommands: vi.fn()
 			};
 			mockGetProfile.mockReturnValue(opencodeSlashProfile);
 

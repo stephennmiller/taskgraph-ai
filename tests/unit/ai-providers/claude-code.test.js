@@ -1,23 +1,23 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the ai-sdk-provider-claude-code package
-jest.unstable_mockModule('ai-sdk-provider-claude-code', () => ({
-	createClaudeCode: jest.fn(() => {
+vi.doMock('ai-sdk-provider-claude-code', () => ({
+	createClaudeCode: vi.fn(() => {
 		const provider = (modelId, settings) => ({
 			// Minimal mock language model surface
 			id: modelId,
 			settings,
-			doGenerate: jest.fn(() => ({ text: 'ok', usage: {} })),
-			doStream: jest.fn(() => ({ stream: true }))
+			doGenerate: vi.fn(() => ({ text: 'ok', usage: {} })),
+			doStream: vi.fn(() => ({ stream: true }))
 		});
-		provider.languageModel = jest.fn((id, settings) => ({ id, settings }));
+		provider.languageModel = vi.fn((id, settings) => ({ id, settings }));
 		provider.chat = provider.languageModel;
 		return provider;
 	})
 }));
 
 // Mock the base provider
-jest.unstable_mockModule('../../../src/ai-providers/base-provider.js', () => ({
+vi.doMock('../../../src/ai-providers/base-provider.js', () => ({
 	BaseAIProvider: class {
 		constructor() {
 			this.name = 'Base Provider';
@@ -29,11 +29,11 @@ jest.unstable_mockModule('../../../src/ai-providers/base-provider.js', () => ({
 }));
 
 // Mock config getters
-jest.unstable_mockModule('../../../scripts/modules/config-manager.js', () => ({
-	getClaudeCodeSettingsForCommand: jest.fn(() => ({})),
-	getSupportedModelsForProvider: jest.fn(() => ['opus', 'sonnet', 'haiku']),
-	getDebugFlag: jest.fn(() => false),
-	getLogLevel: jest.fn(() => 'info')
+vi.doMock('../../../scripts/modules/config-manager.js', () => ({
+	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
+	getSupportedModelsForProvider: vi.fn(() => ['opus', 'sonnet', 'haiku']),
+	getDebugFlag: vi.fn(() => false),
+	getLogLevel: vi.fn(() => 'info')
 }));
 
 // Import after mocking
@@ -46,7 +46,7 @@ describe('ClaudeCodeProvider', () => {
 
 	beforeEach(() => {
 		provider = new ClaudeCodeProvider();
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('constructor', () => {

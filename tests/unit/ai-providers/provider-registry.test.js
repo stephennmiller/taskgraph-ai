@@ -10,7 +10,7 @@
  * 6. Interface validation for registered providers
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Import ProviderRegistry
 const { default: ProviderRegistry } = await import(
@@ -313,8 +313,8 @@ describe('ProviderRegistry', () => {
 	describe('Interface Validation', () => {
 		test('validates generateText method exists', () => {
 			const providerWithoutGenerateText = {
-				streamText: jest.fn(),
-				generateObject: jest.fn()
+				streamText: vi.fn(),
+				generateObject: vi.fn()
 			};
 
 			expect(() =>
@@ -324,8 +324,8 @@ describe('ProviderRegistry', () => {
 
 		test('validates streamText method exists', () => {
 			const providerWithoutStreamText = {
-				generateText: jest.fn(),
-				generateObject: jest.fn()
+				generateText: vi.fn(),
+				generateObject: vi.fn()
 			};
 
 			expect(() =>
@@ -335,8 +335,8 @@ describe('ProviderRegistry', () => {
 
 		test('validates generateObject method exists', () => {
 			const providerWithoutGenerateObject = {
-				generateText: jest.fn(),
-				streamText: jest.fn()
+				generateText: vi.fn(),
+				streamText: vi.fn()
 			};
 
 			expect(() =>
@@ -347,8 +347,8 @@ describe('ProviderRegistry', () => {
 		test('validates methods are functions', () => {
 			const providerWithNonFunctionMethods = {
 				generateText: 'not a function',
-				streamText: jest.fn(),
-				generateObject: jest.fn()
+				streamText: vi.fn(),
+				generateObject: vi.fn()
 			};
 
 			expect(() =>
@@ -358,9 +358,9 @@ describe('ProviderRegistry', () => {
 
 		test('accepts provider with all required methods', () => {
 			const validProvider = {
-				generateText: jest.fn(),
-				streamText: jest.fn(),
-				generateObject: jest.fn()
+				generateText: vi.fn(),
+				streamText: vi.fn(),
+				generateObject: vi.fn()
 			};
 
 			expect(() =>
