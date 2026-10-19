@@ -42,7 +42,7 @@
 	"devDependencies": {
 		"@types/fs-extra": "^11.0.4",
 		"@types/proper-lockfile": "^4.1.4",
-		"@types/node": "^22.10.5",
+		"@types/node": "^26.6.5",
 		"@vitest/coverage-v8": "^4.1.0",
 		"strip-literal": "3.1.0",
 		"typescript": "^5.9.2",
