@@ -453,7 +453,7 @@ Every new feature **must** include comprehensive tests following the guidelines 
    // Example integration test for a new command
    describe('newCommand integration', () => {
      test('should call the correct service functions with parsed arguments', () => {
-       const mockService = jest.fn().mockResolvedValue('success');
+       const mockService = vi.fn().mockResolvedValue('success');
        // Set up test with mocked dependencies
        // Call the command handler
        // Verify service was called with expected arguments
@@ -469,11 +469,11 @@ Every new feature **must** include comprehensive tests following the guidelines 
 
 4. **Test Coverage**: Aim for at least 80% coverage for all new code
 
-5. **Jest Mocking Best Practices**
-   - Follow the mock-first-then-import pattern as described in `tests.md`
-   - Use jest.spyOn() to create spy functions for testing
+5. **Vitest Mocking Best Practices**
+   - Declare `vi.mock()` calls for the modules under test's dependencies (Vitest hoists them), as described in `tests.md`
+   - Use vi.spyOn() to create spy functions for testing
    - Clear mocks between tests to prevent interference
-   - See the Jest Module Mocking Best Practices section in `tests.md` for details
+   - See the Vitest Module Mocking Best Practices section in `tests.md` for details
 
 When submitting a new feature, always run the full test suite to ensure nothing was broken:
 
@@ -817,7 +817,7 @@ When implementing project initialization commands:
   // ✅ DO: Test new features with tagged system awareness
   describe('newFeature', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
     
     it('should work with legacy task format', async () => {

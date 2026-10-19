@@ -247,7 +247,7 @@ By following these patterns consistently, direct functions will properly manage 
     - **Tagged Data Mocking**: Test both legacy and tagged task data structures
 
   - **Testing Flow**:
-    - Module dependencies are mocked (following Jest's hoisting behavior)
+    - Module dependencies are mocked (`vi.mock` calls are hoisted above imports by Vitest)
     - Test modules are imported after mocks are established
     - Spy functions are set up on module methods
     - Tests call the functions under test and verify behavior
