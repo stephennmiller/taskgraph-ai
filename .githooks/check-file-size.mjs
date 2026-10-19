@@ -41,7 +41,10 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/unit/scripts/modules/task-manager/complexity-report-tag-isolation.test.js',
 	'tests/unit/scripts/modules/task-manager/expand-task.test.js',
 	'tests/unit/scripts/modules/task-manager/list-tasks.test.js',
-	'tests/unit/scripts/modules/task-manager/parse-prd.test.js'
+	'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
+	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
+	'.claude/rules/tests.md',
+	'.claude/rules/new-features.md'
 ]);
 
 export const isIgnored = (path) =>

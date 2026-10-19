@@ -51,7 +51,9 @@ test('allows the listed legacy test files but still checks their neighbors', () 
 	for (const p of [
 		'tests/unit/config-manager.test.js',
 		'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
-		'tests/integration/mcp-server/direct-functions.test.js'
+		'tests/integration/mcp-server/direct-functions.test.js',
+		'.claude/rules/tests.md',
+		'.claude/rules/new-features.md'
 	]) {
 		assert.ok(isIgnored(p), p);
 		assert.deepEqual(run({ [p]: big }), []);
