@@ -7,6 +7,7 @@ import path from 'node:path';
 import { ConfigDomain } from './modules/config/config-domain.js';
 import { ConfigManager } from './modules/config/managers/config-manager.js';
 import { GitDomain } from './modules/git/git-domain.js';
+import { GitHubDomain } from './modules/github/github-domain.js';
 import { LoopDomain } from './modules/loop/loop-domain.js';
 import { TasksDomain } from './modules/tasks/tasks-domain.js';
 import { WorkflowDomain } from './modules/workflow/workflow-domain.js';
@@ -83,6 +84,7 @@ export class TmCore {
 	private _git!: GitDomain;
 	private _config!: ConfigDomain;
 	private _loop!: LoopDomain;
+	private _github!: GitHubDomain;
 
 	// Public readonly getters
 	get tasks(): TasksDomain {
@@ -99,6 +101,9 @@ export class TmCore {
 	}
 	get loop(): LoopDomain {
 		return this._loop;
+	}
+	get github(): GitHubDomain {
+		return this._github;
 	}
 	get logger(): Logger {
 		return this._logger;
@@ -175,6 +180,10 @@ export class TmCore {
 			// Wire up cross-domain dependencies
 			// WorkflowDomain needs TasksDomain for status updates
 			this._workflow.setTasksDomain(this._tasks);
+
+			// GitHubDomain reads and writes task links through TasksDomain
+			this._github = new GitHubDomain(this._projectPath);
+			this._github.setTasksDomain(this._tasks);
 
 			// Log successful initialization
 			this._logger.info('TmCore initialized successfully');
