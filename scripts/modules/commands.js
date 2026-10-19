@@ -3919,10 +3919,14 @@ async function runCLI(argv = process.argv) {
 		}
 
 		// Check for updates BEFORE executing the command (skip entirely in test/CI mode)
+		// `completion` output is usually redirected into a file, so nothing else
+		// may be printed to stdout before or after it
+		const isCompletion = argv[2] === 'completion';
 		const skipAutoUpdate =
 			process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1' ||
 			process.env.CI ||
-			process.env.NODE_ENV === 'test';
+			process.env.NODE_ENV === 'test' ||
+			isCompletion;
 
 		const currentVersion = getTaskGraphVersion();
 		const updateInfo = skipAutoUpdate
@@ -3957,6 +3961,7 @@ async function runCLI(argv = process.argv) {
 
 		// Check if migration has occurred and show FYI notice once
 		try {
+			if (isCompletion) return;
 			// Use initTaskGraph with no required fields - will only fail if no project root
 			const taskGraph = initTaskGraph({});
 

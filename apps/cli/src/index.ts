@@ -12,6 +12,19 @@ export { StartCommand } from './commands/start.command.js';
 export { SetStatusCommand } from './commands/set-status.command.js';
 export { TagsCommand } from './commands/tags.command.js';
 export { LoopCommand } from './commands/loop.command.js';
+export { CompletionCommand } from './commands/completion.command.js';
+
+// Shell completion
+export {
+	buildCompletionSpec,
+	type CommandSpec
+} from './completion/spec.js';
+export {
+	renderCompletionScript,
+	detectShell,
+	SHELLS,
+	type Shell
+} from './completion/scripts.js';
 
 // Command Registry
 export {
