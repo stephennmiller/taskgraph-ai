@@ -1,6 +1,6 @@
 /**
  * Unit tests for manage-gitignore.js module
- * Tests the logic with Jest spies instead of mocked modules
+ * Tests the logic with Vitest spies instead of mocked modules
  */
 
 import fs from 'fs';

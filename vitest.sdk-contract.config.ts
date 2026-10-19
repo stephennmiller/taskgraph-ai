@@ -5,9 +5,9 @@ import { defineConfig } from 'vitest/config';
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Vitest config for tests/sdk-contract (Jest -> Vitest migration, #71/#78).
+ * Vitest config for tests/sdk-contract.
  * These tests are excluded from the default root run (vitest.root.config.ts)
- * and run in their own process, like the Jest `test:sdk-contract` script: the
+ * and run in their own process (`npm run test:sdk-contract`): the
  * real SDK stack leaves process-level state that breaks unrelated suites.
  *
  * Standalone (not mergeConfig) because merging would concatenate `include`

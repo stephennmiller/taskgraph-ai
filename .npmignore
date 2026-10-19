@@ -24,7 +24,6 @@ examples
 .travis.yml
 .gitlab-ci.yml
 tsconfig.json
-jest.config.js
 
 # Original project files
 tasks.json
