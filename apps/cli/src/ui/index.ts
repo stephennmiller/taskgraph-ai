@@ -18,6 +18,13 @@ export {
 	getComplexityWithScore
 } from './formatters/complexity-formatters.js';
 
+// AI usage line shown after AI commands
+export {
+	formatCost,
+	formatUsageLine,
+	type UsageTelemetry
+} from './formatters/usage-formatters.js';
+
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
 
