@@ -2,7 +2,6 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { jest } from '@jest/globals';
 
 describe('Rules Files Inclusion in Package', () => {
 	// This test verifies that the required rules files are included in the final package

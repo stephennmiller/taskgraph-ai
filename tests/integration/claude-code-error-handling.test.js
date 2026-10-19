@@ -1,19 +1,21 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock AI SDK functions at the top level
-jest.unstable_mockModule('ai', () => ({
-	generateObject: jest.fn(),
-	generateText: jest.fn(),
-	streamText: jest.fn(),
-	streamObject: jest.fn(),
-	zodSchema: jest.fn(),
+vi.doMock('ai', () => ({
+	generateObject: vi.fn(),
+	generateText: vi.fn(),
+	streamText: vi.fn(),
+	streamObject: vi.fn(),
+	zodSchema: vi.fn(),
+	// Vitest throws on access to an undefined mock export; Jest returned undefined
+	jsonSchema: undefined,
 	JSONParseError: class JSONParseError extends Error {},
 	NoObjectGeneratedError: class NoObjectGeneratedError extends Error {}
 }));
 
 // Mock CLI failure scenario
-jest.unstable_mockModule('ai-sdk-provider-claude-code', () => ({
-	createClaudeCode: jest.fn(() => {
+vi.doMock('ai-sdk-provider-claude-code', () => ({
+	createClaudeCode: vi.fn(() => {
 		throw new Error('Claude Code CLI not found');
 	})
 }));
@@ -25,7 +27,7 @@ const { ClaudeCodeProvider } = await import(
 
 describe('Claude Code Error Handling', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	it('should throw a CLI-not-available error (with or without commandName)', () => {
