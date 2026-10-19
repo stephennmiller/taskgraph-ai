@@ -2,33 +2,33 @@
  * Dependency Manager module tests
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	crossLevelDependencyTasks,
 	sampleTasks
 } from '../fixtures/sample-tasks.js';
 
 // Create mock functions that we can control in tests
-const mockTaskExists = jest.fn();
-const mockFormatTaskId = jest.fn();
-const mockFindCycles = jest.fn();
-const mockLog = jest.fn();
-const mockReadJSON = jest.fn();
-const mockWriteJSON = jest.fn();
+const mockTaskExists = vi.fn();
+const mockFormatTaskId = vi.fn();
+const mockFindCycles = vi.fn();
+const mockLog = vi.fn();
+const mockReadJSON = vi.fn();
+const mockWriteJSON = vi.fn();
 
 // Mock the utils module using the same pattern as move-task-cross-tag.test.js
-jest.mock('../../scripts/modules/utils.js', () => ({
+vi.doMock('../../scripts/modules/utils.js', () => ({
 	log: mockLog,
 	readJSON: mockReadJSON,
 	writeJSON: mockWriteJSON,
 	taskExists: mockTaskExists,
 	formatTaskId: mockFormatTaskId,
 	findCycles: mockFindCycles,
-	traverseDependencies: jest.fn(() => []),
-	isSilentMode: jest.fn(() => true),
-	findProjectRoot: jest.fn(() => '/test'),
-	resolveEnvVariable: jest.fn(() => undefined),
-	isEmpty: jest.fn((v) =>
+	traverseDependencies: vi.fn(() => []),
+	isSilentMode: vi.fn(() => true),
+	findProjectRoot: vi.fn(() => '/test'),
+	resolveEnvVariable: vi.fn(() => undefined),
+	isEmpty: vi.fn((v) =>
 		v == null
 			? true
 			: Array.isArray(v)
@@ -38,23 +38,26 @@ jest.mock('../../scripts/modules/utils.js', () => ({
 					: false
 	),
 	// Common extras
-	enableSilentMode: jest.fn(),
-	disableSilentMode: jest.fn(),
-	getTaskManager: jest.fn(async () => ({})),
-	getTagAwareFilePath: jest.fn((basePath, _tag, projectRoot = '.') => basePath),
-	readComplexityReport: jest.fn(() => null)
+	enableSilentMode: vi.fn(),
+	disableSilentMode: vi.fn(),
+	getTaskManager: vi.fn(async () => ({})),
+	getTagAwareFilePath: vi.fn((basePath, _tag, projectRoot = '.') => basePath),
+	readComplexityReport: vi.fn(() => null)
 }));
 
-jest.mock('path');
-jest.mock('chalk', () => ({
-	green: jest.fn((text) => `<green>${text}</green>`),
-	yellow: jest.fn((text) => `<yellow>${text}</yellow>`),
-	red: jest.fn((text) => `<red>${text}</red>`),
-	cyan: jest.fn((text) => `<cyan>${text}</cyan>`),
-	bold: jest.fn((text) => `<bold>${text}</bold>`)
-}));
+vi.doMock('path');
+vi.doMock('chalk', () => {
+	const m = {
+		green: vi.fn((text) => `<green>${text}</green>`),
+		yellow: vi.fn((text) => `<yellow>${text}</yellow>`),
+		red: vi.fn((text) => `<red>${text}</red>`),
+		cyan: vi.fn((text) => `<cyan>${text}</cyan>`),
+		bold: vi.fn((text) => `<bold>${text}</bold>`)
+	};
+	return { ...m, default: m };
+});
 
-jest.mock('boxen', () => jest.fn((text) => `[boxed: ${text}]`));
+vi.doMock('boxen', () => ({ default: vi.fn((text) => `[boxed: ${text}]`) }));
 
 // Now import SUT after mocks are in place
 import {
@@ -67,8 +70,8 @@ import {
 	validateTaskDependencies
 } from '../../scripts/modules/dependency-manager.js';
 
-jest.mock('../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn()
+vi.doMock('../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn()
 }));
 
 // Use a temporary path for test files - Jest will clean up the temp directory
@@ -76,7 +79,7 @@ const TEST_TASKS_PATH = '/tmp/jest-test-tasks.json';
 
 describe('Dependency Manager Module', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Set default implementations
 		mockTaskExists.mockImplementation((tasks, id) => {
@@ -949,23 +952,23 @@ describe('Dependency Manager Module', () => {
 
 		beforeEach(async () => {
 			// Ensure a fresh module instance so ESM mocks apply to dynamic imports
-			jest.resetModules();
+			vi.resetModules();
 			originalExit = process.exit;
-			process.exit = jest.fn();
+			process.exit = vi.fn();
 
 			// For ESM dynamic imports, use the same pattern
-			await jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
+			await vi.doMock('../../scripts/modules/utils.js', () => ({
 				log: mockLog,
 				readJSON: mockReadJSON,
 				writeJSON: mockWriteJSON,
 				taskExists: mockTaskExists,
 				formatTaskId: mockFormatTaskId,
 				findCycles: mockFindCycles,
-				traverseDependencies: jest.fn(() => []),
-				isSilentMode: jest.fn(() => true),
-				findProjectRoot: jest.fn(() => '/test'),
-				resolveEnvVariable: jest.fn(() => undefined),
-				isEmpty: jest.fn((v) =>
+				traverseDependencies: vi.fn(() => []),
+				isSilentMode: vi.fn(() => true),
+				findProjectRoot: vi.fn(() => '/test'),
+				resolveEnvVariable: vi.fn(() => undefined),
+				isEmpty: vi.fn((v) =>
 					v == null
 						? true
 						: Array.isArray(v)
@@ -974,18 +977,18 @@ describe('Dependency Manager Module', () => {
 								? Object.keys(v).length === 0
 								: false
 				),
-				enableSilentMode: jest.fn(),
-				disableSilentMode: jest.fn(),
-				getTaskManager: jest.fn(async () => ({})),
-				getTagAwareFilePath: jest.fn(
+				enableSilentMode: vi.fn(),
+				disableSilentMode: vi.fn(),
+				getTaskManager: vi.fn(async () => ({})),
+				getTagAwareFilePath: vi.fn(
 					(basePath, _tag, projectRoot = '.') => basePath
 				),
-				readComplexityReport: jest.fn(() => null)
+				readComplexityReport: vi.fn(() => null)
 			}));
 
 			// Also mock transitive imports to keep dependency surface minimal
-			await jest.unstable_mockModule('../../scripts/modules/ui.js', () => ({
-				displayBanner: jest.fn()
+			await vi.doMock('../../scripts/modules/ui.js', () => ({
+				displayBanner: vi.fn()
 			}));
 			// Set up test data that matches the issue report
 			// Clone fixture data before each test to prevent mutation issues
@@ -1164,7 +1167,7 @@ describe('Dependency Manager Module', () => {
 			expect(subtask22AfterAdd.dependencies).toContain(11);
 
 			// Clear mocks and re-setup mockReadJSON with the modified data
-			jest.clearAllMocks();
+			vi.clearAllMocks();
 			mockReadJSON.mockImplementation(() => structuredClone(dataWithDep));
 
 			await removeDependency(TEST_TASKS_PATH, '2.2', 11, {
@@ -1209,7 +1212,7 @@ describe('Dependency Manager Module', () => {
 			expect(task11AfterAdd.dependencies).toContain('2.1');
 
 			// Clear mocks and re-setup mockReadJSON with the modified data
-			jest.clearAllMocks();
+			vi.clearAllMocks();
 			mockReadJSON.mockImplementation(() => structuredClone(dataWithDep));
 
 			await removeDependency(TEST_TASKS_PATH, 11, '2.1', {

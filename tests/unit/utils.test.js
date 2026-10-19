@@ -2,11 +2,11 @@
  * Utils module tests
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock modules first before any imports
-jest.mock('fs', () => ({
-	existsSync: jest.fn((filePath) => {
+vi.doMock('fs', () => ({
+	existsSync: vi.fn((filePath) => {
 		// Prevent Jest internal file access
 		if (
 			filePath.includes('jest-message-util') ||
@@ -16,17 +16,17 @@ jest.mock('fs', () => ({
 		}
 		return false; // Default to false for config discovery prevention
 	}),
-	readFileSync: jest.fn(() => '{}'),
-	writeFileSync: jest.fn(),
-	mkdirSync: jest.fn()
+	readFileSync: vi.fn(() => '{}'),
+	writeFileSync: vi.fn(),
+	mkdirSync: vi.fn()
 }));
 
-jest.mock('path', () => ({
-	join: jest.fn((...paths) => paths.join('/')),
-	dirname: jest.fn((filePath) => filePath.split('/').slice(0, -1).join('/')),
-	resolve: jest.fn((...paths) => paths.join('/')),
-	basename: jest.fn((filePath) => filePath.split('/').pop()),
-	parse: jest.fn((filePath) => {
+vi.doMock('path', () => ({
+	join: vi.fn((...paths) => paths.join('/')),
+	dirname: vi.fn((filePath) => filePath.split('/').slice(0, -1).join('/')),
+	resolve: vi.fn((...paths) => paths.join('/')),
+	basename: vi.fn((filePath) => filePath.split('/').pop()),
+	parse: vi.fn((filePath) => {
 		const parts = filePath.split('/');
 		const fileName = parts[parts.length - 1];
 		const extIndex = fileName.lastIndexOf('.');
@@ -37,43 +37,43 @@ jest.mock('path', () => ({
 			base: fileName
 		};
 	}),
-	format: jest.fn((pathObj) => {
+	format: vi.fn((pathObj) => {
 		const dir = pathObj.dir || '';
 		const base = pathObj.base || `${pathObj.name || ''}${pathObj.ext || ''}`;
 		return dir ? `${dir}/${base}` : base;
 	})
 }));
 
-jest.mock('chalk', () => ({
-	red: jest.fn((text) => text),
-	blue: jest.fn((text) => text),
-	green: jest.fn((text) => text),
-	yellow: jest.fn((text) => text),
-	white: jest.fn((text) => ({
-		bold: jest.fn((text) => text)
+vi.doMock('chalk', () => ({
+	red: vi.fn((text) => text),
+	blue: vi.fn((text) => text),
+	green: vi.fn((text) => text),
+	yellow: vi.fn((text) => text),
+	white: vi.fn((text) => ({
+		bold: vi.fn((text) => text)
 	})),
-	reset: jest.fn((text) => text),
-	dim: jest.fn((text) => text) // Add dim function to prevent chalk errors
+	reset: vi.fn((text) => text),
+	dim: vi.fn((text) => text) // Add dim function to prevent chalk errors
 }));
 
 // Mock console to prevent Jest internal access
 const mockConsole = {
-	log: jest.fn(),
-	info: jest.fn(),
-	warn: jest.fn(),
-	error: jest.fn()
+	log: vi.fn(),
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn()
 };
 global.console = mockConsole;
 
 // Mock path-utils to prevent file system discovery issues
-jest.mock('../../src/utils/path-utils.js', () => ({
+vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
-	findProjectRoot: jest.fn(() => '/mock/project'),
-	findConfigPath: jest.fn(() => null), // Always return null to prevent config discovery
-	findTasksPath: jest.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: jest.fn(() => null),
-	resolveTasksOutputPath: jest.fn(() => '/mock/tasks.json'),
-	resolveComplexityReportOutputPath: jest.fn(() => '/mock/report.json')
+	findProjectRoot: vi.fn(() => '/mock/project'),
+	findConfigPath: vi.fn(() => null), // Always return null to prevent config discovery
+	findTasksPath: vi.fn(() => '/mock/tasks.json'),
+	findComplexityReportPath: vi.fn(() => null),
+	resolveTasksOutputPath: vi.fn(() => '/mock/tasks.json'),
+	resolveComplexityReportOutputPath: vi.fn(() => '/mock/report.json')
 }));
 
 // Import the actual module to test
@@ -98,9 +98,9 @@ import fs from 'fs';
 import path from 'path';
 
 // Mock config-manager to provide config values
-const mockGetLogLevel = jest.fn(() => 'info'); // Default log level for tests
-const mockGetDebugFlag = jest.fn(() => false); // Default debug flag for tests
-jest.mock('../../scripts/modules/config-manager.js', () => ({
+const mockGetLogLevel = vi.fn(() => 'info'); // Default log level for tests
+const mockGetDebugFlag = vi.fn(() => false); // Default debug flag for tests
+vi.doMock('../../scripts/modules/config-manager.js', () => ({
 	getLogLevel: mockGetLogLevel,
 	getDebugFlag: mockGetDebugFlag
 	// Mock other getters if needed by utils.js functions under test
@@ -136,9 +136,9 @@ function testDetectCamelCaseFlags(args) {
 describe('Utils Module', () => {
 	beforeEach(() => {
 		// Clear all mocks before each test
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		// Restore the original path.join mock
-		jest.spyOn(path, 'join').mockImplementation((...paths) => paths.join('/'));
+		vi.spyOn(path, 'join').mockImplementation((...paths) => paths.join('/'));
 	});
 
 	describe('truncate function', () => {
@@ -185,7 +185,7 @@ describe('Utils Module', () => {
 		// const originalConsoleLog = console.log; // Keep original for potential restore if needed
 		beforeEach(() => {
 			// Mock console.log for each test
-			// console.log = jest.fn(); // REMOVE console.log spy
+			// console.log = vi.fn(); // REMOVE console.log spy
 			mockGetLogLevel.mockClear(); // Clear mock calls
 		});
 
@@ -199,9 +199,7 @@ describe('Utils Module', () => {
 			mockGetLogLevel.mockReturnValue('info');
 
 			// Spy on console.log JUST for this test to verify calls
-			const consoleSpy = jest
-				.spyOn(console, 'log')
-				.mockImplementation(() => {});
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 			log('debug', 'Debug message');
 			log('info', 'Info message');
@@ -247,9 +245,7 @@ describe('Utils Module', () => {
 			mockGetLogLevel.mockReturnValue('error');
 
 			// Spy on console.log JUST for this test
-			const consoleSpy = jest
-				.spyOn(console, 'log')
-				.mockImplementation(() => {});
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 			log('debug', 'Debug message');
 			log('info', 'Info message');
@@ -280,9 +276,7 @@ describe('Utils Module', () => {
 		test('should join multiple arguments into a single message', () => {
 			mockGetLogLevel.mockReturnValue('info');
 			// Spy on console.log JUST for this test
-			const consoleSpy = jest
-				.spyOn(console, 'log')
-				.mockImplementation(() => {});
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 			log('info', 'Message', 'with', 'multiple', 'parts');
 			expect(consoleSpy).toHaveBeenCalledWith(
@@ -311,7 +305,7 @@ describe('Utils Module', () => {
 			});
 
 			// Mock console.error
-			const consoleSpy = jest
+			const consoleSpy = vi
 				.spyOn(console, 'error')
 				.mockImplementation(() => {});
 
@@ -327,7 +321,7 @@ describe('Utils Module', () => {
 			fsReadFileSyncSpy.mockReturnValue('{ invalid json: }');
 
 			// Mock console.error
-			const consoleSpy = jest
+			const consoleSpy = vi
 				.spyOn(console, 'error')
 				.mockImplementation(() => {});
 
@@ -361,7 +355,7 @@ describe('Utils Module', () => {
 			});
 
 			// Mock console.error
-			const consoleSpy = jest
+			const consoleSpy = vi
 				.spyOn(console, 'error')
 				.mockImplementation(() => {});
 
@@ -400,11 +394,9 @@ describe('Utils Module', () => {
 				complexityAnalysis: [{ taskId: 1, complexityScore: 7 }]
 			};
 
-			jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-			jest
-				.spyOn(fs, 'readFileSync')
-				.mockReturnValue(JSON.stringify(testReport));
-			jest.spyOn(path, 'join').mockReturnValue('/path/to/report.json');
+			vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+			vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(testReport));
+			vi.spyOn(path, 'join').mockReturnValue('/path/to/report.json');
 
 			const result = readComplexityReport();
 
@@ -417,8 +409,8 @@ describe('Utils Module', () => {
 		});
 
 		test('should handle missing report file', () => {
-			jest.spyOn(fs, 'existsSync').mockReturnValue(false);
-			jest.spyOn(path, 'join').mockReturnValue('/path/to/report.json');
+			vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+			vi.spyOn(path, 'join').mockReturnValue('/path/to/report.json');
 
 			const result = readComplexityReport();
 
@@ -432,10 +424,8 @@ describe('Utils Module', () => {
 				complexityAnalysis: [{ taskId: 1, complexityScore: 7 }]
 			};
 
-			jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-			jest
-				.spyOn(fs, 'readFileSync')
-				.mockReturnValue(JSON.stringify(testReport));
+			vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+			vi.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(testReport));
 
 			const customPath = '/custom/path/report.json';
 			const result = readComplexityReport(customPath);
