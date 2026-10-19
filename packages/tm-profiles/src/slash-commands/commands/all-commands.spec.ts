@@ -37,6 +37,7 @@ const EXPECTED_COMMANDS = [
 	'init-project',
 	'init-project-quick',
 	'show-task',
+	'graph',
 	'list-tasks',
 	'list-tasks-with-subtasks',
 	'list-tasks-by-status',

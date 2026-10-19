@@ -57,6 +57,14 @@ const TASK_STATUS_CONFIG: Record<
 };
 
 /**
+ * Colored status icon on its own, e.g. a green ✓ for done
+ */
+export function getStatusIcon(status: TaskStatus): string {
+	const config = TASK_STATUS_CONFIG[status];
+	return config ? config.color(config.icon) : chalk.red('X');
+}
+
+/**
  * Get colored status display with ASCII icons (matches scripts/modules/ui.js style)
  */
 export function getStatusWithColor(

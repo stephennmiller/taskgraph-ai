@@ -1,8 +1,12 @@
 /**
- * @fileoverview Dependencies domain - Placeholder for future migration
- * This module will handle dependency management, graphs, and validation
- * when migrated from scripts/modules/dependency-manager.js
+ * @fileoverview Dependencies domain
+ * Dependency validation still lives in scripts/modules/dependency-manager.js
+ * until it is migrated here.
  */
 
-// TODO: Migrate dependency-manager.js from scripts/modules/
-// export * from './services/dependency-manager.js';
+export {
+	buildDependencyTree,
+	type BuildDependencyTreeOptions,
+	type DependencyTree,
+	type DependencyTreeNode
+} from './dependency-tree.js';

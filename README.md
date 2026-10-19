@@ -162,6 +162,7 @@ Then, optionally, check how big each task is and break the big ones down:
 | Slash command | CLI | What happens |
 |---|---|---|
 | `/tm:next-task` | `taskgraph next` | Shows the first unblocked, pending task |
+| `/tm:graph` | `taskgraph graph` | Draws tasks as a dependency tree, with the next one marked |
 | `/tm:show-task 1` | `taskgraph show 1,3,5` | Full details for each task |
 | `/tm:to-in-progress 3`, then ask Claude to implement it | `taskgraph set-status --id=3 --status=in-progress` | Claude Code does the work, guided by the task |
 | `/tm:to-done 3` | `taskgraph set-status --id=3 --status=done` | Updates status and unlocks dependent tasks |
@@ -205,6 +206,7 @@ After `taskgraph init --rules claude` they appear as `/tm:<name>` (type `/tm` to
 taskgraph parse-prd .taskgraph/docs/prd.md   # generate tasks from a PRD
 taskgraph list                               # all tasks and their status
 taskgraph next                               # next task to work on
+taskgraph graph                              # tasks as a dependency tree
 taskgraph show 1,3,5                         # one or more tasks
 taskgraph set-status --id=3 --status=done    # change status
 taskgraph add-task --prompt="..." --research # add a task

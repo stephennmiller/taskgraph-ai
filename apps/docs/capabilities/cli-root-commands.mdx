@@ -52,6 +52,21 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
   </Accordion>
 
+  <Accordion title="Show the Dependency Tree">
+    ```bash
+    # Draw all tasks as a tree: each task sits under the dependency it waits on
+    # longest, other dependencies are listed after its title, and the next
+    # task is marked "← next". Loops and missing dependency IDs are called out.
+    taskgraph graph
+
+    # Only one task and everything that depends on it
+    taskgraph graph --id=3
+
+    # Machine-readable tree
+    taskgraph graph --format json
+    ```
+  </Accordion>
+
   <Accordion title="Show Specific Task">
     ```bash
     # Show details of a specific task
