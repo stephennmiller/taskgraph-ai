@@ -1,8 +1,8 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the 'ai' SDK
-const mockGenerateText = jest.fn();
-const mockGenerateObject = jest.fn();
+const mockGenerateText = vi.fn();
+const mockGenerateObject = vi.fn();
 const mockNoObjectGeneratedError = class NoObjectGeneratedError extends Error {
 	static isInstance(error) {
 		return error instanceof mockNoObjectGeneratedError;
@@ -20,33 +20,35 @@ const mockJSONParseError = class JSONParseError extends Error {
 	}
 };
 
-jest.unstable_mockModule('ai', () => ({
+vi.doMock('ai', () => ({
 	generateText: mockGenerateText,
-	streamText: jest.fn(),
+	streamText: vi.fn(),
 	generateObject: mockGenerateObject,
-	streamObject: jest.fn(),
-	zodSchema: jest.fn((schema) => schema),
+	streamObject: vi.fn(),
+	zodSchema: vi.fn((schema) => schema),
+	// Vitest throws on access to an undefined mock export; Jest returned undefined
+	jsonSchema: undefined,
 	NoObjectGeneratedError: mockNoObjectGeneratedError,
 	JSONParseError: mockJSONParseError
 }));
 
 // Mock jsonrepair
-const mockJsonrepair = jest.fn();
-jest.unstable_mockModule('jsonrepair', () => ({
+const mockJsonrepair = vi.fn();
+vi.doMock('jsonrepair', () => ({
 	jsonrepair: mockJsonrepair
 }));
 
 // Mock logging and utilities
-jest.unstable_mockModule('../../../scripts/modules/utils.js', () => ({
-	log: jest.fn(),
-	findProjectRoot: jest.fn(() => '/mock/project/root'),
-	isEmpty: jest.fn(
+vi.doMock('../../../scripts/modules/utils.js', () => ({
+	log: vi.fn(),
+	findProjectRoot: vi.fn(() => '/mock/project/root'),
+	isEmpty: vi.fn(
 		(val) =>
 			!val ||
 			(Array.isArray(val) && val.length === 0) ||
 			(typeof val === 'object' && Object.keys(val).length === 0)
 	),
-	resolveEnvVariable: jest.fn((key) => process.env[key])
+	resolveEnvVariable: vi.fn((key) => process.env[key])
 }));
 
 // Import after mocking
@@ -75,8 +77,8 @@ describe('BaseAIProvider', () => {
 			}
 		}
 
-		mockClient = jest.fn((modelId) => ({ modelId }));
-		jest.clearAllMocks();
+		mockClient = vi.fn((modelId) => ({ modelId }));
+		vi.clearAllMocks();
 		testProvider = new TestProvider();
 	});
 
@@ -489,7 +491,7 @@ describe('BaseAIProvider', () => {
 
 	describe('8. Integration Points - Client Creation', () => {
 		it('should pass params to getClient method', async () => {
-			const getClientSpy = jest.spyOn(testProvider, 'getClient');
+			const getClientSpy = vi.spyOn(testProvider, 'getClient');
 			mockGenerateText.mockResolvedValue({
 				text: 'response',
 				usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 }
@@ -603,8 +605,8 @@ describe('BaseAIProvider', () => {
 	});
 
 	describe('11. Temperature Filtering - CLI vs Standard Providers', () => {
-		const mockStreamText = jest.fn();
-		const mockStreamObject = jest.fn();
+		const mockStreamText = vi.fn();
+		const mockStreamObject = vi.fn();
 
 		beforeEach(() => {
 			mockStreamText.mockReset();

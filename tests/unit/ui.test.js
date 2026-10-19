@@ -2,7 +2,7 @@
  * UI module tests
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	createProgressBar,
 	formatDependenciesWithStatus,
@@ -12,7 +12,7 @@ import {
 import { sampleTasks } from '../fixtures/sample-tasks.js';
 
 // Mock dependencies
-jest.mock('chalk', () => {
+vi.doMock('chalk', () => {
 	const origChalkFn = (text) => text;
 	const chalk = origChalkFn;
 	chalk.green = (text) => text; // Return text as-is for status functions
@@ -32,50 +32,50 @@ jest.mock('chalk', () => {
 	return chalk;
 });
 
-jest.mock('figlet', () => ({
-	textSync: jest.fn(() => 'TaskGraph Banner')
+vi.doMock('figlet', () => ({
+	textSync: vi.fn(() => 'TaskGraph Banner')
 }));
 
-jest.mock('boxen', () => jest.fn((text) => `[boxed: ${text}]`));
+vi.doMock('boxen', () => vi.fn((text) => `[boxed: ${text}]`));
 
-jest.mock('ora', () =>
-	jest.fn(() => ({
-		start: jest.fn(),
-		succeed: jest.fn(),
-		fail: jest.fn(),
-		stop: jest.fn()
+vi.doMock('ora', () =>
+	vi.fn(() => ({
+		start: vi.fn(),
+		succeed: vi.fn(),
+		fail: vi.fn(),
+		stop: vi.fn()
 	}))
 );
 
-jest.mock('cli-table3', () =>
-	jest.fn().mockImplementation(() => ({
-		push: jest.fn(),
-		toString: jest.fn(() => 'Table Content')
+vi.doMock('cli-table3', () =>
+	vi.fn().mockImplementation(() => ({
+		push: vi.fn(),
+		toString: vi.fn(() => 'Table Content')
 	}))
 );
 
-jest.mock('gradient-string', () => jest.fn(() => jest.fn((text) => text)));
+vi.doMock('gradient-string', () => vi.fn(() => vi.fn((text) => text)));
 
-jest.mock('../../scripts/modules/utils.js', () => ({
+vi.doMock('../../scripts/modules/utils.js', () => ({
 	CONFIG: {
 		projectName: 'Test Project',
 		projectVersion: '1.0.0'
 	},
-	log: jest.fn(),
-	findTaskById: jest.fn(),
-	readJSON: jest.fn(),
-	readComplexityReport: jest.fn(),
-	truncate: jest.fn((text) => text)
+	log: vi.fn(),
+	findTaskById: vi.fn(),
+	readJSON: vi.fn(),
+	readComplexityReport: vi.fn(),
+	truncate: vi.fn((text) => text)
 }));
 
-jest.mock('../../scripts/modules/task-manager.js', () => ({
-	findNextTask: jest.fn(),
-	analyzeTaskComplexity: jest.fn()
+vi.doMock('../../scripts/modules/task-manager.js', () => ({
+	findNextTask: vi.fn(),
+	analyzeTaskComplexity: vi.fn()
 }));
 
 describe('UI Module', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('getStatusWithColor function', () => {

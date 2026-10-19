@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { z } from 'zod';
 
 /**
@@ -15,14 +15,16 @@ import { z } from 'zod';
  */
 
 // Mock generateObject from 'ai' SDK
-const mockGenerateObject = jest.fn();
+const mockGenerateObject = vi.fn();
 
-jest.unstable_mockModule('ai', () => ({
+vi.doMock('ai', () => ({
 	generateObject: mockGenerateObject,
-	generateText: jest.fn(),
-	streamText: jest.fn(),
-	streamObject: jest.fn(),
-	zodSchema: jest.fn((schema) => schema),
+	generateText: vi.fn(),
+	streamText: vi.fn(),
+	streamObject: vi.fn(),
+	zodSchema: vi.fn((schema) => schema),
+	// Vitest throws on access to an undefined mock export; Jest returned undefined
+	jsonSchema: undefined,
 	JSONParseError: class JSONParseError extends Error {
 		constructor(message, text) {
 			super(message);
@@ -37,13 +39,13 @@ jest.unstable_mockModule('ai', () => ({
 }));
 
 // Mock jsonrepair
-jest.unstable_mockModule('jsonrepair', () => ({
-	jsonrepair: jest.fn((text) => text)
+vi.doMock('jsonrepair', () => ({
+	jsonrepair: vi.fn((text) => text)
 }));
 
 // Mock the ai-sdk-provider-claude-code package
-jest.unstable_mockModule('ai-sdk-provider-claude-code', () => ({
-	createClaudeCode: jest.fn(() => {
+vi.doMock('ai-sdk-provider-claude-code', () => ({
+	createClaudeCode: vi.fn(() => {
 		const provider = (modelId) => ({
 			id: modelId,
 			specificationVersion: 'v1',
@@ -57,22 +59,22 @@ jest.unstable_mockModule('ai-sdk-provider-claude-code', () => ({
 }));
 
 // Mock config getters
-jest.unstable_mockModule('../../../scripts/modules/config-manager.js', () => ({
-	getClaudeCodeSettingsForCommand: jest.fn(() => ({})),
-	getSupportedModelsForProvider: jest.fn(() => ['opus', 'sonnet', 'haiku']),
-	getDebugFlag: jest.fn(() => false),
-	getLogLevel: jest.fn(() => 'info'),
-	isProxyEnabled: jest.fn(() => false),
-	getAnonymousTelemetryEnabled: jest.fn(() => true),
-	setSuppressConfigWarnings: jest.fn(),
-	isConfigWarningSuppressed: jest.fn(() => false)
+vi.doMock('../../../scripts/modules/config-manager.js', () => ({
+	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
+	getSupportedModelsForProvider: vi.fn(() => ['opus', 'sonnet', 'haiku']),
+	getDebugFlag: vi.fn(() => false),
+	getLogLevel: vi.fn(() => 'info'),
+	isProxyEnabled: vi.fn(() => false),
+	getAnonymousTelemetryEnabled: vi.fn(() => true),
+	setSuppressConfigWarnings: vi.fn(),
+	isConfigWarningSuppressed: vi.fn(() => false)
 }));
 
 // Mock utils
-jest.unstable_mockModule('../../../scripts/modules/utils.js', () => ({
-	log: jest.fn(),
-	findProjectRoot: jest.fn(() => '/test/project'),
-	resolveEnvVariable: jest.fn((key) => process.env[key])
+vi.doMock('../../../scripts/modules/utils.js', () => ({
+	log: vi.fn(),
+	findProjectRoot: vi.fn(() => '/test/project'),
+	resolveEnvVariable: vi.fn((key) => process.env[key])
 }));
 
 // Import after mocking
@@ -85,7 +87,7 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 
 	beforeEach(() => {
 		provider = new ClaudeCodeProvider();
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('needsExplicitJsonSchema flag', () => {
