@@ -3,10 +3,14 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// These tests block on execSync CLI runs (init alone can take ~9s). Jest never
+// enforced its 5s timeout on synchronous tests; Vitest does, so raise it.
+vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 });
 
 describe('Complex Cross-Tag Scenarios', () => {
 	let testDir;
