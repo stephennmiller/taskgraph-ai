@@ -2,33 +2,33 @@ import fs from 'fs';
 /**
  * Tests for the expand-task.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	createGetTagAwareFilePathMock,
 	createSlugifyTagForFilePathMock
 } from './setup.js';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	sanitizePrompt: jest.fn((prompt) => prompt),
-	truncate: jest.fn((text) => text),
-	isSilentMode: jest.fn(() => false),
-	findTaskById: jest.fn(),
-	findProjectRoot: jest.fn((tasksPath) => '/mock/project/root'),
-	getCurrentTag: jest.fn(() => 'master'),
-	resolveTag: jest.fn(() => 'master'),
-	addComplexityToTask: jest.fn((task, complexity) => ({ ...task, complexity })),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	flattenTasksWithSubtasks: jest.fn((tasks) => {
+	sanitizePrompt: vi.fn((prompt) => prompt),
+	truncate: vi.fn((text) => text),
+	isSilentMode: vi.fn(() => false),
+	findTaskById: vi.fn(),
+	findProjectRoot: vi.fn((tasksPath) => '/mock/project/root'),
+	getCurrentTag: vi.fn(() => 'master'),
+	resolveTag: vi.fn(() => 'master'),
+	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	flattenTasksWithSubtasks: vi.fn((tasks) => {
 		const allTasks = [];
 		const queue = [...(tasks || [])];
 		while (queue.length > 0) {
@@ -44,178 +44,165 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 	}),
 	getTagAwareFilePath: createGetTagAwareFilePathMock(),
 	slugifyTagForFilePath: createSlugifyTagForFilePathMock(),
-	readComplexityReport: jest.fn(),
-	markMigrationForNotice: jest.fn(),
-	performCompleteTagMigration: jest.fn(),
-	setTasksForTag: jest.fn(),
-	getTasksForTag: jest.fn((data, tag) => data[tag]?.tasks || [])
+	readComplexityReport: vi.fn(),
+	markMigrationForNotice: vi.fn(),
+	performCompleteTagMigration: vi.fn(),
+	setTasksForTag: vi.fn(),
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || [])
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn(),
-	getStatusWithColor: jest.fn((status) => status),
-	startLoadingIndicator: jest.fn(),
-	stopLoadingIndicator: jest.fn(),
-	succeedLoadingIndicator: jest.fn(),
-	failLoadingIndicator: jest.fn(),
-	warnLoadingIndicator: jest.fn(),
-	infoLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn(),
-	displayContextAnalysis: jest.fn()
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn(),
+	getStatusWithColor: vi.fn((status) => status),
+	startLoadingIndicator: vi.fn(),
+	stopLoadingIndicator: vi.fn(),
+	succeedLoadingIndicator: vi.fn(),
+	failLoadingIndicator: vi.fn(),
+	warnLoadingIndicator: vi.fn(),
+	infoLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn(),
+	displayContextAnalysis: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateObjectService: jest.fn().mockResolvedValue({
-			mainResult: {
-				subtasks: [
-					{
-						id: 1,
-						title: 'Set up project structure',
-						description:
-							'Create the basic project directory structure and configuration files',
-						dependencies: [],
-						details:
-							'Initialize package.json, create src/ and test/ directories, set up linting configuration',
-						status: 'pending',
-						testStrategy:
-							'Verify all expected files and directories are created'
-					},
-					{
-						id: 2,
-						title: 'Implement core functionality',
-						description: 'Develop the main application logic and core features',
-						dependencies: [1],
-						details:
-							'Create main classes, implement business logic, set up data models',
-						status: 'pending',
-						testStrategy: 'Unit tests for all core functions and classes'
-					},
-					{
-						id: 3,
-						title: 'Add user interface',
-						description: 'Create the user interface components and layouts',
-						dependencies: [2],
-						details:
-							'Design UI components, implement responsive layouts, add user interactions',
-						status: 'pending',
-						testStrategy: 'UI tests and visual regression testing'
-					}
-				]
-			},
-			telemetryData: {
-				timestamp: new Date().toISOString(),
-				userId: '1234567890',
-				commandName: 'expand-task',
-				modelUsed: 'claude-3-5-sonnet',
-				providerName: 'anthropic',
-				inputTokens: 1000,
-				outputTokens: 500,
-				totalTokens: 1500,
-				totalCost: 0.012414,
-				currency: 'USD'
-			}
-		})
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateObjectService: vi.fn().mockResolvedValue({
+		mainResult: {
+			subtasks: [
+				{
+					id: 1,
+					title: 'Set up project structure',
+					description:
+						'Create the basic project directory structure and configuration files',
+					dependencies: [],
+					details:
+						'Initialize package.json, create src/ and test/ directories, set up linting configuration',
+					status: 'pending',
+					testStrategy: 'Verify all expected files and directories are created'
+				},
+				{
+					id: 2,
+					title: 'Implement core functionality',
+					description: 'Develop the main application logic and core features',
+					dependencies: [1],
+					details:
+						'Create main classes, implement business logic, set up data models',
+					status: 'pending',
+					testStrategy: 'Unit tests for all core functions and classes'
+				},
+				{
+					id: 3,
+					title: 'Add user interface',
+					description: 'Create the user interface components and layouts',
+					dependencies: [2],
+					details:
+						'Design UI components, implement responsive layouts, add user interactions',
+					status: 'pending',
+					testStrategy: 'UI tests and visual regression testing'
+				}
+			]
+		},
+		telemetryData: {
+			timestamp: new Date().toISOString(),
+			userId: '1234567890',
+			commandName: 'expand-task',
+			modelUsed: 'claude-3-5-sonnet',
+			providerName: 'anthropic',
+			inputTokens: 1000,
+			outputTokens: 500,
+			totalTokens: 1500,
+			totalCost: 0.012414,
+			currency: 'USD'
+		}
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDefaultSubtasks: jest.fn(() => 3),
-		getDebugFlag: jest.fn(() => false),
-		getDefaultNumTasks: jest.fn(() => 10),
-		getMainProvider: jest.fn(() => 'openai'),
-		getResearchProvider: jest.fn(() => 'perplexity'),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDefaultSubtasks: vi.fn(() => 3),
+	getDebugFlag: vi.fn(() => false),
+	getDefaultNumTasks: vi.fn(() => 10),
+	getMainProvider: vi.fn(() => 'openai'),
+	getResearchProvider: vi.fn(() => 'perplexity'),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/contextGatherer.js',
-	() => ({
-		ContextGatherer: jest.fn().mockImplementation(() => ({
-			gather: jest.fn().mockResolvedValue({
+vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
+	ContextGatherer: vi.fn().mockImplementation(function () {
+		return {
+			gather: vi.fn().mockResolvedValue({
 				context: 'Mock project context from files'
 			})
-		}))
+		};
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/fuzzyTaskSearch.js',
-	() => ({
-		FuzzyTaskSearch: jest.fn().mockImplementation(() => ({
-			findRelevantTasks: jest.fn().mockReturnValue([]),
-			getTaskIds: jest.fn().mockReturnValue([])
-		}))
+vi.doMock('../../../../../scripts/modules/utils/fuzzyTaskSearch.js', () => ({
+	FuzzyTaskSearch: vi.fn().mockImplementation(function () {
+		return {
+			findRelevantTasks: vi.fn().mockReturnValue([]),
+			getTaskIds: vi.fn().mockReturnValue([])
+		};
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockReturnValue({
-				systemPrompt: 'Mocked system prompt',
-				userPrompt: 'Mocked user prompt'
-			})
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockReturnValue({
+			systemPrompt: 'Mocked system prompt',
+			userPrompt: 'Mocked user prompt'
 		})
 	})
-);
+}));
 
 // Mock external UI libraries
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	default: {
-		white: { bold: jest.fn((text) => text) },
+		white: { bold: vi.fn((text) => text) },
 		cyan: Object.assign(
-			jest.fn((text) => text),
+			vi.fn((text) => text),
 			{
-				bold: jest.fn((text) => text)
+				bold: vi.fn((text) => text)
 			}
 		),
-		green: jest.fn((text) => text),
-		yellow: jest.fn((text) => text),
-		red: jest.fn((text) => text),
-		blue: jest.fn((text) => text),
-		magenta: jest.fn((text) => text),
-		gray: jest.fn((text) => text),
-		bold: jest.fn((text) => text),
-		dim: jest.fn((text) => text)
+		green: vi.fn((text) => text),
+		yellow: vi.fn((text) => text),
+		red: vi.fn((text) => text),
+		blue: vi.fn((text) => text),
+		magenta: vi.fn((text) => text),
+		gray: vi.fn((text) => text),
+		bold: vi.fn((text) => text),
+		dim: vi.fn((text) => text)
 	}
 }));
 
-jest.unstable_mockModule('boxen', () => ({
-	default: jest.fn((text) => text)
+vi.doMock('boxen', () => ({
+	default: vi.fn((text) => text)
 }));
 
-jest.unstable_mockModule('cli-table3', () => ({
-	default: jest.fn().mockImplementation(() => ({
-		push: jest.fn(),
-		toString: jest.fn(() => 'mocked table')
-	}))
+vi.doMock('cli-table3', () => ({
+	default: vi.fn().mockImplementation(function () {
+		return {
+			push: vi.fn(),
+			toString: vi.fn(() => 'mocked table')
+		};
+	})
 }));
 
 // Mock bridge-utils module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/bridge-utils.js',
-	() => ({
-		createBridgeLogger: jest.fn(() => ({
-			logger: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn()
-			},
-			report: jest.fn(),
-			isMCP: false
-		}))
-	})
-);
+vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
+	createBridgeLogger: vi.fn(() => ({
+		logger: {
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			debug: vi.fn()
+		},
+		report: vi.fn(),
+		isMCP: false
+	}))
+}));
 
 // Mock process.exit to prevent Jest worker crashes
-const mockExit = jest.spyOn(process, 'exit').mockImplementation((code) => {
+const mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
 	throw new Error(`process.exit called with "${code}"`);
 });
 
@@ -310,15 +297,15 @@ describe('expandTask', () => {
 
 	// Create a helper function for consistent mcpLog mock
 	const createMcpLogMock = () => ({
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn(),
-		success: jest.fn()
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
+		success: vi.fn()
 	});
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockExit.mockClear();
 
 		// Default readJSON implementation - returns tagged structure
@@ -348,7 +335,7 @@ describe('expandTask', () => {
 		log.mockImplementation(() => {});
 
 		// Mock console.log to avoid output during tests
-		jest.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
 	afterEach(() => {
@@ -712,7 +699,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt: 'Generate exactly 5 subtasks for complexity report',
 				userPrompt:
 					'Please break this task into 5 parts\n\nUser provided context'
@@ -732,7 +719,7 @@ describe('expandTask', () => {
 			};
 
 			// Stub fs.existsSync to simulate complexity report exists for this tag
-			const existsSpy = jest
+			const existsSpy = vi
 				.spyOn(fs, 'existsSync')
 				.mockImplementation((filepath) =>
 					filepath.endsWith('task-complexity-report_feature-branch.json')
@@ -789,7 +776,7 @@ describe('expandTask', () => {
 			let existsSpy;
 
 			beforeEach(() => {
-				existsSpy = jest
+				existsSpy = vi
 					.spyOn(fs, 'existsSync')
 					.mockImplementation((filepath) => filepath === reportPath);
 				readJSON.mockImplementation((filepath, projectRootParam, tagParam) => {
@@ -1099,7 +1086,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt: 'Mocked system prompt',
 				userPrompt: 'Mocked user prompt with context'
 			});
@@ -1180,7 +1167,7 @@ describe('expandTask', () => {
 
 		beforeEach(() => {
 			// Reset all mocks
-			jest.clearAllMocks();
+			vi.clearAllMocks();
 
 			// Setup default mocks
 			readJSON.mockReturnValue({
@@ -1228,7 +1215,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into an appropriate number of specific subtasks that can be implemented one by one.',
 				userPrompt:
@@ -1256,7 +1243,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 5 specific subtasks that can be implemented one by one.',
 				userPrompt: 'Break down this task into exactly 5 specific subtasks'
@@ -1284,7 +1271,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 4 specific subtasks that can be implemented one by one.',
 				userPrompt: 'Break down this task into exactly 4 specific subtasks'
@@ -1310,7 +1297,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 6 specific subtasks that can be implemented one by one.',
 				userPrompt: 'Break down this task into exactly 6 specific subtasks'
@@ -1336,7 +1323,7 @@ describe('expandTask', () => {
 			const { getPromptManager } = await import(
 				'../../../../../scripts/modules/prompt-manager.js'
 			);
-			const mockLoadPrompt = jest.fn().mockReturnValue({
+			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 7 specific subtasks that can be implemented one by one.',
 				userPrompt: 'Break down this task into exactly 7 specific subtasks'

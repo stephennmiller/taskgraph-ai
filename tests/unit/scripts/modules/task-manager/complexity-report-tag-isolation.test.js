@@ -5,18 +5,18 @@
 
 import fs from 'fs';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock fs module - consolidated single registration
-const mockExistsSync = jest.fn();
-const mockReadFileSync = jest.fn();
-const mockWriteFileSync = jest.fn();
-const mockUnlinkSync = jest.fn();
-const mockMkdirSync = jest.fn();
-const mockReaddirSync = jest.fn(() => []);
-const mockStatSync = jest.fn(() => ({ isDirectory: () => false }));
+const mockExistsSync = vi.fn();
+const mockReadFileSync = vi.fn();
+const mockWriteFileSync = vi.fn();
+const mockUnlinkSync = vi.fn();
+const mockMkdirSync = vi.fn();
+const mockReaddirSync = vi.fn(() => []);
+const mockStatSync = vi.fn(() => ({ isDirectory: () => false }));
 
-jest.unstable_mockModule('fs', () => ({
+vi.doMock('fs', () => ({
 	default: {
 		existsSync: mockExistsSync,
 		readFileSync: mockReadFileSync,
@@ -36,27 +36,25 @@ jest.unstable_mockModule('fs', () => ({
 }));
 
 // Mock the dependencies
-jest.unstable_mockModule('../../../../../src/utils/path-utils.js', () => ({
-	resolveComplexityReportOutputPath: jest.fn(),
-	findComplexityReportPath: jest.fn(),
-	findConfigPath: jest.fn(),
-	findPRDPath: jest.fn(() => '/mock/project/root/.taskgraph/docs/PRD.md'),
-	findTasksPath: jest.fn(
-		() => '/mock/project/root/.taskgraph/tasks/tasks.json'
-	),
-	findProjectRoot: jest.fn(() => '/mock/project/root'),
-	normalizeProjectRoot: jest.fn((root) => root)
+vi.doMock('../../../../../src/utils/path-utils.js', () => ({
+	resolveComplexityReportOutputPath: vi.fn(),
+	findComplexityReportPath: vi.fn(),
+	findConfigPath: vi.fn(),
+	findPRDPath: vi.fn(() => '/mock/project/root/.taskgraph/docs/PRD.md'),
+	findTasksPath: vi.fn(() => '/mock/project/root/.taskgraph/tasks/tasks.json'),
+	findProjectRoot: vi.fn(() => '/mock/project/root'),
+	normalizeProjectRoot: vi.fn((root) => root)
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	isSilentMode: jest.fn(() => false),
-	enableSilentMode: jest.fn(),
-	disableSilentMode: jest.fn(),
-	flattenTasksWithSubtasks: jest.fn((tasks) => tasks),
-	getTagAwareFilePath: jest.fn((basePath, tag, projectRoot) => {
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	isSilentMode: vi.fn(() => false),
+	enableSilentMode: vi.fn(),
+	disableSilentMode: vi.fn(),
+	flattenTasksWithSubtasks: vi.fn((tasks) => tasks),
+	getTagAwareFilePath: vi.fn((basePath, tag, projectRoot) => {
 		if (tag && tag !== 'master') {
 			const dir = path.dirname(basePath);
 			const ext = path.extname(basePath);
@@ -65,7 +63,7 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 		}
 		return path.join(projectRoot || '.', basePath);
 	}),
-	findTaskById: jest.fn((tasks, taskId) => {
+	findTaskById: vi.fn((tasks, taskId) => {
 		if (!tasks || !Array.isArray(tasks)) {
 			return { task: null, originalSubtaskCount: null, originalSubtasks: null };
 		}
@@ -75,36 +73,36 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 			? { task, originalSubtaskCount: null, originalSubtasks: null }
 			: { task: null, originalSubtaskCount: null, originalSubtasks: null };
 	}),
-	taskExists: jest.fn((tasks, taskId) => {
+	taskExists: vi.fn((tasks, taskId) => {
 		if (!tasks || !Array.isArray(tasks)) return false;
 		const id = parseInt(taskId, 10);
 		return tasks.some((t) => t.id === id);
 	}),
-	formatTaskId: jest.fn((id) => `Task ${id}`),
-	findCycles: jest.fn(() => []),
-	truncate: jest.fn((text) => text),
-	addComplexityToTask: jest.fn((task, complexity) => ({ ...task, complexity })),
-	aggregateTelemetry: jest.fn((telemetryArray) => telemetryArray[0] || {}),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	getCurrentTag: jest.fn(() => 'master'),
-	resolveTag: jest.fn(() => 'master'),
-	markMigrationForNotice: jest.fn(),
-	performCompleteTagMigration: jest.fn(),
-	setTasksForTag: jest.fn(),
-	getTasksForTag: jest.fn((data, tag) => data[tag]?.tasks || []),
-	findProjectRoot: jest.fn(() => '/mock/project/root'),
-	readComplexityReport: jest.fn(),
-	findTaskInComplexityReport: jest.fn(),
-	resolveEnvVariable: jest.fn((varName) => `mock_${varName}`),
-	isEmpty: jest.fn(() => false),
-	normalizeProjectRoot: jest.fn((root) => root),
-	slugifyTagForFilePath: jest.fn((tagName) => {
+	formatTaskId: vi.fn((id) => `Task ${id}`),
+	findCycles: vi.fn(() => []),
+	truncate: vi.fn((text) => text),
+	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
+	aggregateTelemetry: vi.fn((telemetryArray) => telemetryArray[0] || {}),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	getCurrentTag: vi.fn(() => 'master'),
+	resolveTag: vi.fn(() => 'master'),
+	markMigrationForNotice: vi.fn(),
+	performCompleteTagMigration: vi.fn(),
+	setTasksForTag: vi.fn(),
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
+	findProjectRoot: vi.fn(() => '/mock/project/root'),
+	readComplexityReport: vi.fn(),
+	findTaskInComplexityReport: vi.fn(),
+	resolveEnvVariable: vi.fn((varName) => `mock_${varName}`),
+	isEmpty: vi.fn(() => false),
+	normalizeProjectRoot: vi.fn((root) => root),
+	slugifyTagForFilePath: vi.fn((tagName) => {
 		if (!tagName || typeof tagName !== 'string') {
 			return 'unknown-tag';
 		}
 		return tagName.replace(/[^a-zA-Z0-9_-]/g, '-').toLowerCase();
 	}),
-	createTagAwareFilePath: jest.fn((basePath, tag, projectRoot) => {
+	createTagAwareFilePath: vi.fn((basePath, tag, projectRoot) => {
 		if (tag && tag !== 'master') {
 			const dir = path.dirname(basePath);
 			const ext = path.extname(basePath);
@@ -119,34 +117,130 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 		}
 		return path.join(projectRoot || '.', basePath);
 	}),
-	traverseDependencies: jest.fn((sourceTasks, allTasks, options = {}) => []),
+	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => []),
 	CONFIG: {
 		defaultSubtasks: 3
 	}
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateTextService: jest.fn().mockImplementation((params) => {
-			const commandName = params?.commandName || 'default';
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateTextService: vi.fn().mockImplementation((params) => {
+		const commandName = params?.commandName || 'default';
 
-			if (commandName === 'analyze-complexity') {
-				// Check if this is for a specific tag test by looking at the prompt
-				const isFeatureTag =
-					params?.prompt?.includes('feature') || params?.role === 'feature';
-				const isMasterTag =
-					params?.prompt?.includes('master') || params?.role === 'master';
+		if (commandName === 'analyze-complexity') {
+			// Check if this is for a specific tag test by looking at the prompt
+			const isFeatureTag =
+				params?.prompt?.includes('feature') || params?.role === 'feature';
+			const isMasterTag =
+				params?.prompt?.includes('master') || params?.role === 'master';
 
-				let taskTitle = 'Test Task';
-				if (isFeatureTag) {
-					taskTitle = 'Feature Task 1';
-				} else if (isMasterTag) {
-					taskTitle = 'Master Task 1';
+			let taskTitle = 'Test Task';
+			if (isFeatureTag) {
+				taskTitle = 'Feature Task 1';
+			} else if (isMasterTag) {
+				taskTitle = 'Master Task 1';
+			}
+
+			return Promise.resolve({
+				mainResult: JSON.stringify([
+					{
+						taskId: 1,
+						taskTitle: taskTitle,
+						complexityScore: 7,
+						recommendedSubtasks: 4,
+						expansionPrompt: 'Break down this task',
+						reasoning: 'This task is moderately complex'
+					},
+					{
+						taskId: 2,
+						taskTitle: 'Task 2',
+						complexityScore: 5,
+						recommendedSubtasks: 3,
+						expansionPrompt: 'Break down this task with a focus on task 2.',
+						reasoning:
+							'Automatically added due to missing analysis in AI response.'
+					}
+				]),
+				telemetryData: {
+					timestamp: new Date().toISOString(),
+					commandName: 'analyze-complexity',
+					modelUsed: 'claude-3-5-sonnet',
+					providerName: 'anthropic',
+					inputTokens: 1000,
+					outputTokens: 500,
+					totalTokens: 1500,
+					totalCost: 0.012414,
+					currency: 'USD'
 				}
+			});
+		} else {
+			// Default for expand-task and others
+			return Promise.resolve({
+				mainResult: JSON.stringify({
+					subtasks: [
+						{
+							id: 1,
+							title: 'Subtask 1',
+							description: 'First subtask',
+							dependencies: [],
+							details: 'Implementation details',
+							status: 'pending',
+							testStrategy: 'Test strategy'
+						}
+					]
+				}),
+				telemetryData: {
+					timestamp: new Date().toISOString(),
+					commandName: commandName || 'expand-task',
+					modelUsed: 'claude-3-5-sonnet',
+					providerName: 'anthropic',
+					inputTokens: 1000,
+					outputTokens: 500,
+					totalTokens: 1500,
+					totalCost: 0.012414,
+					currency: 'USD'
+				}
+			});
+		}
+	}),
+	streamTextService: vi.fn().mockResolvedValue({
+		mainResult: async function* () {
+			yield '{"tasks":[';
+			yield '{"id":1,"title":"Test Task","priority":"high"}';
+			yield ']}';
+		},
+		telemetryData: {
+			timestamp: new Date().toISOString(),
+			commandName: 'analyze-complexity',
+			modelUsed: 'claude-3-5-sonnet',
+			providerName: 'anthropic',
+			inputTokens: 1000,
+			outputTokens: 500,
+			totalTokens: 1500,
+			totalCost: 0.012414,
+			currency: 'USD'
+		}
+	}),
+	generateObjectService: vi.fn().mockImplementation((params) => {
+		const commandName = params?.commandName || 'default';
 
-				return Promise.resolve({
-					mainResult: JSON.stringify([
+		if (commandName === 'analyze-complexity') {
+			// Check if this is for a specific tag test by looking at the prompt
+			const isFeatureTag =
+				params?.prompt?.includes('feature') || params?.role === 'feature';
+			const isMasterTag =
+				params?.prompt?.includes('master') || params?.role === 'master';
+
+			let taskTitle = 'Test Task';
+			if (isFeatureTag) {
+				taskTitle = 'Feature Task 1';
+			} else if (isMasterTag) {
+				taskTitle = 'Master Task 1';
+			}
+
+			return Promise.resolve({
+				mainResult: {
+					complexityAnalysis: [
 						{
 							taskId: 1,
 							taskTitle: taskTitle,
@@ -164,138 +258,11 @@ jest.unstable_mockModule(
 							reasoning:
 								'Automatically added due to missing analysis in AI response.'
 						}
-					]),
-					telemetryData: {
-						timestamp: new Date().toISOString(),
-						commandName: 'analyze-complexity',
-						modelUsed: 'claude-3-5-sonnet',
-						providerName: 'anthropic',
-						inputTokens: 1000,
-						outputTokens: 500,
-						totalTokens: 1500,
-						totalCost: 0.012414,
-						currency: 'USD'
-					}
-				});
-			} else {
-				// Default for expand-task and others
-				return Promise.resolve({
-					mainResult: JSON.stringify({
-						subtasks: [
-							{
-								id: 1,
-								title: 'Subtask 1',
-								description: 'First subtask',
-								dependencies: [],
-								details: 'Implementation details',
-								status: 'pending',
-								testStrategy: 'Test strategy'
-							}
-						]
-					}),
-					telemetryData: {
-						timestamp: new Date().toISOString(),
-						commandName: commandName || 'expand-task',
-						modelUsed: 'claude-3-5-sonnet',
-						providerName: 'anthropic',
-						inputTokens: 1000,
-						outputTokens: 500,
-						totalTokens: 1500,
-						totalCost: 0.012414,
-						currency: 'USD'
-					}
-				});
-			}
-		}),
-		streamTextService: jest.fn().mockResolvedValue({
-			mainResult: async function* () {
-				yield '{"tasks":[';
-				yield '{"id":1,"title":"Test Task","priority":"high"}';
-				yield ']}';
-			},
-			telemetryData: {
-				timestamp: new Date().toISOString(),
-				commandName: 'analyze-complexity',
-				modelUsed: 'claude-3-5-sonnet',
-				providerName: 'anthropic',
-				inputTokens: 1000,
-				outputTokens: 500,
-				totalTokens: 1500,
-				totalCost: 0.012414,
-				currency: 'USD'
-			}
-		}),
-		generateObjectService: jest.fn().mockImplementation((params) => {
-			const commandName = params?.commandName || 'default';
-
-			if (commandName === 'analyze-complexity') {
-				// Check if this is for a specific tag test by looking at the prompt
-				const isFeatureTag =
-					params?.prompt?.includes('feature') || params?.role === 'feature';
-				const isMasterTag =
-					params?.prompt?.includes('master') || params?.role === 'master';
-
-				let taskTitle = 'Test Task';
-				if (isFeatureTag) {
-					taskTitle = 'Feature Task 1';
-				} else if (isMasterTag) {
-					taskTitle = 'Master Task 1';
-				}
-
-				return Promise.resolve({
-					mainResult: {
-						complexityAnalysis: [
-							{
-								taskId: 1,
-								taskTitle: taskTitle,
-								complexityScore: 7,
-								recommendedSubtasks: 4,
-								expansionPrompt: 'Break down this task',
-								reasoning: 'This task is moderately complex'
-							},
-							{
-								taskId: 2,
-								taskTitle: 'Task 2',
-								complexityScore: 5,
-								recommendedSubtasks: 3,
-								expansionPrompt: 'Break down this task with a focus on task 2.',
-								reasoning:
-									'Automatically added due to missing analysis in AI response.'
-							}
-						]
-					},
-					telemetryData: {
-						timestamp: new Date().toISOString(),
-						commandName: 'analyze-complexity',
-						modelUsed: 'claude-3-5-sonnet',
-						providerName: 'anthropic',
-						inputTokens: 1000,
-						outputTokens: 500,
-						totalTokens: 1500,
-						totalCost: 0.012414,
-						currency: 'USD'
-					}
-				});
-			}
-
-			// Default response for expand-task and others
-			return Promise.resolve({
-				mainResult: {
-					subtasks: [
-						{
-							id: 1,
-							title: 'Subtask 1',
-							description: 'First subtask',
-							dependencies: [],
-							details: 'Implementation details',
-							status: 'pending',
-							testStrategy: 'Test strategy'
-						}
 					]
 				},
 				telemetryData: {
 					timestamp: new Date().toISOString(),
-					commandName: 'expand-task',
+					commandName: 'analyze-complexity',
 					modelUsed: 'claude-3-5-sonnet',
 					providerName: 'anthropic',
 					inputTokens: 1000,
@@ -305,194 +272,210 @@ jest.unstable_mockModule(
 					currency: 'USD'
 				}
 			});
-		})
-	})
-);
-
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		// Core config access
-		getConfig: jest.fn(() => ({
-			models: { main: { provider: 'anthropic', modelId: 'claude-3-5-sonnet' } },
-			global: { projectName: 'Test Project' }
-		})),
-		writeConfig: jest.fn(() => true),
-		ConfigurationError: class extends Error {},
-		isConfigFilePresent: jest.fn(() => true),
-
-		// Validation
-		validateProvider: jest.fn(() => true),
-		validateProviderModelCombination: jest.fn(() => true),
-		CUSTOM_PROVIDERS: { OLLAMA: 'ollama', BEDROCK: 'bedrock' },
-		ALL_PROVIDERS: ['anthropic', 'openai', 'perplexity', 'ollama', 'bedrock'],
-		MODEL_MAP: {
-			anthropic: [
-				{
-					id: 'claude-3-5-sonnet',
-					cost_per_1m_tokens: { input: 3, output: 15 }
-				}
-			],
-			openai: [{ id: 'gpt-4', cost_per_1m_tokens: { input: 30, output: 60 } }]
-		},
-		getAvailableModels: jest.fn(() => [
-			{
-				id: 'claude-3-5-sonnet',
-				name: 'Claude 3.5 Sonnet',
-				provider: 'anthropic'
-			},
-			{ id: 'gpt-4', name: 'GPT-4', provider: 'openai' }
-		]),
-
-		// Role-specific getters
-		getMainProvider: jest.fn(() => 'anthropic'),
-		getMainModelId: jest.fn(() => 'claude-3-5-sonnet'),
-		getMainMaxTokens: jest.fn(() => 4000),
-		getMainTemperature: jest.fn(() => 0.7),
-		getResearchProvider: jest.fn(() => 'perplexity'),
-		getResearchModelId: jest.fn(() => 'sonar-pro'),
-		getResearchMaxTokens: jest.fn(() => 8700),
-		getResearchTemperature: jest.fn(() => 0.1),
-		getFallbackProvider: jest.fn(() => 'anthropic'),
-		getFallbackModelId: jest.fn(() => 'claude-3-5-sonnet'),
-		getFallbackMaxTokens: jest.fn(() => 4000),
-		getFallbackTemperature: jest.fn(() => 0.7),
-		getBaseUrlForRole: jest.fn(() => undefined),
-
-		// Global setting getters
-		getLogLevel: jest.fn(() => 'info'),
-		getDebugFlag: jest.fn(() => false),
-		getDefaultNumTasks: jest.fn(() => 10),
-		getDefaultSubtasks: jest.fn(() => 5),
-		getDefaultPriority: jest.fn(() => 'medium'),
-		getProjectName: jest.fn(() => 'Test Project'),
-		getOllamaBaseURL: jest.fn(() => 'http://localhost:11434/api'),
-		getAzureBaseURL: jest.fn(() => undefined),
-		getBedrockBaseURL: jest.fn(() => undefined),
-		getParametersForRole: jest.fn(() => ({
-			maxTokens: 4000,
-			temperature: 0.7
-		})),
-		getUserId: jest.fn(() => '1234567890'),
-
-		// API Key Checkers
-		isApiKeySet: jest.fn(() => true),
-		getMcpApiKeyStatus: jest.fn(() => true),
-
-		// Additional functions
-		getAllProviders: jest.fn(() => ['anthropic', 'openai', 'perplexity']),
-		getVertexProjectId: jest.fn(() => undefined),
-		getVertexLocation: jest.fn(() => undefined),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
-
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockReturnValue({
-				systemPrompt: 'Mocked system prompt',
-				userPrompt: 'Mocked user prompt'
-			})
-		})
-	})
-);
-
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/contextGatherer.js',
-	() => {
-		class MockContextGatherer {
-			constructor(projectRoot, tag) {
-				this.projectRoot = projectRoot;
-				this.tag = tag;
-				this.allTasks = [];
-			}
-
-			async gather(options = {}) {
-				return {
-					context: 'Mock context gathered',
-					analysisData: null,
-					contextSections: 1,
-					finalTaskIds: options.tasks || []
-				};
-			}
 		}
 
-		return {
-			default: MockContextGatherer,
-			ContextGatherer: MockContextGatherer,
-			createContextGatherer: jest.fn(
-				(projectRoot, tag) => new MockContextGatherer(projectRoot, tag)
-			)
-		};
-	}
-);
+		// Default response for expand-task and others
+		return Promise.resolve({
+			mainResult: {
+				subtasks: [
+					{
+						id: 1,
+						title: 'Subtask 1',
+						description: 'First subtask',
+						dependencies: [],
+						details: 'Implementation details',
+						status: 'pending',
+						testStrategy: 'Test strategy'
+					}
+				]
+			},
+			telemetryData: {
+				timestamp: new Date().toISOString(),
+				commandName: 'expand-task',
+				modelUsed: 'claude-3-5-sonnet',
+				providerName: 'anthropic',
+				inputTokens: 1000,
+				outputTokens: 500,
+				totalTokens: 1500,
+				totalCost: 0.012414,
+				currency: 'USD'
+			}
+		});
+	})
+}));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	startLoadingIndicator: jest.fn(() => ({ stop: jest.fn() })),
-	stopLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn(),
-	displayBanner: jest.fn(),
-	getStatusWithColor: jest.fn((status) => status),
-	succeedLoadingIndicator: jest.fn(),
-	failLoadingIndicator: jest.fn(),
-	warnLoadingIndicator: jest.fn(),
-	infoLoadingIndicator: jest.fn(),
-	displayContextAnalysis: jest.fn(),
-	createProgressBar: jest.fn(() => ({
-		start: jest.fn(),
-		stop: jest.fn(),
-		update: jest.fn()
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	// Core config access
+	getConfig: vi.fn(() => ({
+		models: { main: { provider: 'anthropic', modelId: 'claude-3-5-sonnet' } },
+		global: { projectName: 'Test Project' }
 	})),
-	displayTable: jest.fn(),
-	displayBox: jest.fn(),
-	displaySuccess: jest.fn(),
-	displayError: jest.fn(),
-	displayWarning: jest.fn(),
-	displayInfo: jest.fn(),
-	displayTaskDetails: jest.fn(),
-	displayTaskList: jest.fn(),
-	displayComplexityReport: jest.fn(),
-	displayNextTask: jest.fn(),
-	displayDependencyStatus: jest.fn(),
-	displayMigrationNotice: jest.fn(),
-	formatDependenciesWithStatus: jest.fn((deps) => deps),
-	formatTaskId: jest.fn((id) => `Task ${id}`),
-	formatPriority: jest.fn((priority) => priority),
-	formatDuration: jest.fn((duration) => duration),
-	formatDate: jest.fn((date) => date),
-	formatComplexityScore: jest.fn((score) => score),
-	formatTelemetryData: jest.fn((data) => data),
-	formatContextSummary: jest.fn((context) => context),
-	formatTagName: jest.fn((tag) => tag),
-	formatFilePath: jest.fn((path) => path),
-	getComplexityWithColor: jest.fn((complexity) => complexity),
-	getPriorityWithColor: jest.fn((priority) => priority),
-	getTagWithColor: jest.fn((tag) => tag),
-	getDependencyWithColor: jest.fn((dep) => dep),
-	getTelemetryWithColor: jest.fn((data) => data),
-	getContextWithColor: jest.fn((context) => context)
+	writeConfig: vi.fn(() => true),
+	ConfigurationError: class extends Error {},
+	isConfigFilePresent: vi.fn(() => true),
+
+	// Validation
+	validateProvider: vi.fn(() => true),
+	validateProviderModelCombination: vi.fn(() => true),
+	CUSTOM_PROVIDERS: { OLLAMA: 'ollama', BEDROCK: 'bedrock' },
+	ALL_PROVIDERS: ['anthropic', 'openai', 'perplexity', 'ollama', 'bedrock'],
+	MODEL_MAP: {
+		anthropic: [
+			{
+				id: 'claude-3-5-sonnet',
+				cost_per_1m_tokens: { input: 3, output: 15 }
+			}
+		],
+		openai: [{ id: 'gpt-4', cost_per_1m_tokens: { input: 30, output: 60 } }]
+	},
+	getAvailableModels: vi.fn(() => [
+		{
+			id: 'claude-3-5-sonnet',
+			name: 'Claude 3.5 Sonnet',
+			provider: 'anthropic'
+		},
+		{ id: 'gpt-4', name: 'GPT-4', provider: 'openai' }
+	]),
+
+	// Role-specific getters
+	getMainProvider: vi.fn(() => 'anthropic'),
+	getMainModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getMainMaxTokens: vi.fn(() => 4000),
+	getMainTemperature: vi.fn(() => 0.7),
+	getResearchProvider: vi.fn(() => 'perplexity'),
+	getResearchModelId: vi.fn(() => 'sonar-pro'),
+	getResearchMaxTokens: vi.fn(() => 8700),
+	getResearchTemperature: vi.fn(() => 0.1),
+	getFallbackProvider: vi.fn(() => 'anthropic'),
+	getFallbackModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getFallbackMaxTokens: vi.fn(() => 4000),
+	getFallbackTemperature: vi.fn(() => 0.7),
+	getBaseUrlForRole: vi.fn(() => undefined),
+
+	// Global setting getters
+	getLogLevel: vi.fn(() => 'info'),
+	getDebugFlag: vi.fn(() => false),
+	getDefaultNumTasks: vi.fn(() => 10),
+	getDefaultSubtasks: vi.fn(() => 5),
+	getDefaultPriority: vi.fn(() => 'medium'),
+	getProjectName: vi.fn(() => 'Test Project'),
+	getOllamaBaseURL: vi.fn(() => 'http://localhost:11434/api'),
+	getAzureBaseURL: vi.fn(() => undefined),
+	getBedrockBaseURL: vi.fn(() => undefined),
+	getParametersForRole: vi.fn(() => ({
+		maxTokens: 4000,
+		temperature: 0.7
+	})),
+	getUserId: vi.fn(() => '1234567890'),
+
+	// API Key Checkers
+	isApiKeySet: vi.fn(() => true),
+	getMcpApiKeyStatus: vi.fn(() => true),
+
+	// Additional functions
+	getAllProviders: vi.fn(() => ['anthropic', 'openai', 'perplexity']),
+	getVertexProjectId: vi.fn(() => undefined),
+	getVertexLocation: vi.fn(() => undefined),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
+
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockReturnValue({
+			systemPrompt: 'Mocked system prompt',
+			userPrompt: 'Mocked user prompt'
+		})
+	})
+}));
+
+vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => {
+	class MockContextGatherer {
+		constructor(projectRoot, tag) {
+			this.projectRoot = projectRoot;
+			this.tag = tag;
+			this.allTasks = [];
+		}
+
+		async gather(options = {}) {
+			return {
+				context: 'Mock context gathered',
+				analysisData: null,
+				contextSections: 1,
+				finalTaskIds: options.tasks || []
+			};
+		}
+	}
+
+	return {
+		default: MockContextGatherer,
+		ContextGatherer: MockContextGatherer,
+		createContextGatherer: vi.fn(
+			(projectRoot, tag) => new MockContextGatherer(projectRoot, tag)
+		)
+	};
+});
+
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	startLoadingIndicator: vi.fn(() => ({ stop: vi.fn() })),
+	stopLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn(),
+	displayBanner: vi.fn(),
+	getStatusWithColor: vi.fn((status) => status),
+	succeedLoadingIndicator: vi.fn(),
+	failLoadingIndicator: vi.fn(),
+	warnLoadingIndicator: vi.fn(),
+	infoLoadingIndicator: vi.fn(),
+	displayContextAnalysis: vi.fn(),
+	createProgressBar: vi.fn(() => ({
+		start: vi.fn(),
+		stop: vi.fn(),
+		update: vi.fn()
+	})),
+	displayTable: vi.fn(),
+	displayBox: vi.fn(),
+	displaySuccess: vi.fn(),
+	displayError: vi.fn(),
+	displayWarning: vi.fn(),
+	displayInfo: vi.fn(),
+	displayTaskDetails: vi.fn(),
+	displayTaskList: vi.fn(),
+	displayComplexityReport: vi.fn(),
+	displayNextTask: vi.fn(),
+	displayDependencyStatus: vi.fn(),
+	displayMigrationNotice: vi.fn(),
+	formatDependenciesWithStatus: vi.fn((deps) => deps),
+	formatTaskId: vi.fn((id) => `Task ${id}`),
+	formatPriority: vi.fn((priority) => priority),
+	formatDuration: vi.fn((duration) => duration),
+	formatDate: vi.fn((date) => date),
+	formatComplexityScore: vi.fn((score) => score),
+	formatTelemetryData: vi.fn((data) => data),
+	formatContextSummary: vi.fn((context) => context),
+	formatTagName: vi.fn((tag) => tag),
+	formatFilePath: vi.fn((path) => path),
+	getComplexityWithColor: vi.fn((complexity) => complexity),
+	getPriorityWithColor: vi.fn((priority) => priority),
+	getTagWithColor: vi.fn((tag) => tag),
+	getDependencyWithColor: vi.fn((dep) => dep),
+	getTelemetryWithColor: vi.fn((data) => data),
+	getContextWithColor: vi.fn((context) => context)
 }));
 
 // fs module already mocked at top of file with shared spy references
 
 // Mock bridge-utils module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/bridge-utils.js',
-	() => ({
-		createBridgeLogger: jest.fn(() => ({
-			logger: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn()
-			},
-			report: jest.fn(),
-			isMCP: false
-		}))
-	})
-);
+vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
+	createBridgeLogger: vi.fn(() => ({
+		logger: {
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			debug: vi.fn()
+		},
+		report: vi.fn(),
+		isMCP: false
+	}))
+}));
 
 // Import the mocked modules
 const { resolveComplexityReportOutputPath, findComplexityReportPath } =
@@ -564,7 +547,7 @@ describe('Complexity Report Tag Isolation', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Default mock implementations
 		readJSON.mockReturnValue(sampleTasks);
@@ -670,11 +653,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -709,11 +692,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -749,16 +732,16 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(masterOptions, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
 			// Clear mocks to verify separate calls
-			jest.clearAllMocks();
+			vi.clearAllMocks();
 			readJSON.mockReturnValue(sampleTasks);
 
 			// Then, analyze feature tag
@@ -772,11 +755,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(featureOptions, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -822,11 +805,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -856,11 +839,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -890,11 +873,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -945,11 +928,11 @@ describe('Complexity Report Tag Isolation', () => {
 						'task-complexity-report_feature-auth.json'
 					),
 					mcpLog: {
-						info: jest.fn(),
-						warn: jest.fn(),
-						error: jest.fn(),
-						debug: jest.fn(),
-						success: jest.fn()
+						info: vi.fn(),
+						warn: vi.fn(),
+						error: vi.fn(),
+						debug: vi.fn(),
+						success: vi.fn()
 					}
 				},
 				false // force
@@ -991,11 +974,11 @@ describe('Complexity Report Tag Isolation', () => {
 						'task-complexity-report.json'
 					),
 					mcpLog: {
-						info: jest.fn(),
-						warn: jest.fn(),
-						error: jest.fn(),
-						debug: jest.fn(),
-						success: jest.fn()
+						info: vi.fn(),
+						warn: vi.fn(),
+						error: vi.fn(),
+						debug: vi.fn(),
+						success: vi.fn()
 					}
 				},
 				false // force
@@ -1068,11 +1051,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(masterOptions, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1088,7 +1071,7 @@ describe('Complexity Report Tag Isolation', () => {
 			);
 
 			// Clear mocks
-			jest.clearAllMocks();
+			vi.clearAllMocks();
 			readJSON.mockReturnValue(sampleTasks);
 
 			// Analyze feature tag
@@ -1102,11 +1085,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(featureOptions, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1135,11 +1118,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1164,11 +1147,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 
@@ -1193,11 +1176,11 @@ describe('Complexity Report Tag Isolation', () => {
 			await analyzeTaskComplexity(options, {
 				projectRoot,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				}
 			});
 

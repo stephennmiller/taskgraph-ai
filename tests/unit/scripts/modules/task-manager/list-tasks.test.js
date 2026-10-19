@@ -1,62 +1,57 @@
 /**
  * Tests for the list-tasks.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	sanitizePrompt: jest.fn((prompt) => prompt),
-	truncate: jest.fn((text) => text),
-	isSilentMode: jest.fn(() => false),
-	findTaskById: jest.fn((tasks, id) =>
-		tasks.find((t) => t.id === parseInt(id))
-	),
-	addComplexityToTask: jest.fn(),
-	readComplexityReport: jest.fn(() => null),
-	getTagAwareFilePath: jest.fn((tag, path) => '/mock/tagged/report.json'),
-	stripAnsiCodes: jest.fn((text) =>
+	sanitizePrompt: vi.fn((prompt) => prompt),
+	truncate: vi.fn((text) => text),
+	isSilentMode: vi.fn(() => false),
+	findTaskById: vi.fn((tasks, id) => tasks.find((t) => t.id === parseInt(id))),
+	addComplexityToTask: vi.fn(),
+	readComplexityReport: vi.fn(() => null),
+	getTagAwareFilePath: vi.fn((tag, path) => '/mock/tagged/report.json'),
+	stripAnsiCodes: vi.fn((text) =>
 		text ? text.replace(/\x1b\[[0-9;]*m/g, '') : text
 	)
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	formatDependenciesWithStatus: jest.fn(),
-	displayBanner: jest.fn(),
-	displayTaskList: jest.fn(),
-	startLoadingIndicator: jest.fn(() => ({ stop: jest.fn() })),
-	stopLoadingIndicator: jest.fn(),
-	createProgressBar: jest.fn(() => ' MOCK_PROGRESS_BAR '),
-	getStatusWithColor: jest.fn((status) => status),
-	getComplexityWithColor: jest.fn((score) => `Score: ${score}`),
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	formatDependenciesWithStatus: vi.fn(),
+	displayBanner: vi.fn(),
+	displayTaskList: vi.fn(),
+	startLoadingIndicator: vi.fn(() => ({ stop: vi.fn() })),
+	stopLoadingIndicator: vi.fn(),
+	createProgressBar: vi.fn(() => ' MOCK_PROGRESS_BAR '),
+	getStatusWithColor: vi.fn((status) => status),
+	getComplexityWithColor: vi.fn((score) => `Score: ${score}`),
 	theme: {
-		active: { bold: jest.fn((text) => text) },
-		heading: jest.fn((text) => text),
-		muted: jest.fn((text) => text)
+		active: { bold: vi.fn((text) => text) },
+		heading: vi.fn((text) => text),
+		muted: vi.fn((text) => text)
 	},
 	BORDER_COLOR: 'cyan'
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/dependency-manager.js',
-	() => ({
-		validateAndFixDependencies: jest.fn(),
-		validateTaskDependencies: jest.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({
+	validateAndFixDependencies: vi.fn(),
+	validateTaskDependencies: vi.fn()
+}));
 
 // Mock @tm/core to control task data in tests
-const mockTasksList = jest.fn();
-jest.unstable_mockModule('@tm/core', () => ({
-	createTmCore: jest.fn(async () => ({
+const mockTasksList = vi.fn();
+vi.doMock('@tm/core', () => ({
+	createTmCore: vi.fn(async () => ({
 		tasks: {
 			list: mockTasksList
 		}
@@ -148,14 +143,14 @@ const sampleTasks = {
 
 describe('listTasks', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock console methods to suppress output
-		jest.spyOn(console, 'log').mockImplementation(() => {});
-		jest.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		// Mock process.exit to prevent actual exit
-		jest.spyOn(process, 'exit').mockImplementation((code) => {
+		vi.spyOn(process, 'exit').mockImplementation((code) => {
 			throw new Error(`process.exit: ${code}`);
 		});
 
@@ -173,7 +168,7 @@ describe('listTasks', () => {
 
 	afterEach(() => {
 		// Restore console methods
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	test('should list all tasks when no status filter is provided', async () => {
@@ -740,7 +735,7 @@ describe('listTasks', () => {
 
 	describe('Compact output format', () => {
 		test('should output compact format when outputFormat is compact', async () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 			const tasksPath = 'tasks/tasks.json';
 
 			await listTasks(tasksPath, null, null, false, 'compact', {
@@ -762,7 +757,7 @@ describe('listTasks', () => {
 		});
 
 		test('should format single task compactly', async () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 			const tasksPath = 'tasks/tasks.json';
 
 			await listTasks(tasksPath, null, null, false, 'compact', {
@@ -780,7 +775,7 @@ describe('listTasks', () => {
 		});
 
 		test('should handle compact format with subtasks', async () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 			const tasksPath = 'tasks/tasks.json';
 
 			await listTasks(
@@ -810,7 +805,7 @@ describe('listTasks', () => {
 				tasks: []
 			});
 			readJSON.mockReturnValue({ tasks: [] });
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 			const tasksPath = 'tasks/tasks.json';
 
 			await listTasks(tasksPath, null, null, false, 'compact', {
@@ -855,7 +850,7 @@ describe('listTasks', () => {
 				tasks: tasksWithDeps.tasks
 			});
 			readJSON.mockReturnValue(tasksWithDeps);
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 			const tasksPath = 'tasks/tasks.json';
 
 			await listTasks(tasksPath, null, null, false, 'compact', {
