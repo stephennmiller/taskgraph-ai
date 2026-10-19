@@ -17,11 +17,13 @@ import { BASE_LABEL } from './services/issue-renderer.js';
 import { executePush } from './services/push-executor.js';
 import { planSync } from './services/sync-planner.js';
 import type {
+	GitHubLink,
 	GitHubStatus,
 	PushOptions,
 	PushPlan,
 	PushResult,
-	SyncTask
+	SyncTask,
+	UnlinkResult
 } from './types.js';
 
 export interface GitHubDomainOptions {
@@ -97,6 +99,49 @@ export class GitHubDomain {
 		return { dryRun: false, plan, ...done, orphans: plan.orphans };
 	}
 
+	/**
+	 * Forget the issue a task is linked to. The issue itself is left alone.
+	 * Without a tag the task id must be linked in exactly one tag.
+	 */
+	async unlink(
+		taskId: string,
+		options: { tag?: string } = {}
+	): Promise<UnlinkResult> {
+		const id = String(taskId);
+		const candidates = (await this.loadTasks(options.tag)).filter(
+			(t) => String(t.task.id) === id
+		);
+		if (candidates.length === 0) {
+			throw new TaskGraphError(
+				`Task ${id} not found${options.tag ? ` in tag ${options.tag}` : ''}`,
+				ERROR_CODES.TASK_NOT_FOUND
+			);
+		}
+		const linked = candidates.filter((t) => t.task.metadata?.github);
+		if (linked.length === 0) {
+			throw new TaskGraphError(
+				`Task ${id} is not linked to a GitHub issue`,
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
+		if (linked.length > 1) {
+			throw new TaskGraphError(
+				`Task ${id} is linked in several tags (${linked.map((t) => t.tag).join(', ')}); pass --tag to choose one`,
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
+		const { tag, task } = linked[0];
+		const { github, ...rest } = task.metadata as Record<string, unknown>;
+		const link = github as GitHubLink;
+		await this.requireTasks().update(task.id, { metadata: rest }, tag);
+		return {
+			tag,
+			taskId: id,
+			issueNumber: link.issueNumber,
+			url: link.url
+		};
+	}
+
 	private async prepare(options: PushOptions) {
 		const repo = options.repo ?? (await this.detectRepo());
 		if (!repo) {
@@ -110,7 +155,18 @@ export class GitHubDomain {
 			: new GhCliClient(repo, { cwd: this.projectRoot });
 		const tasks = await this.loadTasks(options.tag);
 		const remote = await client.listIssues(BASE_LABEL);
-		const plan = planSync({
+		const wanted = options.taskIds?.map(String);
+		if (wanted) {
+			const known = new Set(tasks.map((t) => String(t.task.id)));
+			const missing = wanted.filter((id) => !known.has(id));
+			if (missing.length > 0) {
+				throw new TaskGraphError(
+					`Task ${missing.join(', ')} not found`,
+					ERROR_CODES.TASK_NOT_FOUND
+				);
+			}
+		}
+		const full = planSync({
 			repo,
 			tasks,
 			remote,
@@ -118,6 +174,16 @@ export class GitHubDomain {
 			closeOrphans: options.closeOrphans,
 			scopeTags: options.tag ? [options.tag] : undefined
 		});
+		// Plan against every task so unselected ones are not mistaken for
+		// orphans, then keep only the selected steps
+		const plan = wanted
+			? {
+					...full,
+					steps: full.steps.filter(
+						(s) => s.action === 'close' || wanted.includes(s.taskId)
+					)
+				}
+			: full;
 		return { plan, client, tasks };
 	}
 
