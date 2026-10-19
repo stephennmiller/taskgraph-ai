@@ -29,6 +29,9 @@ export {
 	supportsLinks
 } from './formatters/link-formatters.js';
 
+// Brand-colored loading spinner
+export { brandSpinner, createSpinner } from './spinner.js';
+
 // Terminal theme (brand colors)
 export {
 	theme,

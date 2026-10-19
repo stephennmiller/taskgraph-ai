@@ -2,8 +2,12 @@
  * Non-streaming handler for PRD parsing
  */
 
-import ora from 'ora';
 import { generateObjectService } from '../../ai-services-unified.js';
+import {
+	failLoadingIndicator,
+	startLoadingIndicator,
+	succeedLoadingIndicator
+} from '../../ui.js';
 import { LoggingConfig, prdResponseSchema } from './parse-prd-config.js';
 import { estimateTokens } from './parse-prd-helpers.js';
 
@@ -21,7 +25,7 @@ export async function handleNonStreamingService(config, prompts) {
 	// Initialize spinner for CLI
 	let spinner = null;
 	if (config.outputFormat === 'text' && !config.isMCP) {
-		spinner = ora('Parsing PRD and generating tasks...\n').start();
+		spinner = startLoadingIndicator('Parsing PRD and generating tasks...\n');
 	}
 
 	try {
@@ -68,7 +72,7 @@ export async function handleNonStreamingService(config, prompts) {
 		}
 
 		if (spinner) {
-			spinner.succeed('Tasks generated successfully!');
+			succeedLoadingIndicator(spinner, 'Tasks generated successfully!');
 		}
 
 		return {
@@ -78,7 +82,7 @@ export async function handleNonStreamingService(config, prompts) {
 		};
 	} catch (error) {
 		if (spinner) {
-			spinner.fail(`Error parsing PRD: ${error.message}`);
+			failLoadingIndicator(spinner, `Error parsing PRD: ${error.message}`);
 		}
 		throw error;
 	}
