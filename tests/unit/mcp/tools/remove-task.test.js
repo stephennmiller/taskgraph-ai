@@ -10,39 +10,39 @@
  * We do NOT import the real implementation - everything is mocked
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock EVERYTHING
-const mockRemoveTaskDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
+const mockRemoveTaskDirect = vi.fn();
+vi.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	removeTaskDirect: mockRemoveTaskDirect
 }));
 
-const mockHandleApiResult = jest.fn((result) => result);
-const mockWithNormalizedProjectRoot = jest.fn((fn) => fn);
-const mockCreateErrorResponse = jest.fn((msg) => ({
+const mockHandleApiResult = vi.fn((result) => result);
+const mockWithNormalizedProjectRoot = vi.fn((fn) => fn);
+const mockCreateErrorResponse = vi.fn((msg) => ({
 	success: false,
 	error: { code: 'ERROR', message: msg }
 }));
-const mockFindTasksPath = jest.fn(() => '/mock/project/tasks.json');
+const mockFindTasksPath = vi.fn(() => '/mock/project/tasks.json');
 
-jest.mock('../../../../mcp-server/src/tools/utils.js', () => ({
+vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 	handleApiResult: mockHandleApiResult,
 	createErrorResponse: mockCreateErrorResponse,
 	withNormalizedProjectRoot: mockWithNormalizedProjectRoot
 }));
 
-jest.mock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
+vi.mock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
 	findTasksPath: mockFindTasksPath
 }));
 
 // Mock the z object from zod
 const mockZod = {
-	object: jest.fn(() => mockZod),
-	string: jest.fn(() => mockZod),
-	boolean: jest.fn(() => mockZod),
-	optional: jest.fn(() => mockZod),
-	describe: jest.fn(() => mockZod),
+	object: vi.fn(() => mockZod),
+	string: vi.fn(() => mockZod),
+	boolean: vi.fn(() => mockZod),
+	optional: vi.fn(() => mockZod),
+	describe: vi.fn(() => mockZod),
 	_def: {
 		shape: () => ({
 			id: {},
@@ -54,7 +54,7 @@ const mockZod = {
 	}
 };
 
-jest.mock('zod', () => ({
+vi.mock('zod', () => ({
 	z: mockZod
 }));
 
@@ -133,10 +133,10 @@ describe('MCP Tool: remove-task', () => {
 
 	// Create mock logger
 	const mockLogger = {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn()
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn()
 	};
 
 	// Test data
@@ -215,11 +215,11 @@ describe('MCP Tool: remove-task', () => {
 
 	beforeEach(() => {
 		// Reset all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create mock server
 		mockServer = {
-			addTool: jest.fn((config) => {
+			addTool: vi.fn((config) => {
 				executeFunction = config.execute;
 			})
 		};

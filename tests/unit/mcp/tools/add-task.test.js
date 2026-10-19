@@ -9,43 +9,43 @@
  * We do NOT import the real implementation - everything is mocked
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	emptySampleTasks,
 	sampleTasks
 } from '../../../fixtures/sample-tasks.js';
 
 // Mock EVERYTHING
-const mockAddTaskDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
+const mockAddTaskDirect = vi.fn();
+vi.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	addTaskDirect: mockAddTaskDirect
 }));
 
-const mockHandleApiResult = jest.fn((result) => result);
-const mockGetProjectRootFromSession = jest.fn(() => '/mock/project/root');
-const mockCreateErrorResponse = jest.fn((msg) => ({
+const mockHandleApiResult = vi.fn((result) => result);
+const mockGetProjectRootFromSession = vi.fn(() => '/mock/project/root');
+const mockCreateErrorResponse = vi.fn((msg) => ({
 	success: false,
 	error: { code: 'ERROR', message: msg }
 }));
 
-jest.mock('../../../../mcp-server/src/tools/utils.js', () => ({
+vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 	getProjectRootFromSession: mockGetProjectRootFromSession,
 	handleApiResult: mockHandleApiResult,
 	createErrorResponse: mockCreateErrorResponse,
-	createContentResponse: jest.fn((content) => ({
+	createContentResponse: vi.fn((content) => ({
 		success: true,
 		data: content
 	})),
-	executeTaskGraphCommand: jest.fn()
+	executeTaskGraphCommand: vi.fn()
 }));
 
 // Mock the z object from zod
 const mockZod = {
-	object: jest.fn(() => mockZod),
-	string: jest.fn(() => mockZod),
-	boolean: jest.fn(() => mockZod),
-	optional: jest.fn(() => mockZod),
-	describe: jest.fn(() => mockZod),
+	object: vi.fn(() => mockZod),
+	string: vi.fn(() => mockZod),
+	boolean: vi.fn(() => mockZod),
+	optional: vi.fn(() => mockZod),
+	describe: vi.fn(() => mockZod),
 	_def: {
 		shape: () => ({
 			prompt: {},
@@ -58,7 +58,7 @@ const mockZod = {
 	}
 };
 
-jest.mock('zod', () => ({
+vi.mock('zod', () => ({
 	z: mockZod
 }));
 
@@ -112,10 +112,10 @@ describe('MCP Tool: add-task', () => {
 
 	// Create mock logger
 	const mockLogger = {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn()
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn()
 	};
 
 	// Test data
@@ -145,11 +145,11 @@ describe('MCP Tool: add-task', () => {
 
 	beforeEach(() => {
 		// Reset all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create mock server
 		mockServer = {
-			addTool: jest.fn((config) => {
+			addTool: vi.fn((config) => {
 				executeFunction = config.execute;
 			})
 		};
@@ -182,7 +182,7 @@ describe('MCP Tool: add-task', () => {
 		// Setup context
 		const mockContext = {
 			log: mockLogger,
-			reportProgress: jest.fn(),
+			reportProgress: vi.fn(),
 			session: { workingDirectory: '/mock/dir' }
 		};
 
@@ -222,7 +222,7 @@ describe('MCP Tool: add-task', () => {
 		// Setup context
 		const mockContext = {
 			log: mockLogger,
-			reportProgress: jest.fn(),
+			reportProgress: vi.fn(),
 			session: { workingDirectory: '/mock/dir' }
 		};
 
@@ -246,7 +246,7 @@ describe('MCP Tool: add-task', () => {
 		// Setup context
 		const mockContext = {
 			log: mockLogger,
-			reportProgress: jest.fn(),
+			reportProgress: vi.fn(),
 			session: { workingDirectory: '/mock/dir' }
 		};
 
@@ -266,7 +266,7 @@ describe('MCP Tool: add-task', () => {
 		// Setup context
 		const mockContext = {
 			log: mockLogger,
-			reportProgress: jest.fn(),
+			reportProgress: vi.fn(),
 			session: { workingDirectory: '/mock/dir' }
 		};
 
@@ -289,7 +289,7 @@ describe('MCP Tool: add-task', () => {
 		);
 
 		// Reset mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Test with research=false
 		executeFunction(
@@ -314,14 +314,14 @@ describe('MCP Tool: add-task', () => {
 		// Setup context
 		const mockContext = {
 			log: mockLogger,
-			reportProgress: jest.fn(),
+			reportProgress: vi.fn(),
 			session: { workingDirectory: '/mock/dir' }
 		};
 
 		// Test different priority values
 		['high', 'medium', 'low'].forEach((priority) => {
 			// Reset mocks
-			jest.clearAllMocks();
+			vi.clearAllMocks();
 
 			// Execute with specific priority
 			executeFunction(

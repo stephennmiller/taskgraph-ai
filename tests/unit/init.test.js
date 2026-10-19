@@ -1,48 +1,48 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock external modules
-jest.mock('child_process', () => ({
-	execSync: jest.fn()
+vi.mock('child_process', () => ({
+	execSync: vi.fn()
 }));
 
-jest.mock('readline', () => ({
-	createInterface: jest.fn(() => ({
-		question: jest.fn(),
-		close: jest.fn()
+vi.mock('readline', () => ({
+	createInterface: vi.fn(() => ({
+		question: vi.fn(),
+		close: vi.fn()
 	}))
 }));
 
 // Mock figlet for banner display
-jest.mock('figlet', () => ({
+vi.mock('figlet', () => ({
 	default: {
-		textSync: jest.fn(() => 'TaskGraph')
+		textSync: vi.fn(() => 'TaskGraph')
 	}
 }));
 
 // Mock console methods
-jest.mock('console', () => ({
-	log: jest.fn(),
-	info: jest.fn(),
-	warn: jest.fn(),
-	error: jest.fn(),
-	clear: jest.fn()
+vi.mock('console', () => ({
+	log: vi.fn(),
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn(),
+	clear: vi.fn()
 }));
 
 describe('MCP Configuration Handling', () => {
 	let tempDir;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create a temporary directory for testing
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-test-'));
 
 		// Spy on fs methods
-		jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-		jest.spyOn(fs, 'readFileSync').mockImplementation((filePath) => {
+		vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+		vi.spyOn(fs, 'readFileSync').mockImplementation((filePath) => {
 			if (filePath.toString().includes('mcp.json')) {
 				return JSON.stringify({
 					mcpServers: {
@@ -55,7 +55,7 @@ describe('MCP Configuration Handling', () => {
 			}
 			return '{}';
 		});
-		jest.spyOn(fs, 'existsSync').mockImplementation((filePath) => {
+		vi.spyOn(fs, 'existsSync').mockImplementation((filePath) => {
 			// Return true for specific paths to test different scenarios
 			if (filePath.toString().includes('package.json')) {
 				return true;
@@ -63,8 +63,8 @@ describe('MCP Configuration Handling', () => {
 			// Default to false for other paths
 			return false;
 		});
-		jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
-		jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+		vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+		vi.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
 	});
 
 	afterEach(() => {
@@ -248,7 +248,7 @@ describe('MCP Configuration Handling', () => {
 		});
 
 		// Spy to check what's written
-		const writeFileSyncSpy = jest.spyOn(fs, 'writeFileSync');
+		const writeFileSyncSpy = vi.spyOn(fs, 'writeFileSync');
 
 		// Act
 		mockSetupMCPConfiguration(tempDir, 'test-project');

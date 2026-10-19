@@ -10,30 +10,30 @@
  * We do NOT import the real implementation - everything is mocked
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock EVERYTHING
-const mockAnalyzeTaskComplexityDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
+const mockAnalyzeTaskComplexityDirect = vi.fn();
+vi.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	analyzeTaskComplexityDirect: mockAnalyzeTaskComplexityDirect
 }));
 
-const mockHandleApiResult = jest.fn((result) => result);
-const mockGetProjectRootFromSession = jest.fn(() => '/mock/project/root');
-const mockCreateErrorResponse = jest.fn((msg) => ({
+const mockHandleApiResult = vi.fn((result) => result);
+const mockGetProjectRootFromSession = vi.fn(() => '/mock/project/root');
+const mockCreateErrorResponse = vi.fn((msg) => ({
 	success: false,
 	error: { code: 'ERROR', message: msg }
 }));
 
-jest.mock('../../../../mcp-server/src/tools/utils.js', () => ({
+vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 	getProjectRootFromSession: mockGetProjectRootFromSession,
 	handleApiResult: mockHandleApiResult,
 	createErrorResponse: mockCreateErrorResponse,
-	createContentResponse: jest.fn((content) => ({
+	createContentResponse: vi.fn((content) => ({
 		success: true,
 		data: content
 	})),
-	executeTaskGraphCommand: jest.fn()
+	executeTaskGraphCommand: vi.fn()
 }));
 
 // This is a more complex mock of Zod to test actual validation
@@ -147,7 +147,7 @@ const createZodMock = () => {
 // Create our Zod mock
 const mockZod = createZodMock();
 
-jest.mock('zod', () => ({
+vi.mock('zod', () => ({
 	z: mockZod
 }));
 
@@ -204,10 +204,10 @@ describe('MCP Tool: analyze_project_complexity', () => {
 
 	// Create mock logger
 	const mockLogger = {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn()
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn()
 	};
 
 	// Test data
@@ -243,11 +243,11 @@ describe('MCP Tool: analyze_project_complexity', () => {
 
 	beforeEach(() => {
 		// Reset all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create mock server
 		mockServer = {
-			addTool: jest.fn((config) => {
+			addTool: vi.fn((config) => {
 				executeFunction = config.execute;
 			})
 		};
@@ -445,7 +445,7 @@ describe('MCP Tool: analyze_project_complexity', () => {
 		);
 
 		// Reset mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Test with research=false
 		executeFunction(

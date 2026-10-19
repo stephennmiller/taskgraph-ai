@@ -6,8 +6,8 @@ import {
 	describe,
 	expect,
 	it,
-	jest
-} from '@jest/globals';
+	vi
+} from 'vitest';
 
 // Import the actual PromptManager to test with real prompt files
 import { PromptManager } from '../../scripts/modules/prompt-manager.js';
@@ -18,9 +18,9 @@ const originalWarn = console.warn;
 const originalError = console.error;
 
 beforeAll(() => {
-	console.log = jest.fn();
-	console.warn = jest.fn();
-	console.error = jest.fn();
+	console.log = vi.fn();
+	console.warn = vi.fn();
+	console.error = vi.fn();
 });
 
 afterAll(() => {

@@ -5,90 +5,87 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Mock the AI services to avoid real API calls
-jest.unstable_mockModule(
-	'../../scripts/modules/ai-services-unified.js',
-	() => ({
-		streamTextService: jest.fn(),
-		generateObjectService: jest.fn(),
-		streamObjectService: jest.fn().mockImplementation(async () => {
-			return {
-				get partialObjectStream() {
-					return (async function* () {
-						yield { tasks: [] };
-						yield { tasks: [{ id: 1, title: 'Test Task', priority: 'high' }] };
-					})();
-				},
-				object: Promise.resolve({
-					tasks: [{ id: 1, title: 'Test Task', priority: 'high' }]
-				})
-			};
-		})
+vi.doMock('../../scripts/modules/ai-services-unified.js', () => ({
+	streamTextService: vi.fn(),
+	generateObjectService: vi.fn(),
+	streamObjectService: vi.fn().mockImplementation(async () => {
+		return {
+			get partialObjectStream() {
+				return (async function* () {
+					yield { tasks: [] };
+					yield { tasks: [{ id: 1, title: 'Test Task', priority: 'high' }] };
+				})();
+			},
+			object: Promise.resolve({
+				tasks: [{ id: 1, title: 'Test Task', priority: 'high' }]
+			})
+		};
 	})
-);
+}));
 
 // Mock all config-manager exports comprehensively
-jest.unstable_mockModule('../../scripts/modules/config-manager.js', () => ({
-	getDebugFlag: jest.fn(() => false),
-	getDefaultPriority: jest.fn(() => 'medium'),
-	getMainModelId: jest.fn(() => 'test-model'),
-	getResearchModelId: jest.fn(() => 'test-research-model'),
-	getParametersForRole: jest.fn(() => ({ maxTokens: 1000, temperature: 0.7 })),
-	getMainProvider: jest.fn(() => 'anthropic'),
-	getResearchProvider: jest.fn(() => 'perplexity'),
-	getFallbackProvider: jest.fn(() => 'anthropic'),
-	getResponseLanguage: jest.fn(() => 'English'),
-	getDefaultNumTasks: jest.fn(() => 10),
-	getDefaultSubtasks: jest.fn(() => 5),
-	getLogLevel: jest.fn(() => 'info'),
-	getConfig: jest.fn(() => ({})),
-	getAllProviders: jest.fn(() => ['anthropic', 'perplexity']),
+vi.doMock('../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false),
+	getDefaultPriority: vi.fn(() => 'medium'),
+	getMainModelId: vi.fn(() => 'test-model'),
+	getResearchModelId: vi.fn(() => 'test-research-model'),
+	getParametersForRole: vi.fn(() => ({ maxTokens: 1000, temperature: 0.7 })),
+	getMainProvider: vi.fn(() => 'anthropic'),
+	getResearchProvider: vi.fn(() => 'perplexity'),
+	getFallbackProvider: vi.fn(() => 'anthropic'),
+	getResponseLanguage: vi.fn(() => 'English'),
+	getDefaultNumTasks: vi.fn(() => 10),
+	getDefaultSubtasks: vi.fn(() => 5),
+	getLogLevel: vi.fn(() => 'info'),
+	getConfig: vi.fn(() => ({})),
+	getAllProviders: vi.fn(() => ['anthropic', 'perplexity']),
 	MODEL_MAP: {},
 	VALID_PROVIDERS: ['anthropic', 'perplexity'],
-	validateProvider: jest.fn(() => true),
-	validateProviderModelCombination: jest.fn(() => true),
-	isApiKeySet: jest.fn(() => true),
-	hasCodebaseAnalysis: jest.fn(() => false)
+	validateProvider: vi.fn(() => true),
+	validateProviderModelCombination: vi.fn(() => true),
+	isApiKeySet: vi.fn(() => true),
+	hasCodebaseAnalysis: vi.fn(() => false)
 }));
 
 // Mock utils comprehensively to prevent CLI behavior
-jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
-	log: jest.fn(),
-	writeJSON: jest.fn(),
-	enableSilentMode: jest.fn(),
-	disableSilentMode: jest.fn(),
-	isSilentMode: jest.fn(() => false),
-	getCurrentTag: jest.fn(() => 'master'),
-	ensureTagMetadata: jest.fn(),
-	readJSON: jest.fn(() => ({ master: { tasks: [] } })),
-	findProjectRoot: jest.fn(() => '/tmp/test'),
-	resolveEnvVariable: jest.fn(() => 'mock-key'),
-	findTaskById: jest.fn(() => null),
-	findTaskByPattern: jest.fn(() => []),
-	validateTaskId: jest.fn(() => true),
-	createTask: jest.fn(() => ({ id: 1, title: 'Mock Task' })),
-	sortByDependencies: jest.fn((tasks) => tasks),
-	isEmpty: jest.fn(() => false),
-	truncate: jest.fn((text) => text),
-	slugify: jest.fn((text) => text.toLowerCase()),
-	getTagFromPath: jest.fn(() => 'master'),
-	isValidTag: jest.fn(() => true),
-	migrateToTaggedFormat: jest.fn(() => ({ master: { tasks: [] } })),
-	performCompleteTagMigration: jest.fn(),
-	resolveCurrentTag: jest.fn(() => 'master'),
-	getDefaultTag: jest.fn(() => 'master'),
-	performMigrationIfNeeded: jest.fn()
+vi.doMock('../../scripts/modules/utils.js', () => ({
+	log: vi.fn(),
+	writeJSON: vi.fn(),
+	enableSilentMode: vi.fn(),
+	disableSilentMode: vi.fn(),
+	isSilentMode: vi.fn(() => false),
+	getCurrentTag: vi.fn(() => 'master'),
+	ensureTagMetadata: vi.fn(),
+	readJSON: vi.fn(() => ({ master: { tasks: [] } })),
+	findProjectRoot: vi.fn(() => '/tmp/test'),
+	resolveEnvVariable: vi.fn(() => 'mock-key'),
+	findTaskById: vi.fn(() => null),
+	findTaskByPattern: vi.fn(() => []),
+	validateTaskId: vi.fn(() => true),
+	createTask: vi.fn(() => ({ id: 1, title: 'Mock Task' })),
+	sortByDependencies: vi.fn((tasks) => tasks),
+	isEmpty: vi.fn(() => false),
+	truncate: vi.fn((text) => text),
+	slugify: vi.fn((text) => text.toLowerCase()),
+	getTagFromPath: vi.fn(() => 'master'),
+	isValidTag: vi.fn(() => true),
+	migrateToTaggedFormat: vi.fn(() => ({ master: { tasks: [] } })),
+	performCompleteTagMigration: vi.fn(),
+	resolveCurrentTag: vi.fn(() => 'master'),
+	getDefaultTag: vi.fn(() => 'master'),
+	performMigrationIfNeeded: vi.fn()
 }));
 
 // Mock prompt manager
-jest.unstable_mockModule('../../scripts/modules/prompt-manager.js', () => ({
-	getPromptManager: jest.fn(() => ({
-		loadPrompt: jest.fn(() => ({
+vi.doMock('../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn(() => ({
+		loadPrompt: vi.fn(() => ({
 			systemPrompt: 'Test system prompt',
 			userPrompt: 'Test user prompt'
 		}))
@@ -96,15 +93,15 @@ jest.unstable_mockModule('../../scripts/modules/prompt-manager.js', () => ({
 }));
 
 // Mock progress/UI components to prevent real CLI UI
-jest.unstable_mockModule('../../src/progress/parse-prd-tracker.js', () => ({
-	createParsePrdTracker: jest.fn(() => ({
-		start: jest.fn(),
-		stop: jest.fn(),
-		cleanup: jest.fn(),
-		addTaskLine: jest.fn(),
-		updateTokens: jest.fn(),
-		complete: jest.fn(),
-		getSummary: jest.fn().mockReturnValue({
+vi.doMock('../../src/progress/parse-prd-tracker.js', () => ({
+	createParsePrdTracker: vi.fn(() => ({
+		start: vi.fn(),
+		stop: vi.fn(),
+		cleanup: vi.fn(),
+		addTaskLine: vi.fn(),
+		updateTokens: vi.fn(),
+		complete: vi.fn(),
+		getSummary: vi.fn().mockReturnValue({
 			taskPriorities: { high: 0, medium: 0, low: 0 },
 			elapsedTime: 0,
 			actionVerb: 'generated'
@@ -112,17 +109,17 @@ jest.unstable_mockModule('../../src/progress/parse-prd-tracker.js', () => ({
 	}))
 }));
 
-jest.unstable_mockModule('../../src/ui/parse-prd.js', () => ({
-	displayParsePrdStart: jest.fn(),
-	displayParsePrdSummary: jest.fn()
+vi.doMock('../../src/ui/parse-prd.js', () => ({
+	displayParsePrdStart: vi.fn(),
+	displayParsePrdSummary: vi.fn()
 }));
 
-jest.unstable_mockModule('../../scripts/modules/ui.js', () => ({
-	displayAiUsageSummary: jest.fn()
+vi.doMock('../../scripts/modules/ui.js', () => ({
+	displayAiUsageSummary: vi.fn()
 }));
 
 // Mock stream parser
-jest.unstable_mockModule('../../src/utils/stream-parser.js', () => {
+vi.doMock('../../src/utils/stream-parser.js', () => {
 	// Define mock StreamingError class
 	class StreamingError extends Error {
 		constructor(message, code) {
@@ -140,57 +137,57 @@ jest.unstable_mockModule('../../src/utils/stream-parser.js', () => {
 	};
 
 	return {
-		parseStream: jest.fn(),
+		parseStream: vi.fn(),
 		StreamingError,
 		STREAMING_ERROR_CODES
 	};
 });
 
 // Mock other potential UI elements
-jest.unstable_mockModule('ora', () => ({
-	default: jest.fn(() => ({
-		start: jest.fn(),
-		stop: jest.fn(),
-		succeed: jest.fn(),
-		fail: jest.fn()
+vi.doMock('ora', () => ({
+	default: vi.fn(() => ({
+		start: vi.fn(),
+		stop: vi.fn(),
+		succeed: vi.fn(),
+		fail: vi.fn()
 	}))
 }));
 
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	default: {
-		red: jest.fn((text) => text),
-		green: jest.fn((text) => text),
-		blue: jest.fn((text) => text),
-		yellow: jest.fn((text) => text),
-		cyan: jest.fn((text) => text),
+		red: vi.fn((text) => text),
+		green: vi.fn((text) => text),
+		blue: vi.fn((text) => text),
+		yellow: vi.fn((text) => text),
+		cyan: vi.fn((text) => text),
 		white: {
-			bold: jest.fn((text) => text)
+			bold: vi.fn((text) => text)
 		}
 	},
-	red: jest.fn((text) => text),
-	green: jest.fn((text) => text),
-	blue: jest.fn((text) => text),
-	yellow: jest.fn((text) => text),
-	cyan: jest.fn((text) => text),
+	red: vi.fn((text) => text),
+	green: vi.fn((text) => text),
+	blue: vi.fn((text) => text),
+	yellow: vi.fn((text) => text),
+	cyan: vi.fn((text) => text),
 	white: {
-		bold: jest.fn((text) => text)
+		bold: vi.fn((text) => text)
 	}
 }));
 
 // Mock boxen
-jest.unstable_mockModule('boxen', () => ({
-	default: jest.fn((content) => content)
+vi.doMock('boxen', () => ({
+	default: vi.fn((content) => content)
 }));
 
 // Mock constants
-jest.unstable_mockModule('../../src/constants/task-priority.js', () => ({
+vi.doMock('../../src/constants/task-priority.js', () => ({
 	DEFAULT_TASK_PRIORITY: 'medium',
 	TASK_PRIORITY_OPTIONS: ['low', 'medium', 'high']
 }));
 
 // Mock UI indicators
-jest.unstable_mockModule('../../src/ui/indicators.js', () => ({
-	getPriorityIndicators: jest.fn(() => ({
+vi.doMock('../../src/ui/indicators.js', () => ({
+	getPriorityIndicators: vi.fn(() => ({
 		high: '🔴',
 		medium: '🟡',
 		low: '🟢'
@@ -277,11 +274,11 @@ Build a simple task management application.
 		});
 
 		// Mock process.exit to prevent actual exit
-		jest.spyOn(process, 'exit').mockImplementation(() => undefined);
+		vi.spyOn(process, 'exit').mockImplementation(() => undefined);
 
 		// Mock console methods to prevent output
-		jest.spyOn(console, 'log').mockImplementation(() => {});
-		jest.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 	});
 
 	afterAll(() => {
@@ -289,11 +286,11 @@ Build a simple task management application.
 		fs.rmSync(tempDir, { recursive: true, force: true });
 
 		// Restore mocks
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock successful AI response
 		generateObjectService.mockResolvedValue({
@@ -319,11 +316,11 @@ Build a simple task management application.
 		const result = await parsePRD(testFiles.txt, outputPath, 2, {
 			force: true,
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			},
 			projectRoot: tempDir
 		});
@@ -344,11 +341,11 @@ Build a simple task management application.
 		const result = await parsePRD(testFiles.md, outputPath, 2, {
 			force: true,
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			},
 			projectRoot: tempDir
 		});
@@ -368,11 +365,11 @@ Build a simple task management application.
 		const result = await parsePRD(testFiles.rst, outputPath, 2, {
 			force: true,
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			},
 			projectRoot: tempDir
 		});
@@ -388,11 +385,11 @@ Build a simple task management application.
 		const result = await parsePRD(testFiles.noExt, outputPath, 2, {
 			force: true,
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			},
 			projectRoot: tempDir
 		});
@@ -416,11 +413,11 @@ Build a simple task management application.
 			await parsePRD(filePath, outputPath, 2, {
 				force: true,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				},
 				projectRoot: testSubDir
 			});
@@ -450,11 +447,11 @@ Build a simple task management application.
 			parsePRD(nonExistentFile, outputPath, 2, {
 				force: true,
 				mcpLog: {
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					debug: jest.fn(),
-					success: jest.fn()
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					debug: vi.fn(),
+					success: vi.fn()
 				},
 				projectRoot: tempDir
 			})
