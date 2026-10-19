@@ -167,6 +167,7 @@ vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
 const mockProgress = {
 	update: vi.fn(),
 	succeed: vi.fn(),
+	fail: vi.fn(),
 	stop: vi.fn(),
 	printedCount: 0
 };
@@ -184,6 +185,7 @@ vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 	getDebugFlag: vi.fn(() => false),
 	getMainModelId: vi.fn(() => 'claude-3-5-sonnet'),
 	getResearchModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getFallbackModelId: vi.fn(() => 'claude-3-5-sonnet'),
 	getParametersForRole: vi.fn(() => ({
 		provider: 'anthropic',
 		modelId: 'claude-3-5-sonnet'
@@ -246,9 +248,11 @@ vi.doMock('path', () => ({
 	default: {
 		dirname: vi.fn(),
 		basename: vi.fn((p) => String(p).split('/').pop()),
+		relative: vi.fn((from, to) => to),
 		join: vi.fn((dir, file) => `${dir}/${file}`)
 	},
 	basename: vi.fn((p) => String(p).split('/').pop()),
+	relative: vi.fn((from, to) => to),
 	dirname: vi.fn(),
 	join: vi.fn((dir, file) => `${dir}/${file}`)
 }));
@@ -1046,6 +1050,45 @@ describe('parsePRD', () => {
 			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
 
 			expect(mockProgress.stop).toHaveBeenCalled();
+			expect(generateObjectService).toHaveBeenCalled();
+			expect(result.success).toBe(true);
+		});
+
+		test('should not ask again when the provider refuses and every role uses the same model', async () => {
+			fs.default.existsSync.mockImplementation((p) => p === 'tasks');
+			const { APICallError } = await import('ai');
+			streamObjectService.mockRejectedValueOnce(
+				new APICallError({
+					message: 'model not found',
+					url: 'claude-code-cli://command',
+					requestBodyValues: {}
+				})
+			);
+
+			await expect(
+				parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3)
+			).rejects.toThrow('model not found');
+			expect(generateObjectService).not.toHaveBeenCalled();
+			expect(mockProgress.fail).toHaveBeenCalled();
+		});
+
+		test('should try the one-shot request when a fallback role uses another model', async () => {
+			fs.default.existsSync.mockImplementation((p) => p === 'tasks');
+			const { APICallError } = await import('ai');
+			const { getFallbackModelId } = await import(
+				'../../../../../scripts/modules/config-manager.js'
+			);
+			getFallbackModelId.mockReturnValueOnce('haiku');
+			streamObjectService.mockRejectedValueOnce(
+				new APICallError({
+					message: 'model not found',
+					url: 'claude-code-cli://command',
+					requestBodyValues: {}
+				})
+			);
+
+			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+
 			expect(generateObjectService).toHaveBeenCalled();
 			expect(result.success).toBe(true);
 		});

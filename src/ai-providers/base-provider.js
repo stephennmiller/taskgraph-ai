@@ -445,7 +445,11 @@ export class BaseAIProvider {
 				maxTokens: params.maxTokens,
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
-					: {})
+					: {}),
+				// The default prints the whole error object to the terminal; callers
+				// already get the error from the stream's promises
+				onError: ({ error }) =>
+					log('debug', `${this.name} stream error: ${error?.message ?? error}`)
 			});
 
 			log(

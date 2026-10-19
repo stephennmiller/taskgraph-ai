@@ -7,6 +7,13 @@
  */
 
 import path from 'path';
+import { APICallError } from 'ai';
+import chalk from 'chalk';
+import {
+	getFallbackModelId,
+	getMainModelId,
+	getResearchModelId
+} from '../../config-manager.js';
 import {
 	generateObjectService,
 	logAiUsage,
@@ -59,13 +66,22 @@ export async function handleNonStreamingService(
 			const result = await streamTasks(config, prompts, progress);
 			return { ...result, estimatedInputTokens };
 		} catch (error) {
+			// The provider refused (bad model, sign-in, limits). The one-shot path
+			// would retry the same model and fail again, slower; it only helps
+			// when another role is set to a different model
+			if (APICallError.isInstance(error) && !hasOtherModel(config)) {
+				progress?.fail("Couldn't generate tasks");
+				throw error;
+			}
 			progress?.stop();
 			logger.report(
 				`Streaming task generation failed (${error.message}); retrying in one request`,
 				'debug'
 			);
 			if (progress?.printedCount) {
-				console.log('Starting over without live progress…');
+				console.log(
+					`${chalk.yellow('⚠')} Live output stopped. Asking Claude again in one request; the final tasks may differ from the ones above.`
+				);
 			}
 		}
 	}
@@ -170,10 +186,26 @@ async function generateTasks(config, prompts, isCli) {
 		return { parsedTasks: generatedData.tasks, aiServiceResponse };
 	} catch (error) {
 		if (spinner) {
-			failLoadingIndicator(spinner, `Error parsing PRD: ${error.message}`);
+			// The reason is printed once, by the command
+			failLoadingIndicator(spinner, "Couldn't generate tasks");
 		}
 		throw error;
 	}
+}
+
+/** Whether a fallback role would try a different model than the one that failed */
+function hasOtherModel(config) {
+	const root = config.projectRoot;
+	const failed = config.research
+		? getResearchModelId(root)
+		: getMainModelId(root);
+	return [
+		getMainModelId(root),
+		getFallbackModelId(root),
+		getResearchModelId(root)
+	]
+		.filter(Boolean)
+		.some((model) => model !== failed);
 }
 
 function serviceParams(config, prompts) {

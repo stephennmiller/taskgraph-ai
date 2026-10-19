@@ -108,13 +108,12 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			tagInfo: serviceResult.aiServiceResponse?.tagInfo
 		};
 	} catch (error) {
-		logger.report(`Error parsing PRD: ${error.message}`, 'error');
-
-		if (!config.isMCP) {
-			console.error(chalk.red(`Error: ${error.message}`));
-			if (getDebugFlag(config.projectRoot)) {
-				console.error(error);
-			}
+		// In the terminal the command prints the reason once; repeating it here
+		// showed the same message three times
+		if (config.isMCP) {
+			logger.report(`Error parsing PRD: ${error.message}`, 'error');
+		} else if (getDebugFlag(config.projectRoot)) {
+			console.error(error);
 		}
 		throw error;
 	}

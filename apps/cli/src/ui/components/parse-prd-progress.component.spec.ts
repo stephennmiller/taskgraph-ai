@@ -2,6 +2,7 @@ import { PassThrough } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
 	completedTaskCount,
+	formatDuration,
 	formatElapsed,
 	ParsePrdProgress
 } from './parse-prd-progress.component.js';
@@ -42,6 +43,14 @@ describe('formatElapsed', () => {
 	});
 });
 
+describe('formatDuration', () => {
+	it('reads naturally in a sentence', () => {
+		expect(formatDuration(43_400)).toBe('43s');
+		expect(formatDuration(87_000)).toBe('1m 27s');
+		expect(formatDuration(120_000)).toBe('2m');
+	});
+});
+
 describe('ParsePrdProgress', () => {
 	let progress: ParsePrdProgress | undefined;
 	afterEach(() => progress?.stop());
@@ -70,7 +79,7 @@ describe('ParsePrdProgress', () => {
 			'✓ 7  Scaffold',
 			'✓ 8  Schema',
 			'✓ 9  Search',
-			'✓ 3 tasks in 0:48'
+			'✓ 3 tasks in 48s'
 		]);
 		expect(progress.printedCount).toBe(3);
 	});
@@ -93,6 +102,14 @@ describe('ParsePrdProgress', () => {
 		expect(line).toMatch(/^✓ 1 {2}A very long/);
 		expect(line.endsWith('…')).toBe(true);
 		expect(line.length).toBeLessThanOrEqual(80);
+	});
+
+	it('fits task lines to a narrow terminal', () => {
+		const { stream, lines } = capture();
+		Object.assign(stream, { columns: 50 });
+		progress = new ParsePrdProgress({ prdName: 'prd.md', stream }).start();
+		progress.succeed({ tasks: [{ title: 'word '.repeat(40) }] });
+		expect(lines()[1].length).toBeLessThanOrEqual(50);
 	});
 
 	it('ends with ✗ and the message on failure', () => {

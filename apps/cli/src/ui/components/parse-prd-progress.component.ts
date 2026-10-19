@@ -55,6 +55,15 @@ export function formatElapsed(ms: number): string {
 	return `${minutes}:${seconds}`;
 }
 
+/** For sentences: 43s, 1m 27s */
+export function formatDuration(ms: number): string {
+	const total = Math.max(0, Math.round(ms / 1000));
+	const minutes = Math.floor(total / 60);
+	const seconds = total % 60;
+	if (minutes === 0) return `${seconds}s`;
+	return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+}
+
 function clip(text: string, max: number): string {
 	const clean = text.replace(/\s+/g, ' ').trim();
 	return clean.length > max ? `${clean.slice(0, max - 1).trimEnd()}…` : clean;
@@ -109,7 +118,8 @@ export class ParsePrdProgress {
 		if (final) this.current = final;
 		this.printCompleted(completedTaskCount(this.current, true));
 		const n = this.printed;
-		const message = `${n} ${n === 1 ? 'task' : 'tasks'} in ${this.elapsed()}`;
+		const took = formatDuration(this.options.now() - this.startedAt);
+		const message = `${n} ${n === 1 ? 'task' : 'tasks'} in ${took}`;
 		this.stop();
 		this.write(`${chalk.green('✓')} ${chalk.bold(message)}\n`);
 	}
@@ -140,7 +150,8 @@ export class ParsePrdProgress {
 		while (this.printed < upTo) {
 			const task = tasks[this.printed];
 			const id = this.options.startId + this.printed;
-			const title = clip(task?.title ?? '', 72);
+			// "✓ 12 " is 6 columns; keep each task on one line
+			const title = clip(task?.title ?? '', Math.max(20, this.columns - 7));
 			this.persist(
 				`${chalk.green('✓')} ${theme.brand(String(id).padEnd(3))}${title}`
 			);
@@ -174,9 +185,15 @@ export class ParsePrdProgress {
 			const of = numTasks ? ` of ${numTasks}` : '';
 			const title = this.current?.tasks?.[writing - 1]?.title;
 			text = `Writing task ${writing}${of}`;
-			if (title) text += theme.muted(` · ${clip(title, 48)}`);
+			// Spinner, text, " · ", title, two spaces, clock: one line, never wrapped
+			const room = this.columns - 2 - text.length - 3 - 2 - 6;
+			if (title && room >= 12) text += theme.muted(` · ${clip(title, room)}`);
 		}
 		return `${text}  ${theme.muted(this.elapsed())}`;
+	}
+
+	private get columns(): number {
+		return this.options.stream.columns || 80;
 	}
 
 	private elapsed(): string {

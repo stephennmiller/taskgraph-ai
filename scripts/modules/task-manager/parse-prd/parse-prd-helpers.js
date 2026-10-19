@@ -445,21 +445,26 @@ export function displayNonStreamingCliOutput({
 	tasksPath,
 	aiServiceResponse
 }) {
-	console.log(
-		boxen(
-			chalk.green(
-				`Successfully generated ${processedTasks.length} new tasks${research ? ' with research-backed analysis' : ''}. Total tasks in ${tasksPath}: ${finalTasks.length}`
-			),
-			{ padding: 1, borderColor: 'green', borderStyle: 'round' }
-		)
-	);
+	// The progress line already said how many tasks; say where they went
+	const where = path.relative(process.cwd(), tasksPath) || tasksPath;
+	const total =
+		finalTasks.length > processedTasks.length
+			? ` · ${finalTasks.length} tasks in total`
+			: '';
+	const researched = research ? ' · research-backed' : '';
+	console.log(theme.muted(`Saved to ${where}${total}${researched}`));
 
+	const step = (command, what) =>
+		`${chalk.yellow(command.padEnd(28))}${theme.muted(what)}`;
 	console.log(
 		boxen(
-			theme.text.bold('Next Steps:') +
+			theme.text.bold('Next steps') +
 				'\n\n' +
-				`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph list')} to view all tasks\n` +
-				`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down a task into subtasks`,
+				[
+					step('taskgraph next', 'the task to start with'),
+					step('taskgraph graph', 'how the tasks depend on each other'),
+					step('taskgraph expand --id=<id>', 'split a task into subtasks')
+				].join('\n'),
 			{
 				padding: 1,
 				borderColor: 'cyan',
