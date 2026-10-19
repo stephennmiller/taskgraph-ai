@@ -4,7 +4,7 @@
  */
 
 // Mock the moveTask function from the core module
-const mockMoveTask = jest
+const mockMoveTask = vi
 	.fn()
 	.mockImplementation(
 		async (tasksPath, sourceId, destinationId, generateFiles, options) => {
@@ -20,7 +20,7 @@ const mockMoveTask = jest
 	);
 
 // Mock the moveTaskDirect function
-const mockMoveTaskDirect = jest
+const mockMoveTaskDirect = vi
 	.fn()
 	.mockImplementation(async (args, log, context = {}) => {
 		// Validate required parameters
@@ -58,7 +58,7 @@ const mockMoveTaskDirect = jest
 	});
 
 // Mock the moveTaskCrossTagDirect function
-const mockMoveTaskCrossTagDirect = jest
+const mockMoveTaskCrossTagDirect = vi
 	.fn()
 	.mockImplementation(async (args, log, context = {}) => {
 		// Validate required parameters
@@ -117,13 +117,13 @@ const mockMoveTaskCrossTagDirect = jest
 	});
 
 // Mock the registerMoveTaskTool function
-const mockRegisterMoveTaskTool = jest.fn().mockImplementation((server) => {
+const mockRegisterMoveTaskTool = vi.fn().mockImplementation((server) => {
 	// Simulate tool registration
 	server.addTool({
 		name: 'move_task',
 		description: 'Move a task or subtask to a new position',
 		parameters: {},
-		execute: jest.fn()
+		execute: vi.fn()
 	});
 });
 

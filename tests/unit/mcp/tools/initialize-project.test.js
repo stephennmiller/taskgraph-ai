@@ -10,36 +10,36 @@
  * We do NOT import the real implementation - everything is mocked
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock child_process.execSync
-const mockExecSync = jest.fn();
-jest.mock('child_process', () => ({
+const mockExecSync = vi.fn();
+vi.mock('child_process', () => ({
 	execSync: mockExecSync
 }));
 
 // Mock the utility functions
-const mockCreateContentResponse = jest.fn((content) => ({
+const mockCreateContentResponse = vi.fn((content) => ({
 	content
 }));
 
-const mockCreateErrorResponse = jest.fn((message, details) => ({
+const mockCreateErrorResponse = vi.fn((message, details) => ({
 	error: { message, details }
 }));
 
-jest.mock('../../../../mcp-server/src/tools/utils.js', () => ({
+vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 	createContentResponse: mockCreateContentResponse,
 	createErrorResponse: mockCreateErrorResponse
 }));
 
 // Mock the z object from zod
 const mockZod = {
-	object: jest.fn(() => mockZod),
-	string: jest.fn(() => mockZod),
-	boolean: jest.fn(() => mockZod),
-	optional: jest.fn(() => mockZod),
-	default: jest.fn(() => mockZod),
-	describe: jest.fn(() => mockZod),
+	object: vi.fn(() => mockZod),
+	string: vi.fn(() => mockZod),
+	boolean: vi.fn(() => mockZod),
+	optional: vi.fn(() => mockZod),
+	default: vi.fn(() => mockZod),
+	describe: vi.fn(() => mockZod),
 	_def: {
 		shape: () => ({
 			projectName: {},
@@ -53,7 +53,7 @@ const mockZod = {
 	}
 };
 
-jest.mock('zod', () => ({
+vi.mock('zod', () => ({
 	z: mockZod
 }));
 
@@ -133,19 +133,19 @@ describe('Initialize Project MCP Tool', () => {
 	let executeFunction;
 
 	const mockLogger = {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn()
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn()
 	};
 
 	beforeEach(() => {
 		// Clear all mocks before each test
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create mock server
 		mockServer = {
-			addTool: jest.fn((config) => {
+			addTool: vi.fn((config) => {
 				executeFunction = config.execute;
 			})
 		};

@@ -5,52 +5,52 @@
  * and passes arguments correctly to the underlying direct function.
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	emptySampleTasks,
 	sampleTasks
 } from '../../../fixtures/sample-tasks.js';
 
 // Mock EVERYTHING
-const mockListTasksDirect = jest.fn();
-jest.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
+const mockListTasksDirect = vi.fn();
+vi.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
 	listTasksDirect: mockListTasksDirect
 }));
 
-const mockHandleApiResult = jest.fn((result) => result);
-const mockWithNormalizedProjectRoot = jest.fn((executeFn) => executeFn);
-const mockCreateErrorResponse = jest.fn((msg) => ({
+const mockHandleApiResult = vi.fn((result) => result);
+const mockWithNormalizedProjectRoot = vi.fn((executeFn) => executeFn);
+const mockCreateErrorResponse = vi.fn((msg) => ({
 	success: false,
 	error: { code: 'ERROR', message: msg }
 }));
 
-const mockResolveTasksPath = jest.fn(() => '/mock/project/tasks.json');
-const mockResolveComplexityReportPath = jest.fn(
+const mockResolveTasksPath = vi.fn(() => '/mock/project/tasks.json');
+const mockResolveComplexityReportPath = vi.fn(
 	() => '/mock/project/complexity-report.json'
 );
 
-jest.mock('../../../../mcp-server/src/tools/utils.js', () => ({
+vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 	withNormalizedProjectRoot: mockWithNormalizedProjectRoot,
 	handleApiResult: mockHandleApiResult,
 	createErrorResponse: mockCreateErrorResponse,
-	createContentResponse: jest.fn((content) => ({
+	createContentResponse: vi.fn((content) => ({
 		success: true,
 		data: content
 	}))
 }));
 
-jest.mock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
+vi.mock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
 	resolveTasksPath: mockResolveTasksPath,
 	resolveComplexityReportPath: mockResolveComplexityReportPath
 }));
 
 // Mock the z object from zod
 const mockZod = {
-	object: jest.fn(() => mockZod),
-	string: jest.fn(() => mockZod),
-	boolean: jest.fn(() => mockZod),
-	optional: jest.fn(() => mockZod),
-	describe: jest.fn(() => mockZod),
+	object: vi.fn(() => mockZod),
+	string: vi.fn(() => mockZod),
+	boolean: vi.fn(() => mockZod),
+	optional: vi.fn(() => mockZod),
+	describe: vi.fn(() => mockZod),
 	_def: {
 		shape: () => ({
 			status: {},
@@ -62,7 +62,7 @@ const mockZod = {
 	}
 };
 
-jest.mock('zod', () => ({
+vi.mock('zod', () => ({
 	z: mockZod
 }));
 
@@ -131,10 +131,10 @@ describe('MCP Tool: get-tasks', () => {
 	let executeFunction;
 
 	const mockLogger = {
-		debug: jest.fn(),
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn()
+		debug: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn()
 	};
 
 	// Sample response data with different statuses for testing
@@ -163,10 +163,10 @@ describe('MCP Tool: get-tasks', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		mockServer = {
-			addTool: jest.fn((config) => {
+			addTool: vi.fn((config) => {
 				executeFunction = config.execute;
 			})
 		};
@@ -279,7 +279,7 @@ describe('MCP Tool: get-tasks', () => {
 			mockLogger
 		);
 
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Test with withSubtasks=false
 		executeFunction(

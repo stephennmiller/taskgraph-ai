@@ -1,7 +1,7 @@
 /**
  * Tests for the stripAnsiCodes utility function
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Import the module under test
 const { stripAnsiCodes } = await import('../../scripts/modules/utils.js');

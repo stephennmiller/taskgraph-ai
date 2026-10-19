@@ -1,31 +1,25 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mocks
-const mockFindTasksPath = jest
+const mockFindTasksPath = vi
 	.fn()
 	.mockReturnValue('/test/path/.taskgraph/tasks/tasks.json');
-jest.unstable_mockModule(
-	'../../../../mcp-server/src/core/utils/path-utils.js',
-	() => ({
-		findTasksPath: mockFindTasksPath
-	})
-);
+vi.doMock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
+	findTasksPath: mockFindTasksPath
+}));
 
-const mockEnableSilentMode = jest.fn();
-const mockDisableSilentMode = jest.fn();
-jest.unstable_mockModule('../../../../scripts/modules/utils.js', () => ({
+const mockEnableSilentMode = vi.fn();
+const mockDisableSilentMode = vi.fn();
+vi.doMock('../../../../scripts/modules/utils.js', () => ({
 	enableSilentMode: mockEnableSilentMode,
 	disableSilentMode: mockDisableSilentMode
 }));
 
 // Spyable mock for moveTasksBetweenTags
-const mockMoveTasksBetweenTags = jest.fn();
-jest.unstable_mockModule(
-	'../../../../scripts/modules/task-manager/move-task.js',
-	() => ({
-		moveTasksBetweenTags: mockMoveTasksBetweenTags
-	})
-);
+const mockMoveTasksBetweenTags = vi.fn();
+vi.doMock('../../../../scripts/modules/task-manager/move-task.js', () => ({
+	moveTasksBetweenTags: mockMoveTasksBetweenTags
+}));
 
 // Import after mocks
 const { moveTaskCrossTagDirect } = await import(
@@ -33,10 +27,10 @@ const { moveTaskCrossTagDirect } = await import(
 );
 
 describe('MCP Cross-Tag Move Direct Function - options & suggestions', () => {
-	const mockLog = { info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+	const mockLog = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	it('passes only withDependencies/ignoreDependencies (no force) to core', async () => {
