@@ -45,3 +45,25 @@ test('error message explains how to split', () => {
 	assert.match(msg, /re-export/);
 	assert.match(msg, /--no-verify/);
 });
+
+test('allows the listed legacy test files but still checks their neighbors', () => {
+	const big = blobOf(MAX_TOKENS * 4 + 100);
+	for (const p of [
+		'tests/unit/config-manager.test.js',
+		'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
+		'tests/integration/mcp-server/direct-functions.test.js',
+		'.claude/rules/tests.md',
+		'.claude/rules/new-features.md'
+	]) {
+		assert.ok(isIgnored(p), p);
+		assert.deepEqual(run({ [p]: big }), []);
+	}
+	for (const p of [
+		'tests/unit/new-thing.test.js',
+		'tests/unit/scripts/modules/task-manager/brand-new.test.js',
+		'packages/tm-core/tests/unit/config-manager.test.js'
+	]) {
+		assert.ok(!isIgnored(p), p);
+		assert.deepEqual(run({ [p]: big }), [p]);
+	}
+});
