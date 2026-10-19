@@ -1,19 +1,19 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Mock dependencies before importing
 const mockUtils = {
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	findProjectRoot: jest.fn(() => '/test/project/root'),
-	log: jest.fn(),
-	setTasksForTag: jest.fn(),
-	traverseDependencies: jest.fn((sourceTasks, allTasks, options = {}) => {
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	findProjectRoot: vi.fn(() => '/test/project/root'),
+	log: vi.fn(),
+	setTasksForTag: vi.fn(),
+	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => {
 		// Mock realistic dependency behavior for testing
 		const { direction = 'forward' } = options;
 
@@ -48,56 +48,51 @@ const mockUtils = {
 };
 
 // Mock the utils module
-jest.unstable_mockModule('../../scripts/modules/utils.js', () => mockUtils);
+vi.doMock('../../scripts/modules/utils.js', () => mockUtils);
 
 // Mock other dependencies
-jest.unstable_mockModule(
-	'../../scripts/modules/task-manager/is-task-dependent.js',
-	() => ({
-		default: jest.fn(() => false)
-	})
-);
+vi.doMock('../../scripts/modules/task-manager/is-task-dependent.js', () => ({
+	default: vi.fn(() => false)
+}));
 
-jest.unstable_mockModule('../../scripts/modules/dependency-manager.js', () => ({
-	findCrossTagDependencies: jest.fn(() => {
+vi.doMock('../../scripts/modules/dependency-manager.js', () => ({
+	findCrossTagDependencies: vi.fn(() => {
 		// Since dependencies can only exist within the same tag,
 		// this function should never find any cross-tag conflicts
 		return [];
 	}),
-	getDependentTaskIds: jest.fn(
-		(sourceTasks, crossTagDependencies, allTasks) => {
-			// Since we now use findAllDependenciesRecursively in the actual implementation,
-			// this mock simulates finding all dependencies recursively within the same tag
-			const dependentIds = new Set();
-			const processedIds = new Set();
+	getDependentTaskIds: vi.fn((sourceTasks, crossTagDependencies, allTasks) => {
+		// Since we now use findAllDependenciesRecursively in the actual implementation,
+		// this mock simulates finding all dependencies recursively within the same tag
+		const dependentIds = new Set();
+		const processedIds = new Set();
 
-			function findAllDependencies(taskId) {
-				if (processedIds.has(taskId)) return;
-				processedIds.add(taskId);
+		function findAllDependencies(taskId) {
+			if (processedIds.has(taskId)) return;
+			processedIds.add(taskId);
 
-				const task = allTasks.find((t) => t.id === taskId);
-				if (!task || !Array.isArray(task.dependencies)) return;
+			const task = allTasks.find((t) => t.id === taskId);
+			if (!task || !Array.isArray(task.dependencies)) return;
 
-				task.dependencies.forEach((depId) => {
-					const normalizedDepId =
-						typeof depId === 'string' ? parseInt(depId, 10) : depId;
-					if (!isNaN(normalizedDepId) && normalizedDepId !== taskId) {
-						dependentIds.add(normalizedDepId);
-						findAllDependencies(normalizedDepId);
-					}
-				});
-			}
-
-			sourceTasks.forEach((sourceTask) => {
-				if (sourceTask && sourceTask.id) {
-					findAllDependencies(sourceTask.id);
+			task.dependencies.forEach((depId) => {
+				const normalizedDepId =
+					typeof depId === 'string' ? parseInt(depId, 10) : depId;
+				if (!isNaN(normalizedDepId) && normalizedDepId !== taskId) {
+					dependentIds.add(normalizedDepId);
+					findAllDependencies(normalizedDepId);
 				}
 			});
-
-			return Array.from(dependentIds);
 		}
-	),
-	validateSubtaskMove: jest.fn((taskId, sourceTag, targetTag) => {
+
+		sourceTasks.forEach((sourceTask) => {
+			if (sourceTask && sourceTask.id) {
+				findAllDependencies(sourceTask.id);
+			}
+		});
+
+		return Array.from(dependentIds);
+	}),
+	validateSubtaskMove: vi.fn((taskId, sourceTag, targetTag) => {
 		// Throw error for subtask IDs
 		const taskIdStr = String(taskId);
 		if (taskIdStr.includes('.')) {
@@ -189,7 +184,7 @@ describe('Cross-Tag Task Movement Integration Tests', () => {
 	});
 
 	afterEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		// Clean up temp file if it exists
 		if (fs.existsSync(testDataPath)) {
 			fs.unlinkSync(testDataPath);

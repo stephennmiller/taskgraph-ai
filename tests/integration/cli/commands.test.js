@@ -1,13 +1,13 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // --- Define mock functions ---
-const mockGetMainModelId = jest.fn().mockReturnValue('claude-3-opus');
-const mockGetResearchModelId = jest.fn().mockReturnValue('gpt-4-turbo');
-const mockGetFallbackModelId = jest.fn().mockReturnValue('claude-3-haiku');
-const mockSetMainModel = jest.fn().mockResolvedValue(true);
-const mockSetResearchModel = jest.fn().mockResolvedValue(true);
-const mockSetFallbackModel = jest.fn().mockResolvedValue(true);
-const mockGetAvailableModels = jest.fn().mockReturnValue([
+const mockGetMainModelId = vi.fn().mockReturnValue('claude-3-opus');
+const mockGetResearchModelId = vi.fn().mockReturnValue('gpt-4-turbo');
+const mockGetFallbackModelId = vi.fn().mockReturnValue('claude-3-haiku');
+const mockSetMainModel = vi.fn().mockResolvedValue(true);
+const mockSetResearchModel = vi.fn().mockResolvedValue(true);
+const mockSetFallbackModel = vi.fn().mockResolvedValue(true);
+const mockGetAvailableModels = vi.fn().mockReturnValue([
 	{ id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'anthropic' },
 	{ id: 'gpt-4-turbo', name: 'GPT-4 Turbo', provider: 'openai' },
 	{ id: 'claude-3-haiku', name: 'Claude 3 Haiku', provider: 'anthropic' },
@@ -15,14 +15,14 @@ const mockGetAvailableModels = jest.fn().mockReturnValue([
 ]);
 
 // Mock UI related functions
-const mockDisplayHelp = jest.fn();
-const mockDisplayBanner = jest.fn();
-const mockLog = jest.fn();
-const mockStartLoadingIndicator = jest.fn(() => ({ stop: jest.fn() }));
-const mockStopLoadingIndicator = jest.fn();
+const mockDisplayHelp = vi.fn();
+const mockDisplayBanner = vi.fn();
+const mockLog = vi.fn();
+const mockStartLoadingIndicator = vi.fn(() => ({ stop: vi.fn() }));
+const mockStopLoadingIndicator = vi.fn();
 
 // --- Setup mocks using unstable_mockModule (recommended for ES modules) ---
-jest.unstable_mockModule('../../../scripts/modules/config-manager.js', () => ({
+vi.doMock('../../../scripts/modules/config-manager.js', () => ({
 	getMainModelId: mockGetMainModelId,
 	getResearchModelId: mockGetResearchModelId,
 	getFallbackModelId: mockGetFallbackModelId,
@@ -33,7 +33,7 @@ jest.unstable_mockModule('../../../scripts/modules/config-manager.js', () => ({
 	VALID_PROVIDERS: ['anthropic', 'openai']
 }));
 
-jest.unstable_mockModule('../../../scripts/modules/ui.js', () => ({
+vi.doMock('../../../scripts/modules/ui.js', () => ({
 	displayHelp: mockDisplayHelp,
 	displayBanner: mockDisplayBanner,
 	log: mockLog,
@@ -43,32 +43,32 @@ jest.unstable_mockModule('../../../scripts/modules/ui.js', () => ({
 
 // --- Mock chalk for consistent output formatting ---
 const mockChalk = {
-	red: jest.fn((text) => text),
-	yellow: jest.fn((text) => text),
-	blue: jest.fn((text) => text),
-	green: jest.fn((text) => text),
-	gray: jest.fn((text) => text),
-	dim: jest.fn((text) => text),
+	red: vi.fn((text) => text),
+	yellow: vi.fn((text) => text),
+	blue: vi.fn((text) => text),
+	green: vi.fn((text) => text),
+	gray: vi.fn((text) => text),
+	dim: vi.fn((text) => text),
 	bold: {
-		cyan: jest.fn((text) => text),
-		white: jest.fn((text) => text),
-		red: jest.fn((text) => text)
+		cyan: vi.fn((text) => text),
+		white: vi.fn((text) => text),
+		red: vi.fn((text) => text)
 	},
 	cyan: {
-		bold: jest.fn((text) => text)
+		bold: vi.fn((text) => text)
 	},
 	white: {
-		bold: jest.fn((text) => text)
+		bold: vi.fn((text) => text)
 	}
 };
 // Default function for chalk itself
-mockChalk.default = jest.fn((text) => text);
+mockChalk.default = vi.fn((text) => text);
 // Add the methods to the function itself for dual usage
 Object.keys(mockChalk).forEach((key) => {
 	if (key !== 'default') mockChalk.default[key] = mockChalk[key];
 });
 
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	default: mockChalk.default
 }));
 
@@ -232,7 +232,7 @@ describe('CLI Models Command (Action Handler Test)', () => {
 
 	beforeEach(() => {
 		// Reset all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Save original console methods
 		originalConsoleLog = console.log;
@@ -240,9 +240,9 @@ describe('CLI Models Command (Action Handler Test)', () => {
 		originalProcessExit = process.exit;
 
 		// Mock console and process.exit
-		console.log = jest.fn();
-		console.error = jest.fn();
-		process.exit = jest.fn((code) => {
+		console.log = vi.fn();
+		console.error = vi.fn();
+		process.exit = vi.fn((code) => {
 			throw new Error(`process.exit(${code}) called`);
 		});
 	});
