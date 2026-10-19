@@ -13,17 +13,12 @@ rules:
       - release.yml:33
       # Checks out with RELEASE_TOKEN and runs `git push --atomic origin HEAD:main <tag>`.
       - version-bump.yml:42
-      # actions-js/push pushes the regenerated docs/models.md.
-      - update-models-md.yml:22
-      # peter-evans/create-pull-request pushes the docs branch.
-      - claude-docs-updater.yml:31
       # The Claude action workflows. Their checkout feeds an action that does its own
       # git operations, and edits to them cannot be tested end to end before merge
       # (the action is expected to refuse a workflow file that differs from the
       # default branch's copy). Left alone deliberately; revisit if that changes.
       - claude.yml:28
       - claude-dedupe-issues.yml:23
-      - claude-issue-triage.yml:17
   dangerous-triggers:
     ignore:
       # `issue_comment` is needed to answer "@claude" comments. The job only runs when
