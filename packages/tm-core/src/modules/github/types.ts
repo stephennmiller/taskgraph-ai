@@ -84,6 +84,8 @@ export interface PushOptions {
 	repo?: string;
 	/** Push only this tag; defaults to every tag */
 	tag?: string;
+	/** Push only these task ids (top-level tasks); defaults to every task */
+	taskIds?: string[];
 	includeDetails?: boolean;
 	closeOrphans?: boolean;
 	dryRun?: boolean;
@@ -106,4 +108,11 @@ export interface GitHubStatus {
 	repo: string | null;
 	linkedTasks: number;
 	unlinkedTasks: number;
+}
+
+export interface UnlinkResult {
+	tag: string;
+	taskId: string;
+	issueNumber: number;
+	url: string;
 }
