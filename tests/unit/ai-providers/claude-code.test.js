@@ -156,6 +156,21 @@ describe('ClaudeCodeProvider', () => {
 			);
 		});
 
+		it('keeps the SDK warnings out of the terminal at the default log level', async () => {
+			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
+			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const out = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			provider.getClient({ commandName: 'parse-prd' });
+			const { logger } = createClaudeCode.mock.calls.at(-1)[0].defaultSettings;
+			logger.warn('[claude-code] Received tool result for unknown tool ID: x');
+
+			expect(warn).not.toHaveBeenCalled();
+			expect(out).not.toHaveBeenCalled();
+			warn.mockRestore();
+			out.mockRestore();
+		});
+
 		it('should pass complete configuration object to createClaudeCode', async () => {
 			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
 			const { getClaudeCodeSettingsForCommand } = await import(
@@ -179,6 +194,12 @@ describe('ClaudeCodeProvider', () => {
 					// Restores pre-2.0 behavior: enables loading of CLAUDE.md and settings.json
 					settingSources: ['user', 'project', 'local'],
 					env: expect.any(Object),
+					logger: {
+						debug: expect.any(Function),
+						info: expect.any(Function),
+						warn: expect.any(Function),
+						error: expect.any(Function)
+					},
 					// Main/fallback roles may only read the repo (codebase analysis)
 					tools: ['Read', 'Grep', 'Glob'],
 					allowedTools: ['Read', 'Grep', 'Glob'],

@@ -12,7 +12,13 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     # Limit the number of tasks generated
     taskgraph parse-prd <prd-file.txt> --num-tasks=10
+
+    # Replace the current tag's tasks, or add to them
+    taskgraph parse-prd <prd-file.txt> --force
+    taskgraph parse-prd <prd-file.txt> --append
     ```
+
+    In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID.
   </Accordion>
 
   <Accordion title="List Tasks">

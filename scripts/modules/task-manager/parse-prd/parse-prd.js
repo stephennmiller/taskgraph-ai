@@ -46,14 +46,15 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 
 	try {
 		// Load existing tasks
-		const { existingTasks, nextId } = loadExistingTasks(
-			config.tasksPath,
-			config.targetTag
-		);
+		const loaded = loadExistingTasks(config.tasksPath, config.targetTag);
+		// Overwriting (--force) replaces the list, so numbering starts over;
+		// only --append continues after the existing tasks
+		const existingTasks = config.append ? loaded.existingTasks : [];
+		const nextId = config.append ? loaded.nextId : 1;
 
 		// Validate operations
 		validateFileOperations({
-			existingTasks,
+			existingTasks: loaded.existingTasks,
 			targetTag: config.targetTag,
 			append: config.append,
 			force: config.force,
@@ -69,7 +70,8 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 		const serviceResult = await serviceHandler(
 			config,
 			prompts,
-			config.numTasks
+			config.numTasks,
+			nextId
 		);
 
 		// Process tasks
@@ -106,13 +108,12 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			tagInfo: serviceResult.aiServiceResponse?.tagInfo
 		};
 	} catch (error) {
-		logger.report(`Error parsing PRD: ${error.message}`, 'error');
-
-		if (!config.isMCP) {
-			console.error(chalk.red(`Error: ${error.message}`));
-			if (getDebugFlag(config.projectRoot)) {
-				console.error(error);
-			}
+		// In the terminal the command prints the reason once; repeating it here
+		// showed the same message three times
+		if (config.isMCP) {
+			logger.report(`Error parsing PRD: ${error.message}`, 'error');
+		} else if (getDebugFlag(config.projectRoot)) {
+			console.error(error);
 		}
 		throw error;
 	}
