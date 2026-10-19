@@ -16,16 +16,24 @@ import type { GitHubClient } from './adapters/github-client.interface.js';
 import { GhCliClient } from './adapters/gh-cli-client.js';
 import { BASE_LABEL } from './services/issue-renderer.js';
 import { executePush } from './services/push-executor.js';
-import { planSync } from './services/sync-planner.js';
+import { planPull } from './services/pull-planner.js';
+import { getLink, planSync } from './services/sync-planner.js';
 import type {
 	GitHubLink,
 	GitHubStatus,
+	PullOptions,
+	PullPlan,
+	PullResult,
+	PullStep,
 	PushOptions,
 	PushPlan,
 	PushResult,
 	SyncTask,
 	UnlinkResult
 } from './types.js';
+
+/** The options push and pull share for choosing repo, tags and tasks */
+type ScopeOptions = Pick<PushOptions, 'repo' | 'tag' | 'allTags' | 'taskIds'>;
 
 export interface GitHubDomainOptions {
 	/** Build a client for `owner/name`; defaults to the `gh` CLI client */
@@ -102,6 +110,37 @@ export class GitHubDomain {
 		return { dryRun: false, plan, ...done, orphans: plan.orphans };
 	}
 
+	/** Work out which task statuses a pull would change, without writing anything */
+	async planPull(options: PullOptions = {}): Promise<PullPlan> {
+		const { plan } = await this.preparePull(options);
+		return plan;
+	}
+
+	/**
+	 * Bring task statuses in line with their issues. Writes only to local
+	 * tasks, never to GitHub. A task that changed on both sides is left alone.
+	 */
+	async pull(options: PullOptions = {}): Promise<PullResult> {
+		const { plan, tasks } = await this.preparePull(options);
+		const counts = { applied: 0, synced: 0, conflicts: 0, skipped: 0 };
+		const byKey = new Map(
+			tasks.map((t) => [`${t.tag}\u0000${t.task.id}`, t] as const)
+		);
+		for (const step of plan.steps) {
+			if (step.action === 'conflict') counts.conflicts++;
+			else if (step.action === 'skip') counts.skipped++;
+			else {
+				const target = byKey.get(`${step.tag}\u0000${step.taskId}`);
+				if (!options.dryRun && target) {
+					await this.recordPull(plan.repo, step, target);
+				}
+				if (step.action === 'apply') counts.applied++;
+				else counts.synced++;
+			}
+		}
+		return { dryRun: Boolean(options.dryRun), plan, ...counts };
+	}
+
 	/**
 	 * Forget the issue a task is linked to. The issue itself is left alone.
 	 * Without a tag the task id must be linked in exactly one tag.
@@ -145,7 +184,8 @@ export class GitHubDomain {
 		};
 	}
 
-	private async prepare(options: PushOptions) {
+	/** Repo, client, the tasks in scope and the issues on GitHub, for push and pull */
+	private async scope(options: ScopeOptions) {
 		const repo = options.repo ?? (await this.detectRepo());
 		if (!repo) {
 			throw new TaskGraphError(
@@ -170,6 +210,12 @@ export class GitHubDomain {
 				);
 			}
 		}
+		return { repo, client, tag, tasks, remote, wanted };
+	}
+
+	private async prepare(options: PushOptions) {
+		const { repo, client, tag, tasks, remote, wanted } =
+			await this.scope(options);
 		const full = planSync({
 			repo,
 			tasks,
@@ -191,8 +237,43 @@ export class GitHubDomain {
 		return { plan, client, tasks };
 	}
 
+	private async preparePull(options: PullOptions) {
+		const { repo, tasks, remote, wanted } = await this.scope(options);
+		const selected = wanted
+			? tasks.filter((t) => wanted.includes(String(t.task.id)))
+			: tasks;
+		return {
+			plan: planPull({ repo, tasks: selected, remote }),
+			tasks: selected
+		};
+	}
+
+	/** Set the task's status if the issue won, and move the link's base to it */
+	private async recordPull(
+		repo: string,
+		step: PullStep,
+		{ task }: SyncTask
+	): Promise<void> {
+		const link = getLink(task, repo);
+		if (!link || !step.to) return;
+		const tasksDomain = this.requireTasks();
+		if (step.action === 'apply') {
+			await tasksDomain.updateStatus(step.taskId, step.to, step.tag);
+		}
+		const github: GitHubLink = {
+			...link,
+			lastPushedStatus: step.to,
+			syncedAt: (this.options.now?.() ?? new Date()).toISOString()
+		};
+		await tasksDomain.update(
+			task.id,
+			{ metadata: { ...task.metadata, github } },
+			step.tag
+		);
+	}
+
 	/** The one tag a push covers, or undefined for every tag */
-	private resolveTag(options: PushOptions): string | undefined {
+	private resolveTag(options: ScopeOptions): string | undefined {
 		if (options.tag && options.allTags) {
 			throw new TaskGraphError(
 				'Use either tag or allTags, not both',

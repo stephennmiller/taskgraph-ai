@@ -4,16 +4,25 @@
  */
 
 import path from 'node:path';
-import { type PushOptions, type TmCore, createTmCore } from '@tm/core';
+import {
+	type PullOptions,
+	type PushOptions,
+	type TmCore,
+	createTmCore
+} from '@tm/core';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { displayError } from '../../utils/error-handler.js';
 import { getProjectRoot } from '../../utils/project-root.js';
 import {
 	formatPlan,
+	formatPullPlan,
+	formatPullResult,
 	formatResult,
 	formatStatus,
 	formatUnlink,
+	hasPullChanges,
+	hasStatusChanges,
 	hasWrites
 } from './github-format.js';
 
@@ -37,6 +46,15 @@ interface PushCommandOptions extends CommonOptions {
 	closeOrphans?: boolean;
 }
 
+interface PullCommandOptions extends CommonOptions {
+	tag?: string;
+	allTags?: boolean;
+	id?: string;
+	dryRun?: boolean;
+	yes?: boolean;
+	repo?: string;
+}
+
 interface UnlinkOptions extends CommonOptions {
 	tag?: string;
 }
@@ -47,9 +65,10 @@ export class GithubCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'github');
 
-		this.description('Push tasks to GitHub Issues (one way)');
+		this.description('Push tasks to GitHub Issues and pull issue status back');
 		this.addStatusCommand();
 		this.addPushCommand();
+		this.addPullCommand();
 		this.addUnlinkCommand();
 	}
 
@@ -88,6 +107,35 @@ Examples:
 			)
 			.action((options: PushCommandOptions) =>
 				this.guard(options, () => this.runPush(options))
+			);
+	}
+
+	private addPullCommand(): void {
+		this.command('pull')
+			.description(
+				'Update task statuses from their GitHub issues (status only, never writes to GitHub)'
+			)
+			.option('--tag <name>', 'Tag to pull (default: the active tag)')
+			.option('--all-tags', 'Pull every tag')
+			.option('--id <ids>', 'Only pull these task ids, comma separated')
+			.option('--dry-run', 'Show the plan without changing any task')
+			.option('-y, --yes', 'Update tasks without asking for confirmation')
+			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
+			.option('-p, --project <path>', 'Project root directory')
+			.option('--json', 'Output as JSON (requires --yes or --dry-run)')
+			.addHelpText(
+				'after',
+				`
+A task that changed on GitHub and not locally takes the issue's status.
+A task that changed on both sides keeps its local status and is reported.
+
+Examples:
+  $ taskgraph github pull --dry-run   # Preview the active tag
+  $ taskgraph github pull -y          # Update tasks without asking
+`
+			)
+			.action((options: PullCommandOptions) =>
+				this.guard(options, () => this.runPull(options))
 			);
 	}
 
@@ -177,7 +225,7 @@ Examples:
 				);
 			}
 			console.log(formatPlan(plan));
-			if (!(await this.confirm(plan.repo))) {
+			if (!(await this.confirm(`Write these changes to ${plan.repo}?`))) {
 				console.log('Cancelled. Nothing was written.');
 				return;
 			}
@@ -187,6 +235,55 @@ Examples:
 		this.print(options, result, [
 			...(options.yes ? [formatPlan(result.plan)] : []),
 			formatResult(result)
+		]);
+	}
+
+	private async runPull(options: PullCommandOptions): Promise<void> {
+		const core = this.core();
+		const pullOptions: PullOptions = {
+			repo: options.repo,
+			tag: options.tag,
+			allTags: options.allTags,
+			taskIds: options.id
+		};
+
+		if (options.dryRun) {
+			const result = await core.github.pull({ ...pullOptions, dryRun: true });
+			this.print(options, result, [
+				formatPullPlan(result.plan),
+				formatPullResult(result)
+			]);
+			return;
+		}
+
+		const plan = await core.github.planPull(pullOptions);
+		if (!hasPullChanges(plan)) {
+			const result = await core.github.pull({ ...pullOptions, dryRun: true });
+			this.print(options, { ...result, dryRun: false }, [
+				formatPullPlan(plan),
+				'Task statuses are already up to date.'
+			]);
+			return;
+		}
+
+		// Only a status change needs asking about; marking tasks in sync is bookkeeping
+		if (hasStatusChanges(plan) && !options.yes) {
+			if (options.json || !this.isInteractive()) {
+				throw new Error(
+					'Refusing to change tasks without confirmation. Pass --yes to proceed or --dry-run to preview.'
+				);
+			}
+			console.log(formatPullPlan(plan));
+			if (!(await this.confirm('Update these task statuses?'))) {
+				console.log('Cancelled. Nothing was changed.');
+				return;
+			}
+		}
+
+		const result = await core.github.pull({ ...pullOptions, dryRun: false });
+		this.print(options, result, [
+			...(options.yes ? [formatPullPlan(result.plan)] : []),
+			formatPullResult(result)
 		]);
 	}
 
@@ -208,12 +305,12 @@ Examples:
 		return Boolean(process.stdin.isTTY && process.stdout.isTTY);
 	}
 
-	protected async confirm(repo: string): Promise<boolean> {
+	protected async confirm(message: string): Promise<boolean> {
 		const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
 			{
 				type: 'confirm',
 				name: 'proceed',
-				message: `Write these changes to ${repo}?`,
+				message,
 				default: false
 			}
 		]);

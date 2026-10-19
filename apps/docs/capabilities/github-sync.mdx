@@ -1,12 +1,12 @@
 ---
 title: GitHub Sync
 sidebarTitle: "GitHub Sync"
-description: "Push your tasks to GitHub Issues from the CLI or an MCP client, one way, with a preview first"
+description: "Push your tasks to GitHub Issues from the CLI or an MCP client, with a preview first, and pull issue status back"
 ---
 
 # GitHub Sync
 
-TaskGraph can mirror your tasks as GitHub Issues. The sync is one way: TaskGraph writes issues, and it never reads changes back from GitHub. It runs through the [`gh` CLI](https://cli.github.com), so there is no token to configure.
+TaskGraph can mirror your tasks as GitHub Issues. Pushing is one way: TaskGraph writes the issues. Pulling is optional and reads status only: whether an issue was closed, reopened or relabelled. Nothing else is read back from GitHub. It runs through the [`gh` CLI](https://cli.github.com), so there is no token to configure.
 
 ## Requirements
 
@@ -23,6 +23,8 @@ taskgraph github push --dry-run         # show the plan, write nothing
 taskgraph github push                   # show the plan, ask, then write
 taskgraph github push --all-tags -y     # every tag, no confirmation
 taskgraph github push --id 1,2          # only top-level tasks 1 and 2
+taskgraph github pull --dry-run         # show which task statuses would change
+taskgraph github pull                   # show the plan, ask, then update the tasks
 taskgraph github unlink 3               # forget the issue task 3 is linked to
 ```
 
@@ -35,9 +37,29 @@ taskgraph github unlink 3               # forget the issue task 3 is linked to
 | `--close-orphans` | Close open issues whose task no longer exists |
 | `--json` | Machine-readable output |
 
+## Pulling status
+
+`taskgraph github pull` reads the issues once and updates task statuses. It never writes to GitHub. It takes the same `--tag`, `--all-tags`, `--id`, `--repo`, `--dry-run`, `--yes` and `--json` options as `push`, and it asks before changing a status unless you pass `--yes`.
+
+| On GitHub | Task status |
+|-----------|-------------|
+| Closed (as completed) | `done` |
+| Closed as not planned | `cancelled` |
+| Open with a `taskgraph:status/<x>` label | `<x>` |
+| Open with no status label (it was reopened) | `pending` |
+
+For each linked task, pull compares three statuses: the one at the last push or pull, the task's status now, and the issue's status.
+
+- **Only the issue changed:** the task takes the issue's status.
+- **Only the task changed:** nothing happens. A push sends it to GitHub.
+- **Both changed to the same status:** pull records them as in sync.
+- **Both changed to different statuses:** this is a conflict. The task keeps its local status and is listed in the plan. Run `taskgraph github push` to overwrite GitHub with it.
+
+Tasks that were never pushed, or whose issue is gone, are skipped.
+
 ## MCP tools
 
-Both tools are in the `all` tier. Set `TASKGRAPH_TOOLS` to `all` (see [MCP Tools](/capabilities/mcp)) to load them.
+There is no MCP tool for pull, because it changes your local tasks. Use the CLI. Both tools below are in the `all` tier. Set `TASKGRAPH_TOOLS` to `all` (see [MCP Tools](/capabilities/mcp)) to load them.
 
 ### `github_status`
 
@@ -82,6 +104,6 @@ After the first push, each task stores its issue in its `metadata.github` field.
 
 ## Limits
 
-- **One way only.** Edits made on GitHub are not read back. The next push of a changed task overwrites the title, body, labels and state of its issue.
+- **Content is one way.** Only status is read back, by `pull`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
 - **Orphans are reported, not closed,** unless you pass `--close-orphans` or `closeOrphans: true`.
 - **`--id` and `id` match top-level tasks.** Subtasks follow their parent.
