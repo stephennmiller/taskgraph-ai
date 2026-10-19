@@ -54,9 +54,8 @@
 							"capabilities/mcp",
 							"capabilities/cli-root-commands",
 							"capabilities/task-structure",
-							"capabilities/claude-code",
-							"capabilities/cross-tag-movement",
-							"capabilities/loop"
+							"capabilities/loop",
+							"capabilities/research"
 						]
 					},
 					{
