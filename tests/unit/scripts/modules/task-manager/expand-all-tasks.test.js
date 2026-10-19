@@ -1,50 +1,44 @@
 /**
  * Tests for the expand-all-tasks.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/task-manager/expand-task.js',
-	() => ({
-		default: jest.fn()
-	})
-);
-
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	log: jest.fn(),
-	isSilentMode: jest.fn(() => false),
-	findProjectRoot: jest.fn(() => '/test/project'),
-	aggregateTelemetry: jest.fn()
+vi.doMock('../../../../../scripts/modules/task-manager/expand-task.js', () => ({
+	default: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDebugFlag: jest.fn(() => false)
-	})
-);
-
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	startLoadingIndicator: jest.fn(),
-	stopLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn()
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	log: vi.fn(),
+	isSilentMode: vi.fn(() => false),
+	findProjectRoot: vi.fn(() => '/test/project'),
+	aggregateTelemetry: vi.fn()
 }));
 
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false)
+}));
+
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	startLoadingIndicator: vi.fn(),
+	stopLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn()
+}));
+
+vi.doMock('chalk', () => ({
 	default: {
-		white: { bold: jest.fn((text) => text) },
-		cyan: jest.fn((text) => text),
-		green: jest.fn((text) => text),
-		dim: jest.fn((text) => text),
-		red: jest.fn((text) => text),
-		bold: jest.fn((text) => text)
+		white: { bold: vi.fn((text) => text) },
+		cyan: vi.fn((text) => text),
+		green: vi.fn((text) => text),
+		dim: vi.fn((text) => text),
+		red: vi.fn((text) => text),
+		bold: vi.fn((text) => text)
 	}
 }));
 
-jest.unstable_mockModule('boxen', () => ({
-	default: jest.fn((text) => text)
+vi.doMock('boxen', () => ({
+	default: vi.fn((text) => text)
 }));
 
 // Import the mocked modules
@@ -70,10 +64,10 @@ describe('expandAllTasks', () => {
 	const mockProjectRoot = '/test/project';
 	const mockSession = { userId: 'test-user' };
 	const mockMcpLog = {
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn()
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
 	};
 
 	const sampleTasksData = {
@@ -107,7 +101,7 @@ describe('expandAllTasks', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockReadJSON.mockReturnValue(sampleTasksData);
 		mockAggregateTelemetry.mockReturnValue({
 			timestamp: '2024-01-01T00:00:00.000Z',

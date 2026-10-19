@@ -1,116 +1,102 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Provide fs mock early so existsSync can be stubbed
-jest.unstable_mockModule('fs', () => {
+vi.doMock('fs', () => {
 	const mockFs = {
-		existsSync: jest.fn(() => true),
-		writeFileSync: jest.fn(),
-		readFileSync: jest.fn(),
-		unlinkSync: jest.fn()
+		existsSync: vi.fn(() => true),
+		writeFileSync: vi.fn(),
+		readFileSync: vi.fn(),
+		unlinkSync: vi.fn()
 	};
 	return { default: mockFs, ...mockFs };
 });
 
 // --- Mock dependencies ---
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	isSilentMode: jest.fn(() => false),
-	findProjectRoot: jest.fn(() => '/project'),
-	flattenTasksWithSubtasks: jest.fn(() => []),
-	truncate: jest.fn((t) => t),
-	isEmpty: jest.fn(() => false),
-	resolveEnvVariable: jest.fn(),
-	findTaskById: jest.fn(),
-	getCurrentTag: jest.fn(() => 'master'),
-	resolveTag: jest.fn(() => 'master'),
-	addComplexityToTask: jest.fn((task, complexity) => ({ ...task, complexity })),
-	getTasksForTag: jest.fn((data, tag) => data[tag]?.tasks || []),
-	setTasksForTag: jest.fn(),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj)
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	isSilentMode: vi.fn(() => false),
+	findProjectRoot: vi.fn(() => '/project'),
+	flattenTasksWithSubtasks: vi.fn(() => []),
+	truncate: vi.fn((t) => t),
+	isEmpty: vi.fn(() => false),
+	resolveEnvVariable: vi.fn(),
+	findTaskById: vi.fn(),
+	getCurrentTag: vi.fn(() => 'master'),
+	resolveTag: vi.fn(() => 'master'),
+	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
+	setTasksForTag: vi.fn(),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj)
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn(),
-	getStatusWithColor: jest.fn((s) => s),
-	startLoadingIndicator: jest.fn(() => ({ stop: jest.fn() })),
-	stopLoadingIndicator: jest.fn(),
-	succeedLoadingIndicator: jest.fn(),
-	failLoadingIndicator: jest.fn(),
-	warnLoadingIndicator: jest.fn(),
-	infoLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn(),
-	displayContextAnalysis: jest.fn()
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn(),
+	getStatusWithColor: vi.fn((s) => s),
+	startLoadingIndicator: vi.fn(() => ({ stop: vi.fn() })),
+	stopLoadingIndicator: vi.fn(),
+	succeedLoadingIndicator: vi.fn(),
+	failLoadingIndicator: vi.fn(),
+	warnLoadingIndicator: vi.fn(),
+	infoLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn(),
+	displayContextAnalysis: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateTextService: jest
-			.fn()
-			.mockResolvedValue({ mainResult: { content: '' }, telemetryData: {} })
-	})
-);
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateTextService: vi
+		.fn()
+		.mockResolvedValue({ mainResult: { content: '' }, telemetryData: {} })
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDebugFlag: jest.fn(() => false),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		default: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockReturnValue('Update the subtask')
-		}),
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockReturnValue('Update the subtask')
-		})
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	default: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockReturnValue('Update the subtask')
+	}),
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockReturnValue('Update the subtask')
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/contextGatherer.js',
-	() => ({
-		ContextGatherer: jest.fn().mockImplementation(() => ({
-			gather: jest.fn().mockReturnValue({
+vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
+	ContextGatherer: vi.fn().mockImplementation(function () {
+		return {
+			gather: vi.fn().mockReturnValue({
 				fullContext: '',
 				summary: ''
 			})
-		}))
+		};
 	})
-);
+}));
 
 // Mock bridge-utils module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/bridge-utils.js',
-	() => ({
-		createBridgeLogger: jest.fn(() => ({
-			logger: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn()
-			},
-			report: jest.fn(),
-			isMCP: false
-		}))
-	})
-);
+vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
+	createBridgeLogger: vi.fn(() => ({
+		logger: {
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			debug: vi.fn()
+		},
+		report: vi.fn(),
+		isMCP: false
+	}))
+}));
 
 // Mock fuzzyTaskSearch module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/fuzzyTaskSearch.js',
-	() => ({
-		FuzzyTaskSearch: jest.fn().mockImplementation(() => ({
-			search: jest.fn().mockReturnValue([])
-		}))
+vi.doMock('../../../../../scripts/modules/utils/fuzzyTaskSearch.js', () => ({
+	FuzzyTaskSearch: vi.fn().mockImplementation(function () {
+		return {
+			search: vi.fn().mockReturnValue([])
+		};
 	})
-);
+}));
 
 // Import mocked utils to leverage mocks later
 const { readJSON, log } = await import(
@@ -124,8 +110,8 @@ const { default: updateSubtaskById } = await import(
 
 describe('updateSubtaskById validation', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
+		vi.clearAllMocks();
+		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit called');
 		});
 	});
@@ -159,7 +145,7 @@ describe('updateSubtaskById validation', () => {
 	});
 
 	test('throws error if tasks file does not exist', async () => {
-		// Mock fs.existsSync to return false via jest.spyOn (dynamic import of fs)
+		// Mock fs.existsSync to return false via vi.spyOn (dynamic import of fs)
 		const fs = await import('fs');
 		fs.existsSync.mockReturnValue(false);
 		await expect(

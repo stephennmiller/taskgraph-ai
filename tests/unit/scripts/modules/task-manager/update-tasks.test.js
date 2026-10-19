@@ -1,82 +1,70 @@
 /**
  * Tests for the update-tasks.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	sanitizePrompt: jest.fn((prompt) => prompt),
-	truncate: jest.fn((text) => text),
-	isSilentMode: jest.fn(() => false),
-	findTaskById: jest.fn(),
-	getCurrentTag: jest.fn(() => 'master'),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	flattenTasksWithSubtasks: jest.fn((tasks) => tasks),
-	findProjectRoot: jest.fn(() => '/mock/project/root')
+	sanitizePrompt: vi.fn((prompt) => prompt),
+	truncate: vi.fn((text) => text),
+	isSilentMode: vi.fn(() => false),
+	findTaskById: vi.fn(),
+	getCurrentTag: vi.fn(() => 'master'),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	flattenTasksWithSubtasks: vi.fn((tasks) => tasks),
+	findProjectRoot: vi.fn(() => '/mock/project/root')
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateTextService: jest.fn().mockResolvedValue({
-			mainResult: '[]', // mainResult is the text string directly
-			telemetryData: {}
-		}),
-		generateObjectService: jest.fn().mockResolvedValue({
-			mainResult: {
-				tasks: [] // generateObject returns structured data
-			},
-			telemetryData: {}
-		})
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateTextService: vi.fn().mockResolvedValue({
+		mainResult: '[]', // mainResult is the text string directly
+		telemetryData: {}
+	}),
+	generateObjectService: vi.fn().mockResolvedValue({
+		mainResult: {
+			tasks: [] // generateObject returns structured data
+		},
+		telemetryData: {}
 	})
-);
-
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	getStatusWithColor: jest.fn((status) => status),
-	startLoadingIndicator: jest.fn(),
-	stopLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDebugFlag: jest.fn(() => false),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	getStatusWithColor: vi.fn((status) => status),
+	startLoadingIndicator: vi.fn(),
+	stopLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn()
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockResolvedValue({
-				systemPrompt: 'Mocked system prompt',
-				userPrompt: 'Mocked user prompt'
-			})
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
+
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockResolvedValue({
+			systemPrompt: 'Mocked system prompt',
+			userPrompt: 'Mocked user prompt'
 		})
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/task-manager/models.js',
-	() => ({
-		getModelConfiguration: jest.fn(() => ({
-			model: 'mock-model',
-			maxTokens: 4000,
-			temperature: 0.7
-		}))
-	})
-);
+vi.doMock('../../../../../scripts/modules/task-manager/models.js', () => ({
+	getModelConfiguration: vi.fn(() => ({
+		model: 'mock-model',
+		maxTokens: 4000,
+		temperature: 0.7
+	}))
+}));
 
 // Import the mocked modules
 const { readJSON, writeJSON, log } = await import(
@@ -94,7 +82,7 @@ const { default: updateTasks } = await import(
 
 describe('updateTasks', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	test('should update tasks based on new context', async () => {

@@ -1,7 +1,7 @@
 /**
  * Common setup for task-manager module tests
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Sample test data
 export const sampleTasks = {
@@ -93,22 +93,22 @@ export const sampleClaudeResponse = {
 // Common mock setup function
 export const setupCommonMocks = () => {
 	// Clear mocks before setup
-	jest.clearAllMocks();
+	vi.clearAllMocks();
 
 	// Mock implementations
 	const mocks = {
-		readFileSync: jest.fn(),
-		existsSync: jest.fn(),
-		mkdirSync: jest.fn(),
-		writeFileSync: jest.fn(),
-		readJSON: jest.fn(),
-		writeJSON: jest.fn(),
-		log: jest.fn(),
-		isTaskDependentOn: jest.fn().mockReturnValue(false),
-		formatDependenciesWithStatus: jest.fn(),
-		displayTaskList: jest.fn(),
-		validateAndFixDependencies: jest.fn(),
-		generateObjectService: jest.fn().mockResolvedValue({
+		readFileSync: vi.fn(),
+		existsSync: vi.fn(),
+		mkdirSync: vi.fn(),
+		writeFileSync: vi.fn(),
+		readJSON: vi.fn(),
+		writeJSON: vi.fn(),
+		log: vi.fn(),
+		isTaskDependentOn: vi.fn().mockReturnValue(false),
+		formatDependenciesWithStatus: vi.fn(),
+		displayTaskList: vi.fn(),
+		validateAndFixDependencies: vi.fn(),
+		generateObjectService: vi.fn().mockResolvedValue({
 			mainResult: { tasks: [] },
 			telemetryData: {}
 		})
@@ -133,7 +133,7 @@ export const cloneData = (data) => JSON.parse(JSON.stringify(data));
  * @returns {string} The resolved file path
  */
 export const createGetTagAwareFilePathMock = () => {
-	return jest.fn((basePath, tag, projectRoot = '.') => {
+	return vi.fn((basePath, tag, projectRoot = '.') => {
 		// Handle projectRoot consistently - this was the key fix
 		const fullPath = projectRoot ? `${projectRoot}/${basePath}` : basePath;
 
@@ -154,7 +154,7 @@ export const createGetTagAwareFilePathMock = () => {
  * @returns {string} Slugified tag name safe for filesystem use
  */
 export const createSlugifyTagForFilePathMock = () => {
-	return jest.fn((tagName) => {
+	return vi.fn((tagName) => {
 		if (!tagName || typeof tagName !== 'string') {
 			return 'unknown-tag';
 		}

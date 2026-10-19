@@ -1,40 +1,38 @@
 /**
  * Tests for the set-task-status.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	sanitizePrompt: jest.fn((prompt) => prompt),
-	truncate: jest.fn((text) => text),
-	isSilentMode: jest.fn(() => false),
-	findTaskById: jest.fn((tasks, id) =>
-		tasks.find((t) => t.id === parseInt(id))
-	),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	getCurrentTag: jest.fn(() => 'master')
+	sanitizePrompt: vi.fn((prompt) => prompt),
+	truncate: vi.fn((text) => text),
+	isSilentMode: vi.fn(() => false),
+	findTaskById: vi.fn((tasks, id) => tasks.find((t) => t.id === parseInt(id))),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	getCurrentTag: vi.fn(() => 'master')
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	formatDependenciesWithStatus: jest.fn(),
-	displayBanner: jest.fn(),
-	displayTaskList: jest.fn(),
-	startLoadingIndicator: jest.fn(() => ({ stop: jest.fn() })),
-	stopLoadingIndicator: jest.fn(),
-	getStatusWithColor: jest.fn((status) => status)
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	formatDependenciesWithStatus: vi.fn(),
+	displayBanner: vi.fn(),
+	displayTaskList: vi.fn(),
+	startLoadingIndicator: vi.fn(() => ({ stop: vi.fn() })),
+	stopLoadingIndicator: vi.fn(),
+	getStatusWithColor: vi.fn((status) => status)
 }));
 
-jest.unstable_mockModule('../../../../../src/constants/task-status.js', () => ({
-	isValidTaskStatus: jest.fn((status) =>
+vi.doMock('../../../../../src/constants/task-status.js', () => ({
+	isValidTaskStatus: vi.fn((status) =>
 		[
 			'pending',
 			'done',
@@ -54,26 +52,20 @@ jest.unstable_mockModule('../../../../../src/constants/task-status.js', () => ({
 	]
 }));
 
-jest.unstable_mockModule(
+vi.doMock(
 	'../../../../../scripts/modules/task-manager/update-single-task-status.js',
 	() => ({
-		default: jest.fn()
+		default: vi.fn()
 	})
 );
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/dependency-manager.js',
-	() => ({
-		validateTaskDependencies: jest.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({
+	validateTaskDependencies: vi.fn()
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDebugFlag: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false)
+}));
 
 // Import the mocked modules
 const { readJSON, writeJSON, log, findTaskById } = await import(
@@ -149,14 +141,14 @@ const sampleTasks = {
 
 describe('setTaskStatus', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock console methods to suppress output
-		jest.spyOn(console, 'log').mockImplementation(() => {});
-		jest.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 
 		// Mock process.exit to prevent actual exit
-		jest.spyOn(process, 'exit').mockImplementation((code) => {
+		vi.spyOn(process, 'exit').mockImplementation((code) => {
 			throw new Error(`process.exit: ${code}`);
 		});
 
@@ -205,7 +197,7 @@ describe('setTaskStatus', () => {
 
 	afterEach(() => {
 		// Restore console methods
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	test('should update task status in tasks.json', async () => {
@@ -222,7 +214,7 @@ describe('setTaskStatus', () => {
 		// Act
 		await setTaskStatus(tasksPath, '2', 'done', {
 			tag: 'master',
-			mcpLog: { info: jest.fn() }
+			mcpLog: { info: vi.fn() }
 		});
 
 		// Assert
@@ -260,7 +252,7 @@ describe('setTaskStatus', () => {
 		// Act
 		await setTaskStatus(tasksPath, '3.1', 'done', {
 			tag: 'master',
-			mcpLog: { info: jest.fn() }
+			mcpLog: { info: vi.fn() }
 		});
 
 		// Assert
@@ -298,7 +290,7 @@ describe('setTaskStatus', () => {
 		// Act
 		await setTaskStatus(tasksPath, '1,2', 'done', {
 			tag: 'master',
-			mcpLog: { info: jest.fn() }
+			mcpLog: { info: vi.fn() }
 		});
 
 		// Assert
@@ -332,7 +324,7 @@ describe('setTaskStatus', () => {
 		// Act
 		await setTaskStatus(tasksPath, '3', 'done', {
 			tag: 'master',
-			mcpLog: { info: jest.fn() }
+			mcpLog: { info: vi.fn() }
 		});
 
 		// Assert
@@ -372,7 +364,7 @@ describe('setTaskStatus', () => {
 		await expect(
 			setTaskStatus(tasksPath, '99', 'done', {
 				tag: 'master',
-				mcpLog: { info: jest.fn() }
+				mcpLog: { info: vi.fn() }
 			})
 		).rejects.toThrow('Task 99 not found');
 	});
@@ -391,7 +383,7 @@ describe('setTaskStatus', () => {
 		// Act & Assert
 		await expect(
 			setTaskStatus(tasksPath, '2', 'InvalidStatus', {
-				mcpLog: { info: jest.fn() }
+				mcpLog: { info: vi.fn() }
 			})
 		).rejects.toThrow(/Invalid status value: InvalidStatus/);
 	});
@@ -414,7 +406,7 @@ describe('setTaskStatus', () => {
 		await expect(
 			setTaskStatus(tasksPath, '3.1', 'done', {
 				tag: 'master',
-				mcpLog: { info: jest.fn() }
+				mcpLog: { info: vi.fn() }
 			})
 		).rejects.toThrow('has no subtasks');
 	});
@@ -434,7 +426,7 @@ describe('setTaskStatus', () => {
 		await expect(
 			setTaskStatus(tasksPath, '3.99', 'done', {
 				tag: 'master',
-				mcpLog: { info: jest.fn() }
+				mcpLog: { info: vi.fn() }
 			})
 		).rejects.toThrow('Subtask 99 not found');
 	});
@@ -452,7 +444,7 @@ describe('setTaskStatus', () => {
 		// Act & Assert
 		await expect(
 			setTaskStatus(tasksPath, taskId, newStatus, {
-				mcpLog: { info: jest.fn() }
+				mcpLog: { info: vi.fn() }
 			})
 		).rejects.toThrow('File not found');
 
@@ -469,7 +461,7 @@ describe('setTaskStatus', () => {
 		// Act & Assert
 		await expect(
 			setTaskStatus(tasksPath, emptyTaskId, newStatus, {
-				mcpLog: { info: jest.fn() }
+				mcpLog: { info: vi.fn() }
 			})
 		).rejects.toThrow();
 
@@ -493,7 +485,7 @@ describe('setTaskStatus', () => {
 		// Act
 		const result = await setTaskStatus(tasksPath, taskIds, newStatus, {
 			tag: 'master',
-			mcpLog: { info: jest.fn() }
+			mcpLog: { info: vi.fn() }
 		});
 
 		// Assert
@@ -557,7 +549,7 @@ describe('setTaskStatus', () => {
 		// Act
 		await setTaskStatus(tasksPath, '1', 'done', {
 			tag: 'master',
-			mcpLog: { info: jest.fn() }
+			mcpLog: { info: vi.fn() }
 		});
 
 		// Assert: writeJSON should be called with data containing both tags intact

@@ -1,7 +1,7 @@
 /**
  * Tests for the find-next-task.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import findNextTask from '../../../../../scripts/modules/task-manager/find-next-task.js';
 
 describe('findNextTask', () => {

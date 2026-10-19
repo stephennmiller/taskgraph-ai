@@ -1,24 +1,24 @@
 /**
  * Tests for the add-task.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { hasCodebaseAnalysis } from '../../../../../scripts/modules/config-manager.js';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	sanitizePrompt: jest.fn((prompt) => prompt),
-	truncate: jest.fn((text) => text),
-	isSilentMode: jest.fn(() => false),
-	findTaskById: jest.fn((tasks, id) => {
+	sanitizePrompt: vi.fn((prompt) => prompt),
+	truncate: vi.fn((text) => text),
+	isSilentMode: vi.fn(() => false),
+	findTaskById: vi.fn((tasks, id) => {
 		if (!tasks) return null;
 		const allTasks = [];
 		const queue = [...tasks];
@@ -31,9 +31,9 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 		}
 		return allTasks.find((task) => String(task.id) === String(id));
 	}),
-	getCurrentTag: jest.fn(() => 'master'),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	flattenTasksWithSubtasks: jest.fn((tasks) => {
+	getCurrentTag: vi.fn(() => 'master'),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	flattenTasksWithSubtasks: vi.fn((tasks) => {
 		const allTasks = [];
 		const queue = [...(tasks || [])];
 		while (queue.length > 0) {
@@ -47,114 +47,105 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 		}
 		return allTasks;
 	}),
-	markMigrationForNotice: jest.fn(),
-	performCompleteTagMigration: jest.fn(),
-	setTasksForTag: jest.fn(),
-	getTasksForTag: jest.fn((data, tag) => data[tag]?.tasks || [])
+	markMigrationForNotice: vi.fn(),
+	performCompleteTagMigration: vi.fn(),
+	setTasksForTag: vi.fn(),
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || [])
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn(),
-	getStatusWithColor: jest.fn((status) => status),
-	startLoadingIndicator: jest.fn(),
-	stopLoadingIndicator: jest.fn(),
-	succeedLoadingIndicator: jest.fn(),
-	failLoadingIndicator: jest.fn(),
-	warnLoadingIndicator: jest.fn(),
-	infoLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn(),
-	displayContextAnalysis: jest.fn()
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn(),
+	getStatusWithColor: vi.fn((status) => status),
+	startLoadingIndicator: vi.fn(),
+	stopLoadingIndicator: vi.fn(),
+	succeedLoadingIndicator: vi.fn(),
+	failLoadingIndicator: vi.fn(),
+	warnLoadingIndicator: vi.fn(),
+	infoLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn(),
+	displayContextAnalysis: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateObjectService: jest.fn().mockResolvedValue({
-			mainResult: {
-				object: {
-					title: 'Task from prompt: Create a new authentication system',
-					description:
-						'Task generated from: Create a new authentication system',
-					details:
-						'Implementation details for task generated from prompt: Create a new authentication system',
-					testStrategy: 'Write unit tests to verify functionality',
-					dependencies: []
-				}
-			},
-			telemetryData: {
-				timestamp: new Date().toISOString(),
-				userId: '1234567890',
-				commandName: 'add-task',
-				modelUsed: 'claude-3-5-sonnet',
-				providerName: 'anthropic',
-				inputTokens: 1000,
-				outputTokens: 500,
-				totalTokens: 1500,
-				totalCost: 0.012414,
-				currency: 'USD'
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateObjectService: vi.fn().mockResolvedValue({
+		mainResult: {
+			object: {
+				title: 'Task from prompt: Create a new authentication system',
+				description: 'Task generated from: Create a new authentication system',
+				details:
+					'Implementation details for task generated from prompt: Create a new authentication system',
+				testStrategy: 'Write unit tests to verify functionality',
+				dependencies: []
 			}
-		})
+		},
+		telemetryData: {
+			timestamp: new Date().toISOString(),
+			userId: '1234567890',
+			commandName: 'add-task',
+			modelUsed: 'claude-3-5-sonnet',
+			providerName: 'anthropic',
+			inputTokens: 1000,
+			outputTokens: 500,
+			totalTokens: 1500,
+			totalCost: 0.012414,
+			currency: 'USD'
+		}
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDefaultPriority: jest.fn(() => 'medium'),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDefaultPriority: vi.fn(() => 'medium'),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/contextGatherer.js',
-	() => ({
-		default: jest.fn().mockImplementation(() => ({
-			gather: jest.fn().mockResolvedValue({
+vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
+	default: vi.fn().mockImplementation(function () {
+		return {
+			gather: vi.fn().mockResolvedValue({
 				contextSummary: 'Mock context summary',
 				allRelatedTaskIds: [],
 				graphVisualization: 'Mock graph'
 			})
-		}))
+		};
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockResolvedValue({
-				systemPrompt: 'Mocked system prompt',
-				userPrompt: 'Mocked user prompt'
-			})
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockResolvedValue({
+			systemPrompt: 'Mocked system prompt',
+			userPrompt: 'Mocked user prompt'
 		})
 	})
-);
+}));
 
 // Mock external UI libraries
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	default: {
-		white: { bold: jest.fn((text) => text) },
+		white: { bold: vi.fn((text) => text) },
 		cyan: Object.assign(
-			jest.fn((text) => text),
+			vi.fn((text) => text),
 			{
-				bold: jest.fn((text) => text)
+				bold: vi.fn((text) => text)
 			}
 		),
-		green: jest.fn((text) => text),
-		yellow: jest.fn((text) => text),
-		bold: jest.fn((text) => text)
+		green: vi.fn((text) => text),
+		yellow: vi.fn((text) => text),
+		bold: vi.fn((text) => text)
 	}
 }));
 
-jest.unstable_mockModule('boxen', () => ({
-	default: jest.fn((text) => text)
+vi.doMock('boxen', () => ({
+	default: vi.fn((text) => text)
 }));
 
-jest.unstable_mockModule('cli-table3', () => ({
-	default: jest.fn().mockImplementation(() => ({
-		push: jest.fn(),
-		toString: jest.fn(() => 'mocked table')
-	}))
+vi.doMock('cli-table3', () => ({
+	default: vi.fn().mockImplementation(function () {
+		return {
+			push: vi.fn(),
+			toString: vi.fn(() => 'mocked table')
+		};
+	})
 }));
 
 // Import the mocked modules
@@ -202,19 +193,19 @@ describe('addTask', () => {
 
 	// Create a helper function for consistent mcpLog mock
 	const createMcpLogMock = () => ({
-		info: jest.fn(),
-		warn: jest.fn(),
-		error: jest.fn(),
-		debug: jest.fn(),
-		success: jest.fn()
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn(),
+		success: vi.fn()
 	});
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		readJSON.mockReturnValue(JSON.parse(JSON.stringify(sampleTasks)));
 
 		// Mock console.log to avoid output during tests
-		jest.spyOn(console, 'log').mockImplementation(() => {});
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
 	afterEach(() => {
