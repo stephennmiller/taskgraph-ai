@@ -1,42 +1,42 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { claudeProfile } from '../../../src/profiles/claude.js';
 
 // Mock external modules
-jest.mock('child_process', () => ({
-	execSync: jest.fn()
+vi.doMock('child_process', () => ({
+	execSync: vi.fn()
 }));
 
 // Mock console methods
-jest.mock('console', () => ({
-	log: jest.fn(),
-	info: jest.fn(),
-	warn: jest.fn(),
-	error: jest.fn(),
-	clear: jest.fn()
+vi.doMock('console', () => ({
+	log: vi.fn(),
+	info: vi.fn(),
+	warn: vi.fn(),
+	error: vi.fn(),
+	clear: vi.fn()
 }));
 
 describe('Claude Profile Integration', () => {
 	let tempDir;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create a temporary directory for testing
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'taskgraph-test-'));
 
 		// Spy on fs methods
-		jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-		jest.spyOn(fs, 'readFileSync').mockImplementation((filePath) => {
+		vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+		vi.spyOn(fs, 'readFileSync').mockImplementation((filePath) => {
 			if (filePath.toString().includes('AGENTS.md')) {
 				return 'Sample AGENTS.md content for Claude integration';
 			}
 			return '{}';
 		});
-		jest.spyOn(fs, 'existsSync').mockImplementation(() => false);
-		jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+		vi.spyOn(fs, 'existsSync').mockImplementation(() => false);
+		vi.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
 	});
 
 	afterEach(() => {
