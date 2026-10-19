@@ -151,7 +151,7 @@
 		"prettier": "^3.9.10",
 		"supertest": "^7.3.1",
 		"ts-jest": "^29.4.14",
-		"tsdown": "^0.15.2",
+		"tsdown": "^0.23.1",
 		"tsx": "^4.23.15",
 		"turbo": "2.11.7",
 		"typescript": "^5.9.2"

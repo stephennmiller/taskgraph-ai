@@ -36,6 +36,9 @@ export default defineConfig(
 			'mcp-server': 'mcp-server/server.js'
 		},
 		outDir: 'dist',
+		// package.json "bin", postpack and the scripts reference dist/*.js. The
+		// package is "type": "module", so .js is ESM. tsdown >= 0.16 defaults to .mjs.
+		outExtensions: () => ({ js: '.js' }),
 		copy: ['assets'],
 		ignoreWatch: ['node_modules', 'dist', 'tests'],
 		// Bundle only our workspace packages, keep npm dependencies external
