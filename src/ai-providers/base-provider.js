@@ -432,12 +432,17 @@ export class BaseAIProvider {
 
 			const schema = buildSafeSchema(params.schema);
 
+			// Same options as generateObject, so both paths ask the model the same way
 			const result = await streamObject({
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,
-				mode: params.mode || 'auto',
-				maxOutputTokens: params.maxTokens,
+				mode: this.needsExplicitJsonSchema ? 'json' : 'auto',
+				...(params.objectName && {
+					schemaName: params.objectName,
+					schemaDescription: `Generate a valid JSON object for ${params.objectName}`
+				}),
+				maxTokens: params.maxTokens,
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
 					: {})

@@ -259,8 +259,7 @@ function registerCommands(programInstance) {
 			try {
 				if (!(await confirmOverwriteIfNeeded())) return;
 
-				console.log(theme.brand(`Parsing PRD file: ${taskGraph.getPrdPath()}`));
-				console.log(theme.brand(`Generating ${numTasks} tasks...`));
+				// The progress display names the file and task count, so no preamble
 				if (append) {
 					console.log(theme.brand('Appending to existing tasks...'));
 				}

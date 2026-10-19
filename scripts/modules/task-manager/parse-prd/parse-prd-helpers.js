@@ -13,6 +13,57 @@ import { getDefaultPriority } from '../../config-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
 import { ensureTagMetadata, findTaskById } from '../../utils.js';
+import { prdResponseSchema } from './parse-prd-config.js';
+
+/**
+ * The first complete top-level JSON object in a string, or null.
+ * Strings and escapes are respected, so braces inside values don't count.
+ * @param {string} text
+ * @returns {string|null}
+ */
+export function firstJsonObject(text) {
+	if (typeof text !== 'string') return null;
+	const start = text.indexOf('{');
+	if (start < 0) return null;
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+	for (let i = start; i < text.length; i++) {
+		const ch = text[i];
+		if (inString) {
+			if (escaped) escaped = false;
+			else if (ch === '\\') escaped = true;
+			else if (ch === '"') inString = false;
+		} else if (ch === '"') {
+			inString = true;
+		} else if (ch === '{') {
+			depth++;
+		} else if (ch === '}') {
+			depth--;
+			if (depth === 0) return text.slice(start, i + 1);
+		}
+	}
+	return null;
+}
+
+/**
+ * Recover the task list from a model reply that failed to parse as a whole.
+ * Claude Code sometimes repeats the JSON object, so the reply is two objects
+ * back to back; the first is complete. Returns null unless it matches the
+ * schema.
+ * @param {string} text - The raw reply
+ * @returns {{tasks: Array}|null}
+ */
+export function recoverTaskList(text) {
+	const json = firstJsonObject(text);
+	if (!json) return null;
+	try {
+		const result = prdResponseSchema.safeParse(JSON.parse(json));
+		return result.success ? result.data : null;
+	} catch {
+		return null;
+	}
+}
 
 /**
  * Estimate token count from text
@@ -89,7 +140,7 @@ export function validateFileOperations({
 	if (!hasExistingTasks) {
 		logger.report(
 			`Tag '${targetTag}' is empty or doesn't exist. Creating/updating tag with new tasks.`,
-			'info'
+			'debug'
 		);
 		return;
 	}

@@ -164,8 +164,15 @@ vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
 	})
 }));
 
+const mockProgress = {
+	update: vi.fn(),
+	succeed: vi.fn(),
+	stop: vi.fn(),
+	printedCount: 0
+};
 vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	getStatusWithColor: vi.fn((status) => status),
+	startParsePrdProgress: vi.fn(() => mockProgress),
 	startLoadingIndicator: vi.fn(),
 	stopLoadingIndicator: vi.fn(),
 	succeedLoadingIndicator: vi.fn(),
@@ -238,8 +245,10 @@ vi.doMock('fs', () => ({
 vi.doMock('path', () => ({
 	default: {
 		dirname: vi.fn(),
+		basename: vi.fn((p) => String(p).split('/').pop()),
 		join: vi.fn((dir, file) => `${dir}/${file}`)
 	},
+	basename: vi.fn((p) => String(p).split('/').pop()),
 	dirname: vi.fn(),
 	join: vi.fn((dir, file) => `${dir}/${file}`)
 }));
@@ -620,6 +629,34 @@ describe('parsePRD', () => {
 		);
 	});
 
+	test('should number tasks from 1 when overwriting with force', async () => {
+		const existing = {
+			master: {
+				tasks: [4, 5, 6].map((id) => ({ id, title: `Old ${id}` }))
+			}
+		};
+		fs.default.existsSync.mockReturnValue(true);
+		fs.default.readFileSync.mockImplementation((p) =>
+			p === 'tasks/tasks.json' ? JSON.stringify(existing) : samplePRDContent
+		);
+
+		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
+			force: true,
+			tag: 'master',
+			mcpLog: {
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
+			}
+		});
+
+		const written = JSON.parse(fs.default.writeFileSync.mock.calls[0][1]);
+		expect(written.master.tasks.map((t) => t.id)).toEqual([1, 2]);
+		expect(written.master.tasks[1].dependencies).toEqual([1]);
+	});
+
 	test('should throw error when tasks in tag exist without force flag in MCP mode', async () => {
 		// Setup mocks to simulate tasks.json already exists with tasks in the target tag
 		fs.default.existsSync.mockReturnValue(true);
@@ -980,29 +1017,73 @@ describe('parsePRD', () => {
 			expect(streamObjectService).not.toHaveBeenCalled();
 		});
 
-		test('should use non-streaming for CLI text mode (streaming disabled)', async () => {
-			// Setup mocks to simulate normal conditions
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
+		test('should stream tasks with live progress in CLI text mode', async () => {
+			fs.default.existsSync.mockImplementation((p) => p === 'tasks');
+			const { startParsePrdProgress } = await import(
+				'../../../../../scripts/modules/ui.js'
+			);
 
-			// Call without mcpLog and without reportProgress (CLI text mode)
 			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
 
-			// With streaming disabled, should use generateObjectService even in CLI text mode
+			expect(streamObjectService).toHaveBeenCalled();
+			expect(generateObjectService).not.toHaveBeenCalled();
+			expect(startParsePrdProgress).toHaveBeenCalledWith({
+				prdName: 'prd.txt',
+				numTasks: 3,
+				startId: 1
+			});
+			expect(mockProgress.update).toHaveBeenCalledTimes(4);
+			expect(mockProgress.succeed).toHaveBeenCalledWith(sampleClaudeResponse);
+			expect(result.success).toBe(true);
+			const written = JSON.parse(fs.default.writeFileSync.mock.calls[0][1]);
+			expect(written.master.tasks.map((t) => t.id)).toEqual([1, 2]);
+		});
+
+		test('should fall back to one request when the stream fails', async () => {
+			fs.default.existsSync.mockImplementation((p) => p === 'tasks');
+			streamObjectService.mockRejectedValueOnce(new Error('stream broke'));
+
+			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+
+			expect(mockProgress.stop).toHaveBeenCalled();
 			expect(generateObjectService).toHaveBeenCalled();
-			expect(streamObjectService).not.toHaveBeenCalled();
+			expect(result.success).toBe(true);
+		});
 
-			// Progress tracker components may still be called for CLI mode display
-			// but the actual parsing uses non-streaming
-
-			expect(result).toEqual({
-				success: true,
-				tasksPath: 'tasks/tasks.json',
+		test('should keep the first copy when the reply repeats the JSON', async () => {
+			fs.default.existsSync.mockImplementation((p) => p === 'tasks');
+			const task = (id) => ({
+				id,
+				title: `Task ${id}`,
+				description: 'Do it',
+				details: '',
+				testStrategy: '',
+				priority: 'medium',
+				dependencies: [],
+				status: 'pending'
+			});
+			const reply = JSON.stringify({ tasks: [task(1), task(2), task(3)] });
+			const parseError = Object.assign(new Error('could not parse'), {
+				text: `${reply}${reply}`
+			});
+			const failingObject = Promise.reject(parseError);
+			failingObject.catch(() => {});
+			streamObjectService.mockResolvedValueOnce({
+				mainResult: {
+					partialObjectStream: (async function* () {
+						yield { tasks: [task(1)] };
+					})(),
+					object: failingObject,
+					usage: Promise.resolve({})
+				},
 				telemetryData: {}
 			});
+
+			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
+
+			expect(generateObjectService).not.toHaveBeenCalled();
+			const written = JSON.parse(fs.default.writeFileSync.mock.calls[0][1]);
+			expect(written.master.tasks).toHaveLength(3);
 		});
 
 		test.skip('should handle parseStream with usedFallback flag - needs rewrite for streamObject', async () => {
