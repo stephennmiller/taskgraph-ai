@@ -140,6 +140,7 @@ export type {
 	PushOptions,
 	PushPlan,
 	PushResult,
+	UnlinkResult,
 	PlanStep
 } from './modules/github/index.js';
 
