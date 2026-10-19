@@ -53,7 +53,8 @@ test('allows the listed legacy test files but still checks their neighbors', () 
 		'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
 		'tests/integration/mcp-server/direct-functions.test.js',
 		'.claude/rules/tests.md',
-		'.claude/rules/new-features.md'
+		'.claude/rules/new-features.md',
+		'scripts/modules/commands.js'
 	]) {
 		assert.ok(isIgnored(p), p);
 		assert.deepEqual(run({ [p]: big }), []);
