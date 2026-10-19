@@ -1,8 +1,12 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
+
+// Load ui.js first: commands.js -> @tm/cli -> ... -> ui.js -> @tm/cli is an
+// import cycle that Vitest only resolves when ui.js is the entry point.
+import '../../../../../scripts/modules/ui.js';
 
 // `react` is not a declared dependency, so it must never be imported while the
 // TUI is still a "coming soon" placeholder (regression test for #1725).
-jest.unstable_mockModule(
+vi.doMock(
 	'react',
 	() => {
 		throw new Error("Cannot find package 'react'");
@@ -18,7 +22,7 @@ describe('launchREPL', () => {
 	let logSpy;
 
 	beforeEach(() => {
-		logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+		logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
 	afterEach(() => {

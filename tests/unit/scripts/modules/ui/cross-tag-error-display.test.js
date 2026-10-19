@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	displayCrossTagDependencyError,
 	displayDependencyValidationHints,
@@ -9,7 +9,7 @@ import {
 
 // Mock console.log to capture output
 const originalConsoleLog = console.log;
-const mockConsoleLog = jest.fn();
+const mockConsoleLog = vi.fn();
 global.console.log = mockConsoleLog;
 
 // Add afterAll hook to restore
