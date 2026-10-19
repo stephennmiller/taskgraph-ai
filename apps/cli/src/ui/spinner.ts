@@ -19,8 +19,19 @@ export function brandSpinner(
 	return { interval: 80, frames: DOTS.map((frame) => paint(frame)) };
 }
 
-/** Create an ora spinner in the brand color. Call `.start()` to show it. */
+/**
+ * Create an ora spinner in the brand color. Call `.start()` to show it.
+ *
+ * succeed/fail/warn finish with the same ✓ ✗ ⚠ symbols the rest of the CLI
+ * uses, instead of ora's heavier ✔ ✖ ⚠ from log-symbols.
+ */
 export function createSpinner(options: string | Options = {}): Ora {
 	const base = typeof options === 'string' ? { text: options } : options;
-	return ora({ ...base, spinner: brandSpinner(), color: false });
+	const spinner = ora({ ...base, spinner: brandSpinner(), color: false });
+	const finish = (symbol: string) => (text?: string) =>
+		spinner.stopAndPersist({ symbol, text });
+	spinner.succeed = finish(chalk.green('✓'));
+	spinner.fail = finish(chalk.red('✗'));
+	spinner.warn = finish(chalk.yellow('⚠'));
+	return spinner;
 }

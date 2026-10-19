@@ -1,3 +1,4 @@
+import { Writable } from 'node:stream';
 import { Chalk } from 'chalk';
 import { describe, expect, it } from 'vitest';
 import { brandSpinner, createSpinner } from './spinner.js';
@@ -36,5 +37,22 @@ describe('createSpinner', () => {
 
 		expect(spinner.text).toBe('Parsing PRD...');
 		expect(spinner.color).toBe(false);
+	});
+
+	it('finishes with the CLI’s own ✓ and ✗ symbols', () => {
+		let written = '';
+		const stream = new Writable({
+			write(chunk, _enc, done) {
+				written += chunk.toString();
+				done();
+			}
+		});
+
+		createSpinner({ text: 'Parsing', stream }).succeed('Done');
+		createSpinner({ text: 'Parsing', stream }).fail('Broke');
+
+		expect(written).toContain('✓ Done');
+		expect(written).toContain('✗ Broke');
+		expect(written).not.toContain('✔');
 	});
 });
