@@ -1,14 +1,14 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // --- Mocks ---
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	setTasksForTag: jest.fn(),
-	truncate: jest.fn((t) => t),
-	isSilentMode: jest.fn(() => false),
-	traverseDependencies: jest.fn((sourceTasks, allTasks, options = {}) => {
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	setTasksForTag: vi.fn(),
+	truncate: vi.fn((t) => t),
+	isSilentMode: vi.fn(() => false),
+	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => {
 		// Mock realistic dependency behavior for testing
 		const { direction = 'forward' } = options;
 
@@ -42,22 +42,16 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 	})
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/task-manager.js',
-	() => ({
-		isTaskDependentOn: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/task-manager.js', () => ({
+	isTaskDependentOn: vi.fn(() => false)
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/dependency-manager.js',
-	() => ({
-		validateCrossTagMove: jest.fn(),
-		findCrossTagDependencies: jest.fn(),
-		getDependentTaskIds: jest.fn(),
-		validateSubtaskMove: jest.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({
+	validateCrossTagMove: vi.fn(),
+	findCrossTagDependencies: vi.fn(),
+	getDependentTaskIds: vi.fn(),
+	validateSubtaskMove: vi.fn()
+}));
 
 const { readJSON, writeJSON, log } = await import(
 	'../../../../../scripts/modules/utils.js'
@@ -80,7 +74,7 @@ describe('Cross-Tag Task Movement', () => {
 	let mockContext;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Setup mock data
 		mockRawData = {
@@ -112,7 +106,7 @@ describe('Cross-Tag Task Movement', () => {
 	});
 
 	afterEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('getAllTasksWithTags', () => {

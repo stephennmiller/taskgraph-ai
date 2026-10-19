@@ -1,25 +1,22 @@
 /**
  * Tests for the addSubtask function
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock dependencies before importing the module
 const mockUtils = {
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	getCurrentTag: jest.fn()
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	getCurrentTag: vi.fn()
 };
 const mockTaskManager = {
-	isTaskDependentOn: jest.fn()
+	isTaskDependentOn: vi.fn()
 };
-const mockGenerateTaskFiles = jest.fn();
+const mockGenerateTaskFiles = vi.fn();
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils.js',
-	() => mockUtils
-);
-jest.unstable_mockModule(
+vi.doMock('../../../../../scripts/modules/utils.js', () => mockUtils);
+vi.doMock(
 	'../../../../../scripts/modules/task-manager.js',
 	() => mockTaskManager
 );
@@ -41,7 +38,7 @@ describe('addSubtask function', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockTaskManager.isTaskDependentOn.mockReturnValue(false);
 	});
 

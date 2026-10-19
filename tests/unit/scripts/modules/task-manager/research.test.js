@@ -1,158 +1,146 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	findProjectRoot: jest.fn(() => '/test/project/root'),
-	log: jest.fn(),
-	readJSON: jest.fn(),
-	flattenTasksWithSubtasks: jest.fn(() => []),
-	isEmpty: jest.fn(() => false)
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	findProjectRoot: vi.fn(() => '/test/project/root'),
+	log: vi.fn(),
+	readJSON: vi.fn(),
+	flattenTasksWithSubtasks: vi.fn(() => []),
+	isEmpty: vi.fn(() => false)
 }));
 
 // Mock marked-terminal to avoid chalk dependency issues
-jest.unstable_mockModule('marked-terminal', () => ({
-	markedTerminal: jest.fn(() => ({}))
+vi.doMock('marked-terminal', () => ({
+	markedTerminal: vi.fn(() => ({}))
 }));
 
 // Mock marked to avoid terminal rendering
-jest.unstable_mockModule('marked', () => ({
+vi.doMock('marked', () => ({
 	marked: Object.assign(
-		jest.fn((text) => text),
+		vi.fn((text) => text),
 		{
-			use: jest.fn(),
-			setOptions: jest.fn(),
-			parse: jest.fn((text) => Promise.resolve(text))
+			use: vi.fn(),
+			setOptions: vi.fn(),
+			parse: vi.fn((text) => Promise.resolve(text))
 		}
 	)
 }));
 
 // Mock UI-affecting external libs to minimal no-op implementations
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	// Callable like the real chalk: theme.text is plain chalk
 	default: Object.assign(
-		jest.fn((text) => text),
+		vi.fn((text) => text),
 		{
-			bold: jest.fn((text) => text),
-			italic: jest.fn((text) => text),
-			magenta: jest.fn((text) => text),
+			bold: vi.fn((text) => text),
+			italic: vi.fn((text) => text),
+			magenta: vi.fn((text) => text),
 			white: Object.assign(
-				jest.fn((text) => text),
+				vi.fn((text) => text),
 				{
-					bold: jest.fn((text) => text)
+					bold: vi.fn((text) => text)
 				}
 			),
 			cyan: Object.assign(
-				jest.fn((text) => text),
+				vi.fn((text) => text),
 				{
-					bold: jest.fn((text) => text)
+					bold: vi.fn((text) => text)
 				}
 			),
 			green: Object.assign(
-				jest.fn((text) => text),
+				vi.fn((text) => text),
 				{
-					bold: jest.fn((text) => text)
+					bold: vi.fn((text) => text)
 				}
 			),
-			yellow: jest.fn((text) => text),
-			red: jest.fn((text) => text),
+			yellow: vi.fn((text) => text),
+			red: vi.fn((text) => text),
 			dim: Object.assign(
-				jest.fn((text) => text),
+				vi.fn((text) => text),
 				{
-					italic: jest.fn((text) => text)
+					italic: vi.fn((text) => text)
 				}
 			),
 			blue: Object.assign(
-				jest.fn((text) => text),
+				vi.fn((text) => text),
 				{
-					bold: jest.fn((text) => text),
-					underline: jest.fn((text) => text)
+					bold: vi.fn((text) => text),
+					underline: vi.fn((text) => text)
 				}
 			),
 			dim: Object.assign(
-				jest.fn((text) => text),
+				vi.fn((text) => text),
 				{
-					strikethrough: jest.fn((text) => text)
+					strikethrough: vi.fn((text) => text)
 				}
 			)
 		}
 	)
 }));
 
-jest.unstable_mockModule('boxen', () => ({ default: (text) => text }));
+vi.doMock('boxen', () => ({ default: (text) => text }));
 
-jest.unstable_mockModule('inquirer', () => ({
-	default: { prompt: jest.fn() }
+vi.doMock('inquirer', () => ({
+	default: { prompt: vi.fn() }
 }));
 
-jest.unstable_mockModule('cli-highlight', () => ({
+vi.doMock('cli-highlight', () => ({
 	highlight: (code) => code
 }));
 
-jest.unstable_mockModule('cli-table3', () => ({
-	default: jest.fn().mockImplementation(() => ({
-		push: jest.fn(),
-		toString: jest.fn(() => '')
+vi.doMock('cli-table3', () => ({
+	default: vi.fn().mockImplementation(() => ({
+		push: vi.fn(),
+		toString: vi.fn(() => '')
 	}))
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/contextGatherer.js',
-	() => ({
-		ContextGatherer: jest.fn().mockImplementation(() => ({
-			gather: jest.fn().mockResolvedValue({
-				context: 'Gathered context',
-				tokenBreakdown: { total: 500 }
-			}),
-			countTokens: jest.fn(() => 100)
-		}))
-	})
-);
-
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/fuzzyTaskSearch.js',
-	() => ({
-		FuzzyTaskSearch: jest.fn().mockImplementation(() => ({
-			findRelevantTasks: jest.fn(() => []),
-			getTaskIds: jest.fn(() => [])
-		}))
-	})
-);
-
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateTextService: jest.fn().mockResolvedValue({
-			mainResult:
-				'Test research result with ```javascript\nconsole.log("test");\n```',
-			telemetryData: {}
+vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
+	ContextGatherer: vi.fn().mockImplementation(() => ({
+		gather: vi.fn().mockResolvedValue({
+			context: 'Gathered context',
+			tokenBreakdown: { total: 500 }
 		}),
-		streamTextService: jest.fn().mockResolvedValue({
-			mainResult: {
-				textStream: (async function* () {
-					yield 'Test research result';
-				})()
-			},
-			telemetryData: {}
-		})
-	})
-);
-
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayAiUsageSummary: jest.fn(),
-	startLoadingIndicator: jest.fn(() => ({ stop: jest.fn() })),
-	stopLoadingIndicator: jest.fn()
+		countTokens: vi.fn(() => 100)
+	}))
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockResolvedValue({
-				systemPrompt: 'System prompt',
-				userPrompt: 'User prompt'
-			})
+vi.doMock('../../../../../scripts/modules/utils/fuzzyTaskSearch.js', () => ({
+	FuzzyTaskSearch: vi.fn().mockImplementation(() => ({
+		findRelevantTasks: vi.fn(() => []),
+		getTaskIds: vi.fn(() => [])
+	}))
+}));
+
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateTextService: vi.fn().mockResolvedValue({
+		mainResult:
+			'Test research result with ```javascript\nconsole.log("test");\n```',
+		telemetryData: {}
+	}),
+	streamTextService: vi.fn().mockResolvedValue({
+		mainResult: {
+			textStream: (async function* () {
+				yield 'Test research result';
+			})()
+		},
+		telemetryData: {}
+	})
+}));
+
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayAiUsageSummary: vi.fn(),
+	startLoadingIndicator: vi.fn(() => ({ stop: vi.fn() })),
+	stopLoadingIndicator: vi.fn()
+}));
+
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockResolvedValue({
+			systemPrompt: 'System prompt',
+			userPrompt: 'User prompt'
 		})
 	})
-);
+}));
 
 const { performResearch } = await import(
 	'../../../../../scripts/modules/task-manager/research.js'
@@ -189,7 +177,7 @@ describe('performResearch tag-aware functionality', () => {
 
 	beforeEach(() => {
 		// Reset all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Set up default mocks
 		utils.findProjectRoot.mockReturnValue('/test/project/root');
@@ -206,22 +194,26 @@ describe('performResearch tag-aware functionality', () => {
 
 		// Set up ContextGatherer mock
 		mockContextGatherer = {
-			gather: jest.fn().mockResolvedValue({
+			gather: vi.fn().mockResolvedValue({
 				context: 'Gathered context',
 				tokenBreakdown: { total: 500 }
 			}),
-			countTokens: jest.fn(() => 100)
+			countTokens: vi.fn(() => 100)
 		};
-		ContextGatherer.mockImplementation(() => mockContextGatherer);
+		ContextGatherer.mockImplementation(function () {
+			return mockContextGatherer;
+		});
 
 		// Set up FuzzyTaskSearch mock
 		mockFuzzySearch = {
-			findRelevantTasks: jest.fn(() => [
+			findRelevantTasks: vi.fn(() => [
 				{ id: 1, title: 'Task 1', description: 'Description 1' }
 			]),
-			getTaskIds: jest.fn(() => ['1'])
+			getTaskIds: vi.fn(() => ['1'])
 		};
-		FuzzyTaskSearch.mockImplementation(() => mockFuzzySearch);
+		FuzzyTaskSearch.mockImplementation(function () {
+			return mockFuzzySearch;
+		});
 
 		// Store references for easier access
 		mockReadJSON = utils.readJSON;
@@ -514,11 +506,11 @@ describe('performResearch tag-aware functionality', () => {
 
 		it('logs debug message when task discovery fails', async () => {
 			const mockLog = {
-				debug: jest.fn(),
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				success: jest.fn()
+				debug: vi.fn(),
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				success: vi.fn()
 			};
 
 			mockReadJSON.mockRejectedValueOnce(new Error('File not found'));
@@ -566,11 +558,11 @@ describe('performResearch tag-aware functionality', () => {
 	describe('MCP integration with tags', () => {
 		it('uses MCP logger when mcpLog is provided in context', async () => {
 			const mockMCPLog = {
-				debug: jest.fn(),
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				success: jest.fn()
+				debug: vi.fn(),
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				success: vi.fn()
 			};
 
 			mockReadJSON.mockRejectedValueOnce(new Error('Test error'));
@@ -609,7 +601,7 @@ describe('performResearch tag-aware functionality', () => {
 
 	describe('output format handling with tags', () => {
 		it('displays UI banner only in text format', async () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 
 			await performResearch('Test query', { tag: 'ui-tag' }, {}, 'text', false);
 
@@ -621,7 +613,7 @@ describe('performResearch tag-aware functionality', () => {
 		});
 
 		it('does not display UI banner in json format', async () => {
-			const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 
 			await performResearch('Test query', { tag: 'ui-tag' }, {}, 'json', false);
 
@@ -648,11 +640,11 @@ describe('performResearch tag-aware functionality', () => {
 			const testContext = {
 				session: { userId: 'test-user' },
 				mcpLog: {
-					debug: jest.fn(),
-					info: jest.fn(),
-					warn: jest.fn(),
-					error: jest.fn(),
-					success: jest.fn()
+					debug: vi.fn(),
+					info: vi.fn(),
+					warn: vi.fn(),
+					error: vi.fn(),
+					success: vi.fn()
 				},
 				commandName: 'test-research',
 				outputType: 'mcp'

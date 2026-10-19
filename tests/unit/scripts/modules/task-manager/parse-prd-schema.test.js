@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 import { prdResponseSchema } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-config.js';
 
 describe('PRD Response Schema', () => {

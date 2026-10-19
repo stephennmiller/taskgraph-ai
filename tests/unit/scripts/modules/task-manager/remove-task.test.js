@@ -1,25 +1,25 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // --- Mock dependencies BEFORE module import ---
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-model',
 		maxTokens: 4000,
 		temperature: 0.7,
 		debug: false
 	},
-	findTaskById: jest.fn(),
-	truncate: jest.fn((t) => t),
-	isSilentMode: jest.fn(() => false)
+	findTaskById: vi.fn(),
+	truncate: vi.fn((t) => t),
+	isSilentMode: vi.fn(() => false)
 }));
 
 // fs is used for file deletion side-effects – stub the methods we touch
-jest.unstable_mockModule('fs', () => ({
-	existsSync: jest.fn(() => true),
-	unlinkSync: jest.fn()
+vi.doMock('fs', () => ({
+	existsSync: vi.fn(() => true),
+	unlinkSync: vi.fn()
 }));
 
 // path is fine to keep as real since only join/dirname used – no side effects
@@ -64,7 +64,7 @@ const getFreshData = () => JSON.parse(JSON.stringify(buildSampleTaggedTasks()));
 
 describe('removeTask', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		// readJSON returns deep copy so each test isolated
 		readJSON.mockImplementation(() => {
 			return {
