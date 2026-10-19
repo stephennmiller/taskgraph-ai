@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import yaml from 'js-yaml';
+import { load } from 'js-yaml';
 
 // A job without `timeout-minutes` silently gets GitHub's 6-hour default, so a
 // hung step burns runner minutes for hours before anyone notices. Jobs that call
@@ -22,9 +22,9 @@ export function findWorkflowsMissingTimeouts(dir) {
 		.filter((name) => /\.ya?ml$/.test(name))
 		.sort()
 		.flatMap((file) =>
-			findJobsMissingTimeout(
-				yaml.load(readFileSync(join(dir, file), 'utf8'))
-			).map((job) => ({ file, job }))
+			findJobsMissingTimeout(load(readFileSync(join(dir, file), 'utf8'))).map(
+				(job) => ({ file, job })
+			)
 		);
 }
 
