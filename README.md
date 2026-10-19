@@ -18,6 +18,10 @@
 
 TaskGraph turns a product requirements document (PRD) into a dependency-aware task list, then walks Claude Code through it one task at a time. You describe what to build, TaskGraph plans the work, and Claude Code implements it, with the plan and progress stored in your repo.
 
+<p align="center">
+  <img src="images/taskgraph-flow.svg" alt="Eight tasks from scaffold to launch. Each unlocks when its dependencies are done, and taskgraph next always points at the next unblocked task." width="720">
+</p>
+
 - **Plan from a PRD:** generate tasks and subtasks, with dependencies, priorities and test strategies.
 - **Always know what's next:** `next` picks the first unblocked task.
 - **Stay in Claude Code:** use slash commands (`/tm:next-task`) or the `taskgraph` CLI. An MCP server is available if you want plain-language control, but it is optional.
