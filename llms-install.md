@@ -1,131 +1,141 @@
 # TaskGraph Installation Guide
 
-This guide helps AI assistants install and configure TaskGraph for users in their development projects.
+This guide helps AI assistants install and configure TaskGraph for users in their development projects. TaskGraph supports Claude Code only.
 
 ## What is TaskGraph?
 
-TaskGraph is an AI-driven task management system designed for development workflows. It helps break down projects into manageable tasks, track dependencies, and maintain development momentum through structured, AI-enhanced planning.
+TaskGraph is an AI-driven task management system designed for development workflows. It breaks a PRD into dependency-aware tasks, tracks their status, and tells Claude Code what to work on next, keeping the plan and progress in the user's repo.
+
+## Prerequisites
+
+- [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (the user has run `claude` once)
+- Node.js 22 or later
+
+TaskGraph needs no AI provider API keys. Every AI call runs through the user's signed-in Claude Code. The only optional key is `CLAUDE_CODE_API_KEY`, for billing calls to a specific Anthropic API key.
 
 ## Installation Steps
 
-### Step 1: Add MCP Configuration
+### Step 1: Install the CLI
 
-Add the following configuration to the user's MCP settings file (`.cursor/mcp.json` for Cursor, or equivalent for other editors):
+```bash
+npm install -g taskgraph-ai
+```
+
+This provides the `taskgraph` command and `taskgraph-mcp`, the optional MCP server. To skip the install, run commands through npx, for example `npx -y -p taskgraph-ai taskgraph list`.
+
+### Step 2: Initialize the Project
+
+From the user's project folder:
+
+```bash
+taskgraph init --rules claude
+```
+
+This creates `.taskgraph/`, imports TaskGraph's workflow guide from `CLAUDE.md`, installs the `/tm:` slash commands in `.claude/commands/tm/`, and writes a `.mcp.json` entry for the MCP server. Do not run `init` twice; it only re-adds the same files.
+
+### Step 3: (Optional) Add the MCP Server
+
+The slash commands and CLI cover the whole workflow. Add the MCP server only if the user wants to drive TaskGraph in plain language:
+
+```bash
+claude mcp add taskgraph-ai --scope user \
+  --env TASKGRAPH_TOOLS=standard \
+  -- npx -y taskgraph-ai
+```
+
+Or in the project's `.mcp.json`:
 
 ```json
 {
-	"mcpServers": {
-		"taskgraph-ai": {
-			"command": "npx",
-			"args": ["-y", "taskgraph-ai"],
-			"env": {
-				"ANTHROPIC_API_KEY": "user_will_add_their_key_here",
-				"PERPLEXITY_API_KEY": "user_will_add_their_key_here",
-				"OPENAI_API_KEY": "user_will_add_their_key_here",
-				"GOOGLE_API_KEY": "user_will_add_their_key_here",
-				"MISTRAL_API_KEY": "user_will_add_their_key_here",
-				"OPENROUTER_API_KEY": "user_will_add_their_key_here",
-				"XAI_API_KEY": "user_will_add_their_key_here"
-			}
-		}
-	}
+  "mcpServers": {
+    "taskgraph-ai": {
+      "command": "npx",
+      "args": ["-y", "taskgraph-ai"],
+      "env": { "TASKGRAPH_TOOLS": "standard" }
+    }
+  }
 }
 ```
 
-### Step 2: API Key Requirements
+`TASKGRAPH_TOOLS` controls how many tools are loaded: `core` (7, the default), `standard` (14) or `all`. Ask the user to restart Claude Code and run `/mcp` to confirm `taskgraph-ai` is connected.
 
-Inform the user they need **at least one** API key from the following providers:
+### Step 4: Choose Models (Optional)
 
-- **Anthropic** (for Claude models) - Recommended
-- **OpenAI** (for GPT models)
-- **Google** (for Gemini models)
-- **Perplexity** (for research features) - Highly recommended
-- **Mistral** (for Mistral models)
-- **OpenRouter** (access to multiple models)
-- **xAI** (for Grok models)
+TaskGraph has three model roles, `main`, `research` and `fallback`. Each can be `opus`, `sonnet` or `haiku`:
 
-The user will be able to define 3 separate roles (can be the same provider or separate providers) for main AI operations, research operations (research providers/models only), and a fallback model in case of errors.
+```bash
+taskgraph models --setup
+taskgraph models --set-main sonnet
+```
 
-### Step 3: Initialize Project
+### Step 5: Create Initial Tasks
 
-Once the MCP server is configured and API keys are added, initialize TaskGraph in the user's project:
+**Option A: Parse a PRD (recommended).** If the user has a Product Requirements Document:
 
-> Can you initialize TaskGraph in my project?
+```bash
+taskgraph parse-prd .taskgraph/docs/prd.md
+```
 
-This will run the `initialize_project` tool to set up the basic file structure.
+or `/tm:parse-prd .taskgraph/docs/prd.md` in Claude Code. If the user has no PRD, help them write one and save it to `.taskgraph/docs/prd.md`.
 
-### Step 4: Create Initial Tasks
+**Option B: Start from scratch.**
 
-Users have two options for creating initial tasks:
-
-**Option A: Parse a PRD (Recommended)**
-If they have a Product Requirements Document:
-
-> Can you parse my PRD file at [path/to/prd.txt] to generate initial tasks?
-
-If the user does not have a PRD, the AI agent can help them create one and store it in scripts/prd.txt for parsing.
-
-**Option B: Start from scratch**
-
-> Can you help me add my first task: [describe the task]
+```bash
+taskgraph add-task --prompt="describe the task"
+```
 
 ## Common Usage Patterns
 
 ### Daily Workflow
 
-> What's the next task I should work on?
-> Can you show me the details for task [ID]?
-> Can you mark task [ID] as done?
+| Slash command | CLI |
+|---|---|
+| `/tm:next-task` | `taskgraph next` |
+| `/tm:show-task <id>` | `taskgraph show <id>` |
+| `/tm:to-in-progress <id>` | `taskgraph set-status --id=<id> --status=in-progress` |
+| `/tm:to-done <id>` | `taskgraph set-status --id=<id> --status=done` |
 
 ### Task Management
 
-> Can you break down task [ID] into subtasks?
-> Can you add a new task: [description]
-> Can you analyze the complexity of my tasks?
+| Slash command | CLI |
+|---|---|
+| `/tm:expand-task <id>` | `taskgraph expand --id=<id>` |
+| `/tm:add-task <description>` | `taskgraph add-task --prompt="..."` |
+| `/tm:analyze-complexity` | `taskgraph analyze-complexity` |
+| `/tm:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt="..."` |
 
-### Project Organization
-
-> Can you show me all my pending tasks?
-> Can you move task [ID] to become a subtask of [parent ID]?
-> Can you update task [ID] with this new information: [details]
+With the MCP server, the user can say the same things in plain language, such as "What's the next task I should work on?".
 
 ## Verification Steps
 
-After installation, verify everything is working:
-
-1. **Check MCP Connection**: The AI should be able to access TaskGraph tools
-2. **Test Basic Commands**: Try `get_tasks` to list current tasks
-3. **Verify API Keys**: Ensure AI-powered commands work (like `add_task`)
-
-Note: An API key fallback exists that allows the MCP server to read API keys from `.env` instead of the MCP JSON config. It is recommended to have keys in both places in case the MCP server is unable to read keys from its environment for whatever reason.
-
-When adding keys to `.env` only, the `models` tool will explain that the keys are not OK for MCP. Despite this, the fallback should kick in and the API keys will be read from the `.env` file.
+1. Run `taskgraph list`. It should show the project's tasks (or none yet).
+2. Run `taskgraph models`. It should show the three model roles.
+3. Run an AI command such as `taskgraph add-task --prompt="test task"`. If it fails, check that `claude` runs and is signed in.
+4. If the MCP server was added, `/mcp` in Claude Code should list `taskgraph-ai` as connected.
 
 ## Troubleshooting
 
-**If MCP server doesn't start:**
+**If the MCP server doesn't start:**
 
 - Verify the JSON configuration is valid
-- Check that Node.js is installed
-- Ensure API keys are properly formatted
+- Check that Node.js 22 or later is installed
+- Confirm `npx -y taskgraph-ai` starts on its own in a terminal (it waits for input; press Ctrl+C to stop)
 
 **If AI commands fail:**
 
-- Verify at least one API key is configured
-- Check API key permissions and quotas
-- Try using a different model via the `models` tool
+- Run `claude` once and make sure the user is signed in
+- Run `taskgraph models` and confirm the roles are set to `opus`, `sonnet` or `haiku`
 
-## CLI Fallback
-
-TaskGraph is also available via CLI commands, by installing with `npm install taskgraph-ai@latest` in a terminal. Running `taskgraph help` will show all available commands, which offer a 1:1 experience with the MCP server. As the AI agent, you should refer to the system prompts and rules provided to you to identify TaskGraph-specific rules that help you understand how and when to use it.
+**If a project came from Task Master or a release before 0.47:** rename `.taskmaster/` to `.taskgraph/` by hand and rename any `TASK_MASTER_*` or `TASKMASTER_*` environment variables to `TASKGRAPH_*`. `taskgraph migrate` and `.taskmasterconfig` no longer exist. See the upgrade guide in `apps/docs/upgrading.mdx`.
 
 ## Next Steps
 
 Once installed, users can:
 
-- Create new tasks with `add-task` or parse a PRD (scripts/prd.txt) into tasks with `parse-prd`
-- Set up model preferences with `models` tool
-- Expand tasks into subtasks with `expand-all` and `expand-task`
-- Explore advanced features like research mode and complexity analysis
+- Create tasks with `add-task` or parse a PRD with `parse-prd`
+- Break tasks into subtasks with `expand` and `expand --all`
+- Analyze complexity with `analyze-complexity`
+- Organize work with tags (`taskgraph tags`)
+- Run `taskgraph help` to see every command
 
-For detailed documentation, refer to the TaskGraph docs directory.``
+For detailed documentation, see the Mintlify docs source in `apps/docs/`.

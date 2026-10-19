@@ -276,7 +276,7 @@ The loop watches for two special markers in agent output:
 | Marker | Purpose | Example |
 | ------ | ------- | ------- |
 | `<loop-complete>REASON</loop-complete>` | Signal that all work is done | `<loop-complete>ALL_TESTS_PASSING</loop-complete>` |
-| `<loop-blocked>REASON</loop-blocked>` | Signal that work cannot proceed | `<loop-blocked>MISSING_API_KEY</loop-blocked>` |
+| `<loop-blocked>REASON</loop-blocked>` | Signal that work cannot proceed | `<loop-blocked>MISSING_ENV_VAR</loop-blocked>` |
 
 When either marker is detected, the loop exits early. The reason text is captured in the final result.
 

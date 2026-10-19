@@ -1,94 +1,84 @@
 ---
 title: "Configuration"
-description: "Configure TaskGraph through environment variables in a .env file"
+description: "Configure TaskGraph models, defaults and environment variables"
 ---
 
-## Required Configuration
+TaskGraph needs no API keys. It runs on your signed-in Claude Code. See [Authentication](/getting-started/api-keys).
+
+Configuration lives in `.taskgraph/config.json`. Create or change it with `taskgraph models`, and avoid editing it by hand.
+
+## Models
+
+Three roles, each set to one of `opus`, `sonnet` or `haiku`:
+
+| Role | Used for |
+| --- | --- |
+| `main` | Task generation and updates |
+| `research` | Research-backed operations (web search and fetch only; it cannot read or change your files and has no shell) |
+| `fallback` | Any operation where the main or research call fails |
+
+```bash
+taskgraph models                       # view the current configuration
+taskgraph models --setup               # interactive setup
+taskgraph models --set-main sonnet
+taskgraph models --set-research opus
+taskgraph models --set-fallback haiku
+```
+
+## Example `config.json`
+
+```json
+{
+  "models": {
+    "main": { "provider": "claude-code", "modelId": "sonnet", "maxTokens": 64000, "temperature": 0.2 },
+    "research": { "provider": "claude-code", "modelId": "sonnet", "maxTokens": 8700, "temperature": 0.1 },
+    "fallback": { "provider": "claude-code", "modelId": "sonnet", "maxTokens": 64000, "temperature": 0.2 }
+  },
+  "global": {
+    "logLevel": "info",
+    "debug": false,
+    "defaultNumTasks": 10,
+    "defaultSubtasks": 5,
+    "defaultPriority": "medium",
+    "defaultTag": "master",
+    "projectName": "Your Project Name",
+    "responseLanguage": "English"
+  },
+  "claudeCode": {}
+}
+```
+
+## Environment variables
+
+| Variable | Description |
+| --- | --- |
+| `CLAUDE_CODE_API_KEY` | Optional. Bill Claude Code calls to this Anthropic API key instead of your Claude Code sign-in. |
+| `TASKGRAPH_TOOLS` | Which MCP tools to load: `core` (default), `standard`, `all` or a comma-separated list. See [MCP tools](/capabilities/mcp). |
+| `TASKGRAPH_MODEL_MAIN`, `TASKGRAPH_MODEL_RESEARCH`, `TASKGRAPH_MODEL_FALLBACK` | Override a model role. |
+| `TASKGRAPH_RESPONSE_LANGUAGE` | Override the language of generated content. |
+| `TASKGRAPH_TAG` | Override the active tag. |
+| `TASKGRAPH_PROJECT_ROOT` | Project root, for tools that run outside the project folder. |
+| `TASKGRAPH_LOG_LEVEL` | Console log level. |
+| `TASKGRAPH_DEBUG` | Set to `true` for debug logging. |
+
+Model IDs, `maxTokens`, `temperature`, `defaultSubtasks`, `defaultPriority` and `projectName` belong in `config.json`, not in environment variables.
 
 <Note>
-  TaskGraph requires an Anthropic API key to function. Add this to your `.env` file:
-
-  ```bash
-  ANTHROPIC_API_KEY=sk-ant-api03-your-api-key
-  ```
-
-  You can obtain an API key from the [Anthropic Console](https://console.anthropic.com/).
+Upgrading? Variables named `TASK_MASTER_*` and `TASKMASTER_*` were renamed to `TASKGRAPH_*` in 0.47, and the old names are ignored. See the [upgrade guide](/upgrading).
 </Note>
-
-## Optional Configuration
-
-| Variable | Default Value | Description | Example |
-| --- | --- | --- | --- |
-| `MODEL` | `"claude-sonnet-5-5"` | Claude model to use | `MODEL=claude-opus-5-5` |
-| `MAX_TOKENS` | `"4000"` | Maximum tokens for responses | `MAX_TOKENS=8000` |
-| `TEMPERATURE` | `"0.7"` | Temperature for model responses | `TEMPERATURE=0.5` |
-| `DEBUG` | `"false"` | Enable debug logging | `DEBUG=true` |
-| `LOG_LEVEL` | `"info"` | Console output level | `LOG_LEVEL=debug` |
-| `DEFAULT_SUBTASKS` | `"3"` | Default subtask count | `DEFAULT_SUBTASKS=5` |
-| `DEFAULT_PRIORITY` | `"medium"` | Default priority | `DEFAULT_PRIORITY=high` |
-| `PROJECT_NAME` | `"MCP SaaS MVP"` | Project name in metadata | `PROJECT_NAME=My Awesome Project` |
-| `PROJECT_VERSION` | `"1.0.0"` | Version in metadata | `PROJECT_VERSION=2.1.0` |
-| `PERPLEXITY_API_KEY` | - | For research-backed features | `PERPLEXITY_API_KEY=pplx-...` |
-| `PERPLEXITY_MODEL` | `"sonar-medium-online"` | Perplexity model | `PERPLEXITY_MODEL=sonar-large-online` |
-
-## TDD Workflow Configuration
-
-Additional options for autonomous TDD workflow:
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `TM_MAX_ATTEMPTS` | `3` | Max attempts per subtask before marking blocked |
-| `TM_AUTO_COMMIT` | `true` | Auto-commit after GREEN phase |
-| `TM_PROJECT_ROOT` | Current dir | Default project root |
-
-## Example .env File
-
-```
-# Required
-ANTHROPIC_API_KEY=sk-ant-api03-your-api-key
-
-# Optional - Claude Configuration
-MODEL=claude-sonnet-5-5
-MAX_TOKENS=4000
-TEMPERATURE=0.7
-
-# Optional - Perplexity API for Research
-PERPLEXITY_API_KEY=pplx-your-api-key
-PERPLEXITY_MODEL=sonar-medium-online
-
-# Optional - Project Info
-PROJECT_NAME=My Project
-PROJECT_VERSION=1.0.0
-
-# Optional - Application Configuration
-DEFAULT_SUBTASKS=3
-DEFAULT_PRIORITY=medium
-DEBUG=false
-LOG_LEVEL=info
-
-# TDD Workflow
-TM_MAX_ATTEMPTS=3
-TM_AUTO_COMMIT=true
-```
 
 ## Troubleshooting
 
-### If `taskgraph init` doesn't respond:
+### If `taskgraph init` doesn't respond
 
-Try running it with Node directly:
-
-```bash
-node node_modules/taskgraph-ai/scripts/init.js
-```
-
-Or clone the repository and run:
+Run the CLI through npx instead:
 
 ```bash
-git clone https://github.com/stephennmiller/taskgraph-ai.git
-cd taskgraph-ai
-node scripts/init.js
+npx -y -p taskgraph-ai taskgraph init --rules claude
 ```
 
-<Note>
-For advanced configuration options and detailed customization, see our [Advanced Configuration Guide] page.
-</Note>
+### Configuration errors
+
+If TaskGraph cannot find its config file, run `taskgraph models --setup` in your project root to create or repair it.
+
+For tag, timeout and MCP details, see the [Advanced Configuration Guide](/best-practices/configuration-advanced).

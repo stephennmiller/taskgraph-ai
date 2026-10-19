@@ -42,7 +42,7 @@ taskgraph validate-dependencies                            # Check for dependenc
 - `.taskgraph/config.json` - AI model configuration (use `taskgraph models` to modify)
 - `.taskgraph/docs/prd.md` - Product Requirements Document for parsing (`.md` extension recommended for better editor support)
 - `.taskgraph/tasks/*.txt` - Individual task files (auto-generated from tasks.json)
-- `.env` - API keys for CLI usage
+- `.env` - Optional environment variables (for example `CLAUDE_CODE_API_KEY`)
 
 **PRD File Format:** While both `.txt` and `.md` extensions work, **`.md` is recommended** because:
 - Markdown syntax highlighting in editors improves readability
@@ -75,7 +75,7 @@ project/
 ├── .claude/
 │   ├── settings.json      # Claude Code configuration
 │   └── commands/         # Custom slash commands
-├── .env                  # API keys
+├── .env                  # Optional env vars
 ├── .mcp.json            # MCP configuration
 └── CLAUDE.md            # This file - auto-loaded by Claude Code
 ```
@@ -109,16 +109,7 @@ TaskGraph also provides an MCP server that Claude Code can connect to. It is opt
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_TOOLS": "core",
-        "ANTHROPIC_API_KEY": "your_key_here",
-        "PERPLEXITY_API_KEY": "your_key_here",
-        "OPENAI_API_KEY": "OPENAI_API_KEY_HERE",
-        "GOOGLE_API_KEY": "GOOGLE_API_KEY_HERE",
-        "XAI_API_KEY": "XAI_API_KEY_HERE",
-        "OPENROUTER_API_KEY": "OPENROUTER_API_KEY_HERE",
-        "MISTRAL_API_KEY": "MISTRAL_API_KEY_HERE",
-        "AZURE_OPENAI_API_KEY": "AZURE_OPENAI_API_KEY_HERE",
-        "OLLAMA_API_KEY": "OLLAMA_API_KEY_HERE"
+        "TASKGRAPH_TOOLS": "core"
       }
     }
   }
@@ -266,19 +257,9 @@ Add to `.claude/settings.json`:
 
 ## Configuration & Setup
 
-### API Keys Required
+### Authentication
 
-At least **one** of these API keys must be configured:
-
-- `ANTHROPIC_API_KEY` (Claude models) - **Recommended**
-- `PERPLEXITY_API_KEY` (Research features) - **Highly recommended**
-- `OPENAI_API_KEY` (GPT models)
-- `GOOGLE_API_KEY` (Gemini models)
-- `MISTRAL_API_KEY` (Mistral models)
-- `OPENROUTER_API_KEY` (Multiple models)
-- `XAI_API_KEY` (Grok models)
-
-An API key is required for any provider used across any of the 3 roles defined in the `models` command.
+TaskGraph runs every AI call through your signed-in Claude Code, so no provider API keys are needed. Run `claude` once to sign in. Optionally set `CLAUDE_CODE_API_KEY` to bill calls to a specific Anthropic API key.
 
 ### Model Configuration
 
@@ -287,9 +268,9 @@ An API key is required for any provider used across any of the 3 roles defined i
 taskgraph models --setup
 
 # Set specific models
-taskgraph models --set-main claude-sonnet-5-5
-taskgraph models --set-research perplexity-llama-3.1-sonar-large-128k-online
-taskgraph models --set-fallback gpt-4o-mini
+taskgraph models --set-main sonnet
+taskgraph models --set-research opus
+taskgraph models --set-fallback haiku
 ```
 
 ## Task Structure & IDs
@@ -382,14 +363,14 @@ cd ../project-api && claude     # Terminal 2: API work
 ### AI Commands Failing
 
 ```bash
-# Check API keys are configured
-cat .env                           # For CLI usage
+# Make sure Claude Code is installed and signed in
+claude --version
 
 # Verify model configuration
 taskgraph models
 
 # Test with different model
-taskgraph models --set-fallback gpt-4o-mini
+taskgraph models --set-fallback haiku
 ```
 
 ### MCP Connection Issues (only if you use MCP)
@@ -444,7 +425,7 @@ These commands make AI calls and may take up to a minute:
 ### Research Mode
 
 - Add `--research` flag for research-based AI enhancement
-- Requires a research model API key like Perplexity (`PERPLEXITY_API_KEY`) in environment
+- The research role has web search and fetch only; it cannot read or change your files
 - Provides more informed task creation and updates
 - Recommended for complex technical tasks
 

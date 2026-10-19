@@ -26,11 +26,8 @@ When using this template to **create** a PRD (not parse it), use **code-context-
 
 **Recommended tools:**
 - **Claude Code** (claude-code CLI) - Best for structured reasoning and large contexts
-- **Cursor/Windsurf** - IDE integration with full codebase context
-- **Gemini CLI** (gemini-cli) - Massive context window for large codebases
-- **Codex/Grok CLI** - Strong code generation with context awareness
 
-**Note:** Once your PRD is created, `taskgraph parse-prd` works with any configured AI model - it just needs to read the PRD text itself, not your codebase.
+**Note:** Once your PRD is created, `taskgraph parse-prd` works with Claude Code - it just needs to read the PRD text itself, not your codebase.
 </rpg-method>
 
 ---
