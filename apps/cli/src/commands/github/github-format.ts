@@ -5,6 +5,9 @@
 import type {
 	GitHubStatus,
 	PlanStep,
+	PullPlan,
+	PullResult,
+	PullStep,
 	PushPlan,
 	PushResult,
 	UnlinkResult
@@ -68,6 +71,71 @@ export function formatResult(result: PushResult): string {
 	return [
 		chalk.bold(result.dryRun ? 'Dry run, nothing written' : 'Push complete'),
 		`  ${prefix}created ${result.created}, ${prefix}updated ${result.updated}, unchanged ${result.skipped}, ${prefix}closed ${result.closed}`
+	].join('\n');
+}
+
+const PULL_LABEL: Record<PullStep['action'], (text: string) => string> = {
+	apply: chalk.green,
+	sync: theme.muted,
+	conflict: chalk.red,
+	skip: theme.muted
+};
+
+export function countPullSteps(
+	plan: PullPlan
+): Record<PullStep['action'], number> {
+	const counts = { apply: 0, sync: 0, conflict: 0, skip: 0 };
+	for (const step of plan.steps) counts[step.action]++;
+	return counts;
+}
+
+/** True when a pull would change something in tasks.json */
+export function hasPullChanges(plan: PullPlan): boolean {
+	const counts = countPullSteps(plan);
+	return counts.apply + counts.sync > 0;
+}
+
+/** True when a pull would change a task's status (worth asking about) */
+export function hasStatusChanges(plan: PullPlan): boolean {
+	return countPullSteps(plan).apply > 0;
+}
+
+function describePullStep(step: PullStep): string {
+	const label = PULL_LABEL[step.action](step.action.padEnd(8));
+	const change =
+		step.action === 'conflict'
+			? `local ${step.from}, GitHub ${step.to}`
+			: `${step.from} -> ${step.to}`;
+	const target = step.issueNumber ? ` (#${step.issueNumber})` : '';
+	return `  ${label} [${step.tag}] ${step.taskId} ${step.title}${target}  ${theme.muted(change)}`;
+}
+
+export function formatPullPlan(plan: PullPlan): string {
+	const counts = countPullSteps(plan);
+	const lines = [
+		chalk.bold(`Pull plan for ${plan.repo}`),
+		`  ${counts.apply} to update, ${counts.sync} already in sync, ${counts.conflict} conflict(s), ${counts.skip} unchanged or skipped`
+	];
+	// Skipped tasks are only counted, not listed
+	for (const step of plan.steps.filter((s) => s.action !== 'skip')) {
+		lines.push(describePullStep(step));
+	}
+	if (counts.conflict > 0) {
+		lines.push(
+			'',
+			chalk.yellow(
+				`${counts.conflict} task(s) changed on both sides and keep their local status. Run \`taskgraph github push\` to overwrite GitHub with it.`
+			)
+		);
+	}
+	return lines.join('\n');
+}
+
+export function formatPullResult(result: PullResult): string {
+	const prefix = result.dryRun ? 'would be ' : '';
+	return [
+		chalk.bold(result.dryRun ? 'Dry run, nothing written' : 'Pull complete'),
+		`  ${prefix}updated ${result.applied}, ${prefix}marked in sync ${result.synced}, conflicts ${result.conflicts}, skipped ${result.skipped}`
 	].join('\n');
 }
 

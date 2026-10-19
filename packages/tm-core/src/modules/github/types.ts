@@ -2,7 +2,7 @@
  * @fileoverview Types for the one-way GitHub Issues push
  */
 
-import type { Task } from '../../common/types/index.js';
+import type { Task, TaskStatus } from '../../common/types/index.js';
 
 /** Link stored in `task.metadata.github`, keyed by (tag, id) */
 export interface GitHubLink {
@@ -10,7 +10,8 @@ export interface GitHubLink {
 	issueNumber: number;
 	url: string;
 	syncedAt: string;
-	lastPushedStatus: string;
+	/** The task status at the last push or pull; the base a pull compares against */
+	lastPushedStatus: TaskStatus;
 	/** Hash of the issue content last written to GitHub */
 	bodyHash: string;
 }
@@ -106,6 +107,53 @@ export interface PushResult {
 	skipped: number;
 	closed: number;
 	orphans: OrphanIssue[];
+}
+
+/**
+ * apply: the issue changed, the task did not; set the task to the issue's status
+ * sync: both sides already agree; only record that they are in sync
+ * conflict: both changed to different statuses; the task is left alone
+ * skip: nothing to do, see `reason`
+ */
+export type PullAction = 'apply' | 'sync' | 'conflict' | 'skip';
+
+export interface PullStep {
+	action: PullAction;
+	tag: string;
+	taskId: string;
+	title: string;
+	issueNumber?: number;
+	/** The task's current status */
+	from?: TaskStatus;
+	/** The status the issue stands for */
+	to?: TaskStatus;
+	reason?: string;
+}
+
+export interface PullPlan {
+	repo: string;
+	steps: PullStep[];
+}
+
+export interface PullOptions {
+	/** `owner/name`; defaults to the repo reported by `gh repo view` */
+	repo?: string;
+	/** Pull only this tag; defaults to the active tag */
+	tag?: string;
+	/** Pull every tag. Cannot be combined with `tag` */
+	allTags?: boolean;
+	/** Pull only these task ids (top-level tasks), as a list or comma separated */
+	taskIds?: string[] | string;
+	dryRun?: boolean;
+}
+
+export interface PullResult {
+	dryRun: boolean;
+	plan: PullPlan;
+	applied: number;
+	synced: number;
+	conflicts: number;
+	skipped: number;
 }
 
 export interface GitHubStatus {

@@ -2,7 +2,7 @@
  * @fileoverview Unit tests for GithubCommand (tm-core is mocked)
  */
 
-import type { PushPlan, PushResult } from '@tm/core';
+import type { PullPlan, PullResult, PushPlan, PushResult } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@tm/core', async (importOriginal) => {
@@ -44,6 +44,53 @@ const RESULT = (overrides: Partial<PushResult> = {}): PushResult => ({
 	...overrides
 });
 
+const PULL_PLAN: PullPlan = {
+	repo: 'acme/app',
+	steps: [
+		{
+			action: 'apply',
+			tag: 'master',
+			taskId: '1',
+			title: 'First',
+			issueNumber: 1,
+			from: 'pending',
+			to: 'done'
+		},
+		{
+			action: 'conflict',
+			tag: 'master',
+			taskId: '2',
+			title: 'Second',
+			issueNumber: 2,
+			from: 'blocked',
+			to: 'done',
+			reason: 'changed on both sides, the local status is kept'
+		},
+		{
+			action: 'skip',
+			tag: 'master',
+			taskId: '3',
+			title: 'Third',
+			reason: 'unchanged'
+		}
+	]
+};
+
+const PULL_RESULT = (overrides: Partial<PullResult> = {}): PullResult => ({
+	dryRun: false,
+	plan: PULL_PLAN,
+	applied: 1,
+	synced: 0,
+	conflicts: 1,
+	skipped: 1,
+	...overrides
+});
+
+const UP_TO_DATE: PullPlan = {
+	repo: 'acme/app',
+	steps: [{ action: 'skip', tag: 'master', taskId: '3', title: 'Third' }]
+};
+
 describe('GithubCommand', () => {
 	let logSpy: any;
 	let github: Record<string, ReturnType<typeof vi.fn>>;
@@ -64,6 +111,8 @@ describe('GithubCommand', () => {
 			}),
 			planPush: vi.fn().mockResolvedValue(PLAN),
 			push: vi.fn().mockResolvedValue(RESULT()),
+			planPull: vi.fn().mockResolvedValue(PULL_PLAN),
+			pull: vi.fn().mockResolvedValue(PULL_RESULT()),
 			unlink: vi.fn().mockResolvedValue({
 				tag: 'master',
 				taskId: '1',
@@ -98,6 +147,113 @@ describe('GithubCommand', () => {
 
 			expect(github.status).toHaveBeenCalledWith({ repo: 'o/n' });
 			expect(JSON.parse(output()).linkedTasks).toBe(2);
+		});
+	});
+
+	describe('pull', () => {
+		it('previews with --dry-run and writes nothing', async () => {
+			github.pull.mockResolvedValue(PULL_RESULT({ dryRun: true }));
+
+			await (command as any).runPull({ dryRun: true });
+
+			expect(github.pull).toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: true })
+			);
+			expect(confirm).not.toHaveBeenCalled();
+			expect(output()).toContain('Dry run, nothing written');
+			expect(output()).toContain('pending -> done');
+		});
+
+		it('asks before updating tasks and then pulls', async () => {
+			await (command as any).runPull({});
+
+			expect(github.planPull).toHaveBeenCalledTimes(1);
+			expect(confirm).toHaveBeenCalledTimes(1);
+			expect(github.pull).toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: false })
+			);
+			expect(output()).toContain('Pull complete');
+		});
+
+		it('does not pull when the confirmation is declined', async () => {
+			confirm.mockResolvedValue(false);
+
+			await (command as any).runPull({});
+
+			expect(github.pull).not.toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: false })
+			);
+			expect(output()).toContain('Cancelled');
+		});
+
+		it('skips the confirmation with --yes', async () => {
+			await (command as any).runPull({ yes: true });
+
+			expect(confirm).not.toHaveBeenCalled();
+			expect(github.pull).toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: false })
+			);
+		});
+
+		it('lists conflicts and says the local status is kept', async () => {
+			await (command as any).runPull({ yes: true });
+
+			expect(output()).toContain('conflict');
+			expect(output()).toContain('blocked');
+			expect(output()).toContain('taskgraph github push');
+		});
+
+		it('reports up to date without asking or writing', async () => {
+			github.planPull.mockResolvedValue(UP_TO_DATE);
+			github.pull.mockResolvedValue(
+				PULL_RESULT({
+					dryRun: true,
+					plan: UP_TO_DATE,
+					applied: 0,
+					conflicts: 0
+				})
+			);
+
+			await (command as any).runPull({});
+
+			expect(confirm).not.toHaveBeenCalled();
+			expect(github.pull).not.toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: false })
+			);
+			expect(output()).toContain('already up to date');
+		});
+
+		it('refuses to write without --yes when it cannot ask', async () => {
+			(command as any).isInteractive = () => false;
+
+			await expect((command as any).runPull({})).rejects.toThrow('--yes');
+			expect(github.pull).not.toHaveBeenCalledWith(
+				expect.objectContaining({ dryRun: false })
+			);
+		});
+
+		it('forwards repo, tag, all-tags and id to core as given', async () => {
+			await (command as any).runPull({
+				repo: 'o/n',
+				tag: 'feature',
+				allTags: false,
+				id: '1, 2',
+				dryRun: true
+			});
+
+			expect(github.pull).toHaveBeenCalledWith({
+				repo: 'o/n',
+				tag: 'feature',
+				allTags: false,
+				taskIds: '1, 2',
+				dryRun: true
+			});
+		});
+
+		it('prints JSON with --json', async () => {
+			await (command as any).runPull({ yes: true, json: true });
+
+			expect(JSON.parse(output()).applied).toBe(1);
 		});
 	});
 
