@@ -3,58 +3,58 @@
  * projectRoot and tag arguments so that tag data is preserved.
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock process.exit to prevent test termination
-const mockProcessExit = jest.fn();
+const mockProcessExit = vi.fn();
 const originalExit = process.exit;
 process.exit = mockProcessExit;
 
 // Mock utils.js BEFORE importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	findProjectRoot: jest.fn(() => '/mock/project/root'),
-	getCurrentTag: jest.fn(() => 'master'),
-	taskExists: jest.fn(() => true),
-	formatTaskId: jest.fn((id) => id),
-	findCycles: jest.fn(() => []),
-	traverseDependencies: jest.fn((sourceTasks, allTasks, options = {}) => []),
-	isSilentMode: jest.fn(() => true),
-	resolveTag: jest.fn(() => 'master'),
-	getTasksForTag: jest.fn(() => []),
-	setTasksForTag: jest.fn(),
-	enableSilentMode: jest.fn(),
-	disableSilentMode: jest.fn(),
-	isEmpty: jest.fn((value) => {
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	findProjectRoot: vi.fn(() => '/mock/project/root'),
+	getCurrentTag: vi.fn(() => 'master'),
+	taskExists: vi.fn(() => true),
+	formatTaskId: vi.fn((id) => id),
+	findCycles: vi.fn(() => []),
+	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => []),
+	isSilentMode: vi.fn(() => true),
+	resolveTag: vi.fn(() => 'master'),
+	getTasksForTag: vi.fn(() => []),
+	setTasksForTag: vi.fn(),
+	enableSilentMode: vi.fn(),
+	disableSilentMode: vi.fn(),
+	isEmpty: vi.fn((value) => {
 		if (value === null || value === undefined) return true;
 		if (Array.isArray(value)) return value.length === 0;
 		if (typeof value === 'object' && value !== null)
 			return Object.keys(value).length === 0;
 		return false; // Not an array or object
 	}),
-	resolveEnvVariable: jest.fn()
+	resolveEnvVariable: vi.fn()
 }));
 
 // Mock ui.js
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn(),
-	formatDependenciesWithStatus: jest.fn()
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn(),
+	formatDependenciesWithStatus: vi.fn()
 }));
 
 // Mock task-manager.js
 // Mock external libraries
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	default: {
-		green: jest.fn((text) => text),
-		cyan: jest.fn((text) => text),
-		bold: jest.fn((text) => text)
+		green: vi.fn((text) => text),
+		cyan: vi.fn((text) => text),
+		bold: vi.fn((text) => text)
 	}
 }));
 
-jest.unstable_mockModule('boxen', () => ({
-	default: jest.fn((text) => text)
+vi.doMock('boxen', () => ({
+	default: vi.fn((text) => text)
 }));
 
 // Import the mocked modules
@@ -69,7 +69,7 @@ const { fixDependenciesCommand } = await import(
 
 describe('fixDependenciesCommand tag preservation', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockProcessExit.mockClear();
 	});
 

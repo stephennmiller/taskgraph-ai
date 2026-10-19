@@ -1,4 +1,4 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	canMoveWithDependencies,
 	findCrossTagDependencies,
