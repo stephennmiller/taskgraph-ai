@@ -9,7 +9,10 @@
 		".": "./src/index.ts",
 		"./tools/autopilot": "./src/tools/autopilot/index.ts"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check src",
@@ -37,12 +40,21 @@
 	"engines": {
 		"node": ">=22.0.0"
 	},
-	"keywords": ["taskgraph", "mcp", "mcp-server", "ai-agent", "workflow", "tdd"],
+	"keywords": [
+		"taskgraph",
+		"mcp",
+		"mcp-server",
+		"ai-agent",
+		"workflow",
+		"tdd"
+	],
 	"author": "",
 	"license": "MIT",
 	"typesVersions": {
 		"*": {
-			"*": ["src/*"]
+			"*": [
+				"src/*"
+			]
 		}
 	},
 	"version": ""

@@ -13,7 +13,10 @@
 		"provenance": true,
 		"access": "public"
 	},
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
 		"prepare": "node .githooks/install.mjs",
 		"build": "npm run build:build-config && cross-env NODE_ENV=production tsdown",

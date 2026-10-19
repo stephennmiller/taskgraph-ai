@@ -10,7 +10,10 @@
 		"./theme": "./src/ui/theme.ts",
 		"./suggested-actions": "./src/ui/suggested-actions.ts"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check src",
@@ -52,12 +55,19 @@
 	"engines": {
 		"node": ">=22.0.0"
 	},
-	"keywords": ["taskgraph", "cli", "task-management", "productivity"],
+	"keywords": [
+		"taskgraph",
+		"cli",
+		"task-management",
+		"productivity"
+	],
 	"author": "",
 	"license": "MIT",
 	"typesVersions": {
 		"*": {
-			"*": ["src/*"]
+			"*": [
+				"src/*"
+			]
 		}
 	},
 	"version": ""
