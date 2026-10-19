@@ -1,0 +1,44 @@
+---
+title: "Upgrading"
+description: "What to change when moving an existing project to TaskGraph 0.47 or later"
+---
+
+TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need a few manual changes.
+
+## 1. Rename the project folder
+
+Rename `.taskmaster/` to `.taskgraph/` by hand, from your project root:
+
+```bash
+git mv .taskmaster .taskgraph   # or: mv .taskmaster .taskgraph
+```
+
+TaskGraph no longer detects `.taskmaster/`, and there is no automatic migration. Also update any `.taskmaster/` paths you reference in `CLAUDE.md`, `.gitignore`, scripts or CI.
+
+## 2. Rename environment variables
+
+Every `TASK_MASTER_*` and `TASKMASTER_*` variable is now `TASKGRAPH_*`. The old names are ignored.
+
+| Before | Now |
+| --- | --- |
+| `TASK_MASTER_TOOLS` / `TASKMASTER_TOOLS` | `TASKGRAPH_TOOLS` |
+| `TASK_MASTER_PROJECT_ROOT` | `TASKGRAPH_PROJECT_ROOT` |
+| `TASK_MASTER_*` / `TASKMASTER_*` (any other) | `TASKGRAPH_*` |
+
+Check your shell profile, `.env`, `.mcp.json` and CI configuration.
+
+## 3. Switch the commands and the MCP server
+
+- The package is `taskgraph-ai`, and the commands are `taskgraph` and `taskgraph-mcp`. Update any scripts or aliases that call the old command name.
+- Register the MCP server as `taskgraph-ai` and remove any old `task-master-ai` entry from `.mcp.json`. See [Installation](/getting-started/quick-start/installation).
+
+## 4. Removed
+
+- `taskgraph migrate` is gone. Moving files from older layouts to `.taskgraph/` is now a manual step (see step 1).
+- `.taskmasterconfig` is no longer read. Configuration lives in `.taskgraph/config.json`; run `taskgraph models --setup` to recreate it.
+- Every provider other than Claude Code is removed, along with the flags that selected them. Models are `opus`, `sonnet` and `haiku`. Provider API keys are ignored; only the optional `CLAUDE_CODE_API_KEY` remains. Remove those flags from any scripts. See [Authentication](/getting-started/api-keys).
+- Support for editors other than Claude Code is removed. `taskgraph init --rules` accepts `claude` only.
+
+## Credit
+
+TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish, and keeps the original license and copyright notices. See [Licensing](/licensing).

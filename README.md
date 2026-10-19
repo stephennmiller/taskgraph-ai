@@ -62,11 +62,11 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 </details>
 
-> **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Existing `.taskmaster/` project folders work unchanged.
+> **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Coming from Task Master or a release before 0.47? See [Upgrading](#upgrading).
 
 ## Contents
 
-[Set up in Claude Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) · [Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models) · [Troubleshooting](#troubleshooting) · [Docs](#documentation) · [Licensing](#licensing)
+[Set up in Claude Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) · [Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models) · [Upgrading](#upgrading) · [Troubleshooting](#troubleshooting) · [Docs](#documentation) · [Licensing](#licensing)
 
 ## Set up in Claude Code
 
@@ -215,7 +215,7 @@ taskgraph research "latest JWT best practices"
 taskgraph models --setup                     # choose models
 ```
 
-Every command, flag and example is in the [command reference](docs/command-reference.md).
+Every command, flag and example is in the [command reference](apps/docs/capabilities/cli-root-commands.mdx).
 
 ## MCP tool tiers
 
@@ -242,7 +242,18 @@ Or edit the `env` block in `.mcp.json`, then restart Claude Code.
 
 TaskGraph uses three roles: **main**, **research** and **fallback** (used if either of the others fails). The choices are `opus`, `sonnet` and `haiku`. The research role gets web search and fetch only. It cannot read or change your files and has no shell.
 
-In Claude Code, say `Change the main model to opus`, or run `taskgraph models --setup`. Details are in [Models](docs/models.md) and the [Claude Code guide](docs/examples/claude-code-usage.md).
+In Claude Code, say `Change the main model to opus`, or run `taskgraph models --setup`. Details are in [Models](docs/models.md) and the [Claude Code guide](apps/docs/capabilities/claude-code.mdx).
+
+## Upgrading
+
+Projects created with Task Master, or with a TaskGraph release before 0.47, need a few manual changes:
+
+- **Rename `.taskmaster/` to `.taskgraph/`** by hand. TaskGraph no longer detects the old folder.
+- **Rename environment variables:** `TASK_MASTER_*` and `TASKMASTER_*` are now `TASKGRAPH_*`. The old names are ignored.
+- **Removed:** the `taskgraph migrate` command and `.taskmasterconfig`. Configuration lives in `.taskgraph/config.json`; run `taskgraph models --setup` to recreate it.
+- **Claude Code only:** other providers and their flags are gone, models are `opus`, `sonnet` and `haiku`, and the only API key still read is the optional `CLAUDE_CODE_API_KEY`.
+
+Full details are in the [upgrade guide](apps/docs/upgrading.mdx).
 
 ## Troubleshooting
 
@@ -256,7 +267,7 @@ In Claude Code, say `Change the main model to opus`, or run `taskgraph models --
 
 ## Documentation
 
-[Tutorial](docs/tutorial.md) · [Command reference](docs/command-reference.md) · [Configuration](docs/configuration.md) · [Task structure](docs/task-structure.md) · [Examples](docs/examples.md) · [Models](docs/models.md) · [Plugin](CLAUDE_CODE_PLUGIN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+[Tutorial](apps/docs/tutorial.mdx) · [Command reference](apps/docs/capabilities/cli-root-commands.mdx) · [Configuration](apps/docs/configuration.mdx) · [Task structure](apps/docs/capabilities/task-structure.mdx) · [Examples](apps/docs/examples.mdx) · [Models](docs/models.md) · [Upgrading](apps/docs/upgrading.mdx) · [Plugin](CLAUDE_CODE_PLUGIN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## Contributors
 

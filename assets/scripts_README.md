@@ -12,7 +12,7 @@ In an AI-driven development process—particularly with tools like [Cursor](http
 4. **Generate** individual task files (e.g., `task_001.txt`) for easy reference or to feed into an AI coding workflow.
 5. **Set task status**—mark tasks as `done`, `pending`, or `deferred` based on progress.
 6. **Expand** tasks with subtasks—break down complex tasks into smaller, more manageable subtasks.
-7. **Research-backed subtask generation**—use Perplexity AI to generate more informed and contextually relevant subtasks.
+7. **Research-backed subtask generation**—use the research model to generate more informed and contextually relevant subtasks.
 8. **Clear subtasks**—remove subtasks from specified tasks to allow regeneration or restructuring.
 9. **Show task details**—display detailed information about a specific task and its subtasks.
 
@@ -26,10 +26,10 @@ TaskGraph configuration is now managed through two primary methods:
     - Managed using the `taskgraph models --setup` command or the `models` MCP tool.
     - This is the main configuration file for most settings.
 
-2.  **Environment Variables (`.env` File - API Keys Only)**
-    - Used **only** for sensitive **API Keys** (e.g., `ANTHROPIC_API_KEY`, `PERPLEXITY_API_KEY`).
-    - Create a `.env` file in your project root for CLI usage.
-    - See `assets/env.example` for required key names.
+2.  **Environment Variables (optional)**
+    - TaskGraph needs no provider API keys; AI calls run through your signed-in Claude Code.
+    - `CLAUDE_CODE_API_KEY` optionally bills calls to a specific Anthropic API key.
+    - See the Configuration page in the TaskGraph docs for the `TASKGRAPH_*` variables.
 
 **Important:** Settings like `MODEL`, `MAX_TOKENS`, `TEMPERATURE`, `TASKGRAPH_LOG_LEVEL`, etc., are **no longer set via `.env`**. Use `taskgraph models --setup` instead.
 
@@ -160,10 +160,10 @@ taskgraph expand --all
 # Force regeneration of subtasks for all pending tasks
 taskgraph expand --all --force
 
-# Use Perplexity AI for research-backed subtask generation
+# Use the research model for research-backed subtask generation
 taskgraph expand --id=3 --research
 
-# Use Perplexity AI for research-backed generation on all pending tasks
+# Use the research model for research-backed generation on all pending tasks
 taskgraph expand --all --research
 ```
 
@@ -192,11 +192,9 @@ Notes:
 ## AI Integration (Updated)
 
 - The script now uses a unified AI service layer (`ai-services-unified.js`).
-- Model selection (e.g., Claude vs. Perplexity for `--research`) is determined by the configuration in `.taskgraph/config.json` based on the requested `role` (`main` or `research`).
-- API keys are automatically resolved from your `.env` file (for CLI) or MCP session environment.
-- To use the research capabilities (e.g., `expand --research`), ensure you have:
-  1.  Configured a model for the `research` role using `taskgraph models --setup` (Perplexity models are recommended).
-  2.  Added the corresponding API key (e.g., `PERPLEXITY_API_KEY`) to your `.env` file.
+- Model selection (for example `opus`, `sonnet` or `haiku`) is determined by the configuration in `.taskgraph/config.json` based on the requested `role` (`main` or `research`).
+- No provider API keys are needed; calls run through your signed-in Claude Code.
+- To use the research capabilities (for example `expand --research`), configure a model for the `research` role with `taskgraph models --setup`.
 
 ## Logging
 
@@ -317,13 +315,13 @@ taskgraph analyze-complexity --model=claude-3-opus-20240229
 # Set a custom complexity threshold (1-10)
 taskgraph analyze-complexity --threshold=6
 
-# Use Perplexity AI for research-backed complexity analysis
+# Use the research model for research-backed complexity analysis
 taskgraph analyze-complexity --research
 ```
 
 Notes:
 
-- The command uses Claude to analyze each task's complexity (or Perplexity with --research flag)
+- The command uses Claude to analyze each task's complexity (or the research model with the --research flag)
 - Tasks are scored on a scale of 1-10
 - Each task receives a recommended number of subtasks based on DEFAULT_SUBTASKS configuration
 - The default output path is `scripts/task-complexity-report.json`

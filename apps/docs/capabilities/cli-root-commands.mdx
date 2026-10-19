@@ -1,8 +1,8 @@
 ---
-title: CLI Commands
+title: "CLI Commands"
 sidebarTitle: "CLI Commands"
+description: "A comprehensive reference of all available TaskGraph commands"
 ---
-
 
 <AccordionGroup>
   <Accordion title="Parse PRD">
@@ -29,14 +29,19 @@ sidebarTitle: "CLI Commands"
     # List tasks with a specific status and include subtasks
     taskgraph list --status=<status> --with-subtasks
 
-    # Watch for changes and auto-refresh the list
+    # Watch for changes and auto-refresh
     taskgraph list --watch
     taskgraph list -w
 
-    # Combine watch with other options
-    taskgraph list all -w              # Watch all tasks with subtasks
-    taskgraph list -w --compact        # Watch in compact format
-    taskgraph list --status=pending -w # Watch pending tasks only
+    # Compact output format
+    taskgraph list --compact
+    taskgraph list -c
+
+    # Watch mode with compact output
+    taskgraph list -w -c
+
+    # Hide the header
+    taskgraph list --no-header
     ```
   </Accordion>
 
@@ -71,7 +76,7 @@ sidebarTitle: "CLI Commands"
     # Update a single task by ID with new information
     taskgraph update-task --id=<id> --prompt="<prompt>"
 
-    # Use research-backed updates with Perplexity AI
+    # Use research-backed updates (research model)
     taskgraph update-task --id=<id> --prompt="<prompt>" --research
     ```
   </Accordion>
@@ -84,7 +89,7 @@ sidebarTitle: "CLI Commands"
     # Example: Add details about API rate limiting to subtask 2 of task 5
     taskgraph update-subtask --id=5.2 --prompt="Add rate limiting of 100 requests per minute"
 
-    # Use research-backed updates with Perplexity AI
+    # Use research-backed updates (research model)
     taskgraph update-subtask --id=<parentId.subtaskId> --prompt="<prompt>" --research
     ```
 
@@ -165,7 +170,7 @@ sidebarTitle: "CLI Commands"
     # Use an alternative tasks file
     taskgraph analyze-complexity --file=custom-tasks.json
 
-    # Use your configured research model for research-backed complexity analysis
+    # Use the research model for research-backed complexity analysis
     taskgraph analyze-complexity --research
     ```
   </Accordion>
@@ -213,6 +218,180 @@ sidebarTitle: "CLI Commands"
     ```bash
     # Initialize a new project with TaskGraph structure
     taskgraph init
+
+    # Set up the Claude Code integration (CLAUDE.md import, .mcp.json, slash commands)
+    taskgraph init --rules claude
     ```
+
+    `claude` is the only supported rule profile; any other value is rejected with an error. Without `--rules`, `init` asks whether to set up the Claude Code integration (`--yes` skips the prompt and installs nothing).
+  </Accordion>
+
+  <Accordion title="Move Tasks">
+    ```bash
+    # Move a task or subtask to a new position
+    taskgraph move --from=<id> --to=<id>
+
+    # Move task to become a subtask
+    taskgraph move --from=5 --to=7
+
+    # Move subtask to become a standalone task
+    taskgraph move --from=5.2 --to=7
+
+    # Move subtask to a different parent
+    taskgraph move --from=5.2 --to=7.3
+
+    # Reorder subtasks within the same parent
+    taskgraph move --from=5.2 --to=5.4
+
+    # Move a task to a new ID position (creates placeholder if it doesn't exist)
+    taskgraph move --from=5 --to=25
+
+    # Move multiple tasks at once (must have the same number of IDs)
+    taskgraph move --from=10,11,12 --to=16,17,18
+
+    # Move a task to another tag (see Cross-Tag Task Movement)
+    taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+    ```
+  </Accordion>
+
+  <Accordion title="Tag Management">
+    Tags are separate, isolated task lists. All task operations work within the active tag, and most commands accept `--tag=<name>` to target a specific one.
+
+    ```bash
+    # List all tags with task counts and status
+    taskgraph tags
+
+    # List tags with detailed metadata
+    taskgraph tags --show-metadata
+
+    # Create a new empty tag, optionally with a description
+    taskgraph tags add <tag-name>
+    taskgraph tags add <tag-name> --description="Feature development tasks"
+
+    # Create a tag named after the current branch
+    taskgraph tags add <tag-name> --from-branch
+
+    # Create a tag by copying tasks from another tag
+    taskgraph tags add <new-tag> --copy-from=<source-tag>
+
+    # Switch to a different tag
+    taskgraph tags use <tag-name>
+
+    # Rename or copy a tag
+    taskgraph tags rename <old-name> <new-name>
+    taskgraph tags copy <source-tag> <target-tag>
+
+    # Delete a tag and all its tasks (asks for confirmation unless --yes)
+    taskgraph tags remove <tag-name> --yes
+    ```
+  </Accordion>
+
+  <Accordion title="Configure AI Models">
+    ```bash
+    # View the current model configuration
+    taskgraph models
+
+    # Set the main, research and fallback models (opus, sonnet or haiku)
+    taskgraph models --set-main sonnet
+    taskgraph models --set-research opus
+    taskgraph models --set-fallback haiku
+
+    # Run interactive setup
+    taskgraph models --setup
+    ```
+
+    TaskGraph runs on Claude Code, so no provider API keys are needed. Configuration is stored in `.taskgraph/config.json`; runtime state such as the current tag is in `.taskgraph/state.json`. Don't edit either by hand. See [Configuration](/configuration).
+  </Accordion>
+
+  <Accordion title="Research Fresh Information">
+    ```bash
+    # AI-powered research with up-to-date information
+    taskgraph research "What are the latest best practices for JWT authentication in Node.js?"
+
+    # Research with task context
+    taskgraph research "How to implement OAuth 2.0?" --id=15,16
+
+    # Research with file context for code-aware suggestions
+    taskgraph research "How can I optimize this API implementation?" --files=src/api.js,src/auth.js
+
+    # Custom context and project tree
+    taskgraph research "Best practices for error handling" --context="We're using Express.js" --tree
+
+    # Different detail levels
+    taskgraph research "React Query v5 migration guide" --detail=high
+
+    # Research within a specific tag
+    taskgraph research "Database optimization strategies" --tag=feature-branch
+
+    # Save the conversation to .taskgraph/docs/research/
+    taskgraph research "Database optimization techniques" --save-file
+
+    # Save key findings to a task or subtask (recommended)
+    taskgraph research "How to implement OAuth?" --save-to=15
+    taskgraph research "API optimization strategies" --save-to=15.2
+    ```
+
+    The research role has web search and fetch only. It cannot read or change your files and has no shell. In the CLI you can ask follow-up questions and choose where to save findings.
+  </Accordion>
+
+  <Accordion title="TDD Workflow (Autopilot)">
+    ```bash
+    # Start autonomous TDD workflow for a task
+    taskgraph autopilot start <taskId>
+
+    # Get next action with context
+    taskgraph autopilot next
+
+    # Complete phase with test results
+    taskgraph autopilot complete --results '{"total":N,"passed":N,"failed":N}'
+
+    # Commit changes
+    taskgraph autopilot commit
+
+    # Check workflow status
+    taskgraph autopilot status
+
+    # Resume interrupted workflow
+    taskgraph autopilot resume
+
+    # Abort workflow
+    taskgraph autopilot abort
+    ```
+
+    The TDD workflow enforces RED → GREEN → COMMIT cycles for each subtask. See [AI Agent Integration](/tdd-workflow/ai-agent-integration) for details.
+  </Accordion>
+
+  <Accordion title="Loop (Autonomous Batch Execution)">
+    ```bash
+    # Run 10 iterations with the default preset
+    taskgraph loop -n 10
+
+    # Use a specific preset
+    taskgraph loop -n 10 --prompt test-coverage
+    taskgraph loop -n 10 --prompt linting
+    taskgraph loop -n 10 --prompt duplication
+    taskgraph loop -n 10 --prompt entropy
+
+    # Use a custom prompt file
+    taskgraph loop -n 10 --prompt ./my-workflow.md
+
+    # Filter to tasks with a specific tag
+    taskgraph loop -n 10 --tag backend
+
+    # Custom progress file location
+    taskgraph loop -n 10 --progress-file ./my-progress.txt
+
+    # Output as JSON
+    taskgraph loop -n 10 --json
+    ```
+
+    **Built-in presets:**
+    - `default` - Complete tasks from TaskGraph backlog one at a time
+    - `test-coverage` - Write meaningful tests for untested user-facing behavior
+    - `linting` - Fix lint and type errors incrementally
+    - `duplication` - Refactor duplicated code into shared utilities
+    - `entropy` - Clean up code smells (long functions, deep nesting, etc.)
+
+    Each iteration spawns a fresh Claude Code session, avoiding context fatigue. See [Loop Command](/capabilities/loop) for full documentation.
   </Accordion>
 </AccordionGroup>

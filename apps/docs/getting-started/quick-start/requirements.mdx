@@ -2,17 +2,23 @@
 title: Requirements
 sidebarTitle: "Requirements"
 ---
-Before you can start using TaskGraph, you'll need to install Node.js and set up at least one model API Key.
+TaskGraph is built for Claude Code. Before you start you need two things.
 
-## 1. Node.js
+## 1. Claude Code
 
-TaskGraph is built with Node.js and requires it to run. npm (Node Package Manager) comes bundled with Node.js.
+Install [Claude Code](https://docs.claude.com/en/docs/claude-code) and sign in by running `claude` once. Every AI call TaskGraph makes runs through your signed-in Claude Code, so there are no provider accounts or API keys to set up.
+
+<Tip>
+If you would rather bill a specific Anthropic API key, set the optional `CLAUDE_CODE_API_KEY` environment variable. See [Authentication](/getting-started/api-keys).
+</Tip>
+
+## 2. Node.js
+
+TaskGraph requires Node.js 22 or later. npm comes bundled with Node.js.
 
 <Accordion title="Install Node.js">
 
-### Installation
-
-**Option 1: Download from official website**
+**Option 1: Download from the official website**
 1. Visit [nodejs.org](https://nodejs.org)
 2. Download the **LTS (Long Term Support)** version for your operating system
 3. Run the installer and follow the setup wizard
@@ -21,8 +27,8 @@ TaskGraph is built with Node.js and requires it to run. npm (Node Package Manage
 
 <CodeGroup>
 
-```bash Windows (Chocolatey)
-choco install nodejs
+```bash macOS (Homebrew)
+brew install node
 ```
 
 ```bash Windows (winget)
@@ -32,19 +38,3 @@ winget install OpenJS.NodeJS
 </CodeGroup>
 
 </Accordion>
-
-## 2. Model API Key
-
-TaskGraph utilizes AI across several commands, and those require a separate API key. For the purpose of a Quick Start we recommend setting up an API Key with Anthropic for your main model and Perplexity for your research model (optional but recommended).
-
-<Tip>TaskGraph shows API costs per command used. Most users load $5-10 on their keys and don't have to top it off for a few months.</Tip>
-
-At least one (1) of the following is required:
-
-1. Anthropic API key (Claude API) - **recommended for Quick Start**
-2. OpenAI API key
-3. Google Gemini API key
-4. Perplexity API key (for research model)
-5. xAI API Key (for research or main model)
-6. OpenRouter API Key (for research or main model)
-7. Claude Code (no API key required - requires Claude Code CLI)

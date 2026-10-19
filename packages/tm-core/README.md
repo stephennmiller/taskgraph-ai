@@ -145,8 +145,6 @@ This is the initial package structure. The following features are planned for im
 ### Task 117: AI Provider System
 - [ ] Base provider interface
 - [ ] Anthropic Claude integration
-- [ ] OpenAI integration
-- [ ] Perplexity integration
 - [ ] Provider factory and registry
 
 ### Task 118: Storage Layer

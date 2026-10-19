@@ -12,31 +12,26 @@ In an AI-driven development process—particularly with tools like [Cursor](http
 4. **Generate** individual task files (e.g., `task_001.txt`) for easy reference or to feed into an AI coding workflow.
 5. **Set task status**—mark tasks as `done`, `pending`, or `deferred` based on progress.
 6. **Expand** tasks with subtasks—break down complex tasks into smaller, more manageable subtasks.
-7. **Research-backed subtask generation**—use Perplexity AI to generate more informed and contextually relevant subtasks.
+7. **Research-backed subtask generation**—use the research model to generate more informed and contextually relevant subtasks.
 8. **Clear subtasks**—remove subtasks from specified tasks to allow regeneration or restructuring.
 9. **Show task details**—display detailed information about a specific task and its subtasks.
 
-## Configuration
+## Configuration (Updated)
 
-The script can be configured through environment variables in a `.env` file at the root of the project:
+TaskGraph configuration is now managed through two primary methods:
 
-### Required Configuration
+1.  **`.taskgraph/config.json` File (Project Root - Primary)**
 
-- `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
+    - Stores AI model selections (`main`, `research`, `fallback`), model parameters (`maxTokens`, `temperature`), `logLevel`, `defaultSubtasks`, `defaultPriority`, `projectName`, etc.
+    - Managed using the `taskgraph models --setup` command or the `models` MCP tool.
+    - This is the main configuration file for most settings.
 
-### Optional Configuration
+2.  **Environment Variables (optional)**
+    - TaskGraph needs no provider API keys; AI calls run through your signed-in Claude Code.
+    - `CLAUDE_CODE_API_KEY` optionally bills calls to a specific Anthropic API key.
+    - See the Configuration page in the TaskGraph docs for the `TASKGRAPH_*` variables.
 
-- `MODEL`: Specify which Claude model to use (default: "claude-sonnet-5-5")
-- `MAX_TOKENS`: Maximum tokens for model responses (default: 4000)
-- `TEMPERATURE`: Temperature for model responses (default: 0.7)
-- `PERPLEXITY_API_KEY`: Your Perplexity API key for research-backed subtask generation
-- `PERPLEXITY_MODEL`: Specify which Perplexity model to use (default: "sonar-medium-online")
-- `DEBUG`: Enable debug logging (default: false)
-- `TASKGRAPH_LOG_LEVEL`: Log level - debug, info, warn, error (default: info)
-- `DEFAULT_SUBTASKS`: Default number of subtasks when expanding (default: 3)
-- `DEFAULT_PRIORITY`: Default priority for generated tasks (default: medium)
-- `PROJECT_NAME`: Override default project name in tasks.json
-- `PROJECT_VERSION`: Override default version in tasks.json
+**Important:** Settings like `MODEL`, `MAX_TOKENS`, `TEMPERATURE`, `TASKGRAPH_LOG_LEVEL`, etc., are **no longer set via `.env`**. Use `taskgraph models --setup` instead.
 
 ## How It Works
 
@@ -47,15 +42,20 @@ The script can be configured through environment variables in a `.env` file at t
    - Tasks can have `subtasks` for more detailed implementation steps.
    - Dependencies are displayed with status indicators (✅ for completed, ⏱️ for pending) to easily track progress.
 
-2. **Script Commands**
-   You can run the script via:
+2. **CLI Commands**
+   You can run the commands via:
 
    ```bash
+   # If installed globally
+   taskgraph [command] [options]
+
+   # If using locally within the project
    node scripts/dev.js [command] [options]
    ```
 
    Available commands:
 
+   - `init`: Initialize a new project
    - `parse-prd`: Generate tasks from a PRD document
    - `list`: Display all tasks with their status
    - `update`: Update tasks based on new information
@@ -65,8 +65,15 @@ The script can be configured through environment variables in a `.env` file at t
    - `clear-subtasks`: Remove subtasks from specified tasks
    - `next`: Determine the next task to work on based on dependencies
    - `show`: Display detailed information about a specific task
+   - `analyze-complexity`: Analyze task complexity and generate recommendations
+   - `complexity-report`: Display the complexity analysis in a readable format
+   - `add-dependency`: Add a dependency between tasks
+   - `remove-dependency`: Remove a dependency from a task
+   - `validate-dependencies`: Check for invalid dependencies
+   - `fix-dependencies`: Fix invalid dependencies automatically
+   - `add-task`: Add a new task using AI
 
-   Run `node scripts/dev.js` without arguments to see detailed usage information.
+   Run `taskgraph --help` or `node scripts/dev.js --help` to see detailed usage information.
 
 ## Listing Tasks
 
@@ -74,16 +81,16 @@ The `list` command allows you to view all tasks and their status:
 
 ```bash
 # List all tasks
-node scripts/dev.js list
+taskgraph list
 
 # List tasks with a specific status
-node scripts/dev.js list --status=pending
+taskgraph list --status=pending
 
 # List tasks and include their subtasks
-node scripts/dev.js list --with-subtasks
+taskgraph list --with-subtasks
 
 # List tasks with a specific status and include their subtasks
-node scripts/dev.js list --status=pending --with-subtasks
+taskgraph list --status=pending --with-subtasks
 ```
 
 ## Updating Tasks
@@ -92,16 +99,13 @@ The `update` command allows you to update tasks based on new information or impl
 
 ```bash
 # Update tasks starting from ID 4 with a new prompt
-node scripts/dev.js update --from=4 --prompt="Refactor tasks from ID 4 onward to use Express instead of Fastify"
+taskgraph update --from=4 --prompt="Refactor tasks from ID 4 onward to use Express instead of Fastify"
 
 # Update all tasks (default from=1)
-node scripts/dev.js update --prompt="Add authentication to all relevant tasks"
-
-# With research-backed updates using Perplexity AI
-node scripts/dev.js update --from=4 --prompt="Integrate OAuth 2.0" --research
+taskgraph update --prompt="Add authentication to all relevant tasks"
 
 # Specify a different tasks file
-node scripts/dev.js update --file=custom-tasks.json --from=5 --prompt="Change database from MongoDB to PostgreSQL"
+taskgraph update --file=custom-tasks.json --from=5 --prompt="Change database from MongoDB to PostgreSQL"
 ```
 
 Notes:
@@ -109,28 +113,6 @@ Notes:
 - The `--prompt` parameter is required and should explain the changes or new context
 - Only tasks that aren't marked as 'done' will be updated
 - Tasks with ID >= the specified --from value will be updated
-- The `--research` flag uses Perplexity AI for more informed updates when available
-
-## Updating a Single Task
-
-The `update-task` command allows you to update a specific task instead of multiple tasks:
-
-```bash
-# Update a specific task with new information
-node scripts/dev.js update-task --id=4 --prompt="Use JWT for authentication"
-
-# With research-backed updates using Perplexity AI
-node scripts/dev.js update-task --id=4 --prompt="Use JWT for authentication" --research
-```
-
-This command:
-
-- Updates only the specified task rather than a range of tasks
-- Provides detailed validation with helpful error messages
-- Checks for required API keys when using research mode
-- Falls back gracefully if Perplexity API is unavailable
-- Preserves tasks that are already marked as "done"
-- Includes contextual error handling for common issues
 
 ## Setting Task Status
 
@@ -138,16 +120,16 @@ The `set-status` command allows you to change a task's status:
 
 ```bash
 # Mark a task as done
-node scripts/dev.js set-status --id=3 --status=done
+taskgraph set-status --id=3 --status=done
 
 # Mark a task as pending
-node scripts/dev.js set-status --id=4 --status=pending
+taskgraph set-status --id=4 --status=pending
 
 # Mark a specific subtask as done
-node scripts/dev.js set-status --id=3.1 --status=done
+taskgraph set-status --id=3.1 --status=done
 
 # Mark multiple tasks at once
-node scripts/dev.js set-status --id=1,2,3 --status=done
+taskgraph set-status --id=1,2,3 --status=done
 ```
 
 Notes:
@@ -164,25 +146,25 @@ The `expand` command allows you to break down tasks into subtasks for more detai
 
 ```bash
 # Expand a specific task with 3 subtasks (default)
-node scripts/dev.js expand --id=3
+taskgraph expand --id=3
 
 # Expand a specific task with 5 subtasks
-node scripts/dev.js expand --id=3 --num=5
+taskgraph expand --id=3 --num=5
 
 # Expand a task with additional context
-node scripts/dev.js expand --id=3 --prompt="Focus on security aspects"
+taskgraph expand --id=3 --prompt="Focus on security aspects"
 
 # Expand all pending tasks that don't have subtasks
-node scripts/dev.js expand --all
+taskgraph expand --all
 
 # Force regeneration of subtasks for all pending tasks
-node scripts/dev.js expand --all --force
+taskgraph expand --all --force
 
-# Use Perplexity AI for research-backed subtask generation
-node scripts/dev.js expand --id=3 --research
+# Use the research model for research-backed subtask generation
+taskgraph expand --id=3 --research
 
-# Use Perplexity AI for research-backed generation on all pending tasks
-node scripts/dev.js expand --all --research
+# Use the research model for research-backed generation on all pending tasks
+taskgraph expand --all --research
 ```
 
 ## Clearing Subtasks
@@ -191,13 +173,13 @@ The `clear-subtasks` command allows you to remove subtasks from specified tasks:
 
 ```bash
 # Clear subtasks from a specific task
-node scripts/dev.js clear-subtasks --id=3
+taskgraph clear-subtasks --id=3
 
 # Clear subtasks from multiple tasks
-node scripts/dev.js clear-subtasks --id=1,2,3
+taskgraph clear-subtasks --id=1,2,3
 
 # Clear subtasks from all tasks
-node scripts/dev.js clear-subtasks --all
+taskgraph clear-subtasks --all
 ```
 
 Notes:
@@ -207,21 +189,12 @@ Notes:
 - Can be combined with the `expand` command to immediately generate new subtasks
 - Works with both parent tasks and individual subtasks
 
-## AI Integration
+## AI Integration (Updated)
 
-The script integrates with two AI services:
-
-1. **Anthropic Claude**: Used for parsing PRDs, generating tasks, and creating subtasks.
-2. **Perplexity AI**: Used for research-backed subtask generation when the `--research` flag is specified.
-
-The Perplexity integration uses the OpenAI client to connect to Perplexity's API, which provides enhanced research capabilities for generating more informed subtasks. If the Perplexity API is unavailable or encounters an error, the script will automatically fall back to using Anthropic's Claude.
-
-To use the Perplexity integration:
-
-1. Obtain a Perplexity API key
-2. Add `PERPLEXITY_API_KEY` to your `.env` file
-3. Optionally specify `PERPLEXITY_MODEL` in your `.env` file (default: "sonar-medium-online")
-4. Use the `--research` flag with the `expand` command
+- The script now uses a unified AI service layer (`ai-services-unified.js`).
+- Model selection (for example `opus`, `sonnet` or `haiku`) is determined by the configuration in `.taskgraph/config.json` based on the requested `role` (`main` or `research`).
+- No provider API keys are needed; calls run through your signed-in Claude Code.
+- To use the research capabilities (for example `expand --research`), configure a model for the `research` role with `taskgraph models --setup`.
 
 ## Logging
 
@@ -240,10 +213,10 @@ The `add-dependency` and `remove-dependency` commands allow you to manage task d
 
 ```bash
 # Add a dependency to a task
-node scripts/dev.js add-dependency --id=<id> --depends-on=<id>
+taskgraph add-dependency --id=<id> --depends-on=<id>
 
 # Remove a dependency from a task
-node scripts/dev.js remove-dependency --id=<id> --depends-on=<id>
+taskgraph remove-dependency --id=<id> --depends-on=<id>
 ```
 
 These commands:
@@ -280,10 +253,10 @@ The `validate-dependencies` command allows you to check for invalid dependencies
 
 ```bash
 # Check for invalid dependencies in tasks.json
-node scripts/dev.js validate-dependencies
+taskgraph validate-dependencies
 
 # Specify a different tasks file
-node scripts/dev.js validate-dependencies --file=custom-tasks.json
+taskgraph validate-dependencies --file=custom-tasks.json
 ```
 
 This command:
@@ -302,10 +275,10 @@ The `fix-dependencies` command proactively finds and fixes all invalid dependenc
 
 ```bash
 # Find and fix all invalid dependencies
-node scripts/dev.js fix-dependencies
+taskgraph fix-dependencies
 
 # Specify a different tasks file
-node scripts/dev.js fix-dependencies --file=custom-tasks.json
+taskgraph fix-dependencies --file=custom-tasks.json
 ```
 
 This command:
@@ -331,24 +304,24 @@ The `analyze-complexity` command allows you to automatically assess task complex
 
 ```bash
 # Analyze all tasks and generate expansion recommendations
-node scripts/dev.js analyze-complexity
+taskgraph analyze-complexity
 
 # Specify a custom output file
-node scripts/dev.js analyze-complexity --output=custom-report.json
+taskgraph analyze-complexity --output=custom-report.json
 
 # Override the model used for analysis
-node scripts/dev.js analyze-complexity --model=claude-3-opus-20240229
+taskgraph analyze-complexity --model=claude-3-opus-20240229
 
 # Set a custom complexity threshold (1-10)
-node scripts/dev.js analyze-complexity --threshold=6
+taskgraph analyze-complexity --threshold=6
 
-# Use Perplexity AI for research-backed complexity analysis
-node scripts/dev.js analyze-complexity --research
+# Use the research model for research-backed complexity analysis
+taskgraph analyze-complexity --research
 ```
 
 Notes:
 
-- The command uses Claude to analyze each task's complexity (or Perplexity with --research flag)
+- The command uses Claude to analyze each task's complexity (or the research model with the --research flag)
 - Tasks are scored on a scale of 1-10
 - Each task receives a recommended number of subtasks based on DEFAULT_SUBTASKS configuration
 - The default output path is `scripts/task-complexity-report.json`
@@ -362,13 +335,13 @@ The `expand` command automatically checks for and uses complexity analysis if av
 
 ```bash
 # Expand a task, using complexity report recommendations if available
-node scripts/dev.js expand --id=8
+taskgraph expand --id=8
 
 # Expand all tasks, prioritizing by complexity score if a report exists
-node scripts/dev.js expand --all
+taskgraph expand --all
 
 # Override recommendations with explicit values
-node scripts/dev.js expand --id=8 --num=5 --prompt="Custom prompt"
+taskgraph expand --id=8 --num=5 --prompt="Custom prompt"
 ```
 
 When a complexity report exists:
@@ -382,25 +355,25 @@ The output report structure is:
 
 ```json
 {
- "meta": {
-  "generatedAt": "2023-06-15T12:34:56.789Z",
-  "tasksAnalyzed": 20,
-  "thresholdScore": 5,
-  "projectName": "Your Project Name",
-  "usedResearch": true
- },
- "complexityAnalysis": [
-  {
-   "taskId": 8,
-   "taskTitle": "Develop Implementation Drift Handling",
-   "complexityScore": 9.5,
-   "recommendedSubtasks": 6,
-   "expansionPrompt": "Create subtasks that handle detecting...",
-   "reasoning": "This task requires sophisticated logic...",
-   "expansionCommand": "node scripts/dev.js expand --id=8 --num=6 --prompt=\"Create subtasks...\" --research"
-  }
-  // More tasks sorted by complexity score (highest first)
- ]
+  "meta": {
+    "generatedAt": "2023-06-15T12:34:56.789Z",
+    "tasksAnalyzed": 20,
+    "thresholdScore": 5,
+    "projectName": "Your Project Name",
+    "usedResearch": true
+  },
+  "complexityAnalysis": [
+    {
+      "taskId": 8,
+      "taskTitle": "Develop Implementation Drift Handling",
+      "complexityScore": 9.5,
+      "recommendedSubtasks": 6,
+      "expansionPrompt": "Create subtasks that handle detecting...",
+      "reasoning": "This task requires sophisticated logic...",
+      "expansionCommand": "taskgraph expand --id=8 --num=6 --prompt=\"Create subtasks...\" --research"
+    }
+    // More tasks sorted by complexity score (highest first)
+  ]
 }
 ```
 
@@ -410,10 +383,10 @@ The `next` command helps you determine which task to work on next based on depen
 
 ```bash
 # Show the next task to work on
-node scripts/dev.js next
+taskgraph next
 
 # Specify a different tasks file
-node scripts/dev.js next --file=custom-tasks.json
+taskgraph next --file=custom-tasks.json
 ```
 
 This command:
@@ -440,16 +413,16 @@ The `show` command allows you to view detailed information about a specific task
 
 ```bash
 # Show details for a specific task
-node scripts/dev.js show 1
+taskgraph show 1
 
 # Alternative syntax with --id option
-node scripts/dev.js show --id=1
+taskgraph show --id=1
 
 # Show details for a subtask
-node scripts/dev.js show --id=1.2
+taskgraph show --id=1.2
 
 # Specify a different tasks file
-node scripts/dev.js show 3 --file=custom-tasks.json
+taskgraph show 3 --file=custom-tasks.json
 ```
 
 This command:
@@ -468,101 +441,3 @@ This command:
    - For subtasks, provides a link to view the parent task
 
 This command is particularly useful when you need to examine a specific task in detail before implementing it or when you want to check the status and details of a particular task.
-
-## Enhanced Error Handling
-
-The script now includes improved error handling throughout all commands:
-
-1. **Detailed Validation**:
-
-   - Required parameters (like task IDs and prompts) are validated early
-   - File existence is checked with customized errors for common scenarios
-   - Parameter type conversion is handled with clear error messages
-
-2. **Contextual Error Messages**:
-
-   - Task not found errors include suggestions to run the list command
-   - API key errors include reminders to check environment variables
-   - Invalid ID format errors show the expected format
-
-3. **Command-Specific Help Displays**:
-
-   - When validation fails, detailed help for the specific command is shown
-   - Help displays include usage examples and parameter descriptions
-   - Formatted in clear, color-coded boxes with examples
-
-4. **Helpful Error Recovery**:
-   - Detailed troubleshooting steps for common errors
-   - Graceful fallbacks for missing optional dependencies
-   - Clear instructions for how to fix configuration issues
-
-## Version Checking
-
-The script now automatically checks for updates without slowing down execution:
-
-1. **Background Version Checking**:
-
-   - Non-blocking version checks run in the background while commands execute
-   - Actual command execution isn't delayed by version checking
-   - Update notifications appear after command completion
-
-2. **Update Notifications**:
-
-   - When a newer version is available, a notification is displayed
-   - Notifications include current version, latest version, and update command
-   - Formatted in an attention-grabbing box with clear instructions
-
-3. **Implementation Details**:
-   - Uses semantic versioning to compare current and latest versions
-   - Fetches version information from npm registry with a timeout
-   - Gracefully handles connection issues without affecting command execution
-
-## Subtask Management
-
-The script now includes enhanced commands for managing subtasks:
-
-### Adding Subtasks
-
-```bash
-# Add a subtask to an existing task
-node scripts/dev.js add-subtask --parent=5 --title="Implement login UI" --description="Create login form"
-
-# Convert an existing task to a subtask
-node scripts/dev.js add-subtask --parent=5 --task-id=8
-
-# Add a subtask with dependencies
-node scripts/dev.js add-subtask --parent=5 --title="Authentication middleware" --dependencies=5.1,5.2
-
-# Skip regenerating task files
-node scripts/dev.js add-subtask --parent=5 --title="Login API route" --skip-generate
-```
-
-Key features:
-
-- Create new subtasks with detailed properties or convert existing tasks
-- Define dependencies between subtasks
-- Set custom status for new subtasks
-- Provides next-step suggestions after creation
-
-### Removing Subtasks
-
-```bash
-# Remove a subtask
-node scripts/dev.js remove-subtask --id=5.2
-
-# Remove multiple subtasks
-node scripts/dev.js remove-subtask --id=5.2,5.3,5.4
-
-# Convert a subtask to a standalone task
-node scripts/dev.js remove-subtask --id=5.2 --convert
-
-# Skip regenerating task files
-node scripts/dev.js remove-subtask --id=5.2 --skip-generate
-```
-
-Key features:
-
-- Remove subtasks individually or in batches
-- Optionally convert subtasks to standalone tasks
-- Control whether task files are regenerated
-- Provides detailed success messages and next steps

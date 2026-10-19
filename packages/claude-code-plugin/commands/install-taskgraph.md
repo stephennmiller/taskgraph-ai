@@ -49,19 +49,14 @@ This command helps you get TaskGraph set up globally on your system.
    taskgraph init
    ```
 
-6. **Configure AI Provider**
-   Ensure you have at least one AI provider API key set:
+6. **Check the AI provider**
+   TaskGraph uses Claude Code, so no API keys are needed. Make sure Claude Code is installed and signed in:
    ```bash
-   # Check current configuration
-   taskgraph models --status
-   
-   # If no API keys found, guide setup
-   echo "You'll need at least one API key:"
-   echo "- ANTHROPIC_API_KEY for Claude"
-   echo "- OPENAI_API_KEY for GPT models"
-   echo "- PERPLEXITY_API_KEY for research"
-   echo ""
-   echo "Set them in your shell profile or .env file"
+   # Verify Claude Code is available
+   claude --version
+
+   # Check current model configuration
+   taskgraph models
    ```
 
 7. **Quick Test**
@@ -105,7 +100,7 @@ nvm use 20
 
 Once installed, you should see:
 ```
-✅ TaskGraph v0.16.2 (or higher) installed
+✅ TaskGraph installed
 ✅ Command 'taskgraph' available globally
 ✅ AI provider configured
 ✅ Ready to use slash commands!
@@ -117,5 +112,5 @@ Try: /project:taskgraph:init your-prd.md
 
 After installation:
 1. Run `/project:utils:check-health` to verify setup
-2. Configure AI providers with `/project:taskgraph:models`
+2. Configure models with `/taskgraph:setup-models`
 3. Start using TaskGraph commands!

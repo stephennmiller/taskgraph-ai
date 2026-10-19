@@ -3,33 +3,43 @@ title: Installation
 sidebarTitle: "Installation"
 ---
 
-Now that you have Node.js and your first API Key, you are ready to begin installing TaskGraph in one of two ways. 
+With Claude Code and Node.js in place, install TaskGraph and set it up in your project.
 
-<Accordion title="Claude Code Quick Install">
-
-For Claude Code users:
+## 1. Install the CLI
 
 ```bash
-claude mcp add taskgraph-ai -- npx -y taskgraph-ai
+npm install -g taskgraph-ai
 ```
 
-Don't forget to add your API keys to the configuration:
-- in the root .env of your Project
-- in the "env" section of your mcp config for taskgraph-ai
+This gives you the `taskgraph` command and `taskgraph-mcp`, the optional MCP server. To skip the install, run any command through npx, for example `npx -y -p taskgraph-ai taskgraph list`.
 
-</Accordion>
-## Installation Options
+## 2. Initialize your project
 
+From your project folder:
 
-<Accordion title="Option 1: MCP (Recommended)">
+```bash
+taskgraph init --rules claude
+```
 
-MCP (Model Context Protocol) lets you run TaskGraph directly from Claude Code.
+This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and the `/tm:` slash commands in `.claude/commands/tm/`. It also writes a `.mcp.json` that registers the MCP server with the 7 `core` tools. Delete that file if you only want slash commands and the CLI.
 
-## 1. Add TaskGraph to Claude Code
+<Warning>
+Don't run `init` twice. It only re-adds the same files.
+</Warning>
 
-Register the server with `claude mcp add` (see Quick Install above), or add it to your project's `.mcp.json`. `taskgraph init --rules claude` writes this file for you.
+## 3. (Optional) Add the MCP server
 
-## Manual Configuration
+The slash commands and CLI do everything without MCP. Add the server only if you want to drive TaskGraph in plain language:
+
+```bash
+claude mcp add taskgraph-ai --scope user \
+  --env TASKGRAPH_TOOLS=standard \
+  -- npx -y taskgraph-ai
+```
+
+Restart Claude Code and run `/mcp`. `taskgraph-ai` should show as connected. If you see `0 tools enabled`, restart Claude Code and confirm `npx -y taskgraph-ai` starts on its own in a terminal.
+
+The equivalent `.mcp.json` entry is:
 
 ```json
 {
@@ -37,73 +47,21 @@ Register the server with `claude mcp add` (see Quick Install above), or add it t
     "taskgraph-ai": {
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
-      "env": {
-        "ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-        "OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-        "GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-        "MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-        "OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-        "XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-        "AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-        "OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
-      }
+      "env": { "TASKGRAPH_TOOLS": "standard" }
     }
   }
 }
 ```
 
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
+## 4. (Optional) Install the plugin
 
-> **Note**: If you see `0 tools enabled` in the MCP settings, restart Claude Code and check that your API keys are correctly configured.
-
-#### 2. (Optional) Configure the models you want to use
-
-In Claude Code, say:
+The Claude Code plugin adds three agents (`task-orchestrator`, `task-executor`, `task-checker`) and `/taskgraph:` slash commands:
 
 ```txt
-Change the main, research and fallback models to <model_name>, <model_name> and <model_name> respectively.
+/plugin marketplace add stephennmiller/taskgraph-ai
+/plugin install taskgraph@taskgraph
 ```
 
-For example, to use Claude Code (no API key required):
-```txt
-Change the main model to claude-code/sonnet
-```
+## Upgrading from Task Master or before 0.47
 
-#### 3. Initialize TaskGraph
-
-In Claude Code, say:
-
-```txt
-Initialize taskgraph in my project
-```
-
-</Accordion>
-
-<Accordion title="Option 2: Using Command Line">
-
-## CLI Installation
-
-```bash
-# Install globally
-npm install -g taskgraph-ai
-
-# OR install locally within your project
-npm install taskgraph-ai
-```
-
-## Initialize a new project
-
-```bash
-# If installed globally
-taskgraph init
-
-# If installed locally
-npx taskgraph init
-
-# Set up the Claude Code integration (CLAUDE.md import, .mcp.json, slash commands)
-taskgraph init --rules claude
-```
-
-This will prompt you for project details and set up a new project with the necessary files and structure.
-</Accordion>
+See the [upgrade guide](/upgrading).

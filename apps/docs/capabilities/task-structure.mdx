@@ -161,8 +161,7 @@ Add `TASKGRAPH_ALLOW_METADATA_UPDATES=true` to your MCP server environment confi
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_ALLOW_METADATA_UPDATES": "true",
-        "ANTHROPIC_API_KEY": "your_key_here"
+        "TASKGRAPH_ALLOW_METADATA_UPDATES": "true"
       }
     }
   }
@@ -321,3 +320,30 @@ The `show` command:
     circular dependencies.
   </Card>
 </CardGroup>
+
+
+## Tagged Task Lists
+
+`tasks.json` organizes tasks into separate contexts called **tags**, so you can keep different branches, features or project phases apart.
+
+```json
+{
+  "master": {
+    "tasks": [
+      { "id": 1, "title": "Setup API", "status": "pending" }
+    ]
+  },
+  "feature-branch": {
+    "tasks": [
+      { "id": 1, "title": "New Feature", "status": "pending" }
+    ]
+  }
+}
+```
+
+- **Isolation:** tasks in different tags never interfere, and each tag numbers its tasks from 1.
+- **Current tag:** stored in `.taskgraph/state.json`, falling back to `master`. Override it per command with `--tag`.
+- **Dependencies** must reference tasks in the same tag, and subtask IDs must be unique within their parent.
+- **Legacy files:** a `tasks.json` in the old `{"tasks": [...]}` shape is converted to `{"master": {"tasks": [...]}}` on first read, with all data preserved.
+
+See [Cross-Tag Task Movement](/capabilities/cross-tag-movement) for moving tasks between tags.
