@@ -125,6 +125,24 @@ export type {
 } from './modules/loop/index.js';
 export { LoopDomain, PRESET_NAMES } from './modules/loop/index.js';
 
+// GitHub Issues push
+export {
+	GitHubDomain,
+	GhCliClient,
+	renderIssue,
+	planSync
+} from './modules/github/index.js';
+export type {
+	GitHubClient,
+	GitHubDomainOptions,
+	GitHubLink,
+	GitHubStatus,
+	PushOptions,
+	PushPlan,
+	PushResult,
+	PlanStep
+} from './modules/github/index.js';
+
 // ========== Advanced API (for CLI/Extension/MCP) ==========
 
 // Workflow - Advanced

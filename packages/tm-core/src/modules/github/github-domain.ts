@@ -1,0 +1,154 @@
+/**
+ * @fileoverview GitHubDomain - one-way push of tasks to GitHub Issues
+ */
+
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../common/errors/taskgraph-error.js';
+import {
+	getGitHubRepoInfo,
+	isGhCliAvailable
+} from '../../common/utils/git-utils.js';
+import type { TasksDomain } from '../tasks/tasks-domain.js';
+import type { GitHubClient } from './adapters/github-client.interface.js';
+import { GhCliClient } from './adapters/gh-cli-client.js';
+import { BASE_LABEL } from './services/issue-renderer.js';
+import { executePush } from './services/push-executor.js';
+import { planSync } from './services/sync-planner.js';
+import type {
+	GitHubStatus,
+	PushOptions,
+	PushPlan,
+	PushResult,
+	SyncTask
+} from './types.js';
+
+export interface GitHubDomainOptions {
+	/** Build a client for `owner/name`; defaults to the `gh` CLI client */
+	clientFactory?: (repo: string) => GitHubClient;
+	sleep?: (ms: number) => Promise<void>;
+	now?: () => Date;
+}
+
+export class GitHubDomain {
+	private tasksDomain?: TasksDomain;
+
+	constructor(
+		private readonly projectRoot: string,
+		private readonly options: GitHubDomainOptions = {}
+	) {}
+
+	/** Wired by TmCore after the tasks domain is initialized */
+	setTasksDomain(tasks: TasksDomain): void {
+		this.tasksDomain = tasks;
+	}
+
+	/** Is `gh` usable, which repo would be used, and how many tasks are linked */
+	async status(options: { repo?: string } = {}): Promise<GitHubStatus> {
+		const ghAvailable = await isGhCliAvailable(this.projectRoot);
+		let repo: string | null = options.repo ?? null;
+		if (!repo && ghAvailable) {
+			repo = await this.detectRepo();
+		}
+		const tasks = await this.loadTasks();
+		const linkedTasks = tasks.filter((t) => t.task.metadata?.github).length;
+		return {
+			ghAvailable,
+			repo,
+			linkedTasks,
+			unlinkedTasks: tasks.length - linkedTasks
+		};
+	}
+
+	/** Work out what a push would do, without writing anything */
+	async planPush(options: PushOptions = {}): Promise<PushPlan> {
+		const { plan } = await this.prepare(options);
+		return plan;
+	}
+
+	async push(options: PushOptions = {}): Promise<PushResult> {
+		const { plan, client, tasks } = await this.prepare(options);
+		const counts = { created: 0, updated: 0, skipped: 0, closed: 0 };
+
+		if (options.dryRun) {
+			for (const step of plan.steps) {
+				const key = (
+					{
+						create: 'created',
+						update: 'updated',
+						skip: 'skipped',
+						close: 'closed'
+					} as const
+				)[step.action];
+				counts[key]++;
+			}
+			return { dryRun: true, plan, ...counts, orphans: plan.orphans };
+		}
+
+		const done = await executePush(plan, tasks, {
+			client,
+			tasks: this.requireTasks(),
+			includeDetails: options.includeDetails,
+			delayMs: options.delayMs,
+			sleep: this.options.sleep,
+			now: this.options.now
+		});
+		return { dryRun: false, plan, ...done, orphans: plan.orphans };
+	}
+
+	private async prepare(options: PushOptions) {
+		const repo = options.repo ?? (await this.detectRepo());
+		if (!repo) {
+			throw new TaskGraphError(
+				'Could not determine the GitHub repository. Pass a repo as owner/name or run `gh auth login` in a GitHub checkout.',
+				ERROR_CODES.MISSING_CONFIGURATION
+			);
+		}
+		const client = this.options.clientFactory
+			? this.options.clientFactory(repo)
+			: new GhCliClient(repo, { cwd: this.projectRoot });
+		const tasks = await this.loadTasks(options.tag);
+		const remote = await client.listIssues(BASE_LABEL);
+		const plan = planSync({
+			repo,
+			tasks,
+			remote,
+			includeDetails: options.includeDetails,
+			closeOrphans: options.closeOrphans,
+			scopeTags: options.tag ? [options.tag] : undefined
+		});
+		return { plan, client, tasks };
+	}
+
+	private async detectRepo(): Promise<string | null> {
+		const info = await getGitHubRepoInfo(this.projectRoot);
+		return info ? `${info.owner.login}/${info.name}` : null;
+	}
+
+	private requireTasks(): TasksDomain {
+		if (!this.tasksDomain) {
+			throw new TaskGraphError(
+				'GitHubDomain is not wired to the tasks domain',
+				ERROR_CODES.INTERNAL_ERROR
+			);
+		}
+		return this.tasksDomain;
+	}
+
+	private async loadTasks(tag?: string): Promise<SyncTask[]> {
+		const tasksDomain = this.requireTasks();
+		const tags = tag
+			? [tag]
+			: (await tasksDomain.getTagsWithStats()).tags.map((t) => t.name);
+		const result: SyncTask[] = [];
+		for (const name of tags) {
+			const { tasks } = await tasksDomain.list({
+				tag: name,
+				includeSubtasks: true
+			});
+			for (const task of tasks) result.push({ tag: name, task });
+		}
+		return result;
+	}
+}
