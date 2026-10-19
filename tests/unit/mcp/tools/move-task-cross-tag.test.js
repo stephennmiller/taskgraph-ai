@@ -1,18 +1,18 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock the utils functions
-const mockFindTasksPath = jest
+const mockFindTasksPath = vi
 	.fn()
 	.mockReturnValue('/test/path/.taskgraph/tasks/tasks.json');
-jest.mock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
+vi.doMock('../../../../mcp-server/src/core/utils/path-utils.js', () => ({
 	findTasksPath: mockFindTasksPath
 }));
 
-const mockEnableSilentMode = jest.fn();
-const mockDisableSilentMode = jest.fn();
-const mockReadJSON = jest.fn();
-const mockWriteJSON = jest.fn();
-jest.mock('../../../../scripts/modules/utils.js', () => ({
+const mockEnableSilentMode = vi.fn();
+const mockDisableSilentMode = vi.fn();
+const mockReadJSON = vi.fn();
+const mockWriteJSON = vi.fn();
+vi.doMock('../../../../scripts/modules/utils.js', () => ({
 	enableSilentMode: mockEnableSilentMode,
 	disableSilentMode: mockDisableSilentMode,
 	readJSON: mockReadJSON,
@@ -24,13 +24,13 @@ import { moveTaskCrossTagDirect } from '../../../../mcp-server/src/core/direct-f
 
 describe('MCP Cross-Tag Move Direct Function', () => {
 	const mockLog = {
-		info: jest.fn(),
-		error: jest.fn(),
-		warn: jest.fn()
+		info: vi.fn(),
+		error: vi.fn(),
+		warn: vi.fn()
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('Mock Verification', () => {
