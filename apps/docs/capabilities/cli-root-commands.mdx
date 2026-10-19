@@ -318,6 +318,22 @@ description: "A comprehensive reference of all available TaskGraph commands"
     TaskGraph runs on Claude Code, so no provider API keys are needed. Configuration is stored in `.taskgraph/config.json`; runtime state such as the current tag is in `.taskgraph/state.json`. Don't edit either by hand. See [Configuration](/configuration).
   </Accordion>
 
+  <Accordion title="Tab Completion">
+    ```bash
+    # Set it up for your shell (detected from $SHELL)
+    taskgraph completion --install
+
+    # Or name the shell
+    taskgraph completion fish --install
+    ```
+
+    `--install` writes the script (`~/.taskgraph-completion.zsh`, `~/.taskgraph-completion.bash`, or `~/.config/fish/completions/taskgraph.fish`) and adds one line to `~/.zshrc` or `~/.bashrc` to load it. Running it again replaces the script and doesn't add the line twice. Run it again after upgrading so new commands complete.
+
+    Tab then completes commands, flags, statuses, priorities and file paths, plus task and subtask IDs and tag names read from the project's `.taskgraph/tasks/tasks.json`. In zsh and fish each ID shows its title and status. Comma-separated lists work too: `taskgraph show 1,<Tab>` skips the IDs already listed.
+
+    To manage your dotfiles yourself, print the script instead: `taskgraph completion zsh > ~/.taskgraph-completion.zsh`. It needs `node` on your `PATH`, which TaskGraph already requires.
+  </Accordion>
+
   <Accordion title="Research Fresh Information">
     ```bash
     # AI-powered research with up-to-date information

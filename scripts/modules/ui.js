@@ -552,6 +552,11 @@ function displayHelp() {
 					name: 'models --set-fallback',
 					args: '<model_id>',
 					desc: 'Set the fallback model (optional)'
+				},
+				{
+					name: 'completion --install',
+					args: '',
+					desc: 'Set up Tab completion for your shell'
 				}
 			]
 		},
