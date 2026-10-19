@@ -29,6 +29,22 @@ To run tests with coverage reporting:
 npm run test:coverage
 ```
 
+### Running under Vitest (Jest to Vitest migration, #71)
+
+The root suite is being migrated from Jest to Vitest. During the migration both
+runners work. Vitest uses `vitest.root.config.ts` (globals, node env,
+`clearMocks`, `@/` alias, `tests/setup.js`; `.js` and `.ts` tests).
+
+```bash
+# Run a single file (or directory) under Vitest
+npx vitest run -c vitest.root.config.ts tests/unit/task-manager/move-task.test.js
+
+# Run the whole root suite under Vitest (temporary script)
+npm run test:vitest
+```
+
+Files that still call `jest.*` APIs will fail under Vitest until migrated.
+
 ## Testing Approach
 
 ### Unit Tests
