@@ -7,6 +7,7 @@
 export { ListTasksCommand } from './commands/list.command.js';
 export { ShowCommand } from './commands/show.command.js';
 export { NextCommand } from './commands/next.command.js';
+export { GraphCommand } from './commands/graph.command.js';
 export { StartCommand } from './commands/start.command.js';
 export { SetStatusCommand } from './commands/set-status.command.js';
 export { TagsCommand } from './commands/tags.command.js';

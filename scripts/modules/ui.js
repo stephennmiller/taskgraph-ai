@@ -699,6 +699,11 @@ function displayHelp() {
 					desc: 'Show the next task to work on based on dependencies'
 				},
 				{
+					name: 'graph',
+					args: '[--id=<id>]',
+					desc: 'Show tasks as a dependency tree, with the next task marked'
+				},
+				{
 					name: 'show',
 					args: '<id>',
 					desc: 'Display detailed information about a specific task'

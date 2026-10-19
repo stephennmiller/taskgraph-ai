@@ -49,6 +49,7 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - \`list-tasks\` - Smart listing with natural language filters
 - \`list-tasks-with-subtasks\` - Include subtasks in hierarchical view
 - \`list-tasks-by-status\` - Filter by specific status
+- \`graph\` - Dependency tree with the next task marked
 
 ### \`/taskgraph:set-status\`
 - \`to-pending\` - Reset task to pending

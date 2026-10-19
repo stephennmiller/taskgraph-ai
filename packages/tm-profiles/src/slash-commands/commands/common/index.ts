@@ -5,6 +5,7 @@
 
 // Display
 export { showTask } from './show-task.js';
+export { graph } from './graph.js';
 export { listTasks } from './list-tasks.js';
 export { listTasksWithSubtasks } from './list-tasks-with-subtasks.js';
 export { listTasksByStatus } from './list-tasks-by-status.js';
