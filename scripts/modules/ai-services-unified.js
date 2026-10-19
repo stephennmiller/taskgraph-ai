@@ -605,6 +605,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 						modelId,
 						inputTokens: providerResponse.usage.inputTokens,
 						outputTokens: providerResponse.usage.outputTokens,
+						cachedInputTokens: providerResponse.usage.cachedInputTokens,
 						outputType
 					});
 				} catch (telemetryError) {
@@ -800,6 +801,7 @@ async function logAiUsage({
 	modelId,
 	inputTokens,
 	outputTokens,
+	cachedInputTokens,
 	outputType
 }) {
 	try {
@@ -829,6 +831,8 @@ async function logAiUsage({
 			inputTokens: inputTokens || 0,
 			outputTokens: outputTokens || 0,
 			totalTokens,
+			// Part of inputTokens read from the prompt cache
+			...(cachedInputTokens > 0 ? { cachedInputTokens } : {}),
 			totalCost,
 			currency, // Add currency to the telemetry data
 			isUnknownCost: isUnknown // Flag to indicate if pricing is unknown

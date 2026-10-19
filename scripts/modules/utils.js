@@ -1706,6 +1706,7 @@ function aggregateTelemetry(telemetryArray, overallCommandName) {
 		providerName: 'Multiple', // Default if providers vary
 		inputTokens: 0,
 		outputTokens: 0,
+		cachedInputTokens: 0,
 		totalTokens: 0,
 		totalCost: 0,
 		currency: telemetryArray[0].currency || 'USD' // Assume consistent currency or default
@@ -1718,6 +1719,7 @@ function aggregateTelemetry(telemetryArray, overallCommandName) {
 	telemetryArray.forEach((item) => {
 		aggregated.inputTokens += item.inputTokens || 0;
 		aggregated.outputTokens += item.outputTokens || 0;
+		aggregated.cachedInputTokens += item.cachedInputTokens || 0;
 		aggregated.totalCost += item.totalCost || 0;
 		uniqueModels.add(item.modelUsed);
 		uniqueProviders.add(item.providerName);

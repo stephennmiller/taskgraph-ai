@@ -205,7 +205,8 @@ describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
 			expect(result.usage).toEqual({
 				inputTokens: 100,
 				outputTokens: 50,
-				totalTokens: 150
+				totalTokens: 150,
+				cachedInputTokens: 0
 			});
 		});
 	});

@@ -150,6 +150,7 @@ async function streamTelemetry(stream, aiServiceResponse, config) {
 				modelId: aiServiceResponse.modelId,
 				inputTokens: usage?.inputTokens ?? usage?.promptTokens ?? 0,
 				outputTokens: usage?.outputTokens ?? usage?.completionTokens ?? 0,
+				cachedInputTokens: usage?.inputTokenDetails?.cacheReadTokens ?? 0,
 				outputType: config.isMCP ? 'mcp' : 'cli'
 			})) || previous
 		);
