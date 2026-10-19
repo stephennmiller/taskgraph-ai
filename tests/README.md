@@ -29,21 +29,22 @@ To run tests with coverage reporting:
 npm run test:coverage
 ```
 
-### Running under Vitest (Jest to Vitest migration, #71)
+### Vitest configuration
 
-The root suite is being migrated from Jest to Vitest. During the migration both
-runners work. Vitest uses `vitest.root.config.ts` (globals, node env,
-`clearMocks`, `@/` alias, `tests/setup.js`; `.js` and `.ts` tests).
+The root suite runs on Vitest with `vitest.root.config.ts` (globals, node env,
+`clearMocks`, `@/` alias, `tests/setup.js`; `.js` and `.ts` tests). Coverage is
+off by default and enabled by `npm run test:coverage` (reports in `coverage/`).
+The real-SDK tests in `tests/sdk-contract/` have their own config
+(`vitest.sdk-contract.config.ts`) and run with `npm run test:sdk-contract`.
 
 ```bash
-# Run a single file (or directory) under Vitest
+# Run a single file (or directory)
 npx vitest run -c vitest.root.config.ts tests/unit/task-manager/move-task.test.js
 
-# Run the whole root suite under Vitest (temporary script)
-npm run test:vitest
+# Run unit or integration tests only (path filter)
+npm run test:unit
+npm run test:integration
 ```
-
-Files that still call `jest.*` APIs will fail under Vitest until migrated.
 
 ## Testing Approach
 
@@ -68,7 +69,7 @@ Test fixtures provide sample data for tests. Fixtures should be small, focused, 
 For external dependencies like file system operations and API calls, we use mocking to isolate the code being tested.
 
 - File system operations: Use `mock-fs` to mock the file system
-- API calls: Use Jest's mocking capabilities to mock API responses
+- API calls: Use Vitest's mocking capabilities (`vi.fn`, `vi.mock`) to mock API responses
 
 ## Test Coverage
 

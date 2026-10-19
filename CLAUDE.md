@@ -14,7 +14,7 @@ npm run format-check              # Biome; `npm run format` to fix
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp)
 npm run test:coverage -w @tm/core # coverage (also @tm/cli); Vitest
 npm run test:e2e -w @tm/cli       # CLI e2e (Vitest, apps/cli/tests/e2e)
-npm test                          # root tests/ suite (Jest, ESM via --experimental-vm-modules)
+npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
 ```
 
 `npm install` points git at `.githooks/`. The pre-push hook runs `biome format` on files changed since `origin/main`. Fix with `npm run format`; `git push --no-verify` skips it once.
@@ -26,7 +26,7 @@ npm test                          # root tests/ suite (Jest, ESM via --experimen
 - **Package & tests**: Place in `packages/<package-name>/src/<module>/<file>.spec.ts` or `apps/<app-name>/src/<module>/<file.spec.ts>` alongside source
 - **Package integration tests**: Place in `packages/<package-name>/tests/integration/<module>/<file>.test.ts` or `apps/<app-name>/tests/integration/<module>/<file>.test.ts` alongside source
 - **Isolated unit tests**: Use `tests/unit/packages/<package-name>/` only when parallel placement isn't possible
-- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the legacy root `tests/` suite is still Jest + `.js` until the Vitest migration (#71) lands. New tests go in packages/apps, not there.
+- **Test extension**: Always use `.ts` for TypeScript tests, never `.js`. Exception: the legacy root `tests/` suite is Vitest with `.js` tests; new tests go in packages/apps, not there.
 
 ### Synchronous Tests
 
