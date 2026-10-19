@@ -26,12 +26,14 @@ jobs:
           persist-credentials: false
 
       - name: Run Claude Code slash command
-        uses: anthropics/claude-code-base-action@e8132bc5e637a42c27763fc757faa37e1ee43b34 # beta
+        # A mirror of claude-code-action's base-action directory. This commit is
+        # the sync of claude-code-action f27be6b, the v1.0.252 that claude.yml
+        # pins, so both workflows run the same source. The old pin (v0.0.63, from
+        # August 2025) bundled a Claude Code whose default model has been retired.
+        uses: anthropics/claude-code-base-action@19324d6ae01311cf3112de059679b41348bdc770 # mirror of claude-code-action v1.0.252
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           prompt: "/dedupe ${{ github.repository }}/issues/${{ github.event.issue.number || inputs.issue_number }}"
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # The pinned action's default model (claude-sonnet-4-20250514) has been
-          # retired and now returns a 404, so name one that exists.
-          model: claude-sonnet-5-5
-          claude_env: |
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: --model claude-sonnet-5-5
