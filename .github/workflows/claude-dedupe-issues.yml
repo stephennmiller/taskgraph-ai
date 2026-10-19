@@ -30,6 +30,11 @@ jobs:
         # the sync of claude-code-action f27be6b, the v1.0.252 that claude.yml
         # pins, so both workflows run the same source. The old pin (v0.0.63, from
         # August 2025) bundled a Claude Code whose default model has been retired.
+        # Not claude-code-action itself: it refuses issue authors without write
+        # access, and dedupe has to run on issues from outside reporters. The
+        # mirror has no recent tags, so Dependabot cannot bump it. When it bumps
+        # claude-code-action in claude.yml, move this pin to the matching
+        # "Sync from claude-code-action base-action@<sha>" commit by hand.
         uses: anthropics/claude-code-base-action@19324d6ae01311cf3112de059679b41348bdc770 # mirror of claude-code-action v1.0.252
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
