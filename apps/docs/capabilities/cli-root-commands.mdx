@@ -320,26 +320,21 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
   <Accordion title="Tab Completion">
     ```bash
-    # Show how to install completion for your shell
-    taskgraph completion
+    # Set it up for your shell (detected from $SHELL)
+    taskgraph completion --install
 
-    # Or write the script yourself
-    taskgraph completion zsh > ~/.taskgraph-completion.zsh
-    echo 'source ~/.taskgraph-completion.zsh' >> ~/.zshrc
-
-    taskgraph completion bash > ~/.taskgraph-completion.bash
-    echo 'source ~/.taskgraph-completion.bash' >> ~/.bashrc
-
-    mkdir -p ~/.config/fish/completions
-    taskgraph completion fish > ~/.config/fish/completions/taskgraph.fish
+    # Or name the shell
+    taskgraph completion fish --install
     ```
+
+    `--install` writes the script (`~/.taskgraph-completion.zsh`, `~/.taskgraph-completion.bash`, or `~/.config/fish/completions/taskgraph.fish`) and adds one line to `~/.zshrc` or `~/.bashrc` to load it. Running it again replaces the script and doesn't add the line twice. Run it again after upgrading so new commands complete.
 
     Tab then completes commands, flags, statuses, priorities and file paths, plus task and subtask IDs and tag names read from the project's `.taskgraph/tasks/tasks.json`. In zsh and fish each ID shows its title and status. Comma-separated lists work too: `taskgraph show 1,<Tab>` skips the IDs already listed.
 
-    The script lists the commands of the version that wrote it, so run the first command again after upgrading. It needs `node` on your `PATH`, which TaskGraph already requires.
+    To manage your dotfiles yourself, print the script instead: `taskgraph completion zsh > ~/.taskgraph-completion.zsh`. It needs `node` on your `PATH`, which TaskGraph already requires.
   </Accordion>
 
-
+  <Accordion title="Research Fresh Information">
     ```bash
     # AI-powered research with up-to-date information
     taskgraph research "What are the latest best practices for JWT authentication in Node.js?"

@@ -223,10 +223,10 @@ taskgraph validate-dependencies
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 taskgraph research "latest JWT best practices"
 taskgraph models --setup                     # choose models
-taskgraph completion                         # set up Tab completion
+taskgraph completion --install               # Tab completion for your shell
 ```
 
-Run `taskgraph completion` once to get Tab completion for commands, flags, task IDs, tags and statuses in bash, zsh or fish. It prints the two commands to install it for your shell.
+Run `taskgraph completion --install` once to get Tab completion for commands, flags, task IDs, tags and statuses in bash, zsh or fish. Run it again after upgrading.
 
 Every command, flag and example is in the [command reference](apps/docs/capabilities/cli-root-commands.mdx).
 

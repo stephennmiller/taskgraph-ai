@@ -59,7 +59,14 @@ export const STATUS_CHOICES = [
 ];
 export const PRIORITY_CHOICES = ['high', 'medium', 'low'];
 
-const ID_NAMES = new Set(['id', 'ids', 'taskid', 'task-id', 'parent']);
+const ID_NAMES = new Set([
+	'id',
+	'ids',
+	'taskid',
+	'task-id',
+	'parent',
+	'dependencies'
+]);
 const TAG_NAMES = new Set([
 	'tag',
 	'tagname',
@@ -123,7 +130,7 @@ function optionSpec(opt: Option, command: string): OptionSpec {
 	return {
 		short: opt.short,
 		long: opt.long,
-		description: firstLine(opt.description),
+		description: shortDescription(opt.description),
 		value: takesValue
 			? inferValue(metavar(opt.flags), opt.argChoices, {
 					long: opt.long,
@@ -143,17 +150,33 @@ function argumentSpec(arg: Argument, command: string): ArgumentSpec {
 	};
 }
 
-function firstLine(text: string | undefined): string {
-	return (text || '').split('\n')[0].trim();
+/** Longest description shown; zsh cuts lines at the terminal edge mid-word */
+export const MAX_DESCRIPTION = 60;
+
+/**
+ * One short line: the first sentence, cut at a word boundary with an
+ * ellipsis when still too long.
+ */
+export function shortDescription(text: string | undefined): string {
+	const line = (text || '').split('\n')[0].trim();
+	const sentence = line.replace(/^(.+?[.!?])\s.*$/, '$1').replace(/\.$/, '');
+	if (sentence.length <= MAX_DESCRIPTION) return sentence;
+	const cut = sentence.slice(0, MAX_DESCRIPTION - 1);
+	const space = cut.lastIndexOf(' ');
+	return `${(space > 30 ? cut.slice(0, space) : cut).replace(/[\s,;:(]+$/, '')}…`;
 }
 
+/** Hidden commands, and deprecated ones that have a replacement */
 function isHidden(cmd: Command): boolean {
-	return Boolean((cmd as unknown as { _hidden?: boolean })._hidden);
+	return (
+		Boolean((cmd as unknown as { _hidden?: boolean })._hidden) ||
+		/^\[deprecated\]/i.test(cmd.description())
+	);
 }
 
 /**
  * Build the completion spec for a Commander program.
- * Hidden commands and options are left out.
+ * Hidden and deprecated commands and hidden options are left out.
  */
 export function buildCompletionSpec(program: Command): CommandSpec {
 	const walk = (cmd: Command): CommandSpec => {
@@ -167,7 +190,7 @@ export function buildCompletionSpec(program: Command): CommandSpec {
 		return {
 			name,
 			aliases: cmd.aliases(),
-			description: firstLine(cmd.description()),
+			description: shortDescription(cmd.description()),
 			options,
 			args: cmd.registeredArguments.map((a) => argumentSpec(a, name)),
 			commands: cmd.commands.filter((c) => !isHidden(c)).map(walk)

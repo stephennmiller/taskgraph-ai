@@ -5,14 +5,25 @@
  */
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Argument, Command } from 'commander';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildEngineProgram } from './engine.js';
+import { displayPath, installCompletion, installPaths } from './install.js';
 import { detectShell, renderCompletionScript } from './scripts.js';
-import { buildCompletionSpec } from './spec.js';
+import {
+	buildCompletionSpec,
+	MAX_DESCRIPTION,
+	shortDescription
+} from './spec.js';
 
 function makeProgram(): Command {
 	const program = new Command('taskgraph').version('1.2.3');
@@ -40,6 +51,12 @@ function makeProgram(): Command {
 		.command('completion')
 		.addArgument(new Argument('[shell]').choices(['bash', 'zsh', 'fish']));
 	program.command('secret', { hidden: true });
+	program
+		.command('use-tag')
+		.description('[DEPRECATED] Switch tags (use "tm tags use" instead)');
+	program
+		.command('add-task')
+		.option('--dependencies <dependencies>', 'Comma-separated task IDs');
 	return program;
 }
 
@@ -119,6 +136,7 @@ describe('buildCompletionSpec', () => {
 		const names = spec.commands.map((c) => c.name);
 		expect(names).toContain('set-status');
 		expect(names).not.toContain('secret');
+		expect(names).not.toContain('use-tag');
 		expect(spec.commands.find((c) => c.name === 'set-status')?.aliases).toEqual(
 			['status']
 		);
@@ -147,6 +165,11 @@ describe('buildCompletionSpec', () => {
 		expect(arg('add')).toBe('none');
 	});
 
+	it('completes IDs for --dependencies', () => {
+		const addTask = spec.commands.find((c) => c.name === 'add-task');
+		expect(addTask?.options[0].value).toEqual({ kind: 'ids' });
+	});
+
 	it('adds --help to every command', () => {
 		expect(spec.options.some((o) => o.long === '--help')).toBe(true);
 		expect(
@@ -156,11 +179,11 @@ describe('buildCompletionSpec', () => {
 });
 
 describe('completion engine', () => {
-	it('completes commands with descriptions', () => {
+	it('completes commands A-Z with descriptions', () => {
 		const result = complete(['s']);
 		expect(result.label).toBe('commands');
-		expect(result.values).toEqual(['show', 'set-status']);
-		expect(result.descriptions[0]).toBe('Show a task');
+		expect(result.values).toEqual(['set-status', 'show']);
+		expect(result.descriptions[1]).toBe('Show a task');
 	});
 
 	it('follows aliases into subcommands', () => {
@@ -310,6 +333,91 @@ COMP_WORDS=(taskgraph show 1,); COMP_CWORD=2; _taskgraph; echo "\${COMPREPLY[*]}
 			env: { ...process.env, TASKGRAPH_TAG: '' }
 		});
 		expect(out.trim().split('\n')).toEqual(['2.1 2.2', '1,2 1,2.1 1,2.2 1,10']);
+	});
+});
+
+describe('shortDescription', () => {
+	it('keeps the first sentence', () => {
+		expect(
+			shortDescription(
+				'Move tasks between tags. Supports cross-tag moves with dependency resolution.'
+			)
+		).toBe('Move tasks between tags');
+	});
+
+	it('cuts long text at a word boundary with an ellipsis', () => {
+		const text =
+			'Description of the task to add (required if not using manual fields like title)';
+		const short = shortDescription(text);
+		expect(short.length).toBeLessThanOrEqual(MAX_DESCRIPTION);
+		expect(short).toBe(
+			'Description of the task to add (required if not using…'
+		);
+	});
+
+	it('leaves short text alone', () => {
+		expect(shortDescription('Show help')).toBe('Show help');
+		expect(shortDescription(undefined)).toBe('');
+	});
+});
+
+describe('installCompletion', () => {
+	it('writes the script and loads it from .zshrc once', () => {
+		const home = mkdtempSync(join(tmpdir(), 'tg-home-'));
+		try {
+			writeFileSync(join(home, '.zshrc'), 'export EDITOR=vim');
+			const first = installCompletion('zsh', '# v1', { home, env: {} });
+			const second = installCompletion('zsh', '# v2', { home, env: {} });
+			expect(first.rcUpdated).toBe(true);
+			expect(second.rcUpdated).toBe(false);
+			expect([first.replaced, second.replaced]).toEqual([false, true]);
+			expect(readFileSync(first.script, 'utf8')).toBe('# v2');
+			const rc = readFileSync(join(home, '.zshrc'), 'utf8');
+			expect(rc.startsWith('export EDITOR=vim\n')).toBe(true);
+			expect(rc).toContain(
+				'[ -f "$HOME/.taskgraph-completion.zsh" ] && source "$HOME/.taskgraph-completion.zsh"'
+			);
+			expect(rc.split('# TaskGraph Tab completion').length - 1).toBe(1);
+		} finally {
+			rmSync(home, { recursive: true, force: true });
+		}
+	});
+
+	it('puts fish completions in its completions folder with no startup line', () => {
+		const home = mkdtempSync(join(tmpdir(), 'tg-home-'));
+		try {
+			const result = installCompletion('fish', '# fish', { home, env: {} });
+			expect(result.script).toBe(
+				join(home, '.config', 'fish', 'completions', 'taskgraph.fish')
+			);
+			expect(result.rc).toBeUndefined();
+			expect(readFileSync(result.script, 'utf8')).toBe('# fish');
+		} finally {
+			rmSync(home, { recursive: true, force: true });
+		}
+	});
+
+	it('uses .bash_profile on macOS when it exists, and honors ZDOTDIR', () => {
+		const home = mkdtempSync(join(tmpdir(), 'tg-home-'));
+		try {
+			writeFileSync(join(home, '.bash_profile'), '');
+			expect(installPaths('bash', { home, platform: 'darwin' }).rc).toBe(
+				join(home, '.bash_profile')
+			);
+			expect(installPaths('bash', { home, platform: 'linux' }).rc).toBe(
+				join(home, '.bashrc')
+			);
+			expect(
+				installPaths('zsh', { home, env: { ZDOTDIR: join(home, 'z') } }).rc
+			).toBe(join(home, 'z', '.zshrc'));
+		} finally {
+			rmSync(home, { recursive: true, force: true });
+		}
+	});
+
+	it('shows paths under home with ~', () => {
+		expect(displayPath('/home/me/.zshrc', '/home/me')).toBe('~/.zshrc');
+		expect(displayPath('/etc/zshrc', '/home/me')).toBe('/etc/zshrc');
 	});
 });
 

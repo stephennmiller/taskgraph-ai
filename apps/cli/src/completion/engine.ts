@@ -18,6 +18,8 @@
  *   4. group label for zsh ("commands", "options", "task IDs", ...)
  * then one candidate per line: value, optionally a tab and a description.
  * Candidates never include the prefixes; each shell adds what it needs.
+ * Candidates come in display order (commands A-Z; IDs, statuses and flags
+ * in their natural order), so the shells are told not to re-sort them.
  */
 
 import type { CommandSpec } from './spec.js';
@@ -217,6 +219,7 @@ if (positional === 0 && cmd.commands.length) {
 		cmd.commands
 			.filter(function (c) { return startsWith(c.name, cur); })
 			.map(function (c) { return [c.name, c.description]; })
+			.sort(function (a, b) { return a[0] < b[0] ? -1 : 1; })
 	);
 }
 
