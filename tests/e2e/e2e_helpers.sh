@@ -7,7 +7,8 @@
 
 # --- New Function: extract_and_sum_cost ---
 # Takes a string containing command output.
-# Extracts costs (lines with "Est. Cost: $X.YYYYYY" or similar from telemetry output)
+# Extracts costs from the usage line, e.g. "opus · 1,500 tokens (1,000 in, 500 out) · ~$0.0935"
+# (also accepts the older "Est. Cost: $X.YYYYYY" box)
 # from the output, sums them, and adds them to the GLOBAL total_e2e_cost variable.
 extract_and_sum_cost() {
   local command_output="$1"
@@ -23,14 +24,14 @@ extract_and_sum_cost() {
   # Accumulate all costs found in the command_output
   while IFS= read -r line; do
     # Extract the numeric part after 'Est. Cost: $' and before any trailing spaces/chars
-    cost_value=$(echo "$line" | grep -o -E 'Est\. Cost: \$([0-9]+\.[0-9]+)' | sed -E 's/Est\. Cost: \$//g')
+    cost_value=$(echo "$line" | grep -o -E '(Est\. Cost: |~)\$([0-9]+\.[0-9]+)' | sed -E 's/(Est\. Cost: |~)\$//g')
     if [[ -n "$cost_value" && "$cost_value" =~ ^[0-9]+\.[0-9]+$ ]]; then
       # echo "[DEBUG] Found cost value: $cost_value in line: '$line'" # For debugging
       extracted_cost_sum=$(echo "$extracted_cost_sum + $cost_value" | bc)
     # else # For debugging
       # echo "[DEBUG] No valid cost value found or extracted in line: '$line' (extracted: '$cost_value')" # For debugging
     fi
-  done < <(echo "$command_output" | grep -E 'Est\. Cost: \$')
+  done < <(echo "$command_output" | grep -E '(Est\. Cost: |~)\$[0-9]')
 
   # echo "[DEBUG] Extracted sum from this command output: $extracted_cost_sum" # For debugging
   if (( $(echo "$extracted_cost_sum > 0" | bc -l) )); then

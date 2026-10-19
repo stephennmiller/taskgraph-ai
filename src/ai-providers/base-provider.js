@@ -362,13 +362,19 @@ export class BaseAIProvider {
 				result.usage?.outputTokens ?? result.usage?.completionTokens ?? 0;
 			const totalTokens =
 				result.usage?.totalTokens ?? inputTokens + outputTokens;
+			// Part of inputTokens read from the prompt cache
+			const cachedInputTokens =
+				result.usage?.inputTokenDetails?.cacheReadTokens ??
+				result.usage?.cachedInputTokens ??
+				0;
 
 			return {
 				text: result.text,
 				usage: {
 					inputTokens,
 					outputTokens,
-					totalTokens
+					totalTokens,
+					cachedInputTokens
 				}
 			};
 		} catch (error) {
@@ -513,13 +519,19 @@ export class BaseAIProvider {
 				result.usage?.outputTokens ?? result.usage?.completionTokens ?? 0;
 			const totalTokens =
 				result.usage?.totalTokens ?? inputTokens + outputTokens;
+			// Part of inputTokens read from the prompt cache
+			const cachedInputTokens =
+				result.usage?.inputTokenDetails?.cacheReadTokens ??
+				result.usage?.cachedInputTokens ??
+				0;
 
 			return {
 				object: result.object,
 				usage: {
 					inputTokens,
 					outputTokens,
-					totalTokens
+					totalTokens,
+					cachedInputTokens
 				}
 			};
 		} catch (error) {

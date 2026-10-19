@@ -79,7 +79,8 @@ describe('BaseAIProvider against the real AI SDK', () => {
 		expect(result.usage).toEqual({
 			inputTokens: 11,
 			outputTokens: 7,
-			totalTokens: 18
+			totalTokens: 18,
+			cachedInputTokens: 0
 		});
 		expect(calls[0].prompt[0]).toMatchObject({
 			role: 'system',
@@ -87,6 +88,33 @@ describe('BaseAIProvider against the real AI SDK', () => {
 		});
 		expect(calls[0].maxOutputTokens).toBe(321);
 		expect(calls[0].temperature).toBe(0.2);
+	});
+
+	it('reports input read from the prompt cache', async () => {
+		const cachedModel = new MockLanguageModelV4({
+			doGenerate: async () => ({
+				content: [{ type: 'text', text: 'ok' }],
+				finishReason: { unified: 'stop', raw: 'stop' },
+				usage: {
+					inputTokens: {
+						total: 1000,
+						noCache: 100,
+						cacheRead: 900,
+						cacheWrite: 0
+					},
+					outputTokens: { total: 5, text: 5, reasoning: 0 }
+				},
+				warnings: []
+			})
+		});
+		const provider = new ContractProvider(cachedModel);
+
+		const result = await provider.generateText(params());
+
+		expect(result.usage).toMatchObject({
+			inputTokens: 1000,
+			cachedInputTokens: 900
+		});
 	});
 
 	it('generateObject returns a parsed object and normalized usage', async () => {

@@ -373,7 +373,8 @@ describe('BaseAIProvider', () => {
 			expect(result.usage).toEqual({
 				inputTokens: 10,
 				outputTokens: 5,
-				totalTokens: 15
+				totalTokens: 15,
+				cachedInputTokens: 0
 			});
 
 			// Test inputTokens/outputTokens format (newer format)
@@ -391,7 +392,8 @@ describe('BaseAIProvider', () => {
 			expect(result.usage).toEqual({
 				inputTokens: 20,
 				outputTokens: 10,
-				totalTokens: 30
+				totalTokens: 30,
+				cachedInputTokens: 0
 			});
 		});
 
@@ -410,8 +412,28 @@ describe('BaseAIProvider', () => {
 			expect(result.usage).toEqual({
 				inputTokens: 0,
 				outputTokens: 0,
-				totalTokens: 0
+				totalTokens: 0,
+				cachedInputTokens: 0
 			});
+		});
+
+		it('should report how much of the input came from the prompt cache', async () => {
+			mockGenerateText.mockResolvedValue({
+				text: 'response',
+				usage: {
+					inputTokens: 1000,
+					outputTokens: 10,
+					inputTokenDetails: { cacheReadTokens: 900 }
+				}
+			});
+
+			const result = await testProvider.generateText({
+				apiKey: 'key',
+				modelId: 'model',
+				messages: [{ role: 'user', content: 'test' }]
+			});
+
+			expect(result.usage.cachedInputTokens).toBe(900);
 		});
 
 		it('should calculate totalTokens when missing', async () => {
