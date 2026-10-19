@@ -12,6 +12,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/taskgraph-ai"><img src="https://img.shields.io/npm/v/taskgraph-ai.svg" alt="npm version"></a>
   <a href="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml"><img src="https://github.com/stephennmiller/taskgraph-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg" alt="License"></a>
 </p>
