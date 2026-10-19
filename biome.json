@@ -1,13 +1,14 @@
 {
 	"files": {
-		"ignore": [
-			"build",
-			"coverage",
-			".changeset",
-			"tasks",
-			"package-lock.json",
-			"tests/fixture/*.json",
-			"dist"
+		"includes": [
+			"**",
+			"!**/build",
+			"!**/coverage",
+			"!**/.changeset",
+			"!**/tasks",
+			"!**/package-lock.json",
+			"!**/tests/fixture/**/*.json",
+			"!**/dist"
 		]
 	},
 	"formatter": {
@@ -26,7 +27,7 @@
 	"linter": {
 		"enabled": false,
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
 			"complexity": {
 				"noForEach": "off",
 				"useOptionalChain": "off",

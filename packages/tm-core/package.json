@@ -48,8 +48,18 @@
 		"typescript": "^5.9.2",
 		"vitest": "^4.1.0"
 	},
-	"files": ["src", "README.md", "CHANGELOG.md"],
-	"keywords": ["task-management", "typescript", "ai", "prd", "parser"],
+	"files": [
+		"src",
+		"README.md",
+		"CHANGELOG.md"
+	],
+	"keywords": [
+		"task-management",
+		"typescript",
+		"ai",
+		"prd",
+		"parser"
+	],
 	"author": "TaskGraph",
 	"version": ""
 }

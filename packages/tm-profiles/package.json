@@ -28,8 +28,18 @@
 		"typescript": "^5.9.2",
 		"vitest": "^4.1.0"
 	},
-	"files": ["src", "README.md", "CHANGELOG.md"],
-	"keywords": ["taskgraph", "profiles", "editor", "commands", "typescript"],
+	"files": [
+		"src",
+		"README.md",
+		"CHANGELOG.md"
+	],
+	"keywords": [
+		"taskgraph",
+		"profiles",
+		"editor",
+		"commands",
+		"typescript"
+	],
 	"author": "TaskGraph",
 	"version": ""
 }

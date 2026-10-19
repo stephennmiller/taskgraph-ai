@@ -13,7 +13,10 @@
 		"provenance": true,
 		"access": "public"
 	},
-	"workspaces": ["apps/*", "packages/*"],
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
 	"scripts": {
 		"prepare": "node .githooks/install.mjs",
 		"build": "npm run build:build-config && cross-env NODE_ENV=production tsdown",
@@ -124,7 +127,7 @@
 		"qs": "^6.16.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.5.15",
 		"@changesets/changelog-github": "^1.0.1",
 		"@changesets/cli": "^3.0.3",
 		"@manypkg/cli": "^0.25.1",

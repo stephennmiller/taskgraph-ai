@@ -10,7 +10,10 @@
 		"./theme": "./src/ui/theme.ts",
 		"./suggested-actions": "./src/ui/suggested-actions.ts"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check src",
@@ -38,7 +41,7 @@
 		"terminal-link": "^5.0.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.5.15",
 		"@types/cli-progress": "^3.11.6",
 		"@types/figlet": "^1.7.0",
 		"@types/gradient-string": "^1.1.6",
@@ -52,12 +55,19 @@
 	"engines": {
 		"node": ">=22.0.0"
 	},
-	"keywords": ["taskgraph", "cli", "task-management", "productivity"],
+	"keywords": [
+		"taskgraph",
+		"cli",
+		"task-management",
+		"productivity"
+	],
 	"author": "",
 	"license": "MIT",
 	"typesVersions": {
 		"*": {
-			"*": ["src/*"]
+			"*": [
+				"src/*"
+			]
 		}
 	},
 	"version": ""
