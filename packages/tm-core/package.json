@@ -44,7 +44,7 @@
 		"@types/proper-lockfile": "^4.1.4",
 		"@types/node": "^26.6.5",
 		"@vitest/coverage-v8": "^4.1.0",
-		"strip-literal": "3.1.0",
+		"strip-literal": "4.0.0",
 		"typescript": "^5.9.2",
 		"vitest": "^4.1.0"
 	},
