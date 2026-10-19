@@ -57,7 +57,11 @@
 		"anthropic",
 		"llm",
 		"mcp",
-		"context"
+		"context",
+		"claude-code",
+		"model-context-protocol",
+		"prd",
+		"task-graph"
 	],
 	"author": "Eyal Toledano",
 	"license": "MIT WITH Commons-Clause",
