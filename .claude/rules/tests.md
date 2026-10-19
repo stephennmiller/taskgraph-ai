@@ -41,16 +41,16 @@ paths:
 
 ```javascript
 // 1. Imports
-import { jest } from '@jest/globals';
+import { vi } from 'vitest'; // optional: `vi`, `describe`, `it`, `expect` are also globals
 
 // 2. Mock setup (MUST come before importing the modules under test)
-jest.mock('fs');
-jest.mock('@anthropic-ai/sdk');
-jest.mock('../../scripts/modules/utils.js', () => ({
+vi.mock('fs');
+vi.mock('@anthropic-ai/sdk');
+vi.mock('../../scripts/modules/utils.js', () => ({
   CONFIG: {
     projectVersion: '1.5.0'
   },
-  log: jest.fn()
+  log: vi.fn()
 }));
 
 // 3. Import modules AFTER all mocks are defined
@@ -59,13 +59,13 @@ import { testFixture } from '../fixtures/fixture-name.js';
 import fs from 'fs';
 
 // 4. Set up spies on mocked modules (if needed)
-const mockReadFileSync = jest.spyOn(fs, 'readFileSync');
+const mockReadFileSync = vi.spyOn(fs, 'readFileSync');
 
 // 5. Test suite with descriptive name
 describe('Feature or Function Name', () => {
   // 6. Setup and teardown (if needed)
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Additional setup code
   });
   
@@ -137,15 +137,15 @@ When testing CLI commands built with Commander.js, several special consideration
   ```javascript
   // If you must mock the Commander.js chain:
   const mockCommand = {
-    command: jest.fn().mockReturnThis(),
-    description: jest.fn().mockReturnThis(),
-    option: jest.fn().mockReturnThis(),
-    argument: jest.fn().mockReturnThis(), // Don't forget this one
-    action: jest.fn(fn => { 
+    command: vi.fn().mockReturnThis(),
+    description: vi.fn().mockReturnThis(),
+    option: vi.fn().mockReturnThis(),
+    argument: vi.fn().mockReturnThis(), // Don't forget this one
+    action: vi.fn(fn => { 
       actionHandler = fn; // Capture the handler for testing
       return mockCommand; 
     }),
-    on: jest.fn().mockReturnThis() // Don't forget this one
+    on: vi.fn().mockReturnThis() // Don't forget this one
   };
   ```
 
@@ -197,7 +197,7 @@ When testing CLI commands built with Commander.js, several special consideration
   ```javascript
   // ❌ DON'T: Create circular references in mocks
   const badMock = {
-    method: jest.fn().mockImplementation(() => badMock.method())
+    method: vi.fn().mockImplementation(() => badMock.method())
   };
   
   // ❌ DON'T: Access uninitialized variables
@@ -208,38 +208,42 @@ When testing CLI commands built with Commander.js, several special consideration
   };
   ```
 
-## Jest Module Mocking Best Practices
+## Vitest Module Mocking Best Practices
 
 - **Mock Hoisting Behavior**
-  - Jest hoists `jest.mock()` calls to the top of the file, even above imports
-  - Always declare mocks before importing the modules being tested
-  - Use the factory pattern for complex mocks that need access to other variables
+  - Vitest hoists `vi.mock()` calls to the top of the file, even above imports
+  - Variables used inside a `vi.mock()` factory must be created with `vi.hoisted()`
+  - Use the factory pattern for complex mocks
+  - Under native ESM, Jest's `jest.mock()` was a silent no-op for statically imported modules; `vi.mock()` does work for them
 
   ```javascript
-  // ✅ DO: Place mocks before imports
-  jest.mock('commander');
+  // ✅ DO: Use vi.hoisted for variables referenced in a mock factory
+  const { mockFn } = vi.hoisted(() => ({ mockFn: vi.fn() }));
+  vi.mock('module', () => ({
+    func: mockFn
+  }));
   import { program } from 'commander';
   
-  // ❌ DON'T: Define variables and then try to use them in mocks
-  const mockFn = jest.fn();
-  jest.mock('module', () => ({
-    func: mockFn // This won't work due to hoisting!
+  // ❌ DON'T: Reference a plain top-level variable in the factory
+  const mockFn = vi.fn();
+  vi.mock('module', () => ({
+    func: mockFn // ReferenceError: the factory runs before this line (hoisting)
   }));
   ```
 
 - **Mocking Modules with Function References**
-  - Use `jest.spyOn()` after imports to create spies on mock functions
+  - Use `vi.spyOn()` after imports to create spies on mock functions
   - Reference these spies in test assertions
   
   ```javascript
   // Mock the module first
-  jest.mock('fs');
+  vi.mock('fs');
   
   // Import the mocked module
   import fs from 'fs';
   
   // Create spies on the mock functions
-  const mockExistsSync = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+  const mockExistsSync = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
   
   test('should call existsSync', () => {
     // Call function that uses fs.existsSync
@@ -256,11 +260,11 @@ When testing CLI commands built with Commander.js, several special consideration
   - Verify the results match expectations
   
   ```javascript
-  jest.mock('commander');
+  vi.mock('commander');
   import { program } from 'commander';
   import { setupCLI } from '../../scripts/modules/commands.js';
   
-  const mockVersion = jest.spyOn(program, 'version').mockReturnValue(program);
+  const mockVersion = vi.spyOn(program, 'version').mockReturnValue(program);
   
   test('version callback should return correct version', () => {
     // Call the function that registers the callback
@@ -282,26 +286,26 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
 
 - **Module Import Challenges**
   - Functions imported from ES modules may still reference internal module-scoped variables
-  - Imported functions may not use your mocked dependencies even with proper jest.mock() setup
+  - Imported functions may not use your mocked dependencies even with proper vi.mock() setup
   - ES module exports are read-only properties (cannot be reassigned during tests)
 
 - **Mocking Modules Statically Imported**
   - For modules imported with standard `import` statements at the top level:
-    - Use `jest.mock('path/to/module', factory)` **before** any imports.
-    - Jest hoists these mocks.
+    - Use `vi.mock('path/to/module', factory)`; Vitest hoists it above the imports.
+    - Use `vi.importActual` inside the factory to keep real exports you do not mock.
     - Ensure the factory function returns the mocked structure correctly.
 
 - **Mocking Dependencies for Dynamically Imported Modules**
-  - **Problem**: Standard `jest.mock()` often fails for dependencies of modules loaded later using dynamic `import('path/to/module')`. The mocks aren't applied correctly when the dynamic import resolves.
-  - **Solution**: Use `jest.unstable_mockModule(modulePath, factory)` **before** the dynamic `import()` call.
+  - **Problem**: `vi.mock()` is hoisted and applies to the whole file; when a test needs a different mock per test, or must mock before a dynamic `import('path/to/module')`, use the non-hoisted `vi.doMock()`.
+  - **Solution**: Use `vi.doMock(modulePath, factory)` **before** the dynamic `import()` call.
   ```javascript
   // 1. Define mock function instances
-  const mockExistsSync = jest.fn();
-  const mockReadFileSync = jest.fn();
+  const mockExistsSync = vi.fn();
+  const mockReadFileSync = vi.fn();
   // ... other mocks
 
   // 2. Mock the dependency module *before* the dynamic import
-  jest.unstable_mockModule('fs', () => ({
+  vi.doMock('fs', () => ({
     __esModule: true, // Important for ES module mocks
     // Mock named exports
     existsSync: mockExistsSync,
@@ -318,7 +322,7 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
     mockReadFileSync.mockReset();
     // ... reset other mocks ...
 
-    // Import *after* unstable_mockModule is called
+    // Import *after* vi.doMock is called (call vi.resetModules() first to drop cached modules)
     moduleUnderTest = await import('../../scripts/modules/module-using-fs.js');
   });
 
@@ -330,7 +334,7 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
     // ... other assertions
   });
   ```
-  - ✅ **DO**: Call `jest.unstable_mockModule()` before `await import()`.
+  - ✅ **DO**: Call `vi.doMock()` before `await import()`.
   - ✅ **DO**: Include `__esModule: true` in the mock factory for ES modules.
   - ✅ **DO**: Mock named and default exports as needed within the factory.
   - ✅ **DO**: Reset mock functions (`mockFn.mockReset()`) before the dynamic import if they might have been called previously.
@@ -354,10 +358,10 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
 
 - **Handling Mock Verification Failures**
   - If verification like `expect(mockFn).toHaveBeenCalled()` fails:
-    1.  Check that your mock setup (`jest.mock` or `jest.unstable_mockModule`) is correctly placed **before** imports (static or dynamic).
+    1.  Check that your mock setup (`vi.mock` or `vi.doMock`) is correctly placed **before** imports (static or dynamic).
     2.  Ensure you're using the right mock instance and it's properly passed to the module.
     3.  Verify your test invokes behavior that *should* call the mock.
-    4.  Use `jest.clearAllMocks()` or specific `mockFn.mockReset()` in `beforeEach` to prevent state leakage between tests.
+    4.  Use `vi.clearAllMocks()` or specific `mockFn.mockReset()` in `beforeEach` to prevent state leakage between tests.
     5.  **Check Console Assertions**: If verifying `console.log`, `console.warn`, or `console.error` calls, ensure your assertion matches the *actual* arguments passed. If the code logs a single formatted string, assert against that single string (using `expect.stringContaining` or exact match), not multiple `expect.stringContaining` arguments.
         ```javascript
         // Example: Code logs console.error(`Error: ${message}. Details: ${details}`)
@@ -376,6 +380,14 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
         );
         ```
     6.  Consider implementing a simpler test that *only* verifies the mock behavior in isolation.
+
+## Vitest Gotchas
+
+- **Constructor mocks**: Vitest 4 cannot `new` an arrow-function mock. Use `vi.fn(function () { ... })` (or a class) for anything called with `new`.
+- **Missing exports throw**: accessing an export that a `vi.mock` factory did not return throws in Vitest, where Jest returned `undefined`. Spread `await vi.importActual(...)` or list every export the code under test touches.
+- **Circular imports**: mocking a module that takes part in an import cycle can surface "Cannot access 'X' before initialization"; mock at the module boundary or use `vi.importActual` for the cycle member.
+- **Slow tests that exec the built CLI**: raise the timeout per file with `vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })` (see `tests/integration/cli/complex-cross-tag-scenarios.test.js`).
+- **Fake timers**: use `vi.useFakeTimers()` / `vi.useRealTimers()`; reset modules with `vi.resetModules()`.
 
 ## Mocking Guidelines
 
@@ -403,12 +415,12 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
   ```javascript
   import { Anthropic } from '@anthropic-ai/sdk';
   
-  jest.mock('@anthropic-ai/sdk');
+  vi.mock('@anthropic-ai/sdk');
   
   beforeEach(() => {
     Anthropic.mockImplementation(() => ({
       messages: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           content: [{ text: 'Mocked response' }]
         })
       }
@@ -421,7 +433,7 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
   const originalEnv = process.env;
   
   beforeEach(() => {
-    jest.resetModules();
+    vi.resetModules();
     process.env = { ...originalEnv };
     process.env.MODEL = 'test-model';
   });
@@ -461,14 +473,14 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
 - ✅ **DO**: Use descriptive test names that explain the expected behavior
 - ✅ **DO**: Maintain test fixtures separate from test logic
 - ✅ **DO**: Aim for 80%+ code coverage, with critical paths at 100%
-- ✅ **DO**: Follow the mock-first-then-import pattern for all Jest mocks
+- ✅ **DO**: Use `vi.mock` (hoisted) with `vi.hoisted` for all module mocks
 
 - ❌ **DON'T**: Test implementation details that might change
 - ❌ **DON'T**: Write brittle tests that depend on specific output formatting
 - ❌ **DON'T**: Skip testing error handling and validation
 - ❌ **DON'T**: Duplicate test fixtures across multiple test files
 - ❌ **DON'T**: Write tests that depend on execution order
-- ❌ **DON'T**: Define mock variables before `jest.mock()` calls (they won't be accessible due to hoisting)
+- ❌ **DON'T**: Reference plain top-level variables inside a `vi.mock()` factory (use `vi.hoisted`)
 
 
 - **Task File Operations**
@@ -520,21 +532,25 @@ npm run test:watch
 npm run test:coverage
 
 # Run a specific test file
-npm test -- tests/unit/specific-file.test.js
+npx vitest run -c vitest.root.config.ts tests/unit/specific-file.test.js
 
-# Run tests matching a pattern
-npm test -- -t "pattern to match"
+# Run tests whose name matches a pattern
+npx vitest run -c vitest.root.config.ts -t "pattern to match"
+
+# Run only unit or integration tests (path filter)
+npm run test:unit
+npm run test:integration
 ```
 
 ## Troubleshooting Test Issues
 
 - **Mock Functions Not Called**
-  - Ensure mocks are defined before imports (Jest hoists `jest.mock()` calls)
+  - Ensure mocks are defined before imports (Vitest hoists `vi.mock()` calls)
   - Check that you're referencing the correct mock instance
   - Verify the import paths match exactly
 
 - **Unexpected Mock Behavior**
-  - Clear mocks between tests with `jest.clearAllMocks()` in `beforeEach`
+  - Clear mocks between tests with `vi.clearAllMocks()` in `beforeEach`
   - Check mock implementation for conditional behavior
   - Ensure mock return values are correctly configured for each test
 
@@ -569,19 +585,19 @@ npm test -- -t "pattern to match"
 
 - **ES Module Mocking Challenges**
   - **Problem**: ES modules don't support `require()` and imports are read-only
-  - **Solution**: Use Jest's module factory pattern and ensure mocks are defined before imports
+  - **Solution**: Use the `vi.mock` module factory pattern and ensure mocks are defined before imports
   ```javascript
   // ❌ DON'T: Try to modify imported modules
   import { detectCamelCaseFlags } from '../../scripts/modules/utils.js';
-  detectCamelCaseFlags = jest.fn(); // Error: Assignment to constant variable
+  detectCamelCaseFlags = vi.fn(); // Error: Assignment to constant variable
   
   // ❌ DON'T: Try to use require with ES modules
   const utils = require('../../scripts/modules/utils.js'); // Error in ES modules
   
-  // ✅ DO: Use Jest module factory pattern
-  jest.mock('../../scripts/modules/utils.js', () => ({
-    detectCamelCaseFlags: jest.fn(),
-    toKebabCase: jest.fn()
+  // ✅ DO: Use the vi.mock module factory pattern
+  vi.mock('../../scripts/modules/utils.js', () => ({
+    detectCamelCaseFlags: vi.fn(),
+    toKebabCase: vi.fn()
   }));
   
   // Import after mocks are defined
@@ -607,24 +623,24 @@ npm test -- -t "pattern to match"
   - **Solution**: Implement a mock that doesn't call the original function
   ```javascript
   // ❌ DON'T: Create circular references with console.log
-  const mockConsoleLog = jest.spyOn(console, 'log');
+  const mockConsoleLog = vi.spyOn(console, 'log');
   mockConsoleLog.mockImplementation(console.log); // Creates infinite recursion
   
   // ✅ DO: Use a non-recursive mock implementation
-  const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+  const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
   ```
 
 - **Mock Function Method Issues**
-  - **Problem**: Trying to use jest.fn() methods on imported functions that aren't properly mocked
-  - **Solution**: Create explicit jest.fn() mocks for functions you need to call jest methods on
+  - **Problem**: Trying to use vi.fn() methods on imported functions that aren't properly mocked
+  - **Solution**: Create explicit vi.fn() mocks for functions you need to call mock methods on
   ```javascript
-  // ❌ DON'T: Try to use jest methods on imported functions without proper mocking
+  // ❌ DON'T: Try to use mock methods on imported functions without proper mocking
   import { parsePRD } from '../../scripts/modules/task-manager.js';
   parsePRD.mockClear(); // Error: parsePRD.mockClear is not a function
   
-  // ✅ DO: Create proper jest.fn() mocks
-  const mockParsePRD = jest.fn().mockResolvedValue(undefined);
-  jest.mock('../../scripts/modules/task-manager.js', () => ({
+  // ✅ DO: Create proper vi.fn() mocks
+  const mockParsePRD = vi.fn().mockResolvedValue(undefined);
+  vi.mock('../../scripts/modules/task-manager.js', () => ({
     parsePRD: mockParsePRD
   }));
   // Now you can use:
@@ -652,11 +668,11 @@ npm test -- -t "pattern to match"
   - **Solution**: Reset all mocks in beforeEach and use separate test-specific mocks
   ```javascript
   // ❌ DON'T: Allow mock state to persist between tests
-  const globalMock = jest.fn().mockReturnValue('test');
+  const globalMock = vi.fn().mockReturnValue('test');
   
   // ✅ DO: Clear mocks before each test
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Set up test-specific mock behavior
     mockFunction.mockReturnValue('test-specific value');
   });
@@ -674,9 +690,9 @@ npm test -- -t "pattern to match"
   await new ClaudeCodeProvider().generateText({ prompt: 'hi' });
 
   // ✅ DO: Mock the provider module with controlled behavior
-  jest.mock('../src/ai-providers/claude-code.js', () => ({
-    ClaudeCodeProvider: jest.fn().mockImplementation(() => ({
-      generateText: jest.fn().mockResolvedValue({ text: 'Mocked AI response' })
+  vi.mock('../src/ai-providers/claude-code.js', () => ({
+    ClaudeCodeProvider: vi.fn().mockImplementation(() => ({
+      generateText: vi.fn().mockResolvedValue({ text: 'Mocked AI response' })
     }))
   }));
   ```
@@ -778,7 +794,7 @@ npm test -- -t "pattern to match"
 
 See [tests/README.md](../../tests/README.md) for more details on the testing approach.
 
-Refer to [jest.config.js](../../jest.config.js) for Jest configuration options.
+Refer to [vitest.root.config.ts](../../vitest.root.config.ts) for the Vitest configuration (globals, `clearMocks`, `tests/setup.js`).
 
 ## Variable Hoisting and Module Initialization Issues
 

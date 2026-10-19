@@ -1,16 +1,16 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Claude Code is the only provider, so every role resolves to the same mock.
-const mockGetMainProvider = jest.fn();
-const mockGetMainModelId = jest.fn();
-const mockGetResearchProvider = jest.fn();
-const mockGetResearchModelId = jest.fn();
-const mockGetFallbackProvider = jest.fn();
-const mockGetFallbackModelId = jest.fn();
-const mockGetParametersForRole = jest.fn();
-const mockGetResponseLanguage = jest.fn();
-const mockGetUserId = jest.fn();
-const mockGetDebugFlag = jest.fn();
+const mockGetMainProvider = vi.fn();
+const mockGetMainModelId = vi.fn();
+const mockGetResearchProvider = vi.fn();
+const mockGetResearchModelId = vi.fn();
+const mockGetFallbackProvider = vi.fn();
+const mockGetFallbackModelId = vi.fn();
+const mockGetParametersForRole = vi.fn();
+const mockGetResponseLanguage = vi.fn();
+const mockGetUserId = vi.fn();
+const mockGetDebugFlag = vi.fn();
 
 const mockModelMap = {
 	'claude-code': [
@@ -21,7 +21,7 @@ const mockModelMap = {
 	]
 };
 
-jest.unstable_mockModule('../../scripts/modules/config-manager.js', () => ({
+vi.doMock('../../scripts/modules/config-manager.js', () => ({
 	MODEL_MAP: mockModelMap,
 	getMainProvider: mockGetMainProvider,
 	getMainModelId: mockGetMainModelId,
@@ -37,25 +37,27 @@ jest.unstable_mockModule('../../scripts/modules/config-manager.js', () => ({
 
 // Claude Code mock provider instance
 const mockClaudeProvider = {
-	generateText: jest.fn(),
-	streamText: jest.fn(),
-	generateObject: jest.fn(),
-	getRequiredApiKeyName: jest.fn(() => 'CLAUDE_CODE_API_KEY'),
-	isRequiredApiKey: jest.fn(() => false)
+	generateText: vi.fn(),
+	streamText: vi.fn(),
+	generateObject: vi.fn(),
+	getRequiredApiKeyName: vi.fn(() => 'CLAUDE_CODE_API_KEY'),
+	isRequiredApiKey: vi.fn(() => false)
 };
 
-jest.unstable_mockModule('../../src/ai-providers/index.js', () => ({
-	ClaudeCodeProvider: jest.fn(() => mockClaudeProvider)
+vi.doMock('../../src/ai-providers/index.js', () => ({
+	ClaudeCodeProvider: vi.fn(function () {
+		return mockClaudeProvider;
+	})
 }));
 
-const mockLog = jest.fn();
-const mockResolveEnvVariable = jest.fn();
-const mockFindProjectRoot = jest.fn();
-const mockIsSilentMode = jest.fn();
-const mockLogAiUsage = jest.fn();
-const mockGetCurrentTag = jest.fn(() => 'master');
+const mockLog = vi.fn();
+const mockResolveEnvVariable = vi.fn();
+const mockFindProjectRoot = vi.fn();
+const mockIsSilentMode = vi.fn();
+const mockLogAiUsage = vi.fn();
+const mockGetCurrentTag = vi.fn(() => 'master');
 
-jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
+vi.doMock('../../scripts/modules/utils.js', () => ({
 	LOG_LEVELS: { error: 0, warn: 1, info: 2, debug: 3 },
 	log: mockLog,
 	resolveEnvVariable: mockResolveEnvVariable,
@@ -79,7 +81,7 @@ describe('Unified AI Services', () => {
 	const fakeProjectRoot = '/fake/project/root';
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockClaudeProvider.generateText.mockReset();
 
 		mockGetMainProvider.mockReturnValue('claude-code');

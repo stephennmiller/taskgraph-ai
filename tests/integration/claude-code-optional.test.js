@@ -1,30 +1,32 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock AI SDK functions at the top level
-const generateText = jest.fn();
-const streamText = jest.fn();
+const generateText = vi.fn();
+const streamText = vi.fn();
 
-jest.unstable_mockModule('ai', () => ({
-	generateObject: jest.fn(),
+vi.doMock('ai', () => ({
+	generateObject: vi.fn(),
 	generateText,
 	streamText,
-	streamObject: jest.fn(),
-	zodSchema: jest.fn(),
+	streamObject: vi.fn(),
+	zodSchema: vi.fn(),
+	// Vitest throws on access to an undefined mock export; Jest returned undefined
+	jsonSchema: undefined,
 	JSONParseError: class JSONParseError extends Error {},
 	NoObjectGeneratedError: class NoObjectGeneratedError extends Error {}
 }));
 
 // Mock successful provider creation for all tests
-const mockProvider = jest.fn((modelId) => ({
+const mockProvider = vi.fn((modelId) => ({
 	id: modelId,
-	doGenerate: jest.fn(),
-	doStream: jest.fn()
+	doGenerate: vi.fn(),
+	doStream: vi.fn()
 }));
-mockProvider.languageModel = jest.fn((id, settings) => ({ id, settings }));
+mockProvider.languageModel = vi.fn((id, settings) => ({ id, settings }));
 mockProvider.chat = mockProvider.languageModel;
 
-jest.unstable_mockModule('ai-sdk-provider-claude-code', () => ({
-	createClaudeCode: jest.fn(() => mockProvider)
+vi.doMock('ai-sdk-provider-claude-code', () => ({
+	createClaudeCode: vi.fn(() => mockProvider)
 }));
 
 // Import the provider after mocking
@@ -34,7 +36,7 @@ const { ClaudeCodeProvider } = await import(
 
 describe('Claude Code Integration (Optional)', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	it('should create a working provider instance', () => {

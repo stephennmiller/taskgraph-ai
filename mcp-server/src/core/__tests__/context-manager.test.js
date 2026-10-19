@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { ContextManager } from '../context-manager.js';
 
 describe('ContextManager', () => {

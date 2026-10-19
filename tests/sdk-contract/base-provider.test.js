@@ -3,30 +3,27 @@
  * mock) against a mock language model, so SDK upgrades that rename or drop
  * options fail here instead of silently at runtime.
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { MockLanguageModelV4 } from 'ai/test';
 import { z } from 'zod';
+import { BaseAIProvider } from '../../src/ai-providers/base-provider.js';
 
-// Runs in its own jest process (`npm run test:sdk-contract`): the real SDK stack
+// Runs in its own vitest process (`npm run test:sdk-contract:vitest`): the real SDK stack
 // leaves process-level state that breaks unrelated suites sharing a worker.
 //
 // Only the app-side utils module is mocked (as in base-provider.test.js). The
 // `ai` package itself stays real.
-jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
-	log: jest.fn(),
-	findProjectRoot: jest.fn(() => '/mock/project/root'),
-	isEmpty: jest.fn(
+vi.mock('../../scripts/modules/utils.js', () => ({
+	log: vi.fn(),
+	findProjectRoot: vi.fn(() => '/mock/project/root'),
+	isEmpty: vi.fn(
 		(val) =>
 			!val ||
 			(Array.isArray(val) && val.length === 0) ||
 			(typeof val === 'object' && Object.keys(val).length === 0)
 	),
-	resolveEnvVariable: jest.fn((key) => process.env[key])
+	resolveEnvVariable: vi.fn((key) => process.env[key])
 }));
-
-const { BaseAIProvider } = await import(
-	'../../src/ai-providers/base-provider.js'
-);
 
 const usage = {
 	inputTokens: { total: 11, noCache: 11, cacheRead: 0, cacheWrite: 0 },

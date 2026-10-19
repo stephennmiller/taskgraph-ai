@@ -1,30 +1,27 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // --- Mocks ---
 // Only mock the specific functions that move-task actually uses
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	setTasksForTag: jest.fn(),
-	traverseDependencies: jest.fn(() => [])
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	setTasksForTag: vi.fn(),
+	traverseDependencies: vi.fn(() => [])
 }));
 
-jest.unstable_mockModule(
+vi.doMock(
 	'../../../../../scripts/modules/task-manager/is-task-dependent.js',
 	() => ({
-		default: jest.fn(() => false)
+		default: vi.fn(() => false)
 	})
 );
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/dependency-manager.js',
-	() => ({
-		findCrossTagDependencies: jest.fn(() => []),
-		getDependentTaskIds: jest.fn(() => []),
-		validateSubtaskMove: jest.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({
+	findCrossTagDependencies: vi.fn(() => []),
+	getDependentTaskIds: vi.fn(() => []),
+	validateSubtaskMove: vi.fn()
+}));
 
 const { readJSON, writeJSON, log } = await import(
 	'../../../../../scripts/modules/utils.js'
@@ -52,7 +49,7 @@ const clone = () => JSON.parse(JSON.stringify(sampleTagged()));
 
 describe('moveTask (unit)', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		readJSON.mockImplementation((path, projectRoot, tag) => {
 			const data = clone();
 			return { ...data[tag], tag, _rawTaggedData: data };

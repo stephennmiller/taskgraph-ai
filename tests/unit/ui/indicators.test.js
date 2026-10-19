@@ -1,25 +1,25 @@
 /**
  * Unit tests for indicators module (priority and complexity indicators)
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock chalk using unstable_mockModule for ESM compatibility
-jest.unstable_mockModule('chalk', () => ({
+vi.doMock('chalk', () => ({
 	// Callable like the real chalk: the theme uses chalk, chalk.cyan(.bold) and chalk.magenta
 	default: Object.assign(
-		jest.fn((str) => str),
+		vi.fn((str) => str),
 		{
-			red: jest.fn((str) => str),
-			yellow: jest.fn((str) => str),
-			green: jest.fn((str) => str),
-			dim: jest.fn((str) => str),
-			white: jest.fn((str) => str),
+			red: vi.fn((str) => str),
+			yellow: vi.fn((str) => str),
+			green: vi.fn((str) => str),
+			dim: vi.fn((str) => str),
+			white: vi.fn((str) => str),
 			cyan: Object.assign(
-				jest.fn((str) => str),
-				{ bold: jest.fn((str) => str) }
+				vi.fn((str) => str),
+				{ bold: vi.fn((str) => str) }
 			),
-			magenta: jest.fn((str) => str),
-			hex: jest.fn(() => jest.fn((str) => str))
+			magenta: vi.fn((str) => str),
+			hex: vi.fn(() => vi.fn((str) => str))
 		}
 	)
 }));

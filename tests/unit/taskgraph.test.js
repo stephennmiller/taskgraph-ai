@@ -5,7 +5,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_DIR,
@@ -14,7 +14,7 @@ import {
 import { TaskGraph, initTaskGraph } from '../../src/taskgraph.js';
 
 // Mock the console to prevent noise during tests
-jest.spyOn(console, 'error').mockImplementation(() => {});
+vi.spyOn(console, 'error').mockImplementation(() => {});
 
 describe('initTaskGraph', () => {
 	let tempDir;
@@ -28,7 +28,7 @@ describe('initTaskGraph', () => {
 		originalCwd = process.cwd();
 
 		// Clear all mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	afterEach(() => {

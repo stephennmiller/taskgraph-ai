@@ -1,12 +1,12 @@
 /**
  * Unit tests for manage-gitignore.js module
- * Tests the logic with Jest spies instead of mocked modules
+ * Tests the logic with Vitest spies instead of mocked modules
  */
 
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Import the module under test and its exports
 import manageGitignoreFile, {
@@ -22,7 +22,7 @@ describe('manage-gitignore.js Unit Tests', () => {
 	let tempDir;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create a temporary directory for testing
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'manage-gitignore-test-'));
@@ -138,16 +138,16 @@ describe('manage-gitignore.js Unit Tests', () => {
 
 		beforeEach(() => {
 			// Set up spies
-			writeFileSyncSpy = jest
+			writeFileSyncSpy = vi
 				.spyOn(fs, 'writeFileSync')
 				.mockImplementation(() => {});
-			readFileSyncSpy = jest
+			readFileSyncSpy = vi
 				.spyOn(fs, 'readFileSync')
 				.mockImplementation(() => '');
-			existsSyncSpy = jest
+			existsSyncSpy = vi
 				.spyOn(fs, 'existsSync')
 				.mockImplementation(() => false);
-			mockLog = jest.fn();
+			mockLog = vi.fn();
 		});
 
 		afterEach(() => {

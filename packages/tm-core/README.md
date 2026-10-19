@@ -15,7 +15,7 @@ Core library for TaskGraph - providing task management and orchestration capabil
 - **Flexible Storage**: Abstracted storage layer supporting different persistence strategies
 - **Task Parsing**: Advanced parsing capabilities for various task definition formats
 - **Error Handling**: Comprehensive error system with specific error types
-- **Testing**: Complete test coverage with Jest and TypeScript support
+- **Testing**: Complete test coverage with Vitest and TypeScript support
 
 ## Installation
 

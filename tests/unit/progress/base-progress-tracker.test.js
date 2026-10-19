@@ -1,17 +1,14 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock cli-progress factory before importing BaseProgressTracker
-jest.unstable_mockModule(
-	'../../../src/progress/cli-progress-factory.js',
-	() => ({
-		newMultiBar: jest.fn(() => ({
-			create: jest.fn(() => ({
-				update: jest.fn()
-			})),
-			stop: jest.fn()
-		}))
-	})
-);
+vi.doMock('../../../src/progress/cli-progress-factory.js', () => ({
+	newMultiBar: vi.fn(() => ({
+		create: vi.fn(() => ({
+			update: vi.fn()
+		})),
+		stop: vi.fn()
+	}))
+}));
 
 const { newMultiBar } = await import(
 	'../../../src/progress/cli-progress-factory.js'
@@ -27,18 +24,18 @@ describe('BaseProgressTracker', () => {
 	let mockTimeTokensBar;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.useFakeTimers();
+		vi.clearAllMocks();
+		vi.useFakeTimers();
 
 		// Setup mocks
-		mockProgressBar = { update: jest.fn() };
-		mockTimeTokensBar = { update: jest.fn() };
+		mockProgressBar = { update: vi.fn() };
+		mockTimeTokensBar = { update: vi.fn() };
 		mockMultiBar = {
-			create: jest
+			create: vi
 				.fn()
 				.mockReturnValueOnce(mockTimeTokensBar)
 				.mockReturnValueOnce(mockProgressBar),
-			stop: jest.fn()
+			stop: vi.fn()
 		};
 		newMultiBar.mockReturnValue(mockMultiBar);
 
@@ -46,7 +43,7 @@ describe('BaseProgressTracker', () => {
 	});
 
 	afterEach(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	describe('cleanup', () => {

@@ -2,51 +2,51 @@
  * Commands module tests - Focus on CLI setup and integration
  */
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Mock modules first
-jest.mock('fs', () => ({
-	existsSync: jest.fn(),
-	readFileSync: jest.fn()
+vi.doMock('fs', () => ({
+	existsSync: vi.fn(),
+	readFileSync: vi.fn()
 }));
 
-jest.mock('path', () => ({
-	join: jest.fn((dir, file) => `${dir}/${file}`)
+vi.doMock('path', () => ({
+	join: vi.fn((dir, file) => `${dir}/${file}`)
 }));
 
-jest.mock('chalk', () => ({
-	red: jest.fn((text) => text),
-	blue: jest.fn((text) => text),
-	green: jest.fn((text) => text),
-	yellow: jest.fn((text) => text),
-	white: jest.fn((text) => ({
-		bold: jest.fn((text) => text)
+vi.doMock('chalk', () => ({
+	red: vi.fn((text) => text),
+	blue: vi.fn((text) => text),
+	green: vi.fn((text) => text),
+	yellow: vi.fn((text) => text),
+	white: vi.fn((text) => ({
+		bold: vi.fn((text) => text)
 	})),
-	reset: jest.fn((text) => text)
+	reset: vi.fn((text) => text)
 }));
 
 // Mock config-manager to prevent file system discovery issues
-jest.mock('../../scripts/modules/config-manager.js', () => ({
-	getLogLevel: jest.fn(() => 'info'),
-	getDebugFlag: jest.fn(() => false),
-	getConfig: jest.fn(() => ({})), // Return empty config to prevent real loading
-	getGlobalConfig: jest.fn(() => ({}))
+vi.doMock('../../scripts/modules/config-manager.js', () => ({
+	getLogLevel: vi.fn(() => 'info'),
+	getDebugFlag: vi.fn(() => false),
+	getConfig: vi.fn(() => ({})), // Return empty config to prevent real loading
+	getGlobalConfig: vi.fn(() => ({}))
 }));
 
 // Mock path-utils to prevent file system discovery issues
-jest.mock('../../src/utils/path-utils.js', () => ({
+vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
-	findProjectRoot: jest.fn(() => '/mock/project'),
-	findConfigPath: jest.fn(() => null),
-	findTasksPath: jest.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: jest.fn(() => null),
-	resolveTasksOutputPath: jest.fn(() => '/mock/tasks.json'),
-	resolveComplexityReportOutputPath: jest.fn(() => '/mock/report.json')
+	findProjectRoot: vi.fn(() => '/mock/project'),
+	findConfigPath: vi.fn(() => null),
+	findTasksPath: vi.fn(() => '/mock/tasks.json'),
+	findComplexityReportPath: vi.fn(() => null),
+	resolveTasksOutputPath: vi.fn(() => '/mock/tasks.json'),
+	resolveComplexityReportOutputPath: vi.fn(() => '/mock/report.json')
 }));
 
-jest.mock('../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn(),
-	displayHelp: jest.fn()
+vi.doMock('../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn(),
+	displayHelp: vi.fn()
 }));
 
 // Add utility functions for testing
@@ -79,16 +79,19 @@ function detectCamelCaseFlags(args) {
 	return camelCaseFlags;
 }
 
-jest.mock('../../scripts/modules/utils.js', () => ({
+vi.doMock('../../scripts/modules/utils.js', () => ({
 	CONFIG: {
 		projectVersion: '1.5.0'
 	},
-	log: jest.fn(() => {}), // Prevent any real logging that could trigger config discovery
+	log: vi.fn(() => {}), // Prevent any real logging that could trigger config discovery
 	toKebabCase: toKebabCase,
 	detectCamelCaseFlags: detectCamelCaseFlags
 }));
 
 // Import all modules after mocking
+// Load ui.js first: Vitest's module runner mishandles the @tm/cli <-> ui.js
+// import cycle (`export * as ui`) when @tm/cli is the entry point.
+import '../../scripts/modules/ui.js';
 import fs from 'fs';
 import path from 'path';
 import { compareVersions } from '@tm/cli';
@@ -99,15 +102,15 @@ import {
 import { setupCLI } from '../../scripts/modules/commands.js';
 
 describe('Commands Module - CLI Setup and Integration', () => {
-	const mockExistsSync = jest.spyOn(fs, 'existsSync');
+	const mockExistsSync = vi.spyOn(fs, 'existsSync');
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		mockExistsSync.mockReturnValue(true);
 	});
 
 	afterAll(() => {
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	describe('setupCLI function', () => {
@@ -281,7 +284,7 @@ describe('Update check functionality', () => {
 	let consoleLogSpy;
 
 	beforeEach(() => {
-		consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+		consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 	});
 
 	afterEach(() => {

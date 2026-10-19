@@ -4,14 +4,7 @@
  * Tests environment variable control system covering all configuration modes and edge cases
  */
 
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	jest
-} from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
 	EXPECTED_CORE_TOOLS,
@@ -41,7 +34,7 @@ describe('TaskGraph Tool Registration System', () => {
 
 		mockServer = {
 			tools: [],
-			addTool: jest.fn((tool) => {
+			addTool: vi.fn((tool) => {
 				mockServer.tools.push(tool);
 				return tool;
 			})
@@ -57,7 +50,7 @@ describe('TaskGraph Tool Registration System', () => {
 			delete process.env.TASKGRAPH_TOOLS;
 		}
 
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('Test Environment Setup', () => {

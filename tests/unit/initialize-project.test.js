@@ -1,77 +1,80 @@
+// Load ui.js first: Vitest's module runner mishandles the @tm/cli <-> ui.js
+// import cycle (`export * as ui`) when @tm/cli is the entry point.
+import '../../scripts/modules/ui.js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
 // Reduce noise in test output
 process.env.TASKGRAPH_LOG_LEVEL = 'error';
 
 // === Mock everything early ===
-jest.mock('child_process', () => ({ execSync: jest.fn() }));
-jest.mock('fs', () => ({
-	...jest.requireActual('fs'),
-	mkdirSync: jest.fn(),
-	writeFileSync: jest.fn(),
-	readFileSync: jest.fn(),
-	appendFileSync: jest.fn(),
-	existsSync: jest.fn(),
-	mkdtempSync: jest.requireActual('fs').mkdtempSync,
-	rmSync: jest.requireActual('fs').rmSync
+vi.doMock('child_process', () => ({ execSync: vi.fn() }));
+vi.doMock('fs', async () => ({
+	...(await vi.importActual('fs')),
+	mkdirSync: vi.fn(),
+	writeFileSync: vi.fn(),
+	readFileSync: vi.fn(),
+	appendFileSync: vi.fn(),
+	existsSync: vi.fn(),
+	mkdtempSync: (await vi.importActual('fs')).mkdtempSync,
+	rmSync: (await vi.importActual('fs')).rmSync
 }));
 
 // Mock console methods to suppress output
 const consoleMethods = ['log', 'info', 'warn', 'error', 'clear'];
 consoleMethods.forEach((method) => {
-	global.console[method] = jest.fn();
+	global.console[method] = vi.fn();
 });
 
 // Mock ES modules using unstable_mockModule
-jest.unstable_mockModule('../../scripts/modules/utils.js', () => ({
-	isSilentMode: jest.fn(() => true),
-	enableSilentMode: jest.fn(),
-	log: jest.fn(),
-	findProjectRoot: jest.fn(() => process.cwd()),
-	getCurrentTag: jest.fn(() => 'master')
+vi.doMock('../../scripts/modules/utils.js', () => ({
+	isSilentMode: vi.fn(() => true),
+	enableSilentMode: vi.fn(),
+	log: vi.fn(),
+	findProjectRoot: vi.fn(() => process.cwd()),
+	getCurrentTag: vi.fn(() => 'master')
 }));
 
 // Mock git-utils module
-jest.unstable_mockModule('../../scripts/modules/utils/git-utils.js', () => ({
-	insideGitWorkTree: jest.fn(() => false)
+vi.doMock('../../scripts/modules/utils/git-utils.js', () => ({
+	insideGitWorkTree: vi.fn(() => false)
 }));
 
 // Mock rule transformer
-jest.unstable_mockModule('../../src/utils/rule-transformer.js', () => ({
-	convertAllRulesToProfileRules: jest.fn(),
-	getRulesProfile: jest.fn(() => ({
+vi.doMock('../../src/utils/rule-transformer.js', () => ({
+	convertAllRulesToProfileRules: vi.fn(),
+	getRulesProfile: vi.fn(() => ({
 		conversionConfig: {},
 		globalReplacements: []
 	}))
 }));
 
 // Mock any other modules that might output or do real operations
-jest.unstable_mockModule('../../scripts/modules/config-manager.js', () => ({
-	createDefaultConfig: jest.fn(() => ({ models: {}, project: {} })),
-	saveConfig: jest.fn()
+vi.doMock('../../scripts/modules/config-manager.js', () => ({
+	createDefaultConfig: vi.fn(() => ({ models: {}, project: {} })),
+	saveConfig: vi.fn()
 }));
 
 // Mock display libraries
-jest.mock('figlet', () => ({ textSync: jest.fn(() => 'MOCKED BANNER') }));
-jest.mock('boxen', () => jest.fn(() => 'MOCKED BOX'));
-jest.mock('gradient-string', () => jest.fn(() => jest.fn((text) => text)));
-jest.mock('chalk', () => ({
-	blue: jest.fn((text) => text),
-	green: jest.fn((text) => text),
-	red: jest.fn((text) => text),
-	yellow: jest.fn((text) => text),
-	cyan: jest.fn((text) => text),
-	white: jest.fn((text) => text),
-	dim: jest.fn((text) => text),
-	bold: jest.fn((text) => text),
-	underline: jest.fn((text) => text)
+vi.doMock('figlet', () => ({ textSync: vi.fn(() => 'MOCKED BANNER') }));
+vi.doMock('boxen', () => vi.fn(() => 'MOCKED BOX'));
+vi.doMock('gradient-string', () => vi.fn(() => vi.fn((text) => text)));
+vi.doMock('chalk', () => ({
+	blue: vi.fn((text) => text),
+	green: vi.fn((text) => text),
+	red: vi.fn((text) => text),
+	yellow: vi.fn((text) => text),
+	cyan: vi.fn((text) => text),
+	white: vi.fn((text) => text),
+	dim: vi.fn((text) => text),
+	bold: vi.fn((text) => text),
+	underline: vi.fn((text) => text)
 }));
 
-const { execSync } = jest.requireMock('child_process');
-const mockFs = jest.requireMock('fs');
+const { execSync } = await import('child_process');
+const mockFs = await import('fs');
 
 // Import the mocked modules
 const mockUtils = await import('../../scripts/modules/utils.js');
@@ -96,7 +99,7 @@ describe('initializeProject – Git / Alias flag logic', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Set up basic fs mocks
 		mockFs.mkdirSync.mockImplementation(() => {});
@@ -485,7 +488,7 @@ describe('initializeProject – Git / Alias flag logic', () => {
 	describe('Function Integration', () => {
 		it('calls utility functions without errors', async () => {
 			// Test that initialization completes without throwing
-			// Note: ES module mocking with jest.unstable_mockModule doesn't reliably
+			// Note: ES module mocking with vi.doMock doesn't reliably
 			// track mock calls through transitive imports (init.js → ui.js → utils.js),
 			// so we verify successful completion instead of specific mock calls
 			await expect(

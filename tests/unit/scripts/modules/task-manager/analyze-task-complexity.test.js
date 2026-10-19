@@ -1,17 +1,17 @@
 /**
  * Tests for the analyze-task-complexity.js module
  */
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
 	createGetTagAwareFilePathMock,
 	createSlugifyTagForFilePathMock
 } from './setup.js';
 
 // Mock the dependencies before importing the module under test
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
 	CONFIG: {
 		model: 'mock-claude-model',
 		maxTokens: 4000,
@@ -19,207 +19,198 @@ jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
 		debug: false,
 		defaultSubtasks: 3
 	},
-	findTaskById: jest.fn(),
-	readComplexityReport: jest.fn(),
-	findTaskInComplexityReport: jest.fn(),
-	findProjectRoot: jest.fn(() => '/mock/project/root'),
-	resolveEnvVariable: jest.fn((varName) => `mock_${varName}`),
-	isSilentMode: jest.fn(() => false),
-	findCycles: jest.fn(() => []),
-	formatTaskId: jest.fn((id) => `Task ${id}`),
-	taskExists: jest.fn((tasks, id) => tasks.some((t) => t.id === id)),
-	enableSilentMode: jest.fn(),
-	disableSilentMode: jest.fn(),
-	truncate: jest.fn((text) => text),
-	addComplexityToTask: jest.fn((task, complexity) => ({ ...task, complexity })),
-	aggregateTelemetry: jest.fn((telemetryArray) => telemetryArray[0] || {}),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj),
-	getCurrentTag: jest.fn(() => 'master'),
-	resolveTag: jest.fn(() => 'master'),
-	flattenTasksWithSubtasks: jest.fn((tasks) => tasks),
+	findTaskById: vi.fn(),
+	readComplexityReport: vi.fn(),
+	findTaskInComplexityReport: vi.fn(),
+	findProjectRoot: vi.fn(() => '/mock/project/root'),
+	resolveEnvVariable: vi.fn((varName) => `mock_${varName}`),
+	isSilentMode: vi.fn(() => false),
+	findCycles: vi.fn(() => []),
+	formatTaskId: vi.fn((id) => `Task ${id}`),
+	taskExists: vi.fn((tasks, id) => tasks.some((t) => t.id === id)),
+	enableSilentMode: vi.fn(),
+	disableSilentMode: vi.fn(),
+	truncate: vi.fn((text) => text),
+	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
+	aggregateTelemetry: vi.fn((telemetryArray) => telemetryArray[0] || {}),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj),
+	getCurrentTag: vi.fn(() => 'master'),
+	resolveTag: vi.fn(() => 'master'),
+	flattenTasksWithSubtasks: vi.fn((tasks) => tasks),
 	getTagAwareFilePath: createGetTagAwareFilePathMock(),
 	slugifyTagForFilePath: createSlugifyTagForFilePathMock(),
-	markMigrationForNotice: jest.fn(),
-	performCompleteTagMigration: jest.fn(),
-	setTasksForTag: jest.fn(),
-	getTasksForTag: jest.fn((data, tag) => data[tag]?.tasks || []),
-	traverseDependencies: jest.fn((tasks, taskId, visited) => [])
+	markMigrationForNotice: vi.fn(),
+	performCompleteTagMigration: vi.fn(),
+	setTasksForTag: vi.fn(),
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
+	traverseDependencies: vi.fn((tasks, taskId, visited) => [])
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateObjectService: jest.fn().mockResolvedValue({
-			mainResult: {
-				complexityAnalysis: []
-			},
-			telemetryData: {
-				timestamp: new Date().toISOString(),
-				userId: '1234567890',
-				commandName: 'analyze-complexity',
-				modelUsed: 'claude-3-5-sonnet',
-				providerName: 'anthropic',
-				inputTokens: 1000,
-				outputTokens: 500,
-				totalTokens: 1500,
-				totalCost: 0.012414,
-				currency: 'USD'
-			}
-		}),
-		generateTextService: jest.fn().mockResolvedValue({
-			mainResult: '[]',
-			telemetryData: {
-				timestamp: new Date().toISOString(),
-				userId: '1234567890',
-				commandName: 'analyze-complexity',
-				modelUsed: 'claude-3-5-sonnet',
-				providerName: 'anthropic',
-				inputTokens: 1000,
-				outputTokens: 500,
-				totalTokens: 1500,
-				totalCost: 0.012414,
-				currency: 'USD'
-			}
-		}),
-		streamTextService: jest.fn().mockResolvedValue({
-			mainResult: async function* () {
-				yield '{"tasks":[';
-				yield '{"id":1,"title":"Test Task","priority":"high"}';
-				yield ']}';
-			},
-			telemetryData: {
-				timestamp: new Date().toISOString(),
-				userId: '1234567890',
-				commandName: 'analyze-complexity',
-				modelUsed: 'claude-3-5-sonnet',
-				providerName: 'anthropic',
-				inputTokens: 1000,
-				outputTokens: 500,
-				totalTokens: 1500,
-				totalCost: 0.012414,
-				currency: 'USD'
-			}
-		}),
-		streamObjectService: jest.fn().mockImplementation(async () => {
-			return {
-				get partialObjectStream() {
-					return (async function* () {
-						yield { tasks: [] };
-						yield { tasks: [{ id: 1, title: 'Test Task', priority: 'high' }] };
-					})();
-				},
-				object: Promise.resolve({
-					tasks: [{ id: 1, title: 'Test Task', priority: 'high' }]
-				})
-			};
-		})
-	})
-);
-
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		// Core config access
-		getConfig: jest.fn(() => ({
-			models: { main: { provider: 'anthropic', modelId: 'claude-3-5-sonnet' } },
-			global: { projectName: 'Test Project' }
-		})),
-		writeConfig: jest.fn(() => true),
-		ConfigurationError: class extends Error {},
-		isConfigFilePresent: jest.fn(() => true),
-
-		// Validation
-		validateProvider: jest.fn(() => true),
-		validateProviderModelCombination: jest.fn(() => true),
-		VALID_PROVIDERS: ['anthropic', 'openai', 'perplexity'],
-		MODEL_MAP: {
-			anthropic: [
-				{
-					id: 'claude-3-5-sonnet',
-					cost_per_1m_tokens: { input: 3, output: 15 }
-				}
-			],
-			openai: [{ id: 'gpt-4', cost_per_1m_tokens: { input: 30, output: 60 } }]
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateObjectService: vi.fn().mockResolvedValue({
+		mainResult: {
+			complexityAnalysis: []
 		},
-		getAvailableModels: jest.fn(() => [
+		telemetryData: {
+			timestamp: new Date().toISOString(),
+			userId: '1234567890',
+			commandName: 'analyze-complexity',
+			modelUsed: 'claude-3-5-sonnet',
+			providerName: 'anthropic',
+			inputTokens: 1000,
+			outputTokens: 500,
+			totalTokens: 1500,
+			totalCost: 0.012414,
+			currency: 'USD'
+		}
+	}),
+	generateTextService: vi.fn().mockResolvedValue({
+		mainResult: '[]',
+		telemetryData: {
+			timestamp: new Date().toISOString(),
+			userId: '1234567890',
+			commandName: 'analyze-complexity',
+			modelUsed: 'claude-3-5-sonnet',
+			providerName: 'anthropic',
+			inputTokens: 1000,
+			outputTokens: 500,
+			totalTokens: 1500,
+			totalCost: 0.012414,
+			currency: 'USD'
+		}
+	}),
+	streamTextService: vi.fn().mockResolvedValue({
+		mainResult: async function* () {
+			yield '{"tasks":[';
+			yield '{"id":1,"title":"Test Task","priority":"high"}';
+			yield ']}';
+		},
+		telemetryData: {
+			timestamp: new Date().toISOString(),
+			userId: '1234567890',
+			commandName: 'analyze-complexity',
+			modelUsed: 'claude-3-5-sonnet',
+			providerName: 'anthropic',
+			inputTokens: 1000,
+			outputTokens: 500,
+			totalTokens: 1500,
+			totalCost: 0.012414,
+			currency: 'USD'
+		}
+	}),
+	streamObjectService: vi.fn().mockImplementation(async () => {
+		return {
+			get partialObjectStream() {
+				return (async function* () {
+					yield { tasks: [] };
+					yield { tasks: [{ id: 1, title: 'Test Task', priority: 'high' }] };
+				})();
+			},
+			object: Promise.resolve({
+				tasks: [{ id: 1, title: 'Test Task', priority: 'high' }]
+			})
+		};
+	})
+}));
+
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	// Core config access
+	getConfig: vi.fn(() => ({
+		models: { main: { provider: 'anthropic', modelId: 'claude-3-5-sonnet' } },
+		global: { projectName: 'Test Project' }
+	})),
+	writeConfig: vi.fn(() => true),
+	ConfigurationError: class extends Error {},
+	isConfigFilePresent: vi.fn(() => true),
+
+	// Validation
+	validateProvider: vi.fn(() => true),
+	validateProviderModelCombination: vi.fn(() => true),
+	VALID_PROVIDERS: ['anthropic', 'openai', 'perplexity'],
+	MODEL_MAP: {
+		anthropic: [
 			{
 				id: 'claude-3-5-sonnet',
-				name: 'Claude 3.5 Sonnet',
-				provider: 'anthropic'
-			},
-			{ id: 'gpt-4', name: 'GPT-4', provider: 'openai' }
-		]),
+				cost_per_1m_tokens: { input: 3, output: 15 }
+			}
+		],
+		openai: [{ id: 'gpt-4', cost_per_1m_tokens: { input: 30, output: 60 } }]
+	},
+	getAvailableModels: vi.fn(() => [
+		{
+			id: 'claude-3-5-sonnet',
+			name: 'Claude 3.5 Sonnet',
+			provider: 'anthropic'
+		},
+		{ id: 'gpt-4', name: 'GPT-4', provider: 'openai' }
+	]),
 
-		// Role-specific getters
-		getMainProvider: jest.fn(() => 'anthropic'),
-		getMainModelId: jest.fn(() => 'claude-3-5-sonnet'),
-		getMainMaxTokens: jest.fn(() => 4000),
-		getMainTemperature: jest.fn(() => 0.7),
-		getResearchProvider: jest.fn(() => 'perplexity'),
-		getResearchModelId: jest.fn(() => 'sonar-pro'),
-		getResearchMaxTokens: jest.fn(() => 8700),
-		getResearchTemperature: jest.fn(() => 0.1),
-		getFallbackProvider: jest.fn(() => 'anthropic'),
-		getFallbackModelId: jest.fn(() => 'claude-3-5-sonnet'),
-		getFallbackMaxTokens: jest.fn(() => 4000),
-		getFallbackTemperature: jest.fn(() => 0.7),
-		getBaseUrlForRole: jest.fn(() => undefined),
+	// Role-specific getters
+	getMainProvider: vi.fn(() => 'anthropic'),
+	getMainModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getMainMaxTokens: vi.fn(() => 4000),
+	getMainTemperature: vi.fn(() => 0.7),
+	getResearchProvider: vi.fn(() => 'perplexity'),
+	getResearchModelId: vi.fn(() => 'sonar-pro'),
+	getResearchMaxTokens: vi.fn(() => 8700),
+	getResearchTemperature: vi.fn(() => 0.1),
+	getFallbackProvider: vi.fn(() => 'anthropic'),
+	getFallbackModelId: vi.fn(() => 'claude-3-5-sonnet'),
+	getFallbackMaxTokens: vi.fn(() => 4000),
+	getFallbackTemperature: vi.fn(() => 0.7),
+	getBaseUrlForRole: vi.fn(() => undefined),
 
-		// Global setting getters
-		getLogLevel: jest.fn(() => 'info'),
-		getDebugFlag: jest.fn(() => false),
-		getDefaultNumTasks: jest.fn(() => 10),
-		getDefaultSubtasks: jest.fn(() => 5),
-		getDefaultPriority: jest.fn(() => 'medium'),
-		getProjectName: jest.fn(() => 'Test Project'),
-		getOllamaBaseURL: jest.fn(() => 'http://localhost:11434/api'),
-		getAzureBaseURL: jest.fn(() => undefined),
-		getBedrockBaseURL: jest.fn(() => undefined),
-		getParametersForRole: jest.fn(() => ({
-			maxTokens: 4000,
-			temperature: 0.7
-		})),
-		getUserId: jest.fn(() => '1234567890'),
+	// Global setting getters
+	getLogLevel: vi.fn(() => 'info'),
+	getDebugFlag: vi.fn(() => false),
+	getDefaultNumTasks: vi.fn(() => 10),
+	getDefaultSubtasks: vi.fn(() => 5),
+	getDefaultPriority: vi.fn(() => 'medium'),
+	getProjectName: vi.fn(() => 'Test Project'),
+	getOllamaBaseURL: vi.fn(() => 'http://localhost:11434/api'),
+	getAzureBaseURL: vi.fn(() => undefined),
+	getBedrockBaseURL: vi.fn(() => undefined),
+	getParametersForRole: vi.fn(() => ({
+		maxTokens: 4000,
+		temperature: 0.7
+	})),
+	getUserId: vi.fn(() => '1234567890'),
 
-		// API Key Checkers
-		isApiKeySet: jest.fn(() => true),
-		getMcpApiKeyStatus: jest.fn(() => true),
+	// API Key Checkers
+	isApiKeySet: vi.fn(() => true),
+	getMcpApiKeyStatus: vi.fn(() => true),
 
-		// Additional functions
-		getAllProviders: jest.fn(() => ['anthropic', 'openai', 'perplexity']),
-		getVertexProjectId: jest.fn(() => undefined),
-		getVertexLocation: jest.fn(() => undefined),
-		hasCodebaseAnalysis: jest.fn(() => false),
-		setSuppressConfigWarnings: jest.fn(),
-		isConfigWarningSuppressed: jest.fn(() => false)
-	})
-);
+	// Additional functions
+	getAllProviders: vi.fn(() => ['anthropic', 'openai', 'perplexity']),
+	getVertexProjectId: vi.fn(() => undefined),
+	getVertexLocation: vi.fn(() => undefined),
+	hasCodebaseAnalysis: vi.fn(() => false),
+	setSuppressConfigWarnings: vi.fn(),
+	isConfigWarningSuppressed: vi.fn(() => false)
+}));
 
 // Mock fs module
-const mockWriteFileSync = jest.fn();
-jest.unstable_mockModule('fs', () => {
+const mockWriteFileSync = vi.fn();
+vi.doMock('fs', async () => {
 	// Keep the real exports (e.g. constants) so Jest 30's node:fs resolution works
-	const actualFs = jest.requireActual('fs');
+	const actualFs = await vi.importActual('fs');
 	const mocked = {
-		existsSync: jest.fn(() => false),
-		readFileSync: jest.fn(),
+		existsSync: vi.fn(() => false),
+		readFileSync: vi.fn(),
 		writeFileSync: mockWriteFileSync,
-		unlinkSync: jest.fn()
+		unlinkSync: vi.fn()
 	};
 	return { ...actualFs, ...mocked, default: { ...actualFs, ...mocked } };
 });
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn().mockResolvedValue({
-				systemPrompt: 'Mocked system prompt',
-				userPrompt: 'Mocked user prompt'
-			})
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn().mockResolvedValue({
+			systemPrompt: 'Mocked system prompt',
+			userPrompt: 'Mocked user prompt'
 		})
 	})
-);
+}));
 
 // Import the mocked modules
 const { readJSON, writeJSON, log, CONFIG, findTaskById } = await import(
@@ -292,7 +283,7 @@ describe('analyzeTaskComplexity', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Default mock implementations - readJSON should return the resolved view with tasks at top level
 		readJSON.mockImplementation((tasksPath, projectRoot, tag) => {
@@ -331,11 +322,11 @@ describe('analyzeTaskComplexity', () => {
 		await analyzeTaskComplexity(options, {
 			projectRoot: '/mock/project/root',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -367,11 +358,11 @@ describe('analyzeTaskComplexity', () => {
 		await analyzeTaskComplexity(researchOptions, {
 			projectRoot: '/mock/project/root',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -395,11 +386,11 @@ describe('analyzeTaskComplexity', () => {
 		await analyzeTaskComplexity(options, {
 			projectRoot: '/mock/project/root',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -410,7 +401,7 @@ describe('analyzeTaskComplexity', () => {
 		);
 
 		// Reset mocks
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Test with number threshold
 		options = {
@@ -423,11 +414,11 @@ describe('analyzeTaskComplexity', () => {
 		await analyzeTaskComplexity(options, {
 			projectRoot: '/mock/project/root',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -451,11 +442,11 @@ describe('analyzeTaskComplexity', () => {
 		await analyzeTaskComplexity(options, {
 			projectRoot: '/mock/project/root',
 			mcpLog: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn(),
-				success: jest.fn()
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				debug: vi.fn(),
+				success: vi.fn()
 			}
 		});
 
@@ -481,11 +472,11 @@ describe('analyzeTaskComplexity', () => {
 		generateObjectService.mockRejectedValueOnce(new Error('API Error'));
 
 		const mockMcpLog = {
-			info: jest.fn(),
-			warn: jest.fn(),
-			error: jest.fn(),
-			debug: jest.fn(),
-			success: jest.fn()
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			debug: vi.fn(),
+			success: vi.fn()
 		};
 
 		// Act & Assert

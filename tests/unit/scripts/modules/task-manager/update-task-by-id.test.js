@@ -1,142 +1,128 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
-jest.unstable_mockModule('fs', () => {
+vi.doMock('fs', () => {
 	const mockFs = {
-		existsSync: jest.fn(() => true),
-		writeFileSync: jest.fn(),
-		readFileSync: jest.fn(),
-		unlinkSync: jest.fn()
+		existsSync: vi.fn(() => true),
+		writeFileSync: vi.fn(),
+		readFileSync: vi.fn(),
+		unlinkSync: vi.fn()
 	};
 	return { default: mockFs, ...mockFs };
 });
 
-jest.unstable_mockModule('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: jest.fn(),
-	writeJSON: jest.fn(),
-	log: jest.fn(),
-	isSilentMode: jest.fn(() => false),
-	findProjectRoot: jest.fn(() => '/project'),
-	flattenTasksWithSubtasks: jest.fn(() => []),
-	truncate: jest.fn((t) => t),
-	isEmpty: jest.fn(() => false),
-	resolveEnvVariable: jest.fn(),
-	findTaskById: jest.fn(),
-	getCurrentTag: jest.fn(() => 'master'),
-	resolveTag: jest.fn(() => 'master'),
-	addComplexityToTask: jest.fn((task, complexity) => ({ ...task, complexity })),
-	getTasksForTag: jest.fn((data, tag) => data[tag]?.tasks || []),
-	setTasksForTag: jest.fn(),
-	ensureTagMetadata: jest.fn((tagObj) => tagObj)
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	log: vi.fn(),
+	isSilentMode: vi.fn(() => false),
+	findProjectRoot: vi.fn(() => '/project'),
+	flattenTasksWithSubtasks: vi.fn(() => []),
+	truncate: vi.fn((t) => t),
+	isEmpty: vi.fn(() => false),
+	resolveEnvVariable: vi.fn(),
+	findTaskById: vi.fn(),
+	getCurrentTag: vi.fn(() => 'master'),
+	resolveTag: vi.fn(() => 'master'),
+	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
+	setTasksForTag: vi.fn(),
+	ensureTagMetadata: vi.fn((tagObj) => tagObj)
 }));
 
-jest.unstable_mockModule('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: jest.fn(),
-	getStatusWithColor: jest.fn((s) => s),
-	startLoadingIndicator: jest.fn(() => ({ stop: jest.fn() })),
-	stopLoadingIndicator: jest.fn(),
-	succeedLoadingIndicator: jest.fn(),
-	failLoadingIndicator: jest.fn(),
-	warnLoadingIndicator: jest.fn(),
-	infoLoadingIndicator: jest.fn(),
-	displayAiUsageSummary: jest.fn(),
-	displayContextAnalysis: jest.fn()
+vi.doMock('../../../../../scripts/modules/ui.js', () => ({
+	displayBanner: vi.fn(),
+	getStatusWithColor: vi.fn((s) => s),
+	startLoadingIndicator: vi.fn(() => ({ stop: vi.fn() })),
+	stopLoadingIndicator: vi.fn(),
+	succeedLoadingIndicator: vi.fn(),
+	failLoadingIndicator: vi.fn(),
+	warnLoadingIndicator: vi.fn(),
+	infoLoadingIndicator: vi.fn(),
+	displayAiUsageSummary: vi.fn(),
+	displayContextAnalysis: vi.fn()
 }));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/ai-services-unified.js',
-	() => ({
-		generateTextService: jest
-			.fn()
-			.mockResolvedValue({ mainResult: { content: '{}' }, telemetryData: {} }),
-		generateObjectService: jest.fn().mockResolvedValue({
-			mainResult: {
-				task: {
-					id: 1,
-					title: 'Updated Task',
-					description: 'Updated description',
-					status: 'pending',
-					dependencies: [],
-					priority: 'medium',
-					details: null,
-					testStrategy: null,
-					subtasks: []
-				}
-			},
-			telemetryData: {}
-		})
+vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
+	generateTextService: vi
+		.fn()
+		.mockResolvedValue({ mainResult: { content: '{}' }, telemetryData: {} }),
+	generateObjectService: vi.fn().mockResolvedValue({
+		mainResult: {
+			task: {
+				id: 1,
+				title: 'Updated Task',
+				description: 'Updated description',
+				status: 'pending',
+				dependencies: [],
+				priority: 'medium',
+				details: null,
+				testStrategy: null,
+				subtasks: []
+			}
+		},
+		telemetryData: {}
 	})
-);
+}));
 
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/config-manager.js',
-	() => ({
-		getDebugFlag: jest.fn(() => false),
-		isApiKeySet: jest.fn(() => true),
-		hasCodebaseAnalysis: jest.fn(() => false)
-	})
-);
+vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
+	getDebugFlag: vi.fn(() => false),
+	isApiKeySet: vi.fn(() => true),
+	hasCodebaseAnalysis: vi.fn(() => false)
+}));
 
 // Mock bridge-utils module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/bridge-utils.js',
-	() => ({
-		createBridgeLogger: jest.fn(() => ({
-			logger: {
-				info: jest.fn(),
-				warn: jest.fn(),
-				error: jest.fn(),
-				debug: jest.fn()
-			},
-			report: jest.fn(),
-			isMCP: false
-		}))
-	})
-);
+vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
+	createBridgeLogger: vi.fn(() => ({
+		logger: {
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			debug: vi.fn()
+		},
+		report: vi.fn(),
+		isMCP: false
+	}))
+}));
 
 // Mock prompt-manager module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/prompt-manager.js',
-	() => ({
-		getPromptManager: jest.fn().mockReturnValue({
-			loadPrompt: jest.fn((promptId, params) => ({
-				systemPrompt:
-					'You are an AI assistant that helps update a software development task with new requirements and information.',
-				userPrompt: `Update the following task based on the provided information: ${params?.updatePrompt || 'User prompt for task update'}`,
-				metadata: {
-					templateId: 'update-task',
-					version: '1.0.0',
-					variant: 'default',
-					parameters: params || {}
-				}
-			}))
-		})
+vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+	getPromptManager: vi.fn().mockReturnValue({
+		loadPrompt: vi.fn((promptId, params) => ({
+			systemPrompt:
+				'You are an AI assistant that helps update a software development task with new requirements and information.',
+			userPrompt: `Update the following task based on the provided information: ${params?.updatePrompt || 'User prompt for task update'}`,
+			metadata: {
+				templateId: 'update-task',
+				version: '1.0.0',
+				variant: 'default',
+				parameters: params || {}
+			}
+		}))
 	})
-);
+}));
 
 // Mock contextGatherer module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/contextGatherer.js',
-	() => ({
-		ContextGatherer: jest.fn().mockImplementation(() => ({
-			gather: jest.fn().mockResolvedValue({
+vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
+	ContextGatherer: vi.fn().mockImplementation(function () {
+		return {
+			gather: vi.fn().mockResolvedValue({
 				fullContext: '',
 				summary: ''
 			})
-		}))
+		};
 	})
-);
+}));
 
 // Mock fuzzyTaskSearch module
-jest.unstable_mockModule(
-	'../../../../../scripts/modules/utils/fuzzyTaskSearch.js',
-	() => ({
-		FuzzyTaskSearch: jest.fn().mockImplementation(() => ({
-			search: jest.fn().mockReturnValue([]),
-			findRelevantTasks: jest.fn().mockReturnValue([]),
-			getTaskIds: jest.fn().mockReturnValue([])
-		}))
+vi.doMock('../../../../../scripts/modules/utils/fuzzyTaskSearch.js', () => ({
+	FuzzyTaskSearch: vi.fn().mockImplementation(function () {
+		return {
+			search: vi.fn().mockReturnValue([]),
+			findRelevantTasks: vi.fn().mockReturnValue([]),
+			getTaskIds: vi.fn().mockReturnValue([])
+		};
 	})
-);
+}));
 
 const { readJSON, log } = await import(
 	'../../../../../scripts/modules/utils.js'
@@ -165,8 +151,8 @@ import {
 
 describe('updateTaskById validation', () => {
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
+		vi.clearAllMocks();
+		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit called');
 		});
 	});
@@ -227,8 +213,8 @@ describe('updateTaskById success path with generateObjectService', () => {
 	let generateObjectService;
 
 	beforeEach(async () => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
+		vi.clearAllMocks();
+		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit called');
 		});
 		fs = await import('fs');
@@ -430,8 +416,8 @@ describe('Prompt Manager Integration', () => {
 	let generateObjectService;
 
 	beforeEach(async () => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
+		vi.clearAllMocks();
+		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit called');
 		});
 		fs = await import('fs');
@@ -500,8 +486,8 @@ describe('Context Gathering Integration', () => {
 	let generateObjectService;
 
 	beforeEach(async () => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
+		vi.clearAllMocks();
+		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit called');
 		});
 		fs = await import('fs');
@@ -514,12 +500,14 @@ describe('Context Gathering Integration', () => {
 	test('should gather project context when projectRoot is provided', async () => {
 		// Arrange
 		const mockContextGatherer = {
-			gather: jest.fn().mockResolvedValue({
+			gather: vi.fn().mockResolvedValue({
 				fullContext: 'Project context from files',
 				summary: 'Context summary'
 			})
 		};
-		ContextGatherer.mockImplementation(() => mockContextGatherer);
+		ContextGatherer.mockImplementation(function () {
+			return mockContextGatherer;
+		});
 
 		fs.existsSync.mockReturnValue(true);
 		readJSON.mockReturnValue({
@@ -577,8 +565,8 @@ describe('Fuzzy Task Search Integration', () => {
 	let generateObjectService;
 
 	beforeEach(async () => {
-		jest.clearAllMocks();
-		jest.spyOn(process, 'exit').mockImplementation(() => {
+		vi.clearAllMocks();
+		vi.spyOn(process, 'exit').mockImplementation(() => {
 			throw new Error('process.exit called');
 		});
 		fs = await import('fs');
@@ -591,13 +579,15 @@ describe('Fuzzy Task Search Integration', () => {
 	test('should use fuzzy search to find related tasks for context', async () => {
 		// Arrange
 		const mockFuzzySearch = {
-			findRelevantTasks: jest.fn().mockReturnValue([
+			findRelevantTasks: vi.fn().mockReturnValue([
 				{ id: 2, title: 'Related Task 1', score: 0.9 },
 				{ id: 3, title: 'Related Task 2', score: 0.85 }
 			]),
-			getTaskIds: jest.fn().mockReturnValue(['2', '3'])
+			getTaskIds: vi.fn().mockReturnValue(['2', '3'])
 		};
-		FuzzyTaskSearch.mockImplementation(() => mockFuzzySearch);
+		FuzzyTaskSearch.mockImplementation(function () {
+			return mockFuzzySearch;
+		});
 
 		fs.existsSync.mockReturnValue(true);
 		readJSON.mockReturnValue({

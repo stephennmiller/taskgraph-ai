@@ -7,7 +7,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import { sampleTasks } from '../fixtures/sample-tasks.js';
 
 // Disable chalk's color detection which can cause fs.readFileSync calls
@@ -39,14 +39,14 @@ try {
 }
 
 // --- Define Mock Function Instances ---
-const mockFindProjectRoot = jest.fn();
-const mockLog = jest.fn();
-const mockResolveEnvVariable = jest.fn();
+const mockFindProjectRoot = vi.fn();
+const mockLog = vi.fn();
+const mockResolveEnvVariable = vi.fn();
 
 // --- Mock fs functions directly instead of the whole module ---
-const mockExistsSync = jest.fn();
-const mockReadFileSync = jest.fn();
-const mockWriteFileSync = jest.fn();
+const mockExistsSync = vi.fn();
+const mockReadFileSync = vi.fn();
+const mockWriteFileSync = vi.fn();
 
 // Instead of mocking the entire fs module, mock just the functions we need
 fs.existsSync = mockExistsSync;
@@ -146,13 +146,13 @@ let consoleWarnSpy;
 
 beforeAll(() => {
 	// Set up console spies
-	consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-	consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+	consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+	consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterAll(() => {
 	// Restore all spies
-	jest.restoreAllMocks();
+	vi.restoreAllMocks();
 });
 
 describe('Config Manager Module', () => {
@@ -162,7 +162,7 @@ describe('Config Manager Module', () => {
 	// Reset mocks before each test for isolation
 	beforeEach(async () => {
 		// Clear all mock calls and reset implementations between tests
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 		// Reset the external mock instances for utils
 		mockFindProjectRoot.mockReset();
 		mockLog.mockReset();
@@ -173,7 +173,7 @@ describe('Config Manager Module', () => {
 
 		// --- Mock Dependencies BEFORE importing the module under test ---
 		// Mock the 'utils.js' module using doMock (applied at runtime)
-		jest.doMock('../../scripts/modules/utils.js', () => ({
+		vi.doMock('../../scripts/modules/utils.js', () => ({
 			__esModule: true, // Indicate it's an ES module mock
 			findProjectRoot: mockFindProjectRoot, // Use the mock function instance
 			log: mockLog, // Use the mock function instance
