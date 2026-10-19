@@ -1,4 +1,8 @@
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
+
+// Load ui.js first: commands.js -> @tm/cli -> ... -> ui.js -> @tm/cli is an
+// import cycle that Vitest only resolves when ui.js is the entry point.
+import '../../../../../scripts/modules/ui.js';
 import chalk from 'chalk';
 
 // ============================================================================
@@ -34,7 +38,7 @@ const mockConfig = {
  * Creates mock functions with consistent naming
  */
 function createMock(name) {
-	return jest.fn().mockName(name);
+	return vi.fn().mockName(name);
 }
 
 /**
@@ -68,7 +72,7 @@ function setupMocks(config = mockConfig) {
 
 	// Only mock the modules that are actually used in cross-tag move functionality
 	if (config.core?.moveTasksBetweenTags) {
-		jest.mock(
+		vi.doMock(
 			'../../../../../scripts/modules/task-manager/move-task.js',
 			() => ({
 				moveTasksBetweenTags: mocks.moveTasksBetweenTags
@@ -77,34 +81,34 @@ function setupMocks(config = mockConfig) {
 	}
 
 	if (config.core?.readJSON || config.core?.findProjectRoot) {
-		jest.mock('../../../../../scripts/modules/utils.js', () => ({
+		vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 			findProjectRoot: mocks.findProjectRoot,
 			readJSON: mocks.readJSON,
 			// Minimal set of utils that might be used
-			log: jest.fn(),
-			writeJSON: jest.fn(),
-			getCurrentTag: jest.fn(() => 'master')
+			log: vi.fn(),
+			writeJSON: vi.fn(),
+			getCurrentTag: vi.fn(() => 'master')
 		}));
 	}
 
 	if (config.core?.initTaskGraph) {
-		jest.mock('../../../../../scripts/modules/config-manager.js', () => ({
+		vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 			initTaskGraph: mocks.initTaskGraph,
-			isApiKeySet: jest.fn(() => true),
-			getConfig: jest.fn(() => ({}))
+			isApiKeySet: vi.fn(() => true),
+			getConfig: vi.fn(() => ({}))
 		}));
 	}
 
 	// Mock chalk for consistent output testing
-	jest.mock('chalk', () => ({
-		red: jest.fn((text) => text),
-		blue: jest.fn((text) => text),
-		green: jest.fn((text) => text),
-		yellow: jest.fn((text) => text),
-		white: jest.fn((text) => ({
-			bold: jest.fn((text) => text)
+	vi.doMock('chalk', () => ({
+		red: vi.fn((text) => text),
+		blue: vi.fn((text) => text),
+		green: vi.fn((text) => text),
+		yellow: vi.fn((text) => text),
+		white: vi.fn((text) => ({
+			bold: vi.fn((text) => text)
 		})),
-		reset: jest.fn((text) => text)
+		reset: vi.fn((text) => text)
 	}));
 
 	return mocks;
@@ -177,18 +181,18 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 	let mockProcessExit;
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Mock console methods
-		mockConsoleError = jest.spyOn(console, 'error').mockImplementation();
-		mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
-		mockProcessExit = jest.spyOn(process, 'exit').mockImplementation();
+		mockConsoleError = vi.spyOn(console, 'error').mockImplementation();
+		mockConsoleLog = vi.spyOn(console, 'log').mockImplementation();
+		mockProcessExit = vi.spyOn(process, 'exit').mockImplementation();
 
 		// Mock TaskGraph instance
 		mockTaskGraph = {
-			getCurrentTag: jest.fn().mockReturnValue('master'),
-			getTasksPath: jest.fn().mockReturnValue('/test/path/tasks.json'),
-			getProjectRoot: jest.fn().mockReturnValue('/test/project')
+			getCurrentTag: vi.fn().mockReturnValue('master'),
+			getTasksPath: vi.fn().mockReturnValue('/test/path/tasks.json'),
+			getProjectRoot: vi.fn().mockReturnValue('/test/project')
 		};
 
 		mocks.initTaskGraph.mockReturnValue(mockTaskGraph);
@@ -202,7 +206,7 @@ describe('CLI Move Command Cross-Tag Functionality', () => {
 	});
 
 	afterEach(() => {
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	describe('Cross-Tag Move Logic', () => {
