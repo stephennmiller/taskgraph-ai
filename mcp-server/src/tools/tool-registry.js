@@ -47,9 +47,9 @@ import {
 	registerAutopilotStatusTool,
 	registerGenerateTool,
 	registerGetTaskTool,
+	registerGetTasksTool,
 	registerGithubPushTool,
 	registerGithubStatusTool,
-	registerGetTasksTool,
 	registerSetTaskStatusTool
 } from '@tm/mcp';
 

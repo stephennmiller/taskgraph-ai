@@ -9,11 +9,10 @@ const github = {
 	status: vi.fn(),
 	push: vi.fn()
 };
-const config = { getActiveTag: vi.fn() };
 
 vi.mock('@tm/core', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@tm/core')>()),
-	createTmCore: vi.fn(async () => ({ github, config }))
+	createTmCore: vi.fn(async () => ({ github }))
 }));
 
 import { registerGithubPushTool } from './push.tool.js';
@@ -52,7 +51,6 @@ const pushResult = {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	config.getActiveTag.mockReturnValue('master');
 	github.push.mockResolvedValue(pushResult);
 });
 
@@ -87,14 +85,15 @@ describe('github_status', () => {
 });
 
 describe('github_push', () => {
-	it('previews by default and scopes to the active tag', async () => {
+	it('previews by default and leaves the tag to core', async () => {
 		const tool = register(registerGithubPushTool);
 
 		const result = await tool.execute({ projectRoot }, ctx);
 
 		expect(github.push).toHaveBeenCalledWith(
-			expect.objectContaining({ dryRun: true, tag: 'master' })
+			expect.objectContaining({ dryRun: true })
 		);
+		expect(github.push.mock.calls[0][0].tag).toBeUndefined();
 		expect(payload(result)).toEqual(pushResult);
 	});
 
@@ -108,28 +107,22 @@ describe('github_push', () => {
 		);
 	});
 
-	it('passes every tag when allTags is set', async () => {
+	it('forwards allTags and tag to core', async () => {
 		const tool = register(registerGithubPushTool);
 
 		await tool.execute({ projectRoot, allTags: true }, ctx);
-
-		expect(github.push.mock.calls[0][0].tag).toBeUndefined();
-	});
-
-	it('uses an explicit tag over the active one', async () => {
-		const tool = register(registerGithubPushTool);
-
 		await tool.execute({ projectRoot, tag: 'feature-x' }, ctx);
 
-		expect(github.push.mock.calls[0][0].tag).toBe('feature-x');
+		expect(github.push.mock.calls[0][0].allTags).toBe(true);
+		expect(github.push.mock.calls[1][0].tag).toBe('feature-x');
 	});
 
-	it('splits a comma separated id list', async () => {
+	it('forwards the id list to core as given', async () => {
 		const tool = register(registerGithubPushTool);
 
 		await tool.execute({ projectRoot, id: '1, 2,,3' }, ctx);
 
-		expect(github.push.mock.calls[0][0].taskIds).toEqual(['1', '2', '3']);
+		expect(github.push.mock.calls[0][0].taskIds).toBe('1, 2,,3');
 	});
 
 	it('forwards repo, includeDetails and closeOrphans', async () => {
@@ -152,19 +145,6 @@ describe('github_push', () => {
 				closeOrphans: true
 			})
 		);
-	});
-
-	it('rejects tag together with allTags without calling core', async () => {
-		const tool = register(registerGithubPushTool);
-
-		const result = await tool.execute(
-			{ projectRoot, tag: 'a', allTags: true },
-			ctx
-		);
-
-		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toContain('either tag or allTags');
-		expect(github.push).not.toHaveBeenCalled();
 	});
 
 	it('returns an error result when core throws', async () => {

@@ -182,7 +182,9 @@ export class TmCore {
 			this._workflow.setTasksDomain(this._tasks);
 
 			// GitHubDomain reads and writes task links through TasksDomain
-			this._github = new GitHubDomain(this._projectPath);
+			this._github = new GitHubDomain(this._projectPath, {
+				getActiveTag: () => this._configManager.getActiveTag()
+			});
 			this._github.setTasksDomain(this._tasks);
 
 			// Log successful initialization

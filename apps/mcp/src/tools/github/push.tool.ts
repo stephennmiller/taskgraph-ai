@@ -60,23 +60,16 @@ export function registerGithubPushTool(server: FastMCP) {
 			async (args: PushArgs, { log, tmCore }: ToolContext) => {
 				// Default to a preview here as well as in the schema, so a caller that
 				// skips schema parsing can never write by accident
-				const { projectRoot, tag, allTags, id, dryRun = true, ...rest } = args;
+				const { projectRoot, id, dryRun = true, ...rest } = args;
 
 				try {
-					if (tag && allTags) {
-						throw new Error('Use either tag or allTags, not both');
-					}
 					log.info(
 						`Pushing tasks to GitHub for ${projectRoot} (dryRun: ${dryRun})`
 					);
 					const result = await tmCore.github.push({
 						...rest,
 						dryRun,
-						tag: allTags ? undefined : (tag ?? tmCore.config.getActiveTag()),
 						taskIds: id
-							?.split(',')
-							.map((taskId) => taskId.trim())
-							.filter(Boolean)
 					});
 					return handleApiResult({
 						result: { success: true, data: result },

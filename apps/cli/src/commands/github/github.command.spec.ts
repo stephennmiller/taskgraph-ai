@@ -72,10 +72,7 @@ describe('GithubCommand', () => {
 			})
 		};
 		command = new GithubCommand();
-		(command as any).tmCore = {
-			github,
-			config: { getActiveTag: vi.fn().mockReturnValue('master') }
-		};
+		(command as any).tmCore = { github };
 		confirm = vi.fn().mockResolvedValue(true);
 		(command as any).confirm = confirm;
 		(command as any).isInteractive = () => true;
@@ -105,39 +102,35 @@ describe('GithubCommand', () => {
 	});
 
 	describe('push', () => {
-		it('defaults to the active tag and asks before writing', async () => {
+		it('asks before writing and leaves the tag to core', async () => {
 			await (command as any).runPush({});
 
-			expect(github.planPush).toHaveBeenCalledWith(
-				expect.objectContaining({ tag: 'master' })
-			);
+			expect(github.planPush.mock.calls[0][0].tag).toBeUndefined();
 			expect(confirm).toHaveBeenCalledTimes(1);
 			expect(github.push).toHaveBeenCalledWith(
-				expect.objectContaining({ tag: 'master', dryRun: false })
+				expect.objectContaining({ dryRun: false })
 			);
 			expect(output()).toContain('1 to create, 1 to update, 1 unchanged');
 		});
 
-		it('pushes every tag with --all-tags', async () => {
+		it('forwards --tag and --all-tags to core', async () => {
+			await (command as any).runPush({ tag: 'feature', yes: true });
 			await (command as any).runPush({ allTags: true, yes: true });
 
-			expect(github.planPush).toHaveBeenCalledWith(
-				expect.objectContaining({ tag: undefined })
-			);
+			expect(github.planPush.mock.calls[0][0]).toMatchObject({
+				tag: 'feature'
+			});
+			expect(github.planPush.mock.calls[1][0]).toMatchObject({
+				allTags: true,
+				tag: undefined
+			});
 		});
 
-		it('rejects --tag together with --all-tags', async () => {
-			await expect(
-				(command as any).runPush({ tag: 'a', allTags: true })
-			).rejects.toThrow('--tag');
-			expect(github.push).not.toHaveBeenCalled();
-		});
-
-		it('splits --id into task ids', async () => {
+		it('forwards --id to core as given', async () => {
 			await (command as any).runPush({ id: '1, 2', yes: true });
 
 			expect(github.push).toHaveBeenCalledWith(
-				expect.objectContaining({ taskIds: ['1', '2'] })
+				expect.objectContaining({ taskIds: '1, 2' })
 			);
 		});
 

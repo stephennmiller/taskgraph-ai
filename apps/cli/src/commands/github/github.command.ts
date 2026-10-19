@@ -141,19 +141,12 @@ Examples:
 	}
 
 	private async runPush(options: PushCommandOptions): Promise<void> {
-		if (options.tag && options.allTags) {
-			throw new Error('Use either --tag or --all-tags, not both');
-		}
 		const core = this.core();
 		const pushOptions: PushOptions = {
 			repo: options.repo,
-			tag: options.allTags
-				? undefined
-				: (options.tag ?? core.config.getActiveTag()),
-			taskIds: options.id
-				?.split(',')
-				.map((id) => id.trim())
-				.filter(Boolean),
+			tag: options.tag,
+			allTags: options.allTags,
+			taskIds: options.id,
 			includeDetails: options.includeDetails,
 			closeOrphans: options.closeOrphans
 		};
