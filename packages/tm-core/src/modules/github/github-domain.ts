@@ -11,6 +11,7 @@ import {
 	isGhCliAvailable
 } from '../../common/utils/git-utils.js';
 import type { TasksDomain } from '../tasks/tasks-domain.js';
+import { parseTaskIds } from '../tasks/validation/task-id.js';
 import type { GitHubClient } from './adapters/github-client.interface.js';
 import { GhCliClient } from './adapters/gh-cli-client.js';
 import { BASE_LABEL } from './services/issue-renderer.js';
@@ -29,6 +30,8 @@ import type {
 export interface GitHubDomainOptions {
 	/** Build a client for `owner/name`; defaults to the `gh` CLI client */
 	clientFactory?: (repo: string) => GitHubClient;
+	/** Tag pushed when a push names none; without it every tag is pushed */
+	getActiveTag?: () => string;
 	sleep?: (ms: number) => Promise<void>;
 	now?: () => Date;
 }
@@ -153,9 +156,10 @@ export class GitHubDomain {
 		const client = this.options.clientFactory
 			? this.options.clientFactory(repo)
 			: new GhCliClient(repo, { cwd: this.projectRoot });
-		const tasks = await this.loadTasks(options.tag);
+		const tag = this.resolveTag(options);
+		const tasks = await this.loadTasks(tag);
 		const remote = await client.listIssues(BASE_LABEL);
-		const wanted = options.taskIds?.map(String);
+		const wanted = this.resolveTaskIds(options.taskIds);
 		if (wanted) {
 			const known = new Set(tasks.map((t) => String(t.task.id)));
 			const missing = wanted.filter((id) => !known.has(id));
@@ -172,7 +176,7 @@ export class GitHubDomain {
 			remote,
 			includeDetails: options.includeDetails,
 			closeOrphans: options.closeOrphans,
-			scopeTags: options.tag ? [options.tag] : undefined
+			scopeTags: tag ? [tag] : undefined
 		});
 		// Plan against every task so unselected ones are not mistaken for
 		// orphans, then keep only the selected steps
@@ -185,6 +189,33 @@ export class GitHubDomain {
 				}
 			: full;
 		return { plan, client, tasks };
+	}
+
+	/** The one tag a push covers, or undefined for every tag */
+	private resolveTag(options: PushOptions): string | undefined {
+		if (options.tag && options.allTags) {
+			throw new TaskGraphError(
+				'Use either tag or allTags, not both',
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
+		if (options.allTags) return undefined;
+		return options.tag ?? this.options.getActiveTag?.();
+	}
+
+	private resolveTaskIds(
+		taskIds: PushOptions['taskIds']
+	): string[] | undefined {
+		if (taskIds === undefined) return undefined;
+		if (Array.isArray(taskIds)) return taskIds.map(String);
+		try {
+			return parseTaskIds(taskIds);
+		} catch (error) {
+			throw new TaskGraphError(
+				error instanceof Error ? error.message : String(error),
+				ERROR_CODES.VALIDATION_ERROR
+			);
+		}
 	}
 
 	private async detectRepo(): Promise<string | null> {

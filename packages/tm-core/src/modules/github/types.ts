@@ -82,10 +82,15 @@ export interface PushPlan {
 export interface PushOptions {
 	/** `owner/name`; defaults to the repo reported by `gh repo view` */
 	repo?: string;
-	/** Push only this tag; defaults to every tag */
+	/** Push only this tag; defaults to the active tag */
 	tag?: string;
-	/** Push only these task ids (top-level tasks); defaults to every task */
-	taskIds?: string[];
+	/** Push every tag. Cannot be combined with `tag` */
+	allTags?: boolean;
+	/**
+	 * Push only these task ids (top-level tasks), as a list or a comma
+	 * separated string; defaults to every task in scope
+	 */
+	taskIds?: string[] | string;
 	includeDetails?: boolean;
 	closeOrphans?: boolean;
 	dryRun?: boolean;
