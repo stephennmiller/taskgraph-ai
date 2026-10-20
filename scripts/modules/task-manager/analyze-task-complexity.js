@@ -93,6 +93,10 @@ async function analyzeTaskComplexity(options, context = {}) {
 		let originalTaskCount = 0;
 		let originalData = null;
 
+		// Done, cancelled and deferred tasks left out of the tasks you asked
+		// for (all of them, or --id / --from / --to)
+		let skippedCount = 0;
+
 		if (options._filteredTasksData) {
 			tasksData = options._filteredTasksData;
 			originalTaskCount = options._originalTaskCount || tasksData.tasks.length;
@@ -120,9 +124,10 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 			// Filter tasks based on active status
 			const activeStatuses = ['pending', 'blocked', 'in-progress'];
-			let filteredTasks = originalData.tasks.filter((task) =>
-				activeStatuses.includes(task.status?.toLowerCase() || 'pending')
-			);
+			const isActive = (task) =>
+				activeStatuses.includes(task.status?.toLowerCase() || 'pending');
+			let inScope = () => true;
+			let filteredTasks = originalData.tasks.filter(isActive);
 
 			// Apply ID filtering if specified
 			if (specificIds && specificIds.length > 0) {
@@ -130,9 +135,8 @@ async function analyzeTaskComplexity(options, context = {}) {
 					`Filtering tasks by specific IDs: ${specificIds.join(', ')}`,
 					'info'
 				);
-				filteredTasks = filteredTasks.filter((task) =>
-					specificIds.includes(task.id)
-				);
+				inScope = (task) => specificIds.includes(task.id);
+				filteredTasks = filteredTasks.filter(inScope);
 
 				if (outputFormat === 'text') {
 					if (filteredTasks.length === 0 && specificIds.length > 0) {
@@ -166,9 +170,9 @@ async function analyzeTaskComplexity(options, context = {}) {
 					`Filtering tasks by ID range: ${effectiveFromId} to ${effectiveToId}`,
 					'info'
 				);
-				filteredTasks = filteredTasks.filter(
-					(task) => task.id >= effectiveFromId && task.id <= effectiveToId
-				);
+				inScope = (task) =>
+					task.id >= effectiveFromId && task.id <= effectiveToId;
+				filteredTasks = filteredTasks.filter(inScope);
 
 				if (outputFormat === 'text' && filteredTasks.length === 0) {
 					console.log(
@@ -178,6 +182,10 @@ async function analyzeTaskComplexity(options, context = {}) {
 					);
 				}
 			}
+
+			skippedCount = originalData.tasks.filter(
+				(task) => inScope(task) && !isActive(task)
+			).length;
 
 			tasksData = {
 				...originalData,
@@ -221,7 +229,6 @@ async function analyzeTaskComplexity(options, context = {}) {
 		}
 		// --- End Context Gathering ---
 
-		const skippedCount = originalTaskCount - tasksData.tasks.length;
 		reportLog(
 			`Found ${originalTaskCount} total tasks in the task file.`,
 			'info'
