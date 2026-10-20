@@ -18,28 +18,23 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 ### Command Categories
 
 #### 🚀 Setup & Installation
-- `/taskgraph:install-taskgraph` - Comprehensive installation guide
-- `/taskgraph:quick-install-taskgraph` - One-line global install
+- `/taskgraph:install-taskgraph [--quick]` - Installation guide, or a one-line global install with `--quick`
 
 #### 📋 Project Setup
-- `/taskgraph:init-project` - Initialize new project
-- `/taskgraph:init-project-quick` - Quick setup with auto-confirm
+- `/taskgraph:init-project [--quick]` - Initialize new project, or skip prompts with `--quick`
 - `/taskgraph:view-models` - View AI configuration
 - `/taskgraph:setup-models` - Configure AI providers
 
 #### 🎯 Task Generation
 - `/taskgraph:parse-prd` - Generate tasks from PRD
 - `/taskgraph:parse-prd-with-research` - Enhanced parsing
-- `/taskgraph:generate-tasks` - Create task files
 
 #### 📝 Task Management
-- `/taskgraph:list-tasks` - List all tasks
-- `/taskgraph:list-tasks-by-status` - List tasks filtered by status
-- `/taskgraph:list-tasks-with-subtasks` - List tasks with subtasks
+- `/taskgraph:list-tasks [status] [--subtasks]` - List tasks, optionally by status or with subtasks
 - `/taskgraph:graph` - Show tasks as a dependency tree
 - `/taskgraph:show-task` - Display task details
 - `/taskgraph:add-task` - Create new task
-- `/taskgraph:update-task` - Update single task
+- `/taskgraph:update-task` - Update a single task
 - `/taskgraph:update-tasks-from-id` - Update multiple tasks
 - `/taskgraph:next-task` - Get next task recommendation
 
@@ -96,8 +91,8 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 
 ### Getting Started
 
-1. Install: `/taskgraph:quick-install-taskgraph`
-2. Initialize: `/taskgraph:init-project-quick`
+1. Install: `/taskgraph:install-taskgraph --quick`
+2. Initialize: `/taskgraph:init-project --quick`
 3. Learn: `/taskgraph:learn`
 4. Work: `/taskgraph:smart-workflow`
 

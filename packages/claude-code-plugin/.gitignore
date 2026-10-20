@@ -1,6 +1,6 @@
 # Claude Code Plugin
 # Build tooling and generated plugin distribution files
-# Source files live in assets/claude/
+# Commands and agents are edited directly in commands/ and agents/
 
 # Only ignore build artifacts and dependencies
 node_modules/

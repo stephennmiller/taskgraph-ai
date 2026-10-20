@@ -1,77 +1,132 @@
 ---
-description: "Update tasks with intelligent field detection and bulk operations."
-argument-hint: "[arguments]"
+description: "Update a single task with new information."
+argument-hint: "<task ID> <changes>"
 ---
 
-Update tasks with intelligent field detection and bulk operations.
+Update a single specific task with new information.
 
 Arguments: $ARGUMENTS
 
-## Intelligent Task Updates
+This command rewrites one task's content (description, details, test strategy) with AI, through `taskgraph update-task --id --prompt`. It does not do the things the older natural-language version tried:
 
-Parse arguments to determine update intent and execute smartly.
+- Several tasks at once, or "all tasks that ...": use `/taskgraph:update-tasks-from-id`
+- Changing status ("mark 23 as done", "defer 7"): use `/taskgraph:set-status <id> <status>`, or the shortcuts `/taskgraph:to-in-progress` and `/taskgraph:to-done`
+- Adding or removing dependencies: use `/taskgraph:add-dependency` and `/taskgraph:remove-dependency`
 
-### 1. **Natural Language Processing**
+The CLI refuses to update a task that is already done, and a status change inside the prompt is not applied. If the request is one of the above, say so and use the right command instead.
 
-Understand update requests like:
-- "mark 23 as done" → Update status to done
-- "increase priority of 45" → Set priority to high
-- "add dependency on 12 to task 34" → Add dependency
-- "tasks 20-25 need review" → Bulk status update
-- "all API tasks high priority" → Pattern-based update
+Parse task ID and update details.
 
-### 2. **Smart Field Detection**
+## Single Task Update
 
-Automatically detect what to update:
-- Status keywords: done, complete, start, pause, review
-- Priority changes: urgent, high, low, deprioritize
-- Dependency updates: depends on, blocks, after
-- Assignment: assign to, owner, responsible
-- Time: estimate, spent, deadline
+Precisely update one task with AI assistance to maintain consistency.
 
-### 3. **Bulk Operations**
+## Argument Parsing
 
-Support for multiple task updates:
-```
-Examples:
-- "complete tasks 12, 15, 18"
-- "all pending auth tasks to in-progress"
-- "increase priority for tasks blocking 45"
-- "defer all documentation tasks"
+Natural language updates:
+- "5: add caching requirement"
+- "update 5 to include error handling"
+- "task 5 needs rate limiting"
+- "5 change priority to high"
+
+## Execution
+
+```bash
+taskgraph update-task --id=<id> --prompt="<context>"
 ```
 
-### 4. **Contextual Validation**
+## Update Types
 
-Before updating, check:
-- Status transitions are valid
-- Dependencies don't create cycles
-- Priority changes make sense
-- Bulk updates won't break project flow
+### 1. **Content Updates**
+- Enhance description
+- Add requirements
+- Clarify details
+- Update acceptance criteria
 
-Show preview:
+### 2. **Metadata Updates**
+- Change priority
+- Adjust time estimates
+- Update complexity
+- Modify dependencies
+
+### 3. **Strategic Updates**
+- Revise approach
+- Change test strategy
+- Update implementation notes
+- Adjust subtask needs
+
+## AI-Powered Updates
+
+The AI:
+1. **Understands Context**
+   - Reads current task state
+   - Identifies update intent
+   - Maintains consistency
+   - Preserves important info
+
+2. **Applies Changes**
+   - Updates relevant fields
+   - Keeps style consistent
+   - Adds without removing
+   - Enhances clarity
+
+3. **Validates Results**
+   - Checks coherence
+   - Verifies completeness
+   - Maintains relationships
+   - Suggests related updates
+
+## Example Updates
+
 ```
-Update Preview:
-─────────────────
-Tasks to update: #23, #24, #25
-Change: status → in-progress
-Impact: Will unblock tasks #30, #31
-Warning: Task #24 has unmet dependencies
+/taskgraph:update-task 5: add rate limiting
+→ Updating Task #5: "Implement API endpoints"
+
+Current: Basic CRUD endpoints
+Adding: Rate limiting requirements
+
+Updated sections:
+✓ Description: Added rate limiting mention
+✓ Details: Added specific limits (100/min)
+✓ Test Strategy: Added rate limit tests
+✓ Complexity: Increased from 5 to 6
+✓ Time Estimate: Increased by 2 hours
+
+Suggestion: Also update task #6 (API Gateway) for consistency?
 ```
 
-### 5. **Smart Suggestions**
+## Smart Features
 
-Based on update:
-- Completing task? → Show newly unblocked tasks
-- Changing priority? → Show impact on sprint
-- Adding dependency? → Check for conflicts
-- Bulk update? → Show summary of changes
+1. **Incremental Updates**
+   - Adds without overwriting
+   - Preserves work history
+   - Tracks what changed
+   - Shows diff view
 
-### 6. **Workflow Integration**
+2. **Consistency Checks**
+   - Related task alignment
+   - Subtask compatibility
+   - Dependency validity
+   - Timeline impact
 
-After updates:
-- Auto-update dependent task states
-- Trigger status recalculation
-- Update sprint/milestone progress
-- Log changes with context
+3. **Update History**
+   - Timestamp changes
+   - Track who/what updated
+   - Reason for update
+   - Previous versions
 
-Result: Flexible, intelligent task updates with safety checks.
+## Field-Specific Updates
+
+Quick syntax for specific fields:
+- "5 priority:high" → Update priority only
+- "5 add-time:4h" → Add to time estimate
+- "5 status:review" → Change status
+- "5 depends:3,4" → Add dependencies
+
+## Post-Update
+
+- Show updated task
+- Highlight changes
+- Check related tasks
+- Update suggestions
+- Timeline adjustments

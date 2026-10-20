@@ -14,8 +14,7 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 ## Project Setup & Configuration
 
 ### `/taskgraph:init`
-- `init-project` - Initialize new project (handles PRD files intelligently)
-- `init-project-quick` - Quick setup with auto-confirmation (-y flag)
+- `init-project [--quick]` - Initialize new project (handles PRD files intelligently); `--quick` skips prompts (-y)
 
 ### `/taskgraph:models`
 - `view-models` - View current AI model configuration
@@ -31,14 +30,11 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - `parse-prd-with-research` - Enhanced parsing with research mode
 
 ### `/taskgraph:generate`
-- `generate-tasks` - Create individual task files from tasks.json
 
 ## Task Management
 
 ### `/taskgraph:list`
-- `list-tasks` - Smart listing with natural language filters
-- `list-tasks-with-subtasks` - Include subtasks in hierarchical view
-- `list-tasks-by-status` - Filter by specific status
+- `list-tasks [status] [--subtasks]` - Smart listing with natural language filters, by status, with subtasks
 - `graph` - Dependency tree with the next task marked
 
 ### `/taskgraph:set-status`
@@ -53,9 +49,8 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - `sync-readme` - Export tasks to README.md with formatting
 
 ### `/taskgraph:update`
-- `update-task` - Update tasks with natural language
+- `update-task` - Update a single task
 - `update-tasks-from-id` - Update multiple tasks from a starting point
-- `update-single-task` - Update specific task
 
 ### `/taskgraph:add-task`
 - `add-task` - Add new task with AI assistance
@@ -127,8 +122,7 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - `analyze-project` - Deep project analysis and insights
 
 ### `/taskgraph:setup`
-- `install-taskgraph` - Comprehensive installation guide
-- `quick-install-taskgraph` - One-line global installation
+- `install-taskgraph [--quick]` - Installation guide; `--quick` for a one-line global install
 
 ## Usage Patterns
 

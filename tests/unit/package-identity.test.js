@@ -36,7 +36,6 @@ const IDENTITY_FILES = [
 	'packages/tm-core/src/common/constants/index.ts',
 	'packages/tm-core/src/modules/loop/presets/default.ts',
 	'packages/claude-code-plugin/commands/install-taskgraph.md',
-	'packages/claude-code-plugin/commands/quick-install-taskgraph.md',
 	'mcp-server/src/tools/utils.js',
 	'scripts/loop.sh',
 	'scripts/modules/commands.js',
