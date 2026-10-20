@@ -1,10 +1,10 @@
-import path from 'path';
 import {
 	assignMetadata,
 	pruneDependencySources,
 	rekeyDependencySources,
 	renameDependencySource
 } from '@tm/core';
+import path from 'path';
 import {
 	findCrossTagDependencies,
 	getDependentTaskIds,
@@ -1130,10 +1130,10 @@ function preserveTaskMetadata(task, sourceTag, targetTag) {
 
 export default moveTask;
 export {
-	moveTasksBetweenTags,
-	getAllTasksWithTags,
 	detectIdConflicts,
-	preserveTaskMetadata,
+	getAllTasksWithTags,
+	MOVE_ERROR_CODES,
 	MoveTaskError,
-	MOVE_ERROR_CODES
+	moveTasksBetweenTags,
+	preserveTaskMetadata
 };

@@ -1,6 +1,6 @@
+import { assignMetadata, pruneDependencySources } from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
-import { assignMetadata, pruneDependencySources } from '@tm/core';
 import { findTaskById, log, readJSON, writeJSON } from '../utils.js';
 import taskExists from './task-exists.js';
 

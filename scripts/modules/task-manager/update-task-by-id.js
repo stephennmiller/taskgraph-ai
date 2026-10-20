@@ -1,27 +1,12 @@
-import fs from 'fs';
-import boxen from 'boxen';
-import chalk from 'chalk';
-
-import {
-	findProjectRoot,
-	flattenTasksWithSubtasks,
-	readJSON,
-	truncate,
-	writeJSON
-} from '../utils.js';
-
-import {
-	displayAiUsageSummary,
-	startLoadingIndicator,
-	stopLoadingIndicator
-} from '../ui.js';
-
 import { theme } from '@tm/cli/theme';
 import {
 	assignMetadata,
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '@tm/core';
+import boxen from 'boxen';
+import chalk from 'chalk';
+import fs from 'fs';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -30,8 +15,20 @@ import {
 import { createBridgeLogger } from '../bridge-utils.js';
 import { hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
+import {
+	displayAiUsageSummary,
+	startLoadingIndicator,
+	stopLoadingIndicator
+} from '../ui.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
+import {
+	findProjectRoot,
+	flattenTasksWithSubtasks,
+	readJSON,
+	truncate,
+	writeJSON
+} from '../utils.js';
 
 /**
  * Update a task by ID with new information using the unified AI service.

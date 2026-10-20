@@ -23,11 +23,13 @@
  * dependencies no longer listed, and writers prune marks when a dependency is
  * removed so a later re-add cannot inherit a stale one.
  *
- * Where the AI invents dependencies: parse-prd, add-task, expand-task,
- * update-task and update (all legacy scripts/modules/task-manager). A
+ * Where the AI invents dependencies, and all of them record it: parse-prd,
+ * add-task, expand-task, update-task, update and scope-up/scope-down
+ * (regenerated subtasks), all in the legacy scripts/modules/task-manager. A
  * dependency the user asked for in an update prompt is still recorded as
- * inferred, because the model decides which IDs to write. scope-up/scope-down
- * are a further AI call site (see scope-adjustment.js).
+ * inferred, because the model decides which IDs to write. The other AI
+ * commands (research, analyze-complexity, update-subtask) never write
+ * dependencies.
  */
 
 export type DependencySource = 'explicit' | 'inferred';
