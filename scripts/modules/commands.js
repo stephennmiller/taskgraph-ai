@@ -978,7 +978,7 @@ function registerCommands(programInstance) {
 			TASKGRAPH_TASKS_FILE // Allow file override
 		) // Allow file override
 		.option(
-			'-cr, --complexity-report <file>',
+			'--complexity-report <file>',
 			'Path to the complexity report file (use this to specify the complexity report, not --file)'
 			// Removed default value to allow tag-specific auto-detection
 		)
