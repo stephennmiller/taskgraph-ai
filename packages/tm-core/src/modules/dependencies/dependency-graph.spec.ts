@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { Task } from '../../common/types/index.js';
+import type { Subtask, Task } from '../../common/types/index.js';
+import { createSubtask } from '../../testing/task-fixtures.js';
 import {
 	blockedCount,
+	bottlenecks,
 	buildDependencyGraph,
 	criticalPath,
 	findCycles
@@ -29,7 +31,13 @@ const sub = (
 	id: number,
 	dependencies: Array<string | number> = [],
 	status: Task['status'] = 'pending'
-) => ({ ...task(String(id), [], status), id, dependencies }) as any;
+): Subtask =>
+	createSubtask({
+		id,
+		title: `Subtask ${id}`,
+		status,
+		dependencies: dependencies.map(String)
+	});
 
 describe('buildDependencyGraph', () => {
 	it('adds subtasks under dotted IDs and resolves bare subtask dependencies', () => {
@@ -193,6 +201,132 @@ describe('criticalPath', () => {
 	});
 });
 
+describe('statuses', () => {
+	it('treats done, completed and cancelled as finished, everything else as open', () => {
+		const tasks = [
+			task('1'),
+			task('2', ['1'], 'deferred'),
+			task('3', ['1'], 'blocked'),
+			task('4', ['1'], 'review'),
+			task('5', ['1'], 'completed'),
+			task('6', ['1'], 'cancelled'),
+			task('7', ['1'], 'done')
+		];
+
+		expect(blockedCount(tasks).get('1')).toBe(3);
+		expect(blockedCount(tasks).get('5')).toBe(0);
+		expect(criticalPath(tasks)).toEqual(['1', '2']);
+	});
+
+	it('leaves completed and cancelled tasks out of the critical path', () => {
+		const tasks = [
+			task('1', [], 'completed'),
+			task('2', ['1'], 'cancelled'),
+			task('3', ['2'])
+		];
+
+		expect(criticalPath(tasks)).toEqual(['3']);
+	});
+
+	it('lets a deferred task stand on the critical path', () => {
+		const tasks = [task('1', [], 'deferred'), task('2', ['1'])];
+
+		expect(criticalPath(tasks)).toEqual(['1', '2']);
+	});
+});
+
+describe('ties and cycles with finished tasks', () => {
+	it('breaks an equal-length diamond by lowest ID', () => {
+		const path = criticalPath([
+			task('1'),
+			task('3', ['1']),
+			task('2', ['1']),
+			task('4', ['2', '3'])
+		]);
+
+		expect(path).toEqual(['1', '2', '4']);
+	});
+
+	it('orders IDs numerically, not alphabetically', () => {
+		expect(criticalPath([task('10'), task('2')])).toEqual(['2']);
+		expect(
+			criticalPath([task('1'), task('10', ['1']), task('2', ['1'])])
+		).toEqual(['1', '2']);
+	});
+
+	it('does not treat a loop through a done task as a cycle for the critical path', () => {
+		const tasks = [task('1', ['2']), task('2', ['1'], 'done')];
+
+		expect(criticalPath(tasks)).toEqual(['1']);
+		expect(blockedCount(tasks).get('1')).toBe(0);
+		expect(findCycles(tasks)).toEqual([['1', '2']]);
+	});
+
+	it('counts the other members of an open cycle as blocked', () => {
+		const counts = blockedCount([
+			task('1', ['2']),
+			task('2', ['1']),
+			task('3', ['2'])
+		]);
+
+		expect(counts.get('1')).toBe(2);
+		expect(counts.get('3')).toBe(0);
+	});
+
+	it('resolves a bare string dependency on a subtask as a sibling', () => {
+		const path = criticalPath([
+			task('1', [], 'pending', [sub(1), sub(2, ['1'])]),
+			task('2', ['1.2'])
+		]);
+
+		expect(path).toEqual(['1.1', '1.2', '2']);
+	});
+});
+
+describe('bottlenecks', () => {
+	const tasks = [
+		task('1'),
+		task('2'),
+		task('3', ['2']),
+		task('4', ['2']),
+		task('5', ['3']),
+		task('10', ['1']),
+		task('11', ['1', '10'])
+	];
+
+	it('ranks open tasks by what they hold up, ties by lowest ID', () => {
+		expect(bottlenecks(tasks).map((b) => [b.id, b.blocks])).toEqual([
+			['2', 3],
+			['1', 2],
+			['3', 1],
+			['10', 1]
+		]);
+	});
+
+	it('keeps only the top few', () => {
+		expect(bottlenecks(tasks, 2).map((b) => b.id)).toEqual(['2', '1']);
+		expect(bottlenecks(tasks, 0)).toEqual([]);
+	});
+
+	it('skips finished tasks and ones that block nothing', () => {
+		const ranked = bottlenecks([
+			task('1', [], 'done'),
+			task('2', ['1']),
+			task('3')
+		]);
+
+		expect(ranked).toEqual([]);
+	});
+
+	it('returns plain data that survives JSON', () => {
+		const ranked = bottlenecks(tasks, 1);
+
+		expect(JSON.parse(JSON.stringify(ranked))).toEqual([
+			{ id: '2', title: 'Task 2', status: 'pending', blocks: 3 }
+		]);
+	});
+});
+
 describe('findCycles', () => {
 	it('returns no cycles for an acyclic graph', () => {
 		expect(findCycles([task('1'), task('2', ['1'])])).toEqual([]);
@@ -237,6 +371,47 @@ describe('findCycles', () => {
 		]);
 
 		expect(cycles).toEqual([['2.1', '2.2']]);
+	});
+
+	it('reports a 10k two-way chain as one cycle without overflowing the stack', () => {
+		const ids = Array.from({ length: 10_000 }, (_, i) => String(i + 1));
+		const loop = ids.map((id, i) =>
+			task(
+				id,
+				[ids[i - 1], ids[i + 1]].filter((d) => d !== undefined)
+			)
+		);
+
+		const cycles = findCycles(loop);
+
+		expect(cycles).toHaveLength(1);
+		expect(cycles[0]).toHaveLength(10_000);
+		expect(criticalPath(loop)).toEqual([]);
+		expect(blockedCount(loop).get('1')).toBe(9_999);
+	});
+
+	it('handles a 10k dependency chain without overflowing the stack', () => {
+		const ids = Array.from({ length: 10_000 }, (_, i) => String(i + 1));
+		const chain = ids.map((id, i) => task(id, i ? [ids[i - 1]] : []));
+
+		expect(criticalPath(chain)).toHaveLength(10_000);
+		expect(findCycles(chain)).toEqual([]);
+		expect(blockedCount(chain).get('1')).toBe(9_999);
+	});
+
+	it('counts a 10k wide graph quickly', () => {
+		const ids = Array.from({ length: 10_000 }, (_, i) => String(i + 1));
+		const wide = [
+			task('0'),
+			...ids.map((id) => task(id, ['0'])),
+			task('end', ids)
+		];
+		const started = Date.now();
+
+		const counts = blockedCount(wide);
+
+		expect(counts.get('0')).toBe(10_001);
+		expect(Date.now() - started).toBeLessThan(2000);
 	});
 
 	it('still reports a cycle that includes done tasks', () => {

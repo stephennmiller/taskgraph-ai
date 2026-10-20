@@ -6,6 +6,8 @@
 
 export {
 	blockedCount,
+	bottlenecks,
+	type Bottleneck,
 	buildDependencyGraph,
 	criticalPath,
 	findCycles,

@@ -3,11 +3,26 @@
  *
  * Tasks and subtasks are flattened into one graph keyed by task ID (subtasks
  * use dotted IDs like "2.1"). A bare number in a subtask's dependencies means
- * a sibling ("1" under task 2 is "2.1"), as it does in `getNextTask`.
+ * a sibling ("1" under task 2 is "2.1"), as it does in `getNextTask`. That
+ * rule is ambiguous with a top-level task ID (see #175); keep it in step with
+ * `getNextTask` until a shared helper exists. A parent task is not an edge to
+ * its subtasks: finishing the subtasks does not unblock anything by itself.
+ *
  * Dependency IDs that match no task are recorded as `missing` and never become
- * edges; self-dependencies are ignored. Tasks whose status satisfies
- * dependencies (done, cancelled) are finished and take no part in
- * `blockedCount` or `criticalPath`. `findCycles` looks at every task.
+ * edges; self-dependencies are ignored.
+ *
+ * Finished means `isTaskComplete` (done, completed, cancelled). Finished
+ * tasks take no part in `blockedCount`, `bottlenecks` or `criticalPath`. Every
+ * other status, including deferred, blocked and review, is open: it still
+ * stands in the way of its dependents.
+ *
+ * Cycles: `findCycles` returns strongly connected groups of 2+ tasks, over
+ * every task. That deliberately differs from `buildDependencyTree`'s
+ * `cyclic`, which also lists everything downstream of a loop. `criticalPath`
+ * leaves cycle members out, since a loop can't be started, and ignores edges
+ * to them.
+ *
+ * Everything is iterative, so long chains don't overflow the stack.
  */
 
 import { isTaskComplete } from '../../common/constants/index.js';
@@ -29,6 +44,14 @@ export interface DependencyGraphNode {
 export interface DependencyGraph {
 	/** Every task and subtask by ID, parents before their subtasks */
 	nodes: Map<string, DependencyGraphNode>;
+}
+
+export interface Bottleneck {
+	id: string;
+	title: string;
+	status: TaskStatus;
+	/** Unfinished tasks waiting on this one, transitively */
+	blocks: number;
 }
 
 export const compareIds = (a: string, b: string): number =>
@@ -100,30 +123,69 @@ const isOpen = (node: DependencyGraphNode): boolean =>
 /**
  * For every task, how many unfinished tasks are (transitively) waiting on it.
  * Finished tasks count 0 and are not traversed. Cycle-safe; a task never
- * counts itself.
+ * counts itself. One pass over the condensed graph with a bitset per
+ * component, so memory grows with the square of the number of open tasks
+ * (about 12 MB at 10k).
  */
 export function blockedCount(tasks: Task[]): Map<string, number> {
 	const { nodes } = buildDependencyGraph(tasks);
 	const counts = new Map<string, number>();
-
+	const open: string[] = [];
 	for (const node of nodes.values()) {
-		if (!isOpen(node)) {
-			counts.set(node.id, 0);
-			continue;
-		}
-		const seen = new Set<string>([node.id]);
-		const stack = [...node.dependents];
-		while (stack.length) {
-			const id = stack.pop() as string;
-			if (seen.has(id)) continue;
-			const next = nodes.get(id) as DependencyGraphNode;
-			if (!isOpen(next)) continue;
-			seen.add(id);
-			stack.push(...next.dependents);
-		}
-		counts.set(node.id, seen.size - 1);
+		if (isOpen(node)) open.push(node.id);
+		else counts.set(node.id, 0);
 	}
+
+	// Components come out with everything they block already emitted
+	const components = stronglyConnectedComponents(
+		open,
+		(id) => (nodes.get(id) as DependencyGraphNode).dependents,
+		(id) => isOpen(nodes.get(id) as DependencyGraphNode)
+	);
+	const componentOf = new Map<string, number>();
+	components.forEach((members, c) => {
+		for (const id of members) componentOf.set(id, c);
+	});
+
+	const words = Math.ceil(components.length / 32);
+	const reach: Uint32Array[] = [];
+	components.forEach((members, c) => {
+		const bits = new Uint32Array(words);
+		for (const id of members) {
+			for (const next of (nodes.get(id) as DependencyGraphNode).dependents) {
+				const d = componentOf.get(next);
+				if (d === undefined || d === c) continue;
+				bits[d >> 5] |= 1 << (d & 31);
+				const below = reach[d];
+				for (let w = 0; w < words; w++) bits[w] |= below[w];
+			}
+		}
+		let total = members.length - 1;
+		for (let d = 0; d < c; d++) {
+			if (bits[d >> 5] & (1 << (d & 31))) total += components[d].length;
+		}
+		reach.push(bits);
+		for (const id of members) counts.set(id, total);
+	});
 	return counts;
+}
+
+/**
+ * The open tasks that hold up the most work, most first. Ties go to the
+ * lowest ID. Tasks that block nothing are left out; pass `limit` to keep the
+ * top few. Plain data, safe to serialize.
+ */
+export function bottlenecks(tasks: Task[], limit?: number): Bottleneck[] {
+	const { nodes } = buildDependencyGraph(tasks);
+	const ranked: Bottleneck[] = [];
+	for (const [id, blocks] of blockedCount(tasks)) {
+		const node = nodes.get(id) as DependencyGraphNode;
+		if (blocks > 0 && isOpen(node)) {
+			ranked.push({ id, title: node.title, status: node.status, blocks });
+		}
+	}
+	ranked.sort((a, b) => b.blocks - a.blocks || compareIds(a.id, b.id));
+	return limit === undefined ? ranked : ranked.slice(0, Math.max(0, limit));
 }
 
 /**
@@ -132,7 +194,14 @@ export function blockedCount(tasks: Task[]): Map<string, number> {
  * or not.
  */
 export function findCycles(tasks: Task[]): string[][] {
-	return stronglyConnected(buildDependencyGraph(tasks).nodes, () => true);
+	const { nodes } = buildDependencyGraph(tasks);
+	return stronglyConnectedComponents(
+		[...nodes.keys()],
+		(id) => (nodes.get(id) as DependencyGraphNode).dependencies
+	)
+		.filter((group) => group.length > 1)
+		.map((group) => group.sort(compareIds))
+		.sort((a, b) => compareIds(a[0], b[0]));
 }
 
 /**
@@ -142,36 +211,61 @@ export function findCycles(tasks: Task[]): string[][] {
  */
 export function criticalPath(tasks: Task[]): string[] {
 	const { nodes } = buildDependencyGraph(tasks);
-	const cyclic = new Set(stronglyConnected(nodes, isOpen).flat());
-	const usable = (id: string) => {
-		const node = nodes.get(id) as DependencyGraphNode;
-		return isOpen(node) && !cyclic.has(id);
-	};
+	const open = [...nodes.values()].filter(isOpen).map((n) => n.id);
+	const isOpenId = (id: string) => isOpen(nodes.get(id) as DependencyGraphNode);
+	const cyclic = new Set(
+		stronglyConnectedComponents(
+			open,
+			(id) => (nodes.get(id) as DependencyGraphNode).dependencies,
+			isOpenId
+		)
+			.filter((group) => group.length > 1)
+			.flat()
+	);
+	const usable = open.filter((id) => !cyclic.has(id));
+	const usableDeps = (id: string) =>
+		(nodes.get(id) as DependencyGraphNode).dependencies.filter(
+			(d) => isOpenId(d) && !cyclic.has(d)
+		);
 
-	// Longest chain ending at each task, and the dependency it extends
+	// Topological order (dependencies first), then longest chain ending at each
+	const waiting = new Map<string, number>();
+	for (const id of usable) waiting.set(id, usableDeps(id).length);
+	const order = usable.filter((id) => waiting.get(id) === 0);
+	for (let i = 0; i < order.length; i++) {
+		for (const dependent of (nodes.get(order[i]) as DependencyGraphNode)
+			.dependents) {
+			if (!waiting.has(dependent)) continue;
+			const left = (waiting.get(dependent) as number) - 1;
+			waiting.set(dependent, left);
+			if (left === 0) order.push(dependent);
+		}
+	}
+
 	const best = new Map<string, { length: number; via: string | null }>();
-	const measure = (id: string): number => {
-		const known = best.get(id);
-		if (known) return known.length;
-		let via: string | null = null;
+	let end: string | null = null;
+	for (const id of order) {
 		let length = 1;
-		const deps = (nodes.get(id) as DependencyGraphNode).dependencies
-			.filter(usable)
-			.sort(compareIds);
-		for (const dep of deps) {
-			const candidate = measure(dep) + 1;
-			if (candidate > length) {
+		let via: string | null = null;
+		for (const dep of usableDeps(id)) {
+			const candidate = (best.get(dep) as { length: number }).length + 1;
+			if (
+				candidate > length ||
+				(candidate === length && via !== null && compareIds(dep, via) < 0)
+			) {
 				length = candidate;
 				via = dep;
 			}
 		}
 		best.set(id, { length, via });
-		return length;
-	};
-
-	let end: string | null = null;
-	for (const id of [...nodes.keys()].filter(usable).sort(compareIds)) {
-		if (end === null || measure(id) > measure(end)) end = id;
+		const bestEnd = end === null ? null : (best.get(end) as { length: number });
+		if (
+			bestEnd === null ||
+			length > bestEnd.length ||
+			(length === bestEnd.length && compareIds(id, end as string) < 0)
+		) {
+			end = id;
+		}
 	}
 
 	const path: string[] = [];
@@ -181,50 +275,70 @@ export function criticalPath(tasks: Task[]): string[] {
 	return path;
 }
 
-/** Tarjan's algorithm over the nodes `include` accepts; groups of 2+ only */
-function stronglyConnected(
-	nodes: Map<string, DependencyGraphNode>,
-	include: (node: DependencyGraphNode) => boolean
+/**
+ * Iterative Tarjan over the listed nodes, following `next` edges to nodes
+ * `include` accepts. Returns every component (singletons too); a component is
+ * emitted only after every component reachable from it.
+ */
+function stronglyConnectedComponents(
+	ids: string[],
+	next: (id: string) => string[],
+	include: (id: string) => boolean = () => true
 ): string[][] {
 	const index = new Map<string, number>();
 	const low = new Map<string, number>();
 	const onStack = new Set<string>();
 	const stack: string[] = [];
-	const groups: string[][] = [];
+	const components: string[][] = [];
 	let counter = 0;
 
-	const visit = (id: string): void => {
-		index.set(id, counter);
-		low.set(id, counter);
-		counter++;
-		stack.push(id);
-		onStack.add(id);
+	for (const root of ids) {
+		if (index.has(root)) continue;
+		const work: Array<{ id: string; edges: string[]; at: number }> = [];
+		const enter = (id: string) => {
+			index.set(id, counter);
+			low.set(id, counter);
+			counter++;
+			stack.push(id);
+			onStack.add(id);
+			work.push({ id, edges: next(id).filter(include), at: 0 });
+		};
+		enter(root);
 
-		const node = nodes.get(id) as DependencyGraphNode;
-		for (const dep of node.dependencies) {
-			if (!include(nodes.get(dep) as DependencyGraphNode)) continue;
-			if (!index.has(dep)) {
-				visit(dep);
-				low.set(id, Math.min(low.get(id) as number, low.get(dep) as number));
-			} else if (onStack.has(dep)) {
-				low.set(id, Math.min(low.get(id) as number, index.get(dep) as number));
+		while (work.length) {
+			const frame = work[work.length - 1];
+			if (frame.at < frame.edges.length) {
+				const to = frame.edges[frame.at++];
+				if (!index.has(to)) {
+					enter(to);
+				} else if (onStack.has(to)) {
+					low.set(
+						frame.id,
+						Math.min(low.get(frame.id) as number, index.get(to) as number)
+					);
+				}
+				continue;
+			}
+
+			work.pop();
+			if (low.get(frame.id) === index.get(frame.id)) {
+				const group: string[] = [];
+				let member: string;
+				do {
+					member = stack.pop() as string;
+					onStack.delete(member);
+					group.push(member);
+				} while (member !== frame.id);
+				components.push(group);
+			}
+			const parent = work[work.length - 1];
+			if (parent) {
+				low.set(
+					parent.id,
+					Math.min(low.get(parent.id) as number, low.get(frame.id) as number)
+				);
 			}
 		}
-
-		if (low.get(id) === index.get(id)) {
-			const group: string[] = [];
-			let member: string;
-			do {
-				member = stack.pop() as string;
-				onStack.delete(member);
-				group.push(member);
-			} while (member !== id);
-			if (group.length > 1) groups.push(group.sort(compareIds));
-		}
-	};
-
-	for (const node of nodes.values()) {
-		if (include(node) && !index.has(node.id)) visit(node.id);
 	}
-	return groups.sort((a, b) => compareIds(a[0], b[0]));
+	return components;
 }
