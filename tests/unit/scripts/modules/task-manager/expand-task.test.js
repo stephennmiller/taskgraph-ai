@@ -434,6 +434,29 @@ describe('expandTask', () => {
 			);
 		});
 
+		test('should record AI-chosen subtask dependencies as inferred', async () => {
+			const context = {
+				mcpLog: createMcpLogMock(),
+				projectRoot: '/mock/project/root'
+			};
+
+			const result = await expandTask(
+				'tasks/tasks.json',
+				'2',
+				3,
+				false,
+				'',
+				context,
+				false
+			);
+
+			const [first, second, third] = result.task.subtasks;
+			expect(first.metadata).toBeUndefined();
+			// sibling marks are keyed dotted under the parent task (2)
+			expect(second.metadata.dependencySources).toEqual({ 2.1: 'inferred' });
+			expect(third.metadata.dependencySources).toEqual({ 2.2: 'inferred' });
+		});
+
 		test('should handle research flag correctly', async () => {
 			// Arrange
 			const tasksPath = 'tasks/tasks.json';

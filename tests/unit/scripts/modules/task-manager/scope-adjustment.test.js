@@ -193,6 +193,75 @@ describe('Scope Adjustment Commands', () => {
 		});
 	});
 
+	describe('dependency provenance of regenerated subtasks', () => {
+		it('records sibling dependencies the AI chose as inferred, keyed dotted under the task', async () => {
+			const task = {
+				id: 1,
+				title: 'Task',
+				description: 'Description',
+				details: 'Details',
+				status: 'pending',
+				subtasks: [
+					{ id: 1, title: 'Old A', status: 'pending', dependencies: [] },
+					{ id: 2, title: 'Old B', status: 'pending', dependencies: [] }
+				]
+			};
+			readJSON.mockReturnValue({ tasks: [structuredClone(task)] });
+			taskExists.mockReturnValue(true);
+			findTaskById.mockReturnValue({ task: structuredClone(task) });
+			generateObjectService
+				.mockResolvedValueOnce({
+					mainResult: {
+						title: 'Bigger task',
+						description: 'Description',
+						details: 'Details',
+						testStrategy: 'Tests'
+					},
+					telemetryData: {}
+				})
+				.mockResolvedValueOnce({
+					mainResult: {
+						subtasks: [
+							{
+								id: 1,
+								title: 'New A',
+								description: 'a',
+								dependencies: [],
+								details: 'a'
+							},
+							{
+								id: 2,
+								title: 'New B',
+								description: 'b',
+								dependencies: ['1.1'],
+								details: 'b'
+							}
+						]
+					},
+					telemetryData: {}
+				});
+
+			await scopeUpTask(
+				'/test/tasks.json',
+				[1],
+				'regular',
+				null,
+				{ projectRoot: '/test/project', tag: 'master', outputType: 'cli' },
+				'json'
+			);
+
+			const written = writeJSON.mock.calls[0][1].tasks[0];
+			expect(written.subtasks.map((st) => st.title)).toEqual([
+				'New A',
+				'New B'
+			]);
+			expect(written.subtasks[0].metadata).toBeUndefined();
+			expect(written.subtasks[1].metadata.dependencySources).toEqual({
+				1.1: 'inferred'
+			});
+		});
+	});
+
 	describe('scopeDownTask', () => {
 		it('should decrease task complexity with regular strength', async () => {
 			const mockTasksData = {

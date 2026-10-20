@@ -1,22 +1,12 @@
-import fs from 'fs';
+import { theme } from '@tm/cli/theme';
+import {
+	assignMetadata,
+	reconcileDependencySources,
+	withoutReservedMetadata
+} from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
-
-import {
-	findProjectRoot,
-	flattenTasksWithSubtasks,
-	readJSON,
-	truncate,
-	writeJSON
-} from '../utils.js';
-
-import {
-	displayAiUsageSummary,
-	startLoadingIndicator,
-	stopLoadingIndicator
-} from '../ui.js';
-
-import { theme } from '@tm/cli/theme';
+import fs from 'fs';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -25,8 +15,20 @@ import {
 import { createBridgeLogger } from '../bridge-utils.js';
 import { hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
+import {
+	displayAiUsageSummary,
+	startLoadingIndicator,
+	stopLoadingIndicator
+} from '../ui.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
+import {
+	findProjectRoot,
+	flattenTasksWithSubtasks,
+	readJSON,
+	truncate,
+	writeJSON
+} from '../utils.js';
 
 /**
  * Update a task by ID with new information using the unified AI service.
@@ -52,13 +54,9 @@ async function updateTaskById(
 	outputFormat = 'text',
 	appendMode = false
 ) {
-	const {
-		session,
-		mcpLog,
-		projectRoot: providedProjectRoot,
-		tag,
-		metadata
-	} = context;
+	const { session, mcpLog, projectRoot: providedProjectRoot, tag } = context;
+	// dependencySources is reserved for dependency provenance
+	const metadata = withoutReservedMetadata(context.metadata);
 	const { report, isMCP } = createBridgeLogger(mcpLog, session);
 
 	try {
@@ -434,6 +432,18 @@ async function updateTaskById(
 						})
 					};
 					currentSubtaskId++;
+					// Dependencies the AI added are inferred; earlier marks stay.
+					// Known limit: subtasks are renumbered above without remapping their
+					// sibling dependencies, so when the AI reorders subtasks a sibling
+					// dependency compares by its new number and can change source.
+					assignMetadata(
+						correctedSubtask,
+						reconcileDependencySources(
+							correctedSubtask,
+							originalSubtask,
+							taskToUpdate.id
+						)
+					);
 					return correctedSubtask;
 				});
 				report(
@@ -491,9 +501,14 @@ async function updateTaskById(
 			// --- Preserve and Merge Metadata ---
 			// AI responses don't include metadata (AI schema excludes it)
 			// Preserve existing metadata from original task and merge new metadata if provided
-			if (taskToUpdate.metadata || metadata) {
+			// Dependencies the AI added are recorded as inferred; earlier marks stay
+			const dependencyMetadata = reconcileDependencySources(
+				updatedTask,
+				taskToUpdate
+			);
+			if (dependencyMetadata || metadata) {
 				updatedTask.metadata = {
-					...(taskToUpdate.metadata || {}),
+					...(dependencyMetadata || {}),
 					...(metadata || {})
 				};
 			}

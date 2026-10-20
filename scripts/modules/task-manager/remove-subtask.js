@@ -1,3 +1,4 @@
+import { assignMetadata, rekeyDependencySources } from '@tm/core';
 import { log, readJSON, writeJSON } from '../utils.js';
 
 /**
@@ -89,6 +90,12 @@ async function removeSubtask(
 				dependencies: removedSubtask.dependencies || [],
 				priority: parentTask.priority || 'medium' // Inherit priority from parent
 			};
+
+			// Keep metadata (and its dependency marks, re-keyed for top level)
+			assignMetadata(
+				convertedTask,
+				rekeyDependencySources(removedSubtask, parentId, undefined)
+			);
 
 			// Add the parent task as a dependency if not already present
 			if (!convertedTask.dependencies.includes(parentId)) {

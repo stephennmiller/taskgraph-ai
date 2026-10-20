@@ -1,14 +1,14 @@
-import path from 'path';
+import { theme } from '@tm/cli/theme';
+import { assignMetadata, reconcileDependencySources } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
-
-import { theme } from '@tm/cli/theme';
+import path from 'path';
 import {
 	DEFAULT_TASK_PRIORITY,
-	TASK_PRIORITY_OPTIONS,
 	isValidTaskPriority,
-	normalizeTaskPriority
+	normalizeTaskPriority,
+	TASK_PRIORITY_OPTIONS
 } from '../../../src/constants/task-priority.js';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
@@ -23,6 +23,7 @@ import {
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
+import ContextGatherer from '../utils/contextGatherer.js';
 import {
 	log as consoleLog,
 	ensureTagMetadata,
@@ -32,7 +33,6 @@ import {
 	truncate,
 	writeJSON
 } from '../utils.js';
-import ContextGatherer from '../utils/contextGatherer.js';
 
 /**
  * Get all tasks from all tags
@@ -514,6 +514,12 @@ async function addTask(
 				});
 			}
 		}
+
+		// Dependencies the user passed stay explicit; any the AI added are inferred
+		assignMetadata(
+			newTask,
+			reconcileDependencySources(newTask, { dependencies: numericDependencies })
+		);
 
 		// Add the task to the tasks array OF THE CORRECT TAG
 		rawData[targetTag].tasks.push(newTask);

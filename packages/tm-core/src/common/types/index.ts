@@ -153,6 +153,10 @@ export interface Task extends TaskImplementationMetadata {
 	 * User-defined metadata that survives all task operations.
 	 * Use for external IDs, custom workflow data, integrations, etc.
 	 * This field is preserved through AI operations, updates, and serialization.
+	 *
+	 * Reserved key: `dependencySources` records which dependencies the AI
+	 * inferred (see modules/dependencies/dependency-provenance.ts). Don't
+	 * store anything else under it.
 	 */
 	metadata?: Record<string, unknown>;
 }
@@ -172,6 +176,12 @@ export interface Subtask extends Omit<Task, 'id' | 'subtasks'> {
  */
 export interface TaskMetadata {
 	version: string;
+	/**
+	 * On-disk schema version of the tag's data in tasks.json. Absent means
+	 * version 1 (files written before the marker existed). Files with a higher
+	 * version than this build understands still load, with a warning.
+	 */
+	schemaVersion?: number;
 	lastModified: string;
 	taskCount: number;
 	completedCount: number;
