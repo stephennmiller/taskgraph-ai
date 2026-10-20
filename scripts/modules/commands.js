@@ -1412,50 +1412,47 @@ ${result.result}
 		.option('--all', 'Clear subtasks from all tasks')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			const taskIds = options.id;
-			const all = options.all;
-
-			// Initialize TaskGraph
-			const taskGraph = initTaskGraph({
-				tasksPath: options.file || true,
-				tag: options.tag
-			});
-
-			const tag = taskGraph.getCurrentTag();
-
-			// Show current tag context
-			await displayCurrentTagIndicator(tag);
-
-			if (!taskIds && !all) {
-				console.error(
-					chalk.red(
-						'Error: Please specify task IDs with --id=<ids> or use --all to clear all tasks'
-					)
+			if (!options.id && !options.all) {
+				printError(
+					'Choose which tasks to clear',
+					'Use `--id=<ids>`, such as `--id=3,5`, or `--all`'
 				);
 				process.exit(1);
 			}
 
-			if (all) {
-				// If --all is specified, get all task IDs
-				const data = readJSON(
-					taskGraph.getTasksPath(),
-					taskGraph.getProjectRoot(),
-					tag
-				);
-				if (!data || !data.tasks) {
-					console.error(chalk.red('Error: No valid tasks found'));
-					process.exit(1);
+			const taskGraph = initTaskGraph({
+				tasksPath: options.file || true,
+				tag: options.tag
+			});
+			const tag = taskGraph.getCurrentTag();
+			const tasksPath = taskGraph.getTasksPath();
+			const projectRoot = taskGraph.getProjectRoot();
+
+			await displayCurrentTagIndicator(tag);
+
+			let taskIds = options.id;
+			if (options.all) {
+				const data = readJSON(tasksPath, projectRoot, tag);
+				taskIds = (data?.tasks ?? []).map((t) => t.id).join(',');
+				if (!taskIds) {
+					console.log('No subtasks to clear');
+					return;
 				}
-				const allIds = data.tasks.map((t) => t.id).join(',');
-				clearSubtasks(taskGraph.getTasksPath(), allIds, {
-					projectRoot: taskGraph.getProjectRoot(),
-					tag
-				});
-			} else {
-				clearSubtasks(taskGraph.getTasksPath(), taskIds, {
-					projectRoot: taskGraph.getProjectRoot(),
-					tag
-				});
+			}
+
+			try {
+				const result = clearSubtasks(tasksPath, taskIds, { projectRoot, tag });
+				console.log(ui.formatClearedSubtasks(result));
+			} catch (error) {
+				if (error?.name !== 'ClearSubtasksError') throw error;
+				const hints = {
+					SUBTASK_ID: `Use \`taskgraph remove-subtask --id=${error.taskId}\` for one subtask, or \`--id=${String(error.taskId).split('.')[0]}\` for all`,
+					INVALID_TASK_ID: 'Use task numbers, such as `--id=3,5`',
+					TASK_NOT_FOUND: 'Run `taskgraph list` to see task IDs',
+					NO_TASKS: `Run \`taskgraph list\` to check the "${tag}" tag`
+				};
+				printError(`${error.message}; nothing was cleared`, hints[error.code]);
+				process.exit(1);
 			}
 		});
 

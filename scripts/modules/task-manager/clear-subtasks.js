@@ -1,133 +1,110 @@
-import path from 'path';
-import boxen from 'boxen';
-import chalk from 'chalk';
-import Table from 'cli-table3';
-
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
-import { displayBanner } from '../ui.js';
-import { isSilentMode, log, readJSON, truncate, writeJSON } from '../utils.js';
+import { log, readJSON, writeJSON } from '../utils.js';
 
 /**
- * Clear subtasks from specified tasks
+ * An error for a task ID that clearSubtasks can't act on. Nothing is cleared
+ * when one is found, so a typo in a list of IDs changes nothing.
+ */
+export class ClearSubtasksError extends Error {
+	/**
+	 * @param {'NO_TASKS'|'INVALID_TASK_ID'|'SUBTASK_ID'|'TASK_NOT_FOUND'} code
+	 * @param {string} message
+	 * @param {string} [taskId] - The ID as the user typed it
+	 */
+	constructor(code, message, taskId) {
+		super(message);
+		this.name = 'ClearSubtasksError';
+		this.code = code;
+		this.taskId = taskId;
+	}
+}
+
+/**
+ * Check each ID and find its task, before anything changes.
+ * @returns {Array<Object>} The tasks, in the order given, without duplicates
+ */
+function resolveTasks(tasks, taskIds) {
+	const ids = [
+		...new Set(
+			String(taskIds)
+				.split(',')
+				.map((id) => id.trim())
+				.filter(Boolean)
+		)
+	];
+	if (ids.length === 0) {
+		throw new ClearSubtasksError('INVALID_TASK_ID', 'No task IDs given');
+	}
+
+	return ids.map((id) => {
+		// parseInt('1.2') is 1, which used to clear every subtask of task 1
+		if (/^\d+\.\d+/.test(id)) {
+			throw new ClearSubtasksError(
+				'SUBTASK_ID',
+				`${id} is a subtask, not a task`,
+				id
+			);
+		}
+		if (!/^\d+$/.test(id)) {
+			throw new ClearSubtasksError(
+				'INVALID_TASK_ID',
+				`"${id}" isn't a task ID`,
+				id
+			);
+		}
+		const task = tasks.find((t) => String(t.id) === id);
+		if (!task) {
+			throw new ClearSubtasksError(
+				'TASK_NOT_FOUND',
+				`Task ${id} not found`,
+				id
+			);
+		}
+		return task;
+	});
+}
+
+/**
+ * Remove every subtask from the given tasks.
+ *
+ * Prints nothing: the CLI formats the result, and MCP returns it.
+ *
  * @param {string} tasksPath - Path to the tasks.json file
- * @param {string} taskIds - Task IDs to clear subtasks from
+ * @param {string} taskIds - Comma-separated task IDs
  * @param {Object} context - Context object containing projectRoot and tag
  * @param {string} [context.projectRoot] - Project root path
  * @param {string} [context.tag] - Tag for the task
+ * @returns {{cleared: Array<{id: number|string, title: string, count: number}>, empty: Array<{id: number|string, title: string}>}}
+ *   Tasks whose subtasks were removed, and tasks that had none
+ * @throws {ClearSubtasksError} If an ID is malformed, a subtask ID, or not found
  */
 function clearSubtasks(tasksPath, taskIds, context = {}) {
 	const { projectRoot, tag } = context;
 	log('debug', `Reading tasks from ${tasksPath}...`);
 	const data = readJSON(tasksPath, projectRoot, tag);
 	if (!data || !data.tasks) {
-		log('error', 'No valid tasks found.');
-		process.exit(1);
+		throw new ClearSubtasksError('NO_TASKS', 'No valid tasks found');
 	}
 
-	// Handle multiple task IDs (comma-separated)
-	const taskIdArray = taskIds.split(',').map((id) => id.trim());
-	let clearedCount = 0;
+	const tasks = resolveTasks(data.tasks, taskIds);
+	const cleared = [];
+	const empty = [];
 
-	// Create a summary table for the cleared subtasks
-	const summaryTable = new Table({
-		head: [
-			chalk.cyan.bold('Task ID'),
-			chalk.cyan.bold('Task Title'),
-			chalk.cyan.bold('Subtasks Cleared')
-		],
-		colWidths: [10, 50, 20],
-		style: { head: [], border: [] }
-	});
-
-	taskIdArray.forEach((taskId) => {
-		const id = parseInt(taskId, 10);
-		if (Number.isNaN(id)) {
-			log('error', `Invalid task ID: ${taskId}`);
-			return;
+	for (const task of tasks) {
+		const count = task.subtasks?.length ?? 0;
+		if (count === 0) {
+			empty.push({ id: task.id, title: task.title });
+			continue;
 		}
-
-		const task = data.tasks.find((t) => t.id === id);
-		if (!task) {
-			log('error', `Task ${id} not found`);
-			return;
-		}
-
-		if (!task.subtasks || task.subtasks.length === 0) {
-			log('info', `Task ${id} has no subtasks to clear`);
-			summaryTable.push([
-				id.toString(),
-				truncate(task.title, 47),
-				chalk.yellow('No subtasks')
-			]);
-			return;
-		}
-
-		const subtaskCount = task.subtasks.length;
 		task.subtasks = [];
-		clearedCount++;
-		log('debug', `Cleared ${subtaskCount} subtasks from task ${id}`);
-
-		summaryTable.push([
-			id.toString(),
-			truncate(task.title, 47),
-			chalk.green(
-				`${subtaskCount} ${subtaskCount === 1 ? 'subtask' : 'subtasks'} cleared`
-			)
-		]);
-	});
-
-	if (clearedCount > 0) {
-		writeJSON(tasksPath, data, projectRoot, tag);
-
-		// Show summary table
-		if (!isSilentMode()) {
-			console.log(
-				boxen(theme.text.bold('Subtask Clearing Summary:'), {
-					padding: { left: 2, right: 2, top: 0, bottom: 0 },
-					margin: { top: 1, bottom: 0 },
-					borderColor: BORDER_COLOR,
-					borderStyle: 'round'
-				})
-			);
-			console.log(summaryTable.toString());
-		}
-
-		// Success message
-		if (!isSilentMode()) {
-			console.log(
-				boxen(
-					chalk.green(
-						`Cleared subtasks from ${chalk.bold(clearedCount)} ${clearedCount === 1 ? 'task' : 'tasks'}`
-					),
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1 }
-					}
-				)
-			);
-
-			// Next steps suggestion
-			console.log(
-				boxen(
-					theme.text.bold('Next Steps:') +
-						'\n\n' +
-						`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to generate new subtasks\n` +
-						`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph list --with-subtasks')} to verify changes`,
-					{
-						padding: 1,
-						borderColor: 'cyan',
-						borderStyle: 'round',
-						margin: { top: 1 }
-					}
-				)
-			);
-		}
-	} else {
-		// The lines above already say why for each task
-		log('info', 'No subtasks were cleared');
+		cleared.push({ id: task.id, title: task.title, count });
+		log('debug', `Cleared ${count} subtasks from task ${task.id}`);
 	}
+
+	if (cleared.length > 0) {
+		writeJSON(tasksPath, data, projectRoot, tag);
+	}
+
+	return { cleared, empty };
 }
 
 export default clearSubtasks;
