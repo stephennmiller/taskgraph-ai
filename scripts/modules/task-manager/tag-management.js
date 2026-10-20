@@ -22,6 +22,29 @@ import {
 import findNextTask from './find-next-task.js';
 
 /**
+ * Read tasks.json, treating a missing file as an empty master tag. A project
+ * has no tasks.json until its first task is added, and listing or creating
+ * tags shouldn't fail before then.
+ * @throws {Error} If the file exists but can't be read
+ */
+function readTasksOrEmpty(tasksPath, projectRoot) {
+	const data = readJSON(tasksPath, projectRoot);
+	if (data) return data;
+	if (!fs.existsSync(tasksPath)) {
+		return {
+			master: {
+				tasks: [],
+				metadata: {
+					created: new Date().toISOString(),
+					description: 'Tasks for master context'
+				}
+			}
+		};
+	}
+	throw new Error(`Could not read tasks file at ${tasksPath}`);
+}
+
+/**
  * Create a new tag context
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {string} tagName - Name of the new tag to create
@@ -76,10 +99,7 @@ async function createTag(
 		logFn.debug(`Creating new tag: ${tagName}`);
 
 		// Read current tasks data
-		const data = readJSON(tasksPath, projectRoot);
-		if (!data) {
-			throw new Error(`Could not read tasks file at ${tasksPath}`);
-		}
+		const data = readTasksOrEmpty(tasksPath, projectRoot);
 
 		// Use raw tagged data for tag operations - ensure we get the actual tagged structure
 		let rawData;
@@ -543,10 +563,7 @@ async function tags(
 		logFn.debug('Using file storage for tags');
 
 		// Read current tasks data
-		const data = readJSON(tasksPath, projectRoot);
-		if (!data) {
-			throw new Error(`Could not read tasks file at ${tasksPath}`);
-		}
+		const data = readTasksOrEmpty(tasksPath, projectRoot);
 
 		// Get current tag
 		const currentTag = getCurrentTag(projectRoot);

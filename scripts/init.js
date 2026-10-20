@@ -322,12 +322,14 @@ function createInitialStateFile(targetDir) {
 		return;
 	}
 
-	// Create initial state configuration
+	// Create initial state configuration. A new project has nothing to migrate,
+	// so the "TaskGraph now supports tags" notice for upgraded projects is
+	// marked as shown
 	const initialState = {
 		currentTag: 'master',
 		lastSwitched: new Date().toISOString(),
 		branchTagMapping: {},
-		migrationNoticeShown: false
+		migrationNoticeShown: true
 	};
 
 	try {
@@ -335,6 +337,32 @@ function createInitialStateFile(targetDir) {
 		log('debug', `Created initial state file: ${stateFilePath}`);
 	} catch (error) {
 		log('error', `Failed to create state file: ${error.message}`);
+	}
+}
+
+/**
+ * Create an empty tasks.json, so adding the first task by hand, listing tags
+ * and every other command work before parse-prd has run. An existing file is
+ * left alone.
+ */
+function createInitialTasksFile(targetDir) {
+	const tasksPath = path.join(targetDir, TASKGRAPH_TASKS_FILE);
+	if (fs.existsSync(tasksPath)) return;
+
+	const emptyTasks = {
+		master: {
+			tasks: [],
+			metadata: {
+				created: new Date().toISOString(),
+				description: 'Tasks for master context'
+			}
+		}
+	};
+	try {
+		fs.writeFileSync(tasksPath, `${JSON.stringify(emptyTasks, null, 2)}\n`);
+		log('debug', `Created empty tasks file: ${tasksPath}`);
+	} catch (error) {
+		log('error', `Failed to create tasks file: ${error.message}`);
 	}
 }
 
@@ -717,6 +745,7 @@ async function createProjectStructure(
 
 	// Create initial state.json file for tag management
 	createInitialStateFile(targetDir);
+	createInitialTasksFile(targetDir);
 
 	// Copy template files with replacements
 	const replacements = {

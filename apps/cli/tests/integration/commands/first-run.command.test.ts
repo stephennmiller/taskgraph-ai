@@ -88,4 +88,75 @@ describe('first run', () => {
 
 		expect(result.stderr).not.toContain('No TaskGraph project');
 	});
+
+	it('adds the first task by hand right after init', () => {
+		// init didn't create tasks.json, and add-task refused to run without it
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+
+		const result = run([
+			'add-task',
+			'--title',
+			'Set up CI',
+			'--description',
+			'Run tests on every push'
+		]);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('Task 1 Created Successfully');
+	});
+
+	it('lists tags right after init', () => {
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+
+		const result = run(['tags']);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('master');
+	});
+
+	it('lists tags in an older project that has no tasks.json yet', () => {
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+		fs.rmSync(path.join(dir, '.taskgraph', 'tasks', 'tasks.json'));
+
+		const result = run(['tags']);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('master');
+	});
+
+	it("doesn't show the tag migration notice in a new project", () => {
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+		run(['add-task', '--title', 'First', '--description', 'd']);
+
+		const result = run(['list']);
+
+		expect(result.stdout).not.toContain('now supports separate task lists');
+	});
+
+	it('adds a task from a subfolder of the project', () => {
+		// add-task looked for .taskgraph/tasks/tasks.json relative to the
+		// current folder, so it failed anywhere but the project root
+		spawnSync('git', ['init', '-q'], { cwd: dir });
+		run(['init', '--yes', '--no-aliases']);
+		const subfolder = path.join(dir, 'src', 'deep');
+		fs.mkdirSync(subfolder, { recursive: true });
+
+		const result = spawnSync(
+			'node',
+			[getCliBinPath(), 'add-task', '--title', 'Nested', '--description', 'd'],
+			{
+				cwd: subfolder,
+				encoding: 'utf8',
+				env: {
+					...process.env,
+					HOME: home,
+					FORCE_COLOR: '0',
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				}
+			}
+		);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('Task 1 Created Successfully');
+	});
 });
