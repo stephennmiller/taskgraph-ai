@@ -16,6 +16,7 @@
 
 import chalk from 'chalk';
 import { theme } from '../theme.js';
+import { PLUGIN_MARKETPLACE, PLUGIN_NAME } from './init-summary-formatters.js';
 
 export interface HelpRow {
 	/** The command, plus a short hint for subcommands (`tags <add|use|…>`) */
@@ -25,7 +26,7 @@ export interface HelpRow {
 
 export interface HelpGroup {
 	title: string;
-	commands: HelpRow[];
+	commands: readonly HelpRow[];
 }
 
 /**
@@ -33,7 +34,7 @@ export interface HelpGroup {
  * registered in two places (commands.js and registerAllCommands), so this list
  * is static rather than read from a registry.
  */
-export const HELP_GROUPS: HelpGroup[] = [
+export const HELP_GROUPS: readonly HelpGroup[] = [
 	{
 		title: 'Daily workflow',
 		commands: [
@@ -116,7 +117,7 @@ export function formatHelp(width = process.stdout.columns || 80): string {
 	];
 
 	for (const group of HELP_GROUPS) {
-		lines.push('', theme.text(chalk.bold(group.title)));
+		lines.push('', theme.heading(group.title));
 		for (const row of group.commands) {
 			lines.push(
 				`${INDENT}${theme.brand(row.name.padEnd(nameWidth))}${GAP}${theme.muted(fit(row.desc, descWidth))}`
@@ -129,8 +130,9 @@ export function formatHelp(width = process.stdout.columns || 80): string {
 		theme.muted('Run ') +
 			theme.brand('taskgraph <command> --help') +
 			theme.muted(' for a command’s flags'),
-		theme.muted('Slash commands for Claude Code: ') +
-			theme.brand('/plugin install taskgraph@taskgraph')
+		theme.muted('The CLI works on its own. For Claude Code slash commands:'),
+		`${INDENT}${theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`)}`,
+		`${INDENT}${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`
 	);
 
 	return lines.join('\n');

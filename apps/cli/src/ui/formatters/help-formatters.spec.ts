@@ -72,12 +72,16 @@ describe('formatHelp', () => {
 		expect(tags?.name).toBe('tags <add|use|remove|rename|copy>');
 	});
 
-	it.each([80, 120])('does not overflow at %i columns', (width) => {
+	it.each([60, 80, 120])('does not overflow at %i columns', (width) => {
 		const lines = stripAnsi(formatHelp(width)).split('\n');
 
 		for (const line of lines) {
 			expect(line.length).toBeLessThanOrEqual(width);
 		}
+	});
+
+	it('cuts no description at 80 columns', () => {
+		expect(stripAnsi(formatHelp(80))).not.toContain('…');
 	});
 
 	it('shows the group titles in order, then the footer', () => {
@@ -87,6 +91,10 @@ describe('formatHelp', () => {
 		expect(positions.every((p) => p >= 0)).toBe(true);
 		expect([...positions].sort((a, b) => a - b)).toEqual(positions);
 		expect(text).toContain('taskgraph <command> --help');
+		expect(text).toContain('works on its own');
+		expect(text).toContain(
+			'/plugin marketplace add stephennmiller/taskgraph-ai'
+		);
 		expect(text).toContain('/plugin install taskgraph@taskgraph');
 	});
 });
