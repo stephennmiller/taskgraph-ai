@@ -1,0 +1,126 @@
+/**
+ * src/ai-providers/claude-code-path-guard.js
+ *
+ * PreToolUse hook that keeps Claude Code's file tools (Read, Grep, Glob)
+ * inside one directory. It is passed to the SDK as a programmatic hook, so it
+ * runs even when no settings sources are loaded.
+ */
+
+import fs from 'fs';
+import path from 'path';
+
+const GUARDED_TOOLS = ['Read', 'Grep', 'Glob'];
+
+/** Resolve symlinks for the longest existing prefix of a path. */
+function realpathOfExistingPrefix(target) {
+	let current = target;
+	const rest = [];
+	for (;;) {
+		try {
+			return path.join(fs.realpathSync(current), ...rest.reverse());
+		} catch {
+			const parent = path.dirname(current);
+			if (parent === current) return target;
+			rest.push(path.basename(current));
+			current = parent;
+		}
+	}
+}
+
+/**
+ * @param {string} root - Absolute, real path of the allowed directory
+ * @param {string} candidate - Path to test, relative paths resolve against root
+ * @returns {boolean} True when candidate is root or inside it
+ */
+export function isInsideRoot(root, candidate) {
+	if (typeof candidate !== 'string') return false;
+	// Shell-style home expansion is not resolved by path.resolve; refuse it
+	if (candidate.startsWith('~')) return false;
+	const resolved = realpathOfExistingPrefix(path.resolve(root, candidate));
+	const relative = path.relative(root, resolved);
+	const leavesRoot = relative === '..' || relative.startsWith(`..${path.sep}`);
+	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
+}
+
+function hasParentSegment(pattern) {
+	return pattern.split(/[\\/]/).includes('..');
+}
+
+/**
+ * The directory an absolute glob is searched from, or null for a relative
+ * glob. Claude Code searches from the last separator before the first glob
+ * character, so `/w/project*` is searched from `/w`, not `/w/project`.
+ * Windows forms (`C:/x`, `C:\\x`, `\\\\server\\share`) count as absolute too.
+ */
+function absoluteGlobBase(pattern) {
+	if (!path.posix.isAbsolute(pattern) && !path.win32.isAbsolute(pattern)) {
+		return null;
+	}
+	const literal = pattern.split(/[*?[{]/)[0];
+	const lastSeparator = Math.max(
+		literal.lastIndexOf('/'),
+		literal.lastIndexOf('\\')
+	);
+	return literal.slice(0, lastSeparator + 1) || literal;
+}
+
+/**
+ * Decide whether a tool call stays inside the root.
+ * @param {string} root - Allowed directory
+ * @param {string} toolName
+ * @param {object} toolInput
+ * @returns {string|null} Reason to deny, or null when the call is allowed
+ */
+export function getPathViolation(root, toolName, toolInput = {}) {
+	if (!GUARDED_TOOLS.includes(toolName)) return null;
+
+	const paths = [toolInput.file_path, toolInput.path].filter(
+		(p) => p !== undefined && p !== null
+	);
+	for (const p of paths) {
+		if (!isInsideRoot(root, p)) {
+			return `${toolName} is limited to the project directory (${root}); ${p} is outside it.`;
+		}
+	}
+
+	// Glob's pattern and Grep's glob can name a directory of their own. (Grep's
+	// pattern is a regex, not a path.)
+	const pattern = toolName === 'Glob' ? toolInput.pattern : toolInput.glob;
+	if (typeof pattern === 'string') {
+		const deny = `${toolName} patterns may not leave the project directory (${root}).`;
+		if (hasParentSegment(pattern) || pattern.startsWith('~')) return deny;
+		const base = absoluteGlobBase(pattern);
+		if (base !== null && !isInsideRoot(root, base)) return deny;
+	}
+	return null;
+}
+
+/**
+ * Build a PreToolUse hook entry that denies file access outside rootDir.
+ * @param {string} rootDir - Project root
+ * @returns {{matcher: string, hooks: Function[]}}
+ */
+export function createPathGuardHook(rootDir) {
+	const root = realpathOfExistingPrefix(path.resolve(rootDir));
+	return {
+		matcher: GUARDED_TOOLS.join('|'),
+		hooks: [
+			async (input) => {
+				const reason = getPathViolation(
+					root,
+					input?.tool_name,
+					input?.tool_input
+				);
+				return reason
+					? {
+							hookSpecificOutput: {
+								hookEventName: 'PreToolUse',
+								permissionDecision: 'deny',
+								permissionDecisionReason: reason
+							}
+						}
+					: {};
+			}
+		]
+	};
+}

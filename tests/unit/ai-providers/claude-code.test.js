@@ -125,7 +125,7 @@ describe('ClaudeCodeProvider', () => {
 			expect(createClaudeCode).toHaveBeenCalledWith(
 				expect.objectContaining({
 					defaultSettings: expect.objectContaining({
-						settingSources: ['user', 'project', 'local']
+						settingSources: []
 					})
 				})
 			);
@@ -150,7 +150,7 @@ describe('ClaudeCodeProvider', () => {
 							type: 'preset',
 							preset: 'claude_code'
 						},
-						settingSources: ['user', 'project', 'local']
+						settingSources: []
 					})
 				})
 			);
@@ -180,7 +180,10 @@ describe('ClaudeCodeProvider', () => {
 			const mockSettings = { maxTokens: 2048 };
 			getClaudeCodeSettingsForCommand.mockReturnValueOnce(mockSettings);
 
-			provider.getClient({ commandName: 'analyze' });
+			provider.getClient({
+				commandName: 'analyze',
+				projectRoot: '/work/project'
+			});
 
 			// Verify the complete configuration structure matches v2.0 migration requirements
 			expect(createClaudeCode).toHaveBeenCalledWith({
@@ -191,8 +194,8 @@ describe('ClaudeCodeProvider', () => {
 						type: 'preset',
 						preset: 'claude_code'
 					},
-					// Restores pre-2.0 behavior: enables loading of CLAUDE.md and settings.json
-					settingSources: ['user', 'project', 'local'],
+					// No settings sources: a project's hooks and CLAUDE.md stay out
+					settingSources: [],
 					env: expect.any(Object),
 					logger: {
 						debug: expect.any(Function),
@@ -206,7 +209,9 @@ describe('ClaudeCodeProvider', () => {
 					permissionMode: 'dontAsk',
 					permissionPrompts: 'none',
 					strictMcpConfig: true,
-					mcpServers: {}
+					mcpServers: {},
+					cwd: '/work/project',
+					hooks: { PreToolUse: [expect.any(Object)] }
 				}
 			});
 		});
@@ -266,7 +271,7 @@ describe('ClaudeCodeProvider', () => {
 			it.each([['main'], ['fallback'], [undefined]])(
 				'gives the %s role read-only repo tools and no web, shell or MCP access',
 				async (role) => {
-					provider.getClient({ role });
+					provider.getClient({ role, projectRoot: '/work/project' });
 
 					const settings = await lastSettings();
 					expect(settings.tools).toEqual(['Read', 'Grep', 'Glob']);
@@ -277,6 +282,61 @@ describe('ClaudeCodeProvider', () => {
 					expect(settings.mcpServers).toEqual({});
 				}
 			);
+
+			it('withholds file tools when no project root is known', async () => {
+				provider.getClient({ role: 'main' });
+
+				const settings = await lastSettings();
+				expect(settings.tools).toEqual([]);
+				expect(settings.allowedTools).toEqual([]);
+				expect(settings.settingSources).toEqual([]);
+				expect(settings.cwd).toBeUndefined();
+			});
+
+			it.each([['main'], ['fallback'], [undefined]])(
+				'isolates settings and scopes files to the project root for the %s role',
+				async (role) => {
+					provider.getClient({ role, projectRoot: '/work/project' });
+
+					const settings = await lastSettings();
+					expect(settings.settingSources).toEqual([]);
+					expect(settings.cwd).toBe('/work/project');
+					expect(settings.additionalDirectories).toBeUndefined();
+					const [guard] = settings.hooks.PreToolUse;
+					expect(guard.matcher).toBe('Read|Grep|Glob');
+				}
+			);
+
+			it('denies reads outside the project root through the hook', async () => {
+				provider.getClient({ role: 'main', projectRoot: '/work/project' });
+
+				const [hook] = (await lastSettings()).hooks.PreToolUse[0].hooks;
+				const out = await hook({
+					tool_name: 'Read',
+					tool_input: { file_path: '/etc/passwd' }
+				});
+				expect(out.hookSpecificOutput.permissionDecision).toBe('deny');
+			});
+
+			it('does not let config settings reopen settings sources or file scope', async () => {
+				const { getClaudeCodeSettingsForCommand } = await import(
+					'../../../scripts/modules/config-manager.js'
+				);
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
+					settingSources: ['user', 'project', 'local'],
+					additionalDirectories: ['/'],
+					cwd: '/',
+					hooks: {}
+				});
+
+				provider.getClient({ role: 'main', projectRoot: '/work/project' });
+
+				const settings = await lastSettings();
+				expect(settings.settingSources).toEqual([]);
+				expect(settings.additionalDirectories).toBeUndefined();
+				expect(settings.cwd).toBe('/work/project');
+				expect(settings.hooks.PreToolUse).toHaveLength(1);
+			});
 
 			it('gives the research role only WebSearch and WebFetch', async () => {
 				provider.getClient({ role: 'research' });
@@ -347,7 +407,7 @@ describe('ClaudeCodeProvider', () => {
 							type: 'preset',
 							preset: 'claude_code'
 						},
-						settingSources: ['user', 'project', 'local']
+						settingSources: []
 					})
 				})
 			);

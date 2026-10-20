@@ -45,7 +45,33 @@ Or edit the roles in `.taskgraph/config.json`:
 }
 ```
 
-The research role is restricted to web search and fetch. It cannot read or change your files and has no shell.
+## What AI calls can access
+
+Each AI call is confined by its role. Your project's own Claude setup, a prompt in a task or PRD, and TaskGraph's own config cannot widen what a call can do.
+
+| | `main` / `fallback` | `research` |
+| --- | --- | --- |
+| Tools | `Read`, `Grep`, `Glob` | `WebSearch`, `WebFetch` |
+| Shell, edit and write tools | Denied | Denied |
+| MCP servers | None | None |
+| Your Claude settings, hooks and `CLAUDE.md` | Not loaded | Not loaded |
+| Files | The project root only (none if TaskGraph can't find the project) | None |
+| Permission prompts | Never shown; anything not allowed is denied | Same |
+| Turn limit | Claude Code's default | 8, unless `maxTurns` is set |
+
+In practice:
+
+- **Your Claude Code setup stays out.** Hooks, `CLAUDE.md`, permission rules and MCP servers from your user, project and local Claude settings are not loaded, so they don't run inside TaskGraph's calls.
+- **File reads stay in the project.** For `main` and `fallback`, a `PreToolUse` hook refuses any `Read`, `Grep` or `Glob` whose path resolves outside the project root. Symlinks are resolved first, so a link in the repo that points elsewhere is refused, as are `..` segments, `~` paths, absolute paths and glob patterns that climb out.
+- **Config can't widen it.** The settings below are applied first and these limits after, so config can't add tools or MCP servers, load settings sources, add directories or replace the hook. One exception: `pathToClaudeCodeExecutable` runs whatever program it names, so check `.taskgraph/config.json` before running TaskGraph in a repo you didn't write.
+
+What this doesn't cover:
+
+- Anything inside the project root can be read and sent to the model, including files such as `.env`. The boundary is the project root, not a per-file filter.
+- The path check runs just before each tool call. A symlink swapped by another process between the check and the read isn't caught; nothing in the call itself can write.
+- It's a check on Claude Code's file tools, not an OS sandbox. It relies on shell tools being denied.
+- A `Grep` regex isn't treated as a path; only its `path` and `glob` arguments are checked.
+- The project root is the one TaskGraph uses for the command: `--project-root` if you pass it, otherwise the project it finds from the current directory. If that's a parent of several projects, all of them are readable. If no root is found, `main` and `fallback` get no file tools.
 
 ## Structured outputs
 
@@ -60,16 +86,7 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
   "claudeCode": {
     "maxTurns": 5,
     "customSystemPrompt": "You are a helpful assistant focused on code quality",
-    "appendSystemPrompt": "Always follow coding best practices",
-    "permissionMode": "default",
-    "allowedTools": ["Read", "LS"],
-    "disallowedTools": ["Write", "Edit"],
-    "mcpServers": {
-      "mcp-server-name": {
-        "command": "npx",
-        "args": ["-y", "mcp-serve"]
-      }
-    }
+    "appendSystemPrompt": "Always follow coding best practices"
   },
   "commandSpecific": {
     "parse-prd": {
@@ -89,12 +106,9 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 | `maxTurns` | Maximum conversation turns in a single request. Useful for complex multi-step operations. |
 | `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
 | `appendSystemPrompt` | Adds standards or context to the system prompt. |
-| `permissionMode` | One of `default`, `acceptEdits`, `plan` or `bypassPermissions`. |
-| `allowedTools`, `disallowedTools` | Restrict tools, for example for read-only analysis. |
-| `mcpServers` | Extra MCP servers available to Claude Code during TaskGraph operations. |
 | `pathToClaudeCodeExecutable` | Path to the `claude` executable if it is not on your `PATH`. |
 
-See the [Claude Code settings documentation](https://docs.claude.com/en/docs/claude-code/settings) for the meaning of each value.
+Tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here. See [What AI calls can access](#what-ai-calls-can-access).
 
 ## Notes
 

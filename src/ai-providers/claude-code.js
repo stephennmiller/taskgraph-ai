@@ -12,12 +12,14 @@
  */
 
 import { execSync } from 'child_process';
+import path from 'path';
 import { createClaudeCode } from 'ai-sdk-provider-claude-code';
 import {
 	getClaudeCodeSettingsForCommand,
 	getSupportedModelsForProvider
 } from '../../scripts/modules/config-manager.js';
 import { log } from '../../scripts/modules/utils.js';
+import { createPathGuardHook } from './claude-code-path-guard.js';
 import { BaseAIProvider } from './base-provider.js';
 
 let _claudeCliChecked = false;
@@ -26,23 +28,40 @@ let _claudeCliAvailable = null;
 // Tools each role may use. Everything else is denied (deny by default).
 // Research reaches the web but has no file or shell tools, so a hostile page
 // cannot drive local file access. Other roles can read files for codebase
-// analysis but cannot reach the web or write anything. Main and fallback still
-// load the repo's own Claude settings (CLAUDE.md, hooks), the same trust model
-// as running `claude` in that repo, and Read is not limited to the repo.
+// analysis but cannot reach the web or write anything.
+//
+// Isolation, for every role:
+// - settingSources: [] loads no user, project or local settings, so a repo's
+//   hooks, CLAUDE.md, permission rules and MCP config never run inside
+//   TaskGraph's AI calls.
+// Main and fallback additionally:
+// - cwd is the project root and no additionalDirectories are added. With no
+//   known project root they get no file tools at all.
+// - A programmatic PreToolUse hook denies Read/Grep/Glob calls that resolve
+//   (symlinks included) outside the project root. Programmatic hooks are not
+//   settings, so they still run with no settings sources.
 const RESEARCH_TOOLS = ['WebSearch', 'WebFetch'];
 const REPO_READ_TOOLS = ['Read', 'Grep', 'Glob'];
 const DEFAULT_RESEARCH_MAX_TURNS = 8;
 
 /**
  * Settings that confine a Claude Code session to the tools its role needs.
- * Applied after user config so config cannot widen the tool set.
+ * Applied after user config so config cannot widen the tool set, reopen
+ * settings sources or move the file boundary.
  * @param {string} [role] - 'main', 'research' or 'fallback'
  * @param {object} settings - Settings from config, used for maxTurns
+ * @param {string|null} projectRoot - Directory file tools are confined to
  * @returns {object} SDK settings
  */
-function getRoleRestrictions(role, settings) {
+function getRoleRestrictions(role, settings, projectRoot) {
 	const isResearch = role === 'research';
-	const tools = isResearch ? RESEARCH_TOOLS : REPO_READ_TOOLS;
+	// Without a known project root there is no boundary to enforce, so the
+	// file tools are withheld rather than scoped to wherever the process runs
+	const tools = isResearch
+		? RESEARCH_TOOLS
+		: projectRoot
+			? REPO_READ_TOOLS
+			: [];
 
 	return {
 		tools: [...tools],
@@ -53,11 +72,17 @@ function getRoleRestrictions(role, settings) {
 		// Ignore MCP servers from user settings and claude.ai connectors
 		strictMcpConfig: true,
 		mcpServers: {},
-		...(isResearch && {
-			// Do not inherit user hooks, CLAUDE.md or permission rules
-			settingSources: [],
-			maxTurns: settings.maxTurns ?? DEFAULT_RESEARCH_MAX_TURNS
-		})
+		// Do not inherit user hooks, CLAUDE.md or permission rules
+		settingSources: [],
+		...(isResearch
+			? { maxTurns: settings.maxTurns ?? DEFAULT_RESEARCH_MAX_TURNS }
+			: {
+					cwd: projectRoot ?? undefined,
+					additionalDirectories: undefined,
+					hooks: projectRoot
+						? { PreToolUse: [createPathGuardHook(projectRoot)] }
+						: {}
+				})
 	};
 }
 
@@ -138,6 +163,7 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 	 * @param {object} params - Client parameters
 	 * @param {string} [params.commandName] - Command name for settings lookup
 	 * @param {string} [params.role] - AI role ('main', 'research', 'fallback') used to restrict tools
+	 * @param {string} [params.projectRoot] - Directory file tools are confined to; without it main and fallback get no file tools
 	 * @returns {Function} Claude Code provider function
 	 * @throws {Error} If Claude Code CLI is not available or client creation fails
 	 */
@@ -145,6 +171,10 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 		try {
 			const settings =
 				getClaudeCodeSettingsForCommand(params.commandName) || {};
+
+			const projectRoot = params.projectRoot
+				? path.resolve(params.projectRoot)
+				: null;
 
 			// The SDK reads the environment when a query runs, so the key choice has
 			// to travel with the client rather than be swapped around this call.
@@ -165,8 +195,6 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 						type: 'preset',
 						preset: 'claude_code'
 					},
-					// Enable loading of CLAUDE.md and settings.json files
-					settingSources: ['user', 'project', 'local'],
 					env,
 					// The SDK's own warnings (e.g. "unknown tool ID") are internal; keep
 					// them out of the terminal unless debug logging is on
@@ -177,7 +205,7 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 						error: (message) => log('error', message)
 					},
 					...settings,
-					...getRoleRestrictions(params.role, settings)
+					...getRoleRestrictions(params.role, settings, projectRoot)
 				}
 			});
 		} catch (error) {
