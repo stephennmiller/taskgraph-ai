@@ -142,6 +142,25 @@ describe('fix-dependencies', () => {
 		);
 	});
 
+	it('names a non-numeric dependency as written, not NaN', async () => {
+		const { result } = await fix([task(1, [], [subtask(1, ['abc'])])]);
+
+		expect(result.fixes).toEqual([
+			{ type: 'missing', taskId: '1.1', dependencyId: 'abc' }
+		]);
+	});
+
+	it('leaves a loop that runs through a task and a subtask', async () => {
+		// Task 1 waits on its subtask 1.1, which waits on task 1
+		const { result } = await fix([task(1, ['1.1'], [subtask(1, ['1'])])]);
+
+		expect(result.fixes).toEqual([]);
+		expect(result.remaining.length).toBeGreaterThan(0);
+		expect(result.remaining.every((issue) => issue.type === 'circular')).toBe(
+			true
+		);
+	});
+
 	it('removes duplicates and counts what is left', async () => {
 		const { result } = await fix([task(1), task(2, [1, 1])]);
 

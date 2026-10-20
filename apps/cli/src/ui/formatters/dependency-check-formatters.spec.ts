@@ -148,6 +148,23 @@ describe('formatDependencyFixes', () => {
 		]);
 	});
 
+	it("never suggests itself for what's left, even a loop through a subtask", () => {
+		// A loop that runs through task 1 and its subtask 1.1 can't be broken
+		// by fix-dependencies, so pointing back at it would go round in circles
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [],
+			remaining: [
+				{ type: 'circular', taskId: 1 },
+				{ type: 'circular', taskId: '1.1' }
+			]
+		});
+		expect(lines(output).at(-1)).toBe(
+			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+		);
+		expect(plain(output)).not.toContain('fix-dependencies');
+	});
+
 	it("doesn't claim success when it fixed nothing but problems remain", () => {
 		const output = formatDependencyFixes({
 			...counts,

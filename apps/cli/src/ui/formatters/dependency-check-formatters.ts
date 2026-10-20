@@ -148,11 +148,17 @@ export function formatDependencyCheck(
 	);
 }
 
-/** `✗ <heading>`, a row per issue, and how to fix them */
+/**
+ * `✗ <heading>`, a row per issue, and how to fix them
+ *
+ * @param afterFix - fix-dependencies already ran, so what's left needs the
+ *   user; suggesting it again would send them round in a circle
+ */
 function problems(
 	heading: string,
 	issues: DependencyIssue[],
-	width: number
+	width: number,
+	afterFix = false
 ): string {
 	const lines = [
 		`${chalk.red('✗')} ${heading}`,
@@ -167,9 +173,11 @@ function problems(
 
 	// fix-dependencies removes missing and self references and breaks loops
 	// between subtasks; a loop between tasks needs the user to pick an edge
-	const fixable = issues.some(
-		(issue) => issue.type !== 'circular' || String(issue.taskId).includes('.')
-	);
+	const fixable =
+		!afterFix &&
+		issues.some(
+			(issue) => issue.type !== 'circular' || String(issue.taskId).includes('.')
+		);
 	lines.push(
 		fixable
 			? theme.muted('Run ') +
@@ -217,7 +225,7 @@ export function formatDependencyFixes(
 			fixes.length > 0
 				? `${plural(remaining.length, 'problem')} left`
 				: plural(remaining.length, 'dependency problem');
-		lines.push(problems(heading, remaining, width));
+		lines.push(problems(heading, remaining, width, true));
 	}
 	return lines.join('\n');
 }

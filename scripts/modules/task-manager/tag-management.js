@@ -71,7 +71,12 @@ async function createTag(
 	outputFormat = 'text'
 ) {
 	const { mcpLog, projectRoot } = context;
-	const { copyFromCurrent = false, copyFromTag, description } = options;
+	const {
+		copyFromCurrent = false,
+		copyFromTag,
+		description,
+		defaultDescription = `Tag created on ${new Date().toLocaleDateString()}`
+	} = options;
 
 	// Create a consistent logFn object regardless of context
 	const logFn = mcpLog || {
@@ -159,8 +164,7 @@ async function createTag(
 			metadata: {
 				created: new Date().toISOString(),
 				updated: new Date().toISOString(),
-				description:
-					description || `Tag created on ${new Date().toLocaleDateString()}`
+				description: description || defaultDescription
 			}
 		};
 
@@ -187,8 +191,7 @@ async function createTag(
 					copyFromCurrent || copyFromTag
 						? copyFromTag || getCurrentTag(projectRoot)
 						: null,
-				description:
-					description || `Tag created on ${new Date().toLocaleDateString()}`
+				description: description || defaultDescription
 			};
 		}
 
@@ -214,8 +217,7 @@ async function createTag(
 				copyFromCurrent || copyFromTag
 					? copyFromTag || getCurrentTag(projectRoot)
 					: null,
-			description:
-				description || `Tag created on ${new Date().toLocaleDateString()}`
+			description: description || defaultDescription
 		};
 	} catch (error) {
 		// The CLI prints the thrown error itself; only MCP needs the log line
@@ -1180,7 +1182,7 @@ async function createTagFromBranch(
 		// Sanitize branch name to create tag name
 		const tagName = sanitizeBranchNameForTag(branchName);
 
-		logFn.info(`Creating tag "${tagName}" from git branch "${branchName}"`);
+		logFn.debug(`Creating tag "${tagName}" from git branch "${branchName}"`);
 
 		// Create the tag using existing createTag function
 		const createResult = await createTag(
@@ -1189,8 +1191,9 @@ async function createTagFromBranch(
 			{
 				copyFromCurrent,
 				copyFromTag,
-				description:
-					description || `Tag created from git branch "${branchName}"`
+				description,
+				// Stored when the user gave no description, but not printed as theirs
+				defaultDescription: `Tag created from git branch "${branchName}"`
 			},
 			context,
 			outputFormat
@@ -1203,7 +1206,7 @@ async function createTagFromBranch(
 		// Auto-switch to the new tag if requested
 		if (autoSwitch) {
 			await switchCurrentTag(projectRoot, tagName);
-			logFn.info(`Automatically switched to tag "${tagName}"`);
+			logFn.debug(`Automatically switched to tag "${tagName}"`);
 		}
 
 		// For JSON output, return structured data
@@ -1226,7 +1229,8 @@ async function createTagFromBranch(
 			autoSwitched: autoSwitch || false
 		};
 	} catch (error) {
-		logFn.error(`Error creating tag from branch: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error creating tag from branch: ${error.message}`);
 		throw error;
 	}
 }

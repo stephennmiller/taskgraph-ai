@@ -101,6 +101,25 @@ describe('dependency commands', () => {
 		expect(result.stdout).toContain('taskgraph remove-dependency');
 	});
 
+	it("fix: for a loop it can't break, points at remove-dependency every time", () => {
+		// Task 1 waits on its own subtask 1.1, which waits on task 1
+		const data = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+		data.master.tasks[0].dependencies = ['1.1'];
+		data.master.tasks[0].subtasks = [
+			{ id: 1, title: 'Sub', status: 'pending', dependencies: ['1'] }
+		];
+		fs.writeFileSync(tasksFile(), JSON.stringify(data, null, 2));
+
+		for (const result of [
+			run(['fix-dependencies']),
+			run(['fix-dependencies'])
+		]) {
+			expect(result.status).toBe(1);
+			expect(result.stdout).toContain('taskgraph remove-dependency');
+			expect(result.stdout).not.toContain('Run taskgraph fix-dependencies');
+		}
+	});
+
 	it('add: a repeat dependency is one plain line, not a warning', () => {
 		run(['add-dependency', '--id=2', '--depends-on=1']);
 		const result = run(['add-dependency', '--id=2', '--depends-on=1']);

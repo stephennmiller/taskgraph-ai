@@ -873,7 +873,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 								fixes.push({
 									type: 'missing',
 									taskId: subtaskId,
-									dependencyId: numericId
+									dependencyId: depId
 								});
 								stats.nonExistentDependenciesRemoved++;
 								return false;

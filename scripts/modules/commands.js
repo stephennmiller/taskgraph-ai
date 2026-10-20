@@ -2963,9 +2963,7 @@ Examples:
 					const branchOptions = {
 						copyFromCurrent: options.copyFromCurrent || false,
 						copyFromTag: options.copyFrom,
-						description:
-							options.description ||
-							`Tag created from git branch "${currentBranch}"`
+						description: options.description
 					};
 
 					await createTagFromBranch(

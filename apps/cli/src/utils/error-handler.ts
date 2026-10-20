@@ -90,15 +90,16 @@ function defaultHint(message: string, code?: string): string | undefined {
 	if (code && HINTS_BY_CODE[code]) {
 		return HINTS_BY_CODE[code];
 	}
+	// Before the task checks: a tag named "task-old" mentions "task"
+	if (MISSING_TAG.test(message) || DUPLICATE_TAG.test(message)) {
+		return 'Run `taskgraph tags` to see your tags';
+	}
 	const subtask = MISSING_SUBTASK.exec(message);
 	if (subtask) {
 		return `Run \`taskgraph show ${subtask[1]}\` to see its subtasks`;
 	}
 	if (MISSING_TASK.test(message)) {
 		return HINTS_BY_CODE.TASK_NOT_FOUND;
-	}
-	if (MISSING_TAG.test(message) || DUPLICATE_TAG.test(message)) {
-		return 'Run `taskgraph tags` to see your tags';
 	}
 	return undefined;
 }

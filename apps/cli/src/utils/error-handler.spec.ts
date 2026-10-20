@@ -87,7 +87,10 @@ describe('describeError', () => {
 		for (const message of [
 			'Source tag "nope" does not exist',
 			'Target tag "backup" already exists',
-			'Tag "feature-auth" already exists'
+			'Tag "feature-auth" already exists',
+			// "task" in a tag name isn't a missing task
+			'Tag "task-old" not found',
+			'Source tag "task-old" does not exist'
 		]) {
 			expect(describeError(new Error(message)).hint).toBe(
 				'Run `taskgraph tags` to see your tags'

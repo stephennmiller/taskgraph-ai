@@ -228,6 +228,20 @@ describe('formatTagList', () => {
 		}
 	});
 
+	it('leaves the date empty instead of failing on one that does not parse', () => {
+		const odd: TagSummary[] = [
+			{ ...tags[1], created: '20.10.2026' },
+			{ ...tags[0], created: 'Unknown' }
+		];
+		const output = lines(formatTagList(odd, { showMetadata: true }));
+		expect(output[1]).toBe(
+			'  master            4      2     1              Tasks for master context'
+		);
+		expect(output[2]).toBe(
+			'● feature-auth      0      0     0              Auth work'
+		);
+	});
+
 	it('says when no tag has ready work', () => {
 		expect(formatTagList([], { ready: true })).toBe(
 			'No tag has a task ready to start'

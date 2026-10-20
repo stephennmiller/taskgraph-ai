@@ -174,11 +174,13 @@ export function formatTagList(
 
 	const numbers = ['Tasks', 'Ready', 'Done'];
 	const dates = options.showMetadata
-		? tags.map((tag) =>
-				tag.created && tag.created !== 'Unknown'
-					? new Date(tag.created).toISOString().slice(0, 10)
-					: ''
-			)
+		? tags.map((tag) => {
+				// A hand-edited date that doesn't parse leaves the cell empty
+				const date = new Date(tag.created ?? '');
+				return Number.isNaN(date.getTime())
+					? ''
+					: date.toISOString().slice(0, 10);
+			})
 		: [];
 	const dateWidth = options.showMetadata ? 10 : 0;
 
