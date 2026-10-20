@@ -216,7 +216,9 @@ describe('next command', () => {
 
 		const { output } = runNext();
 
-		expect(output.toLowerCase()).toContain('no');
+		// Used to check for "no", which only matched the "now supports tags"
+		// notice that ended every run in these test projects
+		expect(output).toContain('All tasks are either completed');
 	});
 
 	it('should find first task in linear dependency chain', () => {
