@@ -166,7 +166,7 @@ function isValidBranchForTag(branchName) {
 	}
 
 	// Check if it's a reserved branch name that shouldn't become tags
-	const reservedBranches = ['main', 'master', 'develop', 'dev', 'HEAD'];
+	const reservedBranches = ['main', 'master', 'develop', 'dev', 'head'];
 	if (reservedBranches.includes(branchName.toLowerCase())) {
 		return false;
 	}
