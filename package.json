@@ -35,8 +35,6 @@
 		"test:watch": "cross-env NODE_ENV=test vitest -c vitest.root.config.ts",
 		"test:coverage": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts --coverage",
 		"test:ci": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts --coverage",
-		"test:e2e": "./tests/e2e/run_e2e.sh",
-		"test:e2e-report": "./tests/e2e/run_e2e.sh --analyze-log",
 		"postpack": "chmod +x dist/taskgraph.js dist/mcp-server.js",
 		"changeset": "changeset",
 		"publish-packages": "turbo run build lint test && changeset version && changeset publish",

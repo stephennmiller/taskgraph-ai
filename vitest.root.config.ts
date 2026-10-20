@@ -27,7 +27,6 @@ export default defineConfig({
 		exclude: [
 			'**/node_modules/**',
 			'tests/sdk-contract/**',
-			'tests/e2e/**',
 			'tests/manual/**'
 		],
 		setupFiles: ['./tests/setup.js'],

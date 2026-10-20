@@ -13,7 +13,6 @@ npm run turbo:typecheck           # run before pushing
 npm run format-check              # Biome; `npm run format` to fix
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp)
 npm run test:coverage -w @tm/core # coverage (also @tm/cli); Vitest
-npm run test:e2e -w @tm/cli       # CLI e2e (Vitest, apps/cli/tests/e2e)
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
 ```
 
