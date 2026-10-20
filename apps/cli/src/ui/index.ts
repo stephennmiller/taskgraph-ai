@@ -55,6 +55,17 @@ export {
 	type ClearSubtasksResult
 } from './formatters/clear-subtasks-formatters.js';
 
+// What research says around the answer
+export {
+	formatResearchAnswer,
+	formatResearchContext,
+	formatResearchSaved,
+	formatResearchSaveFailed,
+	sortTaskIds,
+	type ResearchContextSummary,
+	type ResearchSaveTarget
+} from './formatters/research-formatters.js';
+
 // What init did and what to do next
 export {
 	formatInitSummary,
