@@ -166,6 +166,14 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 					// Enable loading of CLAUDE.md and settings.json files
 					settingSources: ['user', 'project', 'local'],
 					env,
+					// The SDK's own warnings (e.g. "unknown tool ID") are internal; keep
+					// them out of the terminal unless debug logging is on
+					logger: {
+						debug: (message) => log('debug', message),
+						info: (message) => log('debug', message),
+						warn: (message) => log('debug', message),
+						error: (message) => log('error', message)
+					},
 					...settings,
 					...getRoleRestrictions(params.role, settings)
 				}

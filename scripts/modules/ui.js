@@ -112,6 +112,16 @@ function startLoadingIndicator(message) {
 }
 
 /**
+ * Live progress for parse-prd: prints each task as the model finishes it.
+ * Returns null in silent mode.
+ * @param {Object} options - See ParsePrdProgressOptions in @tm/cli
+ */
+function startParsePrdProgress(options) {
+	if (isSilentMode()) return null;
+	return new ui.ParsePrdProgress(options).start();
+}
+
+/**
  * Stop a loading indicator (basic stop, no success/fail indicator)
  * @param {Object} spinner - Spinner object to stop
  */
@@ -552,6 +562,11 @@ function displayHelp() {
 					name: 'models --set-fallback',
 					args: '<model_id>',
 					desc: 'Set the fallback model (optional)'
+				},
+				{
+					name: 'completion --install',
+					args: '',
+					desc: 'Set up Tab completion for your shell'
 				}
 			]
 		},
@@ -2244,39 +2259,12 @@ function displayAiUsageSummary(telemetryData, outputType = 'cli') {
 		return; // Only display for CLI and if data exists and not in silent mode
 	}
 
-	const {
-		modelUsed,
-		providerName,
-		inputTokens,
-		outputTokens,
-		totalTokens,
-		totalCost,
-		commandName,
-		isUnknownCost
-	} = telemetryData;
-
-	let summary = theme.brand.bold('AI Usage Summary:') + '\n';
-	summary += theme.muted(`  Command: ${commandName}\n`);
-	summary += theme.muted(`  Provider: ${providerName}\n`);
-	summary += theme.muted(`  Model: ${modelUsed}\n`);
-	summary += theme.muted(
-		`  Tokens: ${totalTokens} (Input: ${inputTokens}, Output: ${outputTokens})\n`
-	);
-
-	// Show "Unknown" if pricing data is not available, otherwise show the cost
-	const costDisplay = isUnknownCost ? 'Unknown' : `$${totalCost.toFixed(6)}`;
-	summary += theme.muted(`  Est. Cost: ${costDisplay}`);
-
-	console.log(
-		boxen(summary, {
-			padding: 1,
-			margin: { top: 1 },
-			borderColor: BORDER_COLOR,
-			borderStyle: 'round',
-			title: 'Telemetry',
-			titleAlignment: 'center'
-		})
-	);
+	// One quiet line instead of a 9-line box: the command, provider and a
+	// $0.000000 cost told people nothing new
+	const line = ui.formatUsageLine(telemetryData);
+	if (line) {
+		console.log(`\n${theme.muted(line)}`);
+	}
 }
 
 /**
@@ -2759,6 +2747,7 @@ export {
 	displayAsciiBanner as displayBanner,
 	displayTaggedTasksFYI,
 	startLoadingIndicator,
+	startParsePrdProgress,
 	stopLoadingIndicator,
 	createProgressBar,
 	getStatusWithColor,

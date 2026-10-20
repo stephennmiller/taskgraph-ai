@@ -34,6 +34,22 @@ import { ClaudeCodeProvider } from '../../src/ai-providers/index.js';
 import ProviderRegistry from '../../src/provider-registry/index.js';
 
 // Create provider instances
+// The AI SDK's warnings (deprecated APIs, settings a provider ignores) are for
+// TaskGraph's developers, not its users, and they break up spinners. Send them
+// to the debug log unless the embedding app chose its own handling.
+if (globalThis.AI_SDK_LOG_WARNINGS === undefined) {
+	globalThis.AI_SDK_LOG_WARNINGS = ({ warnings, provider, model }) => {
+		for (const warning of warnings) {
+			const detail =
+				warning.message || warning.feature || warning.setting || warning.type;
+			log(
+				'debug',
+				`AI SDK warning (${provider ?? '?'}/${model ?? '?'}): ${detail}`
+			);
+		}
+	};
+}
+
 const PROVIDERS = {
 	'claude-code': new ClaudeCodeProvider()
 };
@@ -589,6 +605,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 						modelId,
 						inputTokens: providerResponse.usage.inputTokens,
 						outputTokens: providerResponse.usage.outputTokens,
+						cachedInputTokens: providerResponse.usage.cachedInputTokens,
 						outputType
 					});
 				} catch (telemetryError) {
@@ -784,6 +801,7 @@ async function logAiUsage({
 	modelId,
 	inputTokens,
 	outputTokens,
+	cachedInputTokens,
 	outputType
 }) {
 	try {
@@ -813,6 +831,8 @@ async function logAiUsage({
 			inputTokens: inputTokens || 0,
 			outputTokens: outputTokens || 0,
 			totalTokens,
+			// Part of inputTokens read from the prompt cache
+			...(cachedInputTokens > 0 ? { cachedInputTokens } : {}),
 			totalCost,
 			currency, // Add currency to the telemetry data
 			isUnknownCost: isUnknown // Flag to indicate if pricing is unknown

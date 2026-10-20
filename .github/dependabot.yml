@@ -38,6 +38,11 @@ updates:
       # reviewed. Migrate on purpose, not through a bump PR.
       - dependency-name: 'typescript'
         update-types: ['version-update:semver-major']
+      # marked-terminal 7.3.0 (the latest release) declares a peer of
+      # `marked >=1 <16`, so `npm ci` fails on marked 16+. Revisit once
+      # marked-terminal publishes a release that supports newer marked.
+      - dependency-name: 'marked'
+        update-types: ['version-update:semver-major']
     groups:
       # Minor/patch only: majors (the AI SDK 7 move, for example) need a human
       # decision and their own PR.

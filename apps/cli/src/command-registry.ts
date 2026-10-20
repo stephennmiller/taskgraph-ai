@@ -6,6 +6,7 @@
 import type { Command } from 'commander';
 
 import { AutopilotCommand } from './commands/autopilot/index.js';
+import { CompletionCommand } from './commands/completion.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 import { GraphCommand } from './commands/graph.command.js';
 // Import all commands
@@ -102,6 +103,12 @@ export class CommandRegistry {
 			name: 'github',
 			description: 'Push tasks to GitHub Issues (status, push, unlink)',
 			commandClass: GithubCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'completion',
+			description: 'Set up Tab completion for bash, zsh or fish',
+			commandClass: CompletionCommand as any,
 			category: 'utility'
 		}
 	];

@@ -362,13 +362,19 @@ export class BaseAIProvider {
 				result.usage?.outputTokens ?? result.usage?.completionTokens ?? 0;
 			const totalTokens =
 				result.usage?.totalTokens ?? inputTokens + outputTokens;
+			// Part of inputTokens read from the prompt cache
+			const cachedInputTokens =
+				result.usage?.inputTokenDetails?.cacheReadTokens ??
+				result.usage?.cachedInputTokens ??
+				0;
 
 			return {
 				text: result.text,
 				usage: {
 					inputTokens,
 					outputTokens,
-					totalTokens
+					totalTokens,
+					cachedInputTokens
 				}
 			};
 		} catch (error) {
@@ -432,15 +438,24 @@ export class BaseAIProvider {
 
 			const schema = buildSafeSchema(params.schema);
 
+			// Same options as generateObject, so both paths ask the model the same way
 			const result = await streamObject({
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,
-				mode: params.mode || 'auto',
-				maxOutputTokens: params.maxTokens,
+				mode: this.needsExplicitJsonSchema ? 'json' : 'auto',
+				...(params.objectName && {
+					schemaName: params.objectName,
+					schemaDescription: `Generate a valid JSON object for ${params.objectName}`
+				}),
+				maxTokens: params.maxTokens,
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
-					: {})
+					: {}),
+				// The default prints the whole error object to the terminal; callers
+				// already get the error from the stream's promises
+				onError: ({ error }) =>
+					log('debug', `${this.name} stream error: ${error?.message ?? error}`)
 			});
 
 			log(
@@ -504,13 +519,19 @@ export class BaseAIProvider {
 				result.usage?.outputTokens ?? result.usage?.completionTokens ?? 0;
 			const totalTokens =
 				result.usage?.totalTokens ?? inputTokens + outputTokens;
+			// Part of inputTokens read from the prompt cache
+			const cachedInputTokens =
+				result.usage?.inputTokenDetails?.cacheReadTokens ??
+				result.usage?.cachedInputTokens ??
+				0;
 
 			return {
 				object: result.object,
 				usage: {
 					inputTokens,
 					outputTokens,
-					totalTokens
+					totalTokens,
+					cachedInputTokens
 				}
 			};
 		} catch (error) {

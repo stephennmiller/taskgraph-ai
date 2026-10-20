@@ -44,7 +44,10 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
 	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
-	'.claude/rules/new-features.md'
+	'.claude/rules/new-features.md',
+	// The legacy CLI command registry, far over the limit. Splitting it is its own
+	// task; until then a dependency bump that touches one line must be committable.
+	'scripts/modules/commands.js'
 ]);
 
 export const isIgnored = (path) =>

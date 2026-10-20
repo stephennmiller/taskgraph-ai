@@ -28,10 +28,10 @@ Found 3 possible duplicate issues:
 2. <link to issue>
 3. <link to issue>
 
-This issue will be automatically closed as a duplicate in 3 days.
+A maintainer will review these.
 
 - If your issue is a duplicate, please close it and 👍 the existing issue instead
-- To prevent auto-closure, add a comment or 👎 this comment
+- If these are not duplicates, add a comment or 👎 this comment
 
 🤖 Generated with \[TaskGraph Bot\]
 
