@@ -1,211 +1,79 @@
 /**
- * @fileoverview Interactive prompt logic for model selection
+ * @fileoverview The model prompts in `taskgraph models --setup`
+ *
+ * There are three Claude Code models, so each role is a plain list with the
+ * current model selected, rather than a search box with "No change" and
+ * "Cancel" entries above the models. Enter keeps the current model and
+ * Ctrl-C cancels, as in any other prompt.
  */
 
-import search, { Separator } from '@inquirer/search';
-import chalk from 'chalk';
+import inquirer from 'inquirer';
+import {
+	MODEL_NOTES,
+	MODEL_ROLES,
+	type ModelRoleName
+} from '../../ui/formatters/model-formatters.js';
 import { theme } from '../../ui/theme.js';
-import { getAvailableModels } from '../../lib/model-management.js';
-import type {
-	CurrentModels,
-	ModelChoice,
-	ModelInfo,
-	ModelRole,
-	PromptData
-} from './types.js';
+import type { ModelInfo } from './types.js';
 
-/**
- * Build prompt choices for a specific role
- */
-export function buildPromptChoices(
-	role: ModelRole,
-	currentModels: CurrentModels,
-	allowNone = false
-): PromptData {
-	const currentModel = currentModels[role];
-	const allModels = getAvailableModels();
-
-	// Group models by provider (filter out models without provider)
-	const modelsByProvider = allModels
-		.filter(
-			(model): model is ModelInfo & { provider: string } => !!model.provider
-		)
-		.reduce(
-			(acc, model) => {
-				if (!acc[model.provider]) {
-					acc[model.provider] = [];
-				}
-				acc[model.provider].push(model);
-				return acc;
-			},
-			{} as Record<string, ModelInfo[]>
-		);
-
-	// System options (cancel and no change)
-	const systemOptions: ModelChoice[] = [];
-	const cancelOption: ModelChoice = {
-		name: '⏹ Cancel Model Setup',
-		value: '__CANCEL__',
-		short: 'Cancel'
-	};
-	const noChangeOption: ModelChoice | null =
-		currentModel?.modelId && currentModel?.provider
-			? {
-					name: `✓ No change to current ${role} model (${currentModel.provider}/${currentModel.modelId})`,
-					value: '__NO_CHANGE__',
-					short: 'No change'
-				}
-			: null;
-
-	if (noChangeOption) {
-		systemOptions.push(noChangeOption);
-	}
-	systemOptions.push(cancelOption);
-
-	// Build role-specific model choices
-	const roleChoices: ModelChoice[] = Object.entries(modelsByProvider)
-		.flatMap(([provider, models]) => {
-			return models
-				.filter((m) => m.allowed_roles && m.allowed_roles.includes(role))
-				.map((m) => {
-					// Use model name if available, otherwise fall back to model ID
-					const displayName = m.name || m.id;
-					return {
-						name: `${provider} / ${displayName} ${
-							m.cost_per_1m_tokens
-								? theme.muted(
-										`($${m.cost_per_1m_tokens.input.toFixed(2)} input | $${m.cost_per_1m_tokens.output.toFixed(2)} output)`
-									)
-								: ''
-						}`,
-						value: { id: m.id, provider },
-						short: `${provider}/${displayName}`
-					};
-				});
-		})
-		.filter((choice) => choice !== null);
-
-	// Find current model index
-	let currentChoiceIndex = -1;
-	if (currentModel?.modelId && currentModel?.provider) {
-		currentChoiceIndex = roleChoices.findIndex(
-			(choice) =>
-				typeof choice.value === 'object' &&
-				choice.value !== null &&
-				'id' in choice.value &&
-				choice.value.id === currentModel.modelId &&
-				choice.value.provider === currentModel.provider
-		);
-	}
-
-	// Build final choices array
-	const systemLength = systemOptions.length;
-	let choices: (ModelChoice | Separator)[];
-	let defaultIndex: number;
-
-	if (allowNone) {
-		choices = [
-			...systemOptions,
-			new Separator('\n── Claude Code Models ──'),
-			{ name: '○ None (disable)', value: null, short: 'None' },
-			...roleChoices
-		];
-		const noneOptionIndex = systemLength + 1;
-		defaultIndex =
-			currentChoiceIndex !== -1
-				? currentChoiceIndex + systemLength + 2
-				: noneOptionIndex;
-	} else {
-		choices = [
-			...systemOptions,
-			new Separator('\n── Claude Code Models ──'),
-			...roleChoices
-		];
-		defaultIndex =
-			currentChoiceIndex !== -1
-				? currentChoiceIndex + systemLength + 1
-				: noChangeOption
-					? 1
-					: 0;
-	}
-
-	// Ensure defaultIndex is valid
-	if (defaultIndex < 0 || defaultIndex >= choices.length) {
-		defaultIndex = 0;
-		console.warn(
-			`Warning: Could not determine default model for role '${role}'. Defaulting to 'Cancel'.`
-		);
-	}
-
-	return { choices, default: defaultIndex };
+export interface ModelChoice {
+	name: string;
+	value: string;
+	short: string;
 }
 
 /**
- * Create search source for inquirer search prompt
+ * The models a role can use, one line each:
+ *
+ *   opus    most capable
+ *   sonnet  balanced · current
+ *   haiku   fastest
  */
-export function createSearchSource(
-	choices: (ModelChoice | Separator)[],
-	_defaultValue: number
-) {
-	return (searchTerm = '') => {
-		const filteredChoices = choices.filter((choice) => {
-			// Separators are always included
-			if (choice instanceof Separator) return true;
-			// Filter regular choices by search term (name and model ID)
-			const mc = choice as ModelChoice;
-			const displayText = mc.name || '';
-			const modelId =
-				typeof mc.value === 'object' && mc.value !== null && 'id' in mc.value
-					? mc.value.id
-					: '';
-			const searchText = `${displayText} ${modelId}`.toLowerCase();
-			return searchText.includes(searchTerm.toLowerCase());
-		});
-		// Map ModelChoice to the format inquirer expects
-		return Promise.resolve(
-			filteredChoices.map((choice) => {
-				if (choice instanceof Separator) return choice;
-				const mc = choice as ModelChoice;
-				return {
-					name: mc.name,
-					value: mc.value,
-					short: mc.short
-				};
-			})
-		);
-	};
+export function buildModelChoices(
+	role: ModelRoleName,
+	models: ModelInfo[],
+	currentModelId: string | null
+): ModelChoice[] {
+	const usable = models.filter((model) => model.allowed_roles.includes(role));
+	const width = Math.max(0, ...usable.map((model) => model.id.length));
+	return usable.map((model) => {
+		const note = [
+			MODEL_NOTES[model.id],
+			model.id === currentModelId ? 'current' : undefined
+		]
+			.filter(Boolean)
+			.join(' · ');
+		return {
+			name: note ? `${model.id.padEnd(width)}  ${theme.muted(note)}` : model.id,
+			value: model.id,
+			short: model.id
+		};
+	});
+}
+
+/** `Main model (creates and updates tasks)` */
+export function modelPromptMessage(role: ModelRoleName): string {
+	const { label, purpose } = MODEL_ROLES[role];
+	return `${label} model (${purpose})`;
 }
 
 /**
- * Display introductory message for interactive setup
- */
-export function displaySetupIntro(): void {
-	console.log(chalk.cyan('\nInteractive model setup'));
-	console.log(theme.muted('━'.repeat(50)));
-	console.log(chalk.yellow('Navigation tips:'));
-	console.log(theme.muted('   • Type to search and filter options'));
-	console.log(theme.muted('   • Use ↑↓ arrow keys to navigate results'));
-	console.log(theme.muted('   • Press Enter to select\n'));
-}
-
-/**
- * Prompt user to select a model for a specific role
+ * Ask which model a role should use. Starts on the current model, so Enter
+ * keeps it.
  */
 export async function promptForModel(
-	role: ModelRole,
-	promptData: PromptData
-): Promise<string | { id: string; provider: string } | null> {
-	const roleLabels = {
-		main: 'main model for generation/updates',
-		research: 'research model',
-		fallback: 'fallback model (optional)'
-	};
-
-	const answer = await search({
-		message: `Select the ${roleLabels[role]}:`,
-		source: createSearchSource(promptData.choices, promptData.default),
-		pageSize: 15
-	});
-
-	return answer;
+	role: ModelRoleName,
+	choices: ModelChoice[],
+	currentModelId: string | null
+): Promise<string> {
+	const { model } = await inquirer.prompt<{ model: string }>([
+		{
+			type: 'select',
+			name: 'model',
+			message: modelPromptMessage(role),
+			choices,
+			default: currentModelId ?? undefined
+		}
+	]);
+	return model;
 }

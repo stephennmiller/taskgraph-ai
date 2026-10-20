@@ -20,7 +20,8 @@ import {
 	performAutoUpdate,
 	registerAllCommands,
 	restartWithNewVersion,
-	runInteractiveSetup
+	runInteractiveSetup,
+	ui
 } from '@tm/cli';
 import { log, readJSON } from './utils.js';
 
@@ -74,6 +75,7 @@ import {
 	ConfigurationError,
 	getConfig,
 	getDefaultNumTasks,
+	getResponseLanguage,
 	isConfigFilePresent,
 	setSuppressConfigWarnings
 } from './config-manager.js';
@@ -94,7 +96,6 @@ import { initTaskGraph } from '../../src/taskgraph.js';
 
 import {
 	confirmTaskOverwrite,
-	displayAvailableModels,
 	displayBanner,
 	displayComplexityReport,
 	displayCrossTagDependencyError,
@@ -102,7 +103,6 @@ import {
 	displayDependencyValidationHints,
 	displayHelp,
 	displayInvalidTagCombinationError,
-	displayModelConfiguration,
 	displaySubtaskMoveError,
 	displayTaggedTasksFYI,
 	getStatusWithColor,
@@ -2593,32 +2593,45 @@ Examples:
 				'baseURL'
 			].filter((flag) => options[flag]);
 			if (removedProviderFlags.length > 0) {
-				console.error(
-					chalk.red(
-						'Error: TaskGraph now uses Claude Code only, so provider flags such as --ollama, --openrouter and --baseURL are no longer supported.'
-					)
+				const flag = `--${removedProviderFlags[0] === 'baseURL' ? 'baseURL' : removedProviderFlags[0].replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+				printError(
+					`${flag} isn't supported any more; TaskGraph runs on Claude Code`,
+					'Choose a model with `taskgraph models --set-main <opus|sonnet|haiku>`'
 				);
-				console.error(
-					chalk.yellow(
-						'Choose one of the Claude Code models: taskgraph models --set-main <opus|sonnet|haiku>'
-					)
+				process.exit(1);
+			}
+
+			if (!isConfigFilePresent(projectRoot)) {
+				printError(
+					'No .taskgraph/config.json in this project',
+					'Run `taskgraph init` to recreate it'
 				);
 				process.exit(1);
 			}
 
 			if (options.setup) {
-				console.log(theme.brand('Starting interactive model setup...'));
 				try {
-					await runInteractiveSetup(projectRoot);
-					// runInteractiveSetup logs its own completion/error messages
+					const ok = await runInteractiveSetup(projectRoot);
+					if (!ok && !process.exitCode) process.exitCode = 1;
 				} catch (setupError) {
-					console.error(
-						chalk.red('\nInteractive setup failed unexpectedly:'),
-						setupError.message
-					);
+					displayError(setupError);
 				}
 				return;
 			}
+
+			const configResult = await getModelConfiguration({ projectRoot });
+			if (!configResult.success) {
+				printError(
+					`Couldn't read the model settings: ${configResult.error.message}`,
+					'Run `taskgraph init` to recreate .taskgraph/config.json'
+				);
+				process.exit(1);
+			}
+			const active = configResult.data.activeModels;
+			const availableResult = await getAvailableModelsList({ projectRoot });
+			const availableIds = availableResult.success
+				? availableResult.data.models.map((m) => m.modelId)
+				: [];
 
 			const requestedChanges = [
 				['main', options.setMain],
@@ -2627,135 +2640,122 @@ Examples:
 			].filter(([, modelId]) => modelId);
 
 			if (requestedChanges.length > 0) {
-				let updateOccurred = false;
+				// Check every model first, so a typo in one flag sets nothing
+				const unknown = requestedChanges.find(
+					([, modelId]) => !availableIds.includes(modelId)
+				);
+				if (unknown) {
+					printError(
+						`"${unknown[1]}" isn't a Claude Code model`,
+						`Choose ${ui.formatModelChoices(availableIds)}`
+					);
+					process.exit(1);
+				}
 
+				const changes = [];
 				for (const [role, modelId] of requestedChanges) {
 					const result = await setModel(role, modelId, { projectRoot });
-					if (result.success) {
-						console.log(chalk.green(`✅ ${result.data.message}`));
-						updateOccurred = true;
-					} else {
-						console.error(
-							chalk.red(
-								`❌ Error setting ${role} model: ${result.error.message}`
-							)
+					if (!result.success) {
+						if (changes.length > 0) {
+							console.log(ui.formatModelChanges(changes));
+						}
+						printError(
+							`Couldn't set the ${role} model: ${result.error.message}`
 						);
+						process.exit(1);
 					}
+					changes.push({
+						role,
+						from: active[role]?.modelId ?? null,
+						to: modelId
+					});
 				}
-
-				if (updateOccurred) {
-					console.log(theme.brand('\nModel configuration updated.'));
-				} else {
-					console.log(
-						chalk.yellow(
-							'\nNo model configuration changes were made (or errors occurred).'
-						)
-					);
-				}
+				console.log(ui.formatModelChanges(changes));
 				return;
 			}
 
-			// Display full status when no setup or set flags were given
-			const configResult = await getModelConfiguration({ projectRoot });
-			const availableResult = await getAvailableModelsList({ projectRoot });
-
-			if (!configResult.success) {
-				console.error(
-					chalk.red(
-						`❌ Error fetching configuration: ${configResult.error.message}`
-					)
-				);
-			} else {
-				displayModelConfiguration(
-					configResult.data,
-					availableResult.data?.models || []
-				);
-			}
-
-			if (availableResult.success) {
-				const activeIds = configResult.success
-					? [
-							configResult.data.activeModels.main.modelId,
-							configResult.data.activeModels.research.modelId,
-							configResult.data.activeModels.fallback?.modelId
-						].filter(Boolean)
-					: [];
-				displayAvailableModels(
-					availableResult.data.models.filter(
-						(m) => !activeIds.includes(m.modelId)
-					)
-				);
-			} else {
-				console.error(
-					chalk.yellow(
-						`⚠️ Warning: Could not display available models: ${availableResult.error.message}`
-					)
-				);
-			}
-
-			if (!isConfigFilePresent(projectRoot)) {
-				console.log(
-					chalk.yellow(
-						"\nHint: Run 'taskgraph models --setup' to create or update your configuration."
-					)
-				);
-			}
+			console.log(
+				ui.formatModelConfiguration(
+					{
+						main: active.main?.modelId ?? null,
+						research: active.research?.modelId ?? null,
+						fallback: active.fallback?.modelId ?? null
+					},
+					availableIds
+				)
+			);
 		});
 
 	// response-language command
 	programInstance
 		.command('lang')
-		.description('Manage response language settings')
+		.description('Show or set the language AI responses are written in')
 		.option('--response <response_language>', 'Set the response language')
-		.option('--setup', 'Run interactive setup to configure response language')
+		.option('--setup', 'Choose the response language interactively')
+		.addHelpText(
+			'after',
+			`
+Examples:
+  $ taskgraph lang                       # Show the response language
+  $ taskgraph lang --response French     # Set it
+  $ taskgraph lang --setup               # Choose it interactively`
+		)
 		.action(async (options) => {
 			const taskGraph = initTaskGraph({});
-			const projectRoot = taskGraph.getProjectRoot(); // Find project root for context
-			const { response, setup } = options;
-			let responseLanguage = response !== undefined ? response : 'English';
-			if (setup) {
-				console.log(
-					theme.brand('Starting interactive response language setup...')
-				);
-				try {
-					const userResponse = await inquirer.prompt([
-						{
-							type: 'input',
-							name: 'responseLanguage',
-							message: 'Input your preferred response language',
-							default: 'English'
-						}
-					]);
-
-					console.log(
-						theme.brand(
-							'Response language set to:',
-							userResponse.responseLanguage
-						)
-					);
-					responseLanguage = userResponse.responseLanguage;
-				} catch (setupError) {
-					console.error(
-						chalk.red('\\nInteractive setup failed unexpectedly:'),
-						setupError.message
-					);
-				}
-			}
-
-			const result = setResponseLanguage(responseLanguage, {
-				projectRoot
-			});
-
-			if (result.success) {
-				console.log(chalk.green(`✅ ${result.data.message}`));
-			} else {
-				console.error(
-					chalk.red(
-						`❌ Error setting response language: ${result.error.message}`
-					)
+			const projectRoot = taskGraph.getProjectRoot();
+			if (!isConfigFilePresent(projectRoot)) {
+				printError(
+					'No .taskgraph/config.json in this project',
+					'Run `taskgraph init` to recreate it'
 				);
 				process.exit(1);
 			}
+			const current = getResponseLanguage(projectRoot) || 'English';
+			let language = options.response;
+
+			if (options.setup) {
+				try {
+					const answer = await inquirer.prompt([
+						{
+							type: 'input',
+							name: 'language',
+							message: 'Language for AI responses?',
+							default: current
+						}
+					]);
+					language = answer.language;
+				} catch (error) {
+					if (error?.name !== 'ExitPromptError') throw error;
+					console.log(theme.muted('\nCancelled; response language unchanged'));
+					process.exitCode = 130;
+					return;
+				}
+			}
+
+			// Without --response or --setup, show the setting instead of
+			// resetting it to English
+			if (language === undefined) {
+				console.log(`Response language: ${theme.brand(current)}`);
+				console.log(
+					theme.muted('Change it with ') +
+						theme.brand('taskgraph lang --response <language>')
+				);
+				return;
+			}
+
+			language = language.trim();
+			const result = setResponseLanguage(language, { projectRoot });
+			if (!result.success) {
+				printError(
+					`Couldn't set the response language: ${result.error.message}`
+				);
+				process.exit(1);
+			}
+			const change =
+				language === current
+					? `${theme.brand(language)} ${theme.muted('(unchanged)')}`
+					: `${current} → ${theme.brand(language)}`;
+			console.log(`${chalk.green('✓')} Response language  ${change}`);
 		});
 
 	// move-task command
@@ -3822,8 +3822,12 @@ async function runCLI(argv = process.argv) {
 
 		// Display banner if not in a pipe (except for init/start/repl commands which have their own)
 		const isInitCommand = argv.includes('init');
-		// init creates the config; telling the user it's missing adds nothing
-		if (argv[2] === 'init') setSuppressConfigWarnings(true);
+		// init creates the config, and models and lang edit it and report a
+		// missing one as an error, so the "using default settings" warning
+		// would only repeat or contradict them
+		if (['init', 'models', 'lang'].includes(argv[2])) {
+			setSuppressConfigWarnings(true);
+		}
 		const isREPLCommand = argv.includes('tui') || argv.includes('repl');
 		const noBanner = argv.includes('--no-banner');
 		if (process.stdout.isTTY && !isInitCommand && !isREPLCommand && !noBanner) {

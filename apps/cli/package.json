@@ -28,7 +28,6 @@
 		"test:ci": "vitest run --coverage --reporter=dot"
 	},
 	"dependencies": {
-		"@inquirer/search": "^4.3.4",
 		"@tm/core": "*",
 		"boxen": "^9.0.0",
 		"chalk": "6.0.1",
