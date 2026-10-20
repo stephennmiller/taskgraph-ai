@@ -400,12 +400,67 @@ function isCircularDependency(tasks, taskId, chain = []) {
 }
 
 /**
+ * Every task and subtask's dependencies as full IDs ("3", "3.2"), without
+ * self-dependencies, which are reported on their own. A bare number in a
+ * subtask's dependencies is a sibling subtask.
+ * @param {Array} tasks - All tasks
+ * @param {Object} [options]
+ * @param {boolean} [options.subtasksOnly] - Keep only edges between subtasks,
+ *   the ones fix-dependencies can break
+ * @returns {Map<string, string[]>}
+ */
+function buildDependencyGraph(tasks, { subtasksOnly = false } = {}) {
+	const graph = new Map();
+	const add = (id, deps) => {
+		const edges = deps.filter(
+			(dep) => dep !== id && (!subtasksOnly || dep.includes('.'))
+		);
+		graph.set(id, edges);
+	};
+
+	for (const task of tasks) {
+		const taskId = String(task.id);
+		if (!subtasksOnly) add(taskId, (task.dependencies || []).map(String));
+		for (const subtask of task.subtasks || []) {
+			add(
+				`${taskId}.${subtask.id}`,
+				(subtask.dependencies || []).map((dep) =>
+					typeof dep === 'number' && dep < 100
+						? `${taskId}.${dep}`
+						: String(dep)
+				)
+			);
+		}
+	}
+	return graph;
+}
+
+/**
+ * Whether a task is in a loop: one of its dependencies leads back to it.
+ * A task that only depends on a loop is not in it.
+ * @param {Map<string, string[]>} graph - From buildDependencyGraph
+ * @param {string} id - Full task or subtask ID
+ */
+function isInLoop(graph, id) {
+	const leadsBack = (from, seen) => {
+		if (from === id) return true;
+		if (seen.has(from)) return false;
+		seen.add(from);
+		return (graph.get(from) || []).some((next) => leadsBack(next, seen));
+	};
+	const seen = new Set();
+	return (graph.get(id) || []).some((dep) => leadsBack(dep, seen));
+}
+
+/**
  * Validate task dependencies
  * @param {Array} tasks - Array of all tasks
  * @returns {Object} Validation result with valid flag and issues array
  */
 function validateTaskDependencies(tasks) {
 	const issues = [];
+	const graph = buildDependencyGraph(tasks);
+	const subtaskGraph = buildDependencyGraph(tasks, { subtasksOnly: true });
 
 	// Check each task's dependencies
 	tasks.forEach((task) => {
@@ -413,13 +468,9 @@ function validateTaskDependencies(tasks) {
 			return; // No dependencies to validate
 		}
 
-		// A self-dependency is also a one-task loop; report it once, as itself
-		let dependsOnItself = false;
-
 		task.dependencies.forEach((depId) => {
 			// Check for self-dependencies
 			if (String(depId) === String(task.id)) {
-				dependsOnItself = true;
 				issues.push({
 					type: 'self',
 					taskId: task.id,
@@ -439,11 +490,14 @@ function validateTaskDependencies(tasks) {
 			}
 		});
 
-		// Check for circular dependencies
-		if (!dependsOnItself && isCircularDependency(tasks, task.id)) {
+		// Check for loops. Self-dependencies were reported above and aren't
+		// in the graph, so they aren't reported again as a loop.
+		if (isInLoop(graph, String(task.id))) {
 			issues.push({
 				type: 'circular',
 				taskId: task.id,
+				// A loop through a task needs the user to choose which edge goes
+				fixable: false,
 				message: `Task ${task.id} is part of a circular dependency chain`
 			});
 		}
@@ -457,7 +511,6 @@ function validateTaskDependencies(tasks) {
 
 				// Create a full subtask ID for reference
 				const fullSubtaskId = `${task.id}.${subtask.id}`;
-				let subtaskDependsOnItself = false;
 
 				subtask.dependencies.forEach((depId) => {
 					// Check for self-dependencies in subtasks
@@ -465,7 +518,6 @@ function validateTaskDependencies(tasks) {
 						String(depId) === String(fullSubtaskId) ||
 						(typeof depId === 'number' && depId === subtask.id)
 					) {
-						subtaskDependsOnItself = true;
 						issues.push({
 							type: 'self',
 							taskId: fullSubtaskId,
@@ -492,13 +544,12 @@ function validateTaskDependencies(tasks) {
 				});
 
 				// Check for circular dependencies in subtasks
-				if (
-					!subtaskDependsOnItself &&
-					isCircularDependency(tasks, fullSubtaskId)
-				) {
+				if (isInLoop(graph, fullSubtaskId)) {
 					issues.push({
 						type: 'circular',
 						taskId: fullSubtaskId,
+						// fix-dependencies breaks loops made only of subtasks
+						fixable: isInLoop(subtaskGraph, fullSubtaskId),
 						message: `Subtask ${fullSubtaskId} is part of a circular dependency chain`
 					});
 				}
