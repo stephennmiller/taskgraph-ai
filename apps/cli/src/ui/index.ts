@@ -14,9 +14,20 @@ export { getPriorityWithColor } from './formatters/priority-formatters.js';
 
 // Complexity formatters
 export {
+	complexityLevel,
 	getComplexityWithColor,
-	getComplexityWithScore
+	getComplexityWithScore,
+	type ComplexityLevel
 } from './formatters/complexity-formatters.js';
+
+// What analyze-complexity found and what complexity-report shows
+export {
+	formatComplexityReport,
+	formatComplexityRun,
+	type ComplexityAnalysisItem,
+	type ComplexityReport,
+	type ComplexityRunSummary
+} from './formatters/complexity-report-formatters.js';
 
 // AI usage line shown after AI commands
 export {
@@ -36,6 +47,44 @@ export {
 	formatAddedSubtasks,
 	type SubtaskSummaryItem
 } from './formatters/subtask-summary-formatters.js';
+
+// What clear-subtasks removed
+export {
+	formatClearedSubtasks,
+	type ClearedTask,
+	type ClearSubtasksResult
+} from './formatters/clear-subtasks-formatters.js';
+
+// What research says around the answer
+export {
+	formatResearchAnswer,
+	formatResearchContext,
+	formatResearchSaved,
+	formatResearchSaveFailed,
+	sortTaskIds,
+	type ResearchContextSummary,
+	type ResearchSaveTarget
+} from './formatters/research-formatters.js';
+
+// What init did and what to do next
+export {
+	formatInitSummary,
+	type InitChange,
+	type InitSummary
+} from './formatters/init-summary-formatters.js';
+
+// What `taskgraph models` shows and confirms
+export {
+	formatModelChanges,
+	formatModelChoices,
+	formatModelConfiguration,
+	MODEL_NOTES,
+	MODEL_ROLES,
+	MODEL_ROLE_ORDER,
+	type ModelAssignments,
+	type ModelChange,
+	type ModelRoleName
+} from './formatters/model-formatters.js';
 
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';

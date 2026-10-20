@@ -20,7 +20,8 @@ import {
 	performAutoUpdate,
 	registerAllCommands,
 	restartWithNewVersion,
-	runInteractiveSetup
+	runInteractiveSetup,
+	ui
 } from '@tm/cli';
 import { log, readJSON } from './utils.js';
 
@@ -74,10 +75,16 @@ import {
 	ConfigurationError,
 	getConfig,
 	getDefaultNumTasks,
-	isConfigFilePresent
+	getResponseLanguage,
+	isConfigFilePresent,
+	setSuppressConfigWarnings
 } from './config-manager.js';
 
-import { CUSTOM_PROVIDERS } from '@tm/core';
+import {
+	CUSTOM_PROVIDERS,
+	findProjectRoot,
+	isTaskGraphProject
+} from '@tm/core';
 
 import {
 	COMPLEXITY_REPORT_FILE,
@@ -89,7 +96,6 @@ import { initTaskGraph } from '../../src/taskgraph.js';
 
 import {
 	confirmTaskOverwrite,
-	displayAvailableModels,
 	displayBanner,
 	displayComplexityReport,
 	displayCrossTagDependencyError,
@@ -97,7 +103,6 @@ import {
 	displayDependencyValidationHints,
 	displayHelp,
 	displayInvalidTagCombinationError,
-	displayModelConfiguration,
 	displaySubtaskMoveError,
 	displayTaggedTasksFYI,
 	getStatusWithColor,
@@ -983,10 +988,6 @@ function registerCommands(programInstance) {
 
 			const taskGraph = initTaskGraph(initOptions);
 
-			const modelOverride = options.model;
-			const thresholdScore = parseFloat(options.threshold);
-			const useResearch = options.research || false;
-
 			// Use the provided tag, or the current active tag, or default to 'master'
 			const targetTag = taskGraph.getCurrentTag();
 
@@ -996,31 +997,8 @@ function registerCommands(programInstance) {
 			// Use user's explicit output path if provided, otherwise use tag-aware default
 			const outputPath = taskGraph.getComplexityReportPath();
 
-			console.log(
-				theme.brand(
-					`Analyzing task complexity from: ${taskGraph.getTasksPath()}`
-				)
-			);
-			console.log(theme.brand(`Output report will be saved to: ${outputPath}`));
-
-			if (options.id) {
-				console.log(theme.brand(`Analyzing specific task IDs: ${options.id}`));
-			} else if (options.from || options.to) {
-				const fromStr = options.from ? options.from : 'first';
-				const toStr = options.to ? options.to : 'last';
-				console.log(
-					theme.brand(`Analyzing tasks in range: ${fromStr} to ${toStr}`)
-				);
-			}
-
-			if (useResearch) {
-				console.log(
-					theme.brand(
-						'Using Claude Code web research for research-backed complexity analysis'
-					)
-				);
-			}
-
+			// The spinner and the summary say what's analyzed and where the
+			// report goes; no separate lines with absolute paths up front
 			// Update options with tag-aware output path and context
 			const updatedOptions = {
 				...options,
@@ -1055,10 +1033,7 @@ function registerCommands(programInstance) {
 			'-t, --tree',
 			'Include project file tree structure in the research context'
 		)
-		.option(
-			'-s, --save <file>',
-			'Save research results to the specified task/subtask(s)'
-		)
+		.option('-s, --save <file>', 'Save the answer to a markdown file')
 		.option(
 			'-d, --detail <level>',
 			'Output detail level: low, medium, high',
@@ -1066,332 +1041,166 @@ function registerCommands(programInstance) {
 		)
 		.option(
 			'--save-to <id>',
-			'Automatically save research results to specified task/subtask ID (e.g., "15" or "15.2")'
+			'Add the answer to a task or subtask\'s details (e.g., "15" or "15.2")'
 		)
-		.option(
-			'--save-file',
-			'Save research results to .taskgraph/docs/research/ directory'
-		)
+		.option('--save-file', 'Save the answer to .taskgraph/docs/research/')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (prompt, options) => {
-			// Initialize TaskGraph
-			const initOptions = {
+			const taskGraph = initTaskGraph({
 				tasksPath: options.file || true,
 				tag: options.tag
+			});
+			const fail = (message, hint) => {
+				printError(message, hint);
+				process.exit(1);
 			};
+			const isTaskId = (id) => /^\d+(\.\d+)?$/.test(id);
 
-			const taskGraph = initTaskGraph(initOptions);
-
-			// Parameter validation
 			if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-				console.error(
-					chalk.red('Error: Research prompt is required and cannot be empty')
+				fail(
+					'Research needs a question',
+					'Example: taskgraph research "How should we store sessions?" --id=3'
 				);
-				showResearchHelp();
-				process.exit(1);
 			}
 
-			// Validate detail level
-			const validDetailLevels = ['low', 'medium', 'high'];
+			const detailLevel = (options.detail || 'medium').toLowerCase();
+			if (!['low', 'medium', 'high'].includes(detailLevel)) {
+				fail(`--detail must be low, medium or high, not "${options.detail}"`);
+			}
+
+			const taskIds = options.id
+				? options.id
+						.split(',')
+						.map((id) => id.trim())
+						.filter(Boolean)
+				: [];
+			const badId = taskIds.find((id) => !isTaskId(id));
+			if (badId) {
+				fail(`"${badId}" isn't a task ID`, 'Use --id=15 or --id=15,16.2');
+			}
+
+			const filePaths = options.files
+				? options.files
+						.split(',')
+						.map((file) => file.trim())
+						.filter(Boolean)
+				: [];
+
+			const saveToId = options.saveTo ? options.saveTo.trim() : null;
+			if (options.saveTo !== undefined && !isTaskId(saveToId || '')) {
+				fail(
+					`"${options.saveTo}" isn't a task ID`,
+					'Use --save-to=15 for a task or --save-to=15.2 for a subtask'
+				);
+			}
+
+			const saveTarget = options.save ? options.save.trim() : null;
 			if (
-				options.detail &&
-				!validDetailLevels.includes(options.detail.toLowerCase())
+				options.save !== undefined &&
+				(!saveTarget ||
+					saveTarget.includes('..') ||
+					path.isAbsolute(saveTarget))
 			) {
-				console.error(
-					chalk.red(
-						`Error: Detail level must be one of: ${validDetailLevels.join(', ')}`
-					)
-				);
-				process.exit(1);
-			}
-
-			// Validate and parse task IDs if provided
-			let taskIds = [];
-			if (options.id) {
-				try {
-					taskIds = options.id.split(',').map((id) => {
-						const trimmedId = id.trim();
-						// Support both task IDs (e.g., "15") and subtask IDs (e.g., "15.2")
-						if (!/^\d+(\.\d+)?$/.test(trimmedId)) {
-							throw new Error(
-								`Invalid task ID format: "${trimmedId}". Expected format: "15" or "15.2"`
-							);
-						}
-						return trimmedId;
-					});
-				} catch (error) {
-					console.error(chalk.red(`Error parsing task IDs: ${error.message}`));
-					process.exit(1);
-				}
-			}
-
-			// Validate and parse file paths if provided
-			let filePaths = [];
-			if (options.files) {
-				try {
-					filePaths = options.files.split(',').map((filePath) => {
-						const trimmedPath = filePath.trim();
-						if (trimmedPath.length === 0) {
-							throw new Error('Empty file path provided');
-						}
-						return trimmedPath;
-					});
-				} catch (error) {
-					console.error(
-						chalk.red(`Error parsing file paths: ${error.message}`)
-					);
-					process.exit(1);
-				}
-			}
-
-			// Validate save-to option if provided
-			if (options.saveTo) {
-				const saveToId = options.saveTo.trim();
-				if (saveToId.length === 0) {
-					console.error(chalk.red('Error: Save-to ID cannot be empty'));
-					process.exit(1);
-				}
-				// Validate ID format: number or number.number
-				if (!/^\d+(\.\d+)?$/.test(saveToId)) {
-					console.error(
-						chalk.red(
-							'Error: Save-to ID must be in format "15" for task or "15.2" for subtask'
-						)
-					);
-					process.exit(1);
-				}
-			}
-
-			// Validate save option if provided (legacy file save)
-			if (options.save) {
-				const saveTarget = options.save.trim();
-				if (saveTarget.length === 0) {
-					console.error(chalk.red('Error: Save target cannot be empty'));
-					process.exit(1);
-				}
-				// Check if it's a valid file path (basic validation)
-				if (saveTarget.includes('..') || saveTarget.startsWith('/')) {
-					console.error(
-						chalk.red(
-							'Error: Save path must be relative and cannot contain ".."'
-						)
-					);
-					process.exit(1);
-				}
+				fail('--save needs a relative file path without ".."');
 			}
 
 			const tag = taskGraph.getCurrentTag();
+			const projectRoot = taskGraph.getProjectRoot();
+			const tasksPath = taskGraph.getTasksPath();
 
-			// Show current tag context
 			await displayCurrentTagIndicator(tag);
 
-			// Validate tasks file exists if task IDs are specified
-			if (taskIds.length > 0) {
-				try {
-					const tasksData = readJSON(
-						taskGraph.getTasksPath(),
-						taskGraph.getProjectRoot(),
-						tag
+			// Check every task ID before spending an AI call
+			const idsToCheck = [...taskIds, ...(saveToId ? [saveToId] : [])];
+			if (idsToCheck.length > 0) {
+				const tasks = readJSON(tasksPath, projectRoot, tag)?.tasks || [];
+				const exists = (id) => {
+					const [parentId, subtaskId] = id
+						.split('.')
+						.map((part) => Number.parseInt(part, 10));
+					const parent = tasks.find((task) => Number(task.id) === parentId);
+					if (!parent || subtaskId === undefined) return Boolean(parent);
+					return (parent.subtasks || []).some(
+						(subtask) => Number(subtask.id) === subtaskId
 					);
-					if (!tasksData || !tasksData.tasks) {
-						console.error(
-							chalk.red(
-								`Error: No valid tasks found in ${taskGraph.getTasksPath()} for tag '${tag}'`
-							)
-						);
-						process.exit(1);
-					}
-				} catch (error) {
-					console.error(
-						chalk.red(`Error reading tasks file: ${error.message}`)
-					);
-					process.exit(1);
-				}
-			}
-
-			// Validate file paths exist if specified
-			if (filePaths.length > 0) {
-				for (const filePath of filePaths) {
-					const fullPath = path.isAbsolute(filePath)
-						? filePath
-						: path.join(taskGraph.getProjectRoot(), filePath);
-					if (!fs.existsSync(fullPath)) {
-						console.error(chalk.red(`Error: File not found: ${filePath}`));
-						process.exit(1);
-					}
-				}
-			}
-
-			// Create validated parameters object
-			const validatedParams = {
-				prompt: prompt.trim(),
-				taskIds: taskIds,
-				filePaths: filePaths,
-				customContext: options.context ? options.context.trim() : null,
-				includeProjectTree: !!options.tree,
-				saveTarget: options.save ? options.save.trim() : null,
-				saveToId: options.saveTo ? options.saveTo.trim() : null,
-				allowFollowUp: true, // Always allow follow-up in CLI
-				detailLevel: options.detail ? options.detail.toLowerCase() : 'medium',
-				tasksPath: taskGraph.getTasksPath(),
-				projectRoot: taskGraph.getProjectRoot()
-			};
-
-			// Display what we're about to do
-			console.log(theme.brand(`Researching: "${validatedParams.prompt}"`));
-
-			if (validatedParams.taskIds.length > 0) {
-				console.log(
-					theme.muted(`Task context: ${validatedParams.taskIds.join(', ')}`)
-				);
-			}
-
-			if (validatedParams.filePaths.length > 0) {
-				console.log(
-					theme.muted(`File context: ${validatedParams.filePaths.join(', ')}`)
-				);
-			}
-
-			if (validatedParams.customContext) {
-				console.log(
-					theme.muted(
-						`Custom context: ${validatedParams.customContext.substring(0, 50)}${validatedParams.customContext.length > 50 ? '...' : ''}`
-					)
-				);
-			}
-
-			if (validatedParams.includeProjectTree) {
-				console.log(theme.muted('Including project file tree'));
-			}
-
-			console.log(theme.muted(`Detail level: ${validatedParams.detailLevel}`));
-
-			try {
-				// Import the research function
-				const { performResearch } = await import('./task-manager/research.js');
-
-				// Prepare research options
-				const researchOptions = {
-					taskIds: validatedParams.taskIds,
-					filePaths: validatedParams.filePaths,
-					customContext: validatedParams.customContext || '',
-					includeProjectTree: validatedParams.includeProjectTree,
-					detailLevel: validatedParams.detailLevel,
-					projectRoot: validatedParams.projectRoot,
-					saveToFile: !!options.saveFile,
-					tag: tag
 				};
-
-				// Execute research
-				const result = await performResearch(
-					validatedParams.prompt,
-					researchOptions,
-					{
-						commandName: 'research',
-						outputType: 'cli',
-						tag: tag
-					},
-					'text',
-					validatedParams.allowFollowUp // Pass follow-up flag
-				);
-
-				// Auto-save to task/subtask if requested and no interactive save occurred
-				if (validatedParams.saveToId && !result.interactiveSaveOccurred) {
-					try {
-						const isSubtask = validatedParams.saveToId.includes('.');
-
-						// Format research content for saving
-						const researchContent = `## Research Query: ${validatedParams.prompt}
-
-**Detail Level:** ${result.detailLevel}
-**Context Size:** ${result.contextSize} characters
-**Timestamp:** ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
-
-### Results
-
-${result.result}`;
-
-						if (isSubtask) {
-							// Save to subtask
-							const { updateSubtaskById } = await import(
-								'./task-manager/update-subtask-by-id.js'
-							);
-
-							await updateSubtaskById(
-								validatedParams.tasksPath,
-								validatedParams.saveToId,
-								researchContent,
-								false, // useResearch = false for simple append
-								{
-									commandName: 'research-save',
-									outputType: 'cli',
-									projectRoot: validatedParams.projectRoot,
-									tag: tag
-								},
-								'text'
-							);
-
-							console.log(
-								chalk.green(
-									`✅ Research saved to subtask ${validatedParams.saveToId}`
-								)
-							);
-						} else {
-							// Save to task
-							const updateTaskById = (
-								await import('./task-manager/update-task-by-id.js')
-							).default;
-
-							const taskIdNum = parseInt(validatedParams.saveToId, 10);
-							await updateTaskById(
-								validatedParams.tasksPath,
-								taskIdNum,
-								researchContent,
-								false, // useResearch = false for simple append
-								{
-									commandName: 'research-save',
-									outputType: 'cli',
-									projectRoot: validatedParams.projectRoot,
-									tag: tag
-								},
-								'text',
-								true // appendMode = true
-							);
-
-							console.log(
-								chalk.green(
-									`✅ Research saved to task ${validatedParams.saveToId}`
-								)
-							);
-						}
-					} catch (saveError) {
-						console.log(
-							chalk.red(`❌ Error saving to task/subtask: ${saveError.message}`)
-						);
-					}
-				}
-
-				// Save results to file if requested (legacy)
-				if (validatedParams.saveTarget) {
-					const saveContent = `# Research Query: ${validatedParams.prompt}
-
-**Detail Level:** ${result.detailLevel}
-**Context Size:** ${result.contextSize} characters
-**Timestamp:** ${new Date().toISOString()}
-
-## Results
-
-${result.result}
-`;
-
-					fs.writeFileSync(validatedParams.saveTarget, saveContent, 'utf-8');
-					console.log(
-						chalk.green(`\n💾 Results saved to: ${validatedParams.saveTarget}`)
+				const missing = idsToCheck.find((id) => !exists(id));
+				if (missing) {
+					fail(
+						`${missing.includes('.') ? 'Subtask' : 'Task'} ${missing} doesn't exist in tag '${tag}'`,
+						'Run `taskgraph list` to see task IDs'
 					);
 				}
+			}
+
+			const missingFile = filePaths.find(
+				(file) =>
+					!fs.existsSync(
+						path.isAbsolute(file) ? file : path.join(projectRoot, file)
+					)
+			);
+			if (missingFile) {
+				fail(`File not found: ${missingFile}`);
+			}
+
+			const query = prompt.trim();
+			let result;
+			try {
+				const { performResearch } = await import('./task-manager/research.js');
+				result = await performResearch(
+					query,
+					{
+						taskIds,
+						filePaths,
+						customContext: options.context ? options.context.trim() : '',
+						includeProjectTree: !!options.tree,
+						detailLevel,
+						projectRoot,
+						saveToFile: !!options.saveFile,
+						tag
+					},
+					{ commandName: 'research', outputType: 'cli', tag },
+					'text',
+					true // follow-up questions, when there's a terminal
+				);
 			} catch (error) {
-				console.error(chalk.red(`\n❌ Research failed: ${error.message}`));
-				process.exit(1);
+				fail(`Research failed: ${error.message}`);
+			}
+
+			// --save-to, unless you already saved from the follow-up menu
+			if (saveToId && !result.interactiveSaveOccurred) {
+				const target = { kind: 'task', id: saveToId };
+				try {
+					const { appendResearchToTask } = await import(
+						'./task-manager/research.js'
+					);
+					appendResearchToTask(
+						tasksPath,
+						saveToId,
+						`## Research: ${query}\n\n${result.result}`,
+						{ projectRoot, tag }
+					);
+					console.log(ui.formatResearchSaved(target));
+				} catch (error) {
+					console.log(ui.formatResearchSaveFailed(target, error.message));
+					process.exitCode = 1;
+				}
+			}
+
+			// --save <file>
+			if (saveTarget) {
+				const target = { kind: 'file', path: saveTarget };
+				try {
+					fs.writeFileSync(
+						saveTarget,
+						`# Research: ${query}\n\n${result.result}\n`,
+						'utf-8'
+					);
+					console.log(ui.formatResearchSaved(target));
+				} catch (error) {
+					console.log(ui.formatResearchSaveFailed(target, error.message));
+					process.exitCode = 1;
+				}
 			}
 		});
 
@@ -1407,50 +1216,47 @@ ${result.result}
 		.option('--all', 'Clear subtasks from all tasks')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
-			const taskIds = options.id;
-			const all = options.all;
-
-			// Initialize TaskGraph
-			const taskGraph = initTaskGraph({
-				tasksPath: options.file || true,
-				tag: options.tag
-			});
-
-			const tag = taskGraph.getCurrentTag();
-
-			// Show current tag context
-			await displayCurrentTagIndicator(tag);
-
-			if (!taskIds && !all) {
-				console.error(
-					chalk.red(
-						'Error: Please specify task IDs with --id=<ids> or use --all to clear all tasks'
-					)
+			if (!options.id && !options.all) {
+				printError(
+					'Choose which tasks to clear',
+					'Use `--id=<ids>`, such as `--id=3,5`, or `--all`'
 				);
 				process.exit(1);
 			}
 
-			if (all) {
-				// If --all is specified, get all task IDs
-				const data = readJSON(
-					taskGraph.getTasksPath(),
-					taskGraph.getProjectRoot(),
-					tag
-				);
-				if (!data || !data.tasks) {
-					console.error(chalk.red('Error: No valid tasks found'));
-					process.exit(1);
+			const taskGraph = initTaskGraph({
+				tasksPath: options.file || true,
+				tag: options.tag
+			});
+			const tag = taskGraph.getCurrentTag();
+			const tasksPath = taskGraph.getTasksPath();
+			const projectRoot = taskGraph.getProjectRoot();
+
+			await displayCurrentTagIndicator(tag);
+
+			let taskIds = options.id;
+			if (options.all) {
+				const data = readJSON(tasksPath, projectRoot, tag);
+				taskIds = (data?.tasks ?? []).map((t) => t.id).join(',');
+				if (!taskIds) {
+					console.log('No subtasks to clear');
+					return;
 				}
-				const allIds = data.tasks.map((t) => t.id).join(',');
-				clearSubtasks(taskGraph.getTasksPath(), allIds, {
-					projectRoot: taskGraph.getProjectRoot(),
-					tag
-				});
-			} else {
-				clearSubtasks(taskGraph.getTasksPath(), taskIds, {
-					projectRoot: taskGraph.getProjectRoot(),
-					tag
-				});
+			}
+
+			try {
+				const result = clearSubtasks(tasksPath, taskIds, { projectRoot, tag });
+				console.log(ui.formatClearedSubtasks(result));
+			} catch (error) {
+				if (error?.name !== 'ClearSubtasksError') throw error;
+				const hints = {
+					SUBTASK_ID: `Use \`taskgraph remove-subtask --id=${error.taskId}\` for one subtask, or \`--id=${String(error.taskId).split('.')[0]}\` for all`,
+					INVALID_TASK_ID: 'Use task numbers, such as `--id=3,5`',
+					TASK_NOT_FOUND: 'Run `taskgraph list` to see task IDs',
+					NO_TASKS: `Run \`taskgraph list\` to check the "${tag}" tag`
+				};
+				printError(`${error.message}; nothing was cleared`, hints[error.code]);
+				process.exit(1);
 			}
 		});
 
@@ -1499,17 +1305,9 @@ ${result.result}
 				process.exit(1);
 			}
 
-			const tasksPath = options.file || TASKGRAPH_TASKS_FILE;
-
-			if (!fs.existsSync(tasksPath)) {
-				console.error(
-					`❌ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file at ${TASKGRAPH_TASKS_FILE}`
-				);
-				process.exit(1);
-			}
-
-			// Correctly determine projectRoot
-			// Initialize TaskGraph
+			// No check that tasks.json exists: addTask creates it for the first
+			// task. The old check also resolved the path from the current folder,
+			// so it failed in any subfolder of the project.
 			const taskGraph = initTaskGraph({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -2186,40 +1984,6 @@ ${result.result}
 		);
 	}
 
-	// Helper function to show research command help
-	function showResearchHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Research Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph research "<query>" [options]\n\n` +
-					chalk.cyan('Required:') +
-					'\n' +
-					'  <query>             Research question or prompt (required)\n\n' +
-					chalk.cyan('Context Options:') +
-					'\n' +
-					'  -i, --id <ids>      Comma-separated task/subtask IDs for context (e.g., "15,23.2")\n' +
-					'  -f, --files <paths> Comma-separated file paths for context\n' +
-					'  -c, --context <text> Additional custom context text\n' +
-					'  --tree              Include project file tree structure\n\n' +
-					chalk.cyan('Output Options:') +
-					'\n' +
-					'  -d, --detail <level> Detail level: low, medium, high (default: medium)\n' +
-					'  --save-to <id>      Auto-save results to task/subtask ID (e.g., "15" or "15.2")\n' +
-					'  --tag <tag>         Specify tag context for task operations\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph research "How should I implement user authentication?"\n' +
-					'  taskgraph research "What\'s the best approach?" --id=15,23.2\n' +
-					'  taskgraph research "How does auth work?" --files=src/auth.js --tree\n' +
-					'  taskgraph research "Implementation steps?" --save-to=15.2 --detail=high',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
-
 	// remove-task command
 	programInstance
 		.command('remove-task')
@@ -2501,10 +2265,9 @@ ${result.result}
 				// Only override defaults if user specified valid rules
 				const invalidProfiles = findInvalidRulesProfiles(userSpecifiedProfiles);
 				if (invalidProfiles.length > 0) {
-					console.error(
-						chalk.red(
-							`Unsupported rule profile(s): ${invalidProfiles.join(', ')}. TaskGraph supports Claude Code only; valid options: ${RULE_PROFILES.join(', ')}`
-						)
+					printError(
+						`"${invalidProfiles.join(', ')}" isn't a rule profile`,
+						`TaskGraph supports Claude Code only; use \`--rules ${RULE_PROFILES.join(',')}\``
 					);
 					process.exit(1);
 				}
@@ -2522,10 +2285,7 @@ ${result.result}
 				await initializeProject(cmdOptions);
 				// initializeProject handles its own flow, including potential process.exit()
 			} catch (error) {
-				console.error(
-					chalk.red(`Error during initialization: ${error.message}`)
-				);
-				process.exit(1);
+				displayError(error);
 			}
 		});
 
@@ -2592,32 +2352,45 @@ Examples:
 				'baseURL'
 			].filter((flag) => options[flag]);
 			if (removedProviderFlags.length > 0) {
-				console.error(
-					chalk.red(
-						'Error: TaskGraph now uses Claude Code only, so provider flags such as --ollama, --openrouter and --baseURL are no longer supported.'
-					)
+				const flag = `--${removedProviderFlags[0] === 'baseURL' ? 'baseURL' : removedProviderFlags[0].replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+				printError(
+					`${flag} isn't supported any more; TaskGraph runs on Claude Code`,
+					'Choose a model with `taskgraph models --set-main <opus|sonnet|haiku>`'
 				);
-				console.error(
-					chalk.yellow(
-						'Choose one of the Claude Code models: taskgraph models --set-main <opus|sonnet|haiku>'
-					)
+				process.exit(1);
+			}
+
+			if (!isConfigFilePresent(projectRoot)) {
+				printError(
+					'No .taskgraph/config.json in this project',
+					'Run `taskgraph init` to recreate it'
 				);
 				process.exit(1);
 			}
 
 			if (options.setup) {
-				console.log(theme.brand('Starting interactive model setup...'));
 				try {
-					await runInteractiveSetup(projectRoot);
-					// runInteractiveSetup logs its own completion/error messages
+					const ok = await runInteractiveSetup(projectRoot);
+					if (!ok && !process.exitCode) process.exitCode = 1;
 				} catch (setupError) {
-					console.error(
-						chalk.red('\nInteractive setup failed unexpectedly:'),
-						setupError.message
-					);
+					displayError(setupError);
 				}
 				return;
 			}
+
+			const configResult = await getModelConfiguration({ projectRoot });
+			if (!configResult.success) {
+				printError(
+					`Couldn't read the model settings: ${configResult.error.message}`,
+					'Run `taskgraph init` to recreate .taskgraph/config.json'
+				);
+				process.exit(1);
+			}
+			const active = configResult.data.activeModels;
+			const availableResult = await getAvailableModelsList({ projectRoot });
+			const availableIds = availableResult.success
+				? availableResult.data.models.map((m) => m.modelId)
+				: [];
 
 			const requestedChanges = [
 				['main', options.setMain],
@@ -2626,135 +2399,122 @@ Examples:
 			].filter(([, modelId]) => modelId);
 
 			if (requestedChanges.length > 0) {
-				let updateOccurred = false;
+				// Check every model first, so a typo in one flag sets nothing
+				const unknown = requestedChanges.find(
+					([, modelId]) => !availableIds.includes(modelId)
+				);
+				if (unknown) {
+					printError(
+						`"${unknown[1]}" isn't a Claude Code model`,
+						`Choose ${ui.formatModelChoices(availableIds)}`
+					);
+					process.exit(1);
+				}
 
+				const changes = [];
 				for (const [role, modelId] of requestedChanges) {
 					const result = await setModel(role, modelId, { projectRoot });
-					if (result.success) {
-						console.log(chalk.green(`✅ ${result.data.message}`));
-						updateOccurred = true;
-					} else {
-						console.error(
-							chalk.red(
-								`❌ Error setting ${role} model: ${result.error.message}`
-							)
+					if (!result.success) {
+						if (changes.length > 0) {
+							console.log(ui.formatModelChanges(changes));
+						}
+						printError(
+							`Couldn't set the ${role} model: ${result.error.message}`
 						);
+						process.exit(1);
 					}
+					changes.push({
+						role,
+						from: active[role]?.modelId ?? null,
+						to: modelId
+					});
 				}
-
-				if (updateOccurred) {
-					console.log(theme.brand('\nModel configuration updated.'));
-				} else {
-					console.log(
-						chalk.yellow(
-							'\nNo model configuration changes were made (or errors occurred).'
-						)
-					);
-				}
+				console.log(ui.formatModelChanges(changes));
 				return;
 			}
 
-			// Display full status when no setup or set flags were given
-			const configResult = await getModelConfiguration({ projectRoot });
-			const availableResult = await getAvailableModelsList({ projectRoot });
-
-			if (!configResult.success) {
-				console.error(
-					chalk.red(
-						`❌ Error fetching configuration: ${configResult.error.message}`
-					)
-				);
-			} else {
-				displayModelConfiguration(
-					configResult.data,
-					availableResult.data?.models || []
-				);
-			}
-
-			if (availableResult.success) {
-				const activeIds = configResult.success
-					? [
-							configResult.data.activeModels.main.modelId,
-							configResult.data.activeModels.research.modelId,
-							configResult.data.activeModels.fallback?.modelId
-						].filter(Boolean)
-					: [];
-				displayAvailableModels(
-					availableResult.data.models.filter(
-						(m) => !activeIds.includes(m.modelId)
-					)
-				);
-			} else {
-				console.error(
-					chalk.yellow(
-						`⚠️ Warning: Could not display available models: ${availableResult.error.message}`
-					)
-				);
-			}
-
-			if (!isConfigFilePresent(projectRoot)) {
-				console.log(
-					chalk.yellow(
-						"\nHint: Run 'taskgraph models --setup' to create or update your configuration."
-					)
-				);
-			}
+			console.log(
+				ui.formatModelConfiguration(
+					{
+						main: active.main?.modelId ?? null,
+						research: active.research?.modelId ?? null,
+						fallback: active.fallback?.modelId ?? null
+					},
+					availableIds
+				)
+			);
 		});
 
 	// response-language command
 	programInstance
 		.command('lang')
-		.description('Manage response language settings')
+		.description('Show or set the language AI responses are written in')
 		.option('--response <response_language>', 'Set the response language')
-		.option('--setup', 'Run interactive setup to configure response language')
+		.option('--setup', 'Choose the response language interactively')
+		.addHelpText(
+			'after',
+			`
+Examples:
+  $ taskgraph lang                       # Show the response language
+  $ taskgraph lang --response French     # Set it
+  $ taskgraph lang --setup               # Choose it interactively`
+		)
 		.action(async (options) => {
 			const taskGraph = initTaskGraph({});
-			const projectRoot = taskGraph.getProjectRoot(); // Find project root for context
-			const { response, setup } = options;
-			let responseLanguage = response !== undefined ? response : 'English';
-			if (setup) {
-				console.log(
-					theme.brand('Starting interactive response language setup...')
-				);
-				try {
-					const userResponse = await inquirer.prompt([
-						{
-							type: 'input',
-							name: 'responseLanguage',
-							message: 'Input your preferred response language',
-							default: 'English'
-						}
-					]);
-
-					console.log(
-						theme.brand(
-							'Response language set to:',
-							userResponse.responseLanguage
-						)
-					);
-					responseLanguage = userResponse.responseLanguage;
-				} catch (setupError) {
-					console.error(
-						chalk.red('\\nInteractive setup failed unexpectedly:'),
-						setupError.message
-					);
-				}
-			}
-
-			const result = setResponseLanguage(responseLanguage, {
-				projectRoot
-			});
-
-			if (result.success) {
-				console.log(chalk.green(`✅ ${result.data.message}`));
-			} else {
-				console.error(
-					chalk.red(
-						`❌ Error setting response language: ${result.error.message}`
-					)
+			const projectRoot = taskGraph.getProjectRoot();
+			if (!isConfigFilePresent(projectRoot)) {
+				printError(
+					'No .taskgraph/config.json in this project',
+					'Run `taskgraph init` to recreate it'
 				);
 				process.exit(1);
 			}
+			const current = getResponseLanguage(projectRoot) || 'English';
+			let language = options.response;
+
+			if (options.setup) {
+				try {
+					const answer = await inquirer.prompt([
+						{
+							type: 'input',
+							name: 'language',
+							message: 'Language for AI responses?',
+							default: current
+						}
+					]);
+					language = answer.language;
+				} catch (error) {
+					if (error?.name !== 'ExitPromptError') throw error;
+					console.log(theme.muted('\nCancelled; response language unchanged'));
+					process.exitCode = 130;
+					return;
+				}
+			}
+
+			// Without --response or --setup, show the setting instead of
+			// resetting it to English
+			if (language === undefined) {
+				console.log(`Response language: ${theme.brand(current)}`);
+				console.log(
+					theme.muted('Change it with ') +
+						theme.brand('taskgraph lang --response <language>')
+				);
+				return;
+			}
+
+			language = language.trim();
+			const result = setResponseLanguage(language, { projectRoot });
+			if (!result.success) {
+				printError(
+					`Couldn't set the response language: ${result.error.message}`
+				);
+				process.exit(1);
+			}
+			const change =
+				language === current
+					? `${theme.brand(language)} ${theme.muted('(unchanged)')}`
+					: `${current} → ${theme.brand(language)}`;
+			console.log(`${chalk.green('✓')} Response language  ${change}`);
 		});
 
 	// move-task command
@@ -3706,6 +3466,58 @@ async function launchREPL() {
 	}
 }
 
+// Commands that work outside a project
+const RUNS_WITHOUT_PROJECT = new Set([
+	'init',
+	'help',
+	'completion',
+	'tui',
+	'repl'
+]);
+
+/**
+ * Stop a command that needs a project when it runs outside one.
+ *
+ * Without this check each command failed in its own way, after a stack of
+ * "Configuration file not found" warnings, and `list`, `next` and `tags`
+ * left an empty .taskgraph folder behind that made the next command think
+ * the folder was a project.
+ *
+ * @param {import('commander').Command} _hookedCommand - The program
+ * @param {import('commander').Command} actionCommand - The command about to run
+ */
+function requireProject(_hookedCommand, actionCommand) {
+	let topLevel = actionCommand;
+	while (topLevel.parent?.parent) topLevel = topLevel.parent;
+	const names = [topLevel.name(), ...topLevel.aliases()];
+	if (names.some((name) => RUNS_WITHOUT_PROJECT.has(name))) return;
+
+	// An explicit tasks file means the caller has said where the project is
+	if (actionCommand.getOptionValueSource('file') === 'cli') return;
+
+	const takesProject = actionCommand.options.some(
+		(option) => option.attributeName() === 'project'
+	);
+	const projectOption = takesProject ? actionCommand.opts().project : null;
+	const explicitRoot =
+		typeof projectOption === 'string' ? path.resolve(projectOption) : null;
+
+	if (isTaskGraphProject(explicitRoot || findProjectRoot())) return;
+
+	if (explicitRoot) {
+		printError(
+			`No TaskGraph project at ${explicitRoot}`,
+			'Run `taskgraph init` in that folder to set one up'
+		);
+	} else {
+		printError(
+			'No TaskGraph project in this folder',
+			'Run `taskgraph init` to set one up, or cd into your project'
+		);
+	}
+	process.exit(1);
+}
+
 /**
  * Setup the CLI application
  * @returns {Object} Configured Commander program
@@ -3749,6 +3561,9 @@ function setupCLI() {
 	};
 	styleParseErrors(programInstance, '');
 
+	// Runs before every subcommand's action, nested ones included
+	programInstance.hook('preAction', requireProject);
+
 	return programInstance;
 }
 
@@ -3766,6 +3581,12 @@ async function runCLI(argv = process.argv) {
 
 		// Display banner if not in a pipe (except for init/start/repl commands which have their own)
 		const isInitCommand = argv.includes('init');
+		// init creates the config, and models and lang edit it and report a
+		// missing one as an error, so the "using default settings" warning
+		// would only repeat or contradict them
+		if (['init', 'models', 'lang'].includes(argv[2])) {
+			setSuppressConfigWarnings(true);
+		}
 		const isREPLCommand = argv.includes('tui') || argv.includes('repl');
 		const noBanner = argv.includes('--no-banner');
 		if (process.stdout.isTTY && !isInitCommand && !isREPLCommand && !noBanner) {
@@ -3813,39 +3634,23 @@ async function runCLI(argv = process.argv) {
 		const filteredArgv = argv.filter((arg) => arg !== '--no-banner');
 		await programInstance.parseAsync(filteredArgv);
 
-		// Check if migration has occurred and show FYI notice once
+		// Show the "TaskGraph now supports tags" notice once, after a run that
+		// migrated an old tasks.json. It used to show for any project whose
+		// state.json said the notice hadn't been shown, which included every
+		// new project after its first tasks were created.
 		try {
 			if (isCompletion) return;
-			// Use initTaskGraph with no required fields - will only fail if no project root
-			const taskGraph = initTaskGraph({});
+			const statePath = initTaskGraph({}).getStatePath();
 
-			const tasksPath = taskGraph.getTasksPath();
-			const statePath = taskGraph.getStatePath();
+			if (statePath && fs.existsSync(statePath)) {
+				// Read state.json directly without tag resolution since it's not a tagged file
+				const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
 
-			if (tasksPath && fs.existsSync(tasksPath)) {
-				// Read raw file to check if it has master key (bypassing tag resolution)
-				const rawData = fs.readFileSync(tasksPath, 'utf8');
-				const parsedData = JSON.parse(rawData);
-
-				if (parsedData && parsedData.master) {
-					// Migration has occurred, check if we've shown the notice
-					let stateData = { migrationNoticeShown: false };
-					if (statePath && fs.existsSync(statePath)) {
-						// Read state.json directly without tag resolution since it's not a tagged file
-						const rawStateData = fs.readFileSync(statePath, 'utf8');
-						stateData = JSON.parse(rawStateData) || stateData;
-					}
-
-					if (!stateData.migrationNoticeShown) {
-						displayTaggedTasksFYI({ _migrationHappened: true });
-
-						// Mark as shown
-						stateData.migrationNoticeShown = true;
-						// Write state.json directly without tag resolution since it's not a tagged file
-						if (statePath) {
-							fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2));
-						}
-					}
+				if (stateData?.migrationNoticePending === true) {
+					displayTaggedTasksFYI({ _migrationHappened: true });
+					stateData.migrationNoticePending = false;
+					stateData.migrationNoticeShown = true;
+					fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2));
 				}
 			}
 		} catch (error) {

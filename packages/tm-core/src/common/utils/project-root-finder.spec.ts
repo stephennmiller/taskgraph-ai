@@ -8,6 +8,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	findProjectRoot,
+	isTaskGraphProject,
 	normalizeProjectRoot
 } from './project-root-finder.js';
 
@@ -330,5 +331,49 @@ describe('normalizeProjectRoot', () => {
 		const sep = path.sep;
 		const result = normalizeProjectRoot(`${sep}.taskgraph`);
 		expect(result).toBe(sep);
+	});
+});
+
+describe('isTaskGraphProject', () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-project-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	it('is false for a folder with nothing in it', () => {
+		expect(isTaskGraphProject(tempDir)).toBe(false);
+	});
+
+	it('is false for an empty .taskgraph/tasks folder', () => {
+		// What `list` used to leave behind outside a project
+		fs.mkdirSync(path.join(tempDir, '.taskgraph', 'tasks'), {
+			recursive: true
+		});
+
+		expect(isTaskGraphProject(tempDir)).toBe(false);
+	});
+
+	it('is true once init has written the config', () => {
+		fs.mkdirSync(path.join(tempDir, '.taskgraph'));
+		fs.writeFileSync(path.join(tempDir, '.taskgraph', 'config.json'), '{}');
+
+		expect(isTaskGraphProject(tempDir)).toBe(true);
+	});
+
+	it('is true for a project that has tasks but lost its config', () => {
+		fs.mkdirSync(path.join(tempDir, '.taskgraph', 'tasks'), {
+			recursive: true
+		});
+		fs.writeFileSync(
+			path.join(tempDir, '.taskgraph', 'tasks', 'tasks.json'),
+			'{}'
+		);
+
+		expect(isTaskGraphProject(tempDir)).toBe(true);
 	});
 });

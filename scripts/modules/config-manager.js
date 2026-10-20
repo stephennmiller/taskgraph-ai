@@ -9,7 +9,10 @@ import {
 import chalk from 'chalk';
 import { z } from 'zod';
 import { AI_COMMAND_NAMES } from '../../src/constants/commands.js';
-import { TASKGRAPH_DIR } from '../../src/constants/paths.js';
+import {
+	TASKGRAPH_DIR,
+	TASKGRAPH_TASKS_FILE
+} from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
@@ -189,31 +192,15 @@ function _loadAndValidateConfig(explicitRoot = null) {
 	} else {
 		// Config file doesn't exist at the determined rootToUse.
 		// Skip warnings if the global suppress flag is set
-		const shouldWarn = !isConfigWarningSuppressed();
+		// Don't warn during initialization: only an explicit root or a folder
+		// with tasks is expected to have a config. An empty .taskgraph folder
+		// isn't a project, so the "No TaskGraph project" error covers it.
+		const expectsConfig =
+			Boolean(explicitRoot) ||
+			fs.existsSync(path.join(rootToUse, TASKGRAPH_TASKS_FILE));
 
-		if (shouldWarn) {
-			if (explicitRoot) {
-				// Warn about explicit root not having config
-				console.warn(
-					chalk.yellow(
-						`Warning: Configuration file not found at provided project root (${explicitRoot}). Using default configuration. Run 'taskgraph models --setup' to configure.`
-					)
-				);
-			} else {
-				// Don't warn about missing config during initialization
-				// Only warn if this looks like an existing project (has .taskgraph dir)
-				const hasTaskGraphDir = fs.existsSync(
-					path.join(rootToUse, TASKGRAPH_DIR)
-				);
-
-				if (hasTaskGraphDir) {
-					console.warn(
-						chalk.yellow(
-							`Warning: Configuration file not found at derived root (${rootToUse}). Using defaults.`
-						)
-					);
-				}
-			}
+		if (expectsConfig && !isConfigWarningSuppressed()) {
+			warnMissingConfigOnce(explicitRoot || rootToUse);
 		}
 		// Keep config as defaults
 		config = { ...defaults };
@@ -221,6 +208,24 @@ function _loadAndValidateConfig(explicitRoot = null) {
 	}
 
 	return config;
+}
+
+// Roots already warned about in this run. getConfig() runs several times per
+// command and doesn't cache loads without an explicit root, so the warning
+// used to print up to five times in a row.
+const warnedMissingConfigRoots = new Set();
+
+/**
+ * Warn, once per run and root, that a project has no config file.
+ * @param {string} root - Project root that should have one
+ */
+function warnMissingConfigOnce(root) {
+	if (warnedMissingConfigRoots.has(root)) return;
+	warnedMissingConfigRoots.add(root);
+	console.warn(
+		`${chalk.yellow('⚠')} No .taskgraph/config.json in ${root}; using default settings\n` +
+			chalk.dim('  Run taskgraph init to recreate it')
+	);
 }
 
 /**

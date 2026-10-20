@@ -970,8 +970,13 @@ function createStateJson(statePath) {
  */
 function markMigrationForNotice(tasksJsonPath) {
 	try {
-		const projectRoot = path.dirname(path.dirname(tasksJsonPath));
-		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
+		// tasks.json is <root>/.taskgraph/tasks/tasks.json. Two dirnames gave
+		// <root>/.taskgraph, so this used to write .taskgraph/.taskgraph/state.json
+		// and fail silently.
+		const statePath = path.join(
+			path.dirname(path.dirname(tasksJsonPath)),
+			'state.json'
+		);
 
 		// Ensure state.json exists
 		if (!fs.existsSync(statePath)) {
@@ -982,11 +987,12 @@ function markMigrationForNotice(tasksJsonPath) {
 		try {
 			const rawState = fs.readFileSync(statePath, 'utf8');
 			const stateData = JSON.parse(rawState) || {};
-			// Only set to false if it's not already set (i.e., first time migration)
-			if (stateData.migrationNoticeShown === undefined) {
-				stateData.migrationNoticeShown = false;
-				fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2), 'utf8');
-			}
+			// A legacy tasks.json was just migrated: show the notice after this
+			// command. migrationNoticeShown alone can't say that, because new
+			// projects start with it false too.
+			stateData.migrationNoticePending = true;
+			stateData.migrationNoticeShown = false;
+			fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2), 'utf8');
 		} catch (stateError) {
 			if (process.env.TASKGRAPH_DEBUG === 'true') {
 				console.warn(

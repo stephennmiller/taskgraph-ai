@@ -134,85 +134,28 @@ export async function researchDirect(args, log, context = {}) {
 			false // allowFollowUp - disable for MCP calls
 		);
 
-		// Auto-save to task/subtask if requested
+		// Auto-save to task/subtask if requested: the answer is appended
+		// as-is to the task's details, with no second AI call
 		if (saveTo) {
 			try {
-				const isSubtask = saveTo.includes('.');
-
-				// Format research content for saving
-				const researchContent = `## Research Query: ${query.trim()}
-
-**Detail Level:** ${result.detailLevel}
-**Context Size:** ${result.contextSize} characters
-**Timestamp:** ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
-
-### Results
-
-${result.result}`;
-
-				if (isSubtask) {
-					// Save to subtask
-					const { updateSubtaskById } = await import(
-						'../../../../scripts/modules/task-manager/update-subtask-by-id.js'
-					);
-
-					const tasksPath = path.join(
-						projectRoot,
-						'.taskgraph',
-						'tasks',
-						'tasks.json'
-					);
-					await updateSubtaskById(
-						tasksPath,
-						saveTo,
-						researchContent,
-						false, // useResearch = false for simple append
-						{
-							session,
-							mcpLog,
-							commandName: 'research-save',
-							outputType: 'mcp',
-							projectRoot,
-							tag
-						},
-						'json'
-					);
-
-					log.info(`Research saved to subtask ${saveTo}`);
-				} else {
-					// Save to task
-					const updateTaskById = (
-						await import(
-							'../../../../scripts/modules/task-manager/update-task-by-id.js'
-						)
-					).default;
-
-					const taskIdNum = parseInt(saveTo, 10);
-					const tasksPath = path.join(
-						projectRoot,
-						'.taskgraph',
-						'tasks',
-						'tasks.json'
-					);
-					await updateTaskById(
-						tasksPath,
-						taskIdNum,
-						researchContent,
-						false, // useResearch = false for simple append
-						{
-							session,
-							mcpLog,
-							commandName: 'research-save',
-							outputType: 'mcp',
-							projectRoot,
-							tag
-						},
-						'json',
-						true // appendMode = true
-					);
-
-					log.info(`Research saved to task ${saveTo}`);
-				}
+				const { appendResearchToTask } = await import(
+					'../../../../scripts/modules/task-manager/research.js'
+				);
+				const tasksPath = path.join(
+					projectRoot,
+					'.taskgraph',
+					'tasks',
+					'tasks.json'
+				);
+				appendResearchToTask(
+					tasksPath,
+					saveTo,
+					`## Research: ${query.trim()}\n\n${result.result}`,
+					{ projectRoot, tag }
+				);
+				log.info(
+					`Research saved to ${saveTo.includes('.') ? 'subtask' : 'task'} ${saveTo}`
+				);
 			} catch (saveError) {
 				log.warn(`Error saving research to task/subtask: ${saveError.message}`);
 			}
