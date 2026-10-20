@@ -11,6 +11,7 @@ import type {
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
+import { blockedCount } from '../../dependencies/index.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
@@ -282,14 +283,12 @@ export class TaskService {
 	 * Prioritizes eligible subtasks from in-progress parent tasks before falling back to top-level tasks
 	 */
 	async getNextTask(tag?: string): Promise<Task | null> {
-		const result = await this.getTaskList({
-			tag,
-			filter: {
-				status: ['pending', 'in-progress', 'done']
-			}
-		});
+		// Load every status: blocked-count needs dependents that next never picks
+		const result = await this.getTaskList({ tag });
 
 		const allTasks = result.tasks;
+		const blockedCounts = blockedCount(allTasks);
+		const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
 		const priorityValues = { critical: 4, high: 3, medium: 2, low: 1 };
 
 		// Helper to convert subtask dependencies to full dotted notation
@@ -353,13 +352,15 @@ export class TaskService {
 			});
 
 		if (candidateSubtasks.length > 0) {
-			// Sort by priority → dependency count → parent ID → subtask ID
+			// Sort by priority → blocked count → dependency count → parent ID → subtask ID
 			candidateSubtasks.sort((a, b) => {
 				const pa =
 					priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
 				const pb =
 					priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
 				if (pb !== pa) return pb - pa;
+
+				if (blocks(a) !== blocks(b)) return blocks(b) - blocks(a);
 
 				if (a.dependencies!.length !== b.dependencies!.length) {
 					return a.dependencies!.length - b.dependencies!.length;
@@ -386,11 +387,13 @@ export class TaskService {
 
 		if (eligibleTasks.length === 0) return null;
 
-		// Sort by priority → dependency count → task ID
+		// Sort by priority → blocked count → dependency count → task ID
 		const nextTask = eligibleTasks.sort((a, b) => {
 			const pa = priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
 			const pb = priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
 			if (pb !== pa) return pb - pa;
+
+			if (blocks(a) !== blocks(b)) return blocks(b) - blocks(a);
 
 			const da = (a.dependencies ?? []).length;
 			const db = (b.dependencies ?? []).length;
