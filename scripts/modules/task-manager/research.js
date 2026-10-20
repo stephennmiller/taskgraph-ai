@@ -374,6 +374,8 @@ async function handleFollowUpQuestions(
 					}
 				]);
 
+				console.log();
+
 				// Build cumulative conversation context from all previous exchanges
 				const conversationContext =
 					buildConversationContext(conversationHistory);
