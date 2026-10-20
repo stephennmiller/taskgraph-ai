@@ -53,9 +53,10 @@ export async function validateDependenciesDirect(args, log) {
 		// Enable silent mode to prevent console logs from interfering with JSON response
 		enableSilentMode();
 
-		const options = { projectRoot, tag };
+		// The core function reads the tag from options.context
+		const options = { context: { projectRoot, tag } };
 		// Call the original command function using the provided tasksPath
-		await validateDependenciesCommand(tasksPath, options);
+		const result = await validateDependenciesCommand(tasksPath, options);
 
 		// Restore normal logging
 		disableSilentMode();
@@ -63,7 +64,10 @@ export async function validateDependenciesDirect(args, log) {
 		return {
 			success: true,
 			data: {
-				message: 'Dependencies validated successfully',
+				message: result.valid
+					? 'No dependency problems'
+					: `Found ${result.issues.length} dependency problem(s)`,
+				...result,
 				tasksPath
 			}
 		};

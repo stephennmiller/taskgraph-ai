@@ -1,0 +1,159 @@
+import { stripVTControlCharacters as plain } from 'node:util';
+import { describe, expect, it } from 'vitest';
+import {
+	formatDependencyCheck,
+	formatDependencyFixes
+} from './dependency-check-formatters.js';
+
+const counts = { taskCount: 4, subtaskCount: 0, dependencyCount: 1 };
+const lines = (text: string) => plain(text).split('\n');
+
+describe('formatDependencyCheck', () => {
+	it('says there are no problems in one line, with what was checked', () => {
+		expect(lines(formatDependencyCheck({ ...counts, issues: [] }))).toEqual([
+			'✓ No dependency problems · 4 tasks, 1 dependency'
+		]);
+	});
+
+	it('counts subtasks and pluralizes dependencies', () => {
+		const output = formatDependencyCheck({
+			taskCount: 1,
+			subtaskCount: 3,
+			dependencyCount: 2,
+			issues: []
+		});
+		expect(plain(output)).toBe(
+			'✓ No dependency problems · 1 task, 3 subtasks, 2 dependencies'
+		);
+	});
+
+	it('lists each problem once and points at fix-dependencies', () => {
+		const output = formatDependencyCheck({
+			...counts,
+			issues: [
+				{ type: 'missing', taskId: 4, dependencyId: 99 },
+				{ type: 'self', taskId: 4 },
+				{ type: 'missing', taskId: '1.1', dependencyId: '1.7' }
+			]
+		});
+
+		expect(lines(output)).toEqual([
+			'✗ 3 dependency problems',
+			"  4    depends on task 99, which doesn't exist",
+			'  4    depends on itself',
+			"  1.1  depends on subtask 1.7, which doesn't exist",
+			'Run taskgraph fix-dependencies to remove them'
+		]);
+	});
+
+	it('suggests remove-dependency when only task loops are left', () => {
+		const output = formatDependencyCheck({
+			...counts,
+			issues: [
+				{ type: 'circular', taskId: 2 },
+				{ type: 'circular', taskId: 3 }
+			]
+		});
+
+		expect(lines(output).at(-1)).toBe(
+			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+		);
+	});
+
+	it('still suggests fix-dependencies for a loop between subtasks', () => {
+		const output = formatDependencyCheck({
+			...counts,
+			issues: [{ type: 'circular', taskId: '1.2' }]
+		});
+		expect(lines(output).at(-1)).toBe(
+			'Run taskgraph fix-dependencies to remove them'
+		);
+	});
+
+	it('fits every line in 80 columns', () => {
+		const output = formatDependencyCheck(
+			{
+				...counts,
+				issues: [
+					{ type: 'missing', taskId: '120.14', dependencyId: '9999.9999' }
+				]
+			},
+			80
+		);
+		for (const line of lines(output)) {
+			expect(line.length).toBeLessThanOrEqual(80);
+		}
+	});
+
+	it('cuts rows to a narrow terminal', () => {
+		const output = formatDependencyCheck(
+			{
+				...counts,
+				issues: [{ type: 'missing', taskId: 4, dependencyId: 99 }]
+			},
+			30
+		);
+		const row = lines(output)[1];
+		expect(row.length).toBeLessThanOrEqual(30);
+		expect(row.endsWith('…')).toBe(true);
+	});
+});
+
+describe('formatDependencyFixes', () => {
+	it('says there was nothing to fix in one line', () => {
+		expect(
+			lines(formatDependencyFixes({ ...counts, fixes: [], remaining: [] }))
+		).toEqual(['✓ No dependency problems · 4 tasks, 1 dependency']);
+	});
+
+	it('lists what was removed, grouped by task', () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [
+				{ type: 'duplicate', taskId: 2, dependencyId: 1 },
+				{ type: 'self', taskId: '1.1' },
+				{ type: 'missing', taskId: 4, dependencyId: 99 },
+				{ type: 'circular', taskId: '1.2', dependencyId: '1.3' },
+				{ type: 'self', taskId: 4 }
+			]
+		});
+
+		expect(lines(output)).toEqual([
+			'✓ Fixed 5 dependency problems',
+			'  1.1  removed its dependency on itself',
+			'  1.2  removed subtask 1.3 to break a loop',
+			'  2    removed a duplicate of task 1',
+			"  4    removed task 99, which doesn't exist",
+			'  4    removed its dependency on itself'
+		]);
+	});
+
+	it('reports problems it left for the user', () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [{ type: 'self', taskId: 4 }],
+			remaining: [
+				{ type: 'circular', taskId: 2 },
+				{ type: 'circular', taskId: 3 }
+			]
+		});
+
+		expect(lines(output)).toEqual([
+			'✓ Fixed 1 dependency problem',
+			'  4  removed its dependency on itself',
+			'✗ 2 problems left',
+			'  2  is part of a dependency loop',
+			'  3  is part of a dependency loop',
+			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+		]);
+	});
+
+	it("doesn't claim success when it fixed nothing but problems remain", () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [],
+			remaining: [{ type: 'circular', taskId: 2 }]
+		});
+		expect(lines(output)[0]).toBe('✗ 1 dependency problem');
+	});
+});

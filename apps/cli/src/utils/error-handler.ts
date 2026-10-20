@@ -64,15 +64,23 @@ export function describeError(error: any, hint?: string): ErrorMessage {
 				: (current?.message ?? String(current));
 
 	const message = cleanMessage(raw);
-	return { message, hint: hint ?? defaultHint(message, current?.code) };
+	// Older code can attach the fix to the error it throws
+	const ownHint =
+		typeof current?.hint === 'string' ? (current.hint as string) : undefined;
+	return {
+		message,
+		hint: hint ?? ownHint ?? defaultHint(message, current?.code)
+	};
 }
 
 /** "Subtask 3.9 not found": its parent is the place to look */
 const MISSING_SUBTASK = /\bsubtask (\d+)\.\d+ not found\b/i;
 /** "Task 9 not found", not "Tasks file not found" */
 const MISSING_TASK = /\btask\b(?!\s+file).*\bnot found\b/i;
-/** 'Tag "x" not found' */
-const MISSING_TAG = /^tag\b.*\bnot found\b/i;
+/** 'Tag "x" not found', 'Source tag "x" not found' */
+const MISSING_TAG = /^(source |target )?tag\b.*\bnot found\b/i;
+/** 'Tag "x" already exists', 'Target tag "x" already exists' */
+const DUPLICATE_TAG = /^(source |target )?tag\b.*\balready exists\b/i;
 
 /**
  * The next step for an error the caller gave no hint for: by code first, then
@@ -89,7 +97,7 @@ function defaultHint(message: string, code?: string): string | undefined {
 	if (MISSING_TASK.test(message)) {
 		return HINTS_BY_CODE.TASK_NOT_FOUND;
 	}
-	if (MISSING_TAG.test(message)) {
+	if (MISSING_TAG.test(message) || DUPLICATE_TAG.test(message)) {
 		return 'Run `taskgraph tags` to see your tags';
 	}
 	return undefined;

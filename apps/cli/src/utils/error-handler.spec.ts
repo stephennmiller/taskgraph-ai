@@ -83,6 +83,26 @@ describe('describeError', () => {
 		);
 	});
 
+	it('suggests listing tags for source, target and duplicate tag errors', () => {
+		for (const message of [
+			'Source tag "nope" does not exist',
+			'Target tag "backup" already exists',
+			'Tag "feature-auth" already exists'
+		]) {
+			expect(describeError(new Error(message)).hint).toBe(
+				'Run `taskgraph tags` to see your tags'
+			);
+		}
+	});
+
+	it('uses a hint attached to the thrown error', () => {
+		const error = Object.assign(new Error('Needs confirmation'), {
+			hint: 'Pass `--yes`'
+		});
+		expect(describeError(error).hint).toBe('Pass `--yes`');
+		expect(describeError(error, 'Caller wins').hint).toBe('Caller wins');
+	});
+
 	it('lets the caller supply the hint', () => {
 		expect(describeError(new Error('nope'), 'Try again').hint).toBe(
 			'Try again'

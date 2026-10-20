@@ -88,6 +88,24 @@ export {
 
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
+export {
+	formatDependencyCheck,
+	formatDependencyFixes,
+	type DependencyCounts,
+	type DependencyFix,
+	type DependencyIssue
+} from './formatters/dependency-check-formatters.js';
+
+// Tag formatters
+export {
+	formatTagCopied,
+	formatTagCreated,
+	formatTagDeleted,
+	formatTagList,
+	formatTagRenamed,
+	formatTagSwitched,
+	type TagSummary
+} from './formatters/tag-formatters.js';
 
 // Link formatters (clickable terminal links)
 export {
