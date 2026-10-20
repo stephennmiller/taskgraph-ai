@@ -47,10 +47,10 @@
 		"@types/gradient-string": "^1.1.6",
 		"@types/inquirer": "^9.0.3",
 		"@types/node": "^26.6.5",
-		"@vitest/coverage-v8": "^4.1.0",
+		"@vitest/coverage-v8": "^5.0.5",
 		"tsx": "^4.23.15",
 		"typescript": "^5.9.2",
-		"vitest": "^4.1.0"
+		"vitest": "^5.0.5"
 	},
 	"engines": {
 		"node": ">=22.13.0"
