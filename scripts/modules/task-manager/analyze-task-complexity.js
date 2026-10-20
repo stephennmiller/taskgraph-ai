@@ -279,11 +279,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 					'info'
 				);
 				if (outputFormat === 'text') {
-					console.log(
-						chalk.yellow(
-							'No matching tasks found for analysis. Keeping existing report.'
-						)
-					);
+					console.log(chalk.dim('The complexity report is unchanged'));
 				}
 				return {
 					report: existingReport,
