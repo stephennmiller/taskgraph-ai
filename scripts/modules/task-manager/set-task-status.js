@@ -52,7 +52,7 @@ async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
 			);
 		}
 
-		log('info', `Reading tasks from ${tasksPath}...`);
+		log('debug', `Reading tasks from ${tasksPath}...`);
 
 		// Read the raw data without tag resolution to preserve tagged structure
 		let rawData = readJSON(tasksPath, projectRoot, tag); // No tag parameter
@@ -124,7 +124,7 @@ async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
 		writeJSON(tasksPath, rawData, projectRoot, tag);
 
 		// Validate dependencies after status update
-		log('info', 'Validating dependencies after status update...');
+		log('debug', 'Validating dependencies after status update...');
 		validateTaskDependencies(data.tasks);
 
 		// Generate individual task files

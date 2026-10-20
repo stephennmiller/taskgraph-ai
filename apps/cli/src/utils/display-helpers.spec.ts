@@ -15,12 +15,11 @@ describe('displayCommandHeader', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('shows the tag and the tasks.json it reads from', () => {
+	it('shows the tag on one line, like the legacy commands, without a path', () => {
 		displayCommandHeader({ tag: 'feature-x' });
 
-		const text = output.join('\n');
-		expect(text).toContain('feature-x');
-		expect(text).toContain('.taskgraph/tasks/tasks.json');
+		const text = output.join('\n').replace(/\u001b\[[0-9;]*m/g, '');
+		expect(text).toBe('[tag] feature-x');
 	});
 
 	it('falls back to the master tag', () => {

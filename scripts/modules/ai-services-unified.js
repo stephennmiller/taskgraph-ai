@@ -439,7 +439,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 		...restApiParams
 	} = params;
 	if (getDebugFlag()) {
-		log('info', `${serviceType}Service called`, {
+		log('debug', `${serviceType}Service called`, {
 			role: initialRole,
 			commandName,
 			outputType,
@@ -839,7 +839,7 @@ async function logAiUsage({
 		};
 
 		if (getDebugFlag()) {
-			log('info', 'AI Usage Telemetry:', telemetryData);
+			log('debug', 'AI Usage Telemetry:', telemetryData);
 		}
 
 		// TODO (Subtask 77.2): Send telemetryData securely to the external endpoint.

@@ -55,14 +55,14 @@ async function updateTasks(
 	const isMCP = !!mcpLog;
 
 	if (isMCP)
-		logFn.info(`updateTasks called with context: session=${!!session}`);
+		logFn.debug(`updateTasks called with context: session=${!!session}`);
 	else logFn('info', `updateTasks called`); // CLI log
 
 	try {
-		if (isMCP) logFn.info(`Updating tasks from ID ${fromId}`);
+		if (isMCP) logFn.debug(`Updating tasks from ID ${fromId}`);
 		else
 			logFn(
-				'info',
+				'debug',
 				`Updating tasks from ID ${fromId} with prompt: "${prompt}"`
 			);
 
@@ -152,32 +152,6 @@ async function updateTasks(
 			);
 
 			console.log(table.toString());
-
-			// Display a message about how completed subtasks are handled
-			console.log(
-				boxen(
-					chalk.cyan.bold('How Completed Subtasks Are Handled:') +
-						'\n\n' +
-						theme.text(
-							'• Subtasks marked as "done" or "completed" will be preserved\n'
-						) +
-						theme.text(
-							'• New subtasks will build upon what has already been completed\n'
-						) +
-						theme.text(
-							'• If completed work needs revision, a new subtask will be created instead of modifying done items\n'
-						) +
-						theme.text(
-							'• This approach maintains a clear record of completed work and new requirements'
-						),
-					{
-						padding: 1,
-						borderColor: BORDER_COLOR,
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
-			);
 		}
 		// --- End Display Tasks ---
 
@@ -261,7 +235,7 @@ async function updateTasks(
 				);
 			else
 				logFn(
-					'info',
+					'debug',
 					`Received ${parsedUpdatedTasks.length} updated tasks from AI.`
 				);
 			// Create a map for efficient lookup
@@ -293,7 +267,7 @@ async function updateTasks(
 				);
 			else
 				logFn(
-					'info',
+					'debug',
 					`Applied updates to ${actualUpdateCount} tasks in the dataset.`
 				);
 

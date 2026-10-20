@@ -484,13 +484,16 @@ function log(level, ...args) {
 		configLevel = 'info';
 	}
 
-	// Use text prefixes instead of emojis
+	// The same marks the rest of the CLI uses (✓ done, ⚠ heads-up, ✗ failed).
+	// Info is plain text: what's left at that level is a result worth
+	// reading, not a label to scan past. Debug keeps a tag so it reads as
+	// diagnostics when someone turns it on.
 	const prefixes = {
-		debug: theme.muted('[DEBUG]'),
-		info: theme.brand('[INFO]'),
-		warn: chalk.yellow('[WARN]'),
-		error: chalk.red('[ERROR]'),
-		success: chalk.green('[SUCCESS]')
+		debug: theme.muted('[debug]'),
+		info: '',
+		warn: chalk.yellow('⚠'),
+		error: chalk.red('✗'),
+		success: chalk.green('✓')
 	};
 
 	// Ensure level exists, default to info if not
@@ -506,7 +509,7 @@ function log(level, ...args) {
 		const message = args
 			.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : arg))
 			.join(' ');
-		console.log(`${prefix} ${message}`);
+		console.log(prefix ? `${prefix} ${message}` : message);
 	}
 }
 

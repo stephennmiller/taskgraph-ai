@@ -9,12 +9,10 @@ import {
 	createTmCore,
 	TaskIdSchema
 } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import { Command } from 'commander';
+import { formatStatusChanges } from '../ui/formatters/status-change-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
-import { theme } from '../ui/theme.js';
 
 /**
  * Valid task status values for validation
@@ -262,63 +260,8 @@ export class SetStatusCommand extends Command {
 	 * Display results in text format
 	 */
 	private displayTextResults(result: SetStatusResult): void {
-		if (result.updatedTasks.length === 1) {
-			// Single task update
-			const update = result.updatedTasks[0];
-			console.log(
-				boxen(
-					chalk.bold(`✓ Updated task ${update.taskId}`) +
-						'\n\n' +
-						`${theme.brand('From:')} ${this.getStatusDisplay(update.oldStatus)}\n` +
-						`${theme.brand('To:')}   ${this.getStatusDisplay(update.newStatus)}`,
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1 }
-					}
-				)
-			);
-		} else {
-			// Multiple task updates
-			console.log(
-				boxen(
-					chalk.bold(`✓ Updated ${result.updatedTasks.length} tasks`) +
-						'\n\n' +
-						result.updatedTasks
-							.map(
-								(update) =>
-									`${chalk.cyan(update.taskId)}: ${this.getStatusDisplay(update.oldStatus)} → ${this.getStatusDisplay(update.newStatus)}`
-							)
-							.join('\n'),
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1 }
-					}
-				)
-			);
-		}
-	}
-
-	/**
-	 * Get colored status display
-	 */
-	private getStatusDisplay(status: TaskStatus): string {
-		const statusColors: Record<TaskStatus, (text: string) => string> = {
-			pending: chalk.yellow,
-			'in-progress': theme.brand,
-			done: chalk.green,
-			deferred: theme.muted,
-			cancelled: chalk.red,
-			blocked: chalk.red,
-			review: chalk.magenta,
-			completed: chalk.green
-		};
-
-		const colorFn = statusColors[status] || theme.text;
-		return colorFn(status);
+		// One line per change: set-status runs many times a day
+		console.log(`\n${formatStatusChanges(result.updatedTasks)}`);
 	}
 
 	/**

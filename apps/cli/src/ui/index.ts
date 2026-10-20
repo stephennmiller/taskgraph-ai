@@ -25,6 +25,18 @@ export {
 	type UsageTelemetry
 } from './formatters/usage-formatters.js';
 
+// The one-line confirmation after set-status
+export {
+	formatStatusChanges,
+	type StatusChange
+} from './formatters/status-change-formatters.js';
+
+// What expand just created
+export {
+	formatAddedSubtasks,
+	type SubtaskSummaryItem
+} from './formatters/subtask-summary-formatters.js';
+
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
 

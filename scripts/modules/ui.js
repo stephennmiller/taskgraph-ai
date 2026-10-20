@@ -2250,6 +2250,16 @@ function displayAvailableModels(availableModels) {
  * @param {object} telemetryData - The telemetry data object.
  * @param {string} outputType - 'cli' or 'mcp' (though typically only called for 'cli').
  */
+/**
+ * Confirm the subtasks `expand` just added, one line each
+ * @param {number|string} parentId - The expanded task
+ * @param {Array<{id: number|string, title: string}>} subtasks - The new subtasks only
+ */
+function displayAddedSubtasks(parentId, subtasks) {
+	if (isSilentMode() || !subtasks?.length) return;
+	console.log(`\n${ui.formatAddedSubtasks(parentId, subtasks)}`);
+}
+
 function displayAiUsageSummary(telemetryData, outputType = 'cli') {
 	if (
 		(outputType !== 'cli' && outputType !== 'text') ||
@@ -2761,6 +2771,7 @@ export {
 	confirmTaskOverwrite,
 	displayModelConfiguration,
 	displayAvailableModels,
+	displayAddedSubtasks,
 	displayAiUsageSummary,
 	displayMultipleTasksSummary,
 	succeedLoadingIndicator,

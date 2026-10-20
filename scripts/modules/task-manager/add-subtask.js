@@ -23,7 +23,7 @@ async function addSubtask(
 ) {
 	const { projectRoot, tag } = context;
 	try {
-		log('info', `Adding subtask to parent task ${parentId}...`);
+		log('debug', `Adding subtask to parent task ${parentId}...`);
 
 		// Read the existing tasks with proper context
 		const data = readJSON(tasksPath, projectRoot, tag);
@@ -102,7 +102,7 @@ async function addSubtask(
 			data.tasks.splice(existingTaskIndex, 1);
 
 			log(
-				'info',
+				'debug',
 				`Converted task ${existingTaskIdNum} to subtask ${parentIdNum}.${newSubtaskId}`
 			);
 		}
@@ -129,7 +129,7 @@ async function addSubtask(
 			// Add to parent's subtasks
 			parentTask.subtasks.push(newSubtask);
 
-			log('info', `Created new subtask ${parentIdNum}.${newSubtaskId}`);
+			log('debug', `Created new subtask ${parentIdNum}.${newSubtaskId}`);
 		} else {
 			throw new Error(
 				'Either existingTaskId or newSubtaskData must be provided'

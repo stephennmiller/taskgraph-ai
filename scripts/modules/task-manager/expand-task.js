@@ -3,6 +3,7 @@ import fs from 'fs';
 import { readJSON, writeJSON } from '../utils.js';
 
 import {
+	displayAddedSubtasks,
 	displayAiUsageSummary,
 	startLoadingIndicator,
 	stopLoadingIndicator
@@ -62,12 +63,12 @@ async function expandTask(
 	const { logger, report, isMCP } = createBridgeLogger(mcpLog, session);
 
 	if (isMCP) {
-		logger.info(`expandTask called with context: session=${!!session}`);
+		logger.debug(`expandTask called with context: session=${!!session}`);
 	}
 
 	try {
 		// --- Task Loading/Filtering (Unchanged) ---
-		logger.info(`Reading tasks from ${tasksPath}`);
+		logger.debug(`Reading tasks from ${tasksPath}`);
 		const data = readJSON(tasksPath, projectRoot, tag);
 		if (!data || !data.tasks)
 			throw new Error(`Invalid tasks data in ${tasksPath}`);
@@ -76,14 +77,14 @@ async function expandTask(
 		);
 		if (taskIndex === -1) throw new Error(`Task ${taskId} not found`);
 		const task = data.tasks[taskIndex];
-		logger.info(
+		logger.debug(
 			`Expanding task ${taskId}: ${task.title}${useResearch ? ' with research' : ''}`
 		);
 		// --- End Task Loading/Filtering ---
 
 		// --- Handle Force Flag: Clear existing subtasks if force=true ---
 		if (force && Array.isArray(task.subtasks) && task.subtasks.length > 0) {
-			logger.info(
+			logger.debug(
 				`Force flag set. Clearing existing ${task.subtasks.length} subtasks for task ${taskId}.`
 			);
 			task.subtasks = []; // Clear existing subtasks
@@ -124,7 +125,7 @@ async function expandTask(
 		let complexityReasoningContext = '';
 		let taskAnalysis = null;
 
-		logger.info(
+		logger.debug(
 			`Looking for complexity report at: ${complexityReportPath}${tag !== 'master' ? ` (tag-specific for '${tag}')` : ''}`
 		);
 
@@ -135,19 +136,19 @@ async function expandTask(
 					(a) => a.taskId === task.id
 				);
 				if (taskAnalysis) {
-					logger.info(
+					logger.debug(
 						`Found complexity analysis for task ${task.id}: Score ${taskAnalysis.complexityScore}`
 					);
 					if (taskAnalysis.reasoning) {
 						complexityReasoningContext = `\nComplexity Analysis Reasoning: ${taskAnalysis.reasoning}`;
 					}
 				} else {
-					logger.info(
+					logger.debug(
 						`No complexity analysis found for task ${task.id} in report.`
 					);
 				}
 			} else {
-				logger.info(
+				logger.debug(
 					`Complexity report not found at ${complexityReportPath}. Skipping complexity check.`
 				);
 			}
@@ -161,25 +162,25 @@ async function expandTask(
 		const explicitNumSubtasks = parseInt(numSubtasks, 10);
 		if (!Number.isNaN(explicitNumSubtasks) && explicitNumSubtasks >= 0) {
 			finalSubtaskCount = explicitNumSubtasks;
-			logger.info(
+			logger.debug(
 				`Using explicitly provided subtask count: ${finalSubtaskCount}`
 			);
 		} else if (taskAnalysis?.recommendedSubtasks != null) {
 			finalSubtaskCount = parseInt(taskAnalysis.recommendedSubtasks, 10);
-			logger.info(
+			logger.debug(
 				`Using subtask count from complexity report: ${finalSubtaskCount}`
 			);
 			// A report value of 0 means "no expansion needed". This differs from an
 			// explicit 0 (--num=0), which asks the model to pick an appropriate count.
 			if (finalSubtaskCount === 0) {
-				logger.info(
+				logger.debug(
 					`Complexity report recommends no expansion for task ${taskId}. Skipping.`
 				);
 				return { task, skipped: true };
 			}
 		} else {
 			finalSubtaskCount = getDefaultSubtasks(session);
-			logger.info(`Using default number of subtasks: ${finalSubtaskCount}`);
+			logger.debug(`Using default number of subtasks: ${finalSubtaskCount}`);
 		}
 		if (Number.isNaN(finalSubtaskCount) || finalSubtaskCount < 0) {
 			logger.warn(
@@ -256,14 +257,14 @@ async function expandTask(
 		let variantKey = 'default';
 		if (expansionPromptText) {
 			variantKey = 'complexity-report';
-			logger.info(
+			logger.debug(
 				`Using expansion prompt from complexity report for task ${task.id}.`
 			);
 		} else if (useResearch) {
 			variantKey = 'research';
-			logger.info(`Using research variant for task ${task.id}.`);
+			logger.debug(`Using research variant for task ${task.id}.`);
 		} else {
-			logger.info(`Using standard prompt generation for task ${task.id}.`);
+			logger.debug(`Using standard prompt generation for task ${task.id}.`);
 		}
 
 		const { systemPrompt, userPrompt: promptContent } =
@@ -287,7 +288,7 @@ async function expandTask(
 		let loadingIndicator = null;
 		if (outputFormat === 'text') {
 			loadingIndicator = startLoadingIndicator(
-				`Generating ${finalSubtaskCount || 'appropriate number of'} subtasks...\n`
+				`Breaking task ${task.id} into ${finalSubtaskCount || 'a few'} subtasks…`
 			);
 		}
 
@@ -319,7 +320,7 @@ async function expandTask(
 				status: subtask.status ?? 'pending',
 				testStrategy: subtask.testStrategy ?? null
 			}));
-			logger.info(`Received ${generatedSubtasks.length} subtasks from AI.`);
+			logger.debug(`Received ${generatedSubtasks.length} subtasks from AI.`);
 		} catch (error) {
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
 			throw error; // The outer catch reports it
@@ -339,6 +340,11 @@ async function expandTask(
 		data.tasks[taskIndex] = task; // Assign the modified task back
 		writeJSON(tasksPath, data, projectRoot, tag);
 		// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
+
+		// Say what was created; the usage line follows
+		if (outputFormat === 'text') {
+			displayAddedSubtasks(task.id, generatedSubtasks);
+		}
 
 		// Display AI Usage Summary for CLI
 		if (

@@ -71,7 +71,7 @@ const DEPENDENCY_ERROR_CODES = {
  * @param {string} [context.tag] - Tag for the task
  */
 async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
-	log('info', `Adding dependency ${dependencyId} to task ${taskId}...`);
+	log('debug', `Adding dependency ${dependencyId} to task ${taskId}...`);
 
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
@@ -208,31 +208,17 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 		// Save changes
 		writeJSON(tasksPath, data, context.projectRoot, context.tag);
+		// One line, like the other quick edits: this runs often and a box
+		// repeated it
 		log(
 			'success',
-			`Added dependency ${formattedDependencyId} to task ${formattedTaskId}`
+			`Task ${formattedTaskId} now depends on task ${formattedDependencyId}`
 		);
-
-		// Display a more visually appealing success message
-		if (!isSilentMode()) {
-			console.log(
-				boxen(
-					chalk.green(`Successfully added dependency:\n\n`) +
-						`Task ${chalk.bold(formattedTaskId)} now depends on ${chalk.bold(formattedDependencyId)}`,
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1 }
-					}
-				)
-			);
-		}
 
 		// Generate updated task files
 		// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 
-		log('info', 'Task files regenerated with updated dependencies.');
+		log('debug', 'Task files regenerated with updated dependencies.');
 	} else {
 		exitWithError(
 			`That would make a loop: task ${formattedDependencyId} already depends on task ${formattedTaskId}`,
@@ -251,7 +237,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
  * @param {string} [context.tag] - Tag for the task
  */
 async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
-	log('info', `Removing dependency ${dependencyId} from task ${taskId}...`);
+	log('debug', `Removing dependency ${dependencyId} from task ${taskId}...`);
 
 	// Read tasks file
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
@@ -306,10 +292,7 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	// Check if the task has any dependencies
 	if (!targetTask.dependencies || targetTask.dependencies.length === 0) {
-		log(
-			'info',
-			`Task ${formattedTaskId} has no dependencies, nothing to remove.`
-		);
+		log('info', `Task ${formattedTaskId} has no dependencies; nothing changed`);
 		return;
 	}
 
@@ -340,7 +323,7 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	if (dependencyIndex === -1) {
 		log(
 			'info',
-			`Task ${formattedTaskId} does not depend on ${formattedDependencyId}, no changes made.`
+			`Task ${formattedTaskId} doesn't depend on task ${formattedDependencyId}; nothing changed`
 		);
 		return;
 	}
@@ -351,27 +334,10 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	// Save the updated tasks
 	writeJSON(tasksPath, data, context.projectRoot, context.tag);
 
-	// Success message
 	log(
 		'success',
-		`Removed dependency: Task ${formattedTaskId} no longer depends on ${formattedDependencyId}`
+		`Task ${formattedTaskId} no longer depends on task ${formattedDependencyId}`
 	);
-
-	if (!isSilentMode()) {
-		// Display a more visually appealing success message
-		console.log(
-			boxen(
-				chalk.green(`Successfully removed dependency:\n\n`) +
-					`Task ${chalk.bold(formattedTaskId)} no longer depends on ${chalk.bold(formattedDependencyId)}`,
-				{
-					padding: 1,
-					borderColor: 'green',
-					borderStyle: 'round',
-					margin: { top: 1 }
-				}
-			)
-		);
-	}
 
 	// Regenerate task files
 	// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
@@ -606,7 +572,7 @@ function cleanupSubtaskDependencies(tasksData) {
  */
 async function validateDependenciesCommand(tasksPath, options = {}) {
 	const { context = {} } = options;
-	log('info', 'Checking for invalid dependencies in task files...');
+	log('debug', 'Checking for invalid dependencies in task files...');
 
 	// Read tasks data
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
@@ -625,7 +591,7 @@ async function validateDependenciesCommand(tasksPath, options = {}) {
 	});
 
 	log(
-		'info',
+		'debug',
 		`Analyzing dependencies for ${taskCount} tasks and ${subtaskCount} subtasks...`
 	);
 
@@ -668,7 +634,7 @@ async function validateDependenciesCommand(tasksPath, options = {}) {
 			}
 		} else {
 			log(
-				'success',
+				'debug',
 				'No invalid dependencies found - all dependencies are valid'
 			);
 
@@ -730,7 +696,7 @@ function countAllDependencies(tasks) {
  */
 async function fixDependenciesCommand(tasksPath, options = {}) {
 	const { context = {} } = options;
-	log('info', 'Checking for and fixing invalid dependencies in tasks.json...');
+	log('debug', 'Checking for and fixing invalid dependencies in tasks.json...');
 
 	try {
 		// Read tasks data
@@ -948,7 +914,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 		});
 
 		// Third phase: Check for circular dependencies
-		log('info', 'Checking for circular dependencies...');
+		log('debug', 'Checking for circular dependencies...');
 
 		// Build the dependency map for subtasks
 		const subtaskDependencyMap = new Map();
@@ -1052,10 +1018,10 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 			log('success', 'Fixed dependency issues in tasks.json');
 
 			// Regenerate task files
-			log('info', 'Regenerating task files to reflect dependency changes...');
+			log('debug', 'Regenerating task files to reflect dependency changes...');
 			// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 		} else {
-			log('info', 'No changes needed to fix dependencies');
+			log('debug', 'No changes needed to fix dependencies');
 		}
 
 		// Show detailed statistics report
@@ -1087,10 +1053,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 					)
 				);
 			} else {
-				log(
-					'success',
-					'No dependency issues found - all dependencies are valid'
-				);
+				log('debug', 'No dependency issues found - all dependencies are valid');
 
 				console.log(
 					boxen(

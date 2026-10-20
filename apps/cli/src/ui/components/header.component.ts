@@ -1,6 +1,6 @@
 /**
  * @fileoverview TaskGraph header component
- * Displays the banner, version, project info, and file path
+ * The one line above a command's output that says which tag it's working in
  */
 
 import chalk from 'chalk';
@@ -11,24 +11,18 @@ import chalk from 'chalk';
 export interface HeaderOptions {
 	title?: string;
 	tag?: string;
+	/** @deprecated No longer shown; the path was noise on every command */
 	filePath?: string;
 }
 
 /**
- * Display the TaskGraph header with project info
+ * Display the active tag, styled like the legacy commands' tag line so every
+ * command opens the same way: `[tag] master`
  */
 export function displayHeader(options: HeaderOptions = {}): void {
-	const { filePath, tag } = options;
+	const { tag } = options;
 
 	if (tag) {
-		console.log(`tag: ${chalk.cyan(tag)}`);
-
-		if (filePath) {
-			// Convert to absolute path if it's relative
-			const absolutePath = filePath.startsWith('/')
-				? filePath
-				: `${process.cwd()}/${filePath}`;
-			console.log(`Listing tasks from: ${chalk.dim(absolutePath)}`);
-		}
+		console.log(chalk.dim('[tag] ') + chalk.cyan(tag));
 	}
 }

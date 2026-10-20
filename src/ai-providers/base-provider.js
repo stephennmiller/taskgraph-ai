@@ -551,7 +551,7 @@ export class BaseAIProvider {
 					const repairedJson = jsonrepair(error.cause.text);
 					const parsed = JSON.parse(repairedJson);
 
-					log('info', `Successfully repaired ${this.name} JSON output`);
+					log('debug', `Successfully repaired ${this.name} JSON output`);
 
 					// Return in the expected format
 					return {
