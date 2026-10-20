@@ -1,9 +1,9 @@
 ---
 title: "Upgrading"
-description: "What to change when moving an existing project to TaskGraph 0.47 or later"
+description: "What to change when moving an existing project to a newer TaskGraph, from Task Master or from any earlier release"
 ---
 
-TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need a few manual changes.
+TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52.
 
 ## 1. Rename the project folder
 
@@ -38,6 +38,32 @@ Check your shell profile, `.env`, `.mcp.json` and CI configuration.
 - `.taskmasterconfig` is no longer read. Configuration lives in `.taskgraph/config.json`; run `taskgraph models --setup` to recreate it.
 - Every provider other than Claude Code is removed, along with the flags that selected them. Models are `opus`, `sonnet` and `haiku`. Provider API keys are ignored; only the optional `CLAUDE_CODE_API_KEY` remains. Remove those flags from any scripts. See [Authentication](/getting-started/api-keys).
 - Support for editors other than Claude Code is removed. `taskgraph init --rules` accepts `claude` only.
+
+## 5. Move slash commands to the plugin
+
+This applies to every project where `taskgraph init --rules claude` ran before this change, whether it was set up with Task Master, with 0.47 to 0.52, or earlier.
+
+`init` no longer writes slash commands. The Claude Code plugin is the only channel, and it provides the commands as `/taskgraph:<name>`. The `/tm:*` files an earlier `init` wrote into `.claude/commands/tm/` stay behind, are never updated, and double the commands you see.
+
+1. Install or refresh the plugin:
+
+   ```txt
+   /plugin marketplace add stephennmiller/taskgraph-ai
+   /plugin install taskgraph@taskgraph
+   /plugin marketplace update taskgraph
+   ```
+
+2. Remove the stale files. Re-running `taskgraph init --rules claude` in the project does it: it deletes the command files TaskGraph wrote into `.claude/commands/tm/` (current names and names from earlier releases), keeps any file you added yourself, and removes the folder if nothing is left. Re-running is the only trigger; nothing prunes them automatically. (`init` also re-adds its other files, such as the `CLAUDE.md` import.)
+
+   Delete by hand instead if you prefer. Check what is there first, because `rm -r` also removes files you added:
+
+   ```bash
+   ls -R .claude/commands/tm
+   ```
+
+   Task Master-era installs also have older copies elsewhere. Look for the nested `.claude/commands/tm/<category>/` folders, `.claude/agents/task-orchestrator.md`, `.claude/agents/task-executor.md`, `.claude/agents/task-checker.md` (the plugin now ships the agents) and `.claude/TM_COMMANDS_GUIDE.md`, and remove the ones TaskGraph wrote.
+
+Updating the plugin itself leaves nothing behind. Claude Code installs each plugin version into its own directory (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>`) and points the install path at the active one. On a real update of `superpowers` from 6.4.2 to 7.0.0, the old directory kept a file the new version dropped and got an `.orphaned_at` marker, while 7.0.0 did not have the file. A plugin with no `version` field, like this one, is probably keyed by commit SHA instead. Whether the update arrives automatically or needs `/plugin marketplace update taskgraph` is not verified, so run it.
 
 ## Credit
 

@@ -5,3 +5,6 @@
  */
 
 export * from './shell-utils.js';
+
+// Cleanup of the slash commands older `init` runs wrote
+export * from './legacy-commands.js';

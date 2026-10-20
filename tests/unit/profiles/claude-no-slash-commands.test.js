@@ -41,4 +41,26 @@ describe('init --rules claude leaves slash commands to the plugin', () => {
 			fs.existsSync(path.join(projectDir, '.taskgraph', 'CLAUDE.md'))
 		).toBe(true);
 	});
+
+	it("removes the command files an earlier init wrote and keeps the user's own", () => {
+		const tmDir = path.join(projectDir, '.claude', 'commands', 'tm');
+		fs.mkdirSync(tmDir, { recursive: true });
+		fs.writeFileSync(path.join(tmDir, 'next-task.md'), '# old');
+		fs.writeFileSync(path.join(tmDir, 'to-review.md'), '# old');
+		fs.writeFileSync(path.join(tmDir, 'my-command.md'), '# mine');
+
+		convertAllRulesToProfileRules(projectDir, claudeProfile);
+
+		expect(fs.readdirSync(tmDir)).toEqual(['my-command.md']);
+	});
+
+	it('removes the empty .claude/commands/tm directory', () => {
+		const tmDir = path.join(projectDir, '.claude', 'commands', 'tm');
+		fs.mkdirSync(tmDir, { recursive: true });
+		fs.writeFileSync(path.join(tmDir, 'help.md'), '# old');
+
+		convertAllRulesToProfileRules(projectDir, claudeProfile);
+
+		expect(fs.existsSync(tmDir)).toBe(false);
+	});
 });
