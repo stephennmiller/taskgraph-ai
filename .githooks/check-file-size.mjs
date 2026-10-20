@@ -42,6 +42,11 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/unit/scripts/modules/task-manager/expand-task.test.js',
 	'tests/unit/scripts/modules/task-manager/list-tasks.test.js',
 	'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
+	// Legacy task-manager sources that were already over the limit. Splitting
+	// them is its own issue; until then a small edit to one must be committable.
+	'scripts/modules/dependency-manager.js',
+	'scripts/modules/task-manager/move-task.js',
+	'scripts/modules/task-manager/add-task.js',
 	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
 	'.claude/rules/new-features.md',
