@@ -18,7 +18,26 @@ import {
 	writeJSON
 } from './utils.js';
 
+import { printError } from '@tm/cli/errors';
 import { displayBanner } from './ui.js';
+
+const LIST_HINT = 'Run `taskgraph list` to see task IDs';
+const NO_TASKS_HINT = 'Create some with `taskgraph parse-prd <file>`';
+
+/**
+ * Stop a dependency command with one clear message. MCP runs in silent mode
+ * and reads errors from the log, so it keeps the plain log line.
+ * @param {string} message
+ * @param {string} [hint]
+ */
+function exitWithError(message, hint) {
+	if (isSilentMode()) {
+		log('error', message);
+	} else {
+		printError(message, hint);
+	}
+	process.exit(1);
+}
 
 /**
  * Structured error class for dependency operations
@@ -56,8 +75,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
-		log('error', 'No valid tasks found in tasks.json');
-		process.exit(1);
+		exitWithError('No tasks yet', NO_TASKS_HINT);
 	}
 
 	// Format the task and dependency IDs correctly
@@ -70,11 +88,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	// Check if the dependency task or subtask actually exists
 	if (!taskExists(data.tasks, formattedDependencyId)) {
-		log(
-			'error',
-			`Dependency target ${formattedDependencyId} does not exist in tasks.json`
-		);
-		process.exit(1);
+		exitWithError(`Task ${formattedDependencyId} not found`, LIST_HINT);
 	}
 
 	// Find the task to update
@@ -89,29 +103,28 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 		const parentTask = data.tasks.find((t) => t.id === parentId);
 
 		if (!parentTask) {
-			log('error', `Parent task ${parentId} not found.`);
-			process.exit(1);
+			exitWithError(`Task ${parentId} not found`, LIST_HINT);
 		}
 
 		if (!parentTask.subtasks) {
-			log('error', `Parent task ${parentId} has no subtasks.`);
-			process.exit(1);
+			exitWithError(
+				`Task ${parentId} has no subtasks`,
+				`Add some with \`taskgraph expand --id=${parentId}\``
+			);
 		}
 
 		targetTask = parentTask.subtasks.find((s) => s.id === subtaskId);
 		isSubtask = true;
 
 		if (!targetTask) {
-			log('error', `Subtask ${formattedTaskId} not found.`);
-			process.exit(1);
+			exitWithError(`Subtask ${formattedTaskId} not found`, LIST_HINT);
 		}
 	} else {
 		// Regular task (not a subtask)
 		targetTask = data.tasks.find((t) => t.id === formattedTaskId);
 
 		if (!targetTask) {
-			log('error', `Task ${formattedTaskId} not found.`);
-			process.exit(1);
+			exitWithError(`Task ${formattedTaskId} not found`, LIST_HINT);
 		}
 	}
 
@@ -136,8 +149,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	// Check if the task is trying to depend on itself - compare full IDs (including subtask parts)
 	if (String(formattedTaskId) === String(formattedDependencyId)) {
-		log('error', `Task ${formattedTaskId} cannot depend on itself.`);
-		process.exit(1);
+		exitWithError(`Task ${formattedTaskId} can't depend on itself`);
 	}
 
 	// For subtasks of the same parent, we need to make sure we're not treating it as a self-dependency
@@ -168,8 +180,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	}
 
 	if (isSelfDependency) {
-		log('error', `Subtask ${formattedTaskId} cannot depend on itself.`);
-		process.exit(1);
+		exitWithError(`Subtask ${formattedTaskId} can't depend on itself`);
 	}
 
 	// Check for circular dependencies
@@ -223,11 +234,10 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 		log('info', 'Task files regenerated with updated dependencies.');
 	} else {
-		log(
-			'error',
-			`Cannot add dependency ${formattedDependencyId} to task ${formattedTaskId} as it would create a circular dependency.`
+		exitWithError(
+			`That would make a loop: task ${formattedDependencyId} already depends on task ${formattedTaskId}`,
+			`Run \`taskgraph graph\` to see how they connect`
 		);
-		process.exit(1);
 	}
 }
 
@@ -246,8 +256,7 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	// Read tasks file
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
-		log('error', 'No valid tasks found.');
-		process.exit(1);
+		exitWithError('No tasks yet', NO_TASKS_HINT);
 	}
 
 	// Format the task and dependency IDs correctly
@@ -270,29 +279,28 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 		const parentTask = data.tasks.find((t) => t.id === parentId);
 
 		if (!parentTask) {
-			log('error', `Parent task ${parentId} not found.`);
-			process.exit(1);
+			exitWithError(`Task ${parentId} not found`, LIST_HINT);
 		}
 
 		if (!parentTask.subtasks) {
-			log('error', `Parent task ${parentId} has no subtasks.`);
-			process.exit(1);
+			exitWithError(
+				`Task ${parentId} has no subtasks`,
+				`Add some with \`taskgraph expand --id=${parentId}\``
+			);
 		}
 
 		targetTask = parentTask.subtasks.find((s) => s.id === subtaskId);
 		isSubtask = true;
 
 		if (!targetTask) {
-			log('error', `Subtask ${formattedTaskId} not found.`);
-			process.exit(1);
+			exitWithError(`Subtask ${formattedTaskId} not found`, LIST_HINT);
 		}
 	} else {
 		// Regular task (not a subtask)
 		targetTask = data.tasks.find((t) => t.id === formattedTaskId);
 
 		if (!targetTask) {
-			log('error', `Task ${formattedTaskId} not found.`);
-			process.exit(1);
+			exitWithError(`Task ${formattedTaskId} not found`, LIST_HINT);
 		}
 	}
 

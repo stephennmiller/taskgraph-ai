@@ -12,7 +12,7 @@ import {
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { theme } from '../ui/theme.js';
 
@@ -109,37 +109,26 @@ export class SetStatusCommand extends Command {
 		try {
 			// Validate required options
 			if (!options.id) {
-				console.error(chalk.red('Error: Task ID is required'));
-				console.log(
-					chalk.yellow(
-						'Usage examples:\n' +
-							'  tm set-status 1 done\n' +
-							'  tm set-status 1.2 in-progress\n' +
-							'  tm set-status --id=1 --status=done'
-					)
+				printError(
+					'Missing task ID',
+					'Try `taskgraph set-status --id=3 --status=done`'
 				);
 				process.exit(1);
 			}
 
 			if (!options.status) {
-				console.error(chalk.red('Error: Status is required'));
-				console.log(
-					chalk.yellow(
-						'Usage examples:\n' +
-							'  tm set-status 1 done\n' +
-							'  tm set-status 1,1.1 in-progress\n' +
-							'  tm set-status --id=1 --status=done'
-					)
+				printError(
+					'Missing status',
+					`Try \`taskgraph set-status --id=${options.id} --status=done\``
 				);
 				process.exit(1);
 			}
 
 			// Validate status
 			if (!VALID_TASK_STATUSES.includes(options.status)) {
-				console.error(
-					chalk.red(
-						`Error: Invalid status "${options.status}". Valid options: ${VALID_TASK_STATUSES.join(', ')}`
-					)
+				printError(
+					`"${options.status}" isn't a status`,
+					`Use one of: ${VALID_TASK_STATUSES.join(', ')}`
 				);
 				process.exit(1);
 			}
@@ -156,9 +145,9 @@ export class SetStatusCommand extends Command {
 			for (const rawId of rawIds) {
 				const parseResult = TaskIdSchema.safeParse(rawId);
 				if (!parseResult.success) {
-					console.error(
-						chalk.red(`Invalid task ID: ${rawId}`),
-						theme.muted(`- ${parseResult.error.issues[0]?.message}`)
+					printError(
+						`"${rawId}" isn't a task ID`,
+						'Use a number like `3`, or `3.1` for a subtask'
 					);
 					process.exit(1);
 				}
@@ -171,6 +160,7 @@ export class SetStatusCommand extends Command {
 				oldStatus: TaskStatus;
 				newStatus: TaskStatus;
 			}> = [];
+			let failure: unknown;
 
 			for (const taskId of taskIds) {
 				try {
@@ -200,10 +190,8 @@ export class SetStatusCommand extends Command {
 								timestamp: new Date().toISOString()
 							})
 						);
-					} else if (!options.silent) {
-						// Show which task failed with context
-						console.error(chalk.red(`\nFailed to update task ${taskId}:`));
-						displayError(error, { skipExit: true });
+					} else {
+						failure = error;
 					}
 					// Don't exit here - let finally block clean up first
 					break;
@@ -212,12 +200,20 @@ export class SetStatusCommand extends Command {
 
 			// Store result for potential reuse
 			this.lastResult = {
-				success: true,
+				success: !hasError,
 				updatedTasks
 			};
 
-			// Display results
-			this.displayResults(this.lastResult, options);
+			// Report what did change before the task that stopped the run; a
+			// JSON failure has already been printed and stands on its own
+			const showResults =
+				updatedTasks.length > 0 && !(hasError && options.format === 'json');
+			if (showResults || !hasError) {
+				this.displayResults(this.lastResult, options);
+			}
+			if (failure !== undefined && !options.silent) {
+				displayError(failure, { skipExit: true });
+			}
 		} catch (error: any) {
 			hasError = true;
 			if (options.format === 'json') {

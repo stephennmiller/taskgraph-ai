@@ -12,11 +12,7 @@ import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 
 import { createBridgeLogger } from '../bridge-utils.js';
-import {
-	getDebugFlag,
-	getDefaultSubtasks,
-	hasCodebaseAnalysis
-} from '../config-manager.js';
+import { getDefaultSubtasks, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import { findProjectRoot, flattenTasksWithSubtasks } from '../utils.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
@@ -326,11 +322,7 @@ async function expandTask(
 			logger.info(`Received ${generatedSubtasks.length} subtasks from AI.`);
 		} catch (error) {
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
-			logger.error(
-				`Error during AI call or parsing for task ${taskId}: ${error.message}`, // Added task ID context
-				'error'
-			);
-			throw error;
+			throw error; // The outer catch reports it
 		} finally {
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
 		}
@@ -364,10 +356,10 @@ async function expandTask(
 			tagInfo: aiServiceResponse?.tagInfo
 		};
 	} catch (error) {
-		// Catches errors from file reading, parsing, AI call etc.
-		logger.error(`Error expanding task ${taskId}: ${error.message}`, 'error');
-		if (outputFormat === 'text' && getDebugFlag(session)) {
-			console.error(error); // Log full stack in debug CLI mode
+		// Catches errors from file reading, parsing, AI call etc. The CLI
+		// command prints the error once, so only MCP logs it here.
+		if (outputFormat !== 'text') {
+			logger.error(`Error expanding task ${taskId}: ${error.message}`, 'error');
 		}
 		throw error; // Re-throw for the caller
 	}

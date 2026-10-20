@@ -702,11 +702,11 @@ async function addTask(
 			stopLoadingIndicator(loadingIndicator);
 		}
 
-		report(`Error adding task: ${error.message}`, 'error');
-		if (outputFormat === 'text') {
-			console.error(chalk.red(`Error: ${error.message}`));
+		// The CLI command prints the error once; MCP gets the log line and the
+		// direct function handler formats the thrown error
+		if (outputFormat !== 'text') {
+			report(`Error adding task: ${error.message}`, 'error');
 		}
-		// In MCP mode, we let the direct function handler catch and format
 		throw error;
 	}
 }

@@ -1,7 +1,152 @@
+import { TaskGraphError } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { displayError } from './error-handler.js';
+import {
+	describeError,
+	displayError,
+	formatCommanderError,
+	formatErrorMessage,
+	printError
+} from './error-handler.js';
 
-describe('displayError', () => {
+// Strip ANSI codes so assertions read like the terminal does
+const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
+
+describe('describeError', () => {
+	it('uses the message of a plain error', () => {
+		expect(describeError(new Error('disk is full'))).toEqual({
+			message: 'disk is full',
+			hint: undefined
+		});
+	});
+
+	it('drops a leading "Error:" and a trailing period', () => {
+		expect(describeError(new Error('Error: Task 9 not found.')).message).toBe(
+			'Task 9 not found'
+		);
+	});
+
+	it('words the same failure the same way whatever code raised it', () => {
+		const message = (text: string) => describeError(new Error(text)).message;
+
+		expect(message('Task with ID 9 not found')).toBe('Task 9 not found');
+		expect(message('Parent task with ID 9 not found')).toBe('Task 9 not found');
+		expect(message('Source task with ID 9 not found')).toBe('Task 9 not found');
+		expect(message('Tag "x" does not exist')).toBe('Tag "x" not found');
+		expect(message('nope.md not found')).toBe('nope.md not found');
+	});
+
+	it('looks past generic wrappers to the cause that says what went wrong', () => {
+		const cause = new TaskGraphError(
+			'Invalid JSON in /p/tasks.json',
+			'JSON_PARSE_ERROR',
+			{ userMessage: "tasks.json isn't valid JSON (line 2, column 1)" }
+		);
+		const wrapper = new TaskGraphError(
+			'Failed to get task list',
+			'INTERNAL_ERROR',
+			{},
+			cause
+		);
+
+		const { message, hint } = describeError(wrapper);
+
+		expect(message).toBe("tasks.json isn't valid JSON (line 2, column 1)");
+		expect(hint).toMatch(/version control/);
+	});
+
+	it('suggests listing tasks when a task is missing', () => {
+		const error = new TaskGraphError('Task 9 not found', 'TASK_NOT_FOUND');
+
+		expect(describeError(error).hint).toBe(
+			'Run `taskgraph list` to see task IDs'
+		);
+	});
+
+	it('recognizes the not-found wording of plain errors', () => {
+		expect(describeError(new Error('Task with ID 9 not found.')).hint).toBe(
+			'Run `taskgraph list` to see task IDs'
+		);
+		expect(
+			describeError(new Error('Tasks file not found at path: x')).hint
+		).toBeUndefined();
+	});
+
+	it("points a missing subtask at its parent's subtasks", () => {
+		expect(describeError(new Error('Subtask 3.9 not found')).hint).toBe(
+			'Run `taskgraph show 3` to see its subtasks'
+		);
+	});
+
+	it('suggests listing tags when a tag is missing', () => {
+		expect(describeError(new Error('Tag "nope" does not exist')).hint).toBe(
+			'Run `taskgraph tags` to see your tags'
+		);
+	});
+
+	it('lets the caller supply the hint', () => {
+		expect(describeError(new Error('nope'), 'Try again').hint).toBe(
+			'Try again'
+		);
+	});
+
+	it('reads the sanitized message of objects shaped like TaskGraph errors', () => {
+		const error = {
+			getSanitizedDetails: () => ({ message: 'Task 7 was not found' })
+		};
+
+		expect(describeError(error).message).toBe('Task 7 was not found');
+	});
+});
+
+describe('formatErrorMessage', () => {
+	it('prints the message after a cross mark', () => {
+		expect(plain(formatErrorMessage({ message: 'Task 9 not found' }))).toBe(
+			'✗ Task 9 not found'
+		);
+	});
+
+	it('puts the hint on an indented second line without the backticks', () => {
+		const text = formatErrorMessage({
+			message: 'Task 9 not found',
+			hint: 'Run `taskgraph list` to see task IDs'
+		});
+
+		expect(plain(text)).toBe(
+			'✗ Task 9 not found\n  Run taskgraph list to see task IDs'
+		);
+	});
+});
+
+describe('formatCommanderError', () => {
+	it('turns Commander suggestions for commands into a runnable hint', () => {
+		const text = formatCommanderError(
+			"error: unknown command 'shwo'\n(Did you mean show?)\n"
+		);
+
+		expect(plain(text)).toBe(
+			"✗ Unknown command 'shwo'\n  Did you mean taskgraph show?"
+		);
+	});
+
+	it('points to the command list when there is no suggestion', () => {
+		expect(plain(formatCommanderError("error: unknown command 'zzz'"))).toBe(
+			"✗ Unknown command 'zzz'\n  Run taskgraph --help to see all commands"
+		);
+	});
+
+	it("points to the subcommand's help for option errors", () => {
+		const text = formatCommanderError(
+			"error: option '-s, --status <status>' argument missing",
+			'list'
+		);
+
+		expect(plain(text)).toBe(
+			'✗ --status needs a value\n  Run taskgraph list --help to see its options'
+		);
+	});
+});
+
+describe('printError and displayError', () => {
 	let output: string[];
 
 	beforeEach(() => {
@@ -15,23 +160,12 @@ describe('displayError', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('shows the message of a plain error', () => {
-		displayError(new Error('disk is full'), { skipExit: true });
+	it('writes to stderr after a blank line', () => {
+		printError('Tag "x" not found', 'Run `taskgraph tags` to see your tags');
 
-		expect(output.join('\n')).toContain('Error: disk is full');
-	});
-
-	it('shows the sanitized message of a TaskGraph error', () => {
-		const taskGraphError = {
-			getSanitizedDetails: () => ({ message: 'Task 7 was not found' }),
-			stack: 'stack trace'
-		};
-
-		displayError(taskGraphError, { skipExit: true });
-
-		const text = output.join('\n');
-		expect(text).toContain('Task 7 was not found');
-		expect(text).not.toContain('Error:');
+		expect(plain(output.join('\n'))).toBe(
+			'\n✗ Tag "x" not found\n  Run taskgraph tags to see your tags'
+		);
 	});
 
 	it('shows the stack only when asked', () => {

@@ -5,12 +5,11 @@
 
 import { type Task, type TmCore, createTmCore, TaskIdSchema } from '@tm/core';
 import type { Subtask } from '@tm/core';
-import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { displayTaskDetails } from '../ui/components/task-detail.component.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
 import { theme } from '../ui/theme.js';
@@ -51,6 +50,7 @@ export interface ShowMultipleTasksResult {
 export class ShowCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ShowTaskResult | ShowMultipleTasksResult;
+	private requestedId?: string;
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -96,7 +96,7 @@ export class ShowCommand extends Command {
 			// Get the task ID from argument or option
 			const idArg = taskId || options.id;
 			if (!idArg) {
-				console.error(chalk.red('Error: Please provide a task ID'));
+				printError('Missing task ID', 'Try `taskgraph show 3`');
 				process.exit(1);
 			}
 
@@ -110,9 +110,9 @@ export class ShowCommand extends Command {
 			for (const rawId of rawIds) {
 				const parseResult = TaskIdSchema.safeParse(rawId);
 				if (!parseResult.success) {
-					console.error(
-						chalk.red(`Invalid task ID: ${rawId}`),
-						theme.muted(`- ${parseResult.error.issues[0]?.message}`)
+					printError(
+						`"${rawId}" isn't a task ID`,
+						'Use a number like `3`, or `3.1` for a subtask'
 					);
 					process.exit(1);
 				}
@@ -172,6 +172,7 @@ export class ShowCommand extends Command {
 		}
 
 		// Get the task
+		this.requestedId = taskId;
 		const result = await this.tmCore.tasks.get(taskId);
 
 		return {
@@ -224,6 +225,10 @@ export class ShowCommand extends Command {
 		switch (format) {
 			case 'json':
 				this.displayJson(result);
+				// Scripts can tell a miss from a hit without parsing the JSON
+				if ('found' in result && !result.found) {
+					process.exitCode = 1;
+				}
 				break;
 
 			case 'text':
@@ -254,14 +259,15 @@ export class ShowCommand extends Command {
 		options: ShowCommandOptions
 	): void {
 		if (!result.found || !result.task) {
-			console.log(
-				boxen(chalk.yellow(`Task not found!`), {
-					padding: { top: 0, bottom: 0, left: 1, right: 1 },
-					borderColor: 'yellow',
-					borderStyle: 'round',
-					margin: { top: 1 }
-				})
+			const id = result.originalTaskId ?? this.requestedId ?? '';
+			const parentId = id.includes('.') ? id.split('.')[0] : undefined;
+			printError(
+				`${parentId ? 'Subtask' : 'Task'} ${id} not found`,
+				parentId
+					? `Run \`taskgraph show ${parentId}\` to see its subtasks`
+					: 'Run `taskgraph list` to see task IDs'
 			);
+			process.exitCode = 1;
 			return;
 		}
 
