@@ -125,14 +125,13 @@ Default: `core` (7 tools). Set via `TASKGRAPH_TOOLS` env var.
 |------|-------|-------|
 | `core` | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task` |
 | `standard` | 14 | core + `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report` |
-| `all` | 43 | standard + dependencies, tags, research, autopilot, scoping, models |
+| `all` | 45 | standard + dependencies, tags, research, autopilot, scoping, models |
 
 **Upgrade when tool unavailable:** Edit MCP config, change `TASKGRAPH_TOOLS` from `"core"` to `"standard"` or `"all"`, restart MCP.
 
 ### Essential MCP Tools
 
 ```javascript
-help; // = shows available taskgraph commands
 // Project setup
 initialize_project; // = taskgraph init
 parse_prd; // = taskgraph parse-prd

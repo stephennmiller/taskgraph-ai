@@ -137,7 +137,6 @@ TaskGraph uses tiered tool loading to optimize context window usage:
 ### Essential MCP Tools
 
 ```javascript
-help; // = shows available taskgraph commands
 // Project setup
 initialize_project; // = taskgraph init
 parse_prd; // = taskgraph parse-prd
