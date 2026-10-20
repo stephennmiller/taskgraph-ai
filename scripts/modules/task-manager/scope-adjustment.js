@@ -374,7 +374,8 @@ Ensure the JSON is valid and properly formatted.`;
 			schema: subtaskSchema,
 			objectName: 'subtask_regeneration',
 			commandName: context.commandName || `subtask-regen-${direction}`,
-			outputType: context.outputType || 'cli'
+			outputType: context.outputType || 'cli',
+			projectRoot: context.projectRoot
 		});
 
 		const generatedSubtasks = aiResult.mainResult.subtasks || [];
@@ -577,7 +578,8 @@ async function adjustTaskComplexity(
 		schema: taskSchema,
 		objectName: 'updated_task',
 		commandName: context.commandName || `scope-${direction}`,
-		outputType: context.outputType || 'cli'
+		outputType: context.outputType || 'cli',
+		projectRoot: context.projectRoot
 	});
 
 	const updatedTaskData = aiResult.mainResult;

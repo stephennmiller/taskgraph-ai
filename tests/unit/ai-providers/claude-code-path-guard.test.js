@@ -67,6 +67,53 @@ describe('claude-code path guard', () => {
 		).toMatch(/may not leave/);
 	});
 
+	it('checks the directory an absolute glob is searched from', () => {
+		// Claude Code searches `${base}/project*` from `${base}`, not from root
+		expect(getPathViolation(root, 'Glob', { pattern: `${root}*/**` })).toMatch(
+			/may not leave/
+		);
+		expect(getPathViolation(root, 'Glob', { pattern: `${root}?x/*` })).toMatch(
+			/may not leave/
+		);
+		expect(
+			getPathViolation(root, 'Glob', { pattern: `${root}/src/*.js` })
+		).toBeNull();
+		expect(
+			getPathViolation(root, 'Glob', { pattern: `${root}/**` })
+		).toBeNull();
+	});
+
+	it('treats Windows drive and UNC globs as absolute', () => {
+		expect(
+			getPathViolation(root, 'Glob', { pattern: 'C:/Users/me/.ssh/**' })
+		).toEqual(
+			process.platform === 'win32'
+				? expect.stringMatching(/may not leave/)
+				: null
+		);
+		expect(
+			getPathViolation(root, 'Glob', { pattern: '\\\\server\\share\\*' })
+		).toEqual(
+			process.platform === 'win32'
+				? expect.stringMatching(/may not leave/)
+				: null
+		);
+	});
+
+	it('allows names inside the root that start with two dots', () => {
+		expect(isInsideRoot(root, '..config')).toBe(true);
+		expect(isInsideRoot(root, path.join(root, '..cache', 'x'))).toBe(true);
+	});
+
+	it('does not treat a Grep regex as a path but checks its glob', () => {
+		expect(
+			getPathViolation(root, 'Grep', { pattern: '/etc/*', glob: '*.js' })
+		).toBeNull();
+		expect(
+			getPathViolation(root, 'Grep', { pattern: 'x', glob: '/etc/*' })
+		).toMatch(/may not leave/);
+	});
+
 	it('ignores tools it does not guard', () => {
 		expect(getPathViolation(root, 'WebFetch', { url: 'https://x' })).toBeNull();
 	});

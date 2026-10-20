@@ -38,14 +38,30 @@ export function isInsideRoot(root, candidate) {
 	if (candidate.startsWith('~')) return false;
 	const resolved = realpathOfExistingPrefix(path.resolve(root, candidate));
 	const relative = path.relative(root, resolved);
-	return (
-		relative === '' ||
-		(!relative.startsWith('..') && !path.isAbsolute(relative))
-	);
+	const leavesRoot = relative === '..' || relative.startsWith(`..${path.sep}`);
+	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
 }
 
 function hasParentSegment(pattern) {
 	return pattern.split(/[\\/]/).includes('..');
+}
+
+/**
+ * The directory an absolute glob is searched from, or null for a relative
+ * glob. Claude Code searches from the last separator before the first glob
+ * character, so `/w/project*` is searched from `/w`, not `/w/project`.
+ * Windows forms (`C:/x`, `C:\\x`, `\\\\server\\share`) count as absolute too.
+ */
+function absoluteGlobBase(pattern) {
+	if (!path.posix.isAbsolute(pattern) && !path.win32.isAbsolute(pattern)) {
+		return null;
+	}
+	const literal = pattern.split(/[*?[{]/)[0];
+	const lastSeparator = Math.max(
+		literal.lastIndexOf('/'),
+		literal.lastIndexOf('\\')
+	);
+	return literal.slice(0, lastSeparator + 1) || literal;
 }
 
 /**
@@ -67,17 +83,14 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		}
 	}
 
-	// Glob patterns and Grep globs can reach outside the root on their own
-	for (const pattern of [toolInput.pattern, toolInput.glob]) {
-		if (typeof pattern !== 'string') continue;
-		if (toolName === 'Grep' && pattern === toolInput.pattern) continue; // regex
-		const base = pattern.startsWith('/') ? pattern : null;
-		if (hasParentSegment(pattern) || pattern.startsWith('~')) {
-			return `${toolName} patterns may not leave the project directory (${root}).`;
-		}
-		if (base && !isInsideRoot(root, base.split(/[*?[{]/)[0] || '/')) {
-			return `${toolName} patterns may not leave the project directory (${root}).`;
-		}
+	// Glob's pattern and Grep's glob can name a directory of their own. (Grep's
+	// pattern is a regex, not a path.)
+	const pattern = toolName === 'Glob' ? toolInput.pattern : toolInput.glob;
+	if (typeof pattern === 'string') {
+		const deny = `${toolName} patterns may not leave the project directory (${root}).`;
+		if (hasParentSegment(pattern) || pattern.startsWith('~')) return deny;
+		const base = absoluteGlobBase(pattern);
+		if (base !== null && !isInsideRoot(root, base)) return deny;
 	}
 	return null;
 }

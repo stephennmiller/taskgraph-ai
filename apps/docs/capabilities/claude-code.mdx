@@ -55,7 +55,7 @@ Each AI call is confined by its role. Your project's own Claude setup, a prompt 
 | Shell, edit and write tools | Denied | Denied |
 | MCP servers | None | None |
 | Your Claude settings, hooks and `CLAUDE.md` | Not loaded | Not loaded |
-| Files | The project root only | None |
+| Files | The project root only (none if TaskGraph can't find the project) | None |
 | Permission prompts | Never shown; anything not allowed is denied | Same |
 | Turn limit | Claude Code's default | 8, unless `maxTurns` is set |
 
@@ -63,7 +63,7 @@ In practice:
 
 - **Your Claude Code setup stays out.** Hooks, `CLAUDE.md`, permission rules and MCP servers from your user, project and local Claude settings are not loaded, so they don't run inside TaskGraph's calls.
 - **File reads stay in the project.** For `main` and `fallback`, a `PreToolUse` hook refuses any `Read`, `Grep` or `Glob` whose path resolves outside the project root. Symlinks are resolved first, so a link in the repo that points elsewhere is refused, as are `..` segments, `~` paths, absolute paths and glob patterns that climb out.
-- **Config can't widen it.** The settings below are applied first and these limits after, so config can't add tools or MCP servers, load settings sources, add directories or replace the hook.
+- **Config can't widen it.** The settings below are applied first and these limits after, so config can't add tools or MCP servers, load settings sources, add directories or replace the hook. One exception: `pathToClaudeCodeExecutable` runs whatever program it names, so check `.taskgraph/config.json` before running TaskGraph in a repo you didn't write.
 
 What this doesn't cover:
 
@@ -71,7 +71,7 @@ What this doesn't cover:
 - The path check runs just before each tool call. A symlink swapped by another process between the check and the read isn't caught; nothing in the call itself can write.
 - It's a check on Claude Code's file tools, not an OS sandbox. It relies on shell tools being denied.
 - A `Grep` regex isn't treated as a path; only its `path` and `glob` arguments are checked.
-- The project root is the one TaskGraph found for the command (`--project-root`, or the nearest `.taskgraph` folder). If that's a parent of several projects, all of them are readable.
+- The project root is the one TaskGraph uses for the command: `--project-root` if you pass it, otherwise the project it finds from the current directory. If that's a parent of several projects, all of them are readable. If no root is found, `main` and `fallback` get no file tools.
 
 ## Structured outputs
 

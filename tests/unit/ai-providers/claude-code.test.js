@@ -180,7 +180,10 @@ describe('ClaudeCodeProvider', () => {
 			const mockSettings = { maxTokens: 2048 };
 			getClaudeCodeSettingsForCommand.mockReturnValueOnce(mockSettings);
 
-			provider.getClient({ commandName: 'analyze' });
+			provider.getClient({
+				commandName: 'analyze',
+				projectRoot: '/work/project'
+			});
 
 			// Verify the complete configuration structure matches v2.0 migration requirements
 			expect(createClaudeCode).toHaveBeenCalledWith({
@@ -207,7 +210,7 @@ describe('ClaudeCodeProvider', () => {
 					permissionPrompts: 'none',
 					strictMcpConfig: true,
 					mcpServers: {},
-					cwd: expect.any(String),
+					cwd: '/work/project',
 					hooks: { PreToolUse: [expect.any(Object)] }
 				}
 			});
@@ -268,7 +271,7 @@ describe('ClaudeCodeProvider', () => {
 			it.each([['main'], ['fallback'], [undefined]])(
 				'gives the %s role read-only repo tools and no web, shell or MCP access',
 				async (role) => {
-					provider.getClient({ role });
+					provider.getClient({ role, projectRoot: '/work/project' });
 
 					const settings = await lastSettings();
 					expect(settings.tools).toEqual(['Read', 'Grep', 'Glob']);
@@ -279,6 +282,16 @@ describe('ClaudeCodeProvider', () => {
 					expect(settings.mcpServers).toEqual({});
 				}
 			);
+
+			it('withholds file tools when no project root is known', async () => {
+				provider.getClient({ role: 'main' });
+
+				const settings = await lastSettings();
+				expect(settings.tools).toEqual([]);
+				expect(settings.allowedTools).toEqual([]);
+				expect(settings.settingSources).toEqual([]);
+				expect(settings.cwd).toBeUndefined();
+			});
 
 			it.each([['main'], ['fallback'], [undefined]])(
 				'isolates settings and scopes files to the project root for the %s role',
