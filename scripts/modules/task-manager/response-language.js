@@ -69,7 +69,7 @@ function setResponseLanguage(lang, options = {}) {
 			success: true,
 			data: {
 				responseLanguage: lang,
-				message: successMessage
+				message: `Response language set to ${lang}`
 			}
 		};
 	} catch (error) {

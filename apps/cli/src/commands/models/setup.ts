@@ -1,225 +1,113 @@
 /**
- * @fileoverview Main setup orchestration for interactive model configuration
+ * @fileoverview `taskgraph models --setup`: pick a model for each role
+ *
+ *   ✔ Main model (creates and updates tasks) opus
+ *   ✔ Research model (research and --research runs) sonnet
+ *   ✔ Fallback model (used if the main model fails) sonnet
+ *
+ *   ✓ Main model  sonnet → opus
+ *
+ * Nothing is saved until all three are answered, so Ctrl-C part way through
+ * changes nothing.
  */
 
 import chalk from 'chalk';
-import { getModelConfiguration, setModel } from '../../lib/model-management.js';
-import { theme } from '../../ui/theme.js';
 import {
-	buildPromptChoices,
-	displaySetupIntro,
-	promptForModel
-} from './prompts.js';
-import type { CurrentModels, ModelRole } from './types.js';
+	getAvailableModels,
+	getModelConfiguration,
+	setModel
+} from '../../lib/model-management.js';
+import {
+	MODEL_ROLE_ORDER,
+	type ModelAssignments,
+	type ModelChange,
+	formatModelChanges
+} from '../../ui/formatters/model-formatters.js';
+import { theme } from '../../ui/theme.js';
+import { printError } from '../../utils/error-handler.js';
+import { buildModelChoices, promptForModel } from './prompts.js';
+import type { ModelInfo } from './types.js';
 
-/**
- * Handle setting a model for a specific role
- */
-async function handleSetModel(
-	role: ModelRole,
-	selectedValue: string | { id: string; provider: string } | null,
-	currentModel: {
-		modelId?: string | null;
-		provider?: string | null;
-	} | null,
-	projectRoot: string
-): Promise<{ success: boolean; modified: boolean }> {
-	const currentModelId = currentModel?.modelId ?? null;
-	const currentProvider = currentModel?.provider ?? null;
-	// Handle cancellation
-	if (selectedValue === '__CANCEL__') {
-		console.log(
-			chalk.yellow(`\nSetup canceled during ${role} model selection.`)
-		);
-		return { success: false, modified: false };
-	}
+/** Inquirer throws this when the user presses Ctrl-C */
+const isPromptExit = (error: unknown) =>
+	error instanceof Error && error.name === 'ExitPromptError';
 
-	// Handle no change
-	if (selectedValue === '__NO_CHANGE__') {
-		console.log(theme.muted(`No change selected for ${role} model.`));
-		return { success: true, modified: false };
-	}
-
-	let modelIdToSet: string | null = null;
-	let providerHint: string | null = null;
-
-	// Handle model selection
-	if (
-		selectedValue &&
-		typeof selectedValue === 'object' &&
-		'id' in selectedValue
-	) {
-		modelIdToSet = selectedValue.id;
-		providerHint = selectedValue.provider;
-	}
-	// Unknown selection
-	else if (selectedValue) {
-		console.error(
-			chalk.red(
-				`Internal Error: Unexpected selection value for ${role}: ${JSON.stringify(selectedValue)}`
-			)
-		);
-		return { success: false, modified: false };
-	}
-
-	// Check if there's actually a change to make
-	if (
-		modelIdToSet === currentModelId &&
-		(providerHint ?? null) === currentProvider
-	) {
-		return { success: true, modified: false };
-	}
-
-	// Set the model
-	if (modelIdToSet) {
-		const result = await setModel(role, modelIdToSet, {
-			projectRoot,
-			providerHint: providerHint || undefined
-		});
-
-		if (result.success) {
-			console.log(
-				theme.brand(
-					`Set ${role} model: ${result.data?.provider} / ${result.data?.modelId}`
-				)
-			);
-			return { success: true, modified: true };
-		} else {
-			console.error(
-				chalk.red(
-					`Error setting ${role} model: ${result.error?.message || 'Unknown'}`
-				)
-			);
-			return { success: false, modified: false };
-		}
-	}
-	return { success: true, modified: false };
+async function currentModels(projectRoot: string): Promise<ModelAssignments> {
+	const result = await getModelConfiguration({ projectRoot });
+	const active = result.success ? result.data?.activeModels : undefined;
+	return {
+		main: active?.main?.modelId ?? null,
+		research: active?.research?.modelId ?? null,
+		fallback: active?.fallback?.modelId ?? null
+	};
 }
 
 /**
- * Run interactive model setup
+ * Save the roles whose model changed, one at a time.
+ *
+ * @returns The changes that were saved, and whether every save worked
+ */
+async function saveChanges(
+	changes: ModelChange[],
+	projectRoot: string
+): Promise<{ saved: ModelChange[]; ok: boolean }> {
+	const saved: ModelChange[] = [];
+	for (const change of changes) {
+		const result = await setModel(change.role, change.to, { projectRoot });
+		if (!result.success) {
+			printError(
+				`Couldn't set the ${change.role} model: ${result.error?.message ?? 'unknown error'}`
+			);
+			return { saved, ok: false };
+		}
+		saved.push(change);
+	}
+	return { saved, ok: true };
+}
+
+/**
+ * Ask for a model for each role and save the ones that changed.
+ *
+ * @returns false if the user cancelled or a model couldn't be saved
  */
 export async function runInteractiveSetup(
 	projectRoot: string
 ): Promise<boolean> {
-	if (!projectRoot) {
-		console.error(
-			chalk.red(
-				'Error: Could not determine project root for interactive setup.'
-			)
-		);
-		process.exit(1);
-	}
+	const current = await currentModels(projectRoot);
+	const models = (getAvailableModels() as ModelInfo[]).filter(
+		(model) => model.allowed_roles
+	);
 
-	// Get current configuration
-	const currentConfigResult = await getModelConfiguration({ projectRoot });
-	const currentModels: CurrentModels =
-		currentConfigResult.success && currentConfigResult.data
-			? {
-					main: currentConfigResult.data.activeModels.main
-						? {
-								modelId: currentConfigResult.data.activeModels.main.modelId,
-								provider: currentConfigResult.data.activeModels.main.provider
-							}
-						: null,
-					research: currentConfigResult.data.activeModels.research
-						? {
-								modelId: currentConfigResult.data.activeModels.research.modelId,
-								provider:
-									currentConfigResult.data.activeModels.research.provider
-							}
-						: null,
-					fallback: currentConfigResult.data.activeModels.fallback
-						? {
-								modelId: currentConfigResult.data.activeModels.fallback.modelId,
-								provider:
-									currentConfigResult.data.activeModels.fallback.provider
-							}
-						: null
-				}
-			: { main: null, research: null, fallback: null };
-
-	// Handle config load failure gracefully
-	if (
-		!currentConfigResult.success &&
-		currentConfigResult.error?.code !== 'CONFIG_MISSING'
-	) {
-		console.warn(
-			chalk.yellow(
-				`Warning: Could not load current model configuration: ${currentConfigResult.error?.message || 'Unknown error'}. Proceeding with defaults.`
-			)
-		);
-	}
-
-	// Build prompt data
-	const mainPromptData = buildPromptChoices('main', currentModels);
-	const researchPromptData = buildPromptChoices('research', currentModels);
-	const fallbackPromptData = buildPromptChoices('fallback', currentModels);
-
-	// Display intro
-	displaySetupIntro();
-
-	// Prompt for main model
-	const mainModel = await promptForModel('main', mainPromptData);
-	if (mainModel === '__CANCEL__') {
+	const chosen: Partial<ModelAssignments> = {};
+	try {
+		for (const role of MODEL_ROLE_ORDER) {
+			const choices = buildModelChoices(role, models, current[role]);
+			chosen[role] = await promptForModel(role, choices, current[role]);
+		}
+	} catch (error) {
+		if (!isPromptExit(error)) throw error;
+		console.log(theme.muted('\nCancelled; no models changed'));
+		process.exitCode = 130;
 		return false;
 	}
 
-	// Prompt for research model
-	const researchModel = await promptForModel('research', researchPromptData);
-	if (researchModel === '__CANCEL__') {
-		return false;
+	const changes: ModelChange[] = MODEL_ROLE_ORDER.filter(
+		(role) => chosen[role] && chosen[role] !== current[role]
+	).map((role) => ({
+		role,
+		from: current[role],
+		to: chosen[role] as string
+	}));
+
+	if (changes.length === 0) {
+		console.log(`\n${chalk.green('✓')} Models unchanged`);
+		return true;
 	}
 
-	// Prompt for fallback model
-	const fallbackModel = await promptForModel('fallback', fallbackPromptData);
-	if (fallbackModel === '__CANCEL__') {
-		return false;
+	const { saved, ok } = await saveChanges(changes, projectRoot);
+	if (saved.length > 0) {
+		console.log(`\n${formatModelChanges(saved)}`);
 	}
-
-	// Process all model selections
-	let setupSuccess = true;
-	let setupConfigModified = false;
-
-	const mainResult = await handleSetModel(
-		'main',
-		mainModel,
-		currentModels.main,
-		projectRoot
-	);
-	if (!mainResult.success) setupSuccess = false;
-	if (mainResult.modified) setupConfigModified = true;
-
-	const researchResult = await handleSetModel(
-		'research',
-		researchModel,
-		currentModels.research,
-		projectRoot
-	);
-	if (!researchResult.success) setupSuccess = false;
-	if (researchResult.modified) setupConfigModified = true;
-
-	const fallbackResult = await handleSetModel(
-		'fallback',
-		fallbackModel,
-		currentModels.fallback,
-		projectRoot
-	);
-	if (!fallbackResult.success) setupSuccess = false;
-	if (fallbackResult.modified) setupConfigModified = true;
-
-	// Display final result
-	if (setupSuccess && setupConfigModified) {
-		console.log(chalk.green.bold('\nModel setup complete!'));
-	} else if (setupSuccess && !setupConfigModified) {
-		console.log(chalk.yellow('\nNo changes made to model configuration.'));
-	} else {
-		console.error(
-			chalk.red(
-				'\nErrors occurred during model selection. Please review and try again.'
-			)
-		);
-	}
-
-	return setupSuccess;
+	if (!ok) process.exitCode = 1;
+	return ok;
 }

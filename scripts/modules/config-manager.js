@@ -9,7 +9,10 @@ import {
 import chalk from 'chalk';
 import { z } from 'zod';
 import { AI_COMMAND_NAMES } from '../../src/constants/commands.js';
-import { TASKGRAPH_DIR } from '../../src/constants/paths.js';
+import {
+	TASKGRAPH_DIR,
+	TASKGRAPH_TASKS_FILE
+} from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
@@ -190,10 +193,11 @@ function _loadAndValidateConfig(explicitRoot = null) {
 		// Config file doesn't exist at the determined rootToUse.
 		// Skip warnings if the global suppress flag is set
 		// Don't warn during initialization: only an explicit root or a folder
-		// that already has .taskgraph is expected to have a config
+		// with tasks is expected to have a config. An empty .taskgraph folder
+		// isn't a project, so the "No TaskGraph project" error covers it.
 		const expectsConfig =
 			Boolean(explicitRoot) ||
-			fs.existsSync(path.join(rootToUse, TASKGRAPH_DIR));
+			fs.existsSync(path.join(rootToUse, TASKGRAPH_TASKS_FILE));
 
 		if (expectsConfig && !isConfigWarningSuppressed()) {
 			warnMissingConfigOnce(explicitRoot || rootToUse);

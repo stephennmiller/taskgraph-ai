@@ -44,6 +44,19 @@ export {
 	type InitSummary
 } from './formatters/init-summary-formatters.js';
 
+// What `taskgraph models` shows and confirms
+export {
+	formatModelChanges,
+	formatModelChoices,
+	formatModelConfiguration,
+	MODEL_NOTES,
+	MODEL_ROLES,
+	MODEL_ROLE_ORDER,
+	type ModelAssignments,
+	type ModelChange,
+	type ModelRoleName
+} from './formatters/model-formatters.js';
+
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
 
