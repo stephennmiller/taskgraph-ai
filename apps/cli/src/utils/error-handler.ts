@@ -38,7 +38,7 @@ const WRAPPER_CODES = new Set([
 const HINTS_BY_CODE: Record<string, string> = {
 	TASK_NOT_FOUND: 'Run `taskgraph list` to see task IDs',
 	JSON_PARSE_ERROR:
-		'Nothing was changed. Fix the file by hand, or restore it from version control'
+		'Nothing was changed; fix the file or restore it from version control'
 };
 
 /**

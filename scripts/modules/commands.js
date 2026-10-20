@@ -192,7 +192,7 @@ function registerCommands(programInstance) {
 			if (prdPath && !fs.existsSync(path.resolve(prdPath))) {
 				printError(
 					`${prdPath} not found`,
-					'Check the spelling. Paths are relative to the folder you run taskgraph from'
+					'Check the spelling; paths are relative to this folder'
 				);
 				process.exit(1);
 			}
