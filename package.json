@@ -103,7 +103,7 @@
 	},
 	"optionalDependencies": {
 		"@anthropic-ai/claude-code": "^2.1.296",
-		"@biomejs/cli-linux-x64": "^1.9.4"
+		"@biomejs/cli-linux-x64": "^2.5.15"
 	},
 	"engines": {
 		"node": ">=22.0.0"
