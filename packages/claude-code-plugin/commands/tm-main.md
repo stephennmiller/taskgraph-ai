@@ -23,6 +23,7 @@ Every slash command the TaskGraph plugin provides, grouped by purpose. Invoke th
 
 - `/taskgraph:list-tasks [status] [--subtasks]` - Smart listing with natural language filters, by status, with subtasks
 - `/taskgraph:graph` - Dependency tree with the next task marked
+- `/taskgraph:why <id>` - Explain why a task is blocked, down to the root causes
 - `/taskgraph:set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
 - `/taskgraph:to-in-progress` - Start working on a task
 - `/taskgraph:to-done` - Mark a task complete
