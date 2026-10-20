@@ -6,6 +6,14 @@
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
+/** Score bands, shared by the colored dot and every High/Medium/Low count */
+export type ComplexityLevel = 'High' | 'Medium' | 'Low';
+
+/** High is 7-10, Medium 4-6, Low 1-3 */
+export function complexityLevel(score: number): ComplexityLevel {
+	return score >= 7 ? 'High' : score >= 4 ? 'Medium' : 'Low';
+}
+
 /**
  * Get complexity color and label based on score thresholds
  */
@@ -13,13 +21,14 @@ function getComplexityLevel(score: number): {
 	color: (text: string) => string;
 	label: string;
 } {
-	if (score >= 7) {
-		return { color: chalk.red, label: 'High' };
-	} else if (score >= 4) {
-		return { color: chalk.yellow, label: 'Medium' };
-	} else {
-		return { color: chalk.green, label: 'Low' };
-	}
+	const label = complexityLevel(score);
+	const color =
+		label === 'High'
+			? chalk.red
+			: label === 'Medium'
+				? chalk.yellow
+				: chalk.green;
+	return { color, label };
 }
 
 /**

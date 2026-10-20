@@ -459,6 +459,50 @@ describe('analyzeTaskComplexity', () => {
 		);
 	});
 
+	describe('skipped count', () => {
+		const run = async (id) => {
+			generateObjectService.mockResolvedValue({
+				mainResult: {
+					complexityAnalysis: id.split(',').map((taskId) => ({
+						taskId: Number(taskId),
+						taskTitle: `Task ${taskId}`,
+						complexityScore: 5,
+						recommendedSubtasks: 3,
+						expansionPrompt: '',
+						reasoning: ''
+					}))
+				},
+				telemetryData: sampleApiResponse.telemetryData
+			});
+			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+			await analyzeTaskComplexity(
+				{
+					file: 'tasks/tasks.json',
+					output: 'scripts/task-complexity-report.json',
+					projectRoot: '/mock/project/root',
+					id
+				},
+				{ projectRoot: '/mock/project/root' }
+			);
+			const printed = logSpy.mock.calls.map((call) => String(call[0]));
+			logSpy.mockRestore();
+			return printed.join('\n');
+		};
+
+		test('does not count tasks left out by --id as done', async () => {
+			const output = await run('1');
+
+			expect(output).toContain('Analyzed');
+			expect(output).not.toContain('skipped');
+		});
+
+		test('counts done tasks among the IDs you asked for', async () => {
+			const output = await run('1,3');
+
+			expect(output).toContain('skipped 1 done');
+		});
+	});
+
 	test('should handle API errors gracefully', async () => {
 		// Arrange
 		const options = {

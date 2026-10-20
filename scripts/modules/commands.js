@@ -988,10 +988,6 @@ function registerCommands(programInstance) {
 
 			const taskGraph = initTaskGraph(initOptions);
 
-			const modelOverride = options.model;
-			const thresholdScore = parseFloat(options.threshold);
-			const useResearch = options.research || false;
-
 			// Use the provided tag, or the current active tag, or default to 'master'
 			const targetTag = taskGraph.getCurrentTag();
 
@@ -1001,31 +997,8 @@ function registerCommands(programInstance) {
 			// Use user's explicit output path if provided, otherwise use tag-aware default
 			const outputPath = taskGraph.getComplexityReportPath();
 
-			console.log(
-				theme.brand(
-					`Analyzing task complexity from: ${taskGraph.getTasksPath()}`
-				)
-			);
-			console.log(theme.brand(`Output report will be saved to: ${outputPath}`));
-
-			if (options.id) {
-				console.log(theme.brand(`Analyzing specific task IDs: ${options.id}`));
-			} else if (options.from || options.to) {
-				const fromStr = options.from ? options.from : 'first';
-				const toStr = options.to ? options.to : 'last';
-				console.log(
-					theme.brand(`Analyzing tasks in range: ${fromStr} to ${toStr}`)
-				);
-			}
-
-			if (useResearch) {
-				console.log(
-					theme.brand(
-						'Using Claude Code web research for research-backed complexity analysis'
-					)
-				);
-			}
-
+			// The spinner and the summary say what's analyzed and where the
+			// report goes; no separate lines with absolute paths up front
 			// Update options with tag-aware output path and context
 			const updatedOptions = {
 				...options,

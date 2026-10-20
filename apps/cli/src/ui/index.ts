@@ -14,9 +14,20 @@ export { getPriorityWithColor } from './formatters/priority-formatters.js';
 
 // Complexity formatters
 export {
+	complexityLevel,
 	getComplexityWithColor,
-	getComplexityWithScore
+	getComplexityWithScore,
+	type ComplexityLevel
 } from './formatters/complexity-formatters.js';
+
+// What analyze-complexity found and what complexity-report shows
+export {
+	formatComplexityReport,
+	formatComplexityRun,
+	type ComplexityAnalysisItem,
+	type ComplexityReport,
+	type ComplexityRunSummary
+} from './formatters/complexity-report-formatters.js';
 
 // AI usage line shown after AI commands
 export {
