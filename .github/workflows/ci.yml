@@ -223,6 +223,12 @@ jobs:
           NODE_ENV: test
           CI: true
 
+      - name: Run @tm/profiles tests
+        run: npm run test -w @tm/profiles
+        env:
+          NODE_ENV: test
+          CI: true
+
       - name: Run AI SDK contract tests
         run: npm run test:sdk-contract
         env:

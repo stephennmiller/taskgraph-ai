@@ -1,7 +1,8 @@
 /**
  * Rule Transformer Module
- * Installs a rule profile (Claude Code) into a project: lifecycle hooks,
- * MCP configuration and slash commands.
+ * Installs a rule profile (Claude Code) into a project: lifecycle hooks and
+ * MCP configuration. Slash commands are not written: the Claude Code plugin
+ * is the only channel.
  */
 import path from 'path';
 import { log } from '../../scripts/modules/utils.js';
@@ -101,32 +102,6 @@ export function convertAllRulesToProfileRules(projectRoot, profile) {
 			log(
 				'error',
 				`[Rule Transformer] onPostConvertRulesProfile failed for ${profile.profileName}: ${error.message}`
-			);
-		}
-	}
-
-	// 4. Add slash commands (if profile supports them)
-	if (profile.slashCommands) {
-		try {
-			const result = profile.slashCommands.profile.addSlashCommands(
-				projectRoot,
-				profile.slashCommands.commands
-			);
-			if (result.success) {
-				log(
-					'debug',
-					`[Rule Transformer] Created ${result.count} slash commands in ${result.directory}`
-				);
-			} else {
-				log(
-					'error',
-					`[Rule Transformer] Failed to add slash commands for ${profile.profileName}: ${result.error}`
-				);
-			}
-		} catch (error) {
-			log(
-				'error',
-				`[Rule Transformer] Slash commands failed for ${profile.profileName}: ${error.message}`
 			);
 		}
 	}

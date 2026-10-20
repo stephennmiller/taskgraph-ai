@@ -25,11 +25,11 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 - **Plan from a PRD:** generate tasks and subtasks, with dependencies, priorities and test strategies.
 - **Always know what's next:** `next` picks the first unblocked task.
-- **Stay in Claude Code:** use slash commands (`/tm:next-task`) or the `taskgraph` CLI. An MCP server is available if you want plain-language control, but it is optional.
+- **Stay in Claude Code:** use slash commands (`/taskgraph:next-task`) or the `taskgraph` CLI. An MCP server is available if you want plain-language control, but it is optional.
 - **No API keys:** every AI call runs through your signed-in Claude Code.
 
 <p align="center">
-  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="820"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next-task and resuming from the notes logged last time" width="820"></a>
   <br>
   <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
@@ -44,13 +44,13 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 </p>
 
 <p align="center">
-  <a href="images/demo/02-prd-to-tasks.mp4"><img src="images/demo/02-prd-to-tasks.svg" alt="Claude Code running /tm:parse-prd to turn a PRD into 8 dependent tasks" width="820"></a>
+  <a href="images/demo/02-prd-to-tasks.mp4"><img src="images/demo/02-prd-to-tasks.svg" alt="Claude Code running /taskgraph:parse-prd to turn a PRD into 8 dependent tasks" width="820"></a>
   <br>
   <sub>2. Turn your PRD into a plan · <a href="images/demo/02-prd-to-tasks.mp4">MP4</a></sub>
 </p>
 
 <p align="center">
-  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /tm:next-task and resuming from the notes logged last time" width="820"></a>
+  <a href="images/demo/03-pick-up-where-you-left-off.mp4"><img src="images/demo/03-pick-up-where-you-left-off.svg" alt="A new Claude Code session running /taskgraph:next-task and resuming from the notes logged last time" width="820"></a>
   <br>
   <sub>3. Pick up where you left off · <a href="images/demo/03-pick-up-where-you-left-off.mp4">MP4</a></sub>
 </p>
@@ -89,20 +89,20 @@ From your own project folder:
 taskgraph init --rules claude
 ```
 
-This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and 46 slash commands in `.claude/commands/tm/`. Don't run it twice; it only re-adds the same files.
+This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and the MCP entry below. It does not install slash commands: step 3 does. Don't run it twice; it only re-adds the same files.
 
 `init` also writes a `.mcp.json` that registers the MCP server with the 7 `core` tools. Delete that file if you only want the slash commands and CLI; see step 4 to keep and configure the server.
 
-### 3. (Optional) Install the plugin
+### 3. Install the plugin
 
-The plugin adds a nearly identical set of 46 slash commands (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
+The plugin is the only way to get slash commands. It adds 47 of them (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
 
 ```txt
 /plugin marketplace add stephennmiller/taskgraph-ai
 /plugin install taskgraph@taskgraph
 ```
 
-The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 4). Its slash commands overlap with the ones from step 2, so install the plugin only if you want the agents.
+The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 4).
 
 ### 4. (Optional) Add the MCP server
 
@@ -139,7 +139,7 @@ To share the setup with your team instead, put it in the project's `.mcp.json`:
   </picture>
 </p>
 
-The examples below use slash commands (`/tm:...`), with the CLI equivalent in each table. If you added the optional MCP server, you can say the same things in plain language instead.
+The examples below use slash commands (`/taskgraph:...`), with the CLI equivalent in each table. If you added the optional MCP server, you can say the same things in plain language instead.
 
 ### 1. Write a PRD
 
@@ -148,28 +148,28 @@ Create `.taskgraph/docs/prd.md` describing what you want to build. The more deta
 ### 2. Generate tasks
 
 ```txt
-/tm:parse-prd .taskgraph/docs/prd.md
+/taskgraph:parse-prd .taskgraph/docs/prd.md
 ```
 
 Then, optionally, check how big each task is and break the big ones down:
 
 ```txt
-/tm:analyze-complexity
-/tm:expand-all-tasks
+/taskgraph:analyze-complexity
+/taskgraph:expand-all-tasks
 ```
 
 ### 3. Work through them
 
 | Slash command | CLI | What happens |
 |---|---|---|
-| `/tm:next-task` | `taskgraph next` | Shows the first unblocked, pending task |
-| `/tm:graph` | `taskgraph graph` | Draws tasks as a dependency tree, with the next one marked |
-| `/tm:show-task 1` | `taskgraph show 1,3,5` | Full details for each task |
-| `/tm:to-in-progress 3`, then ask Claude to implement it | `taskgraph set-status --id=3 --status=in-progress` | Claude Code does the work, guided by the task |
-| `/tm:to-done 3` | `taskgraph set-status --id=3 --status=done` | Updates status and unlocks dependent tasks |
-| `/tm:expand-task 4` | `taskgraph expand --id=4` | Splits it into subtasks |
-| `/tm:add-task <what you want>` | `taskgraph add-task --prompt="..."` | Creates a task with AI help |
-| `/tm:update-task 5 we now use Postgres` | `taskgraph update-task --id=5 --prompt="..."` | Rewrites it for the new direction |
+| `/taskgraph:next-task` | `taskgraph next` | Shows the first unblocked, pending task |
+| `/taskgraph:graph` | `taskgraph graph` | Draws tasks as a dependency tree, with the next one marked |
+| `/taskgraph:show-task 1` | `taskgraph show 1,3,5` | Full details for each task |
+| `/taskgraph:to-in-progress 3`, then ask Claude to implement it | `taskgraph set-status --id=3 --status=in-progress` | Claude Code does the work, guided by the task |
+| `/taskgraph:to-done 3` | `taskgraph set-status --id=3 --status=done` | Updates status and unlocks dependent tasks |
+| `/taskgraph:expand-task 4` | `taskgraph expand --id=4` | Splits it into subtasks |
+| `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt="..."` | Creates a task with AI help |
+| `/taskgraph:update-task 5 we now use Postgres` | `taskgraph update-task --id=5 --prompt="..."` | Rewrites it for the new direction |
 | (CLI only) | `taskgraph research "JWT best practices"` | Web research with project context |
 
 The loop is simple: **next, implement, done, next.** Task IDs look like `3` for a task and `3.2` for a subtask.
@@ -179,7 +179,7 @@ If you use the MCP server instead, research, tags and the dependency tools are o
 ### 4. Keep it organized
 
 - **Tags** keep separate task lists per branch, feature or experiment: `taskgraph tags`, `taskgraph tags add`, `taskgraph tags use` (MCP: `list_tags`, `add_tag`, `use_tag`).
-- **Dependencies** decide what counts as "next". Run `/tm:validate-dependencies` or `/tm:fix-dependencies` if the graph looks wrong.
+- **Dependencies** decide what counts as "next". Run `/taskgraph:validate-dependencies` or `/taskgraph:fix-dependencies` if the graph looks wrong.
 - **Statuses:** `pending`, `in-progress`, `done`, `review`, `deferred`, `cancelled`.
 
 ## Commands
@@ -188,7 +188,7 @@ Slash commands and the `taskgraph` CLI cover everything. The MCP server (optiona
 
 ### Slash commands
 
-After `taskgraph init --rules claude` they appear as `/tm:<name>` (type `/tm` to see them). The plugin provides the same set as `/taskgraph:<name>`.
+Install the plugin (step 3) and they appear as `/taskgraph:<name>` (type `/taskgraph` to see them). `taskgraph init` does not write slash commands.
 
 | Purpose | Commands |
 |---|---|

@@ -1,10 +1,7 @@
 /**
  * @fileoverview TaskGraph Profiles Package
- * Provides slash commands and shell utilities for the Claude Code profile.
+ * Shell utilities for the Claude Code profile. Slash commands ship only as the
+ * Claude Code plugin (packages/claude-code-plugin/commands).
  */
 
-// Re-export everything from slash-commands module
-export * from './slash-commands/index.js';
-
-// Re-export shell utilities
 export * from './shell-utils.js';
