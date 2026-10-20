@@ -108,7 +108,9 @@ describe('runInteractiveSetup', () => {
 		await runInteractiveSetup('/project');
 
 		expect(modelManagement.setModel).not.toHaveBeenCalled();
-		const printed = log.mock.calls.map((call: unknown[]) => plain(String(call[0])));
+		const printed = log.mock.calls.map((call: unknown[]) =>
+			plain(String(call[0]))
+		);
 		expect(printed).toEqual([
 			'✔ Main model (creates and updates tasks) sonnet',
 			'✔ Research model (research and --research runs) sonnet',
@@ -124,7 +126,9 @@ describe('runInteractiveSetup', () => {
 		expect(inquirer.createPromptModule).toHaveBeenCalledWith({
 			clearPromptOnDone: true
 		});
-		const printed = log.mock.calls.map((call: unknown[]) => plain(String(call[0])));
+		const printed = log.mock.calls.map((call: unknown[]) =>
+			plain(String(call[0]))
+		);
 		expect(printed).toEqual([
 			'✔ Main model (creates and updates tasks) opus',
 			'\nCancelled; no models changed'
