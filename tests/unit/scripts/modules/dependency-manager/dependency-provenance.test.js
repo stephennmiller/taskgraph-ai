@@ -1,6 +1,7 @@
 /**
- * Manual add-dependency / remove-dependency keep the explicit-vs-inferred
- * marks (metadata.dependencySources) honest. Only tasks.json I/O is mocked.
+ * Manual add-dependency / remove-dependency / fix-dependencies keep the
+ * explicit-vs-inferred marks (metadata.dependencySources) honest. Only
+ * tasks.json I/O is mocked.
  */
 
 import { vi } from 'vitest';
@@ -19,6 +20,7 @@ vi.mock('../../../../../scripts/modules/utils.js', async (importOriginal) => ({
 
 import {
 	addDependency,
+	fixDependenciesCommand,
 	removeDependency
 } from '../../../../../scripts/modules/dependency-manager.js';
 
@@ -43,14 +45,51 @@ const tasks = () => [
 	}
 ];
 
+const withSubtasks = () => [
+	{
+		id: 2,
+		title: 'Parent',
+		status: 'pending',
+		dependencies: [],
+		subtasks: [
+			{ id: 1, title: 'S1', status: 'pending', dependencies: [] },
+			{ id: 2, title: 'S2', status: 'pending', dependencies: [] },
+			{
+				id: 3,
+				title: 'S3',
+				status: 'pending',
+				// expand stored the sibling as a bare number and keyed the mark the same way
+				dependencies: [1],
+				metadata: { dependencySources: { 1: 'inferred' } }
+			}
+		]
+	}
+];
+
 describe('dependency provenance on manual edits', () => {
 	beforeEach(() => writeJSON.mockClear());
 
-	it('adding a dependency leaves it explicit and keeps other marks', async () => {
+	it('characterization: adding an unrelated dependency leaves other marks alone', async () => {
 		const written = await run(addDependency, tasks(), 3, 2);
 
 		expect(written[2].dependencies.map(String)).toEqual(['1', '2']);
 		expect(written[2].metadata.dependencySources).toEqual({ 1: 'inferred' });
+	});
+
+	it('adding a dependency that is already present and inferred makes it explicit', async () => {
+		const written = await run(addDependency, tasks(), 3, 1);
+
+		expect(written[2].dependencies).toEqual([1]);
+		expect(written[2].metadata).toEqual({ jira: 'ABC-1' });
+	});
+
+	it('adding a dependency that is already present and explicit writes nothing', async () => {
+		const plain = tasks();
+		plain[2].metadata = { jira: 'ABC-1' };
+		readJSON.mockReturnValue({ tasks: plain });
+		await addDependency('tasks.json', 3, 1, context);
+
+		expect(writeJSON).not.toHaveBeenCalled();
 	});
 
 	it('re-adding a dependency over a stale inferred mark makes it explicit', async () => {
@@ -69,10 +108,54 @@ describe('dependency provenance on manual edits', () => {
 		expect(written[2].metadata).toEqual({ jira: 'ABC-1' });
 	});
 
-	it('leaves tasks without metadata free of a metadata field', async () => {
+	it('characterization: tasks without metadata stay free of a metadata field', async () => {
 		const written = await run(addDependency, tasks(), 2, 1);
 
 		expect(written[1].dependencies.map(String)).toEqual(['1']);
 		expect(written[1]).not.toHaveProperty('metadata');
+	});
+});
+
+describe('dependency provenance on subtasks', () => {
+	beforeEach(() => writeJSON.mockClear());
+
+	it('adding the dotted form of a stored sibling does not duplicate it and makes it explicit', async () => {
+		const written = await run(addDependency, withSubtasks(), '2.3', '2.1');
+
+		const subtask = written[0].subtasks[2];
+		expect(subtask.dependencies).toEqual([1]);
+		expect(subtask).not.toHaveProperty('metadata');
+	});
+
+	it('adds a new sibling explicit and rewrites the legacy numeric key as dotted', async () => {
+		const written = await run(addDependency, withSubtasks(), '2.3', '2.2');
+
+		const subtask = written[0].subtasks[2];
+		expect(subtask.dependencies.map(String)).toEqual(['1', '2.2']);
+		expect(subtask.metadata.dependencySources).toEqual({ 2.1: 'inferred' });
+	});
+
+	it('removing a sibling stored as a bare number prunes its numeric-keyed mark', async () => {
+		const written = await run(removeDependency, withSubtasks(), '2.3', '2.1');
+
+		expect(written[0].subtasks[2].dependencies).toEqual([]);
+		expect(written[0].subtasks[2]).not.toHaveProperty('metadata');
+	});
+});
+
+describe('fix-dependencies', () => {
+	beforeEach(() => writeJSON.mockClear());
+
+	it('prunes the mark of a dependency it removes', async () => {
+		const broken = tasks();
+		broken[2].dependencies = [1, 99];
+		broken[2].metadata.dependencySources = { 1: 'inferred', 99: 'inferred' };
+		readJSON.mockReturnValue({ tasks: structuredClone(broken) });
+
+		await fixDependenciesCommand('tasks.json', { context });
+
+		const written = writeJSON.mock.calls[0][1].tasks;
+		expect(written[2].dependencies).toEqual([1]);
+		expect(written[2].metadata.dependencySources).toEqual({ 1: 'inferred' });
 	});
 });

@@ -31,7 +31,7 @@ describe('processTasks dependency provenance', () => {
 		});
 	});
 
-	test('does not record a dependency that remapping dropped', () => {
+	test('characterization: does not record a dependency that remapping dropped', () => {
 		const tasks = processTasks([raw(1), raw(2, [9])], 1, [], 'medium');
 
 		expect(tasks[1].dependencies).toEqual([]);

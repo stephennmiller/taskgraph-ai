@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import path from 'path';
+import { assignMetadata, pruneDependencySources } from '@tm/core';
 import { findTaskById, log, readJSON, writeJSON } from '../utils.js';
 import taskExists from './task-exists.js';
 
@@ -152,6 +153,7 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 							task.dependencies = task.dependencies.filter(
 								(depId) => !allRemovedIds.has(depId)
 							);
+							assignMetadata(task, pruneDependencySources(task));
 						}
 						if (task.subtasks) {
 							task.subtasks.forEach((subtask) => {
@@ -160,6 +162,10 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 										(depId) =>
 											!allRemovedIds.has(`${task.id}.${depId}`) &&
 											!allRemovedIds.has(depId)
+									);
+									assignMetadata(
+										subtask,
+										pruneDependencySources(subtask, task.id)
 									);
 								}
 							});

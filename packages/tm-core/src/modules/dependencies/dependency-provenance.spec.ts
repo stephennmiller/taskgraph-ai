@@ -7,6 +7,28 @@ import {
 	setDependencySource
 } from './dependency-provenance.js';
 
+describe('renameDependencySource handing the source to the new id', () => {
+	it('drops a mark already under the new id when the old id is explicit', () => {
+		const metadata = renameDependencySource(
+			{ [DEPENDENCY_SOURCES_KEY]: { '5': 'inferred' } },
+			7,
+			5
+		);
+
+		expect(metadata).toBeUndefined();
+	});
+
+	it('gives the new id the old id source when both had marks', () => {
+		const metadata = renameDependencySource(
+			{ [DEPENDENCY_SOURCES_KEY]: { '7': 'inferred', '5': 'inferred' } },
+			7,
+			5
+		);
+
+		expect(metadata?.[DEPENDENCY_SOURCES_KEY]).toEqual({ '5': 'inferred' });
+	});
+});
+
 describe('getDependencySource', () => {
 	it('treats a dependency with no recorded source as explicit', () => {
 		expect(getDependencySource({ dependencies: [1] }, 1)).toBe('explicit');

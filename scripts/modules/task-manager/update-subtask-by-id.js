@@ -4,6 +4,7 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 
 import { theme } from '@tm/cli/theme';
+import { withoutReservedMetadata } from '@tm/core';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
@@ -46,13 +47,9 @@ async function updateSubtaskById(
 	context = {},
 	outputFormat = context.mcpLog ? 'json' : 'text'
 ) {
-	const {
-		session,
-		mcpLog,
-		projectRoot: providedProjectRoot,
-		tag,
-		metadata
-	} = context;
+	const { session, mcpLog, projectRoot: providedProjectRoot, tag } = context;
+	// dependencySources is reserved for dependency provenance
+	const metadata = withoutReservedMetadata(context.metadata);
 	const logFn = mcpLog || consoleLog;
 	const isMCP = !!mcpLog;
 

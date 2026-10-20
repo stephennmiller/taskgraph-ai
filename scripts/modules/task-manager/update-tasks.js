@@ -19,7 +19,7 @@ import {
 } from '../ui.js';
 
 import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
-import { reconcileDependencySources } from '@tm/core';
+import { assignMetadata, reconcileDependencySources } from '@tm/core';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
@@ -260,22 +260,22 @@ async function updateTasks(
 								: task.subtasks
 					};
 					// Dependencies the AI added are recorded as inferred; earlier marks stay
-					const taskMetadata = reconcileDependencySources(merged, task);
-					if (taskMetadata) merged.metadata = taskMetadata;
-					else delete merged.metadata;
+					assignMetadata(merged, reconcileDependencySources(merged, task));
 					if (Array.isArray(merged.subtasks)) {
+						// The AI returns subtasks without metadata; restore the one
+						// matched by id (user metadata and dependency marks) and
+						// record any dependency the AI added as inferred.
 						merged.subtasks = merged.subtasks.map((subtask) => {
 							const original = task.subtasks?.find(
 								(st) => String(st.id) === String(subtask.id)
 							);
-							const subtaskMetadata = reconcileDependencySources(
-								subtask,
-								original
+							const restored = { ...subtask };
+							delete restored.metadata;
+							assignMetadata(
+								restored,
+								reconcileDependencySources(subtask, original, task.id)
 							);
-							const { metadata: _drop, ...rest } = subtask;
-							return subtaskMetadata
-								? { ...rest, metadata: subtaskMetadata }
-								: rest;
+							return restored;
 						});
 					}
 					data.tasks[index] = merged;

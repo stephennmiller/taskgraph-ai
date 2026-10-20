@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-import { reconcileDependencySources } from '@tm/core';
+import { assignMetadata, reconcileDependencySources } from '@tm/core';
 
 import { readJSON, writeJSON } from '../utils.js';
 
@@ -324,8 +324,10 @@ async function expandTask(
 					testStrategy: subtask.testStrategy ?? null
 				};
 				// The AI chose these dependencies, so record them as inferred
-				const metadata = reconcileDependencySources(generated);
-				if (metadata) generated.metadata = metadata;
+				assignMetadata(
+					generated,
+					reconcileDependencySources(generated, undefined, task.id)
+				);
 				return generated;
 			});
 			logger.debug(`Received ${generatedSubtasks.length} subtasks from AI.`);

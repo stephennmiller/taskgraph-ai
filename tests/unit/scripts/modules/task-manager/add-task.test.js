@@ -359,7 +359,7 @@ describe('addTask', () => {
 			expect(addedTask().metadata.dependencySources).toEqual({ 2: 'inferred' });
 		});
 
-		test('adds no metadata when the user supplied every dependency', async () => {
+		test('characterization: adds no metadata when the user supplied every dependency', async () => {
 			aiReturnsDependencies([]);
 
 			await addTask(

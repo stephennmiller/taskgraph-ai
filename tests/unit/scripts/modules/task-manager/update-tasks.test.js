@@ -267,8 +267,9 @@ describe('updateTasks', () => {
 			dependencySources: { 1: 'inferred', 3: 'inferred' }
 		});
 		expect(written.subtasks[0].metadata).toEqual({ owner: 'kim' });
+		// sibling marks are keyed dotted under the parent
 		expect(written.subtasks[1].metadata.dependencySources).toEqual({
-			1: 'inferred'
+			2.1: 'inferred'
 		});
 	});
 

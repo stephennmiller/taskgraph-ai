@@ -379,6 +379,124 @@ describe('updateTaskById success path with generateObjectService', () => {
 		});
 	});
 
+	test('keeps subtask marks (legacy numeric keys) and marks sibling dependencies the AI adds', async () => {
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{
+					id: 1,
+					title: 'Original Task',
+					description: 'Original description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'low',
+					details: null,
+					testStrategy: null,
+					subtasks: [
+						{ id: 1, title: 'S1', status: 'pending', dependencies: [] },
+						{
+							id: 2,
+							title: 'S2',
+							status: 'pending',
+							dependencies: [1],
+							metadata: { owner: 'kim', dependencySources: { 1: 'inferred' } }
+						}
+					]
+				}
+			]
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: {
+				task: {
+					id: 1,
+					title: 'Updated Task',
+					description: 'Updated description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'high',
+					details: 'd',
+					testStrategy: 't',
+					subtasks: [
+						{ id: 1, title: 'S1', status: 'pending', dependencies: [] },
+						{ id: 2, title: 'S2', status: 'pending', dependencies: [1] },
+						{ id: 3, title: 'S3', status: 'pending', dependencies: [1, 2] }
+					]
+				}
+			},
+			telemetryData: {}
+		});
+
+		const { updatedTask } = await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Add a subtask',
+			false,
+			{ tag: 'master' },
+			'json'
+		);
+
+		const [, second, third] = updatedTask.subtasks;
+		expect(second.metadata).toEqual({
+			owner: 'kim',
+			dependencySources: { 1.1: 'inferred' }
+		});
+		expect(third.metadata.dependencySources).toEqual({
+			1.1: 'inferred',
+			1.2: 'inferred'
+		});
+	});
+
+	test('ignores a user-supplied dependencySources in metadata (reserved key)', async () => {
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{
+					id: 1,
+					title: 'Original Task',
+					description: 'Original description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'low',
+					details: null,
+					testStrategy: null,
+					subtasks: []
+				}
+			]
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: {
+				task: {
+					id: 1,
+					title: 'Updated Task',
+					description: 'Updated description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'high',
+					details: 'd',
+					testStrategy: 't',
+					subtasks: []
+				}
+			},
+			telemetryData: {}
+		});
+
+		const { updatedTask } = await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Retitle',
+			false,
+			{
+				tag: 'master',
+				metadata: { owner: 'kim', dependencySources: { 9: 'inferred' } }
+			},
+			'json'
+		);
+
+		expect(updatedTask.metadata).toEqual({ owner: 'kim' });
+	});
+
 	test('handles generateObjectService with malformed mainResult', async () => {
 		fs.existsSync.mockReturnValue(true);
 		readJSON.mockReturnValue({

@@ -17,7 +17,11 @@ import {
 } from '../ui.js';
 
 import { theme } from '@tm/cli/theme';
-import { reconcileDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	reconcileDependencySources,
+	withoutReservedMetadata
+} from '@tm/core';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -53,13 +57,9 @@ async function updateTaskById(
 	outputFormat = 'text',
 	appendMode = false
 ) {
-	const {
-		session,
-		mcpLog,
-		projectRoot: providedProjectRoot,
-		tag,
-		metadata
-	} = context;
+	const { session, mcpLog, projectRoot: providedProjectRoot, tag } = context;
+	// dependencySources is reserved for dependency provenance
+	const metadata = withoutReservedMetadata(context.metadata);
 	const { report, isMCP } = createBridgeLogger(mcpLog, session);
 
 	try {
@@ -435,13 +435,18 @@ async function updateTaskById(
 						})
 					};
 					currentSubtaskId++;
-					// Dependencies the AI added are inferred; earlier marks stay
-					const subtaskMetadata = reconcileDependencySources(
+					// Dependencies the AI added are inferred; earlier marks stay.
+					// Known limit: subtasks are renumbered above without remapping their
+					// sibling dependencies, so when the AI reorders subtasks a sibling
+					// dependency compares by its new number and can change source.
+					assignMetadata(
 						correctedSubtask,
-						originalSubtask
+						reconcileDependencySources(
+							correctedSubtask,
+							originalSubtask,
+							taskToUpdate.id
+						)
 					);
-					if (subtaskMetadata) correctedSubtask.metadata = subtaskMetadata;
-					else delete correctedSubtask.metadata;
 					return correctedSubtask;
 				});
 				report(

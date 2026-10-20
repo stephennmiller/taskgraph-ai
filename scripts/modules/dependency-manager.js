@@ -4,7 +4,12 @@
  */
 
 import { printError } from '@tm/cli/errors';
-import { setDependencySource } from '@tm/core';
+import {
+	assignMetadata,
+	hasDependency,
+	pruneDependencySources,
+	setDependencySource
+} from '@tm/core';
 import path from 'path';
 import { displayBanner } from './ui.js';
 import {
@@ -26,11 +31,29 @@ const NO_TASKS_HINT = 'Create some with `taskgraph parse-prd <file>`';
  * @param {object} task
  * @param {string|number} dependencyId
  * @param {'explicit'|'inferred'} source
+ * @param {string|number} [parentId] - Parent task ID when `task` is a subtask
  */
-function setTaskDependencySource(task, dependencyId, source) {
-	const metadata = setDependencySource(task.metadata, dependencyId, source);
-	if (metadata) task.metadata = metadata;
-	else delete task.metadata;
+function setTaskDependencySource(task, dependencyId, source, parentId) {
+	assignMetadata(
+		task,
+		setDependencySource(task.metadata, dependencyId, source, parentId)
+	);
+}
+
+/**
+ * Drop provenance marks for dependencies that no longer exist, on every task
+ * and subtask, after a bulk fix removed some.
+ * @param {Array} tasks
+ */
+function pruneProvenance(tasks) {
+	for (const task of tasks || []) {
+		if (task.metadata) assignMetadata(task, pruneDependencySources(task));
+		for (const subtask of task.subtasks || []) {
+			if (subtask.metadata) {
+				assignMetadata(subtask, pruneDependencySources(subtask, task.id));
+			}
+		}
+	}
 }
 
 /**
@@ -103,6 +126,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	// Find the task to update
 	let targetTask = null;
 	let isSubtask = false;
+	let provenanceParent;
 
 	if (typeof formattedTaskId === 'string' && formattedTaskId.includes('.')) {
 		// Handle dot notation for subtasks (e.g., "1.2")
@@ -124,6 +148,7 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 		targetTask = parentTask.subtasks.find((s) => s.id === subtaskId);
 		isSubtask = true;
+		provenanceParent = parentId;
 
 		if (!targetTask) {
 			exitWithError(`Subtask ${formattedTaskId} not found`, LIST_HINT);
@@ -142,13 +167,24 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 		targetTask.dependencies = [];
 	}
 
-	// Check if dependency already exists
-	if (
-		targetTask.dependencies.some((d) => {
-			// Convert both to strings for comparison to handle both numeric and string IDs
-			return String(d) === String(formattedDependencyId);
-		})
-	) {
+	// Check if dependency already exists (a subtask sibling may be stored as 1 or "2.1")
+	if (hasDependency(targetTask, formattedDependencyId, provenanceParent)) {
+		// Adding it by hand makes an AI-inferred dependency explicit
+		const before = JSON.stringify(targetTask.metadata);
+		setTaskDependencySource(
+			targetTask,
+			formattedDependencyId,
+			'explicit',
+			provenanceParent
+		);
+		if (JSON.stringify(targetTask.metadata) !== before) {
+			writeJSON(tasksPath, data, context.projectRoot, context.tag);
+			log(
+				'success',
+				`Task ${formattedTaskId} now lists task ${formattedDependencyId} as an explicit dependency`
+			);
+			return;
+		}
 		log(
 			'info',
 			`Task ${formattedTaskId} already depends on task ${formattedDependencyId}; nothing changed`
@@ -200,7 +236,12 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 		// Add the dependency
 		targetTask.dependencies.push(formattedDependencyId);
 		// A person added it, so it is explicit (clears any stale inferred mark)
-		setTaskDependencySource(targetTask, formattedDependencyId, 'explicit');
+		setTaskDependencySource(
+			targetTask,
+			formattedDependencyId,
+			'explicit',
+			provenanceParent
+		);
 
 		// Sort dependencies numerically or by parent task ID first, then subtask ID
 		targetTask.dependencies.sort((a, b) => {
@@ -344,7 +385,12 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 		dependencyIndex,
 		1
 	);
-	setTaskDependencySource(targetTask, removedDependency, 'explicit');
+	setTaskDependencySource(
+		targetTask,
+		removedDependency,
+		'explicit',
+		isSubtask ? formattedTaskId.split('.')[0] : undefined
+	);
 
 	// Save the updated tasks
 	writeJSON(tasksPath, data, context.projectRoot, context.tag);
@@ -1030,6 +1076,8 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 			}
 		}
 
+		pruneProvenance(data.tasks);
+
 		// Check if any changes were made by comparing with original data
 		const dataChanged = JSON.stringify(data) !== JSON.stringify(originalData);
 
@@ -1191,6 +1239,8 @@ function validateAndFixDependencies(
 			}
 		}
 	});
+
+	pruneProvenance(tasksData.tasks);
 
 	// Check if any changes were made by comparing with original data
 	const changesDetected =

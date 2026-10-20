@@ -452,8 +452,9 @@ describe('expandTask', () => {
 
 			const [first, second, third] = result.task.subtasks;
 			expect(first.metadata).toBeUndefined();
-			expect(second.metadata.dependencySources).toEqual({ 1: 'inferred' });
-			expect(third.metadata.dependencySources).toEqual({ 2: 'inferred' });
+			// sibling marks are keyed dotted under the parent task (2)
+			expect(second.metadata.dependencySources).toEqual({ 2.1: 'inferred' });
+			expect(third.metadata.dependencySources).toEqual({ 2.2: 'inferred' });
 		});
 
 		test('should handle research flag correctly', async () => {

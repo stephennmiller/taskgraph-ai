@@ -5,15 +5,29 @@
  * Decision: provenance lives in `Task.metadata.dependencySources` rather than
  * a new typed field. `dependencies` is a plain ID array, so provenance is a
  * sidecar map keyed by dependency ID. `metadata` is already carried through
- * every task operation (storage CRUD, AI rewrites, move/expand in the legacy
- * scripts), whereas a new top-level field would be dropped by each of those
- * rewrites until it was threaded through them one by one. Only `inferred`
- * entries are stored; a dependency with no entry is explicit, so existing
- * files and manually added dependencies need no migration. Readers go through
- * getDependencySource, which ignores entries for dependencies no longer listed.
+ * every storage operation and the legacy AI rewrite paths, whereas a new
+ * top-level field would be dropped by each rewrite until it was threaded
+ * through. Only `inferred` entries are stored; a dependency with no entry is
+ * explicit, so existing files and manually added dependencies need no
+ * migration. `dependencySources` is a reserved metadata key.
  *
- * AI dependency creation currently runs in the legacy scripts/modules
- * task-manager, not in @tm/core, so those call sites use these helpers.
+ * Keys are canonical: a task's keys are its plain IDs ("5"); a subtask's
+ * sibling keys are dotted ("2.1") whether the dependency is stored as 1 or
+ * "2.1". Pass the subtask's parent ID as `parentId` and every function
+ * normalizes both stored dependencies and stored keys, so marks written with
+ * a bare numeric key (the form expand used first) still read correctly. A
+ * bare number in a subtask always means a sibling, as elsewhere in the
+ * legacy dependency code.
+ *
+ * Readers go through getDependencySource, which ignores entries for
+ * dependencies no longer listed, and writers prune marks when a dependency is
+ * removed so a later re-add cannot inherit a stale one.
+ *
+ * Where the AI invents dependencies: parse-prd, add-task, expand-task,
+ * update-task and update (all legacy scripts/modules/task-manager). A
+ * dependency the user asked for in an update prompt is still recorded as
+ * inferred, because the model decides which IDs to write. scope-up/scope-down
+ * are a further AI call site (see scope-adjustment.js).
  */
 
 export type DependencySource = 'explicit' | 'inferred';
@@ -28,17 +42,41 @@ interface WithDependencies {
 	metadata?: Metadata;
 }
 
-function readInferred(metadata: Metadata | undefined): Record<string, string> {
+/** Canonical key for a dependency; bare ids are siblings when a parent is given. */
+function canonical(id: DependencyId, parentId?: DependencyId): string {
+	const text = String(id);
+	return parentId !== undefined && !text.includes('.')
+		? `${parentId}.${text}`
+		: text;
+}
+
+/** Inferred marks keyed canonically, whatever form they were written in. */
+function readInferred(
+	metadata: Metadata | undefined,
+	parentId?: DependencyId
+): Record<string, string> {
 	const stored = metadata?.[DEPENDENCY_SOURCES_KEY];
 	if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
 		return {};
 	}
-	return stored as Record<string, string>;
+	const marks: Record<string, string> = {};
+	for (const [key, value] of Object.entries(stored)) {
+		marks[canonical(key, parentId)] = value as string;
+	}
+	return marks;
 }
 
-function isListed(task: WithDependencies, depId: DependencyId): boolean {
-	return (task.dependencies ?? []).some((d) => String(d) === String(depId));
+/** Whether the task lists this dependency, in either stored form. */
+export function hasDependency(
+	task: WithDependencies,
+	depId: DependencyId,
+	parentId?: DependencyId
+): boolean {
+	const key = canonical(depId, parentId);
+	return (task.dependencies ?? []).some((d) => canonical(d, parentId) === key);
 }
+
+const isListed = hasDependency;
 
 /**
  * Write the inferred set into a copy of metadata. Drops the key when empty;
@@ -55,13 +93,37 @@ function withInferred(
 	return Object.keys(rest).length > 0 ? rest : undefined;
 }
 
+/**
+ * User-supplied metadata (update-task / update-subtask --metadata) without the
+ * reserved provenance key, so callers can't overwrite it by accident.
+ * Returns undefined when nothing else is left.
+ */
+export function withoutReservedMetadata(
+	metadata: Metadata | null | undefined
+): Metadata | undefined {
+	if (!metadata) return undefined;
+	const { [DEPENDENCY_SOURCES_KEY]: _reserved, ...rest } = metadata;
+	return Object.keys(rest).length > 0 ? rest : undefined;
+}
+
+/** Set a task's metadata, or delete the field when there is none. */
+export function assignMetadata(
+	task: { metadata?: Metadata },
+	metadata: Metadata | undefined
+): void {
+	if (metadata) task.metadata = metadata;
+	else delete task.metadata;
+}
+
 /** Source of one dependency; anything not recorded as inferred is explicit. */
 export function getDependencySource(
 	task: WithDependencies,
-	depId: DependencyId
+	depId: DependencyId,
+	parentId?: DependencyId
 ): DependencySource {
-	if (!isListed(task, depId)) return 'explicit';
-	return readInferred(task.metadata)[String(depId)] === 'inferred'
+	if (!isListed(task, depId, parentId)) return 'explicit';
+	return readInferred(task.metadata, parentId)[canonical(depId, parentId)] ===
+		'inferred'
 		? 'inferred'
 		: 'explicit';
 }
@@ -74,14 +136,15 @@ export function getDependencySource(
  */
 export function reconcileDependencySources(
 	current: WithDependencies,
-	previous?: WithDependencies
+	previous?: WithDependencies,
+	parentId?: DependencyId
 ): Metadata | undefined {
-	const priorInferred = readInferred(previous?.metadata);
+	const priorInferred = readInferred(previous?.metadata, parentId);
 	const inferred: Record<string, string> = {};
 
 	for (const dep of current.dependencies ?? []) {
-		const key = String(dep);
-		const existed = previous ? isListed(previous, dep) : false;
+		const key = canonical(dep, parentId);
+		const existed = previous ? isListed(previous, dep, parentId) : false;
 		if (!existed || priorInferred[key] === 'inferred') {
 			inferred[key] = 'inferred';
 		}
@@ -94,27 +157,65 @@ export function reconcileDependencySources(
 export function setDependencySource(
 	metadata: Metadata | undefined,
 	depId: DependencyId,
-	source: DependencySource
+	source: DependencySource,
+	parentId?: DependencyId
 ): Metadata | undefined {
-	const inferred = { ...readInferred(metadata) };
-	if (source === 'inferred') {
-		inferred[String(depId)] = 'inferred';
-	} else {
-		delete inferred[String(depId)];
-	}
+	const inferred = readInferred(metadata, parentId);
+	const key = canonical(depId, parentId);
+	if (source === 'inferred') inferred[key] = 'inferred';
+	else delete inferred[key];
 	return withInferred(metadata, inferred);
 }
 
-/** Carry a mark across a dependency ID change (e.g. a task move). */
+/** Drop marks for dependencies the task no longer lists. */
+export function pruneDependencySources(
+	task: WithDependencies,
+	parentId?: DependencyId
+): Metadata | undefined {
+	const kept: Record<string, string> = {};
+	for (const [key, value] of Object.entries(
+		readInferred(task.metadata, parentId)
+	)) {
+		if (isListed(task, key, parentId)) kept[key] = value;
+	}
+	return withInferred(task.metadata, kept);
+}
+
+/**
+ * A dependency changed ID (a task move): the new ID takes the old ID's
+ * source, replacing any mark it already had.
+ */
 export function renameDependencySource(
 	metadata: Metadata | undefined,
 	oldId: DependencyId,
-	newId: DependencyId
+	newId: DependencyId,
+	parentId?: DependencyId
 ): Metadata | undefined {
-	const inferred = { ...readInferred(metadata) };
-	const oldKey = String(oldId);
-	if (inferred[oldKey] !== 'inferred') return metadata;
-	delete inferred[oldKey];
-	inferred[String(newId)] = 'inferred';
+	const inferred = readInferred(metadata, parentId);
+	const source = inferred[canonical(oldId, parentId)];
+	delete inferred[canonical(oldId, parentId)];
+	delete inferred[canonical(newId, parentId)];
+	if (source === 'inferred') inferred[canonical(newId, parentId)] = 'inferred';
 	return withInferred(metadata, inferred);
+}
+
+/**
+ * A task or subtask moved to a different parent (or to top level, with
+ * `undefined`) and keeps its stored dependencies, or has them rewritten by
+ * `newStoredDependency`. Re-key the marks to the form the new context reads.
+ */
+export function rekeyDependencySources(
+	task: WithDependencies,
+	oldParentId: DependencyId | undefined,
+	newParentId: DependencyId | undefined,
+	newStoredDependency: (dep: DependencyId) => DependencyId = (dep) => dep
+): Metadata | undefined {
+	const before = readInferred(task.metadata, oldParentId);
+	const after: Record<string, string> = {};
+	for (const dep of task.dependencies ?? []) {
+		if (before[canonical(dep, oldParentId)] === 'inferred') {
+			after[canonical(newStoredDependency(dep), newParentId)] = 'inferred';
+		}
+	}
+	return withInferred(task.metadata, after);
 }
