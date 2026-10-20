@@ -1,10 +1,9 @@
 import path from 'path';
 import boxen from 'boxen';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 
-import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { theme } from '@tm/cli/theme';
 import {
 	DEFAULT_TASK_PRIORITY,
 	TASK_PRIORITY_OPTIONS,
@@ -22,8 +21,7 @@ import {
 	failLoadingIndicator,
 	getStatusWithColor,
 	startLoadingIndicator,
-	stopLoadingIndicator,
-	succeedLoadingIndicator
+	stopLoadingIndicator
 } from '../ui.js';
 import {
 	log as consoleLog,
@@ -121,11 +119,11 @@ async function addTask(
 		}
 	}
 
-	logFn.info(
+	logFn.debug(
 		`Adding new task with prompt: "${prompt}", Priority: ${effectivePriority}, Dependencies: ${dependencies.join(', ') || 'None'}, Research: ${useResearch}, ProjectRoot: ${projectRoot}`
 	);
 	if (tag) {
-		logFn.info(`Using tag context: ${tag}`);
+		logFn.debug(`Using tag context: ${tag}`);
 	}
 
 	let loadingIndicator = null;
@@ -292,18 +290,6 @@ async function addTask(
 				: 0;
 		const newTaskId = highestId + 1;
 
-		// Only show UI box for CLI mode
-		if (outputFormat === 'text') {
-			console.log(
-				boxen(theme.text.bold(`Creating New Task #${newTaskId}`), {
-					padding: 1,
-					borderColor: BORDER_COLOR,
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 1 }
-				})
-			);
-		}
-
 		// Validate dependencies before proceeding
 		const invalidDeps = dependencies.filter((depId) => {
 			// Ensure depId is parsed as a number for comparison
@@ -364,7 +350,7 @@ async function addTask(
 		} else {
 			report('DEBUG: Taking AI task generation path.', 'debug');
 			// --- Refactored AI Interaction ---
-			report(`Generating task data with AI with prompt:\n${prompt}`, 'info');
+			report(`Generating task data with AI with prompt:\n${prompt}`, 'debug');
 
 			// --- Use the new ContextGatherer ---
 			const contextGatherer = new ContextGatherer(projectRoot, tag);
@@ -418,7 +404,7 @@ async function addTask(
 			// Start the loading indicator - only for text mode
 			if (outputFormat === 'text') {
 				loadingIndicator = startLoadingIndicator(
-					`Generating new task with ${useResearch ? 'Research' : 'Main'} AI... \n`
+					`Writing the new task${useResearch ? ' with research' : ''}…`
 				);
 			}
 
@@ -462,14 +448,11 @@ async function addTask(
 					throw new Error('AI service did not return a valid task object.');
 				}
 
-				report('Successfully generated task data from AI.', 'success');
+				report('Successfully generated task data from AI.', 'debug');
 
-				// Success! Show checkmark
+				// The "Task N Created" box below is the confirmation; just clear the spinner
 				if (loadingIndicator) {
-					succeedLoadingIndicator(
-						loadingIndicator,
-						'Task generated successfully'
-					);
+					stopLoadingIndicator(loadingIndicator);
 					loadingIndicator = null; // Clear it
 				}
 			} catch (error) {
@@ -547,25 +530,6 @@ async function addTask(
 
 		// Show success message - only for text output (CLI)
 		if (outputFormat === 'text') {
-			const table = new Table({
-				head: [
-					chalk.cyan.bold('ID'),
-					chalk.cyan.bold('Title'),
-					chalk.cyan.bold('Description')
-				],
-				colWidths: [5, 30, 50], // Adjust widths as needed
-				style: { border: TABLE_BORDER }
-			});
-
-			table.push([
-				newTask.id,
-				truncate(newTask.title, 27),
-				truncate(newTask.description, 47)
-			]);
-
-			console.log(chalk.green('✓ New task created successfully:'));
-			console.log(table.toString());
-
 			// Helper to get priority color
 			const getPriorityColor = (p) => {
 				switch (p?.toLowerCase()) {

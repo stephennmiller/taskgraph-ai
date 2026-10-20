@@ -372,14 +372,6 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			console.log(
-				theme.brand(
-					`Updating tasks from ID >= ${fromId} with prompt: "${prompt}"`
-				)
-			);
-
-			console.log(theme.brand(`Tasks file: ${tasksPath}`));
-
 			if (useResearch) {
 				console.log(
 					theme.brand(
@@ -441,14 +433,9 @@ function registerCommands(programInstance) {
 
 				// Validate required parameters
 				if (!taskId) {
-					console.error(chalk.red('Error: Task ID is required'));
-					console.log(
-						chalk.yellow(
-							'Usage examples:\n' +
-								'  tm update-task 1 Added implementation details\n' +
-								'  tm update-task TAS-123 Fixed the auth bug\n' +
-								'  tm update-task --id=23 --prompt="Update with new information"'
-						)
+					printError(
+						'Missing task ID',
+						'Try `taskgraph update-task --id=3 --prompt="what changed"`'
 					);
 					process.exit(1);
 				}
@@ -458,33 +445,19 @@ function registerCommands(programInstance) {
 				const validId = /^\d+$/.test(taskId);
 
 				if (!validId) {
-					console.error(
-						chalk.red(
-							`Error: Invalid task ID: ${taskId}. Task ID must be a positive integer.`
-						)
-					);
-					console.log(
-						chalk.yellow(
-							'Usage examples:\n' +
-								'  tm update-task 1 Added implementation details\n' +
-								'  tm update-task 7 Fixed the auth bug'
-						)
+					printError(
+						`"${taskId}" isn't a task ID`,
+						taskId.includes('.')
+							? 'Update subtasks with `taskgraph update-subtask`'
+							: 'Use a number like `3`'
 					);
 					process.exit(1);
 				}
 
 				if (!prompt) {
-					console.error(
-						chalk.red(
-							'Error: Prompt is required. Please provide information about the changes.'
-						)
-					);
-					console.log(
-						chalk.yellow(
-							'Usage examples:\n' +
-								'  tm update-task 1 Added implementation details\n' +
-								'  tm update-task 23 "Update with new information"'
-						)
+					printError(
+						'Missing prompt',
+						`Try \`taskgraph update-task --id=${taskId} --prompt="what changed"\``
 					);
 					process.exit(1);
 				}
@@ -510,12 +483,6 @@ function registerCommands(programInstance) {
 					}
 					process.exit(1);
 				}
-
-				console.log(
-					theme.brand(`Updating task ${taskId} with prompt: "${prompt}"`)
-				);
-
-				console.log(theme.brand(`Tasks file: ${tasksPath}`));
 
 				if (useResearch) {
 					console.log(
@@ -633,12 +600,6 @@ function registerCommands(programInstance) {
 					process.exit(1);
 				}
 
-				console.log(
-					theme.brand(`Updating subtask ${subtaskId} with prompt: "${prompt}"`)
-				);
-
-				console.log(theme.brand(`Tasks file: ${tasksPath}`));
-
 				if (useResearch) {
 					console.log(
 						theme.brand('Using Claude Code web research for this update')
@@ -731,13 +692,9 @@ function registerCommands(programInstance) {
 
 				console.log(
 					theme.brand(
-						`Scoping up ${taskIds.length} task(s): ${taskIds.join(', ')}`
+						`Scoping up ${taskIds.length === 1 ? 'task' : 'tasks'} ${taskIds.join(', ')}`
 					)
 				);
-				console.log(theme.brand(`Strength level: ${options.strength}`));
-				if (options.prompt) {
-					console.log(theme.brand(`Custom instructions: ${options.prompt}`));
-				}
 
 				const context = {
 					projectRoot: taskGraph.getProjectRoot(),
@@ -758,7 +715,7 @@ function registerCommands(programInstance) {
 
 				console.log(
 					chalk.green(
-						`✅ Successfully scoped up ${result.updatedTasks.length} task(s)`
+						`✓ Scoped up ${result.updatedTasks.length} ${result.updatedTasks.length === 1 ? 'task' : 'tasks'}`
 					)
 				);
 			} catch (error) {
@@ -840,13 +797,9 @@ function registerCommands(programInstance) {
 
 				console.log(
 					theme.brand(
-						`Scoping down ${taskIds.length} task(s): ${taskIds.join(', ')}`
+						`Scoping down ${taskIds.length === 1 ? 'task' : 'tasks'} ${taskIds.join(', ')}`
 					)
 				);
-				console.log(theme.brand(`Strength level: ${options.strength}`));
-				if (options.prompt) {
-					console.log(theme.brand(`Custom instructions: ${options.prompt}`));
-				}
 
 				const context = {
 					projectRoot: taskGraph.getProjectRoot(),
@@ -867,7 +820,7 @@ function registerCommands(programInstance) {
 
 				console.log(
 					chalk.green(
-						`✅ Successfully scoped down ${result.updatedTasks.length} task(s)`
+						`✓ Scoped down ${result.updatedTasks.length} ${result.updatedTasks.length === 1 ? 'task' : 'tasks'}`
 					)
 				);
 			} catch (error) {
@@ -961,7 +914,6 @@ function registerCommands(programInstance) {
 					process.exit(1);
 				}
 
-				console.log(theme.brand(`Expanding task ${options.id}...`));
 				try {
 					// Call the refactored expandTask function
 					await expandTask(
@@ -1578,29 +1530,11 @@ ${result.result}
 					details: options.details || '',
 					testStrategy: options.testStrategy || ''
 				};
-				// Restore specific logging for manual creation
-				console.log(
-					theme.brand(`Creating task manually with title: "${options.title}"`)
-				);
-			} else {
-				// Restore specific logging for AI creation
-				console.log(
-					theme.brand(`Creating task with AI using prompt: "${options.prompt}"`)
-				);
 			}
 
-			// Log dependencies and priority if provided (restored)
 			const dependenciesArray = options.dependencies
 				? options.dependencies.split(',').map((id) => id.trim())
 				: [];
-			if (dependenciesArray.length > 0) {
-				console.log(
-					theme.brand(`Dependencies: [${dependenciesArray.join(', ')}]`)
-				);
-			}
-			if (options.priority) {
-				console.log(theme.brand(`Priority: ${options.priority}`));
-			}
 
 			const context = {
 				projectRoot,
@@ -1895,10 +1829,6 @@ ${result.result}
 					);
 				} else if (options.title) {
 					// Create new subtask with provided data
-					console.log(
-						theme.brand(`Creating new subtask for parent task ${parentId}...`)
-					);
-
 					const newSubtaskData = {
 						title: options.title,
 						description: options.description || '',
@@ -1915,12 +1845,6 @@ ${result.result}
 						generateFiles,
 						{ projectRoot: taskGraph.getProjectRoot(), tag }
 					);
-					console.log(
-						chalk.green(
-							`✓ New subtask ${parentId}.${subtask.id} successfully created`
-						)
-					);
-
 					// Display success message and suggested next steps
 					console.log(
 						boxen(
@@ -1944,7 +1868,7 @@ ${result.result}
 								) +
 								'\n' +
 								chalk.cyan(
-									`2. Run ${chalk.yellow(`tm set-status ${parentId}.${subtask.id} in-progress`)} to start working on it`
+									`2. Run ${chalk.yellow(`taskgraph set-status --id=${parentId}.${subtask.id} --status=in-progress`)} to start working on it`
 								),
 							{
 								padding: 1,
@@ -2050,7 +1974,6 @@ ${result.result}
 						process.exit(1);
 					}
 
-					console.log(theme.brand(`Removing subtask ${subtaskId}...`));
 					if (convertToTask) {
 						console.log(
 							theme.brand('The subtask will be converted to a standalone task')
@@ -2088,7 +2011,7 @@ ${result.result}
 									) +
 									'\n' +
 									chalk.cyan(
-										`2. Run ${chalk.yellow(`tm set-status ${result.id} in-progress`)} to start working on it`
+										`2. Run ${chalk.yellow(`taskgraph set-status --id=${result.id} --status=in-progress`)} to start working on it`
 									),
 								{
 									padding: 1,
@@ -2732,7 +2655,6 @@ Examples:
 			}
 
 			// Display full status when no setup or set flags were given
-			console.log(theme.brand('Fetching current model configuration...'));
 			const configResult = await getModelConfiguration({ projectRoot });
 			const availableResult = await getAvailableModelsList({ projectRoot });
 
@@ -3049,9 +2971,6 @@ Examples:
 							continue;
 						}
 
-						console.log(
-							theme.brand(`Moving task/subtask ${fromId} to ${toId}...`)
-						);
 						try {
 							await moveTask(
 								taskGraph.getTasksPath(),
@@ -3114,11 +3033,6 @@ Examples:
 					}
 				} else {
 					// Moving a single task (existing logic)
-					console.log(
-						theme.brand(
-							`Moving task/subtask ${sourceId} to ${destinationId}...`
-						)
-					);
 
 					const result = await moveTask(
 						taskGraph.getTasksPath(),
@@ -3137,9 +3051,20 @@ Examples:
 
 			// Helper function to handle move errors
 			function handleMoveError(error, moveContext) {
-				// A missing ID needs only the message and where to find IDs
-				if (/not found/i.test(error.message)) {
-					displayError(error);
+				const structured = [
+					'CROSS_TAG_DEPENDENCY_CONFLICTS',
+					'CANNOT_MOVE_SUBTASK',
+					'SOURCE_TARGET_TAGS_SAME',
+					'SAME_SOURCE_TARGET_TAG'
+				];
+				// Anything else (a missing ID, a taken destination) is one line
+				// and a hint; the dependency tips only help the cases below
+				if (!structured.includes(error.code)) {
+					displayError(error, {
+						hint: /already exists/i.test(error.message)
+							? 'Run `taskgraph list` to see which IDs are taken'
+							: undefined
+					});
 				}
 
 				console.error(chalk.red(`Error: ${error.message}`));
@@ -3292,7 +3217,7 @@ Examples:
 	programInstance
 		.command('add-tag')
 		.description(
-			'[DEPRECATED] Create a new tag context for organizing tasks (use "tm tags add" instead)'
+			'[DEPRECATED] Create a new tag context for organizing tasks (use "taskgraph tags add" instead)'
 		)
 		.argument(
 			'[tagName]',
@@ -3316,7 +3241,7 @@ Examples:
 			// Show deprecation warning
 			console.warn(
 				chalk.yellow(
-					'⚠ Warning: "tm add-tag" is deprecated. Use "tm tags add" instead.'
+					'⚠ Warning: "taskgraph add-tag" is deprecated. Use "taskgraph tags add" instead.'
 				)
 			);
 			console.log(
@@ -3457,7 +3382,7 @@ Examples:
 	programInstance
 		.command('delete-tag')
 		.description(
-			'[DEPRECATED] Delete an existing tag and all its tasks (use "tm tags remove" instead)'
+			'[DEPRECATED] Delete an existing tag and all its tasks (use "taskgraph tags remove" instead)'
 		)
 		.argument('<tagName>', 'Name of the tag to delete')
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
@@ -3466,7 +3391,7 @@ Examples:
 			// Show deprecation warning
 			console.warn(
 				chalk.yellow(
-					'⚠ Warning: "tm delete-tag" is deprecated. Use "tm tags remove" instead.'
+					'⚠ Warning: "taskgraph delete-tag" is deprecated. Use "taskgraph tags remove" instead.'
 				)
 			);
 			console.log(
@@ -3526,7 +3451,7 @@ Examples:
 	programInstance
 		.command('use-tag')
 		.description(
-			'[DEPRECATED] Switch to a different tag context (use "tm tags use" instead)'
+			'[DEPRECATED] Switch to a different tag context (use "taskgraph tags use" instead)'
 		)
 		.argument('<tagName>', 'Name of the tag to switch to')
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
@@ -3577,7 +3502,7 @@ Examples:
 	programInstance
 		.command('rename-tag')
 		.description(
-			'[DEPRECATED] Rename an existing tag (use "tm tags rename" instead)'
+			'[DEPRECATED] Rename an existing tag (use "taskgraph tags rename" instead)'
 		)
 		.argument('<oldName>', 'Current name of the tag')
 		.argument('<newName>', 'New name for the tag')
@@ -3586,7 +3511,7 @@ Examples:
 			// Show deprecation warning
 			console.warn(
 				chalk.yellow(
-					'⚠ Warning: "tm rename-tag" is deprecated. Use "tm tags rename" instead.'
+					'⚠ Warning: "taskgraph rename-tag" is deprecated. Use "taskgraph tags rename" instead.'
 				)
 			);
 			console.log(
@@ -3636,7 +3561,7 @@ Examples:
 	programInstance
 		.command('copy-tag')
 		.description(
-			'[DEPRECATED] Copy an existing tag to create a new tag with the same tasks (use "tm tags copy" instead)'
+			'[DEPRECATED] Copy an existing tag to create a new tag with the same tasks (use "taskgraph tags copy" instead)'
 		)
 		.argument('<sourceName>', 'Name of the source tag to copy from')
 		.argument('<targetName>', 'Name of the new tag to create')
@@ -3646,7 +3571,7 @@ Examples:
 			// Show deprecation warning
 			console.warn(
 				chalk.yellow(
-					'⚠ Warning: "tm copy-tag" is deprecated. Use "tm tags copy" instead.'
+					'⚠ Warning: "taskgraph copy-tag" is deprecated. Use "taskgraph tags copy" instead.'
 				)
 			);
 			console.log(

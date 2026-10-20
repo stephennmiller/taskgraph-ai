@@ -17,22 +17,11 @@ import { isSilentMode, log, readJSON, truncate, writeJSON } from '../utils.js';
  */
 function clearSubtasks(tasksPath, taskIds, context = {}) {
 	const { projectRoot, tag } = context;
-	log('info', `Reading tasks from ${tasksPath}...`);
+	log('debug', `Reading tasks from ${tasksPath}...`);
 	const data = readJSON(tasksPath, projectRoot, tag);
 	if (!data || !data.tasks) {
 		log('error', 'No valid tasks found.');
 		process.exit(1);
-	}
-
-	if (!isSilentMode()) {
-		console.log(
-			boxen(theme.text.bold('Clearing Subtasks'), {
-				padding: 1,
-				borderColor: BORDER_COLOR,
-				borderStyle: 'round',
-				margin: { top: 1, bottom: 1 }
-			})
-		);
 	}
 
 	// Handle multiple task IDs (comma-separated)
@@ -76,12 +65,14 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 		const subtaskCount = task.subtasks.length;
 		task.subtasks = [];
 		clearedCount++;
-		log('info', `Cleared ${subtaskCount} subtasks from task ${id}`);
+		log('debug', `Cleared ${subtaskCount} subtasks from task ${id}`);
 
 		summaryTable.push([
 			id.toString(),
 			truncate(task.title, 47),
-			chalk.green(`${subtaskCount} subtasks cleared`)
+			chalk.green(
+				`${subtaskCount} ${subtaskCount === 1 ? 'subtask' : 'subtasks'} cleared`
+			)
 		]);
 	});
 
@@ -106,7 +97,7 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 			console.log(
 				boxen(
 					chalk.green(
-						`Successfully cleared subtasks from ${chalk.bold(clearedCount)} task(s)`
+						`Cleared subtasks from ${chalk.bold(clearedCount)} ${clearedCount === 1 ? 'task' : 'tasks'}`
 					),
 					{
 						padding: 1,
@@ -134,16 +125,8 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 			);
 		}
 	} else {
-		if (!isSilentMode()) {
-			console.log(
-				boxen(chalk.yellow('No subtasks were cleared'), {
-					padding: 1,
-					borderColor: 'yellow',
-					borderStyle: 'round',
-					margin: { top: 1 }
-				})
-			);
-		}
+		// The lines above already say why for each task
+		log('info', 'No subtasks were cleared');
 	}
 }
 

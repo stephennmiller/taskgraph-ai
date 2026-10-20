@@ -219,8 +219,8 @@ Examples:
 				'after',
 				`
 Examples:
-  $ tm tags copy sprint-1 sprint-2
-  $ tm tags copy sprint-1 sprint-2 --description "Next sprint tasks"
+  $ taskgraph tags copy sprint-1 sprint-2
+  $ taskgraph tags copy sprint-1 sprint-2 --description "Next sprint tasks"
 `
 			)
 			.action(async (source, target, options) => {

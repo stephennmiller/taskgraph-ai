@@ -171,7 +171,7 @@ async function moveTask(
 	const tasks = rawData[tag].tasks;
 
 	log(
-		'info',
+		'debug',
 		`Moving task/subtask ${sourceId} to ${destinationId} (tag: ${tag})`
 	);
 
@@ -580,7 +580,7 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 		tasks.push(movedTask);
 	}
 
-	log('info', `Moved task ${sourceTask.id} to new ID ${destTaskId}`);
+	log('debug', `Moved task ${sourceTask.id} to new ID ${destTaskId}`);
 
 	return {
 		message: `Moved task ${sourceTask.id} to new ID ${destTaskId}`,
@@ -893,7 +893,7 @@ async function executeMoveOperation(
 			toTag: targetTag
 		});
 
-		log('info', `Moved task ${taskId} from "${sourceTag}" to "${targetTag}"`);
+		log('debug', `Moved task ${taskId} from "${sourceTag}" to "${targetTag}"`);
 	}
 
 	return { rawData, movedTasks };

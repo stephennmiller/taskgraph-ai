@@ -1,7 +1,6 @@
 import fs from 'fs';
 import boxen from 'boxen';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 
 import {
 	findProjectRoot,
@@ -13,12 +12,11 @@ import {
 
 import {
 	displayAiUsageSummary,
-	getStatusWithColor,
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
 
-import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { theme } from '@tm/cli/theme';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -64,7 +62,7 @@ async function updateTaskById(
 	const { report, isMCP } = createBridgeLogger(mcpLog, session);
 
 	try {
-		report('info', `Updating single task ${taskId} with prompt: "${prompt}"`);
+		report('debug', `Updating single task ${taskId} with prompt: "${prompt}"`);
 
 		// --- Input Validations ---
 		// Note: taskId can be a number (1) or a string with a dot (1.2)
@@ -143,7 +141,7 @@ async function updateTaskById(
 		// --- Metadata-Only Update (Fast Path) ---
 		// If only metadata is provided (no prompt), skip AI and just update metadata
 		if (metadata && (!prompt || prompt.trim() === '')) {
-			report('info', `Metadata-only update for task ${taskId}`);
+			report('debug', `Metadata-only update for task ${taskId}`);
 			// Merge new metadata with existing
 			taskToUpdate.metadata = {
 				...(taskToUpdate.metadata || {}),
@@ -190,63 +188,6 @@ async function updateTaskById(
 		}
 		// --- End Context Gathering ---
 
-		// --- Display Task Info (CLI Only - Keep existing) ---
-		if (outputFormat === 'text') {
-			// Show the task that will be updated
-			const table = new Table({
-				head: [
-					chalk.cyan.bold('ID'),
-					chalk.cyan.bold('Title'),
-					chalk.cyan.bold('Status')
-				],
-				colWidths: [5, 60, 10],
-				style: { border: TABLE_BORDER }
-			});
-
-			table.push([
-				taskToUpdate.id,
-				truncate(taskToUpdate.title, 57),
-				getStatusWithColor(taskToUpdate.status)
-			]);
-
-			console.log(
-				boxen(theme.text.bold(`Updating Task #${taskId}`), {
-					padding: 1,
-					borderColor: BORDER_COLOR,
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				})
-			);
-
-			console.log(table.toString());
-
-			// Display a message about how completed subtasks are handled
-			console.log(
-				boxen(
-					chalk.cyan.bold('How Completed Subtasks Are Handled:') +
-						'\n\n' +
-						theme.text(
-							'• Subtasks marked as "done" or "completed" will be preserved\n'
-						) +
-						theme.text(
-							'• New subtasks will build upon what has already been completed\n'
-						) +
-						theme.text(
-							'• If completed work needs revision, a new subtask will be created instead of modifying done items\n'
-						) +
-						theme.text(
-							'• This approach maintains a clear record of completed work and new requirements'
-						),
-					{
-						padding: 1,
-						borderColor: BORDER_COLOR,
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
-			);
-		}
-
 		// --- Build Prompts using PromptManager ---
 		const promptManager = getPromptManager();
 
@@ -273,7 +214,7 @@ async function updateTaskById(
 				: 'default';
 
 		report(
-			'info',
+			'debug',
 			`Loading prompt template with variant: ${variantKey}, appendMode: ${appendMode}, useResearch: ${useResearch}`
 		);
 
@@ -286,7 +227,7 @@ async function updateTaskById(
 				variantKey
 			);
 			report(
-				'info',
+				'debug',
 				`Prompt result type: ${typeof promptResult}, keys: ${promptResult ? Object.keys(promptResult).join(', ') : 'null'}`
 			);
 
@@ -295,7 +236,7 @@ async function updateTaskById(
 			userPrompt = promptResult.userPrompt;
 
 			report(
-				'info',
+				'debug',
 				`Loaded prompts - systemPrompt length: ${systemPrompt?.length}, userPrompt length: ${userPrompt?.length}`
 			);
 		} catch (error) {
@@ -315,8 +256,9 @@ async function updateTaskById(
 		let aiServiceResponse = null;
 
 		if (!isMCP && outputFormat === 'text') {
+			// The spinner names the task, so no header box is needed above it
 			loadingIndicator = startLoadingIndicator(
-				useResearch ? 'Updating task with research...\n' : 'Updating task...\n'
+				`Updating task ${taskId}: ${truncate(taskToUpdate.title, 50)}${useResearch ? ' (with research)' : ''}`
 			);
 		}
 
@@ -392,7 +334,7 @@ async function updateTaskById(
 				// Write the updated task back to file
 				data.tasks[taskIndex] = taskToUpdate;
 				writeJSON(tasksPath, data, projectRoot, tag);
-				report('success', `Successfully appended to task ${taskId}`);
+				report('debug', `Successfully appended to task ${taskId}`);
 
 				// Display success message for CLI
 				if (outputFormat === 'text') {
@@ -441,7 +383,8 @@ async function updateTaskById(
 				throw new Error('Updated task missing required fields.');
 			// Preserve ID if AI changed it
 			if (updatedTask.id !== taskId) {
-				report('warn', `AI changed task ID. Restoring original ID ${taskId}.`);
+				// Routine: the model often renumbers; restoring it is not the user's concern
+				report('debug', `AI changed task ID. Restoring original ID ${taskId}.`);
 				updatedTask.id = taskId;
 			}
 			// Preserve status if AI changed it
@@ -494,7 +437,7 @@ async function updateTaskById(
 					return correctedSubtask;
 				});
 				report(
-					'info',
+					'debug',
 					`Fixed ${updatedTask.subtasks.length} subtask IDs to be sequential numeric IDs.`
 				);
 			}
@@ -562,7 +505,7 @@ async function updateTaskById(
 
 			// --- Write File and Generate (Unchanged) ---
 			writeJSON(tasksPath, data, projectRoot, tag);
-			report('success', `Successfully updated task ${taskId}`);
+			report('success', `Updated task ${taskId}`);
 			// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 			// --- End Write File ---
 

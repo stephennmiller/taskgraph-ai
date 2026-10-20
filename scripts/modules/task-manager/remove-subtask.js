@@ -20,7 +20,7 @@ async function removeSubtask(
 ) {
 	const { projectRoot, tag } = context;
 	try {
-		log('info', `Removing subtask ${subtaskId}...`);
+		log('debug', `Removing subtask ${subtaskId}...`);
 
 		// Read the existing tasks with proper context
 		const data = readJSON(tasksPath, projectRoot, tag);
@@ -73,7 +73,7 @@ async function removeSubtask(
 
 		// Convert the subtask to a standalone task if requested
 		if (convertToTask) {
-			log('info', `Converting subtask ${subtaskId} to a standalone task...`);
+			log('debug', `Converting subtask ${subtaskId} to a standalone task...`);
 
 			// Find the highest task ID to determine the next ID
 			const highestId = Math.max(...data.tasks.map((t) => t.id));
@@ -100,7 +100,7 @@ async function removeSubtask(
 
 			log('info', `Created new task ${newTaskId} from subtask ${subtaskId}`);
 		} else {
-			log('info', `Subtask ${subtaskId} deleted`);
+			log('debug', `Subtask ${subtaskId} deleted`);
 		}
 
 		// Write the updated tasks back to the file with proper context

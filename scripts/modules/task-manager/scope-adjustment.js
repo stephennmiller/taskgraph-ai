@@ -647,13 +647,13 @@ export async function scopeUpTask(
 		}
 
 		if (outputFormat === 'text') {
-			log('info', `Scoping up task ${taskId}: ${task.title}`);
+			log('debug', `Scoping up task ${taskId}: ${task.title}`);
 		}
 
 		// Get original complexity score (if available)
 		const originalComplexity = getCurrentComplexityScore(taskId, context);
 		if (originalComplexity && outputFormat === 'text') {
-			log('info', `Original complexity: ${originalComplexity}/10`);
+			log('debug', `Original complexity: ${originalComplexity}/10`);
 		}
 
 		const adjustResult = await adjustTaskComplexity(
@@ -739,7 +739,7 @@ export async function scopeUpTask(
 	writeJSON(tasksPath, data, projectRoot, tag);
 
 	if (outputFormat === 'text') {
-		log('info', `Successfully scoped up ${updatedTasks.length} task(s)`);
+		log('debug', `Successfully scoped up ${updatedTasks.length} task(s)`);
 	}
 
 	return {
@@ -798,13 +798,13 @@ export async function scopeDownTask(
 		}
 
 		if (outputFormat === 'text') {
-			log('info', `Scoping down task ${taskId}: ${task.title}`);
+			log('debug', `Scoping down task ${taskId}: ${task.title}`);
 		}
 
 		// Get original complexity score (if available)
 		const originalComplexity = getCurrentComplexityScore(taskId, context);
 		if (originalComplexity && outputFormat === 'text') {
-			log('info', `Original complexity: ${originalComplexity}/10`);
+			log('debug', `Original complexity: ${originalComplexity}/10`);
 		}
 
 		const adjustResult = await adjustTaskComplexity(
@@ -890,7 +890,7 @@ export async function scopeDownTask(
 	writeJSON(tasksPath, data, projectRoot, tag);
 
 	if (outputFormat === 'text') {
-		log('info', `Successfully scoped down ${updatedTasks.length} task(s)`);
+		log('debug', `Successfully scoped down ${updatedTasks.length} task(s)`);
 	}
 
 	return {

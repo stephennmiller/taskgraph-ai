@@ -84,7 +84,7 @@ async function expandAllTasks(
 	}
 
 	try {
-		logger.info(`Reading tasks from ${tasksPath}`);
+		logger.debug(`Reading tasks from ${tasksPath}`);
 		const data = readJSON(tasksPath, projectRoot, tag);
 		if (!data || !data.tasks) {
 			throw new Error(`Invalid tasks data in ${tasksPath}`);

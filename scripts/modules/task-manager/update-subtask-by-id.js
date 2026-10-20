@@ -2,15 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import boxen from 'boxen';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 
-import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { theme } from '@tm/cli/theme';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
-	getStatusWithColor,
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
@@ -71,7 +69,7 @@ async function updateSubtaskById(
 	let loadingIndicator = null;
 
 	try {
-		report('info', `Updating subtask ${subtaskId} with prompt: "${prompt}"`);
+		report('debug', `Updating subtask ${subtaskId} with prompt: "${prompt}"`);
 
 		// Basic validation - ID must be present
 		if (!subtaskId || typeof subtaskId !== 'string') {
@@ -146,7 +144,7 @@ async function updateSubtaskById(
 		// --- Metadata-Only Update (Fast Path) ---
 		// If only metadata is provided (no prompt), skip AI and just update metadata
 		if (metadata && (!prompt || prompt.trim() === '')) {
-			report('info', `Metadata-only update for subtask ${subtaskId}`);
+			report('debug', `Metadata-only update for subtask ${subtaskId}`);
 			// Merge new metadata with existing
 			subtask.metadata = {
 				...(subtask.metadata || {}),
@@ -197,33 +195,8 @@ async function updateSubtaskById(
 		// --- End Context Gathering ---
 
 		if (outputFormat === 'text') {
-			const table = new Table({
-				head: [
-					chalk.cyan.bold('ID'),
-					chalk.cyan.bold('Title'),
-					chalk.cyan.bold('Status')
-				],
-				colWidths: [10, 55, 10],
-				style: { border: TABLE_BORDER }
-			});
-			table.push([
-				subtaskId,
-				truncate(subtask.title, 52),
-				getStatusWithColor(subtask.status)
-			]);
-			console.log(
-				boxen(theme.text.bold(`Updating Subtask #${subtaskId}`), {
-					padding: 1,
-					borderColor: BORDER_COLOR,
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				})
-			);
-			console.log(table.toString());
 			loadingIndicator = startLoadingIndicator(
-				useResearch
-					? 'Updating subtask with research...'
-					: 'Updating subtask...'
+				`Updating subtask ${subtaskId}: ${truncate(subtask.title, 50)}${useResearch ? ' (with research)' : ''}`
 			);
 		}
 
@@ -280,7 +253,7 @@ async function updateSubtaskById(
 			);
 
 			const role = useResearch ? 'research' : 'main';
-			report('info', `Using AI text service with role: ${role}`);
+			report('debug', `Using AI text service with role: ${role}`);
 
 			aiServiceResponse = await generateTextService({
 				prompt: userPrompt,
@@ -378,7 +351,7 @@ async function updateSubtaskById(
 			console.log('>>> DEBUG: writeJSON call completed.');
 		}
 
-		report('success', `Successfully updated subtask ${subtaskId}`);
+		report('debug', `Successfully updated subtask ${subtaskId}`);
 		// Updated  function call to make sure if uncommented it will generate the task files for the updated subtask based on the tag
 		// await generateTaskFiles(tasksPath, path.dirname(tasksPath), {
 		// 	tag: tag,

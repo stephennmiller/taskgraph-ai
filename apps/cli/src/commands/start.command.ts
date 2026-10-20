@@ -414,10 +414,10 @@ export class StartCommand extends Command {
 							'\n\n' +
 							chalk.cyan('Next steps:') +
 							'\n' +
-							`• Run ${chalk.yellow('tm show ' + task.id)} to review task details\n` +
-							`• Run ${chalk.yellow('tm set-status --id=' + statusTarget + ' --status=done')} when complete\n` +
-							`• Run ${chalk.yellow('tm next')} to find the next available task\n` +
-							`• Run ${chalk.yellow('tm start')} to begin the next task`,
+							`• Run ${chalk.yellow('taskgraph show ' + task.id)} to review task details\n` +
+							`• Run ${chalk.yellow('taskgraph set-status --id=' + statusTarget + ' --status=done')} when complete\n` +
+							`• Run ${chalk.yellow('taskgraph next')} to find the next available task\n` +
+							`• Run ${chalk.yellow('taskgraph start')} to begin the next task`,
 						{
 							padding: 1,
 							borderStyle: 'round',

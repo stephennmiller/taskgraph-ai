@@ -60,6 +60,7 @@ vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	failLoadingIndicator: vi.fn(),
 	warnLoadingIndicator: vi.fn(),
 	infoLoadingIndicator: vi.fn(),
+	displayAddedSubtasks: vi.fn(),
 	displayAiUsageSummary: vi.fn(),
 	displayContextAnalysis: vi.fn()
 }));

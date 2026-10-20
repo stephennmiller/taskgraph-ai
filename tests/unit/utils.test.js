@@ -222,16 +222,12 @@ describe('Utils Module', () => {
 				expect.stringContaining('Error message')
 			);
 
-			// Verify the formatting includes text prefixes
+			// Warnings and errors carry the CLI's marks; info is plain text
 			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('[INFO]')
+				expect.stringMatching(/^Info message/)
 			);
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('[WARN]')
-			);
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('[ERROR]')
-			);
+			expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('⚠'));
+			expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('✗'));
 
 			// Verify getLogLevel was called by log function
 			expect(mockGetLogLevel).toHaveBeenCalled();

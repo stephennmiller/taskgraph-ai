@@ -73,7 +73,7 @@ async function createTag(
 			throw new Error(`"${tagName}" is a reserved tag name`);
 		}
 
-		logFn.info(`Creating new tag: ${tagName}`);
+		logFn.debug(`Creating new tag: ${tagName}`);
 
 		// Read current tasks data
 		const data = readJSON(tasksPath, projectRoot);
@@ -123,9 +123,11 @@ async function createTag(
 				logFn.warn(`Source tag "${copyFromTag}" not found or has no tasks`);
 			}
 
-			logFn.info(`Copying ${sourceTasks.length} tasks from tag "${sourceTag}"`);
+			logFn.debug(
+				`Copying ${sourceTasks.length} tasks from tag "${sourceTag}"`
+			);
 		} else {
-			logFn.info('Creating empty tag (no tasks copied)');
+			logFn.debug('Creating empty tag (no tasks copied)');
 		}
 
 		// Create the new tag structure in raw data
@@ -150,7 +152,7 @@ async function createTag(
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
 
-		logFn.success(`Successfully created tag "${tagName}"`);
+		logFn.debug(`Successfully created tag "${tagName}"`);
 
 		// For JSON output, return structured data
 		if (outputFormat === 'json') {
@@ -247,7 +249,7 @@ async function deleteTag(
 			throw new Error('Cannot delete the "master" tag');
 		}
 
-		logFn.info(`Deleting tag: ${tagName}`);
+		logFn.debug(`Deleting tag: ${tagName}`);
 
 		// Read current tasks data
 		const data = readJSON(tasksPath, projectRoot);
@@ -347,7 +349,7 @@ async function deleteTag(
 				throw new Error('Tag deletion cancelled');
 			}
 
-			logFn.info('Double confirmation received, proceeding with deletion...');
+			logFn.debug('Double confirmation received, proceeding with deletion...');
 		}
 
 		// Delete the tag
@@ -370,7 +372,7 @@ async function deleteTag(
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
 
-		logFn.success(`Successfully deleted tag "${tagName}"`);
+		logFn.debug(`Successfully deleted tag "${tagName}"`);
 
 		// For JSON output, return structured data
 		if (outputFormat === 'json') {
@@ -536,9 +538,9 @@ async function tags(
 	};
 
 	try {
-		logFn.info('Listing available tags');
+		logFn.debug('Listing available tags');
 
-		logFn.info('Using file storage for tags');
+		logFn.debug('Using file storage for tags');
 
 		// Read current tasks data
 		const data = readJSON(tasksPath, projectRoot);
@@ -600,10 +602,12 @@ async function tags(
 		let filteredTagList = tagList;
 		if (ready) {
 			filteredTagList = tagList.filter((tag) => tag.readyTasks > 0);
-			logFn.info(`Filtered to ${filteredTagList.length} tags with ready tasks`);
+			logFn.debug(
+				`Filtered to ${filteredTagList.length} tags with ready tasks`
+			);
 		}
 
-		logFn.success(`Found ${filteredTagList.length} tags`);
+		logFn.debug(`Found ${filteredTagList.length} tags`);
 
 		// For JSON output, return structured data
 		if (outputFormat === 'json') {
@@ -763,9 +767,9 @@ async function useTag(
 			throw new Error('Tag name is required and must be a string');
 		}
 
-		logFn.info(`Switching to tag: ${tagName}`);
+		logFn.debug(`Switching to tag: ${tagName}`);
 
-		logFn.info('Using file storage for tag switch');
+		logFn.debug('Using file storage for tag switch');
 
 		// Read current tasks data to verify tag exists
 		const data = readJSON(tasksPath, projectRoot);
@@ -795,7 +799,7 @@ async function useTag(
 		// Find the next task to work on in this tag
 		const nextTask = findNextTask(tasks);
 
-		logFn.success(`Successfully switched to tag "${tagName}"`);
+		logFn.debug(`Successfully switched to tag "${tagName}"`);
 
 		// For JSON output, return structured data
 		if (outputFormat === 'json') {
@@ -908,7 +912,7 @@ async function renameTag(
 			throw new Error(`"${newName}" is a reserved tag name`);
 		}
 
-		logFn.info(`Renaming tag from "${oldName}" to "${newName}"`);
+		logFn.debug(`Renaming tag from "${oldName}" to "${newName}"`);
 
 		// Read current tasks data
 		const data = readJSON(tasksPath, projectRoot);
@@ -949,7 +953,7 @@ async function renameTag(
 		// If we're renaming the current tag, update the current tag reference
 		if (isCurrentTag) {
 			await switchCurrentTag(projectRoot, newName);
-			logFn.info(`Updated current tag reference to "${newName}"`);
+			logFn.debug(`Updated current tag reference to "${newName}"`);
 		}
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
@@ -967,7 +971,7 @@ async function renameTag(
 		const tasks = getTasksForTag(rawData, newName);
 		const taskCount = tasks.length;
 
-		logFn.success(`Successfully renamed tag from "${oldName}" to "${newName}"`);
+		logFn.debug(`Successfully renamed tag from "${oldName}" to "${newName}"`);
 
 		// For JSON output, return structured data
 		if (outputFormat === 'json') {
@@ -1069,7 +1073,7 @@ async function copyTag(
 			throw new Error(`"${targetName}" is a reserved tag name`);
 		}
 
-		logFn.info(`Copying tag from "${sourceName}" to "${targetName}"`);
+		logFn.debug(`Copying tag from "${sourceName}" to "${targetName}"`);
 
 		// Read current tasks data
 		const data = readJSON(tasksPath, projectRoot);
@@ -1120,7 +1124,7 @@ async function copyTag(
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
 
-		logFn.success(
+		logFn.debug(
 			`Successfully copied tag from "${sourceName}" to "${targetName}"`
 		);
 
@@ -1336,7 +1340,7 @@ async function createTagFromBranch(
 
 		// Update branch-tag mapping
 		await updateBranchTagMapping(projectRoot, branchName, tagName);
-		logFn.info(`Updated branch-tag mapping: ${branchName} -> ${tagName}`);
+		logFn.debug(`Updated branch-tag mapping: ${branchName} -> ${tagName}`);
 
 		// Auto-switch to the new tag if requested
 		if (autoSwitch) {
@@ -1421,7 +1425,7 @@ async function autoSwitchTagForBranch(
 			return { switched: false, reason: 'no_current_branch' };
 		}
 
-		logFn.info(`Current git branch: ${currentBranch}`);
+		logFn.debug(`Current git branch: ${currentBranch}`);
 
 		// Check if branch is valid for tag creation
 		if (!isValidBranchForTag(currentBranch)) {

@@ -53,7 +53,7 @@ async function updateSingleTaskStatus(
 		subtask.status = newStatus;
 
 		log(
-			'info',
+			'debug',
 			`Updated subtask ${parentId}.${subtaskId} status from '${oldStatus}' to '${newStatus}'`
 		);
 
@@ -101,7 +101,7 @@ async function updateSingleTaskStatus(
 		task.status = newStatus;
 
 		log(
-			'info',
+			'debug',
 			`Updated task ${taskId} status from '${oldStatus}' to '${newStatus}'`
 		);
 
