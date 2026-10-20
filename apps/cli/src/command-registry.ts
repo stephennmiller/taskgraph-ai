@@ -18,6 +18,7 @@ import { SetStatusCommand } from './commands/set-status.command.js';
 import { ShowCommand } from './commands/show.command.js';
 import { StartCommand } from './commands/start.command.js';
 import { TagsCommand } from './commands/tags.command.js';
+import { WhyCommand } from './commands/why.command.js';
 
 /**
  * Command metadata for registration
@@ -60,6 +61,12 @@ export class CommandRegistry {
 			name: 'graph',
 			description: 'Show tasks as a dependency tree',
 			commandClass: GraphCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'why',
+			description: 'Explain why a task is blocked',
+			commandClass: WhyCommand as any,
 			category: 'task'
 		},
 		{
