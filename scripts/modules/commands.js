@@ -1501,17 +1501,9 @@ ${result.result}
 				process.exit(1);
 			}
 
-			const tasksPath = options.file || TASKGRAPH_TASKS_FILE;
-
-			if (!fs.existsSync(tasksPath)) {
-				console.error(
-					`❌ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file at ${TASKGRAPH_TASKS_FILE}`
-				);
-				process.exit(1);
-			}
-
-			// Correctly determine projectRoot
-			// Initialize TaskGraph
+			// No check that tasks.json exists: addTask creates it for the first
+			// task. The old check also resolved the path from the current folder,
+			// so it failed in any subfolder of the project.
 			const taskGraph = initTaskGraph({
 				tasksPath: options.file || true,
 				tag: options.tag
@@ -3872,39 +3864,23 @@ async function runCLI(argv = process.argv) {
 		const filteredArgv = argv.filter((arg) => arg !== '--no-banner');
 		await programInstance.parseAsync(filteredArgv);
 
-		// Check if migration has occurred and show FYI notice once
+		// Show the "TaskGraph now supports tags" notice once, after a run that
+		// migrated an old tasks.json. It used to show for any project whose
+		// state.json said the notice hadn't been shown, which included every
+		// new project after its first tasks were created.
 		try {
 			if (isCompletion) return;
-			// Use initTaskGraph with no required fields - will only fail if no project root
-			const taskGraph = initTaskGraph({});
+			const statePath = initTaskGraph({}).getStatePath();
 
-			const tasksPath = taskGraph.getTasksPath();
-			const statePath = taskGraph.getStatePath();
+			if (statePath && fs.existsSync(statePath)) {
+				// Read state.json directly without tag resolution since it's not a tagged file
+				const stateData = JSON.parse(fs.readFileSync(statePath, 'utf8'));
 
-			if (tasksPath && fs.existsSync(tasksPath)) {
-				// Read raw file to check if it has master key (bypassing tag resolution)
-				const rawData = fs.readFileSync(tasksPath, 'utf8');
-				const parsedData = JSON.parse(rawData);
-
-				if (parsedData && parsedData.master) {
-					// Migration has occurred, check if we've shown the notice
-					let stateData = { migrationNoticeShown: false };
-					if (statePath && fs.existsSync(statePath)) {
-						// Read state.json directly without tag resolution since it's not a tagged file
-						const rawStateData = fs.readFileSync(statePath, 'utf8');
-						stateData = JSON.parse(rawStateData) || stateData;
-					}
-
-					if (!stateData.migrationNoticeShown) {
-						displayTaggedTasksFYI({ _migrationHappened: true });
-
-						// Mark as shown
-						stateData.migrationNoticeShown = true;
-						// Write state.json directly without tag resolution since it's not a tagged file
-						if (statePath) {
-							fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2));
-						}
-					}
+				if (stateData?.migrationNoticePending === true) {
+					displayTaggedTasksFYI({ _migrationHappened: true });
+					stateData.migrationNoticePending = false;
+					stateData.migrationNoticeShown = true;
+					fs.writeFileSync(statePath, JSON.stringify(stateData, null, 2));
 				}
 			}
 		} catch (error) {
