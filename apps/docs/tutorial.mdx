@@ -21,7 +21,7 @@ npm install -g taskgraph-ai
 taskgraph init --rules claude
 ```
 
-This creates `.taskgraph/`, imports TaskGraph's workflow guide from your project's `CLAUDE.md`, installs the `/tm` slash commands in `.claude/commands/tm`, and writes a `.mcp.json` entry for the MCP server.
+This creates `.taskgraph/`, imports TaskGraph's workflow guide from your project's `CLAUDE.md`, and writes a `.mcp.json` entry for the MCP server.
 
 3. **(Optional) Use the MCP server.** Slash commands and the CLI do everything without it. To drive TaskGraph in plain language, register the server and run `/mcp` in Claude Code to check that it is connected:
 
@@ -33,7 +33,7 @@ claude mcp add taskgraph-ai --scope user \
 
 4. **Place your PRD** in `.taskgraph/docs/` (for example `.taskgraph/docs/prd.md`).
 
-5. **Talk to Claude Code** (or use `/tm:` slash commands or the CLI):
+5. **Talk to Claude Code** (or use the `/taskgraph:` slash commands from the [plugin](/getting-started/quick-start/installation) or the CLI):
 
 ```
 Can you parse my PRD at .taskgraph/docs/prd.md?

@@ -1,10 +1,30 @@
 ---
 description: "Check if TaskGraph is installed and install it if needed."
+argument-hint: "[--quick]"
 ---
 
 Check if TaskGraph is installed and install it if needed.
 
-This command helps you get TaskGraph set up globally on your system.
+Usage: `/taskgraph:install-taskgraph [--quick]`
+
+Arguments: $ARGUMENTS
+
+With `--quick`, skip the walkthrough below and only run:
+
+```bash
+# Check and install in one command
+taskgraph --version 2>/dev/null || npm install -g taskgraph-ai
+
+# Verify installation
+taskgraph --version
+
+# Quick setup check
+taskgraph models || echo "Note: TaskGraph uses Claude Code; make sure it is installed and signed in"
+```
+
+If you see "command not found" after installation, restart your terminal or add the npm global bin to PATH: `export PATH=$(npm bin -g):$PATH`.
+
+Without `--quick`, this command helps you get TaskGraph set up globally on your system.
 
 ## Detection and Installation Process
 
@@ -105,12 +125,12 @@ Once installed, you should see:
 ✅ AI provider configured
 ✅ Ready to use slash commands!
 
-Try: /project:taskgraph:init your-prd.md
+Try: /taskgraph:init-project your-prd.md
 ```
 
 ## Next Steps
 
 After installation:
-1. Run `/project:utils:check-health` to verify setup
+1. Run `taskgraph models` to verify setup
 2. Configure models with `/taskgraph:setup-models`
 3. Start using TaskGraph commands!

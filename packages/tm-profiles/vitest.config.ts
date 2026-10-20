@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 /**
  * Package-specific Vitest configuration for @tm/profiles
- * Only tests the profile classes, not the command definitions
+ * Covers the shell utilities and the plugin command files
  */
 export default defineConfig({
 	test: {
@@ -14,8 +14,7 @@ export default defineConfig({
 			provider: 'v8',
 			enabled: true,
 			reporter: ['text'],
-			// Only measure coverage for profile classes
-			exclude: ['node_modules', 'dist', 'src/slash-commands/commands/**'],
+			exclude: ['node_modules', 'dist'],
 			thresholds: {
 				branches: 70,
 				functions: 80,

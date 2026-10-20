@@ -1,22 +1,15 @@
-/**
- * @fileoverview Remove Subtasks Slash Command
- * Clear all subtasks from a specific task.
- */
+---
+description: "Clear all subtasks from one task, or from every task with --all."
+argument-hint: "[<task ID>|--all]"
+---
 
-import { dynamicCommand } from '../../factories.js';
+Clear all subtasks from a task, or from every task.
 
-/**
- * The remove-subtasks slash command - Remove Subtasks
- *
- * Clear all subtasks from a specific task.
- */
-export const removeSubtasks = dynamicCommand(
-	'remove-subtasks',
-	'Remove Subtasks',
-	'<task-id>',
-	`Clear all subtasks from a specific task.
+Usage: `/taskgraph:clear-subtasks [<id>|--all]`
 
-Arguments: $ARGUMENTS (task ID)
+Arguments: $ARGUMENTS (task ID, or `--all`)
+
+To remove a single subtask, use `/taskgraph:remove-subtask` instead.
 
 Remove all subtasks from a parent task at once.
 
@@ -26,9 +19,12 @@ Bulk removal of all subtasks from a parent task.
 
 ## Execution
 
-\`\`\`bash
-taskgraph remove-subtasks --id=$ARGUMENTS
-\`\`\`
+```bash
+taskgraph clear-subtasks --id=<task-id>   # one task
+taskgraph clear-subtasks --all            # every task, destructive
+```
+
+`--all` is never implied: run it only when the arguments say `--all`, and only after the user types `CLEAR ALL SUBTASKS` to confirm. If no ID and no `--all` are given, ask which tasks to clear.
 
 ## Pre-Clear Analysis
 
@@ -46,8 +42,8 @@ taskgraph remove-subtasks --id=$ARGUMENTS
 
 ## Confirmation Required
 
-\`\`\`
-Remove Subtasks Confirmation
+```
+Clear Subtasks Confirmation
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 Parent Task: #5 "Implement user authentication"
 Subtasks to remove: 4
@@ -58,7 +54,7 @@ Subtasks to remove: 4
 
 ⚠️  This will permanently delete all subtask data
 Continue? (y/n)
-\`\`\`
+```
 
 ## Smart Features
 
@@ -92,12 +88,27 @@ Suggest alternatives:
 
 ## Example
 
-\`\`\`
-/taskgraph:remove-subtasks 5
+```
+/taskgraph:clear-subtasks 5
 → Found 4 subtasks to remove
 → Warning: Subtask #5.2 is in-progress
 → Cleared all subtasks from task #5
 → Updated parent task estimates
 → Suggestion: Consider re-expanding with better breakdown
-\`\`\``
-);
+```
+
+## Clearing every task (`--all`)
+
+Use with extreme caution. Before running it:
+
+1. Summarize the project-wide impact: parent tasks, subtasks, and how many are in-progress or done.
+2. Warn about in-progress work that will be lost.
+3. Require the user to type `CLEAR ALL SUBTASKS` to confirm.
+
+```
+/taskgraph:clear-subtasks --all
+→ This will remove ALL 47 subtasks, including 8 in-progress and 15 done
+→ This cannot be undone. Type 'CLEAR ALL SUBTASKS' to confirm:
+```
+
+Valid reasons: project restructuring, a major change of approach, or starting a fresh breakdown. Consider clearing a single task first.

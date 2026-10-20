@@ -1,7 +1,7 @@
 {
 	"name": "@tm/profiles",
 	"private": true,
-	"description": "Claude Code profile management for TaskGraph - installs slash commands and CLAUDE.md integration",
+	"description": "Claude Code profile helpers for TaskGraph",
 	"type": "module",
 	"types": "./src/index.ts",
 	"main": "./dist/index.js",
@@ -37,7 +37,6 @@
 		"taskgraph",
 		"profiles",
 		"editor",
-		"commands",
 		"typescript"
 	],
 	"author": "TaskGraph",

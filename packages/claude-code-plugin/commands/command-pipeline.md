@@ -12,38 +12,38 @@ Arguments: $ARGUMENTS
 Parse pipeline specification from arguments. Supported formats:
 
 ### Simple Pipeline
-`init → expand-all → sprint-plan`
+`init-project → expand-all-tasks → next-task`
 
-### Conditional Pipeline  
-`status → if:pending>10 → sprint-plan → else → next`
+### Conditional Pipeline
+`project-status → if:pending>10 → list-tasks pending → else → next-task`
 
 ### Iterative Pipeline
-`for:pending-tasks → expand → complexity-check`
+`for:pending-tasks → expand-task → complexity-report`
 
 ### Smart Pipeline Patterns
 
 **1. Project Setup Pipeline**
 ```
-init [prd] → 
-expand-all → 
-complexity-report → 
-sprint-plan → 
-show first-sprint
+init-project [prd] →
+expand-all-tasks →
+complexity-report →
+list-tasks pending →
+next-task
 ```
 
 **2. Daily Work Pipeline**
 ```
-standup →
+project-status →
 if:in-progress → continue →
-else → next → start
+else → next-task → to-in-progress
 ```
 
 **3. Task Completion Pipeline**
 ```
-complete [id] →
-git-commit →
-if:blocked-tasks-freed → show-freed →
-next
+to-done [id] →
+(commit your work) →
+if:blocked-tasks-freed → list-tasks pending →
+next-task
 ```
 
 **4. Quality Check Pipeline**
@@ -56,14 +56,14 @@ if:idle>1day → prompt-update
 ### Pipeline Features
 
 **Variables**
-- Store results: `status → $count=pending-count`
+- Store results: `project-status → $count=pending-count`
 - Use in conditions: `if:$count>10`
-- Pass between commands: `expand $high-priority-tasks`
+- Pass between commands: `expand-task $high-priority-tasks`
 
 **Error Handling**
-- On failure: `try:complete → catch:show-blockers`
+- On failure: `try:to-done → catch:show-blockers`
 - Skip on error: `optional:test-run`
-- Retry logic: `retry:3:commit`
+- Retry logic: `retry:3:to-done`
 
 **Parallel Execution**
 - Parallel branches: `[analyze | test | lint]`
@@ -79,4 +79,4 @@ if:idle>1day → prompt-update
 6. Show summary
 
 This enables complex workflows like:
-`parse-prd → expand-all → filter:complex>70 → assign:senior → sprint-plan:weighted`
+`parse-prd → expand-all-tasks → filter:complex>70 → next-task`
