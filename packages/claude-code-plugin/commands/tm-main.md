@@ -38,12 +38,9 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - `graph` - Dependency tree with the next task marked
 
 ### `/taskgraph:set-status`
-- `to-pending` - Reset task to pending
+- `set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
 - `to-in-progress` - Start working on task
 - `to-done` - Mark task complete
-- `to-review` - Submit for review
-- `to-deferred` - Defer task
-- `to-cancelled` - Cancel task
 
 ### `/taskgraph:sync-readme`
 - `sync-readme` - Export tasks to README.md with formatting
@@ -68,8 +65,7 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 - `remove-subtask` - Remove subtask (with optional conversion)
 
 ### `/taskgraph:clear-subtasks`
-- `clear-subtasks` - Clear subtasks from specific task
-- `clear-all-subtasks` - Clear all subtasks globally
+- `clear-subtasks [<id>|--all]` - Clear subtasks from one task, or from every task with `--all`
 
 ## Task Analysis & Breakdown
 
@@ -139,7 +135,7 @@ Commands requiring IDs intelligently parse from $ARGUMENTS:
 ```
 /taskgraph:show 45
 /taskgraph:expand 23
-/taskgraph:set-status/to-done 67
+/taskgraph:to-done 67
 ```
 
 ### Smart Defaults

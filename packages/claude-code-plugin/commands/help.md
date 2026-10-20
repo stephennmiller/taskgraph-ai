@@ -39,12 +39,9 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 - `/taskgraph:next-task` - Get next task recommendation
 
 #### 🔄 Status Management
-- `/taskgraph:to-pending` - Set task to pending
-- `/taskgraph:to-in-progress` - Set task to in-progress
-- `/taskgraph:to-done` - Set task to done
-- `/taskgraph:to-review` - Set task to review
-- `/taskgraph:to-deferred` - Set task to deferred
-- `/taskgraph:to-cancelled` - Set task to cancelled
+- `/taskgraph:set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
+- `/taskgraph:to-in-progress` - Shortcut: set task to in-progress
+- `/taskgraph:to-done` - Shortcut: set task to done
 
 #### 🔍 Analysis & Breakdown
 - `/taskgraph:analyze-complexity` - Analyze task complexity
@@ -61,9 +58,8 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 #### 📦 Subtasks
 - `/taskgraph:add-subtask` - Add subtask to task
 - `/taskgraph:convert-task-to-subtask` - Convert task to subtask
-- `/taskgraph:remove-subtask` - Remove subtask
-- `/taskgraph:remove-subtasks` - Clear specific task subtasks
-- `/taskgraph:remove-all-subtasks` - Clear all subtasks
+- `/taskgraph:remove-subtask <id> [--convert]` - Remove one subtask
+- `/taskgraph:clear-subtasks [<id>|--all]` - Clear subtasks from one task, or from every task
 
 #### 🗑️ Task Removal
 - `/taskgraph:remove-task` - Remove task permanently

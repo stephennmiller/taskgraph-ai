@@ -1,11 +1,15 @@
 ---
-description: "Clear all subtasks from a specific task."
-argument-hint: "[task ID]"
+description: "Clear all subtasks from one task, or from every task with --all."
+argument-hint: "[<task ID>|--all]"
 ---
 
-Clear all subtasks from a specific task.
+Clear all subtasks from a task, or from every task.
 
-Arguments: $ARGUMENTS (task ID)
+Usage: `/taskgraph:clear-subtasks [<id>|--all]`
+
+Arguments: $ARGUMENTS (task ID, or `--all`)
+
+To remove a single subtask, use `/taskgraph:remove-subtask` instead.
 
 Remove all subtasks from a parent task at once.
 
@@ -16,8 +20,11 @@ Bulk removal of all subtasks from a parent task.
 ## Execution
 
 ```bash
-taskgraph clear-subtasks --id=<task-id>
+taskgraph clear-subtasks --id=<task-id>   # one task
+taskgraph clear-subtasks --all            # every task, destructive
 ```
+
+`--all` is never implied: run it only when the arguments say `--all`, and only after the user types `CLEAR ALL SUBTASKS` to confirm. If no ID and no `--all` are given, ask which tasks to clear.
 
 ## Pre-Clear Analysis
 
@@ -89,3 +96,19 @@ Suggest alternatives:
 → Updated parent task estimates
 → Suggestion: Consider re-expanding with better breakdown
 ```
+
+## Clearing every task (`--all`)
+
+Use with extreme caution. Before running it:
+
+1. Summarize the project-wide impact: parent tasks, subtasks, and how many are in-progress or done.
+2. Warn about in-progress work that will be lost.
+3. Require the user to type `CLEAR ALL SUBTASKS` to confirm.
+
+```
+/taskgraph:clear-subtasks --all
+→ This will remove ALL 47 subtasks, including 8 in-progress and 15 done
+→ This cannot be undone. Type 'CLEAR ALL SUBTASKS' to confirm:
+```
+
+Valid reasons: project restructuring, a major change of approach, or starting a fresh breakdown. Consider clearing a single task first.

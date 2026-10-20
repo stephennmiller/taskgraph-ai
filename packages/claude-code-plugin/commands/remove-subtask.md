@@ -1,11 +1,15 @@
 ---
 description: "Remove a subtask from its parent task."
-argument-hint: "[arguments]"
+argument-hint: "<id> [--convert]"
 ---
 
 Remove a subtask from its parent task.
 
+Usage: `/taskgraph:remove-subtask <id> [--convert]`
+
 Arguments: $ARGUMENTS
+
+This removes one subtask. To clear every subtask of a task, or of all tasks, use `/taskgraph:clear-subtasks`.
 
 Parse subtask ID to remove, with option to convert to standalone task.
 
@@ -17,7 +21,7 @@ Remove a subtask and optionally convert it back to a standalone task.
 
 - "remove subtask 5.1"
 - "delete 5.1"
-- "convert 5.1 to task" → remove and convert
+- "5.1 --convert" or "convert 5.1 to task" → remove and convert
 - "5.1 standalone" → convert to standalone
 
 ## Execution Options

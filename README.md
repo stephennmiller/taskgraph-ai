@@ -95,7 +95,7 @@ This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with Task
 
 ### 3. Install the plugin
 
-The plugin is the only way to get slash commands. It adds 42 of them (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
+The plugin is the only way to get slash commands. It adds 38 of them (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
 
 ```txt
 /plugin marketplace add stephennmiller/taskgraph-ai
@@ -195,9 +195,9 @@ Install the plugin (step 3) and they appear as `/taskgraph:<name>` (type `/taskg
 | Set up | `init-project`, `install-taskgraph`, `setup-models`, `view-models` |
 | Plan | `parse-prd`, `parse-prd-with-research`, `analyze-complexity`, `complexity-report`, `analyze-project` |
 | See | `list-tasks`, `next-task`, `show-task`, `project-status` |
-| Change status | `to-pending`, `to-in-progress`, `to-done`, `to-review`, `to-deferred`, `to-cancelled` |
+| Change status | `set-status`, `to-in-progress`, `to-done` |
 | Edit | `add-task`, `update-task`, `update-tasks-from-id`, `remove-task`, `convert-task-to-subtask` |
-| Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `remove-subtasks`, `remove-all-subtasks` |
+| Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `clear-subtasks` |
 | Dependencies | `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
 | Workflows | `smart-workflow`, `command-pipeline`, `auto-implement-tasks`, `sync-readme`, `learn`, `help` |
 

@@ -43,7 +43,7 @@ Check your shell profile, `.env`, `.mcp.json` and CI configuration.
 
 This applies to every project where `taskgraph init --rules claude` ran before this change, whether it was set up with Task Master, with 0.47 to 0.52, or earlier.
 
-`init` no longer writes slash commands. The Claude Code plugin is the only channel, and it provides the commands as `/taskgraph:<name>`. The `/tm:*` files an earlier `init` wrote into `.claude/commands/tm/` stay behind, are never updated, and double the commands you see.
+`init` no longer writes slash commands. The Claude Code plugin is the only channel, and it provides the commands as `/taskgraph:<name>`. Some commands were merged or renamed on the way, so the old names do not all exist (see the table below). The `/tm:*` files an earlier `init` wrote into `.claude/commands/tm/` stay behind, are never updated, and double the commands you see.
 
 1. Install or refresh the plugin:
 
@@ -62,6 +62,21 @@ This applies to every project where `taskgraph init --rules claude` ran before t
    ```
 
    Task Master-era installs also have older copies elsewhere. Look for the nested `.claude/commands/tm/<category>/` folders, `.claude/agents/task-orchestrator.md`, `.claude/agents/task-executor.md`, `.claude/agents/task-checker.md` (the plugin now ships the agents) and `.claude/TM_COMMANDS_GUIDE.md`, and remove the ones TaskGraph wrote.
+
+### Renamed and merged commands
+
+There are no aliases. If you used one of the old names in a script, a note or a prompt, switch to the new form:
+
+| Old command | New command |
+| --- | --- |
+| `list-tasks-by-status` | `list-tasks <status>` |
+| `list-tasks-with-subtasks` | `list-tasks --subtasks` |
+| `init-project-quick` | `init-project --quick` |
+| `quick-install-taskgraph` | `install-taskgraph --quick` |
+| `update-single-task` | `update-task` (it now edits one task only: use `update-tasks-from-id` for bulk edits and `set-status` for status) |
+| `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` and `to-in-progress` stay) |
+| `remove-subtasks` | `clear-subtasks <id>` |
+| `remove-all-subtasks` | `clear-subtasks --all` |
 
 Updating the plugin itself leaves nothing behind. Claude Code installs each plugin version into its own directory (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>`) and points the install path at the active one. On a real update of `superpowers` from 6.4.2 to 7.0.0, the old directory kept a file the new version dropped and got an `.orphaned_at` marker, while 7.0.0 did not have the file. A plugin with no `version` field, like this one, is probably keyed by commit SHA instead. Whether the update arrives automatically or needs `/plugin marketplace update taskgraph` is not verified, so run it.
 

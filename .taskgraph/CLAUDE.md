@@ -94,7 +94,7 @@ With the TaskGraph plugin installed (`/plugin marketplace add stephennmiller/tas
 | Parse a PRD | `/taskgraph:parse-prd` | `taskgraph parse-prd <file>` |
 | Add a task | `/taskgraph:add-task` | `taskgraph add-task --prompt="..."` |
 | Break into subtasks | `/taskgraph:expand-task <id>` | `taskgraph expand --id=<id>` |
-| Change status | `/taskgraph:to-in-progress <id>`, `/taskgraph:to-done <id>`, `/taskgraph:to-review <id>` | `taskgraph set-status --id=<id> --status=<status>` |
+| Change status | `/taskgraph:set-status <id> <status>`, or the shortcuts `/taskgraph:to-in-progress <id>` and `/taskgraph:to-done <id>` | `taskgraph set-status --id=<id> --status=<status>` |
 | Update a task | `/taskgraph:update-task <id>` | `taskgraph update-task --id=<id> --prompt="..."` |
 | Check complexity | `/taskgraph:analyze-complexity` | `taskgraph analyze-complexity` |
 

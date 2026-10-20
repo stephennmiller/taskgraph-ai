@@ -3,10 +3,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const commandsDir = join(
-	dirname(fileURLToPath(import.meta.url)),
-	'../../../claude-code-plugin/commands'
-);
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
+const commandsDir = join(repoRoot, 'packages/claude-code-plugin/commands');
 
 // The plugin is the only slash-command channel (#169): these files are canonical
 const EXPECTED_COMMANDS = [
@@ -20,8 +18,7 @@ const EXPECTED_COMMANDS = [
 	'add-subtask',
 	'remove-task',
 	'remove-subtask',
-	'remove-subtasks',
-	'remove-all-subtasks',
+	'clear-subtasks',
 	'convert-task-to-subtask',
 	'add-dependency',
 	'remove-dependency',
@@ -30,9 +27,6 @@ const EXPECTED_COMMANDS = [
 	'setup-models',
 	'view-models',
 	'install-taskgraph',
-	'to-review',
-	'to-deferred',
-	'to-cancelled',
 	'init-project',
 	'show-task',
 	'graph',
@@ -40,8 +34,8 @@ const EXPECTED_COMMANDS = [
 	'project-status',
 	'next-task',
 	'help',
+	'set-status',
 	'to-done',
-	'to-pending',
 	'to-in-progress',
 	'update-task',
 	'update-tasks-from-id',
@@ -114,4 +108,106 @@ describe('merged plugin commands', () => {
 			'taskgraph update-task --id=<id> --prompt='
 		);
 	});
+});
+
+describe('status and subtask commands', () => {
+	const body = (name: string) =>
+		readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
+
+	it('set-status takes a task id and a status', () => {
+		expect(body('set-status')).toContain(
+			'taskgraph set-status --id=<id> --status=<status>'
+		);
+	});
+
+	it('set-status lists every status the CLI accepts', () => {
+		const source = readFileSync(
+			join(repoRoot, 'apps/cli/src/commands/set-status.command.ts'),
+			'utf-8'
+		);
+		const list = source.match(
+			/VALID_TASK_STATUSES: TaskStatus\[\] = \[([^\]]*)\]/
+		);
+		const statuses = [...(list?.[1] ?? '').matchAll(/'([a-z-]+)'/g)].map(
+			(match) => match[1]
+		);
+
+		expect(statuses.length).toBeGreaterThan(5);
+		for (const status of statuses) {
+			expect(body('set-status')).toContain(`\`${status}\``);
+		}
+	});
+
+	it('remove-subtask maps to the single-subtask CLI command', () => {
+		expect(body('remove-subtask')).toContain('taskgraph remove-subtask --id=');
+		expect(body('remove-subtask')).not.toContain('taskgraph clear-subtasks');
+		expect(body('remove-subtask')).not.toContain('--all');
+	});
+
+	it('clear-subtasks requires the typed confirmation for --all', () => {
+		expect(body('clear-subtasks')).toMatch(
+			/taskgraph clear-subtasks --all[\s\S]*only after the user types `CLEAR ALL SUBTASKS`/
+		);
+	});
+
+	it('remove-subtask declares its argument hint', () => {
+		expect(body('remove-subtask')).toContain(
+			'argument-hint: "<id> [--convert]"'
+		);
+	});
+
+	it('clear-subtasks maps to the clear-subtasks CLI command, one task or all', () => {
+		expect(body('clear-subtasks')).toContain('taskgraph clear-subtasks --id=');
+		expect(body('clear-subtasks')).toContain('taskgraph clear-subtasks --all');
+	});
+});
+
+describe('taskgraph commands used in command bodies', () => {
+	const cliSources = [
+		'scripts/modules/commands.js',
+		'apps/cli/src/command-registry.ts'
+	].map((file) =>
+		readFileSync(join(repoRoot, file), 'utf-8')
+			.replace(/\/\*[\s\S]*?\*\//g, '')
+			.replace(/^\s*\/\/.*$/gm, '')
+	);
+
+	const realCommands = new Set(
+		[
+			...cliSources[0].matchAll(/\.command\('([a-z-]+)'/g),
+			...cliSources[1].matchAll(/^\s+name: '([a-z-]+)'/gm)
+		].map((match) => match[1])
+	);
+
+	// `taskgraph <name>` at the start of a line inside a fenced code block
+	const invokedCommands = (markdown: string): string[] => {
+		const names: string[] = [];
+		let inFence = false;
+		for (const line of markdown.split('\n')) {
+			if (line.trim().startsWith('```')) {
+				inFence = !inFence;
+				continue;
+			}
+			const match =
+				inFence && line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)/);
+			if (match) names.push(match[1]);
+		}
+		return names;
+	};
+
+	it('finds the CLI commands to compare against', () => {
+		expect(realCommands.has('set-status')).toBe(true);
+		expect(realCommands.has('clear-subtasks')).toBe(true);
+	});
+
+	it.each(readdirSync(commandsDir).filter((file) => file.endsWith('.md')))(
+		'%s only runs real taskgraph commands',
+		(file) => {
+			const unknown = invokedCommands(
+				readFileSync(join(commandsDir, file), 'utf-8')
+			).filter((name) => !realCommands.has(name));
+
+			expect(unknown).toEqual([]);
+		}
+	);
 });
