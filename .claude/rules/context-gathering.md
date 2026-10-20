@@ -119,106 +119,46 @@ async function commandAction(prompt, options) {
         includeTokenCounts: true
     });
     
-    // 5. Display token breakdown (for CLI)
+    // 5. One muted line saying what context was used (CLI only)
     if (outputFormat === 'text') {
-        displayDetailedTokenBreakdown(contextResult.tokenBreakdown);
+        console.log(ui.formatResearchContext({ taskIds, relatedTaskIds, files: filePaths }));
     }
     
-    // 6. Use context in AI call
-    const aiResult = await generateTextService(role, session, systemPrompt, userPrompt);
+    // 6. Use context in AI call, behind a spinner
+    const aiResult = await generateTextService({ role, session, systemPrompt, prompt: userPrompt });
     
-    // 7. Display results with enhanced formatting
-    displayResults(aiResult, contextResult.tokenBreakdown);
+    // 7. Print the answer once, rendered, then the AI usage line
+    console.log(ui.formatResearchAnswer(aiResult.mainResult));
+    displayAiUsageSummary(aiResult.telemetryData, 'cli');
 }
 ```
 
-### **2. Token Display Pattern**
-```javascript
-function displayDetailedTokenBreakdown(tokenBreakdown, systemTokens, userTokens) {
-    const sections = [];
-    
-    // Build context breakdown
-    if (tokenBreakdown.tasks?.length > 0) {
-        const taskDetails = tokenBreakdown.tasks.map(task => 
-            `${task.type === 'subtask' ? '  ' : ''}${task.id}: ${task.tokens.toLocaleString()}`
-        ).join('\n');
-        sections.push(`Tasks (${tokenBreakdown.tasks.reduce((sum, t) => sum + t.tokens, 0).toLocaleString()}):\n${taskDetails}`);
-    }
-    
-    if (tokenBreakdown.files?.length > 0) {
-        const fileDetails = tokenBreakdown.files.map(file =>
-            `  ${file.path}: ${file.tokens.toLocaleString()} (${file.size})`
-        ).join('\n');
-        sections.push(`Files (${tokenBreakdown.files.reduce((sum, f) => sum + f.tokens, 0).toLocaleString()}):\n${fileDetails}`);
-    }
-    
-    // Add prompts breakdown
-    sections.push(`Prompts: system ${systemTokens.toLocaleString()}, user ${userTokens.toLocaleString()}`);
-    
-    // Display in clean box
-    const content = sections.join('\n\n');
-    console.log(boxen(content, {
-        title: chalk.cyan('Token Usage'),
-        padding: { top: 1, bottom: 1, left: 2, right: 2 },
-        borderStyle: 'round',
-        borderColor: 'cyan'
-    }));
-}
+### **2. What to Show the User**
+
+`research` is the reference (`scripts/modules/task-manager/research.js`, formatters in `apps/cli/src/ui/formatters/research-formatters.ts`):
+
+```
+Context: task 3 · related 1, 2, 4 · README.md · project tree
+⠋ Researching… 12s
+
+<the answer, rendered to the terminal width>
+
+sonnet · 13,735 tokens (12,188 in, 1,547 out) · 100% cached
 ```
 
-### **3. Enhanced Result Display Pattern**
-```javascript
-function displayResults(result, query, detailLevel, tokenBreakdown) {
-    // Header with query info
-    const header = boxen(
-        chalk.green.bold('Research Results') + '\n\n' +
-        theme.muted('Query: ') + theme.text(query) + '\n' +
-        theme.muted('Detail Level: ') + chalk.cyan(detailLevel),
-        {
-            padding: { top: 1, bottom: 1, left: 2, right: 2 },
-            margin: { top: 1, bottom: 0 },
-            borderStyle: 'round',
-            borderColor: 'green'
-        }
-    );
-    console.log(header);
-    
-    // Process and highlight code blocks
-    const processedResult = processCodeBlocks(result);
-    
-    // Main content in clean box
-    const contentBox = boxen(processedResult, {
-        padding: { top: 1, bottom: 1, left: 2, right: 2 },
-        margin: { top: 0, bottom: 1 },
-        borderStyle: 'single',
-        ...MUTED_BOX_BORDER // dimmed border; borderColor: 'gray' is bright black
-    });
-    console.log(contentBox);
-    
-    console.log(chalk.green('✓ Research complete'));
-}
-```
+- ✅ **DO**: One muted context line (`ui.formatResearchContext`)
+- ✅ **DO**: A spinner with the elapsed time while the model runs
+- ✅ **DO**: Print the answer once, rendered (`ui.formatResearchAnswer`)
+- ✅ **DO**: End with `displayAiUsageSummary`, which has the real token counts
+- ❌ **DON'T**: Print a per-task token table or "Context Analysis" box. The counts are estimates, and the usage line already reports what was used
+- ❌ **DON'T**: Stream raw text and then print the same answer again in a box
+- ❌ **DON'T**: Add header boxes repeating the query the user just typed
 
-## Code Block Enhancement
+Token counts from `ContextGatherer` are still useful internally (logging, MCP responses); just don't print them as a table.
 
-### **Syntax Highlighting Pattern**
-```javascript
-import { highlight } from 'cli-highlight';
+## Rendering Markdown Answers
 
-function processCodeBlocks(text) {
-    return text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
-        try {
-            const highlighted = highlight(code.trim(), { 
-                language: language || 'javascript',
-                theme: 'default'
-            });
-            return `\n${highlighted}\n`;
-        } catch (error) {
-            return `\n${code.trim()}\n`;
-        }
-    });
-}
-```
+Render model answers with `ui.formatResearchAnswer(markdown, width)`. It renders with its own `Marked` instance, so it doesn't change the global `marked` that `show` uses. It wraps to the terminal width, capped at 100 columns, renders inline markdown inside list items, and drops `<think>` blocks. Don't box the result or reformat code blocks by hand.
 
 ## Integration Guidelines
 
@@ -231,7 +171,7 @@ function processCodeBlocks(text) {
 ### **Performance Considerations**
 - ✅ **DO**: Set reasonable file size limits (50KB default)
 - ✅ **DO**: Limit project tree depth (3-5 levels)
-- ✅ **DO**: Provide token counts to help users understand context size
+- ✅ **DO**: Keep token counts for logs and MCP responses; the CLI shows them in the usage line
 - ✅ **DO**: Allow users to control what context is included
 
 ### **Error Handling**
