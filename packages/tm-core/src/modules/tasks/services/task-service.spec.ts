@@ -74,6 +74,31 @@ describe('TaskService.getNextTask', () => {
 			expect(id).toBe('1');
 		});
 
+		it('ranks blocked count above dependency count', async () => {
+			// 2 has a dependency but unblocks 3; 1 has none and unblocks nothing
+			const id = await nextId([
+				task(9, { status: 'done' }),
+				task(1),
+				task(2, { dependencies: ['9'] }),
+				task(3, { dependencies: ['2'] })
+			]);
+
+			expect(id).toBe('2');
+		});
+
+		it('does not change which tasks are eligible', async () => {
+			// 1 is in review, so its done subtask does not satisfy 2's dependency
+			const id = await nextId([
+				task(1, {
+					status: 'review',
+					subtasks: [subtask(1, { status: 'done' })]
+				}),
+				task(2, { dependencies: ['1.1'] })
+			]);
+
+			expect(id).toBeUndefined();
+		});
+
 		it('falls back to fewest dependencies when blocked counts tie', async () => {
 			const id = await nextId([
 				task(1, { status: 'done' }),
@@ -116,6 +141,23 @@ describe('TaskService.getNextTask', () => {
 			]);
 
 			expect(id).toBe('1.2');
+		});
+
+		it('ranks blocked count above dependency count', async () => {
+			// 1.3 has a dependency but unblocks 1.4; 1.2 has none and unblocks nothing
+			const id = await nextId([
+				task(1, {
+					status: 'in-progress',
+					subtasks: [
+						subtask(1, { status: 'done' }),
+						subtask(2),
+						subtask(3, { dependencies: ['1'] }),
+						subtask(4, { dependencies: ['3'] })
+					]
+				})
+			]);
+
+			expect(id).toBe('1.3');
 		});
 
 		it('still ranks priority above blocked count', async () => {

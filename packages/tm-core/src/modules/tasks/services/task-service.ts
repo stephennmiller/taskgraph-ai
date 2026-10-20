@@ -283,11 +283,15 @@ export class TaskService {
 	 * Prioritizes eligible subtasks from in-progress parent tasks before falling back to top-level tasks
 	 */
 	async getNextTask(tag?: string): Promise<Task | null> {
-		// Load every status: blocked-count needs dependents that next never picks
 		const result = await this.getTaskList({ tag });
 
-		const allTasks = result.tasks;
-		const blockedCounts = blockedCount(allTasks);
+		// Eligibility only sees these statuses; blocked counts see every task,
+		// since deferred, blocked and review tasks still wait on their dependencies
+		const eligibleStatuses: TaskStatus[] = ['pending', 'in-progress', 'done'];
+		const allTasks = result.tasks.filter((t) =>
+			eligibleStatuses.includes(t.status)
+		);
+		const blockedCounts = blockedCount(result.tasks);
 		const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
 		const priorityValues = { critical: 4, high: 3, medium: 2, low: 1 };
 
