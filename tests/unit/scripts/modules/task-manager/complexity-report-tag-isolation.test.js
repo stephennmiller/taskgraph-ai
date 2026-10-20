@@ -440,7 +440,6 @@ vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	displayTaskDetails: vi.fn(),
 	displayTaskList: vi.fn(),
 	displayComplexityReport: vi.fn(),
-	displayNextTask: vi.fn(),
 	displayDependencyStatus: vi.fn(),
 	displayMigrationNotice: vi.fn(),
 	formatDependenciesWithStatus: vi.fn((deps) => deps),
