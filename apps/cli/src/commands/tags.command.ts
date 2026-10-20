@@ -391,18 +391,20 @@ Examples:
 			const { projectRoot, tasksPath } = getProjectPaths();
 
 			// Use legacy function which handles both API and file storage
-			await legacyDeleteTag(
+			const removeResult = (await legacyDeleteTag(
 				tasksPath,
 				name,
 				{ yes: options?.yes || false },
 				{ projectRoot },
 				'text'
-			);
+			)) as { cancelled?: boolean } | undefined;
 
 			this.setLastResult({
 				success: true,
 				action: 'remove',
-				message: `Removed tag: ${name}`
+				message: removeResult?.cancelled
+					? `Cancelled; tag ${name} was not removed`
+					: `Removed tag: ${name}`
 			});
 		} catch (error: any) {
 			displayError(error);

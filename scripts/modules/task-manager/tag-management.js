@@ -1,13 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import boxen from 'boxen';
-import chalk from 'chalk';
-import Table from 'cli-table3';
 import inquirer from 'inquirer';
 
-import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { ui } from '@tm/cli';
+import { theme } from '@tm/cli/theme';
 import { filterReadyTasks, isTaskComplete } from '@tm/core';
-import { displayBanner, getStatusWithColor } from '../ui.js';
 import {
 	findProjectRoot,
 	getCurrentTag,
@@ -16,10 +13,18 @@ import {
 	readJSON,
 	resolveTag,
 	setTasksForTag,
-	truncate,
 	writeJSON
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
+
+const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
+
+/** An error the CLI prints with a hint underneath */
+function tagNameError(message) {
+	const error = new Error(message);
+	error.hint = TAG_NAME_HINT;
+	return error;
+}
 
 /**
  * Read tasks.json, treating a missing file as an empty master tag. A project
@@ -66,7 +71,12 @@ async function createTag(
 	outputFormat = 'text'
 ) {
 	const { mcpLog, projectRoot } = context;
-	const { copyFromCurrent = false, copyFromTag, description } = options;
+	const {
+		copyFromCurrent = false,
+		copyFromTag,
+		description,
+		defaultDescription = `Tag created on ${new Date().toLocaleDateString()}`
+	} = options;
 
 	// Create a consistent logFn object regardless of context
 	const logFn = mcpLog || {
@@ -85,9 +95,7 @@ async function createTag(
 
 		// Validate tag name format (alphanumeric, hyphens, underscores only)
 		if (!/^[a-zA-Z0-9_-]+$/.test(tagName)) {
-			throw new Error(
-				'Tag name can only contain letters, numbers, hyphens, and underscores'
-			);
+			throw tagNameError(`"${tagName}" isn't a valid tag name`);
 		}
 
 		// Reserved tag names
@@ -156,8 +164,7 @@ async function createTag(
 			metadata: {
 				created: new Date().toISOString(),
 				updated: new Date().toISOString(),
-				description:
-					description || `Tag created on ${new Date().toLocaleDateString()}`
+				description: description || defaultDescription
 			}
 		};
 
@@ -184,29 +191,21 @@ async function createTag(
 					copyFromCurrent || copyFromTag
 						? copyFromTag || getCurrentTag(projectRoot)
 						: null,
-				description:
-					description || `Tag created on ${new Date().toLocaleDateString()}`
+				description: description || defaultDescription
 			};
 		}
 
-		// For text output, display success message
 		if (outputFormat === 'text') {
 			console.log(
-				boxen(
-					chalk.green.bold('✓ Tag Created Successfully') +
-						`\n\nTag Name: ${chalk.cyan(tagName)}` +
-						`\nTasks Copied: ${chalk.yellow(sourceTasks.length)}` +
-						(copyFromCurrent || copyFromTag
-							? `\nSource Tag: ${chalk.cyan(copyFromTag || getCurrentTag(projectRoot))}`
-							: '') +
-						(description ? `\nDescription: ${theme.muted(description)}` : ''),
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
+				ui.formatTagCreated({
+					tagName,
+					tasksCopied: sourceTasks.length,
+					sourceTag:
+						copyFromCurrent || copyFromTag
+							? copyFromTag || getCurrentTag(projectRoot)
+							: null,
+					description
+				})
 			);
 		}
 
@@ -218,11 +217,11 @@ async function createTag(
 				copyFromCurrent || copyFromTag
 					? copyFromTag || getCurrentTag(projectRoot)
 					: null,
-			description:
-				description || `Tag created on ${new Date().toLocaleDateString()}`
+			description: description || defaultDescription
 		};
 	} catch (error) {
-		logFn.error(`Error creating tag: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error creating tag: ${error.message}`);
 		throw error;
 	}
 }
@@ -319,57 +318,36 @@ async function deleteTag(
 
 		// If not forced and has tasks, require confirmation (for CLI)
 		if (!yes && taskCount > 0 && outputFormat === 'text') {
-			console.log(
-				boxen(
-					chalk.yellow.bold('⚠ WARNING: Tag Deletion') +
-						`\n\nYou are about to delete tag "${chalk.cyan(tagName)}"` +
-						`\nThis will permanently delete ${chalk.red.bold(taskCount)} tasks` +
-						'\n\nThis action cannot be undone!',
+			const what = `tag ${tagName} and its ${taskCount === 1 ? 'task' : `${taskCount} tasks`}`;
+			// Without a terminal a prompt would wait forever
+			if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+				const error = new Error(`Deleting ${what} needs confirmation`);
+				error.hint = 'Pass `--yes` to delete it without asking';
+				throw error;
+			}
+
+			let proceed = false;
+			try {
+				const prompt = inquirer.createPromptModule({ clearPromptOnDone: true });
+				({ proceed } = await prompt([
 					{
-						padding: 1,
-						borderColor: 'yellow',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
+						type: 'confirm',
+						name: 'proceed',
+						message: `Delete ${what}? This can't be undone.`,
+						default: false
 					}
-				)
-			);
-
-			// First confirmation
-			const firstConfirm = await inquirer.prompt([
-				{
-					type: 'confirm',
-					name: 'proceed',
-					message: `Are you sure you want to delete tag "${tagName}" and its ${taskCount} tasks?`,
-					default: false
-				}
-			]);
-
-			if (!firstConfirm.proceed) {
-				logFn.info('Tag deletion cancelled by user');
-				throw new Error('Tag deletion cancelled');
+				]));
+			} catch (error) {
+				if (error?.name !== 'ExitPromptError') throw error;
+				// Ctrl-C
+				console.log(theme.muted('Cancelled; nothing was deleted'));
+				process.exit(130);
 			}
 
-			// Second confirmation (double-check)
-			const secondConfirm = await inquirer.prompt([
-				{
-					type: 'input',
-					name: 'tagNameConfirm',
-					message: `To confirm deletion, please type the tag name "${tagName}":`,
-					validate: (input) => {
-						if (input === tagName) {
-							return true;
-						}
-						return `Please type exactly "${tagName}" to confirm deletion`;
-					}
-				}
-			]);
-
-			if (secondConfirm.tagNameConfirm !== tagName) {
-				logFn.info('Tag deletion cancelled - incorrect tag name confirmation');
-				throw new Error('Tag deletion cancelled');
+			if (!proceed) {
+				console.log(theme.muted('Cancelled; nothing was deleted'));
+				return { tagName, deleted: false, cancelled: true };
 			}
-
-			logFn.debug('Double confirmation received, proceeding with deletion...');
 		}
 
 		// Delete the tag
@@ -378,7 +356,7 @@ async function deleteTag(
 		// If we're deleting the current tag, switch to master
 		if (isCurrentTag) {
 			await switchCurrentTag(projectRoot, 'master');
-			logFn.info('Switched current tag to "master"');
+			logFn.debug('Switched current tag to "master"');
 		}
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
@@ -405,23 +383,13 @@ async function deleteTag(
 			};
 		}
 
-		// For text output, display success message
 		if (outputFormat === 'text') {
 			console.log(
-				boxen(
-					chalk.red.bold('✓ Tag Deleted Successfully') +
-						`\n\nTag Name: ${chalk.cyan(tagName)}` +
-						`\nTasks Deleted: ${chalk.yellow(taskCount)}` +
-						(isCurrentTag
-							? `\n${chalk.yellow('⚠ Switched current tag to "master"')}`
-							: ''),
-					{
-						padding: 1,
-						borderColor: 'red',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
+				ui.formatTagDeleted({
+					tagName,
+					tasksDeleted: taskCount,
+					switchedToMaster: isCurrentTag
+				})
 			);
 		}
 
@@ -433,7 +401,8 @@ async function deleteTag(
 			switchedToMaster: isCurrentTag
 		};
 	} catch (error) {
-		logFn.error(`Error deleting tag: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error deleting tag: ${error.message}`);
 		throw error;
 	}
 }
@@ -635,107 +604,21 @@ async function tags(
 			};
 		}
 
-		// For text output, display formatted table
 		if (outputFormat === 'text') {
-			if (filteredTagList.length === 0) {
-				const message = ready
-					? 'No tags with ready tasks found'
-					: 'No tags found';
-				console.log(
-					boxen(chalk.yellow(message), {
-						padding: 1,
-						borderColor: 'yellow',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					})
-				);
-				return { tags: [], currentTag, totalTags: 0 };
-			}
-
-			// Create table headers based on options
-			const headers = [chalk.cyan.bold('Tag Name')];
-			if (showTaskCounts) {
-				headers.push(chalk.cyan.bold('Tasks'));
-				headers.push(chalk.cyan.bold('Ready'));
-				headers.push(chalk.cyan.bold('Done'));
-			}
-			if (showMetadata) {
-				headers.push(chalk.cyan.bold('Created'));
-				headers.push(chalk.cyan.bold('Description'));
-			}
-
-			// Calculate dynamic column widths based on terminal width
-			const terminalWidth = Math.max(process.stdout.columns || 120, 80);
-			const usableWidth = Math.floor(terminalWidth * 0.95);
-
-			let colWidths;
-			if (showMetadata) {
-				// With metadata: Tag Name, Tasks, Ready, Done, Created, Description
-				const widths = [0.22, 0.08, 0.08, 0.08, 0.14, 0.38];
-				colWidths = widths.map((w, i) =>
-					Math.max(Math.floor(usableWidth * w), i === 0 ? 15 : 6)
-				);
-			} else {
-				// Without metadata: Tag Name, Tasks, Ready, Done
-				const widths = [0.6, 0.13, 0.13, 0.13];
-				colWidths = widths.map((w, i) =>
-					Math.max(Math.floor(usableWidth * w), i === 0 ? 20 : 8)
-				);
-			}
-
-			const table = new Table({
-				head: headers,
-				colWidths: colWidths,
-				wordWrap: true,
-				style: { border: TABLE_BORDER }
-			});
-
-			// Add rows
-			filteredTagList.forEach((tag) => {
-				const row = [];
-
-				// Tag name with current indicator
-				const tagDisplay = tag.isCurrent
-					? `${chalk.green('●')} ${chalk.green.bold(tag.name)} ${theme.muted('(current)')}`
-					: `  ${tag.name}`;
-				row.push(tagDisplay);
-
-				if (showTaskCounts) {
-					row.push(theme.text(tag.tasks.length.toString()));
-					row.push(
-						tag.readyTasks > 0
-							? chalk.yellow(tag.readyTasks.toString())
-							: theme.muted('0')
-					);
-					row.push(chalk.green(tag.completedTasks.toString()));
-				}
-
-				if (showMetadata) {
-					const createdDate =
-						tag.created !== 'Unknown'
-							? new Date(tag.created).toLocaleDateString()
-							: 'Unknown';
-					row.push(theme.muted(createdDate));
-					row.push(theme.muted(truncate(tag.description, 50)));
-				}
-
-				table.push(row);
-			});
-
-			// console.log(
-			// 	boxen(
-			// 		theme.text.bold('Available Tags') +
-			// 			`\n\nCurrent Tag: ${chalk.green.bold(currentTag)}`,
-			// 		{
-			// 			padding: { top: 0, bottom: 1, left: 1, right: 1 },
-			// 			borderColor: BORDER_COLOR,
-			// 			borderStyle: 'round',
-			// 			margin: { top: 1, bottom: 0 }
-			// 		}
-			// 	)
-			// );
-
-			console.log(table.toString());
+			console.log(
+				ui.formatTagList(
+					filteredTagList.map((tag) => ({
+						name: tag.name,
+						isCurrent: tag.isCurrent,
+						taskCount: tag.tasks.length,
+						readyTasks: tag.readyTasks,
+						completedTasks: tag.completedTasks,
+						created: tag.created,
+						description: tag.description
+					})),
+					{ showMetadata, ready }
+				)
+			);
 		}
 
 		return {
@@ -744,7 +627,8 @@ async function tags(
 			totalTags: filteredTagList.length
 		};
 	} catch (error) {
-		logFn.error(`Error listing tags: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error listing tags: ${error.message}`);
 		throw error;
 	}
 }
@@ -829,29 +713,14 @@ async function useTag(
 			};
 		}
 
-		// For text output, display success message
 		if (outputFormat === 'text') {
-			let nextTaskInfo = '';
-			if (nextTask) {
-				nextTaskInfo = `\nNext Task: ${chalk.cyan(`#${nextTask.id}`)} - ${theme.text(nextTask.title)}`;
-			} else {
-				nextTaskInfo = `\nNext Task: ${theme.muted('No eligible tasks available')}`;
-			}
-
 			console.log(
-				boxen(
-					chalk.green.bold('✓ Tag Switched Successfully') +
-						`\n\nPrevious Tag: ${chalk.cyan(previousTag)}` +
-						`\nCurrent Tag: ${chalk.green.bold(tagName)}` +
-						`\nAvailable Tasks: ${chalk.yellow(taskCount)}` +
-						nextTaskInfo,
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
+				ui.formatTagSwitched({
+					previousTag,
+					currentTag: tagName,
+					taskCount,
+					nextTask
+				})
 			);
 		}
 
@@ -913,9 +782,7 @@ async function renameTag(
 
 		// Validate new tag name format
 		if (!/^[a-zA-Z0-9_-]+$/.test(newName)) {
-			throw new Error(
-				'New tag name can only contain letters, numbers, hyphens, and underscores'
-			);
+			throw tagNameError(`"${newName}" isn't a valid tag name`);
 		}
 
 		// Prevent renaming master tag
@@ -1002,23 +869,8 @@ async function renameTag(
 			};
 		}
 
-		// For text output, display success message
 		if (outputFormat === 'text') {
-			console.log(
-				boxen(
-					chalk.green.bold('✓ Tag Renamed Successfully') +
-						`\n\nOld Name: ${chalk.cyan(oldName)}` +
-						`\nNew Name: ${chalk.green.bold(newName)}` +
-						`\nTasks: ${chalk.yellow(taskCount)}` +
-						(isCurrentTag ? `\n${chalk.green('✓ Current tag updated')}` : ''),
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
-			);
+			console.log(ui.formatTagRenamed({ oldName, newName, isCurrentTag }));
 		}
 
 		return {
@@ -1030,7 +882,8 @@ async function renameTag(
 			isCurrentTag: isCurrentTag
 		};
 	} catch (error) {
-		logFn.error(`Error renaming tag: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error renaming tag: ${error.message}`);
 		throw error;
 	}
 }
@@ -1079,9 +932,7 @@ async function copyTag(
 
 		// Validate target tag name format
 		if (!/^[a-zA-Z0-9_-]+$/.test(targetName)) {
-			throw new Error(
-				'Target tag name can only contain letters, numbers, hyphens, and underscores'
-			);
+			throw tagNameError(`"${targetName}" isn't a valid tag name`);
 		}
 
 		// Reserved tag names
@@ -1157,22 +1008,13 @@ async function copyTag(
 			};
 		}
 
-		// For text output, display success message
 		if (outputFormat === 'text') {
 			console.log(
-				boxen(
-					chalk.green.bold('✓ Tag Copied Successfully') +
-						`\n\nSource Tag: ${chalk.cyan(sourceName)}` +
-						`\nTarget Tag: ${chalk.green.bold(targetName)}` +
-						`\nTasks Copied: ${chalk.yellow(sourceTasks.length)}` +
-						(description ? `\nDescription: ${theme.muted(description)}` : ''),
-					{
-						padding: 1,
-						borderColor: 'green',
-						borderStyle: 'round',
-						margin: { top: 1, bottom: 1 }
-					}
-				)
+				ui.formatTagCopied({
+					sourceName,
+					targetName,
+					tasksCopied: sourceTasks.length
+				})
 			);
 		}
 
@@ -1185,7 +1027,8 @@ async function copyTag(
 				`Copy of "${sourceName}" created on ${new Date().toLocaleDateString()}`
 		};
 	} catch (error) {
-		logFn.error(`Error copying tag: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error copying tag: ${error.message}`);
 		throw error;
 	}
 }
@@ -1339,7 +1182,7 @@ async function createTagFromBranch(
 		// Sanitize branch name to create tag name
 		const tagName = sanitizeBranchNameForTag(branchName);
 
-		logFn.info(`Creating tag "${tagName}" from git branch "${branchName}"`);
+		logFn.debug(`Creating tag "${tagName}" from git branch "${branchName}"`);
 
 		// Create the tag using existing createTag function
 		const createResult = await createTag(
@@ -1348,8 +1191,9 @@ async function createTagFromBranch(
 			{
 				copyFromCurrent,
 				copyFromTag,
-				description:
-					description || `Tag created from git branch "${branchName}"`
+				description,
+				// Stored when the user gave no description, but not printed as theirs
+				defaultDescription: `Tag created from git branch "${branchName}"`
 			},
 			context,
 			outputFormat
@@ -1362,7 +1206,7 @@ async function createTagFromBranch(
 		// Auto-switch to the new tag if requested
 		if (autoSwitch) {
 			await switchCurrentTag(projectRoot, tagName);
-			logFn.info(`Automatically switched to tag "${tagName}"`);
+			logFn.debug(`Automatically switched to tag "${tagName}"`);
 		}
 
 		// For JSON output, return structured data
@@ -1385,7 +1229,8 @@ async function createTagFromBranch(
 			autoSwitched: autoSwitch || false
 		};
 	} catch (error) {
-		logFn.error(`Error creating tag from branch: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) logFn.error(`Error creating tag from branch: ${error.message}`);
 		throw error;
 	}
 }

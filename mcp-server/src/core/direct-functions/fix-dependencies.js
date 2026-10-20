@@ -53,9 +53,10 @@ export async function fixDependenciesDirect(args, log) {
 		// Enable silent mode to prevent console logs from interfering with JSON response
 		enableSilentMode();
 
-		const options = { projectRoot, tag };
+		// The core function reads the tag from options.context
+		const options = { context: { projectRoot, tag } };
 		// Call the original command function using the provided path and proper context
-		await fixDependenciesCommand(tasksPath, options);
+		const result = await fixDependenciesCommand(tasksPath, options);
 
 		// Restore normal logging
 		disableSilentMode();
@@ -63,7 +64,11 @@ export async function fixDependenciesDirect(args, log) {
 		return {
 			success: true,
 			data: {
-				message: 'Dependencies fixed successfully',
+				message:
+					result.remaining.length > 0
+						? `Fixed ${result.fixes.length} dependency problem(s); ${result.remaining.length} left that need a decision, such as loops between tasks`
+						: `Fixed ${result.fixes.length} dependency problem(s)`,
+				...result,
 				tasksPath,
 				tag: tag || 'master'
 			}

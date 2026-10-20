@@ -1489,9 +1489,13 @@ function registerCommands(programInstance) {
 			// Show current tag context
 			await displayCurrentTagIndicator(tag);
 
-			await validateDependenciesCommand(taskGraph.getTasksPath(), {
-				context: { projectRoot: taskGraph.getProjectRoot(), tag }
-			});
+			const result = await validateDependenciesCommand(
+				taskGraph.getTasksPath(),
+				{ context: { projectRoot: taskGraph.getProjectRoot(), tag } }
+			);
+			console.log(ui.formatDependencyCheck(result));
+			// A check that finds problems fails, so scripts and CI can act on it
+			if (!result.valid) process.exitCode = 1;
 		});
 
 	// fix-dependencies command
@@ -1515,9 +1519,12 @@ function registerCommands(programInstance) {
 			// Show current tag context
 			await displayCurrentTagIndicator(tag);
 
-			await fixDependenciesCommand(taskGraph.getTasksPath(), {
+			const result = await fixDependenciesCommand(taskGraph.getTasksPath(), {
 				context: { projectRoot: taskGraph.getProjectRoot(), tag }
 			});
+			console.log(ui.formatDependencyFixes(result));
+			// Loops between tasks are left for the user; say so in the exit code
+			if (result.remaining.length > 0) process.exitCode = 1;
 		});
 
 	// complexity-report command
@@ -1868,117 +1875,6 @@ function registerCommands(programInstance) {
 					'  taskgraph remove-subtask --id=5.2\n' +
 					'  taskgraph remove-subtask --id=5.2,6.3,7.1\n' +
 					'  taskgraph remove-subtask --id=5.2 --convert',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
-
-	// Helper function to show tags command help
-	function showTagsHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Tags Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph tags [options]\n\n` +
-					chalk.cyan('Options:') +
-					'\n' +
-					'  -f, --file <file>   Path to the tasks file (default: "' +
-					TASKGRAPH_TASKS_FILE +
-					'")\n' +
-					'  --show-metadata     Show detailed metadata for each tag\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph tags\n' +
-					'  taskgraph tags --show-metadata\n\n' +
-					chalk.cyan('Related Commands:') +
-					'\n' +
-					'  taskgraph add-tag <name>      Create a new tag\n' +
-					'  taskgraph use-tag <name>      Switch to a tag\n' +
-					'  taskgraph delete-tag <name>   Delete a tag',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
-
-	// Helper function to show add-tag command help
-	function showAddTagHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Add Tag Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph add-tag <tagName> [options]\n\n` +
-					chalk.cyan('Options:') +
-					'\n' +
-					'  -f, --file <file>        Path to the tasks file (default: "' +
-					TASKGRAPH_TASKS_FILE +
-					'")\n' +
-					'  --copy-from-current      Copy tasks from the current tag to the new tag\n' +
-					'  --copy-from <tag>        Copy tasks from the specified tag to the new tag\n' +
-					'  -d, --description <text> Optional description for the tag\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph add-tag feature-xyz\n' +
-					'  taskgraph add-tag feature-xyz --copy-from-current\n' +
-					'  taskgraph add-tag feature-xyz --copy-from master\n' +
-					'  taskgraph add-tag feature-xyz -d "Feature XYZ development"',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
-
-	// Helper function to show delete-tag command help
-	function showDeleteTagHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Delete Tag Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph delete-tag <tagName> [options]\n\n` +
-					chalk.cyan('Options:') +
-					'\n' +
-					'  -f, --file <file>   Path to the tasks file (default: "' +
-					TASKGRAPH_TASKS_FILE +
-					'")\n' +
-					'  -y, --yes           Skip confirmation prompts\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph delete-tag feature-xyz\n' +
-					'  taskgraph delete-tag feature-xyz --yes\n\n' +
-					chalk.yellow('Warning:') +
-					'\n' +
-					'  This will permanently delete the tag and all its tasks!',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
-
-	// Helper function to show use-tag command help
-	function showUseTagHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Use Tag Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph use-tag <tagName> [options]\n\n` +
-					chalk.cyan('Options:') +
-					'\n' +
-					'  -f, --file <file>   Path to the tasks file (default: "' +
-					TASKGRAPH_TASKS_FILE +
-					'")\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph use-tag feature-xyz\n' +
-					'  taskgraph use-tag master\n\n' +
-					chalk.cyan('Related Commands:') +
-					'\n' +
-					'  taskgraph tags                 List all available tags\n' +
-					'  taskgraph add-tag <name>       Create a new tag',
 				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
@@ -2973,6 +2869,13 @@ Examples:
 
 	// ===== TAG MANAGEMENT COMMANDS =====
 
+	/** One line on stderr pointing at the command that replaces an alias */
+	function warnDeprecated(alias, replacement) {
+		console.error(
+			`${chalk.yellow('⚠')} ${alias} is deprecated; use ${theme.brand(`taskgraph ${replacement}`)}`
+		);
+	}
+
 	// add-tag command (DEPRECATED - use `tm tags add` instead)
 	programInstance
 		.command('add-tag')
@@ -2998,15 +2901,7 @@ Examples:
 		)
 		.option('-d, --description <text>', 'Optional description for the tag')
 		.action(async (tagName, options) => {
-			// Show deprecation warning
-			console.warn(
-				chalk.yellow(
-					'⚠ Warning: "taskgraph add-tag" is deprecated. Use "taskgraph tags add" instead.'
-				)
-			);
-			console.log(
-				theme.muted('  This command will be removed in a future version.\n')
-			);
+			warnDeprecated('add-tag', 'tags add');
 
 			try {
 				// Initialize TaskGraph
@@ -3017,27 +2912,16 @@ Examples:
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
-					console.error(
-						chalk.red(`Error: Tasks file not found at path: ${tasksPath}`)
-					);
-					console.log(
-						chalk.yellow(
-							'Hint: Run taskgraph init or taskgraph parse-prd to create tasks.json first'
-						)
-					);
+					printError('No tasks yet', NO_TASKS_FILE_HINT);
 					process.exit(1);
 				}
 
 				// Validate that either tagName is provided or --from-branch is used
 				if (!tagName && !options.fromBranch) {
-					console.error(
-						chalk.red(
-							'Error: Either tagName argument or --from-branch option is required.'
-						)
+					printError(
+						'add-tag needs a tag name',
+						'Example: `taskgraph tags add feature-auth`, or `--from-branch`'
 					);
-					console.log(chalk.yellow('Usage examples:'));
-					console.log(chalk.cyan('  taskgraph add-tag my-tag'));
-					console.log(chalk.cyan('  taskgraph add-tag --from-branch'));
 					process.exit(1);
 				}
 
@@ -3056,10 +2940,9 @@ Examples:
 
 					// Check if we're in a git repository
 					if (!(await gitUtils.isGitRepository(context.projectRoot))) {
-						console.error(
-							chalk.red(
-								'Error: Not in a git repository. Cannot use --from-branch option.'
-							)
+						printError(
+							"--from-branch needs a git repository, and this isn't one",
+							'Name the tag instead: `taskgraph tags add <name>`'
 						);
 						process.exit(1);
 					}
@@ -3069,8 +2952,9 @@ Examples:
 						context.projectRoot
 					);
 					if (!currentBranch) {
-						console.error(
-							chalk.red('Error: Could not determine current git branch.')
+						printError(
+							"Couldn't tell which git branch is checked out",
+							'Name the tag instead: `taskgraph tags add <name>`'
 						);
 						process.exit(1);
 					}
@@ -3079,9 +2963,7 @@ Examples:
 					const branchOptions = {
 						copyFromCurrent: options.copyFromCurrent || false,
 						copyFromTag: options.copyFrom,
-						description:
-							options.description ||
-							`Tag created from git branch "${currentBranch}"`
+						description: options.description
 					};
 
 					await createTagFromBranch(
@@ -3127,15 +3009,11 @@ Examples:
 					);
 				}
 			} catch (error) {
-				console.error(chalk.red(`Error creating tag: ${error.message}`));
-				showAddTagHelp();
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			showAddTagHelp();
-			process.exit(1);
+			displayError(err);
 		});
 
 	// delete-tag command (DEPRECATED - use `tm tags remove` instead)
@@ -3148,15 +3026,7 @@ Examples:
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
 		.option('-y, --yes', 'Skip confirmation prompts')
 		.action(async (tagName, options) => {
-			// Show deprecation warning
-			console.warn(
-				chalk.yellow(
-					'⚠ Warning: "taskgraph delete-tag" is deprecated. Use "taskgraph tags remove" instead.'
-				)
-			);
-			console.log(
-				theme.muted('  This command will be removed in a future version.\n')
-			);
+			warnDeprecated('delete-tag', 'tags remove');
 
 			try {
 				// Initialize TaskGraph
@@ -3167,9 +3037,7 @@ Examples:
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
-					console.error(
-						chalk.red(`Error: Tasks file not found at path: ${tasksPath}`)
-					);
+					printError('No tasks yet', NO_TASKS_FILE_HINT);
 					process.exit(1);
 				}
 
@@ -3191,15 +3059,11 @@ Examples:
 					'text'
 				);
 			} catch (error) {
-				console.error(chalk.red(`Error deleting tag: ${error.message}`));
-				showDeleteTagHelp();
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			showDeleteTagHelp();
-			process.exit(1);
+			displayError(err);
 		});
 
 	// tags command - REMOVED
@@ -3216,15 +3080,7 @@ Examples:
 		.argument('<tagName>', 'Name of the tag to switch to')
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
 		.action(async (tagName, options) => {
-			// Show deprecation warning
-			console.warn(
-				chalk.yellow(
-					'⚠ Warning: "taskgraph use-tag" is deprecated. Use "taskgraph tags use" instead.'
-				)
-			);
-			console.log(
-				theme.muted('  This command will be removed in a future version.\n')
-			);
+			warnDeprecated('use-tag', 'tags use');
 
 			try {
 				// Initialize TaskGraph
@@ -3235,9 +3091,7 @@ Examples:
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
-					console.error(
-						chalk.red(`Error: Tasks file not found at path: ${tasksPath}`)
-					);
+					printError('No tasks yet', NO_TASKS_FILE_HINT);
 					process.exit(1);
 				}
 
@@ -3253,9 +3107,7 @@ Examples:
 			}
 		})
 		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			showUseTagHelp();
-			process.exit(1);
+			displayError(err);
 		});
 
 	// rename-tag command (DEPRECATED - use `tm tags rename` instead)
@@ -3268,15 +3120,7 @@ Examples:
 		.argument('<newName>', 'New name for the tag')
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
 		.action(async (oldName, newName, options) => {
-			// Show deprecation warning
-			console.warn(
-				chalk.yellow(
-					'⚠ Warning: "taskgraph rename-tag" is deprecated. Use "taskgraph tags rename" instead.'
-				)
-			);
-			console.log(
-				theme.muted('  This command will be removed in a future version.\n')
-			);
+			warnDeprecated('rename-tag', 'tags rename');
 
 			try {
 				// Initialize TaskGraph
@@ -3287,9 +3131,7 @@ Examples:
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
-					console.error(
-						chalk.red(`Error: Tasks file not found at path: ${tasksPath}`)
-					);
+					printError('No tasks yet', NO_TASKS_FILE_HINT);
 					process.exit(1);
 				}
 
@@ -3308,13 +3150,11 @@ Examples:
 					'text'
 				);
 			} catch (error) {
-				console.error(chalk.red(`Error renaming tag: ${error.message}`));
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			process.exit(1);
+			displayError(err);
 		});
 
 	// copy-tag command (DEPRECATED - use `tm tags copy` instead)
@@ -3328,15 +3168,7 @@ Examples:
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
 		.option('-d, --description <text>', 'Optional description for the new tag')
 		.action(async (sourceName, targetName, options) => {
-			// Show deprecation warning
-			console.warn(
-				chalk.yellow(
-					'⚠ Warning: "taskgraph copy-tag" is deprecated. Use "taskgraph tags copy" instead.'
-				)
-			);
-			console.log(
-				theme.muted('  This command will be removed in a future version.\n')
-			);
+			warnDeprecated('copy-tag', 'tags copy');
 
 			try {
 				// Initialize TaskGraph
@@ -3347,9 +3179,7 @@ Examples:
 
 				// Validate tasks file exists
 				if (!fs.existsSync(tasksPath)) {
-					console.error(
-						chalk.red(`Error: Tasks file not found at path: ${tasksPath}`)
-					);
+					printError('No tasks yet', NO_TASKS_FILE_HINT);
 					process.exit(1);
 				}
 
@@ -3372,13 +3202,11 @@ Examples:
 					'text'
 				);
 			} catch (error) {
-				console.error(chalk.red(`Error copying tag: ${error.message}`));
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			process.exit(1);
+			displayError(err);
 		});
 
 	// tui / repl command - launches the interactive TUI
@@ -3467,6 +3295,8 @@ async function launchREPL() {
 }
 
 // Commands that work outside a project
+const NO_TASKS_FILE_HINT = 'Create some with `taskgraph parse-prd <file>`';
+
 const RUNS_WITHOUT_PROJECT = new Set([
 	'init',
 	'help',
