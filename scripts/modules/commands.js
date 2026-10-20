@@ -15,6 +15,8 @@ import {
 	checkForUpdate,
 	displayError,
 	displayUpgradeNotification,
+	formatCommanderError,
+	printError,
 	performAutoUpdate,
 	registerAllCommands,
 	restartWithNewVersion,
@@ -71,17 +73,9 @@ import {
 import {
 	ConfigurationError,
 	getConfig,
-	getDebugFlag,
 	getDefaultNumTasks,
 	isConfigFilePresent
 } from './config-manager.js';
-
-import {
-	displayFormattedError,
-	displayInfo,
-	displaySuccess,
-	displayWarning
-} from './error-formatter.js';
 
 import { CUSTOM_PROVIDERS } from '@tm/core';
 
@@ -120,6 +114,24 @@ import { getTaskGraphVersion } from '../../src/utils/getVersion.js';
 import { initializeProject } from '../init.js';
 
 /**
+ * The next step to suggest when an AI-backed command fails for a reason the
+ * user can act on. Returns undefined to fall back to the default hint for
+ * the error (e.g. listing tasks when an ID isn't found).
+ * @param {Error} error
+ * @returns {string|undefined}
+ */
+function aiErrorHint(error) {
+	const message = error?.message ?? '';
+	if (/overloaded|rate limit|\b(429|529)\b/i.test(message)) {
+		return 'Claude is busy. Wait a minute and try again';
+	}
+	if (/empty stream response|did not return a valid/i.test(message)) {
+		return 'Try again, or reword the prompt';
+	}
+	return undefined;
+}
+
+/**
  * Configure and register CLI commands
  * @param {Object} program - Commander program instance
  */
@@ -127,11 +139,10 @@ function registerCommands(programInstance) {
 	// Add global error handler for unknown options
 	programInstance.on('option:unknown', function (unknownOption) {
 		const commandName = this._name || 'unknown';
-		displayFormattedError(new Error(`Unknown option '${unknownOption}'`), {
-			context: `Running command: ${commandName}`,
-			command: `taskgraph ${commandName}`,
-			debug: getDebugFlag()
-		});
+		printError(
+			`Unknown option '${unknownOption}'`,
+			`Run \`taskgraph ${commandName} --help\` to see its options`
+		);
 		process.exit(1);
 	});
 
@@ -177,6 +188,15 @@ function registerCommands(programInstance) {
 			// Resolve PRD path: prioritize --input option, then positional argument
 			const prdPath = options.input || file;
 
+			// A mistyped path is the common failure; say so before anything else
+			if (prdPath && !fs.existsSync(path.resolve(prdPath))) {
+				printError(
+					`${prdPath} not found`,
+					'Check the spelling. Paths are relative to the folder you run taskgraph from'
+				);
+				process.exit(1);
+			}
+
 			// Initialize TaskGraph
 			let taskGraph;
 			try {
@@ -190,17 +210,9 @@ function registerCommands(programInstance) {
 				}
 				taskGraph = initTaskGraph(initOptions);
 			} catch (error) {
-				displayFormattedError(error, {
-					context: 'Initializing TaskGraph for PRD parsing',
-					command: 'taskgraph parse-prd',
-					debug: getDebugFlag()
+				displayError(error, {
+					hint: prdPath ? undefined : 'Try `taskgraph parse-prd prd.md`'
 				});
-
-				// Show usage help after error
-				displayInfo(
-					`${chalk.cyan('Usage:')}\n  taskgraph parse-prd <prd-file.txt> [options]\n\n${chalk.cyan('Options:')}\n  -i, --input <file>       Path to the PRD file\n  -o, --output <file>      Output file path\n  -n, --num-tasks <number> Number of tasks to generate\n  -f, --force              Skip confirmation\n  --append                 Append to existing tasks\n  -r, --research           Use Claude Code web research\n\n${chalk.cyan('Examples:')}\n  taskgraph parse-prd requirements.txt --num-tasks 15\n  taskgraph parse-prd --input=requirements.txt\n  taskgraph parse-prd requirements.txt --research`,
-					'Parse PRD Help'
-				);
 				process.exit(1);
 			}
 
@@ -532,30 +544,7 @@ function registerCommands(programInstance) {
 					);
 				}
 			} catch (error) {
-				console.error(chalk.red(`Error: ${error.message}`));
-
-				// Provide more helpful error messages for common issues
-				if (
-					error.message.includes('task') &&
-					error.message.includes('not found')
-				) {
-					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log('  1. Run taskgraph list to see all available task IDs');
-					console.log('  2. Use a valid task ID with the --id parameter');
-				} else if (error.message.includes('API key')) {
-					console.log(
-						chalk.yellow(
-							'\nThis error is related to API keys. Check your environment variables.'
-						)
-					);
-				}
-
-				// Use getDebugFlag getter instead of CONFIG.debug
-				if (getDebugFlag()) {
-					console.error(error);
-				}
-
-				process.exit(1);
+				displayError(error, { hint: aiErrorHint(error) });
 			}
 		});
 
@@ -656,50 +645,15 @@ function registerCommands(programInstance) {
 					);
 				}
 
-				const result = await updateSubtaskById(
+				await updateSubtaskById(
 					taskGraph.getTasksPath(),
 					subtaskId,
 					prompt,
 					useResearch,
 					{ projectRoot: taskGraph.getProjectRoot(), tag }
 				);
-
-				if (!result) {
-					console.log(
-						chalk.yellow(
-							'\nSubtask update was not completed. Review the messages above for details.'
-						)
-					);
-				}
 			} catch (error) {
-				console.error(chalk.red(`Error: ${error.message}`));
-
-				// Provide more helpful error messages for common issues
-				if (
-					error.message.includes('subtask') &&
-					error.message.includes('not found')
-				) {
-					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log(
-						'  1. Run taskgraph list --with-subtasks to see all available subtask IDs'
-					);
-					console.log(
-						'  2. Use a valid subtask ID with the --id parameter in format "parentId.subtaskId"'
-					);
-				} else if (error.message.includes('API key')) {
-					console.log(
-						chalk.yellow(
-							'\nThis error is related to API keys. Check your environment variables.'
-						)
-					);
-				}
-
-				// Use getDebugFlag getter instead of CONFIG.debug
-				if (getDebugFlag()) {
-					console.error(error);
-				}
-
-				process.exit(1);
+				displayError(error, { hint: aiErrorHint(error) });
 			}
 		});
 
@@ -808,19 +762,7 @@ function registerCommands(programInstance) {
 					)
 				);
 			} catch (error) {
-				console.error(chalk.red(`Error: ${error.message}`));
-
-				if (error.message.includes('not found')) {
-					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log('  1. Run taskgraph list to see all available task IDs');
-					console.log('  2. Use valid task IDs with the --id parameter');
-				}
-
-				if (getDebugFlag()) {
-					console.error(error);
-				}
-
-				process.exit(1);
+				displayError(error, { hint: aiErrorHint(error) });
 			}
 		});
 
@@ -929,19 +871,7 @@ function registerCommands(programInstance) {
 					)
 				);
 			} catch (error) {
-				console.error(chalk.red(`Error: ${error.message}`));
-
-				if (error.message.includes('not found')) {
-					console.log(chalk.yellow('\nTo fix this issue:'));
-					console.log('  1. Run taskgraph list to see all available task IDs');
-					console.log('  2. Use valid task IDs with the --id parameter');
-				}
-
-				if (getDebugFlag()) {
-					console.error(error);
-				}
-
-				process.exit(1);
+				displayError(error, { hint: aiErrorHint(error) });
 			}
 		});
 
@@ -1020,10 +950,7 @@ function registerCommands(programInstance) {
 						// outputFormat defaults to 'text' in expandAllTasks for CLI
 					);
 				} catch (error) {
-					console.error(
-						chalk.red(`Error expanding all tasks: ${error.message}`)
-					);
-					process.exit(1);
+					displayError(error, { hint: aiErrorHint(error) });
 				}
 			} else if (options.id) {
 				// --- Handle expand --id <id> (Should be correct from previous refactor) ---
@@ -1052,16 +979,14 @@ function registerCommands(programInstance) {
 					);
 					// expandTask logs its own success/failure for single task
 				} catch (error) {
-					console.error(
-						chalk.red(`Error expanding task ${options.id}: ${error.message}`)
-					);
-					process.exit(1);
+					displayError(error, { hint: aiErrorHint(error) });
 				}
 			} else {
-				console.error(
-					chalk.red('Error: You must specify either a task ID (--id) or --all.')
+				printError(
+					'Missing task ID',
+					'Try `taskgraph expand --id=3`, or `--all` for every pending task'
 				);
-				programInstance.help(); // Show help
+				process.exit(1);
 			}
 		});
 
@@ -1699,11 +1624,7 @@ ${result.result}
 				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'
 				// No need to call displayAiUsageSummary here anymore.
 			} catch (error) {
-				console.error(chalk.red(`Error adding task: ${error.message}`));
-				if (error.details) {
-					console.error(chalk.red(error.details));
-				}
-				process.exit(1);
+				displayError(error, { hint: aiErrorHint(error) });
 			}
 		});
 
@@ -2057,9 +1978,7 @@ ${result.result}
 					process.exit(1);
 				}
 			} catch (error) {
-				console.error(chalk.red(`Error: ${error.message}`));
-				showAddSubtaskHelp();
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
@@ -2197,9 +2116,7 @@ ${result.result}
 					}
 				}
 			} catch (error) {
-				console.error(chalk.red(`Error: ${error.message}`));
-				showRemoveSubtaskHelp();
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
@@ -2475,17 +2392,16 @@ ${result.result}
 					}
 				}
 
-				if (nonExistentIds.length > 0) {
-					console.warn(
-						chalk.yellow(
-							`Warning: The following task IDs were not found: ${nonExistentIds.join(', ')}`
-						)
-					);
+				const notFoundMessage = `${nonExistentIds.length === 1 ? 'Task' : 'Tasks'} ${nonExistentIds.join(', ')} not found`;
+
+				// Nothing to remove is a failure: the ID was probably mistyped
+				if (existingTasksToRemove.length === 0) {
+					printError(notFoundMessage, 'Run `taskgraph list` to see task IDs');
+					process.exit(1);
 				}
 
-				if (existingTasksToRemove.length === 0) {
-					console.log(theme.brand('No existing tasks found to remove.'));
-					process.exit(0);
+				if (nonExistentIds.length > 0) {
+					console.warn(chalk.yellow(`${notFoundMessage}, skipping`));
 				}
 
 				// Skip confirmation if --yes flag is provided
@@ -2623,10 +2539,7 @@ ${result.result}
 					}
 				}
 			} catch (error) {
-				console.error(
-					chalk.red(`Error: ${error.message || 'An unknown error occurred'}`)
-				);
-				process.exit(1);
+				displayError(error);
 			}
 		});
 
@@ -3224,6 +3137,11 @@ Examples:
 
 			// Helper function to handle move errors
 			function handleMoveError(error, moveContext) {
+				// A missing ID needs only the message and where to find IDs
+				if (/not found/i.test(error.message)) {
+					displayError(error);
+				}
+
 				console.error(chalk.red(`Error: ${error.message}`));
 
 				// Enhanced error handling with structured error objects
@@ -3616,7 +3534,7 @@ Examples:
 			// Show deprecation warning
 			console.warn(
 				chalk.yellow(
-					'⚠ Warning: "tm use-tag" is deprecated. Use "tm tags use" instead.'
+					'⚠ Warning: "taskgraph use-tag" is deprecated. Use "taskgraph tags use" instead.'
 				)
 			);
 			console.log(
@@ -3646,9 +3564,7 @@ Examples:
 
 				await useTag(taskGraph.getTasksPath(), tagName, {}, context, 'text');
 			} catch (error) {
-				console.error(chalk.red(`Error switching tag: ${error.message}`));
-				showUseTagHelp();
-				process.exit(1);
+				displayError(error);
 			}
 		})
 		.on('error', function (err) {
@@ -3893,6 +3809,20 @@ function setupCLI() {
 
 	// Register commands
 	registerCommands(programInstance);
+
+	// Commander's own parse errors (unknown command, missing argument) read
+	// like every other error. Commands added with addCommand() don't inherit
+	// output settings, so apply them to the whole tree.
+	const styleParseErrors = (command, path) => {
+		command.configureOutput({
+			outputError: (text, write) =>
+				write(`\n${formatCommanderError(text, path || undefined)}\n`)
+		});
+		for (const sub of command.commands) {
+			styleParseErrors(sub, path ? `${path} ${sub.name()}` : sub.name());
+		}
+	};
+	styleParseErrors(programInstance, '');
 
 	return programInstance;
 }

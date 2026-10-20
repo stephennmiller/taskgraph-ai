@@ -121,9 +121,11 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 				_claudeCliAvailable = true;
 			} catch (error) {
 				_claudeCliAvailable = false;
+				// Not a problem: the Agent SDK ships its own Claude Code binary, so
+				// AI calls work without a global install. Only worth a debug note.
 				log(
-					'warn',
-					'Claude Code CLI not detected. Install it with: npm install -g @anthropic-ai/claude-code'
+					'debug',
+					'No `claude` on PATH; using the Claude Code bundled with the Agent SDK'
 				);
 			} finally {
 				_claudeCliChecked = true;

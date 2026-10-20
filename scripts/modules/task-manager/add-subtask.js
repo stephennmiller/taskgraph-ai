@@ -143,7 +143,8 @@ async function addSubtask(
 
 		return newSubtask;
 	} catch (error) {
-		log('error', `Error adding subtask: ${error.message}`);
+		// The command prints the thrown error; keep this out of the terminal
+		log('debug', `Error adding subtask: ${error.message}`);
 		throw error;
 	}
 }

@@ -842,7 +842,10 @@ async function useTag(
 			nextTask
 		};
 	} catch (error) {
-		logFn.error(`Error switching tag: ${error.message}`);
+		// The CLI prints the thrown error itself; only MCP needs the log line
+		if (mcpLog) {
+			logFn.error(`Error switching tag: ${error.message}`);
+		}
 		throw error;
 	}
 }

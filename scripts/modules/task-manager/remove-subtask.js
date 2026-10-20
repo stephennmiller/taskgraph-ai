@@ -110,7 +110,8 @@ async function removeSubtask(
 
 		return convertedTask;
 	} catch (error) {
-		log('error', `Error removing subtask: ${error.message}`);
+		// The command prints the thrown error; keep this out of the terminal
+		log('debug', `Error removing subtask: ${error.message}`);
 		throw error;
 	}
 }

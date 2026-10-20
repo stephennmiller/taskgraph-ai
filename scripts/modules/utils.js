@@ -571,6 +571,26 @@ function normalizeTaskIds(tasks) {
 }
 
 /**
+ * The error for a tasks.json that doesn't parse, worded like tm-core's so the
+ * CLI shows the same message whichever code path read the file.
+ * @param {string} filepath
+ * @param {SyntaxError} cause
+ * @returns {Error & {code: string}}
+ */
+function invalidTasksFileError(filepath, cause) {
+	const relative = path.relative(process.cwd(), filepath);
+	const shown =
+		relative && !relative.startsWith('..') && !path.isAbsolute(relative)
+			? relative
+			: filepath;
+	const position = /\(line (\d+) column (\d+)\)/.exec(cause.message);
+	const where = position ? ` (line ${position[1]}, column ${position[2]})` : '';
+	const error = new Error(`${shown} isn't valid JSON${where}`, { cause });
+	error.code = 'JSON_PARSE_ERROR';
+	return error;
+}
+
+/**
  * Reads and parses a JSON file
  * @param {string} filepath - Path to the JSON file
  * @param {string} [projectRoot] - Optional project root for tag resolution (used by MCP)
@@ -607,6 +627,14 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 	} catch (err) {
 		if (isDebug) {
 			console.log(`Failed to read JSON from ${filepath}: ${err.message}`);
+		}
+		// A tasks.json that exists but won't parse holds the user's work.
+		// Reading it as "no tasks" would let the next write replace it, so stop.
+		if (
+			err instanceof SyntaxError &&
+			path.basename(filepath) === 'tasks.json'
+		) {
+			throw invalidTasksFileError(filepath, err);
 		}
 		return null;
 	}

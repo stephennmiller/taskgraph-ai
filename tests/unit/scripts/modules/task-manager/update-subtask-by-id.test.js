@@ -179,7 +179,7 @@ describe('updateSubtaskById validation', () => {
 				},
 				'json'
 			)
-		).rejects.toThrow('Parent task with ID 1 not found');
+		).rejects.toThrow('Task 1 not found');
 		// log called with error level
 		expect(log).toHaveBeenCalled();
 	});

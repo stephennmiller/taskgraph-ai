@@ -202,7 +202,7 @@ describe('updateTaskById validation', () => {
 				},
 				'json'
 			)
-		).rejects.toThrow('Task with ID 42 not found');
+		).rejects.toThrow('Task 42 not found');
 		// Note: The error is reported through the bridge logger (report),
 		// not the log function, so we don't assert on log being called
 	});

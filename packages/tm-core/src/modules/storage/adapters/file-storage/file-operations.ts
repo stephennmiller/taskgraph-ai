@@ -10,7 +10,39 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import lockfile from 'proper-lockfile';
 import { Writer } from 'steno';
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../../../common/errors/taskgraph-error.js';
 import type { FileStorageData } from './format-handler.js';
+
+/**
+ * A file that exists but doesn't parse. The user message names the file the
+ * way the user would type it and points at the line, which is what they need
+ * to fix it by hand.
+ */
+function invalidJsonError(
+	filePath: string,
+	error: SyntaxError
+): TaskGraphError {
+	const relative = path.relative(process.cwd(), filePath);
+	const shown =
+		relative && !relative.startsWith('..') && !path.isAbsolute(relative)
+			? relative
+			: filePath;
+	const position = /\(line (\d+) column (\d+)\)/.exec(error.message);
+	const where = position ? ` (line ${position[1]}, column ${position[2]})` : '';
+
+	return new TaskGraphError(
+		`Invalid JSON in file ${filePath}: ${error.message}`,
+		ERROR_CODES.JSON_PARSE_ERROR,
+		{
+			resource: filePath,
+			userMessage: `${shown} isn't valid JSON${where}`
+		},
+		error
+	);
+}
 
 /**
  * File locking configuration for cross-process safety
@@ -60,7 +92,7 @@ export class FileOperations {
 				throw error; // Re-throw ENOENT for caller to handle
 			}
 			if (error instanceof SyntaxError) {
-				throw new Error(`Invalid JSON in file ${filePath}: ${error.message}`);
+				throw invalidJsonError(filePath, error);
 			}
 			throw new Error(`Failed to read file ${filePath}: ${error.message}`);
 		}

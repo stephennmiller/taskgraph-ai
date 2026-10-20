@@ -127,9 +127,7 @@ async function updateSubtaskById(
 
 		const parentTask = data.tasks.find((task) => task.id === parentId);
 		if (!parentTask) {
-			throw new Error(
-				`Parent task with ID ${parentId} not found. Please verify the task ID and try again.`
-			);
+			throw new Error(`Task ${parentId} not found`);
 		}
 
 		if (!parentTask.subtasks || !Array.isArray(parentTask.subtasks)) {
@@ -140,9 +138,7 @@ async function updateSubtaskById(
 			(st) => st.id === subtaskIdNum
 		);
 		if (subtaskIndex === -1) {
-			throw new Error(
-				`Subtask with ID ${subtaskId} not found. Please verify the subtask ID and try again.`
-			);
+			throw new Error(`Subtask ${subtaskId} not found`);
 		}
 
 		const subtask = parentTask.subtasks[subtaskIndex];
@@ -316,7 +312,6 @@ async function updateSubtaskById(
 				loadingIndicator = null;
 			}
 		} catch (aiError) {
-			report('error', `AI service call failed: ${aiError.message}`);
 			if (outputFormat === 'text' && loadingIndicator) {
 				stopLoadingIndicator(loadingIndicator);
 				loadingIndicator = null;
@@ -425,44 +420,12 @@ async function updateSubtaskById(
 			stopLoadingIndicator(loadingIndicator);
 			loadingIndicator = null;
 		}
-		report('error', `Error updating subtask: ${error.message}`);
-		if (outputFormat === 'text') {
-			console.error(chalk.red(`Error: ${error.message}`));
-			if (error.message?.includes('overloaded')) {
-				console.log(
-					chalk.yellow(
-						'\nAI model overloaded, and fallback failed or was unavailable:'
-					)
-				);
-				console.log('  1. Try again in a few minutes.');
-				console.log(
-					'  2. Check that Claude Code is installed and signed in: claude --version'
-				);
-			} else if (error.message?.includes('not found')) {
-				console.log(chalk.yellow('\nTo fix this issue:'));
-				console.log(
-					'  1. Run taskgraph list --with-subtasks to see all available subtask IDs'
-				);
-				console.log(
-					'  2. Use a valid subtask ID with the --id parameter in format "parentId.subtaskId"'
-				);
-			} else if (
-				error.message?.includes('empty stream response') ||
-				error.message?.includes('AI did not return a valid text string')
-			) {
-				console.log(
-					chalk.yellow(
-						'\nThe AI model returned an empty or invalid response. This might be due to the prompt or API issues. Try rephrasing or trying again later.'
-					)
-				);
-			}
-			if (getDebugFlag(session)) {
-				console.error(error);
-			}
-		} else {
-			throw error;
+		// The CLI command prints the error once (and exits non-zero), so only
+		// MCP logs it here
+		if (outputFormat !== 'text') {
+			report('error', `Error updating subtask: ${error.message}`);
 		}
-		return null;
+		throw error;
 	}
 }
 
