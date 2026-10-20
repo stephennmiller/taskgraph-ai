@@ -28,6 +28,16 @@ import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
 
 /**
+ * A missing task or subtask. Coded so callers can tell it apart from storage
+ * failures; `userMessage` drops detail the ID already carries.
+ */
+function taskNotFound(message: string, userMessage = message): TaskGraphError {
+	return new TaskGraphError(message, ERROR_CODES.TASK_NOT_FOUND, {
+		userMessage
+	});
+}
+
+/**
  * File-based storage implementation using a single tasks.json file with separated concerns
  */
 export class FileStorage implements IStorage {
@@ -134,6 +144,10 @@ export class FileStorage implements IStorage {
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				return []; // File doesn't exist, return empty array
+			}
+			// Already says what went wrong (e.g. a corrupt tasks.json)
+			if (error instanceof TaskGraphError) {
+				throw error;
 			}
 			throw new Error(`Failed to load tasks: ${error.message}`);
 		}
@@ -355,7 +369,7 @@ export class FileStorage implements IStorage {
 		const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
 
 		if (taskIndex === -1) {
-			throw new Error(`Task ${taskId} not found`);
+			throw taskNotFound(`Task ${taskId} not found`);
 		}
 
 		const existingTask = tasks[taskIndex];
@@ -413,7 +427,7 @@ export class FileStorage implements IStorage {
 		const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
 
 		if (taskIndex === -1) {
-			throw new Error(`Task ${taskId} not found`);
+			throw taskNotFound(`Task ${taskId} not found`);
 		}
 
 		const oldStatus = tasks[taskIndex].status;
@@ -474,7 +488,10 @@ export class FileStorage implements IStorage {
 		);
 
 		if (parentTaskIndex === -1) {
-			throw new Error(`Parent task ${parentId} not found`);
+			throw taskNotFound(
+				`Parent task ${parentId} not found`,
+				`Task ${parentId} not found`
+			);
 		}
 
 		const parentTask = tasks[parentTaskIndex];
@@ -485,8 +502,9 @@ export class FileStorage implements IStorage {
 		);
 
 		if (subtaskIndex === -1) {
-			throw new Error(
-				`Subtask ${subtaskId} not found in parent task ${parentId}`
+			throw taskNotFound(
+				`Subtask ${subtaskId} not found in parent task ${parentId}`,
+				`Subtask ${subtaskId} not found`
 			);
 		}
 
@@ -555,7 +573,7 @@ export class FileStorage implements IStorage {
 		const filteredTasks = tasks.filter((t) => String(t.id) !== String(taskId));
 
 		if (filteredTasks.length === tasks.length) {
-			throw new Error(`Task ${taskId} not found`);
+			throw taskNotFound(`Task ${taskId} not found`);
 		}
 
 		await this.saveTasks(filteredTasks, tag);

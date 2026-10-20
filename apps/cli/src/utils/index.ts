@@ -7,7 +7,15 @@
  */
 
 // Error handling utilities
-export { displayError, isDebugMode } from './error-handler.js';
+export {
+	describeError,
+	displayError,
+	formatCommanderError,
+	formatErrorMessage,
+	isDebugMode,
+	printError,
+	type ErrorMessage
+} from './error-handler.js';
 
 // Auto-update utilities
 export {

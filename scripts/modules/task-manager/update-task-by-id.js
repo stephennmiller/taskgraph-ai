@@ -25,7 +25,7 @@ import {
 	generateTextService
 } from '../ai-services-unified.js';
 import { createBridgeLogger } from '../bridge-utils.js';
-import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
+import { hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
@@ -108,8 +108,7 @@ async function updateTaskById(
 		const numericTaskId = Number(idStr);
 		const taskIndex = data.tasks.findIndex((task) => task.id === numericTaskId);
 		if (taskIndex === -1) {
-			report('error', `Task with ID ${numericTaskId} not found`);
-			throw new Error(`Task with ID ${numericTaskId} not found.`);
+			throw new Error(`Task ${numericTaskId} not found`);
 		}
 		const taskToUpdate = data.tasks[taskIndex];
 		if (taskToUpdate.status === 'done' || taskToUpdate.status === 'completed') {
@@ -581,23 +580,16 @@ async function updateTaskById(
 		} catch (error) {
 			// Catch errors from generateTextService
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
-			report('error', `Error during AI service call: ${error.message}`);
-			if (error.message.includes('API key')) {
-				report('error', 'Please ensure API keys are configured correctly.');
-			}
-			throw error; // Re-throw error
+			throw error; // The outer catch reports it
 		}
 	} catch (error) {
 		// General error catch
 		// --- General Error Handling (Keep existing) ---
-		report('error', `Error updating task: ${error.message}`);
-		if (outputFormat === 'text') {
-			console.error(chalk.red(`Error: ${error.message}`));
-			// ... helpful hints ...
-			if (getDebugFlag(session)) console.error(error);
-			process.exit(1);
+		// The CLI command prints the error once, so only MCP logs it here
+		if (outputFormat !== 'text') {
+			report('error', `Error updating task: ${error.message}`);
 		}
-		throw error; // Re-throw for MCP
+		throw error;
 		// --- End General Error Handling ---
 	}
 }

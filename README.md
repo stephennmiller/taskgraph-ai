@@ -71,7 +71,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 ## Set up in Claude Code
 
-You need [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (run `claude` once) and Node.js 22 or later.
+You need [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (run `claude` once) and Node.js 22.13 or later.
 
 ### 1. Install
 

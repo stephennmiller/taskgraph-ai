@@ -23,8 +23,9 @@ const originalCwd = process.cwd();
 // We don't change the working directory to avoid breaking relative path logic
 const projectRoot = findProjectRoot();
 
-// Load .env from project root without changing cwd
-dotenv.config({ path: join(projectRoot, '.env') });
+// Load .env from project root without changing cwd. quiet: dotenv 17+ logs
+// "injected env (N) from .env" otherwise, which led every command's output.
+dotenv.config({ path: join(projectRoot, '.env'), quiet: true });
 
 // Make original cwd available to commands that need it
 process.env.TASKGRAPH_ORIGINAL_CWD = originalCwd;

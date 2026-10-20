@@ -9,7 +9,7 @@ TaskGraph is an AI-driven task management system designed for development workfl
 ## Prerequisites
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and signed in (the user has run `claude` once)
-- Node.js 22 or later
+- Node.js 22.13 or later
 
 TaskGraph needs no AI provider API keys. Every AI call runs through the user's signed-in Claude Code. The only optional key is `CLAUDE_CODE_API_KEY`, for billing calls to a specific Anthropic API key.
 
@@ -118,7 +118,7 @@ With the MCP server, the user can say the same things in plain language, such as
 **If the MCP server doesn't start:**
 
 - Verify the JSON configuration is valid
-- Check that Node.js 22 or later is installed
+- Check that Node.js 22.13 or later is installed
 - Confirm `npx -y taskgraph-ai` starts on its own in a terminal (it waits for input; press Ctrl+C to stop)
 
 **If AI commands fail:**
