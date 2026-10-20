@@ -8,7 +8,8 @@
  * to users.
  *
  * Lives in the legacy root suite because it needs both the legacy Commander
- * program (scripts/) and the MCP tool registry (mcp-server/).
+ * program (scripts/) and the MCP tool registry (mcp-server/). Slash commands
+ * are checked against the plugin's command files.
  */
 
 import fs from 'node:fs';
@@ -20,7 +21,6 @@ import {
 	standardTools,
 	toolRegistry
 } from '../../mcp-server/src/tools/tool-registry.js';
-import { allCommands } from '../../packages/tm-profiles/src/slash-commands/commands/index.js';
 import { setupCLI } from '../../scripts/modules/commands.js';
 
 const rootDir = path.resolve(
@@ -29,6 +29,14 @@ const rootDir = path.resolve(
 );
 
 const DOCS = ['.taskgraph/CLAUDE.md', 'assets/AGENTS.md'];
+
+// The plugin is the only slash-command channel: one markdown file per command
+const pluginCommands = new Set(
+	fs
+		.readdirSync(path.join(rootDir, 'packages/claude-code-plugin/commands'))
+		.filter((file) => file.endsWith('.md'))
+		.map((file) => file.slice(0, -3))
+);
 
 /** Text inside fenced blocks and inline backticks, one entry per span/line. */
 function codeSpans(markdown: string): string[] {
@@ -94,7 +102,7 @@ describe.each(DOCS)('%s', (docPath) => {
 
 	const slashCommands = unique(
 		spans.flatMap((s) =>
-			[...s.matchAll(/\/(?:tm|taskgraph):([a-z][a-z-]*)/g)].map((m) => m[1])
+			[...s.matchAll(/\/taskgraph:([a-z][a-z-]*)/g)].map((m) => m[1])
 		)
 	);
 
@@ -116,9 +124,8 @@ describe.each(DOCS)('%s', (docPath) => {
 		expect(missing).toEqual([]);
 	});
 
-	it('only names slash commands the claude profile ships', () => {
-		const shipped = new Set(allCommands.map((c) => c.metadata.name));
-		expect(slashCommands.filter((c) => !shipped.has(c))).toEqual([]);
+	it('only names slash commands the plugin ships', () => {
+		expect(slashCommands.filter((c) => !pluginCommands.has(c))).toEqual([]);
 	});
 
 	it('states tool tier counts that match the registry', () => {
