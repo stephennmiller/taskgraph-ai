@@ -1,6 +1,5 @@
 import fs from 'fs';
-import readline from 'readline';
-import boxen from 'boxen';
+import path from 'path';
 import chalk from 'chalk';
 
 import { isSilentMode, log, readJSON } from '../utils.js';
@@ -14,7 +13,7 @@ import {
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 
-import { theme } from '@tm/cli/theme';
+import { printError, ui } from '@tm/cli';
 import { TASKGRAPH_TASKS_FILE } from '../../../src/constants/paths.js';
 import { resolveComplexityReportOutputPath } from '../../../src/utils/path-utils.js';
 import {
@@ -26,6 +25,12 @@ import { getPromptManager } from '../prompt-manager.js';
 import { flattenTasksWithSubtasks } from '../utils.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
+
+/** The report path relative to the project, as the user would type it */
+function displayPath(filePath, projectRoot) {
+	const relative = path.relative(projectRoot || process.cwd(), filePath);
+	return relative && !relative.startsWith('..') ? relative : filePath;
+}
 
 /**
  * Analyzes task complexity and generates expansion recommendations
@@ -65,11 +70,13 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 	const outputFormat = mcpLog ? 'json' : 'text';
 
+	// Progress details go to MCP, or to the debug log on the CLI: the CLI
+	// shows one summary at the end instead
 	const reportLog = (message, level = 'info') => {
 		if (mcpLog) {
 			mcpLog[level](message);
 		} else if (!isSilentMode() && outputFormat === 'text') {
-			log(level, message);
+			log(level === 'warn' || level === 'error' ? level : 'debug', message);
 		}
 	};
 
@@ -79,14 +86,6 @@ async function analyzeTaskComplexity(options, context = {}) {
 		{ projectRoot, tag },
 		reportLog
 	);
-
-	if (outputFormat === 'text') {
-		console.log(
-			theme.brand(
-				'Analyzing task complexity and generating expansion recommendations...'
-			)
-		);
-	}
 
 	try {
 		reportLog(`Reading tasks from ${tasksPath}...`, 'info');
@@ -235,15 +234,9 @@ async function analyzeTaskComplexity(options, context = {}) {
 				: `Analyzing ${tasksData.tasks.length} tasks in range: ${fromId || 1} to ${toId || 'end'}`;
 
 			reportLog(filterMsg, 'info');
-			if (outputFormat === 'text') {
-				console.log(theme.brand(filterMsg));
-			}
 		} else if (skippedCount > 0) {
 			const skipMessage = `Skipping ${skippedCount} tasks marked as done/cancelled/deferred. Analyzing ${tasksData.tasks.length} active tasks.`;
 			reportLog(skipMessage, 'info');
-			if (outputFormat === 'text') {
-				console.log(chalk.yellow(skipMessage));
-			}
 		}
 
 		// Check for existing report before doing analysis
@@ -321,44 +314,12 @@ async function analyzeTaskComplexity(options, context = {}) {
 			);
 			if (outputFormat === 'text') {
 				console.log(
-					chalk.green(
-						`Task complexity analysis complete. Report written to ${outputPath}`
-					)
-				);
-				const highComplexity = 0;
-				const mediumComplexity = 0;
-				const lowComplexity = 0;
-				const totalAnalyzed = 0;
-
-				console.log('\nComplexity Analysis Summary:');
-				console.log('----------------------------');
-				console.log(`Tasks in input file: ${originalTaskCount}`);
-				console.log(`Tasks successfully analyzed: ${totalAnalyzed}`);
-				console.log(`High complexity tasks: ${highComplexity}`);
-				console.log(`Medium complexity tasks: ${mediumComplexity}`);
-				console.log(`Low complexity tasks: ${lowComplexity}`);
-				console.log(
-					`Sum verification: ${highComplexity + mediumComplexity + lowComplexity} (should equal ${totalAnalyzed})`
-				);
-				console.log(`Research-backed analysis: ${useResearch ? 'Yes' : 'No'}`);
-				console.log(
-					`\nSee ${outputPath} for the full report and expansion commands.`
-				);
-
-				console.log(
-					boxen(
-						theme.text.bold('Suggested Next Steps:') +
-							'\n\n' +
-							`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph complexity-report')} to review detailed findings\n` +
-							`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down complex tasks\n` +
-							`${chalk.cyan('3.')} Run ${chalk.yellow('taskgraph expand --all')} to expand all pending tasks based on complexity`,
-						{
-							padding: 1,
-							borderColor: 'cyan',
-							borderStyle: 'round',
-							margin: { top: 1 }
-						}
-					)
+					ui.formatComplexityRun({
+						analyses: [],
+						skipped: skippedCount,
+						kept: 0,
+						reportPath: displayPath(outputPath, projectRoot)
+					})
 				);
 			}
 			return {
@@ -393,8 +354,9 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 		let loadingIndicator = null;
 		if (outputFormat === 'text') {
+			const count = tasksData.tasks.length;
 			loadingIndicator = startLoadingIndicator(
-				`${useResearch ? 'Researching' : 'Analyzing'} the complexity of your tasks with AI...\n`
+				`Analyzing ${count} ${count === 1 ? 'task' : 'tasks'}${useResearch ? ' with web research' : ''}…`
 			);
 		}
 
@@ -420,12 +382,6 @@ async function analyzeTaskComplexity(options, context = {}) {
 				stopLoadingIndicator(loadingIndicator);
 				loadingIndicator = null;
 			}
-			if (outputFormat === 'text') {
-				readline.clearLine(process.stdout, 0);
-				readline.cursorTo(process.stdout, 0);
-				console.log(chalk.green('AI service call complete.'));
-			}
-
 			// With generateObject, we get structured data directly
 			complexityAnalysis = aiServiceResponse.mainResult?.complexityAnalysis;
 			reportLog(
@@ -444,13 +400,6 @@ async function analyzeTaskComplexity(options, context = {}) {
 					`Missing analysis for ${missingTaskIds.length} tasks: ${missingTaskIds.join(', ')}`,
 					'warn'
 				);
-				if (outputFormat === 'text') {
-					console.log(
-						chalk.yellow(
-							`Missing analysis for ${missingTaskIds.length} tasks: ${missingTaskIds.join(', ')}`
-						)
-					);
-				}
 				for (const missingId of missingTaskIds) {
 					const missingTask = tasksData.tasks.find((t) => t.id === missingId);
 					if (missingTask) {
@@ -524,65 +473,18 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 			if (outputFormat === 'text') {
 				console.log(
-					chalk.green(
-						`Task complexity analysis complete. Report written to ${outputPath}`
-					)
-				);
-				// Calculate statistics specifically for this analysis run
-				const highComplexity = complexityAnalysis.filter(
-					(t) => t.complexityScore >= 8
-				).length;
-				const mediumComplexity = complexityAnalysis.filter(
-					(t) => t.complexityScore >= 5 && t.complexityScore < 8
-				).length;
-				const lowComplexity = complexityAnalysis.filter(
-					(t) => t.complexityScore < 5
-				).length;
-				const totalAnalyzed = complexityAnalysis.length;
-
-				console.log('\nCurrent Analysis Summary:');
-				console.log('----------------------------');
-				console.log(`Tasks analyzed in this run: ${totalAnalyzed}`);
-				console.log(`High complexity tasks: ${highComplexity}`);
-				console.log(`Medium complexity tasks: ${mediumComplexity}`);
-				console.log(`Low complexity tasks: ${lowComplexity}`);
-
-				if (existingReport) {
-					console.log('\nUpdated Report Summary:');
-					console.log('----------------------------');
-					console.log(
-						`Total analyses in report: ${finalComplexityAnalysis.length}`
-					);
-					console.log(
-						`Analyses from previous runs: ${finalComplexityAnalysis.length - totalAnalyzed}`
-					);
-					console.log(`New/updated analyses: ${totalAnalyzed}`);
-				}
-
-				console.log(`Research-backed analysis: ${useResearch ? 'Yes' : 'No'}`);
-				console.log(
-					`\nSee ${outputPath} for the full report and expansion commands.`
-				);
-
-				console.log(
-					boxen(
-						theme.text.bold('Suggested Next Steps:') +
-							'\n\n' +
-							`${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph complexity-report')} to review detailed findings\n` +
-							`${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph expand --id=<id>')} to break down complex tasks\n` +
-							`${chalk.cyan('3.')} Run ${chalk.yellow('taskgraph expand --all')} to expand all pending tasks based on complexity`,
-						{
-							padding: 1,
-							borderColor: 'cyan',
-							borderStyle: 'round',
-							margin: { top: 1 }
-						}
-					)
+					ui.formatComplexityRun({
+						analyses: complexityAnalysis,
+						skipped: skippedCount,
+						kept: finalComplexityAnalysis.length - complexityAnalysis.length,
+						reportPath: displayPath(outputPath, projectRoot),
+						usedResearch: useResearch
+					})
 				);
 
 				if (getDebugFlag(session)) {
 					console.debug(
-						theme.muted(
+						chalk.dim(
 							`Final analysis object: ${JSON.stringify(report, null, 2)}`
 						)
 					);
@@ -600,30 +502,17 @@ async function analyzeTaskComplexity(options, context = {}) {
 			};
 		} catch (aiError) {
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
-			reportLog(`Error during AI service call: ${aiError.message}`, 'error');
-			if (outputFormat === 'text') {
-				console.error(
-					chalk.red(`Error during AI service call: ${aiError.message}`)
-				);
-				if (aiError.message.includes('API key')) {
-					console.log(
-						chalk.yellow(
-							'\nPlease ensure your API keys are correctly configured in .env or ~/.taskgraph/.env'
-						)
-					);
-					console.log(
-						chalk.yellow("Run 'taskgraph models --setup' if needed.")
-					);
-				}
+			if (mcpLog) {
+				reportLog(`Error during AI service call: ${aiError.message}`, 'error');
 			}
 			throw aiError;
 		}
 	} catch (error) {
-		reportLog(`Error analyzing task complexity: ${error.message}`, 'error');
+		if (mcpLog) {
+			reportLog(`Error analyzing task complexity: ${error.message}`, 'error');
+		}
 		if (outputFormat === 'text') {
-			console.error(
-				chalk.red(`Error analyzing task complexity: ${error.message}`)
-			);
+			printError(`Couldn't analyze task complexity: ${error.message}`);
 			if (getDebugFlag(session)) {
 				console.error(error);
 			}

@@ -6,7 +6,7 @@
 import fs from 'fs';
 import readline from 'readline';
 // Import brand banner from @tm/cli
-import { ui } from '@tm/cli';
+import { printError, ui } from '@tm/cli';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
@@ -1759,250 +1759,34 @@ async function displayTaskById(
 }
 
 /**
- * Display the complexity analysis report in a nice format
+ * Show the complexity report: each task with its score, recommended
+ * subtasks and the reasoning, highest score first.
+ *
+ * Without a report it says how to make one and exits 1. It used to ask
+ * whether to run the analysis, which hung any script or agent that ran it.
  * @param {string} reportPath - Path to the complexity report file
  */
 async function displayComplexityReport(reportPath) {
-	// Check if the report exists
 	if (!fs.existsSync(reportPath)) {
-		console.log(
-			boxen(
-				chalk.yellow(`No complexity report found at ${reportPath}\n\n`) +
-					'Would you like to generate one now?',
-				{
-					padding: 1,
-					borderColor: 'yellow',
-					borderStyle: 'round',
-					margin: { top: 1 }
-				}
-			)
+		printError(
+			'No complexity report for this tag yet',
+			'Run `taskgraph analyze-complexity` to create one'
 		);
-
-		const rl = readline.createInterface({
-			input: process.stdin,
-			output: process.stdout
-		});
-
-		const answer = await new Promise((resolve) => {
-			rl.question(chalk.cyan('Generate complexity report? (y/n): '), resolve);
-		});
-		rl.close();
-
-		if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-			// Call the analyze-complexity command
-			console.log(chalk.cyan('Generating complexity report...'));
-			const tasksPath = TASKGRAPH_TASKS_FILE;
-			if (!fs.existsSync(tasksPath)) {
-				console.error(
-					'✗ No tasks.json file found. Please run "taskgraph init" or create a tasks.json file.'
-				);
-				return null;
-			}
-
-			await analyzeTaskComplexity({
-				output: reportPath,
-				research: false, // Default to no research for speed
-				file: tasksPath
-			});
-			// Read the newly generated report
-			return displayComplexityReport(reportPath);
-		} else {
-			console.log(chalk.yellow('Report generation cancelled.'));
-			return;
-		}
+		process.exit(1);
 	}
 
-	// Read the report
 	let report;
 	try {
 		report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 	} catch (error) {
-		log('error', `Error reading complexity report: ${error.message}`);
-		return;
-	}
-
-	// Display report header
-	console.log(
-		boxen(chalk.bold('Task Complexity Analysis Report'), {
-			padding: 1,
-			borderColor: BORDER_COLOR,
-			borderStyle: 'round',
-			margin: { top: 1, bottom: 1 }
-		})
-	);
-
-	// Display metadata
-	const metaTable = new Table({
-		style: {
-			head: [],
-			border: [],
-			'padding-top': 0,
-			'padding-bottom': 0,
-			compact: true
-		},
-		chars: {
-			mid: '',
-			'left-mid': '',
-			'mid-mid': '',
-			'right-mid': ''
-		},
-		colWidths: [20, 50]
-	});
-
-	metaTable.push(
-		[
-			chalk.cyan.bold('Generated:'),
-			new Date(report.meta.generatedAt).toLocaleString()
-		],
-		[chalk.cyan.bold('Tasks Analyzed:'), report.meta.tasksAnalyzed],
-		[chalk.cyan.bold('Threshold Score:'), report.meta.thresholdScore],
-		[chalk.cyan.bold('Project:'), report.meta.projectName],
-		[
-			chalk.cyan.bold('Research-backed:'),
-			report.meta.usedResearch ? 'Yes' : 'No'
-		]
-	);
-
-	console.log(metaTable.toString());
-
-	// Sort tasks by complexity score (highest first)
-	const sortedTasks = [...report.complexityAnalysis].sort(
-		(a, b) => b.complexityScore - a.complexityScore
-	);
-
-	// Determine which tasks need expansion based on threshold
-	const tasksNeedingExpansion = sortedTasks.filter(
-		(task) => task.complexityScore >= report.meta.thresholdScore
-	);
-	const simpleTasks = sortedTasks.filter(
-		(task) => task.complexityScore < report.meta.thresholdScore
-	);
-
-	// Create progress bar to show complexity distribution
-	const complexityDistribution = [0, 0, 0]; // Low (0-4), Medium (5-7), High (8-10)
-	sortedTasks.forEach((task) => {
-		if (task.complexityScore < 5) complexityDistribution[0]++;
-		else if (task.complexityScore < 8) complexityDistribution[1]++;
-		else complexityDistribution[2]++;
-	});
-
-	const percentLow = Math.round(
-		(complexityDistribution[0] / sortedTasks.length) * 100
-	);
-	const percentMedium = Math.round(
-		(complexityDistribution[1] / sortedTasks.length) * 100
-	);
-	const percentHigh = Math.round(
-		(complexityDistribution[2] / sortedTasks.length) * 100
-	);
-
-	console.log(
-		boxen(
-			chalk.bold('Complexity Distribution\n\n') +
-				`${chalk.green.bold('Low (1-4):')} ${complexityDistribution[0]} tasks (${percentLow}%)\n` +
-				`${chalk.yellow.bold('Medium (5-7):')} ${complexityDistribution[1]} tasks (${percentMedium}%)\n` +
-				`${chalk.red.bold('High (8-10):')} ${complexityDistribution[2]} tasks (${percentHigh}%)`,
-			{
-				padding: 1,
-				borderColor: 'cyan',
-				borderStyle: 'round',
-				margin: { top: 1, bottom: 1 }
-			}
-		)
-	);
-
-	// Get terminal width
-	const terminalWidth = process.stdout.columns || 100; // Default to 100 if can't detect
-
-	// Calculate dynamic column widths
-	const idWidth = 12;
-	const titleWidth = Math.floor(terminalWidth * 0.25); // 25% of width
-	const scoreWidth = 8;
-	const subtasksWidth = 8;
-	// Command column gets the remaining space (minus some buffer for borders)
-	const commandWidth =
-		terminalWidth - idWidth - titleWidth - scoreWidth - subtasksWidth - 10;
-
-	// Create table with new column widths and word wrapping
-	const complexTable = new Table({
-		head: [
-			chalk.yellow.bold('ID'),
-			chalk.yellow.bold('Title'),
-			chalk.yellow.bold('Score'),
-			chalk.yellow.bold('Subtasks'),
-			chalk.yellow.bold('Expansion Command')
-		],
-		colWidths: [idWidth, titleWidth, scoreWidth, subtasksWidth, commandWidth],
-		style: { head: [], border: [] },
-		wordWrap: true,
-		wrapOnWordBoundary: true
-	});
-
-	// When adding rows, don't truncate the expansion command
-	tasksNeedingExpansion.forEach((task) => {
-		const expansionCommand = `taskgraph expand --id=${task.taskId} --num=${task.recommendedSubtasks}${task.expansionPrompt ? ` --prompt="${task.expansionPrompt}"` : ''}`;
-
-		complexTable.push([
-			task.taskId,
-			truncate(task.taskTitle, titleWidth - 3), // Still truncate title for readability
-			getComplexityWithColor(task.complexityScore),
-			task.recommendedSubtasks,
-			chalk.cyan(expansionCommand) // Don't truncate - allow wrapping
-		]);
-	});
-
-	console.log(complexTable.toString());
-
-	// Create table for simple tasks
-	if (simpleTasks.length > 0) {
-		console.log(
-			boxen(chalk.green.bold(`Simple Tasks (${simpleTasks.length})`), {
-				padding: { left: 2, right: 2, top: 0, bottom: 0 },
-				margin: { top: 1, bottom: 0 },
-				borderColor: 'green',
-				borderStyle: 'round'
-			})
+		printError(
+			`Couldn't read the complexity report: ${error.message}`,
+			'Run `taskgraph analyze-complexity` to create it again'
 		);
-
-		const simpleTable = new Table({
-			head: [
-				chalk.green.bold('ID'),
-				chalk.green.bold('Title'),
-				chalk.green.bold('Score'),
-				chalk.green.bold('Reasoning')
-			],
-			colWidths: [5, 40, 8, 50],
-			style: { head: [], border: [] }
-		});
-
-		simpleTasks.forEach((task) => {
-			simpleTable.push([
-				task.taskId,
-				truncate(task.taskTitle, 37),
-				getComplexityWithColor(task.complexityScore),
-				truncate(task.reasoning, 47)
-			]);
-		});
-
-		console.log(simpleTable.toString());
+		process.exit(1);
 	}
 
-	// Show action suggestions
-	console.log(
-		boxen(
-			chalk.bold('Suggested Actions:') +
-				'\n\n' +
-				`${chalk.cyan('1.')} Expand all complex tasks: ${chalk.yellow(`taskgraph expand --all`)}\n` +
-				`${chalk.cyan('2.')} Expand a specific task: ${chalk.yellow(`taskgraph expand --id=<id>`)}\n` +
-				`${chalk.cyan('3.')} Regenerate with research: ${chalk.yellow(`taskgraph analyze-complexity --research`)}`,
-			{
-				padding: 1,
-				borderColor: 'cyan',
-				borderStyle: 'round',
-				margin: { top: 1 }
-			}
-		)
-	);
+	console.log(ui.formatComplexityReport(report));
 }
 
 /**
