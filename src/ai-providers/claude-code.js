@@ -12,6 +12,7 @@
  */
 
 import { execSync } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 import { createClaudeCode } from 'ai-sdk-provider-claude-code';
 import {
@@ -43,6 +44,71 @@ let _claudeCliAvailable = null;
 const RESEARCH_TOOLS = ['WebSearch', 'WebFetch'];
 const REPO_READ_TOOLS = ['Read', 'Grep', 'Glob'];
 const DEFAULT_RESEARCH_MAX_TURNS = 8;
+const CLAUDE_EXECUTABLE_NAME = /^claude(\.exe|\.cmd)?$/i;
+
+function isWithin(root, candidate) {
+	const relative = path.relative(root, candidate);
+	return (
+		relative === '' ||
+		(relative !== '..' &&
+			!relative.startsWith(`..${path.sep}`) &&
+			!path.isAbsolute(relative))
+	);
+}
+
+/**
+ * Whether `pathToClaudeCodeExecutable` from config may be run. It comes from
+ * the project's own .taskgraph/config.json, so a repo you didn't write could
+ * otherwise name any program. Allowed: an absolute path to a file named
+ * `claude` (`claude.exe`, `claude.cmd`) that is outside the project, both as
+ * written and after resolving symlinks.
+ * @param {string} candidate - Configured executable path
+ * @param {string|null} projectRoot - Project root, when known
+ * @returns {boolean}
+ */
+export function isTrustedClaudeExecutable(candidate, projectRoot) {
+	if (typeof candidate !== 'string' || !path.isAbsolute(candidate)) {
+		return false;
+	}
+	if (!CLAUDE_EXECUTABLE_NAME.test(path.basename(candidate))) return false;
+	let real;
+	try {
+		real = fs.realpathSync(candidate);
+	} catch {
+		return false;
+	}
+	if (!projectRoot) return true;
+	const root = path.resolve(projectRoot);
+	let realRoot = root;
+	try {
+		realRoot = fs.realpathSync(root);
+	} catch {
+		// Use the root as given
+	}
+	return !isWithin(root, path.resolve(candidate)) && !isWithin(realRoot, real);
+}
+
+/**
+ * Drop an untrusted `pathToClaudeCodeExecutable` from config settings.
+ * @param {object} settings - Settings from config
+ * @param {string|null} projectRoot
+ * @returns {object} Settings safe to pass to the SDK
+ */
+function withTrustedExecutable(settings, projectRoot) {
+	const executable = settings.pathToClaudeCodeExecutable;
+	if (
+		executable === undefined ||
+		isTrustedClaudeExecutable(executable, projectRoot)
+	) {
+		return settings;
+	}
+	log(
+		'warn',
+		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude outside the project`
+	);
+	const { pathToClaudeCodeExecutable, ...rest } = settings;
+	return rest;
+}
 
 /**
  * Settings that confine a Claude Code session to the tools its role needs.
@@ -169,12 +235,14 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 	 */
 	getClient(params = {}) {
 		try {
-			const settings =
-				getClaudeCodeSettingsForCommand(params.commandName) || {};
-
 			const projectRoot = params.projectRoot
 				? path.resolve(params.projectRoot)
 				: null;
+
+			const settings = withTrustedExecutable(
+				getClaudeCodeSettingsForCommand(params.commandName) || {},
+				projectRoot
+			);
 
 			// The SDK reads the environment when a query runs, so the key choice has
 			// to travel with the client rather than be swapped around this call.
