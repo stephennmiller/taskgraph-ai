@@ -7,14 +7,8 @@ import { enableDeferredMcpLoading } from '@tm/profiles';
 
 // Lifecycle functions for Claude Code profile
 function onAddRulesProfile(targetDir, assetsDir) {
-	// Note: Commands and agents are now distributed via Claude Code plugin
-	// Legacy .claude directory copying has been deprecated
-	log(
-		'info',
-		'[Claude] Commands and agents are now available via the TaskGraph plugin'
-	);
-	log('info', '[Claude] Install with: /plugin marketplace add taskgraph');
-	log('info', '[Claude] Then: /plugin install taskgraph@taskgraph');
+	// Nothing is copied into .claude any more: commands and agents ship as a
+	// Claude Code plugin, and init's summary says how to install it
 
 	// Handle CLAUDE.md import for non-destructive integration
 	const sourceFile = path.join(assetsDir, 'AGENTS.md');
@@ -47,12 +41,12 @@ function onAddRulesProfile(targetDir, assetsDir) {
 					const updatedContent = content.trim() + '\n' + importSection + '\n';
 					fs.writeFileSync(userClaudeFile, updatedContent);
 					log(
-						'info',
+						'debug',
 						`[Claude] Added TaskGraph import to existing ${userClaudeFile}`
 					);
 				} else {
 					log(
-						'info',
+						'debug',
 						`[Claude] TaskGraph import already present in ${userClaudeFile}`
 					);
 				}
@@ -60,7 +54,10 @@ function onAddRulesProfile(targetDir, assetsDir) {
 				// Create minimal CLAUDE.md with the import section
 				const minimalContent = `# Claude Code Instructions\n${importSection}\n`;
 				fs.writeFileSync(userClaudeFile, minimalContent);
-				log('info', `[Claude] Created ${userClaudeFile} with TaskGraph import`);
+				log(
+					'debug',
+					`[Claude] Created ${userClaudeFile} with TaskGraph import`
+				);
 			}
 		} catch (err) {
 			log(
@@ -77,10 +74,9 @@ function onAddRulesProfile(targetDir, assetsDir) {
 			log('debug', '[Claude] Deferred MCP loading already configured');
 		} else {
 			log(
-				'info',
+				'debug',
 				`[Claude] Enabled deferred MCP loading in ${deferredResult.shellConfigFile}`
 			);
-			log('info', '[Claude] Restart your terminal for changes to take effect');
 		}
 	} else {
 		log(

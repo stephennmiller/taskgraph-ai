@@ -40,7 +40,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 	const mcpPath = path.join(projectRoot, mcpConfigPath);
 	const configDir = path.dirname(mcpPath);
 
-	log('info', `Setting up MCP configuration at ${mcpPath}...`);
+	log('debug', `Setting up MCP configuration at ${mcpPath}...`);
 
 	// New MCP config to be added - references the installed package
 	// TASKGRAPH_TOOLS: "core" loads essential daily workflow tools (7 tools, default)
@@ -63,7 +63,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 
 	if (fs.existsSync(mcpPath)) {
 		log(
-			'info',
+			'debug',
 			'MCP configuration file already exists, checking for existing taskgraph-ai...'
 		);
 		try {
@@ -76,7 +76,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 			// Leave the config alone if any server already launches this package
 			if (Object.values(mcpConfig.mcpServers).some(launchesTaskGraphPackage)) {
 				log(
-					'info',
+					'debug',
 					'Found existing taskgraph-ai MCP configuration in mcp.json, leaving untouched'
 				);
 				return; // Exit early, don't modify the existing configuration
@@ -84,20 +84,20 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 			// Add the taskgraph-ai server if it doesn't exist
 			if (!mcpConfig.mcpServers[MCP_SERVER_KEY]) {
 				mcpConfig.mcpServers[MCP_SERVER_KEY] = newMCPServer[MCP_SERVER_KEY];
-				log('info', 'Added taskgraph-ai server to existing MCP configuration');
+				log('debug', 'Added taskgraph-ai server to existing MCP configuration');
 			} else {
-				log('info', 'taskgraph-ai server already configured in mcp.json');
+				log('debug', 'taskgraph-ai server already configured in mcp.json');
 			}
 			// Write the updated configuration
 			fs.writeFileSync(mcpPath, formatJSONWithTabs(mcpConfig) + '\n');
-			log('success', 'Updated MCP configuration file');
+			log('debug', 'Updated MCP configuration file');
 		} catch (error) {
 			log('error', `Failed to update MCP configuration: ${error.message}`);
 			// Create a backup before potentially modifying
 			const backupPath = `${mcpPath}.backup-${Date.now()}`;
 			if (fs.existsSync(mcpPath)) {
 				fs.copyFileSync(mcpPath, backupPath);
-				log('info', `Created backup of existing mcp.json at ${backupPath}`);
+				log('warn', `Saved the old file as ${backupPath}`);
 			}
 			// Create new configuration
 			const newMCPConfig = {
@@ -115,11 +115,10 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 			mcpServers: newMCPServer
 		};
 		fs.writeFileSync(mcpPath, formatJSONWithTabs(newMCPConfig) + '\n');
-		log('success', `Created MCP configuration file at ${mcpPath}`);
+		log('debug', `Created MCP configuration file at ${mcpPath}`);
 	}
 
-	// Add note to console about MCP integration
-	log('info', 'MCP server will use the installed taskgraph-ai package');
+	log('debug', 'MCP server will use the installed taskgraph-ai package');
 }
 
 // Export the formatting function for use by other modules

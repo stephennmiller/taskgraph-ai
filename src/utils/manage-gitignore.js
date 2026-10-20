@@ -125,6 +125,24 @@ function buildTaskFilesSection(storeTasksInGit) {
 }
 
 /**
+ * Add the task files section to a template that has none, laid out the way
+ * a merge writes it. The shipped template has no task lines, so without this
+ * `--no-git-tasks` left tasks unignored in a new .gitignore, and the next
+ * init rewrote the file to add the section.
+ * @param {string[]} templateLines - Adjusted template lines
+ * @param {boolean} storeTasksInGit - Whether to comment out task lines
+ * @returns {string[]} Lines with exactly one task files section
+ */
+function withTaskFilesSection(templateLines, storeTasksInGit) {
+	if (templateLines.some(isTaskLine)) return templateLines;
+	const lines = [...templateLines];
+	while (lines.length > 0 && !lines[lines.length - 1].trim()) lines.pop();
+	addSeparatorIfNeeded(lines);
+	lines.push(...buildTaskFilesSection(storeTasksInGit));
+	return lines;
+}
+
+/**
  * Adds a separator line if needed (avoids double spacing)
  * @param {string[]} lines - Current lines array
  */
@@ -245,6 +263,26 @@ function mergeWithExistingFile(
 }
 
 /**
+ * Read the task storage choice an earlier init wrote to .gitignore, so
+ * re-running `init --yes` keeps it instead of resetting it to the default.
+ * @param {string} targetPath - Path to the .gitignore file
+ * @returns {boolean|undefined} true when tasks are committed, false when
+ *   they're ignored, undefined when the file has no task lines
+ */
+function readStoreTasksInGit(targetPath) {
+	try {
+		if (!fs.existsSync(targetPath)) return undefined;
+		const taskLine = fs
+			.readFileSync(targetPath, 'utf8')
+			.split('\n')
+			.find((line) => normalizeLine(line) === TASK_JSON_PATTERN);
+		return taskLine === undefined ? undefined : taskLine.trim().startsWith('#');
+	} catch {
+		return undefined;
+	}
+}
+
+/**
  * Manages .gitignore file creation and updates with task file preferences
  * @param {string} targetPath - Path to the .gitignore file
  * @param {string} content - Template content for .gitignore
@@ -270,7 +308,11 @@ function manageGitignoreFile(
 
 	// Handle file creation or merging
 	if (!fs.existsSync(targetPath)) {
-		createNewGitignoreFile(targetPath, adjustedTemplateLines, log);
+		createNewGitignoreFile(
+			targetPath,
+			withTaskFilesSection(adjustedTemplateLines, storeTasksInGit),
+			log
+		);
 	} else {
 		mergeWithExistingFile(
 			targetPath,
@@ -284,6 +326,7 @@ function manageGitignoreFile(
 export default manageGitignoreFile;
 export {
 	manageGitignoreFile,
+	readStoreTasksInGit,
 	normalizeLine,
 	isTaskLine,
 	buildTaskFilesSection,

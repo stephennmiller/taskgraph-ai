@@ -74,10 +74,15 @@ import {
 	ConfigurationError,
 	getConfig,
 	getDefaultNumTasks,
-	isConfigFilePresent
+	isConfigFilePresent,
+	setSuppressConfigWarnings
 } from './config-manager.js';
 
-import { CUSTOM_PROVIDERS } from '@tm/core';
+import {
+	CUSTOM_PROVIDERS,
+	findProjectRoot,
+	isTaskGraphProject
+} from '@tm/core';
 
 import {
 	COMPLEXITY_REPORT_FILE,
@@ -2501,10 +2506,9 @@ ${result.result}
 				// Only override defaults if user specified valid rules
 				const invalidProfiles = findInvalidRulesProfiles(userSpecifiedProfiles);
 				if (invalidProfiles.length > 0) {
-					console.error(
-						chalk.red(
-							`Unsupported rule profile(s): ${invalidProfiles.join(', ')}. TaskGraph supports Claude Code only; valid options: ${RULE_PROFILES.join(', ')}`
-						)
+					printError(
+						`"${invalidProfiles.join(', ')}" isn't a rule profile`,
+						`TaskGraph supports Claude Code only; use \`--rules ${RULE_PROFILES.join(',')}\``
 					);
 					process.exit(1);
 				}
@@ -2522,10 +2526,7 @@ ${result.result}
 				await initializeProject(cmdOptions);
 				// initializeProject handles its own flow, including potential process.exit()
 			} catch (error) {
-				console.error(
-					chalk.red(`Error during initialization: ${error.message}`)
-				);
-				process.exit(1);
+				displayError(error);
 			}
 		});
 
@@ -3706,6 +3707,58 @@ async function launchREPL() {
 	}
 }
 
+// Commands that work outside a project
+const RUNS_WITHOUT_PROJECT = new Set([
+	'init',
+	'help',
+	'completion',
+	'tui',
+	'repl'
+]);
+
+/**
+ * Stop a command that needs a project when it runs outside one.
+ *
+ * Without this check each command failed in its own way, after a stack of
+ * "Configuration file not found" warnings, and `list`, `next` and `tags`
+ * left an empty .taskgraph folder behind that made the next command think
+ * the folder was a project.
+ *
+ * @param {import('commander').Command} _hookedCommand - The program
+ * @param {import('commander').Command} actionCommand - The command about to run
+ */
+function requireProject(_hookedCommand, actionCommand) {
+	let topLevel = actionCommand;
+	while (topLevel.parent?.parent) topLevel = topLevel.parent;
+	const names = [topLevel.name(), ...topLevel.aliases()];
+	if (names.some((name) => RUNS_WITHOUT_PROJECT.has(name))) return;
+
+	// An explicit tasks file means the caller has said where the project is
+	if (actionCommand.getOptionValueSource('file') === 'cli') return;
+
+	const takesProject = actionCommand.options.some(
+		(option) => option.attributeName() === 'project'
+	);
+	const projectOption = takesProject ? actionCommand.opts().project : null;
+	const explicitRoot =
+		typeof projectOption === 'string' ? path.resolve(projectOption) : null;
+
+	if (isTaskGraphProject(explicitRoot || findProjectRoot())) return;
+
+	if (explicitRoot) {
+		printError(
+			`No TaskGraph project at ${explicitRoot}`,
+			'Run `taskgraph init` in that folder to set one up'
+		);
+	} else {
+		printError(
+			'No TaskGraph project in this folder',
+			'Run `taskgraph init` to set one up, or cd into your project'
+		);
+	}
+	process.exit(1);
+}
+
 /**
  * Setup the CLI application
  * @returns {Object} Configured Commander program
@@ -3749,6 +3802,9 @@ function setupCLI() {
 	};
 	styleParseErrors(programInstance, '');
 
+	// Runs before every subcommand's action, nested ones included
+	programInstance.hook('preAction', requireProject);
+
 	return programInstance;
 }
 
@@ -3766,6 +3822,8 @@ async function runCLI(argv = process.argv) {
 
 		// Display banner if not in a pipe (except for init/start/repl commands which have their own)
 		const isInitCommand = argv.includes('init');
+		// init creates the config; telling the user it's missing adds nothing
+		if (argv[2] === 'init') setSuppressConfigWarnings(true);
 		const isREPLCommand = argv.includes('tui') || argv.includes('repl');
 		const noBanner = argv.includes('--no-banner');
 		if (process.stdout.isTTY && !isInitCommand && !isREPLCommand && !noBanner) {

@@ -50,6 +50,7 @@ export {
 // Export project root finding utilities
 export {
 	findProjectRoot,
+	isTaskGraphProject,
 	normalizeProjectRoot
 } from './project-root-finder.js';
 
