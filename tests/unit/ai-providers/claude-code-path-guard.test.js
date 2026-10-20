@@ -62,9 +62,19 @@ describe('claude-code path guard', () => {
 		expect(getPathViolation(root, 'Glob', { pattern: '/etc/*' })).toMatch(
 			/may not leave/
 		);
+	});
+
+	it('checks plain absolute Glob paths from their parent, trailing slash or not', () => {
+		// Without glob characters Claude Code searches dirname(pattern)
+		expect(getPathViolation(root, 'Glob', { pattern: `${root}/` })).toMatch(
+			/may not leave/
+		);
+		expect(getPathViolation(root, 'Glob', { pattern: root })).toMatch(
+			/may not leave/
+		);
 		expect(
-			getPathViolation(root, 'Grep', { pattern: 'x', glob: '../*' })
-		).toMatch(/may not leave/);
+			getPathViolation(root, 'Glob', { pattern: `${root}/src/a.js` })
+		).toBeNull();
 	});
 
 	it('checks the directory an absolute glob is searched from', () => {
@@ -105,13 +115,17 @@ describe('claude-code path guard', () => {
 		expect(isInsideRoot(root, path.join(root, '..cache', 'x'))).toBe(true);
 	});
 
-	it('does not treat a Grep regex as a path but checks its glob', () => {
+	it("leaves Grep's regex and glob alone, since both only filter under its path", () => {
 		expect(
 			getPathViolation(root, 'Grep', { pattern: '/etc/*', glob: '*.js' })
 		).toBeNull();
+		// `/src/**` is rg's form for anchoring to the search root
 		expect(
-			getPathViolation(root, 'Grep', { pattern: 'x', glob: '/etc/*' })
-		).toMatch(/may not leave/);
+			getPathViolation(root, 'Grep', { pattern: 'x', glob: '/src/**' })
+		).toBeNull();
+		expect(
+			getPathViolation(root, 'Grep', { pattern: 'x', glob: '../*', path: base })
+		).toMatch(/outside/);
 	});
 
 	it('ignores tools it does not guard', () => {

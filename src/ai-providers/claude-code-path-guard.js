@@ -56,6 +56,15 @@ function absoluteGlobBase(pattern) {
 	if (!path.posix.isAbsolute(pattern) && !path.win32.isAbsolute(pattern)) {
 		return null;
 	}
+	const hasGlobChar = /[*?[{]/.test(pattern);
+	if (!hasGlobChar) {
+		// A plain path is split into dirname + basename, so `/w/project/` is
+		// searched from `/w`
+		const trimmed = pattern.replace(/[\\/]+$/, '') || pattern;
+		return path.win32.isAbsolute(trimmed) && !path.posix.isAbsolute(trimmed)
+			? path.win32.dirname(trimmed)
+			: path.posix.dirname(trimmed);
+	}
 	const literal = pattern.split(/[*?[{]/)[0];
 	const lastSeparator = Math.max(
 		literal.lastIndexOf('/'),
@@ -83,9 +92,10 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		}
 	}
 
-	// Glob's pattern and Grep's glob can name a directory of their own. (Grep's
-	// pattern is a regex, not a path.)
-	const pattern = toolName === 'Glob' ? toolInput.pattern : toolInput.glob;
+	// Glob's pattern can name a directory of its own. Grep's pattern is a
+	// regex and its glob only filters files under its path, so neither can
+	// widen the search.
+	const pattern = toolName === 'Glob' ? toolInput.pattern : undefined;
 	if (typeof pattern === 'string') {
 		const deny = `${toolName} patterns may not leave the project directory (${root}).`;
 		if (hasParentSegment(pattern) || pattern.startsWith('~')) return deny;
