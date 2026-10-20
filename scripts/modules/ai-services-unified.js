@@ -582,6 +582,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 				...((serviceType === 'generateObject' ||
 					serviceType === 'streamObject') && { schema, objectName }),
 				role: currentRole, // Lets providers restrict capabilities per role
+				projectRoot: effectiveProjectRoot, // Lets providers confine file access
 				...(commandName && { commandName }), // Providers look up per-command settings by name
 				...(experimental_transform && { experimental_transform }), // Pass smoothStream or other transforms
 				...restApiParams
