@@ -10,7 +10,7 @@ paths:
 - **Identify Feature Type** (See `architecture.md` for module details):
   - **Data Manipulation**: Features that create, read, update, or delete tasks belong in [`task-manager.js`](../../scripts/modules/task-manager.js). Follow guidelines in `tasks.md`.
   - **Dependency Management**: Features that handle task relationships belong in [`dependency-manager.js`](../../scripts/modules/dependency-manager.js). Follow guidelines in `dependencies.md`.
-  - **User Interface**: Features that display information to users belong in [`ui.js`](../../scripts/modules/ui.js). Follow guidelines in `ui.md`.
+  - **User Interface**: Output is formatted by pure functions in `apps/cli/src/ui/formatters/` and printed by the command. Follow `ui.md`. Don't add new display functions to the legacy [`ui.js`](../../scripts/modules/ui.js).
   - **AI Integration**: Features that use AI models belong in [`ai-services.js`](../../scripts/modules/ai-services.js).
   - **Cross-Cutting**: Features that don't fit one category may need components in multiple modules
 
@@ -28,14 +28,14 @@ The standard pattern for adding a feature follows this workflow:
    - For AI-powered commands that benefit from project context, use the standardized context gathering patterns from `context-gathering.md`.
    - Import `ContextGatherer` and `FuzzyTaskSearch` utilities for reusable context extraction.
    - Support multiple context types: tasks, files, custom text, project tree.
-   - Implement detailed token breakdown display for transparency.
+   - Print one muted line saying what context was used; the AI usage line reports the tokens.
 3. **AI Integration (If Applicable)**: 
    - Import necessary service functions (e.g., `generateTextService`, `streamTextService`) from [`ai-services-unified.js`](../../scripts/modules/ai-services-unified.js).
    - Prepare parameters (`role`, `session`, `systemPrompt`, `prompt`).
    - Call the service function.
    - Handle the response (direct text or stream object).
    - **Important**: Prefer `generateTextService` for calls sending large context (like stringified JSON) where incremental display is not needed. See `ai-services.md` for detailed usage patterns and cautions.
-4. **UI Components**: Add any display functions to [`ui.js`](../../scripts/modules/ui.js) following `ui.md`. Consider enhanced formatting with syntax highlighting for code blocks.
+4. **Output**: Add a formatter in `apps/cli/src/ui/formatters/<name>-formatters.ts` with a `.spec.ts` next to it, export it from `apps/cli/src/ui/index.ts`, and follow `ui.md`.
 5. **Command Integration**: Add the CLI command to [`commands.js`](../../scripts/modules/commands.js) following `commands.md`.
 6. **Testing**: Write tests for all components of the feature (following `tests.md`)
 7. **Configuration**: Update configuration settings or add new ones in [`config-manager.js`](../../scripts/modules/config-manager.js) and ensure getters/setters are appropriate. Update documentation in `utilities.md` and `taskgraph.md`. Update the `.taskgraph/config.json` structure if needed.
@@ -244,31 +244,28 @@ export {
 };
 ```
 
-```javascript
-// 3. UI COMPONENTS: Add display function to ui.js
+```typescript
+// 3. OUTPUT: apps/cli/src/ui/formatters/archive-formatters.ts
 /**
- * Display archive operation results
- * @param {string} archivePath - Path to the archive file
- * @param {number} count - Number of tasks archived
+ * @fileoverview What `archive` moved, e.g.
+ *
+ *   ✓ Archived 4 done tasks to .taskgraph/tasks/archive.json
  */
-function displayArchiveResults(archivePath, count) {
-  console.log(boxen(
-    chalk.green(`Successfully archived ${count} tasks to ${archivePath}`),
-    { padding: 1, borderColor: 'green', borderStyle: 'round' }
-  ));
+import chalk from 'chalk';
+
+export function formatArchived(count: number, archivePath: string): string {
+	if (count === 0) return 'No done tasks to archive';
+	const noun = count === 1 ? 'task' : 'tasks';
+	return `${chalk.green('✓')} Archived ${count} done ${noun} to ${archivePath}`;
 }
 
-// Export from the module
-export {
-  // ... existing exports ...
-  displayArchiveResults,
-};
+// ...and export it from apps/cli/src/ui/index.ts
 ```
 
 ```javascript
 // 4. COMMAND INTEGRATION: Add to commands.js
 import { archiveTasks } from './task-manager.js';
-import { displayArchiveResults } from './ui.js';
+import { ui } from '@tm/cli';
 
 // In registerCommands function
 programInstance
@@ -280,10 +277,9 @@ programInstance
     const tasksPath = options.file;
     const archivePath = options.output;
     
-    console.log(chalk.blue(`Archiving completed tasks from ${tasksPath} to ${archivePath}...`));
-    
+    // No "Archiving…" line: print the result once it's done
     const archivedCount = await archiveTasks(tasksPath, archivePath);
-    displayArchiveResults(archivePath, archivedCount);
+    console.log(ui.formatArchived(archivedCount, archivePath));
   });
 ```
 
@@ -420,13 +416,15 @@ When implementing new features, follow these guidelines to ensure your code is t
 - **UI Output Testing**
   - For UI components, focus on testing conditional logic rather than exact output
   - Use string pattern matching (like `expect(result).toContain('text')`)
-  - Pay attention to emojis and formatting which can make exact string matching difficult
-  ```javascript
-  // ✅ DO: Test the essence of the output, not exact formatting
-  test('statusFormatter shows done status correctly', () => {
-    const result = formatStatus('done');
-    expect(result).toContain('done');
-    expect(result).toContain('✅');
+  - Strip ANSI codes before comparing, and check line widths at 80 columns
+  ```typescript
+  // ✅ DO: Test the plain text a user sees
+  import { stripVTControlCharacters as plain } from 'node:util';
+
+  it('says how many subtasks were cleared', () => {
+    const output = plain(formatClearedSubtasks(result, 80));
+    expect(output.split('\n')[0]).toBe('✓ Cleared 4 subtasks from 2 tasks');
+    for (const line of output.split('\n')) expect(line.length).toBeLessThanOrEqual(80);
   });
   ```
 
@@ -688,7 +686,7 @@ When implementing project initialization commands:
       try {
         const projectRoot = findProjectRoot();
         if (!projectRoot) {
-          console.error('Not in a TaskGraph project directory');
+          printError('Not in a TaskGraph project', 'Run `taskgraph init` first');
           process.exit(1);
         }
         
@@ -705,9 +703,9 @@ When implementing project initialization commands:
           }
         );
         
-        console.log('Feature executed successfully');
+        console.log(ui.formatNewFeature(result)); // a ✓ line, per ui.md
       } catch (error) {
-        console.error(`Error: ${error.message}`);
+        printError(error.message);
         process.exit(1);
       }
     });

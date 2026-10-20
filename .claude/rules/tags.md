@@ -51,7 +51,7 @@ programInstance
     // 1. Find project root
     const projectRoot = findProjectRoot();
     if (!projectRoot) {
-      console.error(chalk.red('Error: Could not find project root.'));
+      printError('Not in a TaskGraph project', 'Run `taskgraph init` first');
       process.exit(1);
     }
 

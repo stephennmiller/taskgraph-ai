@@ -16,6 +16,8 @@ While this document details the implementation of TaskGraph's **CLI commands**, 
     - A fallback mechanism if the MCP server is unavailable or a specific functionality is not exposed via an MCP tool.
 - **Implementation Context**: This document (`commands.md`) focuses on the standards for *implementing* the CLI commands using Commander.js within the [`commands.js`](../../scripts/modules/commands.js) module.
 
+How output should look (results, errors, prompts, spinners) is in `ui.md`. This file covers command structure; its examples print the way `ui.md` describes.
+
 ## Command Structure Standards
 
 - **Basic Command Template**:
@@ -46,6 +48,7 @@ When implementing commands that delete or remove data (like `remove-task` or `re
   - ✅ **DO**: Include a confirmation prompt by default for destructive operations
   - ✅ **DO**: Provide a `--yes` or `-y` flag to skip confirmation, useful for scripting or automation
   - ✅ **DO**: Show what will be deleted in the confirmation message
+  - ✅ **DO**: Without a terminal, require `--yes` instead of prompting (a prompt there hangs scripts and agents)
   - ❌ **DON'T**: Perform destructive operations without user confirmation unless explicitly overridden
 
   ```javascript
@@ -59,15 +62,22 @@ When implementing commands that delete or remove data (like `remove-task` or `re
       // Validation code...
       
       if (!options.yes) {
-        const confirm = await inquirer.prompt([{
+        if (!process.stdin.isTTY) {
+          printError(
+            `Removing task ${taskId} needs confirmation`,
+            'Pass --yes to remove it without asking'
+          );
+          process.exit(1);
+        }
+        const { proceed } = await inquirer.prompt([{
           type: 'confirm',
           name: 'proceed',
-          message: `Are you sure you want to permanently delete task ${taskId}? This cannot be undone.`,
+          message: `Remove task ${taskId} (${task.title})? This can't be undone.`,
           default: false
         }]);
-        
-        if (!confirm.proceed) {
-          console.log(chalk.yellow('Operation cancelled.'));
+
+        if (!proceed) {
+          console.log(theme.muted('Cancelled; nothing was removed'));
           return;
         }
       }
@@ -90,13 +100,13 @@ When implementing commands that delete or remove data (like `remove-task` or `re
     `task_${taskId.toString().padStart(3, '0')}.txt`
   );
   
-  // ✅ DO: Check existence before deletion
+  // ✅ DO: Check existence before deletion; report it in the final summary,
+  // not as its own line, and warn only if it fails
   if (fs.existsSync(taskFilePath)) {
     try {
       fs.unlinkSync(taskFilePath);
-      console.log(chalk.green(`Task file deleted: ${taskFilePath}`));
     } catch (error) {
-      console.warn(chalk.yellow(`Could not delete task file: ${error.message}`));
+      log('warn', `Couldn't delete ${path.relative(projectRoot, taskFilePath)}: ${error.message}`);
     }
   }
   ```
@@ -104,12 +114,11 @@ When implementing commands that delete or remove data (like `remove-task` or `re
 - **Clean Up References**:
   - ✅ **DO**: Clean up references to the deleted item in other parts of the data
   - ✅ **DO**: Handle both direct and indirect references
-  - ✅ **DO**: Explain what related data is being updated
+  - ✅ **DO**: Say what related data changed, in the result line
   - ❌ **DON'T**: Leave dangling references
 
   ```javascript
   // ✅ DO: Clean up references when deleting items
-  console.log(chalk.blue('Cleaning up task dependencies...'));
   let referencesRemoved = 0;
   
   // Update dependencies in other tasks
@@ -120,9 +129,9 @@ When implementing commands that delete or remove data (like `remove-task` or `re
     }
   });
   
-  if (referencesRemoved > 0) {
-    console.log(chalk.green(`Removed ${referencesRemoved} references to task ${taskId} from other tasks`));
-  }
+  // One result line covers the removal and its side effects:
+  //   ✓ Removed task 5 · 2 tasks no longer depend on it
+  return { removed: taskId, referencesRemoved };
   ```
 
 - **Task File Regeneration**:
@@ -132,15 +141,14 @@ When implementing commands that delete or remove data (like `remove-task` or `re
   - ❌ **DON'T**: Assume default parameters will work
 
   ```javascript
-  // ✅ DO: Properly regenerate files after deletion
+  // ✅ DO: Properly regenerate files after deletion. It's housekeeping, so
+  // it prints nothing unless it fails
   if (!options.skipGenerate) {
-    console.log(chalk.blue('Regenerating task files...'));
     try {
       // Note both parameters are explicitly provided
       await generateTaskFiles(tasksPath, path.dirname(tasksPath));
-      console.log(chalk.green('Task files regenerated successfully'));
     } catch (error) {
-      console.warn(chalk.yellow(`Warning: Could not regenerate task files: ${error.message}`));
+      log('warn', `Couldn't regenerate task files: ${error.message}`);
     }
   }
   ```
@@ -151,11 +159,10 @@ When implementing commands that delete or remove data (like `remove-task` or `re
   - ✅ **DO**: Include examples of alternative commands
 
   ```javascript
-  // ✅ DO: Suggest alternatives for destructive operations
-  console.log(chalk.yellow('Note: If you just want to exclude this task from active work, consider:'));
-  console.log(chalk.cyan(`  taskgraph set-status --id='${taskId}' --status='cancelled'`));
-  console.log(chalk.cyan(`  taskgraph set-status --id='${taskId}' --status='deferred'`));
-  console.log('This preserves the task and its history for reference.');
+  // ✅ DO: Suggest the alternative in one muted line, before the prompt
+  console.log(
+    theme.muted(`To keep its history instead: taskgraph set-status --id=${taskId} --status=cancelled`)
+  );
   ```
 
 ## Option Naming Conventions
@@ -210,12 +217,16 @@ When implementing commands that delete or remove data (like `remove-task` or `re
 - **Required Parameters**:
   - ✅ DO: Check that required parameters are provided
   - ✅ DO: Provide clear error messages when parameters are missing
-  - ✅ DO: Use early returns with `process.exit(1)` for validation failures
+  - ✅ DO: Use `printError(message, hint)` from `@tm/cli`, then `process.exit(1)`
+  - ✅ DO: Validate everything before any AI call or write
 
   ```javascript
   // ✅ DO: Validate required parameters early
   if (!prompt) {
-    console.error(chalk.red('Error: --prompt parameter is required. Please provide a task description.'));
+    printError(
+      'add-task needs a description',
+      'Example: taskgraph add-task --prompt="Add a login page"'
+    );
     process.exit(1);
   }
   ```
@@ -225,10 +236,10 @@ When implementing commands that delete or remove data (like `remove-task` or `re
   - ✅ DO: Handle conversion errors gracefully
 
   ```javascript
-  // ✅ DO: Parse numeric parameters properly
+  // ✅ DO: Parse numeric parameters properly, quoting what was typed
   const fromId = parseInt(options.from, 10);
   if (isNaN(fromId)) {
-    console.error(chalk.red('Error: --from must be a valid number'));
+    printError(`--from must be a task number, not "${options.from}"`);
     process.exit(1);
   }
   ```
@@ -236,69 +247,51 @@ When implementing commands that delete or remove data (like `remove-task` or `re
 - **Enhanced Input Validation**:
   - ✅ DO: Validate file existence for critical file operations
   - ✅ DO: Provide context-specific validation for identifiers
-  - ✅ DO: Check required API keys for features that depend on them
+  - ✅ DO: Check that IDs exist, not just that they're well formed
 
   ```javascript
   // ✅ DO: Validate file existence
   if (!fs.existsSync(tasksPath)) {
-    console.error(chalk.red(`Error: Tasks file not found at path: ${tasksPath}`));
-    if (tasksPath === 'tasks/tasks.json') {
-      console.log(chalk.yellow('Hint: Run taskgraph init or taskgraph parse-prd to create tasks.json first'));
-    } else {
-      console.log(chalk.yellow(`Hint: Check if the file path is correct: ${tasksPath}`));
-    }
+    printError(
+      `No tasks file at ${path.relative(process.cwd(), tasksPath)}`,
+      'Run `taskgraph init` or `taskgraph parse-prd <file>` to create one'
+    );
     process.exit(1);
   }
-  
-  // ✅ DO: Validate task ID
-  const taskId = parseInt(options.id, 10);
-  if (isNaN(taskId) || taskId <= 0) {
-    console.error(chalk.red(`Error: Invalid task ID: ${options.id}. Task ID must be a positive integer.`));
-    console.log(chalk.yellow("Usage example: taskgraph update-task --id='23' --prompt='Update with new information.\\nEnsure proper error handling.'"));
+
+  // ✅ DO: Validate task ID format, then that it exists
+  if (!/^\d+(\.\d+)?$/.test(options.id)) {
+    printError(`"${options.id}" isn't a task ID`, 'Use --id=15 or --id=15.2');
+    process.exit(1);
+  }
+  if (!findTaskById(tasks, options.id).task) {
+    printError(`Task ${options.id} doesn't exist in tag '${tag}'`, 'Run `taskgraph list` to see task IDs');
     process.exit(1);
   }
   ```
 
 ## User Feedback
 
-- **Operation Status**:
-  - ✅ DO: Provide clear feedback about the operation being performed
-  - ✅ DO: Display success or error messages after completion
-  - ✅ DO: Use colored output to distinguish between different message types
+Follow `ui.md`. In short:
 
-  ```javascript
-  // ✅ DO: Show operation status
-  console.log(chalk.blue(`Parsing PRD file: ${file}`));
-  console.log(chalk.blue(`Generating ${numTasks} tasks...`));
-  
-  try {
-    await parsePRD(file, outputPath, numTasks);
-    console.log(chalk.green('Successfully generated tasks from PRD'));
-  } catch (error) {
-    console.error(chalk.red(`Error: ${error.message}`));
-    process.exit(1);
-  }
-  ```
+- **Print the result, once, when the work is done.** Don't announce each step ("Parsing PRD file…", "Generating 10 tasks…"); use a spinner for waits and `log('debug', …)` for progress.
+- **Lead with a `✓` line** saying what changed, with details as aligned rows below it.
+- **At most one next step,** as a plain line. No "Next Steps" box.
+- **Format in a `.ts` formatter** under `apps/cli/src/ui/formatters/`, and call it through `ui` from `@tm/cli`.
 
-- **Success Messages with Next Steps**:
-  - ✅ DO: Use boxen for important success messages with clear formatting
-  - ✅ DO: Provide suggested next steps after command completion
-  - ✅ DO: Include ready-to-use commands for follow-up actions
+```javascript
+// ✅ DO: Return data from the core function; the command prints it
+// (this is clear-subtasks)
+const result = clearSubtasks(tasksPath, ids, { projectRoot, tag });
+console.log(ui.formatClearedSubtasks(result));
+//   ✓ Cleared 4 subtasks from 2 tasks
+//     1  3 subtasks  Set up the database schema
+//     2  1 subtask   Build the login API
+//   Run taskgraph expand --id=<id> to add new ones
 
-  ```javascript
-  // ✅ DO: Display success with next steps
-  console.log(boxen(
-    chalk.white.bold(`Subtask ${parentId}.${subtask.id} Added Successfully`) + '\n\n' +
-    chalk.white(`Title: ${subtask.title}`) + '\n' +
-    chalk.white(`Status: ${getStatusWithColor(subtask.status)}`) + '\n' +
-    (dependencies.length > 0 ? chalk.white(`Dependencies: ${dependencies.join(', ')}`) + '\n' : '') +
-    '\n' +
-    chalk.white.bold('Next Steps:') + '\n' +
-    chalk.cyan(`1. Run ${chalk.yellow(`taskgraph show '${parentId}'`)} to see the parent task with all subtasks`) + '\n' +
-    chalk.cyan(`2. Run ${chalk.yellow(`taskgraph set-status --id='${parentId}.${subtask.id}' --status='in-progress'`)} to start working on it`),
-    { padding: 1, borderColor: 'green', borderStyle: 'round', margin: { top: 1 } }
-  ));
-  ```
+// ❌ DON'T: Box a success message and number the next steps
+console.log(boxen(chalk.white.bold('Subtasks Cleared Successfully') + '\n\nNext Steps:\n1. …'));
+```
 
 ## Command Registration
 
@@ -331,7 +324,7 @@ For AI-powered commands that benefit from project context, follow the research c
   - ✅ DO: Use `ContextGatherer` utility for multi-source context extraction
   - ✅ DO: Support task IDs, file paths, custom context, and project tree
   - ✅ DO: Implement fuzzy search for automatic task discovery
-  - ✅ DO: Display detailed token breakdown for transparency
+  - ✅ DO: Print one muted line saying what context was used (`ui.formatResearchContext`); the AI usage line reports tokens
 
   ```javascript
   // ✅ DO: Follow this pattern for context-aware commands
@@ -372,8 +365,8 @@ For AI-powered commands that benefit from project context, follow the research c
         includeTokenCounts: true
       });
       
-      // 5. Display token breakdown and execute AI call
-      // Implementation continues...
+      // 5. One context line, then a spinner while the AI call runs
+      // Implementation continues in task-manager/research.js
     });
   ```
 
@@ -385,98 +378,37 @@ For AI-powered commands that benefit from project context, follow the research c
   - ✅ DO: Include detailed error information in debug mode
 
   ```javascript
-  // ✅ DO: Handle errors properly
+  // ✅ DO: Handle errors properly: print once, at the command, then exit 1
   try {
     // Command implementation
   } catch (error) {
-    console.error(chalk.red(`Error: ${error.message}`));
-    
-    if (CONFIG.debug) {
-      console.error(error);
-    }
-    
+    printError(`Couldn't expand task ${taskId}: ${error.message}`);
+    log('debug', error.stack);
     process.exit(1);
   }
   ```
 
-- **Unknown Options Handling**:
-  - ✅ DO: Provide clear error messages for unknown options
-  - ✅ DO: Show available options when an unknown option is used
-  - ✅ DO: Include command-specific help displays for common errors
+- **Unknown Options and Commands**:
+  - ✅ DO: Let Commander's errors go through the shared handler. `runCLI` formats them with `formatCommanderError` from `@tm/cli`, which adds a "Did you mean" or `--help` hint
+  - ✅ DO: Point to `taskgraph <command> --help` in a hint rather than printing a custom help box
   - ❌ DON'T: Allow unknown options with `.allowUnknownOption()`
-
-  ```javascript
-  // ✅ DO: Register global error handlers for unknown options
-  programInstance.on('option:unknown', function(unknownOption) {
-    const commandName = this._name || 'unknown';
-    console.error(chalk.red(`Error: Unknown option '${unknownOption}'`));
-    console.error(chalk.yellow(`Run 'taskgraph ${commandName} --help' to see available options`));
-    process.exit(1);
-  });
-  
-  // ✅ DO: Add command-specific help displays
-  function showCommandHelp() {
-    console.log(boxen(
-      chalk.white.bold('Command Help') + '\n\n' +
-      chalk.cyan('Usage:') + '\n' +
-      `  taskgraph command --option1=<value> [options]\n\n` +
-      chalk.cyan('Options:') + '\n' +
-      '  --option1 <value>    Description of option1 (required)\n' +
-      '  --option2 <value>    Description of option2\n\n' +
-      chalk.cyan('Examples:') + '\n' +
-      '  taskgraph command --option1=\'value1\' --option2=\'value2\'',
-      { padding: 1, borderColor: 'blue', borderStyle: 'round' }
-    ));
-  }
-  ```
-
-- **Global Error Handling**:
-  - ✅ DO: Set up global error handlers for uncaught exceptions
-  - ✅ DO: Detect and format Commander-specific errors
-  - ✅ DO: Provide suitable guidance for fixing common errors
-
-  ```javascript
-  // ✅ DO: Set up global error handlers with helpful messages
-  process.on('uncaughtException', (err) => {
-    // Handle Commander-specific errors
-    if (err.code === 'commander.unknownOption') {
-      const option = err.message.match(/'([^']+)'/)?.[1]; // Safely extract option name
-      console.error(chalk.red(`Error: Unknown option '${option}'`));
-      console.error(chalk.yellow("Run 'taskgraph <command> --help' to see available options"));
-      process.exit(1);
-    }
-    
-    // Handle other error types...
-    console.error(chalk.red(`Error: ${err.message}`));
-    process.exit(1);
-  });
-  ```
+  - ❌ DON'T: Add `showXHelp()` functions that print boxed usage text; `--help` is generated from the command's options
 
 - **Contextual Error Handling**:
-  - ✅ DO: Provide specific error handling for common issues
-  - ✅ DO: Include troubleshooting hints for each error type
-  - ✅ DO: Use consistent error formatting across all commands
+  - ✅ DO: Turn known failures into a plain message plus a hint that fixes them
+  - ✅ DO: Keep stack traces behind debug logging
 
   ```javascript
-  // ✅ DO: Provide specific error handling with guidance
+  // ✅ DO: Provide specific guidance in the hint
   try {
     // Implementation
   } catch (error) {
-    console.error(chalk.red(`Error: ${error.message}`));
-    
-    // Provide more helpful error messages for common issues
-    if (error.message.includes('task') && error.message.includes('not found')) {
-      console.log(chalk.yellow('\nTo fix this issue:'));
-      console.log('  1. Run \'taskgraph list\' to see all available task IDs');
-      console.log('  2. Use a valid task ID with the --id parameter');
-    } else if (error.message.includes('API key')) {
-      console.log(chalk.yellow('\nThis error is related to API keys. Check your environment variables.'));
-    }
-    
-    if (CONFIG.debug) {
-      console.error(error);
-    }
-    
+    const notFound = /not found/i.test(error.message);
+    printError(
+      error.message,
+      notFound ? 'Run `taskgraph list` to see task IDs' : undefined
+    );
+    log('debug', error.stack);
     process.exit(1);
   }
   ```
@@ -521,8 +453,7 @@ For AI-powered commands that benefit from project context, follow the research c
     .action(async (options) => {
       // Validate required parameters
       if (!options.parent) {
-        console.error(chalk.red('Error: --parent parameter is required'));
-        showAddSubtaskHelp(); // Show contextual help
+        printError('add-subtask needs --parent', 'Example: taskgraph add-subtask --parent=5 --title="Implement login UI"');
         process.exit(1);
       }
       
@@ -541,12 +472,7 @@ For AI-powered commands that benefit from project context, follow the research c
     .option('-c, --convert', 'Convert the subtask to a standalone task instead of deleting')
     .option('--generate', 'Regenerate task files after removing subtask')
     .action(async (options) => {
-      // Implementation with detailed error handling
-    })
-    .on('error', function(err) {
-      console.error(chalk.red(`Error: ${err.message}`));
-      showRemoveSubtaskHelp(); // Show contextual help
-      process.exit(1);
+      // Implementation; errors go through printError
     });
   ```
 
@@ -574,22 +500,9 @@ For AI-powered commands that benefit from project context, follow the research c
     return result; // -1, 0, or 1
   }
   
-  // ✅ DO: Display attractive update notifications
-  function displayUpgradeNotification(currentVersion, latestVersion) {
-    const message = boxen(
-      `${chalk.blue.bold('Update Available!')} ${chalk.dim(currentVersion)} → ${chalk.green(latestVersion)}\n\n` +
-      `Run ${chalk.cyan('npm i taskgraph-ai@latest -g')} to update to the latest version with new features and bug fixes.`,
-      {
-        padding: 1,
-        margin: { top: 1, bottom: 1 },
-        borderColor: 'yellow',
-        borderStyle: 'round'
-      }
-    );
-    
-    console.log(message);
-  }
-  
+  // The notification itself is displayUpgradeNotification in
+  // apps/cli/src/utils/auto-update/display.ts
+
   // ✅ DO: Integrate version checking in CLI run function
   async function runCLI(argv = process.argv) {
     try {
@@ -611,46 +524,4 @@ For AI-powered commands that benefit from project context, follow the research c
   }
   ```
 
-Refer to [`commands.js`](../../scripts/modules/commands.js) for implementation examples and `new-features.md` for integration guidelines. 
-// Helper function to show add-subtask command help
-function showAddSubtaskHelp() {
-  console.log(boxen(
-    chalk.white.bold('Add Subtask Command Help') + '\n\n' +
-    chalk.cyan('Usage:') + '\n' +
-    `  taskgraph add-subtask --parent=<id> [options]\n\n` +
-    chalk.cyan('Options:') + '\n' +
-    '  -p, --parent <id>         Parent task ID (required)\n' +
-    '  -i, --task-id <id>        Existing task ID to convert to subtask\n' +
-    '  -t, --title <title>       Title for the new subtask\n' +
-    '  -d, --description <text>  Description for the new subtask\n' +
-    '  --details <text>          Implementation details for the new subtask\n' +
-    '  --dependencies <ids>      Comma-separated list of dependency IDs\n' +
-    '  -s, --status <status>     Status for the new subtask (default: "pending")\n' +
-    '  -f, --file <file>         Path to the tasks file (default: "tasks/tasks.json")\n' +
-    '  --generate                Regenerate task files after adding subtask\n\n' +
-    chalk.cyan('Examples:') + '\n' +
-    '  taskgraph add-subtask --parent=\'5\' --task-id=\'8\'\n' +
-    '  taskgraph add-subtask -p \'5\' -t \'Implement login UI\' -d \'Create the login form\'\n' +
-    '  taskgraph add-subtask -p \'5\' -t \'Handle API Errors\' --details "Handle 401 Unauthorized.\\nHandle 500 Server Error." --generate',
-    { padding: 1, borderColor: 'blue', borderStyle: 'round' }
-  ));
-}
-
-// Helper function to show remove-subtask command help
-function showRemoveSubtaskHelp() {
-  console.log(boxen(
-    chalk.white.bold('Remove Subtask Command Help') + '\n\n' +
-    chalk.cyan('Usage:') + '\n' +
-    `  taskgraph remove-subtask --id=<parentId.subtaskId> [options]\n\n` +
-    chalk.cyan('Options:') + '\n' +
-    '  -i, --id <id>       Subtask ID(s) to remove in format "parentId.subtaskId" (can be comma-separated, required)\n' +
-    '  -c, --convert       Convert the subtask to a standalone task instead of deleting it\n' +
-    '  -f, --file <file>   Path to the tasks file (default: "tasks/tasks.json")\n' +
-    '  --generate          Regenerate task files after removing subtask\n\n' +
-    chalk.cyan('Examples:') + '\n' +
-    '  taskgraph remove-subtask --id=\'5.2\'\n' +
-    '  taskgraph remove-subtask --id=\'5.2,6.3,7.1\'\n' +
-    '  taskgraph remove-subtask --id=\'5.2\' --convert',
-    { padding: 1, borderColor: 'blue', borderStyle: 'round' }
-  ));
-} 
+Refer to [`commands.js`](../../scripts/modules/commands.js) for implementation examples, `ui.md` for output, and `new-features.md` for integration guidelines.

@@ -1,245 +1,106 @@
 ---
-description: Guidelines for implementing and maintaining user interface components
+description: How TaskGraph CLI output should look, and where the code that prints it lives
 paths:
   - "scripts/modules/ui.js"
+  - "scripts/modules/commands.js"
+  - "scripts/modules/task-manager/**/*.js"
+  - "apps/cli/src/ui/**/*.ts"
+  - "apps/cli/src/commands/**/*.ts"
 ---
 
-# User Interface Implementation Guidelines
+# CLI Output Guidelines
 
-## Core UI Component Principles
+TaskGraph's output follows Apple's Human Interface Guidelines and Emil Kowalski's design principles, adapted to the terminal: say what happened, once, in as few lines as it takes, and make the next step obvious. Every rule below comes from cleanups that replaced boxed, repeated output (#140–#152). New output should look like those commands, not like the boxes still left in `scripts/modules/ui.js`.
 
-- **Function Scope Separation**:
-  - ✅ DO: Keep display logic separate from business logic
-  - ✅ DO: Import data processing functions from other modules
-  - ❌ DON'T: Include task manipulations within UI functions
-  - ❌ DON'T: Create circular dependencies with other modules
+## Where output code goes
 
-- **Standard Display Pattern**:
-  ```javascript
-  // ✅ DO: Follow this pattern for display functions
-  /**
-   * Display information about a task
-   * @param {Object} task - The task to display
-   */
-  function displayTaskInfo(task) {
-    console.log(boxen(
-      theme.text.bold(`Task: #${task.id} - ${task.title}`),
-      { padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-    ));
-  }
-  ```
-
-## Visual Styling Standards
-
-- **Color Scheme** (text follows the terminal's own palette; see `apps/cli/src/ui/theme.ts`):
-  - Use `chalk.green` for success messages
-  - Use `chalk.yellow` for warnings
-  - Use `chalk.red` for errors
-  - Use `chalk.cyan` / `theme.brand` for prompts, highlights and informational messages
-  - Use `chalk.magenta` for subtask-related information
-  - Use `theme.text` for body text and `theme.muted` for de-emphasized text
-  - DON'T use `chalk.white`, `chalk.blue`, `chalk.gray` or `chalk.grey`: white is pale gray on many light themes, blue is hard to read on dark ones, and gray is bright black, nearly invisible on Solarized Dark
-  - DON'T name `'gray'` / `'grey'` as a color in options either (`borderColor`, `createLink` `color`, `style.border`). Use `theme.muted`, `chalk.dim`, `TABLE_BORDER` or `MUTED_BOX_BORDER`
-  - `tests/unit/scripts/theme-usage.test.js` and `apps/cli/src/ui/gray-usage.spec.ts` fail on these
-
-- **Box Styling**:
-  ```javascript
-  // ✅ DO: Use consistent box styles by content type
-  // For success messages:
-  boxen(content, { 
-    padding: 1, 
-    borderColor: 'green', 
-    borderStyle: 'round', 
-    margin: { top: 1 } 
-  })
-
-  // For errors:
-  boxen(content, { 
-    padding: 1, 
-    borderColor: 'red', 
-    borderStyle: 'round'
-  })
-
-  // For information (BORDER_COLOR from '@tm/cli/theme'):
-  boxen(content, { 
-    padding: 1, 
-    borderColor: BORDER_COLOR, 
-    borderStyle: 'round', 
-    margin: { top: 1, bottom: 1 } 
-  })
-  ```
-
-## Table Display Guidelines
-
-- **Table Structure**:
-  - Use [`cli-table3`](../../node_modules/cli-table3/README.md) for consistent table rendering
-  - Include colored headers with bold formatting
-  - Use appropriate column widths for readability
+- **Format in `apps/cli/src/ui/formatters/<name>-formatters.ts`.** A formatter is a pure function: data in, string out, no `console.log`. Export it from `apps/cli/src/ui/index.ts`. Legacy JS reaches it through `ui` from `@tm/cli`:
 
   ```javascript
-  // ✅ DO: Create well-structured tables
-  const table = new Table({
-    head: [
-      chalk.cyan.bold('ID'),
-      chalk.cyan.bold('Title'),
-      chalk.cyan.bold('Status'),
-      chalk.cyan.bold('Priority'),
-      chalk.cyan.bold('Dependencies')
-    ],
-    colWidths: [5, 40, 15, 10, 20],
-    // cli-table3 borders default to 'grey' (bright black, invisible on Solarized Dark)
-    style: { border: TABLE_BORDER } // from '@tm/cli/theme'
-  });
-  
-  // Add content rows
-  table.push([
-    task.id,
-    truncate(task.title, 37),
-    getStatusWithColor(task.status),
-    chalk.white(task.priority || 'medium'),
-    formatDependenciesWithStatus(task.dependencies, allTasks, true)
-  ]);
-  
-  console.log(table.toString());
+  import { printError, ui } from '@tm/cli';
+
+  console.log(ui.formatClearedSubtasks(result));
   ```
 
-## Loading Indicators
+- **Core functions return data and print nothing.** The command (or the `outputFormat === 'text'` branch) prints the formatted result. `clear-subtasks.js` returns `{ cleared, empty }`, and `commands.js` prints it.
+- **Test the formatter with a `.spec.ts` next to it.** Assert on plain text with ANSI codes stripped. Check line widths at 80 columns (and narrower when text wraps). Add an integration test against the built CLI for exit codes and stdout/stderr.
+- Start each formatter file with a `@fileoverview` showing example output, as the existing formatters do.
 
-- **Animation Standards**:
-  - Use [`ora`](../../node_modules/ora/readme.md) for spinner animations
-  - Create and stop loading indicators correctly
+## What good output looks like
 
-  ```javascript
-  // ✅ DO: Properly manage loading state
-  const loadingIndicator = startLoadingIndicator('Processing task data...');
-  try {
-    // Do async work...
-    stopLoadingIndicator(loadingIndicator);
-    // Show success message
-  } catch (error) {
-    stopLoadingIndicator(loadingIndicator);
-    // Show error message
-  }
-  ```
+```
+✓ Cleared 4 subtasks from 2 tasks
+  1  3 subtasks  Set up the database schema
+  2  1 subtask   Build the login API
+Task 3 had no subtasks
+Run taskgraph expand --id=<id> to add new ones
+```
 
-## Helper Functions
+- **Lead with the result.** One line starting with a green `✓`: `✓ Saved to task 3`, `✓ Analyzed 5 tasks · skipped 1 done`, `✓ Main model  sonnet → opus`. Don't use "Successfully", "Operation complete" or emoji (✅ ❌ 💾 🔍).
+- **Details as aligned rows,** indented two spaces under the result. Cut titles to fit the terminal width (`process.stdout.columns || 80`), not to a fixed 14 or 30 characters.
+- **Secondary facts are muted** (`theme.muted`), joined with ` · `: counts, dates, "with web research".
+- **At most one next step,** as a plain line: `Next: taskgraph expand --all, or taskgraph complexity-report to see why`. Never a numbered "Next Steps" box.
+- **Paths are relative to the project root:** `Saved to .taskgraph/reports/task-complexity-report.json`, not an absolute path that wraps.
+- **Say each thing once.** No "Analyzing… / Analyzing complete / ✓ Analysis complete" sequences, and no printing the same message from both the core function and the command.
+- **Don't confirm non-events.** If nothing changed, either say nothing or say it in one line (`The complexity report is unchanged`). Don't add a confirmation that repeats what the previous lines already showed.
+- **No boxes (`boxen`) for routine output.** A box makes everyday output look like an alert. The boxes still in `ui.js` are legacy; don't copy them, and replace them when you touch that output.
+- **No progress logs in normal output.** "Reading tasks from…", "AI service call complete" and "Found 6 tasks" go to `log('debug', …)`. Warnings and errors still print.
+- **Fit 80 columns.** Wrap long text (reasoning, research answers) to the terminal width, capped at about 100 columns, with a hanging indent for list items.
 
-- **Status Formatting**:
-  - Use `getStatusWithColor` for consistent status display
-  - Use `formatDependenciesWithStatus` for dependency lists
-  - Use `truncate` to handle text that may overflow display
+## Errors
 
-- **Progress Reporting**:
-  - Use visual indicators for progress (bars, percentages)
-  - Include both numeric and visual representations
-  
-  ```javascript
-  // ✅ DO: Show clear progress indicators
-  console.log(`${chalk.cyan('Tasks:')} ${completedTasks}/${totalTasks} (${completionPercentage.toFixed(1)}%)`);
-  console.log(`${chalk.cyan('Progress:')} ${createProgressBar(completionPercentage)}`);
-  ```
+Use `printError(message, hint)` from `@tm/cli`, then exit 1:
 
-## Command Suggestions
+```javascript
+printError(
+  `Task 9 doesn't exist in tag '${tag}'`,
+  'Run `taskgraph list` to see task IDs'
+);
+process.exit(1);
+```
 
-- **Action Recommendations**:
-  - Provide next step suggestions after command completion
-  - Use a consistent format for suggested commands
+It prints to stderr as `✗ <message>` with the hint muted underneath.
 
-  ```javascript
-  // ✅ DO: Show suggested next actions
-  console.log(boxen(
-    chalk.white.bold('Next Steps:') + '\n\n' +
-    `${chalk.cyan('1.')} Run ${chalk.yellow('taskgraph list')} to view all tasks\n` +
-    `${chalk.cyan('2.')} Run ${chalk.yellow('taskgraph show --id=' + newTaskId)} to view details`,
-    { padding: 1, borderColor: 'cyan', borderStyle: 'round', margin: { top: 1 } }
-  ));
-  ```
+- **Say what's wrong in plain words,** with the value the user typed: `"abc" isn't a task ID`, not `Error: Invalid task ID format`.
+- **The hint is the fix:** a command to run or an example of the right form.
+- **Check input before any AI call or write,** so a typo doesn't cost a model call or leave half the work done (see `research` and `clear-subtasks`).
+- **Print an error once.** If the core function throws, let the command print it. Don't also `console.error` it inside the core function.
+- When a command did some of the work and then failed (saving after research, for example), print `✗ Couldn't save to task 9: <reason>` and set `process.exitCode = 1` rather than exiting.
 
-## Enhanced Display Patterns
+## Waiting and prompts
 
-### **Token Breakdown Display**
-- Use detailed, granular token breakdowns for AI-powered commands
-- Display context sources with individual token counts
-- Show both token count and character count for transparency
+- **AI calls show a spinner** (`startLoadingIndicator` in `ui.js`, or `ui.createSpinner`) with a short label: `Analyzing 5 tasks…`. For waits over a few seconds, add the elapsed time (`Researching… 12s`). Stop the spinner in a `finally` block.
+- **Print a result once, when it's complete.** Don't stream raw text and then print it again formatted.
+- **Prompt only when stdin and stdout are terminals** (`process.stdin.isTTY && process.stdout.isTTY`). Scripts, CI and agents run without one: a prompt there hangs forever. For a read-only command, print an error with a hint instead of asking.
+- **Use inquirer 14 prompt types:** `select`, `input`, `confirm`, `checkbox`. There's no `list` type; using it throws, and code that swallows the error hides the menu.
+- **Ctrl-C prints one muted line** (`Cancelled; no models changed`), changes nothing, and exits 130. Create the prompt with `clearPromptOnDone: true` so a cancelled menu doesn't stay on screen, and print the answer line yourself (see `apps/cli/src/commands/models/prompts.ts`).
+- **Start a choice on the current value,** so Enter keeps it.
 
-  ```javascript
-  // ✅ DO: Display detailed token breakdown
-  function displayDetailedTokenBreakdown(tokenBreakdown, systemTokens, userTokens) {
-    const sections = [];
-    
-    if (tokenBreakdown.tasks?.length > 0) {
-      const taskDetails = tokenBreakdown.tasks.map(task => 
-        `${task.type === 'subtask' ? '  ' : ''}${task.id}: ${task.tokens.toLocaleString()}`
-      ).join('\n');
-      sections.push(`Tasks (${tokenBreakdown.tasks.reduce((sum, t) => sum + t.tokens, 0).toLocaleString()}):\n${taskDetails}`);
-    }
-    
-    const content = sections.join('\n\n');
-    console.log(boxen(content, {
-      title: chalk.cyan('Token Usage'),
-      padding: { top: 1, bottom: 1, left: 2, right: 2 },
-      borderStyle: 'round',
-      borderColor: 'cyan'
-    }));
-  }
-  ```
+## Colors
 
-### **Code Block Syntax Highlighting**
-- Use `cli-highlight` library for syntax highlighting in terminal output
-- Process code blocks in AI responses for better readability
+Text follows the terminal's own palette (see `apps/cli/src/ui/theme.ts`):
 
-  ```javascript
-  // ✅ DO: Enhance code blocks with syntax highlighting
-  import { highlight } from 'cli-highlight';
-  
-  function processCodeBlocks(text) {
-    return text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
-      try {
-        const highlighted = highlight(code.trim(), { 
-          language: language || 'javascript',
-          theme: 'default'
-        });
-        return `\n${highlighted}\n`;
-      } catch (error) {
-        return `\n${code.trim()}\n`;
-      }
-    });
-  }
-  ```
+- `chalk.green` for `✓` and success, `chalk.red` for `✗`, `chalk.yellow` for warnings.
+- `theme.brand` for highlights and commands, `theme.text` for body text, `theme.muted` for secondary text.
+- Don't use `chalk.white`, `chalk.blue`, `chalk.gray` or `chalk.grey`. White is pale gray on many light themes, blue is hard to read on dark ones, and gray is bright black, nearly invisible on Solarized Dark.
+- Don't name `'gray'` or `'grey'` as a color in options either (`borderColor`, `createLink`'s `color`, `style.border`). Use `theme.muted`, `chalk.dim`, `TABLE_BORDER` or `MUTED_BOX_BORDER`.
+- `tests/unit/scripts/theme-usage.test.js` and `apps/cli/src/ui/gray-usage.spec.ts` fail on these.
 
-### **Multi-Section Result Display**
-- Use separate boxes for headers, content, and metadata
-- Maintain consistent styling across different result types
+## Tables
 
-  ```javascript
-  // ✅ DO: Use structured result display
-  function displayResults(result, query, detailLevel) {
-    // Header with query info
-    const header = boxen(
-      chalk.green.bold('Research Results') + '\n\n' +
-      theme.muted('Query: ') + theme.text(query) + '\n' +
-      theme.muted('Detail Level: ') + chalk.cyan(detailLevel),
-      {
-        padding: { top: 1, bottom: 1, left: 2, right: 2 },
-        margin: { top: 1, bottom: 0 },
-        borderStyle: 'round',
-        borderColor: 'green'
-      }
-    );
-    console.log(header);
-    
-    // Process and display main content
-    const processedResult = processCodeBlocks(result);
-    const contentBox = boxen(processedResult, {
-      padding: { top: 1, bottom: 1, left: 2, right: 2 },
-      margin: { top: 0, bottom: 1 },
-      borderStyle: 'single',
-      ...MUTED_BOX_BORDER // dimmed border; borderColor: 'gray' is bright black
-    });
-    console.log(contentBox);
-    
-    console.log(chalk.green('✓ Operation complete'));
-  }
-  ```
+Prefer aligned rows (`padEnd`) over `cli-table3`. A bordered table is right only for genuinely tabular data that the user scans across columns, like `list`. When you do use one:
 
-Refer to [`ui.js`](../../scripts/modules/ui.js) for implementation examples, `context-gathering.md` for context display patterns, and `new-features.md` for integration guidelines. 
+- set `style: { border: TABLE_BORDER }` (cli-table3 defaults to gray)
+- size columns to the terminal width
+- never put long text, such as a whole prompt, in a narrow cell
+
+## AI usage line
+
+AI commands end with `displayAiUsageSummary(telemetryData, 'cli')`, which prints one muted line (`sonnet · 13,735 tokens (12,188 in, 1,547 out) · 100% cached`). Don't print separate token or context tables; the usage line has the real counts.
+
+## Before you open a PR
+
+1. Run the command in a real terminal at 80 columns and capture the output before and after your change.
+2. Check no line wraps mid-word and nothing prints twice.
+3. Check Ctrl-C, a non-TTY run (`< /dev/null | cat`) and a bad argument.
+4. Put the before/after captures and a Before | After | Why table in the PR body.
