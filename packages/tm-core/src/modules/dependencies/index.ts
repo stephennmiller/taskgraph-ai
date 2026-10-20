@@ -5,6 +5,14 @@
  */
 
 export {
+	blockedCount,
+	buildDependencyGraph,
+	criticalPath,
+	findCycles,
+	type DependencyGraph,
+	type DependencyGraphNode
+} from './dependency-graph.js';
+export {
 	buildDependencyTree,
 	type BuildDependencyTreeOptions,
 	type DependencyTree,

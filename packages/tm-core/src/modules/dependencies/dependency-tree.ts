@@ -9,6 +9,7 @@
  */
 
 import type { Task, TaskStatus } from '../../common/types/index.js';
+import { compareIds } from './dependency-graph.js';
 
 export interface DependencyTreeNode {
 	id: string;
@@ -33,9 +34,6 @@ export interface BuildDependencyTreeOptions {
 	/** Only return the subtree under this task */
 	rootId?: string;
 }
-
-const compareIds = (a: string, b: string): number =>
-	a.localeCompare(b, undefined, { numeric: true });
 
 export function buildDependencyTree(
 	tasks: Task[],
