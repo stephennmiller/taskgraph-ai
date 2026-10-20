@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { formatTaskId, log } from '../utils.js';
+import { formatTaskId } from '../utils.js';
 
 /**
  * Display enhanced error message for cross-tag dependency conflicts

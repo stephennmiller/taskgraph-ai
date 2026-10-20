@@ -12,7 +12,8 @@ const modulesDir = path.resolve(
 	'../../../../../scripts/modules'
 );
 
-// The public names ui.js exported before it was split into ui/*.js
+// The public names ui.js exports: what it exported before the split into
+// ui/*.js, minus the functions #165 removed
 const EXPECTED_EXPORTS = [
 	'BORDER_COLOR',
 	'confirmTaskOverwrite',
