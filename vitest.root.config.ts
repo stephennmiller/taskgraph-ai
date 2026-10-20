@@ -24,11 +24,7 @@ export default defineConfig({
 		environment: 'node',
 		clearMocks: true,
 		include: ['tests/**/*.test.{js,ts}', 'tests/**/*.spec.{js,ts}'],
-		exclude: [
-			'**/node_modules/**',
-			'tests/sdk-contract/**',
-			'tests/manual/**'
-		],
+		exclude: ['**/node_modules/**', 'tests/sdk-contract/**', 'tests/manual/**'],
 		setupFiles: ['./tests/setup.js'],
 		coverage: {
 			enabled: false,
