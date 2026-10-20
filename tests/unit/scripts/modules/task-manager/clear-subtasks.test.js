@@ -20,41 +20,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	ensureTagMetadata: vi.fn()
 }));
 
-vi.doMock('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: vi.fn()
-}));
-
-// Mock external UI libraries
-vi.doMock('chalk', () => ({
-	default: {
-		white: {
-			bold: vi.fn((text) => text)
-		},
-		cyan: Object.assign(
-			vi.fn((text) => text),
-			{
-				bold: vi.fn((text) => text)
-			}
-		),
-		green: vi.fn((text) => text),
-		yellow: vi.fn((text) => text),
-		bold: vi.fn((text) => text)
-	}
-}));
-
-vi.doMock('boxen', () => ({
-	default: vi.fn((text) => text)
-}));
-
-vi.doMock('cli-table3', () => ({
-	default: vi.fn().mockImplementation(function () {
-		return {
-			push: vi.fn(),
-			toString: vi.fn(() => 'mocked table')
-		};
-	})
-}));
-
 // Mock process.exit to prevent Jest worker crashes
 const mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
 	throw new Error(`process.exit called with "${code}"`);
@@ -182,53 +147,60 @@ describe('clearSubtasks', () => {
 		expect(writeJSON).not.toHaveBeenCalled();
 	});
 
-	test('should handle non-existent task IDs gracefully', () => {
-		// Arrange
-		const taskId = '99'; // Non-existent task
-		const tasksPath = 'tasks/tasks.json';
-		const context = { tag: 'master' };
-
-		// Act
-		clearSubtasks(tasksPath, taskId, context);
-
-		// Assert
-		expect(readJSON).toHaveBeenCalledWith(tasksPath, undefined, 'master');
-		expect(log).toHaveBeenCalledWith('error', 'Task 99 not found');
-		// Should not write the file if no changes were made
+	test('should reject a non-existent task ID', () => {
+		// Act & Assert
+		expect(() =>
+			clearSubtasks('tasks/tasks.json', '99', { tag: 'master' })
+		).toThrow(
+			expect.objectContaining({
+				name: 'ClearSubtasksError',
+				code: 'TASK_NOT_FOUND',
+				message: 'Task 99 not found'
+			})
+		);
 		expect(writeJSON).not.toHaveBeenCalled();
 	});
 
-	test('should handle multiple task IDs including both valid and non-existent IDs', () => {
+	test('should reject a subtask ID instead of clearing its parent', () => {
+		// parseInt('3.1') is 3, which used to clear every subtask of task 3
+		expect(() =>
+			clearSubtasks('tasks/tasks.json', '3.1', { tag: 'master' })
+		).toThrow(expect.objectContaining({ code: 'SUBTASK_ID', taskId: '3.1' }));
+		expect(writeJSON).not.toHaveBeenCalled();
+	});
+
+	test('should reject an ID that is not a number', () => {
+		expect(() =>
+			clearSubtasks('tasks/tasks.json', 'abc', { tag: 'master' })
+		).toThrow(expect.objectContaining({ code: 'INVALID_TASK_ID' }));
+		expect(writeJSON).not.toHaveBeenCalled();
+	});
+
+	test('should return what it cleared and which tasks had no subtasks', () => {
+		const result = clearSubtasks('tasks/tasks.json', '1,3,4,3', {
+			tag: 'master'
+		});
+
+		expect(result).toEqual({
+			cleared: [
+				{ id: 3, title: 'Task 3', count: 1 },
+				{ id: 4, title: 'Task 4', count: 1 }
+			],
+			empty: [{ id: 1, title: 'Task 1' }]
+		});
+	});
+
+	test('should clear nothing when one of several IDs is not found', () => {
 		// Arrange
 		const taskIds = '3,99'; // Mix of valid and invalid IDs
 		const tasksPath = 'tasks/tasks.json';
 		const context = { tag: 'master' };
 
-		// Act
-		clearSubtasks(tasksPath, taskIds, context);
-
-		// Assert
-		expect(readJSON).toHaveBeenCalledWith(tasksPath, undefined, 'master');
-		expect(log).toHaveBeenCalledWith('error', 'Task 99 not found');
-		// Since task 3 has subtasks that should be cleared, writeJSON should be called
-		expect(writeJSON).toHaveBeenCalledWith(
-			tasksPath,
-			expect.objectContaining({
-				tasks: expect.arrayContaining([
-					expect.objectContaining({ id: 3, subtasks: [] })
-				]),
-				tag: 'master',
-				_rawTaggedData: expect.objectContaining({
-					master: expect.objectContaining({
-						tasks: expect.arrayContaining([
-							expect.objectContaining({ id: 3, subtasks: [] })
-						])
-					})
-				})
-			}),
-			undefined,
-			'master'
+		// Act & Assert: a typo in a list changes nothing
+		expect(() => clearSubtasks(tasksPath, taskIds, context)).toThrow(
+			'Task 99 not found'
 		);
+		expect(writeJSON).not.toHaveBeenCalled();
 	});
 
 	test('should handle file read errors', () => {
@@ -250,9 +222,7 @@ describe('clearSubtasks', () => {
 		// Act & Assert
 		expect(() => {
 			clearSubtasks('tasks/tasks.json', '3', { tag: 'master' });
-		}).toThrow('process.exit called');
-
-		expect(log).toHaveBeenCalledWith('error', 'No valid tasks found.');
+		}).toThrow(expect.objectContaining({ code: 'NO_TASKS' }));
 	});
 
 	test('should handle file write errors', () => {

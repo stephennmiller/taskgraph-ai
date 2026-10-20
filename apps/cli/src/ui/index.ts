@@ -37,6 +37,13 @@ export {
 	type SubtaskSummaryItem
 } from './formatters/subtask-summary-formatters.js';
 
+// What clear-subtasks removed
+export {
+	formatClearedSubtasks,
+	type ClearedTask,
+	type ClearSubtasksResult
+} from './formatters/clear-subtasks-formatters.js';
+
 // What init did and what to do next
 export {
 	formatInitSummary,

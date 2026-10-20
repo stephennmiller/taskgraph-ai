@@ -3,7 +3,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { clearSubtasks } from '../../../../scripts/modules/task-manager.js';
 import {
 	disableSilentMode,
@@ -104,45 +103,46 @@ export async function clearSubtasksDirect(args, log) {
 
 		log.info(`Clearing subtasks from tasks: ${taskIds} in tag '${currentTag}'`);
 
-		// Enable silent mode to prevent console logs from interfering with JSON response
+		// clearSubtasks returns what it changed; silent mode keeps its debug
+		// logs off stdout, which carries the MCP protocol
 		enableSilentMode();
-
-		// Call the core function
-		clearSubtasks(tasksPath, taskIds, { projectRoot, tag: currentTag });
-
-		// Restore normal logging
-		disableSilentMode();
-
-		// Read the updated data to provide a summary
-		const updatedData = readJSON(tasksPath, projectRoot, currentTag);
-		const taskIdArray = taskIds.split(',').map((id) => parseInt(id.trim(), 10));
-
-		// Build a summary of what was done
-		const clearedTasksCount = taskIdArray.length;
-		const updatedTasks = updatedData.tasks || [];
-
-		const taskSummary = taskIdArray.map((id) => {
-			const task = updatedTasks.find((t) => t.id === id);
-			return task ? { id, title: task.title } : { id, title: 'Task not found' };
-		});
+		let result;
+		try {
+			result = clearSubtasks(tasksPath, taskIds, {
+				projectRoot,
+				tag: currentTag
+			});
+		} finally {
+			disableSilentMode();
+		}
+		const { cleared, empty } = result;
+		const subtasksCleared = cleared.reduce((sum, t) => sum + t.count, 0);
 
 		return {
 			success: true,
 			data: {
-				message: `Successfully cleared subtasks from ${clearedTasksCount} task(s) in tag '${currentTag}'`,
-				tasksCleared: taskSummary,
+				message:
+					cleared.length > 0
+						? `Cleared ${subtasksCleared} subtask(s) from ${cleared.length} task(s) in tag '${currentTag}'`
+						: `No subtasks to clear in tag '${currentTag}'`,
+				tasksCleared: cleared.map(({ id, title, count }) => ({
+					id,
+					title,
+					subtasksCleared: count
+				})),
+				tasksWithoutSubtasks: empty,
 				tag: currentTag
 			}
 		};
 	} catch (error) {
-		// Make sure to restore normal logging even if there's an error
-		disableSilentMode();
-
 		log.error(`Error in clearSubtasksDirect: ${error.message}`);
 		return {
 			success: false,
 			error: {
-				code: 'CORE_FUNCTION_ERROR',
+				code:
+					error.name === 'ClearSubtasksError'
+						? 'INPUT_VALIDATION_ERROR'
+						: 'CORE_FUNCTION_ERROR',
 				message: error.message
 			}
 		};
