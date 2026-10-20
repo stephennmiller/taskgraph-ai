@@ -26,8 +26,8 @@ import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
 import {
-	CURRENT_SCHEMA_VERSION,
-	SchemaVersionGuard
+	warnIfUnsupportedSchema,
+	withSchemaVersion
 } from './schema-version.js';
 import { TagOperations } from './tag-operations.js';
 
@@ -50,7 +50,6 @@ export class FileStorage implements IStorage {
 	private pathResolver: PathResolver;
 	private complexityManager: ComplexityReportManager;
 	private tagOps: TagOperations;
-	private schemaGuard = new SchemaVersionGuard();
 
 	constructor(projectPath: string) {
 		this.formatHandler = new FormatHandler();
@@ -135,9 +134,10 @@ export class FileStorage implements IStorage {
 		try {
 			const rawData = await this.fileOps.readJson(filePath);
 			let tasks = this.formatHandler.extractTasks(rawData, resolvedTag);
-			this.schemaGuard.check(
+			warnIfUnsupportedSchema(
 				this.formatHandler.extractMetadata(rawData, resolvedTag),
-				resolvedTag
+				resolvedTag,
+				filePath
 			);
 
 			// Apply filters if provided
@@ -229,7 +229,6 @@ export class FileStorage implements IStorage {
 			return subtaskResult;
 		}
 
-		// Handle regular task lookup
 		return tasks.find((task) => String(task.id) === String(taskId)) || null;
 	}
 
@@ -241,20 +240,18 @@ export class FileStorage implements IStorage {
 		const filePath = this.pathResolver.getTasksPath();
 		const resolvedTag = tag || 'master';
 
-		// Ensure directory exists
 		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
 
 		// Create metadata for this tag
 		const metadata: TaskMetadata = {
 			version: '1.0.0',
-			schemaVersion: CURRENT_SCHEMA_VERSION,
+
 			lastModified: new Date().toISOString(),
 			taskCount: tasks.length,
 			completedCount: tasks.filter((t) => t.status === 'done').length,
 			tags: [resolvedTag]
 		};
 
-		// Normalize tasks
 		const normalizedTasks = this.normalizeTaskIds(tasks);
 
 		// Use modifyJson for atomic read-modify-write
@@ -269,14 +266,17 @@ export class FileStorage implements IStorage {
 				// Legacy format - update/add the tag
 				existingData[resolvedTag] = {
 					tasks: normalizedTasks,
-					metadata
+					metadata: withSchemaVersion(
+						metadata,
+						existingData[resolvedTag]?.metadata
+					)
 				};
 				return existingData;
 			} else if (resolvedTag === 'master') {
 				// Standard format for master tag
 				return {
 					tasks: normalizedTasks,
-					metadata
+					metadata: withSchemaVersion(metadata, existingData.metadata)
 				};
 			} else {
 				// Convert to legacy format when adding non-master tags
@@ -286,11 +286,11 @@ export class FileStorage implements IStorage {
 				return {
 					master: {
 						tasks: masterTasks,
-						metadata: masterMetadata
+						metadata: withSchemaVersion(masterMetadata, existingData.metadata)
 					},
 					[resolvedTag]: {
 						tasks: normalizedTasks,
-						metadata
+						metadata: withSchemaVersion(metadata)
 					}
 				};
 			}
@@ -482,7 +482,6 @@ export class FileStorage implements IStorage {
 		newStatus: TaskStatus,
 		tag?: string
 	): Promise<UpdateStatusResult> {
-		// Parse the subtask ID to get parent ID and subtask ID
 		const parts = subtaskId.split('.');
 		if (parts.length !== 2) {
 			throw new Error(
@@ -499,7 +498,6 @@ export class FileStorage implements IStorage {
 		}
 		const subtaskNumericId = Number(subId);
 
-		// Find the parent task
 		const parentTaskIndex = tasks.findIndex(
 			(t) => String(t.id) === String(parentId)
 		);

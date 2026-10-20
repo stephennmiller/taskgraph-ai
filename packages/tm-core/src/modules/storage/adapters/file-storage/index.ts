@@ -9,7 +9,8 @@ export {
 } from './format-handler.js';
 export {
 	CURRENT_SCHEMA_VERSION,
-	getSchemaVersion
+	getSchemaVersion,
+	withSchemaVersion
 } from './schema-version.js';
 export { FileOperations } from './file-operations.js';
 export { PathResolver } from './path-resolver.js';

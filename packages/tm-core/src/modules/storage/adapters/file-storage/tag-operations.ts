@@ -11,6 +11,7 @@ import type { IStorage } from '../../../../common/interfaces/storage.interface.j
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import type { PathResolver } from './path-resolver.js';
+import { withSchemaVersion } from './schema-version.js';
 
 /**
  * Tag-level operations extracted from FileStorage. Reads go back through the
@@ -66,14 +67,14 @@ export class TagOperations {
 					// Create new tag structure
 					existingData[tagName] = {
 						tasks: tasksToCopy,
-						metadata: {
+						metadata: withSchemaVersion({
 							created: new Date().toISOString(),
 							updatedAt: new Date().toISOString(),
 							description:
 								options?.description ||
 								`Tag created on ${new Date().toLocaleDateString()}`,
 							tags: [tagName]
-						}
+						})
 					};
 
 					return existingData;
@@ -91,18 +92,21 @@ export class TagOperations {
 					return {
 						master: {
 							tasks: masterTasks,
-							metadata: { ...masterMetadata, tags: ['master'] }
+							metadata: withSchemaVersion(
+								{ ...masterMetadata, tags: ['master'] },
+								masterMetadata
+							)
 						},
 						[tagName]: {
 							tasks: tasksToCopy,
-							metadata: {
+							metadata: withSchemaVersion({
 								created: new Date().toISOString(),
 								updatedAt: new Date().toISOString(),
 								description:
 									options?.description ||
 									`Tag created on ${new Date().toLocaleDateString()}`,
 								tags: [tagName]
-							}
+							})
 						}
 					};
 				}
@@ -193,7 +197,10 @@ export class TagOperations {
 					return {
 						[newTag]: {
 							tasks: masterTasks,
-							metadata: { ...masterMetadata, tags: [newTag] }
+							metadata: withSchemaVersion(
+								{ ...masterMetadata, tags: [newTag] },
+								masterMetadata
+							)
 						}
 					};
 				} else {

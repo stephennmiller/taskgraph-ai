@@ -2,11 +2,11 @@
  * Helper functions for PRD parsing
  */
 
-import fs from 'fs';
-import path from 'path';
 import { theme } from '@tm/cli/theme';
 import boxen from 'boxen';
 import chalk from 'chalk';
+import fs from 'fs';
+import path from 'path';
 import { displayParsePrdSummary } from '../../../../src/ui/parse-prd.js';
 import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getDefaultPriority } from '../../config-manager.js';
@@ -293,6 +293,8 @@ export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
 	outputData[targetTag] = {
 		tasks: tasks,
 		metadata: {
+			// Keep what the tag already records (schemaVersion, counts, ...)
+			...outputData[targetTag]?.metadata,
 			created:
 				outputData[targetTag]?.metadata?.created || new Date().toISOString(),
 			updated: new Date().toISOString(),
