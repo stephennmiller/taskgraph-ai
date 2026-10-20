@@ -8,6 +8,10 @@ import os from 'os';
 import path from 'path';
 import manageGitignoreFile from '../../src/utils/manage-gitignore.js';
 
+// Root ignores file permissions, so chmod can't make a path unreadable or
+// unwritable. Dev and CI containers often run as root.
+const testUnlessRoot = process.getuid?.() === 0 ? test.skip : test;
+
 describe('manage-gitignore.js Integration Tests', () => {
 	let tempDir;
 	let testGitignorePath;
@@ -383,7 +387,7 @@ tasks/ `;
 	});
 
 	describe('Error Handling', () => {
-		test('should handle permission errors gracefully', () => {
+		testUnlessRoot('should handle permission errors gracefully', () => {
 			// Create a directory where we would create the file, then remove write permissions
 			const readOnlyDir = path.join(tempDir, 'readonly');
 			fs.mkdirSync(readOnlyDir);
@@ -419,7 +423,7 @@ tasks/ `;
 			fs.chmodSync(readOnlyDir, 0o755);
 		});
 
-		test('should handle read errors on existing files', () => {
+		testUnlessRoot('should handle read errors on existing files', () => {
 			// Create a file then remove read permissions
 			fs.writeFileSync(testGitignorePath, 'existing content');
 			fs.chmodSync(testGitignorePath, 0o000); // No permissions
