@@ -7,6 +7,7 @@
  * Ctrl-C cancels, as in any other prompt.
  */
 
+import chalk from 'chalk';
 import inquirer from 'inquirer';
 import {
 	MODEL_NOTES,
@@ -57,16 +58,25 @@ export function modelPromptMessage(role: ModelRoleName): string {
 	return `${label} model (${purpose})`;
 }
 
+/** `✔ Main model (creates and updates tasks) opus`, as inquirer shows it */
+export function formatModelAnswer(role: ModelRoleName, model: string): string {
+	return `${chalk.green('✔')} ${chalk.bold(modelPromptMessage(role))} ${chalk.cyan(model)}`;
+}
+
 /**
  * Ask which model a role should use. Starts on the current model, so Enter
  * keeps it.
+ *
+ * The list is cleared when the prompt ends, so Ctrl-C doesn't leave it on
+ * screen; the answer line is printed here instead.
  */
 export async function promptForModel(
 	role: ModelRoleName,
 	choices: ModelChoice[],
 	currentModelId: string | null
 ): Promise<string> {
-	const { model } = await inquirer.prompt<{ model: string }>([
+	const ask = inquirer.createPromptModule({ clearPromptOnDone: true });
+	const { model } = await ask<{ model: string }>([
 		{
 			type: 'select',
 			name: 'model',
@@ -75,5 +85,6 @@ export async function promptForModel(
 			default: currentModelId ?? undefined
 		}
 	]);
+	console.log(formatModelAnswer(role, model));
 	return model;
 }

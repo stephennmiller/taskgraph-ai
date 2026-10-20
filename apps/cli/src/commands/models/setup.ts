@@ -11,7 +11,6 @@
  * changes nothing.
  */
 
-import chalk from 'chalk';
 import {
 	getAvailableModels,
 	getModelConfiguration,
@@ -99,10 +98,8 @@ export async function runInteractiveSetup(
 		to: chosen[role] as string
 	}));
 
-	if (changes.length === 0) {
-		console.log(`\n${chalk.green('✓')} Models unchanged`);
-		return true;
-	}
+	// The answer lines already show what each role uses
+	if (changes.length === 0) return true;
 
 	const { saved, ok } = await saveChanges(changes, projectRoot);
 	if (saved.length > 0) {
