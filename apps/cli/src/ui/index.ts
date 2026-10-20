@@ -48,6 +48,14 @@ export {
 	type SubtaskSummaryItem
 } from './formatters/subtask-summary-formatters.js';
 
+// The `taskgraph --help` screen
+export {
+	formatHelp,
+	HELP_GROUPS,
+	type HelpGroup,
+	type HelpRow
+} from './formatters/help-formatters.js';
+
 // What clear-subtasks removed
 export {
 	formatClearedSubtasks,
