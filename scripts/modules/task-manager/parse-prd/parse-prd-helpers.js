@@ -3,6 +3,7 @@
  */
 
 import { theme } from '@tm/cli/theme';
+import { reconcileDependencySources } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -222,6 +223,9 @@ export function processTasks(
 					(findTaskById(existingTasks, newDepId) ||
 						processedTasks.some((t) => t.id === newDepId))
 			);
+		// The AI invented these dependencies, so record them as inferred
+		const metadata = reconcileDependencySources(task);
+		if (metadata) task.metadata = metadata;
 	});
 
 	return processedTasks;

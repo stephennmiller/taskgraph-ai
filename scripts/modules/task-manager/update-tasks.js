@@ -19,6 +19,7 @@ import {
 } from '../ui.js';
 
 import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { reconcileDependencySources } from '@tm/core';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
@@ -249,7 +250,7 @@ async function updateTasks(
 					// Only update if the task was part of the set sent to AI
 					const updatedTask = updatedTasksMap.get(task.id);
 					// Merge the updated task with the existing one to preserve fields like subtasks
-					data.tasks[index] = {
+					const merged = {
 						...task, // Keep all existing fields
 						...updatedTask, // Override with updated fields
 						// Ensure subtasks field is preserved if not provided by AI
@@ -258,6 +259,26 @@ async function updateTasks(
 								? updatedTask.subtasks
 								: task.subtasks
 					};
+					// Dependencies the AI added are recorded as inferred; earlier marks stay
+					const taskMetadata = reconcileDependencySources(merged, task);
+					if (taskMetadata) merged.metadata = taskMetadata;
+					else delete merged.metadata;
+					if (Array.isArray(merged.subtasks)) {
+						merged.subtasks = merged.subtasks.map((subtask) => {
+							const original = task.subtasks?.find(
+								(st) => String(st.id) === String(subtask.id)
+							);
+							const subtaskMetadata = reconcileDependencySources(
+								subtask,
+								original
+							);
+							const { metadata: _drop, ...rest } = subtask;
+							return subtaskMetadata
+								? { ...rest, metadata: subtaskMetadata }
+								: rest;
+						});
+					}
+					data.tasks[index] = merged;
 					actualUpdateCount++;
 				}
 			});

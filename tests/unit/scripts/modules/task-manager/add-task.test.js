@@ -302,6 +302,80 @@ describe('addTask', () => {
 		);
 	});
 
+	describe('dependency provenance', () => {
+		const aiReturnsDependencies = (dependencies) =>
+			generateObjectService.mockResolvedValueOnce({
+				mainResult: {
+					object: {
+						title: 'Task from the AI',
+						description: 'Description from the AI',
+						details: '',
+						testStrategy: '',
+						dependencies
+					}
+				},
+				telemetryData: {}
+			});
+
+		const addedTask = () =>
+			writeJSON.mock.calls[0][1].master.tasks.find((t) => t.id === 4);
+
+		const context = () => ({
+			mcpLog: createMcpLogMock(),
+			projectRoot: '/mock/project/root',
+			tag: 'master'
+		});
+
+		test('marks dependencies the AI chose as inferred', async () => {
+			aiReturnsDependencies([1, 2]);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().metadata.dependencySources).toEqual({
+				1: 'inferred',
+				2: 'inferred'
+			});
+		});
+
+		test('keeps dependencies the user passed explicit and marks only the extras', async () => {
+			aiReturnsDependencies([1, 2]);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[1],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().metadata.dependencySources).toEqual({ 2: 'inferred' });
+		});
+
+		test('adds no metadata when the user supplied every dependency', async () => {
+			aiReturnsDependencies([]);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[1],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().dependencies).toEqual([1]);
+			expect(addedTask()).not.toHaveProperty('metadata');
+		});
+	});
+
 	test('should filter out invalid dependencies', async () => {
 		// Arrange
 		const prompt = 'Create a new authentication system';

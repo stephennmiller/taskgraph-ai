@@ -1,5 +1,7 @@
 import fs from 'fs';
 
+import { reconcileDependencySources } from '@tm/core';
+
 import { readJSON, writeJSON } from '../utils.js';
 
 import {
@@ -314,12 +316,18 @@ async function expandTask(
 			if (!mainResult || !Array.isArray(mainResult.subtasks)) {
 				throw new Error('AI response did not include a valid subtasks array.');
 			}
-			generatedSubtasks = mainResult.subtasks.map((subtask) => ({
-				...subtask,
-				dependencies: subtask.dependencies ?? [],
-				status: subtask.status ?? 'pending',
-				testStrategy: subtask.testStrategy ?? null
-			}));
+			generatedSubtasks = mainResult.subtasks.map((subtask) => {
+				const generated = {
+					...subtask,
+					dependencies: subtask.dependencies ?? [],
+					status: subtask.status ?? 'pending',
+					testStrategy: subtask.testStrategy ?? null
+				};
+				// The AI chose these dependencies, so record them as inferred
+				const metadata = reconcileDependencySources(generated);
+				if (metadata) generated.metadata = metadata;
+				return generated;
+			});
 			logger.debug(`Received ${generatedSubtasks.length} subtasks from AI.`);
 		} catch (error) {
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);

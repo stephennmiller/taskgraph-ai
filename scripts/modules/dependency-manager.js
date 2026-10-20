@@ -3,8 +3,10 @@
  * Manages task dependencies and relationships
  */
 
+import { printError } from '@tm/cli/errors';
+import { setDependencySource } from '@tm/core';
 import path from 'path';
-
+import { displayBanner } from './ui.js';
 import {
 	formatTaskId,
 	isSilentMode,
@@ -15,11 +17,21 @@ import {
 	writeJSON
 } from './utils.js';
 
-import { printError } from '@tm/cli/errors';
-import { displayBanner } from './ui.js';
-
 const LIST_HINT = 'Run `taskgraph list` to see task IDs';
 const NO_TASKS_HINT = 'Create some with `taskgraph parse-prd <file>`';
+
+/**
+ * Record how a dependency was created on the task's metadata. Marking it
+ * explicit drops any inferred entry, which is also how removal prunes one.
+ * @param {object} task
+ * @param {string|number} dependencyId
+ * @param {'explicit'|'inferred'} source
+ */
+function setTaskDependencySource(task, dependencyId, source) {
+	const metadata = setDependencySource(task.metadata, dependencyId, source);
+	if (metadata) task.metadata = metadata;
+	else delete task.metadata;
+}
 
 /**
  * Stop a dependency command with one clear message. MCP runs in silent mode
@@ -187,6 +199,8 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	) {
 		// Add the dependency
 		targetTask.dependencies.push(formattedDependencyId);
+		// A person added it, so it is explicit (clears any stale inferred mark)
+		setTaskDependencySource(targetTask, formattedDependencyId, 'explicit');
 
 		// Sort dependencies numerically or by parent task ID first, then subtask ID
 		targetTask.dependencies.sort((a, b) => {
@@ -325,8 +339,12 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 		return;
 	}
 
-	// Remove the dependency
-	targetTask.dependencies.splice(dependencyIndex, 1);
+	// Remove the dependency, and its provenance mark with it
+	const [removedDependency] = targetTask.dependencies.splice(
+		dependencyIndex,
+		1
+	);
+	setTaskDependencySource(targetTask, removedDependency, 'explicit');
 
 	// Save the updated tasks
 	writeJSON(tasksPath, data, context.projectRoot, context.tag);
@@ -1767,23 +1785,23 @@ function canMoveWithDependencies(taskId, sourceTag, targetTag, allTasks) {
 
 export {
 	addDependency,
-	removeDependency,
-	isCircularDependency,
-	validateTaskDependencies,
-	validateDependenciesCommand,
-	fixDependenciesCommand,
-	removeDuplicateDependencies,
+	canMoveWithDependencies,
 	cleanupSubtaskDependencies,
+	DEPENDENCY_ERROR_CODES,
+	DependencyError,
 	ensureAtLeastOneIndependentSubtask,
-	validateAndFixDependencies,
+	findAllDependenciesRecursively,
+	findCrossTagDependencies,
 	findDependencyTask,
 	findTaskCrossTagConflicts,
-	validateCrossTagMove,
-	findCrossTagDependencies,
+	fixDependenciesCommand,
 	getDependentTaskIds,
+	isCircularDependency,
+	removeDependency,
+	removeDuplicateDependencies,
+	validateAndFixDependencies,
+	validateCrossTagMove,
+	validateDependenciesCommand,
 	validateSubtaskMove,
-	canMoveWithDependencies,
-	findAllDependenciesRecursively,
-	DependencyError,
-	DEPENDENCY_ERROR_CODES
+	validateTaskDependencies
 };

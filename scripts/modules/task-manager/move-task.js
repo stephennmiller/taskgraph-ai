@@ -1,4 +1,5 @@
 import path from 'path';
+import { renameDependencySource } from '@tm/core';
 import {
 	findCrossTagDependencies,
 	getDependentTaskIds,
@@ -11,6 +12,18 @@ import {
 	traverseDependencies,
 	writeJSON
 } from '../utils.js';
+
+/**
+ * Keep a dependency's provenance mark when the task it points at gets a new ID
+ * @param {object} task - The task or subtask that lists the dependency
+ * @param {number} oldId
+ * @param {number} newId
+ */
+function carryDependencySource(task, oldId, newId) {
+	const metadata = renameDependencySource(task.metadata, oldId, newId);
+	if (metadata) task.metadata = metadata;
+	else delete task.metadata;
+}
 
 /**
  * Find all dependencies recursively for a set of source tasks with depth limiting
@@ -528,6 +541,7 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 		if (task.dependencies && task.dependencies.includes(sourceTask.id)) {
 			const depIndex = task.dependencies.indexOf(sourceTask.id);
 			task.dependencies[depIndex] = destTaskId;
+			carryDependencySource(task, sourceTask.id, destTaskId);
 		}
 		if (task.subtasks) {
 			task.subtasks.forEach((subtask) => {
@@ -537,6 +551,7 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 				) {
 					const depIndex = subtask.dependencies.indexOf(sourceTask.id);
 					subtask.dependencies[depIndex] = destTaskId;
+					carryDependencySource(subtask, sourceTask.id, destTaskId);
 				}
 			});
 		}

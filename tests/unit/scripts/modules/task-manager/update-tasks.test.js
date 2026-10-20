@@ -204,6 +204,74 @@ describe('updateTasks', () => {
 		);
 	});
 
+	test('marks dependencies the AI adds as inferred and keeps earlier marks', async () => {
+		const initial = {
+			master: {
+				tasks: [
+					{ id: 1, title: 'One', status: 'done', dependencies: [] },
+					{
+						id: 2,
+						title: 'Two',
+						status: 'pending',
+						dependencies: [1],
+						metadata: { jira: 'ABC-2', dependencySources: { 1: 'inferred' } },
+						subtasks: [
+							{
+								id: 1,
+								title: 'Sub',
+								status: 'pending',
+								dependencies: [],
+								metadata: { owner: 'kim' }
+							}
+						]
+					}
+				]
+			}
+		};
+		const aiTask = {
+			id: 2,
+			title: 'Two, revised',
+			status: 'pending',
+			details: 'd',
+			description: 'd',
+			dependencies: [1, 3],
+			priority: 'medium',
+			testStrategy: 't',
+			subtasks: [
+				{ id: 1, title: 'Sub', status: 'pending', dependencies: [] },
+				{ id: 2, title: 'New sub', status: 'pending', dependencies: [1] }
+			]
+		};
+		readJSON.mockReturnValue({
+			...initial.master,
+			tag: 'master',
+			_rawTaggedData: initial
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: { tasks: [aiTask] },
+			telemetryData: {}
+		});
+
+		await updateTasks(
+			'/mock/path/tasks.json',
+			2,
+			'Revise',
+			false,
+			{ projectRoot: '/mock/path', tag: 'master' },
+			'json'
+		);
+
+		const written = writeJSON.mock.calls[0][1]._rawTaggedData.master.tasks[1];
+		expect(written.metadata).toEqual({
+			jira: 'ABC-2',
+			dependencySources: { 1: 'inferred', 3: 'inferred' }
+		});
+		expect(written.subtasks[0].metadata).toEqual({ owner: 'kim' });
+		expect(written.subtasks[1].metadata.dependencySources).toEqual({
+			1: 'inferred'
+		});
+	});
+
 	test('should handle no tasks to update', async () => {
 		// Arrange
 		const mockTasksPath = '/mock/path/tasks.json';

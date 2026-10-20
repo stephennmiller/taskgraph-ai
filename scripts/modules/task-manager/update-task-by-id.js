@@ -17,6 +17,7 @@ import {
 } from '../ui.js';
 
 import { theme } from '@tm/cli/theme';
+import { reconcileDependencySources } from '@tm/core';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
@@ -434,6 +435,13 @@ async function updateTaskById(
 						})
 					};
 					currentSubtaskId++;
+					// Dependencies the AI added are inferred; earlier marks stay
+					const subtaskMetadata = reconcileDependencySources(
+						correctedSubtask,
+						originalSubtask
+					);
+					if (subtaskMetadata) correctedSubtask.metadata = subtaskMetadata;
+					else delete correctedSubtask.metadata;
 					return correctedSubtask;
 				});
 				report(
@@ -491,9 +499,14 @@ async function updateTaskById(
 			// --- Preserve and Merge Metadata ---
 			// AI responses don't include metadata (AI schema excludes it)
 			// Preserve existing metadata from original task and merge new metadata if provided
-			if (taskToUpdate.metadata || metadata) {
+			// Dependencies the AI added are recorded as inferred; earlier marks stay
+			const dependencyMetadata = reconcileDependencySources(
+				updatedTask,
+				taskToUpdate
+			);
+			if (dependencyMetadata || metadata) {
 				updatedTask.metadata = {
-					...(taskToUpdate.metadata || {}),
+					...(dependencyMetadata || {}),
 					...(metadata || {})
 				};
 			}

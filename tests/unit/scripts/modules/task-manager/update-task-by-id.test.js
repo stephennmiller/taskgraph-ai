@@ -328,6 +328,57 @@ describe('updateTaskById success path with generateObjectService', () => {
 		});
 	});
 
+	test('marks dependencies the AI adds as inferred and keeps earlier marks and user metadata', async () => {
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{
+					id: 1,
+					title: 'Original Task',
+					description: 'Original description',
+					status: 'pending',
+					dependencies: [3, 4],
+					metadata: { jira: 'ABC-1', dependencySources: { 3: 'inferred' } },
+					priority: 'low',
+					details: null,
+					testStrategy: null,
+					subtasks: []
+				}
+			]
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: {
+				task: {
+					id: 1,
+					title: 'Updated Task',
+					description: 'Updated description',
+					status: 'pending',
+					dependencies: [3, 4, 5],
+					priority: 'high',
+					details: 'New details',
+					testStrategy: 'Tests',
+					subtasks: []
+				}
+			},
+			telemetryData: {}
+		});
+
+		const { updatedTask } = await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Add a dependency',
+			false,
+			{ tag: 'master' },
+			'json'
+		);
+
+		expect(updatedTask.metadata).toEqual({
+			jira: 'ABC-1',
+			dependencySources: { 3: 'inferred', 5: 'inferred' }
+		});
+	});
+
 	test('handles generateObjectService with malformed mainResult', async () => {
 		fs.existsSync.mockReturnValue(true);
 		readJSON.mockReturnValue({

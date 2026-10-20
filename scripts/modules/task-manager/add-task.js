@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 
 import { theme } from '@tm/cli/theme';
+import { reconcileDependencySources } from '@tm/core';
 import {
 	DEFAULT_TASK_PRIORITY,
 	TASK_PRIORITY_OPTIONS,
@@ -514,6 +515,12 @@ async function addTask(
 				});
 			}
 		}
+
+		// Dependencies the user passed stay explicit; any the AI added are inferred
+		const dependencyMetadata = reconcileDependencySources(newTask, {
+			dependencies: numericDependencies
+		});
+		if (dependencyMetadata) newTask.metadata = dependencyMetadata;
 
 		// Add the task to the tasks array OF THE CORRECT TAG
 		rawData[targetTag].tasks.push(newTask);
