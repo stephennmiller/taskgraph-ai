@@ -112,7 +112,9 @@ describe('explainBlockers', () => {
 		const result = explainBlockers([task('1', ['99']), task('2', ['1'])], '2');
 
 		expect(shape(result.blockers)).toEqual([['1', [['99:missing']]]]);
-		expect(result.rootCauses).toEqual([{ id: '99', kind: 'missing' }]);
+		expect(result.rootCauses).toEqual([
+			{ id: '99', kind: 'missing', listedBy: ['1'] }
+		]);
 	});
 
 	it('names deferred and blocked dependencies as stalled, not ready', () => {
@@ -160,7 +162,8 @@ describe('explainBlockers', () => {
 				title: 'Task 1',
 				status: 'pending',
 				kind: 'cycle',
-				cycle: ['1', '2', '3']
+				cycle: ['1', '2', '3'],
+				edges: [{ from: '3', to: '1' }]
 			}
 		]);
 	});
@@ -195,6 +198,84 @@ describe('explainBlockers', () => {
 		);
 
 		expect(shape(result.blockers)).toEqual([['1.2', [['1.1:ready']]]]);
+	});
+
+	it('reports a task that depends on itself as a one-task cycle', () => {
+		const result = explainBlockers([task('2', ['2'])], '2');
+
+		expect(result.blocked).toBe(true);
+		expect(shape(result.blockers)).toEqual([['2:cycle']]);
+		expect(result.rootCauses).toEqual([
+			{
+				id: '2',
+				title: 'Task 2',
+				status: 'pending',
+				kind: 'cycle',
+				cycle: ['2'],
+				edges: [{ from: '2', to: '2' }]
+			}
+		]);
+	});
+
+	it('reports a subtask that depends on itself', () => {
+		const result = explainBlockers(
+			[task('1', [], 'pending', [sub(1, [1])])],
+			'1.1'
+		);
+
+		expect(shape(result.blockers)).toEqual([['1.1:cycle']]);
+		expect(result.rootCauses[0]).toMatchObject({
+			kind: 'cycle',
+			edges: [{ from: '1.1', to: '1.1' }]
+		});
+	});
+
+	it('finds a self-dependency further down the chain', () => {
+		const result = explainBlockers([task('1', ['1']), task('2', ['1'])], '2');
+
+		expect(shape(result.blockers)).toEqual([['1', [['1:cycle']]]]);
+	});
+
+	it('ignores the self-dependency of a finished task', () => {
+		expect(explainBlockers([task('1', ['1'], 'done')], '1').blocked).toBe(
+			false
+		);
+	});
+
+	it('lists every task that names a missing ID', () => {
+		const result = explainBlockers(
+			[task('1', ['99']), task('2', ['99']), task('3', ['1', '2'])],
+			'3'
+		);
+
+		expect(result.rootCauses).toEqual([
+			{ id: '99', kind: 'missing', listedBy: ['1', '2'] }
+		]);
+	});
+
+	it('lists every back edge of a cycle', () => {
+		// 1 -> 2 -> 1 and 1 -> 3 -> 1
+		const result = explainBlockers(
+			[task('1', ['2', '3']), task('2', ['1']), task('3', ['1'])],
+			'1'
+		);
+
+		expect(result.rootCauses).toHaveLength(1);
+		expect(result.rootCauses[0].edges).toEqual([
+			{ from: '2', to: '1' },
+			{ from: '3', to: '1' }
+		]);
+	});
+
+	it('explains a very long chain without overflowing the stack', () => {
+		const ids = Array.from({ length: 10_000 }, (_, i) => String(i + 1));
+		const chain = ids.map((id, i) => task(id, i ? [ids[i - 1]] : []));
+
+		const result = explainBlockers(chain, '10000');
+
+		expect(result.rootCauses).toEqual([
+			expect.objectContaining({ id: '1', kind: 'ready' })
+		]);
 	});
 
 	it('lets a task depend on a subtask', () => {

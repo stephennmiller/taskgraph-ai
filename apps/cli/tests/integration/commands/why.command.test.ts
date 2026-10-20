@@ -33,7 +33,12 @@ describe('why command', () => {
 	beforeEach(() => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-why-'));
 		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-why-home-'));
-		run(['init', '--yes', '--no-aliases', '--no-git']);
+		const init = run(['init', '--yes', '--no-aliases', '--no-git']);
+		if (init.status !== 0) {
+			throw new Error(
+				`taskgraph init failed (build first with \`npm run build\`): ${init.stderr}`
+			);
+		}
 		const tasksFile = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
 		const data = JSON.parse(fs.readFileSync(tasksFile, 'utf8'));
 		data.master.tasks = [

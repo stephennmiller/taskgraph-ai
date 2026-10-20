@@ -92,7 +92,7 @@ describe('renderBlockerExplanation', () => {
 				explanation(
 					[node('5', [{ id: '99', kind: 'missing', blockers: [] }])],
 					{
-						rootCauses: [{ id: '99', kind: 'missing' }]
+						rootCauses: [{ id: '99', kind: 'missing', listedBy: ['5'] }]
 					}
 				)
 			)
@@ -134,7 +134,8 @@ describe('renderBlockerExplanation', () => {
 								title: 'Task 1',
 								status: 'pending',
 								kind: 'cycle',
-								cycle: ['1', '2']
+								cycle: ['1', '2'],
+								edges: [{ from: '2', to: '1' }]
 							}
 						]
 					}
@@ -145,6 +146,75 @@ describe('renderBlockerExplanation', () => {
 		expect(lines).toContain('      └─ ○ 1  Task 1  ← loops back');
 		expect(lines).toContain(
 			'  1, 2 depend on each other. Break the loop with: taskgraph remove-dependency --id=2 --depends-on=1'
+		);
+	});
+
+	it('suggests removing a missing ID from every task that lists it', () => {
+		const missing = (): BlockerNode => ({
+			id: '99',
+			kind: 'missing',
+			blockers: []
+		});
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation([node('1', [missing()]), node('2', [missing()])], {
+					rootCauses: [{ id: '99', kind: 'missing', listedBy: ['1', '2'] }]
+				})
+			)
+		);
+
+		expect(lines).toContain(
+			'  99 is not a task. Remove it with: taskgraph remove-dependency --id=1 --depends-on=99 and taskgraph remove-dependency --id=2 --depends-on=99'
+		);
+	});
+
+	it('names a self-dependency and how to remove it', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation([node('7', [], { kind: 'cycle' })], {
+					rootCauses: [
+						{
+							id: '7',
+							title: 'Task 7',
+							status: 'pending',
+							kind: 'cycle',
+							cycle: ['7'],
+							edges: [{ from: '7', to: '7' }]
+						}
+					]
+				})
+			)
+		);
+
+		expect(lines).toContain(
+			'  7 depends on itself. Remove it with: taskgraph remove-dependency --id=7 --depends-on=7'
+		);
+	});
+
+	it('lists every edge that closes a loop', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation(
+					[node('1', [node('2', [node('1', [], { kind: 'cycle' })])])],
+					{
+						rootCauses: [
+							{
+								id: '1',
+								kind: 'cycle',
+								cycle: ['1', '2', '3'],
+								edges: [
+									{ from: '2', to: '1' },
+									{ from: '3', to: '1' }
+								]
+							}
+						]
+					}
+				)
+			)
+		);
+
+		expect(lines.at(-1)).toBe(
+			'  1, 2, 3 depend on each other. Break the loop with: taskgraph remove-dependency --id=2 --depends-on=1 and taskgraph remove-dependency --id=3 --depends-on=1'
 		);
 	});
 });

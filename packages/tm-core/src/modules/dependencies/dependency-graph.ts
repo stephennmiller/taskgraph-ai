@@ -9,7 +9,8 @@
  * its subtasks: finishing the subtasks does not unblock anything by itself.
  *
  * Dependency IDs that match no task are recorded as `missing` and never become
- * edges; self-dependencies are ignored.
+ * edges. Self-dependencies are not edges either (the analyses ignore them),
+ * but are flagged on the node as `selfDependency`.
  *
  * Finished means `isTaskComplete` (done, completed, cancelled). Finished
  * tasks take no part in `blockedCount`, `bottlenecks` or `criticalPath`. Every
@@ -37,6 +38,8 @@ export interface DependencyGraphNode {
 	dependencies: string[];
 	/** Dependency IDs that don't match any task */
 	missing: string[];
+	/** The task lists itself as a dependency (not an edge; see header) */
+	selfDependency: boolean;
 	/** IDs of tasks that list this one as a dependency */
 	dependents: string[];
 }
@@ -98,13 +101,17 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 			priority: r.priority,
 			dependencies: [],
 			missing: [],
+			selfDependency: false,
 			dependents: []
 		});
 	}
 	for (const r of raw) {
 		const node = nodes.get(r.id) as DependencyGraphNode;
 		for (const dep of new Set(r.deps)) {
-			if (dep === r.id) continue;
+			if (dep === r.id) {
+				node.selfDependency = true;
+				continue;
+			}
 			const target = nodes.get(dep);
 			if (target) {
 				node.dependencies.push(dep);

@@ -19,7 +19,8 @@ export {
 	type BlockerExplanation,
 	type BlockerKind,
 	type BlockerNode,
-	type BlockerRootCause
+	type BlockerRootCause,
+	type DependencyEdge
 } from './explain-blockers.js';
 export {
 	buildDependencyTree,

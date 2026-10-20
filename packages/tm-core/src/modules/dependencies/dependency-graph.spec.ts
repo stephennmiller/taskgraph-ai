@@ -57,6 +57,7 @@ describe('buildDependencyGraph', () => {
 
 		expect(graph.nodes.get('1')?.dependencies).toEqual([]);
 		expect(graph.nodes.get('1')?.missing).toEqual(['9']);
+		expect(graph.nodes.get('1')?.selfDependency).toBe(true);
 	});
 });
 

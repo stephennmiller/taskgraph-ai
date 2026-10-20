@@ -73,6 +73,32 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
   </Accordion>
 
+  <Accordion title="Explain Why a Task Is Blocked">
+    ```bash
+    # Follow a task's unfinished dependencies down to the root causes: work
+    # that is ready to start, deferred or blocked tasks, dependency IDs that
+    # match no task, and dependency loops (including a task that lists itself).
+    # Each root cause comes with the command that fixes it.
+    taskgraph why <id>
+    # or
+    taskgraph why --id=<id>
+
+    # Subtasks work too
+    taskgraph why 3.2
+
+    # Machine-readable explanation
+    taskgraph why <id> --format json
+    ```
+
+    The JSON has the task's `id`, `title`, `status`, `blocked`, the `tag`, a
+    nested `blockers` tree (each node has `id`, `title`, `status`, `blockers`,
+    and `kind` where a chain ends: `ready`, `stalled`, `missing` or `cycle`;
+    a task already shown elsewhere is marked `repeated`), and `rootCauses`.
+    A `missing` root cause lists the tasks that name it in `listedBy`; a
+    `cycle` root cause lists its members in `cycle` and the dependencies to
+    remove in `edges` (`from` depends on `to`).
+  </Accordion>
+
   <Accordion title="Show Specific Task">
     ```bash
     # Show details of a specific task
