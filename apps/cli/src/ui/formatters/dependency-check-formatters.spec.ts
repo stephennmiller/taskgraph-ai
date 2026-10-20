@@ -60,13 +60,26 @@ describe('formatDependencyCheck', () => {
 		);
 	});
 
-	it('still suggests fix-dependencies for a loop between subtasks', () => {
+	it('suggests fix-dependencies for a loop it can break', () => {
 		const output = formatDependencyCheck({
 			...counts,
-			issues: [{ type: 'circular', taskId: '1.2' }]
+			issues: [{ type: 'circular', taskId: '1.2', fixable: true }]
 		});
 		expect(lines(output).at(-1)).toBe(
 			'Run taskgraph fix-dependencies to remove them'
+		);
+	});
+
+	it('suggests remove-dependency for a subtask loop that runs through a task', () => {
+		const output = formatDependencyCheck({
+			...counts,
+			issues: [
+				{ type: 'circular', taskId: 1, fixable: false },
+				{ type: 'circular', taskId: '1.1', fixable: false }
+			]
+		});
+		expect(lines(output).at(-1)).toBe(
+			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
 		);
 	});
 

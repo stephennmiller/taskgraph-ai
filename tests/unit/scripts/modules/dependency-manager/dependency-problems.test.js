@@ -67,6 +67,53 @@ describe('validate-dependencies', () => {
 		]);
 	});
 
+	it('reports only the tasks in a loop, not ones that depend on it', () => {
+		// 2 and 3 wait on each other; 1 and subtask 4.1 only wait on 2
+		const { issues } = validateTaskDependencies([
+			task(1, [2]),
+			task(2, [3]),
+			task(3, [2]),
+			task(4, [], [subtask(1, ['2'])])
+		]);
+		expect(issues.map((issue) => [issue.taskId, issue.fixable])).toEqual([
+			[2, false],
+			[3, false]
+		]);
+	});
+
+	it('marks a loop made only of subtasks as one fix-dependencies can break', () => {
+		const { issues } = validateTaskDependencies([
+			task(1, [], [subtask(1, [2]), subtask(2, [1])])
+		]);
+		expect(issues.map((issue) => [issue.taskId, issue.fixable])).toEqual([
+			['1.1', true],
+			['1.2', true]
+		]);
+	});
+
+	it("marks a subtask loop through a task as one fix can't break", () => {
+		const { issues } = validateTaskDependencies([
+			task(1, ['1.1'], [subtask(1, ['1'])])
+		]);
+		expect(issues.map((issue) => [issue.taskId, issue.fixable])).toEqual([
+			[1, false],
+			['1.1', false]
+		]);
+	});
+
+	it('still finds a loop for a task that also depends on itself', () => {
+		const { issues } = validateTaskDependencies([
+			task(1),
+			task(2, [2, 3]),
+			task(3, [2])
+		]);
+		expect(issues.map((issue) => [issue.type, issue.taskId])).toEqual([
+			['self', 2],
+			['circular', 2],
+			['circular', 3]
+		]);
+	});
+
 	it('returns the problems and counts instead of printing them', async () => {
 		readJSON.mockReturnValue({ tasks: [task(1), task(2, [1, 99])] });
 		const result = await validateDependenciesCommand('tasks.json', {

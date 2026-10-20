@@ -120,6 +120,21 @@ describe('dependency commands', () => {
 		}
 	});
 
+	it('validate: lists only the tasks in a loop, and how to break it', () => {
+		// 2 and 3 wait on each other; 1 only waits on 2
+		setDependencies(0, [2]);
+		setDependencies(1, [3]);
+		setDependencies(2, [2]);
+
+		const result = run(['validate-dependencies']);
+
+		expect(result.status).toBe(1);
+		expect(result.stdout).toContain('✗ 2 dependency problems');
+		expect(result.stdout).not.toMatch(/^\s+1\s/m);
+		expect(result.stdout).toContain('taskgraph remove-dependency');
+		expect(result.stdout).not.toContain('Run taskgraph fix-dependencies');
+	});
+
 	it('add: a repeat dependency is one plain line, not a warning', () => {
 		run(['add-dependency', '--id=2', '--depends-on=1']);
 		const result = run(['add-dependency', '--id=2', '--depends-on=1']);

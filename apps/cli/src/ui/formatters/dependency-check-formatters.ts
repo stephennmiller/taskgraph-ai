@@ -30,6 +30,8 @@ export interface DependencyIssue {
 	type: 'missing' | 'self' | 'circular';
 	taskId: Id;
 	dependencyId?: Id;
+	/** For a loop: whether fix-dependencies can break it (subtasks only) */
+	fixable?: boolean;
 }
 
 /** One change `fix-dependencies` made */
@@ -172,12 +174,11 @@ function problems(
 	];
 
 	// fix-dependencies removes missing and self references and breaks loops
-	// between subtasks; a loop between tasks needs the user to pick an edge
+	// made only of subtasks; a loop through a task needs the user to pick an
+	// edge
 	const fixable =
 		!afterFix &&
-		issues.some(
-			(issue) => issue.type !== 'circular' || String(issue.taskId).includes('.')
-		);
+		issues.some((issue) => issue.type !== 'circular' || issue.fixable);
 	lines.push(
 		fixable
 			? theme.muted('Run ') +
