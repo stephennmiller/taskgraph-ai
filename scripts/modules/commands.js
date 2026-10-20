@@ -1060,10 +1060,7 @@ function registerCommands(programInstance) {
 			'-t, --tree',
 			'Include project file tree structure in the research context'
 		)
-		.option(
-			'-s, --save <file>',
-			'Save research results to the specified task/subtask(s)'
-		)
+		.option('-s, --save <file>', 'Save the answer to a markdown file')
 		.option(
 			'-d, --detail <level>',
 			'Output detail level: low, medium, high',
@@ -1071,332 +1068,166 @@ function registerCommands(programInstance) {
 		)
 		.option(
 			'--save-to <id>',
-			'Automatically save research results to specified task/subtask ID (e.g., "15" or "15.2")'
+			'Add the answer to a task or subtask\'s details (e.g., "15" or "15.2")'
 		)
-		.option(
-			'--save-file',
-			'Save research results to .taskgraph/docs/research/ directory'
-		)
+		.option('--save-file', 'Save the answer to .taskgraph/docs/research/')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (prompt, options) => {
-			// Initialize TaskGraph
-			const initOptions = {
+			const taskGraph = initTaskGraph({
 				tasksPath: options.file || true,
 				tag: options.tag
+			});
+			const fail = (message, hint) => {
+				printError(message, hint);
+				process.exit(1);
 			};
+			const isTaskId = (id) => /^\d+(\.\d+)?$/.test(id);
 
-			const taskGraph = initTaskGraph(initOptions);
-
-			// Parameter validation
 			if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-				console.error(
-					chalk.red('Error: Research prompt is required and cannot be empty')
+				fail(
+					'Research needs a question',
+					'Example: taskgraph research "How should we store sessions?" --id=3'
 				);
-				showResearchHelp();
-				process.exit(1);
 			}
 
-			// Validate detail level
-			const validDetailLevels = ['low', 'medium', 'high'];
+			const detailLevel = (options.detail || 'medium').toLowerCase();
+			if (!['low', 'medium', 'high'].includes(detailLevel)) {
+				fail(`--detail must be low, medium or high, not "${options.detail}"`);
+			}
+
+			const taskIds = options.id
+				? options.id
+						.split(',')
+						.map((id) => id.trim())
+						.filter(Boolean)
+				: [];
+			const badId = taskIds.find((id) => !isTaskId(id));
+			if (badId) {
+				fail(`"${badId}" isn't a task ID`, 'Use --id=15 or --id=15,16.2');
+			}
+
+			const filePaths = options.files
+				? options.files
+						.split(',')
+						.map((file) => file.trim())
+						.filter(Boolean)
+				: [];
+
+			const saveToId = options.saveTo ? options.saveTo.trim() : null;
+			if (options.saveTo !== undefined && !isTaskId(saveToId || '')) {
+				fail(
+					`"${options.saveTo}" isn't a task ID`,
+					'Use --save-to=15 for a task or --save-to=15.2 for a subtask'
+				);
+			}
+
+			const saveTarget = options.save ? options.save.trim() : null;
 			if (
-				options.detail &&
-				!validDetailLevels.includes(options.detail.toLowerCase())
+				options.save !== undefined &&
+				(!saveTarget ||
+					saveTarget.includes('..') ||
+					path.isAbsolute(saveTarget))
 			) {
-				console.error(
-					chalk.red(
-						`Error: Detail level must be one of: ${validDetailLevels.join(', ')}`
-					)
-				);
-				process.exit(1);
-			}
-
-			// Validate and parse task IDs if provided
-			let taskIds = [];
-			if (options.id) {
-				try {
-					taskIds = options.id.split(',').map((id) => {
-						const trimmedId = id.trim();
-						// Support both task IDs (e.g., "15") and subtask IDs (e.g., "15.2")
-						if (!/^\d+(\.\d+)?$/.test(trimmedId)) {
-							throw new Error(
-								`Invalid task ID format: "${trimmedId}". Expected format: "15" or "15.2"`
-							);
-						}
-						return trimmedId;
-					});
-				} catch (error) {
-					console.error(chalk.red(`Error parsing task IDs: ${error.message}`));
-					process.exit(1);
-				}
-			}
-
-			// Validate and parse file paths if provided
-			let filePaths = [];
-			if (options.files) {
-				try {
-					filePaths = options.files.split(',').map((filePath) => {
-						const trimmedPath = filePath.trim();
-						if (trimmedPath.length === 0) {
-							throw new Error('Empty file path provided');
-						}
-						return trimmedPath;
-					});
-				} catch (error) {
-					console.error(
-						chalk.red(`Error parsing file paths: ${error.message}`)
-					);
-					process.exit(1);
-				}
-			}
-
-			// Validate save-to option if provided
-			if (options.saveTo) {
-				const saveToId = options.saveTo.trim();
-				if (saveToId.length === 0) {
-					console.error(chalk.red('Error: Save-to ID cannot be empty'));
-					process.exit(1);
-				}
-				// Validate ID format: number or number.number
-				if (!/^\d+(\.\d+)?$/.test(saveToId)) {
-					console.error(
-						chalk.red(
-							'Error: Save-to ID must be in format "15" for task or "15.2" for subtask'
-						)
-					);
-					process.exit(1);
-				}
-			}
-
-			// Validate save option if provided (legacy file save)
-			if (options.save) {
-				const saveTarget = options.save.trim();
-				if (saveTarget.length === 0) {
-					console.error(chalk.red('Error: Save target cannot be empty'));
-					process.exit(1);
-				}
-				// Check if it's a valid file path (basic validation)
-				if (saveTarget.includes('..') || saveTarget.startsWith('/')) {
-					console.error(
-						chalk.red(
-							'Error: Save path must be relative and cannot contain ".."'
-						)
-					);
-					process.exit(1);
-				}
+				fail('--save needs a relative file path without ".."');
 			}
 
 			const tag = taskGraph.getCurrentTag();
+			const projectRoot = taskGraph.getProjectRoot();
+			const tasksPath = taskGraph.getTasksPath();
 
-			// Show current tag context
 			await displayCurrentTagIndicator(tag);
 
-			// Validate tasks file exists if task IDs are specified
-			if (taskIds.length > 0) {
-				try {
-					const tasksData = readJSON(
-						taskGraph.getTasksPath(),
-						taskGraph.getProjectRoot(),
-						tag
+			// Check every task ID before spending an AI call
+			const idsToCheck = [...taskIds, ...(saveToId ? [saveToId] : [])];
+			if (idsToCheck.length > 0) {
+				const tasks = readJSON(tasksPath, projectRoot, tag)?.tasks || [];
+				const exists = (id) => {
+					const [parentId, subtaskId] = id
+						.split('.')
+						.map((part) => Number.parseInt(part, 10));
+					const parent = tasks.find((task) => Number(task.id) === parentId);
+					if (!parent || subtaskId === undefined) return Boolean(parent);
+					return (parent.subtasks || []).some(
+						(subtask) => Number(subtask.id) === subtaskId
 					);
-					if (!tasksData || !tasksData.tasks) {
-						console.error(
-							chalk.red(
-								`Error: No valid tasks found in ${taskGraph.getTasksPath()} for tag '${tag}'`
-							)
-						);
-						process.exit(1);
-					}
-				} catch (error) {
-					console.error(
-						chalk.red(`Error reading tasks file: ${error.message}`)
-					);
-					process.exit(1);
-				}
-			}
-
-			// Validate file paths exist if specified
-			if (filePaths.length > 0) {
-				for (const filePath of filePaths) {
-					const fullPath = path.isAbsolute(filePath)
-						? filePath
-						: path.join(taskGraph.getProjectRoot(), filePath);
-					if (!fs.existsSync(fullPath)) {
-						console.error(chalk.red(`Error: File not found: ${filePath}`));
-						process.exit(1);
-					}
-				}
-			}
-
-			// Create validated parameters object
-			const validatedParams = {
-				prompt: prompt.trim(),
-				taskIds: taskIds,
-				filePaths: filePaths,
-				customContext: options.context ? options.context.trim() : null,
-				includeProjectTree: !!options.tree,
-				saveTarget: options.save ? options.save.trim() : null,
-				saveToId: options.saveTo ? options.saveTo.trim() : null,
-				allowFollowUp: true, // Always allow follow-up in CLI
-				detailLevel: options.detail ? options.detail.toLowerCase() : 'medium',
-				tasksPath: taskGraph.getTasksPath(),
-				projectRoot: taskGraph.getProjectRoot()
-			};
-
-			// Display what we're about to do
-			console.log(theme.brand(`Researching: "${validatedParams.prompt}"`));
-
-			if (validatedParams.taskIds.length > 0) {
-				console.log(
-					theme.muted(`Task context: ${validatedParams.taskIds.join(', ')}`)
-				);
-			}
-
-			if (validatedParams.filePaths.length > 0) {
-				console.log(
-					theme.muted(`File context: ${validatedParams.filePaths.join(', ')}`)
-				);
-			}
-
-			if (validatedParams.customContext) {
-				console.log(
-					theme.muted(
-						`Custom context: ${validatedParams.customContext.substring(0, 50)}${validatedParams.customContext.length > 50 ? '...' : ''}`
-					)
-				);
-			}
-
-			if (validatedParams.includeProjectTree) {
-				console.log(theme.muted('Including project file tree'));
-			}
-
-			console.log(theme.muted(`Detail level: ${validatedParams.detailLevel}`));
-
-			try {
-				// Import the research function
-				const { performResearch } = await import('./task-manager/research.js');
-
-				// Prepare research options
-				const researchOptions = {
-					taskIds: validatedParams.taskIds,
-					filePaths: validatedParams.filePaths,
-					customContext: validatedParams.customContext || '',
-					includeProjectTree: validatedParams.includeProjectTree,
-					detailLevel: validatedParams.detailLevel,
-					projectRoot: validatedParams.projectRoot,
-					saveToFile: !!options.saveFile,
-					tag: tag
 				};
-
-				// Execute research
-				const result = await performResearch(
-					validatedParams.prompt,
-					researchOptions,
-					{
-						commandName: 'research',
-						outputType: 'cli',
-						tag: tag
-					},
-					'text',
-					validatedParams.allowFollowUp // Pass follow-up flag
-				);
-
-				// Auto-save to task/subtask if requested and no interactive save occurred
-				if (validatedParams.saveToId && !result.interactiveSaveOccurred) {
-					try {
-						const isSubtask = validatedParams.saveToId.includes('.');
-
-						// Format research content for saving
-						const researchContent = `## Research Query: ${validatedParams.prompt}
-
-**Detail Level:** ${result.detailLevel}
-**Context Size:** ${result.contextSize} characters
-**Timestamp:** ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
-
-### Results
-
-${result.result}`;
-
-						if (isSubtask) {
-							// Save to subtask
-							const { updateSubtaskById } = await import(
-								'./task-manager/update-subtask-by-id.js'
-							);
-
-							await updateSubtaskById(
-								validatedParams.tasksPath,
-								validatedParams.saveToId,
-								researchContent,
-								false, // useResearch = false for simple append
-								{
-									commandName: 'research-save',
-									outputType: 'cli',
-									projectRoot: validatedParams.projectRoot,
-									tag: tag
-								},
-								'text'
-							);
-
-							console.log(
-								chalk.green(
-									`✅ Research saved to subtask ${validatedParams.saveToId}`
-								)
-							);
-						} else {
-							// Save to task
-							const updateTaskById = (
-								await import('./task-manager/update-task-by-id.js')
-							).default;
-
-							const taskIdNum = parseInt(validatedParams.saveToId, 10);
-							await updateTaskById(
-								validatedParams.tasksPath,
-								taskIdNum,
-								researchContent,
-								false, // useResearch = false for simple append
-								{
-									commandName: 'research-save',
-									outputType: 'cli',
-									projectRoot: validatedParams.projectRoot,
-									tag: tag
-								},
-								'text',
-								true // appendMode = true
-							);
-
-							console.log(
-								chalk.green(
-									`✅ Research saved to task ${validatedParams.saveToId}`
-								)
-							);
-						}
-					} catch (saveError) {
-						console.log(
-							chalk.red(`❌ Error saving to task/subtask: ${saveError.message}`)
-						);
-					}
-				}
-
-				// Save results to file if requested (legacy)
-				if (validatedParams.saveTarget) {
-					const saveContent = `# Research Query: ${validatedParams.prompt}
-
-**Detail Level:** ${result.detailLevel}
-**Context Size:** ${result.contextSize} characters
-**Timestamp:** ${new Date().toISOString()}
-
-## Results
-
-${result.result}
-`;
-
-					fs.writeFileSync(validatedParams.saveTarget, saveContent, 'utf-8');
-					console.log(
-						chalk.green(`\n💾 Results saved to: ${validatedParams.saveTarget}`)
+				const missing = idsToCheck.find((id) => !exists(id));
+				if (missing) {
+					fail(
+						`${missing.includes('.') ? 'Subtask' : 'Task'} ${missing} doesn't exist in tag '${tag}'`,
+						'Run `taskgraph list` to see task IDs'
 					);
 				}
+			}
+
+			const missingFile = filePaths.find(
+				(file) =>
+					!fs.existsSync(
+						path.isAbsolute(file) ? file : path.join(projectRoot, file)
+					)
+			);
+			if (missingFile) {
+				fail(`File not found: ${missingFile}`);
+			}
+
+			const query = prompt.trim();
+			let result;
+			try {
+				const { performResearch } = await import('./task-manager/research.js');
+				result = await performResearch(
+					query,
+					{
+						taskIds,
+						filePaths,
+						customContext: options.context ? options.context.trim() : '',
+						includeProjectTree: !!options.tree,
+						detailLevel,
+						projectRoot,
+						saveToFile: !!options.saveFile,
+						tag
+					},
+					{ commandName: 'research', outputType: 'cli', tag },
+					'text',
+					true // follow-up questions, when there's a terminal
+				);
 			} catch (error) {
-				console.error(chalk.red(`\n❌ Research failed: ${error.message}`));
-				process.exit(1);
+				fail(`Research failed: ${error.message}`);
+			}
+
+			// --save-to, unless you already saved from the follow-up menu
+			if (saveToId && !result.interactiveSaveOccurred) {
+				const target = { kind: 'task', id: saveToId };
+				try {
+					const { appendResearchToTask } = await import(
+						'./task-manager/research.js'
+					);
+					appendResearchToTask(
+						tasksPath,
+						saveToId,
+						`## Research: ${query}\n\n${result.result}`,
+						{ projectRoot, tag }
+					);
+					console.log(ui.formatResearchSaved(target));
+				} catch (error) {
+					console.log(ui.formatResearchSaveFailed(target, error.message));
+					process.exitCode = 1;
+				}
+			}
+
+			// --save <file>
+			if (saveTarget) {
+				const target = { kind: 'file', path: saveTarget };
+				try {
+					fs.writeFileSync(
+						saveTarget,
+						`# Research: ${query}\n\n${result.result}\n`,
+						'utf-8'
+					);
+					console.log(ui.formatResearchSaved(target));
+				} catch (error) {
+					console.log(ui.formatResearchSaveFailed(target, error.message));
+					process.exitCode = 1;
+				}
 			}
 		});
 
@@ -2175,40 +2006,6 @@ ${result.result}
 					'\n' +
 					'  taskgraph tags                 List all available tags\n' +
 					'  taskgraph add-tag <name>       Create a new tag',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
-
-	// Helper function to show research command help
-	function showResearchHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Research Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph research "<query>" [options]\n\n` +
-					chalk.cyan('Required:') +
-					'\n' +
-					'  <query>             Research question or prompt (required)\n\n' +
-					chalk.cyan('Context Options:') +
-					'\n' +
-					'  -i, --id <ids>      Comma-separated task/subtask IDs for context (e.g., "15,23.2")\n' +
-					'  -f, --files <paths> Comma-separated file paths for context\n' +
-					'  -c, --context <text> Additional custom context text\n' +
-					'  --tree              Include project file tree structure\n\n' +
-					chalk.cyan('Output Options:') +
-					'\n' +
-					'  -d, --detail <level> Detail level: low, medium, high (default: medium)\n' +
-					'  --save-to <id>      Auto-save results to task/subtask ID (e.g., "15" or "15.2")\n' +
-					'  --tag <tag>         Specify tag context for task operations\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph research "How should I implement user authentication?"\n' +
-					'  taskgraph research "What\'s the best approach?" --id=15,23.2\n' +
-					'  taskgraph research "How does auth work?" --files=src/auth.js --tree\n' +
-					'  taskgraph research "Implementation steps?" --save-to=15.2 --detail=high',
 				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);

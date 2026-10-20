@@ -4,6 +4,7 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	findProjectRoot: vi.fn(() => '/test/project/root'),
 	log: vi.fn(),
 	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
 	flattenTasksWithSubtasks: vi.fn(() => []),
 	isEmpty: vi.fn(() => false)
 }));
@@ -20,9 +21,12 @@ vi.doMock('marked', () => ({
 		{
 			use: vi.fn(),
 			setOptions: vi.fn(),
-			parse: vi.fn((text) => Promise.resolve(text))
+			parse: vi.fn((text) => text)
 		}
-	)
+	),
+	Marked: vi.fn(function () {
+		return { use: vi.fn(), parse: vi.fn((text) => text) };
+	})
 }));
 
 // Mock UI-affecting external libs to minimal no-op implementations
@@ -142,7 +146,7 @@ vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
 	})
 }));
 
-const { performResearch } = await import(
+const { appendResearchToTask, performResearch } = await import(
 	'../../../../../scripts/modules/task-manager/research.js'
 );
 
@@ -600,26 +604,35 @@ describe('performResearch tag-aware functionality', () => {
 	});
 
 	describe('output format handling with tags', () => {
-		it('displays UI banner only in text format', async () => {
+		it('prints one context line and the answer once in text format', async () => {
 			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 
-			await performResearch('Test query', { tag: 'ui-tag' }, {}, 'text', false);
-
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('🔍 AI Research Query')
+			await performResearch(
+				'Test query',
+				{ taskIds: ['2'], tag: 'ui-tag' },
+				{},
+				'text',
+				false
 			);
+
+			const printed = consoleSpy.mock.calls.map((call) => String(call[0]));
+			expect(printed.some((line) => line.includes('Context: task 2'))).toBe(
+				true
+			);
+			expect(
+				printed.filter((line) => line.includes('Test research result'))
+			).toHaveLength(1);
+			expect(printed.join('\n')).not.toContain('AI Research Query');
 
 			consoleSpy.mockRestore();
 		});
 
-		it('does not display UI banner in json format', async () => {
+		it('prints nothing in json format', async () => {
 			const consoleSpy = vi.spyOn(console, 'log').mockImplementation();
 
 			await performResearch('Test query', { tag: 'ui-tag' }, {}, 'json', false);
 
-			expect(consoleSpy).not.toHaveBeenCalledWith(
-				expect.stringContaining('🔍 AI Research Query')
-			);
+			expect(consoleSpy).not.toHaveBeenCalled();
 
 			consoleSpy.mockRestore();
 		});
@@ -694,5 +707,71 @@ describe('performResearch tag-aware functionality', () => {
 
 			expect(result).toBeDefined();
 		});
+	});
+});
+
+describe('appendResearchToTask', () => {
+	const tasks = () => ({
+		tasks: [
+			{
+				id: 3,
+				title: 'Sign-in',
+				details: 'Use argon2.',
+				subtasks: [{ id: 2, title: 'Session store', details: '' }]
+			}
+		]
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('appends the answer to the task details without an AI call', () => {
+		const data = tasks();
+		utils.readJSON.mockReturnValue(data);
+
+		const saved = appendResearchToTask(
+			'/p/.taskgraph/tasks/tasks.json',
+			'3',
+			'## Research: sessions\n\nUse connect-pg-simple.',
+			{ projectRoot: '/p', tag: 'master' }
+		);
+
+		expect(saved).toEqual({ id: '3', title: 'Sign-in' });
+		expect(data.tasks[0].details).toMatch(
+			/^Use argon2\.\n<info added on .+>\n## Research: sessions\n\nUse connect-pg-simple\.\n<\/info added on .+>$/
+		);
+		expect(utils.writeJSON).toHaveBeenCalledWith(
+			'/p/.taskgraph/tasks/tasks.json',
+			data,
+			'/p',
+			'master'
+		);
+		expect(generateTextService).not.toHaveBeenCalled();
+	});
+
+	it('appends to a subtask', () => {
+		const data = tasks();
+		utils.readJSON.mockReturnValue(data);
+
+		appendResearchToTask('/p/tasks.json', '3.2', 'Notes', {});
+
+		expect(data.tasks[0].subtasks[0].details).toContain('Notes');
+		expect(data.tasks[0].details).toBe('Use argon2.');
+	});
+
+	it('refuses missing tasks and subtasks without writing', () => {
+		utils.readJSON.mockReturnValue(tasks());
+
+		expect(() => appendResearchToTask('/p/tasks.json', '9', 'x')).toThrow(
+			"Task 9 doesn't exist"
+		);
+		expect(() => appendResearchToTask('/p/tasks.json', '3.7', 'x')).toThrow(
+			"Subtask 3.7 doesn't exist"
+		);
+		expect(() => appendResearchToTask('/p/tasks.json', 'abc', 'x')).toThrow(
+			"isn't a task ID"
+		);
+		expect(utils.writeJSON).not.toHaveBeenCalled();
 	});
 });
