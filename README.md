@@ -63,7 +63,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 </details>
 
-> **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Coming from Task Master, or already using TaskGraph and its `/tm:` commands? See [Upgrading](#upgrading).
+> **Attribution:** TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano ([@eyaltoledano](https://x.com/eyaltoledano)) and Ralph Khreish ([@RalphEcom](https://x.com/RalphEcom)). It is named `taskgraph-ai` with `taskgraph` and `taskgraph-mcp` binaries, so it can sit next to the original, and it keeps the original license and copyright notices (see [Licensing](#licensing)). Coming from Task Master, or already using TaskGraph's earlier slash commands? See [Upgrading](#upgrading).
 
 ## Contents
 
@@ -259,7 +259,7 @@ In Claude Code, say `Change the main model to opus`, or run `taskgraph models --
 
 ## Upgrading
 
-**Slash commands now come from the plugin (every existing project).** `taskgraph init --rules claude` no longer writes `/tm:*` commands into `.claude/commands/tm/`. Install the plugin (`/plugin marketplace add stephennmiller/taskgraph-ai`, `/plugin install taskgraph@taskgraph`, then `/plugin marketplace update taskgraph` to refresh), and re-run `taskgraph init --rules claude` once: it removes the old TaskGraph command files there and keeps any you added. Details are in the [upgrade guide](apps/docs/upgrading.mdx#5-move-slash-commands-to-the-plugin).
+**Slash commands now come from the plugin (every existing project).** `taskgraph init --rules claude` no longer writes slash commands into `.claude/commands/tm/`. Install the plugin (`/plugin marketplace add stephennmiller/taskgraph-ai`, `/plugin install taskgraph@taskgraph`, then `/plugin marketplace update taskgraph` to refresh), and re-run `taskgraph init --rules claude` once: it removes the old TaskGraph command files there and keeps any you added. Details are in the [upgrade guide](apps/docs/upgrading.mdx#5-move-slash-commands-to-the-plugin).
 
 Projects created with Task Master, or with a TaskGraph release before 0.47, also need a few manual changes:
 

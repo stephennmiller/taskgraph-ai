@@ -120,7 +120,7 @@ Results are:
 
 After analysis:
 ```
-/taskgraph:expand 5    # Expand specific task
-/taskgraph:expand-all  # Expand all recommended
+/taskgraph:expand-task 5    # Expand specific task
+/taskgraph:expand-all-tasks  # Expand all recommended
 /taskgraph:complexity-report  # View detailed report
 ```

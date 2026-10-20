@@ -5,120 +5,68 @@ argument-hint: "[arguments]"
 
 # TaskGraph Command Reference
 
-Comprehensive command structure for TaskGraph integration with Claude Code.
-
-## Command Organization
-
-Commands are organized hierarchically to match TaskGraph's CLI structure while providing enhanced Claude Code integration.
+Every slash command the TaskGraph plugin provides, grouped by purpose. Invoke them as `/taskgraph:<name>`.
 
 ## Project Setup & Configuration
 
-### `/taskgraph:init`
-- `init-project [--quick]` - Initialize new project (handles PRD files intelligently); `--quick` skips prompts (-y)
-
-### `/taskgraph:models`
-- `view-models` - View current AI model configuration
-- `setup-models` - Interactive model configuration
-- `set-main` - Set primary generation model
-- `set-research` - Set research model
-- `set-fallback` - Set fallback model
+- `/taskgraph:init-project [--quick]` - Initialize new project (handles PRD files intelligently); `--quick` skips prompts (-y)
+- `/taskgraph:install-taskgraph [--quick]` - Installation guide; `--quick` for a one-line global install
+- `/taskgraph:view-models` - View current AI model configuration
+- `/taskgraph:setup-models` - Interactive model configuration
 
 ## Task Generation
 
-### `/taskgraph:parse-prd`
-- `parse-prd` - Generate tasks from PRD document
-- `parse-prd-with-research` - Enhanced parsing with research mode
-
-### `/taskgraph:generate`
+- `/taskgraph:parse-prd` - Generate tasks from a PRD document
+- `/taskgraph:parse-prd-with-research` - Enhanced parsing with research mode
 
 ## Task Management
 
-### `/taskgraph:list`
-- `list-tasks [status] [--subtasks]` - Smart listing with natural language filters, by status, with subtasks
-- `graph` - Dependency tree with the next task marked
-
-### `/taskgraph:set-status`
-- `set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
-- `to-in-progress` - Start working on task
-- `to-done` - Mark task complete
-
-### `/taskgraph:sync-readme`
-- `sync-readme` - Export tasks to README.md with formatting
-
-### `/taskgraph:update`
-- `update-task` - Update a single task
-- `update-tasks-from-id` - Update multiple tasks from a starting point
-
-### `/taskgraph:add-task`
-- `add-task` - Add new task with AI assistance
-
-### `/taskgraph:remove-task`
-- `remove-task` - Remove task with confirmation
+- `/taskgraph:list-tasks [status] [--subtasks]` - Smart listing with natural language filters, by status, with subtasks
+- `/taskgraph:graph` - Dependency tree with the next task marked
+- `/taskgraph:set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
+- `/taskgraph:to-in-progress` - Start working on a task
+- `/taskgraph:to-done` - Mark a task complete
+- `/taskgraph:sync-readme` - Export tasks to README.md with formatting
+- `/taskgraph:add-task` - Add a new task with AI assistance
+- `/taskgraph:update-task` - Update a single task
+- `/taskgraph:update-tasks-from-id` - Update multiple tasks from a starting point
+- `/taskgraph:remove-task` - Remove a task with confirmation
 
 ## Subtask Management
 
-### `/taskgraph:add-subtask`
-- `add-subtask` - Add new subtask to parent
-- `convert-task-to-subtask` - Convert existing task to subtask
-
-### `/taskgraph:remove-subtask`
-- `remove-subtask` - Remove subtask (with optional conversion)
-
-### `/taskgraph:clear-subtasks`
-- `clear-subtasks [<id>|--all]` - Clear subtasks from one task, or from every task with `--all`
+- `/taskgraph:add-subtask` - Add a new subtask to a parent
+- `/taskgraph:convert-task-to-subtask` - Convert an existing task to a subtask
+- `/taskgraph:remove-subtask <id> [--convert]` - Remove one subtask (optionally converting it to a task)
+- `/taskgraph:clear-subtasks [<id>|--all]` - Clear subtasks from one task, or from every task with `--all`
 
 ## Task Analysis & Breakdown
 
-### `/taskgraph:analyze-complexity`
-- `analyze-complexity` - Analyze and generate expansion recommendations
-
-### `/taskgraph:complexity-report`
-- `complexity-report` - Display complexity analysis report
-
-### `/taskgraph:expand`
-- `expand-task` - Break down specific task
-- `expand-all-tasks` - Expand all eligible tasks
-- `with-research` - Enhanced expansion
+- `/taskgraph:analyze-complexity` - Analyze and generate expansion recommendations
+- `/taskgraph:complexity-report` - Display the complexity analysis report
+- `/taskgraph:expand-task` - Break down a specific task
+- `/taskgraph:expand-all-tasks` - Expand all eligible tasks
 
 ## Task Navigation
 
-### `/taskgraph:next`
-- `next-task` - Intelligent next task recommendation
-
-### `/taskgraph:show`
-- `show-task` - Display detailed task information
-
-### `/taskgraph:status`
-- `project-status` - Comprehensive project dashboard
+- `/taskgraph:next-task` - Intelligent next task recommendation
+- `/taskgraph:show-task` - Display detailed task information
+- `/taskgraph:project-status` - Comprehensive project dashboard
 
 ## Dependency Management
 
-### `/taskgraph:add-dependency`
-- `add-dependency` - Add task dependency
-
-### `/taskgraph:remove-dependency`
-- `remove-dependency` - Remove task dependency
-
-### `/taskgraph:validate-dependencies`
-- `validate-dependencies` - Check for dependency issues
-
-### `/taskgraph:fix-dependencies`
-- `fix-dependencies` - Automatically fix dependency problems
+- `/taskgraph:add-dependency` - Add a task dependency
+- `/taskgraph:remove-dependency` - Remove a task dependency
+- `/taskgraph:validate-dependencies` - Check for dependency issues
+- `/taskgraph:fix-dependencies` - Automatically fix dependency problems
 
 ## Workflows & Automation
 
-### `/taskgraph:workflows`
-- `smart-workflow` - Context-aware intelligent workflow execution
-- `command-pipeline` - Chain multiple commands together
-- `auto-implement-tasks` - Advanced auto-implementation with code generation
-
-## Utilities
-
-### `/taskgraph:utils`
-- `analyze-project` - Deep project analysis and insights
-
-### `/taskgraph:setup`
-- `install-taskgraph [--quick]` - Installation guide; `--quick` for a one-line global install
+- `/taskgraph:smart-workflow` - Context-aware intelligent workflow execution
+- `/taskgraph:command-pipeline` - Chain multiple commands together
+- `/taskgraph:auto-implement-tasks` - Advanced auto-implementation with code generation
+- `/taskgraph:analyze-project` - Deep project analysis and insights
+- `/taskgraph:learn` - Interactive guide to TaskGraph
+- `/taskgraph:help` - Command overview
 
 ## Usage Patterns
 
@@ -126,15 +74,15 @@ Commands are organized hierarchically to match TaskGraph's CLI structure while p
 Most commands accept natural language arguments:
 ```
 /taskgraph:add-task create user authentication system
-/taskgraph:update mark all API tasks as high priority
-/taskgraph:list show blocked tasks
+/taskgraph:update-task 12 mark this as high priority
+/taskgraph:list-tasks show blocked tasks
 ```
 
 ### ID-Based Commands
 Commands requiring IDs intelligently parse from $ARGUMENTS:
 ```
-/taskgraph:show 45
-/taskgraph:expand 23
+/taskgraph:show-task 45
+/taskgraph:expand-task 23
 /taskgraph:to-done 67
 ```
 

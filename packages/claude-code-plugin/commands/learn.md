@@ -15,7 +15,7 @@ Based on your input, I'll help you discover capabilities:
 
 If $ARGUMENTS contains:
 - "start" / "begin" → Show project initialization workflows
-- "manage" / "organize" → Show task management commands  
+- "manage" / "organize" → Show task management commands
 - "automate" / "auto" → Show automation workflows
 - "analyze" / "report" → Show analysis tools
 - "fix" / "problem" → Show troubleshooting commands
@@ -28,13 +28,13 @@ Based on your project state:
 **No tasks yet?**
 ```
 You'll want to start with:
-1. /project:taskgraph:init <prd-file>
+1. /taskgraph:init-project <prd-file>
    → Creates tasks from requirements
-   
-2. /project:taskgraph:parse-prd <file>
+
+2. /taskgraph:parse-prd <file>
    → Alternative task generation
 
-Try: /project:taskgraph:init demo-prd.md
+Try: /taskgraph:init-project demo-prd.md
 ```
 
 **Have tasks?**
@@ -47,35 +47,35 @@ Let me analyze what you might need...
 
 **By Category:**
 - 📋 Task Management: list, show, add, update, complete
-- 🔄 Workflows: auto-implement, sprint-plan, daily-standup
-- 🛠️ Utilities: check-health, complexity-report, sync-memory
-- 🔍 Analysis: validate-deps, show dependencies
+- 🔄 Workflows: auto-implement-tasks, smart-workflow, command-pipeline
+- 🛠️ Utilities: project-status, complexity-report, sync-readme
+- 🔍 Analysis: validate-dependencies, graph
 
 **By Scenario:**
-- "I want to see what to work on" → `/project:taskgraph:next`
-- "I need to break this down" → `/project:taskgraph:expand <id>`
-- "Show me everything" → `/project:taskgraph:status`
-- "Just do it for me" → `/project:workflows:auto-implement`
+- "I want to see what to work on" → `/taskgraph:next-task`
+- "I need to break this down" → `/taskgraph:expand-task <id>`
+- "Show me everything" → `/taskgraph:project-status`
+- "Just do it for me" → `/taskgraph:auto-implement-tasks`
 
 ### 4. **Power User Patterns**
 
 **Command Chaining:**
 ```
-/project:taskgraph:next
-/project:taskgraph:start <id>
-/project:workflows:auto-implement
+/taskgraph:next-task
+/taskgraph:to-in-progress <id>
+/taskgraph:auto-implement-tasks
 ```
 
 **Smart Filters:**
 ```
-/project:taskgraph:list pending high
-/project:taskgraph:list blocked
-/project:taskgraph:list 1-5 tree
+/taskgraph:list-tasks pending high
+/taskgraph:list-tasks blocked
+/taskgraph:list-tasks 1-5 tree
 ```
 
 **Automation:**
 ```
-/project:workflows:pipeline init → expand-all → sprint-plan
+/taskgraph:command-pipeline init-project → expand-all-tasks → next-task
 ```
 
 ### 5. **Learning Path**
@@ -83,20 +83,20 @@ Let me analyze what you might need...
 Based on your experience level:
 
 **Beginner Path:**
-1. init → Create project
-2. status → Understand state
-3. next → Find work
-4. complete → Finish task
+1. init-project → Create project
+2. project-status → Understand state
+3. next-task → Find work
+4. to-done → Finish task
 
 **Intermediate Path:**
-1. expand → Break down complex tasks
-2. sprint-plan → Organize work
+1. expand-task → Break down complex tasks
+2. list-tasks pending → Organize work
 3. complexity-report → Understand difficulty
-4. validate-deps → Ensure consistency
+4. validate-dependencies → Ensure consistency
 
 **Advanced Path:**
-1. pipeline → Chain operations
-2. smart-flow → Context-aware automation
+1. command-pipeline → Chain operations
+2. smart-workflow → Context-aware automation
 3. Custom commands → Extend the system
 
 ### 6. **Try This Now**
@@ -105,4 +105,4 @@ Based on what you asked about, try:
 [Specific command suggestion based on $ARGUMENTS]
 
 Want to learn more about a specific command?
-Type: /project:help <command-name>
+Type: /taskgraph:help <command-name>
