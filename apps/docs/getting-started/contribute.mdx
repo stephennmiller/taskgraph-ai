@@ -32,12 +32,12 @@ npm install
 
 ### 2. Create a Feature Branch
 
-**Important**: Always target the `next` branch, not `main`:
+Branch from `main`:
 
 ```bash
-git checkout next
-git pull origin next
-git checkout -b feature/your-feature-name
+git checkout main
+git pull origin main
+git checkout -b feat/your-feature-name
 ```
 
 ### 3. Make Your Changes
@@ -59,19 +59,10 @@ npm run format-check
 npm run format
 ```
 
-### 5. Create a Changeset
+### 5. Submit Your PR
 
-**Required for most changes**:
-
-```bash
-npm run changeset
-```
-
-See the [Changeset Guidelines](#changeset-guidelines) below for details.
-
-### 6. Submit Your PR
-
-- Target the `next` branch
+- Target `main`
+- Use a conventional-commit title (see Versioning below)
 - Write a clear description
 - Reference any related issues
 
@@ -79,9 +70,8 @@ See the [Changeset Guidelines](#changeset-guidelines) below for details.
 
 ### Branch Strategy
 
-- **`main`**: Production-ready code
-- **`next`**: Development branch - **target this for PRs**
-- **Feature branches**: `feature/description` or `fix/description`
+- **`main`**: The only long-lived branch. PRs target it, and releases are cut from it
+- **Feature branches**: `feat/description`, `fix/description`, `docs/description`
 
 ### Code Quality Standards
 
@@ -94,76 +84,32 @@ See the [Changeset Guidelines](#changeset-guidelines) below for details.
 
 Your PR **must pass all CI checks**:
 
-- ✅ **Unit tests**: `npm test`
+- ✅ **Tests**: `npm test`, plus `npm run test -w @tm/cli` and `npm run test -w @tm/core` for the packages you touched
+- ✅ **Types**: `npm run turbo:typecheck`
 - ✅ **Format check**: `npm run format-check`
 
 **Test your changes locally first** - this saves review time and shows you care about quality.
 
-## 📦 Changeset Guidelines
+## 📦 Versioning
 
-We use [Changesets](https://github.com/changesets/changesets) to manage versioning and generate changelogs.
+Releases are cut automatically when a PR merges to `main`, from its commit title. Don't add a changeset.
 
-### When to Create a Changeset
+| Title prefix | Release |
+| --- | --- |
+| `feat:` | Minor (patch while TaskGraph is below 1.0) |
+| `fix:`, `perf:`, `revert:` | Patch |
+| `feat!:` or a `BREAKING CHANGE:` footer | Major (minor while below 1.0) |
+| `chore:`, `docs:`, `ci:`, `test:` | No release |
 
-**Always create a changeset for**:
-
-- ✅ New features
-- ✅ Bug fixes
-- ✅ Breaking changes
-- ✅ Performance improvements
-- ✅ User-facing documentation updates
-- ✅ Dependency updates that affect functionality
-
-**Skip changesets for**:
-
-- ❌ Internal documentation only
-- ❌ Test-only changes
-- ❌ Code formatting/linting
-- ❌ Development tooling that doesn't affect users
-
-### How to Create a Changeset
-
-1. **After making your changes**:
-
-   ```bash
-   npm run changeset
-   ```
-
-2. **Choose the bump type**:
-
-   - **Major**: Breaking changes
-   - **Minor**: New features
-   - **Patch**: Bug fixes, docs, performance improvements
-
-3. **Write a clear summary**:
-
-   ```
-   Add support for custom AI models in MCP configuration
-   ```
-
-4. **Commit the changeset file** with your changes:
-   ```bash
-   git add .changeset/*.md
-   git commit -m "feat: add custom AI model support"
-   ```
-
-### Changeset vs Git Commit Messages
-
-- **Changeset summary**: User-facing, goes in CHANGELOG.md
-- **Git commit**: Developer-facing, explains the technical change
-
-Example:
+The title becomes the release note, so write it for users: say what they get or what's fixed.
 
 ```bash
-# Changeset summary (user-facing)
-"Add a haiku option to the interactive model setup"
+# Good
+feat: research prints the answer once, rendered to fit the terminal
+fix: models --setup no longer leaves the menu on screen after Ctrl-C
 
-# Git commit message (developer-facing)
-"feat(models): add haiku to the interactive model setup
-
-- List haiku alongside opus and sonnet in the setup prompt
-- Validate the chosen model ID against the Claude Code model list
-- Add tests for the new prompt choices"
+# Not as useful
+feat: refactor research.js
 ```
 
 ## 🔧 Development Setup
@@ -198,13 +144,14 @@ npm run test:watch
 # Run with coverage
 npm run test:coverage
 
-# Run E2E tests
-npm run test:e2e
+# Run a package's tests
+npm run test -w @tm/cli
+npm run test -w @tm/core
 ```
 
 ### Code Formatting
 
-We use Prettier for consistent formatting:
+We use [Biome](https://biomejs.dev) for consistent formatting:
 
 ```bash
 # Check formatting
@@ -218,11 +165,10 @@ npm run format
 
 ### Before Submitting
 
-- [ ] **Target the `next` branch**
+- [ ] **Target `main`** with a conventional-commit title
 - [ ] **Test everything locally**
 - [ ] **Run the full test suite**
 - [ ] **Check code formatting**
-- [ ] **Create a changeset** (if needed)
 - [ ] **Re-read your changes** - ensure they're clean and well-thought-out
 
 ### PR Description Template
@@ -245,10 +191,6 @@ Brief description of what this PR does.
 - [ ] All existing tests pass
 - [ ] I have added tests for new functionality
 
-## Changeset
-
-- [ ] I have created a changeset (or this change doesn't need one)
-
 ## Additional Notes
 
 Any additional context or notes for reviewers.
@@ -261,7 +203,6 @@ Any additional context or notes for reviewers.
 - Clear, focused changes
 - Comprehensive testing
 - Good commit messages
-- Proper changeset (when needed)
 - Self-reviewed code
 
 ❌ **Avoid**:
@@ -269,7 +210,6 @@ Any additional context or notes for reviewers.
 - Massive PRs that change everything
 - Untested code
 - Formatting issues
-- Missing changesets for user-facing changes
 - AI-generated code that wasn't reviewed
 
 ## 🏗️ Project Structure

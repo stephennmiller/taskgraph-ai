@@ -24,7 +24,6 @@
 		"test:coverage": "vitest run --coverage",
 		"test:unit": "vitest run '**/*.spec.ts'",
 		"test:integration": "vitest run '**/*.test.ts'",
-		"test:e2e": "vitest run --dir tests/e2e",
 		"test:ci": "vitest run --coverage --reporter=dot"
 	},
 	"dependencies": {

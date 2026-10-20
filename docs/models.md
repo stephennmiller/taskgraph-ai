@@ -1,29 +1,31 @@
-# Available Models as of October 17, 2026
+# Models
 
-## Main Models
+TaskGraph runs every AI call through Claude Code, so it uses Claude Code's three models. There are no provider accounts or per-token prices to manage; usage counts against your Claude Code plan or `CLAUDE_CODE_API_KEY`.
 
-| Provider    | Model Name | SWE Score | Input Cost | Output Cost |
-| ----------- | ---------- | --------- | ---------- | ----------- |
-| claude-code | opus       | 0.725     | 0          | 0           |
-| claude-code | sonnet     | 0.727     | 0          | 0           |
-| claude-code | haiku      | 0.45      | 0          | 0           |
+| Model | |
+| --- | --- |
+| `opus` | Most capable |
+| `sonnet` | Balanced; the default for every role |
+| `haiku` | Fastest |
 
-## Research Models
+Each of TaskGraph's three roles uses one of them:
 
-| Provider    | Model Name | SWE Score | Input Cost | Output Cost |
-| ----------- | ---------- | --------- | ---------- | ----------- |
-| claude-code | opus       | 0.725     | 0          | 0           |
-| claude-code | sonnet     | 0.727     | 0          | 0           |
-| claude-code | haiku      | 0.45      | 0          | 0           |
+| Role | Used for |
+| --- | --- |
+| `main` | Creating and updating tasks |
+| `research` | `research` and `--research` runs. It has web search and fetch, and no access to your files |
+| `fallback` | Retrying a call when the main model fails |
 
-## Fallback Models
+## Changing models
 
-| Provider    | Model Name | SWE Score | Input Cost | Output Cost |
-| ----------- | ---------- | --------- | ---------- | ----------- |
-| claude-code | opus       | 0.725     | 0          | 0           |
-| claude-code | sonnet     | 0.727     | 0          | 0           |
-| claude-code | haiku      | 0.45      | 0          | 0           |
+```bash
+taskgraph models                      # show what each role uses
+taskgraph models --setup              # pick for each role
+taskgraph models --set-main opus      # or set one directly
+taskgraph models --set-research opus
+taskgraph models --set-fallback haiku
+```
 
-## Unsupported Models
+In Claude Code you can also say "Change the main model to opus".
 
-No unsupported models found.
+What each role is allowed to read and run is described in the [Claude Code guide](../apps/docs/capabilities/claude-code.mdx#what-ai-calls-can-access).

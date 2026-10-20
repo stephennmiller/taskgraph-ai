@@ -26,8 +26,6 @@ coverage/
 
 # Test temporary files and directories
 tests/temp/
-tests/e2e/_runs/
-tests/e2e/log/
 tests/**/*.log
 tests/**/coverage/
 
