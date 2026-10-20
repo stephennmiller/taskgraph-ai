@@ -394,7 +394,8 @@ export function findConfigPath(explicitPath = null, args = null, log = null) {
 
 		if (!global._tmConfigWarningsThisRun.has(warningKey)) {
 			global._tmConfigWarningsThisRun.add(warningKey);
-			logger.warn?.(`No configuration file found in project: ${projectRoot}`);
+			// Debug only: config-manager tells the user, once
+			logger.debug?.(`No configuration file found in project: ${projectRoot}`);
 		}
 	}
 

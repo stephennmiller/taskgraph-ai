@@ -548,8 +548,25 @@ describe('getConfig Tests', () => {
 		);
 		expect(fsReadFileSyncSpy).not.toHaveBeenCalled(); // No read if file doesn't exist
 		expect(consoleWarnSpy).toHaveBeenCalledWith(
-			expect.stringContaining('not found at provided project root')
+			expect.stringContaining(
+				`No .taskgraph/config.json in ${MOCK_PROJECT_ROOT}`
+			)
 		);
+	});
+
+	test('warns about a missing config once per run, not on every load', () => {
+		// A root no other test uses: the warning is remembered per root
+		const root = '/projects/no-config-yet';
+		fsExistsSyncSpy.mockReturnValue(false);
+
+		configManager.getConfig(root, true);
+		configManager.getConfig(root, true);
+		configManager.getConfig(root, true);
+
+		const warnings = consoleWarnSpy.mock.calls.filter(([text]) =>
+			String(text).includes(`No .taskgraph/config.json in ${root}`)
+		);
+		expect(warnings).toHaveLength(1);
 	});
 
 	test.skip('should use findProjectRoot and return defaults if file not found', () => {

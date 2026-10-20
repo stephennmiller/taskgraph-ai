@@ -3,7 +3,9 @@ import path from 'node:path';
 import {
 	OTHER_PROJECT_MARKERS,
 	PROJECT_BOUNDARY_MARKERS,
-	TASKGRAPH_PROJECT_MARKERS
+	TASKGRAPH_CONFIG_FILE,
+	TASKGRAPH_PROJECT_MARKERS,
+	TASKGRAPH_TASKS_FILE
 } from '../constants/paths.js';
 
 function markerExists(dir: string, marker: string): boolean {
@@ -92,6 +94,18 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
 	}
 
 	return path.resolve(startDir);
+}
+
+/**
+ * Whether `dir` holds a TaskGraph project, i.e. one that `taskgraph init` set
+ * up. An empty `.taskgraph` folder doesn't count: older versions left one
+ * behind when `list` or `next` ran in a folder that wasn't a project.
+ */
+export function isTaskGraphProject(dir: string): boolean {
+	return (
+		markerExists(dir, TASKGRAPH_CONFIG_FILE) ||
+		markerExists(dir, TASKGRAPH_TASKS_FILE)
+	);
 }
 
 /**

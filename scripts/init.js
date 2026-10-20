@@ -18,19 +18,16 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { ui } from '@tm/cli';
-import boxen from 'boxen';
 import chalk from 'chalk';
-import figlet from 'figlet';
-import gradient from 'gradient-string';
-import ora from 'ora';
 import { RULE_PROFILES } from '../src/constants/profiles.js';
-import { manageGitignoreFile } from '../src/utils/manage-gitignore.js';
+import {
+	manageGitignoreFile,
+	readStoreTasksInGit
+} from '../src/utils/manage-gitignore.js';
 import {
 	convertAllRulesToProfileRules,
 	getRulesProfile
 } from '../src/utils/rule-transformer.js';
-import { getLocalGettingStartedMessage } from './modules/init-next-steps.js';
-import { brandGradient } from './modules/ui.js';
 import { updateConfigMaxTokens } from './modules/update-config-tokens.js';
 import { isSilentMode } from './modules/utils.js';
 import { insideGitWorkTree } from './modules/utils/git-utils.js';
@@ -50,11 +47,15 @@ import {
 	TASKGRAPH_REPORTS_DIR,
 	TASKGRAPH_STATE_FILE,
 	TASKGRAPH_TASKS_DIR,
+	TASKGRAPH_TASKS_FILE,
 	TASKGRAPH_TEMPLATES_DIR
 } from '../src/constants/paths.js';
 
-// Define box width for boxen displays
-const BOX_WIDTH = 60;
+// The alias init adds to the shell config
+const ALIAS_LINE = "alias tm='taskgraph'";
+
+// What @tm/profiles writes to turn on deferred MCP loading
+const DEFERRED_MCP_MARKER = 'ENABLE_EXPERIMENTAL_MCP_CLI';
 
 // Define log levels
 const LOG_LEVELS = {
@@ -115,12 +116,142 @@ function log(level, ...args) {
 	}
 }
 
+// Steps report at debug level; the summary at the end says what changed.
+// Warnings and errors still print as they happen.
+function quietLog(level, ...args) {
+	log(level === 'warn' || level === 'error' ? level : 'debug', ...args);
+}
+
 // Function to create directory if it doesn't exist
 function ensureDirectoryExists(dirPath) {
 	if (!fs.existsSync(dirPath)) {
 		fs.mkdirSync(dirPath, { recursive: true });
-		log('info', `Created directory: ${dirPath}`);
+		log('debug', `Created directory: ${dirPath}`);
 	}
+}
+
+/**
+ * Shell startup files init may append to (the `tm` alias, deferred MCP
+ * loading), so the summary can say which one changed.
+ */
+function shellConfigFiles() {
+	const homeDir = process.env.HOME || process.env.USERPROFILE;
+	if (!homeDir) return [];
+	return ['.zshrc', '.bashrc', '.bash_profile', '.profile'].map((name) =>
+		path.join(homeDir, name)
+	);
+}
+
+/** Paths whose before/after state the init summary compares */
+function trackedPaths(targetDir) {
+	return [
+		path.join(targetDir, TASKGRAPH_DIR),
+		path.join(targetDir, TASKGRAPH_CONFIG_FILE),
+		path.join(targetDir, TASKGRAPH_TASKS_FILE),
+		path.join(targetDir, '.git'),
+		path.join(targetDir, GITIGNORE_FILE),
+		path.join(targetDir, ENV_EXAMPLE_FILE),
+		path.join(targetDir, 'CLAUDE.md'),
+		path.join(targetDir, '.mcp.json'),
+		...shellConfigFiles()
+	];
+}
+
+/**
+ * Record whether each path exists and, for files, its content.
+ * @returns {Map<string, string|null>} null = missing, '' for directories
+ */
+function snapshotPaths(paths) {
+	const snapshot = new Map();
+	for (const filePath of paths) {
+		let state = null;
+		try {
+			if (fs.existsSync(filePath)) {
+				state = fs.statSync(filePath).isDirectory()
+					? ''
+					: fs.readFileSync(filePath, 'utf8');
+			}
+		} catch {
+			state = null;
+		}
+		snapshot.set(filePath, state);
+	}
+	return snapshot;
+}
+
+/**
+ * Turn before/after snapshots into the summary's list of changes.
+ * @returns {{alreadySetUp: boolean, changes: Array<{path: string, note: string}>}}
+ */
+function describeInitChanges(targetDir, before, after) {
+	const at = (relative) => path.join(targetDir, relative);
+	const created = (file) => before.get(file) == null && after.get(file) != null;
+	const changed = (file) =>
+		before.get(file) != null &&
+		after.get(file) != null &&
+		before.get(file) !== after.get(file);
+
+	const alreadySetUp =
+		before.get(at(TASKGRAPH_CONFIG_FILE)) != null ||
+		before.get(at(TASKGRAPH_TASKS_FILE)) != null;
+	const changes = [];
+
+	if (!alreadySetUp && after.get(at(TASKGRAPH_CONFIG_FILE)) != null) {
+		changes.push({
+			path: `${TASKGRAPH_DIR}/`,
+			note: 'tasks, settings and PRD templates'
+		});
+	} else if (alreadySetUp && created(at(TASKGRAPH_CONFIG_FILE))) {
+		changes.push({ path: TASKGRAPH_CONFIG_FILE, note: 'restored' });
+	}
+
+	if (created(at('.git'))) {
+		changes.push({ path: '.git/', note: 'new Git repository' });
+	}
+
+	const projectFiles = [
+		[GITIGNORE_FILE, 'created', 'added TaskGraph entries'],
+		[ENV_EXAMPLE_FILE, 'optional settings', 'updated'],
+		[
+			'CLAUDE.md',
+			"loads TaskGraph's instructions in Claude Code",
+			"now imports TaskGraph's instructions"
+		],
+		[
+			'.mcp.json',
+			'TaskGraph MCP server for Claude Code',
+			'added the TaskGraph MCP server'
+		]
+	];
+	for (const [relative, createdNote, changedNote] of projectFiles) {
+		const file = at(relative);
+		if (created(file)) changes.push({ path: relative, note: createdNote });
+		else if (changed(file)) changes.push({ path: relative, note: changedNote });
+	}
+
+	const homeDir = process.env.HOME || process.env.USERPROFILE;
+	for (const file of shellConfigFiles()) {
+		const was = before.get(file) || '';
+		const now = after.get(file) || '';
+		if (now === was) continue;
+		const added = [];
+		if (now.includes(ALIAS_LINE) && !was.includes(ALIAS_LINE)) {
+			added.push('the `tm` alias');
+		}
+		if (
+			now.includes(DEFERRED_MCP_MARKER) &&
+			!was.includes(DEFERRED_MCP_MARKER)
+		) {
+			added.push('deferred MCP loading');
+		}
+		if (added.length === 0) continue;
+		changes.push({
+			path: homeDir ? file.replace(homeDir, '~') : file,
+			note: `added ${added.join(' and ')}; open a new terminal`
+		});
+	}
+
+	return { alreadySetUp, changes };
 }
 
 // Function to add shell aliases to the user's shell configuration
@@ -148,11 +279,8 @@ function addShellAliases() {
 
 		const configContent = fs.readFileSync(shellConfigFile, 'utf8');
 
-		// Define the aliases we want
-		const aliases = [
-			{ name: 'tm', line: "alias tm='taskgraph'" },
-			{ name: 'taskgraph', line: "alias taskgraph='taskgraph'" }
-		];
+		// `taskgraph` is already the command name, so `tm` is the only alias
+		const aliases = [{ name: 'tm', line: ALIAS_LINE }];
 
 		// Check which aliases are missing
 		const missingAliases = aliases.filter(
@@ -204,8 +332,7 @@ function createInitialStateFile(targetDir) {
 
 	try {
 		fs.writeFileSync(stateFilePath, JSON.stringify(initialState, null, 2));
-		log('success', `Created initial state file: ${stateFilePath}`);
-		log('info', 'Default tag set to "master" for task organization');
+		log('debug', `Created initial state file: ${stateFilePath}`);
 	} catch (error) {
 		log('error', `Failed to create state file: ${error.message}`);
 	}
@@ -235,7 +362,7 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 
 		// Handle .gitignore - append lines that don't exist
 		if (filename === '.gitignore') {
-			log('info', `${targetPath} already exists, merging content...`);
+			log('debug', `${targetPath} already exists, merging content...`);
 			const existingContent = fs.readFileSync(targetPath, 'utf8');
 			const existingLines = new Set(
 				existingContent.split('\n').map((line) => line.trim())
@@ -248,16 +375,16 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 				// Add a comment to separate the original content from our additions
 				const updatedContent = `${existingContent.trim()}\n\n# Added by TaskGraph\n${newLines.join('\n')}`;
 				fs.writeFileSync(targetPath, updatedContent);
-				log('success', `Updated ${targetPath} with additional entries`);
+				log('debug', `Updated ${targetPath} with additional entries`);
 			} else {
-				log('info', `No new content to add to ${targetPath}`);
+				log('debug', `No new content to add to ${targetPath}`);
 			}
 			return;
 		}
 
 		// Handle README.md - offer to preserve or create a different file
 		if (filename === 'README-taskgraph.md') {
-			log('info', `${targetPath} already exists`);
+			log('debug', `${targetPath} already exists`);
 			// Create a separate README file specifically for this project
 			const taskGraphReadmePath = path.join(
 				path.dirname(targetPath),
@@ -265,7 +392,7 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 			);
 			fs.writeFileSync(taskGraphReadmePath, content);
 			log(
-				'success',
+				'debug',
 				`Created ${taskGraphReadmePath} (preserved original README-taskgraph.md)`
 			);
 			return;
@@ -278,7 +405,7 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 
 	// If the file doesn't exist, create it normally
 	fs.writeFileSync(targetPath, content);
-	log('info', `Created file: ${targetPath}`);
+	log('debug', `Created file: ${targetPath}`);
 }
 
 // Main function to initialize a new project
@@ -333,10 +460,6 @@ async function initializeProject(options = {}) {
 	}
 
 	if (skipPrompts) {
-		if (!isSilentMode()) {
-			console.log('SKIPPING PROMPTS - Using defaults or provided values');
-		}
-
 		// Use provided options or defaults
 		const projectName = options.name || 'taskgraph-project';
 		const projectDescription =
@@ -345,31 +468,21 @@ async function initializeProject(options = {}) {
 		const authorName = options.author || 'Vibe coder';
 		const dryRun = options.dryRun || false;
 		const initGit = options.initGit !== undefined ? options.initGit : true; // Default to true if not specified
+		// No flag: keep what an earlier init chose, else store tasks in Git
 		const storeTasksInGit =
-			options.storeTasksInGit !== undefined ? options.storeTasksInGit : true; // Default to true if not specified
+			options.storeTasksInGit ??
+			readStoreTasksInGit(path.join(process.cwd(), GITIGNORE_FILE)) ??
+			true;
 
 		if (dryRun) {
-			log('info', 'DRY RUN MODE: No files will be modified');
-			log('info', 'Would initialize TaskGraph project');
-			log('info', 'Would create/update necessary project files');
-
-			// Show flag-specific behavior
-			log(
-				'info',
-				`${initGit ? 'Would initialize Git repository' : 'Would skip Git initialization'}`
-			);
-			log(
-				'info',
-				`${storeTasksInGit ? 'Would store tasks in Git' : 'Would exclude tasks from Git'}`
-			);
-
+			displayDryRun(initGit, storeTasksInGit);
 			return {
 				dryRun: true
 			};
 		}
 
 		await createProjectStructure(
-			true, // Always add aliases
+			options.aliases !== false, // --no-aliases opts out
 			initGit,
 			storeTasksInGit,
 			dryRun,
@@ -396,16 +509,20 @@ async function initializeProject(options = {}) {
 			let initGitPrompted = true; // Default to true
 			let storeGitPrompted = true; // Default to true
 
-			// Prompt for Git initialization (skip if --git or --no-git flag was provided)
+			// Prompt for Git initialization (skip if --git or --no-git flag was
+			// provided, or if there's already a repository to use)
 			if (options.initGit !== undefined) {
 				initGitPrompted = options.initGit; // Use flag value if provided
+			} else if (insideGitWorkTree()) {
+				initGitPrompted = true; // Nothing to ask; init won't run git init
 			} else {
 				const gitInitInput = await promptQuestion(
 					rl,
 					chalk.cyan('Initialize a Git repository in project root? (Y/n): '),
 					(answer) => {
 						const isYes = answer.trim().toLowerCase() !== 'n';
-						const icon = isYes ? chalk.green('✓') : chalk.red('✗');
+						// ✗ means an error elsewhere; a No answer isn't one
+						const icon = isYes ? chalk.green('✓') : chalk.dim('–');
 						return (
 							chalk.cyan('Initialize a Git repository in project root?') +
 							' ' +
@@ -429,7 +546,8 @@ async function initializeProject(options = {}) {
 					),
 					(answer) => {
 						const isYes = answer.trim().toLowerCase() !== 'n';
-						const icon = isYes ? chalk.green('✓') : chalk.red('✗');
+						// ✗ means an error elsewhere; a No answer isn't one
+						const icon = isYes ? chalk.green('✓') : chalk.dim('–');
 						return (
 							chalk.cyan(
 								'Store tasks in Git (tasks.json and tasks/ directory)?'
@@ -454,7 +572,8 @@ async function initializeProject(options = {}) {
 					),
 					(answer) => {
 						const isYes = answer.trim().toLowerCase() === 'y';
-						const icon = isYes ? chalk.green('✓') : chalk.red('✗');
+						// ✗ means an error elsewhere; a No answer isn't one
+						const icon = isYes ? chalk.green('✓') : chalk.dim('–');
 						return (
 							chalk.cyan('Set up Claude Code integration?') +
 							' ' +
@@ -467,7 +586,7 @@ async function initializeProject(options = {}) {
 				shouldSetupRules = setupRulesInput.trim().toLowerCase() === 'y';
 			} else {
 				log(
-					'info',
+					'debug',
 					`Using rule profiles provided via command line: ${selectedRuleProfiles.join(', ')}`
 				);
 			}
@@ -475,80 +594,27 @@ async function initializeProject(options = {}) {
 			// Prompt for response language preference
 			const languageInput = await promptQuestion(
 				rl,
-				chalk.cyan('Preferred response language (English): ')
+				chalk.cyan('Language for AI responses (English): '),
+				(answer) =>
+					`${chalk.cyan('Language for AI responses?')} ${chalk.dim(answer.trim() || 'English')}`
 			);
 			const preferredLanguage = languageInput.trim() || 'English';
-
-			// Confirm settings with cleaner formatting
-			console.log('\n' + chalk.bold('TaskGraph Project Settings:'));
-			console.log(chalk.dim('─'.repeat(50)));
-
-			// AI IDE rules
-			const rulesIcon = shouldSetupRules ? chalk.green('✓') : chalk.dim('✗');
-			console.log(
-				'  ' + chalk.dim('Claude Code integration:'.padEnd(32)),
-				rulesIcon + ' ' + chalk.dim(shouldSetupRules ? 'Yes' : 'No')
-			);
-
-			// Response language
-			console.log(
-				'  ' + chalk.dim('Response language:'.padEnd(32)),
-				theme.text(preferredLanguage)
-			);
-
-			const gitIcon = initGitPrompted ? chalk.green('✓') : chalk.dim('✗');
-			console.log(
-				'  ' + chalk.dim('Initialize Git repository:'.padEnd(32)),
-				gitIcon + ' ' + chalk.dim(initGitPrompted ? 'Yes' : 'No')
-			);
-
-			const gitTasksIcon = storeGitPrompted ? chalk.green('✓') : chalk.dim('✗');
-			console.log(
-				'  ' + chalk.dim('Store tasks in Git:'.padEnd(32)),
-				gitTasksIcon + ' ' + chalk.dim(storeGitPrompted ? 'Yes' : 'No')
-			);
-
-			console.log(chalk.dim('─'.repeat(50)));
-
-			const confirmInput = await promptQuestion(
-				rl,
-				chalk.yellow('\nDo you want to continue with these settings? (Y/n): ')
-			);
-			const shouldContinue = confirmInput.trim().toLowerCase() !== 'n';
-
-			if (!shouldContinue) {
-				rl.close();
-				log('info', 'Project initialization cancelled by user');
-				process.exit(0);
-				return;
-			}
+			// Each answer already shows on its own line; no second confirmation
 
 			const dryRun = options.dryRun || false;
 
 			if (dryRun) {
-				log('info', 'DRY RUN MODE: No files will be modified');
-				log('info', 'Would initialize TaskGraph project');
-				log('info', 'Would create/update necessary project files');
-
-				// Show flag-specific behavior
-				log(
-					'info',
-					`${initGitPrompted ? 'Would initialize Git repository' : 'Would skip Git initialization'}`
-				);
-				log(
-					'info',
-					`${storeGitPrompted ? 'Would store tasks in Git' : 'Would exclude tasks from Git'}`
-				);
-
+				rl.close();
+				displayDryRun(initGitPrompted, storeGitPrompted);
 				return {
 					dryRun: true
 				};
 			}
 
 			// Create structure using only necessary values
-			// Always add aliases - addShellAliases() handles checking for existing ones
+			// addShellAliases() skips aliases that already exist
 			await createProjectStructure(
-				true, // Always add aliases
+				options.aliases !== false, // --no-aliases opts out
 				initGitPrompted,
 				storeGitPrompted,
 				dryRun,
@@ -638,6 +704,10 @@ async function createProjectStructure(
 	const targetDir = process.cwd();
 	log('debug', `Initializing project in ${targetDir}`);
 
+	// What exists before init touches anything, for the summary at the end
+	const watched = isSilentMode() ? [] : trackedPaths(targetDir);
+	const before = snapshotPaths(watched);
+
 	// Create NEW .taskgraph directory structure (using constants)
 	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_DIR));
 	ensureDirectoryExists(path.join(targetDir, TASKGRAPH_TASKS_DIR));
@@ -694,7 +764,7 @@ async function createProjectStructure(
 			path.join(targetDir, GITIGNORE_FILE),
 			templateContent,
 			storeTasksInGit,
-			log
+			quietLog
 		);
 	} catch (error) {
 		log('error', `Failed to create .gitignore: ${error.message}`);
@@ -709,33 +779,15 @@ async function createProjectStructure(
 		path.join(targetDir, TASKGRAPH_TEMPLATES_DIR, 'example_prd_rpg.txt')
 	);
 
-	// Initialize git repository if git is available
+	// Initialize a git repository unless --no-git or there already is one
 	try {
 		if (initGit === false) {
-			log('info', 'Git initialization skipped due to --no-git flag.');
-		} else if (initGit === true) {
-			if (insideGitWorkTree()) {
-				log(
-					'debug',
-					'Existing Git repository detected – skipping git init despite --git flag.'
-				);
-			} else {
-				log('info', 'Initializing Git repository due to --git flag...');
-				execSync('git init', { cwd: targetDir, stdio: 'ignore' });
-				log('success', 'Git repository initialized');
-			}
+			log('debug', 'Git initialization skipped due to --no-git flag.');
+		} else if (insideGitWorkTree()) {
+			log('debug', 'Existing Git repository detected; skipping git init.');
 		} else {
-			// Default behavior when no flag is provided (from interactive prompt)
-			if (insideGitWorkTree()) {
-				log('debug', 'Existing Git repository detected – skipping git init.');
-			} else {
-				log(
-					'info',
-					'No Git repository detected. Initializing one in project root...'
-				);
-				execSync('git init', { cwd: targetDir, stdio: 'ignore' });
-				log('success', 'Git repository initialized');
-			}
+			execSync('git init', { cwd: targetDir, stdio: 'ignore' });
+			log('debug', 'Git repository initialized');
 		}
 	} catch (error) {
 		log('warn', 'Git not available, skipping repository initialization');
@@ -743,28 +795,10 @@ async function createProjectStructure(
 
 	// Install the Claude profile if requested via --rules or the interactive prompt.
 	if (selectedRuleProfiles.length > 0) {
-		log('info', 'Setting up Claude Code integration...');
+		log('debug', 'Setting up Claude Code integration...');
 		for (const profileName of selectedRuleProfiles) {
 			_processSingleProfile(profileName);
 		}
-	}
-
-	// Add shell aliases if requested
-	if (addAliases) {
-		addShellAliases();
-	}
-
-	// Run npm install automatically
-	const npmInstallOptions = {
-		cwd: targetDir,
-		// Default to inherit for interactive CLI, change if silent
-		stdio: 'inherit'
-	};
-
-	if (isSilentMode()) {
-		// If silent (MCP mode), suppress npm install output
-		npmInstallOptions.stdio = 'ignore';
-		log('info', 'Running npm install silently...'); // Log our own message
 	}
 
 	// === Add Response Language Step ===
@@ -783,98 +817,74 @@ async function createProjectStructure(
 		} catch (error) {
 			log('warn', `Failed to set response language: ${error.message}`);
 		}
-	} else if (isSilentMode() && !dryRun) {
-		log('debug', 'Skipping response language setup in silent (MCP) mode.');
-	} else if (dryRun) {
-		log('debug', 'DRY RUN: Skipping response language setup.');
 	}
 	// =====================================
 
 	// === Add Model Configuration Step ===
+	// Interactive runs choose models now; --yes keeps the defaults, which the
+	// summary mentions. MCP clients set models with the `models` tool.
 	if (!isSilentMode() && !dryRun && !options?.yes) {
-		console.log(
-			boxen(chalk.cyan('Configuring AI Models...'), {
-				padding: 0.5,
-				margin: { top: 1, bottom: 0.5 },
-				borderStyle: 'round',
-				borderColor: 'cyan',
-				width: BOX_WIDTH
-			})
-		);
-		log(
-			'info',
-			'Running interactive model setup. Please select your preferred AI models.'
-		);
+		console.log('');
 		try {
-			execSync('npx taskgraph models --setup', {
-				stdio: 'inherit',
-				cwd: targetDir
-			});
-			log('success', 'AI Models configured.');
+			// Run this same CLI rather than `npx taskgraph`, which can resolve
+			// to a different npm package when TaskGraph isn't installed locally
+			execSync(
+				`"${process.execPath}" "${process.argv[1]}" models --setup --no-banner`,
+				{ stdio: 'inherit', cwd: targetDir }
+			);
+			console.log('');
 		} catch (error) {
-			log('error', 'Failed to configure AI models:', error.message);
-			log('warn', 'You may need to run "taskgraph models --setup" manually.');
+			log(
+				'warn',
+				'Model setup did not finish; run `taskgraph models --setup` to retry'
+			);
 		}
 	} else if (isSilentMode() && !dryRun) {
-		log('info', 'Skipping interactive model setup in silent (MCP) mode.');
-		log(
-			'warn',
-			'Please configure AI models using "taskgraph models --set-..." or the "models" MCP tool.'
-		);
-	} else if (dryRun) {
-		log('info', 'DRY RUN: Skipping interactive model setup.');
-	} else if (options?.yes) {
-		log('info', 'Skipping interactive model setup due to --yes flag.');
-		log(
-			'info',
-			'Default AI models will be used. You can configure different models later using "taskgraph models --setup" or "taskgraph models --set-..." commands.'
-		);
+		log('debug', 'Skipping interactive model setup in silent (MCP) mode.');
 	}
 	// ====================================
 
-	// Add shell aliases if requested
 	if (addAliases && !dryRun) {
-		log('debug', 'Adding shell aliases...');
-		const aliasResult = addShellAliases();
-		if (aliasResult) {
-			log('debug', 'Shell aliases added successfully');
-		}
-	} else if (addAliases && dryRun) {
-		log('debug', 'DRY RUN: Would add shell aliases (tm, taskgraph)');
+		addShellAliases();
 	}
 
-	// Display success message
 	if (!isSilentMode()) {
+		const { alreadySetUp, changes } = describeInitChanges(
+			targetDir,
+			before,
+			snapshotPaths(watched)
+		);
 		console.log(
-			boxen(
-				`${brandGradient.multiline(
-					figlet.textSync('Success!', { font: 'Standard' })
-				)}\n${chalk.green('Project initialized successfully!')}`,
-				{
-					padding: 1,
-					margin: 1,
-					borderStyle: 'double',
-					borderColor: 'green',
-					width: BOX_WIDTH
-				}
-			)
+			`${ui.formatInitSummary({
+				folder: path.basename(targetDir),
+				changes,
+				alreadySetUp,
+				claudeCode: selectedRuleProfiles.includes('claude'),
+				defaultModels: Boolean(options?.yes)
+			})}\n`
 		);
 	}
+}
 
-	// Display next steps in a nice box
-	if (!isSilentMode()) {
-		const gettingStartedMessage = getLocalGettingStartedMessage();
-
-		console.log(
-			boxen(chalk.yellow.bold('Workflow\n') + '\n' + gettingStartedMessage, {
-				padding: 1,
-				margin: { top: 0, bottom: 1, left: 0, right: 0 },
-				borderStyle: 'round',
-				borderColor: 'yellow',
-				width: BOX_WIDTH
-			})
-		);
+/**
+ * Say what init would do without doing it.
+ * @param {boolean} initGit - Whether git init would run
+ * @param {boolean} storeTasksInGit - Whether tasks would be committed
+ */
+function displayDryRun(initGit, storeTasksInGit) {
+	if (isSilentMode()) return;
+	const lines = [
+		'Dry run; nothing was changed. Init would:',
+		`  create ${TASKGRAPH_DIR}/ with tasks, settings and PRD templates`,
+		`  create or update ${GITIGNORE_FILE} and ${ENV_EXAMPLE_FILE}`
+	];
+	if (initGit !== false && !insideGitWorkTree()) {
+		lines.push('  start a Git repository');
 	}
+	lines.push(
+		storeTasksInGit ? '  keep tasks in Git' : '  keep tasks out of Git'
+	);
+	console.log(lines.join('\n'));
 }
 
 // Ensure necessary functions are exported

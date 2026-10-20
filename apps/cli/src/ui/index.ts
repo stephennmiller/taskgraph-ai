@@ -37,6 +37,13 @@ export {
 	type SubtaskSummaryItem
 } from './formatters/subtask-summary-formatters.js';
 
+// What init did and what to do next
+export {
+	formatInitSummary,
+	type InitChange,
+	type InitSummary
+} from './formatters/init-summary-formatters.js';
+
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
 

@@ -11,6 +11,7 @@ import { vi } from 'vitest';
 // Import the module under test and its exports
 import manageGitignoreFile, {
 	normalizeLine,
+	readStoreTasksInGit,
 	isTaskLine,
 	buildTaskFilesSection,
 	TASK_FILES_COMMENT,
@@ -438,5 +439,73 @@ tasks/ `;
 `);
 			});
 		});
+	});
+});
+
+describe('manageGitignoreFile with a template that has no task lines', () => {
+	// Like assets/gitignore, which leaves the task section to the code
+	const template = '# Logs\nlogs\n*.log\n\n# OS specific\n.DS_Store\n';
+	let dir;
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitignore-section-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	test('ignores tasks in a new file when tasks stay out of Git', () => {
+		const target = path.join(dir, '.gitignore');
+
+		manageGitignoreFile(target, template, false);
+
+		const lines = fs.readFileSync(target, 'utf8').split('\n');
+		expect(lines).toContain(TASK_FILES_COMMENT);
+		expect(lines).toContain(TASK_JSON_PATTERN);
+	});
+
+	test('leaves the file unchanged when init runs again', () => {
+		const target = path.join(dir, '.gitignore');
+
+		manageGitignoreFile(target, template, true);
+		const first = fs.readFileSync(target, 'utf8');
+		manageGitignoreFile(target, template, true);
+
+		expect(fs.readFileSync(target, 'utf8')).toBe(first);
+	});
+});
+
+describe('readStoreTasksInGit', () => {
+	let dir;
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitignore-choice-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	test('reads back the choice init wrote', () => {
+		const template = '# Logs\nlogs\n';
+		const ignored = path.join(dir, 'ignored', '.gitignore');
+		const stored = path.join(dir, 'stored', '.gitignore');
+		fs.mkdirSync(path.dirname(ignored));
+		fs.mkdirSync(path.dirname(stored));
+
+		manageGitignoreFile(ignored, template, false);
+		manageGitignoreFile(stored, template, true);
+
+		expect(readStoreTasksInGit(ignored)).toBe(false);
+		expect(readStoreTasksInGit(stored)).toBe(true);
+	});
+
+	test('has no answer for a file without task lines, or no file', () => {
+		const plainFile = path.join(dir, '.gitignore');
+		fs.writeFileSync(plainFile, 'node_modules\n');
+
+		expect(readStoreTasksInGit(plainFile)).toBeUndefined();
+		expect(readStoreTasksInGit(path.join(dir, 'missing'))).toBeUndefined();
 	});
 });
