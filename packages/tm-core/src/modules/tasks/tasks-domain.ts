@@ -23,6 +23,8 @@ import type {
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import {
 	buildDependencyTree,
+	explainBlockers,
+	type BlockerExplanation,
 	type DependencyTree
 } from '../dependencies/index.js';
 import type {
@@ -162,6 +164,19 @@ export class TasksDomain {
 	): Promise<DependencyTree> {
 		const { tasks } = await this.list({ tag: options.tag });
 		return buildDependencyTree(tasks, { rootId: options.rootId });
+	}
+
+	/**
+	 * Explain why a task can't be started: its unfinished dependencies, down
+	 * to the root causes (ready work, stalled tasks, missing IDs, cycles).
+	 * Works for subtask IDs like "2.1". Throws if the task doesn't exist.
+	 */
+	async explainBlockers(
+		taskId: string,
+		options: { tag?: string } = {}
+	): Promise<BlockerExplanation> {
+		const { tasks } = await this.list({ tag: options.tag });
+		return explainBlockers(tasks, String(taskId));
 	}
 
 	/**

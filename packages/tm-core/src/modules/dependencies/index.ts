@@ -15,6 +15,13 @@ export {
 	type DependencyGraphNode
 } from './dependency-graph.js';
 export {
+	explainBlockers,
+	type BlockerExplanation,
+	type BlockerKind,
+	type BlockerNode,
+	type BlockerRootCause
+} from './explain-blockers.js';
+export {
 	buildDependencyTree,
 	type BuildDependencyTreeOptions,
 	type DependencyTree,

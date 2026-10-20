@@ -39,6 +39,7 @@ import {
 import {
 	showTask,
 	graph,
+	why,
 	listTasks,
 	listTasksWithSubtasks,
 	listTasksByStatus,
@@ -96,6 +97,7 @@ export const allCommands: SlashCommand[] = [
 	// General commands
 	showTask,
 	graph,
+	why,
 	listTasks,
 	listTasksWithSubtasks,
 	listTasksByStatus,
