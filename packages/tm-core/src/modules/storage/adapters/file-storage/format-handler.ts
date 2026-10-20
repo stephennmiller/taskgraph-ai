@@ -3,6 +3,7 @@
  */
 
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
+import { CURRENT_SCHEMA_VERSION } from './schema-version.js';
 
 export interface FileStorageData {
 	tasks: Task[];
@@ -239,6 +240,7 @@ export class FormatHandler {
 	private generateMetadataFromTasks(tasks: Task[], tag: string): TaskMetadata {
 		return {
 			version: '1.0.0',
+			schemaVersion: CURRENT_SCHEMA_VERSION,
 			lastModified: new Date().toISOString(),
 			taskCount: tasks.length,
 			completedCount: tasks.filter((t: any) => t.status === 'done').length,

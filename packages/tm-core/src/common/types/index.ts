@@ -172,6 +172,12 @@ export interface Subtask extends Omit<Task, 'id' | 'subtasks'> {
  */
 export interface TaskMetadata {
 	version: string;
+	/**
+	 * On-disk schema version of the tag's data in tasks.json. Absent means
+	 * version 1 (files written before the marker existed). Files with a higher
+	 * version than this build understands still load, with a warning.
+	 */
+	schemaVersion?: number;
 	lastModified: string;
 	taskCount: number;
 	completedCount: number;
