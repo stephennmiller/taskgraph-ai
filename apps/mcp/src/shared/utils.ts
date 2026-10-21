@@ -259,6 +259,8 @@ function getProjectRootFromSession(session: any): string | null {
  * 3. Session-based project root resolution
  * 4. Current directory fallback
  */
+const TAG_PATTERN = /^[A-Za-z0-9_-]+$/;
+
 export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 	fn: (
 		args: T & { projectRoot: string },
@@ -267,6 +269,16 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 ): (args: T, context: any) => Promise<ContentResult> {
 	return async (args: T, context: any): Promise<ContentResult> => {
 		const { log, session } = context;
+		// A tag becomes part of file names and git branch names
+		const tag = (args as { tag?: unknown }).tag;
+		if (
+			tag !== undefined &&
+			!(typeof tag === 'string' && TAG_PATTERN.test(tag))
+		) {
+			return createErrorResponse(
+				`Invalid tag "${String(tag)}": use only letters, numbers, hyphens and underscores`
+			);
+		}
 		let normalizedRoot: string | null = null;
 		let rootSource = 'unknown';
 
