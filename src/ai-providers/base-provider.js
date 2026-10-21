@@ -121,6 +121,21 @@ const buildSafeSchema = (schema) => {
 };
 
 /**
+ * A call that never answers would hang the command forever. Ten minutes is
+ * far past a normal answer, so only a stuck call hits it.
+ */
+const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
+
+function aiCallSignal() {
+	const configured = Number(process.env.TASKGRAPH_AI_TIMEOUT_MS);
+	return AbortSignal.timeout(
+		Number.isFinite(configured) && configured > 0
+			? configured
+			: DEFAULT_AI_CALL_TIMEOUT_MS
+	);
+}
+
+/**
  * Base class for all AI providers
  */
 export class BaseAIProvider {
@@ -343,6 +358,7 @@ export class BaseAIProvider {
 			const client = await this.getClient(params);
 
 			const result = await generateText({
+				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
@@ -395,6 +411,7 @@ export class BaseAIProvider {
 			const client = await this.getClient(params);
 
 			const stream = await streamText({
+				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
@@ -440,6 +457,7 @@ export class BaseAIProvider {
 
 			// Same options as generateObject, so both paths ask the model the same way
 			const result = await streamObject({
+				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,
@@ -448,7 +466,7 @@ export class BaseAIProvider {
 					schemaName: params.objectName,
 					schemaDescription: `Generate a valid JSON object for ${params.objectName}`
 				}),
-				maxTokens: params.maxTokens,
+				...this.prepareTokenParam(params.modelId, params.maxTokens),
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
 					: {}),
@@ -496,13 +514,14 @@ export class BaseAIProvider {
 			const schema = buildSafeSchema(params.schema);
 
 			const result = await generateObject({
+				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,
 				mode: this.needsExplicitJsonSchema ? 'json' : 'auto',
 				schemaName: params.objectName,
 				schemaDescription: `Generate a valid JSON object for ${params.objectName}`,
-				maxTokens: params.maxTokens,
+				...this.prepareTokenParam(params.modelId, params.maxTokens),
 				...(this.supportsTemperature && params.temperature !== undefined
 					? { temperature: params.temperature }
 					: {})
