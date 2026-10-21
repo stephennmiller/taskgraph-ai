@@ -122,7 +122,9 @@ const buildSafeSchema = (schema) => {
 
 /**
  * A call that never answers would hang the command forever. Ten minutes is
- * far past a normal answer, so only a stuck call hits it.
+ * far past a normal answer, so only a stuck call hits it. Streams are left
+ * alone: they run for as long as the model writes, and parse-prd already
+ * times its own stream.
  */
 const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -411,7 +413,6 @@ export class BaseAIProvider {
 			const client = await this.getClient(params);
 
 			const stream = await streamText({
-				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
@@ -457,7 +458,6 @@ export class BaseAIProvider {
 
 			// Same options as generateObject, so both paths ask the model the same way
 			const result = await streamObject({
-				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,

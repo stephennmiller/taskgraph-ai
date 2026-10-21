@@ -78,7 +78,7 @@ describe('AI call limits', () => {
 		['streamObject', () => provider.streamObject(objectParams)]
 	];
 
-	test.each(calls)(
+	test.each(calls.filter(([name]) => !name.startsWith('stream')))(
 		'%s can be abandoned after a time limit',
 		async (name, run) => {
 			await run();
@@ -86,6 +86,15 @@ describe('AI call limits', () => {
 			const options = sdk[name].mock.calls[0][0];
 			expect(options.abortSignal).toBeInstanceOf(AbortSignal);
 			expect(options.abortSignal.aborted).toBe(false);
+		}
+	);
+
+	test.each([['streamText'], ['streamObject']])(
+		'%s is not cut off, since it runs as long as the model writes',
+		async (name) => {
+			await calls.find(([n]) => n === name)[1]();
+
+			expect(sdk[name].mock.calls[0][0].abortSignal).toBeUndefined();
 		}
 	);
 
