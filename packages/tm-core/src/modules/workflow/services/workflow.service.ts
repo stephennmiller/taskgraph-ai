@@ -16,6 +16,7 @@ import type {
 	WorkflowPhase,
 	WorkflowState
 } from '../types.js';
+import { TestResultValidator } from './test-result-validator.js';
 import { WorkflowActivityLogger } from './workflow-activity-logger.js';
 
 /**
@@ -429,6 +430,8 @@ export class WorkflowService {
 			throw new Error('Not in active TDD phase');
 		}
 
+		this.assertTrustworthy(tddPhase, testResults);
+
 		// Transition based on current phase
 		switch (tddPhase) {
 			case 'RED':
@@ -452,6 +455,25 @@ export class WorkflowService {
 		}
 
 		return this.getStatus();
+	}
+
+	/**
+	 * Refuse results that cannot be right before they move the workflow on.
+	 * RED with no failures stays allowed: it means the feature already exists.
+	 */
+	private assertTrustworthy(tddPhase: string, testResults: TestResult): void {
+		const validator = new TestResultValidator();
+		const check =
+			tddPhase === 'GREEN'
+				? validator.validateGreenPhase(testResults)
+				: validator.validate(testResults);
+		const errors = [...check.errors];
+		if (tddPhase === 'RED' && testResults.total === 0) {
+			errors.push('Cannot validate empty test suite');
+		}
+		if (errors.length > 0) {
+			throw new Error(`Invalid test results: ${errors.join('; ')}`);
+		}
 	}
 
 	/**

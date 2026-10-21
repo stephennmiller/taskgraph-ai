@@ -5,10 +5,6 @@
  * @integration
  */
 
-import { execSync } from 'node:child_process';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../src/common/logger/index.js', () => ({
@@ -23,33 +19,18 @@ vi.mock('../../../src/common/logger/index.js', () => ({
 
 import { WorkflowService } from '../../../src/modules/workflow/services/workflow.service.js';
 
-const originalHome = process.env.HOME;
+import { createWorkflowProject } from './project-helper.js';
 
 describe('Autopilot subtask ids', () => {
+	let project: ReturnType<typeof createWorkflowProject>;
 	let projectDir: string;
-	let homeDir: string;
 
 	beforeEach(() => {
-		homeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-ids-home-'));
-		projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-ids-project-'));
-		// Keep workflow state out of the real ~/.taskgraph
-		process.env.HOME = homeDir;
-		const git = (cmd: string) =>
-			execSync(cmd, { cwd: projectDir, stdio: 'pipe' });
-		git('git init');
-		git('git config user.email "test@test.com"');
-		git('git config user.name "Test User"');
-		git('git config commit.gpgsign false');
-		fs.writeFileSync(path.join(projectDir, 'README.md'), '# Test\n');
-		git('git add .');
-		git('git commit -m "Initial commit"');
+		project = createWorkflowProject();
+		projectDir = project.projectDir;
 	});
 
-	afterEach(() => {
-		process.env.HOME = originalHome;
-		fs.rmSync(projectDir, { recursive: true, force: true });
-		fs.rmSync(homeDir, { recursive: true, force: true });
-	});
+	afterEach(() => project.restore());
 
 	it('marks the subtask done by its full id, not the task with the same number', async () => {
 		const updateStatus = vi.fn().mockResolvedValue(undefined);
