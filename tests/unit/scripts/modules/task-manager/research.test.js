@@ -87,10 +87,6 @@ vi.doMock('inquirer', () => ({
 	default: { prompt: vi.fn() }
 }));
 
-vi.doMock('cli-highlight', () => ({
-	highlight: (code) => code
-}));
-
 vi.doMock('cli-table3', () => ({
 	default: vi.fn().mockImplementation(() => ({
 		push: vi.fn(),

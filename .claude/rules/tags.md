@@ -208,15 +208,15 @@ Test each command with:
 
 ```bash
 # Test with explicit tag
-node bin/taskgraph command-name --tag test-tag
+node dist/taskgraph.js command-name --tag test-tag
 
 # Test with active tag (should use current active tag)
-node bin/taskgraph use-tag test-tag
-node bin/taskgraph command-name
+node dist/taskgraph.js use-tag test-tag
+node dist/taskgraph.js command-name
 
 # Test with master tag (default)
-node bin/taskgraph use-tag master  
-node bin/taskgraph command-name
+node dist/taskgraph.js use-tag master  
+node dist/taskgraph.js command-name
 ```
 
 ## Migration Strategy

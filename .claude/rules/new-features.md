@@ -518,8 +518,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
     - **Path Finding**: Inside this function, obtain the `tasksPath` by calling `const tasksPath = findTasksJsonPath(args, log);`. This relies on `args.projectRoot` (derived from the session) being passed correctly.
     - Perform validation on other arguments received in `args`.
     - **Implement Silent Mode**: Wrap core function calls with `enableSilentMode()` and `disableSilentMode()` to prevent logs from interfering with JSON responses.
-    - **If Caching**: Implement caching using `getCachedOrExecute` from `../../tools/utils.js`.
-    - **If Not Caching**: Directly call the core logic function within a try/catch block.
+    - Call the core logic function within a try/catch block.
     - Format the return as `{ success: true/false, data/error, fromCache: boolean }`.
     - Export the wrapper function.
 

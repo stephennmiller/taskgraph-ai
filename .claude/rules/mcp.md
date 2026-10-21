@@ -321,7 +321,6 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
   - Receive `args` (including `projectRoot`), `log`, and optionally `{ session }` context.
   - Find `tasks.json` using `findTasksJsonPath`.
   - Validate arguments.
-  - **Implement Caching (if applicable)**: Use `getCachedOrExecute`.
   - **Call Core Logic**: Invoke function from `scripts/modules/*`.
     - Pass `outputFormat: 'json'` if applicable.
     - Wrap with `enableSilentMode/disableSilentMode` if needed.
@@ -343,7 +342,6 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 - **Output Formatting**: Ensure core functions called by `*Direct` functions can suppress CLI output, ideally via an `outputFormat` parameter.
 - **Project Initialization**: Use the initialize_project tool for setting up new projects in integrated environments.
 - **Centralized Utilities**: Use helpers from `mcp-server/src/tools/utils.js`, `mcp-server/src/core/utils/path-utils.js`, and `mcp-server/src/core/utils/ai-client-utils.js`. See `utilities.md`.
-- **Caching in Direct Functions**: Caching logic resides *within* the `*Direct` functions using `getCachedOrExecute`.
 
 ## Resources and Resource Templates
 
@@ -351,7 +349,7 @@ Resources provide LLMs with static or dynamic data without executing tools.
 
 - **Implementation**: Use `@mcp.resource()` decorator pattern or `server.addResource`/`server.addResourceTemplate` in `mcp-server/src/core/resources/`.
 - **Registration**: Register resources during server initialization in [`mcp-server/src/index.js`](../../mcp-server/src/index.js).
-- **Best Practices**: Organize resources, validate parameters, use consistent URIs, handle errors. See [`fastmcp-core.txt`](docs/fastmcp-core.txt) for underlying SDK details.
+- **Best Practices**: Organize resources, validate parameters, use consistent URIs, handle errors. See the FastMCP documentation for underlying SDK details.
 
 *(Self-correction: Removed detailed Resource implementation examples as they were less relevant to the current user focus on tool execution flow and project roots. Kept the overview.)*
 
@@ -368,7 +366,6 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         - **Path Resolution**: Obtain `tasksPath` using `findTasksJsonPath(args, log)`.
         - Parse other `args` and perform necessary validation.
         - **Handle AI (if applicable)**: Initialize clients using `get*ClientForMCP(session, log)`, build prompts, call AI, parse response. Handle AI-specific errors.
-        - **Implement Caching (if applicable)**: Use `getCachedOrExecute`.
         - **Call Core Logic**:
             - Wrap with `enableSilentMode/disableSilentMode` if necessary.
             - Pass `outputFormat: 'json'` (or similar) if applicable.
@@ -420,14 +417,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         - `handleApiResult`: Takes the raw result from a `*Direct` function and formats it into a standard MCP success or error response, automatically handling data processing via `processMCPResponseData`. This is called by the tool's `execute` method.
         - `createContentResponse`/`createErrorResponse`: Used by `handleApiResult` to format successful/error MCP responses.
         - `processMCPResponseData`: Filters/cleans data (e.g., removing `details`, `testStrategy`) before it's sent in the MCP response. Called by `handleApiResult`.
-        - `getCachedOrExecute`: **Used inside `*Direct` functions** in `taskgraph-core.js` to implement caching logic.
         - `executeTaskGraphCommand`: Fallback for executing CLI commands.
-- **Caching**: To improve performance for frequently called read operations (like `listTasks`, `showTask`, `nextTask`), a caching layer using `lru-cache` is implemented.
-    - **Caching logic resides *within* the direct function wrappers** in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js) using the `getCachedOrExecute` utility from [`tools/utils.js`](../../mcp-server/src/tools/utils.js).
-    - Generate unique cache keys based on function arguments that define a distinct call (e.g., file path, filters).
-    - The `getCachedOrExecute` utility handles checking the cache, executing the core logic function on a cache miss, storing the result, and returning the data along with a `fromCache` flag.
-    - Cache statistics can be monitored using the `cacheStats` MCP tool (implemented via `getCacheStatsDirect`).
-    - **Caching should generally be applied to read-only operations** that don't modify the `tasks.json` state. Commands like `set-status`, `add-task`, `update-task`, `parse-prd`, `add-dependency` should *not* be cached as they change the underlying data.
 
 **MCP Tool Implementation Checklist**:
 
@@ -490,7 +480,6 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
   - Clear separation of concerns
   - Consistent parameter validation
   - Centralized error handling
-  - Performance optimization through caching (for read operations)
   - Standardized response formatting
 
 ## MCP Naming Conventions
@@ -500,7 +489,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
   - ✅ DO: Use consistent directory structure: `mcp-server/src/tools/` for tool definitions, `mcp-server/src/core/direct-functions/` for direct function implementations
 
 - **JavaScript Functions**:
-  - ✅ DO: Use **camelCase** with `Direct` suffix for direct function implementations: `listTasksDirect`, `setTaskStatusDirect`
+  - ✅ DO: Use **camelCase** with `Direct` suffix for direct function implementations: `listTasksDirect`, `nextTaskDirect`
   - ✅ DO: Use **camelCase** with `Tool` suffix for tool registration functions: `registerListTasksTool`, `registerSetTaskStatusTool`
   - ✅ DO: Use consistent action function naming inside direct functions: `coreActionFn` or similar descriptive name
 
@@ -519,7 +508,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     ```javascript
     export const directFunctions = {
       list: listTasksDirect,
-      setStatus: setTaskStatusDirect,
+      next: nextTaskDirect,
       // Add more functions as implemented
     };
     ```
