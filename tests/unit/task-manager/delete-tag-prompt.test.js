@@ -119,4 +119,28 @@ describe('deleteTag confirmation', () => {
 		expect(answer).not.toHaveBeenCalled();
 		expect(tagsOnDisk()).toEqual(['master', 'backup']);
 	});
+
+	it('keeps what another process wrote while the question was open', async () => {
+		setTTY(true);
+		answer.mockImplementation(async () => {
+			const current = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+			current.master.tasks.push({
+				id: 2,
+				title: 'Added meanwhile',
+				status: 'pending',
+				dependencies: []
+			});
+			fs.writeFileSync(tasksPath, JSON.stringify(current));
+			return { proceed: true };
+		});
+
+		await remove();
+
+		const saved = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		expect(Object.keys(saved)).toEqual(['master']);
+		expect(saved.master.tasks.map((t) => t.title)).toEqual([
+			'A',
+			'Added meanwhile'
+		]);
+	});
 });

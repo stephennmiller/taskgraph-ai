@@ -13,6 +13,7 @@ import {
 	readJSON,
 	resolveTag,
 	setTasksForTag,
+	modifyJSON,
 	writeJSON
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
@@ -350,25 +351,18 @@ async function deleteTag(
 			}
 		}
 
-		// Delete the tag
-		delete rawData[tagName];
+		// Delete the tag from the file as it is now: it may have changed while
+		// the question above was open
+		await modifyJSON(tasksPath, (current) => {
+			delete current[tagName];
+			return current;
+		});
 
 		// If we're deleting the current tag, switch to master
 		if (isCurrentTag) {
 			await switchCurrentTag(projectRoot, 'master');
 			logFn.debug('Switched current tag to "master"');
 		}
-
-		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
-
-		// Write the clean data back to file with proper context to avoid tag corruption
-		writeJSON(tasksPath, cleanData, projectRoot);
 
 		logFn.debug(`Successfully deleted tag "${tagName}"`);
 
