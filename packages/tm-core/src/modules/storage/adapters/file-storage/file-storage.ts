@@ -26,10 +26,8 @@ import { ComplexityReportManager } from '../../../reports/managers/complexity-re
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
-import {
-	warnIfUnsupportedSchema,
-	withSchemaVersion
-} from './schema-version.js';
+import { applyTagUpdate, buildTagMetadata } from './tag-update.js';
+import { warnIfUnsupportedSchema } from './schema-version.js';
 import { TagOperations } from './tag-operations.js';
 
 /**
@@ -241,77 +239,54 @@ export class FileStorage implements IStorage {
 
 		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
 
-		// Create metadata for this tag
-		const metadata: TaskMetadata = {
-			version: '1.0.0',
+		const metadata = buildTagMetadata(tasks, resolvedTag);
 
-			lastModified: new Date().toISOString(),
-			taskCount: tasks.length,
-			completedCount: tasks.filter((t) => t.status === 'done').length,
-			tags: [resolvedTag]
-		};
-
-		const normalizedTasks = this.normalizeTaskIds(tasks);
-
-		// Use modifyJson for atomic read-modify-write
-		await this.fileOps.modifyJson(filePath, (existingData: any) => {
-			// Update the specific tag in the existing data structure
-			if (
-				this.formatHandler.detectFormat(existingData) === 'legacy' ||
-				Object.keys(existingData).some(
-					(key) => key !== 'tasks' && key !== 'metadata'
-				)
-			) {
-				// Legacy format - update/add the tag
-				existingData[resolvedTag] = {
-					tasks: normalizedTasks,
-					metadata: withSchemaVersion(
-						metadata,
-						existingData[resolvedTag]?.metadata
-					)
-				};
-				return existingData;
-			} else if (resolvedTag === 'master') {
-				// Standard format for master tag
-				return {
-					tasks: normalizedTasks,
-					metadata: withSchemaVersion(metadata, existingData.metadata)
-				};
-			} else {
-				// Convert to legacy format when adding non-master tags
-				const masterTasks = existingData.tasks || [];
-				const masterMetadata = existingData.metadata || metadata;
-
-				return {
-					master: {
-						tasks: masterTasks,
-						metadata: withSchemaVersion(masterMetadata, existingData.metadata)
-					},
-					[resolvedTag]: {
-						tasks: normalizedTasks,
-						metadata: withSchemaVersion(metadata)
-					}
-				};
-			}
-		});
+		await this.fileOps.modifyJson(filePath, (existingData: any) =>
+			applyTagUpdate(
+				this.formatHandler,
+				existingData,
+				resolvedTag,
+				tasks,
+				metadata
+			)
+		);
 	}
 
 	/**
-	 * Normalize task IDs - keep Task IDs as strings, Subtask IDs as numbers
-	 * Note: Uses spread operator to preserve all task properties including user-defined metadata
+	 * Read-modify-write one tag under the file lock. The tasks are read inside
+	 * the lock, so a change made by another writer since the caller started is
+	 * never overwritten. Return `tasks: null` to leave the file untouched.
+	 * A throw from `mutate` aborts the write.
 	 */
-	private normalizeTaskIds(tasks: Task[]): Task[] {
-		return tasks.map((task) => ({
-			...task,
-			id: String(task.id), // Task IDs are strings
-			dependencies: task.dependencies?.map((dep) => String(dep)) || [],
-			subtasks:
-				task.subtasks?.map((subtask) => ({
-					...subtask,
-					id: Number(subtask.id), // Subtask IDs are numbers
-					parentId: String(subtask.parentId) // Parent ID is string (Task ID)
-				})) || []
-		}));
+	private async mutateTasks<R>(
+		tag: string | undefined,
+		mutate: (tasks: Task[]) => { tasks: Task[] | null; result: R }
+	): Promise<R> {
+		const filePath = this.pathResolver.getTasksPath();
+		const resolvedTag = tag || 'master';
+		let result!: R;
+
+		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
+		await this.fileOps.modifyJson(filePath, (existingData: any) => {
+			const current = this.formatHandler.extractTasks(
+				existingData,
+				resolvedTag
+			);
+			const outcome = mutate(current);
+			result = outcome.result;
+			if (outcome.tasks === null) {
+				return existingData;
+			}
+			return applyTagUpdate(
+				this.formatHandler,
+				existingData,
+				resolvedTag,
+				outcome.tasks,
+				buildTagMetadata(outcome.tasks, resolvedTag)
+			);
+		});
+
+		return result;
 	}
 
 	/**
@@ -368,9 +343,10 @@ export class FileStorage implements IStorage {
 	 * Append tasks to existing storage
 	 */
 	async appendTasks(tasks: Task[], tag?: string): Promise<void> {
-		const existingTasks = await this.loadTasks(tag);
-		const allTasks = [...existingTasks, ...tasks];
-		await this.saveTasks(allTasks, tag);
+		await this.mutateTasks(tag, (existing) => ({
+			tasks: [...existing, ...tasks],
+			result: undefined
+		}));
 	}
 
 	/**
@@ -381,47 +357,49 @@ export class FileStorage implements IStorage {
 		updates: Partial<Task>,
 		tag?: string
 	): Promise<void> {
-		const tasks = await this.loadTasks(tag);
-		const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
+		await this.mutateTasks(tag, (tasks) => {
+			const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
 
-		if (taskIndex === -1) {
-			throw taskNotFound(`Task ${taskId} not found`);
-		}
+			if (taskIndex === -1) {
+				throw taskNotFound(`Task ${taskId} not found`);
+			}
 
-		const existingTask = tasks[taskIndex];
+			const existingTask = tasks[taskIndex];
 
-		// Preserve subtask metadata when subtasks are updated
-		// AI operations don't include metadata in returned subtasks
-		let mergedSubtasks = updates.subtasks;
-		if (updates.subtasks && existingTask.subtasks) {
-			mergedSubtasks = updates.subtasks.map((updatedSubtask) => {
-				// Type-coerce IDs for comparison; fall back to title match if IDs don't match
-				const originalSubtask = existingTask.subtasks?.find(
-					(st) =>
-						String(st.id) === String(updatedSubtask.id) ||
-						(updatedSubtask.title && st.title === updatedSubtask.title)
-				);
-				// Merge metadata: preserve original and add/override with new
-				if (originalSubtask?.metadata || updatedSubtask.metadata) {
-					return {
-						...updatedSubtask,
-						metadata: {
-							...(originalSubtask?.metadata || {}),
-							...(updatedSubtask.metadata || {})
-						}
-					};
-				}
-				return updatedSubtask;
-			});
-		}
+			// Preserve subtask metadata when subtasks are updated
+			// AI operations don't include metadata in returned subtasks
+			let mergedSubtasks = updates.subtasks;
+			if (updates.subtasks && existingTask.subtasks) {
+				mergedSubtasks = updates.subtasks.map((updatedSubtask) => {
+					// Type-coerce IDs for comparison; fall back to title match if IDs don't match
+					const originalSubtask = existingTask.subtasks?.find(
+						(st) =>
+							String(st.id) === String(updatedSubtask.id) ||
+							(updatedSubtask.title && st.title === updatedSubtask.title)
+					);
+					// Merge metadata: preserve original and add/override with new
+					if (originalSubtask?.metadata || updatedSubtask.metadata) {
+						return {
+							...updatedSubtask,
+							metadata: {
+								...(originalSubtask?.metadata || {}),
+								...(updatedSubtask.metadata || {})
+							}
+						};
+					}
+					return updatedSubtask;
+				});
+			}
 
-		tasks[taskIndex] = {
-			...existingTask,
-			...updates,
-			...(mergedSubtasks && { subtasks: mergedSubtasks }),
-			id: String(taskId) // Keep consistent with normalizeTaskIds
-		};
-		await this.saveTasks(tasks, tag);
+			const updated = [...tasks];
+			updated[taskIndex] = {
+				...existingTask,
+				...updates,
+				...(mergedSubtasks && { subtasks: mergedSubtasks }),
+				id: String(taskId) // Keep consistent with normalizeTaskIds
+			};
+			return { tasks: updated, result: undefined };
+		});
 	}
 
 	/**
@@ -432,55 +410,48 @@ export class FileStorage implements IStorage {
 		newStatus: TaskStatus,
 		tag?: string
 	): Promise<UpdateStatusResult> {
-		const tasks = await this.loadTasks(tag);
+		return this.mutateTasks(tag, (tasks) => {
+			// Check if this is a subtask (contains a dot)
+			if (taskId.includes('.')) {
+				return this.updateSubtaskStatusInFile(tasks, taskId, newStatus);
+			}
 
-		// Check if this is a subtask (contains a dot)
-		if (taskId.includes('.')) {
-			return this.updateSubtaskStatusInFile(tasks, taskId, newStatus, tag);
-		}
+			// Handle regular task update
+			const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
 
-		// Handle regular task update
-		const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
+			if (taskIndex === -1) {
+				throw taskNotFound(`Task ${taskId} not found`);
+			}
 
-		if (taskIndex === -1) {
-			throw taskNotFound(`Task ${taskId} not found`);
-		}
-
-		const oldStatus = tasks[taskIndex].status;
-		if (oldStatus === newStatus) {
-			return {
+			const oldStatus = tasks[taskIndex].status;
+			const result: UpdateStatusResult = {
 				success: true,
 				oldStatus,
 				newStatus,
 				taskId: String(taskId)
 			};
-		}
+			if (oldStatus === newStatus) {
+				return { tasks: null, result };
+			}
 
-		tasks[taskIndex] = {
-			...tasks[taskIndex],
-			status: newStatus,
-			updatedAt: new Date().toISOString()
-		};
-
-		await this.saveTasks(tasks, tag);
-
-		return {
-			success: true,
-			oldStatus,
-			newStatus,
-			taskId: String(taskId)
-		};
+			const updated = [...tasks];
+			updated[taskIndex] = {
+				...tasks[taskIndex],
+				status: newStatus,
+				updatedAt: new Date().toISOString()
+			};
+			return { tasks: updated, result };
+		});
 	}
 
 	/**
 	 * Update subtask status within file storage - handles parent status auto-adjustment
 	 */
-	private async updateSubtaskStatusInFile(
+	private updateSubtaskStatusInFile(
 		tasks: Task[],
 		subtaskId: string,
-		newStatus: TaskStatus,
-		tag?: string
-	): Promise<UpdateStatusResult> {
+		newStatus: TaskStatus
+	): { tasks: Task[] | null; result: UpdateStatusResult } {
 		const parts = subtaskId.split('.');
 		if (parts.length !== 2) {
 			throw new Error(
@@ -508,7 +479,10 @@ export class FileStorage implements IStorage {
 			);
 		}
 
-		const parentTask = tasks[parentTaskIndex];
+		const parentTask = {
+			...tasks[parentTaskIndex],
+			subtasks: [...(tasks[parentTaskIndex].subtasks ?? [])]
+		};
 
 		// Find the subtask within the parent task
 		const subtaskIndex = parentTask.subtasks.findIndex(
@@ -523,13 +497,14 @@ export class FileStorage implements IStorage {
 		}
 
 		const oldStatus = parentTask.subtasks[subtaskIndex].status || 'pending';
+		const result: UpdateStatusResult = {
+			success: true,
+			oldStatus,
+			newStatus,
+			taskId: subtaskId
+		};
 		if (oldStatus === newStatus) {
-			return {
-				success: true,
-				oldStatus,
-				newStatus,
-				taskId: subtaskId
-			};
+			return { tasks: null, result };
 		}
 
 		const now = new Date().toISOString();
@@ -561,7 +536,8 @@ export class FileStorage implements IStorage {
 		}
 
 		// Always bump updatedAt; update status only if changed
-		tasks[parentTaskIndex] = {
+		const updated = [...tasks];
+		updated[parentTaskIndex] = {
 			...parentTask,
 			...(parentNewStatus !== parentTask.status
 				? { status: parentNewStatus }
@@ -569,28 +545,24 @@ export class FileStorage implements IStorage {
 			updatedAt: now
 		};
 
-		await this.saveTasks(tasks, tag);
-
-		return {
-			success: true,
-			oldStatus,
-			newStatus,
-			taskId: subtaskId
-		};
+		return { tasks: updated, result };
 	}
 
 	/**
 	 * Delete a task
 	 */
 	async deleteTask(taskId: string, tag?: string): Promise<void> {
-		const tasks = await this.loadTasks(tag);
-		const filteredTasks = tasks.filter((t) => String(t.id) !== String(taskId));
+		await this.mutateTasks(tag, (tasks) => {
+			const filteredTasks = tasks.filter(
+				(t) => String(t.id) !== String(taskId)
+			);
 
-		if (filteredTasks.length === tasks.length) {
-			throw taskNotFound(`Task ${taskId} not found`);
-		}
+			if (filteredTasks.length === tasks.length) {
+				throw taskNotFound(`Task ${taskId} not found`);
+			}
 
-		await this.saveTasks(filteredTasks, tag);
+			return { tasks: filteredTasks, result: undefined };
+		});
 	}
 
 	/** See TagOperations */
