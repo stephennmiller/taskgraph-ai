@@ -1,31 +1,30 @@
-import path from 'path';
+import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { assignMetadata, reconcileDependencySources } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
-
-import {
-	log as consoleLog,
-	isSilentMode,
-	readJSON,
-	truncate,
-	writeJSON
-} from '../utils.js';
-
+import path from 'path';
+import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
+import { generateObjectService } from '../ai-services-unified.js';
+import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
+import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
 	getStatusWithColor,
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
-
-import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
-import { generateObjectService } from '../ai-services-unified.js';
-import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
-import { findProjectRoot, flattenTasksWithSubtasks } from '../utils.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
+import {
+	log as consoleLog,
+	findProjectRoot,
+	flattenTasksWithSubtasks,
+	isSilentMode,
+	readJSON,
+	truncate,
+	writeJSON
+} from '../utils.js';
 import { getModelConfiguration } from './models.js';
 
 /**
@@ -249,7 +248,7 @@ async function updateTasks(
 					// Only update if the task was part of the set sent to AI
 					const updatedTask = updatedTasksMap.get(task.id);
 					// Merge the updated task with the existing one to preserve fields like subtasks
-					data.tasks[index] = {
+					const merged = {
 						...task, // Keep all existing fields
 						...updatedTask, // Override with updated fields
 						// Ensure subtasks field is preserved if not provided by AI
@@ -258,6 +257,26 @@ async function updateTasks(
 								? updatedTask.subtasks
 								: task.subtasks
 					};
+					// Dependencies the AI added are recorded as inferred; earlier marks stay
+					assignMetadata(merged, reconcileDependencySources(merged, task));
+					if (Array.isArray(merged.subtasks)) {
+						// The AI returns subtasks without metadata; restore the one
+						// matched by id (user metadata and dependency marks) and
+						// record any dependency the AI added as inferred.
+						merged.subtasks = merged.subtasks.map((subtask) => {
+							const original = task.subtasks?.find(
+								(st) => String(st.id) === String(subtask.id)
+							);
+							const restored = { ...subtask };
+							delete restored.metadata;
+							assignMetadata(
+								restored,
+								reconcileDependencySources(subtask, original, task.id)
+							);
+							return restored;
+						});
+					}
+					data.tasks[index] = merged;
 					actualUpdateCount++;
 				}
 			});

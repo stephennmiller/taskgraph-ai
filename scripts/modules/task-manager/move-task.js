@@ -1,3 +1,9 @@
+import {
+	assignMetadata,
+	pruneDependencySources,
+	rekeyDependencySources,
+	renameDependencySource
+} from '@tm/core';
 import path from 'path';
 import {
 	findCrossTagDependencies,
@@ -11,6 +17,37 @@ import {
 	traverseDependencies,
 	writeJSON
 } from '../utils.js';
+
+/**
+ * Keep a dependency's provenance mark when the task it points at gets a new ID
+ * @param {object} task - The task or subtask that lists the dependency
+ * @param {number} oldId
+ * @param {number} newId
+ * @param {number} [parentId] - Parent task ID when `task` is a subtask
+ */
+function carryDependencySource(task, oldId, newId, parentId) {
+	assignMetadata(
+		task,
+		renameDependencySource(task.metadata, oldId, newId, parentId)
+	);
+}
+
+/**
+ * Re-key a moved item's provenance marks for its new parent
+ * @param {object} item - The task or subtask, with its stored dependencies
+ * @param {number|undefined} oldParentId - undefined for a top-level task
+ * @param {number|undefined} newParentId - undefined for a top-level task
+ * @param {Function} [newStoredDependency] - How a stored dependency was rewritten
+ * @returns {object|undefined} metadata to set on the moved copy
+ */
+function rekeyedMetadata(item, oldParentId, newParentId, newStoredDependency) {
+	return rekeyDependencySources(
+		item,
+		oldParentId,
+		newParentId,
+		newStoredDependency
+	);
+}
 
 /**
  * Find all dependencies recursively for a set of source tasks with depth limiting
@@ -354,6 +391,11 @@ function moveSubtaskToTask(tasks, sourceId, destinationId) {
 		testStrategy: sourceSubtask.testStrategy || '',
 		subtasks: []
 	};
+	// Keep metadata (and its dependency marks, re-keyed for top level)
+	assignMetadata(
+		newTask,
+		rekeyedMetadata(sourceSubtask, sourceParentTask.id, undefined)
+	);
 
 	// Remove subtask from source parent
 	sourceParentTask.subtasks.splice(sourceSubtaskIndex, 1);
@@ -413,6 +455,11 @@ function moveTaskToSubtask(tasks, sourceId, destinationId) {
 		details: sourceTask.details || '',
 		testStrategy: sourceTask.testStrategy || ''
 	};
+	// Keep metadata (and its dependency marks, re-keyed under the new parent)
+	assignMetadata(
+		newSubtask,
+		rekeyedMetadata(sourceTask, undefined, destParentTask.id)
+	);
 
 	// Find insertion position (based on commit fixes)
 	let destSubtaskIndex = -1;
@@ -486,6 +533,12 @@ function moveSubtaskToAnotherParent(
 		...sourceSubtask,
 		id: destSubtaskId_num
 	};
+	if (newSubtask.metadata) {
+		assignMetadata(
+			newSubtask,
+			rekeyedMetadata(sourceSubtask, sourceParentTask.id, destParentTask.id)
+		);
+	}
 
 	// Initialize subtasks array if it doesn't exist (based on commit fixes)
 	if (!destParentTask.subtasks) {
@@ -528,6 +581,7 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 		if (task.dependencies && task.dependencies.includes(sourceTask.id)) {
 			const depIndex = task.dependencies.indexOf(sourceTask.id);
 			task.dependencies[depIndex] = destTaskId;
+			carryDependencySource(task, sourceTask.id, destTaskId);
 		}
 		if (task.subtasks) {
 			task.subtasks.forEach((subtask) => {
@@ -537,6 +591,7 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 				) {
 					const depIndex = subtask.dependencies.indexOf(sourceTask.id);
 					subtask.dependencies[depIndex] = destTaskId;
+					carryDependencySource(subtask, sourceTask.id, destTaskId, task.id);
 				}
 			});
 		}
@@ -546,7 +601,7 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 	if (Array.isArray(movedTask.subtasks)) {
 		movedTask.subtasks.forEach((subtask) => {
 			if (Array.isArray(subtask.dependencies)) {
-				subtask.dependencies = subtask.dependencies.map((dep) => {
+				const rewrite = (dep) => {
 					// If dependency is a string like "oldParent.subId", update to "newParent.subId"
 					if (typeof dep === 'string' && dep.includes('.')) {
 						const [depParent, depSub] = dep.split('.');
@@ -556,7 +611,15 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 					}
 					// If dependency is a number, and matches a subtask ID in the moved task, leave as is (context is implied)
 					return dep;
-				});
+				};
+				// Marks are keyed under the parent ID, so they follow the rewrite
+				if (subtask.metadata) {
+					assignMetadata(
+						subtask,
+						rekeyedMetadata(subtask, sourceTask.id, destTaskId, rewrite)
+					);
+				}
+				subtask.dependencies = subtask.dependencies.map(rewrite);
 			}
 		});
 	}
@@ -781,6 +844,9 @@ async function resolveDependencies(
 					// Otherwise, keep as-is (unknown/unresolved dependency)
 					return true;
 				});
+				if (task.metadata) {
+					assignMetadata(task, pruneDependencySources(task));
+				}
 			});
 
 			log(
@@ -1064,10 +1130,10 @@ function preserveTaskMetadata(task, sourceTag, targetTag) {
 
 export default moveTask;
 export {
-	moveTasksBetweenTags,
-	getAllTasksWithTags,
 	detectIdConflicts,
-	preserveTaskMetadata,
+	getAllTasksWithTags,
+	MOVE_ERROR_CODES,
 	MoveTaskError,
-	MOVE_ERROR_CODES
+	moveTasksBetweenTags,
+	preserveTaskMetadata
 };

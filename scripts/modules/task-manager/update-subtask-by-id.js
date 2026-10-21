@@ -1,9 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { theme } from '@tm/cli/theme';
+import { withoutReservedMetadata } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
-
-import { theme } from '@tm/cli/theme';
+import fs from 'fs';
+import path from 'path';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
@@ -12,6 +12,8 @@ import {
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
+import { ContextGatherer } from '../utils/contextGatherer.js';
+import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
 import {
 	log as consoleLog,
 	findProjectRoot,
@@ -21,8 +23,6 @@ import {
 	truncate,
 	writeJSON
 } from '../utils.js';
-import { ContextGatherer } from '../utils/contextGatherer.js';
-import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
 
 /**
  * Update a subtask by appending additional timestamped information using the unified AI service.
@@ -46,13 +46,9 @@ async function updateSubtaskById(
 	context = {},
 	outputFormat = context.mcpLog ? 'json' : 'text'
 ) {
-	const {
-		session,
-		mcpLog,
-		projectRoot: providedProjectRoot,
-		tag,
-		metadata
-	} = context;
+	const { session, mcpLog, projectRoot: providedProjectRoot, tag } = context;
+	// dependencySources is reserved for dependency provenance
+	const metadata = withoutReservedMetadata(context.metadata);
 	const logFn = mcpLog || consoleLog;
 	const isMCP = !!mcpLog;
 

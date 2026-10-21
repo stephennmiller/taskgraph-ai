@@ -3,7 +3,6 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -26,6 +25,11 @@ import { ComplexityReportManager } from '../../../reports/managers/complexity-re
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
+import {
+	warnIfUnsupportedSchema,
+	withSchemaVersion
+} from './schema-version.js';
+import { TagOperations } from './tag-operations.js';
 
 /**
  * A missing task or subtask. Coded so callers can tell it apart from storage
@@ -45,12 +49,19 @@ export class FileStorage implements IStorage {
 	private fileOps: FileOperations;
 	private pathResolver: PathResolver;
 	private complexityManager: ComplexityReportManager;
+	private tagOps: TagOperations;
 
 	constructor(projectPath: string) {
 		this.formatHandler = new FormatHandler();
 		this.fileOps = new FileOperations();
 		this.pathResolver = new PathResolver(projectPath);
 		this.complexityManager = new ComplexityReportManager(projectPath);
+		this.tagOps = new TagOperations(
+			this.pathResolver,
+			this.fileOps,
+			this.formatHandler,
+			this
+		);
 	}
 
 	/**
@@ -123,6 +134,11 @@ export class FileStorage implements IStorage {
 		try {
 			const rawData = await this.fileOps.readJson(filePath);
 			let tasks = this.formatHandler.extractTasks(rawData, resolvedTag);
+			warnIfUnsupportedSchema(
+				this.formatHandler.extractMetadata(rawData, resolvedTag),
+				resolvedTag,
+				filePath
+			);
 
 			// Apply filters if provided
 			if (options) {
@@ -213,7 +229,6 @@ export class FileStorage implements IStorage {
 			return subtaskResult;
 		}
 
-		// Handle regular task lookup
 		return tasks.find((task) => String(task.id) === String(taskId)) || null;
 	}
 
@@ -225,19 +240,18 @@ export class FileStorage implements IStorage {
 		const filePath = this.pathResolver.getTasksPath();
 		const resolvedTag = tag || 'master';
 
-		// Ensure directory exists
 		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
 
 		// Create metadata for this tag
 		const metadata: TaskMetadata = {
 			version: '1.0.0',
+
 			lastModified: new Date().toISOString(),
 			taskCount: tasks.length,
 			completedCount: tasks.filter((t) => t.status === 'done').length,
 			tags: [resolvedTag]
 		};
 
-		// Normalize tasks
 		const normalizedTasks = this.normalizeTaskIds(tasks);
 
 		// Use modifyJson for atomic read-modify-write
@@ -252,14 +266,17 @@ export class FileStorage implements IStorage {
 				// Legacy format - update/add the tag
 				existingData[resolvedTag] = {
 					tasks: normalizedTasks,
-					metadata
+					metadata: withSchemaVersion(
+						metadata,
+						existingData[resolvedTag]?.metadata
+					)
 				};
 				return existingData;
 			} else if (resolvedTag === 'master') {
 				// Standard format for master tag
 				return {
 					tasks: normalizedTasks,
-					metadata
+					metadata: withSchemaVersion(metadata, existingData.metadata)
 				};
 			} else {
 				// Convert to legacy format when adding non-master tags
@@ -269,11 +286,11 @@ export class FileStorage implements IStorage {
 				return {
 					master: {
 						tasks: masterTasks,
-						metadata: masterMetadata
+						metadata: withSchemaVersion(masterMetadata, existingData.metadata)
 					},
 					[resolvedTag]: {
 						tasks: normalizedTasks,
-						metadata
+						metadata: withSchemaVersion(metadata)
 					}
 				};
 			}
@@ -465,7 +482,6 @@ export class FileStorage implements IStorage {
 		newStatus: TaskStatus,
 		tag?: string
 	): Promise<UpdateStatusResult> {
-		// Parse the subtask ID to get parent ID and subtask ID
 		const parts = subtaskId.split('.');
 		if (parts.length !== 2) {
 			throw new Error(
@@ -482,7 +498,6 @@ export class FileStorage implements IStorage {
 		}
 		const subtaskNumericId = Number(subId);
 
-		// Find the parent task
 		const parentTaskIndex = tasks.findIndex(
 			(t) => String(t.id) === String(parentId)
 		);
@@ -579,185 +594,22 @@ export class FileStorage implements IStorage {
 		await this.saveTasks(filteredTasks, tag);
 	}
 
-	/**
-	 * Create a new tag in the tasks.json file
-	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
-	 */
+	/** See TagOperations */
 	async createTag(
 		tagName: string,
 		options?: { copyFrom?: string; description?: string }
 	): Promise<void> {
-		const filePath = this.pathResolver.getTasksPath();
-
-		try {
-			await this.fileOps.modifyJson(filePath, (existingData: any) => {
-				const format = this.formatHandler.detectFormat(existingData);
-
-				if (format === 'legacy') {
-					// Legacy format - add new tag key
-					if (tagName in existingData) {
-						throw new TaskGraphError(
-							`Tag ${tagName} already exists`,
-							ERROR_CODES.VALIDATION_ERROR
-						);
-					}
-
-					// Get tasks to copy if specified
-					let tasksToCopy: any[] = [];
-					if (options?.copyFrom) {
-						if (
-							options.copyFrom in existingData &&
-							existingData[options.copyFrom].tasks
-						) {
-							tasksToCopy = JSON.parse(
-								JSON.stringify(existingData[options.copyFrom].tasks)
-							);
-						}
-					}
-
-					// Create new tag structure
-					existingData[tagName] = {
-						tasks: tasksToCopy,
-						metadata: {
-							created: new Date().toISOString(),
-							updatedAt: new Date().toISOString(),
-							description:
-								options?.description ||
-								`Tag created on ${new Date().toLocaleDateString()}`,
-							tags: [tagName]
-						}
-					};
-
-					return existingData;
-				} else {
-					// Standard format - need to convert to legacy format first
-					const masterTasks = existingData.tasks || [];
-					const masterMetadata = existingData.metadata || {};
-
-					// Get tasks to copy (from master in this case)
-					let tasksToCopy: any[] = [];
-					if (options?.copyFrom === 'master' || !options?.copyFrom) {
-						tasksToCopy = JSON.parse(JSON.stringify(masterTasks));
-					}
-
-					return {
-						master: {
-							tasks: masterTasks,
-							metadata: { ...masterMetadata, tags: ['master'] }
-						},
-						[tagName]: {
-							tasks: tasksToCopy,
-							metadata: {
-								created: new Date().toISOString(),
-								updatedAt: new Date().toISOString(),
-								description:
-									options?.description ||
-									`Tag created on ${new Date().toLocaleDateString()}`,
-								tags: [tagName]
-							}
-						}
-					};
-				}
-			});
-		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				throw new Error('Tasks file not found - initialize project first');
-			}
-			throw error;
-		}
+		return this.tagOps.createTag(tagName, options);
 	}
 
-	/**
-	 * Delete a tag from the single tasks.json file
-	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
-	 */
+	/** See TagOperations */
 	async deleteTag(tag: string): Promise<void> {
-		const filePath = this.pathResolver.getTasksPath();
-
-		try {
-			// Use modifyJson to handle all cases atomically
-			let shouldDeleteFile = false;
-
-			await this.fileOps.modifyJson(filePath, (data: any) => {
-				if (
-					this.formatHandler.detectFormat(data) !== 'legacy' &&
-					tag === 'master'
-				) {
-					// Standard format - mark for file deletion after lock release
-					shouldDeleteFile = true;
-					return data; // Return unchanged, we'll delete the file after
-				}
-
-				if (this.formatHandler.detectFormat(data) === 'legacy') {
-					// Legacy format - remove the tag key
-					if (tag in data) {
-						delete data[tag];
-						return data;
-					} else {
-						throw new Error(`Tag ${tag} not found`);
-					}
-				} else {
-					throw new Error(`Tag ${tag} not found in standard format`);
-				}
-			});
-
-			// Delete the file if we're removing master tag from standard format
-			if (shouldDeleteFile) {
-				await this.fileOps.deleteFile(filePath);
-			}
-		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				throw new Error(`Tag ${tag} not found - file doesn't exist`);
-			}
-			throw error;
-		}
+		return this.tagOps.deleteTag(tag);
 	}
 
-	/**
-	 * Rename a tag within the single tasks.json file
-	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
-	 */
+	/** See TagOperations */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
-		const filePath = this.pathResolver.getTasksPath();
-
-		try {
-			await this.fileOps.modifyJson(filePath, (existingData: any) => {
-				if (this.formatHandler.detectFormat(existingData) === 'legacy') {
-					// Legacy format - rename the tag key
-					if (oldTag in existingData) {
-						existingData[newTag] = existingData[oldTag];
-						delete existingData[oldTag];
-
-						// Update metadata tags array
-						if (existingData[newTag].metadata) {
-							existingData[newTag].metadata.tags = [newTag];
-						}
-
-						return existingData;
-					} else {
-						throw new Error(`Tag ${oldTag} not found`);
-					}
-				} else if (oldTag === 'master') {
-					// Convert standard format to legacy when renaming master
-					const masterTasks = existingData.tasks || [];
-					const masterMetadata = existingData.metadata || {};
-
-					return {
-						[newTag]: {
-							tasks: masterTasks,
-							metadata: { ...masterMetadata, tags: [newTag] }
-						}
-					};
-				} else {
-					throw new Error(`Tag ${oldTag} not found in standard format`);
-				}
-			});
-		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				throw new Error(`Tag ${oldTag} not found - file doesn't exist`);
-			}
-			throw error;
-		}
+		return this.tagOps.renameTag(oldTag, newTag);
 	}
 
 	/**
@@ -773,118 +625,9 @@ export class FileStorage implements IStorage {
 		await this.saveTasks(tasks, targetTag);
 	}
 
-	/**
-	 * Get all tags with detailed statistics including task counts
-	 * For file storage, reads tags from tasks.json and calculates statistics
-	 */
-	async getTagsWithStats(): Promise<{
-		tags: Array<{
-			name: string;
-			isCurrent: boolean;
-			taskCount: number;
-			completedTasks: number;
-			statusBreakdown: Record<string, number>;
-			subtaskCounts?: {
-				totalSubtasks: number;
-				subtasksByStatus: Record<string, number>;
-			};
-			created?: string;
-			description?: string;
-		}>;
-		currentTag: string | null;
-		totalTags: number;
-	}> {
-		const availableTags = await this.getAllTags();
-
-		// Get active tag from state.json
-		const activeTag = await this.getActiveTagFromState();
-
-		const tagsWithStats = await Promise.all(
-			availableTags.map(async (tagName) => {
-				try {
-					// Load tasks for this tag
-					const tasks = await this.loadTasks(tagName);
-
-					// Calculate statistics
-					const statusBreakdown: Record<string, number> = {};
-					let completedTasks = 0;
-
-					const subtaskCounts = {
-						totalSubtasks: 0,
-						subtasksByStatus: {} as Record<string, number>
-					};
-
-					tasks.forEach((task) => {
-						// Count task status
-						const status = task.status || 'pending';
-						statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
-
-						if (status === 'done') {
-							completedTasks++;
-						}
-
-						// Count subtasks
-						if (task.subtasks && task.subtasks.length > 0) {
-							subtaskCounts.totalSubtasks += task.subtasks.length;
-
-							task.subtasks.forEach((subtask) => {
-								const subStatus = subtask.status || 'pending';
-								subtaskCounts.subtasksByStatus[subStatus] =
-									(subtaskCounts.subtasksByStatus[subStatus] || 0) + 1;
-							});
-						}
-					});
-
-					// Load metadata to get created date and description
-					const metadata = await this.loadMetadata(tagName);
-
-					return {
-						name: tagName,
-						isCurrent: tagName === activeTag,
-						taskCount: tasks.length,
-						completedTasks,
-						statusBreakdown,
-						subtaskCounts:
-							subtaskCounts.totalSubtasks > 0 ? subtaskCounts : undefined,
-						created: metadata?.created,
-						description: metadata?.description
-					};
-				} catch (error) {
-					// If we can't load tasks for a tag, return it with 0 tasks
-					return {
-						name: tagName,
-						isCurrent: tagName === activeTag,
-						taskCount: 0,
-						completedTasks: 0,
-						statusBreakdown: {}
-					};
-				}
-			})
-		);
-
-		return {
-			tags: tagsWithStats,
-			currentTag: activeTag,
-			totalTags: tagsWithStats.length
-		};
-	}
-
-	/**
-	 * Get the active tag from state.json
-	 * @returns The active tag name or 'master' as default
-	 */
-	private async getActiveTagFromState(): Promise<string> {
-		try {
-			const statePath = path.join(
-				this.pathResolver.getBasePath(),
-				'state.json'
-			);
-			const stateData = await this.fileOps.readJson(statePath);
-			return stateData?.currentTag || 'master';
-		} catch (error) {
-			// If state.json doesn't exist or can't be read, default to 'master'
-			return 'master';
-		}
+	/** See TagOperations */
+	async getTagsWithStats(): ReturnType<TagOperations['getTagsWithStats']> {
+		return this.tagOps.getTagsWithStats();
 	}
 
 	/**

@@ -3,6 +3,7 @@
  * Core logic for dynamic task complexity adjustment (scope-up and scope-down)
  */
 
+import { assignMetadata, reconcileDependencySources } from '@tm/core';
 import { z } from 'zod';
 import { findComplexityReportPath } from '../../../src/utils/path-utils.js';
 import {
@@ -405,18 +406,26 @@ Ensure the JSON is valid and properly formatted.`;
 					id: newId
 				};
 			})
-			.map((st) => ({
-				...st,
-				dependencies: (st.dependencies || []).map((dep) => {
-					if (typeof dep !== 'string' || !dep.startsWith(`${task.id}.`)) {
-						return dep;
-					}
-					const [, siblingIdPart] = dep.split('.');
-					const originalSiblingId = Number.parseInt(siblingIdPart, 10);
-					const remappedSiblingId = idMapping.get(originalSiblingId);
-					return remappedSiblingId ? `${task.id}.${remappedSiblingId}` : dep;
-				})
-			}));
+			.map((st) => {
+				const remapped = {
+					...st,
+					dependencies: (st.dependencies || []).map((dep) => {
+						if (typeof dep !== 'string' || !dep.startsWith(`${task.id}.`)) {
+							return dep;
+						}
+						const [, siblingIdPart] = dep.split('.');
+						const originalSiblingId = Number.parseInt(siblingIdPart, 10);
+						const remappedSiblingId = idMapping.get(originalSiblingId);
+						return remappedSiblingId ? `${task.id}.${remappedSiblingId}` : dep;
+					})
+				};
+				// The AI chose these sibling dependencies, so record them as inferred
+				assignMetadata(
+					remapped,
+					reconcileDependencySources(remapped, undefined, task.id)
+				);
+				return remapped;
+			});
 
 		// Update task with preserved subtasks + newly generated ones
 		task.subtasks = [...preservedSubtasks, ...normalizedGeneratedSubtasks];
