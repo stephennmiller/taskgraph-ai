@@ -4,6 +4,7 @@
  */
 
 import logger from '../logger.js';
+import { scopeToolExecution } from './silent-scope.js';
 import {
 	coreTools,
 	getAvailableTools,
@@ -37,7 +38,8 @@ export function getToolsConfiguration() {
  * @param {string} toolMode - The tool mode configuration (defaults to 'all')
  * @returns {Object} Object containing registered tools, failed tools, and normalized mode
  */
-export function registerTaskGraphTools(server, toolMode = 'core') {
+export function registerTaskGraphTools(rawServer, toolMode = 'core') {
+	const server = scopeToolExecution(rawServer);
 	const registeredTools = [];
 	const failedTools = [];
 

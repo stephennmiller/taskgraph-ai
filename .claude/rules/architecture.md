@@ -118,6 +118,8 @@ paths:
 
 Direct functions (the `*Direct` functions in `mcp-server/src/core/direct-functions/`) need to carefully implement silent mode to prevent console logs from interfering with the structured JSON responses required by MCP. This involves both using `enableSilentMode`/`disableSilentMode` around core function calls AND passing the MCP logger via the standard wrapper pattern (see mcp.md). Here's the standard pattern for correct implementation:
 
+Each MCP tool call runs in its own silent scope (`scopeToolExecution` in `mcp-server/src/tools/silent-scope.js`, applied in `registerTaskGraphTools`). Inside it, `enableSilentMode`/`disableSilentMode` change only that call's switch, so one call finishing cannot un-silence another running at the same time. Outside a scope (the CLI) they still flip one global switch. Keep calling them as below; a new tool needs nothing extra.
+
 1. **Import Silent Mode Utilities**:
    ```javascript
    import { enableSilentMode, disableSilentMode, isSilentMode } from '../../../../scripts/modules/utils.js';

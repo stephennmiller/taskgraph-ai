@@ -3,6 +3,7 @@
  * Utility functions for the TaskGraph CLI
  */
 
+import { AsyncLocalStorage } from 'async_hooks';
 import fs from 'fs';
 import path from 'path';
 import { theme } from '@tm/cli/theme';
@@ -439,18 +440,36 @@ async function getTaskManager() {
 	return import('./task-manager.js');
 }
 
+// Inside a scope, silent mode belongs to that call alone. A server runs many
+// calls at once, so one call finishing must not un-silence another.
+const silentScope = new AsyncLocalStorage();
+
+/**
+ * Run fn with its own silent-mode switch, off at the start. Calls made from
+ * fn, including after awaits, enable and disable only this switch.
+ * @param {Function} fn
+ * @returns {*} Whatever fn returns
+ */
+function withSilentScope(fn) {
+	return silentScope.run({ silent: false }, fn);
+}
+
 /**
  * Enable silent logging mode
  */
 function enableSilentMode() {
-	silentMode = true;
+	const scope = silentScope.getStore();
+	if (scope) scope.silent = true;
+	else silentMode = true;
 }
 
 /**
  * Disable silent logging mode
  */
 function disableSilentMode() {
-	silentMode = false;
+	const scope = silentScope.getStore();
+	if (scope) scope.silent = false;
+	else silentMode = false;
 }
 
 /**
@@ -458,7 +477,8 @@ function disableSilentMode() {
  * @returns {boolean} True if silent mode is enabled
  */
 function isSilentMode() {
-	return silentMode;
+	const scope = silentScope.getStore();
+	return scope ? scope.silent : silentMode;
 }
 
 /**
@@ -2012,6 +2032,7 @@ export {
 	enableSilentMode,
 	getTaskManager,
 	isSilentMode,
+	withSilentScope,
 	addComplexityToTask,
 	resolveEnvVariable,
 	findProjectRoot,
