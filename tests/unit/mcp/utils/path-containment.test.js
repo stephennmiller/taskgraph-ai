@@ -96,3 +96,33 @@ describe('parsePRDDirect output', () => {
 		expect(fs.existsSync(target)).toBe(false);
 	});
 });
+
+describe('researchDirect filePaths', () => {
+	test('refuses a context file outside projectRoot before any AI call', async () => {
+		const { researchDirect } = await import(
+			'../../../../mcp-server/src/core/direct-functions/research.js'
+		);
+		const secret = path.join(outside, 'id_rsa');
+		fs.writeFileSync(secret, 'PRIVATE');
+
+		const result = await researchDirect(
+			{ query: 'q', projectRoot: root, filePaths: `src/a.js,${secret}` },
+			{ info() {}, error() {}, warn() {}, debug() {} }
+		);
+
+		expect(result.success).toBe(false);
+		expect(result.error.code).toBe('INVALID_PATH');
+	});
+});
+
+describe('assertInsideRoot with a root that does not exist yet', () => {
+	test('judges the path instead of throwing ENOENT', () => {
+		const missing = path.join(outside, 'new-project');
+		expect(assertInsideRoot(missing, 'a.json')).toBe(
+			path.join(missing, 'a.json')
+		);
+		expect(() => assertInsideRoot(missing, '../x')).toThrow(
+			/outside the project/
+		);
+	});
+});

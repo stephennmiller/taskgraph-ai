@@ -24,7 +24,11 @@ import {
  * @throws {Error} When the path is outside projectRoot
  */
 export function assertInsideRoot(projectRoot, candidate) {
-	const root = fs.realpathSync(projectRoot);
+	// A root that does not exist yet (before initialize_project) has no symlinks to follow
+	let root = path.resolve(projectRoot);
+	try {
+		root = fs.realpathSync(projectRoot);
+	} catch {}
 	if (!isInsideRoot(root, candidate)) {
 		throw new Error(
 			`Path '${candidate}' is outside the project root '${projectRoot}'`
