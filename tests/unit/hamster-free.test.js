@@ -27,7 +27,6 @@ const ALLOWED_FILES = new Set([
 	// Specs that exist to forbid the word
 	'tests/unit/hamster-free.test.js',
 	'tests/unit/scripts/hamster-removal.test.js',
-	'tests/unit/scripts/error-formatter.test.js',
 	'apps/cli/src/hamster-usage.spec.ts',
 	'apps/cli/src/command-registry.spec.ts',
 	'apps/cli/src/ui/components/brand-banner.component.spec.ts',
