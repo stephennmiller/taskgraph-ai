@@ -16,6 +16,27 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	isSilentMode: vi.fn(() => false)
 }));
 
+// The real helper edits the file under a lock; here it edits what the mocked
+// readJSON returns and hands the result to writeJSON when something changed
+vi.doMock(
+	'../../../../../scripts/modules/utils/update-tag-tasks.js',
+	async () => {
+		const { readJSON, writeJSON } = await import(
+			'../../../../../scripts/modules/utils.js'
+		);
+		return {
+			updateTagTasks: vi.fn(async (filepath, tag, mutate) => {
+				const view = readJSON(filepath);
+				const raw = view._rawTaggedData ?? { [tag]: view };
+				const before = JSON.stringify(raw);
+				const result = mutate(raw[tag]);
+				if (JSON.stringify(raw) !== before) writeJSON(filepath, raw);
+				return result;
+			})
+		};
+	}
+);
+
 // fs is used for file deletion side-effects – stub the methods we touch
 vi.doMock('fs', () => ({
 	existsSync: vi.fn(() => true),
@@ -78,19 +99,20 @@ describe('removeTask', () => {
 		fs.unlinkSync.mockImplementation(() => {});
 	});
 
-	test('removes a main task and cleans dependencies across tags', async () => {
+	test('removes a main task and cleans dependencies in its own tag only', async () => {
 		const result = await removeTask('tasks/tasks.json', '1', { tag: 'master' });
 
 		// Expect success true
 		expect(result.success).toBe(true);
-		// writeJSON called with data where task 1 is gone in master & dependencies removed in other tags
+		// writeJSON called with data where task 1 is gone in master & its dependents cleaned
 		const written = writeJSON.mock.calls[0][1];
 		expect(written.master.tasks.find((t) => t.id === 1)).toBeUndefined();
 		// deps removed from child tasks
 		const task2 = written.master.tasks.find((t) => t.id === 2);
 		expect(task2.dependencies).not.toContain(1);
+		// Another tag's dependency 1 names that tag's own task 1
 		const shadow = written.other.tasks.find((t) => t.id === 99);
-		expect(shadow.dependencies).not.toContain(1);
+		expect(shadow.dependencies).toContain(1);
 		// Task file deletion attempted
 		expect(fs.unlinkSync).toHaveBeenCalled();
 	});

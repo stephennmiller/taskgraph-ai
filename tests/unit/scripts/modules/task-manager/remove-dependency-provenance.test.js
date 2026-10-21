@@ -17,6 +17,18 @@ vi.mock('../../../../../scripts/modules/utils.js', async (importOriginal) => ({
 	log: vi.fn()
 }));
 
+// The real helper edits the file under a lock; here it edits what the mocked
+// readJSON returns and hands the result to writeJSON
+vi.mock('../../../../../scripts/modules/utils/update-tag-tasks.js', () => ({
+	updateTagTasks: async (filepath, tag, mutate) => {
+		const view = readJSON(filepath);
+		const raw = view._rawTaggedData ?? { [tag]: view };
+		const result = mutate(raw[tag]);
+		writeJSON(filepath, raw);
+		return result;
+	}
+}));
+
 import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
 import removeTask from '../../../../../scripts/modules/task-manager/remove-task.js';
 

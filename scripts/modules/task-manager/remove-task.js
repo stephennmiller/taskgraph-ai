@@ -5,7 +5,8 @@ import {
 } from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
-import { findTaskById, log, readJSON, writeJSON } from '../utils.js';
+import { findTaskById, log, readJSON } from '../utils.js';
+import { updateTagTasks } from '../utils/update-tag-tasks.js';
 import taskExists from './task-exists.js';
 
 /**
@@ -50,141 +51,127 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 			throw new Error(`Tag '${tag}' not found or has no tasks.`);
 		}
 
-		const tasks = fullTaggedData[tag].tasks; // Work with tasks from the correct tag
-
 		const tasksToDeleteFiles = []; // Collect IDs of main tasks whose files should be deleted
 
-		for (const taskId of taskIdsToRemove) {
-			// Check if the task ID exists *before* attempting removal
-			if (!taskExists(tasks, taskId)) {
-				const errorMsg = `Task with ID ${taskId} in tag '${tag}' not found or already removed.`;
-				results.errors.push(errorMsg);
-				results.success = false; // Mark overall success as false if any error occurs
-				continue; // Skip to the next ID
-			}
-
-			try {
-				// Handle subtask removal (e.g., '5.2')
-				if (typeof taskId === 'string' && taskId.includes('.')) {
-					const [parentTaskId, subtaskId] = taskId
-						.split('.')
-						.map((id) => parseInt(id, 10));
-
-					// Find the parent task
-					const parentTask = tasks.find((t) => t.id === parentTaskId);
-					if (!parentTask || !parentTask.subtasks) {
-						throw new Error(
-							`Parent task ${parentTaskId} or its subtasks not found for subtask ${taskId}`
-						);
-					}
-
-					// Find the subtask to remove
-					const subtaskIndex = parentTask.subtasks.findIndex(
-						(st) => st.id === subtaskId
-					);
-					if (subtaskIndex === -1) {
-						throw new Error(
-							`Subtask ${subtaskId} not found in parent task ${parentTaskId}`
-						);
-					}
-
-					// Store the subtask info before removal
-					const removedSubtask = {
-						...parentTask.subtasks[subtaskIndex],
-						parentTaskId: parentTaskId
-					};
-					results.removedTasks.push(removedSubtask);
-
-					// Remove the subtask from the parent
-					parentTask.subtasks.splice(subtaskIndex, 1);
-
-					results.messages.push(
-						`Successfully removed subtask ${taskId} from tag '${tag}'`
-					);
+		// Remove from the tag as it is in the file now. It may have changed since
+		// it was read above, so the IDs are looked up again here.
+		await updateTagTasks(tasksPath, tag, (tagData) => {
+			const tasks = tagData.tasks;
+			for (const taskId of taskIdsToRemove) {
+				// Check if the task ID exists *before* attempting removal
+				if (!taskExists(tasks, taskId)) {
+					const errorMsg = `Task with ID ${taskId} in tag '${tag}' not found or already removed.`;
+					results.errors.push(errorMsg);
+					results.success = false; // Mark overall success as false if any error occurs
+					continue; // Skip to the next ID
 				}
-				// Handle main task removal
-				else {
-					const taskIdNum = parseInt(taskId, 10);
-					const taskIndex = tasks.findIndex((t) => t.id === taskIdNum);
-					if (taskIndex === -1) {
-						throw new Error(`Task with ID ${taskId} not found in tag '${tag}'`);
-					}
 
-					// Store the task info before removal
-					const removedTask = tasks[taskIndex];
-					results.removedTasks.push(removedTask);
-					tasksToDeleteFiles.push(taskIdNum); // Add to list for file deletion
+				try {
+					// Handle subtask removal (e.g., '5.2')
+					if (typeof taskId === 'string' && taskId.includes('.')) {
+						const [parentTaskId, subtaskId] = taskId
+							.split('.')
+							.map((id) => parseInt(id, 10));
 
-					// Remove the task from the main array
-					tasks.splice(taskIndex, 1);
-
-					results.messages.push(
-						`Successfully removed task ${taskId} from tag '${tag}'`
-					);
-				}
-			} catch (innerError) {
-				// Catch errors specific to processing *this* ID
-				const errorMsg = `Error processing ID ${taskId}: ${innerError.message}`;
-				results.errors.push(errorMsg);
-				results.success = false;
-				log('warn', errorMsg); // Log as warning and continue with next ID
-			}
-		} // End of loop through taskIdsToRemove
-
-		// --- Post-Loop Operations ---
-
-		// Only proceed with cleanup and saving if at least one task was potentially removed
-		if (results.removedTasks.length > 0) {
-			// Full IDs ("5", "5.2"), the form a dependency resolves to
-			const allRemovedIds = new Set(
-				taskIdsToRemove.map((id) =>
-					typeof id === 'string' && id.includes('.')
-						? id
-						: String(parseInt(id, 10))
-				)
-			);
-
-			// Update the tasks in the current tag of the full data structure
-			fullTaggedData[tag].tasks = tasks;
-
-			// Remove dependencies from all tags
-			for (const tagName in fullTaggedData) {
-				if (
-					Object.prototype.hasOwnProperty.call(fullTaggedData, tagName) &&
-					fullTaggedData[tagName] &&
-					fullTaggedData[tagName].tasks
-				) {
-					const currentTagTasks = fullTaggedData[tagName].tasks;
-					currentTagTasks.forEach((task) => {
-						if (task.dependencies) {
-							task.dependencies = task.dependencies.filter(
-								(depId) => !allRemovedIds.has(String(depId))
+						// Find the parent task
+						const parentTask = tasks.find((t) => t.id === parentTaskId);
+						if (!parentTask || !parentTask.subtasks) {
+							throw new Error(
+								`Parent task ${parentTaskId} or its subtasks not found for subtask ${taskId}`
 							);
-							assignMetadata(task, pruneDependencySources(task));
 						}
-						if (task.subtasks) {
-							task.subtasks.forEach((subtask) => {
-								if (subtask.dependencies) {
-									subtask.dependencies = subtask.dependencies.filter(
-										(depId) =>
-											!allRemovedIds.has(
-												resolveSubtaskDependency(task.id, depId)
-											)
-									);
-									assignMetadata(
-										subtask,
-										pruneDependencySources(subtask, task.id)
-									);
-								}
-							});
+
+						// Find the subtask to remove
+						const subtaskIndex = parentTask.subtasks.findIndex(
+							(st) => st.id === subtaskId
+						);
+						if (subtaskIndex === -1) {
+							throw new Error(
+								`Subtask ${subtaskId} not found in parent task ${parentTaskId}`
+							);
 						}
-					});
+
+						// Store the subtask info before removal
+						const removedSubtask = {
+							...parentTask.subtasks[subtaskIndex],
+							parentTaskId: parentTaskId
+						};
+						results.removedTasks.push(removedSubtask);
+
+						// Remove the subtask from the parent
+						parentTask.subtasks.splice(subtaskIndex, 1);
+
+						results.messages.push(
+							`Successfully removed subtask ${taskId} from tag '${tag}'`
+						);
+					}
+					// Handle main task removal
+					else {
+						const taskIdNum = parseInt(taskId, 10);
+						const taskIndex = tasks.findIndex((t) => t.id === taskIdNum);
+						if (taskIndex === -1) {
+							throw new Error(
+								`Task with ID ${taskId} not found in tag '${tag}'`
+							);
+						}
+
+						// Store the task info before removal
+						const removedTask = tasks[taskIndex];
+						results.removedTasks.push(removedTask);
+						tasksToDeleteFiles.push(taskIdNum); // Add to list for file deletion
+
+						// Remove the task from the main array
+						tasks.splice(taskIndex, 1);
+
+						results.messages.push(
+							`Successfully removed task ${taskId} from tag '${tag}'`
+						);
+					}
+				} catch (innerError) {
+					// Catch errors specific to processing *this* ID
+					const errorMsg = `Error processing ID ${taskId}: ${innerError.message}`;
+					results.errors.push(errorMsg);
+					results.success = false;
+					log('warn', errorMsg); // Log as warning and continue with next ID
 				}
+			} // End of loop through taskIdsToRemove
+
+			if (results.removedTasks.length > 0) {
+				const allRemovedIds = new Set(
+					taskIdsToRemove.map((id) =>
+						typeof id === 'string' && id.includes('.')
+							? id
+							: String(parseInt(id, 10))
+					)
+				);
+
+				// Dependency IDs name tasks of the same tag, so only this tag changes
+				tasks.forEach((task) => {
+					if (task.dependencies) {
+						task.dependencies = task.dependencies.filter(
+							(depId) => !allRemovedIds.has(String(depId))
+						);
+						assignMetadata(task, pruneDependencySources(task));
+					}
+					if (task.subtasks) {
+						task.subtasks.forEach((subtask) => {
+							if (subtask.dependencies) {
+								subtask.dependencies = subtask.dependencies.filter(
+									(depId) =>
+										!allRemovedIds.has(resolveSubtaskDependency(task.id, depId))
+								);
+								assignMetadata(
+									subtask,
+									pruneDependencySources(subtask, task.id)
+								);
+							}
+						});
+					}
+				});
 			}
+		});
 
-			// Save the updated raw data structure
-			writeJSON(tasksPath, fullTaggedData, projectRoot, tag);
-
+		if (results.removedTasks.length > 0) {
 			// Delete task files AFTER saving tasks.json
 			for (const taskIdNum of tasksToDeleteFiles) {
 				const taskFileName = path.join(
