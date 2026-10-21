@@ -61,6 +61,15 @@ describe('assertInsideRoot', () => {
 });
 
 describe('tool path resolvers', () => {
+	test('an absolute path without a projectRoot is refused, not trusted', () => {
+		expect(() => resolveTasksPath({ file: '/etc/passwd' })).toThrow(
+			/projectRoot is required/
+		);
+		expect(() => resolvePrdPath({ input: '/etc/passwd' })).toThrow(
+			/projectRoot is required/
+		);
+	});
+
 	test('resolveTasksPath refuses a file outside projectRoot', () => {
 		expect(() =>
 			resolveTasksPath({

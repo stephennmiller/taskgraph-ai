@@ -26,6 +26,8 @@ vi.mock('@tm/core', () => ({
 	]
 }));
 
+vi.mock('inquirer', () => ({ default: { prompt: vi.fn() } }));
+
 // Mock display utilities
 vi.mock('../utils/display-helpers.js', () => ({
 	displayCommandHeader: vi.fn()
@@ -41,6 +43,7 @@ vi.mock('../utils/project-root.js', () => ({
 
 import type { LoopResult } from '@tm/core';
 import { createTmCore } from '@tm/core';
+import inquirer from 'inquirer';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -279,6 +282,42 @@ describe('LoopCommand', () => {
 			expect(mockLoopRun).toHaveBeenCalledWith(
 				expect.objectContaining({ trusted: true })
 			);
+		});
+
+		describe('with a terminal', () => {
+			beforeEach(() => {
+				for (const stream of [process.stdin, process.stdout]) {
+					Object.defineProperty(stream, 'isTTY', {
+						value: true,
+						configurable: true
+					});
+				}
+			});
+
+			afterEach(() => {
+				Object.defineProperty(process.stdout, 'isTTY', {
+					value: false,
+					configurable: true
+				});
+			});
+
+			it('remembers the approval and runs when the user says yes', async () => {
+				(inquirer.prompt as Mock).mockResolvedValue({ confirmed: true });
+
+				await run({});
+
+				expect(mockTmCore.loop.trust).toHaveBeenCalledOnce();
+				expect(mockLoopRun).toHaveBeenCalled();
+			});
+
+			it('stops and remembers nothing when the user says no', async () => {
+				(inquirer.prompt as Mock).mockResolvedValue({ confirmed: false });
+
+				await expect(run({})).rejects.toThrow('process.exit called');
+
+				expect(mockTmCore.loop.trust).not.toHaveBeenCalled();
+				expect(mockLoopRun).not.toHaveBeenCalled();
+			});
 		});
 
 		it('does not ask in sandbox mode', async () => {

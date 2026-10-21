@@ -78,7 +78,7 @@ export function resolveTasksPath(args, log = silentLogger) {
 
 	// Without a project root there is nothing to check an absolute path against
 	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
-		return explicitPath;
+		throw new Error('projectRoot is required when a file path is absolute');
 	}
 
 	// Normalize project root if provided
@@ -131,7 +131,7 @@ export function resolvePrdPath(args, log = silentLogger) {
 
 	// Without a project root there is nothing to check an absolute path against
 	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
-		return explicitPath;
+		throw new Error('projectRoot is required when a file path is absolute');
 	}
 
 	// Normalize project root if provided
@@ -167,7 +167,7 @@ export function resolveComplexityReportPath(args, log = silentLogger) {
 
 	// Without a project root there is nothing to check an absolute path against
 	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
-		return explicitPath;
+		throw new Error('projectRoot is required when a file path is absolute');
 	}
 
 	// Normalize project root if provided
