@@ -30,9 +30,9 @@ import {
 	markMigrationForNotice,
 	performCompleteTagMigration,
 	readJSON,
-	truncate,
-	writeJSON
+	truncate
 } from '../utils.js';
+import { updateTagTasks } from '../utils/update-tag-tasks.js';
 
 /**
  * Get all tasks from all tags
@@ -288,7 +288,7 @@ async function addTask(
 			tasksInTargetTag.length > 0
 				? Math.max(...tasksInTargetTag.map((t) => t.id))
 				: 0;
-		const newTaskId = highestId + 1;
+		let newTaskId = highestId + 1;
 
 		// Validate dependencies before proceeding
 		const invalidDeps = dependencies.filter((depId) => {
@@ -521,17 +521,26 @@ async function addTask(
 			reconcileDependencySources(newTask, { dependencies: numericDependencies })
 		);
 
-		// Add the task to the tasks array OF THE CORRECT TAG
-		rawData[targetTag].tasks.push(newTask);
-		// Update the tag's metadata
-		ensureTagMetadata(rawData[targetTag], {
-			description: `Tasks for ${targetTag} context`
-		});
-
 		report('DEBUG: Writing tasks.json...', 'debug');
-		// Write the updated raw data back to the file
-		// The writeJSON function will automatically filter out _rawTaggedData
-		writeJSON(tasksPath, rawData, projectRoot, targetTag);
+		// Add the task to the CURRENT contents of the tag. The file may have
+		// changed since it was read (the AI call can take a minute), so the ID
+		// is checked again here.
+		await updateTagTasks(
+			tasksPath,
+			targetTag,
+			(tagData) => {
+				if (tagData.tasks.some((t) => t.id === newTask.id)) {
+					newTask.id = Math.max(...tagData.tasks.map((t) => t.id)) + 1;
+				}
+				tagData.tasks.push(newTask);
+				ensureTagMetadata(tagData, {
+					description: `Tasks for ${targetTag} context`
+				});
+			},
+			// A missing tasks file starts from the empty tag made above
+			{ createWith: rawData[targetTag] }
+		);
+		newTaskId = newTask.id;
 		report('DEBUG: tasks.json written.', 'debug');
 
 		// Show success message - only for text output (CLI)

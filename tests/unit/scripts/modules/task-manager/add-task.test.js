@@ -5,53 +5,55 @@ import { vi } from 'vitest';
 import { hasCodebaseAnalysis } from '../../../../../scripts/modules/config-manager.js';
 
 // Mock the dependencies before importing the module under test
-vi.doMock('../../../../../scripts/modules/utils.js', () => ({
-	readJSON: vi.fn(),
-	writeJSON: vi.fn(),
-	log: vi.fn(),
-	CONFIG: {
-		model: 'mock-claude-model',
-		maxTokens: 4000,
-		temperature: 0.7,
-		debug: false
-	},
-	sanitizePrompt: vi.fn((prompt) => prompt),
-	truncate: vi.fn((text) => text),
-	isSilentMode: vi.fn(() => false),
-	findTaskById: vi.fn((tasks, id) => {
-		if (!tasks) return null;
-		const allTasks = [];
-		const queue = [...tasks];
-		while (queue.length > 0) {
-			const task = queue.shift();
-			allTasks.push(task);
-			if (task.subtasks) {
-				queue.push(...task.subtasks);
-			}
-		}
-		return allTasks.find((task) => String(task.id) === String(id));
-	}),
-	getCurrentTag: vi.fn(() => 'master'),
-	ensureTagMetadata: vi.fn((tagObj) => tagObj),
-	flattenTasksWithSubtasks: vi.fn((tasks) => {
-		const allTasks = [];
-		const queue = [...(tasks || [])];
-		while (queue.length > 0) {
-			const task = queue.shift();
-			allTasks.push(task);
-			if (task.subtasks) {
-				for (const subtask of task.subtasks) {
-					queue.push({ ...subtask, id: `${task.id}.${subtask.id}` });
+vi.doMock('../../../../../scripts/modules/utils.js', () => {
+	return {
+		readJSON: vi.fn(),
+		writeJSON: vi.fn(),
+		log: vi.fn(),
+		CONFIG: {
+			model: 'mock-claude-model',
+			maxTokens: 4000,
+			temperature: 0.7,
+			debug: false
+		},
+		sanitizePrompt: vi.fn((prompt) => prompt),
+		truncate: vi.fn((text) => text),
+		isSilentMode: vi.fn(() => false),
+		findTaskById: vi.fn((tasks, id) => {
+			if (!tasks) return null;
+			const allTasks = [];
+			const queue = [...tasks];
+			while (queue.length > 0) {
+				const task = queue.shift();
+				allTasks.push(task);
+				if (task.subtasks) {
+					queue.push(...task.subtasks);
 				}
 			}
-		}
-		return allTasks;
-	}),
-	markMigrationForNotice: vi.fn(),
-	performCompleteTagMigration: vi.fn(),
-	setTasksForTag: vi.fn(),
-	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || [])
-}));
+			return allTasks.find((task) => String(task.id) === String(id));
+		}),
+		getCurrentTag: vi.fn(() => 'master'),
+		ensureTagMetadata: vi.fn((tagObj) => tagObj),
+		flattenTasksWithSubtasks: vi.fn((tasks) => {
+			const allTasks = [];
+			const queue = [...(tasks || [])];
+			while (queue.length > 0) {
+				const task = queue.shift();
+				allTasks.push(task);
+				if (task.subtasks) {
+					for (const subtask of task.subtasks) {
+						queue.push({ ...subtask, id: `${task.id}.${subtask.id}` });
+					}
+				}
+			}
+			return allTasks;
+		}),
+		markMigrationForNotice: vi.fn(),
+		performCompleteTagMigration: vi.fn(),
+		setTasksForTag: vi.fn(),
+		getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || [])
+	};
+});
 
 vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	displayBanner: vi.fn(),
@@ -149,6 +151,25 @@ vi.doMock('cli-table3', () => ({
 }));
 
 // Import the mocked modules
+vi.doMock(
+	'../../../../../scripts/modules/utils/update-tag-tasks.js',
+	async () => {
+		const { readJSON, writeJSON } = await import(
+			'../../../../../scripts/modules/utils.js'
+		);
+		return {
+			// Same contract as the real one, on top of the mocked read and write
+			updateTagTasks: vi.fn(async (filepath, tag, mutate, options = {}) => {
+				const data = readJSON(filepath) ?? {};
+				if (!data[tag] && options.createWith) data[tag] = options.createWith;
+				const result = mutate(data[tag]);
+				writeJSON(filepath, data);
+				return result;
+			})
+		};
+	}
+);
+
 const { readJSON, writeJSON, log } = await import(
 	'../../../../../scripts/modules/utils.js'
 );
@@ -252,9 +273,7 @@ describe('addTask', () => {
 						})
 					])
 				})
-			}),
-			'/mock/project/root', // projectRoot parameter
-			'master' // tag parameter
+			})
 		);
 		expect(result).toEqual(
 			expect.objectContaining({
@@ -296,9 +315,7 @@ describe('addTask', () => {
 						})
 					])
 				})
-			}),
-			'/mock/project/root', // projectRoot parameter
-			'master' // tag parameter
+			})
 		);
 	});
 
@@ -408,9 +425,7 @@ describe('addTask', () => {
 						})
 					])
 				})
-			}),
-			'/mock/project/root', // projectRoot parameter
-			'master' // tag parameter
+			})
 		);
 		expect(context.mcpLog.warn).toHaveBeenCalledWith(
 			expect.stringContaining(
@@ -443,9 +458,7 @@ describe('addTask', () => {
 						})
 					])
 				})
-			}),
-			'/mock/project/root', // projectRoot parameter
-			'master' // tag parameter
+			})
 		);
 	});
 
@@ -481,9 +494,7 @@ describe('addTask', () => {
 						})
 					])
 				})
-			}),
-			'/mock/project/root', // projectRoot parameter
-			'master' // tag parameter
+			})
 		);
 	});
 
