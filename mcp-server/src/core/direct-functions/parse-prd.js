@@ -14,7 +14,11 @@ import {
 } from '../../../../scripts/modules/utils.js';
 import { TASKGRAPH_TASKS_FILE } from '../../../../src/constants/paths.js';
 import { createLogWrapper } from '../../tools/utils.js';
-import { resolvePrdPath, resolveProjectPath } from '../utils/path-utils.js';
+import {
+	assertInsideRoot,
+	resolvePrdPath,
+	resolveProjectPath
+} from '../utils/path-utils.js';
 
 /**
  * Direct function wrapper for parsing PRD documents and generating tasks.
@@ -81,12 +85,19 @@ export async function parsePRDDirect(args, log, context = {}) {
 	}
 
 	// Resolve output path - use new path utilities for default
-	const outputPath = outputArg
-		? path.isAbsolute(outputArg)
-			? outputArg
-			: path.resolve(projectRoot, outputArg)
-		: resolveProjectPath(TASKGRAPH_TASKS_FILE, args) ||
-			path.resolve(projectRoot, TASKGRAPH_TASKS_FILE);
+	let outputPath;
+	try {
+		outputPath = outputArg
+			? assertInsideRoot(projectRoot, outputArg)
+			: resolveProjectPath(TASKGRAPH_TASKS_FILE, args) ||
+				path.resolve(projectRoot, TASKGRAPH_TASKS_FILE);
+	} catch (error) {
+		logWrapper.error(`Error resolving output path: ${error.message}`);
+		return {
+			success: false,
+			error: { code: 'INVALID_PATH', message: error.message }
+		};
+	}
 
 	// Check if input file exists
 	if (!fs.existsSync(inputPath)) {

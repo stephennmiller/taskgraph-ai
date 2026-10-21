@@ -15,7 +15,7 @@ import { resolveTag } from '../../../scripts/modules/utils.js';
 import { COMPLEXITY_REPORT_FILE } from '../../../src/constants/paths.js';
 import { resolveComplexityReportOutputPath } from '../../../src/utils/path-utils.js';
 import { analyzeTaskComplexityDirect } from '../core/taskgraph-core.js'; // Assuming core functions are exported via taskgraph-core.js
-import { findTasksPath } from '../core/utils/path-utils.js';
+import { assertInsideRoot, findTasksPath } from '../core/utils/path-utils.js';
 
 /**
  * Register the analyze_project_complexity tool
@@ -106,14 +106,18 @@ export function registerAnalyzeProjectComplexityTool(server) {
 					);
 				}
 
-				const outputPath = resolveComplexityReportOutputPath(
-					args.output,
-					{
-						projectRoot: args.projectRoot,
-						tag: resolvedTag
-					},
-					log
-				);
+				let outputPath;
+				try {
+					outputPath = args.output
+						? assertInsideRoot(args.projectRoot, args.output)
+						: resolveComplexityReportOutputPath(
+								null,
+								{ projectRoot: args.projectRoot, tag: resolvedTag },
+								log
+							);
+				} catch (error) {
+					return createErrorResponse(error.message);
+				}
 
 				log.info(`${toolName}: Report output path: ${outputPath}`);
 
