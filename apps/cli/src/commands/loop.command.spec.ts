@@ -302,7 +302,9 @@ describe('LoopCommand', () => {
 			});
 
 			it('remembers the approval and runs when the user says yes', async () => {
-				(inquirer.prompt as Mock).mockResolvedValue({ confirmed: true });
+				(inquirer.prompt as unknown as Mock).mockResolvedValue({
+					confirmed: true
+				});
 
 				await run({});
 
@@ -311,7 +313,9 @@ describe('LoopCommand', () => {
 			});
 
 			it('stops and remembers nothing when the user says no', async () => {
-				(inquirer.prompt as Mock).mockResolvedValue({ confirmed: false });
+				(inquirer.prompt as unknown as Mock).mockResolvedValue({
+					confirmed: false
+				});
 
 				await expect(run({})).rejects.toThrow('process.exit called');
 
