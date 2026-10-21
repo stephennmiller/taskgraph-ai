@@ -21,6 +21,7 @@ import type {
 	TaskMetadata,
 	TaskStatus
 } from '../../../../common/types/index.js';
+import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
@@ -192,12 +193,10 @@ export class FileStorage implements IStorage {
 				return null;
 			}
 
-			const toFullSubId = (maybeDotId: string | number): string => {
-				const depId = String(maybeDotId);
-				return depId.includes('.') ? depId : `${parentTask.id}.${depId}`;
-			};
 			const resolvedDependencies =
-				subtask.dependencies?.map((dep) => toFullSubId(dep)) ?? [];
+				subtask.dependencies?.map((dep) =>
+					resolveSubtaskDependency(parentTask.id, dep)
+				) ?? [];
 
 			// Return a Task-like object for the subtask with the full dotted ID
 			// Following the same pattern as findTaskById in utils.js

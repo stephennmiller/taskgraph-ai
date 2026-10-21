@@ -50,7 +50,11 @@ vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({
 
 // Mock @tm/core to control task data in tests
 const mockTasksList = vi.fn();
+const { resolveSubtaskDependency } = await import(
+	'../../../../../packages/tm-core/src/modules/dependencies/subtask-dependency.ts'
+);
 vi.doMock('@tm/core', () => ({
+	resolveSubtaskDependency,
 	createTmCore: vi.fn(async () => ({
 		tasks: {
 			list: mockTasksList

@@ -1,3 +1,8 @@
+import {
+	assignMetadata,
+	dependenciesForConvertedTask,
+	retargetDependents
+} from '@tm/core';
 import { isTaskDependentOn } from '../task-manager.js';
 import { getCurrentTag, log, readJSON, writeJSON } from '../utils.js';
 
@@ -88,18 +93,32 @@ async function addSubtask(
 					: 0;
 			const newSubtaskId = highestSubtaskId + 1;
 
-			// Clone the existing task to be converted to a subtask
+			// Clone the existing task to be converted to a subtask. Its dependencies
+			// were task IDs; under a subtask a bare number would mean a sibling
+			const { dependencies, metadata } = dependenciesForConvertedTask(
+				existingTask,
+				parentIdNum
+			);
 			newSubtask = {
 				...existingTask,
 				id: newSubtaskId,
-				parentTaskId: parentIdNum
+				parentTaskId: parentIdNum,
+				dependencies
 			};
+			assignMetadata(newSubtask, metadata);
 
 			// Add to parent's subtasks
 			parentTask.subtasks.push(newSubtask);
 
 			// Remove the task from the main tasks array
 			data.tasks.splice(existingTaskIndex, 1);
+
+			// Whatever depended on the task now depends on the subtask
+			retargetDependents(
+				data.tasks,
+				String(existingTaskIdNum),
+				`${parentIdNum}.${newSubtaskId}`
+			);
 
 			log(
 				'debug',

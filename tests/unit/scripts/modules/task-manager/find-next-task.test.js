@@ -172,4 +172,55 @@ describe('findNextTask', () => {
 		// (it has a pending subtask)
 		expect(nextTask).not.toEqual(expect.objectContaining({ id: 2 }));
 	});
+
+	describe('subtask dependencies', () => {
+		const project = (dependencies) => [
+			{
+				id: 1,
+				title: 'Parent',
+				status: 'in-progress',
+				dependencies: [],
+				// Lower than task 2, so task 2 wins when no subtask is eligible
+				priority: 'low',
+				subtasks: [
+					{ id: 1, title: 'S1', status: 'pending', dependencies },
+					{ id: 2, title: 'S2', status: 'done', dependencies: [] }
+				]
+			},
+			{
+				id: 2,
+				title: 'Other',
+				status: 'pending',
+				dependencies: [],
+				priority: 'medium'
+			}
+		];
+
+		test('reads a string without a dot as a task, not a sibling', () => {
+			// "2" is task 2 (pending), so 1.1 must wait even though sibling 1.2 is done
+			const nextTask = findNextTask(project(['2']));
+
+			expect(nextTask.id).toBe(2);
+		});
+
+		test('reads a bare number as a sibling subtask', () => {
+			const nextTask = findNextTask(project([2]));
+
+			expect(nextTask.id).toBe('1.1');
+			expect(nextTask.dependencies).toEqual(['1.2']);
+		});
+
+		test('reads a number of 100 or more as a task', () => {
+			const tasks = project([100]);
+			tasks.push({
+				id: 100,
+				title: 'Far',
+				status: 'done',
+				dependencies: [],
+				priority: 'low'
+			});
+
+			expect(findNextTask(tasks).id).toBe('1.1');
+		});
+	});
 });

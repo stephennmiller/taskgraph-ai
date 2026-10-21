@@ -79,7 +79,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 		expect(getDependencySource(loaded as Task, '1')).toBe('inferred');
 	});
 
-	it('reads a subtask mark written with a bare numeric key through loadTask', async () => {
+	it('reads the mark of a numeric sibling dependency through loadTask', async () => {
 		await storage.saveTasks([
 			createTask('2', {
 				subtasks: [
@@ -101,16 +101,16 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 						description: '',
 						status: 'pending',
 						priority: 'medium',
-						dependencies: ['1'],
+						dependencies: [1],
 						details: '',
 						testStrategy: '',
-						metadata: { [DEPENDENCY_SOURCES_KEY]: { '1': 'inferred' } }
+						metadata: { [DEPENDENCY_SOURCES_KEY]: { '2.1': 'inferred' } }
 					}
 				]
 			})
 		]);
 
-		// loadTask resolves the sibling to its dotted form; the mark was written bare
+		// loadTask resolves the numeric sibling to its dotted form, the mark's key
 		const subtask = (await storage.loadTask('2.2')) as Task;
 
 		expect(subtask.dependencies).toEqual(['2.1']);

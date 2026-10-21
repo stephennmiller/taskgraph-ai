@@ -1,3 +1,4 @@
+import { resolveSubtaskDependency } from '@tm/core';
 import { log } from '../utils.js';
 import { addComplexityToTask } from '../utils.js';
 
@@ -25,15 +26,6 @@ function findNextTask(tasks, complexityReport = null) {
 	// ---------- helpers ----------------------------------------------------
 	const priorityValues = { high: 3, medium: 2, low: 1 };
 
-	const toFullSubId = (parentId, maybeDotId) => {
-		//  "12.3"  ->  "12.3"
-		//        4 ->  "12.4"   (numeric / short form)
-		if (typeof maybeDotId === 'string' && maybeDotId.includes('.')) {
-			return maybeDotId;
-		}
-		return `${parentId}.${maybeDotId}`;
-	};
-
 	// ---------- build completed-ID set (tasks *and* subtasks) --------------
 	const completedIds = new Set();
 	tasks.forEach((t) => {
@@ -60,7 +52,8 @@ function findNextTask(tasks, complexityReport = null) {
 				if (stStatus !== 'pending' && stStatus !== 'in-progress') return;
 
 				const fullDeps =
-					st.dependencies?.map((d) => toFullSubId(parent.id, d)) ?? [];
+					st.dependencies?.map((d) => resolveSubtaskDependency(parent.id, d)) ??
+					[];
 
 				const depsSatisfied =
 					fullDeps.length === 0 ||

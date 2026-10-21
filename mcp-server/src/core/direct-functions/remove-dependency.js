@@ -2,7 +2,10 @@
  * Direct function wrapper for removeDependency
  */
 
-import { removeDependency } from '../../../../scripts/modules/dependency-manager.js';
+import {
+	DependencyError,
+	removeDependency
+} from '../../../../scripts/modules/dependency-manager.js';
 import {
 	disableSilentMode,
 	enableSilentMode
@@ -101,7 +104,8 @@ export async function removeDependencyDirect(args, log) {
 		return {
 			success: false,
 			error: {
-				code: 'CORE_FUNCTION_ERROR',
+				code:
+					error instanceof DependencyError ? error.code : 'CORE_FUNCTION_ERROR',
 				message: error.message
 			}
 		};

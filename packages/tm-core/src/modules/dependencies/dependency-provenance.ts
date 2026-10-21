@@ -11,13 +11,13 @@
  * explicit, so existing files and manually added dependencies need no
  * migration. `dependencySources` is a reserved metadata key.
  *
- * Keys are canonical: a task's keys are its plain IDs ("5"); a subtask's
- * sibling keys are dotted ("2.1") whether the dependency is stored as 1 or
- * "2.1". Pass the subtask's parent ID as `parentId` and every function
- * normalizes both stored dependencies and stored keys, so marks written with
- * a bare numeric key (the form expand used first) still read correctly. A
- * bare number in a subtask always means a sibling, as elsewhere in the
- * legacy dependency code.
+ * Keys are canonical full IDs: a task's keys are its plain IDs ("5"); a
+ * subtask's sibling keys are dotted ("2.1") whether the dependency is stored
+ * as 1 or "2.1", and a task it depends on keeps its plain key ("3", stored
+ * as "3"). Pass the subtask's parent ID as `parentId` and every function
+ * resolves stored dependencies with `resolveSubtaskDependency`, the rule the
+ * rest of the code uses: a number below 100 is a sibling, a string without a
+ * dot is a task. Keys are already full IDs and are read as they are.
  *
  * Readers go through getDependencySource, which ignores entries for
  * dependencies no longer listed, and writers prune marks when a dependency is
@@ -32,6 +32,8 @@
  * dependencies.
  */
 
+import { resolveSubtaskDependency } from './subtask-dependency.js';
+
 export type DependencySource = 'explicit' | 'inferred';
 
 export const DEPENDENCY_SOURCES_KEY = 'dependencySources';
@@ -44,28 +46,23 @@ interface WithDependencies {
 	metadata?: Metadata;
 }
 
-/** Canonical key for a dependency; bare ids are siblings when a parent is given. */
+/**
+ * Canonical key for a dependency stored on a task (no parent) or on a subtask
+ * of `parentId`, where a bare number below 100 is a sibling.
+ */
 function canonical(id: DependencyId, parentId?: DependencyId): string {
-	const text = String(id);
-	return parentId !== undefined && !text.includes('.')
-		? `${parentId}.${text}`
-		: text;
+	return parentId === undefined
+		? String(id)
+		: resolveSubtaskDependency(parentId, id);
 }
 
-/** Inferred marks keyed canonically, whatever form they were written in. */
-function readInferred(
-	metadata: Metadata | undefined,
-	parentId?: DependencyId
-): Record<string, string> {
+/** Inferred marks, keyed by full ID as written. */
+function readInferred(metadata: Metadata | undefined): Record<string, string> {
 	const stored = metadata?.[DEPENDENCY_SOURCES_KEY];
 	if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
 		return {};
 	}
-	const marks: Record<string, string> = {};
-	for (const [key, value] of Object.entries(stored)) {
-		marks[canonical(key, parentId)] = value as string;
-	}
-	return marks;
+	return { ...(stored as Record<string, string>) };
 }
 
 /** Whether the task lists this dependency, in either stored form. */
@@ -124,8 +121,7 @@ export function getDependencySource(
 	parentId?: DependencyId
 ): DependencySource {
 	if (!isListed(task, depId, parentId)) return 'explicit';
-	return readInferred(task.metadata, parentId)[canonical(depId, parentId)] ===
-		'inferred'
+	return readInferred(task.metadata)[canonical(depId, parentId)] === 'inferred'
 		? 'inferred'
 		: 'explicit';
 }
@@ -141,7 +137,7 @@ export function reconcileDependencySources(
 	previous?: WithDependencies,
 	parentId?: DependencyId
 ): Metadata | undefined {
-	const priorInferred = readInferred(previous?.metadata, parentId);
+	const priorInferred = readInferred(previous?.metadata);
 	const inferred: Record<string, string> = {};
 
 	for (const dep of current.dependencies ?? []) {
@@ -162,7 +158,7 @@ export function setDependencySource(
 	source: DependencySource,
 	parentId?: DependencyId
 ): Metadata | undefined {
-	const inferred = readInferred(metadata, parentId);
+	const inferred = readInferred(metadata);
 	const key = canonical(depId, parentId);
 	if (source === 'inferred') inferred[key] = 'inferred';
 	else delete inferred[key];
@@ -175,9 +171,7 @@ export function pruneDependencySources(
 	parentId?: DependencyId
 ): Metadata | undefined {
 	const kept: Record<string, string> = {};
-	for (const [key, value] of Object.entries(
-		readInferred(task.metadata, parentId)
-	)) {
+	for (const [key, value] of Object.entries(readInferred(task.metadata))) {
 		if (isListed(task, key, parentId)) kept[key] = value;
 	}
 	return withInferred(task.metadata, kept);
@@ -193,7 +187,7 @@ export function renameDependencySource(
 	newId: DependencyId,
 	parentId?: DependencyId
 ): Metadata | undefined {
-	const inferred = readInferred(metadata, parentId);
+	const inferred = readInferred(metadata);
 	const source = inferred[canonical(oldId, parentId)];
 	delete inferred[canonical(oldId, parentId)];
 	delete inferred[canonical(newId, parentId)];
@@ -212,7 +206,7 @@ export function rekeyDependencySources(
 	newParentId: DependencyId | undefined,
 	newStoredDependency: (dep: DependencyId) => DependencyId = (dep) => dep
 ): Metadata | undefined {
-	const before = readInferred(task.metadata, oldParentId);
+	const before = readInferred(task.metadata);
 	const after: Record<string, string> = {};
 	for (const dep of task.dependencies ?? []) {
 		if (before[canonical(dep, oldParentId)] === 'inferred') {

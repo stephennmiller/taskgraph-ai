@@ -43,14 +43,16 @@ const tagged = () => ({
 					{
 						id: 2,
 						title: 'S2',
-						dependencies: [1, 2],
+						// sibling 3.1 (the number) and task 2 (the string)
+						dependencies: [1, '2'],
 						metadata: {
 							owner: 'kim',
-							dependencySources: { 3.1: 'inferred', 3.2: 'inferred' }
+							dependencySources: { 3.1: 'inferred', 2: 'inferred' }
 						}
 					}
 				]
-			}
+			},
+			{ id: 9, title: 'Nine', dependencies: ['3.2'] }
 		],
 		metadata: {}
 	}
@@ -93,9 +95,21 @@ describe('remove-subtask --convert dependency provenance', () => {
 		});
 
 		expect(converted.metadata.owner).toBe('kim');
+		// Sibling 3.1 is now written as the full ID, task 2 as it was, and the
+		// old parent is added
+		expect(converted.dependencies).toEqual(['3.1', '2', '3']);
 		expect(converted.metadata.dependencySources).toEqual({
-			1: 'inferred',
+			3.1: 'inferred',
 			2: 'inferred'
 		});
+	});
+
+	test('repoints what depended on the subtask at the new task', async () => {
+		const converted = await removeSubtask('tasks.json', '3.2', true, false, {
+			tag: 'master'
+		});
+
+		const nine = written().tasks.find((t) => t.id === 9);
+		expect(nine.dependencies).toEqual([converted.id]);
 	});
 });

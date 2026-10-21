@@ -200,7 +200,7 @@ export function displaySubtasks(
 		title: string;
 		status: any;
 		description?: string;
-		dependencies?: string[];
+		dependencies?: Array<string | number>;
 	}>,
 	parentTaskId?: string | number
 ): void {

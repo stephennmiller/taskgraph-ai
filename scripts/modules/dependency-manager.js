@@ -3,18 +3,18 @@
  * Manages task dependencies and relationships
  */
 
-import { printError } from '@tm/cli/errors';
 import {
 	assignMetadata,
 	hasDependency,
+	isSiblingReference,
 	pruneDependencySources,
+	resolveSubtaskDependency,
 	setDependencySource
 } from '@tm/core';
 import path from 'path';
 import { displayBanner } from './ui.js';
 import {
 	formatTaskId,
-	isSilentMode,
 	log,
 	readJSON,
 	taskExists,
@@ -57,26 +57,11 @@ function pruneProvenance(tasks) {
 }
 
 /**
- * Stop a dependency command with one clear message. MCP runs in silent mode
- * and reads errors from the log, so it keeps the plain log line.
- * @param {string} message
- * @param {string} [hint]
- */
-function exitWithError(message, hint) {
-	if (isSilentMode()) {
-		log('error', message);
-	} else {
-		printError(message, hint);
-	}
-	process.exit(1);
-}
-
-/**
  * Structured error class for dependency operations
  */
 class DependencyError extends Error {
-	constructor(code, message, data = {}) {
-		super(message);
+	constructor(code, message, data = {}, options) {
+		super(message, options);
 		this.name = 'DependencyError';
 		this.code = code;
 		this.data = data;
@@ -87,11 +72,31 @@ class DependencyError extends Error {
  * Error codes for dependency operations
  */
 const DEPENDENCY_ERROR_CODES = {
+	NO_TASKS: 'NO_TASKS',
+	TASK_NOT_FOUND: 'TASK_NOT_FOUND',
+	NO_SUBTASKS: 'NO_SUBTASKS',
+	SELF_DEPENDENCY: 'SELF_DEPENDENCY',
+	CIRCULAR_DEPENDENCY: 'CIRCULAR_DEPENDENCY',
+	FIX_FAILED: 'FIX_FAILED',
 	CANNOT_MOVE_SUBTASK: 'CANNOT_MOVE_SUBTASK',
 	INVALID_TASK_ID: 'INVALID_TASK_ID',
 	INVALID_SOURCE_TAG: 'INVALID_SOURCE_TAG',
 	INVALID_TARGET_TAG: 'INVALID_TARGET_TAG'
 };
+
+/**
+ * A dependency command stops with one clear message. It throws instead of
+ * exiting so the MCP server survives: the CLI prints the error (with `hint`
+ * as its suggestion) and the MCP direct functions return it as a result.
+ * @param {string} code - One of DEPENDENCY_ERROR_CODES
+ * @param {string} message
+ * @param {string} [hint]
+ * @param {Error} [cause] - The error this one reports, kept for its stack
+ * @returns {DependencyError}
+ */
+function failure(code, message, hint, cause) {
+	return new DependencyError(code, message, { hint }, cause && { cause });
+}
 
 /**
  * Add a dependency to a task
@@ -107,7 +112,11 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
-		exitWithError('No tasks yet', NO_TASKS_HINT);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.NO_TASKS,
+			'No tasks yet',
+			NO_TASKS_HINT
+		);
 	}
 
 	// Format the task and dependency IDs correctly
@@ -120,7 +129,11 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	// Check if the dependency task or subtask actually exists
 	if (!taskExists(data.tasks, formattedDependencyId)) {
-		exitWithError(`Task ${formattedDependencyId} not found`, LIST_HINT);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+			`Task ${formattedDependencyId} not found`,
+			LIST_HINT
+		);
 	}
 
 	// Find the task to update
@@ -136,11 +149,16 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 		const parentTask = data.tasks.find((t) => t.id === parentId);
 
 		if (!parentTask) {
-			exitWithError(`Task ${parentId} not found`, LIST_HINT);
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Task ${parentId} not found`,
+				LIST_HINT
+			);
 		}
 
 		if (!parentTask.subtasks) {
-			exitWithError(
+			throw failure(
+				DEPENDENCY_ERROR_CODES.NO_SUBTASKS,
 				`Task ${parentId} has no subtasks`,
 				`Add some with \`taskgraph expand --id=${parentId}\``
 			);
@@ -151,14 +169,22 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 		provenanceParent = parentId;
 
 		if (!targetTask) {
-			exitWithError(`Subtask ${formattedTaskId} not found`, LIST_HINT);
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Subtask ${formattedTaskId} not found`,
+				LIST_HINT
+			);
 		}
 	} else {
 		// Regular task (not a subtask)
 		targetTask = data.tasks.find((t) => t.id === formattedTaskId);
 
 		if (!targetTask) {
-			exitWithError(`Task ${formattedTaskId} not found`, LIST_HINT);
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Task ${formattedTaskId} not found`,
+				LIST_HINT
+			);
 		}
 	}
 
@@ -194,7 +220,10 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	// Check if the task is trying to depend on itself - compare full IDs (including subtask parts)
 	if (String(formattedTaskId) === String(formattedDependencyId)) {
-		exitWithError(`Task ${formattedTaskId} can't depend on itself`);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.SELF_DEPENDENCY,
+			`Task ${formattedTaskId} can't depend on itself`
+		);
 	}
 
 	// For subtasks of the same parent, we need to make sure we're not treating it as a self-dependency
@@ -225,7 +254,10 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	}
 
 	if (isSelfDependency) {
-		exitWithError(`Subtask ${formattedTaskId} can't depend on itself`);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.SELF_DEPENDENCY,
+			`Subtask ${formattedTaskId} can't depend on itself`
+		);
 	}
 
 	// Check for circular dependencies
@@ -272,7 +304,8 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 		log('debug', 'Task files regenerated with updated dependencies.');
 	} else {
-		exitWithError(
+		throw failure(
+			DEPENDENCY_ERROR_CODES.CIRCULAR_DEPENDENCY,
 			`That would make a loop: task ${formattedDependencyId} already depends on task ${formattedTaskId}`,
 			`Run \`taskgraph graph\` to see how they connect`
 		);
@@ -294,7 +327,11 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	// Read tasks file
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
-		exitWithError('No tasks yet', NO_TASKS_HINT);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.NO_TASKS,
+			'No tasks yet',
+			NO_TASKS_HINT
+		);
 	}
 
 	// Format the task and dependency IDs correctly
@@ -317,11 +354,16 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 		const parentTask = data.tasks.find((t) => t.id === parentId);
 
 		if (!parentTask) {
-			exitWithError(`Task ${parentId} not found`, LIST_HINT);
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Task ${parentId} not found`,
+				LIST_HINT
+			);
 		}
 
 		if (!parentTask.subtasks) {
-			exitWithError(
+			throw failure(
+				DEPENDENCY_ERROR_CODES.NO_SUBTASKS,
 				`Task ${parentId} has no subtasks`,
 				`Add some with \`taskgraph expand --id=${parentId}\``
 			);
@@ -331,14 +373,22 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 		isSubtask = true;
 
 		if (!targetTask) {
-			exitWithError(`Subtask ${formattedTaskId} not found`, LIST_HINT);
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Subtask ${formattedTaskId} not found`,
+				LIST_HINT
+			);
 		}
 	} else {
 		// Regular task (not a subtask)
 		targetTask = data.tasks.find((t) => t.id === formattedTaskId);
 
 		if (!targetTask) {
-			exitWithError(`Task ${formattedTaskId} not found`, LIST_HINT);
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Task ${formattedTaskId} not found`,
+				LIST_HINT
+			);
 		}
 	}
 
@@ -352,24 +402,13 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	const normalizedDependencyId = String(formattedDependencyId);
 
 	// Check if the dependency exists by comparing string representations
+	// On a subtask a bare number is a sibling (stored 1 for "1.1"), a string
+	// without a dot is a task
 	const dependencyIndex = targetTask.dependencies.findIndex((dep) => {
-		// Direct string comparison (handles both numeric IDs and dot notation)
-		const depStr = String(dep);
-		if (depStr === normalizedDependencyId) {
-			return true;
-		}
-
-		// For subtasks: handle numeric dependencies that might be references to other subtasks
-		// in the same parent (e.g., subtask 1.2 depending on subtask 1.1 stored as just "1")
-		if (typeof dep === 'number' && dep < 100 && isSubtask) {
-			const [parentId] = formattedTaskId.split('.');
-			const fullSubtaskRef = `${parentId}.${dep}`;
-			if (fullSubtaskRef === normalizedDependencyId) {
-				return true;
-			}
-		}
-
-		return false;
+		const full = isSubtask
+			? resolveSubtaskDependency(formattedTaskId.split('.')[0], dep)
+			: String(dep);
+		return full === normalizedDependencyId;
 	});
 
 	if (dependencyIndex === -1) {
@@ -451,13 +490,11 @@ function isCircularDependency(tasks, taskId, chain = []) {
 	// Check each dependency recursively
 	const newChain = [...chain, taskIdStr]; // Use taskIdStr for consistency
 	return task.dependencies.some((depId) => {
-		let normalizedDepId = String(depId);
-		// Normalize relative subtask dependencies
-		if (typeof depId === 'number' && parentIdForSubtask !== null) {
-			// If the current task is a subtask AND the dependency is a number,
-			// assume it refers to a sibling subtask.
-			normalizedDepId = `${parentIdForSubtask}.${depId}`;
-		}
+		// A subtask's bare number names a sibling, a string without a dot a task
+		const normalizedDepId =
+			parentIdForSubtask !== null
+				? resolveSubtaskDependency(parentIdForSubtask, depId)
+				: String(depId);
 		// Pass the normalized ID to the recursive call
 		return isCircularDependency(tasks, normalizedDepId, newChain);
 	});
@@ -489,9 +526,7 @@ function buildDependencyGraph(tasks, { subtasksOnly = false } = {}) {
 			add(
 				`${taskId}.${subtask.id}`,
 				(subtask.dependencies || []).map((dep) =>
-					typeof dep === 'number' && dep < 100
-						? `${taskId}.${dep}`
-						: String(dep)
+					resolveSubtaskDependency(taskId, dep)
 				)
 			);
 		}
@@ -500,20 +535,106 @@ function buildDependencyGraph(tasks, { subtasksOnly = false } = {}) {
 }
 
 /**
- * Whether a task is in a loop: one of its dependencies leads back to it.
- * A task that only depends on a loop is not in it.
+ * The IDs that are in a loop: one of their dependencies leads back to them.
+ * A task that only depends on a loop is not in it. These are the members of
+ * strongly connected components of two or more nodes (Tarjan's algorithm, one
+ * pass), so the cost grows with the size of the graph, not its square. It is
+ * iterative, so a long chain cannot overflow the stack. Self-dependencies are
+ * not in the graph, so they never count as a loop.
  * @param {Map<string, string[]>} graph - From buildDependencyGraph
- * @param {string} id - Full task or subtask ID
+ * @returns {Set<string>} Full task and subtask IDs
  */
-function isInLoop(graph, id) {
-	const leadsBack = (from, seen) => {
-		if (from === id) return true;
-		if (seen.has(from)) return false;
-		seen.add(from);
-		return (graph.get(from) || []).some((next) => leadsBack(next, seen));
+function findLoopMembers(graph) {
+	const index = new Map();
+	const lowLink = new Map();
+	const onStack = new Set();
+	const stack = [];
+	const members = new Set();
+	let counter = 0;
+
+	const enter = (id) => {
+		index.set(id, counter);
+		lowLink.set(id, counter);
+		counter++;
+		stack.push(id);
+		onStack.add(id);
+		return { id, edges: graph.get(id), next: 0 };
 	};
-	const seen = new Set();
-	return (graph.get(id) || []).some((dep) => leadsBack(dep, seen));
+
+	for (const root of graph.keys()) {
+		if (index.has(root)) continue;
+
+		const work = [enter(root)];
+		while (work.length > 0) {
+			const frame = work[work.length - 1];
+			if (frame.next < frame.edges.length) {
+				const to = frame.edges[frame.next++];
+				// A dependency on itself is a loop of one, as a search from it finds
+				if (to === frame.id) members.add(to);
+				// An ID that is not a task or subtask has no edges, so no way back
+				if (!graph.has(to)) continue;
+				if (!index.has(to)) {
+					work.push(enter(to));
+				} else if (onStack.has(to)) {
+					lowLink.set(frame.id, Math.min(lowLink.get(frame.id), index.get(to)));
+				}
+				continue;
+			}
+
+			work.pop();
+			if (lowLink.get(frame.id) === index.get(frame.id)) {
+				const component = [];
+				let id;
+				do {
+					id = stack.pop();
+					onStack.delete(id);
+					component.push(id);
+				} while (id !== frame.id);
+				if (component.length > 1) {
+					for (const member of component) members.add(member);
+				}
+			}
+			const parent = work[work.length - 1];
+			if (parent) {
+				lowLink.set(
+					parent.id,
+					Math.min(lowLink.get(parent.id), lowLink.get(frame.id))
+				);
+			}
+		}
+	}
+	return members;
+}
+
+/**
+ * Answers `taskExists(tasks, id)` from an index, for checks that ask once per
+ * dependency. Same answers: an ID names a task by its number, or a subtask
+ * "parent.sub" (anything after a second dot is ignored).
+ * @param {Array} tasks - All tasks
+ * @returns {(id: string|number) => boolean}
+ */
+function createTaskLookup(tasks) {
+	// Task ID -> its subtask IDs (null when it has none); the first task wins
+	const subtaskIds = new Map();
+	for (const task of tasks) {
+		if (subtaskIds.has(task.id)) continue;
+		subtaskIds.set(
+			task.id,
+			task.subtasks ? new Set(task.subtasks.map((st) => st.id)) : null
+		);
+	}
+
+	return (id) => {
+		if (!id) return false;
+		if (typeof id === 'string' && id.includes('.')) {
+			const [parentId, subtaskId] = id.split('.').map((n) => parseInt(n, 10));
+			// Set lookups match NaN with NaN; taskExists never does
+			if (Number.isNaN(parentId) || Number.isNaN(subtaskId)) return false;
+			return subtaskIds.get(parentId)?.has(subtaskId) ?? false;
+		}
+		const taskId = parseInt(id, 10);
+		return !Number.isNaN(taskId) && subtaskIds.has(taskId);
+	};
 }
 
 /**
@@ -524,7 +645,11 @@ function isInLoop(graph, id) {
 function validateTaskDependencies(tasks) {
 	const issues = [];
 	const graph = buildDependencyGraph(tasks);
-	const subtaskGraph = buildDependencyGraph(tasks, { subtasksOnly: true });
+	const loopMembers = findLoopMembers(graph);
+	const subtaskLoopMembers = findLoopMembers(
+		buildDependencyGraph(tasks, { subtasksOnly: true })
+	);
+	const exists = createTaskLookup(tasks);
 
 	// Check each task's dependencies
 	tasks.forEach((task) => {
@@ -544,7 +669,7 @@ function validateTaskDependencies(tasks) {
 			}
 
 			// Check if dependency exists
-			if (!taskExists(tasks, depId)) {
+			if (!exists(depId)) {
 				issues.push({
 					type: 'missing',
 					taskId: task.id,
@@ -556,7 +681,7 @@ function validateTaskDependencies(tasks) {
 
 		// Check for loops. Self-dependencies were reported above and aren't
 		// in the graph, so they aren't reported again as a loop.
-		if (isInLoop(graph, String(task.id))) {
+		if (loopMembers.has(String(task.id))) {
 			issues.push({
 				type: 'circular',
 				taskId: task.id,
@@ -580,7 +705,7 @@ function validateTaskDependencies(tasks) {
 					// Check for self-dependencies in subtasks
 					if (
 						String(depId) === String(fullSubtaskId) ||
-						(typeof depId === 'number' && depId === subtask.id)
+						(isSiblingReference(depId) && depId === subtask.id)
 					) {
 						issues.push({
 							type: 'self',
@@ -591,13 +716,12 @@ function validateTaskDependencies(tasks) {
 					}
 
 					// A bare number names a sibling subtask, as everywhere else here
-					const ref =
-						typeof depId === 'number' && depId < 100
-							? `${task.id}.${depId}`
-							: depId;
+					const ref = isSiblingReference(depId)
+						? resolveSubtaskDependency(task.id, depId)
+						: depId;
 
 					// Check if dependency exists
-					if (!taskExists(tasks, ref)) {
+					if (!exists(ref)) {
 						issues.push({
 							type: 'missing',
 							taskId: fullSubtaskId,
@@ -608,12 +732,12 @@ function validateTaskDependencies(tasks) {
 				});
 
 				// Check for circular dependencies in subtasks
-				if (isInLoop(graph, fullSubtaskId)) {
+				if (loopMembers.has(fullSubtaskId)) {
 					issues.push({
 						type: 'circular',
 						taskId: fullSubtaskId,
 						// fix-dependencies breaks loops made only of subtasks
-						fixable: isInLoop(subtaskGraph, fullSubtaskId),
+						fixable: subtaskLoopMembers.has(fullSubtaskId),
 						message: `Subtask ${fullSubtaskId} is part of a circular dependency chain`
 					});
 				}
@@ -705,7 +829,11 @@ async function validateDependenciesCommand(tasksPath, options = {}) {
 
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
-		exitWithError('No tasks yet', NO_TASKS_HINT);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.NO_TASKS,
+			'No tasks yet',
+			NO_TASKS_HINT
+		);
 	}
 
 	const counts = countTasksAndDependencies(data.tasks);
@@ -776,13 +904,17 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 	const { context = {} } = options;
 	log('debug', 'Checking for and fixing invalid dependencies in tasks.json...');
 
-	try {
-		// Read tasks data
-		const data = readJSON(tasksPath, context.projectRoot, context.tag);
-		if (!data || !data.tasks) {
-			exitWithError('No tasks yet', NO_TASKS_HINT);
-		}
+	// Read tasks data
+	const data = readJSON(tasksPath, context.projectRoot, context.tag);
+	if (!data || !data.tasks) {
+		throw failure(
+			DEPENDENCY_ERROR_CODES.NO_TASKS,
+			'No tasks yet',
+			NO_TASKS_HINT
+		);
+	}
 
+	try {
 		// What was removed, in order, for the summary
 		const fixes = [];
 
@@ -830,10 +962,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 						const uniqueDeps = new Set();
 						const originalLength = subtask.dependencies.length;
 						subtask.dependencies = subtask.dependencies.filter((depId) => {
-							let depIdStr = String(depId);
-							if (typeof depId === 'number' && depId < 100) {
-								depIdStr = `${task.id}.${depId}`;
-							}
+							const depIdStr = resolveSubtaskDependency(task.id, depId);
 							if (uniqueDeps.has(depIdStr)) {
 								fixes.push({
 									type: 'duplicate',
@@ -924,7 +1053,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 						const hasSelfDependency = subtask.dependencies.some((depId) => {
 							if (typeof depId === 'string' && depId.includes('.')) {
 								return depId === subtaskId;
-							} else if (typeof depId === 'number' && depId < 100) {
+							} else if (isSiblingReference(depId)) {
 								return depId === subtask.id;
 							}
 							return false;
@@ -932,10 +1061,10 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 
 						if (hasSelfDependency) {
 							subtask.dependencies = subtask.dependencies.filter((depId) => {
-								const normalizedDepId =
-									typeof depId === 'number' && depId < 100
-										? `${task.id}.${depId}`
-										: String(depId);
+								const normalizedDepId = resolveSubtaskDependency(
+									task.id,
+									depId
+								);
 
 								if (normalizedDepId === subtaskId) {
 									fixes.push({ type: 'self', taskId: subtaskId });
@@ -967,7 +1096,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 
 							// A bare number names a sibling subtask; a string like "3"
 							// is task 3, the form add-dependency stores
-							if (typeof depId === 'number' && numericId < 100) {
+							if (isSiblingReference(depId)) {
 								const fullSubtaskId = `${task.id}.${numericId}`;
 
 								if (!validSubtaskIds.has(fullSubtaskId)) {
@@ -1019,10 +1148,8 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 						const normalizedDeps = subtask.dependencies.map((depId) => {
 							if (typeof depId === 'string' && depId.includes('.')) {
 								return depId;
-							} else if (typeof depId === 'number' && depId < 100) {
-								return `${task.id}.${depId}`;
 							}
-							return String(depId);
+							return resolveSubtaskDependency(task.id, depId);
 						});
 						subtaskDependencyMap.set(subtaskId, normalizedDeps);
 					} else {
@@ -1056,11 +1183,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 
 				const originalLength = subtask.dependencies.length;
 				subtask.dependencies = subtask.dependencies.filter((dep) => {
-					const normalized =
-						typeof dep === 'number' && dep < 100
-							? `${taskId}.${dep}`
-							: String(dep);
-					return normalized !== depId;
+					return resolveSubtaskDependency(taskId, dep) !== depId;
 				});
 				dependencies.splice(dependencies.indexOf(depId), 1);
 
@@ -1096,7 +1219,12 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 			...countTasksAndDependencies(data.tasks)
 		};
 	} catch (error) {
-		exitWithError(`Couldn't fix dependencies: ${error.message}`);
+		throw failure(
+			DEPENDENCY_ERROR_CODES.FIX_FAILED,
+			`Couldn't fix dependencies: ${error.message}`,
+			undefined,
+			error
+		);
 	}
 }
 
@@ -1212,8 +1340,8 @@ function validateAndFixDependencies(
 				if (subtask.dependencies) {
 					subtask.dependencies = subtask.dependencies.filter((depId) => {
 						// Handle numeric subtask references
-						if (typeof depId === 'number' && depId < 100) {
-							const fullSubtaskId = `${task.id}.${depId}`;
+						if (isSiblingReference(depId)) {
+							const fullSubtaskId = resolveSubtaskDependency(task.id, depId);
 							return taskExists(tasksData.tasks, fullSubtaskId);
 						}
 						// Handle full task/subtask references
@@ -1842,7 +1970,10 @@ export {
 	ensureAtLeastOneIndependentSubtask,
 	findAllDependenciesRecursively,
 	findCrossTagDependencies,
+	buildDependencyGraph,
+	createTaskLookup,
 	findDependencyTask,
+	findLoopMembers,
 	findTaskCrossTagConflicts,
 	fixDependenciesCommand,
 	getDependentTaskIds,

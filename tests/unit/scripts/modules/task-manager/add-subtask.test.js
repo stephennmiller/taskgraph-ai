@@ -113,6 +113,84 @@ describe('addSubtask function', () => {
 		expect(parentTask.subtasks[0].title).toBe('Existing Task 2');
 	});
 
+	test('converted task names its task dependencies as strings and drops the new parent', async () => {
+		mockUtils.readJSON.mockReturnValueOnce({
+			tasks: [
+				{ id: 1, title: 'Parent Task', subtasks: [] },
+				{ id: 2, title: 'Dep', subtasks: [] },
+				{
+					id: 3,
+					title: 'Existing Task 3',
+					dependencies: [1, 2],
+					subtasks: []
+				}
+			]
+		});
+
+		const converted = await addSubtask('tasks.json', '1', '3', null, true, {});
+
+		expect(converted.dependencies).toEqual(['2']);
+		const written = mockUtils.writeJSON.mock.calls[0][1];
+		expect(
+			written.tasks.find((t) => t.id === 1).subtasks[0].dependencies
+		).toEqual(['2']);
+	});
+
+	test('converted task keeps its inferred marks for the dependencies that stay', async () => {
+		mockUtils.readJSON.mockReturnValueOnce({
+			tasks: [
+				{ id: 1, title: 'Parent Task', subtasks: [] },
+				{ id: 2, title: 'Dep', subtasks: [] },
+				{
+					id: 3,
+					title: 'Existing Task 3',
+					dependencies: [1, 2],
+					metadata: {
+						jira: 'A-1',
+						dependencySources: { 1: 'inferred', 2: 'inferred' }
+					},
+					subtasks: []
+				}
+			]
+		});
+
+		const converted = await addSubtask('tasks.json', '1', '3', null, true, {});
+
+		expect(converted.metadata).toEqual({
+			jira: 'A-1',
+			dependencySources: { 2: 'inferred' }
+		});
+	});
+
+	test('repoints what depended on the converted task at the new subtask', async () => {
+		mockUtils.readJSON.mockReturnValueOnce({
+			tasks: [
+				{ id: 1, title: 'Parent Task', subtasks: [] },
+				{ id: 3, title: 'Existing Task 3', dependencies: [], subtasks: [] },
+				{
+					id: 4,
+					title: 'Dependent',
+					dependencies: [3],
+					metadata: { dependencySources: { 3: 'inferred' } },
+					subtasks: [
+						{ id: 1, title: 'S', dependencies: ['3'] },
+						{ id: 2, title: 'T', dependencies: [1] }
+					]
+				}
+			]
+		});
+
+		await addSubtask('tasks.json', '1', '3', null, true, {});
+
+		const written = mockUtils.writeJSON.mock.calls[0][1];
+		const dependent = written.tasks.find((t) => t.id === 4);
+		expect(dependent.dependencies).toEqual(['1.1']);
+		expect(dependent.metadata.dependencySources).toEqual({ 1.1: 'inferred' });
+		// "3" was the task; the bare 1 is sibling 4.1 and stays
+		expect(dependent.subtasks[0].dependencies).toEqual(['1.1']);
+		expect(dependent.subtasks[1].dependencies).toEqual([1]);
+	});
+
 	test('should throw an error if parent task does not exist', async () => {
 		mockUtils.readJSON.mockReturnValueOnce({
 			tasks: [{ id: 1, title: 'Task 1', subtasks: [] }]

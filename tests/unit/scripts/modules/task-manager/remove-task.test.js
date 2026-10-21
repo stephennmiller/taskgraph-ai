@@ -119,4 +119,54 @@ describe('removeTask', () => {
 		// writeJSON not called because nothing changed
 		expect(writeJSON).not.toHaveBeenCalled();
 	});
+
+	describe('subtask dependency references', () => {
+		const tagged = () => ({
+			master: {
+				tasks: [
+					{ id: 1, title: 'Task 1', status: 'pending', dependencies: [] },
+					{
+						id: 2,
+						title: 'Parent',
+						status: 'pending',
+						dependencies: ['1'],
+						subtasks: [
+							{ id: 1, title: 'Sub 2.1', status: 'pending', dependencies: [] },
+							// 1 is sibling 2.1, "1" is task 1
+							{
+								id: 2,
+								title: 'Sub 2.2',
+								status: 'pending',
+								dependencies: [1, '1', 150]
+							}
+						]
+					}
+				]
+			}
+		});
+		const remove = async (id) => {
+			readJSON.mockImplementation(() => ({
+				...tagged().master,
+				tag: 'master',
+				_rawTaggedData: tagged()
+			}));
+			await removeTask('tasks/tasks.json', id, { tag: 'master' });
+			const written = writeJSON.mock.calls[0][1];
+			return written.master.tasks.find((t) => t.id === 2);
+		};
+
+		test('removing a task drops the string naming it, not the sibling with that number', async () => {
+			const parent = await remove('1');
+
+			expect(parent.dependencies).toEqual([]);
+			expect(parent.subtasks[1].dependencies).toEqual([1, 150]);
+		});
+
+		test('removing a subtask drops the sibling number, not the task string', async () => {
+			const parent = await remove('2.1');
+
+			expect(parent.dependencies).toEqual(['1']);
+			expect(parent.subtasks[0].dependencies).toEqual(['1', 150]);
+		});
+	});
 });

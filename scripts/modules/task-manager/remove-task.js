@@ -1,4 +1,8 @@
-import { assignMetadata, pruneDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	pruneDependencySources,
+	resolveSubtaskDependency
+} from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
 import { findTaskById, log, readJSON, writeJSON } from '../utils.js';
@@ -131,9 +135,12 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 
 		// Only proceed with cleanup and saving if at least one task was potentially removed
 		if (results.removedTasks.length > 0) {
+			// Full IDs ("5", "5.2"), the form a dependency resolves to
 			const allRemovedIds = new Set(
 				taskIdsToRemove.map((id) =>
-					typeof id === 'string' && id.includes('.') ? id : parseInt(id, 10)
+					typeof id === 'string' && id.includes('.')
+						? id
+						: String(parseInt(id, 10))
 				)
 			);
 
@@ -151,7 +158,7 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 					currentTagTasks.forEach((task) => {
 						if (task.dependencies) {
 							task.dependencies = task.dependencies.filter(
-								(depId) => !allRemovedIds.has(depId)
+								(depId) => !allRemovedIds.has(String(depId))
 							);
 							assignMetadata(task, pruneDependencySources(task));
 						}
@@ -160,8 +167,9 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 								if (subtask.dependencies) {
 									subtask.dependencies = subtask.dependencies.filter(
 										(depId) =>
-											!allRemovedIds.has(`${task.id}.${depId}`) &&
-											!allRemovedIds.has(depId)
+											!allRemovedIds.has(
+												resolveSubtaskDependency(task.id, depId)
+											)
 									);
 									assignMetadata(
 										subtask,

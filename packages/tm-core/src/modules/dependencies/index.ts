@@ -23,8 +23,19 @@ export {
 	type DependencyEdge
 } from './explain-blockers.js';
 export {
+	MAX_SIBLING_REFERENCE,
+	isSiblingReference,
+	resolveSubtaskDependency
+} from './subtask-dependency.js';
+export {
 	buildDependencyTree,
 	type BuildDependencyTreeOptions,
 	type DependencyTree,
 	type DependencyTreeNode
 } from './dependency-tree.js';
+export {
+	dependenciesForConvertedTask,
+	dependenciesForMovedItem,
+	retargetDependents,
+	type ConvertedTaskDependencies
+} from './task-to-subtask.js';

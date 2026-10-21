@@ -165,9 +165,16 @@ export interface Task extends TaskImplementationMetadata {
  * Subtask interface extending Task
  * ID can be number (file storage) or string (API storage with display_id)
  */
-export interface Subtask extends Omit<Task, 'id' | 'subtasks'> {
+export interface Subtask
+	extends Omit<Task, 'id' | 'subtasks' | 'dependencies'> {
 	id: number | string;
 	parentId: string;
+	/**
+	 * The JSON type carries the meaning: a number below 100 is a sibling
+	 * subtask, a string without a dot is a task, a dotted string is a subtask.
+	 * Read them with `resolveSubtaskDependency`.
+	 */
+	dependencies: Array<string | number>;
 	subtasks?: never; // Subtasks cannot have their own subtasks
 }
 

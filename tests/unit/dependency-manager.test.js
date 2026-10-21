@@ -1015,7 +1015,9 @@ describe('Dependency Manager Module', () => {
 
 			mockFormatTaskId.mockImplementation((id) => {
 				if (typeof id === 'string' && id.includes('.')) return id; // keep dot notation
-				return parseInt(id, 10); // normalize top-level task IDs to number
+				// Like the real formatTaskId: a task ID is stored as a string, which on a
+				// subtask means a task (a bare number would mean a sibling)
+				return String(id);
 			});
 		});
 
@@ -1054,7 +1056,7 @@ describe('Dependency Manager Module', () => {
 			const subtask22 = parent2.subtasks.find((st) => st.id === 2);
 
 			// Verify the dependency was actually added to subtask 2.2
-			expect(subtask22.dependencies).toContain(11);
+			expect(subtask22.dependencies).toContain('11');
 			// Also verify a success log was emitted
 			const successCall = mockLog.mock.calls.find(
 				([level]) => level === 'success'
@@ -1130,19 +1132,15 @@ describe('Dependency Manager Module', () => {
 				'../../scripts/modules/dependency-manager.js'
 			);
 
-			const exitError = new Error('process.exit invoked');
-			process.exit.mockImplementation(() => {
-				throw exitError;
-			});
-
 			await expect(
 				addDependency(TEST_TASKS_PATH, '2.2', 99, { projectRoot: '/test' })
-			).rejects.toBe(exitError);
+			).rejects.toMatchObject({
+				code: 'TASK_NOT_FOUND',
+				message: 'Task 99 not found'
+			});
 
-			expect(process.exit).toHaveBeenCalledWith(1);
+			expect(process.exit).not.toHaveBeenCalled();
 			expect(mockWriteJSON).not.toHaveBeenCalled();
-			// Verify that an error was reported to the user
-			expect(mockLog).toHaveBeenCalled();
 		});
 
 		test('should remove top-level task dependency from a subtask', async () => {
@@ -1164,7 +1162,7 @@ describe('Dependency Manager Module', () => {
 			const subtask22AfterAdd = dataWithDep.tasks
 				.find((t) => t.id === 2)
 				.subtasks.find((st) => st.id === 2);
-			expect(subtask22AfterAdd.dependencies).toContain(11);
+			expect(subtask22AfterAdd.dependencies).toContain('11');
 
 			// Clear mocks and re-setup mockReadJSON with the modified data
 			vi.clearAllMocks();
@@ -1182,7 +1180,7 @@ describe('Dependency Manager Module', () => {
 			const subtask22 = saved.tasks
 				.find((t) => t.id === 2)
 				.subtasks.find((st) => st.id === 2);
-			expect(subtask22.dependencies).not.toContain(11);
+			expect(subtask22.dependencies).not.toContain('11');
 			// Verify success log was emitted
 			const successCall = mockLog.mock.calls.find(
 				([level]) => level === 'success'

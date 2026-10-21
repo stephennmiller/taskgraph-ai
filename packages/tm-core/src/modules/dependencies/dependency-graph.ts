@@ -2,10 +2,9 @@
  * @fileoverview Dependency graph analysis: pure functions over a task list.
  *
  * Tasks and subtasks are flattened into one graph keyed by task ID (subtasks
- * use dotted IDs like "2.1"). A bare number in a subtask's dependencies means
- * a sibling ("1" under task 2 is "2.1"), as it does in `getNextTask`. That
- * rule is ambiguous with a top-level task ID (see #175); keep it in step with
- * `getNextTask` until a shared helper exists. A parent task is not an edge to
+ * use dotted IDs like "2.1"). What a subtask's dependency names follows
+ * `resolveSubtaskDependency`: a bare number is a sibling (1 under task 2 is
+ * "2.1"), a string without a dot is a task. A parent task is not an edge to
  * its subtasks: finishing the subtasks does not unblock anything by itself.
  *
  * Dependency IDs that match no task are recorded as `missing` and never become
@@ -28,6 +27,7 @@
 
 import { isTaskComplete } from '../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../common/types/index.js';
+import { resolveSubtaskDependency } from './subtask-dependency.js';
 
 export interface DependencyGraphNode {
 	id: string;
@@ -84,10 +84,9 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 				title: sub.title,
 				status: sub.status ?? 'pending',
 				priority: sub.priority ?? task.priority,
-				deps: (sub.dependencies ?? []).map((d) => {
-					const dep = String(d);
-					return dep.includes('.') ? dep : `${id}.${dep}`;
-				})
+				deps: (sub.dependencies ?? []).map((d) =>
+					resolveSubtaskDependency(id, d)
+				)
 			});
 		}
 	}

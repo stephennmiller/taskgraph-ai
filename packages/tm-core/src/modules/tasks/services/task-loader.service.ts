@@ -7,8 +7,23 @@ import type { Task, Subtask } from '../../../common/types/index.js';
 import type { TaskService } from './task-service.js';
 import { getLogger } from '../../../common/logger/factory.js';
 import { isTaskComplete } from '../../../common/constants/index.js';
+import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 
 const logger = getLogger('TaskLoader');
+
+/**
+ * The sibling a subtask's dependency names, as the subtask's number under its
+ * parent ("2" for "5.2"), or null when it names a task or another task's
+ * subtask, which this per-task check cannot see.
+ */
+function siblingOf(
+	parentId: string,
+	dependency: string | number
+): string | null {
+	const full = resolveSubtaskDependency(parentId, dependency);
+	const prefix = `${parentId}.`;
+	return full.startsWith(prefix) ? full.slice(prefix.length) : null;
+}
 
 /**
  * Validation error types
@@ -233,9 +248,9 @@ export class TaskLoaderService {
 			// Check for missing dependencies
 			if (subtask.dependencies && subtask.dependencies.length > 0) {
 				for (const depId of subtask.dependencies) {
-					const depIdStr = String(depId);
+					const depIdStr = siblingOf(task.id, depId);
 
-					if (!subtaskIds.has(depIdStr)) {
+					if (depIdStr !== null && !subtaskIds.has(depIdStr)) {
 						issues.push({
 							subtaskId,
 							issueType: 'missing',
@@ -249,7 +264,7 @@ export class TaskLoaderService {
 			// Check for circular dependencies
 			const circularCheck = this.detectCircularDependency(
 				subtask,
-				task.subtasks,
+				task,
 				new Set()
 			);
 
@@ -289,7 +304,7 @@ export class TaskLoaderService {
 	 */
 	private detectCircularDependency(
 		subtask: Subtask,
-		allSubtasks: Subtask[],
+		parent: Task,
 		visited: Set<string>
 	): string[] | null {
 		const subtaskId = String(subtask.id);
@@ -302,13 +317,15 @@ export class TaskLoaderService {
 
 		if (subtask.dependencies && subtask.dependencies.length > 0) {
 			for (const depId of subtask.dependencies) {
-				const depIdStr = String(depId);
-				const dependency = allSubtasks.find((st) => String(st.id) === depIdStr);
+				const depIdStr = siblingOf(parent.id, depId);
+				const dependency = parent.subtasks.find(
+					(st) => String(st.id) === depIdStr
+				);
 
 				if (dependency) {
 					const circular = this.detectCircularDependency(
 						dependency,
-						allSubtasks,
+						parent,
 						new Set(visited)
 					);
 
@@ -345,7 +362,11 @@ export class TaskLoaderService {
 				const allDepsCompleted =
 					!subtask.dependencies ||
 					subtask.dependencies.length === 0 ||
-					subtask.dependencies.every((depId) => completed.has(String(depId)));
+					subtask.dependencies.every((depId) => {
+						// A task or another task's subtask is not ordered here
+						const sibling = siblingOf(task.id, depId);
+						return sibling === null || completed.has(sibling);
+					});
 
 				if (allDepsCompleted) {
 					ordered.push(subtask);

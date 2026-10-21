@@ -66,6 +66,7 @@ import {
 
 import {
 	addDependency,
+	DependencyError,
 	fixDependenciesCommand,
 	removeDependency,
 	validateDependenciesCommand
@@ -134,6 +135,24 @@ function aiErrorHint(error) {
 		return 'Try again, or reword the prompt';
 	}
 	return undefined;
+}
+
+/**
+ * Run a dependency command. Its DependencyError (no tasks, task not found, a
+ * loop, ...) is printed as a message with its hint and ends the command with
+ * exit code 1, not as a stack trace. Anything else is rethrown.
+ * @param {() => Promise<T>} run
+ * @returns {Promise<T>}
+ * @template T
+ */
+async function reportDependencyErrors(run) {
+	try {
+		return await run();
+	} catch (error) {
+		if (!(error instanceof DependencyError)) throw error;
+		printError(error.message, error.data?.hint);
+		process.exit(1);
+	}
 }
 
 /**
@@ -1402,14 +1421,16 @@ function registerCommands(programInstance) {
 				? dependencyId
 				: parseInt(dependencyId, 10);
 
-			await addDependency(
-				taskGraph.getTasksPath(),
-				formattedTaskId,
-				formattedDependencyId,
-				{
-					projectRoot: taskGraph.getProjectRoot(),
-					tag
-				}
+			await reportDependencyErrors(() =>
+				addDependency(
+					taskGraph.getTasksPath(),
+					formattedTaskId,
+					formattedDependencyId,
+					{
+						projectRoot: taskGraph.getProjectRoot(),
+						tag
+					}
+				)
 			);
 		});
 
@@ -1455,14 +1476,16 @@ function registerCommands(programInstance) {
 				? dependencyId
 				: parseInt(dependencyId, 10);
 
-			await removeDependency(
-				taskGraph.getTasksPath(),
-				formattedTaskId,
-				formattedDependencyId,
-				{
-					projectRoot: taskGraph.getProjectRoot(),
-					tag
-				}
+			await reportDependencyErrors(() =>
+				removeDependency(
+					taskGraph.getTasksPath(),
+					formattedTaskId,
+					formattedDependencyId,
+					{
+						projectRoot: taskGraph.getProjectRoot(),
+						tag
+					}
+				)
 			);
 		});
 
@@ -1489,9 +1512,10 @@ function registerCommands(programInstance) {
 			// Show current tag context
 			await displayCurrentTagIndicator(tag);
 
-			const result = await validateDependenciesCommand(
-				taskGraph.getTasksPath(),
-				{ context: { projectRoot: taskGraph.getProjectRoot(), tag } }
+			const result = await reportDependencyErrors(() =>
+				validateDependenciesCommand(taskGraph.getTasksPath(), {
+					context: { projectRoot: taskGraph.getProjectRoot(), tag }
+				})
 			);
 			console.log(ui.formatDependencyCheck(result));
 			// A check that finds problems fails, so scripts and CI can act on it
@@ -1519,9 +1543,11 @@ function registerCommands(programInstance) {
 			// Show current tag context
 			await displayCurrentTagIndicator(tag);
 
-			const result = await fixDependenciesCommand(taskGraph.getTasksPath(), {
-				context: { projectRoot: taskGraph.getProjectRoot(), tag }
-			});
+			const result = await reportDependencyErrors(() =>
+				fixDependenciesCommand(taskGraph.getTasksPath(), {
+					context: { projectRoot: taskGraph.getProjectRoot(), tag }
+				})
+			);
 			console.log(ui.formatDependencyFixes(result));
 			// Loops between tasks are left for the user; say so in the exit code
 			if (result.remaining.length > 0) process.exitCode = 1;

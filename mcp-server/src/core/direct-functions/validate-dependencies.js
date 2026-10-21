@@ -3,7 +3,10 @@
  */
 
 import fs from 'fs';
-import { validateDependenciesCommand } from '../../../../scripts/modules/dependency-manager.js';
+import {
+	DependencyError,
+	validateDependenciesCommand
+} from '../../../../scripts/modules/dependency-manager.js';
 import {
 	disableSilentMode,
 	enableSilentMode
@@ -79,7 +82,8 @@ export async function validateDependenciesDirect(args, log) {
 		return {
 			success: false,
 			error: {
-				code: 'VALIDATION_ERROR',
+				code:
+					error instanceof DependencyError ? error.code : 'VALIDATION_ERROR',
 				message: error.message
 			}
 		};

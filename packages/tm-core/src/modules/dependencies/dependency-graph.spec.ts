@@ -36,11 +36,12 @@ const sub = (
 		id,
 		title: `Subtask ${id}`,
 		status,
-		dependencies: dependencies.map(String)
+		// Kept as written: a number names a sibling, a string a task
+		dependencies
 	});
 
 describe('buildDependencyGraph', () => {
-	it('adds subtasks under dotted IDs and resolves bare subtask dependencies', () => {
+	it('adds subtasks under dotted IDs and resolves bare number subtask dependencies', () => {
 		const graph = buildDependencyGraph([
 			task('1', [], 'pending', [sub(1), sub(2, [1]), sub(3, ['2.1'])]),
 			task('2', ['1.2'])
@@ -274,13 +275,22 @@ describe('ties and cycles with finished tasks', () => {
 		expect(counts.get('3')).toBe(0);
 	});
 
-	it('resolves a bare string dependency on a subtask as a sibling', () => {
+	it('resolves a bare number dependency on a subtask as a sibling', () => {
 		const path = criticalPath([
-			task('1', [], 'pending', [sub(1), sub(2, ['1'])]),
+			task('1', [], 'pending', [sub(1), sub(2, [1])]),
 			task('2', ['1.2'])
 		]);
 
 		expect(path).toEqual(['1.1', '1.2', '2']);
+	});
+
+	it('resolves a string dependency without a dot on a subtask as a task', () => {
+		const path = criticalPath([
+			task('1', [], 'pending', [sub(1), sub(2, ['3'])]),
+			task('3')
+		]);
+
+		expect(path).toEqual(['3', '1.2']);
 	});
 });
 
