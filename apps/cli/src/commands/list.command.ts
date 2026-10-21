@@ -9,12 +9,10 @@ import {
 	createTmCore,
 	filterBlockingTasks,
 	filterReadyTasks,
-	isTaskComplete,
 	type InvalidDependency,
 	type OutputFormat,
 	STATUS_ICONS,
 	TASK_STATUSES,
-	type Task,
 	type TaskStatus,
 	type TaskWithBlocks,
 	type TmCore,
@@ -23,7 +21,6 @@ import {
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
-	type NextTaskInfo,
 	calculateDependencyStatistics,
 	calculateSubtaskStatistics,
 	calculateTaskStatistics,
@@ -74,6 +71,8 @@ export interface ListTasksResult {
 	filtered: number;
 	tag?: string;
 	allTags?: boolean;
+	/** ID of the task `next` would pick; only looked up for the text view */
+	nextTaskId?: string | null;
 }
 
 /**
@@ -363,10 +362,22 @@ export class ListTasksCommand extends Command {
 			);
 		}
 
+		// The recommendation comes from tm-core so it matches `taskgraph next`
+		const showsNext =
+			!options.json &&
+			!options.compact &&
+			(options.format ?? 'text') === 'text' &&
+			!options.ready &&
+			!options.blocking;
+		const next = showsNext
+			? await this.tmCore.tasks.getNext(options.tag)
+			: null;
+
 		return {
 			...result,
 			tasks: filteredTasks,
-			filtered: filteredTasks.length
+			filtered: filteredTasks.length,
+			nextTaskId: next ? String(next.id) : null
 		} as ListTasksResult;
 	}
 
@@ -616,12 +627,9 @@ export class ListTasksCommand extends Command {
 		const depStats = calculateDependencyStatistics(tasks);
 		const priorityBreakdown = getPriorityBreakdown(tasks);
 
-		// Find next task following the same logic as findNextTask
-		const nextTaskInfo = this.findNextTask(tasks);
-
 		// Get the full task object with complexity data already included
-		const nextTask = nextTaskInfo
-			? tasks.find((t) => String(t.id) === String(nextTaskInfo.id))
+		const nextTask = data.nextTaskId
+			? tasks.find((t) => String(t.id) === data.nextTaskId)
 			: undefined;
 
 		// Display dashboard boxes unless filtering by --ready, --blocking, or --all-tags
@@ -677,128 +685,6 @@ export class ListTasksCommand extends Command {
 	 */
 	private setLastResult(result: ListTasksResult): void {
 		this.lastResult = result;
-	}
-
-	/**
-	 * Find the next task to work on
-	 * Implements the same logic as scripts/modules/task-manager/find-next-task.js
-	 */
-	private findNextTask(tasks: Task[]): NextTaskInfo | undefined {
-		const priorityValues: Record<string, number> = {
-			critical: 4,
-			high: 3,
-			medium: 2,
-			low: 1
-		};
-
-		// Build set of completed task IDs (including subtasks)
-		const completedIds = new Set<string>();
-		tasks.forEach((t) => {
-			if (isTaskComplete(t.status)) {
-				completedIds.add(String(t.id));
-			}
-			if (t.subtasks) {
-				t.subtasks.forEach((st) => {
-					if (isTaskComplete(st.status as TaskStatus)) {
-						completedIds.add(`${t.id}.${st.id}`);
-					}
-				});
-			}
-		});
-
-		// First, look for eligible subtasks in in-progress parent tasks
-		const candidateSubtasks: NextTaskInfo[] = [];
-
-		tasks
-			.filter(
-				(t) => t.status === 'in-progress' && t.subtasks && t.subtasks.length > 0
-			)
-			.forEach((parent) => {
-				parent.subtasks!.forEach((st) => {
-					const stStatus = (st.status || 'pending').toLowerCase();
-					if (stStatus !== 'pending' && stStatus !== 'in-progress') return;
-
-					// Check if dependencies are satisfied
-					const fullDeps =
-						st.dependencies?.map((d) => {
-							// Handle both numeric and string IDs
-							if (typeof d === 'string' && d.includes('.')) {
-								return d;
-							}
-							return `${parent.id}.${d}`;
-						}) ?? [];
-
-					const depsSatisfied =
-						fullDeps.length === 0 ||
-						fullDeps.every((depId) => completedIds.has(String(depId)));
-
-					if (depsSatisfied) {
-						candidateSubtasks.push({
-							id: `${parent.id}.${st.id}`,
-							title: st.title || `Subtask ${st.id}`,
-							priority: st.priority || parent.priority || 'medium',
-							dependencies: fullDeps.map((d) => String(d))
-						});
-					}
-				});
-			});
-
-		if (candidateSubtasks.length > 0) {
-			// Sort by priority, then by dependencies count, then by ID
-			candidateSubtasks.sort((a, b) => {
-				const pa = priorityValues[a.priority || 'medium'] ?? 2;
-				const pb = priorityValues[b.priority || 'medium'] ?? 2;
-				if (pb !== pa) return pb - pa;
-
-				const depCountA = a.dependencies?.length || 0;
-				const depCountB = b.dependencies?.length || 0;
-				if (depCountA !== depCountB) return depCountA - depCountB;
-
-				return String(a.id).localeCompare(String(b.id));
-			});
-			return candidateSubtasks[0];
-		}
-
-		// Fall back to finding eligible top-level tasks
-		const eligibleTasks = tasks.filter((task) => {
-			// Skip non-eligible statuses
-			const status = (task.status || 'pending').toLowerCase();
-			if (status !== 'pending' && status !== 'in-progress') return false;
-
-			// Check dependencies
-			const deps = task.dependencies || [];
-			const depsSatisfied =
-				deps.length === 0 ||
-				deps.every((depId) => completedIds.has(String(depId)));
-
-			return depsSatisfied;
-		});
-
-		if (eligibleTasks.length === 0) return undefined;
-
-		// Sort eligible tasks
-		eligibleTasks.sort((a, b) => {
-			// Priority (higher first)
-			const pa = priorityValues[a.priority || 'medium'] ?? 2;
-			const pb = priorityValues[b.priority || 'medium'] ?? 2;
-			if (pb !== pa) return pb - pa;
-
-			// Dependencies count (fewer first)
-			const depCountA = a.dependencies?.length || 0;
-			const depCountB = b.dependencies?.length || 0;
-			if (depCountA !== depCountB) return depCountA - depCountB;
-
-			// ID (lower first)
-			return Number(a.id) - Number(b.id);
-		});
-
-		const nextTask = eligibleTasks[0];
-		return {
-			id: nextTask.id,
-			title: nextTask.title,
-			priority: nextTask.priority,
-			dependencies: nextTask.dependencies?.map((d) => String(d))
-		};
 	}
 
 	/**
