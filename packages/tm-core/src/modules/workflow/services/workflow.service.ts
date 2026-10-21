@@ -89,6 +89,12 @@ export interface WorkflowServiceOptions {
 	tag?: string;
 }
 
+/** The task list numbers subtasks 1, 2, ...; status updates need "5.1" */
+function qualifySubtaskId(taskId: string, subtaskId: string | number): string {
+	const id = String(subtaskId);
+	return id.includes('.') ? id : `${taskId}.${id}`;
+}
+
 /**
  * WorkflowService - Facade for workflow operations
  * Manages WorkflowOrchestrator lifecycle and state persistence
@@ -178,7 +184,7 @@ export class WorkflowService {
 
 		// Parse subtasks to WorkflowContext format
 		const workflowSubtasks: SubtaskInfo[] = subtasks.map((st) => ({
-			id: st.id,
+			id: qualifySubtaskId(taskId, st.id),
 			title: st.title,
 			status: st.status === 'done' ? 'completed' : 'pending',
 			attempts: 0,
@@ -485,7 +491,12 @@ export class WorkflowService {
 		// Mark completed subtask as done (use workflow's tag from context)
 		if (completedSubtaskId) {
 			const context = this.orchestrator.getContext();
-			await this.updateTaskStatus(completedSubtaskId, 'done', context.tag);
+			// A workflow saved before ids were qualified still holds bare ones
+			await this.updateTaskStatus(
+				qualifySubtaskId(context.taskId, completedSubtaskId),
+				'done',
+				context.tag
+			);
 		}
 
 		return this.getStatus();
