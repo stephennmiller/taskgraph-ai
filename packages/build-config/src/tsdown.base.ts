@@ -24,7 +24,11 @@ export const baseConfig: Partial<UserConfig> = {
 	sourcemap: isDevelopment,
 	format: 'esm',
 	platform: 'node',
-	dts: isDevelopment,
+	// Nothing consumes declarations for these plain JS entries (the emitted .d.ts
+	// were empty stubs). Emit also fails on ai-providers/base-provider.js: TS 5.9
+	// reports TS9006 and TS 7 TS4053 (private name PartialObject from `ai`), and
+	// rolldown-plugin-dts switches to the tsgo binary on TS 7 and fails hard.
+	dts: false,
 	minify: isProduction,
 	treeshake: isProduction,
 	// Better debugging in development

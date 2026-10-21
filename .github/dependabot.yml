@@ -33,11 +33,13 @@ updates:
       default-days: 7
     open-pull-requests-limit: 5
     ignore:
-      # TypeScript 7 is the native-compiler rewrite: it removes tsconfig options
-      # we use (`baseUrl`) and needs every workspace tsconfig and the build tooling
-      # reviewed. Migrate on purpose, not through a bump PR.
+      # TypeScript majors change tsconfig defaults and options (6.0 deprecated
+      # `baseUrl`, 7.0 is the native-compiler rewrite) and tsdown/rolldown-plugin-dts
+      # pin the supported range. Migrate on purpose, not through a bump PR.
+      # rolldown-plugin-dts peers `typescript ~7.0.0`, so a 7.1 bump breaks
+      # installs; minors need the same deliberate migration.
       - dependency-name: 'typescript'
-        update-types: ['version-update:semver-major']
+        update-types: ['version-update:semver-major', 'version-update:semver-minor']
       # marked-terminal 7.3.0 (the latest release) declares a peer of
       # `marked >=1 <16`, so `npm ci` fails on marked 16+. Revisit once
       # marked-terminal publishes a release that supports newer marked.
