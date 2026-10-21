@@ -477,10 +477,6 @@ These utilities specifically support the implementation and execution of MCP too
     - **Purpose**: Creates a logger object wrapper with standard methods (`info`, `warn`, `error`, `debug`, `success`) mapping to the passed MCP `log` object's methods. Ensures compatibility when passing loggers to core functions.
     - **Usage**: Used within direct functions before passing the `log` object down to core logic that expects the standard method names.
 
-- **`getCachedOrExecute({ cacheKey, actionFn, log })`**:
-    - **Purpose**: Utility for implementing caching within direct functions. Checks cache for `cacheKey`; if miss, executes `actionFn`, caches successful result, and returns.
-    - **Usage**: Wrap the core logic execution within a direct function call.
-
 - **`processMCPResponseData(taskOrData, fieldsToRemove)`**:
     - **Purpose**: Utility to filter potentially sensitive or large fields (like `details`, `testStrategy`) from task objects before sending the response back via MCP.
     - **Usage**: Passed as the default `processFunction` to `handleApiResult`.
@@ -544,8 +540,7 @@ export {
   executeTaskGraphCommand,
   processMCPResponseData,
   createContentResponse,
-  createErrorResponse,
-  getCachedOrExecute
+  createErrorResponse
 };
 ```
 

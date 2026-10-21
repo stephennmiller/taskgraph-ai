@@ -9,7 +9,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import packageJson from '../../../package.json' with { type: 'json' };
 import { getCurrentTag } from '../../../scripts/modules/utils.js';
-import { contextManager } from '../core/context-manager.js'; // Import the singleton
 
 // Import path utilities to ensure consistent path resolution
 import {
@@ -405,49 +404,6 @@ function executeTaskGraphCommand(
 }
 
 /**
- * Checks cache for a result using the provided key. If not found, executes the action function,
- * caches the result upon success, and returns the result.
- *
- * @param {Object} options - Configuration options.
- * @param {string} options.cacheKey - The unique key for caching this operation's result.
- * @param {Function} options.actionFn - The async function to execute if the cache misses.
- *                                      Should return an object like { success: boolean, data?: any, error?: { code: string, message: string } }.
- * @param {Object} options.log - The logger instance.
- * @returns {Promise<Object>} - An object containing the result.
- *                              Format: { success: boolean, data?: any, error?: { code: string, message: string } }
- */
-async function getCachedOrExecute({ cacheKey, actionFn, log }) {
-	// Check cache first
-	const cachedResult = contextManager.getCachedData(cacheKey);
-
-	if (cachedResult !== undefined) {
-		log.info(`Cache hit for key: ${cacheKey}`);
-		return cachedResult;
-	}
-
-	log.info(`Cache miss for key: ${cacheKey}. Executing action function.`);
-
-	// Execute the action function if cache missed
-	const result = await actionFn();
-
-	// If the action was successful, cache the result
-	if (result.success && result.data !== undefined) {
-		log.info(`Action successful. Caching result for key: ${cacheKey}`);
-		contextManager.setCachedData(cacheKey, result);
-	} else if (!result.success) {
-		log.warn(
-			`Action failed for cache key ${cacheKey}. Result not cached. Error: ${result.error?.message}`
-		);
-	} else {
-		log.warn(
-			`Action for cache key ${cacheKey} succeeded but returned no data. Result not cached.`
-		);
-	}
-
-	return result;
-}
-
-/**
  * Recursively removes specified fields from task objects, whether single or in an array.
  * Handles common data structures returned by task commands.
  * @param {Object|Array} taskOrData - A single task object or a data object containing a 'tasks' array.
@@ -835,7 +791,6 @@ export {
 	getTagInfo,
 	handleApiResult,
 	executeTaskGraphCommand,
-	getCachedOrExecute,
 	processMCPResponseData,
 	createContentResponse,
 	createErrorResponse,
