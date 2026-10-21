@@ -142,6 +142,10 @@ export class LoopCommand extends Command {
 
 			const result = await this.tmCore.loop.run(config);
 			this.displayResult(result);
+			// Scripts and CI read the exit code; a stuck or failed loop is a failure
+			if (result.finalStatus === 'error' || result.finalStatus === 'blocked') {
+				process.exitCode = 1;
+			}
 		} catch (error: unknown) {
 			displayError(error, { skipExit: true });
 			process.exit(1);

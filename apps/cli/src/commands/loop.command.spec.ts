@@ -340,6 +340,36 @@ describe('LoopCommand', () => {
 		});
 	});
 
+	describe('exit code', () => {
+		const run = () => (loopCommand as any).execute.bind(loopCommand)({});
+
+		afterEach(() => {
+			process.exitCode = undefined;
+		});
+
+		it.each(['error', 'blocked'] as const)(
+			'fails the process when the loop ends %s',
+			async (finalStatus) => {
+				mockLoopRun.mockResolvedValue(createMockResult({ finalStatus }));
+
+				await run();
+
+				expect(process.exitCode).toBe(1);
+			}
+		);
+
+		it.each(['all_complete', 'max_iterations'] as const)(
+			'succeeds when the loop ends %s',
+			async (finalStatus) => {
+				mockLoopRun.mockResolvedValue(createMockResult({ finalStatus }));
+
+				await run();
+
+				expect(process.exitCode).toBeUndefined();
+			}
+		);
+	});
+
 	describe('execute integration', () => {
 		it('should call tmCore.loop.run with parsed config', async () => {
 			const result = createMockResult();
