@@ -50,4 +50,36 @@ describe('selectNextTask', () => {
 	it('returns null when nothing is eligible', () => {
 		expect(selectNextTask([createTask({ id: 1, title: 'x', status: 'done' })])).toBeNull();
 	});
+
+	it('treats a task with no status as pending', () => {
+		const next = selectNextTask([
+			{ ...createTask({ id: 1, title: 'No status' }), status: undefined as never }
+		]);
+
+		expect(next?.id).toBe('1');
+	});
+
+	it('prefers a subtask of an in-progress task over a higher-priority task', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Urgent', priority: 'critical' }),
+			createTask({
+				id: 2,
+				title: 'Started',
+				status: 'in-progress',
+				priority: 'low',
+				subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '2' })]
+			})
+		]);
+
+		expect(next?.id).toBe('2.1');
+	});
+
+	it('orders ids numerically, so 2 comes before 10', () => {
+		const next = selectNextTask([
+			createTask({ id: 10, title: 'Ten' }),
+			createTask({ id: 2, title: 'Two' })
+		]);
+
+		expect(next?.id).toBe('2');
+	});
 });

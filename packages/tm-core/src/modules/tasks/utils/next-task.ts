@@ -23,8 +23,11 @@ const isDone = (status: string | undefined) =>
 export function selectNextTask(tasks: Task[]): Task | null {
 	// Eligibility only sees these statuses; blocked counts see every task,
 	// since deferred, blocked and review tasks still wait on their dependencies
+	// A hand-edited task may have no status; it counts as pending
 	const allTasks = tasks.filter((t) =>
-		['pending', 'in-progress', 'done', 'completed'].includes(t.status)
+		['pending', 'in-progress', 'done', 'completed'].includes(
+			t.status || 'pending'
+		)
 	);
 	const blockedCounts = blockedCount(tasks);
 	const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;

@@ -1,5 +1,4 @@
 import { selectNextTask } from '@tm/core';
-import { log } from '../utils.js';
 import { addComplexityToTask } from '../utils.js';
 
 /**
@@ -8,13 +7,15 @@ import { addComplexityToTask } from '../utils.js';
  *      whose own status is `in-progress`.
  *   •  If no such subtask exists, fall back to the best top-level task
  *      (previous behaviour).
+ *   •  Ties break by priority, then how much work a task unblocks, then
+ *      fewest dependencies, then lowest id. The rule is in @tm/core.
  *
  * The function still exports the same name (`findNextTask`) so callers
  * don't need to change.  It now always returns an object with
  *  ─ id            →  number  (task)  or  "parentId.subId"  (subtask)
  *  ─ title         →  string
  *  ─ status        →  string
- *  ─ priority      →  string  ("high" | "medium" | "low")
+ *  ─ priority      →  string  ("critical" | "high" | "medium" | "low")
  *  ─ dependencies  →  array   (all IDs expressed in the same dotted form)
  *  ─ parentId      →  number  (present only when it's a subtask)
  *
