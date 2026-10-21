@@ -53,7 +53,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
   <Accordion title="Show Next Task">
     ```bash
-    # Show the next task to work on based on dependencies and status
+    # Show the next task to work on: dependencies done, then priority,
+    # then most unblocked work, then fewer dependencies, then lowest ID
     taskgraph next
     ```
   </Accordion>
@@ -65,12 +66,17 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # task is marked "← next". Loops and missing dependency IDs are called out.
     taskgraph graph
 
-    # Only one task and everything that depends on it
+    # Only one task and the tasks drawn under it
     taskgraph graph --id=3
 
-    # Machine-readable tree
+    # Machine-readable tree, with bottlenecks, criticalPath and per-node
+    # `inferred` dependencies
     taskgraph graph --format json
     ```
+
+    Text output also marks bottlenecks (`blocks N`), the critical path (`◆`)
+    and AI-inferred dependencies (`*`), with a legend. See
+    [Dependency Graph](/capabilities/dependency-graph).
   </Accordion>
 
   <Accordion title="Explain Why a Task Is Blocked">

@@ -1,5 +1,22 @@
 /**
  * @fileoverview Draws a @tm/core DependencyTree as an indented terminal tree
+ *
+ * Example:
+ *   ✓ 1  Set up the database
+ *   └─ ○ 2*  Build the login API · blocks 2 ◆
+ *      └─ ○ 3  Add the dashboard · needs 4* · blocks 1 ◆
+ *
+ *   Bottlenecks
+ *     2  blocks 2  Build the login API
+ *     3  blocks 1  Add the dashboard
+ *
+ *   Critical path: 2 → 3
+ *
+ *   ✓ done  ○ pending
+ *   ◆ critical path  * dependency inferred by AI
+ *
+ * Which tasks are bottlenecks, on the critical path or inferred comes from
+ * tm-core; this only looks them up and draws them.
  */
 
 import type { DependencyTree, DependencyTreeNode, TaskStatus } from '@tm/core';
@@ -28,6 +45,27 @@ const LEGEND: [TaskStatus, string][] = [
 /** Plain-text width, ignoring ANSI color codes */
 const visible = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '').length;
 
+/** "Critical path: 1 → 2 → ..." wrapped between IDs, continuation lines indented */
+function wrapPath(ids: string[], width: number): string[] {
+	const label = 'Critical path:';
+	const rows: string[] = [];
+	let row = `${label} ${ids[0]}`;
+	for (const id of ids.slice(1)) {
+		const piece = ` → ${id}`;
+		// Leave room for the " →" that ends a row
+		if (row.length + piece.length > width - 2) {
+			rows.push(`${row} →`);
+			row = `  ${id}`;
+		} else {
+			row += piece;
+		}
+	}
+	rows.push(row);
+	return rows.map((r, i) =>
+		i === 0 ? theme.muted(label) + r.slice(label.length) : r
+	);
+}
+
 export function renderDependencyTree(
 	tree: DependencyTree,
 	options: RenderDependencyTreeOptions = {}
@@ -37,22 +75,44 @@ export function renderDependencyTree(
 	const nextTask = next?.split('.')[0];
 	const lines: string[] = [];
 	const seen = new Set<TaskStatus>();
+	const blocksById = new Map(tree.bottlenecks.map((b) => [b.id, b.blocks]));
+	const critical = new Set(tree.criticalPath);
+	let showedCritical = false;
+	let showedInferred = false;
 
-	const line = (node: DependencyTreeNode, lead: string) => {
+	const line = (node: DependencyTreeNode, lead: string, parentId?: string) => {
 		seen.add(node.status);
 		const isNext = node.id === nextTask;
+		const isInferred = (dep: string) => node.inferred.includes(dep);
+		const withMark = (dep: string) => {
+			if (!isInferred(dep)) return dep;
+			showedInferred = true;
+			return `${dep}*`;
+		};
 		const notes: string[] = [];
-		if (node.alsoNeeds.length) notes.push(`needs ${node.alsoNeeds.join(', ')}`);
+		if (node.alsoNeeds.length) {
+			notes.push(`needs ${node.alsoNeeds.map(withMark).join(', ')}`);
+		}
+		const blocks = blocksById.get(node.id);
+		if (blocks !== undefined) notes.push(`blocks ${blocks}`);
+		const onPath = critical.has(node.id);
+		if (onPath) showedCritical = true;
+		const inferredParent = parentId !== undefined && isInferred(parentId);
+		if (inferredParent) showedInferred = true;
+		const idLabel = inferredParent
+			? `${theme.brand(node.id)}${theme.muted('*')}`
+			: theme.brand(node.id);
 		const missing = node.missing.length
 			? chalk.yellow(` · missing ${node.missing.join(', ')}`)
 			: '';
 		const suffix =
 			(notes.length ? theme.muted(` · ${notes.join(' · ')}`) : '') +
 			missing +
+			(onPath ? theme.brand(' ◆') : '') +
 			(isNext
 				? theme.brand.bold(next !== nextTask ? `  ← next: ${next}` : '  ← next')
 				: '');
-		const head = `${lead}${getStatusIcon(node.status)} ${theme.brand(node.id)}  `;
+		const head = `${lead}${getStatusIcon(node.status)} ${idLabel}  `;
 		const room = Math.max(12, width - visible(head) - visible(suffix));
 		const title = truncate(node.title, room);
 		const styled =
@@ -64,11 +124,18 @@ export function renderDependencyTree(
 		return head + styled + suffix;
 	};
 
-	const walk = (node: DependencyTreeNode, prefix: string, last: boolean) => {
-		lines.push(line(node, prefix + theme.muted(last ? '└─ ' : '├─ ')));
+	const walk = (
+		node: DependencyTreeNode,
+		parent: DependencyTreeNode,
+		prefix: string,
+		last: boolean
+	) => {
+		lines.push(
+			line(node, prefix + theme.muted(last ? '└─ ' : '├─ '), parent.id)
+		);
 		const childPrefix = prefix + theme.muted(last ? '   ' : '│  ');
 		node.children.forEach((c, i) =>
-			walk(c, childPrefix, i === node.children.length - 1)
+			walk(c, node, childPrefix, i === node.children.length - 1)
 		);
 	};
 
@@ -77,7 +144,7 @@ export function renderDependencyTree(
 		if (prev && (prev.children.length || root.children.length)) lines.push('');
 		lines.push(line(root, ''));
 		root.children.forEach((c, j) =>
-			walk(c, '', j === root.children.length - 1)
+			walk(c, root, '', j === root.children.length - 1)
 		);
 	});
 
@@ -100,9 +167,30 @@ export function renderDependencyTree(
 		}
 	}
 
+	if (tree.bottlenecks.length) {
+		const idWidth = Math.max(...tree.bottlenecks.map((b) => b.id.length));
+		const blocks = tree.bottlenecks.map((b) => `blocks ${b.blocks}`);
+		const blocksWidth = Math.max(...blocks.map((t) => t.length));
+		const room = Math.max(12, width - (2 + idWidth + 2 + blocksWidth + 2));
+		lines.push('', theme.muted('Bottlenecks'));
+		tree.bottlenecks.forEach((b, i) => {
+			lines.push(
+				`  ${theme.brand(b.id.padEnd(idWidth))}  ${chalk.yellow(blocks[i].padEnd(blocksWidth))}  ${truncate(b.title, room)}`
+			);
+		});
+	}
+	if (tree.criticalPath.length) {
+		lines.push('', ...wrapPath(tree.criticalPath, width));
+	}
+
 	const legend = LEGEND.filter(([s]) => seen.has(s))
 		.map(([s, label]) => `${getStatusIcon(s)} ${theme.muted(label)}`)
 		.join('  ');
 	if (legend) lines.push('', legend);
+	const markers = [
+		showedCritical ? '◆ critical path' : '',
+		showedInferred ? '* dependency inferred by AI' : ''
+	].filter(Boolean);
+	if (markers.length) lines.push(theme.muted(markers.join('  ')));
 	return lines;
 }

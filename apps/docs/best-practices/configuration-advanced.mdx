@@ -10,7 +10,7 @@ This page covers MCP tool loading, timeouts, tagged task lists and the state fil
 The `TASKGRAPH_TOOLS` environment variable controls which tools the TaskGraph MCP server loads, so you can trade features for context.
 
 - **`core`** (default, alias `lean`): 7 essential tools. `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task`.
-- **`standard`**: 14 tools. Core plus project initialization, complexity analysis, `expand_all`, subtask and task add/remove.
+- **`standard`**: 15 tools. Core plus project initialization, complexity analysis, `dependency_analysis`, `expand_all`, subtask and task add/remove.
 - **`all`**: every tool, including dependencies, tags, `research`, scope up/down and the `autopilot_*` TDD workflow.
 - **Custom list**: comma-separated tool names, for example `"get_tasks,next_task,set_task_status"`.
 

@@ -54,6 +54,7 @@
 							"capabilities/mcp",
 							"capabilities/cli-root-commands",
 							"capabilities/task-structure",
+							"capabilities/dependency-graph",
 							"capabilities/loop",
 							"capabilities/research",
 							"capabilities/github-sync"

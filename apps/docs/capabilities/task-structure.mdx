@@ -251,8 +251,8 @@ taskgraph expand --all
 <Accordion title="Finding the Next Task">
 The `next` command:
 
-- Identifies tasks that are pending/in-progress and have all dependencies satisfied
-- Prioritizes tasks by priority level, dependency count, and task ID
+- Identifies tasks that are pending/in-progress and have all dependencies done
+- Prefers subtasks of an in-progress parent, then orders candidates by priority, then by how many unfinished tasks they unblock, then by fewer dependencies, then by task ID (see [Dependency Graph](/capabilities/dependency-graph))
 - Displays comprehensive information about the selected task:
   - Basic task details (ID, title, priority, dependencies)
   - Implementation details

@@ -1,0 +1,158 @@
+---
+title: "Dependency Graph"
+sidebarTitle: "Dependency Graph"
+description: "How TaskGraph picks the next task, finds bottlenecks and the critical path, explains blocked tasks, and records where each dependency came from"
+---
+
+Task dependencies form a graph. TaskGraph reads that graph to pick the next task, to show what holds up the most work, and to explain why a task can't start. The analysis (bottlenecks, critical path, blockers, cycles) lives in `@tm/core` (`packages/tm-core/src/modules/dependencies/`), and `taskgraph graph`, `taskgraph why`, `taskgraph next` and the `dependency_analysis` MCP tool only display it. Some older code paths still do their own thing; see [Open issues](#open-issues).
+
+## How `next` orders tasks
+
+`taskgraph next` (and the recommendation in `taskgraph list`) considers tasks that are `pending` or `in-progress` and whose dependencies are all `done`. Subtasks of an in-progress parent are considered first; a subtask whose parent is not `in-progress` is never offered, even when `why` reports it as ready to start. Among the candidates it picks by:
+
+1. **Priority**: `critical`, then `high`, `medium`, `low`.
+2. **Unblocks the most**: the task with the most unfinished tasks waiting on it, directly or through other tasks.
+3. **Fewer dependencies**: the task that lists fewer dependencies.
+4. **ID**: the lowest ID.
+
+Step 2 counts every unfinished task, including `deferred`, `blocked` and `review` ones, because they still wait on their dependencies. A task is "unfinished" unless it is `done`, `completed` or `cancelled`.
+
+## How a subtask's dependencies are read
+
+A subtask's `dependencies` can name a sibling, another task's subtask or a top-level task. The stored value decides which:
+
+- **A number below 100** (`3`) is a sibling subtask: `3` under task 2 is `2.3`.
+- **A dotted string** (`"4.1"`) is that subtask.
+- **Anything else** (a string without a dot, like `"3"`, or a number of 100 or more) is a top-level task.
+
+`add-dependency` stores a task as a string (`"3"`), so it is never read as a sibling. On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
+
+## `taskgraph graph`
+
+```bash
+taskgraph graph                  # all tasks as a tree
+taskgraph graph --id=3           # one task and the tasks drawn under it
+taskgraph graph --format json    # machine-readable
+```
+
+Each task is drawn once, under the dependency it waits on longest. Its other dependencies follow the title (`needs 4`). The task `next` would pick is marked `← next`; when `next` picks a subtask, its parent is marked `← next: 3.2`. Tasks in a dependency loop and dependency IDs that match no task are called out.
+
+```
+○ 1  Set up the database · blocks 3 ◆  ← next
+└─ ○ 2*  Build the login API · blocks 2 ◆
+   └─ ○ 3  Add the dashboard · needs 4* · blocks 1 ◆
+      └─ ○ 5  Write docs ◆
+
+○ 4  Design the schema · blocks 2
+
+Bottlenecks
+  1  blocks 3  Set up the database
+  2  blocks 2  Build the login API
+  4  blocks 2  Design the schema
+  3  blocks 1  Add the dashboard
+
+Critical path: 1 → 2 → 3 → 5
+
+○ pending
+◆ critical path  * dependency inferred by AI
+```
+
+- **`blocks N`** marks a bottleneck: an unfinished task that N unfinished tasks wait on. The list shows the top five, most first, ties to the lowest ID. Tasks that block nothing are left out.
+- **`◆`** marks the critical path: the longest chain of unfinished work, dependencies first. Ties go to the lowest IDs.
+- **`*`** marks a dependency the AI chose rather than you (see [Dependency provenance](#dependency-provenance)). After an ID in a `needs` list, it marks that dependency. After a task's own ID (`2*`), it marks that task's edge to the task drawn above it.
+
+### JSON output
+
+`--format json` returns the tree plus the analysis:
+
+| Field | Contents |
+|---|---|
+| `roots`, `cyclic`, `total` | The tree. Each node has `id`, `title`, `status`, `priority`, `alsoNeeds`, `missing`, `children` |
+| `roots[].inferred` | On every node: the dependency IDs (the tree parent included) recorded as AI-inferred. Anything not listed is explicit |
+| `bottlenecks` | Up to five `{ id, title, status, blocks }`, most first |
+| `criticalPath` | Task IDs, dependencies first |
+| `tag`, `nextId` | The tag shown and the task `next` would pick |
+
+### Known limits
+
+- There is no edge between a parent and its subtasks: the parent doesn't wait on them, so finishing them unblocks nothing by itself. In a project with expanded tasks, the critical path can therefore miss a chain that runs through a parent.
+- Tasks in a dependency cycle, and tasks that depend on one, are left out of the critical path, since they can't be started. Use `taskgraph why` to find and break the loop.
+- The tree shows top-level tasks only. `bottlenecks` and `criticalPath` can name subtasks such as `2.1`; they appear in those lists but not as tree nodes.
+- A top-level task's dependency on a subtask is drawn as `missing 2.1` (and listed in the node's `missing`), because the tree only knows top-level tasks. It is not missing: `bottlenecks`, `criticalPath`, `why` and `dependency_analysis` follow it. For the same reason, a loop that runs through a subtask is not called out in the tree; `why`, `validate-dependencies` and the `cycles` of `dependency_analysis` report it.
+- `--id` draws the task and the tasks placed under it. Each task is drawn under only one dependency (the one it waits on longest), so a task that also needs the chosen task, but is drawn under another dependency, does not appear. The chosen task's own parent edge is not shown or marked, and bottlenecks and the critical path still cover the whole tag.
+
+## `taskgraph why`
+
+```bash
+taskgraph why 5            # why can't task 5 start?
+taskgraph why 3.2          # subtasks work too
+taskgraph why 5 --format json
+```
+
+`why` follows a task's unfinished dependencies down to the root causes and prints the tree of blockers, then what to do:
+
+```
+○ 5  Write docs
+Blocked by:
+└─ ○ 3  Add the dashboard
+   ├─ ○ 2  Build the login API
+   │  └─ ○ 1  Set up the database  ← ready to start
+   └─ ○ 4  Design the schema  ← ready to start
+
+To unblock:
+  Do 1 (Set up the database) and 4 (Design the schema): nothing else stands in their way.
+```
+
+A chain ends at one of four root causes: `ready` (unfinished, nothing in its way), `stalled` (`deferred` or `blocked`), `missing` (the ID matches no task) or `cycle` (it depends on itself through the chain). The JSON has `id`, `title`, `status`, `blocked`, `tag`, a nested `blockers` tree and `rootCauses`; see [CLI commands](/capabilities/cli-root-commands) for the full shape.
+
+### Exit codes
+
+`why` and `graph` exit 0 on success, whether or not the task is blocked. They exit 1 for a missing or malformed ID (`why`), an unknown task, or an unsupported `--format`.
+
+### Known limit
+
+A subtask does not inherit its parent's blockers in `why`. If task 3 is blocked, `why 3.1` explains only the dependencies listed on subtask 3.1 itself.
+
+## Dependency provenance
+
+Every dependency is either **explicit** (you added it, or it was already there) or **inferred** (the AI chose it in `parse-prd`, `add-task`, `expand`, `update`, `update-task`, or `scope-up` / `scope-down`). A dependency you asked for in an update prompt is still recorded as inferred, because the model decides which IDs to write. The other AI commands (`research`, `analyze-complexity`, `update-subtask`) never write dependencies.
+
+### Where it is stored
+
+Provenance lives in the task's `metadata.dependencySources`, a map from dependency ID to `"inferred"`:
+
+```json
+{
+  "id": "3",
+  "dependencies": ["2", "4"],
+  "metadata": {
+    "dependencySources": { "4": "inferred" }
+  }
+}
+```
+
+- **Only inferred dependencies are stored.** A dependency with no entry is explicit, so existing files need no migration.
+- **Keys are full IDs**: the ID the dependency names by the [rule above](#how-a-subtasks-dependencies-are-read). A task's keys are plain IDs (`"4"`). On a subtask of task 2, a sibling is keyed `"2.1"` whether it is stored as `1` or `"2.1"`, and a task stored as `"3"` is keyed `"3"`. Code reads marks through `getDependencySource` in `@tm/core`, never from raw keys.
+- **`dependencySources` is a reserved metadata key.** The `metadata` parameter of the MCP `update_task` and `update_subtask` tools (available only with `TASKGRAPH_ALLOW_METADATA_UPDATES=true`) drops it, so a hand-written value can't overwrite provenance.
+- Marks for a dependency that is removed are dropped with it, and a moved task carries its marks to the new ID.
+- Running `add-dependency` for a dependency that is already inferred makes it explicit.
+- Known limit: when `update-task` regenerates subtasks and the AI reorders them, subtasks are renumbered without remapping their sibling dependencies, so a sibling dependency can change source.
+
+## Schema version
+
+Each tag in `.taskgraph/tasks/tasks.json` records `metadata.schemaVersion` (currently `1`), stamped whenever `@tm/core` saves the tag. A missing or malformed value is read as version 1. A tag written by a newer version, or with a malformed `schemaVersion`, prints a warning to stderr once per file and tag, and is still read. The stamp never lowers a version already on disk.
+
+## MCP
+
+The `dependency_analysis` tool, in the `standard` and `all` tiers, returns the bottlenecks, critical path and cycles for a tag. Pass `id` to also get an `explanation` with the blockers and root causes for one task (what `taskgraph why` shows). `limit` sets how many bottlenecks come back (default 5). See [MCP tool loading](/capabilities/mcp) for the tiers.
+
+## Open issues
+
+These are known and not yet fixed:
+
+- **MCP `next_task` and `taskgraph tags use <tag>`** (which names the next task of the tag it switches to) still use the legacy `find-next-task.js`. It reads subtask dependencies by the shared rule, but it can recommend a different task than `taskgraph next`: it has no `critical` priority (such tasks sort as medium), it treats `completed` as satisfying a dependency, and it has no step for how much work a task unblocks.
+- **The AI writes subtask dependencies as numbers only.** When `expand`, `update-task` or `update` generates subtasks, the response schema (`SubtaskSchema` in `src/schemas/base-schemas.js`) only allows numbers. A number below 100 is read as a sibling, so a subtask dependency the AI meant as a top-level task (task 3) is read as sibling 3 of the same parent. Add such dependencies with `add-dependency`, which stores the task as `"3"`. `add-subtask --dependencies` (and the MCP `add_subtask` tool) has the same limit: it stores plain numbers, so its undotted IDs name siblings.
+- **What counts as finished differs.** `taskgraph next` only treats `done` as satisfying a dependency, while `why` and `graph` treat `done`, `completed` and `cancelled` as finished. A task that depends only on a cancelled task is not blocked in `why`, but `next` will not offer it. `next` also only counts tasks that are `pending`, `in-progress` or `done` when it looks for finished work, so a `done` subtask under a parent in `review`, `blocked` or `deferred` never satisfies a dependency in `next`.
+- **`why` ignores parent blockers for subtasks** (see above).
+- **Older writers don't stamp a schema version.** Tags created by legacy code paths have no `schemaVersion` until the next `@tm/core` save; a missing value means version 1.
+- **Graph limits:** there is no edge between a parent and its subtasks, and cycle members and tasks behind a loop are left out of the critical path (see [`taskgraph graph`](#known-limits)).

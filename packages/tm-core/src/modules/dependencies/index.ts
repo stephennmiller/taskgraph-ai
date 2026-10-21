@@ -5,6 +5,12 @@
  */
 
 export {
+	analyzeDependencies,
+	DEFAULT_BOTTLENECK_LIMIT,
+	type AnalyzeDependenciesOptions,
+	type DependencyAnalysis
+} from './dependency-analysis.js';
+export {
 	blockedCount,
 	bottlenecks,
 	type Bottleneck,

@@ -14,8 +14,8 @@ import {
  */
 export const EXPECTED_TOOL_COUNTS = {
 	core: 7,
-	standard: 14,
-	total: 45
+	standard: 15,
+	total: 46
 };
 
 /**

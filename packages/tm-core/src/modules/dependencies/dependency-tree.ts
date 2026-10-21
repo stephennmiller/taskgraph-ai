@@ -6,10 +6,30 @@
  * dependency), so it always reads after everything it needs; the other
  * dependencies are listed on the node as `alsoNeeds`. Tasks caught in a
  * dependency cycle can't be reached from a root and are returned separately.
+ *
+ * The tree also carries the whole-tag analysis (bottlenecks and critical
+ * path, from dependency-graph.ts) and which dependencies were inferred by the
+ * AI (dependency-provenance.ts), so a display needs no logic of its own.
+ *
+ * Known limits: the tree holds top-level tasks only, while bottlenecks and
+ * the critical path can name subtasks ("2.1"), which then appear in those
+ * lists but not as tree nodes. A parent is not an edge to its subtasks, so the
+ * critical path of an expanded project can miss a chain that runs through the
+ * parent. Cycle members, and tasks that depend on a loop, are left out of the
+ * critical path. The analysis covers the whole tag, even when `rootId` scopes
+ * the tree.
  */
 
 import type { Task, TaskStatus } from '../../common/types/index.js';
-import { compareIds } from './dependency-graph.js';
+import {
+	type Bottleneck,
+	bottlenecks,
+	buildDependencyGraph,
+	compareIds,
+	criticalPath
+} from './dependency-graph.js';
+import { DEFAULT_BOTTLENECK_LIMIT } from './dependency-analysis.js';
+import { getDependencySource } from './dependency-provenance.js';
 
 export interface DependencyTreeNode {
 	id: string;
@@ -20,6 +40,8 @@ export interface DependencyTreeNode {
 	alsoNeeds: string[];
 	/** Dependency IDs that don't match any task */
 	missing: string[];
+	/** Dependencies (the parent included) recorded as AI-inferred */
+	inferred: string[];
 	children: DependencyTreeNode[];
 }
 
@@ -28,6 +50,10 @@ export interface DependencyTree {
 	/** Tasks in a dependency cycle (unreachable from any root) */
 	cyclic: DependencyTreeNode[];
 	total: number;
+	/** Open tasks holding up the most work, most first (top few) */
+	bottlenecks: Bottleneck[];
+	/** Longest chain of unfinished work, dependencies first */
+	criticalPath: string[];
 }
 
 export interface BuildDependencyTreeOptions {
@@ -89,6 +115,9 @@ export function buildDependencyTree(
 				.filter((d) => d !== parent)
 				.sort(compareIds),
 			missing: depsOf(task).filter((d) => !byId.has(d)),
+			inferred: known(task)
+				.filter((d) => getDependencySource(task, d) === 'inferred')
+				.sort(compareIds),
 			children: (childrenOf.get(id) ?? [])
 				.filter((c) => !placed.has(c))
 				.sort(compareIds)
@@ -99,14 +128,23 @@ export function buildDependencyTree(
 	const isRoot = (t: Task) =>
 		Number.isFinite(depthOf(String(t.id))) && !parentOf.get(String(t.id));
 
+	const graph = buildDependencyGraph(tasks);
+	const analysis = {
+		bottlenecks: bottlenecks(tasks, DEFAULT_BOTTLENECK_LIMIT, graph),
+		criticalPath: criticalPath(tasks, graph)
+	};
+
 	let roots: DependencyTreeNode[];
 	if (options.rootId !== undefined) {
 		const rootId = String(options.rootId);
 		if (!byId.has(rootId)) {
 			throw new Error(`Task ${rootId} not found`);
 		}
-		roots = [toNode(rootId)];
-		return { roots, cyclic: [], total: countNodes(roots) };
+		const root = toNode(rootId);
+		// The parent isn't drawn when scoped, so its edge has nothing to mark
+		root.inferred = root.inferred.filter((d) => d !== parentOf.get(rootId));
+		roots = [root];
+		return { roots, cyclic: [], total: countNodes(roots), ...analysis };
 	}
 
 	roots = tasks
@@ -121,7 +159,7 @@ export function buildDependencyTree(
 		.sort(compareIds)
 		.map((id) => ({ ...toNode(id), children: [] }));
 
-	return { roots, cyclic, total: tasks.length };
+	return { roots, cyclic, total: tasks.length, ...analysis };
 }
 
 function countNodes(nodes: DependencyTreeNode[]): number {
