@@ -35,7 +35,7 @@ jobs:
         # mirror has no recent tags, so Dependabot cannot bump it. When it bumps
         # claude-code-action in claude.yml, move this pin to the matching
         # "Sync from claude-code-action base-action@<sha>" commit by hand.
-        uses: anthropics/claude-code-base-action@835599743d81c7a5d303d2abace46bbb5bebcb58 # mirror of claude-code-action v1.0.252
+        uses: anthropics/claude-code-base-action@2a32bc834f10ce844915c4830aad32db0659b2ec # mirror of claude-code-action v1.0.252
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
