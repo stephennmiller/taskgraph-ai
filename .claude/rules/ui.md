@@ -2,6 +2,7 @@
 description: How TaskGraph CLI output should look, and where the code that prints it lives
 paths:
   - "scripts/modules/ui.js"
+  - "scripts/modules/ui/**/*.js"
   - "scripts/modules/commands.js"
   - "scripts/modules/task-manager/**/*.js"
   - "apps/cli/src/ui/**/*.ts"
