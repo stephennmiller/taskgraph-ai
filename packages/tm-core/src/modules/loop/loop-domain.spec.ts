@@ -189,6 +189,18 @@ describe('LoopDomain', () => {
 		});
 	});
 
+	describe('run trust gate', () => {
+		it('refuses to run unprompted in a project nobody approved', async () => {
+			await expect(loopDomain.run({ iterations: 1 })).rejects.toThrow(
+				/--trust/
+			);
+		});
+
+		it('reports an unapproved project as not trusted', () => {
+			expect(loopDomain.isTrusted()).toBe(false);
+		});
+	});
+
 	describe('getIsRunning', () => {
 		it('should return false when no loop is running', () => {
 			expect(loopDomain.getIsRunning()).toBe(false);

@@ -77,6 +77,8 @@ describe('LoopCommand', () => {
 		mockTmCore = {
 			loop: {
 				run: mockLoopRun,
+				isTrusted: vi.fn().mockReturnValue(true),
+				trust: vi.fn(),
 				checkSandboxAuth: vi.fn().mockReturnValue({ ready: true }),
 				runInteractiveAuth: vi.fn().mockReturnValue({ success: true }),
 				resolveIterations: vi.fn().mockImplementation((opts) => {
@@ -243,6 +245,55 @@ describe('LoopCommand', () => {
 			expect(allOutput).toContain('Loop Complete');
 			expect(allOutput).toContain('5');
 			expect(allOutput).toContain('3');
+		});
+	});
+
+	describe('first-use trust', () => {
+		const run = (options: object) =>
+			(loopCommand as any).execute.bind(loopCommand)(options);
+
+		beforeEach(() => {
+			mockTmCore.loop.isTrusted.mockReturnValue(false);
+			// No terminal to ask on, whatever runs the tests
+			Object.defineProperty(process.stdin, 'isTTY', {
+				value: false,
+				configurable: true
+			});
+		});
+
+		it('refuses to start without a terminal to ask on', async () => {
+			await expect(run({})).rejects.toThrow('process.exit called');
+
+			expect(displayError).toHaveBeenCalledWith(
+				expect.objectContaining({
+					message: expect.stringContaining('--trust')
+				}),
+				{ skipExit: true }
+			);
+			expect(mockLoopRun).not.toHaveBeenCalled();
+		});
+
+		it('runs with --trust and tells the domain it is trusted', async () => {
+			await run({ trust: true });
+
+			expect(mockLoopRun).toHaveBeenCalledWith(
+				expect.objectContaining({ trusted: true })
+			);
+		});
+
+		it('does not ask in sandbox mode', async () => {
+			await run({ sandbox: true });
+
+			expect(mockLoopRun).toHaveBeenCalled();
+			expect(mockTmCore.loop.trust).not.toHaveBeenCalled();
+		});
+
+		it('does not ask again once the project is approved', async () => {
+			mockTmCore.loop.isTrusted.mockReturnValue(true);
+
+			await run({});
+
+			expect(mockLoopRun).toHaveBeenCalled();
 		});
 	});
 

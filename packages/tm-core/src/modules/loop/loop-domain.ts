@@ -11,6 +11,7 @@ import {
 	isPreset as checkIsPreset,
 	getPreset
 } from './presets/index.js';
+import { isLoopTrusted, trustLoop } from './loop-trust.js';
 import { LoopService } from './services/loop.service.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 
@@ -48,6 +49,18 @@ export class LoopDomain {
 		return service.runInteractiveAuth();
 	}
 
+	// ========== Trust ==========
+
+	/** Whether the user has approved unprompted runs in this project */
+	isTrusted(): boolean {
+		return isLoopTrusted(this.projectRoot);
+	}
+
+	/** Remember the user's approval for this project */
+	trust(): void {
+		trustLoop(this.projectRoot);
+	}
+
 	// ========== Loop Operations ==========
 
 	/**
@@ -58,6 +71,12 @@ export class LoopDomain {
 	 * @throws Error if a loop is already running
 	 */
 	async run(config: Partial<LoopConfig>): Promise<LoopResult> {
+		if (!config.sandbox && !config.trusted && !this.isTrusted()) {
+			throw new Error(
+				'loop runs Claude with permission prompts off in this project. Approve it first, or pass --trust (or use --sandbox).'
+			);
+		}
+
 		// Prevent orphaning a previous running LoopService
 		if (this.loopService?.isRunning) {
 			try {
