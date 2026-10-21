@@ -37,6 +37,14 @@ describe('per-call silent mode', () => {
 		expect(isSilentMode()).toBe(false);
 	});
 
+	test('a scope starts silent when the global switch is already on', () => {
+		enableSilentMode();
+
+		const inside = withSilentScope(() => isSilentMode());
+
+		expect(inside).toBe(true);
+	});
+
 	test('outside any scope the global switch still works', () => {
 		enableSilentMode();
 		expect(isSilentMode()).toBe(true);

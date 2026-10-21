@@ -445,13 +445,13 @@ async function getTaskManager() {
 const silentScope = new AsyncLocalStorage();
 
 /**
- * Run fn with its own silent-mode switch, off at the start. Calls made from
+ * Run fn with its own silent-mode switch, starting from the global one. Calls made from
  * fn, including after awaits, enable and disable only this switch.
  * @param {Function} fn
  * @returns {*} Whatever fn returns
  */
 function withSilentScope(fn) {
-	return silentScope.run({ silent: false }, fn);
+	return silentScope.run({ silent: silentMode }, fn);
 }
 
 /**
