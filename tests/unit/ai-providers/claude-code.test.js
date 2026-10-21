@@ -253,6 +253,48 @@ describe('ClaudeCodeProvider', () => {
 				expect(process.env.ANTHROPIC_API_KEY).toBe('sk-ant-should-not-be-used');
 			});
 
+			it("reads CLAUDE_CODE_API_KEY from the project's .env without loading it into process.env", async () => {
+				const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-env-'));
+				fs.writeFileSync(
+					path.join(root, '.env'),
+					'CLAUDE_CODE_API_KEY=sk-ant-from-project\n'
+				);
+				delete process.env.CLAUDE_CODE_API_KEY;
+
+				provider.getClient({ projectRoot: root });
+
+				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('sk-ant-from-project');
+				expect(process.env.CLAUDE_CODE_API_KEY).toBeUndefined();
+			});
+
+			it("lets the host's CLAUDE_CODE_API_KEY win over the project's .env", async () => {
+				const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-env-'));
+				fs.writeFileSync(
+					path.join(root, '.env'),
+					'CLAUDE_CODE_API_KEY=from-file\n'
+				);
+				process.env.CLAUDE_CODE_API_KEY = 'from-host';
+
+				provider.getClient({ projectRoot: root });
+
+				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('from-host');
+			});
+
+			it("passes the project's other .env settings to Claude Code", async () => {
+				const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-env-'));
+				fs.writeFileSync(
+					path.join(root, '.env'),
+					'TM_TEST_PROXY=http://proxy.example:8080\n'
+				);
+
+				provider.getClient({ projectRoot: root });
+
+				expect((await lastEnv()).TM_TEST_PROXY).toBe(
+					'http://proxy.example:8080'
+				);
+				expect(process.env.TM_TEST_PROXY).toBeUndefined();
+			});
+
 			it('uses CLAUDE_CODE_API_KEY exclusively when it is set', async () => {
 				process.env.ANTHROPIC_API_KEY = 'sk-ant-other';
 				process.env.CLAUDE_CODE_API_KEY = 'sk-ant-claude-code';

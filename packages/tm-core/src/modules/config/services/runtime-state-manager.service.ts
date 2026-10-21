@@ -11,6 +11,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
+import type { EnvMap } from './project-env.js';
 
 /**
  * Runtime state data structure
@@ -33,7 +34,10 @@ export class RuntimeStateManager {
 	private currentState: RuntimeState;
 	private readonly logger = getLogger('RuntimeStateManager');
 
-	constructor(projectRoot: string) {
+	constructor(
+		projectRoot: string,
+		private readonly env: EnvMap = process.env
+	) {
 		this.stateFilePath = path.join(projectRoot, '.taskgraph', 'state.json');
 		this.currentState = {
 			currentTag: DEFAULT_CONFIG_VALUES.TAGS.DEFAULT_TAG
@@ -59,8 +63,8 @@ export class RuntimeStateManager {
 			};
 
 			// Apply environment variable override for current tag
-			if (process.env.TASKGRAPH_TAG) {
-				state.currentTag = process.env.TASKGRAPH_TAG;
+			if (this.env.TASKGRAPH_TAG) {
+				state.currentTag = this.env.TASKGRAPH_TAG;
 			}
 
 			this.currentState = state;
@@ -71,8 +75,8 @@ export class RuntimeStateManager {
 				this.logger.debug('No state.json found, using default state');
 
 				// Check environment variable
-				if (process.env.TASKGRAPH_TAG) {
-					this.currentState.currentTag = process.env.TASKGRAPH_TAG;
+				if (this.env.TASKGRAPH_TAG) {
+					this.currentState.currentTag = this.env.TASKGRAPH_TAG;
 				}
 
 				return this.currentState;

@@ -242,21 +242,28 @@ async function updateTasks(
 				parsedUpdatedTasks.map((task) => [task.id, task])
 			);
 
+			// The model may return tasks we never sent (finished ones, or ones before
+			// --from); only the tasks that were sent may change
+			const sentIds = new Set(tasksToUpdate.map((t) => t.id));
 			let actualUpdateCount = 0;
 			data.tasks.forEach((task, index) => {
-				if (updatedTasksMap.has(task.id)) {
-					// Only update if the task was part of the set sent to AI
+				if (sentIds.has(task.id) && updatedTasksMap.has(task.id)) {
 					const updatedTask = updatedTasksMap.get(task.id);
 					// Merge the updated task with the existing one to preserve fields like subtasks
 					const merged = {
 						...task, // Keep all existing fields
 						...updatedTask, // Override with updated fields
-						// Ensure subtasks field is preserved if not provided by AI
+						// Keep the existing subtasks unless the AI sent a replacement
 						subtasks:
-							updatedTask.subtasks !== undefined
+							updatedTask.subtasks != null
 								? updatedTask.subtasks
 								: task.subtasks
 					};
+					// The schema makes the model emit null for fields it has nothing to
+					// say about; that must not erase what the task already holds
+					for (const field of ['priority', 'details', 'testStrategy']) {
+						if (updatedTask[field] == null) merged[field] = task[field];
+					}
 					// Dependencies the AI added are recorded as inferred; earlier marks stay
 					assignMetadata(merged, reconcileDependencySources(merged, task));
 					if (Array.isArray(merged.subtasks)) {
@@ -269,6 +276,9 @@ async function updateTasks(
 							);
 							const restored = { ...subtask };
 							delete restored.metadata;
+							if (restored.testStrategy == null && original) {
+								restored.testStrategy = original.testStrategy;
+							}
 							assignMetadata(
 								restored,
 								reconcileDependencySources(subtask, original, task.id)

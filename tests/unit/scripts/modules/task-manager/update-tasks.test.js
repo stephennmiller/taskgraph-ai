@@ -273,6 +273,177 @@ describe('updateTasks', () => {
 		});
 	});
 
+	const runUpdate = async (initialTasks, aiTasks, fromId = 2) => {
+		const initial = { master: { tasks: initialTasks } };
+		readJSON.mockReturnValue({
+			...initial.master,
+			tag: 'master',
+			_rawTaggedData: initial
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: { tasks: aiTasks },
+			telemetryData: {}
+		});
+
+		await updateTasks(
+			'/mock/path/tasks.json',
+			fromId,
+			'Revise',
+			false,
+			{ projectRoot: '/mock/path', tag: 'master' },
+			'json'
+		);
+
+		return writeJSON.mock.calls[0][1]._rawTaggedData.master.tasks;
+	};
+
+	test('keeps existing details, priority and test strategy when the AI returns null for them', async () => {
+		const written = await runUpdate(
+			[
+				{
+					id: 2,
+					title: 'Two',
+					status: 'pending',
+					dependencies: [],
+					priority: 'high',
+					details: 'Careful notes the user wrote',
+					testStrategy: 'Run the suite'
+				}
+			],
+			[
+				{
+					id: 2,
+					title: 'Two, revised',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: null
+				}
+			]
+		);
+
+		expect(written[0]).toMatchObject({
+			title: 'Two, revised',
+			priority: 'high',
+			details: 'Careful notes the user wrote',
+			testStrategy: 'Run the suite'
+		});
+	});
+
+	test('keeps existing subtasks when the AI returns null for them', async () => {
+		const subtasks = [
+			{
+				id: 1,
+				title: 'Finished step',
+				status: 'done',
+				dependencies: [],
+				testStrategy: 'Check it'
+			}
+		];
+		const written = await runUpdate(
+			[{ id: 2, title: 'Two', status: 'pending', dependencies: [], subtasks }],
+			[
+				{
+					id: 2,
+					title: 'Two, revised',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: null
+				}
+			]
+		);
+
+		expect(written[0].subtasks).toEqual(subtasks);
+	});
+
+	test("keeps a subtask's test strategy when the AI returns null for it", async () => {
+		const written = await runUpdate(
+			[
+				{
+					id: 2,
+					title: 'Two',
+					status: 'pending',
+					dependencies: [],
+					subtasks: [
+						{
+							id: 1,
+							title: 'Step',
+							status: 'pending',
+							dependencies: [],
+							testStrategy: 'Check it'
+						}
+					]
+				}
+			],
+			[
+				{
+					id: 2,
+					title: 'Two',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: [
+						{
+							id: 1,
+							title: 'Step',
+							status: 'pending',
+							dependencies: [],
+							testStrategy: null
+						}
+					]
+				}
+			]
+		);
+
+		expect(written[0].subtasks[0].testStrategy).toBe('Check it');
+	});
+
+	test('ignores tasks the AI returns that were not sent to it', async () => {
+		const written = await runUpdate(
+			[
+				{ id: 1, title: 'Finished', status: 'done', dependencies: [] },
+				{ id: 2, title: 'Two', status: 'pending', dependencies: [] }
+			],
+			[
+				{
+					id: 1,
+					title: 'Rewritten finished task',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: null
+				},
+				{
+					id: 2,
+					title: 'Two, revised',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: null
+				}
+			]
+		);
+
+		expect(written[0]).toMatchObject({ title: 'Finished', status: 'done' });
+		expect(written[1].title).toBe('Two, revised');
+	});
+
 	test('should handle no tasks to update', async () => {
 		// Arrange
 		const mockTasksPath = '/mock/path/tasks.json';
