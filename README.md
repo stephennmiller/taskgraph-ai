@@ -114,7 +114,7 @@ claude mcp add taskgraph-ai --scope user \
   -- npx -y taskgraph-ai
 ```
 
-Restart Claude Code and run `/mcp`; `taskgraph-ai` should show as connected. `standard` loads 14 tools, enough for everything in [How to use it](#how-to-use-it). See [MCP tool tiers](#mcp-tool-tiers) for the others.
+Restart Claude Code and run `/mcp`; `taskgraph-ai` should show as connected. `standard` loads 15 tools, enough for everything in [How to use it](#how-to-use-it). See [MCP tool tiers](#mcp-tool-tiers) for the others.
 
 To share the setup with your team instead, put it in the project's `.mcp.json`:
 
@@ -175,7 +175,7 @@ Then, optionally, check how big each task is and break the big ones down:
 
 The loop is simple: **next, implement, done, next.** Task IDs look like `3` for a task and `3.2` for a subtask.
 
-If you use the MCP server instead, research, tags and the dependency tools are only loaded with `TASKGRAPH_TOOLS=all` (see [MCP tool tiers](#mcp-tool-tiers)); everything else here works with `standard`.
+If you use the MCP server instead, research, tags and the dependency editing tools (`add_dependency`, `remove_dependency`, `validate_dependencies`, `fix_dependencies`) are only loaded with `TASKGRAPH_TOOLS=all`; `dependency_analysis` is in `standard` (see [MCP tool tiers](#mcp-tool-tiers)); everything else here works with `standard`.
 
 ### 4. Keep it organized
 
@@ -239,8 +239,8 @@ Only relevant if you added the optional MCP server. Each tool you load costs con
 | Value | Tools | Includes |
 |---|---|---|
 | `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task` |
-| `standard` | 14 | core, plus `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report` |
-| `all` | 43 | everything: updates, dependencies, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
+| `standard` | 15 | core, plus `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
+| `all` | 46 | everything: updates, dependencies, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
 | a list | custom | e.g. `get_tasks,next_task,set_task_status` |
 
 Set it when you add the server:

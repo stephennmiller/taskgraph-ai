@@ -3,6 +3,24 @@
  * Tool Registry - Maps tool names to registration functions
  */
 
+// Import TypeScript tools from apps/mcp
+import {
+	registerAutopilotAbortTool,
+	registerAutopilotCommitTool,
+	registerAutopilotCompleteTool,
+	registerAutopilotFinalizeTool,
+	registerAutopilotNextTool,
+	registerAutopilotResumeTool,
+	registerAutopilotStartTool,
+	registerAutopilotStatusTool,
+	registerDependencyAnalysisTool,
+	registerGenerateTool,
+	registerGetTasksTool,
+	registerGetTaskTool,
+	registerGithubPushTool,
+	registerGithubStatusTool,
+	registerSetTaskStatusTool
+} from '@tm/mcp';
 import { registerAddDependencyTool } from './add-dependency.js';
 import { registerAddSubtaskTool } from './add-subtask.js';
 import { registerAddTagTool } from './add-tag.js';
@@ -29,29 +47,11 @@ import { registerResearchTool } from './research.js';
 import { registerResponseLanguageTool } from './response-language.js';
 import { registerScopeDownTool } from './scope-down.js';
 import { registerScopeUpTool } from './scope-up.js';
+import { registerUpdateTool } from './update.js';
 import { registerUpdateSubtaskTool } from './update-subtask.js';
 import { registerUpdateTaskTool } from './update-task.js';
-import { registerUpdateTool } from './update.js';
 import { registerUseTagTool } from './use-tag.js';
 import { registerValidateDependenciesTool } from './validate-dependencies.js';
-
-// Import TypeScript tools from apps/mcp
-import {
-	registerAutopilotAbortTool,
-	registerAutopilotCommitTool,
-	registerAutopilotCompleteTool,
-	registerAutopilotFinalizeTool,
-	registerAutopilotNextTool,
-	registerAutopilotResumeTool,
-	registerAutopilotStartTool,
-	registerAutopilotStatusTool,
-	registerGenerateTool,
-	registerGetTaskTool,
-	registerGetTasksTool,
-	registerGithubPushTool,
-	registerGithubStatusTool,
-	registerSetTaskStatusTool
-} from '@tm/mcp';
 
 /**
  * Comprehensive tool registry mapping tool names to their registration functions
@@ -71,6 +71,7 @@ export const toolRegistry = {
 	get_task: registerGetTaskTool,
 	next_task: registerNextTaskTool,
 	complexity_report: registerComplexityReportTool,
+	dependency_analysis: registerDependencyAnalysisTool,
 	set_task_status: registerSetTaskStatusTool,
 	add_task: registerAddTaskTool,
 	add_subtask: registerAddSubtaskTool,
@@ -120,7 +121,7 @@ export const coreTools = [
 ];
 
 /**
- * Standard tools array containing the 14 most commonly used tools
+ * Standard tools array containing the 15 most commonly used tools
  * Includes all core tools plus frequently used additional tools
  */
 export const standardTools = [
@@ -131,7 +132,8 @@ export const standardTools = [
 	'add_subtask',
 	'remove_task',
 	'add_task',
-	'complexity_report'
+	'complexity_report',
+	'dependency_analysis'
 ];
 
 /**

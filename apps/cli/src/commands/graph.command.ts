@@ -33,7 +33,10 @@ export class GraphCommand extends Command {
 		super(name || 'graph');
 
 		this.description('Show tasks as a dependency tree')
-			.option('-i, --id <id>', 'Show only this task and what depends on it')
+			.option(
+				'-i, --id <id>',
+				'Show only this task and the tasks drawn under it'
+			)
 			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
 			.option(

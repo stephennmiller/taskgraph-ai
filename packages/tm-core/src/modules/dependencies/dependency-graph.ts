@@ -19,8 +19,8 @@
  * Cycles: `findCycles` returns strongly connected groups of 2+ tasks, over
  * every task. That deliberately differs from `buildDependencyTree`'s
  * `cyclic`, which also lists everything downstream of a loop. `criticalPath`
- * leaves cycle members out, since a loop can't be started, and ignores edges
- * to them.
+ * agrees with that wider view: it leaves out cycle members and everything
+ * that depends on one, since none of it can be started.
  *
  * Everything is iterative, so long chains don't overflow the stack.
  */
@@ -133,8 +133,11 @@ const isOpen = (node: DependencyGraphNode): boolean =>
  * component, so memory grows with the square of the number of open tasks
  * (about 12 MB at 10k).
  */
-export function blockedCount(tasks: Task[]): Map<string, number> {
-	const { nodes } = buildDependencyGraph(tasks);
+export function blockedCount(
+	tasks: Task[],
+	graph: DependencyGraph = buildDependencyGraph(tasks)
+): Map<string, number> {
+	const { nodes } = graph;
 	const counts = new Map<string, number>();
 	const open: string[] = [];
 	for (const node of nodes.values()) {
@@ -181,10 +184,14 @@ export function blockedCount(tasks: Task[]): Map<string, number> {
  * lowest ID. Tasks that block nothing are left out; pass `limit` to keep the
  * top few. Plain data, safe to serialize.
  */
-export function bottlenecks(tasks: Task[], limit?: number): Bottleneck[] {
-	const { nodes } = buildDependencyGraph(tasks);
+export function bottlenecks(
+	tasks: Task[],
+	limit?: number,
+	graph: DependencyGraph = buildDependencyGraph(tasks)
+): Bottleneck[] {
+	const { nodes } = graph;
 	const ranked: Bottleneck[] = [];
-	for (const [id, blocks] of blockedCount(tasks)) {
+	for (const [id, blocks] of blockedCount(tasks, graph)) {
 		const node = nodes.get(id) as DependencyGraphNode;
 		if (blocks > 0 && isOpen(node)) {
 			ranked.push({ id, title: node.title, status: node.status, blocks });
@@ -212,14 +219,18 @@ export function findCycles(tasks: Task[]): string[][] {
 
 /**
  * Longest chain of unfinished work, dependencies first. Tasks in a cycle are
- * left out (they can't be ordered), as are missing dependencies. Ties go to
- * the lowest IDs. Empty when nothing is left to do.
+ * left out (they can't be ordered), and so is everything that depends on a
+ * loop, directly or not: it can never start. Missing dependencies are
+ * ignored. Ties go to the lowest IDs. Empty when nothing is left to do.
  */
-export function criticalPath(tasks: Task[]): string[] {
-	const { nodes } = buildDependencyGraph(tasks);
+export function criticalPath(
+	tasks: Task[],
+	graph: DependencyGraph = buildDependencyGraph(tasks)
+): string[] {
+	const { nodes } = graph;
 	const open = [...nodes.values()].filter(isOpen).map((n) => n.id);
 	const isOpenId = (id: string) => isOpen(nodes.get(id) as DependencyGraphNode);
-	const cyclic = new Set(
+	const stuckBehindLoop = new Set(
 		stronglyConnectedComponents(
 			open,
 			(id) => (nodes.get(id) as DependencyGraphNode).dependencies,
@@ -228,10 +239,21 @@ export function criticalPath(tasks: Task[]): string[] {
 			.filter((group) => group.length > 1)
 			.flat()
 	);
-	const usable = open.filter((id) => !cyclic.has(id));
+	// Everything downstream of a loop is stuck behind it
+	const stuck = [...stuckBehindLoop];
+	for (let i = 0; i < stuck.length; i++) {
+		for (const dependent of (nodes.get(stuck[i]) as DependencyGraphNode)
+			.dependents) {
+			if (isOpenId(dependent) && !stuckBehindLoop.has(dependent)) {
+				stuckBehindLoop.add(dependent);
+				stuck.push(dependent);
+			}
+		}
+	}
+	const usable = open.filter((id) => !stuckBehindLoop.has(id));
 	const usableDeps = (id: string) =>
 		(nodes.get(id) as DependencyGraphNode).dependencies.filter(
-			(d) => isOpenId(d) && !cyclic.has(d)
+			(d) => isOpenId(d) && !stuckBehindLoop.has(d)
 		);
 
 	// Topological order (dependencies first), then longest chain ending at each

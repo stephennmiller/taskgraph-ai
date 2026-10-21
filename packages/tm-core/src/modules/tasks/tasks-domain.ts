@@ -22,8 +22,10 @@ import type {
 
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import {
+	analyzeDependencies,
 	buildDependencyTree,
 	explainBlockers,
+	type DependencyAnalysis,
 	type BlockerExplanation,
 	type DependencyTree
 } from '../dependencies/index.js';
@@ -164,6 +166,21 @@ export class TasksDomain {
 	): Promise<DependencyTree> {
 		const { tasks } = await this.list({ tag: options.tag });
 		return buildDependencyTree(tasks, { rootId: options.rootId });
+	}
+
+	/**
+	 * Bottlenecks (top 5 unless limit is set), critical path and dependency
+	 * cycles for a tag's tasks. With taskId, also explains what blocks that
+	 * task (see explainBlockers) from the same task list.
+	 */
+	async analyzeDependencies(
+		options: { tag?: string; limit?: number; taskId?: string } = {}
+	): Promise<DependencyAnalysis> {
+		const { tasks } = await this.list({ tag: options.tag });
+		return analyzeDependencies(tasks, {
+			limit: options.limit,
+			id: options.taskId
+		});
 	}
 
 	/**

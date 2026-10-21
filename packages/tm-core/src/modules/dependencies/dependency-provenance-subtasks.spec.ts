@@ -86,6 +86,25 @@ describe('subtask sibling ids', () => {
 		});
 	});
 
+	it('reads back what reconcile writes for a sibling, another subtask and a task', () => {
+		// Subtask of task 2: sibling 1, subtask 4.1, task 3, task 150
+		const subtask = { dependencies: [1, '4.1', '3', 150] };
+		const metadata = reconcileDependencySources(subtask, undefined, 2);
+		const marked = { ...subtask, metadata };
+
+		expect(metadata?.[DEPENDENCY_SOURCES_KEY]).toEqual({
+			'2.1': 'inferred',
+			'4.1': 'inferred',
+			'3': 'inferred',
+			'150': 'inferred'
+		});
+		for (const dep of subtask.dependencies) {
+			expect(getDependencySource(marked, dep, 2)).toBe('inferred');
+		}
+		expect(getDependencySource(marked, '2.1', 2)).toBe('inferred');
+		expect(getDependencySource(marked, 3, 2)).toBe('explicit');
+	});
+
 	it('an explicit set clears a mark even when the forms differ', () => {
 		const metadata = setDependencySource(
 			marks({ '2.1': 'inferred' }),

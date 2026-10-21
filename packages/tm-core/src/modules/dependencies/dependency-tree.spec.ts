@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../common/types/index.js';
+import { reconcileDependencySources } from './dependency-provenance.js';
 import { buildDependencyTree } from './dependency-tree.js';
 
 const task = (
@@ -98,5 +99,121 @@ describe('buildDependencyTree', () => {
 
 		expect(shape(tree.roots)).toEqual([['1']]);
 		expect(tree.cyclic).toEqual([]);
+	});
+	describe('analysis', () => {
+		it('returns bottlenecks and the critical path for the whole tag', () => {
+			const tree = buildDependencyTree([
+				task('1'),
+				task('2', ['1']),
+				task('3', ['2']),
+				task('4', ['1'])
+			]);
+
+			expect(tree.bottlenecks.map((b) => [b.id, b.blocks])).toEqual([
+				['1', 3],
+				['2', 1]
+			]);
+			expect(tree.criticalPath).toEqual(['1', '2', '3']);
+		});
+
+		it('keeps the whole-tag analysis when scoped to a rootId', () => {
+			const tree = buildDependencyTree(
+				[task('1'), task('2', ['1']), task('3', ['2'])],
+				{ rootId: '2' }
+			);
+
+			expect(tree.bottlenecks.map((b) => b.id)).toEqual(['1', '2']);
+			expect(tree.criticalPath).toEqual(['1', '2', '3']);
+		});
+
+		it('limits bottlenecks to the top few', () => {
+			const tasks = [task('1')];
+			for (let i = 2; i <= 9; i++) tasks.push(task(String(i), [String(i - 1)]));
+
+			expect(buildDependencyTree(tasks).bottlenecks).toHaveLength(5);
+		});
+
+		it('is empty when everything is done', () => {
+			const tree = buildDependencyTree([
+				task('1', [], 'done'),
+				task('2', ['1'], 'done')
+			]);
+
+			expect(tree.bottlenecks).toEqual([]);
+			expect(tree.criticalPath).toEqual([]);
+		});
+	});
+
+	describe('inferred dependencies', () => {
+		const withSources = (t: Task, inferred: string[]): Task =>
+			({
+				...t,
+				metadata: {
+					dependencySources: Object.fromEntries(
+						inferred.map((d) => [d, 'inferred'])
+					)
+				}
+			}) as Task;
+
+		it('lists the dependencies recorded as inferred on each node', () => {
+			const tree = buildDependencyTree([
+				task('1'),
+				task('2', ['1']),
+				withSources(task('3', ['1', '2']), ['1', '2'])
+			]);
+
+			const three = tree.roots[0].children[0].children[0];
+			expect(three.id).toBe('3');
+			expect(three.inferred).toEqual(['1', '2']);
+			expect(tree.roots[0].children[0].inferred).toEqual([]);
+		});
+
+		it('leaves out the parent edge of a rootId subtree, since the parent is not shown', () => {
+			const tree = buildDependencyTree(
+				[task('1'), withSources(task('2', ['1']), ['1']), task('3', ['2'])],
+				{ rootId: '2' }
+			);
+
+			expect(tree.roots[0].inferred).toEqual([]);
+		});
+
+		it('keeps inferred marks on other dependencies of a rootId subtree', () => {
+			const tree = buildDependencyTree(
+				[
+					task('1'),
+					task('2', ['1']),
+					withSources(task('3', ['1', '2']), ['1'])
+				],
+				{ rootId: '3' }
+			);
+
+			expect(tree.roots[0].alsoNeeds).toEqual(['1']);
+			expect(tree.roots[0].inferred).toEqual(['1']);
+		});
+
+		it('reads the marks the AI paths write, with numeric ids as in tasks.json', () => {
+			const numeric = (id: number, dependencies: number[]): Task =>
+				({ ...task(String(id)), id, dependencies }) as unknown as Task;
+			// update-task kept dependency 1 and the AI added 2
+			const three = numeric(3, [1, 2]);
+			three.metadata = reconcileDependencySources(three, numeric(3, [1]));
+
+			const tree = buildDependencyTree([
+				numeric(1, []),
+				numeric(2, [1]),
+				three
+			]);
+
+			expect(tree.roots[0].children[0].children[0].inferred).toEqual(['2']);
+		});
+
+		it('ignores marks for dependencies the task no longer lists', () => {
+			const tree = buildDependencyTree([
+				task('1'),
+				withSources(task('2', ['1']), ['7'])
+			]);
+
+			expect(tree.roots[0].children[0].inferred).toEqual([]);
+		});
 	});
 });

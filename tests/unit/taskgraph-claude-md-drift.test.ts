@@ -150,3 +150,31 @@ describe.each(DOCS)('%s', (docPath) => {
 		expect(listedStandard).toEqual(unique(extra));
 	});
 });
+
+describe('other places that state the tool tier counts', () => {
+	const read = (file: string) =>
+		fs.readFileSync(path.join(rootDir, file), 'utf8');
+
+	it('README tier table and setup text match the registry', () => {
+		const readme = read('README.md');
+		const counts = getToolCounts();
+		const row = (tier: string) =>
+			Number(
+				readme.match(
+					new RegExp(`\\|\\s*\`${tier}\`[^|]*\\|\\s*(\\d+)\\s*\\|`)
+				)?.[1]
+			);
+		expect(row('standard')).toBe(counts.standard);
+		expect(row('all')).toBe(counts.total);
+		expect(Number(readme.match(/`standard` loads (\d+) tools/)?.[1])).toBe(
+			counts.standard
+		);
+	});
+
+	it('llms-install.md states the standard tier count', () => {
+		const text = read('llms-install.md');
+		expect(Number(text.match(/`standard` \((\d+)\)/)?.[1])).toBe(
+			getToolCounts().standard
+		);
+	});
+});

@@ -182,6 +182,19 @@ describe('criticalPath', () => {
 		expect(path).toEqual(['3', '4']);
 	});
 
+	it('also leaves out tasks that depend on a loop, since they can never start', () => {
+		const path = criticalPath([
+			task('1'),
+			task('2', ['3']),
+			task('3', ['2']),
+			task('4', ['3']),
+			task('5', ['4']),
+			task('6', ['5'])
+		]);
+
+		expect(path).toEqual(['1']);
+	});
+
 	it('ignores missing dependencies', () => {
 		expect(criticalPath([task('1', ['99']), task('2', ['1'])])).toEqual([
 			'1',
