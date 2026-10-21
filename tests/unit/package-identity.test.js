@@ -26,7 +26,6 @@ const IDENTITY_FILES = [
 	'apps/cli/src/utils/auto-update/changelog.ts',
 	'apps/cli/src/utils/auto-update/constants.ts',
 	'apps/cli/src/utils/auto-update/check-update.ts',
-	'apps/cli/src/utils/auto-update/download.ts',
 	'apps/cli/src/utils/auto-update/index.ts',
 	'apps/cli/src/utils/auto-update/install.ts',
 	'apps/cli/src/utils/auto-update/restart.ts',
