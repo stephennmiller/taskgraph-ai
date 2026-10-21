@@ -229,12 +229,12 @@ export function registerTaskGraphTools(rawServer, toolMode = 'core') {
 }
 
 export {
-	toolRegistry,
 	coreTools,
-	standardTools,
 	getAvailableTools,
 	getToolRegistration,
-	isValidTool
+	isValidTool,
+	standardTools,
+	toolRegistry
 };
 
 export default {

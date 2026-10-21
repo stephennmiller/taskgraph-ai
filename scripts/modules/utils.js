@@ -3,14 +3,14 @@
  * Utility functions for the TaskGraph CLI
  */
 
-import { AsyncLocalStorage } from 'async_hooks';
-import fs from 'fs';
-import path from 'path';
 import { theme } from '@tm/cli/theme';
 // Import FileOperations from tm-core for atomic file modifications
 import { FileOperations } from '@tm/core';
+import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 import { COMPLEXITY_REPORT_FILE } from '../../src/constants/paths.js';
 // Import specific config getters needed here
 import { getDebugFlag, getLogLevel } from './config-manager.js';
@@ -2012,46 +2012,46 @@ function stripAnsiCodes(text) {
 
 // Export all utility functions and configuration
 export {
-	LOG_LEVELS,
-	log,
-	readJSON,
-	writeJSON,
-	modifyJSON,
-	sanitizePrompt,
-	readComplexityReport,
-	findTaskInComplexityReport,
-	taskExists,
-	formatTaskId,
-	findTaskById,
-	truncate,
-	isEmpty,
-	findCycles,
-	traverseDependencies,
-	toKebabCase,
+	addComplexityToTask,
+	aggregateTelemetry,
+	createStateJson,
 	detectCamelCaseFlags,
 	disableSilentMode,
 	enableSilentMode,
-	getTaskManager,
-	isSilentMode,
-	withSilentScope,
-	addComplexityToTask,
-	resolveEnvVariable,
-	findProjectRoot,
-	getTagAwareFilePath,
-	slugifyTagForFilePath,
-	aggregateTelemetry,
-	getCurrentTag,
-	resolveTag,
-	getTasksForTag,
-	setTasksForTag,
-	performCompleteTagMigration,
-	migrateConfigJson,
-	createStateJson,
-	markMigrationForNotice,
-	flattenTasksWithSubtasks,
 	ensureTagMetadata,
-	stripAnsiCodes,
+	findCycles,
+	findProjectRoot,
+	findTaskById,
+	findTaskInComplexityReport,
+	flattenTasksWithSubtasks,
+	formatTaskId,
+	getCurrentTag,
+	getTagAwareFilePath,
+	getTaskManager,
+	getTasksForTag,
+	isEmpty,
+	isSilentMode,
+	LOG_LEVELS,
+	log,
+	markMigrationForNotice,
+	migrateConfigJson,
+	modifyJSON,
 	normalizeTaskIds,
+	performCompleteTagMigration,
+	readComplexityReport,
+	readJSON,
+	resolveEnvVariable,
+	resolveTag,
+	sanitizePrompt,
+	setTasksForTag,
+	slugifyTagForFilePath,
+	stripAnsiCodes,
+	taskExists,
+	toKebabCase,
+	traverseDependencies,
+	truncate,
 	withFileLock,
-	withFileLockSync
+	withFileLockSync,
+	withSilentScope,
+	writeJSON
 };

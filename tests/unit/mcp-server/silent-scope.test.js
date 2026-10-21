@@ -1,10 +1,10 @@
+import { scopeToolExecution } from '../../../mcp-server/src/tools/silent-scope.js';
 import {
 	disableSilentMode,
 	enableSilentMode,
 	isSilentMode,
 	withSilentScope
 } from '../../../scripts/modules/utils.js';
-import { scopeToolExecution } from '../../../mcp-server/src/tools/silent-scope.js';
 
 /** A promise the test resolves by hand, so ordering never depends on timers */
 const gate = () => {
