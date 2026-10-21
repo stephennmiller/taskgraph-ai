@@ -44,8 +44,8 @@ export function trustLoop(
 	const trusted = readTrusted(home);
 	if (trusted.includes(root)) return;
 	fs.mkdirSync(path.dirname(trustFile(home)), { recursive: true });
-	fs.writeFileSync(
-		trustFile(home),
-		JSON.stringify([...trusted, root], null, 2)
-	);
+	// Write beside, then rename, so a crash cannot leave half a file
+	const tmp = `${trustFile(home)}.${process.pid}.tmp`;
+	fs.writeFileSync(tmp, JSON.stringify([...trusted, root], null, 2));
+	fs.renameSync(tmp, trustFile(home));
 }
