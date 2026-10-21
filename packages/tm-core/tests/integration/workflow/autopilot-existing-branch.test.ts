@@ -1,7 +1,7 @@
 /**
  * @fileoverview Starting a workflow whose branch already exists (left by an
- * earlier run) must reuse that branch, not fail and leave a half-started
- * workflow behind.
+ * earlier run) must fail clearly and leave no saved state behind, so the
+ * next start is not blocked.
  *
  * @integration
  */
@@ -44,15 +44,24 @@ describe('Autopilot start when the branch already exists', () => {
 
 	afterEach(() => project.restore());
 
-	it('checks the existing branch out and starts normally', async () => {
+	it('says the branch is left over and leaves no half-started workflow', async () => {
 		await start(new WorkflowService(project.projectDir));
 		const workflowBranch = branch();
 		execSync('git checkout -', { cwd: project.projectDir, stdio: 'pipe' });
+		const retry = new WorkflowService(project.projectDir);
+
+		await expect(start(retry, true)).rejects.toThrow(/already exists/);
+
+		expect(await retry.hasWorkflow()).toBe(false);
 		expect(branch()).not.toBe(workflowBranch);
+	});
 
-		const status = await start(new WorkflowService(project.projectDir), true);
+	it('starts normally when already on that branch', async () => {
+		await start(new WorkflowService(project.projectDir));
+		const retry = new WorkflowService(project.projectDir);
 
-		expect(branch()).toBe(workflowBranch);
+		const status = await start(retry, true);
+
 		expect(status.tddPhase).toBe('RED');
 	});
 });

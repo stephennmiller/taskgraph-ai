@@ -241,18 +241,23 @@ export class WorkflowService {
 		const branchName = this.generateBranchName(taskId, taskTitle, tag);
 
 		try {
-			const currentBranch = await gitAdapter.getCurrentBranch();
-			if (currentBranch === branchName) {
-				// Already on it
-			} else if (await gitAdapter.branchExists(branchName)) {
-				// A branch left by an earlier run holds that run's work: pick it up
-				await gitAdapter.checkoutBranch(branchName);
-			} else {
+			if ((await gitAdapter.getCurrentBranch()) !== branchName) {
+				if (await gitAdapter.branchExists(branchName)) {
+					// It may hold finished work; starting over on it should be the user's call
+					throw new Error(
+						`Branch ${branchName} already exists from an earlier run. Check it out to continue there, or delete it with: git branch -D ${branchName}`
+					);
+				}
 				await gitAdapter.createAndCheckoutBranch(branchName);
 			}
 		} catch (error) {
 			// The state file already exists; leaving it would block every restart
-			await this.abortWorkflow();
+			try {
+				this.activityLogger?.stop();
+				await this.abortWorkflow();
+			} catch (cleanupError) {
+				this.logger.warn(`Could not clear workflow state: ${cleanupError}`);
+			}
 			throw error;
 		}
 
@@ -276,6 +281,11 @@ export class WorkflowService {
 		const state = await this.stateManager.load();
 
 		// Create new orchestrator with loaded context
+		// A workflow saved before ids were qualified holds bare ones
+		state.context.subtasks = state.context.subtasks.map((st) => ({
+			...st,
+			id: qualifySubtaskId(state.context.taskId, st.id)
+		}));
 		this.orchestrator = new WorkflowOrchestrator(state.context);
 
 		// Validate and restore state

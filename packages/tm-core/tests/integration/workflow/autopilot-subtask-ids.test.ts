@@ -19,6 +19,8 @@ vi.mock('../../../src/common/logger/index.js', () => ({
 
 import { WorkflowService } from '../../../src/modules/workflow/services/workflow.service.js';
 
+import fs from 'node:fs';
+import { WorkflowStateManager } from '../../../src/modules/workflow/managers/workflow-state-manager.js';
 import { createWorkflowProject } from './project-helper.js';
 
 describe('Autopilot subtask ids', () => {
@@ -66,5 +68,22 @@ describe('Autopilot subtask ids', () => {
 		expect(updateStatus).toHaveBeenCalledWith('5.1', 'done', undefined);
 		expect(updateStatus).not.toHaveBeenCalledWith('1', 'done', undefined);
 		expect(status.currentSubtask?.id).toBe('5.2');
+	});
+
+	it('qualifies the ids of a workflow saved with bare ones when it resumes', async () => {
+		const service = new WorkflowService(projectDir);
+		await service.startWorkflow({
+			taskId: '5',
+			taskTitle: 'Old state',
+			subtasks: [{ id: '1', title: 'First', status: 'pending' }]
+		});
+		const statePath = new WorkflowStateManager(projectDir).getStatePath();
+		const saved = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
+		saved.context.subtasks[0].id = '1';
+		fs.writeFileSync(statePath, JSON.stringify(saved));
+
+		const status = await new WorkflowService(projectDir).resumeWorkflow();
+
+		expect(status.currentSubtask?.id).toBe('5.1');
 	});
 });
