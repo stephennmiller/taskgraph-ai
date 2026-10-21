@@ -23,6 +23,7 @@ import {
 	runInteractiveSetup,
 	ui
 } from '@tm/cli';
+import { syncTasksToReadme } from './sync-readme.js';
 import { log, readJSON } from './utils.js';
 
 import {
