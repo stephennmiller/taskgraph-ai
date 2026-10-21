@@ -95,6 +95,7 @@ const MOVE_ERROR_CODES = {
 	PARENT_TASK_NO_SUBTASKS: 'PARENT_TASK_NO_SUBTASKS',
 	DESTINATION_TASK_NOT_FOUND: 'DESTINATION_TASK_NOT_FOUND',
 	TASK_ALREADY_EXISTS: 'TASK_ALREADY_EXISTS',
+	INVALID_MOVE: 'INVALID_MOVE',
 	INVALID_TASKS_FILE: 'INVALID_TASKS_FILE',
 	ID_COUNT_MISMATCH: 'ID_COUNT_MISMATCH',
 	INVALID_SOURCE_TAG: 'INVALID_SOURCE_TAG',
@@ -323,6 +324,12 @@ function moveSubtaskToSubtask(tasks, sourceId, destinationId) {
 		}
 	} else {
 		// Moving between different parents
+		if (destParentTask.subtasks.some((st) => st.id === destSubtaskId)) {
+			throw new MoveTaskError(
+				MOVE_ERROR_CODES.TASK_ALREADY_EXISTS,
+				`Subtask ${destParentId}.${destSubtaskId} already exists. Use a different destination ID`
+			);
+		}
 		moveSubtaskToAnotherParent(
 			sourceSubtask,
 			sourceParentTask,
@@ -455,6 +462,27 @@ function moveTaskToSubtask(tasks, sourceId, destinationId) {
 	}
 
 	const sourceTask = tasks[sourceTaskIndex];
+
+	// Moving a task under itself would delete it along with its subtasks
+	if (destParentId === sourceTaskId) {
+		throw new MoveTaskError(
+			MOVE_ERROR_CODES.INVALID_MOVE,
+			`Cannot move task ${sourceTaskId} inside itself`
+		);
+	}
+	// Subtasks cannot have subtasks, so they would be dropped
+	if (sourceTask.subtasks?.length > 0) {
+		throw new MoveTaskError(
+			MOVE_ERROR_CODES.INVALID_MOVE,
+			`Task ${sourceTaskId} has subtasks and cannot become a subtask. Move or remove its subtasks first`
+		);
+	}
+	if (destParentTask.subtasks?.some((st) => st.id === destSubtaskId)) {
+		throw new MoveTaskError(
+			MOVE_ERROR_CODES.TASK_ALREADY_EXISTS,
+			`Subtask ${destParentId}.${destSubtaskId} already exists. Use a different destination ID`
+		);
+	}
 
 	// Initialize subtasks array if it doesn't exist (based on commit fixes)
 	if (!destParentTask.subtasks) {

@@ -78,4 +78,44 @@ describe('moveTask (unit)', () => {
 			moveTask('tasks.json', '1', '2', false, { tag: 'ghost' })
 		).rejects.toThrow(/tag "ghost" not found/);
 	});
+
+	describe('refuses moves that would lose or duplicate data', () => {
+		test('rejects moving a task under its own subtask', async () => {
+			await expect(
+				moveTask('tasks.json', '1', '1.1', false, { tag: 'master' })
+			).rejects.toThrow(/inside itself/);
+			expect(writeJSON).not.toHaveBeenCalled();
+		});
+
+		test('rejects turning a task that has subtasks into a subtask', async () => {
+			await expect(
+				moveTask('tasks.json', '2', '1.1', false, { tag: 'master' })
+			).rejects.toThrow(/has subtasks/);
+			expect(writeJSON).not.toHaveBeenCalled();
+		});
+
+		test('rejects a destination subtask ID that already exists', async () => {
+			await expect(
+				moveTask('tasks.json', '1', '2.1', false, { tag: 'master' })
+			).rejects.toThrow(/already exists/);
+			expect(writeJSON).not.toHaveBeenCalled();
+		});
+
+		test('rejects moving a subtask onto an existing subtask of another parent', async () => {
+			readJSON.mockImplementation((path, projectRoot, tag) => {
+				const data = clone();
+				data.master.tasks.push({
+					id: 3,
+					title: 'C',
+					subtasks: [{ id: 1, title: 'C.1' }]
+				});
+				return { ...data[tag], tag, _rawTaggedData: data };
+			});
+
+			await expect(
+				moveTask('tasks.json', '2.1', '3.1', false, { tag: 'master' })
+			).rejects.toThrow(/already exists/);
+			expect(writeJSON).not.toHaveBeenCalled();
+		});
+	});
 });

@@ -228,7 +228,7 @@ export class FormatHandler {
 				task.subtasks?.map((subtask) => ({
 					...subtask,
 					id: Number(subtask.id), // Subtask IDs are numbers
-					parentId: String(subtask.parentId) // Parent ID is string (Task ID)
+					parentId: String(subtask.parentId ?? task.id) // Parent ID is string (Task ID); older files omit it
 				})) || []
 		}));
 	}

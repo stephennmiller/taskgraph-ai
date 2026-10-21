@@ -503,6 +503,57 @@ describe('analyzeTaskComplexity', () => {
 		});
 	});
 
+	describe('report merge', () => {
+		const entry = (taskId, score) => ({
+			taskId,
+			taskTitle: `Task ${taskId}`,
+			complexityScore: score,
+			recommendedSubtasks: 3,
+			expansionPrompt: `prompt ${taskId}`,
+			reasoning: ''
+		});
+
+		test('keeps the entries of tasks that were not analyzed this run', async () => {
+			const reportFile = 'task-complexity-report.json';
+			const outputPath = `scripts/${reportFile}`;
+			fs.existsSync.mockImplementation((p) => p.endsWith(reportFile));
+			fs.readFileSync.mockReturnValue(
+				JSON.stringify({
+					meta: {},
+					complexityAnalysis: [entry(1, 2), entry(2, 8), entry(3, 4)]
+				})
+			);
+			generateObjectService.mockResolvedValue({
+				mainResult: { complexityAnalysis: [entry(1, 9)] },
+				telemetryData: sampleApiResponse.telemetryData
+			});
+			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+			await analyzeTaskComplexity(
+				{
+					file: 'tasks/tasks.json',
+					output: outputPath,
+					projectRoot: '/mock/project/root',
+					id: '1'
+				},
+				{ projectRoot: '/mock/project/root' }
+			);
+			logSpy.mockRestore();
+
+			const writes = mockWriteFileSync.mock.calls.filter(([file]) =>
+				file.endsWith(reportFile)
+			);
+			const report = JSON.parse(writes.at(-1)[1]);
+			const byId = Object.fromEntries(
+				report.complexityAnalysis.map((item) => [
+					item.taskId,
+					item.complexityScore
+				])
+			);
+			expect(byId).toEqual({ 1: 9, 2: 8, 3: 4 });
+		});
+	});
+
 	test('should handle API errors gracefully', async () => {
 		// Arrange
 		const options = {

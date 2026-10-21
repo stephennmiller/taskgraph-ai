@@ -51,6 +51,12 @@ const tagged = () => ({
 				dependencies: [5, 7],
 				metadata: inferred({ 5: 'inferred' })
 			},
+			{
+				id: 20,
+				title: 'D',
+				dependencies: [1],
+				metadata: inferred({ 1: 'inferred' })
+			},
 			{ id: 7, title: 'G', dependencies: [] },
 			{
 				id: 8,
@@ -167,12 +173,12 @@ describe('moveTask dependency provenance', () => {
 	});
 
 	test('keeps metadata and re-keys marks when a task becomes a subtask', async () => {
-		const written = await move('2', '3.4');
+		const written = await move('20', '3.4');
 
 		const subtask = written
 			.find((t) => t.id === 3)
 			.subtasks.find((st) => st.id === 4);
-		// Task 2 listed task 1; as a subtask it must keep saying task 1, not sibling 3.1
+		// Task 20 listed task 1; as a subtask it must keep saying task 1, not sibling 3.1
 		expect(subtask.dependencies).toEqual(['1']);
 		expect(subtask.metadata.dependencySources).toEqual({ 1: 'inferred' });
 	});

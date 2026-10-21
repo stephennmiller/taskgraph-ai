@@ -100,26 +100,42 @@ export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
 	let nextId = 1;
 
-	if (!fs.existsSync(tasksPath)) {
-		return { existingTasks, nextId };
-	}
+	const allData = readExistingTasksFile(tasksPath);
 
-	try {
-		const existingFileContent = fs.readFileSync(tasksPath, 'utf8');
-		const allData = JSON.parse(existingFileContent);
-
-		if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
-			existingTasks = allData[targetTag].tasks;
-			if (existingTasks.length > 0) {
-				nextId = Math.max(...existingTasks.map((t) => t.id || 0)) + 1;
-			}
+	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
+		existingTasks = allData[targetTag].tasks;
+		if (existingTasks.length > 0) {
+			nextId = Math.max(...existingTasks.map((t) => t.id || 0)) + 1;
 		}
-	} catch (error) {
-		// If we can't read the file or parse it, assume no existing tasks
-		return { existingTasks: [], nextId: 1 };
 	}
 
 	return { existingTasks, nextId };
+}
+
+/**
+ * Read the whole tasks file. A missing or empty file has no tags. A file that
+ * exists but is not valid JSON throws: treating it as empty would skip the
+ * overwrite check and the save would then replace every tag in it.
+ * @param {string} tasksPath
+ * @returns {Object} All tags in the file
+ */
+function readExistingTasksFile(tasksPath) {
+	if (!fs.existsSync(tasksPath)) {
+		return {};
+	}
+
+	const content = fs.readFileSync(tasksPath, 'utf8');
+	if (content.trim() === '') {
+		return {};
+	}
+
+	try {
+		return JSON.parse(content);
+	} catch (error) {
+		throw new Error(
+			`${tasksPath} is not valid JSON (${error.message}). Fix or remove the file, then run this again`
+		);
+	}
 }
 
 /**
@@ -282,15 +298,7 @@ export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
 	}
 
 	// Read existing file to preserve other tags
-	let outputData = {};
-	if (fs.existsSync(tasksPath)) {
-		try {
-			const existingFileContent = fs.readFileSync(tasksPath, 'utf8');
-			outputData = JSON.parse(existingFileContent);
-		} catch (error) {
-			outputData = {};
-		}
-	}
+	const outputData = readExistingTasksFile(tasksPath);
 
 	// Update only the target tag
 	outputData[targetTag] = {

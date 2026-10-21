@@ -431,7 +431,10 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 				// Keep existing entries that weren't in this analysis run AND belong to the current tag
 				// We determine tag membership by checking if the task ID exists in the current tag's tasks
-				const currentTagTaskIds = new Set(tasksData.tasks.map((t) => t.id));
+				// tasksData holds only the tasks analyzed this run, so use the whole tag
+				const currentTagTaskIds = new Set(
+					(originalData?.tasks ?? tasksData.tasks).map((t) => t.id)
+				);
 				const existingEntriesNotAnalyzed =
 					existingReport.complexityAnalysis.filter(
 						(item) =>

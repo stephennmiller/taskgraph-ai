@@ -46,6 +46,23 @@ vi.doMock('../../../../../src/utils/path-utils.js', () => ({
 	normalizeProjectRoot: vi.fn((root) => root)
 }));
 
+// The real helper edits the file under a lock; here it edits what the mocked
+// readJSON returns
+vi.doMock(
+	'../../../../../scripts/modules/utils/update-tag-tasks.js',
+	async () => {
+		const { readJSON } = await import(
+			'../../../../../scripts/modules/utils.js'
+		);
+		return {
+			updateTagTasks: vi.fn(async (filepath, tag, mutate) => {
+				const view = readJSON(filepath);
+				return mutate((view._rawTaggedData ?? { [tag]: view })[tag]);
+			})
+		};
+	}
+);
+
 vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	readJSON: vi.fn(),
 	writeJSON: vi.fn(),
