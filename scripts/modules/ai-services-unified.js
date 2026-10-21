@@ -215,6 +215,10 @@ const INITIAL_RETRY_DELAY_MS = 1000;
 // Helper function to check if an error is retryable
 function isRetryableError(error) {
 	const errorMessage = error.message?.toLowerCase() || '';
+	// A call we gave up on stays given up; retrying would wait out the limit again
+	if (error.name === 'TimeoutError' || errorMessage.includes('aborted')) {
+		return false;
+	}
 	return (
 		errorMessage.includes('rate limit') ||
 		errorMessage.includes('overloaded') ||

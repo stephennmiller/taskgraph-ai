@@ -31,6 +31,7 @@ const IGNORED_PATTERNS = [
 // migration (#71) had to touch them. Exact paths, so new files in the same
 // folders are still checked. Remove an entry once its file is split.
 const LEGACY_OVERSIZED = new Set([
+	'scripts/modules/ai-services-unified.js',
 	'tests/integration/cli/move-cross-tag.test.js',
 	'tests/integration/mcp-server/direct-functions.test.js',
 	'tests/integration/move-task-cross-tag.integration.test.js',

@@ -16,6 +16,7 @@ import type {
 	WorkflowPhase,
 	WorkflowState
 } from '../types.js';
+import { TestResultValidator } from './test-result-validator.js';
 import { WorkflowActivityLogger } from './workflow-activity-logger.js';
 
 /**
@@ -87,6 +88,12 @@ export interface WorkflowServiceOptions {
 	projectRoot: string;
 	taskStatusUpdater?: TaskStatusUpdater;
 	tag?: string;
+}
+
+/** The task list numbers subtasks 1, 2, ...; status updates need "5.1" */
+function qualifySubtaskId(taskId: string, subtaskId: string | number): string {
+	const id = String(subtaskId);
+	return id.includes('.') ? id : `${taskId}.${id}`;
 }
 
 /**
@@ -178,7 +185,7 @@ export class WorkflowService {
 
 		// Parse subtasks to WorkflowContext format
 		const workflowSubtasks: SubtaskInfo[] = subtasks.map((st) => ({
-			id: st.id,
+			id: qualifySubtaskId(taskId, st.id),
 			title: st.title,
 			status: st.status === 'done' ? 'completed' : 'pending',
 			attempts: 0,
@@ -233,11 +240,25 @@ export class WorkflowService {
 		// Create git branch with descriptive name
 		const branchName = this.generateBranchName(taskId, taskTitle, tag);
 
-		// Check if we're already on the target branch
-		const currentBranch = await gitAdapter.getCurrentBranch();
-		if (currentBranch !== branchName) {
-			// Only create branch if we're not already on it
-			await gitAdapter.createAndCheckoutBranch(branchName);
+		try {
+			if ((await gitAdapter.getCurrentBranch()) !== branchName) {
+				if (await gitAdapter.branchExists(branchName)) {
+					// It may hold finished work; starting over on it should be the user's call
+					throw new Error(
+						`Branch ${branchName} already exists from an earlier run. Check it out to continue there, or delete it with: git branch -D ${branchName}`
+					);
+				}
+				await gitAdapter.createAndCheckoutBranch(branchName);
+			}
+		} catch (error) {
+			// The state file already exists; leaving it would block every restart
+			try {
+				this.activityLogger?.stop();
+				await this.abortWorkflow();
+			} catch (cleanupError) {
+				this.logger.warn(`Could not clear workflow state: ${cleanupError}`);
+			}
+			throw error;
 		}
 
 		// Transition to SUBTASK_LOOP with RED phase
@@ -260,6 +281,11 @@ export class WorkflowService {
 		const state = await this.stateManager.load();
 
 		// Create new orchestrator with loaded context
+		// A workflow saved before ids were qualified holds bare ones
+		state.context.subtasks = state.context.subtasks.map((st) => ({
+			...st,
+			id: qualifySubtaskId(state.context.taskId, st.id)
+		}));
 		this.orchestrator = new WorkflowOrchestrator(state.context);
 
 		// Validate and restore state
@@ -423,6 +449,8 @@ export class WorkflowService {
 			throw new Error('Not in active TDD phase');
 		}
 
+		this.assertTrustworthy(tddPhase, testResults);
+
 		// Transition based on current phase
 		switch (tddPhase) {
 			case 'RED':
@@ -446,6 +474,25 @@ export class WorkflowService {
 		}
 
 		return this.getStatus();
+	}
+
+	/**
+	 * Refuse results that cannot be right before they move the workflow on.
+	 * RED with no failures stays allowed: it means the feature already exists.
+	 */
+	private assertTrustworthy(tddPhase: string, testResults: TestResult): void {
+		const validator = new TestResultValidator();
+		const check =
+			tddPhase === 'GREEN'
+				? validator.validateGreenPhase(testResults)
+				: validator.validate(testResults);
+		const errors = [...check.errors];
+		if (tddPhase === 'RED' && testResults.total === 0) {
+			errors.push('Cannot validate empty test suite');
+		}
+		if (errors.length > 0) {
+			throw new Error(`Invalid test results: ${errors.join('; ')}`);
+		}
 	}
 
 	/**
@@ -485,7 +532,12 @@ export class WorkflowService {
 		// Mark completed subtask as done (use workflow's tag from context)
 		if (completedSubtaskId) {
 			const context = this.orchestrator.getContext();
-			await this.updateTaskStatus(completedSubtaskId, 'done', context.tag);
+			// A workflow saved before ids were qualified still holds bare ones
+			await this.updateTaskStatus(
+				qualifySubtaskId(context.taskId, completedSubtaskId),
+				'done',
+				context.tag
+			);
 		}
 
 		return this.getStatus();
