@@ -240,11 +240,20 @@ export class WorkflowService {
 		// Create git branch with descriptive name
 		const branchName = this.generateBranchName(taskId, taskTitle, tag);
 
-		// Check if we're already on the target branch
-		const currentBranch = await gitAdapter.getCurrentBranch();
-		if (currentBranch !== branchName) {
-			// Only create branch if we're not already on it
-			await gitAdapter.createAndCheckoutBranch(branchName);
+		try {
+			const currentBranch = await gitAdapter.getCurrentBranch();
+			if (currentBranch === branchName) {
+				// Already on it
+			} else if (await gitAdapter.branchExists(branchName)) {
+				// A branch left by an earlier run holds that run's work: pick it up
+				await gitAdapter.checkoutBranch(branchName);
+			} else {
+				await gitAdapter.createAndCheckoutBranch(branchName);
+			}
+		} catch (error) {
+			// The state file already exists; leaving it would block every restart
+			await this.abortWorkflow();
+			throw error;
 		}
 
 		// Transition to SUBTASK_LOOP with RED phase
