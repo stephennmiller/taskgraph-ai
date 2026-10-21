@@ -12,7 +12,6 @@
 		"strict": true,
 		"skipLibCheck": true,
 		"noEmit": true,
-		"baseUrl": ".",
 		"paths": {
 			"@tm/core": ["./packages/tm-core/src/index.ts"],
 			"@tm/core/*": ["./packages/tm-core/src/*"],

@@ -2,7 +2,7 @@
  * Asset Resolver Module
  * Handles resolving paths to asset files in the package
  *
- * The public/assets folder is copied to dist/assets during build via tsup's publicDir,
+ * The public/assets folder is copied to dist/assets during build via tsdown's `copy` option,
  * so we can reliably find it relative to the bundled files.
  */
 import fs from 'fs';

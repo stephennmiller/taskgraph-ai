@@ -17,7 +17,6 @@
 	],
 	"keywords": [
 		"build-config",
-		"tsup",
 		"monorepo"
 	],
 	"author": "",
@@ -28,10 +27,8 @@
 		"fix-null-versions": "npx tsx scripts/fix-null-versions.ts"
 	},
 	"devDependencies": {
-		"typescript": "^5.9.2"
-	},
-	"dependencies": {
-		"tsup": "^8.5.0"
+		"@types/node": "^26.6.5",
+		"typescript": "~7.0.2"
 	},
 	"version": ""
 }
