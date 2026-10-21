@@ -8,8 +8,3 @@ export interface UpdateInfo {
 	needsUpdate: boolean;
 	highlights?: string[];
 }
-
-export interface TarballInfo {
-	url: string;
-	size: number;
-}
