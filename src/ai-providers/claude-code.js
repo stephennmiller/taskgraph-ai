@@ -19,7 +19,8 @@ import {
 	getClaudeCodeSettingsForCommand,
 	getSupportedModelsForProvider
 } from '../../scripts/modules/config-manager.js';
-import { log, resolveEnvVariable } from '../../scripts/modules/utils.js';
+import { readProjectEnv } from '@tm/core';
+import { log } from '../../scripts/modules/utils.js';
 import { createPathGuardHook } from './claude-code-path-guard.js';
 import { BaseAIProvider } from './base-provider.js';
 
@@ -248,13 +249,11 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			// to travel with the client rather than be swapped around this call.
 			// CLAUDE_CODE_API_KEY, when set, is used exclusively; otherwise
 			// ANTHROPIC_API_KEY is withheld so Claude Code uses its own sign-in.
-			const env = { ...process.env };
-			// The key may live in this project's .env, which is not in process.env
-			const apiKey = resolveEnvVariable(
-				'CLAUDE_CODE_API_KEY',
-				null,
-				projectRoot
-			);
+			// The host's variables win over the project's .env, as in tm-core's config
+			const env = projectRoot
+				? readProjectEnv(projectRoot)
+				: { ...process.env };
+			const apiKey = env.CLAUDE_CODE_API_KEY;
 			if (apiKey) {
 				env.ANTHROPIC_API_KEY = apiKey;
 			} else {

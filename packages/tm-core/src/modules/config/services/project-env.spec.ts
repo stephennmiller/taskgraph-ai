@@ -47,11 +47,11 @@ describe('project .env', () => {
 		const a = readProjectEnv(projectWith('TASKGRAPH_MODEL_MAIN=opus\n'));
 		const b = readProjectEnv(projectWith());
 
-		expect(new EnvironmentConfigProvider(a).loadConfig().models?.main).toBe(
-			'opus'
-		);
 		expect(
-			new EnvironmentConfigProvider(b).loadConfig().models?.main
+			new EnvironmentConfigProvider(undefined, a).loadConfig().models?.main
+		).toBe('opus');
+		expect(
+			new EnvironmentConfigProvider(undefined, b).loadConfig().models?.main
 		).toBeUndefined();
 	});
 

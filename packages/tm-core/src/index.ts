@@ -178,6 +178,12 @@ export {
 	type GenerateTaskFilesResult
 } from './modules/tasks/services/task-file-generator.service.js';
 
+// Per-project environment
+export {
+	readProjectEnv,
+	type EnvMap
+} from './modules/config/services/project-env.js';
+
 // Task filtering utilities
 export {
 	buildBlocksMap,

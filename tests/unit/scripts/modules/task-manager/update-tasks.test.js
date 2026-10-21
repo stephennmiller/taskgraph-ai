@@ -333,6 +333,81 @@ describe('updateTasks', () => {
 		});
 	});
 
+	test('keeps existing subtasks when the AI returns null for them', async () => {
+		const subtasks = [
+			{
+				id: 1,
+				title: 'Finished step',
+				status: 'done',
+				dependencies: [],
+				testStrategy: 'Check it'
+			}
+		];
+		const written = await runUpdate(
+			[{ id: 2, title: 'Two', status: 'pending', dependencies: [], subtasks }],
+			[
+				{
+					id: 2,
+					title: 'Two, revised',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: null
+				}
+			]
+		);
+
+		expect(written[0].subtasks).toEqual(subtasks);
+	});
+
+	test("keeps a subtask's test strategy when the AI returns null for it", async () => {
+		const written = await runUpdate(
+			[
+				{
+					id: 2,
+					title: 'Two',
+					status: 'pending',
+					dependencies: [],
+					subtasks: [
+						{
+							id: 1,
+							title: 'Step',
+							status: 'pending',
+							dependencies: [],
+							testStrategy: 'Check it'
+						}
+					]
+				}
+			],
+			[
+				{
+					id: 2,
+					title: 'Two',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: [
+						{
+							id: 1,
+							title: 'Step',
+							status: 'pending',
+							dependencies: [],
+							testStrategy: null
+						}
+					]
+				}
+			]
+		);
+
+		expect(written[0].subtasks[0].testStrategy).toBe('Check it');
+	});
+
 	test('ignores tasks the AI returns that were not sent to it', async () => {
 		const written = await runUpdate(
 			[

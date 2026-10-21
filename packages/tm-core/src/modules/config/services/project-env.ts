@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseEnv } from 'node:util';
+import { getLogger } from '../../../common/logger/index.js';
 
 export type EnvMap = Record<string, string | undefined>;
 
@@ -20,8 +21,13 @@ export function readProjectEnv(projectRoot: string): EnvMap {
 		fromFile = parseEnv(
 			fs.readFileSync(path.join(projectRoot, '.env'), 'utf-8')
 		);
-	} catch {
-		// No .env, or one that can't be read, means no project settings
+	} catch (error) {
+		// No .env just means no project settings; anything else the user should see
+		if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+			getLogger('project-env').warn(
+				`Could not read ${path.join(projectRoot, '.env')}: ${(error as Error).message}`
+			);
+		}
 	}
 	return { ...fromFile, ...process.env };
 }

@@ -253,9 +253,9 @@ async function updateTasks(
 					const merged = {
 						...task, // Keep all existing fields
 						...updatedTask, // Override with updated fields
-						// Ensure subtasks field is preserved if not provided by AI
+						// Keep the existing subtasks unless the AI sent a replacement
 						subtasks:
-							updatedTask.subtasks !== undefined
+							updatedTask.subtasks != null
 								? updatedTask.subtasks
 								: task.subtasks
 					};
@@ -276,6 +276,9 @@ async function updateTasks(
 							);
 							const restored = { ...subtask };
 							delete restored.metadata;
+							if (restored.testStrategy == null && original) {
+								restored.testStrategy = original.testStrategy;
+							}
 							assignMetadata(
 								restored,
 								reconcileDependencySources(subtask, original, task.id)

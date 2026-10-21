@@ -51,8 +51,8 @@ export class EnvironmentConfigProvider {
 	private mappings: EnvMapping[];
 
 	constructor(
-		private readonly env: EnvMap = process.env,
-		customMappings?: EnvMapping[]
+		customMappings?: EnvMapping[],
+		private readonly env: EnvMap = process.env
 	) {
 		this.mappings = customMappings || [
 			...EnvironmentConfigProvider.DEFAULT_MAPPINGS,

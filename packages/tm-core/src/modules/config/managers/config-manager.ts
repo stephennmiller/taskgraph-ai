@@ -70,7 +70,7 @@ export class ConfigManager {
 		const env = readProjectEnv(projectRoot);
 		this.stateManager = new RuntimeStateManager(projectRoot, env);
 		this.persistence = new ConfigPersistence(projectRoot);
-		this.envProvider = new EnvironmentConfigProvider(env);
+		this.envProvider = new EnvironmentConfigProvider(undefined, env);
 	}
 
 	/**
