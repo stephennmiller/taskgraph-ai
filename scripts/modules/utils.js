@@ -1128,6 +1128,13 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						}
 					}
 
+					// readJSON falls back to master's tasks for a tag that does not
+					// exist. Saving that under the requested name would create the
+					// tag as a copy of master.
+					if (!currentTaggedData[resolvedTag] && data.tag !== resolvedTag) {
+						throw new Error(`Tag "${resolvedTag}" not found`);
+					}
+
 					// Create a clean copy of the current resolved data (without internal properties)
 					const { _rawTaggedData, tag: _, ...cleanResolvedData } = data;
 
