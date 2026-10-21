@@ -19,7 +19,7 @@ import {
 	getClaudeCodeSettingsForCommand,
 	getSupportedModelsForProvider
 } from '../../scripts/modules/config-manager.js';
-import { log } from '../../scripts/modules/utils.js';
+import { log, resolveEnvVariable } from '../../scripts/modules/utils.js';
 import { createPathGuardHook } from './claude-code-path-guard.js';
 import { BaseAIProvider } from './base-provider.js';
 
@@ -249,8 +249,14 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			// CLAUDE_CODE_API_KEY, when set, is used exclusively; otherwise
 			// ANTHROPIC_API_KEY is withheld so Claude Code uses its own sign-in.
 			const env = { ...process.env };
-			if (process.env.CLAUDE_CODE_API_KEY) {
-				env.ANTHROPIC_API_KEY = process.env.CLAUDE_CODE_API_KEY;
+			// The key may live in this project's .env, which is not in process.env
+			const apiKey = resolveEnvVariable(
+				'CLAUDE_CODE_API_KEY',
+				null,
+				projectRoot
+			);
+			if (apiKey) {
+				env.ANTHROPIC_API_KEY = apiKey;
 			} else {
 				delete env.ANTHROPIC_API_KEY;
 			}

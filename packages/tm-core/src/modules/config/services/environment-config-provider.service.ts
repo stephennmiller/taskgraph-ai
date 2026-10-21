@@ -5,6 +5,7 @@
 
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
+import type { EnvMap } from './project-env.js';
 
 /**
  * Environment variable mapping definition
@@ -49,7 +50,10 @@ export class EnvironmentConfigProvider {
 
 	private mappings: EnvMapping[];
 
-	constructor(customMappings?: EnvMapping[]) {
+	constructor(
+		private readonly env: EnvMap = process.env,
+		customMappings?: EnvMapping[]
+	) {
 		this.mappings = customMappings || [
 			...EnvironmentConfigProvider.DEFAULT_MAPPINGS,
 			...EnvironmentConfigProvider.RUNTIME_STATE_MAPPINGS
@@ -66,7 +70,7 @@ export class EnvironmentConfigProvider {
 			// Skip runtime state variables
 			if (mapping.isRuntimeState) continue;
 
-			const value = process.env[mapping.env];
+			const value = this.env[mapping.env];
 			if (!value) continue;
 
 			// Validate value if validator is provided
@@ -91,7 +95,7 @@ export class EnvironmentConfigProvider {
 		for (const mapping of this.mappings) {
 			if (!mapping.isRuntimeState) continue;
 
-			const value = process.env[mapping.env];
+			const value = this.env[mapping.env];
 			if (value) {
 				const key = mapping.path[mapping.path.length - 1];
 				state[key] = value;
@@ -127,7 +131,7 @@ export class EnvironmentConfigProvider {
 	 * Check if an environment variable is set
 	 */
 	hasEnvVar(envName: string): boolean {
-		return envName in process.env && process.env[envName] !== undefined;
+		return this.env[envName] !== undefined;
 	}
 
 	/**
@@ -137,7 +141,7 @@ export class EnvironmentConfigProvider {
 		const vars: Record<string, string> = {};
 		const prefix = 'TASKGRAPH_';
 
-		for (const [key, value] of Object.entries(process.env)) {
+		for (const [key, value] of Object.entries(this.env)) {
 			if (key.startsWith(prefix) && value !== undefined) {
 				vars[key] = value;
 			}

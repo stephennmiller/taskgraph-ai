@@ -108,7 +108,10 @@ describe('ConfigManager', () => {
 			// Services should have been initialized during beforeEach
 			expect(ConfigLoader).toHaveBeenCalledWith(testProjectRoot);
 			expect(ConfigMerger).toHaveBeenCalled();
-			expect(RuntimeStateManager).toHaveBeenCalledWith(testProjectRoot);
+			expect(RuntimeStateManager).toHaveBeenCalledWith(
+				testProjectRoot,
+				expect.any(Object)
+			);
 			expect(ConfigPersistence).toHaveBeenCalledWith(testProjectRoot);
 			expect(EnvironmentConfigProvider).toHaveBeenCalled();
 		});

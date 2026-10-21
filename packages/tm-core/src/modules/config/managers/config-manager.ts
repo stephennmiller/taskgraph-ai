@@ -19,6 +19,7 @@ import {
 } from '../services/config-merger.service.js';
 import { ConfigPersistence } from '../services/config-persistence.service.js';
 import { EnvironmentConfigProvider } from '../services/environment-config-provider.service.js';
+import { readProjectEnv } from '../services/project-env.js';
 import { RuntimeStateManager } from '../services/runtime-state-manager.service.js';
 
 /**
@@ -66,9 +67,10 @@ export class ConfigManager {
 		// Initialize services
 		this.loader = new ConfigLoader(projectRoot);
 		this.merger = new ConfigMerger();
-		this.stateManager = new RuntimeStateManager(projectRoot);
+		const env = readProjectEnv(projectRoot);
+		this.stateManager = new RuntimeStateManager(projectRoot, env);
 		this.persistence = new ConfigPersistence(projectRoot);
-		this.envProvider = new EnvironmentConfigProvider();
+		this.envProvider = new EnvironmentConfigProvider(env);
 	}
 
 	/**

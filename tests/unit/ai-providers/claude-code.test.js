@@ -253,6 +253,20 @@ describe('ClaudeCodeProvider', () => {
 				expect(process.env.ANTHROPIC_API_KEY).toBe('sk-ant-should-not-be-used');
 			});
 
+			it("reads CLAUDE_CODE_API_KEY from the project's .env without loading it into process.env", async () => {
+				const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-env-'));
+				fs.writeFileSync(
+					path.join(root, '.env'),
+					'CLAUDE_CODE_API_KEY=sk-ant-from-project\n'
+				);
+				delete process.env.CLAUDE_CODE_API_KEY;
+
+				provider.getClient({ projectRoot: root });
+
+				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('sk-ant-from-project');
+				expect(process.env.CLAUDE_CODE_API_KEY).toBeUndefined();
+			});
+
 			it('uses CLAUDE_CODE_API_KEY exclusively when it is set', async () => {
 				process.env.ANTHROPIC_API_KEY = 'sk-ant-other';
 				process.env.CLAUDE_CODE_API_KEY = 'sk-ant-claude-code';
