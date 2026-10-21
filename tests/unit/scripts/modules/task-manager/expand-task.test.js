@@ -202,6 +202,26 @@ vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
 	}))
 }));
 
+// The real helper edits the file under a lock. Here it edits the mocked file
+// contents and hands the result to writeJSON so tests can look at it.
+vi.doMock(
+	'../../../../../scripts/modules/utils/update-tag-tasks.js',
+	async () => {
+		const { readJSON, writeJSON } = await import(
+			'../../../../../scripts/modules/utils.js'
+		);
+		return {
+			updateTagTasks: vi.fn(async (filepath, tag, mutate) => {
+				const view = readJSON(filepath);
+				const raw = view._rawTaggedData ?? { [tag]: view };
+				const result = mutate(raw[tag]);
+				writeJSON(filepath, raw);
+				return result;
+			})
+		};
+	}
+);
+
 // Mock process.exit to prevent Jest worker crashes
 const mockExit = vi.spyOn(process, 'exit').mockImplementation((code) => {
 	throw new Error(`process.exit called with "${code}"`);
@@ -217,6 +237,10 @@ const {
 	readComplexityReport,
 	findProjectRoot
 } = await import('../../../../../scripts/modules/utils.js');
+
+const { updateTagTasks } = await import(
+	'../../../../../scripts/modules/utils/update-tag-tasks.js'
+);
 
 const { generateObjectService } = await import(
 	'../../../../../scripts/modules/ai-services-unified.js'
@@ -372,8 +396,12 @@ describe('expandTask', () => {
 				undefined
 			);
 			expect(generateObjectService).toHaveBeenCalledWith(expect.any(Object));
-			expect(writeJSON).toHaveBeenCalledWith(
+			expect(updateTagTasks).toHaveBeenCalledWith(
 				tasksPath,
+				'master',
+				expect.any(Function)
+			);
+			expect(writeJSON.mock.calls[0][1].master).toEqual(
 				expect.objectContaining({
 					tasks: expect.arrayContaining([
 						expect.objectContaining({
@@ -396,16 +424,8 @@ describe('expandTask', () => {
 								})
 							])
 						})
-					]),
-					tag: 'master',
-					_rawTaggedData: expect.objectContaining({
-						master: expect.objectContaining({
-							tasks: expect.any(Array)
-						})
-					})
-				}),
-				'/mock/project/root',
-				undefined
+					])
+				})
 			);
 			expect(result).toEqual(
 				expect.objectContaining({
@@ -541,17 +561,16 @@ describe('expandTask', () => {
 				'/mock/project/root',
 				'master'
 			);
-			expect(writeJSON).toHaveBeenCalledWith(
+			expect(updateTagTasks).toHaveBeenCalledWith(
 				tasksPath,
+				'master',
+				expect.any(Function)
+			);
+			expect(writeJSON.mock.calls[0][1]).toEqual(
 				expect.objectContaining({
-					tag: 'master',
-					_rawTaggedData: expect.objectContaining({
-						master: expect.any(Object),
-						'feature-branch': expect.any(Object)
-					})
-				}),
-				'/mock/project/root',
-				'master' // CRITICAL: Tag must be passed to writeJSON
+					master: expect.any(Object),
+					'feature-branch': expect.any(Object)
+				})
 			);
 		});
 
@@ -584,17 +603,16 @@ describe('expandTask', () => {
 				'/mock/project/root',
 				'feature-branch'
 			);
-			expect(writeJSON).toHaveBeenCalledWith(
+			expect(updateTagTasks).toHaveBeenCalledWith(
 				tasksPath,
+				'feature-branch',
+				expect.any(Function)
+			);
+			expect(writeJSON.mock.calls[0][1]).toEqual(
 				expect.objectContaining({
-					tag: 'feature-branch',
-					_rawTaggedData: expect.objectContaining({
-						master: expect.any(Object),
-						'feature-branch': expect.any(Object)
-					})
-				}),
-				'/mock/project/root',
-				'feature-branch' // CRITICAL: Correct tag passed to writeJSON
+					master: expect.any(Object),
+					'feature-branch': expect.any(Object)
+				})
 			);
 		});
 
@@ -617,21 +635,14 @@ describe('expandTask', () => {
 				'/mock/project/root',
 				undefined
 			);
-			expect(writeJSON).toHaveBeenCalledWith(
+			expect(updateTagTasks).toHaveBeenCalledWith(
 				tasksPath,
-				expect.objectContaining({
-					_rawTaggedData: expect.objectContaining({
-						master: expect.any(Object)
-					})
-				}),
-				'/mock/project/root',
-				undefined
+				'master',
+				expect.any(Function)
 			);
-
-			// CRITICAL: Verify structure is NOT flattened to old format
-			const writeCallArgs = writeJSON.mock.calls[0][1];
-			expect(writeCallArgs).toHaveProperty('tasks'); // Should have tasks property from readJSON mock
-			expect(writeCallArgs).toHaveProperty('_rawTaggedData'); // Should preserve tagged structure
+			expect(writeJSON.mock.calls[0][1]).toEqual(
+				expect.objectContaining({ master: expect.any(Object) })
+			);
 		});
 	});
 
@@ -649,23 +660,16 @@ describe('expandTask', () => {
 			await expandTask(tasksPath, taskId, 3, false, '', context, true);
 
 			// Assert - Should replace existing subtasks
-			expect(writeJSON).toHaveBeenCalledWith(
-				tasksPath,
+			const task4 = writeJSON.mock.calls[0][1].master.tasks.find(
+				(t) => t.id === 4
+			);
+			// The existing subtask is gone and the new ones took its place
+			expect(task4.subtasks).toHaveLength(3);
+			expect(task4.subtasks[0]).toEqual(
 				expect.objectContaining({
-					tasks: expect.arrayContaining([
-						expect.objectContaining({
-							id: 4,
-							subtasks: expect.arrayContaining([
-								expect.objectContaining({
-									id: 1,
-									title: 'Set up project structure'
-								})
-							])
-						})
-					])
-				}),
-				'/mock/project/root',
-				undefined
+					id: 1,
+					title: 'Set up project structure'
+				})
 			);
 		});
 
@@ -694,7 +698,7 @@ describe('expandTask', () => {
 			expect(writeJSON).toHaveBeenCalled();
 			const writeCall = writeJSON.mock.calls[0];
 			const savedData = writeCall[1]; // Second argument is the data
-			const task4 = savedData.tasks.find((t) => t.id === 4);
+			const task4 = savedData.master.tasks.find((t) => t.id === 4);
 
 			// Should have 4 subtasks total (1 existing + 3 new)
 			expect(task4.subtasks).toHaveLength(4);

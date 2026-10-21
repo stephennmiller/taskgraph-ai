@@ -16,9 +16,9 @@ import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';
 import {
 	findProjectRoot,
 	flattenTasksWithSubtasks,
-	readJSON,
-	writeJSON
+	readJSON
 } from '../utils.js';
+import { updateTagTasks } from '../utils/update-tag-tasks.js';
 
 /**
  * Expand a task into subtasks using the unified AI service (generateObjectService).
@@ -77,7 +77,7 @@ async function expandTask(
 			(t) => t.id === parseInt(taskId, 10)
 		);
 		if (taskIndex === -1) throw new Error(`Task ${taskId} not found`);
-		const task = data.tasks[taskIndex];
+		let task = data.tasks[taskIndex];
 		logger.debug(
 			`Expanding task ${taskId}: ${task.title}${useResearch ? ' with research' : ''}`
 		);
@@ -338,16 +338,22 @@ async function expandTask(
 		}
 
 		// --- Task Update & File Writing ---
-		// Ensure task.subtasks is an array before appending
-		if (!Array.isArray(task.subtasks)) {
-			task.subtasks = [];
-		}
-		// Append the newly generated and validated subtasks
-		task.subtasks.push(...generatedSubtasks);
-		// --- End Change: Append instead of replace ---
-
-		data.tasks[taskIndex] = task; // Assign the modified task back
-		writeJSON(tasksPath, data, projectRoot, tag);
+		// Add the subtasks to the task as it is in the file now. The file may
+		// have changed since it was read (the AI call can take a minute).
+		await updateTagTasks(tasksPath, tag ?? data.tag ?? 'master', (tagData) => {
+			const current = tagData.tasks.find((t) => t.id === task.id);
+			if (!current) {
+				throw new Error(
+					`Task ${taskId} was removed while it was being expanded`
+				);
+			}
+			// force replaces what is there; otherwise the new subtasks are appended
+			if (force || !Array.isArray(current.subtasks)) {
+				current.subtasks = [];
+			}
+			current.subtasks.push(...generatedSubtasks);
+			task = current;
+		});
 		// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 
 		// Say what was created; the usage line follows
