@@ -43,8 +43,9 @@ export function isInsideRoot(root, candidate) {
 }
 
 // Names that hold credentials. .env.example and friends hold none.
-const SECRET_NAME = /^(\.env(\..*)?|\.git|\.npmrc|id_.*)$|\.pem$/;
-const PUBLIC_ENV = /^\.env\.(example|sample|template)$/;
+const SECRET_NAME =
+	/^(\.env(\..*)?|\.git|\.npmrc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.pem$/i;
+const PUBLIC_ENV = /^\.env\.(example|sample|template)$/i;
 
 /**
  * True when any part of a path or glob names a credentials file.
@@ -54,9 +55,16 @@ const PUBLIC_ENV = /^\.env\.(example|sample|template)$/;
  */
 function namesSecret(candidate) {
 	return candidate
-		.split(/[\\/]/)
+		.split(/[\\/,]/)
 		.map((part) => part.replace(/[*?[\]{}]/g, ''))
 		.some((part) => SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
+}
+
+/** Judge the path below the root, and where a symlink really leads */
+function targetsSecret(root, candidate) {
+	const resolved = path.resolve(root, candidate);
+	const real = realpathOfExistingPrefix(resolved);
+	return [resolved, real].some((p) => namesSecret(path.relative(root, p)));
 }
 
 function hasParentSegment(pattern) {
@@ -107,9 +115,13 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		if (!isInsideRoot(root, p)) {
 			return `${toolName} is limited to the project directory (${root}); ${p} is outside it.`;
 		}
-		if (namesSecret(p)) {
+		if (targetsSecret(root, p)) {
 			return `${toolName} may not open secret files such as .env, .git or keys (${p}).`;
 		}
+	}
+
+	if (typeof toolInput.glob === 'string' && namesSecret(toolInput.glob)) {
+		return `${toolName} globs may not match secret files such as .env, .git or keys.`;
 	}
 
 	// Glob's pattern can name a directory of its own. Grep's pattern is a

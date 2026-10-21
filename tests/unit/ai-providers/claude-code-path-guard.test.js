@@ -143,7 +143,7 @@ describe('claude-code path guard', () => {
 			);
 		});
 
-		it.each([['**/.env*'], ['.git/**'], ['**/*.pem'], ['id_*']])(
+		it.each([['**/.env*'], ['.git/**'], ['**/*.pem'], ['id_rsa*']])(
 			'denies Glob pattern %s',
 			(pattern) => {
 				expect(getPathViolation(root, 'Glob', { pattern })).toMatch(/secret/);
@@ -153,6 +153,43 @@ describe('claude-code path guard', () => {
 		it('denies a Grep aimed at a secret file or directory', () => {
 			expect(
 				getPathViolation(root, 'Grep', { pattern: 'x', path: '.git' })
+			).toMatch(/secret/);
+		});
+
+		it('denies upper-case names on case-insensitive filesystems', () => {
+			expect(getPathViolation(root, 'Read', { file_path: '.ENV' })).toMatch(
+				/secret/
+			);
+		});
+
+		it('denies a symlink that points at a secret file', () => {
+			fs.writeFileSync(path.join(root, '.env'), 'KEY=1');
+			fs.symlinkSync(path.join(root, '.env'), path.join(root, 'notes.txt'));
+			expect(
+				getPathViolation(root, 'Read', { file_path: 'notes.txt' })
+			).toMatch(/secret/);
+		});
+
+		it('only judges the part of the path below the root', () => {
+			const odd = path.join(base, 'id_cards', 'app');
+			fs.mkdirSync(odd, { recursive: true });
+			expect(
+				getPathViolation(odd, 'Read', { file_path: path.join(odd, 'a.js') })
+			).toBeNull();
+		});
+
+		it('allows source files whose names merely start with id_', () => {
+			expect(
+				getPathViolation(root, 'Read', { file_path: 'src/id_utils.js' })
+			).toBeNull();
+		});
+
+		it('denies brace patterns and Grep globs that name a secret', () => {
+			expect(getPathViolation(root, 'Glob', { pattern: '{.env,x}' })).toMatch(
+				/secret/
+			);
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'KEY', glob: '.env*' })
 			).toMatch(/secret/);
 		});
 
