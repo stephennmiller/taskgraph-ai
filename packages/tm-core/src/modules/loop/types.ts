@@ -56,6 +56,11 @@ export interface LoopConfig {
 	/** Run Claude in Docker sandbox mode (default: false) */
 	sandbox?: boolean;
 	/**
+	 * Skip the first-use approval for running Claude without permission prompts
+	 * outside the sandbox (default: false). Meant for non-interactive runs.
+	 */
+	trusted?: boolean;
+	/**
 	 * Include full Claude output in iteration results (default: false)
 	 *
 	 * When true: `LoopIteration.output` will contain full stdout+stderr text

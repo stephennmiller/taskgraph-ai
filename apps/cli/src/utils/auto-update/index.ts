@@ -3,13 +3,13 @@
  *
  * This module provides functionality for:
  * - Checking for updates from npm registry
- * - Downloading and installing updates with progress bar
+ * - Installing updates through npm
  * - Displaying update notifications
  * - Restarting CLI after updates
  */
 
 // Re-export types
-export type { UpdateInfo, TarballInfo } from './types.js';
+export type { UpdateInfo } from './types.js';
 
 // Re-export version utilities
 export { compareVersions } from './version.js';

@@ -42,6 +42,31 @@ export function isInsideRoot(root, candidate) {
 	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
 }
 
+// Names that hold credentials. .env.example and friends hold none.
+const SECRET_NAME =
+	/^(\.env(\..*)?|\.git|\.npmrc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.pem$/i;
+const PUBLIC_ENV = /^\.env\.(example|sample|template)$/i;
+
+/**
+ * True when any part of a path or glob names a credentials file.
+ * shortcut: a Grep over a whole directory still reads these files, because
+ * the hook only sees the directory; upgrade if the guarded roles ever search
+ * with secrets present.
+ */
+function namesSecret(candidate) {
+	return candidate
+		.split(/[\\/,]/)
+		.map((part) => part.replace(/[*?[\]{}]/g, ''))
+		.some((part) => SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
+}
+
+/** Judge the path below the root, and where a symlink really leads */
+function targetsSecret(root, candidate) {
+	const resolved = path.resolve(root, candidate);
+	const real = realpathOfExistingPrefix(resolved);
+	return [resolved, real].some((p) => namesSecret(path.relative(root, p)));
+}
+
 function hasParentSegment(pattern) {
 	return pattern.split(/[\\/]/).includes('..');
 }
@@ -90,6 +115,13 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		if (!isInsideRoot(root, p)) {
 			return `${toolName} is limited to the project directory (${root}); ${p} is outside it.`;
 		}
+		if (targetsSecret(root, p)) {
+			return `${toolName} may not open secret files such as .env, .git or keys (${p}).`;
+		}
+	}
+
+	if (typeof toolInput.glob === 'string' && namesSecret(toolInput.glob)) {
+		return `${toolName} globs may not match secret files such as .env, .git or keys.`;
 	}
 
 	// Glob's pattern can name a directory of its own. Grep's pattern is a
@@ -99,6 +131,9 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 	if (typeof pattern === 'string') {
 		const deny = `${toolName} patterns may not leave the project directory (${root}).`;
 		if (hasParentSegment(pattern) || pattern.startsWith('~')) return deny;
+		if (namesSecret(pattern)) {
+			return `${toolName} patterns may not match secret files such as .env, .git or keys.`;
+		}
 		const base = absoluteGlobBase(pattern);
 		if (base !== null && !isInsideRoot(root, base)) return deny;
 	}

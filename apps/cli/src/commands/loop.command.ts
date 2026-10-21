@@ -14,6 +14,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
+import inquirer from 'inquirer';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -26,6 +27,7 @@ export interface LoopCommandOptions {
 	tag?: string;
 	project?: string;
 	sandbox?: boolean;
+	trust?: boolean;
 	output?: boolean;
 	verbose?: boolean;
 }
@@ -54,6 +56,10 @@ export class LoopCommand extends Command {
 				'Project root directory (auto-detected if not provided)'
 			)
 			.option('--sandbox', 'Run Claude in Docker sandbox mode')
+			.option(
+				'--trust',
+				'Run Claude without permission prompts in this project, without asking first (for scripts)'
+			)
 			.option(
 				'--no-output',
 				'Exclude full Claude output from iteration results'
@@ -94,6 +100,10 @@ export class LoopCommand extends Command {
 				this.handleSandboxAuth();
 			}
 
+			if (!options.sandbox && !options.trust) {
+				await this.confirmTrust();
+			}
+
 			console.log(chalk.cyan('Starting TaskGraph Loop...'));
 			console.log(chalk.dim(`Preset: ${prompt}`));
 			console.log(chalk.dim(`Max iterations: ${iterations}`));
@@ -122,6 +132,7 @@ export class LoopCommand extends Command {
 				progressFile,
 				tag: options.tag,
 				sandbox: options.sandbox,
+				trusted: options.trust,
 				// CLI defaults to including output (users typically want to see it)
 				// Domain defaults to false (library consumers opt-in explicitly)
 				includeOutput: options.output ?? true,
@@ -135,6 +146,28 @@ export class LoopCommand extends Command {
 			displayError(error, { skipExit: true });
 			process.exit(1);
 		}
+	}
+
+	/** First run in a project: `loop` turns Claude's permission prompts off */
+	private async confirmTrust(): Promise<void> {
+		if (this.tmCore.loop.isTrusted()) return;
+		if (!process.stdin.isTTY || !process.stdout.isTTY) {
+			throw new Error(
+				'loop runs Claude with permission prompts off. Pass --trust to allow that here, or --sandbox to run in Docker.'
+			);
+		}
+		const { confirmed } = await inquirer.prompt([
+			{
+				type: 'confirm',
+				name: 'confirmed',
+				message:
+					'loop runs Claude with permission prompts off: it can read, edit and run anything in this project without asking. Allow that here?',
+				default: false
+			}
+		]);
+		if (!confirmed)
+			throw new Error('Not approved. Use --sandbox to run in Docker.');
+		this.tmCore.loop.trust();
 	}
 
 	private handleSandboxAuth(): void {

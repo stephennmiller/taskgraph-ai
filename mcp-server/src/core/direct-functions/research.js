@@ -10,6 +10,7 @@ import {
 	enableSilentMode
 } from '../../../../scripts/modules/utils.js';
 import { createLogWrapper } from '../../tools/utils.js';
+import { assertInsideRoot } from '../utils/path-utils.js';
 
 /**
  * Direct function wrapper for performing AI-powered research with project context.
@@ -81,6 +82,19 @@ export async function researchDirect(args, log, context = {}) {
 					.map((path) => path.trim())
 					.filter((path) => path.length > 0)
 			: [];
+
+		// The files are read and sent to the model, so they must be in the project
+		if (projectRoot) {
+			try {
+				parsedFilePaths.forEach((p) => assertInsideRoot(projectRoot, p));
+			} catch (error) {
+				disableSilentMode();
+				return {
+					success: false,
+					error: { code: 'INVALID_PATH', message: error.message }
+				};
+			}
+		}
 
 		// Validate detail level
 		const validDetailLevels = ['low', 'medium', 'high'];

@@ -1,4 +1,6 @@
+import fs from 'fs';
 import path from 'path';
+import { isInsideRoot } from '../../../../src/ai-providers/claude-code-path-guard.js';
 import { PROJECT_MARKERS } from '../../../../src/constants/paths.js';
 import {
 	findComplexityReportPath as coreFindComplexityReportPath,
@@ -13,6 +15,27 @@ import {
  * MCP-specific path utilities that extend core path utilities with session support
  * This module handles session-specific path resolution for the MCP server
  */
+
+/**
+ * Resolve a path the model sent and refuse it when it leaves the project.
+ * @param {string} projectRoot - Project directory
+ * @param {string} candidate - Absolute path, or relative to projectRoot
+ * @returns {string} Absolute path inside projectRoot
+ * @throws {Error} When the path is outside projectRoot
+ */
+export function assertInsideRoot(projectRoot, candidate) {
+	// A root that does not exist yet (before initialize_project) has no symlinks to follow
+	let root = path.resolve(projectRoot);
+	try {
+		root = fs.realpathSync(projectRoot);
+	} catch {}
+	if (!isInsideRoot(root, candidate)) {
+		throw new Error(
+			`Path '${candidate}' is outside the project root '${projectRoot}'`
+		);
+	}
+	return path.resolve(projectRoot, candidate);
+}
 
 /**
  * Silent logger for MCP context to prevent console output
@@ -53,9 +76,9 @@ export function resolveTasksPath(args, log = silentLogger) {
 	const explicitPath = args?.file;
 	const rawProjectRoot = args?.projectRoot;
 
-	// If explicit path is provided and absolute, use it directly
-	if (explicitPath && path.isAbsolute(explicitPath)) {
-		return explicitPath;
+	// Without a project root there is nothing to check an absolute path against
+	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
+		throw new Error('projectRoot is required when a file path is absolute');
 	}
 
 	// Normalize project root if provided
@@ -65,7 +88,7 @@ export function resolveTasksPath(args, log = silentLogger) {
 
 	// If explicit path is relative, resolve it relative to normalized projectRoot
 	if (explicitPath && projectRoot) {
-		return path.resolve(projectRoot, explicitPath);
+		return assertInsideRoot(projectRoot, explicitPath);
 	}
 
 	// Use core findTasksPath with explicit path and normalized projectRoot context
@@ -106,9 +129,9 @@ export function resolvePrdPath(args, log = silentLogger) {
 	const explicitPath = args?.input;
 	const rawProjectRoot = args?.projectRoot;
 
-	// If explicit path is provided and absolute, use it directly
-	if (explicitPath && path.isAbsolute(explicitPath)) {
-		return explicitPath;
+	// Without a project root there is nothing to check an absolute path against
+	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
+		throw new Error('projectRoot is required when a file path is absolute');
 	}
 
 	// Normalize project root if provided
@@ -118,7 +141,7 @@ export function resolvePrdPath(args, log = silentLogger) {
 
 	// If explicit path is relative, resolve it relative to normalized projectRoot
 	if (explicitPath && projectRoot) {
-		return path.resolve(projectRoot, explicitPath);
+		return assertInsideRoot(projectRoot, explicitPath);
 	}
 
 	// Use core findPRDPath with explicit path and normalized projectRoot context
@@ -142,9 +165,9 @@ export function resolveComplexityReportPath(args, log = silentLogger) {
 	const rawProjectRoot = args?.projectRoot;
 	const tag = args?.tag;
 
-	// If explicit path is provided and absolute, use it directly
-	if (explicitPath && path.isAbsolute(explicitPath)) {
-		return explicitPath;
+	// Without a project root there is nothing to check an absolute path against
+	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
+		throw new Error('projectRoot is required when a file path is absolute');
 	}
 
 	// Normalize project root if provided
@@ -154,7 +177,7 @@ export function resolveComplexityReportPath(args, log = silentLogger) {
 
 	// If explicit path is relative, resolve it relative to normalized projectRoot
 	if (explicitPath && projectRoot) {
-		return path.resolve(projectRoot, explicitPath);
+		return assertInsideRoot(projectRoot, explicitPath);
 	}
 
 	// Use core findComplexityReportPath with explicit path and normalized projectRoot context
