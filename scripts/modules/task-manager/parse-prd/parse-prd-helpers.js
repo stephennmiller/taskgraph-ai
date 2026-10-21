@@ -231,7 +231,8 @@ export function processTasks(
 	// Second pass: remap dependencies
 	processedTasks.forEach((task) => {
 		task.dependencies = task.dependencies
-			.map((depId) => taskMap.get(depId))
+			// An id the PRD did not number is a task that already exists (--append)
+			.map((depId) => taskMap.get(depId) ?? depId)
 			.filter(
 				(newDepId) =>
 					newDepId != null &&
