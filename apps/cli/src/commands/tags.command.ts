@@ -4,7 +4,12 @@
  */
 
 import type { TmCore } from '@tm/core';
-import { createTmCore, getProjectPaths } from '@tm/core';
+import {
+	createTmCore,
+	getCurrentBranch,
+	getProjectPaths,
+	isGitRepository
+} from '@tm/core';
 import { Command } from 'commander';
 import { displayError } from '../utils/index.js';
 
@@ -30,6 +35,7 @@ import { displayError } from '../utils/index.js';
 import {
 	copyTag as legacyCopyTag,
 	createTag as legacyCreateTag,
+	createTagFromBranch as legacyCreateTagFromBranch,
 	deleteTag as legacyDeleteTag,
 	tags as legacyListTags,
 	renameTag as legacyRenameTag,
@@ -63,7 +69,13 @@ interface LegacyUseTagResult {
 interface LegacyCreateTagOptions {
 	description?: string;
 	copyFromTag?: string;
-	fromBranch?: boolean;
+}
+
+/**
+ * An Error carrying the next step; the CLI error display prints it as a hint.
+ */
+function withHint(message: string, hint: string): Error {
+	return Object.assign(new Error(message), { hint });
 }
 
 /**
@@ -125,7 +137,7 @@ Examples:
 	private addAddCommand(): void {
 		this.command('add')
 			.description('Create a new tag')
-			.argument('<name>', 'Name of the tag to create')
+			.argument('[name]', 'Name of the tag to create (omit with --from-branch)')
 			.option('--description <desc>', 'Tag description')
 			.option('--copy-from <tag>', 'Copy tasks from another tag')
 			.option('--from-branch', 'Create tag from current git branch name')
@@ -291,7 +303,7 @@ Examples:
 	 * Execute add tag
 	 */
 	private async executeAdd(
-		name: string,
+		name: string | undefined,
 		options?: {
 			description?: string;
 			copyFrom?: string;
@@ -299,23 +311,63 @@ Examples:
 		}
 	): Promise<void> {
 		try {
+			if (name && options?.fromBranch) {
+				throw withHint(
+					'Give a tag name or --from-branch, not both',
+					'--from-branch names the tag after the current git branch'
+				);
+			}
+			if (!name && !options?.fromBranch) {
+				throw withHint(
+					'tags add needs a tag name',
+					'Example: `taskgraph tags add feature-auth`, or `--from-branch`'
+				);
+			}
+
 			// Initialize tmCore first (needed by bridge functions)
 			await this.initTmCore();
 
 			const { projectRoot, tasksPath } = getProjectPaths();
 
-			// Use legacy function which handles both API and file storage
-			await legacyCreateTag(
-				tasksPath,
-				name,
-				{
-					description: options?.description,
-					copyFromTag: options?.copyFrom,
-					fromBranch: options?.fromBranch
-				} as LegacyCreateTagOptions,
-				{ projectRoot },
-				'text'
-			);
+			const createOptions = {
+				description: options?.description,
+				copyFromTag: options?.copyFrom
+			} as LegacyCreateTagOptions;
+
+			if (options?.fromBranch) {
+				const nameInstead = 'Name the tag instead: `taskgraph tags add <name>`';
+				if (!(await isGitRepository(projectRoot))) {
+					throw withHint(
+						"--from-branch needs a git repository, and this isn't one",
+						nameInstead
+					);
+				}
+				const branch = await getCurrentBranch(projectRoot);
+				// A detached checkout reports the branch as "HEAD"
+				if (!branch || branch === 'HEAD') {
+					throw withHint(
+						"Couldn't tell which git branch is checked out",
+						nameInstead
+					);
+				}
+				const created = await legacyCreateTagFromBranch(
+					tasksPath,
+					branch,
+					createOptions,
+					{ projectRoot },
+					'text'
+				);
+				name = created.tagName;
+			} else {
+				// Use legacy function which handles both API and file storage
+				await legacyCreateTag(
+					tasksPath,
+					name as string,
+					createOptions,
+					{ projectRoot },
+					'text'
+				);
+			}
 
 			this.setLastResult({
 				success: true,

@@ -83,6 +83,41 @@ describe('tags command', () => {
 		}
 	});
 
+	it('creates a tag named after the current git branch with --from-branch', () => {
+		const git = (...args: string[]) =>
+			spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+		git('init', '-q');
+		git('checkout', '-q', '-b', 'feature/login');
+		// A branch with no commits yet reads as HEAD, so give it one
+		git(
+			'-c',
+			'user.name=Test',
+			'-c',
+			'user.email=test@example.com',
+			'commit',
+			'-q',
+			'--allow-empty',
+			'-m',
+			'init'
+		);
+
+		const added = run(['tags', 'add', '--from-branch', '--description', 'x']);
+
+		expect(added.status, all(added)).toBe(0);
+		expect(run(['tags']).stdout).toContain('feature-login');
+		const state = JSON.parse(
+			fs.readFileSync(path.join(dir, '.taskgraph', 'state.json'), 'utf8')
+		);
+		expect(state.branchTagMapping['feature/login']).toBe('feature-login');
+	});
+
+	it('rejects a name together with --from-branch', () => {
+		const result = run(['tags', 'add', 'feature-auth', '--from-branch']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('not both');
+	});
+
 	it('prints an error once, with a hint', () => {
 		run(['tags', 'add', 'feature-auth']);
 		const result = run(['tags', 'add', 'feature-auth']);

@@ -30,6 +30,7 @@ const ALLOWED_COMMANDS = new Set([
 	'expand',
 	'research',
 	'graph',
+	'why',
 	'tags',
 	'add-dependency',
 	'remove-dependency',
@@ -53,11 +54,18 @@ describe('formatHelp', () => {
 		]);
 	});
 
-	it('lists at most 28 rows with no repeated command', () => {
+	it('lists at most 29 rows with no repeated command', () => {
 		const names = allRows().map((row) => row.name.split(' ')[0]);
 
-		expect(names.length).toBeLessThanOrEqual(28);
+		expect(names.length).toBeLessThanOrEqual(29);
 		expect(new Set(names).size).toBe(names.length);
+	});
+
+	it('lists why right after graph in Organize', () => {
+		const organize = HELP_GROUPS.find((g) => g.title === 'Organize');
+		const names = organize?.commands.map((c) => c.name) ?? [];
+
+		expect(names.indexOf('why')).toBe(names.indexOf('graph') + 1);
 	});
 
 	it('only lists commands from the static allowlist', () => {

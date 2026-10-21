@@ -12,6 +12,14 @@ declare module '*/tag-management.js' {
 		outputFormat?: string
 	): Promise<any>;
 
+	export function createTagFromBranch(
+		tasksPath: string,
+		branchName: string,
+		options?: any,
+		context?: any,
+		outputFormat?: string
+	): Promise<any>;
+
 	export function deleteTag(
 		tasksPath: string,
 		tagName: string,

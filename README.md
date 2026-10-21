@@ -95,7 +95,7 @@ This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with Task
 
 ### 3. Install the plugin
 
-The plugin is the only way to get slash commands. It adds 38 of them (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
+The plugin is the only way to get slash commands. It adds 39 of them (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
 
 ```txt
 /plugin marketplace add stephennmiller/taskgraph-ai
@@ -164,6 +164,7 @@ Then, optionally, check how big each task is and break the big ones down:
 |---|---|---|
 | `/taskgraph:next-task` | `taskgraph next` | Shows the first unblocked, pending task |
 | `/taskgraph:graph` | `taskgraph graph` | Draws tasks as a dependency tree, with the next one marked |
+| `/taskgraph:why 7` | `taskgraph why 7` | Explains why a task is blocked and what to do first |
 | `/taskgraph:show-task 1` | `taskgraph show 1,3,5` | Full details for each task |
 | `/taskgraph:to-in-progress 3`, then ask Claude to implement it | `taskgraph set-status --id=3 --status=in-progress` | Claude Code does the work, guided by the task |
 | `/taskgraph:to-done 3` | `taskgraph set-status --id=3 --status=done` | Updates status and unlocks dependent tasks |
@@ -198,7 +199,7 @@ Install the plugin (step 3) and they appear as `/taskgraph:<name>` (type `/taskg
 | Change status | `set-status`, `to-in-progress`, `to-done` |
 | Edit | `add-task`, `update-task`, `update-tasks-from-id`, `remove-task`, `convert-task-to-subtask` |
 | Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `clear-subtasks` |
-| Dependencies | `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
+| Dependencies | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
 | Workflows | `smart-workflow`, `command-pipeline`, `auto-implement-tasks`, `sync-readme`, `learn`, `help` |
 
 ### CLI cheat sheet
@@ -208,6 +209,7 @@ taskgraph parse-prd .taskgraph/docs/prd.md   # generate tasks from a PRD
 taskgraph list                               # all tasks and their status
 taskgraph next                               # next task to work on
 taskgraph graph                              # tasks as a dependency tree
+taskgraph why 7                              # why task 7 is blocked
 taskgraph show 1,3,5                         # one or more tasks
 taskgraph set-status --id=3 --status=done    # change status
 taskgraph add-task --prompt="..." --research # add a task

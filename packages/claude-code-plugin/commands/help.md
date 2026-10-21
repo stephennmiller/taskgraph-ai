@@ -32,6 +32,7 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 #### 📝 Task Management
 - `/taskgraph:list-tasks [status] [--subtasks]` - List tasks, optionally by status or with subtasks
 - `/taskgraph:graph` - Show tasks as a dependency tree
+- `/taskgraph:why <id>` - Explain why a task is blocked
 - `/taskgraph:show-task` - Display task details
 - `/taskgraph:add-task` - Create new task
 - `/taskgraph:update-task` - Update a single task
