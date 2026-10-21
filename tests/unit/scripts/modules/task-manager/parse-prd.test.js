@@ -609,6 +609,11 @@ describe('parsePRD', () => {
 			if (p === 'tasks') return true; // Directory exists
 			return false;
 		});
+		fs.default.readFileSync.mockImplementation((p) =>
+			p === 'tasks/tasks.json'
+				? JSON.stringify(existingTasksData)
+				: samplePRDContent
+		);
 
 		// Call the function with force=true to allow overwrite and mcpLog to force non-streaming mode
 		await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
@@ -665,8 +670,10 @@ describe('parsePRD', () => {
 		// Setup mocks to simulate tasks.json already exists with tasks in the target tag
 		fs.default.existsSync.mockReturnValue(true);
 		// Mock readFileSync to return data with tasks in the 'master' tag
-		fs.default.readFileSync.mockReturnValueOnce(
-			JSON.stringify(existingTasksData)
+		fs.default.readFileSync.mockImplementation((p) =>
+			p === 'tasks/tasks.json'
+				? JSON.stringify(existingTasksData)
+				: samplePRDContent
 		);
 
 		// Call the function with mcpLog to make it think it's in MCP mode (which throws instead of process.exit)
@@ -693,8 +700,10 @@ describe('parsePRD', () => {
 	test('should throw error when tasks in tag exist without force flag in CLI mode', async () => {
 		// Setup mocks to simulate tasks.json already exists with tasks in the target tag
 		fs.default.existsSync.mockReturnValue(true);
-		fs.default.readFileSync.mockReturnValueOnce(
-			JSON.stringify(existingTasksData)
+		fs.default.readFileSync.mockImplementation((p) =>
+			p === 'tasks/tasks.json'
+				? JSON.stringify(existingTasksData)
+				: samplePRDContent
 		);
 
 		// Call the function without mcpLog (CLI mode) and expect it to throw an error
@@ -714,8 +723,10 @@ describe('parsePRD', () => {
 		// Mock for reading existing tasks in tagged format
 		readJSON.mockReturnValue(existingTasksData);
 		// Mock readFileSync to return the raw content for the initial check
-		fs.default.readFileSync.mockReturnValueOnce(
-			JSON.stringify(existingTasksData)
+		fs.default.readFileSync.mockImplementation((p) =>
+			p === 'tasks/tasks.json'
+				? JSON.stringify(existingTasksData)
+				: samplePRDContent
 		);
 
 		// Mock generateObjectService to return new tasks with continuing IDs
@@ -762,8 +773,10 @@ describe('parsePRD', () => {
 	test('should skip prompt and not overwrite when append is true', async () => {
 		// Setup mocks to simulate tasks.json already exists
 		fs.default.existsSync.mockReturnValue(true);
-		fs.default.readFileSync.mockReturnValueOnce(
-			JSON.stringify(existingTasksData)
+		fs.default.readFileSync.mockImplementation((p) =>
+			p === 'tasks/tasks.json'
+				? JSON.stringify(existingTasksData)
+				: samplePRDContent
 		);
 
 		// Ensure generateObjectService returns proper tasks
