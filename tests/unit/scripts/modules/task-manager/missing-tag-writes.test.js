@@ -24,9 +24,6 @@ const { default: addSubtask } = await import(
 const { default: removeSubtask } = await import(
 	'../../../../../scripts/modules/task-manager/remove-subtask.js'
 );
-const { default: setTaskStatus } = await import(
-	'../../../../../scripts/modules/task-manager/set-task-status.js'
-);
 
 const master = () => ({
 	tasks: [
@@ -104,11 +101,6 @@ describe('writing to a tag that does not exist', () => {
 		await attempt(() =>
 			removeSubtask(tasksPath, '1.1', false, false, context())
 		);
-		expect(tags()).toEqual(['master']);
-	});
-
-	test('set-status', async () => {
-		await attempt(() => setTaskStatus(tasksPath, '1', 'done', context()));
 		expect(tags()).toEqual(['master']);
 	});
 });

@@ -53,8 +53,12 @@ const mockTasksList = vi.fn();
 const { resolveSubtaskDependency } = await import(
 	'../../../../../packages/tm-core/src/modules/dependencies/subtask-dependency.ts'
 );
+const { selectNextTask } = await import(
+	'../../../../../packages/tm-core/src/modules/tasks/utils/next-task.ts'
+);
 vi.doMock('@tm/core', () => ({
 	resolveSubtaskDependency,
+	selectNextTask,
 	createTmCore: vi.fn(async () => ({
 		tasks: {
 			list: mockTasksList

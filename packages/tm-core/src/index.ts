@@ -184,6 +184,7 @@ export {
 	filterReadyTasks,
 	filterBlockingTasks,
 	ACTIONABLE_STATUSES,
+	selectNextTask,
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult

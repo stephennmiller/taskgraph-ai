@@ -23,9 +23,7 @@ import {
 	scopeUpTask,
 	validateStrength
 } from './task-manager/scope-adjustment.js';
-import setTaskStatus from './task-manager/set-task-status.js';
 import taskExists from './task-manager/task-exists.js';
-import updateSingleTaskStatus from './task-manager/update-single-task-status.js';
 import updateSubtaskById from './task-manager/update-subtask-by-id.js';
 import updateTaskById from './task-manager/update-task-by-id.js';
 import updateTasks from './task-manager/update-tasks.js';
@@ -38,8 +36,6 @@ export {
 	updateTasks,
 	updateTaskById,
 	updateSubtaskById,
-	setTaskStatus,
-	updateSingleTaskStatus,
 	listTasks,
 	expandTask,
 	expandAllTasks,

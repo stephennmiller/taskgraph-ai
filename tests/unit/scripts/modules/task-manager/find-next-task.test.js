@@ -223,4 +223,25 @@ describe('findNextTask', () => {
 			expect(findNextTask(tasks).id).toBe('1.1');
 		});
 	});
+
+	test('ranks a critical task above a high one, as the CLI does', () => {
+		const tasks = [
+			{
+				id: 1,
+				title: 'High',
+				status: 'pending',
+				dependencies: [],
+				priority: 'high'
+			},
+			{
+				id: 2,
+				title: 'Critical',
+				status: 'pending',
+				dependencies: [],
+				priority: 'critical'
+			}
+		];
+
+		expect(findNextTask(tasks).id).toBe(2);
+	});
 });
