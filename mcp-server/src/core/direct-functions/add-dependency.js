@@ -3,7 +3,10 @@
  * Direct function implementation for adding a dependency to a task
  */
 
-import { addDependency } from '../../../../scripts/modules/dependency-manager.js';
+import {
+	DependencyError,
+	addDependency
+} from '../../../../scripts/modules/dependency-manager.js';
 import {
 	disableSilentMode,
 	enableSilentMode
@@ -103,7 +106,8 @@ export async function addDependencyDirect(args, log) {
 		return {
 			success: false,
 			error: {
-				code: 'CORE_FUNCTION_ERROR',
+				code:
+					error instanceof DependencyError ? error.code : 'CORE_FUNCTION_ERROR',
 				message: error.message
 			}
 		};

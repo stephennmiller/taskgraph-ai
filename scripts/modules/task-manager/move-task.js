@@ -1,8 +1,12 @@
 import {
 	assignMetadata,
+	dependenciesForConvertedTask,
+	dependenciesForMovedItem,
 	pruneDependencySources,
 	rekeyDependencySources,
-	renameDependencySource
+	renameDependencySource,
+	resolveSubtaskDependency,
+	retargetDependents
 } from '@tm/core';
 import path from 'path';
 import {
@@ -324,7 +328,8 @@ function moveSubtaskToSubtask(tasks, sourceId, destinationId) {
 			sourceParentTask,
 			sourceSubtaskIndex,
 			destParentTask,
-			destSubtaskId
+			destSubtaskId,
+			tasks
 		);
 	}
 
@@ -379,26 +384,37 @@ function moveSubtaskToTask(tasks, sourceId, destinationId) {
 		);
 	}
 
+	// The subtask's siblings become full IDs, which read the same on a task
+	const moved = dependenciesForMovedItem(
+		sourceSubtask,
+		sourceParentTask.id,
+		undefined
+	);
+
 	// Create new task from subtask
 	const newTask = {
 		id: destTaskId,
 		title: sourceSubtask.title,
 		description: sourceSubtask.description,
 		status: sourceSubtask.status || 'pending',
-		dependencies: sourceSubtask.dependencies || [],
+		dependencies: moved.dependencies,
 		priority: sourceSubtask.priority || 'medium',
 		details: sourceSubtask.details || '',
 		testStrategy: sourceSubtask.testStrategy || '',
 		subtasks: []
 	};
 	// Keep metadata (and its dependency marks, re-keyed for top level)
-	assignMetadata(
-		newTask,
-		rekeyedMetadata(sourceSubtask, sourceParentTask.id, undefined)
-	);
+	assignMetadata(newTask, moved.metadata);
 
 	// Remove subtask from source parent
 	sourceParentTask.subtasks.splice(sourceSubtaskIndex, 1);
+
+	// Whatever depended on the subtask now depends on the task
+	retargetDependents(
+		tasks,
+		`${sourceParentTask.id}.${sourceSubtaskId}`,
+		destTaskId
+	);
 
 	// Insert new task in correct position
 	const insertIndex = tasks.findIndex((t) => t.id > destTaskId);
@@ -445,21 +461,22 @@ function moveTaskToSubtask(tasks, sourceId, destinationId) {
 		destParentTask.subtasks = [];
 	}
 
+	// A task's dependencies are task IDs; under a subtask a bare number would
+	// name a sibling, so they are written as strings (and the new parent dropped)
+	const converted = dependenciesForConvertedTask(sourceTask, destParentTask.id);
+
 	// Create new subtask from task
 	const newSubtask = {
 		id: destSubtaskId,
 		title: sourceTask.title,
 		description: sourceTask.description,
 		status: sourceTask.status || 'pending',
-		dependencies: sourceTask.dependencies || [],
+		dependencies: converted.dependencies,
 		details: sourceTask.details || '',
 		testStrategy: sourceTask.testStrategy || ''
 	};
 	// Keep metadata (and its dependency marks, re-keyed under the new parent)
-	assignMetadata(
-		newSubtask,
-		rekeyedMetadata(sourceTask, undefined, destParentTask.id)
-	);
+	assignMetadata(newSubtask, converted.metadata);
 
 	// Find insertion position (based on commit fixes)
 	let destSubtaskIndex = -1;
@@ -479,6 +496,13 @@ function moveTaskToSubtask(tasks, sourceId, destinationId) {
 
 	// Remove the original task from the tasks array
 	tasks.splice(sourceTaskIndex, 1);
+
+	// Whatever depended on the task now depends on the subtask
+	retargetDependents(
+		tasks,
+		String(sourceTaskId),
+		`${destParentTask.id}.${destSubtaskId}`
+	);
 
 	return {
 		message: `Converted task ${sourceId} to subtask ${destinationId}`,
@@ -524,21 +548,25 @@ function moveSubtaskToAnotherParent(
 	sourceParentTask,
 	sourceSubtaskIndex,
 	destParentTask,
-	destSubtaskId
+	destSubtaskId,
+	tasks
 ) {
 	const destSubtaskId_num = parseInt(destSubtaskId, 10);
+
+	// Its siblings stay the subtasks they were, so they are written as full IDs
+	const moved = dependenciesForMovedItem(
+		sourceSubtask,
+		sourceParentTask.id,
+		destParentTask.id
+	);
 
 	// Create new subtask with destination ID
 	const newSubtask = {
 		...sourceSubtask,
-		id: destSubtaskId_num
+		id: destSubtaskId_num,
+		dependencies: moved.dependencies
 	};
-	if (newSubtask.metadata) {
-		assignMetadata(
-			newSubtask,
-			rekeyedMetadata(sourceSubtask, sourceParentTask.id, destParentTask.id)
-		);
-	}
+	assignMetadata(newSubtask, moved.metadata);
 
 	// Initialize subtasks array if it doesn't exist (based on commit fixes)
 	if (!destParentTask.subtasks) {
@@ -564,6 +592,13 @@ function moveSubtaskToAnotherParent(
 	// Remove the subtask from the original parent
 	sourceParentTask.subtasks.splice(sourceSubtaskIndex, 1);
 
+	// Whatever depended on the subtask now depends on its new ID
+	retargetDependents(
+		tasks,
+		`${sourceParentTask.id}.${sourceSubtask.id}`,
+		`${destParentTask.id}.${destSubtaskId_num}`
+	);
+
 	return newSubtask;
 }
 
@@ -576,22 +611,25 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 		id: destTaskId
 	};
 
-	// Update any dependencies that reference the old task ID
+	// Update any dependencies that reference the old task ID. On a subtask a
+	// bare number is a sibling, so a reference to the task is written as a string.
+	const oldId = String(sourceTask.id);
+	const newId = String(destTaskId);
 	tasks.forEach((task) => {
-		if (task.dependencies && task.dependencies.includes(sourceTask.id)) {
-			const depIndex = task.dependencies.indexOf(sourceTask.id);
-			task.dependencies[depIndex] = destTaskId;
-			carryDependencySource(task, sourceTask.id, destTaskId);
+		if (task.dependencies?.some((dep) => String(dep) === oldId)) {
+			task.dependencies = task.dependencies.map((dep) =>
+				String(dep) === oldId ? destTaskId : dep
+			);
+			carryDependencySource(task, oldId, newId);
 		}
 		if (task.subtasks) {
 			task.subtasks.forEach((subtask) => {
-				if (
-					subtask.dependencies &&
-					subtask.dependencies.includes(sourceTask.id)
-				) {
-					const depIndex = subtask.dependencies.indexOf(sourceTask.id);
-					subtask.dependencies[depIndex] = destTaskId;
-					carryDependencySource(subtask, sourceTask.id, destTaskId, task.id);
+				const names = (dep) => resolveSubtaskDependency(task.id, dep) === oldId;
+				if (subtask.dependencies?.some(names)) {
+					subtask.dependencies = subtask.dependencies.map((dep) =>
+						names(dep) ? newId : dep
+					);
+					carryDependencySource(subtask, oldId, newId, task.id);
 				}
 			});
 		}

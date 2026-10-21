@@ -11,7 +11,10 @@ import type {
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
-import { blockedCount } from '../../dependencies/index.js';
+import {
+	blockedCount,
+	resolveSubtaskDependency
+} from '../../dependencies/index.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
@@ -295,17 +298,6 @@ export class TaskService {
 		const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
 		const priorityValues = { critical: 4, high: 3, medium: 2, low: 1 };
 
-		// Helper to convert subtask dependencies to full dotted notation
-		const toFullSubId = (
-			parentId: string,
-			maybeDotId: string | number
-		): string => {
-			if (typeof maybeDotId === 'string' && maybeDotId.includes('.')) {
-				return maybeDotId;
-			}
-			return `${parentId}.${maybeDotId}`;
-		};
-
 		// Build completed IDs set (both tasks and subtasks)
 		const completedIds = new Set<string>();
 		allTasks.forEach((t) => {
@@ -332,8 +324,9 @@ export class TaskService {
 					if (stStatus !== 'pending' && stStatus !== 'in-progress') return;
 
 					const fullDeps =
-						st.dependencies?.map((d) => toFullSubId(String(parent.id), d)) ??
-						[];
+						st.dependencies?.map((d) =>
+							resolveSubtaskDependency(parent.id, d)
+						) ?? [];
 					const depsSatisfied =
 						fullDeps.length === 0 ||
 						fullDeps.every((depId) => completedIds.has(String(depId)));

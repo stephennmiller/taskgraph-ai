@@ -171,23 +171,19 @@ describe('fixDependenciesCommand tag preservation', () => {
 		expect(mockProcessExit).not.toHaveBeenCalled();
 	});
 
-	it('handles early exit when no valid tasks found', async () => {
+	it('throws NO_TASKS instead of exiting when no valid tasks found', async () => {
 		const tasksPath = '/mock/tasks.json';
 
-		// Mock invalid data to trigger early exit
 		readJSON.mockReturnValue(null);
 
-		await fixDependenciesCommand(tasksPath, {
-			context: { projectRoot: '/mock', tag: 'master' }
-		});
+		await expect(
+			fixDependenciesCommand(tasksPath, {
+				context: { projectRoot: '/mock', tag: 'master' }
+			})
+		).rejects.toMatchObject({ code: 'NO_TASKS' });
 
-		// Verify readJSON was called
 		expect(readJSON).toHaveBeenCalled();
-
-		// Verify writeJSON was NOT called (early exit)
 		expect(writeJSON).not.toHaveBeenCalled();
-
-		// Verify process.exit WAS called due to invalid data
-		expect(mockProcessExit).toHaveBeenCalledWith(1);
+		expect(mockProcessExit).not.toHaveBeenCalled();
 	});
 });

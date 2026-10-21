@@ -1,4 +1,8 @@
-import { assignMetadata, rekeyDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	dependenciesForMovedItem,
+	retargetDependents
+} from '@tm/core';
 import { log, readJSON, writeJSON } from '../utils.js';
 
 /**
@@ -80,6 +84,13 @@ async function removeSubtask(
 			const highestId = Math.max(...data.tasks.map((t) => t.id));
 			const newTaskId = highestId + 1;
 
+			// Its siblings become full IDs, which read the same on a task
+			const moved = dependenciesForMovedItem(
+				removedSubtask,
+				parentId,
+				undefined
+			);
+
 			// Create the new task from the subtask
 			convertedTask = {
 				id: newTaskId,
@@ -87,20 +98,20 @@ async function removeSubtask(
 				description: removedSubtask.description || '',
 				details: removedSubtask.details || '',
 				status: removedSubtask.status || 'pending',
-				dependencies: removedSubtask.dependencies || [],
+				dependencies: moved.dependencies,
 				priority: parentTask.priority || 'medium' // Inherit priority from parent
 			};
 
 			// Keep metadata (and its dependency marks, re-keyed for top level)
-			assignMetadata(
-				convertedTask,
-				rekeyDependencySources(removedSubtask, parentId, undefined)
-			);
+			assignMetadata(convertedTask, moved.metadata);
 
 			// Add the parent task as a dependency if not already present
-			if (!convertedTask.dependencies.includes(parentId)) {
-				convertedTask.dependencies.push(parentId);
+			if (!convertedTask.dependencies.includes(String(parentId))) {
+				convertedTask.dependencies.push(String(parentId));
 			}
+
+			// Whatever depended on the subtask now depends on the task
+			retargetDependents(data.tasks, `${parentId}.${subtaskIdNum}`, newTaskId);
 
 			// Add the converted task to the tasks array
 			data.tasks.push(convertedTask);

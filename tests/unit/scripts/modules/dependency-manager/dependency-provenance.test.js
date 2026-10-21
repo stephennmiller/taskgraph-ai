@@ -58,9 +58,9 @@ const withSubtasks = () => [
 				id: 3,
 				title: 'S3',
 				status: 'pending',
-				// expand stored the sibling as a bare number and keyed the mark the same way
+				// the sibling is stored as a bare number; its mark is keyed by full ID
 				dependencies: [1],
-				metadata: { dependencySources: { 1: 'inferred' } }
+				metadata: { dependencySources: { 2.1: 'inferred' } }
 			}
 		]
 	}
@@ -127,7 +127,7 @@ describe('dependency provenance on subtasks', () => {
 		expect(subtask).not.toHaveProperty('metadata');
 	});
 
-	it('adds a new sibling explicit and rewrites the legacy numeric key as dotted', async () => {
+	it('adds a new sibling explicit and keeps the dotted mark of the stored one', async () => {
 		const written = await run(addDependency, withSubtasks(), '2.3', '2.2');
 
 		const subtask = written[0].subtasks[2];
@@ -135,11 +135,44 @@ describe('dependency provenance on subtasks', () => {
 		expect(subtask.metadata.dependencySources).toEqual({ 2.1: 'inferred' });
 	});
 
-	it('removing a sibling stored as a bare number prunes its numeric-keyed mark', async () => {
+	it('removing a sibling stored as a bare number prunes its dotted mark', async () => {
 		const written = await run(removeDependency, withSubtasks(), '2.3', '2.1');
 
 		expect(written[0].subtasks[2].dependencies).toEqual([]);
 		expect(written[0].subtasks[2]).not.toHaveProperty('metadata');
+	});
+});
+
+describe('subtask dependency on a task', () => {
+	beforeEach(() => writeJSON.mockClear());
+
+	const taskDependency = () => {
+		const [parent] = withSubtasks();
+		parent.subtasks[2].dependencies = ['1'];
+		parent.subtasks[2].metadata = { dependencySources: { 1: 'inferred' } };
+		return [
+			{ id: 1, title: 'T1', status: 'pending', dependencies: [] },
+			parent
+		];
+	};
+
+	it('does not read the string "1" as sibling 2.1 when adding sibling 2.1', async () => {
+		const written = await run(addDependency, taskDependency(), '2.3', '2.1');
+
+		const subtask = written[1].subtasks[2];
+		expect(subtask.dependencies).toEqual(['1', '2.1']);
+		expect(subtask.metadata.dependencySources).toEqual({ 1: 'inferred' });
+	});
+
+	it('removing sibling 2.1 leaves the task dependency "1" and its mark', async () => {
+		const tasks = taskDependency();
+		tasks[1].subtasks[2].dependencies = ['1', 1];
+
+		const written = await run(removeDependency, tasks, '2.3', '2.1');
+
+		const subtask = written[1].subtasks[2];
+		expect(subtask.dependencies).toEqual(['1']);
+		expect(subtask.metadata.dependencySources).toEqual({ 1: 'inferred' });
 	});
 });
 

@@ -79,7 +79,20 @@ function createSampleTasks(): Task[] {
 					description: 'Second subtask description',
 					status: 'pending',
 					priority: 'medium',
-					dependencies: ['1'],
+					// A bare number is a sibling subtask
+					dependencies: [1],
+					details: '',
+					testStrategy: ''
+				},
+				{
+					id: 3,
+					parentId: '2',
+					title: 'Subtask 3',
+					description: 'Depends on a task and a subtask of another task',
+					status: 'pending',
+					priority: 'medium',
+					// A string without a dot is a task
+					dependencies: ['1', '1.2'],
 					details: '',
 					testStrategy: ''
 				}
@@ -180,6 +193,7 @@ describe('TaskFileGeneratorService', () => {
 			expect(task2Content).toContain('### 2.2. Subtask 2');
 			expect(task2Content).toContain('**Status:** pending');
 			expect(task2Content).toContain('**Dependencies:** 2.1');
+			expect(task2Content).toContain('**Dependencies:** 1, 1.2');
 		});
 
 		it('should format dependencies with status symbols', async () => {

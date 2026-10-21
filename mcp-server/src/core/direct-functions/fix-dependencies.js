@@ -3,7 +3,10 @@
  */
 
 import fs from 'fs';
-import { fixDependenciesCommand } from '../../../../scripts/modules/dependency-manager.js';
+import {
+	DependencyError,
+	fixDependenciesCommand
+} from '../../../../scripts/modules/dependency-manager.js';
 import {
 	disableSilentMode,
 	enableSilentMode
@@ -81,7 +84,10 @@ export async function fixDependenciesDirect(args, log) {
 		return {
 			success: false,
 			error: {
-				code: 'FIX_DEPENDENCIES_ERROR',
+				code:
+					error instanceof DependencyError
+						? error.code
+						: 'FIX_DEPENDENCIES_ERROR',
 				message: error.message
 			}
 		};

@@ -18,6 +18,7 @@ const task = (
 	overrides: Partial<Omit<Task, 'id' | 'title'>> = {}
 ): Task => createTask({ id, title: `Task ${id}`, ...overrides });
 
+/** Dependencies stay as written: a number names a sibling, a string a task */
 const subtask = (
 	id: number,
 	overrides: Partial<Parameters<typeof createSubtask>[0]> = {}
@@ -134,8 +135,8 @@ describe('TaskService.getNextTask', () => {
 					subtasks: [
 						subtask(1),
 						subtask(2),
-						subtask(3, { dependencies: ['2'] }),
-						subtask(4, { dependencies: ['2'] })
+						subtask(3, { dependencies: [2] }),
+						subtask(4, { dependencies: [2] })
 					]
 				})
 			]);
@@ -151,8 +152,8 @@ describe('TaskService.getNextTask', () => {
 					subtasks: [
 						subtask(1, { status: 'done' }),
 						subtask(2),
-						subtask(3, { dependencies: ['1'] }),
-						subtask(4, { dependencies: ['3'] })
+						subtask(3, { dependencies: [1] }),
+						subtask(4, { dependencies: [3] })
 					]
 				})
 			]);
@@ -167,9 +168,37 @@ describe('TaskService.getNextTask', () => {
 					subtasks: [
 						subtask(1, { priority: 'high' }),
 						subtask(2),
-						subtask(3, { dependencies: ['2'] })
+						subtask(3, { dependencies: [2] })
 					]
 				})
+			]);
+
+			expect(id).toBe('1.1');
+		});
+
+		it('reads a string dependency without a dot as a task, not a sibling', async () => {
+			// "2" is task 2 (pending), so 1.2 waits; sibling 1.2 being done must not count
+			const id = await nextId([
+				task(1, {
+					status: 'in-progress',
+					subtasks: [
+						subtask(1, { dependencies: ['2'] }),
+						subtask(2, { status: 'done' })
+					]
+				}),
+				task(2)
+			]);
+
+			expect(id).toBe('2');
+		});
+
+		it('is unblocked by a finished task named with a string dependency', async () => {
+			const id = await nextId([
+				task(1, {
+					status: 'in-progress',
+					subtasks: [subtask(1, { dependencies: ['2'] })]
+				}),
+				task(2, { status: 'done' })
 			]);
 
 			expect(id).toBe('1.1');

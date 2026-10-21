@@ -379,7 +379,7 @@ describe('updateTaskById success path with generateObjectService', () => {
 		});
 	});
 
-	test('keeps subtask marks (legacy numeric keys) and marks sibling dependencies the AI adds', async () => {
+	test('keeps subtask marks and marks sibling dependencies the AI adds', async () => {
 		fs.existsSync.mockReturnValue(true);
 		readJSON.mockReturnValue({
 			tag: 'master',
@@ -400,7 +400,10 @@ describe('updateTaskById success path with generateObjectService', () => {
 							title: 'S2',
 							status: 'pending',
 							dependencies: [1],
-							metadata: { owner: 'kim', dependencySources: { 1: 'inferred' } }
+							metadata: {
+								owner: 'kim',
+								dependencySources: { 1.1: 'inferred' }
+							}
 						}
 					]
 				}

@@ -8,6 +8,7 @@ import path from 'node:path';
 import type { Task, Subtask, TaskStatus } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
+import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 
 /**
  * Options for generating task files
@@ -268,17 +269,7 @@ export class TaskFileGeneratorService {
 		// Format subtask dependencies
 		if (subtask.dependencies && subtask.dependencies.length > 0) {
 			const subtaskDeps = subtask.dependencies
-				.map((depId) => {
-					const depStr = String(depId);
-					// Check if it's already a full ID (contains a dot) or is a simple number reference
-					// Simple numbers (e.g., 1, '1') are internal subtask refs and need parent prefix
-					// Full IDs (e.g., '1.2', '3') with dots are already complete
-					if (depStr.includes('.')) {
-						return depStr; // Already a full subtask ID like "2.1"
-					}
-					// Simple number - prefix with parent task ID
-					return `${parentTask.id}.${depStr}`;
-				})
+				.map((depId) => resolveSubtaskDependency(parentTask.id, depId))
 				.join(', ');
 			content += `**Dependencies:** ${subtaskDeps}  \n`;
 		} else {

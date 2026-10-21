@@ -3,6 +3,7 @@ import {
 	DEPENDENCY_SOURCES_KEY,
 	assignMetadata,
 	getDependencySource,
+	hasDependency,
 	pruneDependencySources,
 	reconcileDependencySources,
 	rekeyDependencySources,
@@ -14,14 +15,32 @@ const marks = (value: Record<string, string>) => ({
 });
 
 describe('subtask sibling ids', () => {
-	it('reads a legacy numeric key for a dotted dependency under the parent', () => {
+	it('keeps a task dependency, a string without a dot, under its plain key', () => {
+		const subtask = {
+			dependencies: ['3', '2.1'],
+			metadata: marks({ '3': 'inferred' })
+		};
+
+		expect(getDependencySource(subtask, '3', 2)).toBe('inferred');
+		expect(getDependencySource(subtask, '2.1', 2)).toBe('explicit');
+	});
+
+	it('does not read a task key as the sibling with that number', () => {
 		const subtask = {
 			dependencies: ['2.1'],
 			metadata: marks({ '1': 'inferred' })
 		};
 
-		expect(getDependencySource(subtask, '2.1', 2)).toBe('inferred');
-		expect(getDependencySource(subtask, 1, 2)).toBe('inferred');
+		expect(getDependencySource(subtask, '2.1', 2)).toBe('explicit');
+	});
+
+	it('keeps a number of 100 or more as a task key', () => {
+		const subtask = {
+			dependencies: [150],
+			metadata: marks({ '150': 'inferred' })
+		};
+
+		expect(getDependencySource(subtask, 150, 2)).toBe('inferred');
 	});
 
 	it('reads a dotted key for a numeric stored dependency under the parent', () => {
@@ -39,24 +58,20 @@ describe('subtask sibling ids', () => {
 		expect(getDependencySource(task, 1)).toBe('explicit');
 	});
 
-	it('writes dotted keys and rewrites legacy numeric ones', () => {
-		const metadata = setDependencySource(
-			marks({ '1': 'inferred' }),
-			3,
-			'inferred',
-			2
-		);
+	it('writes a dotted key for a sibling and a plain key for a task', () => {
+		const sibling = setDependencySource(undefined, 3, 'inferred', 2);
+		const task = setDependencySource(sibling, '4', 'inferred', 2);
 
-		expect(metadata?.[DEPENDENCY_SOURCES_KEY]).toEqual({
-			'2.1': 'inferred',
-			'2.3': 'inferred'
+		expect(task?.[DEPENDENCY_SOURCES_KEY]).toEqual({
+			'2.3': 'inferred',
+			'4': 'inferred'
 		});
 	});
 
 	it('reconcile treats numeric and dotted forms of one sibling as the same dependency', () => {
 		const previous = {
 			dependencies: [1],
-			metadata: marks({ '1': 'inferred' })
+			metadata: marks({ '2.1': 'inferred' })
 		};
 
 		const metadata = reconcileDependencySources(
@@ -73,13 +88,25 @@ describe('subtask sibling ids', () => {
 
 	it('an explicit set clears a mark even when the forms differ', () => {
 		const metadata = setDependencySource(
-			marks({ '1': 'inferred' }),
-			'2.1',
+			marks({ '2.1': 'inferred' }),
+			1,
 			'explicit',
 			2
 		);
 
 		expect(metadata).toBeUndefined();
+	});
+});
+
+describe('hasDependency under a parent', () => {
+	it('tells a sibling number from a task string', () => {
+		const subtask = { dependencies: [1, '3'] };
+
+		expect(hasDependency(subtask, '2.1', 2)).toBe(true);
+		expect(hasDependency(subtask, 1, 2)).toBe(true);
+		expect(hasDependency(subtask, '1', 2)).toBe(false);
+		expect(hasDependency(subtask, '3', 2)).toBe(true);
+		expect(hasDependency(subtask, 3, 2)).toBe(false);
 	});
 });
 
