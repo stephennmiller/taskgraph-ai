@@ -26,15 +26,15 @@ Based on context, I'll determine the best workflow:
 ### Smart Execution
 
 If last command was:
-- `status` → Likely starting work → Run daily standup
-- `complete` → Task finished → Find next task
-- `list pending` → Planning → Suggest sprint planning
-- `expand` → Breaking down work → Show complexity analysis
-- `init` → New project → Show onboarding workflow
+- `project-status` → Likely starting work → Show what is in progress and next
+- `to-done` → Task finished → Find next task
+- `list-tasks pending` → Planning → Suggest an order to work in
+- `expand-task` → Breaking down work → Show complexity analysis
+- `init-project` → New project → Show onboarding workflow
 
 If no recent commands:
-- Morning? → Daily standup workflow
-- Many pending tasks? → Sprint planning
+- Morning? → Project status, then the next task
+- Many pending tasks? → Suggest an order to work in
 - Tasks blocked? → Dependency resolution
 - Friday? → Weekly review
 
@@ -55,6 +55,6 @@ This command learns from your patterns:
 - Adapt to your style
 
 Example flows detected:
-- Morning: standup → next → start
-- After lunch: status → continue task
-- End of day: complete → commit → status
+- Morning: project-status → next-task → to-in-progress
+- After lunch: project-status → continue task
+- End of day: to-done → commit → project-status

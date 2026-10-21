@@ -63,9 +63,9 @@ Always provide options:
 ### 5. **Workflow Integration**
 
 Seamlessly connect to:
-- `/project:taskgraph:start [selected]` 
-- `/project:workflows:auto-implement`
-- `/project:taskgraph:expand` (if complex)
-- `/project:utils:complexity-report` (if unsure)
+- `/taskgraph:to-in-progress [selected]` 
+- `/taskgraph:auto-implement-tasks`
+- `/taskgraph:expand-task` (if complex)
+- `/taskgraph:complexity-report` (if unsure)
 
 The goal: Zero friction from decision to implementation.

@@ -21,15 +21,24 @@ From your project folder:
 taskgraph init --rules claude
 ```
 
-This creates `.taskgraph/` (tasks, docs, config), a `CLAUDE.md` import with TaskGraph's workflow guide, and the `/tm:` slash commands in `.claude/commands/tm/`. It also writes a `.mcp.json` that registers the MCP server with the 7 `core` tools. Delete that file if you only want slash commands and the CLI.
+This creates `.taskgraph/` (tasks, docs, config), and a `CLAUDE.md` import with TaskGraph's workflow guide. It also writes a `.mcp.json` that registers the MCP server with the 7 `core` tools. Delete that file if you only want slash commands and the CLI. `init` does not install slash commands: step 3 does.
 
 <Warning>
 Don't run `init` twice. It only re-adds the same files.
 </Warning>
 
-## 3. (Optional) Add the MCP server
+## 3. Install the plugin
 
-The slash commands and CLI do everything without MCP. Add the server only if you want to drive TaskGraph in plain language:
+The Claude Code plugin is the only way to get slash commands. It adds the `/taskgraph:` slash commands and three agents (`task-orchestrator`, `task-executor`, `task-checker`):
+
+```txt
+/plugin marketplace add stephennmiller/taskgraph-ai
+/plugin install taskgraph@taskgraph
+```
+
+## 4. (Optional) Add the MCP server
+
+The slash commands (from the plugin) and the CLI do everything without MCP. Add the server only if you want to drive TaskGraph in plain language:
 
 ```bash
 claude mcp add taskgraph-ai --scope user \
@@ -51,15 +60,6 @@ The equivalent `.mcp.json` entry is:
     }
   }
 }
-```
-
-## 4. (Optional) Install the plugin
-
-The Claude Code plugin adds three agents (`task-orchestrator`, `task-executor`, `task-checker`) and `/taskgraph:` slash commands:
-
-```txt
-/plugin marketplace add stephennmiller/taskgraph-ai
-/plugin install taskgraph@taskgraph
 ```
 
 ## Upgrading from Task Master or before 0.47

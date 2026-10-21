@@ -82,7 +82,7 @@ AI analyzes the update context and:
 ## Example Updates
 
 ```
-/taskgraph:update/from-id 5: change database to PostgreSQL
+/taskgraph:update-tasks-from-id 5: change database to PostgreSQL
 → Analyzing impact starting from task #5
 → Found 6 related tasks to update
 → Updates will maintain consistency

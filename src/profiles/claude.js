@@ -3,12 +3,30 @@ import fs from 'fs';
 import path from 'path';
 import { log } from '../../scripts/modules/utils.js';
 import { createProfile } from './base-profile.js';
-import { enableDeferredMcpLoading } from '@tm/profiles';
+import {
+	enableDeferredMcpLoading,
+	pruneLegacySlashCommands
+} from '@tm/profiles';
 
 // Lifecycle functions for Claude Code profile
 function onAddRulesProfile(targetDir, assetsDir) {
 	// Nothing is copied into .claude any more: commands and agents ship as a
 	// Claude Code plugin, and init's summary says how to install it
+	// Remove the command copies an older init wrote; the plugin replaces them
+	try {
+		const { removed } = pruneLegacySlashCommands(targetDir);
+		if (removed.length > 0) {
+			log(
+				'debug',
+				`[Claude] Removed ${removed.length} old slash command files from .claude/commands/tm`
+			);
+		}
+	} catch (err) {
+		log(
+			'error',
+			`[Claude] Failed to remove old slash command files: ${err.message}`
+		);
+	}
 
 	// Handle CLAUDE.md import for non-destructive integration
 	const sourceFile = path.join(assetsDir, 'AGENTS.md');

@@ -31,8 +31,7 @@ const ALLOWED_FILES = new Set([
 	'apps/cli/src/hamster-usage.spec.ts',
 	'apps/cli/src/command-registry.spec.ts',
 	'apps/cli/src/ui/components/brand-banner.component.spec.ts',
-	'packages/tm-core/src/cloud-removal.spec.ts',
-	'packages/tm-profiles/src/slash-commands/commands/all-commands.spec.ts'
+	'packages/tm-core/src/cloud-removal.spec.ts'
 ]);
 
 function listFiles(dir) {

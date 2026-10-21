@@ -1,9 +1,11 @@
 ---
 description: "Initialize a new TaskGraph project."
-argument-hint: "[arguments]"
+argument-hint: "[--quick] [<prd-file>]"
 ---
 
 Initialize a new TaskGraph project.
+
+Usage: `/taskgraph:init-project [--quick] [<prd-file>]`
 
 Arguments: $ARGUMENTS
 
@@ -18,7 +20,8 @@ Parse arguments to determine initialization preferences.
 
 2. **Project Setup**
    ```bash
-   taskgraph init
+   taskgraph init       # interactive
+   taskgraph init -y    # with --quick, quick or -y: accept all defaults
    ```
 
 3. **Smart Initialization**
@@ -30,7 +33,7 @@ Parse arguments to determine initialization preferences.
 ## Configuration Options
 
 Based on arguments:
-- `quick` / `-y` → Skip confirmations
+- `--quick` / `quick` / `-y` → Skip confirmations and accept all defaults (`taskgraph init -y`)
 - `<file.md>` → Use as PRD after init
 - `--name=<name>` → Set project name
 - `--description=<desc>` → Set description
@@ -50,6 +53,14 @@ After successful init:
 
 If PRD file provided:
 ```
-/taskgraph:init my-prd.md
+/taskgraph:init-project my-prd.md
 → Automatically runs parse-prd after init
 ```
+
+## Quick mode
+
+`--quick` runs `taskgraph init -y` without prompts:
+- Creates the `.taskgraph/` directory structure and an empty `tasks.json`
+- Uses the directory name as project name and the default configuration
+
+Then configure models with `/taskgraph:setup-models`, parse a PRD with `/taskgraph:parse-prd <file>`, or create a first task with `/taskgraph:add-task`.

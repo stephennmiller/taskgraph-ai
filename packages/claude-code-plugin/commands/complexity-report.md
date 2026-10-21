@@ -117,6 +117,6 @@ Use report for:
 → View historical analysis
 
 After viewing:
-/taskgraph:expand 5
+/taskgraph:expand-task 5
 → Expand high-complexity task
 ```

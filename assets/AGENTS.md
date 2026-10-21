@@ -85,19 +85,19 @@ project/
 
 Use slash commands or the `taskgraph` CLI first. They need no MCP server and load no extra tool definitions into context. Only fall back to the MCP tools below when a command you need has no slash command or CLI equivalent.
 
-After `taskgraph init --rules claude`, the slash commands live under `/tm:` (type `/tm` to list them):
+With the TaskGraph plugin installed (`/plugin marketplace add stephennmiller/taskgraph-ai`, then `/plugin install taskgraph@taskgraph`), the slash commands live under `/taskgraph:` (type `/taskgraph` to list them). `taskgraph init` does not write slash commands:
 
 | Task | Slash command | CLI |
 |------|---------------|-----|
-| Find next task | `/tm:next-task` | `taskgraph next` |
-| View a task | `/tm:show-task <id>` | `taskgraph show <id>` |
-| List tasks | `/tm:list-tasks` | `taskgraph list` |
-| Parse a PRD | `/tm:parse-prd` | `taskgraph parse-prd <file>` |
-| Add a task | `/tm:add-task` | `taskgraph add-task --prompt="..."` |
-| Break into subtasks | `/tm:expand-task <id>` | `taskgraph expand --id=<id>` |
-| Change status | `/tm:to-in-progress <id>`, `/tm:to-done <id>`, `/tm:to-review <id>` | `taskgraph set-status --id=<id> --status=<status>` |
-| Update a task | `/tm:update-task <id>` | `taskgraph update-task --id=<id> --prompt="..."` |
-| Check complexity | `/tm:analyze-complexity` | `taskgraph analyze-complexity` |
+| Find next task | `/taskgraph:next-task` | `taskgraph next` |
+| View a task | `/taskgraph:show-task <id>` | `taskgraph show <id>` |
+| List tasks | `/taskgraph:list-tasks` | `taskgraph list` |
+| Parse a PRD | `/taskgraph:parse-prd` | `taskgraph parse-prd <file>` |
+| Add a task | `/taskgraph:add-task` | `taskgraph add-task --prompt="..."` |
+| Break into subtasks | `/taskgraph:expand-task <id>` | `taskgraph expand --id=<id>` |
+| Change status | `/taskgraph:set-status <id> <status>`, or the shortcuts `/taskgraph:to-in-progress <id>` and `/taskgraph:to-done <id>` | `taskgraph set-status --id=<id> --status=<status>` |
+| Update a task | `/taskgraph:update-task <id>` | `taskgraph update-task --id=<id> --prompt="..."` |
+| Check complexity | `/taskgraph:analyze-complexity` | `taskgraph analyze-complexity` |
 
 ## MCP Integration (Optional)
 

@@ -31,7 +31,7 @@ From the user's project folder:
 taskgraph init --rules claude
 ```
 
-This creates `.taskgraph/`, imports TaskGraph's workflow guide from `CLAUDE.md`, installs the `/tm:` slash commands in `.claude/commands/tm/`, and writes a `.mcp.json` entry for the MCP server. Do not run `init` twice; it only re-adds the same files.
+This creates `.taskgraph/`, imports TaskGraph's workflow guide from `CLAUDE.md`, and writes a `.mcp.json` entry for the MCP server. Do not run `init` twice; it only re-adds the same files. It does not install slash commands; the Claude Code plugin does (in Claude Code, run `/plugin marketplace add stephennmiller/taskgraph-ai`, then `/plugin install taskgraph@taskgraph`). The commands are then available as `/taskgraph:<name>`.
 
 ### Step 3: (Optional) Add the MCP Server
 
@@ -76,7 +76,7 @@ taskgraph models --set-main sonnet
 taskgraph parse-prd .taskgraph/docs/prd.md
 ```
 
-or `/tm:parse-prd .taskgraph/docs/prd.md` in Claude Code. If the user has no PRD, help them write one and save it to `.taskgraph/docs/prd.md`.
+or `/taskgraph:parse-prd .taskgraph/docs/prd.md` in Claude Code. If the user has no PRD, help them write one and save it to `.taskgraph/docs/prd.md`.
 
 **Option B: Start from scratch.**
 
@@ -90,19 +90,19 @@ taskgraph add-task --prompt="describe the task"
 
 | Slash command | CLI |
 |---|---|
-| `/tm:next-task` | `taskgraph next` |
-| `/tm:show-task <id>` | `taskgraph show <id>` |
-| `/tm:to-in-progress <id>` | `taskgraph set-status --id=<id> --status=in-progress` |
-| `/tm:to-done <id>` | `taskgraph set-status --id=<id> --status=done` |
+| `/taskgraph:next-task` | `taskgraph next` |
+| `/taskgraph:show-task <id>` | `taskgraph show <id>` |
+| `/taskgraph:to-in-progress <id>` | `taskgraph set-status --id=<id> --status=in-progress` |
+| `/taskgraph:to-done <id>` | `taskgraph set-status --id=<id> --status=done` |
 
 ### Task Management
 
 | Slash command | CLI |
 |---|---|
-| `/tm:expand-task <id>` | `taskgraph expand --id=<id>` |
-| `/tm:add-task <description>` | `taskgraph add-task --prompt="..."` |
-| `/tm:analyze-complexity` | `taskgraph analyze-complexity` |
-| `/tm:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt="..."` |
+| `/taskgraph:expand-task <id>` | `taskgraph expand --id=<id>` |
+| `/taskgraph:add-task <description>` | `taskgraph add-task --prompt="..."` |
+| `/taskgraph:analyze-complexity` | `taskgraph analyze-complexity` |
+| `/taskgraph:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt="..."` |
 
 With the MCP server, the user can say the same things in plain language, such as "What's the next task I should work on?".
 

@@ -1,7 +1,5 @@
 // Base profile factory for rule-transformer
 import path from 'path';
-import { getProfile, allCommands } from '@tm/profiles';
-import { log } from '../../scripts/modules/utils.js';
 
 /**
  * Creates a standardized profile configuration
@@ -34,23 +32,6 @@ export function createProfile(editorConfig) {
 		? path.join(profileDir, mcpConfigName)
 		: null;
 
-	// Auto-detect slash command support from @tm/profiles
-	let slashCommands = null;
-	try {
-		const slashCommandProfile = getProfile(name);
-		if (slashCommandProfile?.supportsCommands) {
-			slashCommands = {
-				profile: slashCommandProfile,
-				commands: allCommands
-			};
-		}
-	} catch (err) {
-		log(
-			'debug',
-			`[${displayName}] Slash command profile lookup failed: ${err.message}`
-		);
-	}
-
 	return {
 		profileName: name, // Use name for programmatic access (tests expect this)
 		displayName: displayName, // Keep displayName for UI purposes
@@ -60,8 +41,6 @@ export function createProfile(editorConfig) {
 		mcpConfigName,
 		mcpConfigPath,
 		fileMap,
-		// Declarative slash command config - rule-transformer handles execution
-		slashCommands,
 		// Optional lifecycle hooks
 		...(onAdd && { onAddRulesProfile: onAdd }),
 		...(onPostConvert && { onPostConvertRulesProfile: onPostConvert })
