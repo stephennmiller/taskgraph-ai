@@ -128,6 +128,42 @@ describe('claude-code path guard', () => {
 		).toMatch(/outside/);
 	});
 
+	describe('secret files inside the project', () => {
+		it.each([
+			['.env'],
+			['.env.local'],
+			['config/.env.production'],
+			['.git/config'],
+			['keys/server.pem'],
+			['.ssh/id_ed25519'],
+			['.npmrc']
+		])('denies Read of %s', (file) => {
+			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
+				/secret/
+			);
+		});
+
+		it.each([['**/.env*'], ['.git/**'], ['**/*.pem'], ['id_*']])(
+			'denies Glob pattern %s',
+			(pattern) => {
+				expect(getPathViolation(root, 'Glob', { pattern })).toMatch(/secret/);
+			}
+		);
+
+		it('denies a Grep aimed at a secret file or directory', () => {
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', path: '.git' })
+			).toMatch(/secret/);
+		});
+
+		it.each([['src/a.js'], ['.env.example'], ['docs/environment.md']])(
+			'still allows %s',
+			(file) => {
+				expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
+			}
+		);
+	});
+
 	it('ignores tools it does not guard', () => {
 		expect(getPathViolation(root, 'WebFetch', { url: 'https://x' })).toBeNull();
 	});
