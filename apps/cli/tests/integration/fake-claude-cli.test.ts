@@ -1,0 +1,183 @@
+/**
+ * @fileoverview Runs AI commands through the built CLI against the fake
+ * `claude` program, so no real AI call is made.
+ *
+ * Needs the build (`npm run build`); skipped when dist/ is missing.
+ *
+ * @integration
+ */
+
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { installFakeClaude, readTrace } from '../fakes/install-fake-claude.mjs';
+import { getCliBinPath } from '../helpers/test-utils.js';
+
+const binPath = getCliBinPath();
+const built = fs.existsSync(binPath);
+
+describe.skipIf(!built)('built CLI against the fake claude', () => {
+	let project: string;
+	let work: string;
+	let cliEnv: NodeJS.ProcessEnv;
+	let fakeDir: string;
+
+	const taskgraph = (...args: string[]) =>
+		spawnSync(process.execPath, [binPath, ...args], {
+			cwd: project,
+			encoding: 'utf8',
+			timeout: 25000,
+			env: cliEnv
+		});
+
+	const readTasks = () => {
+		const file = path.join(project, '.taskgraph', 'tasks', 'tasks.json');
+		if (!fs.existsSync(file)) return [];
+		return JSON.parse(fs.readFileSync(file, 'utf8')).master?.tasks ?? [];
+	};
+
+	const install = (replies?: object[]) => {
+		const fake = installFakeClaude({
+			projectDir: project,
+			workDir: work,
+			replies
+		});
+		fakeDir = fake.dir;
+		cliEnv = {
+			...process.env,
+			TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+			...fake.env
+		};
+	};
+
+	beforeEach(() => {
+		project = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-claude-cli-'));
+		work = fs.mkdtempSync(path.join(os.tmpdir(), 'fake-claude-work-'));
+		spawnSync('git', ['init', '-q'], { cwd: project });
+		const init = spawnSync(process.execPath, [binPath, 'init', '--yes'], {
+			cwd: project,
+			encoding: 'utf8',
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+		});
+		expect(init.status).toBe(0);
+	});
+
+	afterEach(() => {
+		fs.rmSync(project, { recursive: true, force: true });
+		fs.rmSync(work, { recursive: true, force: true });
+	});
+
+	it('add-task writes a task built from the schema the CLI sent', () => {
+		install();
+
+		const res = taskgraph('add-task', '--prompt', 'Write a hello world');
+
+		expect(res.status).toBe(0);
+		const tasks = readTasks();
+		expect(tasks).toHaveLength(1);
+		expect(tasks[0].title).toMatch(/^Sample title/);
+		const trace = readTrace(fakeDir);
+		expect(trace).toHaveLength(1);
+		expect(trace[0].prompt).toContain('Write a hello world');
+		expect(Object.keys(trace[0].schema.properties)).toEqual(
+			expect.arrayContaining(['title', 'description', 'details'])
+		);
+	});
+
+	it('add-task uses a canned reply when one is given', () => {
+		install([
+			{
+				object: {
+					title: 'Canned title',
+					description: 'Canned description of the work',
+					details: 'Canned details that are long enough to pass',
+					testStrategy: 'Canned test strategy',
+					dependencies: []
+				}
+			}
+		]);
+
+		const res = taskgraph('add-task', '--prompt', 'Anything');
+
+		expect(res.status).toBe(0);
+		expect(readTasks()[0].title).toBe('Canned title');
+	});
+
+	it('expand adds subtasks to a task', () => {
+		install();
+		expect(taskgraph('add-task', '--prompt', 'First task').status).toBe(0);
+
+		const res = taskgraph('expand', '--id=1', '--num=3', '--force');
+
+		expect(res.status).toBe(0);
+		const [task] = readTasks();
+		expect(task.subtasks.length).toBeGreaterThan(0);
+		for (const subtask of task.subtasks) {
+			expect(subtask.dependencies).not.toContain(subtask.id);
+		}
+		expect(readTrace(fakeDir)).toHaveLength(2);
+	});
+
+	it('never reaches a real model: every command goes through the fake', () => {
+		install();
+
+		taskgraph('add-task', '--prompt', 'One');
+		expect(readTrace(fakeDir)).toHaveLength(1);
+		taskgraph('add-task', '--prompt', 'Two');
+		expect(readTrace(fakeDir)).toHaveLength(2);
+	});
+
+	it('retries a call that fails with a temporary error', () => {
+		install([{ error: 'overloaded' }]);
+
+		const res = taskgraph('add-task', '--prompt', 'Survives one failure');
+
+		expect(res.status).toBe(0);
+		expect(readTasks()).toHaveLength(1);
+		expect(readTrace(fakeDir)).toHaveLength(2);
+	});
+
+	it('fails with the error text and no task when a call fails for good', () => {
+		install([{ error: 'boom' }]);
+
+		const res = taskgraph('add-task', '--prompt', 'Nothing works');
+
+		expect(res.status).not.toBe(0);
+		expect(res.stdout + res.stderr).toContain('boom');
+		expect(readTasks()).toEqual([]);
+		// All three roles use the same model, so a failed one is not tried again
+		expect(readTrace(fakeDir)).toHaveLength(1);
+	});
+
+	it('parse-prd writes tasks with valid statuses', () => {
+		install();
+		fs.writeFileSync(
+			path.join(project, '.taskgraph', 'docs', 'prd.txt'),
+			'# Product\nA tiny todo tool with add, list and done commands.\n'
+		);
+
+		const res = taskgraph(
+			'parse-prd',
+			'.taskgraph/docs/prd.txt',
+			'--num-tasks=2',
+			'--force'
+		);
+
+		expect(res.status).toBe(0);
+		const tasks = readTasks();
+		expect(tasks.length).toBeGreaterThan(0);
+		for (const task of tasks) expect(task.status).toBe('pending');
+	});
+
+	it('research asks for plain text and prints the answer', () => {
+		install();
+
+		const res = taskgraph('research', 'what is a hash map');
+
+		expect(res.status).toBe(0);
+		expect(res.stdout + res.stderr).toContain('Sample text answer');
+		expect(readTrace(fakeDir)[0].schema).toBeNull();
+	});
+});
