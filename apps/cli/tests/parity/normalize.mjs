@@ -68,13 +68,13 @@ export function normalizeSnapshot(name, text, { projectDir, workDir }) {
 		for (const form of pathForms(dir)) out = out.replaceAll(form, placeholder);
 	}
 	out = out.replace(TIMESTAMP, '<timestamp>');
+	// tag copy writes "created on <locale date>" into tasks.json as well
+	out = out.replace(LOCALE_DATE, '<date>');
 	const mcp = name.startsWith('mcp-reply');
 	if (mcp) {
-		out = out
-			.replace(LOCALE_DATE, '<date>')
-			.replace(VERSION_FOOTER, (m) =>
-				m.startsWith('\\') ? '\\n<version footer>' : '\n<version footer>'
-			);
+		out = out.replace(VERSION_FOOTER, (m) =>
+			m.startsWith('\\') ? '\\n<version footer>' : '\n<version footer>'
+		);
 	}
 
 	if (name.endsWith('.json')) {
