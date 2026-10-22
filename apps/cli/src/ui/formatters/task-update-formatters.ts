@@ -20,6 +20,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { formatResearchAnswer } from './research-formatters.js';
 
@@ -57,7 +58,7 @@ function showHint(id: number | string, width: number): string {
  */
 export function formatTaskUpdated(
 	task: UpdatedTaskRef,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	return [
 		resultLine(`Updated task ${task.id}`, task.title, width),
@@ -79,7 +80,7 @@ export function formatTaskUpdated(
 export function formatNotesAdded(
 	target: UpdatedTaskRef & { kind: 'task' | 'subtask' },
 	notes: string,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const name = `${target.kind} ${target.id}`;
 	if (!notes.trim()) {
@@ -104,7 +105,7 @@ export function formatNotesAdded(
  */
 export function formatTasksUpdated(
 	tasks: UpdatedTaskRef[],
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	if (tasks.length === 0) {
 		return 'No tasks changed: the AI returned none of the tasks it was sent';

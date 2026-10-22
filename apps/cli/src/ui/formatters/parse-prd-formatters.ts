@@ -7,6 +7,7 @@
  * It replaces a boxed "Next steps" list of three commands.
  */
 
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface ParsePrdSaved {
@@ -29,7 +30,7 @@ export interface ParsePrdSaved {
  */
 export function formatParsePrdSaved(
 	result: ParsePrdSaved,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const facts = [`Saved to ${result.tasksPath}`];
 	if (result.total > result.added) facts.push(`${result.total} tasks in total`);
