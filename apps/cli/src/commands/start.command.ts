@@ -374,7 +374,7 @@ export class StartCommand extends Command {
 							padding: 1,
 							borderStyle: 'round',
 							borderColor: BORDER_COLOR,
-							width: process.stdout.columns * 0.95 || 100
+							width: ui.getContentWidth()
 						}
 					)
 				);
@@ -422,7 +422,7 @@ export class StartCommand extends Command {
 							padding: 1,
 							borderStyle: 'round',
 							borderColor: 'green',
-							width: process.stdout.columns * 0.95 || 100,
+							width: ui.getContentWidth(),
 							margin: { top: 1 }
 						}
 					)

@@ -13,6 +13,7 @@
 
 import chalk from 'chalk';
 import type { Ora } from 'ora';
+import { terminalWidth } from '../layout/helpers.js';
 import { createSpinner } from '../spinner.js';
 import { theme } from '../theme.js';
 
@@ -193,7 +194,7 @@ export class ParsePrdProgress {
 	}
 
 	private get columns(): number {
-		return this.options.stream.columns || 80;
+		return terminalWidth(this.options.stream);
 	}
 
 	private elapsed(): string {
