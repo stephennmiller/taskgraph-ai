@@ -12,6 +12,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface ClearedTask {
@@ -52,7 +53,7 @@ function describeEmpty(ids: Array<number | string>): string {
  */
 export function formatClearedSubtasks(
 	result: ClearSubtasksResult,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const { cleared, empty } = result;
 

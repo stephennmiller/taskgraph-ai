@@ -160,6 +160,8 @@ export {
 // Layout helpers
 export {
 	getBoxWidth,
+	getContentWidth,
+	terminalWidth,
 	truncate,
 	createProgressBar
 } from './layout/helpers.js';

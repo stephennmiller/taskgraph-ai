@@ -8,6 +8,7 @@ import boxen from 'boxen';
 import chalk from 'chalk';
 import { isTaskComplete } from '../../utils/task-status.js';
 import { getComplexityWithColor } from '../../utils/ui.js';
+import { terminalWidth } from '../layout/helpers.js';
 import { BORDER_COLOR, theme } from '../theme.js';
 
 /**
@@ -500,19 +501,18 @@ export function displayDashboards(
 	depStats: DependencyStatistics,
 	nextTask?: NextTaskInfo
 ): void {
-	// Get terminal width
-	const terminalWidth = process.stdout.columns || 80;
+	const width = terminalWidth();
 	// Each side-by-side box needs ~58 columns for its content to fit unwrapped
 	const minDashboardWidth = 58;
 	const minDependencyWidth = 58;
 	const totalMinWidth = minDashboardWidth + minDependencyWidth + 4;
-	const sideBySide = terminalWidth >= totalMinWidth;
-	const halfWidth = Math.floor(terminalWidth / 2);
+	const sideBySide = width >= totalMinWidth;
+	const halfWidth = Math.floor(width / 2);
 	const boxContentWidth = halfWidth - 4;
 
 	// Text width inside a box (minus 2 border and 6 padding columns). The full
 	// progress bar and status line need about 60 columns; use the compact form below that.
-	const innerWidth = (sideBySide ? boxContentWidth : terminalWidth) - 8;
+	const innerWidth = (sideBySide ? boxContentWidth : width) - 8;
 	const compact = innerWidth < 60;
 
 	const projectDashboardContent = displayProjectDashboard(
