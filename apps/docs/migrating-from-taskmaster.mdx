@@ -1,0 +1,70 @@
+---
+title: "Migrating from Task Master"
+description: "Import a Task Master project, with every tag, its docs and reports, into TaskGraph with one command"
+---
+
+TaskGraph started as a fork of [Task Master](https://github.com/eyaltoledano/claude-task-master) and reads the same task format. `taskgraph init --from-taskmaster` sets up TaskGraph in a Task Master project and brings its work over.
+
+## Import
+
+From the project root, the folder that holds `.taskmaster/`:
+
+```bash
+taskgraph init --from-taskmaster --yes
+```
+
+`--yes` skips init's questions. Leave it out to answer them (Git, Claude Code integration, response language); the import runs the same way. Add `--dry-run` to see what init would do without changing anything.
+
+It prints what moved and the next step:
+
+```txt
+✓ Imported 4 tasks in 2 tags, docs and reports from .taskmaster/
+  .gitignore    created
+  .env.example  optional settings
+Skipped the research model (perplexity sonar-pro) and 6 provider settings
+.taskmaster/ is unchanged · Next: taskgraph next
+```
+
+## What moves
+
+| From `.taskmaster/` | To `.taskgraph/` |
+| --- | --- |
+| `tasks/tasks.json` | `tasks/tasks.json`, every tag, with tasks, subtasks and dependencies unchanged. A file from before tags (`{"tasks": [...]}`) becomes the `master` tag. |
+| `docs/` | `docs/`, including subfolders such as `docs/research/` |
+| `reports/` | `reports/`, including each tag's complexity report |
+| `templates/` | `templates/` |
+| `state.json` | `state.json`: the selected tag and the branch-to-tag mapping |
+| `config.json` | `config.json`: the settings below |
+
+A file that is already in `.taskgraph/` is kept. The PRD templates `init` writes are an example: if you changed Task Master's `templates/example_prd.txt`, copy it over by hand.
+
+The task files in `.taskmaster/tasks/` (`task_001.txt` and so on) are not copied. Run `taskgraph generate` to write them again.
+
+## Settings
+
+TaskGraph runs every AI call through Claude Code, so only part of a Task Master config applies.
+
+- **Model roles that map to Claude Code are kept.** A `main`, `research` or `fallback` model whose ID names a Claude model (for example `claude-code`/`opus`, or `anthropic`/`claude-sonnet-4-20250514`) becomes `opus`, `sonnet` or `haiku`. Any other model (Perplexity, OpenAI, Gemini, Ollama and so on) is skipped, and that role keeps TaskGraph's default, `sonnet`. Change it with `taskgraph models --setup`.
+- **General settings are kept:** project name, default priority, default subtask and task counts, response language, default tag, log level, codebase analysis and the `claudeCode` section.
+- **Provider and API-key settings are dropped:** base URLs (Ollama, Bedrock, Azure), the Vertex project, the user ID, any API key, and settings for providers TaskGraph removed.
+
+API keys in `.env` or `.mcp.json` are not read or copied. TaskGraph needs none; see [Authentication](/getting-started/api-keys).
+
+## If `.taskgraph/` already has tasks
+
+The import won't replace tasks that are already there:
+
+```txt
+✗ .taskgraph/ already has 12 tasks; the import would replace them
+  Move .taskgraph/tasks/tasks.json aside first, or keep using it
+```
+
+An empty task list, like the one a plain `taskgraph init` creates, is fine to import over.
+
+## After the import
+
+`.taskmaster/` is left exactly as it was, so you can compare the two. When you're happy with the result:
+
+1. Check the tasks: `taskgraph tags`, then `taskgraph list`.
+2. Remove `.taskmaster/` (`git rm -r .taskmaster` or `rm -r .taskmaster`).
+3. Update anything else that names Task Master: `.taskmaster/` paths in `CLAUDE.md`, `.gitignore`, scripts or CI, `TASK_MASTER_*` environment variables, and the `task-master-ai` server in `.mcp.json`. The [upgrade guide](/upgrading) lists each rename.

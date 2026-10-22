@@ -5,15 +5,17 @@ description: "What to change when moving an existing project to a newer TaskGrap
 
 TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52.
 
-## 1. Rename the project folder
+## 1. Import the project folder
 
-Rename `.taskmaster/` to `.taskgraph/` by hand, from your project root:
+From your project root, import `.taskmaster/` into `.taskgraph/`:
 
 ```bash
-git mv .taskmaster .taskgraph   # or: mv .taskmaster .taskgraph
+taskgraph init --from-taskmaster --yes
 ```
 
-TaskGraph no longer detects `.taskmaster/`, and there is no automatic migration. Also update any `.taskmaster/` paths you reference in `CLAUDE.md`, `.gitignore`, scripts or CI.
+It copies every tag of tasks, the docs, reports and templates, and the settings that still apply, and drops provider and API-key settings. `.taskmaster/` is left in place. See [Migrating from Task Master](/migrating-from-taskmaster) for what moves.
+
+TaskGraph doesn't read `.taskmaster/` otherwise. Also update any `.taskmaster/` paths you reference in `CLAUDE.md`, `.gitignore`, scripts or CI.
 
 ## 2. Rename environment variables
 
@@ -34,7 +36,7 @@ Check your shell profile, `.env`, `.mcp.json` and CI configuration.
 
 ## 4. Removed
 
-- `taskgraph migrate` is gone. Moving files from older layouts to `.taskgraph/` is now a manual step (see step 1).
+- `taskgraph migrate` is gone. `taskgraph init --from-taskmaster` imports a `.taskmaster/` folder (see step 1).
 - `.taskmasterconfig` is no longer read. Configuration lives in `.taskgraph/config.json`; run `taskgraph models --setup` to recreate it.
 - Every provider other than Claude Code is removed, along with the flags that selected them. Models are `opus`, `sonnet` and `haiku`. Provider API keys are ignored; only the optional `CLAUDE_CODE_API_KEY` remains. Remove those flags from any scripts. See [Authentication](/getting-started/api-keys).
 - Support for editors other than Claude Code is removed. `taskgraph init --rules` accepts `claude` only.

@@ -53,6 +53,8 @@ const LEGACY_OVERSIZED = new Set([
 	'scripts/modules/task-manager/scope-adjustment.js',
 	'scripts/modules/utils.js',
 	'scripts/modules/task-manager/tag-management.js',
+	// Was already ~7,100 tokens before `init --from-taskmaster` added its flag
+	'scripts/init.js',
 	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
 	'.claude/rules/new-features.md',

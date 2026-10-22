@@ -17,7 +17,12 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { ui } from '@tm/cli';
+import { printError, ui } from '@tm/cli';
+import {
+	TaskMasterImportError,
+	checkTaskMasterImport,
+	importTaskMasterProject
+} from '@tm/core';
 import chalk from 'chalk';
 import { RULE_PROFILES } from '../src/constants/profiles.js';
 import {
@@ -439,6 +444,18 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 // Main function to initialize a new project
 async function initializeProject(options = {}) {
 	// Receives options as argument
+	// Check an import can run before the banner, prompts or any write
+	if (options.fromTaskmaster) {
+		try {
+			checkTaskMasterImport(process.cwd());
+		} catch (error) {
+			if (!(error instanceof TaskMasterImportError)) throw error;
+			if (isSilentMode()) throw error;
+			printError(error.message, error.hint);
+			process.exit(1);
+		}
+	}
+
 	// Only display banner if not in silent mode
 	if (!isSilentMode()) {
 		displayBanner();
@@ -503,7 +520,7 @@ async function initializeProject(options = {}) {
 			true;
 
 		if (dryRun) {
-			displayDryRun(initGit, storeTasksInGit);
+			displayDryRun(initGit, storeTasksInGit, options.fromTaskmaster);
 			return {
 				dryRun: true
 			};
@@ -633,7 +650,11 @@ async function initializeProject(options = {}) {
 
 			if (dryRun) {
 				rl.close();
-				displayDryRun(initGitPrompted, storeGitPrompted);
+				displayDryRun(
+					initGitPrompted,
+					storeGitPrompted,
+					options.fromTaskmaster
+				);
 				return {
 					dryRun: true
 				};
@@ -849,10 +870,18 @@ async function createProjectStructure(
 	}
 	// =====================================
 
+	// Bring in a Task Master project: its tasks, docs, reports and the
+	// settings that still apply, including its response language and models
+	const imported =
+		options.fromTaskmaster && !dryRun
+			? importTaskMasterProject(targetDir)
+			: undefined;
+
 	// === Add Model Configuration Step ===
 	// Interactive runs choose models now; --yes keeps the defaults, which the
-	// summary mentions. MCP clients set models with the `models` tool.
-	if (!isSilentMode() && !dryRun && !options?.yes) {
+	// summary mentions. An import brings its models along. MCP clients set
+	// models with the `models` tool.
+	if (!isSilentMode() && !dryRun && !options?.yes && !imported) {
 		console.log('');
 		try {
 			// Run this same CLI rather than `npx taskgraph`, which can resolve
@@ -877,7 +906,19 @@ async function createProjectStructure(
 		addShellAliases();
 	}
 
-	if (!isSilentMode()) {
+	if (!isSilentMode() && imported) {
+		const { changes } = describeInitChanges(
+			targetDir,
+			before,
+			snapshotPaths(watched)
+		);
+		console.log(
+			`${ui.formatTaskMasterImport({
+				result: imported,
+				changes: changes.filter((change) => change.path !== `${TASKGRAPH_DIR}/`)
+			})}\n`
+		);
+	} else if (!isSilentMode()) {
 		const { alreadySetUp, changes } = describeInitChanges(
 			targetDir,
 			before,
@@ -899,12 +940,16 @@ async function createProjectStructure(
  * Say what init would do without doing it.
  * @param {boolean} initGit - Whether git init would run
  * @param {boolean} storeTasksInGit - Whether tasks would be committed
+ * @param {boolean} [fromTaskmaster] - Whether .taskmaster/ would be imported
  */
-function displayDryRun(initGit, storeTasksInGit) {
+function displayDryRun(initGit, storeTasksInGit, fromTaskmaster) {
 	if (isSilentMode()) return;
 	const lines = [
 		'Dry run; nothing was changed. Init would:',
 		`  create ${TASKGRAPH_DIR}/ with tasks, settings and PRD templates`,
+		...(fromTaskmaster
+			? ['  import tasks, docs, reports and settings from .taskmaster/']
+			: []),
 		`  create or update ${GITIGNORE_FILE} and ${ENV_EXAMPLE_FILE}`
 	];
 	if (initGit !== false && !insideGitWorkTree()) {

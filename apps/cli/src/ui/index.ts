@@ -81,6 +81,12 @@ export {
 	type InitSummary
 } from './formatters/init-summary-formatters.js';
 
+// What init --from-taskmaster moved
+export {
+	formatTaskMasterImport,
+	type TaskMasterImportSummary
+} from './formatters/taskmaster-import-formatters.js';
+
 // What `taskgraph models` shows and confirms
 export {
 	formatModelChanges,

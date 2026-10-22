@@ -2174,6 +2174,7 @@ function registerCommands(programInstance) {
 		.option('--no-git', 'Skip Git repository initialization')
 		.option('--git-tasks', 'Store tasks in Git')
 		.option('--no-git-tasks', 'No Git storage of tasks')
+		.option('--from-taskmaster', 'Import a Task Master project (.taskmaster/)')
 		.action(async (cmdOptions) => {
 			// cmdOptions contains parsed arguments
 			// Parse rules: accept space or comma separated, default to all available rules
