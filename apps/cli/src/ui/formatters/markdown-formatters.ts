@@ -1,0 +1,123 @@
+/**
+ * @fileoverview Markdown and plain text wrapped to the terminal, shared by
+ * the formatters that print text someone wrote: a research answer, a task's
+ * description and details.
+ *
+ *   Hash passwords with bcrypt (cost 12). Store sessions in the sessions
+ *   table with a 30-day sliding expiry.
+ *   • Rate-limit sign-in attempts to 5 per minute per IP, and lock the
+ *     account after 20 failed attempts
+ */
+
+import { stripVTControlCharacters } from 'node:util';
+import chalk from 'chalk';
+import { Marked, type MarkedExtension } from 'marked';
+import { markedTerminal } from 'marked-terminal';
+import { theme } from '../theme.js';
+
+/** Length on screen, not counting ANSI codes */
+export const visibleLength = (text: string) =>
+	stripVTControlCharacters(text).length;
+
+/**
+ * Wrap a line at spaces without counting ANSI codes, starting each
+ * continuation line with `indent`. A word longer than the width stays whole.
+ */
+export function wrapLine(
+	line: string,
+	width: number,
+	indent: string
+): string[] {
+	const lead = line.match(/^ */)?.[0] ?? '';
+	const words = line.slice(lead.length).split(' ');
+	const lines: string[] = [];
+	let current = lead;
+	let length = lead.length;
+	let lineHasWord = false;
+
+	for (const word of words) {
+		const wordLength = visibleLength(word);
+		if (lineHasWord && length + 1 + wordLength > width) {
+			lines.push(current);
+			current = indent + word;
+			length = indent.length + wordLength;
+		} else {
+			current += (lineHasWord ? ' ' : '') + word;
+			length += (lineHasWord ? 1 : 0) + wordLength;
+		}
+		lineHasWord = true;
+	}
+	lines.push(current);
+	return lines;
+}
+
+/**
+ * marked-terminal reflows paragraphs but not list items, so long items
+ * relied on the terminal's own wrap and lost their indent. Wrap them with
+ * a hanging indent, and draw bullets as •.
+ */
+function wrapListItems(text: string, width: number): string {
+	return text
+		.split('\n')
+		.flatMap((line) => {
+			const bulleted = line.replace(/^(\s*)\* /, '$1• ');
+			const marker =
+				stripVTControlCharacters(bulleted).match(/^(\s*)(•|\d+\.)\s+/);
+			if (!marker || visibleLength(bulleted) <= width) return [bulleted];
+			return wrapLine(bulleted, width, ' '.repeat(marker[0].length));
+		})
+		.join('\n');
+}
+
+/**
+ * Render markdown for the terminal, with every line at most `columns` wide
+ * (a single word longer than that, such as a URL, stays whole).
+ */
+export function formatMarkdown(markdown: string, columns: number): string {
+	const renderer = new Marked({ gfm: true, breaks: false });
+
+	renderer.use(
+		markedTerminal({
+			code: (code: string) =>
+				code
+					.split('\n')
+					.map((line) => chalk.cyan(line))
+					.join('\n'),
+			blockquote: theme.muted.italic,
+			html: theme.muted,
+			heading: theme.text.bold,
+			firstHeading: theme.text.bold,
+			hr: theme.muted,
+			listitem: theme.text,
+			paragraph: theme.text,
+			strong: theme.text.bold,
+			em: theme.text.italic,
+			codespan: chalk.cyan,
+			del: chalk.dim.strikethrough,
+			link: theme.brand,
+			href: theme.brand.underline,
+			showSectionPrefix: false,
+			unescape: true,
+			emoji: false,
+			tab: 2,
+			width: columns,
+			reflowText: true
+		}) as MarkedExtension
+	);
+
+	// marked-terminal prints list items' inline markdown (**bold**, `code`)
+	// literally; render their inline tokens instead.
+	renderer.use({
+		renderer: {
+			text(token) {
+				if (typeof token === 'object' && 'tokens' in token && token.tokens) {
+					return this.parser.parseInline(token.tokens);
+				}
+				return typeof token === 'string' ? token : token.text;
+			}
+		}
+	});
+
+	const rendered = renderer.parse(markdown.trim(), { async: false }) as string;
+	return wrapListItems(rendered.trimEnd(), columns);
+}

@@ -1,6 +1,7 @@
 /**
- * @fileoverview Task detail component for show command
- * Displays detailed task information in a structured format
+ * @fileoverview Boxed task details still printed by `next` and `start --dry-run`.
+ * `show` prints formatTaskDetail (ui/formatters/task-detail-formatters.ts)
+ * instead; move these commands to it and delete this file (#182).
  */
 
 import type {

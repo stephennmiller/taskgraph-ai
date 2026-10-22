@@ -26,10 +26,6 @@ vi.mock('../../../src/utils/display-helpers.js', () => ({
 	displayCommandHeader: vi.fn()
 }));
 
-vi.mock('../../../src/ui/components/task-detail.component.js', () => ({
-	displayTaskDetails: vi.fn()
-}));
-
 vi.mock('../../../src/utils/ui.js', () => ({
 	createTaskTable: vi.fn(() => 'Table output'),
 	displayWarning: vi.fn()
@@ -119,8 +115,7 @@ describe('ShowCommand', () => {
 			});
 
 			// Should use text format (not JSON)
-			// Text format will call displayCommandHeader and displayTaskDetails
-			// We just verify it was called (mocked functions)
+			// Text format prints the header (mocked) and the formatted task
 			expect(consoleLogSpy).toHaveBeenCalled();
 		});
 

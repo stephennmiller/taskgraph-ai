@@ -56,16 +56,13 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => {
 });
 
 vi.doMock('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: vi.fn(),
-	getStatusWithColor: vi.fn((status) => status),
 	startLoadingIndicator: vi.fn(),
 	stopLoadingIndicator: vi.fn(),
 	succeedLoadingIndicator: vi.fn(),
 	failLoadingIndicator: vi.fn(),
 	warnLoadingIndicator: vi.fn(),
 	infoLoadingIndicator: vi.fn(),
-	displayAiUsageSummary: vi.fn(),
-	displayContextAnalysis: vi.fn()
+	displayAiUsageSummary: vi.fn()
 }));
 
 vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
@@ -118,35 +115,6 @@ vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
 			systemPrompt: 'Mocked system prompt',
 			userPrompt: 'Mocked user prompt'
 		})
-	})
-}));
-
-// Mock external UI libraries
-vi.doMock('chalk', () => ({
-	default: {
-		white: { bold: vi.fn((text) => text) },
-		cyan: Object.assign(
-			vi.fn((text) => text),
-			{
-				bold: vi.fn((text) => text)
-			}
-		),
-		green: vi.fn((text) => text),
-		yellow: vi.fn((text) => text),
-		bold: vi.fn((text) => text)
-	}
-}));
-
-vi.doMock('boxen', () => ({
-	default: vi.fn((text) => text)
-}));
-
-vi.doMock('cli-table3', () => ({
-	default: vi.fn().mockImplementation(function () {
-		return {
-			push: vi.fn(),
-			toString: vi.fn(() => 'mocked table')
-		};
 	})
 }));
 
@@ -428,9 +396,7 @@ describe('addTask', () => {
 			})
 		);
 		expect(context.mcpLog.warn).toHaveBeenCalledWith(
-			expect.stringContaining(
-				'The following dependencies do not exist or are invalid: 999'
-			)
+			"Task 999 doesn't exist; adding the task without that dependency"
 		);
 	});
 

@@ -56,23 +56,31 @@ marked.setOptions({
 });
 
 /**
- * Convert HTML content to Markdown, then render for terminal
- * Handles tiptap HTML gracefully
+ * Turn stored task text into markdown: undo escaped newlines, tabs and
+ * quotes, and convert HTML (tiptap) to markdown.
  */
-export function renderContent(content: string): string {
+export function toMarkdown(content: string): string {
 	if (!content) return '';
 
 	// Clean up escape characters first - order matters: handle escaped backslashes first
-	let cleaned = content
+	const cleaned = content
 		.replace(/\\\\/g, '\\')
 		.replace(/\\n/g, '\n')
 		.replace(/\\t/g, '\t')
 		.replace(/\\"/g, '"');
 
 	// Check if content has HTML tags - if so, convert to markdown first
-	if (/<[^>]+>/.test(cleaned)) {
-		cleaned = turndownService.turndown(cleaned);
-	}
+	return /<[^>]+>/.test(cleaned) ? turndownService.turndown(cleaned) : cleaned;
+}
+
+/**
+ * Convert HTML content to Markdown, then render for terminal
+ * Handles tiptap HTML gracefully
+ */
+export function renderContent(content: string): string {
+	if (!content) return '';
+
+	const cleaned = toMarkdown(content);
 
 	// Render markdown to terminal
 	const result = marked(cleaned);
