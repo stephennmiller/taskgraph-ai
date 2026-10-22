@@ -1,0 +1,105 @@
+{
+	"master": {
+		"tasks": [
+			{
+				"id": 1,
+				"title": "Set up the project",
+				"description": "Create the repository and the build",
+				"details": "Initialize the repository, add the build script and CI",
+				"testStrategy": "The build runs on a clean checkout",
+				"status": "done",
+				"priority": "high",
+				"dependencies": [],
+				"subtasks": []
+			},
+			{
+				"id": 2,
+				"title": "Write the parser",
+				"description": "Parse the input files into tasks",
+				"details": "Read the files, validate them and build the task list",
+				"testStrategy": "Unit tests for valid and broken input",
+				"status": "pending",
+				"priority": "high",
+				"dependencies": [1],
+				"subtasks": [
+					{
+						"id": 1,
+						"title": "Read the files",
+						"description": "Load the files from disk",
+						"details": "Read every file under the input directory",
+						"testStrategy": "A test with a temporary directory",
+						"status": "pending",
+						"dependencies": []
+					},
+					{
+						"id": 2,
+						"title": "Validate the content",
+						"description": "Check every field",
+						"details": "Reject files with missing fields and report which",
+						"testStrategy": "A test per missing field",
+						"status": "pending",
+						"dependencies": [1]
+					}
+				]
+			},
+			{
+				"id": 3,
+				"title": "Add a plugin system",
+				"description": "Let users add commands",
+				"details": "A registry that loads commands from a folder",
+				"testStrategy": "Load a sample plugin",
+				"status": "cancelled",
+				"priority": "low",
+				"dependencies": [],
+				"subtasks": []
+			},
+			{
+				"id": 4,
+				"title": "Write the report",
+				"description": "Print a summary of the tasks",
+				"details": "Group the tasks by status and print the counts",
+				"testStrategy": "Compare the output with a stored sample",
+				"status": "pending",
+				"priority": "medium",
+				"dependencies": [2, 3],
+				"subtasks": []
+			},
+			{
+				"id": 5,
+				"title": "Publish the first version",
+				"description": "Tag and publish",
+				"details": "Tag the release and publish the package",
+				"testStrategy": "Install the published package in a clean folder",
+				"status": "pending",
+				"priority": "critical",
+				"dependencies": [4],
+				"subtasks": []
+			}
+		],
+		"metadata": {
+			"created": "2026-01-01T00:00:00.000Z",
+			"updated": "2026-01-01T00:00:00.000Z",
+			"description": "Parity fixture: main tag"
+		}
+	},
+	"feature": {
+		"tasks": [
+			{
+				"id": 1,
+				"title": "Try the new layout",
+				"description": "A change on a feature tag",
+				"details": "Rework the layout of the report",
+				"testStrategy": "Compare the output with a stored sample",
+				"status": "pending",
+				"priority": "medium",
+				"dependencies": [],
+				"subtasks": []
+			}
+		],
+		"metadata": {
+			"created": "2026-01-01T00:00:00.000Z",
+			"updated": "2026-01-01T00:00:00.000Z",
+			"description": "Parity fixture: feature tag"
+		}
+	}
+}
