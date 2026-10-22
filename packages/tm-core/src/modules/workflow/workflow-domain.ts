@@ -50,7 +50,11 @@ export class WorkflowDomain {
 			const taskStatusUpdater: TaskStatusUpdater | undefined = this.tasksDomain
 				? {
 						updateStatus: async (taskId, status, tag) => {
-							await this.tasksDomain!.updateStatus(taskId, status, tag);
+							// Autopilot keeps its own completion rules; the criteria
+							// gate applies to set-status
+							await this.tasksDomain!.updateStatus(taskId, status, tag, {
+								force: true
+							});
 						}
 					}
 				: undefined;
