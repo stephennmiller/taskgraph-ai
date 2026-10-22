@@ -63,6 +63,17 @@ describe('mcp-stdio smoke script', () => {
 		expect(summary.nonJsonLines).toEqual([]);
 	});
 
+	it('prints the tool schemas only when asked', () => {
+		const plain = summaryOf(smoke([], fakeServer()).stdout);
+		const withSchemas = summaryOf(smoke(['--schemas'], fakeServer()).stdout);
+
+		expect(plain.toolSchemas).toBeUndefined();
+		expect(withSchemas.toolSchemas).toEqual([
+			{ name: 'a', inputSchema: null },
+			{ name: 'b', inputSchema: null }
+		]);
+	});
+
 	it('records the result of a tool call', () => {
 		const res = smoke(['--call', 'a', '--args', '{"x":1}'], fakeServer());
 

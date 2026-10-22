@@ -72,3 +72,5 @@ export function unexpectedExits(run: {
 	status: number | null;
 	expected: number;
 }>;
+
+export function deriveServerCommand(build: string): string | null;

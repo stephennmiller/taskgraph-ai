@@ -37,65 +37,62 @@ export function registerAddDependencyTool(server) {
 			title: 'Add Dependency',
 			destructiveHint: true
 		},
-		execute: withToolContext(
-			'add-dependency',
-			async (args, { log, session }) => {
+		execute: withToolContext(async (args, { log, session }) => {
+			try {
+				log.info(
+					`Adding dependency for task ${args.id} to depend on ${args.dependsOn}`
+				);
+				const resolvedTag = resolveTag({
+					projectRoot: args.projectRoot,
+					tag: args.tag
+				});
+				let tasksJsonPath;
 				try {
-					log.info(
-						`Adding dependency for task ${args.id} to depend on ${args.dependsOn}`
-					);
-					const resolvedTag = resolveTag({
-						projectRoot: args.projectRoot,
-						tag: args.tag
-					});
-					let tasksJsonPath;
-					try {
-						tasksJsonPath = findTasksPath(
-							{ projectRoot: args.projectRoot, file: args.file },
-							log
-						);
-					} catch (error) {
-						log.error(`Error finding tasks.json: ${error.message}`);
-						return createErrorResponse(
-							`Failed to find tasks.json: ${error.message}`
-						);
-					}
-
-					// Call the direct function with the resolved path
-					const result = await addDependencyDirect(
-						{
-							// Pass the explicitly resolved path
-							tasksJsonPath: tasksJsonPath,
-							// Pass other relevant args
-							id: args.id,
-							dependsOn: args.dependsOn,
-							projectRoot: args.projectRoot,
-							tag: resolvedTag
-						},
+					tasksJsonPath = findTasksPath(
+						{ projectRoot: args.projectRoot, file: args.file },
 						log
-						// Remove context object
 					);
+				} catch (error) {
+					log.error(`Error finding tasks.json: ${error.message}`);
+					return createErrorResponse(
+						`Failed to find tasks.json: ${error.message}`
+					);
+				}
 
-					// Log result
-					if (result.success) {
-						log.info(`Successfully added dependency: ${result.data.message}`);
-					} else {
-						log.error(`Failed to add dependency: ${result.error.message}`);
-					}
-
-					// Use handleApiResult to format the response
-					return handleApiResult({
-						result,
-						log,
-						errorPrefix: 'Error adding dependency',
+				// Call the direct function with the resolved path
+				const result = await addDependencyDirect(
+					{
+						// Pass the explicitly resolved path
+						tasksJsonPath: tasksJsonPath,
+						// Pass other relevant args
+						id: args.id,
+						dependsOn: args.dependsOn,
 						projectRoot: args.projectRoot,
 						tag: resolvedTag
-					});
-				} catch (error) {
-					log.error(`Error in addDependency tool: ${error.message}`);
-					return createErrorResponse(error.message);
+					},
+					log
+					// Remove context object
+				);
+
+				// Log result
+				if (result.success) {
+					log.info(`Successfully added dependency: ${result.data.message}`);
+				} else {
+					log.error(`Failed to add dependency: ${result.error.message}`);
 				}
+
+				// Use handleApiResult to format the response
+				return handleApiResult({
+					result,
+					log,
+					errorPrefix: 'Error adding dependency',
+					projectRoot: args.projectRoot,
+					tag: resolvedTag
+				});
+			} catch (error) {
+				log.error(`Error in addDependency tool: ${error.message}`);
+				return createErrorResponse(error.message);
 			}
-		)
+		})
 	});
 }
