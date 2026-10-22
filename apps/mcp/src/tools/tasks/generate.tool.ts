@@ -3,9 +3,12 @@
  * Generates individual task files from tasks.json
  */
 
-import path from 'node:path';
 import { z } from 'zod';
-import { handleApiResult, withToolContext } from '../../shared/utils.js';
+import {
+	handleApiResult,
+	resolveInsideRoot,
+	withToolContext
+} from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
 import type { FastMCP } from 'fastmcp';
 
@@ -43,9 +46,9 @@ export function registerGenerateTool(server: FastMCP) {
 				try {
 					log.info(`Generating task files with args: ${JSON.stringify(args)}`);
 
-					// Resolve output directory
+					// Resolve output directory; it must stay inside the project
 					const outputDir = output
-						? path.resolve(projectRoot, output)
+						? resolveInsideRoot(projectRoot, output)
 						: undefined;
 
 					// Call tm-core to generate task files
