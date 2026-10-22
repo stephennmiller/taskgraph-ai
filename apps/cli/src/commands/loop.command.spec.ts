@@ -95,6 +95,9 @@ describe('LoopCommand', () => {
 			tasks: {
 				getNext: vi.fn().mockResolvedValue({ id: '1', title: 'Test Task' }),
 				getCount: vi.fn().mockResolvedValue(0)
+			},
+			config: {
+				getActiveTag: vi.fn().mockReturnValue('feature-auth')
 			}
 		};
 
@@ -399,6 +402,17 @@ describe('LoopCommand', () => {
 			await execute({});
 
 			expect(displayCommandHeader).toHaveBeenCalled();
+		});
+
+		it('names the active tag in the header when no --tag is given', async () => {
+			mockLoopRun.mockResolvedValue(createMockResult());
+
+			const execute = (loopCommand as any).execute.bind(loopCommand);
+			await execute({});
+
+			expect(displayCommandHeader).toHaveBeenCalledWith(
+				expect.objectContaining({ tag: 'feature-auth' })
+			);
 		});
 
 		it('should call displayError on exception', async () => {

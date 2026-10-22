@@ -1,26 +1,20 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { stripVTControlCharacters as plain } from 'node:util';
+import { shouldShowTagIndicatorForProject } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayCommandHeader } from './display-helpers.js';
 
+vi.mock('@tm/core', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@tm/core')>()),
+	shouldShowTagIndicatorForProject: vi.fn()
+}));
+
+const shouldShow = vi.mocked(shouldShowTagIndicatorForProject);
+
 describe('displayCommandHeader', () => {
 	let output: string[];
-	let dir: string;
-
-	const writeTags = (...tags: string[]) => {
-		const tasksPath = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
-		fs.mkdirSync(path.dirname(tasksPath), { recursive: true });
-		fs.writeFileSync(
-			tasksPath,
-			JSON.stringify(Object.fromEntries(tags.map((t) => [t, { tasks: [] }])))
-		);
-	};
 
 	beforeEach(() => {
 		output = [];
-		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-header-'));
 		vi.spyOn(console, 'log').mockImplementation((line?: unknown) => {
 			output.push(String(line));
 		});
@@ -28,27 +22,34 @@ describe('displayCommandHeader', () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-		fs.rmSync(dir, { recursive: true, force: true });
+		shouldShow.mockReset();
 	});
 
-	it('shows a non-master tag on one line, without a path', () => {
-		writeTags('master', 'feature-x');
-		displayCommandHeader({ tag: 'feature-x', projectRoot: dir });
+	it('shows the tag on one line, without a path, when core says it matters', () => {
+		shouldShow.mockReturnValue(true);
+
+		const shown = displayCommandHeader({ tag: 'feature-x', projectRoot: '/p' });
 
 		expect(output.map(plain)).toEqual(['[tag] feature-x']);
+		expect(shown).toBe(true);
+		expect(shouldShow).toHaveBeenCalledWith('feature-x', '/p');
 	});
 
-	it('prints nothing in a project that only has master', () => {
-		writeTags('master');
-		displayCommandHeader({ tag: 'master', projectRoot: dir });
+	it('prints nothing when core says the tag line tells you nothing', () => {
+		shouldShow.mockReturnValue(false);
+
+		const shown = displayCommandHeader({ tag: 'master', projectRoot: '/p' });
 
 		expect(output).toEqual([]);
+		expect(shown).toBe(false);
 	});
 
-	it('falls back to master, and shows it once there is another tag', () => {
-		writeTags('master', 'feature-x');
-		displayCommandHeader({ projectRoot: dir });
+	it('falls back to master', () => {
+		shouldShow.mockReturnValue(true);
 
+		displayCommandHeader({ projectRoot: '/p' });
+
+		expect(shouldShow).toHaveBeenCalledWith('master', '/p');
 		expect(output.map(plain)).toEqual(['[tag] master']);
 	});
 });

@@ -10,8 +10,12 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCliBinPath } from '../../helpers/test-utils.js';
+
+// Each spawn of the built CLI takes seconds on a loaded runner, and setup
+// spawns three (init, two add-task); tests spawn up to seven
+vi.setConfig({ hookTimeout: 120000, testTimeout: 120000 });
 
 describe('tag indicator', () => {
 	let dir: string;
@@ -69,6 +73,25 @@ describe('tag indicator', () => {
 				expect(result.stdout).not.toContain('[tag]');
 			}
 		});
+
+		it('core commands do not open with the blank line that followed the tag line', () => {
+			run(['add-dependency', '--id=2', '--depends-on=1']);
+
+			for (const args of [
+				['next'],
+				['show', '1'],
+				['show', '1,2'],
+				['show', '1,9'],
+				['why', '2'],
+				['graph']
+			]) {
+				const result = run(args);
+				expect(result.status, args.join(' ')).toBe(0);
+				expect(result.stdout.split('\n')[0].trim(), args.join(' ')).not.toBe(
+					''
+				);
+			}
+		});
 	});
 
 	describe('on a tag other than master', () => {
@@ -92,6 +115,17 @@ describe('tag indicator', () => {
 				const result = run(args);
 				expect(result.status).toBe(0);
 				expect(firstLine(result.stdout)).toBe('[tag] feature-auth');
+			}
+		});
+
+		it('keeps a blank line between the tag line and the result', () => {
+			for (const args of [['next'], ['show', '1'], ['show', '1,2']]) {
+				const result = run(args);
+				expect(result.status, args.join(' ')).toBe(0);
+				expect(result.stdout.split('\n').slice(0, 2), args.join(' ')).toEqual([
+					'[tag] feature-auth',
+					''
+				]);
 			}
 		});
 

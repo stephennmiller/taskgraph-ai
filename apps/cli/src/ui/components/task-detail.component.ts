@@ -544,6 +544,8 @@ export function displayTaskDetails(
 		customHeader?: string;
 		headerColor?: string;
 		originalTaskId?: string;
+		/** Leave a blank line above the custom header box (default true) */
+		spaceAbove?: boolean;
 	}
 ): void {
 	const {
@@ -551,7 +553,8 @@ export function displayTaskDetails(
 		showSuggestedActions = false,
 		customHeader,
 		headerColor = BORDER_COLOR,
-		originalTaskId
+		originalTaskId,
+		spaceAbove = true
 	} = options || {};
 
 	// Display header - either custom or default
@@ -561,7 +564,7 @@ export function displayTaskDetails(
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
 				borderColor: headerColor,
 				borderStyle: 'round',
-				margin: { top: 1 }
+				margin: { top: spaceAbove ? 1 : 0 }
 			})
 		);
 	} else {

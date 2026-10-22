@@ -16,8 +16,8 @@ export interface HeaderOptions {
 }
 
 /**
- * Display the active tag, styled like the legacy commands' tag line so every
- * command opens the same way: `[tag] feature-auth`
+ * Display the active tag with the same muted formatter the legacy commands
+ * use, so every command opens the same way: `[tag] feature-auth`
  */
 export function displayHeader(options: HeaderOptions = {}): void {
 	const { tag } = options;

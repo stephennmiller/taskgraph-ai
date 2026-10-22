@@ -78,6 +78,17 @@ describe('reading tags from tasks.json', () => {
 		expect(shouldShowTagIndicatorForProject('master', dir)).toBe(true);
 	});
 
+	it('reads the tasks file a command was pointed at, not the default one', () => {
+		writeTasks({ master: { tasks: [] } });
+		const other = path.join(dir, 'other.json');
+		fs.writeFileSync(
+			other,
+			JSON.stringify({ master: { tasks: [] }, 'feature-auth': { tasks: [] } })
+		);
+
+		expect(shouldShowTagIndicatorForProject('master', dir, other)).toBe(true);
+	});
+
 	it('shows a non-master tag without reading the file', () => {
 		expect(shouldShowTagIndicatorForProject('feature-auth', dir)).toBe(true);
 	});

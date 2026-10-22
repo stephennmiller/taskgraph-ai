@@ -94,7 +94,7 @@ export class LoopCommand extends Command {
 			this.validateIterations(String(iterations));
 
 			displayCommandHeader({
-				tag: options.tag || 'master',
+				tag: options.tag || this.tmCore.config.getActiveTag(),
 				projectRoot: this.tmCore.projectPath
 			});
 

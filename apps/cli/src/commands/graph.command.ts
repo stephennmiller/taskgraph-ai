@@ -85,7 +85,7 @@ export class GraphCommand extends Command {
 	}
 
 	private displayText(result: GraphResult): void {
-		displayCommandHeader({
+		const headerShown = displayCommandHeader({
 			tag: result.tag,
 			projectRoot: this.tmCore?.projectPath
 		});
@@ -98,7 +98,7 @@ export class GraphCommand extends Command {
 			return;
 		}
 
-		console.log();
+		if (headerShown) console.log();
 		const lines = renderDependencyTree(result, {
 			nextId: result.nextId,
 			width: getContentWidth()

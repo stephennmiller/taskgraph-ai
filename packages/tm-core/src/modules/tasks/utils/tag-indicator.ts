@@ -44,12 +44,15 @@ export function readTagNamesSync(tasksPath: string): string[] {
  * Whether a command in this project should print its tag line
  * @param tag - The tag the command works in
  * @param projectRoot - The project; found from the working directory when omitted
+ * @param tasksPath - The tasks file the command works on, when it isn't the
+ * project's default one (legacy commands take `--file`)
  */
 export function shouldShowTagIndicatorForProject(
 	tag: string,
-	projectRoot?: string
+	projectRoot?: string,
+	tasksPath?: string | null
 ): boolean {
 	if (tag !== DEFAULT_TAG) return true;
-	const { tasksPath } = getProjectPaths(projectRoot);
-	return shouldShowTagIndicator(tag, readTagNamesSync(tasksPath));
+	const file = tasksPath || getProjectPaths(projectRoot).tasksPath;
+	return shouldShowTagIndicator(tag, readTagNamesSync(file));
 }

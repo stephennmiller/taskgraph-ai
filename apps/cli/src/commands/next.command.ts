@@ -175,7 +175,7 @@ export class NextCommand extends Command {
 	 * Display in text format
 	 */
 	private displayText(result: NextTaskResult): void {
-		displayCommandHeader({
+		const headerShown = displayCommandHeader({
 			tag: result.tag || 'master',
 			projectRoot: this.tmCore?.projectPath
 		});
@@ -217,6 +217,7 @@ export class NextCommand extends Command {
 		displayTaskDetails(task, {
 			customHeader,
 			headerColor: 'green',
+			spaceAbove: headerShown,
 			showSuggestedActions: true
 		});
 	}

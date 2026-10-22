@@ -51,10 +51,17 @@ export function displayTaggedTasksFYI(data) {
  * @param {string} tag - The tag the command works in
  * @param {Object} [options]
  * @param {string} [options.projectRoot] - Defaults to the project found from the working directory
+ * @param {string|null} [options.tasksPath] - The tasks file the command works on (`--file`)
  */
 export async function displayCurrentTagIndicator(tag, options = {}) {
 	if (isSilentMode()) return;
-	if (!shouldShowTagIndicatorForProject(tag || 'master', options.projectRoot))
+	if (
+		!shouldShowTagIndicatorForProject(
+			tag || 'master',
+			options.projectRoot,
+			options.tasksPath
+		)
+	)
 		return;
 
 	console.log(ui.formatTagIndicator(tag || 'master'));

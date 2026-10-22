@@ -252,7 +252,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			// Helper function to check if there are existing tasks in the target tag and confirm overwrite
 			async function confirmOverwriteIfNeeded() {
@@ -363,7 +365,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			// Check if there's an 'id' option which is a common mistake (instead of 'from')
 			if (
@@ -449,7 +453,9 @@ function registerCommands(programInstance) {
 				const tag = taskGraph.getCurrentTag();
 
 				// Show current tag context
-				await displayCurrentTagIndicator(tag);
+				await displayCurrentTagIndicator(tag, {
+					tasksPath: taskGraph.getTasksPath()
+				});
 
 				// Prioritize positional arguments over options
 				const taskId = idArg || options.id;
@@ -570,7 +576,9 @@ function registerCommands(programInstance) {
 				const tag = taskGraph.getCurrentTag();
 
 				// Show current tag context
-				await displayCurrentTagIndicator(tag);
+				await displayCurrentTagIndicator(tag, {
+					tasksPath: taskGraph.getTasksPath()
+				});
 
 				// Validate required parameters
 				if (!options.id) {
@@ -674,7 +682,9 @@ function registerCommands(programInstance) {
 				const tag = taskGraph.getCurrentTag();
 
 				// Show current tag context
-				await displayCurrentTagIndicator(tag);
+				await displayCurrentTagIndicator(tag, {
+					tasksPath: taskGraph.getTasksPath()
+				});
 
 				// Validate required parameters
 				if (!options.id) {
@@ -779,7 +789,9 @@ function registerCommands(programInstance) {
 				const tag = taskGraph.getCurrentTag();
 
 				// Show current tag context
-				await displayCurrentTagIndicator(tag);
+				await displayCurrentTagIndicator(tag, {
+					tasksPath: taskGraph.getTasksPath()
+				});
 
 				// Validate required parameters
 				if (!options.id) {
@@ -907,7 +919,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			if (options.all) {
 				// --- Handle expand --all ---
@@ -1012,7 +1026,9 @@ function registerCommands(programInstance) {
 			const targetTag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(targetTag);
+			await displayCurrentTagIndicator(targetTag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			// Use user's explicit output path if provided, otherwise use tag-aware default
 			const outputPath = taskGraph.getComplexityReportPath();
@@ -1128,7 +1144,9 @@ function registerCommands(programInstance) {
 			const projectRoot = taskGraph.getProjectRoot();
 			const tasksPath = taskGraph.getTasksPath();
 
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			// Check every task ID before spending an AI call
 			const idsToCheck = [...taskIds, ...(saveToId ? [saveToId] : [])];
@@ -1252,7 +1270,9 @@ function registerCommands(programInstance) {
 			const tasksPath = taskGraph.getTasksPath();
 			const projectRoot = taskGraph.getProjectRoot();
 
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			let taskIds = options.id;
 			if (options.all) {
@@ -1338,7 +1358,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			let manualTaskData = null;
 			if (isManualCreation) {
@@ -1404,7 +1426,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			if (!taskId || !dependencyId) {
 				console.error(
@@ -1459,7 +1483,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			if (!taskId || !dependencyId) {
 				console.error(
@@ -1511,7 +1537,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			const result = await reportDependencyErrors(() =>
 				validateDependenciesCommand(taskGraph.getTasksPath(), {
@@ -1542,7 +1570,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			const result = await reportDependencyErrors(() =>
 				fixDependenciesCommand(taskGraph.getTasksPath(), {
@@ -1577,7 +1607,9 @@ function registerCommands(programInstance) {
 			const taskGraph = initTaskGraph(initOptions);
 
 			// Show current tag context
-			await displayCurrentTagIndicator(taskGraph.getCurrentTag());
+			await displayCurrentTagIndicator(taskGraph.getCurrentTag(), {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			await displayComplexityReport(taskGraph.getComplexityReportPath());
 		});
@@ -1617,7 +1649,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			if (!parentId) {
 				console.error(
@@ -1931,7 +1965,9 @@ function registerCommands(programInstance) {
 			const tag = taskGraph.getCurrentTag();
 
 			// Show current tag context
-			await displayCurrentTagIndicator(tag);
+			await displayCurrentTagIndicator(tag, {
+				tasksPath: taskGraph.getTasksPath()
+			});
 
 			if (!taskIdsString) {
 				console.error(chalk.red('Error: Task ID(s) are required'));
