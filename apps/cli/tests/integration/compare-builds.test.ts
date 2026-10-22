@@ -105,6 +105,46 @@ describe('normalizeSnapshot', () => {
 
 		expect(JSON.parse(out)).toEqual({ tasks: [{ id: 2 }, { id: 1 }] });
 	});
+
+	describe('MCP replies', () => {
+		it('masks version and locale dates, and keeps every other value', () => {
+			const out = normalizeSnapshot(
+				'mcp-reply.json',
+				JSON.stringify({
+					version: { version: '0.54.14', name: 'taskgraph-ai' },
+					data: { copiedAt: '10/22/2026', message: 'Copied 3 tasks' }
+				}),
+				ctx
+			);
+
+			expect(JSON.parse(out)).toEqual({
+				version: '<version>',
+				data: { copiedAt: '<date>', message: 'Copied 3 tasks' }
+			});
+		});
+
+		it('masks the Version and Name footer of a plain-text error reply', () => {
+			const out = normalizeSnapshot(
+				'mcp-reply.txt',
+				'Error: no such task\nVersion: 0.54.14\nName: taskgraph-ai',
+				ctx
+			);
+
+			expect(out).toBe('Error: no such task\n<version footer>');
+		});
+
+		it('leaves a version key in other files and in tool schemas alone', () => {
+			const tasks = normalizeSnapshot('tasks.json', '{"version":"1"}', ctx);
+			const schema = normalizeSnapshot(
+				'mcp-tools.json',
+				'{"version":"1"}',
+				ctx
+			);
+
+			expect(JSON.parse(tasks)).toEqual({ version: '1' });
+			expect(JSON.parse(schema)).toEqual({ version: '1' });
+		});
+	});
 });
 
 describe('diffSnapshots', () => {
@@ -303,6 +343,18 @@ describe('validateScenario', () => {
 		).not.toThrow();
 	});
 
+	it('accepts an mcp step with and without input and expectError', () => {
+		expect(() =>
+			validateScenario({
+				...ok,
+				steps: [
+					{ mcp: 'get_tasks' },
+					{ mcp: 'get_task', input: { id: '1' }, expectError: true }
+				]
+			})
+		).not.toThrow();
+	});
+
 	it.each([
 		['no steps', { steps: [] }, /steps/],
 		[
@@ -322,7 +374,43 @@ describe('validateScenario', () => {
 			{ steps: [{ args: ['list'], expectExit: 'no' }] },
 			/Step 1.*expectExit/
 		],
-		['a bad replies value', { steps: [['list']], replies: 5 }, /replies/]
+		['a bad replies value', { steps: [['list']], replies: 5 }, /replies/],
+		[
+			'mcp with args',
+			{ steps: [{ mcp: 'get_tasks', args: ['list'] }] },
+			/Step 1.*mcp/
+		],
+		[
+			'mcp with shell',
+			{ steps: [{ mcp: 'get_tasks', shell: 'true' }] },
+			/Step 1.*mcp/
+		],
+		[
+			'mcp with capture',
+			{ steps: [{ mcp: 'get_tasks', capture: 'stdout' }] },
+			/Step 1.*mcp/
+		],
+		[
+			'mcp with expectExit',
+			{ steps: [{ mcp: 'get_tasks', expectExit: 1 }] },
+			/Step 1.*expectError/
+		],
+		['an empty mcp tool name', { steps: [{ mcp: '' }] }, /Step 1.*tool/],
+		[
+			'an input that is not an object',
+			{ steps: [{ mcp: 'get_tasks', input: ['x'] }] },
+			/Step 1.*input/
+		],
+		[
+			'input on a step that is not mcp',
+			{ steps: [{ args: ['list'], input: {} }] },
+			/Step 1.*input/
+		],
+		[
+			'expectError that is not a boolean',
+			{ steps: [{ mcp: 'get_tasks', expectError: 1 }] },
+			/Step 1.*expectError/
+		]
 	])('rejects %s, naming the step', (_name, scenario, message) => {
 		expect(() => validateScenario(scenario)).toThrow(message);
 	});

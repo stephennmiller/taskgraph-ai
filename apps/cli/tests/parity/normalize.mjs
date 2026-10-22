@@ -6,6 +6,11 @@
  *  - the project and work directories become <project> and <work>
  *  - in JSON: metadata.schemaVersion (a newer build writes it, an older one
  *    does not) is dropped and object keys are sorted. Array order is kept.
+ *
+ * MCP replies (a name starting with `mcp-reply`) also mask what one build
+ * version changes without meaning anything: the `version` field, locale dates
+ * such as 10/22/2026 (written by tag copy) and the Version/Name footer of a
+ * plain-text error. Nothing else is masked.
  */
 
 import fs from 'node:fs';
@@ -25,14 +30,23 @@ function pathForms(dir) {
 	return forms;
 }
 
-function cleanJson(value, parentKey = '') {
-	if (Array.isArray(value)) return value.map((v) => cleanJson(v));
+const LOCALE_DATE = /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g;
+// The footer createErrorResponse adds; \n is a real or an escaped line break
+const VERSION_FOOTER = /(?:\n|\\n)Version: [^\n"\\]*(?:\n|\\n)Name: [^\n"\\]*/g;
+
+function cleanJson(value, parentKey = '', mcp = false) {
+	if (Array.isArray(value)) return value.map((v) => cleanJson(v, '', mcp));
 	if (value && typeof value === 'object') {
 		return Object.fromEntries(
 			Object.keys(value)
 				.filter((key) => !(parentKey === 'metadata' && key === 'schemaVersion'))
 				.sort()
-				.map((key) => [key, cleanJson(value[key], key)])
+				.map((key) => [
+					key,
+					mcp && key === 'version'
+						? '<version>'
+						: cleanJson(value[key], key, mcp)
+				])
 		);
 	}
 	return value;
@@ -53,10 +67,18 @@ export function normalizeSnapshot(name, text, { projectDir, workDir }) {
 		for (const form of pathForms(dir)) out = out.replaceAll(form, placeholder);
 	}
 	out = out.replace(TIMESTAMP, '<timestamp>');
+	const mcp = name.startsWith('mcp-reply');
+	if (mcp) {
+		out = out
+			.replace(LOCALE_DATE, '<date>')
+			.replace(VERSION_FOOTER, (m) =>
+				m.startsWith('\\') ? '\\n<version footer>' : '\n<version footer>'
+			);
+	}
 
 	if (name.endsWith('.json')) {
 		try {
-			return `${JSON.stringify(cleanJson(JSON.parse(out)), null, 2)}\n`;
+			return `${JSON.stringify(cleanJson(JSON.parse(out), '', mcp), null, 2)}\n`;
 		} catch {
 			// not valid JSON; keep the masked text
 		}
