@@ -108,7 +108,7 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Commit & Push changes
-        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
         with:
           commit_message: "chore: rc version bump [skip ci]"
           branch: ${{ github.ref_name }}
