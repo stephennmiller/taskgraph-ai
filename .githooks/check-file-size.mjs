@@ -39,7 +39,6 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/integration/mcp-server/direct-functions.test.js',
 	'tests/integration/move-task-cross-tag.integration.test.js',
 	'tests/unit/config-manager.test.js',
-	'tests/unit/config-manager.test.mjs',
 	'tests/unit/dependency-manager.test.js',
 	'tests/unit/utils.test.js',
 	'tests/unit/scripts/modules/task-manager/complexity-report-tag-isolation.test.js',
