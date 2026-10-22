@@ -1,0 +1,34 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["list"],
+		["next"],
+		["show", "2"],
+		["set-status", "--id=2.1", "--status=done"],
+		["next"],
+		["set-status", "--id=2.2", "--status=in-progress"],
+		[
+			"add-subtask",
+			"--parent=4",
+			"--title=Format the output",
+			"--description=Print a table"
+		],
+		["add-dependency", "--id=5", "--depends-on=2"],
+		["validate-dependencies"],
+		["remove-dependency", "--id=5", "--depends-on=2"],
+		["move", "--from=5", "--to=7"],
+		["clear-subtasks", "--id=2"],
+		["remove-task", "--id=3", "--yes"],
+		["add-tag", "scratch"],
+		["copy-tag", "scratch", "scratch-copy"],
+		["rename-tag", "scratch-copy", "scratch-renamed"],
+		["use-tag", "feature"],
+		["list"],
+		["use-tag", "master"],
+		["delete-tag", "scratch", "--yes"],
+		["add-task", "--prompt", "Write a hello world"],
+		["expand", "--id=1", "--num=2", "--force"],
+		["update-task", "--id=2", "--prompt", "Tighten the wording"],
+		["research", "what is a hash map"]
+	]
+}
