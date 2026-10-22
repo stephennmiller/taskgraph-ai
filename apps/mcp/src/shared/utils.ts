@@ -419,6 +419,50 @@ export function withToolContext<TArgs extends { projectRoot?: string }>(
 }
 
 /**
+ * Resolve a path the model sent and refuse it when it leaves the project,
+ * including through a symlink. Same rule as isInsideRoot in
+ * src/ai-providers/claude-code-path-guard.js, which this package cannot import.
+ *
+ * @param projectRoot - Project directory
+ * @param candidate - Absolute path, or relative to projectRoot
+ * @returns Absolute path inside projectRoot
+ * @throws When the path is outside projectRoot
+ */
+export function resolveInsideRoot(
+	projectRoot: string,
+	candidate: string
+): string {
+	const root = fs.realpathSync(projectRoot);
+	const resolved = path.resolve(projectRoot, candidate);
+
+	// Follow symlinks for the part that exists; the rest is not created yet
+	let existing = resolved;
+	const rest: string[] = [];
+	for (;;) {
+		try {
+			existing = fs.realpathSync(existing);
+			break;
+		} catch {
+			rest.unshift(path.basename(existing));
+			existing = path.dirname(existing);
+		}
+	}
+	const relative = path.relative(root, path.join(existing, ...rest));
+
+	// "~" is shell syntax that path.resolve leaves alone; refuse it
+	const leavesRoot =
+		relative === '..' ||
+		relative.startsWith(`..${path.sep}`) ||
+		path.isAbsolute(relative);
+	if (candidate.startsWith('~') || leavesRoot) {
+		throw new Error(
+			`Path '${candidate}' is outside the project root '${projectRoot}'`
+		);
+	}
+	return resolved;
+}
+
+/**
  * Validates and parses metadata string for MCP tools.
  * Checks environment flag, validates JSON format, and ensures metadata is a plain object.
  *
