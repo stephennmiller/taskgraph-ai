@@ -4,11 +4,13 @@
  * with every tag. Docs, reports and templates are copied. Config keeps only
  * what TaskGraph uses: Claude model roles and the general settings. Provider
  * names, base URLs and API-key settings are dropped. `.taskmaster/` is never
- * changed.
+ * changed. The folder may come from someone else's checkout, so symlinks that
+ * lead outside it (or outside the project, on the TaskGraph side) are refused.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { resolvesWithin } from './import-paths.js';
 
 // The only source file that names the project TaskGraph was forked from:
 // everything else refers to it through these constants, so the package
@@ -42,6 +44,19 @@ const CLAUDE_MODELS = ['opus', 'sonnet', 'haiku'] as const;
  * Vertex/Bedrock/Azure settings, user IDs, proxies) belongs to providers
  * TaskGraph removed and is dropped.
  */
+/**
+ * `claudeCode` settings carried over. The rest can hold secrets (MCP server
+ * `env` and `headers`), run another program (`pathToClaudeCodeExecutable`)
+ * or widen permissions (`permissionMode`), so they are dropped and listed.
+ */
+const KEPT_CLAUDE_CODE_SETTINGS = [
+	'maxTurns',
+	'customSystemPrompt',
+	'appendSystemPrompt',
+	'allowedTools',
+	'disallowedTools'
+];
+
 const KEPT_GLOBAL_SETTINGS = [
 	'logLevel',
 	'debug',
@@ -57,7 +72,8 @@ const KEPT_GLOBAL_SETTINGS = [
 export const UPSTREAM_IMPORT_ERRORS = {
 	NO_UPSTREAM_PROJECT: 'NO_UPSTREAM_PROJECT',
 	TASKGRAPH_HAS_TASKS: 'TASKGRAPH_HAS_TASKS',
-	INVALID_JSON: 'INVALID_JSON'
+	INVALID_JSON: 'INVALID_JSON',
+	UNSAFE_PATH: 'UNSAFE_PATH'
 } as const;
 
 export type UpstreamImportErrorCode =
@@ -104,7 +120,7 @@ export interface UpstreamImportResult {
 	keptModels: ImportedModel[];
 	/** Model roles on another provider; TaskGraph's default stays */
 	droppedModels: DroppedModel[];
-	/** Config keys left behind: provider settings and API-key settings */
+	/** Config keys left behind: provider, API-key and unsafe Claude Code settings */
 	droppedSettings: string[];
 	/** The tag Task Master had selected, if it was carried over */
 	currentTag?: string;
@@ -135,12 +151,14 @@ function readJson(file: string, shown: string): unknown {
  * `master` tag, the same way TaskGraph reads it.
  */
 function toTaggedTasks(data: unknown): Record<string, JsonObject> {
-	if (!isObject(data)) return {};
+	// No prototype: a tag named `__proto__` or `toString` is just a key
+	const tagged: Record<string, JsonObject> = Object.create(null);
+	if (!isObject(data)) return tagged;
 	if (Array.isArray(data.tasks)) {
 		const { tasks, ...rest } = data;
-		return { master: { tasks, ...rest } };
+		tagged.master = { tasks, ...rest };
+		return tagged;
 	}
-	const tagged: Record<string, JsonObject> = {};
 	for (const [name, value] of Object.entries(data)) {
 		if (isObject(value) && Array.isArray(value.tasks)) tagged[name] = value;
 	}
@@ -153,10 +171,36 @@ const countTasks = (tagged: Record<string, JsonObject>) =>
 		0
 	);
 
+/** Refuse `relative` (under `root`) when a symlink takes it outside `within` */
+function assertResolvesWithin(
+	within: string,
+	root: string,
+	relative: string
+): void {
+	if (resolvesWithin(within, path.join(root, relative))) return;
+	const shown = path.join(path.basename(root), relative);
+	throw new UpstreamImportError(
+		UPSTREAM_IMPORT_ERRORS.UNSAFE_PATH,
+		`${shown} is a link to somewhere outside ${path.basename(within)}/`,
+		`Replace the link with the real file or folder, then run \`taskgraph init ${UPSTREAM_IMPORT_FLAG}\` again`
+	);
+}
+
+/** Everything under `.taskgraph/` that init or the import writes to */
+const TARGET_PATHS = [
+	'',
+	'tasks',
+	TASKS_FILE,
+	CONFIG_FILE,
+	STATE_FILE,
+	...COPIED_FOLDERS
+];
+
 /**
  * Check that `projectRoot` can be imported, before anything is written:
- * `.taskmaster/` exists, its tasks.json parses, and `.taskgraph/` has no tasks
- * yet (an empty tasks.json from `init` is fine).
+ * `.taskmaster/` exists inside the project, its JSON files parse, no symlink
+ * leads a read or write out of place, and `.taskgraph/` has no tasks yet (an
+ * empty tasks.json from `init` is fine).
  * @throws {UpstreamImportError}
  */
 export function checkUpstreamImport(projectRoot: string): void {
@@ -168,7 +212,15 @@ export function checkUpstreamImport(projectRoot: string): void {
 			`Run \`taskgraph init ${UPSTREAM_IMPORT_FLAG}\` from the folder that holds ${UPSTREAM_DIR}/`
 		);
 	}
-	readJson(path.join(source, TASKS_FILE), `${UPSTREAM_DIR}/tasks/tasks.json`);
+	assertResolvesWithin(projectRoot, projectRoot, UPSTREAM_DIR);
+	for (const file of [TASKS_FILE, CONFIG_FILE, STATE_FILE]) {
+		assertResolvesWithin(source, source, file);
+		readJson(path.join(source, file), `${UPSTREAM_DIR}/${file}`);
+	}
+	const target = path.join(projectRoot, TASKGRAPH_DIR);
+	for (const relative of TARGET_PATHS) {
+		assertResolvesWithin(projectRoot, target, relative);
+	}
 
 	const targetShown = `${TASKGRAPH_DIR}/tasks/tasks.json`;
 	const existing = toTaggedTasks(
@@ -184,19 +236,36 @@ export function checkUpstreamImport(projectRoot: string): void {
 	}
 }
 
-/** Copy every file under `from` into `to`, keeping files already there */
-function copyNewFiles(from: string, to: string): number {
-	if (!fs.statSync(from, { throwIfNoEntry: false })?.isDirectory()) return 0;
+/**
+ * Copy every file under `from` into `to`, keeping files already there.
+ * Symlinks are skipped (a directory entry that is a link is neither a file
+ * nor a folder), a folder that leads outside `fromRoot` isn't read, and one
+ * that leads outside `toRoot` isn't written to.
+ */
+function copyNewFiles(
+	from: string,
+	to: string,
+	fromRoot: string,
+	toRoot: string
+): number {
+	const stat = fs.lstatSync(from, { throwIfNoEntry: false });
+	if (!stat?.isDirectory() || !resolvesWithin(fromRoot, from)) return 0;
+	if (!resolvesWithin(toRoot, to)) return 0;
 	let copied = 0;
 	for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
 		const source = path.join(from, entry.name);
 		const target = path.join(to, entry.name);
 		if (entry.isDirectory()) {
-			copied += copyNewFiles(source, target);
-		} else if (entry.isFile() && !fs.existsSync(target)) {
+			copied += copyNewFiles(source, target, fromRoot, toRoot);
+		} else if (entry.isFile()) {
 			fs.mkdirSync(to, { recursive: true });
-			fs.copyFileSync(source, target);
-			copied++;
+			try {
+				// EXCL keeps an existing file, and won't follow a dangling symlink
+				fs.copyFileSync(source, target, fs.constants.COPYFILE_EXCL);
+				copied++;
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+			}
 		}
 	}
 	return copied;
@@ -262,8 +331,17 @@ export function importUpstreamConfig(
 	}
 	config.global = global;
 
-	// Claude Code's own settings (allowed tools and the like) still apply
-	if (isObject(source.claudeCode)) config.claudeCode = source.claudeCode;
+	// Claude Code's own settings still apply, except the risky ones
+	if (isObject(source.claudeCode)) {
+		const claudeCode: JsonObject = isObject(config.claudeCode)
+			? config.claudeCode
+			: {};
+		for (const [key, value] of Object.entries(source.claudeCode)) {
+			if (KEPT_CLAUDE_CODE_SETTINGS.includes(key)) claudeCode[key] = value;
+			else droppedSettings.push(`claudeCode.${key}`);
+		}
+		config.claudeCode = claudeCode;
+	}
 
 	for (const key of Object.keys(source)) {
 		if (!['models', 'global', 'claudeCode'].includes(key)) {
@@ -305,7 +383,12 @@ export function importUpstreamProject(
 	const copiedFiles = Object.fromEntries(
 		COPIED_FOLDERS.map((folder) => [
 			folder,
-			copyNewFiles(path.join(source, folder), path.join(target, folder))
+			copyNewFiles(
+				path.join(source, folder),
+				path.join(target, folder),
+				source,
+				projectRoot
+			)
 		])
 	) as Record<CopiedFolder, number>;
 
@@ -336,7 +419,7 @@ export function importUpstreamProject(
 		const state: JsonObject = isObject(existing) ? existing : {};
 		if (
 			typeof sourceState.currentTag === 'string' &&
-			sourceState.currentTag in tagged
+			Object.hasOwn(tagged, sourceState.currentTag)
 		) {
 			currentTag = sourceState.currentTag;
 			state.currentTag = currentTag;
