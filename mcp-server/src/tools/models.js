@@ -47,7 +47,7 @@ export function registerModelsTool(server) {
 			title: 'Models',
 			destructiveHint: true
 		},
-		execute: withToolContext('models', async (args, context) => {
+		execute: withToolContext(async (args, context) => {
 			try {
 				context.log.info(
 					`Starting models tool with args: ${JSON.stringify(args)}`
