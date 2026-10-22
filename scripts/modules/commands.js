@@ -296,8 +296,8 @@ function registerCommands(programInstance) {
 			try {
 				if (!(await confirmOverwriteIfNeeded())) return;
 
-				// The progress display names the file and task count, and the
-				// saved line notes research and the new total, so no preamble
+				// The progress display names the file, task count and research,
+				// and the saved line the new total, so no preamble
 				// Handle case where getTasksPath() returns null
 				const outputPath =
 					taskGraph.getTasksPath() ||

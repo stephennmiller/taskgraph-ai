@@ -99,6 +99,32 @@ describe('expandAllTasks', () => {
 	});
 
 	describe('successful expansion', () => {
+		test('reports progress to MCP clients at info', async () => {
+			mockExpandTask.mockResolvedValue({ telemetryData: null });
+
+			await expandAllTasks(
+				mockTasksPath,
+				3,
+				false,
+				'',
+				false,
+				{
+					session: mockSession,
+					mcpLog: mockMcpLog,
+					projectRoot: mockProjectRoot,
+					tag: 'master'
+				},
+				'json'
+			);
+
+			const infos = mockMcpLog.info.mock.calls.map(([msg]) => msg);
+			expect(infos).toContain('Found 2 tasks eligible for expansion.');
+			expect(infos).toContain('Expanded task 1.');
+			expect(infos).toContain(
+				'Expansion complete: 2 expanded, 0 skipped, 0 failed.'
+			);
+		});
+
 		test('should expand all eligible pending tasks', async () => {
 			// Arrange
 			const mockTelemetryData = {

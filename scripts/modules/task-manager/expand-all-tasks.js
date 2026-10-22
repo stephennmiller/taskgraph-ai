@@ -64,6 +64,10 @@ async function expandAllTasks(
 						!isSilentMode() && getDebugFlag(session) && log('debug', msg)
 				});
 
+	// MCP clients follow progress at info; the CLI shows spinners and a
+	// summary line instead, so there these are debug only
+	const progress = (msg) => (isMCPCall ? logger.info(msg) : logger.debug(msg));
+
 	let expandedCount = 0;
 	let failedCount = 0;
 	let skippedCount = 0;
@@ -92,11 +96,11 @@ async function expandAllTasks(
 						(task.status === 'pending' || task.status === 'in-progress') &&
 						task.subtasks?.length > 0
 				).length;
-		logger.debug(`Found ${tasksToExpandCount} tasks eligible for expansion.`);
+		progress(`Found ${tasksToExpandCount} tasks eligible for expansion.`);
 		// --- End Restored Filtering Logic ---
 
 		if (tasksToExpandCount === 0) {
-			logger.debug('No tasks eligible for expansion.');
+			progress('No tasks eligible for expansion.');
 			if (outputFormat === 'text' && !isMCPCall && !isSilentMode()) {
 				console.log(
 					ui.formatExpandAll({
@@ -146,7 +150,7 @@ async function expandAllTasks(
 				if (result?.skipped) {
 					// The complexity report recommended no expansion for this task
 					skippedCount++;
-					logger.debug(
+					progress(
 						`Skipped task ${task.id}: complexity report recommends no expansion.`
 					);
 					continue;
@@ -159,7 +163,7 @@ async function expandAllTasks(
 					allTelemetryData.push(result.telemetryData);
 				}
 
-				logger.debug(`Expanded task ${task.id}.`);
+				progress(`Expanded task ${task.id}.`);
 			} catch (error) {
 				failedCount++;
 				logger.error(`Couldn't expand task ${task.id}: ${error.message}`);
@@ -168,7 +172,7 @@ async function expandAllTasks(
 		}
 
 		// --- AGGREGATION AND DISPLAY ---
-		logger.debug(
+		progress(
 			`Expansion complete: ${expandedCount} expanded, ${skippedCount} skipped, ${failedCount} failed.`
 		);
 

@@ -284,6 +284,33 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 		expectTidy(res.stdout);
 	});
 
+	it('update-subtask says once when the AI added nothing', () => {
+		writeTasks([
+			task(1, 'Parse commands', {
+				subtasks: [
+					{
+						id: 1,
+						title: 'Define the command table',
+						description: 'd',
+						status: 'pending',
+						dependencies: []
+					}
+				]
+			})
+		]);
+		install([{ text: '' }]);
+
+		const res = taskgraph(
+			'update-subtask',
+			'--id=1.1',
+			'--prompt=Aliases are needed'
+		);
+
+		expect(res.status).toBe(0);
+		expect(res.all).toContain('Nothing added to subtask 1.1');
+		expect(res.all).not.toMatch(/did not contain|empty or whitespace/);
+	});
+
 	it('update --from lists the tasks it changed instead of a wide table', () => {
 		writeTasks([
 			task(1, 'Parse commands'),

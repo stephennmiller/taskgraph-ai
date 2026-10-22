@@ -92,6 +92,20 @@ describe('ParsePrdProgress', () => {
 		expect(lines().at(-1)).toMatch(/^✓ 1 task in /);
 	});
 
+	it('says when research is on while the model reads', () => {
+		const { stream, lines } = capture();
+		progress = new ParsePrdProgress({
+			prdName: 'prd.md',
+			numTasks: 2,
+			research: true,
+			stream,
+			now: () => 0
+		}).start();
+		expect(lines()[0]).toBe(
+			'Reading prd.md and planning 2 tasks with research  0:00'
+		);
+	});
+
 	it('shortens long titles to one line', () => {
 		const { stream, lines } = capture();
 		progress = new ParsePrdProgress({ prdName: 'prd.md', stream }).start();

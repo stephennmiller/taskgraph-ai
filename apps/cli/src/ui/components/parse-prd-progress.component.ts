@@ -28,6 +28,8 @@ export interface ParsePrdProgressOptions {
 	numTasks?: number;
 	/** ID the first new task will get, so printed IDs match `taskgraph list` */
 	startId?: number;
+	/** Whether research mode is on; the reading line says so */
+	research?: boolean;
 	/** Where to write; defaults to stdout */
 	stream?: NodeJS.WriteStream;
 	/** Clock, for tests */
@@ -84,6 +86,7 @@ export class ParsePrdProgress {
 		this.options = {
 			numTasks: options.numTasks || 0,
 			startId: options.startId ?? 1,
+			research: options.research ?? false,
 			stream: options.stream ?? process.stdout,
 			now: options.now ?? Date.now,
 			prdName: options.prdName
@@ -174,13 +177,14 @@ export class ParsePrdProgress {
 	}
 
 	private statusText(): string {
-		const { numTasks, prdName } = this.options;
+		const { numTasks, prdName, research } = this.options;
 		const writing = this.current?.tasks?.length ?? 0;
 		let text: string;
 		if (writing === 0) {
 			text = numTasks
 				? `Reading ${prdName} and planning ${numTasks} tasks`
 				: `Reading ${prdName} and planning tasks`;
+			if (research) text += ' with research';
 		} else {
 			const of = numTasks ? ` of ${numTasks}` : '';
 			const title = this.current?.tasks?.[writing - 1]?.title;

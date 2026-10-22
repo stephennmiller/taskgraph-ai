@@ -267,10 +267,13 @@ async function updateSubtaskById(
 				generatedContentString = aiServiceResponse.mainResult;
 			} else {
 				generatedContentString = '';
-				report(
-					'warn',
-					'AI service response did not contain expected text string.'
-				);
+				// The CLI prints one "Nothing added" line below instead
+				if (outputFormat !== 'text') {
+					report(
+						'warn',
+						'AI service response did not contain expected text string.'
+					);
+				}
 			}
 
 			if (outputFormat === 'text' && loadingIndicator) {
