@@ -26,6 +26,10 @@
  *       printed (use a JSON format, such as `next --format json`)
  *   { "shell": "..." }  run a shell command in the project to prepare state
  *       (not part of the build under test)
+ *   { "mcp": "<tool>", "input": {...}, "expectError": false }  call an MCP
+ *       tool on each build's server and compare the reply. "<project>" in
+ *       the input becomes the temp project's path. The server is derived from
+ *       the build (see deriveServerCommand).
  * Every step is expected to exit 0; add "expectExit": N to a step that is
  * meant to fail. A step that exits otherwise fails the run even when both
  * builds agree, so a typo in a scenario cannot pass as "no differences".
@@ -41,6 +45,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { installFakeClaude } from '../fakes/install-fake-claude.mjs';
 import { normalizeSnapshot } from './normalize.mjs';
+import { callMcpTool, isMcpStep, serverFor } from './mcp-step.mjs';
+
+export { deriveServerCommand } from './mcp-step.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const STEP_TIMEOUT_MS = 60000;
@@ -144,7 +151,7 @@ function snapshot(projectDir, workDir) {
 export function buildEnv(workDir, base = process.env) {
 	const home = path.join(workDir, 'home');
 	const realHome = base.HOME ?? os.homedir();
-	return {
+	const env = {
 		...base,
 		HOME: home,
 		XDG_CONFIG_HOME: path.join(home, '.config'),
@@ -153,12 +160,24 @@ export function buildEnv(workDir, base = process.env) {
 			base.npm_config_userconfig ?? path.join(realHome, '.npmrc'),
 		TASKGRAPH_SKIP_AUTO_UPDATE: '1'
 	};
+	// The MCP server prefers this over a tool's projectRoot; a developer's own
+	// value would send writes into a real project.
+	delete env.TASKGRAPH_PROJECT_ROOT;
+	return env;
 }
 
 const STDERR_TAIL = 400;
 const ANSI = /\u001b\[[0-9;]*m/g;
 
-const STEP_KEYS = ['args', 'shell', 'capture', 'expectExit'];
+const STEP_KEYS = [
+	'args',
+	'shell',
+	'capture',
+	'expectExit',
+	'mcp',
+	'input',
+	'expectError'
+];
 
 /**
  * Check a scenario's shape so a typo fails at the start with the step number,
@@ -197,6 +216,37 @@ export function validateScenario(scenario) {
 				);
 			}
 		}
+		if (step.mcp !== undefined) {
+			for (const key of ['args', 'shell', 'capture', 'expectExit']) {
+				if (step[key] !== undefined) {
+					throw new Error(
+						`${where}: mcp cannot be combined with ${key}${key === 'expectExit' ? ' (use expectError)' : ''}`
+					);
+				}
+			}
+			if (typeof step.mcp !== 'string' || step.mcp === '') {
+				throw new Error(`${where}: mcp must be a tool name`);
+			}
+			const input = step.input;
+			if (
+				input !== undefined &&
+				(!input || typeof input !== 'object' || Array.isArray(input))
+			) {
+				throw new Error(`${where}: input must be an object`);
+			}
+			if (
+				step.expectError !== undefined &&
+				typeof step.expectError !== 'boolean'
+			) {
+				throw new Error(`${where}: expectError must be true or false`);
+			}
+			return;
+		}
+		if (step.input !== undefined || step.expectError !== undefined) {
+			throw new Error(
+				`${where}: input and expectError only apply to an mcp step`
+			);
+		}
 		if ((step.args === undefined) === (step.shell === undefined)) {
 			throw new Error(`${where}: needs either args or shell`);
 		}
@@ -223,9 +273,18 @@ export function validateScenario(scenario) {
 	});
 }
 
-/** @returns {{args: string[], shell?: string, capture: boolean, expected: number}} */
+/** @returns {{args: string[], shell?: string, mcp?: {tool: string, input: object}, capture: boolean, expected: number}} */
 function parseStep(spec) {
 	if (Array.isArray(spec)) return { args: spec, capture: false, expected: 0 };
+	if (isMcpStep(spec)) {
+		const input = spec.input ?? {};
+		return {
+			args: ['mcp', spec.mcp, JSON.stringify(input)],
+			mcp: { tool: spec.mcp, input },
+			capture: false,
+			expected: spec.expectError ? 1 : 0
+		};
+	}
 	const expected = spec.expectExit ?? 0;
 	if (typeof spec.shell === 'string') {
 		return {
@@ -247,6 +306,7 @@ function parseStep(spec) {
  *   Entry 0 is the setup (init and the fixture); the rest follow the scenario.
  */
 export function runScenario(build, scenario, { timeoutMs } = {}) {
+	const server = scenario.steps.some(isMcpStep) ? serverFor(build) : null;
 	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parity-proj-'));
 	const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parity-work-'));
 	try {
@@ -302,6 +362,9 @@ export function runScenario(build, scenario, { timeoutMs } = {}) {
 			);
 		}
 
+		// One server start per call; the first also records the tool schemas
+		let toolsRecorded = false;
+
 		const steps = [
 			{
 				args: ['init', '--yes', '+ fixture'],
@@ -311,14 +374,26 @@ export function runScenario(build, scenario, { timeoutMs } = {}) {
 			}
 		];
 		for (const spec of scenario.steps) {
-			const { args, shell, capture, expected } = parseStep(spec);
-			const { stdout, ...result } = run(
-				args,
-				fake.env,
-				shell,
-				timeoutMs ?? STEP_TIMEOUT_MS
-			);
-			const files = snapshot(projectDir, workDir);
+			const { args, shell, mcp, capture, expected } = parseStep(spec);
+			const timeout = timeoutMs ?? STEP_TIMEOUT_MS;
+			const {
+				stdout,
+				files: mcpFiles,
+				...result
+			} = mcp
+				? callMcpTool({
+						server,
+						...mcp,
+						timeout,
+						projectDir,
+						workDir,
+						env: { ...env, ...fake.env },
+						index: steps.length,
+						withTools: !toolsRecorded
+					})
+				: run(args, fake.env, shell, timeout);
+			if (mcpFiles?.['mcp:tools']) toolsRecorded = true;
+			const files = { ...snapshot(projectDir, workDir), ...mcpFiles };
 			if (capture) {
 				files[`stdout:${steps.length}`] = normalizeSnapshot(
 					'stdout.json',
@@ -393,7 +468,8 @@ export function unexpectedExits(run) {
 				step: i + 1,
 				args: step.args,
 				status: step.status,
-				expected
+				expected,
+				...(step.stderr ? { stderr: step.stderr } : {})
 			});
 		}
 	});
@@ -408,7 +484,9 @@ export function unexpectedExits(run) {
 export function summarizeRun(run) {
 	const stateOf = (step) =>
 		JSON.stringify(
-			Object.entries(step.files).filter(([name]) => !name.startsWith('stdout:'))
+			Object.entries(step.files).filter(
+				([name]) => !name.startsWith('stdout:') && !name.startsWith('mcp:')
+			)
 		);
 	const steps = run.steps.slice(1);
 	let changedState = 0;
@@ -502,6 +580,10 @@ function main() {
 	let a;
 	let b;
 	try {
+		if (scenario.steps.some(isMcpStep)) {
+			serverFor(opts.a);
+			serverFor(opts.b);
+		}
 		a = runScenario(opts.a, scenario, { timeoutMs: opts.timeoutMs });
 		b = runScenario(opts.b, scenario, { timeoutMs: opts.timeoutMs });
 	} catch (err) {
@@ -528,6 +610,7 @@ function main() {
 			console.log(
 				`Build ${label}: step ${u.step} (${u.args.join(' ')}) did not exit as expected: exit ${u.status}, expected ${u.expected}.`
 			);
+			if (u.stderr) console.log(`  stderr: ${u.stderr}`);
 		}
 	}
 	process.exitCode = differences.length > 0 || unexpected > 0 ? 1 : 0;
