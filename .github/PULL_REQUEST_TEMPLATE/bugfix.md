@@ -27,7 +27,6 @@
 - [ ] Created changeset: `npm run changeset`
 - [ ] Tests pass: `npm test`
 - [ ] Format check passes: `npm run format-check`
-- [ ] Addressed CodeRabbit comments
 - [ ] Added unit tests (if applicable)
 - [ ] Manually verified the fix works
 
