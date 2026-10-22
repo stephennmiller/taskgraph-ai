@@ -1,11 +1,23 @@
 {
 	"fixture": "../fixtures/tasks-tagged.json",
 	"steps": [
-		["list"],
-		["next"],
-		["show", "2"],
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		},
+		{
+			"args": ["next", "--format", "json"],
+			"capture": "stdout"
+		},
+		{
+			"args": ["show", "2", "--format", "json"],
+			"capture": "stdout"
+		},
 		["set-status", "--id=2.1", "--status=done"],
-		["next"],
+		{
+			"args": ["next", "--format", "json"],
+			"capture": "stdout"
+		},
 		["set-status", "--id=2.2", "--status=in-progress"],
 		[
 			"add-subtask",
@@ -23,7 +35,10 @@
 		["copy-tag", "scratch", "scratch-copy"],
 		["rename-tag", "scratch-copy", "scratch-renamed"],
 		["use-tag", "feature"],
-		["list"],
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		},
 		["use-tag", "master"],
 		["delete-tag", "scratch", "--yes"],
 		["add-task", "--prompt", "Write a hello world"],

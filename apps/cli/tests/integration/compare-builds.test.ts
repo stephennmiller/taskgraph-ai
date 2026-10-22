@@ -222,6 +222,39 @@ describe('compareRuns and formatReport', () => {
 	});
 });
 
+describe('scenario files', () => {
+	const dir = path.resolve(here, '../parity/scenarios');
+	const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
+
+	it('has the default scenario and the edge cases', () => {
+		expect(files).toEqual(
+			expect.arrayContaining([
+				'basic.json',
+				'edge-bulk-update.json',
+				'edge-cancelled-dependency.json',
+				'edge-stale-lock.json'
+			])
+		);
+	});
+
+	it.each(files)('%s is well-formed', (file) => {
+		const scenarioJson = JSON.parse(
+			fs.readFileSync(path.join(dir, file), 'utf8')
+		);
+
+		expect(fs.existsSync(path.resolve(dir, scenarioJson.fixture))).toBe(true);
+		expect(scenarioJson.steps.length).toBeGreaterThan(0);
+		for (const step of scenarioJson.steps) {
+			const ok =
+				Array.isArray(step) ||
+				typeof step.shell === 'string' ||
+				Array.isArray(step.args);
+			expect(ok, JSON.stringify(step)).toBe(true);
+			if (step.capture !== undefined) expect(step.capture).toBe('stdout');
+		}
+	});
+});
+
 describe('buildEnv', () => {
 	it('gives the build its own home so a global config cannot leak in', () => {
 		const env = buildEnv('/tmp/work-x', { HOME: '/home/dev', PATH: '/bin' });

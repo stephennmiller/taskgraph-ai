@@ -1,0 +1,13 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		{
+			"shell": "printf '{\"pid\":1,\"timestamp\":0}' > .taskgraph/tasks/tasks.json.lock && touch -t 202001010000 .taskgraph/tasks/tasks.json.lock"
+		},
+		["set-status", "--id=2", "--status=in-progress"],
+		{
+			"args": ["next", "--format", "json"],
+			"capture": "stdout"
+		}
+	]
+}

@@ -42,3 +42,20 @@ export function formatReport(
 	stepCount: number,
 	labels: { a: string; b: string }
 ): string;
+
+export interface ScenarioStep {
+	args: string[];
+	status: number | null;
+	error?: string;
+	stderr?: string;
+	files: Record<string, string>;
+}
+
+export function runScenario(
+	build: string,
+	scenario: {
+		fixture?: string;
+		replies?: object[];
+		steps: unknown[];
+	}
+): { steps: ScenarioStep[] };
