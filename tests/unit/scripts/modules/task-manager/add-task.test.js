@@ -283,6 +283,34 @@ describe('addTask', () => {
 		);
 	});
 
+	test('stores acceptance criteria given with the task, unchecked', async () => {
+		const context = {
+			mcpLog: createMcpLogMock(),
+			projectRoot: '/mock/project/root',
+			tag: 'master'
+		};
+
+		await addTask(
+			'tasks/tasks.json',
+			'Create a new authentication system',
+			[],
+			'medium',
+			context,
+			'json',
+			null,
+			false,
+			{ acceptanceCriteria: ['Login works', '  ', 'Tokens expire'] }
+		);
+
+		const added = writeJSON.mock.calls[0][1].master.tasks.find(
+			(t) => t.id === 4
+		);
+		expect(added.acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false },
+			{ text: 'Tokens expire', checked: false }
+		]);
+	});
+
 	test('should validate dependencies when adding a task', async () => {
 		// Arrange
 		const prompt = 'Create a new authentication system';

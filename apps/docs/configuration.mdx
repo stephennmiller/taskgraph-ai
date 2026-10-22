@@ -48,6 +48,20 @@ taskgraph models --set-fallback haiku
 }
 ```
 
+## Definition of Done
+
+`global.definitionOfDone` lists checks every task must clear before `set-status done` accepts it, on top of the task's own acceptance criteria:
+
+```json
+{
+  "global": {
+    "definitionOfDone": ["Tests pass", "Docs updated"]
+  }
+}
+```
+
+`taskgraph show <id>` numbers these after the task's own criteria. Check them per task with `taskgraph set-status <id> --check <n>`, or pass `--force` to skip the gate. Subtasks are not gated by the Definition of Done.
+
 ## Environment variables
 
 | Variable | Description |

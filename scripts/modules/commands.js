@@ -1311,6 +1311,11 @@ function registerCommands(programInstance) {
 			'-r, --research',
 			'Whether to use research capabilities for task creation'
 		)
+		.option(
+			'--ac <criterion>',
+			'Acceptance criterion; repeat for more (set-status --check ticks them)',
+			(value, previous = []) => [...previous, value]
+		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			const isManualCreation = options.title && options.description;
@@ -1370,7 +1375,8 @@ function registerCommands(programInstance) {
 					context,
 					'text',
 					manualTaskData,
-					options.research
+					options.research,
+					{ acceptanceCriteria: options.ac }
 				);
 
 				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'

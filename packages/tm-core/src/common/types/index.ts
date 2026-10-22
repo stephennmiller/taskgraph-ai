@@ -79,6 +79,16 @@ export type TaskCategory =
 	| 'review';
 
 /**
+ * One acceptance criterion and whether it has been checked off.
+ * Older tasks.json files store plain strings; those read as unchecked
+ * (see `normalizeAcceptanceCriteria`).
+ */
+export interface AcceptanceCriterion {
+	text: string;
+	checked: boolean;
+}
+
+/**
  * AI-generated implementation guidance metadata
  * These fields provide rich context for AI agents and developers
  */
@@ -95,8 +105,11 @@ export interface TaskImplementationMetadata {
 	implementationApproach?: string;
 	/** Framework requirements, architecture decisions, or technical limitations */
 	technicalConstraints?: string[];
-	/** Acceptance criteria defining when this task is complete */
-	acceptanceCriteria?: string[];
+	/**
+	 * Acceptance criteria defining when this task is complete. A plain string
+	 * is an unchecked criterion written before criteria could be checked.
+	 */
+	acceptanceCriteria?: Array<string | AcceptanceCriterion>;
 	/** Required technical skills to complete this task */
 	skills?: string[];
 	/** Category of work this task represents */
@@ -138,6 +151,11 @@ export interface Task extends TaskImplementationMetadata {
 	actualEffort?: number;
 	tags?: string[];
 	assignee?: string;
+	/**
+	 * Items of the project's Definition of Done (config
+	 * `global.definitionOfDone`) checked off for this task, by their text
+	 */
+	definitionOfDoneChecked?: string[];
 
 	// Database UUID (for API calls that need the actual UUID instead of display_id)
 	databaseId?: string;

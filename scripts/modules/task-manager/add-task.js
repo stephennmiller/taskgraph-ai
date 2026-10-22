@@ -1,5 +1,9 @@
 import { theme } from '@tm/cli/theme';
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	normalizeAcceptanceCriteria,
+	reconcileDependencySources
+} from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
@@ -66,6 +70,8 @@ function getAllTasks(rawData) {
  * @param {Object} customEnv - Custom environment variables (optional) - Note: AI params override deprecated
  * @param {Object} manualTaskData - Manual task data (optional, for direct task creation without AI)
  * @param {boolean} useResearch - Whether to use the research model (passed to unified service)
+ * @param {Object} [extras] - Fields the user gave alongside the prompt or manual data
+ * @param {string[]} [extras.acceptanceCriteria] - Acceptance criteria, stored unchecked
  * @param {Object} context - Context object containing session and potentially projectRoot
  * @param {string} [context.projectRoot] - Project root path (for MCP/env fallback)
  * @param {string} [context.commandName] - The name of the command being executed (for telemetry)
@@ -81,7 +87,8 @@ async function addTask(
 	context = {},
 	outputFormat = 'text', // Default to text for CLI
 	manualTaskData = null,
-	useResearch = false
+	useResearch = false,
+	extras = {}
 ) {
 	const { session, mcpLog, projectRoot, commandName, outputType, tag } =
 		context;
@@ -491,6 +498,12 @@ async function addTask(
 			priority: effectivePriority,
 			subtasks: [] // Initialize with empty subtasks array
 		};
+		const acceptanceCriteria = normalizeAcceptanceCriteria(
+			extras.acceptanceCriteria
+		);
+		if (acceptanceCriteria.length > 0) {
+			newTask.acceptanceCriteria = acceptanceCriteria;
+		}
 
 		// Additional check: validate all dependencies in the AI response
 		if (taskData.dependencies?.length) {

@@ -289,4 +289,64 @@ describe('next command', () => {
 		const hasReadyC = output.includes('Ready Task C');
 		expect(hasReadyA || hasReadyB || hasReadyC).toBe(true);
 	});
+
+	it('numbers the checklist of the next task as set-status --check takes it', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({
+						id: 1,
+						title: 'Login API',
+						status: 'pending',
+						acceptanceCriteria: [
+							{ text: 'Login works', checked: true },
+							'Tokens expire'
+						]
+					})
+				]
+			})
+		);
+
+		const { output, exitCode } = runNext();
+
+		expect(exitCode).toBe(0);
+		expect(output).toContain('Acceptance criteria  1/2');
+		expect(output).toMatch(/1 {2}Login works/);
+		expect(output).toMatch(/2 {2}Tokens expire/);
+	});
+
+	it("shows a next subtask's own criteria", () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({
+						id: 1,
+						title: 'Parent',
+						status: 'in-progress',
+						acceptanceCriteria: ['Parent criterion'],
+						subtasks: [
+							{
+								id: 1,
+								parentId: '1',
+								title: 'Child',
+								description: 'd',
+								status: 'pending',
+								priority: 'medium',
+								dependencies: [],
+								details: '',
+								testStrategy: '',
+								acceptanceCriteria: ['Child criterion']
+							}
+						]
+					})
+				]
+			})
+		);
+
+		const { output, exitCode } = runNext();
+
+		expect(exitCode).toBe(0);
+		expect(output).toMatch(/1 {2}Child criterion/);
+		expect(output).not.toContain('Parent criterion');
+	});
 });

@@ -281,7 +281,11 @@ export class ShowCommand extends Command {
 		displayTaskDetails(result.task, {
 			statusFilter: options.status,
 			showSuggestedActions: true,
-			originalTaskId: result.originalTaskId
+			originalTaskId: result.originalTaskId,
+			checklist: this.tmCore?.tasks.getChecklist(
+				result.task,
+				Boolean(result.originalTaskId)
+			)
 		});
 	}
 

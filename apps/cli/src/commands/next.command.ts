@@ -4,7 +4,12 @@
  */
 
 import path from 'node:path';
-import { type Task, type TmCore, createTmCore } from '@tm/core';
+import {
+	type Task,
+	type TaskChecklist,
+	type TmCore,
+	createTmCore
+} from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -31,6 +36,8 @@ export interface NextTaskResult {
 	found: boolean;
 	tag: string;
 	hasAnyTasks?: boolean;
+	/** The task's acceptance criteria and Definition of Done, numbered for --check */
+	checklist?: TaskChecklist;
 }
 
 /**
@@ -135,11 +142,17 @@ export class NextCommand extends Command {
 		const allTasks = await this.tmCore.tasks.list({ tag: options.tag });
 		const hasAnyTasks = allTasks && allTasks.tasks.length > 0;
 
+		// getNext leaves the criteria out; read the checklist as stored
+		const checklist = task
+			? await this.tmCore.tasks.loadChecklist(String(task.id), options.tag)
+			: undefined;
+
 		return {
 			task,
 			found: task !== null,
 			tag: activeTag,
-			hasAnyTasks
+			hasAnyTasks,
+			...(checklist && { checklist })
 		};
 	}
 
@@ -214,7 +227,8 @@ export class NextCommand extends Command {
 		displayTaskDetails(task, {
 			customHeader,
 			headerColor: 'green',
-			showSuggestedActions: true
+			showSuggestedActions: true,
+			checklist: result.checklist
 		});
 	}
 
