@@ -1047,7 +1047,8 @@ describe('parsePRD', () => {
 			expect(startParsePrdProgress).toHaveBeenCalledWith({
 				prdName: 'prd.txt',
 				numTasks: 3,
-				startId: 1
+				startId: 1,
+				research: false
 			});
 			expect(mockProgress.update).toHaveBeenCalledTimes(4);
 			expect(mockProgress.succeed).toHaveBeenCalledWith(sampleClaudeResponse);
