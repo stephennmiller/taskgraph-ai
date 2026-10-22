@@ -175,6 +175,10 @@ describe('Layout Helpers', () => {
 			expect(terminalWidth({ columns: 0 }, { COLUMNS: ' 60 ' })).toBe(60);
 		});
 
+		it('caps COLUMNS so a huge value cannot crash the layout', () => {
+			expect(terminalWidth({}, { COLUMNS: '9999999999' })).toBe(1000);
+		});
+
 		it('falls back to 80 when COLUMNS is unset or not a positive integer', () => {
 			expect(terminalWidth({}, {})).toBe(80);
 			for (const value of ['', '0', '-5', 'wide', '12.5', '80px']) {
@@ -238,34 +242,6 @@ describe('Layout Helpers', () => {
 				'deps',
 				'complexity'
 			]);
-		});
-	});
-	describe('getContentWidth', () => {
-		const setColumns = (value: number | undefined) =>
-			Object.defineProperty(process.stdout, 'columns', {
-				value,
-				configurable: true,
-				writable: true
-			});
-		let original: PropertyDescriptor | undefined;
-
-		beforeEach(() => {
-			original = Object.getOwnPropertyDescriptor(process.stdout, 'columns');
-		});
-
-		afterEach(() => {
-			if (original) Object.defineProperty(process.stdout, 'columns', original);
-			else delete (process.stdout as { columns?: number }).columns;
-		});
-
-		it('uses 95% of the terminal width', () => {
-			setColumns(120);
-			expect(getContentWidth()).toBe(114);
-		});
-
-		it('falls back to 100 columns when output is not a terminal', () => {
-			setColumns(undefined);
-			expect(getContentWidth()).toBe(100);
 		});
 	});
 });

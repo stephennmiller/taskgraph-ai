@@ -19,6 +19,9 @@ export function getBoxWidth(
 	return Math.max(Math.floor(terminalWidth() * percentage), minWidth);
 }
 
+/** Largest width taken from `COLUMNS`, so a typo cannot crash padding with a huge repeat */
+const MAX_ENV_COLUMNS = 1000;
+
 /**
  * The width the user asked for, or undefined when nothing says: the stream's
  * own width when it is a terminal, else a positive integer in `COLUMNS`
@@ -32,7 +35,7 @@ function detectColumns(
 	const fromEnv = env.COLUMNS?.trim();
 	if (fromEnv && /^\d+$/.test(fromEnv)) {
 		const columns = Number.parseInt(fromEnv, 10);
-		if (columns > 0) return columns;
+		if (columns > 0) return Math.min(columns, MAX_ENV_COLUMNS);
 	}
 	return undefined;
 }
