@@ -35,6 +35,7 @@ import { updateTagTasks } from '../utils/update-tag-tasks.js';
  * @param {Object} [context.mcpLog] - MCP logger object.
  * @param {string} [context.projectRoot] - Project root path
  * @param {string} [context.tag] - Tag for the task
+ * @param {boolean} [context.showUsage=true] - Print the AI usage line (expand --all prints one for the whole run)
  * @param {boolean} [force=false] - If true, replace existing subtasks; otherwise, append.
  * @returns {Promise<Object>} The updated parent task object with new subtasks.
  * @throws {Error} If task not found, AI service fails, or parsing fails.
@@ -362,8 +363,10 @@ async function expandTask(
 		}
 
 		// Display AI Usage Summary for CLI
+		// expand --all prints one usage line for the whole run instead
 		if (
 			outputFormat === 'text' &&
+			context.showUsage !== false &&
 			aiServiceResponse &&
 			aiServiceResponse.telemetryData
 		) {

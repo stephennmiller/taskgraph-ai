@@ -1,8 +1,6 @@
-import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
+import { ui } from '@tm/cli';
 import { assignMetadata, reconcileDependencySources } from '@tm/core';
-import boxen from 'boxen';
 import chalk from 'chalk';
-import Table from 'cli-table3';
 import path from 'path';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
@@ -10,7 +8,6 @@ import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
-	getStatusWithColor,
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
@@ -22,7 +19,6 @@ import {
 	flattenTasksWithSubtasks,
 	isSilentMode,
 	readJSON,
-	truncate,
 	writeJSON
 } from '../utils.js';
 import { getModelConfiguration } from './models.js';
@@ -55,7 +51,7 @@ async function updateTasks(
 
 	if (isMCP)
 		logFn.debug(`updateTasks called with context: session=${!!session}`);
-	else logFn('info', `updateTasks called`); // CLI log
+	else logFn('debug', 'updateTasks called');
 
 	try {
 		if (isMCP) logFn.debug(`Updating tasks from ID ${fromId}`);
@@ -81,9 +77,10 @@ async function updateTasks(
 		if (tasksToUpdate.length === 0) {
 			if (isMCP)
 				logFn.info(`No tasks to update (ID >= ${fromId} and not 'done').`);
+			else if (outputFormat === 'text')
+				console.log(ui.formatNothingToUpdate(fromId));
 			else
 				logFn('info', `No tasks to update (ID >= ${fromId} and not 'done').`);
-			if (outputFormat === 'text') console.log(/* yellow message */);
 			return; // Nothing to do
 		}
 		// --- End Task Loading/Filtering ---
@@ -120,40 +117,6 @@ async function updateTasks(
 		}
 		// --- End Context Gathering ---
 
-		// --- Display Tasks to Update (CLI Only - Unchanged) ---
-		if (outputFormat === 'text') {
-			// Show the tasks that will be updated
-			const table = new Table({
-				head: [
-					chalk.cyan.bold('ID'),
-					chalk.cyan.bold('Title'),
-					chalk.cyan.bold('Status')
-				],
-				colWidths: [5, 70, 20],
-				style: { border: TABLE_BORDER }
-			});
-
-			tasksToUpdate.forEach((task) => {
-				table.push([
-					task.id,
-					truncate(task.title, 57),
-					getStatusWithColor(task.status)
-				]);
-			});
-
-			console.log(
-				boxen(theme.text.bold(`Updating ${tasksToUpdate.length} tasks`), {
-					padding: 1,
-					borderColor: BORDER_COLOR,
-					borderStyle: 'round',
-					margin: { top: 1, bottom: 0 }
-				})
-			);
-
-			console.log(table.toString());
-		}
-		// --- End Display Tasks ---
-
 		// --- Build Prompts (Using PromptManager) ---
 		// Load prompts using PromptManager
 		const promptManager = getPromptManager();
@@ -179,7 +142,10 @@ async function updateTasks(
 		let aiServiceResponse = null;
 
 		if (!isMCP && outputFormat === 'text') {
-			loadingIndicator = startLoadingIndicator('Updating tasks with AI...\n');
+			// The result lists the tasks, so the spinner only counts them
+			loadingIndicator = startLoadingIndicator(
+				`Updating ${tasksToUpdate.length} ${tasksToUpdate.length === 1 ? 'task' : 'tasks'} from ID ${fromId}${useResearch ? ' (with research)' : ''}…`
+			);
 		}
 
 		try {
@@ -246,6 +212,7 @@ async function updateTasks(
 			// --from); only the tasks that were sent may change
 			const sentIds = new Set(tasksToUpdate.map((t) => t.id));
 			let actualUpdateCount = 0;
+			const appliedTasks = [];
 			data.tasks.forEach((task, index) => {
 				if (sentIds.has(task.id) && updatedTasksMap.has(task.id)) {
 					const updatedTask = updatedTasksMap.get(task.id);
@@ -288,6 +255,7 @@ async function updateTasks(
 					}
 					data.tasks[index] = merged;
 					actualUpdateCount++;
+					appliedTasks.push(merged);
 				}
 			});
 			if (isMCP)
@@ -306,11 +274,8 @@ async function updateTasks(
 				logFn.info(
 					`Successfully updated ${actualUpdateCount} tasks in ${tasksPath}`
 				);
-			else
-				logFn(
-					'success',
-					`Successfully updated ${actualUpdateCount} tasks in ${tasksPath}`
-				);
+			else if (outputFormat === 'text')
+				console.log(ui.formatTasksUpdated(appliedTasks));
 			// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 
 			if (outputFormat === 'text' && aiServiceResponse.telemetryData) {

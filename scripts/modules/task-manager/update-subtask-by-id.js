@@ -1,7 +1,5 @@
-import { theme } from '@tm/cli/theme';
+import { ui } from '@tm/cli';
 import { withoutReservedMetadata } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
 import { generateTextService } from '../ai-services-unified.js';
@@ -197,7 +195,6 @@ async function updateSubtaskById(
 		}
 
 		let generatedContentString = '';
-		let newlyAddedSnippet = '';
 		let aiServiceResponse = null;
 
 		try {
@@ -292,16 +289,15 @@ async function updateSubtaskById(
 			// Check if the string is not empty
 			const timestamp = new Date().toISOString();
 			const formattedBlock = `<info added on ${timestamp}>\n${generatedContentString.trim()}\n</info added on ${timestamp}>`;
-			newlyAddedSnippet = formattedBlock;
 
 			subtask.details =
 				(subtask.details ? subtask.details + '\n' : '') + formattedBlock;
-		} else {
+		} else if (outputFormat !== 'text') {
+			// The CLI line below says so
 			report(
 				'warn',
 				'AI response was empty or whitespace after trimming. Original details remain unchanged.'
 			);
-			newlyAddedSnippet = 'No new details were added by the AI.';
 		}
 
 		const updatedSubtask = parentTask.subtasks[subtaskIndex];
@@ -360,17 +356,9 @@ async function updateSubtaskById(
 				loadingIndicator = null;
 			}
 			console.log(
-				boxen(
-					chalk.green(`Successfully updated subtask #${subtaskId}`) +
-						'\n\n' +
-						theme.text.bold('Title:') +
-						' ' +
-						updatedSubtask.title +
-						'\n\n' +
-						theme.text.bold('Newly Added Snippet:') +
-						'\n' +
-						theme.text(newlyAddedSnippet),
-					{ padding: 1, borderColor: 'green', borderStyle: 'round' }
+				ui.formatNotesAdded(
+					{ kind: 'subtask', id: subtaskId, title: updatedSubtask.title },
+					generatedContentString?.trim() ?? ''
 				)
 			);
 		}

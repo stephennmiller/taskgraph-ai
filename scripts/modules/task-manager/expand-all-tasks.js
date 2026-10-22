@@ -1,12 +1,6 @@
-import { theme } from '@tm/cli/theme';
-import boxen from 'boxen';
-import chalk from 'chalk';
+import { ui } from '@tm/cli';
 import { getDebugFlag } from '../config-manager.js';
-import {
-	displayAiUsageSummary,
-	startLoadingIndicator,
-	stopLoadingIndicator
-} from '../ui.js';
+import { displayAiUsageSummary } from '../ui.js';
 import { findProjectRoot, isSilentMode, log, readJSON } from '../utils.js';
 import { aggregateTelemetry } from '../utils.js';
 import expandTask from './expand-task.js';
@@ -70,18 +64,11 @@ async function expandAllTasks(
 						!isSilentMode() && getDebugFlag(session) && log('debug', msg)
 				});
 
-	let loadingIndicator = null;
 	let expandedCount = 0;
 	let failedCount = 0;
 	let skippedCount = 0;
 	let tasksToExpandCount = 0;
 	const allTelemetryData = []; // Still collect individual data first
-
-	if (!isMCPCall && outputFormat === 'text') {
-		loadingIndicator = startLoadingIndicator(
-			'Analyzing tasks for expansion...'
-		);
-	}
 
 	try {
 		logger.debug(`Reading tasks from ${tasksPath}`);
@@ -97,15 +84,30 @@ async function expandAllTasks(
 				(!task.subtasks || task.subtasks.length === 0 || force) // Check subtasks/force here
 		);
 		tasksToExpandCount = tasksToExpand.length; // Get the count from the filtered array
-		logger.info(`Found ${tasksToExpandCount} tasks eligible for expansion.`);
+		// Pending tasks left out only because they already have subtasks
+		const alreadyExpandedCount = force
+			? 0
+			: data.tasks.filter(
+					(task) =>
+						(task.status === 'pending' || task.status === 'in-progress') &&
+						task.subtasks?.length > 0
+				).length;
+		logger.debug(`Found ${tasksToExpandCount} tasks eligible for expansion.`);
 		// --- End Restored Filtering Logic ---
 
-		if (loadingIndicator) {
-			stopLoadingIndicator(loadingIndicator, 'Analysis complete.');
-		}
-
 		if (tasksToExpandCount === 0) {
-			logger.info('No tasks eligible for expansion.');
+			logger.debug('No tasks eligible for expansion.');
+			if (outputFormat === 'text' && !isMCPCall && !isSilentMode()) {
+				console.log(
+					ui.formatExpandAll({
+						expandedCount: 0,
+						skippedCount: 0,
+						failedCount: 0,
+						tasksToExpand: 0,
+						alreadyExpandedCount
+					})
+				);
+			}
 			// --- Fix: Restore success: true and add message ---
 			return {
 				success: true, // Indicate overall success despite no action
@@ -113,6 +115,7 @@ async function expandAllTasks(
 				failedCount: 0,
 				skippedCount: 0,
 				tasksToExpand: 0,
+				alreadyExpandedCount,
 				telemetryData: allTelemetryData,
 				message: 'No tasks eligible for expansion.'
 			};
@@ -121,12 +124,7 @@ async function expandAllTasks(
 
 		// Iterate over the already filtered tasks
 		for (const task of tasksToExpand) {
-			// Start indicator for individual task expansion in CLI mode
-			let taskIndicator = null;
-			if (!isMCPCall && outputFormat === 'text') {
-				taskIndicator = startLoadingIndicator(`Expanding task ${task.id}...`);
-			}
-
+			// expandTask shows its own spinner and what it added
 			try {
 				// Call the refactored expandTask function AND capture result
 				const result = await expandTask(
@@ -139,20 +137,16 @@ async function expandAllTasks(
 						...context,
 						projectRoot,
 						tag: data.tag || tag,
-						complexityReportPath
+						complexityReportPath,
+						// One usage line for the whole run, after the summary
+						showUsage: false
 					}, // Pass the whole context object with projectRoot and resolved tag
 					force
 				);
 				if (result?.skipped) {
 					// The complexity report recommended no expansion for this task
 					skippedCount++;
-					if (taskIndicator) {
-						stopLoadingIndicator(
-							taskIndicator,
-							`Task ${task.id} skipped (no expansion recommended).`
-						);
-					}
-					logger.info(
+					logger.debug(
 						`Skipped task ${task.id}: complexity report recommends no expansion.`
 					);
 					continue;
@@ -165,26 +159,16 @@ async function expandAllTasks(
 					allTelemetryData.push(result.telemetryData);
 				}
 
-				if (taskIndicator) {
-					stopLoadingIndicator(taskIndicator, `Task ${task.id} expanded.`);
-				}
-				logger.info(`Successfully expanded task ${task.id}.`);
+				logger.debug(`Expanded task ${task.id}.`);
 			} catch (error) {
 				failedCount++;
-				if (taskIndicator) {
-					stopLoadingIndicator(
-						taskIndicator,
-						`Failed to expand task ${task.id}.`,
-						false
-					);
-				}
-				logger.error(`Failed to expand task ${task.id}: ${error.message}`);
+				logger.error(`Couldn't expand task ${task.id}: ${error.message}`);
 				// Continue to the next task
 			}
 		}
 
 		// --- AGGREGATION AND DISPLAY ---
-		logger.info(
+		logger.debug(
 			`Expansion complete: ${expandedCount} expanded, ${skippedCount} skipped, ${failedCount} failed.`
 		);
 
@@ -194,21 +178,14 @@ async function expandAllTasks(
 			'expand-all-tasks'
 		);
 
-		if (outputFormat === 'text') {
-			const summaryContent =
-				`${theme.text.bold('Expansion Summary:')}\n\n` +
-				`${chalk.cyan('-')} Attempted: ${chalk.bold(tasksToExpandCount)}\n` +
-				`${chalk.green('-')} Expanded:  ${chalk.bold(expandedCount)}\n` +
-				`${theme.muted('-')} Skipped:   ${chalk.bold(skippedCount)}\n` +
-				`${chalk.red('-')} Failed:    ${chalk.bold(failedCount)}`;
-
+		if (outputFormat === 'text' && !isMCPCall && !isSilentMode()) {
 			console.log(
-				boxen(summaryContent, {
-					padding: 1,
-					margin: { top: 1 },
-					borderColor: failedCount > 0 ? 'red' : 'green', // Red if failures, green otherwise
-					borderStyle: 'round'
-				})
+				`\n${ui.formatExpandAll({
+					expandedCount,
+					skippedCount,
+					failedCount,
+					tasksToExpand: tasksToExpandCount
+				})}`
 			);
 		}
 
@@ -223,11 +200,10 @@ async function expandAllTasks(
 			failedCount,
 			skippedCount,
 			tasksToExpand: tasksToExpandCount,
+			alreadyExpandedCount,
 			telemetryData: aggregatedTelemetryData
 		};
 	} catch (error) {
-		if (loadingIndicator)
-			stopLoadingIndicator(loadingIndicator, 'Error.', false);
 		logger.error(`Error during expand all operation: ${error.message}`);
 		if (!isMCPCall && getDebugFlag(session)) {
 			console.error(error); // Log full stack in debug CLI mode
