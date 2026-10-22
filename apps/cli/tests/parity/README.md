@@ -57,6 +57,40 @@ Scenarios run in separate projects, one probe each, so a difference in one
 cannot cloud another. Add a scenario for a new edge case rather than a step to
 an existing one.
 
+## MCP steps
+
+`{"mcp": "get_tasks", "input": {"projectRoot": "<project>"}, "expectError":
+false}` calls an MCP tool on each build's server and compares the reply, so
+the CLI and the MCP layer of the same build can be checked in one scenario.
+`<project>` in `input` becomes the temp project's path (tools need an absolute
+`projectRoot`). The reply goes into the step's files as `mcp:N` (parsed and
+key-sorted when it is JSON), so a differing field is reported with the step
+number like any file. `mcp:tools` (tool names and input schemas) is compared
+once per scenario, because a renamed parameter breaks clients.
+
+- **Server per build**: derived from the build string. `.../dist/taskgraph.js`
+  becomes `.../dist/mcp-server.js`; a build ending in the bin name `taskgraph`
+  (the npx form) becomes `taskgraph-mcp`. If a scenario has an mcp step and
+  the server cannot be derived, the tool exits 2 and says so.
+- **One server start per call**, through `apps/mcp/tests/smoke/mcp-stdio.smoke.mjs`
+  (all tools, `--timeout` applies). A 25-call scenario takes about a minute per
+  build.
+- **Errors**: an `isError` reply (or a JSON-RPC error with no content) is a
+  result to compare. It counts as "did not exit as expected" unless the step
+  says `"expectError": true`. A call that did not complete cleanly (the server
+  crashed or timed out, or wrote a non-JSON-RPC line to stdout) is never an
+  accepted error: the step fails and its stderr is printed. `mcp` cannot be
+  combined with `args`, `shell`, `capture` or `expectExit`. A reply is compared
+  as its text only when it has a single text part; anything else is compared
+  whole.
+- **Environment**: the same isolated `HOME` and fake `claude` as CLI steps.
+  `TASKGRAPH_PROJECT_ROOT` is removed from the environment, because the
+  server prefers it over a tool's `projectRoot`.
+- **Masked in replies**: the top-level `version` field, locale dates such as
+  `10/22/2026` (written by tag copy), and the `Version:`/`Name:` footer of
+  plain-text error replies. Everything else, including `data.message` and tips
+  text, is compared as is.
+
 ## Expected differences from published releases
 
 Against the latest release (`taskgraph-ai@0.54.12` or newer), expect none: it
