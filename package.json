@@ -28,6 +28,7 @@
 		"turbo:test:integration": "turbo test:integration",
 		"build:build-config": "npm run build -w @tm/build-config",
 		"test": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts",
+		"smoke:mcp": "node apps/mcp/tests/smoke/mcp-stdio.smoke.mjs --tools all",
 		"test:sdk-contract": "cross-env NODE_ENV=test vitest run -c vitest.sdk-contract.config.ts",
 		"test:unit": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts unit",
 		"test:integration": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts integration",
