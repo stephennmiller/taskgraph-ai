@@ -93,6 +93,21 @@ describe('formatTaskCreated', () => {
 		);
 	});
 
+	it('removes escape sequences from titles', () => {
+		const output = formatTaskCreated(
+			{
+				id: 8,
+				title: 'Title \u001b]0;pwned\u0007here',
+				dependencies: [{ id: 2, title: 'Dep \u001b[2Jclear' }]
+			},
+			80
+		);
+
+		expect(output).not.toMatch(/\u001b\]0;|\u0007|\u001b\[2J/);
+		expect(plain(output)).toContain('Added task 8  Title here');
+		expect(plain(output)).toContain('2  Dep clear');
+	});
+
 	it('cuts titles and wraps the next step in a narrow terminal', () => {
 		const output = formatTaskCreated(exportTask, 50);
 

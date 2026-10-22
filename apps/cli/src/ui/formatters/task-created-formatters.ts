@@ -15,7 +15,7 @@
 
 import chalk from 'chalk';
 import { theme } from '../theme.js';
-import { wrapLine } from './markdown-formatters.js';
+import { fit, terminalSafe, wrapLine } from './markdown-formatters.js';
 
 export interface CreatedTaskDependency {
 	id: number | string;
@@ -35,21 +35,24 @@ export interface CreatedTask {
 	unused?: CreatedTaskDependency[];
 }
 
-const fit = (text: string, width: number) =>
-	text.length > width
-		? `${text.slice(0, Math.max(1, width - 1)).trimEnd()}…`
-		: text;
-
 /**
  * Format the confirmation after `add-task`.
  *
- * @param task - The saved task and its dependencies
+ * @param created - The saved task and its dependencies
  * @param width - Terminal width; titles are cut to fit
  */
 export function formatTaskCreated(
-	task: CreatedTask,
+	created: CreatedTask,
 	width = process.stdout.columns || 80
 ): string {
+	const safeDeps = (deps: CreatedTaskDependency[]) =>
+		deps.map((dep) => ({ ...dep, title: terminalSafe(dep.title) }));
+	const task: CreatedTask = {
+		...created,
+		title: terminalSafe(created.title),
+		dependencies: safeDeps(created.dependencies),
+		unused: created.unused && safeDeps(created.unused)
+	};
 	const lines: string[] = [];
 	const priority = task.priority
 		? theme.muted(` · ${task.priority} priority`)

@@ -39,7 +39,9 @@ import { getSuggestedActions } from '../suggested-actions.js';
 import { theme } from '../theme.js';
 import { complexityLevel } from './complexity-formatters.js';
 import {
+	fit,
 	formatMarkdown,
+	terminalSafe,
 	visibleLength,
 	wrapLine
 } from './markdown-formatters.js';
@@ -63,10 +65,20 @@ export interface TaskDetailOptions {
 	width?: number;
 }
 
-const fit = (text: string, width: number) =>
-	text.length > width
-		? `${text.slice(0, Math.max(1, width - 1)).trimEnd()}…`
-		: text;
+/**
+ * A copy of the task with every string made safe to print, so text in a
+ * task file can't send escape sequences to the terminal
+ */
+function safeStrings<T>(value: T): T {
+	if (typeof value === 'string') return terminalSafe(value) as T;
+	if (Array.isArray(value)) return value.map(safeStrings) as T;
+	if (value && typeof value === 'object' && !(value instanceof Date)) {
+		return Object.fromEntries(
+			Object.entries(value).map(([key, item]) => [key, safeStrings(item)])
+		) as T;
+	}
+	return value;
+}
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
 const listIds = (ids: string[]) =>
@@ -93,7 +105,7 @@ function wrapIndented(text: string, width: number, indent = INDENT): string[] {
 /** Render stored markdown or HTML, indented under a heading */
 function body(content: string, width: number, indent = INDENT): string[] {
 	const columns = Math.max(20, width - indent.length);
-	return formatMarkdown(toMarkdown(content), columns)
+	return formatMarkdown(toMarkdown(content), columns, { breaks: true })
 		.split('\n')
 		.map((line) => (line.trim() ? indent + line : ''));
 }
@@ -154,7 +166,12 @@ const heading = (text: string, note?: string) =>
 
 /** `create  src/routes/bookmarks.ts  New router for the endpoints` */
 function fileRows(task: Task | Subtask, width: number): string[] {
-	const files = task.relevantFiles ?? [];
+	// Older or hand-edited files may leave out a field
+	const files = (task.relevantFiles ?? []).map((file) => ({
+		path: file.path ?? '',
+		action: file.action ?? '',
+		description: file.description
+	}));
 	const pathWidth = Math.max(...files.map((file) => file.path.length));
 	const actionWidth = Math.max(...files.map((file) => file.action.length));
 	const lead = INDENT.length + actionWidth + 2;
@@ -180,8 +197,8 @@ function fileRows(task: Task | Subtask, width: number): string[] {
 /** `requireUser  src/middleware/auth.ts` and how to use it underneath */
 function infrastructureRows(task: Task | Subtask, width: number): string[] {
 	return (task.existingInfrastructure ?? []).flatMap((item) => [
-		`${INDENT}${theme.text(item.name)}  ${theme.muted(item.location)}`,
-		...wrapIndented(item.usage, width, INDENT.repeat(2))
+		`${INDENT}${theme.text(item.name ?? '')}  ${theme.muted(item.location ?? '')}`,
+		...(item.usage ? wrapIndented(item.usage, width, INDENT.repeat(2)) : [])
 	]);
 }
 
@@ -249,15 +266,20 @@ function subtaskRows(
 		Math.max(...rows.map((row) => row.title.length))
 	);
 
-	return rows.map((row) => {
+	return rows.flatMap((row) => {
 		const status =
 			getStatusWithColor(row.status) +
 			' '.repeat(statusWidth - row.statusText.length);
 		const title = fit(row.title, titleWidth);
 		const line = `${INDENT}${theme.brand(row.id.padEnd(idWidth))}  ${status}  ${title}`;
-		return showAfter && row.after
-			? `${line}${' '.repeat(titleWidth - title.length)}  ${theme.muted(row.after)}`
-			: line;
+		if (!row.after) return [line];
+		if (showAfter) {
+			return [
+				`${line}${' '.repeat(titleWidth - title.length)}  ${theme.muted(row.after)}`
+			];
+		}
+		// Too narrow for the column: keep the dependencies on their own line
+		return [line, theme.muted(' '.repeat(fixed) + row.after)];
 	});
 }
 
@@ -306,13 +328,14 @@ function nextStep(
 /**
  * Format everything `show` prints about one task or subtask.
  *
- * @param task - The task, or a subtask (pass `options.id` as `2.3`)
+ * @param taskToShow - The task, or a subtask (pass `options.id` as `2.3`)
  * @param options - The ID as asked for, a subtask status filter, the width
  */
 export function formatTaskDetail(
-	task: Task | Subtask,
+	taskToShow: Task | Subtask,
 	options: TaskDetailOptions = {}
 ): string {
+	const task = safeStrings(taskToShow);
 	const width = Math.max(
 		30,
 		Math.min(options.width ?? (process.stdout.columns || 80), MAX_WIDTH)

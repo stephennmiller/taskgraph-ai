@@ -134,11 +134,12 @@ describe('formatTaskDetail', () => {
 			'▶ in-progress · high priority',
 			'complexity 7 (high) · depends on 1'
 		]);
-		// The "after" column goes before titles are cut to nothing
+		// The "after" column goes before titles are cut to nothing, and the
+		// dependencies move under the row instead of disappearing
 		expect(plain(output)).toContain(
-			'  2.2  ▶ in-progress  Sessions table and cookie m…'
+			'  2.2  ▶ in-progress  Sessions table and cookie m…\n' +
+				'                      after 2.1'
 		);
-		expect(plain(output)).not.toContain('after 2.1');
 		expect(lines(output).slice(-2)).toEqual([
 			'Next: taskgraph update-task --id=2 --prompt="..."',
 			'      to update details'
@@ -272,6 +273,60 @@ describe('formatTaskDetail', () => {
 
 		expect(output).toContain('\nNo blocked subtasks\n');
 		expect(output).not.toContain('Subtasks ·');
+	});
+
+	it('keeps the line breaks of text written one item per line', () => {
+		const task = createTask({
+			id: 5,
+			title: 'Bookmark API',
+			details: 'Endpoints:\nGET /bookmarks\nPOST /bookmarks'
+		});
+
+		const output = plain(formatTaskDetail(task, { width: 80 }));
+
+		expect(output).toContain(
+			'Details\n  Endpoints:\n  GET /bookmarks\n  POST /bookmarks'
+		);
+	});
+
+	it('prints files and existing code that leave out a field instead of throwing', () => {
+		const task = createTask({
+			id: 6,
+			title: 'Older task file',
+			relevantFiles: [{ path: 'src/a.ts', description: 'Helpers' }],
+			existingInfrastructure: [{ name: 'db', location: 'src/db.ts' }]
+		} as unknown as Parameters<typeof createTask>[0]);
+
+		const output = plain(formatTaskDetail(task, { width: 80 }));
+
+		expect(output).toContain('src/a.ts  Helpers');
+		expect(output).toContain('Existing code\n  db  src/db.ts');
+	});
+
+	it('removes escape sequences and control characters from task text', () => {
+		const task = createTask({
+			id: 7,
+			title: 'Clear \u001b[2Jscreen\u001b]0;pwned\u0007',
+			details: 'Ring\u0007 the bell\rback',
+			subtasks: [
+				createSubtask({
+					id: 1,
+					parentId: '7',
+					title: 'Move \u001b[10Acursor',
+					status: 'pending'
+				})
+			],
+			acceptanceCriteria: ['Done \u009b31m']
+		});
+
+		const output = formatTaskDetail(task, { width: 80 });
+
+		expect(output).not.toMatch(
+			/\u001b\[2J|\u001b\]0;|\u001b\[10A|\u0007|\r|\u009b/
+		);
+		expect(plain(output)).toContain('Task 7  Clear screen');
+		expect(plain(output)).toContain('Ring the bellback');
+		expect(plain(output)).toContain('Move cursor');
 	});
 
 	it('renders HTML task text as plain text', () => {

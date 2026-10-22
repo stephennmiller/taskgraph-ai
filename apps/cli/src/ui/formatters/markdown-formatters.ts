@@ -15,6 +15,26 @@ import { Marked, type MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import { theme } from '../theme.js';
 
+/**
+ * Text from a task file, safe to print: escape sequences and other control
+ * characters (which could move the cursor, clear the screen or retitle the
+ * terminal) removed. Newlines and tabs stay.
+ */
+export function terminalSafe(text: unknown): string {
+	if (text === undefined || text === null) return '';
+	return (
+		stripVTControlCharacters(String(text))
+			// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
+			.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '')
+	);
+}
+
+/** Cut `text` to `width` characters, ending with … when cut */
+export const fit = (text: string, width: number) =>
+	text.length > width
+		? `${text.slice(0, Math.max(1, width - 1)).trimEnd()}…`
+		: text;
+
 /** Length on screen, not counting ANSI codes */
 export const visibleLength = (text: string) =>
 	stripVTControlCharacters(text).length;
@@ -72,9 +92,16 @@ function wrapListItems(text: string, width: number): string {
 /**
  * Render markdown for the terminal, with every line at most `columns` wide
  * (a single word longer than that, such as a URL, stays whole).
+ *
+ * @param options.breaks - Keep single newlines as line breaks, as task text
+ *   written one item per line expects (markdown joins them by default)
  */
-export function formatMarkdown(markdown: string, columns: number): string {
-	const renderer = new Marked({ gfm: true, breaks: false });
+export function formatMarkdown(
+	markdown: string,
+	columns: number,
+	options: { breaks?: boolean } = {}
+): string {
+	const renderer = new Marked({ gfm: true, breaks: options.breaks ?? false });
 
 	renderer.use(
 		markedTerminal({

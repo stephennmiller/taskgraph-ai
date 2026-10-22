@@ -22,11 +22,15 @@ import ContextGatherer from '../utils/contextGatherer.js';
 import {
 	log as consoleLog,
 	ensureTagMetadata,
+	isSilentMode,
 	markMigrationForNotice,
 	performCompleteTagMigration,
 	readJSON
 } from '../utils.js';
 import { updateTagTasks } from '../utils/update-tag-tasks.js';
+
+/** How many tasks matching the prompt the AI is shown as context */
+const MAX_RELATED_TASKS = 10;
 
 /**
  * Get all tasks from all tags
@@ -349,6 +353,7 @@ async function addTask(
 			const contextGatherer = new ContextGatherer(projectRoot, tag);
 			const gatherResult = await contextGatherer.gather({
 				semanticQuery: prompt,
+				maxSemanticResults: MAX_RELATED_TASKS,
 				dependencyTasks: numericDependencies,
 				format: 'research'
 			});
@@ -356,13 +361,16 @@ async function addTask(
 			const gatheredContext = gatherResult.context;
 			const analysisData = gatherResult.analysisData;
 
-			// One muted line saying which tasks the AI will see
-			if (outputFormat === 'text' && analysisData) {
+			// One muted line saying which tasks the AI will see: the gatherer
+			// sends only the first MAX_RELATED_TASKS of the tasks it matched
+			if (outputFormat === 'text' && analysisData && !isSilentMode()) {
+				const depIds = numericDependencies.map(String);
 				const contextLine = ui.formatResearchContext({
-					taskIds: numericDependencies.map(String),
+					taskIds: depIds,
 					relatedTaskIds: analysisData.allRelevantTasks
+						.slice(0, MAX_RELATED_TASKS)
 						.map((task) => String(task.id))
-						.filter((id) => !numericDependencies.map(String).includes(id)),
+						.filter((id) => !depIds.includes(id)),
 					files: []
 				});
 				if (contextLine) console.log(contextLine);
