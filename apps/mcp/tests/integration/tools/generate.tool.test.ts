@@ -13,22 +13,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { createTask, createTasksFile } from '@tm/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { callMCPTool } from '../../helpers/call-mcp-tool.js';
 
 describe('generate MCP tool', () => {
 	let testDir: string;
 	let tasksPath: string;
 	let cliPath: string;
-	let mcpServerPath: string;
 
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-generate-'));
 		process.chdir(testDir);
 
 		cliPath = path.resolve(__dirname, '../../../../../dist/taskgraph.js');
-		mcpServerPath = path.resolve(
-			__dirname,
-			'../../../../../dist/mcp-server.js'
-		);
 
 		// Initialize TaskGraph in test directory
 		execSync(`node "${cliPath}" init --yes`, {
@@ -59,31 +55,6 @@ describe('generate MCP tool', () => {
 
 	const writeTasks = (tasksData: any) => {
 		fs.writeFileSync(tasksPath, JSON.stringify(tasksData, null, 2));
-	};
-
-	/**
-	 * Call an MCP tool using the inspector CLI
-	 * The inspector returns MCP protocol format: { content: [{ type: "text", text: "<json>" }] }
-	 */
-	const callMCPTool = (toolName: string, args: Record<string, any>): any => {
-		const toolArgs = Object.entries(args)
-			.map(([key, value]) => `--tool-arg ${key}=${value}`)
-			.join(' ');
-
-		const output = execSync(
-			// The inspector only forwards env vars given with -e to the server it
-			// spawns, so `generate` (an "all"-tier tool) needs the flag here.
-			`npx @modelcontextprotocol/inspector --cli -e TASKGRAPH_TOOLS=all node "${mcpServerPath}" --method tools/call --tool-name ${toolName} ${toolArgs}`,
-			{
-				encoding: 'utf-8',
-				stdio: 'pipe'
-			}
-		);
-
-		// Parse the MCP protocol response: { content: [{ type: "text", text: "<json>" }] }
-		const mcpResponse = JSON.parse(output);
-		const resultText = mcpResponse.content[0].text;
-		return JSON.parse(resultText);
 	};
 
 	// ========== MCP-specific tests ==========
