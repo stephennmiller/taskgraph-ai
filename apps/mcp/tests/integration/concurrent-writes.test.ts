@@ -19,6 +19,9 @@ const cliBin = path.join(repoRoot, 'dist', 'taskgraph.js');
 const smokeScript = path.resolve(__dirname, '../smoke/mcp-stdio.smoke.mjs');
 
 const TASK_COUNT = 12;
+const ids = Array.from({ length: TASK_COUNT }, (_, i) => i + 1);
+// How long the MCP server needs to boot before its first call can save
+const CLI_START_DELAY_MS = 600;
 
 interface Finished {
 	status: number | null;
@@ -33,7 +36,12 @@ const runAsync = (
 	options: { cwd: string; env: NodeJS.ProcessEnv }
 ) =>
 	new Promise<Finished>((resolve) => {
-		const child = spawn(command, args, { ...options, stdio: 'pipe' });
+		const child = spawn(command, args, {
+			...options,
+			stdio: 'pipe',
+			timeout: 110000,
+			killSignal: 'SIGKILL'
+		});
 		let stdout = '';
 		let stderr = '';
 		child.stdout.on('data', (d) => (stdout += d));
@@ -60,11 +68,12 @@ describe('CLI and MCP server writing at the same time', () => {
 			FORCE_COLOR: '0',
 			TASKGRAPH_SKIP_AUTO_UPDATE: '1'
 		};
-		spawnSync(
+		const init = spawnSync(
 			process.execPath,
 			[cliBin, 'init', '--yes', '--no-aliases', '--no-git'],
 			{ cwd: dir, env, input: '', timeout: 60000 }
 		);
+		expect(init.status).toBe(0);
 		const tasks = Array.from({ length: TASK_COUNT }, (_, i) => ({
 			id: i + 1,
 			title: `Task ${i + 1}`,
@@ -76,7 +85,9 @@ describe('CLI and MCP server writing at the same time', () => {
 			dependencies: [],
 			subtasks: []
 		}));
-		fs.writeFileSync(tasksFile(), JSON.stringify({ master: { tasks } }));
+		// A second tag that no writer touches, to catch one that drops it
+		const other = { tasks: [{ ...tasks[0], id: 1, title: 'Other tag task' }] };
+		fs.writeFileSync(tasksFile(), JSON.stringify({ master: { tasks }, other }));
 	});
 
 	afterEach(() => {
@@ -110,20 +121,49 @@ describe('CLI and MCP server writing at the same time', () => {
 				{ cwd: dir, env }
 			);
 
-		// Odd tasks through the CLI, even tasks through the MCP server
-		const results = await Promise.all(
-			Array.from({ length: TASK_COUNT }, (_, i) =>
-				(i + 1) % 2 === 1 ? viaCli(i + 1) : viaMcp(i + 1)
-			)
-		);
+		// Odd tasks through the CLI, even tasks through the MCP server. The server
+		// takes a while to boot, so the CLI side starts after it to make the
+		// writes overlap instead of running one side after the other.
+		const mcpIds = ids.filter((id) => id % 2 === 0);
+		const cliIds = ids.filter((id) => id % 2 === 1);
+		const mcpRuns = mcpIds.map(viaMcp);
+		await new Promise((resolve) => setTimeout(resolve, CLI_START_DELAY_MS));
+		const cliRuns = cliIds.map(viaCli);
+		const [mcpResults, cliResults] = await Promise.all([
+			Promise.all(mcpRuns),
+			Promise.all(cliRuns)
+		]);
 
-		const failed = results.filter((r) => r.status !== 0);
+		const failed = [...cliResults, ...mcpResults].filter((r) => r.status !== 0);
 		expect(failed.map((r) => r.stderr || r.stdout)).toEqual([]);
+		// The smoke script exits 0 even when the tool answers with an error
+		const mcpErrors = mcpResults.filter(
+			(r) => JSON.parse(r.stdout).calls[0].isError
+		);
+		expect(mcpErrors.map((r) => r.stdout)).toEqual([]);
 
 		const saved = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
-		expect(saved.master.tasks.map((t: { status: string }) => t.status)).toEqual(
-			Array(TASK_COUNT).fill('done')
+		const tasks = saved.master.tasks as {
+			id: string;
+			title: string;
+			status: string;
+			updatedAt: string;
+		}[];
+		expect(tasks.map((t) => [t.id, t.title, t.status])).toEqual(
+			ids.map((id) => [String(id), `Task ${id}`, 'done'])
 		);
-		expect(fs.existsSync(`${tasksFile()}.lock`)).toBe(false);
+		expect(saved.other.tasks[0]).toMatchObject({
+			title: 'Other tag task',
+			status: 'pending'
+		});
+		expect(fs.readdirSync(path.dirname(tasksFile()))).toEqual(['tasks.json']);
+
+		// The two sides must really have overlapped: the first MCP save came
+		// before the last CLI save
+		const savedAt = (side: number[]) =>
+			side.map((id) => Date.parse(tasks[id - 1].updatedAt));
+		expect(Math.min(...savedAt(mcpIds))).toBeLessThan(
+			Math.max(...savedAt(cliIds))
+		);
 	}, 120000);
 });
