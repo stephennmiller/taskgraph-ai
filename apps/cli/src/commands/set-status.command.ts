@@ -261,7 +261,7 @@ export class SetStatusCommand extends Command {
 	 */
 	private displayTextResults(result: SetStatusResult): void {
 		// One line per change: set-status runs many times a day
-		console.log(`\n${formatStatusChanges(result.updatedTasks)}`);
+		console.log(formatStatusChanges(result.updatedTasks));
 	}
 
 	/**

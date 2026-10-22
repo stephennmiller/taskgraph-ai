@@ -29,6 +29,26 @@ function isBannerHidden(): boolean {
 	return process.env.TM_HIDE_BANNER === 'true';
 }
 
+/** Arguments that ask for the top-level help screen */
+const TOP_LEVEL_HELP_ARGS = new Set(['--help', '-h', 'help']);
+
+/**
+ * Whether `runCLI` should print the ASCII banner before a command.
+ *
+ * Only bare `taskgraph` and the top-level help screen (`taskgraph --help`,
+ * `-h`, `help`) get the banner. Routine commands lead with their result and
+ * `init` prints its own banner. Pipes and redirects never get one, and
+ * `--no-banner` still turns it off.
+ *
+ * @param args - The arguments after the script path (`process.argv.slice(2)`)
+ * @param isTTY - Whether stdout is a terminal
+ */
+export function shouldShowAsciiBanner(args: string[], isTTY: boolean): boolean {
+	if (!isTTY || args.includes('--no-banner')) return false;
+	if (args.length === 0) return true;
+	return args.length === 1 && TOP_LEVEL_HELP_ARGS.has(args[0]);
+}
+
 /**
  * Get terminal width for right-aligning content
  */
