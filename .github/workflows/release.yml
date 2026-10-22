@@ -97,9 +97,6 @@ jobs:
         env:
           NODE_ENV: production
           FORCE_COLOR: 1
-          TM_PUBLIC_BASE_DOMAIN: ${{ secrets.TM_PUBLIC_BASE_DOMAIN }}
-          TM_PUBLIC_SUPABASE_URL: ${{ secrets.TM_PUBLIC_SUPABASE_URL }}
-          TM_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.TM_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Publish RC to npm
         run: npx changeset publish
