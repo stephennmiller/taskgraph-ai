@@ -16,7 +16,7 @@ describe('tags command', () => {
 	let dir: string;
 	let home: string;
 
-	const run = (args: string[]) =>
+	const run = (args: string[], columns = '80') =>
 		spawnSync('node', [getCliBinPath(), ...args], {
 			cwd: dir,
 			encoding: 'utf8',
@@ -26,7 +26,7 @@ describe('tags command', () => {
 				...process.env,
 				HOME: home,
 				FORCE_COLOR: '0',
-				COLUMNS: '80',
+				COLUMNS: columns,
 				TASKGRAPH_SKIP_AUTO_UPDATE: '1'
 			}
 		});
@@ -56,6 +56,29 @@ describe('tags command', () => {
 			'  Tag       Tasks  Ready  Done',
 			'● master        2      2     0'
 		]);
+	});
+
+	// Regression for #184: piped output ignored COLUMNS and always used 80
+	it('sizes piped output to COLUMNS', () => {
+		run([
+			'tags',
+			'add',
+			'feature-authentication-and-session-management',
+			'--description=Signing users in, refreshing sessions and logging out'
+		]);
+		const width = (columns: string) => {
+			const result = run(['tags', '--show-metadata'], columns);
+			expect(result.status).toBe(0);
+			return Math.max(
+				...result.stdout
+					.trimEnd()
+					.split('\n')
+					.map((l) => l.length)
+			);
+		};
+
+		expect(width('60')).toBeLessThanOrEqual(60);
+		expect(width('120')).toBeGreaterThan(80);
 	});
 
 	it('runs add, use, rename, copy and remove with one result line each', () => {
