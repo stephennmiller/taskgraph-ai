@@ -99,6 +99,31 @@ export class FileOperations {
 	}
 
 	/**
+	 * Take the cross-process lock. The legacy scripts keep `<file>.lock` as a
+	 * plain file, but proper-lockfile needs a directory there and fails with
+	 * ENOTDIR when it tries to expire a crashed writer's file. Move a stale
+	 * lock file aside first; a fresh one is left, so its owner still blocks us.
+	 */
+	private async acquireLock(filePath: string): Promise<() => Promise<void>> {
+		const lockPath = `${filePath}.lock`;
+		try {
+			const info = await fs.lstat(lockPath);
+			if (
+				!info.isDirectory() &&
+				Date.now() - info.mtimeMs > LOCK_OPTIONS.stale
+			) {
+				const aside = `${lockPath}.stale.${process.pid}.${Date.now()}`;
+				// A concurrent writer may already have moved it; that is fine
+				await fs.rename(lockPath, aside).catch(() => undefined);
+				await fs.rm(aside, { force: true });
+			}
+		} catch (err: any) {
+			if (err.code !== 'ENOENT') throw err;
+		}
+		return lockfile.lock(filePath, LOCK_OPTIONS);
+	}
+
+	/**
 	 * Write JSON file with atomic operation and cross-process locking.
 	 * Uses steno for atomic writes and proper-lockfile for cross-process safety.
 	 * WARNING: This replaces the entire file. For concurrent modifications,
@@ -114,7 +139,7 @@ export class FileOperations {
 		// Acquire cross-process lock
 		let release: (() => Promise<void>) | null = null;
 		try {
-			release = await lockfile.lock(filePath, LOCK_OPTIONS);
+			release = await this.acquireLock(filePath);
 
 			// Use steno Writer for atomic writes (same pattern as workflow-state-manager)
 			const content = JSON.stringify(data, null, 2);
@@ -154,7 +179,7 @@ export class FileOperations {
 		// Acquire cross-process lock
 		let release: (() => Promise<void>) | null = null;
 		try {
-			release = await lockfile.lock(filePath, LOCK_OPTIONS);
+			release = await this.acquireLock(filePath);
 
 			// Re-read file INSIDE lock to get current state
 			// This prevents lost updates from stale snapshots

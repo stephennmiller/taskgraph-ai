@@ -240,7 +240,8 @@ function withFileLockSync(filepath, callback, options = {}) {
 							// We successfully took ownership of the stale lock
 							// Clean it up and retry immediately
 							try {
-								fs.unlinkSync(stalePath);
+								// tm-core keeps its lock as a directory, not a file
+								fs.rmSync(stalePath, { recursive: true, force: true });
 							} catch {
 								// Ignore cleanup errors
 							}

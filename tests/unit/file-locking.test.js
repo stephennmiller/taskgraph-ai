@@ -132,6 +132,23 @@ describe('File Locking and Atomic Writes', () => {
 		});
 	});
 
+	describe('lock directory left by tm-core', () => {
+		// tm-core's proper-lockfile keeps `<file>.lock` as a directory
+		it('takes over a stale lock directory and leaves nothing behind', () => {
+			const lockPath = `${testFilePath}.lock`;
+			fs.mkdirSync(lockPath);
+			const old = new Date(Date.now() - 60_000);
+			fs.utimesSync(lockPath, old, old);
+
+			const result = utils.withFileLockSync(testFilePath, () => 'ran');
+
+			expect(result).toBe('ran');
+			expect(
+				fs.readdirSync(tempDir).filter((f) => f.includes('.lock'))
+			).toEqual([]);
+		});
+	});
+
 	describe('withFileLock (async)', () => {
 		it('should execute async callback while holding lock', async () => {
 			const result = await utils.withFileLock(testFilePath, async () => {
