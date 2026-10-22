@@ -8,6 +8,7 @@ import chalk from 'chalk';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
 import { createLink } from '../formatters/link-formatters.js';
+import { terminalWidth } from '../layout/helpers.js';
 import { BANNER_GRADIENT } from '../theme.js';
 
 // Brand gradient for the banner
@@ -27,13 +28,6 @@ export interface AsciiBannerOptions {
  */
 function isBannerHidden(): boolean {
 	return process.env.TM_HIDE_BANNER === 'true';
-}
-
-/**
- * Get terminal width for right-aligning content
- */
-function getTerminalWidth(): number {
-	return process.stdout.columns || 80;
 }
 
 /**
@@ -79,7 +73,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 		// Right-align the version when it fits; otherwise put it on its own line
 		const byLength = `by ${creditText}`.length;
 		const versionLength = cleanVersion.length + 1; // "v" + version
-		const spacing = getTerminalWidth() - byLength - versionLength - 1;
+		const spacing = terminalWidth() - byLength - versionLength - 1;
 		if (spacing >= 2) {
 			console.log(byText + ' '.repeat(spacing) + versionLink);
 		} else {

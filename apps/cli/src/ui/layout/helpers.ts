@@ -16,16 +16,47 @@ export function getBoxWidth(
 	percentage: number = 0.9,
 	minWidth: number = 40
 ): number {
-	const terminalWidth = process.stdout.columns || 80;
-	return Math.max(Math.floor(terminalWidth * percentage), minWidth);
+	return Math.max(Math.floor(terminalWidth() * percentage), minWidth);
 }
 
 /**
- * Usable width for boxes and tables: 95% of the terminal, or 100 columns when
- * output is not a terminal (for example, piped to a file).
+ * The width the user asked for, or undefined when nothing says: the stream's
+ * own width when it is a terminal, else a positive integer in `COLUMNS`
+ * (so `COLUMNS=120 taskgraph tags | less` still lays out at 120).
  */
-export function getContentWidth(): number {
-	const columns = process.stdout.columns;
+function detectColumns(
+	stream: { columns?: number } = process.stdout,
+	env: NodeJS.ProcessEnv = process.env
+): number | undefined {
+	if (stream.columns && stream.columns > 0) return stream.columns;
+	const fromEnv = env.COLUMNS?.trim();
+	if (fromEnv && /^\d+$/.test(fromEnv)) {
+		const columns = Number.parseInt(fromEnv, 10);
+		if (columns > 0) return columns;
+	}
+	return undefined;
+}
+
+/**
+ * Terminal width for laying out output: the stream's columns when it is a
+ * terminal, else a positive integer from `COLUMNS`, else 80.
+ */
+export function terminalWidth(
+	stream: { columns?: number } = process.stdout,
+	env: NodeJS.ProcessEnv = process.env
+): number {
+	return detectColumns(stream, env) ?? 80;
+}
+
+/**
+ * Usable width for boxes and tables: 95% of the terminal (or of `COLUMNS`),
+ * or 100 columns when neither says (for example, piped to a file).
+ */
+export function getContentWidth(
+	stream: { columns?: number } = process.stdout,
+	env: NodeJS.ProcessEnv = process.env
+): number {
+	const columns = detectColumns(stream, env);
 	return columns ? Math.floor(columns * 0.95) : 100;
 }
 

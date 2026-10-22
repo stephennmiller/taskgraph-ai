@@ -5,7 +5,12 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
-import { getBoxWidth, getContentWidth, planColumns } from './helpers.js';
+import {
+	getBoxWidth,
+	getContentWidth,
+	planColumns,
+	terminalWidth
+} from './helpers.js';
 
 describe('Layout Helpers', () => {
 	describe('getBoxWidth', () => {
@@ -32,11 +37,14 @@ describe('Layout Helpers', () => {
 
 			// Now spy on the getter
 			columnsSpy = vi.spyOn(process.stdout, 'columns', 'get');
+			// Fallback cases expect 80, whatever COLUMNS the test runner has
+			vi.stubEnv('COLUMNS', '');
 		});
 
 		afterEach(() => {
 			// Restore the spy
 			columnsSpy.mockRestore();
+			vi.unstubAllEnvs();
 
 			// Restore original descriptor or delete the property
 			if (originalDescriptor) {
@@ -153,6 +161,40 @@ describe('Layout Helpers', () => {
 			const width3 = getBoxWidth(0.9, 40);
 			expect(width1).toBe(width2);
 			expect(width2).toBe(width3);
+		});
+	});
+
+	describe('terminalWidth', () => {
+		it('uses the terminal width when output is a terminal', () => {
+			expect(terminalWidth({ columns: 132 }, { COLUMNS: '60' })).toBe(132);
+		});
+
+		// Regression for #184: piped output has no columns, so COLUMNS was ignored
+		it('uses COLUMNS when output is piped', () => {
+			expect(terminalWidth({}, { COLUMNS: '120' })).toBe(120);
+			expect(terminalWidth({ columns: 0 }, { COLUMNS: ' 60 ' })).toBe(60);
+		});
+
+		it('falls back to 80 when COLUMNS is unset or not a positive integer', () => {
+			expect(terminalWidth({}, {})).toBe(80);
+			for (const value of ['', '0', '-5', 'wide', '12.5', '80px']) {
+				expect(terminalWidth({}, { COLUMNS: value })).toBe(80);
+			}
+		});
+	});
+
+	describe('getContentWidth', () => {
+		it('takes 95% of the terminal width', () => {
+			expect(getContentWidth({ columns: 100 }, {})).toBe(95);
+		});
+
+		it('takes 95% of COLUMNS when output is piped', () => {
+			expect(getContentWidth({}, { COLUMNS: '60' })).toBe(57);
+		});
+
+		it('uses 100 columns when neither the terminal nor COLUMNS says', () => {
+			expect(getContentWidth({}, {})).toBe(100);
+			expect(getContentWidth({}, { COLUMNS: 'abc' })).toBe(100);
 		});
 	});
 
