@@ -3436,17 +3436,17 @@ async function runCLI(argv = process.argv) {
 			return;
 		}
 
-		// Display banner if not in a pipe (except for init/start/repl commands which have their own)
-		const isInitCommand = argv.includes('init');
 		// init creates the config, and models and lang edit it and report a
 		// missing one as an error, so the "using default settings" warning
 		// would only repeat or contradict them
 		if (['init', 'models', 'lang'].includes(argv[2])) {
 			setSuppressConfigWarnings(true);
 		}
-		const isREPLCommand = argv.includes('tui') || argv.includes('repl');
-		const noBanner = argv.includes('--no-banner');
-		if (process.stdout.isTTY && !isInitCommand && !isREPLCommand && !noBanner) {
+		// Only the top-level help screen gets the banner; routine commands lead
+		// with their result (init and the TUI print their own)
+		if (
+			ui.shouldShowAsciiBanner(argv.slice(2), Boolean(process.stdout.isTTY))
+		) {
 			displayBanner();
 		}
 
