@@ -28,7 +28,7 @@ export function registerFixDependenciesTool(server) {
 			title: 'Fix Dependencies',
 			destructiveHint: true
 		},
-		execute: withToolContext('fix-dependencies', async (args, context) => {
+		execute: withToolContext(async (args, context) => {
 			try {
 				context.log.info(
 					`Fixing dependencies with args: ${JSON.stringify(args)}`

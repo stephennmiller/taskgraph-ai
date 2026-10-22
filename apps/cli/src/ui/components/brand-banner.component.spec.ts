@@ -5,7 +5,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	displayAsciiBanner,
-	displayInitBanner
+	displayInitBanner,
+	shouldShowAsciiBanner
 } from './brand-banner.component.js';
 
 function captureBanner(render: () => void): string {
@@ -58,5 +59,43 @@ describe('brand banner credits', () => {
 
 		expect(output).not.toContain('tryhamster.com');
 		expect(output).not.toContain('TaskGraph for teams');
+	});
+});
+
+describe('shouldShowAsciiBanner', () => {
+	it.each([['--help'], ['-h'], ['help']])(
+		'shows the banner for the top-level help screen (%s) in a terminal',
+		(arg) => {
+			expect(shouldShowAsciiBanner([arg], true)).toBe(true);
+		}
+	);
+
+	it('shows the banner for bare taskgraph in a terminal', () => {
+		expect(shouldShowAsciiBanner([], true)).toBe(true);
+	});
+
+	it.each([
+		[['list']],
+		[['show', '2']],
+		[['next']],
+		[['set-status', '--id=3', '--status=done']],
+		[['tags', 'remove', 'backup']],
+		[['validate-dependencies']],
+		[['add-dependency', '--id=2', '--depends-on=1']],
+		[['--version']],
+		[['list', '--help']],
+		[['init']],
+		[['tui']]
+	])('leads with the result for %j', (args) => {
+		expect(shouldShowAsciiBanner(args, true)).toBe(false);
+	});
+
+	it('never shows the banner when stdout is not a terminal', () => {
+		expect(shouldShowAsciiBanner(['--help'], false)).toBe(false);
+		expect(shouldShowAsciiBanner([], false)).toBe(false);
+	});
+
+	it('still honors --no-banner on the help screen', () => {
+		expect(shouldShowAsciiBanner(['--help', '--no-banner'], true)).toBe(false);
 	});
 });
