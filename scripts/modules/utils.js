@@ -5,7 +5,7 @@
 
 import { theme } from '@tm/cli/theme';
 // Import FileOperations from tm-core for atomic file modifications
-import { FileOperations } from '@tm/core';
+import { FileOperations, mergeTagChanges } from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
@@ -1066,6 +1066,10 @@ async function modifyJSON(filepath, modifier) {
  * Writes and saves a JSON file. Handles tagged task lists properly.
  * Uses cross-process file locking and atomic writes to prevent race conditions.
  *
+ * For data that came from readJSON (it carries _rawTaggedData), the tag is
+ * re-read under the lock and only the changes the caller made since its read
+ * are applied, so changes other processes saved meanwhile are kept.
+ *
  * @deprecated For new code, prefer modifyJSON() which provides atomic read-modify-write.
  * This function is maintained for backwards compatibility but callers should migrate
  * to modifyJSON() to prevent race conditions from stale reads.
@@ -1160,10 +1164,33 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 					// Create a clean copy of the current resolved data (without internal properties)
 					const { _rawTaggedData, tag: _, ...cleanResolvedData } = data;
 
-					// Update the specific tag with the resolved data, preserving other tags
+					// The caller read the tag, changed it and maybe waited on a model
+					// since. Apply only the caller's own changes to the tag as it is now,
+					// so changes other commands saved meanwhile survive (#243).
+					const tagAsRead = _rawTaggedData[resolvedTag];
+					const tagNow = currentTaggedData[resolvedTag];
+					let tagToSave = cleanResolvedData;
+					if (tagAsRead && tagNow && Array.isArray(tagNow.tasks)) {
+						const tagNowNormalized = JSON.parse(JSON.stringify(tagNow));
+						normalizeTaskIds(tagNowNormalized.tasks);
+						const { merged, renumbered } = mergeTagChanges(
+							tagAsRead,
+							cleanResolvedData,
+							tagNowNormalized
+						);
+						tagToSave = merged;
+						for (const { from, to } of renumbered) {
+							log(
+								'warn',
+								`ID ${from} was taken by a change saved while this command ran; saved as ${to}`
+							);
+						}
+					}
+
+					// Update the specific tag, preserving other tags
 					finalData = {
 						...currentTaggedData,
-						[resolvedTag]: cleanResolvedData
+						[resolvedTag]: tagToSave
 					};
 
 					if (isDebug) {

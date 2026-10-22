@@ -18,6 +18,9 @@
  *     an array of {object}, {text} or {error}; later calls are generated.
  *     An {object} is sent as given, so it must include every field the
  *     command's schema requires (see `required` in the trace).
+ *     Any entry can also carry {holdUntil: "<name>"}: the call is traced at
+ *     once but answers only after <dir>/<name> exists, so a test can change
+ *     tasks.json while an AI command waits on the model.
  */
 
 import fs from 'node:fs';
@@ -66,6 +69,23 @@ function cannedReply(n) {
 	}
 }
 
+const HOLD_LIMIT_MS = 30000;
+
+/** Wait until <dir>/<name> exists; fail the call if it never appears. */
+function holdUntil(name, then) {
+	const file = path.join(dir, name);
+	const started = Date.now();
+	const poll = () => {
+		if (fs.existsSync(file)) return then();
+		if (Date.now() - started > HOLD_LIMIT_MS) {
+			process.stderr.write(`fake claude: ${file} never appeared\n`);
+			process.exit(1);
+		}
+		setTimeout(poll, 20);
+	};
+	poll();
+}
+
 function promptOf(message) {
 	const { content } = message.message ?? {};
 	if (typeof content === 'string') return content;
@@ -95,6 +115,14 @@ function reply(userMessage) {
 	}
 
 	const canned = cannedReply(n);
+	if (canned?.holdUntil !== undefined) {
+		holdUntil(String(canned.holdUntil), () => answer(canned));
+	} else {
+		answer(canned);
+	}
+}
+
+function answer(canned) {
 	let structured;
 	let text;
 	let error;
@@ -104,7 +132,8 @@ function reply(userMessage) {
 	else if (schema) structured = sampleFromSchema(schema);
 	else text = 'Sample text answer';
 
-	const answer = structured !== undefined ? JSON.stringify(structured) : text;
+	const answerText =
+		structured !== undefined ? JSON.stringify(structured) : text;
 	const base = {
 		session_id: sessionId,
 		duration_ms: 1,
@@ -142,7 +171,7 @@ function reply(userMessage) {
 		session_id: sessionId,
 		message: {
 			role: 'assistant',
-			content: [{ type: 'text', text: answer }],
+			content: [{ type: 'text', text: answerText }],
 			usage: { input_tokens: 1, output_tokens: 1 }
 		}
 	});
@@ -151,7 +180,7 @@ function reply(userMessage) {
 			type: 'result',
 			subtype: 'success',
 			is_error: false,
-			result: answer,
+			result: answerText,
 			...(structured !== undefined ? { structured_output: structured } : {}),
 			...base
 		},
