@@ -205,6 +205,7 @@ export {
 	checkDoneGate,
 	getUncheckedCriteria,
 	parseChecklistNumbers,
+	keepChecklistFields,
 	type ChecklistItem,
 	type TaskChecklist,
 	type ChecklistChanges,

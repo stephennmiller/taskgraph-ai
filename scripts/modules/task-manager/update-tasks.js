@@ -1,5 +1,9 @@
 import { BORDER_COLOR, TABLE_BORDER, theme } from '@tm/cli/theme';
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	keepChecklistFields,
+	reconcileDependencySources
+} from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
@@ -279,6 +283,8 @@ async function updateTasks(
 							if (restored.testStrategy == null && original) {
 								restored.testStrategy = original.testStrategy;
 							}
+							// The AI schema has no criteria; keep the stored checklist
+							keepChecklistFields(restored, original);
 							assignMetadata(
 								restored,
 								reconcileDependencySources(subtask, original, task.id)

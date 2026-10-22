@@ -75,6 +75,31 @@ export function normalizeAcceptanceCriteria(
 }
 
 /**
+ * Copy a task's checklist state (its criteria and checked Definition of Done
+ * items) from the task as stored onto a rewritten version of it. AI rewrites
+ * (`update-task`, `update`) return tasks without these fields; without this
+ * they would drop the criteria and, with them, the done gate.
+ *
+ * @param target - The rewritten task or subtask, changed in place
+ * @param source - The task or subtask as stored, if there was one
+ * @returns The target
+ */
+export function keepChecklistFields<T extends object>(
+	target: T,
+	source: ChecklistFields | undefined
+): T {
+	if (!source) return target;
+	const fields = target as ChecklistFields;
+	if (source.acceptanceCriteria !== undefined) {
+		fields.acceptanceCriteria = source.acceptanceCriteria;
+	}
+	if (source.definitionOfDoneChecked !== undefined) {
+		fields.definitionOfDoneChecked = source.definitionOfDoneChecked;
+	}
+	return target;
+}
+
+/**
  * The Definition of Done as configured: a list of non-blank strings.
  * Anything else reads as no Definition of Done.
  */

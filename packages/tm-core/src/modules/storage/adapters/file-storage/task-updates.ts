@@ -210,7 +210,14 @@ export function modifyTaskIn(
 	taskId: string,
 	change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates
 ): Outcome<Task | Subtask> {
-	const [parentId, subId] = taskId.split('.');
+	const parts = taskId.split('.');
+	if (parts.length > 2) {
+		throw taskNotFound(
+			`Task ${taskId} not found: sub-subtask IDs aren't supported`,
+			`Task ${taskId} not found`
+		);
+	}
+	const [parentId, subId] = parts;
 	const taskIndex = tasks.findIndex((t) => String(t.id) === String(parentId));
 	if (taskIndex === -1) {
 		throw taskNotFound(`Task ${parentId} not found`);

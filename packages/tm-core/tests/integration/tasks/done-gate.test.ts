@@ -57,6 +57,9 @@ describe('done gate', () => {
 			createTask({ id: '1', title: 'Task 1', acceptanceCriteria: ['Login works', 'Tokens expire'] })
 		]);
 
+		const tasksPath = path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json');
+		const before = fs.readFileSync(tasksPath, 'utf-8');
+
 		const error = await tmCore.tasks
 			.updateStatus('1', 'done')
 			.catch((e: unknown) => e);
@@ -65,7 +68,11 @@ describe('done gate', () => {
 			ERROR_CODES.CRITERIA_UNCHECKED
 		);
 		expect(getUncheckedCriteria(error)?.unchecked).toHaveLength(2);
-		expect((await readTask('1')).status).toBe('pending');
+		// The refused write leaves the file byte for byte as it was
+		expect(fs.readFileSync(tasksPath, 'utf-8')).toBe(before);
+		// and releases the lock: the next write goes through
+		await tmCore.tasks.updateStatus('1', 'in-progress');
+		expect((await readTask('1')).status).toBe('in-progress');
 	});
 
 	it('marks the task done once every criterion is checked', async () => {
@@ -159,5 +166,28 @@ describe('done gate', () => {
 			tmCore.tasks.updateChecklist('1', { check: [1, 5] })
 		).rejects.toThrow("Task 1 has 1 criterion; there's no 5");
 		expect((await readTask('1')).acceptanceCriteria).toEqual(['Login works']);
+	});
+
+	it('refuses a sub-subtask ID rather than checking the subtask it starts with', async () => {
+		await setup([
+			createTask({
+				id: '1',
+				title: 'Task 1',
+				subtasks: [
+					createSubtask({
+						id: 2,
+						parentId: '1',
+						title: 'Sub',
+						acceptanceCriteria: ['Sub works']
+					})
+				]
+			})
+		]);
+
+		await expect(
+			tmCore.tasks.updateChecklist('1.2.3', { check: [1] })
+		).rejects.toThrow('1.2.3');
+		const sub = (await readTask('1')).subtasks[0];
+		expect(sub.acceptanceCriteria).toEqual(['Sub works']);
 	});
 });
