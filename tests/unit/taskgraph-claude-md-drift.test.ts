@@ -139,10 +139,13 @@ describe.each(DOCS)('%s', (docPath) => {
 });
 
 describe('taskgraph prime rules', () => {
-	const calls = PRIME_RULES.flatMap((rule) => invocations(rule.command));
+	const calls = PRIME_RULES.flatMap((rule) => [
+		...invocations(rule.text),
+		...invocations(rule.command)
+	]);
 
-	it('name a taskgraph command in four of the five rules (guards the extraction)', () => {
-		expect(calls).toHaveLength(4);
+	it('name five taskgraph commands across the rules (guards the extraction)', () => {
+		expect(calls).toHaveLength(5);
 	});
 
 	it('only name CLI commands the program registers', () => {

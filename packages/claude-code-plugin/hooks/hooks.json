@@ -6,7 +6,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "d=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; [ -d \"$d/.taskgraph\" ] || exit 0; pre=\"This project tracks work in TaskGraph, but\"; if ! command -v taskgraph >/dev/null 2>&1; then echo \"$pre the taskgraph CLI is not installed. Ask the user to run: npm install -g taskgraph-ai\"; exit 0; fi; if out=$(TASKGRAPH_SKIP_AUTO_UPDATE=1 taskgraph prime --project \"$d\" 2>&1); then printf '%s\\n' \"$out\"; else case \"$out\" in *\"nknown command\"*) echo \"$pre the installed taskgraph CLI is too old for the plugin. Ask the user to run: npm install -g taskgraph-ai@latest\";; *) echo \"$pre taskgraph prime failed:\"; printf '%s\\n' \"$out\";; esac; fi",
+						"command": "d=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; [ -f \"$d/.taskgraph/config.json\" ] || [ -f \"$d/.taskgraph/tasks/tasks.json\" ] || exit 0; pre=\"This project tracks work in TaskGraph, but\"; if ! command -v taskgraph >/dev/null 2>&1; then echo \"$pre the taskgraph CLI is not installed. Ask the user to run: npm install -g taskgraph-ai\"; exit 0; fi; export TASKGRAPH_SKIP_AUTO_UPDATE=1; if out=$(taskgraph prime --project \"$d\" 2>/dev/null); then printf '%s\\n' \"$out\"; else out=$(taskgraph prime --project \"$d\" 2>&1); case \"$out\" in *\"nknown command\"*) echo \"$pre the installed taskgraph CLI is too old for the plugin. Ask the user to run: npm install -g taskgraph-ai@latest\";; *) echo \"$pre taskgraph prime failed:\"; printf '%s\\n' \"$out\";; esac; fi",
 						"timeout": 20
 					}
 				]

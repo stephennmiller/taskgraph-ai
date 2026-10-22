@@ -121,6 +121,31 @@ describe('buildPrimeContext', () => {
 		]);
 	});
 
+	it('leaves a pending task out of ready while one of its subtasks is in progress', () => {
+		const context = buildPrimeContext(
+			[
+				createTask({
+					id: 1,
+					title: 'Auth',
+					priority: 'high',
+					subtasks: [
+						createSubtask({
+							id: 1,
+							title: 'Endpoint',
+							status: 'in-progress',
+							parentId: '1'
+						})
+					]
+				}),
+				createTask({ id: 2, title: 'Settings page' })
+			],
+			{ tag: 'master' }
+		);
+
+		expect(context.inProgress.map((t) => t.id)).toEqual(['1.1']);
+		expect(context.ready.map((t) => t.id)).toEqual(['2']);
+	});
+
 	it('keeps long titles whole (the CLI cuts them to the terminal)', () => {
 		const title = 'A'.repeat(200);
 		const context = buildPrimeContext([createTask({ id: 1, title })], {

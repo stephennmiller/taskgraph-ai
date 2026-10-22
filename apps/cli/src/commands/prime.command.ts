@@ -6,12 +6,11 @@
  * next, and the workflow rules.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
-import { TASKGRAPH_DIR, type TmCore, createTmCore } from '@tm/core';
+import { type TmCore, createTmCore } from '@tm/core';
 import { Command } from 'commander';
 import { formatPrimeContext } from '../ui/formatters/prime-formatters.js';
-import { displayError, printError } from '../utils/error-handler.js';
+import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface PrimeCommandOptions {
@@ -39,15 +38,8 @@ export class PrimeCommand extends Command {
 	}
 
 	private async executeCommand(options: PrimeCommandOptions): Promise<void> {
+		// The program's requireProject hook has already checked this is a project
 		const projectRoot = path.resolve(getProjectRoot(options.project));
-		if (!fs.existsSync(path.join(projectRoot, TASKGRAPH_DIR))) {
-			printError(
-				`No TaskGraph project in ${projectRoot}`,
-				'Run `taskgraph init` to set one up'
-			);
-			process.exit(1);
-		}
-
 		let hasError = false;
 		try {
 			this.tmCore = await createTmCore({ projectPath: projectRoot });

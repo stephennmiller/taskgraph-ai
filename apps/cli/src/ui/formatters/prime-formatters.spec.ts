@@ -132,8 +132,44 @@ describe('formatPrimeContext', () => {
 	it('says when nothing is in progress and when nothing is ready', () => {
 		const text = render(context({ inProgress: [], ready: [] }));
 
-		expect(text).toContain('Nothing in progress. Claim a ready task first.');
+		expect(text).toContain('Nothing in progress.');
+		expect(text).not.toContain('Claim a ready task first');
 		expect(text).toContain('Nothing else is ready');
+	});
+
+	it('asks for a claim when nothing is in progress but a task is ready', () => {
+		const text = render(context({ inProgress: [] }));
+
+		expect(text).toContain('Nothing in progress. Claim a ready task first.');
+	});
+
+	it('shows two in-progress tasks in full and counts the rest, under 40 lines', () => {
+		const long = 'word '.repeat(40).trim();
+		const lines = render(
+			context({
+				inProgress: [1, 2, 3, 4, 5].map((id) => ({
+					id: String(id),
+					title: `Task ${id}`,
+					status: 'in-progress',
+					priority: 'medium',
+					doneWhen: [long, long, long]
+				})),
+				ready: [1, 2, 3].map((id) => ({
+					id: `9.${id}`,
+					title: 'Ready',
+					status: 'pending',
+					priority: 'medium'
+				}))
+			})
+		).split('\n');
+
+		expect(lines).toContain('  1  Task 1');
+		expect(lines).toContain('  2  Task 2');
+		expect(lines).not.toContain('  3  Task 3');
+		expect(lines).toContain(
+			'  3 more in progress: taskgraph list --status=in-progress'
+		);
+		expect(lines.length).toBeLessThan(40);
 	});
 
 	it('says all tasks are done when they are', () => {

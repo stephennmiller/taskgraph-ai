@@ -28,10 +28,12 @@ import type { PrimeContext, PrimeTask } from '@tm/core';
 import { theme } from '../theme.js';
 
 const INDENT = '  ';
-/** Most lines of done-when text per task before pointing at `show` */
+/** Most lines of done-when text before pointing at `show`, shared by the tasks shown */
 const MAX_DONE_WHEN_LINES = 6;
 /** Most lines one criterion may wrap to */
 const MAX_LINES_PER_CRITERION = 3;
+/** Most in-progress tasks shown in full, so the output stays under 40 lines */
+const MAX_IN_PROGRESS = 2;
 
 const cut = (text: string, width: number) =>
 	text.length > width ? `${text.slice(0, Math.max(1, width - 1))}…` : text;
@@ -126,15 +128,23 @@ export function formatPrimeContext(
 
 function formatInProgress(context: PrimeContext, width: number): string[] {
 	if (context.inProgress.length === 0) {
-		return [theme.muted('Nothing in progress. Claim a ready task first.')];
+		return [
+			theme.muted(
+				context.ready.length > 0
+					? 'Nothing in progress. Claim a ready task first.'
+					: 'Nothing in progress.'
+			)
+		];
 	}
 
-	const idWidth = Math.max(...context.inProgress.map((t) => t.id.length));
+	const shownTasks = context.inProgress.slice(0, MAX_IN_PROGRESS);
+	const idWidth = Math.max(...shownTasks.map((t) => t.id.length));
 	const sub = INDENT + ' '.repeat(idWidth + 2);
 	const textWidth = width - sub.length - 2;
 	const lines = [theme.heading('In progress')];
+	const maxDoneWhenLines = Math.floor(MAX_DONE_WHEN_LINES / shownTasks.length);
 
-	for (const task of context.inProgress) {
+	for (const task of shownTasks) {
 		lines.push(taskRow(task, idWidth, width));
 		if (task.doneWhen.length === 0) {
 			lines.push(
@@ -147,7 +157,7 @@ function formatInProgress(context: PrimeContext, width: number): string[] {
 		let shown = 0;
 		for (const criterion of task.doneWhen) {
 			const wrapped = wrap(criterion, textWidth, MAX_LINES_PER_CRITERION);
-			if (used + wrapped.length > MAX_DONE_WHEN_LINES) break;
+			if (used + wrapped.length > maxDoneWhenLines) break;
 			wrapped.forEach((line, i) => {
 				lines.push(`${sub}${i === 0 ? '- ' : '  '}${line}`);
 			});
@@ -160,6 +170,12 @@ function formatInProgress(context: PrimeContext, width: number): string[] {
 				`${sub}${theme.muted(cut(`${hidden} more: taskgraph show ${task.id}`, textWidth + 2))}`
 			);
 		}
+	}
+	const notShown = context.inProgress.length - shownTasks.length;
+	if (notShown > 0) {
+		lines.push(
+			`${INDENT}${theme.muted(cut(`${notShown} more in progress: taskgraph list --status=in-progress`, width - INDENT.length))}`
+		);
 	}
 	return lines;
 }

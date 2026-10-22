@@ -6,6 +6,7 @@
  * rules; the agent guide init writes only points here.
  */
 
+import { isTaskComplete } from '../../../common/constants/index.js';
 import type { Task } from '../../../common/types/index.js';
 import { rankNextTasks } from './next-task.js';
 
@@ -25,8 +26,9 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 		command: 'taskgraph set-status --id=<id> --status=in-progress'
 	},
 	{
-		text: 'Log what you did and decided as you go',
-		command: 'taskgraph update-task --id=<id> --append --prompt="<note>"'
+		// update-subtask takes only subtask IDs ("3.2"), update-task only task IDs
+		text: 'Log notes as you go (a top-level task: taskgraph update-task --append)',
+		command: 'taskgraph update-subtask --id=<id> --prompt="<note>"'
 	},
 	{
 		text: 'File work you find as a new task instead of doing it now',
@@ -75,9 +77,6 @@ export interface BuildPrimeContextOptions {
 	/** How many ready tasks to include (default 3) */
 	readyLimit?: number;
 }
-
-const isDone = (status: string | undefined) =>
-	status === 'done' || status === 'completed' || status === 'cancelled';
 
 /** Acceptance criteria if any, else the test strategy, else nothing */
 function doneWhen(item: {
@@ -130,8 +129,15 @@ export function buildPrimeContext(
 	}
 
 	const titles = new Map(tasks.map((t) => [String(t.id), t.title]));
+	// A task whose subtask is in progress is being worked, so it isn't ready
+	const working = new Set(
+		inProgressSubtasks.map((st) => st.id.slice(0, st.id.indexOf('.')))
+	);
 	const ready = rankNextTasks(tasks)
-		.filter((t) => (t.status || 'pending') === 'pending')
+		.filter(
+			(t) =>
+				(t.status || 'pending') === 'pending' && !working.has(String(t.id))
+		)
 		.slice(0, readyLimit)
 		.map((t): PrimeTask => {
 			const parentId = (t as Task & { parentId?: string }).parentId;
@@ -148,7 +154,7 @@ export function buildPrimeContext(
 		tag: options.tag,
 		counts: {
 			total: tasks.length,
-			done: tasks.filter((t) => isDone(t.status)).length
+			done: tasks.filter((t) => isTaskComplete(t.status)).length
 		},
 		inProgress: [...inProgressSubtasks, ...inProgressTasks],
 		ready,
