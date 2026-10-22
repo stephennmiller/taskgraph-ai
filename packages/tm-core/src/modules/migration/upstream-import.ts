@@ -10,7 +10,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const TASKMASTER_DIR = '.taskmaster';
+// The only source file that names the project TaskGraph was forked from:
+// everything else refers to it through these constants, so the package
+// identity check (tests/unit/package-identity.test.js) stays meaningful.
+
+/** Display name of the upstream project */
+export const UPSTREAM_NAME = 'Task Master';
+/** Its project folder */
+export const UPSTREAM_DIR = '.taskmaster';
+/** The `init` flag that imports it, and the option key Commander gives it */
+export const UPSTREAM_IMPORT_FLAG = '--from-taskmaster';
+export const UPSTREAM_IMPORT_OPTION = 'fromTaskmaster';
 
 const TASKGRAPH_DIR = '.taskgraph';
 const TASKS_FILE = path.join('tasks', 'tasks.json');
@@ -44,24 +54,24 @@ const KEPT_GLOBAL_SETTINGS = [
 	'enableCodebaseAnalysis'
 ];
 
-export const TASKMASTER_IMPORT_ERRORS = {
-	NO_TASKMASTER_PROJECT: 'NO_TASKMASTER_PROJECT',
+export const UPSTREAM_IMPORT_ERRORS = {
+	NO_UPSTREAM_PROJECT: 'NO_UPSTREAM_PROJECT',
 	TASKGRAPH_HAS_TASKS: 'TASKGRAPH_HAS_TASKS',
 	INVALID_JSON: 'INVALID_JSON'
 } as const;
 
-export type TaskMasterImportErrorCode =
-	(typeof TASKMASTER_IMPORT_ERRORS)[keyof typeof TASKMASTER_IMPORT_ERRORS];
+export type UpstreamImportErrorCode =
+	(typeof UPSTREAM_IMPORT_ERRORS)[keyof typeof UPSTREAM_IMPORT_ERRORS];
 
 /** Why an import can't run, with the fix to show under the message */
-export class TaskMasterImportError extends Error {
+export class UpstreamImportError extends Error {
 	constructor(
-		readonly code: TaskMasterImportErrorCode,
+		readonly code: UpstreamImportErrorCode,
 		message: string,
 		readonly hint: string
 	) {
 		super(message);
-		this.name = 'TaskMasterImportError';
+		this.name = 'UpstreamImportError';
 	}
 }
 
@@ -83,7 +93,7 @@ export interface DroppedModel {
 	modelId: string;
 }
 
-export interface TaskMasterImportResult {
+export interface UpstreamImportResult {
 	/** Tags copied from tasks.json, in file order */
 	tags: ImportedTag[];
 	/** Top-level tasks across every tag */
@@ -112,10 +122,10 @@ function readJson(file: string, shown: string): unknown {
 	try {
 		return JSON.parse(text);
 	} catch (error) {
-		throw new TaskMasterImportError(
-			TASKMASTER_IMPORT_ERRORS.INVALID_JSON,
+		throw new UpstreamImportError(
+			UPSTREAM_IMPORT_ERRORS.INVALID_JSON,
 			`${shown} isn't valid JSON: ${(error as Error).message}`,
-			`Fix ${shown}, then run \`taskgraph init --from-taskmaster\` again`
+			`Fix ${shown}, then run \`taskgraph init ${UPSTREAM_IMPORT_FLAG}\` again`
 		);
 	}
 }
@@ -147,18 +157,18 @@ const countTasks = (tagged: Record<string, JsonObject>) =>
  * Check that `projectRoot` can be imported, before anything is written:
  * `.taskmaster/` exists, its tasks.json parses, and `.taskgraph/` has no tasks
  * yet (an empty tasks.json from `init` is fine).
- * @throws {TaskMasterImportError}
+ * @throws {UpstreamImportError}
  */
-export function checkTaskMasterImport(projectRoot: string): void {
-	const source = path.join(projectRoot, TASKMASTER_DIR);
+export function checkUpstreamImport(projectRoot: string): void {
+	const source = path.join(projectRoot, UPSTREAM_DIR);
 	if (!fs.statSync(source, { throwIfNoEntry: false })?.isDirectory()) {
-		throw new TaskMasterImportError(
-			TASKMASTER_IMPORT_ERRORS.NO_TASKMASTER_PROJECT,
-			`No ${TASKMASTER_DIR}/ folder in ${path.basename(projectRoot) || projectRoot}`,
-			`Run \`taskgraph init --from-taskmaster\` from the folder that holds ${TASKMASTER_DIR}/`
+		throw new UpstreamImportError(
+			UPSTREAM_IMPORT_ERRORS.NO_UPSTREAM_PROJECT,
+			`No ${UPSTREAM_DIR}/ folder in ${path.basename(projectRoot) || projectRoot}`,
+			`Run \`taskgraph init ${UPSTREAM_IMPORT_FLAG}\` from the folder that holds ${UPSTREAM_DIR}/`
 		);
 	}
-	readJson(path.join(source, TASKS_FILE), `${TASKMASTER_DIR}/tasks/tasks.json`);
+	readJson(path.join(source, TASKS_FILE), `${UPSTREAM_DIR}/tasks/tasks.json`);
 
 	const targetShown = `${TASKGRAPH_DIR}/tasks/tasks.json`;
 	const existing = toTaggedTasks(
@@ -166,8 +176,8 @@ export function checkTaskMasterImport(projectRoot: string): void {
 	);
 	const existingCount = countTasks(existing);
 	if (existingCount > 0) {
-		throw new TaskMasterImportError(
-			TASKMASTER_IMPORT_ERRORS.TASKGRAPH_HAS_TASKS,
+		throw new UpstreamImportError(
+			UPSTREAM_IMPORT_ERRORS.TASKGRAPH_HAS_TASKS,
 			`${TASKGRAPH_DIR}/ already has ${existingCount} ${existingCount === 1 ? 'task' : 'tasks'}; the import would replace them`,
 			`Move ${targetShown} aside first, or keep using it`
 		);
@@ -212,7 +222,7 @@ interface ConfigImport {
  * roles keep TaskGraph's model. Kept roles take their token and temperature
  * limits from `target`, since Task Master's were for another provider.
  */
-export function importTaskMasterConfig(
+export function importUpstreamConfig(
 	source: unknown,
 	target: JsonObject = {}
 ): ConfigImport {
@@ -271,23 +281,20 @@ const writeJson = (file: string, data: unknown) => {
 
 /**
  * Import `.taskmaster/` into `.taskgraph/` under `projectRoot`. Runs
- * {@link checkTaskMasterImport} first, so nothing is written when it can't
+ * {@link checkUpstreamImport} first, so nothing is written when it can't
  * finish. `.taskmaster/` is left untouched.
- * @throws {TaskMasterImportError}
+ * @throws {UpstreamImportError}
  */
-export function importTaskMasterProject(
+export function importUpstreamProject(
 	projectRoot: string
-): TaskMasterImportResult {
-	checkTaskMasterImport(projectRoot);
-	const source = path.join(projectRoot, TASKMASTER_DIR);
+): UpstreamImportResult {
+	checkUpstreamImport(projectRoot);
+	const source = path.join(projectRoot, UPSTREAM_DIR);
 	const target = path.join(projectRoot, TASKGRAPH_DIR);
 
 	// Tasks: every tag, as Task Master wrote them
 	const tagged = toTaggedTasks(
-		readJson(
-			path.join(source, TASKS_FILE),
-			`${TASKMASTER_DIR}/tasks/tasks.json`
-		)
+		readJson(path.join(source, TASKS_FILE), `${UPSTREAM_DIR}/tasks/tasks.json`)
 	);
 	const tags = Object.entries(tagged).map(([name, tag]) => ({
 		name,
@@ -306,10 +313,10 @@ export function importTaskMasterProject(
 	const configPath = path.join(target, CONFIG_FILE);
 	const targetConfig = readJson(configPath, `${TASKGRAPH_DIR}/${CONFIG_FILE}`);
 	const { config, keptModels, droppedModels, droppedSettings } =
-		importTaskMasterConfig(
+		importUpstreamConfig(
 			readJson(
 				path.join(source, CONFIG_FILE),
-				`${TASKMASTER_DIR}/${CONFIG_FILE}`
+				`${UPSTREAM_DIR}/${CONFIG_FILE}`
 			),
 			isObject(targetConfig) ? targetConfig : {}
 		);
@@ -321,7 +328,7 @@ export function importTaskMasterProject(
 	let currentTag: string | undefined;
 	const sourceState = readJson(
 		path.join(source, STATE_FILE),
-		`${TASKMASTER_DIR}/${STATE_FILE}`
+		`${UPSTREAM_DIR}/${STATE_FILE}`
 	);
 	if (isObject(sourceState)) {
 		const statePath = path.join(target, STATE_FILE);

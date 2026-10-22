@@ -9,10 +9,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-	TASKMASTER_IMPORT_ERRORS,
-	TaskMasterImportError,
-	checkTaskMasterImport,
-	importTaskMasterProject
+	UPSTREAM_IMPORT_ERRORS,
+	UpstreamImportError,
+	checkUpstreamImport,
+	importUpstreamProject
 } from '../../../src/modules/migration/index.js';
 import { FileStorage } from '../../../src/modules/storage/index.js';
 
@@ -40,14 +40,14 @@ function snapshot(dir: string): Record<string, string> {
 	);
 }
 
-describe('importTaskMasterProject', () => {
+describe('importUpstreamProject', () => {
 	let project: string;
 	const at = (...parts: string[]) => path.join(project, ...parts);
 	const readJson = (...parts: string[]) =>
 		JSON.parse(fs.readFileSync(at(...parts), 'utf8'));
 
 	beforeEach(() => {
-		project = fs.mkdtempSync(path.join(os.tmpdir(), 'taskmaster-import-'));
+		project = fs.mkdtempSync(path.join(os.tmpdir(), 'upstream-import-'));
 		fs.cpSync(fixture, project, { recursive: true });
 	});
 
@@ -56,7 +56,7 @@ describe('importTaskMasterProject', () => {
 	});
 
 	it('copies every tag with its tasks, subtasks and dependencies unchanged', () => {
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 
 		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual(
 			readJson('.taskmaster', 'tasks', 'tasks.json')
@@ -69,7 +69,7 @@ describe('importTaskMasterProject', () => {
 	});
 
 	it('leaves tasks TaskGraph reads back by tag, dependencies intact', async () => {
-		importTaskMasterProject(project);
+		importUpstreamProject(project);
 		const storage = new FileStorage(project);
 
 		const master = await storage.loadTasks('master');
@@ -83,7 +83,7 @@ describe('importTaskMasterProject', () => {
 	});
 
 	it('copies docs, reports and templates, including nested folders', () => {
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 
 		expect(listFiles(at('.taskgraph'))).toEqual(
 			expect.arrayContaining([
@@ -101,7 +101,7 @@ describe('importTaskMasterProject', () => {
 		fs.mkdirSync(at('.taskgraph', 'templates'), { recursive: true });
 		fs.writeFileSync(at('.taskgraph', 'templates', 'example_prd.txt'), 'ours');
 
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 
 		expect(
 			fs.readFileSync(at('.taskgraph', 'templates', 'example_prd.txt'), 'utf8')
@@ -110,7 +110,7 @@ describe('importTaskMasterProject', () => {
 	});
 
 	it('does not copy provider settings or API keys', () => {
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 		const config = readJson('.taskgraph', 'config.json');
 		const everything = Object.values(snapshot(at('.taskgraph'))).join('\n');
 
@@ -152,7 +152,7 @@ describe('importTaskMasterProject', () => {
 		};
 		fs.writeFileSync(at('.taskgraph', 'config.json'), JSON.stringify(defaults));
 
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 		const { models } = readJson('.taskgraph', 'config.json');
 
 		expect(result.keptModels).toEqual([
@@ -172,7 +172,7 @@ describe('importTaskMasterProject', () => {
 	});
 
 	it('carries over the selected tag and branch mapping', () => {
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 
 		expect(result.currentTag).toBe('feature-auth');
 		expect(readJson('.taskgraph', 'state.json')).toMatchObject({
@@ -184,7 +184,7 @@ describe('importTaskMasterProject', () => {
 	it('leaves .taskmaster/ exactly as it was', () => {
 		const before = snapshot(at('.taskmaster'));
 
-		importTaskMasterProject(project);
+		importUpstreamProject(project);
 
 		expect(snapshot(at('.taskmaster'))).toEqual(before);
 	});
@@ -196,7 +196,7 @@ describe('importTaskMasterProject', () => {
 			JSON.stringify(legacy)
 		);
 
-		const result = importTaskMasterProject(project);
+		const result = importUpstreamProject(project);
 
 		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual({
 			master: legacy
@@ -212,21 +212,21 @@ describe('importTaskMasterProject', () => {
 			JSON.stringify({ master: { tasks: [], metadata: {} } })
 		);
 
-		expect(importTaskMasterProject(project).taskCount).toBe(4);
+		expect(importUpstreamProject(project).taskCount).toBe(4);
 	});
 });
 
-describe('checkTaskMasterImport', () => {
+describe('checkUpstreamImport', () => {
 	let project: string;
 	const at = (...parts: string[]) => path.join(project, ...parts);
 
 	/** The error the check throws, or undefined */
-	function checkError(): TaskMasterImportError | undefined {
+	function checkError(): UpstreamImportError | undefined {
 		try {
-			checkTaskMasterImport(project);
+			checkUpstreamImport(project);
 			return undefined;
 		} catch (error) {
-			return error as TaskMasterImportError;
+			return error as UpstreamImportError;
 		}
 	}
 
@@ -244,12 +244,10 @@ describe('checkTaskMasterImport', () => {
 		const ours = JSON.stringify({ master: { tasks: [{ id: 1 }, { id: 2 }] } });
 		fs.writeFileSync(at('.taskgraph', 'tasks', 'tasks.json'), ours);
 
-		expect(() => importTaskMasterProject(project)).toThrow(
-			TaskMasterImportError
-		);
+		expect(() => importUpstreamProject(project)).toThrow(UpstreamImportError);
 		const error = checkError();
 
-		expect(error?.code).toBe(TASKMASTER_IMPORT_ERRORS.TASKGRAPH_HAS_TASKS);
+		expect(error?.code).toBe(UPSTREAM_IMPORT_ERRORS.TASKGRAPH_HAS_TASKS);
 		expect(error?.message).toBe(
 			'.taskgraph/ already has 2 tasks; the import would replace them'
 		);
@@ -267,7 +265,7 @@ describe('checkTaskMasterImport', () => {
 
 		const error = checkError();
 
-		expect(error?.code).toBe(TASKMASTER_IMPORT_ERRORS.NO_TASKMASTER_PROJECT);
+		expect(error?.code).toBe(UPSTREAM_IMPORT_ERRORS.NO_UPSTREAM_PROJECT);
 		expect(error?.hint).toContain('from the folder that holds .taskmaster/');
 	});
 
@@ -276,7 +274,7 @@ describe('checkTaskMasterImport', () => {
 
 		const error = checkError();
 
-		expect(error?.code).toBe(TASKMASTER_IMPORT_ERRORS.INVALID_JSON);
+		expect(error?.code).toBe(UPSTREAM_IMPORT_ERRORS.INVALID_JSON);
 		expect(error?.message).toMatch(
 			/^\.taskmaster\/tasks\/tasks\.json isn't valid JSON/
 		);

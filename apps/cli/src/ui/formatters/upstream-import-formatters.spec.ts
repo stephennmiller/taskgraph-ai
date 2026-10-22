@@ -1,13 +1,15 @@
+import { UPSTREAM_DIR } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import {
-	type TaskMasterImportSummary,
-	formatTaskMasterImport
-} from './taskmaster-import-formatters.js';
+	type UpstreamImportSummary,
+	formatUpstreamImport
+} from './upstream-import-formatters.js';
 
 // Strip ANSI codes so assertions read like the terminal does
+const dir = `${UPSTREAM_DIR}/`;
 const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
 
-const imported: TaskMasterImportSummary = {
+const imported: UpstreamImportSummary = {
 	result: {
 		tags: [
 			{ name: 'master', tasks: 3 },
@@ -33,28 +35,28 @@ const imported: TaskMasterImportSummary = {
 	]
 };
 
-describe('formatTaskMasterImport', () => {
+describe('formatUpstreamImport', () => {
 	it('leads with what moved, then the other files, then the next step', () => {
-		const lines = plain(formatTaskMasterImport(imported)).split('\n');
+		const lines = plain(formatUpstreamImport(imported)).split('\n');
 
 		expect(lines).toEqual([
-			'✓ Imported 4 tasks in 2 tags, docs, reports and templates from .taskmaster/',
+			`✓ Imported 4 tasks in 2 tags, docs, reports and templates from ${dir}`,
 			'  .gitignore    created',
 			'  .env.example  optional settings',
 			'Skipped the research model (perplexity sonar-pro) and 6 provider settings',
-			'.taskmaster/ is unchanged · Next: taskgraph next'
+			`${dir} is unchanged · Next: taskgraph next`
 		]);
 	});
 
 	it('fits every line in 80 columns', () => {
-		const lines = plain(formatTaskMasterImport(imported)).split('\n');
+		const lines = plain(formatUpstreamImport(imported)).split('\n');
 
 		for (const line of lines) expect(line.length).toBeLessThanOrEqual(80);
 	});
 
 	it('names only the roles when several models were skipped', () => {
 		const text = plain(
-			formatTaskMasterImport({
+			formatUpstreamImport({
 				...imported,
 				result: {
 					...imported.result,
@@ -72,7 +74,7 @@ describe('formatTaskMasterImport', () => {
 
 	it('says nothing was skipped by leaving the line out', () => {
 		const text = plain(
-			formatTaskMasterImport({
+			formatUpstreamImport({
 				...imported,
 				result: { ...imported.result, droppedModels: [], droppedSettings: [] }
 			})
@@ -83,7 +85,7 @@ describe('formatTaskMasterImport', () => {
 
 	it('uses singular words for one task in one tag', () => {
 		const first = plain(
-			formatTaskMasterImport({
+			formatUpstreamImport({
 				result: {
 					tags: [{ name: 'master', tasks: 1 }],
 					taskCount: 1,
@@ -96,15 +98,15 @@ describe('formatTaskMasterImport', () => {
 		).split('\n');
 
 		expect(first).toEqual([
-			'✓ Imported 1 task from .taskmaster/',
+			`✓ Imported 1 task from ${dir}`,
 			'Skipped 1 provider setting',
-			'.taskmaster/ is unchanged · Next: taskgraph next'
+			`${dir} is unchanged · Next: taskgraph next`
 		]);
 	});
 
-	it('points at parse-prd when .taskmaster/ had no tasks', () => {
+	it('points at parse-prd when the upstream folder had no tasks', () => {
 		const text = plain(
-			formatTaskMasterImport({
+			formatUpstreamImport({
 				result: {
 					tags: [],
 					taskCount: 0,
@@ -117,7 +119,7 @@ describe('formatTaskMasterImport', () => {
 		);
 
 		expect(text).toBe(
-			'✓ Imported docs from .taskmaster/\n.taskmaster/ is unchanged · Next: taskgraph parse-prd'
+			`✓ Imported docs from ${dir}\n${dir} is unchanged · Next: taskgraph parse-prd`
 		);
 	});
 });

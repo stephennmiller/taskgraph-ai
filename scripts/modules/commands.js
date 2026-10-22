@@ -84,6 +84,9 @@ import {
 
 import {
 	CUSTOM_PROVIDERS,
+	UPSTREAM_DIR,
+	UPSTREAM_IMPORT_FLAG,
+	UPSTREAM_NAME,
 	findProjectRoot,
 	isTaskGraphProject
 } from '@tm/core';
@@ -2174,7 +2177,10 @@ function registerCommands(programInstance) {
 		.option('--no-git', 'Skip Git repository initialization')
 		.option('--git-tasks', 'Store tasks in Git')
 		.option('--no-git-tasks', 'No Git storage of tasks')
-		.option('--from-taskmaster', 'Import a Task Master project (.taskmaster/)')
+		.option(
+			UPSTREAM_IMPORT_FLAG,
+			`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
+		)
 		.action(async (cmdOptions) => {
 			// cmdOptions contains parsed arguments
 			// Parse rules: accept space or comma separated, default to all available rules

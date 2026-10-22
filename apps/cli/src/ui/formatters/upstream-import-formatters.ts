@@ -1,23 +1,24 @@
 /**
- * @fileoverview What `taskgraph init --from-taskmaster` moved, e.g.
+ * @fileoverview What `taskgraph init` moved when it imports the upstream
+ * project's folder (UPSTREAM_DIR from @tm/core), e.g.
  *
- *   ✓ Imported 4 tasks in 2 tags, docs, reports and templates from .taskmaster/
+ *   ✓ Imported 4 tasks in 2 tags, docs, reports and templates from <dir>/
  *     .gitignore    created
  *   Skipped the research model (perplexity sonar-pro) and 6 provider settings
- *   .taskmaster/ is unchanged · Next: taskgraph next
+ *   <dir>/ is unchanged · Next: taskgraph next
  *
  * It replaces init's usual summary and its "write a PRD" steps, which don't
  * apply to a project that already has tasks.
  */
 
-import type { TaskMasterImportResult } from '@tm/core';
+import { UPSTREAM_DIR, type UpstreamImportResult } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import type { InitChange } from './init-summary-formatters.js';
 
-export interface TaskMasterImportSummary {
+export interface UpstreamImportSummary {
 	result: Pick<
-		TaskMasterImportResult,
+		UpstreamImportResult,
 		'tags' | 'taskCount' | 'copiedFiles' | 'droppedModels' | 'droppedSettings'
 	>;
 	/** Other files init created or changed (not .taskgraph/ itself) */
@@ -33,7 +34,7 @@ function joinList(items: string[]): string {
 	return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
-function whatMoved(result: TaskMasterImportSummary['result']): string[] {
+function whatMoved(result: UpstreamImportSummary['result']): string[] {
 	const moved: string[] = [];
 	if (result.tags.length > 0) {
 		const tasks = plural(result.taskCount, 'task');
@@ -47,7 +48,7 @@ function whatMoved(result: TaskMasterImportSummary['result']): string[] {
 	return moved;
 }
 
-function whatWasSkipped(result: TaskMasterImportSummary['result']): string {
+function whatWasSkipped(result: UpstreamImportSummary['result']): string {
 	const models = result.droppedModels;
 	const skipped: string[] = [];
 	// One model names what it was; several just name the roles, to fit a line
@@ -66,17 +67,15 @@ function whatWasSkipped(result: TaskMasterImportSummary['result']): string {
 }
 
 /**
- * Format the summary printed at the end of `taskgraph init --from-taskmaster`.
+ * Format the summary printed at the end of an importing `taskgraph init`.
  */
-export function formatTaskMasterImport(
-	summary: TaskMasterImportSummary
-): string {
+export function formatUpstreamImport(summary: UpstreamImportSummary): string {
 	const { result, changes } = summary;
 	const moved = whatMoved(result);
 	const lines = [
 		moved.length > 0
-			? `${chalk.green('✓')} Imported ${joinList(moved)} from .taskmaster/`
-			: `${chalk.green('✓')} Set up TaskGraph; .taskmaster/ had nothing to import`
+			? `${chalk.green('✓')} Imported ${joinList(moved)} from ${UPSTREAM_DIR}/`
+			: `${chalk.green('✓')} Set up TaskGraph; ${UPSTREAM_DIR}/ had nothing to import`
 	];
 
 	const width = Math.max(0, ...changes.map((change) => change.path.length));
@@ -89,7 +88,7 @@ export function formatTaskMasterImport(
 
 	const next = result.taskCount > 0 ? 'taskgraph next' : 'taskgraph parse-prd';
 	lines.push(
-		`${theme.muted('.taskmaster/ is unchanged ·')} Next: ${theme.brand(next)}`
+		`${theme.muted(`${UPSTREAM_DIR}/ is unchanged ·`)} Next: ${theme.brand(next)}`
 	);
 	return lines.join('\n');
 }
