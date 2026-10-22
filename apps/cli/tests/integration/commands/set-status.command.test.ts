@@ -205,4 +205,45 @@ describe('set-status command', () => {
 		expect(tasks.master.tasks[1].status).toBe('done'); // Task 2 updated
 		expect(tasks.master.tasks[2].status).toBe('pending'); // Task 3 unchanged
 	});
+
+	it('reports a --check it saved when the status then fails, in JSON', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({
+						id: 1,
+						title: 'Gated',
+						status: 'in-progress',
+						acceptanceCriteria: ['Login works', 'Tokens expire']
+					})
+				]
+			})
+		);
+
+		let stdout = '';
+		let exitCode = 0;
+		try {
+			execSync(`node "${binPath}" set-status 1 done --check 1 -f json`, {
+				stdio: 'pipe',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			});
+		} catch (error: any) {
+			stdout = error.stdout?.toString() ?? '';
+			exitCode = error.status;
+		}
+
+		expect(exitCode).toBe(1);
+		const failure = JSON.parse(stdout.trim().split('\n').pop() as string);
+		expect(failure).toMatchObject({
+			success: false,
+			checklist: { taskId: '1', checkedCount: 1 }
+		});
+		expect(failure.unchecked).toHaveLength(1);
+		const saved = readTasks().master.tasks[0];
+		expect(saved.status).toBe('in-progress');
+		expect(saved.acceptanceCriteria[0]).toEqual({
+			text: 'Login works',
+			checked: true
+		});
+	});
 });

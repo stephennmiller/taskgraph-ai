@@ -273,6 +273,8 @@ export class SetStatusCommand extends Command {
 								error: errorMessage,
 								taskId,
 								...(gate && { unchecked: gate.unchecked }),
+								// --check was saved before the status failed
+								...(checklist && { checklist }),
 								timestamp: new Date().toISOString()
 							})
 						);

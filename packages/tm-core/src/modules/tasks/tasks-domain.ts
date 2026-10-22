@@ -293,6 +293,19 @@ export class TasksDomain {
 	}
 
 	/**
+	 * A task or subtask's checklist as stored, by ID ("3" or "3.2"); undefined
+	 * when there is no such task. Use this rather than `getChecklist` for a
+	 * task from `list` or `getNext`, which leave the criteria fields out.
+	 */
+	async loadChecklist(
+		taskId: string,
+		tag?: string
+	): Promise<TaskChecklist | undefined> {
+		const { task, isSubtask } = await this.get(taskId, tag);
+		return task ? this.getChecklist(task, isSubtask) : undefined;
+	}
+
+	/**
 	 * Check and uncheck checklist items by number, in one write.
 	 * Throws INVALID_INPUT, changing nothing, for a number the task's
 	 * checklist doesn't have.

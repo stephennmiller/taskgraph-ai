@@ -107,12 +107,33 @@ describe('set_task_status criteria gate', () => {
 
 		expect(tasks.updateChecklist).toHaveBeenCalledWith(
 			'3',
-			{ check: [1, 2] },
+			{ check: [1, 2], uncheck: undefined },
 			undefined
 		);
 		expect(tasks.updateChecklist.mock.invocationCallOrder[0]).toBeLessThan(
 			tasks.updateStatus.mock.invocationCallOrder[0]
 		);
+	});
+
+	it('clears criteria with uncheck and no status', async () => {
+		tasks.updateChecklist.mockResolvedValue({
+			items: [],
+			checkedCount: 0,
+			unchecked: []
+		});
+
+		const result = await register().execute(
+			{ projectRoot: project, id: '3', uncheck: [2] },
+			ctx
+		);
+
+		expect(result.isError).toBeFalsy();
+		expect(tasks.updateChecklist).toHaveBeenCalledWith(
+			'3',
+			{ check: undefined, uncheck: [2] },
+			undefined
+		);
+		expect(tasks.updateStatus).not.toHaveBeenCalled();
 	});
 
 	it('refuses check with several task IDs', async () => {

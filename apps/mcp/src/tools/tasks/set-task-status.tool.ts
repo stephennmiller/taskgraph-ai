@@ -29,7 +29,13 @@ const SetTaskStatusSchema = z.object({
 		.array(z.number().int().positive())
 		.optional()
 		.describe(
-			'Acceptance criteria to check off, by number (the numbers get_task and a refused done list). Needs a single task ID. Applied before the status.'
+			"Checklist items to check off, by number. A task's acceptance criteria are numbered from 1 in the order get_task lists them, then the project's Definition of Done items follow (top-level tasks only); a refused done lists every unchecked item with its number. Needs a single task ID. Applied before the status."
+		),
+	uncheck: z
+		.array(z.number().int().positive())
+		.optional()
+		.describe(
+			'Checklist items to clear again, by number (same numbering as check). Needs a single task ID.'
 		),
 	force: z
 		.boolean()
@@ -58,7 +64,7 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(async (args: SetTaskStatusArgs, { log, tmCore }: ToolContext) => {
-				const { id, status, check, force, projectRoot, tag } = args;
+				const { id, status, check, uncheck, force, projectRoot, tag } = args;
 
 				try {
 					log.info(
@@ -68,17 +74,18 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 					// Parse and validate task IDs (validation already done by schema, this handles splitting)
 					const taskIds = parseTaskIds(id);
 
-					if (!status && !check?.length) {
+					const changesChecklist = Boolean(check?.length || uncheck?.length);
+					if (!status && !changesChecklist) {
 						throw new Error('Pass a status, criteria to check, or both');
 					}
 					let checklist;
-					if (check?.length) {
+					if (changesChecklist) {
 						if (taskIds.length !== 1) {
-							throw new Error('check takes one task ID');
+							throw new Error('check and uncheck take one task ID');
 						}
 						checklist = await tmCore.tasks.updateChecklist(
 							taskIds[0],
-							{ check },
+							{ check, uncheck },
 							tag
 						);
 					}
@@ -105,7 +112,7 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 
 					const message = status
 						? `Successfully updated ${results.length} task(s) to "${status}"`
-						: `Checked ${check?.join(', ')} on task ${taskIds[0]}`;
+						: `Updated the checklist of task ${taskIds[0]} (${checklist?.checkedCount ?? 0} of ${checklist?.items.length ?? 0} checked)`;
 					log.info(message);
 
 					return handleApiResult({

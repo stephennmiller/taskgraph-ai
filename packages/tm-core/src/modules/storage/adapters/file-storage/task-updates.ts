@@ -21,6 +21,10 @@ import type {
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
 
+/** 'completed' counts as done everywhere else, so it is gated too */
+const isDoneStatus = (status: TaskStatus) =>
+	status === 'done' || status === 'completed';
+
 /**
  * A missing task or subtask. Coded so callers can tell it apart from storage
  * failures; `userMessage` drops detail the ID already carries.
@@ -65,7 +69,7 @@ export function setTaskStatusIn(
 	if (oldStatus === newStatus) {
 		return { tasks: null, result };
 	}
-	if (newStatus === 'done') {
+	if (isDoneStatus(newStatus)) {
 		const refusal = options.guardDone?.(
 			tasks[taskIndex],
 			String(taskId),
@@ -146,7 +150,7 @@ function setSubtaskStatusIn(
 	if (oldStatus === newStatus) {
 		return { tasks: null, result };
 	}
-	if (newStatus === 'done') {
+	if (isDoneStatus(newStatus)) {
 		const refusal = options.guardDone?.(
 			parentTask.subtasks[subtaskIndex],
 			subtaskId,
