@@ -361,7 +361,8 @@ export class StartCommand extends Command {
 
 			displayTaskDetails(task, {
 				customHeader: headerText,
-				headerColor: 'yellow'
+				headerColor: 'yellow',
+				checklist: this.tmCore?.tasks.getChecklist(task)
 			});
 
 			// Show claude-code prompt

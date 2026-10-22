@@ -14,40 +14,13 @@ import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
 import { Marked, type MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
+import { wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 /** Answers wrap at the terminal width, but no wider than this */
 const MAX_ANSWER_WIDTH = 100;
 
 const visibleLength = (text: string) => stripVTControlCharacters(text).length;
-
-/**
- * Wrap a line at spaces without counting ANSI codes, starting each
- * continuation line with `indent`.
- */
-function wrapLine(line: string, width: number, indent: string): string[] {
-	const lead = line.match(/^ */)?.[0] ?? '';
-	const words = line.slice(lead.length).split(' ');
-	const lines: string[] = [];
-	let current = lead;
-	let length = lead.length;
-	let lineHasWord = false;
-
-	for (const word of words) {
-		const wordLength = visibleLength(word);
-		if (lineHasWord && length + 1 + wordLength > width) {
-			lines.push(current);
-			current = indent + word;
-			length = indent.length + wordLength;
-		} else {
-			current += (lineHasWord ? ' ' : '') + word;
-			length += (lineHasWord ? 1 : 0) + wordLength;
-		}
-		lineHasWord = true;
-	}
-	lines.push(current);
-	return lines;
-}
 
 /**
  * marked-terminal reflows paragraphs but not list items, so long items

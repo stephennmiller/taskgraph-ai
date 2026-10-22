@@ -3,6 +3,7 @@
  * Provides utilities for calculating dimensions, truncating text, and creating visual elements
  */
 
+import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
@@ -115,4 +116,36 @@ export function createProgressBar(
 	const bar = chalk.green('█').repeat(filled) + theme.muted('░').repeat(empty);
 
 	return `${bar} ${chalk.cyan(`${percentage}%`)} (${completed}/${total})`;
+}
+
+/**
+ * Wrap a line at spaces without counting ANSI codes, starting each
+ * continuation line with `indent`.
+ */
+export function wrapLine(
+	line: string,
+	width: number,
+	indent: string
+): string[] {
+	const lead = line.match(/^ */)?.[0] ?? '';
+	const words = line.slice(lead.length).split(' ');
+	const lines: string[] = [];
+	let current = lead;
+	let length = lead.length;
+	let lineHasWord = false;
+
+	for (const word of words) {
+		const wordLength = stripVTControlCharacters(word).length;
+		if (lineHasWord && length + 1 + wordLength > width) {
+			lines.push(current);
+			current = indent + word;
+			length = indent.length + wordLength;
+		} else {
+			current += (lineHasWord ? ' ' : '') + word;
+			length += (lineHasWord ? 1 : 0) + wordLength;
+		}
+		lineHasWord = true;
+	}
+	lines.push(current);
+	return lines;
 }

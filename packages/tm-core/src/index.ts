@@ -196,6 +196,21 @@ export {
 	type BuildBlocksMapResult
 } from './modules/tasks/utils/index.js';
 
+// Acceptance criteria and the Definition of Done
+export {
+	normalizeAcceptanceCriteria,
+	normalizeDefinitionOfDone,
+	buildChecklist,
+	applyChecklistChanges,
+	checkDoneGate,
+	getUncheckedCriteria,
+	parseChecklistNumbers,
+	type ChecklistItem,
+	type TaskChecklist,
+	type ChecklistChanges,
+	type ChecklistFields
+} from './modules/tasks/utils/index.js';
+
 // ========== Testing Utilities ==========
 
 // Test fixtures for integration tests

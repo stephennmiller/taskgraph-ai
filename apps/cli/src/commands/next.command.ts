@@ -214,7 +214,8 @@ export class NextCommand extends Command {
 		displayTaskDetails(task, {
 			customHeader,
 			headerColor: 'green',
-			showSuggestedActions: true
+			showSuggestedActions: true,
+			checklist: this.tmCore?.tasks.getChecklist(task)
 		});
 	}
 
