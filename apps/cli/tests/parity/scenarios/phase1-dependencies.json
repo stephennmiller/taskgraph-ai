@@ -1,0 +1,72 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["add-dependency", "--id=4", "--depends-on=1"],
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "5", "dependsOn": "1" }
+		},
+		["add-dependency", "--id=5", "--depends-on=2.1"],
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "2.2", "dependsOn": "2.1" }
+		},
+		["remove-dependency", "--id=4", "--depends-on=1"],
+		{
+			"mcp": "remove_dependency",
+			"input": { "projectRoot": "<project>", "id": "5", "dependsOn": "1" }
+		},
+		{ "args": ["add-dependency", "--id=2", "--depends-on=2"], "expectExit": 1 },
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "2", "dependsOn": "2" },
+			"expectError": true
+		},
+		{ "args": ["add-dependency", "--id=2", "--depends-on=5"], "expectExit": 1 },
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "2", "dependsOn": "5" },
+			"expectError": true
+		},
+		{
+			"args": ["add-dependency", "--id=2", "--depends-on=99"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "2", "dependsOn": "99" },
+			"expectError": true
+		},
+		{
+			"args": ["remove-dependency", "--id=99", "--depends-on=1"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "remove_dependency",
+			"input": { "projectRoot": "<project>", "id": "99", "dependsOn": "1" },
+			"expectError": true
+		},
+		["remove-dependency", "--id=2", "--depends-on=5"],
+		{
+			"mcp": "remove_dependency",
+			"input": { "projectRoot": "<project>", "id": "2", "dependsOn": "5" }
+		},
+		{
+			"shell": "node -e \"const fs=require('fs');const f='.taskgraph/tasks/tasks.json';const j=JSON.parse(fs.readFileSync(f,'utf8'));j.master.tasks[0].dependencies=[1,99];j.master.tasks[3].dependencies=[2,3,3];fs.writeFileSync(f,JSON.stringify(j,null,2))\""
+		},
+		{ "args": ["validate-dependencies"], "expectExit": 1 },
+		{
+			"mcp": "validate_dependencies",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "fix_dependencies",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"shell": "node -e \"const fs=require('fs');const f='.taskgraph/tasks/tasks.json';const j=JSON.parse(fs.readFileSync(f,'utf8'));j.master.tasks[0].dependencies=[1,99];fs.writeFileSync(f,JSON.stringify(j,null,2))\""
+		},
+		["fix-dependencies"],
+		["validate-dependencies"]
+	]
+}

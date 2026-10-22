@@ -1,0 +1,100 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["add-tag", "alpha", "--copy-from-current"],
+		["add-tag", "beta", "--copy-from=feature", "--description=From feature"],
+		{ "args": ["add-tag", "alpha"], "expectExit": 1 },
+		{
+			"shell": "git checkout -q -b topic && git -c user.name=x -c user.email=y commit -q --allow-empty -m x"
+		},
+		["add-tag", "--from-branch"],
+		{
+			"shell": "git checkout -q -b topic-two"
+		},
+		["tags", "add", "--from-branch"],
+		["tags", "add", "gamma", "--copy-from", "alpha", "--description", "Copy"],
+		{
+			"mcp": "add_tag",
+			"input": { "projectRoot": "<project>", "name": "delta" }
+		},
+		{
+			"mcp": "add_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"name": "epsilon",
+				"copyFromCurrent": true,
+				"description": "From the current tag"
+			}
+		},
+		{
+			"mcp": "add_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"name": "zeta",
+				"copyFromTag": "beta"
+			}
+		},
+		{
+			"mcp": "add_tag",
+			"input": { "projectRoot": "<project>", "name": "alpha" },
+			"expectError": true
+		},
+		["tags"],
+		["tags", "list", "--show-metadata"],
+		{
+			"mcp": "list_tags",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "list_tags",
+			"input": { "projectRoot": "<project>", "showMetadata": true }
+		},
+		["tags", "use", "alpha"],
+		{
+			"mcp": "use_tag",
+			"input": { "projectRoot": "<project>", "name": "beta" }
+		},
+		["use-tag", "master"],
+		{ "args": ["tags", "use", "nope"], "expectExit": 1 },
+		{
+			"mcp": "use_tag",
+			"input": { "projectRoot": "<project>", "name": "nope" },
+			"expectError": true
+		},
+		["tags", "rename", "gamma", "gamma-renamed"],
+		{
+			"mcp": "rename_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"oldName": "delta",
+				"newName": "delta-renamed"
+			}
+		},
+		["rename-tag", "epsilon", "epsilon-renamed"],
+		{ "args": ["tags", "rename", "nope", "other"], "expectExit": 1 },
+		["tags", "copy", "alpha", "alpha-copy", "--description", "A copy"],
+		{
+			"mcp": "copy_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"sourceName": "beta",
+				"targetName": "beta-copy",
+				"description": "A copy"
+			}
+		},
+		["copy-tag", "zeta", "zeta-copy"],
+		{ "args": ["tags", "copy", "nope", "other"], "expectExit": 1 },
+		["tags", "remove", "gamma-renamed", "--yes"],
+		{
+			"mcp": "delete_tag",
+			"input": { "projectRoot": "<project>", "name": "delta-renamed" }
+		},
+		["delete-tag", "epsilon-renamed", "--yes"],
+		{ "args": ["tags", "remove", "master", "--yes"], "expectExit": 1 },
+		{
+			"mcp": "delete_tag",
+			"input": { "projectRoot": "<project>", "name": "master" },
+			"expectError": true
+		}
+	]
+}

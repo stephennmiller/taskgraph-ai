@@ -46,6 +46,13 @@ Run every scenario below. Expect no differences.
 | `edge-cancelled-dependency.json` | `next` when a task depends on a cancelled task (#231). |
 | `edge-stale-lock.json` | `set-status` when a crashed older save left a stale `tasks.json.lock` file (#234). |
 
+| `phase1-dependencies.json` | Add, remove, validate and fix dependencies (CLI and MCP), a subtask ID as a dependency, and the failures: self-dependency, cycle, unknown ID. A deliberately broken graph for validate and fix. |
+| `phase1-removal.json` | `remove-task` (one and several IDs), `remove-subtask` (also `--convert`), `clear-subtasks` (one task, `--all`), and their failures (non-subtask, subtask ID, unknown task). |
+| `phase1-structure.json` | `add-subtask` (new, and converting a task), `move` (task to subtask, subtask to task, several IDs, onto an existing ID, across tags with and without `--with-dependencies` / `--ignore-dependencies`, and the cross-tag conflict). |
+| `phase1-tags.json` | `add-tag` (`--copy-from-current`, `--copy-from`, `--from-branch`), the `tags` subcommands, the older `use-tag`/`rename-tag`/`copy-tag`/`delete-tag`, the six tag MCP tools, and the failures (existing tag, unknown tag, removing `master`). |
+| `phase1-flat-format.json` | Reads and writes on an old file with no tags (`{"tasks": [...]}`): the first write moves it under `master`. |
+| `phase1-no-master.json` | A file whose only tag is `sprint`: reads fall back to it, writes to the missing current tag `master` fail until `tags use sprint`. |
+
 A step is a list of CLI arguments, or an object: `{"args": [...], "capture":
 "stdout"}` also compares what the command printed (use a JSON format), and
 `{"shell": "..."}` runs a shell command in the project to prepare state. Every
@@ -91,10 +98,53 @@ once per scenario, because a renamed parameter breaks clients.
   plain-text error replies. Everything else, including `data.message` and tips
   text, is compared as is.
 
+## Phase 1 coverage
+
+Each command and MCP tool the move into `@tm/core` touches, with the scenario
+that runs it on a success path. `fail` marks the scenario with a step that is
+meant to exit 1 (CLI `expectExit`, MCP `expectError`). A test checks that every
+name below appears in a scenario, so a gap shows up there.
+
+| CLI command | MCP tool | Success | Failure |
+|---|---|---|---|
+| `add-dependency` | `add_dependency` | `phase1-dependencies.json`, `phase1-flat-format.json`, `phase1-no-master.json` | `phase1-dependencies.json` (self, cycle, unknown ID), `phase1-no-master.json` |
+| `remove-dependency` | `remove_dependency` | `phase1-dependencies.json`, `phase1-flat-format.json` | `phase1-dependencies.json` |
+| `validate-dependencies` | `validate_dependencies` | `phase1-dependencies.json` | `phase1-dependencies.json` (broken graph exits 1) |
+| `fix-dependencies` | `fix_dependencies` | `phase1-dependencies.json` | none (cannot fail) |
+| `clear-subtasks` | `clear_subtasks` | `phase1-removal.json`, `phase1-flat-format.json` | `phase1-removal.json` (subtask ID) |
+| `remove-task` | `remove_task` | `phase1-removal.json`, `phase1-flat-format.json` | `phase1-removal.json` (unknown ID) |
+| `remove-subtask` | `remove_subtask` | `phase1-removal.json` | `phase1-removal.json` (not a subtask) |
+| `add-subtask` | `add_subtask` | `phase1-structure.json`, `phase1-removal.json` | `phase1-structure.json` (circular) |
+| `move` | `move_task` | `phase1-structure.json` | `phase1-structure.json` (existing ID, cross-tag conflict), `phase1-no-master.json` |
+| `add-tag`, `tags add` | `add_tag` | `phase1-tags.json` | `phase1-tags.json` (existing tag) |
+| `tags` / `tags list` | `list_tags` | `phase1-tags.json`, `phase1-flat-format.json` | none |
+| `tags use`, `use-tag` | `use_tag` | `phase1-tags.json`, `phase1-no-master.json` | `phase1-tags.json` (unknown tag) |
+| `tags rename`, `rename-tag` | `rename_tag` | `phase1-tags.json` | `phase1-tags.json` (unknown tag) |
+| `tags copy`, `copy-tag` | `copy_tag` | `phase1-tags.json` | `phase1-tags.json` (unknown tag) |
+| `tags remove`, `delete-tag` | `delete_tag` | `phase1-tags.json` | `phase1-tags.json` (`master`) |
+
+`add-tag --from-branch` and `tags add --from-branch` are CLI only: the MCP
+`add_tag` tool requires `name`. The scenario makes a commit first with
+`git -c user.name=x -c user.email=y commit`, because the isolated `HOME` has
+no git identity.
+
 ## Expected differences from published releases
 
-Against the latest release (`taskgraph-ai@0.54.12` or newer), expect none: it
-already has the audit fixes below.
+Against `taskgraph-ai@0.54.14` (the latest release when the Phase 1 scenarios
+were added), `basic.json` and the `edge-*` scenarios show none: it already has
+the audit fixes below. The Phase 1 scenarios differ only because of one fix it
+does not have:
+
+- `add_dependency`, `remove_dependency`, `validate_dependencies`,
+  `fix_dependencies`, `clear_subtasks` and `models` fail on every call in
+  0.54.14 and earlier with `Operation failed: e is not a function` (#268, fixed
+  in #270). Every MCP step that calls one of them differs, and so does every
+  later `tasks.json` that the failed call would have changed. Seen in
+  `phase1-dependencies.json`, `phase1-removal.json`,
+  `phase1-flat-format.json` and `phase1-no-master.json`. The report also lists
+  those steps as ones that "did not exit as expected" for the release.
+  `phase1-structure.json` and `phase1-tags.json` have no differences. A
+  release newer than #270 should show none.
 
 Against `taskgraph-ai@0.54.7`, the last release before them, these differences
 are the audit fixes, not regressions:
