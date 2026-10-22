@@ -12,7 +12,7 @@ export function diffSnapshots(
 export interface RunSummary {
 	steps: number;
 	failed: number;
-	changedFiles: number;
+	changedState: number;
 }
 
 export function summarizeRun(run: {
@@ -46,6 +46,7 @@ export function formatReport(
 export interface ScenarioStep {
 	args: string[];
 	status: number | null;
+	expected?: number;
 	error?: string;
 	stderr?: string;
 	files: Record<string, string>;
@@ -57,5 +58,17 @@ export function runScenario(
 		fixture?: string;
 		replies?: object[];
 		steps: unknown[];
-	}
+	},
+	options?: { timeoutMs?: number }
 ): { steps: ScenarioStep[] };
+
+export function validateScenario(scenario: unknown): void;
+
+export function unexpectedExits(run: {
+	steps: Array<{ args: string[]; status: number | null; expected?: number }>;
+}): Array<{
+	step: number;
+	args: string[];
+	status: number | null;
+	expected: number;
+}>;

@@ -6,7 +6,7 @@
  * with the same files.
  *
  *   node apps/cli/tests/parity/compare-builds.mjs --a <build> --b <build> \
- *     [--scenario <file>]
+ *     [--scenario <file>] [--timeout <ms>]
  *
  * A <build> is a shell command that runs the CLI, such as
  * `node dist/taskgraph.js` or `npx -y -p taskgraph-ai@0.54.7 taskgraph`.
@@ -26,9 +26,12 @@
  *       printed (use a JSON format, such as `next --format json`)
  *   { "shell": "..." }  run a shell command in the project to prepare state
  *       (not part of the build under test)
+ * Every step is expected to exit 0; add "expectExit": N to a step that is
+ * meant to fail. A step that exits otherwise fails the run even when both
+ * builds agree, so a typo in a scenario cannot pass as "no differences".
  *
- * Exit code: 0 no differences, 1 differences, 2 bad usage or a build that
- * cannot run.
+ * Exit code: 0 no differences and every step exited as expected, 1 differences
+ * or an unexpected exit, 2 bad usage, a bad scenario or a build that cannot run.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -41,6 +44,8 @@ import { normalizeSnapshot } from './normalize.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const STEP_TIMEOUT_MS = 60000;
+// The first call can download the package (npx on a cold cache)
+const INIT_TIMEOUT_MS = 300000;
 
 /** Unified diff of two texts, from the first hunk on. */
 function unifiedDiff(a, b) {
@@ -50,7 +55,17 @@ function unifiedDiff(a, b) {
 		fs.writeFileSync(path.join(dir, 'b'), b);
 		const res = spawnSync(
 			'git',
-			['diff', '--no-index', '--no-color', '-U3', '--', 'a', 'b'],
+			[
+				'diff',
+				'--no-index',
+				'--no-ext-diff',
+				'--no-textconv',
+				'--no-color',
+				'-U3',
+				'--',
+				'a',
+				'b'
+			],
 			{ cwd: dir, encoding: 'utf8' }
 		);
 		if (res.error || typeof res.stdout !== 'string') {
@@ -143,13 +158,84 @@ export function buildEnv(workDir, base = process.env) {
 const STDERR_TAIL = 400;
 const ANSI = /\u001b\[[0-9;]*m/g;
 
-/** @returns {{args: string[], shell?: string, capture: boolean}} */
-function parseStep(spec) {
-	if (Array.isArray(spec)) return { args: spec, capture: false };
-	if (typeof spec.shell === 'string') {
-		return { args: ['shell', spec.shell], shell: spec.shell, capture: false };
+const STEP_KEYS = ['args', 'shell', 'capture', 'expectExit'];
+
+/**
+ * Check a scenario's shape so a typo fails at the start with the step number,
+ * not as an odd error halfway through a run.
+ * @throws {Error} Naming the first problem found
+ */
+export function validateScenario(scenario) {
+	if (!scenario || typeof scenario !== 'object') {
+		throw new Error('The scenario must be a JSON object');
 	}
-	return { args: spec.args, capture: spec.capture === 'stdout' };
+	if (!Array.isArray(scenario.steps) || scenario.steps.length === 0) {
+		throw new Error('The scenario needs a non-empty "steps" list');
+	}
+	if (scenario.replies !== undefined && !Array.isArray(scenario.replies)) {
+		throw new Error('"replies" must be a list');
+	}
+	if (scenario.fixture !== undefined && typeof scenario.fixture !== 'string') {
+		throw new Error('"fixture" must be a path');
+	}
+	scenario.steps.forEach((step, index) => {
+		const where = `Step ${index + 1}`;
+		const strings = (list) =>
+			Array.isArray(list) && list.every((item) => typeof item === 'string');
+		if (Array.isArray(step)) {
+			if (!strings(step))
+				throw new Error(`${where}: arguments must be strings`);
+			return;
+		}
+		if (!step || typeof step !== 'object') {
+			throw new Error(`${where}: must be a list of arguments or an object`);
+		}
+		for (const key of Object.keys(step)) {
+			if (!STEP_KEYS.includes(key)) {
+				throw new Error(
+					`${where}: unknown key "${key}" (allowed: ${STEP_KEYS.join(', ')})`
+				);
+			}
+		}
+		if ((step.args === undefined) === (step.shell === undefined)) {
+			throw new Error(`${where}: needs either args or shell`);
+		}
+		if (step.args !== undefined && !strings(step.args)) {
+			throw new Error(`${where}: arguments must be strings`);
+		}
+		if (step.shell !== undefined && typeof step.shell !== 'string') {
+			throw new Error(`${where}: shell must be a string`);
+		}
+		if (step.capture !== undefined) {
+			if (step.shell !== undefined) {
+				throw new Error(`${where}: capture does not apply to a shell step`);
+			}
+			if (step.capture !== 'stdout') {
+				throw new Error(`${where}: capture can only be "stdout"`);
+			}
+		}
+		if (
+			step.expectExit !== undefined &&
+			!(Number.isInteger(step.expectExit) && step.expectExit >= 0)
+		) {
+			throw new Error(`${where}: expectExit must be a whole number`);
+		}
+	});
+}
+
+/** @returns {{args: string[], shell?: string, capture: boolean, expected: number}} */
+function parseStep(spec) {
+	if (Array.isArray(spec)) return { args: spec, capture: false, expected: 0 };
+	const expected = spec.expectExit ?? 0;
+	if (typeof spec.shell === 'string') {
+		return {
+			args: ['shell', spec.shell],
+			shell: spec.shell,
+			capture: false,
+			expected
+		};
+	}
+	return { args: spec.args, capture: spec.capture === 'stdout', expected };
 }
 
 /**
@@ -160,13 +246,18 @@ function parseStep(spec) {
  * @returns {{steps: Array<{args: string[], status: number|null, files: Record<string,string>}>}}
  *   Entry 0 is the setup (init and the fixture); the rest follow the scenario.
  */
-export function runScenario(build, scenario) {
+export function runScenario(build, scenario, { timeoutMs } = {}) {
 	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parity-proj-'));
 	const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'parity-work-'));
 	try {
 		const env = buildEnv(workDir);
 		fs.mkdirSync(env.HOME, { recursive: true });
-		const run = (args, extraEnv = {}, shell = null) => {
+		const run = (
+			args,
+			extraEnv = {},
+			shell = null,
+			timeout = STEP_TIMEOUT_MS
+		) => {
 			const argv = shell
 				? ['-c', shell]
 				: ['-c', `${build} "$@"`, 'sh', ...args];
@@ -174,7 +265,7 @@ export function runScenario(build, scenario) {
 				cwd: projectDir,
 				env: { ...env, ...extraEnv },
 				encoding: 'utf8',
-				timeout: STEP_TIMEOUT_MS
+				timeout
 			});
 			const result = { status: res.status, stdout: res.stdout ?? '' };
 			if (res.error) result.error = res.error.code ?? res.error.message;
@@ -187,11 +278,15 @@ export function runScenario(build, scenario) {
 		const git = spawnSync('git', ['init', '-q'], { cwd: projectDir });
 		if (git.error)
 			throw new Error('git is needed to set up a project, and could not run');
-		const init = run(['init', '--yes']);
+		const initTimeout = timeoutMs ?? INIT_TIMEOUT_MS;
+		const init = run(['init', '--yes'], {}, null, initTimeout);
 		if (init.status !== 0) {
+			const why =
+				init.error === 'ETIMEDOUT'
+					? `timed out after ${initTimeout / 1000}s (a first npx run downloads the package; use --timeout to allow longer)`
+					: `exit ${init.status ?? init.error}. The command runs inside a temp project, so paths in it must be absolute`;
 			throw new Error(
-				`"${build}" could not run init (exit ${init.status ?? init.error}). ` +
-					`The command runs inside a temp project, so paths in it must be absolute.` +
+				`"${build}" could not run init: ${why}.` +
 					(init.stderr ? `\n${init.stderr}` : '')
 			);
 		}
@@ -211,12 +306,18 @@ export function runScenario(build, scenario) {
 			{
 				args: ['init', '--yes', '+ fixture'],
 				status: init.status,
+				expected: 0,
 				files: snapshot(projectDir, workDir)
 			}
 		];
 		for (const spec of scenario.steps) {
-			const { args, shell, capture } = parseStep(spec);
-			const { stdout, ...result } = run(args, fake.env, shell);
+			const { args, shell, capture, expected } = parseStep(spec);
+			const { stdout, ...result } = run(
+				args,
+				fake.env,
+				shell,
+				timeoutMs ?? STEP_TIMEOUT_MS
+			);
 			const files = snapshot(projectDir, workDir);
 			if (capture) {
 				files[`stdout:${steps.length}`] = normalizeSnapshot(
@@ -225,7 +326,7 @@ export function runScenario(build, scenario) {
 					{ projectDir, workDir }
 				);
 			}
-			steps.push({ args, ...result, files });
+			steps.push({ args, expected, ...result, files });
 		}
 		return { steps };
 	} finally {
@@ -278,9 +379,31 @@ export function compareRuns(a, b) {
 }
 
 /**
+ * Steps that did not exit as the scenario expects (0 unless it says otherwise).
+ * Two builds failing the same way show no difference, so this is what stops
+ * a broken scenario from passing.
+ * @returns {Array<{step: number, args: string[], status: number|null, expected: number}>}
+ */
+export function unexpectedExits(run) {
+	const found = [];
+	run.steps.slice(1).forEach((step, i) => {
+		const expected = step.expected ?? 0;
+		if (step.status !== expected) {
+			found.push({
+				step: i + 1,
+				args: step.args,
+				status: step.status,
+				expected
+			});
+		}
+	});
+	return found;
+}
+
+/**
  * How much a run did, so "no differences" can be told apart from "nothing
  * happened": steps run (not counting the setup), steps that exited non-zero,
- * and steps that changed a file.
+ * and steps that changed state (a file under .taskgraph/).
  */
 export function summarizeRun(run) {
 	const stateOf = (step) =>
@@ -288,15 +411,13 @@ export function summarizeRun(run) {
 			Object.entries(step.files).filter(([name]) => !name.startsWith('stdout:'))
 		);
 	const steps = run.steps.slice(1);
-	let changedFiles = 0;
+	let changedState = 0;
 	let failed = 0;
 	steps.forEach((step, i) => {
-		if (step.status !== 0) failed++;
-		if (stateOf(step) !== stateOf(run.steps[i])) {
-			changedFiles++;
-		}
+		if (step.status !== (step.expected ?? 0)) failed++;
+		if (stateOf(step) !== stateOf(run.steps[i])) changedState++;
 	});
-	return { steps: steps.length, failed, changedFiles };
+	return { steps: steps.length, failed, changedState };
 }
 
 export function formatReport(differences, stepCount, labels) {
@@ -323,7 +444,8 @@ function parseArgs(argv) {
 	const opts = {
 		a: null,
 		b: null,
-		scenario: path.join(here, 'scenarios', 'basic.json')
+		scenario: path.join(here, 'scenarios', 'basic.json'),
+		timeoutMs: undefined
 	};
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
@@ -334,7 +456,12 @@ function parseArgs(argv) {
 		if (arg === '--a') opts.a = value();
 		else if (arg === '--b') opts.b = value();
 		else if (arg === '--scenario') opts.scenario = path.resolve(value());
-		else throw new Error(`Unknown option ${arg}`);
+		else if (arg === '--timeout') {
+			opts.timeoutMs = Number(value());
+			if (!Number.isFinite(opts.timeoutMs) || opts.timeoutMs <= 0) {
+				throw new Error('--timeout needs a number of milliseconds');
+			}
+		} else throw new Error(`Unknown option ${arg}`);
 	}
 	if (!opts.a || !opts.b) throw new Error('Both --a and --b are required');
 	return opts;
@@ -358,6 +485,13 @@ function main() {
 		process.exitCode = 2;
 		return;
 	}
+	try {
+		validateScenario(scenario);
+	} catch (err) {
+		console.error(`Scenario ${opts.scenario}: ${err.message}`);
+		process.exitCode = 2;
+		return;
+	}
 	if (scenario.fixture) {
 		scenario.fixture = path.resolve(
 			path.dirname(opts.scenario),
@@ -368,8 +502,8 @@ function main() {
 	let a;
 	let b;
 	try {
-		a = runScenario(opts.a, scenario);
-		b = runScenario(opts.b, scenario);
+		a = runScenario(opts.a, scenario, { timeoutMs: opts.timeoutMs });
+		b = runScenario(opts.b, scenario, { timeoutMs: opts.timeoutMs });
 	} catch (err) {
 		console.error(err.message);
 		process.exitCode = 2;
@@ -380,16 +514,23 @@ function main() {
 	console.log(
 		formatReport(differences, a.steps.length - 1, { a: opts.a, b: opts.b })
 	);
+	let unexpected = 0;
 	for (const [label, run] of [
 		['A', a],
 		['B', b]
 	]) {
-		const { steps, failed, changedFiles } = summarizeRun(run);
+		const { steps, failed, changedState } = summarizeRun(run);
 		console.log(
-			`Build ${label} ran ${steps} steps, ${failed} failed, ${changedFiles} changed files.`
+			`Build ${label} ran ${steps} steps, ${failed} failed, ${changedState} changed state.`
 		);
+		for (const u of unexpectedExits(run)) {
+			unexpected++;
+			console.log(
+				`Build ${label}: step ${u.step} (${u.args.join(' ')}) did not exit as expected: exit ${u.status}, expected ${u.expected}.`
+			);
+		}
 	}
-	process.exitCode = differences.length > 0 ? 1 : 0;
+	process.exitCode = differences.length > 0 || unexpected > 0 ? 1 : 0;
 }
 
 if (

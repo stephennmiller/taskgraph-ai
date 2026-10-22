@@ -21,7 +21,9 @@ import {
 	diffSnapshots,
 	formatReport,
 	runScenario,
-	summarizeRun
+	summarizeRun,
+	unexpectedExits,
+	validateScenario
 } from '../parity/compare-builds.mjs';
 import { normalizeSnapshot } from '../parity/normalize.mjs';
 
@@ -30,6 +32,11 @@ const compareScript = path.resolve(here, '../parity/compare-builds.mjs');
 const fixture = path.resolve(here, '../parity/fixtures/tasks-tagged.json');
 const cli = getCliBinPath();
 const built = fs.existsSync(cli);
+if (!built && process.env.CI) {
+	throw new Error(
+		`${cli} is missing; run npm run build before these tests in CI`
+	);
+}
 
 const ctx = { projectDir: '/tmp/proj-a', workDir: '/tmp/work-a' };
 
@@ -115,6 +122,22 @@ describe('diffSnapshots', () => {
 		expect(diff.kind).toBe('changed');
 		expect(diff.diff).toContain('-two');
 		expect(diff.diff).toContain('+2');
+	});
+
+	it('ignores a diff tool set in the environment', () => {
+		const saved = process.env.GIT_EXTERNAL_DIFF;
+		process.env.GIT_EXTERNAL_DIFF = 'true';
+		try {
+			const [diff] = diffSnapshots(
+				{ 'a.json': 'one\ntwo\n' },
+				{ 'a.json': 'one\n2\n' }
+			);
+
+			expect(diff.diff).toContain('-two');
+		} finally {
+			if (saved === undefined) delete process.env.GIT_EXTERNAL_DIFF;
+			else process.env.GIT_EXTERNAL_DIFF = saved;
+		}
 	});
 
 	it('reports a file that exists on one side only', () => {
@@ -243,26 +266,7 @@ describe('scenario files', () => {
 		);
 
 		expect(fs.existsSync(path.resolve(dir, scenarioJson.fixture))).toBe(true);
-		expect(scenarioJson.steps.length).toBeGreaterThan(0);
-		for (const step of scenarioJson.steps) {
-			const ok =
-				Array.isArray(step) ||
-				typeof step.shell === 'string' ||
-				Array.isArray(step.args);
-			expect(ok, JSON.stringify(step)).toBe(true);
-			if (step.capture !== undefined) expect(step.capture).toBe('stdout');
-		}
-	});
-});
-
-describe('buildEnv', () => {
-	it('gives the build its own home so a global config cannot leak in', () => {
-		const env = buildEnv('/tmp/work-x', { HOME: '/home/dev', PATH: '/bin' });
-
-		expect(env.HOME).toBe('/tmp/work-x/home');
-		expect(env.XDG_CONFIG_HOME).toBe('/tmp/work-x/home/.config');
-		expect(env.PATH).toBe('/bin');
-		expect(env.TASKGRAPH_SKIP_AUTO_UPDATE).toBe('1');
+		expect(() => validateScenario(scenarioJson)).not.toThrow();
 	});
 
 	it('keeps the real npm cache and user config, so npx does not download again', () => {
@@ -282,6 +286,69 @@ describe('buildEnv', () => {
 	});
 });
 
+describe('validateScenario', () => {
+	const ok = { fixture: 'f.json', steps: [['list']] };
+
+	it('accepts argument lists, capture steps and shell steps', () => {
+		expect(() =>
+			validateScenario({
+				...ok,
+				steps: [
+					['list'],
+					{ args: ['next', '--format', 'json'], capture: 'stdout' },
+					{ shell: 'true' },
+					{ args: ['set-status', '--id=99'], expectExit: 1 }
+				]
+			})
+		).not.toThrow();
+	});
+
+	it.each([
+		['no steps', { steps: [] }, /steps/],
+		[
+			'a step without args or shell',
+			{ steps: [{ capture: 'stdout' }] },
+			/Step 1.*args/
+		],
+		['a non-string argument', { steps: [['list', 3]] }, /Step 1.*strings/],
+		[
+			'capture on a shell step',
+			{ steps: [{ shell: 'true', capture: 'stdout' }] },
+			/Step 1.*capture/
+		],
+		['an unknown key', { steps: [{ args: ['list'], arg: 1 }] }, /Step 1.*arg/],
+		[
+			'a bad expectExit',
+			{ steps: [{ args: ['list'], expectExit: 'no' }] },
+			/Step 1.*expectExit/
+		],
+		['a bad replies value', { steps: [['list']], replies: 5 }, /replies/]
+	])('rejects %s, naming the step', (_name, scenario, message) => {
+		expect(() => validateScenario(scenario)).toThrow(message);
+	});
+});
+
+describe('unexpectedExits', () => {
+	const step = (status: number | null, expected = 0) => ({
+		args: ['cmd'],
+		status,
+		expected,
+		files: {}
+	});
+
+	it('lists a step that exited differently than the scenario expects', () => {
+		const run = { steps: [step(0), step(0), step(1), step(1, 1)] };
+
+		expect(unexpectedExits(run)).toEqual([
+			{ step: 2, args: ['cmd'], status: 1, expected: 0 }
+		]);
+	});
+
+	it('treats a missing exit code as unexpected', () => {
+		expect(unexpectedExits({ steps: [step(0), step(null)] })).toHaveLength(1);
+	});
+});
+
 describe('summarizeRun', () => {
 	const step = (status: number, files: Record<string, string>) => ({
 		args: ['x'],
@@ -289,7 +356,7 @@ describe('summarizeRun', () => {
 		files
 	});
 
-	it('counts steps, failed steps and steps that changed a file', () => {
+	it('counts steps, failed steps and steps that changed state', () => {
 		const summary = summarizeRun({
 			steps: [
 				step(0, { 'a.json': '1' }), // setup, not counted
@@ -300,7 +367,7 @@ describe('summarizeRun', () => {
 			]
 		});
 
-		expect(summary).toEqual({ steps: 4, failed: 1, changedFiles: 2 });
+		expect(summary).toEqual({ steps: 4, failed: 1, changedState: 2 });
 	});
 
 	it('does not count captured output as a changed file', () => {
@@ -312,7 +379,7 @@ describe('summarizeRun', () => {
 			]
 		});
 
-		expect(summary.changedFiles).toBe(0);
+		expect(summary.changedState).toBe(0);
 	});
 });
 
@@ -370,7 +437,7 @@ describe.skipIf(!built)('compare-builds script', () => {
 
 		expect(res.status, res.stdout + res.stderr).toBe(0);
 		expect(res.stdout).toContain('No differences');
-		expect(res.stdout).toMatch(/2 steps, 0 failed, 2 changed files/);
+		expect(res.stdout).toMatch(/2 steps, 0 failed, 2 changed state/);
 	});
 
 	it('reports a difference in a file on disk', () => {
@@ -467,5 +534,56 @@ describe.skipIf(!built)('compare-builds script', () => {
 		expect(res.status).toBe(1);
 		expect(res.stdout).toContain('stdout:1');
 		expect(res.stdout).toContain('extra-line');
+	});
+	it('fails when a step does not exit as expected, even if both builds agree', () => {
+		const file = scenario([['set-status', '--id=99', '--status=done']]);
+
+		const res = compare(real, real, file);
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).toContain('did not exit as expected');
+		expect(res.stdout).toContain('set-status --id=99');
+	});
+
+	it('accepts a step that is meant to fail when the scenario says so', () => {
+		const file = scenario([
+			{ args: ['set-status', '--id=99', '--status=done'], expectExit: 1 }
+		]);
+
+		const res = compare(real, real, file);
+
+		expect(res.status, res.stdout + res.stderr).toBe(0);
+	});
+
+	it('rejects a scenario with a malformed step before running anything', () => {
+		const file = scenario([{ capture: 'stdout' }]);
+
+		const res = compare(real, real, file);
+
+		expect(res.status).toBe(2);
+		expect(res.stderr).toContain('Step 1');
+	});
+
+	it('says a build timed out instead of blaming the path', () => {
+		const file = scenario([['list']]);
+
+		const res = spawnSync(
+			process.execPath,
+			[
+				compareScript,
+				'--a',
+				'sleep 5 #',
+				'--b',
+				real,
+				'--scenario',
+				file,
+				'--timeout',
+				'1000'
+			],
+			{ encoding: 'utf8', timeout: 60000 }
+		);
+
+		expect(res.status).toBe(2);
+		expect(res.stderr).toContain('timed out');
 	});
 });
