@@ -1,0 +1,16 @@
+{
+	"description": "Gives Claude the project's TaskGraph state and workflow rules at session start and after compaction. Does nothing outside a TaskGraph project.",
+	"hooks": {
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "d=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; [ -d \"$d/.taskgraph\" ] || exit 0; pre=\"This project tracks work in TaskGraph, but\"; if ! command -v taskgraph >/dev/null 2>&1; then echo \"$pre the taskgraph CLI is not installed. Ask the user to run: npm install -g taskgraph-ai\"; exit 0; fi; if out=$(TASKGRAPH_SKIP_AUTO_UPDATE=1 taskgraph prime --project \"$d\" 2>&1); then printf '%s\\n' \"$out\"; else case \"$out\" in *\"nknown command\"*) echo \"$pre the installed taskgraph CLI is too old for the plugin. Ask the user to run: npm install -g taskgraph-ai@latest\";; *) echo \"$pre taskgraph prime failed:\"; printf '%s\\n' \"$out\";; esac; fi",
+						"timeout": 20
+					}
+				]
+			}
+		]
+	}
+}
