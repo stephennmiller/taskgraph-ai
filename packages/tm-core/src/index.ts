@@ -198,6 +198,9 @@ export {
 	filterBlockingTasks,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
+	resolveClaimant,
+	type SelectNextTaskOptions,
+	type TaskClaim,
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult

@@ -12,6 +12,7 @@ import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
 import { selectNextTask } from '../utils/next-task.js';
+import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
@@ -286,6 +287,31 @@ export class TaskService {
 		const result = await this.getTaskList({ tag });
 
 		return selectNextTask(result.tasks);
+	}
+
+	/**
+	 * Pick the next task nobody has started and set it in-progress in one
+	 * locked write, so two sessions claiming at once get different tasks
+	 * @param tag - Tag to claim from; the active tag when omitted
+	 * @param claimant - Recorded as `metadata.claimedBy`; the session ID or user
+	 *   name when omitted (see resolveClaimant)
+	 * @returns The claim, or null when no task is ready
+	 */
+	async claimNextTask(
+		tag?: string,
+		claimant?: string
+	): Promise<TaskClaim | null> {
+		if (!this.storage) {
+			throw new TaskGraphError(
+				'Storage not initialized',
+				ERROR_CODES.STORAGE_ERROR
+			);
+		}
+		const activeTag = tag || this.getActiveTag();
+		return this.storage.claimNextTask(
+			claimant?.trim() || resolveClaimant(),
+			activeTag
+		);
 	}
 
 	/**

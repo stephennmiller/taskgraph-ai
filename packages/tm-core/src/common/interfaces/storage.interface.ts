@@ -3,6 +3,7 @@
  * This file defines the contract for all storage implementations
  */
 
+import type { TaskClaim } from '../../modules/tasks/utils/claim.js';
 import type { Task, TaskMetadata, TaskStatus } from '../types/index.js';
 
 /**
@@ -87,6 +88,15 @@ export interface IStorage {
 		newStatus: TaskStatus,
 		tag?: string
 	): Promise<UpdateStatusResult>;
+
+	/**
+	 * Pick the next task nobody has started and set it in-progress, recording
+	 * the claim in its metadata, all in one locked write
+	 * @param claimant - Recorded as `metadata.claimedBy`
+	 * @param tag - Optional tag context
+	 * @returns The claim, or null when no task is ready
+	 */
+	claimNextTask(claimant: string, tag?: string): Promise<TaskClaim | null>;
 
 	/**
 	 * Delete a task by ID
@@ -338,6 +348,10 @@ export abstract class BaseStorage implements IStorage {
 		newStatus: TaskStatus,
 		tag?: string
 	): Promise<UpdateStatusResult>;
+	abstract claimNextTask(
+		claimant: string,
+		tag?: string
+	): Promise<TaskClaim | null>;
 	abstract deleteTask(taskId: string, tag?: string): Promise<void>;
 	abstract exists(tag?: string): Promise<boolean>;
 	abstract loadMetadata(tag?: string): Promise<TaskMetadata | null>;

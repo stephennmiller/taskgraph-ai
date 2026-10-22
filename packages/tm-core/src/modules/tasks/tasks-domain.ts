@@ -21,6 +21,7 @@ import type {
 } from './services/tag.service.js';
 
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
+import type { TaskClaim } from './utils/claim.js';
 import {
 	analyzeDependencies,
 	buildDependencyTree,
@@ -155,6 +156,18 @@ export class TasksDomain {
 	 */
 	async getNext(tag?: string): Promise<Task | null> {
 		return this.taskService.getNextTask(tag);
+	}
+
+	/**
+	 * Pick the next task nobody has started, set it in-progress and record who
+	 * claimed it, in one locked write. Setting it back to pending clears the
+	 * claim.
+	 * @returns The claim, or null when no task is ready
+	 */
+	async claimNext(
+		options: { tag?: string; claimant?: string } = {}
+	): Promise<TaskClaim | null> {
+		return this.taskService.claimNextTask(options.tag, options.claimant);
 	}
 
 	/**

@@ -56,6 +56,12 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Show the next task to work on: dependencies done, then priority,
     # then most unblocked work, then fewer dependencies, then lowest ID
     taskgraph next
+
+    # Take the next task nobody has started: set it in-progress and record
+    # who claimed it (session ID, else your user name) in one locked write,
+    # so two sessions never get the same task. Setting it back to pending
+    # releases it.
+    taskgraph next --claim
     ```
   </Accordion>
 

@@ -23,6 +23,11 @@ import type {
 } from '../../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
+import {
+	type TaskClaim,
+	claimNextInTasks,
+	releaseClaimIfPending
+} from '../../../tasks/utils/claim.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
@@ -435,12 +440,31 @@ export class FileStorage implements IStorage {
 			}
 
 			const updated = [...tasks];
-			updated[taskIndex] = {
-				...tasks[taskIndex],
-				status: newStatus,
-				updatedAt: new Date().toISOString()
-			};
+			updated[taskIndex] = releaseClaimIfPending(
+				{
+					...tasks[taskIndex],
+					status: newStatus,
+					updatedAt: new Date().toISOString()
+				},
+				newStatus
+			);
 			return { tasks: updated, result };
+		});
+	}
+
+	/**
+	 * Claim the next task nobody has started: set it in-progress and record
+	 * the claim, inside one read-modify-write under the file lock
+	 */
+	async claimNextTask(
+		claimant: string,
+		tag?: string
+	): Promise<TaskClaim | null> {
+		return this.mutateTasks(tag, (tasks) => {
+			const outcome = claimNextInTasks(tasks, claimant);
+			return outcome
+				? { tasks: outcome.tasks, result: outcome.claim }
+				: { tasks: null, result: null };
 		});
 	}
 
@@ -510,11 +534,14 @@ export class FileStorage implements IStorage {
 		const now = new Date().toISOString();
 
 		// Update the subtask status
-		parentTask.subtasks[subtaskIndex] = {
-			...parentTask.subtasks[subtaskIndex],
-			status: newStatus,
-			updatedAt: now
-		};
+		parentTask.subtasks[subtaskIndex] = releaseClaimIfPending(
+			{
+				...parentTask.subtasks[subtaskIndex],
+				status: newStatus,
+				updatedAt: now
+			},
+			newStatus
+		);
 
 		// Auto-adjust parent status based on subtask statuses
 		const subs = parentTask.subtasks;

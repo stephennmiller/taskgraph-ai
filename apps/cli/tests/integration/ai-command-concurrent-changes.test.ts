@@ -38,6 +38,7 @@ interface SavedTask {
 	title: string;
 	status: string;
 	details?: string;
+	metadata?: Record<string, unknown>;
 	subtasks?: { id: number; title: string; status: string; details?: string }[];
 }
 
@@ -248,5 +249,27 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 		expect(result.status, result.stderr).toBe(0);
 		expect(task(5)?.status).toBe('in-progress');
 		expect(task(5)?.title).not.toBe('Task 5');
+	}, 90000);
+
+	it('a claim made while update-task rewrites the same task survives', async () => {
+		const running = startAiCommand(
+			'update-task',
+			'--id=1',
+			'--prompt=Use postgres'
+		);
+		await waitForModelCall();
+
+		const claim = taskgraph('next', '--claim', '--format', 'json');
+		expect(claim.status, claim.stderr).toBe(0);
+		expect(JSON.parse(claim.stdout).task.id).toBe('1');
+		release();
+		const result = await running;
+
+		expect(result.status, result.stderr).toBe(0);
+		expect(task(1)?.status).toBe('in-progress');
+		expect(task(1)?.metadata).toMatchObject({
+			claimedBy: JSON.parse(claim.stdout).claimedBy
+		});
+		expect(task(1)?.title).not.toBe('Task 1');
 	}, 90000);
 });
