@@ -371,7 +371,8 @@ export class SetStatusCommand extends Command {
 			// One line per change: set-status runs many times a day
 			lines.push(formatStatusChanges(result.updatedTasks));
 		}
-		if (lines.length > 0) console.log(`\n${lines.join('\n')}`);
+		// The result is the first line: no leading blank line (#273)
+		if (lines.length > 0) console.log(lines.join('\n'));
 	}
 
 	/**

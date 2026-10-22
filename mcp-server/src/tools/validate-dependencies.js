@@ -29,63 +29,56 @@ export function registerValidateDependenciesTool(server) {
 			title: 'Validate Dependencies',
 			readOnlyHint: true
 		},
-		execute: withToolContext(
-			'validate-dependencies',
-			async (args, { log, session }) => {
+		execute: withToolContext(async (args, { log, session }) => {
+			try {
+				const resolvedTag = resolveTag({
+					projectRoot: args.projectRoot,
+					tag: args.tag
+				});
+				log.info(`Validating dependencies with args: ${JSON.stringify(args)}`);
+
+				// Use args.projectRoot directly (guaranteed by withToolContext)
+				let tasksJsonPath;
 				try {
-					const resolvedTag = resolveTag({
-						projectRoot: args.projectRoot,
-						tag: args.tag
-					});
-					log.info(
-						`Validating dependencies with args: ${JSON.stringify(args)}`
-					);
-
-					// Use args.projectRoot directly (guaranteed by withToolContext)
-					let tasksJsonPath;
-					try {
-						tasksJsonPath = findTasksPath(
-							{ projectRoot: args.projectRoot, file: args.file },
-							log
-						);
-					} catch (error) {
-						log.error(`Error finding tasks.json: ${error.message}`);
-						return createErrorResponse(
-							`Failed to find tasks.json: ${error.message}`
-						);
-					}
-
-					const result = await validateDependenciesDirect(
-						{
-							tasksJsonPath: tasksJsonPath,
-							projectRoot: args.projectRoot,
-							tag: resolvedTag
-						},
+					tasksJsonPath = findTasksPath(
+						{ projectRoot: args.projectRoot, file: args.file },
 						log
 					);
+				} catch (error) {
+					log.error(`Error finding tasks.json: ${error.message}`);
+					return createErrorResponse(
+						`Failed to find tasks.json: ${error.message}`
+					);
+				}
 
-					if (result.success) {
-						log.info(
-							`Successfully validated dependencies: ${result.data.message}`
-						);
-					} else {
-						log.error(
-							`Failed to validate dependencies: ${result.error.message}`
-						);
-					}
-
-					return handleApiResult({
-						result,
-						log,
-						errorPrefix: 'Error validating dependencies',
+				const result = await validateDependenciesDirect(
+					{
+						tasksJsonPath: tasksJsonPath,
 						projectRoot: args.projectRoot,
 						tag: resolvedTag
-					});
-				} catch (error) {
-					log.error(`Error in validateDependencies tool: ${error.message}`);
-					return createErrorResponse(error.message);
+					},
+					log
+				);
+
+				if (result.success) {
+					log.info(
+						`Successfully validated dependencies: ${result.data.message}`
+					);
+				} else {
+					log.error(`Failed to validate dependencies: ${result.error.message}`);
 				}
+
+				return handleApiResult({
+					result,
+					log,
+					errorPrefix: 'Error validating dependencies',
+					projectRoot: args.projectRoot,
+					tag: resolvedTag
+				});
+			} catch (error) {
+				log.error(`Error in validateDependencies tool: ${error.message}`);
+				return createErrorResponse(error.message);
 			}
-		)
+		})
 	});
 }
