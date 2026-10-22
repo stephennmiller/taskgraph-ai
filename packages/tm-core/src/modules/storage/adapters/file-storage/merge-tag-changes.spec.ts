@@ -297,4 +297,33 @@ describe('mergeTagChanges', () => {
 		expect(saved.tasks[0].title).toBe('b');
 		expect(({} as Record<string, unknown>).x).toBeUndefined();
 	});
+
+	it('keeps a criterion checked meanwhile when the command kept the checklist', () => {
+		const criteria = ['Schema migrated', 'Docs'];
+		const base = tag([task(5, { acceptanceCriteria: criteria })]);
+		// AI rewrites copy the checklist fields from the task as read
+		const mine = tag([
+			task(5, { title: 'Use postgres', acceptanceCriteria: criteria })
+		]);
+		const theirs = tag([
+			task(5, {
+				acceptanceCriteria: [
+					{ text: 'Schema migrated', checked: true },
+					{ text: 'Docs', checked: false }
+				],
+				definitionOfDoneChecked: ['Tests pass']
+			})
+		]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks[0]).toMatchObject({
+			title: 'Use postgres',
+			acceptanceCriteria: [
+				{ text: 'Schema migrated', checked: true },
+				{ text: 'Docs', checked: false }
+			],
+			definitionOfDoneChecked: ['Tests pass']
+		});
+	});
 });

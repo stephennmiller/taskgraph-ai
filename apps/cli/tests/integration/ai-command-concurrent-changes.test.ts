@@ -38,6 +38,7 @@ interface SavedTask {
 	title: string;
 	status: string;
 	details?: string;
+	acceptanceCriteria?: unknown[];
 	subtasks?: { id: number; title: string; status: string; details?: string }[];
 }
 
@@ -247,6 +248,30 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 
 		expect(result.status, result.stderr).toBe(0);
 		expect(task(5)?.status).toBe('in-progress');
+		expect(task(5)?.title).not.toBe('Task 5');
+	}, 240000);
+
+	it('a criterion checked on the task being updated stays checked', async () => {
+		const saved = readSaved();
+		saved.master.tasks[4].acceptanceCriteria = ['Schema migrated', 'Docs'];
+		fs.writeFileSync(tasksFile(), JSON.stringify(saved));
+		const running = startAiCommand(
+			'update-task',
+			'--id=5',
+			'--prompt=Use postgres'
+		);
+		await waitForModelCall();
+
+		const check = taskgraph('set-status', '5', '--check', '1');
+		expect(check.status, check.stderr).toBe(0);
+		release();
+		const result = await running;
+
+		expect(result.status, result.stderr).toBe(0);
+		expect(task(5)?.acceptanceCriteria).toEqual([
+			{ text: 'Schema migrated', checked: true },
+			{ text: 'Docs', checked: false }
+		]);
 		expect(task(5)?.title).not.toBe('Task 5');
 	}, 240000);
 });
