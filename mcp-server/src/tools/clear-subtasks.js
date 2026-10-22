@@ -43,7 +43,7 @@ export function registerClearSubtasksTool(server) {
 			title: 'Clear Subtasks',
 			destructiveHint: true
 		},
-		execute: withToolContext('clear-subtasks', async (args, context) => {
+		execute: withToolContext(async (args, context) => {
 			try {
 				context.log.info(
 					`Clearing subtasks with args: ${JSON.stringify(args)}`

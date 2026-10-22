@@ -15,6 +15,7 @@
  *   --call <tool>      call a tool after listing; repeat with --args
  *   --args <json>      arguments for the preceding --call (default: {})
  *   --timeout <ms>     per-request timeout (default: 15000)
+ *   --schemas          also print toolSchemas: each tool's name and inputSchema
  *
  * The server command defaults to the built dist/mcp-server.js of this repo
  * (run `npm run build` first). Exit code: 0 all checks passed, 1 a check
@@ -48,6 +49,7 @@ function parseArgs(argv) {
 		cwd: process.cwd(),
 		calls: [],
 		timeout: 15000,
+		schemas: false,
 		command: null
 	};
 	for (let i = 0; i < argv.length; i++) {
@@ -60,7 +62,8 @@ function parseArgs(argv) {
 			if (i + 1 >= argv.length) throw new Error(`${arg} needs a value`);
 			return argv[++i];
 		};
-		if (arg === '--tools') opts.tools = value();
+		if (arg === '--schemas') opts.schemas = true;
+		else if (arg === '--tools') opts.tools = value();
 		else if (arg === '--expect') opts.expect = parseNumber(arg, value());
 		else if (arg === '--cwd') opts.cwd = value();
 		else if (arg === '--timeout') opts.timeout = parseNumber(arg, value());
@@ -175,6 +178,11 @@ async function run(opts) {
 
 		const list = await request('tools/list', {});
 		summary.tools = (list.result?.tools ?? []).map((t) => t.name).sort();
+		if (opts.schemas) {
+			summary.toolSchemas = (list.result?.tools ?? [])
+				.map((t) => ({ name: t.name, inputSchema: t.inputSchema ?? null }))
+				.sort((x, y) => x.name.localeCompare(y.name));
+		}
 		if (list.error || summary.tools.length === 0) {
 			failures.push(
 				`tools/list returned no tools: ${list.error?.message ?? ''}`
