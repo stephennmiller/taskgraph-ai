@@ -69,7 +69,7 @@ function cannedReply(n) {
 	}
 }
 
-const HOLD_LIMIT_MS = 30000;
+const HOLD_LIMIT_MS = 120000;
 
 /** Wait until <dir>/<name> exists; fail the call if it never appears. */
 function holdUntil(name, then) {

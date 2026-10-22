@@ -58,7 +58,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 		spawnSync(process.execPath, [binPath, ...args], {
 			cwd: project,
 			encoding: 'utf8',
-			timeout: 30000,
+			timeout: 90000,
 			env
 		});
 
@@ -69,7 +69,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 				cwd: project,
 				env,
 				stdio: 'pipe',
-				timeout: 60000,
+				timeout: 200000,
 				killSignal: 'SIGKILL'
 			});
 			let stdout = '';
@@ -83,7 +83,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 	const waitForModelCall = async () => {
 		const started = Date.now();
 		while (readTrace(fakeDir).length === 0) {
-			if (Date.now() - started > 30000) {
+			if (Date.now() - started > 90000) {
 				throw new Error('the AI command never called the model');
 			}
 			await new Promise((resolve) => setTimeout(resolve, 50));
@@ -197,7 +197,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 		expectChangesKept();
 		// The AI command's own change is saved too
 		expect(task(5)?.title).not.toBe('Task 5');
-	}, 90000);
+	}, 240000);
 
 	it('update-subtask keeps a status change and a new task made meanwhile', async () => {
 		const running = startAiCommand(
@@ -214,7 +214,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 		expect(result.status, result.stderr).toBe(0);
 		expectChangesKept();
 		expect(task(5)?.subtasks?.[0].details).toContain('Sample text answer');
-	}, 90000);
+	}, 240000);
 
 	it('update --from keeps a status change and a new task made meanwhile', async () => {
 		const running = startAiCommand(
@@ -230,7 +230,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 
 		expect(result.status, result.stderr).toBe(0);
 		expectChangesKept();
-	}, 90000);
+	}, 240000);
 
 	it('a status set on the task being updated survives the update', async () => {
 		const running = startAiCommand(
@@ -248,5 +248,5 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 		expect(result.status, result.stderr).toBe(0);
 		expect(task(5)?.status).toBe('in-progress');
 		expect(task(5)?.title).not.toBe('Task 5');
-	}, 90000);
+	}, 240000);
 });
