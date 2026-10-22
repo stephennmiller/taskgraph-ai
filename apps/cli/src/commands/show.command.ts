@@ -272,7 +272,10 @@ export class ShowCommand extends Command {
 		}
 
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
-		displayCommandHeader({ tag: activeTag });
+		displayCommandHeader({
+			tag: activeTag,
+			projectRoot: this.tmCore?.projectPath
+		});
 
 		console.log(); // Add spacing
 
@@ -293,7 +296,10 @@ export class ShowCommand extends Command {
 		_options: ShowCommandOptions
 	): void {
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
-		displayCommandHeader({ tag: activeTag });
+		displayCommandHeader({
+			tag: activeTag,
+			projectRoot: this.tmCore?.projectPath
+		});
 
 		if (result.notFound.length > 0) {
 			console.log(chalk.yellow(`\n⚠ Not found: ${result.notFound.join(', ')}`));

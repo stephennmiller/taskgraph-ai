@@ -580,7 +580,10 @@ export class ListTasksCommand extends Command {
 
 		// Display header unless --no-header is set
 		if (options.noHeader !== true) {
-			displayCommandHeader({ tag: allTags ? 'all tags' : tag || 'master' });
+			displayCommandHeader({
+				tag: allTags ? 'all tags' : tag || 'master',
+				projectRoot: this.tmCore?.projectPath
+			});
 		}
 
 		for (const task of tasks) {
@@ -612,7 +615,10 @@ export class ListTasksCommand extends Command {
 
 		// Display header unless --no-header is set
 		if (options.noHeader !== true) {
-			displayCommandHeader({ tag: allTags ? 'all tags' : tag || 'master' });
+			displayCommandHeader({
+				tag: allTags ? 'all tags' : tag || 'master',
+				projectRoot: this.tmCore?.projectPath
+			});
 		}
 
 		// No tasks message

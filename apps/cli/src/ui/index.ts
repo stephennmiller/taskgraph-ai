@@ -109,6 +109,7 @@ export {
 	formatTagCopied,
 	formatTagCreated,
 	formatTagDeleted,
+	formatTagIndicator,
 	formatTagList,
 	formatTagRenamed,
 	formatTagSwitched,

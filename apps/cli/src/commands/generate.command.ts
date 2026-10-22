@@ -169,7 +169,10 @@ export class GenerateCommand extends Command {
 		if (this.tmCore) {
 			const activeTag = options.tag || this.tmCore.config.getActiveTag();
 
-			displayCommandHeader({ tag: activeTag });
+			displayCommandHeader({
+				tag: activeTag,
+				projectRoot: this.tmCore.projectPath
+			});
 		}
 
 		if (!result.success) {

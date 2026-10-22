@@ -1,4 +1,5 @@
 import { ui } from '@tm/cli';
+import { shouldShowTagIndicatorForProject } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { getTaskGraphVersion } from '../../../src/utils/getVersion.js';
@@ -43,25 +44,18 @@ export function displayTaggedTasksFYI(data) {
 }
 
 /**
- * Display a small, non-intrusive indicator showing the current tag context
+ * Print the muted `[tag] <name>` line above a command's output, but only when
+ * it tells you something: you're on a tag other than master, or the project
+ * has more than one tag. A master-only project starts with the result.
  * Note: This is an async function - callers should await it.
- * @param {string} tag - The tag name to display
- * @param {Object} options - Display options
- * @param {boolean} [options.skipIfMaster=false] - Don't show indicator if tag is 'master'
- * @param {boolean} [options.dim=false] - Use dimmed styling
+ * @param {string} tag - The tag the command works in
+ * @param {Object} [options]
+ * @param {string} [options.projectRoot] - Defaults to the project found from the working directory
  */
 export async function displayCurrentTagIndicator(tag, options = {}) {
 	if (isSilentMode()) return;
+	if (!shouldShowTagIndicatorForProject(tag || 'master', options.projectRoot))
+		return;
 
-	const { skipIfMaster = false, dim = false } = options;
-
-	// Skip display for master tag only if explicitly requested
-	if (skipIfMaster && tag === 'master') return;
-
-	// Using ASCII characters for consistent cross-platform display
-	const displayText = dim
-		? theme.muted(`[tag] ${tag}`)
-		: chalk.dim('[tag] ') + chalk.cyan(tag);
-
-	console.log(displayText);
+	console.log(ui.formatTagIndicator(tag || 'master'));
 }

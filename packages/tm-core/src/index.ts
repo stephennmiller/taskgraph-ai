@@ -191,6 +191,9 @@ export {
 	filterBlockingTasks,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
+	readTagNamesSync,
+	shouldShowTagIndicator,
+	shouldShowTagIndicatorForProject,
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult

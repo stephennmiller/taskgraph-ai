@@ -85,7 +85,10 @@ export class GraphCommand extends Command {
 	}
 
 	private displayText(result: GraphResult): void {
-		displayCommandHeader({ tag: result.tag });
+		displayCommandHeader({
+			tag: result.tag,
+			projectRoot: this.tmCore?.projectPath
+		});
 
 		if (result.total === 0) {
 			console.log(chalk.yellow('No tasks yet.'));
