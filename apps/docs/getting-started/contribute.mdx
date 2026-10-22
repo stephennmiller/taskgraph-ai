@@ -1,26 +1,26 @@
 # Contributing to TaskGraph
 
-Thank you for your interest in contributing to TaskGraph! We're excited to work with you and appreciate your help in making this project better. 🚀
+Thank you for your interest in contributing to TaskGraph! We're excited to work with you and appreciate your help in making this project better.
 
-## 🤝 Our Collaborative Approach
+## Our Collaborative Approach
 
 We're a **PR-friendly team** that values collaboration:
 
-- ✅ **We review PRs quickly** - Usually within hours, not days
-- ✅ **We're super reactive** - Expect fast feedback and engagement
-- ✅ **We sometimes take over PRs** - If your contribution is valuable but needs cleanup, we might jump in to help finish it
-- ✅ **We're open to all contributions** - From bug fixes to major features
+- **We review PRs quickly** - Usually within hours, not days
+- **We're super reactive** - Expect fast feedback and engagement
+- **We sometimes take over PRs** - If your contribution is valuable but needs cleanup, we might jump in to help finish it
+- **We're open to all contributions** - From bug fixes to major features
 
 **We don't mind AI-generated code**, but we do expect you to:
 
-- ✅ **Review and understand** what the AI generated
-- ✅ **Test the code thoroughly** before submitting
-- ✅ **Ensure it's well-written** and follows our patterns
-- ❌ **Don't submit "AI slop"** - untested, unreviewed AI output
+- **Review and understand** what the AI generated
+- **Test the code thoroughly** before submitting
+- **Ensure it's well-written** and follows our patterns
+- **Don't submit "AI slop"** - untested, unreviewed AI output
 
 > **Why this matters**: We spend significant time reviewing PRs. Help us help you by submitting quality contributions that save everyone time!
 
-## 🚀 Quick Start for Contributors
+## Quick Start for Contributors
 
 ### 1. Fork and Clone
 
@@ -66,7 +66,7 @@ npm run format
 - Write a clear description
 - Reference any related issues
 
-## 📋 Development Guidelines
+## Development Guidelines
 
 ### Branch Strategy
 
@@ -84,13 +84,14 @@ npm run format
 
 Your PR **must pass all CI checks**:
 
-- ✅ **Tests**: `npm test`, plus `npm run test -w @tm/cli` and `npm run test -w @tm/core` for the packages you touched
-- ✅ **Types**: `npm run turbo:typecheck`
-- ✅ **Format check**: `npm run format-check`
+- **Tests**: `npm test`, plus `npm run test -w <package>` for each package you touched (`@tm/core`, `@tm/cli`, `@tm/mcp`, `@tm/profiles`)
+- **Types**: `npm run turbo:typecheck`
+- **Build**: `npm run build`
+- **Format check**: `npm run format-check`
 
 **Test your changes locally first** - this saves review time and shows you care about quality.
 
-## 📦 Versioning
+## Versioning
 
 Releases are cut automatically when a PR merges to `main`, from its commit title. Don't add a changeset.
 
@@ -112,12 +113,24 @@ fix: models --setup no longer leaves the menu on screen after Ctrl-C
 feat: refactor research.js
 ```
 
-## 🔧 Development Setup
+### Publishing to npm (maintainers)
+
+Merging cuts the tag and the GitHub Release, but it does not publish to npm. The release workflow only **stages** the build, and nothing is installable until a maintainer approves it:
+
+```bash
+npm stage list taskgraph-ai          # staged versions and their ids
+npm stage approve <stage-id>         # publish one (asks for 2FA)
+npm view taskgraph-ai dist-tags      # confirm `latest` is the version you expect
+```
+
+Approve only the newest staged version. Each one is built from its own tag, so the newest already includes every earlier fix, and approving the older ones just adds clutter. If a published version turns out to be bad, don't unpublish it. Run `npm deprecate "taskgraph-ai@<fixed-version>" "<what breaks>; upgrade to >=<fixed-version>"` to warn everyone on the older versions.
+
+## Development Setup
 
 ### Prerequisites
 
-- Node.js 22.13+
-- npm or yarn
+- Node.js 22.13 or newer (`.nvmrc` pins 24 for development)
+- npm (the repo is an npm workspace; `npm install` also points git at `.githooks/`, whose pre-push hook runs the format check)
 
 ### Environment Setup
 
@@ -128,6 +141,7 @@ feat: refactor research.js
    ```
 
 2. **Sign in to Claude Code** (for testing AI features). No provider API keys are needed:
+
    ```bash
    claude
    ```
@@ -145,8 +159,10 @@ npm run test:watch
 npm run test:coverage
 
 # Run a package's tests
-npm run test -w @tm/cli
 npm run test -w @tm/core
+npm run test -w @tm/cli
+npm run test -w @tm/mcp
+npm run test -w @tm/profiles
 ```
 
 ### Code Formatting
@@ -161,7 +177,7 @@ npm run format-check
 npm run format
 ```
 
-## 📝 PR Guidelines
+## PR Guidelines
 
 ### Before Submitting
 
@@ -171,70 +187,56 @@ npm run format
 - [ ] **Check code formatting**
 - [ ] **Re-read your changes** - ensure they're clean and well-thought-out
 
-### PR Description Template
+### PR Description
 
-```markdown
-## Description
-
-Brief description of what this PR does.
-
-## Type of Change
-
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Documentation update
-
-## Testing
-
-- [ ] I have tested this locally
-- [ ] All existing tests pass
-- [ ] I have added tests for new functionality
-
-## Additional Notes
-
-Any additional context or notes for reviewers.
-```
+GitHub fills in the description from `.github/PULL_REQUEST_TEMPLATE.md`. Say what the PR does, link the issue it fixes, and give a few steps to check that it works. Ignore the changeset checkbox: releases come from the PR title (see Versioning).
 
 ### What We Look For
 
-✅ **Good PRs**:
+**Good PRs**:
 
 - Clear, focused changes
 - Comprehensive testing
 - Good commit messages
 - Self-reviewed code
 
-❌ **Avoid**:
+**Avoid**:
 
 - Massive PRs that change everything
 - Untested code
 - Formatting issues
 - AI-generated code that wasn't reviewed
 
-## 🏗️ Project Structure
+## Project Structure
 
-```
+```text
 taskgraph-ai/
-├── bin/                    # CLI executables
-├── mcp-server/            # MCP server implementation
-├── scripts/               # Core task management logic
-├── src/                   # Shared utilities and providers and well refactored code (we are slowly moving everything here)
-├── tests/                 # Test files
-├── docs/                  # Documentation
-└── .claude/               # Claude Code rules (path-scoped dev conventions)
-└── assets/                # Assets installed into user projects (e.g. AGENTS.md)
+├── apps/
+│   ├── cli/                  # @tm/cli: command-line interface
+│   ├── mcp/                  # @tm/mcp: MCP server
+│   └── docs/                 # Mintlify docs site (this page)
+├── packages/
+│   ├── tm-core/              # @tm/core: all business logic
+│   ├── tm-profiles/          # @tm/profiles: shell utils, cleanup of old slash commands
+│   ├── claude-code-plugin/   # Claude Code plugin: slash commands and agents (markdown only)
+│   └── build-config/         # Shared build config
+├── scripts/, src/, mcp-server/  # Older JavaScript, being moved into @tm/core
+├── tests/                    # Older root test suite (new tests go next to the code)
+├── docs/                     # Documentation
+├── assets/                   # Assets installed into user projects (e.g. AGENTS.md)
+└── .claude/                  # Claude Code rules (path-scoped dev conventions)
 ```
 
-### Key Areas for Contribution
+### Where Changes Go
 
-- **CLI Commands**: `scripts/modules/commands.js`
-- **MCP Tools**: `mcp-server/src/tools/`
-- **Core Logic**: `scripts/modules/task-manager/`
-- **AI Providers**: `src/ai-providers/`
-- **Tests**: `tests/`
+All business logic belongs in `@tm/core`. `@tm/cli` and `@tm/mcp` are thin layers that call it and format the result, so don't parse, validate or transform data in them. Logic needed by both goes in `@tm/core` once.
 
-## 🐛 Reporting Issues
+- **Business logic**: `packages/tm-core/src/`
+- **CLI commands**: `apps/cli/src/commands/`
+- **MCP tools**: `apps/mcp/src/`
+- **Tests**: next to the code as `<file>.spec.ts`; integration tests in the package's `tests/integration/`. Write them in TypeScript, not in the older root `tests/` suite.
+
+## Reporting Issues
 
 ### Bug Reports
 
@@ -256,17 +258,16 @@ Include:
 - Proposed implementation (if you have ideas)
 - Willingness to contribute
 
-## 💬 Getting Help
+## Getting Help
 
 - **Issues**: [GitHub Issues](https://github.com/stephennmiller/taskgraph-ai/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/stephennmiller/taskgraph-ai/discussions)
 
-## 📄 License
+## License
 
 By contributing, you agree that your contributions will be licensed under the same license as the project (MIT with Commons Clause).
 
 ---
 
-**Thank you for contributing to TaskGraph!** 🎉
+**Thank you for contributing to TaskGraph!**
 
 Your contributions help make AI-driven development more accessible and efficient for everyone.
