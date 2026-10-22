@@ -35,7 +35,7 @@ export function registerRemoveDependencyTool(server) {
 			title: 'Remove Dependency',
 			destructiveHint: true
 		},
-		execute: withToolContext('remove-dependency', async (args, context) => {
+		execute: withToolContext(async (args, context) => {
 			try {
 				const resolvedTag = resolveTag({
 					projectRoot: args.projectRoot,
