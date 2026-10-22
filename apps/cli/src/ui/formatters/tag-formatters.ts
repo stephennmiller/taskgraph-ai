@@ -23,6 +23,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 type Id = number | string;
@@ -68,7 +69,7 @@ export function formatTagCreated(
 		sourceTag?: string | null;
 		description?: string;
 	},
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const copied =
 		result.sourceTag &&
@@ -88,7 +89,7 @@ export function formatTagSwitched(
 		taskCount: number;
 		nextTask?: { id: Id; title: string } | null;
 	},
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const count = plural(result.taskCount, 'task');
 	const lines = [
@@ -166,7 +167,7 @@ export function formatTagDeleted(result: {
 export function formatTagList(
 	tags: TagSummary[],
 	options: { showMetadata?: boolean; ready?: boolean } = {},
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	if (tags.length === 0) {
 		return options.ready ? 'No tag has a task ready to start' : 'No tags yet';

@@ -24,14 +24,14 @@
 
 import type { ChecklistItem, TaskChecklist } from '@tm/core';
 import chalk from 'chalk';
-import { wrapLine } from '../layout/helpers.js';
+import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 /** Checklist text wraps at the terminal width, but no wider than this */
 const MAX_WIDTH = 100;
 
 const columns = (width?: number) =>
-	Math.max(40, Math.min(width ?? (process.stdout.columns || 80), MAX_WIDTH));
+	Math.max(40, Math.min(width ?? terminalWidth(), MAX_WIDTH));
 
 /**
  * One item per line: a green ✓ or a muted ○, its number, then its text,

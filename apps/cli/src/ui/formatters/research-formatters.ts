@@ -14,7 +14,7 @@ import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
 import { Marked, type MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
-import { wrapLine } from '../layout/helpers.js';
+import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 /** Answers wrap at the terminal width, but no wider than this */
@@ -47,7 +47,7 @@ function wrapListItems(text: string, width: number): string {
  */
 export function formatResearchAnswer(
 	markdown: string,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const columns = Math.max(40, Math.min(width, MAX_ANSWER_WIDTH));
 	const renderer = new Marked({ gfm: true, breaks: false });
