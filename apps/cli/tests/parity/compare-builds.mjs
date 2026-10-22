@@ -163,6 +163,10 @@ export function buildEnv(workDir, base = process.env) {
 	// The MCP server prefers this over a tool's projectRoot; a developer's own
 	// value would send writes into a real project.
 	delete env.TASKGRAPH_PROJECT_ROOT;
+	// Hooks in a linked worktree export GIT_DIR; steps that run git must not use it
+	for (const key of Object.keys(env))
+		if (key.startsWith('GIT_')) delete env[key];
+	env.GIT_CONFIG_NOSYSTEM = '1';
 	return env;
 }
 
@@ -335,7 +339,7 @@ export function runScenario(build, scenario, { timeoutMs } = {}) {
 			return result;
 		};
 
-		const git = spawnSync('git', ['init', '-q'], { cwd: projectDir });
+		const git = spawnSync('git', ['init', '-q'], { cwd: projectDir, env });
 		if (git.error)
 			throw new Error('git is needed to set up a project, and could not run');
 		const initTimeout = timeoutMs ?? INIT_TIMEOUT_MS;
