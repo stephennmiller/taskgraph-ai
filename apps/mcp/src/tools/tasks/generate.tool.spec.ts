@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tasks = {
 	generateTaskFiles: vi.fn()
@@ -51,6 +51,11 @@ beforeEach(() => {
 	});
 	project = tmp();
 	outside = tmp();
+});
+
+afterEach(() => {
+	fs.rmSync(project, { recursive: true, force: true });
+	fs.rmSync(outside, { recursive: true, force: true });
 });
 
 describe('generate output directory', () => {
