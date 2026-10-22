@@ -3,11 +3,11 @@
  * Focuses on modifyJson and cross-process locking functionality
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
-import path from 'node:path';
+import fs from 'node:fs/promises';
 import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileOperations } from './file-operations.js';
 
 describe('FileOperations', () => {
@@ -243,6 +243,44 @@ describe('FileOperations', () => {
 			// Also verify no lock files remain
 			const lockFiles = files.filter((f) => f.endsWith('.lock'));
 			expect(lockFiles).toHaveLength(0);
+		});
+	});
+
+	describe('lock file left by the legacy writer', () => {
+		// The legacy scripts take `<file>.lock` as a plain file; tm-core's lock is a
+		// directory at the same path. A crashed legacy write leaves the file behind.
+		const leaveStaleLockFile = () => {
+			const lockPath = `${testFilePath}.lock`;
+			fsSync.writeFileSync(lockPath, '{"pid":1,"timestamp":0}');
+			const old = new Date(Date.now() - 60_000);
+			fsSync.utimesSync(lockPath, old, old);
+			return lockPath;
+		};
+
+		it('modifyJson takes over a stale lock file', async () => {
+			await fs.writeFile(testFilePath, JSON.stringify({ count: 0 }));
+			const lockPath = leaveStaleLockFile();
+
+			await fileOps.modifyJson(testFilePath, (d: { count: number }) => ({
+				count: d.count + 1
+			}));
+
+			expect(JSON.parse(await fs.readFile(testFilePath, 'utf-8'))).toEqual({
+				count: 1
+			});
+			expect(fsSync.existsSync(lockPath)).toBe(false);
+		});
+
+		it('writeJson takes over a stale lock file', async () => {
+			await fs.writeFile(testFilePath, '{}');
+			const lockPath = leaveStaleLockFile();
+
+			await fileOps.writeJson(testFilePath, { ok: true });
+
+			expect(JSON.parse(await fs.readFile(testFilePath, 'utf-8'))).toEqual({
+				ok: true
+			});
+			expect(fsSync.existsSync(lockPath)).toBe(false);
 		});
 	});
 
