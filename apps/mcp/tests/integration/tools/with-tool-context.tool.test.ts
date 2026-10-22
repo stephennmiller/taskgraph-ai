@@ -31,8 +31,6 @@ describe('tools wrapped in withToolContext (#268)', () => {
 			JSON.stringify(createTasksFile({ tasks: tasks as any }), null, 2)
 		);
 
-	// `init` runs as a child process and can take over 10s on a busy CI
-	// runner while other test files spawn servers, so allow it 30s
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-ctx-'));
 		process.chdir(testDir);
@@ -48,7 +46,7 @@ describe('tools wrapped in withToolContext (#268)', () => {
 			createTask({ id: 1, title: 'One' }),
 			createTask({ id: 2, title: 'Two' })
 		]);
-	}, 30_000);
+	});
 
 	afterEach(() => {
 		process.chdir(repoRoot);

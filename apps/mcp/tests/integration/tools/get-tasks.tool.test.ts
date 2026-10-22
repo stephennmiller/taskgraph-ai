@@ -20,8 +20,6 @@ describe('get_tasks MCP tool', () => {
 	let tasksPath: string;
 	let cliPath: string;
 
-	// `init` runs as a child process and can take over 10s on a busy CI
-	// runner while other test files spawn servers, so allow it 30s
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-get-tasks-'));
 		process.chdir(testDir);
@@ -39,7 +37,7 @@ describe('get_tasks MCP tool', () => {
 		// Create initial empty tasks file using fixtures
 		const initialTasks = createTasksFile();
 		fs.writeFileSync(tasksPath, JSON.stringify(initialTasks, null, 2));
-	}, 30_000);
+	});
 
 	afterEach(() => {
 		// Change back to original directory and cleanup
