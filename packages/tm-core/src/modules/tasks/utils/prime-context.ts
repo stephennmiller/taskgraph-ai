@@ -8,6 +8,7 @@
 
 import { isTaskComplete } from '../../../common/constants/index.js';
 import type { Task } from '../../../common/types/index.js';
+import { normalizeAcceptanceCriteria } from './acceptance-criteria.js';
 import { rankNextTasks } from './next-task.js';
 
 /** One workflow rule: what to do, and the command that does it */
@@ -35,8 +36,9 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 		command: 'taskgraph add-task --prompt="<what you found>"'
 	},
 	{
-		text: 'Check the done-when criteria and run the tests, then close it',
-		command: 'taskgraph set-status --id=<id> --status=done'
+		// set-status done refuses while a criterion is unchecked (#283)
+		text: 'Run the tests, check off each criterion that holds, then close it',
+		command: 'taskgraph set-status --id=<id> --check=<n> --status=done'
 	},
 	{
 		text: 'Commit with the task ID in the message',
@@ -80,12 +82,13 @@ export interface BuildPrimeContextOptions {
 
 /** Acceptance criteria if any, else the test strategy, else nothing */
 function doneWhen(item: {
-	acceptanceCriteria?: string[];
+	acceptanceCriteria?: unknown;
 	testStrategy?: string;
 }): string[] {
-	const criteria = (item.acceptanceCriteria ?? [])
-		.map((c) => c.trim())
-		.filter(Boolean);
+	// Criteria are plain strings in older files, { text, checked } since #283
+	const criteria = normalizeAcceptanceCriteria(item.acceptanceCriteria).map(
+		(c) => c.text
+	);
 	if (criteria.length > 0) return criteria;
 	const strategy = item.testStrategy?.trim();
 	return strategy ? [strategy] : [];

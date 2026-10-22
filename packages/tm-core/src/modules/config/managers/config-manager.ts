@@ -12,6 +12,7 @@ import type {
 } from '../../../common/interfaces/configuration.interface.js';
 import { DEFAULT_CONFIG_VALUES as DEFAULTS } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
+import { normalizeDefinitionOfDone } from '../../tasks/utils/acceptance-criteria.js';
 import { ConfigLoader } from '../services/config-loader.service.js';
 import {
 	CONFIG_PRECEDENCE,
@@ -177,6 +178,17 @@ export class ConfigManager {
 	getResponseLanguage(): string {
 		const customConfig = this.config.custom as any;
 		return customConfig?.responseLanguage || 'English';
+	}
+
+	/**
+	 * The project's Definition of Done (`global.definitionOfDone` in
+	 * .taskgraph/config.json): checklist items every task must clear before
+	 * it can be marked done. Empty when unset or not a list of strings.
+	 */
+	getDefinitionOfDone(): string[] {
+		const global = (this.config as { global?: { definitionOfDone?: unknown } })
+			.global;
+		return normalizeDefinitionOfDone(global?.definitionOfDone);
 	}
 
 	/**

@@ -97,6 +97,13 @@ export {
 	type ModelRoleName
 } from './formatters/model-formatters.js';
 
+// Checklist formatters (acceptance criteria, Definition of Done)
+export {
+	formatChecklist,
+	formatChecklistUpdate,
+	formatUncheckedCriteria
+} from './formatters/checklist-formatters.js';
+
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
 export {

@@ -121,6 +121,29 @@ describe('buildPrimeContext', () => {
 		]);
 	});
 
+	it('reads checkable { text, checked } criteria as well as plain strings', () => {
+		const context = buildPrimeContext(
+			[
+				createTask({
+					id: 1,
+					title: 'Login endpoint',
+					status: 'in-progress',
+					acceptanceCriteria: [
+						{ text: 'Returns 401 on a bad password', checked: true },
+						'Rate limited per IP',
+						{ text: ' ', checked: false }
+					]
+				})
+			],
+			{ tag: 'master' }
+		);
+
+		expect(context.inProgress[0].doneWhen).toEqual([
+			'Returns 401 on a bad password',
+			'Rate limited per IP'
+		]);
+	});
+
 	it('leaves a pending task out of ready while one of its subtasks is in progress', () => {
 		const context = buildPrimeContext(
 			[
