@@ -24,7 +24,6 @@
 ```
 
 ## Contributor Checklist
-- [ ] Created changeset: `npm run changeset`
 - [ ] Tests pass: `npm test`
 - [ ] Format check passes: `npm run format-check`
 - [ ] Added unit tests (if applicable)
