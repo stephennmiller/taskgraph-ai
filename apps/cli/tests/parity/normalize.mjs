@@ -8,7 +8,7 @@
  *    does not) is dropped and object keys are sorted. Array order is kept.
  *
  * MCP replies (a name starting with `mcp-reply`) also mask what one build
- * version changes without meaning anything: the `version` field, locale dates
+ * version changes without meaning anything: the top-level `version` field, locale dates
  * such as 10/22/2026 (written by tag copy) and the Version/Name footer of a
  * plain-text error. Nothing else is masked.
  */
@@ -34,8 +34,9 @@ const LOCALE_DATE = /\b\d{1,2}\/\d{1,2}\/\d{4}\b/g;
 // The footer createErrorResponse adds; \n is a real or an escaped line break
 const VERSION_FOOTER = /(?:\n|\\n)Version: [^\n"\\]*(?:\n|\\n)Name: [^\n"\\]*/g;
 
-function cleanJson(value, parentKey = '', mcp = false) {
-	if (Array.isArray(value)) return value.map((v) => cleanJson(v, '', mcp));
+// maskVersion applies to the top level of an MCP reply only
+function cleanJson(value, parentKey = '', maskVersion = false) {
+	if (Array.isArray(value)) return value.map((v) => cleanJson(v));
 	if (value && typeof value === 'object') {
 		return Object.fromEntries(
 			Object.keys(value)
@@ -43,9 +44,9 @@ function cleanJson(value, parentKey = '', mcp = false) {
 				.sort()
 				.map((key) => [
 					key,
-					mcp && key === 'version'
+					maskVersion && key === 'version'
 						? '<version>'
-						: cleanJson(value[key], key, mcp)
+						: cleanJson(value[key], key)
 				])
 		);
 	}

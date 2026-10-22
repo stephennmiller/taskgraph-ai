@@ -12,9 +12,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCliBinPath } from '../helpers/test-utils.js';
-import { deriveServerCommand, runScenario } from '../parity/compare-builds.mjs';
+import {
+	buildEnv,
+	deriveServerCommand,
+	runScenario
+} from '../parity/compare-builds.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const compareScript = path.resolve(here, '../parity/compare-builds.mjs');
@@ -43,6 +47,17 @@ describe('deriveServerCommand', () => {
 	);
 });
 
+describe('buildEnv for the MCP server', () => {
+	it('removes TASKGRAPH_PROJECT_ROOT, which the server prefers over projectRoot', () => {
+		const env = buildEnv('/tmp/work-x', {
+			HOME: '/home/dev',
+			TASKGRAPH_PROJECT_ROOT: '/real/project'
+		});
+
+		expect(env.TASKGRAPH_PROJECT_ROOT).toBeUndefined();
+	});
+});
+
 describe.skipIf(!built)('mcp steps', () => {
 	let work: string;
 
@@ -51,6 +66,7 @@ describe.skipIf(!built)('mcp steps', () => {
 	});
 
 	afterEach(() => {
+		vi.unstubAllEnvs();
 		fs.rmSync(work, { recursive: true, force: true });
 	});
 
@@ -63,6 +79,16 @@ describe.skipIf(!built)('mcp steps', () => {
 		/** Answer tools/call with a JSON-RPC error (no content) */
 		rpcError?: boolean;
 		schema?: object;
+		/** Printed to stdout during the call, before the reply */
+		banner?: string;
+		/** Exits during the call */
+		crashOnCall?: boolean;
+		/** Exits during the first call in a project only */
+		crashFirstCall?: boolean;
+		/** Never answers the call */
+		silentCall?: boolean;
+		/** Replaces the content list of the reply */
+		content?: object[];
 	}
 
 	/**
@@ -87,6 +113,10 @@ require('readline').createInterface({ input: process.stdin }).on('line', (line) 
 		return send({ jsonrpc: '2.0', id: m.id, result: { tools: [{ name: 'get_tasks', inputSchema: cfg.schema ?? { type: 'object' } }] } });
 	}
 	if (m.method !== 'tools/call') return send({ jsonrpc: '2.0', id: m.id, result: {} });
+	if (cfg.crashOnCall) process.exit(3);
+	if (cfg.crashFirstCall && !fs.existsSync('.crashed')) { fs.writeFileSync('.crashed', ''); process.exit(3); }
+	if (cfg.silentCall) return;
+	if (cfg.banner) console.log(cfg.banner);
 	if (cfg.rpcError) return send({ jsonrpc: '2.0', id: m.id, error: { code: -32602, message: 'bad params in ' + process.cwd() } });
 	const body = {
 		tool: m.params.name,
@@ -95,7 +125,7 @@ require('readline').createInterface({ input: process.stdin }).on('line', (line) 
 		envRoot: process.env.TASKGRAPH_PROJECT_ROOT ?? null,
 		...cfg.extra
 	};
-	send({ jsonrpc: '2.0', id: m.id, result: { isError: Boolean(cfg.isError), content: [{ type: 'text', text: cfg.text ?? JSON.stringify(body) }] } });
+	send({ jsonrpc: '2.0', id: m.id, result: { isError: Boolean(cfg.isError), content: cfg.content ?? [{ type: 'text', text: cfg.text ?? JSON.stringify(body) }] } });
 });`
 		);
 		fs.writeFileSync(
@@ -158,7 +188,9 @@ require('readline').createInterface({ input: process.stdin }).on('line', (line) 
 
 		expect(res.status).toBe(1);
 		expect(res.stdout).toContain('mcp:tools');
-		expect(res.stdout).toContain('projectRoot');
+		// the changed schema lines, not the input JSON the report also prints
+		expect(res.stdout).toMatch(/^\s*-\s*"projectRoot": \{\}/m);
+		expect(res.stdout).toMatch(/^\s*\+\s*"root": \{\}/m);
 	});
 
 	it('replaces <project> in the input with the temp project', () => {
@@ -212,13 +244,98 @@ require('readline').createInterface({ input: process.stdin }).on('line', (line) 
 
 	it('does not pass TASKGRAPH_PROJECT_ROOT of the parent to the server', () => {
 		const build = makeBuild('a');
-		process.env.TASKGRAPH_PROJECT_ROOT = '/not/the/project';
-		try {
-			const run = runScenario(build, { fixture, steps: [step] });
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '/not/the/project');
 
-			expect(JSON.parse(run.steps[1].files['mcp:1']).envRoot).toBeNull();
-		} finally {
-			delete process.env.TASKGRAPH_PROJECT_ROOT;
+		const run = runScenario(build, { fixture, steps: [step] });
+
+		expect(JSON.parse(run.steps[1].files['mcp:1']).envRoot).toBeNull();
+	});
+
+	describe('a call that did not complete cleanly', () => {
+		it('reports a stray line on the server stdout instead of "no differences"', () => {
+			const res = compare(
+				makeBuild('a'),
+				makeBuild('b', { banner: 'debug: hello' }),
+				[step]
+			);
+
+			expect(res.status).toBe(1);
+			expect(res.stdout).toContain('non-JSON-RPC');
+		});
+
+		it('does not accept a server crash as the expected error', () => {
+			const a = makeBuild('a', { crashOnCall: true });
+			const b = makeBuild('b', { crashOnCall: true });
+
+			const res = compare(a, b, [{ ...step, expectError: true }]);
+
+			expect(res.status).toBe(1);
+			expect(res.stdout).toContain('did not exit as expected');
+		});
+
+		it('does not accept a timeout as the expected error', () => {
+			const build = makeBuild('a', { silentCall: true });
+
+			const run = runScenario(
+				build,
+				{ fixture, steps: [{ ...step, expectError: true }] },
+				{ timeoutMs: 8000 }
+			);
+
+			expect(run.steps[1].status).toBeNull();
+			expect(run.steps[1].stderr).toContain('timed out');
+		}, 60000);
+	});
+
+	it('keeps the tool schemas for a later step when the first call failed', () => {
+		const build = makeBuild('a', { crashFirstCall: true });
+
+		const run = runScenario(build, {
+			fixture,
+			steps: [{ ...step, expectError: true }, step]
+		});
+
+		expect(run.steps[1].files['mcp:tools']).toBeUndefined();
+		expect(run.steps[2].files['mcp:tools']).toContain('get_tasks');
+	});
+
+	it('shows what a missing server printed, even when both builds agree', () => {
+		const a = makeBuild('a');
+		const b = makeBuild('b');
+		for (const build of [a, b]) {
+			fs.rmSync(path.join(path.dirname(build), 'taskgraph-mcp'));
 		}
+
+		const res = compare(a, b, [step]);
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).toContain('taskgraph-mcp');
+		expect(res.stdout).toMatch(/not found|No such file/);
+	});
+
+	describe('replies with more than one text part', () => {
+		const text = (t: string) => ({ type: 'text', text: t });
+
+		it('reports an extra content item', () => {
+			const a = makeBuild('a', { content: [text('{"a":1}')] });
+			const b = makeBuild('b', { content: [text('{"a":1}'), text('extra')] });
+
+			const res = compare(a, b, [step]);
+
+			expect(res.status).toBe(1);
+			expect(res.stdout).toContain('extra');
+		});
+
+		it('reports a non-text content item with the same text', () => {
+			const a = makeBuild('a', { content: [text('{"a":1}')] });
+			const b = makeBuild('b', {
+				content: [{ type: 'resource', resource: { uri: 'x', text: '{"a":1}' } }]
+			});
+
+			const res = compare(a, b, [step]);
+
+			expect(res.status).toBe(1);
+			expect(res.stdout).toContain('resource');
+		});
 	});
 });

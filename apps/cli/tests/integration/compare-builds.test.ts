@@ -123,6 +123,19 @@ describe('normalizeSnapshot', () => {
 			});
 		});
 
+		it('masks only the top-level version, not one nested in the data', () => {
+			const out = normalizeSnapshot(
+				'mcp-reply.json',
+				JSON.stringify({ version: '1', data: { version: '2' } }),
+				ctx
+			);
+
+			expect(JSON.parse(out)).toEqual({
+				version: '<version>',
+				data: { version: '2' }
+			});
+		});
+
 		it('masks the Version and Name footer of a plain-text error reply', () => {
 			const out = normalizeSnapshot(
 				'mcp-reply.txt',

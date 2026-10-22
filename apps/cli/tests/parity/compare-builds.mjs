@@ -392,7 +392,7 @@ export function runScenario(build, scenario, { timeoutMs } = {}) {
 						withTools: !toolsRecorded
 					})
 				: run(args, fake.env, shell, timeout);
-			if (mcp) toolsRecorded = true;
+			if (mcpFiles?.['mcp:tools']) toolsRecorded = true;
 			const files = { ...snapshot(projectDir, workDir), ...mcpFiles };
 			if (capture) {
 				files[`stdout:${steps.length}`] = normalizeSnapshot(
@@ -468,7 +468,8 @@ export function unexpectedExits(run) {
 				step: i + 1,
 				args: step.args,
 				status: step.status,
-				expected
+				expected,
+				...(step.stderr ? { stderr: step.stderr } : {})
 			});
 		}
 	});
@@ -609,6 +610,7 @@ function main() {
 			console.log(
 				`Build ${label}: step ${u.step} (${u.args.join(' ')}) did not exit as expected: exit ${u.status}, expected ${u.expected}.`
 			);
+			if (u.stderr) console.log(`  stderr: ${u.stderr}`);
 		}
 	}
 	process.exitCode = differences.length > 0 || unexpected > 0 ? 1 : 0;

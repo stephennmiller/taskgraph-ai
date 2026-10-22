@@ -77,12 +77,16 @@ once per scenario, because a renamed parameter breaks clients.
   build.
 - **Errors**: an `isError` reply (or a JSON-RPC error with no content) is a
   result to compare. It counts as "did not exit as expected" unless the step
-  says `"expectError": true`. `mcp` cannot be combined with `args`, `shell`,
-  `capture` or `expectExit`.
+  says `"expectError": true`. A call that did not complete cleanly (the server
+  crashed or timed out, or wrote a non-JSON-RPC line to stdout) is never an
+  accepted error: the step fails and its stderr is printed. `mcp` cannot be
+  combined with `args`, `shell`, `capture` or `expectExit`. A reply is compared
+  as its text only when it has a single text part; anything else is compared
+  whole.
 - **Environment**: the same isolated `HOME` and fake `claude` as CLI steps.
   `TASKGRAPH_PROJECT_ROOT` is removed from the environment, because the
   server prefers it over a tool's `projectRoot`.
-- **Masked in replies**: the `version` field, locale dates such as
+- **Masked in replies**: the top-level `version` field, locale dates such as
   `10/22/2026` (written by tag copy), and the `Version:`/`Name:` footer of
   plain-text error replies. Everything else, including `data.message` and tips
   text, is compared as is.

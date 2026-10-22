@@ -111,7 +111,9 @@ export function callMcpTool({
 		// no summary: the smoke script or the server did not run
 	}
 	const call = summary?.calls?.[0];
-	if (!call) {
+	// A crash, a timeout or a stray stdout line is a failed call, not a reply to
+	// compare (an isError reply or a JSON-RPC error adds nothing to failures)
+	if (!call || summary.failures?.length) {
 		const why = summary?.failures?.join('; ') || res.stderr || '';
 		return {
 			status: null,
@@ -120,7 +122,9 @@ export function callMcpTool({
 			files: {}
 		};
 	}
-	const text = call.content?.[0]?.text;
+	const parts = call.content;
+	const text =
+		parts?.length === 1 && parts[0].type === 'text' ? parts[0].text : undefined;
 	let name = 'mcp-reply.txt';
 	let body = text;
 	if (typeof text !== 'string') {
