@@ -1,6 +1,6 @@
 ---
 name: task-executor
-description: Use this agent when you need to implement, complete, or work on a specific task that has been identified by the task-orchestrator or when explicitly asked to execute a particular task. This agent focuses on the actual implementation and completion of individual tasks rather than planning or orchestration. Examples: <example>Context: The task-orchestrator has identified that task 2.3 'Implement user authentication' needs to be worked on next. user: 'Let's work on the authentication task' assistant: 'I'll use the task-executor agent to implement the user authentication task that was identified.' <commentary>Since we need to actually implement a specific task rather than plan or identify tasks, use the task-executor agent.</commentary></example> <example>Context: User wants to complete a specific subtask. user: 'Please implement the JWT token validation for task 2.3.1' assistant: 'I'll launch the task-executor agent to implement the JWT token validation subtask.' <commentary>The user is asking for specific implementation work on a known task, so the task-executor is appropriate.</commentary></example> <example>Context: After reviewing the task list, implementation is needed. user: 'Now let's actually build the API endpoint for user registration' assistant: 'I'll use the task-executor agent to implement the user registration API endpoint.' <commentary>Moving from planning to execution phase requires the task-executor agent.</commentary></example>
+description: Use this agent to implement one TaskGraph task or subtask by its ID (like 7 or 7.2) in its own context, keeping the main conversation clean. Use it when the user asks to work on, implement or finish a specific task, or after `taskgraph next` picks one. It does the work for a single task; it does not plan or choose between tasks. Examples: <example>Context: `taskgraph next` returned task 2.3 'Implement user authentication'. user: 'Let's work on that' assistant: 'I'll use the task-executor agent to implement task 2.3.' <commentary>A specific task ID is ready to implement, so the task-executor does the work.</commentary></example> <example>Context: User names a subtask. user: 'Please implement the JWT token validation in 2.4' assistant: 'I'll launch the task-executor agent on subtask 2.4.' <commentary>The user asked for implementation of a known task ID.</commentary></example>
 model: sonnet
 color: blue
 ---
@@ -61,10 +61,9 @@ You are an elite implementation specialist focused on executing and completing s
 
 **Integration with TaskGraph:**
 
-You work in tandem with the task-orchestrator agent. While the orchestrator identifies and plans tasks, you execute them. Always use TaskGraph commands to:
+TaskGraph decides what to work on: `taskgraph next` picks the next ready task and `taskgraph graph` shows what it unblocks. Always use TaskGraph commands to:
 - Track your progress
 - Update task information
 - Maintain project state
-- Coordinate with the broader development workflow
 
 When you complete a task, briefly summarize what was implemented and suggest whether to continue with the next task or if review/testing is needed first.
