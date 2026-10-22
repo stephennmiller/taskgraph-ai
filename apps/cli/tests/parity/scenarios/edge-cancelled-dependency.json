@@ -1,0 +1,18 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		{
+			"args": ["next", "--format", "json"],
+			"capture": "stdout"
+		},
+		["set-status", "--id=2.1,2.2,2", "--status=done"],
+		{
+			"args": ["next", "--format", "json"],
+			"capture": "stdout"
+		},
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		}
+	]
+}

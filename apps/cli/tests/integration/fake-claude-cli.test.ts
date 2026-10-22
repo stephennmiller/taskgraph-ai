@@ -17,6 +17,11 @@ import { getCliBinPath } from '../helpers/test-utils.js';
 
 const binPath = getCliBinPath();
 const built = fs.existsSync(binPath);
+if (!built && process.env.CI) {
+	throw new Error(
+		`${binPath} is missing; run npm run build before these tests in CI`
+	);
+}
 
 describe.skipIf(!built)('built CLI against the fake claude', () => {
 	let project: string;

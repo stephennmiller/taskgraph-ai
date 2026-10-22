@@ -1,0 +1,33 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"replies": [
+		{
+			"object": {
+				"tasks": [
+					{
+						"id": 2,
+						"title": "Write the parser (reworded)",
+						"description": "Parse the input files into tasks",
+						"status": "pending",
+						"dependencies": [1],
+						"priority": "high",
+						"details": null,
+						"testStrategy": null,
+						"subtasks": null
+					}
+				]
+			}
+		}
+	],
+	"steps": [
+		["update", "--from=2", "--prompt", "Reword the parser task"],
+		{
+			"args": ["show", "2", "--format", "json"],
+			"capture": "stdout"
+		},
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		}
+	]
+}
