@@ -14,6 +14,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { fit, terminalSafe, wrapLine } from './markdown-formatters.js';
 
@@ -43,7 +44,7 @@ export interface CreatedTask {
  */
 export function formatTaskCreated(
 	created: CreatedTask,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const safeDeps = (deps: CreatedTaskDependency[]) =>
 		deps.map((dep) => ({ ...dep, title: terminalSafe(dep.title) }));

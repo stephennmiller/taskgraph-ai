@@ -11,6 +11,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 /** The subtask fields the summary shows */
@@ -29,7 +30,7 @@ export interface SubtaskSummaryItem {
 export function formatAddedSubtasks(
 	parentId: number | string,
 	subtasks: SubtaskSummaryItem[],
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const count = subtasks.length;
 	const noun = count === 1 ? 'subtask' : 'subtasks';

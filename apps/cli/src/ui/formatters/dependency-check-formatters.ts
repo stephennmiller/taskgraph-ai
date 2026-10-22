@@ -21,6 +21,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 type Id = number | string;
@@ -139,7 +140,7 @@ function noProblems(counts: DependencyCounts): string {
  */
 export function formatDependencyCheck(
 	result: DependencyCounts & { issues: DependencyIssue[] },
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const { issues } = result;
 	if (issues.length === 0) return noProblems(result);
@@ -203,7 +204,7 @@ export function formatDependencyFixes(
 		/** Problems fix-dependencies leaves for the user, like task loops */
 		remaining?: DependencyIssue[];
 	},
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const { fixes, remaining = [] } = result;
 	if (fixes.length === 0 && remaining.length === 0) return noProblems(result);

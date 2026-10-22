@@ -11,6 +11,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { formatMarkdown } from './markdown-formatters.js';
 
@@ -24,7 +25,7 @@ const MAX_ANSWER_WIDTH = 100;
  */
 export function formatResearchAnswer(
 	markdown: string,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const columns = Math.max(40, Math.min(width, MAX_ANSWER_WIDTH));
 	const answer = markdown.replace(/<think>[\s\S]*?<\/think>/g, '').trim();

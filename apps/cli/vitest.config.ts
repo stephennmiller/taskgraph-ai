@@ -22,6 +22,9 @@ export default mergeConfig(
 			],
 			// Integration tests spawn CLI processes - 30s is reasonable with optimized startup
 			testTimeout: 30000,
+			// Output width falls back to COLUMNS when stdout is not a terminal; clear it
+			// so default-width expectations do not depend on the runner's shell
+			env: { COLUMNS: '' },
 			hookTimeout: 15000
 		}
 	})

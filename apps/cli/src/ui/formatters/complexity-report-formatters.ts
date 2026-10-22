@@ -15,6 +15,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import {
 	complexityLevel,
@@ -145,7 +146,7 @@ const expandHint = () =>
  */
 export function formatComplexityRun(
 	summary: ComplexityRunSummary,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const { analyses, skipped, kept, reportPath } = summary;
 	if (analyses.length === 0) {
@@ -185,7 +186,7 @@ export function formatComplexityRun(
  */
 export function formatComplexityReport(
 	report: ComplexityReport,
-	width = process.stdout.columns || 80
+	width = terminalWidth()
 ): string {
 	const items = report.complexityAnalysis ?? [];
 	if (items.length === 0) {

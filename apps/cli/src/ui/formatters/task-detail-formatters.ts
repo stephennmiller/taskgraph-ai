@@ -36,6 +36,7 @@ import {
 import chalk from 'chalk';
 import { toMarkdown } from '../../utils/content-renderer.js';
 import { getSuggestedActions } from '../suggested-actions.js';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { complexityLevel } from './complexity-formatters.js';
 import {
@@ -338,7 +339,7 @@ export function formatTaskDetail(
 	const task = safeStrings(taskToShow);
 	const width = Math.max(
 		30,
-		Math.min(options.width ?? (process.stdout.columns || 80), MAX_WIDTH)
+		Math.min(options.width ?? terminalWidth(), MAX_WIDTH)
 	);
 	const id = options.id ?? String(task.id);
 	const label = id.includes('.') ? `Subtask ${id}` : `Task ${id}`;
