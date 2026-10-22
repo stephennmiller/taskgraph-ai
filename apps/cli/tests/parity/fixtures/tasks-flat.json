@@ -1,0 +1,56 @@
+{
+	"tasks": [
+		{
+			"id": 1,
+			"title": "Set up the project",
+			"description": "Set up the project description",
+			"details": "Details for Set up the project",
+			"testStrategy": "Check Set up the project",
+			"status": "done",
+			"priority": "medium",
+			"dependencies": [],
+			"subtasks": []
+		},
+		{
+			"id": 2,
+			"title": "Write the parser",
+			"description": "Write the parser description",
+			"details": "Details for Write the parser",
+			"testStrategy": "Check Write the parser",
+			"status": "pending",
+			"priority": "medium",
+			"dependencies": [1],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Read the files",
+					"description": "Read the files description",
+					"details": "Details for Read the files",
+					"testStrategy": "Check Read the files",
+					"status": "pending",
+					"dependencies": []
+				},
+				{
+					"id": 2,
+					"title": "Validate the content",
+					"description": "Validate the content description",
+					"details": "Details for Validate the content",
+					"testStrategy": "Check Validate the content",
+					"status": "pending",
+					"dependencies": [1]
+				}
+			]
+		},
+		{
+			"id": 3,
+			"title": "Write the report",
+			"description": "Write the report description",
+			"details": "Details for Write the report",
+			"testStrategy": "Check Write the report",
+			"status": "pending",
+			"priority": "medium",
+			"dependencies": [2],
+			"subtasks": []
+		}
+	]
+}

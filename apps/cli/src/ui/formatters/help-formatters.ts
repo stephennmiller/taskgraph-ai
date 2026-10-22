@@ -16,6 +16,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { PLUGIN_MARKETPLACE, PLUGIN_NAME } from './init-summary-formatters.js';
 
@@ -106,7 +107,7 @@ const fit = (text: string, width: number) =>
  *
  * @param width - Terminal width; descriptions are cut to fit on one line
  */
-export function formatHelp(width = process.stdout.columns || 80): string {
+export function formatHelp(width = terminalWidth()): string {
 	const rows = HELP_GROUPS.flatMap((group) => group.commands);
 	const nameWidth = Math.max(...rows.map((row) => row.name.length));
 	const descWidth = Math.max(

@@ -1,0 +1,120 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["tags", "copy", "master", "other"],
+		["add-dependency", "--id=4", "--depends-on=1", "--tag", "other"],
+		{
+			"mcp": "add_dependency",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"id": "5",
+				"dependsOn": "1"
+			}
+		},
+		["remove-dependency", "--id=4", "--depends-on=1", "--tag", "other"],
+		{
+			"mcp": "remove_dependency",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"id": "5",
+				"dependsOn": "1"
+			}
+		},
+		["clear-subtasks", "--id=2", "--tag", "other"],
+		[
+			"add-subtask",
+			"--parent=4",
+			"--title=First",
+			"--description=One",
+			"--tag",
+			"other"
+		],
+		{
+			"mcp": "add_subtask",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"id": "4",
+				"title": "Second",
+				"description": "Two"
+			}
+		},
+		["remove-subtask", "--id=4.1", "--tag", "other"],
+		{
+			"mcp": "remove_subtask",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"id": "4.2"
+			}
+		},
+		[
+			"add-subtask",
+			"--parent=4",
+			"--title=Third",
+			"--description=Three",
+			"--tag",
+			"other"
+		],
+		{
+			"mcp": "clear_subtasks",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"all": true
+			}
+		},
+		["move", "--from=5", "--to=6", "--tag", "other"],
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"from": "4",
+				"to": "7"
+			}
+		},
+		["remove-task", "--id=3", "--yes", "--tag", "other"],
+		{
+			"mcp": "remove_task",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other",
+				"id": "1",
+				"confirm": true
+			}
+		},
+		["validate-dependencies", "--tag", "other"],
+		{
+			"mcp": "validate_dependencies",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other"
+			}
+		},
+		["fix-dependencies", "--tag", "other"],
+		{
+			"mcp": "fix_dependencies",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "other"
+			}
+		},
+		{
+			"args": ["add-dependency", "--id=4", "--depends-on=1", "--tag", "nope"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "add_dependency",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "nope",
+				"id": "4",
+				"dependsOn": "1"
+			},
+			"expectError": true
+		}
+	]
+}

@@ -1,0 +1,37 @@
+{
+	"fixture": "../fixtures/tasks-flat.json",
+	"steps": [
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		},
+		{
+			"mcp": "get_tasks",
+			"input": { "projectRoot": "<project>" }
+		},
+		["add-dependency", "--id=3", "--depends-on=1"],
+		["add-subtask", "--parent=3", "--title=Draft", "--description=First draft"],
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "2.2", "dependsOn": "1" }
+		},
+		["remove-dependency", "--id=3", "--depends-on=1"],
+		["move", "--from=3", "--to=4"],
+		{
+			"mcp": "list_tags",
+			"input": { "projectRoot": "<project>" }
+		},
+		["tags", "add", "scratch"],
+		{
+			"mcp": "remove_task",
+			"input": { "projectRoot": "<project>", "id": "4", "confirm": true }
+		},
+		["clear-subtasks", "--id=2"],
+		["tags"],
+		["remove-task", "--id=1", "--yes"],
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		}
+	]
+}

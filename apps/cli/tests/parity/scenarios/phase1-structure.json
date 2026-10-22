@@ -1,0 +1,92 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["add-subtask", "--parent=4", "--title=First", "--description=One"],
+		{
+			"mcp": "add_subtask",
+			"input": {
+				"projectRoot": "<project>",
+				"id": "4",
+				"title": "Second",
+				"description": "Two"
+			}
+		},
+		{
+			"args": ["add-subtask", "--parent=5", "--task-id=3"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "add_subtask",
+			"input": {
+				"projectRoot": "<project>",
+				"id": "5",
+				"taskId": "1"
+			},
+			"expectError": true
+		},
+		["add-subtask", "--parent=1", "--task-id=3"],
+		["move", "--from=4.1", "--to=6"],
+		{
+			"mcp": "add_subtask",
+			"input": {
+				"projectRoot": "<project>",
+				"id": "1",
+				"taskId": "6"
+			}
+		},
+		["move", "--from=5", "--to=2.3"],
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"from": "2.3",
+				"to": "7"
+			}
+		},
+		["move", "--from=7,4", "--to=8,9"],
+		{
+			"args": ["move", "--from=8", "--to=9"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"from": "8",
+				"to": "9"
+			},
+			"expectError": true
+		},
+		{
+			"args": ["move", "--from=2", "--from-tag=master", "--to-tag=feature"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"from": "2",
+				"fromTag": "master",
+				"toTag": "feature"
+			},
+			"expectError": true
+		},
+		[
+			"move",
+			"--from=9",
+			"--from-tag=master",
+			"--to-tag=feature",
+			"--ignore-dependencies"
+		],
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"from": "2",
+				"fromTag": "master",
+				"toTag": "feature",
+				"ignoreDependencies": true
+			}
+		}
+	]
+}

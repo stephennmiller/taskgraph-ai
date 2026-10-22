@@ -1,0 +1,63 @@
+{
+	"sprint": {
+		"tasks": [
+			{
+				"id": 1,
+				"title": "Plan the sprint",
+				"description": "Plan the sprint description",
+				"details": "Details for Plan the sprint",
+				"testStrategy": "Check Plan the sprint",
+				"status": "done",
+				"priority": "medium",
+				"dependencies": [],
+				"subtasks": []
+			},
+			{
+				"id": 2,
+				"title": "Build the feature",
+				"description": "Build the feature description",
+				"details": "Details for Build the feature",
+				"testStrategy": "Check Build the feature",
+				"status": "pending",
+				"priority": "medium",
+				"dependencies": [1],
+				"subtasks": [
+					{
+						"id": 1,
+						"title": "Draft the design",
+						"description": "Draft the design description",
+						"details": "Details for Draft the design",
+						"testStrategy": "Check Draft the design",
+						"status": "pending",
+						"dependencies": []
+					},
+					{
+						"id": 2,
+						"title": "Write the code",
+						"description": "Write the code description",
+						"details": "Details for Write the code",
+						"testStrategy": "Check Write the code",
+						"status": "pending",
+						"dependencies": [1]
+					}
+				]
+			},
+			{
+				"id": 3,
+				"title": "Ship the feature",
+				"description": "Ship the feature description",
+				"details": "Details for Ship the feature",
+				"testStrategy": "Check Ship the feature",
+				"status": "pending",
+				"priority": "medium",
+				"dependencies": [2],
+				"subtasks": []
+			}
+		],
+		"metadata": {
+			"created": "2026-01-01T00:00:00.000Z",
+			"updated": "2026-01-01T00:00:00.000Z",
+			"description": "Parity fixture: the only tag is not master"
+		}
+	}
+}

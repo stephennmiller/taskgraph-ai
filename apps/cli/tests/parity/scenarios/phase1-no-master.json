@@ -1,0 +1,43 @@
+{
+	"fixture": "../fixtures/tasks-no-master.json",
+	"steps": [
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		},
+		{
+			"mcp": "get_tasks",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "list_tags",
+			"input": { "projectRoot": "<project>" }
+		},
+		{ "args": ["add-dependency", "--id=3", "--depends-on=1"], "expectExit": 1 },
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "3", "dependsOn": "1" },
+			"expectError": true
+		},
+		{ "args": ["move", "--from=3", "--to=4"], "expectExit": 1 },
+		["tags", "use", "sprint"],
+		["add-dependency", "--id=3", "--depends-on=1"],
+		["add-subtask", "--parent=3", "--title=Draft", "--description=First draft"],
+		{
+			"mcp": "add_dependency",
+			"input": { "projectRoot": "<project>", "id": "2.2", "dependsOn": "1" }
+		},
+		["remove-dependency", "--id=3", "--depends-on=1"],
+		["move", "--from=3", "--to=4"],
+		["tags", "add", "scratch", "--copy-from", "sprint"],
+		{
+			"mcp": "remove_task",
+			"input": { "projectRoot": "<project>", "id": "4", "confirm": true }
+		},
+		["clear-subtasks", "--id=2"],
+		{
+			"args": ["list", "--format", "json"],
+			"capture": "stdout"
+		}
+	]
+}
