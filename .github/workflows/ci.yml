@@ -229,6 +229,29 @@ jobs:
           NODE_ENV: test
           CI: true
 
+      # Coverage is off: these packages do not meet their coverage thresholds yet,
+      # and this step is about the tests passing
+      - name: Run @tm/core tests
+        if: ${{ !cancelled() }}
+        run: npm run test -w @tm/core -- --coverage.enabled=false
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Run @tm/cli tests
+        if: ${{ !cancelled() }}
+        run: npm run test -w @tm/cli -- --coverage.enabled=false
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Run @tm/mcp tests
+        if: ${{ !cancelled() }}
+        run: npm run test -w @tm/mcp -- --coverage.enabled=false
+        env:
+          NODE_ENV: test
+          CI: true
+
       - name: Run AI SDK contract tests
         run: npm run test:sdk-contract
         env:

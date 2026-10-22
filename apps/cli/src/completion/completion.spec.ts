@@ -298,9 +298,15 @@ describe('renderCompletionScript', () => {
 			try {
 				const file = join(dir, `taskgraph.${shell}`);
 				writeFileSync(file, script);
+				// zsh's script runs compinit unless compdef exists, and compinit aborts in
+				// a shell without a terminal; this test is about quoting, not compinit
+				const prelude = shell === 'zsh' ? 'compdef() { :; }; ' : '';
 				const run = spawnSync(
 					shell,
-					['-c', `source ${file} && printf %s "$__taskgraph_program"`],
+					[
+						'-c',
+						`${prelude}source ${file} && printf %s "$__taskgraph_program"`
+					],
 					{ encoding: 'utf8', env: { ...process.env, HOME: dir } }
 				);
 				if (run.error) return; // shell not installed here
