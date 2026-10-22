@@ -20,6 +20,7 @@ import {
 	compareRuns,
 	diffSnapshots,
 	formatReport,
+	runScenario,
 	summarizeRun
 } from '../parity/compare-builds.mjs';
 import { normalizeSnapshot } from '../parity/normalize.mjs';
@@ -268,6 +269,18 @@ describe('summarizeRun', () => {
 
 		expect(summary).toEqual({ steps: 4, failed: 1, changedFiles: 2 });
 	});
+
+	it('does not count captured output as a changed file', () => {
+		const summary = summarizeRun({
+			steps: [
+				step(0, { 'a.json': '1' }),
+				step(0, { 'a.json': '1', 'stdout:1': '{}' }),
+				step(0, { 'a.json': '1' })
+			]
+		});
+
+		expect(summary.changedFiles).toBe(0);
+	});
 });
 
 describe.skipIf(!built)('compare-builds script', () => {
@@ -281,7 +294,7 @@ describe.skipIf(!built)('compare-builds script', () => {
 		fs.rmSync(work, { recursive: true, force: true });
 	});
 
-	const scenario = (steps: string[][], extra: object = {}) => {
+	const scenario = (steps: unknown[], extra: object = {}) => {
 		const file = path.join(work, 'scenario.json');
 		fs.writeFileSync(
 			file,
@@ -376,5 +389,50 @@ describe.skipIf(!built)('compare-builds script', () => {
 
 		expect(res.status).toBe(1);
 		expect(res.stdout).toContain('boom: refused');
+	});
+	it("records a step's output when the scenario asks for it", () => {
+		const run = runScenario(real, {
+			fixture,
+			steps: [
+				{ args: ['next', '--format', 'json'], capture: 'stdout' },
+				['next']
+			]
+		});
+
+		const captured = JSON.parse(run.steps[1].files['stdout:1']);
+		expect(captured.task.id).toBe('2');
+		expect(Object.keys(run.steps[2].files)).not.toContain('stdout:2');
+	});
+
+	it('runs a shell step in the project, then the steps after it see its effect', () => {
+		const run = runScenario(real, {
+			fixture,
+			steps: [
+				{ shell: 'echo prepared > .taskgraph/tasks/marker.txt' },
+				['list']
+			]
+		});
+
+		expect(run.steps[1].status).toBe(0);
+		expect(run.steps[1].files['.taskgraph/tasks/marker.txt']).toBe(
+			'prepared\n'
+		);
+		expect(run.steps[1].args).toEqual([
+			'shell',
+			'echo prepared > .taskgraph/tasks/marker.txt'
+		]);
+	});
+
+	it('reports a difference in a captured output', () => {
+		const file = scenario([
+			{ args: ['next', '--format', 'json'], capture: 'stdout' }
+		] as any);
+		const noisy = wrapped('[ "$1" = next ] && echo extra-line');
+
+		const res = compare(real, noisy, file);
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).toContain('stdout:1');
+		expect(res.stdout).toContain('extra-line');
 	});
 });

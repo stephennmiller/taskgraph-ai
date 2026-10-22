@@ -21,6 +21,11 @@
  * Scenario file (JSON, paths relative to the file):
  *   { "fixture": "tasks.json to start from", "replies": [canned fake replies],
  *     "steps": [["set-status", "--id=1", "--status=done"], ...] }
+ * A step is a list of CLI arguments, or an object:
+ *   { "args": [...], "capture": "stdout" }  also compare what the command
+ *       printed (use a JSON format, such as `next --format json`)
+ *   { "shell": "..." }  run a shell command in the project to prepare state
+ *       (not part of the build under test)
  *
  * Exit code: 0 no differences, 1 differences, 2 bad usage or a build that
  * cannot run.
@@ -136,6 +141,16 @@ export function buildEnv(workDir, base = process.env) {
 }
 
 const STDERR_TAIL = 400;
+const ANSI = /\u001b\[[0-9;]*m/g;
+
+/** @returns {{args: string[], shell?: string, capture: boolean}} */
+function parseStep(spec) {
+	if (Array.isArray(spec)) return { args: spec, capture: false };
+	if (typeof spec.shell === 'string') {
+		return { args: ['shell', spec.shell], shell: spec.shell, capture: false };
+	}
+	return { args: spec.args, capture: spec.capture === 'stdout' };
+}
 
 /**
  * Run a scenario against one build.
@@ -151,14 +166,17 @@ export function runScenario(build, scenario) {
 	try {
 		const env = buildEnv(workDir);
 		fs.mkdirSync(env.HOME, { recursive: true });
-		const run = (args, extraEnv = {}) => {
-			const res = spawnSync('sh', ['-c', `${build} "$@"`, 'sh', ...args], {
+		const run = (args, extraEnv = {}, shell = null) => {
+			const argv = shell
+				? ['-c', shell]
+				: ['-c', `${build} "$@"`, 'sh', ...args];
+			const res = spawnSync('sh', argv, {
 				cwd: projectDir,
 				env: { ...env, ...extraEnv },
 				encoding: 'utf8',
 				timeout: STEP_TIMEOUT_MS
 			});
-			const result = { status: res.status };
+			const result = { status: res.status, stdout: res.stdout ?? '' };
 			if (res.error) result.error = res.error.code ?? res.error.message;
 			else if (res.signal) result.error = res.signal;
 			const tail = (res.stderr ?? '').trim().slice(-STDERR_TAIL);
@@ -196,9 +214,18 @@ export function runScenario(build, scenario) {
 				files: snapshot(projectDir, workDir)
 			}
 		];
-		for (const args of scenario.steps) {
-			const result = run(args, fake.env);
-			steps.push({ args, ...result, files: snapshot(projectDir, workDir) });
+		for (const spec of scenario.steps) {
+			const { args, shell, capture } = parseStep(spec);
+			const { stdout, ...result } = run(args, fake.env, shell);
+			const files = snapshot(projectDir, workDir);
+			if (capture) {
+				files[`stdout:${steps.length}`] = normalizeSnapshot(
+					'stdout.json',
+					stdout.replace(ANSI, ''),
+					{ projectDir, workDir }
+				);
+			}
+			steps.push({ args, ...result, files });
 		}
 		return { steps };
 	} finally {
@@ -256,12 +283,16 @@ export function compareRuns(a, b) {
  * and steps that changed a file.
  */
 export function summarizeRun(run) {
+	const stateOf = (step) =>
+		JSON.stringify(
+			Object.entries(step.files).filter(([name]) => !name.startsWith('stdout:'))
+		);
 	const steps = run.steps.slice(1);
 	let changedFiles = 0;
 	let failed = 0;
 	steps.forEach((step, i) => {
 		if (step.status !== 0) failed++;
-		if (JSON.stringify(step.files) !== JSON.stringify(run.steps[i].files)) {
+		if (stateOf(step) !== stateOf(run.steps[i])) {
 			changedFiles++;
 		}
 	});
