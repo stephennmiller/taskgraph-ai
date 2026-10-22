@@ -3430,8 +3430,15 @@ function setupCLI() {
  */
 async function runCLI(argv = process.argv) {
 	try {
-		// If no arguments provided, launch the TUI REPL (which has its own banner)
+		// Bare `taskgraph` gets the banner like `--help`: until the TUI ships,
+		// launchREPL falls back to the help screen (a real TUI clears the screen
+		// and draws its own)
 		if (argv.length <= 2) {
+			if (
+				ui.shouldShowAsciiBanner(argv.slice(2), Boolean(process.stdout.isTTY))
+			) {
+				displayBanner();
+			}
 			await launchREPL();
 			return;
 		}
@@ -3443,7 +3450,7 @@ async function runCLI(argv = process.argv) {
 			setSuppressConfigWarnings(true);
 		}
 		// Only the top-level help screen gets the banner; routine commands lead
-		// with their result (init and the TUI print their own)
+		// with their result (init prints its own)
 		if (
 			ui.shouldShowAsciiBanner(argv.slice(2), Boolean(process.stdout.isTTY))
 		) {

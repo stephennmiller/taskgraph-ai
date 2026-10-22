@@ -2,7 +2,7 @@
  * @fileoverview Integration test for when the built CLI prints the ASCII
  * banner. stdout is forced to look like a terminal (the banner never prints
  * into a pipe), so this checks what a user sees: routine commands start with
- * their result, and only the top-level help screen carries the banner.
+ * their result, and only bare `taskgraph` and the top-level help screen carry the banner.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -78,6 +78,13 @@ describe('ASCII banner in a terminal', () => {
 
 	it('shows the banner above the top-level help screen', () => {
 		const output = run('--help');
+
+		expect(output).toContain(BANNER_CREDIT);
+		expect(output).toContain('Daily workflow');
+	});
+
+	it('shows the banner above the help screen for bare taskgraph', () => {
+		const output = run();
 
 		expect(output).toContain(BANNER_CREDIT);
 		expect(output).toContain('Daily workflow');

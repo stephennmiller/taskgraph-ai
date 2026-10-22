@@ -70,6 +70,10 @@ describe('shouldShowAsciiBanner', () => {
 		}
 	);
 
+	it('shows the banner for bare taskgraph in a terminal', () => {
+		expect(shouldShowAsciiBanner([], true)).toBe(true);
+	});
+
 	it.each([
 		[['list']],
 		[['show', '2']],
@@ -88,6 +92,7 @@ describe('shouldShowAsciiBanner', () => {
 
 	it('never shows the banner when stdout is not a terminal', () => {
 		expect(shouldShowAsciiBanner(['--help'], false)).toBe(false);
+		expect(shouldShowAsciiBanner([], false)).toBe(false);
 	});
 
 	it('still honors --no-banner on the help screen', () => {
