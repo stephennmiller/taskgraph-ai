@@ -1173,6 +1173,12 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 					if (tagAsRead && tagNow && Array.isArray(tagNow.tasks)) {
 						const tagNowNormalized = JSON.parse(JSON.stringify(tagNow));
 						normalizeTaskIds(tagNowNormalized.tasks);
+						// readJSON filled in missing metadata on the copy it read; do the
+						// same here so the merge doesn't read that as a removal
+						ensureTagMetadata(tagNowNormalized, {
+							description: `Tasks for ${resolvedTag} context`,
+							skipUpdate: true
+						});
 						const { merged, renumbered } = mergeTagChanges(
 							tagAsRead,
 							cleanResolvedData,

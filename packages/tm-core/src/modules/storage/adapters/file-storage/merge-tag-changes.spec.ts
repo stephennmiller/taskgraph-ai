@@ -201,4 +201,100 @@ describe('mergeTagChanges', () => {
 			lastModified: 'c'
 		});
 	});
+
+	it('points subtask dependencies and their provenance at a renumbered sibling', () => {
+		const sub = (id: number, fields: Record<string, unknown> = {}) => ({
+			id,
+			title: `Sub ${id}`,
+			dependencies: [] as unknown[],
+			...fields
+		});
+		const base = tag([task(5, { subtasks: [sub(1)] })]);
+		const mine = tag([
+			task(5, {
+				subtasks: [
+					sub(1),
+					sub(2, { title: 'mine' }),
+					sub(3, {
+						dependencies: [2, '5.2', 1],
+						metadata: { dependencySources: { '5.2': 'inferred' } }
+					})
+				]
+			})
+		]);
+		const theirs = tag([
+			task(5, { subtasks: [sub(1), sub(2, { title: 'theirs' })] })
+		]);
+
+		const { merged, renumbered } = mergeTagChanges(base, mine, theirs);
+
+		expect(renumbered).toEqual([{ from: '5.2', to: '5.4' }]);
+		const subtasks = merged.tasks[0].subtasks as Record<string, unknown>[];
+		expect(subtasks.map((s) => s.id)).toEqual([1, 2, 4, 3]);
+		expect(subtasks[3]).toMatchObject({
+			dependencies: [4, '5.4', 1],
+			metadata: { dependencySources: { '5.4': 'inferred' } }
+		});
+	});
+
+	it("moves a renumbered task's dotted subtask dependencies with it", () => {
+		const base = tag([task(1)]);
+		const mine = tag([
+			task(1),
+			task(2, {
+				title: 'Mine',
+				subtasks: [
+					{ id: 1, title: 'a', dependencies: [] },
+					{ id: 2, title: 'b', dependencies: ['2.1', 1, '1'] }
+				]
+			})
+		]);
+		const theirs = tag([task(1), task(2, { title: 'Theirs' })]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		const moved = merged.tasks[2];
+		expect(moved.id).toBe(3);
+		expect(
+			(moved.subtasks[1] as { dependencies: unknown[] }).dependencies
+		).toEqual(['3.1', 1, '1']);
+	});
+
+	it("keeps the command's new order and others' additions next to their neighbour", () => {
+		const base = tag([task(1), task(2), task(3)]);
+		const mine = tag([task(3), task(1), task(2)]);
+		const theirs = tag([
+			task(1),
+			task(4),
+			task(2, { status: 'done' }),
+			task(3)
+		]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks.map((t) => t.id)).toEqual([3, 1, 4, 2]);
+		expect(merged.tasks[3].status).toBe('done');
+	});
+
+	it('keeps __proto__ and constructor keys as plain data', () => {
+		const base = JSON.parse(
+			'{"tasks":[{"id":1,"title":"a","__proto__":{"x":1}}],"metadata":{}}'
+		);
+		const mine = JSON.parse(
+			'{"tasks":[{"id":1,"title":"b","__proto__":{"x":1},"constructor":"c"}],"metadata":{}}'
+		);
+		const theirs = JSON.parse(
+			'{"tasks":[{"id":1,"title":"a","__proto__":{"x":2}}],"metadata":{"m":1}}'
+		);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		const saved = JSON.parse(JSON.stringify(merged));
+		expect(Object.getPrototypeOf(merged.tasks[0])).toBe(Object.prototype);
+		expect(Object.hasOwn(saved.tasks[0], '__proto__')).toBe(true);
+		expect(saved.tasks[0].__proto__).toEqual({ x: 2 });
+		expect(saved.tasks[0].constructor).toBe('c');
+		expect(saved.tasks[0].title).toBe('b');
+		expect(({} as Record<string, unknown>).x).toBeUndefined();
+	});
 });
