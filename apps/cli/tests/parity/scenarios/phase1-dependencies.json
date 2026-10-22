@@ -7,9 +7,10 @@
 			"input": { "projectRoot": "<project>", "id": "5", "dependsOn": "1" }
 		},
 		["add-dependency", "--id=5", "--depends-on=2.1"],
+		["add-subtask", "--parent=2", "--title=Report", "--description=Errors"],
 		{
 			"mcp": "add_dependency",
-			"input": { "projectRoot": "<project>", "id": "2.2", "dependsOn": "2.1" }
+			"input": { "projectRoot": "<project>", "id": "2.3", "dependsOn": "2.2" }
 		},
 		["remove-dependency", "--id=4", "--depends-on=1"],
 		{

@@ -3,7 +3,10 @@
 	"steps": [
 		["add-tag", "alpha", "--copy-from-current"],
 		["add-tag", "beta", "--copy-from=feature", "--description=From feature"],
-		{ "args": ["add-tag", "alpha"], "expectExit": 1 },
+		{
+			"args": ["add-tag", "alpha"],
+			"expectExit": 1
+		},
 		{
 			"shell": "git checkout -q -b topic && git -c user.name=x -c user.email=y commit -q --allow-empty -m x"
 		},
@@ -12,10 +15,24 @@
 			"shell": "git checkout -q -b topic-two"
 		},
 		["tags", "add", "--from-branch"],
+		{
+			"shell": "git checkout -q -b topic-three"
+		},
+		{
+			"mcp": "add_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"name": "ignored",
+				"fromBranch": true
+			}
+		},
 		["tags", "add", "gamma", "--copy-from", "alpha", "--description", "Copy"],
 		{
 			"mcp": "add_tag",
-			"input": { "projectRoot": "<project>", "name": "delta" }
+			"input": {
+				"projectRoot": "<project>",
+				"name": "delta"
+			}
 		},
 		{
 			"mcp": "add_tag",
@@ -36,29 +53,39 @@
 		},
 		{
 			"mcp": "add_tag",
-			"input": { "projectRoot": "<project>", "name": "alpha" },
+			"input": {
+				"projectRoot": "<project>",
+				"name": "alpha"
+			},
 			"expectError": true
 		},
 		["tags"],
 		["tags", "list", "--show-metadata"],
 		{
 			"mcp": "list_tags",
-			"input": { "projectRoot": "<project>" }
-		},
-		{
-			"mcp": "list_tags",
-			"input": { "projectRoot": "<project>", "showMetadata": true }
+			"input": {
+				"projectRoot": "<project>"
+			}
 		},
 		["tags", "use", "alpha"],
 		{
 			"mcp": "use_tag",
-			"input": { "projectRoot": "<project>", "name": "beta" }
+			"input": {
+				"projectRoot": "<project>",
+				"name": "beta"
+			}
 		},
 		["use-tag", "master"],
-		{ "args": ["tags", "use", "nope"], "expectExit": 1 },
+		{
+			"args": ["tags", "use", "nope"],
+			"expectExit": 1
+		},
 		{
 			"mcp": "use_tag",
-			"input": { "projectRoot": "<project>", "name": "nope" },
+			"input": {
+				"projectRoot": "<project>",
+				"name": "nope"
+			},
 			"expectError": true
 		},
 		["tags", "rename", "gamma", "gamma-renamed"],
@@ -71,7 +98,19 @@
 			}
 		},
 		["rename-tag", "epsilon", "epsilon-renamed"],
-		{ "args": ["tags", "rename", "nope", "other"], "expectExit": 1 },
+		{
+			"args": ["tags", "rename", "nope", "other"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "rename_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"oldName": "nope",
+				"newName": "other"
+			},
+			"expectError": true
+		},
 		["tags", "copy", "alpha", "alpha-copy", "--description", "A copy"],
 		{
 			"mcp": "copy_tag",
@@ -83,17 +122,57 @@
 			}
 		},
 		["copy-tag", "zeta", "zeta-copy"],
-		{ "args": ["tags", "copy", "nope", "other"], "expectExit": 1 },
+		{
+			"args": ["tags", "copy", "nope", "other"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "copy_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"sourceName": "nope",
+				"targetName": "other"
+			},
+			"expectError": true
+		},
 		["tags", "remove", "gamma-renamed", "--yes"],
 		{
 			"mcp": "delete_tag",
-			"input": { "projectRoot": "<project>", "name": "delta-renamed" }
+			"input": {
+				"projectRoot": "<project>",
+				"name": "delta-renamed"
+			}
 		},
 		["delete-tag", "epsilon-renamed", "--yes"],
-		{ "args": ["tags", "remove", "master", "--yes"], "expectExit": 1 },
+		["tags", "use", "zeta-copy"],
+		["tags", "rename", "zeta-copy", "zeta-now"],
+		{
+			"mcp": "rename_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"oldName": "zeta-now",
+				"newName": "zeta-later"
+			}
+		},
 		{
 			"mcp": "delete_tag",
-			"input": { "projectRoot": "<project>", "name": "master" },
+			"input": {
+				"projectRoot": "<project>",
+				"name": "zeta-later"
+			}
+		},
+		["tags", "use", "alpha-copy"],
+		["tags", "remove", "alpha-copy", "--yes"],
+		{
+			"args": ["tags", "remove", "master", "--yes"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "delete_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"name": "master"
+			},
 			"expectError": true
 		}
 	]

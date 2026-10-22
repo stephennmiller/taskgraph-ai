@@ -27,6 +27,8 @@
 			"input": { "projectRoot": "<project>", "id": "4", "confirm": true }
 		},
 		["clear-subtasks", "--id=2"],
+		["tags"],
+		["remove-task", "--id=1", "--yes"],
 		{
 			"args": ["list", "--format", "json"],
 			"capture": "stdout"

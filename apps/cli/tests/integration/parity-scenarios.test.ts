@@ -69,6 +69,7 @@ const PHASE1_TAGS_SUBCOMMANDS = [
 type Step = {
 	args?: string[];
 	mcp?: string;
+	input?: { tag?: string };
 	expectExit?: number;
 	expectError?: boolean;
 };
@@ -77,6 +78,29 @@ const steps = (s: unknown): Step[] =>
 		Array.isArray(x) ? { args: x as string[] } : (x as Step)
 	);
 const allSteps = scenarios.flatMap(({ scenario }) => steps(scenario));
+
+const TAG_FLAG_COMMANDS = [
+	'add-dependency',
+	'remove-dependency',
+	'validate-dependencies',
+	'fix-dependencies',
+	'clear-subtasks',
+	'remove-task',
+	'remove-subtask',
+	'add-subtask',
+	'move'
+];
+const TAG_FLAG_TOOLS = [
+	'add_dependency',
+	'remove_dependency',
+	'validate_dependencies',
+	'fix_dependencies',
+	'clear_subtasks',
+	'remove_task',
+	'remove_subtask',
+	'add_subtask',
+	'move_task'
+];
 
 describe('parity scenarios', () => {
 	it('has scenario files to check', () => {
@@ -116,6 +140,21 @@ describe('parity scenarios', () => {
 			expect(readme).toContain(`\`${name}\``);
 		}
 	);
+
+	it.each(TAG_FLAG_COMMANDS)('%s runs with --tag in a scenario', (command) => {
+		expect(
+			allSteps.some(
+				(s) =>
+					s.args?.[0] === command && !s.expectExit && s.args.includes('--tag')
+			)
+		).toBe(true);
+	});
+
+	it.each(TAG_FLAG_TOOLS)('%s is called with a tag in a scenario', (tool) => {
+		expect(
+			allSteps.some((s) => s.mcp === tool && !s.expectError && s.input?.tag)
+		).toBe(true);
+	});
 
 	it.each(PHASE1_TAGS_SUBCOMMANDS)('tags %s runs in a scenario', (sub) => {
 		expect(
