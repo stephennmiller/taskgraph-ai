@@ -10,9 +10,10 @@ import {
 	resolveSubtaskDependency
 } from '../../dependencies/index.js';
 
+// A cancelled task will never run, so work waiting on it is not held up.
 // AI-written subtasks may carry the older 'completed' spelling
-const isDone = (status: string | undefined) =>
-	status === 'done' || status === 'completed';
+const isSatisfied = (status: string | undefined) =>
+	status === 'done' || status === 'completed' || status === 'cancelled';
 
 /**
  * Prefers an eligible subtask of an in-progress task, then the best
@@ -21,11 +22,11 @@ const isDone = (status: string | undefined) =>
  * @returns The next item, or null when nothing is eligible
  */
 export function selectNextTask(tasks: Task[]): Task | null {
-	// Eligibility only sees these statuses; blocked counts see every task,
+	// Eligibility and satisfied dependencies only see these statuses; blocked counts see every task,
 	// since deferred, blocked and review tasks still wait on their dependencies
 	// A hand-edited task may have no status; it counts as pending
 	const allTasks = tasks.filter((t) =>
-		['pending', 'in-progress', 'done', 'completed'].includes(
+		['pending', 'in-progress', 'done', 'completed', 'cancelled'].includes(
 			t.status || 'pending'
 		)
 	);
@@ -33,15 +34,15 @@ export function selectNextTask(tasks: Task[]): Task | null {
 	const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
 	const priorityValues = { critical: 4, high: 3, medium: 2, low: 1 };
 
-	// Build completed IDs set (both tasks and subtasks)
+	// Build satisfied IDs set (both tasks and subtasks)
 	const completedIds = new Set<string>();
 	allTasks.forEach((t) => {
-		if (isDone(t.status)) {
+		if (isSatisfied(t.status)) {
 			completedIds.add(String(t.id));
 		}
 		if (Array.isArray(t.subtasks)) {
 			t.subtasks.forEach((st) => {
-				if (isDone(st.status)) {
+				if (isSatisfied(st.status)) {
 					completedIds.add(`${t.id}.${st.id}`);
 				}
 			});
