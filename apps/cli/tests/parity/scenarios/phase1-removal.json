@@ -1,0 +1,57 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["add-subtask", "--parent=4", "--title=First", "--description=One"],
+		["add-subtask", "--parent=4", "--title=Second", "--description=Two"],
+		["add-subtask", "--parent=5", "--title=Third", "--description=Three"],
+		["remove-subtask", "--id=2.1", "--convert"],
+		{
+			"mcp": "remove_subtask",
+			"input": { "projectRoot": "<project>", "id": "2.2" }
+		},
+		{
+			"mcp": "remove_subtask",
+			"input": { "projectRoot": "<project>", "id": "4.1", "convert": true }
+		},
+		["remove-subtask", "--id=4.2"],
+		{ "args": ["remove-subtask", "--id=1"], "expectExit": 1 },
+		{
+			"mcp": "remove_subtask",
+			"input": { "projectRoot": "<project>", "id": "1" },
+			"expectError": true
+		},
+		["clear-subtasks", "--id=5"],
+		["add-subtask", "--parent=4", "--title=Fourth", "--description=Four"],
+		["add-subtask", "--parent=1", "--title=Fifth", "--description=Five"],
+		{
+			"mcp": "clear_subtasks",
+			"input": { "projectRoot": "<project>", "id": "4" }
+		},
+		["add-subtask", "--parent=4", "--title=Sixth", "--description=Six"],
+		["clear-subtasks", "--all"],
+		["add-subtask", "--parent=4", "--title=Seventh", "--description=Seven"],
+		{
+			"mcp": "clear_subtasks",
+			"input": { "projectRoot": "<project>", "all": true }
+		},
+		["add-subtask", "--parent=4", "--title=Eighth", "--description=Eight"],
+		{ "args": ["clear-subtasks", "--id=4.1"], "expectExit": 1 },
+		{
+			"mcp": "clear_subtasks",
+			"input": { "projectRoot": "<project>", "id": "4.1" },
+			"expectError": true
+		},
+		["remove-task", "--id=3", "--yes"],
+		["remove-task", "--id=1,4", "--yes"],
+		{
+			"mcp": "remove_task",
+			"input": { "projectRoot": "<project>", "id": "5", "confirm": true }
+		},
+		{ "args": ["remove-task", "--id=99", "--yes"], "expectExit": 1 },
+		{
+			"mcp": "remove_task",
+			"input": { "projectRoot": "<project>", "id": "99", "confirm": true },
+			"expectError": true
+		}
+	]
+}
