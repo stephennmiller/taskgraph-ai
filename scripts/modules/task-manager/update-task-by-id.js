@@ -471,8 +471,9 @@ async function updateTaskById(
 			}
 			// --- End Task Validation/Correction ---
 
-			// The AI schema has only some fields; keep everything else stored
-			// (GitHub link, tags, criteria and the done gate they carry, ...)
+			// The AI schema has only some fields and sends null for the ones it has
+			// nothing to say about; keep the stored value of each (GitHub link,
+			// tags, details, criteria and the done gate they carry, ...)
 			keepStoredFields(updatedTask, taskToUpdate);
 
 			// --- Preserve and Merge Metadata ---

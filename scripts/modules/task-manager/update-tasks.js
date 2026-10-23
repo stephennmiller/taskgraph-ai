@@ -220,38 +220,20 @@ async function updateTasks(
 			data.tasks.forEach((task, index) => {
 				if (sentIds.has(task.id) && updatedTasksMap.has(task.id)) {
 					const updatedTask = updatedTasksMap.get(task.id);
-					// Merge the updated task with the existing one to preserve fields like subtasks
-					const merged = {
-						...task, // Keep all existing fields
-						...updatedTask, // Override with updated fields
-						// Keep the existing subtasks unless the AI sent a replacement
-						subtasks:
-							updatedTask.subtasks != null
-								? updatedTask.subtasks
-								: task.subtasks
-					};
 					// The schema makes the model emit null for fields it has nothing to
-					// say about; that must not erase what the task already holds
-					for (const field of ['priority', 'details', 'testStrategy']) {
-						if (updatedTask[field] == null) merged[field] = task[field];
-					}
+					// say about (subtasks included); that must not erase what the task holds
+					const merged = keepStoredFields({ ...task, ...updatedTask }, task);
 					// Dependencies the AI added are recorded as inferred; earlier marks stay
 					assignMetadata(merged, reconcileDependencySources(merged, task));
 					if (Array.isArray(merged.subtasks)) {
-						// The AI returns subtasks without metadata; restore the one
-						// matched by id (user metadata and dependency marks) and
-						// record any dependency the AI added as inferred.
+						// The AI returns only some subtask fields; restore the rest from
+						// the one matched by id (user metadata, dependency marks, ...)
+						// and record any dependency the AI added as inferred.
 						merged.subtasks = merged.subtasks.map((subtask) => {
 							const original = task.subtasks?.find(
 								(st) => String(st.id) === String(subtask.id)
 							);
-							const restored = { ...subtask };
-							delete restored.metadata;
-							if (restored.testStrategy == null && original) {
-								restored.testStrategy = original.testStrategy;
-							}
-							// The AI schema has only some fields; keep everything else stored
-							keepStoredFields(restored, original);
+							const restored = keepStoredFields({ ...subtask }, original);
 							assignMetadata(
 								restored,
 								reconcileDependencySources(subtask, original, task.id)

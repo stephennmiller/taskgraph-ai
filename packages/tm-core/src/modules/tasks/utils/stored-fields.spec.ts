@@ -18,12 +18,12 @@ describe('keepStoredFields', () => {
 		expect(rewrite).toEqual({ ...stored, title: 'New' });
 	});
 
-	it('keeps what the rewrite sets, null included', () => {
-		const rewrite = { id: 1, details: null };
+	it('fills fields the rewrite set to null and keeps the ones it set', () => {
+		const rewrite = { id: 1, title: 'New', details: null };
 
-		keepStoredFields(rewrite, { id: 1, details: 'stored' });
+		keepStoredFields(rewrite, { id: 1, title: 'Old', details: 'stored' });
 
-		expect(rewrite).toEqual({ id: 1, details: null });
+		expect(rewrite).toEqual({ id: 1, title: 'New', details: 'stored' });
 	});
 
 	it('leaves the rewrite alone when nothing was stored', () => {
