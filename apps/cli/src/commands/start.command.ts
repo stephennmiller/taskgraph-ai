@@ -312,7 +312,7 @@ export class StartCommand extends Command {
 				checklist,
 				next: {
 					command: `taskgraph start ${label.id}`,
-					description: 'to launch Claude Code on it'
+					description: 'to launch Claude Code'
 				}
 			})
 		);

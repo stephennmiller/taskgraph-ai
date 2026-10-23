@@ -289,7 +289,7 @@ export function formatEmptyList(
 		? { command: 'taskgraph list', description: 'to see every task' }
 		: {
 				command: 'taskgraph add-task --prompt="..."',
-				description: 'to add one, or taskgraph parse-prd <file>'
+				description: 'to add one, or taskgraph parse-prd'
 			};
 	return [theme.text(message), ...formatNextStep(action, width)].join('\n');
 }
