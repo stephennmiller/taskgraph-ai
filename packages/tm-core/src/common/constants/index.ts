@@ -42,7 +42,6 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
  * - Should count toward completion percentage
  * - Should be considered satisfied for dependency resolution
  * - Should not be selected as "next task"
-
  */
 export const TERMINAL_COMPLETE_STATUSES: readonly TaskStatus[] = [
 	'done',
