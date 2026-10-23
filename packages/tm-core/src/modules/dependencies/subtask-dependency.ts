@@ -69,8 +69,9 @@ export function parseSubtaskDependencyInput(input: string): string[] {
 /**
  * Keep the dependencies the AI wrote for a generated subtask that name
  * something, in the forms `resolveSubtaskDependency` reads:
- * - a number up to 99 is a sibling. With `subtaskId`, it is kept only when it
- *   names an earlier sibling (the AI renumbers, so a later one may not exist)
+ * - a number up to 99 is a sibling. With `subtaskId`, a sibling (as `2` or
+ *   `"5.2"`) is kept only when it comes earlier: the AI renumbers, so a later
+ *   one may not exist, and the subtask itself would be a loop
  * - a larger number, `"3"` or `"3.2"` is a task or subtask and is kept as is
  * Anything else, a dependency on the parent task itself, and repeats of the
  * same item are dropped.
@@ -90,13 +91,6 @@ export function cleanGeneratedSubtaskDependencies(
 		let dependency: string | number;
 		if (typeof raw === 'number') {
 			if (!Number.isInteger(raw) || raw < 1) continue;
-			if (
-				isSiblingReference(raw) &&
-				subtaskId !== undefined &&
-				raw >= subtaskId
-			) {
-				continue;
-			}
 			dependency = raw;
 		} else if (typeof raw === 'string' && DEPENDENCY_ID.test(raw.trim())) {
 			dependency = raw.trim();
@@ -105,6 +99,15 @@ export function cleanGeneratedSubtaskDependencies(
 		}
 		const full = resolveSubtaskDependency(parentId, dependency);
 		if (full === String(parentId) || seen.has(full)) continue;
+		// A sibling, as 2 or as "5.2", must come before the subtask itself
+		const siblingPrefix = `${parentId}.`;
+		if (
+			subtaskId !== undefined &&
+			full.startsWith(siblingPrefix) &&
+			Number(full.slice(siblingPrefix.length)) >= subtaskId
+		) {
+			continue;
+		}
 		seen.add(full);
 		kept.push(dependency);
 	}

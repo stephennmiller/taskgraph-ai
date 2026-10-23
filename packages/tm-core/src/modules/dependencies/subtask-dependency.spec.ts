@@ -82,6 +82,12 @@ describe('cleanGeneratedSubtaskDependencies', () => {
 		expect(cleanGeneratedSubtaskDependencies([1, 2, 3], 5, 2)).toEqual([1]);
 	});
 
+	it('drops a dotted sibling that is the subtask itself or a later one', () => {
+		expect(
+			cleanGeneratedSubtaskDependencies(['5.1', '5.2', '5.3', '6.3'], 5, 2)
+		).toEqual(['5.1', '6.3']);
+	});
+
 	it('keeps any sibling when no subtask ID is given', () => {
 		expect(cleanGeneratedSubtaskDependencies([4], 5)).toEqual([4]);
 	});
