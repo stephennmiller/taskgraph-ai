@@ -188,7 +188,10 @@ jobs:
 
   test:
     name: Test
-    timeout-minutes: 15
+    # The suites take about 14 minutes, most of it the @tm/cli integration
+    # tests that spawn the built CLI. A job that hits this limit shows as
+    # cancelled, not failed, so leave a wide margin.
+    timeout-minutes: 25
     runs-on: ubuntu-latest
     needs: build
     steps:
