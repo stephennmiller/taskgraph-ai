@@ -97,6 +97,20 @@ describe('package identity', () => {
 		expect(pkg.bugs.url).toContain('stephennmiller/');
 	});
 
+	test('the package and the plugin credit the same author', () => {
+		const readJson = (file) => JSON.parse(read(file));
+		const authorName = ({ author }) =>
+			typeof author === 'string' ? author : author.name;
+		const authors = [
+			pkg,
+			readJson('packages/claude-code-plugin/package.json'),
+			readJson('packages/claude-code-plugin/.claude-plugin/plugin.json'),
+			...readJson('.claude-plugin/marketplace.json').plugins
+		].map(authorName);
+
+		expect(new Set(authors)).toEqual(new Set(['Stephen Miller']));
+	});
+
 	test('auto-updater re-spawns a binary the package actually ships', () => {
 		const constants = read('apps/cli/src/utils/auto-update/constants.ts');
 		const binName = constants.match(/BIN_NAME = '([^']+)'/)[1];
