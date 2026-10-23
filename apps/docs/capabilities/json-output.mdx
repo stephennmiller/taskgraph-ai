@@ -39,6 +39,8 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `prime --unnoted-since <time>` | `--json` | `unnoted` |
 | `generate` | `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
 | `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
+| `archive` | `--format json` | `tasks` (each with `id`, `title`, `status`), `tag`, `olderThanDays`, `dryRun` |
+| `archive restore <id>` | `--format json` | `restored`, `tag`, `task` |
 | `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |
 | `github push` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `created`, `updated`, `skipped`, `closed`, `orphans` |
 | `github pull` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `applied`, `synced`, `conflicts`, `skipped` |

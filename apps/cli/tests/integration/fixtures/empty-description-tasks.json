@@ -1,0 +1,30 @@
+{
+	"master": {
+		"tasks": [
+			{
+				"id": 1,
+				"title": "Set up the API",
+				"description": "HTTP server and routing",
+				"details": "",
+				"testStrategy": "",
+				"status": "pending",
+				"dependencies": [],
+				"priority": "medium"
+			},
+			{
+				"id": 2,
+				"title": "Add health check",
+				"description": "",
+				"details": "",
+				"status": "pending",
+				"dependencies": ["1"],
+				"priority": "medium"
+			}
+		],
+		"metadata": {
+			"created": "2026-10-01T09:00:00.000Z",
+			"description": "Tasks for master context",
+			"updated": "2026-10-01T09:05:00.000Z"
+		}
+	}
+}

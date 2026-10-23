@@ -43,12 +43,18 @@ The `Parity` job in `.github/workflows/ci.yml` runs this comparison on a pull
 request. It builds the target branch's commit, then runs every scenario below
 with the target branch as build A and the pull request as build B.
 
-- **When it runs:** only when the pull request changes `scripts/`,
-  `mcp-server/`, `src/`, `packages/tm-core/src/`, `apps/cli/src/`,
-  `apps/mcp/src/`, this folder, or `.github/scripts/run-parity.sh`. The
-  `Parity changes` job decides this from the list of changed files and the
-  `Parity` job is skipped otherwise. A change to the workflow file alone does
-  not start it.
+- **When it runs:** when the pull request changes anything that goes into the
+  two builds or the comparison: the code bundled into `dist/` (`scripts/`,
+  `mcp-server/`, `src/`, the `src/` of `@tm/core`, `@tm/profiles`, `@tm/cli`
+  and `@tm/mcp`), `assets/` (what `init` copies), the build config, the
+  `package.json` of the root or of a bundled package, `package-lock.json`,
+  this folder, the MCP smoke client the MCP steps use,
+  `.github/scripts/run-parity.sh` or `ci.yml`. The patterns are in
+  `.github/scripts/parity-paths.txt`, one `grep -E` pattern per line;
+  `apps/cli/tests/integration/parity-paths.test.ts` checks them. The
+  `Parity changes` job matches the changed files against them and `Parity` is
+  skipped when none match (docs and test-only changes). It runs alongside
+  `Test`, so it adds no time to that job.
 - **Where to read it:** the job summary has one row per scenario, and the first
   60 lines of each report that differs. The full reports are in the
   `parity-reports` artifact (kept for 7 days).
@@ -189,7 +195,8 @@ tidy-up that "fixes" a type can change what a dependency means.
 - **Removing a dependency that is not there succeeds.** `remove-dependency`
   exits 0 and `remove_dependency` succeeds with `removed: false` and "Task 2
   doesn't depend on task 5; nothing changed" for a task that never depended on
-  the other (`phase1-dependencies.json`). An unknown task ID does fail.
+  the other (`phase1-dependencies.json`). An unknown task ID does fail. The
+  MCP reply used to claim a removal (#291, fixed in #367).
 - **`validate_dependencies` does not report a duplicate** such as `[2, 3, 3]`,
   while `fix_dependencies` removes it and lists it as `duplicate`.
 - **`move` keeps the old `parentTaskId`** on the subtasks of a moved task

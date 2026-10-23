@@ -266,6 +266,9 @@ export {
 	normalizeTaskStatuses
 } from './modules/tasks/utils/index.js';
 
+// Tag names no new tag can take, shared with the legacy tag commands
+export { isReservedNewTagName } from './modules/tasks/utils/index.js';
+
 // An AI rewrite keeps the stored fields its schema has no place for
 export { keepStoredFields } from './modules/tasks/utils/index.js';
 
