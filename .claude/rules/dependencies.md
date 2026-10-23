@@ -193,36 +193,18 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
 ## Cycle Detection
 
 - **Graph Traversal**:
-  - ✅ DO: Use depth-first search (DFS) for cycle detection
-  - ✅ DO: Track visited nodes and recursion stack
+  - ✅ DO: Find loops with strongly connected components, in one pass:
+    `buildDependencyGraph` then `findLoopMembers` (validate) or
+    `breakSubtaskLoops` (fix), built on `findStronglyConnectedComponents`
+  - ✅ DO: Keep traversals iterative; projects have chains of 10,000+ tasks
   - ✅ DO: Support both task and subtask dependencies
+  - ❌ DON'T: Run a reachability search per task or per dependency (quadratic)
+    or recurse along dependency chains (overflows the stack)
 
   ```javascript
-  // ✅ DO: Use proper cycle detection algorithms
-  function findCycles(subtaskId, dependencyMap, visited = new Set(), recursionStack = new Set()) {
-    // Mark the current node as visited and part of recursion stack
-    visited.add(subtaskId);
-    recursionStack.add(subtaskId);
-    
-    const cyclesToBreak = [];
-    const dependencies = dependencyMap.get(subtaskId) || [];
-    
-    for (const depId of dependencies) {
-      if (!visited.has(depId)) {
-        const cycles = findCycles(depId, dependencyMap, visited, recursionStack);
-        cyclesToBreak.push(...cycles);
-      } 
-      else if (recursionStack.has(depId)) {
-        // Found a cycle, add the edge to break
-        cyclesToBreak.push(depId);
-      }
-    }
-    
-    // Remove the node from recursion stack before returning
-    recursionStack.delete(subtaskId);
-    
-    return cyclesToBreak;
-  }
+  // ✅ DO: Reuse the one-pass helpers
+  const graph = buildDependencyGraph(tasks);
+  const inLoop = findLoopMembers(graph); // Set of full IDs ("3", "3.2")
   ```
 
 Refer to [`dependency-manager.js`](../../scripts/modules/dependency-manager.js) for implementation examples and `new-features.md` for integration guidelines. 
