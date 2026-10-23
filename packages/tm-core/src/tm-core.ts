@@ -42,8 +42,8 @@ export interface TmCoreOptions {
  * const tmcore = await createTmCore({ projectPath: process.cwd() });
  *
  * // Access any domain
- * const tasks = await tmcore.tasks.list();
- * await tmcore.git.commit('feat: add feature');
+ * const { tasks } = await tmcore.tasks.list();
+ * await tmcore.git.createCommit('feat: add feature');
  * const modelConfig = tmcore.config.getModelConfig();
  * ```
  *
@@ -60,7 +60,7 @@ export interface TmCoreOptions {
  *   });
  *
  *   // All internal logging will now be sent to MCP
- *   const tasks = await tmcore.tasks.list();
+ *   const { tasks } = await tmcore.tasks.list();
  *
  *   // You can also log custom messages
  *   tmcore.logger.info('Operation completed');
