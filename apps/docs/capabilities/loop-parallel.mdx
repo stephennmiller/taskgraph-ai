@@ -40,7 +40,7 @@ Next: review with git log -p HEAD..taskgraph/task-1
 
 `.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
 
-`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
 
 ## Status goes to the main project
 

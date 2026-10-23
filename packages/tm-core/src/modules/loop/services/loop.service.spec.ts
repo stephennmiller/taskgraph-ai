@@ -590,7 +590,12 @@ describe('LoopService', () => {
 	describe('buildContextHeader (inlined)', () => {
 		let service: LoopService;
 		let buildContextHeader: (
-			config: { iterations: number; progressFile: string; tag?: string },
+			config: {
+				iterations: number;
+				progressFile: string;
+				tag?: string;
+				taskId?: string;
+			},
 			iteration: number
 		) => string;
 
@@ -634,6 +639,24 @@ describe('LoopService', () => {
 				1
 			);
 			expect(header).toContain('tag: feature-x');
+		});
+
+		it('pins the task --id names in place of taskgraph next', () => {
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt', taskId: '3.2' },
+				1
+			);
+			expect(header).toContain(
+				'Work on task 3.2 only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show 3.2.'
+			);
+		});
+
+		it('names no task when none is pinned', () => {
+			const header = buildContextHeader(
+				{ iterations: 1, progressFile: '/test/progress.txt' },
+				1
+			);
+			expect(header).not.toContain('Work on task');
 		});
 
 		it('should not include tag when not provided', () => {

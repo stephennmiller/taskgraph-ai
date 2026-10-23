@@ -10,7 +10,6 @@ import { GitDomain } from './modules/git/git-domain.js';
 import { GitHubDomain } from './modules/github/github-domain.js';
 import { LoopDomain } from './modules/loop/loop-domain.js';
 import { TasksDomain } from './modules/tasks/tasks-domain.js';
-import { WorkflowDomain } from './modules/workflow/workflow-domain.js';
 
 import {
 	ERROR_CODES,
@@ -44,7 +43,6 @@ export interface TmCoreOptions {
  *
  * // Access any domain
  * const tasks = await tmcore.tasks.list();
- * await tmcore.workflow.start({ taskId: '1' });
  * await tmcore.git.commit('feat: add feature');
  * const modelConfig = tmcore.config.getModelConfig();
  * ```
@@ -80,7 +78,6 @@ export class TmCore {
 
 	// Private writable properties
 	private _tasks!: TasksDomain;
-	private _workflow!: WorkflowDomain;
 	private _git!: GitDomain;
 	private _config!: ConfigDomain;
 	private _loop!: LoopDomain;
@@ -89,9 +86,6 @@ export class TmCore {
 	// Public readonly getters
 	get tasks(): TasksDomain {
 		return this._tasks;
-	}
-	get workflow(): WorkflowDomain {
-		return this._workflow;
 	}
 	get git(): GitDomain {
 		return this._git;
@@ -169,7 +163,6 @@ export class TmCore {
 
 			// Initialize domain facades
 			this._tasks = new TasksDomain(this._configManager);
-			this._workflow = new WorkflowDomain(this._configManager);
 			this._git = new GitDomain(this._projectPath);
 			this._config = new ConfigDomain(this._configManager);
 			this._loop = new LoopDomain(this._configManager, this._tasks);
@@ -178,9 +171,6 @@ export class TmCore {
 			await this._tasks.initialize();
 
 			// Wire up cross-domain dependencies
-			// WorkflowDomain needs TasksDomain for status updates
-			this._workflow.setTasksDomain(this._tasks);
-
 			// GitHubDomain reads and writes task links through TasksDomain
 			this._github = new GitHubDomain(this._projectPath, {
 				getActiveTag: () => this._configManager.getActiveTag()

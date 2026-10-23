@@ -65,10 +65,8 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 #### 🗑️ Task Removal
 - `/taskgraph:remove-task` - Remove task permanently
 
-#### 🤖 Workflows
-- `/taskgraph:smart-workflow` - Intelligent workflows
-- `/taskgraph:command-pipeline` - Command chaining
-- `/taskgraph:auto-implement-tasks` - Auto-implementation
+#### 🤖 Run an agent over the plan
+- `taskgraph loop` (in a terminal) - Claude Code works the tasks one per iteration; `--prompt tdd` for test-first, `--parallel <n>` for independent tasks side by side
 
 #### 📊 Utilities
 - `/taskgraph:analyze-project` - Project analysis
@@ -91,6 +89,6 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 1. Install: `/taskgraph:install-taskgraph --quick`
 2. Initialize: `/taskgraph:init-project --quick`
 3. Learn: `/taskgraph:learn`
-4. Work: `/taskgraph:smart-workflow`
+4. Work: `/taskgraph:next-task`
 
 For detailed command info, run the specific command with `--help` or check command documentation.

@@ -22,7 +22,7 @@ describe('wantsJsonOutput', () => {
 		[['next', '--format', 'json']],
 		[['graph', '--format=json']],
 		[['why', '5', '-f', 'json']],
-		[['autopilot', 'status', '--json']],
+		[['github', 'status', '--json']],
 		[['parse-prd', 'prd.md', '--clarify', '--json']]
 	])('is true for %j', (args) => {
 		expect(wantsJsonOutput(args)).toBe(true);

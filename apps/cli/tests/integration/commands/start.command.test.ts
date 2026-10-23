@@ -1,9 +1,9 @@
 /**
- * @fileoverview Integration tests for 'taskgraph start'
+ * @fileoverview Integration tests for 'taskgraph start', the deprecated
+ * alias of `taskgraph loop -n 1 --id <id>` (#255).
  *
- * Runs the built CLI with --dry-run, so Claude Code is never launched. Covers
- * the compact output (#182): no boxes or spinners, and a failure that says
- * why the task couldn't start, with a fix.
+ * Runs the built CLI with a stand-in `claude` on PATH that records the
+ * prompt it gets, so no real Claude Code session starts.
  *
  * @integration
  */
@@ -17,26 +17,49 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getCliBinPath } from '../../helpers/test-utils.js';
 
 const initialCwd = process.cwd();
-const BOXES = /[╭╮╰╯]/;
-const SPINNER = /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]/;
 
-describe('start command', () => {
+describe('start command (deprecated alias of loop)', () => {
 	let testDir: string;
-	let tasksPath: string;
+	let promptLog: string;
 	let binPath: string;
-	const env = {
-		...process.env,
-		TASKGRAPH_SKIP_AUTO_UPDATE: '1',
-		COLUMNS: '80',
-		NO_COLOR: '1'
-	};
+	let env: NodeJS.ProcessEnv;
 
 	beforeEach(() => {
 		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-start-test-'));
 		process.chdir(testDir);
 		binPath = getCliBinPath();
+
+		// A stand-in for Claude Code: writes its arguments to a file
+		const bin = path.join(testDir, 'bin');
+		promptLog = path.join(testDir, 'claude-args.txt');
+		fs.mkdirSync(bin);
+		fs.writeFileSync(
+			path.join(bin, 'claude'),
+			`#!/bin/sh\nprintf '%s\\n' "$@" > "${promptLog}"\necho done\n`,
+			{ mode: 0o755 }
+		);
+		env = {
+			...process.env,
+			PATH: `${bin}${path.delimiter}${process.env.PATH ?? ''}`,
+			TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+			COLUMNS: '80',
+			NO_COLOR: '1'
+		};
+
 		spawnSync('node', [binPath, 'init', '--yes'], { env, stdio: 'pipe' });
-		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
+		fs.writeFileSync(
+			path.join(testDir, '.taskgraph', 'tasks', 'tasks.json'),
+			JSON.stringify(
+				createTasksFile({
+					tasks: [
+						createTask({ id: 1, title: 'Set up the database' }),
+						createTask({ id: 2, title: 'Build the login API' })
+					]
+				}),
+				null,
+				2
+			)
+		);
 	});
 
 	afterEach(() => {
@@ -50,14 +73,11 @@ describe('start command', () => {
 		}
 	});
 
-	const writeTasks = (data: unknown) => {
-		fs.writeFileSync(tasksPath, JSON.stringify(data, null, 2));
-	};
-
-	const runStart = (...args: string[]) => {
-		const result = spawnSync('node', [binPath, 'start', ...args], {
+	const run = (...args: string[]) => {
+		const result = spawnSync('node', [binPath, ...args], {
 			encoding: 'utf-8',
-			env
+			env,
+			timeout: 30000
 		});
 		return {
 			stdout: result.stdout,
@@ -66,162 +86,46 @@ describe('start command', () => {
 		};
 	};
 
-	/** Task 2 is in progress; its subtask 2.2 is what `next` picks */
-	const project = () =>
-		createTasksFile({
-			tasks: [
-				createTask({
-					id: 1,
-					title: 'Set up the database',
-					status: 'done',
-					priority: 'high'
-				}),
-				createTask({
-					id: 2,
-					title: 'Sign-in with sessions',
-					status: 'in-progress',
-					priority: 'high',
-					dependencies: ['1'],
-					subtasks: [
-						{
-							id: 1,
-							parentId: '2',
-							title: 'Password hashing',
-							description: 'bcrypt wrappers',
-							status: 'done',
-							dependencies: [],
-							details: ''
-						},
-						{
-							id: 2,
-							parentId: '2',
-							title: 'Sessions table and cookie middleware',
-							description: 'Store sessions and set an HttpOnly cookie.',
-							status: 'pending',
-							dependencies: [1],
-							details: ''
-						}
-					] as any
-				}),
-				createTask({
-					id: 3,
-					title: 'Bookmark endpoints',
-					status: 'pending',
-					priority: 'medium',
-					dependencies: ['2']
-				}),
-				createTask({
-					id: 4,
-					title: 'Settings page',
-					status: 'pending',
-					priority: 'low'
-				})
-			]
-		});
-
-	it('--dry-run prints the task it would start, with no boxes or spinners', () => {
-		writeTasks(project());
-
-		const { stdout, exitCode } = runStart('--dry-run');
+	it('prints one deprecation line, then runs one loop iteration on the task', () => {
+		const { stdout, stderr, exitCode } = run('start', '2', '--trust');
 
 		expect(exitCode).toBe(0);
-		expect(stdout).toContain(
-			'Dry run · Claude Code not launched for subtask 2.2'
+		expect(stderr.trim().split('\n')[0]).toBe(
+			'start is deprecated; run taskgraph loop -n 1 --id 2 instead'
 		);
-		expect(stdout).toContain(
-			'Subtask 2.2  Sessions table and cookie middleware'
+		expect(stdout).toContain('Loop · default preset · 1 iteration');
+		expect(stdout).toContain('Task 2  Build the login API');
+		expect(stdout).toContain('Iteration 1 of 1');
+		expect(fs.readFileSync(promptLog, 'utf-8')).toContain(
+			'Work on task 2 only.'
 		);
-		expect(stdout).toContain('depends on 2.1');
-		expect(stdout).toContain('Next: taskgraph start 2.2 to launch Claude Code');
-		expect(stdout).not.toMatch(BOXES);
-		expect(stdout).not.toMatch(SPINNER);
-		expect(stdout).not.toContain('TaskGraph initialized');
-		for (const line of stdout.split('\n')) {
-			expect(line.length).toBeLessThanOrEqual(80);
-		}
 	});
 
-	it('--dry-run does not change the task status', () => {
-		writeTasks(project());
+	it('takes the task from --id as well', () => {
+		const { stderr, exitCode } = run('start', '--id', '1', '--trust');
 
-		runStart('4', '--dry-run', '--force');
-
-		const saved = JSON.parse(fs.readFileSync(tasksPath, 'utf-8'));
-		const task4 = saved.master.tasks.find((t: any) => String(t.id) === '4');
-		expect(task4.status).toBe('pending');
+		expect(exitCode).toBe(0);
+		expect(stderr).toContain('run taskgraph loop -n 1 --id 1 instead');
+		expect(fs.readFileSync(promptLog, 'utf-8')).toContain(
+			'Work on task 1 only.'
+		);
 	});
 
-	it('says another task is in progress, not "Task not found", and how to override', () => {
-		writeTasks(project());
-
-		const { stdout, stderr, exitCode } = runStart('4', '--dry-run');
+	it('says what replaces a flag the old start had', () => {
+		const { stderr, exitCode } = run('start', '2', '--dry-run');
 
 		expect(exitCode).toBe(1);
-		expect(stderr).toContain('Another task is in progress');
-		expect(stderr).toContain('taskgraph start 4 --force');
-		expect(stderr + stdout).not.toContain('Task not found');
-		expect(stderr + stdout).not.toMatch(BOXES);
+		expect(stderr).toContain('start --dry-run is gone');
+		expect(stderr).toContain('taskgraph show 2');
+		expect(fs.existsSync(promptLog)).toBe(false);
 	});
 
-	it('prints a missing task as an error with a hint and exits 1', () => {
-		writeTasks(project());
-
-		const { stdout, stderr, exitCode } = runStart('99', '--dry-run', '--force');
+	it('fails before Claude starts when the task does not exist', () => {
+		const { stderr, exitCode } = run('start', '9', '--trust');
 
 		expect(exitCode).toBe(1);
-		expect(stderr).toContain('99');
-		expect(stderr).toContain('not found');
+		expect(stderr).toContain('Task "9" doesn\'t exist');
 		expect(stderr).toContain('taskgraph list');
-		expect(stdout).not.toMatch(BOXES);
-	});
-
-	it('says a missing task is missing even while another task is in progress', () => {
-		writeTasks(project());
-
-		const { stderr, exitCode } = runStart('99', '--dry-run');
-
-		expect(exitCode).toBe(1);
-		expect(stderr).toContain('Task 99 not found');
-		expect(stderr).not.toContain('--force');
-	});
-
-	it('says a missing subtask is missing instead of starting its parent', () => {
-		writeTasks(project());
-
-		const { stdout, stderr, exitCode } = runStart('2.9', '--dry-run');
-
-		expect(exitCode).toBe(1);
-		expect(stderr).toContain('Subtask 2.9 not found');
-		expect(stdout).not.toContain('Dry run');
-	});
-
-	it('prints the failure as JSON with --format json', () => {
-		writeTasks(project());
-
-		const { stdout, exitCode } = runStart(
-			'99',
-			'--dry-run',
-			'--force',
-			'--format',
-			'json'
-		);
-
-		expect(exitCode).toBe(1);
-		const parsed = JSON.parse(stdout);
-		expect(parsed.found).toBe(false);
-	});
-
-	it('says no task is ready when nothing can start', () => {
-		writeTasks(
-			createTasksFile({
-				tasks: [createTask({ id: 1, title: 'Only task', status: 'done' })]
-			})
-		);
-
-		const { stderr, exitCode } = runStart('--dry-run');
-
-		expect(exitCode).toBe(1);
-		expect(stderr).toContain('No task is ready to start');
-		expect(stderr).toContain('taskgraph list');
+		expect(fs.existsSync(promptLog)).toBe(false);
 	});
 });

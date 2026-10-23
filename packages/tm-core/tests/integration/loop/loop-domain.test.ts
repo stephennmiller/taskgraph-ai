@@ -61,7 +61,8 @@ describe('LoopDomain Integration', () => {
 				'test-coverage',
 				'linting',
 				'duplication',
-				'entropy'
+				'entropy',
+				'tdd'
 			];
 
 			for (const preset of expectedPresets) {
@@ -104,7 +105,7 @@ describe('LoopDomain Integration', () => {
 
 			// Access private buildConfig via run preparation
 			// Test indirectly by checking the domain was created with correct projectRoot
-			expect(domain.getAvailablePresets()).toHaveLength(5);
+			expect(domain.getAvailablePresets()).toHaveLength(6);
 
 			// Verify preset resolution still works
 			expect(domain.isPreset('default')).toBe(true);

@@ -600,56 +600,6 @@ describe('--json contract', () => {
 		`);
 	});
 
-	it('start --dry-run', () => {
-		expect(
-			shapeOf(json(['start', '2', '--dry-run', '--format', 'json']))
-		).toMatchInlineSnapshot(`
-			{
-			  "command": {
-			    "args": [
-			      "string",
-			    ],
-			    "cwd": "string",
-			    "executable": "string",
-			  },
-			  "executionOutput": "string",
-			  "found": "boolean",
-			  "schemaVersion": "number",
-			  "started": "boolean",
-			  "task": {
-			    "acceptanceCriteria": [
-			      {
-			        "checked": "boolean",
-			        "text": "string",
-			      },
-			    ],
-			    "dependencies": [
-			      "number",
-			    ],
-			    "description": "string",
-			    "details": "string",
-			    "id": "number",
-			    "priority": "string",
-			    "status": "string",
-			    "subtasks": [
-			      {
-			        "dependencies": [
-			          "number",
-			        ],
-			        "description": "string",
-			        "details": "string",
-			        "id": "number",
-			        "status": "string",
-			        "title": "string",
-			      },
-			    ],
-			    "testStrategy": "string",
-			    "title": "string",
-			  },
-			}
-		`);
-	});
-
 	it('github status', () => {
 		expect(
 			shapeOf(json(['github', 'status', '--repo', 'acme/app', '--json']))
@@ -660,18 +610,6 @@ describe('--json contract', () => {
 			  "repo": "string",
 			  "schemaVersion": "number",
 			  "unlinkedTasks": "number",
-			}
-		`);
-	});
-
-	it('autopilot status', () => {
-		expect(
-			shapeOf(json(['autopilot', 'status', '--json']))
-		).toMatchInlineSnapshot(`
-			{
-			  "active": "boolean",
-			  "message": "string",
-			  "schemaVersion": "number",
 			}
 		`);
 	});

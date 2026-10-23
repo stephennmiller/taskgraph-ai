@@ -6,7 +6,7 @@
  * development and bundled distribution contexts.
  *
  * These tests verify:
- * - All 5 presets can be loaded without filesystem access
+ * - All 6 presets can be loaded without filesystem access
  * - Preset content contains required markers for loop completion detection
  * - Preset content structure is valid and usable by the loop system
  *
@@ -24,9 +24,9 @@ import {
 
 describe('Preset Accessibility Integration', () => {
 	describe('Preset Accessibility', () => {
-		it('should load all 5 presets without filesystem access', () => {
+		it('should load all 6 presets without filesystem access', () => {
 			// This test verifies that presets are inlined and don't require fs
-			expect(PRESET_NAMES).toHaveLength(5);
+			expect(PRESET_NAMES).toHaveLength(6);
 
 			for (const presetName of PRESET_NAMES) {
 				const content = getPreset(presetName);
@@ -42,7 +42,8 @@ describe('Preset Accessibility Integration', () => {
 				'test-coverage',
 				'linting',
 				'duplication',
-				'entropy'
+				'entropy',
+				'tdd'
 			];
 
 			for (const preset of expectedPresets) {
@@ -51,7 +52,7 @@ describe('Preset Accessibility Integration', () => {
 		});
 
 		it('should have PRESETS record with all presets', () => {
-			expect(Object.keys(PRESETS)).toHaveLength(5);
+			expect(Object.keys(PRESETS)).toHaveLength(6);
 			expect(PRESETS['default']).toBeTruthy();
 			expect(PRESETS['test-coverage']).toBeTruthy();
 			expect(PRESETS['linting']).toBeTruthy();
@@ -218,7 +219,8 @@ No significant code smells remain in the codebase.
 				'test-coverage',
 				'linting',
 				'duplication',
-				'entropy'
+				'entropy',
+				'tdd'
 			];
 
 			for (const name of validPresets) {

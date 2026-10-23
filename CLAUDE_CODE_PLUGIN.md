@@ -29,13 +29,13 @@ taskgraph-ai/
 ├── .claude-plugin/
 │   └── marketplace.json        # Marketplace manifest (repo root)
 └── packages/claude-code-plugin/
-    ├── commands/               # 39 slash commands
-    └── agents/                 # 3 agents
+    ├── commands/               # 36 slash commands
+    └── agents/                 # 2 agents
 ```
 
 ### Slash commands
 
-The plugin provides 39 slash commands, invoked as `/taskgraph:<name>`. For example:
+The plugin provides 36 slash commands, invoked as `/taskgraph:<name>`. For example:
 
 ```txt
 /taskgraph:parse-prd .taskgraph/docs/prd.md
@@ -48,7 +48,6 @@ The plugin is the only way to get slash commands: `taskgraph init --rules claude
 
 ### Agents
 
-- `task-orchestrator`: plans and coordinates work across tasks
 - `task-executor`: implements a task
 - `task-checker`: verifies a finished task (uses the `taskgraph show` CLI, or the MCP tool if you registered the server as `taskgraph-ai`)
 

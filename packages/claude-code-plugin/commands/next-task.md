@@ -64,7 +64,6 @@ Always provide options:
 
 Seamlessly connect to:
 - `/taskgraph:to-in-progress [selected]` 
-- `/taskgraph:auto-implement-tasks`
 - `/taskgraph:expand-task` (if complex)
 - `/taskgraph:complexity-report` (if unsure)
 

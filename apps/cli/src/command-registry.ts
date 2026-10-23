@@ -6,7 +6,6 @@
 import type { Command } from 'commander';
 
 import { ArchiveCommand } from './commands/archive.command.js';
-import { AutopilotCommand } from './commands/autopilot/index.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 import { GraphCommand } from './commands/graph.command.js';
@@ -82,12 +81,6 @@ export class CommandRegistry {
 			category: 'task'
 		},
 		{
-			name: 'start',
-			description: 'Start working on a task with claude-code',
-			commandClass: StartCommand as any,
-			category: 'task'
-		},
-		{
 			name: 'set-status',
 			description: 'Update the status of one or more tasks',
 			commandClass: SetStatusCommand as any,
@@ -98,13 +91,6 @@ export class CommandRegistry {
 			description: 'Log a progress note on a task, as written (no AI)',
 			commandClass: NoteCommand as any,
 			category: 'task'
-		},
-		{
-			name: 'autopilot',
-			description:
-				'AI agent orchestration for TDD workflow (start, resume, next, complete, commit, status, abort)',
-			commandClass: AutopilotCommand as any,
-			category: 'development'
 		},
 		{
 			name: 'loop',
@@ -147,6 +133,13 @@ export class CommandRegistry {
 			description: 'Git merge driver for tasks.json (git runs it)',
 			commandClass: MergeDriverCommand as any,
 			category: 'utility',
+			hidden: true
+		},
+		{
+			name: 'start',
+			description: 'Deprecated alias of loop -n 1 --id <id>',
+			commandClass: StartCommand as any,
+			category: 'development',
 			hidden: true
 		}
 	];

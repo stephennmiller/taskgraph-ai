@@ -12,6 +12,13 @@ import {
 	isPreset as checkIsPreset,
 	getPreset
 } from './presets/index.js';
+import {
+	LoopError,
+	type LoopTask,
+	assertTaskPreset,
+	defaultIterations,
+	isTaskPreset
+} from './loop-task.js';
 import { isLoopTrusted, trustLoop } from './loop-trust.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import type {
@@ -20,6 +27,9 @@ import type {
 } from './parallel/types.js';
 import { LoopService } from './services/loop.service.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
+
+/** A task ID (`3`) or a subtask ID (`3.2`): no spaces, at most one dot */
+const TASK_ID_PATTERN = /^[^.\s]+(\.[^.\s]+)?$/;
 
 /**
  * Loop Domain - Unified API for loop operations
@@ -102,6 +112,35 @@ export class LoopDomain {
 	}
 
 	/**
+	 * Check a `--id` before the loop starts: the preset must work on tasks
+	 * and the task or subtask must exist.
+	 * @returns The task's ID and title, for the CLI to show
+	 * @throws LoopError (with a hint) for a preset that ignores tasks or an
+	 *   ID that isn't in the tag
+	 */
+	async resolveTask(
+		taskId: string,
+		options: { prompt?: string; tag?: string } = {}
+	): Promise<LoopTask> {
+		assertTaskPreset(options.prompt ?? 'default');
+		const id = taskId.trim();
+		// One task ID, or one dot for a subtask: the ID goes into Claude's
+		// prompt, so `3.2.9` or `3 and also 4` must not reach it
+		const found =
+			TASK_ID_PATTERN.test(id) && this.tasks
+				? await this.tasks.get(id, options.tag)
+				: null;
+		// tasks.get falls back to the parent when it has no subtasks list
+		if (!found?.task || (id.includes('.') && !found.isSubtask)) {
+			throw new LoopError(
+				`Task "${id}" doesn't exist${options.tag ? ` in tag '${options.tag}'` : ''}`,
+				'Run `taskgraph list` to see task IDs'
+			);
+		}
+		return { id, title: found.task.title };
+	}
+
+	/**
 	 * Run up to `parallel` ready tasks (wave 1) side by side, each claimed,
 	 * in its own worktree on `taskgraph/task-<id>`, with one Claude Code
 	 * process per task. Never merges. Abort with `options.signal`.
@@ -173,6 +212,14 @@ export class LoopDomain {
 	}
 
 	/**
+	 * Whether a prompt is a built-in preset that works on TaskGraph tasks
+	 * (`default`, `tdd`), so the run starts on `taskgraph next`'s pick
+	 */
+	isTaskPreset(prompt: string): boolean {
+		return isTaskPreset(prompt);
+	}
+
+	/**
 	 * Get all available preset names
 	 * @returns Array of available preset names
 	 */
@@ -183,41 +230,22 @@ export class LoopDomain {
 	// ========== Iteration Resolution ==========
 
 	/**
-	 * Resolve the number of iterations to use based on preset and task count.
-	 * Business logic for determining iterations:
-	 * - If user provided explicit iterations, use that
-	 * - If preset is 'default' and pendingTaskCount > 0, use pending task count
-	 * - Otherwise, default to 10
-	 *
-	 * @param options - Options for resolving iterations
-	 * @param options.userIterations - User-provided iterations (takes priority)
-	 * @param options.preset - The preset name being used
-	 * @param options.pendingTaskCount - Count of pending tasks + subtasks (for default preset)
-	 * @returns The resolved number of iterations
+	 * Resolve the number of iterations to use:
+	 * - the user's `-n`, when given
+	 * - 1 for a pinned task (`--id`)
+	 * - the pending count (tasks + subtasks) for the default preset
+	 * - otherwise 10
 	 */
 	resolveIterations(options: {
 		userIterations?: number;
 		preset: string;
+		taskId?: string;
 		pendingTaskCount?: number;
 	}): number {
-		const { userIterations, preset, pendingTaskCount } = options;
-
-		// User explicitly provided iterations - use their value
-		if (userIterations !== undefined) {
-			return userIterations;
+		if (options.userIterations !== undefined) {
+			return options.userIterations;
 		}
-
-		// For default preset, use pending task count if available
-		if (
-			preset === 'default' &&
-			pendingTaskCount !== undefined &&
-			pendingTaskCount > 0
-		) {
-			return pendingTaskCount;
-		}
-
-		// Default for non-default presets or when no pending tasks
-		return 10;
+		return defaultIterations(options);
 	}
 
 	// ========== Internal Helpers ==========
@@ -237,6 +265,7 @@ export class LoopDomain {
 				path.join(this.projectRoot, '.taskgraph', 'progress.txt'),
 			sleepSeconds: partial.sleepSeconds ?? 5,
 			tag: partial.tag,
+			taskId: partial.taskId,
 			sandbox: partial.sandbox ?? false,
 			includeOutput: partial.includeOutput ?? false,
 			verbose: partial.verbose ?? false,

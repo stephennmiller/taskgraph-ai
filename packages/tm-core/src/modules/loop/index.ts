@@ -19,6 +19,15 @@ export type {
 	LoopOutputCallbacks
 } from './types.js';
 
+// One named task (loop --id)
+export {
+	LoopError,
+	assertTaskPreset,
+	defaultIterations,
+	isTaskPreset
+} from './loop-task.js';
+export type { LoopTask } from './loop-task.js';
+
 // Parallel runs (loop --parallel)
 export * from './parallel/index.js';
 
@@ -26,11 +35,13 @@ export * from './parallel/index.js';
 export {
 	PRESETS,
 	PRESET_NAMES,
+	TASK_PRESETS,
 	getPreset,
 	isPreset,
 	DEFAULT_PRESET,
 	TEST_COVERAGE_PRESET,
 	LINTING_PRESET,
 	DUPLICATION_PRESET,
-	ENTROPY_PRESET
+	ENTROPY_PRESET,
+	TDD_PRESET
 } from './presets/index.js';
