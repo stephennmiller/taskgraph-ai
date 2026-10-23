@@ -16,7 +16,7 @@
 import { randomUUID } from 'crypto';
 import path from 'path';
 import readline from 'readline';
-import { ui } from '@tm/cli';
+import { displayPath, ui } from '@tm/cli';
 import chalk from 'chalk';
 import {
 	ENV_EXAMPLE_FILE,
@@ -31,6 +31,7 @@ import {
 	createProjectStructure,
 	setUpMergeDriver
 } from './modules/init-project-structure.js';
+import { aliasConfigFile } from './modules/init-shell-aliases.js';
 import * as upstream from './modules/init-upstream-import.js';
 import { isSilentMode } from './modules/utils.js';
 import { insideGitWorkTree } from './modules/utils/git-utils.js';
@@ -109,15 +110,23 @@ async function initializeProject(options = {}) {
 			readStoreTasksInGit(path.join(process.cwd(), GITIGNORE_FILE)) ??
 			true;
 
+		// The shell startup file is outside the project: only --aliases edits it
+		const addAliases = options.aliases === true;
+
 		if (dryRun) {
-			displayDryRun(initGit, storeTasksInGit, options, selectedRuleProfiles);
+			displayDryRun(
+				initGit,
+				storeTasksInGit,
+				{ ...options, aliases: addAliases },
+				selectedRuleProfiles
+			);
 			return {
 				dryRun: true
 			};
 		}
 
 		await createProjectStructure(
-			options.aliases !== false, // --no-aliases opts out
+			addAliases,
 			initGit,
 			storeTasksInGit,
 			dryRun,
@@ -235,6 +244,30 @@ async function initializeProject(options = {}) {
 					`${chalk.cyan('Language for AI responses?')} ${chalk.dim(answer.trim() || 'English')}`
 			);
 			const preferredLanguage = languageInput.trim() || 'English';
+
+			// The shell startup file is outside the project, so ask first, with
+			// No as the default, unless --aliases or --no-aliases answered
+			let addAliases = options.aliases === true;
+			const rcFile = options.aliases === undefined ? aliasConfigFile() : null;
+			if (rcFile) {
+				const shown = displayPath(rcFile);
+				const aliasInput = await promptQuestion(
+					rl,
+					chalk.cyan(`Add a tm alias for taskgraph to ${shown}? (y/N): `),
+					(answer) => {
+						const isYes = answer.trim().toLowerCase().startsWith('y');
+						const icon = isYes ? chalk.green('✓') : chalk.dim('–');
+						return (
+							chalk.cyan(`Add a tm alias to ${shown}?`) +
+							' ' +
+							icon +
+							' ' +
+							chalk.dim(isYes ? 'Yes' : 'No')
+						);
+					}
+				);
+				addAliases = aliasInput.trim().toLowerCase().startsWith('y');
+			}
 			// Each answer already shows on its own line; no second confirmation
 
 			const dryRun = options.dryRun || false;
@@ -244,7 +277,7 @@ async function initializeProject(options = {}) {
 				displayDryRun(
 					initGitPrompted,
 					storeGitPrompted,
-					options,
+					{ ...options, aliases: addAliases },
 					shouldSetupRules ? selectedRuleProfiles : []
 				);
 				return {
@@ -255,7 +288,7 @@ async function initializeProject(options = {}) {
 			// Create structure using only necessary values
 			// addShellAliases() skips aliases that already exist
 			await createProjectStructure(
-				options.aliases !== false, // --no-aliases opts out
+				addAliases,
 				initGitPrompted,
 				storeGitPrompted,
 				dryRun,
@@ -325,6 +358,10 @@ function displayDryRun(initGit, storeTasksInGit, options, ruleProfiles = []) {
 	lines.push(
 		storeTasksInGit ? '  keep tasks in Git' : '  keep tasks out of Git'
 	);
+	const rcFile = options?.aliases ? aliasConfigFile() : null;
+	if (rcFile) {
+		lines.push(`  add the tm alias to ${displayPath(rcFile)}`);
+	}
 	if (ruleProfiles.includes('claude')) {
 		lines.push(
 			options?.mcp

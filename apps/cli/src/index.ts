@@ -28,6 +28,7 @@ export {
 	SHELLS,
 	type Shell
 } from './completion/scripts.js';
+export { displayPath } from './completion/install.js';
 
 // Command Registry
 export {

@@ -3,6 +3,7 @@ import { PRIME_RULES } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import { getSuggestedActions } from '../suggested-actions.js';
 import {
+	formatCliTooOldForPlugin,
 	formatPrimeContext,
 	formatUnnotedReminder
 } from './prime-formatters.js';
@@ -318,6 +319,20 @@ describe('formatPrimeContext with escape sequences in task text', () => {
 		expect(out).not.toMatch(UNSAFE);
 		expect(sgrFree(formatUnnotedReminder(hostile.inProgress))).not.toMatch(
 			UNSAFE
+		);
+	});
+});
+
+describe('formatCliTooOldForPlugin', () => {
+	it('names both versions and the update command, for the agent to pass on', () => {
+		expect(
+			formatCliTooOldForPlugin({
+				ok: false,
+				cliVersion: '0.57.1',
+				cliRange: '>=0.58.0'
+			})
+		).toBe(
+			'The taskgraph CLI is 0.57.1, but the TaskGraph plugin needs >=0.58.0.\nAsk the user to run: npm install -g taskgraph-ai@latest'
 		);
 	});
 });

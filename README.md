@@ -105,6 +105,12 @@ The plugin is the only way to get slash commands. It adds 36 of them (as `/taskg
 
 The plugin does not register an MCP server. The `task-checker` agent uses the `taskgraph show` CLI, and uses the MCP tool instead if you registered the server as `taskgraph-ai` (step 4).
 
+Then check the setup from your project folder. `taskgraph doctor` checks Node, Claude Code and its sign-in, the project, the plugin and the MCP server, and prints the fix under each one that failed:
+
+```bash
+taskgraph doctor
+```
+
 ### 4. (Optional) Add the MCP server
 
 Skip this unless you want to drive TaskGraph in plain language. Slash commands and the CLI do everything without it.
@@ -227,6 +233,7 @@ taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 taskgraph research "latest JWT best practices"
 taskgraph models --setup                     # choose models
 taskgraph completion --install               # Tab completion for your shell
+taskgraph doctor                             # check the setup, with fixes
 ```
 
 Run `taskgraph completion --install` once to get Tab completion for commands, flags, task IDs, tags and statuses in bash, zsh or fish. Run it again after upgrading.
@@ -277,6 +284,7 @@ Full details are in the [upgrade guide](https://taskgraph-ai.com/upgrading).
 
 - **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `npx -y taskgraph-ai` starts on its own in a terminal (it waits for input; press Ctrl+C to stop).
 - **Working on TaskGraph itself:** build from source with `git clone https://github.com/stephennmiller/taskgraph-ai.git && cd taskgraph-ai && npm install && npm run build`, then run `node dist/taskgraph.js` for the CLI. This repository's own `.mcp.json` starts `dist/mcp-server.js` relative to the repo, so run `npm run build` first or the server won't connect.
+- **Something in the setup doesn't work:** run `taskgraph doctor`. It prints a line per setup step and the fix under each one that failed.
 - **AI commands fail:** run `claude` once and make sure you're signed in.
 - **Fewer tools than expected:** `TASKGRAPH_TOOLS` defaults to `core`. Set `standard` or `all`.
 - **Commands behave oddly after `git pull`:** run `npm run build` again; the CLI and server run from `dist/`.

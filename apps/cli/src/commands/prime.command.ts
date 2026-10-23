@@ -7,9 +7,10 @@
  */
 
 import path from 'node:path';
-import { type TmCore, createTmCore } from '@tm/core';
-import { Command } from 'commander';
+import { type TmCore, checkCliForPlugin, createTmCore } from '@tm/core';
+import { Command, Option } from 'commander';
 import {
+	formatCliTooOldForPlugin,
 	formatPrimeContext,
 	formatUnnotedReminder
 } from '../ui/formatters/prime-formatters.js';
@@ -22,6 +23,7 @@ export interface PrimeCommandOptions {
 	json?: boolean;
 	project?: string;
 	unnotedSince?: string;
+	pluginRoot?: string;
 }
 
 export class PrimeCommand extends Command {
@@ -40,6 +42,15 @@ export class PrimeCommand extends Command {
 			.option(
 				'--unnoted-since <time>',
 				'Only list in-progress tasks with no note since <time> (ISO)'
+			)
+			// The plugin's SessionStart hook passes its folder, so prime can say
+			// when this CLI is older than the plugin needs. A CLI that predates
+			// the option fails on it, which the hook reports the same way.
+			.addOption(
+				new Option(
+					'--plugin-root <dir>',
+					'Say if this CLI is older than the plugin in <dir> needs'
+				).hideHelp()
 			)
 			.action(async (options: PrimeCommandOptions) => {
 				await this.executeCommand(options);
@@ -69,9 +80,13 @@ export class PrimeCommand extends Command {
 			});
 			if (options.json) {
 				printJson(context);
-			} else {
-				console.log(formatPrimeContext(context));
+				return;
 			}
+			if (options.pluginRoot) {
+				const plugin = checkCliForPlugin(options.pluginRoot);
+				if (!plugin.ok) console.log(`${formatCliTooOldForPlugin(plugin)}\n`);
+			}
+			console.log(formatPrimeContext(context));
 		} catch (error: any) {
 			hasError = true;
 			displayError(error, { skipExit: true });

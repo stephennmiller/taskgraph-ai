@@ -17,7 +17,13 @@ Arguments: $ARGUMENTS
    ```
 
    With `--quick`, stop here and report the version.
-2. Without `--quick`, also check what TaskGraph needs: Node.js 22.13 or later (`node --version`) and a signed-in Claude Code (`claude --version`). TaskGraph runs its AI through Claude Code, so no API keys are needed.
+2. Without `--quick`, also check the rest of the setup:
+
+   ```bash
+   taskgraph doctor
+   ```
+
+   It prints a line per check (Node, Claude Code and its sign-in, the project, this plugin, the optional MCP server) and the fix under each `✗`. Pass each fix on to the user. TaskGraph runs its AI through Claude Code, so no API keys are needed.
 3. Report the installed version in one line, and the next step: `/taskgraph:init-project` in a project without a `.taskgraph/` folder.
 
 If the install fails:

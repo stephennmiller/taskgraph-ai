@@ -125,8 +125,16 @@ function setVersionInText(text, version, file) {
 	return updated;
 }
 
+// The Claude Code plugin's manifest carries the release version too: with a
+// version set, Claude Code updates the plugin only when it changes.
+export const VERSION_FILES = [
+	'package.json',
+	'package-lock.json',
+	'packages/claude-code-plugin/.claude-plugin/plugin.json'
+];
+
 export function applyVersion(rootDir, version) {
-	for (const file of ['package.json', 'package-lock.json']) {
+	for (const file of VERSION_FILES) {
 		const path = join(rootDir, file);
 		writeFileSync(
 			path,

@@ -1,7 +1,7 @@
 ---
 title: "Project Setup"
 sidebarTitle: "Project Setup"
-description: "Initialize a project, manage tags and models, set up tab completion, and run the loop"
+description: "Initialize a project, check the setup, manage tags and models, set up tab completion, and run the loop"
 ---
 
 ## Initialize a Project
@@ -29,6 +29,36 @@ taskgraph init --merge-driver
 `init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. `--rules claude` still works; `claude` is the only rule profile.
 
 Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
+
+`init` changes your shell startup file only if you agree. Interactive runs ask whether to add `alias tm='taskgraph'` to `~/.zshrc` or `~/.bashrc`, with No as the default. `--yes` never adds it; pass `--aliases` to add it without asking, or `--no-aliases` to skip the question.
+
+## Check the Setup
+
+```bash
+# Check Node, Claude Code and its sign-in, the project, the plugin and
+# the MCP server
+taskgraph doctor
+
+# The same checks as JSON
+taskgraph doctor --json
+```
+
+Each check gets one line: `✓` when it passed, `✗` with the fix under it when it failed, and `–` for the MCP server when it isn't set up, since it's optional. Checks that need Claude Code are left out when it isn't installed. `doctor` exits 1 when a check failed, and it works outside a project.
+
+```
+✓ Node            22.22.0
+✓ Claude Code     2.1.309
+✓ Claude sign-in  signed in
+✓ Project         .
+✗ Plugin          not installed
+  In Claude Code, run /plugin marketplace add stephennmiller/taskgraph-ai
+  then /plugin install taskgraph@taskgraph
+– MCP server      optional; add it with taskgraph init --mcp
+```
+
+The plugin check also fails when this CLI is older than the installed plugin needs. The MCP check looks in the project's `.mcp.json` and in Claude Code's own config (`claude mcp add`), without starting the server.
+
+The JSON has `ok`, `cliVersion` and `checks`, each with `name` (`node`, `claude`, `signed-in`, `project`, `plugin`, `mcp`), `status` (`pass`, `fail`, `skip`) and, when they apply, `detail`, `problem` and `required`.
 
 ## Tag Management
 
