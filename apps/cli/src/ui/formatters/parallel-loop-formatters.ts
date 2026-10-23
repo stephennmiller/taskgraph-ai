@@ -27,8 +27,18 @@ import { theme } from '../theme.js';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
+// Escape sequences and other control characters from task text or git
+// errors (and bidi overrides): printed raw, they could move the cursor,
+// rewrite the screen or disguise the text
+const CONTROL =
+	/\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?|[@-Z\\-_])|[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+/** Plain one-line text: control characters out, whitespace collapsed */
+const plain = (text: string) =>
+	text.replace(/\s+/g, ' ').replace(CONTROL, '').replace(/ +/g, ' ').trim();
+
 const fit = (text: string, width: number) => {
-	const clean = text.replace(/\s+/g, ' ').trim();
+	const clean = plain(text);
 	return clean.length > width
 		? `${clean.slice(0, Math.max(0, width - 1))}…`
 		: clean;
@@ -45,13 +55,22 @@ const MARK: Record<ParallelTask['state'], string> = {
 	stopped: chalk.yellow('■')
 };
 
-/** The line above the task lines; without a count while it isn't known */
+/**
+ * The line above the task lines; without a count while it isn't known.
+ * Kept to one line, since the block is redrawn by counting lines.
+ */
 export function formatParallelHeader(
 	count: number | undefined,
-	logsDir: string
+	logsDir: string,
+	width = 80
 ): string {
 	const what = count === undefined ? 'tasks' : plural(count, 'task');
-	return `Running ${what} side by side ${theme.muted(`· logs in ${logsDir}`)}`;
+	const lead = `Running ${what} side by side`;
+	const logs = ` · logs in ${logsDir}`;
+	if (lead.length + logs.length <= width) {
+		return `${lead}${theme.muted(logs)}`;
+	}
+	return fit(lead, width);
 }
 
 /**
@@ -79,7 +98,7 @@ export function formatParallelTaskLines(
 /** What became of one task's worktree, for the summary row */
 function outcome(task: ParallelTask, projectRoot: string): string {
 	if (task.state === 'failed' && !task.kept) {
-		const why = task.error ?? 'failed';
+		const why = plain(task.error ?? 'failed');
 		return `failed: ${why} ${theme.muted(`· ${rel(projectRoot, task.logFile)}`)}`;
 	}
 	if (!task.kept) return theme.muted('no changes; worktree removed');
@@ -88,7 +107,9 @@ function outcome(task: ParallelTask, projectRoot: string): string {
 		task.uncommitted ? 'uncommitted changes' : null
 	].filter(Boolean);
 	const failed =
-		task.state === 'failed' ? ` ${chalk.red(`(failed: ${task.error})`)}` : '';
+		task.state === 'failed'
+			? ` ${chalk.red(`(failed: ${plain(task.error ?? 'failed')})`)}`
+			: '';
 	return `${theme.brand(task.branch)}${work.length ? ` ${theme.muted(`· ${work.join(', ')}`)}` : ''}${failed}`;
 }
 

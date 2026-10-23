@@ -125,15 +125,37 @@ describe('LoopCommand --parallel', () => {
 	});
 
 	it('refuses flags it cannot combine with', async () => {
-		await execute({ parallel: '2', sandbox: true });
+		await execute({ parallel: '2', verbose: true });
 
 		expect(runParallel).not.toHaveBeenCalled();
 		expect(displayError).toHaveBeenCalledWith(
 			expect.objectContaining({
-				message: "--parallel can't be combined with --sandbox"
+				message: "--parallel can't be combined with --verbose"
 			}),
 			{ skipExit: true }
 		);
+	});
+
+	it("without --trust off a terminal, asks for --trust and doesn't suggest --sandbox", async () => {
+		(createTmCore as Mock).mockResolvedValueOnce({
+			projectPath: '/test/project',
+			loop: { runParallel, isTrusted: vi.fn().mockReturnValue(false) }
+		});
+		const stdinTTY = process.stdin.isTTY;
+		process.stdin.isTTY = false as never;
+		try {
+			await execute({ parallel: '2' });
+		} finally {
+			process.stdin.isTTY = stdinTTY;
+		}
+
+		expect(runParallel).not.toHaveBeenCalled();
+		const [error] = (displayError as Mock).mock.calls[0];
+		expect(error.message).toContain(
+			'up to 2 Claude Code processes at once, with permission prompts off'
+		);
+		expect(error.message).toContain('--trust');
+		expect(error.message).not.toContain('--sandbox');
 	});
 
 	it('exits 1 when a task failed and 130 when stopped', async () => {

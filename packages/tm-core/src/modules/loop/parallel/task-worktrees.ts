@@ -23,6 +23,14 @@ export interface WorktreeWork {
 	uncommitted: boolean;
 }
 
+const lstatOrNull = (p: string): fs.Stats | null => {
+	try {
+		return fs.lstatSync(p);
+	} catch {
+		return null;
+	}
+};
+
 /** Same path whatever the symlinks (macOS /var vs /private/var) */
 function canonical(p: string): string {
 	try {
@@ -63,8 +71,29 @@ export function parseWorktreeList(output: string): Map<string, string | null> {
 	return worktrees;
 }
 
+/**
+ * TaskGraph's own files that change while tasks are claimed and worked on,
+ * relative to the project: they don't count as uncommitted work. Anything
+ * else under `.taskgraph/` (config, docs, templates) does, because the
+ * worktrees start from the last commit and wouldn't have it.
+ */
+const OWN_STATE_PATHS = ['.taskgraph/tasks/', '.taskgraph/state.json'];
+
+/** Whether `file` (relative to the repository root) is TaskGraph's own state */
+export function isTaskGraphState(file: string, projectPrefix: string): boolean {
+	const prefix = projectPrefix ? `${projectPrefix}/` : '';
+	return OWN_STATE_PATHS.some((own) =>
+		own.endsWith('/') ? file.startsWith(prefix + own) : file === prefix + own
+	);
+}
+
 export class TaskWorktrees {
-	constructor(private readonly projectRoot: string) {}
+	/** The project folder with symlinks resolved, so paths compare with git's */
+	private readonly projectRoot: string;
+
+	constructor(projectRoot: string) {
+		this.projectRoot = canonical(projectRoot);
+	}
 
 	private async git(args: string[], cwd = this.projectRoot): Promise<string> {
 		const { stdout } = await run('git', args, {
@@ -103,15 +132,15 @@ export class TaskWorktrees {
 
 	/**
 	 * Files with uncommitted changes to tracked files, relative to the
-	 * repository root. Changes under the project's `.taskgraph/` don't count:
+	 * repository root. Changes to the task files and state.json don't count:
 	 * claims and status changes write there.
 	 */
 	async uncommittedFiles(): Promise<string[]> {
 		const top = canonical(
 			(await this.git(['rev-parse', '--show-toplevel'])).trim()
 		);
-		const own = path
-			.relative(top, path.join(canonical(this.projectRoot), '.taskgraph'))
+		const project = path
+			.relative(top, this.projectRoot)
 			.split(path.sep)
 			.join('/');
 		const output = await this.git([
@@ -121,7 +150,7 @@ export class TaskWorktrees {
 			'--untracked-files=no'
 		]);
 		return parsePorcelainPaths(output).filter(
-			(file) => file !== own && !file.startsWith(`${own}/`)
+			(file) => !isTaskGraphState(file, project)
 		);
 	}
 
@@ -148,7 +177,29 @@ export class TaskWorktrees {
 		const top = canonical(
 			(await this.git(['rev-parse', '--show-toplevel'])).trim()
 		);
-		return path.join(worktree, path.relative(top, canonical(this.projectRoot)));
+		return path.join(worktree, path.relative(top, this.projectRoot));
+	}
+
+	/**
+	 * Make the folder the task worktrees and logs go in. It must be a real
+	 * folder: a symlink there (one committed to the repository, say) would
+	 * send the worktrees and Claude's output somewhere else.
+	 * @throws ParallelLoopError when it's a symlink or a file
+	 */
+	prepareWorktreesDir(dir: string): void {
+		let stat: fs.Stats | undefined;
+		try {
+			stat = fs.lstatSync(dir);
+		} catch {
+			// Not there yet
+		}
+		if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) {
+			throw new ParallelLoopError(
+				`${path.relative(this.projectRoot, dir)} is ${stat.isSymbolicLink() ? 'a symlink' : 'not a folder'}; task worktrees and logs go there`,
+				'Remove it, then run `taskgraph loop --parallel` again'
+			);
+		}
+		fs.mkdirSync(dir, { recursive: true });
 	}
 
 	/** Keep the worktrees folder out of the main checkout's `git status` */
@@ -201,7 +252,7 @@ export class TaskWorktrees {
 				`Remove it with \`git worktree remove ${worktree}\``
 			);
 		}
-		if (fs.existsSync(worktree)) {
+		if (lstatOrNull(worktree)) {
 			throw new ParallelLoopError(
 				`${worktree} already exists and isn't a git worktree`,
 				'Move or delete it, then try again'

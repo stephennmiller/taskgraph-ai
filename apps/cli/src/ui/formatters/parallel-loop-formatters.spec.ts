@@ -45,6 +45,31 @@ describe('formatParallelHeader', () => {
 			'Running tasks side by side · logs in x'
 		);
 	});
+
+	it('stays on one line on a narrow terminal', () => {
+		expect(strip(formatParallelHeader(3, '.taskgraph/worktrees', 40))).toBe(
+			'Running 3 tasks side by side'
+		);
+		expect(
+			strip(formatParallelHeader(3, '.taskgraph/worktrees', 20)).length
+		).toBeLessThanOrEqual(20);
+	});
+});
+
+describe('task text', () => {
+	it('drops escape sequences and control characters from titles and errors', () => {
+		const [line] = formatParallelTaskLines([
+			task('1', { title: 'Fix\x1b[2J\x1b]0;owned\x07 the\rlogin\x00 API' })
+		]).map(strip);
+		expect(line).toContain('Fix the login API');
+		expect(line).not.toMatch(/[\x00-\x1f]/);
+
+		const out = summary(
+			result([task('2', { state: 'failed', error: 'bad\x1b[1A\x1b[2Kref' })])
+		);
+		expect(out).toContain('failed: badref');
+		expect(out).not.toContain('\x1b');
+	});
 });
 
 describe('formatParallelTaskLines', () => {

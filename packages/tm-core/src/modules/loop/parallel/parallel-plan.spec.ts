@@ -46,11 +46,26 @@ describe('assertParallelFlags', () => {
 	it.each([
 		[{ prompt: 'linting' }, '--prompt'],
 		[{ iterations: 5 }, '--iterations'],
-		[{ sandbox: true }, '--sandbox'],
 		[{ verbose: true }, '--verbose']
 	])('refuses %j', (flags, flag) => {
 		expect(() => assertParallelFlags(flags)).toThrow(
 			`--parallel can't be combined with ${flag}`
+		);
+	});
+
+	it('refuses --sandbox and says why, without pointing back at it', () => {
+		let error: unknown;
+		try {
+			assertParallelFlags({ sandbox: true });
+		} catch (e) {
+			error = e;
+		}
+		expect(error).toBeInstanceOf(ParallelLoopError);
+		expect((error as ParallelLoopError).message).toContain(
+			"can't run in the Docker sandbox"
+		);
+		expect((error as ParallelLoopError).hint).toContain(
+			'permission prompts off'
 		);
 	});
 });
@@ -113,6 +128,10 @@ describe('buildParallelPrompt', () => {
 		expect(buildParallelPrompt({ taskId: '7', tag: 'api' })).toContain(
 			'`taskgraph show 7 --tag=api`'
 		);
+	});
+
+	it("starts with words, so Claude can't read it as a flag", () => {
+		expect(buildParallelPrompt({ taskId: '7' }).startsWith('-')).toBe(false);
 	});
 
 	it('refuses an unsafe tag or task ID', () => {

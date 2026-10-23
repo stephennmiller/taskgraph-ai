@@ -16,6 +16,7 @@
 
 import { type ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
@@ -44,6 +45,28 @@ interface Running {
 	createdBranch: boolean;
 	child?: ChildProcess;
 	exited: Promise<void>;
+}
+
+/**
+ * Open a task's log for appending. Never through a symlink: one planted
+ * there would send Claude's output into whatever file it points at.
+ */
+function openLog(file: string): number {
+	const flags =
+		fs.constants.O_WRONLY |
+		fs.constants.O_APPEND |
+		fs.constants.O_CREAT |
+		(fs.constants.O_NOFOLLOW ?? 0);
+	let stat: fs.Stats | undefined;
+	try {
+		stat = fs.lstatSync(file);
+	} catch {
+		// A new log
+	}
+	if (stat && !stat.isFile()) {
+		throw new Error(`${path.basename(file)} isn't a plain file`);
+	}
+	return fs.openSync(file, flags, 0o600);
 }
 
 const describeSpawnError = (error: NodeJS.ErrnoException, command: string) =>
@@ -81,6 +104,17 @@ export class ParallelLoopRunner {
 		const running: Running[] = [];
 		let aborted = signal?.aborted ?? false;
 		const killTimers: NodeJS.Timeout[] = [];
+		// If this process exits before the run is over (a second Ctrl-C, a
+		// crash), Claude Code mustn't go on alone with permission prompts off:
+		// its process group is in no terminal's way, so kill it here
+		const killOnExit = () => {
+			for (const r of running) {
+				if (r.task.state === 'running' && r.child) {
+					this.kill(r.child, 'SIGKILL');
+				}
+			}
+		};
+		process.on('exit', killOnExit);
 		const stopAll = () => {
 			aborted = true;
 			for (const r of running) {
@@ -122,7 +156,9 @@ export class ParallelLoopRunner {
 
 				try {
 					if (!ignored) {
-						await git.ignoreWorktreesDir(worktreesDir(this.projectRoot));
+						const dir = worktreesDir(this.projectRoot);
+						git.prepareWorktreesDir(dir);
+						await git.ignoreWorktreesDir(dir);
 						ignored = true;
 					}
 					const { createdBranch } = await git.add(
@@ -132,6 +168,9 @@ export class ParallelLoopRunner {
 					);
 					entry.hasWorktree = true;
 					entry.createdBranch = createdBranch;
+					// Awaited before the abort check: an abort that lands while
+					// this runs must not be followed by a start
+					const cwd = await git.projectIn(entry.task.worktree);
 					if (aborted) {
 						this.finish(entry, 'stopped');
 						callbacks?.onTaskEnd?.({ ...entry.task });
@@ -140,7 +179,7 @@ export class ParallelLoopRunner {
 					entry.exited = this.start(entry, {
 						command,
 						spawner,
-						cwd: await git.projectIn(entry.task.worktree),
+						cwd,
 						prompt: buildParallelPrompt({ taskId: id, tag }),
 						isAborted: () => aborted
 					});
@@ -167,6 +206,7 @@ export class ParallelLoopRunner {
 			throw error;
 		} finally {
 			signal?.removeEventListener('abort', stopAll);
+			process.off('exit', killOnExit);
 			for (const timer of killTimers) clearTimeout(timer);
 		}
 
@@ -191,7 +231,7 @@ export class ParallelLoopRunner {
 		}
 	): Promise<void> {
 		const { task } = entry;
-		const log = fs.openSync(task.logFile, 'a');
+		const log = openLog(task.logFile);
 		return new Promise<void>((resolve) => {
 			let settled = false;
 			const done = (

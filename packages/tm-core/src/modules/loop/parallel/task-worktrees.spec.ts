@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { parsePorcelainPaths, parseWorktreeList } from './task-worktrees.js';
+import {
+	isTaskGraphState,
+	parsePorcelainPaths,
+	parseWorktreeList
+} from './task-worktrees.js';
 
 describe('parsePorcelainPaths', () => {
 	it('lists each changed path, skipping the source of a rename', () => {
@@ -47,5 +51,23 @@ describe('parseWorktreeList', () => {
 			['/repo/.taskgraph/worktrees/task-3', 'refs/heads/taskgraph/task-3'],
 			['/tmp/detached', null]
 		]);
+	});
+});
+
+describe('isTaskGraphState', () => {
+	it('covers the task files and state.json, nothing else under .taskgraph', () => {
+		expect(isTaskGraphState('.taskgraph/tasks/tasks.json', '')).toBe(true);
+		expect(isTaskGraphState('.taskgraph/state.json', '')).toBe(true);
+		expect(isTaskGraphState('.taskgraph/config.json', '')).toBe(false);
+		expect(isTaskGraphState('.taskgraph/docs/prd.txt', '')).toBe(false);
+		expect(isTaskGraphState('.taskgraph/state.json.bak', '')).toBe(false);
+		expect(isTaskGraphState('src/.taskgraph/tasks/tasks.json', '')).toBe(false);
+	});
+
+	it('looks under the project when it sits in a subfolder', () => {
+		expect(isTaskGraphState('app/.taskgraph/tasks/tasks.json', 'app')).toBe(
+			true
+		);
+		expect(isTaskGraphState('.taskgraph/tasks/tasks.json', 'app')).toBe(false);
 	});
 });

@@ -50,20 +50,26 @@ export interface ParallelFlags {
 /**
  * `--parallel` runs each ready task once with the default prompt, so it
  * can't combine with flags that change the prompt, the iteration count, or
- * how output streams.
+ * how output streams. Nor with `--sandbox`: see below.
  * @throws ParallelLoopError naming the first flag that doesn't fit
  */
 export function assertParallelFlags(flags: ParallelFlags): void {
+	if (flags.sandbox) {
+		// A task worktree's git data lives in the main repository's .git,
+		// outside the folder a Docker sandbox mounts, so Claude couldn't commit
+		throw new ParallelLoopError(
+			"--parallel can't run in the Docker sandbox: a task worktree's git data is outside the folder the sandbox mounts, so Claude couldn't commit there",
+			'Drop --sandbox to run the tasks on this machine with permission prompts off, or run `taskgraph loop --sandbox` without --parallel'
+		);
+	}
 	const conflict =
 		flags.prompt && flags.prompt !== 'default'
 			? '--prompt'
 			: flags.iterations !== undefined
 				? '--iterations'
-				: flags.sandbox
-					? '--sandbox'
-					: flags.verbose
-						? '--verbose'
-						: null;
+				: flags.verbose
+					? '--verbose'
+					: null;
 	if (conflict) {
 		throw new ParallelLoopError(
 			`--parallel can't be combined with ${conflict}`,

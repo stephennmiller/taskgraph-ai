@@ -33,6 +33,7 @@ import {
 	type TmCore,
 	createTmCore
 } from '../../../src/index.js';
+import { TaskWorktrees } from '../../../src/modules/loop/parallel/task-worktrees.js';
 
 const FAKE_CLAUDE = `#!/usr/bin/env node
 const fs = require('node:fs');
@@ -162,6 +163,10 @@ describe('loop --parallel', () => {
 
 	it('runs wave 1 in one worktree per task and keeps only the ones with work', async () => {
 		writePlan({ 'task-1': 'commit', 'task-2': 'fail', 'task-3': 'nothing' });
+		// A title that looks like flags must not reach Claude's command line
+		const hostile = '--help --model x $(touch pwned)';
+		await tmCore.tasks.update('1', { title: hostile });
+		git(root, 'commit', '-qam', 'hostile title');
 		const started: ParallelTask[] = [];
 
 		const result = await tmCore.loop.runParallel({
@@ -195,6 +200,7 @@ describe('loop --parallel', () => {
 		expect(argv[0]).toBe('-p');
 		expect(argv[1]).toContain('TaskGraph task 1');
 		expect(argv.slice(2)).toEqual(['--dangerously-skip-permissions']);
+		expect(argv.join(' ')).not.toContain(hostile);
 
 		// Task 1 committed: worktree, branch and claim stay for review
 		expect(byId['1']).toMatchObject({
@@ -228,7 +234,7 @@ describe('loop --parallel', () => {
 		}
 
 		// Never merged, and the worktrees folder is out of git status
-		expect(git(root, 'log', '--format=%s', 'main')).toBe('init');
+		expect(git(root, 'log', '-1', '--format=%s', 'main')).toBe('hostile title');
 		expect(git(root, 'status', '--porcelain')).not.toContain('worktrees');
 		expect(taskById('4')?.status).toBe('pending');
 	}, 60_000);
@@ -331,5 +337,166 @@ describe('loop --parallel', () => {
 		});
 
 		expect(result.tasks).toHaveLength(1);
+	}, 60_000);
+
+	it('counts uncommitted TaskGraph config as uncommitted work', async () => {
+		writePlan({});
+		fs.writeFileSync(path.join(root, '.taskgraph', 'config.json'), '{}\n');
+		git(root, 'add', '.taskgraph/config.json');
+		git(root, 'commit', '-qm', 'config');
+		fs.writeFileSync(
+			path.join(root, '.taskgraph', 'config.json'),
+			'{"changed":true}\n'
+		);
+
+		await expect(
+			tmCore.loop.runParallel({
+				parallel: 1,
+				trusted: true,
+				claimant: 'tester',
+				command: fakeClaude()
+			})
+		).rejects.toMatchObject({
+			message: expect.stringContaining('.taskgraph/config.json')
+		});
+		expect(readTasks().every((t) => t.status === 'pending')).toBe(true);
+	}, 60_000);
+
+	it('refuses a worktrees folder that is a symlink', async () => {
+		writePlan({});
+		const elsewhere = path.join(path.dirname(root), 'elsewhere');
+		fs.mkdirSync(elsewhere);
+		fs.symlinkSync(elsewhere, path.join(root, '.taskgraph', 'worktrees'));
+		git(root, 'add', '.taskgraph/worktrees');
+		git(root, 'commit', '-qm', 'planted symlink');
+
+		const result = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude()
+		});
+
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			error: expect.stringContaining('is a symlink'),
+			claimed: false
+		});
+		expect(fs.readdirSync(elsewhere)).toEqual([]);
+		expect(readTasks().every((t) => t.status === 'pending')).toBe(true);
+	}, 60_000);
+
+	it("doesn't write Claude's output through a symlinked log", async () => {
+		writePlan({});
+		const target = path.join(path.dirname(root), 'victim.txt');
+		fs.writeFileSync(target, 'original\n');
+		const dir = path.join(root, '.taskgraph', 'worktrees');
+		fs.mkdirSync(dir);
+		for (const id of ['1', '2', '3']) {
+			fs.symlinkSync(target, path.join(dir, `task-${id}.log`));
+		}
+
+		const result = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude()
+		});
+
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			error: expect.stringContaining("isn't a plain file")
+		});
+		expect(fs.readFileSync(target, 'utf8')).toBe('original\n');
+	}, 60_000);
+
+	it('excludes the worktrees folder when the project is itself a linked worktree', async () => {
+		writePlan({ 'task-1': 'commit' });
+		const linked = path.join(path.dirname(root), 'linked');
+		git(root, 'worktree', 'add', '-q', linked, '-b', 'linked');
+		await tmCore.close();
+		tmCore = await createTmCore({ projectPath: linked });
+
+		const result = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude()
+		});
+
+		expect(result.tasks[0]).toMatchObject({ state: 'done', kept: true });
+		expect(
+			fs.readFileSync(path.join(root, '.git', 'info', 'exclude'), 'utf8')
+		).toContain('/.taskgraph/worktrees/');
+		expect(git(linked, 'status', '--porcelain')).not.toContain('worktrees');
+	}, 60_000);
+
+	it("doesn't start Claude when the abort lands while a worktree is set up", async () => {
+		writePlan({ 'task-1': 'sleep' });
+		const controller = new AbortController();
+		const projectIn = TaskWorktrees.prototype.projectIn;
+		const spy = vi
+			.spyOn(TaskWorktrees.prototype, 'projectIn')
+			.mockImplementation(async function (this: TaskWorktrees, worktree) {
+				const cwd = await projectIn.call(this, worktree);
+				controller.abort();
+				return cwd;
+			});
+		const spawner = vi.fn();
+
+		try {
+			const result = await tmCore.loop.runParallel({
+				parallel: 1,
+				trusted: true,
+				claimant: 'tester',
+				command: fakeClaude(),
+				signal: controller.signal,
+				spawner
+			});
+
+			expect(spawner).not.toHaveBeenCalled();
+			expect(result.aborted).toBe(true);
+			expect(result.tasks[0]).toMatchObject({
+				state: 'stopped',
+				claimed: false
+			});
+		} finally {
+			spy.mockRestore();
+		}
+	}, 60_000);
+
+	it('kills Claude if this process exits mid-run', async () => {
+		writePlan({ 'task-1': 'sleep' });
+		const controller = new AbortController();
+		const before = process.listeners('exit');
+
+		const running = tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude(),
+			signal: controller.signal
+		});
+		const pidFile = path.join(pidDir, 'task-1');
+		await vi.waitFor(() => expect(fs.existsSync(pidFile)).toBe(true), {
+			timeout: 30_000,
+			interval: 50
+		});
+		const pid = Number(fs.readFileSync(pidFile, 'utf8'));
+
+		// What a second Ctrl-C's process.exit() runs
+		const added = process
+			.listeners('exit')
+			.filter((listener) => !before.includes(listener));
+		expect(added).toHaveLength(1);
+		(added[0] as () => void)();
+		await vi.waitFor(() => expect(isAlive(pid)).toBe(false), {
+			timeout: 10_000,
+			interval: 50
+		});
+
+		controller.abort();
+		await running;
+		expect(process.listeners('exit')).toEqual(before);
 	}, 60_000);
 });
