@@ -17,6 +17,7 @@ import {
 } from '../../../tasks/utils/archive.js';
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
+import { own, put } from './own-key.js';
 import type { PathResolver } from './path-resolver.js';
 import { filterReadyTasks } from '../../../tasks/utils/task-filters.js';
 import { withSchemaVersion } from './schema-version.js';
@@ -54,7 +55,7 @@ export class TagOperations {
 
 				if (format === 'legacy') {
 					// Legacy format - add new tag key
-					if (tagName in existingData) {
+					if (Object.hasOwn(existingData, tagName)) {
 						throw new TaskGraphError(
 							`Tag ${tagName} already exists`,
 							ERROR_CODES.VALIDATION_ERROR
@@ -63,20 +64,16 @@ export class TagOperations {
 
 					// Get tasks to copy if specified
 					let tasksToCopy: any[] = [];
-					if (options?.copyFrom) {
-						if (
-							options.copyFrom in existingData &&
-							existingData[options.copyFrom].tasks
-						) {
-							tasksToCopy = JSON.parse(
-								JSON.stringify(existingData[options.copyFrom].tasks)
-							);
-							copiedFrom = options.copyFrom;
-						}
+					const sourceTasks = options?.copyFrom
+						? own<any>(existingData, options.copyFrom)?.tasks
+						: undefined;
+					if (sourceTasks) {
+						tasksToCopy = JSON.parse(JSON.stringify(sourceTasks));
+						copiedFrom = options?.copyFrom;
 					}
 
 					// Create new tag structure
-					existingData[tagName] = {
+					put(existingData, tagName, {
 						tasks: tasksToCopy,
 						metadata: withSchemaVersion({
 							created: new Date().toISOString(),
@@ -86,7 +83,7 @@ export class TagOperations {
 								`Tag created on ${new Date().toLocaleDateString()}`,
 							tags: [tagName]
 						})
-					};
+					});
 
 					return existingData;
 				} else {
@@ -159,7 +156,7 @@ export class TagOperations {
 
 				if (this.formatHandler.detectFormat(data) === 'legacy') {
 					// Legacy format - remove the tag key
-					if (tag in data) {
+					if (Object.hasOwn(data, tag)) {
 						delete data[tag];
 						return data;
 					} else {
@@ -195,8 +192,8 @@ export class TagOperations {
 			await this.fileOps.modifyJson(filePath, (existingData: any) => {
 				if (this.formatHandler.detectFormat(existingData) === 'legacy') {
 					// Legacy format - rename the tag key
-					if (oldTag in existingData) {
-						existingData[newTag] = existingData[oldTag];
+					if (Object.hasOwn(existingData, oldTag)) {
+						put(existingData, newTag, existingData[oldTag]);
 						delete existingData[oldTag];
 
 						// Update metadata tags array

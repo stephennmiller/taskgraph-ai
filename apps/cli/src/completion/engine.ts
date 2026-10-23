@@ -107,7 +107,7 @@ function readProject() {
 			tag = state.currentTag || state.activeTag;
 		} catch (e) {}
 	}
-	if (!data[tag]) tag = tags.indexOf("master") >= 0 ? "master" : tags[0];
+	if (tags.indexOf(tag) < 0) tag = tags.indexOf("master") >= 0 ? "master" : tags[0];
 	return { tags: tags, tasks: tag ? data[tag].tasks : [] };
 }
 

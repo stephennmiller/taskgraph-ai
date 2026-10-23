@@ -15,6 +15,7 @@ import { COMPLEXITY_REPORT_FILE } from '../../src/constants/paths.js';
 // Import specific config getters needed here
 import { getDebugFlag, getLogLevel } from './config-manager.js';
 import * as gitUtils from './utils/git-utils.js';
+import { getOwnTag } from './utils/own-tag.js';
 
 // Global silent mode flag
 let silentMode = false;
@@ -548,7 +549,7 @@ function hasTaggedStructure(data) {
 	// Check if any top-level properties are objects with tasks arrays
 	for (const key in data) {
 		if (
-			data.hasOwnProperty(key) &&
+			Object.hasOwn(data, key) &&
 			typeof data[key] === 'object' &&
 			Array.isArray(data[key].tasks)
 		) {
@@ -749,7 +750,7 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 		// Ensure all tags have proper metadata before proceeding
 		for (const tagName in data) {
 			if (
-				data.hasOwnProperty(tagName) &&
+				Object.hasOwn(data, tagName) &&
 				typeof data[tagName] === 'object' &&
 				data[tagName].tasks
 			) {
@@ -827,7 +828,7 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 			}
 
 			// Get the data for the resolved tag
-			const tagData = data[resolvedTag];
+			const tagData = getOwnTag(data, resolvedTag);
 			if (tagData && tagData.tasks) {
 				normalizeTaskIds(tagData.tasks);
 
@@ -1135,7 +1136,7 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						[resolvedTag]: {
 							// Preserve existing tag metadata, merged with any new metadata
 							metadata: {
-								...(rawFullData[resolvedTag]?.metadata || {}),
+								...(getOwnTag(rawFullData, resolvedTag)?.metadata || {}),
 								...(data.metadata || {})
 							},
 							tasks: data.tasks // The updated tasks array is the source of truth here
@@ -1165,7 +1166,10 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 					// readJSON falls back to master's tasks for a tag that does not
 					// exist. Saving that under the requested name would create the
 					// tag as a copy of master.
-					if (!currentTaggedData[resolvedTag] && data.tag !== resolvedTag) {
+					if (
+						!getOwnTag(currentTaggedData, resolvedTag) &&
+						data.tag !== resolvedTag
+					) {
 						throw new Error(`Tag "${resolvedTag}" not found`);
 					}
 
@@ -1175,8 +1179,8 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 					// The caller read the tag, changed it and maybe waited on a model
 					// since. Apply only the caller's own changes to the tag as it is now,
 					// so changes other commands saved meanwhile survive (#243).
-					const tagAsRead = _rawTaggedData[resolvedTag];
-					const tagNow = currentTaggedData[resolvedTag];
+					const tagAsRead = getOwnTag(_rawTaggedData, resolvedTag);
+					const tagNow = getOwnTag(currentTaggedData, resolvedTag);
 					let tagToSave = cleanResolvedData;
 					if (tagAsRead && tagNow && Array.isArray(tagNow.tasks)) {
 						const tagNowNormalized = JSON.parse(JSON.stringify(tagNow));
@@ -1223,7 +1227,8 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 
 					// Additional cleanup for tag objects
 					if (typeof cleanData === 'object' && !Array.isArray(cleanData)) {
-						const finalCleanData = {};
+						// No prototype, so a `__proto__` key is written as data
+						const finalCleanData = Object.create(null);
 						for (const [key, value] of Object.entries(cleanData)) {
 							if (
 								value &&
@@ -1929,15 +1934,8 @@ function getTasksForTag(data, tagName) {
 	}
 
 	// Handle migrated format: { "master": { "tasks": [...] }, "otherTag": { "tasks": [...] } }
-	if (
-		data[tagName] &&
-		data[tagName].tasks &&
-		Array.isArray(data[tagName].tasks)
-	) {
-		return data[tagName].tasks;
-	}
-
-	return [];
+	const tasks = getOwnTag(data, tagName)?.tasks;
+	return Array.isArray(tasks) ? tasks : [];
 }
 
 /**

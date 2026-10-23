@@ -39,10 +39,11 @@ export interface CopyTagOptions {
 
 /**
  * Reserved tag names that cannot be used
- * Only 'master' is reserved as it's the system default tag
+ * 'master' is the system default tag. '__proto__' is a tasks.json key that
+ * JavaScript objects treat as their prototype rather than as data.
  * Users can use 'main' or 'default' if desired
  */
-const RESERVED_TAG_NAMES = ['master'];
+const RESERVED_TAG_NAMES = ['master', '__proto__'];
 
 /**
  * Maximum length for tag names (prevents filesystem/UI issues)

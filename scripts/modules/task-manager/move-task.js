@@ -25,6 +25,7 @@ import {
 	traverseDependencies,
 	writeJSON
 } from '../utils.js';
+import { getOwnTag, setOwnTag } from '../utils/own-tag.js';
 
 /**
  * Keep a dependency's provenance mark when the task it points at gets a new ID
@@ -792,11 +793,7 @@ async function validateMove(tasksPath, taskIds, sourceTag, targetTag, context) {
 	}
 
 	// Validate source tag exists
-	if (
-		!rawData ||
-		!rawData[sourceTag] ||
-		!Array.isArray(rawData[sourceTag].tasks)
-	) {
+	if (!rawData || !Array.isArray(getOwnTag(rawData, sourceTag)?.tasks)) {
 		throw new MoveTaskError(
 			MOVE_ERROR_CODES.INVALID_SOURCE_TAG,
 			`Source tag "${sourceTag}" not found or invalid`
@@ -804,8 +801,8 @@ async function validateMove(tasksPath, taskIds, sourceTag, targetTag, context) {
 	}
 
 	// Create target tag if it doesn't exist
-	if (!rawData[targetTag]) {
-		rawData[targetTag] = { tasks: [] };
+	if (!getOwnTag(rawData, targetTag)) {
+		setOwnTag(rawData, targetTag, { tasks: [] });
 		log('info', `Created new tag "${targetTag}"`);
 	}
 

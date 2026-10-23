@@ -35,6 +35,7 @@ import {
 	performCompleteTagMigration,
 	readJSON
 } from '../utils.js';
+import { getOwnTag } from '../utils/own-tag.js';
 import { updateTagTasks } from '../utils/update-tag-tasks.js';
 import taskExists from './task-exists.js';
 
@@ -279,7 +280,7 @@ async function addTask(
 		const targetTag = tag;
 
 		// Ensure the target tag exists
-		if (!rawData[targetTag]) {
+		if (!getOwnTag(rawData, targetTag)) {
 			report(
 				`Tag "${targetTag}" does not exist. Please create it first using the 'add-tag' command.`,
 				'error'

@@ -24,6 +24,7 @@ import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
 import { ensureTagMetadata, withFileLockSync } from '../../utils.js';
+import { getOwnTag, setOwnTag } from '../../utils/own-tag.js';
 import { prdResponseSchema } from './parse-prd-config.js';
 
 /**
@@ -334,7 +335,7 @@ export function saveTasksToFile(
 		() => {
 			// Read existing file to preserve other tags
 			const outputData = readExistingTasksFile(tasksPath);
-			const current = outputData[targetTag];
+			const current = getOwnTag(outputData, targetTag);
 			const currentTasks = Array.isArray(current?.tasks) ? current.tasks : [];
 			const tagTasks =
 				typeof tasks === 'function'
@@ -342,7 +343,7 @@ export function saveTasksToFile(
 					: (tasks ?? currentTasks);
 
 			// Update only the target tag
-			outputData[targetTag] = {
+			const tagData = {
 				tasks: tagTasks,
 				metadata: {
 					// Keep what the tag already records (schemaVersion, counts, ...)
@@ -362,8 +363,10 @@ export function saveTasksToFile(
 				}
 			};
 
+			setOwnTag(outputData, targetTag, tagData);
+
 			// Ensure proper metadata
-			ensureTagMetadata(outputData[targetTag], {
+			ensureTagMetadata(tagData, {
 				description: `Tasks for ${targetTag} context`
 			});
 

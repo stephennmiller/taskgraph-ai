@@ -3,6 +3,7 @@
  */
 import { normalizeTaskStatuses } from '@tm/core';
 import { modifyJSON } from '../utils.js';
+import { getOwnTag, setOwnTag } from './own-tag.js';
 
 /**
  * Change one tag of a tasks file under the file lock. The file is read inside
@@ -22,17 +23,21 @@ export async function updateTagTasks(filepath, tag, mutate, options = {}) {
 	let result;
 	await modifyJSON(filepath, (current) => {
 		const data = current ?? {};
-		if (!data[tag] && options.createWith && Object.keys(data).length === 0) {
-			data[tag] = options.createWith;
+		if (
+			!getOwnTag(data, tag) &&
+			options.createWith &&
+			Object.keys(data).length === 0
+		) {
+			setOwnTag(data, tag, options.createWith);
 		}
-		const tagData = data[tag];
+		const tagData = getOwnTag(data, tag);
 		if (!tagData || !Array.isArray(tagData.tasks)) {
 			throw new Error(`Tag "${tag}" no longer exists in ${filepath}`);
 		}
 		result = mutate(tagData);
 		// Write the older 'completed' status as 'done', as every other save does
-		if (Array.isArray(data[tag]?.tasks)) {
-			data[tag].tasks = normalizeTaskStatuses(data[tag].tasks);
+		if (Array.isArray(tagData.tasks)) {
+			tagData.tasks = normalizeTaskStatuses(tagData.tasks);
 		}
 		return data;
 	});
