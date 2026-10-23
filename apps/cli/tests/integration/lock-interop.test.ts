@@ -52,10 +52,12 @@ const start = (
 	return { child, lines, stderr: () => stderr, exited, hasExited: () => done };
 };
 
-const until = async (check: () => boolean, what: string, ms = 30000) => {
-	const end = Date.now() + ms;
+const until = async (proc: Running, check: () => boolean, what: string) => {
+	const end = Date.now() + 30000;
 	while (!check()) {
-		if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
+		if (Date.now() > end || proc.hasExited()) {
+			throw new Error(`gave up waiting for ${what}\n${proc.stderr()}`);
+		}
 		await new Promise((r) => setTimeout(r, 20));
 	}
 };
@@ -117,10 +119,14 @@ describe('older lock file and tm-core lock directory', () => {
 
 	it('tm-core waits while the older lock file is held', async () => {
 		const legacy = holder('legacy', 1, 'in-progress', release);
-		await until(() => legacy.lines.includes('held'), 'the older lock');
+		await until(legacy, () => legacy.lines.includes('held'), 'the older lock');
 
 		const core = holder('tm-core', 2, 'done', 'none');
-		await until(() => core.lines.includes('trying'), 'the tm-core writer');
+		await until(
+			core,
+			() => core.lines.includes('trying'),
+			'the tm-core writer'
+		);
 		await pause(300);
 		expect(core.hasExited()).toBe(false);
 		expect(statuses()).toEqual(['pending', 'pending']);
@@ -134,10 +140,14 @@ describe('older lock file and tm-core lock directory', () => {
 
 	it('the older code waits while the tm-core lock directory is held', async () => {
 		const core = holder('tm-core', 1, 'in-progress', release);
-		await until(() => core.lines.includes('held'), 'the tm-core lock');
+		await until(core, () => core.lines.includes('held'), 'the tm-core lock');
 
 		const legacy = holder('legacy', 2, 'done', 'none');
-		await until(() => legacy.lines.includes('trying'), 'the older writer');
+		await until(
+			legacy,
+			() => legacy.lines.includes('trying'),
+			'the older writer'
+		);
 		await pause(300);
 		expect(legacy.hasExited()).toBe(false);
 		expect(statuses()).toEqual(['pending', 'pending']);
