@@ -91,7 +91,7 @@ export async function removeDependencyDirect(args, log) {
 		return {
 			success: true,
 			data: {
-				message: `Successfully removed dependency: Task ${taskId} no longer depends on ${dependencyId}`,
+				message: `Removed dependency: Task ${taskId} no longer depends on ${dependencyId}`,
 				taskId: taskId,
 				dependencyId: dependencyId
 			}
