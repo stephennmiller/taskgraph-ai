@@ -14,4 +14,4 @@ This project tracks work in TaskGraph. Run `taskgraph prime` for the task in pro
 
 Put free text (a prompt, a note) in single quotes and write any `'` in it as `'\''`; in double quotes the shell runs backticks and `$(...)` in it.
 
-Statuses: pending, in-progress, review, done, deferred, cancelled, blocked. Subtask IDs have one dot (`3.2`). Change tasks through the commands, not by editing `.taskgraph/tasks/tasks.json`. JSON output (`--json` or `--format json`) starts with a `schemaVersion` (now 1); a higher number means a key you read may have changed. `taskgraph --help` lists the rest.
+Statuses: pending, in-progress, review, done, deferred, cancelled, blocked. Subtask IDs have one dot (`3.2`). Change tasks through the commands, not by editing `.taskgraph/tasks/tasks.json`. JSON output (`--json` or `--format json`) starts with a `schemaVersion` (now 2); a higher number means a key you read may have changed. `taskgraph --help` lists the rest.

@@ -1,10 +1,8 @@
 import {
-	assignMetadata,
+	dropReferences,
 	liveOrArchived,
-	pruneDependencySources,
 	pruneTaskLinks,
-	readArchivedIdsSync,
-	resolveSubtaskDependency
+	readArchivedIdsSync
 } from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
@@ -149,30 +147,9 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 				);
 
 				// Dependency IDs name tasks of the same tag, so only this tag changes
-				tasks.forEach((task) => {
-					if (task.dependencies) {
-						task.dependencies = task.dependencies.filter(
-							(depId) => !allRemovedIds.has(String(depId))
-						);
-						assignMetadata(task, pruneDependencySources(task));
-					}
-					if (task.subtasks) {
-						task.subtasks.forEach((subtask) => {
-							if (subtask.dependencies) {
-								subtask.dependencies = subtask.dependencies.filter(
-									(depId) =>
-										!allRemovedIds.has(resolveSubtaskDependency(task.id, depId))
-								);
-								assignMetadata(
-									subtask,
-									pruneDependencySources(subtask, task.id)
-								);
-							}
-						});
-					}
-				});
-				// Related and discovered-from links to them go too, including
-				// links to the subtasks of a removed task
+				dropReferences(tasks, allRemovedIds);
+				// Related and discovered-from links to the subtasks of a removed
+				// task go too
 				pruneTaskLinks(
 					tasks,
 					liveOrArchived(tasks, () => readArchivedIdsSync(tasksPath, tag).ids)

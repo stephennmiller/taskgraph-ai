@@ -24,6 +24,7 @@ import {
 import { selectNextTask } from '../utils/next-task.js';
 import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
+import { normalizeTaskIds } from '../utils/task-ids.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 
@@ -191,7 +192,8 @@ export class TaskService {
 	}
 
 	/**
-	 * Get a single task by ID - delegates to storage layer
+	 * Get a single task by ID - delegates to storage layer. IDs come back as
+	 * strings (see normalizeTaskIds)
 	 */
 	async getTask(taskId: string, tag?: string): Promise<Task | null> {
 		// Use provided tag or get active tag
@@ -199,7 +201,9 @@ export class TaskService {
 
 		try {
 			// Delegate to storage layer which handles the specific logic for tasks vs subtasks
-			return await this.storage.loadTask(String(taskId), activeTag);
+			const task = await this.storage.loadTask(String(taskId), activeTag);
+			// IDs as strings, as getTaskList gives them, so show agrees with list
+			return task ? normalizeTaskIds(task) : null;
 		} catch (error) {
 			// Re-throw all TaskGraphErrors without wrapping
 			if (error instanceof TaskGraphError) {

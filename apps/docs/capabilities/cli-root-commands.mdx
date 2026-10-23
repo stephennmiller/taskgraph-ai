@@ -303,6 +303,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
 
     Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask can't be marked done until they are checked off with `taskgraph set-status <id> --check <n>`.
+
+    `--force` replaces a task's subtasks. Dependencies and `related` / `discovered-from` links on the old subtasks are dropped first, so they don't end up naming the new subtasks that reuse their IDs.
   </Accordion>
 
   <Accordion title="Clear Subtasks">
@@ -316,6 +318,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Clear subtasks from all tasks
     taskgraph clear-subtasks --all
     ```
+
+    Dependencies on the cleared subtasks, and `related` / `discovered-from` links to them, are dropped too, as `remove-task` and `remove-subtask` do.
   </Accordion>
 
   <Accordion title="Analyze Task Complexity">
