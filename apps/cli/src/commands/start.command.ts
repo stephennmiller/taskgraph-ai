@@ -7,6 +7,7 @@
 import { spawn } from 'child_process';
 import {
 	type StartTaskResult as CoreStartTaskResult,
+	type TaskChecklist,
 	type TmCore,
 	createTmCore
 } from '@tm/core';
@@ -154,7 +155,17 @@ export class StartCommand extends Command {
 
 			// Display results (only for dry run or if execution failed)
 			if (options.dryRun || !coreResult.started) {
-				this.displayResults(result, options);
+				// The checklist of the task or subtask being started, numbered
+				// as set-status --check takes it
+				const checklist =
+					options.dryRun && result.task
+						? await this.tmCore?.tasks.loadChecklist(
+								result.subtaskId
+									? `${result.task.id}.${result.subtaskId}`
+									: String(result.task.id)
+							)
+						: undefined;
+				this.displayResults(result, options, checklist);
 			}
 		} catch (error: any) {
 			if (spinner) {
@@ -306,7 +317,8 @@ export class StartCommand extends Command {
 	 */
 	private displayResults(
 		result: StartCommandResult,
-		options: StartCommandOptions
+		options: StartCommandOptions,
+		checklist?: TaskChecklist
 	): void {
 		const format = options.format || 'text';
 
@@ -317,7 +329,7 @@ export class StartCommand extends Command {
 
 			case 'text':
 			default:
-				this.displayTextResult(result, options);
+				this.displayTextResult(result, options, checklist);
 				break;
 		}
 	}
@@ -334,7 +346,8 @@ export class StartCommand extends Command {
 	 */
 	private displayTextResult(
 		result: StartCommandResult,
-		options: StartCommandOptions
+		options: StartCommandOptions,
+		checklist?: TaskChecklist
 	): void {
 		if (!result.found || !result.task) {
 			console.log(
@@ -361,7 +374,8 @@ export class StartCommand extends Command {
 
 			displayTaskDetails(task, {
 				customHeader: headerText,
-				headerColor: 'yellow'
+				headerColor: 'yellow',
+				checklist
 			});
 
 			// Show claude-code prompt

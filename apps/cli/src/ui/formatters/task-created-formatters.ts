@@ -14,9 +14,9 @@
  */
 
 import chalk from 'chalk';
-import { terminalWidth } from '../layout/helpers.js';
+import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
-import { fit, terminalSafe, wrapLine } from './markdown-formatters.js';
+import { fit, terminalSafe } from './markdown-formatters.js';
 
 export interface CreatedTaskDependency {
 	id: number | string;

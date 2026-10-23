@@ -30,21 +30,23 @@
 import {
 	type Subtask,
 	type Task,
+	type TaskChecklist,
 	type TaskStatus,
+	buildChecklist,
 	resolveSubtaskDependency
 } from '@tm/core';
 import chalk from 'chalk';
 import { toMarkdown } from '../../utils/content-renderer.js';
 import { getSuggestedActions } from '../suggested-actions.js';
-import { terminalWidth } from '../layout/helpers.js';
+import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
+import { formatChecklist } from './checklist-formatters.js';
 import { complexityLevel } from './complexity-formatters.js';
 import {
 	fit,
 	formatMarkdown,
 	terminalSafe,
-	visibleLength,
-	wrapLine
+	visibleLength
 } from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
 import { getStatusWithColor } from './status-formatters.js';
@@ -60,6 +62,11 @@ export interface TaskDetailOptions {
 	 * number, so pass `2.3` when showing subtask 3 of task 2.
 	 */
 	id?: string;
+	/**
+	 * The task's acceptance criteria and the project's Definition of Done
+	 * (`tasks.getChecklist`). Without it, only the task's own criteria show.
+	 */
+	checklist?: TaskChecklist;
 	/** Only list subtasks with this status (`show --status`) */
 	statusFilter?: string;
 	/** Terminal width */
@@ -382,11 +389,12 @@ export function formatTaskDetail(
 			...listRows(task.technicalConstraints, '•', width)
 		]);
 	}
-	if (task.acceptanceCriteria?.length) {
-		sections.push([
-			heading('Done when'),
-			...listRows(task.acceptanceCriteria, '☐', width)
-		]);
+	// Numbered as `set-status --check` takes them
+	const checklist = safeStrings(
+		options.checklist ?? buildChecklist(taskToShow, [])
+	);
+	if (checklist.items.length > 0) {
+		sections.push([formatChecklist(checklist, width)]);
 	}
 
 	const subtasks = isSubtask(task) ? [] : (task.subtasks ?? []);

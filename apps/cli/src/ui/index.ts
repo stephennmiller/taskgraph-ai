@@ -89,9 +89,10 @@ export {
 
 // Markdown and text wrapped to the terminal
 export {
+	fit,
 	formatMarkdown,
-	visibleLength,
-	wrapLine
+	terminalSafe,
+	visibleLength
 } from './formatters/markdown-formatters.js';
 
 // What init did and what to do next
@@ -113,6 +114,13 @@ export {
 	type ModelChange,
 	type ModelRoleName
 } from './formatters/model-formatters.js';
+
+// Checklist formatters (acceptance criteria, Definition of Done)
+export {
+	formatChecklist,
+	formatChecklistUpdate,
+	formatUncheckedCriteria
+} from './formatters/checklist-formatters.js';
 
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
@@ -162,6 +170,7 @@ export {
 	getContentWidth,
 	terminalWidth,
 	truncate,
+	wrapLine,
 	createProgressBar
 } from './layout/helpers.js';
 

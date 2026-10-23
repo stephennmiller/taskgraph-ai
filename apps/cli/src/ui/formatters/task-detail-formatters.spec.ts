@@ -1,4 +1,5 @@
 import { stripVTControlCharacters } from 'node:util';
+import { buildChecklist } from '@tm/core';
 import { createSubtask, createTask } from '@tm/core/testing';
 import { describe, expect, it } from 'vitest';
 import { formatTaskDetail } from './task-detail-formatters.js';
@@ -189,8 +190,18 @@ describe('formatTaskDetail', () => {
 		);
 		expect(output).toContain('Constraints\n  • Responses stay under 200 ms');
 		expect(output).toContain(
-			"Done when\n  ☐ A user can't read or change another user's bookmarks"
+			"Acceptance criteria  0/2\n  ○ 1  A user can't read or change another user's bookmarks"
 		);
+	});
+
+	it("numbers the task's criteria and the project's Definition of Done as --check takes them", () => {
+		const task = bookmarks();
+		const checklist = buildChecklist(task, ['Tests pass']);
+
+		const output = plain(formatTaskDetail(task, { width: 80, checklist }));
+
+		expect(output).toContain('Acceptance criteria  0/2\n  ○ 1  A user');
+		expect(output).toContain('Definition of Done  0/1\n  ○ 3  Tests pass');
 	});
 
 	it('puts file descriptions on their own line when the row would be too narrow', () => {

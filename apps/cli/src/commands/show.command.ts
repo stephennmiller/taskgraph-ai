@@ -278,7 +278,11 @@ export class ShowCommand extends Command {
 		console.log(
 			formatTaskDetail(result.task, {
 				id: result.originalTaskId,
-				statusFilter: options.status
+				statusFilter: options.status,
+				checklist: this.tmCore?.tasks.getChecklist(
+					result.task,
+					Boolean(result.originalTaskId)
+				)
 			})
 		);
 	}

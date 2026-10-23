@@ -15,7 +15,7 @@ This command validates task completion and updates project state intelligently.
 
 1. Verify test strategy was followed
 2. Check if all subtasks are complete
-3. Validate acceptance criteria met
+3. Validate acceptance criteria met, and check off each one you verified with `taskgraph set-status $ARGUMENTS --check <n>` (`taskgraph show $ARGUMENTS` numbers them). `set-status` refuses done while any is unchecked; don't pass `--force` unless the user asks
 4. Ensure code is committed
 
 ## Execution
