@@ -6,7 +6,7 @@
  * @integration
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -252,5 +252,133 @@ describe('show command', () => {
 		result = runShow('3');
 		expect(result.output).toContain('Low Priority');
 		expect(result.output).toContain('low');
+	});
+});
+
+describe('show command output', () => {
+	let testDir: string;
+	let binPath: string;
+
+	const env = { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' };
+
+	beforeEach(() => {
+		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-show-output-'));
+		binPath = getCliBinPath();
+		execSync(`node "${binPath}" init --yes`, {
+			cwd: testDir,
+			stdio: 'pipe',
+			env
+		});
+		fs.writeFileSync(
+			path.join(testDir, '.taskgraph', 'tasks', 'tasks.json'),
+			JSON.stringify(
+				createTasksFile({
+					tasks: [
+						createTask({
+							id: 1,
+							title: 'Set up the database schema',
+							status: 'done'
+						}),
+						createTask({
+							id: 2,
+							title: 'Email and password sign-in with sessions',
+							description:
+								'Let people create an account with an email and password, sign in, and stay signed in across browser restarts.',
+							status: 'in-progress',
+							priority: 'high',
+							dependencies: ['1'],
+							details:
+								'Hash passwords with bcrypt (cost 12). Store sessions in the sessions table with a 30-day sliding expiry.',
+							subtasks: [
+								createSubtask({
+									id: 1,
+									parentId: '2',
+									title: 'Password hashing helpers',
+									status: 'done'
+								}),
+								createSubtask({
+									id: 2,
+									parentId: '2',
+									title: 'Sessions table and cookie middleware',
+									description: '',
+									dependencies: [1]
+								})
+							]
+						})
+					]
+				}),
+				null,
+				2
+			)
+		);
+	});
+
+	afterEach(() => {
+		fs.rmSync(testDir, { recursive: true, force: true });
+	});
+
+	const show = (...args: string[]) =>
+		spawnSync(process.execPath, [binPath, 'show', ...args], {
+			cwd: testDir,
+			encoding: 'utf8',
+			env
+		});
+
+	it('prints headed sections and one next step, with no boxes, within 80 columns', () => {
+		const res = show('2');
+		const lines = res.stdout.split('\n');
+
+		expect(res.status).toBe(0);
+		expect(res.stdout).toContain(
+			'Task 2  Email and password sign-in with sessions'
+		);
+		expect(res.stdout).toContain(
+			'▶ in-progress · high priority · depends on 1'
+		);
+		expect(res.stdout).toContain('\nDetails\n  Hash passwords with bcrypt');
+		expect(res.stdout).toContain('Subtasks · 1 of 2 done');
+		expect(res.stdout).toContain(
+			'  2.2  ○ pending  Sessions table and cookie middleware  after 2.1'
+		);
+		expect(lines.filter((line) => line.startsWith('Next: '))).toHaveLength(1);
+		expect(res.stdout).not.toMatch(/[╭╮╰╯│┌┐└┘├┤]/);
+		expect(Math.max(...lines.map((line) => line.length))).toBeLessThanOrEqual(
+			80
+		);
+		expect(res.stderr).toBe('');
+	});
+
+	it('shows a subtask by its full ID', () => {
+		const res = show('2.2');
+
+		expect(res.status).toBe(0);
+		expect(res.stdout).toContain(
+			'Subtask 2.2  Sessions table and cookie middleware'
+		);
+		expect(res.stdout).toContain(
+			'○ pending · medium priority · depends on 2.1'
+		);
+		expect(res.stdout).toContain(
+			'Next: taskgraph set-status --id=2.2 --status=in-progress'
+		);
+	});
+
+	it('filters subtasks by status', () => {
+		const res = show('2', '--status', 'done');
+
+		expect(res.status).toBe(0);
+		expect(res.stdout).toContain(
+			'Subtasks · 1 of 2 done\n  2.1  ✓ done  Password hashing helpers'
+		);
+		expect(res.stdout).not.toContain('Sessions table');
+	});
+
+	it('prints a missing task as an error on stderr with a hint and exits 1', () => {
+		const res = show('9');
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).not.toContain('Next:');
+		expect(res.stderr).toContain('Task 9 not found');
+		expect(res.stderr).toContain('taskgraph list');
 	});
 });

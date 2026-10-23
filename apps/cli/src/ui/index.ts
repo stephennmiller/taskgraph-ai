@@ -77,6 +77,27 @@ export {
 	type ResearchSaveTarget
 } from './formatters/research-formatters.js';
 
+// What `show` prints about one task
+export {
+	formatTaskDetail,
+	type TaskDetailOptions
+} from './formatters/task-detail-formatters.js';
+
+// What add-task confirms
+export {
+	formatTaskCreated,
+	type CreatedTask,
+	type CreatedTaskDependency
+} from './formatters/task-created-formatters.js';
+
+// Markdown and text wrapped to the terminal
+export {
+	fit,
+	formatMarkdown,
+	terminalSafe,
+	visibleLength
+} from './formatters/markdown-formatters.js';
+
 // What init did and what to do next
 export {
 	formatInitSummary,
@@ -158,6 +179,7 @@ export {
 	getContentWidth,
 	terminalWidth,
 	truncate,
+	wrapLine,
 	createProgressBar
 } from './layout/helpers.js';
 
