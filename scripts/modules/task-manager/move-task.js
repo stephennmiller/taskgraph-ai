@@ -13,6 +13,7 @@ import {
 	retargetDependents,
 	retargetTaskLinks,
 	getOwnKey,
+	isReservedNewTagName,
 	setOwnKey
 } from '@tm/core';
 import path from 'path';
@@ -799,12 +800,10 @@ async function validateMove(tasksPath, taskIds, sourceTag, targetTag, context) {
 
 	// Create target tag if it doesn't exist
 	if (!getOwnKey(rawData, targetTag)) {
-		// JavaScript objects treat a `__proto__` key as their prototype, so no
-		// command creates a tag of that name
-		if (targetTag === '__proto__') {
+		if (isReservedNewTagName(targetTag)) {
 			throw new MoveTaskError(
 				MOVE_ERROR_CODES.INVALID_TARGET_TAG,
-				'"__proto__" is a reserved tag name'
+				`"${targetTag}" is a reserved tag name`
 			);
 		}
 		setOwnKey(rawData, targetTag, { tasks: [] });
