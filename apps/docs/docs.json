@@ -52,7 +52,16 @@
 						"group": "Technical Capabilities",
 						"pages": [
 							"capabilities/mcp",
-							"capabilities/cli-root-commands",
+							{
+								"group": "CLI Commands",
+								"pages": [
+									"capabilities/cli-root-commands",
+									"capabilities/cli-viewing-commands",
+									"capabilities/cli-updating-commands",
+									"capabilities/cli-planning-commands",
+									"capabilities/cli-project-commands"
+								]
+							},
 							"capabilities/task-structure",
 							"capabilities/dependency-graph",
 							"capabilities/archive",

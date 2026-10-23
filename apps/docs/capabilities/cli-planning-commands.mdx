@@ -1,0 +1,179 @@
+---
+title: "Planning Commands"
+sidebarTitle: "Planning Commands"
+description: "Turn a PRD into tasks, add and break down tasks, size them, and research"
+---
+
+## Parse PRD
+
+```bash
+# Parse a PRD file and generate tasks
+taskgraph parse-prd <prd-file.txt>
+
+# Limit the number of tasks generated
+taskgraph parse-prd <prd-file.txt> --num-tasks=10
+
+# Replace the current tag's tasks, or add to them
+taskgraph parse-prd <prd-file.txt> --force
+taskgraph parse-prd <prd-file.txt> --append
+
+# Ask about gaps in the PRD first, and save the answers in it
+taskgraph parse-prd <prd-file.txt> --clarify
+taskgraph parse-prd <prd-file.txt> --clarify --yes
+
+# For agents: print the questions as JSON, then pass the answers back
+taskgraph parse-prd <prd-file.txt> --clarify --json > questions.json
+taskgraph parse-prd <prd-file.txt> --answers questions.json
+```
+
+In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID. With `--append`, Claude sees the existing tasks' IDs and titles, so a new task can depend on one of them. The new tasks are added to the tag as it is when they are saved: a change another command or agent made to the tag while Claude was working is kept, and the new tasks take the next free IDs after it.
+
+Each task records the PRD section it came from in `metadata.source`, such as `docs/prd.md#authentication`, and `taskgraph show` prints it.
+
+Re-running `--append` on a PRD you edited sends Claude only the sections added since the last parse, so existing tasks aren't duplicated. Sections whose text changed and sections you removed are listed with the tasks that came from them; those tasks are left as they are for you to review. An unchanged PRD makes no AI call and adds no tasks:
+
+```
+1 new section in docs/prd.md · #export
+⚠ 1 changed section · #notes · may be stale: task 2
+⚠ 1 removed section · #sharing · task 3 cites it
+```
+
+Each change is reported once: after the run, the edited PRD is the new baseline. With `--append`, Claude decides how many tasks the new sections need; `--num-tasks` applies to whole-PRD parses.
+
+`--clarify` asks up to 5 questions about requirements the PRD leaves open (the data store, sign-in, platforms, scope), each with a suggested answer. Press Enter to keep the suggestion. The answers are saved in the PRD under `## Clarifications`, then the tasks are generated from it, so the decisions stay in the repo:
+
+```markdown
+## Clarifications
+
+- **Q:** Which database should the app use?
+  **A:** PostgreSQL 16
+```
+
+Running it again skips questions the section already answers, and a new answer to the same question replaces the old one. With no terminal to ask in, or with `--yes`, the suggested answers are used. If there is nothing to ask, it goes straight to the tasks. Ctrl-C leaves the PRD unchanged.
+
+`--clarify --json` prints only `{"prd", "questions": [{"question", "suggestedAnswer"}]}` and changes nothing. Add an `"answer"` to each question and pass the file to `--answers` (or `-` for stdin); a question without an `"answer"` keeps its suggestion. `--answers` saves the answers and generates the tasks without asking the model for questions again.
+
+Each task comes with 2-5 acceptance criteria taken from the PRD, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` waits until they are checked off (see [Set Task Status](/capabilities/cli-updating-commands#set-task-status)).
+
+## Add a New Task
+
+```bash
+# Add a new task using AI
+taskgraph add-task --prompt="Description of the new task"
+
+# Add a task with dependencies
+taskgraph add-task --prompt="Description" --dependencies=1,2,3
+
+# Add a task with priority
+taskgraph add-task --prompt="Description" --priority=high
+
+# File work you found while doing task 3; it doesn't wait for task 3
+taskgraph add-task --prompt="Description" --discovered-from=3
+
+# Add acceptance criteria (repeat --ac for each one)
+taskgraph add-task --prompt="Description" --ac="Users can log in" --ac="Tokens expire after 15 minutes"
+```
+
+## Expand Tasks
+
+```bash
+# Expand a specific task with subtasks
+taskgraph expand --id=<id> --num=<number>
+
+# Expand with additional context
+taskgraph expand --id=<id> --prompt='<context>'
+
+# Expand all pending tasks
+taskgraph expand --all
+
+# Force regeneration of subtasks for tasks that already have them
+taskgraph expand --all --force
+
+# Research-backed subtask generation for a specific task
+taskgraph expand --id=<id> --research
+
+# Research-backed generation for all tasks
+taskgraph expand --all --research
+```
+
+Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask can't be marked done until they are checked off with `taskgraph set-status <id> --check <n>`.
+
+`--force` replaces a task's subtasks. Dependencies and `related` / `discovered-from` links on the old subtasks are dropped first, so they don't end up naming the new subtasks that reuse their IDs.
+
+## Clear Subtasks
+
+```bash
+# Clear subtasks from a specific task
+taskgraph clear-subtasks --id=<id>
+
+# Clear subtasks from multiple tasks
+taskgraph clear-subtasks --id=1,2,3
+
+# Clear subtasks from all tasks
+taskgraph clear-subtasks --all
+```
+
+Dependencies on the cleared subtasks, and `related` / `discovered-from` links to them, are dropped too, as `remove-task` and `remove-subtask` do.
+
+## Analyze Task Complexity
+
+```bash
+# Analyze complexity of all tasks
+taskgraph analyze-complexity
+
+# Save report to a custom location
+taskgraph analyze-complexity --output=my-report.json
+
+# Use a specific LLM model
+taskgraph analyze-complexity --model=claude-3-opus-20240229
+
+# Set a custom complexity threshold (1-10)
+taskgraph analyze-complexity --threshold=6
+
+# Use an alternative tasks file
+taskgraph analyze-complexity --file=custom-tasks.json
+
+# Use the research model for research-backed complexity analysis
+taskgraph analyze-complexity --research
+```
+
+## View Complexity Report
+
+```bash
+# Display the task complexity analysis report
+taskgraph complexity-report
+
+# View a report at a custom location
+taskgraph complexity-report --file=my-report.json
+```
+
+## Research Fresh Information
+
+```bash
+# AI-powered research with up-to-date information
+taskgraph research "What are the latest best practices for JWT authentication in Node.js?"
+
+# Research with task context
+taskgraph research "How to implement OAuth 2.0?" --id=15,16
+
+# Research with file context for code-aware suggestions
+taskgraph research "How can I optimize this API implementation?" --files=src/api.js,src/auth.js
+
+# Custom context and project tree
+taskgraph research "Best practices for error handling" --context="We're using Express.js" --tree
+
+# Different detail levels
+taskgraph research "React Query v5 migration guide" --detail=high
+
+# Research within a specific tag
+taskgraph research "Database optimization strategies" --tag=feature-branch
+
+# Save the conversation to .taskgraph/docs/research/
+taskgraph research "Database optimization techniques" --save-file
+
+# Save key findings to a task or subtask (recommended)
+taskgraph research "How to implement OAuth?" --save-to=15
+taskgraph research "API optimization strategies" --save-to=15.2
+```
+
+The research role has web search and fetch only. It cannot read or change your files and has no shell. In the CLI you can ask follow-up questions and choose where to save findings.

@@ -1,0 +1,152 @@
+---
+title: "Updating Tasks"
+sidebarTitle: "Updating Tasks"
+description: "Change tasks, log notes, set status, manage dependencies and move tasks"
+---
+
+## Update Tasks
+
+```bash
+# Update tasks from a specific ID and provide context
+taskgraph update --from=<id> --prompt='<prompt>'
+```
+
+## Update a Specific Task
+
+```bash
+# Update a single task by ID with new information
+taskgraph update-task --id=<id> --prompt='<prompt>'
+
+# Use research-backed updates (research model)
+taskgraph update-task --id=<id> --prompt='<prompt>' --research
+```
+
+## Update a Subtask
+
+```bash
+# Append additional information to a specific subtask
+taskgraph update-subtask --id=<parentId.subtaskId> --prompt='<prompt>'
+
+# Example: Add details about API rate limiting to subtask 2 of task 5
+taskgraph update-subtask --id=5.2 --prompt="Add rate limiting of 100 requests per minute"
+
+# Use research-backed updates (research model)
+taskgraph update-subtask --id=<parentId.subtaskId> --prompt='<prompt>' --research
+```
+
+Unlike the `update-task` command which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. The AI writes the appended text from your prompt; to save a note exactly as written, use `taskgraph note`.
+
+## Log a Progress Note
+
+```bash
+# Append a note to a task or subtask, exactly as written, with a timestamp.
+# No AI call, so it takes well under a second.
+taskgraph note 3 "Chose argon2 over bcrypt: the login API already uses it"
+taskgraph note 3.2 "Cookie path was wrong; fixed in auth/session.ts"
+
+# A longer note from a file, or from stdin with -
+taskgraph note 3 --file notes.md
+git log -1 --format=%B | taskgraph note 3 --file -
+```
+
+Prints one line, `✓ Added a note to task 3  <title>`. The note goes at the
+end of the task's details in an `<info added on <time>>` block, the same
+block `update-subtask` writes, and nothing else in `tasks.json` changes.
+`<time>` is an ISO 8601 UTC timestamp such as `2026-10-23T14:02:11.000Z`,
+repeated in the closing `</info added on <time>>` line. A note can be at
+most 64 KB.
+MCP clients use the `add_note` tool. Use `update-subtask` or
+`update-task --append` when you want the AI to write the note instead.
+
+## Set Task Status
+
+```bash
+# Set status of a single task
+taskgraph set-status --id=<id> --status=<status>
+
+# Set status for multiple tasks
+taskgraph set-status --id=1,2,3 --status=<status>
+
+# Set status for subtasks
+taskgraph set-status --id=1.1,1.2 --status=<status>
+
+# Check off acceptance criteria by the numbers `show` lists
+taskgraph set-status 3 --check 1,2
+
+# Check the last ones and mark the task done in one step
+taskgraph set-status 3 done --check 3
+
+# Clear a criterion checked by mistake
+taskgraph set-status 3 --uncheck 2
+```
+
+A task with acceptance criteria, or a project with a [Definition of Done](/configuration#definition-of-done), can't be marked done while any item is unchecked. `set-status` lists the unchecked items and the `--check` command that clears them. `--force` marks the task done anyway. A subtask is gated by its own criteria only, and a parent whose last subtask finishes stays in progress until its own items are checked.
+
+In Claude Code, the plugin's `/taskgraph:to-done <id>` does the checking for you: the `task-checker` agent compares your changes with each numbered item, the ones it can show evidence for are checked, and the rest are reported to you. It then saves a three-line summary on the task (what changed, files, follow-ups) and marks it done. It never passes `--force` unless you ask.
+
+When marking a task as "done", all of its subtasks will automatically be marked as "done" as well.
+
+## Generate Task Files
+
+```bash
+# Generate individual task files from tasks.json
+taskgraph generate
+```
+
+## Managing Task Dependencies
+
+```bash
+# Add a dependency to a task
+taskgraph add-dependency --id=<id> --depends-on=<id>
+
+# Link two tasks without making one wait for the other
+taskgraph add-dependency --id=<id> --depends-on=<id> --type=related
+
+# Remove a dependency (or a related / discovered-from link) from a task
+taskgraph remove-dependency --id=<id> --depends-on=<id>
+
+# Validate dependencies without fixing them
+taskgraph validate-dependencies
+
+# Find and fix invalid dependencies automatically
+taskgraph fix-dependencies
+```
+
+Once `parse-prd` has recorded where tasks came from, `validate-dependencies` also checks the PRD: it lists sections no task covers, tasks that cite a heading the PRD no longer has (renamed or removed), and tasks with no section. A task covers its section and the sections inside it. These are warnings: only dependency problems make the command exit 1.
+
+```
+✓ No dependency problems · 6 tasks, 4 dependencies
+⚠ 2 of 10 PRD sections have no task · docs/prd.md
+  #search--tags   Search & Tags
+  #rate-limiting  Rate limiting
+⚠ 1 task cites a heading docs/prd.md no longer has
+  3  #password-reset
+```
+
+## Move Tasks
+
+```bash
+# Move a task or subtask to a new position
+taskgraph move --from=<id> --to=<id>
+
+# Move task to become a subtask
+taskgraph move --from=5 --to=7
+
+# Move subtask to become a standalone task
+taskgraph move --from=5.2 --to=7
+
+# Move subtask to a different parent
+taskgraph move --from=5.2 --to=7.3
+
+# Reorder subtasks within the same parent
+taskgraph move --from=5.2 --to=5.4
+
+# Move a task to a new ID position (creates placeholder if it doesn't exist)
+taskgraph move --from=5 --to=25
+
+# Move multiple tasks at once (must have the same number of IDs)
+taskgraph move --from=10,11,12 --to=16,17,18
+
+# Move a task to another tag (see Cross-Tag Task Movement)
+taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
+```

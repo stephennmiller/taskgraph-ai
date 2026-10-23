@@ -1,0 +1,137 @@
+---
+title: "Project Setup"
+sidebarTitle: "Project Setup"
+description: "Initialize a project, manage tags and models, set up tab completion, and run the loop"
+---
+
+## Initialize a Project
+
+```bash
+# Initialize a new project with TaskGraph structure
+taskgraph init
+
+# Import a Task Master project (.taskmaster/) into .taskgraph/
+taskgraph init --from-taskmaster
+
+# Skip the Claude Code integration (CLAUDE.md import)
+taskgraph init --no-claude
+
+# Also register the MCP server in the project's .mcp.json
+taskgraph init --mcp
+
+# Only set up Git to merge tasks.json and archive.json by task
+# (existing projects; once per clone, and again after upgrading)
+taskgraph init --merge-driver
+```
+
+`init` sets up the Claude Code integration by default: it copies TaskGraph's agent guide to `.taskgraph/CLAUDE.md` and imports it from your `CLAUDE.md`. Interactive runs ask, with Yes as the default; `--yes` sets it up without asking, and `--no-claude` skips it. Slash commands and session hooks come from the plugin.
+
+`init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. `--rules claude` still works; `claude` is the only rule profile.
+
+Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
+
+## Tag Management
+
+Tags are separate, isolated task lists. All task operations work within the active tag, and most commands accept `--tag=<name>` to target a specific one.
+
+```bash
+# List all tags with task counts and status
+taskgraph tags
+
+# List tags with detailed metadata
+taskgraph tags --show-metadata
+
+# Create a new empty tag, optionally with a description
+taskgraph tags add <tag-name>
+taskgraph tags add <tag-name> --description="Feature development tasks"
+
+# Create a tag named after the current branch
+taskgraph tags add <tag-name> --from-branch
+
+# Create a tag by copying tasks from another tag
+taskgraph tags add <new-tag> --copy-from=<source-tag>
+
+# Switch to a different tag
+taskgraph tags use <tag-name>
+
+# Rename or copy a tag
+taskgraph tags rename <old-name> <new-name>
+taskgraph tags copy <source-tag> <target-tag>
+
+# Delete a tag and all its tasks (asks for confirmation unless --yes)
+taskgraph tags remove <tag-name> --yes
+```
+
+## Configure AI Models
+
+```bash
+# View the current model configuration
+taskgraph models
+
+# Set the main, research and fallback models (opus, sonnet or haiku)
+taskgraph models --set-main sonnet
+taskgraph models --set-research opus
+taskgraph models --set-fallback haiku
+
+# Run interactive setup
+taskgraph models --setup
+```
+
+TaskGraph runs on Claude Code, so no provider API keys are needed. Configuration is stored in `.taskgraph/config.json`; runtime state such as the current tag is in `.taskgraph/state.json`. Don't edit either by hand. See [Configuration](/configuration).
+
+## Tab Completion
+
+```bash
+# Set it up for your shell (detected from $SHELL)
+taskgraph completion --install
+
+# Or name the shell
+taskgraph completion fish --install
+```
+
+`--install` writes the script (`~/.taskgraph-completion.zsh`, `~/.taskgraph-completion.bash`, or `~/.config/fish/completions/taskgraph.fish`) and adds one line to `~/.zshrc` or `~/.bashrc` to load it. Running it again replaces the script and doesn't add the line twice. Run it again after upgrading so new commands complete.
+
+Tab then completes commands, flags, statuses, priorities and file paths, plus task and subtask IDs and tag names read from the project's `.taskgraph/tasks/tasks.json`. In zsh and fish each ID shows its title and status. Comma-separated lists work too: `taskgraph show 1,<Tab>` skips the IDs already listed.
+
+To manage your dotfiles yourself, print the script instead: `taskgraph completion zsh > ~/.taskgraph-completion.zsh`. It needs `node` on your `PATH`, which TaskGraph already requires.
+
+## Loop (Autonomous Batch Execution)
+
+```bash
+# Work through the backlog, one iteration per pending task
+taskgraph loop
+
+# Stop after 10 iterations
+taskgraph loop -n 10
+
+# Work on one task (1 iteration unless -n is given)
+taskgraph loop --id 3
+
+# Build a task test-first: a failing test, the code, a commit, per subtask
+taskgraph loop --id 3 --prompt tdd
+
+# Use a specific preset
+taskgraph loop -n 10 --prompt test-coverage
+taskgraph loop -n 10 --prompt linting
+taskgraph loop -n 10 --prompt duplication
+taskgraph loop -n 10 --prompt entropy
+
+# Use a custom prompt file
+taskgraph loop -n 10 --prompt ./my-workflow.md
+
+# Filter to tasks with a specific tag
+taskgraph loop -n 10 --tag backend
+
+# Custom progress file location
+taskgraph loop -n 10 --progress-file ./my-progress.txt
+```
+
+**Built-in presets:**
+- `default` - Complete tasks from TaskGraph backlog one at a time
+- `test-coverage` - Write meaningful tests for untested user-facing behavior
+- `linting` - Fix lint and type errors incrementally
+- `duplication` - Refactor duplicated code into shared utilities
+- `entropy` - Clean up code smells (long functions, deep nesting, etc.)
+- `tdd` - Complete tasks test-first: RED, GREEN, COMMIT for each subtask
+
+Each iteration spawns a fresh Claude Code session, avoiding context fatigue. See [Loop Command](/capabilities/loop) for full documentation.
