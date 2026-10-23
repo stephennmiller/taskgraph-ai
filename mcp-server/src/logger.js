@@ -86,7 +86,7 @@ function log(level, ...args) {
  * Create a logger object with methods for different log levels
  * @returns {Object} Logger object with info, error, debug, warn, and success methods
  */
-export function createLogger() {
+function createLogger() {
 	const createLogMethod =
 		(level) =>
 		(...args) =>
@@ -106,4 +106,3 @@ export function createLogger() {
 const logger = createLogger();
 
 export default logger;
-export { log, LOG_LEVELS };

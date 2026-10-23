@@ -191,19 +191,12 @@ Commands that should consider adopting this pattern:
 
 ### **Context Gatherer Module**
 ```javascript
-export {
-    ContextGatherer,
-    createContextGatherer  // Factory function
-};
+export { ContextGatherer };
 ```
 
 ### **Fuzzy Search Module**
 ```javascript
-export {
-    FuzzyTaskSearch,
-    PURPOSE_CATEGORIES,
-    RELEVANCE_THRESHOLDS
-};
+export { FuzzyTaskSearch };
 ```
 
 This context gathering system provides a foundation for building more intelligent, context-aware commands that can leverage project knowledge to provide better AI-powered assistance.

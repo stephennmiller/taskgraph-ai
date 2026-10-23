@@ -233,7 +233,7 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   // Example in a direct function
   export async function someOperationDirect(args, log) {
     let result;
-    const tasksPath = findTasksJsonPath(args, log); // Get path first
+    const tasksPath = findTasksPath(args, log); // Get path first
     
     // Option 1: Core function handles 'json' format (Preferred)
     try {
@@ -417,7 +417,7 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
 ### Project Root and Task File Path Detection (`path-utils.js`)
 
 - **Purpose**: This module ([`mcp-server/src/core/utils/path-utils.js`](../../mcp-server/src/core/utils/path-utils.js)) provides the mechanism for locating the user's `tasks.json` file, used by direct functions.
-- **`findTasksJsonPath(args, log)`**:
+- **`findTasksPath(args, log)`**:
     - ✅ **DO**: Call this function from within **direct function wrappers** (e.g., `listTasksDirect` in `mcp-server/src/core/direct-functions/`) to get the absolute path to the relevant `tasks.json`.
     - Pass the *entire `args` object* received by the MCP tool (which should include `projectRoot` derived from the session) and the `log` object.
     - Implements a **simplified precedence system** for finding the `tasks.json` path:
@@ -511,7 +511,7 @@ export {
 
 // Example export from mcp-server/src/core/utils/path-utils.js
 export {
-  findTasksJsonPath,
+  findTasksPath,
   getPackagePath
 };
 

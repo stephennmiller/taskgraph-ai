@@ -55,7 +55,7 @@ export function getAssetsDir() {
  * @param {string} relativePath - Path relative to assets directory
  * @returns {string} Full path to the asset file
  */
-export function getAssetPath(relativePath) {
+function getAssetPath(relativePath) {
 	const assetsDir = getAssetsDir();
 	return path.join(assetsDir, relativePath);
 }

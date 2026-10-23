@@ -1059,12 +1059,4 @@ async function switchCurrentTag(projectRoot, tagName) {
 }
 
 // Export all tag management functions
-export {
-	createTag,
-	deleteTag,
-	tags,
-	useTag,
-	renameTag,
-	copyTag,
-	switchCurrentTag
-};
+export { createTag, deleteTag, tags, useTag, renameTag, copyTag };

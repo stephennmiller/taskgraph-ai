@@ -16,7 +16,7 @@ import { z } from 'zod';
  * When tasks are updated via AI, the spread operator preserves existing metadata
  * since AI responses won't include a metadata field.
  */
-export const TaskStatusSchema = z.enum([
+const TaskStatusSchema = z.enum([
 	'pending',
 	'in-progress',
 	'blocked',
@@ -59,7 +59,7 @@ export const BaseTaskSchema = z
  * another task's subtask ("3.2"). Numbers alone would make a dependency on
  * task 3 read as sibling 3.
  */
-export const SubtaskDependencySchema = z.union([
+const SubtaskDependencySchema = z.union([
 	z.number().int().positive(),
 	z.string()
 ]);
