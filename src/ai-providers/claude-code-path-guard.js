@@ -43,10 +43,11 @@ export function isInsideRoot(root, candidate) {
 	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
 }
 
-// Names that hold credentials. .env.example and friends hold none. .aws is
-// refused whole: besides credentials it holds SSO and CLI token caches.
+// Names that hold credentials. .env.example and friends hold none. .aws and
+// .kube are refused whole: besides credentials and kubeconfigs (config,
+// config-staging, ...) they hold SSO, CLI and OIDC token caches.
 const SECRET_NAME =
-	/^(\.env([._-].*)?|\.envrc|\.git|\.aws|\.npmrc|[._]netrc|\.pypirc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore)$/i;
+	/^(\.env([._-].*)?|\.envrc|\.git|\.git-credentials|\.aws|\.kube|\.npmrc|[._]netrc|\.pypirc|\.pgpass|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore|jks|ppk)$/i;
 const PUBLIC_ENV = /^\.env[._-](example|sample|template)$/i;
 // Files that are secret only inside a given directory: [directory, file]
 const SECRET_PAIRS = [['.docker', 'config.json']];
@@ -113,11 +114,14 @@ const SECRET_GLOBS = [
 	'.env_*',
 	'.envrc',
 	'.git',
+	'.git-credentials',
 	'.aws',
+	'.kube',
 	'.npmrc',
 	'.netrc',
 	'_netrc',
 	'.pypirc',
+	'.pgpass',
 	'id_rsa*',
 	'id_dsa*',
 	'id_ecdsa*',
@@ -127,6 +131,8 @@ const SECRET_GLOBS = [
 	'*.p12',
 	'*.pfx',
 	'*.keystore',
+	'*.jks',
+	'*.ppk',
 	...SECRET_PAIRS.map(([dir, file]) => `**/${dir}/${file}`)
 ].map((name) => `!${anyCase(name)}`);
 
