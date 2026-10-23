@@ -8,7 +8,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const commandsDir = join(repoRoot, 'packages/claude-code-plugin/commands');
 
 /**
- * Slash commands that were merged or renamed (#170, #171) or never existed.
+ * Slash commands that were merged or renamed (#170, #171, #244) or never existed.
  * They must not be referenced anywhere: there are no aliases.
  */
 const REMOVED_COMMANDS = [
@@ -24,7 +24,8 @@ const REMOVED_COMMANDS = [
 	'remove-subtasks',
 	'remove-all-subtasks',
 	'clear-all-subtasks',
-	'generate-tasks'
+	'generate-tasks',
+	'analyze-project'
 ];
 
 /** Slash-command prefixes that no longer exist: the plugin namespace is /taskgraph: */

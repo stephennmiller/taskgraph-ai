@@ -6,6 +6,24 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const commandsDir = join(repoRoot, 'packages/claude-code-plugin/commands');
 
+/**
+ * The code in a command body: each line of a fenced block, and each inline
+ * `code` span outside one. Bodies name the commands to run in both forms.
+ */
+function codeLines(markdown: string): string[] {
+	const lines: string[] = [];
+	let inFence = false;
+	for (const line of markdown.split('\n')) {
+		if (line.trim().startsWith('```')) {
+			inFence = !inFence;
+			continue;
+		}
+		if (inFence) lines.push(line);
+		else for (const span of line.matchAll(/`([^`]+)`/g)) lines.push(span[1]);
+	}
+	return lines;
+}
+
 // The plugin is the only slash-command channel (#169): these files are canonical
 const EXPECTED_COMMANDS = [
 	'parse-prd',
@@ -41,8 +59,6 @@ const EXPECTED_COMMANDS = [
 	'update-task',
 	'update-tasks-from-id',
 	'tm-main',
-	'learn',
-	'analyze-project',
 	'sync-readme'
 ];
 
@@ -177,21 +193,11 @@ describe('taskgraph commands used in command bodies', () => {
 		].map((match) => match[1])
 	);
 
-	// `taskgraph <name>` at the start of a line inside a fenced code block
-	const invokedCommands = (markdown: string): string[] => {
-		const names: string[] = [];
-		let inFence = false;
-		for (const line of markdown.split('\n')) {
-			if (line.trim().startsWith('```')) {
-				inFence = !inFence;
-				continue;
-			}
-			const match =
-				inFence && line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)/);
-			if (match) names.push(match[1]);
-		}
-		return names;
-	};
+	// `taskgraph <name>` at the start of a code line or inline code span
+	const invokedCommands = (markdown: string): string[] =>
+		codeLines(markdown).flatMap(
+			(line) => line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)/)?.[1] ?? []
+		);
 
 	it('finds the CLI commands to compare against', () => {
 		expect(realCommands.has('set-status')).toBe(true);
@@ -265,17 +271,11 @@ describe('taskgraph flags used in command bodies', () => {
 		);
 	}
 
-	// `taskgraph <name> ...` lines inside fenced code blocks, with their flags
+	// `taskgraph <name> ...` code lines and inline spans, with their flags
 	const invocations = (markdown: string) => {
 		const calls: Array<{ command: string; flags: string[] }> = [];
-		let inFence = false;
-		for (const line of markdown.split('\n')) {
-			if (line.trim().startsWith('```')) {
-				inFence = !inFence;
-				continue;
-			}
-			const match =
-				inFence && line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)(.*)$/);
+		for (const line of codeLines(markdown)) {
+			const match = line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)(.*)$/);
 			if (!match) continue;
 			// Drop quoted text (a prompt can mention flags) and comments
 			const args = match[2]
@@ -446,5 +446,95 @@ describe('parse-prd', () => {
 		expect(calls.length).toBeGreaterThan(1);
 		for (const call of calls) expect(call[1]).toBe("'<prd-file>'");
 		expect(body).toContain("write any `'` in it as `'\\''`");
+	});
+});
+
+/**
+ * Command bodies run the CLI and show what it prints (#244). The prompts they
+ * replaced asked Claude for velocity, sprint progress and time estimates,
+ * which TaskGraph doesn't store, so Claude made them up.
+ */
+describe('command bodies run the CLI instead of asking for untracked data', () => {
+	const files = readdirSync(commandsDir).filter((file) => file.endsWith('.md'));
+	const body = (name: string) =>
+		readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
+
+	// The CLI command each slash command is named after, and must run
+	const RUNS: Record<string, string> = {
+		'add-dependency': 'add-dependency',
+		'add-subtask': 'add-subtask',
+		'add-task': 'add-task',
+		'analyze-complexity': 'analyze-complexity',
+		'clear-subtasks': 'clear-subtasks',
+		'complexity-report': 'complexity-report',
+		'convert-task-to-subtask': 'add-subtask',
+		'expand-all-tasks': 'expand',
+		'expand-task': 'expand',
+		'fix-dependencies': 'fix-dependencies',
+		graph: 'graph',
+		'init-project': 'init',
+		'install-taskgraph': '--version',
+		'list-tasks': 'list',
+		'next-task': 'next',
+		'parse-prd': 'parse-prd',
+		'parse-prd-with-research': 'parse-prd',
+		'project-status': 'list',
+		'remove-dependency': 'remove-dependency',
+		'remove-subtask': 'remove-subtask',
+		'remove-task': 'remove-task',
+		'set-status': 'set-status',
+		'setup-models': 'models',
+		'show-task': 'show',
+		'sync-readme': 'sync-readme',
+		'to-done': 'set-status',
+		'to-in-progress': 'set-status',
+		'update-task': 'update-task',
+		'update-tasks-from-id': 'update',
+		'validate-dependencies': 'validate-dependencies',
+		'view-models': 'models',
+		why: 'why'
+	};
+	// Lists of the slash commands, not tied to one CLI command
+	const REFERENCES = ['help', 'tm-main'];
+
+	it('knows which CLI command every slash command runs', () => {
+		const unmapped = files
+			.map((file) => file.slice(0, -3))
+			.filter((name) => !(name in RUNS) && !REFERENCES.includes(name));
+
+		expect(unmapped).toEqual([]);
+	});
+
+	it.each(Object.entries(RUNS))('%s runs `taskgraph %s`', (name, command) => {
+		const runs = new RegExp(`^\\s*taskgraph ${command}(\\s|$)`);
+
+		expect(codeLines(body(name)).some((line) => runs.test(line))).toBe(true);
+	});
+
+	it.each(files)('%s asks for no metric TaskGraph does not store', (file) => {
+		const text = readFileSync(join(commandsDir, file), 'utf-8');
+
+		expect(
+			text.match(/velocity|sprint|burndown|estimat|timeline/gi)
+		).toBeNull();
+	});
+
+	it('help lists every slash command', () => {
+		const listed = new Set(
+			[...body('help').matchAll(/^ {2}\/taskgraph:([a-z-]+)/gm)].map(
+				(match) => match[1]
+			)
+		);
+
+		expect(
+			files.map((file) => file.slice(0, -3)).filter((name) => !listed.has(name))
+		).toEqual(REFERENCES);
+	});
+
+	it('tm-main shows the same list as help', () => {
+		const list = (name: string) => body(name).match(/```\n[\s\S]*?```/)?.[0];
+
+		expect(list('tm-main')).toBeDefined();
+		expect(list('tm-main')).toBe(list('help'));
 	});
 });

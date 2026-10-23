@@ -1,46 +1,21 @@
 ---
 description: "TaskGraph: choose the AI models TaskGraph uses for planning and research."
+argument-hint: "[main|research|fallback] [opus|sonnet|haiku]"
 ---
 
-Run interactive setup to configure AI models.
+Choose the AI models TaskGraph uses. TaskGraph runs them through Claude Code, so no API keys are needed; the models are `opus`, `sonnet` and `haiku`.
 
-## Interactive Model Configuration
+Arguments: $ARGUMENTS
 
-Guides you through setting up AI providers for TaskGraph.
+1. Run `taskgraph models` and show the current choice.
+2. If the arguments don't already name a role and a model, ask the user which roles to change: main (generating and updating tasks), research (`--research` runs) and fallback (used when main fails).
+3. Run one line per role that changes, with a model from the list above only:
 
-## Execution
+   ```bash
+   taskgraph models --set-main <model>
+   taskgraph models --set-research <model>
+   taskgraph models --set-fallback <model>
+   ```
 
-```bash
-taskgraph models --setup
-```
-
-## Setup Process
-
-1. **Environment Check**
-   - Confirm Claude Code is installed and signed in
-   - Show current configuration
-
-2. **Model Selection**
-   - Choose the main model (required)
-   - Choose the research model (recommended)
-   - Choose a fallback model (optional)
-
-TaskGraph uses Claude Code, so no API keys are needed. Available models: opus, sonnet, haiku.
-
-## Smart Recommendations
-
-Based on your needs:
-- **For best results**: opus for main, sonnet for research
-- **Budget conscious**: haiku for fallback
-- **Balanced**: sonnet for all roles
-
-## Configuration Storage
-
-Model choices are saved in `.taskgraph/config.json`.
-
-## Post-Setup
-
-After configuration:
-- Show usage examples
-- Suggest next steps
-- Verify parse-prd works
+   `taskgraph models --setup` is an interactive menu for the user's own terminal; it can't be answered from here.
+4. Show the output unchanged. The choice is saved in `.taskgraph/config.json`.

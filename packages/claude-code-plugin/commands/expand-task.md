@@ -1,60 +1,18 @@
 ---
 description: "TaskGraph: break one task into subtasks. Use when a TaskGraph task is too big to do in one go."
-argument-hint: "[task ID]"
+argument-hint: "<task ID> [number of subtasks] [research]"
 ---
 
-Break down a complex task into subtasks.
+Break one task into subtasks with AI.
 
-Arguments: $ARGUMENTS (task ID)
+Arguments: $ARGUMENTS (task ID, then optional modifiers)
 
-## Intelligent Task Expansion
+1. Use the ID only when it is digits; if there is none, ask which task. Then run:
 
-Analyzes a task and creates detailed subtasks for better manageability.
+   ```bash
+   taskgraph expand --id=<id>
+   ```
 
-## Execution
-
-```bash
-taskgraph expand --id=<id>
-```
-
-Put the ID into the command only when it is digits and dots; otherwise ask the user for the task ID. Use a top-level task ID (`5`): `expand` reads `5.2` as task 5.
-
-## Expansion Process
-
-1. **Task Analysis**
-   - Review task complexity
-   - Identify components
-   - Detect technical challenges
-   - Estimate time requirements
-
-2. **Subtask Generation**
-   - Create 3-7 subtasks typically
-   - Each subtask 1-4 hours
-   - Logical implementation order
-   - Clear acceptance criteria
-
-3. **Smart Breakdown**
-   - Setup/configuration tasks
-   - Core implementation
-   - Testing components
-   - Integration steps
-   - Documentation updates
-
-## Enhanced Features
-
-Based on task type:
-- **Feature**: Setup → Implement → Test → Integrate
-- **Bug Fix**: Reproduce → Diagnose → Fix → Verify
-- **Refactor**: Analyze → Plan → Refactor → Validate
-
-## Acceptance criteria
-
-Each new subtask comes with 2-5 acceptance criteria of its own, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` refuses the subtask until every one is checked off with `taskgraph set-status --id=<id> --check <n>` (or `/taskgraph:to-done <id>`, which checks them against your changes first).
-
-## Post-Expansion
-
-After expansion:
-1. Show subtask hierarchy
-2. Update time estimates
-3. Suggest implementation order
-4. Highlight critical path
+   Add flags from the arguments: a number → `--num=<n>`; `research` → `--research`; any other words → `--prompt='<words>'` (single quotes, any `'` written as `'\''`). If the task already has subtasks, the new ones are added after them; `--force` replaces them instead, so add it only when the user asks.
+2. Show the subtask lines it printed. Each subtask has 2-5 acceptance criteria of its own, all unchecked; `/taskgraph:to-done <id>` checks them against your changes.
+3. Then suggest starting the first subtask: `taskgraph next`.

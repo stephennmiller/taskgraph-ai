@@ -3,41 +3,16 @@ description: "TaskGraph: claim a task by setting it in-progress. Use when starti
 argument-hint: "[task ID]"
 ---
 
-Start working on a task by setting its status to in-progress.
+Start work on a task.
 
-Arguments: $ARGUMENTS (task ID)
+Arguments: $ARGUMENTS (task ID, e.g. `3` or a subtask like `3.2`)
 
-## Starting Work on Task
+1. Use the ID only when it is digits and dots. With no ID, ask which task, or whether to take the next one: `taskgraph next --claim` starts the task `next` picks.
+2. Run:
 
-This command does more than just change status - it prepares your environment for productive work.
+   ```bash
+   taskgraph set-status --id=<id> --status=in-progress
+   taskgraph show <id>
+   ```
 
-## Pre-Start Checks
-
-1. Verify dependencies are met
-2. Check if another task is already in-progress
-3. Ensure task details are complete
-4. Validate test strategy exists
-
-## Execution
-
-```bash
-taskgraph set-status --id=<id> --status=in-progress
-```
-
-Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
-
-## Environment Setup
-
-After setting to in-progress:
-1. Create/checkout appropriate git branch
-2. Open relevant documentation
-3. Set up test watchers if applicable
-4. Display task details and acceptance criteria
-5. Show similar completed tasks for reference
-
-## Smart Suggestions
-
-- Estimated completion time based on complexity
-- Related files from similar tasks
-- Potential blockers to watch for
-- Recommended first steps
+3. Show the `show` output unchanged in a code block. Then, in one or two sentences, point out any dependency that isn't done (`/taskgraph:why <id>`) and the acceptance criteria the work has to meet. When the work is finished, close it with `/taskgraph:to-done <id>`.
