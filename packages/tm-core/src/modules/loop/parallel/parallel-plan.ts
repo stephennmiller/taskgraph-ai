@@ -125,6 +125,15 @@ export function taskLogPath(projectRoot: string, id: string): string {
  * The prompt for one task's Claude Code process. Only the ID and the tag go
  * in, both checked; Claude reads the task itself with `taskgraph show`.
  * It reaches Claude as one argv entry, never through a shell.
+ *
+ * The project path isn't in it: the runner sets TASKGRAPH_PROJECT_ROOT for
+ * the process instead, so every `taskgraph` command Claude (or a plugin
+ * hook) runs works on the main project's tasks.json without Claude having
+ * to remember a flag, and no path is ever pasted into Claude's shell.
+ *
+ * Claude marks the task `review`, not `done`: its work sits on an unmerged
+ * branch, and a `done` task would let the tasks that depend on it start
+ * from a commit that doesn't have it.
  */
 export function buildParallelPrompt(options: {
 	taskId: string;
@@ -139,10 +148,12 @@ export function buildParallelPrompt(options: {
 	return [
 		`You are working on TaskGraph task ${taskId}, alone, in its own git worktree on branch ${branch}. Other tasks are being worked on in other worktrees at the same time.`,
 		'',
+		"`taskgraph` commands here work on the main project's tasks, not this worktree's copy: TASKGRAPH_PROJECT_ROOT points there. Don't change it, don't pass --project, and don't edit or commit anything under .taskgraph/tasks/.",
+		'',
 		`1. Read the task: \`taskgraph show ${taskId}${tagFlag}\`.`,
 		'2. Implement it here, with the smallest change that does the job, and run the tests and type checks that cover it.',
-		`3. Mark it done: \`taskgraph set-status --id=${taskId} --status=done${tagFlag}\`.`,
-		`4. Commit your work on ${branch}. Don't merge, rebase or push; the branch is left for review.`,
+		`3. Commit your work on ${branch}. Don't merge, rebase or push; the branch is left for review.`,
+		`4. Mark it ready for review: \`taskgraph set-status --id=${taskId} --status=review${tagFlag}\`.`,
 		'',
 		`Work only on task ${taskId}. Don't start another task.`
 	].join('\n');

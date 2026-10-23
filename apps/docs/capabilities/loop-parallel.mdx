@@ -1,0 +1,55 @@
+---
+title: Run Tasks in Parallel
+sidebarTitle: "Parallel Loop"
+description: "Run independent tasks side by side, each in its own git worktree, with loop --parallel"
+---
+
+`--parallel N` runs up to N independent tasks side by side instead of one after another:
+
+```bash
+taskgraph loop --parallel 3 --trust
+```
+
+TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks whose dependencies are all done. For each one it:
+
+1. Claims the task, the same way `taskgraph next --claim` does: the task goes `in-progress` with `claimedBy` and `claimedAt` in its metadata, so another session won't pick it up.
+2. Creates a git worktree at `.taskgraph/worktrees/task-<id>` on a new branch `taskgraph/task-<id>`, starting from your current commit.
+3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`.
+
+Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`.
+
+<Warning>
+Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable.
+</Warning>
+
+While they run you get one status line per task. When all have finished you get a summary:
+
+```
+✓ 2 of 3 tasks done · 1 failed · 1 branch to review
+  1  taskgraph/task-1 · 2 commits
+  2  no changes; worktree removed
+  3  failed: exit 1 · .taskgraph/worktrees/task-3.log
+Next: review with git log -p HEAD..taskgraph/task-1
+```
+
+**Nothing is merged.** A task that left commits or changes keeps its worktree and its branch, ready for you to review and merge yourself. It's in `review` if Claude got that far, and otherwise stays claimed (`in-progress`). A task that left nothing has its worktree and branch removed, and its claim released: it goes back to `pending`, unless Claude already marked it.
+
+**Ctrl-C** stops every Claude Code process and releases every claim (the tasks still `in-progress` go back to `pending`; one Claude already marked `review` stays there). Closing the terminal or sending `SIGTERM` does the same. Worktrees with work in them stay. Run the same command again to pick up where they left off: an existing `taskgraph/task-<id>` branch or worktree is reused. A second Ctrl-C exits at once, without the cleanup, but still kills the Claude Code processes.
+
+**Before it starts**, `--parallel` refuses to run when tracked files have uncommitted changes, because the worktrees start from your last commit and wouldn't have them. Commit or stash first. Changes to `.taskgraph/tasks/` and `.taskgraph/state.json` don't count, since claims and status changes are written there; other files under `.taskgraph/`, such as `config.json`, do.
+
+`.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
+
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+
+## Status goes to the main project
+
+`.taskgraph/` is committed, so each worktree has its own copy of `tasks.json`, as of your last commit. Every Claude Code process gets the `TASKGRAPH_PROJECT_ROOT` environment variable set to your project, so the `taskgraph` commands it runs read and write your project's `tasks.json`, not the worktree's copy. The TaskGraph plugin's hooks and the TaskGraph MCP server follow it too.
+
+Because of that:
+
+- Status changes and notes land in your project's `tasks.json`, through the same locked write as any other `taskgraph` command, so `taskgraph list` shows them while the run goes on.
+- A task you added and haven't committed yet still works: the worktree's copy doesn't have it, but Claude never reads that copy.
+- The task branches carry only Claude's work, so merging several of them doesn't bring `tasks.json` conflicts.
+
+Claude marks a finished task `review`, not `done`, because its work is on a branch you haven't merged. A task in `review` doesn't count as finished, so the tasks that depend on it wait: a later `loop --parallel` won't start them from a commit that lacks their dependency. After you merge the branch, mark the task done with `taskgraph set-status --id=<id> --status=done`.

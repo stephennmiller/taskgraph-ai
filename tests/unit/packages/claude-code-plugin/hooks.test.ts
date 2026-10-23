@@ -80,6 +80,8 @@ interface HookRun {
 	tmp?: string;
 	/** Run with this shell instead of bash */
 	shell?: string;
+	/** Extra environment variables */
+	env?: Record<string, string>;
 }
 
 function runHook(
@@ -95,7 +97,8 @@ function runHook(
 		env: {
 			PATH: `${binDir}:${systemBin}`,
 			CLAUDE_PROJECT_DIR: projectDir,
-			...(options.tmp ? { TMPDIR: options.tmp } : {})
+			...(options.tmp ? { TMPDIR: options.tmp } : {}),
+			...options.env
 		}
 	});
 }
@@ -139,6 +142,18 @@ describe('plugin hooks.json', () => {
 		expect(result.stdout).toBe(
 			`TaskGraph tracks work in this project · args: prime --project ${dir}\nskip=1\n`
 		);
+	});
+
+	it('primes the project TASKGRAPH_PROJECT_ROOT names, as in a loop --parallel worktree', () => {
+		const main = project('tg-hook-main-');
+		const worktree = tempDir('tg-hook-worktree-');
+		const bin = fakeCli('echo "args: $*"');
+
+		const result = runHook(sessionStart, worktree, bin, {
+			env: { TASKGRAPH_PROJECT_ROOT: main }
+		});
+
+		expect(result.stdout).toBe(`args: prime --project ${main}\n`);
 	});
 
 	it('keeps warnings prime writes to stderr out of the context when it succeeds', () => {
@@ -294,6 +309,23 @@ describe('plugin Stop hook', () => {
 		);
 		expect(second.status).toBe(0);
 		expect(second.stderr).toBe('');
+	});
+
+	it('checks the project TASKGRAPH_PROJECT_ROOT names for unnoted tasks', () => {
+		const { dir: main, tmp } = session('2026-10-23T09:00:00Z');
+		const worktree = tempDir('tg-hook-stop-worktree-');
+		const bin = remindingCli();
+
+		const result = runHook(stop, worktree, bin, {
+			input: hookInput({ stop_hook_active: false }),
+			tmp,
+			env: { TASKGRAPH_PROJECT_ROOT: main }
+		});
+
+		expect(result.status).toBe(2);
+		expect(result.stderr).toContain(
+			`args: prime --project ${main} --unnoted-since 2026-10-23T09:00:00Z`
+		);
 	});
 
 	it('stays quiet when every in-progress task has a note this session', () => {

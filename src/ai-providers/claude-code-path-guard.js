@@ -2,8 +2,9 @@
  * src/ai-providers/claude-code-path-guard.js
  *
  * PreToolUse hook that keeps Claude Code's file tools (Read, Grep, Glob)
- * inside one directory. It is passed to the SDK as a programmatic hook, so it
- * runs even when no settings sources are loaded.
+ * inside one directory and away from the secret files in it. It is passed to
+ * the SDK as a programmatic hook, so it runs even when no settings sources are
+ * loaded.
  */
 
 import fs from 'fs';
@@ -47,17 +48,53 @@ const SECRET_NAME =
 	/^(\.env(\..*)?|\.git|\.npmrc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.pem$/i;
 const PUBLIC_ENV = /^\.env\.(example|sample|template)$/i;
 
-/**
- * True when any part of a path or glob names a credentials file.
- * shortcut: a Grep over a whole directory still reads these files, because
- * the hook only sees the directory; upgrade if the guarded roles ever search
- * with secrets present.
- */
+/** True when any part of a path or glob names a credentials file. */
 function namesSecret(candidate) {
 	return candidate
 		.split(/[\\/,]/)
 		.map((part) => part.replace(/[*?[\]{}]/g, ''))
 		.some((part) => SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
+}
+
+/** `env` -> `[eE][nN][vV]`, since rg globs are case-sensitive */
+function anyCase(name) {
+	return name.replace(
+		/[a-z]/gi,
+		(c) => `[${c.toLowerCase()}${c.toUpperCase()}]`
+	);
+}
+
+// rg globs for the names SECRET_NAME matches; keep the two in step. They hold
+// no commas or spaces, since Claude Code splits Grep's glob on both. They also
+// skip .env.example: rg can't re-include a file without turning every other
+// glob into an allow-list.
+const SECRET_GLOBS = [
+	'.env',
+	'.env.*',
+	'.git',
+	'.npmrc',
+	'id_rsa*',
+	'id_dsa*',
+	'id_ecdsa*',
+	'id_ed25519*',
+	'*.pem'
+].map((name) => `!${anyCase(name)}`);
+
+/**
+ * Grep input that skips secret files wherever its search walks.
+ * The hook only sees the directory a Grep searches, so `{ pattern: 'KEY' }`
+ * over the project would otherwise return lines from .env. Claude Code passes
+ * each glob token to rg as `--glob`, and a later negated glob wins over the
+ * caller's own globs and `type`.
+ * @param {object} toolInput - Grep input
+ * @returns {object} The input with exclusions appended to `glob`
+ */
+export function excludeSecretsFromGrep(toolInput = {}) {
+	const own = typeof toolInput.glob === 'string' ? toolInput.glob.trim() : '';
+	return {
+		...toolInput,
+		glob: [own, ...SECRET_GLOBS].filter(Boolean).join(' ')
+	};
 }
 
 /** Judge the path below the root, and where a symlink really leads */
@@ -141,7 +178,8 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 }
 
 /**
- * Build a PreToolUse hook entry that denies file access outside rootDir.
+ * Build a PreToolUse hook entry that denies file access outside rootDir or to
+ * secret files, and makes every Grep skip secret files.
  * @param {string} rootDir - Project root
  * @returns {{matcher: string, hooks: Function[]}}
  */
@@ -156,15 +194,24 @@ export function createPathGuardHook(rootDir) {
 					input?.tool_name,
 					input?.tool_input
 				);
-				return reason
-					? {
-							hookSpecificOutput: {
-								hookEventName: 'PreToolUse',
-								permissionDecision: 'deny',
-								permissionDecisionReason: reason
-							}
+				if (reason) {
+					return {
+						hookSpecificOutput: {
+							hookEventName: 'PreToolUse',
+							permissionDecision: 'deny',
+							permissionDecisionReason: reason
 						}
-					: {};
+					};
+				}
+				if (input?.tool_name !== 'Grep') return {};
+				// No permissionDecision: the rewritten input still goes through
+				// the session's own permission rules
+				return {
+					hookSpecificOutput: {
+						hookEventName: 'PreToolUse',
+						updatedInput: excludeSecretsFromGrep(input.tool_input)
+					}
+				};
 			}
 		]
 	};

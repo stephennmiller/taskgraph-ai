@@ -92,8 +92,10 @@ import {
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
 	UPSTREAM_NAME,
+	PROJECT_ROOT_ENV,
 	findProjectRoot,
 	isTaskGraphProject,
+	resolveProjectRoot,
 	writeClarifications
 } from '@tm/core';
 
@@ -3600,12 +3602,20 @@ function requireProject(_hookedCommand, actionCommand) {
 	const explicitRoot =
 		typeof projectOption === 'string' ? path.resolve(projectOption) : null;
 
-	if (isTaskGraphProject(explicitRoot || findProjectRoot())) return;
+	// The same root the command will use: --project, else
+	// TASKGRAPH_PROJECT_ROOT, else the one found from here
+	const root = resolveProjectRoot(explicitRoot ?? undefined);
+	if (isTaskGraphProject(root)) return;
 
 	if (explicitRoot) {
 		printError(
 			`No TaskGraph project at ${explicitRoot}`,
 			'Run `taskgraph init` in that folder to set one up'
+		);
+	} else if (process.env[PROJECT_ROOT_ENV]?.trim()) {
+		printError(
+			`No TaskGraph project at ${root}, which ${PROJECT_ROOT_ENV} names`,
+			`Unset ${PROJECT_ROOT_ENV}, or point it at your project`
 		);
 	} else {
 		printError(

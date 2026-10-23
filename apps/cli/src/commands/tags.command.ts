@@ -253,7 +253,7 @@ Examples:
 	private async initTmCore(): Promise<void> {
 		if (!this.tmCore) {
 			this.tmCore = await createTmCore({
-				projectPath: process.cwd()
+				projectPath: getProjectPaths().projectRoot
 			});
 		}
 	}

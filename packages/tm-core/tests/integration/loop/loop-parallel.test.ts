@@ -2,15 +2,20 @@
  * @fileoverview `loop --parallel` against a real git repository and a real
  * tasks.json, with Claude Code replaced at the process boundary by a fake
  * executable. The fake does what a plan file says for its worktree: commit,
- * fail, do nothing, or sleep until it's killed.
+ * fail, do nothing, sleep until it's killed, or work the task the way the
+ * prompt says (`review`): `taskgraph show`, commit, `taskgraph set-status`.
+ * Its `taskgraph` is a stand-in that resolves the project the way the CLI
+ * does (resolveProjectRoot) and then calls tm-core.
  *
  * @integration
  */
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../src/common/logger/index.js', () => {
@@ -43,6 +48,21 @@ const plan = JSON.parse(fs.readFileSync(process.env.FAKE_CLAUDE_PLAN, 'utf8'));
 const name = path.basename(process.cwd());
 console.log(JSON.stringify(process.argv.slice(2)));
 const mode = plan[name] || 'nothing';
+const taskgraph = (...args) =>
+	execFileSync(
+		process.execPath,
+		[process.env.FAKE_TSX, process.env.FAKE_TASKGRAPH, ...args],
+		{ stdio: 'inherit' }
+	);
+if (mode === 'review') {
+	const id = name.slice('task-'.length);
+	taskgraph('show', id);
+	fs.writeFileSync('work.txt', 'done\\n');
+	execFileSync('git', ['add', 'work.txt']);
+	execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
+	taskgraph('set-status', '--id=' + id, '--status=review');
+	process.exit(0);
+}
 if (mode === 'commit') {
 	fs.writeFileSync('work.txt', 'done\\n');
 	execFileSync('git', ['add', 'work.txt']);
@@ -56,6 +76,28 @@ if (mode === 'sleep' || mode === 'dirty-sleep') {
 	setInterval(() => {}, 1000);
 } else {
 	process.exit(0);
+}
+`;
+
+/** The `taskgraph` the fake Claude runs: just enough of show and set-status */
+const fakeTaskgraph = (corePath: string) => `
+import { createTmCore, resolveProjectRoot } from ${JSON.stringify(corePath)};
+const [command, ...rest] = process.argv.slice(2);
+const flag = (name: string) =>
+	rest.find((a) => a.startsWith('--' + name + '='))?.slice(name.length + 3);
+const tmCore = await createTmCore({
+	projectPath: resolveProjectRoot(flag('project'))
+});
+try {
+	if (command === 'show') {
+		const { task } = await tmCore.tasks.get(rest[0], flag('tag'));
+		if (!task) throw new Error('No task ' + rest[0]);
+		console.log(task.title);
+	} else if (command === 'set-status') {
+		await tmCore.tasks.updateStatus(flag('id')!, flag('status') as never, flag('tag'));
+	}
+} finally {
+	await tmCore.close();
 }
 `;
 
@@ -91,13 +133,10 @@ describe('loop --parallel', () => {
 	let tmCore: TmCore;
 	const fakeClaude = () => path.join(binDir, 'claude');
 
-	const readTasks = () =>
-		JSON.parse(
-			fs.readFileSync(
-				path.join(root, '.taskgraph', 'tasks', 'tasks.json'),
-				'utf8'
-			)
-		).master.tasks as Array<{
+	const tasksFile = (dir: string) =>
+		path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+	const readTasks = (dir = root) =>
+		JSON.parse(fs.readFileSync(tasksFile(dir), 'utf8')).master.tasks as Array<{
 			id: string;
 			status: string;
 			metadata?: Record<string, unknown>;
@@ -125,6 +164,15 @@ describe('loop --parallel', () => {
 		for (const dir of [root, binDir, pidDir]) fs.mkdirSync(dir);
 		fs.writeFileSync(fakeClaude(), FAKE_CLAUDE, { mode: 0o755 });
 		vi.stubEnv('FAKE_CLAUDE_PLAN', planFile);
+		const taskgraphScript = path.join(binDir, 'taskgraph.mts');
+		fs.writeFileSync(
+			taskgraphScript,
+			fakeTaskgraph(
+				fileURLToPath(new URL('../../../src/index.ts', import.meta.url))
+			)
+		);
+		vi.stubEnv('FAKE_TASKGRAPH', taskgraphScript);
+		vi.stubEnv('FAKE_TSX', createRequire(import.meta.url).resolve('tsx/cli'));
 
 		fs.mkdirSync(path.join(root, '.taskgraph', 'tasks'), { recursive: true });
 		fs.writeFileSync(
@@ -238,6 +286,66 @@ describe('loop --parallel', () => {
 		expect(git(root, 'status', '--porcelain')).not.toContain('worktrees');
 		expect(taskById('4')?.status).toBe('pending');
 	}, 60_000);
+
+	it("records the task's status in the main project, not in the worktree's copy", async () => {
+		writePlan({ 'task-1': 'review' });
+		// One left over in the shell must not send Claude to another project
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', path.join(path.dirname(root), 'nope'));
+		const committed = fs.readFileSync(tasksFile(root), 'utf8');
+
+		const result = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude()
+		});
+
+		const [first] = result.tasks;
+		expect(first).toMatchObject({
+			id: '1',
+			state: 'done',
+			commits: 1,
+			uncommitted: false,
+			kept: true,
+			claimed: false
+		});
+		expect(taskById('1')?.status).toBe('review');
+		// The worktree's copy is as committed, and the branch carries only work
+		expect(fs.readFileSync(tasksFile(first.worktree), 'utf8')).toBe(committed);
+		expect(git(root, 'diff', '--name-only', 'main', 'taskgraph/task-1')).toBe(
+			'work.txt'
+		);
+		// Kept for review, but marked review: the tasks after it still wait
+		const tree = await tmCore.tasks.getDependencyTree();
+		expect(tree.waves.waves[0]).not.toContain('4');
+	}, 120_000);
+
+	it('works on a task that exists only uncommitted in the main project', async () => {
+		writePlan({ 'task-5': 'review' });
+		const data = JSON.parse(fs.readFileSync(tasksFile(root), 'utf8'));
+		data.master.tasks = [
+			...data.master.tasks.map((t: { id: string }) => ({
+				...t,
+				status: 'deferred'
+			})),
+			task('5')
+		];
+		fs.writeFileSync(tasksFile(root), JSON.stringify(data, null, 2));
+		await tmCore.close();
+		tmCore = await createTmCore({ projectPath: root });
+
+		const result = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			command: fakeClaude()
+		});
+
+		const [only] = result.tasks;
+		expect(only).toMatchObject({ id: '5', state: 'done', kept: true });
+		expect(taskById('5')?.status).toBe('review');
+		expect(readTasks(only.worktree).map((t) => t.id)).not.toContain('5');
+	}, 120_000);
 
 	it('starts no more than N tasks', async () => {
 		writePlan({});

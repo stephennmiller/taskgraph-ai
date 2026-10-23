@@ -63,14 +63,15 @@ In practice:
 
 - **Your Claude Code setup stays out.** Hooks, `CLAUDE.md`, permission rules and MCP servers from your user, project and local Claude settings are not loaded, so they don't run inside TaskGraph's calls.
 - **File reads stay in the project.** For `main` and `fallback`, a `PreToolUse` hook refuses any `Read`, `Grep` or `Glob` whose path resolves outside the project root. Symlinks are resolved first, so a link in the repo that points elsewhere is refused, as are `..` segments, `~` paths, absolute paths and glob patterns that climb out.
+- **Secret files stay closed.** The same hook refuses a `Read`, `Grep` or `Glob` that names `.env*`, `.git`, `.npmrc`, `*.pem` or an `id_rsa`-style key (`.env.example`, `.env.sample` and `.env.template` can still be read). A `Grep` over a whole directory is rewritten to skip those files, so a search for `API_KEY` across the project can't return lines from `.env`. That search also skips `.env.example`.
 - **Config can't widen it.** The settings below are applied first and these limits after, so config can't add tools or MCP servers, load settings sources, add directories or replace the hook. `pathToClaudeCodeExecutable` is only used when it's an absolute path to a file named `claude` outside the project, so a repo's config can't point it at another program.
 
 What this doesn't cover:
 
-- Anything inside the project root can be read and sent to the model, including files such as `.env`. The boundary is the project root, not a per-file filter.
+- Secret files are recognized by name only. A key saved as `config/prod.json` or a token pasted into a source file can be read and sent to the model.
 - The path check runs just before each tool call. A symlink swapped by another process between the check and the read isn't caught; nothing in the call itself can write.
 - It's a check on Claude Code's file tools, not an OS sandbox. It relies on shell tools being denied.
-- For `Grep`, only `path` is checked. Its regex and `glob` only filter files under that path, so they can't reach outside it.
+- For `Grep`, only `path` and `glob` are checked. Its regex only filters lines, and `glob` only filters files under that path, so neither can reach outside it.
 - The project root is the one TaskGraph uses for the command: `--project-root` if you pass it, otherwise the project it finds from the current directory. If that's a parent of several projects, all of them are readable. If no root is found, `main` and `fallback` get no file tools.
 
 ## Structured outputs

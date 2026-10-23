@@ -5,7 +5,7 @@
 
 import { theme } from '@tm/cli/theme';
 // Import FileOperations from tm-core for atomic file modifications
-import { FileOperations, mergeTagChanges } from '@tm/core';
+import { FileOperations, mergeTagChanges, normalizeTaskStatus } from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
@@ -559,13 +559,18 @@ function hasTaggedStructure(data) {
 }
 
 /**
- * Normalizes task IDs to ensure they are numbers instead of strings
+ * Normalizes task IDs to ensure they are numbers instead of strings, and
+ * reads the older 'completed' status as 'done' (the rule is in @tm/core)
  * @param {Array} tasks - Array of tasks to normalize
  */
 function normalizeTaskIds(tasks) {
 	if (!Array.isArray(tasks)) return;
 
 	tasks.forEach((task) => {
+		if (task.status !== undefined) {
+			task.status = normalizeTaskStatus(task.status);
+		}
+
 		// Convert task ID to number with validation
 		if (task.id !== undefined) {
 			const parsedId = parseInt(task.id, 10);
@@ -577,6 +582,9 @@ function normalizeTaskIds(tasks) {
 		// Convert subtask IDs to numbers with validation
 		if (Array.isArray(task.subtasks)) {
 			task.subtasks.forEach((subtask) => {
+				if (subtask.status !== undefined) {
+					subtask.status = normalizeTaskStatus(subtask.status);
+				}
 				if (subtask.id !== undefined) {
 					// Check for dot notation (which shouldn't exist in storage)
 					if (typeof subtask.id === 'string' && subtask.id.includes('.')) {
