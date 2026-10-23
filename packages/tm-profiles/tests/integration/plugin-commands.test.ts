@@ -41,10 +41,7 @@ const EXPECTED_COMMANDS = [
 	'update-task',
 	'update-tasks-from-id',
 	'tm-main',
-	'smart-workflow',
 	'learn',
-	'command-pipeline',
-	'auto-implement-tasks',
 	'analyze-project',
 	'sync-readme'
 ];

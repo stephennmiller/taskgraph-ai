@@ -47,7 +47,7 @@ Let me analyze what you might need...
 
 **By Category:**
 - 📋 Task Management: list, show, add, update, complete
-- 🔄 Workflows: auto-implement-tasks, smart-workflow, command-pipeline
+- 🔄 Run an agent over the plan: `taskgraph loop` in a terminal
 - 🛠️ Utilities: project-status, complexity-report, sync-readme
 - 🔍 Analysis: validate-dependencies, graph
 
@@ -55,7 +55,7 @@ Let me analyze what you might need...
 - "I want to see what to work on" → `/taskgraph:next-task`
 - "I need to break this down" → `/taskgraph:expand-task <id>`
 - "Show me everything" → `/taskgraph:project-status`
-- "Just do it for me" → `/taskgraph:auto-implement-tasks`
+- "Just do it for me" → `taskgraph loop` in a terminal (`--prompt tdd` for test-first)
 
 ### 4. **Power User Patterns**
 
@@ -63,7 +63,6 @@ Let me analyze what you might need...
 ```
 /taskgraph:next-task
 /taskgraph:to-in-progress <id>
-/taskgraph:auto-implement-tasks
 ```
 
 **Smart Filters:**
@@ -75,7 +74,9 @@ Let me analyze what you might need...
 
 **Automation:**
 ```
-/taskgraph:command-pipeline init-project → expand-all-tasks → next-task
+taskgraph loop -n 5
+taskgraph loop --id 3 --prompt tdd
+taskgraph loop --parallel 3
 ```
 
 ### 5. **Learning Path**
@@ -95,8 +96,8 @@ Based on your experience level:
 4. validate-dependencies → Ensure consistency
 
 **Advanced Path:**
-1. command-pipeline → Chain operations
-2. smart-workflow → Context-aware automation
+1. `taskgraph loop` → Claude Code works the tasks, one per iteration
+2. `taskgraph loop --parallel <n>` → Independent tasks side by side
 3. Custom commands → Extend the system
 
 ### 6. **Try This Now**
