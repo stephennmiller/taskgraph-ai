@@ -31,7 +31,7 @@ A subtask's `dependencies` can name a sibling, another task's subtask or a top-l
 
 When `expand`, `update-task` or `update` has the AI write subtasks, the AI uses the same forms: a number for an earlier subtask in its list, a string for a task (`"3"`) or another task's subtask (`"4.1"`). Entries that are none of these, and a dependency on the subtask's own parent, are dropped. `update-task` also drops a sibling number that is not earlier than the subtask itself.
 
-On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
+On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `add-dependency` and `add-task --dependencies` store a task there as `"3"` and a subtask as `"3.2"`, the form tm-core saves, and `add-dependency` rewrites a list that mixes `3` and `"3"` into that form when it adds to it. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
 
 ## Parents and subtasks
 
@@ -134,8 +134,11 @@ Blocked by:
    └─ ○ 4  Design the schema  ← ready to start
 
 To unblock:
-  Do 1 (Set up the database) and 4 (Design the schema): nothing else stands in their way.
+  Do 1 (Set up the database) and 4 (Design the schema): nothing else stands
+    in their way.
 ```
+
+Each step wraps to the terminal width, continuing under a deeper indent.
 
 A chain ends at one of four root causes: `ready` (unfinished, nothing in its way), `stalled` (`deferred` or `blocked`), `missing` (the ID matches no task) or `cycle` (it depends on itself through the chain). The JSON has `id`, `title`, `status`, `blocked`, `tag`, a nested `blockers` tree and `rootCauses`; see [CLI commands](/capabilities/cli-root-commands) for the full shape.
 

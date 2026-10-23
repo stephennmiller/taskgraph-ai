@@ -85,6 +85,45 @@ describe('subtask dependency rule', () => {
 		expect(writeJSON).not.toHaveBeenCalled();
 	});
 
+	it('add-dependency stores a task list in one form, not a string in a list of numbers (#290)', async () => {
+		readJSON.mockReturnValue({
+			tasks: [task(1), task(2), task(3, [2])]
+		});
+
+		await addDependency('tasks.json', '3', '1', context);
+
+		expect(writeJSON.mock.calls[0][1].tasks[2].dependencies).toEqual([
+			'1',
+			'2'
+		]);
+	});
+
+	it("add-dependency rewrites a task's mixed list to one form when it adds to it (#290)", async () => {
+		readJSON.mockReturnValue({
+			tasks: [task(1), task(2), task(3, [], [subtask(1)]), task(4, [2, '1'])]
+		});
+
+		await addDependency('tasks.json', '4', '3.1', context);
+
+		expect(writeJSON.mock.calls[0][1].tasks[3].dependencies).toEqual([
+			'1',
+			'2',
+			'3.1'
+		]);
+	});
+
+	it('add-dependency keeps a task as "1" on a subtask, apart from sibling 1 (#290)', async () => {
+		readJSON.mockReturnValue({
+			tasks: [task(1), task(2, [], [subtask(1), subtask(2, [1])])]
+		});
+
+		await addDependency('tasks.json', '2.2', '1', context);
+
+		expect(
+			writeJSON.mock.calls[0][1].tasks[1].subtasks[1].dependencies
+		).toEqual([1, '1']);
+	});
+
 	it('add-dependency adds sibling 2.1 to a subtask that lists the task "1"', async () => {
 		// "1" is task 1, so 2.2 does not yet depend on sibling 2.1
 		readJSON.mockReturnValue({

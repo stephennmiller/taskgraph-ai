@@ -9,7 +9,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { CURRENT_SCHEMA_VERSION } from '@tm/core';
-import { createInitialTasksFile } from '../../../../scripts/init.js';
+import { createInitialTasksFile } from '../../../../scripts/modules/init-project-files.js';
 import { saveTasksToFile } from '../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import { readJSON, writeJSON } from '../../../../scripts/modules/utils.js';
 import { updateTagTasks } from '../../../../scripts/modules/utils/update-tag-tasks.js';

@@ -232,7 +232,11 @@ export class ContextGatherer {
 			const dependencyTitles =
 				task.dependencies?.length > 0
 					? task.dependencies
-							.map((depId) => this.allTasks.find((t) => t.id === depId)?.title)
+							.map(
+								(depId) =>
+									this.allTasks.find((t) => String(t.id) === String(depId))
+										?.title
+							)
 							.filter(Boolean)
 							.join(' ')
 					: '';
@@ -344,22 +348,27 @@ export class ContextGatherer {
 		if (allRelatedTaskIds.size === 0) return '';
 
 		const dependentTasks = Array.from(allRelatedTaskIds)
-			.map((id) => this.allTasks.find((t) => t.id === id))
+			.map((id) => this.allTasks.find((t) => String(t.id) === id))
 			.filter(Boolean)
-			.sort((a, b) => (depthMap.get(a.id) || 0) - (depthMap.get(b.id) || 0));
+			.sort(
+				(a, b) =>
+					(depthMap.get(String(a.id)) || 0) - (depthMap.get(String(b.id)) || 0)
+			);
 
 		const uniqueDetailedTasks = dependentTasks.slice(0, 8);
 
 		let context = `\nThis task relates to a dependency structure with ${dependentTasks.length} related tasks in the chain.`;
 
-		const directDeps = this.allTasks.filter((t) => taskIds.includes(t.id));
+		// A dependency may be stored as 3 or "3"
+		const isDirect = (t) => taskIds.some((id) => String(id) === String(t.id));
+		const directDeps = this.allTasks.filter(isDirect);
 		if (directDeps.length > 0) {
 			context += `\n\nDirect dependencies:\n${directDeps
 				.map((t) => `- Task ${t.id}: ${t.title} - ${t.description}`)
 				.join('\n')}`;
 		}
 
-		const indirectDeps = dependentTasks.filter((t) => !taskIds.includes(t.id));
+		const indirectDeps = dependentTasks.filter((t) => !isDirect(t));
 		if (indirectDeps.length > 0) {
 			context += `\n\nIndirect dependencies (dependencies of dependencies):\n${indirectDeps
 				.slice(0, 5)
@@ -412,9 +421,11 @@ export class ContextGatherer {
 		return { allRelatedTaskIds: visited, graphs, depthMap };
 	}
 
-	_buildDependencyGraph(taskId, visited, depthMap, depth = 0) {
+	_buildDependencyGraph(dependencyId, visited, depthMap, depth = 0) {
+		// Keyed by string: a dependency may be stored as 3 or "3"
+		const taskId = String(dependencyId);
 		if (visited.has(taskId) || depth > 5) return null; // Limit recursion depth
-		const task = this.allTasks.find((t) => t.id === taskId);
+		const task = this.allTasks.find((t) => String(t.id) === taskId);
 		if (!task) return null;
 
 		visited.add(taskId);

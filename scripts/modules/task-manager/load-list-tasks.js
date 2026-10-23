@@ -23,6 +23,11 @@ export async function loadListTasks(tasksPath, { projectRoot, tag } = {}) {
 			archivedIds: await tmCore.tasks.getArchivedIds(tag)
 		};
 	} catch (storageError) {
+		// A missing tag is an answer, not a storage failure: readJSON would
+		// fall back to master and list its tasks under the requested tag
+		if (storageError?.code === 'NOT_FOUND') {
+			throw storageError;
+		}
 		log(
 			'warn',
 			`TmCore failed, falling back to legacy readJSON: ${storageError.message}`

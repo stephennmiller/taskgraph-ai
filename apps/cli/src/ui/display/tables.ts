@@ -19,7 +19,8 @@ import {
 	type ColumnSpec,
 	getContentWidth,
 	planColumns,
-	truncate
+	truncate,
+	wrapLine
 } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
@@ -40,6 +41,7 @@ export type TaskTableItem = (Task | Subtask) & {
 /**
  * Table columns in display order. Optional columns are hidden, lowest
  * dropOrder first, when the terminal is too narrow to show them all.
+ * Tag and ID widths here are maximums.
  */
 const TASK_TABLE_COLUMNS: (ColumnSpec & { header: string })[] = [
 	// Never dropped: the column only shows when requested, and IDs repeat across tags
@@ -47,7 +49,7 @@ const TASK_TABLE_COLUMNS: (ColumnSpec & { header: string })[] = [
 	{ key: 'id', header: 'ID', width: 10 },
 	{ key: 'title', header: 'Title', width: 'flex' },
 	{ key: 'status', header: 'Status', width: 15 },
-	{ key: 'priority', header: 'Priority', width: 10 },
+	{ key: 'priority', header: 'Priority', width: 10, dropOrder: 4 },
 	{ key: 'dependencies', header: 'Dependencies', width: 14, dropOrder: 3 },
 	{ key: 'blocks', header: 'Blocks', width: 10, dropOrder: 0 },
 	{ key: 'complexity', header: 'Complexity', width: 12, dropOrder: 1 }
@@ -81,7 +83,22 @@ export function createTaskTable(
 		blocks: showBlocks,
 		complexity: showComplexity
 	};
-	const specs = TASK_TABLE_COLUMNS.filter((col) => requested[col.key] ?? true);
+	// Tag and ID fit their widest value (plus cell padding), up to the default width
+	const fitTo: Record<string, string[]> = {
+		tag: tasks.map((t) => t.tagName || '-'),
+		id: tasks.flatMap((t) => [
+			String(t.id),
+			...(showSubtasks ? (t.subtasks ?? []) : []).map((s) => ` └─ ${s.id}`)
+		])
+	};
+	const specs = TASK_TABLE_COLUMNS.filter(
+		(col) => requested[col.key] ?? true
+	).map((col) => {
+		const values = fitTo[col.key];
+		if (!values) return col;
+		const widest = Math.max(col.header.length, ...values.map((v) => v.length));
+		return { ...col, width: Math.min(widest + 2, col.width as number) };
+	});
 	const plan = planColumns(getContentWidth(), specs);
 	const width = (key: string) => plan.widths[plan.keys.indexOf(key)];
 
@@ -161,13 +178,17 @@ export function createTaskTable(
 	const hiddenNote =
 		plan.hidden.length > 0
 			? '\n' +
-				theme.muted(
+				wrapLine(
 					`Hidden to fit width: ${plan.hidden
 						.map(
 							(key) => TASK_TABLE_COLUMNS.find((col) => col.key === key)?.header
 						)
-						.join(', ')}`
+						.join(', ')}`,
+					getContentWidth(),
+					''
 				)
+					.map((line) => theme.muted(line))
+					.join('\n')
 			: '';
 
 	return table.toString() + hiddenNote;

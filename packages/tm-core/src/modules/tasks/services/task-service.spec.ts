@@ -282,3 +282,59 @@ describe('TaskService.getTask', () => {
 		expect(loaded).toBeNull();
 	});
 });
+
+describe('TaskService.getTaskList', () => {
+	/** A TaskService over a tasks.json with these tags (none: no file yet) */
+	const serviceWithTags = (tags: string[], activeTag = 'master'): TaskService => {
+		const service = new TaskService({
+			getActiveTag: () => activeTag
+		} as unknown as ConfigManager);
+		(service as any).storage = {
+			loadTasks: async () => (tags.length > 0 ? [task(1)] : []),
+			getAllTags: async () => tags
+		};
+		return service;
+	};
+
+	// Regression: #384, a typo in --tag listed an empty tag instead of failing
+	it('fails on a tag the project does not have', async () => {
+		const service = serviceWithTags(['master', 'feature']);
+
+		await expect(service.getTaskList({ tag: 'nosuch' })).rejects.toMatchObject(
+			{ message: 'Tag "nosuch" not found', code: 'NOT_FOUND' }
+		);
+	});
+
+	it('lists a tag the project has', async () => {
+		const result = await serviceWithTags(['master', 'feature']).getTaskList({
+			tag: 'feature'
+		});
+
+		expect(result.tag).toBe('feature');
+		expect(result.tasks).toHaveLength(1);
+	});
+
+	it('accepts master, which reads fall back to', async () => {
+		const result = await serviceWithTags(['feature']).getTaskList({
+			tag: 'master'
+		});
+
+		expect(result.tag).toBe('master');
+	});
+
+	// The active tag can be missing after a git checkout; prime passes it
+	// explicitly and must not fail at session start
+	it('accepts the active tag even when tasks.json lacks it', async () => {
+		const result = await serviceWithTags(['feature'], 'gone').getTaskList({
+			tag: 'gone'
+		});
+
+		expect(result.tag).toBe('gone');
+	});
+
+	it('accepts any tag before tasks.json exists', async () => {
+		const result = await serviceWithTags([]).getTaskList({ tag: 'nosuch' });
+
+		expect(result.tasks).toEqual([]);
+	});
+});

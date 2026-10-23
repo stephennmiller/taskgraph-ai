@@ -45,6 +45,8 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `github unlink <id>` | `--json` | `tag`, `taskId`, `issueNumber`, `url` |
 | `parse-prd --clarify` | `--json` | `prd`, `questions` |
 
+In `list` JSON, each task's `blocks` lists the IDs of the tasks that depend on it, whatever their status. `--status` filters the rows, not `blocks`.
+
 `set-status` prints its JSON on one line, including when it fails. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
 
 In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.

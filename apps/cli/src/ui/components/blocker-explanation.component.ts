@@ -22,7 +22,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
-import { truncate } from '../layout/helpers.js';
+import { truncate, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface RenderBlockerExplanationOptions {
@@ -33,7 +33,9 @@ export interface RenderBlockerExplanationOptions {
 /** Plain-text width, ignoring ANSI color codes */
 const visible = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '').length;
 
-const cmd = (text: string) => theme.brand(text);
+// Commands join their words with KEEP so wrapping moves a command whole instead of splitting it
+const KEEP = '\u0000';
+const cmd = (text: string) => theme.brand(text.replaceAll(' ', KEEP));
 
 const joinAnd = (items: string[]) =>
 	items.length < 2
@@ -60,6 +62,16 @@ export function renderBlockerExplanation(
 	explanation = sanitizeForTerminal(explanation);
 	const width = options.width ?? 100;
 	const lines: string[] = [];
+	// A command wider than the line breaks at its spaces after all
+	const wrap = (text: string, indent: string) => {
+		const room = width - indent.length;
+		const fits = text.split(' ').every((word) => visible(word) <= room);
+		return wrapLine(
+			fits ? text : text.replaceAll(KEEP, ' '),
+			width,
+			indent
+		).map((l) => l.replaceAll(KEEP, ' '));
+	};
 
 	const note = (node: BlockerNode): string => {
 		if (node.repeated) return 'shown above';
@@ -98,7 +110,7 @@ export function renderBlockerExplanation(
 	);
 
 	if (!explanation.blocked) {
-		lines.push(...describeStart(explanation));
+		lines.push(...describeStart(explanation).flatMap((l) => wrap(l, '  ')));
 		return lines;
 	}
 
@@ -109,7 +121,11 @@ export function renderBlockerExplanation(
 
 	const fixes = unblockSteps(explanation.rootCauses);
 	if (fixes.length)
-		lines.push('', 'To unblock:', ...fixes.map((f) => `  ${f}`));
+		lines.push(
+			'',
+			'To unblock:',
+			...fixes.flatMap((f) => wrap(`  ${f}`, '    '))
+		);
 	return lines;
 }
 
