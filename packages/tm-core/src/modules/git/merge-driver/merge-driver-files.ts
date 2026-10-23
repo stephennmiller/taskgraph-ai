@@ -42,10 +42,8 @@ export const MERGE_DRIVER_NAME = 'taskgraph';
 const MERGED_FILES = [
 	{ file: TASKGRAPH_TASKS_FILE, driver: MERGE_DRIVER_NAME },
 	{
-		file: path.posix.join(
-			path.posix.dirname(TASKGRAPH_TASKS_FILE),
-			ARCHIVE_FILE_NAME
-		),
+		// Beside tasks.json; not path.posix, which some CLI specs mock away
+		file: TASKGRAPH_TASKS_FILE.replace(/[^/]+$/, ARCHIVE_FILE_NAME),
 		driver: `${MERGE_DRIVER_NAME}-archive`
 	}
 ];
