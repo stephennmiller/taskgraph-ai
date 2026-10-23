@@ -18,7 +18,7 @@
 		".": {
 			"entry": [
 				".github/scripts/{check-job-timeouts,check-pre-release-mode,version-bump}.mjs",
-				".githooks/{check-file-size,check-file-size.test,install}.mjs",
+				".githooks/{check-file-size,install}.mjs",
 				"tests/manual/**/*.js"
 			],
 			"project": [
