@@ -14,14 +14,14 @@ import type { Argument, Command, Option } from 'commander';
  * - choices: a fixed list (see `choices`)
  * - none: free text, nothing to suggest
  */
-export type ValueKind = 'ids' | 'tags' | 'files' | 'dirs' | 'choices' | 'none';
+type ValueKind = 'ids' | 'tags' | 'files' | 'dirs' | 'choices' | 'none';
 
-export interface ValueSpec {
+interface ValueSpec {
 	kind: ValueKind;
 	choices?: string[];
 }
 
-export interface OptionSpec {
+interface OptionSpec {
 	short?: string;
 	long?: string;
 	description: string;
@@ -33,7 +33,7 @@ export interface OptionSpec {
 	variadic?: boolean;
 }
 
-export interface ArgumentSpec {
+interface ArgumentSpec {
 	name: string;
 	variadic: boolean;
 	value: ValueSpec;
@@ -48,7 +48,7 @@ export interface CommandSpec {
 	commands: CommandSpec[];
 }
 
-export const STATUS_CHOICES = [
+const STATUS_CHOICES = [
 	'pending',
 	'in-progress',
 	'done',
@@ -57,7 +57,7 @@ export const STATUS_CHOICES = [
 	'deferred',
 	'cancelled'
 ];
-export const PRIORITY_CHOICES = ['high', 'medium', 'low'];
+const PRIORITY_CHOICES = ['high', 'medium', 'low'];
 
 const ID_NAMES = new Set([
 	'id',

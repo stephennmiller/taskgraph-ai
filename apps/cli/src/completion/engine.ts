@@ -24,7 +24,7 @@
 
 import type { CommandSpec } from './spec.js';
 
-export const ENGINE_SOURCE = `
+const ENGINE_SOURCE = `
 var fs = require("fs");
 var path = require("path");
 var args = process.argv.slice(1);

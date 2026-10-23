@@ -588,10 +588,6 @@ For long-running operations that should not block the client, use the AsyncOpera
    ```
    - AsyncOperationManager will forward progress updates to the client
 
-4. **Check Operation Status**:
-   - Implement a way for clients to check status using the `get_operation_status` MCP tool
-   - Return appropriate status codes and messages
-
 ## Project Initialization
 
 When implementing project initialization commands:
