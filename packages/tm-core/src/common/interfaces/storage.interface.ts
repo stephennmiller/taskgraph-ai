@@ -150,9 +150,14 @@ export interface IStorage {
 	 * the claim in its metadata, all in one locked write
 	 * @param claimant - Recorded as `metadata.claimedBy`
 	 * @param tag - Optional tag context
+	 * @param among - Only these top-level task IDs (one parallel wave, say)
 	 * @returns The claim, or null when no task is ready
 	 */
-	claimNextTask(claimant: string, tag?: string): Promise<TaskClaim | null>;
+	claimNextTask(
+		claimant: string,
+		tag?: string,
+		among?: ReadonlySet<string>
+	): Promise<TaskClaim | null>;
 
 	/**
 	 * IDs of the tasks archived in a tag (see modules/tasks/utils/archive.ts)
@@ -435,7 +440,8 @@ export abstract class BaseStorage implements IStorage {
 
 	abstract claimNextTask(
 		claimant: string,
-		tag?: string
+		tag?: string,
+		among?: ReadonlySet<string>
 	): Promise<TaskClaim | null>;
 	abstract loadArchivedTaskIds(tag?: string): Promise<Set<string>>;
 	abstract archiveTasks(

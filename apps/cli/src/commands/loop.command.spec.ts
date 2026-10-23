@@ -15,16 +15,24 @@ import {
 import { LoopCommand } from './loop.command.js';
 
 // Mock @tm/core
-vi.mock('@tm/core', () => ({
-	createTmCore: vi.fn(),
-	PRESET_NAMES: [
-		'default',
-		'test-coverage',
-		'linting',
-		'duplication',
-		'entropy'
-	]
-}));
+vi.mock('@tm/core', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('@tm/core')>();
+	return {
+		createTmCore: vi.fn(),
+		PRESET_NAMES: [
+			'default',
+			'test-coverage',
+			'linting',
+			'duplication',
+			'entropy'
+		],
+		// Flag checks are tm-core logic the command relies on: use the real ones
+		MAX_PARALLEL: actual.MAX_PARALLEL,
+		ParallelLoopError: actual.ParallelLoopError,
+		assertParallelFlags: actual.assertParallelFlags,
+		parseParallelCount: actual.parseParallelCount
+	};
+});
 
 vi.mock('inquirer', () => ({ default: { prompt: vi.fn() } }));
 

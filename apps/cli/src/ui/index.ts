@@ -56,6 +56,13 @@ export {
 	type ClaimSummary
 } from './formatters/claim-formatters.js';
 
+// What loop --parallel prints
+export {
+	formatParallelHeader,
+	formatParallelSummary,
+	formatParallelTaskLines
+} from './formatters/parallel-loop-formatters.js';
+
 // The parallel-waves line under `taskgraph graph`
 export { formatWaveSummary } from './formatters/wave-formatters.js';
 
