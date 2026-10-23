@@ -32,7 +32,7 @@ run --version
 run init --yes
 run add-task --title="Write the README" --description="Say what the tool does"
 run list
-run next --json | tee next.json
+run next --format json | tee next.json
 
 # next must hand back the task add-task just created
 if ! grep -q "Write the README" next.json; then
