@@ -45,6 +45,15 @@ Filter to specific task tag:
 taskgraph loop -n 10 --tag backend
 ```
 
+Work on one task (or subtask) instead of the one `taskgraph next` picks. It runs one iteration unless you pass `-n`:
+
+```bash
+taskgraph loop --id 3
+taskgraph loop --id 3.2 --prompt tdd
+```
+
+`--id` works with the `default` and `tdd` presets and with custom prompt files. The other presets pick their own work, so `loop` refuses `--id` with them. A task ID that doesn't exist fails before Claude Code starts.
+
 ## How It Works
 
 Each loop iteration:
@@ -80,7 +89,8 @@ Example progress file content:
 | Option                   | Type   | Default                         | Description                                                                                                   |
 | ------------------------ | ------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `-n, --iterations`       | number | `10`                            | Maximum number of iterations to run.                                                                          |
-| `-p, --prompt`           | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
+| `-i, --id`               | string | -                               | Work on this task or subtask (`3`, `3.2`) instead of the next one. Runs 1 iteration unless `-n` is given. Works with the `default` and `tdd` presets and custom prompt files. |
+| `-p, --prompt`           | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `tdd`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
 | `--progress-file`        | string | `.taskgraph/loop-progress.txt` | Path to the progress log file where iteration notes are appended.                                             |
 | `--sleep`                | number | `5`                             | Seconds to wait between iterations. Gives the system time to settle before spawning the next agent.          |
 | `--on-complete`          | string | -                               | Shell command to run when all tasks complete (status becomes `all_complete`). Example: `--on-complete 'notify-send "Done!"'` |
@@ -93,7 +103,7 @@ Example progress file content:
 ### Option Details
 
 **`--prompt` accepts two types of values:**
-- **Preset names**: Use built-in presets like `default`, `test-coverage`, `linting`, `duplication`, or `entropy`
+- **Preset names**: Use built-in presets like `default`, `tdd`, `test-coverage`, `linting`, `duplication`, or `entropy`
 - **File paths**: Provide a path to a custom prompt file (e.g., `./my-custom-loop.md`)
 
 **`--on-complete` runs only on success:**
@@ -135,120 +145,11 @@ Next: review with git log -p HEAD..taskgraph/task-1
 
 `.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
 
-`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
 
 ## Built-in Presets
 
-The loop command includes five built-in presets for common development workflows. Each preset guides agents to complete ONE focused task per iteration.
-
-| Preset | Purpose | Completion Marker |
-| ------ | ------- | ----------------- |
-| `default` | Complete tasks from TaskGraph backlog | `ALL_TASKS_DONE` |
-| `test-coverage` | Write meaningful tests for uncovered code | `COVERAGE_TARGET` |
-| `linting` | Fix lint and type errors one by one | `ZERO_ERRORS` |
-| `duplication` | Refactor duplicated code into shared utilities | `LOW_DUPLICATION` |
-| `entropy` | Clean up code smells (long functions, deep nesting) | `LOW_ENTROPY` |
-
-### default
-
-The standard task completion workflow. Agents work through your TaskGraph backlog, completing one task per iteration.
-
-```bash
-taskgraph loop -n 10 --prompt default
-```
-
-**What it does:**
-1. Runs `taskgraph next` to get the highest priority available task
-2. Reads task details with `taskgraph show <id>`
-3. Implements the task with the smallest possible change
-4. Runs tests and type checks to verify quality
-5. Marks the task complete with `taskgraph set-status --id=<id> --status=done`
-6. Commits work with a descriptive message
-
-**Completion criteria:** All pending tasks are complete.
-
-### test-coverage
-
-Improves test coverage by writing meaningful tests for user-facing behavior - not just chasing coverage numbers.
-
-```bash
-taskgraph loop -n 10 --prompt test-coverage
-```
-
-**What it does:**
-1. Runs the coverage command (`npm run coverage`, etc.)
-2. Identifies the most important user-facing feature lacking tests
-3. Writes ONE meaningful test validating real behavior
-4. Verifies coverage increased as a side effect
-5. Commits with message: `test(<file>): <describe user behavior tested>`
-
-**Philosophy:** Don't write tests just to increase coverage. Use coverage as a guide to find untested user-facing behavior. Prioritize error handling, CLI commands, API endpoints, and file parsing over internal utilities.
-
-**Completion criteria:** Coverage reaches target or 100%.
-
-### linting
-
-Cleans up lint errors and type errors systematically, one fix per iteration.
-
-```bash
-taskgraph loop -n 20 --prompt linting
-```
-
-**What it does:**
-1. Runs lint command (`npm run lint`, `eslint .`, etc.)
-2. Runs type check (`tsc --noEmit`, etc.)
-3. Picks ONE error to fix, prioritizing:
-   - Type errors (breaks builds)
-   - Security-related lint errors
-   - Errors in frequently-changed files
-4. Fixes with minimal changes - no surrounding refactoring
-5. Commits with message: `fix(<file>): <describe error fixed>`
-
-**Completion criteria:** Zero lint errors and zero type errors.
-
-### duplication
-
-Finds duplicated code using detection tools and refactors into shared utilities.
-
-```bash
-taskgraph loop -n 10 --prompt duplication
-```
-
-**What it does:**
-1. Runs duplication detection (`npx jscpd .` or similar)
-2. Reviews the report and picks ONE clone to refactor, prioritizing:
-   - Larger clones (more lines = more maintenance burden)
-   - Clones in frequently-changed files
-   - Clones with slight variations
-3. Extracts duplicated code into a shared utility
-4. Updates all clone locations to use the shared utility
-5. Runs tests to verify behavior is preserved
-
-**Completion criteria:** Duplication below threshold (e.g., <3%).
-
-### entropy
-
-Targets code smells that increase cognitive load and maintenance burden.
-
-```bash
-taskgraph loop -n 10 --prompt entropy
-```
-
-**Code smells targeted:**
-- Long functions (>60 lines) → extract into smaller functions
-- Deep nesting (>3 levels) → use early returns, extract conditions
-- Large files (>500 lines) → split into focused modules
-- Magic numbers → extract into named constants
-- Complex conditionals → extract into well-named functions
-- God classes → split responsibilities
-
-**What it does:**
-1. Scans codebase for code smells (uses judgment or tools like `complexity-report`)
-2. Picks ONE smell to fix, prioritizing smells in critical paths
-3. Refactors with minimal changes - no over-engineering
-4. Runs tests to verify behavior is preserved
-
-**Completion criteria:** No significant code smells remain.
+Six built-in presets cover common workflows: `default` (the TaskGraph backlog), `tdd` (the backlog, test-first), `test-coverage`, `linting`, `duplication` and `entropy`. See [Loop Presets](/capabilities/loop-presets) for what each one does.
 
 ## Custom Prompts
 
@@ -471,7 +372,6 @@ Use a separate progress file to track migration-specific notes.
 <Note>
 **Related documentation:**
 - [CLI Root Commands](/capabilities/cli-root-commands) - Full command reference
-- [TDD Workflow](/tdd-workflow/quickstart) - Structured test-driven development
 - [Task Structure](/capabilities/task-structure) - Understanding task organization
 </Note>
 

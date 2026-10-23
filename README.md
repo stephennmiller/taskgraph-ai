@@ -95,7 +95,7 @@ This creates `.taskgraph/` (tasks, docs, config) and a `CLAUDE.md` import with T
 
 ### 3. Install the plugin
 
-The plugin is the only way to get slash commands. It adds 39 of them (as `/taskgraph:<name>`) and three agents (`task-orchestrator`, `task-executor`, `task-checker`).
+The plugin is the only way to get slash commands. It adds 36 of them (as `/taskgraph:<name>`) and two agents (`task-executor`, `task-checker`).
 
 ```txt
 /plugin marketplace add stephennmiller/taskgraph-ai
@@ -200,7 +200,7 @@ Install the plugin (step 3) and they appear as `/taskgraph:<name>` (type `/taskg
 | Edit | `add-task`, `update-task`, `update-tasks-from-id`, `remove-task`, `convert-task-to-subtask` |
 | Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `clear-subtasks` |
 | Dependencies | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
-| Workflows | `smart-workflow`, `command-pipeline`, `auto-implement-tasks`, `sync-readme`, `learn`, `help` |
+| Other | `sync-readme`, `learn`, `help` |
 
 ### CLI cheat sheet
 
@@ -240,7 +240,7 @@ Only relevant if you added the optional MCP server. Each tool you load costs con
 |---|---|---|
 | `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task` |
 | `standard` | 16 | core, plus `update_subtask`, `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
-| `all` | 48 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
+| `all` | 40 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task` and `generate` |
 | a list | custom | e.g. `get_tasks,next_task,set_task_status` |
 
 Set it when you add the server:

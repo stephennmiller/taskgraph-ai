@@ -57,17 +57,11 @@
 							"capabilities/dependency-graph",
 							"capabilities/archive",
 							"capabilities/loop",
+							"capabilities/loop-presets",
 							"capabilities/research",
 							"capabilities/github-sync",
 							"capabilities/merge-driver",
 							"capabilities/json-output"
-						]
-					},
-					{
-						"group": "TDD Workflow (Autopilot)",
-						"pages": [
-							"tdd-workflow/quickstart",
-							"tdd-workflow/ai-agent-integration"
 						]
 					}
 				]
@@ -87,6 +81,10 @@
 		{
 			"source": "/command-reference",
 			"destination": "/capabilities/cli-root-commands"
+		},
+		{
+			"source": "/tdd-workflow/:slug*",
+			"destination": "/capabilities/loop-presets#tdd"
 		}
 	],
 	"logo": {
