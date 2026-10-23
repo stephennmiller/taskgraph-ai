@@ -17,6 +17,7 @@ import {
 	displayError,
 	displayUpgradeNotification,
 	formatCommanderError,
+	fromBranchError,
 	printError,
 	performAutoUpdate,
 	printJson,
@@ -88,6 +89,7 @@ import {
 
 import {
 	CUSTOM_PROVIDERS,
+	createTagFromBranch,
 	parseClarificationAnswers,
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
@@ -477,14 +479,17 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			// Call core updateTasks, passing context for CLI
-			await updateTasks(
-				taskGraph.getTasksPath(),
-				fromId,
-				prompt,
-				useResearch,
-				{ projectRoot: taskGraph.getProjectRoot(), tag } // Pass context with projectRoot and tag
-			);
+			try {
+				await updateTasks(
+					taskGraph.getTasksPath(),
+					fromId,
+					prompt,
+					useResearch,
+					{ projectRoot: taskGraph.getProjectRoot(), tag }
+				);
+			} catch (error) {
+				displayError(error, { hint: aiErrorHint(error) });
+			}
 		});
 
 	// update-task command
@@ -3119,82 +3124,29 @@ Examples:
 					outputType: 'cli'
 				};
 
-				// Handle --from-branch option
+				const createOptions = {
+					copyFromCurrent: options.copyFromCurrent || false,
+					copyFromTag: options.copyFrom,
+					description: options.description
+				};
+
 				if (options.fromBranch) {
-					const { createTagFromBranch } = await import(
-						'./task-manager/tag-management.js'
-					);
-					const gitUtils = await import('./utils/git-utils.js');
-
-					// Check if we're in a git repository
-					if (!(await gitUtils.isGitRepository(context.projectRoot))) {
-						printError(
-							"--from-branch needs a git repository, and this isn't one",
-							'Name the tag instead: `taskgraph tags add <name>`'
-						);
-						process.exit(1);
-					}
-
-					// Get current git branch
-					const currentBranch = await gitUtils.getCurrentBranch(
-						context.projectRoot
-					);
-					if (!currentBranch) {
-						printError(
-							"Couldn't tell which git branch is checked out",
-							'Name the tag instead: `taskgraph tags add <name>`'
-						);
-						process.exit(1);
-					}
-
-					// Create tag from branch
-					const branchOptions = {
-						copyFromCurrent: options.copyFromCurrent || false,
-						copyFromTag: options.copyFrom,
-						description: options.description
-					};
-
+					// Names the tag after the current git branch and maps the branch to it
 					await createTagFromBranch(
-						taskGraph.getTasksPath(),
-						currentBranch,
-						branchOptions,
-						context,
-						'text'
-					);
-				} else {
-					// Regular tag creation
-					const createOptions = {
-						copyFromCurrent: options.copyFromCurrent || false,
-						copyFromTag: options.copyFrom,
-						description: options.description
-					};
-
-					await createTag(
-						taskGraph.getTasksPath(),
-						tagName,
-						createOptions,
-						context,
-						'text'
-					);
-				}
-
-				// Handle auto-switch if requested
-				if (options.autoSwitch) {
-					const { useTag } = await import('./task-manager/tag-management.js');
-					const finalTagName = options.fromBranch
-						? (await import('./utils/git-utils.js')).sanitizeBranchNameForTag(
-								await (await import('./utils/git-utils.js')).getCurrentBranch(
-									projectRoot
-								)
+						context.projectRoot,
+						(branchTag, { defaultDescription }) =>
+							createTag(
+								tasksPath,
+								branchTag,
+								{ ...createOptions, defaultDescription },
+								context,
+								'text'
 							)
-						: tagName;
-					await useTag(
-						taskGraph.getTasksPath(),
-						finalTagName,
-						{},
-						context,
-						'text'
-					);
+					).catch((error) => {
+						throw fromBranchError(error);
+					});
+				} else {
+					await createTag(tasksPath, tagName, createOptions, context, 'text');
 				}
 			} catch (error) {
 				displayError(error);

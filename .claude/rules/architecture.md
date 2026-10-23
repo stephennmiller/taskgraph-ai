@@ -297,10 +297,10 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - Import `zod`, `handleApiResult`, **`getProjectRootFromSession`**, and your `yourCommandDirect` function.
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters, making `projectRoot` optional**: `projectRoot: z.string().optional().describe(...)`.
-    - Consider if this operation should run in the background using `AsyncOperationManager`.
+    - If the operation is long-running, pass `reportProgress` from the tool context through `checkProgressCapability` to the direct function (see `mcp.md`).
     - Implement the standard `execute` method:
       - Get `rootFolder` using `getProjectRootFromSession` (with fallback to `args.projectRoot`).
-      - Call `yourCommandDirect({ ...args, projectRoot: rootFolder }, log)` or use `asyncOperationManager.addOperation`.
+      - Call `yourCommandDirect({ ...args, projectRoot: rootFolder }, log, { session })`.
       - Pass the result to `handleApiResult`.
 
 5.  **Register Tool**: Import and call `registerYourCommandTool` in `mcp-server/src/tools/index.js`.

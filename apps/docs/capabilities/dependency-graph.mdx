@@ -8,14 +8,16 @@ Task dependencies form a graph. TaskGraph reads that graph to pick the next task
 
 ## How `next` orders tasks
 
-`taskgraph next` (and the recommendation in `taskgraph list`) considers tasks that are `pending` or `in-progress` and whose dependencies are all `done`. Subtasks of an in-progress parent are considered first; a subtask whose parent is not `in-progress` is never offered, even when `why` reports it as ready to start. Among the candidates it picks by:
+`taskgraph next` (and the recommendation in `taskgraph list`) considers tasks that are `pending` or `in-progress` and whose dependencies are all `done`. Subtasks of an in-progress parent are considered first, when both their own dependencies and their parent's are done (see [Parents and subtasks](#parents-and-subtasks)). A subtask whose parent is not `in-progress` is not offered on its own: `next` offers the parent, and once you start it, `next` offers its subtasks. Among the candidates it picks by:
 
 1. **Priority**: `critical`, then `high`, `medium`, `low`.
-2. **Unblocks the most**: the task with the most unfinished tasks waiting on it, directly or through other tasks.
+2. **Unblocks the most**: the task with the most unfinished tasks waiting on it, directly or through other tasks. Between two subtasks that tie, the one more of its own task waits on.
 3. **Fewer dependencies**: the task that lists fewer dependencies.
 4. **ID**: the lowest ID.
 
 Step 2 counts every unfinished task, including `deferred`, `blocked` and `review` ones, because they still wait on their dependencies. A task is "unfinished" unless it is `done`, `completed` or `cancelled`.
+
+It counts top-level tasks: a parent and its subtasks are one piece of work, however finely the task was expanded. A task in front of a parent with ten subtasks counts that parent once, the same as before the parent was expanded, and subtasks that wait through their parent count toward that parent. A subtask doesn't count its own parent or siblings, so one that holds up only its own task counts 0 (step 2 then compares how many of its siblings wait on it).
 
 ## How a subtask's dependencies are read
 
@@ -30,6 +32,15 @@ A subtask's `dependencies` can name a sibling, another task's subtask or a top-l
 When `expand`, `update-task` or `update` has the AI write subtasks, the AI uses the same forms: a number for an earlier subtask in its list, a string for a task (`"3"`) or another task's subtask (`"4.1"`). Entries that are none of these, and a dependency on the subtask's own parent, are dropped. `update-task` also drops a sibling number that is not earlier than the subtask itself.
 
 On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
+
+## Parents and subtasks
+
+A subtask is part of its parent, so the analysis links them both ways:
+
+- **A subtask waits on what its parent waits on.** If task 3 depends on task 2, subtask 3.1 can't start before task 2 is done either, even though 3.1 lists nothing. `why`, `next`, the critical path, bottleneck counts and loop checks all follow this. A parent's dependency on one of its own subtasks is not passed down.
+- **A parent isn't finished until its subtasks are.** The critical path orders a parent after its open subtasks, so a chain can run `1 → 3.1 → 3.2 → 3 → 5`. A subtask that lists its own parent keeps that dependency, and the parent is then not ordered after it.
+
+`validate-dependencies` and `fix-dependencies` check only the dependencies written on each task and subtask, so they don't report a loop that only exists through a parent (task 2 needs 4, and 4 needs 2.1). `why` and the `cycles` of `dependency_analysis` do.
 
 ## `taskgraph graph`
 
@@ -62,9 +73,10 @@ Critical path: 1 → 2 → 3 → 5
 ◆ critical path  * dependency inferred by AI
 ```
 
-- **`blocks N`** marks a bottleneck: an unfinished task that N unfinished tasks wait on. The list shows the top five, most first, ties to the lowest ID. Tasks that block nothing are left out.
+- **`blocks N`** marks a bottleneck: an unfinished task that N unfinished top-level tasks wait on, directly, through other tasks, or through a subtask. A parent and its subtasks count as one, as in [`next`](#how-next-orders-tasks). The list shows the top five, most first, ties to the lowest ID. Tasks that block nothing are left out.
 - **`wave N`** is the task's parallel wave. Wave 1 is every task that can run now: `pending` or `in-progress` with all its dependencies finished. Wave N holds the tasks whose dependencies are all finished or in earlier waves, so everything in one wave can run side by side. The line under the critical path counts the waves and names wave 1; `N can't be scheduled` counts the unfinished tasks with no wave (see [Parallel waves](#parallel-waves)).
-- **`◆`** marks the critical path: the longest chain of unfinished work, dependencies first. Ties go to the lowest IDs.
+- **`◆`** marks the critical path: the longest chain of unfinished work, dependencies first, through parents and subtasks as [described above](#parents-and-subtasks). Ties go to the lowest IDs.
+- **`needs 2.1`**: a dependency on a subtask places the task under the subtask's parent (task 2), and the subtask is always listed after the title, since the parent is not what the task waits on.
 - **`*`** marks a dependency the AI chose rather than you (see [Dependency provenance](#dependency-provenance)). After an ID in a `needs` list, it marks that dependency. After a task's own ID (`2*`), it marks that task's edge to the task drawn above it.
 
 ### JSON output
@@ -83,10 +95,10 @@ Critical path: 1 → 2 → 3 → 5
 
 ### Known limits
 
-- There is no edge between a parent and its subtasks: the parent doesn't wait on them, so finishing them unblocks nothing by itself. In a project with expanded tasks, the critical path can therefore miss a chain that runs through a parent.
 - Tasks in a dependency cycle, and tasks that depend on one, are left out of the critical path, since they can't be started. Use `taskgraph why` to find and break the loop.
 - The tree shows top-level tasks only. `bottlenecks` and `criticalPath` can name subtasks such as `2.1`; they appear in those lists but not as tree nodes.
-- A top-level task's dependency on a subtask is drawn as `missing 2.1` (and listed in the node's `missing`), because the tree only knows top-level tasks. It is not missing: `bottlenecks`, `criticalPath`, `why` and `dependency_analysis` follow it. For the same reason, a loop that runs through a subtask is not called out in the tree; `why`, `validate-dependencies` and the `cycles` of `dependency_analysis` report it.
+- The tree reads only top-level tasks' dependencies, so a loop formed by a subtask's own dependencies (task 4 needs 2.1, and 2.1 needs 4) is not called out in the tree; `why`, `validate-dependencies` and the `cycles` of `dependency_analysis` report it. A loop through a parent's dependencies (task 2 needs 4, and 4 needs 2.1) is called out.
+- A loop that only exists because a parent finishes after its subtasks (subtask 2.1 needs task 3, and 3 needs task 2) keeps those tasks off the critical path, but is not reported as a cycle: each task can still start.
 - A dependency on an archived task (see `taskgraph archive`) counts as done and isn't drawn: the task sits at the top level, or under its other dependencies.
 - `--id` draws the task and the tasks placed under it. Each task is drawn under only one dependency (the one it waits on longest), so a task that also needs the chosen task, but is drawn under another dependency, does not appear. The chosen task's own parent edge is not shown or marked, and bottlenecks and the critical path still cover the whole tag.
 
@@ -127,13 +139,25 @@ To unblock:
 
 A chain ends at one of four root causes: `ready` (unfinished, nothing in its way), `stalled` (`deferred` or `blocked`), `missing` (the ID matches no task) or `cycle` (it depends on itself through the chain). The JSON has `id`, `title`, `status`, `blocked`, `tag`, a nested `blockers` tree and `rootCauses`; see [CLI commands](/capabilities/cli-root-commands) for the full shape.
 
+A subtask also waits on what its parent waits on. `why` draws those blockers under the parent, marked `← parent`:
+
+```
+○ 3.1  Write the chart queries
+Blocked by:
+└─ ○ 3  Add the dashboard  ← parent
+   ├─ ○ 2  Build the login API
+   │  └─ ○ 1  Set up the database  ← ready to start
+   └─ ○ 4  Design the schema  ← ready to start
+
+To unblock:
+  Do 1 (Set up the database) and 4 (Design the schema): nothing else stands in their way.
+```
+
+In the JSON, that node has `parentOf` set to the subtask's ID. The parent itself is not something to finish first; only its blockers are.
+
 ### Exit codes
 
-`why` and `graph` exit 0 on success, whether or not the task is blocked. They exit 1 for a missing or malformed ID (`why`), an unknown task, or an unsupported `--format`.
-
-### Known limit
-
-A subtask does not inherit its parent's blockers in `why`. If task 3 is blocked, `why 3.1` explains only the dependencies listed on subtask 3.1 itself.
+`why` and `graph` exit 0 on success, whether or not the task is blocked. They exit 1 for a missing or malformed ID (`why`), an unknown task or tag, or an unsupported `--format`.
 
 ## Dependency provenance
 
@@ -210,17 +234,16 @@ Everything in `dependencies` is a `blocks` link, so files written before link ty
 
 ## Schema version
 
-Each tag in `.taskgraph/tasks/tasks.json` records `metadata.schemaVersion` (currently `1`), stamped whenever `@tm/core` saves the tag. A missing or malformed value is read as version 1. A tag written by a newer version, or with a malformed `schemaVersion`, prints a warning to stderr once per file and tag, and is still read. The stamp never lowers a version already on disk.
+Each tag in `.taskgraph/tasks/tasks.json` records `metadata.schemaVersion` (currently `1`), stamped whenever TaskGraph saves the tag, from any command, and in the empty file `init` creates. A missing or malformed value is read as version 1. A tag written by a newer version, or with a malformed `schemaVersion`, prints a warning to stderr once per file and tag, and is still read. The stamp never lowers a version already on disk.
 
 ## MCP
 
-The `dependency_analysis` tool, in the `standard` and `all` tiers, returns the bottlenecks, critical path and cycles for a tag. Pass `id` to also get an `explanation` with the blockers and root causes for one task (what `taskgraph why` shows). `limit` sets how many bottlenecks come back (default 5). See [MCP tool loading](/capabilities/mcp) for the tiers.
+The `dependency_analysis` tool, in the `standard` and `all` tiers, returns the bottlenecks, critical path and cycles for a tag. Pass `id` to also get an `explanation` with the blockers and root causes for one task (what `taskgraph why` shows). `limit` sets how many bottlenecks come back (default 5). A `tag` the project doesn't have is an error, not an empty result. See [MCP tool loading](/capabilities/mcp) for the tiers.
 
 ## Open issues
 
 These are known and not yet fixed:
 
 - **What counts as finished differs for subtasks.** `next`, `why` and `graph` all treat `done` and `cancelled` as finished, but `next` only looks for finished work under parents that are `pending`, `in-progress`, `done` or `cancelled`. A `done` subtask under a parent in `review`, `blocked` or `deferred` satisfies a dependency in `why` and `graph`, but never in `next`.
-- **`why` ignores parent blockers for subtasks** (see above).
 - **Older writers don't stamp a schema version.** Tags created by legacy code paths have no `schemaVersion` until the next `@tm/core` save; a missing value means version 1.
-- **Graph limits:** there is no edge between a parent and its subtasks, and cycle members and tasks behind a loop are left out of the critical path (see [`taskgraph graph`](#known-limits)).
+- **Graph limits:** cycle members and tasks behind a loop are left out of the critical path, and the tree doesn't call out a loop formed only by a subtask's own dependencies (see [`taskgraph graph`](#known-limits)).

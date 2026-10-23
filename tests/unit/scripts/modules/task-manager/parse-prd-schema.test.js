@@ -14,43 +14,21 @@ describe('PRD Response Schema', () => {
 	};
 
 	describe('Valid responses', () => {
-		it('should accept response with tasks and metadata', () => {
-			const response = {
-				tasks: [validTask],
-				metadata: {
-					projectName: 'Test Project',
-					totalTasks: 1,
-					sourceFile: 'test.txt',
-					generatedAt: '2025-01-01T00:00:00Z'
-				}
-			};
+		it('should accept response with only tasks', () => {
+			const result = prdResponseSchema.safeParse({ tasks: [validTask] });
 
-			const result = prdResponseSchema.safeParse(response);
 			expect(result.success).toBe(true);
 		});
 
-		it('should accept response with tasks and null metadata', () => {
-			const response = {
+		it('should drop a metadata object the model adds anyway', () => {
+			// Tag metadata comes from the code; the prompt no longer asks for it
+			const result = prdResponseSchema.safeParse({
 				tasks: [validTask],
-				metadata: null
-			};
+				metadata: { projectName: 'Test Project' }
+			});
 
-			const result = prdResponseSchema.safeParse(response);
 			expect(result.success).toBe(true);
-		});
-
-		it('should accept response with only tasks (no metadata field)', () => {
-			// This is what ZAI returns - just the tasks array without metadata
-			const response = {
-				tasks: [validTask]
-			};
-
-			const result = prdResponseSchema.safeParse(response);
-			expect(result.success).toBe(true);
-			if (result.success) {
-				// With .default(null), omitted metadata becomes null
-				expect(result.data.metadata).toBeNull();
-			}
+			expect(result.data).not.toHaveProperty('metadata');
 		});
 
 		it('should accept response with multiple tasks', () => {
@@ -65,21 +43,8 @@ describe('PRD Response Schema', () => {
 
 	describe('Invalid responses', () => {
 		it('should reject response without tasks field', () => {
-			const response = {
-				metadata: null
-			};
+			const result = prdResponseSchema.safeParse({});
 
-			const result = prdResponseSchema.safeParse(response);
-			expect(result.success).toBe(false);
-		});
-
-		it('should reject response with empty tasks array and invalid metadata', () => {
-			const response = {
-				tasks: [],
-				metadata: 'invalid'
-			};
-
-			const result = prdResponseSchema.safeParse(response);
 			expect(result.success).toBe(false);
 		});
 
@@ -146,8 +111,6 @@ describe('PRD Response Schema', () => {
 			expect(result.success).toBe(true);
 			if (result.success) {
 				expect(result.data.tasks).toHaveLength(2);
-				// With .default(null), omitted metadata becomes null (not undefined)
-				expect(result.data.metadata).toBeNull();
 			}
 		});
 	});

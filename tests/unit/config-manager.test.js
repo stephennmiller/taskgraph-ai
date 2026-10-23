@@ -744,6 +744,35 @@ describe('getConfig Tests', () => {
 		);
 	});
 
+	test('warns about an unsupported provider once per run, with the project path (#269)', () => {
+		fsReadFileSyncSpy.mockImplementation((filePath) => {
+			if (filePath === MOCK_CONFIG_PATH)
+				return JSON.stringify(INVALID_PROVIDER_CONFIG);
+			throw new Error(`Unexpected fs.readFileSync call: ${filePath}`);
+		});
+		// The real findProjectRoot runs here; it starts from the cwd
+		vi.spyOn(process, 'cwd').mockReturnValue(MOCK_PROJECT_ROOT);
+
+		// As a command does: log() reads the config without a root, then the
+		// command reads it with the project root
+		configManager.getConfig(null, true);
+		configManager.getLogLevel();
+		configManager.getConfig(MOCK_PROJECT_ROOT);
+
+		const warnings = consoleWarnSpy.mock.calls.map(([text]) => String(text));
+		expect(warnings).toHaveLength(1);
+		expect(warnings[0]).toContain(
+			'Main provider "invalid-provider" isn\'t supported; using sonnet'
+		);
+		expect(warnings[0]).toContain(
+			'Run taskgraph models --setup to update .taskgraph/config.json'
+		);
+		expect(warnings[0]).not.toContain(MOCK_PROJECT_ROOT);
+		expect(
+			fsReadFileSyncSpy.mock.calls.filter(([file]) => file === MOCK_CONFIG_PATH)
+		).toHaveLength(1);
+	});
+
 	test('should validate provider and fallback to default if invalid', () => {
 		// Arrange
 		fsReadFileSyncSpy.mockImplementation((filePath) => {
@@ -771,7 +800,7 @@ describe('getConfig Tests', () => {
 		// Assert
 		expect(consoleWarnSpy).toHaveBeenCalledWith(
 			expect.stringContaining(
-				'Warning: Invalid main provider "invalid-provider"'
+				'Main provider "invalid-provider" isn\'t supported'
 			)
 		);
 		const expectedMergedConfig = {
@@ -795,6 +824,21 @@ describe('getConfig Tests', () => {
 
 // --- writeConfig Tests ---
 describe('writeConfig', () => {
+	test("doesn't serve another project's written config as the cached one", () => {
+		mockFindConfigPath.mockImplementation((_, { projectRoot }) =>
+			path.join(projectRoot, '.taskgraph/config.json')
+		);
+		configManager.getConfig(MOCK_PROJECT_ROOT, true);
+
+		// The MCP server serves several projects in one process
+		configManager.writeConfig(VALID_CUSTOM_CONFIG, '/other/project');
+
+		expect(configManager.getConfig('/other/project')).toEqual(
+			VALID_CUSTOM_CONFIG
+		);
+		expect(configManager.getConfig(MOCK_PROJECT_ROOT)).toEqual(DEFAULT_CONFIG);
+	});
+
 	test('should write valid config to file', () => {
 		// Arrange (Default mocks are sufficient)
 		// findProjectRoot mock set in beforeEach

@@ -11,13 +11,17 @@
  * path, from dependency-graph.ts; parallel waves, from parallel-waves.ts) and which dependencies were inferred by the
  * AI (dependency-provenance.ts), so a display needs no logic of its own.
  *
- * Known limits: the tree holds top-level tasks only, while bottlenecks and
- * the critical path can name subtasks ("2.1"), which then appear in those
- * lists but not as tree nodes. A parent is not an edge to its subtasks, so the
- * critical path of an expanded project can miss a chain that runs through the
- * parent. Cycle members, and tasks that depend on a loop, are left out of the
- * critical path. The analysis covers the whole tag, even when `rootId` scopes
- * the tree.
+ * The tree holds top-level tasks only. A dependency on a subtask ("2.1")
+ * places the task under that subtask's parent (task 2) when that is its
+ * deepest dependency, and is always listed in `alsoNeeds`, since the parent
+ * is not what it waits on.
+ *
+ * Known limits: bottlenecks and the critical path can name subtasks ("2.1"),
+ * which then appear in those lists but not as tree nodes. A loop formed only
+ * by a subtask's own dependencies (4 needs 2.1, 2.1 needs 4) is not called
+ * out in the tree, which doesn't read subtask dependencies. Cycle members, and
+ * tasks that depend on a loop, are left out of the critical path. The
+ * analysis covers the whole tag, even when `rootId` scopes the tree.
  */
 
 import type { Task, TaskStatus } from '../../common/types/index.js';
@@ -37,7 +41,10 @@ export interface DependencyTreeNode {
 	title: string;
 	status: TaskStatus;
 	priority?: Task['priority'];
-	/** Dependencies other than the parent this node is drawn under */
+	/**
+	 * Dependencies other than the task this node is drawn under; subtask
+	 * dependencies ("2.1") are always listed
+	 */
 	alsoNeeds: string[];
 	/** Dependency IDs that don't match any task */
 	missing: string[];
@@ -73,7 +80,28 @@ export function buildDependencyTree(
 	const byId = new Map(tasks.map((t) => [String(t.id), t]));
 	const depsOf = (t: Task) =>
 		(t.dependencies ?? []).map(String).filter((d) => d !== String(t.id));
-	const known = (t: Task) => depsOf(t).filter((d) => byId.has(d));
+	// The tree only draws tasks: a dependency on subtask 2.1 places the task
+	// after task 2, as parallelWaves orders it. Undefined when nothing matches
+	const taskOf = (dep: string): string | undefined => {
+		if (byId.has(dep)) return dep;
+		const dot = dep.indexOf('.');
+		if (dot <= 0) return undefined;
+		const parent = byId.get(dep.slice(0, dot));
+		const subId = dep.slice(dot + 1);
+		return parent?.subtasks?.some((s) => String(s.id) === subId)
+			? String(parent.id)
+			: undefined;
+	};
+	/** Dependencies that name a task or subtask, as written */
+	const listed = (t: Task) => depsOf(t).filter((d) => taskOf(d) !== undefined);
+	/** The tasks those dependencies place it after (not itself) */
+	const known = (t: Task) => [
+		...new Set(
+			listed(t)
+				.map((d) => taskOf(d) as string)
+				.filter((d) => d !== String(t.id))
+		)
+	];
 
 	// Longest path from a root; cycles get Infinity so they never become parents
 	const depth = new Map<string, number>();
@@ -117,11 +145,11 @@ export function buildDependencyTree(
 			title: task.title,
 			status: task.status,
 			priority: task.priority,
-			alsoNeeds: known(task)
+			alsoNeeds: listed(task)
 				.filter((d) => d !== parent)
 				.sort(compareIds),
-			missing: depsOf(task).filter((d) => !byId.has(d)),
-			inferred: known(task)
+			missing: depsOf(task).filter((d) => taskOf(d) === undefined),
+			inferred: listed(task)
 				.filter((d) => getDependencySource(task, d) === 'inferred')
 				.sort(compareIds),
 			wave: waves.waveOf[id] ?? null,

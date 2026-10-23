@@ -16,6 +16,7 @@ import {
 	importUpstreamConfig,
 	importUpstreamProject
 } from '../../../src/modules/migration/index.js';
+import { CURRENT_SCHEMA_VERSION } from '../../../src/modules/storage/adapters/file-storage/index.js';
 import { FileStorage } from '../../../src/modules/storage/index.js';
 
 const fixture = path.resolve(
@@ -60,9 +61,15 @@ describe('importUpstreamProject', () => {
 	it('copies every tag with its tasks, subtasks and dependencies unchanged', () => {
 		const result = importUpstreamProject(project);
 
-		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual(
-			readJson('.taskmaster', 'tasks', 'tasks.json')
-		);
+		// Only the schema version stamp is added to each tag's metadata
+		const source = readJson('.taskmaster', 'tasks', 'tasks.json');
+		for (const tag of Object.values<{ metadata?: object }>(source)) {
+			tag.metadata = {
+				...tag.metadata,
+				schemaVersion: CURRENT_SCHEMA_VERSION
+			};
+		}
+		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual(source);
 		expect(result.tags).toEqual([
 			{ name: 'master', tasks: 3 },
 			{ name: 'feature-auth', tasks: 1 }
@@ -218,7 +225,10 @@ describe('importUpstreamProject', () => {
 		const result = importUpstreamProject(project);
 
 		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual({
-			master: legacy
+			master: {
+				...legacy,
+				metadata: { schemaVersion: CURRENT_SCHEMA_VERSION }
+			}
 		});
 		expect(result.tags).toEqual([{ name: 'master', tasks: 1 }]);
 		expect(result.currentTag).toBeUndefined();

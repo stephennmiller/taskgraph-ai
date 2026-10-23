@@ -109,6 +109,77 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('2.1');
 	});
 
+	it('skips subtasks whose parent still waits on an unfinished task', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Database', status: 'review' }),
+			createTask({
+				id: 2,
+				title: 'Started early',
+				status: 'in-progress',
+				dependencies: ['1'],
+				subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '2' })]
+			}),
+			createTask({ id: 3, title: 'Ready' })
+		]);
+
+		expect(next?.id).toBe('3');
+	});
+
+	it('offers subtasks once the parent\'s dependencies are done', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Database', status: 'done' }),
+			createTask({
+				id: 2,
+				title: 'Started',
+				status: 'in-progress',
+				dependencies: ['1', '2.2'],
+				subtasks: [
+					createSubtask({ id: 1, title: 'Step', parentId: '2' }),
+					createSubtask({ id: 2, title: 'Later', parentId: '2' })
+				]
+			})
+		]);
+
+		// The parent's dependency on its own subtask doesn't hold its subtasks
+		// back; 2.2 comes first because task 2 waits on it
+		expect(next?.id).toBe('2.2');
+	});
+
+	it('offers subtasks when the parent lists itself as a dependency', () => {
+		const next = selectNextTask([
+			createTask({
+				id: 2,
+				title: 'Lists itself',
+				status: 'in-progress',
+				dependencies: ['2'],
+				subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '2' })]
+			})
+		]);
+
+		// The graph ignores a self-dependency, so `why 2.1` says not blocked
+		expect(next?.id).toBe('2.1');
+	});
+
+	it('counts an expanded task once when ranking what a task unblocks', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Unblocks one expanded task' }),
+			createTask({ id: 2, title: 'Unblocks two tasks' }),
+			createTask({
+				id: 3,
+				title: 'Expanded',
+				dependencies: ['1'],
+				subtasks: Array.from({ length: 10 }, (_, i) =>
+					createSubtask({ id: i + 1, title: `Step ${i + 1}`, parentId: '3' })
+				)
+			}),
+			createTask({ id: 4, title: 'Waits on 2', dependencies: ['2'] }),
+			createTask({ id: 5, title: 'Waits on 2', dependencies: ['2'] })
+		]);
+
+		// Task 1 holds up one task (however many subtasks it has), task 2 two
+		expect(next?.id).toBe('2');
+	});
+
 	it('orders ids numerically, so 2 comes before 10', () => {
 		const next = selectNextTask([
 			createTask({ id: 10, title: 'Ten' }),
