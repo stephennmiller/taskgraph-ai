@@ -186,6 +186,13 @@ export {
 	type GenerateTaskFilesResult
 } from './modules/tasks/services/task-file-generator.service.js';
 
+// Per-machine settings (.taskgraph/config.local.json)
+export {
+	hasPerMachineSettings,
+	mergeMachineConfig,
+	splitMachineConfig
+} from './modules/config/services/machine-config.js';
+
 // Per-project environment
 export {
 	readProjectEnv,
@@ -203,6 +210,7 @@ export {
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,
 	rankNextTasks,
+	subtaskInContext,
 	buildPrimeContext,
 	findUnnotedInProgress,
 	PRIME_RULES,
@@ -250,6 +258,9 @@ export {
 	normalizeTaskStatuses
 } from './modules/tasks/utils/index.js';
 
+// An AI rewrite keeps the stored fields its schema has no place for
+export { keepStoredFields } from './modules/tasks/utils/index.js';
+
 // Acceptance criteria and the Definition of Done
 export {
 	normalizeAcceptanceCriteria,
@@ -259,7 +270,6 @@ export {
 	checkDoneGate,
 	getUncheckedCriteria,
 	parseChecklistNumbers,
-	keepChecklistFields,
 	setGeneratedCriteria,
 	MAX_GENERATED_CRITERIA,
 	MAX_GENERATED_CRITERION_LENGTH,

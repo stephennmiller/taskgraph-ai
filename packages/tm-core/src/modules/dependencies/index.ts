@@ -37,7 +37,9 @@ export {
 } from './explain-blockers.js';
 export {
 	MAX_SIBLING_REFERENCE,
+	cleanGeneratedSubtaskDependencies,
 	isSiblingReference,
+	parseSubtaskDependencyInput,
 	resolveSubtaskDependency,
 	toTaskDependency
 } from './subtask-dependency.js';
@@ -62,6 +64,7 @@ export {
 	type NonBlockingLinkType,
 	type TaskLink
 } from './task-links.js';
+export { dropReferences, removeAllSubtasks } from './removed-references.js';
 export {
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,

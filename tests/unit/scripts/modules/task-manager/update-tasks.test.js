@@ -423,6 +423,55 @@ describe('updateTasks', () => {
 		});
 	});
 
+	test('keeps stored subtask fields the AI schema has no place for (#286)', async () => {
+		const written = await runUpdate(
+			[
+				{
+					id: 2,
+					title: 'Two',
+					status: 'pending',
+					dependencies: [],
+					subtasks: [
+						{
+							id: 1,
+							title: 'Sub',
+							status: 'pending',
+							dependencies: [],
+							assignee: 'lee',
+							relevantFiles: [{ path: 'src/b.ts' }]
+						}
+					]
+				}
+			],
+			[
+				{
+					id: 2,
+					title: 'Two, revised',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: [
+						{
+							id: 1,
+							title: 'Sub, revised',
+							status: 'pending',
+							dependencies: []
+						}
+					]
+				}
+			]
+		);
+
+		expect(written[0].subtasks[0]).toMatchObject({
+			title: 'Sub, revised',
+			assignee: 'lee',
+			relevantFiles: [{ path: 'src/b.ts' }]
+		});
+	});
+
 	test('keeps existing details, priority and test strategy when the AI returns null for them', async () => {
 		const written = await runUpdate(
 			[

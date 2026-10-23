@@ -6,7 +6,8 @@ import {
 	normalizeAcceptanceCriteria,
 	readArchivedIdsSync,
 	reconcileDependencySources,
-	setTaskLink
+	setTaskLink,
+	getOwnKey
 } from '@tm/core';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 import path from 'path';
@@ -218,7 +219,7 @@ async function addTask(
 		const targetTag = tag;
 
 		// Ensure the target tag exists
-		if (!rawData[targetTag]) {
+		if (!getOwnKey(rawData, targetTag)) {
 			report(
 				`Tag "${targetTag}" does not exist. Please create it first using the 'add-tag' command.`,
 				'error'

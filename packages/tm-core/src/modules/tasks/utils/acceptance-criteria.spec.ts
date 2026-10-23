@@ -5,7 +5,6 @@ import {
 	buildChecklist,
 	checkDoneGate,
 	getUncheckedCriteria,
-	keepChecklistFields,
 	normalizeAcceptanceCriteria,
 	normalizeDefinitionOfDone,
 	MAX_GENERATED_CRITERIA,
@@ -220,29 +219,6 @@ describe('parseChecklistNumbers', () => {
 		expect(() => parseChecklistNumbers('0')).toThrow(
 			`"0" isn't a criterion number`
 		);
-	});
-});
-
-describe('keepChecklistFields', () => {
-	it('copies stored criteria and checked Definition of Done items onto a rewrite', () => {
-		const stored = {
-			acceptanceCriteria: [{ text: 'Login works', checked: true }],
-			definitionOfDoneChecked: ['Tests pass']
-		};
-		const rewrite: Record<string, unknown> = { id: 1, title: 'New' };
-
-		keepChecklistFields(rewrite, stored);
-
-		expect(rewrite).toEqual({ id: 1, title: 'New', ...stored });
-	});
-
-	it('leaves the rewrite alone when nothing was stored', () => {
-		const rewrite = { id: 1, title: 'New' };
-
-		keepChecklistFields(rewrite, undefined);
-		keepChecklistFields(rewrite, {});
-
-		expect(rewrite).toEqual({ id: 1, title: 'New' });
 	});
 });
 

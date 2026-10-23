@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { withNormalizedProjectRoot, withToolContext } from './utils.js';
 
 vi.mock('@tm/core', async (importOriginal) => ({
@@ -36,6 +36,72 @@ describe('withNormalizedProjectRoot tag check', () => {
 			expect(fn).toHaveBeenCalledOnce();
 		}
 	);
+});
+
+describe('withNormalizedProjectRoot project root (#339)', () => {
+	const main = path.resolve('/projects/main');
+	const other = path.resolve('/projects/other');
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	const rootPassed = async (args: object, context: object = {}) => {
+		const fn = vi.fn().mockResolvedValue({ content: [] });
+		await withNormalizedProjectRoot(fn)(args as never, { log: {}, ...context });
+		return fn.mock.calls[0]?.[0]?.projectRoot;
+	};
+
+	it('takes an explicit projectRoot over TASKGRAPH_PROJECT_ROOT', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+
+		expect(await rootPassed({ projectRoot: other })).toBe(other);
+	});
+
+	it("takes an explicit projectRoot over the session's TASKGRAPH_PROJECT_ROOT", async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+
+		expect(
+			await rootPassed(
+				{ projectRoot: other },
+				{ session: { env: { TASKGRAPH_PROJECT_ROOT: main } } }
+			)
+		).toBe(other);
+	});
+
+	it('keeps a loop --parallel task worktree on the main project', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+		const worktree = path.join(main, '.taskgraph', 'worktrees', 'task-3');
+
+		expect(await rootPassed({ projectRoot: worktree })).toBe(main);
+	});
+
+	it('uses TASKGRAPH_PROJECT_ROOT when no projectRoot is passed', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+
+		expect(
+			await rootPassed({}, { session: { roots: [{ uri: `file://${other}` }] } })
+		).toBe(main);
+	});
+
+	it("uses the session's TASKGRAPH_PROJECT_ROOT when the process has none", async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+
+		expect(
+			await rootPassed(
+				{},
+				{ session: { env: { TASKGRAPH_PROJECT_ROOT: main } } }
+			)
+		).toBe(main);
+	});
+
+	it("falls back to the session's root folder", async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+
+		expect(
+			await rootPassed({}, { session: { roots: [{ uri: `file://${other}` }] } })
+		).toBe(other);
+	});
 });
 
 describe('withToolContext project .env', () => {

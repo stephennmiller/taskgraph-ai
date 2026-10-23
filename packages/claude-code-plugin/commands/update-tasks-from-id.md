@@ -1,115 +1,18 @@
 ---
 description: "TaskGraph: rewrite every task from an ID onward after a change of direction."
-argument-hint: "[arguments]"
+argument-hint: "<from ID> <what changed>"
 ---
 
-Update multiple tasks starting from a specific ID.
+Rewrite every task not yet done, from one ID onward, with AI after a change of direction.
 
-Arguments: $ARGUMENTS
+Arguments: $ARGUMENTS (the first task ID, then what changed: "5 switch the database to PostgreSQL")
 
-Parse starting task ID and update context.
+1. Use the ID only when it is digits and dots and names a top-level task (`5`); otherwise ask which task to start from. Tell the user which tasks will be rewritten (every task with that ID or higher that isn't done) and go on once they agree.
+2. Put the change in single quotes, with any `'` written as `'\''`:
 
-## Bulk Task Updates
-
-Update multiple related tasks based on new requirements or context changes.
-
-## Argument Parsing
-
-- "from 5: add security requirements"
-- "5 onwards: update API endpoints"
-- "starting at 5: change to use new framework"
-
-## Execution
-
-```bash
-taskgraph update --from=<id> --prompt='<context>'
-```
-
-Put the ID into the command only when it is digits and dots; otherwise ask the user for the task ID. Use a top-level task ID (`5`): `update --from` reads `5.2` as task 5. Keep the text in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in it, and prompts often quote file names and code.
-
-## Update Process
-
-### 1. **Task Selection**
-Starting from specified ID:
-- Include the task itself
-- Include all dependent tasks
-- Include related subtasks
-- Smart boundary detection
-
-### 2. **Context Application**
-AI analyzes the update context and:
-- Identifies what needs changing
-- Maintains consistency
-- Preserves completed work
-- Updates related information
-
-### 3. **Intelligent Updates**
-- Modify descriptions appropriately
-- Update test strategies
-- Adjust time estimates
-- Revise dependencies if needed
-
-## Smart Features
-
-1. **Scope Detection**
-   - Find natural task groupings
-   - Identify related features
-   - Stop at logical boundaries
-   - Avoid over-updating
-
-2. **Consistency Maintenance**
-   - Keep naming conventions
-   - Preserve relationships
-   - Update cross-references
-   - Maintain task flow
-
-3. **Change Preview**
-   ```
-   Bulk Update Preview
-   ━━━━━━━━━━━━━━━━━━
-   Starting from: Task #5
-   Tasks to update: 8 tasks + 12 subtasks
-   
-   Context: "add security requirements"
-   
-   Changes will include:
-   - Add security sections to descriptions
-   - Update test strategies for security
-   - Add security-related subtasks where needed
-   - Adjust time estimates (+20% average)
-   
-   Continue? (y/n)
+   ```bash
+   taskgraph update --from=<id> --prompt='<what changed>'
    ```
 
-## Example Updates
-
-```
-/taskgraph:update-tasks-from-id 5: change database to PostgreSQL
-→ Analyzing impact starting from task #5
-→ Found 6 related tasks to update
-→ Updates will maintain consistency
-→ Preview changes? (y/n)
-
-Applied updates:
-✓ Task #5: Updated connection logic references
-✓ Task #6: Changed migration approach
-✓ Task #7: Updated query syntax notes
-✓ Task #8: Revised testing strategy
-✓ Task #9: Updated deployment steps
-✓ Task #12: Changed backup procedures
-```
-
-## Safety Features
-
-- Preview all changes
-- Selective confirmation
-- Rollback capability
-- Change logging
-- Validation checks
-
-## Post-Update
-
-- Summary of changes
-- Consistency verification
-- Suggest review tasks
-- Update timeline if needed
+   Add `--research` if the user asks for research.
+3. Show the output unchanged in a code block. For a change to one task only, use `/taskgraph:update-task` instead.

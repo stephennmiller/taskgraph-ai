@@ -1,7 +1,6 @@
 /**
- * update-task keeps a task's checklist (acceptance criteria and checked
- * Definition of Done items) when the AI rewrites it: the AI schema has no
- * such fields.
+ * update-task keeps what a subtask dependency the AI writes names: a number
+ * is a sibling, "3" is task 3 and "3.2" is a subtask (#213).
  */
 import { vi } from 'vitest';
 
@@ -138,22 +137,37 @@ const { default: updateTaskById } = await import(
 	'../../../../../scripts/modules/task-manager/update-task-by-id.js'
 );
 
-describe('updateTaskById checklist fields', () => {
+import { resolveSubtaskDependency } from '@tm/core';
+import { COMMAND_SCHEMAS } from '../../../../../src/schemas/registry.js';
+
+const subtask = (id, title, dependencies) => ({
+	id,
+	title,
+	description: `Description of ${title}`,
+	dependencies,
+	details: `Implementation details of ${title}`,
+	status: 'pending',
+	testStrategy: null
+});
+
+describe('updateTaskById subtask dependencies', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		fs.existsSync.mockReturnValue(true);
 	});
 
-	test('keeps acceptance criteria and checked Definition of Done items through an AI rewrite', async () => {
-		const criteria = [
-			{ text: 'Login works', checked: true },
-			{ text: 'Tokens expire', checked: false }
-		];
-		fs.existsSync.mockReturnValue(true);
+	test('keeps a dependency on a task below 100 as that task, not a sibling', async () => {
 		readJSON.mockReturnValue({
 			tag: 'master',
 			tasks: [
 				{
-					id: 1,
+					id: 2,
+					title: 'Set up database',
+					status: 'pending',
+					dependencies: []
+				},
+				{
+					id: 5,
 					title: 'Original Task',
 					description: 'Original description',
 					status: 'pending',
@@ -161,52 +175,48 @@ describe('updateTaskById checklist fields', () => {
 					priority: 'low',
 					details: null,
 					testStrategy: null,
-					acceptanceCriteria: criteria,
-					definitionOfDoneChecked: ['Tests pass'],
-					subtasks: [
-						{
-							id: 1,
-							title: 'S1',
-							status: 'pending',
-							dependencies: [],
-							acceptanceCriteria: [{ text: 'Sub works', checked: false }]
-						}
-					]
+					subtasks: []
 				}
 			]
 		});
+		const aiTask = {
+			id: 5,
+			title: 'Original Task',
+			description: 'Updated description',
+			status: 'pending',
+			dependencies: [],
+			priority: 'low',
+			details: null,
+			testStrategy: null,
+			subtasks: [
+				subtask(1, 'Write the schema', []),
+				subtask(2, 'Write the migration', []),
+				// Sibling 1, task 2 (not sibling 2) and subtask 2.1
+				subtask(3, 'Seed the tables', [1, '2', '2.1'])
+			]
+		};
+		// The AI response schema must accept the string forms
+		expect(() =>
+			COMMAND_SCHEMAS['update-task-by-id'].parse({ task: aiTask })
+		).not.toThrow();
 		generateObjectService.mockResolvedValue({
-			mainResult: {
-				task: {
-					id: 1,
-					title: 'Updated Task',
-					description: 'Updated description',
-					status: 'pending',
-					dependencies: [],
-					priority: 'high',
-					details: 'd',
-					testStrategy: 't',
-					subtasks: [
-						{ id: 1, title: 'S1', status: 'pending', dependencies: [] }
-					]
-				}
-			},
+			mainResult: { task: aiTask },
 			telemetryData: {}
 		});
 
 		const { updatedTask } = await updateTaskById(
 			'tasks/tasks.json',
-			1,
-			'Rewrite it',
+			5,
+			'Seed the tables after the database is set up',
 			false,
 			{ tag: 'master' },
 			'json'
 		);
 
-		expect(updatedTask.acceptanceCriteria).toEqual(criteria);
-		expect(updatedTask.definitionOfDoneChecked).toEqual(['Tests pass']);
-		expect(updatedTask.subtasks[0].acceptanceCriteria).toEqual([
-			{ text: 'Sub works', checked: false }
-		]);
+		const seed = updatedTask.subtasks[2];
+		expect(seed.dependencies).toEqual([1, '2', '2.1']);
+		expect(
+			seed.dependencies.map((dep) => resolveSubtaskDependency(5, dep))
+		).toEqual(['5.1', '2', '2.1']);
 	});
 });

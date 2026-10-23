@@ -28,6 +28,8 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
   ```
 
 - **Subtask Dependencies**:
+  - ✅ DO: Read and write them by the rule in `@tm/core` (`resolveSubtaskDependency`): a number up to 99 is a sibling, a dotted string is that subtask, anything else is a task
+  - ✅ DO: Parse IDs a user types with `parseSubtaskDependencyInput` (`3` is task 3, as in `add-dependency`), and clean what the AI writes with `cleanGeneratedSubtaskDependencies`
   - ✅ DO: Allow numeric subtask IDs to reference other subtasks within the same parent
   - ✅ DO: Convert between formats appropriately when needed
   - ❌ DON'T: Create circular dependencies between subtasks

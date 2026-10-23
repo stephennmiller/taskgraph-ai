@@ -151,6 +151,31 @@ describe('expandTask with another writer', () => {
 		expect(saved.other.tasks).toHaveLength(1);
 	});
 
+	test('force drops dependencies and links on the old subtasks before adding new ones (#320)', async () => {
+		// Task 1 depends on 2.2 and links to 2.1; the new subtasks reuse both IDs
+		const current = readFile();
+		current.master.tasks[0].dependencies = ['2.2'];
+		current.master.tasks[0].metadata = {
+			dependencySources: { 2.2: 'inferred' },
+			taskLinks: { 2.1: 'related' }
+		};
+		current.master.tasks[1].subtasks = [
+			subtask(1, 'Old one'),
+			subtask(2, 'Old two')
+		];
+		fs.writeFileSync(tasksPath, JSON.stringify(current));
+
+		await expandTask(tasksPath, 2, 2, false, '', context(), true);
+
+		const saved = readFile().master.tasks;
+		expect(saved[1].subtasks.map((s) => s.title)).toEqual([
+			'Step one',
+			'Step two'
+		]);
+		expect(saved[0].dependencies).toEqual([]);
+		expect(saved[0].metadata).toBeUndefined();
+	});
+
 	test('fails clearly when the task was removed during the AI call', async () => {
 		generateObjectService.mockImplementation(async () => {
 			const current = readFile();

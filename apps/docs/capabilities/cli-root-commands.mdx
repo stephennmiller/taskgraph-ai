@@ -26,7 +26,7 @@ description: "A comprehensive reference of all available TaskGraph commands"
     taskgraph parse-prd <prd-file.txt> --answers questions.json
     ```
 
-    In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID.
+    In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID. With `--append`, Claude sees the existing tasks' IDs and titles, so a new task can depend on one of them. The new tasks are added to the tag as it is when they are saved: a change another command or agent made to the tag while Claude was working is kept, and the new tasks take the next free IDs after it.
 
     Each task records the PRD section it came from in `metadata.source`, such as `docs/prd.md#authentication`, and `taskgraph show` prints it.
 
@@ -303,6 +303,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
 
     Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask can't be marked done until they are checked off with `taskgraph set-status <id> --check <n>`.
+
+    `--force` replaces a task's subtasks. Dependencies and `related` / `discovered-from` links on the old subtasks are dropped first, so they don't end up naming the new subtasks that reuse their IDs.
   </Accordion>
 
   <Accordion title="Clear Subtasks">
@@ -316,6 +318,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Clear subtasks from all tasks
     taskgraph clear-subtasks --all
     ```
+
+    Dependencies on the cleared subtasks, and `related` / `discovered-from` links to them, are dropped too, as `remove-task` and `remove-subtask` do.
   </Accordion>
 
   <Accordion title="Analyze Task Complexity">
@@ -550,7 +554,10 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
   <Accordion title="Loop (Autonomous Batch Execution)">
     ```bash
-    # Run 10 iterations with the default preset
+    # Work through the backlog, one iteration per pending task
+    taskgraph loop
+
+    # Stop after 10 iterations
     taskgraph loop -n 10
 
     # Work on one task (1 iteration unless -n is given)
@@ -573,9 +580,6 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     # Custom progress file location
     taskgraph loop -n 10 --progress-file ./my-progress.txt
-
-    # Output as JSON
-    taskgraph loop -n 10 --json
     ```
 
     **Built-in presets:**

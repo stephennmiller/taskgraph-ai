@@ -90,6 +90,11 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   - ❌ DON'T: Store API keys in this file.
   - ❌ DON'T: Manually edit this file unless necessary.
 
+- **`.taskgraph/config.local.json` File** (gitignored, per-machine):
+  - ✅ DO: Know that `getConfig` merges it over `config.json` and `writeConfig` splits a config back into the two files (`mergeMachineConfig` / `splitMachineConfig` in `@tm/core`).
+  - ✅ DO: Add a setting that differs per machine (an absolute path, say) to `PER_MACHINE_CONFIG_KEYS` in `packages/tm-core/src/modules/config/services/machine-config.ts`, so it's always saved locally and moved out of `config.json`.
+  - ❌ DON'T: Write `config.json` directly with `fs`; go through `writeConfig` so per-machine settings stay out of the shared file.
+
 - **Configuration Getters (`config-manager.js`)**:
   - ✅ DO: Import and use specific getters from `config-manager.js` (e.g., `getMainProvider()`, `getLogLevel()`, `getMainMaxTokens()`) to access configuration values *needed for application logic* (like `getDefaultSubtasks`).
   - ✅ DO: Pass the `explicitRoot` parameter to getters if calling from MCP direct functions to ensure the correct project's config is loaded.
@@ -420,11 +425,8 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
     - Pass the *entire `args` object* received by the MCP tool (which should include `projectRoot` derived from the session) and the `log` object.
     - Implements a **simplified precedence system** for finding the `tasks.json` path:
         1.  Explicit `projectRoot` passed in `args` (Expected from MCP tools).
-        2.  Cached `lastFoundProjectRoot` (CLI fallback).
-        3.  Search upwards from `process.cwd()` (CLI fallback).
+        2.  Search upwards from `process.cwd()` (CLI fallback).
     - Throws a specific error if the `tasks.json` file cannot be located.
-    - Updates the `lastFoundProjectRoot` cache on success.
-- **`PROJECT_MARKERS`**: An exported array of common file/directory names used to identify a likely project root during the CLI fallback search.
 - **`getPackagePath()`**: Utility to find the installation path of the `taskgraph-ai` package itself (potentially removable).
 
 ## MCP Server Tool Utilities (`mcp-server/src/tools/utils.js`)
@@ -436,17 +438,12 @@ These utilities specifically support the implementation and execution of MCP too
     - **Logic**: Decodes URI, strips `file://`, handles Windows drive prefix (`/C:/`), replaces `\` with `/`, uses `path.resolve()`.
     - **Usage**: Used internally by `withNormalizedProjectRoot` HOF.
 
-- **`getRawProjectRootFromSession(session, log)`**:
-    - **Purpose**: Extracts the *raw* project root URI string from the session object (`session.roots[0].uri` or `session.roots.roots[0].uri`) without performing normalization.
-    - **Usage**: Used internally by `withNormalizedProjectRoot` HOF as a fallback if `args.projectRoot` isn't provided.
-
 - **`withNormalizedProjectRoot(executeFn)`**:
     - **Purpose**: A Higher-Order Function (HOF) designed to wrap a tool's `execute` method.
     - **Logic**: 
-        1. Determines the raw project root (from `args.projectRoot` or `getRawProjectRootFromSession`).
-        2. Normalizes the raw path using `normalizeProjectRoot`.
-        3. Injects the normalized, absolute path back into the `args` object as `args.projectRoot`.
-        4. Calls the original `executeFn` with the updated `args`.
+        1. Picks the project root in the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` (normalized with `normalizeProjectRoot`), else `TASKGRAPH_PROJECT_ROOT` from `process.env` or the session's env, else the session's root folder (`getProjectRootFromSession`). An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
+        2. Injects the absolute path back into the `args` object as `args.projectRoot`.
+        3. Calls the original `executeFn` with the updated `args`.
     - **Usage**: Should wrap the `execute` function of *every* MCP tool that needs a reliable, normalized project root path.
     - **Example**:
       ```javascript
@@ -484,10 +481,6 @@ These utilities specifically support the implementation and execution of MCP too
 - **`getProjectRootFromSession(session, log)`**:
     - **Purpose**: Legacy function to extract *and normalize* the project root from the session. Replaced by the HOF pattern but potentially still used.
     - **Recommendation**: Prefer using the `withNormalizedProjectRoot` HOF in tools instead of calling this directly.
-
-- **`executeTaskGraphCommand(...)`**: 
-    - **Purpose**: Executes `taskgraph` CLI command as a fallback. 
-    - **Recommendation**: Deprecated for most uses; prefer direct function calls.
 
 ## Export Organization
 
@@ -527,17 +520,13 @@ export {
 // Example export from mcp-server/src/core/utils/path-utils.js
 export {
   findTasksJsonPath,
-  getPackagePath,
-  PROJECT_MARKERS,
-  lastFoundProjectRoot // Exporting for potential direct use/reset if needed
+  getPackagePath
 };
 
 // Example export from mcp-server/src/tools/utils.js
 export {
-  getProjectRoot,
   getProjectRootFromSession,
   handleApiResult,
-  executeTaskGraphCommand,
   processMCPResponseData,
   createContentResponse,
   createErrorResponse

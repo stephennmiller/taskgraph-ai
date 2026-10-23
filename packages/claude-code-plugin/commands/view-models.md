@@ -2,50 +2,8 @@
 description: "TaskGraph: show which AI models TaskGraph is set to use."
 ---
 
-View current AI model configuration.
+Show the AI models TaskGraph uses.
 
-## Model Configuration Display
-
-Shows the currently configured AI providers and models for TaskGraph.
-
-## Execution
-
-```bash
-taskgraph models
-```
-
-## Information Displayed
-
-1. **Main Provider**
-   - Model ID and name
-   - Usage: Primary task generation
-
-2. **Research Provider**
-   - Model ID and name
-   - Usage: Enhanced research mode
-
-3. **Fallback Provider**
-   - Model ID and name
-   - Usage: Backup when main fails
-
-## Visual Status
-
-```
-TaskGraph Model Configuration
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Main:     ✅ claude-code / sonnet
-Research: ✅ claude-code / sonnet
-Fallback: ✅ claude-code / sonnet
-
-Available Models:
-- opus
-- sonnet
-- haiku
-```
-
-## Next Actions
-
-Based on configuration:
-- If Claude Code is missing → Suggest installing and signing in
-- If no research model → Explain benefits
-- If all configured → Show usage tips
+1. Run `taskgraph models`.
+2. Show the output unchanged in a code block.
+3. Then, in one sentence, say which model each role uses (main, research, fallback) and that `/taskgraph:setup-models` changes them. TaskGraph runs every model through Claude Code, so no API keys are needed.

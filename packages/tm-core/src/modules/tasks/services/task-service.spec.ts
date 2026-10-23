@@ -248,3 +248,37 @@ describe('TaskService.getNextTask', () => {
 		});
 	});
 });
+
+describe('TaskService.getTask', () => {
+	/** A TaskService whose storage returns this task as tasks.json stores it */
+	const serviceLoading = (stored: unknown): TaskService => {
+		const service = new TaskService({
+			getActiveTag: () => 'master'
+		} as unknown as ConfigManager);
+		(service as any).storage = { loadTask: async () => stored };
+		return service;
+	};
+
+	// Regression: #311, show returned numeric IDs where list and next give strings
+	it('gives IDs as strings, as getTaskList does', async () => {
+		const service = serviceLoading({
+			...task(2),
+			id: 2,
+			dependencies: [1],
+			subtasks: [{ id: 1, title: 'Schema', status: 'pending', dependencies: [] }]
+		});
+
+		const loaded = await service.getTask('2');
+
+		expect(loaded?.id).toBe('2');
+		expect(loaded?.dependencies).toEqual(['1']);
+		expect(loaded?.subtasks[0].id).toBe('1');
+		expect(loaded?.subtasks[0].parentId).toBe('2');
+	});
+
+	it('returns null for a task that does not exist', async () => {
+		const loaded = await serviceLoading(null).getTask('9');
+
+		expect(loaded).toBeNull();
+	});
+});

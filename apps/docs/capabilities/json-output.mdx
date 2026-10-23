@@ -14,7 +14,7 @@ taskgraph next --format json
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "found": true,
   "task": { "id": "2", "title": "Add Postgres", "status": "pending", ... },
   "tag": "master",
@@ -73,7 +73,12 @@ For a given `schemaVersion`:
 
 Removing or renaming a key, or changing its type, raises `schemaVersion`. A new key does not.
 
-The current version is `1`.
+The current version is `2`.
+
+| Version | Change |
+|---------|--------|
+| `2` | `show` gives task IDs, task `dependencies` and subtask IDs as strings, as `list` and `next` do, and its subtasks gain `parentId`. A subtask's `dependencies` keep their stored type: a bare number names a sibling subtask, a string names a task or a dotted subtask. |
+| `1` | First versioned output. |
 
 ## Not the same as the tasks file version
 

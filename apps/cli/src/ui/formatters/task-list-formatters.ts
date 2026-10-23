@@ -26,7 +26,12 @@
  * generic next steps.
  */
 
-import { type Task, fullSubtaskId, resolveSubtaskDependency } from '@tm/core';
+import {
+	type Task,
+	fullSubtaskId,
+	isTaskComplete,
+	resolveSubtaskDependency
+} from '@tm/core';
 import chalk from 'chalk';
 import {
 	type TaskStatistics,
@@ -34,7 +39,6 @@ import {
 	calculateSubtaskStatistics,
 	calculateTaskStatistics
 } from '../components/dashboard.component.js';
-import { isTaskComplete } from '../../utils/task-status.js';
 import { terminalWidth } from '../layout/helpers.js';
 import { getSuggestedActions } from '../suggested-actions.js';
 import { theme } from '../theme.js';

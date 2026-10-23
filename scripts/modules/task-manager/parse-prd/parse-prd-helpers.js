@@ -6,13 +6,17 @@ import { ui } from '@tm/cli';
 import {
 	PRD_SNAPSHOT_KEY,
 	assignMetadata,
+	formatExistingTaskList,
 	formatPrdSectionList,
 	nextTaskId,
+	numberGeneratedTasks,
 	prdSourceMetadata,
 	readArchivedIdsSync,
 	reconcileDependencySources,
 	setGeneratedCriteria,
-	withPrdSnapshot
+	withPrdSnapshot,
+	getOwnKey,
+	setOwnKey
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -21,11 +25,7 @@ import { displayParsePrdSummary } from '../../../../src/ui/parse-prd.js';
 import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
-import {
-	ensureTagMetadata,
-	findTaskById,
-	withFileLockSync
-} from '../../utils.js';
+import { ensureTagMetadata, withFileLockSync } from '../../utils.js';
 import { prdResponseSchema } from './parse-prd-config.js';
 
 /**
@@ -116,10 +116,11 @@ export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
 
 	const allData = readExistingTasksFile(tasksPath);
-	const tagMetadata = allData[targetTag]?.metadata || {};
+	const tagData = getOwnKey(allData, targetTag);
+	const tagMetadata = tagData?.metadata || {};
 
-	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
-		existingTasks = allData[targetTag].tasks;
+	if (Array.isArray(tagData?.tasks)) {
+		existingTasks = tagData.tasks;
 	}
 
 	const { highestId } = readArchivedIdsSync(tasksPath, targetTag);
@@ -171,6 +172,12 @@ export function validateFileOperations({
 	isMCP,
 	logger
 }) {
+	// JavaScript objects treat a `__proto__` key as their prototype, so no
+	// command creates a tag of that name
+	if (targetTag === '__proto__') {
+		throw new Error('"__proto__" is a reserved tag name');
+	}
+
 	const hasExistingTasks = existingTasks.length > 0;
 
 	if (!hasExistingTasks) {
@@ -211,11 +218,14 @@ export function validateFileOperations({
 /**
  * Process and transform tasks with ID remapping
  * @param {Array} rawTasks - Raw tasks from AI
- * @param {number} startId - Starting ID for new tasks
- * @param {Array} existingTasks - Existing tasks for dependency validation
+ * @param {number} startId - ID the first new task gets
+ * @param {Array} existingTasks - The tag's tasks now; a new task may depend
+ *   on one of them
  * @param {string} defaultPriority - Default priority for tasks
  * @param {{path: string, sections: Array}} [prd] - The PRD's path and
  *   headings; a task naming one of them gets `metadata.source`
+ * @param {number} [promptStartId=startId] - The first ID the prompt told the
+ *   model to use; a dependency below it names an existing task
  * @returns {Array} Processed tasks with remapped IDs
  */
 export function processTasks(
@@ -223,18 +233,19 @@ export function processTasks(
 	startId,
 	existingTasks,
 	defaultPriority,
-	prd
+	prd,
+	promptStartId = startId
 ) {
 	// Runtime guard: ensure PRD task IDs are unique and sequential (1..N).
-	validateSequentialTaskIds(rawTasks, startId);
+	validateSequentialTaskIds(rawTasks, promptStartId);
 
-	let currentId = startId;
-	const taskMap = new Map();
+	const numbered = numberGeneratedTasks(rawTasks, {
+		promptStartId,
+		startId,
+		existingIds: existingTasks.map((task) => task.id)
+	});
 
-	// First pass: assign new IDs and create mapping
-	const processedTasks = rawTasks.map(({ section, ...task }) => {
-		const newId = currentId++;
-		taskMap.set(task.id, newId);
+	return rawTasks.map(({ section, ...task }, index) => {
 		// Only a section the PRD has; an invented slug would point nowhere.
 		// The section's hash lets a later --append tell whether it changed
 		const source = prd
@@ -242,13 +253,12 @@ export function processTasks(
 			: undefined;
 
 		// The AI's criteria are stored as unchecked items (none: no field)
-		return setGeneratedCriteria({
+		const processed = setGeneratedCriteria({
 			...task,
 			...(source ? { metadata: { ...task.metadata, ...source } } : {}),
-			id: newId,
+			...numbered[index],
 			status: task.status || 'pending',
 			priority: task.priority || defaultPriority,
-			dependencies: Array.isArray(task.dependencies) ? task.dependencies : [],
 			subtasks: task.subtasks || [],
 			// Ensure all required fields have values
 			title: task.title || '',
@@ -256,24 +266,10 @@ export function processTasks(
 			details: task.details || '',
 			testStrategy: task.testStrategy || ''
 		});
-	});
-
-	// Second pass: remap dependencies
-	processedTasks.forEach((task) => {
-		task.dependencies = task.dependencies
-			.map((depId) => taskMap.get(depId))
-			.filter(
-				(newDepId) =>
-					newDepId != null &&
-					newDepId < task.id &&
-					(findTaskById(existingTasks, newDepId) ||
-						processedTasks.some((t) => t.id === newDepId))
-			);
 		// The AI invented these dependencies, so record them as inferred
-		assignMetadata(task, reconcileDependencySources(task));
+		assignMetadata(processed, reconcileDependencySources(processed));
+		return processed;
 	});
-
-	return processedTasks;
 }
 
 function validateSequentialTaskIds(rawTasks, expectedStartId = 1) {
@@ -318,8 +314,10 @@ function validateSequentialTaskIds(rawTasks, expectedStartId = 1) {
  * tasks file lock and the file is replaced atomically, so a concurrent
  * writer's other tags aren't lost and a crash can't leave half a file.
  * @param {string} tasksPath - Path to save tasks
- * @param {Array|null} tasks - Tasks to save, or null to keep the tag's tasks
- *   as they are in the file now (only the metadata changes)
+ * @param {Array|Function|null} tasks - Tasks to save; a function, called
+ *   under the lock with the tag's tasks as the file has them now, that
+ *   returns the tasks to save; or null to keep the tag's tasks as they are
+ *   (only the metadata changes)
  * @param {string} targetTag - Target tag
  * @param {Object} logger - Logger instance
  * @param {{path: string, snapshot: Object, replace?: boolean}} [prdSnapshot] -
@@ -345,12 +343,15 @@ export function saveTasksToFile(
 		() => {
 			// Read existing file to preserve other tags
 			const outputData = readExistingTasksFile(tasksPath);
-			const current = outputData[targetTag];
+			const current = getOwnKey(outputData, targetTag);
+			const currentTasks = Array.isArray(current?.tasks) ? current.tasks : [];
 			const tagTasks =
-				tasks ?? (Array.isArray(current?.tasks) ? current.tasks : []);
+				typeof tasks === 'function'
+					? tasks(currentTasks)
+					: (tasks ?? currentTasks);
 
 			// Update only the target tag
-			outputData[targetTag] = {
+			const tagData = {
 				tasks: tagTasks,
 				metadata: {
 					// Keep what the tag already records (schemaVersion, counts, ...)
@@ -370,8 +371,10 @@ export function saveTasksToFile(
 				}
 			};
 
+			setOwnKey(outputData, targetTag, tagData);
+
 			// Ensure proper metadata
-			ensureTagMetadata(outputData[targetTag], {
+			ensureTagMetadata(tagData, {
 				description: `Tasks for ${targetTag} context`
 			});
 
@@ -402,9 +405,10 @@ export function saveTasksToFile(
  * @param {string} prdContent - PRD content
  * @param {number} nextId - Next task ID
  * @param {{sections: Array}} [prd] - The PRD's headings, for tasks to cite
- * @param {{numTasks?: number, newSectionsOnly?: boolean}} [options] -
+ * @param {{numTasks?: number, newSectionsOnly?: boolean, existingTasks?: Array}} [options] -
  *   With newSectionsOnly, prdContent holds only the sections added since the
- *   last parse, and numTasks (0: the model decides) replaces config.numTasks
+ *   last parse, and numTasks (0: the model decides) replaces config.numTasks.
+ *   existingTasks (with --append) are listed so new tasks can depend on them
  * @returns {Promise<{systemPrompt: string, userPrompt: string}>}
  */
 export async function buildPrompts(
@@ -425,6 +429,9 @@ export async function buildPrompts(
 		prdPath: config.prdPath,
 		prdSections: prd?.sections?.length
 			? formatPrdSectionList(prd.sections)
+			: '',
+		existingTasks: options.existingTasks?.length
+			? formatExistingTaskList(options.existingTasks)
 			: '',
 		hasCodebaseAnalysis: config.hasCodebaseAnalysis(),
 		projectRoot: config.projectRoot || ''

@@ -3,7 +3,7 @@ title: "Upgrading"
 description: "What to change when moving an existing project to a newer TaskGraph, from Task Master or from any earlier release"
 ---
 
-TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52. Step 7 (`start` and `autopilot` folded into `loop`) applies to anyone who used them.
+TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52. Step 7 (`start` and `autopilot` folded into `loop`) applies to anyone who used them. Step 8 (stop committing `state.json`) applies to every project set up before it.
 
 ## 1. Import the project folder
 
@@ -79,6 +79,8 @@ There are no aliases. If you used one of the old names in a script, a note or a 
 | `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` and `to-in-progress` stay) |
 | `remove-subtasks` | `clear-subtasks <id>` |
 | `remove-all-subtasks` | `clear-subtasks --all` |
+| `learn` | `help` |
+| `analyze-project` | `project-status` (progress, work in hand and bottlenecks, from `taskgraph list` and `taskgraph graph`) |
 
 Updating the plugin itself leaves nothing behind. Claude Code installs each plugin version into its own directory (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>`) and points the install path at the active one. On a real update of `superpowers` from 6.4.2 to 7.0.0, the old directory kept a file the new version dropped and got an `.orphaned_at` marker, while 7.0.0 did not have the file. A plugin with no `version` field, like this one, is probably keyed by commit SHA instead. Whether the update arrives automatically or needs `/plugin marketplace update taskgraph` is not verified, so run it.
 
@@ -111,6 +113,20 @@ Claude Code no longer reads that variable: it defers MCP tool definitions by def
 - **`start`** still runs for one more release, hidden from help. It prints `start is deprecated; run taskgraph loop -n 1 --id <id> instead` and then runs that loop. It now runs Claude Code non-interactively (`claude -p`), like every `loop` run, instead of opening an interactive session. The first run in a project asks you to allow Claude to work without permission prompts; pass `--trust` in scripts. `--dry-run`, `--force`, `--no-status-update` and `--format json` are gone: use `taskgraph show <id>` to see a task without starting it.
 - **`autopilot`** is removed with its 8 `autopilot_*` MCP tools. The `tdd` preset runs the same RED, GREEN, COMMIT cycle for each subtask as a prompt, on a `task-<id>` branch (see [tdd](/capabilities/loop-presets#tdd)). Nothing checks the test results for Claude any more, and there is no `resume` or `abort`: stop with Ctrl-C and run the same command again to continue. The workflow state `autopilot` kept in `~/.taskgraph/<project>/sessions/` is no longer read; you can delete that folder. With `TASKGRAPH_TOOLS=all`, the MCP server now loads 40 tools instead of 48.
 - **Plugin**: refresh it (`/plugin marketplace update taskgraph`) to drop the removed commands and agent.
+
+## 8. Stop committing state.json and per-machine settings
+
+This applies to every project set up before this change. Earlier `init` runs didn't gitignore `.taskgraph/state.json`, which holds your current tag, so every `taskgraph tags use` changed a committed file and two people on different tags got conflicts. `.taskgraph/config.json` could also hold an absolute `claudeCode.pathToClaudeCodeExecutable` that only works on one machine.
+
+1. Re-run `taskgraph init --yes`. It adds `.taskgraph/state.json` and `.taskgraph/config.local.json` to `.gitignore`, and moves `pathToClaudeCodeExecutable` from `config.json` to `config.local.json`. TaskGraph also moves it the next time it saves settings, for example on `taskgraph models --set-main`.
+2. Stop tracking `state.json`; `.gitignore` alone doesn't untrack a committed file. `init` reminds you when it's still tracked:
+
+   ```bash
+   git rm --cached .taskgraph/state.json
+   git commit -m "chore: stop tracking TaskGraph state.json"
+   ```
+
+Each person keeps their own `state.json` and current tag. Until you upgrade, `pathToClaudeCodeExecutable` in `config.json` keeps working. See [Shared and per-machine settings](/configuration#shared-and-per-machine-settings).
 
 ## Credit
 

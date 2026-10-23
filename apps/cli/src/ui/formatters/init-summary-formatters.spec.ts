@@ -90,4 +90,42 @@ describe('formatInitSummary', () => {
 			'  .taskgraph/config.json  restored'
 		]);
 	});
+
+	it('keeps "already set up" when the only row is a hint', () => {
+		const text = plain(
+			formatInitSummary({
+				...fresh,
+				alreadySetUp: true,
+				changes: [],
+				hints: [
+					{
+						path: '.taskgraph/state.json',
+						note: 'ignored but still tracked; `git rm --cached` it'
+					}
+				]
+			})
+		);
+
+		expect(text.split('\n')).toEqual([
+			'✓ TaskGraph is already set up in my-app',
+			'  .taskgraph/state.json  ignored but still tracked; git rm --cached it'
+		]);
+	});
+
+	it('lists hints after the changes, aligned with them', () => {
+		const text = plain(
+			formatInitSummary({
+				...fresh,
+				alreadySetUp: true,
+				changes: [{ path: '.gitignore', note: 'added TaskGraph entries' }],
+				hints: [{ path: '.taskgraph/state.json', note: 'still tracked' }]
+			})
+		);
+
+		expect(text.split('\n')).toEqual([
+			'✓ Updated TaskGraph in my-app',
+			'  .gitignore             added TaskGraph entries',
+			'  .taskgraph/state.json  still tracked'
+		]);
+	});
 });

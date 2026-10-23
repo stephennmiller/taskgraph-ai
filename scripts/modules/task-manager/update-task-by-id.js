@@ -1,7 +1,8 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
-	keepChecklistFields,
+	cleanGeneratedSubtaskDependencies,
+	keepStoredFields,
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '@tm/core';
@@ -376,7 +377,7 @@ async function updateTaskById(
 			if (updatedTask.subtasks && Array.isArray(updatedTask.subtasks)) {
 				let currentSubtaskId = 1;
 				updatedTask.subtasks = updatedTask.subtasks.map((subtask) => {
-					// Find original subtask to preserve its metadata
+					// Find the original subtask to keep the fields the AI can't return
 					// Use type-coerced ID matching (AI may return string IDs vs numeric)
 					// Also match by title as fallback (subtask titles are typically unique)
 					const originalSubtask = taskToUpdate.subtasks?.find(
@@ -388,27 +389,16 @@ async function updateTaskById(
 					const correctedSubtask = {
 						...subtask,
 						id: currentSubtaskId, // Override AI-generated ID with correct sequential ID
-						dependencies: Array.isArray(subtask.dependencies)
-							? subtask.dependencies
-									.map((dep) =>
-										typeof dep === 'string' ? parseInt(dep, 10) : dep
-									)
-									.filter(
-										(depId) =>
-											!Number.isNaN(depId) &&
-											depId >= 1 &&
-											depId < currentSubtaskId
-									)
-							: [],
+						// A number is an earlier sibling; a string is a task or subtask
+						dependencies: cleanGeneratedSubtaskDependencies(
+							subtask.dependencies,
+							taskId,
+							currentSubtaskId
+						),
 						status: subtask.status || 'pending',
-						testStrategy: subtask.testStrategy ?? null,
-						// Preserve subtask metadata from original (AI schema excludes metadata)
-						...(originalSubtask?.metadata && {
-							metadata: originalSubtask.metadata
-						})
+						testStrategy: subtask.testStrategy ?? null
 					};
-					// The AI schema has no criteria either; keep the stored checklist
-					keepChecklistFields(correctedSubtask, originalSubtask);
+					keepStoredFields(correctedSubtask, originalSubtask);
 					currentSubtaskId++;
 					// Dependencies the AI added are inferred; earlier marks stay.
 					// Known limit: subtasks are renumbered above without remapping their
@@ -476,25 +466,25 @@ async function updateTaskById(
 			}
 			// --- End Task Validation/Correction ---
 
+			// The AI schema has only some fields and sends null for the ones it has
+			// nothing to say about; keep the stored value of each (GitHub link,
+			// tags, details, criteria and the done gate they carry, ...)
+			keepStoredFields(updatedTask, taskToUpdate);
+
 			// --- Preserve and Merge Metadata ---
-			// AI responses don't include metadata (AI schema excludes it)
-			// Preserve existing metadata from original task and merge new metadata if provided
-			// Dependencies the AI added are recorded as inferred; earlier marks stay
+			// Stored metadata plus the user's, with dependencies the AI added
+			// recorded as inferred (earlier marks stay)
 			const dependencyMetadata = reconcileDependencySources(
 				updatedTask,
 				taskToUpdate
 			);
-			if (dependencyMetadata || metadata) {
-				updatedTask.metadata = {
-					...(dependencyMetadata || {}),
-					...(metadata || {})
-				};
-			}
+			assignMetadata(
+				updatedTask,
+				dependencyMetadata || metadata
+					? { ...(dependencyMetadata || {}), ...(metadata || {}) }
+					: undefined
+			);
 			// --- End Preserve and Merge Metadata ---
-
-			// The AI schema has no acceptance criteria; keep the stored checklist
-			// so a rewrite can't drop criteria and with them the done gate
-			keepChecklistFields(updatedTask, taskToUpdate);
 
 			// --- Update Task Data (Keep existing) ---
 			data.tasks[taskIndex] = updatedTask;

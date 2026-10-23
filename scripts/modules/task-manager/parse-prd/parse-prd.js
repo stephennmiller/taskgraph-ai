@@ -4,9 +4,11 @@ import {
 	diffPrdSections,
 	getPrdSnapshot,
 	hasPrdChanges,
+	nextTaskId,
 	parsePrdSections,
 	prdDeltaContent,
-	prdPathForSource
+	prdPathForSource,
+	readArchivedIdsSync
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -142,7 +144,7 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			deltaOnly ? prdDeltaContent(prdDelta, prdContent) : prdContent,
 			nextId,
 			deltaOnly ? { ...prd, sections: prdDelta.added } : prd,
-			{ numTasks, newSectionsOnly: deltaOnly }
+			{ numTasks, newSectionsOnly: deltaOnly, existingTasks }
 		);
 
 		// Call the appropriate service handler
@@ -153,25 +155,31 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			nextId
 		);
 
-		// Process tasks
+		// Number the new tasks and save them against the tag as the file has it
+		// now, under the lock: another command may have changed the tag while
+		// the model ran, and its changes and IDs must survive
 		const defaultPriority = getDefaultPriority(config.projectRoot) || 'medium';
-		const processedNewTasks = processTasks(
-			serviceResult.parsedTasks,
-			nextId,
-			existingTasks,
-			defaultPriority,
-			prd
-		);
-
-		// Combine with existing if appending
-		const finalTasks = config.append
-			? [...existingTasks, ...processedNewTasks]
-			: processedNewTasks;
-
-		// Save to file
+		let processedNewTasks = [];
+		let finalTasks = [];
 		saveTasksToFile(
 			config.tasksPath,
-			finalTasks,
+			(currentTasks) => {
+				// Overwriting (--force) replaces the list
+				const keptTasks = config.append ? currentTasks : [];
+				processedNewTasks = processTasks(
+					serviceResult.parsedTasks,
+					nextTaskId(
+						keptTasks.map((t) => t.id),
+						readArchivedIdsSync(config.tasksPath, config.targetTag).highestId
+					),
+					keptTasks,
+					defaultPriority,
+					prd,
+					nextId
+				);
+				finalTasks = [...keptTasks, ...processedNewTasks];
+				return finalTasks;
+			},
 			config.targetTag,
 			logger,
 			prdSnapshot

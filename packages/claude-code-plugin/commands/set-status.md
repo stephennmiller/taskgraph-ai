@@ -9,38 +9,29 @@ Usage: `/taskgraph:set-status <id> <status>`
 
 Arguments: $ARGUMENTS (task ID, then status)
 
-`/taskgraph:to-in-progress <id>` and `/taskgraph:to-done <id>` stay as shortcuts for the two most common changes. Use this command for every other status.
+`/taskgraph:to-in-progress <id>` and `/taskgraph:to-done <id>` are the shortcuts for the two most common changes; `to-done` checks the acceptance criteria first. Use this command for every other status:
 
-## Statuses
+- `pending` - not started, or moved back to the start
+- `in-progress` - being worked on
+- `review` - work is complete and waits for review
+- `done` - completed and verified
+- `deferred` - valid, but postponed
+- `cancelled` - no longer needed; kept for reference
+- `blocked` - waiting on something outside the plan
 
-- `pending` - Not yet started, or moved back to the start
-- `in-progress` - Currently being worked on
-- `done` - Completed and verified
-- `review` - Work is complete but needs verification before final approval
-- `deferred` - Valid, but postponed
-- `cancelled` - No longer needed; kept for reference
-- `blocked` - Waiting on external factors
+Use the ID only when it is digits and dots (`3`, `3.2`, or several as `3,4`). If the status is missing or isn't one of these, ask which one is meant before changing anything.
 
-If the status is missing or is not one of these, ask which one is meant before changing anything.
+1. Run:
 
-## Execution
+   ```bash
+   taskgraph set-status --id=<id> --status=<status>
+   ```
 
-```bash
-taskgraph set-status --id=<id> --status=<status>
-```
+   For `done`, `set-status` refuses while acceptance criteria are unchecked and lists them. Report that; pass `--force` only when the user says so.
+2. For `deferred`, `cancelled` or `blocked`, save the user's reason on the task, in single quotes with any `'` written as `'\''`. `note` takes one ID, so run it once per task. The `--` stops a reason that starts with `-` from being read as a flag (`--file=...` would read a file into the note):
 
-Put the IDs into the command only when they are digits and dots (`5`, `5.2`), or a comma-separated list of them (`5,6.1`); otherwise ask the user for the task ID.
+   ```bash
+   taskgraph note <id> -- '<reason>'
+   ```
 
-## Per-status checks
-
-- **pending**: warn if the task is in-progress, and check whether this blocks other tasks
-- **review**: summarize key changes and test results, and note who should review
-- **deferred**: record why, and the criteria for picking it up again
-- **cancelled**: confirm no task depends on it, and record why
-- **blocked**: record what the task is waiting on
-
-## After the change
-
-- Show the updated task
-- List tasks this change unblocks, or now blocks
-- Suggest the next task with `taskgraph next`
+3. Show the `set-status` output unchanged, then suggest `taskgraph next` for what to work on now.

@@ -24,7 +24,7 @@
 
 import type { CommandSpec } from './spec.js';
 
-export const ENGINE_SOURCE = `
+const ENGINE_SOURCE = `
 var fs = require("fs");
 var path = require("path");
 var args = process.argv.slice(1);
@@ -107,7 +107,7 @@ function readProject() {
 			tag = state.currentTag || state.activeTag;
 		} catch (e) {}
 	}
-	if (!data[tag]) tag = tags.indexOf("master") >= 0 ? "master" : tags[0];
+	if (tags.indexOf(tag) < 0) tag = tags.indexOf("master") >= 0 ? "master" : tags[0];
 	return { tags: tags, tasks: tag ? data[tag].tasks : [] };
 }
 
