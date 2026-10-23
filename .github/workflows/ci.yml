@@ -127,6 +127,13 @@ jobs:
         env:
           FORCE_COLOR: 1
 
+      # The only check that reads the legacy JS (allowJs + strict) together
+      # with the TypeScript that calls it, so a JSDoc type that disagrees with
+      # a TypeScript caller fails here
+      - name: Typecheck legacy JS with its TypeScript callers
+        if: ${{ !cancelled() }}
+        run: npm run typecheck:root
+
   # Build job to ensure everything compiles
   build:
     name: Build

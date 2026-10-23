@@ -88,6 +88,7 @@ Your PR **must pass all CI checks**:
 
 - ✅ **Tests**: `npm test`, plus `npm run test -w @tm/cli` and `npm run test -w @tm/core` for the packages you touched
 - ✅ **Types**: `npm run turbo:typecheck`
+- ✅ **Legacy JS types**: `npm run typecheck:root` (checks the JSDoc in `scripts/` against the TypeScript that calls it)
 - ✅ **Format check**: `npm run format-check`
 
 **Test your changes locally first** - this saves review time and shows you care about quality.

@@ -23,6 +23,7 @@
 		"turbo:dev": "turbo dev",
 		"turbo:build": "turbo build",
 		"turbo:typecheck": "turbo typecheck",
+		"typecheck:root": "tsc --noEmit -p tsconfig.json",
 		"turbo:test": "turbo test",
 		"turbo:test:unit": "turbo test:unit",
 		"turbo:test:integration": "turbo test:integration",
