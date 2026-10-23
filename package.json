@@ -64,7 +64,7 @@
 		"cli",
 		"llm"
 	],
-	"author": "Eyal Toledano",
+	"author": "Stephen Miller",
 	"license": "MIT WITH Commons-Clause",
 	"dependencies": {
 		"@streamparser/json": "^0.0.26",
