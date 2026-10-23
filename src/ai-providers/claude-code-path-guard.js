@@ -100,11 +100,11 @@ export function normalizeSegment(segment) {
  * Fold case the way a case-insensitive filesystem compares names. NTFS
  * upper-cases both sides, so `.aw\u017F` (long s) and `.g\u0131t` (dotless i)
  * can open `.aws` and `.git`; APFS case-folds, so `server.\u212Aey` (Kelvin
- * sign) can open `server.key`. Upper- then lower-casing maps all three to
- * ASCII, which a plain `/i` regex does not.
+ * sign) can open `server.key`. NFKC, then upper- then lower-casing maps all
+ * three to ASCII, which a plain `/i` regex does not.
  */
 function foldCase(name) {
-	return name.toUpperCase().toLowerCase();
+	return name.normalize('NFKC').toUpperCase().toLowerCase();
 }
 
 /** True when any part of a path or glob names a credentials file. */
@@ -170,6 +170,34 @@ export function excludeSecretsFromGrep(toolInput = {}) {
 	};
 }
 
+// Directories that hold a path-scoped secret: .docker, .config and git
+const SECRET_DIRS = new Set(
+	SECRETS.paths.flatMap((segments) => segments.slice(0, -1))
+);
+
+/**
+ * True when the resolved path names a directory in SECRET_DIRS in a spelling
+ * that only Windows or a case-insensitive filesystem opens as that directory:
+ * `.docker.`, `.docker `, `.doc\u212Aer` (Kelvin sign), `.config/g\u0131t`
+ * (dotless i). rg matches its exclusion for `.docker/config.json` against the
+ * spelling it is given, so a Grep there would read the secret. Plain ASCII
+ * case is fine, since those exclusions match any ASCII case. Only ASCII
+ * letters are lower-cased for that comparison: toLowerCase maps the Kelvin
+ * sign to k too.
+ */
+function spellsSecretDirOddly(root, candidate) {
+	const resolved = resolvePathInsideRoot(root, candidate);
+	if (resolved === null) return false;
+	return path
+		.relative(root, resolved)
+		.split(/[\\/]/)
+		.some((part) => {
+			const opened = foldCase(normalizeSegment(part));
+			const typed = part.replace(/[A-Z]/g, (c) => c.toLowerCase());
+			return opened !== typed && SECRET_DIRS.has(opened);
+		});
+}
+
 /** Judge the path below the root, and where a symlink really leads */
 function targetsSecret(root, candidate) {
 	const resolved = path.resolve(root, candidate);
@@ -225,7 +253,7 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		if (!isInsideRoot(root, p)) {
 			return `${toolName} is limited to the project directory (${root}); ${p} is outside it.`;
 		}
-		if (targetsSecret(root, p)) {
+		if (targetsSecret(root, p) || spellsSecretDirOddly(root, p)) {
 			return `${toolName} may not open secret files such as .env, .git or keys (${p}).`;
 		}
 	}
