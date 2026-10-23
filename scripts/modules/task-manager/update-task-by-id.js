@@ -4,6 +4,7 @@ import {
 	cleanGeneratedSubtaskDependencies,
 	keepStoredFields,
 	reconcileDependencySources,
+	stripTerminalControls,
 	withoutReservedMetadata
 } from '@tm/core';
 import fs from 'fs';
@@ -107,7 +108,7 @@ async function updateTaskById(
 			throw new Error(`Task ${numericTaskId} not found`);
 		}
 		const taskToUpdate = data.tasks[taskIndex];
-		if (taskToUpdate.status === 'done' || taskToUpdate.status === 'completed') {
+		if (taskToUpdate.status === 'done') {
 			// The CLI command explains this once, with the fix; MCP gets a warning
 			if (outputFormat !== 'text') {
 				report(
@@ -239,7 +240,7 @@ async function updateTaskById(
 		if (!isMCP && outputFormat === 'text') {
 			// The spinner names the task, so no header box is needed above it
 			loadingIndicator = startLoadingIndicator(
-				`Updating task ${taskId}: ${truncate(taskToUpdate.title, 50)}${useResearch ? ' (with research)' : ''}`
+				`Updating task ${taskId}: ${truncate(stripTerminalControls(String(taskToUpdate.title ?? ''), { singleLine: true }), 50)}${useResearch ? ' (with research)' : ''}`
 			);
 		}
 
@@ -430,7 +431,7 @@ async function updateTaskById(
 					updatedTask.subtasks = taskToUpdate.subtasks;
 				} else {
 					const completedOriginal = taskToUpdate.subtasks.filter(
-						(st) => st.status === 'done' || st.status === 'completed'
+						(st) => st.status === 'done'
 					);
 					completedOriginal.forEach((compSub) => {
 						const updatedSub = updatedTask.subtasks.find(

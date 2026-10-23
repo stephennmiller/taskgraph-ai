@@ -70,27 +70,6 @@ describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
 			expect(stats.completionPercentage).toBe(100);
 		});
 
-		it('should treat completed status as complete in percentage calculation', () => {
-			// Arrange: Mix of done, completed, cancelled, pending
-			const tasks: Task[] = [
-				createTestTask({ id: '1', status: 'done' }),
-				createTestTask({ id: '2', status: 'completed' }),
-				createTestTask({ id: '3', status: 'cancelled' }),
-				createTestTask({ id: '4', status: 'pending' })
-			];
-
-			// Act
-			const stats = calculateTaskStatistics(tasks);
-
-			// Assert
-			expect(stats.total).toBe(4);
-			expect(stats.done).toBe(1);
-			expect(stats.cancelled).toBe(1);
-			expect(stats.completedCount).toBe(3); // done + completed + cancelled
-			// 3 complete out of 4 total = 75%
-			expect(stats.completionPercentage).toBe(75);
-		});
-
 		it('should show 100% completion when all tasks are cancelled', () => {
 			// Arrange
 			const tasks: Task[] = [
@@ -149,30 +128,6 @@ describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
 			expect(stats.completedCount).toBe(4); // done + cancelled
 			expect(stats.completionPercentage).toBe(100);
 		});
-
-		it('should handle completed status in subtasks', () => {
-			// Arrange
-			const tasks: Task[] = [
-				createTestTask({
-					id: '1',
-					status: 'in-progress',
-					subtasks: [
-						createTestSubtask('1', '1', 'done'),
-						createTestSubtask('2', '1', 'completed'),
-						createTestSubtask('3', '1', 'pending')
-					]
-				})
-			];
-
-			// Act
-			const stats = calculateSubtaskStatistics(tasks);
-
-			// Assert
-			expect(stats.total).toBe(3);
-			expect(stats.completedCount).toBe(2); // done + completed
-			// 2 complete (done + completed) out of 3 = 67%
-			expect(stats.completionPercentage).toBe(67);
-		});
 	});
 
 	describe('calculateDependencyStatistics', () => {
@@ -190,21 +145,6 @@ describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
 			const stats = calculateDependencyStatistics(tasks);
 
 			// Assert: Task 15 should be ready since its dependency (14) is cancelled
-			expect(stats.tasksBlockedByDeps).toBe(0);
-			expect(stats.tasksReadyToWork).toBe(1);
-		});
-
-		it('should treat completed status as satisfied dependencies', () => {
-			// Arrange
-			const tasks: Task[] = [
-				createTestTask({ id: '1', status: 'completed' }),
-				createTestTask({ id: '2', status: 'pending', dependencies: ['1'] })
-			];
-
-			// Act
-			const stats = calculateDependencyStatistics(tasks);
-
-			// Assert
 			expect(stats.tasksBlockedByDeps).toBe(0);
 			expect(stats.tasksReadyToWork).toBe(1);
 		});

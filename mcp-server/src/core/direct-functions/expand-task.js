@@ -133,7 +133,7 @@ export async function expandTaskDirect(args, log, context = {}) {
 		}
 
 		// Check if task is completed
-		if (task.status === 'done' || task.status === 'completed') {
+		if (task.status === 'done') {
 			return {
 				success: false,
 				error: {

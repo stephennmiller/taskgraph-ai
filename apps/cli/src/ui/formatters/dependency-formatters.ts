@@ -3,7 +3,7 @@
  * Provides formatted dependency displays with status indicators
  */
 
-import type { Task } from '@tm/core';
+import { sanitizeForTerminal, type Task } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
@@ -14,6 +14,8 @@ export function formatDependenciesWithStatus(
 	dependencies: string[] | number[],
 	tasks: Task[]
 ): string {
+	dependencies = sanitizeForTerminal(dependencies);
+	tasks = sanitizeForTerminal(tasks);
 	if (!dependencies || dependencies.length === 0) {
 		return theme.muted('none');
 	}

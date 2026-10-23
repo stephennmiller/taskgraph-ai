@@ -19,6 +19,13 @@ describe('describeError', () => {
 		});
 	});
 
+	it('drops escape sequences quoted from task text or a model reply', () => {
+		expect(
+			describeError(new Error('Task "Fix\x1b[2J\x1b]0;pwned\x07 login" failed'))
+				.message
+		).toBe('Task "Fix login" failed');
+	});
+
 	it('drops a leading "Error:" and a trailing period', () => {
 		expect(describeError(new Error('Error: Task 9 not found.')).message).toBe(
 			'Task 9 not found'

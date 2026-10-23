@@ -11,6 +11,7 @@
  * success message and a boxed "Next Steps" list.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -55,6 +56,7 @@ export function formatClearedSubtasks(
 	result: ClearSubtasksResult,
 	width = terminalWidth()
 ): string {
+	result = sanitizeForTerminal(result);
 	const { cleared, empty } = result;
 
 	if (cleared.length === 0) {

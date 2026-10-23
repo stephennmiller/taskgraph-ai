@@ -2,15 +2,16 @@
  * @fileoverview Text output for the github command (presentation only)
  */
 
-import type {
-	GitHubStatus,
-	PlanStep,
-	PullPlan,
-	PullResult,
-	PullStep,
-	PushPlan,
-	PushResult,
-	UnlinkResult
+import {
+	type GitHubStatus,
+	type PlanStep,
+	type PullPlan,
+	type PullResult,
+	type PullStep,
+	type PushPlan,
+	type PushResult,
+	sanitizeForTerminal,
+	type UnlinkResult
 } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../../ui/theme.js';
@@ -43,6 +44,7 @@ function describeStep(step: PlanStep): string {
 }
 
 export function formatPlan(plan: PushPlan): string {
+	plan = sanitizeForTerminal(plan);
 	const counts = countSteps(plan);
 	const lines = [
 		chalk.bold(`Plan for ${plan.repo}`),
@@ -109,6 +111,7 @@ function describePullStep(step: PullStep): string {
 }
 
 export function formatPullPlan(plan: PullPlan): string {
+	plan = sanitizeForTerminal(plan);
 	const counts = countPullSteps(plan);
 	const lines = [
 		chalk.bold(`Pull plan for ${plan.repo}`),
@@ -138,6 +141,7 @@ export function formatPullResult(result: PullResult): string {
 }
 
 export function formatStatus(status: GitHubStatus): string {
+	status = sanitizeForTerminal(status);
 	const gh = status.ghAvailable
 		? chalk.green('available and signed in')
 		: chalk.red('not available (install gh and run `gh auth login`)');
@@ -151,6 +155,7 @@ export function formatStatus(status: GitHubStatus): string {
 }
 
 export function formatUnlink(result: UnlinkResult): string {
+	result = sanitizeForTerminal(result);
 	return [
 		`Unlinked task ${result.taskId} [${result.tag}] from issue #${result.issueNumber} (${result.url}).`,
 		theme.muted(

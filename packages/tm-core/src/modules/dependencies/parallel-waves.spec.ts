@@ -61,7 +61,7 @@ describe('parallelWaves', () => {
 			task('2', ['1']),
 			task('3', ['1'], 'cancelled'),
 			task('4', ['3'], 'in-progress'),
-			task('5', ['2', '4'], 'completed')
+			task('5', ['2', '4'], 'done')
 		]);
 
 		expect(result.waves).toEqual([['2', '4']]);

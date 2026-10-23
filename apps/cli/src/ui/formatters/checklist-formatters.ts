@@ -22,7 +22,11 @@
  * The numbers are the ones `--check` takes, so each line says what to type.
  */
 
-import type { ChecklistItem, TaskChecklist } from '@tm/core';
+import {
+	type ChecklistItem,
+	sanitizeForTerminal,
+	type TaskChecklist
+} from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -63,6 +67,7 @@ export function formatChecklist(
 	checklist: TaskChecklist,
 	width?: number
 ): string {
+	checklist = sanitizeForTerminal(checklist);
 	const cols = columns(width);
 	const numberWidth = numberWidthOf(checklist.items);
 	const groups: Array<[string, ChecklistItem[]]> = [
@@ -94,6 +99,7 @@ export function formatChecklistUpdate(
 	checklist: TaskChecklist,
 	width?: number
 ): string {
+	checklist = sanitizeForTerminal(checklist);
 	const total = checklist.items.length;
 	const head = `${chalk.green('✓')} Task ${theme.brand(taskId)}`;
 	if (checklist.unchecked.length === 0) {
@@ -122,6 +128,9 @@ export function formatUncheckedCriteria(
 	unchecked: ChecklistItem[],
 	width?: number
 ): string {
+	message = sanitizeForTerminal(message);
+	taskId = sanitizeForTerminal(taskId);
+	unchecked = sanitizeForTerminal(unchecked);
 	const cols = columns(width);
 	const numbers = unchecked.map((item) => item.number).join(',');
 	const hint = `  ${theme.muted('Check them with')} ${theme.brand(`taskgraph set-status ${taskId} --check ${numbers}`)}${theme.muted(', or pass')} ${theme.brand('--force')}`;

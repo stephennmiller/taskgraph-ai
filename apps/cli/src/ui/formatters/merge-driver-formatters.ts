@@ -25,6 +25,7 @@
  */
 
 import path from 'node:path';
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -95,6 +96,7 @@ export function formatMergeRenumbered(
 	clean = true,
 	width = terminalWidth()
 ): string {
+	rows = sanitizeForTerminal(rows);
 	if (rows.length === 0) return '';
 	if (!clean) {
 		const lead = 'Renumbered incoming ';
@@ -122,6 +124,8 @@ export function formatMergeConflicts(
 	renumbered: MergeRenumberedRow[] = [],
 	width = terminalWidth()
 ): string {
+	conflicts = sanitizeForTerminal(conflicts);
+	renumbered = sanitizeForTerminal(renumbered);
 	const count = conflicts.length;
 	const name = path.basename(tasksFile);
 	const head =

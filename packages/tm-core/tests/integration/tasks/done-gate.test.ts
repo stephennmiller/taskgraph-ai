@@ -191,17 +191,6 @@ describe('done gate', () => {
 		expect(sub.acceptanceCriteria).toEqual(['Sub works']);
 	});
 
-	it('gates the completed status like done', async () => {
-		await setup([
-			createTask({ id: '1', title: 'Task 1', acceptanceCriteria: ['Login works'] })
-		]);
-
-		await expect(tmCore.tasks.updateStatus('1', 'completed')).rejects.toThrow(
-			'1 criterion unchecked on task 1'
-		);
-		expect((await readTask('1')).status).toBe('pending');
-	});
-
 	it('loads the checklist as stored for a task from getNext, which leaves criteria out', async () => {
 		await setup(
 			[

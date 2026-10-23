@@ -16,7 +16,8 @@ import {
 	DROPPED_NUM_TASKS_SETTING,
 	UPSTREAM_DIR,
 	UPSTREAM_NAME,
-	type UpstreamImportResult
+	type UpstreamImportResult,
+	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
@@ -79,6 +80,7 @@ function whatWasSkipped(result: UpstreamImportSummary['result']): string {
  * Format the summary printed at the end of an importing `taskgraph init`.
  */
 export function formatUpstreamImport(summary: UpstreamImportSummary): string {
+	summary = sanitizeForTerminal(summary);
 	const { result, changes } = summary;
 	const moved = whatMoved(result);
 	const lines = [

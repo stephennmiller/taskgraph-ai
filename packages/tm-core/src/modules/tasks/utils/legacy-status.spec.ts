@@ -21,9 +21,9 @@ describe('normalizeTaskStatuses', () => {
 			createTask({
 				id: '1',
 				title: 'Schema',
-				status: 'completed',
+				status: 'completed' as never,
 				subtasks: [
-					createSubtask({ id: 1, parentId: '1', title: 'A', status: 'completed' }),
+					createSubtask({ id: 1, parentId: '1', title: 'A', status: 'completed' as never }),
 					createSubtask({ id: 2, parentId: '1', title: 'B', status: 'pending' })
 				]
 			}),
@@ -42,7 +42,7 @@ describe('normalizeTaskStatuses', () => {
 	});
 
 	it('leaves entries that are not objects for validation to report', () => {
-		const input = [null, createTask({ id: '1', title: 'A', status: 'completed' })];
+		const input = [null, createTask({ id: '1', title: 'A', status: 'completed' as never })];
 
 		const result = normalizeTaskStatuses(input as unknown as Task[]);
 

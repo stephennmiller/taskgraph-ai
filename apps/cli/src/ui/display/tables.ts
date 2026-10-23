@@ -5,6 +5,7 @@
 
 import {
 	isTaskComplete,
+	sanitizeForTerminal,
 	type Subtask,
 	type Task,
 	type TaskPriority
@@ -67,6 +68,7 @@ export function createTaskTable(
 		showTag?: boolean;
 	}
 ): string {
+	tasks = sanitizeForTerminal(tasks);
 	const {
 		showSubtasks = false,
 		showComplexity = false,

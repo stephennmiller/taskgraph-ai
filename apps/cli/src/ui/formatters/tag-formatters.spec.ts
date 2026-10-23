@@ -11,6 +11,12 @@ import {
 	type TagSummary
 } from './tag-formatters.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 const lines = (text: string) => plain(text).split('\n');
 
 describe('tag result lines', () => {
@@ -255,5 +261,34 @@ describe('tag indicator', () => {
 		expect(plain(formatTagIndicator('feature-auth'))).toBe(
 			'[tag] feature-auth'
 		);
+	});
+});
+
+describe('tag output with escape sequences in tag names and text', () => {
+	it('prints names, descriptions and titles without them', () => {
+		const outputs = [
+			formatTagIndicator(HOSTILE),
+			formatTagSwitched({
+				currentTag: HOSTILE,
+				taskCount: 1,
+				nextTask: { id: 1, title: HOSTILE }
+			}),
+			formatTagList(
+				[
+					{
+						name: HOSTILE,
+						isCurrent: false,
+						taskCount: 1,
+						readyTasks: 1,
+						completedTasks: 0,
+						description: HOSTILE
+					}
+				],
+				{ showMetadata: true }
+			)
+		].map(sgrFree);
+
+		expect(outputs[0]).toBe('[tag] Fix login');
+		for (const out of outputs) expect(out).not.toMatch(UNSAFE);
 	});
 });

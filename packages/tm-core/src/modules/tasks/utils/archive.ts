@@ -20,6 +20,7 @@ import path from 'node:path';
 import type { Task } from '../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
+import { normalizeTaskStatuses } from './legacy-status.js';
 
 /** Days a finished task stays in tasks.json before `archive` moves it */
 export const DEFAULT_ARCHIVE_AFTER_DAYS = 30;
@@ -52,7 +53,7 @@ export function archivePathFor(tasksPath: string): string {
 
 /** Whether a status means the work is over */
 function isFinishedStatus(status: string | undefined): boolean {
-	return status === 'done' || status === 'completed' || status === 'cancelled';
+	return status === 'done' || status === 'cancelled';
 }
 
 /**
@@ -114,11 +115,14 @@ function ownSection(archive: unknown, tag: string): unknown {
 		: undefined;
 }
 
-/** A tag's section, or an empty one. Tolerates a hand-edited file. */
+/**
+ * A tag's section, or an empty one, with older statuses read as current
+ * ones. Tolerates a hand-edited file.
+ */
 export function archiveTag(archive: unknown, tag: string): ArchiveTagData {
 	const section = ownSection(archive, tag);
 	const tasks = Array.isArray((section as ArchiveTagData | undefined)?.tasks)
-		? (section as ArchiveTagData).tasks
+		? (normalizeTaskStatuses((section as ArchiveTagData).tasks) as ArchivedTask[])
 		: [];
 	const stored = Number((section as ArchiveTagData | undefined)?.metadata?.highestId);
 	return {

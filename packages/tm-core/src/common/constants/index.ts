@@ -42,12 +42,9 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
  * - Should count toward completion percentage
  * - Should be considered satisfied for dependency resolution
  * - Should not be selected as "next task"
- *
- * Note: 'completed' is a workflow-specific alias for 'done' used in some contexts
  */
 export const TERMINAL_COMPLETE_STATUSES: readonly TaskStatus[] = [
 	'done',
-	'completed',
 	'cancelled'
 ] as const;
 
@@ -60,7 +57,6 @@ export const TERMINAL_COMPLETE_STATUSES: readonly TaskStatus[] = [
  * @example
  * ```typescript
  * isTaskComplete('done')      // true
- * isTaskComplete('completed') // true
  * isTaskComplete('cancelled') // true
  * isTaskComplete('pending')   // false
  * ```
@@ -100,7 +96,6 @@ export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
  */
 export const STATUS_ICONS: Record<TaskStatus, string> = {
 	done: '✓',
-	completed: '✓',
 	'in-progress': '►',
 	blocked: '⭕',
 	pending: '○',
@@ -119,8 +114,7 @@ export const STATUS_COLORS: Record<TaskStatus, string> = {
 	deferred: 'dim',
 	cancelled: 'red',
 	blocked: 'magenta',
-	review: 'cyan',
-	completed: 'green'
+	review: 'cyan'
 } as const;
 
 /**

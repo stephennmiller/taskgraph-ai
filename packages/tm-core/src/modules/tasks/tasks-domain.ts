@@ -5,9 +5,6 @@
 
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import { TaskService } from './services/task-service.js';
-import { TaskExecutionService } from './services/task-execution-service.js';
-import { TaskLoaderService } from './services/task-loader.service.js';
-import { PreflightChecker } from './services/preflight-checker.service.js';
 import { TagService } from './services/tag.service.js';
 import {
 	TaskFileGeneratorService,
@@ -64,14 +61,6 @@ import type {
 	GetTaskListOptions
 } from './services/task-service.js';
 import type {
-	StartTaskOptions,
-	StartTaskResult
-} from './services/task-execution-service.js';
-import type {
-	PreflightResult
-} from './services/preflight-checker.service.js';
-import type { TaskValidationResult } from './services/task-loader.service.js';
-import type {
 	WatchEvent,
 	WatchOptions,
 	WatchSubscription
@@ -90,9 +79,6 @@ export interface ArchiveResult {
  */
 export class TasksDomain {
 	private taskService: TaskService;
-	private executionService: TaskExecutionService;
-	private loaderService: TaskLoaderService;
-	private preflightChecker: PreflightChecker;
 	private tagService!: TagService;
 	private taskFileGenerator!: TaskFileGeneratorService;
 	private projectRoot: string;
@@ -102,9 +88,6 @@ export class TasksDomain {
 		this.projectRoot = configManager.getProjectRoot();
 		this.configManager = configManager;
 		this.taskService = new TaskService(configManager);
-		this.executionService = new TaskExecutionService(this.taskService);
-		this.loaderService = new TaskLoaderService(this.taskService);
-		this.preflightChecker = new PreflightChecker(this.projectRoot);
 	}
 
 	async initialize(): Promise<void> {
@@ -508,89 +491,6 @@ export class TasksDomain {
 	 */
 	async setActiveTag(tag: string): Promise<void> {
 		return this.taskService.setActiveTag(tag);
-	}
-
-	// ========== Task Execution ==========
-
-	/**
-	 * Start working on a task
-	 */
-	async start(taskId: string, options?: StartTaskOptions): Promise<StartTaskResult> {
-		return this.executionService.startTask(taskId, options);
-	}
-
-	/**
-	 * Check for in-progress conflicts
-	 */
-	async checkInProgressConflicts(taskId: string) {
-		return this.executionService.checkInProgressConflicts(taskId);
-	}
-
-	/**
-	 * Get next available task (from execution service)
-	 */
-	async getNextAvailable(): Promise<string | null> {
-		return this.executionService.getNextAvailableTask();
-	}
-
-	/**
-	 * Check if a task can be started
-	 */
-	async canStart(taskId: string, force?: boolean): Promise<boolean> {
-		return this.executionService.canStartTask(taskId, force);
-	}
-
-	// ========== Task Loading & Validation ==========
-
-	/**
-	 * Load and validate a task for execution
-	 */
-	async loadAndValidate(taskId: string): Promise<TaskValidationResult> {
-		return this.loaderService.loadAndValidateTask(taskId);
-	}
-
-	/**
-	 * Get execution order for subtasks
-	 */
-	getExecutionOrder(task: Task) {
-		return this.loaderService.getExecutionOrder(task);
-	}
-
-	// ========== Preflight Checks ==========
-
-	/**
-	 * Run all preflight checks
-	 */
-	async runPreflightChecks(): Promise<PreflightResult> {
-		return this.preflightChecker.runAllChecks();
-	}
-
-	/**
-	 * Detect test command
-	 */
-	async detectTestCommand() {
-		return this.preflightChecker.detectTestCommand();
-	}
-
-	/**
-	 * Check git working tree
-	 */
-	async checkGitWorkingTree() {
-		return this.preflightChecker.checkGitWorkingTree();
-	}
-
-	/**
-	 * Validate required tools
-	 */
-	async validateRequiredTools() {
-		return this.preflightChecker.validateRequiredTools();
-	}
-
-	/**
-	 * Detect default git branch
-	 */
-	async detectDefaultBranch() {
-		return this.preflightChecker.detectDefaultBranch();
 	}
 
 	// ========== Tag Management ==========

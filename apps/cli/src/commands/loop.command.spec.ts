@@ -24,7 +24,10 @@ vi.mock('@tm/core', async (importOriginal) => {
 		MAX_PARALLEL: actual.MAX_PARALLEL,
 		ParallelLoopError: actual.ParallelLoopError,
 		assertParallelFlags: actual.assertParallelFlags,
-		parseParallelCount: actual.parseParallelCount
+		parseParallelCount: actual.parseParallelCount,
+		// So is making task text safe to print
+		sanitizeForTerminal: actual.sanitizeForTerminal,
+		stripTerminalControls: actual.stripTerminalControls
 	};
 });
 

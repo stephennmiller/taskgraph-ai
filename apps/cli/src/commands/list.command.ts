@@ -10,6 +10,7 @@ import {
 	filterBlockingTasks,
 	filterByStatus,
 	filterReadyTasks,
+	sanitizeForTerminal,
 	satisfyArchivedDependencies,
 	type InvalidDependency,
 	type OutputFormat,
@@ -494,8 +495,10 @@ export class ListTasksCommand extends Command {
 				this.displayJson(result);
 				break;
 
+			// Compact prints titles itself: strip escape sequences first (the
+			// text formatters do their own; JSON escapes them)
 			case 'compact':
-				this.displayCompact(result, options);
+				this.displayCompact(sanitizeForTerminal(result), options);
 				break;
 
 			case 'text':
