@@ -205,7 +205,7 @@ describe('formatListNextStep', () => {
 		const out = plain(formatListNextStep(next, { width: 80 }));
 
 		expect(out).not.toContain('--status=in-progress');
-		expect(out).toBe('Next: taskgraph note 4 "..." to log progress');
+		expect(out).toBe("Next: taskgraph note 4 '...' to log progress");
 	});
 
 	it('is empty when nothing is ready', () => {

@@ -1,10 +1,12 @@
 import type { PrimeContext } from '@tm/core';
 import { PRIME_RULES } from '@tm/core';
 import { describe, expect, it } from 'vitest';
+import { getSuggestedActions } from '../suggested-actions.js';
 import {
 	formatPrimeContext,
 	formatUnnotedReminder
 } from './prime-formatters.js';
+import { formatEmptyList } from './task-list-formatters.js';
 
 const stripAnsi = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
@@ -76,12 +78,18 @@ describe('formatPrimeContext', () => {
 	});
 
 	it('puts free text in single quotes and says how to write a quote', () => {
+		const statuses = ['pending', 'in-progress', 'review', 'blocked', 'done'];
 		const text = [
 			render(context()),
 			render(
 				context({ counts: { total: 0, done: 0 }, inProgress: [], ready: [] })
 			),
-			stripAnsi(formatUnnotedReminder([context().inProgress[0]]))
+			stripAnsi(formatUnnotedReminder([context().inProgress[0]])),
+			// The "Next:" hints list, show and next print
+			stripAnsi(formatEmptyList()),
+			...statuses.flatMap((status) =>
+				getSuggestedActions('3.2', status, false).map((a) => a.command)
+			)
 		].join('\n');
 		// In double quotes the shell runs backticks and $(...) in the text
 		const commands = text

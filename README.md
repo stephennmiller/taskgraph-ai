@@ -217,7 +217,7 @@ taskgraph expand --id=4 --research           # split into subtasks
 taskgraph expand --all                       # expand every eligible task
 taskgraph update-task --id=5 --prompt='...'  # change one task
 taskgraph update --from=5 --prompt='...'     # change task 5 onward
-taskgraph note 3.2 'chose argon2'           # log progress, as written
+taskgraph note 3.2 'chose argon2'            # log progress, as written
 taskgraph analyze-complexity --research
 taskgraph complexity-report
 taskgraph add-dependency --id=5 --depends-on=3

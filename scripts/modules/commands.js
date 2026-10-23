@@ -457,7 +457,7 @@ function registerCommands(programInstance) {
 				);
 				console.log(chalk.yellow('\nTo update multiple tasks:'));
 				console.log(
-					`  taskgraph update --from=${fromId} --prompt="Your prompt here"`
+					`  taskgraph update --from=${fromId} --prompt='Your prompt here'`
 				);
 				console.log(
 					chalk.yellow(
@@ -465,7 +465,7 @@ function registerCommands(programInstance) {
 					)
 				);
 				console.log(
-					`  taskgraph update-task --id=<id> --prompt="Your prompt here"`
+					`  taskgraph update-task --id=<id> --prompt='Your prompt here'`
 				);
 				process.exit(1);
 			}
@@ -539,7 +539,7 @@ function registerCommands(programInstance) {
 				if (!taskId) {
 					printError(
 						'Missing task ID',
-						'Try `taskgraph update-task --id=3 --prompt="what changed"`'
+						"Try `taskgraph update-task --id=3 --prompt='what changed'`"
 					);
 					process.exit(1);
 				}
@@ -561,7 +561,7 @@ function registerCommands(programInstance) {
 				if (!prompt) {
 					printError(
 						'Missing prompt',
-						`Try \`taskgraph update-task --id=${taskId} --prompt="what changed"\``
+						`Try \`taskgraph update-task --id=${taskId} --prompt='what changed'\``
 					);
 					process.exit(1);
 				}
@@ -652,7 +652,7 @@ function registerCommands(programInstance) {
 					console.error(chalk.red('Error: --id parameter is required'));
 					console.log(
 						chalk.yellow(
-							'Usage example: taskgraph update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
+							"Usage example: taskgraph update-subtask --id=5.2 --prompt='Add more details about the API endpoint'"
 						)
 					);
 					process.exit(1);
@@ -670,7 +670,7 @@ function registerCommands(programInstance) {
 					);
 					console.log(
 						chalk.yellow(
-							'Usage example: taskgraph update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
+							"Usage example: taskgraph update-subtask --id=5.2 --prompt='Add more details about the API endpoint'"
 						)
 					);
 					process.exit(1);
@@ -1844,7 +1844,7 @@ function registerCommands(programInstance) {
 								theme.text('Create new subtask:') +
 								'\n' +
 								chalk.yellow(
-									`  taskgraph add-subtask --parent=5 --title="Implement login UI" --description="Create the login form"`
+									`  taskgraph add-subtask --parent=5 --title='Implement login UI' --description='Create the login form'`
 								) +
 								'\n\n',
 							{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
@@ -1866,7 +1866,7 @@ function registerCommands(programInstance) {
 	function showAddSubtaskHelp() {
 		console.log(
 			boxen(
-				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Task or subtask IDs it depends on (3,5.2)\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
+				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Task or subtask IDs it depends on (3,5.2)\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t 'Implement login UI' -d 'Create the login form' --generate`,
 				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
