@@ -12,6 +12,7 @@ export {
 } from './dependency-analysis.js';
 export {
 	blockedCount,
+	blockedWithinTask,
 	bottlenecks,
 	type Bottleneck,
 	buildDependencyGraph,

@@ -86,6 +86,33 @@ describe('renderBlockerExplanation', () => {
 		expect(lines).toContain('   └─ ○ 1  Task 1  ← shown above');
 	});
 
+	it('marks the parent a subtask inherits its blockers from', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation(
+					[node('2', [node('1', [], { kind: 'ready' })], { parentOf: '2.1' })],
+					{
+						id: '2.1',
+						title: 'Task 2.1',
+						rootCauses: [
+							{ id: '1', title: 'Task 1', status: 'pending', kind: 'ready' }
+						]
+					}
+				)
+			)
+		);
+
+		expect(lines).toEqual([
+			'○ 2.1  Task 2.1',
+			'Blocked by:',
+			'└─ ○ 2  Task 2  ← parent',
+			'   └─ ○ 1  Task 1  ← ready to start',
+			'',
+			'To unblock:',
+			'  Do 1 (Task 1): nothing else stands in its way.'
+		]);
+	});
+
 	it('suggests the command that removes a missing dependency from the task that lists it', () => {
 		const lines = plain(
 			renderBlockerExplanation(

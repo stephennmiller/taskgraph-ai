@@ -2,9 +2,9 @@
  * @fileoverview One call for the graph-wide analysis the MCP
  * `dependency_analysis` tool returns: bottlenecks, critical path and
  * dependency cycles, plus an optional blocker explanation for one task. Pure;
- * see dependency-graph.ts for the rules and known limits (there is no edge
- * between a parent and its subtasks, so the critical path can miss a chain
- * through a parent; cycle members and tasks behind a loop are left out of it).
+ * see dependency-graph.ts for the rules (a subtask waits on its parent's
+ * dependencies; a parent finishes after its subtasks) and known limits (cycle
+ * members and tasks behind a loop are left out of the critical path).
  *
  * `cycles` are strongly connected groups (findCycles), which is narrower than
  * the `cyclic` list of the dependency tree that `taskgraph graph` prints: that
