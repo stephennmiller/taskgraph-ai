@@ -5,7 +5,7 @@
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
 
 /** Starts one Claude Code process; `child_process.spawn` by default */
-export type AgentSpawner = (
+type AgentSpawner = (
 	command: string,
 	args: string[],
 	options: SpawnOptions

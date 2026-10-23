@@ -12,6 +12,7 @@ npm run build                     # tsdown production build
 npm run turbo:typecheck           # run before pushing
 npm run typecheck:root            # root tsc: legacy JS (JSDoc) checked against its TS callers; CI runs it
 npm run format-check              # Biome; `npm run format` to fix
+npm run knip                      # unused files, exports and dependencies; CI runs it
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
 npm run test:coverage -w @tm/core # with coverage and thresholds (not met yet); Vitest
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
@@ -154,6 +155,8 @@ Structure tests as Arrange, Act, Assert.
 ## Code Quality
 
 Extract a pattern into a shared utility once it appears twice, not before. Export new modules from the package's index file.
+
+Remove what a change leaves unused: files, exports, types and dependencies. `npm run knip` finds them and CI fails on them. Fix the code rather than adding to the allowlist in `knip.jsonc`; an entry there needs a one-line reason.
 
 ## Documentation Guidelines
 

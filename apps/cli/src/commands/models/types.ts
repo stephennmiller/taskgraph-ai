@@ -5,7 +5,7 @@
 import type { ModelRoleName } from '../../ui/formatters/model-formatters.js';
 
 /** A model role: main, research or fallback */
-export type ModelRole = ModelRoleName;
+type ModelRole = ModelRoleName;
 
 /** A model the roles can use, from supported-models.json */
 export interface ModelInfo {

@@ -3,15 +3,8 @@
  */
 
 export { GitHubDomain, type GitHubDomainOptions } from './github-domain.js';
-export type {
-	CreateIssueInput,
-	GitHubClient,
-	UpdateIssueInput
-} from './adapters/github-client.interface.js';
+export type { GitHubClient } from './adapters/github-client.interface.js';
 export { GhCliClient } from './adapters/gh-cli-client.js';
-export { renderIssue, hashIssue } from './services/issue-renderer.js';
-export { planSync, getLink } from './services/sync-planner.js';
-export { planPull } from './services/pull-planner.js';
-export { statusFromIssue, sameStatus } from './services/issue-status.js';
-export { executePush } from './services/push-executor.js';
+export { renderIssue } from './services/issue-renderer.js';
+export { planSync } from './services/sync-planner.js';
 export type * from './types.js';

@@ -11,7 +11,7 @@ import * as modelsJs from '../../../../scripts/modules/task-manager/models.js';
 
 // ========== Types ==========
 
-export interface ModelCost {
+interface ModelCost {
 	input: number;
 	output: number;
 }
@@ -27,7 +27,7 @@ export interface ModelData {
 	supported?: boolean;
 }
 
-export interface ModelConfiguration {
+interface ModelConfiguration {
 	provider: string;
 	modelId: string;
 	sweScore: number | null;
@@ -42,26 +42,6 @@ export interface ModelConfigurationResponse {
 			research: ModelConfiguration;
 			fallback: ModelConfiguration | null;
 		};
-		message: string;
-	};
-	error?: {
-		code: string;
-		message: string;
-	};
-}
-
-export interface AvailableModel {
-	provider: string;
-	modelId: string;
-	sweScore: number | null;
-	cost: ModelCost | null;
-	allowedRoles: string[];
-}
-
-export interface AvailableModelsResponse {
-	success: boolean;
-	data?: {
-		models: AvailableModel[];
 		message: string;
 	};
 	error?: {
@@ -108,17 +88,6 @@ export async function getModelConfiguration(
 }
 
 /**
- * Get all available models
- */
-export async function getAvailableModelsList(
-	options: SetModelOptions
-): Promise<AvailableModelsResponse> {
-	return modelsJs.getAvailableModelsList(
-		options as any
-	) as Promise<AvailableModelsResponse>;
-}
-
-/**
  * Set a model for a specific role
  */
 export async function setModel(
@@ -131,20 +100,6 @@ export async function setModel(
 		modelId,
 		options as any
 	) as Promise<SetModelResponse>;
-}
-
-/**
- * Get config from config manager
- */
-export function getConfig(projectRoot: string): any {
-	return configManagerJs.getConfig(projectRoot);
-}
-
-/**
- * Write config using config manager
- */
-export function writeConfig(config: any, projectRoot: string): boolean {
-	return configManagerJs.writeConfig(config, projectRoot);
 }
 
 /**

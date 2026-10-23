@@ -50,7 +50,7 @@ export interface SyncTask {
 	task: Task;
 }
 
-export type PlanAction = 'create' | 'update' | 'skip' | 'close';
+type PlanAction = 'create' | 'update' | 'skip' | 'close';
 
 export interface PlanStep {
 	action: PlanAction;
