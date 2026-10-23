@@ -5,8 +5,10 @@
  * output to Claude, or say what to install.
  *
  * SessionStart also records when the session started, in
- * $TMPDIR/taskgraph-session-<session_id>; the Stop hook reads it to remind
- * Claude, once per session, about an in-progress task with no note since.
+ * $TMPDIR/taskgraph-<uid>/session-<session_id> (a 0700 folder the user owns,
+ * so other users on a shared /tmp can't plant or read it); the Stop hook
+ * reads it to remind Claude, once per session, about an in-progress task
+ * with no note since.
  *
  * Lives here rather than beside the plugin because the plugin package is
  * markdown and JSON only.
@@ -47,6 +49,22 @@ function fakeCli(body: string): string {
 	return bin;
 }
 
+/** Only the system tools the hooks use, so a global taskgraph stays off PATH */
+const systemBin = (() => {
+	const bin = tempDir('tg-hook-sys-');
+	for (const tool of ['date', 'id', 'mkdir']) {
+		const found = ['/usr/bin', '/bin']
+			.map((dir) => path.join(dir, tool))
+			.find((file) => fs.existsSync(file));
+		if (found) fs.symlinkSync(found, path.join(bin, tool));
+	}
+	return bin;
+})();
+
+/** The private folder the hooks keep session markers in, under `tmp` */
+const markerDir = (tmp: string) =>
+	path.join(tmp, `taskgraph-${process.getuid?.() ?? ''}`);
+
 /** A TaskGraph project, i.e. one with the config.json `init` writes */
 function project(prefix: string): string {
 	const dir = tempDir(prefix);
@@ -60,8 +78,6 @@ interface HookRun {
 	input?: string;
 	/** Where the session marker goes */
 	tmp?: string;
-	/** Also put the system bin dirs on PATH (for `date`) */
-	system?: boolean;
 	/** Run with this shell instead of bash */
 	shell?: string;
 }
@@ -77,7 +93,7 @@ function runHook(
 		encoding: 'utf8',
 		input: options.input ?? '',
 		env: {
-			PATH: options.system ? `${binDir}:/usr/bin:/bin` : binDir,
+			PATH: `${binDir}:${systemBin}`,
 			CLAUDE_PROJECT_DIR: projectDir,
 			...(options.tmp ? { TMPDIR: options.tmp } : {})
 		}
@@ -197,22 +213,21 @@ describe('plugin hooks.json', () => {
 		const dir = project('tg-hook-marker-');
 		const tmp = tempDir('tg-hook-tmp-');
 		const bin = fakeCli('echo primed');
-		const marker = path.join(tmp, 'taskgraph-session-abc-123');
+		const marker = path.join(markerDir(tmp), 'session-abc-123');
 
 		runHook(sessionStart, dir, bin, {
 			input: hookInput({ source: 'startup' }),
-			tmp,
-			system: true
+			tmp
 		});
 		const started = fs.readFileSync(marker, 'utf8');
 		fs.writeFileSync(marker, '2026-10-23T09:00:00Z\n');
 		runHook(sessionStart, dir, bin, {
 			input: hookInput({ source: 'compact' }),
-			tmp,
-			system: true
+			tmp
 		});
 
 		expect(started).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n$/);
+		expect(fs.statSync(markerDir(tmp)).mode & 0o777).toBe(0o700);
 		expect(fs.readFileSync(marker, 'utf8')).toBe('2026-10-23T09:00:00Z\n');
 	});
 
@@ -223,12 +238,26 @@ describe('plugin hooks.json', () => {
 
 		const result = runHook(sessionStart, dir, bin, {
 			input: JSON.stringify({ session_id: '../../etc/x', source: 'startup' }),
-			tmp,
-			system: true
+			tmp
 		});
 
 		expect(result.stdout).toBe('primed\n');
 		expect(fs.readdirSync(tmp)).toEqual([]);
+	});
+
+	it('does not write through a marker folder that is a symlink', () => {
+		const dir = project('tg-hook-symlink-');
+		const tmp = tempDir('tg-hook-tmp-');
+		const target = tempDir('tg-hook-target-');
+		fs.symlinkSync(target, markerDir(tmp));
+
+		const result = runHook(sessionStart, dir, fakeCli('echo primed'), {
+			input: hookInput({ source: 'startup' }),
+			tmp
+		});
+
+		expect(result.stdout).toBe('primed\n');
+		expect(fs.readdirSync(target)).toEqual([]);
 	});
 });
 
@@ -237,8 +266,9 @@ describe('plugin Stop hook', () => {
 	function session(started: string, extra = '') {
 		const dir = project('tg-stop-');
 		const tmp = tempDir('tg-stop-tmp-');
+		fs.mkdirSync(markerDir(tmp), { mode: 0o700 });
 		fs.writeFileSync(
-			path.join(tmp, 'taskgraph-session-abc-123'),
+			path.join(markerDir(tmp), 'session-abc-123'),
 			`${started}\n${extra}`
 		);
 		return { dir, tmp };
@@ -296,7 +326,7 @@ describe('plugin Stop hook', () => {
 			tmp
 		});
 		const traversal = runHook(stop, dir, bin, {
-			input: JSON.stringify({ session_id: '../taskgraph-session-abc-123' }),
+			input: JSON.stringify({ session_id: '../session-abc-123' }),
 			tmp
 		});
 		const none = runHook(stop, dir, bin, { input: '', tmp });
@@ -306,6 +336,41 @@ describe('plugin Stop hook', () => {
 			expect(result.stdout + result.stderr).toBe('');
 		}
 	});
+
+	it('ignores a marker folder that is a symlink, and never appends through it', () => {
+		const dir = project('tg-stop-symlink-');
+		const tmp = tempDir('tg-stop-tmp-');
+		const target = tempDir('tg-stop-target-');
+		const victim = path.join(target, 'session-abc-123');
+		fs.writeFileSync(victim, '2026-10-23T09:00:00Z\n');
+		fs.symlinkSync(target, markerDir(tmp));
+
+		const result = runHook(stop, dir, remindingCli(), {
+			input: hookInput({}),
+			tmp
+		});
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe('');
+		expect(fs.readFileSync(victim, 'utf8')).toBe('2026-10-23T09:00:00Z\n');
+	});
+
+	// Root can write a read-only file, so this only runs as a normal user
+	it.skipIf(process.getuid?.() === 0)(
+		'does not block when it cannot record that the reminder was shown',
+		() => {
+			const { dir, tmp } = session('2026-10-23T09:00:00Z');
+			fs.chmodSync(path.join(markerDir(tmp), 'session-abc-123'), 0o400);
+
+			const result = runHook(stop, dir, remindingCli(), {
+				input: hookInput({}),
+				tmp
+			});
+
+			expect(result.status).toBe(0);
+			expect(result.stderr).toBe('');
+		}
+	);
 
 	it('ignores a session_id key quoted inside another field', () => {
 		const { dir, tmp } = session('2026-10-23T09:00:00Z');
@@ -373,7 +438,6 @@ describe('plugin Stop hook', () => {
 				{
 					input: hookInput({ source: 'startup' }),
 					tmp: tempDir('tg-dash-tmp-'),
-					system: true,
 					shell: '/bin/dash'
 				}
 			);
