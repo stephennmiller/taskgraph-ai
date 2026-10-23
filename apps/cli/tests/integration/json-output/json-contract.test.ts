@@ -407,6 +407,7 @@ describe('--json contract', () => {
 			              "priority": "string",
 			              "status": "string",
 			              "title": "string",
+			              "wave": "number",
 			            },
 			          ],
 			          "id": "string",
@@ -415,6 +416,7 @@ describe('--json contract', () => {
 			          "priority": "string",
 			          "status": "string",
 			          "title": "string",
+			          "wave": "number",
 			        },
 			      ],
 			      "id": "string",
@@ -423,11 +425,24 @@ describe('--json contract', () => {
 			      "priority": "string",
 			      "status": "string",
 			      "title": "string",
+			      "wave": "null",
 			    },
 			  ],
 			  "schemaVersion": "number",
 			  "tag": "string",
 			  "total": "number",
+			  "waves": {
+			    "unscheduled": [],
+			    "waveOf": {
+			      "2": "number",
+			      "3": "number",
+			    },
+			    "waves": [
+			      [
+			        "string",
+			      ],
+			    ],
+			  },
 			}
 		`);
 	});
