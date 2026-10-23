@@ -1,5 +1,5 @@
 /**
- * @fileoverview The Git merge driver for tasks.json (#210)
+ * @fileoverview The Git merge driver for tasks.json (#210) and archive.json
  */
 
 export {
@@ -8,8 +8,9 @@ export {
 	type TasksMergeResult,
 	mergeTasksJson
 } from './merge-tasks-json.js';
+export { mergeArchiveJson } from './merge-archive-json.js';
 export {
-	MERGE_DRIVER_ATTRIBUTE,
+	MERGE_DRIVER_ATTRIBUTES,
 	MERGE_DRIVER_NAME,
 	type MergeDriverCommandOptions,
 	type MergeDriverFiles,

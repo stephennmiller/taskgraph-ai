@@ -1,7 +1,7 @@
 ---
 title: Merging tasks.json
 sidebarTitle: "Merging tasks.json"
-description: "A Git merge driver that keeps both branches' new tasks, renumbers the incoming ones, and marks real clashes as conflicts"
+description: "A Git merge driver that keeps both branches' new and archived tasks, renumbers the incoming ones, and marks real clashes as conflicts"
 ---
 
 # Merging tasks.json
@@ -26,6 +26,28 @@ Merge made by the 'ort' strategy.
 ```
 
 A merge that renumbered nothing prints nothing.
+
+## archive.json
+
+The driver also merges `.taskgraph/tasks/archive.json`, so two branches that both ran `taskgraph archive` don't conflict:
+
+- **Archived tasks from both branches are all kept**, tag by tag. `highestId` takes the higher value, so no archived ID is handed out again.
+- **IDs never move.** Tasks may depend on an archived ID, so the same ID on both branches is one task, merged field by field (`archivedAt` takes the earlier time). Two different tasks archived under one ID are reported as a clash on their fields.
+- **An ID the incoming branch archived and this branch reused** is a clash. Say the incoming branch added task 9 and archived it while this branch added its own task 9. Both are kept, and the driver marks `archive.json` as conflicted:
+
+```
+✗ 1 change to archive.json clashes; kept this branch's value
+  9  archived on the incoming branch; this branch has another task 9
+Run taskgraph move --from=9 --to=<free ID>, then git add both files
+```
+
+Moving this branch's task frees the ID for the archived one. `move` also moves dependencies on task 9 to the new ID, so check any that meant the archived task.
+
+The driver tells the tasks apart by title, and it can only check when Git runs it, which is when both branches changed the file. If only the incoming branch touched `archive.json`, Git takes its version without a merge and the reused ID isn't reported; `taskgraph archive restore 9` then says the ID is already in `tasks.json`.
+
+`archive.json` has a driver name of its own, `taskgraph-archive`, so a teammate whose clone was set up by an older TaskGraph (which only knows `taskgraph`) gets Git's normal text merge for it, as before, until they upgrade and run `taskgraph init --merge-driver`.
+
+The driver reads the other file of the pair from the working tree, which during a merge still holds this branch's version, so the order in which Git merges the two files doesn't matter.
 
 ## When both branches change the same field
 
@@ -52,8 +74,8 @@ Some fields never clash:
 | Field | Merged as |
 |-------|-----------|
 | `updatedAt`, `updated`, `lastModified` | the later timestamp |
-| `created`, `createdAt` | the earlier timestamp |
-| `schemaVersion` | the higher one |
+| `created`, `createdAt`, `archivedAt` | the earlier timestamp |
+| `schemaVersion`, the archive's `highestId` | the higher one |
 | `dependencies`, `tags` and other lists of plain values | both sides' additions and removals |
 | `details` that both sides appended to | both appendices, this branch's first |
 | a tag's `taskCount`, `completedCount` | recounted |
@@ -66,7 +88,7 @@ If one branch's `tasks.json` isn't a JSON object (for example, it was committed 
 
 ## Setting it up
 
-New projects get it from `taskgraph init` when tasks are stored in Git (the default inside a Git repository). For a project that was set up before, or a fresh clone, run:
+New projects get it from `taskgraph init` when tasks are stored in Git (the default inside a Git repository). For a project that was set up before, a fresh clone, or a project set up before `archive.json` had a driver, run:
 
 ```bash
 taskgraph init --merge-driver
@@ -76,7 +98,7 @@ It only sets up the driver and touches nothing else. It is safe to run again; wh
 
 ```
 ✓ Git now merges tasks.json by task
-  .gitattributes  routes tasks.json to the driver; commit it
+  .gitattributes  routes tasks.json and archive.json to it; commit it
   .git/config     turns it on here; each clone runs init --merge-driver
 ```
 
@@ -84,8 +106,8 @@ The setup has two parts:
 
 | Part | Where | Shared? |
 |------|-------|---------|
-| `.taskgraph/tasks/tasks.json merge=taskgraph` | `.gitattributes` in the project root | Yes, commit it |
-| `merge.taskgraph.driver` (the command Git runs) | `.git/config` | **No.** Git never pushes or clones config |
+| `.taskgraph/tasks/tasks.json merge=taskgraph` and `.taskgraph/tasks/archive.json merge=taskgraph-archive` | `.gitattributes` in the project root | Yes, commit it |
+| `merge.taskgraph.driver` and `merge.taskgraph-archive.driver` (the command Git runs) | `.git/config` | **No.** Git never pushes or clones config |
 
 <Warning>
 **Each clone runs `taskgraph init --merge-driver` once.** The committed `.gitattributes` line names the driver, but the command behind it lives in each clone's own `.git/config`. A teammate who clones the repository and skips this step gets Git's normal line-by-line merge of `tasks.json`: nothing breaks, but colliding task IDs conflict as before.
@@ -93,7 +115,7 @@ The setup has two parts:
 
 ### A merge setup of your own
 
-If `.gitattributes` already gives `.taskgraph/tasks/tasks.json` a merge attribute (such as `merge=union`), or `.git/config` has a `merge.taskgraph.driver` that TaskGraph didn't write, setup leaves it as it is and says so:
+If `.gitattributes` already gives `tasks.json` or `archive.json` a merge attribute (such as `merge=union`), or `.git/config` has a `merge.taskgraph.driver` that TaskGraph didn't write, setup leaves it as it is and says so:
 
 ```
 ! Kept your own tasks.json merge setup
