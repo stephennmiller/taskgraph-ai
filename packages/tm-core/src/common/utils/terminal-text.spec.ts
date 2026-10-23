@@ -44,9 +44,9 @@ describe('stripTerminalControls', () => {
 	});
 
 	it('removes C0 controls, DEL and bidi overrides', () => {
-		expect(stripTerminalControls('a\x00b\x07c\x08d\x7fe ‮esrever‬')).toBe(
-			'abcde esrever'
-		);
+		expect(
+			stripTerminalControls('a\x00b\x07c\x08d\x7fe \u202eesrever\u202c')
+		).toBe('abcde esrever');
 	});
 
 	it('keeps newlines and tabs, and turns CRLF into LF', () => {

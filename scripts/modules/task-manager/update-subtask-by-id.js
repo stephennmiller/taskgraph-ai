@@ -1,5 +1,5 @@
 import { ui } from '@tm/cli';
-import { withoutReservedMetadata } from '@tm/core';
+import { stripTerminalControls, withoutReservedMetadata } from '@tm/core';
 import fs from 'fs';
 import path from 'path';
 import { generateTextService } from '../ai-services-unified.js';
@@ -190,7 +190,7 @@ async function updateSubtaskById(
 
 		if (outputFormat === 'text') {
 			loadingIndicator = startLoadingIndicator(
-				`Updating subtask ${subtaskId}: ${truncate(subtask.title, 50)}${useResearch ? ' (with research)' : ''}`
+				`Updating subtask ${subtaskId}: ${truncate(stripTerminalControls(String(subtask.title ?? ''), { singleLine: true }), 50)}${useResearch ? ' (with research)' : ''}`
 			);
 		}
 

@@ -2146,20 +2146,24 @@ function registerCommands(programInstance) {
 						if (task.isSubtask) {
 							// Subtask - title is directly on the task object
 							console.log(
-								theme.text(`  Subtask ${id}: ${task.title || '(no title)'}`)
+								theme.text(
+									`  Subtask ${id}: ${stripTerminalControls(task.title || '(no title)')}`
+								)
 							);
 							// Optionally show parent context if available
 							if (task.parentTask) {
 								console.log(
 									theme.muted(
-										`    (Parent: ${task.parentTask.id} - ${task.parentTask.title || '(no title)'})`
+										`    (Parent: ${task.parentTask.id} - ${stripTerminalControls(task.parentTask.title || '(no title)')})`
 									)
 								);
 							}
 						} else {
 							// Main task - title is directly on the task object
 							console.log(
-								theme.text.bold(`  Task ${id}: ${task.title || '(no title)'}`)
+								theme.text.bold(
+									`  Task ${id}: ${stripTerminalControls(task.title || '(no title)')}`
+								)
 							);
 						}
 					});

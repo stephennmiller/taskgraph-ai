@@ -26,12 +26,12 @@ const ESCAPE_SEQUENCE =
 // from what it says
 const CONTROL_CHARACTERS =
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
-	/[\x00-\x08\x0b-\x1f\x7f-\x9f‎‏‪-‮⁦-⁩]/g;
+	/[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
 
 // The same, with tab and newline, for one-line text
 const CONTROL_CHARACTERS_AND_LAYOUT =
 	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
-	/[\x00-\x1f\x7f-\x9f‎‏‪-‮⁦-⁩]/g;
+	/[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
 
 export interface StripTerminalControlsOptions {
 	/**
