@@ -8,7 +8,10 @@ import {
 	keepChecklistFields,
 	normalizeAcceptanceCriteria,
 	normalizeDefinitionOfDone,
-	parseChecklistNumbers
+	MAX_GENERATED_CRITERIA,
+	MAX_GENERATED_CRITERION_LENGTH,
+	parseChecklistNumbers,
+	setGeneratedCriteria
 } from './acceptance-criteria.js';
 
 describe('normalizeAcceptanceCriteria', () => {
@@ -240,5 +243,127 @@ describe('keepChecklistFields', () => {
 		keepChecklistFields(rewrite, {});
 
 		expect(rewrite).toEqual({ id: 1, title: 'New' });
+	});
+});
+
+describe('setGeneratedCriteria', () => {
+	it('stores the strings an AI wrote as unchecked items', () => {
+		const task = {
+			id: 1,
+			acceptanceCriteria: ['  Login works ', '', 'Tokens expire']
+		};
+
+		setGeneratedCriteria(task);
+
+		expect(task.acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false },
+			{ text: 'Tokens expire', checked: false }
+		]);
+	});
+
+	it('never stores a generated criterion as checked', () => {
+		const task = {
+			acceptanceCriteria: [{ text: 'Login works', checked: true }]
+		};
+
+		setGeneratedCriteria(task);
+
+		expect(task.acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false }
+		]);
+	});
+
+	it.each([
+		['missing', {}],
+		['null', { acceptanceCriteria: null }],
+		['empty', { acceptanceCriteria: [] }],
+		['blank only', { acceptanceCriteria: ['  '] }]
+	])('leaves the field off when the criteria are %s', (_label, fields) => {
+		const task: Record<string, unknown> = { id: 1, ...fields };
+
+		setGeneratedCriteria(task);
+
+		expect(task).toEqual({ id: 1 });
+	});
+	it('strips escape sequences and control characters from AI text', () => {
+		const task = {
+			acceptanceCriteria: [
+				'\x1b[31mRed\x1b[0m text',
+				'Title \x1b]0;pwned\x07set',
+				'Tab\tand\nnewline\u0000null',
+				'Bidi \u202eesrever\u202c text',
+				'\x1b[2J\u0007'
+			]
+		};
+
+		setGeneratedCriteria(task);
+
+		expect(task.acceptanceCriteria).toEqual([
+			{ text: 'Red text', checked: false },
+			{ text: 'Title set', checked: false },
+			{ text: 'Tab and newline null', checked: false },
+			{ text: 'Bidi esrever text', checked: false }
+		]);
+	});
+
+	it('cuts a criterion longer than the cap', () => {
+		const task: { acceptanceCriteria: unknown } = {
+			acceptanceCriteria: ['x'.repeat(5000)]
+		};
+
+		setGeneratedCriteria(task);
+
+		const [{ text }] = task.acceptanceCriteria as { text: string }[];
+		expect(text).toHaveLength(MAX_GENERATED_CRITERION_LENGTH);
+		expect(text.endsWith('…')).toBe(true);
+	});
+
+	it('keeps at most the capped number of criteria and drops duplicates', () => {
+		const many = Array.from({ length: 50 }, (_, i) => `Criterion ${i}`);
+		const task: { acceptanceCriteria: unknown } = {
+			acceptanceCriteria: ['Criterion 0', ...many]
+		};
+
+		setGeneratedCriteria(task);
+
+		const texts = (task.acceptanceCriteria as { text: string }[]).map(
+			(c) => c.text
+		);
+		expect(texts).toHaveLength(MAX_GENERATED_CRITERIA);
+		expect(texts[0]).toBe('Criterion 0');
+		expect(texts[1]).toBe('Criterion 1');
+	});
+
+	it('builds plain items from entries carrying prototype keys', () => {
+		const entry = JSON.parse(
+			'{"text":"Login works","checked":true,"__proto__":{"polluted":true}}'
+		);
+		const task = JSON.parse(
+			'{"acceptanceCriteria":[],"__proto__":{"polluted":true}}'
+		);
+		task.acceptanceCriteria = [entry];
+
+		setGeneratedCriteria(task);
+
+		expect(task.acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false }
+		]);
+		expect(Object.keys(task.acceptanceCriteria[0])).toEqual([
+			'text',
+			'checked'
+		]);
+		expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+	});
+
+	it.each([
+		['a string', 'Login works'],
+		['an object', { text: 'Login works' }],
+		['numbers', [1, 2]]
+	])('leaves the field off when the criteria are %s', (_label, raw) => {
+		const task: Record<string, unknown> = { id: 1, acceptanceCriteria: raw };
+
+		setGeneratedCriteria(task);
+
+		expect(task).toEqual({ id: 1 });
 	});
 });

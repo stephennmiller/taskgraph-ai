@@ -45,6 +45,10 @@ Based on task type:
 - **Bug Fix**: Reproduce → Diagnose → Fix → Verify
 - **Refactor**: Analyze → Plan → Refactor → Validate
 
+## Acceptance criteria
+
+Each new subtask comes with 2-5 acceptance criteria of its own, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` refuses the subtask until every one is checked off with `taskgraph set-status --id=<id> --check <n>` (or `/taskgraph:to-done <id>`, which checks them against your changes first).
+
 ## Post-Expansion
 
 After expansion:

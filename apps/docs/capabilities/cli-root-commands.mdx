@@ -52,6 +52,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     Running it again skips questions the section already answers, and a new answer to the same question replaces the old one. With no terminal to ask in, or with `--yes`, the suggested answers are used. If there is nothing to ask, it goes straight to the tasks. Ctrl-C leaves the PRD unchanged.
 
     `--clarify --json` prints only `{"prd", "questions": [{"question", "suggestedAnswer"}]}` and changes nothing. Add an `"answer"` to each question and pass the file to `--answers` (or `-` for stdin); a question without an `"answer"` keeps its suggestion. `--answers` saves the answers and generates the tasks without asking the model for questions again.
+
+    Each task comes with 2-5 acceptance criteria taken from the PRD, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` waits until they are checked off (see Set Status).
   </Accordion>
 
   <Accordion title="List Tasks">
@@ -268,6 +270,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Research-backed generation for all tasks
     taskgraph expand --all --research
     ```
+
+    Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask can't be marked done until they are checked off with `taskgraph set-status <id> --check <n>`.
   </Accordion>
 
   <Accordion title="Clear Subtasks">

@@ -25,6 +25,21 @@ export const TaskStatusSchema = z.enum([
 	'deferred'
 ]);
 
+/**
+ * Acceptance criteria the AI writes for a generated task or subtask: short,
+ * checkable statements of what "done" means. They are stored unchecked (see
+ * tm-core `normalizeAcceptanceCriteria`) and gate `set-status done`.
+ *
+ * `.catch(null)` keeps the field in the JSON Schema's `required` list (as
+ * OpenAI's Structured Outputs needs), while a response that leaves it out or
+ * gets its shape wrong still validates, as null: missing criteria never
+ * fail a generation.
+ */
+export const GeneratedAcceptanceCriteriaSchema = z
+	.array(z.string())
+	.nullable()
+	.catch(null);
+
 export const BaseTaskSchema = z
 	.object({
 		id: z.number().int().positive(),

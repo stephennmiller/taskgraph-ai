@@ -1,7 +1,8 @@
 import {
 	assignMetadata,
 	getPrdSource,
-	reconcileDependencySources
+	reconcileDependencySources,
+	setGeneratedCriteria
 } from '@tm/core';
 import fs from 'fs';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
@@ -321,12 +322,13 @@ async function expandTask(
 				throw new Error('AI response did not include a valid subtasks array.');
 			}
 			generatedSubtasks = mainResult.subtasks.map((subtask) => {
-				const generated = {
+				// The AI's criteria are stored as unchecked items (none: no field)
+				const generated = setGeneratedCriteria({
 					...subtask,
 					dependencies: subtask.dependencies ?? [],
 					status: subtask.status ?? 'pending',
 					testStrategy: subtask.testStrategy ?? null
-				};
+				});
 				// The AI chose these dependencies, so record them as inferred
 				assignMetadata(
 					generated,

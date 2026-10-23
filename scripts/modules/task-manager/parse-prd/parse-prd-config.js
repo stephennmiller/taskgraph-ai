@@ -4,6 +4,7 @@
 
 import { z } from 'zod';
 import { TASK_PRIORITY_OPTIONS } from '../../../../src/constants/task-priority.js';
+import { GeneratedAcceptanceCriteriaSchema } from '../../../../src/schemas/base-schemas.js';
 import { Duration } from '../../../../src/utils/timeout-manager.js';
 import { hasCodebaseAnalysis } from '../../config-manager.js';
 import { getCurrentTag, isSilentMode, log } from '../../utils.js';
@@ -24,7 +25,8 @@ export const prdSingleTaskSchema = z.object({
 	status: z.string(),
 	// Slug of the PRD section the task implements; checked against the PRD's
 	// headings and stored as metadata.source. Models may leave it out
-	section: z.string().nullable().default(null)
+	section: z.string().nullable().default(null),
+	acceptanceCriteria: GeneratedAcceptanceCriteriaSchema
 });
 
 // Define the Zod schema for the ENTIRE expected AI response object

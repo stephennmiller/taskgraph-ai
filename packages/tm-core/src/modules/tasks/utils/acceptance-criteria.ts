@@ -99,6 +99,74 @@ export function keepChecklistFields<T extends object>(
 	return target;
 }
 
+/** Most criteria kept from one generated task; the prompts ask for 2-5 */
+export const MAX_GENERATED_CRITERIA = 10;
+
+/** Longest generated criterion kept, in characters; longer ones are cut */
+export const MAX_GENERATED_CRITERION_LENGTH = 300;
+
+// Terminal escape sequences (CSI, OSC and other ESC-introduced ones)
+const ESCAPE_SEQUENCE =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
+	/\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?|[@-Z\\-_])/g;
+// C0/C1 control characters and the bidirectional overrides that can make
+// text display differently from what it says
+const CONTROL_CHARACTERS =
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
+	/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
+
+/**
+ * One generated criterion made safe to store and print: escape sequences
+ * and control characters removed, whitespace collapsed to single spaces,
+ * and cut to MAX_GENERATED_CRITERION_LENGTH characters.
+ */
+function sanitizeGeneratedCriterion(text: string): string {
+	const clean = text
+		.replace(ESCAPE_SEQUENCE, '')
+		.replace(CONTROL_CHARACTERS, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+	const chars = Array.from(clean);
+	if (chars.length <= MAX_GENERATED_CRITERION_LENGTH) return clean;
+	return `${chars
+		.slice(0, MAX_GENERATED_CRITERION_LENGTH - 1)
+		.join('')
+		.trimEnd()}…`;
+}
+
+/**
+ * Store the acceptance criteria an AI wrote for a new task or subtask
+ * (`parse-prd`, `expand`): each one as an unchecked item, since nothing has
+ * been verified yet. The text is AI output, so it is sanitized (no escape
+ * sequences or control characters, at most MAX_GENERATED_CRITERION_LENGTH
+ * characters), duplicates are dropped, and at most MAX_GENERATED_CRITERIA
+ * are kept. A missing, null, malformed or empty list leaves the field off,
+ * so a response without criteria saves the task as it did before.
+ *
+ * @param task - The generated task or subtask, changed in place
+ * @returns The task
+ */
+export function setGeneratedCriteria<T extends object>(task: T): T {
+	const fields = task as ChecklistFields;
+	const seen = new Set<string>();
+	const criteria: AcceptanceCriterion[] = [];
+	for (const { text: raw } of normalizeAcceptanceCriteria(
+		fields.acceptanceCriteria
+	)) {
+		const text = sanitizeGeneratedCriterion(raw);
+		if (!text || seen.has(text)) continue;
+		seen.add(text);
+		criteria.push({ text, checked: false });
+		if (criteria.length === MAX_GENERATED_CRITERIA) break;
+	}
+	if (criteria.length > 0) {
+		fields.acceptanceCriteria = criteria;
+	} else {
+		delete fields.acceptanceCriteria;
+	}
+	return task;
+}
+
 /**
  * The Definition of Done as configured: a list of non-blank strings.
  * Anything else reads as no Definition of Done.

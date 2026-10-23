@@ -24,7 +24,7 @@ export function registerExpandAllTool(server) {
 	server.addTool({
 		name: 'expand_all',
 		description:
-			'Expand all pending tasks into subtasks based on complexity or defaults',
+			'Expand all pending tasks into subtasks based on complexity or defaults. Each new subtask gets unchecked acceptance criteria that must be checked before set_task_status marks it done.',
 		parameters: z.object({
 			num: z
 				.string()

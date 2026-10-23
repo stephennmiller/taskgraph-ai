@@ -11,6 +11,7 @@ import {
 	prdSourceMetadata,
 	readArchivedIdsSync,
 	reconcileDependencySources,
+	setGeneratedCriteria,
 	withPrdSnapshot
 } from '@tm/core';
 import chalk from 'chalk';
@@ -241,7 +242,8 @@ export function processTasks(
 			? prdSourceMetadata(section, prd.sections, prd.path)
 			: undefined;
 
-		return {
+		// The AI's criteria are stored as unchecked items (none: no field)
+		return setGeneratedCriteria({
 			...task,
 			...(source ? { metadata: { ...task.metadata, ...source } } : {}),
 			id: newId,
@@ -254,7 +256,7 @@ export function processTasks(
 			description: task.description || '',
 			details: task.details || '',
 			testStrategy: task.testStrategy || ''
-		};
+		});
 	});
 
 	// Second pass: remap dependencies

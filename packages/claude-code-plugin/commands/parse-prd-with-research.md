@@ -45,6 +45,10 @@ Research mode typically:
 - Adds compliance considerations
 - Suggests modern tooling
 
+## Acceptance criteria
+
+Each generated task comes with 2-5 acceptance criteria, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` refuses the task until every one is checked off with `taskgraph set-status --id=<id> --check <n>` (or `/taskgraph:to-done <id>`, which checks them against your changes first). Read them when you start a task: they say what "done" means.
+
 ## When to Use
 
 - New technology domains

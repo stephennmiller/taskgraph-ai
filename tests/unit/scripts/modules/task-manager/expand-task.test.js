@@ -567,6 +567,85 @@ describe('expandTask', () => {
 		});
 	});
 
+	describe('Acceptance criteria', () => {
+		const aiSubtask = (id, acceptanceCriteria) => ({
+			id,
+			title: `Generated subtask ${id}`,
+			description: 'A subtask the AI wrote for this test',
+			dependencies: [],
+			details: 'Implementation details for the generated subtask',
+			status: 'pending',
+			testStrategy: null,
+			acceptanceCriteria
+		});
+
+		test('stores the criteria the AI wrote as unchecked items', async () => {
+			// Arrange
+			generateObjectService.mockResolvedValueOnce({
+				mainResult: {
+					subtasks: [
+						aiSubtask(1, [
+							'POST /login returns 401 for a wrong password',
+							'  The session cookie is HttpOnly  ',
+							''
+						]),
+						aiSubtask(2, null),
+						aiSubtask(3, [])
+					]
+				},
+				telemetryData: {}
+			});
+
+			// Act
+			await expandTask(
+				'tasks/tasks.json',
+				'2',
+				3,
+				false,
+				'',
+				{ mcpLog: createMcpLogMock(), projectRoot: '/mock/project/root' },
+				false
+			);
+
+			// Assert
+			const parent = writeJSON.mock.calls[0][1].master.tasks.find(
+				(t) => t.id === 2
+			);
+			const [first, second, third] = parent.subtasks.slice(-3);
+			expect(first.acceptanceCriteria).toEqual([
+				{
+					text: 'POST /login returns 401 for a wrong password',
+					checked: false
+				},
+				{ text: 'The session cookie is HttpOnly', checked: false }
+			]);
+			expect(second).not.toHaveProperty('acceptanceCriteria');
+			expect(third).not.toHaveProperty('acceptanceCriteria');
+		});
+
+		test('saves subtasks from a response without criteria as before', async () => {
+			// Act: the default mock response has no acceptanceCriteria field
+			await expandTask(
+				'tasks/tasks.json',
+				'2',
+				3,
+				false,
+				'',
+				{ mcpLog: createMcpLogMock(), projectRoot: '/mock/project/root' },
+				false
+			);
+
+			// Assert
+			const parent = writeJSON.mock.calls[0][1].master.tasks.find(
+				(t) => t.id === 2
+			);
+			expect(parent.subtasks.length).toBeGreaterThan(0);
+			for (const subtask of parent.subtasks) {
+				expect(subtask).not.toHaveProperty('acceptanceCriteria');
+			}
+		});
+	});
+
 	describe('Tag Handling (The Critical Bug Fix)', () => {
 		test('should preserve tagged structure when expanding with default tag', async () => {
 			// Arrange

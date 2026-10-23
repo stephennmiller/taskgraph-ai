@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GeneratedAcceptanceCriteriaSchema } from './base-schemas.js';
 
 // Schema for a single task from PRD parsing
 const PRDSingleTaskSchema = z
@@ -10,7 +11,8 @@ const PRDSingleTaskSchema = z
 		testStrategy: z.string().nullable(),
 		priority: z.enum(['high', 'medium', 'low']).nullable(),
 		dependencies: z.array(z.number().int().positive()).nullable(),
-		status: z.string().nullable()
+		status: z.string().nullable(),
+		acceptanceCriteria: GeneratedAcceptanceCriteriaSchema
 	})
 	.strict();
 
