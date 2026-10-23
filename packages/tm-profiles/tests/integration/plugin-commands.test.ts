@@ -219,15 +219,20 @@ describe('taskgraph flags used in command bodies', () => {
 		source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 	// The long flags declared with .option('-x, --name <value>', ...),
-	// .requiredOption(...) or .addOption(new Option(...))
-	const longFlags = (source: string): string[] =>
-		[
+	// .requiredOption(...) or .addOption(new Option(...)), plus --json from
+	// the CLI's shared .addOption(jsonOption())
+	const longFlags = (source: string): string[] => [
+		...[
 			...source.matchAll(
 				/(?:\.option|\.requiredOption|new Option)\(\s*(['"`])(.*?)\1/g
 			)
 		].flatMap((match) =>
 			[...match[2].matchAll(/--([a-z][a-z-]*)/g)].map((flag) => flag[1])
-		);
+		),
+		...[...source.matchAll(/\.addOption\(\s*jsonOption\(\)\s*\)/g)].map(
+			() => 'json'
+		)
+	];
 
 	const legacySource = stripComments(
 		readFileSync(join(repoRoot, 'scripts/modules/commands.js'), 'utf-8')
@@ -309,6 +314,7 @@ describe('taskgraph flags used in command bodies', () => {
 			expect(flagsByCommand.get('set-status')?.has(flag)).toBe(true);
 		}
 		expect(flagsByCommand.get('show')?.has('json')).toBe(true);
+		expect(flagsByCommand.get('next')?.has('json')).toBe(true);
 		expect(flagsByCommand.get('update-task')?.has('append')).toBe(true);
 		expect(flagsByCommand.get('update-subtask')?.has('prompt')).toBe(true);
 		expect(flagsByCommand.get('update-subtask')?.has('append')).toBe(false);
