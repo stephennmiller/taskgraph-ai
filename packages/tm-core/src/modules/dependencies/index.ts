@@ -67,3 +67,8 @@ export {
 	retargetDependents,
 	type ConvertedTaskDependencies
 } from './task-to-subtask.js';
+export {
+	mergeNewTaskDependencies,
+	type MergeNewTaskDependenciesOptions,
+	type NewTaskDependencies
+} from './new-task-dependencies.js';
