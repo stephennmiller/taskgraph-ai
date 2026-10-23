@@ -140,7 +140,7 @@ export {
 	type ResearchSaveTarget
 } from './formatters/research-formatters.js';
 
-// What `show`, `next` and `start --dry-run` print about one task
+// What `show` and `next` print about one task
 export {
 	formatNextStep,
 	formatTaskDetail,

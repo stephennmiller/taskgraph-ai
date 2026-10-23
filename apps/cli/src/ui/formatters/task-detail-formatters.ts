@@ -79,11 +79,6 @@ export interface TaskDetailOptions {
 	statusFilter?: string;
 	/** Terminal width */
 	width?: number;
-	/**
-	 * The `Next:` line. Left out, it is the first status-aware suggestion;
-	 * `start --dry-run` passes its own, and null leaves the line out.
-	 */
-	next?: SuggestedAction | null;
 }
 
 /**
@@ -430,11 +425,10 @@ export function formatTaskDetail(
 		);
 	}
 
-	const action =
-		options.next === undefined
-			? getSuggestedActions(id, task.status, subtasks.length > 0)[0]
-			: options.next;
-	const next = formatNextStep(action, width);
+	const next = formatNextStep(
+		getSuggestedActions(id, task.status, subtasks.length > 0)[0],
+		width
+	);
 	if (next.length > 0) sections.push(next);
 
 	return sections.map((lines) => lines.join('\n')).join('\n\n');
