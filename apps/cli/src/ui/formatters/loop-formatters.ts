@@ -3,10 +3,6 @@
  *
  *   Loop · tdd preset · 1 iteration · Claude CLI
  *   Task 3  Set up the database schema
- *
- * and the notice the deprecated `start` alias prints to stderr:
- *
- *   start is deprecated; run taskgraph loop -n 1 --id 3 instead
  */
 
 import type { LoopTask } from '@tm/core';
@@ -52,10 +48,4 @@ export function formatLoopIntro(intro: LoopIntro, width = 80): string[] {
 		lines.push(chalk.yellow('No task is ready to work on'));
 	}
 	return lines;
-}
-
-/** The one line `start` prints before it runs the loop */
-export function formatStartDeprecation(taskId?: string): string {
-	const command = `taskgraph loop -n 1${taskId ? ` --id ${fit(taskId, taskId.length)}` : ''}`;
-	return chalk.yellow(`start is deprecated; run ${command} instead`);
 }

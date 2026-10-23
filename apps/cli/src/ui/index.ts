@@ -140,7 +140,7 @@ export {
 	type ResearchSaveTarget
 } from './formatters/research-formatters.js';
 
-// What `show`, `next` and `start --dry-run` print about one task
+// What `show` and `next` print about one task
 export {
 	formatNextStep,
 	formatTaskDetail,
@@ -159,10 +159,9 @@ export {
 	type ListSummaryOptions
 } from './formatters/task-list-formatters.js';
 
-// What `loop` prints before it starts, and the `start` alias notice
+// What `loop` prints before it starts
 export {
 	formatLoopIntro,
-	formatStartDeprecation,
 	type LoopIntro
 } from './formatters/loop-formatters.js';
 

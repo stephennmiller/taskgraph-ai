@@ -64,6 +64,20 @@ describe('ConfigLoader', () => {
 			expect(result).toEqual(mockConfig);
 		});
 
+		it('loads a config.json that still has the removed workflow settings', async () => {
+			const oldConfig = {
+				models: { main: 'test-model' },
+				workflow: { enableAutopilot: true, branchPattern: 'task-{taskId}' }
+			};
+			vi.mocked(fsPromises.readFile).mockResolvedValue(
+				JSON.stringify(oldConfig)
+			);
+
+			const result = await configLoader.loadLocalConfig();
+
+			expect(result?.models).toEqual({ main: 'test-model' });
+		});
+
 		it('merges config.local.json over config.json', async () => {
 			vi.mocked(fsPromises.readFile).mockImplementation(async (file) => {
 				if (String(file).endsWith('config.local.json')) {
