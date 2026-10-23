@@ -227,10 +227,15 @@ describe('Layout Helpers', () => {
 			expect(totalOf(plan.widths)).toBe(76);
 		});
 
-		it('never shrinks the flexible column below its minimum', () => {
-			const plan = planColumns(30, specs);
+		it('shrinks the flexible column below its minimum only once every optional column is hidden', () => {
+			const plan = planColumns(40, specs);
 			expect(plan.hidden).toEqual(['blocks', 'complexity', 'deps']);
-			expect(plan.widths[plan.keys.indexOf('title')]).toBe(20);
+			expect(totalOf(plan.widths)).toBe(40);
+		});
+
+		it('never shrinks the flexible column below 10', () => {
+			const plan = planColumns(30, specs);
+			expect(plan.widths[plan.keys.indexOf('title')]).toBe(10);
 		});
 
 		it('keeps display order for the columns it keeps', () => {

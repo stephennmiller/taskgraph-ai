@@ -103,6 +103,23 @@ describe('models and lang commands', () => {
 		expect(result.stderr).not.toContain('using default settings');
 	});
 
+	it('warns about each unsupported provider once, with the project path (#269)', () => {
+		const config = readConfig();
+		config.models.main = { provider: 'anthropic', modelId: 'claude-3-7' };
+		config.models.research = { provider: 'perplexity', modelId: 'sonar-pro' };
+		fs.writeFileSync(configPath(), JSON.stringify(config));
+
+		const result = run(['models']);
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe(
+			'⚠ Main provider "anthropic" isn\'t supported; using sonnet\n' +
+				'⚠ Research provider "perplexity" isn\'t supported; using sonnet\n' +
+				'  Run taskgraph models --setup to update .taskgraph/config.json\n'
+		);
+		expect(result.stdout).toMatch(/Main\s+sonnet/);
+	});
+
 	it('sets the response language without an error', () => {
 		// setResponseLanguage used to save the language, then fail on an
 		// undefined variable and exit 1

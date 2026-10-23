@@ -29,22 +29,10 @@ export const prdSingleTaskSchema = z.object({
 	acceptanceCriteria: GeneratedAcceptanceCriteriaSchema
 });
 
-// Define the Zod schema for the ENTIRE expected AI response object
+// Define the Zod schema for the ENTIRE expected AI response object.
+// Tag metadata is written by the code, so the AI isn't asked for any
 export const prdResponseSchema = z.object({
-	tasks: z.array(prdSingleTaskSchema),
-	// Use union for better structured outputs compatibility
-	// Models understand "either return this object OR null" more reliably
-	metadata: z
-		.union([
-			z.object({
-				projectName: z.string(),
-				totalTasks: z.number(),
-				sourceFile: z.string(),
-				generatedAt: z.string()
-			}),
-			z.null()
-		])
-		.default(null)
+	tasks: z.array(prdSingleTaskSchema)
 });
 
 // ============================================================================

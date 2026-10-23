@@ -184,3 +184,24 @@ export function filterBlockingTasks(
 ): TaskWithBlocks[] {
 	return tasks.filter((task) => task.blocks.length > 0);
 }
+
+/**
+ * Filter to tasks with one of the statuses a `--status` value names
+ * (`pending` or `pending,review`); `all` or no value keeps every task.
+ *
+ * Apply it after `buildBlocksMap`, which needs every task: built from the
+ * filtered tasks alone, a dependency on a task with another status reads as
+ * a non-existent task and `blocks` leaves out the tasks filtered away.
+ *
+ * @param tasks - Tasks to filter
+ * @param status - Comma-separated statuses, or `all`
+ * @returns The tasks whose status is listed
+ */
+export function filterByStatus<T extends Task>(
+	tasks: T[],
+	status?: string
+): T[] {
+	if (!status || status === 'all') return tasks;
+	const statuses = status.split(',').map((s) => s.trim());
+	return tasks.filter((task) => statuses.includes(task.status));
+}

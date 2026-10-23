@@ -306,7 +306,7 @@ describe('addTask', () => {
 					tasks: expect.arrayContaining([
 						expect.objectContaining({
 							id: 4,
-							dependencies: validDependencies
+							dependencies: ['1', '2']
 						})
 					])
 				})
@@ -383,7 +383,7 @@ describe('addTask', () => {
 				'json'
 			);
 
-			expect(addedTask().dependencies).toEqual([1]);
+			expect(addedTask().dependencies).toEqual(['1']);
 			expect(addedTask()).not.toHaveProperty('metadata');
 		});
 
@@ -399,7 +399,7 @@ describe('addTask', () => {
 				'json'
 			);
 
-			expect(addedTask().dependencies).toEqual([1, 2, 3]);
+			expect(addedTask().dependencies).toEqual(['1', '2', '3']);
 			expect(addedTask().metadata.dependencySources).toEqual({
 				2: 'inferred',
 				3: 'inferred'
@@ -418,7 +418,27 @@ describe('addTask', () => {
 				'json'
 			);
 
-			expect(addedTask().dependencies).toEqual([1, 2]);
+			expect(addedTask().dependencies).toEqual(['1', '2']);
+		});
+
+		test('stores typed IDs as the task and subtask they name: 1 stays task 1, 3.2 is not read as task 3 (#290)', async () => {
+			const tasks = JSON.parse(JSON.stringify(sampleTasks));
+			tasks.master.tasks[2].subtasks = [
+				{ id: 2, title: 'Sub', status: 'pending', dependencies: [] }
+			];
+			readJSON.mockReturnValue(tasks);
+			aiReturnsDependencies(['2']);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				['1', '3.2'],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().dependencies).toEqual(['1', '3.2', '2']);
 		});
 	});
 
@@ -497,7 +517,7 @@ describe('addTask', () => {
 				'json'
 			);
 
-			expect(featureTask().dependencies).toEqual([1]);
+			expect(featureTask().dependencies).toEqual(['1']);
 		});
 
 		test("names each dependency with the target tag's task", async () => {

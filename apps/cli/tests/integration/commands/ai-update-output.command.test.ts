@@ -347,4 +347,22 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 			'No tasks to update: none from 9 on are unfinished'
 		);
 	});
+
+	it.each([
+		['update', '--from=1', '--prompt=Anything'],
+		['update-task', '--id=1', '--prompt=Anything'],
+		['expand', '--id=1', '--num=2']
+	])('%s prints a failed AI call once (#272)', (...args) => {
+		writeTasks([task(1, 'Parse commands')]);
+		install([{ error: 'boom' }]);
+
+		const res = taskgraph(...args);
+
+		expect(res.status).toBe(1);
+		const errorLines = res.all.split('\n').filter((l) => l.includes('boom'));
+		expect(errorLines).toEqual([
+			'✗ Claude Code API error during object generation: boom'
+		]);
+		expect(res.all).not.toMatch(/Attempt 1 failed|requestBodyValues/);
+	});
 });

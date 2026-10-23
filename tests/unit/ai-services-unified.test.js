@@ -151,7 +151,7 @@ describe('Unified AI Services', () => {
 				expect.objectContaining({ role: 'fallback' })
 			);
 			expect(mockLog).toHaveBeenCalledWith(
-				'error',
+				'debug',
 				expect.stringContaining('Service call failed for role main')
 			);
 		});

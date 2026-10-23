@@ -14,17 +14,17 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
 
 - **Dependency References**:
   - ✅ DO: Represent task dependencies as arrays of task IDs
-  - ✅ DO: Use numeric IDs for direct task references
-  - ✅ DO: Use string IDs with dot notation (e.g., "1.2") for subtask references
+  - ✅ DO: Store a top-level task's dependencies as strings (`"3"`, `"3.2"`), the form tm-core's file storage saves; older files may still hold numbers, so compare with `String()`
+  - ✅ DO: On a subtask, keep the type: a bare number up to 99 is a sibling, `"3"` is a task, `"3.2"` is that subtask
   - ❌ DON'T: Mix reference types without proper conversion
 
   ```javascript
   // ✅ DO: Use consistent dependency formats
   // For main tasks
-  task.dependencies = [1, 2, 3]; // Dependencies on other main tasks
-  
-  // For subtasks
-  subtask.dependencies = [1, "3.2"]; // Dependency on main task 1 and subtask 2 of task 3
+  task.dependencies = ["1", "2", "3.2"]; // Tasks 1 and 2, subtask 3.2
+
+  // For subtasks of task 2
+  subtask.dependencies = [1, "3", "3.2"]; // Sibling 2.1, task 3, subtask 3.2
   ```
 
 - **Subtask Dependencies**:
@@ -91,6 +91,7 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
   - ✅ DO: Format task and dependency IDs consistently
   - ✅ DO: Check for existing dependencies to prevent duplicates
   - ✅ DO: Sort dependencies for better readability
+  - ✅ DO: Store a top-level task's dependencies through `toTaskDependency` from `@tm/core` (`"3"` for a task, `"3.2"` for a subtask); never on a subtask's list, where a bare number is a sibling
 
   ```javascript
   // ✅ DO: Format IDs consistently when adding dependencies
