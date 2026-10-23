@@ -2108,7 +2108,7 @@ function registerCommands(programInstance) {
 								const dependentTasks = data.tasks.filter(
 									(t) =>
 										t.dependencies &&
-										t.dependencies.includes(parseInt(taskId, 10))
+										t.dependencies.some((d) => String(d) === String(taskId))
 								);
 								if (dependentTasks.length > 0) {
 									dependentTaskMessages.push(

@@ -19,9 +19,9 @@ import type { TasksDomain } from './modules/tasks/tasks-domain.js';
  * });
  *
  * // Access domains
- * const tasks = await tmcore.tasks.list();
- * await tmcore.git.commit('feat: add feature');
- * const config = tmcore.config.get('models.main');
+ * const { tasks } = await tmcore.tasks.list();
+ * await tmcore.git.createCommit('feat: add feature');
+ * const modelConfig = tmcore.config.getModelConfig();
  * ```
  */
 export { createTmCore, TmCore, type TmCoreOptions } from './tm-core.js';
@@ -281,6 +281,9 @@ export {
 
 // An AI rewrite keeps the stored fields its schema has no place for
 export { keepStoredFields } from './modules/tasks/utils/index.js';
+
+// A subtask that becomes a task gets a description it can load with
+export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
 
 // Acceptance criteria and the Definition of Done
 export {

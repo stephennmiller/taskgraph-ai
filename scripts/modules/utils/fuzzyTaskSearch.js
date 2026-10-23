@@ -100,7 +100,9 @@ export class FuzzyTaskSearch {
 				task.dependencies?.length > 0
 					? task.dependencies
 							.map((depId) => {
-								const depTask = tasks.find((t) => t.id === depId);
+								const depTask = tasks.find(
+									(t) => String(t.id) === String(depId)
+								);
 								return depTask ? depTask.title : '';
 							})
 							.filter((title) => title)

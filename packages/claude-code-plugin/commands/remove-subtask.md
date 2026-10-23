@@ -7,7 +7,7 @@ Remove one subtask, or turn it into a task of its own.
 
 Usage: `/taskgraph:remove-subtask <id> [--convert]`
 
-Arguments: $ARGUMENTS (subtask ID like `5.1`; `--convert`, `convert` or `standalone` keeps it as a task)
+Arguments: $ARGUMENTS (subtask ID like `5.1`; `--convert`, `convert` or `standalone` keeps it as a task, with its title as the description if it has none)
 
 To clear every subtask of a task, use `/taskgraph:clear-subtasks` instead.
 

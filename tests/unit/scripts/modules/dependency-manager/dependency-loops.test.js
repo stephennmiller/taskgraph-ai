@@ -27,6 +27,23 @@ function isInLoopBySearch(graph, id) {
 	return (graph.get(id) || []).some((dep) => leadsBack(dep, seen));
 }
 
+/** The fastest of a few runs, so one pause on a busy machine doesn't count */
+function fastest(run, makeInput, runs = 3) {
+	let best = Number.POSITIVE_INFINITY;
+	for (let r = 0; r < runs; r++) {
+		const input = makeInput();
+		const started = performance.now();
+		run(input);
+		best = Math.min(best, performance.now() - started);
+	}
+	return best;
+}
+
+// The timing tests compare two timings on the same machine, so the test
+// timeout only has to stop a run that hangs, not bound the speed; on a busy
+// runner the runs and the project builds between them outlast 5 s.
+const TIMING_TEST_TIMEOUT = 30000;
+
 /** Small deterministic generator, so a failure can be reproduced */
 function random(seed) {
 	let state = seed;
@@ -101,19 +118,28 @@ const chain = (length, subtasksPerTask = 0) =>
 	}));
 
 describe('validateTaskDependencies on a large project', () => {
-	// The search per task took 9 s at 10,000 tasks and grows with the square
-	// of the size; one pass takes well under a second. The 5 s bound is generous
-	// enough to hold on a slow machine and far below the quadratic time.
-	it('checks a long chain of tasks with subtasks in linear time', () => {
-		const tasks = chain(20000, 3);
+	// Timed against copying the same project (structuredClone, one pass over
+	// it), not a fixed number of seconds, so a slow or busy runner slows both
+	// sides. One pass takes 3 to 5 copies. Looking each dependency up with a
+	// scan of the task list takes 22 to 27 copies, so the bound sits between.
+	// A loop search per task overflows the stack on this chain.
+	it(
+		'checks a long chain of tasks with subtasks in linear time',
+		() => {
+			expect(validateTaskDependencies(chain(20000, 3))).toEqual({
+				valid: true,
+				issues: []
+			});
 
-		const started = performance.now();
-		const result = validateTaskDependencies(tasks);
-		const elapsed = performance.now() - started;
+			const validateTime = fastest(validateTaskDependencies, () =>
+				chain(20000, 3)
+			);
+			const copyTime = fastest(structuredClone, () => chain(20000, 3));
 
-		expect(result).toEqual({ valid: true, issues: [] });
-		expect(elapsed).toBeLessThan(5000);
-	});
+			expect(validateTime).toBeLessThan(copyTime * 10);
+		},
+		TIMING_TEST_TIMEOUT
+	);
 
 	it('finds every task of a loop closed at the end of a long chain', () => {
 		const tasks = chain(20000);
@@ -437,18 +463,6 @@ describe('breakSubtaskLoops', () => {
 		return tasks;
 	};
 
-	/** The fastest of a few runs, so one pause on a busy machine doesn't count */
-	const fastest = (run, makeInput, runs = 3) => {
-		let best = Number.POSITIVE_INFINITY;
-		for (let r = 0; r < runs; r++) {
-			const input = makeInput();
-			const started = performance.now();
-			run(input);
-			best = Math.min(best, performance.now() - started);
-		}
-		return best;
-	};
-
 	// The search per dependency overflowed the stack on this ring
 	it('breaks every loop of a long ring of subtasks', () => {
 		const tasks = ringProject();
@@ -464,10 +478,14 @@ describe('breakSubtaskLoops', () => {
 	// fixed number of seconds, so a slow or busy runner slows both sides. One
 	// pass takes about as long as validate; a search per dependency on the
 	// 30,000-subtask ring takes thousands of times longer.
-	it('takes about as long as validate on a large project', () => {
-		const breakTime = fastest(breakSubtaskLoops, ringProject);
-		const validateTime = fastest(validateTaskDependencies, ringProject);
+	it(
+		'takes about as long as validate on a large project',
+		() => {
+			const breakTime = fastest(breakSubtaskLoops, ringProject);
+			const validateTime = fastest(validateTaskDependencies, ringProject);
 
-		expect(breakTime).toBeLessThan(validateTime * 5);
-	});
+			expect(breakTime).toBeLessThan(validateTime * 5);
+		},
+		TIMING_TEST_TIMEOUT
+	);
 });
