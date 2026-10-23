@@ -21,6 +21,23 @@ const QUESTION = {
 	question: 'Which database should the app use?',
 	suggestedAnswer: 'PostgreSQL 16'
 };
+const TASKS = {
+	object: {
+		tasks: [
+			{
+				id: 1,
+				title: 'Set up the SQLite schema',
+				description: 'Tables for users and bookmarks.',
+				details: 'Use migrations.',
+				testStrategy: 'Run the migrations on an empty database.',
+				priority: 'high',
+				dependencies: [],
+				status: 'pending'
+			}
+		],
+		metadata: null
+	}
+};
 
 describe('parse_prd MCP tool: clarify', () => {
 	let project: string;
@@ -38,14 +55,19 @@ describe('parse_prd MCP tool: clarify', () => {
 			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 		});
 		fs.writeFileSync(path.join(project, 'prd.md'), PRD);
+	});
+
+	// Replies are served in call order, so each test installs the ones its
+	// own calls need: clarify makes one call, clarifications only the tasks call
+	const install = (replies: object[]) => {
 		const fake = installFakeClaude({
 			projectDir: project,
 			workDir: work,
-			replies: [{ object: { questions: [QUESTION] } }]
+			replies
 		});
 		fakeDir = fake.dir;
 		Object.assign(process.env, fake.env);
-	});
+	};
 
 	afterEach(() => {
 		process.chdir(path.resolve(__dirname, '../../../../..'));
@@ -55,6 +77,8 @@ describe('parse_prd MCP tool: clarify', () => {
 	});
 
 	it('clarify returns the questions and generates nothing', () => {
+		install([{ object: { questions: [QUESTION] } }]);
+
 		const reply = callMCPTool('parse_prd', {
 			projectRoot: project,
 			input: path.join(project, 'prd.md'),
@@ -67,6 +91,8 @@ describe('parse_prd MCP tool: clarify', () => {
 	});
 
 	it('clarifications are saved in the PRD before the tasks are generated', () => {
+		install([TASKS]);
+
 		const reply = callMCPTool('parse_prd', {
 			projectRoot: project,
 			input: path.join(project, 'prd.md'),
@@ -84,6 +110,7 @@ describe('parse_prd MCP tool: clarify', () => {
 		);
 		// The task generation call read the PRD with the answer in it
 		const trace = readTrace(fakeDir);
-		expect(trace.at(-1).prompt).toContain('**A:** SQLite');
+		expect(trace).toHaveLength(1);
+		expect(trace[0].prompt).toContain('**A:** SQLite');
 	});
 });

@@ -1,54 +1,70 @@
 ---
-description: "Parse a PRD document to generate tasks."
-argument-hint: "[PRD file path]"
+description: "Ask about gaps in a PRD, save the answers in it, then generate tasks."
+argument-hint: "[PRD file path] [number of tasks] [research]"
 ---
 
-Parse a PRD document to generate tasks.
+Generate tasks from a PRD, after asking the user about the gaps that would change them.
 
-Arguments: $ARGUMENTS (PRD file path)
+Arguments: $ARGUMENTS (PRD file path, then optional modifiers). In the commands below, put the file path in single quotes and write any `'` in it as `'\''`. Modifiers:
 
-## Intelligent PRD Parsing
+- a number → `--num-tasks=<n>`
+- `research` → `--research`
 
-Analyzes your requirements document and generates a complete task breakdown.
-
-## Execution
+## 1. Find the gaps
 
 ```bash
-taskgraph parse-prd --input=$ARGUMENTS
+taskgraph parse-prd '<prd-file>' --clarify --json
 ```
 
-## Parsing Process
+This reads the PRD and prints only JSON, at most five questions, each with the answer the model would assume:
 
-1. **Document Analysis**
-   - Extract key requirements
-   - Identify technical components
-   - Detect dependencies
-   - Estimate complexity
+```json
+{
+  "prd": "prd.md",
+  "questions": [
+    { "question": "Which database should the app use?", "suggestedAnswer": "PostgreSQL 16" }
+  ]
+}
+```
 
-2. **Task Generation**
-   - Create 10-15 tasks by default
-   - Include implementation tasks
-   - Add testing tasks
-   - Include documentation tasks
-   - Set logical dependencies
+It changes nothing. If `questions` is empty, the PRD is clear enough: go to step 4.
 
-3. **Smart Enhancements**
-   - Group related functionality
-   - Set appropriate priorities
-   - Add acceptance criteria
-   - Include test strategies
+## 2. Ask the user
 
-## Options
+Ask the questions in the conversation, all in one message, numbered, each with its suggested answer. Tell the user they can reply with just the numbers they want to change, and that the rest keep the suggestion. Don't answer for the user, and don't drop a question.
 
-Parse arguments for modifiers:
-- Number after filename → `--num-tasks`
-- `research` → Use research mode
-- `comprehensive` → Generate more tasks
+## 3. Save the answers and generate the tasks
 
-## Post-Generation
+Pass the JSON from step 1 back on stdin, with an `answer` added to each question the user answered. A question with no `answer` keeps its `suggestedAnswer`. Keep the heredoc's quoted `'TASKGRAPH_ANSWERS'` delimiter, so the shell expands nothing in the user's words; only JSON escaping applies (`\"` and `\\`).
 
-After parsing:
-1. Display task summary
-2. Show dependency graph
-3. Suggest task expansion for complex items
-4. Recommend sprint planning
+```bash
+taskgraph parse-prd '<prd-file>' --answers - <<'TASKGRAPH_ANSWERS'
+{
+  "questions": [
+    { "question": "Which database should the app use?", "suggestedAnswer": "PostgreSQL 16", "answer": "SQLite" }
+  ]
+}
+TASKGRAPH_ANSWERS
+```
+
+The answers are written into the PRD under `## Clarifications` (an answer already there is replaced, not repeated), and the tasks are generated from the updated PRD, so the decisions stay in the repo. Add `--num-tasks=<n>` or `--research` from the arguments.
+
+If the project already has tasks in the current tag, ask the user first whether to add to them (`--append`) or replace them (`--force`), and add that flag.
+
+## 4. Without questions
+
+```bash
+taskgraph parse-prd '<prd-file>'
+```
+
+Same flags as step 3, without `--answers`.
+
+## After
+
+Show the user the task lines `parse-prd` printed, then suggest the next step:
+
+```bash
+taskgraph next
+```
+
+For large tasks, `/taskgraph:expand-task <id>` splits one into subtasks; `/taskgraph:analyze-complexity` finds which ones need it.

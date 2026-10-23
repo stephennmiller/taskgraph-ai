@@ -152,7 +152,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 3. Task Analysis and Expansion
 
--   **`parse_prd`**: Parses a PRD to generate tasks.
+-   **`parse_prd`**: Parses a PRD to generate tasks. With `clarify: true` it returns up to 5 questions about gaps in the PRD, each with a `suggestedAnswer`, and generates nothing; ask the user, then call it again with their answers in `clarifications: [{question, answer}]`. The answers are saved in the PRD under `## Clarifications` before the tasks are generated.
 -   **`expand_task`**: Expands a task into subtasks.
 -   **`expand_all`**: Expands all eligible tasks.
 -   **`analyze_project_complexity`**: Analyzes task complexity.

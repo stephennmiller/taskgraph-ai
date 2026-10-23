@@ -416,3 +416,28 @@ describe('task-checker agent', () => {
 		expect(agent).toContain('NEVER change task state');
 	});
 });
+
+describe('parse-prd', () => {
+	const body = readFileSync(join(commandsDir, 'parse-prd.md'), 'utf-8');
+
+	it('gets the questions as JSON before generating anything', () => {
+		expect(body).toContain("taskgraph parse-prd '<prd-file>' --clarify --json");
+		expect(body.indexOf('--clarify --json')).toBeLessThan(
+			body.indexOf('--answers -')
+		);
+	});
+
+	it('passes the answers on stdin through a quoted heredoc, so the shell expands nothing in them', () => {
+		expect(body).toMatch(
+			/^taskgraph parse-prd '<prd-file>' --answers - <<'TASKGRAPH_ANSWERS'$[\s\S]*?^TASKGRAPH_ANSWERS$/m
+		);
+	});
+
+	it('single-quotes the PRD path in every call', () => {
+		const calls = [...body.matchAll(/^taskgraph parse-prd (\S+)/gm)];
+
+		expect(calls.length).toBeGreaterThan(1);
+		for (const call of calls) expect(call[1]).toBe("'<prd-file>'");
+		expect(body).toContain("write any `'` in it as `'\\''`");
+	});
+});

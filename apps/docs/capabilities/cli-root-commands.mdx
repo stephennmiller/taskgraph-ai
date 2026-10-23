@@ -16,6 +16,14 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Replace the current tag's tasks, or add to them
     taskgraph parse-prd <prd-file.txt> --force
     taskgraph parse-prd <prd-file.txt> --append
+
+    # Ask about gaps in the PRD first, and save the answers in it
+    taskgraph parse-prd <prd-file.txt> --clarify
+    taskgraph parse-prd <prd-file.txt> --clarify --yes
+
+    # For agents: print the questions as JSON, then pass the answers back
+    taskgraph parse-prd <prd-file.txt> --clarify --json > questions.json
+    taskgraph parse-prd <prd-file.txt> --answers questions.json
     ```
 
     In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID.
@@ -31,6 +39,19 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
 
     Each change is reported once: after the run, the edited PRD is the new baseline. With `--append`, Claude decides how many tasks the new sections need; `--num-tasks` applies to whole-PRD parses.
+
+    `--clarify` asks up to 5 questions about requirements the PRD leaves open (the data store, sign-in, platforms, scope), each with a suggested answer. Press Enter to keep the suggestion. The answers are saved in the PRD under `## Clarifications`, then the tasks are generated from it, so the decisions stay in the repo:
+
+    ```markdown
+    ## Clarifications
+
+    - **Q:** Which database should the app use?
+      **A:** PostgreSQL 16
+    ```
+
+    Running it again skips questions the section already answers, and a new answer to the same question replaces the old one. With no terminal to ask in, or with `--yes`, the suggested answers are used. If there is nothing to ask, it goes straight to the tasks. Ctrl-C leaves the PRD unchanged.
+
+    `--clarify --json` prints only `{"prd", "questions": [{"question", "suggestedAnswer"}]}` and changes nothing. Add an `"answer"` to each question and pass the file to `--answers` (or `-` for stdin); a question without an `"answer"` keeps its suggestion. `--answers` saves the answers and generates the tasks without asking the model for questions again.
   </Accordion>
 
   <Accordion title="List Tasks">
