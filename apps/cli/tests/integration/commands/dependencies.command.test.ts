@@ -145,4 +145,78 @@ describe('dependency commands', () => {
 		);
 		expect(result.stdout + result.stderr).not.toContain('⚠');
 	});
+
+	describe('PRD coverage', () => {
+		/** Record the PRD section a task came from, as parse-prd does */
+		const setSources = (sources: Array<string | undefined>) => {
+			const data = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+			sources.forEach((source, i) => {
+				if (source) {
+					data.master.tasks[i].metadata = {
+						...data.master.tasks[i].metadata,
+						source
+					};
+				}
+			});
+			fs.writeFileSync(tasksFile(), JSON.stringify(data, null, 2));
+		};
+
+		const writePrd = (markdown: string) => {
+			fs.mkdirSync(path.join(dir, 'docs'), { recursive: true });
+			fs.writeFileSync(path.join(dir, 'docs', 'prd.md'), markdown);
+		};
+
+		it('says nothing about PRDs when no task records a section', () => {
+			const result = run(['validate-dependencies']);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).not.toContain('PRD');
+		});
+
+		it('says every section has a task in one line', () => {
+			writePrd('# App\n\n## API\n\n## Database\n\n## Sign-in\n');
+			setSources([
+				'docs/prd.md#api',
+				'docs/prd.md#database',
+				'docs/prd.md#sign-in'
+			]);
+			const result = run(['validate-dependencies']);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain(
+				'✓ Every PRD section has a task · 4 sections in docs/prd.md'
+			);
+		});
+
+		it('lists gaps as warnings without failing the check', () => {
+			writePrd('# App\n\n## API\n\n## Database\n\n## Billing\n');
+			setSources(['docs/prd.md#api', 'docs/prd.md#postgres']);
+			const result = run(['validate-dependencies']);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain('✓ No dependency problems');
+			expect(result.stdout).toContain(
+				'⚠ 2 of 4 PRD sections have no task · docs/prd.md'
+			);
+			expect(result.stdout).toMatch(/#database\s+Database/);
+			expect(result.stdout).toContain(
+				'⚠ 1 task cites a heading docs/prd.md no longer has'
+			);
+			expect(result.stdout).toMatch(/2\s+#postgres/);
+			expect(result.stdout).toContain('⚠ 1 task has no PRD section');
+			expect(result.stdout).toMatch(/3\s+Sign-in/);
+			for (const line of result.stdout.split('\n')) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+		});
+
+		it('show names the section a task came from', () => {
+			writePrd('# App\n\n## API\n');
+			setSources(['docs/prd.md#api']);
+			const result = run(['show', '1']);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toContain('From docs/prd.md#api');
+		});
+	});
 });
