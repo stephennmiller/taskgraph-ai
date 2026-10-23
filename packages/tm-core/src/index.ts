@@ -20,7 +20,6 @@ import type { TasksDomain } from './modules/tasks/tasks-domain.js';
  *
  * // Access domains
  * const tasks = await tmcore.tasks.list();
- * await tmcore.workflow.start({ taskId: '1' });
  * await tmcore.git.commit('feat: add feature');
  * const config = tmcore.config.get('models.main');
  * ```
@@ -107,21 +106,6 @@ export type {
 export type TaskWithSubtaskResult = Awaited<ReturnType<TasksDomain['get']>>;
 export type { ArchiveResult } from './modules/tasks/tasks-domain.js';
 
-// Workflow types
-export type {
-	StartWorkflowOptions,
-	WorkflowStatus,
-	NextAction
-} from './modules/workflow/services/workflow.service.js';
-
-export type {
-	WorkflowPhase,
-	TDDPhase,
-	WorkflowContext,
-	WorkflowState,
-	TestResult
-} from './modules/workflow/types.js';
-
 // Git types
 export type { CommitMessageOptions } from './modules/git/services/commit-message-generator.js';
 
@@ -139,9 +123,15 @@ export type {
 	LoopConfig,
 	LoopIteration,
 	LoopResult,
-	LoopOutputCallbacks
+	LoopOutputCallbacks,
+	LoopTask
 } from './modules/loop/index.js';
-export { LoopDomain, PRESET_NAMES } from './modules/loop/index.js';
+export {
+	LoopDomain,
+	LoopError,
+	PRESET_NAMES,
+	TASK_PRESETS
+} from './modules/loop/index.js';
 export {
 	MAX_PARALLEL,
 	ParallelLoopError,
@@ -181,16 +171,6 @@ export type {
 } from './modules/github/index.js';
 
 // ========== Advanced API (for CLI/Extension/MCP) ==========
-
-// Workflow - Advanced
-export { WorkflowOrchestrator } from './modules/workflow/orchestrators/workflow-orchestrator.js';
-export { WorkflowStateManager } from './modules/workflow/managers/workflow-state-manager.js';
-export {
-	WorkflowService,
-	type TaskStatusUpdater,
-	type WorkflowServiceOptions
-} from './modules/workflow/services/workflow.service.js';
-export type { SubtaskInfo } from './modules/workflow/types.js';
 
 // Git - Advanced
 export { GitAdapter } from './modules/git/adapters/git-adapter.js';
