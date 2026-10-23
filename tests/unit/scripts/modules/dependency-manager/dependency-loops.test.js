@@ -120,8 +120,9 @@ const chain = (length, subtasksPerTask = 0) =>
 describe('validateTaskDependencies on a large project', () => {
 	// Timed against copying the same project (structuredClone, one pass over
 	// it), not a fixed number of seconds, so a slow or busy runner slows both
-	// sides. One pass takes 3 to 5 copies; the search per task took 9 s at
-	// 10,000 tasks and grows with the square of the size, hundreds of copies.
+	// sides. One pass takes 3 to 5 copies. Looking each dependency up with a
+	// scan of the task list takes 22 to 27 copies, so the bound sits between.
+	// A loop search per task overflows the stack on this chain.
 	it(
 		'checks a long chain of tasks with subtasks in linear time',
 		() => {
@@ -135,7 +136,7 @@ describe('validateTaskDependencies on a large project', () => {
 			);
 			const copyTime = fastest(structuredClone, () => chain(20000, 3));
 
-			expect(validateTime).toBeLessThan(copyTime * 25);
+			expect(validateTime).toBeLessThan(copyTime * 10);
 		},
 		TIMING_TEST_TIMEOUT
 	);
