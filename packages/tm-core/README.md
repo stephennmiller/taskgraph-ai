@@ -1,204 +1,72 @@
-# @taskgraph/tm-core
+# @tm/core
 
-Core library for TaskGraph - providing task management and orchestration capabilities with TypeScript support.
+All of TaskGraph's business logic: tasks, dependencies, tags, config, git, GitHub sync and the loop. The CLI (`apps/cli`) and the MCP server (`apps/mcp`) are thin layers over it, and the legacy JS in `scripts/` calls into it too.
 
-## Overview
+`@tm/core` is a private workspace package. It isn't published to npm; other workspaces depend on it by name. It is ESM only and ships its TypeScript source (`exports` points at `src/`), which the root `tsdown` build bundles into the CLI.
 
-`tm-core` is the foundational library that powers TaskGraph's task management system. It provides a comprehensive set of tools for creating, managing, and orchestrating tasks with AI integration.
+## Entry points
 
-## Features
-
-- **TypeScript-first**: Built with full TypeScript support and strict type checking
-- **Dual Format**: Supports both ESM and CommonJS with automatic format detection
-- **Modular Architecture**: Clean separation of concerns with dedicated modules for different functionality
-- **AI Provider Integration**: Pluggable AI provider system for task generation and management
-- **Flexible Storage**: Abstracted storage layer supporting different persistence strategies
-- **Task Parsing**: Advanced parsing capabilities for various task definition formats
-- **Error Handling**: Comprehensive error system with specific error types
-- **Testing**: Complete test coverage with Vitest and TypeScript support
-
-## Installation
-
-```bash
-npm install @taskgraph/tm-core
-```
+- `@tm/core`: the public API. Import everything from here.
+- `@tm/core/testing`: test fixtures (`createTask`, `createSubtask`, `createTasksFile`, `TaskScenarios`, `MetadataFixtures`) and `createMockLogger`.
 
 ## Usage
 
-### Basic Usage
+`createTmCore` is the way in. It loads the project's config and returns a `TmCore` whose domains do the work. `projectPath` must be absolute.
 
 ```typescript
-import { generateTaskId, PlaceholderTask } from '@taskgraph/tm-core';
+import { createTmCore } from '@tm/core';
 
-// Generate a unique task ID
-const taskId = generateTaskId();
+const tmCore = await createTmCore({ projectPath: process.cwd() });
 
-// Create a task (coming soon - full implementation)
-const task: PlaceholderTask = {
-  id: taskId,
-  title: 'My Task',
-  status: 'pending',
-  priority: 'medium'
-};
+const { tasks } = await tmCore.tasks.list();
+const next = await tmCore.tasks.getNext();
+const { task, isSubtask } = await tmCore.tasks.get('3.2'); // task or subtask ID
+await tmCore.tasks.updateStatus('3.2', 'in-progress');
+
+await tmCore.close(); // releases file locks
 ```
 
-### Entry points
+| Domain | What it does |
+| --- | --- |
+| `tmCore.tasks` | Read and change tasks: `list`, `get`, `getNext`, `claimNext`, `update`, `updateStatus`, `addNote`, checklists, archive, tags, dependency trees and blockers |
+| `tmCore.config` | Project config: `getConfig`, `getModelConfig`, `getActiveTag`, `setActiveTag`, `updateConfig` |
+| `tmCore.git` | Repository state, branches, staging and commits (`createCommit`, `generateCommitMessage`) |
+| `tmCore.github` | Sync with GitHub Issues: `status`, `planPush`/`push`, `planPull`/`pull`, `unlink` |
+| `tmCore.loop` | Run Claude Code over tasks one at a time (`run`) or in parallel worktrees (`runParallel`) |
+| `tmCore.logger` | The logger. Pass `loggerConfig` to `createTmCore` to route it; the MCP server sends it to the MCP log |
 
-`@tm/core` is a private workspace package with two entry points: `@tm/core` for the public API and `@tm/core/testing` for test helpers. Import everything else from `@tm/core`.
+`@tm/core` also exports the types, Zod schemas, errors (`TaskGraphError`, `ERROR_CODES`) and pure helpers the CLI and MCP share, such as `selectNextTask`, `buildPrimeContext` and the dependency and PRD utilities. See `src/index.ts` for the full list.
 
-## Architecture
+## Layout
 
-The library is organized into several key modules:
-
-- **types/**: TypeScript type definitions and interfaces
-- **providers/**: AI provider implementations for task generation
-- **storage/**: Storage adapters for different persistence strategies
-- **parser/**: Task parsing utilities for various formats
-- **utils/**: Common utility functions and helpers
-- **errors/**: Custom error classes and error handling
-
-## Development
-
-### Prerequisites
-
-- Node.js >= 20.0.0
-- npm or yarn
-
-### Setup
-
-```bash
-# Install dependencies
-npm install
-
-# Build the library
-npm run build
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
+```
+src/
+  tm-core.ts   TmCore facade and createTmCore
+  index.ts     public exports
+  common/      types, interfaces, schemas, constants, errors, logger, utils
+  modules/     one folder per area: tasks, config, git, github, loop,
+               storage, dependencies, prd, reports, migration
+  testing/     @tm/core/testing
+tests/         integration tests (*.test.ts); unit tests sit next to the source
 ```
 
-### Scripts
+## Scripts
 
-- `build`: Build the library for both ESM and CJS formats
-- `build:watch`: Build in watch mode for development
-- `test`: Run the test suite
-- `test:watch`: Run tests in watch mode
-- `test:coverage`: Run tests with coverage reporting
-- `lint`: Lint TypeScript files
-- `lint:fix`: Lint and auto-fix issues
-- `format`: Format code with Prettier
-- `format:check`: Check code formatting
-- `typecheck`: Type-check without emitting files
-- `clean`: Clean build artifacts
-- `dev`: Development mode with watch
+Run them from the repo root with `-w @tm/core`, for example `npm run test -w @tm/core`.
 
-## ESM and CommonJS Support
+| Script | What it runs |
+| --- | --- |
+| `test` | All tests (`vitest run`) |
+| `test:unit` | `*.spec.ts` only |
+| `test:integration` | `*.test.ts` only |
+| `test:watch` | Vitest in watch mode |
+| `test:coverage` | Tests with coverage |
+| `typecheck` | `tsc --noEmit` |
+| `lint` / `lint:check` / `lint:fix` | Biome check: write fixes / read only / also apply unsafe fixes |
+| `format` / `format:check` | Biome format: write / read only |
 
-This package supports both ESM and CommonJS formats automatically:
-
-```javascript
-// ESM
-import { generateTaskId } from '@taskgraph/tm-core';
-
-// CommonJS
-const { generateTaskId } = require('@taskgraph/tm-core');
-```
-
-## Roadmap
-
-This is the initial package structure. The following features are planned for implementation:
-
-### Task 116: TypeScript Types
-- [ ] Complete type definitions for tasks, projects, and configurations
-- [ ] Zod schema validation
-- [ ] Generic type utilities
-
-### Task 117: AI Provider System
-- [ ] Base provider interface
-- [ ] Anthropic Claude integration
-- [ ] Provider factory and registry
-
-### Task 118: Storage Layer
-- [ ] File system storage adapter
-- [ ] Memory storage adapter
-- [ ] Storage interface and factory
-
-### Task 119: Task Parser
-- [ ] PRD parser implementation
-- [ ] Markdown parser
-- [ ] JSON task format parser
-- [ ] Validation utilities
-
-### Task 120: Utility Functions
-- [ ] Task ID generation
-- [ ] Date formatting
-- [ ] Validation helpers
-- [ ] File system utilities
-
-### Task 121: Error Handling
-- [ ] Task-specific errors
-- [ ] Storage errors
-- [ ] Provider errors
-- [ ] Validation errors
-
-### Task 122: Configuration System
-- [ ] Configuration schema
-- [ ] Default configurations
-- [ ] Environment variable support
-
-### Task 123: Testing Infrastructure
-- [ ] Unit test coverage
-- [ ] Integration tests
-- [ ] Mock utilities
-
-### Task 124: Documentation
-- [ ] API documentation
-- [ ] Usage examples
-- [ ] Migration guides
-
-### Task 125: Package Finalization
-- [ ] Final testing and validation
-- [ ] Release preparation
-- [ ] CI/CD integration
-
-## Implementation Checklist
-
-### ✅ Task 115: Initialize tm-core Package Structure (COMPLETED)
-- [x] Create tm-core directory structure and base configuration files
-- [x] Configure build and test infrastructure 
-- [x] Create barrel export files for all directories
-- [x] Add development tooling and documentation
-- [x] Validate package structure and prepare for development
-
-### 🚧 Remaining Implementation Tasks
-- [ ] **Task 116**: TypeScript Types - Complete type definitions for tasks, projects, and configurations
-- [ ] **Task 117**: AI Provider System - Base provider interface and integrations
-- [ ] **Task 118**: Storage Layer - File system and memory storage adapters
-- [ ] **Task 119**: Task Parser - PRD, Markdown, and JSON parsers
-- [ ] **Task 120**: Utility Functions - Task ID generation, validation helpers
-- [ ] **Task 121**: Error Handling - Task-specific and validation errors
-- [ ] **Task 122**: Configuration System - Schema and environment support
-- [ ] **Task 123**: Testing Infrastructure - Complete unit and integration tests
-- [ ] **Task 124**: Documentation - API docs and usage examples
-- [ ] **Task 125**: Package Finalization - Release preparation and CI/CD
-
-## Contributing
-
-This package is part of the TaskGraph project. Please refer to the main project's contributing guidelines.
+The package has no build script: `npm run build` at the root builds the CLI, `@tm/core` included.
 
 ## License
 
-MIT - See the main project's LICENSE file for details.
-
-## Support
-
-For questions and support, please refer to the main TaskGraph documentation.
+See the repository's [LICENSE](../../LICENSE).
