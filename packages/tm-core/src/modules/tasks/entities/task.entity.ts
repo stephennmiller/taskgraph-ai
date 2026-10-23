@@ -9,6 +9,7 @@ import type {
 	TaskPriority,
 	TaskStatus
 } from '../../../common/types/index.js';
+import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
 
 /**
@@ -50,10 +51,7 @@ export class TaskEntity implements Task {
 		// Files from earlier versions can hold a task with no description
 		// (`remove-subtask --convert` copied an empty one). It takes its title,
 		// so one such task doesn't stop the whole tag from loading
-		this.description =
-			typeof data.description === 'string' && data.description.trim()
-				? data.description
-				: data.title;
+		this.description = promotedSubtaskDescription(data);
 		this.status = data.status;
 		this.priority = data.priority;
 		this.dependencies = ids.dependencies;

@@ -83,6 +83,13 @@ describe('a task with an empty description', () => {
 		});
 	});
 
+	it('shows the same description as list', () => {
+		const result = run(['show', '2', '--json']);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('"description": "Add health check"');
+	});
+
 	it('leaves tasks.json as it was', () => {
 		const tasksFile = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
 
