@@ -1255,11 +1255,7 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						// No prototype, so a `__proto__` key is written as data
 						const finalCleanData = Object.create(null);
 						for (const [key, value] of Object.entries(cleanData)) {
-							if (
-								value &&
-								typeof value === 'object' &&
-								Array.isArray(value.tasks)
-							) {
+							if (isTagData(value)) {
 								// This is a tag object - clean up any rogue root-level properties
 								// Move created/description to metadata if they're at root level
 								const { created, description, ...cleanTagData } = value;

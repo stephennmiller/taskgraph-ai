@@ -8,6 +8,7 @@ import {
 	copyArchivedTag,
 	deleteArchivedTag,
 	filterReadyTasks,
+	isReservedNewTagName,
 	isTaskComplete,
 	readArchivedIdsSync,
 	renameArchivedTag,
@@ -29,19 +30,15 @@ import findNextTask from './find-next-task.js';
 
 const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
 
-/**
- * `__proto__` is a key JavaScript objects treat as their prototype, not data.
- * `tag` and `_rawTaggedData` are also fields readJSON adds to the data it
- * returns, which the legacy code would mistake a tag of that name for.
- */
-const RESERVED_TAG_NAMES = [
-	'master',
-	'main',
-	'default',
-	'__proto__',
-	'tag',
-	'_rawtaggeddata'
-];
+const RESERVED_TAG_NAMES = ['master', 'main', 'default'];
+
+/** Whether a new tag may not take this name */
+function isReservedTagName(name) {
+	return (
+		RESERVED_TAG_NAMES.includes(name.toLowerCase()) ||
+		isReservedNewTagName(name)
+	);
+}
 
 /** An error the CLI prints with a hint underneath */
 function tagNameError(message) {
@@ -124,7 +121,7 @@ async function createTag(
 		}
 
 		// Reserved tag names
-		if (RESERVED_TAG_NAMES.includes(tagName.toLowerCase())) {
+		if (isReservedTagName(tagName)) {
 			throw new Error(`"${tagName}" is a reserved tag name`);
 		}
 
@@ -790,7 +787,7 @@ async function renameTag(
 		}
 
 		// Reserved tag names
-		if (RESERVED_TAG_NAMES.includes(newName.toLowerCase())) {
+		if (isReservedTagName(newName)) {
 			throw new Error(`"${newName}" is a reserved tag name`);
 		}
 
@@ -931,7 +928,7 @@ async function copyTag(
 		}
 
 		// Reserved tag names
-		if (RESERVED_TAG_NAMES.includes(targetName.toLowerCase())) {
+		if (isReservedTagName(targetName)) {
 			throw new Error(`"${targetName}" is a reserved tag name`);
 		}
 

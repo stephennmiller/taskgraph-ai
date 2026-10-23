@@ -6,6 +6,7 @@
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { TagInfo } from '../../../common/interfaces/storage.interface.js';
 import { TaskGraphError, ERROR_CODES } from '../../../common/errors/taskgraph-error.js';
+import { isReservedNewTagName } from '../utils/tag-names.js';
 
 /**
  * Options for creating a new tag
@@ -44,14 +45,6 @@ export interface CopyTagOptions {
  */
 const RESERVED_TAG_NAMES = ['master'];
 
-/**
- * Names no new tag can take. JavaScript objects treat a `__proto__` key as
- * their prototype rather than as data, and the legacy scripts/ code that also
- * writes tasks.json uses `tag` and `_rawTaggedData` as fields of its own. A tag
- * with one of these names already in the file (a hand edit) can still be
- * deleted or renamed.
- */
-const NEW_TAG_RESERVED_NAMES = ['__proto__', 'tag', '_rawTaggedData'];
 
 /**
  * Maximum length for tag names (prevents filesystem/UI issues)
@@ -117,7 +110,7 @@ export class TagService {
 	 */
 	private validateNewTagName(name: string, context = 'Tag name'): void {
 		this.validateTagName(name, context);
-		if (NEW_TAG_RESERVED_NAMES.includes(name)) {
+		if (isReservedNewTagName(name)) {
 			throw new TaskGraphError(
 				`"${name}" is a reserved tag name`,
 				ERROR_CODES.VALIDATION_ERROR,
