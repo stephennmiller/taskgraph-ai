@@ -187,6 +187,13 @@ describe('LoopDomain', () => {
 			expect(mockReadFile).toHaveBeenCalledWith('/custom/prompt.md');
 			expect(content).toBe('Custom prompt content');
 		});
+
+		it('reads a prompt file named after an inherited object key', async () => {
+			const mockReadFile = vi.fn().mockResolvedValue('Custom prompt content');
+			const content = await loopDomain.resolvePrompt('toString', mockReadFile);
+			expect(mockReadFile).toHaveBeenCalledWith('toString');
+			expect(content).toBe('Custom prompt content');
+		});
 	});
 
 	describe('run trust gate', () => {

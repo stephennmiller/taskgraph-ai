@@ -16,18 +16,26 @@ describe('isTaskPreset', () => {
 		expect(isTaskPreset(prompt)).toBe(true);
 	});
 
-	it.each(['test-coverage', 'linting', 'duplication', 'entropy', './my.md'])(
-		'is false for %s',
-		(prompt) => {
-			expect(isTaskPreset(prompt)).toBe(false);
-		}
-	);
+	it.each([
+		'test-coverage',
+		'linting',
+		'duplication',
+		'entropy',
+		'./my.md',
+		'toString',
+		'constructor'
+	])('is false for %s', (prompt) => {
+		expect(isTaskPreset(prompt)).toBe(false);
+	});
 });
 
 describe('assertTaskPreset', () => {
-	it.each(['default', 'tdd', './my-prompt.md'])('allows %s', (prompt) => {
-		expect(() => assertTaskPreset(prompt)).not.toThrow();
-	});
+	it.each(['default', 'tdd', './my-prompt.md', 'toString'])(
+		'allows %s',
+		(prompt) => {
+			expect(() => assertTaskPreset(prompt)).not.toThrow();
+		}
+	);
 
 	it('refuses a preset that picks its own work, with a fix', () => {
 		let error: unknown;
