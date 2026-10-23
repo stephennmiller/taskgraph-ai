@@ -6,9 +6,12 @@
  * 2. Claim up to N tasks from wave 1 (the tasks that can run now), using the
  *    same locked claim as `next --claim`.
  * 3. For each, make `.taskgraph/worktrees/task-<id>` on `taskgraph/task-<id>`
- *    and start `claude -p <prompt>` there. Output goes to a log file.
+ *    and start `claude -p <prompt>` there, with TASKGRAPH_PROJECT_ROOT set
+ *    to this project so its `taskgraph` commands update the main
+ *    tasks.json, not the worktree's copy. Output goes to a log file.
  * 4. When all have exited: keep every worktree with commits or changes, and
- *    its claim; remove the empty ones and release their claims.
+ *    its claim if Claude didn't mark the task `review`; remove the empty
+ *    ones and release their claims.
  *
  * Nothing is ever merged. An abort kills the processes, releases every
  * claim, and keeps the worktrees that have work in them.
@@ -18,6 +21,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
 import {
@@ -252,7 +256,14 @@ export class ParallelLoopRunner {
 					['-p', ctx.prompt, '--dangerously-skip-permissions'],
 					{
 						cwd: ctx.cwd,
-						env: process.env,
+						// `taskgraph` run in the worktree would otherwise find the
+						// worktree's own copy of tasks.json, checked out from HEAD:
+						// status changes would land on the branch, and tasks not yet
+						// committed would be missing. An env value, never a shell
+						env: {
+							...process.env,
+							[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
+						},
 						stdio: ['ignore', log, log],
 						// Own process group, so an abort can stop Claude's children too
 						detached: process.platform !== 'win32'
@@ -313,7 +324,9 @@ export class ParallelLoopRunner {
 	/**
 	 * After every process is gone: keep worktrees with work, remove the
 	 * empty ones, and release claims on tasks with nothing to review (all of
-	 * them on abort).
+	 * them on abort). Claude updates the task in the main project (see
+	 * start), so `claimed` is read back from there: a task Claude marked
+	 * `review` is no longer claimed.
 	 */
 	private async settle(
 		running: Running[],
@@ -336,10 +349,24 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
-			const release = aborted || !hasWork;
-			task.claimed = release
-				? !(await this.release(task.id, tag, claimant))
-				: true;
+			if (aborted || !hasWork) await this.release(task.id, tag, claimant);
+			task.claimed = await this.isClaimed(task.id, tag, claimant);
+		}
+	}
+
+	/** Still in-progress under this run's claim (assumed so if unreadable) */
+	private async isClaimed(
+		id: string,
+		tag: string | undefined,
+		claimant: string
+	): Promise<boolean> {
+		try {
+			const { task } = await this.tasks.get(id, tag);
+			return (
+				task?.status === 'in-progress' && task.metadata?.claimedBy === claimant
+			);
+		} catch {
+			return true;
 		}
 	}
 
@@ -348,20 +375,18 @@ export class ParallelLoopRunner {
 		id: string,
 		tag: string | undefined,
 		claimant: string
-	): Promise<boolean> {
+	): Promise<void> {
 		try {
 			const { task } = await this.tasks.get(id, tag);
 			if (
 				task?.status !== 'in-progress' ||
 				task.metadata?.claimedBy !== claimant
 			) {
-				return true;
+				return;
 			}
 			await this.tasks.updateStatus(id, 'pending', tag);
-			return true;
 		} catch (error) {
 			this.logger.warn(`Couldn't release the claim on task ${id}:`, error);
-			return false;
 		}
 	}
 }
