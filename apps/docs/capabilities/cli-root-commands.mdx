@@ -26,7 +26,7 @@ description: "A comprehensive reference of all available TaskGraph commands"
     taskgraph parse-prd <prd-file.txt> --answers questions.json
     ```
 
-    In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID.
+    In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID. With `--append`, Claude sees the existing tasks' IDs and titles, so a new task can depend on one of them. The new tasks are added to the tag as it is when they are saved: a change another command or agent made to the tag while Claude was working is kept, and the new tasks take the next free IDs after it.
 
     Each task records the PRD section it came from in `metadata.source`, such as `docs/prd.md#authentication`, and `taskgraph show` prints it.
 
