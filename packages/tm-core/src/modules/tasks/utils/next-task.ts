@@ -13,10 +13,9 @@ import {
 } from '../../dependencies/index.js';
 import { subtaskInContext } from './subtask-context.js';
 
-// A cancelled task will never run, so work waiting on it is not held up.
-// AI-written subtasks may carry the older 'completed' spelling
+// A cancelled task will never run, so work waiting on it is not held up
 const isSatisfied = (status: string | undefined) =>
-	status === 'done' || status === 'completed' || status === 'cancelled';
+	status === 'done' || status === 'cancelled';
 
 export interface SelectNextTaskOptions {
 	/**
@@ -58,7 +57,7 @@ export function rankNextTasks(
 	// since deferred, blocked and review tasks still wait on their dependencies
 	// A hand-edited task may have no status; it counts as pending
 	const allTasks = tasks.filter((t) =>
-		['pending', 'in-progress', 'done', 'completed', 'cancelled'].includes(
+		['pending', 'in-progress', 'done', 'cancelled'].includes(
 			t.status || 'pending'
 		)
 	);

@@ -45,7 +45,7 @@ const joinAnd = (items: string[]) =>
 const label = (id: string, title?: string) => (title ? `${id} (${title})` : id);
 
 function describeStart(e: BlockerExplanation): string[] {
-	if (e.status === 'done' || e.status === 'completed') return ['Already done.'];
+	if (e.status === 'done') return ['Already done.'];
 	if (e.status === 'cancelled') return ['Cancelled.'];
 	if (e.status === 'pending') {
 		return [

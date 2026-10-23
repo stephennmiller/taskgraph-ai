@@ -72,7 +72,7 @@ const SEGMENTS: Array<{
 		name: 'done',
 		glyph: '█',
 		paint: chalk.green,
-		// `completed` counts as done; cancelled has its own segment
+		// completedCount includes cancelled, which has its own segment
 		count: (stats) => stats.completedCount - stats.cancelled
 	},
 	{

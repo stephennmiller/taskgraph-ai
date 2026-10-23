@@ -1,7 +1,8 @@
 /**
  * @fileoverview A tasks.json that says 'completed' (the older spelling of
  * 'done') loads: list and next read it as 'done', and the next save writes
- * 'done' back. The MCP side is in apps/mcp next-task-completed.tool.test.ts.
+ * 'done' back. So does a task restored from an archive.json that says it.
+ * The MCP side is in apps/mcp next-task-completed.tool.test.ts.
  */
 
 import * as fs from 'node:fs';
@@ -90,5 +91,31 @@ describe("a top-level 'completed' status", () => {
 		expect(saved[0].status).toBe('done');
 		expect(saved[0].subtasks[0].status).toBe('done');
 		expect(saved[1].status).toBe('in-progress');
+	});
+
+	it("restores an archived 'completed' task as done", async () => {
+		fs.writeFileSync(
+			path.join(path.dirname(tasksPath), 'archive.json'),
+			JSON.stringify({
+				master: {
+					tasks: [
+						{
+							...rawTasks()[0],
+							id: 3,
+							title: 'Seed the data',
+							archivedAt: '2025-01-01T00:00:00.000Z'
+						}
+					],
+					metadata: { highestId: 3 }
+				}
+			})
+		);
+
+		const { task } = await tmCore.tasks.restore('3');
+
+		expect(task.status).toBe('done');
+		const saved = readFile().master.tasks[2];
+		expect(saved.status).toBe('done');
+		expect(saved.subtasks[0].status).toBe('done');
 	});
 });

@@ -108,7 +108,7 @@ async function updateTaskById(
 			throw new Error(`Task ${numericTaskId} not found`);
 		}
 		const taskToUpdate = data.tasks[taskIndex];
-		if (taskToUpdate.status === 'done' || taskToUpdate.status === 'completed') {
+		if (taskToUpdate.status === 'done') {
 			// The CLI command explains this once, with the fix; MCP gets a warning
 			if (outputFormat !== 'text') {
 				report(
@@ -431,7 +431,7 @@ async function updateTaskById(
 					updatedTask.subtasks = taskToUpdate.subtasks;
 				} else {
 					const completedOriginal = taskToUpdate.subtasks.filter(
-						(st) => st.status === 'done' || st.status === 'completed'
+						(st) => st.status === 'done'
 					);
 					completedOriginal.forEach((compSub) => {
 						const updatedSub = updatedTask.subtasks.find(

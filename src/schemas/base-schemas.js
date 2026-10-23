@@ -71,7 +71,7 @@ export const SubtaskSchema = z
 		description: z.string().min(10),
 		dependencies: z.array(SubtaskDependencySchema),
 		details: z.string().min(20),
-		status: z.enum(['pending', 'done', 'completed']),
+		status: z.enum(['pending', 'done']),
 		testStrategy: z.string().nullable()
 	})
 	.strict();

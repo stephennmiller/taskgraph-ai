@@ -48,11 +48,6 @@ const TASK_STATUS_CONFIG: Record<
 		color: chalk.red,
 		icon: '!',
 		tableIcon: '!'
-	},
-	completed: {
-		color: chalk.green,
-		icon: '✓',
-		tableIcon: '✓'
 	}
 };
 

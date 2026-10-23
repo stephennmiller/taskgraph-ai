@@ -1,7 +1,7 @@
 /**
  * @fileoverview Older status spellings
- * Older task files and AI-written ones can say 'completed' where TaskGraph
- * says 'done'. Every loader reads it as 'done', so the next save writes 'done'.
+ * Older task and archive files can say 'completed' where TaskGraph says
+ * 'done'. Every loader reads it as 'done', so the next save writes 'done'.
  */
 
 import type { Task } from '../../../common/types/index.js';

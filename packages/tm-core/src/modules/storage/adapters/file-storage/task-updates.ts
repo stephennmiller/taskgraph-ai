@@ -22,10 +22,6 @@ import { releaseClaimIfPending } from '../../../tasks/utils/claim.js';
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
 
-/** 'completed' counts as done everywhere else, so it is gated too */
-const isDoneStatus = (status: TaskStatus) =>
-	status === 'done' || status === 'completed';
-
 /**
  * A missing task or subtask. Coded so callers can tell it apart from storage
  * failures; `userMessage` drops detail the ID already carries.
@@ -70,7 +66,7 @@ export function setTaskStatusIn(
 	if (oldStatus === newStatus) {
 		return { tasks: null, result };
 	}
-	if (isDoneStatus(newStatus)) {
+	if (newStatus === 'done') {
 		const refusal = options.guardDone?.(
 			tasks[taskIndex],
 			String(taskId),
@@ -154,7 +150,7 @@ function setSubtaskStatusIn(
 	if (oldStatus === newStatus) {
 		return { tasks: null, result };
 	}
-	if (isDoneStatus(newStatus)) {
+	if (newStatus === 'done') {
 		const refusal = options.guardDone?.(
 			parentTask.subtasks[subtaskIndex],
 			subtaskId,
@@ -180,10 +176,7 @@ function setSubtaskStatusIn(
 	let parentNewStatus = parentTask.status;
 	if (subs.length > 0) {
 		const norm = (s: any) => s.status || 'pending';
-		const isDoneLike = (s: any) => {
-			const st = norm(s);
-			return st === 'done' || st === 'completed';
-		};
+		const isDoneLike = (s: any) => norm(s) === 'done';
 		const allDone = subs.every(isDoneLike);
 		const anyInProgress = subs.some((s) => norm(s) === 'in-progress');
 		const anyDone = subs.some(isDoneLike);

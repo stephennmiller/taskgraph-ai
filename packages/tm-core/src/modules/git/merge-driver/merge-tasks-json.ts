@@ -41,6 +41,7 @@ import {
 	TASK_LINKS_KEY
 } from '../../dependencies/dependency-provenance.js';
 import { archivedTasksById } from '../../tasks/utils/archive.js';
+import { normalizeTaskStatuses } from '../../tasks/utils/legacy-status.js';
 import {
 	type Item,
 	type Json,
@@ -175,15 +176,27 @@ export function mergeTasksJson(
 	return { merged, renumbered, conflicts };
 }
 
-/** Read a file's content as tags; a legacy file is one `master` tag */
+/**
+ * Read a file's content as tags; a legacy file is one `master` tag. Older
+ * statuses read as current ones, so a side that only rewrote them on save
+ * didn't change them.
+ */
 function asTagged(doc: unknown): { tags: Json; legacy: boolean } {
 	if (!isObject(doc)) return { tags: {}, legacy: false };
-	if (Array.isArray(own(doc, 'tasks'))) {
-		const tags: Json = {};
-		put(tags, LEGACY_TAG, doc);
-		return { tags, legacy: true };
+	const legacy = Array.isArray(own(doc, 'tasks'));
+	const tags: Json = {};
+	const entries = legacy ? [[LEGACY_TAG, doc]] : Object.entries(doc);
+	for (const [tag, value] of entries as [string, unknown][]) {
+		const tasks = isObject(value) && own(value, 'tasks');
+		put(
+			tags,
+			tag,
+			Array.isArray(tasks)
+				? { ...(value as Json), tasks: normalizeTaskStatuses(tasks) }
+				: value
+		);
 	}
-	return { tags: doc, legacy: false };
+	return { tags, legacy };
 }
 
 function mergeTag(

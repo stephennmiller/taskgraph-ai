@@ -74,7 +74,7 @@ async function listTasks(
 		// Calculate completion statistics
 		const totalTasks = data.tasks.length;
 		const completedTasks = data.tasks.filter(
-			(task) => task.status === 'done' || task.status === 'completed'
+			(task) => task.status === 'done'
 		).length;
 		const completionPercentage =
 			totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -114,7 +114,7 @@ async function listTasks(
 			if (task.subtasks && task.subtasks.length > 0) {
 				totalSubtasks += task.subtasks.length;
 				completedSubtasks += task.subtasks.filter(
-					(st) => st.status === 'done' || st.status === 'completed'
+					(st) => st.status === 'done'
 				).length;
 				inProgressSubtasks += task.subtasks.filter(
 					(st) => st.status === 'in-progress'
@@ -144,22 +144,17 @@ async function listTasks(
 		// Dependencies on archived tasks count as done
 		const dependencyView = satisfyArchivedDependencies(data.tasks, archivedIds);
 		const completedTaskIds = new Set(
-			data.tasks
-				.filter((t) => t.status === 'done' || t.status === 'completed')
-				.map((t) => t.id)
+			data.tasks.filter((t) => t.status === 'done').map((t) => t.id)
 		);
 
 		const tasksWithNoDeps = dependencyView.filter(
 			(t) =>
-				t.status !== 'done' &&
-				t.status !== 'completed' &&
-				(!t.dependencies || t.dependencies.length === 0)
+				t.status !== 'done' && (!t.dependencies || t.dependencies.length === 0)
 		).length;
 
 		const tasksWithAllDepsSatisfied = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
-				t.status !== 'completed' &&
 				t.dependencies &&
 				t.dependencies.length > 0 &&
 				t.dependencies.every((depId) => completedTaskIds.has(depId))
@@ -168,7 +163,6 @@ async function listTasks(
 		const tasksWithUnsatisfiedDeps = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
-				t.status !== 'completed' &&
 				t.dependencies &&
 				t.dependencies.length > 0 &&
 				!t.dependencies.every((depId) => completedTaskIds.has(depId))
@@ -405,7 +399,6 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 	const getStatusSymbol = (status) => {
 		switch (status) {
 			case 'done':
-			case 'completed':
 				return '✓&nbsp;done';
 			case 'in-progress':
 				return '►&nbsp;in-progress';

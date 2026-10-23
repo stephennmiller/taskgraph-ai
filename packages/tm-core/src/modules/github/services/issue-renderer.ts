@@ -38,13 +38,10 @@ function label(name: string): string {
 	return `${BASE_LABEL}:${name}`.slice(0, 50);
 }
 
-const isCompleted = (status: string) =>
-	status === 'done' || status === 'completed';
-
 function stateFor(
 	status: string
 ): Pick<RenderedIssue, 'state' | 'stateReason'> {
-	if (isCompleted(status)) return { state: 'closed', stateReason: 'completed' };
+	if (status === 'done') return { state: 'closed', stateReason: 'completed' };
 	if (status === 'cancelled')
 		return { state: 'closed', stateReason: 'not_planned' };
 	return { state: 'open' };
@@ -69,7 +66,7 @@ export function renderIssue(task: Task, ctx: RenderContext): RenderedIssue {
 
 	if (task.subtasks?.length) {
 		const items = task.subtasks.map((st) => {
-			const mark = isCompleted(st.status) ? 'x' : ' ';
+			const mark = st.status === 'done' ? 'x' : ' ';
 			return `- [${mark}] ${id}.${st.id} ${st.title}`;
 		});
 		sections.push(`### Subtasks\n${items.join('\n')}`);

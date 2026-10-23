@@ -259,7 +259,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   // Calculate completion statistics
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => 
-    task.status === 'done' || task.status === 'completed').length;
+    task.status === 'done').length;
   const completionPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
   
   // Count subtasks
@@ -270,7 +270,7 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
     if (task.subtasks && task.subtasks.length > 0) {
       totalSubtasks += task.subtasks.length;
       completedSubtasks += task.subtasks.filter(st => 
-        st.status === 'done' || st.status === 'completed').length;
+        st.status === 'done').length;
     }
   });
   ```
