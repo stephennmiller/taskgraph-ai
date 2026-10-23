@@ -38,7 +38,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 <summary><b>See the full workflow</b> (4 short clips)</summary>
 
 <p align="center">
-  <a href="images/demo/01-setup.mp4"><img src="images/demo/01-setup.svg" alt="Running taskgraph init --rules claude in a project" width="820"></a>
+  <a href="images/demo/01-setup.mp4"><img src="images/demo/01-setup.svg" alt="Running taskgraph init in a project" width="820"></a>
   <br>
   <sub>1. Set it up in your project · <a href="images/demo/01-setup.mp4">MP4</a></sub>
 </p>
