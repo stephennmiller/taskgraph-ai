@@ -17,32 +17,31 @@ import {
 	findProjectRoot,
 	getCurrentTag,
 	getTasksForTag,
+	isTagData,
 	log,
 	readJSON,
 	resolveTag,
 	modifyJSON,
+	withoutReadJSONFields,
 	writeJSON
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
 const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
 
-/** `__proto__` is a key JavaScript objects treat as their prototype, not data */
-const RESERVED_TAG_NAMES = ['master', 'main', 'default', '__proto__'];
-
 /**
- * Copy tagged tasks.json data without the given keys. The copy has no
- * prototype, so every key, `__proto__` included, is copied as data.
+ * `__proto__` is a key JavaScript objects treat as their prototype, not data.
+ * `tag` and `_rawTaggedData` are also fields readJSON adds to the data it
+ * returns, which the legacy code would mistake a tag of that name for.
  */
-function copyTaggedData(data, skipKeys) {
-	const copy = Object.create(null);
-	for (const [key, value] of Object.entries(data)) {
-		if (!skipKeys.includes(key)) {
-			copy[key] = value;
-		}
-	}
-	return copy;
-}
+const RESERVED_TAG_NAMES = [
+	'master',
+	'main',
+	'default',
+	'__proto__',
+	'tag',
+	'_rawtaggeddata'
+];
 
 /** An error the CLI prints with a hint underneath */
 function tagNameError(message) {
@@ -153,7 +152,7 @@ async function createTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
+			rawData = withoutReadJSONFields(data);
 		}
 
 		// Check if tag already exists
@@ -190,7 +189,7 @@ async function createTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+		const cleanData = withoutReadJSONFields(rawData);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -316,7 +315,7 @@ async function deleteTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
+			rawData = withoutReadJSONFields(data);
 		}
 
 		// Check if tag exists
@@ -441,14 +440,7 @@ async function enhanceTagsWithMetadata(tasksPath, rawData, context = {}) {
 
 		for (const [tagName, tagData] of Object.entries(rawData)) {
 			// Skip non-tag properties
-			if (
-				tagName === 'tasks' ||
-				tagName === 'tag' ||
-				tagName === '_rawTaggedData' ||
-				!tagData ||
-				typeof tagData !== 'object' ||
-				!Array.isArray(tagData.tasks)
-			) {
+			if (tagName === 'tasks' || !isTagData(tagData)) {
 				continue;
 			}
 
@@ -483,7 +475,7 @@ async function enhanceTagsWithMetadata(tasksPath, rawData, context = {}) {
 		// If we enhanced any tags, write the data back
 		if (enhanced) {
 			// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-			const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+			const cleanData = withoutReadJSONFields(rawData);
 			writeJSON(tasksPath, cleanData, context.projectRoot);
 		}
 	} catch (error) {
@@ -552,15 +544,8 @@ async function tags(
 		// Extract all tags
 		const tagList = [];
 		for (const [tagName, tagData] of Object.entries(rawData)) {
-			// Skip non-tag properties (like legacy 'tasks' array, 'tag', '_rawTaggedData')
-			if (
-				tagName === 'tasks' ||
-				tagName === 'tag' ||
-				tagName === '_rawTaggedData' ||
-				!tagData ||
-				typeof tagData !== 'object' ||
-				!Array.isArray(tagData.tasks)
-			) {
+			// Skip non-tag properties, like a legacy 'tasks' array
+			if (tagName === 'tasks' || !isTagData(tagData)) {
 				continue;
 			}
 
@@ -854,7 +839,7 @@ async function renameTag(
 		}
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+		const cleanData = withoutReadJSONFields(rawData);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -991,7 +976,7 @@ async function copyTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+		const cleanData = withoutReadJSONFields(rawData);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
