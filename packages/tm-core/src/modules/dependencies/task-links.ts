@@ -24,6 +24,7 @@
  */
 
 import { isDeepStrictEqual } from 'node:util';
+import { fullSubtaskId } from '../tasks/validation/task-id.js';
 import {
 	TASK_LINKS_KEY,
 	assignMetadata,
@@ -177,12 +178,12 @@ function* everyItem(
 	tasks: LinkableTask[]
 ): Generator<{ item: Linkable; fullId: string }> {
 	for (const task of tasks) {
-		yield { item: task, fullId: String(task.id) };
+		const taskId = String(task.id);
+		yield { item: task, fullId: taskId };
 		for (const subtask of task.subtasks ?? []) {
-			const sub = String(subtask.id);
 			yield {
 				item: subtask,
-				fullId: sub.includes('.') ? sub : `${task.id}.${sub}`
+				fullId: fullSubtaskId(taskId, String(subtask.id))
 			};
 		}
 	}

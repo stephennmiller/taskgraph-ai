@@ -23,7 +23,7 @@ import {
 	it
 } from 'vitest';
 import { installFakeClaude } from '../../fakes/install-fake-claude.mjs';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
 
 const binPath = getCliBinPath();
 const built = fs.existsSync(binPath);
@@ -174,9 +174,8 @@ describe.skipIf(!built)(
 		});
 
 		beforeEach(() => {
-			project = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-prd-append-'));
+			project = copyProject(template, 'tm-prd-append-');
 			work = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-prd-append-work-'));
-			fs.cpSync(template, project, { recursive: true });
 			install(project, work, [
 				{
 					object: {

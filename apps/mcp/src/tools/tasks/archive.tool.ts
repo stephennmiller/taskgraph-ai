@@ -107,7 +107,8 @@ export function registerArchiveTasksTool(server: FastMCP) {
 							}
 						},
 						log,
-						projectRoot
+						projectRoot,
+						tag
 					});
 				}
 			}

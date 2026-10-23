@@ -3,56 +3,18 @@ description: "TaskGraph: list the project's tasks, filtered by status or tag. Us
 argument-hint: "[status] [--subtasks]"
 ---
 
-List tasks with intelligent argument parsing. One command covers plain listing, status filters and the subtask tree.
+List the project's tasks.
 
 Usage: `/taskgraph:list-tasks [status] [--subtasks]`
 
-Parse arguments to determine filters and display options:
-- Status: pending, in-progress, done, review, deferred, cancelled, blocked (a task whose status is `blocked`)
-- Priority: high, medium, low (or priority:high)
-- Special: subtasks (or `--subtasks`), tree, dependencies, "waiting" (tasks with unmet dependencies)
-- IDs: Direct numbers (e.g., "1,3,5" or "1-5")
-- Complex: "pending high" = pending AND high priority
-
 Arguments: $ARGUMENTS
 
-Let me parse your request intelligently:
-
-1. **Detect Filter Intent**
-   - If arguments contain status keywords → filter by status
-   - If arguments contain priority → filter by priority
-   - If arguments contain "subtasks" → include subtasks
-   - If arguments contain "tree" → hierarchical view
-   - If arguments contain numbers → show specific tasks
-   - If arguments contain "blocked" → status filter: `taskgraph list --status=blocked`
-   - If arguments contain "waiting" or "unmet dependencies" → tasks whose dependencies are not done (a different question from the `blocked` status)
-
-2. **Smart Combinations**
-   Examples of what I understand:
-   - "pending high" → pending tasks with high priority
-   - "done today" → tasks completed today
-   - "blocked" → tasks with status `blocked`
-   - "waiting" → tasks with unmet dependencies
-   - "1-5" → tasks 1 through 5
-   - "subtasks tree" → hierarchical view with subtasks
-
-3. **Execute Appropriate Query**
-   Based on parsed intent, run the most specific taskgraph command:
-   ```bash
-   taskgraph list                      # everything
-   taskgraph list --status=<status>    # a status keyword was given
-   taskgraph list --with-subtasks      # "subtasks" or "--subtasks" was given
-   taskgraph list --status=<status> --with-subtasks
-   ```
-
-4. **Enhanced Display**
-   - Group by relevant criteria
-   - Show most important information first
-   - Use visual indicators for quick scanning
-   - Include relevant metrics
-
-5. **Intelligent Suggestions**
-   Based on what you're viewing, suggest next actions:
-   - Many pending? → Suggest priority order
-   - Many blocked? → Show dependency resolution
-   - Looking at specific tasks? → Show related tasks
+1. Pick the command from the arguments:
+   - nothing: `taskgraph list`
+   - a status (pending, in-progress, done, review, deferred, cancelled, blocked): `taskgraph list --status=<status>`. `blocked` means the task's status is `blocked`: `taskgraph list --status=blocked`
+   - `subtasks` or `--subtasks`: add `--with-subtasks`, as in `taskgraph list --with-subtasks`
+   - `ready`: `taskgraph list --ready`, the tasks whose dependencies are all done
+   - `waiting` or "unmet dependencies": tasks that wait on another task, a different question from the `blocked` status. Run `taskgraph graph` instead; it draws each task under what it waits on.
+   - task IDs like `1,3,5` (digits, dots and commas only): `taskgraph show 1,3,5`
+2. Show the output unchanged in a code block.
+3. Then, in one sentence, point out the `Next` task from the summary at the top of `list`, and anything in progress or blocked. `show` prints no summary, so after `show` point out only what it printed.

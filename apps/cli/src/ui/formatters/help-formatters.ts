@@ -35,6 +35,12 @@ export interface HelpGroup {
  * One row per command, in the order a user reaches for them. Commands are
  * registered in two places (commands.js and registerAllCommands), so this list
  * is static rather than read from a registry.
+ *
+ * Every command a user runs gets a row. Left out on purpose: `prime` (for
+ * agents, named in the footer), hidden commands (`start`, an alias of loop,
+ * and `merge-driver`, which git runs), `help`, the placeholder `tui`,
+ * `update-subtask` (the help points at `note` instead, #245) and the old
+ * per-tag commands that `tags <…>` replaces.
  */
 export const HELP_GROUPS: readonly HelpGroup[] = [
 	{
@@ -44,7 +50,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'show', desc: 'Show one task in detail' },
 			{ name: 'list', desc: 'List tasks, filtered by status or tag' },
 			{ name: 'set-status', desc: 'Change a task or subtask status' },
-			{ name: 'add-task', desc: 'Add a task from a description' }
+			{ name: 'add-task', desc: 'Add a task from a description' },
+			{ name: 'loop', desc: 'Have Claude Code work through your tasks' }
 		]
 	},
 	{
@@ -52,6 +59,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		commands: [
 			{ name: 'init', desc: 'Set up TaskGraph in this project' },
 			{ name: 'models', desc: 'View or change the AI models' },
+			{ name: 'lang', desc: 'View or change the AI response language' },
 			{ name: 'completion', desc: 'Install Tab completion for your shell' }
 		]
 	},
@@ -67,7 +75,11 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'remove-task', desc: 'Remove a task or subtask' },
 			{ name: 'remove-subtask', desc: 'Remove a subtask' },
 			{ name: 'clear-subtasks', desc: 'Remove all subtasks from tasks' },
-			{ name: 'sync-readme', desc: 'Export tasks to README.md' }
+			{ name: 'sync-readme', desc: 'Export tasks to README.md' },
+			{
+				name: 'github <push|pull|status|unlink>',
+				desc: 'Sync tasks with GitHub Issues'
+			}
 		]
 	},
 	{
@@ -76,6 +88,8 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'analyze-complexity', desc: 'Score tasks for complexity' },
 			{ name: 'complexity-report', desc: 'Show the complexity report' },
 			{ name: 'expand', desc: 'Break a task into subtasks' },
+			{ name: 'scope-up', desc: 'Grow a task’s scope with AI' },
+			{ name: 'scope-down', desc: 'Shrink a task’s scope with AI' },
 			{ name: 'research', desc: 'Ask a research question about the project' }
 		]
 	},
@@ -88,6 +102,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			},
 			{ name: 'graph', desc: 'Show tasks as a dependency tree' },
 			{ name: 'why', desc: 'Explain why a task is blocked' },
+			{ name: 'move', desc: 'Move tasks to another position or tag' },
 			{
 				name: 'archive <restore>',
 				desc: 'Move finished tasks out, or restore one'

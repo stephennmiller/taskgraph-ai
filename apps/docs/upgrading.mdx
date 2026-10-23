@@ -79,6 +79,8 @@ There are no aliases. If you used one of the old names in a script, a note or a 
 | `to-pending`, `to-review`, `to-deferred`, `to-cancelled` | `set-status <id> <status>` (`to-done` and `to-in-progress` stay) |
 | `remove-subtasks` | `clear-subtasks <id>` |
 | `remove-all-subtasks` | `clear-subtasks --all` |
+| `learn` | `help` |
+| `analyze-project` | `project-status` (progress, work in hand and bottlenecks, from `taskgraph list` and `taskgraph graph`) |
 
 Updating the plugin itself leaves nothing behind. Claude Code installs each plugin version into its own directory (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>`) and points the install path at the active one. On a real update of `superpowers` from 6.4.2 to 7.0.0, the old directory kept a file the new version dropped and got an `.orphaned_at` marker, while 7.0.0 did not have the file. A plugin with no `version` field, like this one, is probably keyed by commit SHA instead. Whether the update arrives automatically or needs `/plugin marketplace update taskgraph` is not verified, so run it.
 

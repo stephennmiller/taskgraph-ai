@@ -9,8 +9,16 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it
+} from 'vitest';
+import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
 
 describe('tags command', () => {
 	let dir: string;
@@ -34,13 +42,32 @@ describe('tags command', () => {
 	const all = (result: { stdout: string; stderr: string }) =>
 		result.stdout + result.stderr;
 
-	beforeEach(() => {
-		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tags-'));
-		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tags-home-'));
-		run(['init', '--yes', '--no-aliases', '--no-git']);
+	// Set the project up once and copy it into each test's folder: every spawn
+	// of the built CLI takes seconds on a loaded runner
+	let template: string;
+	let templateHome: string;
+
+	beforeAll(() => {
+		template = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tags-tpl-'));
+		templateHome = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tags-home-'));
+		dir = template;
+		home = templateHome;
+		expect(run(['init', '--yes', '--no-aliases', '--no-git']).status).toBe(0);
 		for (const title of ['Set up the API', 'Add Postgres']) {
-			run(['add-task', `--title=${title}`, `--description=${title}`]);
+			expect(
+				run(['add-task', `--title=${title}`, `--description=${title}`]).status
+			).toBe(0);
 		}
+	}, 60000);
+
+	afterAll(() => {
+		fs.rmSync(template, { recursive: true, force: true });
+		fs.rmSync(templateHome, { recursive: true, force: true });
+	});
+
+	beforeEach(() => {
+		dir = copyProject(template, 'tm-tags-');
+		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tags-home-'));
 	});
 
 	afterEach(() => {

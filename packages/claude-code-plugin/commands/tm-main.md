@@ -1,89 +1,56 @@
 ---
 description: "TaskGraph: every TaskGraph slash command, grouped by purpose."
-argument-hint: "[arguments]"
 ---
 
-# TaskGraph Command Reference
+Show every TaskGraph slash command, grouped by purpose. Show this list as it is:
 
-Every slash command the TaskGraph plugin provides, grouped by purpose. Invoke them as `/taskgraph:<name>`.
-
-## Project Setup & Configuration
-
-- `/taskgraph:init-project [--quick]` - Initialize new project (handles PRD files intelligently); `--quick` skips prompts (-y)
-- `/taskgraph:install-taskgraph [--quick]` - Installation guide; `--quick` for a one-line global install
-- `/taskgraph:view-models` - View current AI model configuration
-- `/taskgraph:setup-models` - Interactive model configuration
-
-## Task Generation
-
-- `/taskgraph:parse-prd` - Generate tasks from a PRD document
-- `/taskgraph:parse-prd-with-research` - Enhanced parsing with research mode
-
-## Task Management
-
-- `/taskgraph:list-tasks [status] [--subtasks]` - Smart listing with natural language filters, by status, with subtasks
-- `/taskgraph:graph` - Dependency tree with the next task marked
-- `/taskgraph:why <id>` - Explain why a task is blocked, down to the root causes
-- `/taskgraph:set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
-- `/taskgraph:to-in-progress` - Start working on a task
-- `/taskgraph:to-done` - Check acceptance criteria, save a close summary, mark complete
-- `/taskgraph:sync-readme` - Export tasks to README.md with formatting
-- `/taskgraph:add-task` - Add a new task with AI assistance
-- `/taskgraph:update-task` - Update a single task
-- `/taskgraph:update-tasks-from-id` - Update multiple tasks from a starting point
-- `/taskgraph:remove-task` - Remove a task with confirmation
-
-## Subtask Management
-
-- `/taskgraph:add-subtask` - Add a new subtask to a parent
-- `/taskgraph:convert-task-to-subtask` - Convert an existing task to a subtask
-- `/taskgraph:remove-subtask <id> [--convert]` - Remove one subtask (optionally converting it to a task)
-- `/taskgraph:clear-subtasks [<id>|--all]` - Clear subtasks from one task, or from every task with `--all`
-
-## Task Analysis & Breakdown
-
-- `/taskgraph:analyze-complexity` - Analyze and generate expansion recommendations
-- `/taskgraph:complexity-report` - Display the complexity analysis report
-- `/taskgraph:expand-task` - Break down a specific task
-- `/taskgraph:expand-all-tasks` - Expand all eligible tasks
-
-## Task Navigation
-
-- `/taskgraph:next-task` - Intelligent next task recommendation
-- `/taskgraph:show-task` - Display detailed task information
-- `/taskgraph:project-status` - Comprehensive project dashboard
-
-## Dependency Management
-
-- `/taskgraph:add-dependency` - Add a task dependency
-- `/taskgraph:remove-dependency` - Remove a task dependency
-- `/taskgraph:validate-dependencies` - Check for dependency issues
-- `/taskgraph:fix-dependencies` - Automatically fix dependency problems
-
-## Workflows & Automation
-
-- `taskgraph loop` (in a terminal) - Claude Code works the tasks, one per iteration (`--prompt tdd` for test-first, `--parallel <n>` side by side)
-- `/taskgraph:analyze-project` - Deep project analysis and insights
-- `/taskgraph:learn` - Interactive guide to TaskGraph
-- `/taskgraph:help` - Command overview
-
-## Usage Patterns
-
-### Natural Language
-Most commands accept natural language arguments:
 ```
-/taskgraph:add-task create user authentication system
-/taskgraph:update-task 12 mark this as high priority
-/taskgraph:list-tasks show blocked tasks
+Start
+  /taskgraph:install-taskgraph [--quick]   Install the taskgraph CLI
+  /taskgraph:init-project [--quick]        Set up TaskGraph in this project
+  /taskgraph:view-models                   Show the AI models in use
+  /taskgraph:setup-models                  Choose the AI models
+
+Plan
+  /taskgraph:parse-prd <file>              Turn a PRD into tasks, gaps first
+  /taskgraph:parse-prd-with-research       Same, with web research
+  /taskgraph:analyze-complexity            Score tasks, say which to split
+  /taskgraph:complexity-report             Show the complexity report
+  /taskgraph:expand-task <id>              Break one task into subtasks
+  /taskgraph:expand-all-tasks              Break down every task without any
+
+See
+  /taskgraph:next-task                     The next task to work on
+  /taskgraph:show-task <id>                One task in full
+  /taskgraph:list-tasks [status]           All tasks, or one status
+  /taskgraph:project-status                Progress, work in hand, bottlenecks
+  /taskgraph:graph [id]                    Tasks as a dependency tree
+  /taskgraph:why <id>                      Why a task is blocked
+
+Work
+  /taskgraph:to-in-progress <id>           Start a task
+  /taskgraph:to-done <id>                  Check the criteria and close a task
+  /taskgraph:set-status <id> <status>      Set any other status
+
+Edit
+  /taskgraph:add-task <text>               Add a task
+  /taskgraph:update-task <id> <changes>    Rewrite one task
+  /taskgraph:update-tasks-from-id <id>     Rewrite every task from an ID onward
+  /taskgraph:remove-task <id>              Delete a task
+  /taskgraph:add-subtask <id> <title>      Add a subtask
+  /taskgraph:convert-task-to-subtask       Move a task under another
+  /taskgraph:remove-subtask <id>           Delete a subtask, or make it a task
+  /taskgraph:clear-subtasks <id>           Delete all of a task's subtasks
+  /taskgraph:sync-readme                   Write the task list into README.md
+
+Dependencies
+  /taskgraph:add-dependency <id> <id>      Make a task wait on another
+  /taskgraph:remove-dependency <id> <id>   Remove a dependency
+  /taskgraph:validate-dependencies         Check for broken or circular links
+  /taskgraph:fix-dependencies              Repair what it can
+
+To have Claude Code work the tasks one after another, run taskgraph loop in a
+terminal (--prompt tdd for test-first, --parallel <n> for independent tasks).
 ```
 
-### ID-Based Commands
-Commands requiring IDs intelligently parse from $ARGUMENTS:
-```
-/taskgraph:show-task 45
-/taskgraph:expand-task 23
-/taskgraph:to-done 67
-```
-
-### Smart Defaults
-Commands provide intelligent defaults and suggestions based on context.
+Then, in one sentence, suggest `/taskgraph:next-task` to find what to work on.

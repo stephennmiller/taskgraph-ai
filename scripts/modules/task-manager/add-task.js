@@ -1,6 +1,7 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
+	mergeNewTaskDependencies,
 	nextTaskId,
 	normalizeAcceptanceCriteria,
 	readArchivedIdsSync,
@@ -65,25 +66,6 @@ function resolveDiscoveredFrom(id, tasks) {
 		throw fail(`Task ${fullId} doesn't exist`);
 	}
 	return fullId;
-}
-
-/**
- * Get all tasks from all tags
- * @param {Object} rawData - The raw tagged data object
- * @returns {Array} A flat array of all task objects
- */
-function getAllTasks(rawData) {
-	let allTasks = [];
-	for (const tagName in rawData) {
-		if (
-			Object.prototype.hasOwnProperty.call(rawData, tagName) &&
-			rawData[tagName] &&
-			Array.isArray(rawData[tagName].tasks)
-		) {
-			allTasks = allTasks.concat(rawData[tagName].tasks);
-		}
-	}
-	return allTasks;
 }
 
 /**
@@ -317,9 +299,6 @@ async function addTask(
 			};
 		}
 
-		// Get a flat list of ALL tasks across ALL tags to validate dependencies
-		const allTasks = getAllTasks(rawData);
-
 		// The next ID *within the target tag*, above every archived ID too, so
 		// an archived task's ID is never reused
 		const tasksInTargetTag = rawData[targetTag].tasks;
@@ -333,24 +312,24 @@ async function addTask(
 			archived.highestId
 		);
 
-		// Validate dependencies before proceeding
-		const invalidDeps = dependencies.filter((depId) => {
-			// Ensure depId is parsed as a number for comparison
-			const numDepId = parseInt(depId, 10);
-			return Number.isNaN(numDepId) || !allTasks.some((t) => t.id === numDepId);
-		});
+		// Dependencies resolve within the target tag only: task IDs repeat
+		// across tags, so another tag's task 2 is not this tag's task 2
+		const existingIds = tasksInTargetTag.map((t) => t.id);
+		const { dependencies: numericDependencies, missingExplicit: invalidDeps } =
+			mergeNewTaskDependencies({
+				explicit: dependencies.map((dep) => {
+					const id = parseInt(dep, 10);
+					return Number.isNaN(id) ? dep : id;
+				}),
+				existingIds
+			});
 
 		if (invalidDeps.length > 0) {
 			report(
 				`${invalidDeps.length === 1 ? 'Task' : 'Tasks'} ${invalidDeps.join(', ')} ${invalidDeps.length === 1 ? "doesn't" : "don't"} exist; adding the task without ${invalidDeps.length === 1 ? 'that dependency' : 'those dependencies'}`,
 				'warn'
 			);
-			dependencies = dependencies.filter(
-				(depId) => !invalidDeps.includes(depId)
-			);
 		}
-		// Ensure dependencies are numbers
-		const numericDependencies = dependencies.map((dep) => parseInt(dep, 10));
 
 		// Build dependency graphs for explicitly specified dependencies
 		const dependencyGraphs = [];
@@ -359,7 +338,12 @@ async function addTask(
 
 		// First pass: build a complete dependency graph for each specified dependency
 		for (const depId of numericDependencies) {
-			const graph = buildDependencyGraph(allTasks, depId, new Set(), depthMap);
+			const graph = buildDependencyGraph(
+				tasksInTargetTag,
+				depId,
+				new Set(),
+				depthMap
+			);
 			if (graph) {
 				dependencyGraphs.push(graph);
 			}
@@ -439,7 +423,7 @@ async function addTask(
 				{
 					prompt,
 					newTaskId,
-					existingTasks: allTasks,
+					existingTasks: tasksInTargetTag,
 					gatheredContext,
 					contextFromArgs,
 					useResearch,
@@ -530,6 +514,20 @@ async function addTask(
 			// --- End Refactored AI Interaction ---
 		}
 
+		// The dependencies the user passed always stay; the AI's suggestions are
+		// added to them, minus any with no task in the target tag
+		const merged = mergeNewTaskDependencies({
+			explicit: numericDependencies,
+			suggested: taskData.dependencies,
+			existingIds
+		});
+		if (merged.missingSuggested.length > 0) {
+			report(
+				'AI suggested invalid dependencies. Filtering them out...',
+				'warn'
+			);
+		}
+
 		// Create the new task object
 		const newTask = {
 			id: newTaskId,
@@ -538,9 +536,7 @@ async function addTask(
 			details: taskData.details || '',
 			testStrategy: taskData.testStrategy || '',
 			status: 'pending',
-			dependencies: taskData.dependencies?.length
-				? taskData.dependencies
-				: numericDependencies, // Use AI-suggested dependencies if available, fallback to manually specified
+			dependencies: merged.dependencies,
 			priority: effectivePriority,
 			subtasks: [] // Initialize with empty subtasks array
 		};
@@ -549,29 +545,6 @@ async function addTask(
 		);
 		if (acceptanceCriteria.length > 0) {
 			newTask.acceptanceCriteria = acceptanceCriteria;
-		}
-
-		// Additional check: validate all dependencies in the AI response
-		if (taskData.dependencies?.length) {
-			const allValidDeps = taskData.dependencies.every((depId) => {
-				const numDepId = parseInt(depId, 10);
-				return (
-					!Number.isNaN(numDepId) && allTasks.some((t) => t.id === numDepId)
-				);
-			});
-
-			if (!allValidDeps) {
-				report(
-					'AI suggested invalid dependencies. Filtering them out...',
-					'warn'
-				);
-				newTask.dependencies = taskData.dependencies.filter((depId) => {
-					const numDepId = parseInt(depId, 10);
-					return (
-						!Number.isNaN(numDepId) && allTasks.some((t) => t.id === numDepId)
-					);
-				});
-			}
 		}
 
 		// Dependencies the user passed stay explicit; any the AI added are inferred
@@ -615,9 +588,8 @@ async function addTask(
 		// Show success message - only for text output (CLI)
 		if (outputFormat === 'text') {
 			const same = (a) => (b) => String(a) === String(b);
-			const titleOf = (id) => allTasks.find((t) => same(id)(t.id))?.title ?? '';
-			// A subtask too ("3.2"), in the tag the task went in
-			const titleOfAny = (id) => {
+			// A task or a subtask ("3.2"), in the tag the task went in
+			const titleOf = (id) => {
 				const [parent, sub] = String(id).split('.');
 				const task = tasksInTargetTag.find((t) => same(parent)(t.id));
 				return sub === undefined
@@ -634,12 +606,9 @@ async function addTask(
 						title: titleOf(dep),
 						addedByAi: !numericDependencies.some(same(dep))
 					})),
-					unused: numericDependencies
-						.filter((dep) => !newTask.dependencies.some(same(dep)))
-						.map((dep) => ({ id: dep, title: titleOf(dep) })),
 					discoveredFrom:
 						discoveredFrom && !newTask.dependencies.some(same(discoveredFrom))
-							? { id: discoveredFrom, title: titleOfAny(discoveredFrom) }
+							? { id: discoveredFrom, title: titleOf(discoveredFrom) }
 							: undefined
 				})
 			);

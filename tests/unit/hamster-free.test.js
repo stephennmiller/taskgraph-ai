@@ -1,6 +1,6 @@
 /**
  * The Hamster cloud integration is gone (issue #16). Outside the changelog,
- * archived notes, managed .taskgraph state and the specs that forbid the word,
+ * the archived 2025 upstream .taskgraph data and the specs that forbid the word,
  * nothing in the repository may mention it.
  */
 import fs from 'fs';
@@ -21,9 +21,9 @@ const SKIPPED_DIRS = new Set([
 const ALLOWED_FILES = new Set([
 	'CHANGELOG.md',
 	'package-lock.json',
-	// Managed state and archived research notes
-	'.taskgraph/state.json',
-	'.taskgraph/docs/research/2025-11-18_should-we-be-doing-the-taskgraph-gateway-even-tho.md',
+	// Archived 2025 upstream state and research notes
+	'.taskgraph/archive/2025-upstream/state.json',
+	'.taskgraph/archive/2025-upstream/docs/research/2025-11-18_should-we-be-doing-the-taskgraph-gateway-even-tho.md',
 	// Specs that exist to forbid the word
 	'tests/unit/hamster-free.test.js',
 	'tests/unit/scripts/hamster-removal.test.js',

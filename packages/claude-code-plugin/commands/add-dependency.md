@@ -1,71 +1,18 @@
 ---
 description: "TaskGraph: make one task wait on another. Use when a task can't start until another is done."
-argument-hint: "[arguments]"
+argument-hint: "<task ID> <depends-on ID>"
 ---
 
-Add a dependency between tasks.
+Make one task wait on another.
 
-Arguments: $ARGUMENTS
+Arguments: $ARGUMENTS (the task, then the task it waits on: "5 3", "5 needs 3", "5 after 3")
 
-Parse the task IDs to establish dependency relationship.
+1. Read both IDs from the arguments; use them only when they are digits and dots. If it isn't clear which task waits on which, ask.
+2. Run:
 
-## Adding Dependencies
+   ```bash
+   taskgraph add-dependency --id=<task-id> --depends-on=<dependency-id>
+   ```
 
-Creates a dependency where one task must be completed before another can start.
-
-## Argument Parsing
-
-Parse natural language or IDs:
-- "make 5 depend on 3" → task 5 depends on task 3
-- "5 needs 3" → task 5 depends on task 3
-- "5 3" → task 5 depends on task 3
-- "5 after 3" → task 5 depends on task 3
-
-## Execution
-
-```bash
-taskgraph add-dependency --id=<task-id> --depends-on=<dependency-id>
-```
-
-## Links That Don't Block
-
-When the tasks are only connected ("5 is related to 3", "found 5 while doing 3"), link them without making one wait:
-
-```bash
-taskgraph add-dependency --id=5 --depends-on=3 --type=related
-taskgraph add-dependency --id=5 --depends-on=3 --type=discovered-from
-```
-
-These never block `next` or show up in `why`; `show` lists them after the task's dependencies.
-
-## Validation
-
-Before adding:
-1. **Verify both tasks exist**
-2. **Check for circular dependencies**
-3. **Ensure dependency makes logical sense**
-4. **Warn if creating complex chains**
-
-## Smart Features
-
-- Detect if dependency already exists
-- Suggest related dependencies
-- Show impact on task flow
-- Update task priorities if needed
-
-## Post-Addition
-
-After adding dependency:
-1. Show updated dependency graph
-2. Identify any newly blocked tasks
-3. Suggest task order changes
-4. Update project timeline
-
-## Example Flows
-
-```
-/taskgraph:add-dependency 5 needs 3
-→ Task #5 now depends on Task #3
-→ Task #5 is now blocked until #3 completes
-→ Suggested: Also consider if #5 needs #4
-```
+   When the tasks are only connected ("5 is related to 3", "found 5 while doing 3"), link them without making one wait: add `--type=related` or `--type=discovered-from`. Those links never hold up `next`.
+3. Show the output unchanged in a code block. The command refuses a dependency that would make a loop; if it does, say which tasks form it.

@@ -69,7 +69,8 @@ export function registerDependencyAnalysisTool(server: FastMCP) {
 							}
 						},
 						log,
-						projectRoot
+						projectRoot,
+						tag
 					});
 				}
 			}
