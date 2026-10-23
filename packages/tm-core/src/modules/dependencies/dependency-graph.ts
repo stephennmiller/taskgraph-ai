@@ -161,7 +161,7 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 }
 
 /** What a task waits on before it can start: listed and inherited edges */
-export const startEdges = (node: DependencyGraphNode): string[] =>
+const startEdges = (node: DependencyGraphNode): string[] =>
 	node.inherited.length
 		? [...node.dependencies, ...node.inherited]
 		: node.dependencies;
