@@ -1,0 +1,102 @@
+---
+title: Merging tasks.json
+sidebarTitle: "Merging tasks.json"
+description: "A Git merge driver that keeps both branches' new tasks, renumbers the incoming ones, and marks real clashes as conflicts"
+---
+
+# Merging tasks.json
+
+Two branches that each add a task both call it the next free ID, say `5`. A plain Git merge of `.taskgraph/tasks/tasks.json` then conflicts, and resolving it by hand can easily leave a dependency pointing at the wrong task 5.
+
+TaskGraph ships a Git merge driver for `tasks.json`. Git runs it during `git merge`, `git pull`, `git rebase` and `git cherry-pick`, and it merges the file task by task instead of line by line.
+
+## What it does
+
+- **New tasks on both branches are all kept.** When both branches used the same ID, the incoming branch's task gets the next free ID. The same goes for new subtasks of an existing task.
+- **References follow the renumbered task.** On the incoming side, task and subtask `dependencies`, `metadata.dependencySources` keys and a subtask's `parentId` are rewritten to the new ID.
+- **Only IDs that collide move.** An incoming task whose ID is still free keeps it.
+- **Changes to different fields merge cleanly.** One branch sets task 3 to `done` while the other edits its description: both changes land.
+
+It prints one line inside the merge output when it renumbered something:
+
+```
+✓ Merged tasks.json; renumbered incoming 2 → 4, 1.2 → 1.3
+Auto-merging .taskgraph/tasks/tasks.json
+Merge made by the 'ort' strategy.
+```
+
+A merge that renumbered nothing prints nothing.
+
+## When both branches change the same field
+
+If both branches set the same field of the same task to different values, the driver can't pick one for you. It:
+
+1. keeps **this branch's** value (the branch you're merging into, or the commit being rebased onto; when this branch deleted the field, the incoming value),
+2. still writes a valid `tasks.json` with everything else merged, so `taskgraph` keeps working,
+3. lists each clash with the incoming value, and
+4. exits with an error, so Git marks the file as conflicted and stops the merge.
+
+```
+✗ 1 change to tasks.json clashes; kept this branch's value
+  1  status  done · incoming: review
+Renumbered incoming 2 → 3
+Edit .taskgraph/tasks/tasks.json to choose, then git add it
+Auto-merging .taskgraph/tasks/tasks.json
+CONFLICT (content): Merge conflict in .taskgraph/tasks/tasks.json
+```
+
+There are no conflict markers in the file. Change the listed fields if you want the incoming values (or use `taskgraph set-status` and friends), then `git add .taskgraph/tasks/tasks.json` and finish the merge. The incoming version is also in Git's index: `git show :3:.taskgraph/tasks/tasks.json`.
+
+Some fields never clash:
+
+| Field | Merged as |
+|-------|-----------|
+| `updatedAt`, `updated`, `lastModified` | the later timestamp |
+| `created`, `createdAt` | the earlier timestamp |
+| `schemaVersion` | the higher one |
+| `dependencies`, `tags` and other lists of plain values | both sides' additions and removals |
+| `details` that both sides appended to | both appendices, this branch's first |
+| a tag's `taskCount`, `completedCount` | recounted |
+
+A task removed on one branch and changed on the other is kept and reported as a clash. Removed on one branch and untouched on the other, it goes.
+
+If one branch's `tasks.json` isn't valid JSON (for example, it was committed with conflict markers in it), the driver leaves this branch's file untouched, says which side couldn't be read, and marks the file as conflicted.
+
+## Setting it up
+
+New projects get it from `taskgraph init` when tasks are stored in Git (the default inside a Git repository). For a project that was set up before, or a fresh clone, run:
+
+```bash
+taskgraph init --merge-driver
+```
+
+It only sets up the driver and touches nothing else. It is safe to run again; when everything is in place it says so.
+
+```
+✓ Git now merges tasks.json by task
+  .gitattributes  routes tasks.json to the driver; commit it
+  .git/config     turns it on here; each clone runs init --merge-driver
+```
+
+The setup has two parts:
+
+| Part | Where | Shared? |
+|------|-------|---------|
+| `.taskgraph/tasks/tasks.json merge=taskgraph` | `.gitattributes` in the project root | Yes, commit it |
+| `merge.taskgraph.driver` (the command Git runs) | `.git/config` | **No.** Git never pushes or clones config |
+
+<Warning>
+**Each clone runs `taskgraph init --merge-driver` once.** The committed `.gitattributes` line names the driver, but the command behind it lives in each clone's own `.git/config`. A teammate who clones the repository and skips this step gets Git's normal line-by-line merge of `tasks.json`: nothing breaks, but colliding task IDs conflict as before.
+</Warning>
+
+### Which command Git runs
+
+When `taskgraph` is on your `PATH`, Git runs it by name, so upgrading TaskGraph upgrades the driver. Otherwise (a project-local install or `npx`) Git runs the CLI that ran `init`, by its full path. Rerun `taskgraph init --merge-driver` if you move or reinstall it.
+
+### When TaskGraph isn't installed
+
+The command first checks that the CLI is still there. If it isn't (`taskgraph` was uninstalled, the path moved, or the clone is on a machine without it), Git falls back to its own text merge, `git merge-file`. You get an ordinary conflict with `<<<<<<< ours` / `>>>>>>> theirs` markers, the same as in a repository without the driver. A merge never silently drops the incoming side.
+
+## Not covered
+
+Projects that keep tasks out of Git (`init --no-git-tasks`) don't need the driver, and `init` doesn't set it up.

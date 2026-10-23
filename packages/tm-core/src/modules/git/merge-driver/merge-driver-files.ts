@@ -113,13 +113,31 @@ export interface MergeDriverCommandOptions {
 }
 
 /**
- * The command git runs. `taskgraph` when it's on PATH, so upgrades keep
- * working; otherwise this CLI by its absolute path (npx, local installs).
+ * What git runs when the TaskGraph CLI is gone (uninstalled, a clone on a
+ * machine without it, a moved npx cache): git's own line-based merge of the
+ * same three files. It writes conflict markers into `%A` and exits non-zero
+ * on a clash, exactly like a repository with no merge driver at all.
+ */
+export const MERGE_DRIVER_FALLBACK =
+	'git merge-file -L ours -L base -L theirs %A %O %B';
+
+/**
+ * The command git runs (through `sh`, also on Windows). `taskgraph` when
+ * it's on PATH, so upgrades keep working; otherwise this CLI by its absolute
+ * path (npx, local installs). Either way it first checks that the CLI is
+ * still there and, if not, falls back to {@link MERGE_DRIVER_FALLBACK}, so a
+ * missing install gives a normal conflict instead of a failed merge that
+ * silently keeps this branch's file.
  */
 export function mergeDriverCommand(options: MergeDriverCommandOptions): string {
-	if (options.onPath) return `taskgraph ${DRIVER_ARGS}`;
+	const fallback = `else ${MERGE_DRIVER_FALLBACK}; fi`;
+	if (options.onPath) {
+		return `if command -v taskgraph >/dev/null 2>&1; then taskgraph ${DRIVER_ARGS}; ${fallback}`;
+	}
 	const quote = (value: string) => `"${value.replace(/(["\\$`])/g, '\\$1')}"`;
-	return `${quote(options.execPath)} ${quote(options.scriptPath)} ${DRIVER_ARGS}`;
+	const node = quote(options.execPath);
+	const script = quote(options.scriptPath);
+	return `if [ -x ${node} ] && [ -f ${script} ]; then ${node} ${script} ${DRIVER_ARGS}; ${fallback}`;
 }
 
 /** Whether an executable with this name is in a PATH directory */
@@ -217,13 +235,16 @@ export function installMergeDriver(
 	}
 	let config: MergeDriverInstallResult['config'] = 'unchanged';
 	if (current !== command) {
+		// The command first: a `merge.taskgraph` section with a name but no
+		// driver makes git stop with "lacks command line" instead of falling
+		// back to a text merge
+		git(projectRoot, ['config', '--local', `${key}.driver`, command]);
 		git(projectRoot, [
 			'config',
 			'--local',
 			`${key}.name`,
 			'TaskGraph tasks.json merge'
 		]);
-		git(projectRoot, ['config', '--local', `${key}.driver`, command]);
 		config = 'set';
 	}
 

@@ -57,7 +57,8 @@
 							"capabilities/dependency-graph",
 							"capabilities/loop",
 							"capabilities/research",
-							"capabilities/github-sync"
+							"capabilities/github-sync",
+							"capabilities/merge-driver"
 						]
 					},
 					{

@@ -11,6 +11,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	MERGE_DRIVER_ATTRIBUTE,
+	MERGE_DRIVER_FALLBACK,
 	NotAGitRepositoryError,
 	installMergeDriver,
 	isOnPath,
@@ -172,7 +173,9 @@ describe('mergeDriverCommand', () => {
 	it('runs taskgraph by name when it is on PATH', () => {
 		expect(
 			mergeDriverCommand({ onPath: true, execPath: '/n', scriptPath: '/s' })
-		).toBe('taskgraph merge-driver %O %A %B %P');
+		).toBe(
+			`if command -v taskgraph >/dev/null 2>&1; then taskgraph merge-driver %O %A %B %P; else ${MERGE_DRIVER_FALLBACK}; fi`
+		);
 	});
 
 	it('runs this CLI by its quoted path otherwise', () => {
@@ -183,8 +186,82 @@ describe('mergeDriverCommand', () => {
 				scriptPath: '/a/"x"/taskgraph.js'
 			})
 		).toBe(
-			'"/opt/node 22/bin/node" "/a/\\"x\\"/taskgraph.js" merge-driver %O %A %B %P'
+			'if [ -x "/opt/node 22/bin/node" ] && [ -f "/a/\\"x\\"/taskgraph.js" ]; ' +
+				'then "/opt/node 22/bin/node" "/a/\\"x\\"/taskgraph.js" merge-driver %O %A %B %P; ' +
+				`else ${MERGE_DRIVER_FALLBACK}; fi`
 		);
+	});
+});
+
+describe('merge driver when the CLI is gone', () => {
+	let repo: string;
+	const tasksFile = '.taskgraph/tasks/tasks.json';
+	const writeTasks = (tasks: unknown[]) => {
+		fs.mkdirSync(path.join(repo, '.taskgraph/tasks'), { recursive: true });
+		fs.writeFileSync(
+			path.join(repo, tasksFile),
+			`${JSON.stringify(tag(tasks), null, 2)}\n`
+		);
+	};
+	const commit = (message: string) => {
+		git(repo, 'add', '-A');
+		git(repo, 'commit', '-q', '-m', message);
+	};
+
+	beforeEach(() => {
+		repo = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-merge-driver-gone-'))
+		);
+		git(repo, 'init', '-q', '--initial-branch=main');
+		git(repo, 'config', 'user.email', 'test@example.com');
+		git(repo, 'config', 'user.name', 'Test');
+	});
+
+	afterEach(() => {
+		fs.rmSync(repo, { recursive: true, force: true });
+	});
+
+	// A PATH with git but no taskgraph, for the by-name command
+	const pathWithoutTaskgraph = (process.env.PATH ?? '')
+		.split(path.delimiter)
+		.filter((dir) => dir && !fs.existsSync(path.join(dir, 'taskgraph')))
+		.join(path.delimiter);
+
+	it.each([
+		['by name, not on PATH', true],
+		['by a path that no longer exists', false]
+	])('falls back to a normal text conflict when run %s', (_, onPath) => {
+		installMergeDriver(
+			repo,
+			mergeDriverCommand({
+				onPath,
+				execPath: process.execPath,
+				scriptPath: path.join(repo, 'no-such-cli.js')
+			})
+		);
+		writeTasks([task(1, 'A')]);
+		commit('base');
+		git(repo, 'checkout', '-q', '-b', 'feature');
+		writeTasks([task(1, 'A'), task(2, 'Theirs')]);
+		commit('feature adds 2');
+		git(repo, 'checkout', '-q', 'main');
+		writeTasks([task(1, 'A'), task(2, 'Ours')]);
+		commit('main adds 2');
+
+		expect(() =>
+			execFileSync('git', ['merge', '--no-edit', 'feature'], {
+				cwd: repo,
+				stdio: 'pipe',
+				env: { ...process.env, PATH: pathWithoutTaskgraph }
+			})
+		).toThrow();
+
+		const content = fs.readFileSync(path.join(repo, tasksFile), 'utf8');
+		expect(content).toContain('<<<<<<< ours');
+		expect(content).toContain('>>>>>>> theirs');
+		expect(content).toContain('"Ours"');
+		expect(content).toContain('"Theirs"');
+		expect(git(repo, 'diff', '--name-only', '--diff-filter=U')).toBe(tasksFile);
 	});
 });
 

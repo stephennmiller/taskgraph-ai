@@ -15,6 +15,7 @@ export {
 	type MergeDriverFiles,
 	type MergeDriverInstallResult,
 	type MergeDriverOutcome,
+	MERGE_DRIVER_FALLBACK,
 	NotAGitRepositoryError,
 	installMergeDriver,
 	isInsideGitWorkTree,

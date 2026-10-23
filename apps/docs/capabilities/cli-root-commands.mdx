@@ -324,9 +324,14 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     # Set up the Claude Code integration (CLAUDE.md import and .mcp.json; slash commands come from the plugin)
     taskgraph init --rules claude
+
+    # Only set up Git to merge tasks.json by task (existing projects; once per clone)
+    taskgraph init --merge-driver
     ```
 
     `claude` is the only supported rule profile; any other value is rejected with an error. Without `--rules`, `init` asks whether to set up the Claude Code integration (`--yes` skips the prompt and installs nothing).
+
+    Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add tasks merge without an ID clash.
   </Accordion>
 
   <Accordion title="Move Tasks">
