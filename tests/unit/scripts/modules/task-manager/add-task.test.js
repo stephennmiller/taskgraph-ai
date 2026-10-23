@@ -421,6 +421,26 @@ describe('addTask', () => {
 
 			expect(addedTask().dependencies).toEqual([1, 2]);
 		});
+
+		test('stores typed IDs as the task and subtask they name: 1 stays task 1, 3.2 is not read as task 3 (#290)', async () => {
+			const tasks = JSON.parse(JSON.stringify(sampleTasks));
+			tasks.master.tasks[2].subtasks = [
+				{ id: 2, title: 'Sub', status: 'pending', dependencies: [] }
+			];
+			readJSON.mockReturnValue(tasks);
+			aiReturnsDependencies(['2']);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				['1', '3.2'],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().dependencies).toEqual([1, '3.2', 2]);
+		});
 	});
 
 	describe('dependencies in a tag that shares IDs with another (#288)', () => {

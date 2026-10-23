@@ -19,7 +19,8 @@ import {
 	removeTaskLink,
 	resolveSubtaskDependency,
 	setDependencySource,
-	setTaskLink
+	setTaskLink,
+	toTaskDependency
 } from '@tm/core';
 import path from 'path';
 import { displayBanner } from './ui.js';
@@ -377,6 +378,11 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	) {
 		// Add the dependency; a non-blocking link to the same task gives way
 		targetTask.dependencies.push(formattedDependencyId);
+		// A task's list keeps one form; a subtask's keeps its types, which say
+		// whether a bare number is a sibling or a task
+		if (!isSubtask) {
+			targetTask.dependencies = targetTask.dependencies.map(toTaskDependency);
+		}
 		assignMetadata(
 			targetTask,
 			removeTaskLink(targetTask.metadata, formattedDependencyId)

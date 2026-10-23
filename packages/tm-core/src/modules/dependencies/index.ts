@@ -38,7 +38,8 @@ export {
 export {
 	MAX_SIBLING_REFERENCE,
 	isSiblingReference,
-	resolveSubtaskDependency
+	resolveSubtaskDependency,
+	toTaskDependency
 } from './subtask-dependency.js';
 export {
 	buildDependencyTree,

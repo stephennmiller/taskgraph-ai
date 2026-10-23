@@ -313,16 +313,14 @@ async function addTask(
 		);
 
 		// Dependencies resolve within the target tag only: task IDs repeat
-		// across tags, so another tag's task 2 is not this tag's task 2
-		const existingIds = tasksInTargetTag.map((t) => t.id);
+		// across tags, so another tag's task 2 is not this tag's task 2. A
+		// subtask ID such as 3.2 names that subtask
+		const existingIds = tasksInTargetTag.flatMap((t) => [
+			t.id,
+			...(t.subtasks ?? []).map((s) => `${t.id}.${s.id}`)
+		]);
 		const { dependencies: numericDependencies, missingExplicit: invalidDeps } =
-			mergeNewTaskDependencies({
-				explicit: dependencies.map((dep) => {
-					const id = parseInt(dep, 10);
-					return Number.isNaN(id) ? dep : id;
-				}),
-				existingIds
-			});
+			mergeNewTaskDependencies({ explicit: dependencies, existingIds });
 
 		if (invalidDeps.length > 0) {
 			report(

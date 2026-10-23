@@ -89,6 +89,7 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
   - ✅ DO: Format task and dependency IDs consistently
   - ✅ DO: Check for existing dependencies to prevent duplicates
   - ✅ DO: Sort dependencies for better readability
+  - ✅ DO: Store a top-level task's dependencies through `toTaskDependency` from `@tm/core` (`3` for a task, `"3.2"` for a subtask); never on a subtask's list, where a bare number is a sibling
 
   ```javascript
   // ✅ DO: Format IDs consistently when adding dependencies

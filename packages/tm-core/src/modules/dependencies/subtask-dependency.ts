@@ -38,3 +38,15 @@ export function resolveSubtaskDependency(
 		? `${parentId}.${dependency}`
 		: String(dependency);
 }
+
+/**
+ * The form a top-level task stores a dependency in: a task as a number (`3`)
+ * and a subtask as its dotted ID (`"3.2"`), as parse-prd and add-task write
+ * them. On a task, `"3"` and `3` name the same task, so only the type
+ * changes. Never apply it to a subtask's list, where the type is the meaning.
+ */
+export function toTaskDependency(dependency: string | number): string | number {
+	return typeof dependency === 'string' && /^\d+$/.test(dependency)
+		? Number(dependency)
+		: dependency;
+}

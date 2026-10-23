@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	MAX_SIBLING_REFERENCE,
 	isSiblingReference,
-	resolveSubtaskDependency
+	resolveSubtaskDependency,
+	toTaskDependency
 } from './subtask-dependency.js';
 
 describe('resolveSubtaskDependency', () => {
@@ -38,5 +39,21 @@ describe('isSiblingReference', () => {
 		expect(isSiblingReference(MAX_SIBLING_REFERENCE + 1)).toBe(false);
 		expect(isSiblingReference('1')).toBe(false);
 		expect(isSiblingReference('1.2')).toBe(false);
+	});
+});
+
+describe('toTaskDependency', () => {
+	it('stores a task as a number, as parse-prd and add-task do (#290)', () => {
+		expect(toTaskDependency('1')).toBe(1);
+		expect(toTaskDependency(1)).toBe(1);
+	});
+
+	it('keeps a subtask as its dotted ID', () => {
+		expect(toTaskDependency('3.2')).toBe('3.2');
+	});
+
+	it('leaves anything that is not an ID as it is', () => {
+		expect(toTaskDependency('abc')).toBe('abc');
+		expect(toTaskDependency('')).toBe('');
 	});
 });
