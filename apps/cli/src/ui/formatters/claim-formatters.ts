@@ -11,6 +11,7 @@
  *   Run taskgraph list to see what's in progress or blocked
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import { getStatusWithColor } from './status-formatters.js';
@@ -35,6 +36,7 @@ export function formatClaim(
 	claim: ClaimSummary | null,
 	options: { hasAnyTasks: boolean; width?: number }
 ): string {
+	claim = sanitizeForTerminal(claim);
 	if (!claim) {
 		return options.hasAnyTasks
 			? [

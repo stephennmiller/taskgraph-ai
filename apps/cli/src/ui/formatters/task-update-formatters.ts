@@ -21,10 +21,10 @@
  * 95-column table, and a box explaining that done tasks can't be updated.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
-import { terminalSafe } from './markdown-formatters.js';
 import { formatResearchAnswer } from './research-formatters.js';
 
 /** The task fields these confirmations show */
@@ -37,14 +37,14 @@ const fit = (text: string, width: number) =>
 	text.length > width ? `${text.slice(0, Math.max(1, width - 1))}…` : text;
 
 /**
- * `✓ <lead>  <title>`, with the title cut to fit on one line. The title
- * comes from tasks.json, so escape sequences in it are removed first.
+ * `✓ <lead>  <title>`, with the title cut to fit on one line (callers
+ * pass it through sanitizeForTerminal first)
  */
 function resultLine(lead: string, title: string, width: number): string {
 	// "✓ " + lead + 2-space gap
 	const titleWidth = Math.max(10, width - lead.length - 4);
-	const safeTitle = terminalSafe(title).replace(/\s+/g, ' ');
-	return `${chalk.green('✓')} ${lead}  ${fit(safeTitle, titleWidth)}`;
+	const oneLine = title.replace(/\s+/g, ' ');
+	return `${chalk.green('✓')} ${lead}  ${fit(oneLine, titleWidth)}`;
 }
 
 /** `Run taskgraph show 2 to see what changed`, shortened for narrow terminals */
@@ -67,6 +67,7 @@ export function formatTaskUpdated(
 	task: UpdatedTaskRef,
 	width = terminalWidth()
 ): string {
+	task = sanitizeForTerminal(task);
 	return [
 		resultLine(`Updated task ${task.id}`, task.title, width),
 		showHint(task.id, width)
@@ -89,6 +90,8 @@ export function formatNotesAdded(
 	notes: string,
 	width = terminalWidth()
 ): string {
+	target = sanitizeForTerminal(target);
+	notes = sanitizeForTerminal(notes);
 	const name = `${target.kind} ${target.id}`;
 	if (!notes.trim()) {
 		return `${chalk.yellow('⚠')} Nothing added to ${name}: the AI returned no text`;
@@ -115,6 +118,7 @@ export function formatNoteAdded(
 	note: UpdatedTaskRef & { isSubtask: boolean },
 	width = terminalWidth()
 ): string {
+	note = sanitizeForTerminal(note);
 	const kind = note.isSubtask ? 'subtask' : 'task';
 	return resultLine(`Added a note to ${kind} ${note.id}`, note.title, width);
 }
@@ -129,6 +133,7 @@ export function formatTasksUpdated(
 	tasks: UpdatedTaskRef[],
 	width = terminalWidth()
 ): string {
+	tasks = sanitizeForTerminal(tasks);
 	if (tasks.length === 0) {
 		return 'No tasks changed: the AI returned none of the tasks it was sent';
 	}

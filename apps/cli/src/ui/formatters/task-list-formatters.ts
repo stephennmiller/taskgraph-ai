@@ -29,10 +29,12 @@
 import {
 	type InvalidDependency,
 	TAG_NAME_PATTERN,
-	type Task,
 	fullSubtaskId,
 	isTaskComplete,
-	resolveSubtaskDependency
+	resolveSubtaskDependency,
+	sanitizeForTerminal,
+	stripTerminalControls,
+	type Task
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -44,12 +46,7 @@ import {
 import { terminalWidth } from '../layout/helpers.js';
 import { getSuggestedActions } from '../suggested-actions.js';
 import { theme } from '../theme.js';
-import {
-	fit,
-	joinFacts,
-	terminalSafe,
-	visibleLength
-} from './markdown-formatters.js';
+import { fit, joinFacts, visibleLength } from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
 import { formatNextStep } from './task-detail-formatters.js';
 
@@ -222,7 +219,7 @@ function nextRow(next: Task | null | undefined, width: number): string {
 		return label('Next') + theme.muted('nothing is ready to start');
 	}
 	const id = String(next.id);
-	const title = terminalSafe(next.title);
+	const title = next.title;
 	const facts: string[] = [];
 	if (next.priority) {
 		facts.push(`${getPriorityWithColor(next.priority)} priority`);
@@ -257,6 +254,8 @@ export function formatListSummary(
 	next: Task | null | undefined,
 	options: ListSummaryOptions = {}
 ): string {
+	tasks = sanitizeForTerminal(tasks);
+	next = sanitizeForTerminal(next);
 	const width = resolveWidth(options.width);
 	const rows = progressRows('Tasks', calculateTaskStatistics(tasks), width);
 
@@ -278,6 +277,7 @@ export function formatListNextStep(
 	next: Task | null | undefined,
 	options: ListSummaryOptions = {}
 ): string {
+	next = sanitizeForTerminal(next);
 	if (!next) return '';
 	const [action] = getSuggestedActions(
 		next.id,
@@ -346,9 +346,7 @@ interface PlainRow {
  * and control characters are removed
  */
 export const oneLine = (text: unknown) =>
-	terminalSafe(String(text ?? '').replace(/\s+/g, ' '))
-		.replace(/ {2,}/g, ' ')
-		.trim();
+	stripTerminalControls(String(text ?? ''), { singleLine: true });
 
 /**
  * `list` for a pipe: one line per task (and per subtask with

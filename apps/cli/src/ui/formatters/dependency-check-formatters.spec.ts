@@ -5,6 +5,12 @@ import {
 	formatDependencyFixes
 } from './dependency-check-formatters.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 const counts = { taskCount: 4, subtaskCount: 0, dependencyCount: 1 };
 const lines = (text: string) => plain(text).split('\n');
 
@@ -209,6 +215,26 @@ describe('formatDependencyFixes', () => {
 			remaining: [{ type: 'circular', taskId: 2 }]
 		});
 		expect(lines(output)[0]).toBe('✗ 1 dependency problem');
+	});
+});
+
+describe('dependency output with escape sequences in IDs', () => {
+	it('prints the IDs without them', () => {
+		const issue = {
+			type: 'missing' as const,
+			taskId: 3,
+			dependencyId: HOSTILE
+		};
+		const outputs = [
+			formatDependencyCheck({ ...counts, issues: [issue] }),
+			formatDependencyFixes({
+				...counts,
+				fixes: [{ type: 'missing', taskId: 3, dependencyId: HOSTILE }]
+			})
+		].map(sgrFree);
+
+		expect(outputs[0]).toContain('depends on task Fix login');
+		for (const out of outputs) expect(out).not.toMatch(UNSAFE);
 	});
 });
 

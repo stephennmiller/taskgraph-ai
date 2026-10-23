@@ -12,12 +12,13 @@
  *     Do 1 (Set up the database): nothing else stands in its way.
  */
 
-import type {
-	BlockerExplanation,
-	BlockerKind,
-	BlockerNode,
-	BlockerRootCause,
-	TaskStatus
+import {
+	type BlockerExplanation,
+	type BlockerKind,
+	type BlockerNode,
+	type BlockerRootCause,
+	sanitizeForTerminal,
+	type TaskStatus
 } from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
@@ -58,6 +59,7 @@ export function renderBlockerExplanation(
 	explanation: BlockerExplanation,
 	options: RenderBlockerExplanationOptions = {}
 ): string[] {
+	explanation = sanitizeForTerminal(explanation);
 	const width = options.width ?? 100;
 	const lines: string[] = [];
 	// A command wider than the line breaks at its spaces after all

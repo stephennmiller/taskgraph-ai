@@ -2,6 +2,12 @@ import type { Bottleneck, DependencyTree, DependencyTreeNode } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import { renderDependencyTree } from './dependency-tree.component.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 const node = (
 	id: string,
 	children: DependencyTreeNode[] = [],
@@ -303,5 +309,16 @@ describe('renderDependencyTree', () => {
 
 			expect(lines.join('\n')).not.toContain('inferred');
 		});
+	});
+});
+
+describe('renderDependencyTree with escape sequences in titles', () => {
+	it('prints the titles without them', () => {
+		const out = renderDependencyTree(
+			tree([node('1', [node('2', [], { title: HOSTILE })], { title: HOSTILE })])
+		).map(sgrFree);
+
+		expect(out.slice(0, 2)).toEqual(['○ 1  Fix login', '└─ ○ 2  Fix login']);
+		expect(out.join('\n')).not.toMatch(UNSAFE);
 	});
 });

@@ -14,6 +14,7 @@
  * task's whole expansion prompt in a 22-column cell.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -148,6 +149,7 @@ export function formatComplexityRun(
 	summary: ComplexityRunSummary,
 	width = terminalWidth()
 ): string {
+	summary = sanitizeForTerminal(summary);
 	const { analyses, skipped, kept, reportPath } = summary;
 	if (analyses.length === 0) {
 		return theme.muted('No pending tasks to analyze');
@@ -188,6 +190,7 @@ export function formatComplexityReport(
 	report: ComplexityReport,
 	width = terminalWidth()
 ): string {
+	report = sanitizeForTerminal(report);
 	const items = report.complexityAnalysis ?? [];
 	if (items.length === 0) {
 		return theme.muted('The report has no analyzed tasks yet');

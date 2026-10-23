@@ -10,6 +10,7 @@
  * table, and the answer printed twice (streamed raw, then again in a box).
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -27,6 +28,7 @@ export function formatResearchAnswer(
 	markdown: string,
 	width = terminalWidth()
 ): string {
+	markdown = sanitizeForTerminal(markdown);
 	const columns = Math.max(40, Math.min(width, MAX_ANSWER_WIDTH));
 	const answer = markdown.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 	return formatMarkdown(answer, columns);
@@ -72,6 +74,7 @@ const taskLabel = (ids: string[]) =>
  * there is no project context.
  */
 export function formatResearchContext(summary: ResearchContextSummary): string {
+	summary = sanitizeForTerminal(summary);
 	const parts: string[] = [];
 	const { taskIds, relatedTaskIds, files } = summary;
 
@@ -95,6 +98,7 @@ export function formatResearchContext(summary: ResearchContextSummary): string {
 
 /** `✓ Saved to task 3` or `✓ Saved to .taskgraph/docs/research/….md` */
 export function formatResearchSaved(target: ResearchSaveTarget): string {
+	target = sanitizeForTerminal(target);
 	const where =
 		target.kind === 'file'
 			? target.path
@@ -107,6 +111,8 @@ export function formatResearchSaveFailed(
 	target: ResearchSaveTarget,
 	reason: string
 ): string {
+	target = sanitizeForTerminal(target);
+	reason = sanitizeForTerminal(reason);
 	const where =
 		target.kind === 'file'
 			? 'a file'

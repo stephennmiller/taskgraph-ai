@@ -4,6 +4,7 @@ import {
 	cleanGeneratedSubtaskDependencies,
 	keepStoredFields,
 	reconcileDependencySources,
+	stripTerminalControls,
 	withoutReservedMetadata
 } from '@tm/core';
 import fs from 'fs';
@@ -239,7 +240,7 @@ async function updateTaskById(
 		if (!isMCP && outputFormat === 'text') {
 			// The spinner names the task, so no header box is needed above it
 			loadingIndicator = startLoadingIndicator(
-				`Updating task ${taskId}: ${truncate(taskToUpdate.title, 50)}${useResearch ? ' (with research)' : ''}`
+				`Updating task ${taskId}: ${truncate(stripTerminalControls(String(taskToUpdate.title ?? ''), { singleLine: true }), 50)}${useResearch ? ' (with research)' : ''}`
 			);
 		}
 
