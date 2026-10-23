@@ -28,8 +28,7 @@ vi.mock('../utils/display-helpers.js', () => ({
 }));
 
 vi.mock('../utils/ui.js', () => ({
-	createTaskTable: vi.fn(() => 'Table output'),
-	displayWarning: vi.fn()
+	createTaskTable: vi.fn(() => 'Table output')
 }));
 
 import { ListTasksCommand } from './list.command.js';
@@ -614,5 +613,49 @@ describe('ListTasksCommand', () => {
 
 			consoleWarnSpy.mockRestore();
 		});
+	});
+});
+
+describe('ListTasksCommand with escape sequences in task text (#287)', () => {
+	const hostile = 'Fix\x1b[2J\x1b]0;pwned\x07 login';
+	let logSpy: ReturnType<typeof vi.spyOn>;
+	let command: ListTasksCommand;
+
+	beforeEach(() => {
+		logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+		command = new ListTasksCommand();
+		(command as any).tmCore = {
+			tasks: {
+				getArchivedIds: vi.fn().mockResolvedValue(new Set()),
+				list: vi.fn().mockResolvedValue({
+					tasks: [{ id: '1', title: hostile, status: 'pending' }],
+					total: 1,
+					filtered: 1
+				}),
+				getNext: vi.fn().mockResolvedValue(null)
+			},
+			config: { getActiveTag: vi.fn().mockReturnValue('master') }
+		};
+	});
+
+	afterEach(() => {
+		logSpy.mockRestore();
+	});
+
+	it('prints compact titles without them', async () => {
+		await (command as any).executeCommand({ compact: true });
+
+		const output = logSpy.mock.calls
+			.map((call: unknown[]) => String(call[0]))
+			.join('\n');
+		expect(output.replace(/\x1b\[[0-9;]*m/g, '')).toContain('Fix login');
+		expect(output).not.toContain('pwned');
+	});
+
+	it('keeps the stored text in JSON, where the escapes are escaped', async () => {
+		await (command as any).executeCommand({ json: true });
+
+		const parsed = JSON.parse(String(logSpy.mock.calls[0][0]));
+		expect(parsed.tasks[0].title).toBe(hostile);
 	});
 });

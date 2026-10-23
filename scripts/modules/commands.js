@@ -100,6 +100,7 @@ import {
 	isTaskGraphProject,
 	parseSubtaskDependencyInput,
 	resolveProjectRoot,
+	stripTerminalControls,
 	writeClarifications
 } from '@tm/core';
 
@@ -1803,7 +1804,7 @@ function registerCommands(programInstance) {
 								`Subtask ${parentId}.${subtask.id} Added Successfully`
 							) +
 								'\n\n' +
-								theme.text(`Title: ${subtask.title}`) +
+								theme.text(`Title: ${stripTerminalControls(subtask.title)}`) +
 								'\n' +
 								theme.text(`Status: ${getStatusWithColor(subtask.status)}`) +
 								'\n' +
@@ -1947,7 +1948,7 @@ function registerCommands(programInstance) {
 									`Subtask ${subtaskId} Converted to Task #${result.id}`
 								) +
 									'\n\n' +
-									theme.text(`Title: ${result.title}`) +
+									theme.text(`Title: ${stripTerminalControls(result.title)}`) +
 									'\n' +
 									theme.text(`Status: ${getStatusWithColor(result.status)}`) +
 									'\n' +
@@ -2150,20 +2151,24 @@ function registerCommands(programInstance) {
 						if (task.isSubtask) {
 							// Subtask - title is directly on the task object
 							console.log(
-								theme.text(`  Subtask ${id}: ${task.title || '(no title)'}`)
+								theme.text(
+									`  Subtask ${id}: ${stripTerminalControls(task.title || '(no title)')}`
+								)
 							);
 							// Optionally show parent context if available
 							if (task.parentTask) {
 								console.log(
 									theme.muted(
-										`    (Parent: ${task.parentTask.id} - ${task.parentTask.title || '(no title)'})`
+										`    (Parent: ${task.parentTask.id} - ${stripTerminalControls(task.parentTask.title || '(no title)')})`
 									)
 								);
 							}
 						} else {
 							// Main task - title is directly on the task object
 							console.log(
-								theme.text.bold(`  Task ${id}: ${task.title || '(no title)'}`)
+								theme.text.bold(
+									`  Task ${id}: ${stripTerminalControls(task.title || '(no title)')}`
+								)
 							);
 						}
 					});

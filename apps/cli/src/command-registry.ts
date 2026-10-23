@@ -19,7 +19,6 @@ import { NoteCommand } from './commands/note.command.js';
 import { PrimeCommand } from './commands/prime.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
 import { ShowCommand } from './commands/show.command.js';
-import { StartCommand } from './commands/start.command.js';
 import { TagsCommand } from './commands/tags.command.js';
 import { WhyCommand } from './commands/why.command.js';
 
@@ -133,13 +132,6 @@ export class CommandRegistry {
 			description: 'Git merge driver for tasks.json (git runs it)',
 			commandClass: MergeDriverCommand as any,
 			category: 'utility',
-			hidden: true
-		},
-		{
-			name: 'start',
-			description: 'Deprecated alias of loop -n 1 --id <id>',
-			commandClass: StartCommand as any,
-			category: 'development',
 			hidden: true
 		}
 	];

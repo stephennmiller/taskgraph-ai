@@ -42,6 +42,19 @@ describe('mergeArchiveJson', () => {
 		);
 	});
 
+	it("reads the older 'completed' as 'done', so a save that only rewrote it isn't a change", () => {
+		const base = archive([archived(1, jan, { status: 'completed' })], 1, jan);
+		const ours = archive([archived(1, jan)], 1, jan);
+		const theirs = archive([archived(1, jan, { status: 'cancelled' })], 1, jan);
+
+		const result = mergeArchiveJson(base, ours, theirs);
+
+		expect(result.conflicts).toEqual([]);
+		expect(result.merged).toEqual(
+			archive([archived(1, jan, { status: 'cancelled' })], 1, jan)
+		);
+	});
+
 	it('merges a task both branches archived, keeping the earlier archivedAt', () => {
 		const base = archive([], 0);
 		const ours = archive([archived(3, mar)], 3);

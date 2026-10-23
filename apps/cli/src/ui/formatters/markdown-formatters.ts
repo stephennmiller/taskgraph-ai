@@ -10,6 +10,7 @@
  */
 
 import { stripVTControlCharacters } from 'node:util';
+import { stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { Marked, type MarkedExtension } from 'marked';
 import { markedTerminal } from 'marked-terminal';
@@ -19,15 +20,12 @@ import { theme } from '../theme.js';
 /**
  * Text from a task file, safe to print: escape sequences and other control
  * characters (which could move the cursor, clear the screen or retitle the
- * terminal) removed. Newlines and tabs stay.
+ * terminal) removed. Newlines and tabs stay. See stripTerminalControls in
+ * @tm/core.
  */
 export function terminalSafe(text: unknown): string {
 	if (text === undefined || text === null) return '';
-	return (
-		stripVTControlCharacters(String(text))
-			// biome-ignore lint/suspicious/noControlCharactersInRegex: stripping them is the point
-			.replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '')
-	);
+	return stripTerminalControls(String(text));
 }
 
 /** Cut `text` to `width` characters, ending with … when cut */

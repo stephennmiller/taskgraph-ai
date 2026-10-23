@@ -93,8 +93,10 @@ describe('planPull', () => {
 		});
 	});
 
-	it('treats done and completed as the same status', () => {
-		const step = planOne(linked('1', 'completed', 'done'), [closed(1)]);
+	it('treats a link saved with the older completed status as done', () => {
+		const step = planOne(linked('1', 'done', 'completed' as never), [
+			closed(1)
+		]);
 
 		expect(step.action).toBe('skip');
 	});

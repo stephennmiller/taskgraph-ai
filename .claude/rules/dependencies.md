@@ -185,7 +185,7 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
       const depTask = findTaskById(allTasks, depId);
       if (!depTask) return `${depId} (Not found)`;
       
-      const isDone = depTask.status === 'done' || depTask.status === 'completed';
+      const isDone = depTask.status === 'done';
       const statusIcon = isDone ? '✅' : '⏱️';
       
       return `${statusIcon} ${depId} (${depTask.status})`;

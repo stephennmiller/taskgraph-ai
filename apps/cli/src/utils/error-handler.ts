@@ -7,6 +7,7 @@
  *     Run taskgraph list to see task IDs
  */
 
+import { stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../ui/theme.js';
 
@@ -111,7 +112,8 @@ function defaultHint(message: string, code?: string): string | undefined {
  * "not found" rather than "does not exist".
  */
 function cleanMessage(message: string): string {
-	const text = message
+	// Messages can quote task text or a model's reply: no escape sequences
+	const text = stripTerminalControls(message)
 		.trim()
 		.replace(/^(error:\s*)+/i, '')
 		.replace(/\.$/, '')

@@ -7,19 +7,6 @@ import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
-/**
- * Calculate box width as percentage of terminal width
- * @param percentage - Percentage of terminal width to use (default: 0.9)
- * @param minWidth - Minimum width to enforce (default: 40)
- * @returns Calculated box width
- */
-export function getBoxWidth(
-	percentage: number = 0.9,
-	minWidth: number = 40
-): number {
-	return Math.max(Math.floor(terminalWidth() * percentage), minWidth);
-}
-
 /** Largest width taken from `COLUMNS`, so a typo cannot crash padding with a huge repeat */
 const MAX_ENV_COLUMNS = 1000;
 

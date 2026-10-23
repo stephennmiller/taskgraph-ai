@@ -2,9 +2,7 @@
  * @fileoverview Update notification display utilities
  */
 
-import boxen from 'boxen';
-import chalk from 'chalk';
-import { theme } from '../../ui/theme.js';
+import { formatUpdateNotice } from '../../ui/formatters/update-formatters.js';
 
 /**
  * Display upgrade notification message
@@ -14,26 +12,5 @@ export function displayUpgradeNotification(
 	latestVersion: string,
 	highlights?: string[]
 ) {
-	let content = `${theme.brand.bold('Update Available!')} ${chalk.dim(currentVersion)} → ${chalk.green(latestVersion)}`;
-
-	if (highlights && highlights.length > 0) {
-		content += '\n\n' + chalk.bold("What's New:");
-		for (const highlight of highlights) {
-			content += '\n' + chalk.cyan('• ') + highlight;
-		}
-		content += '\n\n' + 'Auto-updating to the latest version...';
-	} else {
-		content +=
-			'\n\n' +
-			'Auto-updating to the latest version with new features and bug fixes...';
-	}
-
-	const message = boxen(content, {
-		padding: 1,
-		margin: { top: 1, bottom: 1 },
-		borderColor: 'yellow',
-		borderStyle: 'round'
-	});
-
-	console.log(message);
+	console.log(formatUpdateNotice(currentVersion, latestVersion, highlights));
 }

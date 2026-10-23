@@ -12,7 +12,6 @@ export { WhyCommand } from './commands/why.command.js';
 export { ArchiveCommand } from './commands/archive.command.js';
 export { PrimeCommand } from './commands/prime.command.js';
 export { NoteCommand } from './commands/note.command.js';
-export { StartCommand } from './commands/start.command.js';
 export { SetStatusCommand } from './commands/set-status.command.js';
 export { TagsCommand } from './commands/tags.command.js';
 export { LoopCommand } from './commands/loop.command.js';
@@ -42,7 +41,7 @@ export {
 export * from './utils/index.js';
 
 // UI utilities - exported only via ui namespace to avoid naming conflicts
-// Import via: import { ui } from '@tm/cli'; ui.displayBanner();
+// Import via: import { ui } from '@tm/cli'; ui.terminalWidth();
 export * as ui from './ui/index.js';
 
 export { runInteractiveSetup } from './commands/models/index.js';

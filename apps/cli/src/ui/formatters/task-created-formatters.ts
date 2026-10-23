@@ -17,10 +17,11 @@
  * dependencies again, and a numbered "Next Steps" list of three commands.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
-import { fit, terminalSafe } from './markdown-formatters.js';
+import { fit } from './markdown-formatters.js';
 
 export interface CreatedTaskDependency {
 	id: number | string;
@@ -50,15 +51,8 @@ export function formatTaskCreated(
 	created: CreatedTask,
 	width = terminalWidth()
 ): string {
-	const safeDeps = (deps: CreatedTaskDependency[]) =>
-		deps.map((dep) => ({ ...dep, title: terminalSafe(dep.title) }));
-	const task: CreatedTask = {
-		...created,
-		title: terminalSafe(created.title),
-		dependencies: safeDeps(created.dependencies),
-		discoveredFrom:
-			created.discoveredFrom && safeDeps([created.discoveredFrom])[0]
-	};
+	// Titles come from tasks.json: no escape sequences to the terminal
+	const task = sanitizeForTerminal(created);
 	const lines: string[] = [];
 	const priority = task.priority
 		? theme.muted(` · ${task.priority} priority`)

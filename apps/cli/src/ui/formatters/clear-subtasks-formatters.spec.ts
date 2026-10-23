@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { formatClearedSubtasks } from './clear-subtasks-formatters.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 const plain = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
 describe('formatClearedSubtasks', () => {
@@ -96,5 +102,19 @@ describe('formatClearedSubtasks', () => {
 				]
 			})
 		).toBe('No subtasks to clear');
+	});
+});
+
+describe('formatClearedSubtasks with escape sequences in titles', () => {
+	it('prints the titles without them', () => {
+		const out = sgrFree(
+			formatClearedSubtasks({
+				cleared: [{ id: 1, title: HOSTILE, count: 1 }],
+				empty: [{ id: 2, title: HOSTILE }]
+			})
+		);
+
+		expect(out).toContain('  1  Fix login');
+		expect(out).not.toMatch(UNSAFE);
 	});
 });

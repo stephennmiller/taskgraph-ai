@@ -140,7 +140,7 @@ export {
 	type ResearchSaveTarget
 } from './formatters/research-formatters.js';
 
-// What `show`, `next` and `start --dry-run` print about one task
+// What `show` and `next` print about one task
 export {
 	formatNextStep,
 	formatTaskDetail,
@@ -159,10 +159,9 @@ export {
 	type ListSummaryOptions
 } from './formatters/task-list-formatters.js';
 
-// What `loop` prints before it starts, and the `start` alias notice
+// What `loop` prints before it starts
 export {
 	formatLoopIntro,
-	formatStartDeprecation,
 	type LoopIntro
 } from './formatters/loop-formatters.js';
 
@@ -171,6 +170,15 @@ export {
 	getSuggestedActions,
 	type SuggestedAction
 } from './suggested-actions.js';
+
+// What generate wrote
+export {
+	formatGenerateError,
+	formatGenerateResult
+} from './formatters/generate-formatters.js';
+
+// The notice before TaskGraph updates itself
+export { formatUpdateNotice } from './formatters/update-formatters.js';
 
 // What add-task confirms
 export {
@@ -277,22 +285,12 @@ export {
 
 // Layout helpers
 export {
-	getBoxWidth,
 	getContentWidth,
 	terminalWidth,
 	truncate,
 	wrapLine,
 	createProgressBar
 } from './layout/helpers.js';
-
-// Display messages
-export {
-	displayBanner,
-	displayErrorBox,
-	displaySuccess,
-	displayWarning,
-	displayInfo
-} from './display/messages.js';
 
 // Display tables
 export { createTaskTable } from './display/tables.js';

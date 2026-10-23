@@ -293,10 +293,9 @@ describe('Update check functionality', () => {
 
 	test('displays upgrade notification when newer version is available', () => {
 		displayUpgradeNotification('1.0.0', '1.1.0');
-		expect(consoleLogSpy).toHaveBeenCalled();
-		expect(consoleLogSpy.mock.calls[0][0]).toContain('Update Available!');
-		expect(consoleLogSpy.mock.calls[0][0]).toContain('1.0.0');
-		expect(consoleLogSpy.mock.calls[0][0]).toContain('1.1.0');
+		expect(consoleLogSpy).toHaveBeenCalledTimes(1);
+		expect(consoleLogSpy.mock.calls[0][0]).toContain('1.1.0 is out');
+		expect(consoleLogSpy.mock.calls[0][0]).toContain('you have 1.0.0');
 	});
 
 	test('displays upgrade notification with highlights when provided', () => {
@@ -306,28 +305,13 @@ describe('Update check functionality', () => {
 			'Move to AI SDK v5'
 		];
 		displayUpgradeNotification('1.0.0', '1.1.0', highlights);
-		expect(consoleLogSpy).toHaveBeenCalled();
 		const output = consoleLogSpy.mock.calls[0][0];
-		expect(output).toContain('Update Available!');
-		expect(output).toContain('1.0.0');
-		expect(output).toContain('1.1.0');
-		expect(output).toContain("What's New:");
-		expect(output).toContain(
-			'Add Codex CLI provider with OAuth authentication'
-		);
-		expect(output).toContain('Cursor IDE custom slash command support');
-		expect(output).toContain('Move to AI SDK v5');
-	});
-
-	test('displays upgrade notification without highlights section when empty array', () => {
-		displayUpgradeNotification('1.0.0', '1.1.0', []);
-		expect(consoleLogSpy).toHaveBeenCalled();
-		const output = consoleLogSpy.mock.calls[0][0];
-		expect(output).toContain('Update Available!');
-		expect(output).not.toContain("What's New:");
-		expect(output).toContain(
-			'Auto-updating to the latest version with new features and bug fixes'
-		);
+		expect(output).toContain('1.1.0 is out');
+		for (const highlight of highlights) {
+			expect(output).toContain(`• ${highlight}`);
+		}
+		// No box around it
+		expect(output).not.toMatch(/[╭╮╰╯│]/);
 	});
 
 	test('parseChangelogHighlights validates version format to prevent ReDoS', () => {

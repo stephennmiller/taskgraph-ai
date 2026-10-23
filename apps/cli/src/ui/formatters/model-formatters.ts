@@ -18,6 +18,7 @@
  * Free) and a four-step "Next Steps" box.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
@@ -77,6 +78,7 @@ export function formatModelConfiguration(
 	models: ModelAssignments,
 	available: string[]
 ): string {
+	models = sanitizeForTerminal(models);
 	const labelWidth = Math.max(
 		...MODEL_ROLE_ORDER.map((role) => MODEL_ROLES[role].label.length)
 	);
@@ -120,6 +122,7 @@ const transition = (change: ModelChange) =>
  * @param changes - The roles that were set, in order
  */
 export function formatModelChanges(changes: ModelChange[]): string {
+	changes = sanitizeForTerminal(changes);
 	const check = chalk.green('✓');
 	if (changes.length === 1) {
 		const [change] = changes;

@@ -8,6 +8,12 @@ import {
 } from './prime-formatters.js';
 import { formatEmptyList } from './task-list-formatters.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 const stripAnsi = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
 const context = (overrides: Partial<PrimeContext> = {}): PrimeContext => ({
@@ -286,5 +292,32 @@ describe('formatUnnotedReminder', () => {
 		for (const line of text.split('\n')) {
 			expect(line.length).toBeLessThanOrEqual(80);
 		}
+	});
+});
+
+describe('formatPrimeContext with escape sequences in task text', () => {
+	it('prints titles and criteria without them', () => {
+		const hostile = context({
+			tag: HOSTILE,
+			inProgress: [
+				{
+					id: '3',
+					title: HOSTILE,
+					status: 'in-progress',
+					priority: 'high',
+					parentTitle: HOSTILE,
+					doneWhen: [HOSTILE]
+				}
+			],
+			ready: [{ id: '4', title: HOSTILE, status: 'pending', priority: 'high' }]
+		});
+
+		const out = sgrFree(formatPrimeContext(hostile, 80));
+
+		expect(out).toContain('Fix login');
+		expect(out).not.toMatch(UNSAFE);
+		expect(sgrFree(formatUnnotedReminder(hostile.inProgress))).not.toMatch(
+			UNSAFE
+		);
 	});
 });

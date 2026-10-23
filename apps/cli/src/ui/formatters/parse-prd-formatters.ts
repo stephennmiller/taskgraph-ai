@@ -7,6 +7,7 @@
  * It replaces a boxed "Next steps" list of three commands.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
@@ -32,6 +33,7 @@ export function formatParsePrdSaved(
 	result: ParsePrdSaved,
 	width = terminalWidth()
 ): string {
+	result = sanitizeForTerminal(result);
 	const facts = [`Saved to ${result.tasksPath}`];
 	if (result.total > result.added) facts.push(`${result.total} tasks in total`);
 	if (result.research) facts.push('research-backed');

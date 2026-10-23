@@ -6,6 +6,12 @@ import {
 	formatUncheckedCriteria
 } from './checklist-formatters.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 // Strip ANSI codes so assertions read like the terminal does
 const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
 
@@ -97,5 +103,21 @@ describe('formatUncheckedCriteria', () => {
 			'  ○ 3  Tests pass',
 			'  Check them with taskgraph set-status 3 --check 2,3, or pass --force'
 		]);
+	});
+});
+
+describe('checklist output with escape sequences in criteria and config', () => {
+	it('prints criteria and Definition of Done items without them', () => {
+		const hostile = buildChecklist({ acceptanceCriteria: [HOSTILE] }, [
+			HOSTILE
+		]);
+		const outputs = [
+			formatChecklist(hostile, 80),
+			formatChecklistUpdate('1', hostile, 80),
+			formatUncheckedCriteria(HOSTILE, '1', hostile.items, 80)
+		].map(sgrFree);
+
+		expect(outputs[0]).toContain('○ 1  Fix login');
+		for (const out of outputs) expect(out).not.toMatch(UNSAFE);
 	});
 });

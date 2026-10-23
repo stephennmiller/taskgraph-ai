@@ -4,11 +4,7 @@
 
 import { stripVTControlCharacters } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import {
-	type LoopIntro,
-	formatLoopIntro,
-	formatStartDeprecation
-} from './loop-formatters.js';
+import { type LoopIntro, formatLoopIntro } from './loop-formatters.js';
 
 const intro = (overrides: Partial<LoopIntro> = {}): LoopIntro => ({
 	prompt: 'default',
@@ -89,19 +85,5 @@ describe('formatLoopIntro', () => {
 		);
 		for (const line of lines) expect(line.length).toBeLessThanOrEqual(60);
 		expect(lines[1].endsWith('…')).toBe(true);
-	});
-});
-
-describe('formatStartDeprecation', () => {
-	it('names the loop command that replaces start', () => {
-		expect(stripVTControlCharacters(formatStartDeprecation('3'))).toBe(
-			'start is deprecated; run taskgraph loop -n 1 --id 3 instead'
-		);
-	});
-
-	it('drops --id when no task was given', () => {
-		expect(stripVTControlCharacters(formatStartDeprecation())).toBe(
-			'start is deprecated; run taskgraph loop -n 1 instead'
-		);
 	});
 });

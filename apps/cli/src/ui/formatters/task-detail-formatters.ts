@@ -38,7 +38,8 @@ import {
 	fullSubtaskId,
 	getPrdSource,
 	getTaskLinks,
-	resolveSubtaskDependency
+	resolveSubtaskDependency,
+	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
 import { toMarkdown } from '../../utils/content-renderer.js';
@@ -50,12 +51,7 @@ import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { formatChecklist } from './checklist-formatters.js';
 import { complexityLevel } from './complexity-formatters.js';
-import {
-	fit,
-	formatMarkdown,
-	joinFacts,
-	terminalSafe
-} from './markdown-formatters.js';
+import { fit, formatMarkdown, joinFacts } from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
 import { getStatusWithColor } from './status-formatters.js';
 
@@ -79,26 +75,6 @@ export interface TaskDetailOptions {
 	statusFilter?: string;
 	/** Terminal width */
 	width?: number;
-	/**
-	 * The `Next:` line. Left out, it is the first status-aware suggestion;
-	 * `start --dry-run` passes its own, and null leaves the line out.
-	 */
-	next?: SuggestedAction | null;
-}
-
-/**
- * A copy of the task with every string made safe to print, so text in a
- * task file can't send escape sequences to the terminal
- */
-function safeStrings<T>(value: T): T {
-	if (typeof value === 'string') return terminalSafe(value) as T;
-	if (Array.isArray(value)) return value.map(safeStrings) as T;
-	if (value && typeof value === 'object' && !(value instanceof Date)) {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [key, safeStrings(item)])
-		) as T;
-	}
-	return value;
 }
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
@@ -336,9 +312,7 @@ function subtaskSection(
 			...subtaskRows(parentId, matching, width)
 		];
 	}
-	const done = subtasks.filter(
-		(sub) => sub.status === 'done' || sub.status === 'completed'
-	).length;
+	const done = subtasks.filter((sub) => sub.status === 'done').length;
 	return [
 		heading('Subtasks', `${done} of ${subtasks.length} done`),
 		...subtaskRows(parentId, subtasks, width)
@@ -365,7 +339,7 @@ export function formatTaskDetail(
 	taskToShow: Task | Subtask,
 	options: TaskDetailOptions = {}
 ): string {
-	const task = safeStrings(taskToShow);
+	const task = sanitizeForTerminal(taskToShow);
 	const width = Math.max(
 		30,
 		Math.min(options.width ?? terminalWidth(), MAX_WIDTH)
@@ -416,7 +390,7 @@ export function formatTaskDetail(
 		]);
 	}
 	// Numbered as `set-status --check` takes them
-	const checklist = safeStrings(
+	const checklist = sanitizeForTerminal(
 		options.checklist ?? buildChecklist(taskToShow, [])
 	);
 	if (checklist.items.length > 0) {
@@ -430,11 +404,10 @@ export function formatTaskDetail(
 		);
 	}
 
-	const action =
-		options.next === undefined
-			? getSuggestedActions(id, task.status, subtasks.length > 0)[0]
-			: options.next;
-	const next = formatNextStep(action, width);
+	const next = formatNextStep(
+		getSuggestedActions(id, task.status, subtasks.length > 0)[0],
+		width
+	);
 	if (next.length > 0) sections.push(next);
 
 	return sections.map((lines) => lines.join('\n')).join('\n\n');

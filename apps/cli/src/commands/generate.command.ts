@@ -9,11 +9,13 @@ import {
 	type TmCore,
 	createTmCore
 } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import { Command } from 'commander';
+import {
+	formatGenerateError,
+	formatGenerateResult
+} from '../ui/formatters/generate-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
@@ -176,51 +178,15 @@ export class GenerateCommand extends Command {
 			});
 		}
 
+		const projectRoot = this.tmCore?.projectPath ?? process.cwd();
 		if (!result.success) {
-			// Error occurred
-			console.log(
-				boxen(chalk.red(`Error: ${result.error || 'Unknown error'}`), {
-					padding: 1,
-					borderStyle: 'round',
-					borderColor: 'red',
-					title: 'Generation failed',
-					titleAlignment: 'center'
-				})
-			);
+			const { message, hint } = formatGenerateError(result, projectRoot);
+			printError(message, hint);
+			process.exitCode = 1;
 			return;
 		}
 
-		if (result.count === 0) {
-			// No tasks to generate
-			console.log(
-				boxen(chalk.yellow('No tasks found to generate files for.'), {
-					padding: 1,
-					borderStyle: 'round',
-					borderColor: 'yellow',
-					title: 'No tasks',
-					titleAlignment: 'center'
-				})
-			);
-			return;
-		}
-
-		// Success message
-		let message = `${chalk.green('✓')} Generated ${chalk.cyan(result.count)} task file(s)`;
-		message += `\n\n${chalk.dim('Output directory:')} ${result.directory}`;
-
-		if (result.orphanedFilesRemoved > 0) {
-			message += `\n${chalk.dim('Orphaned files removed:')} ${result.orphanedFilesRemoved}`;
-		}
-
-		console.log(
-			boxen(message, {
-				padding: 1,
-				borderStyle: 'round',
-				borderColor: 'green',
-				title: 'Task files generated',
-				titleAlignment: 'center'
-			})
-		);
+		console.log(formatGenerateResult(result, projectRoot));
 	}
 
 	/**

@@ -2,6 +2,12 @@ import type { Task } from '@tm/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createTaskTable } from './tables.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 // eslint-disable-next-line no-control-regex
 const stripAnsi = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
@@ -93,5 +99,31 @@ describe('createTaskTable - narrow terminals', () => {
 
 		expect(widest(output)).toBeLessThanOrEqual(50);
 		expect(output).toContain('feature');
+	});
+});
+
+describe('createTaskTable with escape sequences in task text', () => {
+	it('prints titles and subtask titles without them', () => {
+		const subtask = {
+			id: 1,
+			parentId: '1',
+			title: HOSTILE,
+			description: '',
+			status: 'pending',
+			priority: 'medium',
+			dependencies: [],
+			details: '',
+			testStrategy: ''
+		} satisfies Task['subtasks'][number];
+		const task = {
+			...makeTask('1', 'alpha'),
+			title: HOSTILE,
+			subtasks: [subtask]
+		};
+
+		const out = sgrFree(createTaskTable([task], { showSubtasks: true }));
+
+		expect(out).toContain('Fix login');
+		expect(out).not.toMatch(UNSAFE);
 	});
 });

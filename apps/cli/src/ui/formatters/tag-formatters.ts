@@ -27,6 +27,7 @@
  * bordered table about 116 columns wide.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -35,6 +36,7 @@ type Id = number | string;
 
 /** The muted line naming the tag a command works in */
 export function formatTagIndicator(tag: string): string {
+	tag = sanitizeForTerminal(tag);
 	return theme.muted(`[tag] ${tag}`);
 }
 
@@ -81,6 +83,7 @@ export function formatTagCreated(
 	},
 	width = terminalWidth()
 ): string {
+	result = sanitizeForTerminal(result);
 	const copied =
 		result.sourceTag &&
 		`${plural(result.tasksCopied, 'task')} from ${result.sourceTag}`;
@@ -101,6 +104,7 @@ export function formatTagSwitched(
 	},
 	width = terminalWidth()
 ): string {
+	result = sanitizeForTerminal(result);
 	const count = plural(result.taskCount, 'task');
 	const lines = [
 		result.previousTag === result.currentTag
@@ -131,6 +135,7 @@ export function formatTagRenamed(result: {
 	newName: string;
 	isCurrentTag?: boolean;
 }): string {
+	result = sanitizeForTerminal(result);
 	return (
 		ok(`Renamed ${result.oldName} to ${result.newName}`) +
 		facts(result.isCurrentTag && 'current tag')
@@ -142,6 +147,7 @@ export function formatTagCopied(result: {
 	targetName: string;
 	tasksCopied: number;
 }): string {
+	result = sanitizeForTerminal(result);
 	return [
 		ok(`Copied ${result.sourceName} to ${result.targetName}`) +
 			facts(plural(result.tasksCopied, 'task')),
@@ -154,6 +160,7 @@ export function formatTagDeleted(result: {
 	tasksDeleted: number;
 	switchedToMaster?: boolean;
 }): string {
+	result = sanitizeForTerminal(result);
 	const tasks =
 		result.tasksDeleted === 0
 			? ''
@@ -179,6 +186,7 @@ export function formatTagList(
 	options: { showMetadata?: boolean; ready?: boolean } = {},
 	width = terminalWidth()
 ): string {
+	tags = sanitizeForTerminal(tags);
 	if (tags.length === 0) {
 		return options.ready ? 'No tag has a task ready to start' : 'No tags yet';
 	}

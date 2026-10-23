@@ -199,10 +199,7 @@ export function createTasksFile(overrides?: {
 }): TasksFile {
 	const tasks = overrides?.tasks ?? [];
 	const completedTasks = tasks.filter(
-		(t) =>
-			t.status === 'done' ||
-			t.status === 'completed' ||
-			t.status === 'cancelled'
+		(t) => t.status === 'done' || t.status === 'cancelled'
 	);
 
 	const defaultMetadata: TaskMetadata = {

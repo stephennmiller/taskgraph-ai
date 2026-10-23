@@ -25,7 +25,11 @@
  * no wider than the terminal (80 columns when there isn't one).
  */
 
-import type { PrimeContext, PrimeTask } from '@tm/core';
+import {
+	type PrimeContext,
+	type PrimeTask,
+	sanitizeForTerminal
+} from '@tm/core';
 import { theme } from '../theme.js';
 
 const INDENT = '  ';
@@ -87,6 +91,7 @@ export function formatPrimeContext(
 	context: PrimeContext,
 	width = process.stdout.columns || 80
 ): string {
+	context = sanitizeForTerminal(context);
 	const { counts } = context;
 	const lines = [
 		`TaskGraph tracks work in this project ${theme.muted(
@@ -217,6 +222,7 @@ function formatReady(context: PrimeContext, width: number): string[] {
  * reminder to a fixed shape.
  */
 export function formatUnnotedReminder(tasks: PrimeTask[]): string {
+	tasks = sanitizeForTerminal(tasks);
 	const ids = tasks.map((t) => t.id);
 	const one = ids.length === 1;
 	const id = one ? ids[0] : '<id>';

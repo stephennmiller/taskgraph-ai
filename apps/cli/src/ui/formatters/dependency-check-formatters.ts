@@ -20,6 +20,7 @@
  * printed twice, and a self-dependency reported a second time as a loop.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -157,6 +158,7 @@ export function formatDependencyCheck(
 	result: DependencyCounts & { issues: DependencyIssue[] },
 	width = terminalWidth()
 ): string {
+	result = sanitizeForTerminal(result);
 	const { issues } = result;
 	if (issues.length === 0) return noProblems(result);
 	return problems(
@@ -221,6 +223,7 @@ export function formatDependencyFixes(
 	},
 	width = terminalWidth()
 ): string {
+	result = sanitizeForTerminal(result);
 	const { fixes, remaining = [] } = result;
 	if (fixes.length === 0 && remaining.length === 0) return noProblems(result);
 

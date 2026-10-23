@@ -15,7 +15,7 @@ Task dependencies form a graph. TaskGraph reads that graph to pick the next task
 3. **Fewer dependencies**: the task that lists fewer dependencies.
 4. **ID**: the lowest ID.
 
-Step 2 counts every unfinished task, including `deferred`, `blocked` and `review` ones, because they still wait on their dependencies. A task is "unfinished" unless it is `done`, `completed` or `cancelled`.
+Step 2 counts every unfinished task, including `deferred`, `blocked` and `review` ones, because they still wait on their dependencies. A task is "unfinished" unless it is `done` or `cancelled`.
 
 It counts top-level tasks: a parent and its subtasks are one piece of work, however finely the task was expanded. A task in front of a parent with ten subtasks counts that parent once, the same as before the parent was expanded, and subtasks that wait through their parent count toward that parent. A subtask doesn't count its own parent or siblings, so one that holds up only its own task counts 0 (step 2 then compares how many of its siblings wait on it).
 
@@ -107,7 +107,7 @@ Critical path: 1 → 2 → 3 → 5
 `parallelWaves(tasks)` in `@tm/core` (`parallel-waves.ts`) groups unfinished tasks into waves. It is what `graph` shows and what a runner that starts several tasks at once should read.
 
 - **Top-level tasks only.** A task is the unit of parallel work; its subtasks run inside it. This matches the tree `graph` draws.
-- **Finished tasks** (`done`, `completed`, `cancelled`) get no wave and satisfy whatever waits on them.
+- **Finished tasks** (`done`, `cancelled`) get no wave and satisfy whatever waits on them.
 - **A dependency on a subtask** (`2.1`) is satisfied once that subtask or its parent is finished. Until then the task goes in a wave after the parent (task 2).
 - **Unfinished tasks with no wave** are listed in `unscheduled` with a `reason`:
   - `cycle`: in a dependency loop (a task that lists itself counts). `blockers` names the loop members it depends on.

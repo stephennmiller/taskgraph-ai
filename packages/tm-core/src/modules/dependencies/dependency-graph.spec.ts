@@ -361,25 +361,24 @@ describe('blockedWithinTask', () => {
 });
 
 describe('statuses', () => {
-	it('treats done, completed and cancelled as finished, everything else as open', () => {
+	it('treats done and cancelled as finished, everything else as open', () => {
 		const tasks = [
 			task('1'),
 			task('2', ['1'], 'deferred'),
 			task('3', ['1'], 'blocked'),
 			task('4', ['1'], 'review'),
-			task('5', ['1'], 'completed'),
 			task('6', ['1'], 'cancelled'),
 			task('7', ['1'], 'done')
 		];
 
 		expect(blockedCount(tasks).get('1')).toBe(3);
-		expect(blockedCount(tasks).get('5')).toBe(0);
+		expect(blockedCount(tasks).get('6')).toBe(0);
 		expect(criticalPath(tasks)).toEqual(['1', '2']);
 	});
 
-	it('leaves completed and cancelled tasks out of the critical path', () => {
+	it('leaves done and cancelled tasks out of the critical path', () => {
 		const tasks = [
-			task('1', [], 'completed'),
+			task('1', [], 'done'),
 			task('2', ['1'], 'cancelled'),
 			task('3', ['2'])
 		];
