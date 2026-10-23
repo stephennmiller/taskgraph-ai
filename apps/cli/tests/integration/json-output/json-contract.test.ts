@@ -25,7 +25,7 @@ import { shapeOf } from '../../helpers/json-shape.js';
 import { getCliBinPath } from '../../helpers/test-utils.js';
 
 /** The schemaVersion the shapes below describe */
-const PINNED_VERSION = 1;
+const PINNED_VERSION = 2;
 
 describe('--json contract', () => {
 	let dir: string;
@@ -178,11 +178,11 @@ describe('--json contract', () => {
 			      },
 			    ],
 			    "dependencies": [
-			      "number",
+			      "string",
 			    ],
 			    "description": "string",
 			    "details": "string",
-			    "id": "number",
+			    "id": "string",
 			    "priority": "string",
 			    "status": "string",
 			    "subtasks": [
@@ -192,7 +192,8 @@ describe('--json contract', () => {
 			        ],
 			        "description": "string",
 			        "details": "string",
-			        "id": "number",
+			        "id": "string",
+			        "parentId": "string",
 			        "status": "string",
 			        "title": "string",
 			      },
@@ -214,7 +215,8 @@ describe('--json contract', () => {
 			    "dependencies": [],
 			    "description": "string",
 			    "details": "string",
-			    "id": "number",
+			    "id": "string",
+			    "parentId": "string",
 			    "status": "string",
 			    "title": "string",
 			  },
@@ -238,11 +240,11 @@ describe('--json contract', () => {
 			        },
 			      ],
 			      "dependencies": [
-			        "number",
+			        "string",
 			      ],
 			      "description": "string",
 			      "details": "string",
-			      "id": "number",
+			      "id": "string",
 			      "priority": "string",
 			      "status": "string",
 			      "subtasks": [
@@ -252,7 +254,8 @@ describe('--json contract', () => {
 			          ],
 			          "description": "string",
 			          "details": "string",
-			          "id": "number",
+			          "id": "string",
+			          "parentId": "string",
 			          "status": "string",
 			          "title": "string",
 			        },
@@ -328,6 +331,53 @@ describe('--json contract', () => {
 			  },
 			}
 		`);
+	});
+
+	// #310: subtasks stored without parentId printed "parentId": "undefined"
+	it("next and list --with-subtasks give each subtask its task's id as parentId", () => {
+		const next = json(['next', '--format', 'json']);
+		const list = json(['list', '--with-subtasks', '--json']);
+		const listed = list.tasks.find((t: { id: string }) => t.id === '2');
+
+		for (const subtasks of [next.task.subtasks, listed.subtasks]) {
+			expect(
+				subtasks.map((st: { id: string; parentId: string }) => [
+					st.id,
+					st.parentId
+				])
+			).toEqual([
+				['1', '2'],
+				['2', '2']
+			]);
+		}
+	});
+
+	// #311: show and start gave numeric ids where list and next give strings
+	it('show, start, list and next give the same ids', () => {
+		const listed = json(['list', '--with-subtasks', '--json']).tasks.find(
+			(t: { id: string }) => t.id === '2'
+		);
+		const ids = (t: {
+			id: unknown;
+			dependencies: unknown[];
+			subtasks: { id: unknown }[];
+		}) => ({
+			id: t.id,
+			dependencies: t.dependencies,
+			subtaskIds: t.subtasks.map((st) => st.id)
+		});
+		const expected = { id: '2', dependencies: ['1'], subtaskIds: ['1', '2'] };
+
+		expect(ids(listed)).toEqual(expected);
+		expect(ids(json(['next', '--format', 'json']).task)).toEqual(expected);
+		expect(ids(json(['show', '2', '--json']).task)).toEqual(expected);
+		expect(
+			ids(json(['start', '2', '--dry-run', '--format', 'json']).task)
+		).toEqual(expected);
+		expect(json(['show', '2.1', '--json']).task).toMatchObject({
+			id: '1',
+			parentId: '2'
+		});
 	});
 
 	it('next: nothing to do', () => {
@@ -624,11 +674,11 @@ describe('--json contract', () => {
 			      },
 			    ],
 			    "dependencies": [
-			      "number",
+			      "string",
 			    ],
 			    "description": "string",
 			    "details": "string",
-			    "id": "number",
+			    "id": "string",
 			    "priority": "string",
 			    "status": "string",
 			    "subtasks": [
@@ -638,7 +688,8 @@ describe('--json contract', () => {
 			        ],
 			        "description": "string",
 			        "details": "string",
-			        "id": "number",
+			        "id": "string",
+			        "parentId": "string",
 			        "status": "string",
 			        "title": "string",
 			      },

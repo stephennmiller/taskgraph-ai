@@ -14,7 +14,7 @@ taskgraph next --format json
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "found": true,
   "task": { "id": "2", "title": "Add Postgres", "status": "pending", ... },
   "tag": "master",
@@ -63,7 +63,7 @@ For a given `schemaVersion`:
 
 Removing or renaming a key, or changing its type, raises `schemaVersion`. A new key does not.
 
-The current version is `1`.
+The current version is `2`.
 
 ## Not the same as the tasks file version
 

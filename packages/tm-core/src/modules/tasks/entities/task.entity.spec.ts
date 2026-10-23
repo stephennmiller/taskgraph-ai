@@ -342,4 +342,50 @@ describe('TaskEntity', () => {
 			expect(entity.metadata).toEqual({ tracked: true });
 		});
 	});
+
+	describe('subtask ids', () => {
+		// Regression: #310, a subtask stored without parentId read as "undefined"
+		it("gives a subtask stored without parentId its task's id", () => {
+			const entity = new TaskEntity(
+				createMinimalTask({
+					id: '2',
+					subtasks: [
+						{
+							id: 1,
+							title: 'Schema',
+							description: 'Write the schema',
+							status: 'pending',
+							dependencies: []
+						} as unknown as Task['subtasks'][number]
+					]
+				})
+			);
+
+			expect(entity.subtasks[0].id).toBe('1');
+			expect(entity.subtasks[0].parentId).toBe('2');
+		});
+
+		it('keeps a stored parentId', () => {
+			const entity = new TaskEntity(
+				createMinimalTask({
+					id: '2',
+					subtasks: [
+						{
+							id: 1,
+							parentId: '2',
+							title: 'Schema',
+							description: 'Write the schema',
+							status: 'pending',
+							priority: 'low',
+							dependencies: [],
+							details: '',
+							testStrategy: ''
+						}
+					]
+				})
+			);
+
+			expect(entity.subtasks[0].parentId).toBe('2');
+		});
+	});
 });
