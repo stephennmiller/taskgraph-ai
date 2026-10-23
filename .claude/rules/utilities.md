@@ -445,7 +445,7 @@ These utilities specifically support the implementation and execution of MCP too
     - **Example**:
       ```javascript
       // In mcp-server/src/tools/your-tool.js
-      import { withNormalizedProjectRoot } from './utils.js';
+      import { withNormalizedProjectRoot } from '@tm/mcp';
       
       export function registerYourTool(server) {
           server.addTool({
@@ -459,9 +459,10 @@ These utilities specifically support the implementation and execution of MCP too
       }
       ```
 
-- **`handleApiResult(result, log, errorPrefix, processFunction)`**:
-    - **Purpose**: Standardizes the formatting of responses returned by direct functions (`{ success, data/error, fromCache }`) into the MCP response format.
-    - **Usage**: Call this at the end of the tool's `execute` method, passing the result from the direct function call.
+- **`handleApiResult({ result, log, errorPrefix, projectRoot, tag })`** (from `@tm/mcp`, [`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)):
+    - **Purpose**: Standardizes the formatting of responses returned by direct functions (`{ success, data/error }`) into the MCP response format: `{ data, version, tag }` on success, an `isError` response on failure.
+    - **Usage**: Call this at the end of the tool's `execute` method with one options object. Only `result` is required; pass `projectRoot` (or `tag`) so the response names the current tag.
+    - **Note**: `mcp-server/src/tools/utils.js` still has an older positional `handleApiResult(result, log, errorPrefix, processFunction)`. Tools don't use it; import from `@tm/mcp`.
 
 - **`createContentResponse(content)` / `createErrorResponse(errorMessage)`**:
     - **Purpose**: Helper functions to create the basic MCP response structure for success or error messages.
@@ -473,7 +474,7 @@ These utilities specifically support the implementation and execution of MCP too
 
 - **`processMCPResponseData(taskOrData, fieldsToRemove)`**:
     - **Purpose**: Utility to filter potentially sensitive or large fields (like `details`, `testStrategy`) from task objects before sending the response back via MCP.
-    - **Usage**: Passed as the default `processFunction` to `handleApiResult`.
+    - **Usage**: Only the older positional `handleApiResult` in `mcp-server/src/tools/utils.js` calls it; the `@tm/mcp` version does not filter fields.
 
 - **`getProjectRootFromSession(session, log)`**:
     - **Purpose**: Legacy function to extract *and normalize* the project root from the session. Replaced by the HOF pattern but potentially still used.
