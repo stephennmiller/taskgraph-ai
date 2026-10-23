@@ -17,6 +17,7 @@ import {
 	displayError,
 	displayUpgradeNotification,
 	formatCommanderError,
+	fromBranchError,
 	printError,
 	performAutoUpdate,
 	printJson,
@@ -88,13 +89,16 @@ import {
 
 import {
 	CUSTOM_PROVIDERS,
+	createTagFromBranch,
 	parseClarificationAnswers,
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
 	UPSTREAM_NAME,
 	PROJECT_ROOT_ENV,
 	findProjectRoot,
+	getOwnKey,
 	isTaskGraphProject,
+	parseSubtaskDependencyInput,
 	resolveProjectRoot,
 	writeClarifications
 } from '@tm/core';
@@ -339,11 +343,8 @@ function registerCommands(programInstance) {
 						const allData = JSON.parse(existingFileContent);
 
 						// Check if the target tag exists and has tasks
-						if (
-							allData[tag] &&
-							Array.isArray(allData[tag].tasks) &&
-							allData[tag].tasks.length > 0
-						) {
+						const tagTasks = getOwnKey(allData, tag)?.tasks;
+						if (Array.isArray(tagTasks) && tagTasks.length > 0) {
 							hasExistingTasksInTag = true;
 						}
 					} catch (error) {
@@ -478,14 +479,17 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			// Call core updateTasks, passing context for CLI
-			await updateTasks(
-				taskGraph.getTasksPath(),
-				fromId,
-				prompt,
-				useResearch,
-				{ projectRoot: taskGraph.getProjectRoot(), tag } // Pass context with projectRoot and tag
-			);
+			try {
+				await updateTasks(
+					taskGraph.getTasksPath(),
+					fromId,
+					prompt,
+					useResearch,
+					{ projectRoot: taskGraph.getProjectRoot(), tag }
+				);
+			} catch (error) {
+				displayError(error, { hint: aiErrorHint(error) });
+			}
 		});
 
 	// update-task command
@@ -1709,7 +1713,7 @@ function registerCommands(programInstance) {
 		.option('--details <text>', 'Implementation details for the new subtask')
 		.option(
 			'--dependencies <ids>',
-			'Comma-separated list of dependency IDs for the new subtask'
+			'Comma-separated task or subtask IDs the new subtask depends on (3, 5.2)'
 		)
 		.option('-s, --status <status>', 'Status for the new subtask', 'pending')
 		.option('--generate', 'Regenerate task files after adding subtask')
@@ -1743,13 +1747,14 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			// Parse dependencies if provided
+			// 3 is task 3 and 5.2 is that subtask, as in add-dependency
 			let dependencies = [];
 			if (options.dependencies) {
-				dependencies = options.dependencies.split(',').map((id) => {
-					// Handle both regular IDs and dot notation
-					return id.includes('.') ? id.trim() : parseInt(id.trim(), 10);
-				});
+				try {
+					dependencies = parseSubtaskDependencyInput(options.dependencies);
+				} catch (error) {
+					displayError(error);
+				}
 			}
 
 			try {
@@ -1861,7 +1866,7 @@ function registerCommands(programInstance) {
 	function showAddSubtaskHelp() {
 		console.log(
 			boxen(
-				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
+				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Task or subtask IDs it depends on (3,5.2)\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
 				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);
@@ -3119,82 +3124,29 @@ Examples:
 					outputType: 'cli'
 				};
 
-				// Handle --from-branch option
+				const createOptions = {
+					copyFromCurrent: options.copyFromCurrent || false,
+					copyFromTag: options.copyFrom,
+					description: options.description
+				};
+
 				if (options.fromBranch) {
-					const { createTagFromBranch } = await import(
-						'./task-manager/tag-management.js'
-					);
-					const gitUtils = await import('./utils/git-utils.js');
-
-					// Check if we're in a git repository
-					if (!(await gitUtils.isGitRepository(context.projectRoot))) {
-						printError(
-							"--from-branch needs a git repository, and this isn't one",
-							'Name the tag instead: `taskgraph tags add <name>`'
-						);
-						process.exit(1);
-					}
-
-					// Get current git branch
-					const currentBranch = await gitUtils.getCurrentBranch(
-						context.projectRoot
-					);
-					if (!currentBranch) {
-						printError(
-							"Couldn't tell which git branch is checked out",
-							'Name the tag instead: `taskgraph tags add <name>`'
-						);
-						process.exit(1);
-					}
-
-					// Create tag from branch
-					const branchOptions = {
-						copyFromCurrent: options.copyFromCurrent || false,
-						copyFromTag: options.copyFrom,
-						description: options.description
-					};
-
+					// Names the tag after the current git branch and maps the branch to it
 					await createTagFromBranch(
-						taskGraph.getTasksPath(),
-						currentBranch,
-						branchOptions,
-						context,
-						'text'
-					);
-				} else {
-					// Regular tag creation
-					const createOptions = {
-						copyFromCurrent: options.copyFromCurrent || false,
-						copyFromTag: options.copyFrom,
-						description: options.description
-					};
-
-					await createTag(
-						taskGraph.getTasksPath(),
-						tagName,
-						createOptions,
-						context,
-						'text'
-					);
-				}
-
-				// Handle auto-switch if requested
-				if (options.autoSwitch) {
-					const { useTag } = await import('./task-manager/tag-management.js');
-					const finalTagName = options.fromBranch
-						? (await import('./utils/git-utils.js')).sanitizeBranchNameForTag(
-								await (await import('./utils/git-utils.js')).getCurrentBranch(
-									projectRoot
-								)
+						context.projectRoot,
+						(branchTag, { defaultDescription }) =>
+							createTag(
+								tasksPath,
+								branchTag,
+								{ ...createOptions, defaultDescription },
+								context,
+								'text'
 							)
-						: tagName;
-					await useTag(
-						taskGraph.getTasksPath(),
-						finalTagName,
-						{},
-						context,
-						'text'
-					);
+					).catch((error) => {
+						throw fromBranchError(error);
+					});
+				} else {
+					await createTag(tasksPath, tagName, createOptions, context, 'text');
 				}
 			} catch (error) {
 				displayError(error);
@@ -3410,76 +3362,13 @@ Examples:
 }
 
 /**
- * Load the TUI module (coming soon)
- * @returns {Promise<object|null>} null - TUI not yet available
- */
-async function loadTUI() {
-	// TUI is coming soon - return null for now
-	return null;
-}
-
-/**
- * Launch the interactive TUI REPL
+ * Launch the interactive TUI REPL. The TUI is not built yet, so this shows
+ * help instead.
  */
 async function launchREPL() {
-	const tui = await loadTUI();
-
-	if (!tui) {
-		// TUI coming soon - show help for now
-		console.log(chalk.yellow('TUI mode coming soon!'));
-		console.log(chalk.dim('Showing help instead...\n'));
-		displayHelp();
-		return;
-	}
-
-	// Only import react once a TUI exists; it is not a declared dependency
-	const React = await import('react');
-	const { render, Shell } = tui;
-
-	// Get current context
-	let tag = 'master';
-	let projectRoot = process.cwd();
-
-	try {
-		const taskGraph = initTaskGraph({});
-		tag = taskGraph.getCurrentTag();
-		projectRoot = taskGraph.getProjectRoot() || process.cwd();
-	} catch (error) {
-		// Use defaults
-	}
-
-	// Check if stdin supports raw mode (required for interactive TUI)
-	const isInteractive =
-		process.stdin.isTTY && typeof process.stdin.setRawMode === 'function';
-
-	// Clear screen
-	console.clear();
-
-	// Shell props with interactive flag and auth state
-	const shellProps = {
-		showBanner: true,
-		showSplash: isInteractive,
-		initialTag: tag,
-		isInteractive: isInteractive,
-		projectRoot: projectRoot,
-		onExit: () => {
-			console.log(chalk.dim('\nGoodbye! 👋'));
-			process.exit(0);
-		}
-	};
-
-	const instance = render(React.createElement(Shell, shellProps));
-
-	// In non-interactive mode, wait for render then exit
-	if (!isInteractive) {
-		setTimeout(() => {
-			instance.unmount();
-			console.log(
-				chalk.dim('\n💡 Run in an interactive terminal for full REPL mode.')
-			);
-			process.exit(0);
-		}, 200);
-	}
+	console.log(chalk.yellow('TUI mode coming soon!'));
+	console.log(chalk.dim('Showing help instead...\n'));
+	displayHelp();
 }
 
 // Commands that work outside a project
@@ -3607,7 +3496,8 @@ function requireProject(_hookedCommand, actionCommand) {
 	const root = resolveProjectRoot(explicitRoot ?? undefined);
 	if (isTaskGraphProject(root)) return;
 
-	if (explicitRoot) {
+	// A --project inside the variable's worktrees resolves to the variable's project
+	if (explicitRoot === root) {
 		printError(
 			`No TaskGraph project at ${explicitRoot}`,
 			'Run `taskgraph init` in that folder to set one up'

@@ -57,6 +57,12 @@ export {
 	type RenumberedItem
 } from './modules/storage/adapters/file-storage/merge-tag-changes.js';
 
+// Stamp tasks.json tags with the schema version, for writers outside FileStorage
+export {
+	CURRENT_SCHEMA_VERSION,
+	stampTasksFileSchemaVersion
+} from './modules/storage/adapters/file-storage/schema-version.js';
+
 // Constants
 export * from './common/constants/index.js';
 
@@ -186,6 +192,13 @@ export {
 	type GenerateTaskFilesResult
 } from './modules/tasks/services/task-file-generator.service.js';
 
+// Per-machine settings (.taskgraph/config.local.json)
+export {
+	hasPerMachineSettings,
+	mergeMachineConfig,
+	splitMachineConfig
+} from './modules/config/services/machine-config.js';
+
 // Per-project environment
 export {
 	readProjectEnv,
@@ -203,6 +216,7 @@ export {
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,
 	rankNextTasks,
+	subtaskInContext,
 	buildPrimeContext,
 	findUnnotedInProgress,
 	PRIME_RULES,
@@ -242,6 +256,17 @@ export {
 	deleteArchivedTag,
 	copyArchivedTag,
 	type ArchivedIds
+} from './modules/tasks/utils/index.js';
+
+// Tags named after git branches
+export {
+	createTagFromBranch,
+	resolveBranchTag,
+	recordBranchTag,
+	tagNameForBranch,
+	type BranchTag,
+	type CreateBranchTag,
+	type CreateTagFromBranchResult
 } from './modules/tasks/utils/index.js';
 
 // Older status spellings ('completed') read as 'done' on load

@@ -58,7 +58,7 @@ export class FormatHandler {
 	 */
 	private extractTasksFromLegacy(data: any, tag: string): Task[] {
 		// First check if the requested tag exists
-		if (tag in data) {
+		if (Object.hasOwn(data, tag)) {
 			const tagData = data[tag];
 			return tagData?.tasks || [];
 		}
@@ -107,7 +107,7 @@ export class FormatHandler {
 		data: any,
 		tag: string
 	): TaskMetadata | null {
-		if (tag in data) {
+		if (Object.hasOwn(data, tag)) {
 			const tagData = data[tag];
 			// Generate metadata if not present in legacy format
 			if (!tagData?.metadata && tagData?.tasks) {

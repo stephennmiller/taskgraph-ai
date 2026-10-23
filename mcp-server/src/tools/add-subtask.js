@@ -46,7 +46,9 @@ export function registerAddSubtaskTool(server) {
 			dependencies: z
 				.string()
 				.optional()
-				.describe('Comma-separated list of dependency IDs for the new subtask'),
+				.describe(
+					'Comma-separated task or subtask IDs the new subtask depends on, e.g. "3,5.2" (3 is task 3, 5.2 is subtask 2 of task 5)'
+				),
 			file: z
 				.string()
 				.optional()

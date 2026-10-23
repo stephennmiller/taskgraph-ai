@@ -17,6 +17,9 @@ export {
 	type ErrorMessage
 } from './error-handler.js';
 
+// `--from-branch` git check failures
+export { fromBranchError } from './from-branch-error.js';
+
 // Versioned JSON output
 export { formatJson, printJson, wantsJsonOutput } from './json-output.js';
 

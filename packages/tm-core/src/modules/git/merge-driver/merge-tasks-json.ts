@@ -38,6 +38,10 @@ import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
 } from '../../dependencies/dependency-provenance.js';
+import {
+	getOwnKey as own,
+	setOwnKey as put
+} from '../../../common/utils/own-key.js';
 import { archivedTasksById } from '../../tasks/utils/archive.js';
 import {
 	isSiblingReference,
@@ -122,20 +126,6 @@ const isPrimitiveList = (value: unknown): value is unknown[] =>
 	value.every((item) => item === null || typeof item !== 'object');
 
 const keyOf = (item: Item) => String(item.id);
-
-/** Own property only, so keys such as `constructor` never read the prototype */
-const own = (object: Json | undefined, key: string): unknown =>
-	object && Object.hasOwn(object, key) ? object[key] : undefined;
-
-/** Define an own property, so a `__proto__` key stays data */
-const put = (object: Json, key: string, value: unknown) => {
-	Object.defineProperty(object, key, {
-		value,
-		enumerable: true,
-		writable: true,
-		configurable: true
-	});
-};
 
 const byKey = (items: Item[] | undefined) =>
 	new Map((items ?? []).map((item) => [keyOf(item), item]));

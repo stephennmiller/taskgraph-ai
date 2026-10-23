@@ -5,13 +5,14 @@
  */
 
 import path from 'node:path';
+import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
 import { LoopError } from '../loop-task.js';
 
 /** Upper bound on `--parallel`: each task is a full Claude Code session */
 export const MAX_PARALLEL = 16;
 
 /** Branch prefix for task worktrees: `taskgraph/task-<id>` */
-export const TASK_BRANCH_PREFIX = 'taskgraph/task-';
+const TASK_BRANCH_PREFIX = 'taskgraph/task-';
 
 /** A `--parallel` error the CLI prints as-is, with the fix underneath */
 export class ParallelLoopError extends LoopError {
@@ -104,7 +105,7 @@ export function taskBranchName(id: string): string {
 
 /** Where task worktrees and their logs live, under the project */
 export function worktreesDir(projectRoot: string): string {
-	return path.join(projectRoot, '.taskgraph', 'worktrees');
+	return path.join(projectRoot, TASKGRAPH_WORKTREES_DIR);
 }
 
 /** `.taskgraph/worktrees/task-<id>` */

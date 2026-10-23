@@ -51,12 +51,12 @@ describe('saveTasksToFile metadata', () => {
 		expect(saved.other.metadata.schemaVersion).toBe(1);
 	});
 
-	test('a new tag gets metadata without inventing a schemaVersion', () => {
+	test('a new tag gets metadata stamped with the schema version', () => {
 		saveTasksToFile(tasksPath, [{ id: 1, title: 'T' }], 'master', logger);
 
 		const saved = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
 		expect(saved.master.metadata.created).toBeDefined();
-		expect(saved.master.metadata).not.toHaveProperty('schemaVersion');
+		expect(saved.master.metadata.schemaVersion).toBe(1);
 	});
 
 	test('with null tasks, records the PRD hashes and keeps the tasks the file has now', () => {

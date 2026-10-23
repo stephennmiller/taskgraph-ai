@@ -10,7 +10,8 @@ import {
 	filterReadyTasks,
 	isTaskComplete,
 	readArchivedIdsSync,
-	renameArchivedTag
+	renameArchivedTag,
+	getOwnKey
 } from '@tm/core';
 import {
 	findProjectRoot,
@@ -19,13 +20,29 @@ import {
 	log,
 	readJSON,
 	resolveTag,
-	setTasksForTag,
 	modifyJSON,
 	writeJSON
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
 const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
+
+/** `__proto__` is a key JavaScript objects treat as their prototype, not data */
+const RESERVED_TAG_NAMES = ['master', 'main', 'default', '__proto__'];
+
+/**
+ * Copy tagged tasks.json data without the given keys. The copy has no
+ * prototype, so every key, `__proto__` included, is copied as data.
+ */
+function copyTaggedData(data, skipKeys) {
+	const copy = Object.create(null);
+	for (const [key, value] of Object.entries(data)) {
+		if (!skipKeys.includes(key)) {
+			copy[key] = value;
+		}
+	}
+	return copy;
+}
 
 /** An error the CLI prints with a hint underneath */
 function tagNameError(message) {
@@ -65,6 +82,7 @@ function readTasksOrEmpty(tasksPath, projectRoot) {
  * @param {boolean} [options.copyFromCurrent=false] - Whether to copy tasks from current tag
  * @param {string} [options.copyFromTag] - Specific tag to copy tasks from
  * @param {string} [options.description] - Optional description for the tag
+ * @param {string} [options.defaultDescription] - Stored when description is empty, but not printed as the user's
  * @param {Object} context - Context object containing session and projectRoot
  * @param {string} [context.projectRoot] - Project root path
  * @param {Object} [context.mcpLog] - MCP logger object (optional)
@@ -107,8 +125,7 @@ async function createTag(
 		}
 
 		// Reserved tag names
-		const reservedNames = ['master', 'main', 'default'];
-		if (reservedNames.includes(tagName.toLowerCase())) {
+		if (RESERVED_TAG_NAMES.includes(tagName.toLowerCase())) {
 			throw new Error(`"${tagName}" is a reserved tag name`);
 		}
 
@@ -136,16 +153,11 @@ async function createTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = {};
-			for (const [key, value] of Object.entries(data)) {
-				if (key !== '_rawTaggedData' && key !== 'tag') {
-					rawData[key] = value;
-				}
-			}
+			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
 		}
 
 		// Check if tag already exists
-		if (rawData[tagName]) {
+		if (getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" already exists`);
 		}
 
@@ -178,12 +190,7 @@ async function createTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
+		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -309,16 +316,11 @@ async function deleteTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = {};
-			for (const [key, value] of Object.entries(data)) {
-				if (key !== '_rawTaggedData' && key !== 'tag') {
-					rawData[key] = value;
-				}
-			}
+			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
 		}
 
 		// Check if tag exists
-		if (!rawData[tagName]) {
+		if (!getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" does not exist`);
 		}
 
@@ -481,12 +483,7 @@ async function enhanceTagsWithMetadata(tasksPath, rawData, context = {}) {
 		// If we enhanced any tags, write the data back
 		if (enhanced) {
 			// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-			const cleanData = {};
-			for (const [key, value] of Object.entries(rawData)) {
-				if (key !== '_rawTaggedData') {
-					cleanData[key] = value;
-				}
-			}
+			const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 			writeJSON(tasksPath, cleanData, context.projectRoot);
 		}
 	} catch (error) {
@@ -695,7 +692,7 @@ async function useTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if tag exists
-		if (!rawData[tagName]) {
+		if (!getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" does not exist`);
 		}
 
@@ -808,8 +805,7 @@ async function renameTag(
 		}
 
 		// Reserved tag names
-		const reservedNames = ['master', 'main', 'default'];
-		if (reservedNames.includes(newName.toLowerCase())) {
+		if (RESERVED_TAG_NAMES.includes(newName.toLowerCase())) {
 			throw new Error(`"${newName}" is a reserved tag name`);
 		}
 
@@ -825,12 +821,12 @@ async function renameTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if old tag exists
-		if (!rawData[oldName]) {
+		if (!getOwnKey(rawData, oldName)) {
 			throw new Error(`Tag "${oldName}" does not exist`);
 		}
 
 		// Check if new tag name already exists
-		if (rawData[newName]) {
+		if (getOwnKey(rawData, newName)) {
 			throw new Error(`Tag "${newName}" already exists`);
 		}
 
@@ -858,12 +854,7 @@ async function renameTag(
 		}
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
+		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -955,8 +946,7 @@ async function copyTag(
 		}
 
 		// Reserved tag names
-		const reservedNames = ['master', 'main', 'default'];
-		if (reservedNames.includes(targetName.toLowerCase())) {
+		if (RESERVED_TAG_NAMES.includes(targetName.toLowerCase())) {
 			throw new Error(`"${targetName}" is a reserved tag name`);
 		}
 
@@ -972,12 +962,12 @@ async function copyTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if source tag exists
-		if (!rawData[sourceName]) {
+		if (!getOwnKey(rawData, sourceName)) {
 			throw new Error(`Source tag "${sourceName}" does not exist`);
 		}
 
 		// Check if target tag already exists
-		if (rawData[targetName]) {
+		if (getOwnKey(rawData, targetName)) {
 			throw new Error(`Target tag "${targetName}" already exists`);
 		}
 
@@ -1001,12 +991,7 @@ async function copyTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
+		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -1091,350 +1076,6 @@ async function switchCurrentTag(projectRoot, tagName) {
 	}
 }
 
-/**
- * Update branch-tag mapping in state.json
- * @param {string} projectRoot - Project root directory
- * @param {string} branchName - Git branch name
- * @param {string} tagName - Tag name to map to
- * @returns {Promise<void>}
- */
-async function updateBranchTagMapping(projectRoot, branchName, tagName) {
-	try {
-		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
-
-		// Read current state or create default
-		let state = {};
-		if (fs.existsSync(statePath)) {
-			const rawState = fs.readFileSync(statePath, 'utf8');
-			state = JSON.parse(rawState);
-		}
-
-		// Ensure branchTagMapping exists
-		if (!state.branchTagMapping) {
-			state.branchTagMapping = {};
-		}
-
-		// Update the mapping
-		state.branchTagMapping[branchName] = tagName;
-
-		// Write updated state
-		fs.writeFileSync(statePath, JSON.stringify(state, null, 2), 'utf8');
-	} catch (error) {
-		log('warn', `Could not update branch-tag mapping: ${error.message}`);
-		// Don't throw - this is not critical for tag operations
-	}
-}
-
-/**
- * Get tag name for a git branch from state.json mapping
- * @param {string} projectRoot - Project root directory
- * @param {string} branchName - Git branch name
- * @returns {Promise<string|null>} Mapped tag name or null if not found
- */
-async function getTagForBranch(projectRoot, branchName) {
-	try {
-		const statePath = path.join(projectRoot, '.taskgraph', 'state.json');
-
-		if (!fs.existsSync(statePath)) {
-			return null;
-		}
-
-		const rawState = fs.readFileSync(statePath, 'utf8');
-		const state = JSON.parse(rawState);
-
-		return state.branchTagMapping?.[branchName] || null;
-	} catch (error) {
-		return null;
-	}
-}
-
-/**
- * Create a tag from a git branch name
- * @param {string} tasksPath - Path to the tasks.json file
- * @param {string} branchName - Git branch name to create tag from
- * @param {Object} options - Options object
- * @param {boolean} [options.copyFromCurrent] - Copy tasks from current tag
- * @param {string} [options.copyFromTag] - Copy tasks from specific tag
- * @param {string} [options.description] - Custom description for the tag
- * @param {boolean} [options.autoSwitch] - Automatically switch to the new tag
- * @param {Object} context - Context object containing session and projectRoot
- * @param {string} [context.projectRoot] - Project root path
- * @param {Object} [context.mcpLog] - MCP logger object (optional)
- * @param {string} outputFormat - Output format (text or json)
- * @returns {Promise<{branchName: string, tagName: string, mappingUpdated: boolean, autoSwitched: boolean, created?: boolean}>}
- *   The branch and the tag created for it. Text output adds `created: true`;
- *   JSON output also carries createTag's result fields
- */
-async function createTagFromBranch(
-	tasksPath,
-	branchName,
-	options = {},
-	context = {},
-	outputFormat = 'text'
-) {
-	const { mcpLog, projectRoot } = context;
-	const { copyFromCurrent, copyFromTag, description, autoSwitch } = options;
-
-	// Import git utilities
-	const { sanitizeBranchNameForTag, isValidBranchForTag } = await import(
-		'../utils/git-utils.js'
-	);
-
-	// Create a consistent logFn object regardless of context
-	const logFn = mcpLog || {
-		info: (...args) => log('info', ...args),
-		warn: (...args) => log('warn', ...args),
-		error: (...args) => log('error', ...args),
-		debug: (...args) => log('debug', ...args),
-		success: (...args) => log('success', ...args)
-	};
-
-	try {
-		// Validate branch name
-		if (!branchName || typeof branchName !== 'string') {
-			throw new Error('Branch name is required and must be a string');
-		}
-
-		// Check if branch name is valid for tag creation
-		if (!isValidBranchForTag(branchName)) {
-			throw new Error(
-				`Branch "${branchName}" cannot be converted to a valid tag name`
-			);
-		}
-
-		// Sanitize branch name to create tag name
-		const tagName = sanitizeBranchNameForTag(branchName);
-
-		logFn.debug(`Creating tag "${tagName}" from git branch "${branchName}"`);
-
-		// Create the tag using existing createTag function
-		const createResult = await createTag(
-			tasksPath,
-			tagName,
-			{
-				copyFromCurrent,
-				copyFromTag,
-				description,
-				// Stored when the user gave no description, but not printed as theirs
-				defaultDescription: `Tag created from git branch "${branchName}"`
-			},
-			context,
-			outputFormat
-		);
-
-		// Update branch-tag mapping
-		await updateBranchTagMapping(projectRoot, branchName, tagName);
-		logFn.debug(`Updated branch-tag mapping: ${branchName} -> ${tagName}`);
-
-		// Auto-switch to the new tag if requested
-		if (autoSwitch) {
-			await switchCurrentTag(projectRoot, tagName);
-			logFn.debug(`Automatically switched to tag "${tagName}"`);
-		}
-
-		// For JSON output, return structured data
-		if (outputFormat === 'json') {
-			return {
-				...createResult,
-				branchName,
-				tagName,
-				mappingUpdated: true,
-				autoSwitched: autoSwitch || false
-			};
-		}
-
-		// For text output, the createTag function already handles display
-		return {
-			branchName,
-			tagName,
-			created: true,
-			mappingUpdated: true,
-			autoSwitched: autoSwitch || false
-		};
-	} catch (error) {
-		// The CLI prints the thrown error itself; only MCP needs the log line
-		if (mcpLog) logFn.error(`Error creating tag from branch: ${error.message}`);
-		throw error;
-	}
-}
-
-/**
- * Automatically switch tag based on current git branch
- * @param {string} tasksPath - Path to the tasks.json file
- * @param {Object} options - Options object
- * @param {boolean} [options.createIfMissing] - Create tag if it doesn't exist
- * @param {boolean} [options.copyFromCurrent] - Copy tasks when creating new tag
- * @param {Object} context - Context object containing session and projectRoot
- * @param {string} [context.projectRoot] - Project root path
- * @param {Object} [context.mcpLog] - MCP logger object (optional)
- * @param {string} outputFormat - Output format (text or json)
- * @returns {Promise<Object>} Result object with switch details
- */
-async function autoSwitchTagForBranch(
-	tasksPath,
-	options = {},
-	context = {},
-	outputFormat = 'text'
-) {
-	const { mcpLog, projectRoot } = context;
-	const { createIfMissing, copyFromCurrent } = options;
-
-	// Import git utilities
-	const {
-		getCurrentBranch,
-		isGitRepository,
-		sanitizeBranchNameForTag,
-		isValidBranchForTag
-	} = await import('../utils/git-utils.js');
-
-	// Create a consistent logFn object regardless of context
-	const logFn = mcpLog || {
-		info: (...args) => log('info', ...args),
-		warn: (...args) => log('warn', ...args),
-		error: (...args) => log('error', ...args),
-		debug: (...args) => log('debug', ...args),
-		success: (...args) => log('success', ...args)
-	};
-
-	try {
-		// Check if we're in a git repository
-		if (!(await isGitRepository(projectRoot))) {
-			logFn.warn('Not in a git repository, cannot auto-switch tags');
-			return { switched: false, reason: 'not_git_repo' };
-		}
-
-		// Get current git branch
-		const currentBranch = await getCurrentBranch(projectRoot);
-		if (!currentBranch) {
-			logFn.warn('Could not determine current git branch');
-			return { switched: false, reason: 'no_current_branch' };
-		}
-
-		logFn.debug(`Current git branch: ${currentBranch}`);
-
-		// Check if branch is valid for tag creation
-		if (!isValidBranchForTag(currentBranch)) {
-			logFn.info(`Branch "${currentBranch}" is not suitable for tag creation`);
-			return {
-				switched: false,
-				reason: 'invalid_branch_for_tag',
-				branchName: currentBranch
-			};
-		}
-
-		// Check if there's already a mapping for this branch
-		let tagName = await getTagForBranch(projectRoot, currentBranch);
-
-		if (!tagName) {
-			// No mapping exists, create tag name from branch
-			tagName = sanitizeBranchNameForTag(currentBranch);
-		}
-
-		// Check if tag exists
-		const data = readJSON(tasksPath, projectRoot);
-		const rawData = data._rawTaggedData || data;
-		const tagExists = rawData[tagName];
-
-		if (!tagExists && createIfMissing) {
-			// Create the tag from branch
-			logFn.info(`Creating new tag "${tagName}" for branch "${currentBranch}"`);
-
-			const createResult = await createTagFromBranch(
-				tasksPath,
-				currentBranch,
-				{
-					copyFromCurrent,
-					autoSwitch: true
-				},
-				context,
-				outputFormat
-			);
-
-			return {
-				switched: true,
-				created: true,
-				branchName: currentBranch,
-				tagName,
-				...createResult
-			};
-		} else if (tagExists) {
-			// Tag exists, switch to it
-			logFn.info(
-				`Switching to existing tag "${tagName}" for branch "${currentBranch}"`
-			);
-
-			const switchResult = await useTag(
-				tasksPath,
-				tagName,
-				{},
-				context,
-				outputFormat
-			);
-
-			// Update mapping if it didn't exist
-			if (!(await getTagForBranch(projectRoot, currentBranch))) {
-				await updateBranchTagMapping(projectRoot, currentBranch, tagName);
-			}
-
-			return {
-				switched: true,
-				created: false,
-				branchName: currentBranch,
-				tagName,
-				...switchResult
-			};
-		} else {
-			// Tag doesn't exist and createIfMissing is false
-			logFn.warn(
-				`Tag "${tagName}" for branch "${currentBranch}" does not exist`
-			);
-			return {
-				switched: false,
-				reason: 'tag_not_found',
-				branchName: currentBranch,
-				tagName
-			};
-		}
-	} catch (error) {
-		logFn.error(`Error in auto-switch tag for branch: ${error.message}`);
-		throw error;
-	}
-}
-
-/**
- * Check git workflow configuration and perform auto-switch if enabled
- * @param {string} projectRoot - Project root directory
- * @param {string} tasksPath - Path to the tasks.json file
- * @param {Object} context - Context object
- * @returns {Promise<Object|null>} Switch result or null if not enabled
- */
-async function checkAndAutoSwitchTag(projectRoot, tasksPath, context = {}) {
-	try {
-		// Read configuration
-		const configPath = path.join(projectRoot, '.taskgraph', 'config.json');
-		if (!fs.existsSync(configPath)) {
-			return null;
-		}
-
-		const rawConfig = fs.readFileSync(configPath, 'utf8');
-		const config = JSON.parse(rawConfig);
-
-		// Git workflow has been removed - return null to disable auto-switching
-		return null;
-
-		// Perform auto-switch
-		return await autoSwitchTagForBranch(
-			tasksPath,
-			{ createIfMissing: true, copyFromCurrent: false },
-			context,
-			'json'
-		);
-	} catch (error) {
-		// Silently fail - this is not critical
-		return null;
-	}
-}
-
 // Export all tag management functions
 export {
 	createTag,
@@ -1443,10 +1084,5 @@ export {
 	useTag,
 	renameTag,
 	copyTag,
-	switchCurrentTag,
-	updateBranchTagMapping,
-	getTagForBranch,
-	createTagFromBranch,
-	autoSwitchTagForBranch,
-	checkAndAutoSwitchTag
+	switchCurrentTag
 };

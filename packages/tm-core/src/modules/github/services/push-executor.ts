@@ -19,7 +19,7 @@ import { BASE_LABEL, hashIssue, renderIssue } from './issue-renderer.js';
 import { getLink } from './sync-planner.js';
 
 /** The slice of TasksDomain the executor needs */
-export interface TaskWriter {
+interface TaskWriter {
 	update(
 		taskId: string | number,
 		updates: Partial<Task>,

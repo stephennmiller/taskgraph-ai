@@ -59,7 +59,7 @@ export function modelPromptMessage(role: ModelRoleName): string {
 }
 
 /** `✔ Main model (creates and updates tasks) opus`, as inquirer shows it */
-export function formatModelAnswer(role: ModelRoleName, model: string): string {
+function formatModelAnswer(role: ModelRoleName, model: string): string {
 	return `${chalk.green('✔')} ${chalk.bold(modelPromptMessage(role))} ${chalk.cyan(model)}`;
 }
 

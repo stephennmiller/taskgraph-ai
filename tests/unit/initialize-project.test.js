@@ -54,7 +54,8 @@ vi.doMock('../../src/utils/rule-transformer.js', () => ({
 // Mock any other modules that might output or do real operations
 vi.doMock('../../scripts/modules/config-manager.js', () => ({
 	createDefaultConfig: vi.fn(() => ({ models: {}, project: {} })),
-	saveConfig: vi.fn()
+	saveConfig: vi.fn(),
+	moveMachineSettings: vi.fn(() => false)
 }));
 
 // Mock display libraries

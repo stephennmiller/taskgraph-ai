@@ -21,8 +21,8 @@ export function callMCPTool(
 	toolName: string,
 	args: Record<string, unknown>
 ): any {
-	// The server prefers this variable over the projectRoot argument, so a value
-	// in the developer's shell would send these calls into their real project
+	// The server uses this variable when a call passes no projectRoot, so a
+	// value in the developer's shell would send such calls into their project
 	const { TASKGRAPH_PROJECT_ROOT: _ignored, ...env } = process.env;
 	const run = spawnSync(
 		process.execPath,

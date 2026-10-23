@@ -4,13 +4,17 @@ import { fileURLToPath } from 'url';
 import {
 	ALL_PROVIDERS,
 	CUSTOM_PROVIDERS,
-	CUSTOM_PROVIDERS_ARRAY
+	CUSTOM_PROVIDERS_ARRAY,
+	hasPerMachineSettings,
+	mergeMachineConfig,
+	splitMachineConfig
 } from '@tm/core';
 import chalk from 'chalk';
 import { z } from 'zod';
 import { AI_COMMAND_NAMES } from '../../src/constants/commands.js';
 import {
 	TASKGRAPH_DIR,
+	TASKGRAPH_LOCAL_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
 } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
@@ -127,12 +131,18 @@ function _loadAndValidateConfig(explicitRoot = null) {
 		configExists = true;
 		try {
 			const rawData = fs.readFileSync(configPath, 'utf-8');
-			let parsedConfig = JSON.parse(rawData);
-			const cleaned = dropOldNumTasksDefault(parsedConfig);
+			let sharedConfig = JSON.parse(rawData);
+			const cleaned = dropOldNumTasksDefault(sharedConfig);
 			if (cleaned) {
-				parsedConfig = cleaned;
+				sharedConfig = cleaned;
 				saveCleanedConfig(configPath, cleaned);
 			}
+			// This machine's settings (gitignored) override the shared file.
+			// Merge after the cleanup, which saves only config.json's own keys.
+			const parsedConfig = mergeMachineConfig(
+				sharedConfig,
+				readLocalConfig(rootToUse)
+			);
 
 			// Deep merge parsed config onto defaults
 			config = {
@@ -154,20 +164,16 @@ function _loadAndValidateConfig(explicitRoot = null) {
 			configSource = `file (${configPath})`; // Update source info
 
 			// --- Validation (Warn if file content is invalid) ---
-			// Use log.warn for consistency
+			const unsupported = [];
 			if (!validateProvider(config.models.main.provider)) {
-				console.warn(
-					chalk.yellow(
-						`Warning: Invalid main provider "${config.models.main.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
-					)
+				unsupported.push(
+					`Main provider "${config.models.main.provider}" isn't supported; using ${defaults.models.main.modelId}`
 				);
 				config.models.main = { ...defaults.models.main };
 			}
 			if (!validateProvider(config.models.research.provider)) {
-				console.warn(
-					chalk.yellow(
-						`Warning: Invalid research provider "${config.models.research.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
-					)
+				unsupported.push(
+					`Research provider "${config.models.research.provider}" isn't supported; using ${defaults.models.research.modelId}`
 				);
 				config.models.research = { ...defaults.models.research };
 			}
@@ -175,13 +181,19 @@ function _loadAndValidateConfig(explicitRoot = null) {
 				config.models.fallback?.provider &&
 				!validateProvider(config.models.fallback.provider)
 			) {
-				console.warn(
-					chalk.yellow(
-						`Warning: Invalid fallback provider "${config.models.fallback.provider}" in ${configPath}. Fallback model configuration will be ignored. Run 'taskgraph models --setup' to choose a Claude Code model.`
-					)
+				unsupported.push(
+					`Fallback provider "${config.models.fallback.provider}" isn't supported; no fallback model`
 				);
 				config.models.fallback.provider = undefined;
 				config.models.fallback.modelId = undefined;
+			}
+			if (unsupported.length > 0) {
+				console.warn(
+					unsupported.map((line) => `${chalk.yellow('⚠')} ${line}`).join('\n') +
+						chalk.dim(
+							`\n  Run taskgraph models --setup to update ${path.relative(rootToUse, configPath)}`
+						)
+				);
 			}
 			if (config.claudeCode && !isEmpty(config.claudeCode)) {
 				config.claudeCode = validateClaudeCodeSettings(config.claudeCode);
@@ -214,11 +226,54 @@ function _loadAndValidateConfig(explicitRoot = null) {
 		configSource = `defaults (no config file found at ${rootToUse})`;
 	}
 
-	return config;
+	return { config, root: rootToUse, fromFile: configExists };
+}
+
+// config.local.json files already reported as broken in this run
+const warnedLocalConfigPaths = new Set();
+
+/**
+ * Read .taskgraph/config.local.json, the gitignored per-machine settings.
+ * A broken file is reported and skipped so config.json still applies.
+ * @param {string} root - Project root
+ * @returns {object|null} The parsed settings, or null when there are none
+ */
+function readLocalConfig(root) {
+	const localPath = path.join(root, TASKGRAPH_LOCAL_CONFIG_FILE);
+	if (!fs.existsSync(localPath)) return null;
+	try {
+		return JSON.parse(fs.readFileSync(localPath, 'utf-8'));
+	} catch (error) {
+		if (warnedLocalConfigPaths.has(localPath)) return null;
+		warnedLocalConfigPaths.add(localPath);
+		console.warn(
+			`${chalk.yellow('⚠')} Couldn't read ${TASKGRAPH_LOCAL_CONFIG_FILE}: ${error.message}\n` +
+				chalk.dim('  Fix the JSON or delete the file; using config.json only')
+		);
+		return null;
+	}
+}
+
+/** Marks a file that exists but isn't valid JSON (see readJsonIfPresent) */
+const UNREADABLE = Symbol('unreadable');
+
+/**
+ * Parse a JSON file for writeConfig.
+ * @param {string} filePath
+ * @returns {object|null|typeof UNREADABLE} null when missing, UNREADABLE
+ *   when it exists but can't be parsed
+ */
+function readJsonIfPresent(filePath) {
+	try {
+		if (!fs.existsSync(filePath)) return null;
+		return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+	} catch {
+		return UNREADABLE;
+	}
 }
 
 // Roots already warned about in this run. getConfig() runs several times per
-// command and doesn't cache loads without an explicit root, so the warning
+// command and doesn't cache defaults loaded without a root, so the warning
 // used to print up to five times in a row.
 const warnedMissingConfigRoots = new Set();
 
@@ -250,16 +305,16 @@ function getConfig(explicitRoot = null, forceReload = false) {
 		(explicitRoot && explicitRoot !== loadedConfigRoot);
 
 	if (needsLoad) {
-		const newConfig = _loadAndValidateConfig(explicitRoot); // _load handles null explicitRoot
+		const { config, root, fromFile } = _loadAndValidateConfig(explicitRoot);
 
-		// Only update the global cache if loading was forced or if an explicit root
-		// was provided (meaning we attempted to load a specific project's config).
-		// We avoid caching the initial default load triggered without an explicitRoot.
-		if (forceReload || explicitRoot) {
-			loadedConfig = newConfig;
-			loadedConfigRoot = explicitRoot; // Store the root used for this loaded config
+		// log() reads the config without a root on every call, so a file found
+		// that way is cached too; each reload repeated its warnings (#269).
+		// Defaults aren't cached, so a config written later in the run is found.
+		if (forceReload || explicitRoot || fromFile) {
+			loadedConfig = config;
+			loadedConfigRoot = explicitRoot || root;
 		}
-		return newConfig; // Return the newly loaded/default config
+		return config;
 	}
 
 	// If no load was needed, return the cached config
@@ -769,12 +824,9 @@ function writeConfig(config, explicitRoot = null) {
 			fs.mkdirSync(taskgraphDir, { recursive: true });
 		}
 
-		const saved = readSavedConfig(configPath);
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify(toSavedConfig(config, saved, DEFAULTS), null, 2)
-		);
+		writeSplitConfig(rootPath, config);
 		loadedConfig = config; // Update the cache after successful write
+		loadedConfigRoot = rootPath;
 		return true;
 	} catch (error) {
 		console.error(
@@ -783,16 +835,6 @@ function writeConfig(config, explicitRoot = null) {
 			)
 		);
 		return false;
-	}
-}
-
-/** config.json as saved, or null when it is missing or not valid JSON */
-function readSavedConfig(configPath) {
-	try {
-		if (!fs.existsSync(configPath)) return null;
-		return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-	} catch {
-		return null;
 	}
 }
 
@@ -811,6 +853,77 @@ function saveCleanedConfig(configPath, cleaned) {
 		// Not fatal: the cleanup runs again on the next load
 		fs.rmSync(tempPath, { force: true });
 	}
+}
+
+/**
+ * Write a config to config.json and config.local.json. Per-machine settings
+ * go to config.local.json (gitignored), the rest to config.json, so a
+ * per-machine setting an earlier release wrote to config.json moves to the
+ * local file on the next write. config.json gets only the keys it already
+ * has or that differ from DEFAULTS (see toSavedConfig).
+ * @param {string} rootPath - Project root
+ * @param {object} config - Full config (shared and local merged)
+ */
+function writeSplitConfig(rootPath, config) {
+	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
+	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
+	const sharedOnDisk = readJsonIfPresent(configPath);
+	const currentShared = sharedOnDisk === UNREADABLE ? null : sharedOnDisk;
+	const currentLocal = readJsonIfPresent(localPath);
+	if (currentLocal === UNREADABLE) {
+		// Leave a broken config.local.json for the user to fix rather than
+		// overwrite the settings in it; save everything to config.json as
+		// before config.local.json existed.
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(toSavedConfig(config, currentShared, DEFAULTS), null, 2)
+		);
+		return;
+	}
+	const { shared, local } = splitMachineConfig(
+		config,
+		currentShared,
+		currentLocal,
+		DEFAULTS
+	);
+
+	// Local file first: if the shared write then fails, a moved setting is
+	// in both files rather than in neither
+	if (currentLocal || Object.keys(local).length > 0) {
+		fs.writeFileSync(localPath, `${JSON.stringify(local, null, 2)}\n`);
+	}
+	fs.writeFileSync(
+		configPath,
+		JSON.stringify(toSavedConfig(shared, currentShared, DEFAULTS), null, 2)
+	);
+}
+
+/**
+ * Move per-machine settings (such as claudeCode.pathToClaudeCodeExecutable)
+ * that an earlier release kept in the shared config.json into
+ * config.local.json. A value already in config.local.json wins. Does nothing
+ * when config.json has none.
+ * @param {string} rootPath - Project root
+ * @returns {boolean} true when settings moved
+ */
+function moveMachineSettings(rootPath) {
+	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
+	const shared = readJsonIfPresent(configPath);
+	if (!hasPerMachineSettings(shared)) return false;
+
+	const local = readJsonIfPresent(
+		path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE)
+	);
+	// A broken config.local.json stays as it is; readLocalConfig reports it
+	if (local === UNREADABLE) return false;
+	try {
+		writeSplitConfig(rootPath, mergeMachineConfig(shared, local));
+	} catch (error) {
+		log('warn', `Couldn't move per-machine settings: ${error.message}`);
+		return false;
+	}
+	loadedConfig = null;
+	return true;
 }
 
 /**
@@ -862,6 +975,7 @@ export {
 	// Core config access
 	getConfig,
 	writeConfig,
+	moveMachineSettings,
 	ConfigurationError,
 	isConfigFilePresent,
 	// Claude Code settings

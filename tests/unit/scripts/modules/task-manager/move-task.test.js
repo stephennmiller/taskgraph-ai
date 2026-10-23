@@ -6,7 +6,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	readJSON: vi.fn(),
 	writeJSON: vi.fn(),
 	log: vi.fn(),
-	setTasksForTag: vi.fn(),
 	traverseDependencies: vi.fn(() => [])
 }));
 

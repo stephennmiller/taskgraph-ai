@@ -529,7 +529,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
     - Import `zod`, `handleApiResult`, **`withNormalizedProjectRoot` HOF**, and your `yourCommandDirect` function.
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters**: Make `projectRoot` optional (`z.string().optional().describe(...)`) as the HOF handles fallback.
-    - Consider if this operation should run in the background using `AsyncOperationManager`.
+    - If the operation is long-running, report progress as described in Progress Reporting below.
     - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`**:
       ```javascript
       execute: withNormalizedProjectRoot(async (args, { log, session }) => {
@@ -549,48 +549,36 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
 
 6.  **Update `mcp.json`**: Add the new tool definition to the `tools` array in `.mcp.json`.
 
-## Implementing Background Operations
+## Progress Reporting
 
-For long-running operations that should not block the client, use the AsyncOperationManager:
+MCP tools run inline: `execute` awaits the direct function and returns the finished result. For long-running work, such as PRD parsing, report progress through the tool context (see `mcp-server/src/tools/parse-prd.js`):
 
-1. **Identify Background-Appropriate Operations**:
-   - ✅ **DO**: Use async operations for CPU-intensive tasks like task expansion or PRD parsing
-   - ✅ **DO**: Consider async operations for tasks that may take more than 1-2 seconds
-   - ❌ **DON'T**: Use async operations for quick read/status operations
-   - ❌ **DON'T**: Use async operations when immediate feedback is critical
-
-2. **Use AsyncOperationManager in MCP Tools**:
+1. **In the MCP tool**, take `reportProgress` from the context, validate it, and pass it to the direct function:
    ```javascript
-   import { asyncOperationManager } from '../core/utils/async-manager.js';
-   
-   // In execute method:
-   const operationId = asyncOperationManager.addOperation(
-     expandTaskDirect, // The direct function to run in background
-     { ...args, projectRoot: rootFolder }, // Args to pass to the function
-     { log, reportProgress, session } // Context to preserve for the operation
-   );
-   
-   // Return immediate response with operation ID
-   return createContentResponse({
-     message: "Operation started successfully",
-     operationId,
-     status: "pending"
-   });
+   import {
+     checkProgressCapability,
+     handleApiResult,
+     withNormalizedProjectRoot
+   } from '@tm/mcp';
+
+   execute: withNormalizedProjectRoot(async (args, { log, session, reportProgress }) => {
+     const result = await yourCommandDirect(args, log, {
+       session,
+       reportProgress: checkProgressCapability(reportProgress, log)
+     });
+     return handleApiResult({ result, log, projectRoot: args.projectRoot });
+   })
    ```
+   `checkProgressCapability` returns `undefined` when the client did not provide `reportProgress`.
 
-3. **Implement Progress Reporting**:
-   - ✅ **DO**: Use the reportProgress function in direct functions:
+2. **In the direct function**, forward it from `context` to the core function; don't call it there.
+
+3. **In core logic**, call it only when it is defined:
    ```javascript
-   // In your direct function:
    if (reportProgress) {
-     await reportProgress({ progress: 50 }); // 50% complete
+     await reportProgress({ progress: current, total });
    }
    ```
-   - AsyncOperationManager will forward progress updates to the client
-
-4. **Check Operation Status**:
-   - Implement a way for clients to check status using the `get_operation_status` MCP tool
-   - Return appropriate status codes and messages
 
 ## Project Initialization
 

@@ -4,6 +4,7 @@
 
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import type { FormatHandler } from './format-handler.js';
+import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import { withSchemaVersion } from './schema-version.js';
 
 export function buildTagMetadata(tasks: Task[], tag: string): TaskMetadata {
@@ -45,10 +46,13 @@ export function applyTagUpdate(
 		)
 	) {
 		// Legacy format - update/add the tag
-		existingData[resolvedTag] = {
+		setOwnKey(existingData, resolvedTag, {
 			tasks: normalizedTasks,
-			metadata: mergeTagMetadata(metadata, existingData[resolvedTag]?.metadata)
-		};
+			metadata: mergeTagMetadata(
+				metadata,
+				getOwnKey(existingData, resolvedTag)?.metadata
+			)
+		});
 		return existingData;
 	}
 	if (resolvedTag === 'master') {

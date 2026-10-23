@@ -52,6 +52,7 @@ export {
 	PROJECT_ROOT_ENV,
 	findProjectRoot,
 	isTaskGraphProject,
+	namedProjectRoot,
 	normalizeProjectRoot,
 	resolveProjectRoot
 } from './project-root-finder.js';
@@ -83,3 +84,6 @@ export {
 	toVersionedJson,
 	type VersionedJson
 } from './json-output.js';
+
+// Own-key access that ignores the prototype (`constructor`, `__proto__` keys)
+export { getOwnKey, setOwnKey } from './own-key.js';
