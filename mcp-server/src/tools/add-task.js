@@ -63,7 +63,13 @@ export function registerAddTaskTool(server) {
 			research: z
 				.boolean()
 				.optional()
-				.describe('Whether to use research capabilities for task creation')
+				.describe('Whether to use research capabilities for task creation'),
+			acceptanceCriteria: z
+				.array(z.string())
+				.optional()
+				.describe(
+					'Acceptance criteria, stored unchecked; set_task_status refuses done until they are checked'
+				)
 		}),
 		annotations: {
 			title: 'Add Task',
@@ -104,6 +110,7 @@ export function registerAddTaskTool(server) {
 						dependencies: args.dependencies,
 						priority: args.priority,
 						research: args.research,
+						acceptanceCriteria: args.acceptanceCriteria,
 						projectRoot: args.projectRoot,
 						tag: resolvedTag
 					},

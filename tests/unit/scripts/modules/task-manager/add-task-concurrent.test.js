@@ -16,16 +16,13 @@ vi.doMock('../../../../../scripts/modules/utils.js', async () => {
 });
 
 vi.doMock('../../../../../scripts/modules/ui.js', () => ({
-	displayBanner: vi.fn(),
-	getStatusWithColor: vi.fn((status) => status),
 	startLoadingIndicator: vi.fn(),
 	stopLoadingIndicator: vi.fn(),
 	succeedLoadingIndicator: vi.fn(),
 	failLoadingIndicator: vi.fn(),
 	warnLoadingIndicator: vi.fn(),
 	infoLoadingIndicator: vi.fn(),
-	displayAiUsageSummary: vi.fn(),
-	displayContextAnalysis: vi.fn()
+	displayAiUsageSummary: vi.fn()
 }));
 
 vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({

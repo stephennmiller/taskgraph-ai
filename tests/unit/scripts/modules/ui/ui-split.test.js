@@ -13,7 +13,8 @@ const modulesDir = path.resolve(
 );
 
 // The public names ui.js exports: what it exported before the split into
-// ui/*.js, minus the functions #165 removed
+// ui/*.js, minus the functions #165 removed and the
+// context-analysis box add-task no longer prints (#182)
 const EXPECTED_EXPORTS = [
 	'BORDER_COLOR',
 	'confirmTaskOverwrite',
@@ -23,7 +24,6 @@ const EXPECTED_EXPORTS = [
 	'displayAsciiBanner',
 	'displayBanner',
 	'displayComplexityReport',
-	'displayContextAnalysis',
 	'displayCrossTagDependencyError',
 	'displayCurrentTagIndicator',
 	'displayDependencyValidationHints',

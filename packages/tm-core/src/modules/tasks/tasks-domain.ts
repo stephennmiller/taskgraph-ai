@@ -23,6 +23,13 @@ import type {
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
 import {
+	applyChecklistChanges,
+	buildChecklist,
+	checkDoneGate,
+	type ChecklistChanges,
+	type TaskChecklist
+} from './utils/acceptance-criteria.js';
+import {
 	analyzeDependencies,
 	buildDependencyTree,
 	explainBlockers,
@@ -30,6 +37,10 @@ import {
 	type BlockerExplanation,
 	type DependencyTree
 } from '../dependencies/index.js';
+import {
+	buildPrimeContext,
+	type PrimeContext
+} from './utils/prime-context.js';
 import type {
 	TaskListResult,
 	GetTaskListOptions
@@ -210,6 +221,17 @@ export class TasksDomain {
 	}
 
 	/**
+	 * Session context for a coding agent (`taskgraph prime`): the task in
+	 * progress with its done-when criteria, the next three ready tasks in
+	 * `next` order, and the workflow rules. Uses the active tag by default.
+	 */
+	async getPrimeContext(options: { tag?: string } = {}): Promise<PrimeContext> {
+		const tag = options.tag || this.configManager.getActiveTag();
+		const { tasks } = await this.list({ tag });
+		return buildPrimeContext(tasks, { tag });
+	}
+
+	/**
 	 * Get count of tasks and their subtasks matching a status
 	 * Useful for determining work remaining, progress tracking, or setting loop iterations
 	 *
@@ -260,10 +282,83 @@ export class TasksDomain {
 	}
 
 	/**
-	 * Update task status
+	 * Update task status.
+	 *
+	 * Moving a task to done is refused while its checklist (its acceptance
+	 * criteria, plus the project's Definition of Done for a top-level task)
+	 * has unchecked items: the error has code CRITERIA_UNCHECKED, and
+	 * `getUncheckedCriteria(error)` lists them. `force` skips that check.
+	 * A parent whose last subtask finishes stays in progress until its own
+	 * checklist is clear, even with `force`.
 	 */
-	async updateStatus(taskId: string, status: TaskStatus, tag?: string) {
-		return this.taskService.updateTaskStatus(taskId, status, tag);
+	async updateStatus(
+		taskId: string,
+		status: TaskStatus,
+		tag?: string,
+		options: { force?: boolean } = {}
+	) {
+		const definitionOfDone = this.configManager.getDefinitionOfDone();
+		return this.taskService.updateTaskStatus(taskId, status, tag, {
+			guardDone: (task, id, auto) =>
+				options.force && !auto
+					? undefined
+					: checkDoneGate(task, id, definitionOfDone, id.includes('.'))
+		});
+	}
+
+	// ========== Acceptance Criteria ==========
+
+	/**
+	 * A task's checklist: its acceptance criteria, numbered from 1, then the
+	 * project's Definition of Done (top-level tasks only)
+	 */
+	getChecklist(task: Task | Subtask, isSubtask = false): TaskChecklist {
+		return buildChecklist(
+			task,
+			this.configManager.getDefinitionOfDone(),
+			isSubtask
+		);
+	}
+
+	/**
+	 * A task or subtask's checklist as stored, by ID ("3" or "3.2"); undefined
+	 * when there is no such task. Use this rather than `getChecklist` for a
+	 * task from `list` or `getNext`, which leave the criteria fields out.
+	 */
+	async loadChecklist(
+		taskId: string,
+		tag?: string
+	): Promise<TaskChecklist | undefined> {
+		const { task, isSubtask } = await this.get(taskId, tag);
+		return task ? this.getChecklist(task, isSubtask) : undefined;
+	}
+
+	/**
+	 * Check and uncheck checklist items by number, in one write.
+	 * Throws INVALID_INPUT, changing nothing, for a number the task's
+	 * checklist doesn't have.
+	 *
+	 * @returns The checklist as saved
+	 */
+	async updateChecklist(
+		taskId: string,
+		changes: ChecklistChanges,
+		tag?: string
+	): Promise<TaskChecklist> {
+		const definitionOfDone = this.configManager.getDefinitionOfDone();
+		const saved = await this.taskService.modifyTask(
+			taskId,
+			(task, isSubtask) =>
+				applyChecklistChanges(
+					task,
+					taskId,
+					definitionOfDone,
+					changes,
+					isSubtask
+				),
+			tag
+		);
+		return buildChecklist(saved, definitionOfDone, taskId.includes('.'));
 	}
 
 	/**

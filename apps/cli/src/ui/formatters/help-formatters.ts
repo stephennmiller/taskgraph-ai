@@ -8,6 +8,7 @@
  *     show                              Show one task in detail
  *
  *   Run taskgraph <command> --help for a command's flags
+ *   Agents: taskgraph prime prints task context and rules
  *
  * It replaces 8 boxed categories and 42 rows (3 for `list`, 5 for `models`)
  * whose columns added up to 110 and overflowed 80 columns. Flags live in
@@ -15,6 +16,7 @@
  */
 
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { PLUGIN_MARKETPLACE, PLUGIN_NAME } from './init-summary-formatters.js';
 
@@ -105,7 +107,7 @@ const fit = (text: string, width: number) =>
  *
  * @param width - Terminal width; descriptions are cut to fit on one line
  */
-export function formatHelp(width = process.stdout.columns || 80): string {
+export function formatHelp(width = terminalWidth()): string {
 	const rows = HELP_GROUPS.flatMap((group) => group.commands);
 	const nameWidth = Math.max(...rows.map((row) => row.name.length));
 	const descWidth = Math.max(
@@ -131,6 +133,10 @@ export function formatHelp(width = process.stdout.columns || 80): string {
 		theme.muted('Run ') +
 			theme.brand('taskgraph <command> --help') +
 			theme.muted(' for a command’s flags'),
+		// `prime` is for agents, not people, so it stays out of the groups (#195)
+		theme.muted('Agents: ') +
+			theme.brand('taskgraph prime') +
+			theme.muted(' prints task context and rules'),
 		theme.muted('The CLI works on its own. For Claude Code slash commands:'),
 		`${INDENT}${theme.brand(`/plugin marketplace add ${PLUGIN_MARKETPLACE}`)}`,
 		`${INDENT}${theme.brand(`/plugin install ${PLUGIN_NAME}`)}`

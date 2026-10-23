@@ -35,7 +35,6 @@ export {
 	confirmTaskOverwrite
 } from './ui/complexity.js';
 export {
-	displayContextAnalysis,
 	displayAiUsageSummary,
 	displayAddedSubtasks
 } from './ui/context-analysis.js';

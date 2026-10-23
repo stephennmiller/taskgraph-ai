@@ -13,7 +13,7 @@ import type {
 	Task,
 	TaskStatus
 } from '../../../common/types/index.js';
-import { selectNextTask } from './next-task.js';
+import { rankNextTasks } from './next-task.js';
 
 /** Who claimed a task and when */
 export interface TaskClaim {
@@ -95,7 +95,21 @@ export function claimNextInTasks(
 	claimedBy: string,
 	claimedAt: string = new Date().toISOString()
 ): { tasks: Task[]; claim: TaskClaim } | null {
-	const next = selectNextTask(tasks, { unstartedOnly: true });
+	// A task someone else claimed is theirs, subtasks included
+	const claimedByOther = new Set(
+		tasks
+			.filter((task) => {
+				const owner = task.metadata?.claimedBy;
+				return typeof owner === 'string' && owner !== claimedBy;
+			})
+			.map((task) => String(task.id))
+	);
+	const next = rankNextTasks(tasks, { unstartedOnly: true }).find(
+		(item) => {
+			const parentId = (item as Task & { parentId?: string }).parentId;
+			return parentId === undefined || !claimedByOther.has(parentId);
+		}
+	);
 	if (!next) return null;
 
 	const claim = { claimedBy, claimedAt };

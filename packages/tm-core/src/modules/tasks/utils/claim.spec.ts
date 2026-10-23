@@ -70,6 +70,30 @@ describe('claimNextInTasks', () => {
 
 		expect(claimNextInTasks(tasks, 'alice')).toBeNull();
 	});
+	it("leaves the subtasks of a task someone else claimed to them", () => {
+		const tasks = [
+			task('1', {
+				status: 'in-progress',
+				metadata: { claimedBy: 'alice' },
+				subtasks: [
+					{
+						id: 1,
+						parentId: '1',
+						title: 'Sub',
+						description: '',
+						status: 'pending',
+						dependencies: [],
+						details: '',
+						testStrategy: ''
+					}
+				]
+			}),
+			task('2')
+		];
+
+		expect(claimNextInTasks(tasks, 'bob')?.claim.task.id).toBe('2');
+		expect(claimNextInTasks(tasks, 'alice')?.claim.task.id).toBe('1.1');
+	});
 });
 
 describe('withoutClaim', () => {

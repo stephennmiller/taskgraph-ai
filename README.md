@@ -265,7 +265,7 @@ In Claude Code, say `Change the main model to opus`, or run `taskgraph models --
 
 Projects created with Task Master, or with a TaskGraph release before 0.47, also need a few manual changes:
 
-- **Rename `.taskmaster/` to `.taskgraph/`** by hand. TaskGraph no longer detects the old folder.
+- **Import `.taskmaster/`** with `taskgraph init --from-taskmaster --yes`. It copies every tag, the docs and reports, and the settings that still apply, and leaves `.taskmaster/` in place. See [Migrating from Task Master](apps/docs/migrating-from-taskmaster.mdx).
 - **Rename environment variables:** `TASK_MASTER_*` and `TASKMASTER_*` are now `TASKGRAPH_*`. The old names are ignored.
 - **Removed:** the `taskgraph migrate` command and `.taskmasterconfig`. Configuration lives in `.taskgraph/config.json`; run `taskgraph models --setup` to recreate it.
 - **Claude Code only:** other providers and their flags are gone, models are `opus`, `sonnet` and `haiku`, and the only API key still read is the optional `CLAUDE_CODE_API_KEY`.

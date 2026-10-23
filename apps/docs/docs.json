@@ -15,7 +15,7 @@
 				"groups": [
 					{
 						"group": "Welcome",
-						"pages": ["introduction", "upgrading"]
+						"pages": ["introduction", "upgrading", "migrating-from-taskmaster"]
 					},
 					{
 						"group": "Getting Started",

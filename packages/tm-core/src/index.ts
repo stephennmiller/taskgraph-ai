@@ -75,6 +75,9 @@ export * from './modules/tasks/validation/index.js';
 export * from './modules/dependencies/index.js';
 export * from './modules/dependencies/dependency-provenance.js';
 
+// Importing the upstream project TaskGraph was forked from (init flag)
+export * from './modules/migration/index.js';
+
 // Zod schemas for validation
 export * from './common/schemas/index.js';
 
@@ -198,12 +201,36 @@ export {
 	filterBlockingTasks,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
+	rankNextTasks,
+	buildPrimeContext,
+	PRIME_RULES,
+	type PrimeContext,
+	type PrimeTask,
+	type PrimeInProgressTask,
+	type PrimeRule,
+	type BuildPrimeContextOptions,
 	resolveClaimant,
 	type SelectNextTaskOptions,
 	type TaskClaim,
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult
+} from './modules/tasks/utils/index.js';
+
+// Acceptance criteria and the Definition of Done
+export {
+	normalizeAcceptanceCriteria,
+	normalizeDefinitionOfDone,
+	buildChecklist,
+	applyChecklistChanges,
+	checkDoneGate,
+	getUncheckedCriteria,
+	parseChecklistNumbers,
+	keepChecklistFields,
+	type ChecklistItem,
+	type TaskChecklist,
+	type ChecklistChanges,
+	type ChecklistFields
 } from './modules/tasks/utils/index.js';
 
 // ========== Testing Utilities ==========

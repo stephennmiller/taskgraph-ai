@@ -84,6 +84,9 @@ import {
 
 import {
 	CUSTOM_PROVIDERS,
+	UPSTREAM_DIR,
+	UPSTREAM_IMPORT_FLAG,
+	UPSTREAM_NAME,
 	findProjectRoot,
 	isTaskGraphProject
 } from '@tm/core';
@@ -1311,6 +1314,11 @@ function registerCommands(programInstance) {
 			'-r, --research',
 			'Whether to use research capabilities for task creation'
 		)
+		.option(
+			'--ac <criterion>',
+			'Acceptance criterion; repeat for more (set-status --check ticks them)',
+			(value, previous = []) => [...previous, value]
+		)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
 			const isManualCreation = options.title && options.description;
@@ -1370,7 +1378,8 @@ function registerCommands(programInstance) {
 					context,
 					'text',
 					manualTaskData,
-					options.research
+					options.research,
+					{ acceptanceCriteria: options.ac }
 				);
 
 				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'
@@ -2174,6 +2183,10 @@ function registerCommands(programInstance) {
 		.option('--no-git', 'Skip Git repository initialization')
 		.option('--git-tasks', 'Store tasks in Git')
 		.option('--no-git-tasks', 'No Git storage of tasks')
+		.option(
+			UPSTREAM_IMPORT_FLAG,
+			`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
+		)
 		.action(async (cmdOptions) => {
 			// cmdOptions contains parsed arguments
 			// Parse rules: accept space or comma separated, default to all available rules
@@ -3430,23 +3443,30 @@ function setupCLI() {
  */
 async function runCLI(argv = process.argv) {
 	try {
-		// If no arguments provided, launch the TUI REPL (which has its own banner)
+		// Bare `taskgraph` gets the banner like `--help`: until the TUI ships,
+		// launchREPL falls back to the help screen (a real TUI clears the screen
+		// and draws its own)
 		if (argv.length <= 2) {
+			if (
+				ui.shouldShowAsciiBanner(argv.slice(2), Boolean(process.stdout.isTTY))
+			) {
+				displayBanner();
+			}
 			await launchREPL();
 			return;
 		}
 
-		// Display banner if not in a pipe (except for init/start/repl commands which have their own)
-		const isInitCommand = argv.includes('init');
 		// init creates the config, and models and lang edit it and report a
 		// missing one as an error, so the "using default settings" warning
 		// would only repeat or contradict them
 		if (['init', 'models', 'lang'].includes(argv[2])) {
 			setSuppressConfigWarnings(true);
 		}
-		const isREPLCommand = argv.includes('tui') || argv.includes('repl');
-		const noBanner = argv.includes('--no-banner');
-		if (process.stdout.isTTY && !isInitCommand && !isREPLCommand && !noBanner) {
+		// Only the top-level help screen gets the banner; routine commands lead
+		// with their result (init prints its own)
+		if (
+			ui.shouldShowAsciiBanner(argv.slice(2), Boolean(process.stdout.isTTY))
+		) {
 			displayBanner();
 		}
 

@@ -74,6 +74,10 @@ describe('formatHelp', () => {
 		}
 	});
 
+	it('keeps prime, an agent command, out of the groups', () => {
+		expect(allRows().some((row) => row.name.startsWith('prime'))).toBe(false);
+	});
+
 	it('keeps a tags subcommand hint on the tags row', () => {
 		const tags = allRows().find((row) => row.name.startsWith('tags'));
 
@@ -100,6 +104,7 @@ describe('formatHelp', () => {
 		expect([...positions].sort((a, b) => a - b)).toEqual(positions);
 		expect(text).toContain('taskgraph <command> --help');
 		expect(text).toContain('works on its own');
+		expect(text).toContain('Agents: taskgraph prime');
 		expect(text).toContain(
 			'/plugin marketplace add stephennmiller/taskgraph-ai'
 		);

@@ -7,7 +7,7 @@ import { type Task, type TmCore, createTmCore, TaskIdSchema } from '@tm/core';
 import type { Subtask } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { displayTaskDetails } from '../ui/components/task-detail.component.js';
+import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -274,15 +274,17 @@ export class ShowCommand extends Command {
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
 		displayCommandHeader({ tag: activeTag });
 
-		console.log(); // Add spacing
-
-		// Use the global task details display function
-		// Pass the original requested ID if it's a subtask
-		displayTaskDetails(result.task, {
-			statusFilter: options.status,
-			showSuggestedActions: true,
-			originalTaskId: result.originalTaskId
-		});
+		console.log();
+		console.log(
+			formatTaskDetail(result.task, {
+				id: result.originalTaskId,
+				statusFilter: options.status,
+				checklist: this.tmCore?.tasks.getChecklist(
+					result.task,
+					Boolean(result.originalTaskId)
+				)
+			})
+		);
 	}
 
 	/**

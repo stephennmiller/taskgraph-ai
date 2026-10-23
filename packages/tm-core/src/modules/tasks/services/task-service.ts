@@ -4,11 +4,16 @@
  */
 
 import type {
+	Subtask,
 	Task,
 	TaskFilter,
 	TaskStatus
 } from '../../../common/types/index.js';
-import type { IStorage } from '../../../common/interfaces/storage.interface.js';
+import type {
+	IStorage,
+	TaskFieldUpdates,
+	UpdateStatusOptions
+} from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
 import { selectNextTask } from '../utils/next-task.js';
@@ -456,12 +461,37 @@ export class TaskService {
 	}
 
 	/**
+	 * Change one task or subtask in a single locked read-modify-write
+	 */
+	async modifyTask(
+		taskId: string,
+		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
+		tag?: string
+	): Promise<Task | Subtask> {
+		if (!this.storage) {
+			throw new TaskGraphError(
+				'Storage not initialized',
+				ERROR_CODES.STORAGE_ERROR
+			);
+		}
+		if (!this.initialized) {
+			await this.initialize();
+		}
+		return this.storage.modifyTask(
+			String(taskId),
+			change,
+			tag || this.getActiveTag()
+		);
+	}
+
+	/**
 	 * Update task status - delegates to storage layer which handles storage-specific logic
 	 */
 	async updateTaskStatus(
 		taskId: string | number,
 		newStatus: TaskStatus,
-		tag?: string
+		tag?: string,
+		options?: UpdateStatusOptions
 	): Promise<{
 		success: boolean;
 		oldStatus: TaskStatus;
@@ -485,7 +515,8 @@ export class TaskService {
 			return await this.storage.updateTaskStatus(
 				taskIdStr,
 				newStatus,
-				activeTag
+				activeTag,
+				options
 			);
 		} catch (error) {
 			// Re-throw all TaskGraphErrors without wrapping

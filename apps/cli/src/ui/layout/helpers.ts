@@ -3,6 +3,7 @@
  * Provides utilities for calculating dimensions, truncating text, and creating visual elements
  */
 
+import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
@@ -16,16 +17,50 @@ export function getBoxWidth(
 	percentage: number = 0.9,
 	minWidth: number = 40
 ): number {
-	const terminalWidth = process.stdout.columns || 80;
-	return Math.max(Math.floor(terminalWidth * percentage), minWidth);
+	return Math.max(Math.floor(terminalWidth() * percentage), minWidth);
+}
+
+/** Largest width taken from `COLUMNS`, so a typo cannot crash padding with a huge repeat */
+const MAX_ENV_COLUMNS = 1000;
+
+/**
+ * The width the user asked for, or undefined when nothing says: the stream's
+ * own width when it is a terminal, else a positive integer in `COLUMNS`
+ * (so `COLUMNS=120 taskgraph tags | less` still lays out at 120).
+ */
+function detectColumns(
+	stream: { columns?: number } = process.stdout,
+	env: NodeJS.ProcessEnv = process.env
+): number | undefined {
+	if (stream.columns && stream.columns > 0) return stream.columns;
+	const fromEnv = env.COLUMNS?.trim();
+	if (fromEnv && /^\d+$/.test(fromEnv)) {
+		const columns = Number.parseInt(fromEnv, 10);
+		if (columns > 0) return Math.min(columns, MAX_ENV_COLUMNS);
+	}
+	return undefined;
 }
 
 /**
- * Usable width for boxes and tables: 95% of the terminal, or 100 columns when
- * output is not a terminal (for example, piped to a file).
+ * Terminal width for laying out output: the stream's columns when it is a
+ * terminal, else a positive integer from `COLUMNS`, else 80.
  */
-export function getContentWidth(): number {
-	const columns = process.stdout.columns;
+export function terminalWidth(
+	stream: { columns?: number } = process.stdout,
+	env: NodeJS.ProcessEnv = process.env
+): number {
+	return detectColumns(stream, env) ?? 80;
+}
+
+/**
+ * Usable width for boxes and tables: 95% of the terminal (or of `COLUMNS`),
+ * or 100 columns when neither says (for example, piped to a file).
+ */
+export function getContentWidth(
+	stream: { columns?: number } = process.stdout,
+	env: NodeJS.ProcessEnv = process.env
+): number {
+	const columns = detectColumns(stream, env);
 	return columns ? Math.floor(columns * 0.95) : 100;
 }
 
@@ -115,4 +150,36 @@ export function createProgressBar(
 	const bar = chalk.green('█').repeat(filled) + theme.muted('░').repeat(empty);
 
 	return `${bar} ${chalk.cyan(`${percentage}%`)} (${completed}/${total})`;
+}
+
+/**
+ * Wrap a line at spaces without counting ANSI codes, starting each
+ * continuation line with `indent`.
+ */
+export function wrapLine(
+	line: string,
+	width: number,
+	indent: string
+): string[] {
+	const lead = line.match(/^ */)?.[0] ?? '';
+	const words = line.slice(lead.length).split(' ');
+	const lines: string[] = [];
+	let current = lead;
+	let length = lead.length;
+	let lineHasWord = false;
+
+	for (const word of words) {
+		const wordLength = stripVTControlCharacters(word).length;
+		if (lineHasWord && length + 1 + wordLength > width) {
+			lines.push(current);
+			current = indent + word;
+			length = indent.length + wordLength;
+		} else {
+			current += (lineHasWord ? ' ' : '') + word;
+			length += (lineHasWord ? 1 : 0) + wordLength;
+		}
+		lineHasWord = true;
+	}
+	lines.push(current);
+	return lines;
 }

@@ -1,7 +1,9 @@
-import { theme } from '@tm/cli/theme';
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
+import { ui } from '@tm/cli';
+import {
+	assignMetadata,
+	normalizeAcceptanceCriteria,
+	reconcileDependencySources
+} from '@tm/core';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 import path from 'path';
 import {
@@ -16,10 +18,7 @@ import { getDefaultPriority, hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
-	displayBanner,
-	displayContextAnalysis,
 	failLoadingIndicator,
-	getStatusWithColor,
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
@@ -27,12 +26,15 @@ import ContextGatherer from '../utils/contextGatherer.js';
 import {
 	log as consoleLog,
 	ensureTagMetadata,
+	isSilentMode,
 	markMigrationForNotice,
 	performCompleteTagMigration,
-	readJSON,
-	truncate
+	readJSON
 } from '../utils.js';
 import { updateTagTasks } from '../utils/update-tag-tasks.js';
+
+/** How many tasks matching the prompt the AI is shown as context */
+const MAX_RELATED_TASKS = 10;
 
 /**
  * Get all tasks from all tags
@@ -66,6 +68,8 @@ function getAllTasks(rawData) {
  * @param {Object} customEnv - Custom environment variables (optional) - Note: AI params override deprecated
  * @param {Object} manualTaskData - Manual task data (optional, for direct task creation without AI)
  * @param {boolean} useResearch - Whether to use the research model (passed to unified service)
+ * @param {Object} [extras] - Fields the user gave alongside the prompt or manual data
+ * @param {string[]} [extras.acceptanceCriteria] - Acceptance criteria, stored unchecked
  * @param {Object} context - Context object containing session and potentially projectRoot
  * @param {string} [context.projectRoot] - Project root path (for MCP/env fallback)
  * @param {string} [context.commandName] - The name of the command being executed (for telemetry)
@@ -81,7 +85,8 @@ async function addTask(
 	context = {},
 	outputFormat = 'text', // Default to text for CLI
 	manualTaskData = null,
-	useResearch = false
+	useResearch = false,
+	extras = {}
 ) {
 	const { session, mcpLog, projectRoot, commandName, outputType, tag } =
 		context;
@@ -299,10 +304,9 @@ async function addTask(
 
 		if (invalidDeps.length > 0) {
 			report(
-				`The following dependencies do not exist or are invalid: ${invalidDeps.join(', ')}`,
+				`${invalidDeps.length === 1 ? 'Task' : 'Tasks'} ${invalidDeps.join(', ')} ${invalidDeps.length === 1 ? "doesn't" : "don't"} exist; adding the task without ${invalidDeps.length === 1 ? 'that dependency' : 'those dependencies'}`,
 				'warn'
 			);
-			report('Removing invalid dependencies...', 'info');
 			dependencies = dependencies.filter(
 				(depId) => !invalidDeps.includes(depId)
 			);
@@ -332,7 +336,7 @@ async function addTask(
 
 		// Check if manual task data is provided
 		if (manualTaskData) {
-			report('Using manually provided task data', 'info');
+			report('Using manually provided task data', 'debug');
 			taskData = manualTaskData;
 			report('DEBUG: Taking MANUAL task data path.', 'debug');
 
@@ -356,6 +360,7 @@ async function addTask(
 			const contextGatherer = new ContextGatherer(projectRoot, tag);
 			const gatherResult = await contextGatherer.gather({
 				semanticQuery: prompt,
+				maxSemanticResults: MAX_RELATED_TASKS,
 				dependencyTasks: numericDependencies,
 				format: 'research'
 			});
@@ -363,9 +368,19 @@ async function addTask(
 			const gatheredContext = gatherResult.context;
 			const analysisData = gatherResult.analysisData;
 
-			// Display context analysis if not in silent mode
-			if (outputFormat === 'text' && analysisData) {
-				displayContextAnalysis(analysisData, prompt, gatheredContext.length);
+			// One muted line saying which tasks the AI will see: the gatherer
+			// sends only the first MAX_RELATED_TASKS of the tasks it matched
+			if (outputFormat === 'text' && analysisData && !isSilentMode()) {
+				const depIds = numericDependencies.map(String);
+				const contextLine = ui.formatResearchContext({
+					taskIds: depIds,
+					relatedTaskIds: analysisData.allRelevantTasks
+						.slice(0, MAX_RELATED_TASKS)
+						.map((task) => String(task.id))
+						.filter((id) => !depIds.includes(id)),
+					files: []
+				});
+				if (contextLine) console.log(contextLine);
 			}
 
 			// Add any manually provided details to the prompt for context
@@ -450,7 +465,7 @@ async function addTask(
 
 				report('Successfully generated task data from AI.', 'debug');
 
-				// The "Task N Created" box below is the confirmation; just clear the spinner
+				// The "✓ Added task N" line below is the confirmation; just clear the spinner
 				if (loadingIndicator) {
 					stopLoadingIndicator(loadingIndicator);
 					loadingIndicator = null; // Clear it
@@ -491,6 +506,12 @@ async function addTask(
 			priority: effectivePriority,
 			subtasks: [] // Initialize with empty subtasks array
 		};
+		const acceptanceCriteria = normalizeAcceptanceCriteria(
+			extras.acceptanceCriteria
+		);
+		if (acceptanceCriteria.length > 0) {
+			newTask.acceptanceCriteria = acceptanceCriteria;
+		}
 
 		// Additional check: validate all dependencies in the AI response
 		if (taskData.dependencies?.length) {
@@ -545,115 +566,22 @@ async function addTask(
 
 		// Show success message - only for text output (CLI)
 		if (outputFormat === 'text') {
-			// Helper to get priority color
-			const getPriorityColor = (p) => {
-				switch (p?.toLowerCase()) {
-					case 'high':
-						return 'red';
-					case 'low':
-						return 'dim';
-					default:
-						return 'yellow';
-				}
-			};
-
-			// Check if AI added new dependencies that weren't explicitly provided
-			const aiAddedDeps = newTask.dependencies.filter(
-				(dep) => !numericDependencies.includes(dep)
-			);
-
-			// Check if AI removed any dependencies that were explicitly provided
-			const aiRemovedDeps = numericDependencies.filter(
-				(dep) => !newTask.dependencies.includes(dep)
-			);
-
-			// Get task titles for dependencies to display
-			const depTitles = {};
-			newTask.dependencies.forEach((dep) => {
-				const depTask = allTasks.find((t) => t.id === dep);
-				if (depTask) {
-					depTitles[dep] = truncate(depTask.title, 30);
-				}
-			});
-
-			// Prepare dependency display string
-			let dependencyDisplay = '';
-			if (newTask.dependencies.length > 0) {
-				dependencyDisplay = theme.text('Dependencies:') + '\n';
-				newTask.dependencies.forEach((dep) => {
-					const isAiAdded = aiAddedDeps.includes(dep);
-					const depType = isAiAdded ? chalk.yellow(' (AI suggested)') : '';
-					dependencyDisplay +=
-						theme.text(
-							`  - ${dep}: ${depTitles[dep] || 'Unknown task'}${depType}`
-						) + '\n';
-				});
-			} else {
-				dependencyDisplay = theme.text('Dependencies: None') + '\n';
-			}
-
-			// Add info about removed dependencies if any
-			if (aiRemovedDeps.length > 0) {
-				dependencyDisplay +=
-					theme.muted('\nUser-specified dependencies that were not used:') +
-					'\n';
-				aiRemovedDeps.forEach((dep) => {
-					const depTask = allTasks.find((t) => t.id === dep);
-					const title = depTask ? truncate(depTask.title, 30) : 'Unknown task';
-					dependencyDisplay += theme.muted(`  - ${dep}: ${title}`) + '\n';
-				});
-			}
-
-			// Add dependency analysis summary
-			let dependencyAnalysis = '';
-			if (aiAddedDeps.length > 0 || aiRemovedDeps.length > 0) {
-				dependencyAnalysis =
-					'\n' + theme.text.bold('Dependency Analysis:') + '\n';
-				if (aiAddedDeps.length > 0) {
-					dependencyAnalysis +=
-						chalk.green(
-							`AI identified ${aiAddedDeps.length} additional dependencies`
-						) + '\n';
-				}
-				if (aiRemovedDeps.length > 0) {
-					dependencyAnalysis +=
-						chalk.yellow(
-							`AI excluded ${aiRemovedDeps.length} user-provided dependencies`
-						) + '\n';
-				}
-			}
-
-			// Show success message box
+			const same = (a) => (b) => String(a) === String(b);
+			const titleOf = (id) => allTasks.find((t) => same(id)(t.id))?.title ?? '';
 			console.log(
-				boxen(
-					theme.text.bold(`Task ${newTaskId} Created Successfully`) +
-						'\n\n' +
-						theme.text(`Title: ${newTask.title}`) +
-						'\n' +
-						theme.text(`Status: ${getStatusWithColor(newTask.status)}`) +
-						'\n' +
-						theme.text(
-							`Priority: ${chalk[getPriorityColor(newTask.priority)](newTask.priority)}`
-						) +
-						'\n\n' +
-						dependencyDisplay +
-						dependencyAnalysis +
-						'\n' +
-						theme.text.bold('Next Steps:') +
-						'\n' +
-						chalk.cyan(
-							`1. Run ${chalk.yellow(`taskgraph show ${newTaskId}`)} to see complete task details`
-						) +
-						'\n' +
-						chalk.cyan(
-							`2. Run ${chalk.yellow(`taskgraph set-status --id=${newTaskId} --status=in-progress`)} to start working on it`
-						) +
-						'\n' +
-						chalk.cyan(
-							`3. Run ${chalk.yellow(`taskgraph expand --id=${newTaskId}`)} to break it down into subtasks`
-						),
-					{ padding: 1, borderColor: 'green', borderStyle: 'round' }
-				)
+				ui.formatTaskCreated({
+					id: newTaskId,
+					title: newTask.title,
+					priority: newTask.priority,
+					dependencies: newTask.dependencies.map((dep) => ({
+						id: dep,
+						title: titleOf(dep),
+						addedByAi: !numericDependencies.some(same(dep))
+					})),
+					unused: numericDependencies
+						.filter((dep) => !newTask.dependencies.some(same(dep)))
+						.map((dep) => ({ id: dep, title: titleOf(dep) }))
+				})
 			);
 
 			// Display AI Usage Summary if telemetryData is available

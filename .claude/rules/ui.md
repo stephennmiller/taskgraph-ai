@@ -38,7 +38,7 @@ Run taskgraph expand --id=<id> to add new ones
 ```
 
 - **Lead with the result.** One line starting with a green `✓`: `✓ Saved to task 3`, `✓ Analyzed 5 tasks · skipped 1 done`, `✓ Main model  sonnet → opus`. Don't use "Successfully", "Operation complete" or emoji (✅ ❌ 💾 🔍).
-- **Details as aligned rows,** indented two spaces under the result. Cut titles to fit the terminal width (`process.stdout.columns || 80`), not to a fixed 14 or 30 characters.
+- **Details as aligned rows,** indented two spaces under the result. Cut titles to fit the terminal width (`terminalWidth()` from `apps/cli/src/ui/layout/helpers.ts`, which honors `COLUMNS` when output is piped), not to a fixed 14 or 30 characters.
 - **Secondary facts are muted** (`theme.muted`), joined with ` · `: counts, dates, "with web research".
 - **At most one next step,** as a plain line: `Next: taskgraph expand --all, or taskgraph complexity-report to see why`. Never a numbered "Next Steps" box.
 - **Paths are relative to the project root:** `Saved to .taskgraph/reports/task-complexity-report.json`, not an absolute path that wraps.

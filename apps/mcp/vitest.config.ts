@@ -15,7 +15,12 @@ export default mergeConfig(
 				'tests/**/*.spec.ts',
 				'src/**/*.test.ts',
 				'src/**/*.spec.ts'
-			]
+			],
+			// Integration tests run `taskgraph init` in beforeEach and spawn the
+			// built server; on a busy CI runner that can take longer than the
+			// default 10s, as the CLI package already allows for
+			testTimeout: 30000,
+			hookTimeout: 30000
 		}
 	})
 );

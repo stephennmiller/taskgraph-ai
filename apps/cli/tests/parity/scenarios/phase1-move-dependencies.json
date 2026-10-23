@@ -1,0 +1,44 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["tags", "add", "scratch"],
+		["tags", "add", "scratch2"],
+		["tags", "add", "scratch3"],
+		["tags", "add", "scratch4"],
+		["tags", "copy", "master", "master2"],
+		[
+			"move",
+			"--from=5",
+			"--from-tag=master",
+			"--to-tag=scratch2",
+			"--ignore-dependencies"
+		],
+		[
+			"move",
+			"--from=4",
+			"--from-tag=master",
+			"--to-tag=scratch",
+			"--with-dependencies"
+		],
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"from": "5",
+				"fromTag": "master2",
+				"toTag": "scratch4",
+				"ignoreDependencies": true
+			}
+		},
+		{
+			"mcp": "move_task",
+			"input": {
+				"projectRoot": "<project>",
+				"from": "4",
+				"fromTag": "master2",
+				"toTag": "scratch3",
+				"withDependencies": true
+			}
+		}
+	]
+}
