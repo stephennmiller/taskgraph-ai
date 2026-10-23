@@ -25,8 +25,9 @@ export interface NumberGeneratedTasksOptions {
  * from `startId` in the order the model returned them. A dependency below
  * `promptStartId` that names a task in the tag stays as it is: the prompt
  * offered those as existing tasks, and renumbering the new tasks doesn't move
- * them. Any other dependency names a generated task and follows it to its new
- * ID. A dependency on nothing, or on a task that isn't lower, is dropped.
+ * them. A model that numbered from 1 instead means its own tasks by every ID.
+ * Any other dependency names a generated task and follows it to its new ID.
+ * A dependency on nothing, or on a task that isn't lower, is dropped.
  */
 export function numberGeneratedTasks(
 	tasks: GeneratedTaskIds[],
@@ -34,6 +35,7 @@ export function numberGeneratedTasks(
 ): Array<{ id: number; dependencies: number[] }> {
 	const { promptStartId, startId } = options;
 	const existing = new Set(Array.from(options.existingIds, String));
+	const numberedFromPrompt = tasks[0]?.id === promptStartId;
 	const newIds = new Map(
 		tasks.map((task, index) => [task.id, startId + index])
 	);
@@ -45,6 +47,7 @@ export function numberGeneratedTasks(
 			? task.dependencies
 			: []) {
 			const target =
+				numberedFromPrompt &&
 				typeof dep === 'number' &&
 				dep < promptStartId &&
 				existing.has(String(dep))

@@ -49,14 +49,18 @@ describe('numberGeneratedTasks', () => {
 		]);
 	});
 
-	it('reads an ID below promptStartId as the existing task when the model numbered from 1', () => {
-		const result = numberGeneratedTasks([raw(1), raw(2, [3, 1])], {
+	it('reads every ID as a new task when the model numbered from 1', () => {
+		const result = numberGeneratedTasks([raw(1), raw(2, [1]), raw(3, [2])], {
 			promptStartId: 11,
 			startId: 11,
 			existingIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 		});
 
-		expect(result[1]).toEqual({ id: 12, dependencies: [3, 1] });
+		expect(result).toEqual([
+			{ id: 11, dependencies: [] },
+			{ id: 12, dependencies: [11] },
+			{ id: 13, dependencies: [12] }
+		]);
 	});
 
 	it('maps a model ID from 1 to the new task when no existing task has it', () => {
