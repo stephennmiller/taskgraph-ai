@@ -88,8 +88,9 @@ const SECRETS = {
 		'kubeconfig'
 	],
 	// Files that are secret only inside given directories, as path segments.
-	// .config/git/credentials is where git's store helper writes when
-	// XDG_CONFIG_HOME is set or the file already exists.
+	// .config/git/credentials is git's store helper's XDG file
+	// ($XDG_CONFIG_HOME/git/credentials with XDG_CONFIG_HOME unset), which it
+	// reads and, when .git-credentials doesn't exist, writes.
 	paths: [
 		['.docker', 'config.json'],
 		['.config', 'git', 'credentials']
