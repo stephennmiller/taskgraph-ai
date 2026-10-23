@@ -67,6 +67,26 @@ describe('per-machine config and state', () => {
 		expect(fs.existsSync(localPath())).toBe(false);
 	});
 
+	it('adds them once to a .gitignore from an earlier init', () => {
+		const gitignore = path.join(dir, '.gitignore');
+		fs.writeFileSync(
+			gitignore,
+			'node_modules/\n\n# Task files\n# tasks.json\n'
+		);
+
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+
+		const lines = fs.readFileSync(gitignore, 'utf8').split('\n');
+		expect(lines).toContain('node_modules/');
+		for (const file of [
+			'.taskgraph/state.json',
+			'.taskgraph/config.local.json'
+		]) {
+			expect(lines.filter((line) => line === file)).toHaveLength(1);
+		}
+	});
+
 	it('reads a model from config.local.json over config.json', () => {
 		writeJson(localPath(), { models: { main: { modelId: 'opus' } } });
 
@@ -85,12 +105,14 @@ describe('per-machine config and state', () => {
 
 	it('saves a locally overridden model locally, leaving config.json as it was', () => {
 		writeJson(localPath(), { models: { main: { modelId: 'opus' } } });
+		const sharedBefore = readJson(sharedPath());
 
 		const result = run(['models', '--set-main', 'haiku']);
 
 		expect(result.status).toBe(0);
 		expect(readJson(localPath()).models.main.modelId).toBe('haiku');
-		expect(readJson(sharedPath()).models.main.modelId).toBe('sonnet');
+		// The whole role stays local, maxTokens included
+		expect(readJson(sharedPath()).models).toEqual(sharedBefore.models);
 	});
 
 	it('saves a shared model to config.json', () => {

@@ -97,6 +97,40 @@ describe('splitMachineConfig', () => {
 		expect(local).toEqual({ models: { main: { modelId: 'haiku' } } });
 	});
 
+	it('keeps every changed key of a locally overridden model role local', () => {
+		// models --set-main haiku with main overridden locally: setModel also
+		// changes maxTokens, which must not reach the shared file
+		const currentShared = {
+			models: {
+				main: { modelId: 'sonnet', maxTokens: 64000, temperature: 0.2 },
+				research: { modelId: 'sonnet', maxTokens: 8700 }
+			}
+		};
+		const currentLocal = { models: { main: { modelId: 'opus' } } };
+		const config = {
+			models: {
+				main: { modelId: 'haiku', maxTokens: 32000, temperature: 0.2 },
+				research: { modelId: 'opus', maxTokens: 8700 }
+			}
+		};
+
+		const { shared, local } = splitMachineConfig(
+			config,
+			currentShared,
+			currentLocal
+		);
+
+		expect(shared).toEqual({
+			models: {
+				main: { modelId: 'sonnet', maxTokens: 64000, temperature: 0.2 },
+				research: { modelId: 'opus', maxTokens: 8700 }
+			}
+		});
+		expect(local).toEqual({
+			models: { main: { modelId: 'haiku', maxTokens: 32000 } }
+		});
+	});
+
 	it('leaves a key out of config.json when only the local file had it', () => {
 		const config = {
 			global: { logLevel: 'info' },

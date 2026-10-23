@@ -73,6 +73,22 @@ function leafPaths(obj: unknown, prefix = ''): string[] {
 }
 
 /**
+ * Settings that change together, saved as one: a model role's modelId,
+ * maxTokens and temperature. When config.local.json overrides any key of a
+ * unit, a save keeps the whole unit's changes local, so switching a
+ * locally overridden model doesn't write its maxTokens to config.json.
+ * Any other path is its own unit.
+ */
+function overrideUnit(keyPath: string): string {
+	const [first, second] = keyPath.split('.');
+	return first === 'models' && second ? `models.${second}` : keyPath;
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+	return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
  * Merge config.local.json over config.json. Objects merge key by key; any
  * other value in the local file (string, number, array) replaces the shared
  * one. Neither input is changed.
@@ -101,7 +117,8 @@ export function mergeMachineConfig<T extends object>(
  *
  * - A setting the local file already overrides stays local: the new value
  *   goes to config.local.json and config.json keeps the value it had, so
- *   changing a per-machine override doesn't change it for everyone.
+ *   changing a per-machine override doesn't change it for everyone. For a
+ *   model role this covers the whole role (see overrideUnit).
  * - A setting in PER_MACHINE_CONFIG_KEYS always goes to config.local.json
  *   and is removed from config.json. This moves settings an earlier release
  *   wrote to the shared file.
@@ -119,14 +136,27 @@ export function splitMachineConfig<T extends object>(
 	const shared = clone(config) as unknown as JsonObject;
 	const local: JsonObject = clone((currentLocal ?? {}) as JsonObject);
 
-	for (const keyPath of leafPaths(currentLocal)) {
-		const value = getPath(config, keyPath);
-		if (value === undefined) deletePath(local, keyPath);
-		else setPath(local, keyPath, clone(value));
+	const units = new Set(leafPaths(currentLocal).map(overrideUnit));
+	for (const unit of units) {
+		const value = getPath(config, unit);
+		const sharedValue = getPath(currentShared, unit);
+		const localValue = getPath(currentLocal, unit);
 
-		const sharedValue = getPath(currentShared, keyPath);
-		if (sharedValue === undefined) deletePath(shared, keyPath);
-		else setPath(shared, keyPath, clone(sharedValue));
+		if (value === undefined) deletePath(local, unit);
+		else if (isPlainObject(value) && isPlainObject(localValue)) {
+			// Keys the local file had, plus keys that now differ from config.json
+			const sharedObject = isPlainObject(sharedValue) ? sharedValue : {};
+			const localObject: JsonObject = {};
+			for (const [key, keyValue] of Object.entries(value)) {
+				if (key in localValue || !sameValue(keyValue, sharedObject[key])) {
+					localObject[key] = clone(keyValue);
+				}
+			}
+			setPath(local, unit, localObject);
+		} else setPath(local, unit, clone(value));
+
+		if (sharedValue === undefined) deletePath(shared, unit);
+		else setPath(shared, unit, clone(sharedValue));
 	}
 
 	for (const keyPath of PER_MACHINE_CONFIG_KEYS) {
