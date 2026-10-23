@@ -48,7 +48,7 @@ paths:
     - **Core CLI Utilities**: Place utilities used primarily by the core `taskgraph` CLI logic and command modules (`scripts/modules/*`) into [`scripts/modules/utils.js`](../../scripts/modules/utils.js).
     - **MCP Server Utilities**: Place utilities specifically designed to support the MCP server implementation into the appropriate subdirectories within `mcp-server/src/`.
         - Path/Core Logic Helpers: [`mcp-server/src/core/utils/`](../../mcp-server/src/core/utils) (e.g., `path-utils.js`).
-        - Tool Execution/Response Helpers: [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js).
+        - Tool Execution/Response Helpers: `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)); the direct functions' logger adapter is in [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js).
 
 ## Documentation Standards
 
@@ -429,64 +429,58 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
     - Throws a specific error if the `tasks.json` file cannot be located.
 - **`getPackagePath()`**: Utility to find the installation path of the `taskgraph-ai` package itself (potentially removable).
 
-## MCP Server Tool Utilities (`mcp-server/src/tools/utils.js`)
+## MCP Server Tool Utilities (`@tm/mcp`)
 
-These utilities specifically support the implementation and execution of MCP tools.
-
-- **`normalizeProjectRoot(rawPath, log)`**:
-    - **Purpose**: Takes a raw project root path (potentially URI encoded, with `file://` prefix, Windows slashes) and returns a normalized, absolute path suitable for the server's OS.
-    - **Logic**: Decodes URI, strips `file://`, handles Windows drive prefix (`/C:/`), replaces `\` with `/`, uses `path.resolve()`.
-    - **Usage**: Used internally by `withNormalizedProjectRoot` HOF.
+MCP tools, the legacy JS ones in `mcp-server/src/tools/` included, import their response and project-root helpers from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)).
 
 - **`withNormalizedProjectRoot(executeFn)`**:
     - **Purpose**: A Higher-Order Function (HOF) designed to wrap a tool's `execute` method.
     - **Logic**: 
-        1. Picks the project root in the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` (normalized with `normalizeProjectRoot`), else `TASKGRAPH_PROJECT_ROOT` from `process.env` or the session's env, else the session's root folder (`getProjectRootFromSession`). An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
-        2. Injects the absolute path back into the `args` object as `args.projectRoot`.
-        3. Calls the original `executeFn` with the updated `args`.
+        1. Rejects a `tag` argument that is not letters, numbers, hyphens and underscores.
+        2. Picks the project root in the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` (normalized with `normalizeProjectRoot`), else `TASKGRAPH_PROJECT_ROOT` from `process.env` or the session's env, else the session's root folder. An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
+        3. Injects the absolute path back into the `args` object as `args.projectRoot` and calls the original `executeFn`.
     - **Usage**: Should wrap the `execute` function of *every* MCP tool that needs a reliable, normalized project root path.
     - **Example**:
       ```javascript
       // In mcp-server/src/tools/your-tool.js
-      import { withNormalizedProjectRoot } from '@tm/mcp';
+      import { handleApiResult, withNormalizedProjectRoot } from '@tm/mcp';
       
       export function registerYourTool(server) {
           server.addTool({
               // ... name, description, parameters ...
-              execute: withNormalizedProjectRoot(async (args, context) => {
-                  // args.projectRoot is now normalized here
-                  const { projectRoot /*, other args */ } = args;
-                  // ... rest of tool logic using normalized projectRoot ...
+              execute: withNormalizedProjectRoot(async (args, { log, session }) => {
+                  const result = await yourDirectFunction(args, log, { session });
+                  return handleApiResult({
+                      result,
+                      log,
+                      errorPrefix: 'Error doing your thing',
+                      projectRoot: args.projectRoot
+                  });
               })
           });
       }
       ```
 
-- **`handleApiResult({ result, log, errorPrefix, projectRoot, tag })`** (from `@tm/mcp`, [`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)):
-    - **Purpose**: Standardizes the formatting of responses returned by direct functions (`{ success, data/error }`) into the MCP response format: `{ data, version, tag }` on success, an `isError` response on failure.
+- **`handleApiResult({ result, log, errorPrefix, projectRoot, tag })`**:
+    - **Purpose**: Turns a direct function's `{ success, data/error }` into the MCP response, with version and current tag. A failed result becomes an `isError` response.
     - **Usage**: Call this at the end of the tool's `execute` method with one options object. Only `result` is required; pass `projectRoot` (or `tag`) so the response names the current tag.
-    - **Note**: `mcp-server/src/tools/utils.js` still has an older positional `handleApiResult(result, log, errorPrefix, processFunction)`. Tools don't use it; import from `@tm/mcp`.
 
 - **`createContentResponse(content)` / `createErrorResponse(errorMessage)`**:
-    - **Purpose**: Helper functions to create the basic MCP response structure for success or error messages.
-    - **Usage**: Used internally by `handleApiResult` and potentially directly for simple responses.
+    - **Purpose**: Build a success or error response directly, for errors caught before or around the direct function call.
+
+- **`checkProgressCapability(reportProgress, log)`**:
+    - **Purpose**: Returns `reportProgress` when the client supports progress updates, otherwise `undefined`.
+
+### Direct Function Logger (`mcp-server/src/tools/utils.js`)
 
 - **`createLogWrapper(log)`**:
     - **Purpose**: Creates a logger object wrapper with standard methods (`info`, `warn`, `error`, `debug`, `success`) mapping to the passed MCP `log` object's methods. Ensures compatibility when passing loggers to core functions.
-    - **Usage**: Used within direct functions before passing the `log` object down to core logic that expects the standard method names.
-
-- **`processMCPResponseData(taskOrData, fieldsToRemove)`**:
-    - **Purpose**: Utility to filter potentially sensitive or large fields (like `details`, `testStrategy`) from task objects before sending the response back via MCP.
-    - **Usage**: Only the older positional `handleApiResult` in `mcp-server/src/tools/utils.js` calls it; the `@tm/mcp` version does not filter fields.
-
-- **`getProjectRootFromSession(session, log)`**:
-    - **Purpose**: Legacy function to extract *and normalize* the project root from the session. Replaced by the HOF pattern but potentially still used.
-    - **Recommendation**: Prefer using the `withNormalizedProjectRoot` HOF in tools instead of calling this directly.
+    - **Usage**: Used within direct functions before passing the `log` object down to core logic that expects the standard method names. It is the file's only export.
 
 ## Export Organization
 
 - **Grouping Related Functions**:
-  - ✅ DO: Keep utilities relevant to their location (e.g., core CLI utils in `scripts/modules/utils.js`, MCP path utils in `mcp-server/src/core/utils/path-utils.js`, MCP tool utils in `mcp-server/src/tools/utils.js`).
+  - ✅ DO: Keep utilities relevant to their location (e.g., core CLI utils in `scripts/modules/utils.js`, MCP path utils in `mcp-server/src/core/utils/path-utils.js`, MCP tool helpers in `@tm/mcp`).
   - ✅ DO: Export all utility functions in a single statement per file.
   - ✅ DO: Group related exports together.
   - ✅ DO: Export configuration constants (from `scripts/modules/utils.js`).
@@ -525,13 +519,7 @@ export {
 };
 
 // Example export from mcp-server/src/tools/utils.js
-export {
-  getProjectRootFromSession,
-  handleApiResult,
-  processMCPResponseData,
-  createContentResponse,
-  createErrorResponse
-};
+export { createLogWrapper };
 ```
 
 ## Context Gathering Utilities
