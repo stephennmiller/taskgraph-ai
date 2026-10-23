@@ -46,6 +46,8 @@ const ALLOWED_COMMANDS = new Set([
 ]);
 
 const allRows = () => HELP_GROUPS.flatMap((group) => group.commands);
+// The command each row names, without its subcommand hint
+const rowNames = () => allRows().map((row) => row.name.split(' ')[0]);
 
 describe('formatHelp', () => {
 	it('starts with the Daily workflow group, ending with loop', () => {
@@ -66,7 +68,7 @@ describe('formatHelp', () => {
 	// (#219). Each command a user runs now has one row, so the cap is the
 	// command count; raise it only for a new command, not a second row.
 	it('lists at most 36 rows with no repeated command', () => {
-		const names = allRows().map((row) => row.name.split(' ')[0]);
+		const names = rowNames();
 
 		expect(names.length).toBeLessThanOrEqual(36);
 		expect(new Set(names).size).toBe(names.length);
@@ -80,8 +82,8 @@ describe('formatHelp', () => {
 	});
 
 	it('only lists commands from the static allowlist', () => {
-		for (const row of allRows()) {
-			expect(ALLOWED_COMMANDS.has(row.name.split(' ')[0])).toBe(true);
+		for (const name of rowNames()) {
+			expect(ALLOWED_COMMANDS.has(name)).toBe(true);
 		}
 	});
 
@@ -92,16 +94,12 @@ describe('formatHelp', () => {
 	it.each(['loop', 'move', 'lang', 'scope-up', 'scope-down', 'github'])(
 		'lists %s, which the help used to leave out',
 		(command) => {
-			const names = allRows().map((row) => row.name.split(' ')[0]);
-
-			expect(names).toContain(command);
+			expect(rowNames()).toContain(command);
 		}
 	);
 
 	it.each(['start', 'autopilot', 'tui'])('gives %s no row', (command) => {
-		const names = allRows().map((row) => row.name.split(' ')[0]);
-
-		expect(names).not.toContain(command);
+		expect(rowNames()).not.toContain(command);
 	});
 
 	it('keeps a github subcommand hint on the github row', () => {
