@@ -42,7 +42,7 @@ export {
 export * from './utils/index.js';
 
 // UI utilities - exported only via ui namespace to avoid naming conflicts
-// Import via: import { ui } from '@tm/cli'; ui.displayBanner();
+// Import via: import { ui } from '@tm/cli'; ui.terminalWidth();
 export * as ui from './ui/index.js';
 
 export { runInteractiveSetup } from './commands/models/index.js';
