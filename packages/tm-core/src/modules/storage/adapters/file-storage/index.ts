@@ -13,6 +13,11 @@ export {
 	withSchemaVersion
 } from './schema-version.js';
 export { FileOperations } from './file-operations.js';
+export {
+	mergeTagChanges,
+	type MergeTagChangesResult,
+	type RenumberedItem
+} from './merge-tag-changes.js';
 export { PathResolver } from './path-resolver.js';
 
 // Main FileStorage class - primary export

@@ -14,6 +14,7 @@ import { ListTasksCommand } from './commands/list.command.js';
 import { GithubCommand } from './commands/github/github.command.js';
 import { LoopCommand } from './commands/loop.command.js';
 import { NextCommand } from './commands/next.command.js';
+import { PrimeCommand } from './commands/prime.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
 import { ShowCommand } from './commands/show.command.js';
 import { StartCommand } from './commands/start.command.js';
@@ -92,6 +93,12 @@ export class CommandRegistry {
 			name: 'loop',
 			description: 'Run Claude Code in a loop, one task per iteration',
 			commandClass: LoopCommand as any,
+			category: 'development'
+		},
+		{
+			name: 'prime',
+			description: 'Print task context and workflow rules for a coding agent',
+			commandClass: PrimeCommand as any,
 			category: 'development'
 		},
 		{

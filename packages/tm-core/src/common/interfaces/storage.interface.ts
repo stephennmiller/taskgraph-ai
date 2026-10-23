@@ -3,7 +3,13 @@
  * This file defines the contract for all storage implementations
  */
 
-import type { Task, TaskMetadata, TaskStatus } from '../types/index.js';
+import type { TaskClaim } from '../../modules/tasks/utils/claim.js';
+import type {
+	Subtask,
+	Task,
+	TaskMetadata,
+	TaskStatus
+} from '../types/index.js';
 
 /**
  * Options for loading tasks from storage
@@ -24,6 +30,30 @@ export interface UpdateStatusResult {
 	newStatus: TaskStatus;
 	taskId: string;
 }
+
+/**
+ * Options for updateTaskStatus operations
+ */
+export interface UpdateStatusOptions {
+	/**
+	 * Asked inside the write, with the task as stored, before it moves to
+	 * done; return an error to refuse the change. Also asked (with `auto`
+	 * true) before a parent moves to done because its last subtask finished;
+	 * refusing then leaves the parent in progress.
+	 */
+	guardDone?: (
+		task: Task | Subtask,
+		taskId: string,
+		auto: boolean
+	) => Error | undefined;
+}
+
+/**
+ * Fields a modifyTask change can set on a task or subtask
+ */
+export type TaskFieldUpdates = Partial<
+	Omit<Task, 'id' | 'subtasks' | 'dependencies'>
+>;
 
 /**
  * Interface for storage operations on tasks
@@ -85,8 +115,32 @@ export interface IStorage {
 	updateTaskStatus(
 		taskId: string,
 		newStatus: TaskStatus,
-		tag?: string
+		tag?: string,
+		options?: UpdateStatusOptions
 	): Promise<UpdateStatusResult>;
+
+	/**
+	 * Change one task or subtask in a single locked read-modify-write
+	 * @param taskId - ID of the task or subtask (e.g., "1" or "1.2")
+	 * @param change - Gets the item as stored; returns the fields to set, or
+	 *   throws to leave the file unchanged
+	 * @param tag - Optional tag context for the task
+	 * @returns The item as saved
+	 */
+	modifyTask(
+		taskId: string,
+		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
+		tag?: string
+	): Promise<Task | Subtask>;
+
+	/**
+	 * Pick the next task nobody has started and set it in-progress, recording
+	 * the claim in its metadata, all in one locked write
+	 * @param claimant - Recorded as `metadata.claimedBy`
+	 * @param tag - Optional tag context
+	 * @returns The claim, or null when no task is ready
+	 */
+	claimNextTask(claimant: string, tag?: string): Promise<TaskClaim | null>;
 
 	/**
 	 * Delete a task by ID
@@ -336,8 +390,19 @@ export abstract class BaseStorage implements IStorage {
 	abstract updateTaskStatus(
 		taskId: string,
 		newStatus: TaskStatus,
-		tag?: string
+		tag?: string,
+		options?: UpdateStatusOptions
 	): Promise<UpdateStatusResult>;
+	abstract modifyTask(
+		taskId: string,
+		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
+		tag?: string
+	): Promise<Task | Subtask>;
+
+	abstract claimNextTask(
+		claimant: string,
+		tag?: string
+	): Promise<TaskClaim | null>;
 	abstract deleteTask(taskId: string, tag?: string): Promise<void>;
 	abstract exists(tag?: string): Promise<boolean>;
 	abstract loadMetadata(tag?: string): Promise<TaskMetadata | null>;

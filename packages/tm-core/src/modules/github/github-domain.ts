@@ -258,7 +258,10 @@ export class GitHubDomain {
 		if (!link || !step.to) return;
 		const tasksDomain = this.requireTasks();
 		if (step.action === 'apply') {
-			await tasksDomain.updateStatus(step.taskId, step.to, step.tag);
+			// The issue's state wins a pull, criteria or not
+			await tasksDomain.updateStatus(step.taskId, step.to, step.tag, {
+				force: true
+			});
 		}
 		const github: GitHubLink = {
 			...link,

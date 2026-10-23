@@ -102,7 +102,7 @@ describe('first run', () => {
 		]);
 
 		expect(result.status).toBe(0);
-		expect(result.stdout).toContain('Task 1 Created Successfully');
+		expect(result.stdout).toContain('✓ Added task 1');
 	});
 
 	it('lists tags right after init', () => {
@@ -157,6 +157,6 @@ describe('first run', () => {
 		);
 
 		expect(result.status).toBe(0);
-		expect(result.stdout).toContain('Task 1 Created Successfully');
+		expect(result.stdout).toContain('✓ Added task 1');
 	});
 });

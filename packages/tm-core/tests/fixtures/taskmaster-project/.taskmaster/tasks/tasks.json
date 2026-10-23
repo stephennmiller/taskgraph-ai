@@ -1,0 +1,83 @@
+{
+	"master": {
+		"tasks": [
+			{
+				"id": 1,
+				"title": "Set up the database schema",
+				"description": "Create tables for products and orders",
+				"details": "Use Postgres with migrations",
+				"testStrategy": "Run the migrations against an empty database",
+				"priority": "high",
+				"dependencies": [],
+				"status": "done",
+				"subtasks": [
+					{
+						"id": 1,
+						"title": "Products table",
+						"description": "Columns for name, price and stock",
+						"dependencies": [],
+						"details": "",
+						"status": "done",
+						"testStrategy": ""
+					},
+					{
+						"id": 2,
+						"title": "Orders table",
+						"description": "References products",
+						"dependencies": [1],
+						"details": "",
+						"status": "done",
+						"testStrategy": ""
+					}
+				]
+			},
+			{
+				"id": 2,
+				"title": "Build the product API",
+				"description": "CRUD endpoints for products",
+				"details": "Express routes under /products",
+				"testStrategy": "Supertest against each route",
+				"priority": "high",
+				"dependencies": [1],
+				"status": "in-progress",
+				"subtasks": []
+			},
+			{
+				"id": 3,
+				"title": "Build the order API",
+				"description": "Create and list orders",
+				"details": "",
+				"testStrategy": "",
+				"priority": "medium",
+				"dependencies": [1, 2],
+				"status": "pending",
+				"subtasks": []
+			}
+		],
+		"metadata": {
+			"created": "2026-03-01T09:00:00.000Z",
+			"updated": "2026-03-30T10:00:00.000Z",
+			"description": "Tasks for master context"
+		}
+	},
+	"feature-auth": {
+		"tasks": [
+			{
+				"id": 1,
+				"title": "Add login",
+				"description": "Email and password sign-in",
+				"details": "",
+				"testStrategy": "",
+				"priority": "medium",
+				"dependencies": [],
+				"status": "pending",
+				"subtasks": []
+			}
+		],
+		"metadata": {
+			"created": "2026-03-20T09:00:00.000Z",
+			"updated": "2026-03-20T09:00:00.000Z",
+			"description": "Login work on the feature/auth branch"
+		}
+	}
+}

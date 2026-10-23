@@ -1,5 +1,9 @@
 import { ui } from '@tm/cli';
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	keepChecklistFields,
+	reconcileDependencySources
+} from '@tm/core';
 import chalk from 'chalk';
 import path from 'path';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
@@ -246,6 +250,8 @@ async function updateTasks(
 							if (restored.testStrategy == null && original) {
 								restored.testStrategy = original.testStrategy;
 							}
+							// The AI schema has no criteria; keep the stored checklist
+							keepChecklistFields(restored, original);
 							assignMetadata(
 								restored,
 								reconcileDependencySources(subtask, original, task.id)

@@ -1,20 +1,24 @@
 /**
- * @fileoverview Task detail component for show command
- * Displays detailed task information in a structured format
+ * @fileoverview Boxed task details still printed by `next` and `start --dry-run`.
+ * `show` prints formatTaskDetail (ui/formatters/task-detail-formatters.ts)
+ * instead; move these commands to it and delete this file (#182).
  */
 
-import type {
-	ExistingInfrastructure,
-	RelevantFile,
-	ScopeBoundaries,
-	Subtask,
-	Task,
-	TaskCategory
+import {
+	type ExistingInfrastructure,
+	type RelevantFile,
+	type ScopeBoundaries,
+	type Subtask,
+	type Task,
+	type TaskCategory,
+	type TaskChecklist,
+	buildChecklist
 } from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { renderContent } from '../../utils/content-renderer.js';
+import { formatChecklist } from '../formatters/checklist-formatters.js';
 import {
 	getComplexityWithColor,
 	getPriorityWithColor,
@@ -345,24 +349,6 @@ export function displayScopeBoundaries(boundaries: ScopeBoundaries): void {
 }
 
 /**
- * Display acceptance criteria as a checklist
- */
-export function displayAcceptanceCriteria(criteria: string[]): void {
-	const terminalWidth = getContentWidth();
-
-	const content = criteria.map((c) => theme.text(`☐ ${c}`)).join('\n');
-
-	console.log(
-		boxen(chalk.bold('Acceptance Criteria:') + '\n\n' + content, {
-			padding: 1,
-			borderStyle: 'round',
-			borderColor: 'green',
-			width: terminalWidth
-		})
-	);
-}
-
-/**
  * Display technical constraints
  */
 export function displayTechnicalConstraints(constraints: string[]): void {
@@ -447,12 +433,21 @@ export function displaySkillsAndCategory(
  * Shows all AI-generated guidance when available
  * Note: Category and skills are displayed in the main properties table
  */
-export function displayImplementationMetadata(task: Task | Subtask): void {
+export function displayImplementationMetadata(
+	task: Task | Subtask,
+	checklist?: TaskChecklist
+): void {
+	// Without the project's Definition of Done, show the task's own criteria
+	const items = checklist ?? buildChecklist(task, []);
+	if (items.items.length > 0) {
+		console.log();
+		console.log(formatChecklist(items));
+	}
+
 	const hasMetadata =
 		task.relevantFiles ||
 		task.existingInfrastructure ||
 		task.scopeBoundaries ||
-		task.acceptanceCriteria ||
 		task.technicalConstraints ||
 		task.implementationApproach ||
 		task.codebasePatterns;
@@ -496,12 +491,6 @@ export function displayImplementationMetadata(task: Task | Subtask): void {
 		console.log();
 		displayTechnicalConstraints(task.technicalConstraints);
 	}
-
-	// Display acceptance criteria
-	if (task.acceptanceCriteria && task.acceptanceCriteria.length > 0) {
-		console.log();
-		displayAcceptanceCriteria(task.acceptanceCriteria);
-	}
 }
 
 // ============================================================================
@@ -544,6 +533,8 @@ export function displayTaskDetails(
 		customHeader?: string;
 		headerColor?: string;
 		originalTaskId?: string;
+		/** Acceptance criteria and Definition of Done, numbered for --check */
+		checklist?: TaskChecklist;
 	}
 ): void {
 	const {
@@ -551,7 +542,8 @@ export function displayTaskDetails(
 		showSuggestedActions = false,
 		customHeader,
 		headerColor = BORDER_COLOR,
-		originalTaskId
+		originalTaskId,
+		checklist
 	} = options || {};
 
 	// Display header - either custom or default
@@ -586,7 +578,7 @@ export function displayTaskDetails(
 	}
 
 	// Display AI implementation metadata (relevantFiles, codebasePatterns, etc.)
-	displayImplementationMetadata(task);
+	displayImplementationMetadata(task, checklist);
 
 	// Display subtasks if available
 	if (task.subtasks && task.subtasks.length > 0) {

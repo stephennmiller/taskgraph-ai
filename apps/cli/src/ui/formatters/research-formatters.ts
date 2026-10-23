@@ -10,63 +10,13 @@
  * table, and the answer printed twice (streamed raw, then again in a box).
  */
 
-import { stripVTControlCharacters } from 'node:util';
 import chalk from 'chalk';
-import { Marked, type MarkedExtension } from 'marked';
-import { markedTerminal } from 'marked-terminal';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
+import { formatMarkdown } from './markdown-formatters.js';
 
 /** Answers wrap at the terminal width, but no wider than this */
 const MAX_ANSWER_WIDTH = 100;
-
-const visibleLength = (text: string) => stripVTControlCharacters(text).length;
-
-/**
- * Wrap a line at spaces without counting ANSI codes, starting each
- * continuation line with `indent`.
- */
-function wrapLine(line: string, width: number, indent: string): string[] {
-	const lead = line.match(/^ */)?.[0] ?? '';
-	const words = line.slice(lead.length).split(' ');
-	const lines: string[] = [];
-	let current = lead;
-	let length = lead.length;
-	let lineHasWord = false;
-
-	for (const word of words) {
-		const wordLength = visibleLength(word);
-		if (lineHasWord && length + 1 + wordLength > width) {
-			lines.push(current);
-			current = indent + word;
-			length = indent.length + wordLength;
-		} else {
-			current += (lineHasWord ? ' ' : '') + word;
-			length += (lineHasWord ? 1 : 0) + wordLength;
-		}
-		lineHasWord = true;
-	}
-	lines.push(current);
-	return lines;
-}
-
-/**
- * marked-terminal reflows paragraphs but not list items, so long items
- * relied on the terminal's own wrap and lost their indent. Wrap them with
- * a hanging indent, and draw bullets as •.
- */
-function wrapListItems(text: string, width: number): string {
-	return text
-		.split('\n')
-		.flatMap((line) => {
-			const bulleted = line.replace(/^(\s*)\* /, '$1• ');
-			const marker =
-				stripVTControlCharacters(bulleted).match(/^(\s*)(•|\d+\.)\s+/);
-			if (!marker || visibleLength(bulleted) <= width) return [bulleted];
-			return wrapLine(bulleted, width, ' '.repeat(marker[0].length));
-		})
-		.join('\n');
-}
 
 /**
  * Render a research answer's markdown for the terminal, wrapped to the
@@ -78,53 +28,8 @@ export function formatResearchAnswer(
 	width = terminalWidth()
 ): string {
 	const columns = Math.max(40, Math.min(width, MAX_ANSWER_WIDTH));
-	const renderer = new Marked({ gfm: true, breaks: false });
-
-	renderer.use(
-		markedTerminal({
-			code: (code: string) =>
-				code
-					.split('\n')
-					.map((line) => chalk.cyan(line))
-					.join('\n'),
-			blockquote: theme.muted.italic,
-			html: theme.muted,
-			heading: theme.text.bold,
-			firstHeading: theme.text.bold,
-			hr: theme.muted,
-			listitem: theme.text,
-			paragraph: theme.text,
-			strong: theme.text.bold,
-			em: theme.text.italic,
-			codespan: chalk.cyan,
-			del: chalk.dim.strikethrough,
-			link: theme.brand,
-			href: theme.brand.underline,
-			showSectionPrefix: false,
-			unescape: true,
-			emoji: false,
-			tab: 2,
-			width: columns,
-			reflowText: true
-		}) as MarkedExtension
-	);
-
-	// marked-terminal prints list items' inline markdown (**bold**, `code`)
-	// literally; render their inline tokens instead.
-	renderer.use({
-		renderer: {
-			text(token) {
-				if (typeof token === 'object' && 'tokens' in token && token.tokens) {
-					return this.parser.parseInline(token.tokens);
-				}
-				return typeof token === 'string' ? token : token.text;
-			}
-		}
-	});
-
 	const answer = markdown.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-	const rendered = renderer.parse(answer, { async: false }) as string;
-	return wrapListItems(rendered.trimEnd(), columns);
+	return formatMarkdown(answer, columns);
 }
 
 export interface ResearchContextSummary {

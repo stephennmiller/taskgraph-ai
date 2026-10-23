@@ -4,11 +4,18 @@
  */
 
 import path from 'node:path';
-import { type Task, type TmCore, createTmCore } from '@tm/core';
+import {
+	type Task,
+	type TaskChecklist,
+	type TaskClaim,
+	type TmCore,
+	createTmCore
+} from '@tm/core';
 import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { displayTaskDetails } from '../ui/components/task-detail.component.js';
+import { formatClaim } from '../ui/formatters/claim-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -21,6 +28,19 @@ export interface NextCommandOptions {
 	format?: 'text' | 'json';
 	silent?: boolean;
 	project?: string;
+	claim?: boolean;
+}
+
+/**
+ * Result of `next --claim`
+ */
+export interface ClaimNextResult {
+	claimed: boolean;
+	task: Task | null;
+	claimedBy: string | null;
+	claimedAt: string | null;
+	tag: string;
+	hasAnyTasks: boolean;
 }
 
 /**
@@ -31,6 +51,8 @@ export interface NextTaskResult {
 	found: boolean;
 	tag: string;
 	hasAnyTasks?: boolean;
+	/** The task's acceptance criteria and Definition of Done, numbered for --check */
+	checklist?: TaskChecklist;
 }
 
 /**
@@ -48,6 +70,10 @@ export class NextCommand extends Command {
 		this.description('Find the next available task to work on')
 			.option('-t, --tag <tag>', 'Filter by tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.option(
+				'--claim',
+				'Start the next task and record who took it, in one locked write'
+			)
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
 			.option(
 				'-p, --project <path>',
@@ -69,6 +95,12 @@ export class NextCommand extends Command {
 
 			// Initialize tm-core
 			await this.initializeCore(getProjectRoot(options.project));
+
+			if (options.claim) {
+				const claimResult = await this.claimNextTask(options);
+				if (!options.silent) this.displayClaim(claimResult, options);
+				return;
+			}
 
 			// Get next task from core
 			const result = await this.getNextTask(options);
@@ -135,12 +167,74 @@ export class NextCommand extends Command {
 		const allTasks = await this.tmCore.tasks.list({ tag: options.tag });
 		const hasAnyTasks = allTasks && allTasks.tasks.length > 0;
 
+		// getNext leaves the criteria out; read the checklist as stored
+		const checklist = task
+			? await this.tmCore.tasks.loadChecklist(String(task.id), options.tag)
+			: undefined;
+
 		return {
 			task,
 			found: task !== null,
 			tag: activeTag,
+			hasAnyTasks,
+			...(checklist && { checklist })
+		};
+	}
+
+	/**
+	 * Claim the next task through tm-core
+	 */
+	private async claimNextTask(
+		options: NextCommandOptions
+	): Promise<ClaimNextResult> {
+		if (!this.tmCore) {
+			throw new Error('TmCore not initialized');
+		}
+
+		const claim: TaskClaim | null = await this.tmCore.tasks.claimNext({
+			tag: options.tag
+		});
+		const tag = options.tag || this.tmCore.config.getActiveTag();
+		const hasAnyTasks = claim
+			? true
+			: (await this.tmCore.tasks.list({ tag: options.tag })).tasks.length > 0;
+
+		return {
+			claimed: claim !== null,
+			task: claim?.task ?? null,
+			claimedBy: claim?.claimedBy ?? null,
+			claimedAt: claim?.claimedAt ?? null,
+			tag,
 			hasAnyTasks
 		};
+	}
+
+	/**
+	 * Display the claim: JSON, or a few lines of text
+	 */
+	private displayClaim(
+		result: ClaimNextResult,
+		options: NextCommandOptions
+	): void {
+		if (options.format === 'json') {
+			console.log(JSON.stringify(result, null, 2));
+			return;
+		}
+		console.log(
+			formatClaim(
+				result.task && result.claimedBy
+					? {
+							taskId: String(result.task.id),
+							title: result.task.title,
+							claimedBy: result.claimedBy
+						}
+					: null,
+				{
+					hasAnyTasks: result.hasAnyTasks,
+					width: process.stdout.columns || 80
+				}
+			)
+		);
 	}
 
 	/**
@@ -214,7 +308,8 @@ export class NextCommand extends Command {
 		displayTaskDetails(task, {
 			customHeader,
 			headerColor: 'green',
-			showSuggestedActions: true
+			showSuggestedActions: true,
+			checklist: result.checklist
 		});
 	}
 

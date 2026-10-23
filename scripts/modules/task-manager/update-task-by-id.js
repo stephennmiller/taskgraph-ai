@@ -1,6 +1,7 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
+	keepChecklistFields,
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '@tm/core';
@@ -406,6 +407,8 @@ async function updateTaskById(
 							metadata: originalSubtask.metadata
 						})
 					};
+					// The AI schema has no criteria either; keep the stored checklist
+					keepChecklistFields(correctedSubtask, originalSubtask);
 					currentSubtaskId++;
 					// Dependencies the AI added are inferred; earlier marks stay.
 					// Known limit: subtasks are renumbered above without remapping their
@@ -488,6 +491,10 @@ async function updateTaskById(
 				};
 			}
 			// --- End Preserve and Merge Metadata ---
+
+			// The AI schema has no acceptance criteria; keep the stored checklist
+			// so a rewrite can't drop criteria and with them the done gate
+			keepChecklistFields(updatedTask, taskToUpdate);
 
 			// --- Update Task Data (Keep existing) ---
 			data.tasks[taskIndex] = updatedTask;

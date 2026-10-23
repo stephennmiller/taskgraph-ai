@@ -11,34 +11,32 @@ import type {
 	IStorage,
 	LoadTasksOptions,
 	StorageStats,
+	TaskFieldUpdates,
+	UpdateStatusOptions,
 	UpdateStatusResult,
 	WatchEvent,
 	WatchOptions,
 	WatchSubscription
 } from '../../../../common/interfaces/storage.interface.js';
 import type {
+	Subtask,
 	Task,
 	TaskMetadata,
 	TaskStatus
 } from '../../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
+import {
+	type TaskClaim,
+	claimNextInTasks
+} from '../../../tasks/utils/claim.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
 import { applyTagUpdate, buildTagMetadata } from './tag-update.js';
 import { warnIfUnsupportedSchema } from './schema-version.js';
 import { TagOperations } from './tag-operations.js';
-
-/**
- * A missing task or subtask. Coded so callers can tell it apart from storage
- * failures; `userMessage` drops detail the ID already carries.
- */
-function taskNotFound(message: string, userMessage = message): TaskGraphError {
-	return new TaskGraphError(message, ERROR_CODES.TASK_NOT_FOUND, {
-		userMessage
-	});
-}
+import { modifyTaskIn, setTaskStatusIn, taskNotFound } from './task-updates.js';
 
 /**
  * File-based storage implementation using a single tasks.json file with separated concerns
@@ -408,144 +406,41 @@ export class FileStorage implements IStorage {
 	async updateTaskStatus(
 		taskId: string,
 		newStatus: TaskStatus,
-		tag?: string
+		tag?: string,
+		options: UpdateStatusOptions = {}
 	): Promise<UpdateStatusResult> {
+		return this.mutateTasks(tag, (tasks) =>
+			setTaskStatusIn(tasks, taskId, newStatus, options)
+		);
+	}
+
+	/**
+	 * Claim the next task nobody has started: set it in-progress and record
+	 * the claim, inside one read-modify-write under the file lock
+	 */
+	async claimNextTask(
+		claimant: string,
+		tag?: string
+	): Promise<TaskClaim | null> {
 		return this.mutateTasks(tag, (tasks) => {
-			// Check if this is a subtask (contains a dot)
-			if (taskId.includes('.')) {
-				return this.updateSubtaskStatusInFile(tasks, taskId, newStatus);
-			}
-
-			// Handle regular task update
-			const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
-
-			if (taskIndex === -1) {
-				throw taskNotFound(`Task ${taskId} not found`);
-			}
-
-			const oldStatus = tasks[taskIndex].status;
-			const result: UpdateStatusResult = {
-				success: true,
-				oldStatus,
-				newStatus,
-				taskId: String(taskId)
-			};
-			if (oldStatus === newStatus) {
-				return { tasks: null, result };
-			}
-
-			const updated = [...tasks];
-			updated[taskIndex] = {
-				...tasks[taskIndex],
-				status: newStatus,
-				updatedAt: new Date().toISOString()
-			};
-			return { tasks: updated, result };
+			const outcome = claimNextInTasks(tasks, claimant);
+			return outcome
+				? { tasks: outcome.tasks, result: outcome.claim }
+				: { tasks: null, result: null };
 		});
 	}
 
 	/**
-	 * Update subtask status within file storage - handles parent status auto-adjustment
+	 * Change one task or subtask in a single locked read-modify-write
 	 */
-	private updateSubtaskStatusInFile(
-		tasks: Task[],
-		subtaskId: string,
-		newStatus: TaskStatus
-	): { tasks: Task[] | null; result: UpdateStatusResult } {
-		const parts = subtaskId.split('.');
-		if (parts.length !== 2) {
-			throw new Error(
-				`Invalid subtask ID format: ${subtaskId}. Expected format: parentId.subtaskId`
-			);
-		}
-
-		const [parentId, subIdRaw] = parts;
-		const subId = subIdRaw.trim();
-		if (!/^\d+$/.test(subId)) {
-			throw new Error(
-				`Invalid subtask ID: ${subId}. Subtask ID must be a positive integer.`
-			);
-		}
-		const subtaskNumericId = Number(subId);
-
-		const parentTaskIndex = tasks.findIndex(
-			(t) => String(t.id) === String(parentId)
+	async modifyTask(
+		taskId: string,
+		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
+		tag?: string
+	): Promise<Task | Subtask> {
+		return this.mutateTasks<Task | Subtask>(tag, (tasks) =>
+			modifyTaskIn(tasks, taskId, change)
 		);
-
-		if (parentTaskIndex === -1) {
-			throw taskNotFound(
-				`Parent task ${parentId} not found`,
-				`Task ${parentId} not found`
-			);
-		}
-
-		const parentTask = {
-			...tasks[parentTaskIndex],
-			subtasks: [...(tasks[parentTaskIndex].subtasks ?? [])]
-		};
-
-		// Find the subtask within the parent task
-		const subtaskIndex = parentTask.subtasks.findIndex(
-			(st) => st.id === subtaskNumericId || String(st.id) === subId
-		);
-
-		if (subtaskIndex === -1) {
-			throw taskNotFound(
-				`Subtask ${subtaskId} not found in parent task ${parentId}`,
-				`Subtask ${subtaskId} not found`
-			);
-		}
-
-		const oldStatus = parentTask.subtasks[subtaskIndex].status || 'pending';
-		const result: UpdateStatusResult = {
-			success: true,
-			oldStatus,
-			newStatus,
-			taskId: subtaskId
-		};
-		if (oldStatus === newStatus) {
-			return { tasks: null, result };
-		}
-
-		const now = new Date().toISOString();
-
-		// Update the subtask status
-		parentTask.subtasks[subtaskIndex] = {
-			...parentTask.subtasks[subtaskIndex],
-			status: newStatus,
-			updatedAt: now
-		};
-
-		// Auto-adjust parent status based on subtask statuses
-		const subs = parentTask.subtasks;
-		let parentNewStatus = parentTask.status;
-		if (subs.length > 0) {
-			const norm = (s: any) => s.status || 'pending';
-			const isDoneLike = (s: any) => {
-				const st = norm(s);
-				return st === 'done' || st === 'completed';
-			};
-			const allDone = subs.every(isDoneLike);
-			const anyInProgress = subs.some((s) => norm(s) === 'in-progress');
-			const anyDone = subs.some(isDoneLike);
-			const allPending = subs.every((s) => norm(s) === 'pending');
-
-			if (allDone) parentNewStatus = 'done';
-			else if (anyInProgress || anyDone) parentNewStatus = 'in-progress';
-			else if (allPending) parentNewStatus = 'pending';
-		}
-
-		// Always bump updatedAt; update status only if changed
-		const updated = [...tasks];
-		updated[parentTaskIndex] = {
-			...parentTask,
-			...(parentNewStatus !== parentTask.status
-				? { status: parentNewStatus }
-				: {}),
-			updatedAt: now
-		};
-
-		return { tasks: updated, result };
 	}
 
 	/**

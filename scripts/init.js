@@ -30,6 +30,7 @@ import {
 } from '../src/utils/rule-transformer.js';
 import { updateConfigMaxTokens } from './modules/update-config-tokens.js';
 import { isSilentMode } from './modules/utils.js';
+import * as upstream from './modules/init-upstream-import.js';
 import { insideGitWorkTree } from './modules/utils/git-utils.js';
 
 // Import asset resolver
@@ -439,6 +440,7 @@ function copyTemplateFile(templateName, targetPath, replacements = {}) {
 // Main function to initialize a new project
 async function initializeProject(options = {}) {
 	// Receives options as argument
+	upstream.ensureUpstreamImportCanRun(options, process.cwd());
 	// Only display banner if not in silent mode
 	if (!isSilentMode()) {
 		displayBanner();
@@ -503,7 +505,7 @@ async function initializeProject(options = {}) {
 			true;
 
 		if (dryRun) {
-			displayDryRun(initGit, storeTasksInGit);
+			displayDryRun(initGit, storeTasksInGit, options);
 			return {
 				dryRun: true
 			};
@@ -633,7 +635,7 @@ async function initializeProject(options = {}) {
 
 			if (dryRun) {
 				rl.close();
-				displayDryRun(initGitPrompted, storeGitPrompted);
+				displayDryRun(initGitPrompted, storeGitPrompted, options);
 				return {
 					dryRun: true
 				};
@@ -849,10 +851,13 @@ async function createProjectStructure(
 	}
 	// =====================================
 
+	const imported = upstream.runUpstreamImport(targetDir, options, dryRun);
+
 	// === Add Model Configuration Step ===
 	// Interactive runs choose models now; --yes keeps the defaults, which the
-	// summary mentions. MCP clients set models with the `models` tool.
-	if (!isSilentMode() && !dryRun && !options?.yes) {
+	// summary mentions. An import brings its models. MCP clients set models
+	// with the `models` tool.
+	if (!isSilentMode() && !dryRun && !options?.yes && !imported) {
 		console.log('');
 		try {
 			// Run this same CLI rather than `npx taskgraph`, which can resolve
@@ -883,6 +888,10 @@ async function createProjectStructure(
 			before,
 			snapshotPaths(watched)
 		);
+		if (imported) {
+			upstream.printUpstreamImportSummary(imported, changes, TASKGRAPH_DIR);
+			return;
+		}
 		console.log(
 			`${ui.formatInitSummary({
 				folder: path.basename(targetDir),
@@ -899,12 +908,14 @@ async function createProjectStructure(
  * Say what init would do without doing it.
  * @param {boolean} initGit - Whether git init would run
  * @param {boolean} storeTasksInGit - Whether tasks would be committed
+ * @param {object} [options] - init's options, for the import flag
  */
-function displayDryRun(initGit, storeTasksInGit) {
+function displayDryRun(initGit, storeTasksInGit, options) {
 	if (isSilentMode()) return;
 	const lines = [
 		'Dry run; nothing was changed. Init would:',
 		`  create ${TASKGRAPH_DIR}/ with tasks, settings and PRD templates`,
+		...upstream.upstreamImportDryRunLines(options),
 		`  create or update ${GITIGNORE_FILE} and ${ENV_EXAMPLE_FILE}`
 	];
 	if (initGit !== false && !insideGitWorkTree()) {

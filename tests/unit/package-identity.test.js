@@ -52,6 +52,13 @@ const SOURCE_DIRS = [
 	'packages/tm-profiles/src'
 ];
 
+// The upstream importer (`init`'s import flag) has to name the old project's
+// folder and flag. It is the one source file allowed to, and every caller
+// goes through its constants.
+const ALLOWED_SOURCE_FILES = new Set([
+	'packages/tm-core/src/modules/migration/upstream-import.ts'
+]);
+
 const listSourceFiles = (dir) =>
 	fs
 		.readdirSync(path.join(rootDir, dir), { withFileTypes: true })
@@ -107,13 +114,15 @@ describe('package identity', () => {
 	});
 
 	test('source does not use the previous name', () => {
-		const offenders = SOURCE_DIRS.flatMap(listSourceFiles).flatMap((file) =>
-			read(file)
-				.split('\n')
-				.map((text, i) => ({ file, line: i + 1, text }))
-				.filter(({ text }) => PREVIOUS_NAME.test(text))
-				.map(({ file, line }) => `${file}:${line}`)
-		);
+		const offenders = SOURCE_DIRS.flatMap(listSourceFiles)
+			.filter((file) => !ALLOWED_SOURCE_FILES.has(file))
+			.flatMap((file) =>
+				read(file)
+					.split('\n')
+					.map((text, i) => ({ file, line: i + 1, text }))
+					.filter(({ text }) => PREVIOUS_NAME.test(text))
+					.map(({ file, line }) => `${file}:${line}`)
+			);
 
 		expect(offenders).toEqual([]);
 	});

@@ -4,14 +4,20 @@
  */
 
 import type {
+	Subtask,
 	Task,
 	TaskFilter,
 	TaskStatus
 } from '../../../common/types/index.js';
-import type { IStorage } from '../../../common/interfaces/storage.interface.js';
+import type {
+	IStorage,
+	TaskFieldUpdates,
+	UpdateStatusOptions
+} from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
 import { selectNextTask } from '../utils/next-task.js';
+import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
@@ -289,6 +295,31 @@ export class TaskService {
 	}
 
 	/**
+	 * Pick the next task nobody has started and set it in-progress in one
+	 * locked write, so two sessions claiming at once get different tasks
+	 * @param tag - Tag to claim from; the active tag when omitted
+	 * @param claimant - Recorded as `metadata.claimedBy`; the session ID or user
+	 *   name when omitted (see resolveClaimant)
+	 * @returns The claim, or null when no task is ready
+	 */
+	async claimNextTask(
+		tag?: string,
+		claimant?: string
+	): Promise<TaskClaim | null> {
+		if (!this.storage) {
+			throw new TaskGraphError(
+				'Storage not initialized',
+				ERROR_CODES.STORAGE_ERROR
+			);
+		}
+		const activeTag = tag || this.getActiveTag();
+		return this.storage.claimNextTask(
+			claimant?.trim() || resolveClaimant(),
+			activeTag
+		);
+	}
+
+	/**
 	 * Apply filters to task entities
 	 */
 	private applyFilters(tasks: TaskEntity[], filter: TaskFilter): TaskEntity[] {
@@ -430,12 +461,37 @@ export class TaskService {
 	}
 
 	/**
+	 * Change one task or subtask in a single locked read-modify-write
+	 */
+	async modifyTask(
+		taskId: string,
+		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
+		tag?: string
+	): Promise<Task | Subtask> {
+		if (!this.storage) {
+			throw new TaskGraphError(
+				'Storage not initialized',
+				ERROR_CODES.STORAGE_ERROR
+			);
+		}
+		if (!this.initialized) {
+			await this.initialize();
+		}
+		return this.storage.modifyTask(
+			String(taskId),
+			change,
+			tag || this.getActiveTag()
+		);
+	}
+
+	/**
 	 * Update task status - delegates to storage layer which handles storage-specific logic
 	 */
 	async updateTaskStatus(
 		taskId: string | number,
 		newStatus: TaskStatus,
-		tag?: string
+		tag?: string,
+		options?: UpdateStatusOptions
 	): Promise<{
 		success: boolean;
 		oldStatus: TaskStatus;
@@ -459,7 +515,8 @@ export class TaskService {
 			return await this.storage.updateTaskStatus(
 				taskIdStr,
 				newStatus,
-				activeTag
+				activeTag,
+				options
 			);
 		} catch (error) {
 			// Re-throw all TaskGraphErrors without wrapping
