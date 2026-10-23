@@ -52,6 +52,7 @@
 						"group": "Technical Capabilities",
 						"pages": [
 							"capabilities/mcp",
+							"capabilities/claude-code",
 							"capabilities/cli-root-commands",
 							"capabilities/task-structure",
 							"capabilities/dependency-graph",
