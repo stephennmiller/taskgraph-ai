@@ -58,4 +58,37 @@ describe('saveTasksToFile metadata', () => {
 		expect(saved.master.metadata.created).toBeDefined();
 		expect(saved.master.metadata).not.toHaveProperty('schemaVersion');
 	});
+
+	test('with null tasks, records the PRD hashes and keeps the tasks the file has now', () => {
+		// Another command added task 2 after parse-prd loaded the tasks
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({
+				master: {
+					tasks: [
+						{ id: 1, title: 'A' },
+						{ id: 2, title: 'Added meanwhile' }
+					],
+					metadata: { created: '2020-01-01T00:00:00.000Z' }
+				}
+			})
+		);
+
+		saveTasksToFile(tasksPath, null, 'master', logger, {
+			path: 'docs/prd.md',
+			snapshot: { overview: 'abc' }
+		});
+
+		const saved = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		expect(saved.master.tasks.map((task) => task.id)).toEqual([1, 2]);
+		expect(saved.master.metadata.prdSections).toEqual({
+			'docs/prd.md': { overview: 'abc' }
+		});
+	});
+
+	test('writes under the lock and leaves no temp or lock file behind', () => {
+		saveTasksToFile(tasksPath, [{ id: 1, title: 'T' }], 'master', logger);
+
+		expect(fs.readdirSync(dir)).toEqual(['tasks.json']);
+	});
 });

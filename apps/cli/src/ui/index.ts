@@ -76,6 +76,8 @@ export {
 	formatParsePrdSaved,
 	type ParsePrdSaved
 } from './formatters/parse-prd-formatters.js';
+// What parse-prd --append found changed in the PRD
+export { formatPrdDelta } from './formatters/prd-delta-formatters.js';
 
 // The line expand --all ends with
 export {

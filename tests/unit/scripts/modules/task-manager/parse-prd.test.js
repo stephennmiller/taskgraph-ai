@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
 vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	withFileLockSync: vi.fn((filepath, callback) => callback()),
 	readJSON: vi.fn(),
 	writeJSON: vi.fn(),
 	log: vi.fn(),
@@ -233,6 +234,8 @@ vi.doMock('fs', () => ({
 		existsSync: vi.fn(),
 		mkdirSync: vi.fn(),
 		writeFileSync: vi.fn(),
+		renameSync: vi.fn(),
+		unlinkSync: vi.fn(),
 		promises: {
 			readFile: vi.fn()
 		}
@@ -240,7 +243,9 @@ vi.doMock('fs', () => ({
 	readFileSync: vi.fn(),
 	existsSync: vi.fn(),
 	mkdirSync: vi.fn(),
-	writeFileSync: vi.fn()
+	writeFileSync: vi.fn(),
+	renameSync: vi.fn(),
+	unlinkSync: vi.fn()
 }));
 
 // Mock path module
@@ -513,12 +518,16 @@ describe('parsePRD', () => {
 
 		// Verify fs.writeFileSync was called with the correct arguments in tagged format
 		expect(fs.default.writeFileSync).toHaveBeenCalledWith(
-			'tasks/tasks.json',
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
 			expect.stringContaining('"master"')
+		);
+		expect(fs.default.renameSync).toHaveBeenCalledWith(
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
+			'tasks/tasks.json'
 		);
 
 		// Verify result
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			success: true,
 			tasksPath: 'tasks/tasks.json',
 			telemetryData: {}
@@ -638,7 +647,7 @@ describe('parsePRD', () => {
 
 		// Verify the file was written after force overwrite
 		expect(fs.default.writeFileSync).toHaveBeenCalledWith(
-			'tasks/tasks.json',
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
 			expect.stringContaining('"master"')
 		);
 	});
@@ -758,12 +767,12 @@ describe('parsePRD', () => {
 
 		// Verify the file was written with merged tasks in the correct tag
 		expect(fs.default.writeFileSync).toHaveBeenCalledWith(
-			'tasks/tasks.json',
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
 			expect.stringContaining('"master"')
 		);
 
 		// Verify the result contains merged tasks
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			success: true,
 			tasksPath: 'tasks/tasks.json',
 			telemetryData: {}
@@ -863,7 +872,7 @@ describe('parsePRD', () => {
 			expect(mockReportProgress).toHaveBeenCalled();
 
 			// Verify result structure
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}
@@ -944,7 +953,7 @@ describe('parsePRD', () => {
 			expect(generateObjectService).toHaveBeenCalled();
 
 			// Verify result structure (should succeed via fallback)
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}
@@ -977,7 +986,7 @@ describe('parsePRD', () => {
 			expect(streamObjectService).not.toHaveBeenCalled();
 
 			// Verify result structure
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}
@@ -1251,7 +1260,7 @@ describe('parsePRD', () => {
 				expect(generateObjectService).toHaveBeenCalled();
 
 				// Verify successful result despite streaming failure
-				expect(result).toEqual({
+				expect(result).toMatchObject({
 					success: true,
 					tasksPath: 'tasks/tasks.json',
 					telemetryData: {}
@@ -1456,7 +1465,7 @@ describe('parsePRD', () => {
 			});
 
 			// Verify it completed successfully
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}

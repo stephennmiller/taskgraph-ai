@@ -16,6 +16,18 @@ export function buildTagMetadata(tasks: Task[], tag: string): TaskMetadata {
 	};
 }
 
+/**
+ * The tag's new metadata over what it had, so keys other writers keep there
+ * (`created`, `description`, parse-prd's `prdSections`) survive a save
+ */
+function mergeTagMetadata(
+	metadata: TaskMetadata,
+	existing: TaskMetadata | null | undefined
+): TaskMetadata & { schemaVersion: number } {
+	const kept = existing && typeof existing === 'object' ? existing : {};
+	return withSchemaVersion({ ...kept, ...metadata }, existing);
+}
+
 /** Put `tasks` under `resolvedTag` in the parsed file contents */
 export function applyTagUpdate(
 	formatHandler: FormatHandler,
@@ -35,7 +47,7 @@ export function applyTagUpdate(
 		// Legacy format - update/add the tag
 		existingData[resolvedTag] = {
 			tasks: normalizedTasks,
-			metadata: withSchemaVersion(metadata, existingData[resolvedTag]?.metadata)
+			metadata: mergeTagMetadata(metadata, existingData[resolvedTag]?.metadata)
 		};
 		return existingData;
 	}
@@ -43,7 +55,7 @@ export function applyTagUpdate(
 		// Standard format for master tag
 		return {
 			tasks: normalizedTasks,
-			metadata: withSchemaVersion(metadata, existingData.metadata)
+			metadata: mergeTagMetadata(metadata, existingData.metadata)
 		};
 	}
 	// Convert to legacy format when adding non-master tags

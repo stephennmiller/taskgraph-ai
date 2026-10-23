@@ -140,8 +140,13 @@ The `metadata` field allows you to store arbitrary custom data on tasks without 
 `parse-prd` records the PRD section each task implements in `metadata.source`: the PRD's path relative to the project root, then the heading's anchor as GitHub would write it.
 
 ```json
-"metadata": { "source": "docs/prd.md#authentication" }
+"metadata": {
+  "source": "docs/prd.md#authentication",
+  "sourceHash": "3f9a1c0e5b7d2a64"
+}
 ```
+
+`sourceHash` is a hash of that section's text when the task was made. The tag's own metadata keeps the hash of every section of the PRD (`prdSections`), so `parse-prd --append` can tell which sections are new, changed or removed since the last parse.
 
 The AI is given the PRD's headings and picks one per task; an answer that matches no heading is dropped rather than stored. `expand` copies the source to each new subtask. `taskgraph show` prints it under the status line, and `taskgraph validate-dependencies` uses it to list PRD sections that have no task (see [CLI commands](/capabilities/cli-root-commands)).
 
@@ -149,7 +154,7 @@ The AI is given the PRD's headings and picks one per task; an answer that matche
 
 | Operation        | Metadata Behavior                                            |
 | ---------------- | ------------------------------------------------------------ |
-| `parse-prd`      | New tasks get `source`, the PRD section they came from       |
+| `parse-prd`      | New tasks get `source` and `sourceHash`, the PRD section they came from |
 | `update-task`    | Existing metadata is preserved unless explicitly changed     |
 | `expand`         | Parent task metadata is preserved; subtasks inherit `source` only |
 | `update-subtask` | Subtask metadata is preserved                                |

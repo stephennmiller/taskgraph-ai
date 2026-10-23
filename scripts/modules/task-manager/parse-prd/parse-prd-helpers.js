@@ -4,10 +4,12 @@
 
 import { ui } from '@tm/cli';
 import {
+	PRD_SNAPSHOT_KEY,
 	assignMetadata,
 	formatPrdSectionList,
-	prdSourceFor,
-	reconcileDependencySources
+	prdSourceMetadata,
+	reconcileDependencySources,
+	withPrdSnapshot
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -17,7 +19,11 @@ import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getDefaultPriority } from '../../config-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
-import { ensureTagMetadata, findTaskById } from '../../utils.js';
+import {
+	ensureTagMetadata,
+	findTaskById,
+	withFileLockSync
+} from '../../utils.js';
 import { prdResponseSchema } from './parse-prd-config.js';
 
 /**
@@ -98,13 +104,16 @@ export function readPrdContent(prdPath) {
  * Load existing tasks from file
  * @param {string} tasksPath - Path to tasks file
  * @param {string} targetTag - Target tag to load from
- * @returns {{tasks: Array, nextId: number}} Existing tasks and next ID
+ * @returns {{existingTasks: Array, nextId: number, tagMetadata: Object}}
+ *   Existing tasks, the next ID and the tag's metadata (which holds the PRD
+ *   section hashes of the last parse)
  */
 export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
 	let nextId = 1;
 
 	const allData = readExistingTasksFile(tasksPath);
+	const tagMetadata = allData[targetTag]?.metadata || {};
 
 	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
 		existingTasks = allData[targetTag].tasks;
@@ -113,7 +122,7 @@ export function loadExistingTasks(tasksPath, targetTag) {
 		}
 	}
 
-	return { existingTasks, nextId };
+	return { existingTasks, nextId, tagMetadata };
 }
 
 /**
@@ -169,7 +178,8 @@ export function validateFileOperations({
 	if (append) {
 		logger.report(
 			`Append mode enabled. Found ${existingTasks.length} existing tasks in tag '${targetTag}'.`,
-			'info'
+			// The PRD change lines and the saved line say what --append did
+			'debug'
 		);
 		return;
 	}
@@ -219,12 +229,15 @@ export function processTasks(
 	const processedTasks = rawTasks.map(({ section, ...task }) => {
 		const newId = currentId++;
 		taskMap.set(task.id, newId);
-		// Only a section the PRD has; an invented slug would point nowhere
-		const source = prd ? prdSourceFor(section, prd.sections, prd.path) : null;
+		// Only a section the PRD has; an invented slug would point nowhere.
+		// The section's hash lets a later --append tell whether it changed
+		const source = prd
+			? prdSourceMetadata(section, prd.sections, prd.path)
+			: undefined;
 
 		return {
 			...task,
-			...(source ? { metadata: { ...task.metadata, source } } : {}),
+			...(source ? { metadata: { ...task.metadata, ...source } } : {}),
 			id: newId,
 			status: task.status || 'pending',
 			priority: task.priority || defaultPriority,
@@ -294,47 +307,86 @@ function validateSequentialTaskIds(rawTasks, expectedStartId = 1) {
 }
 
 /**
- * Save tasks to file with tag support
+ * Save tasks to file with tag support. The read-modify-write runs under the
+ * tasks file lock and the file is replaced atomically, so a concurrent
+ * writer's other tags aren't lost and a crash can't leave half a file.
  * @param {string} tasksPath - Path to save tasks
- * @param {Array} tasks - Tasks to save
+ * @param {Array|null} tasks - Tasks to save, or null to keep the tag's tasks
+ *   as they are in the file now (only the metadata changes)
  * @param {string} targetTag - Target tag
  * @param {Object} logger - Logger instance
+ * @param {{path: string, snapshot: Object, replace?: boolean}} [prdSnapshot] -
+ *   The PRD's section hashes, recorded in the tag so the next --append can
+ *   tell what changed. With replace, other PRDs' hashes are dropped: their
+ *   tasks were just replaced
  */
-export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
+export function saveTasksToFile(
+	tasksPath,
+	tasks,
+	targetTag,
+	logger,
+	prdSnapshot
+) {
 	// Create directory if it doesn't exist
 	const tasksDir = path.dirname(tasksPath);
 	if (!fs.existsSync(tasksDir)) {
 		fs.mkdirSync(tasksDir, { recursive: true });
 	}
 
-	// Read existing file to preserve other tags
-	const outputData = readExistingTasksFile(tasksPath);
+	const saved = withFileLockSync(
+		tasksPath,
+		() => {
+			// Read existing file to preserve other tags
+			const outputData = readExistingTasksFile(tasksPath);
+			const current = outputData[targetTag];
+			const tagTasks =
+				tasks ?? (Array.isArray(current?.tasks) ? current.tasks : []);
 
-	// Update only the target tag
-	outputData[targetTag] = {
-		tasks: tasks,
-		metadata: {
-			// Keep what the tag already records (schemaVersion, counts, ...)
-			...outputData[targetTag]?.metadata,
-			created:
-				outputData[targetTag]?.metadata?.created || new Date().toISOString(),
-			updated: new Date().toISOString(),
-			description: `Tasks for ${targetTag} context`
-		}
-	};
+			// Update only the target tag
+			outputData[targetTag] = {
+				tasks: tagTasks,
+				metadata: {
+					// Keep what the tag already records (schemaVersion, counts, ...)
+					...current?.metadata,
+					created: current?.metadata?.created || new Date().toISOString(),
+					updated: new Date().toISOString(),
+					description: `Tasks for ${targetTag} context`,
+					...(prdSnapshot
+						? {
+								[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
+									prdSnapshot.replace ? {} : current?.metadata,
+									prdSnapshot.path,
+									prdSnapshot.snapshot
+								)
+							}
+						: {})
+				}
+			};
 
-	// Ensure proper metadata
-	ensureTagMetadata(outputData[targetTag], {
-		description: `Tasks for ${targetTag} context`
-	});
+			// Ensure proper metadata
+			ensureTagMetadata(outputData[targetTag], {
+				description: `Tasks for ${targetTag} context`
+			});
 
-	// Write back to file
-	fs.writeFileSync(tasksPath, JSON.stringify(outputData, null, 2));
-
-	logger.report(
-		`Successfully saved ${tasks.length} tasks to ${tasksPath}`,
-		'debug'
+			// Write to a temp file and rename it over the tasks file
+			const tempPath = `${tasksPath}.tmp.${process.pid}`;
+			try {
+				fs.writeFileSync(tempPath, JSON.stringify(outputData, null, 2));
+				fs.renameSync(tempPath, tasksPath);
+			} catch (error) {
+				try {
+					if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+				} catch {
+					// The write error is the one to report
+				}
+				throw error;
+			}
+			return tagTasks.length;
+		},
+		{ createIfMissing: true }
 	);
+
+	logger.report(`Successfully saved ${saved} tasks to ${tasksPath}`, 'debug');
 }
 
 /**
@@ -343,16 +395,26 @@ export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
  * @param {string} prdContent - PRD content
  * @param {number} nextId - Next task ID
  * @param {{sections: Array}} [prd] - The PRD's headings, for tasks to cite
+ * @param {{numTasks?: number, newSectionsOnly?: boolean}} [options] -
+ *   With newSectionsOnly, prdContent holds only the sections added since the
+ *   last parse, and numTasks (0: the model decides) replaces config.numTasks
  * @returns {Promise<{systemPrompt: string, userPrompt: string}>}
  */
-export async function buildPrompts(config, prdContent, nextId, prd) {
+export async function buildPrompts(
+	config,
+	prdContent,
+	nextId,
+	prd,
+	options = {}
+) {
 	const promptManager = getPromptManager();
 	const defaultTaskPriority =
 		getDefaultPriority(config.projectRoot) || 'medium';
 
 	return promptManager.loadPrompt('parse-prd', {
 		research: config.research,
-		numTasks: config.numTasks,
+		numTasks: options.numTasks ?? config.numTasks,
+		newSectionsOnly: Boolean(options.newSectionsOnly),
 		nextId,
 		prdContent,
 		prdPath: config.prdPath,

@@ -63,7 +63,9 @@ export function registerParsePRDTool(server) {
 			append: z
 				.boolean()
 				.optional()
-				.describe('Append generated tasks to existing file.')
+				.describe(
+					'Append generated tasks to existing file. For a PRD parsed before, only sections added since then get tasks; changed and removed sections are listed in prdChanges, and an unchanged PRD adds nothing.'
+				)
 		}),
 		annotations: {
 			title: 'Parse PRD',
