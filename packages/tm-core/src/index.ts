@@ -282,6 +282,9 @@ export {
 // An AI rewrite keeps the stored fields its schema has no place for
 export { keepStoredFields } from './modules/tasks/utils/index.js';
 
+// A subtask that becomes a task gets a description it can load with
+export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
+
 // Acceptance criteria and the Definition of Done
 export {
 	normalizeAcceptanceCriteria,

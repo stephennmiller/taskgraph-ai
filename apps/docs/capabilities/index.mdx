@@ -41,7 +41,7 @@ The CLI is organized into a series of commands, each with its own set of options
     -   `--ids <ids>`: A comma-separated list of task or subtask IDs to remove.
 -   **`remove-subtask`**: Removes a subtask from its parent.
     -   `--id <subtaskId>`: The ID of the subtask to remove (in the format `parentId.subtaskId`).
-    -   `--convert-to-task`: Converts the subtask to a standalone task.
+    -   `--convert`: Keeps the subtask as a standalone task. A subtask with no description takes its title as the description.
 -   **`update`**: Updates multiple tasks starting from a specific ID.
     -   `--from <fromId>`: The ID of the task to start updating from.
     -   `--prompt <prompt>`: The new context to apply to the tasks.
