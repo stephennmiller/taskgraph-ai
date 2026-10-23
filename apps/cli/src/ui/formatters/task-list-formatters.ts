@@ -27,6 +27,7 @@
  */
 
 import {
+	type InvalidDependency,
 	type Task,
 	fullSubtaskId,
 	isTaskComplete,
@@ -343,7 +344,7 @@ interface PlainRow {
  * become single spaces (so `a\rb` stays two words), then escape sequences
  * and control characters are removed
  */
-const oneLine = (text: unknown) =>
+export const oneLine = (text: unknown) =>
 	terminalSafe(String(text ?? '').replace(/\s+/g, ' '))
 		.replace(/ {2,}/g, ' ')
 		.trim();
@@ -409,4 +410,43 @@ export function formatPlainTaskList(
 			].join('  ')
 		)
 		.join('\n');
+}
+
+/** How many invalid dependencies the warning names before `...and N more` */
+const INVALID_DEPENDENCIES_SHOWN = 5;
+
+/**
+ * The warning `list` prints on stderr for dependencies on tasks that don't
+ * exist. The IDs and tag come from the task file, so each goes through
+ * oneLine, as in the plain lines (#366):
+ *
+ *   Warning: 1 invalid dependency reference(s) found:
+ *     Task 3 depends on non-existent task 9
+ *   Run taskgraph fix-dependencies to remove them
+ *
+ * @param invalidDependencies - From `buildBlocksMap`; must not be empty
+ * @param tagName - The tag, named when listing every tag
+ */
+export function formatInvalidDependencyWarning(
+	invalidDependencies: InvalidDependency[],
+	tagName?: string
+): string {
+	const tag = tagName === undefined ? undefined : oneLine(tagName);
+	const tagContext = tag === undefined ? '' : ` (tag: ${tag})`;
+	const fix = `taskgraph fix-dependencies${tag === undefined ? '' : ` --tag ${tag}`}`;
+	const more = invalidDependencies.length - INVALID_DEPENDENCIES_SHOWN;
+	return [
+		chalk.yellow(
+			`\nWarning: ${invalidDependencies.length} invalid dependency reference(s) found${tagContext}:`
+		),
+		...invalidDependencies
+			.slice(0, INVALID_DEPENDENCIES_SHOWN)
+			.map(({ taskId, depId }) =>
+				theme.muted(
+					`  Task ${oneLine(taskId)} depends on non-existent task ${oneLine(depId)}`
+				)
+			),
+		...(more > 0 ? [theme.muted(`  ...and ${more} more`)] : []),
+		`Run ${fix} to remove them`
+	].join('\n');
 }

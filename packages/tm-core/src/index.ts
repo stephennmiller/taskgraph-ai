@@ -197,6 +197,7 @@ export {
 	buildBlocksMap,
 	filterReadyTasks,
 	filterBlockingTasks,
+	filterByStatus,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
 	readTagNamesSync,
