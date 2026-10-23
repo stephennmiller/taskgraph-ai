@@ -66,6 +66,26 @@ describe('TaskLoaderService.loadAndValidateTask', () => {
 
 		expect(result.errorType).toBe('circular_dependencies');
 	});
+
+	it('accepts a subtask with an empty or missing description', async () => {
+		const empty = { ...sub(1), description: '' };
+		const missing = { ...sub(2), description: undefined } as unknown as Subtask;
+
+		const result = await loaderFor(
+			parent([empty, missing])
+		).loadAndValidateTask('5');
+
+		expect(result.success).toBe(true);
+	});
+
+	it('still rejects a subtask with no title', async () => {
+		const result = await loaderFor(
+			parent([{ ...sub(1), title: '' }])
+		).loadAndValidateTask('5');
+
+		expect(result.errorType).toBe('invalid_structure');
+		expect(result.errorMessage).toBe('Subtask 5.1 has no title');
+	});
 });
 
 describe('TaskLoaderService.getExecutionOrder', () => {

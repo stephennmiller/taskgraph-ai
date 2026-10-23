@@ -209,14 +209,14 @@ export class TaskLoaderService {
 	 */
 	private validateSubtaskStructure(task: Task): TaskValidationResult {
 		for (const subtask of task.subtasks) {
-			// Check required fields
-			if (!subtask.title || !subtask.description) {
+			// A title is required; a description is optional, as everywhere else
+			if (!subtask.title) {
 				return {
 					success: false,
 					errorType: 'invalid_structure',
-					errorMessage: `Subtask ${task.id}.${subtask.id} is missing required fields`,
+					errorMessage: `Subtask ${task.id}.${subtask.id} has no title`,
 					suggestion:
-						'Subtasks must have title and description. Re-expand the task or manually fix the subtask structure.'
+						'Give the subtask a title, or re-expand the task to regenerate its subtasks.'
 				};
 			}
 
