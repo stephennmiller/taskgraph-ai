@@ -5,6 +5,7 @@
  */
 
 import path from 'node:path';
+import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
 import { LoopError } from '../loop-task.js';
 
 /** Upper bound on `--parallel`: each task is a full Claude Code session */
@@ -104,7 +105,7 @@ export function taskBranchName(id: string): string {
 
 /** Where task worktrees and their logs live, under the project */
 export function worktreesDir(projectRoot: string): string {
-	return path.join(projectRoot, '.taskgraph', 'worktrees');
+	return path.join(projectRoot, TASKGRAPH_WORKTREES_DIR);
 }
 
 /** `.taskgraph/worktrees/task-<id>` */

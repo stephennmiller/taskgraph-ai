@@ -3,20 +3,11 @@
  * Utility functions for TaskGraph CLI integration
  */
 
-import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { namedProjectRoot } from '@tm/core';
 import packageJson from '../../../package.json' with { type: 'json' };
 import { getCurrentTag } from '../../../scripts/modules/utils.js';
-
-// Import path utilities to ensure consistent path resolution
-import {
-	PROJECT_MARKERS,
-	lastFoundProjectRoot
-} from '../core/utils/path-utils.js';
-
-const __filename = fileURLToPath(import.meta.url);
 
 // Cache for version info to avoid repeated file reads
 let cachedVersionInfo = null;
@@ -95,74 +86,6 @@ function getTagInfo(projectRoot, log) {
 		log.warn(`Error getting tag information: ${error.message}`);
 		return { currentTag: 'master', availableTags: ['master'] };
 	}
-}
-
-/**
- * Get normalized project root path
- * @param {string|undefined} projectRootRaw - Raw project root from arguments
- * @param {Object} log - Logger object
- * @returns {string} - Normalized absolute path to project root
- */
-function getProjectRoot(projectRootRaw, log) {
-	// PRECEDENCE ORDER:
-	// 1. Environment variable override (TASKGRAPH_PROJECT_ROOT)
-	// 2. Explicitly provided projectRoot in args
-	// 3. Previously found/cached project root
-	// 4. Current directory if it has project markers
-	// 5. Current directory with warning
-
-	// 1. Check for environment variable override
-	if (process.env.TASKGRAPH_PROJECT_ROOT) {
-		const envRoot = process.env.TASKGRAPH_PROJECT_ROOT;
-		const absolutePath = path.isAbsolute(envRoot)
-			? envRoot
-			: path.resolve(process.cwd(), envRoot);
-		log.info(
-			`Using project root from TASKGRAPH_PROJECT_ROOT environment variable: ${absolutePath}`
-		);
-		return absolutePath;
-	}
-
-	// 2. If project root is explicitly provided, use it
-	if (projectRootRaw) {
-		const absolutePath = path.isAbsolute(projectRootRaw)
-			? projectRootRaw
-			: path.resolve(process.cwd(), projectRootRaw);
-
-		log.info(`Using explicitly provided project root: ${absolutePath}`);
-		return absolutePath;
-	}
-
-	// 3. If we have a last found project root from a tasks.json search, use that for consistency
-	if (lastFoundProjectRoot) {
-		log.info(
-			`Using last known project root where tasks.json was found: ${lastFoundProjectRoot}`
-		);
-		return lastFoundProjectRoot;
-	}
-
-	// 4. Check if the current directory has any indicators of being a taskgraph project
-	const currentDir = process.cwd();
-	if (
-		PROJECT_MARKERS.some((marker) => {
-			const markerPath = path.join(currentDir, marker);
-			return fs.existsSync(markerPath);
-		})
-	) {
-		log.info(
-			`Using current directory as project root (found project markers): ${currentDir}`
-		);
-		return currentDir;
-	}
-
-	// 5. Default to current working directory but warn the user
-	log.warn(
-		`No taskgraph project detected in current directory. Using ${currentDir} as project root.`
-	);
-	log.warn(
-		'Consider using --project-root to specify the correct project location or set TASKGRAPH_PROJECT_ROOT environment variable.'
-	);
-	return currentDir;
 }
 
 /**
@@ -320,87 +243,6 @@ async function handleApiResult(
 	}
 
 	return createContentResponse(responsePayload);
-}
-
-/**
- * Executes a taskgraph CLI command synchronously.
- * @param {string} command - The command to execute (e.g., 'add-task')
- * @param {Object} log - Logger instance
- * @param {Array} args - Arguments for the command
- * @param {string|undefined} projectRootRaw - Optional raw project root path (will be normalized internally)
- * @param {Object|null} customEnv - Optional object containing environment variables to pass to the child process
- * @returns {Object} - The result of the command execution
- */
-function executeTaskGraphCommand(
-	command,
-	log,
-	args = [],
-	projectRootRaw = null,
-	customEnv = null // Changed from session to customEnv
-) {
-	try {
-		// Normalize project root internally using the getProjectRoot utility
-		const cwd = getProjectRoot(projectRootRaw, log);
-
-		log.info(
-			`Executing taskgraph ${command} with args: ${JSON.stringify(
-				args
-			)} in directory: ${cwd}`
-		);
-
-		// Prepare full arguments array
-		const fullArgs = [command, ...args];
-
-		// Common options for spawn
-		const spawnOptions = {
-			encoding: 'utf8',
-			cwd: cwd,
-			// Merge process.env with customEnv, giving precedence to customEnv
-			env: { ...process.env, ...(customEnv || {}) }
-		};
-
-		// Log the environment being passed (optional, for debugging)
-		// log.info(`Spawn options env: ${JSON.stringify(spawnOptions.env)}`);
-
-		// Execute the command using the global taskgraph CLI or local script
-		// Try the global CLI first
-		let result = spawnSync('taskgraph', fullArgs, spawnOptions);
-
-		// If global CLI is not available, try fallback to the local script
-		if (result.error && result.error.code === 'ENOENT') {
-			log.info('Global taskgraph not found, falling back to local script');
-			// Pass the same spawnOptions (including env) to the fallback
-			result = spawnSync('node', ['scripts/dev.js', ...fullArgs], spawnOptions);
-		}
-
-		if (result.error) {
-			throw new Error(`Command execution error: ${result.error.message}`);
-		}
-
-		if (result.status !== 0) {
-			// Improve error handling by combining stderr and stdout if stderr is empty
-			const errorOutput = result.stderr
-				? result.stderr.trim()
-				: result.stdout
-					? result.stdout.trim()
-					: 'Unknown error';
-			throw new Error(
-				`Command failed with exit code ${result.status}: ${errorOutput}`
-			);
-		}
-
-		return {
-			success: true,
-			stdout: result.stdout,
-			stderr: result.stderr
-		};
-	} catch (error) {
-		log.error(`Error executing taskgraph command: ${error.message}`);
-		return {
-			success: false,
-			error: error.message
-		};
-	}
 }
 
 /**
@@ -608,33 +450,12 @@ function normalizeProjectRoot(rawPath, log) {
 }
 
 /**
- * Extracts the raw project root path from the session (without normalization).
- * Used as a fallback within the HOF.
- * @param {Object} session - The MCP session object.
- * @param {Object} log - The MCP logger object.
- * @returns {string|null} The raw path string or null.
- */
-function getRawProjectRootFromSession(session, log) {
-	try {
-		// Check primary location
-		if (session?.roots?.[0]?.uri) {
-			return session.roots[0].uri;
-		}
-		// Check alternate location
-		else if (session?.roots?.roots?.[0]?.uri) {
-			return session.roots.roots[0].uri;
-		}
-		return null; // Not found in expected session locations
-	} catch (e) {
-		log.error(`Error accessing session roots: ${e.message}`);
-		return null;
-	}
-}
-
-/**
  * Higher-order function to wrap MCP tool execute methods.
- * Ensures args.projectRoot is present and normalized before execution.
- * Uses TASKGRAPH_PROJECT_ROOT environment variable with proper precedence.
+ * Ensures args.projectRoot is present and normalized before execution, in the
+ * order the CLI uses (namedProjectRoot in @tm/core):
+ * 1. args.projectRoot (explicitly provided)
+ * 2. TASKGRAPH_PROJECT_ROOT, from process.env or else the session's env
+ * 3. the session's root folder (getProjectRootFromSession)
  * @param {Function} executeFn - The original async execute(args, context) function.
  * @returns {Function} The wrapped async execute function.
  */
@@ -642,48 +463,14 @@ function withNormalizedProjectRoot(executeFn) {
 	return async (args, context) => {
 		const { log, session } = context;
 		let normalizedRoot = null;
-		let rootSource = 'unknown';
 
 		try {
-			// PRECEDENCE ORDER:
-			// 1. TASKGRAPH_PROJECT_ROOT environment variable (from process.env or session)
-			// 2. args.projectRoot (explicitly provided)
-			// 3. Session-based project root resolution
-			// 4. Current directory fallback
-
-			// 1. Check for TASKGRAPH_PROJECT_ROOT environment variable first
-			if (process.env.TASKGRAPH_PROJECT_ROOT) {
-				const envRoot = process.env.TASKGRAPH_PROJECT_ROOT;
-				normalizedRoot = path.isAbsolute(envRoot)
-					? envRoot
-					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASKGRAPH_PROJECT_ROOT environment variable';
-				log.info(`Using project root from ${rootSource}: ${normalizedRoot}`);
-			}
-			// Also check session environment variables for TASKGRAPH_PROJECT_ROOT
-			else if (session?.env?.TASKGRAPH_PROJECT_ROOT) {
-				const envRoot = session.env.TASKGRAPH_PROJECT_ROOT;
-				normalizedRoot = path.isAbsolute(envRoot)
-					? envRoot
-					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASKGRAPH_PROJECT_ROOT session environment variable';
-				log.info(`Using project root from ${rootSource}: ${normalizedRoot}`);
-			}
-			// 2. If no environment variable, try args.projectRoot
-			else if (args.projectRoot) {
-				normalizedRoot = normalizeProjectRoot(args.projectRoot, log);
-				rootSource = 'args.projectRoot';
-				log.info(`Using project root from ${rootSource}: ${normalizedRoot}`);
-			}
-			// 3. If no args.projectRoot, try session-based resolution
-			else {
-				const sessionRoot = getProjectRootFromSession(session, log);
-				if (sessionRoot) {
-					normalizedRoot = sessionRoot; // getProjectRootFromSession already normalizes
-					rootSource = 'session';
-					log.info(`Using project root from ${rootSource}: ${normalizedRoot}`);
-				}
-			}
+			normalizedRoot =
+				namedProjectRoot(
+					normalizeProjectRoot(args.projectRoot, log) ?? undefined,
+					process.env,
+					session?.env
+				) ?? getProjectRootFromSession(session, log);
 
 			if (!normalizedRoot) {
 				log.error(
@@ -693,6 +480,7 @@ function withNormalizedProjectRoot(executeFn) {
 					'Could not determine project root. Please provide projectRoot argument or ensure TASKGRAPH_PROJECT_ROOT environment variable is set.'
 				);
 			}
+			log.info(`Using project root: ${normalizedRoot}`);
 
 			// Inject the normalized root back into args
 			const updatedArgs = { ...args, projectRoot: normalizedRoot };
@@ -786,17 +574,14 @@ function checkProgressCapability(reportProgress, log) {
 
 // Ensure all functions are exported
 export {
-	getProjectRoot,
 	getProjectRootFromSession,
 	getTagInfo,
 	handleApiResult,
-	executeTaskGraphCommand,
 	processMCPResponseData,
 	createContentResponse,
 	createErrorResponse,
 	createLogWrapper,
 	normalizeProjectRoot,
-	getRawProjectRootFromSession,
 	withNormalizedProjectRoot,
 	checkProgressCapability
 };

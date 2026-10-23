@@ -52,6 +52,7 @@ export {
 	PROJECT_ROOT_ENV,
 	findProjectRoot,
 	isTaskGraphProject,
+	namedProjectRoot,
 	normalizeProjectRoot,
 	resolveProjectRoot
 } from './project-root-finder.js';

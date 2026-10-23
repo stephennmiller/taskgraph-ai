@@ -116,8 +116,8 @@ once per scenario, because a renamed parameter breaks clients.
   as its text only when it has a single text part; anything else is compared
   whole.
 - **Environment**: the same isolated `HOME` and fake `claude` as CLI steps.
-  `TASKGRAPH_PROJECT_ROOT` is removed from the environment, because the
-  server prefers it over a tool's `projectRoot`.
+  `TASKGRAPH_PROJECT_ROOT` is removed from the environment, because servers
+  built before #339 prefer it over a tool's `projectRoot`.
 - **Masked in replies**: the top-level `version` field and the
   `Version:`/`Name:` footer of plain-text error replies. (Locale dates such as
   `10/22/2026`, written by tag copy, are masked in every file and reply.) Everything else, including `data.message` and tips

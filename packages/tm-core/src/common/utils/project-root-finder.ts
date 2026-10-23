@@ -5,8 +5,10 @@ import {
 	PROJECT_BOUNDARY_MARKERS,
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_PROJECT_MARKERS,
-	TASKGRAPH_TASKS_FILE
+	TASKGRAPH_TASKS_FILE,
+	TASKGRAPH_WORKTREES_DIR
 } from '../constants/paths.js';
+import { isWithin } from '../../modules/migration/import-paths.js';
 
 function markerExists(dir: string, marker: string): boolean {
 	try {
@@ -105,19 +107,44 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
 export const PROJECT_ROOT_ENV = 'TASKGRAPH_PROJECT_ROOT';
 
 /**
- * The project a command works on, as an absolute path: `explicit` (a
- * `--project` flag) when given, else TASKGRAPH_PROJECT_ROOT when set, else
- * the root found from the current directory (see findProjectRoot). Relative
- * paths resolve against the current directory.
+ * The project named by `explicit` (a `--project` flag or an MCP tool's
+ * `projectRoot`) when given, else by TASKGRAPH_PROJECT_ROOT in the first of
+ * `envs` that sets it, as an absolute path; undefined when neither names one.
+ * Relative paths resolve against the current directory, and a blank variable
+ * counts as unset. The CLI and both MCP servers use this order, so an explicit
+ * path wins over the variable.
+ *
+ * One exception: an explicit path inside the variable's project's
+ * `.taskgraph/worktrees` is a `loop --parallel` task worktree, and gives the
+ * variable's project. MCP tools require `projectRoot`, so Claude Code in a
+ * task worktree passes the worktree, and the task's status belongs in the
+ * main project.
+ */
+export function namedProjectRoot(
+	explicit?: string,
+	...envs: Array<Record<string, string | undefined> | undefined>
+): string | undefined {
+	const fromEnv = envs
+		.map((env) => env?.[PROJECT_ROOT_ENV]?.trim())
+		.find(Boolean);
+	const envRoot = fromEnv ? path.resolve(fromEnv) : undefined;
+	if (!explicit) return envRoot;
+	const root = path.resolve(explicit);
+	return envRoot && isWithin(path.join(envRoot, TASKGRAPH_WORKTREES_DIR), root)
+		? envRoot
+		: root;
+}
+
+/**
+ * The project a command works on, as an absolute path: the one
+ * namedProjectRoot gives for `explicit` and `env`, else the root found from
+ * the current directory (see findProjectRoot).
  */
 export function resolveProjectRoot(
 	explicit?: string,
 	env: NodeJS.ProcessEnv = process.env
 ): string {
-	if (explicit) return path.resolve(explicit);
-	const fromEnv = env[PROJECT_ROOT_ENV]?.trim();
-	if (fromEnv) return path.resolve(fromEnv);
-	return findProjectRoot();
+	return namedProjectRoot(explicit, env) ?? findProjectRoot();
 }
 
 /**

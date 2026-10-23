@@ -33,15 +33,3 @@ export const GITIGNORE_FILE = '.gitignore';
 // Task file naming pattern
 export const TASK_FILE_PREFIX = 'task_';
 export const TASK_FILE_EXTENSION = '.txt';
-
-/**
- * Project markers used to identify a taskgraph project root
- * These files/directories indicate that a directory is a TaskGraph project
- */
-export const PROJECT_MARKERS = [
-	'.taskgraph', // TaskGraph data directory
-	'tasks.json', // Generic tasks file
-	TASKGRAPH_TASKS_FILE, // .taskgraph/tasks/tasks.json
-	'.git', // Git repository
-	'.svn' // SVN repository
-];

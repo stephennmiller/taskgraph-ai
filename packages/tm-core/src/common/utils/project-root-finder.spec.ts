@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	findProjectRoot,
 	isTaskGraphProject,
+	namedProjectRoot,
 	normalizeProjectRoot,
 	resolveProjectRoot
 } from './project-root-finder.js';
@@ -429,5 +430,58 @@ describe('resolveProjectRoot', () => {
 		expect(
 			resolveProjectRoot(undefined, { TASKGRAPH_PROJECT_ROOT: '  ' })
 		).toBe(here);
+	});
+});
+
+describe('namedProjectRoot', () => {
+	const main = path.resolve('/projects/main');
+	const other = path.resolve('/projects/other');
+
+	it('takes an explicit path over TASKGRAPH_PROJECT_ROOT', () => {
+		expect(namedProjectRoot(other, { TASKGRAPH_PROJECT_ROOT: main })).toBe(
+			other
+		);
+	});
+
+	it('uses TASKGRAPH_PROJECT_ROOT from the first env that sets it', () => {
+		expect(
+			namedProjectRoot(
+				undefined,
+				{ TASKGRAPH_PROJECT_ROOT: ' ' },
+				undefined,
+				{ TASKGRAPH_PROJECT_ROOT: main },
+				{ TASKGRAPH_PROJECT_ROOT: other }
+			)
+		).toBe(main);
+	});
+
+	it("gives the variable's project for a path in its loop --parallel worktrees", () => {
+		const worktree = path.join(main, '.taskgraph', 'worktrees', 'task-3');
+
+		expect(namedProjectRoot(worktree, { TASKGRAPH_PROJECT_ROOT: main })).toBe(
+			main
+		);
+		expect(
+			namedProjectRoot(path.join(worktree, 'src'), {
+				TASKGRAPH_PROJECT_ROOT: main
+			})
+		).toBe(main);
+	});
+
+	it("keeps an explicit path beside the variable's worktrees folder", () => {
+		const env = { TASKGRAPH_PROJECT_ROOT: main };
+
+		expect(namedProjectRoot(path.join(main, '.taskgraph'), env)).toBe(
+			path.join(main, '.taskgraph')
+		);
+		expect(
+			namedProjectRoot(path.join(main, '.taskgraph', 'worktrees-old'), env)
+		).toBe(path.join(main, '.taskgraph', 'worktrees-old'));
+		expect(namedProjectRoot(main, env)).toBe(main);
+	});
+
+	it('names no project when there is no path and no variable', () => {
+		expect(namedProjectRoot(undefined, {}, undefined)).toBeUndefined();
+		expect(namedProjectRoot('')).toBeUndefined();
 	});
 });
