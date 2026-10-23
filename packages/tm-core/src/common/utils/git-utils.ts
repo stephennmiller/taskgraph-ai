@@ -304,12 +304,15 @@ export function sanitizeBranchNameForTag(branchName: string): string {
 	}
 
 	// Replace invalid characters with hyphens and clean up
-	return branchName
-		.replace(/[^a-zA-Z0-9_.-]/g, '-') // Replace invalid chars with hyphens (allow dots)
-		.replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-		.replace(/-+/g, '-') // Collapse multiple hyphens
-		.toLowerCase() // Convert to lowercase
-		.substring(0, 50); // Limit length
+	return (
+		branchName
+			// Tag names allow only letters, digits, `_` and `-`
+			.replace(/[^a-zA-Z0-9_-]/g, '-')
+			.replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+			.replace(/-+/g, '-') // Collapse multiple hyphens
+			.toLowerCase() // Convert to lowercase
+			.substring(0, 50)
+	); // Limit length
 }
 
 /**

@@ -3,15 +3,25 @@
  * Direct function implementation for creating a new tag
  */
 
-import {
-	createTag,
-	createTagFromBranch
-} from '../../../../scripts/modules/task-manager/tag-management.js';
+import { createTagFromBranch } from '@tm/core';
+import { createTag } from '../../../../scripts/modules/task-manager/tag-management.js';
 import {
 	disableSilentMode,
 	enableSilentMode
 } from '../../../../scripts/modules/utils.js';
 import { createLogWrapper } from '../../tools/utils.js';
+
+/** The add_tag replies for the git checks behind fromBranch, by error code */
+const GIT_ERRORS = {
+	NOT_GIT_REPO: {
+		log: 'Not in a git repository',
+		message: 'Not in a git repository. Cannot use fromBranch option.'
+	},
+	NO_CURRENT_BRANCH: {
+		log: 'Could not determine current git branch',
+		message: 'Could not determine current git branch.'
+	}
+};
 
 /**
  * Direct function wrapper for creating a new tag with error handling.
@@ -65,58 +75,33 @@ export async function addTagDirect(args, log, context = {}) {
 		if (fromBranch) {
 			log.info('Creating tag from current git branch');
 
-			// Import git utilities
-			const gitUtils = await import(
-				'../../../../scripts/modules/utils/git-utils.js'
-			);
-
-			// Check if we're in a git repository
-			if (!(await gitUtils.isGitRepository(projectRoot))) {
-				log.error('Not in a git repository');
+			let result;
+			try {
+				result = await createTagFromBranch(
+					projectRoot,
+					(tagName, { defaultDescription }) =>
+						createTag(
+							tasksJsonPath,
+							tagName,
+							{
+								copyFromCurrent,
+								copyFromTag,
+								description: description || defaultDescription
+							},
+							{ session, mcpLog, projectRoot },
+							'json' // outputFormat - use 'json' to suppress CLI UI
+						)
+				);
+			} catch (error) {
+				const gitError = GIT_ERRORS[error.code];
+				if (!gitError) throw error;
+				log.error(gitError.log);
 				disableSilentMode();
 				return {
 					success: false,
-					error: {
-						code: 'NOT_GIT_REPO',
-						message: 'Not in a git repository. Cannot use fromBranch option.'
-					}
+					error: { code: error.code, message: gitError.message }
 				};
 			}
-
-			// Get current git branch
-			const currentBranch = await gitUtils.getCurrentBranch(projectRoot);
-			if (!currentBranch) {
-				log.error('Could not determine current git branch');
-				disableSilentMode();
-				return {
-					success: false,
-					error: {
-						code: 'NO_CURRENT_BRANCH',
-						message: 'Could not determine current git branch.'
-					}
-				};
-			}
-
-			// Prepare options for branch-based tag creation
-			const branchOptions = {
-				copyFromCurrent,
-				copyFromTag,
-				description:
-					description || `Tag created from git branch "${currentBranch}"`
-			};
-
-			// Call the createTagFromBranch function
-			const result = await createTagFromBranch(
-				tasksJsonPath,
-				currentBranch,
-				branchOptions,
-				{
-					session,
-					mcpLog,
-					projectRoot
-				},
-				'json' // outputFormat - use 'json' to suppress CLI UI
-			);
 
 			// Restore normal logging
 			disableSilentMode();
@@ -126,7 +111,7 @@ export async function addTagDirect(args, log, context = {}) {
 				data: {
 					branchName: result.branchName,
 					tagName: result.tagName,
-					created: result.created,
+					created: result.created.created,
 					mappingUpdated: result.mappingUpdated,
 					message: `Successfully created tag "${result.tagName}" from git branch "${result.branchName}"`
 				}

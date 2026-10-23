@@ -24,6 +24,11 @@ import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
 import { subtaskInContext } from './utils/subtask-context.js';
 import {
+	createTagFromBranch,
+	type CreateBranchTag,
+	type CreateTagFromBranchResult
+} from './utils/branch-tag.js';
+import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
@@ -598,6 +603,17 @@ export class TasksDomain {
 	 */
 	async createTag(name: string, options?: CreateTagOptions) {
 		return this.tagService.createTag(name, options);
+	}
+
+	/**
+	 * Create a tag named after the current git branch and map the branch to it
+	 * in state.json. createTag writes the tag; see createTagFromBranch in
+	 * utils/branch-tag.ts for the checks and errors.
+	 */
+	async createTagFromBranch<T>(
+		createTag: CreateBranchTag<T>
+	): Promise<CreateTagFromBranchResult<T>> {
+		return createTagFromBranch(this.projectRoot, createTag);
 	}
 
 	/**

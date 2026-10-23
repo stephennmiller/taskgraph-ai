@@ -137,46 +137,6 @@ async function getGitHubRepoInfo(projectRoot) {
 }
 
 /**
- * Sanitize branch name to be a valid tag name
- * @param {string} branchName - Git branch name
- * @returns {string} Sanitized tag name
- */
-function sanitizeBranchNameForTag(branchName) {
-	if (!branchName || typeof branchName !== 'string') {
-		return 'unknown-branch';
-	}
-
-	// Replace invalid characters with hyphens and clean up
-	return branchName
-		.replace(/[^a-zA-Z0-9_-]/g, '-') // Replace invalid chars with hyphens
-		.replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-		.replace(/-+/g, '-') // Collapse multiple hyphens
-		.toLowerCase() // Convert to lowercase
-		.substring(0, 50); // Limit length
-}
-
-/**
- * Check if a branch name would create a valid tag name
- * @param {string} branchName - Git branch name
- * @returns {boolean} True if branch name can be converted to valid tag
- */
-function isValidBranchForTag(branchName) {
-	if (!branchName || typeof branchName !== 'string') {
-		return false;
-	}
-
-	// Check if it's a reserved branch name that shouldn't become tags
-	const reservedBranches = ['main', 'master', 'develop', 'dev', 'head'];
-	if (reservedBranches.includes(branchName.toLowerCase())) {
-		return false;
-	}
-
-	// Check if sanitized name would be meaningful
-	const sanitized = sanitizeBranchNameForTag(branchName);
-	return sanitized.length > 0 && sanitized !== 'unknown-branch';
-}
-
-/**
  * Get git repository root directory
  * @param {string} projectRoot - Directory to start search from (required)
  * @returns {Promise<string|null>} Git repository root path or null
@@ -376,8 +336,6 @@ export {
 	getRemoteBranches,
 	isGhCliAvailable,
 	getGitHubRepoInfo,
-	sanitizeBranchNameForTag,
-	isValidBranchForTag,
 	getGitRepositoryRoot,
 	isGitRepositoryRoot,
 	getDefaultBranch,
