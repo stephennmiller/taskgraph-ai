@@ -51,6 +51,13 @@ export { FileStorage } from './modules/storage/index.js';
 // File operations - for atomic file modifications
 export { FileOperations } from './modules/storage/adapters/file-storage/file-operations.js';
 
+// Keep changes other processes saved while a command waited before saving
+export {
+	mergeTagChanges,
+	type MergeTagChangesResult,
+	type RenumberedItem
+} from './modules/storage/adapters/file-storage/merge-tag-changes.js';
+
 // Constants
 export * from './common/constants/index.js';
 
