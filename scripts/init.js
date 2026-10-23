@@ -27,7 +27,6 @@ import { RULE_PROFILES } from '../src/constants/profiles.js';
 import { readStoreTasksInGit } from '../src/utils/manage-gitignore.js';
 import { GITATTRIBUTES_FILE } from './modules/init-changes.js';
 import { log } from './modules/init-log.js';
-import { createInitialTasksFile } from './modules/init-project-files.js';
 import {
 	createProjectStructure,
 	setUpMergeDriver
@@ -337,4 +336,4 @@ function displayDryRun(initGit, storeTasksInGit, options, ruleProfiles = []) {
 }
 
 // Ensure necessary functions are exported
-export { createInitialTasksFile, initializeProject, log, setUpMergeDriver };
+export { initializeProject, setUpMergeDriver };
