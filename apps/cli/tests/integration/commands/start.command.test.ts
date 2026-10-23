@@ -175,6 +175,26 @@ describe('start command', () => {
 		expect(stdout).not.toMatch(BOXES);
 	});
 
+	it('says a missing task is missing even while another task is in progress', () => {
+		writeTasks(project());
+
+		const { stderr, exitCode } = runStart('99', '--dry-run');
+
+		expect(exitCode).toBe(1);
+		expect(stderr).toContain('Task 99 not found');
+		expect(stderr).not.toContain('--force');
+	});
+
+	it('says a missing subtask is missing instead of starting its parent', () => {
+		writeTasks(project());
+
+		const { stdout, stderr, exitCode } = runStart('2.9', '--dry-run');
+
+		expect(exitCode).toBe(1);
+		expect(stderr).toContain('Subtask 2.9 not found');
+		expect(stdout).not.toContain('Dry run');
+	});
+
 	it('prints the failure as JSON with --format json', () => {
 		writeTasks(project());
 

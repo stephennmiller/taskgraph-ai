@@ -71,23 +71,28 @@ export function formatStartFailed(
 	id: string,
 	result: { found: boolean; error?: string }
 ): { message: string; hint: string } {
-	if (result.error?.startsWith('Conflicting tasks in progress')) {
+	// The error can carry task titles and the ID as typed: keep terminal
+	// control sequences in them from reaching the terminal
+	const error =
+		result.error === undefined ? undefined : terminalSafe(result.error);
+	const safeId = terminalSafe(id);
+	if (error?.startsWith('Conflicting tasks in progress')) {
 		return {
-			message: result.error.replace(
+			message: error.replace(
 				'Conflicting tasks in progress',
 				'Another task is in progress'
 			),
-			hint: `Run \`taskgraph start ${id} --force\` to start it anyway`
+			hint: `Run \`taskgraph start ${safeId} --force\` to start it anyway`
 		};
 	}
 	if (!result.found) {
 		return {
-			message: result.error ?? `Task ${id} not found`,
+			message: error ?? `Task ${safeId} not found`,
 			hint: 'Run `taskgraph list` to see task IDs'
 		};
 	}
 	return {
-		message: `Couldn't launch Claude Code for ${id}${result.error ? `: ${result.error}` : ''}`,
+		message: `Couldn't launch Claude Code for ${safeId}${error ? `: ${error}` : ''}`,
 		hint: 'Check that the `claude` command is installed and on your PATH'
 	};
 }

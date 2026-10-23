@@ -351,7 +351,7 @@ export class ListTasksCommand extends Command {
 		});
 		// The rows keep subtasks only when asked for, as before
 		const listed =
-			showsSummary && options.withSubtasks === false
+			showsSummary && !options.withSubtasks
 				? result.tasks.map((task) => ({ ...task, subtasks: [] }))
 				: result.tasks;
 

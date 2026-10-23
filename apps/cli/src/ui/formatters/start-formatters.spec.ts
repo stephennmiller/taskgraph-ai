@@ -67,6 +67,19 @@ describe('formatStartFailed', () => {
 		expect(failure.hint).toContain('taskgraph list');
 	});
 
+	it('strips terminal control sequences from titles in the error', () => {
+		const failure = formatStartFailed('3\u001b[2J', {
+			found: false,
+			error:
+				'Conflicting tasks in progress: #2: Sign-in \u001b]0;pwned\u0007\u001b[2Jx'
+		});
+
+		expect(failure.message).toBe('Another task is in progress: #2: Sign-in x');
+		expect(failure.hint).toBe(
+			'Run `taskgraph start 3 --force` to start it anyway'
+		);
+	});
+
 	it('points at the claude command when the launch could not be prepared', () => {
 		const failure = formatStartFailed('3', { found: true });
 
