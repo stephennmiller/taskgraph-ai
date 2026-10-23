@@ -48,22 +48,23 @@
 		"deps:fix": "manypkg fix"
 	},
 	"keywords": [
-		"claude",
-		"task",
-		"management",
-		"ai",
-		"development",
-		"cursor",
-		"anthropic",
-		"llm",
-		"mcp",
-		"context",
 		"claude-code",
-		"model-context-protocol",
+		"claude-code-plugin",
+		"claude",
+		"anthropic",
+		"ai-agents",
+		"ai-coding",
+		"task-management",
+		"task-manager",
+		"task-graph",
+		"dependency-graph",
 		"prd",
-		"task-graph"
+		"mcp",
+		"model-context-protocol",
+		"cli",
+		"llm"
 	],
-	"author": "Eyal Toledano",
+	"author": "Stephen Miller",
 	"license": "MIT WITH Commons-Clause",
 	"dependencies": {
 		"@streamparser/json": "^0.0.26",
@@ -110,7 +111,7 @@
 		"type": "git",
 		"url": "git+https://github.com/stephennmiller/taskgraph-ai.git"
 	},
-	"homepage": "https://github.com/stephennmiller/taskgraph-ai#readme",
+	"homepage": "https://taskgraph-ai.com",
 	"bugs": {
 		"url": "https://github.com/stephennmiller/taskgraph-ai/issues"
 	},

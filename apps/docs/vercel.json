@@ -2,11 +2,11 @@
 	"rewrites": [
 		{
 			"source": "/",
-			"destination": "https://taskgraph-49ce32d5.mintlify.dev/docs"
+			"destination": "https://myself-fcf8480c.mintlify.site"
 		},
 		{
 			"source": "/:match*",
-			"destination": "https://taskgraph-49ce32d5.mintlify.dev/docs/:match*"
+			"destination": "https://myself-fcf8480c.mintlify.site/:match*"
 		}
 	]
 }

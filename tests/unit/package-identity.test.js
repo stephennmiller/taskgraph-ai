@@ -91,10 +91,24 @@ describe('package identity', () => {
 		expect(pkg.bin['taskgraph-mcp']).toBe(pkg.bin[pkg.name]);
 	});
 
-	test('repository, homepage and bugs point at this repo', () => {
+	test('repository and bugs point at this repo, homepage not at upstream', () => {
 		expect(pkg.repository.url).toContain('stephennmiller/');
-		expect(pkg.homepage).toContain('stephennmiller/');
+		expect(pkg.homepage).not.toMatch(/eyaltoledano|task-master/);
 		expect(pkg.bugs.url).toContain('stephennmiller/');
+	});
+
+	test('the package and the plugin credit the same author', () => {
+		const readJson = (file) => JSON.parse(read(file));
+		const authorName = ({ author }) =>
+			typeof author === 'string' ? author : author.name;
+		const authors = [
+			pkg,
+			readJson('packages/claude-code-plugin/package.json'),
+			readJson('packages/claude-code-plugin/.claude-plugin/plugin.json'),
+			...readJson('.claude-plugin/marketplace.json').plugins
+		].map(authorName);
+
+		expect(new Set(authors)).toEqual(new Set(['Stephen Miller']));
 	});
 
 	test('auto-updater re-spawns a binary the package actually ships', () => {
