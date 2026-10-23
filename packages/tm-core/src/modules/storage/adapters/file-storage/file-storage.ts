@@ -26,6 +26,10 @@ import type {
 } from '../../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
+import {
+	type TaskClaim,
+	claimNextInTasks
+} from '../../../tasks/utils/claim.js';
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
@@ -408,6 +412,22 @@ export class FileStorage implements IStorage {
 		return this.mutateTasks(tag, (tasks) =>
 			setTaskStatusIn(tasks, taskId, newStatus, options)
 		);
+	}
+
+	/**
+	 * Claim the next task nobody has started: set it in-progress and record
+	 * the claim, inside one read-modify-write under the file lock
+	 */
+	async claimNextTask(
+		claimant: string,
+		tag?: string
+	): Promise<TaskClaim | null> {
+		return this.mutateTasks(tag, (tasks) => {
+			const outcome = claimNextInTasks(tasks, claimant);
+			return outcome
+				? { tasks: outcome.tasks, result: outcome.claim }
+				: { tasks: null, result: null };
+		});
 	}
 
 	/**

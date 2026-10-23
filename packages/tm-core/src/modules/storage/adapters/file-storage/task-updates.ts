@@ -18,6 +18,7 @@ import type {
 	Task,
 	TaskStatus
 } from '../../../../common/types/index.js';
+import { releaseClaimIfPending } from '../../../tasks/utils/claim.js';
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
 
@@ -79,11 +80,14 @@ export function setTaskStatusIn(
 	}
 
 	const updated = [...tasks];
-	updated[taskIndex] = {
-		...tasks[taskIndex],
-		status: newStatus,
-		updatedAt: new Date().toISOString()
-	};
+	updated[taskIndex] = releaseClaimIfPending(
+		{
+			...tasks[taskIndex],
+			status: newStatus,
+			updatedAt: new Date().toISOString()
+		},
+		newStatus
+	);
 	return { tasks: updated, result };
 }
 
@@ -162,11 +166,14 @@ function setSubtaskStatusIn(
 	const now = new Date().toISOString();
 
 	// Update the subtask status
-	parentTask.subtasks[subtaskIndex] = {
-		...parentTask.subtasks[subtaskIndex],
-		status: newStatus,
-		updatedAt: now
-	};
+	parentTask.subtasks[subtaskIndex] = releaseClaimIfPending(
+		{
+			...parentTask.subtasks[subtaskIndex],
+			status: newStatus,
+			updatedAt: now
+		},
+		newStatus
+	);
 
 	// Auto-adjust parent status based on subtask statuses
 	const subs = parentTask.subtasks;
