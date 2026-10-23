@@ -11,8 +11,9 @@
  * the ones it lists, as `inherited`. A parent's dependency on one of its own
  * subtasks is not passed down. A parent isn't finished until its subtasks
  * are, which only `criticalPath` uses: it orders a parent after its open
- * subtasks. `blockedCount` (and so `bottlenecks` and `next`) counts the
- * subtasks that wait on a task through their parent.
+ * subtasks. `blockedCount` (and so `bottlenecks` and `next`) follows
+ * subtasks that wait on a task through their parent, and counts a parent and
+ * its subtasks as one unit of waiting work.
  *
  * Dependency IDs that match no task are recorded as `missing` and never become
  * edges. Self-dependencies are not edges either (the analyses ignore them),
@@ -69,7 +70,10 @@ export interface Bottleneck {
 	id: string;
 	title: string;
 	status: TaskStatus;
-	/** Unfinished tasks waiting on this one, transitively */
+	/**
+	 * Unfinished top-level tasks waiting on this one, transitively; a parent
+	 * and its subtasks count once (see `blockedCount`)
+	 */
 	blocks: number;
 }
 
@@ -180,12 +184,16 @@ const isOpen = (node: DependencyGraphNode): boolean =>
 	!isTaskComplete(node.status);
 
 /**
- * For every task, how many unfinished tasks are (transitively) waiting on it,
- * subtasks waiting through their parent included. Finished tasks count 0 and
- * are not traversed. Cycle-safe; a task never
- * counts itself. One pass over the condensed graph with a bitset per
- * component, so memory grows with the square of the number of open tasks
- * (about 12 MB at 10k).
+ * For every task, how much unfinished work is (transitively) waiting on it,
+ * counted in top-level tasks: a parent and its subtasks are one unit, so a
+ * task in front of a parent expanded into ten subtasks counts that parent
+ * once, and the count doesn't change with how finely tasks are expanded.
+ * Subtasks waiting through their parent count toward the parent's unit. A
+ * task never counts its own unit, so a subtask that only holds up its
+ * siblings counts 0. Finished tasks count 0 and are not traversed.
+ * Cycle-safe. One pass over the condensed graph with a bitset of units per
+ * component, so memory grows with open tasks times top-level tasks (about
+ * 12 MB at 10k of each).
  */
 export function blockedCount(
 	tasks: Task[],
@@ -195,9 +203,18 @@ export function blockedCount(
 	const waiting = startDependents(graph);
 	const counts = new Map<string, number>();
 	const open: string[] = [];
+	// The top-level task each open task belongs to, as a bit index
+	const unitIndex = new Map<string, number>();
+	const unitOf = new Map<string, number>();
 	for (const node of nodes.values()) {
-		if (isOpen(node)) open.push(node.id);
-		else counts.set(node.id, 0);
+		if (!isOpen(node)) {
+			counts.set(node.id, 0);
+			continue;
+		}
+		open.push(node.id);
+		const unit = node.parent ?? node.id;
+		if (!unitIndex.has(unit)) unitIndex.set(unit, unitIndex.size);
+		unitOf.set(node.id, unitIndex.get(unit) as number);
 	}
 
 	// Components come out with everything they block already emitted
@@ -211,27 +228,74 @@ export function blockedCount(
 		for (const id of members) componentOf.set(id, c);
 	});
 
-	const words = Math.ceil(components.length / 32);
+	const words = Math.ceil(unitIndex.size / 32);
+	// Units waiting on each component, the component's own members included
 	const reach: Uint32Array[] = [];
 	components.forEach((members, c) => {
 		const bits = new Uint32Array(words);
 		for (const id of members) {
+			const u = unitOf.get(id) as number;
+			bits[u >> 5] |= 1 << (u & 31);
 			for (const next of waiting.get(id) as string[]) {
 				const d = componentOf.get(next);
 				if (d === undefined || d === c) continue;
-				bits[d >> 5] |= 1 << (d & 31);
 				const below = reach[d];
 				for (let w = 0; w < words; w++) bits[w] |= below[w];
 			}
 		}
-		let total = members.length - 1;
-		for (let d = 0; d < c; d++) {
-			if (bits[d >> 5] & (1 << (d & 31))) total += components[d].length;
-		}
 		reach.push(bits);
-		for (const id of members) counts.set(id, total);
+		let units = 0;
+		for (let w = 0; w < words; w++) units += popcount(bits[w]);
+		// Each member's own unit is in `bits` (it set it), and never counts.
+		// In a loop across units, every member counts the others' units
+		for (const id of members) counts.set(id, units - 1);
 	});
 	return counts;
+}
+
+/**
+ * For every open subtask, how many open parts of its own task (siblings, or
+ * the parent when it lists the subtask) wait on it to start, transitively,
+ * following edges inside that task only. `blockedCount` leaves this work out
+ * (it is the subtask's own unit); `next` uses it to order siblings.
+ */
+export function blockedWithinTask(
+	tasks: Task[],
+	graph: DependencyGraph = buildDependencyGraph(tasks)
+): Map<string, number> {
+	const { nodes } = graph;
+	const waiting = startDependents(graph);
+	const counts = new Map<string, number>();
+	for (const node of nodes.values()) {
+		if (!node.parent || !isOpen(node)) continue;
+		const unit = node.parent;
+		const sameTaskOpen = (id: string) => {
+			const other = nodes.get(id) as DependencyGraphNode;
+			return (other.parent ?? other.id) === unit && isOpen(other);
+		};
+		const seen = new Set([node.id]);
+		const queue = [node.id];
+		for (let i = 0; i < queue.length; i++) {
+			const current = nodes.get(queue[i]) as DependencyGraphNode;
+			for (const id of waiting.get(current.id) as string[]) {
+				if (seen.has(id) || !sameTaskOpen(id)) continue;
+				seen.add(id);
+				queue.push(id);
+			}
+		}
+		counts.set(node.id, seen.size - 1);
+	}
+	return counts;
+}
+
+function popcount(word: number): number {
+	let n = word >>> 0;
+	let bits = 0;
+	while (n) {
+		n &= n - 1;
+		bits++;
+	}
+	return bits;
 }
 
 /**

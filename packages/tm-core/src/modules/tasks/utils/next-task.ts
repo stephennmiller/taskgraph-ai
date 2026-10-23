@@ -7,6 +7,8 @@
 import type { Task } from '../../../common/types/index.js';
 import {
 	blockedCount,
+	blockedWithinTask,
+	buildDependencyGraph,
 	resolveSubtaskDependency
 } from '../../dependencies/index.js';
 
@@ -26,7 +28,8 @@ export interface SelectNextTaskOptions {
 /**
  * Prefers an eligible subtask of an in-progress task (its own and its
  * parent's dependencies satisfied), then the best
- * top-level task: priority, then how much work it unblocks, then fewest
+ * top-level task: priority, then how much work it unblocks (in top-level
+ * tasks; between subtasks, then how much of their own task), then fewest
  * dependencies, then lowest id.
  * @returns The next item, or null when nothing is eligible
  */
@@ -58,8 +61,12 @@ export function rankNextTasks(
 			t.status || 'pending'
 		)
 	);
-	const blockedCounts = blockedCount(tasks);
+	const graph = buildDependencyGraph(tasks);
+	const blockedCounts = blockedCount(tasks, graph);
 	const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
+	const siblingCounts = blockedWithinTask(tasks, graph);
+	const blocksSiblings = (task: Task) =>
+		siblingCounts.get(String(task.id)) ?? 0;
 	const priorityValues = { critical: 4, high: 3, medium: 2, low: 1 };
 
 	// Build satisfied IDs set (both tasks and subtasks)
@@ -122,7 +129,8 @@ export function rankNextTasks(
 			});
 		});
 
-	// Sort by priority → blocked count → dependency count → parent ID → subtask ID
+	// Sort by priority → blocked count → work of the same task it holds up →
+	// dependency count → parent ID → subtask ID
 	candidateSubtasks.sort((a, b) => {
 		const pa =
 			priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
@@ -131,6 +139,10 @@ export function rankNextTasks(
 		if (pb !== pa) return pb - pa;
 
 		if (blocks(a) !== blocks(b)) return blocks(b) - blocks(a);
+
+		if (blocksSiblings(a) !== blocksSiblings(b)) {
+			return blocksSiblings(b) - blocksSiblings(a);
+		}
 
 		if (a.dependencies!.length !== b.dependencies!.length) {
 			return a.dependencies!.length - b.dependencies!.length;

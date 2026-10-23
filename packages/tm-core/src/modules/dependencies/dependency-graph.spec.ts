@@ -3,6 +3,7 @@ import type { Subtask, Task } from '../../common/types/index.js';
 import { createSubtask } from '../../testing/task-fixtures.js';
 import {
 	blockedCount,
+	blockedWithinTask,
 	bottlenecks,
 	buildDependencyGraph,
 	criticalPath,
@@ -121,13 +122,14 @@ describe('blockedCount', () => {
 		expect(counts.has('99')).toBe(false);
 	});
 
-	it('counts subtasks, including ones other tasks depend on by dotted ID', () => {
+	it('follows subtasks, including ones other tasks depend on by dotted ID', () => {
 		const counts = blockedCount([
 			task('1', [], 'pending', [sub(1), sub(2, [1])]),
 			task('2', ['1.1'])
 		]);
 
-		expect(counts.get('1.1')).toBe(2);
+		// 1.2 is part of 1.1's own task, so only task 2 counts
+		expect(counts.get('1.1')).toBe(1);
 	});
 });
 
@@ -289,8 +291,72 @@ describe('parents and subtasks', () => {
 			task('3', ['2.2'])
 		]);
 
-		expect(counts.get('1')).toBe(4);
+		// Task 2 (with its subtasks) and task 3: two units of work
+		expect(counts.get('1')).toBe(2);
 		expect(counts.get('2')).toBe(0);
+	});
+
+	it('counts a parent and its subtasks as one unit, however finely expanded', () => {
+		const tenSubtasks = Array.from({ length: 10 }, (_, i) => sub(i + 1));
+		const expanded = blockedCount([
+			task('1'),
+			task('2', ['1'], 'pending', tenSubtasks),
+			task('3', ['1'])
+		]);
+		const unexpanded = blockedCount([
+			task('1'),
+			task('2', ['1']),
+			task('3', ['1'])
+		]);
+
+		expect(expanded.get('1')).toBe(2);
+		expect(unexpanded.get('1')).toBe(2);
+	});
+
+	it('counts a parent once when only some of its subtasks wait', () => {
+		const counts = blockedCount([
+			task('1'),
+			task('2', [], 'pending', [sub(1, ['1']), sub(2, ['1']), sub(3, [2])])
+		]);
+
+		expect(counts.get('1')).toBe(1);
+	});
+
+	it("does not count a subtask's own parent or siblings", () => {
+		const counts = blockedCount([
+			task('1', [], 'pending', [sub(1), sub(2, [1]), sub(3, [2])]),
+			task('2', ['1.3'])
+		]);
+
+		expect(counts.get('1.1')).toBe(1);
+		expect(counts.get('1.3')).toBe(1);
+		expect(
+			blockedCount([task('1', [], 'pending', [sub(1), sub(2, [1])])]).get('1.1')
+		).toBe(0);
+	});
+});
+
+describe('blockedWithinTask', () => {
+	it('counts the siblings and parent waiting on a subtask, and nothing else', () => {
+		const counts = blockedWithinTask([
+			task('1', ['1.3'], 'pending', [sub(1), sub(2, [1]), sub(3, [2]), sub(4)]),
+			task('2', ['1.1'])
+		]);
+
+		// 1.2, 1.3 and task 1, which lists 1.3; task 2 is another task
+		expect(counts.get('1.1')).toBe(3);
+		expect(counts.get('1.3')).toBe(1);
+		expect(counts.get('1.4')).toBe(0);
+		expect(counts.has('1')).toBe(false);
+	});
+
+	it('does not walk through finished work', () => {
+		const counts = blockedWithinTask([
+			task('1', [], 'pending', [sub(1), sub(2, [1], 'done'), sub(3, [2])])
+		]);
+
+		expect(counts.get('1.1')).toBe(0);
+		expect(counts.has('1.2')).toBe(false);
 	});
 });
 

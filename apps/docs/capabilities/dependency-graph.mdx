@@ -11,11 +11,13 @@ Task dependencies form a graph. TaskGraph reads that graph to pick the next task
 `taskgraph next` (and the recommendation in `taskgraph list`) considers tasks that are `pending` or `in-progress` and whose dependencies are all `done`. Subtasks of an in-progress parent are considered first, when both their own dependencies and their parent's are done (see [Parents and subtasks](#parents-and-subtasks)). A subtask whose parent is not `in-progress` is not offered on its own: `next` offers the parent, and once you start it, `next` offers its subtasks. Among the candidates it picks by:
 
 1. **Priority**: `critical`, then `high`, `medium`, `low`.
-2. **Unblocks the most**: the task with the most unfinished tasks waiting on it, directly or through other tasks.
+2. **Unblocks the most**: the task with the most unfinished tasks waiting on it, directly or through other tasks. Between two subtasks that tie, the one more of its own task waits on.
 3. **Fewer dependencies**: the task that lists fewer dependencies.
 4. **ID**: the lowest ID.
 
-Step 2 counts every unfinished task, including `deferred`, `blocked` and `review` ones, because they still wait on their dependencies, and subtasks that wait through their parent. A task is "unfinished" unless it is `done`, `completed` or `cancelled`.
+Step 2 counts every unfinished task, including `deferred`, `blocked` and `review` ones, because they still wait on their dependencies. A task is "unfinished" unless it is `done`, `completed` or `cancelled`.
+
+It counts top-level tasks: a parent and its subtasks are one piece of work, however finely the task was expanded. A task in front of a parent with ten subtasks counts that parent once, the same as before the parent was expanded, and subtasks that wait through their parent count toward that parent. A subtask doesn't count its own parent or siblings, so one that holds up only its own task counts 0 (step 2 then compares how many of its siblings wait on it).
 
 ## How a subtask's dependencies are read
 
@@ -67,7 +69,7 @@ Critical path: 1 → 2 → 3 → 5
 ◆ critical path  * dependency inferred by AI
 ```
 
-- **`blocks N`** marks a bottleneck: an unfinished task that N unfinished tasks and subtasks wait on, directly, through other tasks, or through a parent. The list shows the top five, most first, ties to the lowest ID. Tasks that block nothing are left out.
+- **`blocks N`** marks a bottleneck: an unfinished task that N unfinished top-level tasks wait on, directly, through other tasks, or through a subtask. A parent and its subtasks count as one, as in [`next`](#how-next-orders-tasks). The list shows the top five, most first, ties to the lowest ID. Tasks that block nothing are left out.
 - **`wave N`** is the task's parallel wave. Wave 1 is every task that can run now: `pending` or `in-progress` with all its dependencies finished. Wave N holds the tasks whose dependencies are all finished or in earlier waves, so everything in one wave can run side by side. The line under the critical path counts the waves and names wave 1; `N can't be scheduled` counts the unfinished tasks with no wave (see [Parallel waves](#parallel-waves)).
 - **`◆`** marks the critical path: the longest chain of unfinished work, dependencies first, through parents and subtasks as [described above](#parents-and-subtasks). Ties go to the lowest IDs.
 - **`needs 2.1`**: a dependency on a subtask places the task under the subtask's parent (task 2), and the subtask is always listed after the title, since the parent is not what the task waits on.
