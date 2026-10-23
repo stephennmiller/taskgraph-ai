@@ -266,3 +266,104 @@ jobs:
             coverage
             junit.xml
           retention-days: 30
+
+  # Does this PR touch code the build comparison covers? Cheap, so the heavy job
+  # below is skipped for docs and workflow-only changes.
+  parity-changes:
+    name: Parity changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.changed.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find changes under the compared code
+        id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git diff --name-only "origin/${BASE_REF}...HEAD" > changed-files.txt
+          if grep -Eq '^(scripts/|mcp-server/|src/|packages/tm-core/src/|apps/cli/src/|apps/mcp/src/|apps/cli/tests/parity/|\.github/scripts/run-parity\.sh)' changed-files.txt; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Runs the scripted CLI and MCP scenarios on the target branch's build and on
+  # this PR's build and reports where they differ. Informational: a difference is
+  # shown in the job summary and does not fail the PR. Only a scenario that
+  # cannot run fails the job. It is not a required check.
+  parity:
+    name: Parity
+    needs: [build, parity-changes]
+    if: needs.parity-changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Check out the target branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: base/package-lock.json
+
+      - name: Restore node_modules cache
+        id: cache-node-modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: node-modules-v2-${{ runner.os }}-node${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Download this PR's build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: build-artifacts
+          path: dist/
+
+      # Its own install, so a lockfile change in the PR cannot make the target
+      # branch's build run on this PR's dependencies
+      - name: Install the target branch
+        working-directory: base
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Build the target branch
+        working-directory: base
+        run: npm run turbo:build
+        env:
+          NODE_ENV: production
+        timeout-minutes: 10
+
+      - name: Compare the builds
+        run: .github/scripts/run-parity.sh base . parity-reports
+
+      - name: Upload comparison reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: parity-reports
+          path: parity-reports
+          retention-days: 7

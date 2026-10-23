@@ -37,6 +37,30 @@ node apps/cli/tests/parity/compare-builds.mjs \
 
 Run every scenario below. Expect no differences.
 
+## In CI
+
+The `Parity` job in `.github/workflows/ci.yml` runs this comparison on a pull
+request. It builds the target branch's commit, then runs every scenario below
+with the target branch as build A and the pull request as build B.
+
+- **When it runs:** only when the pull request changes `scripts/`,
+  `mcp-server/`, `src/`, `packages/tm-core/src/`, `apps/cli/src/`,
+  `apps/mcp/src/`, this folder, or `.github/scripts/run-parity.sh`. The
+  `Parity changes` job decides this from the list of changed files and the
+  `Parity` job is skipped otherwise. A change to the workflow file alone does
+  not start it.
+- **Where to read it:** the job summary has one row per scenario, and the first
+  60 lines of each report that differs. The full reports are in the
+  `parity-reports` artifact (kept for 7 days).
+- **It does not fail the pull request on a difference.** A pull request that
+  fixes a bug is meant to differ, and a difference is a prompt to read it, not
+  a verdict. The job fails only when a scenario cannot run (exit 2): a broken
+  scenario, or a build that cannot run `init`. It is not a required check.
+- **To run the same thing locally:** build both trees, then
+  `.github/scripts/run-parity.sh <base-root> <head-root> <reports-dir>`. Each
+  root is a checkout with a built `dist/`; the scenarios and the tool come from
+  the head root. A fourth argument names another folder of scenarios.
+
 ## Scenarios
 
 | File | What it covers |
