@@ -251,4 +251,27 @@ describe('renderBlockerExplanation', () => {
 			'    nothing else stands in their way.'
 		]);
 	});
+
+	const missingStep = () =>
+		explanation([node('5', [node('99', [], { kind: 'missing' })])], {
+			rootCauses: [{ id: '99', kind: 'missing', listedBy: ['5'] }]
+		});
+
+	it('moves a command to the next line whole instead of splitting it', () => {
+		const lines = plain(renderBlockerExplanation(missingStep(), { width: 76 }));
+
+		expect(lines.slice(lines.indexOf('To unblock:') + 1)).toEqual([
+			'  99 is not a task. Remove it with:',
+			'    taskgraph remove-dependency --id=5 --depends-on=99'
+		]);
+	});
+
+	it('splits a command at its spaces when it is wider than the line', () => {
+		const lines = plain(renderBlockerExplanation(missingStep(), { width: 40 }));
+
+		expect(Math.max(...lines.map((l) => l.length))).toBeLessThanOrEqual(40);
+		expect(lines.join(' ').replace(/ +/g, ' ')).toContain(
+			'taskgraph remove-dependency --id=5 --depends-on=99'
+		);
+	});
 });
