@@ -244,9 +244,10 @@ async function handleCompletionReporting(
 			completionMessage = `✅ Task Generation Completed | ~Tokens (I/O): ${estimatedInputTokens}/${outputTokens} | Cost: ~$0.00`;
 		}
 
+		// The count asked for can be 0 (sized to the PRD), so report what came back
 		await config.reportProgress({
-			progress: config.numTasks,
-			total: config.numTasks,
+			progress: processedNewTasks.length,
+			total: processedNewTasks.length,
 			message: completionMessage
 		});
 	}

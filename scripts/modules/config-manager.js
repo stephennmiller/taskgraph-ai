@@ -46,7 +46,8 @@ const DEFAULTS = {
 	global: {
 		logLevel: 'info',
 		debug: false,
-		defaultNumTasks: 10,
+		// 0: parse-prd sizes the task list to the PRD
+		defaultNumTasks: 0,
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'TaskGraph',

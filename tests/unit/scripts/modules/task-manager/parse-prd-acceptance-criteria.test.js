@@ -124,8 +124,7 @@ describe('parse-prd prompt: acceptanceCriteria', () => {
 		numTasks: 0,
 		nextId: 1,
 		prdContent: 'Users log in with a password.',
-		prdPath: 'prd.txt',
-		defaultTaskPriority: 'medium'
+		prdPath: 'prd.txt'
 	};
 
 	it.each([false, true])(

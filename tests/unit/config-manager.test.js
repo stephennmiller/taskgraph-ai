@@ -136,7 +136,7 @@ const DEFAULT_CONFIG = {
 	global: {
 		logLevel: 'info',
 		debug: false,
-		defaultNumTasks: 10,
+		defaultNumTasks: 0,
 		defaultSubtasks: 5,
 		defaultPriority: 'medium',
 		projectName: 'TaskGraph',
@@ -1094,7 +1094,7 @@ describe('Configuration Getters', () => {
 		const result = configManager.getDefaultNumTasks(MOCK_PROJECT_ROOT);
 
 		// Assert
-		expect(result).toBe(10); // Should fallback to DEFAULTS.global.defaultNumTasks
+		expect(result).toBe(0); // Falls back to DEFAULTS: 0, sized to the PRD
 	});
 
 	test('getDefaultNumTasks should return fallback when config value is missing', () => {
@@ -1116,7 +1116,7 @@ describe('Configuration Getters', () => {
 		const result = configManager.getDefaultNumTasks(MOCK_PROJECT_ROOT);
 
 		// Assert
-		expect(result).toBe(10); // Should fallback to DEFAULTS.global.defaultNumTasks
+		expect(result).toBe(0); // Falls back to DEFAULTS: 0, sized to the PRD
 	});
 
 	test('getDefaultNumTasks should handle non-existent config file', () => {
@@ -1130,7 +1130,7 @@ describe('Configuration Getters', () => {
 		const result = configManager.getDefaultNumTasks(MOCK_PROJECT_ROOT);
 
 		// Assert
-		expect(result).toBe(10); // Should fallback to DEFAULTS.global.defaultNumTasks
+		expect(result).toBe(0); // Falls back to DEFAULTS: 0, sized to the PRD
 	});
 
 	test('getDefaultNumTasks should accept explicit project root', () => {

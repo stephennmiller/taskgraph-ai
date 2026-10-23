@@ -19,7 +19,6 @@ import fs from 'fs';
 import path from 'path';
 import { displayParsePrdSummary } from '../../../../src/ui/parse-prd.js';
 import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
-import { getDefaultPriority } from '../../config-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
 import {
@@ -416,8 +415,6 @@ export async function buildPrompts(
 	options = {}
 ) {
 	const promptManager = getPromptManager();
-	const defaultTaskPriority =
-		getDefaultPriority(config.projectRoot) || 'medium';
 
 	return promptManager.loadPrompt('parse-prd', {
 		research: config.research,
@@ -429,7 +426,6 @@ export async function buildPrompts(
 		prdSections: prd?.sections?.length
 			? formatPrdSectionList(prd.sections)
 			: '',
-		defaultTaskPriority,
 		hasCodebaseAnalysis: config.hasCodebaseAnalysis(),
 		projectRoot: config.projectRoot || ''
 	});
