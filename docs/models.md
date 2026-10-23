@@ -28,4 +28,4 @@ taskgraph models --set-fallback haiku
 
 In Claude Code you can also say "Change the main model to opus".
 
-What each role is allowed to read and run is described in the [Claude Code guide](../apps/docs/capabilities/claude-code.mdx#what-ai-calls-can-access).
+What each role is allowed to read and run is described in the [Claude Code guide](https://myself-fcf8480c.mintlify.site/capabilities/claude-code#what-ai-calls-can-access).

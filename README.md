@@ -8,7 +8,8 @@
 </p>
 
 <p align="center">
-<b>TaskGraph</b>: task management for AI-driven development, built for Claude Code.
+<b>TaskGraph</b>: task management for AI-driven development, built for Claude Code.<br>
+<a href="https://myself-fcf8480c.mintlify.site">Documentation</a>
 </p>
 
 <p align="center">
@@ -230,7 +231,7 @@ taskgraph completion --install               # Tab completion for your shell
 
 Run `taskgraph completion --install` once to get Tab completion for commands, flags, task IDs, tags and statuses in bash, zsh or fish. Run it again after upgrading.
 
-Every command, flag and example is in the [command reference](apps/docs/capabilities/cli-root-commands.mdx).
+Every command, flag and example is in the [command reference](https://myself-fcf8480c.mintlify.site/capabilities/cli-root-commands).
 
 ## MCP tool tiers
 
@@ -257,20 +258,20 @@ Or edit the `env` block in `.mcp.json`, then restart Claude Code.
 
 TaskGraph uses three roles: **main**, **research** and **fallback** (used if either of the others fails). The choices are `opus`, `sonnet` and `haiku`. The research role gets web search and fetch only. It cannot read or change your files and has no shell.
 
-In Claude Code, say `Change the main model to opus`, or run `taskgraph models --setup`. Details are in [Models](docs/models.md) and the [Claude Code guide](apps/docs/capabilities/claude-code.mdx).
+In Claude Code, say `Change the main model to opus`, or run `taskgraph models --setup`. Details are in [Models](docs/models.md) and the [Claude Code guide](https://myself-fcf8480c.mintlify.site/capabilities/claude-code).
 
 ## Upgrading
 
-**Slash commands now come from the plugin (every existing project).** `taskgraph init --rules claude` no longer writes slash commands into `.claude/commands/tm/`. Install the plugin (`/plugin marketplace add stephennmiller/taskgraph-ai`, `/plugin install taskgraph@taskgraph`, then `/plugin marketplace update taskgraph` to refresh), and re-run `taskgraph init --rules claude` once: it removes the old TaskGraph command files there and keeps any you added. Details are in the [upgrade guide](apps/docs/upgrading.mdx#5-move-slash-commands-to-the-plugin).
+**Slash commands now come from the plugin (every existing project).** `taskgraph init --rules claude` no longer writes slash commands into `.claude/commands/tm/`. Install the plugin (`/plugin marketplace add stephennmiller/taskgraph-ai`, `/plugin install taskgraph@taskgraph`, then `/plugin marketplace update taskgraph` to refresh), and re-run `taskgraph init --rules claude` once: it removes the old TaskGraph command files there and keeps any you added. Details are in the [upgrade guide](https://myself-fcf8480c.mintlify.site/upgrading#5-move-slash-commands-to-the-plugin).
 
 Projects created with Task Master, or with a TaskGraph release before 0.47, also need a few manual changes:
 
-- **Import `.taskmaster/`** with `taskgraph init --from-taskmaster --yes`. It copies every tag, the docs and reports, and the settings that still apply, and leaves `.taskmaster/` in place. See [Migrating from Task Master](apps/docs/migrating-from-taskmaster.mdx).
+- **Import `.taskmaster/`** with `taskgraph init --from-taskmaster --yes`. It copies every tag, the docs and reports, and the settings that still apply, and leaves `.taskmaster/` in place. See [Migrating from Task Master](https://myself-fcf8480c.mintlify.site/migrating-from-taskmaster).
 - **Rename environment variables:** `TASK_MASTER_*` and `TASKMASTER_*` are now `TASKGRAPH_*`. The old names are ignored.
 - **Removed:** the `taskgraph migrate` command and `.taskmasterconfig`. Configuration lives in `.taskgraph/config.json`; run `taskgraph models --setup` to recreate it.
 - **Claude Code only:** other providers and their flags are gone, models are `opus`, `sonnet` and `haiku`, and the only API key still read is the optional `CLAUDE_CODE_API_KEY`.
 
-Full details are in the [upgrade guide](apps/docs/upgrading.mdx).
+Full details are in the [upgrade guide](https://myself-fcf8480c.mintlify.site/upgrading).
 
 ## Troubleshooting
 
@@ -284,7 +285,7 @@ Full details are in the [upgrade guide](apps/docs/upgrading.mdx).
 
 ## Documentation
 
-[Tutorial](apps/docs/tutorial.mdx) · [Command reference](apps/docs/capabilities/cli-root-commands.mdx) · [Configuration](apps/docs/configuration.mdx) · [Task structure](apps/docs/capabilities/task-structure.mdx) · [Examples](apps/docs/examples.mdx) · [Models](docs/models.md) · [Upgrading](apps/docs/upgrading.mdx) · [Plugin](CLAUDE_CODE_PLUGIN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+[Tutorial](https://myself-fcf8480c.mintlify.site/tutorial) · [Command reference](https://myself-fcf8480c.mintlify.site/capabilities/cli-root-commands) · [Configuration](https://myself-fcf8480c.mintlify.site/configuration) · [Task structure](https://myself-fcf8480c.mintlify.site/capabilities/task-structure) · [Examples](https://myself-fcf8480c.mintlify.site/examples) · [Models](docs/models.md) · [Upgrading](https://myself-fcf8480c.mintlify.site/upgrading) · [Plugin](CLAUDE_CODE_PLUGIN.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## Contributors
 

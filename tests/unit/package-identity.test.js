@@ -91,9 +91,9 @@ describe('package identity', () => {
 		expect(pkg.bin['taskgraph-mcp']).toBe(pkg.bin[pkg.name]);
 	});
 
-	test('repository, homepage and bugs point at this repo', () => {
+	test('repository and bugs point at this repo, homepage not at upstream', () => {
 		expect(pkg.repository.url).toContain('stephennmiller/');
-		expect(pkg.homepage).toContain('stephennmiller/');
+		expect(pkg.homepage).not.toMatch(/eyaltoledano|task-master/);
 		expect(pkg.bugs.url).toContain('stephennmiller/');
 	});
 
