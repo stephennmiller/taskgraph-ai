@@ -57,6 +57,12 @@ export {
 	type RenumberedItem
 } from './modules/storage/adapters/file-storage/merge-tag-changes.js';
 
+// Stamp tasks.json tags with the schema version, for writers outside FileStorage
+export {
+	CURRENT_SCHEMA_VERSION,
+	stampTasksFileSchemaVersion
+} from './modules/storage/adapters/file-storage/schema-version.js';
+
 // Constants
 export * from './common/constants/index.js';
 

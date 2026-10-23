@@ -196,10 +196,12 @@ export class TagOperations {
 						setOwnKey(existingData, newTag, existingData[oldTag]);
 						delete existingData[oldTag];
 
-						// Update metadata tags array
-						if (existingData[newTag].metadata) {
-							existingData[newTag].metadata.tags = [newTag];
-						}
+						// Update metadata tags array and stamp the schema version
+						const metadata = existingData[newTag].metadata;
+						existingData[newTag].metadata = withSchemaVersion(
+							{ ...metadata, tags: [newTag] },
+							metadata
+						);
 
 						return existingData;
 					} else {
