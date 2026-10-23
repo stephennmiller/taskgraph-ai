@@ -12,13 +12,21 @@
  *
  *   Next: taskgraph set-status --id=2.2 --status=in-progress to start working
  *
+ * When stdout isn't a terminal (an agent or a script reading through a pipe),
+ * `list` prints `formatPlainTaskList` instead: one line per task, full
+ * titles, no color and no table:
+ *
+ *   1  done         high    Set up the database
+ *   2  in-progress  high    Sign-in with sessions  deps:1
+ *   3  pending      medium  Bookmark endpoints  deps:2
+ *
  * It replaces two boxed dashboards (progress and priorities, dependency
  * metrics and next task), a boxed "Next task" card under the table that
  * repeated the dashboard's next task, and a boxed, numbered list of three
  * generic next steps.
  */
 
-import type { Task } from '@tm/core';
+import { type Task, fullSubtaskId, resolveSubtaskDependency } from '@tm/core';
 import chalk from 'chalk';
 import {
 	type TaskStatistics,
@@ -312,4 +320,89 @@ export function formatNoNextTask(
 			resolveWidth(options.width)
 		)
 	].join('\n');
+}
+
+/** A task as `list` holds it, with its tag when listing every tag */
+type PlainListTask = Task & { tagName?: string };
+
+interface PlainRow {
+	tag?: string;
+	id: string;
+	status: string;
+	priority: string;
+	title: string;
+	deps: string[];
+}
+
+/**
+ * One line of text from a task file: line breaks, tabs and other whitespace
+ * become single spaces (so `a\rb` stays two words), then escape sequences
+ * and control characters are removed
+ */
+const oneLine = (text: unknown) =>
+	terminalSafe(String(text ?? '').replace(/\s+/g, ' '))
+		.replace(/ {2,}/g, ' ')
+		.trim();
+
+/**
+ * `list` for a pipe: one line per task (and per subtask with
+ * `withSubtasks`), columns separated by two spaces and padded to line up,
+ * full titles, and no ANSI codes, boxes or summary. A task's dependencies
+ * end the line as `deps:1,2`. Subtasks get their full dotted ID (`2.1`).
+ * When tasks carry a `tagName` (`--all-tags`), the tag is the first column.
+ *
+ * @param tasks - The rows `list` would put in its table
+ */
+export function formatPlainTaskList(
+	tasks: PlainListTask[],
+	options: { withSubtasks?: boolean } = {}
+): string {
+	const rows: PlainRow[] = [];
+	for (const task of tasks) {
+		const id = String(task.id);
+		// Every field comes from the task file, so each goes through oneLine
+		const tag = task.tagName === undefined ? undefined : oneLine(task.tagName);
+		rows.push({
+			tag,
+			id: oneLine(id),
+			status: oneLine(task.status),
+			priority: oneLine(task.priority) || '-',
+			title: oneLine(task.title) || '-',
+			deps: (task.dependencies ?? []).map(oneLine)
+		});
+		if (!options.withSubtasks) continue;
+		for (const subtask of task.subtasks ?? []) {
+			rows.push({
+				tag,
+				id: oneLine(fullSubtaskId(id, subtask.id)),
+				status: oneLine(subtask.status),
+				priority: oneLine(subtask.priority) || '-',
+				title: oneLine(subtask.title) || '-',
+				deps: (subtask.dependencies ?? []).map((dep) =>
+					oneLine(resolveSubtaskDependency(id, dep))
+				)
+			});
+		}
+	}
+
+	const showTag = rows.some((row) => row.tag !== undefined);
+	const widest = (pick: (row: PlainRow) => string) =>
+		Math.max(...rows.map((row) => pick(row).length));
+	const tagWidth = showTag ? widest((row) => row.tag ?? '-') : 0;
+	const idWidth = widest((row) => row.id);
+	const statusWidth = widest((row) => row.status);
+	const priorityWidth = widest((row) => row.priority);
+
+	return rows
+		.map((row) =>
+			[
+				...(showTag ? [(row.tag ?? '-').padEnd(tagWidth)] : []),
+				row.id.padEnd(idWidth),
+				row.status.padEnd(statusWidth),
+				row.priority.padEnd(priorityWidth),
+				row.title,
+				...(row.deps.length > 0 ? [`deps:${row.deps.join(',')}`] : [])
+			].join('  ')
+		)
+		.join('\n');
 }

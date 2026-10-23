@@ -35,6 +35,7 @@ import {
 	type TaskChecklist,
 	type TaskStatus,
 	buildChecklist,
+	fullSubtaskId,
 	getPrdSource,
 	getTaskLinks,
 	resolveSubtaskDependency
@@ -271,10 +272,7 @@ function subtaskRows(
 	width: number
 ): string[] {
 	const rows = subtasks.map((subtask) => {
-		// A subtask's ID is usually its own number, but may already be dotted
-		const id = String(subtask.id).includes('.')
-			? String(subtask.id)
-			: `${parentId}.${subtask.id}`;
+		const id = fullSubtaskId(parentId, subtask.id);
 		const deps = (subtask.dependencies ?? []).map((dep) =>
 			resolveSubtaskDependency(parentId, dep)
 		);
