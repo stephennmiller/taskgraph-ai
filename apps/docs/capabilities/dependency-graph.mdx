@@ -134,8 +134,11 @@ Blocked by:
    └─ ○ 4  Design the schema  ← ready to start
 
 To unblock:
-  Do 1 (Set up the database) and 4 (Design the schema): nothing else stands in their way.
+  Do 1 (Set up the database) and 4 (Design the schema): nothing else stands
+    in their way.
 ```
+
+Each step wraps to the terminal width, continuing under a deeper indent.
 
 A chain ends at one of four root causes: `ready` (unfinished, nothing in its way), `stalled` (`deferred` or `blocked`), `missing` (the ID matches no task) or `cycle` (it depends on itself through the chain). The JSON has `id`, `title`, `status`, `blocked`, `tag`, a nested `blockers` tree and `rootCauses`; see [CLI commands](/capabilities/cli-root-commands) for the full shape.
 
