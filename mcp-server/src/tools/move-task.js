@@ -180,7 +180,8 @@ export function registerMoveTaskTool(server) {
 								},
 								log,
 								errorPrefix: 'Error moving multiple tasks',
-								projectRoot: args.projectRoot
+								projectRoot: args.projectRoot,
+								tag: resolvedTag
 							});
 						}
 						return handleApiResult({
@@ -194,7 +195,8 @@ export function registerMoveTaskTool(server) {
 							},
 							log,
 							errorPrefix: 'Error moving multiple tasks',
-							projectRoot: args.projectRoot
+							projectRoot: args.projectRoot,
+							tag: resolvedTag
 						});
 					} else {
 						// Moving a single task
