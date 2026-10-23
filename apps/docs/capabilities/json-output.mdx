@@ -22,7 +22,7 @@ taskgraph next --json
 }
 ```
 
-Every command that takes `--format` also takes `--json` as its shorthand, so `next --json` and `next --format json` print the same thing.
+Every command that takes `--format` also takes `--json` as its shorthand, so `next --json` and `next --format json` print the same thing. A `--format` typed on the same line wins over `--json`.
 
 Check `schemaVersion` before you parse. If it is higher than the version your script was written for, a key you read may have been renamed or removed.
 
