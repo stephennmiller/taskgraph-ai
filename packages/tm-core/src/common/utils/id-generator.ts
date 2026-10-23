@@ -1,25 +1,7 @@
 /**
  * @fileoverview ID generation utilities for TaskGraph
- * Provides functions to generate unique identifiers for tasks and subtasks
+ * Provides functions to generate and validate task and subtask identifiers
  */
-
-import { randomBytes } from 'node:crypto';
-
-/**
- * Generates a unique task ID using the format: TASK-{timestamp}-{random}
- *
- * @returns A unique task ID string
- * @example
- * ```typescript
- * const taskId = generateTaskId();
- * // Returns something like: "TASK-1704067200000-A7B3"
- * ```
- */
-export function generateTaskId(): string {
-	const timestamp = Date.now();
-	const random = generateRandomString(4);
-	return `TASK-${timestamp}-${random}`;
-}
 
 /**
  * Generates a subtask ID using the format: {parentId}.{sequential}
@@ -57,26 +39,6 @@ export function generateSubtaskId(
 		sequentialNumbers.length > 0 ? Math.max(...sequentialNumbers) + 1 : 1;
 
 	return `${parentId}.${nextSequential}`;
-}
-
-/**
- * Generates a random alphanumeric string of specified length
- * Uses crypto.randomBytes for cryptographically secure randomness
- *
- * @param length - The desired length of the random string
- * @returns A random alphanumeric string
- * @internal
- */
-function generateRandomString(length: number): string {
-	const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-	const bytes = randomBytes(length);
-	let result = '';
-
-	for (let i = 0; i < length; i++) {
-		result += chars[bytes[i] % chars.length];
-	}
-
-	return result;
 }
 
 /**

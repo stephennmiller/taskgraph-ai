@@ -5,8 +5,6 @@
 
 // Export ID generation utilities
 export {
-	generateTaskId as generateId, // Alias for backward compatibility
-	generateTaskId,
 	generateSubtaskId,
 	isValidTaskId,
 	isValidSubtaskId,

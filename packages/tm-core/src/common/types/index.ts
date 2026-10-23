@@ -121,16 +121,6 @@ export interface TaskImplementationMetadata {
 // ============================================================================
 
 /**
- * Placeholder task interface for temporary/minimal task objects
- */
-export interface PlaceholderTask {
-	id: string;
-	title: string;
-	status: TaskStatus;
-	priority: TaskPriority;
-}
-
-/**
  * Base task interface
  */
 export interface Task extends TaskImplementationMetadata {
