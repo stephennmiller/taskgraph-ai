@@ -3,6 +3,7 @@
  */
 
 import type { TaskMetadata } from '../../../../common/types/index.js';
+import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 
 /** Schema version this build writes to tasks.json (a missing value means 1). */
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -36,26 +37,34 @@ export function withSchemaVersion<T extends object>(
 	};
 }
 
-function isTagObject(value: unknown): value is { metadata?: unknown } {
+function isTagObject(value: unknown): value is Record<string, unknown> {
 	return (
 		value !== null &&
 		typeof value === 'object' &&
 		!Array.isArray(value) &&
-		Array.isArray((value as { tasks?: unknown }).tasks)
+		Array.isArray(getOwnKey(value as Record<string, unknown>, 'tasks'))
 	);
 }
 
-function stampTag(tag: { metadata?: unknown }): void {
+// Own-key reads and writes: tag objects may come from a null-prototype
+// writer, and an inherited `metadata` or `schemaVersion` is not the file's
+function stampTag(tag: Record<string, unknown>): void {
+	const current = getOwnKey(tag, 'metadata');
 	// Leave metadata that is not a plain object alone rather than rewrite it
 	if (
-		tag.metadata !== undefined &&
-		tag.metadata !== null &&
-		(typeof tag.metadata !== 'object' || Array.isArray(tag.metadata))
+		current !== undefined &&
+		current !== null &&
+		(typeof current !== 'object' || Array.isArray(current))
 	) {
 		return;
 	}
-	const metadata = (tag.metadata ?? {}) as Pick<TaskMetadata, 'schemaVersion'>;
-	tag.metadata = withSchemaVersion(metadata, metadata);
+	const metadata = (current ?? {}) as Record<string, unknown>;
+	const onDisk = getOwnKey(metadata, 'schemaVersion') as number | undefined;
+	setOwnKey(
+		tag,
+		'metadata',
+		withSchemaVersion(metadata, { schemaVersion: onDisk })
+	);
 }
 
 /**

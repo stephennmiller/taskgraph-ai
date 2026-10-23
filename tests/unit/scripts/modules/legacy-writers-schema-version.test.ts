@@ -67,6 +67,22 @@ describe('legacy tasks.json writers stamp schemaVersion', () => {
 		expect(read().master.metadata.schemaVersion).toBe(newer);
 	});
 
+	it('writeJSON stamps a tag named __proto__ and keeps it as data', () => {
+		const raw = JSON.parse(
+			'{"master":{"tasks":[]},"__proto__":{"tasks":[],"metadata":{"created":"c"}}}'
+		);
+
+		writeJSON(tasksPath, raw);
+
+		const saved = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		expect(Object.hasOwn(saved, '__proto__')).toBe(true);
+		expect(saved.__proto__.metadata).toEqual({
+			created: 'c',
+			schemaVersion: CURRENT_SCHEMA_VERSION
+		});
+		expect(saved.master.metadata.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+	});
+
 	it('modifyJSON (add-task and other updateTagTasks callers) stamps the tag', async () => {
 		writeFile({ master: { tasks: [], metadata: {} } });
 

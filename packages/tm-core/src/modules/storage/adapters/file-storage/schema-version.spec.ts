@@ -94,4 +94,33 @@ describe('stampTasksFileSchemaVersion', () => {
 		expect(state).toEqual({ currentTag: 'master' });
 		expect(stampTasksFileSchemaVersion(null)).toBeNull();
 	});
+
+	it('stamps a null-prototype file whose tags are named __proto__ or constructor', () => {
+		const data = Object.create(null);
+		Object.defineProperty(data, '__proto__', {
+			value: { tasks: [], metadata: { created: 'c' } },
+			enumerable: true,
+			writable: true,
+			configurable: true
+		});
+		data.constructor = { tasks: [] };
+
+		stampTasksFileSchemaVersion(data);
+
+		expect(Object.getPrototypeOf(data)).toBeNull();
+		expect(JSON.parse(JSON.stringify(data))).toEqual(
+			JSON.parse(
+				'{"__proto__":{"tasks":[],"metadata":{"created":"c","schemaVersion":1}},"constructor":{"tasks":[],"metadata":{"schemaVersion":1}}}'
+			)
+		);
+	});
+
+	it('does not read a schemaVersion inherited by the metadata object', () => {
+		const metadata = Object.create({ schemaVersion: 7 });
+		const data = { master: { tasks: [], metadata } };
+
+		stampTasksFileSchemaVersion(data);
+
+		expect(data.master.metadata).toEqual({ schemaVersion: 1 });
+	});
 });
