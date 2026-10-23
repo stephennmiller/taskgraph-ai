@@ -97,17 +97,6 @@ export type {
 	GetTaskListOptions
 } from './modules/tasks/services/task-service.js';
 
-export type {
-	StartTaskOptions,
-	StartTaskResult,
-	ConflictCheckResult
-} from './modules/tasks/services/task-execution-service.js';
-
-export type {
-	PreflightResult,
-	CheckResult
-} from './modules/tasks/services/preflight-checker.service.js';
-
 // Task domain result types
 export type TaskWithSubtaskResult = Awaited<ReturnType<TasksDomain['get']>>;
 export type { ArchiveResult } from './modules/tasks/tasks-domain.js';
@@ -184,8 +173,6 @@ export { CommitMessageGenerator } from './modules/git/services/commit-message-ge
 export * from './modules/git/merge-driver/index.js';
 
 // Tasks - Advanced
-export { PreflightChecker } from './modules/tasks/services/preflight-checker.service.js';
-export { TaskLoaderService } from './modules/tasks/services/task-loader.service.js';
 export {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,

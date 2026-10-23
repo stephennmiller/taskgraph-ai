@@ -98,7 +98,7 @@ describe('formatHelp', () => {
 		}
 	);
 
-	it.each(['start', 'merge-driver', 'tui'])('gives %s no row', (command) => {
+	it.each(['merge-driver', 'tui'])('gives %s no row', (command) => {
 		expect(rowNames()).not.toContain(command);
 	});
 

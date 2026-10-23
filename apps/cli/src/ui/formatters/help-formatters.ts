@@ -37,10 +37,9 @@ export interface HelpGroup {
  * is static rather than read from a registry.
  *
  * Every command a user runs gets a row. Left out on purpose: `prime` (for
- * agents, named in the footer), hidden commands (`start`, an alias of loop,
- * and `merge-driver`, which git runs), `help`, the placeholder `tui`,
- * `update-subtask` (the help points at `note` instead, #245) and the old
- * per-tag commands that `tags <…>` replaces.
+ * agents, named in the footer), the hidden `merge-driver` (git runs it),
+ * `help`, the placeholder `tui`, `update-subtask` (the help points at `note`
+ * instead, #245) and the old per-tag commands that `tags <…>` replaces.
  */
 export const HELP_GROUPS: readonly HelpGroup[] = [
 	{

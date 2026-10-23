@@ -159,10 +159,9 @@ export {
 	type ListSummaryOptions
 } from './formatters/task-list-formatters.js';
 
-// What `loop` prints before it starts, and the `start` alias notice
+// What `loop` prints before it starts
 export {
 	formatLoopIntro,
-	formatStartDeprecation,
 	type LoopIntro
 } from './formatters/loop-formatters.js';
 
