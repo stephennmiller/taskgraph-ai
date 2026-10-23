@@ -103,6 +103,30 @@ describe('writeConfig only saves keys the project set (#336)', () => {
 	});
 });
 
+describe('a save without a readable config.json', () => {
+	it('saves the userId when there is no config.json', () => {
+		getUserId(root);
+
+		expect(readFile().global.userId).toBe('1234567890');
+		expect(getConfig(root, true).global.userId).toBe('1234567890');
+		// The built-in defaults were not changed by the save
+		fs.rmSync(configPath);
+		expect(getConfig(root, true).global.userId).toBeUndefined();
+	});
+
+	it('saves a change made to a config.json that is not valid JSON', () => {
+		fs.writeFileSync(configPath, '{ not json');
+		const config = getConfig(root, true);
+		config.global.responseLanguage = 'German';
+
+		writeConfig(config, root);
+
+		expect(readFile().global.responseLanguage).toBe('German');
+		fs.rmSync(configPath);
+		expect(getConfig(root, true).global.responseLanguage).toBe('English');
+	});
+});
+
 describe('model roles are saved with their provider', () => {
 	it('keeps a fallback model whose provider equals the default', () => {
 		writeFile({ global: { defaultPriority: 'medium' } });
@@ -116,6 +140,35 @@ describe('model roles are saved with their provider', () => {
 			modelId: 'opus'
 		});
 		expect(getConfig(root, true).models.fallback.modelId).toBe('opus');
+	});
+});
+
+describe('the saved file keeps its shape', () => {
+	it('keeps the order of the keys in the file', () => {
+		writeFile({
+			storage: { type: 'file' },
+			global: { defaultTag: 'master', logLevel: 'info' },
+			models: { main: { modelId: 'opus', provider: 'claude-code' } }
+		});
+
+		getUserId(root);
+
+		const file = readFile();
+		expect(Object.keys(file)).toEqual(['storage', 'global', 'models']);
+		expect(Object.keys(file.global)).toEqual([
+			'defaultTag',
+			'logLevel',
+			'userId'
+		]);
+		expect(Object.keys(file.models.main)).toEqual(['modelId', 'provider']);
+	});
+
+	it('does not pin the default model into a role that saves only temperature', () => {
+		writeFile({ models: { research: { temperature: 0.3 } } });
+
+		getUserId(root);
+
+		expect(readFile().models).toEqual({ research: { temperature: 0.3 } });
 	});
 });
 
@@ -182,7 +235,11 @@ describe('config-file helpers', () => {
 
 		expect(toSavedConfig(config, null, defaults)).toEqual({
 			global: { b: 2 },
-			models: { main: { provider: 'p', modelId: 'm', maxTokens: 2 } }
+			models: { main: { maxTokens: 2 } }
+		});
+		config.models.main.modelId = 'n';
+		expect(toSavedConfig(config, null, defaults).models).toEqual({
+			main: { provider: 'p', modelId: 'n', maxTokens: 2 }
 		});
 	});
 

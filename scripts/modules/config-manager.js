@@ -111,7 +111,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
 
 	// --- Find configuration file ---
 	let configPath = null;
-	let config = { ...defaults }; // Start with a deep copy of defaults
+	let config = structuredClone(defaults); // Callers change the result
 	let configExists = false;
 
 	// During initialization (no project markers), skip config file search entirely
@@ -193,7 +193,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
 					`Error reading or parsing ${configPath}: ${error.message}. Using default configuration.`
 				)
 			);
-			config = { ...defaults }; // Reset to defaults on parse error
+			config = structuredClone(defaults); // Reset to defaults on parse error
 			configSource = `defaults (parse error at ${configPath})`;
 		}
 	} else {
@@ -210,7 +210,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
 			warnMissingConfigOnce(explicitRoot || rootToUse);
 		}
 		// Keep config as defaults
-		config = { ...defaults };
+		config = structuredClone(defaults);
 		configSource = `defaults (no config file found at ${rootToUse})`;
 	}
 
@@ -801,10 +801,15 @@ function readSavedConfig(configPath) {
  * still gets the cleaned values for this run.
  */
 function saveCleanedConfig(configPath, cleaned) {
+	// Write a temp file and rename it, so another process reading config.json
+	// at the same time never sees a half-written file
+	const tempPath = `${configPath}.${process.pid}.tmp`;
 	try {
-		fs.writeFileSync(configPath, JSON.stringify(cleaned, null, 2));
+		fs.writeFileSync(tempPath, JSON.stringify(cleaned, null, 2));
+		fs.renameSync(tempPath, configPath);
 	} catch {
 		// Not fatal: the cleanup runs again on the next load
+		fs.rmSync(tempPath, { force: true });
 	}
 }
 

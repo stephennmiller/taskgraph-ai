@@ -18,7 +18,8 @@ const isPlainObject = (value) =>
  */
 function keepSetKeys(value, saved, defaults) {
 	const out = {};
-	for (const [key, entry] of Object.entries(value)) {
+	for (const key of inFileOrder(value, saved)) {
+		const entry = value[key];
 		const inFile = isPlainObject(saved) && Object.hasOwn(saved, key);
 		const fallback = isPlainObject(defaults) ? defaults[key] : undefined;
 		if (isPlainObject(entry) && isPlainObject(fallback)) {
@@ -29,6 +30,17 @@ function keepSetKeys(value, saved, defaults) {
 		}
 	}
 	return out;
+}
+
+/** Keys of `value`: those the file has in the file's order, then the rest */
+function inFileOrder(value, saved) {
+	const fileKeys = isPlainObject(saved)
+		? Object.keys(saved).filter((key) => Object.hasOwn(value, key))
+		: [];
+	return [
+		...fileKeys,
+		...Object.keys(value).filter((key) => !fileKeys.includes(key))
+	];
 }
 
 /**
@@ -44,25 +56,32 @@ function keepSetKeys(value, saved, defaults) {
  */
 export function toSavedConfig(config, saved, defaults) {
 	const file = isPlainObject(saved) ? saved : {};
-	const unread = Object.fromEntries(
-		Object.entries(file).filter(([key]) => !Object.hasOwn(defaults, key))
-	);
-	const out = { ...unread, ...keepSetKeys(config, file, defaults) };
-	pinModelPairs(out.models, config.models);
-	return out;
+	const kept = keepSetKeys(config, file, defaults);
+	pinModelPairs(kept.models, config.models);
+	// Keep the file's key order, so a save changes only the lines it must
+	const out = {};
+	for (const [key, value] of Object.entries(file)) {
+		if (!Object.hasOwn(defaults, key)) out[key] = value;
+		else if (Object.hasOwn(kept, key)) out[key] = kept[key];
+	}
+	return { ...out, ...kept };
 }
 
 /**
- * A saved model role always names both provider and modelId: a modelId only
- * means something with its provider, the loader ignores a fallback without
- * both, and a later default provider must not change the user's model.
+ * A saved model role that names a provider or a modelId names both: a modelId
+ * only means something with its provider, the loader ignores a fallback
+ * without both, and a later default provider must not change the user's
+ * model. A role that saves only other keys (such as temperature) keeps
+ * following the default model.
  */
 function pinModelPairs(savedModels, models) {
 	if (!isPlainObject(savedModels) || !isPlainObject(models)) return;
 	for (const [role, saved] of Object.entries(savedModels)) {
 		const model = models[role];
 		if (!isPlainObject(saved) || !isPlainObject(model)) continue;
-		if (Object.keys(saved).length === 0) continue;
+		if (!Object.hasOwn(saved, 'provider') && !Object.hasOwn(saved, 'modelId')) {
+			continue;
+		}
 		for (const key of ['provider', 'modelId']) {
 			if (model[key] !== undefined && !Object.hasOwn(saved, key)) {
 				saved[key] = model[key];
