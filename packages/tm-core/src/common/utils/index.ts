@@ -39,6 +39,12 @@ export {
 	isValidNormalizedPath
 } from './path-normalizer.js';
 
+// Resolve a path to one spelling, refusing it when it leaves a root
+export {
+	realpathOfExistingPrefix,
+	resolvePathInsideRoot
+} from './path-inside-root.js';
+
 // Export run ID generation utilities
 export {
 	generateRunId,

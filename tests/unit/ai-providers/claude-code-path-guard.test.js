@@ -40,7 +40,7 @@ function findRipgrep() {
  * mode: --hidden, then each `glob` token as --glob. Tokens split on spaces,
  * then on commas unless the token holds a brace group.
  */
-function grepArgs({ pattern, glob, type }) {
+function grepArgs({ pattern, glob, type, path: searchPath }) {
 	const args = ['--hidden', '--no-heading', '-n'];
 	for (const token of (glob ?? '').split(/\s+/).filter(Boolean)) {
 		const parts =
@@ -49,7 +49,7 @@ function grepArgs({ pattern, glob, type }) {
 	}
 	if (type) args.push('--type', type);
 	// rg reads stdin when given no path, so name the directory like Claude Code
-	args.push('-e', pattern, '.');
+	args.push('-e', pattern, searchPath ?? '.');
 	return args;
 }
 
@@ -545,6 +545,68 @@ describe('claude-code path guard', () => {
 			for (const secret of secrets) {
 				expect(lines.join('\n')).not.toContain(`API_KEY=${secret}`);
 			}
+		});
+
+		describe('search path spellings (#439)', () => {
+			// rg matches `**/.docker/config.json` against the path as typed, so
+			// these walked into the directory-scoped secrets before the hook
+			// handed rg the resolved path
+			const spellings = [
+				['.docker//', '.docker'],
+				['.docker/./', '.docker'],
+				['./.docker/', '.docker'],
+				['src/../.docker', '.docker'],
+				['docker-link', '.docker'],
+				['.config//git', '.config/git'],
+				['.config/./git/', '.config/git'],
+				['nested/../.config/git/', '.config/git']
+			];
+
+			beforeAll(() => {
+				fs.symlinkSync('.docker', path.join(project, 'docker-link'));
+			});
+
+			it.each(spellings)(
+				'hook hands Grep of %s the resolved path',
+				async (searchPath, resolved) => {
+					const [hook] = createPathGuardHook(project).hooks;
+					const result = await hook({
+						tool_name: 'Grep',
+						tool_input: { pattern: 'KEY', path: searchPath }
+					});
+					expect(result.hookSpecificOutput.updatedInput.path).toBe(
+						path.join(fs.realpathSync(project), resolved)
+					);
+				}
+			);
+
+			it.skipIf(!ripgrep).each(spellings)(
+				'rewritten Grep of %s returns no secret lines',
+				async (searchPath, resolved) => {
+					const [hook] = createPathGuardHook(project).hooks;
+					const result = await hook({
+						tool_name: 'Grep',
+						tool_input: { pattern: 'API_KEY', path: searchPath }
+					});
+					const lines = runGrep(
+						project,
+						result.hookSpecificOutput.updatedInput
+					).join('\n');
+					expect(lines).not.toContain('API_KEY=.docker/config.json');
+					expect(lines).not.toContain('API_KEY=.config/git/credentials');
+					// Still searched: each directory holds one file that isn't secret
+					expect(lines).toContain(`API_KEY=${resolved}/`);
+				}
+			);
+
+			it.each([
+				['Grep', { glob: '.docker//config.json' }],
+				['Grep', { glob: '.config/./git/credentials' }],
+				['Glob', { pattern: '.docker//config.json' }],
+				['Glob', { pattern: '**/.config/./git//credentials' }]
+			])('denies a %s glob that names a secret with %o', (tool, input) => {
+				expect(getPathViolation(project, tool, input)).toMatch(/secret/);
+			});
 		});
 
 		it.skipIf(!ripgrep)('rewritten Grep still searches other files', () => {

@@ -7,26 +7,10 @@
  * loaded.
  */
 
-import fs from 'fs';
 import path from 'path';
+import { realpathOfExistingPrefix, resolvePathInsideRoot } from '@tm/core';
 
 const GUARDED_TOOLS = ['Read', 'Grep', 'Glob'];
-
-/** Resolve symlinks for the longest existing prefix of a path. */
-function realpathOfExistingPrefix(target) {
-	let current = target;
-	const rest = [];
-	for (;;) {
-		try {
-			return path.join(fs.realpathSync(current), ...rest.reverse());
-		} catch {
-			const parent = path.dirname(current);
-			if (parent === current) return target;
-			rest.push(path.basename(current));
-			current = parent;
-		}
-	}
-}
 
 /**
  * @param {string} root - Absolute, real path of the allowed directory
@@ -34,13 +18,7 @@ function realpathOfExistingPrefix(target) {
  * @returns {boolean} True when candidate is root or inside it
  */
 export function isInsideRoot(root, candidate) {
-	if (typeof candidate !== 'string') return false;
-	// Shell-style home expansion is not resolved by path.resolve; refuse it
-	if (candidate.startsWith('~')) return false;
-	const resolved = realpathOfExistingPrefix(path.resolve(root, candidate));
-	const relative = path.relative(root, resolved);
-	const leavesRoot = relative === '..' || relative.startsWith(`..${path.sep}`);
-	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
+	return resolvePathInsideRoot(root, candidate) !== null;
 }
 
 // Names that hold credentials, in lower case. Both the name check and the rg
@@ -131,9 +109,12 @@ function foldCase(name) {
 
 /** True when any part of a path or glob names a credentials file. */
 function namesSecret(candidate) {
+	// Empty parts come from `//` and `/./` (normalizeSegment drops the dot), so
+	// `.docker//config.json` is judged as `.docker/config.json`
 	const parts = candidate
 		.split(/[\\/,]/)
-		.map((part) => foldCase(normalizeSegment(part)));
+		.map((part) => foldCase(normalizeSegment(part)))
+		.filter(Boolean);
 	const secret = (part) =>
 		SHORT_NAME.test(part) || (isSecretName(part) && !PUBLIC_ENV.test(part));
 	if (parts.some(secret)) return true;
@@ -303,12 +284,19 @@ export function createPathGuardHook(rootDir) {
 					};
 				}
 				if (input?.tool_name !== 'Grep') return {};
+				// rg matches the exclusion globs against the path as typed, so
+				// `.docker//` or a symlink to .docker would skip
+				// `**/.docker/config.json`; hand it the path judged above (#439)
+				const toolInput = { ...input.tool_input };
+				if (toolInput.path !== undefined && toolInput.path !== null) {
+					toolInput.path = resolvePathInsideRoot(root, toolInput.path);
+				}
 				// No permissionDecision: the rewritten input still goes through
 				// the session's own permission rules
 				return {
 					hookSpecificOutput: {
 						hookEventName: 'PreToolUse',
-						updatedInput: excludeSecretsFromGrep(input.tool_input)
+						updatedInput: excludeSecretsFromGrep(toolInput)
 					}
 				};
 			}
