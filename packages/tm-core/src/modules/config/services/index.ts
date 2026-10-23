@@ -18,9 +18,3 @@ export {
 	type PersistenceOptions
 } from './config-persistence.service.js';
 export { EnvironmentConfigProvider } from './environment-config-provider.service.js';
-export {
-	PER_MACHINE_CONFIG_KEYS,
-	hasPerMachineSettings,
-	mergeMachineConfig,
-	splitMachineConfig
-} from './machine-config.js';

@@ -143,6 +143,51 @@ describe('per-machine config and state', () => {
 		expect(fs.existsSync(localPath())).toBe(false);
 	});
 
+	describe('an old-save config.json next to a config.local.json', () => {
+		// Before #329 every save wrote the merged defaults, including
+		// defaultNumTasks 10 and enableProxy false
+		beforeEach(() => {
+			editShared((config) => {
+				config.global = {
+					...config.global,
+					defaultNumTasks: 10,
+					enableProxy: false
+				};
+			});
+			writeJson(localPath(), {
+				models: { main: { modelId: 'opus' } },
+				claudeCode: { pathToClaudeCodeExecutable: EXECUTABLE }
+			});
+		});
+
+		it('cleans config.json on load without copying local settings into it', () => {
+			const result = run(['models']);
+
+			expect(result.status).toBe(0);
+			expect(result.stdout).toMatch(/Main\s+opus/);
+			const shared = readJson(sharedPath());
+			expect(shared.global.defaultNumTasks).toBeUndefined();
+			expect(shared.global.enableProxy).toBeUndefined();
+			expect(shared.models.main.modelId).toBe('sonnet');
+			expect(shared.claudeCode).toBeUndefined();
+		});
+
+		it('saves a shared change to config.json and keeps local settings local', () => {
+			const result = run(['models', '--set-research', 'opus']);
+
+			expect(result.status).toBe(0);
+			const shared = readJson(sharedPath());
+			expect(shared.models.research.modelId).toBe('opus');
+			expect(shared.models.main.modelId).toBe('sonnet');
+			expect(shared.global.defaultNumTasks).toBeUndefined();
+			expect(shared.claudeCode).toBeUndefined();
+			expect(readJson(localPath())).toEqual({
+				models: { main: { modelId: 'opus' } },
+				claudeCode: { pathToClaudeCodeExecutable: EXECUTABLE }
+			});
+		});
+	});
+
 	describe('a project whose config.json has the claude executable path', () => {
 		beforeEach(() => {
 			editShared((config) => {

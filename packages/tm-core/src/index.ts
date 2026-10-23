@@ -188,7 +188,6 @@ export {
 
 // Per-machine settings (.taskgraph/config.local.json)
 export {
-	PER_MACHINE_CONFIG_KEYS,
 	hasPerMachineSettings,
 	mergeMachineConfig,
 	splitMachineConfig

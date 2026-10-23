@@ -11,6 +11,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
+import { TASKGRAPH_LOCAL_CONFIG_FILE } from '../../../common/constants/paths.js';
 import { getLogger } from '../../../common/logger/index.js';
 import { mergeMachineConfig } from './machine-config.js';
 
@@ -28,8 +29,7 @@ export class ConfigLoader {
 		this.localConfigPath = path.join(projectRoot, '.taskgraph', 'config.json');
 		this.machineConfigPath = path.join(
 			projectRoot,
-			'.taskgraph',
-			'config.local.json'
+			TASKGRAPH_LOCAL_CONFIG_FILE
 		);
 		this.globalConfigPath = path.join(
 			process.env.HOME || '',
