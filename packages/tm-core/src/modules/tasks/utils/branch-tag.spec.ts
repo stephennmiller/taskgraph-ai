@@ -23,7 +23,7 @@ describe('tagNameForBranch', () => {
 		expect(tagNameForBranch(`feature/${'x'.repeat(80)}`)).toHaveLength(50);
 	});
 
-	it.each(['main', 'master', 'develop', 'dev', 'HEAD', 'Main'])(
+	it.each(['main', 'master', 'develop', 'dev', 'HEAD', 'head', 'Main'])(
 		'rejects the reserved branch %s',
 		(branch) => {
 			expect(() => tagNameForBranch(branch)).toThrow(

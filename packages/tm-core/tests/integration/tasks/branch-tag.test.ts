@@ -159,4 +159,25 @@ describe('recordBranchTag', () => {
 			fs.readFileSync(path.join(dir, '.taskgraph', 'state.json'), 'utf8')
 		).toBe(JSON.stringify({ branchTagMapping: { topic: 'topic' } }, null, 2));
 	});
+
+	it('replaces a branchTagMapping that is an array, which would drop the entry', async () => {
+		const statePath = path.join(dir, '.taskgraph', 'state.json');
+		fs.writeFileSync(statePath, JSON.stringify({ branchTagMapping: [] }));
+
+		await recordBranchTag(dir, 'topic', 'topic');
+
+		expect(JSON.parse(fs.readFileSync(statePath, 'utf8'))).toEqual({
+			branchTagMapping: { topic: 'topic' }
+		});
+	});
+
+	it('refuses a state.json that is not a JSON object and leaves it alone', async () => {
+		const statePath = path.join(dir, '.taskgraph', 'state.json');
+		fs.writeFileSync(statePath, '[]');
+
+		await expect(recordBranchTag(dir, 'topic', 'topic')).rejects.toThrow(
+			'state.json does not hold a JSON object'
+		);
+		expect(fs.readFileSync(statePath, 'utf8')).toBe('[]');
+	});
 });

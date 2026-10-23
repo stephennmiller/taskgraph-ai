@@ -88,6 +88,10 @@ export async function resolveBranchTag(
 	return { branchName, tagName: tagNameForBranch(branchName) };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /**
  * Record in state.json that branchName maps to tagName. Every other key in
  * the file is kept as it is; a missing file is created.
@@ -98,16 +102,19 @@ export async function recordBranchTag(
 	tagName: string
 ): Promise<void> {
 	const statePath = path.join(projectRoot, TASKGRAPH_STATE_FILE);
-	let state: Record<string, unknown> = {};
+	let state: unknown = {};
 	try {
 		state = JSON.parse(await fs.readFile(statePath, 'utf8'));
 	} catch (error: any) {
 		if (error?.code !== 'ENOENT') throw error;
 	}
-	const mapping =
-		state.branchTagMapping && typeof state.branchTagMapping === 'object'
-			? (state.branchTagMapping as Record<string, string>)
-			: {};
+	// JSON.stringify drops a key set on an array, so the mapping would be lost
+	if (!isRecord(state)) {
+		throw new Error('state.json does not hold a JSON object');
+	}
+	const mapping = isRecord(state.branchTagMapping)
+		? (state.branchTagMapping as Record<string, string>)
+		: {};
 	mapping[branchName] = tagName;
 	state.branchTagMapping = mapping;
 	await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
