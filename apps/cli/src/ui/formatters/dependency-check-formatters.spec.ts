@@ -46,6 +46,30 @@ describe('formatDependencyCheck', () => {
 		]);
 	});
 
+	it('reports a related link to a missing task, which fix-dependencies removes', () => {
+		const output = formatDependencyCheck({
+			...counts,
+			issues: [{ type: 'missing-link', taskId: 4, dependencyId: '9.1' }]
+		});
+
+		expect(lines(output)).toEqual([
+			'✗ 1 dependency problem',
+			"  4  links to subtask 9.1, which doesn't exist",
+			'Run taskgraph fix-dependencies to remove them'
+		]);
+		expect(
+			lines(
+				formatDependencyFixes({
+					...counts,
+					fixes: [{ type: 'missing-link', taskId: 4, dependencyId: 9 }]
+				})
+			)
+		).toEqual([
+			'✓ Fixed 1 dependency problem',
+			"  4  removed its link to task 9, which doesn't exist"
+		]);
+	});
+
 	it('suggests remove-dependency when only task loops are left', () => {
 		const output = formatDependencyCheck({
 			...counts,

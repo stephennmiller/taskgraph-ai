@@ -27,6 +27,17 @@ Parse natural language or IDs:
 taskgraph add-dependency --id=<task-id> --depends-on=<dependency-id>
 ```
 
+## Links That Don't Block
+
+When the tasks are only connected ("5 is related to 3", "found 5 while doing 3"), link them without making one wait:
+
+```bash
+taskgraph add-dependency --id=5 --depends-on=3 --type=related
+taskgraph add-dependency --id=5 --depends-on=3 --type=discovered-from
+```
+
+These never block `next` or show up in `why`; `show` lists them after the task's dependencies.
+
 ## Validation
 
 Before adding:

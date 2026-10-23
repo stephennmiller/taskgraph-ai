@@ -101,6 +101,44 @@ describe('mergeTasksJson', () => {
 		});
 	});
 
+	it('moves related and discovered-from links to a renumbered incoming task', () => {
+		const base = file({ master: [task(1)] });
+		const ours = file({ master: [task(1), task(2, { title: 'Ours' })] });
+		const theirs = file({
+			master: [
+				task(1, { metadata: { taskLinks: { '2': 'related' } } }),
+				task(2, {
+					title: 'Theirs',
+					subtasks: [{ id: 1, title: 'Sub', status: 'pending' }]
+				}),
+				task(3, {
+					metadata: {
+						owner: 'kim',
+						taskLinks: { '2.1': 'discovered-from', '1': 'related' }
+					}
+				})
+			]
+		});
+
+		const result = mergeTasksJson(base, ours, theirs);
+
+		expect(result.renumbered).toContainEqual({
+			tag: 'master',
+			from: '2',
+			to: '4'
+		});
+		expect(byId(result.merged, 1)?.metadata).toEqual({
+			taskLinks: { '4': 'related' }
+		});
+		const incoming = tasksOf(result.merged).find(
+			(t) => (t.metadata as any)?.owner === 'kim'
+		);
+		expect(incoming?.metadata).toEqual({
+			owner: 'kim',
+			taskLinks: { '4.1': 'discovered-from', '1': 'related' }
+		});
+	});
+
 	it('keeps one copy when both sides added the identical task', () => {
 		const base = file({ master: [task(1)] });
 		const both = file({ master: [task(1), task(2, { title: 'Same' })] });

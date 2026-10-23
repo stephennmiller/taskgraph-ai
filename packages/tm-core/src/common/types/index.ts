@@ -172,9 +172,11 @@ export interface Task extends TaskImplementationMetadata {
 	 * Use for external IDs, custom workflow data, integrations, etc.
 	 * This field is preserved through AI operations, updates, and serialization.
 	 *
-	 * Reserved key: `dependencySources` records which dependencies the AI
-	 * inferred (see modules/dependencies/dependency-provenance.ts). Don't
-	 * store anything else under it.
+	 * Reserved keys: `dependencySources` records which dependencies the AI
+	 * inferred (see modules/dependencies/dependency-provenance.ts), and
+	 * `taskLinks` holds non-blocking `related` / `discovered-from` links (see
+	 * modules/dependencies/task-links.ts). Don't store anything else under
+	 * them.
 	 */
 	metadata?: Record<string, unknown>;
 }

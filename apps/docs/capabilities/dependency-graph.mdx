@@ -138,6 +138,54 @@ Provenance lives in the task's `metadata.dependencySources`, a map from dependen
 - Running `add-dependency` for a dependency that is already inferred makes it explicit.
 - Known limit: when `update-task` regenerates subtasks and the AI reorders them, subtasks are renumbered without remapping their sibling dependencies, so a sibling dependency can change source.
 
+## Links that don't block
+
+A dependency means "wait for this task". Sometimes two tasks are only connected: they touch the same code, or you found one while doing the other. Link them without making either wait:
+
+```bash
+# Task 7 is related to task 4
+taskgraph add-dependency --id=7 --depends-on=4 --type=related
+
+# File work you found while doing task 3
+taskgraph add-task --prompt="Fix the flaky login test" --discovered-from=3
+```
+
+There are three link types:
+
+| Type | Blocks? | Set with |
+| --- | --- | --- |
+| `blocks` | Yes | `add-dependency` (the default), `add-task --dependencies` |
+| `related` | No | `add-dependency --type=related` |
+| `discovered-from` | No | `add-dependency --type=discovered-from`, `add-task --discovered-from` |
+
+Only `blocks` counts anywhere a task waits: `next`, `why`, `graph` (blocked counts and the critical path), loop checks, and `validate-dependencies` / `fix-dependencies`. `show` lists the other two after what the task depends on:
+
+```
+Task 7  Export bookmarks
+○ pending · medium priority · depends on 2 · related to 4 · discovered from 3
+```
+
+- **Changing the type.** Running `add-dependency --type=related` on a task that already depends on the other turns the dependency into a link, so the task stops waiting. Running plain `add-dependency` on a linked pair turns the link back into a dependency.
+- **Removing a link.** `remove-dependency` removes a link the same way it removes a dependency.
+- **Cleanup.** Removing a task removes the links to it (and to its subtasks), as it does dependencies. Moving a task within a tag carries the links to its new ID. Moving it to another tag drops links that would cross tags. `validate-dependencies` reports a link to a task that doesn't exist and `fix-dependencies` removes it.
+- **MCP.** `add_dependency` takes `type` (`blocks`, `related` or `discovered-from`) and `add_task` takes `discoveredFrom`.
+
+### Where links are stored
+
+Non-blocking links live in the task's `metadata.taskLinks`, a map from full ID to link type, not in `dependencies`:
+
+```json
+{
+  "id": "7",
+  "dependencies": ["2"],
+  "metadata": {
+    "taskLinks": { "4": "related", "3": "discovered-from" }
+  }
+}
+```
+
+Everything in `dependencies` is a `blocks` link, so files written before link types existed load unchanged. Keeping the other links out of `dependencies` means no code that reads dependencies can mistake them for blockers. Keys are always full IDs (`"2.1"` for a subtask), on a task or a subtask. If the same task is both a dependency and a link, the dependency wins. Like `dependencySources`, `taskLinks` is a reserved metadata key that the `metadata` parameter of `update_task` and `update_subtask` drops.
+
 ## Schema version
 
 Each tag in `.taskgraph/tasks/tasks.json` records `metadata.schemaVersion` (currently `1`), stamped whenever `@tm/core` saves the tag. A missing or malformed value is read as version 1. A tag written by a newer version, or with a malformed `schemaVersion`, prints a warning to stderr once per file and tag, and is still read. The stamp never lowers a version already on disk.

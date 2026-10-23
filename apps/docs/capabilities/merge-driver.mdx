@@ -13,7 +13,7 @@ TaskGraph ships a Git merge driver for `tasks.json`. Git runs it during `git mer
 ## What it does
 
 - **New tasks on both branches are all kept.** When both branches used the same ID, the incoming branch's task gets the next free ID. The same goes for new subtasks of an existing task.
-- **References follow the renumbered task.** On the incoming side, task and subtask `dependencies`, `metadata.dependencySources` keys and a subtask's `parentId` are rewritten to the new ID.
+- **References follow the renumbered task.** On the incoming side, task and subtask `dependencies`, `metadata.dependencySources` keys, `related` / `discovered-from` links (`metadata.taskLinks`) and a subtask's `parentId` are rewritten to the new ID.
 - **Only IDs that collide move.** An incoming task whose ID is still free keeps it.
 - **Changes to different fields merge cleanly.** One branch sets task 3 to `done` while the other edits its description: both changes land.
 

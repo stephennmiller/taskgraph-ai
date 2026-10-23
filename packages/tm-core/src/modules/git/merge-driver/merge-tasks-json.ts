@@ -12,7 +12,8 @@
  *   the next free ID and is reported in `renumbered`. Every reference to it
  *   on the incoming side follows: dependencies of tasks and subtasks (in the
  *   form each was stored: a number, a string, or a sibling number),
- *   `metadata.dependencySources` keys and a subtask's `parentId`.
+ *   `metadata.dependencySources` and `metadata.taskLinks` keys and a
+ *   subtask's `parentId`.
  * - The same field changed to different values on both sides is a conflict.
  *   The current branch's value (`ours`) is written, and the conflict is
  *   reported with the incoming value, so the caller can exit non-zero and
@@ -31,7 +32,10 @@
  */
 
 import { isDeepStrictEqual } from 'node:util';
-import { DEPENDENCY_SOURCES_KEY } from '../../dependencies/dependency-provenance.js';
+import {
+	DEPENDENCY_SOURCES_KEY,
+	TASK_LINKS_KEY
+} from '../../dependencies/dependency-provenance.js';
 import {
 	isSiblingReference,
 	resolveSubtaskDependency
@@ -368,18 +372,20 @@ function rewriteReferences(
 	}
 
 	const metadata = own(item, 'metadata');
-	const sources = isObject(metadata)
-		? own(metadata, DEPENDENCY_SOURCES_KEY)
-		: undefined;
-	if (isObject(metadata) && isObject(sources)) {
-		const movedSources: Json = {};
-		for (const [key, value] of Object.entries(sources)) {
-			put(movedSources, remap(key), value);
+	if (!isObject(metadata)) return;
+	// Provenance marks and non-blocking links are both keyed by full ID
+	let movedMetadata: Json | undefined;
+	for (const mapKey of [DEPENDENCY_SOURCES_KEY, TASK_LINKS_KEY]) {
+		const entries = own(metadata, mapKey);
+		if (!isObject(entries)) continue;
+		const moved: Json = {};
+		for (const [key, value] of Object.entries(entries)) {
+			put(moved, remap(key), value);
 		}
-		const movedMetadata: Json = { ...metadata };
-		put(movedMetadata, DEPENDENCY_SOURCES_KEY, movedSources);
-		item.metadata = movedMetadata;
+		movedMetadata ??= { ...metadata };
+		put(movedMetadata, mapKey, moved);
 	}
+	if (movedMetadata) item.metadata = movedMetadata;
 }
 
 function maxId(lists: Item[][]): number {

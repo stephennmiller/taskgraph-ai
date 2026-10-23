@@ -64,6 +64,23 @@ describe('formatTaskCreated', () => {
 		]);
 	});
 
+	it('shows where the task was discovered, apart from what it depends on', () => {
+		const output = formatTaskCreated(
+			{
+				id: 6,
+				title: 'Fix the flaky login test',
+				dependencies: [{ id: 1, title: 'Set up the database schema' }],
+				discoveredFrom: { id: '2.1', title: 'Password hashing helpers' }
+			},
+			80
+		);
+
+		expect(lines(output).slice(1, 3)).toEqual([
+			'  Depends on       1    Set up the database schema',
+			'  Discovered from  2.1  Password hashing helpers'
+		]);
+	});
+
 	it('names a dependency it cannot find', () => {
 		const output = formatTaskCreated(
 			{ id: 2, title: 'Two', dependencies: [{ id: 9, title: '' }] },

@@ -1,6 +1,7 @@
 import {
 	assignMetadata,
 	dependenciesForMovedItem,
+	pruneTaskLinks,
 	retargetDependents
 } from '@tm/core';
 import { log, readJSON, writeJSON } from '../utils.js';
@@ -118,6 +119,8 @@ async function removeSubtask(
 
 			log('info', `Created new task ${newTaskId} from subtask ${subtaskId}`);
 		} else {
+			// Related and discovered-from links to it go with it
+			pruneTaskLinks(data.tasks);
 			log('debug', `Subtask ${subtaskId} deleted`);
 		}
 

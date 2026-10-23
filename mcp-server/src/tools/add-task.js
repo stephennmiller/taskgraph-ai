@@ -48,6 +48,12 @@ export function registerAddTaskTool(server) {
 				.string()
 				.optional()
 				.describe('Comma-separated list of task IDs this task depends on'),
+			discoveredFrom: z
+				.string()
+				.optional()
+				.describe(
+					'ID of the task you found this work while doing; links them without blocking the new task'
+				),
 			priority: z
 				.string()
 				.optional()
@@ -111,6 +117,7 @@ export function registerAddTaskTool(server) {
 						priority: args.priority,
 						research: args.research,
 						acceptanceCriteria: args.acceptanceCriteria,
+						discoveredFrom: args.discoveredFrom,
 						projectRoot: args.projectRoot,
 						tag: resolvedTag
 					},

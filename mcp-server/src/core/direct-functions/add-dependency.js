@@ -19,6 +19,7 @@ import {
  * @param {string} args.tasksJsonPath - Explicit path to the tasks.json file.
  * @param {string|number} args.id - Task ID to add dependency to
  * @param {string|number} args.dependsOn - Task ID that will become a dependency
+ * @param {string} [args.type] - blocks (default), related or discovered-from
  * @param {string} args.tag - Tag for the task (optional)
  * @param {string} args.projectRoot - Project root path (for MCP/env fallback)
  * @param {Object} log - Logger object
@@ -26,7 +27,7 @@ import {
  */
 export async function addDependencyDirect(args, log) {
 	// Destructure expected args
-	const { tasksJsonPath, id, dependsOn, tag, projectRoot } = args;
+	const { tasksJsonPath, id, dependsOn, type, tag, projectRoot } = args;
 	try {
 		log.info(`Adding dependency with args: ${JSON.stringify(args)}`);
 
@@ -82,7 +83,7 @@ export async function addDependencyDirect(args, log) {
 		enableSilentMode();
 
 		// Create context object
-		const context = { projectRoot, tag };
+		const context = { projectRoot, tag, linkType: type };
 
 		// Call the core function using the provided path
 		await addDependency(tasksPath, taskId, dependencyId, context);
@@ -90,12 +91,17 @@ export async function addDependencyDirect(args, log) {
 		// Restore normal logging
 		disableSilentMode();
 
+		const linkType = type || 'blocks';
 		return {
 			success: true,
 			data: {
-				message: `Successfully added dependency: Task ${taskId} now depends on ${dependencyId}`,
+				message:
+					linkType === 'blocks'
+						? `Successfully added dependency: Task ${taskId} now depends on ${dependencyId}`
+						: `Linked task ${taskId} to ${dependencyId} as ${linkType}; it doesn't block`,
 				taskId: taskId,
-				dependencyId: dependencyId
+				dependencyId: dependencyId,
+				type: linkType
 			}
 		};
 	} catch (error) {

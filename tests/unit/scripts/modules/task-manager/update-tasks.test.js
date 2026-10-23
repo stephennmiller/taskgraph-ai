@@ -273,6 +273,77 @@ describe('updateTasks', () => {
 		});
 	});
 
+	test('keeps related and discovered-from links on tasks and subtasks', async () => {
+		const initial = {
+			master: {
+				tasks: [
+					{ id: 1, title: 'One', status: 'pending', dependencies: [] },
+					{
+						id: 2,
+						title: 'Two',
+						status: 'pending',
+						dependencies: [],
+						metadata: { taskLinks: { 1: 'related' } },
+						subtasks: [
+							{
+								id: 1,
+								title: 'Sub',
+								status: 'pending',
+								dependencies: [],
+								metadata: { taskLinks: { 1: 'discovered-from' } }
+							}
+						]
+					}
+				]
+			}
+		};
+		// The model can't add or drop links, even if it sends metadata back
+		const aiTask = {
+			id: 2,
+			title: 'Two, revised',
+			status: 'pending',
+			details: 'd',
+			description: 'd',
+			dependencies: [],
+			priority: 'medium',
+			testStrategy: 't',
+			metadata: { taskLinks: { 5: 'related' } },
+			subtasks: [
+				{
+					id: 1,
+					title: 'Sub',
+					status: 'pending',
+					dependencies: [],
+					metadata: {}
+				}
+			]
+		};
+		readJSON.mockReturnValue({
+			...initial.master,
+			tag: 'master',
+			_rawTaggedData: initial
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: { tasks: [aiTask] },
+			telemetryData: {}
+		});
+
+		await updateTasks(
+			'/mock/path/tasks.json',
+			2,
+			'Revise',
+			false,
+			{ projectRoot: '/mock/path', tag: 'master' },
+			'json'
+		);
+
+		const written = writeJSON.mock.calls[0][1]._rawTaggedData.master.tasks[1];
+		expect(written.metadata).toEqual({ taskLinks: { 1: 'related' } });
+		expect(written.subtasks[0].metadata).toEqual({
+			taskLinks: { 1: 'discovered-from' }
+		});
+	});
+
 	const runUpdate = async (initialTasks, aiTasks, fromId = 2) => {
 		const initial = { master: { tasks: initialTasks } };
 		readJSON.mockReturnValue({

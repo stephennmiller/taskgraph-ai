@@ -14,7 +14,8 @@
  *   others added stay, items the command removed go, items the command added
  *   are appended. When someone else took the ID of an item the command added,
  *   the command's item gets the next free ID and is reported in `renumbered`.
- *   Dependencies on a renumbered item, and their provenance marks, follow it.
+ *   Dependencies on a renumbered item, their provenance marks and
+ *   non-blocking links follow it.
  * - When the command reordered items it kept, its order wins; items others
  *   added stay after the item they followed.
  * - An item someone else removed stays removed.
@@ -22,7 +23,10 @@
 
 import { isDeepStrictEqual } from 'node:util';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
-import { DEPENDENCY_SOURCES_KEY } from '../../../dependencies/dependency-provenance.js';
+import {
+	DEPENDENCY_SOURCES_KEY,
+	TASK_LINKS_KEY
+} from '../../../dependencies/dependency-provenance.js';
 
 export interface RenumberedItem {
 	/** The ID the command gave the item, such as `11` or `5.3` */
@@ -285,16 +289,19 @@ function rewriteDependencies(
 	}
 	const metadata = own(item, 'metadata');
 	if (isPlainObject(metadata)) {
-		const sources = own(metadata, DEPENDENCY_SOURCES_KEY);
-		if (isPlainObject(sources)) {
-			const movedSources: Record<string, unknown> = {};
-			for (const [key, value] of Object.entries(sources)) {
-				put(movedSources, remap(key), value);
+		// Both maps are keyed by full ID
+		let movedMetadata: Record<string, unknown> | undefined;
+		for (const mapKey of [DEPENDENCY_SOURCES_KEY, TASK_LINKS_KEY]) {
+			const entries = own(metadata, mapKey);
+			if (!isPlainObject(entries)) continue;
+			const moved: Record<string, unknown> = {};
+			for (const [key, value] of Object.entries(entries)) {
+				put(moved, remap(key), value);
 			}
-			const movedMetadata = { ...metadata };
-			put(movedMetadata, DEPENDENCY_SOURCES_KEY, movedSources);
-			result.metadata = movedMetadata;
+			movedMetadata ??= { ...metadata };
+			put(movedMetadata, mapKey, moved);
 		}
+		if (movedMetadata) result.metadata = movedMetadata;
 	}
 	return result;
 }

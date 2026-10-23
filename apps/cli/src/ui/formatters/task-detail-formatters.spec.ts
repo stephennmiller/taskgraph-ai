@@ -273,6 +273,79 @@ describe('formatTaskDetail', () => {
 		);
 	});
 
+	it('lists related and discovered-from links apart from what it depends on', () => {
+		// The fixture leaves metadata out, so it is added here
+		const task = {
+			...createTask({
+				id: 5,
+				title: 'Export bookmarks',
+				description: '',
+				status: 'pending',
+				dependencies: ['1']
+			}),
+			metadata: {
+				taskLinks: { '4': 'related', '2.1': 'related', '3': 'discovered-from' }
+			}
+		};
+
+		const output = lines(formatTaskDetail(task, { width: 80 }));
+
+		expect(output[1]).toBe(
+			'○ pending · medium priority · depends on 1 · related to 2.1 and 4'
+		);
+		expect(output[2]).toBe('discovered from 3');
+	});
+
+	it('names a few links of each type and counts the rest, within 80 columns', () => {
+		const taskLinks = Object.fromEntries(
+			Array.from({ length: 40 }, (_, i) => [String(100 + i), 'related'])
+		);
+		const task = {
+			...createTask({
+				id: 5,
+				title: 'Export bookmarks',
+				description: '',
+				status: 'pending'
+			}),
+			metadata: { taskLinks }
+		};
+
+		const output = lines(formatTaskDetail(task, { width: 80 }));
+
+		expect(output).toContain(
+			'related to 100, 101, 102, 103, 104, 105 and 34 more'
+		);
+		for (const line of output) expect(line.length).toBeLessThanOrEqual(80);
+	});
+
+	it('shows no link facts for a file without links', () => {
+		const output = plain(formatTaskDetail(signIn(), { width: 80 }));
+
+		expect(output).not.toContain('related to');
+		expect(output).not.toContain('discovered from');
+	});
+
+	it("reads a subtask's links against its parent's IDs", () => {
+		const subtask = {
+			...createSubtask({
+				id: 2,
+				parentId: '2',
+				title: 'Sessions table',
+				description: '',
+				status: 'pending',
+				// sibling 2.1 is a blocker, so the stale link to it isn't shown
+				dependencies: [1]
+			}),
+			metadata: { taskLinks: { '2.1': 'related', '7': 'discovered-from' } }
+		};
+
+		const output = lines(formatTaskDetail(subtask, { id: '2.2', width: 80 }));
+
+		expect(output[1]).toBe(
+			'○ pending · medium priority · depends on 2.1 · discovered from 7'
+		);
+	});
+
 	it('keeps a subtask ID that already holds its parent', () => {
 		const task = createTask({
 			id: 1,

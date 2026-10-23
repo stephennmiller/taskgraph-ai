@@ -6,11 +6,17 @@
 import {
 	assignMetadata,
 	checkPrdCoverage,
+	findDanglingLinks,
+	getLinkType,
 	hasDependency,
 	isSiblingReference,
+	parseLinkType,
 	pruneDependencySources,
+	pruneTaskLinks,
+	removeTaskLink,
 	resolveSubtaskDependency,
-	setDependencySource
+	setDependencySource,
+	setTaskLink
 } from '@tm/core';
 import path from 'path';
 import { displayBanner } from './ui.js';
@@ -24,6 +30,48 @@ import {
 } from './utils.js';
 
 const LIST_HINT = 'Run `taskgraph list` to see task IDs';
+const LINK_TYPE_HINT = 'Use --type=blocks, related or discovered-from';
+
+/** `related to task 3`, `discovered from task 3` */
+function describeLink(type, dependencyId) {
+	return type === 'related'
+		? `related to task ${dependencyId}`
+		: `marked as discovered from task ${dependencyId}`;
+}
+
+/**
+ * Link a task to another without making it wait: a `related` or
+ * `discovered-from` link. A blocking dependency on the same task becomes the
+ * link, so the task stops waiting for it.
+ * @returns {boolean} Whether anything changed
+ */
+function linkWithoutBlocking(task, taskId, dependencyId, type, parentId) {
+	const current = getLinkType(task, dependencyId, parentId);
+	if (current === type) {
+		log(
+			'info',
+			`Task ${taskId} is already ${describeLink(type, dependencyId)}; nothing changed`
+		);
+		return false;
+	}
+	if (current === 'blocks') {
+		const fullId = (dep) =>
+			parentId === undefined
+				? String(dep)
+				: resolveSubtaskDependency(parentId, dep);
+		task.dependencies = task.dependencies.filter(
+			(dep) => fullId(dep) !== String(dependencyId)
+		);
+		setTaskDependencySource(task, dependencyId, 'explicit', parentId);
+	}
+	assignMetadata(task, setTaskLink(task.metadata, dependencyId, type));
+	log(
+		'success',
+		`Task ${taskId} is now ${describeLink(type, dependencyId)}` +
+			(current === 'blocks' ? ' and no longer waits for it' : '')
+	);
+	return true;
+}
 const NO_TASKS_HINT = 'Create some with `taskgraph parse-prd <file>`';
 
 /**
@@ -81,6 +129,7 @@ const DEPENDENCY_ERROR_CODES = {
 	FIX_FAILED: 'FIX_FAILED',
 	CANNOT_MOVE_SUBTASK: 'CANNOT_MOVE_SUBTASK',
 	INVALID_TASK_ID: 'INVALID_TASK_ID',
+	INVALID_LINK_TYPE: 'INVALID_LINK_TYPE',
 	INVALID_SOURCE_TAG: 'INVALID_SOURCE_TAG',
 	INVALID_TARGET_TAG: 'INVALID_TARGET_TAG'
 };
@@ -100,16 +149,27 @@ function failure(code, message, hint, cause) {
 }
 
 /**
- * Add a dependency to a task
+ * Add a dependency to a task, or a link that doesn't block it
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {number|string} taskId - ID of the task to add dependency to
  * @param {number|string} dependencyId - ID of the task to add as dependency
  * @param {Object} context - Context object containing projectRoot and tag information
  * @param {string} [context.projectRoot] - Project root path
  * @param {string} [context.tag] - Tag for the task
+ * @param {string} [context.linkType] - `blocks` (the default), or `related`
+ *   / `discovered-from` for a link that never holds the task back
  */
 async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	log('debug', `Adding dependency ${dependencyId} to task ${taskId}...`);
+
+	const linkType = parseLinkType(context.linkType);
+	if (!linkType) {
+		throw failure(
+			DEPENDENCY_ERROR_CODES.INVALID_LINK_TYPE,
+			`"${context.linkType}" isn't a link type`,
+			LINK_TYPE_HINT
+		);
+	}
 
 	const data = readJSON(tasksPath, context.projectRoot, context.tag);
 	if (!data || !data.tasks) {
@@ -194,6 +254,26 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 		targetTask.dependencies = [];
 	}
 
+	// A related or discovered-from link is kept apart from the dependencies,
+	// so it can't hold the task back and can't make a loop
+	if (linkType !== 'blocks') {
+		if (String(formattedTaskId) === String(formattedDependencyId)) {
+			throw failure(
+				DEPENDENCY_ERROR_CODES.SELF_DEPENDENCY,
+				`Task ${formattedTaskId} can't link to itself`
+			);
+		}
+		const changed = linkWithoutBlocking(
+			targetTask,
+			formattedTaskId,
+			String(formattedDependencyId),
+			linkType,
+			provenanceParent
+		);
+		if (changed) writeJSON(tasksPath, data, context.projectRoot, context.tag);
+		return;
+	}
+
 	// Check if dependency already exists (a subtask sibling may be stored as 1 or "2.1")
 	if (hasDependency(targetTask, formattedDependencyId, provenanceParent)) {
 		// Adding it by hand makes an AI-inferred dependency explicit
@@ -266,8 +346,12 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	if (
 		!isCircularDependency(data.tasks, formattedDependencyId, dependencyChain)
 	) {
-		// Add the dependency
+		// Add the dependency; a non-blocking link to the same task gives way
 		targetTask.dependencies.push(formattedDependencyId);
+		assignMetadata(
+			targetTask,
+			removeTaskLink(targetTask.metadata, formattedDependencyId)
+		);
 		// A person added it, so it is explicit (clears any stale inferred mark)
 		setTaskDependencySource(
 			targetTask,
@@ -391,6 +475,25 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 				LIST_HINT
 			);
 		}
+	}
+
+	// A related or discovered-from link is removed the same way
+	const linkType = getLinkType(
+		targetTask,
+		formattedDependencyId,
+		isSubtask ? formattedTaskId.split('.')[0] : undefined
+	);
+	if (linkType && linkType !== 'blocks') {
+		assignMetadata(
+			targetTask,
+			removeTaskLink(targetTask.metadata, formattedDependencyId)
+		);
+		writeJSON(tasksPath, data, context.projectRoot, context.tag);
+		log(
+			'success',
+			`Task ${formattedTaskId} is no longer linked to task ${formattedDependencyId}`
+		);
+		return;
 	}
 
 	// Check if the task has any dependencies
@@ -745,6 +848,17 @@ function validateTaskDependencies(tasks) {
 			});
 		}
 	});
+
+	// Related and discovered-from links never block, but one to a task that
+	// is gone is still stale
+	for (const link of findDanglingLinks(tasks, exists)) {
+		issues.push({
+			type: 'missing-link',
+			taskId: link.taskId,
+			dependencyId: link.linkedId,
+			message: `Task ${link.taskId} links to non-existent task ${link.linkedId}`
+		});
+	}
 
 	return {
 		valid: issues.length === 0,
@@ -1207,6 +1321,15 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 		}
 
 		pruneProvenance(data.tasks);
+
+		// Drop related and discovered-from links to tasks that don't exist
+		for (const link of pruneTaskLinks(data.tasks)) {
+			fixes.push({
+				type: 'missing-link',
+				taskId: link.taskId,
+				dependencyId: link.linkedId
+			});
+		}
 
 		// Check if any changes were made by comparing with original data
 		const dataChanged = JSON.stringify(data) !== JSON.stringify(originalData);

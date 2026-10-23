@@ -38,6 +38,12 @@ export type DependencySource = 'explicit' | 'inferred';
 
 export const DEPENDENCY_SOURCES_KEY = 'dependencySources';
 
+/**
+ * Reserved metadata key for non-blocking links (`related`,
+ * `discovered-from`); see task-links.ts.
+ */
+export const TASK_LINKS_KEY = 'taskLinks';
+
 type DependencyId = string | number;
 type Metadata = Record<string, unknown>;
 
@@ -94,14 +100,18 @@ function withInferred(
 
 /**
  * User-supplied metadata (update-task / update-subtask --metadata) without the
- * reserved provenance key, so callers can't overwrite it by accident.
- * Returns undefined when nothing else is left.
+ * reserved provenance and link keys, so callers can't overwrite them by
+ * accident. Returns undefined when nothing else is left.
  */
 export function withoutReservedMetadata(
 	metadata: Metadata | null | undefined
 ): Metadata | undefined {
 	if (!metadata) return undefined;
-	const { [DEPENDENCY_SOURCES_KEY]: _reserved, ...rest } = metadata;
+	const {
+		[DEPENDENCY_SOURCES_KEY]: _reserved,
+		[TASK_LINKS_KEY]: _links,
+		...rest
+	} = metadata;
 	return Object.keys(rest).length > 0 ? rest : undefined;
 }
 
