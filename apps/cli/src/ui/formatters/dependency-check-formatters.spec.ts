@@ -211,3 +211,42 @@ describe('formatDependencyFixes', () => {
 		expect(lines(output)[0]).toBe('✗ 1 dependency problem');
 	});
 });
+
+describe('IDs read from tasks.json (#398)', () => {
+	// An OSC sequence that would retitle the terminal window
+	const hostile = '9\u001b]0;pwned\u0007';
+	const escapes = /\u001b\]|\u0007/;
+
+	it('fix-dependencies prints them without escape sequences', () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [
+				{ type: 'missing', taskId: `4\u001b]0;x\u0007`, dependencyId: hostile },
+				{ type: 'missing-link', taskId: 5, dependencyId: '7\nfake line' }
+			],
+			remaining: [{ type: 'circular', taskId: `2\u0007` }]
+		});
+
+		expect(output).not.toMatch(escapes);
+		expect(lines(output)).toEqual([
+			'✓ Fixed 2 dependency problems',
+			"  4  removed task 9, which doesn't exist",
+			"  5  removed its link to task 7 fake line, which doesn't exist",
+			'✗ 1 problem left',
+			'  2  is part of a dependency loop',
+			'Break the loop with taskgraph remove-dependency --id=<id> --depends-on=<id>'
+		]);
+	});
+
+	it('validate-dependencies prints them without escape sequences', () => {
+		const output = formatDependencyCheck({
+			...counts,
+			issues: [{ type: 'missing', taskId: 4, dependencyId: hostile }]
+		});
+
+		expect(output).not.toMatch(escapes);
+		expect(lines(output)[1]).toBe(
+			"  4  depends on task 9, which doesn't exist"
+		);
+	});
+});

@@ -23,6 +23,7 @@
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
+import { oneLine } from './task-list-formatters.js';
 
 type Id = number | string;
 
@@ -56,9 +57,14 @@ const plural = (count: number, noun: string) =>
 const fit = (text: string, width: number) =>
 	text.length > width ? `${text.slice(0, Math.max(1, width - 1))}…` : text;
 
-/** "task 3" or "subtask 3.2" */
-const describeId = (id: Id) =>
-	`${String(id).includes('.') ? 'subtask' : 'task'} ${id}`;
+/**
+ * "task 3" or "subtask 3.2". IDs come from tasks.json, so oneLine drops any
+ * escape sequence or line break in them (#398)
+ */
+function describeId(id: Id): string {
+	const safe = oneLine(id);
+	return `${safe.includes('.') ? 'subtask' : 'task'} ${safe}`;
+}
 
 /** `4 tasks, 2 subtasks, 3 dependencies` */
 function describeCounts({
@@ -112,11 +118,12 @@ function rows(
 	items: Array<{ taskId: Id; text: string }>,
 	width: number
 ): string[] {
-	const idWidth = Math.max(...items.map((item) => String(item.taskId).length));
+	const ids = items.map((item) => oneLine(item.taskId));
+	const idWidth = Math.max(...ids.map((id) => id.length));
 	const textWidth = Math.max(10, width - 4 - idWidth);
 	return items.map(
-		(item) =>
-			`  ${theme.brand(String(item.taskId).padEnd(idWidth))}  ${fit(item.text, textWidth)}`
+		(item, i) =>
+			`  ${theme.brand(ids[i].padEnd(idWidth))}  ${fit(item.text, textWidth)}`
 	);
 }
 
