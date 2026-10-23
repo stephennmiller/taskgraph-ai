@@ -84,7 +84,8 @@ describe('claimNextInTasks', () => {
 						status: 'pending',
 						dependencies: [],
 						details: '',
-						testStrategy: ''
+						testStrategy: '',
+						priority: 'medium'
 					}
 				]
 			}),
