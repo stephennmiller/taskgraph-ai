@@ -15,7 +15,7 @@ Arguments: $ARGUMENTS (what the work is, in plain words)
 
    Add flags only for what the user said:
    - tasks it has to wait for: `--dependencies=<ids>` (digits, dots and commas only)
-   - found while working on another task: `--discovered-from=<id>`, which links them without blocking
+   - found while working on another task: `--discovered-from=<id>` (digits and dots only), which links them without blocking
    - a priority: `--priority=high`, `medium` or `low`
    - "research" or unfamiliar tech: `--research`
 2. Show the output unchanged in a code block.

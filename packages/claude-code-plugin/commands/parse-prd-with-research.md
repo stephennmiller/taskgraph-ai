@@ -9,7 +9,7 @@ Arguments: $ARGUMENTS (PRD file path)
 
 This is `/taskgraph:parse-prd <file> research` without the questions about gaps in the PRD. To be asked those first, use that command instead.
 
-1. Put the file path in single quotes, with any `'` written as `'\''`. If the project already has tasks in the current tag, ask the user whether to add to them (`--append`) or replace them (`--force`), and add that flag.
+1. Put the file path in single quotes, with any `'` written as `'\''`; if it starts with `-`, write it as `./<path>` so it isn't read as a flag. Run `taskgraph list` first: if it lists tasks, ask the user whether to add to them (`--append`) or replace them (`--force`), and add that flag. Without either, `parse-prd` waits on a terminal question that can't be answered here.
 
    ```bash
    taskgraph parse-prd '<prd-file>' --research

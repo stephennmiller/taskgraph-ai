@@ -17,6 +17,6 @@ Arguments: $ARGUMENTS
    taskgraph init -y
    ```
 
-   Without it, first ask the user whether to commit the task files to Git, then run `taskgraph init -y --git-tasks` or `taskgraph init -y --no-git-tasks`.
+   Without it, first ask the user whether to commit the task files to Git, and, when `git rev-parse --is-inside-work-tree` fails, whether to start a Git repository here (`-y` alone runs `git init`). Then run `taskgraph init -y` with `--git-tasks` or `--no-git-tasks`, and `--git` or `--no-git` when you asked about the repository.
 2. Show the output unchanged in a code block.
 3. If the arguments name a PRD file, go on with `/taskgraph:parse-prd <prd-file>`. Otherwise point out the next step `init` printed: write a PRD in `.taskgraph/docs/prd.md`, or add a first task with `/taskgraph:add-task`.

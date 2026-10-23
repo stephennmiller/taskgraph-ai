@@ -13,5 +13,5 @@ Arguments: $ARGUMENTS (parent task ID, then the subtask's title)
    taskgraph add-subtask --parent=<id> --title='<title>'
    ```
 
-   Add `--description='<text>'` if the user described more than a title, and `--dependencies=<ids>` for sibling subtasks it waits on (`5.1`). For several subtasks ("setup, implement, test"), run it once per title. To make an existing task a subtask, use `/taskgraph:convert-task-to-subtask`.
+   Add `--description='<text>'` if the user described more than a title, and `--dependencies=<ids>` for sibling subtasks it waits on (`5.1`; digits, dots and commas only). For several subtasks ("setup, implement, test"), run it once per title. To make an existing task a subtask, use `/taskgraph:convert-task-to-subtask`.
 2. Show the output unchanged in a code block, then run `taskgraph show <parent-id>` and show its subtask list.

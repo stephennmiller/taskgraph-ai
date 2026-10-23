@@ -343,6 +343,41 @@ describe('taskgraph flags used in command bodies', () => {
 		}
 	);
 
+	// Slash-command arguments written as flags, not passed to the CLI
+	const SLASH_ARGUMENTS = new Set(['quick', 'subtasks']);
+
+	// A flag named on its own (`--research`) is one of the body's commands' flags
+	const unknownStandaloneFlags = (markdown: string): string[] => {
+		const known = new Set(
+			invocations(markdown).flatMap(({ command }) => [
+				...(flagsByCommand.get(command) ?? [])
+			])
+		);
+		return codeLines(markdown).flatMap((line) => {
+			const flag = line.match(/^--([a-z][a-z-]*)/)?.[1];
+			return flag && !known.has(flag) && !SLASH_ARGUMENTS.has(flag)
+				? [`--${flag}`]
+				: [];
+		});
+	};
+
+	it('flags a standalone flag none of the body commands declare', () => {
+		expect(
+			unknownStandaloneFlags(
+				'Run `taskgraph expand --id=3`, adding `--research` or `--deep`.'
+			)
+		).toEqual(['--deep']);
+	});
+
+	it.each(readdirSync(commandsDir).filter((file) => file.endsWith('.md')))(
+		'%s names only flags its commands declare',
+		(file) => {
+			expect(
+				unknownStandaloneFlags(readFileSync(join(commandsDir, file), 'utf-8'))
+			).toEqual([]);
+		}
+	);
+
 	it('to-done passes only flags its commands declare', () => {
 		const body = readFileSync(join(commandsDir, 'to-done.md'), 'utf-8');
 

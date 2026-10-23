@@ -8,7 +8,7 @@ Choose the AI models TaskGraph uses. TaskGraph runs them through Claude Code, so
 Arguments: $ARGUMENTS
 
 1. Run `taskgraph models` and show the current choice.
-2. If the arguments don't already name a role and a model, ask the user which roles to change: main (generating and updating tasks), research (`--research` runs) and fallback (used when main fails).
+2. If the arguments don't already name a role and a model, ask the user which roles to change: main (generating and updating tasks), research (research-backed runs) and fallback (used when main fails).
 3. Run one line per role that changes, with a model from the list above only:
 
    ```bash

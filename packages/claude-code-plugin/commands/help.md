@@ -7,7 +7,7 @@ Show the TaskGraph slash commands.
 
 Arguments: $ARGUMENTS
 
-If the arguments name a command, read that command's line below and run `taskgraph <cli-command> --help` for its CLI flags (for example `taskgraph expand --help` for `expand-task`), and show that output unchanged. Otherwise show this list as it is:
+If the arguments name a command in the list below, read its line and run `taskgraph <cli-command> --help` for its CLI flags (for example `taskgraph expand --help` for `expand-task`), and show that output unchanged. Otherwise show this list as it is:
 
 ```
 Start
@@ -52,7 +52,7 @@ Dependencies
   /taskgraph:add-dependency <id> <id>      Make a task wait on another
   /taskgraph:remove-dependency <id> <id>   Remove a dependency
   /taskgraph:validate-dependencies         Check for broken or circular links
-  /taskgraph:fix-dependencies              Repair them
+  /taskgraph:fix-dependencies              Repair what it can
 
 To have Claude Code work the tasks one after another, run taskgraph loop in a
 terminal (--prompt tdd for test-first, --parallel <n> for independent tasks).

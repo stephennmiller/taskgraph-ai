@@ -47,7 +47,7 @@ Dependencies
   /taskgraph:add-dependency <id> <id>      Make a task wait on another
   /taskgraph:remove-dependency <id> <id>   Remove a dependency
   /taskgraph:validate-dependencies         Check for broken or circular links
-  /taskgraph:fix-dependencies              Repair them
+  /taskgraph:fix-dependencies              Repair what it can
 
 To have Claude Code work the tasks one after another, run taskgraph loop in a
 terminal (--prompt tdd for test-first, --parallel <n> for independent tasks).

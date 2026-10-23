@@ -28,10 +28,10 @@ Use the ID only when it is digits and dots (`3`, `3.2`, or several as `3,4`). If
    ```
 
    For `done`, `set-status` refuses while acceptance criteria are unchecked and lists them. Report that; pass `--force` only when the user says so.
-2. For `deferred`, `cancelled` or `blocked`, save the user's reason on the task, in single quotes with any `'` written as `'\''`:
+2. For `deferred`, `cancelled` or `blocked`, save the user's reason on the task, in single quotes with any `'` written as `'\''`. `note` takes one ID, so run it once per task. The `--` stops a reason that starts with `-` from being read as a flag (`--file=...` would read a file into the note):
 
    ```bash
-   taskgraph note <id> '<reason>'
+   taskgraph note <id> -- '<reason>'
    ```
 
 3. Show the `set-status` output unchanged, then suggest `taskgraph next` for what to work on now.

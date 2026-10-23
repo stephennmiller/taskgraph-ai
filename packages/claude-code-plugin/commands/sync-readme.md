@@ -15,4 +15,4 @@ Arguments: $ARGUMENTS
 
    Add `--with-subtasks` if the arguments ask for subtasks, and `--status=<status>` for a status (pending, in-progress, done, review, deferred, cancelled, blocked).
 2. Show the output unchanged. The list goes between the `<!-- TASKGRAPH_EXPORT_START -->` and `<!-- TASKGRAPH_EXPORT_END -->` markers, replacing the previous export, or at the end of README.md the first time. The rest of the file stays as it was.
-3. Then run `git diff --stat README.md` and tell the user the README changed, ready to commit.
+3. Then run `git status --short README.md` and tell the user the README changed (or was created), ready to commit.
