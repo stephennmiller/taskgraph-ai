@@ -7,6 +7,8 @@ import {
 	renameTag,
 	useTag
 } from '../../../scripts/modules/task-manager/tag-management.js';
+import { moveTasksBetweenTags } from '../../../scripts/modules/task-manager/move-task.js';
+import { validateFileOperations } from '../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 
 // Temporary workspace for each test run
 const TEMP_DIR = path.join(process.cwd(), '.tmp_tag_boundary');
@@ -337,5 +339,37 @@ describe('Tag names shared with Object.prototype', () => {
 
 		expect(fs.readFileSync(TASKS_PATH, 'utf8')).toBe(before);
 		expect({}.tasks).toBeUndefined();
+	});
+
+	it('refuses to create a __proto__ tag by moving or parsing a PRD into it', async () => {
+		const before = fs.readFileSync(TASKS_PATH, 'utf8');
+
+		await expect(
+			moveTasksBetweenTags(TASKS_PATH, ['1'], 'master', '__proto__', {}, ctx)
+		).rejects.toThrow('"__proto__" is a reserved tag name');
+		expect(() =>
+			validateFileOperations({
+				existingTasks: [],
+				targetTag: '__proto__',
+				append: false,
+				force: false,
+				isMCP: false,
+				logger: { report: () => {} }
+			})
+		).toThrow('"__proto__" is a reserved tag name');
+
+		expect(fs.readFileSync(TASKS_PATH, 'utf8')).toBe(before);
+	});
+
+	it('deletes a __proto__ tag that is already in the file', async () => {
+		// JSON.parse keeps a "__proto__" key as data, as a hand edit would leave it
+		fs.writeFileSync(
+			TASKS_PATH,
+			'{"master":{"tasks":[],"metadata":{}},"__proto__":{"tasks":[],"metadata":{}}}'
+		);
+
+		await deleteTag(TASKS_PATH, '__proto__', { yes: true }, ctx, 'json');
+
+		expect(Object.keys(readTasks())).toEqual(['master']);
 	});
 });

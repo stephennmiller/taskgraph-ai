@@ -115,6 +115,31 @@ describe('FileStorage tag names shared with Object.prototype', () => {
 		await expect(tags.createTag('__proto__')).rejects.toThrow(
 			'"__proto__" is a reserved tag name'
 		);
+		await expect(tags.renameTag('feature', '__proto__')).rejects.toThrow(
+			'"__proto__" is a reserved tag name'
+		);
+		await expect(tags.copyTag('feature', '__proto__')).rejects.toThrow(
+			'"__proto__" is a reserved tag name'
+		);
 		expect(Object.keys(readFile())).toEqual(['master', 'feature']);
+	});
+
+	it('renames and deletes a __proto__ tag that is already in the file', async () => {
+		// JSON.parse keeps a "__proto__" key as data, as a hand edit would leave it
+		fs.writeFileSync(
+			tasksPath,
+			'{"master":{"tasks":[],"metadata":{}},"__proto__":{"tasks":[],"metadata":{}}}'
+		);
+		const tags = new TagService(storage);
+
+		await tags.renameTag('__proto__', 'renamed');
+		expect(Object.keys(readFile())).toEqual(['master', 'renamed']);
+
+		fs.writeFileSync(
+			tasksPath,
+			'{"master":{"tasks":[],"metadata":{}},"__proto__":{"tasks":[],"metadata":{}}}'
+		);
+		await tags.deleteTag('__proto__');
+		expect(Object.keys(readFile())).toEqual(['master']);
 	});
 });
