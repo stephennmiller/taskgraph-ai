@@ -96,6 +96,7 @@ import {
 	findProjectRoot,
 	getOwnKey,
 	isTaskGraphProject,
+	parseSubtaskDependencyInput,
 	resolveProjectRoot,
 	writeClarifications
 } from '@tm/core';
@@ -1707,7 +1708,7 @@ function registerCommands(programInstance) {
 		.option('--details <text>', 'Implementation details for the new subtask')
 		.option(
 			'--dependencies <ids>',
-			'Comma-separated list of dependency IDs for the new subtask'
+			'Comma-separated task or subtask IDs the new subtask depends on (3, 5.2)'
 		)
 		.option('-s, --status <status>', 'Status for the new subtask', 'pending')
 		.option('--generate', 'Regenerate task files after adding subtask')
@@ -1741,13 +1742,14 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			// Parse dependencies if provided
+			// 3 is task 3 and 5.2 is that subtask, as in add-dependency
 			let dependencies = [];
 			if (options.dependencies) {
-				dependencies = options.dependencies.split(',').map((id) => {
-					// Handle both regular IDs and dot notation
-					return id.includes('.') ? id.trim() : parseInt(id.trim(), 10);
-				});
+				try {
+					dependencies = parseSubtaskDependencyInput(options.dependencies);
+				} catch (error) {
+					displayError(error);
+				}
 			}
 
 			try {
@@ -1859,7 +1861,7 @@ function registerCommands(programInstance) {
 	function showAddSubtaskHelp() {
 		console.log(
 			boxen(
-				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Comma-separated list of dependency IDs\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
+				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Task or subtask IDs it depends on (3,5.2)\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
 				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
 			)
 		);

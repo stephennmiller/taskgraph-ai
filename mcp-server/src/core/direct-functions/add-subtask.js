@@ -2,6 +2,7 @@
  * Direct function wrapper for addSubtask
  */
 
+import { parseSubtaskDependencyInput } from '@tm/core';
 import { addSubtask } from '../../../../scripts/modules/task-manager.js';
 import {
 	disableSilentMode,
@@ -18,7 +19,7 @@ import {
  * @param {string} [args.description] - Description for new subtask
  * @param {string} [args.details] - Implementation details for new subtask
  * @param {string} [args.status] - Status for new subtask (default: 'pending')
- * @param {string} [args.dependencies] - Comma-separated list of dependency IDs
+ * @param {string} [args.dependencies] - Comma-separated task or subtask IDs (3, 5.2)
  * @param {boolean} [args.skipGenerate] - Skip regenerating task files
  * @param {string} [args.projectRoot] - Project root directory
  * @param {string} [args.tag] - Tag for the task
@@ -79,13 +80,17 @@ export async function addSubtaskDirect(args, log) {
 		// Use provided path
 		const tasksPath = tasksJsonPath;
 
-		// Parse dependencies if provided
+		// 3 is task 3 and 5.2 is that subtask, as in add_dependency
 		let dependencies = [];
 		if (dependenciesStr) {
-			dependencies = dependenciesStr.split(',').map((depId) => {
-				// Handle both regular IDs and dot notation
-				return depId.includes('.') ? depId.trim() : parseInt(depId.trim(), 10);
-			});
+			try {
+				dependencies = parseSubtaskDependencyInput(dependenciesStr);
+			} catch (error) {
+				return {
+					success: false,
+					error: { code: 'INPUT_VALIDATION_ERROR', message: error.message }
+				};
+			}
 		}
 
 		// Convert existingTaskId to a number if provided

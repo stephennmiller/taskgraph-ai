@@ -1,6 +1,7 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
+	cleanGeneratedSubtaskDependencies,
 	keepStoredFields,
 	reconcileDependencySources,
 	withoutReservedMetadata
@@ -388,18 +389,12 @@ async function updateTaskById(
 					const correctedSubtask = {
 						...subtask,
 						id: currentSubtaskId, // Override AI-generated ID with correct sequential ID
-						dependencies: Array.isArray(subtask.dependencies)
-							? subtask.dependencies
-									.map((dep) =>
-										typeof dep === 'string' ? parseInt(dep, 10) : dep
-									)
-									.filter(
-										(depId) =>
-											!Number.isNaN(depId) &&
-											depId >= 1 &&
-											depId < currentSubtaskId
-									)
-							: [],
+						// A number is an earlier sibling; a string is a task or subtask
+						dependencies: cleanGeneratedSubtaskDependencies(
+							subtask.dependencies,
+							taskId,
+							currentSubtaskId
+						),
 						status: subtask.status || 'pending',
 						testStrategy: subtask.testStrategy ?? null
 					};
