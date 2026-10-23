@@ -4,6 +4,7 @@ import {
 	formatTagCopied,
 	formatTagCreated,
 	formatTagDeleted,
+	formatTagIndicator,
 	formatTagList,
 	formatTagRenamed,
 	formatTagSwitched,
@@ -245,6 +246,14 @@ describe('formatTagList', () => {
 	it('says when no tag has ready work', () => {
 		expect(formatTagList([], { ready: true })).toBe(
 			'No tag has a task ready to start'
+		);
+	});
+});
+
+describe('tag indicator', () => {
+	it('is one muted line naming the tag', () => {
+		expect(plain(formatTagIndicator('feature-auth'))).toBe(
+			'[tag] feature-auth'
 		);
 	});
 });

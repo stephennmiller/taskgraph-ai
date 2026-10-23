@@ -102,8 +102,11 @@ export class WhyCommand extends Command {
 	}
 
 	private displayText(result: WhyResult): void {
-		displayCommandHeader({ tag: result.tag });
-		console.log();
+		const headerShown = displayCommandHeader({
+			tag: result.tag,
+			projectRoot: this.tmCore?.projectPath
+		});
+		if (headerShown) console.log();
 		console.log(
 			renderBlockerExplanation(result, { width: getContentWidth() }).join('\n')
 		);

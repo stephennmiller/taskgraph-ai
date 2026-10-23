@@ -85,7 +85,10 @@ export class GraphCommand extends Command {
 	}
 
 	private displayText(result: GraphResult): void {
-		displayCommandHeader({ tag: result.tag });
+		const headerShown = displayCommandHeader({
+			tag: result.tag,
+			projectRoot: this.tmCore?.projectPath
+		});
 
 		if (result.total === 0) {
 			console.log(chalk.yellow('No tasks yet.'));
@@ -95,7 +98,7 @@ export class GraphCommand extends Command {
 			return;
 		}
 
-		console.log();
+		if (headerShown) console.log();
 		const lines = renderDependencyTree(result, {
 			nextId: result.nextId,
 			width: getContentWidth()

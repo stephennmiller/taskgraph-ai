@@ -533,6 +533,8 @@ export function displayTaskDetails(
 		customHeader?: string;
 		headerColor?: string;
 		originalTaskId?: string;
+		/** Leave a blank line above the custom header box (default true) */
+		spaceAbove?: boolean;
 		/** Acceptance criteria and Definition of Done, numbered for --check */
 		checklist?: TaskChecklist;
 	}
@@ -543,6 +545,7 @@ export function displayTaskDetails(
 		customHeader,
 		headerColor = BORDER_COLOR,
 		originalTaskId,
+		spaceAbove = true,
 		checklist
 	} = options || {};
 
@@ -553,7 +556,7 @@ export function displayTaskDetails(
 				padding: { top: 0, bottom: 0, left: 1, right: 1 },
 				borderColor: headerColor,
 				borderStyle: 'round',
-				margin: { top: 1 }
+				margin: { top: spaceAbove ? 1 : 0 }
 			})
 		);
 	} else {

@@ -93,7 +93,10 @@ export class LoopCommand extends Command {
 
 			this.validateIterations(String(iterations));
 
-			displayCommandHeader({ tag: options.tag || 'master' });
+			displayCommandHeader({
+				tag: options.tag || this.tmCore.config.getActiveTag(),
+				projectRoot: this.tmCore.projectPath
+			});
 
 			// Only check sandbox auth when --sandbox flag is used
 			if (options.sandbox) {

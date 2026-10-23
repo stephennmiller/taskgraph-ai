@@ -269,7 +269,10 @@ export class NextCommand extends Command {
 	 * Display in text format
 	 */
 	private displayText(result: NextTaskResult): void {
-		displayCommandHeader({ tag: result.tag || 'master' });
+		const headerShown = displayCommandHeader({
+			tag: result.tag || 'master',
+			projectRoot: this.tmCore?.projectPath
+		});
 
 		if (!result.found || !result.task) {
 			// Only show warning box if there are literally NO tasks at all
@@ -308,6 +311,7 @@ export class NextCommand extends Command {
 		displayTaskDetails(task, {
 			customHeader,
 			headerColor: 'green',
+			spaceAbove: headerShown,
 			showSuggestedActions: true,
 			checklist: result.checklist
 		});

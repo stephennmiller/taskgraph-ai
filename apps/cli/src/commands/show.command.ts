@@ -272,9 +272,12 @@ export class ShowCommand extends Command {
 		}
 
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
-		displayCommandHeader({ tag: activeTag });
-
-		console.log();
+		const headerShown = displayCommandHeader({
+			tag: activeTag,
+			projectRoot: this.tmCore?.projectPath
+		});
+		// Separate the tag line from the task; with no tag line, start with the task
+		if (headerShown) console.log();
 		console.log(
 			formatTaskDetail(result.task, {
 				id: result.originalTaskId,
@@ -295,10 +298,19 @@ export class ShowCommand extends Command {
 		_options: ShowCommandOptions
 	): void {
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
-		displayCommandHeader({ tag: activeTag });
+		// A blank line separates each block from the one above it, but nothing
+		// comes before the first block
+		let printed = displayCommandHeader({
+			tag: activeTag,
+			projectRoot: this.tmCore?.projectPath
+		});
 
 		if (result.notFound.length > 0) {
-			console.log(chalk.yellow(`\n⚠ Not found: ${result.notFound.join(', ')}`));
+			const gap = printed ? '\n' : '';
+			console.log(
+				chalk.yellow(`${gap}⚠ Not found: ${result.notFound.join(', ')}`)
+			);
+			printed = true;
 		}
 
 		if (result.tasks.length === 0) {
@@ -307,7 +319,7 @@ export class ShowCommand extends Command {
 		}
 
 		// Task table
-		console.log(theme.brand.bold(`\nTasks:\n`));
+		console.log(theme.brand.bold(`${printed ? '\n' : ''}Tasks:\n`));
 		console.log(
 			ui.createTaskTable(result.tasks, {
 				showSubtasks: true,

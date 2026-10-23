@@ -18,6 +18,11 @@
  *   ● feature-auth      0      0     0
  *     master            4      2     0
  *
+ * and the line a command opens with when the tag matters (see
+ * shouldShowTagIndicator in @tm/core):
+ *
+ *   [tag] feature-auth
+ *
  * They replace a boxed "✓ Tag … Successfully" panel per command and a
  * bordered table about 116 columns wide.
  */
@@ -27,6 +32,11 @@ import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 type Id = number | string;
+
+/** The muted line naming the tag a command works in */
+export function formatTagIndicator(tag: string): string {
+	return theme.muted(`[tag] ${tag}`);
+}
 
 /** One row of the `tags` list */
 export interface TagSummary {
