@@ -42,7 +42,7 @@ Type `/taskgraph:` and use tab completion to explore all commands.
 #### 🔄 Status Management
 - `/taskgraph:set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
 - `/taskgraph:to-in-progress` - Shortcut: set task to in-progress
-- `/taskgraph:to-done` - Shortcut: set task to done
+- `/taskgraph:to-done` - Check acceptance criteria against your changes, save a close summary, set done
 
 #### 🔍 Analysis & Breakdown
 - `/taskgraph:analyze-complexity` - Analyze task complexity
