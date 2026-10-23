@@ -7,7 +7,7 @@ Add a subtask to a task.
 
 Arguments: $ARGUMENTS (parent task ID, then the subtask's title)
 
-1. Use the parent ID only when it is digits. If it is missing, ask which task. Put the title in single quotes, with any `'` written as `'\''`:
+1. Use the parent ID only when it is digits and dots and names a top-level task (`5`, no dot). If it is missing, ask which task. Put the title in single quotes, with any `'` written as `'\''`:
 
    ```bash
    taskgraph add-subtask --parent=<id> --title='<title>'

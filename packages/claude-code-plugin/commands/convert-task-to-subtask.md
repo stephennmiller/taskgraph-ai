@@ -7,7 +7,7 @@ Move an existing task under another task as a subtask.
 
 Arguments: $ARGUMENTS (the parent task ID, then the task to move: "5 8" or "move 8 under 5")
 
-1. Read both IDs from the arguments; use them only when they are digits. If it isn't clear which is the parent, ask.
+1. Read both IDs from the arguments; use them only when they are digits and dots and name top-level tasks (`5`, `8`). If it isn't clear which is the parent, ask.
 2. Run:
 
    ```bash

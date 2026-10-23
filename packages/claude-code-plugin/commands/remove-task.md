@@ -7,7 +7,7 @@ Delete a task, with its subtasks, permanently.
 
 Arguments: $ARGUMENTS (task ID, e.g. `5`, a subtask like `5.2`, or several as `5,6`)
 
-1. Use the ID only when it is digits, dots and commas; if there is none, ask which task.
+1. Use the IDs only when they are digits and dots (`5`, `5.2`), or a comma-separated list of them (`5,6.1`); if there is none, ask which task.
 2. Run `taskgraph show <id>` and tell the user what will go: the task's status, its subtasks, and the tasks that depend on it. Suggest `/taskgraph:set-status <id> cancelled` if they want to keep it for reference.
 3. Only after the user confirms in the conversation, run:
 

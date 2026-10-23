@@ -14,7 +14,7 @@ This changes one task's content only. For other requests, say so and use the rig
 - dependencies: `/taskgraph:add-dependency` and `/taskgraph:remove-dependency`
 - a progress note, kept as written with no AI: `taskgraph note <id> -- '<text>'`
 
-1. Use the ID only when it is digits (`5`); otherwise ask which task. Put the changes in single quotes, with any `'` written as `'\''`:
+1. Use the ID only when it is digits and dots (`5`, or a subtask like `5.2`); otherwise ask which task. Put the changes in single quotes, with any `'` written as `'\''`:
 
    ```bash
    taskgraph update-task --id=<id> --prompt='<changes>'

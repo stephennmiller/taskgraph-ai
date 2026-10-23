@@ -11,7 +11,7 @@ Arguments: $ARGUMENTS (subtask ID like `5.1`; `--convert`, `convert` or `standal
 
 To clear every subtask of a task, use `/taskgraph:clear-subtasks` instead.
 
-1. Use the ID only when it is digits with one dot (`5.1`); otherwise ask which subtask.
+1. Use the ID only when it is digits and dots with exactly one dot (`5.1`); otherwise ask which subtask.
 2. Run one of:
 
    ```bash

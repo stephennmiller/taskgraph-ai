@@ -7,7 +7,7 @@ Break one task into subtasks with AI.
 
 Arguments: $ARGUMENTS (task ID, then optional modifiers)
 
-1. Use the ID only when it is digits; if there is none, ask which task. Then run:
+1. Use the ID only when it is digits and dots and names a top-level task (`5`); if there is none, ask which task. Then run:
 
    ```bash
    taskgraph expand --id=<id>

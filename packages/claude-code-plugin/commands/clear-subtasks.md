@@ -11,7 +11,7 @@ Arguments: $ARGUMENTS (task ID, several as `5,6`, or `--all`)
 
 To remove a single subtask, use `/taskgraph:remove-subtask` instead.
 
-1. Use the ID only when it is digits and commas. If no ID and no `--all` are given, ask which task. For an ID, run `taskgraph show <id>` and tell the user how many subtasks will go, and how many of them are in progress or done.
+1. Use the IDs only when they are digits and dots and name top-level tasks (`5`), or a comma-separated list of them (`5,6`). If no ID and no `--all` are given, ask which task. For an ID, run `taskgraph show <id>` and tell the user how many subtasks will go, and how many of them are in progress or done.
 2. Run:
 
    ```bash
