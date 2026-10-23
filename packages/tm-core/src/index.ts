@@ -185,7 +185,6 @@ export * from './modules/git/merge-driver/index.js';
 
 // Tasks - Advanced
 export { PreflightChecker } from './modules/tasks/services/preflight-checker.service.js';
-export { TaskLoaderService } from './modules/tasks/services/task-loader.service.js';
 export {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,

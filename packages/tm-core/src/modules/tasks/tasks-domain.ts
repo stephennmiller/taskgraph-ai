@@ -6,7 +6,6 @@
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import { TaskService } from './services/task-service.js';
 import { TaskExecutionService } from './services/task-execution-service.js';
-import { TaskLoaderService } from './services/task-loader.service.js';
 import { PreflightChecker } from './services/preflight-checker.service.js';
 import { TagService } from './services/tag.service.js';
 import {
@@ -70,7 +69,6 @@ import type {
 import type {
 	PreflightResult
 } from './services/preflight-checker.service.js';
-import type { TaskValidationResult } from './services/task-loader.service.js';
 import type {
 	WatchEvent,
 	WatchOptions,
@@ -91,7 +89,6 @@ export interface ArchiveResult {
 export class TasksDomain {
 	private taskService: TaskService;
 	private executionService: TaskExecutionService;
-	private loaderService: TaskLoaderService;
 	private preflightChecker: PreflightChecker;
 	private tagService!: TagService;
 	private taskFileGenerator!: TaskFileGeneratorService;
@@ -103,7 +100,6 @@ export class TasksDomain {
 		this.configManager = configManager;
 		this.taskService = new TaskService(configManager);
 		this.executionService = new TaskExecutionService(this.taskService);
-		this.loaderService = new TaskLoaderService(this.taskService);
 		this.preflightChecker = new PreflightChecker(this.projectRoot);
 	}
 
@@ -538,22 +534,6 @@ export class TasksDomain {
 	 */
 	async canStart(taskId: string, force?: boolean): Promise<boolean> {
 		return this.executionService.canStartTask(taskId, force);
-	}
-
-	// ========== Task Loading & Validation ==========
-
-	/**
-	 * Load and validate a task for execution
-	 */
-	async loadAndValidate(taskId: string): Promise<TaskValidationResult> {
-		return this.loaderService.loadAndValidateTask(taskId);
-	}
-
-	/**
-	 * Get execution order for subtasks
-	 */
-	getExecutionOrder(task: Task) {
-		return this.loaderService.getExecutionOrder(task);
 	}
 
 	// ========== Preflight Checks ==========
