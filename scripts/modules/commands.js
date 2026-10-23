@@ -1737,14 +1737,14 @@ function registerCommands(programInstance) {
 			if (!parentId) {
 				printError(
 					'add-subtask needs --parent, the task to add the subtask to',
-					'Try `taskgraph add-subtask --parent=5 --title="<title>"`'
+					"Try `taskgraph add-subtask --parent=5 --title='<title>'`"
 				);
 				process.exit(1);
 			}
 			if (!existingTaskId && !options.title) {
 				printError(
 					'add-subtask needs --title for a new subtask, or --task-id to move a task',
-					`Try \`taskgraph add-subtask --parent=${parentId} --title="<title>"\` or \`--task-id=<id>\``
+					`Try \`taskgraph add-subtask --parent=${parentId} --title='<title>'\` or \`--task-id=<id>\``
 				);
 				process.exit(1);
 			}

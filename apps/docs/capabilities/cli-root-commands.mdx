@@ -151,7 +151,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Print what an agent needs at the start of a session: the tag, the task
     # in progress with how to tell it's done (acceptance criteria, else test
     # strategy), the next three ready tasks in `next` order, and the five
-    # workflow rules. Under 40 lines, 80 columns wide when piped.
+    # workflow rules, with free text in single quotes. Under 40 lines, 80
+    # columns wide when piped.
     taskgraph prime
 
     # Another tag, or the same context as JSON
@@ -195,17 +196,17 @@ description: "A comprehensive reference of all available TaskGraph commands"
   <Accordion title="Update Tasks">
     ```bash
     # Update tasks from a specific ID and provide context
-    taskgraph update --from=<id> --prompt="<prompt>"
+    taskgraph update --from=<id> --prompt='<prompt>'
     ```
   </Accordion>
 
   <Accordion title="Update a Specific Task">
     ```bash
     # Update a single task by ID with new information
-    taskgraph update-task --id=<id> --prompt="<prompt>"
+    taskgraph update-task --id=<id> --prompt='<prompt>'
 
     # Use research-backed updates (research model)
-    taskgraph update-task --id=<id> --prompt="<prompt>" --research
+    taskgraph update-task --id=<id> --prompt='<prompt>' --research
     ```
   </Accordion>
 
@@ -234,13 +235,13 @@ description: "A comprehensive reference of all available TaskGraph commands"
   <Accordion title="Update a Subtask">
     ```bash
     # Append additional information to a specific subtask
-    taskgraph update-subtask --id=<parentId.subtaskId> --prompt="<prompt>"
+    taskgraph update-subtask --id=<parentId.subtaskId> --prompt='<prompt>'
 
     # Example: Add details about API rate limiting to subtask 2 of task 5
     taskgraph update-subtask --id=5.2 --prompt="Add rate limiting of 100 requests per minute"
 
     # Use research-backed updates (research model)
-    taskgraph update-subtask --id=<parentId.subtaskId> --prompt="<prompt>" --research
+    taskgraph update-subtask --id=<parentId.subtaskId> --prompt='<prompt>' --research
     ```
 
     Unlike the `update-task` command which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. The AI writes the appended text from your prompt; to save a note exactly as written, use `taskgraph note`.
@@ -287,7 +288,7 @@ description: "A comprehensive reference of all available TaskGraph commands"
     taskgraph expand --id=<id> --num=<number>
 
     # Expand with additional context
-    taskgraph expand --id=<id> --prompt="<context>"
+    taskgraph expand --id=<id> --prompt='<context>'
 
     # Expand all pending tasks
     taskgraph expand --all

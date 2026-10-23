@@ -112,7 +112,7 @@ describe('note', () => {
 
 		expect(result.status).toBe(1);
 		expect(result.stderr).toContain('✗ The note is empty');
-		expect(result.stderr).toContain('taskgraph note 3 "what you did"');
+		expect(result.stderr).toContain("taskgraph note 3 'what you did'");
 	}, 60000);
 
 	it('refuses a note over 64 KB from stdin, changing nothing', () => {
