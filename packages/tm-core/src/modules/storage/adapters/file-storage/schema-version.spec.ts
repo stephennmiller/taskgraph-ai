@@ -51,6 +51,33 @@ describe('stampTasksFileSchemaVersion', () => {
 		});
 	});
 
+	it('stamps the tags of a file that also has root tasks, as it is read as tagged', () => {
+		const data = {
+			tasks: [],
+			metadata: {},
+			master: { tasks: [], metadata: { created: '2020-01-01' } }
+		};
+
+		stampTasksFileSchemaVersion(data);
+
+		expect(data.master.metadata).toEqual({
+			created: '2020-01-01',
+			schemaVersion: CURRENT_SCHEMA_VERSION
+		});
+	});
+
+	it('leaves metadata that is not a plain object unchanged', () => {
+		const data = {
+			master: { tasks: [], metadata: ['x'] },
+			feature: { tasks: [], metadata: 'notes' }
+		};
+
+		stampTasksFileSchemaVersion(data);
+
+		expect(data.master.metadata).toEqual(['x']);
+		expect(data.feature.metadata).toBe('notes');
+	});
+
 	it('leaves keys that are not tags, and files with no tasks, unchanged', () => {
 		const data = {
 			master: { tasks: [] },

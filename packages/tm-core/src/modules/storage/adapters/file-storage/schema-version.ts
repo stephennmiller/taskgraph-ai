@@ -46,10 +46,15 @@ function isTagObject(value: unknown): value is { metadata?: unknown } {
 }
 
 function stampTag(tag: { metadata?: unknown }): void {
-	const metadata =
-		tag.metadata && typeof tag.metadata === 'object'
-			? (tag.metadata as Pick<TaskMetadata, 'schemaVersion'>)
-			: {};
+	// Leave metadata that is not a plain object alone rather than rewrite it
+	if (
+		tag.metadata !== undefined &&
+		tag.metadata !== null &&
+		(typeof tag.metadata !== 'object' || Array.isArray(tag.metadata))
+	) {
+		return;
+	}
+	const metadata = (tag.metadata ?? {}) as Pick<TaskMetadata, 'schemaVersion'>;
 	tag.metadata = withSchemaVersion(metadata, metadata);
 }
 
@@ -62,12 +67,13 @@ function stampTag(tag: { metadata?: unknown }): void {
  */
 export function stampTasksFileSchemaVersion<T>(data: T): T {
 	if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
-	if (isTagObject(data)) {
+	// Tag keys win over root `tasks`, as FormatHandler.detectFormat reads a
+	// file with both as tagged (an unmigrated file a writer added a tag to)
+	const tags = Object.values(data).filter(isTagObject);
+	if (tags.length > 0) {
+		for (const tag of tags) stampTag(tag);
+	} else if (isTagObject(data)) {
 		stampTag(data);
-		return data;
-	}
-	for (const value of Object.values(data)) {
-		if (isTagObject(value)) stampTag(value);
 	}
 	return data;
 }

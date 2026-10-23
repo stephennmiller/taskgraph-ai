@@ -198,9 +198,8 @@ export class TagOperations {
 
 						// Update metadata tags array and stamp the schema version
 						const metadata = existingData[newTag].metadata;
-						if (metadata) metadata.tags = [newTag];
 						existingData[newTag].metadata = withSchemaVersion(
-							metadata ?? {},
+							{ ...metadata, tags: [newTag] },
 							metadata
 						);
 
