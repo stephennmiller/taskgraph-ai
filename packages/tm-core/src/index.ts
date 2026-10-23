@@ -203,6 +203,7 @@ export {
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,
 	rankNextTasks,
+	subtaskInContext,
 	buildPrimeContext,
 	findUnnotedInProgress,
 	PRIME_RULES,

@@ -99,8 +99,6 @@ export function rankNextTasks(
 					candidateSubtasks.push({
 						...subtaskInContext(parent, st),
 						id: `${parent.id}.${st.id}`,
-						title: st.title || `Subtask ${st.id}`,
-						status: st.status || 'pending',
 						dependencies: fullDeps,
 						subtasks: []
 					} as Task & { parentId: string });

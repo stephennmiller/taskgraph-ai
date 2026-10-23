@@ -33,6 +33,24 @@ describe('subtaskInContext', () => {
 		);
 	});
 
+	it('gives a hand-edited subtask with no title or status the ones next shows', () => {
+		const sub = stored({ title: undefined, status: undefined, dependencies: [] });
+		const parent = createTask({
+			id: 3,
+			title: 'Cycles',
+			status: 'in-progress',
+			subtasks: [sub]
+		});
+
+		const next = selectNextTask([parent]) as unknown as Subtask;
+
+		expect(next).toMatchObject({ title: 'Subtask 2', status: 'pending' });
+		expect(subtaskInContext(parent, sub)).toMatchObject({
+			title: next.title,
+			status: next.status
+		});
+	});
+
 	it('matches what next picks for the same subtask, apart from the dotted ID', () => {
 		const sub = stored({ complexity: 5 });
 		const parent = createTask({
