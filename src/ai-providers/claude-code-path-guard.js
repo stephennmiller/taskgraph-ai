@@ -43,17 +43,55 @@ export function isInsideRoot(root, candidate) {
 	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
 }
 
-// Names that hold credentials. .env.example and friends hold none.
+// Names that hold credentials. .env.example and friends hold none. .aws is
+// refused whole: besides credentials it holds SSO and CLI token caches.
 const SECRET_NAME =
-	/^(\.env(\..*)?|\.git|\.npmrc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.pem$/i;
-const PUBLIC_ENV = /^\.env\.(example|sample|template)$/i;
+	/^(\.env([._-].*)?|\.envrc|\.git|\.aws|\.npmrc|[._]netrc|\.pypirc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore)$/i;
+const PUBLIC_ENV = /^\.env[._-](example|sample|template)$/i;
+// Files that are secret only inside a given directory: [directory, file]
+const SECRET_PAIRS = [['.docker', 'config.json']];
+// A Windows 8.3 short name such as ENV~1 or ENVLOC~1.LOC. It can stand for
+// any long name, .env included, so it is refused whatever it points at.
+const SHORT_NAME = /^[^.~]{1,7}~\d+(\.[^.]{0,3})?$/;
+
+/**
+ * The name Windows opens for one path segment. It drops an alternate data
+ * stream (`.env::$DATA`, `.env:x`) and trailing dots and spaces (`.env.`,
+ * `.env `), all of which open the file the plain name does. Glob characters
+ * are dropped too, so `.env*` is judged as `.env`. Applied on every platform:
+ * on POSIX these are odd names, and refusing them costs nothing.
+ * @param {string} segment - One path segment
+ * @returns {string}
+ */
+export function normalizeSegment(segment) {
+	return segment
+		.replace(/[*?[\]{}]/g, '')
+		.split(':')[0]
+		.replace(/[. ]+$/, '');
+}
+
+/**
+ * Fold case the way a case-insensitive filesystem compares names. NTFS
+ * upper-cases both sides, so `.aw\u017F` (long s) and `.g\u0131t` (dotless i)
+ * can open `.aws` and `.git`; APFS case-folds, so `server.\u212Aey` (Kelvin
+ * sign) can open `server.key`. Upper- then lower-casing maps all three to
+ * ASCII, which a plain `/i` regex does not.
+ */
+function foldCase(name) {
+	return name.toUpperCase().toLowerCase();
+}
 
 /** True when any part of a path or glob names a credentials file. */
 function namesSecret(candidate) {
-	return candidate
+	const parts = candidate
 		.split(/[\\/,]/)
-		.map((part) => part.replace(/[*?[\]{}]/g, ''))
-		.some((part) => SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
+		.map((part) => foldCase(normalizeSegment(part)));
+	const secret = (part) =>
+		SHORT_NAME.test(part) || (SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
+	if (parts.some(secret)) return true;
+	return SECRET_PAIRS.some(([dir, file]) =>
+		parts.some((part, i) => part === dir && parts[i + 1] === file)
+	);
 }
 
 /** `env` -> `[eE][nN][vV]`, since rg globs are case-sensitive */
@@ -71,13 +109,25 @@ function anyCase(name) {
 const SECRET_GLOBS = [
 	'.env',
 	'.env.*',
+	'.env-*',
+	'.env_*',
+	'.envrc',
 	'.git',
+	'.aws',
 	'.npmrc',
+	'.netrc',
+	'_netrc',
+	'.pypirc',
 	'id_rsa*',
 	'id_dsa*',
 	'id_ecdsa*',
 	'id_ed25519*',
-	'*.pem'
+	'*.pem',
+	'*.key',
+	'*.p12',
+	'*.pfx',
+	'*.keystore',
+	...SECRET_PAIRS.map(([dir, file]) => `**/${dir}/${file}`)
 ].map((name) => `!${anyCase(name)}`);
 
 /**
@@ -157,7 +207,11 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		}
 	}
 
-	if (typeof toolInput.glob === 'string' && namesSecret(toolInput.glob)) {
+	// Claude Code passes each space-separated token of glob to rg on its own
+	if (
+		typeof toolInput.glob === 'string' &&
+		toolInput.glob.split(/\s+/).some(namesSecret)
+	) {
 		return `${toolName} globs may not match secret files such as .env, .git or keys.`;
 	}
 
@@ -168,11 +222,14 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 	if (typeof pattern === 'string') {
 		const deny = `${toolName} patterns may not leave the project directory (${root}).`;
 		if (hasParentSegment(pattern) || pattern.startsWith('~')) return deny;
-		if (namesSecret(pattern)) {
-			return `${toolName} patterns may not match secret files such as .env, .git or keys.`;
-		}
 		const base = absoluteGlobBase(pattern);
 		if (base !== null && !isInsideRoot(root, base)) return deny;
+		// Judge only the part below the root, whose own path may hold a short
+		// name such as C:\Users\RUNNER~1
+		const below = base === null ? pattern : path.relative(root, pattern);
+		if (namesSecret(below)) {
+			return `${toolName} patterns may not match secret files such as .env, .git or keys.`;
+		}
 	}
 	return null;
 }

@@ -104,7 +104,7 @@ describe.skipIf(!built)('add-task command output', () => {
 		expect(res.stdout).toContain('  Depends on  1  Set up the database schema');
 	});
 
-	it('marks the dependencies the AI added and the ones it left out, within 80 columns', () => {
+	it('keeps the dependencies you passed and marks the ones the AI added, within 80 columns', () => {
 		const fake = installFakeClaude({
 			projectDir: project,
 			workDir: work,
@@ -129,10 +129,19 @@ describe.skipIf(!built)('add-task command output', () => {
 		expect(res.stdout).toContain(
 			[
 				'✓ Added task 3  Export bookmarks as a Netscape HTML file · medium priority',
-				'  Depends on  2  Email and password sign-in  added by AI',
-				'  Not used    1  Set up the database schema'
+				'  Depends on  1  Set up the database schema',
+				'              2  Email and password sign-in  added by AI'
 			].join('\n')
 		);
+		const saved = JSON.parse(
+			fs.readFileSync(
+				path.join(project, '.taskgraph', 'tasks', 'tasks.json'),
+				'utf8'
+			)
+		);
+		expect(
+			saved.master.tasks.find((t: { id: number }) => t.id === 3).dependencies
+		).toEqual([1, 2]);
 		expect(res.stdout).not.toMatch(BOXES);
 		expect(res.stdout).not.toContain('Context Analysis');
 		const lines = res.stdout.split('\n');

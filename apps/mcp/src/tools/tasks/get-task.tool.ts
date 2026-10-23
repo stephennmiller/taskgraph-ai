@@ -84,7 +84,8 @@ export function registerGetTaskTool(server: FastMCP) {
 								}
 							},
 							log,
-							projectRoot
+							projectRoot,
+							tag
 						});
 					}
 
@@ -117,7 +118,8 @@ export function registerGetTaskTool(server: FastMCP) {
 							}
 						},
 						log,
-						projectRoot
+						projectRoot,
+						tag
 					});
 				}
 			}

@@ -12,23 +12,23 @@ const exportTask = {
 	title: 'Export bookmarks as a Netscape HTML file',
 	priority: 'medium',
 	dependencies: [
+		{ id: 1, title: 'Set up the database schema' },
 		{
 			id: 2,
 			title: 'Email and password sign-in with sessions',
 			addedByAi: true
 		},
 		{ id: 3, title: 'Bookmark CRUD endpoints', addedByAi: true }
-	],
-	unused: [{ id: 1, title: 'Set up the database schema' }]
+	]
 };
 
 describe('formatTaskCreated', () => {
 	it('leads with one ✓ line, then aligned dependency rows and one next step', () => {
 		expect(lines(formatTaskCreated(exportTask, 80))).toEqual([
 			'✓ Added task 4  Export bookmarks as a Netscape HTML file · medium priority',
-			'  Depends on  2  Email and password sign-in with sessions  added by AI',
+			'  Depends on  1  Set up the database schema',
+			'              2  Email and password sign-in with sessions  added by AI',
 			'              3  Bookmark CRUD endpoints                   added by AI',
-			'  Not used    1  Set up the database schema',
 			'Next: taskgraph show 4 to read it, or taskgraph expand --id=4 to break it down'
 		]);
 	});
@@ -98,8 +98,10 @@ describe('formatTaskCreated', () => {
 				id: 120,
 				title: long,
 				priority: 'high',
-				dependencies: [{ id: 101, title: long, addedByAi: true }],
-				unused: [{ id: 7, title: long }]
+				dependencies: [
+					{ id: 7, title: long },
+					{ id: 101, title: long, addedByAi: true }
+				]
 			},
 			80
 		);
@@ -131,9 +133,9 @@ describe('formatTaskCreated', () => {
 		expect(widest(output)).toBeLessThanOrEqual(50);
 		expect(lines(output)).toEqual([
 			'✓ Added task 4  Export bookmark… · medium priority',
-			'  Depends on  2  Email and password…   added by AI',
+			'  Depends on  1  Set up the database…',
+			'              2  Email and password…   added by AI',
 			'              3  Bookmark CRUD endpo…  added by AI',
-			'  Not used    1  Set up the database…',
 			'Next: taskgraph show 4 to read it, or taskgraph',
 			'      expand --id=4 to break it down'
 		]);

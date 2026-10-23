@@ -434,6 +434,8 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
  * @param {Object} context - Context object containing projectRoot and tag information
  * @param {string} [context.projectRoot] - Project root path
  * @param {string} [context.tag] - Tag for the task
+ * @returns {Promise<{removed: boolean, message: string}>} Whether tasks.json
+ *   changed, and a sentence that says what happened
  */
 async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	log('debug', `Removing dependency ${dependencyId} from task ${taskId}...`);
@@ -518,17 +520,16 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 			removeTaskLink(targetTask.metadata, formattedDependencyId)
 		);
 		writeJSON(tasksPath, data, context.projectRoot, context.tag);
-		log(
-			'success',
-			`Task ${formattedTaskId} is no longer linked to task ${formattedDependencyId}`
-		);
-		return;
+		const message = `Task ${formattedTaskId} is no longer linked to task ${formattedDependencyId}`;
+		log('success', message);
+		return { removed: true, message };
 	}
 
 	// Check if the task has any dependencies
 	if (!targetTask.dependencies || targetTask.dependencies.length === 0) {
-		log('info', `Task ${formattedTaskId} has no dependencies; nothing changed`);
-		return;
+		const message = `Task ${formattedTaskId} has no dependencies; nothing changed`;
+		log('info', message);
+		return { removed: false, message };
 	}
 
 	// Normalize the dependency ID for comparison to handle different formats
@@ -545,11 +546,9 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	});
 
 	if (dependencyIndex === -1) {
-		log(
-			'info',
-			`Task ${formattedTaskId} doesn't depend on task ${formattedDependencyId}; nothing changed`
-		);
-		return;
+		const message = `Task ${formattedTaskId} doesn't depend on task ${formattedDependencyId}; nothing changed`;
+		log('info', message);
+		return { removed: false, message };
 	}
 
 	// Remove the dependency, and its provenance mark with it
@@ -567,13 +566,9 @@ async function removeDependency(tasksPath, taskId, dependencyId, context = {}) {
 	// Save the updated tasks
 	writeJSON(tasksPath, data, context.projectRoot, context.tag);
 
-	log(
-		'success',
-		`Task ${formattedTaskId} no longer depends on task ${formattedDependencyId}`
-	);
-
-	// Regenerate task files
-	// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
+	const message = `Task ${formattedTaskId} no longer depends on task ${formattedDependencyId}`;
+	log('success', message);
+	return { removed: true, message };
 }
 
 /**

@@ -52,8 +52,10 @@ Note: `taskgraph research` (the CLI and MCP command) runs with its own restricte
 To keep the result with a task, save a summary to it as written, for example:
 
 ```bash
-taskgraph note <id> "<summary of findings, with source URLs>"
+taskgraph note <id> '<summary of findings, with source URLs>'
 ```
+
+Keep the summary in single quotes, and write any `'` in it as `'\''`. In double quotes the shell would run backticks and `$(...)` in the text.
 
 ## Gotchas
 

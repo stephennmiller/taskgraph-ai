@@ -102,7 +102,8 @@ export function registerGenerateTool(server: FastMCP) {
 							}
 						},
 						log,
-						projectRoot
+						projectRoot,
+						tag
 					});
 				}
 			}
