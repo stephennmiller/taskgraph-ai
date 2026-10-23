@@ -6,8 +6,7 @@
 	"main": "./dist/index.js",
 	"types": "./src/index.ts",
 	"exports": {
-		".": "./src/index.ts",
-		"./tools/autopilot": "./src/tools/autopilot/index.ts"
+		".": "./src/index.ts"
 	},
 	"files": [
 		"dist",
