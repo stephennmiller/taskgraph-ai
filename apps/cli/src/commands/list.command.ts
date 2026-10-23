@@ -41,13 +41,6 @@ import {
 	shouldPrintPlainList
 } from './list.types.js';
 
-export {
-	type ListCommandOptions,
-	type ListTasksResult,
-	type TaskWithTag,
-	shouldPrintPlainList
-} from './list.types.js';
-
 /**
  * ListTasksCommand extending Commander's Command class
  * This is a thin presentation layer over @tm/core
@@ -308,8 +301,11 @@ export class ListTasksCommand extends Command {
 
 		// When --ready is used, we need ALL tasks to correctly compute which dependencies are satisfied
 		// So we fetch without status filter first, then apply status filter after ready/blocking.
-		// The summary counts every task too, whatever the status filter.
-		const needsAllTasks = options.ready || options.blocking || showsSummary;
+		// The summary counts every task too, whatever the status filter. Plain
+		// lines load them all as well, so a dependency on a task with another
+		// status isn't reported as missing (#250)
+		const needsAllTasks =
+			options.ready || options.blocking || showsSummary || options.plain;
 
 		// Build filter - skip status filter if we need all tasks for ready/blocking computation
 		const filter =

@@ -313,6 +313,36 @@ describe('formatPlainTaskList (#250)', () => {
 		expect(output).toBe('1  pending  low  First line second line');
 	});
 
+	it('keeps words apart across a carriage return or form feed', () => {
+		const output = formatPlainTaskList([
+			createTask({
+				id: 1,
+				title: 'Fix login\rretry\fnow',
+				status: 'pending',
+				priority: 'low'
+			})
+		]);
+
+		expect(output).toBe('1  pending  low  Fix login retry now');
+	});
+
+	it('strips escape codes from every field, not only the title', () => {
+		const output = formatPlainTaskList([
+			{
+				...createTask({
+					id: 1,
+					title: 'A',
+					status: 'pending',
+					priority: 'low',
+					dependencies: ['2\u001b]0;pwned\u0007']
+				}),
+				tagName: 'ui\u001b[2J'
+			}
+		]);
+
+		expect(output).toBe('ui  1  pending  low  A  deps:2');
+	});
+
 	it('starts each line with the tag when listing every tag', () => {
 		const output = formatPlainTaskList([
 			{

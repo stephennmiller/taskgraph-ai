@@ -32,7 +32,8 @@ vi.mock('../utils/ui.js', () => ({
 	displayWarning: vi.fn()
 }));
 
-import { ListTasksCommand, shouldPrintPlainList } from './list.command.js';
+import { ListTasksCommand } from './list.command.js';
+import { shouldPrintPlainList } from './list.types.js';
 
 describe('ListTasksCommand', () => {
 	let consoleLogSpy: any;

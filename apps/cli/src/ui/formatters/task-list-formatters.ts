@@ -334,9 +334,15 @@ interface PlainRow {
 	deps: string[];
 }
 
-/** One line of text: no control characters, no line breaks */
+/**
+ * One line of text from a task file: line breaks, tabs and other whitespace
+ * become single spaces (so `a\rb` stays two words), then escape sequences
+ * and control characters are removed
+ */
 const oneLine = (text: unknown) =>
-	terminalSafe(text).replace(/\s+/g, ' ').trim();
+	terminalSafe(String(text ?? '').replace(/\s+/g, ' '))
+		.replace(/ {2,}/g, ' ')
+		.trim();
 
 /**
  * `list` for a pipe: one line per task (and per subtask with
@@ -354,24 +360,26 @@ export function formatPlainTaskList(
 	const rows: PlainRow[] = [];
 	for (const task of tasks) {
 		const id = String(task.id);
+		// Every field comes from the task file, so each goes through oneLine
+		const tag = task.tagName === undefined ? undefined : oneLine(task.tagName);
 		rows.push({
-			tag: task.tagName,
-			id,
-			status: task.status,
-			priority: task.priority || '-',
-			title: oneLine(task.title),
-			deps: (task.dependencies ?? []).map(String)
+			tag,
+			id: oneLine(id),
+			status: oneLine(task.status),
+			priority: oneLine(task.priority) || '-',
+			title: oneLine(task.title) || '-',
+			deps: (task.dependencies ?? []).map(oneLine)
 		});
 		if (!options.withSubtasks) continue;
 		for (const subtask of task.subtasks ?? []) {
 			rows.push({
-				tag: task.tagName,
-				id: fullSubtaskId(id, subtask.id),
-				status: subtask.status,
-				priority: subtask.priority || '-',
-				title: oneLine(subtask.title),
+				tag,
+				id: oneLine(fullSubtaskId(id, subtask.id)),
+				status: oneLine(subtask.status),
+				priority: oneLine(subtask.priority) || '-',
+				title: oneLine(subtask.title) || '-',
 				deps: (subtask.dependencies ?? []).map((dep) =>
-					resolveSubtaskDependency(id, dep)
+					oneLine(resolveSubtaskDependency(id, dep))
 				)
 			});
 		}

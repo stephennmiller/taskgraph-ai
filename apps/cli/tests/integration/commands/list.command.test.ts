@@ -66,7 +66,12 @@ describe('list command', () => {
 			const output = execSync(`node "${binPath}" list ${args}`, {
 				encoding: 'utf-8',
 				stdio: 'pipe',
-				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+				// No FORCE_COLOR from the runner's shell: a pipe alone decides
+				env: {
+					...process.env,
+					FORCE_COLOR: undefined,
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				}
 			});
 			return { output, exitCode: 0 };
 		} catch (error: any) {
@@ -187,7 +192,12 @@ describe('list command', () => {
 		const runPiped = (args: string[]) =>
 			spawnSync('node', [binPath, ...args], {
 				encoding: 'utf-8',
-				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+				// No FORCE_COLOR from the runner's shell: a pipe alone decides
+				env: {
+					...process.env,
+					FORCE_COLOR: undefined,
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				}
 			});
 
 		it('prints one plain line per task with full titles', () => {
@@ -211,6 +221,22 @@ describe('list command', () => {
 			expect(stdout).toMatch(
 				/^2\.2 +pending +\S+ +Sessions table and cookie middleware {2}deps:2\.1$/m
 			);
+		});
+
+		it('filters by status without reporting other tasks as missing', () => {
+			writeTasks(subtaskProject());
+
+			const { stdout, stderr, status } = runPiped([
+				'list',
+				'--status',
+				'pending'
+			]);
+
+			expect(status).toBe(0);
+			expect(stdout.trimEnd().split('\n')).toEqual([
+				'3  pending  medium  Bookmark endpoints  deps:2'
+			]);
+			expect(stderr).not.toContain('non-existent');
 		});
 
 		it('keeps the table when --format text is given', () => {
