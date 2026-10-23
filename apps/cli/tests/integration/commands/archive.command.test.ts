@@ -12,8 +12,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createTask, createTasksFile } from '@tm/core/testing';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it
+} from 'vitest';
+import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
 
 interface SavedTask {
 	id: number | string;
@@ -46,10 +54,23 @@ describe('archive', () => {
 	const archivedIds = (tag = 'master') =>
 		ids(readJson(archivePath)[tag]?.tasks);
 
-	beforeEach(() => {
-		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-archive-'));
+	// One init, copied into each test's folder: init is the slow part
+	let template: string;
+
+	beforeAll(() => {
+		template = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-archive-tpl-'));
+		testDir = template;
 		const init = run(['init', '--yes', '--no-aliases', '--no-git']);
 		expect(init.status).toBe(0);
+		// Starting the built CLI for init can take over 15s on a busy machine
+	}, 60000);
+
+	afterAll(() => {
+		fs.rmSync(template, { recursive: true, force: true });
+	});
+
+	beforeEach(() => {
+		testDir = copyProject(template, 'tm-archive-');
 		tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
 		archivePath = path.join(testDir, '.taskgraph', 'tasks', 'archive.json');
 		fs.writeFileSync(
@@ -78,8 +99,7 @@ describe('archive', () => {
 				})
 			)
 		);
-		// Starting the built CLI for init can take over 15s on a busy machine
-	}, 60000);
+	});
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
