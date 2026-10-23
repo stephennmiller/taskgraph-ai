@@ -5,6 +5,7 @@ import chalk from 'chalk';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
 	formatEmptyList,
+	formatInvalidDependencyWarning,
 	formatListNextStep,
 	formatListSummary,
 	formatNoNextTask,
@@ -355,6 +356,72 @@ describe('formatPlainTaskList (#250)', () => {
 		expect(output.split('\n').map((line) => line.split(/ {2,}/)[0])).toEqual([
 			'master',
 			'ui'
+		]);
+	});
+});
+
+describe('formatInvalidDependencyWarning (#366)', () => {
+	const level = chalk.level;
+	afterEach(() => {
+		chalk.level = level;
+	});
+
+	it('names each missing dependency, and the tag when given', () => {
+		const output = formatInvalidDependencyWarning(
+			[{ taskId: '3', depId: '9' }],
+			'feature'
+		);
+
+		expect(lines(output)).toEqual([
+			'',
+			'Warning: 1 invalid dependency reference(s) found (tag: feature):',
+			'  Task 3 depends on non-existent task 9',
+			'Run taskgraph fix-dependencies --tag feature to remove them'
+		]);
+	});
+
+	it('puts <tag> in the command for a tag add-tag would refuse', () => {
+		const output = lines(
+			formatInvalidDependencyWarning(
+				[{ taskId: '3', depId: '9' }],
+				'a;rm -rf ~'
+			)
+		);
+
+		expect(output[1]).toContain('(tag: a;rm -rf ~)');
+		expect(output.at(-1)).toBe(
+			'Run taskgraph fix-dependencies --tag <tag> to remove them'
+		);
+	});
+
+	it('names five and counts the rest', () => {
+		const invalid = Array.from({ length: 7 }, (_, i) => ({
+			taskId: String(i + 1),
+			depId: '99'
+		}));
+
+		const output = lines(formatInvalidDependencyWarning(invalid));
+
+		expect(output).toHaveLength(9);
+		expect(output.at(-2)).toBe('  ...and 2 more');
+		expect(output.at(-1)).toBe('Run taskgraph fix-dependencies to remove them');
+	});
+
+	it('strips escape codes from the IDs and the tag', () => {
+		chalk.level = 0;
+
+		const output = formatInvalidDependencyWarning(
+			[{ taskId: '3\u001b[2J', depId: '9\u001b]0;pwned\u0007' }],
+			'x\u001b[31m\ny'
+		);
+
+		expect(output).not.toContain('\u001b');
+		expect(output).not.toContain('\u0007');
+		expect(output.split('\n')).toEqual([
+			'',
+			'Warning: 1 invalid dependency reference(s) found (tag: x y):',
+			'  Task 3 depends on non-existent task 9',
+			'Run taskgraph fix-dependencies --tag <tag> to remove them'
 		]);
 	});
 });

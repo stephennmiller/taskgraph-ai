@@ -363,6 +363,28 @@ describe('listTasks', () => {
 		);
 	});
 
+	// Regression: #384, readJSON falls back to master, so a missing tag
+	// listed master's tasks under the requested tag
+	test('reports a missing tag instead of falling back to readJSON', async () => {
+		mockTasksList.mockReset();
+		mockTasksList.mockRejectedValue(
+			Object.assign(new Error('Tag "nosuch" not found'), { code: 'NOT_FOUND' })
+		);
+		readJSON.mockClear();
+
+		await expect(
+			listTasks('tasks/tasks.json', null, null, false, 'json', {
+				tag: 'nosuch'
+			})
+		).rejects.toEqual(
+			expect.objectContaining({
+				code: 'TASK_LIST_ERROR',
+				message: 'Tag "nosuch" not found'
+			})
+		);
+		expect(readJSON).not.toHaveBeenCalled();
+	});
+
 	test('should validate and fix dependencies before listing', async () => {
 		// Arrange
 		const tasksPath = 'tasks/tasks.json';
