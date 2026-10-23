@@ -144,9 +144,15 @@ function fileCoverage(
 	};
 }
 
+/** Larger files aren't PRDs; reading one would stall validate-dependencies */
+export const MAX_PRD_BYTES = 10 * 1024 * 1024;
+
 /**
  * `computePrdCoverage` with each PRD read from disk. Relative paths are read
- * from the project root, as parse-prd stores them.
+ * from the project root, as parse-prd stores them. `metadata.source` comes
+ * from the task file, so only a regular file up to `MAX_PRD_BYTES` is read:
+ * a source naming `/dev/zero` or a FIFO counts as unreadable instead of
+ * hanging the check.
  */
 export function checkPrdCoverage(
 	tasks: PrdCoverageTask[],
@@ -154,7 +160,10 @@ export function checkPrdCoverage(
 ): PrdCoverage | null {
 	return computePrdCoverage(tasks, (prdPath) => {
 		try {
-			return fs.readFileSync(path.resolve(projectRoot, prdPath), 'utf8');
+			const file = path.resolve(projectRoot, prdPath);
+			const stat = fs.statSync(file);
+			if (!stat.isFile() || stat.size > MAX_PRD_BYTES) return null;
+			return fs.readFileSync(file, 'utf8');
 		} catch {
 			return null;
 		}

@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+	MAX_PRD_BYTES,
 	type PrdCoverageTask,
 	checkPrdCoverage,
 	computePrdCoverage,
@@ -158,5 +159,29 @@ describe('checkPrdCoverage', () => {
 			}),
 			expect.objectContaining({ path: 'docs/gone.md', missing: true })
 		]);
+	});
+
+	it('treats a source naming a directory or device as unreadable', () => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-coverage-'));
+		fs.mkdirSync(path.join(dir, 'docs'));
+		const devices = process.platform === 'win32' ? [] : ['/dev/zero#x'];
+
+		const coverage = checkPrdCoverage(
+			[task(1, 'docs#x'), ...devices.map((source, i) => task(i + 2, source))],
+			dir
+		);
+
+		expect(coverage?.files.every((file) => file.missing)).toBe(true);
+		expect(coverage?.files).toHaveLength(1 + devices.length);
+	});
+
+	it('treats a file over the size limit as unreadable', () => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-coverage-'));
+		fs.writeFileSync(path.join(dir, 'big.md'), '');
+		fs.truncateSync(path.join(dir, 'big.md'), MAX_PRD_BYTES + 1);
+
+		const coverage = checkPrdCoverage([task(1, 'big.md#x')], dir);
+
+		expect(coverage?.files[0]).toMatchObject({ path: 'big.md', missing: true });
 	});
 });

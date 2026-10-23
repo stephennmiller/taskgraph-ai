@@ -83,4 +83,19 @@ describe('formatPrdCoverage', () => {
 			expect(line.length).toBeLessThanOrEqual(80);
 		}
 	});
+
+	it('strips control characters from task ids and titles in the task file', () => {
+		const output = formatPrdCoverage(
+			{
+				files: [
+					file({ stale: [{ taskId: '3\u001b]0;pwned\u0007', slug: 'x' }] })
+				],
+				unsourced: [{ id: '\u001b[2J6', title: 'Notes\u001b[31m' }]
+			},
+			80
+		);
+
+		expect(output).not.toMatch(/\u001b\]|\u001b\[2J|\u0007/);
+		expect(lines(output)).toContain('  6  Notes');
+	});
 });
