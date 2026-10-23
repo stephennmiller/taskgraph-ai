@@ -5,7 +5,6 @@
 
 import fs from 'fs';
 import path from 'path';
-import boxen from 'boxen';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
 import inquirer from 'inquirer';
@@ -79,7 +78,6 @@ import {
 } from './dependency-manager.js';
 
 import {
-	ConfigurationError,
 	getConfig,
 	getDefaultNumTasks,
 	getResponseLanguage,
@@ -122,12 +120,11 @@ import {
 	displayInvalidTagCombinationError,
 	displaySubtaskMoveError,
 	displayTaggedTasksFYI,
-	getStatusWithColor,
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from './ui.js';
 
-import { BORDER_COLOR, theme } from '@tm/cli/theme';
+import { theme } from '@tm/cli/theme';
 import {
 	RULE_PROFILES,
 	findInvalidRulesProfiles
@@ -357,7 +354,7 @@ function registerCommands(programInstance) {
 				if (hasExistingTasksInTag && !useForce && !useAppend) {
 					const overwrite = await confirmTaskOverwrite(tasksPath);
 					if (!overwrite) {
-						log('info', 'Operation cancelled.');
+						console.log(theme.muted('Cancelled; no tasks changed'));
 						return false;
 					}
 					// If user confirms 'y', we should set useForce = true for the parsePRD call
@@ -1738,12 +1735,17 @@ function registerCommands(programInstance) {
 			});
 
 			if (!parentId) {
-				console.error(
-					chalk.red(
-						'Error: --parent parameter is required. Please provide a parent task ID.'
-					)
+				printError(
+					'add-subtask needs --parent, the task to add the subtask to',
+					'Try `taskgraph add-subtask --parent=5 --title="<title>"`'
 				);
-				showAddSubtaskHelp();
+				process.exit(1);
+			}
+			if (!existingTaskId && !options.title) {
+				printError(
+					'add-subtask needs --title for a new subtask, or --task-id to move a task',
+					`Try \`taskgraph add-subtask --parent=${parentId} --title="<title>"\` or \`--task-id=<id>\``
+				);
 				process.exit(1);
 			}
 
@@ -1759,13 +1761,7 @@ function registerCommands(programInstance) {
 
 			try {
 				if (existingTaskId) {
-					// Convert existing task to subtask
-					console.log(
-						theme.brand(
-							`Converting task ${existingTaskId} to a subtask of ${parentId}...`
-						)
-					);
-					await addSubtask(
+					const subtask = await addSubtask(
 						taskGraph.getTasksPath(),
 						parentId,
 						existingTaskId,
@@ -1773,104 +1769,28 @@ function registerCommands(programInstance) {
 						generateFiles,
 						{ projectRoot: taskGraph.getProjectRoot(), tag }
 					);
-					console.log(
-						chalk.green(
-							`✓ Task ${existingTaskId} successfully converted to a subtask of task ${parentId}`
-						)
-					);
-				} else if (options.title) {
-					// Create new subtask with provided data
-					const newSubtaskData = {
-						title: options.title,
-						description: options.description || '',
-						details: options.details || '',
-						status: options.status || 'pending',
-						dependencies: dependencies
-					};
-
+					console.log(ui.formatSubtaskAdded(parentId, subtask, existingTaskId));
+				} else {
 					const subtask = await addSubtask(
 						taskGraph.getTasksPath(),
 						parentId,
 						null,
-						newSubtaskData,
+						{
+							title: options.title,
+							description: options.description || '',
+							details: options.details || '',
+							status: options.status || 'pending',
+							dependencies
+						},
 						generateFiles,
 						{ projectRoot: taskGraph.getProjectRoot(), tag }
 					);
-					// Display success message and suggested next steps
-					console.log(
-						boxen(
-							theme.text.bold(
-								`Subtask ${parentId}.${subtask.id} Added Successfully`
-							) +
-								'\n\n' +
-								theme.text(`Title: ${subtask.title}`) +
-								'\n' +
-								theme.text(`Status: ${getStatusWithColor(subtask.status)}`) +
-								'\n' +
-								(dependencies.length > 0
-									? theme.text(`Dependencies: ${dependencies.join(', ')}`) +
-										'\n'
-									: '') +
-								'\n' +
-								theme.text.bold('Next Steps:') +
-								'\n' +
-								chalk.cyan(
-									`1. Run ${chalk.yellow(`taskgraph show ${parentId}`)} to see the parent task with all subtasks`
-								) +
-								'\n' +
-								chalk.cyan(
-									`2. Run ${chalk.yellow(`taskgraph set-status --id=${parentId}.${subtask.id} --status=in-progress`)} to start working on it`
-								),
-							{
-								padding: 1,
-								borderColor: 'green',
-								borderStyle: 'round',
-								margin: { top: 1 }
-							}
-						)
-					);
-				} else {
-					console.error(
-						chalk.red('Error: Either --task-id or --title must be provided.')
-					);
-					console.log(
-						boxen(
-							theme.text.bold('Usage Examples:') +
-								'\n\n' +
-								theme.text('Convert existing task to subtask:') +
-								'\n' +
-								chalk.yellow(`  taskgraph add-subtask --parent=5 --task-id=8`) +
-								'\n\n' +
-								theme.text('Create new subtask:') +
-								'\n' +
-								chalk.yellow(
-									`  taskgraph add-subtask --parent=5 --title="Implement login UI" --description="Create the login form"`
-								) +
-								'\n\n',
-							{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-						)
-					);
-					process.exit(1);
+					console.log(ui.formatSubtaskAdded(parentId, subtask));
 				}
 			} catch (error) {
 				displayError(error);
 			}
-		})
-		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			showAddSubtaskHelp();
-			process.exit(1);
 		});
-
-	// Helper function to show add-subtask command help
-	function showAddSubtaskHelp() {
-		console.log(
-			boxen(
-				`${theme.text.bold('Add Subtask Command Help')}\n\n${chalk.cyan('Usage:')}\n  taskgraph add-subtask --parent=<id> [options]\n\n${chalk.cyan('Options:')}\n  -p, --parent <id>         Parent task ID (required)\n  -i, --task-id <id>        Existing task ID to convert to subtask\n  -t, --title <title>       Title for the new subtask\n  -d, --description <text>  Description for the new subtask\n  --details <text>          Implementation details for the new subtask\n  --dependencies <ids>      Task or subtask IDs it depends on (3,5.2)\n  -s, --status <status>     Status for the new subtask (default: "pending")\n  -f, --file <file>         Path to the tasks file (default: "${TASKGRAPH_TASKS_FILE}")\n  --generate                Regenerate task files after adding subtask\n\n${chalk.cyan('Examples:')}\n  taskgraph add-subtask --parent=5 --task-id=8\n  taskgraph add-subtask -p 5 -t "Implement login UI" -d "Create the login form" --generate`,
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
 
 	// remove-subtask command
 	programInstance
@@ -1899,132 +1819,42 @@ function registerCommands(programInstance) {
 			const generateFiles = options.generate || false;
 			const tag = taskGraph.getCurrentTag();
 
-			if (!subtaskIds) {
-				console.error(
-					chalk.red(
-						'Error: --id parameter is required. Please provide subtask ID(s) in format "parentId.subtaskId".'
-					)
+			const subtaskIdArray = (subtaskIds ?? '')
+				.split(',')
+				.map((id) => id.trim())
+				.filter(Boolean);
+			if (subtaskIdArray.length === 0) {
+				printError(
+					'remove-subtask needs --id, the subtask to remove',
+					'Try `taskgraph remove-subtask --id=5.2`'
 				);
-				showRemoveSubtaskHelp();
+				process.exit(1);
+			}
+			// Check every ID before removing any, so a typo changes nothing
+			const notSubtaskId = subtaskIdArray.find((id) => !id.includes('.'));
+			if (notSubtaskId) {
+				printError(
+					`"${notSubtaskId}" isn't a subtask ID`,
+					`Subtask IDs look like 5.2; for a task, run \`taskgraph remove-task --id=${notSubtaskId}\``
+				);
 				process.exit(1);
 			}
 
 			try {
-				// Split by comma to support multiple subtask IDs
-				const subtaskIdArray = subtaskIds.split(',').map((id) => id.trim());
-
 				for (const subtaskId of subtaskIdArray) {
-					// Validate subtask ID format
-					if (!subtaskId.includes('.')) {
-						console.error(
-							chalk.red(
-								`Error: Subtask ID "${subtaskId}" must be in format "parentId.subtaskId"`
-							)
-						);
-						showRemoveSubtaskHelp();
-						process.exit(1);
-					}
-
-					if (convertToTask) {
-						console.log(
-							theme.brand('The subtask will be converted to a standalone task')
-						);
-					}
-
-					const result = await removeSubtask(
+					const convertedTask = await removeSubtask(
 						taskGraph.getTasksPath(),
 						subtaskId,
 						convertToTask,
 						generateFiles,
 						{ projectRoot: taskGraph.getProjectRoot(), tag }
 					);
-
-					if (convertToTask && result) {
-						// Display success message and next steps for converted task
-						console.log(
-							boxen(
-								theme.text.bold(
-									`Subtask ${subtaskId} Converted to Task #${result.id}`
-								) +
-									'\n\n' +
-									theme.text(`Title: ${result.title}`) +
-									'\n' +
-									theme.text(`Status: ${getStatusWithColor(result.status)}`) +
-									'\n' +
-									theme.text(
-										`Dependencies: ${result.dependencies.join(', ')}`
-									) +
-									'\n\n' +
-									theme.text.bold('Next Steps:') +
-									'\n' +
-									chalk.cyan(
-										`1. Run ${chalk.yellow(`taskgraph show ${result.id}`)} to see details of the new task`
-									) +
-									'\n' +
-									chalk.cyan(
-										`2. Run ${chalk.yellow(`taskgraph set-status --id=${result.id} --status=in-progress`)} to start working on it`
-									),
-								{
-									padding: 1,
-									borderColor: 'green',
-									borderStyle: 'round',
-									margin: { top: 1 }
-								}
-							)
-						);
-					} else {
-						// Display success message for deleted subtask
-						console.log(
-							boxen(
-								theme.text.bold(`Subtask ${subtaskId} Removed`) +
-									'\n\n' +
-									theme.text('The subtask has been successfully deleted.'),
-								{
-									padding: 1,
-									borderColor: 'green',
-									borderStyle: 'round',
-									margin: { top: 1 }
-								}
-							)
-						);
-					}
+					console.log(ui.formatSubtaskRemoved(subtaskId, convertedTask));
 				}
 			} catch (error) {
 				displayError(error);
 			}
-		})
-		.on('error', function (err) {
-			console.error(chalk.red(`Error: ${err.message}`));
-			showRemoveSubtaskHelp();
-			process.exit(1);
 		});
-
-	// Helper function to show remove-subtask command help
-	function showRemoveSubtaskHelp() {
-		console.log(
-			boxen(
-				theme.text.bold('Remove Subtask Command Help') +
-					'\n\n' +
-					chalk.cyan('Usage:') +
-					'\n' +
-					`  taskgraph remove-subtask --id=<parentId.subtaskId> [options]\n\n` +
-					chalk.cyan('Options:') +
-					'\n' +
-					'  -i, --id <id>       Subtask ID(s) to remove in format "parentId.subtaskId" (can be comma-separated, required)\n' +
-					'  -c, --convert       Convert the subtask to a standalone task instead of deleting it\n' +
-					'  -f, --file <file>   Path to the tasks file (default: "' +
-					TASKGRAPH_TASKS_FILE +
-					'")\n' +
-					'  --skip-generate     Skip regenerating task files\n\n' +
-					chalk.cyan('Examples:') +
-					'\n' +
-					'  taskgraph remove-subtask --id=5.2\n' +
-					'  taskgraph remove-subtask --id=5.2,6.3,7.1\n' +
-					'  taskgraph remove-subtask --id=5.2 --convert',
-				{ padding: 1, borderColor: BORDER_COLOR, borderStyle: 'round' }
-			)
-		);
-	}
 
 	// remove-task command
 	programInstance
@@ -2206,10 +2036,6 @@ function registerCommands(programInstance) {
 					}
 				}
 
-				const indicator = startLoadingIndicator(
-					`Removing ${existingTasksToRemove.length} task(s)/subtask(s)...`
-				);
-
 				// Use the string of existing IDs for the core function
 				const existingIdsString = existingTasksToRemove
 					.map(({ id }) => id)
@@ -2223,51 +2049,16 @@ function registerCommands(programInstance) {
 					}
 				);
 
-				stopLoadingIndicator(indicator);
-
 				if (result.success) {
 					console.log(
-						boxen(
-							chalk.green(
-								`Successfully removed ${result.removedTasks.length} task(s)/subtask(s).`
-							) +
-								(result.message ? `\n\nDetails:\n${result.message}` : '') +
-								(result.error
-									? `\n\nWarnings:\n${chalk.yellow(result.error)}`
-									: ''),
-							{ padding: 1, borderColor: 'green', borderStyle: 'round' }
-						)
+						ui.formatTasksRemoved(existingTasksToRemove.map(({ id }) => id))
 					);
 				} else {
-					console.error(
-						boxen(
-							chalk.red(
-								`Operation completed with errors. Removed ${result.removedTasks.length} task(s)/subtask(s).`
-							) +
-								(result.message ? `\n\nDetails:\n${result.message}` : '') +
-								(result.error ? `\n\nErrors:\n${chalk.red(result.error)}` : ''),
-							{
-								padding: 1,
-								borderColor: 'red',
-								borderStyle: 'round'
-							}
-						)
+					printError(
+						`Removed ${result.removedTasks.length} of ${existingTasksToRemove.length}: ${result.error}`,
+						'Run `taskgraph list` to see what is left'
 					);
-					process.exit(1); // Exit with error code if any part failed
-				}
-
-				// Log any initially non-existent IDs again for clarity
-				if (nonExistentIds.length > 0) {
-					console.warn(
-						chalk.yellow(
-							`Note: The following IDs were not found initially and were skipped: ${nonExistentIds.join(', ')}`
-						)
-					);
-
-					// Exit with error if any removals failed
-					if (result.removedTasks.length === 0) {
-						process.exit(1);
-					}
+					process.exit(1);
 				}
 			} catch (error) {
 				displayError(error);
@@ -3637,8 +3428,6 @@ async function runCLI(argv = process.argv) {
 		}
 
 		// Setup and parse
-		// NOTE: getConfig() might be called during setupCLI->registerCommands if commands need config
-		// This means the ConfigurationError might be thrown here if configuration file is missing.
 		const programInstance = setupCLI();
 		// Filter out --no-banner since it's handled above and not a Commander option
 		const filteredArgv = argv.filter((arg) => arg !== '--no-banner');
@@ -3667,56 +3456,7 @@ async function runCLI(argv = process.argv) {
 			// Silently ignore errors checking for migration notice
 		}
 	} catch (error) {
-		// ** Specific catch block for missing configuration file **
-		if (error instanceof ConfigurationError) {
-			console.error(
-				boxen(
-					chalk.red.bold('Configuration Update Required!') +
-						'\n\n' +
-						theme.text('TaskGraph now uses a ') +
-						chalk.yellow.bold('configuration file') +
-						theme.text(
-							' in your project for AI model choices and settings.\n\n' +
-								'This file appears to be '
-						) +
-						chalk.red.bold('missing') +
-						theme.text('. No worries though.\n\n') +
-						chalk.cyan.bold('To create this file, run the interactive setup:') +
-						'\n' +
-						chalk.green('   taskgraph models --setup') +
-						'\n\n' +
-						theme.text.bold('Key Points:') +
-						'\n' +
-						theme.text('*   ') +
-						chalk.yellow.bold('Configuration file') +
-						theme.text(
-							': Stores your AI model settings (do not manually edit)\n'
-						) +
-						theme.text('*   ') +
-						chalk.yellow.bold('.env & .mcp.json') +
-						theme.text(': Still used ') +
-						chalk.red.bold('only') +
-						theme.text(' for your AI provider API keys.\n\n') +
-						chalk.cyan(
-							'`taskgraph models` to check your config & available models\n'
-						) +
-						chalk.cyan(
-							'`taskgraph models --setup` to adjust the AI models used by TaskGraph'
-						),
-					{
-						padding: 1,
-						margin: { top: 1 },
-						borderColor: 'red',
-						borderStyle: 'round'
-					}
-				)
-			);
-		} else {
-			// Generic error handling for other errors
-			displayError(error);
-		}
-
-		process.exit(1);
+		displayError(error);
 	}
 }
 

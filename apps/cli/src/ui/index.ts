@@ -181,6 +181,16 @@ export {
 // The notice before TaskGraph updates itself
 export { formatUpdateNotice } from './formatters/update-formatters.js';
 
+// What add-subtask and remove-subtask changed
+export {
+	formatSubtaskAdded,
+	formatSubtaskRemoved,
+	type SubtaskRef
+} from './formatters/subtask-change-formatters.js';
+
+// What remove-task removed
+export { formatTasksRemoved } from './formatters/remove-task-formatters.js';
+
 // What add-task confirms
 export {
 	formatTaskCreated,
@@ -279,9 +289,7 @@ export {
 	theme,
 	BRAND_COLORS,
 	BANNER_GRADIENT,
-	BORDER_COLOR,
-	TABLE_BORDER,
-	MUTED_BOX_BORDER
+	TABLE_BORDER
 } from './theme.js';
 
 // Layout helpers

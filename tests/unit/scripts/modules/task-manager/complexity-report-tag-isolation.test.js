@@ -327,7 +327,6 @@ vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 		global: { projectName: 'Test Project' }
 	})),
 	writeConfig: vi.fn(() => true),
-	ConfigurationError: class extends Error {},
 	isConfigFilePresent: vi.fn(() => true),
 
 	// Validation

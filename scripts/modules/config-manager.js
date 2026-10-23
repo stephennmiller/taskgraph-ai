@@ -84,14 +84,6 @@ export function isConfigWarningSuppressed() {
 	return global._tmSuppressConfigWarnings === true;
 }
 
-// Custom Error for configuration issues
-class ConfigurationError extends Error {
-	constructor(message) {
-		super(message);
-		this.name = 'ConfigurationError';
-	}
-}
-
 function _loadAndValidateConfig(explicitRoot = null) {
 	const defaults = DEFAULTS; // Use the defined defaults
 	let rootToUse = explicitRoot;
@@ -976,7 +968,6 @@ export {
 	getConfig,
 	writeConfig,
 	moveMachineSettings,
-	ConfigurationError,
 	isConfigFilePresent,
 	// Claude Code settings
 	getClaudeCodeSettings,
