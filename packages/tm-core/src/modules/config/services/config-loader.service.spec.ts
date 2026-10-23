@@ -64,6 +64,45 @@ describe('ConfigLoader', () => {
 			expect(result).toEqual(mockConfig);
 		});
 
+		it('merges config.local.json over config.json', async () => {
+			vi.mocked(fsPromises.readFile).mockImplementation(async (file) => {
+				if (String(file).endsWith('config.local.json')) {
+					return JSON.stringify({
+						models: { main: { modelId: 'opus' } },
+						claudeCode: { pathToClaudeCodeExecutable: '/opt/bin/claude' }
+					});
+				}
+				return JSON.stringify({
+					models: { main: { modelId: 'sonnet', maxTokens: 64000 } }
+				});
+			});
+
+			const result = await configLoader.loadLocalConfig();
+
+			expect(fsPromises.readFile).toHaveBeenCalledWith(
+				'/test/project/.taskgraph/config.local.json',
+				'utf-8'
+			);
+			expect(result).toEqual({
+				models: { main: { modelId: 'opus', maxTokens: 64000 } },
+				claudeCode: { pathToClaudeCodeExecutable: '/opt/bin/claude' }
+			});
+		});
+
+		it('uses config.json alone when there is no config.local.json', async () => {
+			const shared = { models: { main: { modelId: 'sonnet' } } };
+			vi.mocked(fsPromises.readFile).mockImplementation(async (file) => {
+				if (String(file).endsWith('config.local.json')) {
+					throw Object.assign(new Error('missing'), { code: 'ENOENT' });
+				}
+				return JSON.stringify(shared);
+			});
+
+			const result = await configLoader.loadLocalConfig();
+
+			expect(result).toEqual(shared);
+		});
+
 		it('should return null when config file does not exist', async () => {
 			const error = new Error('File not found') as any;
 			error.code = 'ENOENT';

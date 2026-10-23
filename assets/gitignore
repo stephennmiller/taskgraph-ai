@@ -23,3 +23,7 @@ node_modules/
 
 # OS specific
 .DS_Store
+
+# TaskGraph per-machine files
+.taskgraph/state.json
+.taskgraph/config.local.json

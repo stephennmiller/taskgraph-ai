@@ -11,6 +11,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
+import { splitMachineConfig } from './machine-config.js';
 
 /**
  * Persistence options
@@ -30,11 +31,17 @@ export interface PersistenceOptions {
  */
 export class ConfigPersistence {
 	private localConfigPath: string;
+	private machineConfigPath: string;
 	private backupDir: string;
 	private readonly logger = getLogger('ConfigPersistence');
 
 	constructor(projectRoot: string) {
 		this.localConfigPath = path.join(projectRoot, '.taskgraph', 'config.json');
+		this.machineConfigPath = path.join(
+			projectRoot,
+			'.taskgraph',
+			'config.local.json'
+		);
 		this.backupDir = path.join(projectRoot, '.taskgraph', 'backups');
 	}
 
@@ -57,16 +64,17 @@ export class ConfigPersistence {
 			const configDir = path.dirname(this.localConfigPath);
 			await fs.mkdir(configDir, { recursive: true });
 
-			const jsonContent = JSON.stringify(config, null, 2);
+			// Per-machine settings go to config.local.json, the rest to config.json
+			const currentMachine = await this.readJson(this.machineConfigPath);
+			const { shared, local } = splitMachineConfig(
+				config,
+				currentMachine ? await this.readJson(this.localConfigPath) : null,
+				currentMachine
+			);
 
-			if (atomic) {
-				// Atomic write: write to temp file then rename
-				const tempPath = `${this.localConfigPath}.tmp`;
-				await fs.writeFile(tempPath, jsonContent, 'utf-8');
-				await fs.rename(tempPath, this.localConfigPath);
-			} else {
-				// Direct write
-				await fs.writeFile(this.localConfigPath, jsonContent, 'utf-8');
+			await this.writeJson(this.localConfigPath, shared, atomic);
+			if (currentMachine || Object.keys(local).length > 0) {
+				await this.writeJson(this.machineConfigPath, local, atomic);
 			}
 		} catch (error) {
 			throw new TaskGraphError(
@@ -75,6 +83,31 @@ export class ConfigPersistence {
 				{ configPath: this.localConfigPath },
 				error as Error
 			);
+		}
+	}
+
+	/** Parse a JSON file; null when it's missing or unreadable */
+	private async readJson(filePath: string): Promise<object | null> {
+		try {
+			return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+		} catch {
+			return null;
+		}
+	}
+
+	private async writeJson(
+		filePath: string,
+		data: unknown,
+		atomic: boolean
+	): Promise<void> {
+		const jsonContent = JSON.stringify(data, null, 2);
+		if (atomic) {
+			// Atomic write: write to temp file then rename
+			const tempPath = `${filePath}.tmp`;
+			await fs.writeFile(tempPath, jsonContent, 'utf-8');
+			await fs.rename(tempPath, filePath);
+		} else {
+			await fs.writeFile(filePath, jsonContent, 'utf-8');
 		}
 	}
 

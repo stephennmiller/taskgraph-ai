@@ -112,7 +112,7 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 | `maxTurns` | Maximum conversation turns in a single request. Useful for complex multi-step operations. |
 | `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
 | `appendSystemPrompt` | Adds standards or context to the system prompt. |
-| `pathToClaudeCodeExecutable` | Absolute path to the `claude` executable if it is not on your `PATH`. It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. |
+| `pathToClaudeCodeExecutable` | Absolute path to the `claude` executable if it is not on your `PATH`. It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
 
 Tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here. See [What AI calls can access](#what-ai-calls-can-access).
 

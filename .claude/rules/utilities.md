@@ -90,6 +90,11 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   - ❌ DON'T: Store API keys in this file.
   - ❌ DON'T: Manually edit this file unless necessary.
 
+- **`.taskgraph/config.local.json` File** (gitignored, per-machine):
+  - ✅ DO: Know that `getConfig` merges it over `config.json` and `writeConfig` splits a config back into the two files (`mergeMachineConfig` / `splitMachineConfig` in `@tm/core`).
+  - ✅ DO: Add a setting that differs per machine (an absolute path, say) to `PER_MACHINE_CONFIG_KEYS` in `packages/tm-core/src/modules/config/services/machine-config.ts`, so it's always saved locally and moved out of `config.json`.
+  - ❌ DON'T: Write `config.json` directly with `fs`; go through `writeConfig` so per-machine settings stay out of the shared file.
+
 - **Configuration Getters (`config-manager.js`)**:
   - ✅ DO: Import and use specific getters from `config-manager.js` (e.g., `getMainProvider()`, `getLogLevel()`, `getMainMaxTokens()`) to access configuration values *needed for application logic* (like `getDefaultSubtasks`).
   - ✅ DO: Pass the `explicitRoot` parameter to getters if calling from MCP direct functions to ensure the correct project's config is loaded.

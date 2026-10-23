@@ -186,6 +186,14 @@ export {
 	type GenerateTaskFilesResult
 } from './modules/tasks/services/task-file-generator.service.js';
 
+// Per-machine settings (.taskgraph/config.local.json)
+export {
+	PER_MACHINE_CONFIG_KEYS,
+	hasPerMachineSettings,
+	mergeMachineConfig,
+	splitMachineConfig
+} from './modules/config/services/machine-config.js';
+
 // Per-project environment
 export {
 	readProjectEnv,

@@ -29,6 +29,7 @@ import {
 	convertAllRulesToProfileRules,
 	getRulesProfile
 } from '../src/utils/rule-transformer.js';
+import { moveMachineSettings } from './modules/config-manager.js';
 import { updateConfigMaxTokens } from './modules/update-config-tokens.js';
 import { isSilentMode } from './modules/utils.js';
 import * as upstream from './modules/init-upstream-import.js';
@@ -46,6 +47,7 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_DIR,
 	TASKGRAPH_DOCS_DIR,
+	TASKGRAPH_LOCAL_CONFIG_FILE,
 	TASKGRAPH_REPORTS_DIR,
 	TASKGRAPH_STATE_FILE,
 	TASKGRAPH_TASKS_DIR,
@@ -149,6 +151,7 @@ function trackedPaths(targetDir) {
 	return [
 		path.join(targetDir, TASKGRAPH_DIR),
 		path.join(targetDir, TASKGRAPH_CONFIG_FILE),
+		path.join(targetDir, TASKGRAPH_LOCAL_CONFIG_FILE),
 		path.join(targetDir, TASKGRAPH_TASKS_FILE),
 		path.join(targetDir, '.git'),
 		path.join(targetDir, GITIGNORE_FILE),
@@ -208,6 +211,13 @@ function describeInitChanges(targetDir, before, after) {
 		changes.push({ path: TASKGRAPH_CONFIG_FILE, note: 'restored' });
 	}
 
+	if (created(at(TASKGRAPH_LOCAL_CONFIG_FILE))) {
+		changes.push({
+			path: TASKGRAPH_LOCAL_CONFIG_FILE,
+			note: "this machine's settings, moved from config.json"
+		});
+	}
+
 	if (created(at('.git'))) {
 		changes.push({ path: '.git/', note: 'new Git repository' });
 	}
@@ -250,6 +260,24 @@ function describeInitChanges(targetDir, before, after) {
 	}
 
 	return { alreadySetUp, changes };
+}
+
+/**
+ * Whether Git tracks `file` in the repository at `targetDir`.
+ * @param {string} targetDir - Project root
+ * @param {string} file - Path relative to the project root
+ * @returns {boolean} false outside a Git repository
+ */
+function isTrackedInGit(targetDir, file) {
+	try {
+		execSync(`git ls-files --error-unmatch -- "${file}"`, {
+			cwd: targetDir,
+			stdio: 'ignore'
+		});
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 // Function to add shell aliases to the user's shell configuration
@@ -791,6 +819,15 @@ async function createProjectStructure(
 	// Update config.json with storage configuration
 	updateStorageConfig(configPath);
 
+	// Move per-machine settings an earlier release kept in the shared
+	// config.json to the gitignored config.local.json
+	if (moveMachineSettings(targetDir)) {
+		log(
+			'debug',
+			`Moved per-machine settings to ${TASKGRAPH_LOCAL_CONFIG_FILE}`
+		);
+	}
+
 	// Copy .gitignore with GitTasks preference
 	try {
 		const templateContent = readAsset('gitignore', 'utf8');
@@ -904,6 +941,13 @@ async function createProjectStructure(
 			before,
 			snapshotPaths(watched)
 		);
+		// .gitignore doesn't untrack a state.json an earlier init let in
+		if (isTrackedInGit(targetDir, TASKGRAPH_STATE_FILE)) {
+			changes.push({
+				path: TASKGRAPH_STATE_FILE,
+				note: 'ignored but still tracked; `git rm --cached` it'
+			});
+		}
 		if (imported) {
 			upstream.printUpstreamImportSummary(imported, changes, TASKGRAPH_DIR);
 			return;

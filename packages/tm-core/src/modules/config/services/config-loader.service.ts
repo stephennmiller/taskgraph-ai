@@ -12,6 +12,7 @@ import {
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
+import { mergeMachineConfig } from './machine-config.js';
 
 /**
  * ConfigLoader handles loading configuration from files
@@ -19,11 +20,17 @@ import { getLogger } from '../../../common/logger/index.js';
  */
 export class ConfigLoader {
 	private localConfigPath: string;
+	private machineConfigPath: string;
 	private globalConfigPath: string;
 	private readonly logger = getLogger('ConfigLoader');
 
 	constructor(projectRoot: string) {
 		this.localConfigPath = path.join(projectRoot, '.taskgraph', 'config.json');
+		this.machineConfigPath = path.join(
+			projectRoot,
+			'.taskgraph',
+			'config.local.json'
+		);
 		this.globalConfigPath = path.join(
 			process.env.HOME || '',
 			'.taskgraph',
@@ -82,22 +89,32 @@ export class ConfigLoader {
 	}
 
 	/**
-	 * Load local project configuration
+	 * Load the project configuration: .taskgraph/config.json with this
+	 * machine's .taskgraph/config.local.json merged over it
 	 */
 	async loadLocalConfig(): Promise<PartialConfiguration | null> {
+		const shared = await this.readConfigFile(this.localConfigPath);
+		if (!shared) {
+			this.logger.debug('No local config.json found, using defaults');
+		}
+		const machine = await this.readConfigFile(this.machineConfigPath);
+		if (!shared && !machine) return null;
+		return mergeMachineConfig(shared, machine);
+	}
+
+	/** Parse a config file; null when it doesn't exist */
+	private async readConfigFile(
+		configPath: string
+	): Promise<PartialConfiguration | null> {
 		try {
-			const configData = await fs.readFile(this.localConfigPath, 'utf-8');
+			const configData = await fs.readFile(configPath, 'utf-8');
 			return JSON.parse(configData);
 		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				// File doesn't exist, return null
-				this.logger.debug('No local config.json found, using defaults');
-				return null;
-			}
+			if (error.code === 'ENOENT') return null;
 			throw new TaskGraphError(
 				'Failed to load local configuration',
 				ERROR_CODES.CONFIG_ERROR,
-				{ configPath: this.localConfigPath },
+				{ configPath },
 				error
 			);
 		}
