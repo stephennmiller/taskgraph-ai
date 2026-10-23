@@ -313,6 +313,81 @@ jobs:
             junit.xml
           retention-days: 30
 
+  # The full suites above run on ubuntu only. This builds on each OS and on the
+  # oldest Node that `engines` allows, then runs the CLI smoke tests (the
+  # @tm/cli integration tests that spawn the built CLI for the everyday
+  # commands; list in apps/cli/package.json "test:smoke") and the MCP stdio
+  # smoke test.
+  smoke:
+    name: Smoke (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ["24"]
+        include:
+          - os: ubuntu-latest
+            node: "22.13.0"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 10
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: CLI smoke tests
+        run: npm run test:smoke -w @tm/cli
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: MCP smoke test
+        if: ${{ !cancelled() }}
+        run: npm run smoke:mcp
+
+  # Installs the tarball `npm pack` makes, as a user would get it from the
+  # registry, and runs the CLI from it. Catches a file missing from "files"
+  # or a broken bin before release.
+  pack:
+    name: Packed tarball
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: build-artifacts
+          path: dist/
+
+      - name: Install and run the packed CLI
+        run: .github/scripts/pack-smoke.sh
+
   # Does this PR touch what the build comparison covers: the code bundled into
   # dist/, the files init copies, the dependencies, or the comparison itself?
   # Cheap, so the heavy job below is skipped for docs and test-only changes.
