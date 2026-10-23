@@ -36,6 +36,13 @@ taskgraph validate-dependencies
    - Too many dependencies per task
    - Bottleneck tasks
 
+5. **PRD Coverage** (once `parse-prd` has recorded each task's `metadata.source`)
+   - PRD sections no task covers
+   - Tasks citing a heading the PRD no longer has (renamed or removed)
+   - Tasks with no PRD section
+
+   Coverage gaps are warnings; only dependency problems make the command exit 1.
+
 ## Smart Analysis
 
 The validation provides:

@@ -1528,6 +1528,9 @@ function registerCommands(programInstance) {
 				})
 			);
 			console.log(ui.formatDependencyCheck(result));
+			// Which PRD sections have tasks, once parse-prd has recorded sources
+			const coverage = ui.formatPrdCoverage(result.prdCoverage);
+			if (coverage) console.log(coverage);
 			// A check that finds problems fails, so scripts and CI can act on it
 			if (!result.valid) process.exitCode = 1;
 		});

@@ -1,4 +1,8 @@
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	getPrdSource,
+	reconcileDependencySources
+} from '@tm/core';
 import fs from 'fs';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
@@ -328,6 +332,9 @@ async function expandTask(
 					generated,
 					reconcileDependencySources(generated, undefined, task.id)
 				);
+				// A subtask comes from the same PRD section as its task
+				const source = getPrdSource(task);
+				if (source) generated.metadata = { ...generated.metadata, source };
 				return generated;
 			});
 			logger.debug(`Received ${generatedSubtasks.length} subtasks from AI.`);

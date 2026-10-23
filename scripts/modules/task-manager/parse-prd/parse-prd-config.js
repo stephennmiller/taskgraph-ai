@@ -21,7 +21,10 @@ export const prdSingleTaskSchema = z.object({
 	testStrategy: z.string(),
 	priority: z.enum(TASK_PRIORITY_OPTIONS),
 	dependencies: z.array(z.number()),
-	status: z.string()
+	status: z.string(),
+	// Slug of the PRD section the task implements; checked against the PRD's
+	// headings and stored as metadata.source. Models may leave it out
+	section: z.string().nullable().default(null)
 });
 
 // Define the Zod schema for the ENTIRE expected AI response object

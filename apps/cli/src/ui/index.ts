@@ -167,6 +167,7 @@ export {
 	type DependencyFix,
 	type DependencyIssue
 } from './formatters/dependency-check-formatters.js';
+export { formatPrdCoverage } from './formatters/prd-coverage-formatters.js';
 
 // Tag formatters
 export {

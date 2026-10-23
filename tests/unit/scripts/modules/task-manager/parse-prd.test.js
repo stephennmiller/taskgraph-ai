@@ -249,12 +249,17 @@ vi.doMock('path', () => ({
 		dirname: vi.fn(),
 		basename: vi.fn((p) => String(p).split('/').pop()),
 		relative: vi.fn((from, to) => to),
-		join: vi.fn((dir, file) => `${dir}/${file}`)
+		join: vi.fn((dir, file) => `${dir}/${file}`),
+		// parse-prd names the PRD in each task's source (#202)
+		resolve: vi.fn((...parts) => parts.at(-1)),
+		isAbsolute: vi.fn(() => false)
 	},
 	basename: vi.fn((p) => String(p).split('/').pop()),
 	relative: vi.fn((from, to) => to),
 	dirname: vi.fn(),
-	join: vi.fn((dir, file) => `${dir}/${file}`)
+	join: vi.fn((dir, file) => `${dir}/${file}`),
+	resolve: vi.fn((...parts) => parts.at(-1)),
+	isAbsolute: vi.fn(() => false)
 }));
 
 // Mock JSONParser for streaming tests
