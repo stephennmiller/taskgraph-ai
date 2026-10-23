@@ -66,7 +66,10 @@ const LEGACY_OVERSIZED = new Set([
 	// Over the limit on main; a one-line default or parameter change must be
 	// committable until each is split.
 	'scripts/modules/config-manager.js',
-	'src/prompts/README.md'
+	'src/prompts/README.md',
+	// Manual prompt test harness (~15,000 tokens on main); a stale parameter
+	// removal must be committable until it is split.
+	'tests/manual/prompts/prompt-test.js'
 ]);
 
 export const isIgnored = (path) =>

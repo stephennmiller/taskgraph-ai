@@ -14,6 +14,7 @@ import {
 	TASKGRAPH_TASKS_FILE
 } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
+import { dropOldNumTasksDefault, toSavedConfig } from './config-file.js';
 import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
 
@@ -126,7 +127,12 @@ function _loadAndValidateConfig(explicitRoot = null) {
 		configExists = true;
 		try {
 			const rawData = fs.readFileSync(configPath, 'utf-8');
-			const parsedConfig = JSON.parse(rawData);
+			let parsedConfig = JSON.parse(rawData);
+			const cleaned = dropOldNumTasksDefault(parsedConfig);
+			if (cleaned) {
+				parsedConfig = cleaned;
+				saveCleanedConfig(configPath, cleaned);
+			}
 
 			// Deep merge parsed config onto defaults
 			config = {
@@ -729,7 +735,8 @@ function getAvailableModels() {
 }
 
 /**
- * Writes the configuration object to the file.
+ * Writes the configuration object to the file. Only keys the file already
+ * has or that differ from DEFAULTS are saved (see toSavedConfig).
  * @param {Object} config The configuration object to write.
  * @param {string|null} explicitRoot - Optional explicit path to the project root.
  * @returns {boolean} True if successful, false otherwise.
@@ -762,7 +769,11 @@ function writeConfig(config, explicitRoot = null) {
 			fs.mkdirSync(taskgraphDir, { recursive: true });
 		}
 
-		fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+		const saved = readSavedConfig(configPath);
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(toSavedConfig(config, saved, DEFAULTS), null, 2)
+		);
 		loadedConfig = config; // Update the cache after successful write
 		return true;
 	} catch (error) {
@@ -772,6 +783,28 @@ function writeConfig(config, explicitRoot = null) {
 			)
 		);
 		return false;
+	}
+}
+
+/** config.json as saved, or null when it is missing or not valid JSON */
+function readSavedConfig(configPath) {
+	try {
+		if (!fs.existsSync(configPath)) return null;
+		return JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Save the one-time cleanup from dropOldNumTasksDefault. A read-only project
+ * still gets the cleaned values for this run.
+ */
+function saveCleanedConfig(configPath, cleaned) {
+	try {
+		fs.writeFileSync(configPath, JSON.stringify(cleaned, null, 2));
+	} catch {
+		// Not fatal: the cleanup runs again on the next load
 	}
 }
 

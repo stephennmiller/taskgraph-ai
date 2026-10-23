@@ -314,7 +314,6 @@ Create a comprehensive social media management dashboard that allows users to ma
 					numTasks: 8,
 					nextId: 1,
 					prdPath: 'social-media-dashboard-prd.txt',
-					defaultTaskPriority: 'medium',
 					research: false
 				},
 				variants: ['default']
@@ -349,7 +348,6 @@ Build a next-generation e-commerce platform with AI-driven recommendations, voic
 					numTasks: 10,
 					nextId: 1,
 					prdPath: 'ai-ecommerce-prd.txt',
-					defaultTaskPriority: 'high',
 					research: true
 				},
 				variants: ['research']
@@ -961,7 +959,6 @@ async function runComprehensiveTests(generateDetailed = false) {
 					numTasks: 0,
 					nextId: 1,
 					prdPath: 'test-zero-tasks.txt',
-					defaultTaskPriority: 'medium',
 					research: false
 				}
 			},
@@ -1010,7 +1007,6 @@ async function runComprehensiveTests(generateDetailed = false) {
 					numTasks: 5,
 					nextId: 1,
 					prdPath: 'test-positive-tasks.txt',
-					defaultTaskPriority: 'medium',
 					research: false
 				}
 			},

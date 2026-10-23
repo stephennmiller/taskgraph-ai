@@ -48,6 +48,10 @@ taskgraph models --set-fallback haiku
 }
 ```
 
+TaskGraph saves only the settings you change. A setting left out of `config.json` uses the current default, so it follows a new default after an upgrade.
+
+Projects from before `defaultNumTasks` became `0` may have `"defaultNumTasks": 10` saved next to `"enableProxy": false`. That 10 was the old default, saved automatically, so TaskGraph removes both lines the next time it reads the file. To keep asking for about 10 tasks, set `defaultNumTasks` to `10` again or pass `--num-tasks 10`.
+
 ## Definition of Done
 
 `global.definitionOfDone` lists checks every task must clear before `set-status done` accepts it, on top of the task's own acceptance criteria:
