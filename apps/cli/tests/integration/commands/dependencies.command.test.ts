@@ -9,8 +9,16 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it
+} from 'vitest';
+import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
 
 describe('dependency commands', () => {
 	let dir: string;
@@ -40,13 +48,30 @@ describe('dependency commands', () => {
 		fs.writeFileSync(tasksFile(), JSON.stringify(data, null, 2));
 	};
 
-	beforeEach(() => {
-		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-deps-'));
-		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-deps-home-'));
+	// Set the project up once and copy it into each test's folder: every spawn
+	// of the built CLI takes seconds on a loaded runner
+	let template: string;
+	let templateHome: string;
+
+	beforeAll(() => {
+		template = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-deps-tpl-'));
+		templateHome = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-deps-home-'));
+		dir = template;
+		home = templateHome;
 		run(['init', '--yes', '--no-aliases', '--no-git']);
 		for (const title of ['Set up the API', 'Add Postgres', 'Sign-in']) {
 			run(['add-task', `--title=${title}`, `--description=${title}`]);
 		}
+	});
+
+	afterAll(() => {
+		fs.rmSync(template, { recursive: true, force: true });
+		fs.rmSync(templateHome, { recursive: true, force: true });
+	});
+
+	beforeEach(() => {
+		dir = copyProject(template, 'tm-deps-');
+		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-deps-home-'));
 	});
 
 	afterEach(() => {

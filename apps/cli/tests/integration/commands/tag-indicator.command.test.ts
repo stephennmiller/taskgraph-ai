@@ -10,11 +10,20 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi
+} from 'vitest';
+import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
 
-// Each spawn of the built CLI takes seconds on a loaded runner, and setup
-// spawns three (init, two add-task); tests spawn up to seven
+// Each spawn of the built CLI takes seconds on a loaded runner: setup spawns
+// three (init, two add-task) once per file, and tests spawn up to seven
 vi.setConfig({ hookTimeout: 120000, testTimeout: 120000 });
 
 describe('tag indicator', () => {
@@ -39,13 +48,29 @@ describe('tag indicator', () => {
 	const firstLine = (stdout: string) =>
 		stdout.split('\n').find((line) => line.trim() !== '');
 
-	beforeEach(() => {
-		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tag-line-'));
-		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tag-line-home-'));
+	// Set the project up once and copy it into each test's folder
+	let template: string;
+	let templateHome: string;
+
+	beforeAll(() => {
+		template = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tag-line-tpl-'));
+		templateHome = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tag-line-home-'));
+		dir = template;
+		home = templateHome;
 		run(['init', '--yes', '--no-aliases', '--no-git']);
 		for (const title of ['Set up the API', 'Add Postgres']) {
 			run(['add-task', `--title=${title}`, `--description=${title}`]);
 		}
+	});
+
+	afterAll(() => {
+		fs.rmSync(template, { recursive: true, force: true });
+		fs.rmSync(templateHome, { recursive: true, force: true });
+	});
+
+	beforeEach(() => {
+		dir = copyProject(template, 'tm-tag-line-');
+		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-tag-line-home-'));
 	});
 
 	afterEach(() => {
