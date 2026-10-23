@@ -6,6 +6,10 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const commandsDir = join(repoRoot, 'packages/claude-code-plugin/commands');
 
+/** A plugin command's markdown, by name */
+const body = (name: string) =>
+	readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
+
 /**
  * The code in a command body: each line of a fenced block, and each inline
  * `code` span outside one. Bodies name the commands to run in both forms.
@@ -77,9 +81,6 @@ describe('plugin command files', () => {
 });
 
 describe('merged plugin commands', () => {
-	const body = (name: string) =>
-		readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
-
 	it('list-tasks covers status and subtask listing', () => {
 		expect(body('list-tasks')).toContain('taskgraph list --status=');
 		expect(body('list-tasks')).toContain('taskgraph list --with-subtasks');
@@ -125,9 +126,6 @@ describe('merged plugin commands', () => {
 });
 
 describe('status and subtask commands', () => {
-	const body = (name: string) =>
-		readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
-
 	it('set-status takes a task id and a status', () => {
 		expect(body('set-status')).toContain(
 			'taskgraph set-status --id=<id> --status=<status>'
@@ -456,8 +454,7 @@ describe('parse-prd', () => {
  */
 describe('command bodies run the CLI instead of asking for untracked data', () => {
 	const files = readdirSync(commandsDir).filter((file) => file.endsWith('.md'));
-	const body = (name: string) =>
-		readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
+	const names = files.map((file) => file.slice(0, -3));
 
 	// The CLI command each slash command is named after, and must run
 	const RUNS: Record<string, string> = {
@@ -498,9 +495,9 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 	const REFERENCES = ['help', 'tm-main'];
 
 	it('knows which CLI command every slash command runs', () => {
-		const unmapped = files
-			.map((file) => file.slice(0, -3))
-			.filter((name) => !(name in RUNS) && !REFERENCES.includes(name));
+		const unmapped = names.filter(
+			(name) => !(name in RUNS) && !REFERENCES.includes(name)
+		);
 
 		expect(unmapped).toEqual([]);
 	});
@@ -511,11 +508,9 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		expect(codeLines(body(name)).some((line) => runs.test(line))).toBe(true);
 	});
 
-	it.each(files)('%s asks for no metric TaskGraph does not store', (file) => {
-		const text = readFileSync(join(commandsDir, file), 'utf-8');
-
+	it.each(names)('%s asks for no metric TaskGraph does not store', (name) => {
 		expect(
-			text.match(/velocity|sprint|burndown|estimat|timeline/gi)
+			body(name).match(/velocity|sprint|burndown|estimat|timeline/gi)
 		).toBeNull();
 	});
 
@@ -526,9 +521,7 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 			)
 		);
 
-		expect(
-			files.map((file) => file.slice(0, -3)).filter((name) => !listed.has(name))
-		).toEqual(REFERENCES);
+		expect(names.filter((name) => !listed.has(name))).toEqual(REFERENCES);
 	});
 
 	it('tm-main shows the same list as help', () => {
