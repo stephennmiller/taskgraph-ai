@@ -58,7 +58,8 @@
 							"capabilities/loop",
 							"capabilities/research",
 							"capabilities/github-sync",
-							"capabilities/merge-driver"
+							"capabilities/merge-driver",
+							"capabilities/json-output"
 						]
 					},
 					{

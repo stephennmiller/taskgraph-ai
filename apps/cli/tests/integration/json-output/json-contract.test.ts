@@ -110,6 +110,12 @@ describe('--json contract', () => {
 			}),
 			task(3, 'Sign-in', 'pending', [2])
 		];
+		// next --claim writes, so it gets its own tag. Its metadata has no
+		// created or description, as in older files: tags lists them as optional
+		data.claim = {
+			tasks: [task(1, 'Claim me', 'pending', [])],
+			metadata: {}
+		};
 		data.empty = {
 			tasks: [],
 			metadata: { created: '2026-01-01T00:00:00.000Z', description: 'Empty' }
@@ -192,6 +198,24 @@ describe('--json contract', () => {
 			      },
 			    ],
 			    "testStrategy": "string",
+			    "title": "string",
+			  },
+			}
+		`);
+	});
+
+	it('show: a subtask', () => {
+		expect(shapeOf(json(['show', '2.1', '--json']))).toMatchInlineSnapshot(`
+			{
+			  "found": "boolean",
+			  "originalTaskId": "string",
+			  "schemaVersion": "number",
+			  "task": {
+			    "dependencies": [],
+			    "description": "string",
+			    "details": "string",
+			    "id": "number",
+			    "status": "string",
 			    "title": "string",
 			  },
 			}
@@ -320,6 +344,37 @@ describe('--json contract', () => {
 		`);
 	});
 
+	it('next --claim', () => {
+		expect(
+			shapeOf(json(['next', '--claim', '--tag', 'claim', '--format', 'json']))
+		).toMatchInlineSnapshot(`
+			{
+			  "claimed": "boolean",
+			  "claimedAt": "string",
+			  "claimedBy": "string",
+			  "hasAnyTasks": "boolean",
+			  "schemaVersion": "number",
+			  "tag": "string",
+			  "task": {
+			    "dependencies": [],
+			    "description": "string",
+			    "details": "string",
+			    "id": "string",
+			    "metadata": {
+			      "claimedAt": "string",
+			      "claimedBy": "string",
+			    },
+			    "priority": "string",
+			    "status": "string",
+			    "subtasks": [],
+			    "testStrategy": "string",
+			    "title": "string",
+			    "updatedAt": "string",
+			  },
+			}
+		`);
+	});
+
 	it('graph', () => {
 		expect(shapeOf(json(['graph', '--format', 'json']))).toMatchInlineSnapshot(`
 			{
@@ -421,8 +476,8 @@ describe('--json contract', () => {
 			  "tags": [
 			    {
 			      "completedTasks": "number",
-			      "created": "string",
-			      "description": "string",
+			      "created?": "string",
+			      "description?": "string",
 			      "isCurrent": "boolean",
 			      "name": "string",
 			      "readyTasks": "number",

@@ -3,7 +3,9 @@
  */
 
 import type { PullPlan, PullResult, PushPlan, PushResult } from '@tm/core';
+import { JSON_OUTPUT_SCHEMA_VERSION } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { shapeOf } from '../../../tests/helpers/json-shape.js';
 
 vi.mock('@tm/core', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('@tm/core')>();
@@ -380,6 +382,140 @@ describe('GithubCommand', () => {
 
 			expect(github.unlink).toHaveBeenCalledWith('1', { tag: 'master' });
 			expect(output()).toContain('issue #5');
+		});
+	});
+
+	/**
+	 * The --json contract for the commands that need a GitHub repo to run for
+	 * real. The rest are pinned in tests/integration/json-output/json-contract.test.ts;
+	 * the same rules apply: a new key updates the shape, a removed or renamed key
+	 * or a changed type bumps JSON_OUTPUT_SCHEMA_VERSION.
+	 */
+	describe('--json shape', () => {
+		const printed = () => {
+			const payload = JSON.parse(output());
+			expect(payload.schemaVersion).toBe(JSON_OUTPUT_SCHEMA_VERSION);
+			return shapeOf(payload);
+		};
+
+		it('push', async () => {
+			// Cover the optional fields too, so each one shows in the shape
+			const plan: PushPlan = {
+				...PLAN,
+				steps: [
+					...PLAN.steps,
+					{
+						action: 'update',
+						tag: 'master',
+						taskId: '4',
+						title: 'Fourth',
+						issueNumber: 8,
+						recovered: true,
+						url: 'https://github.com/acme/app/issues/8'
+					}
+				],
+				orphans: [
+					...PLAN.orphans,
+					{
+						issueNumber: 10,
+						url: 'u',
+						title: 'Old',
+						tag: 'master',
+						taskId: '5'
+					}
+				]
+			};
+			github.push.mockResolvedValue(RESULT({ plan, orphans: plan.orphans }));
+
+			await (command as any).runPush({ json: true, yes: true });
+
+			expect(printed()).toMatchInlineSnapshot(`
+				{
+				  "closed": "number",
+				  "created": "number",
+				  "dryRun": "boolean",
+				  "orphans": [
+				    {
+				      "issueNumber": "number",
+				      "tag?": "string",
+				      "taskId?": "string",
+				      "title": "string",
+				      "url": "string",
+				    },
+				  ],
+				  "plan": {
+				    "orphans": [
+				      {
+				        "issueNumber": "number",
+				        "tag?": "string",
+				        "taskId?": "string",
+				        "title": "string",
+				        "url": "string",
+				      },
+				    ],
+				    "repo": "string",
+				    "steps": [
+				      {
+				        "action": "string",
+				        "issueNumber?": "number",
+				        "reason?": "string",
+				        "recovered?": "boolean",
+				        "tag": "string",
+				        "taskId": "string",
+				        "title": "string",
+				        "url?": "string",
+				      },
+				    ],
+				  },
+				  "schemaVersion": "number",
+				  "skipped": "number",
+				  "updated": "number",
+				}
+			`);
+		});
+
+		it('pull', async () => {
+			await (command as any).runPull({ json: true, yes: true });
+
+			expect(printed()).toMatchInlineSnapshot(`
+				{
+				  "applied": "number",
+				  "conflicts": "number",
+				  "dryRun": "boolean",
+				  "plan": {
+				    "repo": "string",
+				    "steps": [
+				      {
+				        "action": "string",
+				        "from?": "string",
+				        "issueNumber?": "number",
+				        "reason?": "string",
+				        "tag": "string",
+				        "taskId": "string",
+				        "title": "string",
+				        "to?": "string",
+				      },
+				    ],
+				  },
+				  "schemaVersion": "number",
+				  "skipped": "number",
+				  "synced": "number",
+				}
+			`);
+		});
+
+		it('unlink', async () => {
+			await (command as any).runUnlink('1', { json: true });
+
+			expect(printed()).toMatchInlineSnapshot(`
+				{
+				  "issueNumber": "number",
+				  "schemaVersion": "number",
+				  "tag": "string",
+				  "taskId": "string",
+				  "url": "string",
+				}
+			`);
 		});
 	});
 });
