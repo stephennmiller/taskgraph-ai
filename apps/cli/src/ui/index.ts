@@ -284,12 +284,9 @@ export {
 } from './layout/helpers.js';
 
 // Display messages
-// Note: displayError alias is available via namespace (ui.displayError) for backward compat
-// but not exported at package level to avoid conflicts with utils/error-handler.ts
 export {
 	displayBanner,
 	displayErrorBox,
-	displayError, // Backward compatibility alias
 	displaySuccess,
 	displayWarning,
 	displayInfo

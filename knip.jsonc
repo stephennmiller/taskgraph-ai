@@ -1,0 +1,52 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+	"ignoreBinaries": [
+		// The package's own bin, run by the legacy MCP tools
+		"taskgraph",
+		// ripgrep, a system binary the Claude Code path guard test calls
+		"rg"
+	],
+	// Legacy JS being moved into @tm/core: unused exports there are cleaned up
+	// in #373, and these entries go when it is done
+	"ignoreIssues": {
+		"scripts/**": ["exports", "duplicates"],
+		"mcp-server/**": ["exports", "duplicates"],
+		"src/**": ["exports", "duplicates"],
+		"tests/**": ["exports"]
+	},
+	"workspaces": {
+		".": {
+			"entry": [
+				".github/scripts/{check-job-timeouts,check-pre-release-mode,version-bump}.mjs",
+				".githooks/{check-file-size,check-file-size.test,install}.mjs",
+				"tests/manual/**/*.js"
+			],
+			"project": [
+				"scripts/**/*.js",
+				"mcp-server/**/*.js",
+				"src/**/*.js",
+				"tests/**/*.js",
+				".github/scripts/*.mjs",
+				".githooks/*.mjs"
+			],
+			// Imported by workspace code that tsdown bundles into dist/, which
+			// keeps npm packages external, so the published package needs them
+			"ignoreDependencies": [
+				"date-fns",
+				"figlet",
+				"fs-extra",
+				"gradient-string",
+				"ora",
+				"proper-lockfile",
+				"simple-git",
+				"steno",
+				"terminal-link"
+			]
+		},
+		"apps/cli": {
+			"entry": ["tests/fakes/*.mjs", "tests/helpers/*.mjs"],
+			// Loaded with `node --import tsx` by tests/integration/lock-interop.test.ts
+			"ignoreDependencies": ["tsx"]
+		}
+	}
+}

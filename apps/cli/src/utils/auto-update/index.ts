@@ -8,9 +8,6 @@
  * - Restarting CLI after updates
  */
 
-// Re-export types
-export type { UpdateInfo } from './types.js';
-
 // Re-export version utilities
 export { compareVersions } from './version.js';
 

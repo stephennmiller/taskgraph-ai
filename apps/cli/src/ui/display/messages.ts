@@ -47,11 +47,6 @@ export function displayErrorBox(message: string, details?: string): void {
 }
 
 /**
- * Alias for displayErrorBox
- */
-export const displayError = displayErrorBox;
-
-/**
  * Display a success message
  */
 export function displaySuccess(message: string): void {

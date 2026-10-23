@@ -30,7 +30,7 @@ export const ARCHIVE_FILE_NAME = 'archive.json';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** A task as the archive stores it */
-export type ArchivedTask = Task & { archivedAt: string };
+type ArchivedTask = Task & { archivedAt: string };
 
 /** One tag's section of archive.json */
 export interface ArchiveTagData {
@@ -51,7 +51,7 @@ export function archivePathFor(tasksPath: string): string {
 }
 
 /** Whether a status means the work is over */
-export function isFinishedStatus(status: string | undefined): boolean {
+function isFinishedStatus(status: string | undefined): boolean {
 	return status === 'done' || status === 'completed' || status === 'cancelled';
 }
 

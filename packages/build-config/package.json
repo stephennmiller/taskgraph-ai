@@ -23,8 +23,7 @@
 	"license": "MIT",
 	"scripts": {
 		"build": "tsc",
-		"typecheck": "tsc --noEmit",
-		"fix-null-versions": "npx tsx scripts/fix-null-versions.ts"
+		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.5",

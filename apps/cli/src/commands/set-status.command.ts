@@ -396,10 +396,3 @@ export class SetStatusCommand extends Command {
 		return setStatusCommand;
 	}
 }
-
-/**
- * Factory function to create and configure the set-status command
- */
-export function createSetStatusCommand(): SetStatusCommand {
-	return new SetStatusCommand();
-}
