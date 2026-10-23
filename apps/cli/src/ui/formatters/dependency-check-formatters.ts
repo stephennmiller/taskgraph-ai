@@ -28,7 +28,8 @@ type Id = number | string;
 
 /** One problem `validateTaskDependencies` reports */
 export interface DependencyIssue {
-	type: 'missing' | 'self' | 'circular';
+	/** `missing-link`: a related or discovered-from link to a missing task */
+	type: 'missing' | 'self' | 'circular' | 'missing-link';
 	taskId: Id;
 	dependencyId?: Id;
 	/** For a loop: whether fix-dependencies can break it (subtasks only) */
@@ -37,7 +38,7 @@ export interface DependencyIssue {
 
 /** One change `fix-dependencies` made */
 export interface DependencyFix {
-	type: 'missing' | 'self' | 'duplicate' | 'circular';
+	type: 'missing' | 'self' | 'duplicate' | 'circular' | 'missing-link';
 	taskId: Id;
 	dependencyId?: Id;
 }
@@ -85,6 +86,8 @@ function describeIssue(issue: DependencyIssue): string {
 			return `depends on ${describeId(issue.dependencyId ?? '?')}, which doesn't exist`;
 		case 'circular':
 			return 'is part of a dependency loop';
+		case 'missing-link':
+			return `links to ${describeId(issue.dependencyId ?? '?')}, which doesn't exist`;
 	}
 }
 
@@ -99,6 +102,8 @@ function describeFix(fix: DependencyFix): string {
 			return `removed a duplicate of ${dep}`;
 		case 'circular':
 			return `removed ${dep} to break a loop`;
+		case 'missing-link':
+			return `removed its link to ${dep}, which doesn't exist`;
 	}
 }
 

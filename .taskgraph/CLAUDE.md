@@ -8,7 +8,7 @@ This project tracks work in TaskGraph. Run `taskgraph prime` for the task in pro
 - `taskgraph show <id>`: one task in detail (`3`, or a subtask like `3.2`)
 - `taskgraph list`: all tasks, filtered by `--status` or `--tag`
 - `taskgraph set-status --id=<id> --status=in-progress`: claim a task (`--status=done` when finished)
-- `taskgraph add-task --prompt="<what>"`: add a task
+- `taskgraph add-task --prompt="<what>"`: add a task; add `--discovered-from=<id>` for work you found while doing task `<id>` (a link that doesn't block it)
 - `taskgraph parse-prd <file> --clarify`: generate tasks from a PRD, asking about its gaps first. Agents: `--clarify --json` prints the questions; ask the user, add their answers to that JSON, write it to a file (not through a shell heredoc or echo) and pass `--answers <file>`
 
 Statuses: pending, in-progress, review, done, deferred, cancelled, blocked. Subtask IDs have one dot (`3.2`). Change tasks through the commands, not by editing `.taskgraph/tasks/tasks.json`. `taskgraph --help` lists the rest.

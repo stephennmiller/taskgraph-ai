@@ -16,12 +16,19 @@ import { findTasksPath } from '../core/utils/path-utils.js';
 export function registerAddDependencyTool(server) {
 	server.addTool({
 		name: 'add_dependency',
-		description: 'Add a dependency relationship between two tasks',
+		description:
+			'Add a dependency between two tasks, or with type related / discovered-from a link that never blocks',
 		parameters: z.object({
 			id: z.string().describe('ID of task that will depend on another task'),
 			dependsOn: z
 				.string()
 				.describe('ID of task that will become a dependency'),
+			type: z
+				.enum(['blocks', 'related', 'discovered-from'])
+				.optional()
+				.describe(
+					'blocks (default): id waits for dependsOn. related or discovered-from: a link that never blocks next or shows in why'
+				),
 			file: z
 				.string()
 				.optional()
@@ -67,6 +74,7 @@ export function registerAddDependencyTool(server) {
 						// Pass other relevant args
 						id: args.id,
 						dependsOn: args.dependsOn,
+						type: args.type,
 						projectRoot: args.projectRoot,
 						tag: resolvedTag
 					},

@@ -320,7 +320,10 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Add a dependency to a task
     taskgraph add-dependency --id=<id> --depends-on=<id>
 
-    # Remove a dependency from a task
+    # Link two tasks without making one wait for the other
+    taskgraph add-dependency --id=<id> --depends-on=<id> --type=related
+
+    # Remove a dependency (or a related / discovered-from link) from a task
     taskgraph remove-dependency --id=<id> --depends-on=<id>
 
     # Validate dependencies without fixing them
@@ -352,6 +355,9 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     # Add a task with priority
     taskgraph add-task --prompt="Description" --priority=high
+
+    # File work you found while doing task 3; it doesn't wait for task 3
+    taskgraph add-task --prompt="Description" --discovered-from=3
 
     # Add acceptance criteria (repeat --ac for each one)
     taskgraph add-task --prompt="Description" --ac="Users can log in" --ac="Tokens expire after 15 minutes"

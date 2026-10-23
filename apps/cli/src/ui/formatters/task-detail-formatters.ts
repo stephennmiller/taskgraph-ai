@@ -3,6 +3,7 @@
  *
  *   Task 2  Email and password sign-in with sessions
  *   ▶ in-progress · high priority · complexity 7 (high) · depends on 1
+ *   related to 4 · discovered from 3
  *   From docs/prd.md#authentication
  *
  *   Let people create an account with an email and password, sign in, and
@@ -35,6 +36,7 @@ import {
 	type TaskStatus,
 	buildChecklist,
 	getPrdSource,
+	getTaskLinks,
 	resolveSubtaskDependency
 } from '@tm/core';
 import chalk from 'chalk';
@@ -141,6 +143,22 @@ function header(label: string, title: string, width: number): string[] {
 	];
 }
 
+/**
+ * Links that don't block, apart from what the task depends on:
+ * `related to 4 and 6`, `discovered from 3`
+ */
+function linkFacts(task: Task | Subtask): string[] {
+	const links = getTaskLinks(task, isSubtask(task) ? task.parentId : undefined);
+	const ids = (type: string) =>
+		links.filter((link) => link.type === type).map((link) => link.id);
+	const facts: string[] = [];
+	const related = ids('related');
+	if (related.length > 0) facts.push(`related to ${listIds(related)}`);
+	const found = ids('discovered-from');
+	if (found.length > 0) facts.push(`discovered from ${listIds(found)}`);
+	return facts.map((fact) => theme.muted(fact));
+}
+
 /** `▶ in-progress · high priority · complexity 7 · depends on 1` */
 function facts(task: Task | Subtask, width: number): string[] {
 	const parts = [getStatusWithColor(task.status as TaskStatus)];
@@ -155,6 +173,7 @@ function facts(task: Task | Subtask, width: number): string[] {
 	if (deps.length > 0) {
 		parts.push(theme.muted(`depends on ${listIds(deps)}`));
 	}
+	parts.push(...linkFacts(task));
 	if (task.category) parts.push(theme.muted(task.category));
 	if (task.skills && task.skills.length > 0) {
 		parts.push(theme.accent(task.skills.join(', ')));

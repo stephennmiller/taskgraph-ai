@@ -477,6 +477,32 @@ describe('expandTask', () => {
 			expect(third.metadata.dependencySources).toEqual({ 2.2: 'inferred' });
 		});
 
+		test("keeps the task's related and discovered-from links", async () => {
+			const links = { 1: 'discovered-from', 3: 'related' };
+			readJSON.mockImplementation((tasksPath, projectRoot, tag) => {
+				const data = JSON.parse(JSON.stringify(sampleTasks));
+				data.master.tasks[1].metadata = { taskLinks: links };
+				return {
+					...data[tag || 'master'],
+					tag: 'master',
+					_rawTaggedData: data
+				};
+			});
+
+			const result = await expandTask(
+				'tasks/tasks.json',
+				'2',
+				3,
+				false,
+				'',
+				{ mcpLog: createMcpLogMock(), projectRoot: '/mock/project/root' },
+				false
+			);
+
+			expect(result.task.metadata).toEqual({ taskLinks: links });
+			expect(result.task.dependencies).toEqual([]);
+		});
+
 		test('should handle research flag correctly', async () => {
 			// Arrange
 			const tasksPath = 'tasks/tasks.json';

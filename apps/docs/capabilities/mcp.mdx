@@ -133,7 +133,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 1. Task and Subtask Management
 
--   **`add_task`**: Creates a new task.
+-   **`add_task`**: Creates a new task. `discoveredFrom` links it to the task it was found in, without blocking it.
 -   **`add_subtask`**: Adds a subtask to a parent task.
 -   **`remove_task`**: Removes one or more tasks or subtasks.
 -   **`remove_subtask`**: Removes a subtask from its parent.
@@ -160,8 +160,8 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 4. Dependency Management
 
--   **`add_dependency`**: Adds a dependency to a task.
--   **`remove_dependency`**: Removes a dependency from a task.
+-   **`add_dependency`**: Adds a dependency to a task. With `type: "related"` or `"discovered-from"` it adds a link that never blocks.
+-   **`remove_dependency`**: Removes a dependency, or a related / discovered-from link, from a task.
 -   **`validate_dependencies`**: Validates the dependencies of all tasks.
 -   **`fix_dependencies`**: Fixes any invalid dependencies.
 -   **`dependency_analysis`**: Shows the bottlenecks, critical path and cycles, and with `id` what blocks one task.

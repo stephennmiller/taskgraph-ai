@@ -260,6 +260,32 @@ describe('mergeTagChanges', () => {
 		).toEqual(['3.1', 1, '1']);
 	});
 
+	it("moves a renumbered task's related links to its subtasks with it", () => {
+		const base = tag([task(1)]);
+		const mine = tag([
+			task(1),
+			task(2, {
+				title: 'Mine',
+				subtasks: [
+					{ id: 1, title: 'a', dependencies: [] },
+					{
+						id: 2,
+						title: 'b',
+						dependencies: [],
+						metadata: { taskLinks: { '2.1': 'related', '1': 'related' } }
+					}
+				]
+			})
+		]);
+		const theirs = tag([task(1), task(2, { title: 'Theirs' })]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(
+			(merged.tasks[2].subtasks[1] as { metadata: unknown }).metadata
+		).toEqual({ taskLinks: { '3.1': 'related', '1': 'related' } });
+	});
+
 	it("keeps the command's new order and others' additions next to their neighbour", () => {
 		const base = tag([task(1), task(2), task(3)]);
 		const mine = tag([task(3), task(1), task(2)]);

@@ -16,7 +16,8 @@ import { findTasksPath } from '../core/utils/path-utils.js';
 export function registerRemoveDependencyTool(server) {
 	server.addTool({
 		name: 'remove_dependency',
-		description: 'Remove a dependency from a task',
+		description:
+			'Remove a dependency, or a related / discovered-from link, from a task',
 		parameters: z.object({
 			id: z.string().describe('Task ID to remove dependency from'),
 			dependsOn: z.string().describe('Task ID to remove as a dependency'),

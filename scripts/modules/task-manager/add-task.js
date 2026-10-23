@@ -2,7 +2,8 @@ import { ui } from '@tm/cli';
 import {
 	assignMetadata,
 	normalizeAcceptanceCriteria,
-	reconcileDependencySources
+	reconcileDependencySources,
+	setTaskLink
 } from '@tm/core';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 import path from 'path';
@@ -32,9 +33,37 @@ import {
 	readJSON
 } from '../utils.js';
 import { updateTagTasks } from '../utils/update-tag-tasks.js';
+import taskExists from './task-exists.js';
 
 /** How many tasks matching the prompt the AI is shown as context */
 const MAX_RELATED_TASKS = 10;
+
+/**
+ * The task `--discovered-from` names, as a full ID ("3" or "3.2"). Checked
+ * before any AI call so a typo costs nothing.
+ * @param {string|number|undefined} id
+ * @param {Array} tasks - Tasks of the tag the new task goes in
+ * @returns {string|undefined}
+ */
+function resolveDiscoveredFrom(id, tasks) {
+	if (id === undefined || id === null || id === '') return undefined;
+	const text = String(id).trim();
+	const fail = (message) =>
+		Object.assign(new Error(message), {
+			hint: 'Run `taskgraph list` to see task IDs'
+		});
+	if (!/^\d+(\.\d+)?$/.test(text)) {
+		throw fail(`"${text}" isn't a task ID`);
+	}
+	const fullId = text
+		.split('.')
+		.map((part) => String(parseInt(part, 10)))
+		.join('.');
+	if (!taskExists(tasks, fullId)) {
+		throw fail(`Task ${fullId} doesn't exist`);
+	}
+	return fullId;
+}
 
 /**
  * Get all tasks from all tags
@@ -70,6 +99,8 @@ function getAllTasks(rawData) {
  * @param {boolean} useResearch - Whether to use the research model (passed to unified service)
  * @param {Object} [extras] - Fields the user gave alongside the prompt or manual data
  * @param {string[]} [extras.acceptanceCriteria] - Acceptance criteria, stored unchecked
+ * @param {string} [extras.discoveredFrom] - Task this work was found while
+ *   doing; stored as a `discovered-from` link, which never blocks
  * @param {Object} context - Context object containing session and potentially projectRoot
  * @param {string} [context.projectRoot] - Project root path (for MCP/env fallback)
  * @param {string} [context.commandName] - The name of the command being executed (for telemetry)
@@ -289,6 +320,10 @@ async function addTask(
 
 		// Find the highest task ID *within the target tag* to determine the next ID
 		const tasksInTargetTag = rawData[targetTag].tasks;
+		const discoveredFrom = resolveDiscoveredFrom(
+			extras.discoveredFrom,
+			tasksInTargetTag
+		);
 		const highestId =
 			tasksInTargetTag.length > 0
 				? Math.max(...tasksInTargetTag.map((t) => t.id))
@@ -541,6 +576,13 @@ async function addTask(
 			newTask,
 			reconcileDependencySources(newTask, { dependencies: numericDependencies })
 		);
+		// Where the work was found: a link that never blocks the new task
+		if (discoveredFrom) {
+			assignMetadata(
+				newTask,
+				setTaskLink(newTask.metadata, discoveredFrom, 'discovered-from')
+			);
+		}
 
 		report('DEBUG: Writing tasks.json...', 'debug');
 		// Add the task to the CURRENT contents of the tag. The file may have
@@ -568,6 +610,14 @@ async function addTask(
 		if (outputFormat === 'text') {
 			const same = (a) => (b) => String(a) === String(b);
 			const titleOf = (id) => allTasks.find((t) => same(id)(t.id))?.title ?? '';
+			// A subtask too ("3.2"), in the tag the task went in
+			const titleOfAny = (id) => {
+				const [parent, sub] = String(id).split('.');
+				const task = tasksInTargetTag.find((t) => same(parent)(t.id));
+				return sub === undefined
+					? (task?.title ?? '')
+					: (task?.subtasks?.find((st) => same(sub)(st.id))?.title ?? '');
+			};
 			console.log(
 				ui.formatTaskCreated({
 					id: newTaskId,
@@ -580,7 +630,11 @@ async function addTask(
 					})),
 					unused: numericDependencies
 						.filter((dep) => !newTask.dependencies.some(same(dep)))
-						.map((dep) => ({ id: dep, title: titleOf(dep) }))
+						.map((dep) => ({ id: dep, title: titleOf(dep) })),
+					discoveredFrom:
+						discoveredFrom && !newTask.dependencies.some(same(discoveredFrom))
+							? { id: discoveredFrom, title: titleOfAny(discoveredFrom) }
+							: undefined
 				})
 			);
 

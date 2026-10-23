@@ -13,7 +13,7 @@
  * dependencies that stay.
  *
  * Whatever else pointed at the item (`retargetDependents`) is repointed at its
- * new ID so it doesn't dangle.
+ * new ID so it doesn't dangle, non-blocking links included.
  */
 
 import {
@@ -23,6 +23,7 @@ import {
 	renameDependencySource
 } from './dependency-provenance.js';
 import { resolveSubtaskDependency } from './subtask-dependency.js';
+import { retargetTaskLinks } from './task-links.js';
 
 type Metadata = Record<string, unknown>;
 type DependencyId = string | number;
@@ -80,7 +81,8 @@ interface Dependent {
 
 /**
  * Point every dependency on `oldId` (a full ID: "8" or "5.3") at `newId`, on
- * every task and subtask, with its provenance mark. A top-level task keeps
+ * every task and subtask, with its provenance mark, and every non-blocking
+ * link to it. A top-level task keeps
  * `newId` as given; a subtask gets it as a string, since under a subtask a
  * bare number would name a sibling.
  */
@@ -121,4 +123,5 @@ export function retargetDependents(
 			);
 		}
 	}
+	retargetTaskLinks(tasks, oldId, newId);
 }

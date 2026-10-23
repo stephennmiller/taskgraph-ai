@@ -7,6 +7,10 @@
  *     Not used    1  Set up the database schema
  *   Next: taskgraph show 4 to read it, or taskgraph expand --id=4 to break it down
  *
+ * With `--discovered-from=2` it adds a row that doesn't block the task:
+ *
+ *     Discovered from  2  Email and password sign-in with sessions
+ *
  * It replaces a boxed "Task 4 Created Successfully" with the title, status
  * and priority repeated as labelled lines, a dependency list with titles cut
  * to 30 characters, a "Dependency Analysis" that counted the same
@@ -34,6 +38,8 @@ export interface CreatedTask {
 	dependencies: CreatedTaskDependency[];
 	/** Dependencies you passed that the new task doesn't have */
 	unused?: CreatedTaskDependency[];
+	/** The task it was found while doing (`--discovered-from`); never blocks */
+	discoveredFrom?: CreatedTaskDependency;
 }
 
 /**
@@ -52,7 +58,9 @@ export function formatTaskCreated(
 		...created,
 		title: terminalSafe(created.title),
 		dependencies: safeDeps(created.dependencies),
-		unused: created.unused && safeDeps(created.unused)
+		unused: created.unused && safeDeps(created.unused),
+		discoveredFrom:
+			created.discoveredFrom && safeDeps([created.discoveredFrom])[0]
 	};
 	const lines: string[] = [];
 	const priority = task.priority
@@ -70,6 +78,7 @@ export function formatTaskCreated(
 
 	const groups: Array<[string, CreatedTaskDependency[]]> = [
 		['Depends on', task.dependencies],
+		['Discovered from', task.discoveredFrom ? [task.discoveredFrom] : []],
 		['Not used', task.unused ?? []]
 	];
 	const all = groups.flatMap(([, deps]) => deps);

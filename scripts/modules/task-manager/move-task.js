@@ -3,10 +3,12 @@ import {
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,
 	pruneDependencySources,
+	pruneTaskLinks,
 	rekeyDependencySources,
 	renameDependencySource,
 	resolveSubtaskDependency,
-	retargetDependents
+	retargetDependents,
+	retargetTaskLinks
 } from '@tm/core';
 import path from 'path';
 import {
@@ -709,6 +711,9 @@ function moveTaskToNewId(tasks, sourceTaskIndex, sourceTask, destTaskId) {
 		tasks.push(movedTask);
 	}
 
+	// Related and discovered-from links to the task or its subtasks follow it
+	retargetTaskLinks(tasks, sourceTask.id, destTaskId, { withSubtasks: true });
+
 	log('debug', `Moved task ${sourceTask.id} to new ID ${destTaskId}`);
 
 	return {
@@ -1050,6 +1055,16 @@ async function finalizeMove(
 ) {
 	const { projectRoot } = context;
 	const { rawData, movedTasks } = moveResult;
+
+	// Related and discovered-from links don't cross tags: the same ID names a
+	// different task there. Moved tasks keep links among themselves; the
+	// source tag drops its links to them.
+	const movedIds = new Set(movedTasks.map((moved) => String(moved.id)));
+	const movedTaskObjects = rawData[targetTag].tasks.filter((task) =>
+		movedIds.has(String(task.id))
+	);
+	pruneTaskLinks(movedTaskObjects, (id) => movedIds.has(id.split('.')[0]));
+	pruneTaskLinks(rawData[sourceTag].tasks);
 
 	// Write the updated data
 	writeJSON(tasksPath, rawData, projectRoot, null);

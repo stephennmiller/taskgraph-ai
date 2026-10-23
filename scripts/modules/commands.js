@@ -1381,6 +1381,10 @@ function registerCommands(programInstance) {
 			'Comma-separated list of task IDs this task depends on'
 		)
 		.option(
+			'--discovered-from <id>',
+			'Task you found this work while doing; links them without blocking'
+		)
+		.option(
 			'--priority <priority>',
 			'Task priority (high, medium, low)',
 			'medium'
@@ -1456,13 +1460,16 @@ function registerCommands(programInstance) {
 					'text',
 					manualTaskData,
 					options.research,
-					{ acceptanceCriteria: options.ac }
+					{
+						acceptanceCriteria: options.ac,
+						discoveredFrom: options.discoveredFrom
+					}
 				);
 
 				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'
 				// No need to call displayAiUsageSummary here anymore.
 			} catch (error) {
-				displayError(error, { hint: aiErrorHint(error) });
+				displayError(error, { hint: error.hint ?? aiErrorHint(error) });
 			}
 		});
 
@@ -1472,6 +1479,10 @@ function registerCommands(programInstance) {
 		.description('Add a dependency to a task')
 		.option('-i, --id <id>', 'Task ID to add dependency to')
 		.option('-d, --depends-on <id>', 'Task ID that will become a dependency')
+		.option(
+			'--type <type>',
+			'blocks (default), or related / discovered-from to link without blocking'
+		)
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (options) => {
@@ -1517,7 +1528,8 @@ function registerCommands(programInstance) {
 					formattedDependencyId,
 					{
 						projectRoot: taskGraph.getProjectRoot(),
-						tag
+						tag,
+						linkType: options.type
 					}
 				)
 			);
@@ -1526,7 +1538,7 @@ function registerCommands(programInstance) {
 	// remove-dependency command
 	programInstance
 		.command('remove-dependency')
-		.description('Remove a dependency from a task')
+		.description('Remove a dependency (or a related link) from a task')
 		.option('-i, --id <id>', 'Task ID to remove dependency from')
 		.option('-d, --depends-on <id>', 'Task ID to remove as a dependency')
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)

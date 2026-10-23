@@ -40,6 +40,21 @@ export {
 	type DependencyTreeNode
 } from './dependency-tree.js';
 export {
+	findDanglingLinks,
+	getLinkType,
+	getTaskLinks,
+	LINK_TYPES,
+	parseLinkType,
+	pruneTaskLinks,
+	removeTaskLink,
+	retargetTaskLinks,
+	setTaskLink,
+	type DanglingLink,
+	type LinkType,
+	type NonBlockingLinkType,
+	type TaskLink
+} from './task-links.js';
+export {
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,
 	retargetDependents,
