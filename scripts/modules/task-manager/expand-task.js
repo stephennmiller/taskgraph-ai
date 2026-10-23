@@ -2,6 +2,7 @@ import {
 	assignMetadata,
 	getPrdSource,
 	reconcileDependencySources,
+	removeAllSubtasks,
 	setGeneratedCriteria
 } from '@tm/core';
 import fs from 'fs';
@@ -357,10 +358,11 @@ async function expandTask(
 					`Task ${taskId} was removed while it was being expanded`
 				);
 			}
-			// force replaces what is there; otherwise the new subtasks are appended
-			if (force || !Array.isArray(current.subtasks)) {
-				current.subtasks = [];
-			}
+			// force replaces what is there, first dropping dependencies and links
+			// on the old subtasks: the new ones reuse their IDs. Otherwise the
+			// new subtasks are appended.
+			if (force) removeAllSubtasks(tagData.tasks, current);
+			if (!Array.isArray(current.subtasks)) current.subtasks = [];
 			current.subtasks.push(...generatedSubtasks);
 			task = current;
 		});

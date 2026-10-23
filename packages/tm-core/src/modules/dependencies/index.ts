@@ -61,6 +61,7 @@ export {
 	type NonBlockingLinkType,
 	type TaskLink
 } from './task-links.js';
+export { dropReferences, removeAllSubtasks } from './removed-references.js';
 export {
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,

@@ -1,7 +1,7 @@
 /**
- * update-task keeps a task's checklist (acceptance criteria and checked
- * Definition of Done items) when the AI rewrites it: the AI schema has no
- * such fields.
+ * update-task keeps the stored fields the AI schema has no place for (#286):
+ * the checklist (acceptance criteria and checked Definition of Done items),
+ * GitHub link, tags, assignee and the rest.
  */
 import { vi } from 'vitest';
 
@@ -138,7 +138,7 @@ const { default: updateTaskById } = await import(
 	'../../../../../scripts/modules/task-manager/update-task-by-id.js'
 );
 
-describe('updateTaskById checklist fields', () => {
+describe('updateTaskById stored fields', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
@@ -208,5 +208,199 @@ describe('updateTaskById checklist fields', () => {
 		expect(updatedTask.subtasks[0].acceptanceCriteria).toEqual([
 			{ text: 'Sub works', checked: false }
 		]);
+	});
+
+	test('keeps stored fields the AI schema has no place for (#286)', async () => {
+		const github = { issue: 12, url: 'https://github.com/o/r/issues/12' };
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{
+					id: 1,
+					title: 'Original Task',
+					description: 'Original description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'low',
+					details: null,
+					testStrategy: null,
+					github,
+					tags: ['api'],
+					assignee: 'kim',
+					relevantFiles: [{ path: 'src/a.ts' }],
+					complexity: 7,
+					createdAt: '2026-01-01T00:00:00.000Z',
+					subtasks: [
+						{
+							id: 1,
+							title: 'S1',
+							status: 'pending',
+							dependencies: [],
+							assignee: 'lee',
+							relevantFiles: [{ path: 'src/b.ts' }]
+						}
+					]
+				}
+			]
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: {
+				task: {
+					id: 1,
+					title: 'Updated Task',
+					description: 'Updated description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'high',
+					details: 'd',
+					testStrategy: 't',
+					subtasks: [
+						{ id: 1, title: 'S1', status: 'pending', dependencies: [] }
+					]
+				}
+			},
+			telemetryData: {}
+		});
+
+		const { updatedTask } = await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Tighten the description',
+			false,
+			{ tag: 'master' },
+			'json'
+		);
+
+		expect(updatedTask).toMatchObject({
+			title: 'Updated Task',
+			priority: 'high',
+			github,
+			tags: ['api'],
+			assignee: 'kim',
+			relevantFiles: [{ path: 'src/a.ts' }],
+			complexity: 7,
+			createdAt: '2026-01-01T00:00:00.000Z'
+		});
+		expect(updatedTask.subtasks[0]).toMatchObject({
+			assignee: 'lee',
+			relevantFiles: [{ path: 'src/b.ts' }]
+		});
+	});
+
+	test('drops the inferred mark of a dependency the AI removed', async () => {
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{
+					id: 1,
+					title: 'Original Task',
+					description: 'Original description',
+					status: 'pending',
+					dependencies: [3],
+					metadata: { dependencySources: { 3: 'inferred' } },
+					priority: 'low',
+					details: null,
+					testStrategy: null,
+					subtasks: []
+				}
+			]
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: {
+				task: {
+					id: 1,
+					title: 'Updated Task',
+					description: 'Updated description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'low',
+					details: null,
+					testStrategy: null,
+					subtasks: []
+				}
+			},
+			telemetryData: {}
+		});
+
+		const { updatedTask } = await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Drop the dependency',
+			false,
+			{ tag: 'master' },
+			'json'
+		);
+
+		expect(updatedTask).not.toHaveProperty('metadata');
+	});
+
+	test('keeps stored details, priority and test strategy when the AI returns null for them', async () => {
+		fs.existsSync.mockReturnValue(true);
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{
+					id: 1,
+					title: 'Original Task',
+					description: 'Original description',
+					status: 'pending',
+					dependencies: [],
+					priority: 'high',
+					details: 'Stored details',
+					testStrategy: 'Stored strategy',
+					subtasks: [
+						{
+							id: 1,
+							title: 'S1',
+							status: 'pending',
+							dependencies: [],
+							testStrategy: 'Sub strategy'
+						}
+					]
+				}
+			]
+		});
+		generateObjectService.mockResolvedValue({
+			mainResult: {
+				task: {
+					id: 1,
+					title: 'Updated Task',
+					description: 'Updated description',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: [
+						{
+							id: 1,
+							title: 'S1',
+							status: 'pending',
+							dependencies: [],
+							testStrategy: null
+						}
+					]
+				}
+			},
+			telemetryData: {}
+		});
+
+		const { updatedTask } = await updateTaskById(
+			'tasks/tasks.json',
+			1,
+			'Tighten the description',
+			false,
+			{ tag: 'master' },
+			'json'
+		);
+
+		expect(updatedTask).toMatchObject({
+			priority: 'high',
+			details: 'Stored details',
+			testStrategy: 'Stored strategy'
+		});
+		expect(updatedTask.subtasks[0].testStrategy).toBe('Sub strategy');
 	});
 });

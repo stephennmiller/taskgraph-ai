@@ -19,5 +19,5 @@ To clear every subtask of a task, use `/taskgraph:clear-subtasks` instead.
    taskgraph remove-subtask --id=<parent.sub> --convert  # keep it as a task
    ```
 
-   Deleting can't be undone: if the subtask is in progress or done, confirm with the user first, and offer `--convert`.
+   Deleting drops dependencies and links on the subtask and can't be undone: if the subtask is in progress or done, confirm with the user first, and offer `--convert`.
 3. Show the output unchanged in a code block, including the new task ID after `--convert`.
