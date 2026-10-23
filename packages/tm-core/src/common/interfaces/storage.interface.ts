@@ -483,26 +483,6 @@ export abstract class BaseStorage implements IStorage {
 	}
 
 	/**
-	 * Utility method to validate task data before storage operations
-	 * @param task - Task to validate
-	 * @throws Error if task is invalid
-	 */
-	protected validateTask(task: Task): void {
-		if (!task.id) {
-			throw new Error('Task ID is required');
-		}
-		if (!task.title) {
-			throw new Error('Task title is required');
-		}
-		if (!task.description) {
-			throw new Error('Task description is required');
-		}
-		if (!task.status) {
-			throw new Error('Task status is required');
-		}
-	}
-
-	/**
 	 * Utility method to sanitize tag names for file system safety
 	 * @param tag - Tag name to sanitize
 	 * @returns Sanitized tag name
