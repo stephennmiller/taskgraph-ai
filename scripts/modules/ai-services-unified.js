@@ -385,8 +385,9 @@ async function _attemptProviderCallWithRetries(
 			}
 			return result;
 		} catch (error) {
+			// The command prints the final error once; attempts are for --debug (#272)
 			log(
-				'warn',
+				'debug',
 				`Attempt ${retries + 1} failed for role ${attemptRole} (${fnName} / ${providerName}): ${error.message}`
 			);
 
@@ -400,7 +401,7 @@ async function _attemptProviderCallWithRetries(
 				await new Promise((resolve) => setTimeout(resolve, delay));
 			} else {
 				log(
-					'error',
+					'debug',
 					`Something went wrong on the provider side. Max retries reached for role ${attemptRole} (${fnName} / ${providerName}).`
 				);
 				throw error;
@@ -655,7 +656,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 		} catch (error) {
 			const cleanMessage = _extractErrorMessage(error);
 			log(
-				'error',
+				'debug',
 				`Service call failed for role ${currentRole} (Provider: ${providerName || 'unknown'}, Model: ${modelId || 'unknown'}): ${cleanMessage}`
 			);
 			lastError = error;
@@ -677,14 +678,14 @@ async function _unifiedServiceRunner(serviceType, params) {
 					lowerCaseMessage.includes('tool use is not supported')
 				) {
 					const specificErrorMsg = `Model '${modelId || 'unknown'}' via provider '${providerName || 'unknown'}' does not support the 'tool use' required by generateObjectService. Please configure a model that supports tool/function calling for the '${currentRole}' role, or use generateTextService if structured output is not strictly required.`;
-					log('error', `[Tool Support Error] ${specificErrorMsg}`);
+					log('debug', `[Tool Support Error] ${specificErrorMsg}`);
 					throw new Error(specificErrorMsg);
 				}
 			}
 		}
 	}
 
-	log('error', `All roles in the sequence [${sequence.join(', ')}] failed.`);
+	log('debug', `All roles in the sequence [${sequence.join(', ')}] failed.`);
 	throw new Error(lastCleanErrorMessage);
 }
 
