@@ -82,6 +82,19 @@ There are no aliases. If you used one of the old names in a script, a note or a 
 
 Updating the plugin itself leaves nothing behind. Claude Code installs each plugin version into its own directory (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>`) and points the install path at the active one. On a real update of `superpowers` from 6.4.2 to 7.0.0, the old directory kept a file the new version dropped and got an `.orphaned_at` marker, while 7.0.0 did not have the file. A plugin with no `version` field, like this one, is probably keyed by commit SHA instead. Whether the update arrives automatically or needs `/plugin marketplace update taskgraph` is not verified, so run it.
 
+## 6. Remove the deferred MCP loading line (optional)
+
+Earlier `taskgraph init --rules claude` runs appended this to your shell profile (`~/.zshrc`, `~/.bashrc` or similar):
+
+```bash
+# Claude Code deferred MCP loading (added by TaskGraph)
+export ENABLE_EXPERIMENTAL_MCP_CLI='true'
+```
+
+Claude Code no longer reads that variable: it defers MCP tool definitions by default (MCP tool search, set with `ENABLE_TOOL_SEARCH`). `init` doesn't add the line any more, and you can delete it.
+
+`init` also stopped writing `.mcp.json` unless you pass `--mcp`. An `.mcp.json` you already have is left as it is. The Claude Code integration (the `CLAUDE.md` import) is now on by default, including under `--yes`; pass `--no-claude` to skip it.
+
 ## Credit
 
 TaskGraph is based on [Task Master](https://github.com/eyaltoledano/claude-task-master) by Eyal Toledano and Ralph Khreish, and keeps the original license and copyright notices. See [Licensing](/licensing).

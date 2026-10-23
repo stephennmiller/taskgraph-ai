@@ -28,10 +28,10 @@ This provides the `taskgraph` command and `taskgraph-mcp`, the optional MCP serv
 From the user's project folder:
 
 ```bash
-taskgraph init --rules claude
+taskgraph init --yes
 ```
 
-This creates `.taskgraph/`, imports TaskGraph's workflow guide from `CLAUDE.md`, and writes a `.mcp.json` entry for the MCP server. Do not run `init` twice; it only re-adds the same files. It does not install slash commands; the Claude Code plugin does (in Claude Code, run `/plugin marketplace add stephennmiller/taskgraph-ai`, then `/plugin install taskgraph@taskgraph`). The commands are then available as `/taskgraph:<name>`.
+This creates `.taskgraph/` and imports TaskGraph's workflow guide from `CLAUDE.md`. It writes no `.mcp.json` unless you add `--mcp`. Do not run `init` twice; it only re-adds the same files. It does not install slash commands; the Claude Code plugin does (in Claude Code, run `/plugin marketplace add stephennmiller/taskgraph-ai`, then `/plugin install taskgraph@taskgraph`). The commands are then available as `/taskgraph:<name>`.
 
 ### Step 3: (Optional) Add the MCP Server
 
