@@ -178,6 +178,7 @@ export type { SubtaskInfo } from './modules/workflow/types.js';
 // Git - Advanced
 export { GitAdapter } from './modules/git/adapters/git-adapter.js';
 export { CommitMessageGenerator } from './modules/git/services/commit-message-generator.js';
+export * from './modules/git/merge-driver/index.js';
 
 // Tasks - Advanced
 export { PreflightChecker } from './modules/tasks/services/preflight-checker.service.js';

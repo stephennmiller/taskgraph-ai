@@ -13,6 +13,7 @@ import { GraphCommand } from './commands/graph.command.js';
 import { ListTasksCommand } from './commands/list.command.js';
 import { GithubCommand } from './commands/github/github.command.js';
 import { LoopCommand } from './commands/loop.command.js';
+import { MergeDriverCommand } from './commands/merge-driver.command.js';
 import { NextCommand } from './commands/next.command.js';
 import { PrimeCommand } from './commands/prime.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
@@ -29,6 +30,8 @@ export interface CommandMetadata {
 	description: string;
 	commandClass: typeof Command;
 	category?: 'task' | 'utility' | 'development';
+	/** Left out of help and Tab completion (run by tools, not people) */
+	hidden?: boolean;
 }
 
 /**
@@ -124,6 +127,13 @@ export class CommandRegistry {
 			description: 'Set up Tab completion for bash, zsh or fish',
 			commandClass: CompletionCommand as any,
 			category: 'utility'
+		},
+		{
+			name: 'merge-driver',
+			description: 'Git merge driver for tasks.json (git runs it)',
+			commandClass: MergeDriverCommand as any,
+			category: 'utility',
+			hidden: true
 		}
 	];
 
@@ -188,7 +198,7 @@ export class CommandRegistry {
 		} else {
 			// Fallback to creating instance and adding
 			const instance = new CommandClass();
-			program.addCommand(instance);
+			program.addCommand(instance, { hidden: metadata.hidden === true });
 		}
 	}
 
