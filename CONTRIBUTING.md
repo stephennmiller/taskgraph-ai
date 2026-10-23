@@ -81,7 +81,7 @@ The roadmap is tracked in two places: [GitHub issues](https://github.com/stephen
 
 - Each open issue has one task in the `master` tag, titled `<issue title> (#<n>)`, with the issue link in its details. Epics that only group other issues (#195, #242) have no task; epics with steps of their own (#254, #328) have a subtask per step.
 - Task dependencies follow the "Order" sections of the epics.
-- New issue: add its task, without AI: `taskgraph add-task --title='<issue title> (#<n>)' --description='<one line>' --details='GitHub issue #<n>: <url>'`.
+- New issue: add its task, without AI: `taskgraph add-task --title='<issue title> (#<n>)' --description='<one line>' --details='GitHub issue #<n>: <url>'` (write a `'` in the title as `'\''`).
 - Closing an issue: in the PR that closes it, run `taskgraph set-status --id=<task id> --status=done` (`--status=cancelled` if it closes as not planned).
 - When the task and the issue disagree, change the task to match the issue.
 
