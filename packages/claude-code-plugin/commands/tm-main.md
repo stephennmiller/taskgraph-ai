@@ -26,7 +26,7 @@ Every slash command the TaskGraph plugin provides, grouped by purpose. Invoke th
 - `/taskgraph:why <id>` - Explain why a task is blocked, down to the root causes
 - `/taskgraph:set-status <id> <status>` - Set any status (pending, review, deferred, cancelled, blocked, ...)
 - `/taskgraph:to-in-progress` - Start working on a task
-- `/taskgraph:to-done` - Mark a task complete
+- `/taskgraph:to-done` - Check acceptance criteria, save a close summary, mark complete
 - `/taskgraph:sync-readme` - Export tasks to README.md with formatting
 - `/taskgraph:add-task` - Add a new task with AI assistance
 - `/taskgraph:update-task` - Update a single task
