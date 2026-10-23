@@ -52,10 +52,6 @@ vi.doMock('chalk', () => ({
 	}
 }));
 
-vi.doMock('boxen', () => ({
-	default: vi.fn((text) => text)
-}));
-
 // Import the mocked modules
 const { readJSON, writeJSON, log, taskExists } = await import(
 	'../../../../../scripts/modules/utils.js'

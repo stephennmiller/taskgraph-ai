@@ -14,9 +14,9 @@ const modulesDir = path.resolve(
 
 // The public names ui.js exports: what it exported before the split into
 // ui/*.js, minus the functions #165 removed and the
-// context-analysis box add-task no longer prints (#182)
+// context-analysis box add-task no longer prints (#182), and BORDER_COLOR,
+// whose last box went in #318
 const EXPECTED_EXPORTS = [
-	'BORDER_COLOR',
 	'confirmTaskOverwrite',
 	'createProgressBar',
 	'displayAddedSubtasks',

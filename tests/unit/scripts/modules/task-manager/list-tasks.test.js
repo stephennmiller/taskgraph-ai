@@ -39,8 +39,7 @@ vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 		active: { bold: vi.fn((text) => text) },
 		heading: vi.fn((text) => text),
 		muted: vi.fn((text) => text)
-	},
-	BORDER_COLOR: 'cyan'
+	}
 }));
 
 vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({

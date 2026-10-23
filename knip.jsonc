@@ -32,6 +32,7 @@
 			// Imported by workspace code that tsdown bundles into dist/, which
 			// keeps npm packages external, so the published package needs them
 			"ignoreDependencies": [
+				"cli-table3",
 				"date-fns",
 				"figlet",
 				"fs-extra",

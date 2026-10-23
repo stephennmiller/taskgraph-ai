@@ -93,59 +93,12 @@ vi.doMock('../../scripts/modules/prompt-manager.js', () => ({
 	}))
 }));
 
-// Mock progress/UI components to prevent real CLI UI
-vi.doMock('../../src/progress/parse-prd-tracker.js', () => ({
-	createParsePrdTracker: vi.fn(() => ({
-		start: vi.fn(),
-		stop: vi.fn(),
-		cleanup: vi.fn(),
-		addTaskLine: vi.fn(),
-		updateTokens: vi.fn(),
-		complete: vi.fn(),
-		getSummary: vi.fn().mockReturnValue({
-			taskPriorities: { high: 0, medium: 0, low: 0 },
-			elapsedTime: 0,
-			actionVerb: 'generated'
-		})
-	}))
-}));
-
-vi.doMock('../../src/ui/parse-prd.js', () => ({
-	displayParsePrdStart: vi.fn(),
-	displayParsePrdSummary: vi.fn()
-}));
-
 vi.doMock('../../scripts/modules/ui.js', () => ({
 	displayAiUsageSummary: vi.fn(),
 	startLoadingIndicator: vi.fn(),
 	succeedLoadingIndicator: vi.fn(),
 	failLoadingIndicator: vi.fn()
 }));
-
-// Mock stream parser
-vi.doMock('../../src/utils/stream-parser.js', () => {
-	// Define mock StreamingError class
-	class StreamingError extends Error {
-		constructor(message, code) {
-			super(message);
-			this.name = 'StreamingError';
-			this.code = code;
-		}
-	}
-
-	// Define mock error codes
-	const STREAMING_ERROR_CODES = {
-		NOT_ASYNC_ITERABLE: 'STREAMING_NOT_SUPPORTED',
-		STREAM_PROCESSING_FAILED: 'STREAM_PROCESSING_FAILED',
-		STREAM_NOT_ITERABLE: 'STREAM_NOT_ITERABLE'
-	};
-
-	return {
-		parseStream: vi.fn(),
-		StreamingError,
-		STREAMING_ERROR_CODES
-	};
-});
 
 // Mock other potential UI elements
 vi.doMock('ora', () => ({
@@ -161,15 +114,6 @@ vi.doMock('ora', () => ({
 vi.doMock('../../src/constants/task-priority.js', () => ({
 	DEFAULT_TASK_PRIORITY: 'medium',
 	TASK_PRIORITY_OPTIONS: ['low', 'medium', 'high']
-}));
-
-// Mock UI indicators
-vi.doMock('../../src/ui/indicators.js', () => ({
-	getPriorityIndicators: vi.fn(() => ({
-		high: '🔴',
-		medium: '🟡',
-		low: '🟢'
-	}))
 }));
 
 // Import modules after mocking

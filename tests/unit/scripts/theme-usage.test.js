@@ -1,18 +1,17 @@
 /**
  * Legacy terminal output must use the TaskGraph theme, not fixed ANSI colors.
  * chalk.white is pale gray on many light themes and chalk.blue is hard to read
- * on dark ones, so text goes through theme.text / theme.brand and boxen borders
- * through BORDER_COLOR (all exported from @tm/cli).
+ * on dark ones, so text goes through theme.text / theme.brand (exported from
+ * @tm/cli).
  */
 import fs from 'fs';
 import path from 'path';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
-const SCAN_DIRS = ['scripts', 'src/ui', 'src/utils'];
+const SCAN_DIRS = ['scripts', 'src/utils'];
 
 // chalk.white, chalk.bold.white, chalk.blue.underline, ...
 const FIXED_TEXT_COLOR = /chalk(\.\w+)*\.(white|blue)\b/;
-const FIXED_BORDER_COLOR = /borderColor:\s*['"]blue['"]/;
 
 function listJsFiles(dir) {
 	return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -158,9 +157,5 @@ describe('legacy terminal colors', () => {
 
 	it('sets style.border on every cli-table3 table', () => {
 		expect(findDefaultBorderTables()).toEqual([]);
-	});
-
-	it("uses BORDER_COLOR instead of borderColor: 'blue'", () => {
-		expect(findOffenders(FIXED_BORDER_COLOR)).toEqual([]);
 	});
 });

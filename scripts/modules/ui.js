@@ -4,10 +4,7 @@
  * Barrel over scripts/modules/ui/: named re-exports only.
  */
 
-export {
-	theme,
-	BORDER_COLOR
-} from './ui/theme.js';
+export { theme } from './ui/theme.js';
 export {
 	displayAsciiBanner,
 	displayAsciiBanner as displayBanner,

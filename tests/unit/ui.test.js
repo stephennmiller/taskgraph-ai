@@ -36,8 +36,6 @@ vi.doMock('figlet', () => ({
 	textSync: vi.fn(() => 'TaskGraph Banner')
 }));
 
-vi.doMock('boxen', () => vi.fn((text) => `[boxed: ${text}]`));
-
 vi.doMock('ora', () =>
 	vi.fn(() => ({
 		start: vi.fn(),

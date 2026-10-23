@@ -62,8 +62,6 @@ vi.doMock('chalk', () => {
 	return { ...m, default: m };
 });
 
-vi.doMock('boxen', () => ({ default: vi.fn((text) => `[boxed: ${text}]`) }));
-
 // Now import SUT after mocks are in place
 import {
 	canMoveWithDependencies,

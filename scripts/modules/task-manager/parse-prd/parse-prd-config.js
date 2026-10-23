@@ -5,7 +5,6 @@
 import { z } from 'zod';
 import { TASK_PRIORITY_OPTIONS } from '../../../../src/constants/task-priority.js';
 import { GeneratedAcceptanceCriteriaSchema } from '../../../../src/schemas/base-schemas.js';
-import { Duration } from '../../../../src/utils/timeout-manager.js';
 import { hasCodebaseAnalysis } from '../../config-manager.js';
 import { getCurrentTag, isSilentMode, log } from '../../utils.js';
 
@@ -55,22 +54,11 @@ export class PrdParseConfig {
 		this.session = options.session;
 		this.projectRoot = options.projectRoot;
 		this.tag = options.tag;
-		this.streamingTimeout =
-			options.streamingTimeout || Duration.seconds(180).milliseconds;
 
 		// Derived values
 		this.targetTag = this.tag || getCurrentTag(this.projectRoot) || 'master';
 		this.isMCP = !!this.mcpLog;
 		this.outputFormat = this.isMCP && !this.reportProgress ? 'json' : 'text';
-
-		// Feature flag: Temporarily disable streaming, use generateObject instead
-		// TODO: Re-enable streaming once issues are resolved
-		const ENABLE_STREAMING = false;
-
-		this.useStreaming =
-			ENABLE_STREAMING &&
-			(typeof this.reportProgress === 'function' ||
-				this.outputFormat === 'text');
 	}
 
 	/**
