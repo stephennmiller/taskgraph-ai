@@ -70,7 +70,7 @@ describe('formatGenerateError', () => {
 			)
 		).toEqual({
 			message: "Couldn't generate task files: EEXIST: file already exists",
-			hint: 'Run `taskgraph list` to check that the tasks file reads'
+			hint: 'Check that .taskgraph/tasks is a folder you can write to'
 		});
 	});
 
@@ -87,6 +87,8 @@ describe('formatGenerateError', () => {
 		expect(message).toBe(
 			"Couldn't write 2 task files to .taskgraph/tasks: task 2: EACCES: permission denied (and 1 more)"
 		);
-		expect(hint).toContain('.taskgraph/tasks is writable');
+		expect(hint).toBe(
+			'Check that .taskgraph/tasks is a folder you can write to'
+		);
 	});
 });

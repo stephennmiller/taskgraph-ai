@@ -53,17 +53,18 @@ export function formatGenerateError(
 	projectRoot: string
 ): { message: string; hint: string } {
 	const dir = relativeDir(result.directory, projectRoot);
+	const hint = `Check that ${dir} is a folder you can write to`;
 	const failed = Object.entries(result.fileErrors ?? {});
 	if (failed.length > 0) {
 		const [id, reason] = failed[0];
 		const more = failed.length > 1 ? ` (and ${failed.length - 1} more)` : '';
 		return {
 			message: `Couldn't write ${plural(failed.length, 'task file')} to ${dir}: task ${id}: ${reason}${more}`,
-			hint: `Check that ${dir} is writable, then run taskgraph generate again`
+			hint
 		};
 	}
 	return {
 		message: `Couldn't generate task files: ${result.error ?? 'unknown error'}`,
-		hint: 'Run `taskgraph list` to check that the tasks file reads'
+		hint
 	};
 }
