@@ -57,7 +57,7 @@ Or in the project's `.mcp.json`:
 }
 ```
 
-`TASKGRAPH_TOOLS` controls how many tools are loaded: `core` (7, the default), `standard` (15) or `all`. Ask the user to restart Claude Code and run `/mcp` to confirm `taskgraph-ai` is connected.
+`TASKGRAPH_TOOLS` controls how many tools are loaded: `core` (7, the default), `standard` (16) or `all`. Ask the user to restart Claude Code and run `/mcp` to confirm `taskgraph-ai` is connected.
 
 ### Step 4: Choose Models (Optional)
 

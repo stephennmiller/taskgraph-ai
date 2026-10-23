@@ -17,9 +17,13 @@ describe('getSuggestedActions', () => {
 		expect(actions).toContain('taskgraph set-status --id=3 --status=done');
 	});
 
-	it('suggests logging progress with update-subtask for an in-progress subtask', () => {
-		const actions = commands(getSuggestedActions('3.2', 'in-progress', false));
-		expect(actions[0]).toBe('taskgraph update-subtask --id=3.2 --prompt="..."');
+	it('suggests logging progress with note for an in-progress task or subtask', () => {
+		expect(commands(getSuggestedActions('3.2', 'in-progress', false))[0]).toBe(
+			'taskgraph note 3.2 "..."'
+		);
+		expect(commands(getSuggestedActions(3, 'in-progress', true))[0]).toBe(
+			'taskgraph note 3 "..."'
+		);
 	});
 
 	it('does not suggest expanding a subtask or a task that already has subtasks', () => {

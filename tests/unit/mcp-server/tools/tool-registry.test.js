@@ -20,8 +20,8 @@ describe('tool-registry', () => {
 			expect(coreTools.length).toBe(7);
 		});
 
-		it('should have exactly 15 standard tools', () => {
-			expect(standardTools.length).toBe(15);
+		it('should have exactly 16 standard tools', () => {
+			expect(standardTools.length).toBe(16);
 		});
 
 		it('should have standardTools include all coreTools', () => {
@@ -48,7 +48,7 @@ describe('tool-registry', () => {
 		it('should return correct counts', () => {
 			const counts = getToolCounts();
 			expect(counts.core).toBe(7);
-			expect(counts.standard).toBe(15);
+			expect(counts.standard).toBe(16);
 			expect(counts.total).toBeGreaterThanOrEqual(14);
 		});
 	});

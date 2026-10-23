@@ -27,9 +27,9 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 		command: 'taskgraph set-status --id=<id> --status=in-progress'
 	},
 	{
-		// update-subtask takes only subtask IDs ("3.2"), update-task only task IDs
-		text: 'Log notes as you go (a top-level task: taskgraph update-task --append)',
-		command: 'taskgraph update-subtask --id=<id> --prompt="<note>"'
+		// Saved as written with a timestamp, no AI call; works on 3 and 3.2
+		text: 'Log what you did and decided as you go',
+		command: 'taskgraph note <id> "<what you did or decided>"'
 	},
 	{
 		text: 'File work you find as a new task instead of doing it now',

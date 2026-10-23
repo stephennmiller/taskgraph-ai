@@ -8,6 +8,8 @@
  *     Found that the CLI parser needs an alias table, so `ls` maps to
  *     `list` before the command runs.
  *
+ *   ✓ Added a note to task 3  Store sessions in SQLite
+ *
  *   ✓ Updated 3 tasks
  *     2  Build the login API
  *     3  Store sessions in SQLite
@@ -22,6 +24,7 @@
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
+import { terminalSafe } from './markdown-formatters.js';
 import { formatResearchAnswer } from './research-formatters.js';
 
 /** The task fields these confirmations show */
@@ -33,11 +36,15 @@ export interface UpdatedTaskRef {
 const fit = (text: string, width: number) =>
 	text.length > width ? `${text.slice(0, Math.max(1, width - 1))}…` : text;
 
-/** `✓ <lead>  <title>`, with the title cut to fit on one line */
+/**
+ * `✓ <lead>  <title>`, with the title cut to fit on one line. The title
+ * comes from tasks.json, so escape sequences in it are removed first.
+ */
 function resultLine(lead: string, title: string, width: number): string {
 	// "✓ " + lead + 2-space gap
 	const titleWidth = Math.max(10, width - lead.length - 4);
-	return `${chalk.green('✓')} ${lead}  ${fit(title, titleWidth)}`;
+	const safeTitle = terminalSafe(title).replace(/\s+/g, ' ');
+	return `${chalk.green('✓')} ${lead}  ${fit(safeTitle, titleWidth)}`;
 }
 
 /** `Run taskgraph show 2 to see what changed`, shortened for narrow terminals */
@@ -95,6 +102,21 @@ export function formatNotesAdded(
 		.map((line) => (line ? `${indent}${line}` : line))
 		.join('\n');
 	return `${resultLine(`Added notes to ${name}`, target.title, width)}\n${body}`;
+}
+
+/**
+ * Format the line `taskgraph note` prints once the note is saved. The note
+ * isn't echoed: it was saved as typed, so showing it again says it twice.
+ *
+ * @param note - The task or subtask the note was added to
+ * @param width - Terminal width; the title is cut to fit on one line
+ */
+export function formatNoteAdded(
+	note: UpdatedTaskRef & { isSubtask: boolean },
+	width = terminalWidth()
+): string {
+	const kind = note.isSubtask ? 'subtask' : 'task';
+	return resultLine(`Added a note to ${kind} ${note.id}`, note.title, width);
 }
 
 /**

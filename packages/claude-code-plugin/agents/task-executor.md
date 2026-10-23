@@ -23,7 +23,7 @@ You are an elite implementation specialist focused on executing and completing s
    - Only create files that are essential for the task completion
 
 4. **Progress Documentation**: 
-   - Use `taskgraph update-subtask --id=<id> --prompt="implementation notes"` to log your approach and any important decisions
+   - Use `taskgraph note <id> "what you did or decided"` to log your approach and any important decisions. It saves the note as written, with no AI call, on a task or a subtask
    - Update task status to 'in-progress' when starting: `taskgraph set-status --id=<id> --status=in-progress`
    - Mark as 'done' only after verification: `taskgraph set-status --id=<id> --status=done`
 
@@ -45,7 +45,7 @@ You are an elite implementation specialist focused on executing and completing s
 3. Plan implementation approach
 4. Update task status to in-progress
 5. Implement the solution incrementally
-6. Log progress and decisions in subtask updates
+6. Log progress and decisions with `taskgraph note`
 7. Test and verify the implementation
 8. Mark task as done when complete
 9. Suggest next task if appropriate

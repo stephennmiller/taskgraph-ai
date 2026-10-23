@@ -144,8 +144,13 @@ describe('taskgraph prime rules', () => {
 		...invocations(rule.command)
 	]);
 
-	it('name five taskgraph commands across the rules (guards the extraction)', () => {
-		expect(calls).toHaveLength(5);
+	it('name four taskgraph commands across the rules (guards the extraction)', () => {
+		expect(calls.map((c) => c.command)).toEqual([
+			'set-status',
+			'note',
+			'add-task',
+			'set-status'
+		]);
 	});
 
 	it('only name CLI commands the program registers', () => {

@@ -352,13 +352,7 @@ describe('taskgraph flags used in command bodies', () => {
 		const body = readFileSync(join(commandsDir, 'to-done.md'), 'utf-8');
 
 		expect(invocations(body).map((call) => call.command)).toEqual(
-			expect.arrayContaining([
-				'show',
-				'set-status',
-				'update-subtask',
-				'update-task',
-				'next'
-			])
+			expect.arrayContaining(['show', 'set-status', 'note', 'next'])
 		);
 		expect(unknownFlags(body)).toEqual([]);
 	});
@@ -376,18 +370,21 @@ describe('to-done', () => {
 		expect(body).toContain('taskgraph set-status --id=<id> --check <n>,<n>');
 	});
 
-	it('saves the summary before marking the task done', () => {
-		expect(
-			body.indexOf('taskgraph update-task --id=<id> --append')
-		).toBeLessThan(
+	it('saves the summary with taskgraph note before marking the task done', () => {
+		const note = body.indexOf("taskgraph note <id> 'Close summary");
+
+		expect(note).toBeGreaterThan(-1);
+		expect(note).toBeLessThan(
 			body.indexOf('taskgraph set-status --id=<id> --status=done')
 		);
+		// note saves the text as written; the AI rewrite commands aren't needed
+		expect(body).not.toMatch(/^\s*taskgraph update-(sub)?task/m);
 	});
 
 	it('passes the summary in single quotes, so the shell runs nothing in it', () => {
-		const prompts = [...body.matchAll(/^\s*taskgraph .*--prompt=(.)/gm)];
+		const notes = [...body.matchAll(/^\s*taskgraph note <id> (.)/gm)];
 
-		expect(prompts.map((match) => match[1])).toEqual(["'", "'"]);
+		expect(notes.map((match) => match[1])).toEqual(["'"]);
 		expect(body).toContain("write any `'` inside it as `'\\''`");
 	});
 

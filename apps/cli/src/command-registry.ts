@@ -16,6 +16,7 @@ import { GithubCommand } from './commands/github/github.command.js';
 import { LoopCommand } from './commands/loop.command.js';
 import { MergeDriverCommand } from './commands/merge-driver.command.js';
 import { NextCommand } from './commands/next.command.js';
+import { NoteCommand } from './commands/note.command.js';
 import { PrimeCommand } from './commands/prime.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
 import { ShowCommand } from './commands/show.command.js';
@@ -90,6 +91,12 @@ export class CommandRegistry {
 			name: 'set-status',
 			description: 'Update the status of one or more tasks',
 			commandClass: SetStatusCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'note',
+			description: 'Log a progress note on a task, as written (no AI)',
+			commandClass: NoteCommand as any,
 			category: 'task'
 		},
 		{

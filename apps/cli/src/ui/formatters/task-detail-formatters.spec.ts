@@ -130,9 +130,7 @@ describe('formatTaskDetail', () => {
 	it('ends with one next step that fits the status', () => {
 		const output = lines(formatTaskDetail(signIn(), { width: 80 }));
 
-		expect(output.at(-1)).toBe(
-			'Next: taskgraph update-task --id=2 --prompt="..." to update details'
-		);
+		expect(output.at(-1)).toBe('Next: taskgraph note 2 "..." to log progress');
 		expect(output.filter((line) => line.startsWith('Next:'))).toHaveLength(1);
 	});
 
@@ -160,10 +158,9 @@ describe('formatTaskDetail', () => {
 			'  2.2  ▶ in-progress  Sessions table and cookie m…\n' +
 				'                      after 2.1'
 		);
-		expect(lines(output).slice(-2)).toEqual([
-			'Next: taskgraph update-task --id=2 --prompt="..."',
-			'      to update details'
-		]);
+		expect(lines(output).at(-1)).toBe(
+			'Next: taskgraph note 2 "..." to log progress'
+		);
 	});
 
 	it('wraps a long title under itself', () => {
@@ -269,7 +266,7 @@ describe('formatTaskDetail', () => {
 			'▶ in-progress · medium priority · depends on 2.1 and 5'
 		);
 		expect(output.at(-1)).toBe(
-			'Next: taskgraph update-subtask --id=2.2 --prompt="..." to log progress notes'
+			'Next: taskgraph note 2.2 "..." to log progress'
 		);
 	});
 

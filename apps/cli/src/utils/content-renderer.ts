@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import { MarkedExtension, marked } from 'marked';
 import { markedTerminal } from 'marked-terminal';
 import TurndownService from 'turndown';
+import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { theme } from '../ui/theme.js';
 
 // Initialize turndown for HTML to Markdown conversion
@@ -80,7 +81,9 @@ export function toMarkdown(content: string): string {
 export function renderContent(content: string): string {
 	if (!content) return '';
 
-	const cleaned = toMarkdown(content);
+	// Task text is written by people, agents and notes: drop escape
+	// sequences before it reaches the terminal
+	const cleaned = toMarkdown(terminalSafe(content));
 
 	// Render markdown to terminal
 	const result = marked(cleaned);
