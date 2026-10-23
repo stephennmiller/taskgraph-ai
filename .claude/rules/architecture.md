@@ -71,7 +71,7 @@ paths:
   - **[`mcp-server/`](../../mcp-server/): MCP Server Integration**
     - **Purpose**: Provides MCP interface using FastMCP.
     - **Responsibilities** (See also: `mcp.md`):
-      - Registers tools (`mcp-server/src/tools/*.js`). Tool `execute` methods **should be wrapped** with the `withNormalizedProjectRoot` HOF (from `tools/utils.js`) to ensure consistent path handling.
+      - Registers tools (`mcp-server/src/tools/*.js`). Tool `execute` methods **should be wrapped** with the `withNormalizedProjectRoot` HOF (from `@tm/mcp`) to ensure consistent path handling.
       - The HOF provides a normalized `args.projectRoot` to the `execute` method.
       - Tool `execute` methods call **direct function wrappers** (`mcp-server/src/core/direct-functions/*.js`), passing the normalized `projectRoot` and other args.
       - Direct functions use path utilities (`mcp-server/src/core/utils/`) to resolve paths based on `projectRoot` from session.
@@ -294,18 +294,15 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, `handleApiResult`, **`getProjectRootFromSession`**, and your `yourCommandDirect` function.
+    - Import `zod`, `yourCommandDirect`, and `withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse` from `@tm/mcp`.
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters, making `projectRoot` optional**: `projectRoot: z.string().optional().describe(...)`.
     - If the operation is long-running, pass `reportProgress` from the tool context through `checkProgressCapability` to the direct function (see `mcp.md`).
-    - Implement the standard `execute` method:
-      - Get `rootFolder` using `getProjectRootFromSession` (with fallback to `args.projectRoot`).
-      - Call `yourCommandDirect({ ...args, projectRoot: rootFolder }, log, { session })`.
-      - Pass the result to `handleApiResult`.
+    - Wrap `execute` in `withNormalizedProjectRoot` (it normalizes `args.projectRoot`):
+      - Call `yourCommandDirect({ ...args }, log, { session })`.
+      - Return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot })`.
 
-5.  **Register Tool**: Import and call `registerYourCommandTool` in `mcp-server/src/tools/index.js`.
-
-6.  **Update `mcp.json`**: Add the new tool definition.
+5.  **Register Tool**: Add `your_command: registerYourCommandTool` to `toolRegistry` in `mcp-server/src/tools/tool-registry.js` (tiers and counts: `mcp.md`). `.mcp.json` lists no tools, so it needs no change.
 
 ## Project Initialization
 

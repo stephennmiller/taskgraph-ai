@@ -526,28 +526,33 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, `handleApiResult`, **`withNormalizedProjectRoot` HOF**, and your `yourCommandDirect` function.
+    - Import `zod`, your `yourCommandDirect` function, and **`withNormalizedProjectRoot`**, `handleApiResult` and `createErrorResponse` from `@tm/mcp`.
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters**: Make `projectRoot` optional (`z.string().optional().describe(...)`) as the HOF handles fallback.
     - If the operation is long-running, report progress as described in Progress Reporting below.
-    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`**:
+    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`** (see `mcp-server/src/tools/next-task.js`):
       ```javascript
       execute: withNormalizedProjectRoot(async (args, { log, session }) => {
           // args.projectRoot is now normalized
           const { projectRoot /*, other args */ } = args;
           // ... resolve tasks path if needed using normalized projectRoot ...
           const result = await yourCommandDirect(
-              { /* other args */, projectRoot /* if needed by direct func */ }, 
-              log, 
+              { /* other args */, projectRoot /* if needed by direct func */ },
+              log,
               { session }
           );
-          return handleApiResult(result, log);
+          return handleApiResult({
+              result,
+              log,
+              errorPrefix: 'Error running your_command',
+              projectRoot
+          });
       })
       ```
 
-5.  **Register Tool**: Import and call `registerYourCommandTool` in `mcp-server/src/tools/index.js`.
+5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. Then update `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js` (and `EXPECTED_CORE_TOOLS` there for a core tool). A core or standard tool also changes the tier counts asserted in `tests/unit/mcp-server/tools/tool-registry.test.js`.
 
-6.  **Update `mcp.json`**: Add the new tool definition to the `tools` array in `.mcp.json`.
+6.  **No `.mcp.json` change**: `.mcp.json` only starts the server; it has no list of tools.
 
 ## Progress Reporting
 
@@ -593,6 +598,7 @@ When implementing project initialization commands:
 2. **In MCP Tool Implementation**:
    ```javascript
    // In initialize-project.js MCP tool:
+   import { createErrorResponse, handleApiResult } from "@tm/mcp";
    import { z } from "zod";
    import { initializeProjectDirect } from "../core/taskgraph-core.js";
    
@@ -610,7 +616,7 @@ When implementing project initialization commands:
          try {
            // No need for project root since we're creating a new project
            const result = await initializeProjectDirect(args, log);
-           return handleApiResult(result, log, 'Error initializing project');
+           return handleApiResult({ result, log, errorPrefix: 'Error initializing project' });
          } catch (error) {
            log.error(`Error in initialize_project: ${error.message}`);
            return createErrorResponse(`Failed to initialize project: ${error.message}`);
@@ -778,12 +784,15 @@ When implementing project initialization commands:
             log,
             { session }
           );
-          return handleApiResult(result, log);
+          return handleApiResult({ result, log, projectRoot: args.projectRoot });
         } catch (error) {
           return handleApiResult({
-            success: false,
-            error: { code: 'EXECUTION_ERROR', message: error.message }
-          }, log);
+            result: {
+              success: false,
+              error: { code: 'EXECUTION_ERROR', message: error.message }
+            },
+            log
+          });
         }
       })
     });
