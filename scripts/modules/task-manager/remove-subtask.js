@@ -1,6 +1,7 @@
 import {
 	assignMetadata,
 	dependenciesForMovedItem,
+	dropReferences,
 	liveOrArchived,
 	nextTaskId,
 	pruneTaskLinks,
@@ -124,7 +125,8 @@ async function removeSubtask(
 
 			log('info', `Created new task ${newTaskId} from subtask ${subtaskId}`);
 		} else {
-			// Related and discovered-from links to it go with it
+			// Dependencies on it, their marks and links to it go with it
+			dropReferences(data.tasks, [`${parentId}.${subtaskIdNum}`]);
 			pruneTaskLinks(
 				data.tasks,
 				liveOrArchived(
