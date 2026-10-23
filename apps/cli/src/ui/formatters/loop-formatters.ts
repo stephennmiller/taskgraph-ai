@@ -46,7 +46,7 @@ export function formatLoopIntro(intro: LoopIntro, width = 80): string[] {
 	const task = intro.pinned ?? intro.next;
 	if (task) {
 		const label = intro.pinned ? 'Task' : 'Starts with task';
-		const head = `${label} ${task.id}  `;
+		const head = `${label} ${fit(task.id, 20)}  `;
 		lines.push(theme.text(head + fit(task.title, width - head.length)));
 	} else if (intro.next === null) {
 		lines.push(chalk.yellow('No task is ready to work on'));
@@ -56,6 +56,6 @@ export function formatLoopIntro(intro: LoopIntro, width = 80): string[] {
 
 /** The one line `start` prints before it runs the loop */
 export function formatStartDeprecation(taskId?: string): string {
-	const command = `taskgraph loop -n 1${taskId ? ` --id ${fit(taskId, 20)}` : ''}`;
+	const command = `taskgraph loop -n 1${taskId ? ` --id ${fit(taskId, taskId.length)}` : ''}`;
 	return chalk.yellow(`start is deprecated; run ${command} instead`);
 }

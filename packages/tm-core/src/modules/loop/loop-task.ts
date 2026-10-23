@@ -45,8 +45,8 @@ export function assertTaskPreset(prompt: string): void {
 
 /**
  * How many iterations a run gets when the user didn't pass `-n`: one for a
- * pinned task (it is one task's work), otherwise the pending count for the
- * default preset, otherwise 10.
+ * pinned task (it is one task's work), otherwise the pending count for a
+ * preset that works on tasks (`default`, `tdd`), otherwise 10.
  */
 export function defaultIterations(options: {
 	preset: string;
@@ -55,7 +55,7 @@ export function defaultIterations(options: {
 }): number {
 	if (options.taskId !== undefined) return 1;
 	if (
-		options.preset === 'default' &&
+		isTaskPreset(options.preset) &&
 		options.pendingTaskCount !== undefined &&
 		options.pendingTaskCount > 0
 	) {

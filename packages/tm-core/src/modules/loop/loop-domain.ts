@@ -28,6 +28,9 @@ import type {
 import { LoopService } from './services/loop.service.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 
+/** A task ID (`3`) or a subtask ID (`3.2`): no spaces, at most one dot */
+const TASK_ID_PATTERN = /^[^.\s]+(\.[^.\s]+)?$/;
+
 /**
  * Loop Domain - Unified API for loop operations
  * Coordinates LoopService with lazy instantiation
@@ -121,9 +124,14 @@ export class LoopDomain {
 	): Promise<LoopTask> {
 		assertTaskPreset(options.prompt ?? 'default');
 		const id = taskId.trim();
+		// One task ID, or one dot for a subtask: the ID goes into Claude's
+		// prompt, so `3.2.9` or `3 and also 4` must not reach it
 		const found =
-			id && this.tasks ? await this.tasks.get(id, options.tag) : null;
-		if (!found?.task) {
+			TASK_ID_PATTERN.test(id) && this.tasks
+				? await this.tasks.get(id, options.tag)
+				: null;
+		// tasks.get falls back to the parent when it has no subtasks list
+		if (!found?.task || (id.includes('.') && !found.isSubtask)) {
 			throw new LoopError(
 				`Task "${id}" doesn't exist${options.tag ? ` in tag '${options.tag}'` : ''}`,
 				'Run `taskgraph list` to see task IDs'

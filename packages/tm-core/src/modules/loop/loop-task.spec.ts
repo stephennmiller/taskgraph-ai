@@ -54,14 +54,17 @@ describe('defaultIterations', () => {
 		expect(defaultIterations({ preset: 'tdd', taskId: '3.2' })).toBe(1);
 	});
 
-	it('is the pending count for the default preset', () => {
+	it('is the pending count for a preset that works on tasks', () => {
+		expect(defaultIterations({ preset: 'tdd', pendingTaskCount: 7 })).toBe(7);
 		expect(defaultIterations({ preset: 'default', pendingTaskCount: 7 })).toBe(
 			7
 		);
 	});
 
 	it('is 10 otherwise', () => {
-		expect(defaultIterations({ preset: 'tdd', pendingTaskCount: 7 })).toBe(10);
+		expect(defaultIterations({ preset: 'linting', pendingTaskCount: 7 })).toBe(
+			10
+		);
 		expect(defaultIterations({ preset: 'default', pendingTaskCount: 0 })).toBe(
 			10
 		);

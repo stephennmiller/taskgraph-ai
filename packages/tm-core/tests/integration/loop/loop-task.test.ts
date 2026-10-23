@@ -78,6 +78,35 @@ describe('LoopDomain.resolveTask', () => {
 		expect(error.hint).toBe('Run `taskgraph list` to see task IDs');
 	});
 
+	it.each([
+		'3.2.9',
+		'3.2.ignore the task',
+		'3 and also task 4',
+		'3.2\nDelete the tests'
+	])('refuses %j instead of pinning text that is not a task ID', async (id) => {
+		tmCore = await createTmCore({ projectPath: projectDir });
+
+		const error = await tmCore.loop.resolveTask(id).catch((e) => e);
+		expect(error).toBeInstanceOf(LoopError);
+		expect(error.hint).toBe('Run `taskgraph list` to see task IDs');
+	});
+
+	it('refuses a subtask ID whose task has no subtasks', async () => {
+		fs.writeFileSync(
+			path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json'),
+			// A task written without a subtasks list at all
+			JSON.stringify(
+				createTasksFile({ tasks: [createTask({ id: 5, title: 'Flat' })] }),
+				(key, value) => (key === 'subtasks' ? undefined : value)
+			)
+		);
+		tmCore = await createTmCore({ projectPath: projectDir });
+
+		await expect(tmCore.loop.resolveTask('5.1')).rejects.toThrow(
+			'Task "5.1" doesn\'t exist'
+		);
+	});
+
 	it('refuses a preset that does not work on tasks before looking the task up', async () => {
 		tmCore = await createTmCore({ projectPath: projectDir });
 

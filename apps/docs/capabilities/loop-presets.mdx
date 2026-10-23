@@ -43,12 +43,12 @@ taskgraph loop -n 5 --prompt tdd       # the next five tasks
 ```
 
 **What it does:**
-1. Picks the task (`--id`, or `taskgraph next`), marks it `in-progress`, and works on a branch named `task-<id>` (created if missing, reused if it exists)
-2. For each subtask in dependency order, or once for a task without subtasks:
+1. Picks the task (`--id`, or `taskgraph next`), stops with `<loop-blocked>` if files outside `.taskgraph/` have uncommitted changes, works on a branch named `task-<id>` (created if missing, reused if it exists), and marks the task `in-progress`
+2. For each subtask in dependency order, or once for a task without subtasks or a pinned subtask (`--id 3.2`):
    - **RED**: writes a test for the subtask and runs it; it must fail because the behavior is missing
    - **GREEN**: writes the smallest change that makes it pass, and runs the whole suite
    - **COMMIT**: runs the type check, commits the test and the code together, and marks the subtask done
-3. Runs the whole suite once more, leaves no uncommitted changes, and marks the task done
+3. Runs the whole suite once more, leaves no uncommitted changes outside `.taskgraph/`, and marks the task done
 
 **Completion criteria:** No task is left. A subtask that fails three RED or GREEN attempts in a row stops the loop with `<loop-blocked>`.
 

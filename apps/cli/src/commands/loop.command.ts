@@ -110,9 +110,9 @@ export class LoopCommand extends Command {
 						})
 					: undefined;
 
-			// Get pending task count for default preset iteration resolution
+			// Pending count (tasks + subtasks) caps a run of a preset that works on tasks
 			const pendingTaskCount =
-				prompt === 'default' && !pinned
+				this.tmCore.loop.isTaskPreset(prompt) && !pinned
 					? await this.tmCore.tasks.getCount('pending', options.tag)
 					: undefined;
 

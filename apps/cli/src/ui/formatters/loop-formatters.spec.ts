@@ -52,6 +52,14 @@ describe('formatLoopIntro', () => {
 		).toBe('Starts with task 1.2  Users table');
 	});
 
+	it('prints a task ID from tasks.json without its escape sequences', () => {
+		const [, line] = formatLoopIntro(
+			intro({ next: { id: '4\x1b[2J', title: 'Clear' } })
+		);
+		expect(line).not.toContain('\x1b[2J');
+		expect(stripVTControlCharacters(line)).toBe('Starts with task 4  Clear');
+	});
+
 	it('says when no task is ready', () => {
 		expect(plain(formatLoopIntro(intro({ next: null })))[1]).toBe(
 			'No task is ready to work on'

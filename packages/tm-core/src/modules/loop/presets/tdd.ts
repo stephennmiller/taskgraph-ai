@@ -17,11 +17,14 @@ Implement ONE task from the TaskGraph backlog, test-first. Work through its subt
 
 1. If the taskgraph command is not found, run: npm i -g taskgraph-ai
 2. Run taskgraph next to get the next available task, and taskgraph show <id> to read it.
-3. Mark it started: taskgraph set-status --id=<id> --status=in-progress
-4. Make sure the git working tree is clean. Work on a branch named task-<id>; create it if it does not exist, or continue on it if it does.
-5. Find the project's test command (package.json scripts, Makefile, pytest, cargo test and so on).
+3. Check git status. Changes under .taskgraph/ are fine; if anything else is uncommitted, stop and output <loop-blocked>TASK <id>: uncommitted changes</loop-blocked>.
+4. Work on a branch named task-<id>; create it if it does not exist, or continue on it if it does.
+5. Mark it started: taskgraph set-status --id=<id> --status=in-progress
+6. Find the project's test command (package.json scripts, Makefile, pytest, cargo test and so on).
 
-### For each subtask, in dependency order (once for the task if it has none)
+### For each subtask, in dependency order
+
+If the task has no subtasks, or <id> is itself a subtask (like 3.2), run one cycle for <id> and skip marking a subtask done.
 
 RED: Write a test for the behavior the subtask describes. Run the tests. The new test must fail, and fail because the behavior is missing, not because of a typo or a broken import. If it passes already, the test does not cover new behavior: change it until it fails.
 
@@ -31,7 +34,7 @@ COMMIT: Run the type check if the project has one. Commit the test and the code 
 
 ### Finish
 
-1. Run the whole test suite one last time. Leave no uncommitted changes.
+1. Run the whole test suite one last time. Leave no uncommitted changes outside .taskgraph/.
 2. Mark the task done: taskgraph set-status --id=<id> --status=done
 3. Append super-concise notes to the progress file: task ID, branch, subtasks done, any learnings.
 
