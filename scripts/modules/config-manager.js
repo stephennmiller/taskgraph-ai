@@ -777,6 +777,7 @@ function writeConfig(config, explicitRoot = null) {
 			JSON.stringify(toSavedConfig(config, saved, DEFAULTS), null, 2)
 		);
 		loadedConfig = config; // Update the cache after successful write
+		loadedConfigRoot = rootPath;
 		return true;
 	} catch (error) {
 		console.error(

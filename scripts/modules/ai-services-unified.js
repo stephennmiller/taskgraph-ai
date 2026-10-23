@@ -678,7 +678,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 					lowerCaseMessage.includes('tool use is not supported')
 				) {
 					const specificErrorMsg = `Model '${modelId || 'unknown'}' via provider '${providerName || 'unknown'}' does not support the 'tool use' required by generateObjectService. Please configure a model that supports tool/function calling for the '${currentRole}' role, or use generateTextService if structured output is not strictly required.`;
-					log('error', `[Tool Support Error] ${specificErrorMsg}`);
+					log('debug', `[Tool Support Error] ${specificErrorMsg}`);
 					throw new Error(specificErrorMsg);
 				}
 			}

@@ -824,6 +824,21 @@ describe('getConfig Tests', () => {
 
 // --- writeConfig Tests ---
 describe('writeConfig', () => {
+	test("doesn't serve another project's written config as the cached one", () => {
+		mockFindConfigPath.mockImplementation((_, { projectRoot }) =>
+			path.join(projectRoot, '.taskgraph/config.json')
+		);
+		configManager.getConfig(MOCK_PROJECT_ROOT, true);
+
+		// The MCP server serves several projects in one process
+		configManager.writeConfig(VALID_CUSTOM_CONFIG, '/other/project');
+
+		expect(configManager.getConfig('/other/project')).toEqual(
+			VALID_CUSTOM_CONFIG
+		);
+		expect(configManager.getConfig(MOCK_PROJECT_ROOT)).toEqual(DEFAULT_CONFIG);
+	});
+
 	test('should write valid config to file', () => {
 		// Arrange (Default mocks are sufficient)
 		// findProjectRoot mock set in beforeEach
