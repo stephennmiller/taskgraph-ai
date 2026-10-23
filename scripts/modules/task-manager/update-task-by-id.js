@@ -1,12 +1,10 @@
-import { theme } from '@tm/cli/theme';
+import { ui } from '@tm/cli';
 import {
 	assignMetadata,
 	keepChecklistFields,
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import fs from 'fs';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
@@ -109,28 +107,11 @@ async function updateTaskById(
 		}
 		const taskToUpdate = data.tasks[taskIndex];
 		if (taskToUpdate.status === 'done' || taskToUpdate.status === 'completed') {
-			report(
-				'warn',
-				`Task ${taskId} is already marked as done and cannot be updated`
-			);
-
-			// Only show warning box for text output (CLI)
-			if (outputFormat === 'text') {
-				console.log(
-					boxen(
-						chalk.yellow(
-							`Task ${taskId} is already marked as ${taskToUpdate.status} and cannot be updated.`
-						) +
-							'\n\n' +
-							theme.text(
-								'Completed tasks are locked to maintain consistency. To modify a completed task, you must first:'
-							) +
-							'\n' +
-							theme.text('1. Change its status to "pending" or "in-progress"') +
-							'\n' +
-							theme.text('2. Then run the update-task command'),
-						{ padding: 1, borderColor: 'yellow', borderStyle: 'round' }
-					)
+			// The CLI command explains this once, with the fix; MCP gets a warning
+			if (outputFormat !== 'text') {
+				report(
+					'warn',
+					`Task ${taskId} is already marked as done and cannot be updated`
 				);
 			}
 			return null;
@@ -296,23 +277,25 @@ async function updateTaskById(
 			if (appendMode) {
 				// Append mode: handle as plain text
 				const generatedContentString = aiServiceResponse.mainResult;
-				let newlyAddedSnippet = '';
+				const addedNotes =
+					typeof generatedContentString === 'string'
+						? generatedContentString.trim()
+						: '';
 
-				if (generatedContentString && generatedContentString.trim()) {
+				if (addedNotes) {
 					const timestamp = new Date().toISOString();
-					const formattedBlock = `<info added on ${timestamp}>\n${generatedContentString.trim()}\n</info added on ${timestamp}>`;
-					newlyAddedSnippet = formattedBlock;
+					const formattedBlock = `<info added on ${timestamp}>\n${addedNotes}\n</info added on ${timestamp}>`;
 
 					// Append to task details
 					taskToUpdate.details =
 						(taskToUpdate.details ? taskToUpdate.details + '\n' : '') +
 						formattedBlock;
-				} else {
+				} else if (outputFormat !== 'text') {
+					// The CLI line below says so
 					report(
 						'warn',
 						'AI response was empty or whitespace after trimming. Original details remain unchanged.'
 					);
-					newlyAddedSnippet = 'No new details were added by the AI.';
 				}
 
 				// Update description with timestamp if prompt is short
@@ -335,20 +318,12 @@ async function updateTaskById(
 				writeJSON(tasksPath, data, projectRoot, tag);
 				report('debug', `Successfully appended to task ${taskId}`);
 
-				// Display success message for CLI
+				// Say what was added, once
 				if (outputFormat === 'text') {
 					console.log(
-						boxen(
-							chalk.green(`Successfully appended to task #${taskId}`) +
-								'\n\n' +
-								theme.text.bold('Title:') +
-								' ' +
-								taskToUpdate.title +
-								'\n\n' +
-								theme.text.bold('Newly Added Content:') +
-								'\n' +
-								theme.text(newlyAddedSnippet),
-							{ padding: 1, borderColor: 'green', borderStyle: 'round' }
+						ui.formatNotesAdded(
+							{ kind: 'task', id: taskId, title: taskToUpdate.title },
+							addedNotes
 						)
 					);
 				}
@@ -527,7 +502,11 @@ async function updateTaskById(
 
 			// --- Write File and Generate (Unchanged) ---
 			writeJSON(tasksPath, data, projectRoot, tag);
-			report('success', `Updated task ${taskId}`);
+			if (outputFormat === 'text') {
+				console.log(ui.formatTaskUpdated(updatedTask));
+			} else {
+				report('success', `Updated task ${taskId}`);
+			}
 			// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 			// --- End Write File ---
 

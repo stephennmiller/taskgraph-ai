@@ -62,6 +62,27 @@ export {
 	type HelpRow
 } from './formatters/help-formatters.js';
 
+// What update-task, update and update-subtask changed
+export {
+	formatNotesAdded,
+	formatNothingToUpdate,
+	formatTasksUpdated,
+	formatTaskUpdated,
+	type UpdatedTaskRef
+} from './formatters/task-update-formatters.js';
+
+// What parse-prd says after saving its tasks
+export {
+	formatParsePrdSaved,
+	type ParsePrdSaved
+} from './formatters/parse-prd-formatters.js';
+
+// The line expand --all ends with
+export {
+	formatExpandAll,
+	type ExpandAllSummary
+} from './formatters/expand-all-formatters.js';
+
 // Session context for coding agents (`taskgraph prime`)
 export { formatPrimeContext } from './formatters/prime-formatters.js';
 
