@@ -14,8 +14,10 @@ Uses the research role, which runs on Claude Code with web search and fetch acce
 ## Execution
 
 ```bash
-taskgraph parse-prd --input=$ARGUMENTS --research
+taskgraph parse-prd '<prd-file>' --research
 ```
+
+Put the file path in single quotes, and write any `'` in it as `'\''`.
 
 ## Research Benefits
 

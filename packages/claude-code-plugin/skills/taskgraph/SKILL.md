@@ -14,9 +14,11 @@ For what the user asked:
 - What next: `taskgraph next`, then `taskgraph show <id>` for its details.
 - What's left: `taskgraph list --status=pending` (or `--status=in-progress`, `--tag=<tag>`).
 - Plan from a spec: `taskgraph parse-prd <file>`, then `taskgraph expand --id=<id>` for a task too big to do in one go.
-- New work: `taskgraph add-task --prompt="<what>"`.
+- New work: `taskgraph add-task --prompt='<what>'`.
 - Start a task: `taskgraph set-status --id=<id> --status=in-progress`.
-- Log progress: `taskgraph note <id> "<what you did or decided>"`.
+- Log progress: `taskgraph note <id> '<what you did or decided>'`.
 - Finish: check its criteria, then `taskgraph set-status --id=<id> --status=done`.
+
+Put free text (a prompt, a note) in single quotes and write any `'` in it as `'\''`. In double quotes the shell runs backticks and `$(...)` in the text.
 
 Change tasks through these commands, not by editing `.taskgraph/tasks/tasks.json`. `taskgraph <command> --help` lists a command's flags.

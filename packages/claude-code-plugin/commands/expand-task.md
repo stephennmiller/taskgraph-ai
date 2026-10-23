@@ -14,8 +14,10 @@ Analyzes a task and creates detailed subtasks for better manageability.
 ## Execution
 
 ```bash
-taskgraph expand --id=$ARGUMENTS
+taskgraph expand --id=<id>
 ```
+
+Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
 
 ## Expansion Process
 

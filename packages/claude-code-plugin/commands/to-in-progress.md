@@ -21,8 +21,10 @@ This command does more than just change status - it prepares your environment fo
 ## Execution
 
 ```bash
-taskgraph set-status --id=$ARGUMENTS --status=in-progress
+taskgraph set-status --id=<id> --status=in-progress
 ```
+
+Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
 
 ## Environment Setup
 
