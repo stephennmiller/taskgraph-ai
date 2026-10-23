@@ -172,7 +172,7 @@ export class TmCore {
 			this._workflow = new WorkflowDomain(this._configManager);
 			this._git = new GitDomain(this._projectPath);
 			this._config = new ConfigDomain(this._configManager);
-			this._loop = new LoopDomain(this._configManager);
+			this._loop = new LoopDomain(this._configManager, this._tasks);
 
 			// Initialize domains that need async setup
 			await this._tasks.initialize();

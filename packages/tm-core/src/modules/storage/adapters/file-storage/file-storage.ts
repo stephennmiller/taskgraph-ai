@@ -438,13 +438,11 @@ export class FileStorage implements IStorage {
 		);
 	}
 
-	/**
-	 * Claim the next task nobody has started: set it in-progress and record
-	 * the claim, inside one read-modify-write under the file lock
-	 */
+	/** Claim the next unstarted task, from `among` if set, under the file lock */
 	async claimNextTask(
 		claimant: string,
-		tag?: string
+		tag?: string,
+		among?: ReadonlySet<string>
 	): Promise<TaskClaim | null> {
 		return this.mutateTasks(tag, async (tasks) => {
 			// Read after tasks.json: archive writes archive.json first, so a task
@@ -454,7 +452,8 @@ export class FileStorage implements IStorage {
 				tasks,
 				claimant,
 				new Date().toISOString(),
-				archived
+				archived,
+				{ among }
 			);
 			return outcome
 				? { tasks: outcome.tasks, result: outcome.claim }

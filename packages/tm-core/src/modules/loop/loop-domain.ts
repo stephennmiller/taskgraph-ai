@@ -6,12 +6,18 @@
 import path from 'node:path';
 import { getLogger } from '../../common/logger/index.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
+import type { TasksDomain } from '../tasks/tasks-domain.js';
 import {
 	PRESET_NAMES,
 	isPreset as checkIsPreset,
 	getPreset
 } from './presets/index.js';
 import { isLoopTrusted, trustLoop } from './loop-trust.js';
+import { ParallelLoopRunner } from './parallel/parallel-runner.js';
+import type {
+	ParallelLoopOptions,
+	ParallelLoopResult
+} from './parallel/types.js';
 import { LoopService } from './services/loop.service.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 
@@ -24,7 +30,10 @@ export class LoopDomain {
 	private loopService: LoopService | null = null;
 	private readonly projectRoot: string;
 
-	constructor(configManager: ConfigManager) {
+	constructor(
+		configManager: ConfigManager,
+		private readonly tasks?: TasksDomain
+	) {
 		this.projectRoot = configManager.getProjectRoot();
 	}
 
@@ -90,6 +99,25 @@ export class LoopDomain {
 		const fullConfig = this.buildConfig(config);
 		this.loopService = new LoopService({ projectRoot: this.projectRoot });
 		return this.loopService.run(fullConfig);
+	}
+
+	/**
+	 * Run up to `parallel` ready tasks (wave 1) side by side, each claimed,
+	 * in its own worktree on `taskgraph/task-<id>`, with one Claude Code
+	 * process per task. Never merges. Abort with `options.signal`.
+	 * @throws ParallelLoopError (with a hint) for a bad count, a dirty tree,
+	 *   or a project that isn't a git repository
+	 */
+	async runParallel(options: ParallelLoopOptions): Promise<ParallelLoopResult> {
+		if (!options.trusted && !this.isTrusted()) {
+			throw new Error(
+				'loop runs Claude with permission prompts off in this project. Approve it first, or pass --trust.'
+			);
+		}
+		if (!this.tasks) {
+			throw new Error('loop --parallel needs the tasks domain');
+		}
+		return new ParallelLoopRunner(this.projectRoot, this.tasks).run(options);
 	}
 
 	/**

@@ -350,11 +350,13 @@ export class TaskService {
 	 * @param tag - Tag to claim from; the active tag when omitted
 	 * @param claimant - Recorded as `metadata.claimedBy`; the session ID or user
 	 *   name when omitted (see resolveClaimant)
+	 * @param among - Only these top-level task IDs (one parallel wave, say)
 	 * @returns The claim, or null when no task is ready
 	 */
 	async claimNextTask(
 		tag?: string,
-		claimant?: string
+		claimant?: string,
+		among?: ReadonlySet<string>
 	): Promise<TaskClaim | null> {
 		if (!this.storage) {
 			throw new TaskGraphError(
@@ -365,7 +367,8 @@ export class TaskService {
 		const activeTag = tag || this.getActiveTag();
 		return this.storage.claimNextTask(
 			claimant?.trim() || resolveClaimant(),
-			activeTag
+			activeTag,
+			among
 		);
 	}
 

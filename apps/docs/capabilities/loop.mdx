@@ -88,6 +88,7 @@ Example progress file content:
 | `--status`               | string | `pending`                       | Filter to only work on tasks with this status.                                                                |
 | `--project`              | string | -                               | Project root directory. Auto-detected if not provided.                                                        |
 | `--json`                 | flag   | -                               | Output results as JSON instead of formatted text.                                                             |
+| `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](#run-tasks-in-parallel). |
 
 ### Option Details
 
@@ -97,6 +98,44 @@ Example progress file content:
 
 **`--on-complete` runs only on success:**
 The shell command only executes when `finalStatus` is `all_complete`, meaning an agent output the `<loop-complete>` marker. It does not run on `max_iterations`, `blocked`, or `error` outcomes.
+
+## Run tasks in parallel
+
+`--parallel N` runs up to N independent tasks side by side instead of one after another:
+
+```bash
+taskgraph loop --parallel 3 --trust
+```
+
+TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks whose dependencies are all done. For each one it:
+
+1. Claims the task, the same way `taskgraph next --claim` does: the task goes `in-progress` with `claimedBy` and `claimedAt` in its metadata, so another session won't pick it up.
+2. Creates a git worktree at `.taskgraph/worktrees/task-<id>` on a new branch `taskgraph/task-<id>`, starting from your current commit.
+3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`.
+
+<Warning>
+Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable.
+</Warning>
+
+While they run you get one status line per task. When all have finished you get a summary:
+
+```
+✓ 2 of 3 tasks done · 1 failed · 1 branch to review
+  1  taskgraph/task-1 · 2 commits
+  2  no changes; worktree removed
+  3  failed: exit 1 · .taskgraph/worktrees/task-3.log
+Next: review with git log -p HEAD..taskgraph/task-1
+```
+
+**Nothing is merged.** A task that left commits or changes keeps its worktree, its branch and its claim, ready for you to review and merge yourself. A task that left nothing has its worktree and branch removed, and goes back to `pending`.
+
+**Ctrl-C** stops every Claude Code process and releases every claim (the tasks go back to `pending`). Closing the terminal or sending `SIGTERM` does the same. Worktrees with work in them stay. Run the same command again to pick up where they left off: an existing `taskgraph/task-<id>` branch or worktree is reused. A second Ctrl-C exits at once, without the cleanup, but still kills the Claude Code processes.
+
+**Before it starts**, `--parallel` refuses to run when tracked files have uncommitted changes, because the worktrees start from your last commit and wouldn't have them. Commit or stash first. Changes to `.taskgraph/tasks/` and `.taskgraph/state.json` don't count, since claims and status changes are written there; other files under `.taskgraph/`, such as `config.json`, do. Commit new tasks before a parallel run so the worktrees have them.
+
+`.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
+
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
 
 ## Built-in Presets
 

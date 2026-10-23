@@ -95,6 +95,40 @@ describe('claimNextInTasks', () => {
 		expect(claimNextInTasks(tasks, 'bob')?.claim.task.id).toBe('2');
 		expect(claimNextInTasks(tasks, 'alice')?.claim.task.id).toBe('1.1');
 	});
+
+	it('picks only from the given task IDs, never a subtask', () => {
+		const tasks = [
+			task('1', {
+				status: 'in-progress',
+				subtasks: [
+					{
+						id: 1,
+						parentId: '1',
+						title: 'Sub',
+						description: '',
+						status: 'pending',
+						dependencies: [],
+						details: '',
+						testStrategy: '',
+						priority: 'medium'
+					}
+				]
+			}),
+			task('2', { priority: 'high' }),
+			task('3')
+		];
+
+		expect(
+			claimNextInTasks(tasks, 'alice', undefined, undefined, {
+				among: new Set(['1', '3'])
+			})?.claim.task.id
+		).toBe('3');
+		expect(
+			claimNextInTasks(tasks, 'alice', undefined, undefined, {
+				among: new Set(['1'])
+			})
+		).toBeNull();
+	});
 });
 
 describe('withoutClaim', () => {

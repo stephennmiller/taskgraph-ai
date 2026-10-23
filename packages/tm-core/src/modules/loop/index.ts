@@ -19,6 +19,9 @@ export type {
 	LoopOutputCallbacks
 } from './types.js';
 
+// Parallel runs (loop --parallel)
+export * from './parallel/index.js';
+
 // Presets - content and helpers
 export {
 	PRESETS,

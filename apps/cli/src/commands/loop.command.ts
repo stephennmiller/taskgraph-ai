@@ -3,22 +3,33 @@
  */
 
 import path from 'node:path';
+import { stripVTControlCharacters } from 'node:util';
 import {
 	type LoopConfig,
 	type LoopIteration,
 	type LoopOutputCallbacks,
 	type LoopResult,
+	MAX_PARALLEL,
 	PRESET_NAMES,
+	type ParallelTask,
 	type TmCore,
-	createTmCore
+	assertParallelFlags,
+	createTmCore,
+	parseParallelCount
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
-import { getProjectRoot } from '../utils/project-root.js';
+import {
+	formatParallelHeader,
+	formatParallelSummary,
+	formatParallelTaskLines
+} from '../ui/formatters/parallel-loop-formatters.js';
+import { terminalWidth } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
+import { getProjectRoot } from '../utils/project-root.js';
 
 export interface LoopCommandOptions {
 	iterations?: string;
@@ -30,6 +41,7 @@ export interface LoopCommandOptions {
 	trust?: boolean;
 	output?: boolean;
 	verbose?: boolean;
+	parallel?: string;
 }
 
 export class LoopCommand extends Command {
@@ -65,10 +77,17 @@ export class LoopCommand extends Command {
 				'Exclude full Claude output from iteration results'
 			)
 			.option('-v, --verbose', "Show Claude's work in real-time")
+			.option(
+				'--parallel <n>',
+				`Run up to n ready tasks at once (1-${MAX_PARALLEL}), each in its own git worktree and branch`
+			)
 			.action((options: LoopCommandOptions) => this.execute(options));
 	}
 
 	private async execute(options: LoopCommandOptions): Promise<void> {
+		if (options.parallel !== undefined) {
+			return this.executeParallel(options);
+		}
 		const prompt = options.prompt || 'default';
 		const progressFile = options.progressFile || '.taskgraph/progress.txt';
 
@@ -155,25 +174,132 @@ export class LoopCommand extends Command {
 		}
 	}
 
-	/** First run in a project: `loop` turns Claude's permission prompts off */
-	private async confirmTrust(): Promise<void> {
+	/**
+	 * `--parallel <n>`: tm-core claims wave-1 tasks and runs one Claude Code
+	 * process per worktree; this only shows the status lines and summary.
+	 */
+	private async executeParallel(options: LoopCommandOptions): Promise<void> {
+		const controller = new AbortController();
+		let interrupts = 0;
+		const onSigint = () => {
+			interrupts++;
+			// A second Ctrl-C leaves at once, without the cleanup
+			if (interrupts > 1) process.exit(130);
+			controller.abort();
+		};
+		const live = process.stdout.isTTY ? new LiveLines() : null;
+		let timer: NodeJS.Timeout | undefined;
+
+		try {
+			const parallel = parseParallelCount(options.parallel ?? '');
+			assertParallelFlags({
+				prompt: options.prompt,
+				iterations:
+					options.iterations !== undefined
+						? Number(options.iterations)
+						: undefined,
+				sandbox: options.sandbox,
+				verbose: options.verbose
+			});
+
+			const projectRoot = path.resolve(getProjectRoot(options.project));
+			this.tmCore = await createTmCore({ projectPath: projectRoot });
+			if (!options.trust) await this.confirmTrust(parallel);
+
+			const logsDir = '.taskgraph/worktrees';
+			const tasks: ParallelTask[] = [];
+			const lines = () =>
+				formatParallelTaskLines(tasks, { width: terminalWidth() });
+			const render = () =>
+				live?.render([
+					formatParallelHeader(tasks.length, logsDir, terminalWidth()),
+					...lines()
+				]);
+			const upsert = (task: ParallelTask) => {
+				const i = tasks.findIndex((t) => t.id === task.id);
+				if (i === -1) tasks.push(task);
+				else tasks[i] = task;
+			};
+
+			// Closing the terminal or a kill stops the tasks too: Claude runs in
+			// its own process group and wouldn't get the signal
+			for (const sig of STOP_SIGNALS) process.on(sig, onSigint);
+			if (live) timer = setInterval(render, 1000);
+			const result = await this.tmCore.loop.runParallel({
+				parallel,
+				tag: options.tag,
+				trusted: true,
+				signal: controller.signal,
+				callbacks: {
+					onTaskStart: (task) => {
+						if (!live && tasks.length === 0) {
+							console.log(
+								formatParallelHeader(undefined, logsDir, terminalWidth())
+							);
+						}
+						upsert(task);
+						if (live) render();
+						else console.log(lines()[tasks.length - 1]);
+					},
+					onTaskEnd: (task) => {
+						upsert(task);
+						if (live) render();
+						else console.log(lines()[tasks.findIndex((t) => t.id === task.id)]);
+					}
+				}
+			});
+			clearInterval(timer);
+			if (tasks.length) console.log();
+			console.log(
+				formatParallelSummary(result, {
+					projectRoot: this.tmCore.projectPath,
+					parallel
+				})
+			);
+			if (result.aborted) process.exitCode = 130;
+			else if (result.tasks.some((t) => t.state === 'failed')) {
+				process.exitCode = 1;
+			}
+		} catch (error: unknown) {
+			displayError(error, { skipExit: true });
+			process.exitCode = 1;
+		} finally {
+			clearInterval(timer);
+			for (const sig of STOP_SIGNALS) process.off(sig, onSigint);
+		}
+	}
+
+	/**
+	 * First run in a project: `loop` turns Claude's permission prompts off.
+	 * With --parallel there's no sandbox to suggest instead.
+	 */
+	private async confirmTrust(parallel?: number): Promise<void> {
 		if (this.tmCore.loop.isTrusted()) return;
+		const who =
+			parallel === undefined
+				? 'Claude'
+				: `up to ${parallel} Claude Code processes at once,`;
+		const instead =
+			parallel === undefined ? ', or --sandbox to run in Docker' : '';
 		if (!process.stdin.isTTY || !process.stdout.isTTY) {
 			throw new Error(
-				'loop runs Claude with permission prompts off. Pass --trust to allow that here, or --sandbox to run in Docker.'
+				`loop runs ${who} with permission prompts off. Pass --trust to allow that here${instead}.`
 			);
 		}
 		const { confirmed } = await inquirer.prompt([
 			{
 				type: 'confirm',
 				name: 'confirmed',
-				message:
-					'loop runs Claude with permission prompts off: it can read, edit and run anything in this project without asking. Allow that here?',
+				message: `loop runs ${who} with permission prompts off: ${parallel === undefined ? 'it' : 'each'} can read, edit and run anything in this project without asking. Allow that here?`,
 				default: false
 			}
 		]);
 		if (!confirmed)
-			throw new Error('Not approved. Use --sandbox to run in Docker.');
+			throw new Error(
+				parallel === undefined
+					? 'Not approved. Use --sandbox to run in Docker.'
+					: 'Not approved; no tasks were claimed.'
+			);
 		this.tmCore.loop.trust();
 	}
 
@@ -280,5 +406,27 @@ export class LoopCommand extends Command {
 		const cmd = new LoopCommand(name);
 		program.addCommand(cmd);
 		return cmd;
+	}
+}
+
+/** Signals that stop a parallel run the way Ctrl-C does */
+const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
+
+/** A block of lines redrawn in place on a terminal */
+class LiveLines {
+	private drawn = 0;
+
+	render(lines: string[]): void {
+		let out = this.drawn ? `\x1b[${this.drawn}A\x1b[J` : '';
+		for (const line of lines) out += `\x1b[2K${line}\n`;
+		process.stdout.write(out);
+		// Count rows, not lines: a line wider than the terminal wraps
+		const columns = process.stdout.columns || 80;
+		this.drawn = lines.reduce(
+			(rows, line) =>
+				rows +
+				Math.max(1, Math.ceil(stripVTControlCharacters(line).length / columns)),
+			0
+		);
 	}
 }

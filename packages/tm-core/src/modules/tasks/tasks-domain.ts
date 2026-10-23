@@ -192,13 +192,22 @@ export class TasksDomain {
 	/**
 	 * Pick the next task nobody has started, set it in-progress and record who
 	 * claimed it, in one locked write. Setting it back to pending clears the
-	 * claim.
+	 * claim. `among` limits the pick to those top-level task IDs (one
+	 * parallel wave, say).
 	 * @returns The claim, or null when no task is ready
 	 */
 	async claimNext(
-		options: { tag?: string; claimant?: string } = {}
+		options: {
+			tag?: string;
+			claimant?: string;
+			among?: ReadonlySet<string>;
+		} = {}
 	): Promise<TaskClaim | null> {
-		return this.taskService.claimNextTask(options.tag, options.claimant);
+		return this.taskService.claimNextTask(
+			options.tag,
+			options.claimant,
+			options.among
+		);
 	}
 
 	/**

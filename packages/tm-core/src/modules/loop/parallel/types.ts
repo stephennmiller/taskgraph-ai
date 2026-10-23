@@ -1,0 +1,90 @@
+/**
+ * @fileoverview Types for `loop --parallel`
+ */
+
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
+
+/** Starts one Claude Code process; `child_process.spawn` by default */
+export type AgentSpawner = (
+	command: string,
+	args: string[],
+	options: SpawnOptions
+) => ChildProcess;
+
+/** Where a task's run stands */
+export type ParallelTaskState =
+	/** Claude Code is working on it */
+	| 'running'
+	/** Claude Code exited 0 */
+	| 'done'
+	/** Couldn't start, or Claude Code exited non-zero */
+	| 'failed'
+	/** Stopped by an abort before Claude Code finished */
+	| 'stopped';
+
+/** One task in a parallel run */
+export interface ParallelTask {
+	id: string;
+	title: string;
+	/** `taskgraph/task-<id>` */
+	branch: string;
+	/** Absolute path of the task's worktree */
+	worktree: string;
+	/** Absolute path of the file holding Claude Code's output */
+	logFile: string;
+	state: ParallelTaskState;
+	/** When Claude Code started (ms since epoch) */
+	startedAt: number;
+	/** How long it ran, once it stopped */
+	durationMs?: number;
+	exitCode?: number | null;
+	/** Why it failed, in plain words */
+	error?: string;
+	/** Commits on the branch past the starting commit (set at the end) */
+	commits?: number;
+	/** Uncommitted changes left in the worktree (set at the end) */
+	uncommitted?: boolean;
+	/** The worktree and branch were kept for review (set at the end) */
+	kept?: boolean;
+	/** The task is still claimed (in-progress) after the run (set at the end) */
+	claimed?: boolean;
+}
+
+/** Progress callbacks for the presentation layer */
+export interface ParallelLoopCallbacks {
+	/** A task was claimed, its worktree made and Claude Code started */
+	onTaskStart?: (task: ParallelTask) => void;
+	/** Claude Code exited, failed to start, or was stopped */
+	onTaskEnd?: (task: ParallelTask) => void;
+}
+
+export interface ParallelLoopOptions {
+	/** How many tasks to run at once (1 to MAX_PARALLEL) */
+	parallel: number;
+	/** Tag to take tasks from; the active tag when omitted */
+	tag?: string;
+	/** Run without asking for the permission-prompt approval (see loop --trust) */
+	trusted?: boolean;
+	/** Recorded as the claim owner; the session ID or user name by default */
+	claimant?: string;
+	/** Stops the run: children are killed, claims released */
+	signal?: AbortSignal;
+	callbacks?: ParallelLoopCallbacks;
+	/** The Claude Code executable; `claude` by default */
+	command?: string;
+	/** Starts the processes; `child_process.spawn` by default */
+	spawner?: AgentSpawner;
+	/** How long a stopped process gets to exit before SIGKILL (default 5000) */
+	killGraceMs?: number;
+}
+
+export interface ParallelLoopResult {
+	/** Tasks that ran, in the order they started */
+	tasks: ParallelTask[];
+	/** Tasks in the ready wave (wave 1) when the run started */
+	readyCount: number;
+	/** Ready tasks left out because their ID can't be a branch name */
+	skippedIds: string[];
+	/** The run was aborted */
+	aborted: boolean;
+}

@@ -142,6 +142,19 @@ export type {
 	LoopOutputCallbacks
 } from './modules/loop/index.js';
 export { LoopDomain, PRESET_NAMES } from './modules/loop/index.js';
+export {
+	MAX_PARALLEL,
+	ParallelLoopError,
+	assertParallelFlags,
+	parseParallelCount
+} from './modules/loop/index.js';
+export type {
+	ParallelLoopCallbacks,
+	ParallelLoopOptions,
+	ParallelLoopResult,
+	ParallelTask,
+	ParallelTaskState
+} from './modules/loop/index.js';
 
 // GitHub Issues push
 export {

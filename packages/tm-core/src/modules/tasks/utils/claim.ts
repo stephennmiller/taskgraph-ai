@@ -86,6 +86,15 @@ const asLoaded = (task: Task): Task => ({
 	dependencies: (task.dependencies ?? []).map(String)
 });
 
+/** Which tasks a claim may pick */
+export interface ClaimNextOptions {
+	/**
+	 * Only these top-level task IDs, in `next` order (for example one
+	 * parallel wave). Subtasks are never picked when this is set.
+	 */
+	among?: ReadonlySet<string>;
+}
+
 /**
  * Claim the next task nobody has started, by the same order as `next`.
  *
@@ -96,7 +105,8 @@ export function claimNextInTasks(
 	tasks: Task[],
 	claimedBy: string,
 	claimedAt: string = new Date().toISOString(),
-	archivedIds: ReadonlySet<string> = new Set()
+	archivedIds: ReadonlySet<string> = new Set(),
+	options: ClaimNextOptions = {}
 ): { tasks: Task[]; claim: TaskClaim } | null {
 	// A task someone else claimed is theirs, subtasks included
 	const claimedByOther = new Set(
@@ -113,6 +123,9 @@ export function claimNextInTasks(
 	).find(
 		(item) => {
 			const parentId = (item as Task & { parentId?: string }).parentId;
+			if (options.among) {
+				return parentId === undefined && options.among.has(String(item.id));
+			}
 			return parentId === undefined || !claimedByOther.has(parentId);
 		}
 	);
