@@ -109,6 +109,57 @@ describe('MCP dependency tools with a real tasks.json', () => {
 		expect(exit).not.toHaveBeenCalled();
 	});
 
+	// #291: the reply said "Successfully removed dependency" when nothing was
+	it.each([
+		['a task it never depended on', '2'],
+		['a task that does not exist', '99']
+	])('remove_dependency of %s says nothing changed', async (_, dependsOn) => {
+		write([task(1), task(2), task(3, [1])]);
+		const before = fs.readFileSync(tasksJsonPath, 'utf8');
+
+		const result = await removeDependencyDirect(
+			args({ id: '3', dependsOn }),
+			log
+		);
+
+		expect(result.success).toBe(true);
+		expect(result.data).toMatchObject({
+			removed: false,
+			message: `Task 3 doesn't depend on task ${dependsOn}; nothing changed`
+		});
+		expect(fs.readFileSync(tasksJsonPath, 'utf8')).toBe(before);
+	});
+
+	it('remove_dependency from a task with no dependencies says nothing changed', async () => {
+		write([task(1), task(2)]);
+
+		const result = await removeDependencyDirect(
+			args({ id: '2', dependsOn: '1' }),
+			log
+		);
+
+		expect(result.data).toMatchObject({
+			removed: false,
+			message: 'Task 2 has no dependencies; nothing changed'
+		});
+	});
+
+	it('remove_dependency of a real dependency says it was removed', async () => {
+		write([task(1), task(2, [1])]);
+
+		const result = await removeDependencyDirect(
+			args({ id: '2', dependsOn: '1' }),
+			log
+		);
+
+		expect(result.data).toMatchObject({
+			removed: true,
+			message: 'Task 2 no longer depends on task 1'
+		});
+		const saved = JSON.parse(fs.readFileSync(tasksJsonPath, 'utf8'));
+		expect(saved.master.tasks[1].dependencies).toEqual([]);
+	});
+
 	it('fix_dependencies returns FIX_FAILED when the fix cannot be saved', async () => {
 		write([task(1, [9])]);
 		vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {

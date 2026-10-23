@@ -153,6 +153,7 @@ export {
 	formatListNextStep,
 	formatListSummary,
 	formatNoNextTask,
+	formatPlainTaskList,
 	type ListSummaryOptions
 } from './formatters/task-list-formatters.js';
 

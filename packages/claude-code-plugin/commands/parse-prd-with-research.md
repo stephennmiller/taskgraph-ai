@@ -1,57 +1,19 @@
 ---
 description: "TaskGraph: turn a PRD into tasks, researching the tech first. Use for a PRD with unfamiliar tech."
-argument-hint: "[PRD file path]"
+argument-hint: "<PRD file path>"
 ---
 
-Parse PRD with enhanced research mode for better task generation.
+Generate tasks from a PRD, with web research on the tech it names (the research model runs Claude Code with web search and fetch).
 
 Arguments: $ARGUMENTS (PRD file path)
 
-## Research-Enhanced Parsing
+This is `/taskgraph:parse-prd <file> research` without the questions about gaps in the PRD. To be asked those first, use that command instead.
 
-Uses the research role, which runs on Claude Code with web search and fetch access, for more comprehensive task generation with current best practices.
+1. Put the file path in single quotes, with any `'` written as `'\''`; if it starts with `-`, write it as `./<path>` so it isn't read as a flag. Run `taskgraph list` first: if it lists tasks, ask the user whether to add to them (`--append`) or replace them (`--force`), and add that flag. Without either, `parse-prd` waits on a terminal question that can't be answered here.
 
-## Execution
+   ```bash
+   taskgraph parse-prd '<prd-file>' --research
+   ```
 
-```bash
-taskgraph parse-prd --input=$ARGUMENTS --research
-```
-
-## Research Benefits
-
-1. **Current Best Practices**
-   - Latest framework patterns
-   - Security considerations
-   - Performance optimizations
-   - Accessibility requirements
-
-2. **Technical Deep Dive**
-   - Implementation approaches
-   - Library recommendations
-   - Architecture patterns
-   - Testing strategies
-
-3. **Comprehensive Coverage**
-   - Edge cases consideration
-   - Error handling tasks
-   - Monitoring setup
-   - Deployment tasks
-
-## Enhanced Output
-
-Research mode typically:
-- Generates more detailed tasks
-- Includes industry standards
-- Adds compliance considerations
-- Suggests modern tooling
-
-## Acceptance criteria
-
-Each generated task comes with 2-5 acceptance criteria, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` refuses the task until every one is checked off with `taskgraph set-status --id=<id> --check <n>` (or `/taskgraph:to-done <id>`, which checks them against your changes first). Read them when you start a task: they say what "done" means.
-
-## When to Use
-
-- New technology domains
-- Complex requirements
-- Regulatory compliance needed
-- Best practices crucial
+2. Show the task lines it printed. Each task has 2-5 acceptance criteria, all unchecked, that say what "done" means.
+3. Then suggest `taskgraph next`, and `/taskgraph:analyze-complexity` to find the tasks worth breaking down.

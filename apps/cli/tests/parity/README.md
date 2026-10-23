@@ -184,24 +184,21 @@ tidy-up that "fixes" a type can change what a dependency means.
   A migration that normalizes `"1"` to `1` would silently turn a dependency
   on task 1 into one on sibling 2.1.
 - **Removing a dependency that is not there succeeds.** `remove-dependency`
-  exits 0 and `remove_dependency` replies "Successfully removed dependency"
-  for a task that never depended on the other (`phase1-dependencies.json`). An
-  unknown task ID does fail.
+  exits 0 and `remove_dependency` succeeds with `removed: false` and "Task 2
+  doesn't depend on task 5; nothing changed" for a task that never depended on
+  the other (`phase1-dependencies.json`). An unknown task ID does fail.
 - **`validate_dependencies` does not report a duplicate** such as `[2, 3, 3]`,
   while `fix_dependencies` removes it and lists it as `duplicate`.
 - **`move` keeps the old `parentTaskId`** on the subtasks of a moved task
   (task 4 moved to 9: its subtasks still say `parentTaskId: 4`).
 - **`list --format json` on the no-master file** reports `"tag": "master"` in
   its metadata while it shows the tasks of `sprint`.
-- **The `tag` in an MCP reply can be wrong.** `remove_dependency`,
-  `add_subtask` and `remove_subtask` called with `tag: "other"` change `other`
-  but reply `"tag": "master"` (`phase1-tag-flag.json`).
 
 ## Expected differences from published releases
 
 Against `taskgraph-ai@0.54.14` (the latest release when the Phase 1 scenarios
 were added), `basic.json` and the `edge-*` scenarios show none: it already has
-the audit fixes below. The Phase 1 scenarios differ only because of one fix it
+the audit fixes below. The Phase 1 scenarios differ only because of fixes it
 does not have:
 
 - `add_dependency`, `remove_dependency`, `validate_dependencies`,
@@ -213,7 +210,12 @@ does not have:
   `phase1-flat-format.json` and `phase1-no-master.json`. The report also lists
   those steps as ones that "did not exit as expected" for the release.
   `phase1-structure.json` and `phase1-tags.json` have no differences. A
-  release newer than #270 should show none.
+  release newer than #270 shows only the next difference.
+- `remove_dependency` replied "Successfully removed dependency" for a
+  dependency the task never had, and `remove_dependency`, `add_subtask` and
+  `remove_subtask` called with `tag: "other"` replied `"tag": "master"` (#291,
+  #292). Against a release without those fixes, those MCP replies differ in
+  `phase1-dependencies.json` and `phase1-tag-flag.json`.
 
 Against `taskgraph-ai@0.54.7`, the last release before them, these differences
 are the audit fixes, not regressions:

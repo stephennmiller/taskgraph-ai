@@ -150,7 +150,8 @@ export function registerGetTasksTool(server: FastMCP) {
 							}
 						},
 						log,
-						projectRoot
+						projectRoot,
+						tag
 					});
 				}
 			}

@@ -72,9 +72,7 @@ export function registerRemoveDependencyTool(server) {
 				);
 
 				if (result.success) {
-					context.log.info(
-						`Successfully removed dependency: ${result.data.message}`
-					);
+					context.log.info(result.data.message);
 				} else {
 					context.log.error(
 						`Failed to remove dependency: ${result.error.message}`
@@ -85,7 +83,8 @@ export function registerRemoveDependencyTool(server) {
 					result,
 					log: context.log,
 					errorPrefix: 'Error removing dependency',
-					projectRoot: args.projectRoot
+					projectRoot: args.projectRoot,
+					tag: resolvedTag
 				});
 			} catch (error) {
 				context.log.error(`Error in removeDependency tool: ${error.message}`);

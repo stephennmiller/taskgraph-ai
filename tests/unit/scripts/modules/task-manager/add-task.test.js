@@ -387,6 +387,137 @@ describe('addTask', () => {
 			expect(addedTask().dependencies).toEqual([1]);
 			expect(addedTask()).not.toHaveProperty('metadata');
 		});
+
+		test('keeps the dependencies the user passed when the AI suggests others (#271)', async () => {
+			aiReturnsDependencies([2, 3]);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[1],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().dependencies).toEqual([1, 2, 3]);
+			expect(addedTask().metadata.dependencySources).toEqual({
+				2: 'inferred',
+				3: 'inferred'
+			});
+		});
+
+		test('lists a dependency both passed and suggested once (#271)', async () => {
+			aiReturnsDependencies([2, 1]);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[1],
+				'medium',
+				context(),
+				'json'
+			);
+
+			expect(addedTask().dependencies).toEqual([1, 2]);
+		});
+	});
+
+	describe('dependencies in a tag that shares IDs with another (#288)', () => {
+		// master holds tasks 1-3; feature holds only a task 1 of its own
+		const twoTags = () => ({
+			...JSON.parse(JSON.stringify(sampleTasks)),
+			feature: {
+				tasks: [
+					{
+						id: 1,
+						title: 'Feature groundwork',
+						description: 'Only task in feature',
+						status: 'pending',
+						dependencies: []
+					}
+				]
+			}
+		});
+
+		const aiReturnsDependencies = (dependencies) =>
+			generateObjectService.mockResolvedValueOnce({
+				mainResult: {
+					object: {
+						title: 'Task from the AI',
+						description: 'Description from the AI',
+						details: '',
+						testStrategy: '',
+						dependencies
+					}
+				},
+				telemetryData: {}
+			});
+
+		const featureTask = () =>
+			writeJSON.mock.calls[0][1].feature.tasks.find((t) => t.id === 2);
+
+		const featureContext = () => ({
+			mcpLog: createMcpLogMock(),
+			projectRoot: '/mock/project/root',
+			tag: 'feature'
+		});
+
+		beforeEach(() => {
+			readJSON.mockReturnValue(twoTags());
+		});
+
+		test('drops a dependency that exists only in another tag', async () => {
+			aiReturnsDependencies([]);
+			const context = featureContext();
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[3],
+				'medium',
+				context,
+				'json'
+			);
+
+			expect(featureTask().dependencies).toEqual([]);
+			expect(context.mcpLog.warn).toHaveBeenCalledWith(
+				"Task 3 doesn't exist; adding the task without that dependency"
+			);
+		});
+
+		test('drops an AI suggestion that exists only in another tag', async () => {
+			aiReturnsDependencies([1, 3]);
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[],
+				'medium',
+				featureContext(),
+				'json'
+			);
+
+			expect(featureTask().dependencies).toEqual([1]);
+		});
+
+		test("names each dependency with the target tag's task", async () => {
+			aiReturnsDependencies([]);
+			const { mcpLog, ...context } = featureContext();
+
+			await addTask(
+				'tasks/tasks.json',
+				'A prompt',
+				[1],
+				'medium',
+				context,
+				'text'
+			);
+
+			const printed = console.log.mock.calls.flat().join('\n');
+			expect(printed).toContain('Feature groundwork');
+			expect(printed).not.toContain('Task 1');
+		});
 	});
 
 	test('should filter out invalid dependencies', async () => {
