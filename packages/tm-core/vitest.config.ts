@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
  * Extends root config with core-specific settings including:
  * - Path aliases for cleaner imports
  * - Test setup file
- * - Higher coverage thresholds (80%)
+ * - Higher coverage thresholds (80%), enforced by `npm run test:coverage`
  */
 export default mergeConfig(
 	rootConfig,
@@ -30,7 +30,7 @@ export default mergeConfig(
 			// Core-specific setup
 			setupFiles: ['./tests/setup.ts'],
 
-			// Higher coverage thresholds for core package
+			// Higher coverage thresholds for core package (test:coverage only)
 			coverage: {
 				thresholds: {
 					branches: 80,

@@ -24,10 +24,12 @@ export default defineConfig({
 		// Common exclusions
 		exclude: ['node_modules', 'dist', '.git', '.cache', '**/node_modules/**'],
 
-		// Coverage configuration
+		// Coverage is off for a plain `vitest run` (`npm run test -w <package>`),
+		// so it passes when the tests pass. `npm run test:coverage` turns it on
+		// with --coverage and enforces the thresholds below.
 		coverage: {
 			provider: 'v8',
-			enabled: true,
+			enabled: false,
 			reporter: ['text', 'json', 'html'],
 			include: ['src/**/*.ts'],
 			exclude: [
@@ -43,7 +45,7 @@ export default defineConfig({
 				'vitest.config.ts',
 				'src/index.ts'
 			],
-			// Default thresholds (can be overridden per package)
+			// Default thresholds for test:coverage (can be overridden per package)
 			thresholds: {
 				branches: 70,
 				functions: 70,
