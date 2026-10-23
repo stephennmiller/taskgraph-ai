@@ -13,6 +13,7 @@ import type {
 import { DEFAULT_CONFIG_VALUES as DEFAULTS } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
 import { normalizeDefinitionOfDone } from '../../tasks/utils/acceptance-criteria.js';
+import { DEFAULT_ARCHIVE_AFTER_DAYS } from '../../tasks/utils/archive.js';
 import { ConfigLoader } from '../services/config-loader.service.js';
 import {
 	CONFIG_PRECEDENCE,
@@ -189,6 +190,19 @@ export class ConfigManager {
 		const global = (this.config as { global?: { definitionOfDone?: unknown } })
 			.global;
 		return normalizeDefinitionOfDone(global?.definitionOfDone);
+	}
+
+	/**
+	 * Days a done or cancelled task stays in tasks.json before `archive`
+	 * moves it (`global.archiveAfterDays`); 30 when unset or invalid
+	 */
+	getArchiveAfterDays(): number {
+		const global = (this.config as { global?: { archiveAfterDays?: unknown } })
+			.global;
+		const days = Number(global?.archiveAfterDays);
+		return Number.isInteger(days) && days >= 0
+			? days
+			: DEFAULT_ARCHIVE_AFTER_DAYS;
 	}
 
 	/**

@@ -46,6 +46,11 @@ vi.doMock('../../scripts/modules/utils.js', () => ({
 }));
 
 vi.doMock('path');
+// path is mocked, so the archive file can't be located: no task is archived
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
+	readArchivedIdsSync: vi.fn(() => ({ ids: new Set(), highestId: 0 }))
+}));
 vi.doMock('chalk', () => {
 	const m = {
 		green: vi.fn((text) => `<green>${text}</green>`),

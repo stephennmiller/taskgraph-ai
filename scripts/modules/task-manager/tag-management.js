@@ -4,7 +4,13 @@ import inquirer from 'inquirer';
 
 import { ui } from '@tm/cli';
 import { theme } from '@tm/cli/theme';
-import { filterReadyTasks, isTaskComplete } from '@tm/core';
+import {
+	deleteArchivedTagSync,
+	filterReadyTasks,
+	isTaskComplete,
+	readArchivedIdsSync,
+	renameArchivedTagSync
+} from '@tm/core';
 import {
 	findProjectRoot,
 	getCurrentTag,
@@ -357,6 +363,8 @@ async function deleteTag(
 			delete current[tagName];
 			return current;
 		});
+		// Its archived tasks go with it
+		deleteArchivedTagSync(tasksPath, tagName);
 
 		// If we're deleting the current tag, switch to master
 		if (isCurrentTag) {
@@ -692,7 +700,11 @@ async function useTag(
 		const taskCount = tasks.length;
 
 		// Find the next task to work on in this tag
-		const nextTask = findNextTask(tasks);
+		const nextTask = findNextTask(
+			tasks,
+			null,
+			readArchivedIdsSync(tasksPath, tagName).ids
+		);
 
 		logFn.debug(`Successfully switched to tag "${tagName}"`);
 
@@ -844,6 +856,8 @@ async function renameTag(
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
+		// Its archived tasks move with it
+		renameArchivedTagSync(tasksPath, oldName, newName);
 
 		// Get task count
 		const tasks = getTasksForTag(rawData, newName);

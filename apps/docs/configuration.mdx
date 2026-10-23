@@ -62,6 +62,20 @@ taskgraph models --set-fallback haiku
 
 `taskgraph show <id>` numbers these after the task's own criteria. Check them per task with `taskgraph set-status <id> --check <n>`, or pass `--force` to skip the gate. Subtasks are not gated by the Definition of Done.
 
+## Archiving finished tasks
+
+`global.archiveAfterDays` (default `30`) is how long a done or cancelled task stays in tasks.json before `taskgraph archive` moves it to `.taskgraph/tasks/archive.json`. `--older-than <days>` overrides it for one run.
+
+```json
+{
+  "global": {
+    "archiveAfterDays": 14
+  }
+}
+```
+
+See [Archiving finished tasks](/capabilities/archive) for how archived IDs and dependencies behave.
+
 ## Environment variables
 
 | Variable | Description |

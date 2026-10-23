@@ -92,7 +92,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
 ```
 
 #### All Tools
-Loads all available (46) tools, including `github_status` and `github_push` (see [GitHub Sync](/capabilities/github-sync)). Use when you need full TaskGraph functionality.
+Loads all available (47) tools, including `github_status` and `github_push` (see [GitHub Sync](/capabilities/github-sync)). Use when you need full TaskGraph functionality.
 
 ```json
 {
@@ -149,6 +149,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 -   **`get_task`**: Shows the details of a specific task.
 -   **`next_task`**: Shows the next task to work on. With `claim: true` it also starts the task and records who claimed it, in one locked write, so parallel sessions never get the same task.
 -   **`set_task_status`**: Sets the status of a task or subtask.
+-   **`archive_tasks`**: Moves done and cancelled tasks older than N days (`olderThanDays`, default 30) into `.taskgraph/tasks/archive.json`; `dryRun` lists them first, and `restore` brings one back by ID. In the `all` tier.
 
 ### 3. Task Analysis and Expansion
 

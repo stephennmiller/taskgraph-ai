@@ -356,8 +356,13 @@ export class ListTasksCommand extends Command {
 				? result.tasks.map((task) => ({ ...task, subtasks: [] }))
 				: result.tasks;
 
-		// Build blocks map and enrich tasks with blocks field
-		const { blocksMap, invalidDependencies } = buildBlocksMap(listed);
+		// Build blocks map and enrich tasks with blocks field. Dependencies on
+		// archived tasks count as done, not as missing
+		const archivedIds = await this.tmCore.tasks.getArchivedIds(options.tag);
+		const { blocksMap, invalidDependencies } = buildBlocksMap(
+			listed,
+			archivedIds
+		);
 		this.displayInvalidDependencyWarnings(invalidDependencies);
 		const enrichedTasks = listed.map((task) => ({
 			...task,
@@ -368,7 +373,7 @@ export class ListTasksCommand extends Command {
 		let filteredTasks = enrichedTasks;
 
 		if (options.ready) {
-			filteredTasks = filterReadyTasks(filteredTasks);
+			filteredTasks = filterReadyTasks(filteredTasks, archivedIds);
 		}
 
 		if (options.blocking) {
@@ -431,7 +436,11 @@ export class ListTasksCommand extends Command {
 				totalTaskCount += result.tasks.length;
 
 				// Build blocks map for this tag's tasks
-				const { blocksMap, invalidDependencies } = buildBlocksMap(result.tasks);
+				const archivedIds = await this.tmCore.tasks.getArchivedIds(tagName);
+				const { blocksMap, invalidDependencies } = buildBlocksMap(
+					result.tasks,
+					archivedIds
+				);
 				this.displayInvalidDependencyWarnings(invalidDependencies, tagName);
 
 				// Enrich tasks with blocks field and tag name
@@ -444,7 +453,7 @@ export class ListTasksCommand extends Command {
 				// Apply ready filter per-tag to respect tag-scoped dependencies
 				// (task IDs may overlap between tags, so we must filter within each tag)
 				const tasksToAdd: TaskWithTag[] = options.ready
-					? (filterReadyTasks(enrichedTasks) as TaskWithTag[])
+					? (filterReadyTasks(enrichedTasks, archivedIds) as TaskWithTag[])
 					: enrichedTasks;
 
 				allTaggedTasks.push(...tasksToAdd);

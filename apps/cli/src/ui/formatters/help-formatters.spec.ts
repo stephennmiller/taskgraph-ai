@@ -31,6 +31,7 @@ const ALLOWED_COMMANDS = new Set([
 	'research',
 	'graph',
 	'why',
+	'archive',
 	'tags',
 	'add-dependency',
 	'remove-dependency',
@@ -54,10 +55,10 @@ describe('formatHelp', () => {
 		]);
 	});
 
-	it('lists at most 29 rows with no repeated command', () => {
+	it('lists at most 30 rows with no repeated command', () => {
 		const names = allRows().map((row) => row.name.split(' ')[0]);
 
-		expect(names.length).toBeLessThanOrEqual(29);
+		expect(names.length).toBeLessThanOrEqual(30);
 		expect(new Set(names).size).toBe(names.length);
 	});
 

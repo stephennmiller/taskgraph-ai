@@ -4,12 +4,18 @@ import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { TaskService } from './task-service.js';
 
-/** A TaskService whose storage returns exactly these tasks */
-const serviceWith = (tasks: Task[]): TaskService => {
+/** A TaskService whose storage returns exactly these tasks (and archive) */
+const serviceWith = (
+	tasks: Task[],
+	archivedIds: string[] = []
+): TaskService => {
 	const service = new TaskService({
 		getActiveTag: () => 'master'
 	} as unknown as ConfigManager);
-	(service as any).storage = { loadTasks: async () => tasks };
+	(service as any).storage = {
+		loadTasks: async () => tasks,
+		loadArchivedTaskIds: async () => new Set(archivedIds)
+	};
 	return service;
 };
 
@@ -28,6 +34,32 @@ const nextId = async (tasks: Task[]) =>
 	(await serviceWith(tasks).getNextTask())?.id;
 
 describe('TaskService.getNextTask', () => {
+	it('treats a dependency on an archived task as done, and still shows it', async () => {
+		const service = serviceWith([task(2, { dependencies: ['1'] })], ['1']);
+
+		const next = await service.getNextTask();
+
+		expect(next?.id).toBe('2');
+		expect(next?.dependencies).toEqual(['1']);
+	});
+
+	it('shows a subtask\'s dependency on an archived task in full', async () => {
+		const service = serviceWith(
+			[
+				task(2, {
+					status: 'in-progress',
+					subtasks: [subtask(1, { parentId: '2', dependencies: ['1'] })]
+				})
+			],
+			['1']
+		);
+
+		const next = await service.getNextTask();
+
+		expect(next?.id).toBe('2.1');
+		expect(next?.dependencies).toEqual(['1']);
+	});
+
 	describe('top-level tasks', () => {
 		it('prefers the task that unblocks more work among equal priorities', async () => {
 			const id = await nextId([

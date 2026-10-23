@@ -1,7 +1,9 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
+	nextTaskId,
 	normalizeAcceptanceCriteria,
+	readArchivedIdsSync,
 	reconcileDependencySources,
 	setTaskLink
 } from '@tm/core';
@@ -318,17 +320,18 @@ async function addTask(
 		// Get a flat list of ALL tasks across ALL tags to validate dependencies
 		const allTasks = getAllTasks(rawData);
 
-		// Find the highest task ID *within the target tag* to determine the next ID
+		// The next ID *within the target tag*, above every archived ID too, so
+		// an archived task's ID is never reused
 		const tasksInTargetTag = rawData[targetTag].tasks;
 		const discoveredFrom = resolveDiscoveredFrom(
 			extras.discoveredFrom,
 			tasksInTargetTag
 		);
-		const highestId =
-			tasksInTargetTag.length > 0
-				? Math.max(...tasksInTargetTag.map((t) => t.id))
-				: 0;
-		let newTaskId = highestId + 1;
+		const archived = readArchivedIdsSync(tasksPath, targetTag);
+		let newTaskId = nextTaskId(
+			tasksInTargetTag.map((t) => t.id),
+			archived.highestId
+		);
 
 		// Validate dependencies before proceeding
 		const invalidDeps = dependencies.filter((depId) => {
@@ -593,7 +596,10 @@ async function addTask(
 			targetTag,
 			(tagData) => {
 				if (tagData.tasks.some((t) => t.id === newTask.id)) {
-					newTask.id = Math.max(...tagData.tasks.map((t) => t.id)) + 1;
+					newTask.id = nextTaskId(
+						tagData.tasks.map((t) => t.id),
+						archived.highestId
+					);
 				}
 				tagData.tasks.push(newTask);
 				ensureTagMetadata(tagData, {

@@ -9,6 +9,11 @@ import {
 	TaskGraphError
 } from '../../../../common/errors/taskgraph-error.js';
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
+import {
+	type ArchiveData,
+	dropArchiveTag,
+	renameArchiveTag
+} from '../../../tasks/utils/archive.js';
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import type { PathResolver } from './path-resolver.js';
@@ -159,6 +164,8 @@ export class TagOperations {
 			if (shouldDeleteFile) {
 				await this.fileOps.deleteFile(filePath);
 			}
+			// Its archived tasks go with it
+			await this.updateArchive((archive) => dropArchiveTag(archive, tag));
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				throw new Error(`Tag ${tag} not found - file doesn't exist`);
@@ -209,12 +216,31 @@ export class TagOperations {
 					throw new Error(`Tag ${oldTag} not found in standard format`);
 				}
 			});
+			// Its archived tasks move with it
+			await this.updateArchive((archive) =>
+				renameArchiveTag(archive, oldTag, newTag)
+			);
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				throw new Error(`Tag ${oldTag} not found - file doesn't exist`);
 			}
 			throw error;
 		}
+	}
+
+	/**
+	 * Apply a tag change to archive.json under its lock. Leaves the file alone
+	 * when there is none or the tag has nothing archived.
+	 */
+	private async updateArchive(
+		change: (archive: ArchiveData) => ArchiveData | null
+	): Promise<void> {
+		const archivePath = this.pathResolver.getArchivePath();
+		if (!(await this.fileOps.exists(archivePath))) return;
+		await this.fileOps.modifyJson(
+			archivePath,
+			(current: ArchiveData) => change(current ?? {}) ?? current
+		);
 	}
 
 	/**

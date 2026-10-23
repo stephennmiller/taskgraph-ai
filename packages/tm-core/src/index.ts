@@ -105,6 +105,7 @@ export type {
 
 // Task domain result types
 export type TaskWithSubtaskResult = Awaited<ReturnType<TasksDomain['get']>>;
+export type { ArchiveResult } from './modules/tasks/tasks-domain.js';
 
 // Workflow types
 export type {
@@ -222,6 +223,21 @@ export {
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult
+} from './modules/tasks/utils/index.js';
+
+// Archive: finished tasks out of tasks.json, IDs kept reserved
+export {
+	DEFAULT_ARCHIVE_AFTER_DAYS,
+	ARCHIVE_FILE_NAME,
+	archivePathFor,
+	readArchivedIdsSync,
+	isArchivedReference,
+	satisfyArchivedDependencies,
+	withStoredDependencies,
+	nextTaskId,
+	renameArchivedTagSync,
+	deleteArchivedTagSync,
+	type ArchivedIds
 } from './modules/tasks/utils/index.js';
 
 // Acceptance criteria and the Definition of Done

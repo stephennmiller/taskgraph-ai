@@ -6,6 +6,10 @@ paths:
 
 # Dependency Management Guidelines
 
+## Archived tasks
+
+A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done for dependency purposes. Validation and fixing must not report or strip a dependency on it: read the tag's archived IDs with `readArchivedIdsSync(tasksPath, tag)` from `@tm/core` and test each dependency with `isArchivedReference`. Code that picks or counts ready work takes `satisfyArchivedDependencies(tasks, archivedIds)` first. New task IDs come from `nextTaskId(ids, archived.highestId)` so an archived ID is never reused.
+
 ## Dependency Structure Principles
 
 - **Dependency References**:

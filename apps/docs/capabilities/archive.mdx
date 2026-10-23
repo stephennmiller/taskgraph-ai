@@ -1,0 +1,38 @@
+---
+title: Archiving finished tasks
+sidebarTitle: "Archive"
+description: "Move done and cancelled tasks out of tasks.json, keep their IDs reserved, and restore one by ID"
+---
+
+# Archiving finished tasks
+
+Finished tasks stay in `tasks.json` until you archive them. `taskgraph archive` moves them to `.taskgraph/tasks/archive.json`, one section per tag, so `list`, validation and agent context only carry the work that is still open.
+
+```bash
+# Move done and cancelled tasks last changed 30+ days ago out of
+# tasks.json into .taskgraph/tasks/archive.json (per tag)
+taskgraph archive
+
+# See what would move first, or pick another age (0 = every finished task)
+taskgraph archive --dry-run
+taskgraph archive --older-than 7
+
+# Bring one back, with its subtasks
+taskgraph archive restore <id>
+```
+
+`--tag <tag>` picks another tag, and `--format json` prints the tasks moved. MCP clients use the `archive_tasks` tool (`olderThanDays`, `dryRun`, `restore`) in the `all` tier.
+
+## Which tasks move
+
+The age is the task's last update (`updatedAt`, or a subtask's when later). A finished task with no update time was finished before TaskGraph recorded one, so it counts as old enough. The default age comes from `global.archiveAfterDays` (30 when unset; see [Configuration](/configuration)).
+
+## IDs and dependencies
+
+- Archived tasks keep their IDs: `add-task`, `parse-prd`, `move` and `remove-subtask --convert` never hand an archived ID to a new task, even after a restore.
+- A dependency on an archived task counts as done, so `next`, `why`, `graph`, `list --ready` and `validate-dependencies` treat it as finished and `fix-dependencies` leaves it alone. `add-dependency` on an archived task tells you to restore it first.
+
+## Tags and safety
+
+- Archived tasks belong to their tag: `tags rename` takes them along, and `tags remove` deletes them with the tag.
+- Archive and restore take the same lock as every other write to tasks.json, so a change another session saves at the same time isn't lost.

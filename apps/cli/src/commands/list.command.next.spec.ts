@@ -85,7 +85,11 @@ describe('ListTasksCommand summary and next step', () => {
 		getNext = vi.fn().mockResolvedValue(tasks[1]);
 		command = new ListTasksCommand();
 		(command as any).tmCore = {
-			tasks: { list, getNext },
+			tasks: {
+				list,
+				getNext,
+				getArchivedIds: vi.fn().mockResolvedValue(new Set())
+			},
 			config: { getActiveTag: () => 'master' }
 		} as unknown as TmCore;
 	});

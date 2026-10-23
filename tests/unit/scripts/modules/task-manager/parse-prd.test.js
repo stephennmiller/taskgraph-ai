@@ -228,6 +228,12 @@ vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
 }));
 
 // Mock fs module
+// fs is mocked, so there is no archive file: no task IDs are reserved
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
+	readArchivedIdsSync: vi.fn(() => ({ ids: new Set(), highestId: 0 }))
+}));
+
 vi.doMock('fs', () => ({
 	default: {
 		readFileSync: vi.fn(),

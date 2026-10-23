@@ -5,6 +5,7 @@
 
 // Import TypeScript tools from apps/mcp
 import {
+	registerArchiveTasksTool,
 	registerAutopilotAbortTool,
 	registerAutopilotCommitTool,
 	registerAutopilotCompleteTool,
@@ -86,6 +87,7 @@ export const toolRegistry = {
 	remove_dependency: registerRemoveDependencyTool,
 	validate_dependencies: registerValidateDependenciesTool,
 	fix_dependencies: registerFixDependenciesTool,
+	archive_tasks: registerArchiveTasksTool,
 	list_tags: registerListTagsTool,
 	add_tag: registerAddTagTool,
 	delete_tag: registerDeleteTagTool,

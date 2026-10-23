@@ -7,7 +7,9 @@ import {
 	PRD_SNAPSHOT_KEY,
 	assignMetadata,
 	formatPrdSectionList,
+	nextTaskId,
 	prdSourceMetadata,
+	readArchivedIdsSync,
 	reconcileDependencySources,
 	withPrdSnapshot
 } from '@tm/core';
@@ -104,25 +106,29 @@ export function readPrdContent(prdPath) {
  * Load existing tasks from file
  * @param {string} tasksPath - Path to tasks file
  * @param {string} targetTag - Target tag to load from
- * @returns {{existingTasks: Array, nextId: number, tagMetadata: Object}}
- *   Existing tasks, the next ID and the tag's metadata (which holds the PRD
- *   section hashes of the last parse)
+ * @returns {{existingTasks: Array, nextId: number, firstFreeId: number, tagMetadata: Object}}
+ *   Existing tasks; the next ID after them (for --append); the first ID no
+ *   archived task holds (for an overwrite; archived IDs are never reused);
+ *   and the tag's metadata (which holds the PRD section hashes of the last
+ *   parse)
  */
 export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
-	let nextId = 1;
 
 	const allData = readExistingTasksFile(tasksPath);
 	const tagMetadata = allData[targetTag]?.metadata || {};
 
 	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
 		existingTasks = allData[targetTag].tasks;
-		if (existingTasks.length > 0) {
-			nextId = Math.max(...existingTasks.map((t) => t.id || 0)) + 1;
-		}
 	}
 
-	return { existingTasks, nextId, tagMetadata };
+	const { highestId } = readArchivedIdsSync(tasksPath, targetTag);
+	const nextId = nextTaskId(
+		existingTasks.map((t) => t.id || 0),
+		highestId
+	);
+
+	return { existingTasks, nextId, firstFreeId: highestId + 1, tagMetadata };
 }
 
 /**

@@ -1,7 +1,9 @@
 import {
 	assignMetadata,
 	dependenciesForMovedItem,
+	nextTaskId,
 	pruneTaskLinks,
+	readArchivedIdsSync,
 	retargetDependents
 } from '@tm/core';
 import { log, readJSON, writeJSON } from '../utils.js';
@@ -81,9 +83,11 @@ async function removeSubtask(
 		if (convertToTask) {
 			log('debug', `Converting subtask ${subtaskId} to a standalone task...`);
 
-			// Find the highest task ID to determine the next ID
-			const highestId = Math.max(...data.tasks.map((t) => t.id));
-			const newTaskId = highestId + 1;
+			// The next free ID, above every archived ID too
+			const newTaskId = nextTaskId(
+				data.tasks.map((t) => t.id),
+				readArchivedIdsSync(tasksPath, data.tag || tag || 'master').highestId
+			);
 
 			// Its siblings become full IDs, which read the same on a task
 			const moved = dependenciesForMovedItem(

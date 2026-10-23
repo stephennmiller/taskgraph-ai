@@ -49,6 +49,18 @@ export interface UpdateStatusOptions {
 }
 
 /**
+ * Options for archiveTasks
+ */
+export interface ArchiveTasksOptions {
+	/** Archive done or cancelled tasks last changed at least this many days ago */
+	olderThanDays: number;
+	/** Report what would be archived without changing any file */
+	dryRun?: boolean;
+	/** Defaults to the current time */
+	now?: Date;
+}
+
+/**
  * Fields a modifyTask change can set on a task or subtask
  */
 export type TaskFieldUpdates = Partial<
@@ -141,6 +153,26 @@ export interface IStorage {
 	 * @returns The claim, or null when no task is ready
 	 */
 	claimNextTask(claimant: string, tag?: string): Promise<TaskClaim | null>;
+
+	/**
+	 * IDs of the tasks archived in a tag (see modules/tasks/utils/archive.ts)
+	 * @param tag - Optional tag context
+	 */
+	loadArchivedTaskIds(tag?: string): Promise<Set<string>>;
+
+	/**
+	 * Move finished tasks out of the tag into the archive, in one locked
+	 * write of tasks.json
+	 * @param options - Which tasks qualify; `dryRun` only reports them
+	 * @returns The tasks archived (or that would be, with dryRun)
+	 */
+	archiveTasks(options: ArchiveTasksOptions, tag?: string): Promise<Task[]>;
+
+	/**
+	 * Move one archived task back into the tag, in one locked write
+	 * @returns The restored task
+	 */
+	restoreArchivedTask(taskId: string, tag?: string): Promise<Task>;
 
 	/**
 	 * Delete a task by ID
@@ -405,6 +437,12 @@ export abstract class BaseStorage implements IStorage {
 		claimant: string,
 		tag?: string
 	): Promise<TaskClaim | null>;
+	abstract loadArchivedTaskIds(tag?: string): Promise<Set<string>>;
+	abstract archiveTasks(
+		options: ArchiveTasksOptions,
+		tag?: string
+	): Promise<Task[]>;
+	abstract restoreArchivedTask(taskId: string, tag?: string): Promise<Task>;
 	abstract deleteTask(taskId: string, tag?: string): Promise<void>;
 	abstract exists(tag?: string): Promise<boolean>;
 	abstract loadMetadata(tag?: string): Promise<TaskMetadata | null>;
