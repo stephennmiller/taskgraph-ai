@@ -8,7 +8,8 @@ import {
 	createPathGuardHook,
 	excludeSecretsFromGrep,
 	getPathViolation,
-	isInsideRoot
+	isInsideRoot,
+	normalizeSegment
 } from '../../../src/ai-providers/claude-code-path-guard.js';
 
 const repoRoot = path.resolve(
@@ -195,7 +196,22 @@ describe('claude-code path guard', () => {
 			['.git/config'],
 			['keys/server.pem'],
 			['.ssh/id_ed25519'],
-			['.npmrc']
+			['.npmrc'],
+			// #346
+			['.envrc'],
+			['.env-local'],
+			['.env_prod'],
+			['certs/server.key'],
+			['certs/client.p12'],
+			['certs/client.pfx'],
+			['android/release.keystore'],
+			['.netrc'],
+			['_netrc'],
+			['.pypirc'],
+			['.aws/credentials'],
+			['.aws/sso/cache/token.json'],
+			['.docker/config.json'],
+			['home/.Docker/Config.json']
 		])('denies Read of %s', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
 				/secret/
@@ -252,12 +268,83 @@ describe('claude-code path guard', () => {
 			).toMatch(/secret/);
 		});
 
-		it.each([['src/a.js'], ['.env.example'], ['docs/environment.md']])(
-			'still allows %s',
-			(file) => {
-				expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
+		it.each([
+			['src/a.js'],
+			['.env.example'],
+			['.env-sample'],
+			['docs/environment.md'],
+			['src/keys.js'],
+			['docker/config.json'],
+			['.docker/daemon.json'],
+			['config.json'],
+			['notes~']
+		])('still allows %s', (file) => {
+			expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
+		});
+	});
+
+	describe('Windows names that open a secret file (#346)', () => {
+		it.each([
+			['.env::$DATA', '.env'],
+			['.env:hidden', '.env'],
+			['.env:hidden:$DATA', '.env'],
+			['.env.', '.env'],
+			['.env ', '.env'],
+			['.env. .', '.env'],
+			['.npmrc  ', '.npmrc'],
+			['.env*', '.env'],
+			['C:', 'C'],
+			['src', 'src'],
+			['.env.example', '.env.example']
+		])('normalizes %j to %j', (segment, name) => {
+			expect(normalizeSegment(segment)).toBe(name);
+		});
+
+		it.each([
+			['.env::$DATA'],
+			['.env:hidden'],
+			['.env '],
+			['.env.'],
+			['.ENV...'],
+			['.git./config'],
+			['.git /config'],
+			['certs/server.key.'],
+			['.aws ./credentials'],
+			['.docker/config.json::$DATA'],
+			// 8.3 short names: ENV~1 is how Windows may alias .env
+			['ENV~1'],
+			['env~2'],
+			['ENVLOC~1.LOC'],
+			['AWS~1/CREDEN~1']
+		])('denies Read of %j', (file) => {
+			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
+				/secret/
+			);
+		});
+
+		it.each([['**/.env::$DATA'], ['ENV~1'], ['**/.env.']])(
+			'denies Glob pattern and Grep glob %j',
+			(pattern) => {
+				expect(getPathViolation(root, 'Glob', { pattern })).toMatch(/secret/);
+				expect(
+					getPathViolation(root, 'Grep', { pattern: 'x', glob: pattern })
+				).toMatch(/secret/);
 			}
 		);
+
+		it('judges an absolute Glob only below the root, which may hold a short name', () => {
+			const shortRoot = path.join(base, 'RUNNER~1', 'project');
+			expect(
+				getPathViolation(shortRoot, 'Glob', {
+					pattern: `${shortRoot}/src/*.js`
+				})
+			).toBeNull();
+			expect(
+				getPathViolation(shortRoot, 'Glob', {
+					pattern: `${shortRoot}/**/.env*`
+				})
+			).toMatch(/secret/);
+		});
 	});
 
 	describe('directory-wide Grep (#225)', () => {
@@ -271,12 +358,32 @@ describe('claude-code path guard', () => {
 			'.ssh/id_rsa',
 			'.ssh/id_ed25519.pub',
 			'certs/server.pem',
-			'.git/config'
+			'.git/config',
+			// #346
+			'.envrc',
+			'.env-local',
+			'.env_prod',
+			'certs/server.key',
+			'certs/client.p12',
+			'certs/client.pfx',
+			'android/release.keystore',
+			'.netrc',
+			'_netrc',
+			'.pypirc',
+			'.aws/credentials',
+			'.aws/config',
+			'.docker/config.json',
+			'nested/.docker/config.json'
 		];
 
 		beforeAll(() => {
 			project = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-grep-'));
-			for (const file of [...secrets, 'src/app.js', 'README.md']) {
+			for (const file of [
+				...secrets,
+				'src/app.js',
+				'README.md',
+				'.docker/daemon.json'
+			]) {
 				fs.mkdirSync(path.dirname(path.join(project, file)), {
 					recursive: true
 				});
@@ -340,6 +447,7 @@ describe('claude-code path guard', () => {
 				excludeSecretsFromGrep({ pattern: 'API_KEY' })
 			);
 			expect(lines).toEqual([
+				'./.docker/daemon.json:1:API_KEY=.docker/daemon.json',
 				'./README.md:1:API_KEY=README.md',
 				'./src/app.js:1:API_KEY=src/app.js'
 			]);
