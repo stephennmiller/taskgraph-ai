@@ -9,7 +9,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	findProjectRoot,
 	isTaskGraphProject,
-	normalizeProjectRoot
+	normalizeProjectRoot,
+	resolveProjectRoot
 } from './project-root-finder.js';
 
 describe('findProjectRoot', () => {
@@ -375,5 +376,58 @@ describe('isTaskGraphProject', () => {
 		);
 
 		expect(isTaskGraphProject(tempDir)).toBe(true);
+	});
+});
+
+describe('resolveProjectRoot', () => {
+	let tempDir: string;
+	let originalCwd: string;
+
+	beforeEach(() => {
+		originalCwd = process.cwd();
+		tempDir = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-resolve-'))
+		);
+		fs.mkdirSync(path.join(tempDir, 'main', '.taskgraph'), {
+			recursive: true
+		});
+		fs.mkdirSync(path.join(tempDir, 'worktree', '.taskgraph'), {
+			recursive: true
+		});
+		process.chdir(path.join(tempDir, 'worktree'));
+	});
+
+	afterEach(() => {
+		process.chdir(originalCwd);
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	it('takes an explicit path over TASKGRAPH_PROJECT_ROOT', () => {
+		const env = { TASKGRAPH_PROJECT_ROOT: path.join(tempDir, 'main') };
+
+		expect(resolveProjectRoot('../other', env)).toBe(
+			path.join(tempDir, 'other')
+		);
+	});
+
+	it('takes TASKGRAPH_PROJECT_ROOT over the project found from here', () => {
+		const env = { TASKGRAPH_PROJECT_ROOT: path.join(tempDir, 'main') };
+
+		expect(resolveProjectRoot(undefined, env)).toBe(path.join(tempDir, 'main'));
+	});
+
+	it('resolves a relative TASKGRAPH_PROJECT_ROOT against the current folder', () => {
+		expect(
+			resolveProjectRoot(undefined, { TASKGRAPH_PROJECT_ROOT: ' ../main ' })
+		).toBe(path.join(tempDir, 'main'));
+	});
+
+	it('finds the project from here when TASKGRAPH_PROJECT_ROOT is unset or blank', () => {
+		const here = path.join(tempDir, 'worktree');
+
+		expect(resolveProjectRoot(undefined, {})).toBe(here);
+		expect(
+			resolveProjectRoot(undefined, { TASKGRAPH_PROJECT_ROOT: '  ' })
+		).toBe(here);
 	});
 });

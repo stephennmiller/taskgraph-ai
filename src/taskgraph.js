@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { resolveProjectRoot } from '@tm/core';
 import {
 	COMPLEXITY_REPORT_FILE,
 	TASKGRAPH_CONFIG_FILE,
@@ -15,7 +16,6 @@ import {
 	TASKGRAPH_REPORTS_DIR,
 	TASKGRAPH_TASKS_FILE
 } from './constants/paths.js';
-import { findProjectRoot } from './utils/path-utils.js';
 
 /**
  * TaskGraph class manages all the paths for the application.
@@ -244,8 +244,9 @@ export function initTaskGraph(overrides = {}) {
 
 		paths.projectRoot = resolvedOverride;
 	} else {
-		// findProjectRoot now always returns a value (fallback to cwd)
-		paths.projectRoot = findProjectRoot();
+		// TASKGRAPH_PROJECT_ROOT when set (loop --parallel sets it for its
+		// task worktrees), else the root found from the current directory
+		paths.projectRoot = resolveProjectRoot();
 	}
 
 	// TaskGraph Directory

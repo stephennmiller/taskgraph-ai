@@ -17,15 +17,20 @@ describe('first run', () => {
 	let home: string;
 
 	// HOME points at a temp folder so init can't touch the real shell config
-	const run = (args: string[]) =>
+	const run = (
+		args: string[],
+		options: { cwd?: string; env?: Record<string, string> } = {}
+	) =>
 		spawnSync('node', [getCliBinPath(), ...args], {
-			cwd: dir,
+			cwd: options.cwd ?? dir,
 			encoding: 'utf8',
 			env: {
 				...process.env,
+				TASKGRAPH_PROJECT_ROOT: '',
 				HOME: home,
 				FORCE_COLOR: '0',
-				TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+				...options.env
 			}
 		});
 
@@ -60,6 +65,43 @@ describe('first run', () => {
 
 		expect(result.status).toBe(1);
 		expect(result.stderr).toContain(`No TaskGraph project at ${dir}`);
+	});
+
+	it('works on the project TASKGRAPH_PROJECT_ROOT names, from any folder', () => {
+		// What a loop --parallel task worktree does
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+		const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-first-run-'));
+		const there = { cwd: elsewhere, env: { TASKGRAPH_PROJECT_ROOT: dir } };
+
+		try {
+			const add = run(
+				['add-task', '--title', 'Set up CI', '--description', 'Run tests'],
+				there
+			);
+			const status = run(['set-status', '--id=1', '--status=review'], there);
+
+			expect(add.status).toBe(0);
+			expect(status.status).toBe(0);
+			const tasks = JSON.parse(
+				fs.readFileSync(
+					path.join(dir, '.taskgraph', 'tasks', 'tasks.json'),
+					'utf8'
+				)
+			).master.tasks;
+			expect(tasks).toMatchObject([{ id: '1', status: 'review' }]);
+			expect(fs.existsSync(path.join(elsewhere, '.taskgraph'))).toBe(false);
+		} finally {
+			fs.rmSync(elsewhere, { recursive: true, force: true });
+		}
+	});
+
+	it('names the folder TASKGRAPH_PROJECT_ROOT points at when it has no project', () => {
+		const result = run(['list'], { env: { TASKGRAPH_PROJECT_ROOT: home } });
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain(
+			`No TaskGraph project at ${home}, which TASKGRAPH_PROJECT_ROOT names`
+		);
 	});
 
 	it('summarizes init with relative paths and next steps', () => {

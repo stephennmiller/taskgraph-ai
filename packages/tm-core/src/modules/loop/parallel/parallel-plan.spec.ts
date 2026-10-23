@@ -124,6 +124,21 @@ describe('buildParallelPrompt', () => {
 		expect(prompt).toContain("Don't merge");
 	});
 
+	it('has Claude mark the task review, since its branch is unmerged', () => {
+		const prompt = buildParallelPrompt({ taskId: '7' });
+
+		expect(prompt).toContain('`taskgraph set-status --id=7 --status=review`');
+		expect(prompt).not.toContain('--status=done');
+	});
+
+	it("says taskgraph works on the main project's tasks, without a path", () => {
+		const prompt = buildParallelPrompt({ taskId: '7' });
+
+		expect(prompt).toContain('TASKGRAPH_PROJECT_ROOT');
+		expect(prompt).toContain("don't pass --project");
+		expect(prompt).not.toMatch(/--project[ =]\S/);
+	});
+
 	it('passes the tag to the taskgraph commands', () => {
 		expect(buildParallelPrompt({ taskId: '7', tag: 'api' })).toContain(
 			'`taskgraph show 7 --tag=api`'

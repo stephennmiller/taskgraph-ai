@@ -49,9 +49,11 @@ export {
 
 // Export project root finding utilities
 export {
+	PROJECT_ROOT_ENV,
 	findProjectRoot,
 	isTaskGraphProject,
-	normalizeProjectRoot
+	normalizeProjectRoot,
+	resolveProjectRoot
 } from './project-root-finder.js';
 
 // Export path construction utilities

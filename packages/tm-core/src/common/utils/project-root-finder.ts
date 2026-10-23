@@ -97,6 +97,30 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
 }
 
 /**
+ * The environment variable that names the project root. The MCP server reads
+ * it too. `loop --parallel` sets it for each task's Claude Code process, so
+ * `taskgraph` commands run in a task worktree record status and notes in the
+ * main project rather than in the worktree's copy of tasks.json.
+ */
+export const PROJECT_ROOT_ENV = 'TASKGRAPH_PROJECT_ROOT';
+
+/**
+ * The project a command works on, as an absolute path: `explicit` (a
+ * `--project` flag) when given, else TASKGRAPH_PROJECT_ROOT when set, else
+ * the root found from the current directory (see findProjectRoot). Relative
+ * paths resolve against the current directory.
+ */
+export function resolveProjectRoot(
+	explicit?: string,
+	env: NodeJS.ProcessEnv = process.env
+): string {
+	if (explicit) return path.resolve(explicit);
+	const fromEnv = env[PROJECT_ROOT_ENV]?.trim();
+	if (fromEnv) return path.resolve(fromEnv);
+	return findProjectRoot();
+}
+
+/**
  * Whether `dir` holds a TaskGraph project, i.e. one that `taskgraph init` set
  * up. An empty `.taskgraph` folder doesn't count: older versions left one
  * behind when `list` or `next` ran in a folder that wasn't a project.
