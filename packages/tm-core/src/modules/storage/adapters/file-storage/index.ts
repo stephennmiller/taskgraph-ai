@@ -4,9 +4,7 @@
 
 export {
 	CURRENT_SCHEMA_VERSION,
-	getSchemaVersion,
-	stampTasksFileSchemaVersion,
-	withSchemaVersion
+	getSchemaVersion
 } from './schema-version.js';
 
 // Main FileStorage class - primary export
