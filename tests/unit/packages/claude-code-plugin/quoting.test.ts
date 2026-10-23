@@ -150,11 +150,14 @@ describe('free text passed to taskgraph in plugin instructions', () => {
 	);
 });
 
+// to-done has this check with its other tests in packages/tm-profiles/tests/integration/plugin-commands.test.ts
 describe('commands that take a task ID from the arguments', () => {
 	it.each([
+		'clear-subtasks',
 		'expand-task',
+		'remove-task',
+		'set-status',
 		'to-in-progress',
-		'to-done',
 		'update-task',
 		'update-tasks-from-id'
 	])('%s uses the ID only when it is a task number', (name) => {

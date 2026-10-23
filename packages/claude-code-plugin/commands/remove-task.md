@@ -26,6 +26,8 @@ Permanently removes a task while maintaining project integrity.
 taskgraph remove-task --id=<id> [-y]
 ```
 
+Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+
 ## Pre-Removal Analysis
 
 1. **Task Details**
