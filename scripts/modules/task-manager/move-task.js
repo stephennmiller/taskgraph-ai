@@ -10,7 +10,9 @@ import {
 	renameDependencySource,
 	resolveSubtaskDependency,
 	retargetDependents,
-	retargetTaskLinks
+	retargetTaskLinks,
+	getOwnKey,
+	setOwnKey
 } from '@tm/core';
 import path from 'path';
 import {
@@ -18,13 +20,7 @@ import {
 	getDependentTaskIds,
 	validateSubtaskMove
 } from '../dependency-manager.js';
-import {
-	log,
-	readJSON,
-	setTasksForTag,
-	traverseDependencies,
-	writeJSON
-} from '../utils.js';
+import { log, readJSON, traverseDependencies, writeJSON } from '../utils.js';
 
 /**
  * Keep a dependency's provenance mark when the task it points at gets a new ID
@@ -206,7 +202,8 @@ async function moveTask(
 	}
 
 	// Ensure the tag exists in the raw data
-	if (!rawData || !rawData[tag] || !Array.isArray(rawData[tag].tasks)) {
+	const tagData = getOwnKey(rawData, tag);
+	if (!Array.isArray(tagData?.tasks)) {
 		throw new MoveTaskError(
 			MOVE_ERROR_CODES.INVALID_TASKS_FILE,
 			`Invalid tasks file or tag "${tag}" not found at ${tasksPath}`
@@ -214,7 +211,7 @@ async function moveTask(
 	}
 
 	// Get the tasks for the current tag
-	const tasks = rawData[tag].tasks;
+	const tasks = tagData.tasks;
 
 	log(
 		'debug',
@@ -247,7 +244,7 @@ async function moveTask(
 	}
 
 	// Update the data structure with the modified tasks
-	rawData[tag].tasks = tasks;
+	tagData.tasks = tasks;
 
 	// Always write the data object, never the _rawTaggedData directly
 	// The writeJSON function will filter out _rawTaggedData automatically
@@ -792,11 +789,7 @@ async function validateMove(tasksPath, taskIds, sourceTag, targetTag, context) {
 	}
 
 	// Validate source tag exists
-	if (
-		!rawData ||
-		!rawData[sourceTag] ||
-		!Array.isArray(rawData[sourceTag].tasks)
-	) {
+	if (!rawData || !Array.isArray(getOwnKey(rawData, sourceTag)?.tasks)) {
 		throw new MoveTaskError(
 			MOVE_ERROR_CODES.INVALID_SOURCE_TAG,
 			`Source tag "${sourceTag}" not found or invalid`
@@ -804,8 +797,16 @@ async function validateMove(tasksPath, taskIds, sourceTag, targetTag, context) {
 	}
 
 	// Create target tag if it doesn't exist
-	if (!rawData[targetTag]) {
-		rawData[targetTag] = { tasks: [] };
+	if (!getOwnKey(rawData, targetTag)) {
+		// JavaScript objects treat a `__proto__` key as their prototype, so no
+		// command creates a tag of that name
+		if (targetTag === '__proto__') {
+			throw new MoveTaskError(
+				MOVE_ERROR_CODES.INVALID_TARGET_TAG,
+				'"__proto__" is a reserved tag name'
+			);
+		}
+		setOwnKey(rawData, targetTag, { tasks: [] });
 		log('info', `Created new tag "${targetTag}"`);
 	}
 
@@ -1196,7 +1197,8 @@ async function moveTasksBetweenTags(
 function detectIdConflicts(taskIds, targetTag, rawData) {
 	const conflicts = [];
 
-	if (!rawData[targetTag] || !Array.isArray(rawData[targetTag].tasks)) {
+	const targetTasks = getOwnKey(rawData, targetTag)?.tasks;
+	if (!Array.isArray(targetTasks)) {
 		return conflicts;
 	}
 
@@ -1204,9 +1206,7 @@ function detectIdConflicts(taskIds, targetTag, rawData) {
 		// Normalize taskId to number for comparison
 		const normalizedTaskId =
 			typeof taskId === 'string' ? parseInt(taskId, 10) : taskId;
-		const existingTask = rawData[targetTag].tasks.find(
-			(t) => t.id === normalizedTaskId
-		);
+		const existingTask = targetTasks.find((t) => t.id === normalizedTaskId);
 		if (existingTask) {
 			conflicts.push(taskId);
 		}

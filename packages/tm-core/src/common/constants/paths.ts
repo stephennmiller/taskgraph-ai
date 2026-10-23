@@ -14,6 +14,8 @@ export const TASKGRAPH_WORKTREES_DIR = '.taskgraph/worktrees';
 
 // TaskGraph configuration files
 export const TASKGRAPH_CONFIG_FILE = '.taskgraph/config.json';
+// Per-machine settings merged over config.json; gitignored
+export const TASKGRAPH_LOCAL_CONFIG_FILE = '.taskgraph/config.local.json';
 export const TASKGRAPH_STATE_FILE = '.taskgraph/state.json';
 
 // TaskGraph report files

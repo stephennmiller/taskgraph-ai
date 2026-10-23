@@ -10,7 +10,8 @@ import {
 	filterReadyTasks,
 	isTaskComplete,
 	readArchivedIdsSync,
-	renameArchivedTag
+	renameArchivedTag,
+	getOwnKey
 } from '@tm/core';
 import {
 	findProjectRoot,
@@ -19,13 +20,29 @@ import {
 	log,
 	readJSON,
 	resolveTag,
-	setTasksForTag,
 	modifyJSON,
 	writeJSON
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
 const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
+
+/** `__proto__` is a key JavaScript objects treat as their prototype, not data */
+const RESERVED_TAG_NAMES = ['master', 'main', 'default', '__proto__'];
+
+/**
+ * Copy tagged tasks.json data without the given keys. The copy has no
+ * prototype, so every key, `__proto__` included, is copied as data.
+ */
+function copyTaggedData(data, skipKeys) {
+	const copy = Object.create(null);
+	for (const [key, value] of Object.entries(data)) {
+		if (!skipKeys.includes(key)) {
+			copy[key] = value;
+		}
+	}
+	return copy;
+}
 
 /** An error the CLI prints with a hint underneath */
 function tagNameError(message) {
@@ -107,8 +124,7 @@ async function createTag(
 		}
 
 		// Reserved tag names
-		const reservedNames = ['master', 'main', 'default'];
-		if (reservedNames.includes(tagName.toLowerCase())) {
+		if (RESERVED_TAG_NAMES.includes(tagName.toLowerCase())) {
 			throw new Error(`"${tagName}" is a reserved tag name`);
 		}
 
@@ -136,16 +152,11 @@ async function createTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = {};
-			for (const [key, value] of Object.entries(data)) {
-				if (key !== '_rawTaggedData' && key !== 'tag') {
-					rawData[key] = value;
-				}
-			}
+			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
 		}
 
 		// Check if tag already exists
-		if (rawData[tagName]) {
+		if (getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" already exists`);
 		}
 
@@ -178,12 +189,7 @@ async function createTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
+		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -309,16 +315,11 @@ async function deleteTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = {};
-			for (const [key, value] of Object.entries(data)) {
-				if (key !== '_rawTaggedData' && key !== 'tag') {
-					rawData[key] = value;
-				}
-			}
+			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
 		}
 
 		// Check if tag exists
-		if (!rawData[tagName]) {
+		if (!getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" does not exist`);
 		}
 
@@ -481,12 +482,7 @@ async function enhanceTagsWithMetadata(tasksPath, rawData, context = {}) {
 		// If we enhanced any tags, write the data back
 		if (enhanced) {
 			// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-			const cleanData = {};
-			for (const [key, value] of Object.entries(rawData)) {
-				if (key !== '_rawTaggedData') {
-					cleanData[key] = value;
-				}
-			}
+			const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 			writeJSON(tasksPath, cleanData, context.projectRoot);
 		}
 	} catch (error) {
@@ -695,7 +691,7 @@ async function useTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if tag exists
-		if (!rawData[tagName]) {
+		if (!getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" does not exist`);
 		}
 
@@ -808,8 +804,7 @@ async function renameTag(
 		}
 
 		// Reserved tag names
-		const reservedNames = ['master', 'main', 'default'];
-		if (reservedNames.includes(newName.toLowerCase())) {
+		if (RESERVED_TAG_NAMES.includes(newName.toLowerCase())) {
 			throw new Error(`"${newName}" is a reserved tag name`);
 		}
 
@@ -825,12 +820,12 @@ async function renameTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if old tag exists
-		if (!rawData[oldName]) {
+		if (!getOwnKey(rawData, oldName)) {
 			throw new Error(`Tag "${oldName}" does not exist`);
 		}
 
 		// Check if new tag name already exists
-		if (rawData[newName]) {
+		if (getOwnKey(rawData, newName)) {
 			throw new Error(`Tag "${newName}" already exists`);
 		}
 
@@ -858,12 +853,7 @@ async function renameTag(
 		}
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
+		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -955,8 +945,7 @@ async function copyTag(
 		}
 
 		// Reserved tag names
-		const reservedNames = ['master', 'main', 'default'];
-		if (reservedNames.includes(targetName.toLowerCase())) {
+		if (RESERVED_TAG_NAMES.includes(targetName.toLowerCase())) {
 			throw new Error(`"${targetName}" is a reserved tag name`);
 		}
 
@@ -972,12 +961,12 @@ async function copyTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if source tag exists
-		if (!rawData[sourceName]) {
+		if (!getOwnKey(rawData, sourceName)) {
 			throw new Error(`Source tag "${sourceName}" does not exist`);
 		}
 
 		// Check if target tag already exists
-		if (rawData[targetName]) {
+		if (getOwnKey(rawData, targetName)) {
 			throw new Error(`Target tag "${targetName}" already exists`);
 		}
 
@@ -1001,12 +990,7 @@ async function copyTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = {};
-		for (const [key, value] of Object.entries(rawData)) {
-			if (key !== '_rawTaggedData') {
-				cleanData[key] = value;
-			}
-		}
+		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -1333,7 +1317,7 @@ async function autoSwitchTagForBranch(
 		// Check if tag exists
 		const data = readJSON(tasksPath, projectRoot);
 		const rawData = data._rawTaggedData || data;
-		const tagExists = rawData[tagName];
+		const tagExists = getOwnKey(rawData, tagName);
 
 		if (!tagExists && createIfMissing) {
 			// Create the tag from branch

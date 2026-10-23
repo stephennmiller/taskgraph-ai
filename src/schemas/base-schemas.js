@@ -53,12 +53,23 @@ export const BaseTaskSchema = z
 	})
 	.strict();
 
+/**
+ * A subtask's dependencies take the forms tm-core's `resolveSubtaskDependency`
+ * reads: a number for a sibling subtask (1), a string for a task ("3") or
+ * another task's subtask ("3.2"). Numbers alone would make a dependency on
+ * task 3 read as sibling 3.
+ */
+export const SubtaskDependencySchema = z.union([
+	z.number().int().positive(),
+	z.string()
+]);
+
 export const SubtaskSchema = z
 	.object({
 		id: z.number().int().positive(),
 		title: z.string().min(5).max(200),
 		description: z.string().min(10),
-		dependencies: z.array(z.number().int().positive()),
+		dependencies: z.array(SubtaskDependencySchema),
 		details: z.string().min(20),
 		status: z.enum(['pending', 'done', 'completed']),
 		testStrategy: z.string().nullable()
