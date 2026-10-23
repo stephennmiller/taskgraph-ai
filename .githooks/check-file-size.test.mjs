@@ -26,6 +26,7 @@ test('ignores lockfiles, generated code, and tool-managed files', () => {
 		'dist/index.js',
 		'CHANGELOG.md',
 		'.taskgraph/tasks/tasks.json',
+		'.taskgraph/archive/2025-upstream/docs/loop-prd.md',
 		'images/demo.webp'
 	]) {
 		assert.ok(isIgnored(p), p);
