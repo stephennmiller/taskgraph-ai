@@ -57,10 +57,11 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 	try {
 		// Load existing tasks
 		const loaded = loadExistingTasks(config.tasksPath, config.targetTag);
-		// Overwriting (--force) replaces the list, so numbering starts over;
-		// only --append continues after the existing tasks
+		// Overwriting (--force) replaces the list, so numbering starts over
+		// (above any archived IDs, which stay reserved); only --append
+		// continues after the existing tasks
 		const existingTasks = config.append ? loaded.existingTasks : [];
-		const nextId = config.append ? loaded.nextId : 1;
+		const nextId = config.append ? loaded.nextId : loaded.firstFreeId;
 
 		// Validate operations
 		validateFileOperations({

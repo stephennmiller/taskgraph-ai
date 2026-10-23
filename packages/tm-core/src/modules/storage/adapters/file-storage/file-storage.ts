@@ -8,6 +8,7 @@ import {
 	TaskGraphError
 } from '../../../../common/errors/taskgraph-error.js';
 import type {
+	ArchiveTasksOptions,
 	IStorage,
 	LoadTasksOptions,
 	StorageStats,
@@ -27,6 +28,14 @@ import type {
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
 import {
+	type ArchiveData,
+	addToArchive,
+	archivedTaskIds,
+	insertById,
+	selectArchivable,
+	takeFromArchive
+} from '../../../tasks/utils/archive.js';
+import {
 	type TaskClaim,
 	claimNextInTasks
 } from '../../../tasks/utils/claim.js';
@@ -37,6 +46,15 @@ import { applyTagUpdate, buildTagMetadata } from './tag-update.js';
 import { warnIfUnsupportedSchema } from './schema-version.js';
 import { TagOperations } from './tag-operations.js';
 import { modifyTaskIn, setTaskStatusIn, taskNotFound } from './task-updates.js';
+
+/** What a mutateTasks change returns */
+interface MutateOutcome<R> {
+	/** The tag's new tasks, or null to leave the file untouched */
+	tasks: Task[] | null;
+	result: R;
+	/** Runs after tasks.json is written, while its lock is still held */
+	afterWrite?: () => Promise<void>;
+}
 
 /**
  * File-based storage implementation using a single tasks.json file with separated concerns
@@ -258,31 +276,37 @@ export class FileStorage implements IStorage {
 	 */
 	private async mutateTasks<R>(
 		tag: string | undefined,
-		mutate: (tasks: Task[]) => { tasks: Task[] | null; result: R }
+		mutate: (tasks: Task[]) => MutateOutcome<R> | Promise<MutateOutcome<R>>
 	): Promise<R> {
 		const filePath = this.pathResolver.getTasksPath();
 		const resolvedTag = tag || 'master';
 		let result!: R;
+		let afterWrite: (() => Promise<void>) | undefined;
 
 		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
-		await this.fileOps.modifyJson(filePath, (existingData: any) => {
-			const current = this.formatHandler.extractTasks(
-				existingData,
-				resolvedTag
-			);
-			const outcome = mutate(current);
-			result = outcome.result;
-			if (outcome.tasks === null) {
-				return existingData;
-			}
-			return applyTagUpdate(
-				this.formatHandler,
-				existingData,
-				resolvedTag,
-				outcome.tasks,
-				buildTagMetadata(outcome.tasks, resolvedTag)
-			);
-		});
+		await this.fileOps.modifyJson(
+			filePath,
+			async (existingData: any) => {
+				const current = this.formatHandler.extractTasks(
+					existingData,
+					resolvedTag
+				);
+				const outcome = await mutate(current);
+				result = outcome.result;
+				afterWrite = outcome.afterWrite;
+				if (outcome.tasks === null) {
+					return existingData;
+				}
+				return applyTagUpdate(
+					this.formatHandler,
+					existingData,
+					resolvedTag,
+					outcome.tasks,
+					buildTagMetadata(outcome.tasks, resolvedTag)
+				);
+			},
+			{ afterWrite: () => afterWrite?.() ?? Promise.resolve() }
+		);
 
 		return result;
 	}
@@ -422,11 +446,102 @@ export class FileStorage implements IStorage {
 		claimant: string,
 		tag?: string
 	): Promise<TaskClaim | null> {
-		return this.mutateTasks(tag, (tasks) => {
-			const outcome = claimNextInTasks(tasks, claimant);
+		return this.mutateTasks(tag, async (tasks) => {
+			// Read after tasks.json: archive writes archive.json first, so a task
+			// is always in one of the two
+			const archived = await this.loadArchivedTaskIds(tag);
+			const outcome = claimNextInTasks(
+				tasks,
+				claimant,
+				new Date().toISOString(),
+				archived
+			);
 			return outcome
 				? { tasks: outcome.tasks, result: outcome.claim }
 				: { tasks: null, result: null };
+		});
+	}
+
+	/** IDs of the tasks archived in a tag (none without an archive) */
+	async loadArchivedTaskIds(tag?: string): Promise<Set<string>> {
+		return archivedTaskIds(await this.readArchive(), tag || 'master');
+	}
+
+	private async readArchive(): Promise<ArchiveData> {
+		try {
+			const data = await this.fileOps.readJson(
+				this.pathResolver.getArchivePath()
+			);
+			return data && typeof data === 'object' ? data : {};
+		} catch (error: any) {
+			if (error.code === 'ENOENT') return {};
+			throw error;
+		}
+	}
+
+	/**
+	 * Move finished tasks into archive.json. Locks tasks.json, then
+	 * archive.json (restore takes them in the same order), and writes the
+	 * archive before tasks.json: if the second write fails the tasks are in
+	 * both files, never in neither.
+	 */
+	async archiveTasks(
+		options: ArchiveTasksOptions,
+		tag?: string
+	): Promise<Task[]> {
+		const resolvedTag = tag || 'master';
+		if (options.dryRun) {
+			return selectArchivable(await this.loadTasks(resolvedTag), options)
+				.archive;
+		}
+		return this.mutateTasks(resolvedTag, async (tasks) => {
+			const { archive, keep } = selectArchivable(tasks, options);
+			if (archive.length === 0) return { tasks: null, result: [] };
+			await this.fileOps.modifyJson(
+				this.pathResolver.getArchivePath(),
+				(current: ArchiveData) =>
+					addToArchive(current ?? {}, resolvedTag, archive, options.now)
+			);
+			return { tasks: keep, result: archive };
+		});
+	}
+
+	/**
+	 * Move one archived task back into tasks.json. Writes tasks.json before
+	 * the archive, for the same reason archiveTasks writes the archive first.
+	 */
+	async restoreArchivedTask(taskId: string, tag?: string): Promise<Task> {
+		const resolvedTag = tag || 'master';
+		const id = String(taskId);
+		return this.mutateTasks(resolvedTag, async (tasks) => {
+			const taken = takeFromArchive(await this.readArchive(), resolvedTag, id);
+			if (!taken) {
+				throw Object.assign(
+					taskNotFound(`Task ${id} isn't archived in tag '${resolvedTag}'`),
+					{ hint: 'Archived tasks are in .taskgraph/tasks/archive.json' }
+				);
+			}
+			if (tasks.some((t) => String(t.id) === id)) {
+				throw Object.assign(
+					new TaskGraphError(
+						`Task ${id} is already in tasks.json`,
+						ERROR_CODES.VALIDATION_ERROR
+					),
+					{ hint: `Run \`taskgraph show ${id}\` to see it` }
+				);
+			}
+			return {
+				tasks: insertById(tasks, taken.task),
+				result: taken.task,
+				// Still under the tasks.json lock, so no archive run can interleave
+				afterWrite: () =>
+					this.fileOps.modifyJson(
+						this.pathResolver.getArchivePath(),
+						(current: ArchiveData) =>
+							takeFromArchive(current ?? {}, resolvedTag, id)?.archive ??
+							current
+					)
+			};
 		});
 	}
 
@@ -489,6 +604,7 @@ export class FileStorage implements IStorage {
 		}
 
 		await this.saveTasks(tasks, targetTag);
+		await this.tagOps.copyArchivedTasks(sourceTag, targetTag);
 	}
 
 	/** See TagOperations */

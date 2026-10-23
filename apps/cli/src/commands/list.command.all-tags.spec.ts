@@ -95,6 +95,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: listMock,
 					getTagsWithStats: vi.fn().mockResolvedValue({
 						tags: [
@@ -182,6 +183,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: listMock,
 					getTagsWithStats: vi.fn().mockResolvedValue({
 						tags: [
@@ -277,6 +279,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: listMock,
 					getTagsWithStats: vi.fn().mockResolvedValue({
 						tags: [
@@ -349,6 +352,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: listMock,
 					getTagsWithStats: vi.fn().mockResolvedValue({
 						tags: [

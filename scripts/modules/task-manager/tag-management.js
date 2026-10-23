@@ -4,7 +4,14 @@ import inquirer from 'inquirer';
 
 import { ui } from '@tm/cli';
 import { theme } from '@tm/cli/theme';
-import { filterReadyTasks, isTaskComplete } from '@tm/core';
+import {
+	copyArchivedTag,
+	deleteArchivedTag,
+	filterReadyTasks,
+	isTaskComplete,
+	readArchivedIdsSync,
+	renameArchivedTag
+} from '@tm/core';
 import {
 	findProjectRoot,
 	getCurrentTag,
@@ -144,8 +151,9 @@ async function createTag(
 
 		// Determine source for copying tasks (only if explicitly requested)
 		let sourceTasks = [];
+		let sourceTag = null;
 		if (copyFromCurrent || copyFromTag) {
-			const sourceTag = copyFromTag || getCurrentTag(projectRoot);
+			sourceTag = copyFromTag || getCurrentTag(projectRoot);
 			sourceTasks = getTasksForTag(rawData, sourceTag);
 
 			if (copyFromTag && sourceTasks.length === 0) {
@@ -179,6 +187,11 @@ async function createTag(
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
+		// A copy keeps the source's archived tasks, so its dependencies on them
+		// still count as done and their IDs stay reserved
+		if (sourceTag) {
+			await copyArchivedTag(tasksPath, sourceTag, tagName);
+		}
 
 		logFn.debug(`Successfully created tag "${tagName}"`);
 
@@ -357,6 +370,8 @@ async function deleteTag(
 			delete current[tagName];
 			return current;
 		});
+		// Its archived tasks go with it
+		await deleteArchivedTag(tasksPath, tagName);
 
 		// If we're deleting the current tag, switch to master
 		if (isCurrentTag) {
@@ -558,7 +573,11 @@ async function tags(
 			// Use centralized filtering from @tm/core
 			// Note: filterReadyTasks expects TaskWithBlocks[] but only uses status/dependencies at runtime
 			const tasksWithBlocks = tasks.map((t) => ({ ...t, blocks: [] }));
-			const readyTasks = filterReadyTasks(tasksWithBlocks);
+			// Dependencies on the tag's archived tasks count as done
+			const readyTasks = filterReadyTasks(
+				tasksWithBlocks,
+				readArchivedIdsSync(tasksPath, tagName).ids
+			);
 
 			tagList.push({
 				name: tagName,
@@ -692,7 +711,11 @@ async function useTag(
 		const taskCount = tasks.length;
 
 		// Find the next task to work on in this tag
-		const nextTask = findNextTask(tasks);
+		const nextTask = findNextTask(
+			tasks,
+			null,
+			readArchivedIdsSync(tasksPath, tagName).ids
+		);
 
 		logFn.debug(`Successfully switched to tag "${tagName}"`);
 
@@ -844,6 +867,8 @@ async function renameTag(
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
+		// Its archived tasks move with it
+		await renameArchivedTag(tasksPath, oldName, newName);
 
 		// Get task count
 		const tasks = getTasksForTag(rawData, newName);
@@ -985,6 +1010,8 @@ async function copyTag(
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
+		// Its archived tasks are copied too (see createTag)
+		await copyArchivedTag(tasksPath, sourceName, targetName);
 
 		logFn.debug(
 			`Successfully copied tag from "${sourceName}" to "${targetName}"`

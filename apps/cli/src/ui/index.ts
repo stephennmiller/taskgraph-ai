@@ -42,6 +42,14 @@ export {
 	type StatusChange
 } from './formatters/status-change-formatters.js';
 
+// What archive and archive restore did
+export {
+	formatArchiveResult,
+	formatRestoreResult,
+	type ArchiveSummary,
+	type ArchivedTaskRow
+} from './formatters/archive-formatters.js';
+
 // What next --claim took
 export {
 	formatClaim,

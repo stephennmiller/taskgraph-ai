@@ -244,4 +244,25 @@ describe('findNextTask', () => {
 
 		expect(findNextTask(tasks).id).toBe(2);
 	});
+
+	test('counts a dependency on an archived task as done but still lists it', () => {
+		const tasks = [
+			{
+				id: 3,
+				title: 'Waits on archived task 1',
+				status: 'in-progress',
+				dependencies: [1],
+				priority: 'high',
+				subtasks: [
+					{ id: 1, title: 'Sub', status: 'pending', dependencies: ['1'] }
+				]
+			}
+		];
+
+		const next = findNextTask(tasks, null, new Set(['1']));
+
+		expect(next.id).toBe('3.1');
+		expect(next.dependencies).toEqual(['1']);
+		expect(findNextTask(tasks)).toBeNull();
+	});
 });

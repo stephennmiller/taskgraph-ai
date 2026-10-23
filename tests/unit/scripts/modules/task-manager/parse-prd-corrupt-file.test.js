@@ -49,6 +49,7 @@ describe('parse-prd with an unreadable tasks.json', () => {
 		expect(loadExistingTasks(tasksPath, 'master')).toEqual({
 			existingTasks: [],
 			nextId: 1,
+			firstFreeId: 1,
 			tagMetadata: {}
 		});
 	});

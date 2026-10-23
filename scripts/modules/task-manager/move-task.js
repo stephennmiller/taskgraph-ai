@@ -2,8 +2,10 @@ import {
 	assignMetadata,
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,
+	liveOrArchived,
 	pruneDependencySources,
 	pruneTaskLinks,
+	readArchivedIdsSync,
 	rekeyDependencySources,
 	renameDependencySource,
 	resolveSubtaskDependency,
@@ -222,6 +224,11 @@ async function moveTask(
 	// Parse source and destination IDs
 	const isSourceSubtask = sourceId.includes('.');
 	const isDestSubtask = destinationId.includes('.');
+
+	// An archived task's ID stays reserved
+	if (!isDestSubtask) {
+		assertNotArchived(tasksPath, tag, parseInt(destinationId, 10));
+	}
 
 	let result;
 
@@ -538,6 +545,25 @@ function moveTaskToSubtask(tasks, sourceId, destinationId) {
 		message: `Converted task ${sourceId} to subtask ${destinationId}`,
 		movedItem: newSubtask
 	};
+}
+
+/**
+ * Refuse a destination ID that an archived task in the tag holds: archived
+ * IDs are never reused
+ * @param {string} tasksPath
+ * @param {string} tag
+ * @param {number} taskId
+ */
+function assertNotArchived(tasksPath, tag, taskId) {
+	if (
+		!readArchivedIdsSync(tasksPath, tag || 'master').ids.has(String(taskId))
+	) {
+		return;
+	}
+	throw new MoveTaskError(
+		MOVE_ERROR_CODES.TASK_ALREADY_EXISTS,
+		`Task ${taskId} is archived in tag "${tag}", so its ID is taken. Use a different destination ID.`
+	);
 }
 
 function moveTaskToTask(tasks, sourceId, destinationId) {
@@ -993,6 +1019,9 @@ async function executeMoveOperation(
 
 		const taskToMove = rawData[sourceTag].tasks[sourceTaskIndex];
 
+		// An archived task in the target tag keeps its ID
+		assertNotArchived(tasksPath, targetTag, normalizedTaskId);
+
 		// Check for ID conflicts in target tag
 		const existingTaskIndex = rawData[targetTag].tasks.findIndex(
 			(t) => t.id === normalizedTaskId
@@ -1064,7 +1093,13 @@ async function finalizeMove(
 		movedIds.has(String(task.id))
 	);
 	pruneTaskLinks(movedTaskObjects, (id) => movedIds.has(id.split('.')[0]));
-	pruneTaskLinks(rawData[sourceTag].tasks);
+	pruneTaskLinks(
+		rawData[sourceTag].tasks,
+		liveOrArchived(
+			rawData[sourceTag].tasks,
+			() => readArchivedIdsSync(tasksPath, sourceTag).ids
+		)
+	);
 
 	// Write the updated data
 	writeJSON(tasksPath, rawData, projectRoot, null);

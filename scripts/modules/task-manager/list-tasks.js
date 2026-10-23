@@ -1,15 +1,15 @@
+import { satisfyArchivedDependencies } from '@tm/core';
 import chalk from 'chalk';
 
 import {
 	addComplexityToTask,
 	log,
 	readComplexityReport,
-	readJSON,
 	truncate
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
+import { loadListTasks } from './load-list-tasks.js';
 
-import { createTmCore } from '@tm/core';
 import { getStatusWithColor, theme } from '../ui.js';
 
 /**
@@ -35,26 +35,11 @@ async function listTasks(
 ) {
 	const { projectRoot, tag } = context;
 	try {
-		// BRIDGE: Initialize tm-core for unified task access
-		let data;
-		try {
-			const tmCore = await createTmCore({
-				projectPath: projectRoot || process.cwd()
-			});
-
-			// Load tasks via tm-core tasks domain
-			const result = await tmCore.tasks.list({ tag });
-			data = { tasks: result.tasks };
-
-			log('debug', `Loaded ${result.tasks.length} tasks via tm-core`);
-		} catch (storageError) {
-			log(
-				'warn',
-				`TmCore failed, falling back to legacy readJSON: ${storageError.message}`
-			);
-			// Fallback to old readJSON if tm-core fails
-			data = readJSON(tasksPath, projectRoot, tag);
-		}
+		// BRIDGE: tm-core for unified task access, readJSON as the fallback
+		const { data, archivedIds } = await loadListTasks(tasksPath, {
+			projectRoot,
+			tag
+		});
 
 		if (!data || !data.tasks) {
 			throw new Error(`No valid tasks found in ${tasksPath}`);
@@ -156,20 +141,22 @@ async function listTasks(
 			totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
 		// Calculate dependency statistics (moved up to be available for all output formats)
+		// Dependencies on archived tasks count as done
+		const dependencyView = satisfyArchivedDependencies(data.tasks, archivedIds);
 		const completedTaskIds = new Set(
 			data.tasks
 				.filter((t) => t.status === 'done' || t.status === 'completed')
 				.map((t) => t.id)
 		);
 
-		const tasksWithNoDeps = data.tasks.filter(
+		const tasksWithNoDeps = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
 				t.status !== 'completed' &&
 				(!t.dependencies || t.dependencies.length === 0)
 		).length;
 
-		const tasksWithAllDepsSatisfied = data.tasks.filter(
+		const tasksWithAllDepsSatisfied = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
 				t.status !== 'completed' &&
@@ -178,7 +165,7 @@ async function listTasks(
 				t.dependencies.every((depId) => completedTaskIds.has(depId))
 		).length;
 
-		const tasksWithUnsatisfiedDeps = data.tasks.filter(
+		const tasksWithUnsatisfiedDeps = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
 				t.status !== 'completed' &&
@@ -225,7 +212,7 @@ async function listTasks(
 		const avgDependenciesPerTask = totalDependencies / data.tasks.length;
 
 		// Find next task to work on, passing the complexity report
-		const nextItem = findNextTask(data.tasks, complexityReport);
+		const nextItem = findNextTask(data.tasks, complexityReport, archivedIds);
 
 		// Structured data: the JSON output, and what any other format but
 		// markdown-readme and compact returns

@@ -1,4 +1,8 @@
-import { selectNextTask } from '@tm/core';
+import {
+	satisfyArchivedDependencies,
+	selectNextTask,
+	withStoredDependencies
+} from '@tm/core';
 import { addComplexityToTask } from '../utils.js';
 
 /**
@@ -21,11 +25,15 @@ import { addComplexityToTask } from '../utils.js';
  *
  * @param {Object[]} tasks  – full array of top-level tasks, each may contain .subtasks[]
  * @param {Object} [complexityReport=null] - Optional complexity report object
+ * @param {Set<string>} [archivedIds] - Archived task IDs; dependencies on
+ *   them count as done
  * @returns {Object|null}   – next work item or null if nothing is eligible
  */
-function findNextTask(tasks, complexityReport = null) {
+function findNextTask(tasks, complexityReport = null, archivedIds = new Set()) {
 	// The rule lives in @tm/core so the CLI, MCP and list view agree
-	const picked = selectNextTask(tasks);
+	const picked = selectNextTask(
+		satisfyArchivedDependencies(tasks, archivedIds)
+	);
 	if (!picked) return null;
 
 	let nextTask;
@@ -35,7 +43,8 @@ function findNextTask(tasks, complexityReport = null) {
 			title: picked.title,
 			status: picked.status,
 			priority: picked.priority,
-			dependencies: picked.dependencies,
+			// What it really depends on, archived tasks included
+			dependencies: withStoredDependencies(picked, tasks).dependencies,
 			parentId: Number(picked.parentId)
 		};
 	} else {

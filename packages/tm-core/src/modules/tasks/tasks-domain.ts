@@ -23,6 +23,10 @@ import type {
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
 import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../common/errors/taskgraph-error.js';
+import {
 	applyChecklistChanges,
 	buildChecklist,
 	checkDoneGate,
@@ -58,6 +62,14 @@ import type {
 	WatchOptions,
 	WatchSubscription
 } from '../../common/interfaces/storage.interface.js';
+
+/** What `archive` moved, or would move with dryRun */
+export interface ArchiveResult {
+	tasks: Task[];
+	tag: string;
+	olderThanDays: number;
+	dryRun: boolean;
+}
 
 /**
  * Tasks Domain - Unified API for all task operations
@@ -188,7 +200,7 @@ export class TasksDomain {
 	async getDependencyTree(
 		options: { tag?: string; rootId?: string } = {}
 	): Promise<DependencyTree> {
-		const { tasks } = await this.list({ tag: options.tag });
+		const tasks = await this.taskService.getDependencyView(options.tag);
 		return buildDependencyTree(tasks, { rootId: options.rootId });
 	}
 
@@ -200,7 +212,7 @@ export class TasksDomain {
 	async analyzeDependencies(
 		options: { tag?: string; limit?: number; taskId?: string } = {}
 	): Promise<DependencyAnalysis> {
-		const { tasks } = await this.list({ tag: options.tag });
+		const tasks = await this.taskService.getDependencyView(options.tag);
 		return analyzeDependencies(tasks, {
 			limit: options.limit,
 			id: options.taskId
@@ -216,7 +228,7 @@ export class TasksDomain {
 		taskId: string,
 		options: { tag?: string } = {}
 	): Promise<BlockerExplanation> {
-		const { tasks } = await this.list({ tag: options.tag });
+		const tasks = await this.taskService.getDependencyView(options.tag);
 		return explainBlockers(tasks, String(taskId));
 	}
 
@@ -227,8 +239,67 @@ export class TasksDomain {
 	 */
 	async getPrimeContext(options: { tag?: string } = {}): Promise<PrimeContext> {
 		const tag = options.tag || this.configManager.getActiveTag();
-		const { tasks } = await this.list({ tag });
+		const tasks = await this.taskService.getDependencyView(tag);
 		return buildPrimeContext(tasks, { tag });
+	}
+
+	// ========== Archive ==========
+
+	/**
+	 * Move done and cancelled tasks out of tasks.json into
+	 * .taskgraph/tasks/archive.json, in one locked write. A task qualifies
+	 * when its last change is at least `olderThanDays` old (default: config
+	 * `global.archiveAfterDays`, else 30); one with no timestamp qualifies.
+	 * Archived IDs are never reused, and dependencies on them count as done.
+	 * @returns The tasks archived (or that would be, with dryRun)
+	 */
+	async archive(
+		options: { tag?: string; olderThanDays?: number; dryRun?: boolean } = {}
+	): Promise<ArchiveResult> {
+		const olderThanDays =
+			options.olderThanDays ?? this.configManager.getArchiveAfterDays();
+		if (!Number.isInteger(olderThanDays) || olderThanDays < 0) {
+			throw new TaskGraphError(
+				`"${olderThanDays}" isn't a number of days`,
+				ERROR_CODES.INVALID_INPUT
+			);
+		}
+		const tag = options.tag || this.configManager.getActiveTag();
+		const tasks = await this.taskService.archiveTasks(
+			{ olderThanDays, dryRun: options.dryRun },
+			tag
+		);
+		return { tasks, tag, olderThanDays, dryRun: options.dryRun === true };
+	}
+
+	/**
+	 * Move one archived task, with its subtasks, back into tasks.json
+	 * @param taskId - A task ID like "5" (subtasks come back with their task)
+	 */
+	async restore(
+		taskId: string,
+		options: { tag?: string } = {}
+	): Promise<{ task: Task; tag: string }> {
+		const id = String(taskId).trim();
+		if (id.includes('.')) {
+			throw Object.assign(
+				new TaskGraphError(
+					`${id} is a subtask; restore its task instead`,
+					ERROR_CODES.INVALID_INPUT
+				),
+				{ hint: `Run \`taskgraph archive restore ${id.split('.')[0]}\`` }
+			);
+		}
+		const tag = options.tag || this.configManager.getActiveTag();
+		const task = await this.taskService.restoreArchivedTask(id, tag);
+		return { task, tag };
+	}
+
+	/**
+	 * IDs of the tasks archived in a tag (the active tag when omitted)
+	 */
+	async getArchivedIds(tag?: string): Promise<Set<string>> {
+		return this.taskService.getArchivedTaskIds(tag);
 	}
 
 	/**

@@ -13,6 +13,7 @@ import type {
 	Task,
 	TaskStatus
 } from '../../../common/types/index.js';
+import { satisfyArchivedDependencies } from './archive.js';
 import { rankNextTasks } from './next-task.js';
 
 /** Who claimed a task and when */
@@ -88,12 +89,14 @@ const asLoaded = (task: Task): Task => ({
 /**
  * Claim the next task nobody has started, by the same order as `next`.
  *
+ * @param archivedIds - Tasks in the archive; dependencies on them count as done
  * @returns The changed tasks and the claim, or null when nothing is ready
  */
 export function claimNextInTasks(
 	tasks: Task[],
 	claimedBy: string,
-	claimedAt: string = new Date().toISOString()
+	claimedAt: string = new Date().toISOString(),
+	archivedIds: ReadonlySet<string> = new Set()
 ): { tasks: Task[]; claim: TaskClaim } | null {
 	// A task someone else claimed is theirs, subtasks included
 	const claimedByOther = new Set(
@@ -104,7 +107,10 @@ export function claimNextInTasks(
 			})
 			.map((task) => String(task.id))
 	);
-	const next = rankNextTasks(tasks, { unstartedOnly: true }).find(
+	const next = rankNextTasks(
+		satisfyArchivedDependencies(tasks, archivedIds),
+		{ unstartedOnly: true }
+	).find(
 		(item) => {
 			const parentId = (item as Task & { parentId?: string }).parentId;
 			return parentId === undefined || !claimedByOther.has(parentId);

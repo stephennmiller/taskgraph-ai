@@ -55,6 +55,7 @@
 							"capabilities/cli-root-commands",
 							"capabilities/task-structure",
 							"capabilities/dependency-graph",
+							"capabilities/archive",
 							"capabilities/loop",
 							"capabilities/research",
 							"capabilities/github-sync",

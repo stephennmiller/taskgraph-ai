@@ -5,6 +5,7 @@
 
 import type { Command } from 'commander';
 
+import { ArchiveCommand } from './commands/archive.command.js';
 import { AutopilotCommand } from './commands/autopilot/index.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
@@ -71,6 +72,12 @@ export class CommandRegistry {
 			name: 'why',
 			description: 'Explain why a task is blocked',
 			commandClass: WhyCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'archive',
+			description: 'Move done and cancelled tasks out of tasks.json',
+			commandClass: ArchiveCommand as any,
 			category: 'task'
 		},
 		{

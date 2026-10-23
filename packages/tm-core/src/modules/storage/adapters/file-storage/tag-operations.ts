@@ -9,6 +9,12 @@ import {
 	TaskGraphError
 } from '../../../../common/errors/taskgraph-error.js';
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
+import {
+	type ArchiveData,
+	copyArchiveTag,
+	dropArchiveTag,
+	renameArchiveTag
+} from '../../../tasks/utils/archive.js';
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import type { PathResolver } from './path-resolver.js';
@@ -39,6 +45,8 @@ export class TagOperations {
 		options?: { copyFrom?: string; description?: string }
 	): Promise<void> {
 		const filePath = this.pathResolver.getTasksPath();
+		// The tag the new one copied its tasks from, if any
+		let copiedFrom: string | undefined;
 
 		try {
 			await this.fileOps.modifyJson(filePath, (existingData: any) => {
@@ -63,6 +71,7 @@ export class TagOperations {
 							tasksToCopy = JSON.parse(
 								JSON.stringify(existingData[options.copyFrom].tasks)
 							);
+							copiedFrom = options.copyFrom;
 						}
 					}
 
@@ -89,6 +98,7 @@ export class TagOperations {
 					let tasksToCopy: any[] = [];
 					if (options?.copyFrom === 'master' || !options?.copyFrom) {
 						tasksToCopy = JSON.parse(JSON.stringify(masterTasks));
+						copiedFrom = 'master';
 					}
 
 					return {
@@ -113,6 +123,11 @@ export class TagOperations {
 					};
 				}
 			});
+			// A copy keeps the source's archived tasks: its dependencies on them
+			// still count as done, and their IDs stay reserved in the copy
+			if (copiedFrom !== undefined) {
+				await this.copyArchivedTasks(copiedFrom, tagName);
+			}
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				throw new Error('Tasks file not found - initialize project first');
@@ -159,6 +174,8 @@ export class TagOperations {
 			if (shouldDeleteFile) {
 				await this.fileOps.deleteFile(filePath);
 			}
+			// Its archived tasks go with it
+			await this.updateArchive((archive) => dropArchiveTag(archive, tag));
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				throw new Error(`Tag ${tag} not found - file doesn't exist`);
@@ -209,12 +226,41 @@ export class TagOperations {
 					throw new Error(`Tag ${oldTag} not found in standard format`);
 				}
 			});
+			// Its archived tasks move with it
+			await this.updateArchive((archive) =>
+				renameArchiveTag(archive, oldTag, newTag)
+			);
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				throw new Error(`Tag ${oldTag} not found - file doesn't exist`);
 			}
 			throw error;
 		}
+	}
+
+	/**
+	 * Give a copy of a tag the source's archived tasks: the copy's
+	 * dependencies on them still count as done, and their IDs stay reserved
+	 */
+	async copyArchivedTasks(fromTag: string, toTag: string): Promise<void> {
+		await this.updateArchive((archive) =>
+			copyArchiveTag(archive, fromTag, toTag)
+		);
+	}
+
+	/**
+	 * Apply a tag change to archive.json under its lock. Leaves the file alone
+	 * when there is none or the tag has nothing archived.
+	 */
+	private async updateArchive(
+		change: (archive: ArchiveData) => ArchiveData | null
+	): Promise<void> {
+		const archivePath = this.pathResolver.getArchivePath();
+		if (!(await this.fileOps.exists(archivePath))) return;
+		await this.fileOps.modifyJson(
+			archivePath,
+			(current: ArchiveData) => change(current ?? {}) ?? current
+		);
 	}
 
 	/**

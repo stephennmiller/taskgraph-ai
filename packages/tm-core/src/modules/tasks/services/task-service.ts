@@ -10,12 +10,17 @@ import type {
 	TaskStatus
 } from '../../../common/types/index.js';
 import type {
+	ArchiveTasksOptions,
 	IStorage,
 	TaskFieldUpdates,
 	UpdateStatusOptions
 } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
 import { StorageFactory } from '../../storage/services/storage-factory.js';
+import {
+	satisfyArchivedDependencies,
+	withStoredDependencies
+} from '../utils/archive.js';
 import { selectNextTask } from '../utils/next-task.js';
 import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
@@ -289,9 +294,54 @@ export class TaskService {
 	 * Prioritizes eligible subtasks from in-progress parent tasks before falling back to top-level tasks
 	 */
 	async getNextTask(tag?: string): Promise<Task | null> {
-		const result = await this.getTaskList({ tag });
+		const { tasks } = await this.getTaskList({ tag });
+		const picked = selectNextTask(
+			satisfyArchivedDependencies(tasks, await this.getArchivedTaskIds(tag))
+		);
+		// Show the dependencies it really has; archived ones count as done
+		return picked ? withStoredDependencies(picked, tasks) : null;
+	}
 
-		return selectNextTask(result.tasks);
+	/**
+	 * A tag's tasks for readiness, blocker and tree logic: dependencies on
+	 * archived tasks are taken out, since those count as done. Read only;
+	 * never save the result.
+	 */
+	async getDependencyView(tag?: string): Promise<Task[]> {
+		const result = await this.getTaskList({ tag });
+		return satisfyArchivedDependencies(
+			result.tasks,
+			await this.getArchivedTaskIds(tag)
+		);
+	}
+
+	/**
+	 * IDs of the tasks archived in a tag (the active tag when omitted)
+	 */
+	async getArchivedTaskIds(tag?: string): Promise<Set<string>> {
+		return this.storage.loadArchivedTaskIds(tag || this.getActiveTag());
+	}
+
+	/**
+	 * Move done and cancelled tasks last changed at least `olderThanDays`
+	 * ago into the archive, in one locked write
+	 * @returns The tasks archived (or that would be, with dryRun)
+	 */
+	async archiveTasks(
+		options: ArchiveTasksOptions,
+		tag?: string
+	): Promise<Task[]> {
+		return this.storage.archiveTasks(options, tag || this.getActiveTag());
+	}
+
+	/**
+	 * Move one archived task back into tasks.json
+	 */
+	async restoreArchivedTask(taskId: string, tag?: string): Promise<Task> {
+		return this.storage.restoreArchivedTask(
+			taskId,
+			tag || this.getActiveTag()
+		);
 	}
 
 	/**

@@ -168,10 +168,13 @@ export class FileOperations {
 	 * Re-reads file inside lock to prevent lost updates from stale snapshots.
 	 * @param filePath - Path to the JSON file
 	 * @param modifier - Function that receives current data and returns modified data
+	 * @param options.afterWrite - Runs after the write, before the lock is
+	 *   released (to update a second file in step with this one)
 	 */
 	async modifyJson<T = any>(
 		filePath: string,
-		modifier: (currentData: T) => T | Promise<T>
+		modifier: (currentData: T) => T | Promise<T>,
+		options: { afterWrite?: () => Promise<void> } = {}
 	): Promise<void> {
 		// Ensure file exists for locking (proper-lockfile requires this)
 		await this.ensureFileExists(filePath);
@@ -218,6 +221,7 @@ export class FileOperations {
 			const content = JSON.stringify(newData, null, 2);
 			const writer = this.getWriter(filePath);
 			await writer.write(content);
+			await options.afterWrite?.();
 		} finally {
 			if (release) {
 				try {

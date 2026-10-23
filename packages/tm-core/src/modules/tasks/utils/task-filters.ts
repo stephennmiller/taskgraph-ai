@@ -9,6 +9,7 @@ import {
 	isTaskComplete
 } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
+import { isArchivedReference } from './archive.js';
 
 const logger = getLogger('TaskFilters');
 
@@ -53,8 +54,10 @@ export interface BuildBlocksMapResult {
  * This is the inverse of the dependencies relationship
  *
  * Also validates dependencies and returns any references to non-existent tasks.
+ * A dependency on an archived task isn't one of them.
  *
  * @param tasks - Array of tasks to analyze
+ * @param archivedIds - IDs of the tag's archived tasks
  * @returns Object containing the blocks map and any invalid dependency references
  *
  * @example
@@ -71,7 +74,10 @@ export interface BuildBlocksMapResult {
  * // invalidDependencies => []         // No invalid deps in this example
  * ```
  */
-export function buildBlocksMap(tasks: Task[]): BuildBlocksMapResult {
+export function buildBlocksMap(
+	tasks: Task[],
+	archivedIds: ReadonlySet<string> = new Set()
+): BuildBlocksMapResult {
 	const blocksMap = new Map<string, string[]>(
 		tasks.map((task) => [String(task.id), []])
 	);
@@ -84,7 +90,7 @@ export function buildBlocksMap(tasks: Task[]): BuildBlocksMapResult {
 			const blocks = blocksMap.get(depIdStr);
 			if (blocks) {
 				blocks.push(String(task.id));
-			} else {
+			} else if (!isArchivedReference(depIdStr, archivedIds)) {
 				// Dependency references a non-existent task
 				invalidDependencies.push({
 					taskId: String(task.id),
@@ -101,9 +107,10 @@ export function buildBlocksMap(tasks: Task[]): BuildBlocksMapResult {
  * Filter to only tasks that are ready to work on
  * A task is ready when:
  * 1. It has an actionable status (pending, in-progress, or review)
- * 2. All its dependencies are complete (done, completed, or cancelled)
+ * 2. All its dependencies are complete (done, completed, or cancelled) or archived
  *
  * @param tasks - Array of tasks with blocks information
+ * @param archivedIds - IDs of the tag's archived tasks
  * @returns Filtered array of tasks that are ready to work on
  *
  * @example
@@ -118,11 +125,15 @@ export function buildBlocksMap(tasks: Task[]): BuildBlocksMapResult {
  * // Task 3 is not ready because dependency '2' is still pending
  * ```
  */
-export function filterReadyTasks(tasks: TaskWithBlocks[]): TaskWithBlocks[] {
+export function filterReadyTasks(
+	tasks: TaskWithBlocks[],
+	archivedIds: ReadonlySet<string> = new Set()
+): TaskWithBlocks[] {
 	// Build set of completed task IDs for dependency checking
 	const completedIds = new Set<string>(
 		tasks.filter((t) => isTaskComplete(t.status)).map((t) => String(t.id))
 	);
+	const liveIds = new Set(tasks.map((t) => String(t.id)));
 
 	return tasks.filter((task) => {
 		// Validate status is a known value
@@ -139,7 +150,14 @@ export function filterReadyTasks(tasks: TaskWithBlocks[]): TaskWithBlocks[] {
 
 		// Ready if no dependencies or all dependencies are completed
 		const deps = task.dependencies ?? [];
-		return deps.every((depId) => completedIds.has(String(depId)));
+		return deps.every(
+			(depId) =>
+				completedIds.has(String(depId)) ||
+				// A task back in tasks.json isn't archived (as in
+				// satisfyArchivedDependencies), and neither are its subtasks
+				(!liveIds.has(String(depId).split('.')[0]) &&
+					isArchivedReference(depId, archivedIds))
+		);
 	});
 }
 

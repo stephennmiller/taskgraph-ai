@@ -9,8 +9,11 @@ import {
 	findDanglingLinks,
 	getLinkType,
 	hasDependency,
+	isArchivedReference,
+	liveOrArchived,
 	isSiblingReference,
 	parseLinkType,
+	readArchivedIdsSync,
 	pruneDependencySources,
 	pruneTaskLinks,
 	removeTaskLink,
@@ -73,6 +76,19 @@ function linkWithoutBlocking(task, taskId, dependencyId, type, parentId) {
 	return true;
 }
 const NO_TASKS_HINT = 'Create some with `taskgraph parse-prd <file>`';
+
+/**
+ * IDs of the tasks archived in the tag `data` was read from. Dependencies on
+ * them count as done: they aren't missing, and fix-dependencies keeps them.
+ * @param {string} tasksPath
+ * @param {Object} data - What readJSON returned (it carries the tag)
+ * @param {Object} [context]
+ * @returns {Set<string>}
+ */
+function archivedIdsFor(tasksPath, data, context = {}) {
+	const tag = data?.tag || context.tag || 'master';
+	return readArchivedIdsSync(tasksPath, tag).ids;
+}
 
 /**
  * Record how a dependency was created on the task's metadata. Marking it
@@ -190,6 +206,19 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 
 	// Check if the dependency task or subtask actually exists
 	if (!taskExists(data.tasks, formattedDependencyId)) {
+		if (
+			isArchivedReference(
+				formattedDependencyId,
+				archivedIdsFor(tasksPath, data, context)
+			)
+		) {
+			const archivedId = String(formattedDependencyId).split('.')[0];
+			throw failure(
+				DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
+				`Task ${archivedId} is archived, so it already counts as done`,
+				`Run \`taskgraph archive restore ${archivedId}\` to depend on it again`
+			);
+		}
 		throw failure(
 			DEPENDENCY_ERROR_CODES.TASK_NOT_FOUND,
 			`Task ${formattedDependencyId} not found`,
@@ -744,16 +773,19 @@ function createTaskLookup(tasks) {
 /**
  * Validate task dependencies
  * @param {Array} tasks - Array of all tasks
+ * @param {Set<string>} [archivedIds] - Archived task IDs; dependencies on
+ *   them count as done, not missing
  * @returns {Object} Validation result with valid flag and issues array
  */
-function validateTaskDependencies(tasks) {
+function validateTaskDependencies(tasks, archivedIds = new Set()) {
 	const issues = [];
 	const graph = buildDependencyGraph(tasks);
 	const loopMembers = findLoopMembers(graph);
 	const subtaskLoopMembers = findLoopMembers(
 		buildDependencyGraph(tasks, { subtasksOnly: true })
 	);
-	const exists = createTaskLookup(tasks);
+	const lookup = createTaskLookup(tasks);
+	const exists = (id) => lookup(id) || isArchivedReference(id, archivedIds);
 
 	// Check each task's dependencies
 	tasks.forEach((task) => {
@@ -957,7 +989,10 @@ async function validateDependenciesCommand(tasksPath, options = {}) {
 		`Analyzing dependencies for ${counts.taskCount} tasks and ${counts.subtaskCount} subtasks...`
 	);
 
-	const { valid, issues } = validateTaskDependencies(data.tasks);
+	const { valid, issues } = validateTaskDependencies(
+		data.tasks,
+		archivedIdsFor(tasksPath, data, context)
+	);
 	// PRD sections with no task, and tasks with no section. Null unless
 	// parse-prd recorded sources; gaps are reported but don't fail the check
 	const prdCoverage = checkPrdCoverage(
@@ -1104,6 +1139,10 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 			}
 		});
 
+		// Dependencies on archived tasks count as done: keep them
+		const archivedIds = archivedIdsFor(tasksPath, data, context);
+		const archived = (depId) => isArchivedReference(depId, archivedIds);
+
 		// Create validity maps for tasks and subtasks
 		const validTaskIds = new Set(data.tasks.map((t) => t.id));
 		const validSubtaskIds = new Set();
@@ -1128,6 +1167,10 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 					}
 
 					const isSubtask = typeof depId === 'string' && depId.includes('.');
+
+					if (archived(depId) && !validTaskIds.has(parseInt(depId, 10))) {
+						return true;
+					}
 
 					if (isSubtask) {
 						// Check if the subtask exists
@@ -1198,6 +1241,13 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 
 						// Then check for non-existent dependencies
 						subtask.dependencies = subtask.dependencies.filter((depId) => {
+							if (
+								!isSiblingReference(depId) &&
+								archived(depId) &&
+								!validTaskIds.has(parseInt(depId, 10))
+							) {
+								return true;
+							}
 							if (typeof depId === 'string' && depId.includes('.')) {
 								if (!validSubtaskIds.has(depId)) {
 									fixes.push({
@@ -1323,7 +1373,11 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 		pruneProvenance(data.tasks);
 
 		// Drop related and discovered-from links to tasks that don't exist
-		for (const link of pruneTaskLinks(data.tasks)) {
+		// (a link to an archived task isn't dangling)
+		for (const link of pruneTaskLinks(
+			data.tasks,
+			liveOrArchived(data.tasks, archivedIds)
+		)) {
 			fixes.push({
 				type: 'missing-link',
 				taskId: link.taskId,
@@ -1344,7 +1398,7 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 		return {
 			fixes,
 			// Loops between tasks are left for the user to break
-			remaining: validateTaskDependencies(data.tasks).issues,
+			remaining: validateTaskDependencies(data.tasks, archivedIds).issues,
 			changed: dataChanged,
 			...countTasksAndDependencies(data.tasks)
 		};

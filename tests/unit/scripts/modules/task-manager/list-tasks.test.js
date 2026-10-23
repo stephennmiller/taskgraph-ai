@@ -56,12 +56,19 @@ const { resolveSubtaskDependency } = await import(
 const { selectNextTask } = await import(
 	'../../../../../packages/tm-core/src/modules/tasks/utils/next-task.ts'
 );
+const { satisfyArchivedDependencies, withStoredDependencies } = await import(
+	'../../../../../packages/tm-core/src/modules/tasks/utils/archive.ts'
+);
 vi.doMock('@tm/core', () => ({
 	resolveSubtaskDependency,
 	selectNextTask,
+	satisfyArchivedDependencies,
+	withStoredDependencies,
+	readArchivedIdsSync: vi.fn(() => ({ ids: new Set(), highestId: 0 })),
 	createTmCore: vi.fn(async () => ({
 		tasks: {
-			list: mockTasksList
+			list: mockTasksList,
+			getArchivedIds: vi.fn(async () => new Set())
 		}
 	}))
 }));

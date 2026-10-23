@@ -43,6 +43,7 @@ describe('ListTasksCommand', () => {
 
 		mockTmCore = {
 			tasks: {
+				getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 				list: vi.fn().mockResolvedValue({
 					tasks: [{ id: '1', title: 'Test Task', status: 'pending' }],
 					total: 1,
@@ -183,6 +184,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 4,
@@ -221,6 +223,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 3,
@@ -258,6 +261,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 5,
@@ -301,6 +305,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 4,
@@ -343,6 +348,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 6,
@@ -387,6 +393,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 4,
@@ -446,6 +453,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 2,
@@ -493,6 +501,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 3,
@@ -540,6 +549,7 @@ describe('ListTasksCommand', () => {
 
 			(command as any).tmCore = {
 				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
 					list: vi.fn().mockResolvedValue({
 						tasks: mockTasks,
 						total: 1,

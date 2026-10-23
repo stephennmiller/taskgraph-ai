@@ -1,7 +1,9 @@
 import {
 	assignMetadata,
+	liveOrArchived,
 	pruneDependencySources,
 	pruneTaskLinks,
+	readArchivedIdsSync,
 	resolveSubtaskDependency
 } from '@tm/core';
 import * as fs from 'fs';
@@ -171,7 +173,10 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 				});
 				// Related and discovered-from links to them go too, including
 				// links to the subtasks of a removed task
-				pruneTaskLinks(tasks);
+				pruneTaskLinks(
+					tasks,
+					liveOrArchived(tasks, () => readArchivedIdsSync(tasksPath, tag).ids)
+				);
 			}
 		});
 

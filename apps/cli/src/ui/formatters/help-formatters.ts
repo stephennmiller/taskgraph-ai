@@ -88,6 +88,10 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			},
 			{ name: 'graph', desc: 'Show tasks as a dependency tree' },
 			{ name: 'why', desc: 'Explain why a task is blocked' },
+			{
+				name: 'archive <restore>',
+				desc: 'Move finished tasks out, or restore one'
+			},
 			{ name: 'add-dependency', desc: 'Make a task depend on another' },
 			{ name: 'remove-dependency', desc: 'Remove a dependency' },
 			{ name: 'validate-dependencies', desc: 'Report invalid dependencies' },

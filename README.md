@@ -240,7 +240,7 @@ Only relevant if you added the optional MCP server. Each tool you load costs con
 |---|---|---|
 | `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task` |
 | `standard` | 15 | core, plus `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
-| `all` | 46 | everything: updates, dependencies, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
+| `all` | 47 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
 | a list | custom | e.g. `get_tasks,next_task,set_task_status` |
 
 Set it when you add the server:
