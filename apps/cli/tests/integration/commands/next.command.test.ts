@@ -448,4 +448,19 @@ describe('next command', () => {
 		expect(output).toMatch(/1 {2}Child criterion/);
 		expect(output).not.toContain('Parent criterion');
 	});
+
+	it('takes --json as the shorthand for --format json (#250)', () => {
+		writeTasks(subtaskProject());
+		const run = (...flags: string[]) =>
+			spawnSync('node', [binPath, 'next', ...flags], {
+				encoding: 'utf-8',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			});
+
+		const json = run('--json');
+
+		expect(json.status).toBe(0);
+		expect(JSON.parse(json.stdout).found).toBe(true);
+		expect(json.stdout).toBe(run('--format', 'json').stdout);
+	});
 });
