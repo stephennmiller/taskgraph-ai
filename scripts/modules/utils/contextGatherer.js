@@ -232,7 +232,11 @@ export class ContextGatherer {
 			const dependencyTitles =
 				task.dependencies?.length > 0
 					? task.dependencies
-							.map((depId) => this.allTasks.find((t) => t.id === depId)?.title)
+							.map(
+								(depId) =>
+									this.allTasks.find((t) => String(t.id) === String(depId))
+										?.title
+							)
 							.filter(Boolean)
 							.join(' ')
 					: '';

@@ -30,7 +30,7 @@ export interface NewTaskDependencies {
 /**
  * Merge the dependencies the user asked for with the ones the AI suggested.
  * An ID is compared as a string, so `1` and `"1"` are the same task, and
- * stored as `toTaskDependency` gives it: `"1"` as `1`, `"3.2"` as is.
+ * stored as `toTaskDependency` gives it: `1` as `"1"`, `"3.2"` as is.
  */
 export function mergeNewTaskDependencies({
 	explicit,

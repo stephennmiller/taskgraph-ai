@@ -25,7 +25,7 @@ A subtask's `dependencies` can name a sibling, another task's subtask or a top-l
 - **A dotted string** (`"4.1"`) is that subtask.
 - **Anything else** (a string without a dot, like `"3"`, or a number of 100 or more) is a top-level task.
 
-On a subtask, `add-dependency` stores a task as a string (`"3"`), so it is never read as a sibling. On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `add-dependency` and `add-task --dependencies` store a task there as `"3"` and a subtask as `"3.2"`, the form every other command saves, and `add-dependency` rewrites a list that mixes `3` and `"3"` into that form when it adds to it. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
+On a subtask, `add-dependency` stores a task as a string (`"3"`), so it is never read as a sibling. On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `add-dependency` and `add-task --dependencies` store a task there as `"3"` and a subtask as `"3.2"`, the form tm-core saves, and `add-dependency` rewrites a list that mixes `3` and `"3"` into that form when it adds to it. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
 
 ## `taskgraph graph`
 
