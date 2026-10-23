@@ -249,4 +249,13 @@ describe('IDs read from tasks.json (#398)', () => {
 			"  4  depends on task 9, which doesn't exist"
 		);
 	});
+
+	it('shows an ID that is only escape sequences as ?', () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [{ type: 'missing', taskId: '\u001b[2J', dependencyId: '\u0007' }]
+		});
+
+		expect(lines(output)[1]).toBe("  ?  removed task ?, which doesn't exist");
+	});
 });

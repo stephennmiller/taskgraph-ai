@@ -58,11 +58,14 @@ const fit = (text: string, width: number) =>
 	text.length > width ? `${text.slice(0, Math.max(1, width - 1))}…` : text;
 
 /**
- * "task 3" or "subtask 3.2". IDs come from tasks.json, so oneLine drops any
- * escape sequence or line break in them (#398)
+ * An ID from tasks.json made safe to print: oneLine drops any escape sequence
+ * or line break in it (#398), and an ID with nothing left shows as `?`
  */
+const safeId = (id: Id) => oneLine(id) || '?';
+
+/** "task 3" or "subtask 3.2" */
 function describeId(id: Id): string {
-	const safe = oneLine(id);
+	const safe = safeId(id);
 	return `${safe.includes('.') ? 'subtask' : 'task'} ${safe}`;
 }
 
@@ -118,7 +121,7 @@ function rows(
 	items: Array<{ taskId: Id; text: string }>,
 	width: number
 ): string[] {
-	const ids = items.map((item) => oneLine(item.taskId));
+	const ids = items.map((item) => safeId(item.taskId));
 	const idWidth = Math.max(...ids.map((id) => id.length));
 	const textWidth = Math.max(10, width - 4 - idWidth);
 	return items.map(
