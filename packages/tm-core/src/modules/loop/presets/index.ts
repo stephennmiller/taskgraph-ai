@@ -49,7 +49,8 @@ export function getPreset(name: LoopPreset): string {
  * @returns True if the value is a valid LoopPreset
  */
 export function isPreset(value: string): value is LoopPreset {
-	return value in PRESETS;
+	// Own keys only: `in` would also match `toString`, `constructor`...
+	return Object.hasOwn(PRESETS, value);
 }
 
 // Re-export individual presets for direct access

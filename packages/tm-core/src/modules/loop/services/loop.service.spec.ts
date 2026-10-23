@@ -475,6 +475,31 @@ describe('LoopService', () => {
 				);
 			});
 
+			it('reads a prompt file named after an inherited object key', async () => {
+				vi.mocked(fsPromises.readFile).mockResolvedValue(
+					'Custom prompt content'
+				);
+				mockSpawnSync.mockReturnValue({
+					stdout: '',
+					stderr: '',
+					status: 0,
+					signal: null,
+					pid: 123,
+					output: []
+				});
+
+				await service.run({
+					prompt: 'toString',
+					iterations: 1,
+					sleepSeconds: 0,
+					progressFile: '/test/progress.txt'
+				});
+
+				expect(fsPromises.readFile).toHaveBeenCalledWith('toString', 'utf-8');
+				const promptArg = mockSpawnSync.mock.calls[0][1][1];
+				expect(promptArg).toContain('Custom prompt content');
+			});
+
 			it('should throw on empty custom prompt file', async () => {
 				vi.mocked(fsPromises.readFile).mockResolvedValue('   ');
 

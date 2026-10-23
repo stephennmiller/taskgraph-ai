@@ -127,6 +127,13 @@ describe('Preset Exports', () => {
 			expect(isPreset('presets/default.md')).toBe(false);
 		});
 
+		it.each(['toString', 'constructor', 'hasOwnProperty', '__proto__'])(
+			'returns false for the inherited object key %s',
+			(name) => {
+				expect(isPreset(name)).toBe(false);
+			}
+		);
+
 		it('returns false for preset names with different casing', () => {
 			expect(isPreset('Default')).toBe(false);
 			expect(isPreset('DEFAULT')).toBe(false);

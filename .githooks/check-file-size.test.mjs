@@ -26,10 +26,23 @@ test('ignores lockfiles, generated code, and tool-managed files', () => {
 		'dist/index.js',
 		'CHANGELOG.md',
 		'.taskgraph/tasks/tasks.json',
+		'.taskgraph/archive/2025-upstream/docs/loop-prd.md',
 		'images/demo.webp'
 	]) {
 		assert.ok(isIgnored(p), p);
 		assert.deepEqual(run({ [p]: big }), []);
+	}
+});
+
+test('ignores only the root .taskgraph/archive/ folder', () => {
+	const big = blobOf(MAX_TOKENS * 4 + 100);
+	for (const p of [
+		'packages/x/.taskgraph/archive/notes.md',
+		'.taskgraph/archived-notes.md',
+		'.taskgraph/docs/prd.md'
+	]) {
+		assert.ok(!isIgnored(p), p);
+		assert.deepEqual(run({ [p]: big }), [p]);
 	}
 });
 

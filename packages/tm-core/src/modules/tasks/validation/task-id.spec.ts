@@ -10,6 +10,7 @@ import {
 	taskIdsSchema,
 	parseTaskIds,
 	extractParentId,
+	fullSubtaskId,
 	isSubtaskId
 } from './task-id.js';
 
@@ -144,6 +145,17 @@ describe('Task ID Validation', () => {
 		it('returns false for main task IDs', () => {
 			expect(isSubtaskId('1')).toBe(false);
 			expect(isSubtaskId('15')).toBe(false);
+		});
+	});
+
+	describe('fullSubtaskId', () => {
+		it('prefixes a subtask number with its parent ID', () => {
+			expect(fullSubtaskId(3, 2)).toBe('3.2');
+			expect(fullSubtaskId('3', '2')).toBe('3.2');
+		});
+
+		it('keeps an ID that is already dotted', () => {
+			expect(fullSubtaskId(3, '3.2')).toBe('3.2');
 		});
 	});
 });

@@ -5,7 +5,6 @@
 
 import {
 	OUTPUT_FORMATS,
-	type Task,
 	buildBlocksMap,
 	createTmCore,
 	filterBlockingTasks,
@@ -16,7 +15,6 @@ import {
 	STATUS_ICONS,
 	TASK_STATUSES,
 	type TaskStatus,
-	type TaskWithBlocks,
 	type TmCore,
 	type WatchSubscription
 } from '@tm/core';
@@ -27,58 +25,21 @@ import {
 	displayWatchFooter,
 	formatEmptyList,
 	formatListNextStep,
-	formatListSummary
+	formatListSummary,
+	formatPlainTaskList
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
-import * as ui from '../utils/ui.js';
 import { theme } from '../ui/theme.js';
-
-/**
- * Options interface for the list command
- */
-export interface ListCommandOptions {
-	status?: string;
-	tag?: string;
-	withSubtasks?: boolean;
-	format?: OutputFormat;
-	json?: boolean;
-	compact?: boolean;
-	noHeader?: boolean;
-	silent?: boolean;
-	project?: string;
-	watch?: boolean;
-	ready?: boolean;
-	blocking?: boolean;
-	allTags?: boolean;
-}
-
-/**
- * Task with tag info for cross-tag listing
- */
-export type TaskWithTag = TaskWithBlocks & { tagName: string };
-
-/**
- * Result type from list command
- */
-export interface ListTasksResult {
-	tasks: TaskWithBlocks[] | TaskWithTag[];
-	total: number;
-	filtered: number;
-	tag?: string;
-	allTags?: boolean;
-	/** ID of the task `next` would pick; only looked up for the text view */
-	nextTaskId?: string | null;
-	/** The task or subtask (`2.2`) `next` would pick, for the text view */
-	nextTask?: Task | null;
-	/**
-	 * Every task in the tag with its subtasks, before filters: what the
-	 * summary above the table counts. Only loaded for the text view.
-	 */
-	summaryTasks?: Task[];
-}
+import * as ui from '../utils/ui.js';
+import {
+	type ListCommandOptions,
+	type ListTasksResult,
+	type TaskWithTag,
+	shouldPrintPlainList
+} from './list.types.js';
 
 /**
  * ListTasksCommand extending Commander's Command class
@@ -147,6 +108,10 @@ export class ListTasksCommand extends Command {
 					status,
 					withSubtasks
 				};
+				mergedOptions.plain = shouldPrintPlainList(
+					mergedOptions,
+					this.getOptionValueSource('format') === 'cli'
+				);
 				await this.executeCommand(mergedOptions);
 			});
 	}
@@ -327,6 +292,7 @@ export class ListTasksCommand extends Command {
 		// The text view prints a summary of the whole tag above the table, and
 		// the task `next` picks; JSON, compact and --ready/--blocking don't
 		const showsSummary =
+			!options.plain &&
 			!options.json &&
 			!options.compact &&
 			(options.format ?? 'text') === 'text' &&
@@ -335,8 +301,11 @@ export class ListTasksCommand extends Command {
 
 		// When --ready is used, we need ALL tasks to correctly compute which dependencies are satisfied
 		// So we fetch without status filter first, then apply status filter after ready/blocking.
-		// The summary counts every task too, whatever the status filter.
-		const needsAllTasks = options.ready || options.blocking || showsSummary;
+		// The summary counts every task too, whatever the status filter. Plain
+		// lines load them all as well, so a dependency on a task with another
+		// status isn't reported as missing (#250)
+		const needsAllTasks =
+			options.ready || options.blocking || showsSummary || options.plain;
 
 		// Build filter - skip status filter if we need all tasks for ready/blocking computation
 		const filter =
@@ -574,7 +543,11 @@ export class ListTasksCommand extends Command {
 
 			case 'text':
 			default:
-				this.displayText(result, options);
+				if (options.plain) {
+					this.displayPlain(result, options);
+				} else {
+					this.displayText(result, options);
+				}
 				break;
 		}
 	}
@@ -630,6 +603,31 @@ export class ListTasksCommand extends Command {
 	}
 
 	/**
+	 * One plain line per task, for a pipe: no header, summary, table or color
+	 */
+	private displayPlain(
+		data: ListTasksResult,
+		options: ListCommandOptions
+	): void {
+		if (data.tasks.length === 0) {
+			console.log(formatEmptyList(this.emptyListFilter(options)));
+			return;
+		}
+		console.log(
+			formatPlainTaskList(data.tasks, { withSubtasks: options.withSubtasks })
+		);
+	}
+
+	/** The filter an empty list names: `No ready tasks found` */
+	private emptyListFilter(options: ListCommandOptions): string | undefined {
+		if (options.ready) return 'ready';
+		if (options.blocking) return 'blocking';
+		return options.status && options.status !== 'all'
+			? options.status.split(',').join(' or ')
+			: undefined;
+	}
+
+	/**
 	 * Display in text format with tables
 	 */
 	private displayText(
@@ -648,14 +646,7 @@ export class ListTasksCommand extends Command {
 
 		// No tasks message
 		if (tasks.length === 0) {
-			const filter = options.ready
-				? 'ready'
-				: options.blocking
-					? 'blocking'
-					: options.status && options.status !== 'all'
-						? options.status.split(',').join(' or ')
-						: undefined;
-			console.log(formatEmptyList(filter));
+			console.log(formatEmptyList(this.emptyListFilter(options)));
 			return;
 		}
 
