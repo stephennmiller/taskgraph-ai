@@ -191,7 +191,7 @@ async function initializeProgress(config, numTasks, estimatedInputTokens) {
 	if (config.reportProgress) {
 		await config.reportProgress({
 			progress: 0,
-			total: numTasks,
+			...(numTasks > 0 && { total: numTasks }),
 			message: `Starting PRD analysis (Input: ${estimatedInputTokens} tokens)${config.research ? ' with research' : ''}...`
 		});
 	}
@@ -428,10 +428,14 @@ async function reportPlaceholderTask(
 	}
 
 	if (config.reportProgress && !progressTracker) {
+		// numTasks is 0 when the model sizes the list, so there is no total
 		await config.reportProgress({
 			progress: taskNumber,
-			total: numTasks,
-			message: `Generating task ${taskNumber}/${numTasks}...`
+			...(numTasks > 0 && { total: numTasks }),
+			message:
+				numTasks > 0
+					? `Generating task ${taskNumber}/${numTasks}...`
+					: `Generating task ${taskNumber}...`
 		});
 	}
 }

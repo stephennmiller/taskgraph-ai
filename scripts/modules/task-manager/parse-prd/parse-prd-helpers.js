@@ -460,14 +460,21 @@ export async function reportTaskProgress({
 	// MCP progress reporting
 	if (reportProgress) {
 		try {
-			const outputTokens = estimatedTokens
-				? Math.floor(estimatedTokens / totalTasks)
-				: 0;
+			// totalTasks is 0 when the model sizes the list, so there is no total
+			const hasTotal = totalTasks > 0;
+			const outputTokens =
+				estimatedTokens && hasTotal
+					? Math.floor(estimatedTokens / totalTasks)
+					: 0;
+			const position = hasTotal
+				? `${currentCount}/${totalTasks}`
+				: `${currentCount}`;
+			const tokens = hasTotal ? ` | ~Output: ${outputTokens} tokens` : '';
 
 			await reportProgress({
 				progress: currentCount,
-				total: totalTasks,
-				message: `${priorityIndicator} Task ${currentCount}/${totalTasks} - ${task.title} | ~Output: ${outputTokens} tokens`
+				...(hasTotal && { total: totalTasks }),
+				message: `${priorityIndicator} Task ${position} - ${task.title}${tokens}`
 			});
 		} catch (error) {
 			// Ignore progress reporting errors
