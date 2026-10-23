@@ -1,7 +1,7 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
-	keepChecklistFields,
+	keepStoredFields,
 	reconcileDependencySources
 } from '@tm/core';
 import chalk from 'chalk';
@@ -250,8 +250,8 @@ async function updateTasks(
 							if (restored.testStrategy == null && original) {
 								restored.testStrategy = original.testStrategy;
 							}
-							// The AI schema has no criteria; keep the stored checklist
-							keepChecklistFields(restored, original);
+							// The AI schema has only some fields; keep everything else stored
+							keepStoredFields(restored, original);
 							assignMetadata(
 								restored,
 								reconcileDependencySources(subtask, original, task.id)

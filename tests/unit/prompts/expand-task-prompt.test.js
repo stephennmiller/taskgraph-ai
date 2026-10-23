@@ -136,7 +136,7 @@ describe('expand-task prompt template', () => {
 
 		test('update keeps the shared subtask schema without criteria', () => {
 			// update/update-task rewrite subtasks; their criteria are copied
-			// back from storage (keepChecklistFields), not regenerated
+			// back from storage (keepStoredFields), not regenerated
 			expect(SubtaskSchema.shape).not.toHaveProperty('acceptanceCriteria');
 		});
 
