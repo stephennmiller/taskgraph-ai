@@ -311,6 +311,21 @@ export class TaskService {
 	 * archived tasks are taken out, since those count as done. Read only;
 	 * never save the result.
 	 */
+	/**
+	 * Throw NOT_FOUND when a tag is named that the project doesn't have, so
+	 * a typo isn't read as an empty tag. A project with no tags yet passes.
+	 */
+	async assertTagExists(tag: string): Promise<void> {
+		const tags = await this.storage.getAllTags();
+		if (tags.length && !tags.includes(tag)) {
+			throw new TaskGraphError(
+				`Tag "${tag}" not found`,
+				ERROR_CODES.NOT_FOUND,
+				{ tagName: tag }
+			);
+		}
+	}
+
 	async getDependencyView(tag?: string): Promise<Task[]> {
 		const result = await this.getTaskList({ tag });
 		return satisfyArchivedDependencies(

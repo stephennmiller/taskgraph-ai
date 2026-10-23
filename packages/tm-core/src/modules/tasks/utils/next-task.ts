@@ -24,7 +24,8 @@ export interface SelectNextTaskOptions {
 }
 
 /**
- * Prefers an eligible subtask of an in-progress task, then the best
+ * Prefers an eligible subtask of an in-progress task (its own and its
+ * parent's dependencies satisfied), then the best
  * top-level task: priority, then how much work it unblocks, then fewest
  * dependencies, then lowest id.
  * @returns The next item, or null when nothing is eligible
@@ -82,6 +83,14 @@ export function rankNextTasks(
 	allTasks
 		.filter((t) => t.status === 'in-progress' && Array.isArray(t.subtasks))
 		.forEach((parent) => {
+			// A subtask also waits on what its parent waits on (not on the
+			// parent's own subtasks), as `why` shows it
+			const ownPrefix = `${parent.id}.`;
+			const parentDepsSatisfied = (parent.dependencies ?? [])
+				.map(String)
+				.filter((depId) => !depId.startsWith(ownPrefix))
+				.every((depId) => completedIds.has(depId));
+			if (!parentDepsSatisfied) return;
 			parent.subtasks!.forEach((st) => {
 				const stStatus = (st.status || 'pending').toLowerCase();
 				if (!pickable(stStatus)) return;

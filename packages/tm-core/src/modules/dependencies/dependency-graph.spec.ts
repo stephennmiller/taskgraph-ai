@@ -209,10 +209,88 @@ describe('criticalPath', () => {
 	it('follows subtask dependencies', () => {
 		const path = criticalPath([
 			task('1', [], 'pending', [sub(1), sub(2, [1])]),
-			task('2', ['1.2'])
+			task('2', ['1.2']),
+			task('3', ['2'])
 		]);
 
-		expect(path).toEqual(['1.1', '1.2', '2']);
+		expect(path).toEqual(['1.1', '1.2', '2', '3']);
+	});
+});
+
+describe('parents and subtasks', () => {
+	it("passes a parent's dependencies down to its subtasks as inherited", () => {
+		const { nodes } = buildDependencyGraph([
+			task('1'),
+			task('2', ['1', '2.2'], 'pending', [sub(1), sub(2, ['1']), sub(3, [1])])
+		]);
+
+		expect(nodes.get('2.1')?.parent).toBe('2');
+		expect(nodes.get('2')?.subtasks).toEqual(['2.1', '2.2', '2.3']);
+		// The parent's dependency on its own subtask is not passed down
+		expect(nodes.get('2.1')?.inherited).toEqual(['1']);
+		// Already listed on the subtask itself
+		expect(nodes.get('2.2')?.inherited).toEqual([]);
+		expect(nodes.get('2.3')?.inherited).toEqual(['1']);
+		expect(nodes.get('2')?.inherited).toEqual([]);
+	});
+
+	it('runs the critical path through a parent and its subtasks', () => {
+		// Before: 2.1 → 2.2 → 3 → 4, as if 2.1 could start before task 1
+		const path = criticalPath([
+			task('1'),
+			task('2', ['1'], 'pending', [sub(1), sub(2, [1])]),
+			task('3', ['2.2']),
+			task('4', ['3'])
+		]);
+
+		expect(path).toEqual(['1', '2.1', '2.2', '3', '4']);
+	});
+
+	it('orders a parent after its open subtasks', () => {
+		const path = criticalPath([
+			task('1', [], 'pending', [sub(1), sub(2, [1])]),
+			task('2', ['1'])
+		]);
+
+		expect(path).toEqual(['1.1', '1.2', '1', '2']);
+	});
+
+	it('skips finished subtasks when ordering the parent', () => {
+		const path = criticalPath([
+			task('1', [], 'in-progress', [sub(1, [], 'done'), sub(2, [1], 'done')]),
+			task('2', ['1'])
+		]);
+
+		expect(path).toEqual(['1', '2']);
+	});
+
+	it('does not loop when a subtask lists its own parent', () => {
+		const path = criticalPath([
+			task('1', [], 'pending', [sub(1, ['1'])]),
+			task('2', ['1'])
+		]);
+
+		expect(path).toEqual(['1', '1.1']);
+	});
+
+	it("finds a loop that runs through a parent's dependency", () => {
+		// 2.1 waits on 4 through task 2, and 4 waits on 2.1
+		const tasks = [task('2', ['4'], 'pending', [sub(1)]), task('4', ['2.1'])];
+
+		expect(findCycles(tasks)).toEqual([['2.1', '4']]);
+		expect(criticalPath(tasks)).toEqual([]);
+	});
+
+	it('counts subtasks that wait on a task through their parent', () => {
+		// Before: 1 blocked only task 2, though 3 waits on 2.2, which waits on 1
+		const counts = blockedCount([
+			task('1'),
+			task('2', ['1'], 'pending', [sub(1), sub(2)]),
+			task('3', ['2.2'])
+		]);
+
+		expect(counts.get('1')).toBe(4);
+		expect(counts.get('2')).toBe(0);
 	});
 });
 
@@ -291,10 +369,11 @@ describe('ties and cycles with finished tasks', () => {
 	it('resolves a bare number dependency on a subtask as a sibling', () => {
 		const path = criticalPath([
 			task('1', [], 'pending', [sub(1), sub(2, [1])]),
-			task('2', ['1.2'])
+			task('2', ['1.2']),
+			task('3', ['2'])
 		]);
 
-		expect(path).toEqual(['1.1', '1.2', '2']);
+		expect(path).toEqual(['1.1', '1.2', '2', '3']);
 	});
 
 	it('resolves a string dependency without a dot on a subtask as a task', () => {
@@ -303,7 +382,8 @@ describe('ties and cycles with finished tasks', () => {
 			task('3')
 		]);
 
-		expect(path).toEqual(['3', '1.2']);
+		// Task 1 finishes after its subtask, so the chain ends there
+		expect(path).toEqual(['3', '1.2', '1']);
 	});
 });
 

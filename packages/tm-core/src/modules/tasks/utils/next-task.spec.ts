@@ -109,6 +109,42 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('2.1');
 	});
 
+	it('skips subtasks whose parent still waits on an unfinished task', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Database', status: 'review' }),
+			createTask({
+				id: 2,
+				title: 'Started early',
+				status: 'in-progress',
+				dependencies: ['1'],
+				subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '2' })]
+			}),
+			createTask({ id: 3, title: 'Ready' })
+		]);
+
+		expect(next?.id).toBe('3');
+	});
+
+	it('offers subtasks once the parent\'s dependencies are done', () => {
+		const next = selectNextTask([
+			createTask({ id: 1, title: 'Database', status: 'done' }),
+			createTask({
+				id: 2,
+				title: 'Started',
+				status: 'in-progress',
+				dependencies: ['1', '2.2'],
+				subtasks: [
+					createSubtask({ id: 1, title: 'Step', parentId: '2' }),
+					createSubtask({ id: 2, title: 'Later', parentId: '2' })
+				]
+			})
+		]);
+
+		// The parent's dependency on its own subtask doesn't hold its subtasks
+		// back; 2.2 comes first because task 2 waits on it
+		expect(next?.id).toBe('2.2');
+	});
+
 	it('orders ids numerically, so 2 comes before 10', () => {
 		const next = selectNextTask([
 			createTask({ id: 10, title: 'Ten' }),
