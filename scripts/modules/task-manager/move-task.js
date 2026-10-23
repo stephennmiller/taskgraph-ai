@@ -3,6 +3,7 @@ import {
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,
 	liveOrArchived,
+	promotedSubtaskDescription,
 	pruneDependencySources,
 	pruneTaskLinks,
 	readArchivedIdsSync,
@@ -408,7 +409,7 @@ function moveSubtaskToTask(tasks, sourceId, destinationId) {
 	const newTask = {
 		id: destTaskId,
 		title: sourceSubtask.title,
-		description: sourceSubtask.description,
+		description: promotedSubtaskDescription(sourceSubtask),
 		status: sourceSubtask.status || 'pending',
 		dependencies: moved.dependencies,
 		priority: sourceSubtask.priority || 'medium',
