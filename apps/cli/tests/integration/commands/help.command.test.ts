@@ -20,6 +20,8 @@ describe('--help', () => {
 
 		expect(text).toContain('Daily workflow');
 		expect(text).toContain('Organize');
+		expect(text).toMatch(/^ {2}loop {2,}Have Claude Code/m);
+		expect(text).toMatch(/^ {2}github <push\|pull\|status\|unlink> {2,}Sync/m);
 		expect(text).toContain('taskgraph <command> --help');
 		expect(text).toContain('/plugin install taskgraph@taskgraph');
 	});
