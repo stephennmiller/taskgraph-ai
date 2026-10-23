@@ -124,6 +124,30 @@ describe('RuntimeStateManager', () => {
 			);
 		});
 
+		it('should keep keys it does not manage, such as branchTagMapping', async () => {
+			vi.mocked(fs.readFile).mockResolvedValue(
+				JSON.stringify({
+					currentTag: 'master',
+					branchTagMapping: { 'feature/x': 'feature-x' },
+					migrationNoticeShown: true
+				})
+			);
+			vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+			vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+			await stateManager.loadState();
+			await stateManager.setCurrentTag('feature-x');
+
+			const saved = JSON.parse(
+				vi.mocked(fs.writeFile).mock.calls[0][1] as string
+			);
+			expect(saved).toMatchObject({
+				currentTag: 'feature-x',
+				branchTagMapping: { 'feature/x': 'feature-x' },
+				migrationNoticeShown: true
+			});
+		});
+
 		it('should throw TaskGraphError on save failure', async () => {
 			vi.mocked(fs.mkdir).mockRejectedValue(new Error('Disk full'));
 
