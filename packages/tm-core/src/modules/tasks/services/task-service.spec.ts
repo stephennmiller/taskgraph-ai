@@ -276,6 +276,23 @@ describe('TaskService.getTask', () => {
 		expect(loaded?.subtasks[0].parentId).toBe('2');
 	});
 
+	// Regression: #412, show gave an empty description where list gives the title
+	it('gives a task with no description its title, as getTaskList does', async () => {
+		const service = serviceLoading({ ...task(2), description: '' });
+
+		const loaded = await service.getTask('2');
+
+		expect(loaded?.description).toBe('Task 2');
+	});
+
+	it('keeps an empty description on a subtask', async () => {
+		const service = serviceLoading({ ...task(1), id: '1.1', description: '' });
+
+		const loaded = await service.getTask('1.1');
+
+		expect(loaded?.description).toBe('');
+	});
+
 	it('returns null for a task that does not exist', async () => {
 		const loaded = await serviceLoading(null).getTask('9');
 

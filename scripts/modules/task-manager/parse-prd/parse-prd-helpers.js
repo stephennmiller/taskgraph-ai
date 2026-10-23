@@ -8,6 +8,7 @@ import {
 	assignMetadata,
 	formatExistingTaskList,
 	formatPrdSectionList,
+	isReservedNewTagName,
 	nextTaskId,
 	numberGeneratedTasks,
 	prdSourceMetadata,
@@ -171,10 +172,8 @@ export function validateFileOperations({
 	isMCP,
 	logger
 }) {
-	// JavaScript objects treat a `__proto__` key as their prototype, so no
-	// command creates a tag of that name
-	if (targetTag === '__proto__') {
-		throw new Error('"__proto__" is a reserved tag name');
+	if (isReservedNewTagName(targetTag)) {
+		throw new Error(`"${targetTag}" is a reserved tag name`);
 	}
 
 	const hasExistingTasks = existingTasks.length > 0;
