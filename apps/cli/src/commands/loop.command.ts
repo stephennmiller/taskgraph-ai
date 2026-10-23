@@ -9,6 +9,7 @@ import {
 	type LoopIteration,
 	type LoopOutputCallbacks,
 	type LoopResult,
+	type LoopTask,
 	MAX_PARALLEL,
 	PRESET_NAMES,
 	type ParallelTask,
@@ -20,6 +21,7 @@ import {
 import chalk from 'chalk';
 import { Command } from 'commander';
 import inquirer from 'inquirer';
+import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import {
@@ -28,11 +30,11 @@ import {
 	formatParallelTaskLines
 } from '../ui/formatters/parallel-loop-formatters.js';
 import { terminalWidth } from '../ui/layout/helpers.js';
-import { theme } from '../ui/theme.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface LoopCommandOptions {
 	iterations?: string;
+	id?: string;
 	prompt?: string;
 	progressFile?: string;
 	tag?: string;
@@ -52,6 +54,10 @@ export class LoopCommand extends Command {
 
 		this.description('Run Claude Code in a loop, one task per iteration')
 			.option('-n, --iterations <number>', 'Maximum iterations')
+			.option(
+				'-i, --id <id>',
+				'Work on this task or subtask instead of the next one (1 iteration unless -n is given)'
+			)
 			.option(
 				'-p, --prompt <preset|path>',
 				`Preset name (${PRESET_NAMES.join(', ')}) or path to custom prompt file`,
@@ -95,9 +101,18 @@ export class LoopCommand extends Command {
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
 
+			// Check --id before anything else, so a typo costs nothing
+			const pinned: LoopTask | undefined =
+				options.id !== undefined
+					? await this.tmCore.loop.resolveTask(options.id, {
+							prompt,
+							tag: options.tag
+						})
+					: undefined;
+
 			// Get pending task count for default preset iteration resolution
 			const pendingTaskCount =
-				prompt === 'default'
+				prompt === 'default' && !pinned
 					? await this.tmCore.tasks.getCount('pending', options.tag)
 					: undefined;
 
@@ -107,6 +122,7 @@ export class LoopCommand extends Command {
 					? parseInt(options.iterations, 10)
 					: undefined,
 				preset: prompt,
+				taskId: pinned?.id,
 				pendingTaskCount
 			});
 
@@ -126,33 +142,32 @@ export class LoopCommand extends Command {
 				await this.confirmTrust();
 			}
 
-			console.log(chalk.cyan('Starting TaskGraph Loop...'));
-			console.log(chalk.dim(`Preset: ${prompt}`));
-			console.log(chalk.dim(`Max iterations: ${iterations}`));
-			console.log(
-				chalk.dim(`Mode: ${options.sandbox ? 'Docker sandbox' : 'Claude CLI'}`)
-			);
-
-			// Show next task only for default preset (other presets don't use TaskGraph tasks)
-			if (prompt === 'default') {
-				const nextTask = await this.tmCore.tasks.getNext(options.tag);
-				if (nextTask) {
-					console.log(
-						theme.text(
-							`Next task to work on: ${theme.text(nextTask.id)} - ${nextTask.title}`
-						)
-					);
-				} else {
-					console.log(chalk.yellow('No pending tasks found'));
-				}
+			// The task the run starts on, for presets that work on tasks
+			let next: LoopTask | null | undefined;
+			if (!pinned && this.tmCore.loop.isTaskPreset(prompt)) {
+				const task = await this.tmCore.tasks.getNext(options.tag);
+				next = task ? { id: String(task.id), title: task.title } : null;
 			}
-			console.log();
+			for (const line of formatLoopIntro(
+				{
+					prompt,
+					isPreset: this.tmCore.loop.isPreset(prompt),
+					iterations,
+					sandbox: options.sandbox ?? false,
+					pinned,
+					next
+				},
+				terminalWidth()
+			)) {
+				console.log(line);
+			}
 
 			const config: Partial<LoopConfig> = {
 				iterations,
 				prompt,
 				progressFile,
 				tag: options.tag,
+				taskId: pinned?.id,
 				sandbox: options.sandbox,
 				trusted: options.trust,
 				// CLI defaults to including output (users typically want to see it)
@@ -199,7 +214,8 @@ export class LoopCommand extends Command {
 						? Number(options.iterations)
 						: undefined,
 				sandbox: options.sandbox,
-				verbose: options.verbose
+				verbose: options.verbose,
+				taskId: options.id
 			});
 
 			const projectRoot = path.resolve(getProjectRoot(options.project));
