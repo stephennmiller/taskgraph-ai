@@ -75,6 +75,18 @@ npm run format
 - **`main`**: The only long-lived branch. PRs target it, and releases are cut from it
 - **Feature branches**: `feat/description`, `fix/description`, `docs/description`
 
+### Roadmap: GitHub issues and TaskGraph
+
+The roadmap is tracked in two places: [GitHub issues](https://github.com/stephennmiller/taskgraph-ai/issues) and this repo's own `.taskgraph/tasks/tasks.json`, so that `taskgraph next` here returns current work. **The GitHub issue wins.** Its scope, done criteria and open or closed state are the source of truth; the task points at it and sets the order.
+
+- Each open issue has one task in the `master` tag, titled `<issue title> (#<n>)`, with the issue link in its details. Epics that only group other issues (#195, #242) have no task; epics with steps of their own (#254, #328) have a subtask per step.
+- Task dependencies follow the "Order" sections of the epics.
+- New issue: add its task, without AI: `taskgraph add-task --title='<issue title> (#<n>)' --description='<one line>' --details='GitHub issue #<n>: <url>'`.
+- Closing an issue: in the PR that closes it, run `taskgraph set-status --id=<task id> --status=done` (`--status=cancelled` if it closes as not planned).
+- When the task and the issue disagree, change the task to match the issue.
+
+Don't run `taskgraph github push` here: these tasks aren't linked to their issues, so it would open a second issue for each one.
+
 ### Code Quality Standards
 
 1. **Write tests** for new functionality

@@ -5,6 +5,8 @@
 **Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskgraph/CLAUDE.md
 
+This repo's tasks mirror its open GitHub issues (titles end in `(#<n>)`), and the issue wins where they differ. When a PR closes an issue, set its task to `done` in the same PR. See "Roadmap" in `CONTRIBUTING.md`.
+
 ## Commands
 
 ```bash
