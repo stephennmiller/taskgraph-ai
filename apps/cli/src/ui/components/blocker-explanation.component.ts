@@ -12,7 +12,7 @@ import type {
 } from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
-import { truncate } from '../layout/helpers.js';
+import { truncate, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface RenderBlockerExplanationOptions {
@@ -86,7 +86,9 @@ export function renderBlockerExplanation(
 	);
 
 	if (!explanation.blocked) {
-		lines.push(...describeStart(explanation));
+		lines.push(
+			...describeStart(explanation).flatMap((l) => wrapLine(l, width, '  '))
+		);
 		return lines;
 	}
 
@@ -97,7 +99,11 @@ export function renderBlockerExplanation(
 
 	const fixes = unblockSteps(explanation.rootCauses);
 	if (fixes.length)
-		lines.push('', 'To unblock:', ...fixes.map((f) => `  ${f}`));
+		lines.push(
+			'',
+			'To unblock:',
+			...fixes.flatMap((f) => wrapLine(`  ${f}`, width, '    '))
+		);
 	return lines;
 }
 
