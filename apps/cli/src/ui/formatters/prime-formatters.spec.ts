@@ -75,6 +75,25 @@ describe('formatPrimeContext', () => {
 		expect(text).toContain('  5. Commit with the task ID in the message');
 	});
 
+	it('puts free text in single quotes and says how to write a quote', () => {
+		const text = [
+			render(context()),
+			render(
+				context({ counts: { total: 0, done: 0 }, inProgress: [], ready: [] })
+			),
+			stripAnsi(formatUnnotedReminder([context().inProgress[0]]))
+		].join('\n');
+		// In double quotes the shell runs backticks and $(...) in the text
+		const commands = text
+			.split('\n')
+			.filter((line) => /\b(taskgraph|git) /.test(line));
+
+		expect(commands.filter((line) => line.includes('"'))).toEqual([]);
+		expect(text).toContain(
+			"Keep free text in single quotes, and write ' in it as '\\''."
+		);
+	});
+
 	it('stays under 40 lines and 80 columns with long titles and criteria', () => {
 		const long = 'word '.repeat(80).trim();
 		const lines = render(
@@ -229,8 +248,8 @@ describe('formatUnnotedReminder', () => {
 		expect(stripAnsi(formatUnnotedReminder([task('3.2')]))).toBe(
 			[
 				'Task 3.2 is still in progress with no note from this session.',
-				'If you worked on it, log what you did:',
-				'  taskgraph note 3.2 "<what you did or decided>"',
+				"If you worked on it, log what you did (write ' as '\\''):",
+				"  taskgraph note 3.2 '<what you did or decided>'",
 				"If it's finished, check its criteria and close it:",
 				'  taskgraph set-status --id=3.2 --status=done',
 				"If you didn't work on it, say so in one line and stop."
@@ -246,7 +265,7 @@ describe('formatUnnotedReminder', () => {
 		expect(lines[0]).toBe(
 			'Tasks 1, 3.2 and 7 are still in progress with no note from this session.'
 		);
-		expect(lines[2]).toBe('  taskgraph note <id> "<what you did or decided>"');
+		expect(lines[2]).toBe("  taskgraph note <id> '<what you did or decided>'");
 		expect(lines[5]).toBe(
 			"If you didn't work on them, say so in one line and stop."
 		);
