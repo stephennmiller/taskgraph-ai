@@ -60,6 +60,21 @@ describe('normalizeSnapshot', () => {
 
 		expect(out).toContain('Copied on <date>');
 	});
+
+	it("drops a captured output's schemaVersion, which older builds do not print", () => {
+		const newer = normalizeSnapshot(
+			'stdout.json',
+			JSON.stringify({ schemaVersion: 1, task: { id: '2' } }),
+			ctx
+		);
+		const older = normalizeSnapshot(
+			'stdout.json',
+			JSON.stringify({ task: { id: '2' } }),
+			ctx
+		);
+
+		expect(newer).toBe(older);
+	});
 });
 
 describe.skipIf(!built)('compare-builds script and git', () => {

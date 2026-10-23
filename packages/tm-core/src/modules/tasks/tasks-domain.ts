@@ -485,9 +485,13 @@ export class TasksDomain {
 
 	/**
 	 * Get all tags with detailed statistics including task counts
+	 * @param options.ready - Only tags with at least one task ready to start
 	 */
-	async getTagsWithStats() {
-		return this.tagService.getTagsWithStats();
+	async getTagsWithStats(options: { ready?: boolean } = {}) {
+		const result = await this.tagService.getTagsWithStats();
+		if (!options.ready) return result;
+		const tags = result.tags.filter((tag) => tag.readyTasks > 0);
+		return { ...result, tags, totalTags: tags.length };
 	}
 
 	// ========== Watch ==========

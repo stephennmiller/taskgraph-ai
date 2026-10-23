@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { JSON_OUTPUT_SCHEMA_VERSION } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	installFakeClaude,
@@ -152,6 +153,7 @@ describe.skipIf(!built)('parse-prd --clarify', () => {
 
 		expect(res.status).toBe(0);
 		expect(JSON.parse(res.stdout)).toEqual({
+			schemaVersion: JSON_OUTPUT_SCHEMA_VERSION,
 			prd: 'prd.md',
 			questions: QUESTIONS.object.questions
 		});
@@ -162,7 +164,9 @@ describe.skipIf(!built)('parse-prd --clarify', () => {
 
 	it('--answers - saves the answers from stdin without asking the model again', () => {
 		install([TASKS]);
+		// The --clarify --json output, answered, is what goes back in
 		const answers = {
+			schemaVersion: JSON_OUTPUT_SCHEMA_VERSION,
 			prd: 'prd.md',
 			questions: [
 				{ ...QUESTIONS.object.questions[0], answer: 'SQLite' },

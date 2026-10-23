@@ -3,6 +3,7 @@
  */
 
 import path from 'node:path';
+import { isTaskComplete } from '../../../../common/constants/index.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -11,6 +12,7 @@ import type { IStorage } from '../../../../common/interfaces/storage.interface.j
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
 import type { PathResolver } from './path-resolver.js';
+import { filterReadyTasks } from '../../../tasks/utils/task-filters.js';
 import { withSchemaVersion } from './schema-version.js';
 
 /**
@@ -225,6 +227,7 @@ export class TagOperations {
 			isCurrent: boolean;
 			taskCount: number;
 			completedTasks: number;
+			readyTasks: number;
 			statusBreakdown: Record<string, number>;
 			subtaskCounts?: {
 				totalSubtasks: number;
@@ -261,7 +264,7 @@ export class TagOperations {
 						const status = task.status || 'pending';
 						statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
 
-						if (status === 'done') {
+						if (isTaskComplete(status)) {
 							completedTasks++;
 						}
 
@@ -277,6 +280,11 @@ export class TagOperations {
 						}
 					});
 
+					// Ready: actionable, with every dependency complete
+					const readyTasks = filterReadyTasks(
+						tasks.map((task) => ({ ...task, blocks: [] }))
+					).length;
+
 					// Load metadata to get created date and description
 					const metadata = await this.reader.loadMetadata(tagName);
 
@@ -285,6 +293,7 @@ export class TagOperations {
 						isCurrent: tagName === activeTag,
 						taskCount: tasks.length,
 						completedTasks,
+						readyTasks,
 						statusBreakdown,
 						subtaskCounts:
 							subtaskCounts.totalSubtasks > 0 ? subtaskCounts : undefined,
@@ -298,6 +307,7 @@ export class TagOperations {
 						isCurrent: tagName === activeTag,
 						taskCount: 0,
 						completedTasks: 0,
+						readyTasks: 0,
 						statusBreakdown: {}
 					};
 				}

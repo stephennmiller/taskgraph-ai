@@ -74,3 +74,10 @@ export function formatDate(date: Date = new Date()): string {
 export function deepClone<T>(obj: T): T {
 	return JSON.parse(JSON.stringify(obj));
 }
+
+// Export the version stamp for --json output
+export {
+	JSON_OUTPUT_SCHEMA_VERSION,
+	toVersionedJson,
+	type VersionedJson
+} from './json-output.js';

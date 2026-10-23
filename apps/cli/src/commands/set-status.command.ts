@@ -19,6 +19,7 @@ import {
 } from '../ui/formatters/checklist-formatters.js';
 import { formatStatusChanges } from '../ui/formatters/status-change-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -219,12 +220,13 @@ export class SetStatusCommand extends Command {
 					};
 				} catch (error: any) {
 					if (options.format === 'json') {
-						console.log(
-							JSON.stringify({
+						printJson(
+							{
 								success: false,
 								error: error?.getUserMessage?.() ?? error?.message,
 								taskId: taskIds[0]
-							})
+							},
+							{ compact: true }
 						);
 					} else if (!options.silent) {
 						displayError(error, {
@@ -267,8 +269,8 @@ export class SetStatusCommand extends Command {
 								: String(error);
 
 						const gate = getUncheckedCriteria(error);
-						console.log(
-							JSON.stringify({
+						printJson(
+							{
 								success: false,
 								error: errorMessage,
 								taskId,
@@ -276,7 +278,8 @@ export class SetStatusCommand extends Command {
 								// --check was saved before the status failed
 								...(checklist && { checklist }),
 								timestamp: new Date().toISOString()
-							})
+							},
+							{ compact: true }
 						);
 					} else {
 						failure = error;
@@ -316,7 +319,7 @@ export class SetStatusCommand extends Command {
 			if (options.format === 'json') {
 				const errorMessage =
 					error instanceof Error ? error.message : 'Unknown error occurred';
-				console.log(JSON.stringify({ success: false, error: errorMessage }));
+				printJson({ success: false, error: errorMessage }, { compact: true });
 			} else if (!options.silent) {
 				displayError(error, { skipExit: true });
 			}
@@ -343,7 +346,7 @@ export class SetStatusCommand extends Command {
 
 		switch (format) {
 			case 'json':
-				console.log(JSON.stringify(result, null, 2));
+				printJson(result);
 				break;
 
 			case 'text':

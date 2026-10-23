@@ -6,6 +6,8 @@
  *  - the project and work directories become <project> and <work>
  *  - in JSON: metadata.schemaVersion (a newer build writes it, an older one
  *    does not) is dropped and object keys are sorted. Array order is kept.
+ *  - in captured command output (stdout.json): the top-level schemaVersion
+ *    of a --json payload is dropped, for the same reason
  *
  * MCP replies (a name starting with `mcp-reply`) also mask what one build
  * version changes without meaning anything: the top-level `version` field, locale dates
@@ -79,7 +81,11 @@ export function normalizeSnapshot(name, text, { projectDir, workDir }) {
 
 	if (name.endsWith('.json')) {
 		try {
-			return `${JSON.stringify(cleanJson(JSON.parse(out), '', mcp), null, 2)}\n`;
+			const parsed = JSON.parse(out);
+			if (name === 'stdout.json' && parsed && !Array.isArray(parsed)) {
+				delete parsed.schemaVersion;
+			}
+			return `${JSON.stringify(cleanJson(parsed, '', mcp), null, 2)}\n`;
 		} catch {
 			// not valid JSON; keep the masked text
 		}

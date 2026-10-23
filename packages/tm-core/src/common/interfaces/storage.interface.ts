@@ -260,8 +260,10 @@ export interface TagInfo {
 	isCurrent: boolean;
 	/** Total number of tasks in this tag */
 	taskCount: number;
-	/** Number of completed tasks */
+	/** Number of complete tasks (done or cancelled) */
 	completedTasks: number;
+	/** Number of tasks ready to start (actionable, dependencies complete) */
+	readyTasks: number;
 	/** Breakdown of tasks by status */
 	statusBreakdown: Record<string, number>;
 	/** Subtask counts if available */

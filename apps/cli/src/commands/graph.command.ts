@@ -12,6 +12,7 @@ import { getContentWidth } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface GraphCommandOptions {
@@ -71,7 +72,7 @@ export class GraphCommand extends Command {
 			};
 
 			if (options.format === 'json') {
-				console.log(JSON.stringify(result, null, 2));
+				printJson(result);
 			} else {
 				this.displayText(result);
 			}

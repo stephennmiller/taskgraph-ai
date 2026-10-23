@@ -15,6 +15,7 @@ import { renderBlockerExplanation } from '../ui/components/blocker-explanation.c
 import { getContentWidth } from '../ui/layout/helpers.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface WhyCommandOptions {
@@ -88,7 +89,7 @@ export class WhyCommand extends Command {
 			};
 
 			if (options.format === 'json') {
-				console.log(JSON.stringify(result, null, 2));
+				printJson(result);
 			} else {
 				this.displayText(result);
 			}

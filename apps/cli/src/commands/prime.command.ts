@@ -11,6 +11,7 @@ import { type TmCore, createTmCore } from '@tm/core';
 import { Command } from 'commander';
 import { formatPrimeContext } from '../ui/formatters/prime-formatters.js';
 import { displayError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface PrimeCommandOptions {
@@ -46,11 +47,11 @@ export class PrimeCommand extends Command {
 			const context = await this.tmCore.tasks.getPrimeContext({
 				tag: options.tag
 			});
-			console.log(
-				options.json
-					? JSON.stringify(context, null, 2)
-					: formatPrimeContext(context)
-			);
+			if (options.json) {
+				printJson(context);
+			} else {
+				console.log(formatPrimeContext(context));
+			}
 		} catch (error: any) {
 			hasError = true;
 			displayError(error, { skipExit: true });

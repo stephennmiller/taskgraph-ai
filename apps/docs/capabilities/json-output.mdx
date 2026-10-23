@@ -1,0 +1,77 @@
+---
+title: JSON Output
+sidebarTitle: "JSON Output"
+description: "Which commands print JSON, the schemaVersion every payload carries, and what stays stable within a version"
+---
+
+# JSON Output
+
+Scripts and agents can read TaskGraph's output as JSON. Every JSON payload the CLI prints is one object whose first key is `schemaVersion`:
+
+```bash
+taskgraph next --format json
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "found": true,
+  "task": { "id": "2", "title": "Add Postgres", "status": "pending", ... },
+  "tag": "master",
+  "hasAnyTasks": true
+}
+```
+
+Check `schemaVersion` before you parse. If it is higher than the version your script was written for, a key you read may have been renamed or removed.
+
+## Commands
+
+| Command | Flag | Top-level keys besides `schemaVersion` |
+|---------|------|----------------------------------------|
+| `list` | `--json` or `--format json` | `tasks`, `metadata` |
+| `show <id>` | `--json` or `--format json` | `found`, `task` (one ID, plus `originalTaskId` for a subtask); `tasks`, `notFound` (several IDs) |
+| `next` | `--format json` | `found`, `task`, `tag`, `hasAnyTasks`, `checklist` (when the task has acceptance criteria) |
+| `next --claim` | `--format json` | `claimed`, `task`, `claimedBy`, `claimedAt`, `tag`, `hasAnyTasks` |
+| `graph` | `--format json` | `tag`, `total`, `roots`, `criticalPath`, `bottlenecks`, `cyclic`, `nextId` |
+| `why <id>` | `--format json` | `id`, `title`, `status`, `tag`, `blocked`, `blockers`, `rootCauses` |
+| `tags`, `tags list` | `--json` | `tags`, `currentTag`, `totalTags` |
+| `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules` |
+| `generate` | `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
+| `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
+| `start <id>` | `--format json` | `found`, `started`, `task`, `command`, `executionOutput` |
+| `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |
+| `github push` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `created`, `updated`, `skipped`, `closed`, `orphans` |
+| `github pull` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `applied`, `synced`, `conflicts`, `skipped` |
+| `github unlink <id>` | `--json` | `tag`, `taskId`, `issueNumber`, `url` |
+| `autopilot *` | `--json` | depends on the subcommand |
+| `parse-prd --clarify` | `--json` | `prd`, `questions` |
+
+`set-status` prints its JSON on one line, including when it fails. `autopilot` prints errors and warnings as JSON on stderr, and those carry `schemaVersion` too. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
+
+In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.
+
+Some keys are only present when they apply. For example, a task has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
+
+## What stays the same within a version
+
+For a given `schemaVersion`:
+
+- Keys already in a payload keep their names.
+- Each key keeps its type. A string stays a string, an array stays an array.
+- New keys can be added. Ignore keys you don't recognise.
+
+Removing or renaming a key, or changing its type, raises `schemaVersion`. A new key does not.
+
+The current version is `1`.
+
+## Not the same as the tasks file version
+
+The output's `schemaVersion` is not the `metadata.schemaVersion` stored on each tag in `.taskgraph/tasks/tasks.json` (see [Schema version](/capabilities/dependency-graph#schema-version)). They change independently: a new field in the file does not have to change the output, and a new key in the output does not change the file.
+
+## How the contract is kept
+
+Each command's shape (keys and value types) is pinned in a test; for `autopilot`, `status` with no active workflow is pinned. A change to the shape fails CI until the pinned shape is updated, and a breaking change also needs a version bump:
+
+- `apps/cli/tests/integration/json-output/json-contract.test.ts` runs the built CLI on a fixture project.
+- `apps/cli/src/commands/github/github.command.spec.ts` covers `github push`, `pull` and `unlink`, which need a GitHub repository to run for real.
+- `apps/cli/tests/integration/commands/parse-prd-clarify.command.test.ts` covers `parse-prd --clarify --json`, which needs a model to answer.

@@ -22,6 +22,7 @@ import {
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { theme } from '../ui/theme.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -289,7 +290,7 @@ export class StartCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: StartCommandResult): void {
-		console.log(JSON.stringify(result, null, 2));
+		printJson(result);
 	}
 
 	/**
