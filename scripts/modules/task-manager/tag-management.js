@@ -1161,7 +1161,8 @@ async function getTagForBranch(projectRoot, branchName) {
  * @param {string} [context.projectRoot] - Project root path
  * @param {Object} [context.mcpLog] - MCP logger object (optional)
  * @param {string} outputFormat - Output format (text or json)
- * @returns {Promise<Object>} Result object with creation details
+ * @returns {Promise<{branchName: string, tagName: string, mappingUpdated: boolean, autoSwitched: boolean, [key: string]: any}>}
+ *   The branch and the tag created for it; JSON output also carries createTag's result fields
  */
 async function createTagFromBranch(
 	tasksPath,
