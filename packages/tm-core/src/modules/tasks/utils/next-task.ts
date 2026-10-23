@@ -22,6 +22,16 @@ const isSatisfied = (status: string | undefined) =>
  * @returns The next item, or null when nothing is eligible
  */
 export function selectNextTask(tasks: Task[]): Task | null {
+	return rankNextTasks(tasks)[0] ?? null;
+}
+
+/**
+ * Every eligible item in `next` order: subtasks of in-progress tasks first,
+ * then top-level tasks, each group ranked as selectNextTask describes. The
+ * first item is what selectNextTask returns. Subtasks carry dotted IDs
+ * ("3.2") and a parentId.
+ */
+export function rankNextTasks(tasks: Task[]): Task[] {
 	// Eligibility and satisfied dependencies only see these statuses; blocked counts see every task,
 	// since deferred, blocked and review tasks still wait on their dependencies
 	// A hand-edited task may have no status; it counts as pending
@@ -84,32 +94,28 @@ export function selectNextTask(tasks: Task[]): Task | null {
 			});
 		});
 
-	if (candidateSubtasks.length > 0) {
-		// Sort by priority → blocked count → dependency count → parent ID → subtask ID
-		candidateSubtasks.sort((a, b) => {
-			const pa =
-				priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
-			const pb =
-				priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
-			if (pb !== pa) return pb - pa;
+	// Sort by priority → blocked count → dependency count → parent ID → subtask ID
+	candidateSubtasks.sort((a, b) => {
+		const pa =
+			priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
+		const pb =
+			priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
+		if (pb !== pa) return pb - pa;
 
-			if (blocks(a) !== blocks(b)) return blocks(b) - blocks(a);
+		if (blocks(a) !== blocks(b)) return blocks(b) - blocks(a);
 
-			if (a.dependencies!.length !== b.dependencies!.length) {
-				return a.dependencies!.length - b.dependencies!.length;
-			}
+		if (a.dependencies!.length !== b.dependencies!.length) {
+			return a.dependencies!.length - b.dependencies!.length;
+		}
 
-			// Compare parent then subtask ID numerically
-			const [aPar, aSub] = String(a.id).split('.').map(Number);
-			const [bPar, bSub] = String(b.id).split('.').map(Number);
-			if (aPar !== bPar) return aPar - bPar;
-			return aSub - bSub;
-		});
+		// Compare parent then subtask ID numerically
+		const [aPar, aSub] = String(a.id).split('.').map(Number);
+		const [bPar, bSub] = String(b.id).split('.').map(Number);
+		if (aPar !== bPar) return aPar - bPar;
+		return aSub - bSub;
+	});
 
-		return candidateSubtasks[0];
-	}
-
-	// 2) Fall back to top-level tasks (original logic)
+	// 2) Then top-level tasks
 	const eligibleTasks = allTasks.filter((task) => {
 		const status = (task.status || 'pending').toLowerCase();
 		if (status !== 'pending' && status !== 'in-progress') return false;
@@ -118,10 +124,8 @@ export function selectNextTask(tasks: Task[]): Task | null {
 		return deps.every((depId) => completedIds.has(String(depId)));
 	});
 
-	if (eligibleTasks.length === 0) return null;
-
 	// Sort by priority → blocked count → dependency count → task ID
-	const nextTask = eligibleTasks.sort((a, b) => {
+	eligibleTasks.sort((a, b) => {
 		const pa = priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
 		const pb = priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
 		if (pb !== pa) return pb - pa;
@@ -133,7 +137,7 @@ export function selectNextTask(tasks: Task[]): Task | null {
 		if (da !== db) return da - db;
 
 		return Number(a.id) - Number(b.id);
-	})[0];
+	});
 
-	return nextTask;
+	return [...candidateSubtasks, ...eligibleTasks];
 }

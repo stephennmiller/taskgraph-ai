@@ -36,6 +36,8 @@ The Claude Code plugin is the only way to get slash commands. It adds the `/task
 /plugin install taskgraph@taskgraph
 ```
 
+The plugin also adds a session hook. In a project with a `.taskgraph/` folder, each Claude Code session (and each resume after compaction) starts with the output of [`taskgraph prime`](/capabilities/cli-root-commands): the task in progress, what's ready next, and the workflow rules. Elsewhere the hook does nothing. It needs a CLI with the `prime` command, so update the CLI when you update the plugin.
+
 ## 4. (Optional) Add the MCP server
 
 The slash commands (from the plugin) and the CLI do everything without MCP. Add the server only if you want to drive TaskGraph in plain language:

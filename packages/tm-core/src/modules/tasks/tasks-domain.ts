@@ -36,6 +36,10 @@ import {
 	type BlockerExplanation,
 	type DependencyTree
 } from '../dependencies/index.js';
+import {
+	buildPrimeContext,
+	type PrimeContext
+} from './utils/prime-context.js';
 import type {
 	TaskListResult,
 	GetTaskListOptions
@@ -201,6 +205,17 @@ export class TasksDomain {
 	): Promise<BlockerExplanation> {
 		const { tasks } = await this.list({ tag: options.tag });
 		return explainBlockers(tasks, String(taskId));
+	}
+
+	/**
+	 * Session context for a coding agent (`taskgraph prime`): the task in
+	 * progress with its done-when criteria, the next three ready tasks in
+	 * `next` order, and the workflow rules. Uses the active tag by default.
+	 */
+	async getPrimeContext(options: { tag?: string } = {}): Promise<PrimeContext> {
+		const tag = options.tag || this.configManager.getActiveTag();
+		const { tasks } = await this.list({ tag });
+		return buildPrimeContext(tasks, { tag });
 	}
 
 	/**

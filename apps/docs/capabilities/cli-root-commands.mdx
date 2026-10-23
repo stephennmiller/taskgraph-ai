@@ -105,6 +105,31 @@ description: "A comprehensive reference of all available TaskGraph commands"
     remove in `edges` (`from` depends on `to`).
   </Accordion>
 
+  <Accordion title="Prime a Coding Agent">
+    ```bash
+    # Print what an agent needs at the start of a session: the tag, the task
+    # in progress with how to tell it's done (acceptance criteria, else test
+    # strategy), the next three ready tasks in `next` order, and the five
+    # workflow rules. Under 40 lines, 80 columns wide when piped.
+    taskgraph prime
+
+    # Another tag, or the same context as JSON
+    taskgraph prime --tag=feature-auth
+    taskgraph prime --json
+    ```
+
+    `prime` is for agents, so `taskgraph --help` mentions it under its groups
+    rather than in them. The Claude Code plugin runs it from a SessionStart
+    hook, at startup and again after the conversation is compacted, so Claude
+    doesn't start cold. The hook prints nothing in a folder without
+    `.taskgraph/`.
+
+    The JSON has `tag`, `counts` (`total`, `done`), `inProgress` (each with
+    `id`, `title`, `status`, `priority`, `doneWhen`, and `parentTitle` for a
+    subtask), `ready` (the same fields without `doneWhen`) and `rules`
+    (`text` and `command`).
+  </Accordion>
+
   <Accordion title="Show Specific Task">
     ```bash
     # Show details of a specific task

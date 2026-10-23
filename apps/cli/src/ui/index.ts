@@ -56,6 +56,9 @@ export {
 	type HelpRow
 } from './formatters/help-formatters.js';
 
+// Session context for coding agents (`taskgraph prime`)
+export { formatPrimeContext } from './formatters/prime-formatters.js';
+
 // What clear-subtasks removed
 export {
 	formatClearedSubtasks,
