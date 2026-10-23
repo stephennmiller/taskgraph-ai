@@ -40,4 +40,13 @@ describe('normalizeTaskStatuses', () => {
 		expect(input[0].status).toBe('completed');
 		expect(input[0].subtasks[0].status).toBe('completed');
 	});
+
+	it('leaves entries that are not objects for validation to report', () => {
+		const input = [null, createTask({ id: '1', title: 'A', status: 'completed' })];
+
+		const result = normalizeTaskStatuses(input as unknown as Task[]);
+
+		expect(result[0]).toBeNull();
+		expect(result[1].status).toBe('done');
+	});
 });

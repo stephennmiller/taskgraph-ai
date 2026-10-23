@@ -1,15 +1,13 @@
 /**
  * @fileoverview A tasks.json that says 'completed' (the older spelling of
- * 'done') loads everywhere: list and next read it as 'done', next agrees
- * with the rule the MCP tool runs on the raw file, and the next save
- * writes 'done' back.
+ * 'done') loads: list and next read it as 'done', and the next save writes
+ * 'done' back. The MCP side is in apps/mcp next-task-completed.tool.test.ts.
  */
 
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { selectNextTask } from '../../../src/modules/tasks/utils/next-task.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 const rawTasks = () => [
@@ -79,11 +77,10 @@ describe("a top-level 'completed' status", () => {
 		expect(tasks[0].subtasks[0].status).toBe('done');
 	});
 
-	it('picks the same next task as the raw-file rule the MCP tool uses', async () => {
+	it('offers the task that depends on it as next', async () => {
 		const next = await tmCore.tasks.getNext();
 
 		expect(next?.id).toBe('2');
-		expect(String(selectNextTask(rawTasks() as never)?.id)).toBe('2');
 	});
 
 	it("writes 'done' back on the next save", async () => {

@@ -4,6 +4,7 @@
  */
 
 import type { TaskStatus } from '../../../common/types/index.js';
+import { normalizeTaskStatus } from '../../tasks/utils/legacy-status.js';
 import type { RemoteIssue } from '../types.js';
 
 const STATUS_LABEL_PREFIX = 'taskgraph:status/';
@@ -17,12 +18,9 @@ const OPEN_STATUSES: readonly TaskStatus[] = [
 	'review'
 ];
 
-const normalize = (status: TaskStatus): TaskStatus =>
-	status === 'completed' ? 'done' : status;
-
 /** `done` and `completed` mean the same thing */
 export function sameStatus(a: TaskStatus, b: TaskStatus): boolean {
-	return normalize(a) === normalize(b);
+	return normalizeTaskStatus(a) === normalizeTaskStatus(b);
 }
 
 /**
