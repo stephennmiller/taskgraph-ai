@@ -40,13 +40,11 @@ export function resolveSubtaskDependency(
 }
 
 /**
- * The form a top-level task stores a dependency in: a task as a number (`3`)
- * and a subtask as its dotted ID (`"3.2"`), as parse-prd and add-task write
- * them. On a task, `"3"` and `3` name the same task, so only the type
- * changes. Never apply it to a subtask's list, where the type is the meaning.
+ * The form a top-level task stores a dependency in: a string, `"3"` for a
+ * task and `"3.2"` for a subtask, as tm-core's file storage saves it. On a
+ * task, `3` and `"3"` name the same task, so only the type changes. Never
+ * apply it to a subtask's list, where a bare number is a sibling.
  */
-export function toTaskDependency(dependency: string | number): string | number {
-	return typeof dependency === 'string' && /^\d+$/.test(dependency)
-		? Number(dependency)
-		: dependency;
+export function toTaskDependency(dependency: string | number): string {
+	return String(dependency);
 }

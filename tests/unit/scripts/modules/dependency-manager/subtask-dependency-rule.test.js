@@ -85,14 +85,17 @@ describe('subtask dependency rule', () => {
 		expect(writeJSON).not.toHaveBeenCalled();
 	});
 
-	it('add-dependency stores a task on a task as a number, not a string in a list of numbers (#290)', async () => {
+	it('add-dependency stores a task list in one form, not a string in a list of numbers (#290)', async () => {
 		readJSON.mockReturnValue({
 			tasks: [task(1), task(2), task(3, [2])]
 		});
 
 		await addDependency('tasks.json', '3', '1', context);
 
-		expect(writeJSON.mock.calls[0][1].tasks[2].dependencies).toEqual([1, 2]);
+		expect(writeJSON.mock.calls[0][1].tasks[2].dependencies).toEqual([
+			'1',
+			'2'
+		]);
 	});
 
 	it("add-dependency rewrites a task's mixed list to one form when it adds to it (#290)", async () => {
@@ -103,8 +106,8 @@ describe('subtask dependency rule', () => {
 		await addDependency('tasks.json', '4', '3.1', context);
 
 		expect(writeJSON.mock.calls[0][1].tasks[3].dependencies).toEqual([
-			1,
-			2,
+			'1',
+			'2',
 			'3.1'
 		]);
 	});

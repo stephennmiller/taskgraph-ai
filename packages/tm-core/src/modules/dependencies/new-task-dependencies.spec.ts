@@ -11,7 +11,7 @@ describe('mergeNewTaskDependencies', () => {
 			existingIds
 		});
 
-		expect(result.dependencies).toEqual([1, 2, 3]);
+		expect(result.dependencies).toEqual(['1', '2', '3']);
 	});
 
 	it('lists a dependency both asked for and suggested once', () => {
@@ -21,17 +21,17 @@ describe('mergeNewTaskDependencies', () => {
 			existingIds
 		});
 
-		expect(result.dependencies).toEqual([2, 1, 3]);
+		expect(result.dependencies).toEqual(['2', '1', '3']);
 	});
 
-	it('stores the IDs a user typed as numbers and keeps a subtask dotted (#290)', () => {
+	it('stores each ID as a string, a subtask dotted (#290)', () => {
 		const result = mergeNewTaskDependencies({
 			explicit: ['1', '3.2'],
 			suggested: ['2', 1],
 			existingIds: [1, 2, 3, '3.2']
 		});
 
-		expect(result.dependencies).toEqual([1, '3.2', 2]);
+		expect(result.dependencies).toEqual(['1', '3.2', '2']);
 	});
 
 	it('keeps only the dependencies the user asked for when the AI suggests none', () => {
@@ -41,7 +41,7 @@ describe('mergeNewTaskDependencies', () => {
 			existingIds
 		});
 
-		expect(result.dependencies).toEqual([3]);
+		expect(result.dependencies).toEqual(['3']);
 	});
 
 	it('sets aside IDs that are not in the given tasks, by who named them (#288)', () => {
@@ -52,7 +52,7 @@ describe('mergeNewTaskDependencies', () => {
 		});
 
 		expect(result).toEqual({
-			dependencies: [1, 2],
+			dependencies: ['1', '2'],
 			missingExplicit: [9],
 			missingSuggested: [7]
 		});
@@ -66,7 +66,7 @@ describe('mergeNewTaskDependencies', () => {
 		});
 
 		expect(result).toEqual({
-			dependencies: [1],
+			dependencies: ['1'],
 			missingExplicit: [],
 			missingSuggested: []
 		});

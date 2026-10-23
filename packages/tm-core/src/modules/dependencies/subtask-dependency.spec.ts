@@ -43,17 +43,12 @@ describe('isSiblingReference', () => {
 });
 
 describe('toTaskDependency', () => {
-	it('stores a task as a number, as parse-prd and add-task do (#290)', () => {
-		expect(toTaskDependency('1')).toBe(1);
-		expect(toTaskDependency(1)).toBe(1);
+	it('stores a task as a string, as tm-core saves it (#290)', () => {
+		expect(toTaskDependency(1)).toBe('1');
+		expect(toTaskDependency('1')).toBe('1');
 	});
 
 	it('keeps a subtask as its dotted ID', () => {
 		expect(toTaskDependency('3.2')).toBe('3.2');
-	});
-
-	it('leaves anything that is not an ID as it is', () => {
-		expect(toTaskDependency('abc')).toBe('abc');
-		expect(toTaskDependency('')).toBe('');
 	});
 });

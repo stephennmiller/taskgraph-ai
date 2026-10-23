@@ -183,9 +183,9 @@ tidy-up that "fixes" a type can change what a dependency means.
   `[1, "1"]`: two different dependencies, not a repeat.
   A migration that normalizes `"1"` to `1` would silently turn a dependency
   on task 1 into one on sibling 2.1. On a top-level task, `add-dependency`
-  writes a task as a number and rewrites the list it adds to into that form
-  (`[2, "1"]` became `[1, 2]` in #290), through `toTaskDependency` in the same
-  file.
+  and `add-task` write strings and `add-dependency` rewrites the list it adds
+  to into that form (`[2, "1"]` became `["1", "2"]` in #290), through
+  `toTaskDependency` in the same file.
 - **Removing a dependency that is not there succeeds.** `remove-dependency`
   exits 0 and `remove_dependency` succeeds with `removed: false` and "Task 2
   doesn't depend on task 5; nothing changed" for a task that never depended on
