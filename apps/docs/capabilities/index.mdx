@@ -203,7 +203,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 2. Task Information and Status
 
--   **`get_tasks`**: Lists all tasks.
+-   **`get_tasks`**: Lists tasks as compact JSON with `id`, `title`, `status`, `priority` and `dependencies`. `fields` asks for more (`"title,details"`, or `"all"`), `status` filters (`"pending,review"`), and `withSubtasks` nests subtasks with the same fields.
 -   **`get_task`**: Shows the details of a specific task.
 -   **`next_task`**: Shows the next task to work on.
 -   **`set_task_status`**: Sets the status of a task or subtask.

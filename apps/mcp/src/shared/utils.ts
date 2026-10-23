@@ -124,13 +124,16 @@ export async function handleApiResult<T>(options: {
 	errorPrefix?: string;
 	projectRoot?: string;
 	tag?: string; // Optional tag/brief to use instead of reading from state.json
+	/** Print the JSON on one line, without indentation */
+	minify?: boolean;
 }): Promise<ContentResult> {
 	const {
 		result,
 		log,
 		errorPrefix = 'API error',
 		projectRoot,
-		tag: providedTag
+		tag: providedTag,
+		minify = false
 	} = options;
 
 	// Get version info for every response
@@ -183,7 +186,7 @@ export async function handleApiResult<T>(options: {
 		content: [
 			{
 				type: 'text',
-				text: JSON.stringify(responsePayload, null, 2)
+				text: JSON.stringify(responsePayload, null, minify ? undefined : 2)
 			}
 		]
 	};

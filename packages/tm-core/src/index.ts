@@ -275,6 +275,13 @@ export { keepStoredFields } from './modules/tasks/utils/index.js';
 // A subtask that becomes a task gets a description it can load with
 export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
 
+// Which fields of each task a listing returns
+export {
+	DEFAULT_TASK_FIELDS,
+	parseTaskFields,
+	selectTaskFields
+} from './modules/tasks/utils/index.js';
+
 // Acceptance criteria and the Definition of Done
 export {
 	normalizeAcceptanceCriteria,

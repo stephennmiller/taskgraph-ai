@@ -18,3 +18,4 @@ export * from './task-ids.js';
 export * from './branch-tag.js';
 export * from './promoted-subtask.js';
 export * from './tag-names.js';
+export * from './task-fields.js';
