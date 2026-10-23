@@ -34,6 +34,18 @@ test('ignores lockfiles, generated code, and tool-managed files', () => {
 	}
 });
 
+test('ignores only the root .taskgraph/archive/ folder', () => {
+	const big = blobOf(MAX_TOKENS * 4 + 100);
+	for (const p of [
+		'packages/x/.taskgraph/archive/notes.md',
+		'.taskgraph/archived-notes.md',
+		'.taskgraph/docs/prd.md'
+	]) {
+		assert.ok(!isIgnored(p), p);
+		assert.deepEqual(run({ [p]: big }), [p]);
+	}
+});
+
 test('skips binary content regardless of extension', () => {
 	const bin = blobOf(MAX_TOKENS * 4 + 100);
 	bin[10] = 0;
