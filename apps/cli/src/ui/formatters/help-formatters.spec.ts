@@ -12,8 +12,10 @@ const ALLOWED_COMMANDS = new Set([
 	'list',
 	'set-status',
 	'add-task',
+	'loop',
 	'init',
 	'models',
+	'lang',
 	'completion',
 	'parse-prd',
 	'generate',
@@ -25,12 +27,16 @@ const ALLOWED_COMMANDS = new Set([
 	'remove-subtask',
 	'clear-subtasks',
 	'sync-readme',
+	'github',
 	'analyze-complexity',
 	'complexity-report',
 	'expand',
+	'scope-up',
+	'scope-down',
 	'research',
 	'graph',
 	'why',
+	'move',
 	'archive',
 	'tags',
 	'add-dependency',
@@ -42,7 +48,7 @@ const ALLOWED_COMMANDS = new Set([
 const allRows = () => HELP_GROUPS.flatMap((group) => group.commands);
 
 describe('formatHelp', () => {
-	it('starts with the Daily workflow group and its five commands', () => {
+	it('starts with the Daily workflow group, ending with loop', () => {
 		const [first] = HELP_GROUPS;
 
 		expect(first.title).toBe('Daily workflow');
@@ -51,14 +57,18 @@ describe('formatHelp', () => {
 			'show',
 			'list',
 			'set-status',
-			'add-task'
+			'add-task',
+			'loop'
 		]);
 	});
 
-	it('lists at most 30 rows with no repeated command', () => {
+	// 30 rows left out loop, move, lang, scope-up, scope-down and github
+	// (#219). Each command a user runs now has one row, so the cap is the
+	// command count; raise it only for a new command, not a second row.
+	it('lists at most 36 rows with no repeated command', () => {
 		const names = allRows().map((row) => row.name.split(' ')[0]);
 
-		expect(names.length).toBeLessThanOrEqual(30);
+		expect(names.length).toBeLessThanOrEqual(36);
 		expect(new Set(names).size).toBe(names.length);
 	});
 
@@ -77,6 +87,27 @@ describe('formatHelp', () => {
 
 	it('keeps prime, an agent command, out of the groups', () => {
 		expect(allRows().some((row) => row.name.startsWith('prime'))).toBe(false);
+	});
+
+	it.each(['loop', 'move', 'lang', 'scope-up', 'scope-down', 'github'])(
+		'lists %s, which the help used to leave out',
+		(command) => {
+			const names = allRows().map((row) => row.name.split(' ')[0]);
+
+			expect(names).toContain(command);
+		}
+	);
+
+	it.each(['start', 'autopilot', 'tui'])('gives %s no row', (command) => {
+		const names = allRows().map((row) => row.name.split(' ')[0]);
+
+		expect(names).not.toContain(command);
+	});
+
+	it('keeps a github subcommand hint on the github row', () => {
+		const github = allRows().find((row) => row.name.startsWith('github'));
+
+		expect(github?.name).toBe('github <push|pull|status|unlink>');
 	});
 
 	it('keeps a tags subcommand hint on the tags row', () => {
