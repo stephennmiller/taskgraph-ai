@@ -422,27 +422,52 @@ describe('breakSubtaskLoops', () => {
 		expect(breakSubtaskLoops(tasks)).toEqual([]);
 	});
 
-	// The search per dependency overflowed the stack on a long chain of
-	// subtasks and grew with the square of the loop sizes. The 5 s bound is
-	// generous enough for a slow machine; this takes well under a second.
-	it('breaks loops in a large project in linear time', () => {
+	/**
+	 * 10,000 tasks of 3 subtasks. Every other task's subtasks form a loop
+	 * (1 -> 3 -> 2 -> 1), and each first subtask waits on the last one of the
+	 * task before, which closes one ring through all 30,000 subtasks.
+	 */
+	const ringProject = () => {
 		const tasks = chain(10000, 3);
 		for (let i = 0; i < tasks.length; i++) {
 			const first = tasks[i].subtasks[0];
-			// Every other task's subtasks form a loop: 1 -> 3 -> 2 -> 1
 			if (i % 2 === 0) first.dependencies = [3];
-			// And each first subtask waits on the last one of the task before,
-			// which closes one ring through all 30,000 subtasks
 			first.dependencies.push(`${i === 0 ? tasks.length : i}.3`);
 		}
+		return tasks;
+	};
 
-		const started = performance.now();
+	/** The fastest of a few runs, so one pause on a busy machine doesn't count */
+	const fastest = (run, makeInput, runs = 3) => {
+		let best = Number.POSITIVE_INFINITY;
+		for (let r = 0; r < runs; r++) {
+			const input = makeInput();
+			const started = performance.now();
+			run(input);
+			best = Math.min(best, performance.now() - started);
+		}
+		return best;
+	};
+
+	// The search per dependency overflowed the stack on this ring
+	it('breaks every loop of a long ring of subtasks', () => {
+		const tasks = ringProject();
+
 		const removed = breakSubtaskLoops(tasks);
-		const elapsed = performance.now() - started;
 
 		// Each small loop loses one edge; the ring loses one more
 		expect(removed).toHaveLength(5001);
 		expect(validateTaskDependencies(tasks).valid).toBe(true);
-		expect(elapsed).toBeLessThan(5000);
+	});
+
+	// Timed against validate on the same project and machine, not against a
+	// fixed number of seconds, so a slow or busy runner slows both sides. One
+	// pass takes about as long as validate; a search per dependency on the
+	// 30,000-subtask ring takes thousands of times longer.
+	it('takes about as long as validate on a large project', () => {
+		const breakTime = fastest(breakSubtaskLoops, ringProject);
+		const validateTime = fastest(validateTaskDependencies, ringProject);
+
+		expect(breakTime).toBeLessThan(validateTime * 5);
 	});
 });
