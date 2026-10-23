@@ -17,6 +17,9 @@ export {
 	type ErrorMessage
 } from './error-handler.js';
 
+// Versioned JSON output
+export { formatJson, printJson } from './json-output.js';
+
 // Auto-update utilities
 export {
 	checkForUpdate,

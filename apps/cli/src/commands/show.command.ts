@@ -10,6 +10,7 @@ import { Command } from 'commander';
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
 import { theme } from '../ui/theme.js';
@@ -248,7 +249,7 @@ export class ShowCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: ShowTaskResult | ShowMultipleTasksResult): void {
-		console.log(JSON.stringify(result, null, 2));
+		printJson(result);
 	}
 
 	/**

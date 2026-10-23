@@ -145,6 +145,7 @@ export class TagService {
 			name,
 			taskCount: 0,
 			completedTasks: 0,
+			readyTasks: 0,
 			isCurrent: false,
 			statusBreakdown: {},
 			description: options.description || `Tag created on ${new Date().toLocaleDateString()}`

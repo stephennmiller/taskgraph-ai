@@ -4,6 +4,7 @@
 
 import chalk from 'chalk';
 import { theme } from '../../ui/theme.js';
+import { formatJson, printJson } from '../../utils/json-output.js';
 
 /**
  * Base options interface for all autopilot commands
@@ -25,7 +26,7 @@ export class OutputFormatter {
 	 */
 	output(data: Record<string, unknown>): void {
 		if (this.useJson) {
-			console.log(JSON.stringify(data, null, 2));
+			printJson(data);
 		} else {
 			this.outputText(data);
 		}
@@ -64,16 +65,7 @@ export class OutputFormatter {
 	 */
 	error(message: string, details?: Record<string, unknown>): void {
 		if (this.useJson) {
-			console.error(
-				JSON.stringify(
-					{
-						error: message,
-						...details
-					},
-					null,
-					2
-				)
-			);
+			console.error(formatJson({ error: message, ...details }));
 		} else {
 			console.error(chalk.red(`Error: ${message}`));
 			if (details) {
@@ -89,17 +81,7 @@ export class OutputFormatter {
 	 */
 	success(message: string, data?: Record<string, unknown>): void {
 		if (this.useJson) {
-			console.log(
-				JSON.stringify(
-					{
-						success: true,
-						message,
-						...data
-					},
-					null,
-					2
-				)
-			);
+			printJson({ success: true, message, ...data });
 		} else {
 			console.log(chalk.green(`✓ ${message}`));
 			if (data) {
@@ -113,15 +95,7 @@ export class OutputFormatter {
 	 */
 	warning(message: string): void {
 		if (this.useJson) {
-			console.warn(
-				JSON.stringify(
-					{
-						warning: message
-					},
-					null,
-					2
-				)
-			);
+			console.warn(formatJson({ warning: message }));
 		} else {
 			console.warn(chalk.yellow(`⚠ ${message}`));
 		}

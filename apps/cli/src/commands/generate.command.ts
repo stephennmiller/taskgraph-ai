@@ -14,6 +14,7 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -156,7 +157,7 @@ export class GenerateCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: GenerateTaskFilesResult): void {
-		console.log(JSON.stringify(result, null, 2));
+		printJson(result);
 	}
 
 	/**

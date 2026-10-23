@@ -13,6 +13,7 @@ import {
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import { displayError } from '../../utils/error-handler.js';
+import { formatJson } from '../../utils/json-output.js';
 import { getProjectRoot } from '../../utils/project-root.js';
 import {
 	formatPlan,
@@ -183,9 +184,7 @@ Examples:
 
 	private async runStatus(options: StatusOptions): Promise<void> {
 		const status = await this.core().github.status({ repo: options.repo });
-		console.log(
-			options.json ? JSON.stringify(status, null, 2) : formatStatus(status)
-		);
+		console.log(options.json ? formatJson(status) : formatStatus(status));
 	}
 
 	private async runPush(options: PushCommandOptions): Promise<void> {
@@ -289,15 +288,11 @@ Examples:
 
 	private async runUnlink(id: string, options: UnlinkOptions): Promise<void> {
 		const result = await this.core().github.unlink(id, { tag: options.tag });
-		console.log(
-			options.json ? JSON.stringify(result, null, 2) : formatUnlink(result)
-		);
+		console.log(options.json ? formatJson(result) : formatUnlink(result));
 	}
 
 	private print(options: CommonOptions, json: unknown, text: string[]): void {
-		console.log(
-			options.json ? JSON.stringify(json, null, 2) : text.join('\n\n')
-		);
+		console.log(options.json ? formatJson(json as object) : text.join('\n\n'));
 	}
 
 	/** Can we prompt? Overridable for tests */

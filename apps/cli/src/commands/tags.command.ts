@@ -12,6 +12,7 @@ import {
 } from '@tm/core';
 import { Command } from 'commander';
 import { displayError } from '../utils/index.js';
+import { printJson } from '../utils/json-output.js';
 
 /**
  * TODO: TECH DEBT - Architectural Refactor Needed
@@ -92,7 +93,8 @@ export class TagsCommand extends Command {
 		// Configure the command with options that apply to default list action
 		this.description('Manage tags for task organization')
 			.option('--show-metadata', 'Show additional tag metadata')
-			.option('--ready', 'Show only tags with ready tasks available');
+			.option('--ready', 'Show only tags with ready tasks available')
+			.option('--json', 'Output the tag list as JSON');
 
 		// Add subcommands
 		this.addListCommand();
@@ -116,6 +118,7 @@ export class TagsCommand extends Command {
 			.description('List all tags with statistics (default action)')
 			.option('--show-metadata', 'Show additional tag metadata')
 			.option('--ready', 'Show only tags with ready tasks available')
+			.option('--json', 'Output the tag list as JSON')
 			.addHelpText(
 				'after',
 				`
@@ -124,10 +127,13 @@ Examples:
   $ tm tags list     # List all tags (explicit)
   $ tm tags list --show-metadata  # List with metadata
   $ tm tags list --ready  # Show only tags with parallelizable work
+  $ tm tags --json        # Tags with counts, for scripts
 `
 			)
 			.action(async (options) => {
-				await this.executeList(options);
+				// The parent `tags` declares the same flags and parses them first,
+				// so `tags list --json` lands on the parent's options
+				await this.executeList({ ...this.opts(), ...options });
 			});
 	}
 
@@ -258,10 +264,26 @@ Examples:
 	private async executeList(options?: {
 		showMetadata?: boolean;
 		ready?: boolean;
+		json?: boolean;
 	}): Promise<void> {
 		try {
 			// Initialize tmCore first (needed by bridge functions)
 			await this.initTmCore();
+
+			if (options?.json) {
+				const result = await this.tmCore!.tasks.getTagsWithStats({
+					ready: options.ready
+				});
+				printJson(result);
+				this.setLastResult({
+					success: true,
+					action: 'list',
+					tags: result.tags,
+					currentTag: result.currentTag,
+					message: `Found ${result.totalTags} tag(s)`
+				});
+				return;
+			}
 
 			const { projectRoot, tasksPath } = getProjectPaths();
 

@@ -17,6 +17,7 @@ import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { formatNoNextTask } from '../ui/formatters/task-list-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -216,7 +217,7 @@ export class NextCommand extends Command {
 		options: NextCommandOptions
 	): void {
 		if (options.format === 'json') {
-			console.log(JSON.stringify(result, null, 2));
+			printJson(result);
 			return;
 		}
 		console.log(
@@ -261,7 +262,7 @@ export class NextCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: NextTaskResult): void {
-		console.log(JSON.stringify(result, null, 2));
+		printJson(result);
 	}
 
 	/**

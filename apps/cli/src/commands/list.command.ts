@@ -30,6 +30,7 @@ import {
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
 import { theme } from '../ui/theme.js';
@@ -569,21 +570,15 @@ export class ListTasksCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(data: ListTasksResult): void {
-		console.log(
-			JSON.stringify(
-				{
-					tasks: data.tasks,
-					metadata: {
-						total: data.total,
-						filtered: data.filtered,
-						tag: data.allTags ? 'all' : data.tag,
-						allTags: data.allTags || false
-					}
-				},
-				null,
-				2
-			)
-		);
+		printJson({
+			tasks: data.tasks,
+			metadata: {
+				total: data.total,
+				filtered: data.filtered,
+				tag: data.allTags ? 'all' : data.tag,
+				allTags: data.allTags || false
+			}
+		});
 	}
 
 	/**
