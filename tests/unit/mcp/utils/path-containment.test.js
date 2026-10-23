@@ -5,6 +5,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { parsePRDDirect } from '../../../../mcp-server/src/core/direct-functions/parse-prd.js';
+import { researchDirect } from '../../../../mcp-server/src/core/direct-functions/research.js';
 import {
 	assertInsideRoot,
 	resolvePrdPath,
@@ -88,9 +90,6 @@ describe('tool path resolvers', () => {
 
 describe('parsePRDDirect output', () => {
 	test('refuses an output file outside projectRoot before doing any work', async () => {
-		const { parsePRDDirect } = await import(
-			'../../../../mcp-server/src/core/direct-functions/parse-prd.js'
-		);
 		const input = path.join(root, 'prd.md');
 		fs.writeFileSync(input, 'prd');
 		const target = path.join(outside, 'tasks.json');
@@ -108,9 +107,6 @@ describe('parsePRDDirect output', () => {
 
 describe('researchDirect filePaths', () => {
 	test('refuses a context file outside projectRoot before any AI call', async () => {
-		const { researchDirect } = await import(
-			'../../../../mcp-server/src/core/direct-functions/research.js'
-		);
 		const secret = path.join(outside, 'id_rsa');
 		fs.writeFileSync(secret, 'PRIVATE');
 
