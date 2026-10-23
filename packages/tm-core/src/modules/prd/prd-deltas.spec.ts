@@ -12,6 +12,7 @@ import {
 	prdSourceMetadata,
 	withPrdSnapshot
 } from './prd-deltas.js';
+import { applyClarifications } from './clarifications.js';
 import { type PrdSection, parsePrdSections } from './prd-sections.js';
 
 const FIXTURES = path.join(__dirname, '../../../tests/fixtures/prd');
@@ -234,6 +235,53 @@ describe('prdDeltaContent', () => {
 
 		expect(prdDeltaContent(delta, after)).toBe(
 			'### Two-factor sign-in\n\nAsk for a one-time code from an authenticator app after the password.'
+		);
+	});
+});
+
+describe('Clarifications section (parse-prd --clarify)', () => {
+	const clarify = (prd: string, answer: string) =>
+		applyClarifications(prd, [{ question: 'Which database?', answer }]).content;
+
+	it('is not new work when --clarify adds it to a PRD parsed before', () => {
+		const clarified = clarify(before, 'SQLite');
+		const delta = diffPrdSections(
+			parsePrdSections(clarified),
+			PRD,
+			tasks,
+			snapshot
+		);
+
+		expect(hasPrdChanges(delta)).toBe(false);
+	});
+
+	it('is not reported as changed when an answer changes', () => {
+		const first = clarify(before, 'SQLite');
+		const delta = diffPrdSections(
+			parsePrdSections(clarify(first, 'PostgreSQL')),
+			PRD,
+			tasks,
+			buildPrdSnapshot(parsePrdSections(first))
+		);
+
+		expect(hasPrdChanges(delta)).toBe(false);
+	});
+
+	it('goes to the AI with the new sections, so the answers apply to them', () => {
+		const clarified = clarify(after, 'SQLite');
+		const delta = diffPrdSections(
+			parsePrdSections(clarified),
+			PRD,
+			tasks,
+			snapshot
+		);
+
+		expect(delta.added.map((s) => s.slug)).toEqual(['two-factor-sign-in']);
+		expect(prdDeltaContent(delta, clarified)).toBe(
+			[
+				'### Two-factor sign-in\n\nAsk for a one-time code from an authenticator app after the password.',
+				'## Clarifications\n\n- **Q:** Which database?\n  **A:** SQLite'
+			].join('\n\n')
 		);
 	});
 });
