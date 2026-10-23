@@ -17,7 +17,7 @@ import {
 } from '../../../tasks/utils/archive.js';
 import type { FileOperations } from './file-operations.js';
 import type { FormatHandler } from './format-handler.js';
-import { own, put } from './own-key.js';
+import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import type { PathResolver } from './path-resolver.js';
 import { filterReadyTasks } from '../../../tasks/utils/task-filters.js';
 import { withSchemaVersion } from './schema-version.js';
@@ -65,7 +65,7 @@ export class TagOperations {
 					// Get tasks to copy if specified
 					let tasksToCopy: any[] = [];
 					const sourceTasks = options?.copyFrom
-						? own<any>(existingData, options.copyFrom)?.tasks
+						? getOwnKey(existingData, options.copyFrom)?.tasks
 						: undefined;
 					if (sourceTasks) {
 						tasksToCopy = JSON.parse(JSON.stringify(sourceTasks));
@@ -73,7 +73,7 @@ export class TagOperations {
 					}
 
 					// Create new tag structure
-					put(existingData, tagName, {
+					setOwnKey(existingData, tagName, {
 						tasks: tasksToCopy,
 						metadata: withSchemaVersion({
 							created: new Date().toISOString(),
@@ -193,7 +193,7 @@ export class TagOperations {
 				if (this.formatHandler.detectFormat(existingData) === 'legacy') {
 					// Legacy format - rename the tag key
 					if (Object.hasOwn(existingData, oldTag)) {
-						put(existingData, newTag, existingData[oldTag]);
+						setOwnKey(existingData, newTag, existingData[oldTag]);
 						delete existingData[oldTag];
 
 						// Update metadata tags array

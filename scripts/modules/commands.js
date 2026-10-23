@@ -94,6 +94,7 @@ import {
 	UPSTREAM_NAME,
 	PROJECT_ROOT_ENV,
 	findProjectRoot,
+	getOwnKey,
 	isTaskGraphProject,
 	resolveProjectRoot,
 	writeClarifications
@@ -339,11 +340,8 @@ function registerCommands(programInstance) {
 						const allData = JSON.parse(existingFileContent);
 
 						// Check if the target tag exists and has tasks
-						if (
-							allData[tag] &&
-							Array.isArray(allData[tag].tasks) &&
-							allData[tag].tasks.length > 0
-						) {
+						const tagTasks = getOwnKey(allData, tag)?.tasks;
+						if (Array.isArray(tagTasks) && tagTasks.length > 0) {
 							hasExistingTasksInTag = true;
 						}
 					} catch (error) {

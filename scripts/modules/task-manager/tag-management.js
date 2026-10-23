@@ -10,7 +10,8 @@ import {
 	filterReadyTasks,
 	isTaskComplete,
 	readArchivedIdsSync,
-	renameArchivedTag
+	renameArchivedTag,
+	getOwnKey
 } from '@tm/core';
 import {
 	findProjectRoot,
@@ -19,11 +20,9 @@ import {
 	log,
 	readJSON,
 	resolveTag,
-	setTasksForTag,
 	modifyJSON,
 	writeJSON
 } from '../utils.js';
-import { getOwnTag } from '../utils/own-tag.js';
 import findNextTask from './find-next-task.js';
 
 const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
@@ -157,7 +156,7 @@ async function createTag(
 		}
 
 		// Check if tag already exists
-		if (getOwnTag(rawData, tagName)) {
+		if (getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" already exists`);
 		}
 
@@ -320,7 +319,7 @@ async function deleteTag(
 		}
 
 		// Check if tag exists
-		if (!getOwnTag(rawData, tagName)) {
+		if (!getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" does not exist`);
 		}
 
@@ -692,7 +691,7 @@ async function useTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if tag exists
-		if (!getOwnTag(rawData, tagName)) {
+		if (!getOwnKey(rawData, tagName)) {
 			throw new Error(`Tag "${tagName}" does not exist`);
 		}
 
@@ -821,12 +820,12 @@ async function renameTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if old tag exists
-		if (!getOwnTag(rawData, oldName)) {
+		if (!getOwnKey(rawData, oldName)) {
 			throw new Error(`Tag "${oldName}" does not exist`);
 		}
 
 		// Check if new tag name already exists
-		if (getOwnTag(rawData, newName)) {
+		if (getOwnKey(rawData, newName)) {
 			throw new Error(`Tag "${newName}" already exists`);
 		}
 
@@ -962,12 +961,12 @@ async function copyTag(
 		const rawData = data._rawTaggedData || data;
 
 		// Check if source tag exists
-		if (!getOwnTag(rawData, sourceName)) {
+		if (!getOwnKey(rawData, sourceName)) {
 			throw new Error(`Source tag "${sourceName}" does not exist`);
 		}
 
 		// Check if target tag already exists
-		if (getOwnTag(rawData, targetName)) {
+		if (getOwnKey(rawData, targetName)) {
 			throw new Error(`Target tag "${targetName}" already exists`);
 		}
 
@@ -1318,7 +1317,7 @@ async function autoSwitchTagForBranch(
 		// Check if tag exists
 		const data = readJSON(tasksPath, projectRoot);
 		const rawData = data._rawTaggedData || data;
-		const tagExists = getOwnTag(rawData, tagName);
+		const tagExists = getOwnKey(rawData, tagName);
 
 		if (!tagExists && createIfMissing) {
 			// Create the tag from branch

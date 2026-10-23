@@ -1,9 +1,8 @@
 /**
  * @fileoverview Change one tag of a tasks file under the file lock
  */
-import { normalizeTaskStatuses } from '@tm/core';
+import { normalizeTaskStatuses, getOwnKey, setOwnKey } from '@tm/core';
 import { modifyJSON } from '../utils.js';
-import { getOwnTag, setOwnTag } from './own-tag.js';
 
 /**
  * Change one tag of a tasks file under the file lock. The file is read inside
@@ -24,13 +23,13 @@ export async function updateTagTasks(filepath, tag, mutate, options = {}) {
 	await modifyJSON(filepath, (current) => {
 		const data = current ?? {};
 		if (
-			!getOwnTag(data, tag) &&
+			!getOwnKey(data, tag) &&
 			options.createWith &&
 			Object.keys(data).length === 0
 		) {
-			setOwnTag(data, tag, options.createWith);
+			setOwnKey(data, tag, options.createWith);
 		}
-		const tagData = getOwnTag(data, tag);
+		const tagData = getOwnKey(data, tag);
 		if (!tagData || !Array.isArray(tagData.tasks)) {
 			throw new Error(`Tag "${tag}" no longer exists in ${filepath}`);
 		}

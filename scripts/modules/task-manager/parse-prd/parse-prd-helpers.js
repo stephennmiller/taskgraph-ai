@@ -14,7 +14,9 @@ import {
 	readArchivedIdsSync,
 	reconcileDependencySources,
 	setGeneratedCriteria,
-	withPrdSnapshot
+	withPrdSnapshot,
+	getOwnKey,
+	setOwnKey
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -24,7 +26,6 @@ import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
 import { ensureTagMetadata, withFileLockSync } from '../../utils.js';
-import { getOwnTag, setOwnTag } from '../../utils/own-tag.js';
 import { prdResponseSchema } from './parse-prd-config.js';
 
 /**
@@ -115,10 +116,11 @@ export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
 
 	const allData = readExistingTasksFile(tasksPath);
-	const tagMetadata = allData[targetTag]?.metadata || {};
+	const tagData = getOwnKey(allData, targetTag);
+	const tagMetadata = tagData?.metadata || {};
 
-	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
-		existingTasks = allData[targetTag].tasks;
+	if (Array.isArray(tagData?.tasks)) {
+		existingTasks = tagData.tasks;
 	}
 
 	const { highestId } = readArchivedIdsSync(tasksPath, targetTag);
@@ -335,7 +337,7 @@ export function saveTasksToFile(
 		() => {
 			// Read existing file to preserve other tags
 			const outputData = readExistingTasksFile(tasksPath);
-			const current = getOwnTag(outputData, targetTag);
+			const current = getOwnKey(outputData, targetTag);
 			const currentTasks = Array.isArray(current?.tasks) ? current.tasks : [];
 			const tagTasks =
 				typeof tasks === 'function'
@@ -363,7 +365,7 @@ export function saveTasksToFile(
 				}
 			};
 
-			setOwnTag(outputData, targetTag, tagData);
+			setOwnKey(outputData, targetTag, tagData);
 
 			// Ensure proper metadata
 			ensureTagMetadata(tagData, {

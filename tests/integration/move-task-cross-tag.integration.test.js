@@ -12,7 +12,6 @@ const mockUtils = {
 	writeJSON: vi.fn(),
 	findProjectRoot: vi.fn(() => '/test/project/root'),
 	log: vi.fn(),
-	setTasksForTag: vi.fn(),
 	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => {
 		// Mock realistic dependency behavior for testing
 		const { direction = 'forward' } = options;

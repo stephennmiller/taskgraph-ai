@@ -27,7 +27,10 @@ import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
 } from '../../../dependencies/dependency-provenance.js';
-import { own, put } from './own-key.js';
+import {
+	getOwnKey as own,
+	setOwnKey as put
+} from '../../../../common/utils/own-key.js';
 
 export interface RenumberedItem {
 	/** The ID the command gave the item, such as `11` or `5.3` */

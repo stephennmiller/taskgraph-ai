@@ -5,7 +5,12 @@
 
 import { theme } from '@tm/cli/theme';
 // Import FileOperations from tm-core for atomic file modifications
-import { FileOperations, mergeTagChanges, normalizeTaskStatus } from '@tm/core';
+import {
+	FileOperations,
+	mergeTagChanges,
+	normalizeTaskStatus,
+	getOwnKey
+} from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
@@ -15,7 +20,6 @@ import { COMPLEXITY_REPORT_FILE } from '../../src/constants/paths.js';
 // Import specific config getters needed here
 import { getDebugFlag, getLogLevel } from './config-manager.js';
 import * as gitUtils from './utils/git-utils.js';
-import { getOwnTag } from './utils/own-tag.js';
 
 // Global silent mode flag
 let silentMode = false;
@@ -828,7 +832,7 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 			}
 
 			// Get the data for the resolved tag
-			const tagData = getOwnTag(data, resolvedTag);
+			const tagData = getOwnKey(data, resolvedTag);
 			if (tagData && tagData.tasks) {
 				normalizeTaskIds(tagData.tasks);
 
@@ -1136,7 +1140,7 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						[resolvedTag]: {
 							// Preserve existing tag metadata, merged with any new metadata
 							metadata: {
-								...(getOwnTag(rawFullData, resolvedTag)?.metadata || {}),
+								...(getOwnKey(rawFullData, resolvedTag)?.metadata || {}),
 								...(data.metadata || {})
 							},
 							tasks: data.tasks // The updated tasks array is the source of truth here
@@ -1167,7 +1171,7 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 					// exist. Saving that under the requested name would create the
 					// tag as a copy of master.
 					if (
-						!getOwnTag(currentTaggedData, resolvedTag) &&
+						!getOwnKey(currentTaggedData, resolvedTag) &&
 						data.tag !== resolvedTag
 					) {
 						throw new Error(`Tag "${resolvedTag}" not found`);
@@ -1179,8 +1183,8 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 					// The caller read the tag, changed it and maybe waited on a model
 					// since. Apply only the caller's own changes to the tag as it is now,
 					// so changes other commands saved meanwhile survive (#243).
-					const tagAsRead = getOwnTag(_rawTaggedData, resolvedTag);
-					const tagNow = getOwnTag(currentTaggedData, resolvedTag);
+					const tagAsRead = getOwnKey(_rawTaggedData, resolvedTag);
+					const tagNow = getOwnKey(currentTaggedData, resolvedTag);
 					let tagToSave = cleanResolvedData;
 					if (tagAsRead && tagNow && Array.isArray(tagNow.tasks)) {
 						const tagNowNormalized = JSON.parse(JSON.stringify(tagNow));
@@ -1934,28 +1938,8 @@ function getTasksForTag(data, tagName) {
 	}
 
 	// Handle migrated format: { "master": { "tasks": [...] }, "otherTag": { "tasks": [...] } }
-	const tasks = getOwnTag(data, tagName)?.tasks;
+	const tasks = getOwnKey(data, tagName)?.tasks;
 	return Array.isArray(tasks) ? tasks : [];
-}
-
-/**
- * Sets the tasks array for a specific tag in the data structure
- * @param {Object} data - The tasks.json data object
- * @param {string} tagName - The tag name to set tasks for
- * @param {Array} tasks - The tasks array to set
- * @returns {Object} The updated data object
- */
-function setTasksForTag(data, tagName, tasks) {
-	if (!data) {
-		data = {};
-	}
-
-	if (!data[tagName]) {
-		data[tagName] = {};
-	}
-
-	data[tagName].tasks = tasks || [];
-	return data;
 }
 
 /**
@@ -2083,7 +2067,6 @@ export {
 	resolveEnvVariable,
 	resolveTag,
 	sanitizePrompt,
-	setTasksForTag,
 	slugifyTagForFilePath,
 	stripAnsiCodes,
 	taskExists,
