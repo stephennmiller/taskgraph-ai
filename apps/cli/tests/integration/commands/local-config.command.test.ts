@@ -11,7 +11,15 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it
+} from 'vitest';
 import { getCliBinPath } from '../../helpers/test-utils.js';
 
 const EXECUTABLE = '/opt/claude/bin/claude';
@@ -46,15 +54,28 @@ describe('per-machine config and state', () => {
 		writeJson(sharedPath(), config);
 	};
 
+	// One init, copied into each test's folder: init is the slow part
+	let template: string;
+
+	beforeAll(() => {
+		template = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-local-config-tpl-'));
+		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-local-config-home-'));
+		dir = template;
+		run(['init', '--yes', '--no-aliases', '--no-git']);
+	});
+
+	afterAll(() => {
+		fs.rmSync(template, { recursive: true, force: true });
+		fs.rmSync(home, { recursive: true, force: true });
+	});
+
 	beforeEach(() => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-local-config-'));
-		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-local-config-home-'));
-		run(['init', '--yes', '--no-aliases', '--no-git']);
+		fs.cpSync(template, dir, { recursive: true });
 	});
 
 	afterEach(() => {
 		fs.rmSync(dir, { recursive: true, force: true });
-		fs.rmSync(home, { recursive: true, force: true });
 	});
 
 	it('gitignores state.json and config.local.json', () => {
@@ -74,7 +95,6 @@ describe('per-machine config and state', () => {
 			'node_modules/\n\n# Task files\n# tasks.json\n'
 		);
 
-		run(['init', '--yes', '--no-aliases', '--no-git']);
 		run(['init', '--yes', '--no-aliases', '--no-git']);
 
 		const lines = fs.readFileSync(gitignore, 'utf8').split('\n');
