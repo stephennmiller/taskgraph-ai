@@ -1,85 +1,17 @@
 ---
 description: "TaskGraph: add a subtask to a task. Use when a TaskGraph task needs a smaller step."
-argument-hint: "[arguments]"
+argument-hint: "<parent ID> <title>"
 ---
 
-Add a subtask to a parent task.
+Add a subtask to a task.
 
-Arguments: $ARGUMENTS
+Arguments: $ARGUMENTS (parent task ID, then the subtask's title)
 
-Parse arguments to create a new subtask or convert existing task.
+1. Use the parent ID only when it is digits and dots and names a top-level task (`5`, no dot). If it is missing, ask which task. Put the title in single quotes, with any `'` written as `'\''`:
 
-## Adding Subtasks
+   ```bash
+   taskgraph add-subtask --parent=<id> --title='<title>'
+   ```
 
-Creates subtasks to break down complex parent tasks into manageable pieces.
-
-## Argument Parsing
-
-Flexible natural language:
-- "add subtask to 5: implement login form"
-- "break down 5 with: setup, implement, test"
-- "subtask for 5: handle edge cases"
-- "5: validate user input" → adds subtask to task 5
-
-## Execution Modes
-
-### 1. Create New Subtask
-```bash
-taskgraph add-subtask --parent=<id> --title='<title>' --description='<desc>'
-```
-
-Keep the title and description in single quotes, and write any `'` inside them as `'\''`. In double quotes the shell would run backticks and `$(...)` in the text.
-
-### 2. Convert Existing Task
-```bash
-taskgraph add-subtask --parent=<id> --task-id=<existing-id>
-```
-
-Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
-
-## Smart Features
-
-1. **Automatic Subtask Generation**
-   - If title contains "and" or commas, create multiple
-   - Suggest common subtask patterns
-   - Inherit parent's context
-
-2. **Intelligent Defaults**
-   - Priority based on parent
-   - Appropriate time estimates
-   - Logical dependencies between subtasks
-
-3. **Validation**
-   - Check parent task complexity
-   - Warn if too many subtasks
-   - Ensure subtask makes sense
-
-## Creation Process
-
-1. Parse parent task context
-2. Generate subtask with ID like "5.1"
-3. Set appropriate defaults
-4. Link to parent task
-5. Update parent's time estimate
-
-## Example Flows
-
-```
-/taskgraph:add-subtask to 5: implement user authentication
-→ Created subtask #5.1: "implement user authentication"
-→ Parent task #5 now has 1 subtask
-→ Suggested next subtasks: tests, documentation
-
-/taskgraph:add-subtask 5: setup, implement, test
-→ Created 3 subtasks:
-  #5.1: setup
-  #5.2: implement  
-  #5.3: test
-```
-
-## Post-Creation
-
-- Show updated task hierarchy
-- Suggest logical next subtasks
-- Update complexity estimates
-- Recommend subtask order
+   Add `--description='<text>'` if the user described more than a title, and `--dependencies=<ids>` for sibling subtasks it waits on (`5.1`; digits, dots and commas only). For several subtasks ("setup, implement, test"), run it once per title. To make an existing task a subtask, use `/taskgraph:convert-task-to-subtask`.
+2. Show the output unchanged in a code block, then run `taskgraph show <parent-id>` and show its subtask list.

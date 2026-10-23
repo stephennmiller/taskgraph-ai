@@ -3,132 +3,24 @@ description: "TaskGraph: change one task's details, with AI. Use when a TaskGrap
 argument-hint: "<task ID> <changes>"
 ---
 
-Update a single specific task with new information.
+Rewrite one task's description, details and test strategy with AI.
 
-Arguments: $ARGUMENTS
+Arguments: $ARGUMENTS (task ID, then what changed: "5 add rate limiting")
 
-This command rewrites one task's content (description, details, test strategy) with AI, through `taskgraph update-task --id --prompt`. It does not do the things the older natural-language version tried:
+This changes one task's content only. For other requests, say so and use the right command:
 
-- Several tasks at once, or "all tasks that ...": use `/taskgraph:update-tasks-from-id`
-- Changing status ("mark 23 as done", "defer 7"): use `/taskgraph:set-status <id> <status>`, or the shortcuts `/taskgraph:to-in-progress` and `/taskgraph:to-done`
-- Adding or removing dependencies: use `/taskgraph:add-dependency` and `/taskgraph:remove-dependency`
+- several tasks at once, or "all tasks that ...": `/taskgraph:update-tasks-from-id`
+- a status ("mark 23 as done", "defer 7"): `/taskgraph:set-status <id> <status>`, or the shortcuts `/taskgraph:to-in-progress` and `/taskgraph:to-done`
+- dependencies: `/taskgraph:add-dependency` and `/taskgraph:remove-dependency`
+- a progress note, kept as written with no AI: `taskgraph note <id> -- '<text>'`
 
-The CLI refuses to update a task that is already done, and a status change inside the prompt is not applied. If the request is one of the above, say so and use the right command instead.
+1. Use the ID only when it is digits and dots (`5`, or a subtask like `5.2`); otherwise ask which task. Put the changes in single quotes, with any `'` written as `'\''`:
 
-Parse task ID and update details.
+   ```bash
+   taskgraph update-task --id=<id> --prompt='<changes>'
+   ```
 
-## Single Task Update
+   `update-task` takes a top-level task only. For a subtask (digits with one dot, `5.2`), run `taskgraph update-subtask --id=<id> --prompt='<changes>'`, which adds the changes to the subtask's details with a timestamp.
 
-Precisely update one task with AI assistance to maintain consistency.
-
-## Argument Parsing
-
-Natural language updates:
-- "5: add caching requirement"
-- "update 5 to include error handling"
-- "task 5 needs rate limiting"
-- "5 change priority to high"
-
-## Execution
-
-```bash
-taskgraph update-task --id=<id> --prompt='<context>'
-```
-
-Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID. Keep the text in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in it, and prompts often quote file names and code.
-
-## Update Types
-
-### 1. **Content Updates**
-- Enhance description
-- Add requirements
-- Clarify details
-- Update acceptance criteria
-
-### 2. **Metadata Updates**
-- Change priority
-- Adjust time estimates
-- Update complexity
-- Modify dependencies
-
-### 3. **Strategic Updates**
-- Revise approach
-- Change test strategy
-- Update implementation notes
-- Adjust subtask needs
-
-## AI-Powered Updates
-
-The AI:
-1. **Understands Context**
-   - Reads current task state
-   - Identifies update intent
-   - Maintains consistency
-   - Preserves important info
-
-2. **Applies Changes**
-   - Updates relevant fields
-   - Keeps style consistent
-   - Adds without removing
-   - Enhances clarity
-
-3. **Validates Results**
-   - Checks coherence
-   - Verifies completeness
-   - Maintains relationships
-   - Suggests related updates
-
-## Example Updates
-
-```
-/taskgraph:update-task 5: add rate limiting
-→ Updating Task #5: "Implement API endpoints"
-
-Current: Basic CRUD endpoints
-Adding: Rate limiting requirements
-
-Updated sections:
-✓ Description: Added rate limiting mention
-✓ Details: Added specific limits (100/min)
-✓ Test Strategy: Added rate limit tests
-✓ Complexity: Increased from 5 to 6
-✓ Time Estimate: Increased by 2 hours
-
-Suggestion: Also update task #6 (API Gateway) for consistency?
-```
-
-## Smart Features
-
-1. **Incremental Updates**
-   - Adds without overwriting
-   - Preserves work history
-   - Tracks what changed
-   - Shows diff view
-
-2. **Consistency Checks**
-   - Related task alignment
-   - Subtask compatibility
-   - Dependency validity
-   - Timeline impact
-
-3. **Update History**
-   - Timestamp changes
-   - Track who/what updated
-   - Reason for update
-   - Previous versions
-
-## Field-Specific Updates
-
-Quick syntax for specific fields:
-- "5 priority:high" → Update priority only
-- "5 add-time:4h" → Add to time estimate
-- "5 status:review" → Change status
-- "5 depends:3,4" → Add dependencies
-
-## Post-Update
-
-- Show updated task
-- Highlight changes
-- Check related tasks
-- Update suggestions
-- Timeline adjustments
+   Add `--research` if the user asks for research. The CLI refuses a task that is already done.
+2. Show the output unchanged in a code block, then, in one sentence, what changed in the task.

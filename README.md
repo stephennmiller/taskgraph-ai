@@ -194,13 +194,13 @@ Install the plugin (step 3) and they appear as `/taskgraph:<name>` (type `/taskg
 | Purpose | Commands |
 |---|---|
 | Set up | `init-project`, `install-taskgraph`, `setup-models`, `view-models` |
-| Plan | `parse-prd`, `parse-prd-with-research`, `analyze-complexity`, `complexity-report`, `analyze-project` |
+| Plan | `parse-prd`, `parse-prd-with-research`, `analyze-complexity`, `complexity-report` |
 | See | `list-tasks`, `next-task`, `show-task`, `project-status` |
 | Change status | `set-status`, `to-in-progress`, `to-done` |
 | Edit | `add-task`, `update-task`, `update-tasks-from-id`, `remove-task`, `convert-task-to-subtask` |
 | Subtasks | `expand-task`, `expand-all-tasks`, `add-subtask`, `remove-subtask`, `clear-subtasks` |
 | Dependencies | `graph`, `why`, `add-dependency`, `remove-dependency`, `validate-dependencies`, `fix-dependencies` |
-| Other | `sync-readme`, `learn`, `help` |
+| Other | `sync-readme`, `help` |
 
 ### CLI cheat sheet
 
