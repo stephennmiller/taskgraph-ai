@@ -65,6 +65,11 @@ Removing or renaming a key, or changing its type, raises `schemaVersion`. A new 
 
 The current version is `2`.
 
+| Version | Change |
+|---------|--------|
+| `2` | `show` and `start` give task IDs, task `dependencies` and subtask IDs as strings, as `list` and `next` do, and their subtasks gain `parentId`. A subtask's `dependencies` keep their stored type: a bare number names a sibling subtask, a string names a task or a dotted subtask. |
+| `1` | First versioned output. |
+
 ## Not the same as the tasks file version
 
 The output's `schemaVersion` is not the `metadata.schemaVersion` stored on each tag in `.taskgraph/tasks/tasks.json` (see [Schema version](/capabilities/dependency-graph#schema-version)). They change independently: a new field in the file does not have to change the output, and a new key in the output does not change the file.
