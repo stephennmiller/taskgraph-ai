@@ -43,12 +43,17 @@ The `Parity` job in `.github/workflows/ci.yml` runs this comparison on a pull
 request. It builds the target branch's commit, then runs every scenario below
 with the target branch as build A and the pull request as build B.
 
-- **When it runs:** only when the pull request changes `scripts/`,
-  `mcp-server/`, `src/`, `packages/tm-core/src/`, `apps/cli/src/`,
-  `apps/mcp/src/`, this folder, or `.github/scripts/run-parity.sh`. The
-  `Parity changes` job decides this from the list of changed files and the
-  `Parity` job is skipped otherwise. A change to the workflow file alone does
-  not start it.
+- **When it runs:** when the pull request changes anything that goes into the
+  two builds or the comparison: the code bundled into `dist/` (`scripts/`,
+  `mcp-server/`, `src/`, the `src/` of `@tm/core`, `@tm/profiles`, `@tm/cli`
+  and `@tm/mcp`), `assets/` (what `init` copies), the build config, the root
+  `package.json` or `package-lock.json`, this folder, the MCP smoke client the
+  MCP steps use, `.github/scripts/run-parity.sh` or `ci.yml`. The patterns are
+  in `.github/scripts/parity-paths.txt`, one `grep -E` pattern per line;
+  `tests/integration/parity-paths.test.ts` checks them. The `Parity changes`
+  job matches the changed files against them and `Parity` is skipped when
+  none match (docs and test-only changes). It runs alongside `Test`, so it
+  adds no time to that job.
 - **Where to read it:** the job summary has one row per scenario, and the first
   60 lines of each report that differs. The full reports are in the
   `parity-reports` artifact (kept for 7 days).
