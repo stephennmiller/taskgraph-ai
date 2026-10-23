@@ -192,6 +192,9 @@ export {
 	type EnvMap
 } from './modules/config/services/project-env.js';
 
+// The tag names add-tag accepts
+export { TAG_NAME_PATTERN } from './modules/tasks/services/tag.service.js';
+
 // Task filtering utilities
 export {
 	buildBlocksMap,

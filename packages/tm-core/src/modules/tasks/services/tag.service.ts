@@ -50,6 +50,12 @@ const RESERVED_TAG_NAMES = ['master'];
 const MAX_TAG_NAME_LENGTH = 50;
 
 /**
+ * The characters a tag name may use: letters, numbers, hyphens and
+ * underscores. Such a name is also safe to put in a shell command.
+ */
+export const TAG_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+/**
  * TagService - Handles tag management business logic
  * Validates operations and delegates to storage layer
  */
@@ -78,7 +84,7 @@ export class TagService {
 		}
 
 		// Check format: alphanumeric, hyphens, underscores only
-		if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+		if (!TAG_NAME_PATTERN.test(name)) {
 			throw new TaskGraphError(
 				`${context} can only contain letters, numbers, hyphens, and underscores`,
 				ERROR_CODES.VALIDATION_ERROR,

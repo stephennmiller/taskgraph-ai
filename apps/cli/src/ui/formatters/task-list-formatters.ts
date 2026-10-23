@@ -28,6 +28,7 @@
 
 import {
 	type InvalidDependency,
+	TAG_NAME_PATTERN,
 	type Task,
 	fullSubtaskId,
 	isTaskComplete,
@@ -415,9 +416,6 @@ export function formatPlainTaskList(
 /** How many invalid dependencies the warning names before `...and N more` */
 const INVALID_DEPENDENCIES_SHOWN = 5;
 
-/** The tag names add-tag accepts, safe to put in a shell command */
-const SAFE_TAG_NAME = /^[a-zA-Z0-9_-]+$/;
-
 /**
  * The warning `list` prints on stderr for dependencies on tasks that don't
  * exist. The IDs and tag come from the task file, so each goes through
@@ -440,7 +438,7 @@ export function formatInvalidDependencyWarning(
 	const tagFlag =
 		tagName === undefined
 			? ''
-			: ` --tag ${SAFE_TAG_NAME.test(tagName) ? tagName : '<tag>'}`;
+			: ` --tag ${TAG_NAME_PATTERN.test(tagName) ? tagName : '<tag>'}`;
 	const more = invalidDependencies.length - INVALID_DEPENDENCIES_SHOWN;
 	return [
 		chalk.yellow(
