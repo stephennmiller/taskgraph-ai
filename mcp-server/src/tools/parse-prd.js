@@ -47,7 +47,7 @@ export function registerParsePRDTool(server) {
 				.string()
 				.optional()
 				.describe(
-					'Approximate number of top-level tasks to generate (default: 10). As the agent, if you have enough information, ensure to enter a number of tasks that would logically scale with project complexity. Setting to 0 will allow TaskGraph to determine the appropriate number of tasks based on the complexity of the PRD. Avoid entering numbers above 50 due to context window limitations.'
+					'Approximate number of top-level tasks to generate. Pass 0 to let TaskGraph size the list to the PRD. Omitted, it uses the project config defaultNumTasks, which is 0 unless set. Avoid numbers above 50 due to context window limitations.'
 				),
 			force: z
 				.boolean()

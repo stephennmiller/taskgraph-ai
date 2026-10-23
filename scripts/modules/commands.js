@@ -205,8 +205,7 @@ function registerCommands(programInstance) {
 		.option('-o, --output <file>', 'Output file path')
 		.option(
 			'-n, --num-tasks <number>',
-			'Number of tasks to generate',
-			getDefaultNumTasks()
+			'About how many tasks (default: sized to the PRD)'
 		)
 		.option('-f, --force', 'Skip confirmation when overwriting existing tasks')
 		.option(
@@ -290,7 +289,11 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			const numTasks = parseInt(options.numTasks, 10);
+			// Without the flag, the config's defaultNumTasks; 0 sizes it to the PRD
+			const numTasks = parseInt(
+				options.numTasks ?? getDefaultNumTasks(taskGraph.getProjectRoot()),
+				10
+			);
 			const force = options.force || false;
 			const append = options.append || false;
 			const research = options.research || false;

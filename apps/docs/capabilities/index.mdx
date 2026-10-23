@@ -75,7 +75,7 @@ The CLI is organized into a series of commands, each with its own set of options
 
 -   **`parse-prd`**: Parses a PRD to generate tasks.
     -   `--file <file>`: The path to the PRD file.
-    -   `--num-tasks <numTasks>`: The number of tasks to generate.
+    -   `--num-tasks <numTasks>`: About how many tasks to generate. Without it, the list is sized to the PRD (`global.defaultNumTasks` in config overrides that).
 -   **`expand`**: Expands a task into subtasks.
     -   `--id <taskId>`: The ID of the task to expand.
     -   `--num-subtasks <numSubtasks>`: The number of subtasks to generate.

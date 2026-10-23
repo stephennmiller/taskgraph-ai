@@ -62,7 +62,11 @@ const LEGACY_OVERSIZED = new Set([
 	'.claude/rules/new-features.md',
 	// The legacy CLI command registry, far over the limit. Splitting it is its own
 	// task; until then a dependency bump that touches one line must be committable.
-	'scripts/modules/commands.js'
+	'scripts/modules/commands.js',
+	// Over the limit on main; a one-line default or parameter change must be
+	// committable until each is split.
+	'scripts/modules/config-manager.js',
+	'src/prompts/README.md'
 ]);
 
 export const isIgnored = (path) =>

@@ -76,11 +76,10 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 **Variants**: `default`, `research` (when research mode is enabled)
 
 **Required Parameters**:
-- `numTasks` (number): Target number of tasks to generate
+- `numTasks` (number): Target number of tasks to generate; 0 lets the model size the list to the PRD
 - `nextId` (number): Starting ID for tasks
 - `prdContent` (string): Content of the PRD file
 - `prdPath` (string): Path to the PRD file
-- `defaultTaskPriority` (string): Default priority for generated tasks
 
 **Optional Parameters**:
 - `research` (boolean): Enable research mode for latest best practices (default: false)
