@@ -44,9 +44,10 @@ export function dropReferences(
 		parentId?: DependencyId
 	) => {
 		if (!item.dependencies) return;
-		item.dependencies = item.dependencies.filter(
-			(dep) => !removed.has(fullId(dep))
-		);
+		const kept = item.dependencies.filter((dep) => !removed.has(fullId(dep)));
+		// Leave untouched items as they are, metadata included
+		if (kept.length === item.dependencies.length) return;
+		item.dependencies = kept;
 		assignMetadata(item, pruneDependencySources(item, parentId));
 	};
 
@@ -71,7 +72,7 @@ export function dropReferences(
  * @returns How many subtasks were removed (0 leaves the task as it is)
  */
 export function removeAllSubtasks(tasks: Referrer[], task: Referrer): number {
-	const subtasks = task.subtasks ?? [];
+	const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
 	if (subtasks.length === 0) return 0;
 	const ids = subtasks.map((subtask) => `${task.id}.${subtask.id}`);
 	task.subtasks = [];

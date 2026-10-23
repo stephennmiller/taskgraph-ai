@@ -88,6 +88,17 @@ describe('dropReferences', () => {
 
 		expect(list).toEqual(before);
 	});
+
+	it("leaves an item's metadata alone when none of its dependencies go", () => {
+		const list = tasks();
+		const metadata = { [DEPENDENCY_SOURCES_KEY]: { '9': 'inferred' }, a: 1 };
+		list[0].dependencies = [1];
+		list[0].metadata = metadata;
+
+		dropReferences(list, ['5.2']);
+
+		expect(list[0].metadata).toBe(metadata);
+	});
 });
 
 describe('removeAllSubtasks', () => {
@@ -112,6 +123,13 @@ describe('removeAllSubtasks', () => {
 		list[1].subtasks?.push({ id: 2, dependencies: [] });
 
 		expect(list[2].dependencies).not.toContain('5.2');
+	});
+
+	it('returns 0 for subtasks that are not a list', () => {
+		const list = tasks();
+		(list[0] as { subtasks?: unknown }).subtasks = {};
+
+		expect(removeAllSubtasks(list, list[0])).toBe(0);
 	});
 
 	it('returns 0 for a task without subtasks', () => {
