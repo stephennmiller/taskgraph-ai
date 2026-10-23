@@ -77,11 +77,19 @@ describe('loop command', () => {
 			const output = execSync(`node "${binPath}" loop ${args}`, {
 				encoding: 'utf-8',
 				stdio: 'pipe',
-				timeout: 5000, // Short timeout since we can't actually run claude
+				// Every call here fails validation before a Claude session could start,
+				// so wait for the CLI to exit. The kill timeout only stops a run that
+				// did start a session; execSync blocks, so Vitest's own timeout can't.
+				timeout: 30000,
 				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
 			});
 			return { output, exitCode: 0 };
 		} catch (error: any) {
+			if (error.signal) {
+				throw new Error(
+					`loop ${args} was killed (${error.signal}) before exiting`
+				);
+			}
 			return {
 				output: error.stderr?.toString() || error.stdout?.toString() || '',
 				exitCode: error.status || 1

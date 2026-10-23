@@ -1,0 +1,14 @@
+^scripts/
+^mcp-server/
+^src/
+^assets/
+^packages/(tm-core|tm-profiles)/src/
+^packages/build-config/
+^apps/(cli|mcp)/src/
+^apps/cli/tests/parity/
+^apps/mcp/tests/smoke/mcp-stdio\.smoke\.mjs$
+^\.github/scripts/(run-parity\.sh|parity-paths\.txt)$
+^\.github/workflows/ci\.yml$
+^tsdown\.config\.ts$
+^(packages/(tm-core|tm-profiles)/|apps/(cli|mcp)/)?package\.json$
+^package-lock\.json$

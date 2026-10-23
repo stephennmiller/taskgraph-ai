@@ -61,6 +61,9 @@ describe('init --from-taskmaster', () => {
 			'✓ Imported 4 tasks in 2 tags, docs and reports from .taskmaster/'
 		);
 		expect(result.stdout).toContain(
+			'default of 10 tasks; parse-prd sizes the list to the PRD'
+		);
+		expect(result.stdout).toContain(
 			'.taskmaster/ is unchanged · Next: taskgraph next'
 		);
 		// The usual "write a PRD" steps don't apply to a project with tasks

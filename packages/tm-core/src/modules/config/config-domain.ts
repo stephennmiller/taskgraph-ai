@@ -71,27 +71,6 @@ export class ConfigDomain {
 	// ========== Configuration Updates ==========
 
 	/**
-	 * Update configuration
-	 */
-	async updateConfig(updates: PartialConfiguration): Promise<void> {
-		return this.configManager.updateConfig(updates);
-	}
-
-	/**
-	 * Set response language
-	 */
-	async setResponseLanguage(language: string): Promise<void> {
-		return this.configManager.setResponseLanguage(language);
-	}
-
-	/**
-	 * Save current configuration
-	 */
-	async saveConfig(): Promise<void> {
-		return this.configManager.saveConfig();
-	}
-
-	/**
 	 * Reset configuration to defaults
 	 */
 	async reset(): Promise<void> {

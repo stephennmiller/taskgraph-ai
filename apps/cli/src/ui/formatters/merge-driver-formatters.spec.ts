@@ -153,6 +153,56 @@ describe('formatMergeConflicts', () => {
 			'  tag sprint  metadata.description  A · incoming: B'
 		);
 	});
+
+	it('names archive.json and how to free an ID the incoming branch archived', () => {
+		const output = plain(
+			formatMergeConflicts(
+				[
+					{
+						tag: 'master',
+						id: '9',
+						field: '',
+						kind: 'archived-theirs',
+						ours: { id: 9 },
+						theirs: { id: 9 }
+					}
+				],
+				'.taskgraph/tasks/archive.json',
+				[],
+				80
+			)
+		);
+
+		expect(output.split('\n')).toEqual([
+			"✗ 1 change to archive.json clashes; kept this branch's value",
+			'  9  archived on the incoming branch; this branch has another task 9',
+			'Run taskgraph move --from=9 --to=<free ID>, then git add both files'
+		]);
+	});
+
+	it('names the tag in the move hint outside master', () => {
+		const output = plain(
+			formatMergeConflicts(
+				[
+					{
+						tag: 'feature',
+						id: '9',
+						field: '',
+						kind: 'archived-theirs',
+						ours: { id: 9 },
+						theirs: { id: 9 }
+					}
+				],
+				'.taskgraph/tasks/archive.json',
+				[],
+				80
+			)
+		);
+
+		expect(output.split('\n').at(-1)).toBe(
+			'Run taskgraph move --from=9 --to=<free ID> --tag=feature, then git add both files'
+		);
+	});
 });
 
 describe('formatMergeDriverSetup', () => {
@@ -163,7 +213,7 @@ describe('formatMergeDriverSetup', () => {
 
 		expect(output.split('\n')).toEqual([
 			'✓ Git now merges tasks.json by task',
-			'  .gitattributes  routes tasks.json to the driver; commit it',
+			'  .gitattributes  routes tasks.json and archive.json to it; commit it',
 			'  .git/config     turns it on here; each clone runs init --merge-driver'
 		]);
 	});
