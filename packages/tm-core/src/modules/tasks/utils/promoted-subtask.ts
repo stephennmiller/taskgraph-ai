@@ -9,11 +9,15 @@
  * the title, so the new task loads.
  *
  * @param subtask - The subtask being turned into a task
- * @returns Its description, or its title when the description is empty
+ * @returns Its description, or its title when the description is empty or not
+ * a string (hand-edited `tasks.json`)
  */
 export function promotedSubtaskDescription(subtask: {
-	title: string;
-	description?: string | null;
+	title?: string | null;
+	description?: unknown;
 }): string {
-	return subtask.description?.trim() ? subtask.description : subtask.title;
+	const { description } = subtask;
+	return typeof description === 'string' && description.trim()
+		? description
+		: (subtask.title ?? '');
 }

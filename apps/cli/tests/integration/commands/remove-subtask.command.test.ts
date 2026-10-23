@@ -38,7 +38,7 @@ describe('converting a subtask with no description into a task', () => {
 	beforeEach(() => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-convert-'));
 		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-convert-home-'));
-		run(['init', '--yes', '--no-aliases', '--no-git']);
+		expect(run(['init', '--yes', '--no-aliases', '--no-git']).status).toBe(0);
 		// `add-subtask` without --description stores no description
 		fs.writeFileSync(
 			tasksPath(),
@@ -90,6 +90,8 @@ describe('converting a subtask with no description into a task', () => {
 		expect(run(['move', '--from=1.1', '--to=5']).status).toBe(0);
 
 		expect(readTask(5).description).toBe('Child');
-		expect(run(['list']).status).toBe(0);
+		const list = run(['list']);
+		expect(list.stderr).not.toContain('description is required');
+		expect(list.status).toBe(0);
 	});
 });

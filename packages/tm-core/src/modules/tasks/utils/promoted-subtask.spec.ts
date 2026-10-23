@@ -12,10 +12,15 @@ describe('promotedSubtaskDescription', () => {
 		['missing', undefined],
 		['null', null],
 		['empty', ''],
-		['blank', '  ']
+		['blank', '  '],
+		['not a string', 42]
 	])('uses the title when the description is %s', (_, description) => {
 		expect(promotedSubtaskDescription({ title: 'Child', description })).toBe(
 			'Child'
 		);
+	});
+
+	it('returns an empty string when the subtask has no title either', () => {
+		expect(promotedSubtaskDescription({ description: '' })).toBe('');
 	});
 });
