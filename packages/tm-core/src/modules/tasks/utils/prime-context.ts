@@ -21,6 +21,8 @@ export interface PrimeRule {
 /**
  * The five rules an agent follows while working a task. Each command must be
  * one the CLI registers; tests/unit/taskgraph-claude-md-drift.test.ts checks.
+ * Free text goes in single quotes: in double quotes the shell runs backticks
+ * and $(...) in it.
  */
 export const PRIME_RULES: readonly PrimeRule[] = [
 	{
@@ -30,12 +32,12 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 	{
 		// Saved as written with a timestamp, no AI call; works on 3 and 3.2
 		text: 'Log what you did and decided as you go',
-		command: 'taskgraph note <id> "<what you did or decided>"'
+		command: "taskgraph note <id> '<what you did or decided>'"
 	},
 	{
 		text: 'File work you find as a new task instead of doing it now',
 		command:
-			'taskgraph add-task --prompt="<what you found>" --discovered-from=<id>'
+			"taskgraph add-task --prompt='<what you found>' --discovered-from=<id>"
 	},
 	{
 		// set-status done refuses while a criterion is unchecked (#283)
@@ -44,7 +46,7 @@ export const PRIME_RULES: readonly PrimeRule[] = [
 	},
 	{
 		text: 'Commit with the task ID in the message',
-		command: 'git commit -m "<type>: <change> (task <id>)"'
+		command: "git commit -m '<type>: <change> (task <id>)'"
 	}
 ];
 

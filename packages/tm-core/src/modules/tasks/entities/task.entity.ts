@@ -9,6 +9,7 @@ import type {
 	TaskPriority,
 	TaskStatus
 } from '../../../common/types/index.js';
+import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
 
 /**
@@ -47,7 +48,10 @@ export class TaskEntity implements Task {
 		const ids = normalizeTaskIds(data as Task);
 		this.id = ids.id;
 		this.title = data.title;
-		this.description = data.description;
+		// Files from earlier versions can hold a task with no description
+		// (`remove-subtask --convert` copied an empty one). It takes its title,
+		// so one such task doesn't stop the whole tag from loading
+		this.description = promotedSubtaskDescription(data);
 		this.status = data.status;
 		this.priority = data.priority;
 		this.dependencies = ids.dependencies;
@@ -89,13 +93,6 @@ export class TaskEntity implements Task {
 		if (!data.title || data.title.trim().length === 0) {
 			throw new TaskGraphError(
 				'Task title is required',
-				ERROR_CODES.VALIDATION_ERROR
-			);
-		}
-
-		if (!data.description || data.description.trim().length === 0) {
-			throw new TaskGraphError(
-				'Task description is required',
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}

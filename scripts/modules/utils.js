@@ -542,6 +542,30 @@ function log(level, ...args) {
 	}
 }
 
+/** Whether a value is one tag's data: an object with a tasks array */
+function isTagData(value) {
+	return (
+		Boolean(value) && typeof value === 'object' && Array.isArray(value.tasks)
+	);
+}
+
+/**
+ * Copy tagged tasks.json data without the `tag` (a tag name) and
+ * `_rawTaggedData` (all tags) fields readJSON adds. A tag a user named `tag`
+ * or `_rawTaggedData` holds tag data, not those fields, so it is kept. The
+ * copy has no prototype, so every key, `__proto__` included, is copied as data.
+ */
+function withoutReadJSONFields(data) {
+	const copy = Object.create(null);
+	for (const [key, value] of Object.entries(data)) {
+		if ((key === 'tag' || key === '_rawTaggedData') && !isTagData(value)) {
+			continue;
+		}
+		copy[key] = value;
+	}
+	return copy;
+}
+
 /**
  * Checks if the data object has a tagged structure (contains tag objects with tasks arrays)
  * @param {Object} data - The data object to check
@@ -553,16 +577,7 @@ function hasTaggedStructure(data) {
 	}
 
 	// Check if any top-level properties are objects with tasks arrays
-	for (const key in data) {
-		if (
-			Object.hasOwn(data, key) &&
-			typeof data[key] === 'object' &&
-			Array.isArray(data[key].tasks)
-		) {
-			return true;
-		}
-	}
-	return false;
+	return Object.values(data).some(isTagData);
 }
 
 /**
@@ -1153,7 +1168,12 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 				}
 				// If we have _rawTaggedData, this means we're working with resolved tag data
 				// and need to merge it back into the full tagged structure
-				else if (data && data._rawTaggedData && projectRoot) {
+				else if (
+					data &&
+					data._rawTaggedData &&
+					!isTagData(data._rawTaggedData) &&
+					projectRoot
+				) {
 					const resolvedTag = tag || getCurrentTag(projectRoot);
 
 					// IMPORTANT: Re-read the file to get the CURRENT state instead of using
@@ -1230,20 +1250,14 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 				// Clean up any internal properties that shouldn't be persisted
 				let cleanData = finalData;
 				if (cleanData && typeof cleanData === 'object') {
-					// Remove any _rawTaggedData or tag properties from root level
-					const { _rawTaggedData, tag: tagProp, ...rootCleanData } = cleanData;
-					cleanData = rootCleanData;
+					cleanData = withoutReadJSONFields(cleanData);
 
 					// Additional cleanup for tag objects
 					if (typeof cleanData === 'object' && !Array.isArray(cleanData)) {
 						// No prototype, so a `__proto__` key is written as data
 						const finalCleanData = Object.create(null);
 						for (const [key, value] of Object.entries(cleanData)) {
-							if (
-								value &&
-								typeof value === 'object' &&
-								Array.isArray(value.tasks)
-							) {
+							if (isTagData(value)) {
 								// This is a tag object - clean up any rogue root-level properties
 								// Move created/description to metadata if they're at root level
 								const { created, description, ...cleanTagData } = value;
@@ -2061,6 +2075,8 @@ export {
 	getTagAwareFilePath,
 	getTaskManager,
 	getTasksForTag,
+	isTagData,
+	withoutReadJSONFields,
 	isEmpty,
 	isSilentMode,
 	LOG_LEVELS,

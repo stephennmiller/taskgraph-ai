@@ -116,6 +116,29 @@ describe('--json contract', () => {
 			tasks: [task(1, 'Claim me', 'pending', [])],
 			metadata: {}
 		};
+		// archive and archive restore write, so they each get their own tag
+		data.finished = {
+			tasks: [task(1, 'Ship it', 'done', [])],
+			metadata: {}
+		};
+		data.restorable = {
+			tasks: [
+				task(1, 'Plan', 'done', []),
+				task(2, 'Build', 'done', [1], {
+					subtasks: [
+						{
+							id: 1,
+							title: 'Wire it',
+							description: 'Wire it up',
+							details: '',
+							status: 'done',
+							dependencies: []
+						}
+					]
+				})
+			],
+			metadata: {}
+		};
 		data.empty = {
 			tasks: [],
 			metadata: { created: '2026-01-01T00:00:00.000Z', description: 'Empty' }
@@ -644,6 +667,91 @@ describe('--json contract', () => {
 			  "success": "boolean",
 			  "taskId": "string",
 			  "timestamp": "string",
+			}
+		`);
+	});
+
+	it('archive', () => {
+		expect(
+			shapeOf(
+				json([
+					'archive',
+					'--tag',
+					'finished',
+					'--older-than',
+					'0',
+					'--format',
+					'json'
+				])
+			)
+		).toMatchInlineSnapshot(`
+			{
+			  "dryRun": "boolean",
+			  "olderThanDays": "number",
+			  "schemaVersion": "number",
+			  "tag": "string",
+			  "tasks": [
+			    {
+			      "id": "string",
+			      "status": "string",
+			      "title": "string",
+			    },
+			  ],
+			}
+		`);
+	});
+
+	it('archive restore', () => {
+		// Archive first here, so this test doesn't depend on the one above
+		json([
+			'archive',
+			'--tag',
+			'restorable',
+			'--older-than',
+			'0',
+			'--format',
+			'json'
+		]);
+		expect(
+			shapeOf(
+				json([
+					'archive',
+					'restore',
+					'2',
+					'--tag',
+					'restorable',
+					'--format',
+					'json'
+				])
+			)
+		).toMatchInlineSnapshot(`
+			{
+			  "restored": "boolean",
+			  "schemaVersion": "number",
+			  "tag": "string",
+			  "task": {
+			    "dependencies": [
+			      "string",
+			    ],
+			    "description": "string",
+			    "details": "string",
+			    "id": "string",
+			    "priority": "string",
+			    "status": "string",
+			    "subtasks": [
+			      {
+			        "dependencies": [],
+			        "description": "string",
+			        "details": "string",
+			        "id": "string",
+			        "parentId": "string",
+			        "status": "string",
+			        "title": "string",
+			      },
+			    ],
+			    "testStrategy": "string",
+			    "title": "string",
+			  },
 			}
 		`);
 	});

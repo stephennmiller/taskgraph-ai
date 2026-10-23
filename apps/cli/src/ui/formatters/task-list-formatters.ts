@@ -302,7 +302,7 @@ export function formatEmptyList(
 	const action = filter
 		? { command: 'taskgraph list', description: 'to see every task' }
 		: {
-				command: 'taskgraph add-task --prompt="..."',
+				command: "taskgraph add-task --prompt='...'",
 				description: 'to add one, or taskgraph parse-prd'
 			};
 	return [theme.text(message), ...formatNextStep(action, width)].join('\n');

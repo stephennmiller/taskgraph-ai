@@ -236,8 +236,13 @@ describe('claude-code path guard', () => {
 			['android/release.jks', '**/*.jks'],
 			['keys/server.ppk', '**/*.ppk'],
 			['.pgpass', '**/.pgpass'],
-			['.kube/config', '**/.kube/config']
-		])('denies Read, Glob and Grep of %s (#370)', (file, pattern) => {
+			['.kube/config', '**/.kube/config'],
+			// #396
+			['kubeconfig', '**/kubeconfig'],
+			['deploy/prod.kubeconfig', '**/*.kubeconfig'],
+			['.config/git/credentials', '**/.config/git/credentials'],
+			['AppData/Roaming/postgresql/pgpass.conf', '**/pgpass.conf']
+		])('denies Read, Glob and Grep of %s (#370, #396)', (file, pattern) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
 				/secret/
 			);
@@ -315,7 +320,15 @@ describe('claude-code path guard', () => {
 			['src/ppk-reader.ts'],
 			['kube/config'],
 			['.kubectl/config'],
-			['deploy/config']
+			['deploy/config'],
+			// #396 look-alikes
+			['docs/kubeconfig.md'],
+			['src/kubeconfig.ts'],
+			['.config/git/config'],
+			['.config/git/ignore'],
+			['git/credentials'],
+			['.config/credentials'],
+			['docs/pgpass.conf.md']
 		])('still allows %s', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
 		});
@@ -378,7 +391,9 @@ describe('claude-code path guard', () => {
 			['.docker/config.j\u017Fon'],
 			['.\u212Aube/config'],
 			['.pgpa\u017F\u017F'],
-			['.g\u0131t-credentials']
+			['.g\u0131t-credentials'],
+			['\u212Aubeconfig'],
+			['.config/g\u0131t/credentials']
 		])('denies Read of case-fold look-alike %j', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
 				/secret/
@@ -444,17 +459,25 @@ describe('claude-code path guard', () => {
 			'.pgpass',
 			'.kube/config',
 			'.kube/cache/oidc-login/token',
-			'nested/.kube/config'
+			'nested/.kube/config',
+			// #396
+			'kubeconfig',
+			'deploy/prod.kubeconfig',
+			'deploy/STAGING.KUBECONFIG',
+			'.config/git/credentials',
+			'nested/.config/git/credentials',
+			'AppData/Roaming/postgresql/pgpass.conf'
+		];
+		const others = [
+			'src/app.js',
+			'README.md',
+			'.docker/daemon.json',
+			'.config/git/config'
 		];
 
 		beforeAll(() => {
 			project = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-grep-'));
-			for (const file of [
-				...secrets,
-				'src/app.js',
-				'README.md',
-				'.docker/daemon.json'
-			]) {
+			for (const file of [...secrets, ...others]) {
 				fs.mkdirSync(path.dirname(path.join(project, file)), {
 					recursive: true
 				});
@@ -465,6 +488,18 @@ describe('claude-code path guard', () => {
 		});
 
 		afterAll(() => fs.rmSync(project, { recursive: true, force: true }));
+
+		// Read and the Grep rewrite are built from one table (#396); this keeps
+		// every file the rewrite must skip refused on Read too
+		it.each(secrets)('also denies Read of %s', (file) => {
+			expect(getPathViolation(project, 'Read', { file_path: file })).toMatch(
+				/secret/
+			);
+		});
+
+		it.each(others)('allows Read of %s', (file) => {
+			expect(getPathViolation(project, 'Read', { file_path: file })).toBeNull();
+		});
 
 		it("appends secret exclusions after the caller's own glob", () => {
 			const { glob, pattern } = excludeSecretsFromGrep({
@@ -518,6 +553,7 @@ describe('claude-code path guard', () => {
 				excludeSecretsFromGrep({ pattern: 'API_KEY' })
 			);
 			expect(lines).toEqual([
+				'./.config/git/config:1:API_KEY=.config/git/config',
 				'./.docker/daemon.json:1:API_KEY=.docker/daemon.json',
 				'./README.md:1:API_KEY=README.md',
 				'./src/app.js:1:API_KEY=src/app.js'

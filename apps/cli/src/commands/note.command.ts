@@ -1,5 +1,5 @@
 /**
- * @fileoverview `taskgraph note <id> "text"`: log progress on a task or
+ * @fileoverview `taskgraph note <id> 'text'`: log progress on a task or
  * subtask as written, with no AI call. Thin layer over tm-core's
  * tasks.addNote(), which appends the note with a timestamp under the
  * tasks.json lock. `--file -` reads the note from stdin.
@@ -18,7 +18,7 @@ export interface NoteCommandOptions {
 	project?: string;
 }
 
-const USAGE_HINT = 'Write it after the ID: `taskgraph note 3 "what you did"`';
+const USAGE_HINT = "Write it after the ID: `taskgraph note 3 'what you did'`";
 
 /** Thrown by readNoteSource when the source is bigger than a note may be */
 class NoteTooLargeError extends Error {}
@@ -80,7 +80,7 @@ export class NoteCommand extends Command {
 		if (inline && options.file) {
 			printError(
 				'Pass the note as text or with --file, not both',
-				'Use one: `taskgraph note 3 "text"` or `taskgraph note 3 --file notes.md`'
+				"Use one: `taskgraph note 3 'text'` or `taskgraph note 3 --file notes.md`"
 			);
 			process.exit(1);
 		}
