@@ -1,7 +1,5 @@
 import { ui } from '@tm/cli';
 import { shouldShowTagIndicatorForProject } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import { getTaskGraphVersion } from '../../../src/utils/getVersion.js';
 import { getProjectName } from '../config-manager.js';
 import { isSilentMode } from '../utils.js';
@@ -27,18 +25,8 @@ export function displayTaggedTasksFYI(data) {
 	if (isSilentMode() || !data || !data._migrationHappened) return;
 
 	console.log(
-		boxen(
-			chalk.bold('FYI: ') +
-				theme.muted('TaskGraph now supports separate task lists per tag. ') +
-				chalk.cyan(
-					'Use the --tag flag to create/read/update/filter tasks by tag.'
-				),
-			{
-				padding: { top: 0, bottom: 0, left: 2, right: 2 },
-				borderColor: 'cyan',
-				borderStyle: 'round',
-				margin: { top: 1, bottom: 1 }
-			}
+		theme.muted(
+			'TaskGraph now keeps a separate task list per tag; use --tag to work in one'
 		)
 	);
 }

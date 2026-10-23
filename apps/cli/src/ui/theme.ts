@@ -28,20 +28,11 @@ export const BANNER_GRADIENT = [
 	BRAND_COLORS.deep
 ];
 
-/** Border color for neutral / informational boxes (boxen accepts hex) */
-export const BORDER_COLOR = BRAND_COLORS.accent;
-
 /**
  * cli-table3 `style.border` value. The library's own default is 'grey' (bright
  * black), invisible on Solarized Dark; dimming the default foreground is not.
  */
 export const TABLE_BORDER = ['dim'];
-
-/**
- * boxen options for a de-emphasized border. `borderColor: 'gray'` is bright
- * black too, so dim the default foreground instead.
- */
-export const MUTED_BOX_BORDER = { dimBorder: true } as const;
 
 export const theme = {
 	/** Brand-colored text */

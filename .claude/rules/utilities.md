@@ -106,9 +106,6 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   - ✅ DO: Use `isApiKeySet(providerName, session)` from `config-manager.js` to check if a provider's key is available *before* potentially attempting an AI call if needed, but note the unified service performs its own internal check.
   - ✅ DO: Understand that the unified service layer (`ai-services-unified.js`) internally resolves API keys using `resolveEnvVariable(key, session)` from `utils.js`.
 
-- **Error Handling**:
-  - ✅ DO: Handle potential `ConfigurationError` if the `.taskgraph/config.json` file is missing or invalid when accessed via `getConfig` (e.g., in `commands.js` or direct functions).
-
 ## Logging Utilities (in `scripts/modules/utils.js`)
 
 - **Log Levels**:

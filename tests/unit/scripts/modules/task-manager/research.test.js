@@ -81,8 +81,6 @@ vi.doMock('chalk', () => ({
 	)
 }));
 
-vi.doMock('boxen', () => ({ default: (text) => text }));
-
 vi.doMock('inquirer', () => ({
 	default: { prompt: vi.fn() }
 }));

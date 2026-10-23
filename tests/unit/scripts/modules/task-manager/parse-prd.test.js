@@ -273,72 +273,6 @@ vi.doMock('path', () => ({
 	isAbsolute: vi.fn(() => false)
 }));
 
-// Mock JSONParser for streaming tests
-vi.doMock('@streamparser/json', () => ({
-	JSONParser: vi.fn().mockImplementation(() => ({
-		onValue: vi.fn(),
-		onError: vi.fn(),
-		write: vi.fn(),
-		end: vi.fn()
-	}))
-}));
-
-// Mock stream-parser functions
-vi.doMock('../../../../../src/utils/stream-parser.js', () => {
-	// Define mock StreamingError class
-	class StreamingError extends Error {
-		constructor(message, code) {
-			super(message);
-			this.name = 'StreamingError';
-			this.code = code;
-		}
-	}
-
-	// Define mock error codes
-	const STREAMING_ERROR_CODES = {
-		NOT_ASYNC_ITERABLE: 'STREAMING_NOT_SUPPORTED',
-		STREAM_PROCESSING_FAILED: 'STREAM_PROCESSING_FAILED',
-		STREAM_NOT_ITERABLE: 'STREAM_NOT_ITERABLE'
-	};
-
-	return {
-		parseStream: vi.fn().mockResolvedValue({
-			items: [{ id: 1, title: 'Test Task', priority: 'high' }],
-			accumulatedText:
-				'{"tasks":[{"id":1,"title":"Test Task","priority":"high"}]}',
-			estimatedTokens: 50,
-			usedFallback: false
-		}),
-		createTaskProgressCallback: vi.fn().mockReturnValue(vi.fn()),
-		createConsoleProgressCallback: vi.fn().mockReturnValue(vi.fn()),
-		StreamingError,
-		STREAMING_ERROR_CODES
-	};
-});
-
-// Mock progress tracker to prevent intervals
-vi.doMock('../../../../../src/progress/parse-prd-tracker.js', () => ({
-	createParsePrdTracker: vi.fn().mockReturnValue({
-		start: vi.fn(),
-		stop: vi.fn(),
-		cleanup: vi.fn(),
-		updateTokens: vi.fn(),
-		addTaskLine: vi.fn(),
-		trackTaskPriority: vi.fn(),
-		getSummary: vi.fn().mockReturnValue({
-			taskPriorities: { high: 0, medium: 0, low: 0 },
-			elapsedTime: 0,
-			actionVerb: 'generated'
-		})
-	})
-}));
-
-// Mock UI functions to prevent any display delays
-vi.doMock('../../../../../src/ui/parse-prd.js', () => ({
-	displayParsePrdStart: vi.fn(),
-	displayParsePrdSummary: vi.fn()
-}));
-
 // Import the mocked modules
 const { readJSON, promptYesNo } = await import(
 	'../../../../../scripts/modules/utils.js'
@@ -346,20 +280,6 @@ const { readJSON, promptYesNo } = await import(
 
 const { generateObjectService, streamObjectService } = await import(
 	'../../../../../scripts/modules/ai-services-unified.js'
-);
-
-const { JSONParser } = await import('@streamparser/json');
-
-const { parseStream, StreamingError, STREAMING_ERROR_CODES } = await import(
-	'../../../../../src/utils/stream-parser.js'
-);
-
-const { createParsePrdTracker } = await import(
-	'../../../../../src/progress/parse-prd-tracker.js'
-);
-
-const { displayParsePrdStart, displayParsePrdSummary } = await import(
-	'../../../../../src/ui/parse-prd.js'
 );
 
 const fs = await import('fs');
@@ -843,7 +763,7 @@ describe('parsePRD', () => {
 	});
 
 	describe('Streaming vs Non-Streaming Modes', () => {
-		test('should use non-streaming when reportProgress function is provided (streaming disabled)', async () => {
+		test('should use non-streaming when reportProgress function is provided', async () => {
 			// Setup mocks to simulate normal conditions (no existing output file)
 			fs.default.existsSync.mockImplementation((path) => {
 				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
@@ -854,111 +774,21 @@ describe('parsePRD', () => {
 			// Mock progress reporting function
 			const mockReportProgress = vi.fn(() => Promise.resolve());
 
-			// Mock JSONParser instance
-			const mockParser = {
-				onValue: vi.fn(),
-				onError: vi.fn(),
-				write: vi.fn(),
-				end: vi.fn()
-			};
-			JSONParser.mockReturnValue(mockParser);
-
-			// Call the function with reportProgress - with streaming disabled, should use non-streaming
+			// Call the function with reportProgress; MCP gets the one-shot request
 			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 				reportProgress: mockReportProgress
 			});
 
-			// With streaming disabled, should use generateObjectService instead
+			// Should use generateObjectService instead
 			expect(generateObjectService).toHaveBeenCalled();
 
-			// Verify streamObjectService was NOT called (streaming is disabled)
+			// Verify streamObjectService was NOT called
 			expect(streamObjectService).not.toHaveBeenCalled();
 
 			// Verify progress reporting was still called
 			expect(mockReportProgress).toHaveBeenCalled();
 
 			// Verify result structure
-			expect(result).toMatchObject({
-				success: true,
-				tasksPath: 'tasks/tasks.json',
-				telemetryData: {}
-			});
-		});
-
-		test.skip('should fallback to non-streaming when streaming fails with specific errors (streaming disabled)', async () => {
-			// Setup mocks to simulate normal conditions (no existing output file)
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
-
-			// Mock progress reporting function
-			const mockReportProgress = vi.fn(() => Promise.resolve());
-
-			// Mock streamObjectService to return a stream that fails during processing
-			streamObjectService.mockImplementationOnce(async () => {
-				return {
-					mainResult: {
-						get partialObjectStream() {
-							return (async function* () {
-								throw new Error('Stream processing failed');
-							})();
-						},
-						usage: Promise.resolve(null),
-						object: Promise.resolve(null)
-					},
-					providerName: 'anthropic',
-					modelId: 'claude-3-5-sonnet-20241022',
-					telemetryData: {}
-				};
-			});
-
-			// Ensure generateObjectService returns tasks for fallback
-			generateObjectService.mockResolvedValue({
-				mainResult: {
-					tasks: [
-						{
-							id: 1,
-							title: 'Test Task 1',
-							priority: 'high',
-							description: 'Test description 1',
-							status: 'pending',
-							dependencies: []
-						},
-						{
-							id: 2,
-							title: 'Test Task 2',
-							priority: 'medium',
-							description: 'Test description 2',
-							status: 'pending',
-							dependencies: []
-						},
-						{
-							id: 3,
-							title: 'Test Task 3',
-							priority: 'low',
-							description: 'Test description 3',
-							status: 'pending',
-							dependencies: []
-						}
-					]
-				},
-				telemetryData: {}
-			});
-
-			// Call the function with reportProgress to trigger streaming path
-			const result = await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
-				reportProgress: mockReportProgress
-			});
-
-			// Verify streamObjectService was called first (streaming attempt)
-			expect(streamObjectService).toHaveBeenCalled();
-
-			// Verify generateObjectService was called as fallback
-			expect(generateObjectService).toHaveBeenCalled();
-
-			// Verify result structure (should succeed via fallback)
 			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
@@ -999,7 +829,7 @@ describe('parsePRD', () => {
 			});
 		});
 
-		test('should handle research flag with non-streaming (streaming disabled)', async () => {
+		test('should handle research flag with non-streaming', async () => {
 			// Setup mocks to simulate normal conditions
 			fs.default.existsSync.mockImplementation((path) => {
 				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
@@ -1010,13 +840,13 @@ describe('parsePRD', () => {
 			// Mock progress reporting function
 			const mockReportProgress = vi.fn(() => Promise.resolve());
 
-			// Call with reportProgress + research - with streaming disabled, should use non-streaming
+			// Call with reportProgress + research; MCP gets the one-shot request
 			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
 				reportProgress: mockReportProgress,
 				research: true
 			});
 
-			// With streaming disabled, should use generateObjectService with research role
+			// Should use generateObjectService with research role
 			expect(generateObjectService).toHaveBeenCalledWith(
 				expect.objectContaining({
 					role: 'research'
@@ -1161,233 +991,6 @@ describe('parsePRD', () => {
 			expect(generateObjectService).not.toHaveBeenCalled();
 			const written = JSON.parse(fs.default.writeFileSync.mock.calls[0][1]);
 			expect(written.master.tasks).toHaveLength(3);
-		});
-
-		test.skip('should handle parseStream with usedFallback flag - needs rewrite for streamObject', async () => {
-			// Setup mocks to simulate normal conditions
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
-
-			// Mock progress reporting function
-			const mockReportProgress = vi.fn(() => Promise.resolve());
-
-			// Mock parseStream to return usedFallback: true
-			parseStream.mockResolvedValueOnce({
-				items: [{ id: 1, title: 'Test Task', priority: 'high' }],
-				accumulatedText:
-					'{"tasks":[{"id":1,"title":"Test Task","priority":"high"}]}',
-				estimatedTokens: 50,
-				usedFallback: true // This triggers fallback reporting
-			});
-
-			// Call with streaming
-			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
-				reportProgress: mockReportProgress
-			});
-
-			// Verify that usedFallback scenario was handled
-			expect(parseStream).toHaveBeenCalledWith(
-				expect.anything(),
-				expect.objectContaining({
-					jsonPaths: ['$.tasks.*'],
-					onProgress: expect.any(Function),
-					onError: expect.any(Function),
-					estimateTokens: expect.any(Function),
-					expectedTotal: 3,
-					fallbackItemExtractor: expect.any(Function)
-				})
-			);
-		});
-
-		test.skip('should handle StreamingError types for fallback - needs rewrite for streamObject', async () => {
-			// Setup mocks to simulate normal conditions
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
-
-			// Test different StreamingError types that should trigger fallback
-			const streamingErrors = [
-				{
-					message: 'Stream object is not iterable',
-					code: STREAMING_ERROR_CODES.STREAM_NOT_ITERABLE
-				},
-				{
-					message: 'Failed to process AI text stream',
-					code: STREAMING_ERROR_CODES.STREAM_PROCESSING_FAILED
-				},
-				{
-					message: 'textStream is not async iterable',
-					code: STREAMING_ERROR_CODES.NOT_ASYNC_ITERABLE
-				}
-			];
-
-			for (const errorConfig of streamingErrors) {
-				// Clear mocks for each iteration
-				vi.clearAllMocks();
-
-				// Setup mocks again
-				fs.default.existsSync.mockImplementation((path) => {
-					if (path === 'tasks/tasks.json') return false;
-					if (path === 'tasks') return true;
-					return false;
-				});
-				fs.default.readFileSync.mockReturnValue(samplePRDContent);
-				generateObjectService.mockResolvedValue({
-					mainResult: { object: sampleClaudeResponse },
-					telemetryData: {}
-				});
-
-				// Mock streamTextService to fail with StreamingError
-				const error = new StreamingError(errorConfig.message, errorConfig.code);
-				streamTextService.mockRejectedValueOnce(error);
-
-				// Mock progress reporting function
-				const mockReportProgress = vi.fn(() => Promise.resolve());
-
-				// Call with streaming (should fallback to non-streaming)
-				const result = await parsePRD(
-					'path/to/prd.txt',
-					'tasks/tasks.json',
-					3,
-					{
-						reportProgress: mockReportProgress
-					}
-				);
-
-				// Verify streaming was attempted first
-				expect(streamTextService).toHaveBeenCalled();
-
-				// Verify fallback to non-streaming occurred
-				expect(generateObjectService).toHaveBeenCalled();
-
-				// Verify successful result despite streaming failure
-				expect(result).toMatchObject({
-					success: true,
-					tasksPath: 'tasks/tasks.json',
-					telemetryData: {}
-				});
-			}
-		});
-
-		test.skip('should handle progress tracker integration in CLI streaming mode - needs rewrite for streamObject', async () => {
-			// Setup mocks to simulate normal conditions
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
-
-			// Mock progress tracker methods
-			const mockProgressTracker = {
-				start: vi.fn(),
-				stop: vi.fn(),
-				cleanup: vi.fn(),
-				addTaskLine: vi.fn(),
-				updateTokens: vi.fn(),
-				getSummary: vi.fn().mockReturnValue({
-					taskPriorities: { high: 1, medium: 0, low: 0 },
-					elapsedTime: 1000,
-					actionVerb: 'generated'
-				})
-			};
-			createParsePrdTracker.mockReturnValue(mockProgressTracker);
-
-			// Call in CLI text mode (no mcpLog, no reportProgress)
-			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3);
-
-			// Verify progress tracker was created and used
-			expect(createParsePrdTracker).toHaveBeenCalledWith({
-				numUnits: 3,
-				unitName: 'task',
-				append: false
-			});
-			expect(mockProgressTracker.start).toHaveBeenCalled();
-			expect(mockProgressTracker.cleanup).toHaveBeenCalled();
-
-			// Verify UI display functions were called
-			expect(displayParsePrdStart).toHaveBeenCalled();
-			expect(displayParsePrdSummary).toHaveBeenCalled();
-		});
-
-		test.skip('should handle onProgress callback during streaming - needs rewrite for streamObject', async () => {
-			// Setup mocks to simulate normal conditions
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
-
-			// Mock progress reporting function
-			const mockReportProgress = vi.fn(() => Promise.resolve());
-
-			// Mock parseStream to call onProgress
-			parseStream.mockImplementation(async (stream, options) => {
-				// Simulate calling onProgress during parsing
-				if (options.onProgress) {
-					await options.onProgress(
-						{ title: 'Test Task', priority: 'high' },
-						{ currentCount: 1, estimatedTokens: 50 }
-					);
-				}
-				return {
-					items: [{ id: 1, title: 'Test Task', priority: 'high' }],
-					accumulatedText:
-						'{"tasks":[{"id":1,"title":"Test Task","priority":"high"}]}',
-					estimatedTokens: 50,
-					usedFallback: false
-				};
-			});
-
-			// Call with streaming
-			await parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
-				reportProgress: mockReportProgress
-			});
-
-			// Verify parseStream was called with correct onProgress callback
-			expect(parseStream).toHaveBeenCalledWith(
-				expect.anything(),
-				expect.objectContaining({
-					onProgress: expect.any(Function)
-				})
-			);
-
-			// Verify progress was reported during streaming
-			expect(mockReportProgress).toHaveBeenCalled();
-		});
-
-		test.skip('should not re-throw non-streaming errors during fallback - needs rewrite for streamObject', async () => {
-			// Setup mocks to simulate normal conditions
-			fs.default.existsSync.mockImplementation((path) => {
-				if (path === 'tasks/tasks.json') return false; // Output file doesn't exist
-				if (path === 'tasks') return true; // Directory exists
-				return false;
-			});
-
-			// Mock progress reporting function
-			const mockReportProgress = vi.fn(() => Promise.resolve());
-
-			// Mock streamTextService to fail with NON-streaming error
-			streamTextService.mockRejectedValueOnce(
-				new Error('AI API rate limit exceeded')
-			);
-
-			// Call with streaming - should re-throw non-streaming errors
-			await expect(
-				parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3, {
-					reportProgress: mockReportProgress
-				})
-			).rejects.toThrow('AI API rate limit exceeded');
-
-			// Verify streaming was attempted
-			expect(streamTextService).toHaveBeenCalled();
-
-			// Verify fallback was NOT attempted (error was re-thrown)
-			expect(generateObjectService).not.toHaveBeenCalled();
 		});
 	});
 

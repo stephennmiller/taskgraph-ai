@@ -1,8 +1,8 @@
 import fs from 'fs';
 import readline from 'readline';
 import { printError, ui } from '@tm/cli';
-import boxen from 'boxen';
 import chalk from 'chalk';
+import { theme } from './theme.js';
 
 /**
  * Show the complexity report: each task with its score, recommended
@@ -42,20 +42,8 @@ export async function displayComplexityReport(reportPath) {
  */
 export async function confirmTaskOverwrite(tasksPath) {
 	console.log(
-		boxen(
-			chalk.yellow(
-				"It looks like you've already generated tasks for this project.\n"
-			) +
-				chalk.yellow(
-					'Executing this command will overwrite any existing tasks.'
-				),
-			{
-				padding: 1,
-				borderColor: 'yellow',
-				borderStyle: 'round',
-				margin: { top: 1 }
-			}
-		)
+		`${chalk.yellow('⚠')} This tag has tasks; parse-prd replaces them` +
+			theme.muted(' (--append adds to them)')
 	);
 
 	const rl = readline.createInterface({
@@ -64,10 +52,7 @@ export async function confirmTaskOverwrite(tasksPath) {
 	});
 
 	const answer = await new Promise((resolve) => {
-		rl.question(
-			chalk.cyan('Are you sure you wish to continue? (y/N): '),
-			resolve
-		);
+		rl.question(theme.brand('Replace them? (y/N) '), resolve);
 	});
 	rl.close();
 

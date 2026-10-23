@@ -11,7 +11,7 @@ paths:
 
 # CLI Output Guidelines
 
-TaskGraph's output follows Apple's Human Interface Guidelines and Emil Kowalski's design principles, adapted to the terminal: say what happened, once, in as few lines as it takes, and make the next step obvious. Every rule below comes from cleanups that replaced boxed, repeated output (#140–#152). New output should look like those commands, not like the boxes still left in `scripts/modules/ui.js`.
+TaskGraph's output follows Apple's Human Interface Guidelines and Emil Kowalski's design principles, adapted to the terminal: say what happened, once, in as few lines as it takes, and make the next step obvious. Every rule below comes from cleanups that replaced boxed, repeated output (#140–#152). New output should look like those commands. The last boxes went in #318, and `boxen` is no longer a dependency.
 
 ## Where output code goes
 
@@ -44,7 +44,7 @@ Run taskgraph expand --id=<id> to add new ones
 - **Paths are relative to the project root:** `Saved to .taskgraph/reports/task-complexity-report.json`, not an absolute path that wraps.
 - **Say each thing once.** No "Analyzing… / Analyzing complete / ✓ Analysis complete" sequences, and no printing the same message from both the core function and the command.
 - **Don't confirm non-events.** If nothing changed, either say nothing or say it in one line (`The complexity report is unchanged`). Don't add a confirmation that repeats what the previous lines already showed.
-- **No boxes (`boxen`) for routine output.** A box makes everyday output look like an alert. The boxes still in `ui.js` are legacy; don't copy them, and replace them when you touch that output.
+- **No boxes.** A box makes everyday output look like an alert. Don't add `boxen` back, and don't draw boxes by hand.
 - **No progress logs in normal output.** "Reading tasks from…", "AI service call complete" and "Found 6 tasks" go to `log('debug', …)`. Warnings and errors still print.
 - **Fit 80 columns.** Wrap long text (reasoning, research answers) to the terminal width, capped at about 100 columns, with a hanging indent for list items.
 
@@ -84,7 +84,7 @@ Text follows the terminal's own palette (see `apps/cli/src/ui/theme.ts`):
 - `chalk.green` for `✓` and success, `chalk.red` for `✗`, `chalk.yellow` for warnings.
 - `theme.brand` for highlights and commands, `theme.text` for body text, `theme.muted` for secondary text.
 - Don't use `chalk.white`, `chalk.blue`, `chalk.gray` or `chalk.grey`. White is pale gray on many light themes, blue is hard to read on dark ones, and gray is bright black, nearly invisible on Solarized Dark.
-- Don't name `'gray'` or `'grey'` as a color in options either (`borderColor`, `createLink`'s `color`, `style.border`). Use `theme.muted`, `chalk.dim`, `TABLE_BORDER` or `MUTED_BOX_BORDER`.
+- Don't name `'gray'` or `'grey'` as a color in options either (`createLink`'s `color`, `style.border`). Use `theme.muted`, `chalk.dim` or `TABLE_BORDER`.
 - `tests/unit/scripts/theme-usage.test.js` and `apps/cli/src/ui/gray-usage.spec.ts` fail on these.
 
 ## Tables

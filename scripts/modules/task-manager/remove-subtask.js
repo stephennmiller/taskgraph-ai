@@ -124,7 +124,7 @@ async function removeSubtask(
 			// Add the converted task to the tasks array
 			data.tasks.push(convertedTask);
 
-			log('info', `Created new task ${newTaskId} from subtask ${subtaskId}`);
+			log('debug', `Created new task ${newTaskId} from subtask ${subtaskId}`);
 		} else {
 			// Dependencies on it, their marks and links to it go with it
 			dropReferences(data.tasks, [`${parentId}.${subtaskIdNum}`]);

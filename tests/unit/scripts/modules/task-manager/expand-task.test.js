@@ -174,10 +174,6 @@ vi.doMock('chalk', () => ({
 	}
 }));
 
-vi.doMock('boxen', () => ({
-	default: vi.fn((text) => text)
-}));
-
 vi.doMock('cli-table3', () => ({
 	default: vi.fn().mockImplementation(function () {
 		return {

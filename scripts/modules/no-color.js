@@ -5,7 +5,7 @@
  *
  * Sets FORCE_COLOR=0 for modules that load later and also switches off the
  * shared chalk instance directly, because the bundler may load chalk before
- * this code runs. boxen, gradient-string and ora share that instance.
+ * this code runs. gradient-string and ora share that instance.
  */
 import chalk from 'chalk';
 

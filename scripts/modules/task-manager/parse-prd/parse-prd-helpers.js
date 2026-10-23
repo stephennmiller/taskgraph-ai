@@ -15,7 +15,6 @@ import {
 	readArchivedIdsSync,
 	reconcileDependencySources,
 	setGeneratedCriteria,
-	stripTerminalControls,
 	withPrdSnapshot,
 	getOwnKey,
 	setOwnKey,
@@ -24,8 +23,6 @@ import {
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-import { displayParsePrdSummary } from '../../../../src/ui/parse-prd.js';
-import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
 import { ensureTagMetadata, withFileLockSync } from '../../utils.js';
@@ -439,109 +436,6 @@ export async function buildPrompts(
 		hasCodebaseAnalysis: config.hasCodebaseAnalysis(),
 		projectRoot: config.projectRoot || ''
 	});
-}
-
-/**
- * Handle progress reporting for both CLI and MCP
- * @param {Object} params
- */
-export async function reportTaskProgress({
-	task,
-	currentCount,
-	totalTasks,
-	estimatedTokens,
-	progressTracker,
-	reportProgress,
-	priorityMap,
-	defaultPriority,
-	estimatedInputTokens
-}) {
-	const priority = task.priority || defaultPriority;
-	const priorityIndicator = priorityMap[priority] || priorityMap.medium;
-
-	// CLI progress tracker
-	if (progressTracker) {
-		progressTracker.addTaskLine(currentCount, task.title, priority);
-		if (estimatedTokens) {
-			progressTracker.updateTokens(estimatedInputTokens, estimatedTokens);
-		}
-	}
-
-	// MCP progress reporting
-	if (reportProgress) {
-		try {
-			// totalTasks is 0 when the model sizes the list, so there is no total
-			const hasTotal = totalTasks > 0;
-			const outputTokens =
-				estimatedTokens && hasTotal
-					? Math.floor(estimatedTokens / totalTasks)
-					: 0;
-			const position = hasTotal
-				? `${currentCount}/${totalTasks}`
-				: `${currentCount}`;
-			const tokens = hasTotal ? ` | ~Output: ${outputTokens} tokens` : '';
-
-			await reportProgress({
-				progress: currentCount,
-				...(hasTotal && { total: totalTasks }),
-				message: `${priorityIndicator} Task ${position} - ${stripTerminalControls(String(task.title ?? ''), { singleLine: true })}${tokens}`
-			});
-		} catch (error) {
-			// Ignore progress reporting errors
-		}
-	}
-}
-
-/**
- * Display completion summary for CLI
- * @param {Object} params
- */
-export async function displayCliSummary({
-	processedTasks,
-	nextId,
-	summary,
-	prdPath,
-	tasksPath,
-	usedFallback,
-	aiServiceResponse
-}) {
-	// Generate task file names
-	const taskFilesGenerated = (() => {
-		if (!Array.isArray(processedTasks) || processedTasks.length === 0) {
-			return `task_${String(nextId).padStart(3, '0')}.txt`;
-		}
-		const firstNewTaskId = processedTasks[0].id;
-		const lastNewTaskId = processedTasks[processedTasks.length - 1].id;
-		if (processedTasks.length === 1) {
-			return `task_${String(firstNewTaskId).padStart(3, '0')}.txt`;
-		}
-		return `task_${String(firstNewTaskId).padStart(3, '0')}.txt -> task_${String(lastNewTaskId).padStart(3, '0')}.txt`;
-	})();
-
-	displayParsePrdSummary({
-		totalTasks: processedTasks.length,
-		taskPriorities: summary.taskPriorities,
-		prdFilePath: prdPath,
-		outputPath: tasksPath,
-		elapsedTime: summary.elapsedTime,
-		usedFallback,
-		taskFilesGenerated,
-		actionVerb: summary.actionVerb
-	});
-
-	// Display telemetry
-	if (aiServiceResponse?.telemetryData) {
-		// For streaming, wait briefly to allow usage data to be captured
-		if (aiServiceResponse.mainResult?.usage) {
-			// Give the usage promise a short time to resolve
-			await TimeoutManager.withSoftTimeout(
-				aiServiceResponse.mainResult.usage,
-				1000,
-				undefined
-			);
-		}
-		displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli');
-	}
 }
 
 /**
