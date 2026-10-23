@@ -180,10 +180,11 @@
         "description": "Run the CLI and MCP build comparison in CI on every PR that touches the compared code, so moving legacy scripts can't change behavior.",
         "details": "GitHub issue #296: https://github.com/stephennmiller/taskgraph-ai/issues/296\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:44.561Z"
       },
       {
         "id": "13",
@@ -394,10 +395,11 @@
         "description": "The add-MCP-support steps in .claude/rules/mcp.md, architecture.md and new-features.md still describe code that is gone.",
         "details": "GitHub issue #414: https://github.com/stephennmiller/taskgraph-ai/issues/414\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:46.764Z"
       },
       {
         "id": "28",
@@ -493,10 +495,11 @@
         "description": "@tm/core still exports generateTaskId, generateId and PlaceholderTask from the original scaffold; nothing uses them.",
         "details": "GitHub issue #437: https://github.com/stephennmiller/taskgraph-ai/issues/437\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:48.969Z"
       },
       {
         "id": "37",
@@ -537,10 +540,11 @@
         "description": "Remove the rest of the unused scaffold utils from @tm/core: the id-generator helpers, formatDate and deepClone.",
         "details": "GitHub issue #449: https://github.com/stephennmiller/taskgraph-ai/issues/449\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:51.195Z"
       },
       {
         "id": "41",
@@ -686,7 +690,7 @@
         "subtasks": []
       },
       {
-        "id": 54,
+        "id": "54",
         "title": "apps/mcp resolveInsideRoot duplicates @tm/core's resolvePathInsideRoot (#470)",
         "description": "Once #439 moves the path rule into @tm/core as resolvePathInsideRoot, make apps/mcp import it instead of keeping its own copy.",
         "details": "GitHub issue #470: https://github.com/stephennmiller/taskgraph-ai/issues/470\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -699,10 +703,21 @@
         "subtasks": []
       },
       {
-        "id": 55,
+        "id": "55",
         "title": "taskgraph github: import existing issues as tasks, and pull status for them (#471)",
         "description": "Add an import from existing GitHub issues to linked tasks, and let pull update tasks from issues it did not create.",
         "details": "GitHub issue #471: https://github.com/stephennmiller/taskgraph-ai/issues/471\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 56,
+        "title": "Tests: the fake claude shim only runs on POSIX, so AI-path CLI tests can't run on Windows (#476)",
+        "description": "The fake claude is a #!/bin/sh script, so tests on the AI path fail on Windows and the Windows smoke leg leaves them out.",
+        "details": "GitHub issue #476: https://github.com/stephennmiller/taskgraph-ai/issues/476\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
         "status": "pending",
         "dependencies": [],
@@ -714,11 +729,11 @@
       "created": "2026-10-23T23:05:46.810Z",
       "description": "Tasks for master context",
       "schemaVersion": 1,
-      "updated": "2026-10-23T23:21:33.525Z",
+      "updated": "2026-10-23T23:41:53.268Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-23T23:21:30.295Z",
-      "taskCount": 53,
-      "completedCount": 3,
+      "lastModified": "2026-10-23T23:41:51.195Z",
+      "taskCount": 55,
+      "completedCount": 7,
       "tags": [
         "master"
       ]
