@@ -141,6 +141,24 @@ describe('buildDependencyTree', () => {
 
 			expect(tree.bottlenecks).toEqual([]);
 			expect(tree.criticalPath).toEqual([]);
+			expect(tree.waves.waves).toEqual([]);
+		});
+
+		it('puts each task in its parallel wave, null when finished', () => {
+			const tree = buildDependencyTree([
+				task('1', [], 'done'),
+				task('2', ['1']),
+				task('3', ['1']),
+				task('4', ['2', '3'])
+			]);
+
+			const [one] = tree.roots;
+			expect(one.wave).toBeNull();
+			expect(one.children.map((n) => [n.id, n.wave])).toEqual([
+				['2', 1],
+				['3', 1]
+			]);
+			expect(tree.waves.waves).toEqual([['2', '3'], ['4']]);
 		});
 	});
 

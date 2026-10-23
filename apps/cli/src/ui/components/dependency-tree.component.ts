@@ -3,25 +3,27 @@
  *
  * Example:
  *   ✓ 1  Set up the database
- *   └─ ○ 2*  Build the login API · blocks 2 ◆
- *      └─ ○ 3  Add the dashboard · needs 4* · blocks 1 ◆
+ *   └─ ○ 2*  Build the login API · wave 1 · blocks 2 ◆
+ *      └─ ○ 3  Add the dashboard · wave 2 · needs 4* · blocks 1 ◆
  *
  *   Bottlenecks
  *     2  blocks 2  Build the login API
  *     3  blocks 1  Add the dashboard
  *
  *   Critical path: 2 → 3
+ *   2 waves · 1 task can run now: 2
  *
  *   ✓ done  ○ pending
  *   ◆ critical path  * dependency inferred by AI
  *
- * Which tasks are bottlenecks, on the critical path or inferred comes from
- * tm-core; this only looks them up and draws them.
+ * Which tasks are bottlenecks, on the critical path, in which parallel wave
+ * or inferred comes from tm-core; this only looks them up and draws them.
  */
 
 import type { DependencyTree, DependencyTreeNode, TaskStatus } from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
+import { formatWaveSummary } from '../formatters/wave-formatters.js';
 import { truncate } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
@@ -90,6 +92,9 @@ export function renderDependencyTree(
 			return `${dep}*`;
 		};
 		const notes: string[] = [];
+		if (node.wave !== null) {
+			notes.push(`wave ${node.wave}`);
+		}
 		if (node.alsoNeeds.length) {
 			notes.push(`needs ${node.alsoNeeds.map(withMark).join(', ')}`);
 		}
@@ -179,9 +184,11 @@ export function renderDependencyTree(
 			);
 		});
 	}
-	if (tree.criticalPath.length) {
-		lines.push('', ...wrapPath(tree.criticalPath, width));
-	}
+	const waveSummary = formatWaveSummary(tree.waves, width);
+	if (tree.criticalPath.length || waveSummary) lines.push('');
+	if (tree.criticalPath.length)
+		lines.push(...wrapPath(tree.criticalPath, width));
+	if (waveSummary) lines.push(waveSummary);
 
 	const legend = LEGEND.filter(([s]) => seen.has(s))
 		.map(([s, label]) => `${getStatusIcon(s)} ${theme.muted(label)}`)

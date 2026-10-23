@@ -1,10 +1,10 @@
 ---
 title: "Dependency Graph"
 sidebarTitle: "Dependency Graph"
-description: "How TaskGraph picks the next task, finds bottlenecks and the critical path, explains blocked tasks, and records where each dependency came from"
+description: "How TaskGraph picks the next task, finds bottlenecks, the critical path and parallel waves, explains blocked tasks, and records where each dependency came from"
 ---
 
-Task dependencies form a graph. TaskGraph reads that graph to pick the next task, to show what holds up the most work, and to explain why a task can't start. The analysis (bottlenecks, critical path, blockers, cycles) lives in `@tm/core` (`packages/tm-core/src/modules/dependencies/`), and `taskgraph graph`, `taskgraph why`, `taskgraph next` and the `dependency_analysis` MCP tool only display it. Some older code paths still do their own thing; see [Open issues](#open-issues).
+Task dependencies form a graph. TaskGraph reads that graph to pick the next task, to show what holds up the most work, and to explain why a task can't start. The analysis (bottlenecks, critical path, parallel waves, blockers, cycles) lives in `@tm/core` (`packages/tm-core/src/modules/dependencies/`), and `taskgraph graph`, `taskgraph why`, `taskgraph next` and the `dependency_analysis` MCP tool only display it. Some older code paths still do their own thing; see [Open issues](#open-issues).
 
 ## How `next` orders tasks
 
@@ -38,12 +38,12 @@ taskgraph graph --format json    # machine-readable
 Each task is drawn once, under the dependency it waits on longest. Its other dependencies follow the title (`needs 4`). The task `next` would pick is marked `← next`; when `next` picks a subtask, its parent is marked `← next: 3.2`. Tasks in a dependency loop and dependency IDs that match no task are called out.
 
 ```
-○ 1  Set up the database · blocks 3 ◆  ← next
-└─ ○ 2*  Build the login API · blocks 2 ◆
-   └─ ○ 3  Add the dashboard · needs 4* · blocks 1 ◆
-      └─ ○ 5  Write docs ◆
+○ 1  Set up the database · wave 1 · blocks 3 ◆  ← next
+└─ ○ 2*  Build the login API · wave 2 · blocks 2 ◆
+   └─ ○ 3  Add the dashboard · wave 3 · needs 4* · blocks 1 ◆
+      └─ ○ 5  Write docs · wave 4 ◆
 
-○ 4  Design the schema · blocks 2
+○ 4  Design the schema · wave 1 · blocks 2
 
 Bottlenecks
   1  blocks 3  Set up the database
@@ -52,12 +52,14 @@ Bottlenecks
   3  blocks 1  Add the dashboard
 
 Critical path: 1 → 2 → 3 → 5
+4 waves · 2 tasks can run now: 1, 4
 
 ○ pending
 ◆ critical path  * dependency inferred by AI
 ```
 
 - **`blocks N`** marks a bottleneck: an unfinished task that N unfinished tasks wait on. The list shows the top five, most first, ties to the lowest ID. Tasks that block nothing are left out.
+- **`wave N`** is the task's parallel wave. Wave 1 is every task that can run now: `pending` or `in-progress` with all its dependencies finished. Wave N holds the tasks whose dependencies are all finished or in earlier waves, so everything in one wave can run side by side. The line under the critical path counts the waves and names wave 1; `N can't be scheduled` counts the unfinished tasks with no wave (see [Parallel waves](#parallel-waves)).
 - **`◆`** marks the critical path: the longest chain of unfinished work, dependencies first. Ties go to the lowest IDs.
 - **`*`** marks a dependency the AI chose rather than you (see [Dependency provenance](#dependency-provenance)). After an ID in a `needs` list, it marks that dependency. After a task's own ID (`2*`), it marks that task's edge to the task drawn above it.
 
@@ -71,6 +73,8 @@ Critical path: 1 → 2 → 3 → 5
 | `roots[].inferred` | On every node: the dependency IDs (the tree parent included) recorded as AI-inferred. Anything not listed is explicit |
 | `bottlenecks` | Up to five `{ id, title, status, blocks }`, most first |
 | `criticalPath` | Task IDs, dependencies first |
+| `roots[].wave` | On every node: its parallel wave (1 = can run now), or `null` when finished or unschedulable |
+| `waves` | `{ waves, waveOf, unscheduled }`: task IDs per wave (`waves[0]` is wave 1), each scheduled task's wave by ID, and `{ id, reason, blockers }` for every unfinished task with no wave |
 | `tag`, `nextId` | The tag shown and the task `next` would pick |
 
 ### Known limits
@@ -80,6 +84,19 @@ Critical path: 1 → 2 → 3 → 5
 - The tree shows top-level tasks only. `bottlenecks` and `criticalPath` can name subtasks such as `2.1`; they appear in those lists but not as tree nodes.
 - A top-level task's dependency on a subtask is drawn as `missing 2.1` (and listed in the node's `missing`), because the tree only knows top-level tasks. It is not missing: `bottlenecks`, `criticalPath`, `why` and `dependency_analysis` follow it. For the same reason, a loop that runs through a subtask is not called out in the tree; `why`, `validate-dependencies` and the `cycles` of `dependency_analysis` report it.
 - `--id` draws the task and the tasks placed under it. Each task is drawn under only one dependency (the one it waits on longest), so a task that also needs the chosen task, but is drawn under another dependency, does not appear. The chosen task's own parent edge is not shown or marked, and bottlenecks and the critical path still cover the whole tag.
+
+### Parallel waves
+
+`parallelWaves(tasks)` in `@tm/core` (`parallel-waves.ts`) groups unfinished tasks into waves. It is what `graph` shows and what a runner that starts several tasks at once should read.
+
+- **Top-level tasks only.** A task is the unit of parallel work; its subtasks run inside it. This matches the tree `graph` draws.
+- **Finished tasks** (`done`, `completed`, `cancelled`) get no wave and satisfy whatever waits on them.
+- **A dependency on a subtask** (`2.1`) is satisfied once that subtask or its parent is finished. Until then the task goes in a wave after the parent (task 2).
+- **Unfinished tasks with no wave** are listed in `unscheduled` with a `reason`:
+  - `cycle`: in a dependency loop (a task that lists itself counts). `blockers` names the loop members it depends on.
+  - `missing`: names a dependency ID that matches no task. `next` never picks such a task, so it gets no wave either. `blockers` lists the IDs.
+  - `held`: `review`, `blocked` or `deferred`. Only `pending` and `in-progress` tasks go in a wave.
+  - `waiting`: depends on a task that has no wave. `blockers` lists those tasks.
 
 ## `taskgraph why`
 

@@ -21,6 +21,13 @@ export {
 	type DependencyGraphNode
 } from './dependency-graph.js';
 export {
+	blockingDependencies,
+	parallelWaves,
+	type ParallelWaves,
+	type UnscheduledReason,
+	type UnscheduledTask
+} from './parallel-waves.js';
+export {
 	explainBlockers,
 	type BlockerExplanation,
 	type BlockerKind,

@@ -308,7 +308,7 @@ export function criticalPath(
  * `include` accepts. Returns every component (singletons too); a component is
  * emitted only after every component reachable from it.
  */
-function stronglyConnectedComponents(
+export function stronglyConnectedComponents(
 	ids: string[],
 	next: (id: string) => string[],
 	include: (id: string) => boolean = () => true

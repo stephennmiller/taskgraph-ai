@@ -8,7 +8,7 @@
  * dependency cycle can't be reached from a root and are returned separately.
  *
  * The tree also carries the whole-tag analysis (bottlenecks and critical
- * path, from dependency-graph.ts) and which dependencies were inferred by the
+ * path, from dependency-graph.ts; parallel waves, from parallel-waves.ts) and which dependencies were inferred by the
  * AI (dependency-provenance.ts), so a display needs no logic of its own.
  *
  * Known limits: the tree holds top-level tasks only, while bottlenecks and
@@ -30,6 +30,7 @@ import {
 } from './dependency-graph.js';
 import { DEFAULT_BOTTLENECK_LIMIT } from './dependency-analysis.js';
 import { getDependencySource } from './dependency-provenance.js';
+import { type ParallelWaves, parallelWaves } from './parallel-waves.js';
 
 export interface DependencyTreeNode {
 	id: string;
@@ -42,6 +43,8 @@ export interface DependencyTreeNode {
 	missing: string[];
 	/** Dependencies (the parent included) recorded as AI-inferred */
 	inferred: string[];
+	/** Parallel wave (1 = can start now); null when finished or unschedulable */
+	wave: number | null;
 	children: DependencyTreeNode[];
 }
 
@@ -54,6 +57,8 @@ export interface DependencyTree {
 	bottlenecks: Bottleneck[];
 	/** Longest chain of unfinished work, dependencies first */
 	criticalPath: string[];
+	/** Which unfinished tasks can run at the same time (see parallelWaves) */
+	waves: ParallelWaves;
 }
 
 export interface BuildDependencyTreeOptions {
@@ -101,6 +106,7 @@ export function buildDependencyTree(
 		if (parent) childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), id]);
 	}
 
+	const waves = parallelWaves(tasks);
 	const placed = new Set<string>();
 	const toNode = (id: string): DependencyTreeNode => {
 		placed.add(id);
@@ -118,6 +124,7 @@ export function buildDependencyTree(
 			inferred: known(task)
 				.filter((d) => getDependencySource(task, d) === 'inferred')
 				.sort(compareIds),
+			wave: waves.waveOf[id] ?? null,
 			children: (childrenOf.get(id) ?? [])
 				.filter((c) => !placed.has(c))
 				.sort(compareIds)
@@ -131,7 +138,8 @@ export function buildDependencyTree(
 	const graph = buildDependencyGraph(tasks);
 	const analysis = {
 		bottlenecks: bottlenecks(tasks, DEFAULT_BOTTLENECK_LIMIT, graph),
-		criticalPath: criticalPath(tasks, graph)
+		criticalPath: criticalPath(tasks, graph),
+		waves
 	};
 
 	let roots: DependencyTreeNode[];
