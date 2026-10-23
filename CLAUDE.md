@@ -10,6 +10,7 @@
 ```bash
 npm run build                     # tsdown production build
 npm run turbo:typecheck           # run before pushing
+npm run typecheck:root            # root tsc: legacy JS (JSDoc) checked against its TS callers; CI runs it
 npm run format-check              # Biome; `npm run format` to fix
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
 npm run test:coverage -w @tm/core # with coverage and thresholds (not met yet); Vitest

@@ -110,6 +110,7 @@ jobs:
           key: node-modules-v2-${{ runner.os }}-node${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
+        id: install-typecheck
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: npm ci
         timeout-minutes: 5
@@ -126,6 +127,13 @@ jobs:
         run: npm run turbo:typecheck
         env:
           FORCE_COLOR: 1
+
+      # The only check that reads the legacy JS (allowJs + strict) together
+      # with the TypeScript that calls it, so a JSDoc type that disagrees with
+      # a TypeScript caller fails here
+      - name: Typecheck legacy JS with its TypeScript callers
+        if: ${{ !cancelled() && steps.install-typecheck.outcome != 'failure' }}
+        run: npm run typecheck:root
 
   # Build job to ensure everything compiles
   build:
