@@ -56,7 +56,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 </p>
 
 <p align="center">
-  <a href="images/demo/04-terminal.mp4"><img src="images/demo/04-terminal.svg" alt="The taskgraph list dashboard and task table in a terminal" width="820"></a>
+  <a href="images/demo/04-terminal.mp4"><img src="images/demo/04-terminal.svg" alt="taskgraph list in a terminal: progress, what is ready, the next task and the task table" width="820"></a>
   <br>
   <sub>4. Or drive it from your terminal · <a href="images/demo/04-terminal.mp4">MP4</a></sub>
 </p>
