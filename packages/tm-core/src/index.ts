@@ -209,6 +209,9 @@ export {
 	type PrimeInProgressTask,
 	type PrimeRule,
 	type BuildPrimeContextOptions,
+	resolveClaimant,
+	type SelectNextTaskOptions,
+	type TaskClaim,
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult

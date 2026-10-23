@@ -42,6 +42,12 @@ export {
 	type StatusChange
 } from './formatters/status-change-formatters.js';
 
+// What next --claim took
+export {
+	formatClaim,
+	type ClaimSummary
+} from './formatters/claim-formatters.js';
+
 // What expand just created
 export {
 	formatAddedSubtasks,

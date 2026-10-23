@@ -15,14 +15,25 @@ import {
 const isSatisfied = (status: string | undefined) =>
 	status === 'done' || status === 'completed' || status === 'cancelled';
 
+export interface SelectNextTaskOptions {
+	/**
+	 * Only pick work nobody has started: skip items already in progress. Used
+	 * by claims, so two sessions never get the same task.
+	 */
+	unstartedOnly?: boolean;
+}
+
 /**
  * Prefers an eligible subtask of an in-progress task, then the best
  * top-level task: priority, then how much work it unblocks, then fewest
  * dependencies, then lowest id.
  * @returns The next item, or null when nothing is eligible
  */
-export function selectNextTask(tasks: Task[]): Task | null {
-	return rankNextTasks(tasks)[0] ?? null;
+export function selectNextTask(
+	tasks: Task[],
+	options: SelectNextTaskOptions = {}
+): Task | null {
+	return rankNextTasks(tasks, options)[0] ?? null;
 }
 
 /**
@@ -31,7 +42,13 @@ export function selectNextTask(tasks: Task[]): Task | null {
  * first item is what selectNextTask returns. Subtasks carry dotted IDs
  * ("3.2") and a parentId.
  */
-export function rankNextTasks(tasks: Task[]): Task[] {
+export function rankNextTasks(
+	tasks: Task[],
+	options: SelectNextTaskOptions = {}
+): Task[] {
+	const pickable = (status: string) =>
+		status === 'pending' ||
+		(status === 'in-progress' && !options.unstartedOnly);
 	// Eligibility and satisfied dependencies only see these statuses; blocked counts see every task,
 	// since deferred, blocked and review tasks still wait on their dependencies
 	// A hand-edited task may have no status; it counts as pending
@@ -67,7 +84,7 @@ export function rankNextTasks(tasks: Task[]): Task[] {
 		.forEach((parent) => {
 			parent.subtasks!.forEach((st) => {
 				const stStatus = (st.status || 'pending').toLowerCase();
-				if (stStatus !== 'pending' && stStatus !== 'in-progress') return;
+				if (!pickable(stStatus)) return;
 
 				const fullDeps =
 					st.dependencies?.map((d) =>
@@ -118,7 +135,7 @@ export function rankNextTasks(tasks: Task[]): Task[] {
 	// 2) Then top-level tasks
 	const eligibleTasks = allTasks.filter((task) => {
 		const status = (task.status || 'pending').toLowerCase();
-		if (status !== 'pending' && status !== 'in-progress') return false;
+		if (!pickable(status)) return false;
 
 		const deps = task.dependencies ?? [];
 		return deps.every((depId) => completedIds.has(String(depId)));
