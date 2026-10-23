@@ -361,23 +361,30 @@ export class TaskService {
 	/**
 	 * Move done and cancelled tasks last changed at least `olderThanDays`
 	 * ago into the archive, in one locked write
-	 * @returns The tasks archived (or that would be, with dryRun)
+	 * @returns The tasks archived (or that would be, with dryRun), with
+	 * string IDs (see normalizeTaskIds)
 	 */
 	async archiveTasks(
 		options: ArchiveTasksOptions,
 		tag?: string
 	): Promise<Task[]> {
-		return this.storage.archiveTasks(options, tag || this.getActiveTag());
+		const tasks = await this.storage.archiveTasks(
+			options,
+			tag || this.getActiveTag()
+		);
+		return tasks.map(normalizeTaskIds);
 	}
 
 	/**
-	 * Move one archived task back into tasks.json
+	 * Move one archived task back into tasks.json. IDs come back as strings
+	 * (see normalizeTaskIds)
 	 */
 	async restoreArchivedTask(taskId: string, tag?: string): Promise<Task> {
-		return this.storage.restoreArchivedTask(
+		const task = await this.storage.restoreArchivedTask(
 			taskId,
 			tag || this.getActiveTag()
 		);
+		return normalizeTaskIds(task);
 	}
 
 	/**
