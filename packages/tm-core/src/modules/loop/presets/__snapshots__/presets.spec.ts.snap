@@ -32,7 +32,7 @@ Find duplicated code and refactor into shared utilities. ONE refactor per sessio
 
 ## Files Available
 
-- @.taskgraph/loop-progress.txt - Progress log (clones refactored, duplication %)
+- The progress file (attached above) - Progress log (clones refactored, duplication %)
 
 ## Process
 
@@ -66,7 +66,7 @@ Find code smells and clean them up. ONE cleanup per session.
 
 ## Files Available
 
-- @.taskgraph/loop-progress.txt - Progress log (smells fixed, areas cleaned)
+- The progress file (attached above) - Progress log (smells fixed, areas cleaned)
 
 ## Code Smells to Target
 
@@ -108,7 +108,7 @@ Fix lint errors and type errors one by one. ONE fix per session.
 
 ## Files Available
 
-- @.taskgraph/loop-progress.txt - Progress log (errors fixed, remaining count)
+- The progress file (attached above) - Progress log (errors fixed, remaining count)
 
 ## Process
 
@@ -142,7 +142,7 @@ Implement ONE task from the TaskGraph backlog, test-first. Work through its subt
 
 ## Files Available
 
-- @.taskgraph/progress.txt - Progress log from previous iterations
+- The progress file (attached above) - Progress log from previous iterations
 
 ## Process
 
@@ -187,7 +187,7 @@ Find uncovered code and write meaningful tests. ONE test per session.
 
 ## Files Available
 
-- @.taskgraph/loop-progress.txt - Progress log (coverage %, what was tested)
+- The progress file (attached above) - Progress log (coverage %, what was tested)
 
 ## What Makes a Great Test
 

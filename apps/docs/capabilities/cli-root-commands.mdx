@@ -555,7 +555,10 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
   <Accordion title="Loop (Autonomous Batch Execution)">
     ```bash
-    # Run 10 iterations with the default preset
+    # Work through the backlog, one iteration per pending task
+    taskgraph loop
+
+    # Stop after 10 iterations
     taskgraph loop -n 10
 
     # Work on one task (1 iteration unless -n is given)
@@ -578,9 +581,6 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     # Custom progress file location
     taskgraph loop -n 10 --progress-file ./my-progress.txt
-
-    # Output as JSON
-    taskgraph loop -n 10 --json
     ```
 
     **Built-in presets:**

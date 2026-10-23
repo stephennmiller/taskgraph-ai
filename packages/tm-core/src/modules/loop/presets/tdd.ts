@@ -9,7 +9,7 @@ Implement ONE task from the TaskGraph backlog, test-first. Work through its subt
 
 ## Files Available
 
-- @.taskgraph/progress.txt - Progress log from previous iterations
+- The progress file (attached above) - Progress log from previous iterations
 
 ## Process
 
