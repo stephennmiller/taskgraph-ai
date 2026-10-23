@@ -1,0 +1,145 @@
+---
+title: "Finding Work"
+sidebarTitle: "Finding Work"
+description: "List tasks, pick the next one, see what blocks a task, and prime an agent"
+---
+
+## List Tasks
+
+```bash
+# List all tasks
+taskgraph list
+
+# List tasks with a specific status
+taskgraph list --status=<status>
+
+# List tasks with subtasks
+taskgraph list --with-subtasks
+
+# List tasks with a specific status and include subtasks
+taskgraph list --status=<status> --with-subtasks
+
+# Watch for changes and auto-refresh
+taskgraph list --watch
+taskgraph list -w
+
+# Compact output format
+taskgraph list --compact
+taskgraph list -c
+
+# Watch mode with compact output
+taskgraph list -w -c
+
+# Hide the header
+taskgraph list --no-header
+```
+
+## Show Next Task
+
+```bash
+# Show the next task to work on: dependencies done, then priority,
+# then most unblocked work, then fewer dependencies, then lowest ID
+taskgraph next
+
+# Take the next task nobody has started: set it in-progress and record
+# who claimed it (session ID, else your user name) in one locked write,
+# so two sessions never get the same task. Setting it back to pending
+# releases it.
+taskgraph next --claim
+```
+
+## Show Specific Task
+
+```bash
+# Show details of a specific task
+taskgraph show <id>
+# or
+taskgraph show --id=<id>
+
+# View a specific subtask (e.g., subtask 2 of task 1)
+taskgraph show 1.2
+```
+
+## Show the Dependency Tree
+
+```bash
+# Draw all tasks as a tree: each task sits under the dependency it waits on
+# longest, other dependencies are listed after its title, and the next
+# task is marked "← next". Loops and missing dependency IDs are called out.
+taskgraph graph
+
+# Only one task and the tasks drawn under it
+taskgraph graph --id=3
+
+# Machine-readable tree, with bottlenecks, criticalPath and per-node
+# `inferred` dependencies
+taskgraph graph --format json
+```
+
+Text output also marks bottlenecks (`blocks N`), the critical path (`◆`)
+and AI-inferred dependencies (`*`), with a legend. See
+[Dependency Graph](/capabilities/dependency-graph).
+
+## Explain Why a Task Is Blocked
+
+```bash
+# Follow a task's unfinished dependencies down to the root causes: work
+# that is ready to start, deferred or blocked tasks, dependency IDs that
+# match no task, and dependency loops (including a task that lists itself).
+# Each root cause comes with the command that fixes it.
+taskgraph why <id>
+# or
+taskgraph why --id=<id>
+
+# Subtasks work too
+taskgraph why 3.2
+
+# Machine-readable explanation
+taskgraph why <id> --format json
+```
+
+The JSON has the task's `id`, `title`, `status`, `blocked`, the `tag`, a
+nested `blockers` tree (each node has `id`, `title`, `status`, `blockers`,
+and `kind` where a chain ends: `ready`, `stalled`, `missing` or `cycle`;
+a task already shown elsewhere is marked `repeated`), and `rootCauses`.
+A subtask also waits on what its parent waits on: those blockers sit under
+a node for the parent with `parentOf` set to the subtask's ID. The parent
+itself is not something to finish first; only its `blockers` are.
+A `missing` root cause lists the tasks that name it in `listedBy`; a
+`cycle` root cause lists its members in `cycle` and the dependencies to
+remove in `edges` (`from` depends on `to`).
+
+## Prime a Coding Agent
+
+```bash
+# Print what an agent needs at the start of a session: the tag, the task
+# in progress with how to tell it's done (acceptance criteria, else test
+# strategy), the next three ready tasks in `next` order, and the five
+# workflow rules, with free text in single quotes. Under 40 lines, 80
+# columns wide when piped.
+taskgraph prime
+
+# Another tag, or the same context as JSON
+taskgraph prime --tag=feature-auth
+taskgraph prime --json
+
+# Only the in-progress tasks with no note since a time (ISO); prints
+# nothing when every one has a note. The plugin's Stop hook uses it.
+taskgraph prime --unnoted-since=2026-10-23T09:00:00Z
+```
+
+`prime` is for agents, so `taskgraph --help` mentions it under its groups
+rather than in them. The Claude Code plugin runs it from a SessionStart
+hook, at startup and again after the conversation is compacted, so Claude
+doesn't start cold. The hook prints nothing in a folder without
+`.taskgraph/`.
+
+The JSON has `tag`, `counts` (`total`, `done`), `inProgress` (each with
+`id`, `title`, `status`, `priority`, `doneWhen`, and `parentTitle` for a
+subtask), `ready` (the same fields without `doneWhen`) and `rules`
+(`text` and `command`). With `--unnoted-since`, the JSON is
+`{ "unnoted": [...] }` with the `ready` fields for each task.
+
+A note counts if a `taskgraph note`, `update-subtask` or `research --save`
+block was added to the task (or its parent or subtask) at or after that
+time.
