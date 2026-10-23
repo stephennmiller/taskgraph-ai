@@ -484,4 +484,63 @@ describe('mergeTasksJson', () => {
 			'{"master":{"tasks":[],"__proto__":{"x":1},"y":2}}'
 		);
 	});
+
+	describe('hostile or damaged input', () => {
+		it('keeps a task and the prototype clean when a task has a __proto__ key', () => {
+			const ours = JSON.parse(
+				'{"master":{"tasks":[{"id":1,"title":"A","__proto__":{"polluted":1}}]}}'
+			);
+			const theirs = JSON.parse(
+				'{"master":{"tasks":[{"id":1,"title":"B","__proto__":{"polluted":2}}]}}'
+			);
+
+			const result = mergeTasksJson(undefined, ours, theirs);
+
+			expect(({} as Json).polluted).toBeUndefined();
+			expect(tasksOf(result.merged).map((t) => t.title)).toEqual(['A', 'B']);
+			expect(JSON.stringify(byId(result.merged, 2))).toBe(
+				'{"id":2,"title":"B","__proto__":{"polluted":2}}'
+			);
+		});
+
+		it('reports a clash instead of collapsing tasks that share an ID', () => {
+			const base = file({ master: [task(1)] });
+			const ours = file({ master: [task(1), task(5, { title: 'Ours' })] });
+			const theirs = file({
+				master: [task(1), task(5, { title: 'X' }), task(5, { title: 'Y' })]
+			});
+
+			const result = mergeTasksJson(base, ours, theirs);
+
+			expect(result.conflicts).toEqual([
+				expect.objectContaining({ field: 'tasks', kind: 'changed-both' })
+			]);
+			expect(tasksOf(result.merged)).toEqual(tasksOf(ours));
+		});
+
+		it('reports a clash instead of renumbering an object ID', () => {
+			const ours = file({ master: [task(1), { id: { a: 1 }, title: 'A' }] });
+			const theirs = file({ master: [task(1), { id: { b: 2 }, title: 'B' }] });
+
+			const result = mergeTasksJson(file({ master: [task(1)] }), ours, theirs);
+
+			expect(result.renumbered).toEqual([]);
+			expect(result.conflicts).toEqual([
+				expect.objectContaining({ field: 'tasks', kind: 'changed-both' })
+			]);
+		});
+
+		it('merges long lists of plain values from both sides', () => {
+			const tags = (from: number) =>
+				Array.from({ length: 50_000 }, (_, i) => `t${from + i}`);
+			const base = file({ master: [task(1, { tags: tags(0) })] });
+			const ours = file({ master: [task(1, { tags: tags(1) })] });
+			const theirs = file({ master: [task(1, { tags: tags(2) })] });
+
+			const merged = byId(mergeTasksJson(base, ours, theirs).merged, 1);
+
+			// t0 left on both sides, t1 on the incoming one; t50001 arrived there
+			expect(merged?.tags).toEqual(tags(2));
+		});
+	});
 });

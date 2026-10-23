@@ -46,7 +46,7 @@ export class MergeDriverCommand extends Command {
 
 		if (outcome.status === 'unreadable') {
 			printError(
-				`Couldn't merge ${file}: the ${SIDE_NAMES[outcome.side]} version isn't valid JSON`,
+				`Couldn't merge ${file}: the ${SIDE_NAMES[outcome.side]} version isn't a valid tasks file`,
 				"Kept this branch's version; fix the file by hand, then git add it"
 			);
 			process.exitCode = 1;

@@ -60,7 +60,9 @@ Some fields never clash:
 
 A task removed on one branch and changed on the other is kept and reported as a clash. Removed on one branch and untouched on the other, it goes.
 
-If one branch's `tasks.json` isn't valid JSON (for example, it was committed with conflict markers in it), the driver leaves this branch's file untouched, says which side couldn't be read, and marks the file as conflicted.
+Two tasks with the same ID inside one branch's file (left over from a hand merge) aren't merged one by one: the whole task list is reported as a clash and this branch's list is kept.
+
+If one branch's `tasks.json` isn't a JSON object (for example, it was committed with conflict markers in it), the driver leaves this branch's file untouched, says which side couldn't be read, and marks the file as conflicted.
 
 ## Setting it up
 
@@ -88,6 +90,17 @@ The setup has two parts:
 <Warning>
 **Each clone runs `taskgraph init --merge-driver` once.** The committed `.gitattributes` line names the driver, but the command behind it lives in each clone's own `.git/config`. A teammate who clones the repository and skips this step gets Git's normal line-by-line merge of `tasks.json`: nothing breaks, but colliding task IDs conflict as before.
 </Warning>
+
+### A merge setup of your own
+
+If `.gitattributes` already gives `.taskgraph/tasks/tasks.json` a merge attribute (such as `merge=union`), or `.git/config` has a `merge.taskgraph.driver` that TaskGraph didn't write, setup leaves it as it is and says so:
+
+```
+! Kept your own tasks.json merge setup
+  .git/config     merge.taskgraph.driver is yours; unset it for TaskGraph's
+```
+
+Run `git config --unset merge.taskgraph.driver` (or delete the `.gitattributes` line), then `taskgraph init --merge-driver` again.
 
 ### Which command Git runs
 

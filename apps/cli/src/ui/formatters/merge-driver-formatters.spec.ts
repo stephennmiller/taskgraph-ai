@@ -168,6 +168,21 @@ describe('formatMergeDriverSetup', () => {
 		]);
 	});
 
+	it("names a merge setup it kept and how to use TaskGraph's instead", () => {
+		const output = plain(
+			formatMergeDriverSetup({ attributes: 'kept', config: 'kept' })
+		);
+
+		expect(output.split('\n')).toEqual([
+			'! Kept your own tasks.json merge setup',
+			"  .gitattributes  has its own tasks.json merge line; delete it for TaskGraph's",
+			"  .git/config     merge.taskgraph.driver is yours; unset it for TaskGraph's"
+		]);
+		for (const line of output.split('\n')) {
+			expect(line.length).toBeLessThanOrEqual(80);
+		}
+	});
+
 	it('says so in one line when it was already set up', () => {
 		expect(
 			formatMergeDriverSetup({ attributes: 'unchanged', config: 'unchanged' })

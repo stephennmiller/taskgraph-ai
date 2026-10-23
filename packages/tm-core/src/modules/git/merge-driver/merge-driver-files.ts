@@ -79,6 +79,16 @@ export function runTasksMergeDriver(
 		} catch (error) {
 			return { status: 'unreadable', side, reason: (error as Error).message };
 		}
+		// An array, string or null at the top isn't a tasks file; merging it
+		// as one would drop that side's content without a conflict
+		const value = parsed[side];
+		if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			return {
+				status: 'unreadable',
+				side,
+				reason: 'not a JSON object'
+			};
+		}
 	}
 
 	const { merged, renumbered, conflicts } = mergeTasksJson(
@@ -97,10 +107,20 @@ export function runTasksMergeDriver(
 	};
 }
 
+/**
+ * Write next to `file`, then rename over it, so `%A` is either the old
+ * content or the whole merge. `wx` refuses a temp name that already exists
+ * (including a symlink planted there) instead of writing through it.
+ */
 function writeAtomically(file: string, content: string): void {
 	const temp = `${file}.taskgraph-merge-${process.pid}`;
-	fs.writeFileSync(temp, content, 'utf8');
-	fs.renameSync(temp, file);
+	try {
+		fs.writeFileSync(temp, content, { encoding: 'utf8', flag: 'wx' });
+		fs.renameSync(temp, file);
+	} catch (error) {
+		fs.rmSync(temp, { force: true });
+		throw error;
+	}
 }
 
 export interface MergeDriverCommandOptions {
@@ -134,7 +154,10 @@ export function mergeDriverCommand(options: MergeDriverCommandOptions): string {
 	if (options.onPath) {
 		return `if command -v taskgraph >/dev/null 2>&1; then taskgraph ${DRIVER_ARGS}; ${fallback}`;
 	}
-	const quote = (value: string) => `"${value.replace(/(["\\$`])/g, '\\$1')}"`;
+	// Double quotes for sh, then `%` doubled: git expands `%A` and friends
+	// anywhere in the command, and reads `%%` as one `%`
+	const quote = (value: string) =>
+		`"${value.replace(/(["\\$`])/g, '\\$1')}"`.replace(/%/g, '%%');
 	const node = quote(options.execPath);
 	const script = quote(options.scriptPath);
 	return `if [ -x ${node} ] && [ -f ${script} ]; then ${node} ${script} ${DRIVER_ARGS}; ${fallback}`;
@@ -167,10 +190,39 @@ export function isOnPath(
 }
 
 export interface MergeDriverInstallResult {
-	/** What happened to `.gitattributes` in the project root */
-	attributes: 'created' | 'updated' | 'unchanged';
-	/** Whether `.git/config` already had this exact driver command */
-	config: 'set' | 'unchanged';
+	/**
+	 * What happened to `.gitattributes` in the project root. `kept`: a line
+	 * already gives tasks.json another merge attribute, left as it is
+	 */
+	attributes: 'created' | 'updated' | 'unchanged' | 'kept';
+	/**
+	 * Whether `.git/config` already had this exact driver command. `kept`:
+	 * `merge.taskgraph.driver` is a command TaskGraph didn't write, left as it is
+	 */
+	config: 'set' | 'unchanged' | 'kept';
+}
+
+/** Whether a configured driver command is one {@link mergeDriverCommand} wrote */
+const isOurCommand = (command: string) =>
+	command.includes(` ${DRIVER_ARGS}`) &&
+	command.includes(MERGE_DRIVER_FALLBACK);
+
+/**
+ * The merge attribute an existing `.gitattributes` line gives tasks.json
+ * (`merge=x`, `merge`, `-merge`, `!merge`), or undefined. Only lines naming
+ * the file itself count; a wider pattern is the user's business, and ours,
+ * added after it, takes precedence for this one file.
+ */
+function existingMergeAttribute(lines: string[]): string | undefined {
+	let found: string | undefined;
+	for (const line of lines) {
+		const [pattern, ...attributes] = line.split(/\s+/);
+		if (pattern.replace(/^\//, '') !== TASKGRAPH_TASKS_FILE) continue;
+		for (const attribute of attributes) {
+			if (/^[-!]?merge(=|$)/.test(attribute)) found = attribute;
+		}
+	}
+	return found;
 }
 
 export class NotAGitRepositoryError extends Error {
@@ -199,6 +251,8 @@ export function isInsideGitWorkTree(projectRoot: string): boolean {
 /**
  * Set up the merge driver: add the `.gitattributes` line (keeping what's
  * there) and point `merge.taskgraph.driver` at `command`. Safe to repeat.
+ * A merge attribute for tasks.json or a `merge.taskgraph.driver` that
+ * TaskGraph didn't write is the user's own setup and is left alone (`kept`).
  *
  * @throws NotAGitRepositoryError when `projectRoot` isn't in a Git work tree
  */
@@ -216,7 +270,10 @@ export function installMergeDriver(
 		? fs.readFileSync(attributesFile, 'utf8')
 		: null;
 	const lines = (existing ?? '').split(/\r?\n/).map((line) => line.trim());
-	if (!lines.includes(MERGE_DRIVER_ATTRIBUTE)) {
+	const current = existingMergeAttribute(lines);
+	if (current !== undefined && current !== `merge=${MERGE_DRIVER_NAME}`) {
+		attributes = 'kept';
+	} else if (current === undefined) {
 		const separator = existing && !existing.endsWith('\n') ? '\n' : '';
 		fs.writeFileSync(
 			attributesFile,
@@ -227,24 +284,31 @@ export function installMergeDriver(
 	}
 
 	const key = `merge.${MERGE_DRIVER_NAME}`;
-	let current = '';
-	try {
-		current = git(projectRoot, ['config', '--local', '--get', `${key}.driver`]);
-	} catch {
-		// not set
-	}
+	const read = (name: string) => {
+		try {
+			return git(projectRoot, ['config', '--local', '--get', `${key}.${name}`]);
+		} catch {
+			return ''; // not set
+		}
+	};
+	const driver = read('driver');
 	let config: MergeDriverInstallResult['config'] = 'unchanged';
-	if (current !== command) {
+	if (driver !== command && driver !== '' && !isOurCommand(driver)) {
+		// Someone set up their own driver under this name; don't replace it
+		config = 'kept';
+	} else if (driver !== command) {
 		// The command first: a `merge.taskgraph` section with a name but no
 		// driver makes git stop with "lacks command line" instead of falling
 		// back to a text merge
 		git(projectRoot, ['config', '--local', `${key}.driver`, command]);
-		git(projectRoot, [
-			'config',
-			'--local',
-			`${key}.name`,
-			'TaskGraph tasks.json merge'
-		]);
+		if (read('name') === '') {
+			git(projectRoot, [
+				'config',
+				'--local',
+				`${key}.name`,
+				'TaskGraph tasks.json merge'
+			]);
+		}
 		config = 'set';
 	}
 

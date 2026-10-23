@@ -92,11 +92,23 @@ const same = (a: unknown, b: unknown) => isDeepStrictEqual(a, b);
 const isObject = (value: unknown): value is Json =>
 	value !== null && typeof value === 'object' && !Array.isArray(value);
 
-const isItemList = (value: unknown): value is Item[] =>
-	Array.isArray(value) &&
-	value.every(
-		(item) => isObject(item) && item.id !== undefined && item.id !== null
-	);
+/**
+ * A list of tasks or subtasks: objects with unique number or string IDs.
+ * Anything else (a duplicate ID from a bad hand merge, an object as an ID)
+ * isn't merged item by item, so a clash in it is reported, never collapsed.
+ */
+const isItemList = (value: unknown): value is Item[] => {
+	if (!Array.isArray(value)) return false;
+	const seen = new Set<string>();
+	for (const item of value) {
+		if (!isObject(item)) return false;
+		const id = own(item, 'id');
+		if (typeof id !== 'number' && typeof id !== 'string') return false;
+		if (seen.has(String(id))) return false;
+		seen.add(String(id));
+	}
+	return true;
+};
 
 const isPrimitiveList = (value: unknown): value is unknown[] =>
 	Array.isArray(value) &&
@@ -552,13 +564,18 @@ function mergePrimitiveList(
 	ours: unknown[],
 	theirs: unknown[]
 ): unknown[] {
-	const has = (list: unknown[], value: unknown) =>
-		list.some((entry) => same(entry, value));
+	// Sets, not nested scans: a list from either branch can be any length
+	const inBase = new Set(base);
+	const inTheirs = new Set(theirs);
 	const result = ours.filter(
-		(value) => !(has(base, value) && !has(theirs, value))
+		(value) => !(inBase.has(value) && !inTheirs.has(value))
 	);
+	const inResult = new Set(result);
 	for (const value of theirs) {
-		if (!has(base, value) && !has(result, value)) result.push(value);
+		if (!inBase.has(value) && !inResult.has(value)) {
+			result.push(value);
+			inResult.add(value);
+		}
 	}
 	return result;
 }

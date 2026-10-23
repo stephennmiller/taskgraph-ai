@@ -111,6 +111,39 @@ describe('runTasksMergeDriver', () => {
 		expect(fs.readFileSync(at('ours'), 'utf8')).toBe(ours);
 		expect(fs.readdirSync(dir).sort()).toEqual(['base', 'ours', 'theirs']);
 	});
+
+	it.each([
+		['an array', '[]'],
+		['null', 'null'],
+		['a string', '"tasks"']
+	])(
+		'treats %s at the top of a side as unreadable, not as no tasks',
+		(_, text) => {
+			const theirs = `${JSON.stringify(tag([task(1, 'A')]))}\n`;
+			write('base', tag([task(1, 'A')]));
+			write('ours', text);
+			write('theirs', theirs);
+
+			const outcome = runTasksMergeDriver(files());
+
+			expect(outcome).toMatchObject({ status: 'unreadable', side: 'ours' });
+			expect(fs.readFileSync(at('ours'), 'utf8')).toBe(text);
+		}
+	);
+
+	it('leaves the current side untouched when the temporary file is taken', () => {
+		const ours = `${JSON.stringify(tag([task(1, 'A'), task(2, 'Ours')]))}\n`;
+		write('base', tag([task(1, 'A')]));
+		write('ours', ours);
+		write('theirs', tag([task(1, 'A'), task(2, 'Theirs')]));
+		const taken = path.join(dir, 'elsewhere');
+		write('elsewhere', 'not yours');
+		fs.symlinkSync(taken, `${at('ours')}.taskgraph-merge-${process.pid}`);
+
+		expect(() => runTasksMergeDriver(files())).toThrow(/EEXIST/);
+		expect(fs.readFileSync(at('ours'), 'utf8')).toBe(ours);
+		expect(fs.readFileSync(taken, 'utf8')).toBe('not yours');
+	});
 });
 
 describe('installMergeDriver', () => {
@@ -152,15 +185,60 @@ describe('installMergeDriver', () => {
 		).toBe('.taskgraph/tasks/tasks.json: merge: taskgraph');
 	});
 
-	it('updates the config when the command changed', () => {
+	it('updates the config when the command it wrote changed', () => {
 		git(repo, 'init', '--initial-branch=main');
-		installMergeDriver(repo, 'old');
+		const command = (scriptPath: string) =>
+			mergeDriverCommand({ onPath: false, execPath: '/node', scriptPath });
+		installMergeDriver(repo, command('/old/cli.js'));
 
-		expect(installMergeDriver(repo, 'new')).toEqual({
+		expect(installMergeDriver(repo, command('/new/cli.js'))).toEqual({
 			attributes: 'unchanged',
 			config: 'set'
 		});
-		expect(git(repo, 'config', '--get', 'merge.taskgraph.driver')).toBe('new');
+		expect(git(repo, 'config', '--get', 'merge.taskgraph.driver')).toBe(
+			command('/new/cli.js')
+		);
+	});
+
+	it("keeps a merge.taskgraph driver and name it didn't write", () => {
+		git(repo, 'init', '--initial-branch=main');
+		git(repo, 'config', 'merge.taskgraph.driver', 'my-merge %O %A %B');
+		git(repo, 'config', 'merge.taskgraph.name', 'Mine');
+
+		const result = installMergeDriver(
+			repo,
+			mergeDriverCommand({ onPath: true, execPath: '/n', scriptPath: '/s' })
+		);
+
+		expect(result).toEqual({ attributes: 'created', config: 'kept' });
+		expect(git(repo, 'config', '--get', 'merge.taskgraph.driver')).toBe(
+			'my-merge %O %A %B'
+		);
+		expect(git(repo, 'config', '--get', 'merge.taskgraph.name')).toBe('Mine');
+	});
+
+	it('keeps a merge attribute tasks.json already has', () => {
+		git(repo, 'init', '--initial-branch=main');
+		const attributes = '/.taskgraph/tasks/tasks.json merge=union\n';
+		fs.writeFileSync(path.join(repo, '.gitattributes'), attributes);
+
+		const result = installMergeDriver(repo, 'taskgraph merge-driver');
+
+		expect(result).toEqual({ attributes: 'kept', config: 'set' });
+		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
+			attributes
+		);
+	});
+
+	it('counts its own line among other attributes as already there', () => {
+		git(repo, 'init', '--initial-branch=main');
+		const attributes = `${MERGE_DRIVER_ATTRIBUTE} -diff\n`;
+		fs.writeFileSync(path.join(repo, '.gitattributes'), attributes);
+
+		expect(installMergeDriver(repo, 'x').attributes).toBe('unchanged');
+		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
+			attributes
+		);
 	});
 
 	it('refuses outside a Git repository and writes nothing', () => {
@@ -190,6 +268,76 @@ describe('mergeDriverCommand', () => {
 				'then "/opt/node 22/bin/node" "/a/\\"x\\"/taskgraph.js" merge-driver %O %A %B %P; ' +
 				`else ${MERGE_DRIVER_FALLBACK}; fi`
 		);
+	});
+});
+
+describe('the driver command through a real git merge', () => {
+	let root: string;
+
+	beforeEach(() => {
+		root = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-merge-driver-quote-'))
+		);
+	});
+
+	afterEach(() => {
+		fs.rmSync(root, { recursive: true, force: true });
+	});
+
+	// Each one is special to sh or to git's %-placeholders
+	it.each([
+		'with space',
+		"single'quote",
+		'double"quote',
+		'dollar$HOME',
+		'back`id`tick',
+		'per%Acent',
+		'back\\slash'
+	])("runs a CLI in a folder named %s with git's arguments intact", (name) => {
+		const cliDir = path.join(root, name);
+		fs.mkdirSync(cliDir);
+		const argsFile = path.join(root, 'args.json');
+		// A stand-in CLI: records its arguments and writes a merged %A
+		const script = path.join(cliDir, 'cli.cjs');
+		fs.writeFileSync(
+			script,
+			`const fs = require('fs');
+fs.writeFileSync(${JSON.stringify(argsFile)}, JSON.stringify(process.argv.slice(2)));
+fs.writeFileSync(process.argv[4], '{"merged":true}\\n');`
+		);
+		const repo = path.join(root, 'repo');
+		fs.mkdirSync(repo);
+		git(repo, 'init', '-q', '--initial-branch=main');
+		git(repo, 'config', 'user.email', 'test@example.com');
+		git(repo, 'config', 'user.name', 'Test');
+		installMergeDriver(
+			repo,
+			mergeDriverCommand({
+				onPath: false,
+				execPath: process.execPath,
+				scriptPath: script
+			})
+		);
+		const tasksFile = path.join(repo, '.taskgraph/tasks/tasks.json');
+		fs.mkdirSync(path.dirname(tasksFile), { recursive: true });
+		const commit = (content: string) => {
+			fs.writeFileSync(tasksFile, content);
+			git(repo, 'commit', '-q', '-am', content);
+		};
+		fs.writeFileSync(tasksFile, '{"a":1}\n');
+		git(repo, 'add', '-A');
+		git(repo, 'commit', '-q', '-m', 'base');
+		git(repo, 'checkout', '-q', '-b', 'feature');
+		commit('{"a":2}\n');
+		git(repo, 'checkout', '-q', 'main');
+		commit('{"a":3}\n');
+
+		git(repo, 'merge', '--no-edit', 'feature');
+
+		const args = JSON.parse(fs.readFileSync(argsFile, 'utf8'));
+		expect(args[0]).toBe('merge-driver');
+		expect(args[4]).toBe('.taskgraph/tasks/tasks.json');
+		expect(fs.readFileSync(tasksFile, 'utf8')).toBe('{"merged":true}\n');
 	});
 });
 

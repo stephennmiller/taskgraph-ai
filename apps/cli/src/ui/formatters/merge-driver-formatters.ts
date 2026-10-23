@@ -160,22 +160,39 @@ export function formatMergeConflicts(
 }
 
 export type MergeDriverSetup = {
-	attributes: 'created' | 'updated' | 'unchanged';
-	config: 'set' | 'unchanged';
+	attributes: 'created' | 'updated' | 'unchanged' | 'kept';
+	config: 'set' | 'unchanged' | 'kept';
 };
 
-/** What `init --merge-driver` changed, or one line when nothing did */
+/**
+ * What `init --merge-driver` changed, or one line when nothing did. A merge
+ * setup the user made themselves is left alone and named, with how to
+ * switch to TaskGraph's.
+ */
 export function formatMergeDriverSetup(setup: MergeDriverSetup): string {
 	if (setup.attributes === 'unchanged' && setup.config === 'unchanged') {
 		return 'The tasks.json merge driver is already set up';
 	}
-	const lines = [`${chalk.green('✓')} Git now merges tasks.json by task`];
-	if (setup.attributes !== 'unchanged') {
+	const kept = setup.attributes === 'kept' || setup.config === 'kept';
+	const lines = [
+		kept
+			? `${chalk.yellow('!')} Kept your own tasks.json merge setup`
+			: `${chalk.green('✓')} Git now merges tasks.json by task`
+	];
+	if (setup.attributes === 'kept') {
+		lines.push(
+			`  .gitattributes  ${theme.muted("has its own tasks.json merge line; delete it for TaskGraph's")}`
+		);
+	} else if (setup.attributes !== 'unchanged') {
 		lines.push(
 			`  .gitattributes  ${theme.muted('routes tasks.json to the driver; commit it')}`
 		);
 	}
-	if (setup.config === 'set') {
+	if (setup.config === 'kept') {
+		lines.push(
+			`  .git/config     ${theme.muted("merge.taskgraph.driver is yours; unset it for TaskGraph's")}`
+		);
+	} else if (setup.config === 'set') {
 		lines.push(
 			`  .git/config     ${theme.muted('turns it on here; each clone runs init --merge-driver')}`
 		);
