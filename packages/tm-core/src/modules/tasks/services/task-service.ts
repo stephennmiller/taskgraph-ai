@@ -102,6 +102,10 @@ export class TaskService {
 		const tag = options.tag || activeTag;
 
 		try {
+			if (options.tag) {
+				await this.assertTagExists(options.tag);
+			}
+
 			// Determine if we can push filters to storage layer
 			const canPushStatusFilter =
 				options.filter?.status &&
@@ -188,6 +192,23 @@ export class TaskService {
 				},
 				error as Error
 			);
+		}
+	}
+
+	/**
+	 * Fail on a tag the project doesn't have, so a typo isn't read as an empty
+	 * tag. "master" always passes (reads fall back to it), and so does any tag
+	 * while tasks.json has none yet
+	 */
+	private async assertTagExists(tag: string): Promise<void> {
+		if (tag === 'master') {
+			return;
+		}
+		const tags = await this.storage.getAllTags();
+		if (tags.length > 0 && !tags.includes(tag)) {
+			throw new TaskGraphError(`Tag "${tag}" not found`, ERROR_CODES.NOT_FOUND, {
+				tagName: tag
+			});
 		}
 	}
 

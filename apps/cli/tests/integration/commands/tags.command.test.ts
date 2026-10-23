@@ -177,6 +177,18 @@ describe('tags command', () => {
 		expect(result.stderr).toContain('Run taskgraph tags to see your tags');
 	});
 
+	// Regression: #384, a typo looked like an empty tag and suggested adding tasks
+	it('list and next fail on a tag that does not exist', () => {
+		for (const command of ['list', 'next']) {
+			const result = run([command, '--tag', 'nosuch']);
+
+			expect(result.status).toBe(1);
+			expect(result.stderr).toContain('Tag "nosuch" not found');
+			expect(result.stderr).toContain('Run taskgraph tags to see your tags');
+			expect(result.stdout).not.toContain('No tasks found');
+		}
+	});
+
 	it('refuses to delete a tag with tasks without a terminal or --yes', () => {
 		run(['tags', 'copy', 'master', 'backup']);
 		const result = run(['tags', 'remove', 'backup']);
