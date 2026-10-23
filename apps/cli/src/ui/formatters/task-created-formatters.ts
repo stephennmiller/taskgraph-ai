@@ -2,9 +2,9 @@
  * @fileoverview What `add-task` prints once the task is saved, e.g.
  *
  *   ✓ Added task 4  Export bookmarks as a Netscape HTML file · medium priority
- *     Depends on  2  Email and password sign-in with sessions  added by AI
+ *     Depends on  1  Set up the database schema
+ *                 2  Email and password sign-in with sessions  added by AI
  *                 3  Bookmark CRUD endpoints                   added by AI
- *     Not used    1  Set up the database schema
  *   Next: taskgraph show 4 to read it, or taskgraph expand --id=4 to break it down
  *
  * With `--discovered-from=2` it adds a row that doesn't block the task:
@@ -36,8 +36,6 @@ export interface CreatedTask {
 	priority?: string;
 	/** What the new task depends on */
 	dependencies: CreatedTaskDependency[];
-	/** Dependencies you passed that the new task doesn't have */
-	unused?: CreatedTaskDependency[];
 	/** The task it was found while doing (`--discovered-from`); never blocks */
 	discoveredFrom?: CreatedTaskDependency;
 }
@@ -58,7 +56,6 @@ export function formatTaskCreated(
 		...created,
 		title: terminalSafe(created.title),
 		dependencies: safeDeps(created.dependencies),
-		unused: created.unused && safeDeps(created.unused),
 		discoveredFrom:
 			created.discoveredFrom && safeDeps([created.discoveredFrom])[0]
 	};
@@ -78,8 +75,7 @@ export function formatTaskCreated(
 
 	const groups: Array<[string, CreatedTaskDependency[]]> = [
 		['Depends on', task.dependencies],
-		['Discovered from', task.discoveredFrom ? [task.discoveredFrom] : []],
-		['Not used', task.unused ?? []]
+		['Discovered from', task.discoveredFrom ? [task.discoveredFrom] : []]
 	];
 	const all = groups.flatMap(([, deps]) => deps);
 	if (all.length > 0) {
@@ -108,7 +104,7 @@ export function formatTaskCreated(
 					(dep.addedByAi
 						? `${name.padEnd(titleWidth)}  ${theme.muted(note)}`
 						: name);
-				lines.push(label === 'Not used' ? theme.muted(row) : row);
+				lines.push(row);
 			});
 		}
 	}
