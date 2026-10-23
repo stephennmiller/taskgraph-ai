@@ -8,7 +8,8 @@ import {
 	keepChecklistFields,
 	normalizeAcceptanceCriteria,
 	normalizeDefinitionOfDone,
-	parseChecklistNumbers
+	parseChecklistNumbers,
+	setGeneratedCriteria
 } from './acceptance-criteria.js';
 
 describe('normalizeAcceptanceCriteria', () => {
@@ -240,5 +241,46 @@ describe('keepChecklistFields', () => {
 		keepChecklistFields(rewrite, {});
 
 		expect(rewrite).toEqual({ id: 1, title: 'New' });
+	});
+});
+
+describe('setGeneratedCriteria', () => {
+	it('stores the strings an AI wrote as unchecked items', () => {
+		const task = {
+			id: 1,
+			acceptanceCriteria: ['  Login works ', '', 'Tokens expire']
+		};
+
+		setGeneratedCriteria(task);
+
+		expect(task.acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false },
+			{ text: 'Tokens expire', checked: false }
+		]);
+	});
+
+	it('never stores a generated criterion as checked', () => {
+		const task = {
+			acceptanceCriteria: [{ text: 'Login works', checked: true }]
+		};
+
+		setGeneratedCriteria(task);
+
+		expect(task.acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false }
+		]);
+	});
+
+	it.each([
+		['missing', {}],
+		['null', { acceptanceCriteria: null }],
+		['empty', { acceptanceCriteria: [] }],
+		['blank only', { acceptanceCriteria: ['  '] }]
+	])('leaves the field off when the criteria are %s', (_label, fields) => {
+		const task: Record<string, unknown> = { id: 1, ...fields };
+
+		setGeneratedCriteria(task);
+
+		expect(task).toEqual({ id: 1 });
 	});
 });

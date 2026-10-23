@@ -234,6 +234,7 @@ export {
 	getUncheckedCriteria,
 	parseChecklistNumbers,
 	keepChecklistFields,
+	setGeneratedCriteria,
 	type ChecklistItem,
 	type TaskChecklist,
 	type ChecklistChanges,

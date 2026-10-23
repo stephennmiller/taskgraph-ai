@@ -100,6 +100,28 @@ export function keepChecklistFields<T extends object>(
 }
 
 /**
+ * Store the acceptance criteria an AI wrote for a new task or subtask
+ * (`parse-prd`, `expand`): each one as an unchecked item, since nothing has
+ * been verified yet. A missing, null or empty list leaves the field off, so
+ * a response without criteria saves the task as it did before.
+ *
+ * @param task - The generated task or subtask, changed in place
+ * @returns The task
+ */
+export function setGeneratedCriteria<T extends object>(task: T): T {
+	const fields = task as ChecklistFields;
+	const criteria = normalizeAcceptanceCriteria(fields.acceptanceCriteria).map(
+		({ text }) => ({ text, checked: false })
+	);
+	if (criteria.length > 0) {
+		fields.acceptanceCriteria = criteria;
+	} else {
+		delete fields.acceptanceCriteria;
+	}
+	return task;
+}
+
+/**
  * The Definition of Done as configured: a list of non-blank strings.
  * Anything else reads as no Definition of Done.
  */

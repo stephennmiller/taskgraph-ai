@@ -1,6 +1,10 @@
 import { PromptManager } from '../../../scripts/modules/prompt-manager.js';
+import { zodSchema } from 'ai';
 import { SubtaskSchema } from '../../../src/schemas/base-schemas.js';
-import { ExpandTaskResponseSchema } from '../../../src/schemas/expand-task.js';
+import {
+	ExpandedSubtaskSchema,
+	ExpandTaskResponseSchema
+} from '../../../src/schemas/expand-task.js';
 
 describe('expand-task prompt template', () => {
 	let promptManager;
@@ -86,14 +90,71 @@ describe('expand-task prompt template', () => {
 		const subtaskSchema = subtasksSchema.element;
 
 		// Verify the schema has the required fields
-		expect(subtaskSchema).toBe(SubtaskSchema);
-		expect(SubtaskSchema.shape).toHaveProperty('id');
-		expect(SubtaskSchema.shape).toHaveProperty('title');
-		expect(SubtaskSchema.shape).toHaveProperty('description');
-		expect(SubtaskSchema.shape).toHaveProperty('dependencies');
-		expect(SubtaskSchema.shape).toHaveProperty('details');
-		expect(SubtaskSchema.shape).toHaveProperty('status');
-		expect(SubtaskSchema.shape).toHaveProperty('testStrategy');
+		expect(subtaskSchema).toBe(ExpandedSubtaskSchema);
+		for (const field of Object.keys(SubtaskSchema.shape)) {
+			expect(ExpandedSubtaskSchema.shape).toHaveProperty(field);
+		}
+		expect(ExpandedSubtaskSchema.shape).toHaveProperty('acceptanceCriteria');
+	});
+
+	describe('acceptanceCriteria', () => {
+		const subtask = {
+			id: 1,
+			title: 'Add the login route',
+			description: 'Accept a username and password',
+			dependencies: [],
+			details: 'POST /login checks the password hash',
+			status: 'pending',
+			testStrategy: null
+		};
+
+		test('the schema keeps the criteria the AI wrote', () => {
+			const result = ExpandTaskResponseSchema.parse({
+				subtasks: [
+					{ ...subtask, acceptanceCriteria: ['Wrong passwords get 401'] }
+				]
+			});
+
+			expect(result.subtasks[0].acceptanceCriteria).toEqual([
+				'Wrong passwords get 401'
+			]);
+		});
+
+		test('a response without criteria still validates, as null', () => {
+			const result = ExpandTaskResponseSchema.parse({ subtasks: [subtask] });
+
+			expect(result.subtasks[0].acceptanceCriteria).toBeNull();
+		});
+
+		test('the JSON Schema sent to the model lists the field as required', () => {
+			const item = zodSchema(ExpandTaskResponseSchema).jsonSchema.properties
+				.subtasks.items;
+
+			expect(item.required).toContain('acceptanceCriteria');
+			expect(item.additionalProperties).toBe(false);
+		});
+
+		test('update keeps the shared subtask schema without criteria', () => {
+			// update/update-task rewrite subtasks; their criteria are copied
+			// back from storage (keepChecklistFields), not regenerated
+			expect(SubtaskSchema.shape).not.toHaveProperty('acceptanceCriteria');
+		});
+
+		test.each([
+			['default', {}],
+			['research', { useResearch: true }],
+			['complexity-report', { expansionPrompt: 'Focus on security' }]
+		])('the %s variant asks for acceptanceCriteria', (variant, extra) => {
+			const { systemPrompt } = promptManager.loadPrompt(
+				'expand-task',
+				{ ...baseParams, ...extra },
+				variant
+			);
+
+			expect(systemPrompt).toContain(
+				'- acceptanceCriteria: 2-5 short statements'
+			);
+		});
 	});
 
 	test('complexity-report variant fails without task context regression test', () => {
