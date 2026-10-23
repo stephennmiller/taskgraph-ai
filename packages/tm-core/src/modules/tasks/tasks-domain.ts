@@ -22,6 +22,7 @@ import type {
 
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
+import { subtaskInContext } from './utils/subtask-context.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -128,7 +129,8 @@ export class TasksDomain {
 	 * Get a single task by ID
 	 * Automatically handles all ID formats:
 	 * - Simple task IDs (e.g., "1")
-	 * - Subtask IDs with dot notation (e.g., "1.2")
+	 * - Subtask IDs with dot notation (e.g., "1.2"), returned with their
+	 *   parentId and the parent's priority when they have none
 	 *
 	 * @returns Discriminated union indicating task/subtask with proper typing
 	 */
@@ -157,8 +159,7 @@ export class TasksDomain {
 				(st) => String(st.id) === subtaskIdPart
 			);
 			if (subtask) {
-				// Return the actual subtask with properly typed result
-				return { task: subtask, isSubtask: true };
+				return { task: subtaskInContext(task, subtask), isSubtask: true };
 			}
 			// Subtask ID provided but not found
 			return { task: null, isSubtask: true };
