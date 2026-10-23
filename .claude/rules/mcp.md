@@ -308,7 +308,7 @@ log.info('Progress: 50% - AI call initiated...'); // Example progress logging
 The `session` object (destructured from `context`) contains authenticated session data and client information.
 
 - **Authentication**: Access user-specific data (`session.userId`, etc.) if authentication is implemented.
-- **Project Root**: The primary use in TaskGraph is accessing `session.roots` to determine the client's project root directory via the `getProjectRootFromSession` utility (from [`tools/utils.js`](../../mcp-server/src/tools/utils.js)). See the Standard Tool Execution Pattern above.
+- **Project Root**: The primary use in TaskGraph is accessing `session.roots` to determine the client's project root directory through `withNormalizedProjectRoot` from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)). See the Standard Tool Execution Pattern above.
 - **Environment Variables**: The `session.env` object provides access to environment variables set in the MCP client configuration (e.g., `.mcp.json`). This is the **primary mechanism** for the unified AI service layer (`ai-services-unified.js`) to securely access **API keys** when called from MCP context.
 - **Capabilities**: Can be used to check client capabilities (`session.clientCapabilities`).
 
