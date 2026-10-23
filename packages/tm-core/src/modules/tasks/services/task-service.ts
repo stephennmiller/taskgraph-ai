@@ -25,6 +25,7 @@ import { selectNextTask } from '../utils/next-task.js';
 import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
+import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 
@@ -225,8 +226,16 @@ export class TaskService {
 		try {
 			// Delegate to storage layer which handles the specific logic for tasks vs subtasks
 			const task = await this.storage.loadTask(String(taskId), activeTag);
+			if (!task) {
+				return null;
+			}
 			// IDs as strings, as getTaskList gives them, so show agrees with list
-			return task ? normalizeTaskIds(task) : null;
+			const normalized = normalizeTaskIds(task);
+			// A task with no description takes its title, as in getTaskList. A
+			// subtask (dotted ID) keeps its own, which is optional
+			return String(taskId).includes('.')
+				? normalized
+				: { ...normalized, description: promotedSubtaskDescription(task) };
 		} catch (error) {
 			// Re-throw all TaskGraphErrors without wrapping
 			if (error instanceof TaskGraphError) {

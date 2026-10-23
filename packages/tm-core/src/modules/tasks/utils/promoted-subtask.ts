@@ -1,14 +1,15 @@
 /**
- * @fileoverview The description a subtask takes when it becomes a task.
+ * @fileoverview The description a task takes when it has none.
  */
 
 /**
- * A task needs a description to load, but a subtask can have none (`add-subtask`
- * without `--description`). When a subtask becomes a task (`remove-subtask
- * --convert`, `move --from=1.2 --to=9`), an empty description falls back to
- * the title, so the new task loads.
+ * A subtask can have no description (`add-subtask` without `--description`).
+ * When a subtask becomes a task (`remove-subtask --convert`, `move --from=1.2
+ * --to=9`), an empty description falls back to the title. Loading a task
+ * applies the same rule in memory (TaskEntity, TaskService.getTask), so a
+ * `tasks.json` an earlier version wrote with an empty description still loads.
  *
- * @param subtask - The subtask being turned into a task
+ * @param subtask - The subtask being turned into a task, or a loaded task
  * @returns Its description, or its title when the description is empty or not
  * a string (hand-edited `tasks.json`)
  */
