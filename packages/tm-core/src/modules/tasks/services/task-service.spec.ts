@@ -285,9 +285,9 @@ describe('TaskService.getTask', () => {
 
 describe('TaskService.getTaskList', () => {
 	/** A TaskService over a tasks.json with these tags (none: no file yet) */
-	const serviceWithTags = (tags: string[]): TaskService => {
+	const serviceWithTags = (tags: string[], activeTag = 'master'): TaskService => {
 		const service = new TaskService({
-			getActiveTag: () => 'master'
+			getActiveTag: () => activeTag
 		} as unknown as ConfigManager);
 		(service as any).storage = {
 			loadTasks: async () => (tags.length > 0 ? [task(1)] : []),
@@ -320,6 +320,16 @@ describe('TaskService.getTaskList', () => {
 		});
 
 		expect(result.tag).toBe('master');
+	});
+
+	// The active tag can be missing after a git checkout; prime passes it
+	// explicitly and must not fail at session start
+	it('accepts the active tag even when tasks.json lacks it', async () => {
+		const result = await serviceWithTags(['feature'], 'gone').getTaskList({
+			tag: 'gone'
+		});
+
+		expect(result.tag).toBe('gone');
 	});
 
 	it('accepts any tag before tasks.json exists', async () => {

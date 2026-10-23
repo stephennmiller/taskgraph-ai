@@ -102,7 +102,9 @@ export class TaskService {
 		const tag = options.tag || activeTag;
 
 		try {
-			if (options.tag) {
+			// Callers such as prime pass the active tag explicitly; it reads as
+			// empty when missing, the same as passing no tag
+			if (options.tag && options.tag !== activeTag) {
 				await this.assertTagExists(options.tag);
 			}
 
