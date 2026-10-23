@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../common/types/index.js';
+import { createSubtask } from '../../testing/task-fixtures.js';
 import { reconcileDependencySources } from './dependency-provenance.js';
 import { buildDependencyTree } from './dependency-tree.js';
 
@@ -65,6 +66,69 @@ describe('buildDependencyTree', () => {
 
 		expect(tree.roots[0].id).toBe('1');
 		expect(tree.roots[0].missing).toEqual(['99']);
+	});
+
+	describe('dependencies on subtasks', () => {
+		const withSubtasks = (t: Task, ids: number[]): Task => ({
+			...t,
+			subtasks: ids.map((id) =>
+				createSubtask({ id, title: `Subtask ${id}`, parentId: t.id })
+			)
+		});
+
+		it("draws the task under the subtask's parent, not as missing", () => {
+			// Before: 3 was a root with `missing: ['2.2']`
+			const tree = buildDependencyTree([
+				task('1'),
+				withSubtasks(task('2', ['1']), [1, 2]),
+				task('3', ['2.2'])
+			]);
+
+			expect(shape(tree.roots)).toEqual([['1', [['2', [['3']]]]]]);
+			const three = tree.roots[0].children[0].children[0];
+			expect(three.missing).toEqual([]);
+			expect(three.alsoNeeds).toEqual(['2.2']);
+		});
+
+		it('still reports a subtask ID that matches nothing', () => {
+			const tree = buildDependencyTree([
+				withSubtasks(task('2'), [1]),
+				task('3', ['2.9', '7.1'])
+			]);
+
+			expect(tree.roots.map((r) => r.id)).toEqual(['2', '3']);
+			expect(tree.roots[1].missing).toEqual(['2.9', '7.1']);
+		});
+
+		it("ignores a task's dependency on its own subtask for placement", () => {
+			const tree = buildDependencyTree([withSubtasks(task('2', ['2.1']), [1])]);
+
+			expect(shape(tree.roots)).toEqual([['2']]);
+			expect(tree.roots[0].alsoNeeds).toEqual(['2.1']);
+			expect(tree.cyclic).toEqual([]);
+		});
+
+		it('calls out a loop that runs through a subtask', () => {
+			const tree = buildDependencyTree([
+				withSubtasks(task('2', ['3']), [1]),
+				task('3', ['2.1'])
+			]);
+
+			expect(tree.roots).toEqual([]);
+			expect(tree.cyclic.map((n) => n.id)).toEqual(['2', '3']);
+		});
+
+		it('marks an inferred subtask dependency', () => {
+			const tree = buildDependencyTree([
+				withSubtasks(task('2'), [1]),
+				{
+					...task('3', ['2.1']),
+					metadata: { dependencySources: { '2.1': 'inferred' } }
+				} as Task
+			]);
+
+			expect(tree.roots[0].children[0].inferred).toEqual(['2.1']);
+		});
 	});
 
 	it('returns tasks stuck in a cycle separately instead of looping', () => {

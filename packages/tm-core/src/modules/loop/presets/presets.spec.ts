@@ -234,13 +234,12 @@ describe('Preset Structure Validation', () => {
 			expect(content).toMatch(/<loop-complete>/);
 		});
 
-		it.each(PRESET_NAMES.filter((p) => p !== 'default'))(
-			'%s contains @ file reference pattern',
+		it.each(PRESET_NAMES)(
+			'%s does not hard-code the progress file path',
 			(preset) => {
 				const content = getPreset(preset);
-				// Check for @ file reference pattern (e.g., @.taskgraph/ or @./)
-				// Note: default preset uses context header injection instead
-				expect(content).toMatch(/@\.taskgraph\/|@\.\//);
+				// The context header attaches the configured --progress-file
+				expect(content).not.toMatch(/progress\.txt/);
 			}
 		);
 
@@ -291,8 +290,7 @@ describe('Preset Content Consistency', () => {
 
 	it.each(PRESET_NAMES)('%s has progress file reference', (preset) => {
 		const content = getPreset(preset);
-		// All presets should reference the progress file
-		expect(content).toMatch(/loop-progress|progress/i);
+		expect(content).toMatch(/progress file/i);
 	});
 
 	it('specialized presets have markdown headers', () => {

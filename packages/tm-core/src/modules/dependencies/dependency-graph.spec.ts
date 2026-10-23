@@ -3,6 +3,7 @@ import type { Subtask, Task } from '../../common/types/index.js';
 import { createSubtask } from '../../testing/task-fixtures.js';
 import {
 	blockedCount,
+	blockedWithinTask,
 	bottlenecks,
 	buildDependencyGraph,
 	criticalPath,
@@ -121,13 +122,14 @@ describe('blockedCount', () => {
 		expect(counts.has('99')).toBe(false);
 	});
 
-	it('counts subtasks, including ones other tasks depend on by dotted ID', () => {
+	it('follows subtasks, including ones other tasks depend on by dotted ID', () => {
 		const counts = blockedCount([
 			task('1', [], 'pending', [sub(1), sub(2, [1])]),
 			task('2', ['1.1'])
 		]);
 
-		expect(counts.get('1.1')).toBe(2);
+		// 1.2 is part of 1.1's own task, so only task 2 counts
+		expect(counts.get('1.1')).toBe(1);
 	});
 });
 
@@ -209,10 +211,152 @@ describe('criticalPath', () => {
 	it('follows subtask dependencies', () => {
 		const path = criticalPath([
 			task('1', [], 'pending', [sub(1), sub(2, [1])]),
-			task('2', ['1.2'])
+			task('2', ['1.2']),
+			task('3', ['2'])
 		]);
 
-		expect(path).toEqual(['1.1', '1.2', '2']);
+		expect(path).toEqual(['1.1', '1.2', '2', '3']);
+	});
+});
+
+describe('parents and subtasks', () => {
+	it("passes a parent's dependencies down to its subtasks as inherited", () => {
+		const { nodes } = buildDependencyGraph([
+			task('1'),
+			task('2', ['1', '2.2'], 'pending', [sub(1), sub(2, ['1']), sub(3, [1])])
+		]);
+
+		expect(nodes.get('2.1')?.parent).toBe('2');
+		expect(nodes.get('2')?.subtasks).toEqual(['2.1', '2.2', '2.3']);
+		// The parent's dependency on its own subtask is not passed down
+		expect(nodes.get('2.1')?.inherited).toEqual(['1']);
+		// Already listed on the subtask itself
+		expect(nodes.get('2.2')?.inherited).toEqual([]);
+		expect(nodes.get('2.3')?.inherited).toEqual(['1']);
+		expect(nodes.get('2')?.inherited).toEqual([]);
+	});
+
+	it('runs the critical path through a parent and its subtasks', () => {
+		// Before: 2.1 → 2.2 → 3 → 4, as if 2.1 could start before task 1
+		const path = criticalPath([
+			task('1'),
+			task('2', ['1'], 'pending', [sub(1), sub(2, [1])]),
+			task('3', ['2.2']),
+			task('4', ['3'])
+		]);
+
+		expect(path).toEqual(['1', '2.1', '2.2', '3', '4']);
+	});
+
+	it('orders a parent after its open subtasks', () => {
+		const path = criticalPath([
+			task('1', [], 'pending', [sub(1), sub(2, [1])]),
+			task('2', ['1'])
+		]);
+
+		expect(path).toEqual(['1.1', '1.2', '1', '2']);
+	});
+
+	it('skips finished subtasks when ordering the parent', () => {
+		const path = criticalPath([
+			task('1', [], 'in-progress', [sub(1, [], 'done'), sub(2, [1], 'done')]),
+			task('2', ['1'])
+		]);
+
+		expect(path).toEqual(['1', '2']);
+	});
+
+	it('does not loop when a subtask lists its own parent', () => {
+		const path = criticalPath([
+			task('1', [], 'pending', [sub(1, ['1'])]),
+			task('2', ['1'])
+		]);
+
+		expect(path).toEqual(['1', '1.1']);
+	});
+
+	it("finds a loop that runs through a parent's dependency", () => {
+		// 2.1 waits on 4 through task 2, and 4 waits on 2.1
+		const tasks = [task('2', ['4'], 'pending', [sub(1)]), task('4', ['2.1'])];
+
+		expect(findCycles(tasks)).toEqual([['2.1', '4']]);
+		expect(criticalPath(tasks)).toEqual([]);
+	});
+
+	it('counts subtasks that wait on a task through their parent', () => {
+		// Before: 1 blocked only task 2, though 3 waits on 2.2, which waits on 1
+		const counts = blockedCount([
+			task('1'),
+			task('2', ['1'], 'pending', [sub(1), sub(2)]),
+			task('3', ['2.2'])
+		]);
+
+		// Task 2 (with its subtasks) and task 3: two units of work
+		expect(counts.get('1')).toBe(2);
+		expect(counts.get('2')).toBe(0);
+	});
+
+	it('counts a parent and its subtasks as one unit, however finely expanded', () => {
+		const tenSubtasks = Array.from({ length: 10 }, (_, i) => sub(i + 1));
+		const expanded = blockedCount([
+			task('1'),
+			task('2', ['1'], 'pending', tenSubtasks),
+			task('3', ['1'])
+		]);
+		const unexpanded = blockedCount([
+			task('1'),
+			task('2', ['1']),
+			task('3', ['1'])
+		]);
+
+		expect(expanded.get('1')).toBe(2);
+		expect(unexpanded.get('1')).toBe(2);
+	});
+
+	it('counts a parent once when only some of its subtasks wait', () => {
+		const counts = blockedCount([
+			task('1'),
+			task('2', [], 'pending', [sub(1, ['1']), sub(2, ['1']), sub(3, [2])])
+		]);
+
+		expect(counts.get('1')).toBe(1);
+	});
+
+	it("does not count a subtask's own parent or siblings", () => {
+		const counts = blockedCount([
+			task('1', [], 'pending', [sub(1), sub(2, [1]), sub(3, [2])]),
+			task('2', ['1.3'])
+		]);
+
+		expect(counts.get('1.1')).toBe(1);
+		expect(counts.get('1.3')).toBe(1);
+		expect(
+			blockedCount([task('1', [], 'pending', [sub(1), sub(2, [1])])]).get('1.1')
+		).toBe(0);
+	});
+});
+
+describe('blockedWithinTask', () => {
+	it('counts the siblings and parent waiting on a subtask, and nothing else', () => {
+		const counts = blockedWithinTask([
+			task('1', ['1.3'], 'pending', [sub(1), sub(2, [1]), sub(3, [2]), sub(4)]),
+			task('2', ['1.1'])
+		]);
+
+		// 1.2, 1.3 and task 1, which lists 1.3; task 2 is another task
+		expect(counts.get('1.1')).toBe(3);
+		expect(counts.get('1.3')).toBe(1);
+		expect(counts.get('1.4')).toBe(0);
+		expect(counts.has('1')).toBe(false);
+	});
+
+	it('does not walk through finished work', () => {
+		const counts = blockedWithinTask([
+			task('1', [], 'pending', [sub(1), sub(2, [1], 'done'), sub(3, [2])])
+		]);
+
+		expect(counts.get('1.1')).toBe(0);
+		expect(counts.has('1.2')).toBe(false);
 	});
 });
 
@@ -291,10 +435,11 @@ describe('ties and cycles with finished tasks', () => {
 	it('resolves a bare number dependency on a subtask as a sibling', () => {
 		const path = criticalPath([
 			task('1', [], 'pending', [sub(1), sub(2, [1])]),
-			task('2', ['1.2'])
+			task('2', ['1.2']),
+			task('3', ['2'])
 		]);
 
-		expect(path).toEqual(['1.1', '1.2', '2']);
+		expect(path).toEqual(['1.1', '1.2', '2', '3']);
 	});
 
 	it('resolves a string dependency without a dot on a subtask as a task', () => {
@@ -303,7 +448,8 @@ describe('ties and cycles with finished tasks', () => {
 			task('3')
 		]);
 
-		expect(path).toEqual(['3', '1.2']);
+		// Task 1 finishes after its subtask, so the chain ends there
+		expect(path).toEqual(['3', '1.2', '1']);
 	});
 });
 

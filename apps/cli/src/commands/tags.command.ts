@@ -4,14 +4,9 @@
  */
 
 import type { TmCore } from '@tm/core';
-import {
-	createTmCore,
-	getCurrentBranch,
-	getProjectPaths,
-	isGitRepository
-} from '@tm/core';
+import { createTmCore, getProjectPaths } from '@tm/core';
 import { Command } from 'commander';
-import { displayError } from '../utils/index.js';
+import { displayError, fromBranchError } from '../utils/index.js';
 import { printJson } from '../utils/json-output.js';
 
 /**
@@ -36,7 +31,6 @@ import { printJson } from '../utils/json-output.js';
 import {
 	copyTag as legacyCopyTag,
 	createTag as legacyCreateTag,
-	createTagFromBranch as legacyCreateTagFromBranch,
 	deleteTag as legacyDeleteTag,
 	tags as legacyListTags,
 	renameTag as legacyRenameTag,
@@ -70,6 +64,8 @@ interface LegacyUseTagResult {
 interface LegacyCreateTagOptions {
 	description?: string;
 	copyFromTag?: string;
+	/** Stored when description is empty, but not printed as the user's */
+	defaultDescription?: string;
 }
 
 /**
@@ -357,28 +353,18 @@ Examples:
 			} as LegacyCreateTagOptions;
 
 			if (options?.fromBranch) {
-				const nameInstead = 'Name the tag instead: `taskgraph tags add <name>`';
-				if (!(await isGitRepository(projectRoot))) {
-					throw withHint(
-						"--from-branch needs a git repository, and this isn't one",
-						nameInstead
-					);
-				}
-				const branch = await getCurrentBranch(projectRoot);
-				// A detached checkout reports the branch as "HEAD"
-				if (!branch || branch === 'HEAD') {
-					throw withHint(
-						"Couldn't tell which git branch is checked out",
-						nameInstead
-					);
-				}
-				const created = await legacyCreateTagFromBranch(
-					tasksPath,
-					branch,
-					createOptions,
-					{ projectRoot },
-					'text'
-				);
+				const created = await this.tmCore!.tasks.createTagFromBranch(
+					(tagName, { defaultDescription }) =>
+						legacyCreateTag(
+							tasksPath,
+							tagName,
+							{ ...createOptions, defaultDescription },
+							{ projectRoot },
+							'text'
+						)
+				).catch((error: unknown) => {
+					throw fromBranchError(error);
+				});
 				name = created.tagName;
 			} else {
 				// Use legacy function which handles both API and file storage

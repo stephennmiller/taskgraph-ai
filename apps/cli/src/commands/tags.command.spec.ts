@@ -5,21 +5,20 @@
 import { Command } from 'commander';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@tm/core', () => ({
+vi.mock('@tm/core', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@tm/core')>()),
 	createTmCore: vi.fn(),
-	getProjectPaths: vi.fn(),
-	getCurrentBranch: vi.fn(),
-	isGitRepository: vi.fn()
+	getProjectPaths: vi.fn()
 }));
 
-vi.mock('../utils/index.js', () => ({
+vi.mock('../utils/index.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../utils/index.js')>()),
 	displayError: vi.fn()
 }));
 
 vi.mock('../../../../scripts/modules/task-manager/tag-management.js', () => ({
 	copyTag: vi.fn(),
 	createTag: vi.fn(),
-	createTagFromBranch: vi.fn(),
 	deleteTag: vi.fn(),
 	tags: vi.fn(),
 	renameTag: vi.fn(),
@@ -27,16 +26,21 @@ vi.mock('../../../../scripts/modules/task-manager/tag-management.js', () => ({
 }));
 
 import {
+	ERROR_CODES,
+	TaskGraphError,
 	createTmCore,
-	getCurrentBranch,
-	getProjectPaths,
-	isGitRepository
+	getProjectPaths
 } from '@tm/core';
 import * as tagManagement from '../../../../scripts/modules/task-manager/tag-management.js';
+import { displayError } from '../utils/index.js';
 import { TagsCommand } from './tags.command.js';
 
 const tasksPath = '/test/project/.taskgraph/tasks/tasks.json';
 const context = { projectRoot: '/test/project' };
+const defaultDescription = 'Tag created from git branch "feature/login"';
+
+/** tm-core's createTagFromBranch: on feature/login it calls back to write the tag */
+const createTagFromBranch = vi.fn();
 
 function runAdd(...args: string[]): Promise<unknown> {
 	const tags = new TagsCommand().setThrowOnError(true);
@@ -47,19 +51,19 @@ function runAdd(...args: string[]): Promise<unknown> {
 describe('tags add', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(createTmCore).mockResolvedValue({} as any);
+		vi.mocked(createTmCore).mockResolvedValue({
+			tasks: { createTagFromBranch }
+		} as any);
 		vi.mocked(getProjectPaths).mockReturnValue({
 			projectRoot: '/test/project',
 			tasksPath
 		} as any);
-		vi.mocked(isGitRepository).mockResolvedValue(true);
-		vi.mocked(getCurrentBranch).mockResolvedValue('feature/login');
-		vi.mocked(tagManagement.createTagFromBranch).mockResolvedValue({
+		createTagFromBranch.mockImplementation(async (createTag) => ({
 			branchName: 'feature/login',
 			tagName: 'feature-login',
-			mappingUpdated: true,
-			autoSwitched: false
-		});
+			created: await createTag('feature-login', { defaultDescription }),
+			mappingUpdated: true
+		}));
 	});
 
 	it('creates a tag with the given name', async () => {
@@ -72,20 +76,20 @@ describe('tags add', () => {
 			context,
 			'text'
 		);
-		expect(tagManagement.createTagFromBranch).not.toHaveBeenCalled();
+		expect(createTagFromBranch).not.toHaveBeenCalled();
 	});
 
 	it('creates a tag from the current branch when given only --from-branch', async () => {
 		await runAdd('--from-branch');
 
-		expect(tagManagement.createTagFromBranch).toHaveBeenCalledWith(
+		expect(createTagFromBranch).toHaveBeenCalledTimes(1);
+		expect(tagManagement.createTag).toHaveBeenCalledWith(
 			tasksPath,
-			'feature/login',
-			{ description: undefined, copyFromTag: undefined },
+			'feature-login',
+			{ description: undefined, copyFromTag: undefined, defaultDescription },
 			context,
 			'text'
 		);
-		expect(tagManagement.createTag).not.toHaveBeenCalled();
 	});
 
 	it('passes --description and --copy-from through to the branch tag', async () => {
@@ -97,10 +101,10 @@ describe('tags add', () => {
 			'master'
 		);
 
-		expect(tagManagement.createTagFromBranch).toHaveBeenCalledWith(
+		expect(tagManagement.createTag).toHaveBeenCalledWith(
 			tasksPath,
-			'feature/login',
-			{ description: 'Login work', copyFromTag: 'master' },
+			'feature-login',
+			{ description: 'Login work', copyFromTag: 'master', defaultDescription },
 			context,
 			'text'
 		);
@@ -113,7 +117,6 @@ describe('tags add', () => {
 
 		expect(createTmCore).not.toHaveBeenCalled();
 		expect(tagManagement.createTag).not.toHaveBeenCalled();
-		expect(tagManagement.createTagFromBranch).not.toHaveBeenCalled();
 	});
 
 	it('rejects neither a name nor --from-branch', async () => {
@@ -121,27 +124,41 @@ describe('tags add', () => {
 
 		expect(createTmCore).not.toHaveBeenCalled();
 		expect(tagManagement.createTag).not.toHaveBeenCalled();
-		expect(tagManagement.createTagFromBranch).not.toHaveBeenCalled();
-	});
-
-	it('rejects --from-branch outside a git repository', async () => {
-		vi.mocked(isGitRepository).mockResolvedValue(false);
-
-		await expect(runAdd('--from-branch')).rejects.toThrow(/git repository/i);
-
-		expect(tagManagement.createTagFromBranch).not.toHaveBeenCalled();
 	});
 
 	it.each([
-		['a detached HEAD', 'HEAD'],
-		['no branch', null]
-	])('rejects --from-branch on %s', async (_label, branch) => {
-		vi.mocked(getCurrentBranch).mockResolvedValue(branch);
+		[
+			ERROR_CODES.NOT_GIT_REPO,
+			"--from-branch needs a git repository, and this isn't one"
+		],
+		[
+			ERROR_CODES.NO_CURRENT_BRANCH,
+			"Couldn't tell which git branch is checked out"
+		]
+	])('words the %s failure for the CLI, with a hint', async (code, message) => {
+		createTagFromBranch.mockRejectedValue(new TaskGraphError('git', code));
 
-		await expect(runAdd('--from-branch')).rejects.toThrow(
-			/which git branch is checked out/i
+		await expect(runAdd('--from-branch')).rejects.toThrow(message);
+
+		expect(displayError).toHaveBeenCalledWith(
+			expect.objectContaining({
+				message,
+				hint: 'Name the tag instead: `taskgraph tags add <name>`'
+			})
+		);
+		expect(tagManagement.createTag).not.toHaveBeenCalled();
+	});
+
+	it('shows any other failure as it is', async () => {
+		createTagFromBranch.mockRejectedValue(
+			new TaskGraphError(
+				'Branch "main" cannot be converted to a valid tag name',
+				ERROR_CODES.INVALID_BRANCH_FOR_TAG
+			)
 		);
 
-		expect(tagManagement.createTagFromBranch).not.toHaveBeenCalled();
+		await expect(runAdd('--from-branch')).rejects.toThrow(
+			'Branch "main" cannot be converted to a valid tag name'
+		);
 	});
 });
