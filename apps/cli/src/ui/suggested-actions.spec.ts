@@ -19,10 +19,10 @@ describe('getSuggestedActions', () => {
 
 	it('suggests logging progress with note for an in-progress task or subtask', () => {
 		expect(commands(getSuggestedActions('3.2', 'in-progress', false))[0]).toBe(
-			'taskgraph note 3.2 "..."'
+			"taskgraph note 3.2 '...'"
 		);
 		expect(commands(getSuggestedActions(3, 'in-progress', true))[0]).toBe(
-			'taskgraph note 3 "..."'
+			"taskgraph note 3 '...'"
 		);
 	});
 

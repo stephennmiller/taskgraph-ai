@@ -20,7 +20,7 @@ export function getSuggestedActions(
 	const id = String(taskId);
 	const isSubtask = id.includes('.');
 	const logProgress: SuggestedAction = {
-		command: `taskgraph note ${id} "..."`,
+		command: `taskgraph note ${id} '...'`,
 		description: 'to log progress'
 	};
 	const expand: SuggestedAction[] =

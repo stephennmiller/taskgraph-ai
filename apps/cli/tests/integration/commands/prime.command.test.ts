@@ -124,7 +124,7 @@ describe('prime command', () => {
 			'Task 2 is still in progress with no note from this session.'
 		);
 		expect(before.stdout).toContain(
-			'taskgraph note 2 "<what you did or decided>"'
+			"taskgraph note 2 '<what you did or decided>'"
 		);
 
 		const note = run(['note', '2', 'Wired the sign-in form']);
