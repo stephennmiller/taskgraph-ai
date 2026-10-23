@@ -3,7 +3,12 @@
  * Provides table creation and formatting for tasks
  */
 
-import type { Subtask, Task, TaskPriority } from '@tm/core';
+import {
+	sanitizeForTerminal,
+	type Subtask,
+	type Task,
+	type TaskPriority
+} from '@tm/core';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { isTaskComplete } from '../../utils/task-status.js';
@@ -61,6 +66,7 @@ export function createTaskTable(
 		showTag?: boolean;
 	}
 ): string {
+	tasks = sanitizeForTerminal(tasks);
 	const {
 		showSubtasks = false,
 		showComplexity = false,

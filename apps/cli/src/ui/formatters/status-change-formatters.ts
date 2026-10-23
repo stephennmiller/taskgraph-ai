@@ -7,7 +7,7 @@
  * a box. Several tasks get a count and one aligned line each.
  */
 
-import type { TaskStatus } from '@tm/core';
+import { sanitizeForTerminal, type TaskStatus } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import { getStatusWithColor } from './status-formatters.js';
@@ -30,6 +30,7 @@ const transition = (change: StatusChange) =>
  * @param changes - The tasks that were updated, in order
  */
 export function formatStatusChanges(changes: StatusChange[]): string {
+	changes = sanitizeForTerminal(changes);
 	const check = chalk.green('✓');
 	if (changes.length === 1) {
 		const [change] = changes;

@@ -9,6 +9,7 @@ import {
 	createTmCore,
 	filterBlockingTasks,
 	filterReadyTasks,
+	sanitizeForTerminal,
 	satisfyArchivedDependencies,
 	type InvalidDependency,
 	type OutputFormat,
@@ -445,7 +446,7 @@ export class ListTasksCommand extends Command {
 					`\nWarning: Could not fetch tasks from ${failedTags.length} tag(s):`
 				)
 			);
-			failedTags.forEach(({ name, error }) => {
+			sanitizeForTerminal(failedTags).forEach(({ name, error }) => {
 				console.warn(theme.muted(`  ${name}: ${error}`));
 			});
 		}
@@ -499,13 +500,14 @@ export class ListTasksCommand extends Command {
 			return;
 		}
 
-		const tagContext = tagName ? ` (tag: ${tagName})` : '';
+		const tagContext = tagName ? ` (tag: ${sanitizeForTerminal(tagName)})` : '';
+		const invalid = sanitizeForTerminal(invalidDependencies);
 		console.warn(
 			chalk.yellow(
 				`\nWarning: ${invalidDependencies.length} invalid dependency reference(s) found${tagContext}:`
 			)
 		);
-		invalidDependencies.slice(0, 5).forEach(({ taskId, depId }) => {
+		invalid.slice(0, 5).forEach(({ taskId, depId }) => {
 			console.warn(
 				theme.muted(`  Task ${taskId} depends on non-existent task ${depId}`)
 			);
@@ -537,8 +539,10 @@ export class ListTasksCommand extends Command {
 				this.displayJson(result);
 				break;
 
+			// Compact prints titles itself: strip escape sequences first (the
+			// text formatters do their own; JSON escapes them)
 			case 'compact':
-				this.displayCompact(result, options);
+				this.displayCompact(sanitizeForTerminal(result), options);
 				break;
 
 			case 'text':

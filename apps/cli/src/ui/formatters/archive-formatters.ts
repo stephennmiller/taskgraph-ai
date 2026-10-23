@@ -13,7 +13,7 @@
  *   ✓ Restored task 5  Build the login API
  */
 
-import type { TaskStatus } from '@tm/core';
+import { sanitizeForTerminal, type TaskStatus } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import { getStatusIcon } from './status-formatters.js';
@@ -52,6 +52,7 @@ export function formatArchiveResult(
 	summary: ArchiveSummary,
 	width = 80
 ): string {
+	summary = sanitizeForTerminal(summary);
 	const { tasks, olderThanDays, dryRun } = summary;
 	const finished = finishedPhrase(olderThanDays);
 
@@ -87,6 +88,7 @@ export function formatRestoreResult(
 	task: { id: string; title: string },
 	width = 80
 ): string {
+	task = sanitizeForTerminal(task);
 	const lead = `✓ Restored task ${task.id}  `;
 	return `${chalk.green('✓')} Restored task ${theme.brand(task.id)}  ${fit(task.title, width - lead.length)}`;
 }

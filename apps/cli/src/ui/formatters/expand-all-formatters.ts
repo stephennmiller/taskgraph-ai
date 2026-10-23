@@ -10,6 +10,7 @@
  * columns, so it takes no width.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 
@@ -35,6 +36,7 @@ const plural = (count: number, noun: string) =>
  * @param summary - What expandAllTasks returned
  */
 export function formatExpandAll(summary: ExpandAllSummary): string {
+	summary = sanitizeForTerminal(summary);
 	const {
 		expandedCount,
 		skippedCount,

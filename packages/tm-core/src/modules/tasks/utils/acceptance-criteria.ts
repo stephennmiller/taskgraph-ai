@@ -17,6 +17,7 @@ import type {
 	Subtask,
 	Task
 } from '../../../common/types/index.js';
+import { stripTerminalControls } from '../../../common/utils/terminal-text.js';
 
 /** One numbered line of a task's checklist */
 export interface ChecklistItem {
@@ -80,27 +81,13 @@ export const MAX_GENERATED_CRITERIA = 10;
 /** Longest generated criterion kept, in characters; longer ones are cut */
 export const MAX_GENERATED_CRITERION_LENGTH = 300;
 
-// Terminal escape sequences (CSI, OSC and other ESC-introduced ones)
-const ESCAPE_SEQUENCE =
-	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
-	/\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?|[@-Z\\-_])/g;
-// C0/C1 control characters and the bidirectional overrides that can make
-// text display differently from what it says
-const CONTROL_CHARACTERS =
-	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching them is the point
-	/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
-
 /**
  * One generated criterion made safe to store and print: escape sequences
  * and control characters removed, whitespace collapsed to single spaces,
  * and cut to MAX_GENERATED_CRITERION_LENGTH characters.
  */
 function sanitizeGeneratedCriterion(text: string): string {
-	const clean = text
-		.replace(ESCAPE_SEQUENCE, '')
-		.replace(CONTROL_CHARACTERS, ' ')
-		.replace(/\s+/g, ' ')
-		.trim();
+	const clean = stripTerminalControls(text, { singleLine: true });
 	const chars = Array.from(clean);
 	if (chars.length <= MAX_GENERATED_CRITERION_LENGTH) return clean;
 	return `${chars

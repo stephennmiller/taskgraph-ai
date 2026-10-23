@@ -20,22 +20,24 @@
  */
 
 import path from 'node:path';
-import type { ParallelLoopResult, ParallelTask } from '@tm/core';
+import {
+	type ParallelLoopResult,
+	type ParallelTask,
+	stripTerminalControls
+} from '@tm/core';
 import chalk from 'chalk';
 import { formatDuration } from '../components/parse-prd-progress.component.js';
 import { theme } from '../theme.js';
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-// Escape sequences and other control characters from task text or git
-// errors (and bidi overrides): printed raw, they could move the cursor,
-// rewrite the screen or disguise the text
-const CONTROL =
-	/\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)?|[@-Z\\-_])|[\x00-\x08\x0b-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]/g;
-
-/** Plain one-line text: control characters out, whitespace collapsed */
+/**
+ * Task text or a git error as one plain line: escape sequences and control
+ * characters out (printed raw, they could move the cursor, rewrite the
+ * screen or disguise the text), whitespace collapsed
+ */
 const plain = (text: string) =>
-	text.replace(/\s+/g, ' ').replace(CONTROL, '').replace(/ +/g, ' ').trim();
+	stripTerminalControls(text, { singleLine: true });
 
 /** One line of task text, cut with `…` to fit `width` columns */
 export const fit = (text: string, width: number) => {

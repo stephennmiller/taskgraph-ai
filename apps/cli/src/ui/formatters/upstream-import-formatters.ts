@@ -11,7 +11,11 @@
  * apply to a project that already has tasks.
  */
 
-import { UPSTREAM_DIR, type UpstreamImportResult } from '@tm/core';
+import {
+	UPSTREAM_DIR,
+	type UpstreamImportResult,
+	sanitizeForTerminal
+} from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import type { InitChange } from './init-summary-formatters.js';
@@ -70,6 +74,7 @@ function whatWasSkipped(result: UpstreamImportSummary['result']): string {
  * Format the summary printed at the end of an importing `taskgraph init`.
  */
 export function formatUpstreamImport(summary: UpstreamImportSummary): string {
+	summary = sanitizeForTerminal(summary);
 	const { result, changes } = summary;
 	const moved = whatMoved(result);
 	const lines = [

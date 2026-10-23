@@ -83,3 +83,10 @@ export {
 	toVersionedJson,
 	type VersionedJson
 } from './json-output.js';
+
+// Strip escape sequences and control characters before printing file text
+export {
+	sanitizeForTerminal,
+	stripTerminalControls,
+	type StripTerminalControlsOptions
+} from './terminal-text.js';

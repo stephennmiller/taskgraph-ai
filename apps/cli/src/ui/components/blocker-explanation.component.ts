@@ -3,12 +3,13 @@
  * dependencies behind a task, then what to do about each root cause
  */
 
-import type {
-	BlockerExplanation,
-	BlockerKind,
-	BlockerNode,
-	BlockerRootCause,
-	TaskStatus
+import {
+	type BlockerExplanation,
+	type BlockerKind,
+	type BlockerNode,
+	type BlockerRootCause,
+	sanitizeForTerminal,
+	type TaskStatus
 } from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
@@ -47,6 +48,7 @@ export function renderBlockerExplanation(
 	explanation: BlockerExplanation,
 	options: RenderBlockerExplanationOptions = {}
 ): string[] {
+	explanation = sanitizeForTerminal(explanation);
 	const width = options.width ?? 100;
 	const lines: string[] = [];
 

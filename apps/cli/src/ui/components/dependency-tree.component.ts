@@ -20,7 +20,12 @@
  * or inferred comes from tm-core; this only looks them up and draws them.
  */
 
-import type { DependencyTree, DependencyTreeNode, TaskStatus } from '@tm/core';
+import {
+	type DependencyTree,
+	type DependencyTreeNode,
+	sanitizeForTerminal,
+	type TaskStatus
+} from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
 import { formatWaveSummary } from '../formatters/wave-formatters.js';
@@ -72,6 +77,7 @@ export function renderDependencyTree(
 	tree: DependencyTree,
 	options: RenderDependencyTreeOptions = {}
 ): string[] {
+	tree = sanitizeForTerminal(tree);
 	const width = options.width ?? 100;
 	const next = options.nextId ? String(options.nextId) : null;
 	const nextTask = next?.split('.')[0];

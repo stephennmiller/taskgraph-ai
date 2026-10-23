@@ -12,6 +12,7 @@ import {
 	readArchivedIdsSync,
 	reconcileDependencySources,
 	setGeneratedCriteria,
+	stripTerminalControls,
 	withPrdSnapshot
 } from '@tm/core';
 import chalk from 'chalk';
@@ -474,7 +475,7 @@ export async function reportTaskProgress({
 			await reportProgress({
 				progress: currentCount,
 				...(hasTotal && { total: totalTasks }),
-				message: `${priorityIndicator} Task ${position} - ${task.title}${tokens}`
+				message: `${priorityIndicator} Task ${position} - ${stripTerminalControls(String(task.title ?? ''), { singleLine: true })}${tokens}`
 			});
 		} catch (error) {
 			// Ignore progress reporting errors

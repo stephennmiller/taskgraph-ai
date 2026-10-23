@@ -10,6 +10,7 @@
  * new subtasks was a debug log.
  */
 
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -32,6 +33,7 @@ export function formatAddedSubtasks(
 	subtasks: SubtaskSummaryItem[],
 	width = terminalWidth()
 ): string {
+	subtasks = sanitizeForTerminal(subtasks);
 	const count = subtasks.length;
 	const noun = count === 1 ? 'subtask' : 'subtasks';
 	const lines = [

@@ -2,6 +2,12 @@ import type { BlockerExplanation, BlockerNode } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import { renderBlockerExplanation } from './blocker-explanation.component.js';
 
+import {
+	HOSTILE,
+	sgrFree,
+	UNSAFE
+} from '../../../tests/helpers/hostile-text.js';
+
 const plain = (lines: string[]) =>
 	lines.map((l) => l.replace(/\x1b\[[0-9;]*m/g, ''));
 
@@ -216,5 +222,21 @@ describe('renderBlockerExplanation', () => {
 		expect(lines.at(-1)).toBe(
 			'  1, 2, 3 depend on each other. Break the loop with: taskgraph remove-dependency --id=2 --depends-on=1 and taskgraph remove-dependency --id=3 --depends-on=1'
 		);
+	});
+});
+
+describe('renderBlockerExplanation with escape sequences in titles', () => {
+	it('prints the titles without them', () => {
+		const out = renderBlockerExplanation(
+			explanation([node('5', [], { title: HOSTILE, kind: 'ready' })], {
+				title: HOSTILE,
+				rootCauses: [
+					{ id: '5', title: HOSTILE, status: 'pending', kind: 'ready' }
+				]
+			})
+		).map(sgrFree);
+
+		expect(out[0]).toBe('○ 7  Fix login');
+		expect(out.join('\n')).not.toMatch(UNSAFE);
 	});
 });

@@ -96,6 +96,7 @@ import {
 	findProjectRoot,
 	isTaskGraphProject,
 	resolveProjectRoot,
+	stripTerminalControls,
 	writeClarifications
 } from '@tm/core';
 
@@ -1798,7 +1799,7 @@ function registerCommands(programInstance) {
 								`Subtask ${parentId}.${subtask.id} Added Successfully`
 							) +
 								'\n\n' +
-								theme.text(`Title: ${subtask.title}`) +
+								theme.text(`Title: ${stripTerminalControls(subtask.title)}`) +
 								'\n' +
 								theme.text(`Status: ${getStatusWithColor(subtask.status)}`) +
 								'\n' +
@@ -1942,7 +1943,7 @@ function registerCommands(programInstance) {
 									`Subtask ${subtaskId} Converted to Task #${result.id}`
 								) +
 									'\n\n' +
-									theme.text(`Title: ${result.title}`) +
+									theme.text(`Title: ${stripTerminalControls(result.title)}`) +
 									'\n' +
 									theme.text(`Status: ${getStatusWithColor(result.status)}`) +
 									'\n' +
