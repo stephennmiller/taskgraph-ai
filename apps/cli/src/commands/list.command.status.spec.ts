@@ -32,6 +32,7 @@ vi.mock('../utils/ui.js', () => ({
 	displayWarning: vi.fn()
 }));
 
+import { displayError } from '../utils/error-handler.js';
 import { ListTasksCommand } from './list.command.js';
 
 describe('ListTasksCommand warnings and escaping', () => {
@@ -141,6 +142,63 @@ describe('ListTasksCommand warnings and escaping', () => {
 			expect(output).toContain('Fix login');
 			expect(output).not.toContain('pwned');
 			expect(output).not.toContain('\u0007');
+		});
+	});
+	describe('tags in warnings and errors (#366)', () => {
+		const warned = (spy: any) => spy.mock.calls.flat().join('\n');
+
+		it('names the tag given with --tag in the fix-dependencies hint', async () => {
+			const consoleWarnSpy = vi
+				.spyOn(console, 'warn')
+				.mockImplementation(() => {});
+			const command = new ListTasksCommand();
+			(command as any).tmCore = {
+				...mockTmCore,
+				tasks: {
+					...mockTmCore.tasks,
+					list: vi.fn().mockResolvedValue({
+						tasks: [
+							{ id: '1', title: 'A', status: 'pending', dependencies: ['9'] }
+						],
+						total: 1,
+						filtered: 1
+					})
+				}
+			};
+
+			await (command as any).executeCommand({ tag: 'feature', json: true });
+
+			expect(warned(consoleWarnSpy)).toContain(
+				'taskgraph fix-dependencies --tag feature'
+			);
+			consoleWarnSpy.mockRestore();
+		});
+
+		it('strips escape codes from the error when every tag fails', async () => {
+			const consoleWarnSpy = vi
+				.spyOn(console, 'warn')
+				.mockImplementation(() => {});
+			const command = new ListTasksCommand();
+			(command as any).tmCore = {
+				...mockTmCore,
+				tasks: {
+					...mockTmCore.tasks,
+					list: vi
+						.fn()
+						.mockRejectedValue(new Error('bad\u001b]0;pwned\u0007\nfile')),
+					getTagsWithStats: vi
+						.fn()
+						.mockResolvedValue({ tags: [{ name: 'x', taskCount: 1 }] })
+				}
+			};
+
+			await (command as any).executeCommand({ allTags: true, json: true });
+
+			const message = vi.mocked(displayError).mock.calls[0][0].message;
+			expect(message).toBe(
+				'Failed to fetch tasks from any tag. First error: bad file'
+			);
+			consoleWarnSpy.mockRestore();
 		});
 	});
 });

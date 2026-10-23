@@ -380,6 +380,20 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 		]);
 	});
 
+	it('puts <tag> in the command for a tag add-tag would refuse', () => {
+		const output = lines(
+			formatInvalidDependencyWarning(
+				[{ taskId: '3', depId: '9' }],
+				'a;rm -rf ~'
+			)
+		);
+
+		expect(output[1]).toContain('(tag: a;rm -rf ~)');
+		expect(output.at(-1)).toBe(
+			'Run taskgraph fix-dependencies --tag <tag> to remove them'
+		);
+	});
+
 	it('names five and counts the rest', () => {
 		const invalid = Array.from({ length: 7 }, (_, i) => ({
 			taskId: String(i + 1),
@@ -407,7 +421,7 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 			'',
 			'Warning: 1 invalid dependency reference(s) found (tag: x y):',
 			'  Task 3 depends on non-existent task 9',
-			'Run taskgraph fix-dependencies --tag x y to remove them'
+			'Run taskgraph fix-dependencies --tag <tag> to remove them'
 		]);
 	});
 });

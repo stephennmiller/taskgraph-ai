@@ -318,7 +318,7 @@ export class ListTasksCommand extends Command {
 			listed,
 			archivedIds
 		);
-		this.displayInvalidDependencyWarnings(invalidDependencies);
+		this.displayInvalidDependencyWarnings(invalidDependencies, options.tag);
 		const enrichedTasks = listed.map((task) => ({
 			...task,
 			blocks: blocksMap.get(String(task.id)) || []
@@ -437,7 +437,7 @@ export class ListTasksCommand extends Command {
 			tagsResult.tags.length > 0
 		) {
 			throw new Error(
-				`Failed to fetch tasks from any tag. First error: ${failedTags[0].error}`
+				`Failed to fetch tasks from any tag. First error: ${oneLine(failedTags[0].error)}`
 			);
 		}
 
@@ -462,7 +462,7 @@ export class ListTasksCommand extends Command {
 	/**
 	 * Display warnings for invalid dependency references
 	 * @param invalidDependencies - Array of invalid dependency references from buildBlocksMap
-	 * @param tagName - Optional tag name for context in multi-tag mode
+	 * @param tagName - The tag given with --tag, or each tag under --all-tags
 	 */
 	private displayInvalidDependencyWarnings(
 		invalidDependencies: InvalidDependency[],

@@ -415,6 +415,9 @@ export function formatPlainTaskList(
 /** How many invalid dependencies the warning names before `...and N more` */
 const INVALID_DEPENDENCIES_SHOWN = 5;
 
+/** The tag names add-tag accepts, safe to put in a shell command */
+const SAFE_TAG_NAME = /^[a-zA-Z0-9_-]+$/;
+
 /**
  * The warning `list` prints on stderr for dependencies on tasks that don't
  * exist. The IDs and tag come from the task file, so each goes through
@@ -425,7 +428,8 @@ const INVALID_DEPENDENCIES_SHOWN = 5;
  *   Run taskgraph fix-dependencies to remove them
  *
  * @param invalidDependencies - From `buildBlocksMap`; must not be empty
- * @param tagName - The tag, named when listing every tag
+ * @param tagName - The tag, when `list` was given one or every tag. The
+ *   command names it only when add-tag would accept it, `<tag>` otherwise
  */
 export function formatInvalidDependencyWarning(
 	invalidDependencies: InvalidDependency[],
@@ -433,7 +437,10 @@ export function formatInvalidDependencyWarning(
 ): string {
 	const tag = tagName === undefined ? undefined : oneLine(tagName);
 	const tagContext = tag === undefined ? '' : ` (tag: ${tag})`;
-	const fix = `taskgraph fix-dependencies${tag === undefined ? '' : ` --tag ${tag}`}`;
+	const tagFlag =
+		tagName === undefined
+			? ''
+			: ` --tag ${SAFE_TAG_NAME.test(tagName) ? tagName : '<tag>'}`;
 	const more = invalidDependencies.length - INVALID_DEPENDENCIES_SHOWN;
 	return [
 		chalk.yellow(
@@ -447,6 +454,8 @@ export function formatInvalidDependencyWarning(
 				)
 			),
 		...(more > 0 ? [theme.muted(`  ...and ${more} more`)] : []),
-		`Run ${fix} to remove them`
+		theme.muted('Run ') +
+			theme.brand(`taskgraph fix-dependencies${tagFlag}`) +
+			theme.muted(' to remove them')
 	].join('\n');
 }
