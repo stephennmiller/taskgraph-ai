@@ -156,32 +156,6 @@ vi.doMock('ora', () => ({
 	}))
 }));
 
-vi.doMock('chalk', () => ({
-	default: {
-		red: vi.fn((text) => text),
-		green: vi.fn((text) => text),
-		blue: vi.fn((text) => text),
-		yellow: vi.fn((text) => text),
-		cyan: vi.fn((text) => text),
-		white: {
-			bold: vi.fn((text) => text)
-		}
-	},
-	red: vi.fn((text) => text),
-	green: vi.fn((text) => text),
-	blue: vi.fn((text) => text),
-	yellow: vi.fn((text) => text),
-	cyan: vi.fn((text) => text),
-	white: {
-		bold: vi.fn((text) => text)
-	}
-}));
-
-// Mock boxen
-vi.doMock('boxen', () => ({
-	default: vi.fn((content) => content)
-}));
-
 // Mock constants
 vi.doMock('../../src/constants/task-priority.js', () => ({
 	DEFAULT_TASK_PRIORITY: 'medium',

@@ -301,18 +301,8 @@ function registerCommands(programInstance) {
 			try {
 				if (!(await confirmOverwriteIfNeeded())) return;
 
-				// The progress display names the file and task count, so no preamble
-				if (append) {
-					console.log(theme.brand('Appending to existing tasks...'));
-				}
-				if (research) {
-					console.log(
-						theme.brand(
-							'Using Claude Code web research for research-backed task generation'
-						)
-					);
-				}
-
+				// The progress display names the file, task count and research,
+				// and the saved line the new total, so no preamble
 				// Handle case where getTasksPath() returns null
 				const outputPath =
 					taskGraph.getTasksPath() ||
@@ -402,14 +392,6 @@ function registerCommands(programInstance) {
 					)
 				);
 				process.exit(1);
-			}
-
-			if (useResearch) {
-				console.log(
-					theme.brand(
-						'Using Claude Code web research for research-backed task updates'
-					)
-				);
 			}
 
 			// Call core updateTasks, passing context for CLI
@@ -518,12 +500,6 @@ function registerCommands(programInstance) {
 					process.exit(1);
 				}
 
-				if (useResearch) {
-					console.log(
-						theme.brand('Using Claude Code web research for this update')
-					);
-				}
-
 				const shouldAppend = options.append || false;
 
 				const result = await updateTaskById(
@@ -536,13 +512,13 @@ function registerCommands(programInstance) {
 					shouldAppend
 				);
 
-				// If the task wasn't updated (e.g., if it was already marked as done)
+				// updateTaskById returns null only for a finished task
 				if (!result) {
-					console.log(
-						chalk.yellow(
-							'\nTask update was not completed. Review the messages above for details.'
-						)
+					printError(
+						`Task ${taskId} is done, so it can't be updated`,
+						`Run \`taskgraph set-status --id=${taskId} --status=pending\` first`
 					);
+					process.exitCode = 1;
 				}
 			} catch (error) {
 				displayError(error, { hint: aiErrorHint(error) });
@@ -634,12 +610,6 @@ function registerCommands(programInstance) {
 						);
 					}
 					process.exit(1);
-				}
-
-				if (useResearch) {
-					console.log(
-						theme.brand('Using Claude Code web research for this update')
-					);
 				}
 
 				await updateSubtaskById(
@@ -928,8 +898,7 @@ function registerCommands(programInstance) {
 
 			if (options.all) {
 				// --- Handle expand --all ---
-				console.log(theme.brand('Expanding all pending tasks...'));
-				// Updated call to the refactored expandAllTasks
+				// Each task's spinner and result, then one summary line, say it all
 				try {
 					const result = await expandAllTasks(
 						taskGraph.getTasksPath(),
@@ -944,6 +913,9 @@ function registerCommands(programInstance) {
 						} // Pass context with projectRoot and tag
 						// outputFormat defaults to 'text' in expandAllTasks for CLI
 					);
+					// Some tasks failed: the work that succeeded is saved, but the
+					// run did not do everything asked
+					if (result?.failedCount > 0) process.exitCode = 1;
 				} catch (error) {
 					displayError(error, { hint: aiErrorHint(error) });
 				}

@@ -61,7 +61,8 @@ export async function handleNonStreamingService(
 			progress = startParsePrdProgress({
 				prdName: path.basename(config.prdPath || 'PRD'),
 				numTasks,
-				startId
+				startId,
+				research: config.research
 			});
 			const result = await streamTasks(config, prompts, progress);
 			return { ...result, estimatedInputTokens };

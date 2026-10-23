@@ -2,9 +2,8 @@
  * Helper functions for PRD parsing
  */
 
-import { theme } from '@tm/cli/theme';
+import { ui } from '@tm/cli';
 import { assignMetadata, reconcileDependencySources } from '@tm/core';
-import boxen from 'boxen';
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
@@ -459,32 +458,14 @@ export function displayNonStreamingCliOutput({
 	aiServiceResponse
 }) {
 	// The progress line already said how many tasks; say where they went
-	const where = path.relative(process.cwd(), tasksPath) || tasksPath;
-	const total =
-		finalTasks.length > processedTasks.length
-			? ` · ${finalTasks.length} tasks in total`
-			: '';
-	const researched = research ? ' · research-backed' : '';
-	console.log(theme.muted(`Saved to ${where}${total}${researched}`));
-
-	const step = (command, what) =>
-		`${chalk.yellow(command.padEnd(28))}${theme.muted(what)}`;
+	// and what to do next
 	console.log(
-		boxen(
-			theme.text.bold('Next steps') +
-				'\n\n' +
-				[
-					step('taskgraph next', 'the task to start with'),
-					step('taskgraph graph', 'how the tasks depend on each other'),
-					step('taskgraph expand --id=<id>', 'split a task into subtasks')
-				].join('\n'),
-			{
-				padding: 1,
-				borderColor: 'cyan',
-				borderStyle: 'round',
-				margin: { top: 1 }
-			}
-		)
+		ui.formatParsePrdSaved({
+			tasksPath: path.relative(process.cwd(), tasksPath) || tasksPath,
+			added: processedTasks.length,
+			total: finalTasks.length,
+			research
+		})
 	);
 
 	if (aiServiceResponse?.telemetryData) {
