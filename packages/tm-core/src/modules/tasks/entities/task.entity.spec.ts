@@ -28,6 +28,35 @@ function createMinimalTask(overrides: Partial<Task> = {}): Task {
 }
 
 describe('TaskEntity', () => {
+	describe('description', () => {
+		it.each([
+			['empty', ''],
+			['blank', '   '],
+			['missing', undefined]
+		])('takes the title when the description is %s', (_, description) => {
+			const task = createMinimalTask({
+				title: 'Add health check',
+				description: description as string
+			});
+
+			const entity = new TaskEntity(task);
+
+			expect(entity.description).toBe('Add health check');
+		});
+
+		it('keeps a description that has text', () => {
+			const entity = new TaskEntity(createMinimalTask());
+
+			expect(entity.description).toBe('Test description');
+		});
+
+		it('still rejects a task with no title', () => {
+			const task = createMinimalTask({ title: '', description: '' });
+
+			expect(() => new TaskEntity(task)).toThrow('Task title is required');
+		});
+	});
+
 	describe('metadata property', () => {
 		it('should preserve metadata through constructor', () => {
 			const metadata = { uuid: '123', custom: 'value' };

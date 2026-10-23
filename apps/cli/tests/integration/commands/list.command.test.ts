@@ -471,42 +471,6 @@ describe('list command', () => {
 	});
 
 	describe('error handling - validation errors should surface to CLI', () => {
-		it('should display validation error when task has missing description', () => {
-			// Create intentionally invalid task data bypassing fixtures
-			const testData = {
-				master: {
-					tasks: [
-						{
-							id: 1,
-							title: 'Invalid Task',
-							description: '', // ❌ Invalid - empty description
-							status: 'pending',
-							priority: 'high',
-							dependencies: [],
-							details: '',
-							testStrategy: '',
-							subtasks: []
-						}
-					],
-					metadata: {
-						version: '1.0.0',
-						lastModified: new Date().toISOString(),
-						taskCount: 1,
-						completedCount: 0
-					}
-				}
-			};
-			writeTasks(testData);
-
-			const { output, exitCode } = runList();
-
-			expect(exitCode).toBe(1);
-			expect(output.toLowerCase()).toContain('description');
-			expect(output.toLowerCase()).toContain('required');
-			// Should NOT contain the generic wrapped error message
-			expect(output).not.toContain('Failed to get task list');
-		});
-
 		it('should display validation error when task has missing title', () => {
 			const testData = {
 				master: {
@@ -541,39 +505,6 @@ describe('list command', () => {
 			expect(output).not.toContain('Failed to get task list');
 		});
 
-		it('should display validation error when task has only whitespace in description', () => {
-			const testData = {
-				master: {
-					tasks: [
-						{
-							id: 1,
-							title: 'Task with whitespace description',
-							description: '   ', // ❌ Invalid - only whitespace
-							status: 'pending',
-							priority: 'high',
-							dependencies: [],
-							details: '',
-							testStrategy: '',
-							subtasks: []
-						}
-					],
-					metadata: {
-						version: '1.0.0',
-						lastModified: new Date().toISOString(),
-						taskCount: 1,
-						completedCount: 0
-					}
-				}
-			};
-			writeTasks(testData);
-
-			const { output, exitCode } = runList();
-
-			expect(exitCode).toBe(1);
-			expect(output.toLowerCase()).toContain('description');
-			expect(output.toLowerCase()).toContain('required');
-		});
-
 		it('should display validation error for first invalid task when multiple tasks exist', () => {
 			const testData = {
 				master: {
@@ -591,8 +522,8 @@ describe('list command', () => {
 						},
 						{
 							id: 2,
-							title: 'Invalid Task',
-							description: '', // ❌ Invalid - this should trigger error
+							title: '', // ❌ Invalid - this should trigger error
+							description: 'A task without a title',
 							status: 'pending',
 							priority: 'high',
 							dependencies: [],
@@ -625,7 +556,7 @@ describe('list command', () => {
 			const { output, exitCode } = runList();
 
 			expect(exitCode).toBe(1);
-			expect(output.toLowerCase()).toContain('description');
+			expect(output.toLowerCase()).toContain('title');
 			expect(output.toLowerCase()).toContain('required');
 		});
 
