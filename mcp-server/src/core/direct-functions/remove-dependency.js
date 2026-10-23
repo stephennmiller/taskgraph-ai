@@ -72,9 +72,7 @@ export async function removeDependencyDirect(args, log) {
 				? dependsOn
 				: parseInt(dependsOn, 10);
 
-		log.info(
-			`Removing dependency: task ${taskId} no longer depends on ${dependencyId}`
-		);
+		log.info(`Removing dependency ${dependencyId} from task ${taskId}`);
 
 		// Enable silent mode to prevent console logs from interfering with JSON response
 		enableSilentMode();

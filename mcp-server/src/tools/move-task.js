@@ -215,7 +215,8 @@ export function registerMoveTaskTool(server) {
 							),
 							log,
 							errorPrefix: 'Error moving task',
-							projectRoot: args.projectRoot
+							projectRoot: args.projectRoot,
+							tag: resolvedTag
 						});
 					}
 				}

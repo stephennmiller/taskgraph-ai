@@ -101,6 +101,16 @@ describe('replies name the tag the tool worked in (#292)', () => {
 		expect(readTag('master')[1].subtasks).toHaveLength(1);
 	}, 30000);
 
+	it('an error reply names the tag it looked in', () => {
+		expect(() =>
+			callMCPTool('get_task', {
+				id: '99',
+				tag: 'other',
+				projectRoot: testDir
+			})
+		).toThrow(/Current Tag: other/);
+	}, 30000);
+
 	it('without a tag the reply names the current tag', () => {
 		const out = callMCPTool('remove_dependency', {
 			id: '2',
@@ -111,7 +121,11 @@ describe('replies name the tag the tool worked in (#292)', () => {
 	}, 30000);
 });
 
-/** The `{ ... }` argument of each handleApiResult call after `from` */
+/**
+ * The top-level keys of each `handleApiResult({ ... })` argument after
+ * `from`: nested objects such as `result: { data: { tag } }` are left out, so
+ * a `tag` inside them does not count as the reply's tag
+ */
 function replyArguments(source: string, from: number): string[] {
 	const calls: string[] = [];
 	const call = /handleApiResult\(\{/g;
@@ -119,32 +133,43 @@ function replyArguments(source: string, from: number): string[] {
 	for (let m = call.exec(source); m; m = call.exec(source)) {
 		let depth = 1;
 		let end = call.lastIndex;
+		let topLevel = '';
 		while (depth > 0 && end < source.length) {
 			const c = source[end++];
-			if (c === '{' || c === '(') depth++;
-			else if (c === '}' || c === ')') depth--;
+			if (c === '{' || c === '(' || c === '[') depth++;
+			else if (c === '}' || c === ')' || c === ']') depth--;
+			else if (depth === 1) topLevel += c;
 		}
-		calls.push(source.slice(call.lastIndex, end - 1));
+		calls.push(topLevel);
 	}
 	return calls;
 }
 
-describe('tools that resolve a tag', () => {
-	it('pass it to every reply after resolving it', () => {
-		// Without `tag`, handleApiResult names the current tag, not the one the
-		// tool worked in
+/** Files under `dir` whose replies come after the tag is known */
+function offenders(dir: string, tagKnownAt: RegExp): string[] {
+	return fs
+		.readdirSync(dir, { recursive: true, encoding: 'utf8' })
+		.filter((f) => /\.(js|ts)$/.test(f) && !/\.(spec|test)\./.test(f))
+		.filter((f) => {
+			const source = fs.readFileSync(path.join(dir, f), 'utf8');
+			const known = source.search(tagKnownAt);
+			return (
+				known !== -1 &&
+				replyArguments(source, known).some((a) => !/^\s*tag\b/m.test(a))
+			);
+		});
+}
+
+describe('tools that take a tag', () => {
+	// Without `tag`, handleApiResult names the current tag, not the one the
+	// tool worked in
+	it('legacy tools pass the resolved tag to every reply', () => {
 		const root = path.join(repoRoot, 'mcp-server', 'src', 'tools');
-		const offenders = fs
-			.readdirSync(root)
-			.filter((f) => f.endsWith('.js'))
-			.filter((f) => {
-				const source = fs.readFileSync(path.join(root, f), 'utf8');
-				const resolved = source.indexOf('= resolveTag(');
-				return (
-					resolved !== -1 &&
-					replyArguments(source, resolved).some((a) => !/^\s*tag\b/m.test(a))
-				);
-			});
-		expect(offenders).toEqual([]);
+		expect(offenders(root, /= resolveTag\(/)).toEqual([]);
+	});
+
+	it('@tm/mcp tools pass the tag argument to every reply', () => {
+		const root = path.join(repoRoot, 'apps', 'mcp', 'src', 'tools');
+		expect(offenders(root, /const \{[^}]*\btag\b[^}]*\} = args/)).toEqual([]);
 	});
 });
