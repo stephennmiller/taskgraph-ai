@@ -1,5 +1,5 @@
 ---
-description: "Display the task complexity analysis report."
+description: "TaskGraph: show the task complexity report. Use after analyze-complexity."
 argument-hint: "[arguments]"
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: "Add new tasks with intelligent parsing and context awareness."
+description: "TaskGraph: add a task to the plan. Use when the user asks to track, file or remember new work."
 argument-hint: "[arguments]"
 ---
 

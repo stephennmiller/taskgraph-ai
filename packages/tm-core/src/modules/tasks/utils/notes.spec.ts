@@ -4,7 +4,10 @@ import {
 	MAX_NOTE_BYTES,
 	appendNote,
 	formatNoteBlock,
-	normalizeNoteText
+	hasNoteSince,
+	normalizeNoteText,
+	noteTimes,
+	parseNoteSince
 } from './notes.js';
 
 describe('normalizeNoteText', () => {
@@ -66,6 +69,55 @@ describe('appendNote', () => {
 	it('adds the note after existing details on a new line', () => {
 		expect(appendNote('Use JWT', 'Done', at)).toBe(
 			`Use JWT\n${formatNoteBlock('Done', at)}`
+		);
+	});
+});
+
+describe('noteTimes', () => {
+	it('reads the time of each block, not its closing tag', () => {
+		const details = appendNote(
+			appendNote('Plan', 'first', '2026-10-23T10:00:00.000Z'),
+			'second',
+			'2026-10-23T12:30:00.000Z'
+		);
+
+		expect(noteTimes(details).map((t) => t.toISOString())).toEqual([
+			'2026-10-23T10:00:00.000Z',
+			'2026-10-23T12:30:00.000Z'
+		]);
+	});
+
+	it('skips a block whose time does not parse, and handles no details', () => {
+		expect(noteTimes('<info added on someday>\nx\n</info added on someday>')).toEqual([]);
+		expect(noteTimes(undefined)).toEqual([]);
+		expect(noteTimes('')).toEqual([]);
+	});
+});
+
+describe('hasNoteSince', () => {
+	const details = appendNote('', 'did it', '2026-10-23T12:00:00.500Z');
+
+	it('counts a note added at or after the time', () => {
+		expect(hasNoteSince(details, new Date('2026-10-23T12:00:00Z'))).toBe(true);
+		expect(hasNoteSince(details, new Date('2026-10-23T12:00:00.500Z'))).toBe(true);
+	});
+
+	it('ignores a note added before the time', () => {
+		expect(hasNoteSince(details, new Date('2026-10-23T12:00:01Z'))).toBe(false);
+		expect(hasNoteSince('plain text, no notes', new Date(0))).toBe(false);
+	});
+});
+
+describe('parseNoteSince', () => {
+	it('parses an ISO time', () => {
+		expect(parseNoteSince('2026-10-23T14:02:11Z').toISOString()).toBe(
+			'2026-10-23T14:02:11.000Z'
+		);
+	});
+
+	it.each(['', '  ', 'yesterday'])('rejects %j', (value) => {
+		expect(() => parseNoteSince(value)).toThrow(
+			expect.objectContaining({ code: ERROR_CODES.INVALID_INPUT })
 		);
 	});
 });

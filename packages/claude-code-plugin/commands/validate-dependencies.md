@@ -1,5 +1,5 @@
 ---
-description: "Validate all task dependencies for issues."
+description: "TaskGraph: check task dependencies for missing or circular links."
 ---
 
 Validate all task dependencies for issues.

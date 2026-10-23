@@ -1,5 +1,5 @@
 ---
-description: "Check a task's acceptance criteria against your changes, write a close summary, and mark it done."
+description: "TaskGraph: check a task's criteria against your changes and close it. Use when a TaskGraph task is finished."
 argument-hint: "[task ID]"
 ---
 

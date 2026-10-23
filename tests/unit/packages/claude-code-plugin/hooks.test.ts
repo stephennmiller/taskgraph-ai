@@ -4,6 +4,12 @@
  * project they must print nothing; inside one they hand `taskgraph prime`
  * output to Claude, or say what to install.
  *
+ * SessionStart also records when the session started, in
+ * $TMPDIR/taskgraph-<uid>/session-<session_id> (a 0700 folder the user owns,
+ * so other users on a shared /tmp can't plant or read it); the Stop hook
+ * reads it to remind Claude, once per session, about an in-progress task
+ * with no note since.
+ *
  * Lives here rather than beside the plugin because the plugin package is
  * markdown and JSON only.
  */
@@ -25,6 +31,7 @@ const hooksFile = path.join(
 const config = JSON.parse(fs.readFileSync(hooksFile, 'utf8'));
 
 const sessionStart: string = config.hooks.SessionStart[0].hooks[0].command;
+const stop: string = config.hooks.Stop[0].hooks[0].command;
 
 const tempDirs: string[] = [];
 const tempDir = (prefix: string) => {
@@ -42,6 +49,22 @@ function fakeCli(body: string): string {
 	return bin;
 }
 
+/** Only the system tools the hooks use, so a global taskgraph stays off PATH */
+const systemBin = (() => {
+	const bin = tempDir('tg-hook-sys-');
+	for (const tool of ['date', 'id', 'mkdir']) {
+		const found = ['/usr/bin', '/bin']
+			.map((dir) => path.join(dir, tool))
+			.find((file) => fs.existsSync(file));
+		if (found) fs.symlinkSync(found, path.join(bin, tool));
+	}
+	return bin;
+})();
+
+/** The private folder the hooks keep session markers in, under `tmp` */
+const markerDir = (tmp: string) =>
+	path.join(tmp, `taskgraph-${process.getuid?.() ?? ''}`);
+
 /** A TaskGraph project, i.e. one with the config.json `init` writes */
 function project(prefix: string): string {
 	const dir = tempDir(prefix);
@@ -50,22 +73,46 @@ function project(prefix: string): string {
 	return dir;
 }
 
-function runHook(command: string, projectDir: string, binDir: string) {
-	return spawnSync('/bin/bash', ['-c', command], {
+interface HookRun {
+	/** The JSON Claude Code sends on stdin */
+	input?: string;
+	/** Where the session marker goes */
+	tmp?: string;
+	/** Run with this shell instead of bash */
+	shell?: string;
+}
+
+function runHook(
+	command: string,
+	projectDir: string,
+	binDir: string,
+	options: HookRun = {}
+) {
+	return spawnSync(options.shell ?? '/bin/bash', ['-c', command], {
 		cwd: projectDir,
 		encoding: 'utf8',
-		env: { PATH: binDir, CLAUDE_PROJECT_DIR: projectDir }
+		input: options.input ?? '',
+		env: {
+			PATH: `${binDir}:${systemBin}`,
+			CLAUDE_PROJECT_DIR: projectDir,
+			...(options.tmp ? { TMPDIR: options.tmp } : {})
+		}
 	});
 }
+
+/** Compact JSON, as Claude Code sends it */
+const hookInput = (fields: Record<string, unknown>) =>
+	JSON.stringify({ session_id: 'abc-123', cwd: '/x', ...fields });
 
 afterAll(() => {
 	for (const dir of tempDirs) fs.rmSync(dir, { recursive: true, force: true });
 });
 
 describe('plugin hooks.json', () => {
-	it('registers only a SessionStart hook, for every session source', () => {
-		expect(Object.keys(config.hooks)).toEqual(['SessionStart']);
-		// No matcher: startup, resume, clear and compact all re-prime
+	it('registers a SessionStart hook for every session source, and a Stop hook', () => {
+		expect(Object.keys(config.hooks)).toEqual(['SessionStart', 'Stop']);
+		// No matcher: startup, resume, clear and compact all re-prime. That
+		// covers compaction: a PreCompact hook's output never reaches Claude
 		expect(config.hooks.SessionStart[0].matcher).toBeUndefined();
 	});
 
@@ -161,4 +208,248 @@ describe('plugin hooks.json', () => {
 			'This project tracks work in TaskGraph, but taskgraph prime failed:\n✗ tasks.json is not valid JSON\n'
 		);
 	});
+
+	it('records when the session started, and keeps it across compaction', () => {
+		const dir = project('tg-hook-marker-');
+		const tmp = tempDir('tg-hook-tmp-');
+		const bin = fakeCli('echo primed');
+		const marker = path.join(markerDir(tmp), 'session-abc-123');
+
+		runHook(sessionStart, dir, bin, {
+			input: hookInput({ source: 'startup' }),
+			tmp
+		});
+		const started = fs.readFileSync(marker, 'utf8');
+		fs.writeFileSync(marker, '2026-10-23T09:00:00Z\n');
+		runHook(sessionStart, dir, bin, {
+			input: hookInput({ source: 'compact' }),
+			tmp
+		});
+
+		expect(started).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n$/);
+		expect(fs.statSync(markerDir(tmp)).mode & 0o777).toBe(0o700);
+		expect(fs.readFileSync(marker, 'utf8')).toBe('2026-10-23T09:00:00Z\n');
+	});
+
+	it('does not record a session ID that could leave the temp folder', () => {
+		const dir = project('tg-hook-badsid-');
+		const tmp = tempDir('tg-hook-tmp-');
+		const bin = fakeCli('echo primed');
+
+		const result = runHook(sessionStart, dir, bin, {
+			input: JSON.stringify({ session_id: '../../etc/x', source: 'startup' }),
+			tmp
+		});
+
+		expect(result.stdout).toBe('primed\n');
+		expect(fs.readdirSync(tmp)).toEqual([]);
+	});
+
+	it('does not write through a marker folder that is a symlink', () => {
+		const dir = project('tg-hook-symlink-');
+		const tmp = tempDir('tg-hook-tmp-');
+		const target = tempDir('tg-hook-target-');
+		fs.symlinkSync(target, markerDir(tmp));
+
+		const result = runHook(sessionStart, dir, fakeCli('echo primed'), {
+			input: hookInput({ source: 'startup' }),
+			tmp
+		});
+
+		expect(result.stdout).toBe('primed\n');
+		expect(fs.readdirSync(target)).toEqual([]);
+	});
+});
+
+describe('plugin Stop hook', () => {
+	/** A project whose session started at the given time */
+	function session(started: string, extra = '') {
+		const dir = project('tg-stop-');
+		const tmp = tempDir('tg-stop-tmp-');
+		fs.mkdirSync(markerDir(tmp), { mode: 0o700 });
+		fs.writeFileSync(
+			path.join(markerDir(tmp), 'session-abc-123'),
+			`${started}\n${extra}`
+		);
+		return { dir, tmp };
+	}
+
+	const remindingCli = () =>
+		fakeCli(
+			'echo "args: $*"; echo "Task 3 is still in progress with no note from this session."'
+		);
+
+	it('reminds Claude once, through stderr and exit 2, with the session start time', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+		const bin = remindingCli();
+		const input = hookInput({ stop_hook_active: false });
+
+		const first = runHook(stop, dir, bin, { input, tmp });
+		const second = runHook(stop, dir, bin, { input, tmp });
+
+		expect(first.status).toBe(2);
+		expect(first.stdout).toBe('');
+		expect(first.stderr).toBe(
+			`args: prime --project ${dir} --unnoted-since 2026-10-23T09:00:00Z\nTask 3 is still in progress with no note from this session.\n`
+		);
+		expect(second.status).toBe(0);
+		expect(second.stderr).toBe('');
+	});
+
+	it('stays quiet when every in-progress task has a note this session', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+		const bin = fakeCli('exit 0');
+
+		const result = runHook(stop, dir, bin, { input: hookInput({}), tmp });
+
+		expect(result.status).toBe(0);
+		expect(result.stdout + result.stderr).toBe('');
+	});
+
+	it('never blocks a stop that a stop hook already continued', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+
+		const result = runHook(stop, dir, remindingCli(), {
+			input: hookInput({ stop_hook_active: true }),
+			tmp
+		});
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe('');
+	});
+
+	it('stays quiet without a recorded session start or a usable session ID', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+		const bin = remindingCli();
+		const other = runHook(stop, dir, bin, {
+			input: JSON.stringify({ session_id: 'other-session' }),
+			tmp
+		});
+		const traversal = runHook(stop, dir, bin, {
+			input: JSON.stringify({ session_id: '../session-abc-123' }),
+			tmp
+		});
+		const none = runHook(stop, dir, bin, { input: '', tmp });
+
+		for (const result of [other, traversal, none]) {
+			expect(result.status).toBe(0);
+			expect(result.stdout + result.stderr).toBe('');
+		}
+	});
+
+	it('ignores a marker folder that is a symlink, and never appends through it', () => {
+		const dir = project('tg-stop-symlink-');
+		const tmp = tempDir('tg-stop-tmp-');
+		const target = tempDir('tg-stop-target-');
+		const victim = path.join(target, 'session-abc-123');
+		fs.writeFileSync(victim, '2026-10-23T09:00:00Z\n');
+		fs.symlinkSync(target, markerDir(tmp));
+
+		const result = runHook(stop, dir, remindingCli(), {
+			input: hookInput({}),
+			tmp
+		});
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe('');
+		expect(fs.readFileSync(victim, 'utf8')).toBe('2026-10-23T09:00:00Z\n');
+	});
+
+	// Root can write a read-only file, so this only runs as a normal user
+	it.skipIf(process.getuid?.() === 0)(
+		'does not block when it cannot record that the reminder was shown',
+		() => {
+			const { dir, tmp } = session('2026-10-23T09:00:00Z');
+			fs.chmodSync(path.join(markerDir(tmp), 'session-abc-123'), 0o400);
+
+			const result = runHook(stop, dir, remindingCli(), {
+				input: hookInput({}),
+				tmp
+			});
+
+			expect(result.status).toBe(0);
+			expect(result.stderr).toBe('');
+		}
+	);
+
+	it('ignores a session_id key quoted inside another field', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+		const input = JSON.stringify({
+			last_assistant_message: '"session_id":"abc-123"',
+			session_id: 'zzz'
+		});
+
+		const result = runHook(stop, dir, remindingCli(), { input, tmp });
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).toBe('');
+	});
+
+	it('stays quiet when the CLI is missing, fails or predates --unnoted-since', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+		const old = fakeCli(
+			`echo "error: unknown option '--unnoted-since'" >&2; exit 1`
+		);
+		const empty = tempDir('tg-stop-empty-bin-');
+		const input = hookInput({});
+
+		for (const bin of [old, empty]) {
+			const result = runHook(stop, dir, bin, { input, tmp });
+			expect(result.status).toBe(0);
+			expect(result.stdout + result.stderr).toBe('');
+		}
+	});
+
+	it('prints nothing outside a TaskGraph project', () => {
+		const dir = tempDir('tg-stop-none-');
+
+		const result = runHook(stop, dir, remindingCli(), {
+			input: hookInput({})
+		});
+
+		expect(result.status).toBe(0);
+		expect(result.stdout + result.stderr).toBe('');
+	});
+
+	it('passes task text through as data, never as shell code', () => {
+		const { dir, tmp } = session('2026-10-23T09:00:00Z');
+		const pwned = path.join(tmp, 'pwned');
+		const bin = fakeCli(
+			`printf '%s\\n' 'Task "$(touch ${pwned})" \`touch ${pwned}\`; $HOME'`
+		);
+
+		const result = runHook(stop, dir, bin, { input: hookInput({}), tmp });
+
+		expect(result.status).toBe(2);
+		expect(result.stderr).toContain(`$(touch ${pwned})`);
+		expect(fs.existsSync(pwned)).toBe(false);
+	});
+
+	it.runIf(fs.existsSync('/bin/dash'))(
+		'works under dash, a plain POSIX sh',
+		() => {
+			const { dir, tmp } = session('2026-10-23T09:00:00Z');
+			const bin = remindingCli();
+
+			const start = runHook(
+				sessionStart,
+				project('tg-dash-'),
+				fakeCli('echo primed'),
+				{
+					input: hookInput({ source: 'startup' }),
+					tmp: tempDir('tg-dash-tmp-'),
+					shell: '/bin/dash'
+				}
+			);
+			const result = runHook(stop, dir, bin, {
+				input: hookInput({}),
+				tmp,
+				shell: '/bin/dash'
+			});
+
+			expect(start.stdout).toBe('primed\n');
+			expect(result.status).toBe(2);
+			expect(result.stderr).toContain('Task 3 is still in progress');
+		}
+	);
 });

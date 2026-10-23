@@ -1,5 +1,5 @@
 ---
-description: "Automatically fix dependency issues found during validation."
+description: "TaskGraph: fix invalid or circular task dependencies that validate found."
 ---
 
 Automatically fix dependency issues found during validation.

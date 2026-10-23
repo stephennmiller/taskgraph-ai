@@ -110,7 +110,10 @@ export {
 } from './formatters/expand-all-formatters.js';
 
 // Session context for coding agents (`taskgraph prime`)
-export { formatPrimeContext } from './formatters/prime-formatters.js';
+export {
+	formatPrimeContext,
+	formatUnnotedReminder
+} from './formatters/prime-formatters.js';
 
 // What clear-subtasks removed
 export {

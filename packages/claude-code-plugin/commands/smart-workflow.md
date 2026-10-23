@@ -1,5 +1,5 @@
 ---
-description: "Execute an intelligent workflow based on current project state and recent commands."
+description: "TaskGraph: run the workflow that fits the plan's current state."
 argument-hint: "[arguments]"
 ---
 

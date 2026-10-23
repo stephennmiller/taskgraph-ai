@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import { rankNextTasks, selectNextTask } from './next-task.js';
-import { PRIME_RULES, buildPrimeContext } from './prime-context.js';
+import { appendNote } from './notes.js';
+import {
+	PRIME_RULES,
+	buildPrimeContext,
+	findUnnotedInProgress
+} from './prime-context.js';
 
 describe('buildPrimeContext', () => {
 	it('returns the rules and empty lists for a project with no tasks', () => {
@@ -218,5 +223,85 @@ describe('PRIME_RULES', () => {
 			expect(`  1. ${rule.text}`.length).toBeLessThanOrEqual(80);
 			expect(`     ${rule.command}`.length).toBeLessThanOrEqual(80);
 		}
+	});
+});
+
+describe('findUnnotedInProgress', () => {
+	const since = new Date('2026-10-23T12:00:00Z');
+	const before = '2026-10-23T11:59:59.000Z';
+	const after = '2026-10-23T12:05:00.000Z';
+	const noted = (at: string) => appendNote('Plan', 'did a thing', at);
+
+	it('lists an in-progress task with no note since the session started', () => {
+		const tasks = [
+			createTask({ id: 1, title: 'Old note', status: 'in-progress', details: noted(before) }),
+			createTask({ id: 2, title: 'Fresh note', status: 'in-progress', details: noted(after) }),
+			createTask({ id: 3, title: 'Never noted', status: 'in-progress' }),
+			createTask({ id: 4, title: 'Pending', details: '' })
+		];
+
+		const unnoted = findUnnotedInProgress(tasks, since);
+
+		expect(unnoted.map((t) => t.id)).toEqual(['1', '3']);
+		expect(unnoted[0]).toEqual({
+			id: '1',
+			title: 'Old note',
+			status: 'in-progress',
+			priority: 'medium'
+		});
+	});
+
+	it('checks the in-progress subtask, not its parent', () => {
+		const tasks = [
+			createTask({
+				id: 3,
+				title: 'Auth',
+				status: 'in-progress',
+				subtasks: [
+					createSubtask({ id: 1, title: 'Hash passwords', status: 'done' }),
+					createSubtask({ id: 2, title: 'Login endpoint', status: 'in-progress' })
+				]
+			})
+		];
+
+		expect(findUnnotedInProgress(tasks, since)).toEqual([
+			{
+				id: '3.2',
+				title: 'Login endpoint',
+				status: 'in-progress',
+				priority: 'medium',
+				parentTitle: 'Auth'
+			}
+		]);
+	});
+
+	it('counts a note on the parent for its subtask, and on a subtask for its parent', () => {
+		const parentNoted = [
+			createTask({
+				id: 3,
+				title: 'Auth',
+				details: noted(after),
+				subtasks: [createSubtask({ id: 2, title: 'Login', status: 'in-progress' })]
+			})
+		];
+		const subtaskNoted = [
+			createTask({
+				id: 5,
+				title: 'Billing',
+				status: 'in-progress',
+				subtasks: [
+					createSubtask({ id: 1, title: 'Checkout', status: 'done', details: noted(after) })
+				]
+			})
+		];
+
+		expect(findUnnotedInProgress(parentNoted, since)).toEqual([]);
+		expect(findUnnotedInProgress(subtaskNoted, since)).toEqual([]);
+	});
+
+	it('returns nothing when no task is in progress', () => {
+		expect(
+			findUnnotedInProgress([createTask({ id: 1, title: 'Todo' })], since)
+		).toEqual([]);
 	});
 });

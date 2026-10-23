@@ -1,5 +1,5 @@
 ---
-description: "Enhanced status command with comprehensive project insights."
+description: "TaskGraph: show where the plan stands: done, in progress, blocked, next. Use when asked for status."
 argument-hint: "[arguments]"
 ---
 

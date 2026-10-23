@@ -9,7 +9,10 @@
 import path from 'node:path';
 import { type TmCore, createTmCore } from '@tm/core';
 import { Command } from 'commander';
-import { formatPrimeContext } from '../ui/formatters/prime-formatters.js';
+import {
+	formatPrimeContext,
+	formatUnnotedReminder
+} from '../ui/formatters/prime-formatters.js';
 import { displayError } from '../utils/error-handler.js';
 import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -18,6 +21,7 @@ export interface PrimeCommandOptions {
 	tag?: string;
 	json?: boolean;
 	project?: string;
+	unnotedSince?: string;
 }
 
 export class PrimeCommand extends Command {
@@ -33,6 +37,10 @@ export class PrimeCommand extends Command {
 				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
+			.option(
+				'--unnoted-since <time>',
+				'Only list in-progress tasks with no note since <time> (ISO)'
+			)
 			.action(async (options: PrimeCommandOptions) => {
 				await this.executeCommand(options);
 			});
@@ -44,6 +52,18 @@ export class PrimeCommand extends Command {
 		let hasError = false;
 		try {
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
+			if (options.unnotedSince !== undefined) {
+				const unnoted = await this.tmCore.tasks.getUnnotedInProgress({
+					since: options.unnotedSince,
+					tag: options.tag
+				});
+				if (options.json) {
+					printJson({ unnoted });
+				} else if (unnoted.length > 0) {
+					console.log(formatUnnotedReminder(unnoted));
+				}
+				return;
+			}
 			const context = await this.tmCore.tasks.getPrimeContext({
 				tag: options.tag
 			});

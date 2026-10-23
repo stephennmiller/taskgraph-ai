@@ -1,5 +1,5 @@
 ---
-description: "TaskGraph Command Reference"
+description: "TaskGraph: every TaskGraph slash command, grouped by purpose."
 argument-hint: "[arguments]"
 ---
 

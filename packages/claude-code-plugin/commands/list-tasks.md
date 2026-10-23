@@ -1,5 +1,5 @@
 ---
-description: "List tasks with intelligent argument parsing."
+description: "TaskGraph: list the project's tasks, filtered by status or tag. Use when asked what tasks there are."
 argument-hint: "[status] [--subtasks]"
 ---
 

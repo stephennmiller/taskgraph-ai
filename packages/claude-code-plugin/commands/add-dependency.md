@@ -1,5 +1,5 @@
 ---
-description: "Add a dependency between tasks."
+description: "TaskGraph: make one task wait on another. Use when a task can't start until another is done."
 argument-hint: "[arguments]"
 ---
 

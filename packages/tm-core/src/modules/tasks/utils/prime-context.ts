@@ -10,6 +10,7 @@ import { isTaskComplete } from '../../../common/constants/index.js';
 import type { Task } from '../../../common/types/index.js';
 import { normalizeAcceptanceCriteria } from './acceptance-criteria.js';
 import { rankNextTasks } from './next-task.js';
+import { hasNoteSince } from './notes.js';
 
 /** One workflow rule: what to do, and the command that does it */
 export interface PrimeRule {
@@ -164,4 +165,44 @@ export function buildPrimeContext(
 		ready,
 		rules: PRIME_RULES
 	};
+}
+
+/**
+ * The in-progress tasks and subtasks (the ones prime lists) with no note
+ * added at or after `since`. The plugin's Stop hook passes the time the
+ * Claude Code session started, to remind the agent to log its work before it
+ * stops.
+ *
+ * A note counts for both a subtask and its parent: a note on task 3 covers
+ * in-progress subtask 3.2, and a note on 3.1 covers in-progress task 3.
+ */
+export function findUnnotedInProgress(tasks: Task[], since: Date): PrimeTask[] {
+	const unnoted: PrimeTask[] = [];
+	for (const task of tasks) {
+		const subtasks = task.subtasks ?? [];
+		const taskNoted = hasNoteSince(task.details, since);
+		const inProgress = subtasks.filter((st) => st.status === 'in-progress');
+		for (const st of inProgress) {
+			if (taskNoted || hasNoteSince(st.details, since)) continue;
+			unnoted.push({
+				id: `${task.id}.${st.id}`,
+				title: st.title,
+				status: st.status,
+				priority: st.priority || task.priority || 'medium',
+				parentTitle: task.title
+			});
+		}
+		if (task.status !== 'in-progress' || inProgress.length > 0) continue;
+		const noted =
+			taskNoted || subtasks.some((st) => hasNoteSince(st.details, since));
+		if (!noted) {
+			unnoted.push({
+				id: String(task.id),
+				title: task.title,
+				status: task.status,
+				priority: task.priority || 'medium'
+			});
+		}
+	}
+	return unnoted;
 }

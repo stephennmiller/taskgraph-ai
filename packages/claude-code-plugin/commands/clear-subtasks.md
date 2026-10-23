@@ -1,5 +1,5 @@
 ---
-description: "Clear all subtasks from one task, or from every task with --all."
+description: "TaskGraph: delete the subtasks of one task, or of every task with --all."
 argument-hint: "[<task ID>|--all]"
 ---
 

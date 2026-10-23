@@ -1,5 +1,5 @@
 ---
-description: "Enhanced auto-implementation with intelligent code generation and testing."
+description: "TaskGraph: implement a task end to end, with tests."
 argument-hint: "[arguments]"
 ---
 

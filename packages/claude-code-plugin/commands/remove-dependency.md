@@ -1,5 +1,5 @@
 ---
-description: "Remove a dependency between tasks."
+description: "TaskGraph: remove a dependency between two tasks."
 argument-hint: "[arguments]"
 ---
 

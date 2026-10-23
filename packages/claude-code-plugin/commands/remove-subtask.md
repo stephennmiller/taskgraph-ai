@@ -1,5 +1,5 @@
 ---
-description: "Remove a subtask from its parent task."
+description: "TaskGraph: remove a subtask, or turn it into its own task."
 argument-hint: "<id> [--convert]"
 ---
 

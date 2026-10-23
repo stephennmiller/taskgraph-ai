@@ -1,5 +1,5 @@
 ---
-description: "Explain why a task is blocked."
+description: "TaskGraph: explain why a task is blocked and what would unblock it."
 argument-hint: "<task-id>"
 ---
 

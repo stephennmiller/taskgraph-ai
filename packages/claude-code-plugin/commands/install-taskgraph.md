@@ -1,5 +1,5 @@
 ---
-description: "Check if TaskGraph is installed and install it if needed."
+description: "TaskGraph: check the taskgraph CLI is installed, and install it if not."
 argument-hint: "[--quick]"
 ---
 

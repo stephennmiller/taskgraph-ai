@@ -1,5 +1,5 @@
 ---
-description: "Execute a pipeline of commands based on a specification."
+description: "TaskGraph: run several TaskGraph commands in sequence from one specification."
 argument-hint: "[arguments]"
 ---
 

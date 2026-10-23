@@ -1,5 +1,5 @@
 ---
-description: "Show help for TaskGraph commands."
+description: "TaskGraph: list the TaskGraph commands and what each does."
 argument-hint: "[arguments]"
 ---
 

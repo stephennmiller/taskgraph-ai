@@ -1,5 +1,5 @@
 ---
-description: "Export tasks to README.md with professional formatting."
+description: "TaskGraph: write the task list into README.md."
 argument-hint: "[arguments]"
 ---
 

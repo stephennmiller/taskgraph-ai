@@ -29,6 +29,7 @@ import {
 import {
 	appendNote,
 	normalizeNoteText,
+	parseNoteSince,
 	type TaskNote
 } from './utils/notes.js';
 import {
@@ -48,7 +49,9 @@ import {
 } from '../dependencies/index.js';
 import {
 	buildPrimeContext,
-	type PrimeContext
+	findUnnotedInProgress,
+	type PrimeContext,
+	type PrimeTask
 } from './utils/prime-context.js';
 import type {
 	TaskListResult,
@@ -305,6 +308,20 @@ export class TasksDomain {
 	 */
 	async getArchivedIds(tag?: string): Promise<Set<string>> {
 		return this.taskService.getArchivedTaskIds(tag);
+	}
+
+	/**
+	 * In-progress tasks and subtasks with no note added at or after `since`
+	 * (an ISO time). Throws INVALID_INPUT when `since` isn't a time.
+	 */
+	async getUnnotedInProgress(options: {
+		since: string;
+		tag?: string;
+	}): Promise<PrimeTask[]> {
+		const since = parseNoteSince(options.since);
+		const tag = options.tag || this.configManager.getActiveTag();
+		const { tasks } = await this.list({ tag });
+		return findUnnotedInProgress(tasks, since);
 	}
 
 	/**
