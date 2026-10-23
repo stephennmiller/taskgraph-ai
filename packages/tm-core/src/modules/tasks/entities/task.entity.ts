@@ -9,6 +9,7 @@ import type {
 	TaskPriority,
 	TaskStatus
 } from '../../../common/types/index.js';
+import { normalizeTaskIds } from '../utils/task-ids.js';
 
 /**
  * Task entity representing a task with business logic
@@ -41,22 +42,18 @@ export class TaskEntity implements Task {
 	constructor(data: Task | (Omit<Task, 'id'> & { id: number | string })) {
 		this.validate(data);
 
-		// Always convert ID to string
-		this.id = String(data.id);
+		// IDs as strings: the task's, its dependencies', and each subtask's
+		// (with parentId, which older files leave out)
+		const ids = normalizeTaskIds(data as Task);
+		this.id = ids.id;
 		this.title = data.title;
 		this.description = data.description;
 		this.status = data.status;
 		this.priority = data.priority;
-		// Ensure dependency IDs are also strings
-		this.dependencies = (data.dependencies || []).map((dep) => String(dep));
+		this.dependencies = ids.dependencies;
 		this.details = data.details;
 		this.testStrategy = data.testStrategy;
-		// Normalize subtask IDs to strings
-		this.subtasks = (data.subtasks || []).map((subtask) => ({
-			...subtask,
-			id: String(subtask.id),
-			parentId: String(subtask.parentId)
-		}));
+		this.subtasks = ids.subtasks;
 
 		// Optional properties
 		this.createdAt = data.createdAt;
