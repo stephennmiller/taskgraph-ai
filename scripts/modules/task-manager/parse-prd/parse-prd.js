@@ -1,4 +1,13 @@
-import { parsePrdSections, prdPathForSource } from '@tm/core';
+import { ui } from '@tm/cli';
+import {
+	buildPrdSnapshot,
+	diffPrdSections,
+	getPrdSnapshot,
+	hasPrdChanges,
+	parsePrdSections,
+	prdDeltaContent,
+	prdPathForSource
+} from '@tm/core';
 import chalk from 'chalk';
 import {
 	STREAMING_ERROR_CODES,
@@ -73,13 +82,71 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			),
 			sections: parsePrdSections(prdContent)
 		};
-		const prompts = await buildPrompts(config, prdContent, nextId, prd);
+		// The section hashes this parse records in the tag, so the next
+		// --append can tell which sections are new, changed or removed. A parse
+		// without --append replaces the tasks, so it drops other PRDs' hashes
+		const prdSnapshot =
+			prd.sections.length > 0 || !config.append
+				? {
+						path: prd.path,
+						snapshot: buildPrdSnapshot(prd.sections),
+						replace: !config.append
+					}
+				: undefined;
+
+		// --append sends the AI only the sections added since the last parse.
+		// Changed and removed ones are reported; their tasks are left alone
+		const prdDelta =
+			config.append && prd.sections.length > 0
+				? diffPrdSections(
+						prd.sections,
+						prd.path,
+						existingTasks,
+						getPrdSnapshot(loaded.tagMetadata, prd.path)
+					)
+				: null;
+		const deltaOnly = Boolean(prdDelta?.known);
+		if (deltaOnly && config.outputFormat === 'text' && !config.isMCP) {
+			console.log(ui.formatPrdDelta(prdDelta));
+		}
+		if (deltaOnly && prdDelta.added.length === 0) {
+			// Nothing new: no AI call and no new tasks. Record the PRD as it is
+			// now, so a change or removal is reported once
+			if (hasPrdChanges(prdDelta)) {
+				saveTasksToFile(
+					config.tasksPath,
+					existingTasks,
+					config.targetTag,
+					logger,
+					prdSnapshot
+				);
+			}
+			return {
+				success: true,
+				tasksPath: config.tasksPath,
+				addedTasks: 0,
+				prdDelta,
+				telemetryData: null,
+				tagInfo: null
+			};
+		}
+
+		// A count meant for the whole PRD doesn't fit a few new sections, so
+		// for those the model decides how many tasks they need
+		const numTasks = deltaOnly ? 0 : config.numTasks;
+		const prompts = await buildPrompts(
+			config,
+			deltaOnly ? prdDeltaContent(prdDelta, prdContent) : prdContent,
+			nextId,
+			deltaOnly ? { ...prd, sections: prdDelta.added } : prd,
+			{ numTasks, newSectionsOnly: deltaOnly }
+		);
 
 		// Call the appropriate service handler
 		const serviceResult = await serviceHandler(
 			config,
 			prompts,
-			config.numTasks,
+			numTasks,
 			nextId
 		);
 
@@ -99,7 +166,13 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			: processedNewTasks;
 
 		// Save to file
-		saveTasksToFile(config.tasksPath, finalTasks, config.targetTag, logger);
+		saveTasksToFile(
+			config.tasksPath,
+			finalTasks,
+			config.targetTag,
+			logger,
+			prdSnapshot
+		);
 
 		// Handle completion reporting
 		await handleCompletionReporting(
@@ -114,6 +187,8 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 		return {
 			success: true,
 			tasksPath: config.tasksPath,
+			addedTasks: processedNewTasks.length,
+			prdDelta,
 			telemetryData: serviceResult.aiServiceResponse?.telemetryData,
 			tagInfo: serviceResult.aiServiceResponse?.tagInfo
 		};

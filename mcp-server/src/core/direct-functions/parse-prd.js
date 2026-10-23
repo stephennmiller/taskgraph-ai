@@ -184,13 +184,36 @@ export async function parsePRDDirect(args, log, context = {}) {
 
 		// Adjust check for the new return structure
 		if (result && result.success) {
-			const successMsg = `Successfully parsed PRD and generated tasks in ${result.tasksPath}`;
+			// With --append only new PRD sections get tasks; an unchanged PRD
+			// adds none, and changed or removed sections are listed
+			const delta = result.prdDelta?.known ? result.prdDelta : null;
+			const successMsg =
+				delta && result.addedTasks === 0
+					? `No new sections in ${delta.path}; no tasks added`
+					: `Successfully parsed PRD and generated tasks in ${result.tasksPath}`;
 			logWrapper.success(successMsg);
 			return {
 				success: true,
 				data: {
 					message: successMsg,
 					outputPath: result.tasksPath,
+					addedTasks: result.addedTasks,
+					...(delta
+						? {
+								prdChanges: {
+									prd: delta.path,
+									newSections: delta.added.map((s) => s.slug),
+									changedSections: delta.changed.map((c) => ({
+										section: c.slug,
+										mayBeStale: c.taskIds
+									})),
+									removedSections: delta.removed.map((r) => ({
+										section: r.slug,
+										tasks: r.taskIds
+									}))
+								}
+							}
+						: {}),
 					telemetryData: result.telemetryData,
 					tagInfo: result.tagInfo
 				}

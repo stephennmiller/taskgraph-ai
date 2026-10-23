@@ -1,7 +1,7 @@
 /**
  * parse-prd records the PRD section each task came from (#202)
  */
-import { parsePrdSections } from '@tm/core';
+import { hashPrdSection, parsePrdSections } from '@tm/core';
 import { processTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import { PromptManager } from '../../../../../scripts/modules/prompt-manager.js';
 
@@ -32,7 +32,11 @@ describe('processTasks PRD sources', () => {
 			prd
 		);
 
-		expect(task.metadata).toEqual({ source: 'docs/prd.md#authentication' });
+		expect(task.metadata).toEqual({
+			source: 'docs/prd.md#authentication',
+			// The section's hash, so a later --append can tell it changed (#203)
+			sourceHash: hashPrdSection('## Authentication')
+		});
 		expect(task).not.toHaveProperty('section');
 	});
 
@@ -54,6 +58,7 @@ describe('processTasks PRD sources', () => {
 
 		expect(tasks[1].metadata).toEqual({
 			source: 'docs/prd.md#search',
+			sourceHash: hashPrdSection('## Search'),
 			dependencySources: { 1: 'inferred' }
 		});
 	});
@@ -85,5 +90,19 @@ describe('parse-prd prompt', () => {
 		});
 
 		expect(userPrompt).not.toContain('Sections of this PRD');
+	});
+
+	test('says when only new sections are sent (#203)', () => {
+		const load = (newSectionsOnly) =>
+			new PromptManager().loadPrompt('parse-prd', {
+				numTasks: 0,
+				nextId: 5,
+				prdContent: '## Export',
+				prdPath: 'prd.md',
+				newSectionsOnly
+			}).userPrompt;
+
+		expect(load(true)).toContain('only the sections added since then');
+		expect(load(false)).not.toContain('only the sections added');
 	});
 });

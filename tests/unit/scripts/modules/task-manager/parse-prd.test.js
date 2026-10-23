@@ -518,7 +518,7 @@ describe('parsePRD', () => {
 		);
 
 		// Verify result
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			success: true,
 			tasksPath: 'tasks/tasks.json',
 			telemetryData: {}
@@ -763,7 +763,7 @@ describe('parsePRD', () => {
 		);
 
 		// Verify the result contains merged tasks
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			success: true,
 			tasksPath: 'tasks/tasks.json',
 			telemetryData: {}
@@ -863,7 +863,7 @@ describe('parsePRD', () => {
 			expect(mockReportProgress).toHaveBeenCalled();
 
 			// Verify result structure
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}
@@ -944,7 +944,7 @@ describe('parsePRD', () => {
 			expect(generateObjectService).toHaveBeenCalled();
 
 			// Verify result structure (should succeed via fallback)
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}
@@ -977,7 +977,7 @@ describe('parsePRD', () => {
 			expect(streamObjectService).not.toHaveBeenCalled();
 
 			// Verify result structure
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}
@@ -1251,7 +1251,7 @@ describe('parsePRD', () => {
 				expect(generateObjectService).toHaveBeenCalled();
 
 				// Verify successful result despite streaming failure
-				expect(result).toEqual({
+				expect(result).toMatchObject({
 					success: true,
 					tasksPath: 'tasks/tasks.json',
 					telemetryData: {}
@@ -1456,7 +1456,7 @@ describe('parsePRD', () => {
 			});
 
 			// Verify it completed successfully
-			expect(result).toEqual({
+			expect(result).toMatchObject({
 				success: true,
 				tasksPath: 'tasks/tasks.json',
 				telemetryData: {}

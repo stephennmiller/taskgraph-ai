@@ -4,10 +4,12 @@
 
 import { ui } from '@tm/cli';
 import {
+	PRD_SNAPSHOT_KEY,
 	assignMetadata,
 	formatPrdSectionList,
-	prdSourceFor,
-	reconcileDependencySources
+	prdSourceMetadata,
+	reconcileDependencySources,
+	withPrdSnapshot
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -98,13 +100,16 @@ export function readPrdContent(prdPath) {
  * Load existing tasks from file
  * @param {string} tasksPath - Path to tasks file
  * @param {string} targetTag - Target tag to load from
- * @returns {{tasks: Array, nextId: number}} Existing tasks and next ID
+ * @returns {{existingTasks: Array, nextId: number, tagMetadata: Object}}
+ *   Existing tasks, the next ID and the tag's metadata (which holds the PRD
+ *   section hashes of the last parse)
  */
 export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
 	let nextId = 1;
 
 	const allData = readExistingTasksFile(tasksPath);
+	const tagMetadata = allData[targetTag]?.metadata || {};
 
 	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
 		existingTasks = allData[targetTag].tasks;
@@ -113,7 +118,7 @@ export function loadExistingTasks(tasksPath, targetTag) {
 		}
 	}
 
-	return { existingTasks, nextId };
+	return { existingTasks, nextId, tagMetadata };
 }
 
 /**
@@ -169,7 +174,8 @@ export function validateFileOperations({
 	if (append) {
 		logger.report(
 			`Append mode enabled. Found ${existingTasks.length} existing tasks in tag '${targetTag}'.`,
-			'info'
+			// The PRD change lines and the saved line say what --append did
+			'debug'
 		);
 		return;
 	}
@@ -219,12 +225,15 @@ export function processTasks(
 	const processedTasks = rawTasks.map(({ section, ...task }) => {
 		const newId = currentId++;
 		taskMap.set(task.id, newId);
-		// Only a section the PRD has; an invented slug would point nowhere
-		const source = prd ? prdSourceFor(section, prd.sections, prd.path) : null;
+		// Only a section the PRD has; an invented slug would point nowhere.
+		// The section's hash lets a later --append tell whether it changed
+		const source = prd
+			? prdSourceMetadata(section, prd.sections, prd.path)
+			: undefined;
 
 		return {
 			...task,
-			...(source ? { metadata: { ...task.metadata, source } } : {}),
+			...(source ? { metadata: { ...task.metadata, ...source } } : {}),
 			id: newId,
 			status: task.status || 'pending',
 			priority: task.priority || defaultPriority,
@@ -299,8 +308,18 @@ function validateSequentialTaskIds(rawTasks, expectedStartId = 1) {
  * @param {Array} tasks - Tasks to save
  * @param {string} targetTag - Target tag
  * @param {Object} logger - Logger instance
+ * @param {{path: string, snapshot: Object, replace?: boolean}} [prdSnapshot] -
+ *   The PRD's section hashes, recorded in the tag so the next --append can
+ *   tell what changed. With replace, other PRDs' hashes are dropped: their
+ *   tasks were just replaced
  */
-export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
+export function saveTasksToFile(
+	tasksPath,
+	tasks,
+	targetTag,
+	logger,
+	prdSnapshot
+) {
 	// Create directory if it doesn't exist
 	const tasksDir = path.dirname(tasksPath);
 	if (!fs.existsSync(tasksDir)) {
@@ -319,7 +338,16 @@ export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
 			created:
 				outputData[targetTag]?.metadata?.created || new Date().toISOString(),
 			updated: new Date().toISOString(),
-			description: `Tasks for ${targetTag} context`
+			description: `Tasks for ${targetTag} context`,
+			...(prdSnapshot
+				? {
+						[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
+							prdSnapshot.replace ? {} : outputData[targetTag]?.metadata,
+							prdSnapshot.path,
+							prdSnapshot.snapshot
+						)
+					}
+				: {})
 		}
 	};
 
@@ -343,16 +371,26 @@ export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
  * @param {string} prdContent - PRD content
  * @param {number} nextId - Next task ID
  * @param {{sections: Array}} [prd] - The PRD's headings, for tasks to cite
+ * @param {{numTasks?: number, newSectionsOnly?: boolean}} [options] -
+ *   With newSectionsOnly, prdContent holds only the sections added since the
+ *   last parse, and numTasks (0: the model decides) replaces config.numTasks
  * @returns {Promise<{systemPrompt: string, userPrompt: string}>}
  */
-export async function buildPrompts(config, prdContent, nextId, prd) {
+export async function buildPrompts(
+	config,
+	prdContent,
+	nextId,
+	prd,
+	options = {}
+) {
 	const promptManager = getPromptManager();
 	const defaultTaskPriority =
 		getDefaultPriority(config.projectRoot) || 'medium';
 
 	return promptManager.loadPrompt('parse-prd', {
 		research: config.research,
-		numTasks: config.numTasks,
+		numTasks: options.numTasks ?? config.numTasks,
+		newSectionsOnly: Boolean(options.newSectionsOnly),
 		nextId,
 		prdContent,
 		prdPath: config.prdPath,
