@@ -668,21 +668,26 @@ function buildDependencyGraph(tasks, { subtasksOnly = false } = {}) {
 }
 
 /**
- * The IDs that are in a loop: one of their dependencies leads back to them.
- * A task that only depends on a loop is not in it. These are the members of
- * strongly connected components of two or more nodes (Tarjan's algorithm, one
- * pass), so the cost grows with the size of the graph, not its square. It is
- * iterative, so a long chain cannot overflow the stack. Self-dependencies are
- * not in the graph, so they never count as a loop.
+ * The strongly connected components of a dependency graph: groups of IDs that
+ * can each reach all the others. Tarjan's algorithm, one pass, so the cost
+ * grows with the size of the graph, not its square. It is iterative, so a long
+ * chain cannot overflow the stack.
  * @param {Map<string, string[]>} graph - From buildDependencyGraph
- * @returns {Set<string>} Full task and subtask IDs
+ * @param {Iterable<string>} [ids] - Where to start; defaults to every ID
+ * @param {(id: string) => boolean} [inScope] - Edges to IDs outside it are
+ *   ignored; defaults to the IDs in the graph
+ * @returns {string[][]} Every component, a lone ID included
  */
-function findLoopMembers(graph) {
+function findStronglyConnectedComponents(
+	graph,
+	ids = graph.keys(),
+	inScope = (id) => graph.has(id)
+) {
 	const index = new Map();
 	const lowLink = new Map();
 	const onStack = new Set();
 	const stack = [];
-	const members = new Set();
+	const components = [];
 	let counter = 0;
 
 	const enter = (id) => {
@@ -694,7 +699,7 @@ function findLoopMembers(graph) {
 		return { id, edges: graph.get(id), next: 0 };
 	};
 
-	for (const root of graph.keys()) {
+	for (const root of ids) {
 		if (index.has(root)) continue;
 
 		const work = [enter(root)];
@@ -702,10 +707,8 @@ function findLoopMembers(graph) {
 			const frame = work[work.length - 1];
 			if (frame.next < frame.edges.length) {
 				const to = frame.edges[frame.next++];
-				// A dependency on itself is a loop of one, as a search from it finds
-				if (to === frame.id) members.add(to);
 				// An ID that is not a task or subtask has no edges, so no way back
-				if (!graph.has(to)) continue;
+				if (!inScope(to)) continue;
 				if (!index.has(to)) {
 					work.push(enter(to));
 				} else if (onStack.has(to)) {
@@ -723,9 +726,7 @@ function findLoopMembers(graph) {
 					onStack.delete(id);
 					component.push(id);
 				} while (id !== frame.id);
-				if (component.length > 1) {
-					for (const member of component) members.add(member);
-				}
+				components.push(component);
 			}
 			const parent = work[work.length - 1];
 			if (parent) {
@@ -736,7 +737,124 @@ function findLoopMembers(graph) {
 			}
 		}
 	}
+	return components;
+}
+
+/**
+ * The IDs that are in a loop: one of their dependencies leads back to them.
+ * A task that only depends on a loop is not in it. These are the members of
+ * strongly connected components of two or more nodes, found in one pass.
+ * Self-dependencies are not in the graph, so they never count as a loop.
+ * @param {Map<string, string[]>} graph - From buildDependencyGraph
+ * @returns {Set<string>} Full task and subtask IDs
+ */
+function findLoopMembers(graph) {
+	const members = new Set();
+	// A dependency on itself is a loop of one, as a search from it finds
+	for (const [id, edges] of graph) {
+		if (edges.includes(id)) members.add(id);
+	}
+	for (const component of findStronglyConnectedComponents(graph)) {
+		if (component.length > 1) {
+			for (const member of component) members.add(member);
+		}
+	}
 	return members;
+}
+
+/**
+ * Break loops between subtasks: in order, drop each dependency that leads
+ * back to the subtask it starts from. Removing edges as it goes means each
+ * loop loses exactly one edge. A dependency leads back exactly when both ends
+ * are in the same strongly connected component, so the components answer
+ * each check, and only the component that lost an edge is worked out again.
+ * Dependencies on tasks are not followed. Changes `tasks` in place.
+ * @param {Array} tasks - All tasks, after missing and self-dependencies are gone
+ * @returns {Array<{taskId: string, dependencyId: string}>} The dropped
+ *   dependencies, in order, as full IDs
+ */
+function breakSubtaskLoops(tasks) {
+	// Subtask ID -> its dependencies as full IDs
+	const graph = new Map();
+	for (const task of tasks) {
+		for (const subtask of task.subtasks || []) {
+			graph.set(
+				`${task.id}.${subtask.id}`,
+				Array.isArray(subtask.dependencies)
+					? subtask.dependencies.map((depId) =>
+							resolveSubtaskDependency(task.id, depId)
+						)
+					: []
+			);
+		}
+	}
+
+	// The subtask a full ID names, as `tasks.find(...).subtasks.find(...)`
+	// would find it with the numbers in the ID: the first match wins
+	const tasksById = new Map();
+	for (const task of tasks) {
+		if (!tasksById.has(task.id)) tasksById.set(task.id, task);
+	}
+	const subtasksByTask = new Map();
+	const findSubtask = (taskId, subtaskNum) => {
+		// A Map matches NaN with NaN; `===` never does
+		if (Number.isNaN(taskId) || Number.isNaN(subtaskNum)) return undefined;
+		const task = tasksById.get(taskId);
+		if (!task?.subtasks) return undefined;
+		let subtasks = subtasksByTask.get(task);
+		if (!subtasks) {
+			subtasks = new Map();
+			for (const st of task.subtasks) {
+				if (!subtasks.has(st.id)) subtasks.set(st.id, st);
+			}
+			subtasksByTask.set(task, subtasks);
+		}
+		return subtasks.get(subtaskNum);
+	};
+
+	const componentOf = new Map();
+	const assign = (components) => {
+		for (const component of components) {
+			for (const id of component) componentOf.set(id, component);
+		}
+	};
+	assign(findStronglyConnectedComponents(graph));
+
+	const removed = [];
+	for (const [subtaskId, dependencies] of graph) {
+		const [taskId, subtaskNum] = subtaskId.split('.').map(Number);
+		const subtask = findSubtask(taskId, subtaskNum);
+		if (!subtask?.dependencies) continue;
+
+		for (const depId of [...dependencies]) {
+			const component = componentOf.get(subtaskId);
+			const leadsBack =
+				depId === subtaskId || componentOf.get(depId) === component;
+			if (!leadsBack) continue;
+
+			const originalLength = subtask.dependencies.length;
+			subtask.dependencies = subtask.dependencies.filter((dep) => {
+				return resolveSubtaskDependency(taskId, dep) !== depId;
+			});
+			dependencies.splice(dependencies.indexOf(depId), 1);
+
+			// Without that edge the component may have split
+			if (depId !== subtaskId) {
+				assign(
+					findStronglyConnectedComponents(
+						graph,
+						component,
+						(id) => componentOf.get(id) === component
+					)
+				);
+			}
+
+			if (subtask.dependencies.length < originalLength) {
+				removed.push({ taskId: subtaskId, dependencyId: depId });
+			}
+		}
+	}
+	return removed;
 }
 
 /**
@@ -1308,66 +1426,10 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 		// Third phase: Check for circular dependencies
 		log('debug', 'Checking for circular dependencies...');
 
-		// Build the dependency map for subtasks
-		const subtaskDependencyMap = new Map();
-		data.tasks.forEach((task) => {
-			if (task.subtasks && Array.isArray(task.subtasks)) {
-				task.subtasks.forEach((subtask) => {
-					const subtaskId = `${task.id}.${subtask.id}`;
-
-					if (subtask.dependencies && Array.isArray(subtask.dependencies)) {
-						const normalizedDeps = subtask.dependencies.map((depId) => {
-							if (typeof depId === 'string' && depId.includes('.')) {
-								return depId;
-							}
-							return resolveSubtaskDependency(task.id, depId);
-						});
-						subtaskDependencyMap.set(subtaskId, normalizedDeps);
-					} else {
-						subtaskDependencyMap.set(subtaskId, []);
-					}
-				});
-			}
-		});
-
-		// Break loops between subtasks: drop each dependency that leads back to
-		// the subtask it starts from. Removing edges as we go means each loop
-		// loses exactly one edge.
-		const leadsBackTo = (from, target, seen = new Set()) => {
-			if (from === target) return true;
-			if (seen.has(from)) return false;
-			seen.add(from);
-			return (subtaskDependencyMap.get(from) || []).some((next) =>
-				leadsBackTo(next, target, seen)
-			);
-		};
-
-		for (const [subtaskId, dependencies] of subtaskDependencyMap.entries()) {
-			const [taskId, subtaskNum] = subtaskId.split('.').map(Number);
-			const subtask = data.tasks
-				.find((t) => t.id === taskId)
-				?.subtasks?.find((st) => st.id === subtaskNum);
-			if (!subtask?.dependencies) continue;
-
-			for (const depId of [...dependencies]) {
-				if (!leadsBackTo(depId, subtaskId)) continue;
-
-				const originalLength = subtask.dependencies.length;
-				subtask.dependencies = subtask.dependencies.filter((dep) => {
-					return resolveSubtaskDependency(taskId, dep) !== depId;
-				});
-				dependencies.splice(dependencies.indexOf(depId), 1);
-
-				if (subtask.dependencies.length < originalLength) {
-					fixes.push({
-						type: 'circular',
-						taskId: subtaskId,
-						dependencyId: depId
-					});
-					stats.circularDependenciesFixed++;
-					stats.subtasksFixed++;
-				}
-			}
+		for (const { taskId, dependencyId } of breakSubtaskLoops(data.tasks)) {
+			fixes.push({ type: 'circular', taskId, dependencyId });
+			stats.circularDependenciesFixed++;
+			stats.subtasksFixed++;
 		}
 
 		pruneProvenance(data.tasks);
@@ -2147,6 +2209,7 @@ function canMoveWithDependencies(taskId, sourceTag, targetTag, allTasks) {
 
 export {
 	addDependency,
+	breakSubtaskLoops,
 	canMoveWithDependencies,
 	cleanupSubtaskDependencies,
 	DEPENDENCY_ERROR_CODES,
