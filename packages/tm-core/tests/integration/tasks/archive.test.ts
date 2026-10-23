@@ -81,8 +81,9 @@ describe('archive', () => {
 		expect(ids(readArchive().master.tasks)).toEqual(['2']);
 	});
 
-	// #395: restore gave numeric IDs where list, next and show give strings
-	it('restores a task with string IDs, as list gives them', async () => {
+	// #395: archive and restore gave numeric IDs where list, next and show
+	// give strings
+	it('archives and restores a task with string IDs, as list gives them', async () => {
 		await setup({
 			master: [
 				createTask({
@@ -101,7 +102,10 @@ describe('archive', () => {
 				})
 			]
 		});
-		await tmCore.tasks.archive();
+		const archived = await tmCore.tasks.archive();
+
+		expect(archived.tasks[0].id).toBe('2');
+		expect(archived.tasks[0].subtasks.map((st) => st.id)).toEqual(['1']);
 
 		const { task } = await tmCore.tasks.restore('2');
 

@@ -116,9 +116,27 @@ describe('--json contract', () => {
 			tasks: [task(1, 'Claim me', 'pending', [])],
 			metadata: {}
 		};
-		// archive and archive restore write, so they get their own tag too
+		// archive and archive restore write, so they each get their own tag
 		data.finished = {
 			tasks: [task(1, 'Ship it', 'done', [])],
+			metadata: {}
+		};
+		data.restorable = {
+			tasks: [
+				task(1, 'Plan', 'done', []),
+				task(2, 'Build', 'done', [1], {
+					subtasks: [
+						{
+							id: 1,
+							title: 'Wire it',
+							description: 'Wire it up',
+							details: '',
+							status: 'done',
+							dependencies: []
+						}
+					]
+				})
+			],
 			metadata: {}
 		};
 		data.empty = {
@@ -684,14 +702,24 @@ describe('--json contract', () => {
 	});
 
 	it('archive restore', () => {
+		// Archive first here, so this test doesn't depend on the one above
+		json([
+			'archive',
+			'--tag',
+			'restorable',
+			'--older-than',
+			'0',
+			'--format',
+			'json'
+		]);
 		expect(
 			shapeOf(
 				json([
 					'archive',
 					'restore',
-					'1',
+					'2',
 					'--tag',
-					'finished',
+					'restorable',
 					'--format',
 					'json'
 				])
@@ -702,13 +730,25 @@ describe('--json contract', () => {
 			  "schemaVersion": "number",
 			  "tag": "string",
 			  "task": {
-			    "dependencies": [],
+			    "dependencies": [
+			      "string",
+			    ],
 			    "description": "string",
 			    "details": "string",
 			    "id": "string",
 			    "priority": "string",
 			    "status": "string",
-			    "subtasks": [],
+			    "subtasks": [
+			      {
+			        "dependencies": [],
+			        "description": "string",
+			        "details": "string",
+			        "id": "string",
+			        "parentId": "string",
+			        "status": "string",
+			        "title": "string",
+			      },
+			    ],
 			    "testStrategy": "string",
 			    "title": "string",
 			  },

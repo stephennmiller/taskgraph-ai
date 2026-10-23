@@ -126,7 +126,7 @@ Examples:
 			});
 
 			const tasks = result.tasks.map((t) => ({
-				id: String(t.id),
+				id: t.id,
 				title: t.title,
 				status: t.status
 			}));
@@ -172,10 +172,7 @@ Examples:
 				return;
 			}
 			console.log(
-				formatRestoreResult(
-					{ id: String(task.id), title: task.title },
-					terminalWidth()
-				)
+				formatRestoreResult({ id: task.id, title: task.title }, terminalWidth())
 			);
 		} catch (error: unknown) {
 			failed = true;
