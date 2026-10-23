@@ -160,8 +160,8 @@ export function buildEnv(workDir, base = process.env) {
 			base.npm_config_userconfig ?? path.join(realHome, '.npmrc'),
 		TASKGRAPH_SKIP_AUTO_UPDATE: '1'
 	};
-	// The MCP server prefers this over a tool's projectRoot; a developer's own
-	// value would send writes into a real project.
+	// MCP servers built before #339 prefer this over a tool's projectRoot; a
+	// developer's own value would send writes into a real project.
 	delete env.TASKGRAPH_PROJECT_ROOT;
 	// Hooks in a linked worktree export GIT_DIR; steps that run git must not use it
 	for (const key of Object.keys(env))

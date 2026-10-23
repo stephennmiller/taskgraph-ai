@@ -186,6 +186,13 @@ export {
 	type GenerateTaskFilesResult
 } from './modules/tasks/services/task-file-generator.service.js';
 
+// Per-machine settings (.taskgraph/config.local.json)
+export {
+	hasPerMachineSettings,
+	mergeMachineConfig,
+	splitMachineConfig
+} from './modules/config/services/machine-config.js';
+
 // Per-project environment
 export {
 	readProjectEnv,
@@ -203,6 +210,7 @@ export {
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,
 	rankNextTasks,
+	subtaskInContext,
 	buildPrimeContext,
 	findUnnotedInProgress,
 	PRIME_RULES,

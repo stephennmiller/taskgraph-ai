@@ -239,6 +239,16 @@ describe('completion engine', () => {
 		);
 	});
 
+	it('falls back to master for a missing tag named like an Object member', () => {
+		expect(complete(['show', '--tag', 'toString', '--id', '']).values).toEqual([
+			'1',
+			'2',
+			'2.1',
+			'2.2',
+			'10'
+		]);
+	});
+
 	it('hands paths back to the shell', () => {
 		expect(complete(['parse-prd', 'do']).mode).toBe('files');
 		const dirs = complete(['graph', '--project=']);

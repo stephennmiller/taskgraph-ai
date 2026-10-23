@@ -31,6 +31,11 @@ export interface InitSummary {
 	folder: string;
 	/** Files and folders created or changed, in order */
 	changes: InitChange[];
+	/**
+	 * Rows about files init left alone but the user should act on, listed
+	 * after the changes. They don't count as changes in the headline.
+	 */
+	hints?: InitChange[];
 	/** The folder was already a TaskGraph project before this run */
 	alreadySetUp: boolean;
 	/** The Claude Code integration was installed in this run */
@@ -93,11 +98,14 @@ export function formatInitSummary(summary: InitSummary): string {
 		lines.push(`${check} Updated TaskGraph in ${summary.folder}`);
 	} else {
 		lines.push(`${check} TaskGraph is already set up in ${summary.folder}`);
-		lines.push(
-			theme.muted(withCode('  Run `taskgraph list` to see your tasks'))
-		);
+		// A hint row is the next step; otherwise point at the tasks
+		if (!summary.hints?.length) {
+			lines.push(
+				theme.muted(withCode('  Run `taskgraph list` to see your tasks'))
+			);
+		}
 	}
-	lines.push(...formatChanges(summary.changes));
+	lines.push(...formatChanges([...summary.changes, ...(summary.hints ?? [])]));
 
 	const steps = nextSteps(summary);
 	if (steps.length > 0) {

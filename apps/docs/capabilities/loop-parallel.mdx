@@ -44,7 +44,7 @@ Next: review with git log -p HEAD..taskgraph/task-1
 
 ## Status goes to the main project
 
-`.taskgraph/` is committed, so each worktree has its own copy of `tasks.json`, as of your last commit. Every Claude Code process gets the `TASKGRAPH_PROJECT_ROOT` environment variable set to your project, so the `taskgraph` commands it runs read and write your project's `tasks.json`, not the worktree's copy. The TaskGraph plugin's hooks and the TaskGraph MCP server follow it too.
+`.taskgraph/` is committed, so each worktree has its own copy of `tasks.json`, as of your last commit. Every Claude Code process gets the `TASKGRAPH_PROJECT_ROOT` environment variable set to your project, so the `taskgraph` commands it runs read and write your project's `tasks.json`, not the worktree's copy. The TaskGraph plugin's hooks and the TaskGraph MCP server follow it too: an MCP tool call that passes the task's worktree as `projectRoot` works on your project.
 
 Because of that:
 

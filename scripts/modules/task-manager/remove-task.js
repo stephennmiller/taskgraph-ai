@@ -1,5 +1,6 @@
 import {
 	dropReferences,
+	getOwnKey,
 	liveOrArchived,
 	pruneTaskLinks,
 	readArchivedIdsSync
@@ -48,7 +49,7 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 		// Use the full tagged data if available, otherwise use the data as is
 		const fullTaggedData = rawData._rawTaggedData || rawData;
 
-		if (!fullTaggedData[tag] || !fullTaggedData[tag].tasks) {
+		if (!getOwnKey(fullTaggedData, tag)?.tasks) {
 			throw new Error(`Tag '${tag}' not found or has no tasks.`);
 		}
 

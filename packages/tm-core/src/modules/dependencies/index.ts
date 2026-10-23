@@ -37,7 +37,9 @@ export {
 } from './explain-blockers.js';
 export {
 	MAX_SIBLING_REFERENCE,
+	cleanGeneratedSubtaskDependencies,
 	isSiblingReference,
+	parseSubtaskDependencyInput,
 	resolveSubtaskDependency
 } from './subtask-dependency.js';
 export {

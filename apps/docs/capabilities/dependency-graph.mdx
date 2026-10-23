@@ -25,7 +25,11 @@ A subtask's `dependencies` can name a sibling, another task's subtask or a top-l
 - **A dotted string** (`"4.1"`) is that subtask.
 - **Anything else** (a string without a dot, like `"3"`, or a number of 100 or more) is a top-level task.
 
-`add-dependency` stores a task as a string (`"3"`), so it is never read as a sibling. On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
+`add-dependency` and `add-subtask --dependencies` (and their MCP tools) take the IDs you see in `list`: `3` is task 3 and `2.1` is that subtask. They store a task as a string (`"3"`), so it is never read as a sibling. To depend on a sibling, give its dotted ID (`2.1` under task 2). `add-subtask` rejects an entry that is not a task or subtask ID.
+
+When `expand`, `update-task` or `update` has the AI write subtasks, the AI uses the same forms: a number for an earlier subtask in its list, a string for a task (`"3"`) or another task's subtask (`"4.1"`). Entries that are none of these, and a dependency on the subtask's own parent, are dropped. `update-task` also drops a sibling number that is not earlier than the subtask itself.
+
+On a top-level task there is no sibling to name: a number or a plain string is a task, and a dotted string is a subtask. `next`, `why`, `graph`, the dependency commands and the MCP tools all read dependencies by this rule (`resolveSubtaskDependency` in `@tm/core`).
 
 ## `taskgraph graph`
 
@@ -216,7 +220,6 @@ The `dependency_analysis` tool, in the `standard` and `all` tiers, returns the b
 
 These are known and not yet fixed:
 
-- **The AI writes subtask dependencies as numbers only.** When `expand`, `update-task` or `update` generates subtasks, the response schema (`SubtaskSchema` in `src/schemas/base-schemas.js`) only allows numbers. A number below 100 is read as a sibling, so a subtask dependency the AI meant as a top-level task (task 3) is read as sibling 3 of the same parent. Add such dependencies with `add-dependency`, which stores the task as `"3"`. `add-subtask --dependencies` (and the MCP `add_subtask` tool) has the same limit: it stores plain numbers, so its undotted IDs name siblings.
 - **What counts as finished differs for subtasks.** `next`, `why` and `graph` all treat `done` and `cancelled` as finished, but `next` only looks for finished work under parents that are `pending`, `in-progress`, `done` or `cancelled`. A `done` subtask under a parent in `review`, `blocked` or `deferred` satisfies a dependency in `why` and `graph`, but never in `next`.
 - **`why` ignores parent blockers for subtasks** (see above).
 - **Older writers don't stamp a schema version.** Tags created by legacy code paths have no `schemaVersion` until the next `@tm/core` save; a missing value means version 1.

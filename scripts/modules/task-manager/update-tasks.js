@@ -1,6 +1,7 @@
 import { ui } from '@tm/cli';
 import {
 	assignMetadata,
+	cleanGeneratedSubtaskDependencies,
 	keepStoredFields,
 	reconcileDependencySources
 } from '@tm/core';
@@ -183,7 +184,10 @@ async function updateTasks(
 					subtasks: task.subtasks
 						? task.subtasks.map((subtask) => ({
 								...subtask,
-								dependencies: subtask.dependencies ?? [],
+								dependencies: cleanGeneratedSubtaskDependencies(
+									subtask.dependencies,
+									task.id
+								),
 								status: subtask.status ?? 'pending',
 								testStrategy: subtask.testStrategy ?? null
 							}))
