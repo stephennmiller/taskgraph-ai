@@ -52,9 +52,10 @@ describe('Loop Exports from @tm/core', () => {
 				'test-coverage',
 				'linting',
 				'duplication',
-				'entropy'
+				'entropy',
+				'tdd'
 			];
-			expect(validPresets).toHaveLength(5);
+			expect(validPresets).toHaveLength(6);
 		});
 
 		it('should export LoopConfig type (compile-time verification)', () => {

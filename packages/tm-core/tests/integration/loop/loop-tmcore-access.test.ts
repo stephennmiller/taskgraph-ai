@@ -135,7 +135,8 @@ describe('LoopDomain Access via TmCore', () => {
 			expect(presets).toContain('linting');
 			expect(presets).toContain('duplication');
 			expect(presets).toContain('entropy');
-			expect(presets).toHaveLength(5);
+			expect(presets).toContain('tdd');
+			expect(presets).toHaveLength(6);
 		});
 	});
 

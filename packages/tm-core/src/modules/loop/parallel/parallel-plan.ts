@@ -45,6 +45,8 @@ export interface ParallelFlags {
 	iterations?: number;
 	sandbox?: boolean;
 	verbose?: boolean;
+	/** `--id`: --parallel picks its own tasks from wave 1 */
+	taskId?: string;
 }
 
 /**
@@ -69,7 +71,9 @@ export function assertParallelFlags(flags: ParallelFlags): void {
 				? '--iterations'
 				: flags.verbose
 					? '--verbose'
-					: null;
+					: flags.taskId !== undefined
+						? '--id'
+						: null;
 	if (conflict) {
 		throw new ParallelLoopError(
 			`--parallel can't be combined with ${conflict}`,
