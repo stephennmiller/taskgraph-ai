@@ -253,6 +253,30 @@ export function isArchivedReference(
 }
 
 /**
+ * For pruneTaskLinks: a link target exists when it is a task or subtask in
+ * `tasks` or an archived task (or one of its subtasks), so pruning never
+ * drops a related or discovered-from link to an archived task
+ * @param archivedIds - The tag's archived IDs, or a function that reads them
+ *   (called once, only when a link names something not in `tasks`)
+ */
+export function liveOrArchived(
+	tasks: Task[],
+	archivedIds: ReadonlySet<string> | (() => ReadonlySet<string>)
+): (id: string) => boolean {
+	const live = new Set<string>();
+	for (const task of tasks) {
+		live.add(String(task.id));
+		for (const sub of task.subtasks ?? []) live.add(`${task.id}.${sub.id}`);
+	}
+	let archived = typeof archivedIds === 'function' ? undefined : archivedIds;
+	return (id) => {
+		if (live.has(id)) return true;
+		archived ??= (archivedIds as () => ReadonlySet<string>)();
+		return isArchivedReference(id, archived);
+	};
+}
+
+/**
  * Tasks with every dependency on an archived task taken out, so readiness,
  * blocker and tree logic treat those dependencies as done. For reading only:
  * never save the result. A task that is back in tasks.json isn't archived.

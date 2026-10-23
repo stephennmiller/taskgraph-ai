@@ -2,6 +2,7 @@ import {
 	assignMetadata,
 	dependenciesForConvertedTask,
 	dependenciesForMovedItem,
+	liveOrArchived,
 	pruneDependencySources,
 	pruneTaskLinks,
 	readArchivedIdsSync,
@@ -1092,7 +1093,13 @@ async function finalizeMove(
 		movedIds.has(String(task.id))
 	);
 	pruneTaskLinks(movedTaskObjects, (id) => movedIds.has(id.split('.')[0]));
-	pruneTaskLinks(rawData[sourceTag].tasks);
+	pruneTaskLinks(
+		rawData[sourceTag].tasks,
+		liveOrArchived(
+			rawData[sourceTag].tasks,
+			() => readArchivedIdsSync(tasksPath, sourceTag).ids
+		)
+	);
 
 	// Write the updated data
 	writeJSON(tasksPath, rawData, projectRoot, null);

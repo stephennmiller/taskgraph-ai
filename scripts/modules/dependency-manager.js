@@ -10,6 +10,7 @@ import {
 	getLinkType,
 	hasDependency,
 	isArchivedReference,
+	liveOrArchived,
 	isSiblingReference,
 	parseLinkType,
 	readArchivedIdsSync,
@@ -1372,7 +1373,11 @@ async function fixDependenciesCommand(tasksPath, options = {}) {
 		pruneProvenance(data.tasks);
 
 		// Drop related and discovered-from links to tasks that don't exist
-		for (const link of pruneTaskLinks(data.tasks)) {
+		// (a link to an archived task isn't dangling)
+		for (const link of pruneTaskLinks(
+			data.tasks,
+			liveOrArchived(data.tasks, archivedIds)
+		)) {
 			fixes.push({
 				type: 'missing-link',
 				taskId: link.taskId,

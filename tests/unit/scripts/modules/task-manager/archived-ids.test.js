@@ -19,6 +19,7 @@ import moveTask, {
 } from '../../../../../scripts/modules/task-manager/move-task.js';
 import { loadExistingTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
+import removeTask from '../../../../../scripts/modules/task-manager/remove-task.js';
 import {
 	copyTag,
 	createTag,
@@ -281,6 +282,23 @@ describe('archived task IDs in the legacy commands', () => {
 			expect(
 				result.fixes.some((f) => ['1', '1.1'].includes(String(f.dependencyId)))
 			).toBe(false);
+		});
+
+		test('fix-dependencies and remove-task keep links to archived tasks', async () => {
+			const links = { taskLinks: { 1: 'discovered-from', 9: 'related' } };
+			setup([task(3, { metadata: links }), task(4)], [task(1)]);
+
+			await fixDependenciesCommand(tasksPath, {
+				context: { projectRoot: dir, tag: 'master' }
+			});
+			expect(readTasks()[0].metadata.taskLinks).toEqual({
+				1: 'discovered-from'
+			});
+
+			await removeTask(tasksPath, '4', { projectRoot: dir, tag: 'master' });
+			expect(readTasks()[0].metadata.taskLinks).toEqual({
+				1: 'discovered-from'
+			});
 		});
 
 		test('MCP next_task picks a task whose dependency is archived', async () => {

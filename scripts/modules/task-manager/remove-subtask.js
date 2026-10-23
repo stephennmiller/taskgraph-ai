@@ -1,6 +1,7 @@
 import {
 	assignMetadata,
 	dependenciesForMovedItem,
+	liveOrArchived,
 	nextTaskId,
 	pruneTaskLinks,
 	readArchivedIdsSync,
@@ -124,7 +125,13 @@ async function removeSubtask(
 			log('info', `Created new task ${newTaskId} from subtask ${subtaskId}`);
 		} else {
 			// Related and discovered-from links to it go with it
-			pruneTaskLinks(data.tasks);
+			pruneTaskLinks(
+				data.tasks,
+				liveOrArchived(
+					data.tasks,
+					() => readArchivedIdsSync(tasksPath, data.tag || tag || 'master').ids
+				)
+			);
 			log('debug', `Subtask ${subtaskId} deleted`);
 		}
 

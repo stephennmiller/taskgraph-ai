@@ -233,6 +233,7 @@ export {
 	readArchivedIdsSync,
 	isArchivedReference,
 	satisfyArchivedDependencies,
+	liveOrArchived,
 	withStoredDependencies,
 	nextTaskId,
 	renameArchivedTag,
