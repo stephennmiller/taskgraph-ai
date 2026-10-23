@@ -37,9 +37,10 @@ export interface HelpGroup {
  * is static rather than read from a registry.
  *
  * Every command a user runs gets a row. Left out on purpose: `prime` (for
- * agents, named in the footer), hidden aliases (`start`), the placeholder
- * `tui`, `update-subtask` (the help points at `note` instead, #245) and the
- * old per-tag commands that `tags <…>` replaces.
+ * agents, named in the footer), hidden commands (`start`, an alias of loop,
+ * and `merge-driver`, which git runs), `help`, the placeholder `tui`,
+ * `update-subtask` (the help points at `note` instead, #245) and the old
+ * per-tag commands that `tags <…>` replaces.
  */
 export const HELP_GROUPS: readonly HelpGroup[] = [
 	{
@@ -50,7 +51,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'list', desc: 'List tasks, filtered by status or tag' },
 			{ name: 'set-status', desc: 'Change a task or subtask status' },
 			{ name: 'add-task', desc: 'Add a task from a description' },
-			{ name: 'loop', desc: 'Run Claude Code on tasks, one at a time' }
+			{ name: 'loop', desc: 'Have Claude Code work through your tasks' }
 		]
 	},
 	{
@@ -58,7 +59,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		commands: [
 			{ name: 'init', desc: 'Set up TaskGraph in this project' },
 			{ name: 'models', desc: 'View or change the AI models' },
-			{ name: 'lang', desc: 'Set the language AI responses use' },
+			{ name: 'lang', desc: 'View or change the AI response language' },
 			{ name: 'completion', desc: 'Install Tab completion for your shell' }
 		]
 	},
