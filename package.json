@@ -96,7 +96,7 @@
 		"steno": "^4.0.2",
 		"terminal-link": "^5.0.0",
 		"turndown": "^7.2.4",
-		"undici": "^8.11.2",
+		"undici": "^7.30.1",
 		"zod": "^4.1.12"
 	},
 	"optionalDependencies": {
