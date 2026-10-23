@@ -15,7 +15,6 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from './common/errors/taskgraph-error.js';
-import type { IConfiguration } from './common/interfaces/configuration.interface.js';
 import {
 	type Logger,
 	type LoggerConfig,
@@ -28,8 +27,6 @@ import {
 export interface TmCoreOptions {
 	/** Absolute path to project root */
 	projectPath: string;
-	/** Optional configuration overrides */
-	configuration?: Partial<IConfiguration>;
 	/** Optional logger configuration for MCP integration and debugging */
 	loggerConfig?: LoggerConfig;
 }
@@ -42,8 +39,8 @@ export interface TmCoreOptions {
  * const tmcore = await createTmCore({ projectPath: process.cwd() });
  *
  * // Access any domain
- * const tasks = await tmcore.tasks.list();
- * await tmcore.git.commit('feat: add feature');
+ * const { tasks } = await tmcore.tasks.list();
+ * await tmcore.git.createCommit('feat: add feature');
  * const modelConfig = tmcore.config.getModelConfig();
  * ```
  *
@@ -60,7 +57,7 @@ export interface TmCoreOptions {
  *   });
  *
  *   // All internal logging will now be sent to MCP
- *   const tasks = await tmcore.tasks.list();
+ *   const { tasks } = await tmcore.tasks.list();
  *
  *   // You can also log custom messages
  *   tmcore.logger.info('Operation completed');
@@ -152,11 +149,6 @@ export class TmCore {
 
 			// Create config manager
 			this._configManager = await ConfigManager.create(this._projectPath);
-
-			// Apply configuration overrides if provided
-			if (this._options.configuration) {
-				await this._configManager.updateConfig(this._options.configuration);
-			}
 
 			// Initialize domain facades
 			this._tasks = new TasksDomain(this._configManager);

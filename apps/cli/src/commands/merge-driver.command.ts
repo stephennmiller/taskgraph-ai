@@ -1,6 +1,6 @@
 /**
  * @fileoverview `taskgraph merge-driver %O %A %B %P`: the Git merge driver for
- * tasks.json. Git runs it; people don't, so it's hidden from help and Tab
+ * tasks.json and archive.json. Git runs it; people don't, so it's hidden from help and Tab
  * completion. `taskgraph init` (or `init --merge-driver`) sets it up.
  *
  * Thin layer over tm-core's runTasksMergeDriver(): exit 0 when merged, 1 when
@@ -9,7 +9,7 @@
  */
 
 import path from 'node:path';
-import { archivePathFor, runTasksMergeDriver } from '@tm/core';
+import { runTasksMergeDriver } from '@tm/core';
 import { Command } from 'commander';
 import {
 	formatMergeConflicts,
@@ -27,7 +27,9 @@ export class MergeDriverCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'merge-driver');
 
-		this.description('Git merge driver for tasks.json (git runs it)')
+		this.description(
+			'Git merge driver for tasks.json and archive.json (git runs it)'
+		)
 			.argument('<base>', 'The common ancestor (%O)')
 			.argument('<ours>', 'This branch, where the result goes (%A)')
 			.argument('<theirs>', 'The branch being merged in (%B)')
@@ -44,17 +46,17 @@ export class MergeDriverCommand extends Command {
 		file = '.taskgraph/tasks/tasks.json'
 	): void {
 		// Git runs the driver at the top of the working tree, so `file` (%P)
-		// finds the archive.json beside it; new tasks never take archived IDs
+		// finds the other file of the pair beside it
 		const outcome = runTasksMergeDriver({
 			basePath,
 			oursPath,
 			theirsPath,
-			archivePath: archivePathFor(path.resolve(file))
+			path: path.resolve(file)
 		});
 
 		if (outcome.status === 'unreadable') {
 			printError(
-				`Couldn't merge ${file}: the ${SIDE_NAMES[outcome.side]} version isn't a valid tasks file`,
+				`Couldn't merge ${file}: the ${SIDE_NAMES[outcome.side]} version isn't a valid ${path.basename(file)}`,
 				"Kept this branch's version; fix the file by hand, then git add it"
 			);
 			process.exitCode = 1;

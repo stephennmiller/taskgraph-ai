@@ -1,4 +1,4 @@
-import { UPSTREAM_DIR } from '@tm/core';
+import { UPSTREAM_DIR, UPSTREAM_NAME } from '@tm/core';
 import { describe, expect, it } from 'vitest';
 import {
 	type UpstreamImportSummary,
@@ -51,6 +51,27 @@ describe('formatUpstreamImport', () => {
 	it('fits every line in 80 columns', () => {
 		const lines = plain(formatUpstreamImport(imported)).split('\n');
 
+		for (const line of lines) expect(line.length).toBeLessThanOrEqual(80);
+	});
+
+	it('says parse-prd sizes the list when the saved count of 10 was left out', () => {
+		const lines = plain(
+			formatUpstreamImport({
+				...imported,
+				result: {
+					...imported.result,
+					droppedSettings: [
+						...imported.result.droppedSettings,
+						'global.defaultNumTasks'
+					]
+				}
+			})
+		).split('\n');
+
+		expect(lines.slice(3, 5)).toEqual([
+			'Skipped the research model (perplexity sonar-pro) and 6 provider settings',
+			`Left out ${UPSTREAM_NAME}'s default of 10 tasks; parse-prd sizes the list to the PRD`
+		]);
 		for (const line of lines) expect(line.length).toBeLessThanOrEqual(80);
 	});
 

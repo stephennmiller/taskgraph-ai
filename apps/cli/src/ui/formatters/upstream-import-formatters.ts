@@ -5,6 +5,7 @@
  *   ✓ Imported 4 tasks in 2 tags, docs, reports and templates from <dir>/
  *     .gitignore    created
  *   Skipped the research model (perplexity sonar-pro) and 6 provider settings
+ *   Left out <name>'s default of 10 tasks; parse-prd sizes the list to the PRD
  *   <dir>/ is unchanged · Next: taskgraph next
  *
  * It replaces init's usual summary and its "write a PRD" steps, which don't
@@ -12,7 +13,9 @@
  */
 
 import {
+	DROPPED_NUM_TASKS_SETTING,
 	UPSTREAM_DIR,
+	UPSTREAM_NAME,
 	type UpstreamImportResult,
 	sanitizeForTerminal
 } from '@tm/core';
@@ -64,8 +67,11 @@ function whatWasSkipped(result: UpstreamImportSummary['result']): string {
 	} else if (models.length > 1) {
 		skipped.push(`the ${joinList(models.map((m) => m.role))} models`);
 	}
-	if (result.droppedSettings.length > 0) {
-		skipped.push(plural(result.droppedSettings.length, 'provider setting'));
+	const settings = result.droppedSettings.filter(
+		(key) => key !== DROPPED_NUM_TASKS_SETTING
+	);
+	if (settings.length > 0) {
+		skipped.push(plural(settings.length, 'provider setting'));
 	}
 	return skipped.length > 0 ? `Skipped ${joinList(skipped)}` : '';
 }
@@ -90,6 +96,13 @@ export function formatUpstreamImport(summary: UpstreamImportSummary): string {
 
 	const skipped = whatWasSkipped(result);
 	if (skipped) lines.push(theme.muted(skipped));
+	if (result.droppedSettings.includes(DROPPED_NUM_TASKS_SETTING)) {
+		lines.push(
+			theme.muted(
+				`Left out ${UPSTREAM_NAME}'s default of 10 tasks; parse-prd sizes the list to the PRD`
+			)
+		);
+	}
 
 	const next = result.taskCount > 0 ? 'taskgraph next' : 'taskgraph parse-prd';
 	lines.push(

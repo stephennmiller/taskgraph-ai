@@ -11,6 +11,12 @@
  *     1.1  title   Ours sub · incoming: Theirs sub
  *   Edit .taskgraph/tasks/tasks.json to choose, then git add it
  *
+ * or, when the incoming branch archived an ID this branch reused:
+ *
+ *   ✗ 1 change to archive.json clashes; kept this branch's value
+ *     9  archived on the incoming branch; this branch has another task 9
+ *   Run taskgraph move --from=9 --to=<free ID>, then git add both files
+ *
  * and how `init --merge-driver` set it up:
  *
  *   ✓ Git now merges tasks.json by task
@@ -18,6 +24,7 @@
  *     .git/config     turns it on here; each clone runs init --merge-driver
  */
 
+import path from 'node:path';
 import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
@@ -33,7 +40,7 @@ export interface MergeConflictRow {
 	tag: string;
 	id?: string;
 	field: string;
-	kind: 'changed-both' | 'removed-ours' | 'removed-theirs';
+	kind: 'changed-both' | 'removed-ours' | 'removed-theirs' | 'archived-theirs';
 	ours: unknown;
 	theirs: unknown;
 }
@@ -108,7 +115,7 @@ const show = (value: unknown): string => {
 /**
  * The clash report, for stderr.
  *
- * @param tasksFile - The path git passed (`%P`)
+ * @param tasksFile - The path git passed (`%P`): tasks.json or archive.json
  * @param renumbered - Incoming items that were also renumbered, as a note
  */
 export function formatMergeConflicts(
@@ -120,10 +127,11 @@ export function formatMergeConflicts(
 	conflicts = sanitizeForTerminal(conflicts);
 	renumbered = sanitizeForTerminal(renumbered);
 	const count = conflicts.length;
+	const name = path.basename(tasksFile);
 	const head =
 		count === 1
-			? `${chalk.red('✗')} 1 change to tasks.json clashes; kept this branch's value`
-			: `${chalk.red('✗')} ${count} changes to tasks.json clash; kept this branch's values`;
+			? `${chalk.red('✗')} 1 change to ${name} clashes; kept this branch's value`
+			: `${chalk.red('✗')} ${count} changes to ${name} clash; kept this branch's values`;
 
 	const label = (row: MergeConflictRow) => {
 		if (row.id === undefined) return `tag ${row.tag}`;
@@ -145,6 +153,9 @@ export function formatMergeConflicts(
 		if (row.kind === 'removed-theirs') {
 			return `${indent}removed on the incoming branch, changed here; kept it`;
 		}
+		if (row.kind === 'archived-theirs') {
+			return `${indent}archived on the incoming branch; this branch has another task ${row.id}`;
+		}
 		// Cut the plain text, then color it, so ANSI codes never count
 		const plain = `${row.field.padEnd(fieldWidth)}  ${show(row.ours)} · incoming: ${show(row.theirs)}`;
 		const cut = fit(plain, width - indent.length);
@@ -155,12 +166,18 @@ export function formatMergeConflicts(
 	});
 
 	const note = formatMergeRenumbered(renumbered, false, width);
-	return [
-		head,
-		...rows,
-		...(note ? [note] : []),
-		theme.muted(`Edit ${tasksFile} to choose, then git add it`)
-	].join('\n');
+	// Renumbering this branch's task frees the ID for the archived one
+	const reused = conflicts.filter((row) => row.kind === 'archived-theirs');
+	const from = reused.length === 1 ? reused[0].id : '<id>';
+	const tag =
+		reused.length === 1 && reused[0].tag !== DEFAULT_TAG
+			? ` --tag=${reused[0].tag}`
+			: '';
+	const fix =
+		reused.length > 0
+			? `Run taskgraph move --from=${from} --to=<free ID>${tag}, then git add both files`
+			: `Edit ${tasksFile} to choose, then git add it`;
+	return [head, ...rows, ...(note ? [note] : []), theme.muted(fix)].join('\n');
 }
 
 export type MergeDriverSetup = {
@@ -189,7 +206,7 @@ export function formatMergeDriverSetup(setup: MergeDriverSetup): string {
 		);
 	} else if (setup.attributes !== 'unchanged') {
 		lines.push(
-			`  .gitattributes  ${theme.muted('routes tasks.json to the driver; commit it')}`
+			`  .gitattributes  ${theme.muted('routes tasks.json and archive.json to it; commit it')}`
 		);
 	}
 	if (setup.config === 'kept') {
