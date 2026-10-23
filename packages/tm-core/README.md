@@ -47,6 +47,7 @@ src/
   modules/     one folder per area: tasks, config, git, github, loop,
                storage, dependencies, prd, reports, migration
   testing/     @tm/core/testing
+  utils/       time helpers
 tests/         integration tests (*.test.ts); unit tests sit next to the source
 ```
 
@@ -57,8 +58,6 @@ Run them from the repo root with `-w @tm/core`, for example `npm run test -w @tm
 | Script | What it runs |
 | --- | --- |
 | `test` | All tests (`vitest run`) |
-| `test:unit` | `*.spec.ts` only |
-| `test:integration` | `*.test.ts` only |
 | `test:watch` | Vitest in watch mode |
 | `test:coverage` | Tests with coverage |
 | `typecheck` | `tsc --noEmit` |
