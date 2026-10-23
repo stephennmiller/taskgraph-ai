@@ -52,7 +52,7 @@ function fileLines(file: PrdFileCoverage, width: number): string[] {
 		const cite = file.taskIds.length === 1 ? 'cites' : 'cite';
 		return [
 			warn(
-				`Can't read ${prd}, which ${file.taskIds.length === 1 ? 'task' : 'tasks'} ${listIds(file.taskIds)} ${cite}`
+				`Can't read ${prd}, which ${file.taskIds.length === 1 ? 'task' : 'tasks'} ${listIds(file.taskIds.map(terminalSafe))} ${cite}`
 			)
 		];
 	}
@@ -79,7 +79,7 @@ function fileLines(file: PrdFileCoverage, width: number): string[] {
 			),
 			...rows(
 				file.stale.map((stale) => ({
-					key: String(stale.taskId),
+					key: terminalSafe(stale.taskId),
 					text: `#${terminalSafe(stale.slug)}`
 				})),
 				width
@@ -115,7 +115,7 @@ export function formatPrdCoverage(
 			),
 			...rows(
 				coverage.unsourced.map((task) => ({
-					key: String(task.id),
+					key: terminalSafe(task.id),
 					text: terminalSafe(task.title)
 				})),
 				width
