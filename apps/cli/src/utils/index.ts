@@ -21,7 +21,12 @@ export {
 export { fromBranchError } from './from-branch-error.js';
 
 // Versioned JSON output
-export { formatJson, printJson, wantsJsonOutput } from './json-output.js';
+export {
+	formatJson,
+	jsonOption,
+	printJson,
+	wantsJsonOutput
+} from './json-output.js';
 
 // Auto-update utilities
 export {

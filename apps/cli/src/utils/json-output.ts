@@ -5,6 +5,7 @@
  */
 
 import { toVersionedJson } from '@tm/core';
+import { Option } from 'commander';
 
 /** The payload as printed: versioned, indented unless `compact` */
 export function formatJson(
@@ -43,4 +44,16 @@ export function wantsJsonOutput(args: readonly string[]): boolean {
 		}
 	}
 	return false;
+}
+
+/**
+ * `--json`, the shorthand for `--format json`, for a command that takes
+ * `--format`. Commander sets `format` to `json` unless `--format` is also
+ * given, so the command reads only `options.format`.
+ */
+export function jsonOption(): Option {
+	return new Option(
+		'--json',
+		'Output in JSON format (shorthand for --format json)'
+	).implies({ format: 'json' });
 }

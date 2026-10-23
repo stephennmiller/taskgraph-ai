@@ -9,7 +9,7 @@ description: "Which commands print JSON, the schemaVersion every payload carries
 Scripts and agents can read TaskGraph's output as JSON. Every JSON payload the CLI prints is one object whose first key is `schemaVersion`:
 
 ```bash
-taskgraph next --format json
+taskgraph next --json
 ```
 
 ```json
@@ -22,6 +22,8 @@ taskgraph next --format json
 }
 ```
 
+Every command that takes `--format` also takes `--json` as its shorthand, so `next --json` and `next --format json` print the same thing.
+
 Check `schemaVersion` before you parse. If it is higher than the version your script was written for, a key you read may have been renamed or removed.
 
 ## Commands
@@ -30,17 +32,17 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 |---------|------|----------------------------------------|
 | `list` | `--json` or `--format json` | `tasks`, `metadata` |
 | `show <id>` | `--json` or `--format json` | `found`, `task` (one ID, plus `originalTaskId` for a subtask); `tasks`, `notFound` (several IDs) |
-| `next` | `--format json` | `found`, `task`, `tag`, `hasAnyTasks`, `checklist` (when the task has acceptance criteria) |
-| `next --claim` | `--format json` | `claimed`, `task`, `claimedBy`, `claimedAt`, `tag`, `hasAnyTasks` |
-| `graph` | `--format json` | `tag`, `total`, `roots`, `criticalPath`, `bottlenecks`, `cyclic`, `nextId`, `waves` (each node also has `wave`) |
-| `why <id>` | `--format json` | `id`, `title`, `status`, `tag`, `blocked`, `blockers`, `rootCauses` |
+| `next` | `--json` or `--format json` | `found`, `task`, `tag`, `hasAnyTasks`, `checklist` (when the task has acceptance criteria) |
+| `next --claim` | `--json` or `--format json` | `claimed`, `task`, `claimedBy`, `claimedAt`, `tag`, `hasAnyTasks` |
+| `graph` | `--json` or `--format json` | `tag`, `total`, `roots`, `criticalPath`, `bottlenecks`, `cyclic`, `nextId`, `waves` (each node also has `wave`) |
+| `why <id>` | `--json` or `--format json` | `id`, `title`, `status`, `tag`, `blocked`, `blockers`, `rootCauses` |
 | `tags`, `tags list` | `--json` | `tags`, `currentTag`, `totalTags` |
 | `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules` |
 | `prime --unnoted-since <time>` | `--json` | `unnoted` |
-| `generate` | `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
-| `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
-| `archive` | `--format json` | `tasks` (each with `id`, `title`, `status`), `tag`, `olderThanDays`, `dryRun` |
-| `archive restore <id>` | `--format json` | `restored`, `tag`, `task` |
+| `generate` | `--json` or `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
+| `set-status` | `--json` or `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
+| `archive` | `--json` or `--format json` | `tasks` (each with `id`, `title`, `status`), `tag`, `olderThanDays`, `dryRun` |
+| `archive restore <id>` | `--json` or `--format json` | `restored`, `tag`, `task` |
 | `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |
 | `github push` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `created`, `updated`, `skipped`, `closed`, `orphans` |
 | `github pull` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `applied`, `synced`, `conflicts`, `skipped` |

@@ -19,7 +19,7 @@ import {
 } from '../ui/formatters/checklist-formatters.js';
 import { formatStatusChanges } from '../ui/formatters/status-change-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -108,6 +108,7 @@ export class SetStatusCommand extends Command {
 			)
 			.option('--force', 'Mark done even with unchecked criteria')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
 			.option(
 				'-p, --project <path>',

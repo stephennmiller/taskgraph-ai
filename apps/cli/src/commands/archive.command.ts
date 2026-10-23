@@ -13,7 +13,7 @@ import {
 } from '../ui/formatters/archive-formatters.js';
 import { terminalWidth } from '../ui/layout/helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface ArchiveCommandOptions {
@@ -51,6 +51,7 @@ export class ArchiveCommand extends Command {
 			.option('--dry-run', 'List what would be archived without moving it')
 			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.option(
 				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
@@ -77,6 +78,7 @@ Examples:
 			.argument('<id>', 'ID of the archived task')
 			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.option(
 				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'
