@@ -68,6 +68,9 @@ export * from './modules/tasks/validation/index.js';
 export * from './modules/dependencies/index.js';
 export * from './modules/dependencies/dependency-provenance.js';
 
+// Importing the upstream project TaskGraph was forked from (init flag)
+export * from './modules/migration/index.js';
+
 // Zod schemas for validation
 export * from './common/schemas/index.js';
 

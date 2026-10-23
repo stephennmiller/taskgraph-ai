@@ -286,6 +286,9 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Initialize a new project with TaskGraph structure
     taskgraph init
 
+    # Import a Task Master project (.taskmaster/) into .taskgraph/
+    taskgraph init --from-taskmaster
+
     # Set up the Claude Code integration (CLAUDE.md import and .mcp.json; slash commands come from the plugin)
     taskgraph init --rules claude
     ```

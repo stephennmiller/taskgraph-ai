@@ -81,6 +81,12 @@ export {
 	type InitSummary
 } from './formatters/init-summary-formatters.js';
 
+// What init's upstream import moved
+export {
+	formatUpstreamImport,
+	type UpstreamImportSummary
+} from './formatters/upstream-import-formatters.js';
+
 // What `taskgraph models` shows and confirms
 export {
 	formatModelChanges,
