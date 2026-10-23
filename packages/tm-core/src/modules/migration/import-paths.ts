@@ -5,18 +5,7 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
-
-/** Whether `child` is `parent` or a path under it (both already resolved) */
-function isWithin(parent: string, child: string): boolean {
-	const relative = path.relative(parent, child);
-	return (
-		relative === '' ||
-		(!relative.startsWith(`..${path.sep}`) &&
-			relative !== '..' &&
-			!path.isAbsolute(relative))
-	);
-}
+import { isWithin } from '../../common/utils/project-root-finder.js';
 
 /**
  * Whether `file`, after following every symlink, stays under `root`. A path

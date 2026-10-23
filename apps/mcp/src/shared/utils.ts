@@ -4,7 +4,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { createTmCore } from '@tm/core';
+import { createTmCore, namedProjectRoot } from '@tm/core';
 import type { ContentResult, Context } from 'fastmcp';
 import packageJson from '../../../../package.json' with { type: 'json' };
 import type { ToolContext } from './types.js';
@@ -249,17 +249,15 @@ function getProjectRootFromSession(session: any): string | null {
 	}
 }
 
-/**
- * Wrapper to normalize project root in args with proper precedence order
- *
- * PRECEDENCE ORDER:
- * 1. TASKGRAPH_PROJECT_ROOT environment variable (from process.env or session)
- * 2. args.projectRoot (explicitly provided)
- * 3. Session-based project root resolution
- * 4. Current directory fallback
- */
 const TAG_PATTERN = /^[A-Za-z0-9_-]+$/;
 
+/**
+ * Wrapper to normalize project root in args, in the order the CLI uses
+ * (namedProjectRoot in @tm/core):
+ * 1. args.projectRoot (explicitly provided)
+ * 2. TASKGRAPH_PROJECT_ROOT, from process.env or else the session's env
+ * 3. the session's root folder
+ */
 export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 	fn: (
 		args: T & { projectRoot: string },
@@ -279,44 +277,14 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 			);
 		}
 		let normalizedRoot: string | null = null;
-		let rootSource = 'unknown';
 
 		try {
-			// 1. Check for TASKGRAPH_PROJECT_ROOT environment variable first
-			if (process.env.TASKGRAPH_PROJECT_ROOT) {
-				const envRoot = process.env.TASKGRAPH_PROJECT_ROOT;
-				normalizedRoot = path.isAbsolute(envRoot)
-					? envRoot
-					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASKGRAPH_PROJECT_ROOT environment variable';
-				log?.info?.(`Using project root from ${rootSource}: ${normalizedRoot}`);
-			}
-			// Also check session environment variables for TASKGRAPH_PROJECT_ROOT
-			else if (session?.env?.TASKGRAPH_PROJECT_ROOT) {
-				const envRoot = session.env.TASKGRAPH_PROJECT_ROOT;
-				normalizedRoot = path.isAbsolute(envRoot)
-					? envRoot
-					: path.resolve(process.cwd(), envRoot);
-				rootSource = 'TASKGRAPH_PROJECT_ROOT session environment variable';
-				log?.info?.(`Using project root from ${rootSource}: ${normalizedRoot}`);
-			}
-			// 2. If no environment variable, try args.projectRoot
-			else if (args.projectRoot) {
-				normalizedRoot = normalizeProjectRoot(args.projectRoot);
-				rootSource = 'args.projectRoot';
-				log?.info?.(`Using project root from ${rootSource}: ${normalizedRoot}`);
-			}
-			// 3. If no args.projectRoot, try session-based resolution
-			else {
-				const sessionRoot = getProjectRootFromSession(session);
-				if (sessionRoot) {
-					normalizedRoot = sessionRoot;
-					rootSource = 'session';
-					log?.info?.(
-						`Using project root from ${rootSource}: ${normalizedRoot}`
-					);
-				}
-			}
+			normalizedRoot =
+				namedProjectRoot(
+					args.projectRoot ? normalizeProjectRoot(args.projectRoot) : undefined,
+					process.env,
+					session?.env
+				) ?? getProjectRootFromSession(session);
 
 			if (!normalizedRoot) {
 				log?.error?.(
@@ -332,6 +300,7 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 					}
 				});
 			}
+			log?.info?.(`Using project root: ${normalizedRoot}`);
 
 			// Inject the normalized root back into args
 			const updatedArgs = { ...args, projectRoot: normalizedRoot } as T & {

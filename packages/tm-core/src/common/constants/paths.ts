@@ -9,6 +9,8 @@ export const TASKGRAPH_TASKS_DIR = '.taskgraph/tasks';
 export const TASKGRAPH_DOCS_DIR = '.taskgraph/docs';
 export const TASKGRAPH_REPORTS_DIR = '.taskgraph/reports';
 export const TASKGRAPH_TEMPLATES_DIR = '.taskgraph/templates';
+/** Where `loop --parallel` puts each task's git worktree */
+export const TASKGRAPH_WORKTREES_DIR = '.taskgraph/worktrees';
 
 // TaskGraph configuration files
 export const TASKGRAPH_CONFIG_FILE = '.taskgraph/config.json';
