@@ -416,3 +416,41 @@ describe('task-checker agent', () => {
 		expect(agent).toContain('NEVER change task state');
 	});
 });
+
+describe('parse-prd', () => {
+	const body = readFileSync(join(commandsDir, 'parse-prd.md'), 'utf-8');
+
+	it('gets the questions as JSON before generating anything', () => {
+		expect(body).toContain("taskgraph parse-prd '<prd-file>' --clarify --json");
+		expect(body.indexOf('--clarify --json')).toBeLessThan(
+			body.indexOf('--answers ')
+		);
+	});
+
+	it('passes the answers in a file written with the Write tool, never through the shell', () => {
+		// An answer with a line that is exactly the heredoc delimiter would end
+		// a heredoc early and run the rest of the answer as shell commands
+		const shellBlocks = [...body.matchAll(/```bash\n([\s\S]*?)```/g)].map(
+			(match) => match[1]
+		);
+
+		expect(body).toContain(
+			'to `.taskgraph/clarify-answers.json` with the Write tool'
+		);
+		expect(body).toMatch(
+			/^taskgraph parse-prd '<prd-file>' --answers \.taskgraph\/clarify-answers\.json$/m
+		);
+		expect(body).toMatch(/^rm \.taskgraph\/clarify-answers\.json$/m);
+		for (const block of shellBlocks) {
+			expect(block).not.toMatch(/<<|--answers -|echo/);
+		}
+	});
+
+	it('single-quotes the PRD path in every call', () => {
+		const calls = [...body.matchAll(/^taskgraph parse-prd (\S+)/gm)];
+
+		expect(calls.length).toBeGreaterThan(1);
+		for (const call of calls) expect(call[1]).toBe("'<prd-file>'");
+		expect(body).toContain("write any `'` in it as `'\\''`");
+	});
+});

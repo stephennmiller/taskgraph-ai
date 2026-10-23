@@ -75,7 +75,7 @@ export * from './modules/tasks/validation/index.js';
 export * from './modules/dependencies/index.js';
 export * from './modules/dependencies/dependency-provenance.js';
 
-// PRD sections and which of them have tasks (parse-prd, validate-dependencies)
+// PRD sections, coverage and clarifications (parse-prd, validate-dependencies)
 export * from './modules/prd/index.js';
 
 // Importing the upstream project TaskGraph was forked from (init flag)

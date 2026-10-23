@@ -12,13 +12,19 @@
  *   - changed sections: the text hash differs; their tasks may be stale, but
  *     are left as they are
  *   - removed sections: recorded or cited before, gone from the PRD now
+ *
+ * The `## Clarifications` section (`parse-prd --clarify`) answers questions
+ * about the rest of the PRD, so it is never new work: a new or edited one is
+ * not offered for tasks, and goes to the AI with the new sections as context.
  */
 
 import { createHash } from 'node:crypto';
+import { isClarificationsHeading } from './clarifications.js';
 import {
 	type PrdSection,
 	formatPrdSource,
 	getPrdSource,
+	parsePrdSections,
 	parsePrdSource,
 	resolvePrdSection
 } from './prd-sections.js';
@@ -249,8 +255,15 @@ export function diffPrdSections(
 			);
 
 	sections.forEach((section, i) => {
-		const result =
+		let result =
 			outcome[i] ?? (near.has(section.slug) ? 'unchanged' : undefined);
+		if (
+			result !== 'unchanged' &&
+			isClarificationsHeading(section.title, section.level) &&
+			!citing.has(section.slug)
+		) {
+			result = 'unchanged';
+		}
 		if (result === 'unchanged') {
 			delta.unchanged++;
 		} else if (result === 'changed') {
@@ -317,9 +330,18 @@ export function hasPrdChanges(delta: PrdDelta): boolean {
 
 /**
  * The text that goes to the AI for the new sections: each one's heading and
- * own text, in document order. The whole PRD when nothing was known about it.
+ * own text, in document order, then the PRD's Clarifications section, if it
+ * has one, so the answers apply to them. The whole PRD when nothing was known
+ * about it.
  */
 export function prdDeltaContent(delta: PrdDelta, prdContent: string): string {
 	if (!delta.known) return prdContent;
-	return delta.added.map((section) => section.text).join('\n\n');
+	const clarifications = parsePrdSections(prdContent).find(
+		(section) =>
+			isClarificationsHeading(section.title, section.level) &&
+			!delta.added.some((added) => added.slug === section.slug)
+	);
+	return [...delta.added, ...(clarifications ? [clarifications] : [])]
+		.map((section) => section.text)
+		.join('\n\n');
 }

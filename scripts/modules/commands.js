@@ -13,6 +13,7 @@ import inquirer from 'inquirer';
 // Import command registry and utilities from @tm/cli
 import {
 	checkForUpdate,
+	collectClarifications,
 	displayError,
 	displayUpgradeNotification,
 	formatCommanderError,
@@ -49,6 +50,7 @@ import {
 } from './task-manager.js';
 
 import { moveTasksBetweenTags } from './task-manager/move-task.js';
+import { findPrdGaps } from './task-manager/parse-prd/index.js';
 
 import {
 	getAvailableModelsList,
@@ -84,11 +86,13 @@ import {
 
 import {
 	CUSTOM_PROVIDERS,
+	parseClarificationAnswers,
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
 	UPSTREAM_NAME,
 	findProjectRoot,
-	isTaskGraphProject
+	isTaskGraphProject,
+	writeClarifications
 } from '@tm/core';
 
 import {
@@ -211,6 +215,16 @@ function registerCommands(programInstance) {
 			'-r, --research',
 			'Use Claude Code web research for research-backed task generation, providing more comprehensive and accurate task breakdown'
 		)
+		.option(
+			'--clarify',
+			'Ask up to 5 questions about gaps in the PRD first and save the answers in it'
+		)
+		.option(
+			'--answers <file>',
+			'Save answers (JSON from --clarify --json, or - for stdin) in the PRD, then generate tasks'
+		)
+		.option('--json', 'With --clarify: print the questions as JSON and stop')
+		.option('-y, --yes', 'With --clarify: accept the suggested answers')
 		.option('--tag <tag>', 'Specify tag context for task operations')
 		.action(async (file, options) => {
 			// Resolve PRD path: prioritize --input option, then positional argument
@@ -223,6 +237,36 @@ function registerCommands(programInstance) {
 					'Check the spelling; paths are relative to this folder'
 				);
 				process.exit(1);
+			}
+
+			// Flags that only work together; checked before any AI call or write
+			const flagError = clarifyFlagError(options);
+			if (flagError) {
+				printError(flagError.message, flagError.hint);
+				process.exit(1);
+			}
+			let answersFromFile = null;
+			if (
+				options.answers &&
+				options.answers !== '-' &&
+				!fs.existsSync(path.resolve(options.answers))
+			) {
+				printError(
+					`${options.answers} not found`,
+					'Check the spelling; paths are relative to this folder'
+				);
+				process.exit(1);
+			}
+			if (options.answers) {
+				try {
+					answersFromFile = readClarificationAnswers(options.answers);
+				} catch (error) {
+					printError(
+						`Couldn't read the answers in ${options.answers}: ${error.message}`,
+						'Add an "answer" to each question in the output of --clarify --json'
+					);
+					process.exit(1);
+				}
 			}
 
 			// Initialize TaskGraph
@@ -253,6 +297,29 @@ function registerCommands(programInstance) {
 
 			// Resolve tag using standard pattern
 			const tag = taskGraph.getCurrentTag();
+
+			// --clarify --json: print the questions for an agent to ask, and stop.
+			// stdout carries only the JSON
+			if (options.clarify && options.json) {
+				try {
+					const { questions } = await findPrdGaps({
+						prdPath: taskGraph.getPrdPath(),
+						projectRoot: taskGraph.getProjectRoot(),
+						research
+					});
+					console.log(
+						JSON.stringify(
+							{ prd: displayPath(taskGraph.getPrdPath()), questions },
+							null,
+							2
+						)
+					);
+				} catch (error) {
+					printError(`Couldn't find questions to ask: ${error.message}`);
+					process.exit(1);
+				}
+				return;
+			}
 
 			// Show current tag context
 			await displayCurrentTagIndicator(tag, {
@@ -300,6 +367,22 @@ function registerCommands(programInstance) {
 
 			try {
 				if (!(await confirmOverwriteIfNeeded())) return;
+
+				// Answers go into the PRD first, so the tasks are generated from them
+				const answers =
+					answersFromFile ??
+					(options.clarify
+						? await clarifyPrd(taskGraph, { research, yes: options.yes })
+						: []);
+				if (answers.length > 0) {
+					const saved = writeClarifications(taskGraph.getPrdPath(), answers);
+					console.log(
+						ui.formatClarificationsSaved(
+							saved,
+							displayPath(taskGraph.getPrdPath())
+						)
+					);
+				}
 
 				// The progress display names the file, task count and research,
 				// and the saved line the new total, so no preamble
@@ -3371,6 +3454,85 @@ async function launchREPL() {
 
 // Commands that work outside a project
 const NO_TASKS_FILE_HINT = 'Create some with `taskgraph parse-prd <file>`';
+
+/**
+ * parse-prd's --clarify flags that need each other, or exclude each other
+ * @returns {{message: string, hint: string} | null}
+ */
+function clarifyFlagError(options) {
+	if (options.clarify && options.answers) {
+		return {
+			message: '--clarify and --answers both supply the answers',
+			hint: 'Use --clarify to be asked, or --answers <file> to pass them in'
+		};
+	}
+	if (options.json && !options.clarify) {
+		return {
+			message: '--json only works with --clarify',
+			hint: 'Try `taskgraph parse-prd prd.md --clarify --json`'
+		};
+	}
+	if (options.yes && !options.clarify) {
+		return {
+			message: '--yes only works with --clarify',
+			hint: 'Try `taskgraph parse-prd prd.md --clarify --yes`'
+		};
+	}
+	return null;
+}
+
+/** Read --answers: a JSON file, or - for stdin */
+function readClarificationAnswers(source) {
+	const text =
+		source === '-'
+			? fs.readFileSync(0, 'utf8')
+			: fs.readFileSync(source, 'utf8');
+	let json;
+	try {
+		json = JSON.parse(text);
+	} catch {
+		throw new Error("it isn't valid JSON");
+	}
+	return parseClarificationAnswers(json);
+}
+
+/** A path as the user typed it: relative to the current folder */
+function displayPath(file) {
+	const relative = path.relative(process.cwd(), file);
+	return relative && !relative.startsWith('..') ? relative : file;
+}
+
+/**
+ * parse-prd --clarify in the terminal: find gaps in the PRD, then ask about
+ * them (or take the suggested answers without a terminal or with --yes)
+ * @returns {Promise<Array<{question: string, answer: string}>>}
+ */
+async function clarifyPrd(taskGraph, { research, yes }) {
+	const prdPath = taskGraph.getPrdPath();
+	const prdName = displayPath(prdPath);
+	const spinner = startLoadingIndicator(`Reading ${prdName} for gaps…`);
+	let questions;
+	try {
+		({ questions } = await findPrdGaps({
+			prdPath,
+			projectRoot: taskGraph.getProjectRoot(),
+			research
+		}));
+	} finally {
+		stopLoadingIndicator(spinner);
+	}
+
+	if (questions.length === 0) {
+		console.log(ui.formatNoClarifyQuestions(prdName));
+		return [];
+	}
+	const answers = await collectClarifications(questions, { prdName, yes });
+	if (answers === null) {
+		console.log(ui.formatClarifyCancelled(prdName));
+		process.exit(130);
+	}
+	return answers;
+}
 
 const RUNS_WITHOUT_PROJECT = new Set([
 	'init',

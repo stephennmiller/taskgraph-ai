@@ -9,6 +9,7 @@ import {
 	computePrdCoverage,
 	hasPrdCoverageGaps
 } from './prd-coverage.js';
+import { applyClarifications } from './clarifications.js';
 import { parsePrdSections } from './prd-sections.js';
 
 const FIXTURES = path.join(__dirname, '../../../tests/fixtures/prd');
@@ -69,6 +70,21 @@ describe('computePrdCoverage', () => {
 		expect([...cited, ...coveredByNesting, ...uncovered].sort()).toEqual(
 			[...all].sort()
 		);
+	});
+
+	it('needs no task for the Clarifications section parse-prd --clarify writes', () => {
+		const clarified = applyClarifications(prd, [
+			{ question: 'Which database?', answer: 'SQLite' }
+		]).content;
+		const uncovered = computePrdCoverage(
+			tasks,
+			readerFor(clarified)
+		)?.files[0].uncovered.map((s) => s.slug);
+
+		expect(parsePrdSections(clarified).map((s) => s.slug)).toContain(
+			'clarifications'
+		);
+		expect(uncovered).toEqual(['search--tags', 'rate-limiting', 'setup']);
 	});
 
 	it('reports tasks that cite a renamed heading, and the new heading as uncovered', () => {

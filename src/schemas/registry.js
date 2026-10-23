@@ -2,6 +2,7 @@ import { AddTaskResponseSchema } from './add-task.js';
 import { ComplexityAnalysisResponseSchema } from './analyze-complexity.js';
 import { ExpandTaskResponseSchema } from './expand-task.js';
 import { ParsePRDResponseSchema } from './parse-prd.js';
+import { ParsePRDClarifyResponseSchema } from './parse-prd-clarify.js';
 import { UpdateSubtaskResponseSchema } from './update-subtask.js';
 import { UpdateTaskResponseSchema } from './update-task.js';
 import { UpdateTasksResponseSchema } from './update-tasks.js';
@@ -13,7 +14,8 @@ export const COMMAND_SCHEMAS = {
 	'update-subtask-by-id': UpdateSubtaskResponseSchema,
 	'update-task-by-id': UpdateTaskResponseSchema,
 	'add-task': AddTaskResponseSchema,
-	'parse-prd': ParsePRDResponseSchema
+	'parse-prd': ParsePRDResponseSchema,
+	'parse-prd-clarify': ParsePRDClarifyResponseSchema
 };
 
 // Export individual schemas for direct access
@@ -24,4 +26,5 @@ export * from './update-subtask.js';
 export * from './update-task.js';
 export * from './add-task.js';
 export * from './parse-prd.js';
+export * from './parse-prd-clarify.js';
 export * from './base-schemas.js';

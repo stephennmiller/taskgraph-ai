@@ -65,6 +65,25 @@ export function registerParsePRDTool(server) {
 				.optional()
 				.describe(
 					'Append generated tasks to existing file. For a PRD parsed before, only sections added since then get tasks; changed and removed sections are listed in prdChanges, and an unchanged PRD adds nothing.'
+				),
+			clarify: z
+				.boolean()
+				.optional()
+				.describe(
+					'Return up to 5 questions about gaps in the PRD, each with a suggestedAnswer, without generating tasks. Ask the user, then call parse_prd again with their answers in clarifications.'
+				),
+			clarifications: z
+				.array(
+					z.object({
+						question: z
+							.string()
+							.describe('The question, as clarify returned it'),
+						answer: z.string().describe("The user's answer")
+					})
+				)
+				.optional()
+				.describe(
+					'Answers to save in the PRD under "## Clarifications" before generating tasks, so the tasks follow them'
 				)
 		}),
 		annotations: {

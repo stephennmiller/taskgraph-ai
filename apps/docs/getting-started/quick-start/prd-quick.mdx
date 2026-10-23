@@ -106,6 +106,14 @@ This will:
 - Parse your PRD document
 - Generate a structured `tasks.json` file with tasks, dependencies, priorities, and test strategies
 
+To be asked about gaps in the PRD first, use the `/taskgraph:parse-prd` plugin command in Claude Code, or add `--clarify` in the terminal:
+
+```bash
+taskgraph parse-prd .taskgraph/docs/<prd-name>.md --clarify
+```
+
+It asks up to 5 questions, each with a suggested answer, saves your answers in the PRD under `## Clarifications`, and then generates the tasks from it.
+
 Now that you have written and parsed a PRD, you are ready to start setting up your tasks.
 
 

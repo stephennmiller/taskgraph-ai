@@ -5,7 +5,9 @@
 
 import fs from 'fs';
 import path from 'path';
+import { parseClarificationAnswers, writeClarifications } from '@tm/core';
 import { getDefaultNumTasks } from '../../../../scripts/modules/config-manager.js';
+import { findPrdGaps } from '../../../../scripts/modules/task-manager/parse-prd/index.js';
 import { parsePRD } from '../../../../scripts/modules/task-manager.js';
 import {
 	disableSilentMode,
@@ -31,6 +33,8 @@ import {
  * @param {boolean} args.append - Whether to append to the output file.
  * @param {boolean} args.research - Whether to use research mode.
  * @param {string} args.tag - Tag context for organizing tasks into separate task lists.
+ * @param {boolean} [args.clarify] - Return questions about gaps in the PRD instead of generating tasks.
+ * @param {Array<{question: string, answer: string}>} [args.clarifications] - Answers to save in the PRD first.
  * @param {Object} log - Logger object.
  * @param {Object} context - Context object containing session data.
  * @returns {Promise<Object>} - Result object with success status and data/error information.
@@ -46,7 +50,9 @@ export async function parsePRDDirect(args, log, context = {}) {
 		append,
 		research,
 		projectRoot,
-		tag
+		tag,
+		clarify,
+		clarifications
 	} = args;
 
 	// Create the standard logger wrapper
@@ -107,6 +113,72 @@ export async function parsePRDDirect(args, log, context = {}) {
 			success: false,
 			error: { code: 'FILE_NOT_FOUND', message: errorMsg }
 		};
+	}
+
+	if (clarify && clarifications) {
+		return {
+			success: false,
+			error: {
+				code: 'INVALID_ARGUMENT',
+				message:
+					'Pass clarify to get questions, or clarifications to save answers, not both'
+			}
+		};
+	}
+
+	// clarify: the questions for the agent to ask the user; no tasks yet
+	if (clarify) {
+		const wasSilentForClarify = isSilentMode();
+		if (!wasSilentForClarify) enableSilentMode();
+		try {
+			const { questions, telemetryData } = await findPrdGaps({
+				prdPath: inputPath,
+				projectRoot,
+				research,
+				session,
+				isMCP: true
+			});
+			return {
+				success: true,
+				data: {
+					message:
+						questions.length > 0
+							? `Ask the user these ${questions.length} questions, then call parse_prd with their answers in clarifications`
+							: 'No open questions; call parse_prd without clarify to generate tasks',
+					questions,
+					telemetryData
+				}
+			};
+		} catch (error) {
+			logWrapper.error(`Error finding questions: ${error.message}`);
+			return {
+				success: false,
+				error: { code: 'PARSE_PRD_CLARIFY_ERROR', message: error.message }
+			};
+		} finally {
+			if (!wasSilentForClarify && isSilentMode()) disableSilentMode();
+		}
+	}
+
+	// Answers go into the PRD first, so the tasks are generated from them
+	let clarificationsSaved;
+	if (clarifications) {
+		try {
+			const saved = writeClarifications(
+				inputPath,
+				parseClarificationAnswers(clarifications)
+			);
+			clarificationsSaved = {
+				added: saved.added,
+				updated: saved.updated,
+				unchanged: saved.unchanged
+			};
+		} catch (error) {
+			return {
+				success: false,
+				error: { code: 'INVALID_ARGUMENT', message: error.message }
+			};
+		}
 	}
 
 	const outputDir = path.dirname(outputPath);
@@ -215,7 +287,10 @@ export async function parsePRDDirect(args, log, context = {}) {
 							}
 						: {}),
 					telemetryData: result.telemetryData,
-					tagInfo: result.tagInfo
+					tagInfo: result.tagInfo,
+					...(clarificationsSaved
+						? { clarifications: clarificationsSaved }
+						: {})
 				}
 			};
 		} else {
