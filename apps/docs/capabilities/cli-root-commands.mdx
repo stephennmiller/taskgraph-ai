@@ -548,37 +548,16 @@ description: "A comprehensive reference of all available TaskGraph commands"
     The research role has web search and fetch only. It cannot read or change your files and has no shell. In the CLI you can ask follow-up questions and choose where to save findings.
   </Accordion>
 
-  <Accordion title="TDD Workflow (Autopilot)">
-    ```bash
-    # Start autonomous TDD workflow for a task
-    taskgraph autopilot start <taskId>
-
-    # Get next action with context
-    taskgraph autopilot next
-
-    # Complete phase with test results
-    taskgraph autopilot complete --results '{"total":N,"passed":N,"failed":N}'
-
-    # Commit changes
-    taskgraph autopilot commit
-
-    # Check workflow status
-    taskgraph autopilot status
-
-    # Resume interrupted workflow
-    taskgraph autopilot resume
-
-    # Abort workflow
-    taskgraph autopilot abort
-    ```
-
-    The TDD workflow enforces RED → GREEN → COMMIT cycles for each subtask. See [AI Agent Integration](/tdd-workflow/ai-agent-integration) for details.
-  </Accordion>
-
   <Accordion title="Loop (Autonomous Batch Execution)">
     ```bash
     # Run 10 iterations with the default preset
     taskgraph loop -n 10
+
+    # Work on one task (1 iteration unless -n is given)
+    taskgraph loop --id 3
+
+    # Build a task test-first: a failing test, the code, a commit, per subtask
+    taskgraph loop --id 3 --prompt tdd
 
     # Use a specific preset
     taskgraph loop -n 10 --prompt test-coverage
@@ -605,6 +584,7 @@ description: "A comprehensive reference of all available TaskGraph commands"
     - `linting` - Fix lint and type errors incrementally
     - `duplication` - Refactor duplicated code into shared utilities
     - `entropy` - Clean up code smells (long functions, deep nesting, etc.)
+    - `tdd` - Complete tasks test-first: RED, GREEN, COMMIT for each subtask
 
     Each iteration spawns a fresh Claude Code session, avoiding context fatigue. See [Loop Command](/capabilities/loop) for full documentation.
   </Accordion>

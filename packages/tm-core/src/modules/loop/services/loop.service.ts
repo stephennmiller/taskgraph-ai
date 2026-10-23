@@ -271,10 +271,14 @@ export class LoopService {
 
 	private buildContextHeader(config: LoopConfig, iteration: number): string {
 		const tagInfo = config.tag ? ` (tag: ${config.tag})` : '';
+		// The pinned task replaces the preset's `taskgraph next` step
+		const taskInfo = config.taskId
+			? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}.`
+			: '';
 		// Note: tasks.json reference removed - let the preset control task source to avoid confusion
 		return `@${config.progressFile} @CLAUDE.md
 
-Loop iteration ${iteration} of ${config.iterations}${tagInfo}`;
+Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 	}
 
 	private async buildPrompt(

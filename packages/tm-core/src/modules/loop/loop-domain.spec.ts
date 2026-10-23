@@ -141,7 +141,7 @@ describe('LoopDomain', () => {
 	describe('getAvailablePresets', () => {
 		it('should return array of all preset names', () => {
 			const presets = loopDomain.getAvailablePresets();
-			expect(presets).toHaveLength(5);
+			expect(presets).toHaveLength(6);
 			expect(presets).toEqual(
 				expect.arrayContaining([
 					'default',

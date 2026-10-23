@@ -19,13 +19,7 @@ vi.mock('@tm/core', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('@tm/core')>();
 	return {
 		createTmCore: vi.fn(),
-		PRESET_NAMES: [
-			'default',
-			'test-coverage',
-			'linting',
-			'duplication',
-			'entropy'
-		],
+		PRESET_NAMES: actual.PRESET_NAMES,
 		// Flag checks are tm-core logic the command relies on: use the real ones
 		MAX_PARALLEL: actual.MAX_PARALLEL,
 		ParallelLoopError: actual.ParallelLoopError,
@@ -95,10 +89,19 @@ describe('LoopCommand', () => {
 				resolveIterations: vi.fn().mockImplementation((opts) => {
 					// Mirror the real implementation logic for accurate testing
 					if (opts.userIterations !== undefined) return opts.userIterations;
+					if (opts.taskId !== undefined) return 1;
 					if (opts.preset === 'default' && opts.pendingTaskCount > 0)
 						return opts.pendingTaskCount;
 					return 10;
-				})
+				}),
+				resolveTask: vi.fn().mockImplementation(async (id: string) => ({
+					id,
+					title: 'Pinned Task'
+				})),
+				isPreset: vi.fn().mockReturnValue(true),
+				isTaskPreset: vi
+					.fn()
+					.mockImplementation((p: string) => p === 'default' || p === 'tdd')
 			},
 			tasks: {
 				getNext: vi.fn().mockResolvedValue({ id: '1', title: 'Test Task' }),
@@ -616,8 +619,41 @@ describe('LoopCommand', () => {
 
 			expect(mockTmCore.tasks.getNext).toHaveBeenCalled();
 			const allOutput = consoleLogSpy.mock.calls.flat().join(' ');
-			expect(allOutput).toContain('Next task');
+			expect(allOutput).toContain('Starts with task 1');
 			expect(allOutput).toContain('Test Task');
+		});
+
+		it('runs one iteration on the task --id names', async () => {
+			const execute = (loopCommand as any).execute.bind(loopCommand);
+			await execute({ id: '3', prompt: 'tdd' });
+
+			expect(mockTmCore.loop.resolveTask).toHaveBeenCalledWith('3', {
+				prompt: 'tdd',
+				tag: undefined
+			});
+			expect(mockLoopRun).toHaveBeenCalledWith(
+				expect.objectContaining({ iterations: 1, prompt: 'tdd', taskId: '3' })
+			);
+			expect(mockTmCore.tasks.getNext).not.toHaveBeenCalled();
+			const allOutput = consoleLogSpy.mock.calls.flat().join(' ');
+			expect(allOutput).toContain('Task 3  Pinned Task');
+		});
+
+		it('checks --id before asking for approval or starting Claude', async () => {
+			mockTmCore.loop.isTrusted.mockReturnValue(false);
+			mockTmCore.loop.resolveTask.mockRejectedValue(
+				new Error('Task "9" doesn\'t exist')
+			);
+
+			const execute = (loopCommand as any).execute.bind(loopCommand);
+			await expect(execute({ id: '9' })).rejects.toThrow('process.exit called');
+
+			expect(inquirer.prompt).not.toHaveBeenCalled();
+			expect(mockLoopRun).not.toHaveBeenCalled();
+			expect(displayError).toHaveBeenCalledWith(
+				expect.objectContaining({ message: 'Task "9" doesn\'t exist' }),
+				{ skipExit: true }
+			);
 		});
 	});
 });

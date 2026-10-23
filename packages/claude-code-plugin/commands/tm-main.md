@@ -62,9 +62,7 @@ Every slash command the TaskGraph plugin provides, grouped by purpose. Invoke th
 
 ## Workflows & Automation
 
-- `/taskgraph:smart-workflow` - Context-aware intelligent workflow execution
-- `/taskgraph:command-pipeline` - Chain multiple commands together
-- `/taskgraph:auto-implement-tasks` - Advanced auto-implementation with code generation
+- `taskgraph loop` (in a terminal) - Claude Code works the tasks, one per iteration (`--prompt tdd` for test-first, `--parallel <n>` side by side)
 - `/taskgraph:analyze-project` - Deep project analysis and insights
 - `/taskgraph:learn` - Interactive guide to TaskGraph
 - `/taskgraph:help` - Command overview

@@ -3,7 +3,7 @@ title: "Upgrading"
 description: "What to change when moving an existing project to a newer TaskGraph, from Task Master or from any earlier release"
 ---
 
-TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52.
+TaskGraph 0.47 renamed the project from Task Master to TaskGraph and removed the legacy support that went with the old name. Projects created with Task Master or with a release before 0.47 need steps 1 to 4. Step 5 (slash commands now come from the plugin) applies to every existing project, including those set up with 0.47 to 0.52. Step 7 (`start` and `autopilot` folded into `loop`) applies to anyone who used them.
 
 ## 1. Import the project folder
 
@@ -94,6 +94,23 @@ export ENABLE_EXPERIMENTAL_MCP_CLI='true'
 Claude Code no longer reads that variable: it defers MCP tool definitions by default (MCP tool search, set with `ENABLE_TOOL_SEARCH`). `init` doesn't add the line any more, and you can delete it.
 
 `init` also stopped writing `.mcp.json` unless you pass `--mcp`. An `.mcp.json` you already have is left as it is. The Claude Code integration (the `CLAUDE.md` import) is now on by default, including under `--yes`; pass `--no-claude` to skip it.
+
+## 7. Run agents with `loop`
+
+`taskgraph loop` is now the one way to have Claude Code work the plan. `start`, `autopilot` and three plugin commands folded into it or were removed:
+
+| Before | Now |
+| --- | --- |
+| `taskgraph start <id>` | `taskgraph loop -n 1 --id <id>` |
+| `taskgraph start` (no ID) | `taskgraph loop -n 1` |
+| `taskgraph autopilot start <id>` and the other `autopilot` subcommands | `taskgraph loop --id <id> --prompt tdd` |
+| MCP tools `autopilot_start`, `autopilot_resume`, `autopilot_next`, `autopilot_status`, `autopilot_complete`, `autopilot_commit`, `autopilot_finalize`, `autopilot_abort` | `taskgraph loop --prompt tdd` in a terminal |
+| `/taskgraph:auto-implement-tasks`, `/taskgraph:smart-workflow`, `/taskgraph:command-pipeline` | `taskgraph loop` (add `--prompt tdd` or `--parallel <n>`) |
+| `task-orchestrator` agent | `taskgraph loop --parallel <n>`, or the `task-executor` agent for one task |
+
+- **`start`** still runs for one more release, hidden from help. It prints `start is deprecated; run taskgraph loop -n 1 --id <id> instead` and then runs that loop. It now runs Claude Code non-interactively (`claude -p`), like every `loop` run, instead of opening an interactive session. The first run in a project asks you to allow Claude to work without permission prompts; pass `--trust` in scripts. `--dry-run`, `--force`, `--no-status-update` and `--format json` are gone: use `taskgraph show <id>` to see a task without starting it.
+- **`autopilot`** is removed with its 8 `autopilot_*` MCP tools. The `tdd` preset runs the same RED, GREEN, COMMIT cycle for each subtask as a prompt, on a `task-<id>` branch (see [tdd](/capabilities/loop-presets#tdd)). Nothing checks the test results for Claude any more, and there is no `resume` or `abort`: stop with Ctrl-C and run the same command again to continue. The workflow state `autopilot` kept in `~/.taskgraph/<project>/sessions/` is no longer read; you can delete that folder. With `TASKGRAPH_TOOLS=all`, the MCP server now loads 40 tools instead of 48.
+- **Plugin**: refresh it (`/plugin marketplace update taskgraph`) to drop the removed commands and agent.
 
 ## Credit
 

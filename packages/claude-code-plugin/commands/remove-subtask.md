@@ -36,6 +36,8 @@ taskgraph remove-subtask --id=<parentId.subtaskId>
 taskgraph remove-subtask --id=<parentId.subtaskId> --convert
 ```
 
+Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+
 ## Pre-Removal Checks
 
 1. **Validate Subtask**

@@ -153,16 +153,16 @@ export {
 	formatListNextStep,
 	formatListSummary,
 	formatNoNextTask,
+	formatPlainTaskList,
 	type ListSummaryOptions
 } from './formatters/task-list-formatters.js';
 
-// What `start` prints around a Claude Code session
+// What `loop` prints before it starts, and the `start` alias notice
 export {
-	formatStartFailed,
-	formatStartLaunching,
-	formatStartSessionEnded,
-	type StartTarget
-} from './formatters/start-formatters.js';
+	formatLoopIntro,
+	formatStartDeprecation,
+	type LoopIntro
+} from './formatters/loop-formatters.js';
 
 // Status-aware next steps for a task
 export {

@@ -12,13 +12,15 @@ import {
 	TEST_COVERAGE_PRESET,
 	LINTING_PRESET,
 	DUPLICATION_PRESET,
-	ENTROPY_PRESET
+	ENTROPY_PRESET,
+	TASK_PRESETS,
+	TDD_PRESET
 } from './index.js';
 
 describe('Preset Exports', () => {
 	describe('PRESET_NAMES', () => {
-		it('contains all 5 preset names', () => {
-			expect(PRESET_NAMES).toHaveLength(5);
+		it('contains all 6 preset names', () => {
+			expect(PRESET_NAMES).toHaveLength(6);
 		});
 
 		it('includes default preset', () => {
@@ -39,6 +41,14 @@ describe('Preset Exports', () => {
 
 		it('includes entropy preset', () => {
 			expect(PRESET_NAMES).toContain('entropy');
+		});
+
+		it('includes tdd preset', () => {
+			expect(PRESET_NAMES).toContain('tdd');
+		});
+
+		it('names default and tdd as the presets that work on tasks', () => {
+			expect([...TASK_PRESETS]).toEqual(['default', 'tdd']);
 		});
 	});
 
@@ -165,6 +175,25 @@ describe('Preset Exports', () => {
 	});
 });
 
+describe('tdd preset', () => {
+	it('runs RED, GREEN and COMMIT for each subtask', () => {
+		expect(TDD_PRESET).toContain('RED:');
+		expect(TDD_PRESET).toContain('GREEN:');
+		expect(TDD_PRESET).toContain('COMMIT:');
+		expect(TDD_PRESET).toMatch(/new test must fail/);
+	});
+
+	it('works on TaskGraph tasks and marks them done', () => {
+		expect(TDD_PRESET).toContain('taskgraph next');
+		expect(TDD_PRESET).toContain(
+			'taskgraph set-status --id=<id>.<subtask id> --status=done'
+		);
+		expect(TDD_PRESET).toContain(
+			'taskgraph set-status --id=<id> --status=done'
+		);
+	});
+});
+
 describe('Preset Snapshots', () => {
 	it('default preset matches snapshot', () => {
 		expect(DEFAULT_PRESET).toMatchSnapshot();
@@ -184,6 +213,10 @@ describe('Preset Snapshots', () => {
 
 	it('entropy preset matches snapshot', () => {
 		expect(ENTROPY_PRESET).toMatchSnapshot();
+	});
+
+	it('tdd preset matches snapshot', () => {
+		expect(TDD_PRESET).toMatchSnapshot();
 	});
 });
 

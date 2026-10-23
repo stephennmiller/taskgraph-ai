@@ -352,8 +352,8 @@ describe('--json contract', () => {
 		}
 	});
 
-	// #311: show and start gave numeric ids where list and next give strings
-	it('show, start, list and next give the same ids', () => {
+	// #311: show gave numeric ids where list and next give strings
+	it('show, list and next give the same ids', () => {
 		const listed = json(['list', '--with-subtasks', '--json']).tasks.find(
 			(t: { id: string }) => t.id === '2'
 		);
@@ -371,9 +371,6 @@ describe('--json contract', () => {
 		expect(ids(listed)).toEqual(expected);
 		expect(ids(json(['next', '--format', 'json']).task)).toEqual(expected);
 		expect(ids(json(['show', '2', '--json']).task)).toEqual(expected);
-		expect(
-			ids(json(['start', '2', '--dry-run', '--format', 'json']).task)
-		).toEqual(expected);
 		expect(json(['show', '2.1', '--json']).task).toMatchObject({
 			id: '1',
 			parentId: '2'
@@ -650,57 +647,6 @@ describe('--json contract', () => {
 		`);
 	});
 
-	it('start --dry-run', () => {
-		expect(
-			shapeOf(json(['start', '2', '--dry-run', '--format', 'json']))
-		).toMatchInlineSnapshot(`
-			{
-			  "command": {
-			    "args": [
-			      "string",
-			    ],
-			    "cwd": "string",
-			    "executable": "string",
-			  },
-			  "executionOutput": "string",
-			  "found": "boolean",
-			  "schemaVersion": "number",
-			  "started": "boolean",
-			  "task": {
-			    "acceptanceCriteria": [
-			      {
-			        "checked": "boolean",
-			        "text": "string",
-			      },
-			    ],
-			    "dependencies": [
-			      "string",
-			    ],
-			    "description": "string",
-			    "details": "string",
-			    "id": "string",
-			    "priority": "string",
-			    "status": "string",
-			    "subtasks": [
-			      {
-			        "dependencies": [
-			          "number",
-			        ],
-			        "description": "string",
-			        "details": "string",
-			        "id": "string",
-			        "parentId": "string",
-			        "status": "string",
-			        "title": "string",
-			      },
-			    ],
-			    "testStrategy": "string",
-			    "title": "string",
-			  },
-			}
-		`);
-	});
-
 	it('github status', () => {
 		expect(
 			shapeOf(json(['github', 'status', '--repo', 'acme/app', '--json']))
@@ -711,18 +657,6 @@ describe('--json contract', () => {
 			  "repo": "string",
 			  "schemaVersion": "number",
 			  "unlinkedTasks": "number",
-			}
-		`);
-	});
-
-	it('autopilot status', () => {
-		expect(
-			shapeOf(json(['autopilot', 'status', '--json']))
-		).toMatchInlineSnapshot(`
-			{
-			  "active": "boolean",
-			  "message": "string",
-			  "schemaVersion": "number",
 			}
 		`);
 	});

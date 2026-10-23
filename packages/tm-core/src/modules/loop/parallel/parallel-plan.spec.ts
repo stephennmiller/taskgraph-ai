@@ -46,7 +46,8 @@ describe('assertParallelFlags', () => {
 	it.each([
 		[{ prompt: 'linting' }, '--prompt'],
 		[{ iterations: 5 }, '--iterations'],
-		[{ verbose: true }, '--verbose']
+		[{ verbose: true }, '--verbose'],
+		[{ taskId: '3' }, '--id']
 	])('refuses %j', (flags, flag) => {
 		expect(() => assertParallelFlags(flags)).toThrow(
 			`--parallel can't be combined with ${flag}`

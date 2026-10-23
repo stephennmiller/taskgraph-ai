@@ -10,7 +10,8 @@ export type LoopPreset =
 	| 'test-coverage'
 	| 'linting'
 	| 'duplication'
-	| 'entropy';
+	| 'entropy'
+	| 'tdd';
 
 /**
  * Output callbacks for loop execution.
@@ -53,6 +54,12 @@ export interface LoopConfig {
 	sleepSeconds: number;
 	/** Tag context to operate on (optional) */
 	tag?: string;
+	/**
+	 * Work on this task or subtask (`3`, `3.2`) instead of the one
+	 * `taskgraph next` picks (optional). Check it first with
+	 * `LoopDomain.resolveTask`.
+	 */
+	taskId?: string;
 	/** Run Claude in Docker sandbox mode (default: false) */
 	sandbox?: boolean;
 	/**

@@ -37,7 +37,8 @@ const CONTROL =
 const plain = (text: string) =>
 	text.replace(/\s+/g, ' ').replace(CONTROL, '').replace(/ +/g, ' ').trim();
 
-const fit = (text: string, width: number) => {
+/** One line of task text, cut with `…` to fit `width` columns */
+export const fit = (text: string, width: number) => {
 	const clean = plain(text);
 	return clean.length > width
 		? `${clean.slice(0, Math.max(0, width - 1))}…`

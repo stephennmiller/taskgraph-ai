@@ -55,7 +55,10 @@ describe('tags add', () => {
 		vi.mocked(isGitRepository).mockResolvedValue(true);
 		vi.mocked(getCurrentBranch).mockResolvedValue('feature/login');
 		vi.mocked(tagManagement.createTagFromBranch).mockResolvedValue({
-			tagName: 'feature-login'
+			branchName: 'feature/login',
+			tagName: 'feature-login',
+			mappingUpdated: true,
+			autoSwitched: false
 		});
 	});
 

@@ -5,6 +5,7 @@
  */
 
 import path from 'node:path';
+import { LoopError } from '../loop-task.js';
 
 /** Upper bound on `--parallel`: each task is a full Claude Code session */
 export const MAX_PARALLEL = 16;
@@ -12,13 +13,10 @@ export const MAX_PARALLEL = 16;
 /** Branch prefix for task worktrees: `taskgraph/task-<id>` */
 export const TASK_BRANCH_PREFIX = 'taskgraph/task-';
 
-/** An error the CLI prints as-is, with the fix underneath */
-export class ParallelLoopError extends Error {
-	constructor(
-		message: string,
-		readonly hint?: string
-	) {
-		super(message);
+/** A `--parallel` error the CLI prints as-is, with the fix underneath */
+export class ParallelLoopError extends LoopError {
+	constructor(message: string, hint?: string) {
+		super(message, hint);
 		this.name = 'ParallelLoopError';
 	}
 }
@@ -45,6 +43,8 @@ export interface ParallelFlags {
 	iterations?: number;
 	sandbox?: boolean;
 	verbose?: boolean;
+	/** `--id`: --parallel picks its own tasks from wave 1 */
+	taskId?: string;
 }
 
 /**
@@ -69,7 +69,9 @@ export function assertParallelFlags(flags: ParallelFlags): void {
 				? '--iterations'
 				: flags.verbose
 					? '--verbose'
-					: null;
+					: flags.taskId !== undefined
+						? '--id'
+						: null;
 	if (conflict) {
 		throw new ParallelLoopError(
 			`--parallel can't be combined with ${conflict}`,

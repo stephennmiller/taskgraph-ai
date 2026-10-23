@@ -22,13 +22,11 @@
 	"global": {
 		"logLevel": "silent",
 		"debug": false,
-		"defaultNumTasks": 10,
 		"defaultSubtasks": 5,
 		"defaultPriority": "medium",
 		"projectName": "TaskGraph",
 		"responseLanguage": "English",
 		"enableCodebaseAnalysis": true,
-		"enableProxy": false,
 		"anonymousTelemetry": true,
 		"ollamaBaseURL": "http://localhost:11434/api",
 		"bedrockBaseURL": "https://bedrock.us-east-1.amazonaws.com",

@@ -39,19 +39,29 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `prime --unnoted-since <time>` | `--json` | `unnoted` |
 | `generate` | `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
 | `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
-| `start <id>` | `--format json` | `found`, `started`, `task`, `command`, `executionOutput` |
 | `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |
 | `github push` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `created`, `updated`, `skipped`, `closed`, `orphans` |
 | `github pull` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `applied`, `synced`, `conflicts`, `skipped` |
 | `github unlink <id>` | `--json` | `tag`, `taskId`, `issueNumber`, `url` |
-| `autopilot *` | `--json` | depends on the subcommand |
 | `parse-prd --clarify` | `--json` | `prd`, `questions` |
 
-`set-status` prints its JSON on one line, including when it fails. `autopilot` prints errors and warnings as JSON on stderr, and those carry `schemaVersion` too. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
+`set-status` prints its JSON on one line, including when it fails. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
 
 In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.
 
 Some keys are only present when they apply. For example, a task has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
+
+## Plain lines from `list` in a pipe
+
+When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--format` is given, `taskgraph list` prints one plain line per task instead of the summary and table: full titles, no color codes, no box characters.
+
+```
+1  done         high    Set up the database
+2  in-progress  high    Sign-in with sessions  deps:1
+3  pending      medium  Bookmark endpoints  deps:2
+```
+
+The columns are ID, status, priority and title, separated by two or more spaces, then `deps:` with the task's dependencies when it has any. `--with-subtasks` adds a line for each subtask with its dotted ID (`2.1`), and `--all-tags` puts the tag first. Pass `--format text` to get the summary and table in a pipe, or `--json` for every field.
 
 ## What stays the same within a version
 
@@ -67,7 +77,7 @@ The current version is `2`.
 
 | Version | Change |
 |---------|--------|
-| `2` | `show` and `start` give task IDs, task `dependencies` and subtask IDs as strings, as `list` and `next` do, and their subtasks gain `parentId`. A subtask's `dependencies` keep their stored type: a bare number names a sibling subtask, a string names a task or a dotted subtask. |
+| `2` | `show` gives task IDs, task `dependencies` and subtask IDs as strings, as `list` and `next` do, and its subtasks gain `parentId`. A subtask's `dependencies` keep their stored type: a bare number names a sibling subtask, a string names a task or a dotted subtask. |
 | `1` | First versioned output. |
 
 ## Not the same as the tasks file version
@@ -76,7 +86,7 @@ The output's `schemaVersion` is not the `metadata.schemaVersion` stored on each 
 
 ## How the contract is kept
 
-Each command's shape (keys and value types) is pinned in a test; for `autopilot`, `status` with no active workflow is pinned. A change to the shape fails CI until the pinned shape is updated, and a breaking change also needs a version bump:
+Each command's shape (keys and value types) is pinned in a test. A change to the shape fails CI until the pinned shape is updated, and a breaking change also needs a version bump:
 
 - `apps/cli/tests/integration/json-output/json-contract.test.ts` runs the built CLI on a fixture project.
 - `apps/cli/src/commands/github/github.command.spec.ts` covers `github push`, `pull` and `unlink`, which need a GitHub repository to run for real.

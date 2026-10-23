@@ -25,13 +25,17 @@ Flexible natural language:
 
 ### 1. Create New Subtask
 ```bash
-taskgraph add-subtask --parent=<id> --title="<title>" --description="<desc>"
+taskgraph add-subtask --parent=<id> --title='<title>' --description='<desc>'
 ```
+
+Keep the title and description in single quotes, and write any `'` inside them as `'\''`. In double quotes the shell would run backticks and `$(...)` in the text.
 
 ### 2. Convert Existing Task
 ```bash
 taskgraph add-subtask --parent=<id> --task-id=<existing-id>
 ```
+
+Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
 
 ## Smart Features
 

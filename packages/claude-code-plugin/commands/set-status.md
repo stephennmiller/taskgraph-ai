@@ -29,6 +29,8 @@ If the status is missing or is not one of these, ask which one is meant before c
 taskgraph set-status --id=<id> --status=<status>
 ```
 
+Put the IDs into the command only when they are digits and dots (`5`, `5.2`), or a comma-separated list of them (`5,6.1`); otherwise ask the user for the task ID.
+
 ## Per-status checks
 
 - **pending**: warn if the task is in-progress, and check whether this blocks other tasks

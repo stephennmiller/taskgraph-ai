@@ -1,16 +1,19 @@
 /**
  * The loop check finds loop members in one pass over the dependency graph
  * (strongly connected components), not one reachability search per task, which
- * made `set-status` slow on very large projects. Pure functions, no mocks.
+ * made `set-status` slow on very large projects. fix-dependencies breaks
+ * subtask loops the same way. Pure functions, no mocks.
  */
 
 import {
+	breakSubtaskLoops,
 	buildDependencyGraph,
 	createTaskLookup,
 	findLoopMembers,
 	validateTaskDependencies
 } from '../../../../../scripts/modules/dependency-manager.js';
 import { taskExists } from '../../../../../scripts/modules/utils.js';
+import { resolveSubtaskDependency } from '@tm/core';
 
 /** The earlier check: a search from each ID for a way back to it */
 function isInLoopBySearch(graph, id) {
@@ -288,5 +291,183 @@ describe('validateTaskDependencies', () => {
 		// The generator has to reach loops of both kinds, or this proves little
 		expect(loops).toBeGreaterThan(100);
 		expect(unfixable).toBeGreaterThan(20);
+	});
+});
+
+/**
+ * The loop breaking before the one-pass version, as the reference for the new
+ * one: a search per dependency for a way back to the subtask
+ */
+function breakSubtaskLoopsBySearch(tasks) {
+	const subtaskDependencyMap = new Map();
+	for (const task of tasks) {
+		for (const subtask of task.subtasks ?? []) {
+			subtaskDependencyMap.set(
+				`${task.id}.${subtask.id}`,
+				Array.isArray(subtask.dependencies)
+					? subtask.dependencies.map((depId) =>
+							typeof depId === 'string' && depId.includes('.')
+								? depId
+								: resolveSubtaskDependency(task.id, depId)
+						)
+					: []
+			);
+		}
+	}
+	const leadsBackTo = (from, target, seen = new Set()) => {
+		if (from === target) return true;
+		if (seen.has(from)) return false;
+		seen.add(from);
+		return (subtaskDependencyMap.get(from) || []).some((next) =>
+			leadsBackTo(next, target, seen)
+		);
+	};
+
+	const removed = [];
+	for (const [subtaskId, dependencies] of subtaskDependencyMap.entries()) {
+		const [taskId, subtaskNum] = subtaskId.split('.').map(Number);
+		const subtask = tasks
+			.find((t) => t.id === taskId)
+			?.subtasks?.find((st) => st.id === subtaskNum);
+		if (!subtask?.dependencies) continue;
+
+		for (const depId of [...dependencies]) {
+			if (!leadsBackTo(depId, subtaskId)) continue;
+			const originalLength = subtask.dependencies.length;
+			subtask.dependencies = subtask.dependencies.filter(
+				(dep) => resolveSubtaskDependency(taskId, dep) !== depId
+			);
+			dependencies.splice(dependencies.indexOf(depId), 1);
+			if (subtask.dependencies.length < originalLength) {
+				removed.push({ taskId: subtaskId, dependencyId: depId });
+			}
+		}
+	}
+	return removed;
+}
+
+/** Subtasks that mostly depend on other subtasks, so loops are common */
+function randomSubtaskProject(seed) {
+	const next = random(seed);
+	const size = 2 + Math.floor(next() * 8);
+	const dependency = () => {
+		const kind = next();
+		if (kind < 0.45) return Math.floor(next() * 5) + 1;
+		if (kind < 0.85) {
+			return `${Math.floor(next() * size) + 1}.${Math.floor(next() * 5) + 1}`;
+		}
+		return String(Math.floor(next() * (size + 1)) + 1);
+	};
+	return Array.from({ length: size }, (_, i) => ({
+		id: i + 1,
+		dependencies: [],
+		subtasks: Array.from({ length: Math.floor(next() * 6) }, (_, s) => ({
+			id: s + 1,
+			dependencies: Array.from(
+				{ length: Math.floor(next() * 4) },
+				dependency
+			).filter((dep, at, all) => all.indexOf(dep) === at)
+		}))
+	}));
+}
+
+describe('breakSubtaskLoops', () => {
+	it('drops the same dependencies, in the same order, as the per-dependency search', () => {
+		let dropped = 0;
+		for (let seed = 1; seed <= 1500; seed++) {
+			const tasks =
+				seed % 3 === 0 ? randomProject(seed) : randomSubtaskProject(seed);
+			const expectedTasks = structuredClone(tasks);
+
+			const removed = breakSubtaskLoops(tasks);
+			const expected = breakSubtaskLoopsBySearch(expectedTasks);
+
+			expect(removed, `seed ${seed}`).toEqual(expected);
+			expect(tasks, `seed ${seed}`).toEqual(expectedTasks);
+			dropped += removed.length;
+		}
+		// The generator has to make loops, or this proves little
+		expect(dropped).toBeGreaterThan(1000);
+	});
+
+	it('matches the search when subtask IDs repeat or are not numbers', () => {
+		const tasks = [
+			{
+				id: 1,
+				subtasks: [
+					{ id: 1, dependencies: [2] },
+					{ id: 2, dependencies: [1] },
+					{ id: 2, dependencies: [1, '2.1'] },
+					{ id: '3', dependencies: [1] }
+				]
+			},
+			{ id: 1, subtasks: [{ id: 1, dependencies: ['1.2'] }] },
+			{ id: 2, subtasks: [{ id: 1, dependencies: ['1.1'] }] },
+			{ id: '3', subtasks: [{ id: 1, dependencies: [1] }] }
+		];
+		const expectedTasks = structuredClone(tasks);
+
+		expect(breakSubtaskLoops(tasks)).toEqual(
+			breakSubtaskLoopsBySearch(expectedTasks)
+		);
+		expect(tasks).toEqual(expectedTasks);
+	});
+
+	it('leaves dependencies on tasks alone, even when they close a loop', () => {
+		const tasks = [
+			{ id: 1, dependencies: [], subtasks: [{ id: 1, dependencies: ['2'] }] },
+			{ id: 2, dependencies: [], subtasks: [{ id: 1, dependencies: ['1.1'] }] }
+		];
+
+		expect(breakSubtaskLoops(tasks)).toEqual([]);
+	});
+
+	/**
+	 * 10,000 tasks of 3 subtasks. Every other task's subtasks form a loop
+	 * (1 -> 3 -> 2 -> 1), and each first subtask waits on the last one of the
+	 * task before, which closes one ring through all 30,000 subtasks.
+	 */
+	const ringProject = () => {
+		const tasks = chain(10000, 3);
+		for (let i = 0; i < tasks.length; i++) {
+			const first = tasks[i].subtasks[0];
+			if (i % 2 === 0) first.dependencies = [3];
+			first.dependencies.push(`${i === 0 ? tasks.length : i}.3`);
+		}
+		return tasks;
+	};
+
+	/** The fastest of a few runs, so one pause on a busy machine doesn't count */
+	const fastest = (run, makeInput, runs = 3) => {
+		let best = Number.POSITIVE_INFINITY;
+		for (let r = 0; r < runs; r++) {
+			const input = makeInput();
+			const started = performance.now();
+			run(input);
+			best = Math.min(best, performance.now() - started);
+		}
+		return best;
+	};
+
+	// The search per dependency overflowed the stack on this ring
+	it('breaks every loop of a long ring of subtasks', () => {
+		const tasks = ringProject();
+
+		const removed = breakSubtaskLoops(tasks);
+
+		// Each small loop loses one edge; the ring loses one more
+		expect(removed).toHaveLength(5001);
+		expect(validateTaskDependencies(tasks).valid).toBe(true);
+	});
+
+	// Timed against validate on the same project and machine, not against a
+	// fixed number of seconds, so a slow or busy runner slows both sides. One
+	// pass takes about as long as validate; a search per dependency on the
+	// 30,000-subtask ring takes thousands of times longer.
+	it('takes about as long as validate on a large project', () => {
+		const breakTime = fastest(breakSubtaskLoops, ringProject);
+		const validateTime = fastest(validateTaskDependencies, ringProject);
+
+		expect(breakTime).toBeLessThan(validateTime * 5);
 	});
 });
