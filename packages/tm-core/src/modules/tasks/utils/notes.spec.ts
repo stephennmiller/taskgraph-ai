@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ERROR_CODES } from '../../../common/errors/taskgraph-error.js';
-import { appendNote, formatNoteBlock, normalizeNoteText } from './notes.js';
+import {
+	MAX_NOTE_BYTES,
+	appendNote,
+	formatNoteBlock,
+	normalizeNoteText
+} from './notes.js';
 
 describe('normalizeNoteText', () => {
 	it('keeps the text as written, inner lines and indentation included', () => {
@@ -21,6 +26,26 @@ describe('normalizeNoteText', () => {
 				expect.objectContaining({ code: ERROR_CODES.INVALID_INPUT })
 			);
 		}
+	});
+});
+
+describe('normalizeNoteText size limit', () => {
+	it('accepts a note of exactly MAX_NOTE_BYTES', () => {
+		const text = 'a'.repeat(MAX_NOTE_BYTES);
+
+		expect(normalizeNoteText(text)).toBe(text);
+	});
+
+	it('refuses a note over MAX_NOTE_BYTES, counting UTF-8 bytes', () => {
+		// 'é' is 2 bytes, so this is MAX_NOTE_BYTES + 2 bytes in half as many characters
+		const text = 'é'.repeat(MAX_NOTE_BYTES / 2 + 1);
+
+		expect(() => normalizeNoteText(text)).toThrow(
+			expect.objectContaining({
+				code: ERROR_CODES.INVALID_INPUT,
+				message: 'The note is over 64 KB'
+			})
+		);
 	});
 });
 

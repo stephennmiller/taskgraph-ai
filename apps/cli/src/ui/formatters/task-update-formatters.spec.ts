@@ -40,6 +40,20 @@ describe('formatTaskUpdated', () => {
 });
 
 describe('formatNoteAdded', () => {
+	it('drops escape sequences and line breaks from a title in tasks.json', () => {
+		const output = formatNoteAdded(
+			{
+				id: 3,
+				title: 'Store\u001b]0;pwned\u0007 sessions\u001b[2J\nnow',
+				isSubtask: false
+			},
+			80
+		);
+
+		expect(output).not.toMatch(/\u001b\]|\u0007|\u001b\[2J|\n/);
+		expect(plain(output)).toBe('✓ Added a note to task 3  Store sessions now');
+	});
+
 	it('prints one result line naming the task, without echoing the note', () => {
 		const output = plain(
 			formatNoteAdded({ id: 3, title: 'Store sessions', isSubtask: false }, 80)

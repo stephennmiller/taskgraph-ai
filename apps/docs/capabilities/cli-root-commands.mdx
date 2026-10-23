@@ -213,6 +213,9 @@ description: "A comprehensive reference of all available TaskGraph commands"
     Prints one line, `✓ Added a note to task 3  <title>`. The note goes at the
     end of the task's details in an `<info added on <time>>` block, the same
     block `update-subtask` writes, and nothing else in `tasks.json` changes.
+    `<time>` is an ISO 8601 UTC timestamp such as `2026-10-23T14:02:11.000Z`,
+    repeated in the closing `</info added on <time>>` line. A note can be at
+    most 64 KB.
     MCP clients use the `add_note` tool. Use `update-subtask` or
     `update-task --append` when you want the AI to write the note instead.
   </Accordion>

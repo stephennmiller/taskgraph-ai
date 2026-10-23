@@ -219,6 +219,7 @@ export {
 	type BuildPrimeContextOptions,
 	resolveClaimant,
 	normalizeNoteText,
+	MAX_NOTE_BYTES,
 	formatNoteBlock,
 	appendNote,
 	type TaskNote,

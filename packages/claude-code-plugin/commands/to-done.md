@@ -48,21 +48,18 @@ Write three lines, in plain words, from the diff:
 - `Files:` the main files touched
 - `Follow-ups:` anything left for later, or `none`
 
-Save it on the task before marking it done (a done task can't be updated). For a subtask (ID with a dot):
+Save it on the task before marking it done. `taskgraph note` works for a task or a subtask and saves the text as written, with a timestamp and no AI call:
 
 ```bash
-taskgraph update-subtask --id=<id> --prompt='Close summary, keep as written: Changed: ... Files: ... Follow-ups: ...'
-```
-
-For a top-level task:
-
-```bash
-taskgraph update-task --id=<id> --append --prompt='Close summary, keep as written: Changed: ... Files: ... Follow-ups: ...'
+taskgraph note <id> 'Close summary
+Changed: ...
+Files: ...
+Follow-ups: ...'
 ```
 
 Keep the summary in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in the text, and summaries quote file names and code from the diff.
 
-Both pass the text through the project's AI model, which may reword it. If the call fails (no model configured, for example), show the summary to the user and go on.
+If the call fails, show the summary to the user and go on.
 
 ## 5. Mark it done
 

@@ -8,13 +8,23 @@
  *   Chose argon2 over bcrypt: the login API already depends on it
  *   </info added on 2026-10-23T14:02:11.000Z>
  *
- * so every appended note carries the time it was added.
+ * so every appended note carries the time it was added. The time is
+ * `Date.prototype.toISOString()` output (UTC, milliseconds, `Z`), and the
+ * opening and closing markers carry the same value. Tools that read notes
+ * back (the Stop hook, for one) rely on this format: keep it stable.
  */
 
 import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
+
+/**
+ * The largest note `addNote` accepts, in UTF-8 bytes (64 KiB). A progress
+ * note is a few lines; anything this big is almost always a log or a file
+ * piped in by mistake, and it would bloat tasks.json and every `show`.
+ */
+export const MAX_NOTE_BYTES = 64 * 1024;
 
 /** What `addNote` saved */
 export interface TaskNote {
@@ -31,13 +41,22 @@ export interface TaskNote {
 /**
  * Trim what surrounds a note (blank lines, trailing spaces, the newline
  * `echo` adds) and keep the rest as written, indentation included.
- * Throws INVALID_INPUT when nothing is left.
+ * Throws INVALID_INPUT when nothing is left, or when the note is over
+ * MAX_NOTE_BYTES.
  */
 export function normalizeNoteText(text: string): string {
-	const trimmed = text.replace(/^(\s*\n)+/, '').trimEnd();
+	const trimmed = String(text ?? '')
+		.replace(/^(\s*\n)+/, '')
+		.trimEnd();
 	if (!trimmed.trim()) {
 		throw new TaskGraphError('The note is empty', ERROR_CODES.INVALID_INPUT, {
 			userMessage: 'The note is empty'
+		});
+	}
+	if (Buffer.byteLength(trimmed, 'utf8') > MAX_NOTE_BYTES) {
+		const message = `The note is over ${MAX_NOTE_BYTES / 1024} KB`;
+		throw new TaskGraphError(message, ERROR_CODES.INVALID_INPUT, {
+			userMessage: message
 		});
 	}
 	return trimmed;

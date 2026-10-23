@@ -114,4 +114,24 @@ describe('note', () => {
 		expect(result.stderr).toContain('✗ The note is empty');
 		expect(result.stderr).toContain('taskgraph note 3 "what you did"');
 	}, 60000);
+
+	it('refuses a note over 64 KB from stdin, changing nothing', () => {
+		const before = fs.readFileSync(tasksPath, 'utf8');
+
+		const result = run(['note', '1', '--file', '-'], 'x'.repeat(200 * 1024));
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('✗ The note is over 64 KB');
+		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
+	}, 60000);
+
+	it('exits 1 with a fix when --file is missing, changing nothing', () => {
+		const before = fs.readFileSync(tasksPath, 'utf8');
+
+		const result = run(['note', '1', '--file', 'missing.md']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain("✗ Couldn't read missing.md: ENOENT");
+		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
+	}, 60000);
 });

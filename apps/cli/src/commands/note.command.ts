@@ -6,7 +6,7 @@
  */
 
 import fs from 'node:fs';
-import { type TmCore, createTmCore } from '@tm/core';
+import { MAX_NOTE_BYTES, type TmCore, createTmCore } from '@tm/core';
 import { Command } from 'commander';
 import { formatNoteAdded } from '../ui/formatters/task-update-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
@@ -19,6 +19,35 @@ export interface NoteCommandOptions {
 }
 
 const USAGE_HINT = 'Write it after the ID: `taskgraph note 3 "what you did"`';
+
+/** Thrown by readNoteSource when the source is bigger than a note may be */
+class NoteTooLargeError extends Error {}
+
+/**
+ * Read a note from a file, or from stdin for `-`, stopping once it's past
+ * MAX_NOTE_BYTES so a large file or an endless stream (`/dev/zero`, a
+ * forgotten `tail -f`) can't fill memory before tm-core refuses it.
+ */
+async function readNoteSource(file: string): Promise<string> {
+	const stream =
+		file === '-'
+			? process.stdin
+			: fs.createReadStream(file, { highWaterMark: 64 * 1024 });
+	const chunks: Buffer[] = [];
+	let size = 0;
+	try {
+		for await (const chunk of stream) {
+			const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+			size += buffer.length;
+			// Some slack for the blank lines around a note that get trimmed
+			if (size > MAX_NOTE_BYTES + 1024) throw new NoteTooLargeError();
+			chunks.push(buffer);
+		}
+	} finally {
+		if (stream !== process.stdin) (stream as fs.ReadStream).destroy();
+	}
+	return Buffer.concat(chunks).toString('utf8');
+}
 
 export class NoteCommand extends Command {
 	private tmCore?: TmCore;
@@ -59,12 +88,19 @@ export class NoteCommand extends Command {
 		let text = inline;
 		if (options.file) {
 			try {
-				text = fs.readFileSync(options.file === '-' ? 0 : options.file, 'utf8');
+				text = await readNoteSource(options.file);
 			} catch (error: any) {
-				printError(
-					`Couldn't read ${options.file}: ${error.code ?? error.message}`,
-					'Check the path, or pipe the note in with `--file -`'
-				);
+				if (error instanceof NoteTooLargeError) {
+					printError(
+						`The note is over ${MAX_NOTE_BYTES / 1024} KB`,
+						'Keep the note to what you did or decided, and link to the rest'
+					);
+				} else {
+					printError(
+						`Couldn't read ${options.file}: ${error.code ?? error.message}`,
+						'Check the path, or pipe the note in with `--file -`'
+					);
+				}
 				process.exit(1);
 			}
 		}
