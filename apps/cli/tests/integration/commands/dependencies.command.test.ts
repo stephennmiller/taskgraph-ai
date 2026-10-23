@@ -58,11 +58,13 @@ describe('dependency commands', () => {
 		templateHome = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-deps-home-'));
 		dir = template;
 		home = templateHome;
-		run(['init', '--yes', '--no-aliases', '--no-git']);
+		expect(run(['init', '--yes', '--no-aliases', '--no-git']).status).toBe(0);
 		for (const title of ['Set up the API', 'Add Postgres', 'Sign-in']) {
-			run(['add-task', `--title=${title}`, `--description=${title}`]);
+			expect(
+				run(['add-task', `--title=${title}`, `--description=${title}`]).status
+			).toBe(0);
 		}
-	});
+	}, 60000);
 
 	afterAll(() => {
 		fs.rmSync(template, { recursive: true, force: true });

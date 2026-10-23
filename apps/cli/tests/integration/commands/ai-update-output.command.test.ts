@@ -22,7 +22,7 @@ import {
 	it
 } from 'vitest';
 import { installFakeClaude } from '../../fakes/install-fake-claude.mjs';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
 
 const binPath = getCliBinPath();
 const built = fs.existsSync(binPath);
@@ -132,9 +132,8 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 	});
 
 	beforeEach(() => {
-		project = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-ai-output-'));
+		project = copyProject(template, 'tm-ai-output-');
 		work = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-ai-output-work-'));
-		fs.cpSync(template, project, { recursive: true });
 		install();
 	});
 

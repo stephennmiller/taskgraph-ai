@@ -62,7 +62,8 @@ describe('archive', () => {
 		testDir = template;
 		const init = run(['init', '--yes', '--no-aliases', '--no-git']);
 		expect(init.status).toBe(0);
-	});
+		// Starting the built CLI for init can take over 15s on a busy machine
+	}, 60000);
 
 	afterAll(() => {
 		fs.rmSync(template, { recursive: true, force: true });
@@ -98,8 +99,7 @@ describe('archive', () => {
 				})
 			)
 		);
-		// Starting the built CLI for init can take over 15s on a busy machine
-	}, 60000);
+	});
 
 	afterEach(() => {
 		fs.rmSync(testDir, { recursive: true, force: true });
