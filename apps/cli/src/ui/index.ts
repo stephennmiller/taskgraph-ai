@@ -150,10 +150,12 @@ export {
 // What `list` prints around its table
 export {
 	formatEmptyList,
+	formatInvalidDependencyWarning,
 	formatListNextStep,
 	formatListSummary,
 	formatNoNextTask,
 	formatPlainTaskList,
+	oneLine,
 	type ListSummaryOptions
 } from './formatters/task-list-formatters.js';
 

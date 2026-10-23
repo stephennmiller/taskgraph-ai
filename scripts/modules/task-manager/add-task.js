@@ -159,67 +159,6 @@ async function addTask(
 		}
 	};
 
-	/**
-	 * Recursively builds a dependency graph for a given task
-	 * @param {Array} tasks - All tasks from tasks.json
-	 * @param {number} taskId - ID of the task to analyze
-	 * @param {Set} visited - Set of already visited task IDs
-	 * @param {Map} depthMap - Map of task ID to its depth in the graph
-	 * @param {number} depth - Current depth in the recursion
-	 * @return {Object} Dependency graph data
-	 */
-	function buildDependencyGraph(
-		tasks,
-		taskId,
-		visited = new Set(),
-		depthMap = new Map(),
-		depth = 0
-	) {
-		// Skip if we've already visited this task or it doesn't exist
-		if (visited.has(taskId)) {
-			return null;
-		}
-
-		// Find the task
-		const task = tasks.find((t) => t.id === taskId);
-		if (!task) {
-			return null;
-		}
-
-		// Mark as visited
-		visited.add(taskId);
-
-		// Update depth if this is a deeper path to this task
-		if (!depthMap.has(taskId) || depth < depthMap.get(taskId)) {
-			depthMap.set(taskId, depth);
-		}
-
-		// Process dependencies
-		const dependencyData = [];
-		if (task.dependencies && task.dependencies.length > 0) {
-			for (const depId of task.dependencies) {
-				const depData = buildDependencyGraph(
-					tasks,
-					depId,
-					visited,
-					depthMap,
-					depth + 1
-				);
-				if (depData) {
-					dependencyData.push(depData);
-				}
-			}
-		}
-
-		return {
-			id: task.id,
-			title: task.title,
-			description: task.description,
-			status: task.status,
-			dependencies: dependencyData
-		};
-	}
-
 	try {
 		// Read the existing tasks - IMPORTANT: Read the raw data without tag resolution
 		let rawData = readJSON(tasksPath, projectRoot, tag); // No tag parameter
@@ -314,45 +253,20 @@ async function addTask(
 		);
 
 		// Dependencies resolve within the target tag only: task IDs repeat
-		// across tags, so another tag's task 2 is not this tag's task 2
-		const existingIds = tasksInTargetTag.map((t) => t.id);
-		const { dependencies: numericDependencies, missingExplicit: invalidDeps } =
-			mergeNewTaskDependencies({
-				explicit: dependencies.map((dep) => {
-					const id = parseInt(dep, 10);
-					return Number.isNaN(id) ? dep : id;
-				}),
-				existingIds
-			});
+		// across tags, so another tag's task 2 is not this tag's task 2. A
+		// subtask ID such as 3.2 names that subtask
+		const existingIds = tasksInTargetTag.flatMap((t) => [
+			t.id,
+			...(t.subtasks ?? []).map((s) => `${t.id}.${s.id}`)
+		]);
+		const { dependencies: explicitDependencies, missingExplicit: invalidDeps } =
+			mergeNewTaskDependencies({ explicit: dependencies, existingIds });
 
 		if (invalidDeps.length > 0) {
 			report(
 				`${invalidDeps.length === 1 ? 'Task' : 'Tasks'} ${invalidDeps.join(', ')} ${invalidDeps.length === 1 ? "doesn't" : "don't"} exist; adding the task without ${invalidDeps.length === 1 ? 'that dependency' : 'those dependencies'}`,
 				'warn'
 			);
-		}
-
-		// Build dependency graphs for explicitly specified dependencies
-		const dependencyGraphs = [];
-		const allRelatedTaskIds = new Set();
-		const depthMap = new Map();
-
-		// First pass: build a complete dependency graph for each specified dependency
-		for (const depId of numericDependencies) {
-			const graph = buildDependencyGraph(
-				tasksInTargetTag,
-				depId,
-				new Set(),
-				depthMap
-			);
-			if (graph) {
-				dependencyGraphs.push(graph);
-			}
-		}
-
-		// Second pass: build a set of all related task IDs for flat analysis
-		for (const [taskId, depth] of depthMap.entries()) {
-			allRelatedTaskIds.add(taskId);
 		}
 
 		let taskData;
@@ -384,7 +298,7 @@ async function addTask(
 			const gatherResult = await contextGatherer.gather({
 				semanticQuery: prompt,
 				maxSemanticResults: MAX_RELATED_TASKS,
-				dependencyTasks: numericDependencies,
+				dependencyTasks: explicitDependencies,
 				format: 'research'
 			});
 
@@ -394,7 +308,7 @@ async function addTask(
 			// One muted line saying which tasks the AI will see: the gatherer
 			// sends only the first MAX_RELATED_TASKS of the tasks it matched
 			if (outputFormat === 'text' && analysisData && !isSilentMode()) {
-				const depIds = numericDependencies.map(String);
+				const depIds = explicitDependencies.map(String);
 				const contextLine = ui.formatResearchContext({
 					taskIds: depIds,
 					relatedTaskIds: analysisData.allRelevantTasks
@@ -429,7 +343,7 @@ async function addTask(
 					contextFromArgs,
 					useResearch,
 					priority: effectivePriority,
-					dependencies: numericDependencies,
+					dependencies: explicitDependencies,
 					hasCodebaseAnalysis: hasCodebaseAnalysis(
 						useResearch,
 						projectRoot,
@@ -518,7 +432,7 @@ async function addTask(
 		// The dependencies the user passed always stay; the AI's suggestions are
 		// added to them, minus any with no task in the target tag
 		const merged = mergeNewTaskDependencies({
-			explicit: numericDependencies,
+			explicit: explicitDependencies,
 			suggested: taskData.dependencies,
 			existingIds
 		});
@@ -551,7 +465,9 @@ async function addTask(
 		// Dependencies the user passed stay explicit; any the AI added are inferred
 		assignMetadata(
 			newTask,
-			reconcileDependencySources(newTask, { dependencies: numericDependencies })
+			reconcileDependencySources(newTask, {
+				dependencies: explicitDependencies
+			})
 		);
 		// Where the work was found: a link that never blocks the new task
 		if (discoveredFrom) {
@@ -605,7 +521,7 @@ async function addTask(
 					dependencies: newTask.dependencies.map((dep) => ({
 						id: dep,
 						title: titleOf(dep),
-						addedByAi: !numericDependencies.some(same(dep))
+						addedByAi: !explicitDependencies.some(same(dep))
 					})),
 					discoveredFrom:
 						discoveredFrom && !newTask.dependencies.some(same(discoveredFrom))

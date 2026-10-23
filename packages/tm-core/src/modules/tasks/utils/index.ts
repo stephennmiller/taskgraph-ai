@@ -16,3 +16,4 @@ export * from './legacy-status.js';
 export * from './subtask-context.js';
 export * from './task-ids.js';
 export * from './branch-tag.js';
+export * from './promoted-subtask.js';

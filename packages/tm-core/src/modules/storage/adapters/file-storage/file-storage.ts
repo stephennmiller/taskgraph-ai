@@ -331,6 +331,9 @@ export class FileStorage implements IStorage {
 			if (error.code === 'ENOENT') {
 				return []; // File doesn't exist
 			}
+			if (error instanceof TaskGraphError) {
+				throw error;
+			}
 			throw new Error(`Failed to get tags: ${error.message}`);
 		}
 	}

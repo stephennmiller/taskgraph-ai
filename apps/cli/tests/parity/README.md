@@ -170,19 +170,22 @@ Decide deliberately whether the change is intended (and update the expectation
 and this list) instead of accepting the difference quickly. In particular, a
 tidy-up that "fixes" a type can change what a dependency means.
 
-- **Dependency IDs are written as strings, and the type carries meaning.** In
-  a subtask's list a bare number up to 99 names a sibling subtask and a string
+- **On a subtask, the type of a dependency ID carries its meaning.** In a
+  subtask's list a bare number up to 99 names a sibling subtask and a string
   names a task (`resolveSubtaskDependency` in
   `packages/tm-core/src/modules/dependencies/subtask-dependency.ts`, used by
   `scripts/modules/dependency-manager.js`). `add-dependency` and
-  `add_dependency` write `"1"` (a string) into lists such as `[2, 3]`, and
+  `add_dependency` write `"1"` (a string) on a subtask, and
   `remove-subtask --convert` makes the parent a string dependency of the new task
   (`["4"]`). So on subtask
   2.2 a stored `1` means subtask 2.1, while `"1"` means task 1, and
   `phase1-flat-format.json` and `phase1-no-master.json` leave 2.2 with
-  `[1, "1"]`: both, because the duplicate check compares them as different.
+  `[1, "1"]`: two different dependencies, not a repeat.
   A migration that normalizes `"1"` to `1` would silently turn a dependency
-  on task 1 into one on sibling 2.1.
+  on task 1 into one on sibling 2.1. On a top-level task, `add-dependency`
+  and `add-task` write strings and `add-dependency` rewrites the list it adds
+  to into that form (`[2, "1"]` became `["1", "2"]` in #290), through
+  `toTaskDependency` in the same file.
 - **Removing a dependency that is not there succeeds.** `remove-dependency`
   exits 0 and `remove_dependency` succeeds with `removed: false` and "Task 2
   doesn't depend on task 5; nothing changed" for a task that never depended on

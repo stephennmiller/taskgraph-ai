@@ -55,10 +55,6 @@ const LEGACY_OVERSIZED = new Set([
 	'scripts/modules/task-manager/scope-adjustment.js',
 	'scripts/modules/utils.js',
 	'scripts/modules/task-manager/tag-management.js',
-	// Already ~7,100 tokens on main. New init features go in their own module
-	// (e.g. scripts/modules/init-upstream-import.js) and add only hook-up lines
-	// here; splitting init.js itself is its own task.
-	'scripts/init.js',
 	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
 	'.claude/rules/new-features.md',

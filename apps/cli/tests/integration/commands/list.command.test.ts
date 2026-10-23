@@ -264,6 +264,56 @@ describe('list command', () => {
 		});
 	});
 
+	describe('dependency warnings (#365, #366)', () => {
+		const runPiped = (args: string[]) =>
+			spawnSync('node', [binPath, ...args], {
+				encoding: 'utf-8',
+				env: {
+					...process.env,
+					FORCE_COLOR: undefined,
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				}
+			});
+
+		it.each([['--json'], ['--compact']])(
+			'filters by status with %s without reporting other tasks as missing',
+			(format) => {
+				writeTasks(subtaskProject());
+
+				const { stderr, status } = runPiped([
+					'list',
+					'--status',
+					'pending',
+					format
+				]);
+
+				expect(status).toBe(0);
+				expect(stderr).not.toContain('non-existent');
+			}
+		);
+
+		it('strips escape codes from a dependency ID in the task file', () => {
+			writeTasks(
+				createTasksFile({
+					tasks: [
+						createTask({
+							id: 1,
+							title: 'Avatar upload',
+							dependencies: ['9\u001b]0;pwned\u0007']
+						})
+					]
+				})
+			);
+
+			const { stderr } = runPiped(['list', '--json']);
+
+			expect(stderr).toContain('Task 1 depends on non-existent task 9\n');
+			expect(stderr).toContain('Run taskgraph fix-dependencies to remove them');
+			expect(stderr).not.toContain('\u001b');
+			expect(stderr).not.toContain('pwned');
+		});
+	});
+
 	it('should display message when no tasks exist', () => {
 		const { output, exitCode } = runList();
 

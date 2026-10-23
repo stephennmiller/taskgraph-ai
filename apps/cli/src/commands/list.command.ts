@@ -8,6 +8,7 @@ import {
 	buildBlocksMap,
 	createTmCore,
 	filterBlockingTasks,
+	filterByStatus,
 	filterReadyTasks,
 	satisfyArchivedDependencies,
 	type InvalidDependency,
@@ -24,9 +25,11 @@ import {
 	displaySyncMessage,
 	displayWatchFooter,
 	formatEmptyList,
+	formatInvalidDependencyWarning,
 	formatListNextStep,
 	formatListSummary,
-	formatPlainTaskList
+	formatPlainTaskList,
+	oneLine
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
@@ -283,12 +286,6 @@ export class ListTasksCommand extends Command {
 			throw new Error('TmCore not initialized');
 		}
 
-		// Parse status filter values
-		const statusFilterValues =
-			options.status && options.status !== 'all'
-				? options.status.split(',').map((s: string) => s.trim() as TaskStatus)
-				: undefined;
-
 		// The text view prints a summary of the whole tag above the table, and
 		// the task `next` picks; JSON, compact and --ready/--blocking don't
 		const showsSummary =
@@ -299,25 +296,13 @@ export class ListTasksCommand extends Command {
 			!options.ready &&
 			!options.blocking;
 
-		// When --ready is used, we need ALL tasks to correctly compute which dependencies are satisfied
-		// So we fetch without status filter first, then apply status filter after ready/blocking.
-		// The summary counts every task too, whatever the status filter. Plain
-		// lines load them all as well, so a dependency on a task with another
-		// status isn't reported as missing (#250)
-		const needsAllTasks =
-			options.ready || options.blocking || showsSummary || options.plain;
-
-		// Build filter - skip status filter if we need all tasks for ready/blocking computation
-		const filter =
-			statusFilterValues && !needsAllTasks
-				? { status: statusFilterValues }
-				: undefined;
-
-		// Call tm-core. The summary counts subtasks even when the table hides
-		// them (#246); the table only shows them with --with-subtasks.
+		// Load every task, whatever the status filter, which comes last: the
+		// blocks map, --ready, --blocking and the summary all need them, and a
+		// dependency on a task with another status isn't a missing one (#365).
+		// The summary counts subtasks even when the table hides them (#246);
+		// the table only shows them with --with-subtasks.
 		const result = await this.tmCore.tasks.list({
 			tag: options.tag,
-			filter,
 			includeSubtasks: showsSummary ? true : options.withSubtasks
 		});
 		// The rows keep subtasks only when asked for, as before
@@ -333,13 +318,13 @@ export class ListTasksCommand extends Command {
 			listed,
 			archivedIds
 		);
-		this.displayInvalidDependencyWarnings(invalidDependencies);
+		this.displayInvalidDependencyWarnings(invalidDependencies, options.tag);
 		const enrichedTasks = listed.map((task) => ({
 			...task,
 			blocks: blocksMap.get(String(task.id)) || []
 		}));
 
-		// Apply ready/blocking filters (with full task context)
+		// Apply ready/blocking filters (with full task context), then status
 		let filteredTasks = enrichedTasks;
 
 		if (options.ready) {
@@ -350,12 +335,7 @@ export class ListTasksCommand extends Command {
 			filteredTasks = filterBlockingTasks(filteredTasks);
 		}
 
-		// Apply status filter AFTER ready/blocking if we deferred it earlier
-		if (statusFilterValues && needsAllTasks) {
-			filteredTasks = filteredTasks.filter((task) =>
-				statusFilterValues.includes(task.status)
-			);
-		}
+		filteredTasks = filterByStatus(filteredTasks, options.status);
 
 		// The recommendation comes from tm-core so it matches `taskgraph next`.
 		// It may be a subtask (`2.2`), which isn't a row of the task list, so
@@ -445,8 +425,9 @@ export class ListTasksCommand extends Command {
 					`\nWarning: Could not fetch tasks from ${failedTags.length} tag(s):`
 				)
 			);
+			// Tag names come from the task file: no escape codes (#366)
 			failedTags.forEach(({ name, error }) => {
-				console.warn(theme.muted(`  ${name}: ${error}`));
+				console.warn(theme.muted(`  ${oneLine(name)}: ${oneLine(error)}`));
 			});
 		}
 
@@ -456,7 +437,7 @@ export class ListTasksCommand extends Command {
 			tagsResult.tags.length > 0
 		) {
 			throw new Error(
-				`Failed to fetch tasks from any tag. First error: ${failedTags[0].error}`
+				`Failed to fetch tasks from any tag. First error: ${oneLine(failedTags[0].error)}`
 			);
 		}
 
@@ -468,15 +449,7 @@ export class ListTasksCommand extends Command {
 			filteredTasks = filteredTasks.filter((task) => task.blocks.length > 0);
 		}
 
-		// Apply status filter if specified
-		if (options.status && options.status !== 'all') {
-			const statusValues = options.status
-				.split(',')
-				.map((s) => s.trim() as TaskStatus);
-			filteredTasks = filteredTasks.filter((task) =>
-				statusValues.includes(task.status)
-			);
-		}
+		filteredTasks = filterByStatus(filteredTasks, options.status);
 
 		return {
 			tasks: filteredTasks,
@@ -489,7 +462,7 @@ export class ListTasksCommand extends Command {
 	/**
 	 * Display warnings for invalid dependency references
 	 * @param invalidDependencies - Array of invalid dependency references from buildBlocksMap
-	 * @param tagName - Optional tag name for context in multi-tag mode
+	 * @param tagName - The tag given with --tag, or each tag under --all-tags
 	 */
 	private displayInvalidDependencyWarnings(
 		invalidDependencies: InvalidDependency[],
@@ -498,23 +471,7 @@ export class ListTasksCommand extends Command {
 		if (invalidDependencies.length === 0) {
 			return;
 		}
-
-		const tagContext = tagName ? ` (tag: ${tagName})` : '';
-		console.warn(
-			chalk.yellow(
-				`\nWarning: ${invalidDependencies.length} invalid dependency reference(s) found${tagContext}:`
-			)
-		);
-		invalidDependencies.slice(0, 5).forEach(({ taskId, depId }) => {
-			console.warn(
-				theme.muted(`  Task ${taskId} depends on non-existent task ${depId}`)
-			);
-		});
-		if (invalidDependencies.length > 5) {
-			console.warn(
-				theme.muted(`  ...and ${invalidDependencies.length - 5} more`)
-			);
-		}
+		console.warn(formatInvalidDependencyWarning(invalidDependencies, tagName));
 	}
 
 	/**
@@ -587,15 +544,20 @@ export class ListTasksCommand extends Command {
 		for (const task of tasks) {
 			const icon = STATUS_ICONS[task.status];
 			// Show tag in compact format when listing all tags (tasks are TaskWithTag[])
+			// IDs, titles and tags come from the task file: no escape codes (#366)
 			const tagPrefix =
-				allTags && 'tagName' in task ? theme.accent(`[${task.tagName}] `) : '';
-			console.log(`${tagPrefix}${chalk.cyan(task.id)} ${icon} ${task.title}`);
+				allTags && 'tagName' in task
+					? theme.accent(`[${oneLine(task.tagName)}] `)
+					: '';
+			console.log(
+				`${tagPrefix}${chalk.cyan(oneLine(task.id))} ${icon} ${oneLine(task.title)}`
+			);
 
 			if (options.withSubtasks && task.subtasks?.length) {
 				for (const subtask of task.subtasks) {
 					const subIcon = STATUS_ICONS[subtask.status];
 					console.log(
-						`  ${theme.muted(String(subtask.id))} ${subIcon} ${theme.muted(subtask.title)}`
+						`  ${theme.muted(oneLine(subtask.id))} ${subIcon} ${theme.muted(oneLine(subtask.title))}`
 					);
 				}
 			}

@@ -172,9 +172,7 @@ describe('ListTasksCommand summary and next step', () => {
 			await (command as any).executeCommand({ status: 'in-progress' });
 
 			// Fetched without the filter, so the summary sees every task
-			expect(list).toHaveBeenCalledWith(
-				expect.objectContaining({ filter: undefined })
-			);
+			expect(list.mock.calls[0][0]).not.toHaveProperty('filter');
 			expect(printed()).toMatch(/Tasks .* 0 of 4 done/);
 			expect(tableRows().map((t) => t.id)).toEqual(['2']);
 		});
