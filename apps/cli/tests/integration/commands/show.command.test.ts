@@ -363,6 +363,33 @@ describe('show command output', () => {
 		);
 	});
 
+	it('prints the same facts line as next for a subtask stored without parentId or priority', () => {
+		// As expand and add-subtask write them: no parentId, priority from the parent
+		const tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
+		const data = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		for (const subtask of data.master.tasks[1].subtasks) {
+			delete subtask.parentId;
+			delete subtask.priority;
+		}
+		data.master.tasks[1].subtasks[1].status = 'in-progress';
+		fs.writeFileSync(tasksPath, JSON.stringify(data, null, 2));
+		const factsLine = (stdout: string) =>
+			stdout.split('\n').find((line) => line.startsWith('▶'));
+
+		const shown = show('2.2');
+		const next = spawnSync(process.execPath, [binPath, 'next'], {
+			cwd: testDir,
+			encoding: 'utf8',
+			env
+		});
+
+		expect(shown.status).toBe(0);
+		expect(factsLine(shown.stdout)).toBe(
+			'▶ in-progress · high priority · depends on 2.1'
+		);
+		expect(factsLine(next.stdout)).toBe(factsLine(shown.stdout));
+	});
+
 	it('filters subtasks by status', () => {
 		const res = show('2', '--status', 'done');
 

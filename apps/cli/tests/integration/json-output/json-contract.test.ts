@@ -215,6 +215,8 @@ describe('--json contract', () => {
 			    "description": "string",
 			    "details": "string",
 			    "id": "number",
+			    "parentId": "string",
+			    "priority": "string",
 			    "status": "string",
 			    "title": "string",
 			  },

@@ -9,6 +9,7 @@ import {
 	blockedCount,
 	resolveSubtaskDependency
 } from '../../dependencies/index.js';
+import { subtaskInContext } from './subtask-context.js';
 
 // A cancelled task will never run, so work waiting on it is not held up.
 // AI-written subtasks may carry the older 'completed' spelling
@@ -96,15 +97,11 @@ export function rankNextTasks(
 
 				if (depsSatisfied) {
 					candidateSubtasks.push({
+						...subtaskInContext(parent, st),
 						id: `${parent.id}.${st.id}`,
 						title: st.title || `Subtask ${st.id}`,
 						status: st.status || 'pending',
-						priority: st.priority || parent.priority || 'medium',
 						dependencies: fullDeps,
-						parentId: String(parent.id),
-						description: st.description,
-						details: st.details,
-						testStrategy: st.testStrategy,
 						subtasks: []
 					} as Task & { parentId: string });
 				}
