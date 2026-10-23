@@ -6,20 +6,23 @@ import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
 	addToArchive,
 	archivePathFor,
+	archiveTag,
 	archivedTaskIds,
-	deleteArchivedTagSync,
+	copyArchiveTag,
+	deleteArchivedTag,
 	dropArchiveTag,
 	isArchivedReference,
 	lastChangedAt,
 	nextTaskId,
 	readArchivedIdsSync,
 	renameArchiveTag,
-	renameArchivedTagSync,
+	renameArchivedTag,
 	satisfyArchivedDependencies,
 	selectArchivable,
 	takeFromArchive
 } from './archive.js';
 import { selectNextTask } from './next-task.js';
+import { filterReadyTasks } from './task-filters.js';
 
 const NOW = new Date('2026-10-23T12:00:00Z');
 const daysAgo = (days: number) =>
@@ -232,23 +235,75 @@ describe('tag rename and delete', () => {
 		expect(dropArchiveTag(archive(), 'other')).toBeNull();
 	});
 
-	it('updates archive.json on disk, and creates none when there is no archive', () => {
+	it('copies a tag\'s section for a tag copy and leaves the source', () => {
+		const copied = copyArchiveTag(archive(), 'feature', 'copy');
+
+		expect(Object.keys(copied ?? {}).sort()).toEqual(['copy', 'feature', 'master']);
+		expect(copied?.copy).toEqual(copied?.feature);
+		expect(copied?.copy).not.toBe(copied?.feature);
+		expect(copyArchiveTag(archive(), 'other', 'copy')).toBeNull();
+	});
+
+	it('never reads a tag named like an Object.prototype key through the prototype', () => {
+		for (const tag of ['constructor', 'toString', '__proto__']) {
+			expect(archiveTag(archive(), tag).tasks).toEqual([]);
+			expect(renameArchiveTag(archive(), tag, 'x')).toBeNull();
+			expect(dropArchiveTag(archive(), tag)).toBeNull();
+			expect(copyArchiveTag(archive(), tag, 'x')).toBeNull();
+		}
+	});
+
+	it('keeps a tag named __proto__ as data through a JSON round trip', () => {
+		const stored = JSON.parse(
+			JSON.stringify(
+				addToArchive({}, '__proto__', [createTask({ id: 7, title: 'P', status: 'done' })], NOW)
+			)
+		);
+
+		expect(archiveTag(stored, '__proto__').metadata.highestId).toBe(7);
+		expect(Object.getPrototypeOf(stored)).toBe(Object.prototype);
+		expect(({} as Record<string, unknown>).tasks).toBeUndefined();
+	});
+
+	it('updates archive.json on disk under its lock, and creates none when there is no archive', async () => {
 		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-archive-tag-'));
 		try {
 			const tasksPath = path.join(dir, 'tasks.json');
-			renameArchivedTagSync(tasksPath, 'feature', 'launch');
+			await renameArchivedTag(tasksPath, 'feature', 'launch');
 			expect(fs.existsSync(archivePathFor(tasksPath))).toBe(false);
 
 			fs.writeFileSync(archivePathFor(tasksPath), JSON.stringify(archive()));
-			renameArchivedTagSync(tasksPath, 'feature', 'launch');
+			await renameArchivedTag(tasksPath, 'feature', 'launch');
 			expect(readArchivedIdsSync(tasksPath, 'launch').ids).toEqual(new Set(['4']));
 			expect(readArchivedIdsSync(tasksPath, 'feature').highestId).toBe(0);
 
-			deleteArchivedTagSync(tasksPath, 'launch');
+			await deleteArchivedTag(tasksPath, 'launch');
 			expect(readArchivedIdsSync(tasksPath, 'launch').highestId).toBe(0);
 			expect(readArchivedIdsSync(tasksPath, 'master').ids).toEqual(new Set(['2']));
+			expect(fs.readdirSync(dir).sort()).toEqual(['archive.json']);
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
 		}
+	});
+});
+
+describe('filterReadyTasks with archived IDs', () => {
+	const withBlocks = (task: ReturnType<typeof createTask>) => ({ ...task, blocks: [] });
+
+	it('counts a dependency on an archived task or its subtask as done', () => {
+		const tasks = [
+			withBlocks(createTask({ id: 3, title: 'T', dependencies: ['1', '1.2'] }))
+		];
+
+		expect(filterReadyTasks(tasks, new Set(['1'])).map((t) => String(t.id))).toEqual(['3']);
+	});
+
+	it('goes by the live task when the same ID is also archived (left by an interrupted run)', () => {
+		const tasks = [
+			withBlocks(createTask({ id: 1, title: 'Live', status: 'pending' })),
+			withBlocks(createTask({ id: 3, title: 'T', dependencies: ['1.2'] }))
+		];
+
+		expect(filterReadyTasks(tasks, new Set(['1'])).map((t) => String(t.id))).toEqual(['1']);
 	});
 });

@@ -235,8 +235,9 @@ export {
 	satisfyArchivedDependencies,
 	withStoredDependencies,
 	nextTaskId,
-	renameArchivedTagSync,
-	deleteArchivedTagSync,
+	renameArchivedTag,
+	deleteArchivedTag,
+	copyArchivedTag,
 	type ArchivedIds
 } from './modules/tasks/utils/index.js';
 

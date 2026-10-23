@@ -14,6 +14,8 @@
  *   form each was stored: a number, a string, or a sibling number),
  *   `metadata.dependencySources` and `metadata.taskLinks` keys and a
  *   subtask's `parentId`.
+ * - An incoming new task under an archived ID (options.archive) gets the
+ *   next ID above every archived one.
  * - The same field changed to different values on both sides is a conflict.
  *   The current branch's value (`ours`) is written, and the conflict is
  *   reported with the incoming value, so the caller can exit non-zero and
@@ -36,6 +38,7 @@ import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
 } from '../../dependencies/dependency-provenance.js';
+import { archivedTasksById } from '../../tasks/utils/archive.js';
 import {
 	isSiblingReference,
 	resolveSubtaskDependency
@@ -145,6 +148,12 @@ interface Context {
 	tag: string;
 	renumbered: MergeRenumbered[];
 	conflicts: MergeConflict[];
+	archived: ReturnType<typeof archivedTasksById>;
+}
+
+export interface MergeTasksOptions {
+	/** The parsed archive.json, whose IDs stay reserved */
+	archive?: unknown;
 }
 
 /**
@@ -158,7 +167,8 @@ interface Context {
 export function mergeTasksJson(
 	base: unknown,
 	ours: unknown,
-	theirs: unknown
+	theirs: unknown,
+	options: MergeTasksOptions = {}
 ): TasksMergeResult {
 	const renumbered: MergeRenumbered[] = [];
 	const conflicts: MergeConflict[] = [];
@@ -170,7 +180,8 @@ export function mergeTasksJson(
 	const merged: Json = {};
 	const tags = [...new Set([...Object.keys(o.tags), ...Object.keys(t.tags)])];
 	for (const tag of tags) {
-		const ctx: Context = { tag, renumbered, conflicts };
+		const archived = archivedTasksById(options.archive, tag);
+		const ctx: Context = { tag, renumbered, conflicts, archived };
 		const value = mergeTag(
 			own(b.tags, tag),
 			own(o.tags, tag),
@@ -255,12 +266,22 @@ function renumberIncoming(
 	const oursById = byKey(ourTasks);
 	const moves = new Map<string, string>();
 
-	// New tasks on both sides under the same ID
-	let nextTask = maxId([baseList, ourTasks, theirTasks]) + 1;
+	// New tasks on both sides under one ID, or incoming under an archived ID
+	let nextTask =
+		Math.max(maxId([baseList, ourTasks, theirTasks]), ctx.archived.highestId) +
+		1;
 	for (const task of theirTasks) {
 		const key = keyOf(task);
-		if (baseById.has(key) || !oursById.has(key)) continue;
-		if (same(task, oursById.get(key))) continue;
+		if (baseById.has(key)) continue;
+		if (oursById.has(key)) {
+			if (same(task, oursById.get(key))) continue;
+		} else if (
+			!ctx.archived.tasks.has(key) ||
+			// The archived task itself, restored on that branch
+			same(task, ctx.archived.tasks.get(key))
+		) {
+			continue;
+		}
 		moves.set(key, String(nextTask++));
 	}
 

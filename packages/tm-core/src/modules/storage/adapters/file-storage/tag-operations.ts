@@ -11,6 +11,7 @@ import {
 import type { IStorage } from '../../../../common/interfaces/storage.interface.js';
 import {
 	type ArchiveData,
+	copyArchiveTag,
 	dropArchiveTag,
 	renameArchiveTag
 } from '../../../tasks/utils/archive.js';
@@ -44,6 +45,8 @@ export class TagOperations {
 		options?: { copyFrom?: string; description?: string }
 	): Promise<void> {
 		const filePath = this.pathResolver.getTasksPath();
+		// The tag the new one copied its tasks from, if any
+		let copiedFrom: string | undefined;
 
 		try {
 			await this.fileOps.modifyJson(filePath, (existingData: any) => {
@@ -68,6 +71,7 @@ export class TagOperations {
 							tasksToCopy = JSON.parse(
 								JSON.stringify(existingData[options.copyFrom].tasks)
 							);
+							copiedFrom = options.copyFrom;
 						}
 					}
 
@@ -94,6 +98,7 @@ export class TagOperations {
 					let tasksToCopy: any[] = [];
 					if (options?.copyFrom === 'master' || !options?.copyFrom) {
 						tasksToCopy = JSON.parse(JSON.stringify(masterTasks));
+						copiedFrom = 'master';
 					}
 
 					return {
@@ -118,6 +123,11 @@ export class TagOperations {
 					};
 				}
 			});
+			// A copy keeps the source's archived tasks: its dependencies on them
+			// still count as done, and their IDs stay reserved in the copy
+			if (copiedFrom !== undefined) {
+				await this.copyArchivedTasks(copiedFrom, tagName);
+			}
 		} catch (error: any) {
 			if (error.code === 'ENOENT') {
 				throw new Error('Tasks file not found - initialize project first');
@@ -226,6 +236,16 @@ export class TagOperations {
 			}
 			throw error;
 		}
+	}
+
+	/**
+	 * Give a copy of a tag the source's archived tasks: the copy's
+	 * dependencies on them still count as done, and their IDs stay reserved
+	 */
+	async copyArchivedTasks(fromTag: string, toTag: string): Promise<void> {
+		await this.updateArchive((archive) =>
+			copyArchiveTag(archive, fromTag, toTag)
+		);
 	}
 
 	/**

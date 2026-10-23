@@ -112,6 +112,12 @@ describe('archive', () => {
 		expect(next.status, next.stderr).toBe(0);
 		expect(JSON.parse(next.stdout).task.id).toBe('2');
 
+		// The list summary agrees: ready, not waiting on dependencies
+		const list = run(['list']);
+		expect(list.status, list.stderr).toBe(0);
+		expect(list.stdout).toMatch(/1 ready/);
+		expect(list.stdout).not.toContain('waiting on dependencies');
+
 		// A new task gets 4, not the free-looking 1
 		const added = run(['add-task', '--title', 'New', '--description', 'New']);
 		expect(added.status, added.stderr).toBe(0);

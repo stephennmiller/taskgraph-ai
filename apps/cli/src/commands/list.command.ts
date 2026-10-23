@@ -10,6 +10,7 @@ import {
 	createTmCore,
 	filterBlockingTasks,
 	filterReadyTasks,
+	satisfyArchivedDependencies,
 	type InvalidDependency,
 	type OutputFormat,
 	STATUS_ICONS,
@@ -400,7 +401,10 @@ export class ListTasksCommand extends Command {
 			filtered: filteredTasks.length,
 			nextTaskId: next ? String(next.id) : null,
 			nextTask: next,
-			...(showsSummary && { summaryTasks: result.tasks })
+			// The summary's ready count treats archived dependencies as done
+			...(showsSummary && {
+				summaryTasks: satisfyArchivedDependencies(result.tasks, archivedIds)
+			})
 		} as ListTasksResult;
 	}
 

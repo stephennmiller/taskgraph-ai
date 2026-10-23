@@ -3,6 +3,7 @@
  * Direct function implementation for finding the next task to work on
  */
 
+import { readArchivedIdsSync } from '@tm/core';
 import { findNextTask } from '../../../../scripts/modules/task-manager.js';
 import {
 	readComplexityReport,
@@ -65,7 +66,12 @@ export async function nextTaskDirect(args, log, context = {}) {
 			const complexityReport = readComplexityReport(reportPath);
 
 			// Find the next task
-			const nextTask = findNextTask(data.tasks, complexityReport);
+			// Dependencies on archived tasks count as done, as in the CLI's next
+			const nextTask = findNextTask(
+				data.tasks,
+				complexityReport,
+				readArchivedIdsSync(tasksJsonPath, data.tag || tag || 'master').ids
+			);
 
 			if (!nextTask) {
 				log.info(

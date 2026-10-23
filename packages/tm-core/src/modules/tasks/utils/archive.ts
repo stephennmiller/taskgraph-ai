@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Task } from '../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
+import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 
 /** Days a finished task stays in tasks.json before `archive` moves it */
 export const DEFAULT_ARCHIVE_AFTER_DAYS = 30;
@@ -103,12 +104,19 @@ const numericId = (id: unknown): number => {
 const byId = (a: { id: unknown }, b: { id: unknown }) =>
 	numericId(a.id) - numericId(b.id);
 
+/**
+ * A tag's own section of the archive. A tag may be named `constructor` or
+ * `__proto__`, so this never reads through the object's prototype.
+ */
+function ownSection(archive: unknown, tag: string): unknown {
+	return archive && typeof archive === 'object' && Object.hasOwn(archive, tag)
+		? (archive as Record<string, unknown>)[tag]
+		: undefined;
+}
+
 /** A tag's section, or an empty one. Tolerates a hand-edited file. */
 export function archiveTag(archive: unknown, tag: string): ArchiveTagData {
-	const section =
-		archive && typeof archive === 'object'
-			? (archive as Record<string, unknown>)[tag]
-			: undefined;
+	const section = ownSection(archive, tag);
 	const tasks = Array.isArray((section as ArchiveTagData | undefined)?.tasks)
 		? (section as ArchiveTagData).tasks
 		: [];
@@ -192,6 +200,23 @@ export function insertById(tasks: Task[], task: Task): Task[] {
 	return at === -1
 		? [...tasks, task]
 		: [...tasks.slice(0, at), task, ...tasks.slice(at)];
+}
+
+/** A tag's archived tasks by ID, as they were before archiving */
+export function archivedTasksById(
+	archive: unknown,
+	tag: string
+): { tasks: Map<string, Task>; highestId: number } {
+	const section = archiveTag(archive, tag);
+	return {
+		tasks: new Map(
+			section.tasks.map(({ archivedAt: _at, ...task }) => [
+				String(task.id),
+				task as Task
+			])
+		),
+		highestId: section.metadata.highestId
+	};
 }
 
 /** IDs of the tasks archived in a tag */
@@ -338,11 +363,26 @@ export function renameArchiveTag(
 	oldTag: string,
 	newTag: string
 ): ArchiveData | null {
-	if (!archive || typeof archive !== 'object' || !(oldTag in archive)) {
-		return null;
-	}
-	const { [oldTag]: section, ...rest } = archive;
-	return { ...rest, [newTag]: section };
+	const section = ownSection(archive, oldTag);
+	if (section === undefined) return null;
+	const { [oldTag]: _old, ...rest } = archive;
+	return { ...rest, [newTag]: section as ArchiveTagData };
+}
+
+/**
+ * The archive with a copy of a tag's section under a new tag name, for a tag
+ * copy: the copied tasks keep their dependencies on archived tasks (which
+ * still count as done), and the new tag never reuses an archived ID
+ * @returns null when the source tag has nothing archived
+ */
+export function copyArchiveTag(
+	archive: ArchiveData,
+	fromTag: string,
+	toTag: string
+): ArchiveData | null {
+	const section = ownSection(archive, fromTag);
+	if (section === undefined) return null;
+	return { ...archive, [toTag]: structuredClone(section) as ArchiveTagData };
 }
 
 /**
@@ -354,43 +394,57 @@ export function dropArchiveTag(
 	archive: ArchiveData,
 	tag: string
 ): ArchiveData | null {
-	if (!archive || typeof archive !== 'object' || !(tag in archive)) {
-		return null;
-	}
+	if (ownSection(archive, tag) === undefined) return null;
 	const { [tag]: _dropped, ...rest } = archive;
 	return rest;
 }
 
 /**
- * Apply a tag rename or delete to archive.json synchronously, for the legacy
- * tag commands. Writes a temp file and renames it over the archive, so a
- * crash never leaves half a file. Does nothing when there is no archive or
- * the tag has nothing archived.
+ * Apply a tag change to archive.json under its lock (the same lock tm-core's
+ * archive and restore take), with an atomic write, so a concurrent archive
+ * run's tasks are never lost. Does nothing when there is no archive or the
+ * tag has nothing archived.
  */
-function updateArchiveSync(
+async function updateArchiveFile(
 	tasksPath: string,
 	change: (archive: ArchiveData) => ArchiveData | null
-): void {
+): Promise<void> {
 	const archivePath = archivePathFor(tasksPath);
-	const next = change(readArchiveSync(archivePath));
-	if (!next) return;
-	const tmpPath = `${archivePath}.${process.pid}.tmp`;
-	fs.writeFileSync(tmpPath, `${JSON.stringify(next, null, 2)}\n`);
-	fs.renameSync(tmpPath, archivePath);
+	const fileOps = new FileOperations();
+	try {
+		if (!(await fileOps.exists(archivePath))) return;
+		await fileOps.modifyJson(
+			archivePath,
+			(current: ArchiveData) => change(current ?? {}) ?? current
+		);
+	} finally {
+		await fileOps.cleanup();
+	}
 }
 
 /** Move a renamed tag's archived tasks to its new name (see renameArchiveTag) */
-export function renameArchivedTagSync(
+export function renameArchivedTag(
 	tasksPath: string,
 	oldTag: string,
 	newTag: string
-): void {
-	updateArchiveSync(tasksPath, (archive) =>
+): Promise<void> {
+	return updateArchiveFile(tasksPath, (archive) =>
 		renameArchiveTag(archive, oldTag, newTag)
 	);
 }
 
 /** Remove a deleted tag's archived tasks (see dropArchiveTag) */
-export function deleteArchivedTagSync(tasksPath: string, tag: string): void {
-	updateArchiveSync(tasksPath, (archive) => dropArchiveTag(archive, tag));
+export function deleteArchivedTag(tasksPath: string, tag: string): Promise<void> {
+	return updateArchiveFile(tasksPath, (archive) => dropArchiveTag(archive, tag));
+}
+
+/** Copy a tag's archived tasks to a copy of the tag (see copyArchiveTag) */
+export function copyArchivedTag(
+	tasksPath: string,
+	fromTag: string,
+	toTag: string
+): Promise<void> {
+	return updateArchiveFile(tasksPath, (archive) =>
+		copyArchiveTag(archive, fromTag, toTag)
+	);
 }

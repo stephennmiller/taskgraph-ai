@@ -186,4 +186,23 @@ describe('archive', () => {
 		await storage.deleteTag('launch');
 		expect(readArchive().launch).toBeUndefined();
 	});
+	it('gives a copied tag the source\'s archive, so it never reuses an archived ID', async () => {
+		await setup({
+			master: [
+				createTask({ id: 1, title: 'Done', status: 'done', updatedAt: OLD }),
+				createTask({ id: 2, title: 'Open', dependencies: ['1'] })
+			]
+		});
+		await tmCore.tasks.archive();
+		const storage = new FileStorage(projectDir);
+
+		await storage.copyTag('master', 'copy');
+		await storage.createTag('branch', { copyFrom: 'master' });
+		await storage.createTag('empty');
+
+		expect(ids(readArchive().copy.tasks)).toEqual(['1']);
+		expect(ids(readArchive().branch.tasks)).toEqual(['1']);
+		expect(readArchive().empty).toBeUndefined();
+		expect(String((await tmCore.tasks.getNext('copy'))?.id)).toBe('2');
+	});
 });

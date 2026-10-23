@@ -29,10 +29,11 @@ The age is the task's last update (`updatedAt`, or a subtask's when later). A fi
 
 ## IDs and dependencies
 
-- Archived tasks keep their IDs: `add-task`, `parse-prd`, `move` and `remove-subtask --convert` never hand an archived ID to a new task, even after a restore.
-- A dependency on an archived task counts as done, so `next`, `why`, `graph`, `list --ready` and `validate-dependencies` treat it as finished and `fix-dependencies` leaves it alone. `add-dependency` on an archived task tells you to restore it first.
+- Archived tasks keep their IDs: `add-task`, `parse-prd`, `move` and `remove-subtask --convert` never hand an archived ID to a new task, even after a restore. The tasks.json merge driver doesn't either: a task another branch added under an ID archived here gets the next free ID.
+- A dependency on an archived task counts as done, so `next` (CLI and MCP), `why`, `graph`, `list` and `list --ready`, `tags --ready` and `validate-dependencies` treat it as finished and `fix-dependencies` leaves it alone. `add-dependency` on an archived task tells you to restore it first.
 
 ## Tags and safety
 
-- Archived tasks belong to their tag: `tags rename` takes them along, and `tags remove` deletes them with the tag.
-- Archive and restore take the same lock as every other write to tasks.json, so a change another session saves at the same time isn't lost.
+- Archived tasks belong to their tag: `tags rename` takes them along, `tags remove` deletes them with the tag, and `tags copy` (or `tags add --copy-from`) copies them, so the copy's dependencies on them still count as done and their IDs stay reserved there too.
+- Archive and restore take the same lock as every other write to tasks.json, so a change another session saves at the same time isn't lost. Every change to archive.json also takes its own lock and replaces the file in one step.
+- Archive writes archive.json before tasks.json, and restore writes tasks.json first. If the process stops between the two writes, the task is in both files, never in neither. The copy in tasks.json is the one that counts.

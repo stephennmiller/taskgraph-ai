@@ -1,8 +1,9 @@
 /**
  * Archived tasks (`taskgraph archive`) keep their IDs and count as done in
  * the legacy commands: add-task, parse-prd, move and remove-subtask never
- * hand out an archived ID, and validate/fix-dependencies leave dependencies
- * on archived tasks alone. Real files in a temp dir; only logging is silenced.
+ * hand out an archived ID, a tag copy keeps the archive, and validate/fix-
+ * dependencies, the MCP next_task and the tags ready count treat
+ * dependencies on archived tasks as done. Real files in a temp dir; only logging is silenced.
  */
 import fs from 'fs';
 import os from 'os';
@@ -18,6 +19,12 @@ import moveTask, {
 } from '../../../../../scripts/modules/task-manager/move-task.js';
 import { loadExistingTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
+import {
+	copyTag,
+	createTag,
+	tags as listTags
+} from '../../../../../scripts/modules/task-manager/tag-management.js';
+import { nextTaskDirect } from '../../../../../mcp-server/src/core/direct-functions/next-task.js';
 
 // vi.mock is hoisted above the imports: real file I/O, logging silenced
 vi.mock('../../../../../scripts/modules/utils.js', async (importOriginal) => ({
@@ -274,6 +281,92 @@ describe('archived task IDs in the legacy commands', () => {
 			expect(
 				result.fixes.some((f) => ['1', '1.1'].includes(String(f.dependencyId)))
 			).toBe(false);
+		});
+
+		test('MCP next_task picks a task whose dependency is archived', async () => {
+			setup([task(3, { dependencies: [1] })], [task(1)]);
+
+			const result = await nextTaskDirect(
+				{ tasksJsonPath: tasksPath, projectRoot: dir, tag: 'master' },
+				silentLog
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.data.nextTask?.id).toBe(3);
+		});
+
+		test('the tags ready count counts them as done', async () => {
+			setup([task(3, { dependencies: [1] })], [task(1)]);
+
+			const result = await listTags(
+				tasksPath,
+				{ ready: true },
+				{ mcpLog: silentLog, projectRoot: dir },
+				'json'
+			);
+
+			expect(result.tags.find((t) => t.name === 'master')?.readyTasks).toBe(1);
+		});
+	});
+
+	describe('tag copy', () => {
+		const archived = (tag) =>
+			JSON.parse(fs.readFileSync(archivePath, 'utf8'))[tag];
+
+		test('copy-tag copies the archive, so the copy keeps IDs reserved', async () => {
+			setup([task(3, { dependencies: [1] })], [task(1), task(2)]);
+
+			await copyTag(
+				tasksPath,
+				'master',
+				'copy',
+				{},
+				{ mcpLog: silentLog, projectRoot: dir },
+				'json'
+			);
+
+			expect(archived('copy').metadata.highestId).toBe(2);
+			expect(archived('copy').tasks.map((t) => t.id)).toEqual([1, 2]);
+			expect(archived('master').tasks.map((t) => t.id)).toEqual([1, 2]);
+
+			const added = await addTask(
+				tasksPath,
+				null,
+				[],
+				'medium',
+				{ mcpLog: silentLog, projectRoot: dir, tag: 'copy' },
+				'json',
+				{ title: 'New', description: 'New task' }
+			);
+			expect(added.newTaskId).toBe(4);
+		});
+
+		test('add-tag --copy-from copies the archive too', async () => {
+			setup([task(3)], [task(1)]);
+
+			await createTag(
+				tasksPath,
+				'feature',
+				{ copyFromTag: 'master' },
+				{ mcpLog: silentLog, projectRoot: dir },
+				'json'
+			);
+
+			expect(archived('feature').tasks.map((t) => t.id)).toEqual([1]);
+		});
+
+		test('an empty new tag gets no archive section', async () => {
+			setup([task(3)], [task(1)]);
+
+			await createTag(
+				tasksPath,
+				'empty',
+				{},
+				{ mcpLog: silentLog, projectRoot: dir },
+				'json'
+			);
+
+			expect(archived('empty')).toBeUndefined();
 		});
 	});
 });

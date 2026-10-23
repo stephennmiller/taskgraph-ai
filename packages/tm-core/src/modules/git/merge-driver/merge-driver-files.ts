@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
+import { readArchiveSync } from '../../tasks/utils/archive.js';
 import { type TasksMergeResult, mergeTasksJson } from './merge-tasks-json.js';
 
 /** The driver's name in `.gitattributes` and `merge.<name>.*` */
@@ -37,6 +38,12 @@ export interface MergeDriverFiles {
 	oursPath: string;
 	/** `%B`, the branch being merged in */
 	theirsPath: string;
+	/**
+	 * archive.json in the working tree, next to the file being merged. New
+	 * incoming tasks never take an ID it holds. Optional; an archive that is
+	 * missing or can't be read (mid-merge conflict markers) is skipped.
+	 */
+	archivePath?: string;
 }
 
 export type MergeDriverOutcome =
@@ -94,7 +101,8 @@ export function runTasksMergeDriver(
 	const { merged, renumbered, conflicts } = mergeTasksJson(
 		parsed.base,
 		parsed.ours,
-		parsed.theirs
+		parsed.theirs,
+		{ archive: files.archivePath ? readArchiveOrNone(files.archivePath) : {} }
 	);
 	const content =
 		JSON.stringify(merged, null, 2) + (oursText.endsWith('\n') ? '\n' : '');
@@ -105,6 +113,15 @@ export function runTasksMergeDriver(
 		renumbered,
 		conflicts
 	};
+}
+
+/** The parsed archive, or none when it is missing or unreadable */
+function readArchiveOrNone(archivePath: string): unknown {
+	try {
+		return readArchiveSync(archivePath);
+	} catch {
+		return {};
+	}
 }
 
 /**

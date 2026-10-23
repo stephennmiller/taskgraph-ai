@@ -1,3 +1,4 @@
+import { satisfyArchivedDependencies } from '@tm/core';
 import chalk from 'chalk';
 
 import {
@@ -140,20 +141,22 @@ async function listTasks(
 			totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
 		// Calculate dependency statistics (moved up to be available for all output formats)
+		// Dependencies on archived tasks count as done
+		const dependencyView = satisfyArchivedDependencies(data.tasks, archivedIds);
 		const completedTaskIds = new Set(
 			data.tasks
 				.filter((t) => t.status === 'done' || t.status === 'completed')
 				.map((t) => t.id)
 		);
 
-		const tasksWithNoDeps = data.tasks.filter(
+		const tasksWithNoDeps = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
 				t.status !== 'completed' &&
 				(!t.dependencies || t.dependencies.length === 0)
 		).length;
 
-		const tasksWithAllDepsSatisfied = data.tasks.filter(
+		const tasksWithAllDepsSatisfied = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
 				t.status !== 'completed' &&
@@ -162,7 +165,7 @@ async function listTasks(
 				t.dependencies.every((depId) => completedTaskIds.has(depId))
 		).length;
 
-		const tasksWithUnsatisfiedDeps = data.tasks.filter(
+		const tasksWithUnsatisfiedDeps = dependencyView.filter(
 			(t) =>
 				t.status !== 'done' &&
 				t.status !== 'completed' &&

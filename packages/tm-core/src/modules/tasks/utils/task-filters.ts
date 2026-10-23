@@ -153,7 +153,10 @@ export function filterReadyTasks(
 		return deps.every(
 			(depId) =>
 				completedIds.has(String(depId)) ||
-				(!liveIds.has(String(depId)) && isArchivedReference(depId, archivedIds))
+				// A task back in tasks.json isn't archived (as in
+				// satisfyArchivedDependencies), and neither are its subtasks
+				(!liveIds.has(String(depId).split('.')[0]) &&
+					isArchivedReference(depId, archivedIds))
 		);
 	});
 }

@@ -74,6 +74,39 @@ describe('runTasksMergeDriver', () => {
 		).toEqual([1, 2, 3]);
 	});
 
+	it('reads archive.json so an incoming task never takes an archived ID', () => {
+		write('base', tag([task(1, 'A')]));
+		write('ours', tag([task(1, 'A')]));
+		write('theirs', tag([task(1, 'A'), task(2, 'Theirs')]));
+		write('archive.json', {
+			master: { tasks: [task(2, 'Archived')], metadata: { highestId: 2 } }
+		});
+
+		const outcome = runTasksMergeDriver({
+			...files(),
+			archivePath: at('archive.json')
+		});
+
+		expect(outcome).toMatchObject({
+			status: 'merged',
+			renumbered: [{ tag: 'master', from: '2', to: '3' }]
+		});
+	});
+
+	it("merges without the archive when it can't be read", () => {
+		write('base', tag([task(1, 'A')]));
+		write('ours', tag([task(1, 'A')]));
+		write('theirs', tag([task(1, 'A'), task(2, 'Theirs')]));
+		write('archive.json', '<<<<<<< HEAD\n{}\n=======\n');
+
+		const outcome = runTasksMergeDriver({
+			...files(),
+			archivePath: at('archive.json')
+		});
+
+		expect(outcome).toMatchObject({ status: 'merged', renumbered: [] });
+	});
+
 	it('treats an empty ancestor as a file both branches added', () => {
 		write('base', '');
 		write('ours', tag([task(1, 'Ours')]));

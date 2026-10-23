@@ -462,10 +462,7 @@ export class FileStorage implements IStorage {
 		});
 	}
 
-	/**
-	 * IDs of the tasks archived in a tag. An archive that is missing or empty
-	 * has none.
-	 */
+	/** IDs of the tasks archived in a tag (none without an archive) */
 	async loadArchivedTaskIds(tag?: string): Promise<Set<string>> {
 		return archivedTaskIds(await this.readArchive(), tag || 'master');
 	}
@@ -607,6 +604,7 @@ export class FileStorage implements IStorage {
 		}
 
 		await this.saveTasks(tasks, targetTag);
+		await this.tagOps.copyArchivedTasks(sourceTag, targetTag);
 	}
 
 	/** See TagOperations */

@@ -8,7 +8,8 @@
  * conflicted.
  */
 
-import { runTasksMergeDriver } from '@tm/core';
+import path from 'node:path';
+import { archivePathFor, runTasksMergeDriver } from '@tm/core';
 import { Command } from 'commander';
 import {
 	formatMergeConflicts,
@@ -42,7 +43,14 @@ export class MergeDriverCommand extends Command {
 		theirsPath: string,
 		file = '.taskgraph/tasks/tasks.json'
 	): void {
-		const outcome = runTasksMergeDriver({ basePath, oursPath, theirsPath });
+		// Git runs the driver at the top of the working tree, so `file` (%P)
+		// finds the archive.json beside it; new tasks never take archived IDs
+		const outcome = runTasksMergeDriver({
+			basePath,
+			oursPath,
+			theirsPath,
+			archivePath: archivePathFor(path.resolve(file))
+		});
 
 		if (outcome.status === 'unreadable') {
 			printError(

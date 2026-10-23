@@ -582,3 +582,67 @@ describe('mergeTasksJson', () => {
 		});
 	});
 });
+describe('mergeTasksJson with an archive', () => {
+	const archive = (tasks: Json[], highestId: number) => ({
+		master: {
+			tasks: tasks.map((t) => ({
+				...t,
+				archivedAt: '2026-02-01T00:00:00.000Z'
+			})),
+			metadata: { highestId }
+		}
+	});
+
+	it('moves an incoming new task off an ID this branch archived', () => {
+		// Ours added 3 and archived it; theirs added its own 3
+		const base = file({ master: [task(1), task(2)] });
+		const ours = file({ master: [task(1), task(2)] });
+		const theirs = file({
+			master: [
+				task(1),
+				task(2),
+				task(3, { title: 'Theirs' }),
+				task(4, { dependencies: [3] })
+			]
+		});
+
+		const result = mergeTasksJson(base, ours, theirs, {
+			archive: archive([task(3, { title: 'Ours', status: 'done' })], 3)
+		});
+
+		expect(result.renumbered).toEqual([{ tag: 'master', from: '3', to: '5' }]);
+		expect(
+			tasksOf(result.merged)
+				.map((t) => t.id)
+				.sort()
+		).toEqual([1, 2, 4, 5]);
+		expect(byId(result.merged, 5)?.title).toBe('Theirs');
+		expect(byId(result.merged, 4)?.dependencies).toEqual([5]);
+	});
+
+	it('numbers a renumbered task above the highest archived ID', () => {
+		const base = file({ master: [task(1)] });
+		const ours = file({ master: [task(1), task(2, { title: 'Ours' })] });
+		const theirs = file({ master: [task(1), task(2, { title: 'Theirs' })] });
+
+		const result = mergeTasksJson(base, ours, theirs, {
+			archive: archive([], 9)
+		});
+
+		expect(result.renumbered).toEqual([{ tag: 'master', from: '2', to: '10' }]);
+	});
+
+	it('keeps a task the incoming branch restored from the archive', () => {
+		const restored = task(3, { status: 'done' });
+		const base = file({ master: [task(1)] });
+		const ours = file({ master: [task(1)] });
+		const theirs = file({ master: [task(1), restored] });
+
+		const result = mergeTasksJson(base, ours, theirs, {
+			archive: archive([restored], 3)
+		});
+
+		expect(result.renumbered).toEqual([]);
+		expect(tasksOf(result.merged).map((t) => t.id)).toEqual([1, 3]);
+	});
+});
