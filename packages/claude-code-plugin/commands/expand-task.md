@@ -17,7 +17,7 @@ Analyzes a task and creates detailed subtasks for better manageability.
 taskgraph expand --id=<id>
 ```
 
-Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+Put the ID into the command only when it is digits and dots; otherwise ask the user for the task ID. Use a top-level task ID (`5`): `expand` reads `5.2` as task 5.
 
 ## Expansion Process
 

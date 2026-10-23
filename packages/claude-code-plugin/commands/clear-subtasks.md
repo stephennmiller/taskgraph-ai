@@ -24,7 +24,7 @@ taskgraph clear-subtasks --id=<task-id>   # one task
 taskgraph clear-subtasks --all            # every task, destructive
 ```
 
-`--all` is never implied: run it only when the arguments say `--all`, and only after the user types `CLEAR ALL SUBTASKS` to confirm. If no ID and no `--all` are given, ask which tasks to clear. Put an ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+`--all` is never implied: run it only when the arguments say `--all`, and only after the user types `CLEAR ALL SUBTASKS` to confirm. If no ID and no `--all` are given, ask which tasks to clear. Put the IDs into the command only when they are digits and dots (`5`), or a comma-separated list of them (`5,6`); otherwise ask the user for the task ID.
 
 ## Pre-Clear Analysis
 

@@ -53,20 +53,37 @@ function taskgraphCalls(markdown: string): string[] {
 			calls.push(span[1]);
 		}
 	}
-	return calls.map((call) => {
-		// Cut at the first shell operator or comment outside single quotes
-		let inQuote = false;
-		for (let i = 0; i < call.length; i++) {
-			const char = call[i];
-			if (char === "'") inQuote = !inQuote;
-			else if (!inQuote && /[#|;&]/.test(char)) return call.slice(0, i).trim();
+	return calls.map((call) => shellScan(call).call);
+}
+
+/**
+ * Reads a call the way the shell does: text in '...' is literal, and outside
+ * quotes a backslash makes the next character literal (so `'\''` is a quote).
+ * Returns the call cut at the first comment or shell operator outside quotes,
+ * and the text of that call the shell would expand (outside quotes and escapes).
+ */
+function shellScan(call: string): { call: string; unquoted: string } {
+	let inQuote = false;
+	let unquoted = '';
+	for (let i = 0; i < call.length; i++) {
+		const char = call[i];
+		if (inQuote) {
+			if (char === "'") inQuote = false;
+		} else if (char === "'") {
+			inQuote = true;
+		} else if (char === '\\') {
+			i++;
+		} else if (/[#|;&]/.test(char)) {
+			return { call: call.slice(0, i).trim(), unquoted };
+		} else {
+			unquoted += char;
 		}
-		return call.trim();
-	});
+	}
+	return { call: call.trim(), unquoted };
 }
 
 /** The parts of a call the shell would expand: everything outside '...' */
-const unquoted = (call: string): string => call.replace(/'[^']*'/g, "''");
+const unquoted = (call: string): string => shellScan(call).unquoted;
 
 describe('taskgraphCalls', () => {
 	it('reads fenced lines and inline code spans', () => {
@@ -81,6 +98,15 @@ describe('taskgraphCalls', () => {
 		expect(
 			taskgraphCalls('```bash\ntaskgraph note 3 \'a | b # c\' || echo "x"\n```')
 		).toEqual(["taskgraph note 3 'a | b # c'"]);
+	});
+
+	it("reads '\\'' as a quote inside single-quoted text", () => {
+		const [call] = taskgraphCalls(
+			"```bash\ntaskgraph note 3 'it'\\''s a | b \"x\"' || true\n```"
+		);
+
+		expect(call).toBe("taskgraph note 3 'it'\\''s a | b \"x\"'");
+		expect(unquoted(call)).toBe('taskgraph note 3 ');
 	});
 
 	it('ignores fenced lines that do not start with taskgraph', () => {
@@ -150,22 +176,49 @@ describe('free text passed to taskgraph in plugin instructions', () => {
 	);
 });
 
-// to-done has this check with its other tests in packages/tm-profiles/tests/integration/plugin-commands.test.ts
-describe('commands that take a task ID from the arguments', () => {
-	it.each([
-		'clear-subtasks',
-		'expand-task',
-		'remove-task',
-		'set-status',
-		'to-in-progress',
-		'update-task',
-		'update-tasks-from-id'
-	])('%s uses the ID only when it is a task number', (name) => {
+/** A taskgraph call that puts a task ID placeholder into the command line */
+const takesId = (call: string): boolean =>
+	/(--(id|parent|from|task-id|depends-on)=<|^taskgraph (why|show|note) <)/.test(
+		call
+	);
+
+/** The fenced lines of a file only, so prose that mentions a command is skipped */
+const fencedCalls = (markdown: string): string[] =>
+	taskgraphCalls(markdown.replace(/^(?!```|\s*(?:\$ )?taskgraph ).*$/gm, ''));
+
+/**
+ * Commands that take a task ID from the user's arguments: the argument hint
+ * names one, or a code block puts an ID placeholder into a taskgraph call
+ */
+const idCommands = fs
+	.readdirSync(path.join(pluginDir, 'commands'))
+	.filter((file) => {
 		const body = fs.readFileSync(
-			path.join(pluginDir, 'commands', `${name}.md`),
+			path.join(pluginDir, 'commands', file),
 			'utf-8'
 		);
-
-		expect(body).toContain('only when it is digits and dots');
+		return (
+			/^argument-hint: .*\b(task[ -])?id\b/im.test(body) ||
+			fencedCalls(body).some(takesId)
+		);
 	});
+
+describe('commands that take a task ID from the arguments', () => {
+	it('finds them', () => {
+		expect(idCommands).toEqual(
+			expect.arrayContaining(['expand-task.md', 'set-status.md', 'why.md'])
+		);
+	});
+
+	it.each(idCommands)(
+		'%s uses the ID only when it is a task number',
+		(file) => {
+			const body = fs.readFileSync(
+				path.join(pluginDir, 'commands', file),
+				'utf-8'
+			);
+
+			expect(body).toMatch(/only when (it is|they are) digits and dots/);
+		}
+	);
 });

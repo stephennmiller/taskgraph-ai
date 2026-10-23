@@ -25,7 +25,7 @@ Update multiple related tasks based on new requirements or context changes.
 taskgraph update --from=<id> --prompt='<context>'
 ```
 
-Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID. Keep the text in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in it, and prompts often quote file names and code.
+Put the ID into the command only when it is digits and dots; otherwise ask the user for the task ID. Use a top-level task ID (`5`): `update --from` reads `5.2` as task 5. Keep the text in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in it, and prompts often quote file names and code.
 
 ## Update Process
 

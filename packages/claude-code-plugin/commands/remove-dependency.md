@@ -27,6 +27,8 @@ Parse natural language or IDs:
 taskgraph remove-dependency --id=<task-id> --depends-on=<dependency-id>
 ```
 
+Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+
 ## Pre-Removal Checks
 
 1. **Verify dependency exists**

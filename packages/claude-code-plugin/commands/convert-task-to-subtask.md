@@ -26,6 +26,8 @@ Converts an existing standalone task into a subtask of another task.
 taskgraph add-subtask --parent=<parent-id> --task-id=<task-to-convert>
 ```
 
+Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+
 ## Pre-Conversion Checks
 
 1. **Validation**

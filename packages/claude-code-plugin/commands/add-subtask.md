@@ -35,6 +35,8 @@ Keep the title and description in single quotes, and write any `'` inside them a
 taskgraph add-subtask --parent=<id> --task-id=<existing-id>
 ```
 
+Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+
 ## Smart Features
 
 1. **Automatic Subtask Generation**
