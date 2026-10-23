@@ -8,6 +8,7 @@ import {
 	copyArchivedTag,
 	deleteArchivedTag,
 	filterReadyTasks,
+	isReservedNewTagName,
 	isTaskComplete,
 	readArchivedIdsSync,
 	renameArchivedTag,
@@ -17,31 +18,26 @@ import {
 	findProjectRoot,
 	getCurrentTag,
 	getTasksForTag,
+	isTagData,
 	log,
 	readJSON,
 	resolveTag,
 	modifyJSON,
+	withoutReadJSONFields,
 	writeJSON
 } from '../utils.js';
 import findNextTask from './find-next-task.js';
 
 const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
 
-/** `__proto__` is a key JavaScript objects treat as their prototype, not data */
-const RESERVED_TAG_NAMES = ['master', 'main', 'default', '__proto__'];
+const RESERVED_TAG_NAMES = ['master', 'main', 'default'];
 
-/**
- * Copy tagged tasks.json data without the given keys. The copy has no
- * prototype, so every key, `__proto__` included, is copied as data.
- */
-function copyTaggedData(data, skipKeys) {
-	const copy = Object.create(null);
-	for (const [key, value] of Object.entries(data)) {
-		if (!skipKeys.includes(key)) {
-			copy[key] = value;
-		}
-	}
-	return copy;
+/** Whether a new tag may not take this name */
+function isReservedTagName(name) {
+	return (
+		RESERVED_TAG_NAMES.includes(name.toLowerCase()) ||
+		isReservedNewTagName(name)
+	);
 }
 
 /** An error the CLI prints with a hint underneath */
@@ -125,7 +121,7 @@ async function createTag(
 		}
 
 		// Reserved tag names
-		if (RESERVED_TAG_NAMES.includes(tagName.toLowerCase())) {
+		if (isReservedTagName(tagName)) {
 			throw new Error(`"${tagName}" is a reserved tag name`);
 		}
 
@@ -153,7 +149,7 @@ async function createTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
+			rawData = withoutReadJSONFields(data);
 		}
 
 		// Check if tag already exists
@@ -190,7 +186,7 @@ async function createTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+		const cleanData = withoutReadJSONFields(rawData);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -316,7 +312,7 @@ async function deleteTag(
 			};
 		} else {
 			// This is already in tagged format, use it directly but exclude internal fields
-			rawData = copyTaggedData(data, ['_rawTaggedData', 'tag']);
+			rawData = withoutReadJSONFields(data);
 		}
 
 		// Check if tag exists
@@ -441,14 +437,7 @@ async function enhanceTagsWithMetadata(tasksPath, rawData, context = {}) {
 
 		for (const [tagName, tagData] of Object.entries(rawData)) {
 			// Skip non-tag properties
-			if (
-				tagName === 'tasks' ||
-				tagName === 'tag' ||
-				tagName === '_rawTaggedData' ||
-				!tagData ||
-				typeof tagData !== 'object' ||
-				!Array.isArray(tagData.tasks)
-			) {
+			if (tagName === 'tasks' || !isTagData(tagData)) {
 				continue;
 			}
 
@@ -483,7 +472,7 @@ async function enhanceTagsWithMetadata(tasksPath, rawData, context = {}) {
 		// If we enhanced any tags, write the data back
 		if (enhanced) {
 			// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-			const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+			const cleanData = withoutReadJSONFields(rawData);
 			writeJSON(tasksPath, cleanData, context.projectRoot);
 		}
 	} catch (error) {
@@ -552,15 +541,8 @@ async function tags(
 		// Extract all tags
 		const tagList = [];
 		for (const [tagName, tagData] of Object.entries(rawData)) {
-			// Skip non-tag properties (like legacy 'tasks' array, 'tag', '_rawTaggedData')
-			if (
-				tagName === 'tasks' ||
-				tagName === 'tag' ||
-				tagName === '_rawTaggedData' ||
-				!tagData ||
-				typeof tagData !== 'object' ||
-				!Array.isArray(tagData.tasks)
-			) {
+			// Skip non-tag properties, like a legacy 'tasks' array
+			if (tagName === 'tasks' || !isTagData(tagData)) {
 				continue;
 			}
 
@@ -805,7 +787,7 @@ async function renameTag(
 		}
 
 		// Reserved tag names
-		if (RESERVED_TAG_NAMES.includes(newName.toLowerCase())) {
+		if (isReservedTagName(newName)) {
 			throw new Error(`"${newName}" is a reserved tag name`);
 		}
 
@@ -854,7 +836,7 @@ async function renameTag(
 		}
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+		const cleanData = withoutReadJSONFields(rawData);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
@@ -946,7 +928,7 @@ async function copyTag(
 		}
 
 		// Reserved tag names
-		if (RESERVED_TAG_NAMES.includes(targetName.toLowerCase())) {
+		if (isReservedTagName(targetName)) {
 			throw new Error(`"${targetName}" is a reserved tag name`);
 		}
 
@@ -991,7 +973,7 @@ async function copyTag(
 		};
 
 		// Create clean data for writing (exclude _rawTaggedData to prevent corruption)
-		const cleanData = copyTaggedData(rawData, ['_rawTaggedData']);
+		const cleanData = withoutReadJSONFields(rawData);
 
 		// Write the clean data back to file with proper context to avoid tag corruption
 		writeJSON(tasksPath, cleanData, projectRoot);
