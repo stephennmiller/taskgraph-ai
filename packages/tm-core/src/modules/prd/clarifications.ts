@@ -60,6 +60,13 @@ export interface ApplyClarificationsResult {
 }
 
 const HEADING_LINE = /^##\s+Clarifications\s*$/i;
+
+/**
+ * Whether a PRD heading is the `## Clarifications` section. It refines the
+ * requirements above it, so no task needs to cite it
+ */
+export const isClarificationsHeading = (title: string, level: number) =>
+	level === 2 && /^clarifications$/i.test(title.trim());
 const SECTION_END = /^#{1,2}\s/;
 const QUESTION_LINE = /^-\s+\*\*Q:\*\*\s*(.*)$/;
 const ANSWER_LINE = /^\s+\*\*A:\*\*\s*(.*)$/;

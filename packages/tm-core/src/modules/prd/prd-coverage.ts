@@ -7,11 +7,13 @@
  * reset" under it, and a task for "Password reset" covers "Authentication".
  * A task that cites a heading the PRD no longer has (renamed or removed) is
  * reported, never silently dropped, and the renamed heading shows up as
- * uncovered. Cancelled tasks neither cover a section nor need one.
+ * uncovered. Cancelled tasks neither cover a section nor need one, and the
+ * `## Clarifications` section parse-prd --clarify writes needs no task.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { isClarificationsHeading } from './clarifications.js';
 import {
 	type PrdSection,
 	getPrdSource,
@@ -138,7 +140,10 @@ function fileCoverage(
 		taskIds,
 		sectionCount: sections.length,
 		uncovered: sections
-			.filter((s) => !covered.has(s.slug))
+			.filter(
+				(s) =>
+					!covered.has(s.slug) && !isClarificationsHeading(s.title, s.level)
+			)
 			.map(({ slug, title, level }) => ({ slug, title, level })),
 		stale
 	};
