@@ -12,15 +12,6 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('2');
 	});
 
-	it('treats a completed task as satisfying a dependency', () => {
-		const next = selectNextTask([
-			createTask({ id: 1, title: 'Old', status: 'completed' as never }),
-			createTask({ id: 2, title: 'Waiting', dependencies: ['1'] })
-		]);
-
-		expect(next?.id).toBe('2');
-	});
-
 	it('treats a cancelled task as satisfying a dependency', () => {
 		const next = selectNextTask([
 			createTask({ id: 1, title: 'Dropped', status: 'cancelled' }),
@@ -42,32 +33,6 @@ describe('selectNextTask', () => {
 						title: 'Dropped',
 						parentId: '1',
 						status: 'cancelled'
-					}),
-					createSubtask({
-						id: 2,
-						title: 'Waiting',
-						parentId: '1',
-						dependencies: [1]
-					})
-				]
-			})
-		]);
-
-		expect(next?.id).toBe('1.2');
-	});
-
-	it('treats a completed subtask as satisfying a sibling dependency', () => {
-		const next = selectNextTask([
-			createTask({
-				id: 1,
-				title: 'Parent',
-				status: 'in-progress',
-				subtasks: [
-					createSubtask({
-						id: 1,
-						title: 'Done one',
-						parentId: '1',
-						status: 'completed' as never
 					}),
 					createSubtask({
 						id: 2,

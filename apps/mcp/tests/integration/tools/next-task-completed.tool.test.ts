@@ -32,7 +32,7 @@ describe("next_task MCP tool with a top-level 'completed' task", () => {
 						createTask({
 							id: 1,
 							title: 'Set up the database',
-							status: 'completed',
+							status: 'completed' as never, // the older spelling, as an old file has it
 							priority: 'high'
 						}),
 						createTask({

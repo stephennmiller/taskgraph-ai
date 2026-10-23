@@ -336,9 +336,7 @@ function subtaskSection(
 			...subtaskRows(parentId, matching, width)
 		];
 	}
-	const done = subtasks.filter(
-		(sub) => sub.status === 'done' || sub.status === 'completed'
-	).length;
+	const done = subtasks.filter((sub) => sub.status === 'done').length;
 	return [
 		heading('Subtasks', `${done} of ${subtasks.length} done`),
 		...subtaskRows(parentId, subtasks, width)

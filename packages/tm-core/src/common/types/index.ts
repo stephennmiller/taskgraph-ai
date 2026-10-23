@@ -16,8 +16,7 @@ export type TaskStatus =
 	| 'deferred'
 	| 'cancelled'
 	| 'blocked'
-	| 'review'
-	| 'completed';
+	| 'review';
 
 /**
  * Task priority levels

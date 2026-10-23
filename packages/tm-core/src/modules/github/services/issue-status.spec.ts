@@ -11,8 +11,7 @@ const ALL_STATUSES: TaskStatus[] = [
 	'deferred',
 	'cancelled',
 	'blocked',
-	'review',
-	'completed'
+	'review'
 ];
 
 function issue(overrides: Partial<RemoteIssue> = {}): RemoteIssue {
@@ -94,8 +93,8 @@ describe('statusFromIssue', () => {
 });
 
 describe('sameStatus', () => {
-	it('treats done and completed as the same', () => {
-		expect(sameStatus('done', 'completed')).toBe(true);
+	it('treats done and the older completed, as a link saved before may hold, as the same', () => {
+		expect(sameStatus('done', 'completed' as never)).toBe(true);
 		expect(sameStatus('done', 'pending')).toBe(false);
 		expect(sameStatus('in-progress', 'in-progress')).toBe(true);
 	});

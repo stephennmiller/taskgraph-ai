@@ -55,7 +55,6 @@ export function getSuggestedActions(
 				}
 			];
 		case 'done':
-		case 'completed':
 		case 'cancelled':
 			return [
 				{

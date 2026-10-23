@@ -45,16 +45,13 @@ describe('renderIssue', () => {
 		expect(issue.state).toBe('open');
 	});
 
-	it.each(['done', 'completed'] as const)(
-		'closes %s as completed',
-		(status) => {
-			const issue = renderIssue(makeTask({ status }), { tag: 'master' });
+	it('closes done as completed', () => {
+		const issue = renderIssue(makeTask({ status: 'done' }), { tag: 'master' });
 
-			expect(issue.state).toBe('closed');
-			expect(issue.stateReason).toBe('completed');
-			expect(issue.labels.some((l) => l.includes('status/'))).toBe(false);
-		}
-	);
+		expect(issue.state).toBe('closed');
+		expect(issue.stateReason).toBe('completed');
+		expect(issue.labels.some((l) => l.includes('status/'))).toBe(false);
+	});
 
 	it('closes cancelled as not planned', () => {
 		const issue = renderIssue(makeTask({ status: 'cancelled' }), {

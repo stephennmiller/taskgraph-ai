@@ -77,10 +77,7 @@ export function createProgressBar(
 
 		// Calculate proportions for each status
 		const totalRemaining = Object.entries(statusBreakdown)
-			.filter(
-				([status]) =>
-					!['deferred', 'cancelled', 'done', 'completed'].includes(status)
-			)
+			.filter(([status]) => !['deferred', 'cancelled', 'done'].includes(status))
 			.reduce((sum, [_, val]) => sum + val, 0);
 
 		// If no remaining tasks with tracked statuses, just use gray
@@ -93,8 +90,7 @@ export function createProgressBar(
 			// Add each status section proportionally
 			for (const [status, percentage] of Object.entries(statusBreakdown)) {
 				// Skip statuses that are considered complete
-				if (['deferred', 'cancelled', 'done', 'completed'].includes(status))
-					continue;
+				if (['deferred', 'cancelled', 'done'].includes(status)) continue;
 
 				// Calculate how many characters this status should fill
 				const statusChars = Math.round((percentage / totalRemaining) * empty);
@@ -145,7 +141,6 @@ export function getStatusWithColor(status, forTable = false) {
 
 	const statusConfig = {
 		done: { color: chalk.green, icon: '✓', tableIcon: '✓' },
-		completed: { color: chalk.green, icon: '✓', tableIcon: '✓' },
 		pending: { color: chalk.yellow, icon: '○', tableIcon: '⏱' },
 		'in-progress': { color: theme.active, icon: '▶', tableIcon: '▶' },
 		deferred: { color: theme.muted, icon: 'x', tableIcon: '⏱' },
@@ -165,7 +160,6 @@ export function getStatusWithColor(status, forTable = false) {
 		// Use ASCII characters instead of Unicode for completely stable display
 		const simpleIcons = {
 			done: '✓',
-			completed: '✓',
 			pending: '○',
 			'in-progress': '►',
 			deferred: 'x',
@@ -226,9 +220,7 @@ export function formatDependenciesWithStatus(
 				}
 
 				const status = depTask.status || 'pending';
-				const isDone =
-					status.toLowerCase() === 'done' ||
-					status.toLowerCase() === 'completed';
+				const isDone = status.toLowerCase() === 'done';
 				const isInProgress = status.toLowerCase() === 'in-progress';
 
 				if (forConsole) {
@@ -263,8 +255,7 @@ export function formatDependenciesWithStatus(
 
 			// Format with status
 			const status = subtask.status || 'pending';
-			const isDone =
-				status.toLowerCase() === 'done' || status.toLowerCase() === 'completed';
+			const isDone = status.toLowerCase() === 'done';
 			const isInProgress = status.toLowerCase() === 'in-progress';
 
 			if (forConsole) {
@@ -305,8 +296,7 @@ export function formatDependenciesWithStatus(
 
 		// Format with status
 		const status = depTask.status || 'pending';
-		const isDone =
-			status.toLowerCase() === 'done' || status.toLowerCase() === 'completed';
+		const isDone = status.toLowerCase() === 'done';
 		const isInProgress = status.toLowerCase() === 'in-progress';
 
 		if (forConsole) {

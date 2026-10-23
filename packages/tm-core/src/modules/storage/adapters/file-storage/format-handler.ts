@@ -4,6 +4,7 @@
 
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import { normalizeTaskStatuses } from '../../../tasks/utils/legacy-status.js';
+import { buildTagMetadata } from './tag-update.js';
 
 export interface FileStorageData {
 	tasks: Task[];
@@ -239,12 +240,6 @@ export class FormatHandler {
 	 * Generate metadata from tasks when not present
 	 */
 	private generateMetadataFromTasks(tasks: Task[], tag: string): TaskMetadata {
-		return {
-			version: '1.0.0',
-			lastModified: new Date().toISOString(),
-			taskCount: tasks.length,
-			completedCount: tasks.filter((t: any) => t.status === 'done').length,
-			tags: [tag]
-		};
+		return buildTagMetadata(normalizeTaskStatuses(tasks), tag);
 	}
 }

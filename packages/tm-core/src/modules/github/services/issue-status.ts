@@ -18,7 +18,10 @@ const OPEN_STATUSES: readonly TaskStatus[] = [
 	'review'
 ];
 
-/** `done` and `completed` mean the same thing */
+/**
+ * Whether two statuses match. A link's lastPushedStatus is stored as pushed,
+ * so one saved by an older version can hold an older spelling.
+ */
 export function sameStatus(a: TaskStatus, b: TaskStatus): boolean {
 	return normalizeTaskStatus(a) === normalizeTaskStatus(b);
 }

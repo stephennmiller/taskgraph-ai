@@ -40,7 +40,7 @@ describe('getSuggestedActions', () => {
 	});
 
 	it('points finished tasks at the next task instead', () => {
-		for (const status of ['done', 'completed', 'cancelled']) {
+		for (const status of ['done', 'cancelled']) {
 			expect(commands(getSuggestedActions(1, status, false))).toEqual([
 				'taskgraph next'
 			]);
