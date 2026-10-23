@@ -3,14 +3,6 @@
  * This file exports all utility functions and helper classes
  */
 
-// Export ID generation utilities
-export {
-	generateSubtaskId,
-	isValidTaskId,
-	isValidSubtaskId,
-	getParentTaskId
-} from './id-generator.js';
-
 // Export git utilities
 export {
 	isGitRepository,
@@ -57,24 +49,6 @@ export {
 
 // Export path construction utilities
 export { getProjectPaths } from './path-helpers.js';
-
-// Additional utility exports
-
-/**
- * Formats a date for task timestamps
- * @deprecated This is a placeholder function that will be properly implemented in later tasks
- */
-export function formatDate(date: Date = new Date()): string {
-	return date.toISOString();
-}
-
-/**
- * Deep clones an object
- * @deprecated This is a placeholder function that will be properly implemented in later tasks
- */
-export function deepClone<T>(obj: T): T {
-	return JSON.parse(JSON.stringify(obj));
-}
 
 // Export the version stamp for --json output
 export {
