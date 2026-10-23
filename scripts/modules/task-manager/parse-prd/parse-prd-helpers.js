@@ -15,7 +15,10 @@ import {
 	reconcileDependencySources,
 	setGeneratedCriteria,
 	stripTerminalControls,
-	withPrdSnapshot
+	withPrdSnapshot,
+	getOwnKey,
+	setOwnKey,
+	stampTasksFileSchemaVersion
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -115,10 +118,11 @@ export function loadExistingTasks(tasksPath, targetTag) {
 	let existingTasks = [];
 
 	const allData = readExistingTasksFile(tasksPath);
-	const tagMetadata = allData[targetTag]?.metadata || {};
+	const tagData = getOwnKey(allData, targetTag);
+	const tagMetadata = tagData?.metadata || {};
 
-	if (allData[targetTag]?.tasks && Array.isArray(allData[targetTag].tasks)) {
-		existingTasks = allData[targetTag].tasks;
+	if (Array.isArray(tagData?.tasks)) {
+		existingTasks = tagData.tasks;
 	}
 
 	const { highestId } = readArchivedIdsSync(tasksPath, targetTag);
@@ -170,6 +174,12 @@ export function validateFileOperations({
 	isMCP,
 	logger
 }) {
+	// JavaScript objects treat a `__proto__` key as their prototype, so no
+	// command creates a tag of that name
+	if (targetTag === '__proto__') {
+		throw new Error('"__proto__" is a reserved tag name');
+	}
+
 	const hasExistingTasks = existingTasks.length > 0;
 
 	if (!hasExistingTasks) {
@@ -335,7 +345,7 @@ export function saveTasksToFile(
 		() => {
 			// Read existing file to preserve other tags
 			const outputData = readExistingTasksFile(tasksPath);
-			const current = outputData[targetTag];
+			const current = getOwnKey(outputData, targetTag);
 			const currentTasks = Array.isArray(current?.tasks) ? current.tasks : [];
 			const tagTasks =
 				typeof tasks === 'function'
@@ -343,7 +353,7 @@ export function saveTasksToFile(
 					: (tasks ?? currentTasks);
 
 			// Update only the target tag
-			outputData[targetTag] = {
+			const tagData = {
 				tasks: tagTasks,
 				metadata: {
 					// Keep what the tag already records (schemaVersion, counts, ...)
@@ -363,10 +373,14 @@ export function saveTasksToFile(
 				}
 			};
 
+			setOwnKey(outputData, targetTag, tagData);
+
 			// Ensure proper metadata
-			ensureTagMetadata(outputData[targetTag], {
+			ensureTagMetadata(tagData, {
 				description: `Tasks for ${targetTag} context`
 			});
+
+			stampTasksFileSchemaVersion(outputData);
 
 			// Write to a temp file and rename it over the tasks file
 			const tempPath = `${tasksPath}.tmp.${process.pid}`;

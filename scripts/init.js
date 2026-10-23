@@ -18,7 +18,12 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { ui } from '@tm/cli';
-import { installMergeDriver, isOnPath, mergeDriverCommand } from '@tm/core';
+import {
+	installMergeDriver,
+	isOnPath,
+	mergeDriverCommand,
+	stampTasksFileSchemaVersion
+} from '@tm/core';
 import chalk from 'chalk';
 import { RULE_PROFILES } from '../src/constants/profiles.js';
 import {
@@ -29,6 +34,7 @@ import {
 	convertAllRulesToProfileRules,
 	getRulesProfile
 } from '../src/utils/rule-transformer.js';
+import { moveMachineSettings } from './modules/config-manager.js';
 import { updateConfigMaxTokens } from './modules/update-config-tokens.js';
 import { isSilentMode } from './modules/utils.js';
 import * as upstream from './modules/init-upstream-import.js';
@@ -46,6 +52,7 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_DIR,
 	TASKGRAPH_DOCS_DIR,
+	TASKGRAPH_LOCAL_CONFIG_FILE,
 	TASKGRAPH_REPORTS_DIR,
 	TASKGRAPH_STATE_FILE,
 	TASKGRAPH_TASKS_DIR,
@@ -252,6 +259,24 @@ function describeInitChanges(targetDir, before, after) {
 	return { alreadySetUp, changes };
 }
 
+/**
+ * Whether Git tracks `file` in the repository at `targetDir`.
+ * @param {string} targetDir - Project root
+ * @param {string} file - Path relative to the project root
+ * @returns {boolean} false outside a Git repository
+ */
+function isTrackedInGit(targetDir, file) {
+	try {
+		execSync(`git ls-files --error-unmatch -- "${file}"`, {
+			cwd: targetDir,
+			stdio: 'ignore'
+		});
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 // Function to add shell aliases to the user's shell configuration
 // Silently checks each alias individually and adds only missing ones
 function addShellAliases() {
@@ -347,7 +372,7 @@ function createInitialTasksFile(targetDir) {
 	const tasksPath = path.join(targetDir, TASKGRAPH_TASKS_FILE);
 	if (fs.existsSync(tasksPath)) return;
 
-	const emptyTasks = {
+	const emptyTasks = stampTasksFileSchemaVersion({
 		master: {
 			tasks: [],
 			metadata: {
@@ -355,7 +380,7 @@ function createInitialTasksFile(targetDir) {
 				description: 'Tasks for master context'
 			}
 		}
-	};
+	});
 	try {
 		fs.writeFileSync(tasksPath, `${JSON.stringify(emptyTasks, null, 2)}\n`);
 		log('debug', `Created empty tasks file: ${tasksPath}`);
@@ -791,6 +816,10 @@ async function createProjectStructure(
 	// Update config.json with storage configuration
 	updateStorageConfig(configPath);
 
+	// Move per-machine settings an earlier release kept in the shared
+	// config.json to the gitignored config.local.json
+	const movedMachineSettings = moveMachineSettings(targetDir);
+
 	// Copy .gitignore with GitTasks preference
 	try {
 		const templateContent = readAsset('gitignore', 'utf8');
@@ -904,14 +933,36 @@ async function createProjectStructure(
 			before,
 			snapshotPaths(watched)
 		);
+		// Listed whether config.local.json is new or already had settings.
+		// A move needs an existing config.json, so this is the first row.
+		if (movedMachineSettings) {
+			changes.unshift({
+				path: TASKGRAPH_LOCAL_CONFIG_FILE,
+				note: "this machine's settings, moved from config.json"
+			});
+		}
+		// .gitignore doesn't untrack a state.json an earlier init let in
+		const hints = isTrackedInGit(targetDir, TASKGRAPH_STATE_FILE)
+			? [
+					{
+						path: TASKGRAPH_STATE_FILE,
+						note: 'ignored but still tracked; `git rm --cached` it'
+					}
+				]
+			: [];
 		if (imported) {
-			upstream.printUpstreamImportSummary(imported, changes, TASKGRAPH_DIR);
+			upstream.printUpstreamImportSummary(
+				imported,
+				[...changes, ...hints],
+				TASKGRAPH_DIR
+			);
 			return;
 		}
 		console.log(
 			`${ui.formatInitSummary({
 				folder: path.basename(targetDir),
 				changes,
+				hints,
 				alreadySetUp,
 				claudeCode: selectedRuleProfiles.includes('claude'),
 				defaultModels: Boolean(options?.yes)
@@ -973,4 +1024,4 @@ function displayDryRun(initGit, storeTasksInGit, options, ruleProfiles = []) {
 }
 
 // Ensure necessary functions are exported
-export { initializeProject, log, setUpMergeDriver };
+export { createInitialTasksFile, initializeProject, log, setUpMergeDriver };

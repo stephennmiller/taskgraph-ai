@@ -1,6 +1,15 @@
 /**
  * @fileoverview Draws a @tm/core BlockerExplanation: the chain of unfinished
  * dependencies behind a task, then what to do about each root cause
+ *
+ * Example (a subtask waits on what its parent waits on):
+ *   ○ 2.1  Write the auth schema
+ *   Blocked by:
+ *   └─ ○ 2  Build the login API  ← parent
+ *      └─ ○ 1  Set up the database  ← ready to start
+ *
+ *   To unblock:
+ *     Do 1 (Set up the database): nothing else stands in its way.
  */
 
 import {
@@ -54,6 +63,7 @@ export function renderBlockerExplanation(
 
 	const note = (node: BlockerNode): string => {
 		if (node.repeated) return 'shown above';
+		if (node.parentOf) return 'parent';
 		const notes: Record<BlockerKind, string> = {
 			ready: 'ready to start',
 			stalled: `${node.status}, needs a decision`,

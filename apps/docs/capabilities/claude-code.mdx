@@ -65,8 +65,8 @@ In practice:
 - **File reads stay in the project.** For `main` and `fallback`, a `PreToolUse` hook refuses any `Read`, `Grep` or `Glob` whose path resolves outside the project root. Symlinks are resolved first, so a link in the repo that points elsewhere is refused, as are `..` segments, `~` paths, absolute paths and glob patterns that climb out.
 - **Secret files stay closed.** The same hook refuses a `Read`, `Grep` or `Glob` that names one of these (any letter case):
   - env files: `.env`, `.env.*`, `.env-*`, `.env_*`, `.envrc`. `.env.example`, `.env.sample` and `.env.template` (or with `-`/`_`) can still be read.
-  - keys and certificates: `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.keystore`, and `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519` and their `.pub` files.
-  - credential stores: `.git`, `.npmrc`, `.netrc`, `_netrc`, `.pypirc`, the whole `.aws` directory, and `.docker/config.json`.
+  - keys and certificates: `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.keystore`, `*.jks`, PuTTY's `*.ppk`, and `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519` and their `.pub` files.
+  - credential stores: `.git`, `.git-credentials`, `.npmrc`, `.netrc`, `_netrc`, `.pypirc`, `.pgpass`, the whole `.aws` and `.kube` directories, and `.docker/config.json`.
 
   A `Grep` over a whole directory is rewritten to skip those files, so a search for `API_KEY` across the project can't return lines from `.env`. That search also skips `.env.example`. Other spellings that Windows or macOS open as one of these are refused too: an alternate data stream (`.env::$DATA`), a trailing dot or space (`.env.`, `.env `), any 8.3 short name such as `ENV~1`, and non-ASCII letters a case-insensitive filesystem matches to ASCII (`.awſ`, with a long s, can open `.aws`).
 - **Config can't widen it.** The settings below are applied first and these limits after, so config can't add tools or MCP servers, load settings sources, add directories or replace the hook. `pathToClaudeCodeExecutable` is only used when it's an absolute path to a file named `claude` outside the project, so a repo's config can't point it at another program.
@@ -112,7 +112,7 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 | `maxTurns` | Maximum conversation turns in a single request. Useful for complex multi-step operations. |
 | `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
 | `appendSystemPrompt` | Adds standards or context to the system prompt. |
-| `pathToClaudeCodeExecutable` | Absolute path to the `claude` executable if it is not on your `PATH`. It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. |
+| `pathToClaudeCodeExecutable` | Absolute path to the `claude` executable if it is not on your `PATH`. It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
 
 Tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here. See [What AI calls can access](#what-ai-calls-can-access).
 

@@ -108,6 +108,19 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 			);
 		});
 
+		it('stamps a tag renamed within a multi-tag file', async () => {
+			writeFile({
+				master: { tasks: [createTask('1')], metadata: {} },
+				feature: { tasks: [createTask('1')] }
+			});
+
+			await storage.renameTag('feature', 'feat');
+
+			expect(readFile().feat.metadata.schemaVersion).toBe(
+				CURRENT_SCHEMA_VERSION
+			);
+		});
+
 		it('loads a legacy file without schemaVersion unchanged and stamps it on next save', async () => {
 			writeFile({
 				master: { tasks: [createTask('1')], metadata: { version: '1.0.0' } }

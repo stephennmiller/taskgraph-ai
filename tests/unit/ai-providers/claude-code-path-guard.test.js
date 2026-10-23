@@ -210,8 +210,14 @@ describe('claude-code path guard', () => {
 			['.pypirc'],
 			['.aws/credentials'],
 			['.aws/sso/cache/token.json'],
+			// kubelogin keeps OIDC tokens here
+			['.kube/cache/oidc-login/token'],
+			['.kube/config-staging'],
 			['.docker/config.json'],
-			['home/.Docker/Config.json']
+			['home/.Docker/Config.json'],
+			// #370, whose plain names are covered below
+			['home/.GIT-CREDENTIALS'],
+			['home/.KUBE/Config']
 		])('denies Read of %s', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
 				/secret/
@@ -225,9 +231,31 @@ describe('claude-code path guard', () => {
 			}
 		);
 
+		it.each([
+			['.git-credentials', '**/.git-credentials'],
+			['android/release.jks', '**/*.jks'],
+			['keys/server.ppk', '**/*.ppk'],
+			['.pgpass', '**/.pgpass'],
+			['.kube/config', '**/.kube/config']
+		])('denies Read, Glob and Grep of %s (#370)', (file, pattern) => {
+			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
+				/secret/
+			);
+			expect(getPathViolation(root, 'Glob', { pattern })).toMatch(/secret/);
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', path: file })
+			).toMatch(/secret/);
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', glob: pattern })
+			).toMatch(/secret/);
+		});
+
 		it('denies a Grep aimed at a secret file or directory', () => {
 			expect(
 				getPathViolation(root, 'Grep', { pattern: 'x', path: '.git' })
+			).toMatch(/secret/);
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', path: '.kube' })
 			).toMatch(/secret/);
 		});
 
@@ -277,7 +305,17 @@ describe('claude-code path guard', () => {
 			['docker/config.json'],
 			['.docker/daemon.json'],
 			['config.json'],
-			['notes~']
+			['notes~'],
+			// #370 look-alikes
+			['.gitignore'],
+			['.git-blame-ignore-revs'],
+			['git-credentials.md'],
+			['docs/pgpass.md'],
+			['src/jks.js'],
+			['src/ppk-reader.ts'],
+			['kube/config'],
+			['.kubectl/config'],
+			['deploy/config']
 		])('still allows %s', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
 		});
@@ -337,7 +375,10 @@ describe('claude-code path guard', () => {
 			['.g\u0131t/config'],
 			['\u0131d_rsa'],
 			['certs/server.\u212Aey'],
-			['.docker/config.j\u017Fon']
+			['.docker/config.j\u017Fon'],
+			['.\u212Aube/config'],
+			['.pgpa\u017F\u017F'],
+			['.g\u0131t-credentials']
 		])('denies Read of case-fold look-alike %j', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
 				/secret/
@@ -394,7 +435,16 @@ describe('claude-code path guard', () => {
 			'.aws/credentials',
 			'.aws/config',
 			'.docker/config.json',
-			'nested/.docker/config.json'
+			'nested/.docker/config.json',
+			// #370
+			'.git-credentials',
+			'.GIT-CREDENTIALS',
+			'android/release.jks',
+			'keys/server.ppk',
+			'.pgpass',
+			'.kube/config',
+			'.kube/cache/oidc-login/token',
+			'nested/.kube/config'
 		];
 
 		beforeAll(() => {

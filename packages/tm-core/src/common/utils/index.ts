@@ -52,6 +52,7 @@ export {
 	PROJECT_ROOT_ENV,
 	findProjectRoot,
 	isTaskGraphProject,
+	namedProjectRoot,
 	normalizeProjectRoot,
 	resolveProjectRoot
 } from './project-root-finder.js';
@@ -90,3 +91,6 @@ export {
 	stripTerminalControls,
 	type StripTerminalControlsOptions
 } from './terminal-text.js';
+
+// Own-key access that ignores the prototype (`constructor`, `__proto__` keys)
+export { getOwnKey, setOwnKey } from './own-key.js';

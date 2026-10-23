@@ -156,6 +156,26 @@ describe('FileStorage claimNextTask', () => {
 		});
 	});
 
+	it("keeps the tag's created date and description", async () => {
+		const file = path.join(tempDir, '.taskgraph', 'tasks', 'tasks.json');
+		const tagMetadata = {
+			created: '2025-02-02T00:00:00.000Z',
+			description: 'X'
+		};
+		fs.writeFileSync(
+			file,
+			JSON.stringify({
+				master: { tasks: [], metadata: {} },
+				b: { tasks: [createTask('1')], metadata: tagMetadata }
+			})
+		);
+
+		await session().claimNextTask('alice', 'b');
+
+		const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+		expect(saved.b.metadata).toMatchObject({ ...tagMetadata, taskCount: 1 });
+	});
+
 	it('releases the claim when the task goes back to pending', async () => {
 		await session().saveTasks([
 			createTask('1', { metadata: { externalId: 'JIRA-1' } }),

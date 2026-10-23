@@ -7,6 +7,17 @@ TaskGraph needs no API keys. It runs on your signed-in Claude Code. See [Authent
 
 Configuration lives in `.taskgraph/config.json`. Create or change it with `taskgraph models`, and avoid editing it by hand.
 
+## Shared and per-machine settings
+
+`.taskgraph/config.json` is shared: commit it so everyone on the project uses the same models and defaults. Settings that only make sense on one machine go in `.taskgraph/config.local.json`, which `taskgraph init` adds to `.gitignore`.
+
+- TaskGraph reads `config.local.json` over `config.json`: any key in the local file wins, and objects merge key by key. A missing local file is fine.
+- If `config.local.json` isn't valid JSON, TaskGraph warns, uses `config.json` alone, and leaves the file for you to fix.
+- `claudeCode.pathToClaudeCodeExecutable` is always per-machine. TaskGraph saves it to `config.local.json`, and moves it there from `config.json` the next time it saves settings or `taskgraph init` runs.
+- To use a different model on your machine only, put it in `config.local.json`, for example `{ "models": { "main": { "modelId": "opus" } } }`. From then on, `taskgraph models --set-main` and `--setup` save the main model there and leave the shared one alone.
+
+`.taskgraph/state.json` holds your current tag and is gitignored too, so `taskgraph tags use` never changes a committed file.
+
 ## Models
 
 Three roles, each set to one of `opus`, `sonnet` or `haiku`:
@@ -89,7 +100,7 @@ See [Archiving finished tasks](/capabilities/archive) for how archived IDs and d
 | `TASKGRAPH_MODEL_MAIN`, `TASKGRAPH_MODEL_RESEARCH`, `TASKGRAPH_MODEL_FALLBACK` | Override a model role. |
 | `TASKGRAPH_RESPONSE_LANGUAGE` | Override the language of generated content. |
 | `TASKGRAPH_TAG` | Override the active tag. |
-| `TASKGRAPH_PROJECT_ROOT` | Project root, for tools that run outside the project folder. The CLI uses it when you don't pass `--project`; `loop --parallel` sets it for each task's Claude Code process. |
+| `TASKGRAPH_PROJECT_ROOT` | Project root, for tools that run outside the project folder. The CLI uses it when you don't pass `--project`, and the MCP server when a tool call passes no `projectRoot`: an explicit path wins, except a path inside this project's `.taskgraph/worktrees/` (a `loop --parallel` task worktree), which gives this project. `loop --parallel` sets it for each task's Claude Code process. |
 | `TASKGRAPH_LOG_LEVEL` | Console log level. |
 | `TASKGRAPH_DEBUG` | Set to `true` for debug logging. |
 

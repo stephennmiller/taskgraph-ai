@@ -22,6 +22,12 @@ import type {
 
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
+import { subtaskInContext } from './utils/subtask-context.js';
+import {
+	createTagFromBranch,
+	type CreateBranchTag,
+	type CreateTagFromBranchResult
+} from './utils/branch-tag.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -128,7 +134,8 @@ export class TasksDomain {
 	 * Get a single task by ID
 	 * Automatically handles all ID formats:
 	 * - Simple task IDs (e.g., "1")
-	 * - Subtask IDs with dot notation (e.g., "1.2")
+	 * - Subtask IDs with dot notation (e.g., "1.2"), returned with their
+	 *   parentId and the parent's priority when they have none
 	 *
 	 * @returns Discriminated union indicating task/subtask with proper typing
 	 */
@@ -157,8 +164,7 @@ export class TasksDomain {
 				(st) => String(st.id) === subtaskIdPart
 			);
 			if (subtask) {
-				// Return the actual subtask with properly typed result
-				return { task: subtask, isSubtask: true };
+				return { task: subtaskInContext(task, subtask), isSubtask: true };
 			}
 			// Subtask ID provided but not found
 			return { task: null, isSubtask: true };
@@ -213,10 +219,12 @@ export class TasksDomain {
 	/**
 	 * Lay tasks out as a dependency tree for display (each task once, under
 	 * its deepest dependency). Pass rootId for one task and what depends on it.
+	 * Throws NOT_FOUND for a tag the project doesn't have.
 	 */
 	async getDependencyTree(
 		options: { tag?: string; rootId?: string } = {}
 	): Promise<DependencyTree> {
+		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return buildDependencyTree(tasks, { rootId: options.rootId });
 	}
@@ -224,11 +232,13 @@ export class TasksDomain {
 	/**
 	 * Bottlenecks (top 5 unless limit is set), critical path and dependency
 	 * cycles for a tag's tasks. With taskId, also explains what blocks that
-	 * task (see explainBlockers) from the same task list.
+	 * task (see explainBlockers) from the same task list. Throws NOT_FOUND for
+	 * a tag the project doesn't have.
 	 */
 	async analyzeDependencies(
 		options: { tag?: string; limit?: number; taskId?: string } = {}
 	): Promise<DependencyAnalysis> {
+		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return analyzeDependencies(tasks, {
 			limit: options.limit,
@@ -239,12 +249,14 @@ export class TasksDomain {
 	/**
 	 * Explain why a task can't be started: its unfinished dependencies, down
 	 * to the root causes (ready work, stalled tasks, missing IDs, cycles).
-	 * Works for subtask IDs like "2.1". Throws if the task doesn't exist.
+	 * Works for subtask IDs like "2.1"; a subtask also waits on its parent's
+	 * dependencies. Throws if the task or the named tag doesn't exist.
 	 */
 	async explainBlockers(
 		taskId: string,
 		options: { tag?: string } = {}
 	): Promise<BlockerExplanation> {
+		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return explainBlockers(tasks, String(taskId));
 	}
@@ -591,6 +603,17 @@ export class TasksDomain {
 	 */
 	async createTag(name: string, options?: CreateTagOptions) {
 		return this.tagService.createTag(name, options);
+	}
+
+	/**
+	 * Create a tag named after the current git branch and map the branch to it
+	 * in state.json. createTag writes the tag; see createTagFromBranch in
+	 * utils/branch-tag.ts for the checks and errors.
+	 */
+	async createTagFromBranch<T>(
+		createTag: CreateBranchTag<T>
+	): Promise<CreateTagFromBranchResult<T>> {
+		return createTagFromBranch(this.projectRoot, createTag);
 	}
 
 	/**

@@ -45,6 +45,13 @@ export interface CopyTagOptions {
 const RESERVED_TAG_NAMES = ['master'];
 
 /**
+ * A name no new tag can take: JavaScript objects treat a `__proto__` key as
+ * their prototype rather than as data. A `__proto__` tag already in the file
+ * (a hand edit) can still be deleted or renamed.
+ */
+const PROTOTYPE_KEY = '__proto__';
+
+/**
  * Maximum length for tag names (prevents filesystem/UI issues)
  */
 const MAX_TAG_NAME_LENGTH = 50;
@@ -97,6 +104,21 @@ export class TagService {
 	}
 
 	/**
+	 * Validate the name of a tag about to be created
+	 * @throws {TaskGraphError} if validation fails
+	 */
+	private validateNewTagName(name: string, context = 'Tag name'): void {
+		this.validateTagName(name, context);
+		if (name === PROTOTYPE_KEY) {
+			throw new TaskGraphError(
+				`"${name}" is a reserved tag name`,
+				ERROR_CODES.VALIDATION_ERROR,
+				{ tagName: name, reserved: true }
+			);
+		}
+	}
+
+	/**
 	 * Create a new tag, with optional task copying
 	 */
 	async createTag(
@@ -104,7 +126,7 @@ export class TagService {
 		options: CreateTagOptions = {}
 	): Promise<TagInfo> {
 		// Validate tag name
-		this.validateTagName(name);
+		this.validateNewTagName(name);
 
 		// Check if tag already exists
 		const allTags = await this.storage.getAllTags();
@@ -195,7 +217,7 @@ export class TagService {
 	async renameTag(oldName: string, newName: string): Promise<void> {
 		// Validate both names
 		this.validateTagName(oldName, 'Old tag name');
-		this.validateTagName(newName, 'New tag name');
+		this.validateNewTagName(newName, 'New tag name');
 
 		// Cannot rename master tag
 		if (oldName === 'master') {
@@ -239,7 +261,7 @@ export class TagService {
 	): Promise<void> {
 		// Validate both names
 		this.validateTagName(sourceName, 'Source tag name');
-		this.validateTagName(targetName, 'Target tag name');
+		this.validateNewTagName(targetName, 'Target tag name');
 
 		// Check if source tag exists
 		const allTags = await this.storage.getAllTags();

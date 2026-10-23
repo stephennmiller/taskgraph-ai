@@ -12,6 +12,7 @@ export {
 } from './dependency-analysis.js';
 export {
 	blockedCount,
+	blockedWithinTask,
 	bottlenecks,
 	type Bottleneck,
 	buildDependencyGraph,
@@ -37,7 +38,9 @@ export {
 } from './explain-blockers.js';
 export {
 	MAX_SIBLING_REFERENCE,
+	cleanGeneratedSubtaskDependencies,
 	isSiblingReference,
+	parseSubtaskDependencyInput,
 	resolveSubtaskDependency
 } from './subtask-dependency.js';
 export {
