@@ -313,8 +313,10 @@ jobs:
             junit.xml
           retention-days: 30
 
-  # Does this PR touch code the build comparison covers? Cheap, so the heavy job
-  # below is skipped for docs and workflow-only changes.
+  # Does this PR touch what the build comparison covers: the code bundled into
+  # dist/, the files init copies, the dependencies, or the comparison itself?
+  # Cheap, so the heavy job below is skipped for docs and test-only changes.
+  # The patterns are in .github/scripts/parity-paths.txt.
   parity-changes:
     name: Parity changes
     if: github.event_name == 'pull_request'
@@ -333,12 +335,18 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git diff --name-only "origin/${BASE_REF}...HEAD" > changed-files.txt
-          if grep -Eq '^(scripts/|mcp-server/|src/|packages/tm-core/src/|apps/cli/src/|apps/mcp/src/|apps/cli/tests/parity/|\.github/scripts/run-parity\.sh)' changed-files.txt; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
+          # -z: names unquoted, so a non-ASCII path still matches its pattern;
+          # --no-renames: a file moved out of a covered folder counts too
+          git diff -z --no-renames --name-only "origin/${BASE_REF}...HEAD" > changed-files.txt
+          # grep exits 1 for no match; anything else (a missing or bad pattern
+          # file) must fail the job rather than skip the comparison
+          code=0
+          grep -zEqf .github/scripts/parity-paths.txt changed-files.txt || code=$?
+          case $code in
+          0) echo "run=true" >> "$GITHUB_OUTPUT" ;;
+          1) echo "run=false" >> "$GITHUB_OUTPUT" ;;
+          *) exit "$code" ;;
+          esac
 
   # Runs the scripted CLI and MCP scenarios on the target branch's build and on
   # this PR's build and reports where they differ. Informational: a difference is
