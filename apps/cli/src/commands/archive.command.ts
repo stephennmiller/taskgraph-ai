@@ -13,6 +13,7 @@ import {
 } from '../ui/formatters/archive-formatters.js';
 import { terminalWidth } from '../ui/layout/helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
+import { printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface ArchiveCommandOptions {
@@ -124,31 +125,19 @@ Examples:
 				dryRun: options.dryRun
 			});
 
+			const tasks = result.tasks.map((t) => ({
+				id: String(t.id),
+				title: t.title,
+				status: t.status
+			}));
 			if (options.format === 'json') {
-				console.log(
-					JSON.stringify(
-						{
-							...result,
-							tasks: result.tasks.map((t) => ({
-								id: String(t.id),
-								title: t.title,
-								status: t.status
-							}))
-						},
-						null,
-						2
-					)
-				);
+				printJson({ ...result, tasks });
 				return;
 			}
 			console.log(
 				formatArchiveResult(
 					{
-						tasks: result.tasks.map((t) => ({
-							id: String(t.id),
-							title: t.title,
-							status: t.status
-						})),
+						tasks,
 						olderThanDays: result.olderThanDays,
 						dryRun: result.dryRun
 					},
@@ -179,7 +168,7 @@ Examples:
 				tag: options.tag
 			});
 			if (options.format === 'json') {
-				console.log(JSON.stringify({ restored: true, tag, task }, null, 2));
+				printJson({ restored: true, tag, task });
 				return;
 			}
 			console.log(

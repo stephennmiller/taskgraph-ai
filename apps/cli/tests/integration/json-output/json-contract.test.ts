@@ -116,6 +116,11 @@ describe('--json contract', () => {
 			tasks: [task(1, 'Claim me', 'pending', [])],
 			metadata: {}
 		};
+		// archive and archive restore write, so they get their own tag too
+		data.finished = {
+			tasks: [task(1, 'Ship it', 'done', [])],
+			metadata: {}
+		};
 		data.empty = {
 			tasks: [],
 			metadata: { created: '2026-01-01T00:00:00.000Z', description: 'Empty' }
@@ -644,6 +649,69 @@ describe('--json contract', () => {
 			  "success": "boolean",
 			  "taskId": "string",
 			  "timestamp": "string",
+			}
+		`);
+	});
+
+	it('archive', () => {
+		expect(
+			shapeOf(
+				json([
+					'archive',
+					'--tag',
+					'finished',
+					'--older-than',
+					'0',
+					'--format',
+					'json'
+				])
+			)
+		).toMatchInlineSnapshot(`
+			{
+			  "dryRun": "boolean",
+			  "olderThanDays": "number",
+			  "schemaVersion": "number",
+			  "tag": "string",
+			  "tasks": [
+			    {
+			      "id": "string",
+			      "status": "string",
+			      "title": "string",
+			    },
+			  ],
+			}
+		`);
+	});
+
+	it('archive restore', () => {
+		expect(
+			shapeOf(
+				json([
+					'archive',
+					'restore',
+					'1',
+					'--tag',
+					'finished',
+					'--format',
+					'json'
+				])
+			)
+		).toMatchInlineSnapshot(`
+			{
+			  "restored": "boolean",
+			  "schemaVersion": "number",
+			  "tag": "string",
+			  "task": {
+			    "dependencies": [],
+			    "description": "string",
+			    "details": "string",
+			    "id": "string",
+			    "priority": "string",
+			    "status": "string",
+			    "subtasks": [],
+			    "testStrategy": "string",
+			    "title": "string",
+			  },
 			}
 		`);
 	});

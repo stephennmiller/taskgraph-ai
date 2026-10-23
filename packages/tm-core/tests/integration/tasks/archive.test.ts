@@ -9,7 +9,10 @@ import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Task } from '../../../src/common/types/index.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
-import { createTask } from '../../../src/testing/task-fixtures.js';
+import {
+	createSubtask,
+	createTask
+} from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 const OLD = '2020-01-01T00:00:00.000Z';
@@ -76,6 +79,34 @@ describe('archive', () => {
 		expect(back[0].details).toBe('Keep me');
 		expect(back[0]).not.toHaveProperty('archivedAt');
 		expect(ids(readArchive().master.tasks)).toEqual(['2']);
+	});
+
+	// #395: restore gave numeric IDs where list, next and show give strings
+	it('restores a task with string IDs, as list gives them', async () => {
+		await setup({
+			master: [
+				createTask({
+					id: 2,
+					title: 'Schema',
+					status: 'done',
+					updatedAt: OLD,
+					subtasks: [
+						createSubtask({
+							id: 1,
+							parentId: '2',
+							title: 'Tables',
+							status: 'done'
+						})
+					]
+				})
+			]
+		});
+		await tmCore.tasks.archive();
+
+		const { task } = await tmCore.tasks.restore('2');
+
+		expect(task.id).toBe('2');
+		expect(task.subtasks.map((st) => st.id)).toEqual(['1']);
 	});
 
 	it('lists without moving anything on a dry run', async () => {

@@ -354,13 +354,15 @@ export class TaskService {
 	}
 
 	/**
-	 * Move one archived task back into tasks.json
+	 * Move one archived task back into tasks.json. IDs come back as strings
+	 * (see normalizeTaskIds)
 	 */
 	async restoreArchivedTask(taskId: string, tag?: string): Promise<Task> {
-		return this.storage.restoreArchivedTask(
+		const task = await this.storage.restoreArchivedTask(
 			taskId,
 			tag || this.getActiveTag()
 		);
+		return normalizeTaskIds(task);
 	}
 
 	/**
