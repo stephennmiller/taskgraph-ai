@@ -73,11 +73,7 @@ describe('ConfigManager', () => {
 		} as any);
 
 		vi.mocked(ConfigPersistence).mockImplementation(function (this: any) {
-			this.saveConfig = vi.fn().mockResolvedValue(undefined);
-			this.configExists = vi.fn().mockResolvedValue(false);
 			this.deleteConfig = vi.fn().mockResolvedValue(undefined);
-			this.getBackups = vi.fn().mockResolvedValue([]);
-			this.restoreFromBackup = vi.fn().mockResolvedValue(undefined);
 			return this;
 		} as any);
 
@@ -266,48 +262,15 @@ describe('ConfigManager', () => {
 		});
 	});
 
-	describe('configuration updates', () => {
-		// Manager is already initialized in the main beforeEach
-
-		it('should update configuration and save', async () => {
-			const updates = {
-				models: { main: 'new-model', fallback: 'fallback-model' }
-			};
-			await manager.updateConfig(updates);
-
-			const persistence = (manager as any).persistence;
-			expect(persistence.saveConfig).toHaveBeenCalled();
-		});
-
-		it('should re-initialize after update to maintain precedence', async () => {
-			const merger = (manager as any).merger;
-			merger.clearSources.mockClear();
-
-			await manager.updateConfig({ custom: { test: 'value' } });
-
-			expect(merger.clearSources).toHaveBeenCalled();
-		});
-
-		it('should set response language', async () => {
-			await manager.setResponseLanguage('French');
-
-			const persistence = (manager as any).persistence;
-			expect(persistence.saveConfig).toHaveBeenCalledWith(
-				expect.objectContaining({
-					custom: { responseLanguage: 'French' }
-				})
-			);
-		});
-
-		it('should save configuration with options', async () => {
-			await manager.saveConfig();
-
-			const persistence = (manager as any).persistence;
-			expect(persistence.saveConfig).toHaveBeenCalledWith(expect.any(Object), {
-				createBackup: true,
-				atomic: true
-			});
-		});
+	it('has no method that writes the merged config to config.json (#356)', () => {
+		// Saving the merged config pinned every default of the day into the file
+		for (const method of [
+			'updateConfig',
+			'setResponseLanguage',
+			'saveConfig'
+		]) {
+			expect(manager).not.toHaveProperty(method);
+		}
 	});
 
 	describe('utilities', () => {

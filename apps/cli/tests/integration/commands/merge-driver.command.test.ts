@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getCliBinPath } from '../../helpers/test-utils.js';
 
 const TASKS_FILE = '.taskgraph/tasks/tasks.json';
+const ARCHIVE_FILE = '.taskgraph/tasks/archive.json';
 
 /**
  * PATH without any `taskgraph` executable, so init points git at this
@@ -70,6 +71,26 @@ describe('merge driver with git merge', () => {
 	const readTasks = (): Task[] =>
 		JSON.parse(fs.readFileSync(path.join(repo, TASKS_FILE), 'utf8')).master
 			.tasks;
+	const writeArchive = (tasks: Task[], highestId: number) =>
+		fs.writeFileSync(
+			path.join(repo, ARCHIVE_FILE),
+			`${JSON.stringify(
+				{
+					master: {
+						tasks: tasks.map((t) => ({
+							...t,
+							archivedAt: '2026-02-01T00:00:00.000Z'
+						})),
+						metadata: { highestId }
+					}
+				},
+				null,
+				2
+			)}\n`
+		);
+	const readArchive = (): Task[] =>
+		JSON.parse(fs.readFileSync(path.join(repo, ARCHIVE_FILE), 'utf8')).master
+			.tasks;
 	const commitAll = (message: string) => {
 		gitOk('add', '-A');
 		gitOk('commit', '-q', '-m', message);
@@ -115,9 +136,9 @@ describe('merge driver with git merge', () => {
 		fs.rmSync(repo, { recursive: true, force: true });
 	});
 
-	it('init routes tasks.json to the driver and turns it on for this clone', () => {
+	it('init routes tasks.json and archive.json to the driver and turns it on for this clone', () => {
 		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
-			`${TASKS_FILE} merge=taskgraph\n`
+			`${TASKS_FILE} merge=taskgraph\n${ARCHIVE_FILE} merge=taskgraph-archive\n`
 		);
 		expect(gitOk('check-attr', 'merge', TASKS_FILE)).toBe(
 			`${TASKS_FILE}: merge: taskgraph`
@@ -229,6 +250,115 @@ describe('merge driver with git merge', () => {
 			'Ours: login',
 			'Theirs: search'
 		]);
+	});
+
+	describe('when a branch archives', () => {
+		const done = (id: number, title: string) =>
+			createTask({ id, title, status: 'done' });
+
+		/** Base: tasks 1 to 3 done, nothing archived; returns to main */
+		const archiveOnBothBranches = (
+			ours: { tasks: Task[]; archived: Task[]; highestId: number },
+			theirs: { tasks: Task[]; archived: Task[]; highestId: number }
+		) => {
+			writeTasks([done(1, 'One'), done(2, 'Two'), done(3, 'Three')]);
+			writeArchive([], 0);
+			commitAll('base');
+			gitOk('checkout', '-q', '-b', 'feature');
+			writeTasks(theirs.tasks);
+			writeArchive(theirs.archived, theirs.highestId);
+			commitAll('feature');
+			gitOk('checkout', '-q', 'main');
+			writeTasks(ours.tasks);
+			writeArchive(ours.archived, ours.highestId);
+			commitAll('main');
+			return git('merge', '--no-edit', 'feature');
+		};
+
+		it('merges archive.json as data when both branches archived', () => {
+			const merge = archiveOnBothBranches(
+				{
+					tasks: [done(2, 'Two'), done(3, 'Three')],
+					archived: [done(1, 'One')],
+					highestId: 1
+				},
+				{
+					tasks: [done(1, 'One'), done(2, 'Two')],
+					archived: [done(3, 'Three')],
+					highestId: 3
+				}
+			);
+
+			expect(merge.status, merge.stdout + merge.stderr).toBe(0);
+			expect(readArchive().map((t) => t.title)).toEqual(['One', 'Three']);
+			expect(
+				JSON.parse(fs.readFileSync(path.join(repo, ARCHIVE_FILE), 'utf8'))
+					.master.metadata.highestId
+			).toBe(3);
+			expect(readTasks().map((t) => t.title)).toEqual(['Two']);
+		});
+
+		it('leaves archive.json to a text merge in a clone set up only for tasks.json', () => {
+			// An older CLI configured only `taskgraph`; it would renumber archived tasks
+			gitOk('config', '--remove-section', 'merge.taskgraph-archive');
+
+			const merge = archiveOnBothBranches(
+				{
+					tasks: [done(2, 'Two'), done(3, 'Three')],
+					archived: [done(1, 'One')],
+					highestId: 1
+				},
+				{
+					tasks: [done(1, 'One'), done(2, 'Two')],
+					archived: [done(3, 'Three')],
+					highestId: 3
+				}
+			);
+
+			expect(merge.status).not.toBe(0);
+			expect(gitOk('diff', '--name-only', '--diff-filter=U')).toBe(
+				ARCHIVE_FILE
+			);
+			expect(fs.readFileSync(path.join(repo, ARCHIVE_FILE), 'utf8')).toContain(
+				'<<<<<<<'
+			);
+		});
+
+		it('reports an ID the incoming branch archived and this branch reused', () => {
+			// Feature added 4 and archived it; main archived 1 and added its own 4
+			const merge = archiveOnBothBranches(
+				{
+					tasks: [
+						done(2, 'Two'),
+						done(3, 'Three'),
+						createTask({ id: 4, title: 'Ours' })
+					],
+					archived: [done(1, 'One')],
+					highestId: 1
+				},
+				{
+					tasks: [done(1, 'One'), done(2, 'Two'), done(3, 'Three')],
+					archived: [done(4, 'Theirs')],
+					highestId: 4
+				}
+			);
+
+			expect(merge.status).not.toBe(0);
+			const output = merge.stdout + merge.stderr;
+			expect(output).toContain(
+				"1 change to archive.json clashes; kept this branch's value"
+			);
+			expect(output).toMatch(
+				/4\s+archived on the incoming branch; this branch has another task 4/
+			);
+			expect(output).toContain(
+				'Run taskgraph move --from=4 --to=<free ID>, then git add both files'
+			);
+			expect(gitOk('diff', '--name-only', '--diff-filter=U')).toBe(
+				ARCHIVE_FILE
+			);
+			expect(readArchive().map((t) => t.title)).toEqual(['One', 'Theirs']);
+		});
 	});
 
 	it('a clone without the config falls back to a normal text conflict', () => {

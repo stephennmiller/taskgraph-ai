@@ -417,7 +417,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Also register the MCP server in the project's .mcp.json
     taskgraph init --mcp
 
-    # Only set up Git to merge tasks.json by task (existing projects; once per clone)
+    # Only set up Git to merge tasks.json and archive.json by task
+    # (existing projects; once per clone, and again after upgrading)
     taskgraph init --merge-driver
     ```
 
@@ -425,7 +426,7 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     `init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. `--rules claude` still works; `claude` is the only rule profile.
 
-    Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add tasks merge without an ID clash.
+    Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
   </Accordion>
 
   <Accordion title="Move Tasks">
