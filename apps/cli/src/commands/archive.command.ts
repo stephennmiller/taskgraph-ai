@@ -81,8 +81,19 @@ Examples:
 				'Project root directory (auto-detected if not provided)'
 			)
 			.action(async (id: string, options: RestoreCommandOptions) => {
-				await this.executeRestore(id, options);
+				// `archive` defines --tag, --format and --project too, so Commander
+				// hands it those flags even when they come after `restore`
+				await this.executeRestore(id, { ...options, ...this.givenOptions() });
 			});
+	}
+
+	/** The options typed on `archive` itself, without its defaults */
+	private givenOptions(): Partial<RestoreCommandOptions> {
+		const given: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(this.opts())) {
+			if (this.getOptionValueSource(key) !== 'default') given[key] = value;
+		}
+		return given;
 	}
 
 	private async openCore(project?: string): Promise<TmCore> {

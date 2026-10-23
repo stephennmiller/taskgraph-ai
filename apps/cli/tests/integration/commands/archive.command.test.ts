@@ -139,6 +139,41 @@ describe('archive', () => {
 		expect(liveIds()).toEqual(['2']);
 	});
 
+	it('restores in the tag and format given after restore', () => {
+		const data = readJson(tasksPath);
+		data.feature = {
+			tasks: [
+				createTask({
+					id: 7,
+					title: 'Feature work',
+					status: 'done',
+					updatedAt: OLD
+				})
+			],
+			metadata: {}
+		};
+		fs.writeFileSync(tasksPath, JSON.stringify(data));
+		expect(run(['archive', '--tag', 'feature']).status).toBe(0);
+		expect(archivedIds('feature')).toEqual(['7']);
+
+		const restored = run([
+			'archive',
+			'restore',
+			'7',
+			'--tag',
+			'feature',
+			'--format',
+			'json'
+		]);
+
+		expect(restored.status, restored.stderr).toBe(0);
+		expect(JSON.parse(restored.stdout)).toMatchObject({
+			restored: true,
+			tag: 'feature'
+		});
+		expect(liveIds('feature')).toEqual(['7']);
+	});
+
 	it('restores a task by ID, and says so when it is not archived', () => {
 		run(['archive']);
 
