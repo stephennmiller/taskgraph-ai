@@ -42,29 +42,9 @@ const task: PlaceholderTask = {
 };
 ```
 
-### Modular Imports
+### Entry points
 
-You can import specific modules to reduce bundle size:
-
-```typescript
-// Import types only
-import type { TaskId, TaskStatus } from '@taskgraph/tm-core/types';
-
-// Import utilities
-import { generateTaskId, formatDate } from '@taskgraph/tm-core/utils';
-
-// Import providers (AI providers coming soon)
-// import { AIProvider } from '@taskgraph/tm-core/providers';
-
-// Import storage
-import { PlaceholderStorage } from '@taskgraph/tm-core/storage';
-
-// Import parsers
-import { PlaceholderParser } from '@taskgraph/tm-core/parser';
-
-// Import errors
-import { TmCoreError, TaskNotFoundError } from '@taskgraph/tm-core/errors';
-```
+`@tm/core` is a private workspace package with two entry points: `@tm/core` for the public API and `@tm/core/testing` for test helpers. Import everything else from `@tm/core`.
 
 ## Architecture
 

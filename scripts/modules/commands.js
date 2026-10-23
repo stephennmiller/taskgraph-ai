@@ -3410,76 +3410,13 @@ Examples:
 }
 
 /**
- * Load the TUI module (coming soon)
- * @returns {Promise<object|null>} null - TUI not yet available
- */
-async function loadTUI() {
-	// TUI is coming soon - return null for now
-	return null;
-}
-
-/**
- * Launch the interactive TUI REPL
+ * Launch the interactive TUI REPL. The TUI is not built yet, so this shows
+ * help instead.
  */
 async function launchREPL() {
-	const tui = await loadTUI();
-
-	if (!tui) {
-		// TUI coming soon - show help for now
-		console.log(chalk.yellow('TUI mode coming soon!'));
-		console.log(chalk.dim('Showing help instead...\n'));
-		displayHelp();
-		return;
-	}
-
-	// Only import react once a TUI exists; it is not a declared dependency
-	const React = await import('react');
-	const { render, Shell } = tui;
-
-	// Get current context
-	let tag = 'master';
-	let projectRoot = process.cwd();
-
-	try {
-		const taskGraph = initTaskGraph({});
-		tag = taskGraph.getCurrentTag();
-		projectRoot = taskGraph.getProjectRoot() || process.cwd();
-	} catch (error) {
-		// Use defaults
-	}
-
-	// Check if stdin supports raw mode (required for interactive TUI)
-	const isInteractive =
-		process.stdin.isTTY && typeof process.stdin.setRawMode === 'function';
-
-	// Clear screen
-	console.clear();
-
-	// Shell props with interactive flag and auth state
-	const shellProps = {
-		showBanner: true,
-		showSplash: isInteractive,
-		initialTag: tag,
-		isInteractive: isInteractive,
-		projectRoot: projectRoot,
-		onExit: () => {
-			console.log(chalk.dim('\nGoodbye! 👋'));
-			process.exit(0);
-		}
-	};
-
-	const instance = render(React.createElement(Shell, shellProps));
-
-	// In non-interactive mode, wait for render then exit
-	if (!isInteractive) {
-		setTimeout(() => {
-			instance.unmount();
-			console.log(
-				chalk.dim('\n💡 Run in an interactive terminal for full REPL mode.')
-			);
-			process.exit(0);
-		}, 200);
-	}
+	console.log(chalk.yellow('TUI mode coming soon!'));
+	console.log(chalk.dim('Showing help instead...\n'));
+	displayHelp();
 }
 
 // Commands that work outside a project
