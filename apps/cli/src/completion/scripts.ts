@@ -10,7 +10,7 @@ import type { CommandSpec } from './spec.js';
 export const SHELLS = ['bash', 'zsh', 'fish'] as const;
 export type Shell = (typeof SHELLS)[number];
 
-export function isShell(value: string): value is Shell {
+function isShell(value: string): value is Shell {
 	return (SHELLS as readonly string[]).includes(value);
 }
 

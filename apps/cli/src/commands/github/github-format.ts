@@ -24,7 +24,7 @@ const ACTION_LABEL: Record<PlanStep['action'], (text: string) => string> = {
 };
 
 /** Counts of each planned action */
-export function countSteps(plan: PushPlan): Record<PlanStep['action'], number> {
+function countSteps(plan: PushPlan): Record<PlanStep['action'], number> {
 	const counts = { create: 0, update: 0, skip: 0, close: 0 };
 	for (const step of plan.steps) counts[step.action]++;
 	return counts;
@@ -83,9 +83,7 @@ const PULL_LABEL: Record<PullStep['action'], (text: string) => string> = {
 	skip: theme.muted
 };
 
-export function countPullSteps(
-	plan: PullPlan
-): Record<PullStep['action'], number> {
+function countPullSteps(plan: PullPlan): Record<PullStep['action'], number> {
 	const counts = { apply: 0, sync: 0, conflict: 0, skip: 0 };
 	for (const step of plan.steps) counts[step.action]++;
 	return counts;

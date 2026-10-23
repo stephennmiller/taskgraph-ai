@@ -28,7 +28,7 @@ function siblingOf(
 /**
  * Validation error types
  */
-export type ValidationErrorType =
+type ValidationErrorType =
 	| 'task_not_found'
 	| 'task_completed'
 	| 'no_subtasks'
@@ -57,7 +57,7 @@ export interface TaskValidationResult {
 /**
  * Dependency issue details
  */
-export interface DependencyIssue {
+interface DependencyIssue {
 	/** Subtask ID with the issue */
 	subtaskId: string;
 	/** Type of dependency issue */

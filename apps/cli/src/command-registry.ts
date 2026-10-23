@@ -314,6 +314,3 @@ export function registerCommandsByCategory(
 ): void {
 	CommandRegistry.registerByCategory(program, category);
 }
-
-// Export the registry for direct access if needed
-export default CommandRegistry;
