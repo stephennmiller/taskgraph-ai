@@ -30,6 +30,10 @@ import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
 } from '../../../dependencies/dependency-provenance.js';
+import {
+	getOwnKey as own,
+	setOwnKey as put
+} from '../../../../common/utils/own-key.js';
 
 export interface RenumberedItem {
 	/** The ID the command gave the item, such as `11` or `5.3` */
@@ -57,20 +61,6 @@ const isItemList = (value: unknown): value is Item[] =>
 const keyOf = (item: Item) => String(item.id);
 
 const same = (a: unknown, b: unknown) => isDeepStrictEqual(a, b);
-
-/** Own property only, so keys such as `constructor` never read the prototype */
-const own = (object: Record<string, unknown>, key: string): unknown =>
-	Object.hasOwn(object, key) ? object[key] : undefined;
-
-/** Define an own property, so a `__proto__` key stays data */
-const put = (object: Record<string, unknown>, key: string, value: unknown) => {
-	Object.defineProperty(object, key, {
-		value,
-		enumerable: true,
-		writable: true,
-		configurable: true
-	});
-};
 
 interface Context {
 	renumbered: RenumberedItem[];

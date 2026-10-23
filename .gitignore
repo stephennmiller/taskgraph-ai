@@ -86,8 +86,9 @@ dev-debug.log
 # turbo
 .turbo
 
-# TaskGraph Workflow State (now stored in ~/.taskgraph/sessions/)
-# No longer needed in .gitignore as state is stored globally
+# TaskGraph per-machine files: the current tag and this machine's settings
+.taskgraph/state.json
+.taskgraph/config.local.json
 
 .scannerwork
 
