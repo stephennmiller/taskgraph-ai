@@ -332,6 +332,27 @@ describe('claude-code path guard', () => {
 			}
 		);
 
+		it.each([
+			['.aw\u017F/credentials'],
+			['.g\u0131t/config'],
+			['\u0131d_rsa'],
+			['certs/server.\u212Aey'],
+			['.docker/config.j\u017Fon']
+		])('denies Read of case-fold look-alike %j', (file) => {
+			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
+				/secret/
+			);
+		});
+
+		it('denies a Grep glob that names a secret after a space', () => {
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', glob: '*.md .envrc' })
+			).toMatch(/secret/);
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', glob: '*.md *.ts' })
+			).toBeNull();
+		});
+
 		it('judges an absolute Glob only below the root, which may hold a short name', () => {
 			const shortRoot = path.join(base, 'RUNNER~1', 'project');
 			expect(

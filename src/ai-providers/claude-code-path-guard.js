@@ -70,15 +70,27 @@ export function normalizeSegment(segment) {
 		.replace(/[. ]+$/, '');
 }
 
+/**
+ * Fold case the way a case-insensitive filesystem compares names. NTFS
+ * upper-cases both sides, so `.aw\u017F` (long s) and `.g\u0131t` (dotless i)
+ * can open `.aws` and `.git`; APFS case-folds, so `server.\u212Aey` (Kelvin
+ * sign) can open `server.key`. Upper- then lower-casing maps all three to
+ * ASCII, which a plain `/i` regex does not.
+ */
+function foldCase(name) {
+	return name.toUpperCase().toLowerCase();
+}
+
 /** True when any part of a path or glob names a credentials file. */
 function namesSecret(candidate) {
-	const parts = candidate.split(/[\\/,]/).map(normalizeSegment);
+	const parts = candidate
+		.split(/[\\/,]/)
+		.map((part) => foldCase(normalizeSegment(part)));
 	const secret = (part) =>
 		SHORT_NAME.test(part) || (SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
 	if (parts.some(secret)) return true;
-	const lower = parts.map((part) => part.toLowerCase());
 	return SECRET_PAIRS.some(([dir, file]) =>
-		lower.some((part, i) => part === dir && lower[i + 1] === file)
+		parts.some((part, i) => part === dir && parts[i + 1] === file)
 	);
 }
 
@@ -195,7 +207,11 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		}
 	}
 
-	if (typeof toolInput.glob === 'string' && namesSecret(toolInput.glob)) {
+	// Claude Code passes each space-separated token of glob to rg on its own
+	if (
+		typeof toolInput.glob === 'string' &&
+		toolInput.glob.split(/\s+/).some(namesSecret)
+	) {
 		return `${toolName} globs may not match secret files such as .env, .git or keys.`;
 	}
 
