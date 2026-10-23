@@ -3,9 +3,9 @@
  * Provides standardized paths for TaskGraph project structure
  */
 
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../constants/paths.js';
-import { findProjectRoot } from './project-root-finder.js';
+import { resolveProjectRoot } from './project-root-finder.js';
 
 /**
  * Get standard TaskGraph project paths
@@ -29,9 +29,8 @@ export function getProjectPaths(projectPath?: string): {
 	projectRoot: string;
 	tasksPath: string;
 } {
-	const projectRoot = projectPath
-		? resolve(process.cwd(), projectPath)
-		: findProjectRoot();
+	// An explicit path, else TASKGRAPH_PROJECT_ROOT, else the one found
+	const projectRoot = resolveProjectRoot(projectPath);
 
 	return {
 		projectRoot,
