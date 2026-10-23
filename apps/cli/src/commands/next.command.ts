@@ -11,11 +11,10 @@ import {
 	type TmCore,
 	createTmCore
 } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import { Command } from 'commander';
-import { displayTaskDetails } from '../ui/components/task-detail.component.js';
 import { formatClaim } from '../ui/formatters/claim-formatters.js';
+import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
+import { formatNoNextTask } from '../ui/formatters/task-list-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
@@ -274,47 +273,20 @@ export class NextCommand extends Command {
 			projectRoot: this.tmCore?.projectPath
 		});
 
+		// Separate the tag line from the task; with no tag line, start with it
+		if (headerShown) console.log();
+
 		if (!result.found || !result.task) {
-			// Only show warning box if there are literally NO tasks at all
-			if (!result.hasAnyTasks) {
-				console.log(
-					boxen(chalk.yellow('No tasks found in this project.'), {
-						padding: 1,
-						borderStyle: 'round',
-						borderColor: 'yellow',
-						title: 'No tasks available',
-						titleAlignment: 'center'
-					})
-				);
-				console.log(
-					`\n${chalk.dim('Tip: Create tasks with')} ${chalk.cyan('taskgraph parse-prd')} ${chalk.dim('or')} ${chalk.cyan('taskgraph add-task')}`
-				);
-			} else {
-				// Tasks exist but none are available to work on - just show a simple message
-				console.log(
-					chalk.yellow(
-						'✓ All tasks are either completed, blocked by dependencies, or in progress.'
-					)
-				);
-				console.log(
-					`\n${chalk.dim('Tip: Try')} ${chalk.cyan('taskgraph list')} ${chalk.dim('to see all tasks')}`
-				);
-			}
+			console.log(formatNoNextTask(Boolean(result.hasAnyTasks)));
 			return;
 		}
 
-		const task = result.task;
-
-		// Display the task details using the same component as 'show' command
-		// with a custom header indicating this is the next task
-		const customHeader = `Next Task: #${task.id} - ${task.title}`;
-		displayTaskDetails(task, {
-			customHeader,
-			headerColor: 'green',
-			spaceAbove: headerShown,
-			showSuggestedActions: true,
-			checklist: result.checklist
-		});
+		console.log(
+			formatTaskDetail(result.task, {
+				id: String(result.task.id),
+				checklist: result.checklist
+			})
+		);
 	}
 
 	/**

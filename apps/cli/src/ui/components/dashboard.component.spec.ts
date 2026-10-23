@@ -8,8 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	calculateDependencyStatistics,
 	calculateSubtaskStatistics,
-	calculateTaskStatistics,
-	formatStatusLine
+	calculateTaskStatistics
 } from './dashboard.component.js';
 
 /**
@@ -241,45 +240,5 @@ describe('dashboard.component - Bug Fix: Cancelled Tasks as Complete', () => {
 			expect(stats.tasksBlockedByDeps).toBe(1);
 			expect(stats.tasksReadyToWork).toBe(1);
 		});
-	});
-});
-
-describe('dashboard.component - formatStatusLine', () => {
-	// eslint-disable-next-line no-control-regex
-	const stripAnsi = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
-	const stats = {
-		total: 30,
-		done: 12,
-		completedCount: 12,
-		cancelled: 3,
-		deferred: 4,
-		inProgress: 5,
-		review: 1,
-		pending: 4,
-		blocked: 1
-	} as Parameters<typeof formatStatusLine>[0];
-	// Content width of a compact dashboard box in a 120-column terminal
-	const COMPACT_CONTENT_WIDTH = 48;
-
-	it.each([
-		['tasks', false],
-		['subtasks', true]
-	])(
-		'keeps every %s line within the compact box width',
-		(_label, isSubtask) => {
-			const lines = stripAnsi(formatStatusLine(stats, isSubtask, true)).split(
-				'\n'
-			);
-
-			for (const line of lines) {
-				expect(line.length).toBeLessThanOrEqual(COMPACT_CONTENT_WIDTH);
-			}
-		}
-	);
-
-	it('keeps all statuses on a single line pair when not compact', () => {
-		const lines = formatStatusLine(stats, false, false).split('\n');
-
-		expect(lines).toHaveLength(2);
 	});
 });

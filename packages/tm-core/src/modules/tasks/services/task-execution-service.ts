@@ -53,6 +53,33 @@ export class TaskExecutionService {
 			// Handle subtask IDs by extracting parent task ID
 			const { parentId, subtaskId } = this.parseTaskId(taskId);
 
+			// Get the actual task (parent task if dealing with subtask). Look it
+			// up before checking conflicts, so a mistyped ID says it doesn't
+			// exist rather than suggesting --force.
+			const task = await this.taskService.getTask(parentId);
+			if (!task) {
+				return {
+					task: null,
+					found: false,
+					started: false,
+					error: `Task ${parentId} not found`
+				};
+			}
+
+			// Find the specific subtask if provided; don't fall back to the parent
+			let subtask = undefined;
+			if (subtaskId) {
+				subtask = task.subtasks?.find((st) => String(st.id) === subtaskId);
+				if (!subtask) {
+					return {
+						task: null,
+						found: false,
+						started: false,
+						error: `Subtask ${taskId} not found`
+					};
+				}
+			}
+
 			// Check for in-progress task conflicts
 			if (!options.force) {
 				const conflictCheck = await this.checkInProgressConflicts(taskId);
@@ -64,23 +91,6 @@ export class TaskExecutionService {
 						error: `Conflicting tasks in progress: ${conflictCheck.conflictingTasks.map((t) => `#${t.id}: ${t.title}`).join(', ')}`
 					};
 				}
-			}
-
-			// Get the actual task (parent task if dealing with subtask)
-			const task = await this.taskService.getTask(parentId);
-			if (!task) {
-				return {
-					task: null,
-					found: false,
-					started: false,
-					error: `Task ${parentId} not found`
-				};
-			}
-
-			// Find the specific subtask if provided
-			let subtask = undefined;
-			if (subtaskId && task.subtasks) {
-				subtask = task.subtasks.find((st) => String(st.id) === subtaskId);
 			}
 
 			// Update task status to in-progress if not disabled

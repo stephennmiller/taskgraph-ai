@@ -6,7 +6,7 @@
  * @integration
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -76,6 +76,111 @@ describe('list command', () => {
 			};
 		}
 	};
+
+	/** Task 2 is in progress; `next` picks its subtask 2.2 (#246) */
+	const subtaskProject = () =>
+		createTasksFile({
+			tasks: [
+				createTask({ id: 1, title: 'Set up the database', status: 'done' }),
+				createTask({
+					id: 2,
+					title: 'Sign-in with sessions',
+					status: 'in-progress',
+					priority: 'high',
+					dependencies: ['1'],
+					subtasks: [
+						createSubtask({
+							id: 1,
+							parentId: '2',
+							title: 'Password hashing',
+							status: 'done'
+						}),
+						createSubtask({
+							id: 2,
+							parentId: '2',
+							title: 'Sessions table and cookie middleware',
+							status: 'pending',
+							dependencies: [1]
+						}),
+						createSubtask({
+							id: 3,
+							parentId: '2',
+							title: 'Sign-in rate limiting',
+							status: 'pending',
+							dependencies: [2]
+						})
+					]
+				}),
+				createTask({
+					id: 3,
+					title: 'Bookmark endpoints',
+					status: 'pending',
+					dependencies: ['2']
+				})
+			]
+		});
+
+	describe('compact output (#182, #246)', () => {
+		const runAt80 = (args: string[] = []) =>
+			spawnSync('node', [binPath, 'list', ...args], {
+				encoding: 'utf-8',
+				env: {
+					...process.env,
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+					COLUMNS: '80',
+					NO_COLOR: '1'
+				}
+			}).stdout;
+
+		it('prints a summary and one Next: line, with no boxes, within 80 columns', () => {
+			writeTasks(subtaskProject());
+
+			const output = runAt80();
+
+			expect(output).toMatch(/^Tasks {5}/m);
+			expect(output).not.toMatch(/[╭╮╰╯]/);
+			expect(output).not.toContain('Project Dashboard');
+			expect(output).not.toContain('Suggested Next Steps');
+			expect(output.match(/^Next: /gm)).toHaveLength(1);
+			for (const line of output.split('\n')) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+		});
+
+		it('shows the subtask next picks, not "No task available" (#246)', () => {
+			writeTasks(subtaskProject());
+
+			const output = runAt80();
+
+			expect(output).toMatch(
+				/^Next {6}2\.2 {2}Sessions table and cookie middleware/m
+			);
+			expect(output).not.toContain('No task available');
+			expect(output).toContain(
+				'Next: taskgraph set-status --id=2.2 --status=in-progress'
+			);
+		});
+
+		it('counts subtasks without --with-subtasks (#246)', () => {
+			writeTasks(subtaskProject());
+
+			const output = runAt80();
+
+			expect(output).toMatch(/^Subtasks .*1 of 3 done · 33%/m);
+			// The table itself still hides them
+			expect(output).not.toContain('Password hashing');
+		});
+
+		it('says which filter matched nothing, with a way back', () => {
+			writeTasks(subtaskProject());
+
+			const output = runAt80(['--status', 'review']);
+
+			expect(output).toContain('No review tasks found');
+			expect(output).toContain('Next: taskgraph list to see every task');
+			expect(output).not.toMatch(/[╭╮╰╯]/);
+		});
+	});
 
 	it('should display message when no tasks exist', () => {
 		const { output, exitCode } = runList();

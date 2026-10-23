@@ -40,6 +40,27 @@ export const fit = (text: string, width: number) =>
 export const visibleLength = (text: string) =>
 	stripVTControlCharacters(text).length;
 
+/** Join facts with ` · `, starting a new line rather than splitting one */
+export function joinFacts(
+	facts: string[],
+	width: number,
+	separator = theme.muted(' · ')
+): string[] {
+	const lines: string[] = [];
+	let line = '';
+	for (const fact of facts) {
+		const next = line ? `${line}${separator}${fact}` : fact;
+		if (line && visibleLength(next) > width) {
+			lines.push(line);
+			line = fact;
+		} else {
+			line = next;
+		}
+	}
+	if (line) lines.push(line);
+	return lines;
+}
+
 /**
  * marked-terminal reflows paragraphs but not list items, so long items
  * relied on the terminal's own wrap and lost their indent. Wrap them with

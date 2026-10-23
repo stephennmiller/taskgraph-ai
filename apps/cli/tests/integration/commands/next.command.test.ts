@@ -6,11 +6,11 @@
  * @integration
  */
 
-import { execSync } from 'node:child_process';
+import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createTask, createTasksFile } from '@tm/core/testing';
+import { createSubtask, createTask, createTasksFile } from '@tm/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { getCliBinPath } from '../../helpers/test-utils.js';
 
@@ -77,6 +77,105 @@ describe('next command', () => {
 			};
 		}
 	};
+
+	/** Task 2 is in progress; `next` picks its subtask 2.2 (#246) */
+	const subtaskProject = () =>
+		createTasksFile({
+			tasks: [
+				createTask({ id: 1, title: 'Set up the database', status: 'done' }),
+				createTask({
+					id: 2,
+					title: 'Sign-in with sessions',
+					status: 'in-progress',
+					priority: 'high',
+					dependencies: ['1'],
+					subtasks: [
+						createSubtask({
+							id: 1,
+							parentId: '2',
+							title: 'Password hashing',
+							status: 'done'
+						}),
+						createSubtask({
+							id: 2,
+							parentId: '2',
+							title: 'Sessions table and cookie middleware',
+							status: 'pending',
+							dependencies: [1]
+						}),
+						createSubtask({
+							id: 3,
+							parentId: '2',
+							title: 'Sign-in rate limiting',
+							status: 'pending',
+							dependencies: [2]
+						})
+					]
+				}),
+				createTask({
+					id: 3,
+					title: 'Bookmark endpoints',
+					status: 'pending',
+					dependencies: ['2']
+				})
+			]
+		});
+
+	describe('compact output (#182)', () => {
+		const runAt80 = () =>
+			spawnSync('node', [binPath, 'next'], {
+				encoding: 'utf-8',
+				env: {
+					...process.env,
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+					COLUMNS: '80',
+					NO_COLOR: '1'
+				}
+			}).stdout;
+
+		it('prints the subtask it picks as show does, with no boxes', () => {
+			writeTasks(subtaskProject());
+
+			const output = runAt80();
+
+			expect(output).toContain(
+				'Subtask 2.2  Sessions table and cookie middleware'
+			);
+			expect(output).toContain('depends on 2.1');
+			expect(output).toContain(
+				'Next: taskgraph set-status --id=2.2 --status=in-progress'
+			);
+			expect(output).not.toMatch(/[╭╮╰╯]/);
+			expect(output).not.toContain('Next Task:');
+			for (const line of output.split('\n')) {
+				expect(line.length).toBeLessThanOrEqual(80);
+			}
+		});
+
+		it('says nothing is ready, without a box, when every task is done', () => {
+			writeTasks(
+				createTasksFile({
+					tasks: [createTask({ id: 1, title: 'Only task', status: 'done' })]
+				})
+			);
+
+			const output = runAt80();
+
+			expect(output).toContain(
+				'All tasks are either completed, blocked by dependencies, or in progress'
+			);
+			expect(output).toContain('Next: taskgraph list');
+			expect(output).not.toMatch(/[╭╮╰╯]/);
+		});
+
+		it('says there are no tasks, without a box, in an empty project', () => {
+			const output = runAt80();
+
+			expect(output).toContain('No tasks found');
+			expect(output).toContain('taskgraph add-task');
+			expect(output).not.toMatch(/[╭╮╰╯]/);
+		});
+	});
 
 	it('should find first pending task with no dependencies', () => {
 		const testData = createTasksFile({

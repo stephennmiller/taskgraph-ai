@@ -5,6 +5,7 @@
 
 import {
 	OUTPUT_FORMATS,
+	type Task,
 	buildBlocksMap,
 	createTmCore,
 	filterBlockingTasks,
@@ -21,16 +22,11 @@ import {
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
-	calculateDependencyStatistics,
-	calculateSubtaskStatistics,
-	calculateTaskStatistics,
-	displayDashboards,
-	displayRecommendedNextTask,
-	displaySuggestedNextSteps,
 	displaySyncMessage,
 	displayWatchFooter,
-	getPriorityBreakdown,
-	getTaskDescription
+	formatEmptyList,
+	formatListNextStep,
+	formatListSummary
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
@@ -73,6 +69,13 @@ export interface ListTasksResult {
 	allTags?: boolean;
 	/** ID of the task `next` would pick; only looked up for the text view */
 	nextTaskId?: string | null;
+	/** The task or subtask (`2.2`) `next` would pick, for the text view */
+	nextTask?: Task | null;
+	/**
+	 * Every task in the tag with its subtasks, before filters: what the
+	 * summary above the table counts. Only loaded for the text view.
+	 */
+	summaryTasks?: Task[];
 }
 
 /**
@@ -319,9 +322,19 @@ export class ListTasksCommand extends Command {
 				? options.status.split(',').map((s: string) => s.trim() as TaskStatus)
 				: undefined;
 
+		// The text view prints a summary of the whole tag above the table, and
+		// the task `next` picks; JSON, compact and --ready/--blocking don't
+		const showsSummary =
+			!options.json &&
+			!options.compact &&
+			(options.format ?? 'text') === 'text' &&
+			!options.ready &&
+			!options.blocking;
+
 		// When --ready is used, we need ALL tasks to correctly compute which dependencies are satisfied
-		// So we fetch without status filter first, then apply status filter after ready/blocking
-		const needsAllTasks = options.ready || options.blocking;
+		// So we fetch without status filter first, then apply status filter after ready/blocking.
+		// The summary counts every task too, whatever the status filter.
+		const needsAllTasks = options.ready || options.blocking || showsSummary;
 
 		// Build filter - skip status filter if we need all tasks for ready/blocking computation
 		const filter =
@@ -329,17 +342,23 @@ export class ListTasksCommand extends Command {
 				? { status: statusFilterValues }
 				: undefined;
 
-		// Call tm-core
+		// Call tm-core. The summary counts subtasks even when the table hides
+		// them (#246); the table only shows them with --with-subtasks.
 		const result = await this.tmCore.tasks.list({
 			tag: options.tag,
 			filter,
-			includeSubtasks: options.withSubtasks
+			includeSubtasks: showsSummary ? true : options.withSubtasks
 		});
+		// The rows keep subtasks only when asked for, as before
+		const listed =
+			showsSummary && !options.withSubtasks
+				? result.tasks.map((task) => ({ ...task, subtasks: [] }))
+				: result.tasks;
 
 		// Build blocks map and enrich tasks with blocks field
-		const { blocksMap, invalidDependencies } = buildBlocksMap(result.tasks);
+		const { blocksMap, invalidDependencies } = buildBlocksMap(listed);
 		this.displayInvalidDependencyWarnings(invalidDependencies);
-		const enrichedTasks = result.tasks.map((task) => ({
+		const enrichedTasks = listed.map((task) => ({
 			...task,
 			blocks: blocksMap.get(String(task.id)) || []
 		}));
@@ -362,14 +381,10 @@ export class ListTasksCommand extends Command {
 			);
 		}
 
-		// The recommendation comes from tm-core so it matches `taskgraph next`
-		const showsNext =
-			!options.json &&
-			!options.compact &&
-			(options.format ?? 'text') === 'text' &&
-			!options.ready &&
-			!options.blocking;
-		const next = showsNext
+		// The recommendation comes from tm-core so it matches `taskgraph next`.
+		// It may be a subtask (`2.2`), which isn't a row of the task list, so
+		// keep the object tm-core returns rather than looking the ID up (#246).
+		const next = showsSummary
 			? await this.tmCore.tasks.getNext(options.tag)
 			: null;
 
@@ -377,7 +392,9 @@ export class ListTasksCommand extends Command {
 			...result,
 			tasks: filteredTasks,
 			filtered: filteredTasks.length,
-			nextTaskId: next ? String(next.id) : null
+			nextTaskId: next ? String(next.id) : null,
+			nextTask: next,
+			...(showsSummary && { summaryTasks: result.tasks })
 		} as ListTasksResult;
 	}
 
@@ -623,32 +640,23 @@ export class ListTasksCommand extends Command {
 
 		// No tasks message
 		if (tasks.length === 0) {
-			ui.displayWarning('No tasks found matching the criteria.');
+			const filter = options.ready
+				? 'ready'
+				: options.blocking
+					? 'blocking'
+					: options.status && options.status !== 'all'
+						? options.status.split(',').join(' or ')
+						: undefined;
+			console.log(formatEmptyList(filter));
 			return;
 		}
 
-		// Calculate statistics
-		const taskStats = calculateTaskStatistics(tasks);
-		const subtaskStats = calculateSubtaskStatistics(tasks);
-		const depStats = calculateDependencyStatistics(tasks);
-		const priorityBreakdown = getPriorityBreakdown(tasks);
-
-		// Get the full task object with complexity data already included
-		const nextTask = data.nextTaskId
-			? tasks.find((t) => String(t.id) === data.nextTaskId)
-			: undefined;
-
-		// Display dashboard boxes unless filtering by --ready, --blocking, or --all-tags
-		// (filtered/cross-tag dashboards would show misleading statistics)
+		// The summary and the next step describe the whole tag, so leave them
+		// out of --ready, --blocking and --all-tags views
 		const isFiltered = options.ready || options.blocking || allTags;
 		if (!isFiltered) {
-			displayDashboards(
-				taskStats,
-				subtaskStats,
-				priorityBreakdown,
-				depStats,
-				nextTask
-			);
+			console.log(formatListSummary(data.summaryTasks ?? tasks, data.nextTask));
+			console.log();
 		}
 
 		// Task table
@@ -662,27 +670,9 @@ export class ListTasksCommand extends Command {
 			})
 		);
 
-		// Display recommended next task section immediately after table
-		// Skip when filtering by --ready or --blocking (user already knows what they're looking at)
 		if (!isFiltered) {
-			// Don't show "no tasks available" message in list command - that's for tm next
-			if (nextTask) {
-				const description = getTaskDescription(nextTask);
-
-				displayRecommendedNextTask({
-					id: nextTask.id,
-					title: nextTask.title,
-					priority: nextTask.priority,
-					status: nextTask.status,
-					dependencies: nextTask.dependencies,
-					description,
-					complexity: nextTask.complexity as number | undefined
-				});
-			}
-			// If no next task, don't show any message - dashboard already shows the info
-
-			// Display suggested next steps at the end
-			displaySuggestedNextSteps();
+			const next = formatListNextStep(data.nextTask);
+			if (next) console.log(`\n${next}`);
 		}
 	}
 

@@ -118,11 +118,35 @@ export {
 	type ResearchSaveTarget
 } from './formatters/research-formatters.js';
 
-// What `show` prints about one task
+// What `show`, `next` and `start --dry-run` print about one task
 export {
+	formatNextStep,
 	formatTaskDetail,
 	type TaskDetailOptions
 } from './formatters/task-detail-formatters.js';
+
+// What `list` prints around its table
+export {
+	formatEmptyList,
+	formatListNextStep,
+	formatListSummary,
+	formatNoNextTask,
+	type ListSummaryOptions
+} from './formatters/task-list-formatters.js';
+
+// What `start` prints around a Claude Code session
+export {
+	formatStartFailed,
+	formatStartLaunching,
+	formatStartSessionEnded,
+	type StartTarget
+} from './formatters/start-formatters.js';
+
+// Status-aware next steps for a task
+export {
+	getSuggestedActions,
+	type SuggestedAction
+} from './suggested-actions.js';
 
 // What add-task confirms
 export {
@@ -135,6 +159,7 @@ export {
 export {
 	fit,
 	formatMarkdown,
+	joinFacts,
 	terminalSafe,
 	visibleLength
 } from './formatters/markdown-formatters.js';

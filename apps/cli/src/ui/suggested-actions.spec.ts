@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getSuggestedActions } from './task-detail.component.js';
+import { getSuggestedActions } from './suggested-actions.js';
 
 const commands = (actions: { command: string }[]) =>
 	actions.map((action) => action.command);

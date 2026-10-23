@@ -7,20 +7,22 @@
 import { spawn } from 'child_process';
 import {
 	type StartTaskResult as CoreStartTaskResult,
+	type Subtask,
+	type Task,
 	type TaskChecklist,
 	type TmCore,
 	createTmCore
 } from '@tm/core';
-import boxen from 'boxen';
-import chalk from 'chalk';
 import { Command } from 'commander';
-import type { Ora } from 'ora';
-import { displayTaskDetails } from '../ui/components/task-detail.component.js';
-import { displayError } from '../utils/error-handler.js';
+import {
+	formatStartFailed,
+	formatStartLaunching,
+	formatStartSessionEnded
+} from '../ui/formatters/start-formatters.js';
+import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
+import { theme } from '../ui/theme.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
-import * as ui from '../utils/ui.js';
-import { createSpinner } from '../ui/spinner.js';
-import { BORDER_COLOR, theme } from '../ui/theme.js';
 
 /**
  * CLI-specific options interface for the start command
@@ -87,92 +89,99 @@ export class StartCommand extends Command {
 		taskId: string | undefined,
 		options: StartCommandOptions
 	): Promise<void> {
-		let spinner: Ora | null = null;
-
 		try {
 			// Validate options
 			if (!this.validateOptions(options)) {
 				process.exit(1);
 			}
 
-			// Initialize tm-core with spinner
-			spinner = createSpinner('Initializing TaskGraph...').start();
 			await this.initializeCore(getProjectRoot(options.project));
-			spinner.succeed('TaskGraph initialized');
 
 			// Get the task ID from argument or option, or find next available task
-			const idArg = taskId || options.id || null;
-			let targetTaskId = idArg;
+			const targetTaskId =
+				taskId || options.id || (await this.performGetNextTask());
 
 			if (!targetTaskId) {
-				spinner = createSpinner('Finding next available task...').start();
-				targetTaskId = await this.performGetNextTask();
-				if (targetTaskId) {
-					spinner.succeed(`Found next task: #${targetTaskId}`);
-				} else {
-					spinner.fail('No available tasks found');
-				}
-			}
-
-			if (!targetTaskId) {
-				ui.displayError('No task ID provided and no available tasks found');
+				printError(
+					'No task is ready to start',
+					'Run `taskgraph list` to see what is blocked, or pass a task ID'
+				);
 				process.exit(1);
 			}
 
-			// Show pre-launch message (no spinner needed, it's just display)
-			if (!options.dryRun) {
-				await this.showPreLaunchMessage(targetTaskId);
-			}
-
-			// Use tm-core's startTask method with spinner
-			spinner = createSpinner('Preparing task execution...').start();
 			const coreResult = await this.performStartTask(targetTaskId, options);
-
-			if (coreResult.started) {
-				spinner.succeed(
-					options.dryRun
-						? 'Dry run completed'
-						: 'Task prepared - launching Claude...'
-				);
-			} else {
-				spinner.fail('Task execution failed');
-			}
-
-			// Execute command if we have one and it's not a dry run
-			if (!options.dryRun && coreResult.command) {
-				// Stop any remaining spinners before launching Claude
-				if (spinner && !spinner.isSpinning) {
-					// Clear the line to make room for Claude
-					console.log();
-				}
-				await this.executeChildProcess(coreResult.command);
-			}
-
 			const result: StartCommandResult = coreResult;
-
-			// Store result for programmatic access
 			this.setLastResult(result);
+			const json = options.format === 'json';
 
-			// Display results (only for dry run or if execution failed)
-			if (options.dryRun || !coreResult.started) {
-				// The checklist of the task or subtask being started, numbered
-				// as set-status --check takes it
-				const checklist =
-					options.dryRun && result.task
-						? await this.tmCore?.tasks.loadChecklist(
-								result.subtaskId
-									? `${result.task.id}.${result.subtaskId}`
-									: String(result.task.id)
-							)
-						: undefined;
-				this.displayResults(result, options, checklist);
+			if (!coreResult.found || !coreResult.task || !coreResult.started) {
+				if (json) {
+					this.displayJson(result);
+				} else {
+					const failure = formatStartFailed(targetTaskId, coreResult);
+					printError(failure.message, failure.hint);
+				}
+				process.exitCode = 1;
+				return;
+			}
+
+			const label = this.workItemLabel(coreResult, targetTaskId);
+
+			if (options.dryRun) {
+				if (json) {
+					this.displayJson(result);
+					return;
+				}
+				// The task or subtask being started, as `show` prints it, with
+				// its checklist numbered as set-status --check takes it
+				const item = await this.loadWorkItem(coreResult, label);
+				const checklist = await this.tmCore?.tasks.loadChecklist(label.id);
+				this.displayDryRun(item, label, checklist);
+				return;
+			}
+
+			// Execute command if we have one
+			if (coreResult.command) {
+				const title =
+					label.kind === 'subtask'
+						? coreResult.subtask?.title
+						: coreResult.task.title;
+				if (!json) console.log(formatStartLaunching(label, title ?? ''));
+				await this.executeChildProcess(coreResult.command);
+				if (!json) console.log(formatStartSessionEnded(label.id));
 			}
 		} catch (error: any) {
-			if (spinner) {
-				spinner.fail('Operation failed');
-			}
 			displayError(error);
 		}
+	}
+
+	/**
+	 * The task or subtask being started. A subtask is loaded by its full ID
+	 * and knows its parent, so its dependencies show as `2.1`, not `1`.
+	 */
+	private async loadWorkItem(
+		result: CoreStartTaskResult,
+		label: { id: string; kind: 'task' | 'subtask' }
+	): Promise<Task | Subtask> {
+		const task = result.task as Task;
+		if (label.kind === 'task') return task;
+		const found = await this.tmCore?.tasks.get(label.id);
+		if (!found?.task || !found.isSubtask) return task;
+		return { ...found.task, parentId: found.task.parentId ?? String(task.id) };
+	}
+
+	/** `subtask 2.2` or `task 3`, for the lines around the session */
+	private workItemLabel(
+		result: CoreStartTaskResult,
+		targetTaskId: string
+	): { id: string; kind: 'task' | 'subtask' } {
+		if (result.subtask && result.subtaskId && result.task) {
+			return { id: `${result.task.id}.${result.subtaskId}`, kind: 'subtask' };
+		}
+		return {
+			id: result.task ? String(result.task.id) : targetTaskId,
+			kind: 'task'
+		};
 	}
 
 	/**
@@ -181,8 +190,10 @@ export class StartCommand extends Command {
 	private validateOptions(options: StartCommandOptions): boolean {
 		// Validate format
 		if (options.format && !['text', 'json'].includes(options.format)) {
-			console.error(chalk.red(`Invalid format: ${options.format}`));
-			console.error(theme.muted(`Valid formats: text, json`));
+			printError(
+				`"${options.format}" isn't an output format`,
+				'Use --format text or --format json'
+			);
 			return false;
 		}
 
@@ -209,24 +220,6 @@ export class StartCommand extends Command {
 	}
 
 	/**
-	 * Show pre-launch message using tm-core data
-	 */
-	private async showPreLaunchMessage(targetTaskId: string): Promise<void> {
-		if (!this.tmCore) return;
-
-		const { task, isSubtask } = await this.tmCore.tasks.get(targetTaskId);
-		if (task) {
-			const workItemText = isSubtask
-				? `Subtask #${targetTaskId} - ${task.title}`
-				: `Task #${task.id} - ${task.title}`;
-
-			console.log(chalk.green('Starting: ') + chalk.bold(workItemText));
-			console.log(theme.muted('Launching Claude Code...'));
-			console.log(); // Empty line
-		}
-	}
-
-	/**
 	 * Perform start task using tm-core business logic
 	 */
 	private async performStartTask(
@@ -237,28 +230,12 @@ export class StartCommand extends Command {
 			throw new Error('TmCore not initialized');
 		}
 
-		// Show spinner for status update if enabled
-		let statusSpinner: Ora | null = null;
-		if (!options.noStatusUpdate && !options.dryRun) {
-			statusSpinner = createSpinner(
-				'Updating task status to in-progress...'
-			).start();
-		}
-
 		// Get execution command from tm-core (instead of executing directly)
 		const result = await this.tmCore.tasks.start(targetTaskId, {
 			dryRun: options.dryRun,
 			force: options.force,
 			updateStatus: !options.noStatusUpdate
 		});
-
-		if (statusSpinner) {
-			if (result.started) {
-				statusSpinner.succeed('Task status updated');
-			} else {
-				statusSpinner.warn('Task status update skipped');
-			}
-		}
 
 		if (!result) {
 			throw new Error('Failed to start task - core result is undefined');
@@ -277,10 +254,6 @@ export class StartCommand extends Command {
 		cwd: string;
 	}): Promise<void> {
 		return new Promise((resolve, reject) => {
-			// Don't show the full command with args as it can be very long
-			console.log(chalk.green('Launching Claude Code…'));
-			console.log(); // Add space before Claude takes over
-
 			const childProcess = spawn(command.executable, command.args, {
 				cwd: command.cwd,
 				stdio: 'inherit', // Inherit stdio from parent process
@@ -313,28 +286,6 @@ export class StartCommand extends Command {
 	}
 
 	/**
-	 * Display results based on format
-	 */
-	private displayResults(
-		result: StartCommandResult,
-		options: StartCommandOptions,
-		checklist?: TaskChecklist
-	): void {
-		const format = options.format || 'text';
-
-		switch (format) {
-			case 'json':
-				this.displayJson(result);
-				break;
-
-			case 'text':
-			default:
-				this.displayTextResult(result, options, checklist);
-				break;
-		}
-	}
-
-	/**
 	 * Display in JSON format
 	 */
 	private displayJson(result: StartCommandResult): void {
@@ -342,122 +293,29 @@ export class StartCommand extends Command {
 	}
 
 	/**
-	 * Display result in text format
+	 * `--dry-run`: the task as `show` prints it, ending with how to launch it
 	 */
-	private displayTextResult(
-		result: StartCommandResult,
-		options: StartCommandOptions,
+	private displayDryRun(
+		item: Task | Subtask,
+		label: { id: string; kind: 'task' | 'subtask' },
 		checklist?: TaskChecklist
 	): void {
-		if (!result.found || !result.task) {
-			console.log(
-				boxen(chalk.yellow(`Task not found!`), {
-					padding: { top: 0, bottom: 0, left: 1, right: 1 },
-					borderColor: 'yellow',
-					borderStyle: 'round',
-					margin: { top: 1 }
-				})
-			);
-			return;
-		}
-
-		const task = result.task;
-
-		if (options.dryRun) {
-			// For dry run, show full details since Claude Code won't be launched
-			let headerText = `Dry Run: Starting Task #${task.id} - ${task.title}`;
-
-			// If working on a specific subtask, highlight it in the header
-			if (result.subtask && result.subtaskId) {
-				headerText = `Dry Run: Starting Subtask #${task.id}.${result.subtaskId} - ${result.subtask.title}`;
-			}
-
-			displayTaskDetails(task, {
-				customHeader: headerText,
-				headerColor: 'yellow',
-				checklist
-			});
-
-			// Show claude-code prompt
-			if (result.executionOutput) {
-				console.log(); // Empty line for spacing
-				console.log(
-					boxen(
-						chalk.bold('Claude-Code Prompt:') + '\n\n' + result.executionOutput,
-						{
-							padding: 1,
-							borderStyle: 'round',
-							borderColor: BORDER_COLOR,
-							width: ui.getContentWidth()
-						}
-					)
-				);
-			}
-
-			console.log(); // Empty line for spacing
-			console.log(
-				boxen(
-					chalk.yellow(
-						'Dry run - claude-code would be launched with the above prompt'
-					),
-					{
-						padding: { top: 0, bottom: 0, left: 1, right: 1 },
-						borderColor: 'yellow',
-						borderStyle: 'round'
-					}
-				)
-			);
-		} else {
-			// For actual execution, show minimal info since Claude Code will clear the terminal
-			if (result.started) {
-				// Determine what was worked on - task or subtask
-				let workItemText = `Task: #${task.id} - ${task.title}`;
-				let statusTarget = task.id;
-
-				if (result.subtask && result.subtaskId) {
-					workItemText = `Subtask: #${task.id}.${result.subtaskId} - ${result.subtask.title}`;
-					statusTarget = `${task.id}.${result.subtaskId}`;
+		console.log(
+			theme.muted(
+				`Dry run · Claude Code not launched for ${label.kind} ${label.id}`
+			)
+		);
+		console.log();
+		console.log(
+			formatTaskDetail(item, {
+				id: label.id,
+				checklist,
+				next: {
+					command: `taskgraph start ${label.id}`,
+					description: 'to launch Claude Code'
 				}
-
-				// Post-execution message (shown after Claude Code exits)
-				console.log(
-					boxen(
-						chalk.green.bold('✓ Task session complete') +
-							'\n\n' +
-							theme.text(workItemText) +
-							'\n\n' +
-							chalk.cyan('Next steps:') +
-							'\n' +
-							`• Run ${chalk.yellow('taskgraph show ' + task.id)} to review task details\n` +
-							`• Run ${chalk.yellow('taskgraph set-status --id=' + statusTarget + ' --status=done')} when complete\n` +
-							`• Run ${chalk.yellow('taskgraph next')} to find the next available task\n` +
-							`• Run ${chalk.yellow('taskgraph start')} to begin the next task`,
-						{
-							padding: 1,
-							borderStyle: 'round',
-							borderColor: 'green',
-							width: ui.getContentWidth(),
-							margin: { top: 1 }
-						}
-					)
-				);
-			} else {
-				// Error case
-				console.log(
-					boxen(
-						chalk.red(
-							'✗ Failed to launch claude-code' +
-								(result.error ? `\nError: ${result.error}` : '')
-						),
-						{
-							padding: { top: 0, bottom: 0, left: 1, right: 1 },
-							borderColor: 'red',
-							borderStyle: 'round'
-						}
-					)
-				);
-			}
-		}
+			})
+		);
 	}
 
 	/**

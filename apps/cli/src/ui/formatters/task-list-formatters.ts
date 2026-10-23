@@ -1,0 +1,315 @@
+/**
+ * @fileoverview What `taskgraph list` prints around its task table, e.g.
+ *
+ *   Tasks     ███───▓▓▓▒▒▒░░░░░░!!  1 of 7 done · 14%
+ *             ─ 1 deferred  ▓ 1 in progress  ▒ 1 review  ░ 2 pending  ! 1 blocked
+ *   Subtasks  ███████░░░░░░░░░░░░░  1 of 3 done · 33%
+ *             ░ 2 pending
+ *   Ready     2 ready · 4 waiting on dependencies · task 3 unblocks 3
+ *   Next      2.2  Sessions table and cookie middleware · high priority
+ *
+ *   ┌────┬───────── (the task table) ─────────┐
+ *
+ *   Next: taskgraph set-status --id=2.2 --status=in-progress to start working
+ *
+ * It replaces two boxed dashboards (progress and priorities, dependency
+ * metrics and next task), a boxed "Next task" card under the table that
+ * repeated the dashboard's next task, and a boxed, numbered list of three
+ * generic next steps.
+ */
+
+import type { Task } from '@tm/core';
+import chalk from 'chalk';
+import {
+	type TaskStatistics,
+	calculateDependencyStatistics,
+	calculateSubtaskStatistics,
+	calculateTaskStatistics
+} from '../components/dashboard.component.js';
+import { isTaskComplete } from '../../utils/task-status.js';
+import { terminalWidth } from '../layout/helpers.js';
+import { getSuggestedActions } from '../suggested-actions.js';
+import { theme } from '../theme.js';
+import {
+	fit,
+	joinFacts,
+	terminalSafe,
+	visibleLength
+} from './markdown-formatters.js';
+import { getPriorityWithColor } from './priority-formatters.js';
+import { formatNextStep } from './task-detail-formatters.js';
+
+/** Rows fit the terminal, but no wider than this */
+const MAX_WIDTH = 100;
+/** Row labels (`Subtasks`) and the gap after them */
+const LABEL_WIDTH = 10;
+const BAR_MIN = 8;
+const BAR_MAX = 20;
+
+/**
+ * One bar segment per status. Each has its own character as well as its own
+ * color, so the bar reads without color; the counts line repeats the
+ * characters as a legend.
+ */
+const SEGMENTS: Array<{
+	name: string;
+	glyph: string;
+	paint: (text: string) => string;
+	count: (stats: TaskStatistics) => number;
+}> = [
+	{
+		name: 'done',
+		glyph: '█',
+		paint: chalk.green,
+		// `completed` counts as done; cancelled has its own segment
+		count: (stats) => stats.completedCount - stats.cancelled
+	},
+	{
+		name: 'cancelled',
+		glyph: '─',
+		paint: theme.muted,
+		count: (stats) => stats.cancelled
+	},
+	{
+		name: 'deferred',
+		glyph: '─',
+		paint: theme.muted,
+		count: (stats) => stats.deferred
+	},
+	{
+		name: 'in progress',
+		glyph: '▓',
+		paint: theme.active,
+		count: (stats) => stats.inProgress
+	},
+	{
+		name: 'review',
+		glyph: '▒',
+		paint: chalk.magenta,
+		count: (stats) => stats.review ?? 0
+	},
+	{
+		name: 'pending',
+		glyph: '░',
+		paint: chalk.yellow,
+		count: (stats) => stats.pending
+	},
+	{
+		name: 'blocked',
+		glyph: '!',
+		paint: chalk.red,
+		count: (stats) => stats.blocked
+	}
+];
+
+export interface ListSummaryOptions {
+	/** Terminal width */
+	width?: number;
+}
+
+const resolveWidth = (width?: number) =>
+	Math.max(30, Math.min(width ?? terminalWidth(), MAX_WIDTH));
+
+const label = (text: string) => chalk.bold(text.padEnd(LABEL_WIDTH));
+const indent = ' '.repeat(LABEL_WIDTH);
+
+/** `███──▓▓▒░░!`, one segment per status, `width` characters long */
+function progressBar(stats: TaskStatistics, width: number): string {
+	const parts = SEGMENTS.map((segment) => ({
+		...segment,
+		n: segment.count(stats)
+	})).filter((segment) => segment.n > 0);
+	if (stats.total === 0 || parts.length === 0) {
+		return theme.muted('░'.repeat(width));
+	}
+
+	let used = 0;
+	const chars = parts.map((part) => {
+		const n = Math.min(
+			width - used,
+			Math.round((part.n / stats.total) * width)
+		);
+		used += n;
+		return n;
+	});
+	// Rounding can leave the bar a character short; give it to the last status
+	chars[chars.length - 1] += width - used;
+
+	return parts
+		.map((part, i) => part.paint(part.glyph.repeat(Math.max(0, chars[i]))))
+		.join('');
+}
+
+/**
+ * `Tasks     ███──▓▓▒░░!  1 of 7 done · 14%` and, under it, the count of
+ * each status that isn't done
+ */
+function progressRows(
+	name: string,
+	stats: TaskStatistics,
+	width: number
+): string[] {
+	const done = `${stats.completedCount} of ${stats.total} done`;
+	const percent = ` · ${stats.completionPercentage}%`;
+	const barWidth = Math.max(
+		BAR_MIN,
+		Math.min(BAR_MAX, width - LABEL_WIDTH - 2 - done.length - percent.length)
+	);
+	const rows = [
+		`${label(name)}${progressBar(stats, barWidth)}  ${theme.text(done)}${theme.muted(percent)}`
+	];
+
+	const counts = SEGMENTS.slice(1)
+		.map((segment) => ({ segment, n: segment.count(stats) }))
+		.filter(({ n }) => n > 0)
+		.map(
+			({ segment, n }) =>
+				`${segment.paint(segment.glyph)} ${n} ${theme.muted(segment.name)}`
+		);
+	// The glyphs separate the counts, so two spaces will do
+	rows.push(
+		...joinFacts(counts, width - LABEL_WIDTH, '  ').map((line) => indent + line)
+	);
+	return rows;
+}
+
+/** `Ready     2 ready · 4 waiting on dependencies · task 3 unblocks 3` */
+function readyRow(tasks: Task[], width: number): string[] {
+	const deps = calculateDependencyStatistics(tasks);
+	if (deps.tasksReadyToWork === 0 && deps.tasksBlockedByDeps === 0) return [];
+
+	const facts = [`${deps.tasksReadyToWork} ready`];
+	if (deps.tasksBlockedByDeps > 0) {
+		facts.push(
+			theme.muted(`${deps.tasksBlockedByDeps} waiting on dependencies`)
+		);
+	}
+	// The task most others depend on, while it still holds them up
+	const keyTask = tasks.find(
+		(task) => String(task.id) === String(deps.mostDependedOnTaskId)
+	);
+	if (
+		keyTask &&
+		!isTaskComplete(keyTask.status) &&
+		(deps.mostDependedOnCount ?? 0) > 1
+	) {
+		facts.push(
+			theme.muted(`task ${keyTask.id} unblocks ${deps.mostDependedOnCount}`)
+		);
+	}
+	return joinFacts(facts, width - LABEL_WIDTH).map(
+		(line, i) => (i === 0 ? label('Ready') : indent) + line
+	);
+}
+
+/** `Next      2.2  Sessions table and cookie middleware · high priority` */
+function nextRow(next: Task | null | undefined, width: number): string {
+	if (!next) {
+		return label('Next') + theme.muted('nothing is ready to start');
+	}
+	const id = String(next.id);
+	const title = terminalSafe(next.title);
+	const facts: string[] = [];
+	if (next.priority) {
+		facts.push(`${getPriorityWithColor(next.priority)} priority`);
+	}
+	if (typeof next.complexity === 'number') {
+		facts.push(theme.muted(`complexity ${next.complexity}`));
+	}
+	const factText = facts.join(theme.muted(' · '));
+	const factLength = facts.length ? visibleLength(` · ${factText}`) : 0;
+	const room = width - LABEL_WIDTH - id.length - 2;
+	// Keep the title readable: drop the facts before cutting it short
+	const showFacts = facts.length > 0 && room - factLength >= 20;
+	const titleText = fit(title, showFacts ? room - factLength : room);
+	return (
+		label('Next') +
+		theme.brand(id) +
+		'  ' +
+		chalk.bold(titleText) +
+		(showFacts ? theme.muted(' · ') + factText : '')
+	);
+}
+
+/**
+ * The summary `list` prints above its table: progress of tasks and
+ * subtasks, how many are ready, and the task `next` picks.
+ *
+ * @param tasks - Every task in the tag, with subtasks, before any filter
+ * @param next - What `taskgraph next` returns: a task or a subtask (`2.2`)
+ */
+export function formatListSummary(
+	tasks: Task[],
+	next: Task | null | undefined,
+	options: ListSummaryOptions = {}
+): string {
+	const width = resolveWidth(options.width);
+	const rows = progressRows('Tasks', calculateTaskStatistics(tasks), width);
+
+	const subtaskStats = calculateSubtaskStatistics(tasks);
+	if (subtaskStats.total > 0) {
+		rows.push(...progressRows('Subtasks', subtaskStats, width));
+	}
+
+	rows.push(...readyRow(tasks, width));
+	rows.push(nextRow(next, width));
+	return rows.join('\n');
+}
+
+/**
+ * The one `Next:` line under the table, for the task `next` picks; empty
+ * when nothing is ready
+ */
+export function formatListNextStep(
+	next: Task | null | undefined,
+	options: ListSummaryOptions = {}
+): string {
+	if (!next) return '';
+	const [action] = getSuggestedActions(
+		next.id,
+		next.status,
+		(next.subtasks?.length ?? 0) > 0
+	);
+	return formatNextStep(action, resolveWidth(options.width)).join('\n');
+}
+
+/**
+ * What `list` says when no task matches: `No tasks found`, or
+ * `No pending tasks found`, and how to get some
+ *
+ * @param filter - The status or view asked for (`pending`, `ready`), if any
+ */
+export function formatEmptyList(
+	filter?: string,
+	options: ListSummaryOptions = {}
+): string {
+	const width = resolveWidth(options.width);
+	const message = filter ? `No ${filter} tasks found` : 'No tasks found';
+	const action = filter
+		? { command: 'taskgraph list', description: 'to see every task' }
+		: {
+				command: 'taskgraph add-task --prompt="..."',
+				description: 'to add one, or taskgraph parse-prd'
+			};
+	return [theme.text(message), ...formatNextStep(action, width)].join('\n');
+}
+
+/**
+ * What `next` says when it has nothing to offer: no tasks at all, or none
+ * ready to start
+ */
+export function formatNoNextTask(
+	hasAnyTasks: boolean,
+	options: ListSummaryOptions = {}
+): string {
+	if (!hasAnyTasks) return formatEmptyList(undefined, options);
+	return [
+		chalk.yellow(
+			'All tasks are either completed, blocked by dependencies, or in progress'
+		),
+		...formatNextStep(
+			{ command: 'taskgraph list', description: 'to see them all' },
+			resolveWidth(options.width)
+		)
+	].join('\n');
+}

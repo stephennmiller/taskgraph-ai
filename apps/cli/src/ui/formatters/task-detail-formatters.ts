@@ -39,7 +39,10 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { toMarkdown } from '../../utils/content-renderer.js';
-import { getSuggestedActions } from '../suggested-actions.js';
+import {
+	getSuggestedActions,
+	type SuggestedAction
+} from '../suggested-actions.js';
 import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { formatChecklist } from './checklist-formatters.js';
@@ -47,8 +50,8 @@ import { complexityLevel } from './complexity-formatters.js';
 import {
 	fit,
 	formatMarkdown,
-	terminalSafe,
-	visibleLength
+	joinFacts,
+	terminalSafe
 } from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
 import { getStatusWithColor } from './status-formatters.js';
@@ -73,6 +76,11 @@ export interface TaskDetailOptions {
 	statusFilter?: string;
 	/** Terminal width */
 	width?: number;
+	/**
+	 * The `Next:` line. Left out, it is the first status-aware suggestion;
+	 * `start --dry-run` passes its own, and null leaves the line out.
+	 */
+	next?: SuggestedAction | null;
 }
 
 /**
@@ -131,23 +139,6 @@ function header(label: string, title: string, width: number): string[] {
 		theme.brand.bold(label) + '  ' + chalk.bold(first),
 		...rest.map((line) => pad + chalk.bold(line))
 	];
-}
-
-/** Join facts with ` · `, starting a new line rather than splitting one */
-function joinFacts(facts: string[], width: number): string[] {
-	const lines: string[] = [];
-	let line = '';
-	for (const fact of facts) {
-		const next = line ? `${line}${theme.muted(' · ')}${fact}` : fact;
-		if (line && visibleLength(next) > width) {
-			lines.push(line);
-			line = fact;
-		} else {
-			line = next;
-		}
-	}
-	if (line) lines.push(line);
-	return lines;
 }
 
 /** `▶ in-progress · high priority · complexity 7 · depends on 1` */
@@ -330,13 +321,10 @@ function subtaskSection(
 }
 
 /** `Next: taskgraph set-status --id=2 --status=done when it is finished` */
-function nextStep(
-	id: string,
-	status: string | undefined,
-	hasSubtasks: boolean,
+export function formatNextStep(
+	action: SuggestedAction | null | undefined,
 	width: number
 ): string[] {
-	const [action] = getSuggestedActions(id, status, hasSubtasks);
 	if (!action) return [];
 	const line = `Next: ${theme.brand(action.command)} ${action.description}`;
 	return wrapLine(line, width, '      ');
@@ -417,7 +405,11 @@ export function formatTaskDetail(
 		);
 	}
 
-	const next = nextStep(id, task.status, subtasks.length > 0, width);
+	const action =
+		options.next === undefined
+			? getSuggestedActions(id, task.status, subtasks.length > 0)[0]
+			: options.next;
+	const next = formatNextStep(action, width);
 	if (next.length > 0) sections.push(next);
 
 	return sections.map((lines) => lines.join('\n')).join('\n\n');
