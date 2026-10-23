@@ -18,6 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { ui } from '@tm/cli';
+import { installMergeDriver, isOnPath, mergeDriverCommand } from '@tm/core';
 import chalk from 'chalk';
 import { RULE_PROFILES } from '../src/constants/profiles.js';
 import {
@@ -51,6 +52,9 @@ import {
 	TASKGRAPH_TASKS_FILE,
 	TASKGRAPH_TEMPLATES_DIR
 } from '../src/constants/paths.js';
+
+// Committed next to .gitignore; routes tasks.json to the merge driver
+const GITATTRIBUTES_FILE = '.gitattributes';
 
 // The alias init adds to the shell config
 const ALIAS_LINE = "alias tm='taskgraph'";
@@ -151,6 +155,7 @@ function trackedPaths(targetDir) {
 		path.join(targetDir, TASKGRAPH_TASKS_FILE),
 		path.join(targetDir, '.git'),
 		path.join(targetDir, GITIGNORE_FILE),
+		path.join(targetDir, GITATTRIBUTES_FILE),
 		path.join(targetDir, ENV_EXAMPLE_FILE),
 		path.join(targetDir, 'CLAUDE.md'),
 		path.join(targetDir, '.mcp.json'),
@@ -212,6 +217,11 @@ function describeInitChanges(targetDir, before, after) {
 
 	const projectFiles = [
 		[GITIGNORE_FILE, 'created', 'added TaskGraph entries'],
+		[
+			GITATTRIBUTES_FILE,
+			'Git merges tasks.json by task; commit it',
+			'Git merges tasks.json by task; commit it'
+		],
 		[ENV_EXAMPLE_FILE, 'optional settings', 'updated'],
 		[
 			'CLAUDE.md',
@@ -824,6 +834,19 @@ async function createProjectStructure(
 		log('warn', 'Git not available, skipping repository initialization');
 	}
 
+	// Let Git merge tasks.json by task, so two branches that both add a task
+	// don't conflict (#210). Pointless when tasks.json isn't committed.
+	if (storeTasksInGit && insideGitWorkTree()) {
+		try {
+			setUpMergeDriver(targetDir);
+		} catch (error) {
+			log(
+				'warn',
+				`Couldn't set up the tasks.json merge driver: ${error.message}`
+			);
+		}
+	}
+
 	// Install the Claude profile if requested via --rules or the interactive prompt.
 	if (selectedRuleProfiles.length > 0) {
 		log('debug', 'Setting up Claude Code integration...');
@@ -905,6 +928,22 @@ async function createProjectStructure(
 }
 
 /**
+ * Set up the Git merge driver for tasks.json in `targetDir`: the
+ * .gitattributes line and this clone's git config. Git runs `taskgraph`
+ * when it's on PATH, otherwise this CLI by its path.
+ * @returns {{attributes: string, config: string}} What changed
+ * @throws {NotAGitRepositoryError} Outside a Git work tree
+ */
+function setUpMergeDriver(targetDir) {
+	const command = mergeDriverCommand({
+		onPath: isOnPath('taskgraph'),
+		execPath: process.execPath,
+		scriptPath: path.resolve(process.argv[1])
+	});
+	return installMergeDriver(targetDir, command);
+}
+
+/**
  * Say what init would do without doing it.
  * @param {boolean} initGit - Whether git init would run
  * @param {boolean} storeTasksInGit - Whether tasks would be committed
@@ -921,6 +960,11 @@ function displayDryRun(initGit, storeTasksInGit, options) {
 	if (initGit !== false && !insideGitWorkTree()) {
 		lines.push('  start a Git repository');
 	}
+	if (storeTasksInGit && (initGit !== false || insideGitWorkTree())) {
+		lines.push(
+			`  set up Git to merge tasks.json by task (${GITATTRIBUTES_FILE})`
+		);
+	}
 	lines.push(
 		storeTasksInGit ? '  keep tasks in Git' : '  keep tasks out of Git'
 	);
@@ -928,4 +972,4 @@ function displayDryRun(initGit, storeTasksInGit, options) {
 }
 
 // Ensure necessary functions are exported
-export { initializeProject, log };
+export { initializeProject, log, setUpMergeDriver };

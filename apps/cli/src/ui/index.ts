@@ -158,6 +158,16 @@ export {
 	formatUncheckedCriteria
 } from './formatters/checklist-formatters.js';
 
+// Merge driver formatters (tasks.json across branches)
+export {
+	type MergeConflictRow,
+	type MergeDriverSetup,
+	type MergeRenumberedRow,
+	formatMergeConflicts,
+	formatMergeDriverSetup,
+	formatMergeRenumbered
+} from './formatters/merge-driver-formatters.js';
+
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
 export {

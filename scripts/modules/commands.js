@@ -121,7 +121,7 @@ import {
 	findInvalidRulesProfiles
 } from '../../src/constants/profiles.js';
 import { getTaskGraphVersion } from '../../src/utils/getVersion.js';
-import { initializeProject } from '../init.js';
+import { initializeProject, setUpMergeDriver } from '../init.js';
 
 /**
  * The next step to suggest when an AI-backed command fails for a reason the
@@ -2195,10 +2195,34 @@ function registerCommands(programInstance) {
 		.option('--git-tasks', 'Store tasks in Git')
 		.option('--no-git-tasks', 'No Git storage of tasks')
 		.option(
+			'--merge-driver',
+			'Only set up Git to merge tasks.json by task (existing projects)'
+		)
+		.option(
 			UPSTREAM_IMPORT_FLAG,
 			`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
 		)
 		.action(async (cmdOptions) => {
+			if (cmdOptions.mergeDriver) {
+				const root = findProjectRoot() || process.cwd();
+				try {
+					console.log(ui.formatMergeDriverSetup(setUpMergeDriver(root)));
+				} catch (error) {
+					if (error?.name === 'NotAGitRepositoryError') {
+						printError(
+							"This folder isn't in a Git repository",
+							'Run `git init` first, then `taskgraph init --merge-driver`'
+						);
+					} else {
+						printError(
+							`Couldn't set up the tasks.json merge driver: ${error.message}`
+						);
+					}
+					process.exit(1);
+				}
+				return;
+			}
+
 			// cmdOptions contains parsed arguments
 			// Parse rules: accept space or comma separated, default to all available rules
 			let selectedProfiles = RULE_PROFILES;
@@ -3352,6 +3376,9 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	'init',
 	'help',
 	'completion',
+	// Git runs the merge driver from the repository root, which may not be
+	// the project root
+	'merge-driver',
 	'tui',
 	'repl'
 ]);
@@ -3470,7 +3497,7 @@ async function runCLI(argv = process.argv) {
 		// init creates the config, and models and lang edit it and report a
 		// missing one as an error, so the "using default settings" warning
 		// would only repeat or contradict them
-		if (['init', 'models', 'lang'].includes(argv[2])) {
+		if (['init', 'models', 'lang', 'merge-driver'].includes(argv[2])) {
 			setSuppressConfigWarnings(true);
 		}
 		// Only the top-level help screen gets the banner; routine commands lead
@@ -3484,12 +3511,15 @@ async function runCLI(argv = process.argv) {
 		// Check for updates BEFORE executing the command (skip entirely in test/CI mode)
 		// `completion` output is usually redirected into a file, so nothing else
 		// may be printed to stdout before or after it
-		const isCompletion = argv[2] === 'completion';
+		// The merge driver runs inside `git merge`: no update check, no notices
+		const printsOnlyItsOwnOutput = ['completion', 'merge-driver'].includes(
+			argv[2]
+		);
 		const skipAutoUpdate =
 			process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1' ||
 			process.env.CI ||
 			process.env.NODE_ENV === 'test' ||
-			isCompletion;
+			printsOnlyItsOwnOutput;
 
 		const currentVersion = getTaskGraphVersion();
 		const updateInfo = skipAutoUpdate
@@ -3527,7 +3557,7 @@ async function runCLI(argv = process.argv) {
 		// state.json said the notice hadn't been shown, which included every
 		// new project after its first tasks were created.
 		try {
-			if (isCompletion) return;
+			if (printsOnlyItsOwnOutput) return;
 			const statePath = initTaskGraph({}).getStatePath();
 
 			if (statePath && fs.existsSync(statePath)) {
