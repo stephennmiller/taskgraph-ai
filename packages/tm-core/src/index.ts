@@ -252,6 +252,17 @@ export {
 	type ArchivedIds
 } from './modules/tasks/utils/index.js';
 
+// Tags named after git branches
+export {
+	createTagFromBranch,
+	resolveBranchTag,
+	recordBranchTag,
+	tagNameForBranch,
+	type BranchTag,
+	type CreateBranchTag,
+	type CreateTagFromBranchResult
+} from './modules/tasks/utils/index.js';
+
 // Older status spellings ('completed') read as 'done' on load
 export {
 	normalizeTaskStatus,
