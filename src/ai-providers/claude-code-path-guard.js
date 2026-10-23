@@ -43,16 +43,14 @@ export function isInsideRoot(root, candidate) {
 	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
 }
 
-// Names that hold credentials. .env.example and friends hold none. .aws is
-// refused whole: besides credentials it holds SSO and CLI token caches.
+// Names that hold credentials. .env.example and friends hold none. .aws and
+// .kube are refused whole: besides credentials and kubeconfigs (config,
+// config-staging, ...) they hold SSO, CLI and OIDC token caches.
 const SECRET_NAME =
-	/^(\.env([._-].*)?|\.envrc|\.git|\.git-credentials|\.aws|\.npmrc|[._]netrc|\.pypirc|\.pgpass|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore|jks|ppk)$/i;
+	/^(\.env([._-].*)?|\.envrc|\.git|\.git-credentials|\.aws|\.kube|\.npmrc|[._]netrc|\.pypirc|\.pgpass|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore|jks|ppk)$/i;
 const PUBLIC_ENV = /^\.env[._-](example|sample|template)$/i;
 // Files that are secret only inside a given directory: [directory, file]
-const SECRET_PAIRS = [
-	['.docker', 'config.json'],
-	['.kube', 'config']
-];
+const SECRET_PAIRS = [['.docker', 'config.json']];
 // A Windows 8.3 short name such as ENV~1 or ENVLOC~1.LOC. It can stand for
 // any long name, .env included, so it is refused whatever it points at.
 const SHORT_NAME = /^[^.~]{1,7}~\d+(\.[^.]{0,3})?$/;
@@ -118,6 +116,7 @@ const SECRET_GLOBS = [
 	'.git',
 	'.git-credentials',
 	'.aws',
+	'.kube',
 	'.npmrc',
 	'.netrc',
 	'_netrc',

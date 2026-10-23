@@ -210,6 +210,9 @@ describe('claude-code path guard', () => {
 			['.pypirc'],
 			['.aws/credentials'],
 			['.aws/sso/cache/token.json'],
+			// kubelogin keeps OIDC tokens here
+			['.kube/cache/oidc-login/token'],
+			['.kube/config-staging'],
 			['.docker/config.json'],
 			['home/.Docker/Config.json'],
 			// #370, whose plain names are covered below
@@ -250,6 +253,9 @@ describe('claude-code path guard', () => {
 		it('denies a Grep aimed at a secret file or directory', () => {
 			expect(
 				getPathViolation(root, 'Grep', { pattern: 'x', path: '.git' })
+			).toMatch(/secret/);
+			expect(
+				getPathViolation(root, 'Grep', { pattern: 'x', path: '.kube' })
 			).toMatch(/secret/);
 		});
 
@@ -308,7 +314,7 @@ describe('claude-code path guard', () => {
 			['src/jks.js'],
 			['src/ppk-reader.ts'],
 			['kube/config'],
-			['.kube/cache/discovery.json'],
+			['.kubectl/config'],
 			['deploy/config']
 		])('still allows %s', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
@@ -437,6 +443,7 @@ describe('claude-code path guard', () => {
 			'keys/server.ppk',
 			'.pgpass',
 			'.kube/config',
+			'.kube/cache/oidc-login/token',
 			'nested/.kube/config'
 		];
 
@@ -446,8 +453,7 @@ describe('claude-code path guard', () => {
 				...secrets,
 				'src/app.js',
 				'README.md',
-				'.docker/daemon.json',
-				'.kube/cache/discovery.json'
+				'.docker/daemon.json'
 			]) {
 				fs.mkdirSync(path.dirname(path.join(project, file)), {
 					recursive: true
@@ -513,7 +519,6 @@ describe('claude-code path guard', () => {
 			);
 			expect(lines).toEqual([
 				'./.docker/daemon.json:1:API_KEY=.docker/daemon.json',
-				'./.kube/cache/discovery.json:1:API_KEY=.kube/cache/discovery.json',
 				'./README.md:1:API_KEY=README.md',
 				'./src/app.js:1:API_KEY=src/app.js'
 			]);
