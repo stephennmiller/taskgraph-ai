@@ -62,7 +62,7 @@ export function withoutClaim(
 }
 
 /** Copy of `item` with its metadata replaced; no `metadata` key when empty */
-export function withMetadata<T extends { metadata?: Record<string, unknown> }>(
+function withMetadata<T extends { metadata?: Record<string, unknown> }>(
 	item: T,
 	metadata: Record<string, unknown> | undefined
 ): T {

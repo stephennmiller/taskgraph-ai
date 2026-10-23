@@ -42,18 +42,3 @@ export function getLogger(name?: string, config?: LoggerConfig): Logger {
 
 	return loggers.get(name)!;
 }
-
-/**
- * Set the global logger instance
- */
-export function setGlobalLogger(logger: Logger): void {
-	globalLogger = logger;
-}
-
-/**
- * Clear all logger instances (useful for testing)
- */
-export function clearLoggers(): void {
-	globalLogger = null;
-	loggers.clear();
-}

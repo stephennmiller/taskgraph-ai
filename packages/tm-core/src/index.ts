@@ -250,6 +250,9 @@ export {
 	normalizeTaskStatuses
 } from './modules/tasks/utils/index.js';
 
+// An AI rewrite keeps the stored fields its schema has no place for
+export { keepStoredFields } from './modules/tasks/utils/index.js';
+
 // Acceptance criteria and the Definition of Done
 export {
 	normalizeAcceptanceCriteria,
@@ -259,7 +262,6 @@ export {
 	checkDoneGate,
 	getUncheckedCriteria,
 	parseChecklistNumbers,
-	keepChecklistFields,
 	setGeneratedCriteria,
 	MAX_GENERATED_CRITERIA,
 	MAX_GENERATED_CRITERION_LENGTH,

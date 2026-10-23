@@ -10,8 +10,7 @@ import {
 	disableSilentMode,
 	enableSilentMode,
 	isSilentMode,
-	readJSON,
-	writeJSON
+	readJSON
 } from '../../../../scripts/modules/utils.js';
 import { createLogWrapper } from '../../tools/utils.js';
 
@@ -161,27 +160,13 @@ export async function expandTaskDirect(args, log, context = {}) {
 			};
 		}
 
-		// If force flag is set, clear existing subtasks
+		// With force, expandTask replaces the subtasks (and drops dependencies
+		// and links on them) in its locked write, once the AI call succeeds
 		if (hasExistingSubtasks && forceFlag) {
 			log.info(
-				`Force flag set. Clearing existing subtasks for task ${taskId}.`
+				`Force flag set. Replacing existing subtasks for task ${taskId}.`
 			);
-			task.subtasks = [];
 		}
-
-		// Keep a copy of the task before modification
-		const originalTask = JSON.parse(JSON.stringify(task));
-
-		// Tracking subtasks count before expansion
-		const subtasksCountBefore = task.subtasks ? task.subtasks.length : 0;
-
-		// Directly modify the data instead of calling the CLI function
-		if (!task.subtasks) {
-			task.subtasks = [];
-		}
-
-		// Save tasks.json with potentially empty subtasks array and proper context
-		writeJSON(tasksPath, data, projectRoot, tag);
 
 		// Create logger wrapper using the utility
 		const mcpLog = createLogWrapper(log);
@@ -219,10 +204,8 @@ export async function expandTaskDirect(args, log, context = {}) {
 			const updatedData = readJSON(tasksPath, projectRoot);
 			const updatedTask = updatedData.tasks.find((t) => t.id === taskId);
 
-			// Calculate how many subtasks were added
-			const subtasksAdded = updatedTask.subtasks
-				? updatedTask.subtasks.length - subtasksCountBefore
-				: 0;
+			// Any old subtasks were replaced, so all of them are new
+			const subtasksAdded = updatedTask.subtasks?.length ?? 0;
 
 			// Return the result, including telemetryData
 			log.info(

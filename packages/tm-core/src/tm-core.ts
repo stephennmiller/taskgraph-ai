@@ -49,14 +49,11 @@ export interface TmCoreOptions {
  *
  * @example MCP integration with logging
  * ```typescript
- * import { LogLevel } from '@tm/core/logger';
- *
  * // In MCP tool execute function
  * async function execute(args, log) {
  *   const tmcore = await createTmCore({
  *     projectPath: args.projectRoot,
  *     loggerConfig: {
- *       level: LogLevel.INFO,
  *       mcpMode: true,
  *       logCallback: log  // MCP log function
  *     }

@@ -1,3 +1,4 @@
+import { removeAllSubtasks } from '@tm/core';
 import { log, readJSON, writeJSON } from '../utils.js';
 
 /**
@@ -90,12 +91,12 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 	const empty = [];
 
 	for (const task of tasks) {
-		const count = task.subtasks?.length ?? 0;
+		// Dependencies and links on the subtasks go with them
+		const count = removeAllSubtasks(data.tasks, task);
 		if (count === 0) {
 			empty.push({ id: task.id, title: task.title });
 			continue;
 		}
-		task.subtasks = [];
 		cleared.push({ id: task.id, title: task.title, count });
 		log('debug', `Cleared ${count} subtasks from task ${task.id}`);
 	}

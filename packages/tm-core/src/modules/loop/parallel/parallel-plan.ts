@@ -11,7 +11,7 @@ import { LoopError } from '../loop-task.js';
 export const MAX_PARALLEL = 16;
 
 /** Branch prefix for task worktrees: `taskgraph/task-<id>` */
-export const TASK_BRANCH_PREFIX = 'taskgraph/task-';
+const TASK_BRANCH_PREFIX = 'taskgraph/task-';
 
 /** A `--parallel` error the CLI prints as-is, with the fix underneath */
 export class ParallelLoopError extends LoopError {

@@ -3,8 +3,7 @@
  * table (see formatters/task-list-formatters.ts)
  */
 
-import type { Task, TaskStatus } from '@tm/core';
-import { isTaskComplete } from '../../utils/task-status.js';
+import { isTaskComplete, type Task, type TaskStatus } from '@tm/core';
 
 /**
  * Statistics for task collection
