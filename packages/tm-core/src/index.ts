@@ -20,8 +20,8 @@ import type { TasksDomain } from './modules/tasks/tasks-domain.js';
  *
  * // Access domains
  * const tasks = await tmcore.tasks.list();
- * await tmcore.git.commit('feat: add feature');
- * const config = tmcore.config.get('models.main');
+ * await tmcore.git.createCommit('feat: add feature');
+ * const modelConfig = tmcore.config.getModelConfig();
  * ```
  */
 export { createTmCore, TmCore, type TmCoreOptions } from './tm-core.js';

@@ -43,7 +43,7 @@ export interface TmCoreOptions {
  *
  * // Access any domain
  * const tasks = await tmcore.tasks.list();
- * await tmcore.git.commit('feat: add feature');
+ * await tmcore.git.createCommit('feat: add feature');
  * const modelConfig = tmcore.config.getModelConfig();
  * ```
  *
