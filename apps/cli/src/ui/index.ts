@@ -79,6 +79,18 @@ export {
 // What parse-prd --append found changed in the PRD
 export { formatPrdDelta } from './formatters/prd-delta-formatters.js';
 
+// What parse-prd --clarify says around its questions
+export {
+	formatClarifyIntro,
+	formatClarifyAnswer,
+	formatNoClarifyQuestions,
+	formatAcceptedSuggestions,
+	formatClarificationsSaved,
+	formatClarifyCancelled,
+	type AcceptedReason,
+	type ClarificationsSaved
+} from './formatters/clarify-formatters.js';
+
 // The line expand --all ends with
 export {
 	formatExpandAll,

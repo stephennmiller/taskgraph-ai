@@ -44,6 +44,7 @@ export * from './utils/index.js';
 export * as ui from './ui/index.js';
 
 export { runInteractiveSetup } from './commands/models/index.js';
+export { collectClarifications } from './commands/parse-prd/clarify-prompts.js';
 
 // Re-export commonly used types from tm-core
 export type {

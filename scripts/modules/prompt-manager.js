@@ -15,6 +15,9 @@ import expandTaskPrompt from '../../src/prompts/expand-task.json' with {
 import parsePrdPrompt from '../../src/prompts/parse-prd.json' with {
 	type: 'json'
 };
+import parsePrdClarifyPrompt from '../../src/prompts/parse-prd-clarify.json' with {
+	type: 'json'
+};
 import researchPrompt from '../../src/prompts/research.json' with {
 	type: 'json'
 };
@@ -45,6 +48,7 @@ export class PromptManager {
 			['add-task', addTaskPrompt],
 			['research', researchPrompt],
 			['parse-prd', parsePrdPrompt],
+			['parse-prd-clarify', parsePrdClarifyPrompt],
 			['update-task', updateTaskPrompt],
 			['update-tasks', updateTasksPrompt],
 			['update-subtask', updateSubtaskPrompt]
