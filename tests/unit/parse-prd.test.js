@@ -55,6 +55,7 @@ vi.doMock('../../scripts/modules/config-manager.js', () => ({
 
 // Mock utils comprehensively to prevent CLI behavior
 vi.doMock('../../scripts/modules/utils.js', () => ({
+	withFileLockSync: vi.fn((filepath, callback) => callback()),
 	log: vi.fn(),
 	writeJSON: vi.fn(),
 	enableSilentMode: vi.fn(),

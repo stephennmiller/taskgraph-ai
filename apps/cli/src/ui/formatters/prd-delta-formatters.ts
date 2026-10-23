@@ -24,10 +24,11 @@ const plural = (count: number, noun: string) =>
 
 /** `4, 9, 12`; past six IDs, `1, 2, 3, 4, 5 +3 more` */
 function listIds(ids: Id[]): string {
-	if (ids.length > 6) {
-		return `${ids.slice(0, 5).join(', ')} +${ids.length - 5} more`;
+	const safe = ids.map(terminalSafe);
+	if (safe.length > 6) {
+		return `${safe.slice(0, 5).join(', ')} +${safe.length - 5} more`;
 	}
-	return ids.join(', ');
+	return safe.join(', ');
 }
 
 /** Unique task IDs in number order */

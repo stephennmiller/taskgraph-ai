@@ -19,7 +19,11 @@ import { TimeoutManager } from '../../../../src/utils/timeout-manager.js';
 import { getDefaultPriority } from '../../config-manager.js';
 import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
-import { ensureTagMetadata, findTaskById } from '../../utils.js';
+import {
+	ensureTagMetadata,
+	findTaskById,
+	withFileLockSync
+} from '../../utils.js';
 import { prdResponseSchema } from './parse-prd-config.js';
 
 /**
@@ -303,9 +307,12 @@ function validateSequentialTaskIds(rawTasks, expectedStartId = 1) {
 }
 
 /**
- * Save tasks to file with tag support
+ * Save tasks to file with tag support. The read-modify-write runs under the
+ * tasks file lock and the file is replaced atomically, so a concurrent
+ * writer's other tags aren't lost and a crash can't leave half a file.
  * @param {string} tasksPath - Path to save tasks
- * @param {Array} tasks - Tasks to save
+ * @param {Array|null} tasks - Tasks to save, or null to keep the tag's tasks
+ *   as they are in the file now (only the metadata changes)
  * @param {string} targetTag - Target tag
  * @param {Object} logger - Logger instance
  * @param {{path: string, snapshot: Object, replace?: boolean}} [prdSnapshot] -
@@ -326,43 +333,60 @@ export function saveTasksToFile(
 		fs.mkdirSync(tasksDir, { recursive: true });
 	}
 
-	// Read existing file to preserve other tags
-	const outputData = readExistingTasksFile(tasksPath);
+	const saved = withFileLockSync(
+		tasksPath,
+		() => {
+			// Read existing file to preserve other tags
+			const outputData = readExistingTasksFile(tasksPath);
+			const current = outputData[targetTag];
+			const tagTasks =
+				tasks ?? (Array.isArray(current?.tasks) ? current.tasks : []);
 
-	// Update only the target tag
-	outputData[targetTag] = {
-		tasks: tasks,
-		metadata: {
-			// Keep what the tag already records (schemaVersion, counts, ...)
-			...outputData[targetTag]?.metadata,
-			created:
-				outputData[targetTag]?.metadata?.created || new Date().toISOString(),
-			updated: new Date().toISOString(),
-			description: `Tasks for ${targetTag} context`,
-			...(prdSnapshot
-				? {
-						[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
-							prdSnapshot.replace ? {} : outputData[targetTag]?.metadata,
-							prdSnapshot.path,
-							prdSnapshot.snapshot
-						)
-					}
-				: {})
-		}
-	};
+			// Update only the target tag
+			outputData[targetTag] = {
+				tasks: tagTasks,
+				metadata: {
+					// Keep what the tag already records (schemaVersion, counts, ...)
+					...current?.metadata,
+					created: current?.metadata?.created || new Date().toISOString(),
+					updated: new Date().toISOString(),
+					description: `Tasks for ${targetTag} context`,
+					...(prdSnapshot
+						? {
+								[PRD_SNAPSHOT_KEY]: withPrdSnapshot(
+									prdSnapshot.replace ? {} : current?.metadata,
+									prdSnapshot.path,
+									prdSnapshot.snapshot
+								)
+							}
+						: {})
+				}
+			};
 
-	// Ensure proper metadata
-	ensureTagMetadata(outputData[targetTag], {
-		description: `Tasks for ${targetTag} context`
-	});
+			// Ensure proper metadata
+			ensureTagMetadata(outputData[targetTag], {
+				description: `Tasks for ${targetTag} context`
+			});
 
-	// Write back to file
-	fs.writeFileSync(tasksPath, JSON.stringify(outputData, null, 2));
-
-	logger.report(
-		`Successfully saved ${tasks.length} tasks to ${tasksPath}`,
-		'debug'
+			// Write to a temp file and rename it over the tasks file
+			const tempPath = `${tasksPath}.tmp.${process.pid}`;
+			try {
+				fs.writeFileSync(tempPath, JSON.stringify(outputData, null, 2));
+				fs.renameSync(tempPath, tasksPath);
+			} catch (error) {
+				try {
+					if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+				} catch {
+					// The write error is the one to report
+				}
+				throw error;
+			}
+			return tagTasks.length;
+		},
+		{ createIfMissing: true }
 	);
+
+	logger.report(`Successfully saved ${saved} tasks to ${tasksPath}`, 'debug');
 }
 
 /**

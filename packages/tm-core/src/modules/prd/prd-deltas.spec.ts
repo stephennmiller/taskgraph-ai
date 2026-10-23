@@ -122,6 +122,76 @@ describe('diffPrdSections', () => {
 		]);
 	});
 
+	describe('repeated headings', () => {
+		const twoSetups =
+			'# App\n\n## Web\n\n### Setup\n\nInstall node.\n\n## Mobile\n\n### Setup\n\nInstall Xcode.\n';
+		const recorded = buildPrdSnapshot(parsePrdSections(twoSetups));
+
+		it('offers a "Setup" inserted above others as new, not the ones it shifted', () => {
+			// The new Setup takes `setup`; the old ones move to `setup-1`, `setup-2`
+			const sections = parsePrdSections(
+				'# App\n\n## CLI\n\n### Setup\n\nInstall brew.\n\n## Web\n\n### Setup\n\nInstall node.\n\n## Mobile\n\n### Setup\n\nInstall Xcode.\n'
+			);
+
+			const delta = diffPrdSections(sections, PRD, [], recorded);
+
+			expect(delta.added.map((s) => s.text)).toEqual([
+				'## CLI',
+				'### Setup\n\nInstall brew.'
+			]);
+			expect(delta.changed).toEqual([]);
+			expect(delta.removed).toEqual([]);
+		});
+
+		it('reports the first of two "Setup" sections as removed, not changed', () => {
+			const sections = parsePrdSections(
+				'# App\n\n## Web\n\n## Mobile\n\n### Setup\n\nInstall Xcode.\n'
+			);
+
+			const delta = diffPrdSections(sections, PRD, [], recorded);
+
+			expect(delta.added).toEqual([]);
+			expect(delta.changed).toEqual([]);
+			expect(delta.removed.map((r) => r.slug)).toEqual(['setup']);
+		});
+
+		it('does the same from task hashes when the tag has no snapshot', () => {
+			const old = parsePrdSections(twoSetups);
+			const sections = parsePrdSections(
+				'# App\n\n## CLI\n\n### Setup\n\nInstall brew.\n\n## Web\n\n### Setup\n\nInstall node.\n\n## Mobile\n\n### Setup\n\nInstall Xcode.\n'
+			);
+
+			const delta = diffPrdSections(sections, PRD, [
+				task(1, 'setup', 'pending', old),
+				task(2, 'setup-1', 'pending', old)
+			]);
+
+			expect(delta.added.map((s) => s.text)).toContain(
+				'### Setup\n\nInstall brew.'
+			);
+			expect(delta.added.map((s) => s.slug)).not.toContain('setup-2');
+			expect(delta.changed).toEqual([]);
+		});
+	});
+
+	it('handles headings named like Object properties after a JSON round trip', () => {
+		const prd = '# __proto__\n\nx\n\n# Constructor\n';
+		const recorded = JSON.parse(
+			JSON.stringify(buildPrdSnapshot(parsePrdSections(prd)))
+		);
+
+		const delta = diffPrdSections(
+			parsePrdSections(`${prd}\n# toString\n`),
+			PRD,
+			[],
+			recorded
+		);
+
+		expect(Object.getPrototypeOf(recorded)).toBe(Object.prototype);
+		expect(delta.added.map((s) => s.slug)).toEqual(['tostring']);
+		expect(delta.unchanged).toBe(2);
+	});
+
 	describe('without a snapshot', () => {
 		it('treats every section as new when no task cites the PRD', () => {
 			const delta = diffPrdSections(afterSections, PRD, [], undefined);

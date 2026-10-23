@@ -154,6 +154,12 @@ export function withPrdSnapshot(
  * `sourceHash`, when it has one, tells whether its section changed.
  * Cancelled tasks are ignored.
  *
+ * Sections are matched by text before slug. A repeated heading's slug
+ * depends on its position (`setup`, `setup-1`), so inserting a "Setup" above
+ * another shifts the later ones: their text is found under the new slug and
+ * they stay unchanged, and the inserted one is new. A section whose text
+ * matches one recorded before is never offered as new.
+ *
  * @param sections - The PRD's sections now (`parsePrdSections`)
  * @param prdPath - The PRD as tasks cite it (`prdPathForSource`)
  * @param tasks - Top-level tasks of the tag
@@ -179,10 +185,17 @@ export function diffPrdSections(
 		citing.set(source.slug, list);
 	}
 
-	const bySlug = new Map(sections.map((s) => [s.slug, s]));
-	const known = snapshot
-		? new Set(Object.keys(snapshot))
-		: knownFromTasks(sections, bySlug, citing);
+	// What was recorded before: each slug with the hashes known for it. A
+	// snapshot has one per slug; tasks may have none (made before hashes)
+	const previous: Array<{ slug: string; hashes: Set<string> }> = snapshot
+		? Object.entries(snapshot).map(([slug, hash]) => ({
+				slug,
+				hashes: new Set([hash])
+			}))
+		: [...citing].map(([slug, cited]) => ({
+				slug,
+				hashes: new Set(cited.flatMap((task) => (task.hash ? [task.hash] : [])))
+			}));
 
 	const delta: PrdDelta = {
 		path: prdPath,
@@ -190,53 +203,86 @@ export function diffPrdSections(
 		changed: [],
 		removed: [],
 		unchanged: 0,
-		known: known.size > 0 || citing.size > 0
+		known: previous.length > 0
 	};
 
-	for (const section of sections) {
-		if (!known.has(section.slug)) {
-			delta.added.push(section);
-			continue;
-		}
-		const hash = hashPrdSection(section.text);
-		const cited = citing.get(section.slug) ?? [];
-		const before = snapshot?.[section.slug];
-		const changed =
-			before !== undefined
-				? before !== hash
-				: cited.some((task) => task.hash !== undefined && task.hash !== hash);
-		if (changed) {
+	const hashes = sections.map((section) => hashPrdSection(section.text));
+	const matched = new Set<(typeof previous)[number]>();
+	const outcome: Array<'unchanged' | 'changed' | undefined> = [];
+	const claim = (
+		i: number,
+		find: (entry: (typeof previous)[number]) => boolean,
+		result: 'unchanged' | 'changed'
+	) => {
+		if (outcome[i]) return;
+		const entry = previous.find((e) => !matched.has(e) && find(e));
+		if (!entry) return;
+		matched.add(entry);
+		outcome[i] = result;
+	};
+	// Same slug and text, then same text under another slug, then same slug
+	// with other text: a change, unless nothing recorded its text
+	sections.forEach((section, i) =>
+		claim(
+			i,
+			(e) => e.slug === section.slug && e.hashes.has(hashes[i]),
+			'unchanged'
+		)
+	);
+	sections.forEach((_, i) =>
+		claim(i, (e) => e.hashes.has(hashes[i]), 'unchanged')
+	);
+	sections.forEach((section, i) =>
+		claim(i, (e) => e.slug === section.slug && e.hashes.size > 0, 'changed')
+	);
+	sections.forEach((section, i) =>
+		claim(i, (e) => e.slug === section.slug, 'unchanged')
+	);
+
+	// Without a snapshot, sections above or below a matched one count as
+	// known too: their tasks may cite the section around them
+	const near = snapshot
+		? new Set<string>()
+		: knownAround(
+				sections,
+				new Set(sections.filter((_, i) => outcome[i]).map((s) => s.slug))
+			);
+
+	sections.forEach((section, i) => {
+		const result =
+			outcome[i] ?? (near.has(section.slug) ? 'unchanged' : undefined);
+		if (result === 'unchanged') {
+			delta.unchanged++;
+		} else if (result === 'changed') {
 			delta.changed.push({
 				slug: section.slug,
 				title: section.title,
-				taskIds: cited.map((task) => task.id)
+				taskIds: (citing.get(section.slug) ?? []).map((task) => task.id)
 			});
 		} else {
-			delta.unchanged++;
+			delta.added.push(section);
 		}
-	}
+	});
 
 	// Like a change, a removal is reported once: after this run the snapshot
 	// no longer has it. validate-dependencies keeps reporting tasks that cite it
-	const previous = snapshot ? Object.keys(snapshot) : [...citing.keys()];
-	for (const slug of previous) {
-		if (bySlug.has(slug)) continue;
+	for (const entry of previous) {
+		if (matched.has(entry)) continue;
 		delta.removed.push({
-			slug,
-			taskIds: (citing.get(slug) ?? []).map((task) => task.id)
+			slug: entry.slug,
+			taskIds: (citing.get(entry.slug) ?? []).map((task) => task.id)
 		});
 	}
 
 	return delta;
 }
 
-/** Without a snapshot: sections tasks cite, and those above or below them */
-function knownFromTasks(
+/** Sections above or below any of `matched` */
+function knownAround(
 	sections: PrdSection[],
-	bySlug: Map<string, PrdSection>,
-	citing: Map<string, unknown>
+	matched: Set<string>
 ): Set<string> {
-	const known = new Set<string>();
+	const bySlug = new Map(sections.map((s) => [s.slug, s]));
 	const ancestors = (section: PrdSection) => {
 		const chain: string[] = [];
 		let parent = section.parentSlug
@@ -248,12 +294,12 @@ function knownFromTasks(
 		}
 		return chain;
 	};
+	const known = new Set<string>();
 	for (const section of sections) {
 		const above = ancestors(section);
-		if (citing.has(section.slug)) {
-			known.add(section.slug);
+		if (matched.has(section.slug)) {
 			for (const slug of above) known.add(slug);
-		} else if (above.some((slug) => citing.has(slug))) {
+		} else if (above.some((slug) => matched.has(slug))) {
 			known.add(section.slug);
 		}
 	}

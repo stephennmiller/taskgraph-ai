@@ -42,4 +42,23 @@ describe('applyTagUpdate', () => {
 
 		expect(saved.metadata).toMatchObject({ taskCount: 1, prdSections });
 	});
+
+	it('copies a __proto__ key from the file as data, without touching prototypes', () => {
+		const existing = JSON.parse(
+			'{"tasks":[],"metadata":{"__proto__":{"polluted":true},"note":"kept"}}'
+		);
+
+		const saved = applyTagUpdate(
+			new FormatHandler(),
+			existing,
+			'master',
+			[task],
+			buildTagMetadata([task], 'master')
+		);
+
+		expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+		expect(Object.getPrototypeOf(saved.metadata)).toBe(Object.prototype);
+		expect(saved.metadata.polluted).toBeUndefined();
+		expect(saved.metadata.note).toBe('kept');
+	});
 });

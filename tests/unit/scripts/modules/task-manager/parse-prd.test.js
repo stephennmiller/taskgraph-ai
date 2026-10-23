@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 
 // Mock the dependencies before importing the module under test
 vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	withFileLockSync: vi.fn((filepath, callback) => callback()),
 	readJSON: vi.fn(),
 	writeJSON: vi.fn(),
 	log: vi.fn(),
@@ -233,6 +234,8 @@ vi.doMock('fs', () => ({
 		existsSync: vi.fn(),
 		mkdirSync: vi.fn(),
 		writeFileSync: vi.fn(),
+		renameSync: vi.fn(),
+		unlinkSync: vi.fn(),
 		promises: {
 			readFile: vi.fn()
 		}
@@ -240,7 +243,9 @@ vi.doMock('fs', () => ({
 	readFileSync: vi.fn(),
 	existsSync: vi.fn(),
 	mkdirSync: vi.fn(),
-	writeFileSync: vi.fn()
+	writeFileSync: vi.fn(),
+	renameSync: vi.fn(),
+	unlinkSync: vi.fn()
 }));
 
 // Mock path module
@@ -513,8 +518,12 @@ describe('parsePRD', () => {
 
 		// Verify fs.writeFileSync was called with the correct arguments in tagged format
 		expect(fs.default.writeFileSync).toHaveBeenCalledWith(
-			'tasks/tasks.json',
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
 			expect.stringContaining('"master"')
+		);
+		expect(fs.default.renameSync).toHaveBeenCalledWith(
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
+			'tasks/tasks.json'
 		);
 
 		// Verify result
@@ -638,7 +647,7 @@ describe('parsePRD', () => {
 
 		// Verify the file was written after force overwrite
 		expect(fs.default.writeFileSync).toHaveBeenCalledWith(
-			'tasks/tasks.json',
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
 			expect.stringContaining('"master"')
 		);
 	});
@@ -758,7 +767,7 @@ describe('parsePRD', () => {
 
 		// Verify the file was written with merged tasks in the correct tag
 		expect(fs.default.writeFileSync).toHaveBeenCalledWith(
-			'tasks/tasks.json',
+			expect.stringMatching(/^tasks\/tasks\.json\.tmp\./),
 			expect.stringContaining('"master"')
 		);
 

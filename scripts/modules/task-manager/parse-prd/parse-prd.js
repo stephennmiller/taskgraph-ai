@@ -113,9 +113,11 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			// Nothing new: no AI call and no new tasks. Record the PRD as it is
 			// now, so a change or removal is reported once
 			if (hasPrdChanges(prdDelta)) {
+				// null keeps the tag's tasks as the file has them now: only the
+				// recorded hashes change
 				saveTasksToFile(
 					config.tasksPath,
-					existingTasks,
+					null,
 					config.targetTag,
 					logger,
 					prdSnapshot
