@@ -95,6 +95,28 @@ describe('processTasks: acceptanceCriteria', () => {
 			expect(task).not.toHaveProperty('acceptanceCriteria');
 		}
 	});
+
+	it('sanitizes streamed criteria the schema never saw', () => {
+		// The streaming path hands processTasks partial objects without Zod
+		const tasks = processTasks(
+			[
+				aiTask(1, {
+					acceptanceCriteria: ['\x1b[31mLogin\x1b[0m works\n', 42, null]
+				}),
+				aiTask(2, { acceptanceCriteria: 'Login works' }),
+				aiTask(3, { acceptanceCriteria: { text: 'Login works' } })
+			],
+			1,
+			[],
+			'medium'
+		);
+
+		expect(tasks[0].acceptanceCriteria).toEqual([
+			{ text: 'Login works', checked: false }
+		]);
+		expect(tasks[1]).not.toHaveProperty('acceptanceCriteria');
+		expect(tasks[2]).not.toHaveProperty('acceptanceCriteria');
+	});
 });
 
 describe('parse-prd prompt: acceptanceCriteria', () => {

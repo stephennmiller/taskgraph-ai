@@ -46,6 +46,10 @@ Only expands tasks that:
 - Add `force` to expand all regardless of complexity
 - Add `research` for enhanced AI analysis
 
+## Acceptance criteria
+
+Each new subtask comes with 2-5 acceptance criteria of its own, all unchecked. `taskgraph show <id>` numbers them, and `set-status done` refuses the subtask until every one is checked off with `taskgraph set-status --id=<id> --check <n>` (or `/taskgraph:to-done <id>`, which checks them against your changes first).
+
 ## Results
 
 After bulk expansion:

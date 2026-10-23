@@ -25,7 +25,7 @@ import { parsePRDDirect } from '../core/taskgraph-core.js';
 export function registerParsePRDTool(server) {
 	server.addTool({
 		name: 'parse_prd',
-		description: `Parse a Product Requirements Document (PRD) text file to automatically generate initial tasks. Reinitializing the project is not necessary to run this tool. It is recommended to run parse-prd after initializing the project and creating/importing a prd.txt file in the project root's ${TASKGRAPH_DOCS_DIR} directory.`,
+		description: `Parse a Product Requirements Document (PRD) text file to automatically generate initial tasks. Reinitializing the project is not necessary to run this tool. It is recommended to run parse-prd after initializing the project and creating/importing a prd.txt file in the project root's ${TASKGRAPH_DOCS_DIR} directory. Each generated task gets unchecked acceptance criteria that must be checked before set_task_status marks it done.`,
 
 		parameters: z.object({
 			input: z

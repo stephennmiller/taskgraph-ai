@@ -235,6 +235,8 @@ export {
 	parseChecklistNumbers,
 	keepChecklistFields,
 	setGeneratedCriteria,
+	MAX_GENERATED_CRITERIA,
+	MAX_GENERATED_CRITERION_LENGTH,
 	type ChecklistItem,
 	type TaskChecklist,
 	type ChecklistChanges,

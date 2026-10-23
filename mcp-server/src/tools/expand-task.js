@@ -23,7 +23,8 @@ import {
 export function registerExpandTaskTool(server) {
 	server.addTool({
 		name: 'expand_task',
-		description: 'Expand a task into subtasks for detailed implementation',
+		description:
+			'Expand a task into subtasks for detailed implementation. Each new subtask gets unchecked acceptance criteria that must be checked before set_task_status marks it done.',
 		parameters: z.object({
 			id: z.string().describe('ID of task to expand'),
 			num: z.string().optional().describe('Number of subtasks to generate'),
