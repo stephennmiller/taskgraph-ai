@@ -3,6 +3,7 @@
  */
 
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
+import { normalizeTaskStatuses } from '../../../tasks/utils/legacy-status.js';
 
 export interface FileStorageData {
 	tasks: Task[];
@@ -35,7 +36,8 @@ export class FormatHandler {
 	}
 
 	/**
-	 * Extract tasks from data for a specific tag
+	 * Extract tasks from data for a specific tag. The older 'completed'
+	 * status reads as 'done', so the next save writes 'done' back.
 	 */
 	extractTasks(data: any, tag: string): Task[] {
 		if (!data) {
@@ -43,12 +45,12 @@ export class FormatHandler {
 		}
 
 		const format = this.detectFormat(data);
+		const tasks =
+			format === 'legacy'
+				? this.extractTasksFromLegacy(data, tag)
+				: this.extractTasksFromStandard(data);
 
-		if (format === 'legacy') {
-			return this.extractTasksFromLegacy(data, tag);
-		}
-
-		return this.extractTasksFromStandard(data);
+		return Array.isArray(tasks) ? normalizeTaskStatuses(tasks) : tasks;
 	}
 
 	/**
