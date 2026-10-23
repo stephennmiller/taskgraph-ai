@@ -424,7 +424,6 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
         1.  Explicit `projectRoot` passed in `args` (Expected from MCP tools).
         2.  Search upwards from `process.cwd()` (CLI fallback).
     - Throws a specific error if the `tasks.json` file cannot be located.
-- **`getPackagePath()`**: Utility to find the installation path of the `taskgraph-ai` package itself (potentially removable).
 
 ## MCP Server Tool Utilities (`@tm/mcp`)
 
@@ -511,8 +510,8 @@ export {
 
 // Example export from mcp-server/src/core/utils/path-utils.js
 export {
-  findTasksPath,
-  getPackagePath
+  resolveTasksPath,
+  findTasksPath
 };
 
 // Example export from mcp-server/src/tools/utils.js
