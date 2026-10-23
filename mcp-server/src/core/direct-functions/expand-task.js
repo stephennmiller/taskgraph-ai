@@ -3,6 +3,7 @@
  * Direct function implementation for expanding a task into subtasks
  */
 
+import { removeAllSubtasks } from '@tm/core';
 import fs from 'fs';
 import path from 'path';
 import expandTask from '../../../../scripts/modules/task-manager/expand-task.js';
@@ -161,12 +162,13 @@ export async function expandTaskDirect(args, log, context = {}) {
 			};
 		}
 
-		// If force flag is set, clear existing subtasks
+		// If force flag is set, clear existing subtasks, and the dependencies
+		// and links on them: the new subtasks reuse their IDs
 		if (hasExistingSubtasks && forceFlag) {
 			log.info(
 				`Force flag set. Clearing existing subtasks for task ${taskId}.`
 			);
-			task.subtasks = [];
+			removeAllSubtasks(data.tasks, task);
 		}
 
 		// Keep a copy of the task before modification

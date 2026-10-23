@@ -48,10 +48,10 @@ describe('clear-subtasks command', () => {
 		});
 
 	const tasksPath = () => path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+	const readTasks = () =>
+		JSON.parse(fs.readFileSync(tasksPath(), 'utf8')).master.tasks;
 	const subtaskCounts = () =>
-		JSON.parse(fs.readFileSync(tasksPath(), 'utf8')).master.tasks.map(
-			(t: { subtasks: unknown[] }) => t.subtasks.length
-		);
+		readTasks().map((t: { subtasks: unknown[] }) => t.subtasks.length);
 
 	beforeEach(() => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-clear-'));
@@ -109,6 +109,29 @@ describe('clear-subtasks command', () => {
 
 		expect(result.status).toBe(1);
 		expect(subtaskCounts()).toEqual([3, 1, 0]);
+	});
+
+	it('drops dependencies and links on the cleared subtasks (#320)', () => {
+		run(['add-dependency', '--id=3', '--depends-on=1.2']);
+		run(['add-dependency', '--id=2.1', '--depends-on=1.3', '--type=related']);
+
+		const result = run(['clear-subtasks', '--id=1']);
+
+		expect(result.status).toBe(0);
+		const [, second, third] = readTasks();
+		expect(third.dependencies).toEqual([]);
+		expect(second.subtasks[0].metadata?.taskLinks).toBeUndefined();
+		expect(run(['validate-dependencies']).status).toBe(0);
+	});
+
+	it('remove-subtask drops dependencies on the removed subtask too', () => {
+		run(['add-dependency', '--id=3', '--depends-on=1.2']);
+
+		const result = run(['remove-subtask', '--id=1.2']);
+
+		expect(result.status).toBe(0);
+		expect(readTasks()[2].dependencies).toEqual([]);
+		expect(run(['validate-dependencies']).status).toBe(0);
 	});
 
 	it('says so when there is nothing to clear', () => {

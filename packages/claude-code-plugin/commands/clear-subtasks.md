@@ -67,9 +67,8 @@ Continue? (y/n)
 
 1. List all subtasks for confirmation
 2. Check for in-progress work
-3. Remove all subtasks
+3. Remove all subtasks (the command also drops dependencies and links on them)
 4. Update parent task
-5. Clean up dependencies
 
 ## Alternative Options
 
