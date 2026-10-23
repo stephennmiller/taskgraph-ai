@@ -4,6 +4,14 @@
  * tasks, subtasks and missing IDs are read. A task that lists itself as a
  * dependency is reported as a one-task cycle. Walks iteratively, so long
  * chains don't overflow the stack.
+ *
+ * A subtask also waits on what its parent waits on. Those blockers are drawn
+ * under the parent (a node with `parentOf` set), so the tree says where they
+ * come from:
+ *
+ *   2.1 Write the schema
+ *   └─ 2 Build the API      (parentOf: "2.1")
+ *      └─ 1 Set up the database  (ready)
  */
 
 import { isTaskComplete } from '../../common/constants/index.js';
@@ -35,6 +43,12 @@ export interface BlockerNode {
 	blockers: BlockerNode[];
 	/** Already shown elsewhere in the tree, so not expanded again */
 	repeated?: boolean;
+	/**
+	 * Set when this node is the parent of the task above it. Its `blockers`
+	 * are the parent's own blockers, which the subtask waits on too; the
+	 * parent itself is not something to finish first
+	 */
+	parentOf?: string;
 }
 
 /** A dependency: `from` lists `to` as something it needs */
@@ -71,19 +85,25 @@ const STALLED: TaskStatus[] = ['deferred', 'blocked'];
 
 interface Frame {
 	node: DependencyGraphNode;
-	deps: DependencyGraphNode[];
+	/** Dependencies inherited from the parent, then the listed ones */
+	deps: Array<{ node: DependencyGraphNode; inherited: boolean }>;
 	at: number;
 	out: BlockerNode[];
+	/** Blockers inherited from the parent, drawn under it */
+	inheritedOut: BlockerNode[];
+	/** This task is a dependency the frame below inherited from its parent */
+	inherited?: boolean;
 }
 
 export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
-	const { nodes } = buildDependencyGraph(tasks);
+	const graph = buildDependencyGraph(tasks);
+	const { nodes } = graph;
 	const target = nodes.get(String(id));
 	if (!target) {
 		throw new Error(`Task ${id} not found`);
 	}
 
-	const cycles = findCycles(tasks);
+	const cycles = findCycles(tasks, graph);
 	const rootCauses = new Map<string, BlockerRootCause>();
 	const expanded = new Set<string>();
 	const kinds = new Map<string, BlockerKind | undefined>();
@@ -124,14 +144,76 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		};
 	};
 
-	const open = (node: DependencyGraphNode): Frame => {
-		const out: BlockerNode[] = [];
-		if (node.selfDependency) out.push(addLoopEdge(node, node));
-		const deps = node.dependencies
+	const unfinished = (ids: string[]) =>
+		ids
 			.map((d) => nodes.get(d) as DependencyGraphNode)
 			.filter((d) => !isTaskComplete(d.status))
 			.sort((a, b) => compareIds(a.id, b.id));
-		return { node, deps, at: 0, out };
+
+	const open = (node: DependencyGraphNode): Frame => {
+		const out: BlockerNode[] = [];
+		const inheritedOut: BlockerNode[] = [];
+		if (node.selfDependency) out.push(addLoopEdge(node, node));
+		// Inherited first: they're drawn first, under the parent
+		const deps: Frame['deps'] = [];
+		const parent = node.parent
+			? (nodes.get(node.parent) as DependencyGraphNode)
+			: undefined;
+		if (parent && !isTaskComplete(parent.status)) {
+			// A parent on the path already shows its own blockers; only a way
+			// back onto the path (a loop) is news
+			const parentShown = onPath.has(parent.id);
+			for (const dep of unfinished(node.inherited)) {
+				if (!parentShown || onPath.has(dep.id)) {
+					deps.push({ node: dep, inherited: true });
+				}
+			}
+			if (!parentShown) {
+				if (parent.selfDependency) {
+					inheritedOut.push(addLoopEdge(parent, parent));
+				}
+				for (const missing of [...parent.missing].sort(compareIds)) {
+					addCause({ id: missing, kind: 'missing', listedBy: [parent.id] });
+					inheritedOut.push({ id: missing, kind: 'missing', blockers: [] });
+				}
+			}
+		}
+		for (const dep of unfinished(node.dependencies)) {
+			deps.push({ node: dep, inherited: false });
+		}
+		return { node, deps, at: 0, out, inheritedOut };
+	};
+
+	/** Parents whose inherited blockers are already drawn */
+	const parentsShown = new Set<string>();
+
+	/** Close a frame: its blockers, with inherited ones under the parent */
+	const blockersOf = (frame: Frame): BlockerNode[] => {
+		if (!frame.inheritedOut.length) return frame.out;
+		const parent = nodes.get(
+			frame.node.parent as string
+		) as DependencyGraphNode;
+		// A sibling inherits the same blockers; point back instead of redrawing.
+		// Drawn earlier: closed before, or an open frame below (its inherited
+		// blockers come first, so they are drawn above this one)
+		const drawnEarlier =
+			parentsShown.has(parent.id) ||
+			stack.some(
+				(f) => f.node.parent === parent.id && f.inheritedOut.length > 0
+			);
+		const again = drawnEarlier && frame.inheritedOut.every((b) => b.repeated);
+		parentsShown.add(parent.id);
+		return [
+			{
+				id: parent.id,
+				title: parent.title,
+				status: parent.status,
+				parentOf: frame.node.id,
+				blockers: again ? [] : frame.inheritedOut,
+				...(again && { repeated: true })
+			},
+			...frame.out
+		];
 	};
 
 	if (isTaskComplete(target.status)) {
@@ -153,11 +235,16 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		const frame = stack[stack.length - 1];
 
 		if (frame.at < frame.deps.length) {
-			const dep = frame.deps[frame.at++];
+			const { node: dep, inherited } = frame.deps[frame.at++];
+			const out = inherited ? frame.inheritedOut : frame.out;
 			if (onPath.has(dep.id)) {
-				frame.out.push(addLoopEdge(frame.node, dep));
+				// An inherited edge is the parent's dependency; that's what to remove
+				const from = inherited
+					? (nodes.get(frame.node.parent as string) as DependencyGraphNode)
+					: frame.node;
+				out.push(addLoopEdge(from, dep));
 			} else if (expanded.has(dep.id)) {
-				frame.out.push({
+				out.push({
 					id: dep.id,
 					title: dep.title,
 					status: dep.status,
@@ -168,7 +255,9 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 			} else {
 				expanded.add(dep.id);
 				onPath.add(dep.id);
-				stack.push(open(dep));
+				const child = open(dep);
+				child.inherited = inherited;
+				stack.push(child);
 			}
 			continue;
 		}
@@ -179,15 +268,16 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		}
 
 		stack.pop();
+		const below = blockersOf(frame);
 		const parent = stack[stack.length - 1];
 		if (!parent) {
-			blockers = frame.out;
+			blockers = below;
 			break;
 		}
 
 		const node = frame.node;
 		onPath.delete(node.id);
-		const kind: BlockerKind | undefined = frame.out.length
+		const kind: BlockerKind | undefined = below.length
 			? undefined
 			: STALLED.includes(node.status)
 				? 'stalled'
@@ -196,12 +286,12 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		if (kind) {
 			addCause({ id: node.id, title: node.title, status: node.status, kind });
 		}
-		parent.out.push({
+		(frame.inherited ? parent.inheritedOut : parent.out).push({
 			id: node.id,
 			title: node.title,
 			status: node.status,
 			kind,
-			blockers: frame.out
+			blockers: below
 		});
 	}
 

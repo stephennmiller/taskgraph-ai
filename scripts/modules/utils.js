@@ -10,7 +10,8 @@ import {
 	mergeTagChanges,
 	normalizeTaskStatus,
 	getOwnKey,
-	readArchivedIdsSync
+	readArchivedIdsSync,
+	stampTasksFileSchemaVersion
 } from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
@@ -1073,7 +1074,9 @@ function getFileOps() {
  */
 async function modifyJSON(filepath, modifier) {
 	const fileOps = getFileOps();
-	await fileOps.modifyJson(filepath, modifier);
+	await fileOps.modifyJson(filepath, async (current) =>
+		stampTasksFileSchemaVersion(await modifier(current))
+	);
 }
 
 /**
@@ -1268,6 +1271,9 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						cleanData = finalCleanData;
 					}
 				}
+
+				// Label every tag with the schema version, as @tm/core's writer does
+				cleanData = stampTasksFileSchemaVersion(cleanData);
 
 				// Use atomic write: write to temp file then rename
 				// This prevents partial writes from corrupting the file

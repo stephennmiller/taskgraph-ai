@@ -93,6 +93,38 @@ describe('why command', () => {
 		});
 	});
 
+	it('shows a subtask waiting on what its parent waits on', () => {
+		const tasksFile = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+		const data = JSON.parse(fs.readFileSync(tasksFile, 'utf8'));
+		data.master.tasks[1].subtasks = [
+			{
+				id: 1,
+				title: 'Write the migration',
+				description: '',
+				details: '',
+				status: 'pending',
+				dependencies: []
+			}
+		];
+		fs.writeFileSync(tasksFile, JSON.stringify(data, null, 2));
+
+		const result = run(['why', '2.1']);
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toContain('└─ ○ 2  Add Postgres  ← parent');
+		expect(result.stdout).toContain(
+			'   └─ ○ 1  Set up the API  ← ready to start'
+		);
+	});
+
+	it('exits 1 with a hint for a tag that does not exist', () => {
+		const result = run(['why', '1', '--tag', 'nope']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('Tag "nope" not found');
+		expect(result.stderr).toContain('taskgraph tags');
+	});
+
 	it('exits 1 for a task that does not exist', () => {
 		const result = run(['why', '99']);
 

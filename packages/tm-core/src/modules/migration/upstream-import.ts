@@ -10,6 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { stampTasksFileSchemaVersion } from '../storage/adapters/file-storage/schema-version.js';
 import { resolvesWithin } from './import-paths.js';
 
 // The only source file that names the project TaskGraph was forked from:
@@ -378,7 +379,11 @@ export function importUpstreamProject(
 		name,
 		tasks: (tag.tasks as unknown[]).length
 	}));
-	if (tags.length > 0) writeJson(path.join(target, TASKS_FILE), tagged);
+	if (tags.length > 0)
+		writeJson(
+			path.join(target, TASKS_FILE),
+			stampTasksFileSchemaVersion(tagged)
+		);
 
 	const copiedFiles = Object.fromEntries(
 		COPIED_FOLDERS.map((folder) => [

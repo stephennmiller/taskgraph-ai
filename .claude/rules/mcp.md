@@ -187,7 +187,7 @@ execute: async (args, { log, session }) => {
 ```
 
 - **args**: Validated parameters.
-- **context**: Contains `{ log, session }` from FastMCP. (Removed `reportProgress`).
+- **context**: Contains `{ log, session }` from FastMCP, plus `reportProgress` for tools that stream progress (see Progress Reporting below).
 
 ### Standard Tool Execution Pattern with Path Normalization (Updated)
 
@@ -292,7 +292,7 @@ export function registerInitializeProjectTool(server) {
 
 ### Logging Convention
 
-The `log` object (destructured from `context`) provides standardized logging methods. Use it within both the `execute` method and the `*Direct` functions. **If progress indication is needed within a direct function, use `log.info()` instead of `reportProgress`**.
+The `log` object (destructured from `context`) provides standardized logging methods. Use it within both the `execute` method and the `*Direct` functions. For progress the client can show, pass `reportProgress` through instead (see Progress Reporting below).
 
 ```javascript
 // Proper logging usage
@@ -327,7 +327,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
     - Pass `{ mcpLog: logWrapper, session }` context if core logic needs it.
   - Handle errors.
   - Return standardized result object.
-  - ❌ **DON'T**: Call `reportProgress`.
+  - ❌ **DON'T**: Call `reportProgress` yourself; only forward it to core logic when the tool passed it in `context`.
   - ❌ **DON'T**: Initialize AI clients or call AI services directly.
 
 ## Key Principles
@@ -337,8 +337,8 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 - **Path Resolution via Direct Functions**: The `*Direct` function is responsible for finding the exact `tasks.json` path using `findTasksJsonPath`, relying on the `projectRoot` passed in `args`.
 - **AI Logic in Core Modules**: AI interactions (prompt building, calling unified service) reside within the core logic functions (`scripts/modules/*`), not direct functions.
 - **Silent Mode in Direct Functions**: Wrap *core function* calls (from `scripts/modules`) with `enableSilentMode()` and `disableSilentMode()` if they produce console output not handled by `outputFormat`. Do not wrap AI calls.
-- **Selective Async Processing**: Use `AsyncOperationManager` in the *MCP Tool layer* for operations involving multiple steps or long waits beyond a single AI call (e.g., file processing + AI call + file writing). Simple AI calls handled entirely within the `*Direct` function (like `addTaskDirect`) may not need it at the tool layer.
-- **No `reportProgress` in Direct Functions**: Do not pass or use `reportProgress` within `*Direct` functions. Use `log.info()` for internal progress or report progress from the `AsyncOperationManager` callback in the MCP tool layer.
+- **Long-Running Work Runs Inline**: Tools await their `*Direct` function and return the finished result. There is no background job queue or operation-status tool.
+- **Progress Reporting**: For long work (like `parse_prd`), take `reportProgress` from the tool context, validate it with `checkProgressCapability(reportProgress, log)` from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)), and pass the result in the `*Direct` function's `context`. The direct function forwards it to core logic, which calls it only when it is defined. Otherwise use `log.info()`.
 - **Output Formatting**: Ensure core functions called by `*Direct` functions can suppress CLI output, ideally via an `outputFormat` parameter.
 - **Project Initialization**: Use the initialize_project tool for setting up new projects in integrated environments.
 - **Centralized Utilities**: Use helpers from `mcp-server/src/tools/utils.js`, `mcp-server/src/core/utils/path-utils.js`, and `mcp-server/src/core/utils/ai-client-utils.js`. See `utilities.md`.
@@ -371,23 +371,21 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
             - Pass `outputFormat: 'json'` (or similar) if applicable.
             - Handle errors from the core function.
         - Format the return as `{ success: true/false, data/error, fromCache?: boolean }`.
-        - ❌ **DON'T**: Call `reportProgress`.
+        - ❌ **DON'T**: Call `reportProgress` yourself; forward it from `context` to core logic if the tool passed it.
     - Export the wrapper function.
 
 3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, `handleApiResult`, `createErrorResponse`, `getProjectRootFromSession`, and your `yourCommandDirect` function. Import `AsyncOperationManager` if needed.
+    - Import `zod`, `handleApiResult`, `createErrorResponse`, `getProjectRootFromSession`, and your `yourCommandDirect` function. Import `checkProgressCapability` from `@tm/mcp` if the command reports progress.
     - Implement `registerYourCommandTool(server)`.
     - Define the tool `name` using **snake_case** (e.g., `your_command`).
     - Define the `parameters` using `zod`. Include `projectRoot: z.string().optional()`.
-    - Implement the `async execute(args, { log, session })` method (omitting `reportProgress` from destructuring).
+    - Implement the `async execute(args, { log, session })` method.
         - Get `rootFolder` using `getProjectRootFromSession(session, log)`.
-        - **Determine Execution Strategy**:
-            - **If using `AsyncOperationManager`**: Create the operation, call the `*Direct` function from within the async task callback (passing `log` and `{ session }`), report progress *from the callback*, and return the initial `ACCEPTED` response.
-            - **If calling `*Direct` function synchronously** (like `add-task`): Call `await yourCommandDirect({ ...args, projectRoot }, log, { session });`. Handle the result with `handleApiResult`.
-        - ❌ **DON'T**: Pass `reportProgress` down to the direct function in either case.
+        - Call `await yourCommandDirect({ ...args, projectRoot }, log, { session });` and handle the result with `handleApiResult`.
+        - **If the command is long-running**: also destructure `reportProgress`, and pass `{ session, reportProgress: checkProgressCapability(reportProgress, log) }` as the context (see `mcp-server/src/tools/parse-prd.js`).
 
 5.  **Register Tool**: Import and call `registerYourCommandTool` in `mcp-server/src/tools/index.js`.
 
@@ -435,7 +433,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
    - [ ] Create new file in `mcp-server/src/tools/` with kebab-case naming
    - [ ] Define zod schema for all parameters
    - [ ] Implement the `execute` method following the standard pattern
-   - [ ] Consider using AsyncOperationManager for long-running operations
+   - [ ] For long-running operations, pass `reportProgress` through `checkProgressCapability` to the direct function
    - [ ] Register tool in `mcp-server/src/tools/index.js`
 
 4. **Testing**:
