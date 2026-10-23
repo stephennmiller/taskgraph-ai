@@ -38,6 +38,15 @@ export const TASK_FIELDS = [
 	'assignee',
 	'acceptanceCriteria',
 	'definitionOfDoneChecked',
+	'relevantFiles',
+	'codebasePatterns',
+	'existingInfrastructure',
+	'scopeBoundaries',
+	'implementationApproach',
+	'technicalConstraints',
+	'skills',
+	'category',
+	'databaseId',
 	'complexity',
 	'recommendedSubtasks',
 	'expansionPrompt',
@@ -50,7 +59,8 @@ export type TaskField = (typeof TASK_FIELDS)[number];
 /**
  * Read a comma-separated field list such as `"title,details"`.
  * `id` is always returned. Empty or missing gives the default fields, and
- * `all` gives every field. `withSubtasks` adds `subtasks`.
+ * `all` gives every field. `withSubtasks: true` adds `subtasks`, and
+ * `withSubtasks: false` drops it (the listing then has none to return).
  * @returns The fields to keep, or `'all'` to keep each task whole
  * @throws TaskGraphError naming the valid fields when one isn't a task field
  */
@@ -62,10 +72,10 @@ export function parseTaskFields(
 		.split(',')
 		.map((name) => name.trim())
 		.filter(Boolean);
-	if (names.includes('all')) return 'all';
 
 	const unknown = names.filter(
-		(name) => !(TASK_FIELDS as readonly string[]).includes(name)
+		(name) =>
+			name !== 'all' && !(TASK_FIELDS as readonly string[]).includes(name)
 	);
 	if (unknown.length > 0) {
 		throw new TaskGraphError(
@@ -73,6 +83,7 @@ export function parseTaskFields(
 			ERROR_CODES.VALIDATION_ERROR
 		);
 	}
+	if (names.includes('all')) return 'all';
 	const fields = names.length > 0 ? (names as TaskField[]) : DEFAULT_TASK_FIELDS;
 	return [
 		...new Set<TaskField>([
@@ -80,7 +91,7 @@ export function parseTaskFields(
 			...fields,
 			...(options.withSubtasks ? (['subtasks'] as const) : [])
 		])
-	];
+	].filter((field) => !(field === 'subtasks' && options.withSubtasks === false));
 }
 
 /**

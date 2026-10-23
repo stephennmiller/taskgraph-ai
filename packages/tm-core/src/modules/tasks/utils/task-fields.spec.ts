@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import type { Task } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import { TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import {
 	DEFAULT_TASK_FIELDS,
+	TASK_FIELDS,
+	type TaskField,
 	parseTaskFields,
 	selectTaskFields
 } from './task-fields.js';
@@ -35,8 +38,35 @@ describe('parseTaskFields', () => {
 		]);
 	});
 
+	it('drops subtasks with withSubtasks false', () => {
+		expect(parseTaskFields('title,subtasks', { withSubtasks: false })).toEqual(
+			['id', 'title']
+		);
+	});
+
 	it('reads all as every field', () => {
 		expect(parseTaskFields('title,all')).toBe('all');
+	});
+
+	it('still rejects an unknown field next to all', () => {
+		expect(() => parseTaskFields('all,titel')).toThrow(
+			/^Unknown task field: titel\./
+		);
+	});
+
+	it('accepts every Task field', () => {
+		// Fails to compile when Task gains a field TASK_FIELDS doesn't list
+		const listsAll: [Exclude<keyof Task, TaskField>] extends [never]
+			? true
+			: false = true;
+		expect(listsAll).toBe(true);
+		expect(parseTaskFields('skills,category,relevantFiles')).toEqual([
+			'id',
+			'skills',
+			'category',
+			'relevantFiles'
+		]);
+		expect(TASK_FIELDS).toContain('implementationApproach');
 	});
 
 	it('names the unknown fields and the valid ones', () => {

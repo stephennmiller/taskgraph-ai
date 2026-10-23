@@ -6,7 +6,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Command } from 'commander';
+import { Command } from 'commander';
 import { describe, expect, it } from 'vitest';
 import { ArchiveCommand } from './archive.command.js';
 import { GenerateCommand } from './generate.command.js';
@@ -87,4 +87,22 @@ describe('--json alias', () => {
 	it.each(withFormat)('%s takes --json', (_name, command) => {
 		expect(command.options.map((option) => option.long)).toContain('--json');
 	});
+
+	it.each(withFormat)(
+		'%s: --json sets format to json, and a typed --format wins',
+		(_name, command) => {
+			const option = (long: string) =>
+				command.options.find((candidate) => candidate.long === long)!;
+			const formatFor = (args: string[]): unknown =>
+				new Command('probe')
+					.addOption(option('--format'))
+					.addOption(option('--json'))
+					.action(() => {})
+					.parse(args, { from: 'user' })
+					.opts().format;
+
+			expect(formatFor(['--json'])).toBe('json');
+			expect(formatFor(['--json', '--format', 'text'])).toBe('text');
+		}
+	);
 });
