@@ -18,10 +18,10 @@ This gives you the `taskgraph` command and `taskgraph-mcp`, the optional MCP ser
 From your project folder:
 
 ```bash
-taskgraph init --rules claude
+taskgraph init
 ```
 
-This creates `.taskgraph/` (tasks, docs, config), and a `CLAUDE.md` import with TaskGraph's workflow guide. It also writes a `.mcp.json` that registers the MCP server with the 7 `core` tools. Delete that file if you only want slash commands and the CLI. `init` does not install slash commands: step 3 does.
+This creates `.taskgraph/` (tasks, docs, config), and a `CLAUDE.md` import with TaskGraph's workflow guide. Pass `--no-claude` to skip the `CLAUDE.md` import. `init` does not install slash commands (step 3 does) and doesn't register the MCP server unless you pass `--mcp` (step 4).
 
 <Warning>
 Don't run `init` twice. It only re-adds the same files.

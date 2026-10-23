@@ -64,3 +64,60 @@ describe('init --rules claude leaves slash commands to the plugin', () => {
 		expect(fs.existsSync(tmDir)).toBe(false);
 	});
 });
+
+describe('init --rules claude and MCP', () => {
+	let projectDir;
+	let originalHome;
+	let originalShell;
+
+	beforeEach(() => {
+		originalHome = process.env.HOME;
+		originalShell = process.env.SHELL;
+		process.env.HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-home-'));
+		process.env.SHELL = '/bin/bash';
+		fs.writeFileSync(path.join(process.env.HOME, '.bashrc'), '# mine\n');
+		projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-project-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(process.env.HOME, { recursive: true, force: true });
+		process.env.HOME = originalHome;
+		process.env.SHELL = originalShell;
+		fs.rmSync(projectDir, { recursive: true, force: true });
+	});
+
+	it('writes no .mcp.json unless asked for', () => {
+		convertAllRulesToProfileRules(projectDir, claudeProfile);
+
+		expect(fs.existsSync(path.join(projectDir, '.mcp.json'))).toBe(false);
+	});
+
+	it('leaves an .mcp.json the user already has alone', () => {
+		const file = path.join(projectDir, '.mcp.json');
+		const mine = JSON.stringify({ mcpServers: { other: { command: 'x' } } });
+		fs.writeFileSync(file, mine);
+
+		convertAllRulesToProfileRules(projectDir, claudeProfile);
+
+		expect(fs.readFileSync(file, 'utf8')).toBe(mine);
+	});
+
+	it('registers the TaskGraph MCP server in Claude format with mcp: true', () => {
+		convertAllRulesToProfileRules(projectDir, claudeProfile, { mcp: true });
+
+		const config = JSON.parse(
+			fs.readFileSync(path.join(projectDir, '.mcp.json'), 'utf8')
+		);
+		const servers = Object.values(config.mcpServers);
+		expect(servers).toHaveLength(1);
+		expect(servers[0].type).toBe('stdio');
+	});
+
+	it("does not edit the user's shell startup file", () => {
+		convertAllRulesToProfileRules(projectDir, claudeProfile, { mcp: true });
+
+		expect(
+			fs.readFileSync(path.join(process.env.HOME, '.bashrc'), 'utf8')
+		).toBe('# mine\n');
+	});
+});

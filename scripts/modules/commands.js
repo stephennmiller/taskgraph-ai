@@ -2277,6 +2277,15 @@ function registerCommands(programInstance) {
 			'-r, --rules <rules...>',
 			'Rule profiles to install (claude). Accepts comma or space separated values.'
 		)
+		.option('--claude', 'Set up Claude Code integration (the default)')
+		.option(
+			'--no-claude',
+			'Skip the Claude Code integration (CLAUDE.md import)'
+		)
+		.option(
+			'--mcp',
+			'Also register the TaskGraph MCP server in .mcp.json (Claude Code)'
+		)
 		.option('--skip-install', 'Skip installing dependencies')
 		.option('--dry-run', 'Show what would be done without making changes')
 		.option('--aliases', 'Add shell aliases (tm, taskgraph)')
@@ -2337,6 +2346,14 @@ function registerCommands(programInstance) {
 					selectedProfiles = userSpecifiedProfiles;
 					rulesExplicitlyProvided = true;
 				}
+			}
+
+			if (cmdOptions.mcp && cmdOptions.claude === false) {
+				printError(
+					'--mcp writes Claude Code’s .mcp.json, so it needs the Claude Code integration',
+					'Drop --no-claude, or drop --mcp'
+				);
+				process.exit(1);
 			}
 
 			cmdOptions.rules = selectedProfiles;

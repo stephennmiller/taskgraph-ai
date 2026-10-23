@@ -235,15 +235,3 @@ export function addShellExport(
 		};
 	}
 }
-
-/**
- * Enables Claude Code deferred MCP loading by adding the required env var
- * @returns Result object with success status and details
- */
-export function enableDeferredMcpLoading(): ShellConfigResult {
-	return addShellExport(
-		'ENABLE_EXPERIMENTAL_MCP_CLI',
-		'true',
-		'Claude Code deferred MCP loading (added by TaskGraph)'
-	);
-}

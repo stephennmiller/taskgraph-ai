@@ -18,10 +18,10 @@ npm install -g taskgraph-ai
 2. **Initialize your project** from its folder:
 
 ```bash
-taskgraph init --rules claude
+taskgraph init
 ```
 
-This creates `.taskgraph/`, imports TaskGraph's workflow guide from your project's `CLAUDE.md`, and writes a `.mcp.json` entry for the MCP server.
+This creates `.taskgraph/` and imports TaskGraph's workflow guide from your project's `CLAUDE.md`. Add `--mcp` to also write a `.mcp.json` entry for the MCP server.
 
 3. **(Optional) Use the MCP server.** Slash commands and the CLI do everything without it. To drive TaskGraph in plain language, register the server and run `/mcp` in Claude Code to check that it is connected:
 

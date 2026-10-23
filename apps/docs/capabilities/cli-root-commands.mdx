@@ -372,14 +372,19 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Import a Task Master project (.taskmaster/) into .taskgraph/
     taskgraph init --from-taskmaster
 
-    # Set up the Claude Code integration (CLAUDE.md import and .mcp.json; slash commands come from the plugin)
-    taskgraph init --rules claude
+    # Skip the Claude Code integration (CLAUDE.md import)
+    taskgraph init --no-claude
+
+    # Also register the MCP server in the project's .mcp.json
+    taskgraph init --mcp
 
     # Only set up Git to merge tasks.json by task (existing projects; once per clone)
     taskgraph init --merge-driver
     ```
 
-    `claude` is the only supported rule profile; any other value is rejected with an error. Without `--rules`, `init` asks whether to set up the Claude Code integration (`--yes` skips the prompt and installs nothing).
+    `init` sets up the Claude Code integration by default: it copies TaskGraph's agent guide to `.taskgraph/CLAUDE.md` and imports it from your `CLAUDE.md`. Interactive runs ask, with Yes as the default; `--yes` sets it up without asking, and `--no-claude` skips it. Slash commands and session hooks come from the plugin.
+
+    `init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. `--rules claude` still works; `claude` is the only rule profile.
 
     Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add tasks merge without an ID clash.
   </Accordion>

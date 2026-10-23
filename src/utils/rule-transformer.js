@@ -1,7 +1,7 @@
 /**
  * Rule Transformer Module
- * Installs a rule profile (Claude Code) into a project: lifecycle hooks and
- * MCP configuration. Slash commands are not written: the Claude Code plugin
+ * Installs a rule profile (Claude Code) into a project: lifecycle hooks and,
+ * when asked for, MCP configuration. Slash commands are not written: the Claude Code plugin
  * is the only channel.
  */
 import path from 'path';
@@ -50,9 +50,16 @@ export function getRulesProfile(name) {
  * Install a profile into a project
  * @param {string} projectRoot - The project root directory
  * @param {Object} profile - The profile configuration
+ * @param {{mcp?: boolean}} [options] - mcp: also register the TaskGraph MCP
+ *   server in the profile's MCP config (`init --mcp`). Off by default: the
+ *   CLI, the plugin's slash commands and its hooks need no MCP server.
  * @returns {{success: number, failed: number}} Result counts
  */
-export function convertAllRulesToProfileRules(projectRoot, profile) {
+export function convertAllRulesToProfileRules(
+	projectRoot,
+	profile,
+	{ mcp = false } = {}
+) {
 	const targetDir = path.join(projectRoot, profile.rulesDir);
 
 	let failed = 0;
@@ -74,8 +81,8 @@ export function convertAllRulesToProfileRules(projectRoot, profile) {
 		}
 	}
 
-	// 2. Setup MCP configuration (if enabled)
-	if (profile.mcpConfig !== false) {
+	// 2. Setup MCP configuration (only when asked for)
+	if (mcp && profile.mcpConfig !== false) {
 		try {
 			setupMCPConfiguration(projectRoot, profile.mcpConfigPath);
 			log(
@@ -93,7 +100,7 @@ export function convertAllRulesToProfileRules(projectRoot, profile) {
 	// 3. Post-conversion hook (for finalization)
 	if (typeof profile.onPostConvertRulesProfile === 'function') {
 		try {
-			profile.onPostConvertRulesProfile(targetDir, getAssetsDir());
+			profile.onPostConvertRulesProfile(targetDir, getAssetsDir(), { mcp });
 			log(
 				'debug',
 				`[Rule Transformer] Called onPostConvertRulesProfile for ${profile.profileName}`

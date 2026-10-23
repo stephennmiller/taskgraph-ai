@@ -3,10 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { log } from '../../scripts/modules/utils.js';
 import { createProfile } from './base-profile.js';
-import {
-	enableDeferredMcpLoading,
-	pruneLegacySlashCommands
-} from '@tm/profiles';
+import { pruneLegacySlashCommands } from '@tm/profiles';
 
 // Lifecycle functions for Claude Code profile
 function onAddRulesProfile(targetDir, assetsDir) {
@@ -84,24 +81,6 @@ function onAddRulesProfile(targetDir, assetsDir) {
 			);
 		}
 	}
-
-	// Enable deferred MCP loading for reduced context usage
-	const deferredResult = enableDeferredMcpLoading();
-	if (deferredResult.success) {
-		if (deferredResult.alreadyExists) {
-			log('debug', '[Claude] Deferred MCP loading already configured');
-		} else {
-			log(
-				'debug',
-				`[Claude] Enabled deferred MCP loading in ${deferredResult.shellConfigFile}`
-			);
-		}
-	} else {
-		log(
-			'debug',
-			`[Claude] Could not configure deferred loading: ${deferredResult.message}`
-		);
-	}
 }
 
 /**
@@ -144,8 +123,13 @@ function transformToClaudeFormat(mcpConfig) {
 	return claudeConfig;
 }
 
-function onPostConvertRulesProfile(targetDir, assetsDir) {
+/**
+ * @param {{mcp?: boolean}} [options] - mcp: false when init was not asked to
+ *   set up MCP (`--mcp`), so a .mcp.json the user keeps is left alone
+ */
+function onPostConvertRulesProfile(targetDir, assetsDir, { mcp = true } = {}) {
 	// onAddRulesProfile already ran before this hook; only the MCP config needs converting
+	if (!mcp) return;
 	// Transform MCP configuration to Claude format
 	const mcpConfigPath = path.join(targetDir, '.mcp.json');
 	if (fs.existsSync(mcpConfigPath)) {

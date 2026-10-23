@@ -59,9 +59,6 @@ const GITATTRIBUTES_FILE = '.gitattributes';
 // The alias init adds to the shell config
 const ALIAS_LINE = "alias tm='taskgraph'";
 
-// What @tm/profiles writes to turn on deferred MCP loading
-const DEFERRED_MCP_MARKER = 'ENABLE_EXPERIMENTAL_MCP_CLI';
-
 // Define log levels
 const LOG_LEVELS = {
 	debug: 0,
@@ -136,8 +133,8 @@ function ensureDirectoryExists(dirPath) {
 }
 
 /**
- * Shell startup files init may append to (the `tm` alias, deferred MCP
- * loading), so the summary can say which one changed.
+ * Shell startup files init may append the `tm` alias to, so the summary can
+ * say which one changed.
  */
 function shellConfigFiles() {
 	const homeDir = process.env.HOME || process.env.USERPROFILE;
@@ -245,20 +242,10 @@ function describeInitChanges(targetDir, before, after) {
 		const was = before.get(file) || '';
 		const now = after.get(file) || '';
 		if (now === was) continue;
-		const added = [];
-		if (now.includes(ALIAS_LINE) && !was.includes(ALIAS_LINE)) {
-			added.push('the `tm` alias');
-		}
-		if (
-			now.includes(DEFERRED_MCP_MARKER) &&
-			!was.includes(DEFERRED_MCP_MARKER)
-		) {
-			added.push('deferred MCP loading');
-		}
-		if (added.length === 0) continue;
+		if (!now.includes(ALIAS_LINE) || was.includes(ALIAS_LINE)) continue;
 		changes.push({
 			path: homeDir ? file.replace(homeDir, '~') : file,
-			note: `added ${added.join(' and ')}; open a new terminal`
+			note: 'added the `tm` alias; open a new terminal'
 		});
 	}
 
@@ -486,17 +473,15 @@ async function initializeProject(options = {}) {
 	// 	console.log('Skip prompts determined:', skipPrompts);
 	// }
 
+	// Claude Code integration is on unless --no-claude: --yes and the
+	// interactive prompt's default both set it up
 	let selectedRuleProfiles;
-	if (options.rulesExplicitlyProvided) {
-		// If --rules flag was used, always respect it.
+	if (options.claude === false) {
+		selectedRuleProfiles = [];
+	} else if (options.rulesExplicitlyProvided) {
 		selectedRuleProfiles = options.rules;
-	} else if (skipPrompts) {
-		// If non-interactive (e.g., --yes) and no rules specified, skip rules setup entirely
-		selectedRuleProfiles = [];
 	} else {
-		// If interactive and no rules specified, default to NONE.
-		// The Claude Code integration prompt below opts in.
-		selectedRuleProfiles = [];
+		selectedRuleProfiles = RULE_PROFILES;
 	}
 
 	if (skipPrompts) {
@@ -515,7 +500,7 @@ async function initializeProject(options = {}) {
 			true;
 
 		if (dryRun) {
-			displayDryRun(initGit, storeTasksInGit, options);
+			displayDryRun(initGit, storeTasksInGit, options, selectedRuleProfiles);
 			return {
 				dryRun: true
 			};
@@ -602,16 +587,17 @@ async function initializeProject(options = {}) {
 				storeGitPrompted = gitTasksInput.trim().toLowerCase() !== 'n';
 			}
 
-			// Prompt for AI IDE rules setup (only if not explicitly provided via --rules)
-			let shouldSetupRules = false;
-			if (!options.rulesExplicitlyProvided) {
+			// Ask about the Claude Code integration unless --claude, --no-claude
+			// or --rules already answered; Enter accepts it
+			let shouldSetupRules = selectedRuleProfiles.length > 0;
+			if (options.claude === undefined && !options.rulesExplicitlyProvided) {
 				const setupRulesInput = await promptQuestion(
 					rl,
 					chalk.cyan(
-						'Set up Claude Code integration (CLAUDE.md import)? (y/N): '
+						'Set up Claude Code integration (CLAUDE.md import)? (Y/n): '
 					),
 					(answer) => {
-						const isYes = answer.trim().toLowerCase() === 'y';
+						const isYes = answer.trim().toLowerCase() !== 'n';
 						// ✗ means an error elsewhere; a No answer isn't one
 						const icon = isYes ? chalk.green('✓') : chalk.dim('–');
 						return (
@@ -623,11 +609,11 @@ async function initializeProject(options = {}) {
 						);
 					}
 				);
-				shouldSetupRules = setupRulesInput.trim().toLowerCase() === 'y';
+				shouldSetupRules = setupRulesInput.trim().toLowerCase() !== 'n';
 			} else {
 				log(
 					'debug',
-					`Using rule profiles provided via command line: ${selectedRuleProfiles.join(', ')}`
+					`Claude Code integration from flags: ${shouldSetupRules ? 'on' : 'off'}`
 				);
 			}
 
@@ -645,7 +631,12 @@ async function initializeProject(options = {}) {
 
 			if (dryRun) {
 				rl.close();
-				displayDryRun(initGitPrompted, storeGitPrompted, options);
+				displayDryRun(
+					initGitPrompted,
+					storeGitPrompted,
+					options,
+					shouldSetupRules ? selectedRuleProfiles : []
+				);
 				return {
 					dryRun: true
 				};
@@ -659,7 +650,7 @@ async function initializeProject(options = {}) {
 				storeGitPrompted,
 				dryRun,
 				{ ...options, shouldSetupRules, preferredLanguage }, // Pass shouldSetupRules and preferredLanguage through options
-				shouldSetupRules ? RULE_PROFILES : selectedRuleProfiles
+				shouldSetupRules ? selectedRuleProfiles : []
 			);
 			rl.close();
 		} catch (error) {
@@ -768,8 +759,10 @@ async function createProjectStructure(
 	function _processSingleProfile(profileName) {
 		const profile = getRulesProfile(profileName);
 		if (profile) {
-			convertAllRulesToProfileRules(targetDir, profile);
-			// Also triggers MCP config setup (if applicable)
+			// .mcp.json only with --mcp: the CLI and the plugin need no MCP server
+			convertAllRulesToProfileRules(targetDir, profile, {
+				mcp: options.mcp === true
+			});
 		} else {
 			log('warn', `Unknown rule profile: ${profileName}`);
 		}
@@ -947,9 +940,10 @@ function setUpMergeDriver(targetDir) {
  * Say what init would do without doing it.
  * @param {boolean} initGit - Whether git init would run
  * @param {boolean} storeTasksInGit - Whether tasks would be committed
- * @param {object} [options] - init's options, for the import flag
+ * @param {object} [options] - init's options, for the import and MCP flags
+ * @param {string[]} [ruleProfiles] - Profiles init would install
  */
-function displayDryRun(initGit, storeTasksInGit, options) {
+function displayDryRun(initGit, storeTasksInGit, options, ruleProfiles = []) {
 	if (isSilentMode()) return;
 	const lines = [
 		'Dry run; nothing was changed. Init would:',
@@ -968,6 +962,13 @@ function displayDryRun(initGit, storeTasksInGit, options) {
 	lines.push(
 		storeTasksInGit ? '  keep tasks in Git' : '  keep tasks out of Git'
 	);
+	if (ruleProfiles.includes('claude')) {
+		lines.push(
+			options?.mcp
+				? '  import TaskGraph’s guide in CLAUDE.md and add the MCP server to .mcp.json'
+				: '  import TaskGraph’s guide in CLAUDE.md'
+		);
+	}
 	console.log(lines.join('\n'));
 }
 

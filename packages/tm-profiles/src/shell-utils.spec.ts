@@ -2,11 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-	addShellExport,
-	enableDeferredMcpLoading,
-	getShellConfigPath
-} from './shell-utils.js';
+import { addShellExport, getShellConfigPath } from './shell-utils.js';
 
 // Mock fs and os modules
 vi.mock('fs');
@@ -570,53 +566,6 @@ describe('shell-utils', () => {
 			// Assert - fish config file not found since we don't auto-create it (unlike PowerShell)
 			expect(result.success).toBe(false);
 			expect(result.message).toContain('not found');
-
-			// Cleanup
-			process.env.SHELL = originalShell;
-		});
-	});
-
-	describe('enableDeferredMcpLoading', () => {
-		it('should add ENABLE_EXPERIMENTAL_MCP_CLI export', () => {
-			// Arrange
-			const originalShell = process.env.SHELL;
-			process.env.SHELL = '/bin/zsh';
-			const shellConfigPath = path.join(mockHomeDir, '.zshrc');
-			vi.mocked(fs.existsSync).mockReturnValue(true);
-			vi.mocked(fs.readFileSync).mockReturnValue('# existing content\n');
-			vi.mocked(fs.appendFileSync).mockImplementation(() => {});
-
-			// Act
-			const result = enableDeferredMcpLoading();
-
-			// Assert
-			expect(result.success).toBe(true);
-			expect(result.shellConfigFile).toBe(shellConfigPath);
-			expect(fs.appendFileSync).toHaveBeenCalledWith(
-				shellConfigPath,
-				"\n# Claude Code deferred MCP loading (added by TaskGraph)\nexport ENABLE_EXPERIMENTAL_MCP_CLI='true'\n"
-			);
-
-			// Cleanup
-			process.env.SHELL = originalShell;
-		});
-
-		it('should skip if already configured', () => {
-			// Arrange
-			const originalShell = process.env.SHELL;
-			process.env.SHELL = '/bin/zsh';
-			vi.mocked(fs.existsSync).mockReturnValue(true);
-			vi.mocked(fs.readFileSync).mockReturnValue(
-				'export ENABLE_EXPERIMENTAL_MCP_CLI=true\n'
-			);
-
-			// Act
-			const result = enableDeferredMcpLoading();
-
-			// Assert
-			expect(result.success).toBe(true);
-			expect(result.alreadyExists).toBe(true);
-			expect(fs.appendFileSync).not.toHaveBeenCalled();
 
 			// Cleanup
 			process.env.SHELL = originalShell;
