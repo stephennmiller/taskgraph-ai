@@ -46,10 +46,13 @@ export function isInsideRoot(root, candidate) {
 // Names that hold credentials. .env.example and friends hold none. .aws is
 // refused whole: besides credentials it holds SSO and CLI token caches.
 const SECRET_NAME =
-	/^(\.env([._-].*)?|\.envrc|\.git|\.aws|\.npmrc|[._]netrc|\.pypirc|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore)$/i;
+	/^(\.env([._-].*)?|\.envrc|\.git|\.git-credentials|\.aws|\.npmrc|[._]netrc|\.pypirc|\.pgpass|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore|jks|ppk)$/i;
 const PUBLIC_ENV = /^\.env[._-](example|sample|template)$/i;
 // Files that are secret only inside a given directory: [directory, file]
-const SECRET_PAIRS = [['.docker', 'config.json']];
+const SECRET_PAIRS = [
+	['.docker', 'config.json'],
+	['.kube', 'config']
+];
 // A Windows 8.3 short name such as ENV~1 or ENVLOC~1.LOC. It can stand for
 // any long name, .env included, so it is refused whatever it points at.
 const SHORT_NAME = /^[^.~]{1,7}~\d+(\.[^.]{0,3})?$/;
@@ -113,11 +116,13 @@ const SECRET_GLOBS = [
 	'.env_*',
 	'.envrc',
 	'.git',
+	'.git-credentials',
 	'.aws',
 	'.npmrc',
 	'.netrc',
 	'_netrc',
 	'.pypirc',
+	'.pgpass',
 	'id_rsa*',
 	'id_dsa*',
 	'id_ecdsa*',
@@ -127,6 +132,8 @@ const SECRET_GLOBS = [
 	'*.p12',
 	'*.pfx',
 	'*.keystore',
+	'*.jks',
+	'*.ppk',
 	...SECRET_PAIRS.map(([dir, file]) => `**/${dir}/${file}`)
 ].map((name) => `!${anyCase(name)}`);
 
