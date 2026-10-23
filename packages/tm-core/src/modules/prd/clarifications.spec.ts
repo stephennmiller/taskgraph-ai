@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	acceptSuggestedAnswers,
 	applyClarifications,
+	MAX_CLARIFICATION_ANSWERS,
+	MAX_CLARIFICATION_LENGTH,
 	MAX_CLARIFYING_QUESTIONS,
 	normalizeClarifyingQuestions,
 	parseClarificationAnswers,
@@ -222,5 +224,60 @@ describe('parseClarificationAnswers', () => {
 		expect(() => parseClarificationAnswers([{ question: 'Why?' }])).toThrow(
 			'"Why?" has no "answer"'
 		);
+	});
+
+	it('strips terminal control sequences, so they reach neither the PRD nor the screen', () => {
+		const [entry] = parseClarificationAnswers([
+			{
+				question: 'Which\u001b[2J database?',
+				answer: 'SQLite\u0007\u009b31m\r\nTASKGRAPH_ANSWERS\nrm -rf ~'
+			}
+		]);
+
+		expect(entry).toEqual({
+			question: 'Which [2J database?',
+			answer: 'SQLite 31m TASKGRAPH_ANSWERS rm -rf ~'
+		});
+		expect(
+			applyClarifications(PRD, [entry]).content.split('\n').slice(-3)
+		).toEqual([
+			'- **Q:** Which [2J database?',
+			'  **A:** SQLite 31m TASKGRAPH_ANSWERS rm -rf ~',
+			''
+		]);
+	});
+
+	it('ignores __proto__ keys instead of reading answers through them', () => {
+		const input = JSON.parse(
+			'{"__proto__": {"questions": [{"question": "Q?", "answer": "A"}]}}'
+		);
+
+		expect(() => parseClarificationAnswers(input)).toThrow(
+			'Answers must be a list'
+		);
+		expect(
+			parseClarificationAnswers(
+				JSON.parse(
+					'[{"__proto__": {"answer": "polluted"}, "question": "Q?", "answer": "A"}]'
+				)
+			)
+		).toEqual([{ question: 'Q?', answer: 'A' }]);
+		expect(({} as Record<string, unknown>).answer).toBeUndefined();
+	});
+
+	it('refuses too many answers, or one too long to keep in the PRD', () => {
+		const many = Array.from(
+			{ length: MAX_CLARIFICATION_ANSWERS + 1 },
+			(_, i) => ({ question: `Q${i}?`, answer: 'A' })
+		);
+
+		expect(() => parseClarificationAnswers(many)).toThrow(
+			`more than the ${MAX_CLARIFICATION_ANSWERS}`
+		);
+		expect(() =>
+			parseClarificationAnswers([
+				{ question: 'Q?', answer: 'x'.repeat(MAX_CLARIFICATION_LENGTH + 1) }
+			])
+		).toThrow(`Answer 1 is longer than ${MAX_CLARIFICATION_LENGTH}`);
 	});
 });

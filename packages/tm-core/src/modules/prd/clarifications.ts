@@ -27,6 +27,12 @@ export const MAX_CLARIFYING_QUESTIONS = 5;
 
 export const CLARIFICATIONS_HEADING = '## Clarifications';
 
+/** The most answers one `--answers` file or MCP call may save */
+export const MAX_CLARIFICATION_ANSWERS = 25;
+
+/** The longest question or answer, in characters, that is saved in the PRD */
+export const MAX_CLARIFICATION_LENGTH = 1000;
+
 /** A question about the PRD, with the answer used when the user just presses Enter */
 export interface ClarifyingQuestion {
 	question: string;
@@ -58,8 +64,16 @@ const SECTION_END = /^#{1,2}\s/;
 const QUESTION_LINE = /^-\s+\*\*Q:\*\*\s*(.*)$/;
 const ANSWER_LINE = /^\s+\*\*A:\*\*\s*(.*)$/;
 
-/** Questions and answers are kept on one line each */
-const oneLine = (text: string): string => text.replace(/\s+/g, ' ').trim();
+/**
+ * Questions and answers are kept on one line each, without control
+ * characters: they come from the model or from answers JSON, and are shown in
+ * the terminal and written into the PRD
+ */
+const oneLine = (text: string): string =>
+	text
+		.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
 
 /** Two questions are the same if they differ only in case and spacing */
 const questionKey = (text: string): string =>
@@ -273,6 +287,11 @@ export function parseClarificationAnswers(input: unknown): Clarification[] {
 			'Answers must be a list of {"question", "answer"}, or the output of --clarify --json'
 		);
 	}
+	if (items.length > MAX_CLARIFICATION_ANSWERS) {
+		throw invalidAnswers(
+			`${items.length} answers is more than the ${MAX_CLARIFICATION_ANSWERS} that can be saved at once`
+		);
+	}
 	return items.map((item, index) => {
 		const entry = (item ?? {}) as Record<string, unknown>;
 		const text = (value: unknown) =>
@@ -284,6 +303,14 @@ export function parseClarificationAnswers(input: unknown): Clarification[] {
 		}
 		if (!answer) {
 			throw invalidAnswers(`"${question}" has no "answer"`);
+		}
+		if (
+			question.length > MAX_CLARIFICATION_LENGTH ||
+			answer.length > MAX_CLARIFICATION_LENGTH
+		) {
+			throw invalidAnswers(
+				`Answer ${index + 1} is longer than ${MAX_CLARIFICATION_LENGTH} characters`
+			);
 		}
 		return { question, answer };
 	});

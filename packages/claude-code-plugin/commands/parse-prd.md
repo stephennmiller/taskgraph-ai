@@ -35,16 +35,21 @@ Ask the questions in the conversation, all in one message, numbered, each with i
 
 ## 3. Save the answers and generate the tasks
 
-Pass the JSON from step 1 back on stdin, with an `answer` added to each question the user answered. A question with no `answer` keeps its `suggestedAnswer`. Keep the heredoc's quoted `'TASKGRAPH_ANSWERS'` delimiter, so the shell expands nothing in the user's words; only JSON escaping applies (`\"` and `\\`).
+Write the JSON from step 1, with an `answer` added to each question the user answered, to `.taskgraph/clarify-answers.json` with the Write tool. A question with no `answer` keeps its `suggestedAnswer`. Don't put the answers in a shell command (no `echo`, no heredoc): the user's words could end the heredoc or run as commands. Keep each answer on one line.
 
-```bash
-taskgraph parse-prd '<prd-file>' --answers - <<'TASKGRAPH_ANSWERS'
+```json
 {
   "questions": [
     { "question": "Which database should the app use?", "suggestedAnswer": "PostgreSQL 16", "answer": "SQLite" }
   ]
 }
-TASKGRAPH_ANSWERS
+```
+
+Then pass the file, and remove it once the tasks are generated:
+
+```bash
+taskgraph parse-prd '<prd-file>' --answers .taskgraph/clarify-answers.json
+rm .taskgraph/clarify-answers.json
 ```
 
 The answers are written into the PRD under `## Clarifications` (an answer already there is replaced, not repeated), and the tasks are generated from the updated PRD, so the decisions stay in the repo. Add `--num-tasks=<n>` or `--research` from the arguments.
