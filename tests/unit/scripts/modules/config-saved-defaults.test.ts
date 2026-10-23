@@ -97,9 +97,25 @@ describe('writeConfig only saves keys the project set (#336)', () => {
 		writeConfig(config, root);
 
 		expect(readFile()).toEqual({
-			models: { main: { modelId: 'opus' } },
+			models: { main: { modelId: 'opus', provider: 'claude-code' } },
 			storage: { type: 'file' }
 		});
+	});
+});
+
+describe('model roles are saved with their provider', () => {
+	it('keeps a fallback model whose provider equals the default', () => {
+		writeFile({ global: { defaultPriority: 'medium' } });
+		const config = getConfig(root, true);
+		config.models.fallback = { ...config.models.fallback, modelId: 'opus' };
+
+		writeConfig(config, root);
+
+		expect(readFile().models.fallback).toEqual({
+			provider: 'claude-code',
+			modelId: 'opus'
+		});
+		expect(getConfig(root, true).models.fallback.modelId).toBe('opus');
 	});
 });
 
@@ -155,11 +171,18 @@ describe('a defaultNumTasks: 10 saved by the old default (#336)', () => {
 
 describe('config-file helpers', () => {
 	it('toSavedConfig leaves out nested defaults the file does not have', () => {
-		const defaults = { models: { main: { provider: 'a', maxTokens: 1 } } };
-		const config = { models: { main: { provider: 'a', maxTokens: 2 } } };
+		const defaults = {
+			global: { a: 1, b: 1 },
+			models: { main: { provider: 'p', modelId: 'm', maxTokens: 1 } }
+		};
+		const config = {
+			global: { a: 1, b: 2 },
+			models: { main: { provider: 'p', modelId: 'm', maxTokens: 2 } }
+		};
 
 		expect(toSavedConfig(config, null, defaults)).toEqual({
-			models: { main: { maxTokens: 2 } }
+			global: { b: 2 },
+			models: { main: { provider: 'p', modelId: 'm', maxTokens: 2 } }
 		});
 	});
 

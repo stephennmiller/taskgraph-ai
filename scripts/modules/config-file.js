@@ -47,7 +47,28 @@ export function toSavedConfig(config, saved, defaults) {
 	const unread = Object.fromEntries(
 		Object.entries(file).filter(([key]) => !Object.hasOwn(defaults, key))
 	);
-	return { ...unread, ...keepSetKeys(config, file, defaults) };
+	const out = { ...unread, ...keepSetKeys(config, file, defaults) };
+	pinModelPairs(out.models, config.models);
+	return out;
+}
+
+/**
+ * A saved model role always names both provider and modelId: a modelId only
+ * means something with its provider, the loader ignores a fallback without
+ * both, and a later default provider must not change the user's model.
+ */
+function pinModelPairs(savedModels, models) {
+	if (!isPlainObject(savedModels) || !isPlainObject(models)) return;
+	for (const [role, saved] of Object.entries(savedModels)) {
+		const model = models[role];
+		if (!isPlainObject(saved) || !isPlainObject(model)) continue;
+		if (Object.keys(saved).length === 0) continue;
+		for (const key of ['provider', 'modelId']) {
+			if (model[key] !== undefined && !Object.hasOwn(saved, key)) {
+				saved[key] = model[key];
+			}
+		}
+	}
 }
 
 /**
