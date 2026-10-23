@@ -313,8 +313,8 @@ jobs:
             junit.xml
           retention-days: 30
 
-  # The full suites above run on ubuntu only. This builds on each OS and on the
-  # oldest Node that `engines` allows, then runs the CLI smoke tests (the
+  # The full suites above run on ubuntu only. This builds on each OS, then runs,
+  # on Node 24 and on the oldest Node that `engines` allows, the CLI smoke tests (the
   # @tm/cli integration tests that spawn the built CLI for the everyday
   # commands; list in apps/cli/package.json "test:smoke") and the MCP stdio
   # smoke test.
@@ -338,9 +338,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # Build on the repo's Node (.nvmrc): tsdown itself needs Node 22.18 or
+      # later. The tests below then run on matrix.node, which is what
+      # `engines` promises users of the built package.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
@@ -351,6 +354,12 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+
+      - name: Switch to Node ${{ matrix.node }}
+        if: matrix.node != env.NODE_VERSION
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ matrix.node }}
 
       - name: CLI smoke tests
         run: npm run test:smoke -w @tm/cli

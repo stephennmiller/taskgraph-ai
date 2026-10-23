@@ -32,14 +32,12 @@ run --version
 run init --yes
 run add-task --title="Write the README" --description="Say what the tool does"
 run list
-run next --json >next.json
-cat next.json
+run next --json | tee next.json
 
 # next must hand back the task add-task just created
-node -e '
-const out = JSON.parse(require("node:fs").readFileSync("next.json", "utf8"));
-const title = JSON.stringify(out).includes("Write the README");
-if (!title) { console.error("next did not return the new task"); process.exit(1); }
-'
+if ! grep -q "Write the README" next.json; then
+	echo "next did not return the new task" >&2
+	exit 1
+fi
 echo
 echo "Packed CLI works"
