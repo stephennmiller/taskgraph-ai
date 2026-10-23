@@ -267,7 +267,8 @@ export class BaseAIProvider {
 	 */
 	handleError(operation, error) {
 		const errorMessage = error.message || 'Unknown error occurred';
-		log('error', `${this.name} ${operation} failed: ${errorMessage}`, {
+		// The caller prints the thrown error; this copy dumps the request (#272)
+		log('debug', `${this.name} ${operation} failed: ${errorMessage}`, {
 			error
 		});
 		throw new Error(
