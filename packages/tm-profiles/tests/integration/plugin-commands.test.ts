@@ -217,10 +217,15 @@ describe('taskgraph flags used in command bodies', () => {
 	const stripComments = (source: string) =>
 		source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-	// The long flags declared with .option('-x, --name <value>', ...)
+	// The long flags declared with .option('-x, --name <value>', ...),
+	// .requiredOption(...) or .addOption(new Option(...))
 	const longFlags = (source: string): string[] =>
-		[...source.matchAll(/\.option\(\s*'([^']*)'/g)].flatMap((match) =>
-			[...match[1].matchAll(/--([a-z][a-z-]*)/g)].map((flag) => flag[1])
+		[
+			...source.matchAll(
+				/(?:\.option|\.requiredOption|new Option)\(\s*(['"`])(.*?)\1/g
+			)
+		].flatMap((match) =>
+			[...match[2].matchAll(/--([a-z][a-z-]*)/g)].map((flag) => flag[1])
 		);
 
 	const legacySource = stripComments(
@@ -275,7 +280,11 @@ describe('taskgraph flags used in command bodies', () => {
 			const match =
 				inFence && line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)(.*)$/);
 			if (!match) continue;
-			const args = match[2].split('#')[0].replace(/"[^"]*"/g, '""');
+			// Drop quoted text (a prompt can mention flags) and comments
+			const args = match[2]
+				.replace(/\\'/g, '')
+				.replace(/'[^']*'|"[^"]*"/g, '""')
+				.split('#')[0];
 			calls.push({
 				command: match[1],
 				flags: [...args.matchAll(/(?:^|\s)--([a-z][a-z-]*)/g)].map(
@@ -316,6 +325,18 @@ describe('taskgraph flags used in command bodies', () => {
 				'```bash\ntaskgraph update-task --id=3 --checked --prompt="a --b"\n```'
 			)
 		).toEqual(['update-task --checked']);
+	});
+
+	it('ignores flags inside single-quoted text', () => {
+		expect(
+			unknownFlags(
+				"```bash\ntaskgraph update-task --id=3 --prompt='it'\\''s # --b' --checked\n```"
+			)
+		).toEqual(['update-task --checked']);
+	});
+
+	it('reads hidden flags declared with new Option', () => {
+		expect(flagsByCommand.get('models')?.has('claude-code')).toBe(true);
 	});
 
 	it.each(readdirSync(commandsDir).filter((file) => file.endsWith('.md')))(
@@ -361,6 +382,17 @@ describe('to-done', () => {
 		).toBeLessThan(
 			body.indexOf('taskgraph set-status --id=<id> --status=done')
 		);
+	});
+
+	it('passes the summary in single quotes, so the shell runs nothing in it', () => {
+		const prompts = [...body.matchAll(/^\s*taskgraph .*--prompt=(.)/gm)];
+
+		expect(prompts.map((match) => match[1])).toEqual(["'", "'"]);
+		expect(body).toContain("write any `'` inside it as `'\\''`");
+	});
+
+	it('uses the ID only when it is a task number', () => {
+		expect(body).toContain('only when it is digits and dots');
 	});
 
 	it('never runs --force on its own', () => {

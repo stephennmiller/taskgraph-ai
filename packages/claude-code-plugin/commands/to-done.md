@@ -5,7 +5,7 @@ argument-hint: "[task ID]"
 
 Close a task: verify what you can, record what changed, then mark it done.
 
-Arguments: $ARGUMENTS (task ID, e.g. `3` or a subtask like `3.2`). With no ID, use the task `taskgraph list --status=in-progress` shows; if there are several, ask which one.
+Arguments: $ARGUMENTS (task ID, e.g. `3` or a subtask like `3.2`). With no ID, use the task `taskgraph list --status=in-progress --with-subtasks` shows; if there are several, ask which one. Put the ID into the commands below only when it is digits and dots (`3`, `3.2`); otherwise ask the user for the task ID.
 
 ## 1. Read the checklist
 
@@ -51,14 +51,16 @@ Write three lines, in plain words, from the diff:
 Save it on the task before marking it done (a done task can't be updated). For a subtask (ID with a dot):
 
 ```bash
-taskgraph update-subtask --id=<id> --prompt="Close summary, keep as written: Changed: ... Files: ... Follow-ups: ..."
+taskgraph update-subtask --id=<id> --prompt='Close summary, keep as written: Changed: ... Files: ... Follow-ups: ...'
 ```
 
 For a top-level task:
 
 ```bash
-taskgraph update-task --id=<id> --append --prompt="Close summary, keep as written: Changed: ... Files: ... Follow-ups: ..."
+taskgraph update-task --id=<id> --append --prompt='Close summary, keep as written: Changed: ... Files: ... Follow-ups: ...'
 ```
+
+Keep the summary in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in the text, and summaries quote file names and code from the diff.
 
 Both pass the text through the project's AI model, which may reword it. If the call fails (no model configured, for example), show the summary to the user and go on.
 
