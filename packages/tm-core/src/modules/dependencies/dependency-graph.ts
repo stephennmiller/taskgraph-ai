@@ -4,8 +4,16 @@
  * Tasks and subtasks are flattened into one graph keyed by task ID (subtasks
  * use dotted IDs like "2.1"). What a subtask's dependency names follows
  * `resolveSubtaskDependency`: a bare number is a sibling (1 under task 2 is
- * "2.1"), a string without a dot is a task. A parent task is not an edge to
- * its subtasks: finishing the subtasks does not unblock anything by itself.
+ * "2.1"), a string without a dot is a task.
+ *
+ * Parents and subtasks: a subtask can't start before its parent could, so it
+ * waits on everything its parent waits on. Those edges are kept apart from
+ * the ones it lists, as `inherited`. A parent's dependency on one of its own
+ * subtasks is not passed down. A parent isn't finished until its subtasks
+ * are, which only `criticalPath` uses: it orders a parent after its open
+ * subtasks. `blockedCount` (and so `bottlenecks` and `next`) follows
+ * subtasks that wait on a task through their parent, and counts a parent and
+ * its subtasks as one unit of waiting work.
  *
  * Dependency IDs that match no task are recorded as `missing` and never become
  * edges. Self-dependencies are not edges either (the analyses ignore them),
@@ -36,6 +44,15 @@ export interface DependencyGraphNode {
 	priority?: Task['priority'];
 	/** Dependency IDs that match a task (excluding the task itself) */
 	dependencies: string[];
+	/**
+	 * Subtasks only: the parent's dependencies, which the subtask waits on
+	 * too. Leaves out the parent's own subtasks and IDs in `dependencies`
+	 */
+	inherited: string[];
+	/** Subtasks only: the parent task's ID */
+	parent?: string;
+	/** Parents only: the IDs of their subtasks */
+	subtasks: string[];
 	/** Dependency IDs that don't match any task */
 	missing: string[];
 	/** The task lists itself as a dependency (not an edge; see header) */
@@ -53,7 +70,10 @@ export interface Bottleneck {
 	id: string;
 	title: string;
 	status: TaskStatus;
-	/** Unfinished tasks waiting on this one, transitively */
+	/**
+	 * Unfinished top-level tasks waiting on this one, transitively; a parent
+	 * and its subtasks count once (see `blockedCount`)
+	 */
 	blocks: number;
 }
 
@@ -67,6 +87,7 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 		status: TaskStatus;
 		priority?: Task['priority'];
 		deps: string[];
+		parent?: string;
 	}> = [];
 
 	for (const task of tasks) {
@@ -86,7 +107,8 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 				priority: sub.priority ?? task.priority,
 				deps: (sub.dependencies ?? []).map((d) =>
 					resolveSubtaskDependency(id, d)
-				)
+				),
+				parent: id
 			});
 		}
 	}
@@ -99,10 +121,14 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 			status: r.status,
 			priority: r.priority,
 			dependencies: [],
+			inherited: [],
+			parent: r.parent,
+			subtasks: [],
 			missing: [],
 			selfDependency: false,
 			dependents: []
 		});
+		if (r.parent) nodes.get(r.parent)?.subtasks.push(r.id);
 	}
 	for (const r of raw) {
 		const node = nodes.get(r.id) as DependencyGraphNode;
@@ -120,35 +146,81 @@ export function buildDependencyGraph(tasks: Task[]): DependencyGraph {
 			}
 		}
 	}
+	// Parents come first, so their edges are complete by now
+	for (const node of nodes.values()) {
+		if (!node.parent) continue;
+		const parent = nodes.get(node.parent) as DependencyGraphNode;
+		node.inherited = parent.dependencies.filter(
+			(dep) =>
+				dep !== node.id &&
+				!parent.subtasks.includes(dep) &&
+				!node.dependencies.includes(dep)
+		);
+	}
 	return { nodes };
+}
+
+/** What a task waits on before it can start: listed and inherited edges */
+const startEdges = (node: DependencyGraphNode): string[] =>
+	node.inherited.length
+		? [...node.dependencies, ...node.inherited]
+		: node.dependencies;
+
+/** The reverse of `startEdges`: who waits on each task to start */
+function startDependents(graph: DependencyGraph): Map<string, string[]> {
+	const waiting = new Map<string, string[]>();
+	for (const node of graph.nodes.values()) {
+		waiting.set(node.id, [...node.dependents]);
+	}
+	for (const node of graph.nodes.values()) {
+		for (const dep of node.inherited) {
+			(waiting.get(dep) as string[]).push(node.id);
+		}
+	}
+	return waiting;
 }
 
 const isOpen = (node: DependencyGraphNode): boolean =>
 	!isTaskComplete(node.status);
 
 /**
- * For every task, how many unfinished tasks are (transitively) waiting on it.
- * Finished tasks count 0 and are not traversed. Cycle-safe; a task never
- * counts itself. One pass over the condensed graph with a bitset per
- * component, so memory grows with the square of the number of open tasks
- * (about 12 MB at 10k).
+ * For every task, how much unfinished work is (transitively) waiting on it,
+ * counted in top-level tasks: a parent and its subtasks are one unit, so a
+ * task in front of a parent expanded into ten subtasks counts that parent
+ * once, and the count doesn't change with how finely tasks are expanded.
+ * Subtasks waiting through their parent count toward the parent's unit. A
+ * task never counts its own unit, so a subtask that only holds up its
+ * siblings counts 0. Finished tasks count 0 and are not traversed.
+ * Cycle-safe. One pass over the condensed graph with a bitset of units per
+ * component, so memory grows with open tasks times top-level tasks (about
+ * 12 MB at 10k of each).
  */
 export function blockedCount(
 	tasks: Task[],
 	graph: DependencyGraph = buildDependencyGraph(tasks)
 ): Map<string, number> {
 	const { nodes } = graph;
+	const waiting = startDependents(graph);
 	const counts = new Map<string, number>();
 	const open: string[] = [];
+	// The top-level task each open task belongs to, as a bit index
+	const unitIndex = new Map<string, number>();
+	const unitOf = new Map<string, number>();
 	for (const node of nodes.values()) {
-		if (isOpen(node)) open.push(node.id);
-		else counts.set(node.id, 0);
+		if (!isOpen(node)) {
+			counts.set(node.id, 0);
+			continue;
+		}
+		open.push(node.id);
+		const unit = node.parent ?? node.id;
+		if (!unitIndex.has(unit)) unitIndex.set(unit, unitIndex.size);
+		unitOf.set(node.id, unitIndex.get(unit) as number);
 	}
 
 	// Components come out with everything they block already emitted
 	const components = stronglyConnectedComponents(
 		open,
-		(id) => (nodes.get(id) as DependencyGraphNode).dependents,
+		(id) => waiting.get(id) as string[],
 		(id) => isOpen(nodes.get(id) as DependencyGraphNode)
 	);
 	const componentOf = new Map<string, number>();
@@ -156,27 +228,74 @@ export function blockedCount(
 		for (const id of members) componentOf.set(id, c);
 	});
 
-	const words = Math.ceil(components.length / 32);
+	const words = Math.ceil(unitIndex.size / 32);
+	// Units waiting on each component, the component's own members included
 	const reach: Uint32Array[] = [];
 	components.forEach((members, c) => {
 		const bits = new Uint32Array(words);
 		for (const id of members) {
-			for (const next of (nodes.get(id) as DependencyGraphNode).dependents) {
+			const u = unitOf.get(id) as number;
+			bits[u >> 5] |= 1 << (u & 31);
+			for (const next of waiting.get(id) as string[]) {
 				const d = componentOf.get(next);
 				if (d === undefined || d === c) continue;
-				bits[d >> 5] |= 1 << (d & 31);
 				const below = reach[d];
 				for (let w = 0; w < words; w++) bits[w] |= below[w];
 			}
 		}
-		let total = members.length - 1;
-		for (let d = 0; d < c; d++) {
-			if (bits[d >> 5] & (1 << (d & 31))) total += components[d].length;
-		}
 		reach.push(bits);
-		for (const id of members) counts.set(id, total);
+		let units = 0;
+		for (let w = 0; w < words; w++) units += popcount(bits[w]);
+		// Each member's own unit is in `bits` (it set it), and never counts.
+		// In a loop across units, every member counts the others' units
+		for (const id of members) counts.set(id, units - 1);
 	});
 	return counts;
+}
+
+/**
+ * For every open subtask, how many open parts of its own task (siblings, or
+ * the parent when it lists the subtask) wait on it to start, transitively,
+ * following edges inside that task only. `blockedCount` leaves this work out
+ * (it is the subtask's own unit); `next` uses it to order siblings.
+ */
+export function blockedWithinTask(
+	tasks: Task[],
+	graph: DependencyGraph = buildDependencyGraph(tasks)
+): Map<string, number> {
+	const { nodes } = graph;
+	const waiting = startDependents(graph);
+	const counts = new Map<string, number>();
+	for (const node of nodes.values()) {
+		if (!node.parent || !isOpen(node)) continue;
+		const unit = node.parent;
+		const sameTaskOpen = (id: string) => {
+			const other = nodes.get(id) as DependencyGraphNode;
+			return (other.parent ?? other.id) === unit && isOpen(other);
+		};
+		const seen = new Set([node.id]);
+		const queue = [node.id];
+		for (let i = 0; i < queue.length; i++) {
+			const current = nodes.get(queue[i]) as DependencyGraphNode;
+			for (const id of waiting.get(current.id) as string[]) {
+				if (seen.has(id) || !sameTaskOpen(id)) continue;
+				seen.add(id);
+				queue.push(id);
+			}
+		}
+		counts.set(node.id, seen.size - 1);
+	}
+	return counts;
+}
+
+function popcount(word: number): number {
+	let n = word >>> 0;
+	let bits = 0;
+	while (n) {
+		n &= n - 1;
+		bits++;
+	}
+	return bits;
 }
 
 /**
@@ -204,13 +323,16 @@ export function bottlenecks(
 /**
  * Tasks in dependency cycles, one sorted group per cycle (strongly connected
  * component), groups sorted by their first ID. Considers every task, finished
- * or not.
+ * or not. Inherited edges count: if task 2 needs 4 and 4 needs 2.1, then 2.1
+ * waits on 4 through its parent, and 2.1 and 4 form a loop.
  */
-export function findCycles(tasks: Task[]): string[][] {
-	const { nodes } = buildDependencyGraph(tasks);
-	return stronglyConnectedComponents(
-		[...nodes.keys()],
-		(id) => (nodes.get(id) as DependencyGraphNode).dependencies
+export function findCycles(
+	tasks: Task[],
+	graph: DependencyGraph = buildDependencyGraph(tasks)
+): string[][] {
+	const { nodes } = graph;
+	return stronglyConnectedComponents([...nodes.keys()], (id) =>
+		startEdges(nodes.get(id) as DependencyGraphNode)
 	)
 		.filter((group) => group.length > 1)
 		.map((group) => group.sort(compareIds))
@@ -218,10 +340,13 @@ export function findCycles(tasks: Task[]): string[][] {
 }
 
 /**
- * Longest chain of unfinished work, dependencies first. Tasks in a cycle are
- * left out (they can't be ordered), and so is everything that depends on a
- * loop, directly or not: it can never start. Missing dependencies are
- * ignored. Ties go to the lowest IDs. Empty when nothing is left to do.
+ * Longest chain of unfinished work, dependencies first. A subtask waits on
+ * its parent's dependencies, and a parent comes after its open subtasks
+ * (unless a subtask lists the parent itself), so a chain can run through a
+ * parent: 1 → 2.1 → 2.2 → 2 → 3. Tasks in a cycle are left out (they can't
+ * be ordered), and so is everything that depends on a loop, directly or not:
+ * it can never start. Missing dependencies are ignored. Ties go to the lowest
+ * IDs. Empty when nothing is left to do.
  */
 export function criticalPath(
 	tasks: Task[],
@@ -230,20 +355,36 @@ export function criticalPath(
 	const { nodes } = graph;
 	const open = [...nodes.values()].filter(isOpen).map((n) => n.id);
 	const isOpenId = (id: string) => isOpen(nodes.get(id) as DependencyGraphNode);
+
+	// Edges for ordering work: what a task waits on to start, plus a parent
+	// waiting on its subtasks to finish
+	const depsOf = new Map<string, string[]>();
+	const dependentsOf = new Map<string, string[]>();
+	for (const id of open) dependentsOf.set(id, []);
+	for (const id of open) {
+		const node = nodes.get(id) as DependencyGraphNode;
+		const deps = new Set(startEdges(node));
+		for (const sub of node.subtasks) {
+			if (!(nodes.get(sub) as DependencyGraphNode).dependencies.includes(id)) {
+				deps.add(sub);
+			}
+		}
+		const openDeps = [...deps].filter(isOpenId);
+		depsOf.set(id, openDeps);
+		for (const dep of openDeps) (dependentsOf.get(dep) as string[]).push(id);
+	}
+	const edgesOf = (id: string) => depsOf.get(id) as string[];
+	const dependentsOfId = (id: string) => dependentsOf.get(id) as string[];
+
 	const stuckBehindLoop = new Set(
-		stronglyConnectedComponents(
-			open,
-			(id) => (nodes.get(id) as DependencyGraphNode).dependencies,
-			isOpenId
-		)
+		stronglyConnectedComponents(open, edgesOf)
 			.filter((group) => group.length > 1)
 			.flat()
 	);
 	// Everything downstream of a loop is stuck behind it
 	const stuck = [...stuckBehindLoop];
 	for (let i = 0; i < stuck.length; i++) {
-		for (const dependent of (nodes.get(stuck[i]) as DependencyGraphNode)
-			.dependents) {
+		for (const dependent of dependentsOfId(stuck[i])) {
 			if (isOpenId(dependent) && !stuckBehindLoop.has(dependent)) {
 				stuckBehindLoop.add(dependent);
 				stuck.push(dependent);
@@ -252,17 +393,14 @@ export function criticalPath(
 	}
 	const usable = open.filter((id) => !stuckBehindLoop.has(id));
 	const usableDeps = (id: string) =>
-		(nodes.get(id) as DependencyGraphNode).dependencies.filter(
-			(d) => isOpenId(d) && !stuckBehindLoop.has(d)
-		);
+		edgesOf(id).filter((d) => !stuckBehindLoop.has(d));
 
 	// Topological order (dependencies first), then longest chain ending at each
 	const waiting = new Map<string, number>();
 	for (const id of usable) waiting.set(id, usableDeps(id).length);
 	const order = usable.filter((id) => waiting.get(id) === 0);
 	for (let i = 0; i < order.length; i++) {
-		for (const dependent of (nodes.get(order[i]) as DependencyGraphNode)
-			.dependents) {
+		for (const dependent of dependentsOfId(order[i])) {
 			if (!waiting.has(dependent)) continue;
 			const left = (waiting.get(dependent) as number) - 1;
 			waiting.set(dependent, left);

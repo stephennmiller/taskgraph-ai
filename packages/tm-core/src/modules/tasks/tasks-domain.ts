@@ -214,10 +214,12 @@ export class TasksDomain {
 	/**
 	 * Lay tasks out as a dependency tree for display (each task once, under
 	 * its deepest dependency). Pass rootId for one task and what depends on it.
+	 * Throws NOT_FOUND for a tag the project doesn't have.
 	 */
 	async getDependencyTree(
 		options: { tag?: string; rootId?: string } = {}
 	): Promise<DependencyTree> {
+		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return buildDependencyTree(tasks, { rootId: options.rootId });
 	}
@@ -225,11 +227,13 @@ export class TasksDomain {
 	/**
 	 * Bottlenecks (top 5 unless limit is set), critical path and dependency
 	 * cycles for a tag's tasks. With taskId, also explains what blocks that
-	 * task (see explainBlockers) from the same task list.
+	 * task (see explainBlockers) from the same task list. Throws NOT_FOUND for
+	 * a tag the project doesn't have.
 	 */
 	async analyzeDependencies(
 		options: { tag?: string; limit?: number; taskId?: string } = {}
 	): Promise<DependencyAnalysis> {
+		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return analyzeDependencies(tasks, {
 			limit: options.limit,
@@ -240,12 +244,14 @@ export class TasksDomain {
 	/**
 	 * Explain why a task can't be started: its unfinished dependencies, down
 	 * to the root causes (ready work, stalled tasks, missing IDs, cycles).
-	 * Works for subtask IDs like "2.1". Throws if the task doesn't exist.
+	 * Works for subtask IDs like "2.1"; a subtask also waits on its parent's
+	 * dependencies. Throws if the task or the named tag doesn't exist.
 	 */
 	async explainBlockers(
 		taskId: string,
 		options: { tag?: string } = {}
 	): Promise<BlockerExplanation> {
+		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return explainBlockers(tasks, String(taskId));
 	}
