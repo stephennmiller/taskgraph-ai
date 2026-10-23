@@ -9,5 +9,6 @@ export {
 	taskIdsSchema,
 	parseTaskIds,
 	extractParentId,
-	isSubtaskId
+	isSubtaskId,
+	fullSubtaskId
 } from './task-id.js';

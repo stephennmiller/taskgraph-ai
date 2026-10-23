@@ -113,7 +113,7 @@ describe('archive', () => {
 		expect(JSON.parse(next.stdout).task.id).toBe('2');
 
 		// The list summary agrees: ready, not waiting on dependencies
-		const list = run(['list']);
+		const list = run(['list', '--format', 'text']);
 		expect(list.status, list.stderr).toBe(0);
 		expect(list.stdout).toMatch(/1 ready/);
 		expect(list.stdout).not.toContain('waiting on dependencies');

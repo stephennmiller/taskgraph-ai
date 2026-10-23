@@ -1,12 +1,14 @@
 import { stripVTControlCharacters } from 'node:util';
 import type { Task } from '@tm/core';
 import { createSubtask, createTask } from '@tm/core/testing';
-import { describe, expect, it } from 'vitest';
+import chalk from 'chalk';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
 	formatEmptyList,
 	formatListNextStep,
 	formatListSummary,
-	formatNoNextTask
+	formatNoNextTask,
+	formatPlainTaskList
 } from './task-list-formatters.js';
 
 const plain = (text: string) => stripVTControlCharacters(text);
@@ -237,5 +239,92 @@ describe('formatNoNextTask', () => {
 
 	it('says there are no tasks in an empty project', () => {
 		expect(lines(formatNoNextTask(false))[0]).toBe('No tasks found');
+	});
+});
+
+describe('formatPlainTaskList (#250)', () => {
+	const level = chalk.level;
+	afterEach(() => {
+		chalk.level = level;
+	});
+
+	it('prints one aligned line per task with the full title and deps', () => {
+		const output = formatPlainTaskList([
+			createTask({
+				id: 1,
+				title: 'Set up the database schema',
+				status: 'done',
+				priority: 'high'
+			}),
+			createTask({
+				id: 10,
+				title:
+					'Email and password sign-in with sessions, rate limits and a lockout after five failed attempts',
+				status: 'in-progress',
+				priority: 'medium',
+				dependencies: ['1', '3']
+			})
+		]);
+
+		expect(output.split('\n')).toEqual([
+			'1   done         high    Set up the database schema',
+			'10  in-progress  medium  Email and password sign-in with sessions, rate limits and a lockout after five failed attempts  deps:1,3'
+		]);
+	});
+
+	it('has no ANSI codes or box characters, even when color is on', () => {
+		chalk.level = 3;
+
+		const output = formatPlainTaskList(project(), { withSubtasks: true });
+
+		expect(output).not.toContain('\u001b');
+		expect(output).not.toMatch(/[│┌┐└┘├┤─]/);
+	});
+
+	it('lists subtasks under their task with dotted IDs and deps', () => {
+		const output = formatPlainTaskList(project().slice(1, 2), {
+			withSubtasks: true
+		});
+
+		expect(output.split('\n')).toEqual([
+			'2    in-progress  high    Email and password sign-in with sessions  deps:1',
+			'2.1  done         medium  Password hashing helpers',
+			'2.2  pending      medium  Sessions table and cookie middleware  deps:2.1',
+			'2.3  pending      medium  Sign-in rate limiting  deps:2.2'
+		]);
+	});
+
+	it('leaves subtasks out unless asked', () => {
+		const output = formatPlainTaskList(project().slice(1, 2));
+
+		expect(output.split('\n')).toHaveLength(1);
+	});
+
+	it('keeps a title with line breaks or control characters on one line', () => {
+		const output = formatPlainTaskList([
+			createTask({
+				id: 1,
+				title: 'First line\nsecond\tline\u0007',
+				status: 'pending',
+				priority: 'low'
+			})
+		]);
+
+		expect(output).toBe('1  pending  low  First line second line');
+	});
+
+	it('starts each line with the tag when listing every tag', () => {
+		const output = formatPlainTaskList([
+			{
+				...createTask({ id: 1, title: 'A', status: 'pending' }),
+				tagName: 'master'
+			},
+			{ ...createTask({ id: 1, title: 'B', status: 'done' }), tagName: 'ui' }
+		]);
+
+		expect(output.split('\n').map((line) => line.split(/ {2,}/)[0])).toEqual([
+			'master',
+			'ui'
+		]);
 	});
 });

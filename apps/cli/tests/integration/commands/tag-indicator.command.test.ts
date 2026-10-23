@@ -111,7 +111,9 @@ describe('tag indicator', () => {
 		});
 
 		it('core commands open with the tag line', () => {
-			for (const args of [['list'], ['next']]) {
+			// A piped `list` prints only task lines (#250); its terminal view
+			// opens with the tag line
+			for (const args of [['list', '--format', 'text'], ['next']]) {
 				const result = run(args);
 				expect(result.status).toBe(0);
 				expect(firstLine(result.stdout)).toBe('[tag] feature-auth');

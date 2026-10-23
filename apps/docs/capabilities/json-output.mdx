@@ -53,6 +53,18 @@ In a JSON run, stdout holds only the JSON: banners, the update check and other n
 
 Some keys are only present when they apply. For example, a task has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
 
+## Plain lines from `list` in a pipe
+
+When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--format` is given, `taskgraph list` prints one plain line per task instead of the summary and table: full titles, no color codes, no box characters.
+
+```
+1  done         high    Set up the database
+2  in-progress  high    Sign-in with sessions  deps:1
+3  pending      medium  Bookmark endpoints  deps:2
+```
+
+The columns are ID, status, priority and title, separated by two or more spaces, then `deps:` with the task's dependencies when it has any. `--with-subtasks` adds a line for each subtask with its dotted ID (`2.1`), and `--all-tags` puts the tag first. Pass `--format text` to get the summary and table in a pipe, or `--json` for every field.
+
 ## What stays the same within a version
 
 For a given `schemaVersion`:

@@ -148,3 +148,21 @@ export function extractParentId(taskId: string): string {
 export function isSubtaskId(taskId: string): boolean {
 	return taskId.includes('.');
 }
+
+/**
+ * The full dotted ID of a subtask. Stored subtasks usually carry only their
+ * own number (`2`), but some already hold the dotted form (`"3.2"`).
+ *
+ * @example
+ * ```typescript
+ * fullSubtaskId(3, 2);     // "3.2"
+ * fullSubtaskId(3, "3.2"); // "3.2"
+ * ```
+ */
+export function fullSubtaskId(
+	parentId: string | number,
+	subtaskId: string | number
+): string {
+	const id = String(subtaskId);
+	return isSubtaskId(id) ? id : `${parentId}.${id}`;
+}

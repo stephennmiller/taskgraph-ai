@@ -121,8 +121,9 @@ describe('list command', () => {
 		});
 
 	describe('compact output (#182, #246)', () => {
+		// --format text: the terminal view, which a pipe only gets on request
 		const runAt80 = (args: string[] = []) =>
-			spawnSync('node', [binPath, 'list', ...args], {
+			spawnSync('node', [binPath, 'list', '--format', 'text', ...args], {
 				encoding: 'utf-8',
 				env: {
 					...process.env,
@@ -179,6 +180,61 @@ describe('list command', () => {
 			expect(output).toContain('No review tasks found');
 			expect(output).toContain('Next: taskgraph list to see every task');
 			expect(output).not.toMatch(/[╭╮╰╯]/);
+		});
+	});
+
+	describe('piped output (#250)', () => {
+		const runPiped = (args: string[]) =>
+			spawnSync('node', [binPath, ...args], {
+				encoding: 'utf-8',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			});
+
+		it('prints one plain line per task with full titles', () => {
+			writeTasks(subtaskProject());
+
+			const { stdout, status } = runPiped(['list']);
+
+			expect(status).toBe(0);
+			expect(stdout.trimEnd().split('\n')).toEqual([
+				'1  done         medium  Set up the database',
+				'2  in-progress  high    Sign-in with sessions  deps:1',
+				'3  pending      medium  Bookmark endpoints  deps:2'
+			]);
+		});
+
+		it('lists subtasks with dotted IDs when asked', () => {
+			writeTasks(subtaskProject());
+
+			const { stdout } = runPiped(['list', '--with-subtasks']);
+
+			expect(stdout).toMatch(
+				/^2\.2 +pending +\S+ +Sessions table and cookie middleware {2}deps:2\.1$/m
+			);
+		});
+
+		it('keeps the table when --format text is given', () => {
+			writeTasks(subtaskProject());
+
+			const { stdout } = runPiped(['list', '--format', 'text']);
+
+			expect(stdout).toMatch(/^Tasks {5}/m);
+			expect(stdout).toContain('│');
+		});
+
+		it.each([
+			['list'],
+			['list', '--with-subtasks'],
+			['list', '--status', 'review'],
+			['next'],
+			['show', '2']
+		])('sends no ANSI escape codes through a pipe: %s', (...args) => {
+			writeTasks(subtaskProject());
+
+			const { stdout, stderr } = runPiped(args);
+
+			expect(stdout).not.toContain('\u001b');
+			expect(stderr).not.toContain('\u001b');
 		});
 	});
 

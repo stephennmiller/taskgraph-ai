@@ -32,7 +32,7 @@ vi.mock('../utils/ui.js', () => ({
 	displayWarning: vi.fn()
 }));
 
-import { ListTasksCommand } from './list.command.js';
+import { ListTasksCommand, shouldPrintPlainList } from './list.command.js';
 
 describe('ListTasksCommand', () => {
 	let consoleLogSpy: any;
@@ -139,6 +139,32 @@ describe('ListTasksCommand', () => {
 						})()
 				).toBe(true);
 			}
+		});
+	});
+
+	describe('plain output in a pipe (#250)', () => {
+		it('prints plain lines when stdout is not a terminal and no format was given', () => {
+			expect(shouldPrintPlainList({}, false, false)).toBe(true);
+			expect(shouldPrintPlainList({}, false, undefined)).toBe(true);
+		});
+
+		it('keeps the table in a terminal, or when a format, --json, --compact or --watch is given', () => {
+			expect(shouldPrintPlainList({}, false, true)).toBe(false);
+			expect(shouldPrintPlainList({}, true, false)).toBe(false);
+			expect(shouldPrintPlainList({ json: true }, false, false)).toBe(false);
+			expect(shouldPrintPlainList({ compact: true }, false, false)).toBe(false);
+			expect(shouldPrintPlainList({ watch: true }, false, false)).toBe(false);
+		});
+
+		it('prints one line per task, without the summary or table', async () => {
+			const command = new ListTasksCommand();
+			(command as any).tmCore = mockTmCore;
+
+			await (command as any).executeCommand({ plain: true });
+
+			const printed = consoleLogSpy.mock.calls.map((call: any[]) => call[0]);
+			expect(printed).toEqual(['1  pending  -  Test Task']);
+			expect(mockTmCore.tasks?.getNext).not.toHaveBeenCalled();
 		});
 	});
 

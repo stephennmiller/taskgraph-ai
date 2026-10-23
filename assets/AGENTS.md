@@ -6,7 +6,7 @@ This project tracks work in TaskGraph. Run `taskgraph prime` for the task in pro
 
 - `taskgraph next`: the next task to work on
 - `taskgraph show <id>`: one task in detail (`3`, or a subtask like `3.2`)
-- `taskgraph list`: all tasks, filtered by `--status` or `--tag`
+- `taskgraph list`: all tasks, filtered by `--status` or `--tag`. Piped, it prints one plain line per task: `3  pending  high  <title>  deps:1,2`
 - `taskgraph set-status --id=<id> --status=in-progress`: claim a task (`--status=done` when finished)
 - `taskgraph note <id> "<what you did>"`: log progress on a task as you go, saved as written
 - `taskgraph add-task --prompt="<what>"`: add a task; add `--discovered-from=<id>` for work you found while doing task `<id>` (a link that doesn't block it)
