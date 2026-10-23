@@ -145,6 +145,21 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('2.2');
 	});
 
+	it('offers subtasks when the parent lists itself as a dependency', () => {
+		const next = selectNextTask([
+			createTask({
+				id: 2,
+				title: 'Lists itself',
+				status: 'in-progress',
+				dependencies: ['2'],
+				subtasks: [createSubtask({ id: 1, title: 'Step', parentId: '2' })]
+			})
+		]);
+
+		// The graph ignores a self-dependency, so `why 2.1` says not blocked
+		expect(next?.id).toBe('2.1');
+	});
+
 	it('orders ids numerically, so 2 comes before 10', () => {
 		const next = selectNextTask([
 			createTask({ id: 10, title: 'Ten' }),

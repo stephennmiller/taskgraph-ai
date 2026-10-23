@@ -84,11 +84,13 @@ export function rankNextTasks(
 		.filter((t) => t.status === 'in-progress' && Array.isArray(t.subtasks))
 		.forEach((parent) => {
 			// A subtask also waits on what its parent waits on (not on the
-			// parent's own subtasks), as `why` shows it
-			const ownPrefix = `${parent.id}.`;
+			// parent's own subtasks, nor on the parent listing itself), as
+			// `why` shows it
+			const parentId = String(parent.id);
+			const ownPrefix = `${parentId}.`;
 			const parentDepsSatisfied = (parent.dependencies ?? [])
 				.map(String)
-				.filter((depId) => !depId.startsWith(ownPrefix))
+				.filter((depId) => depId !== parentId && !depId.startsWith(ownPrefix))
 				.every((depId) => completedIds.has(depId));
 			if (!parentDepsSatisfied) return;
 			parent.subtasks!.forEach((st) => {

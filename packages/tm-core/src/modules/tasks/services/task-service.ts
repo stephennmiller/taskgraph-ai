@@ -307,11 +307,6 @@ export class TaskService {
 	}
 
 	/**
-	 * A tag's tasks for readiness, blocker and tree logic: dependencies on
-	 * archived tasks are taken out, since those count as done. Read only;
-	 * never save the result.
-	 */
-	/**
 	 * Throw NOT_FOUND when a tag is named that the project doesn't have, so
 	 * a typo isn't read as an empty tag. A project with no tags yet passes.
 	 */
@@ -326,6 +321,11 @@ export class TaskService {
 		}
 	}
 
+	/**
+	 * A tag's tasks for readiness, blocker and tree logic: dependencies on
+	 * archived tasks are taken out, since those count as done. Read only;
+	 * never save the result.
+	 */
 	async getDependencyView(tag?: string): Promise<Task[]> {
 		const result = await this.getTaskList({ tag });
 		return satisfyArchivedDependencies(
