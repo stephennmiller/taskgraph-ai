@@ -5,6 +5,8 @@
  * task IDs, never every tag's.
  */
 
+import { toTaskDependency } from './subtask-dependency.js';
+
 type DependencyId = string | number;
 
 export interface MergeNewTaskDependenciesOptions {
@@ -17,7 +19,7 @@ export interface MergeNewTaskDependenciesOptions {
 }
 
 export interface NewTaskDependencies {
-	/** Explicit IDs first, then new suggestions, each once, as given */
+	/** Explicit IDs first, then new suggestions, each once, in stored form */
 	dependencies: DependencyId[];
 	/** Explicit IDs with no task in the tag */
 	missingExplicit: DependencyId[];
@@ -27,7 +29,8 @@ export interface NewTaskDependencies {
 
 /**
  * Merge the dependencies the user asked for with the ones the AI suggested.
- * An ID is compared as a string, so `1` and `"1"` are the same task.
+ * An ID is compared as a string, so `1` and `"1"` are the same task, and
+ * stored as `toTaskDependency` gives it: `1` as `"1"`, `"3.2"` as is.
  */
 export function mergeNewTaskDependencies({
 	explicit,
@@ -48,7 +51,7 @@ export function mergeNewTaskDependencies({
 			if (seen.has(key)) continue;
 			seen.add(key);
 			if (known.has(key)) {
-				result.dependencies.push(id);
+				result.dependencies.push(toTaskDependency(id));
 			} else {
 				missing.push(id);
 			}

@@ -4,6 +4,7 @@ import {
 	dropReferences,
 	liveOrArchived,
 	nextTaskId,
+	promotedSubtaskDescription,
 	pruneTaskLinks,
 	readArchivedIdsSync,
 	retargetDependents
@@ -102,7 +103,7 @@ async function removeSubtask(
 			convertedTask = {
 				id: newTaskId,
 				title: removedSubtask.title,
-				description: removedSubtask.description || '',
+				description: promotedSubtaskDescription(removedSubtask),
 				details: removedSubtask.details || '',
 				status: removedSubtask.status || 'pending',
 				dependencies: moved.dependencies,

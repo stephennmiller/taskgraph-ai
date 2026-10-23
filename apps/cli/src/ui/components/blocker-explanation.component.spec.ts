@@ -186,7 +186,9 @@ describe('renderBlockerExplanation', () => {
 			renderBlockerExplanation(
 				explanation([node('1', [missing()]), node('2', [missing()])], {
 					rootCauses: [{ id: '99', kind: 'missing', listedBy: ['1', '2'] }]
-				})
+				}),
+				// Wide enough to keep the step on one line
+				{ width: 200 }
 			)
 		);
 
@@ -236,12 +238,67 @@ describe('renderBlockerExplanation', () => {
 							}
 						]
 					}
-				)
+				),
+				{ width: 200 }
 			)
 		);
 
 		expect(lines.at(-1)).toBe(
 			'  1, 2, 3 depend on each other. Break the loop with: taskgraph remove-dependency --id=2 --depends-on=1 and taskgraph remove-dependency --id=3 --depends-on=1'
+		);
+	});
+
+	it('wraps each unblock step to the width with a hanging indent', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation([node('5'), node('4')], {
+					rootCauses: [
+						{
+							id: '3',
+							title: 'Design the schema',
+							status: 'pending',
+							kind: 'ready'
+						},
+						{
+							id: '4',
+							title: 'Design the dashboard layout for admins',
+							status: 'pending',
+							kind: 'ready'
+						}
+					]
+				}),
+				{ width: 80 }
+			)
+		);
+
+		const steps = lines.slice(lines.indexOf('To unblock:') + 1);
+		expect(Math.max(...lines.map((l) => l.length))).toBeLessThanOrEqual(80);
+		expect(steps).toEqual([
+			'  Do 3 (Design the schema) and 4 (Design the dashboard layout for admins):',
+			'    nothing else stands in their way.'
+		]);
+	});
+
+	const missingStep = () =>
+		explanation([node('5', [node('99', [], { kind: 'missing' })])], {
+			rootCauses: [{ id: '99', kind: 'missing', listedBy: ['5'] }]
+		});
+
+	it('moves a command to the next line whole instead of splitting it', () => {
+		const lines = plain(renderBlockerExplanation(missingStep(), { width: 76 }));
+
+		expect(lines.slice(lines.indexOf('To unblock:') + 1)).toEqual([
+			'  99 is not a task. Remove it with:',
+			'    taskgraph remove-dependency --id=5 --depends-on=99'
+		]);
+	});
+
+	it('splits a command at its spaces when it is wider than the line', () => {
+		const lines = plain(renderBlockerExplanation(missingStep(), { width: 40 }));
+
+		expect(Math.max(...lines.map((l) => l.length))).toBeLessThanOrEqual(40);
+		expect(lines.join(' ').replace(/ +/g, ' ')).toContain(
+			'taskgraph remove-dependency --id=5 --depends-on=99'
 		);
 	});
 });

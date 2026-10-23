@@ -41,7 +41,8 @@ export {
 	cleanGeneratedSubtaskDependencies,
 	isSiblingReference,
 	parseSubtaskDependencyInput,
-	resolveSubtaskDependency
+	resolveSubtaskDependency,
+	toTaskDependency
 } from './subtask-dependency.js';
 export {
 	buildDependencyTree,

@@ -19,7 +19,8 @@ import {
 	removeTaskLink,
 	resolveSubtaskDependency,
 	setDependencySource,
-	setTaskLink
+	setTaskLink,
+	toTaskDependency
 } from '@tm/core';
 import path from 'path';
 import { displayBanner } from './ui.js';
@@ -377,6 +378,11 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 	) {
 		// Add the dependency; a non-blocking link to the same task gives way
 		targetTask.dependencies.push(formattedDependencyId);
+		// A task's list is all strings, as tm-core saves it; a subtask's keeps
+		// its types, which say whether a bare number is a sibling or a task
+		if (!isSubtask) {
+			targetTask.dependencies = targetTask.dependencies.map(toTaskDependency);
+		}
 		assignMetadata(
 			targetTask,
 			removeTaskLink(targetTask.metadata, formattedDependencyId)
@@ -396,7 +402,9 @@ async function addDependency(tasksPath, taskId, dependencyId, context = {}) {
 			} else if (typeof a === 'string' && typeof b === 'string') {
 				const [aParent, aChild] = a.split('.').map(Number);
 				const [bParent, bChild] = b.split('.').map(Number);
-				return aParent !== bParent ? aParent - bParent : aChild - bChild;
+				return aParent !== bParent
+					? aParent - bParent
+					: (aChild ?? 0) - (bChild ?? 0); // "3" before "3.1"
 			} else if (typeof a === 'number') {
 				return -1; // Numbers come before strings
 			} else {

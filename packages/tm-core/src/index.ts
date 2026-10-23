@@ -205,11 +205,15 @@ export {
 	type EnvMap
 } from './modules/config/services/project-env.js';
 
+// The tag names add-tag accepts
+export { TAG_NAME_PATTERN } from './modules/tasks/services/tag.service.js';
+
 // Task filtering utilities
 export {
 	buildBlocksMap,
 	filterReadyTasks,
 	filterBlockingTasks,
+	filterByStatus,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
 	readTagNamesSync,
@@ -277,6 +281,9 @@ export {
 
 // An AI rewrite keeps the stored fields its schema has no place for
 export { keepStoredFields } from './modules/tasks/utils/index.js';
+
+// A subtask that becomes a task gets a description it can load with
+export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
 
 // Acceptance criteria and the Definition of Done
 export {

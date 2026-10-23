@@ -177,6 +177,56 @@ describe('tags command', () => {
 		expect(result.stderr).toContain('Run taskgraph tags to see your tags');
 	});
 
+	// Regression: #384, a typo looked like an empty tag and suggested adding tasks
+	it('list and next fail on a tag that does not exist', () => {
+		for (const command of ['list', 'next']) {
+			const result = run([command, '--tag', 'nosuch']);
+
+			expect(result.status).toBe(1);
+			expect(result.stderr).toContain('Tag "nosuch" not found');
+			expect(result.stderr).toContain('Run taskgraph tags to see your tags');
+			expect(result.stdout).not.toContain('No tasks found');
+		}
+	});
+
+	// Prototype members aren't tags (#386 own-key lookups)
+	it('list fails on a tag named after an Object member', () => {
+		const result = run(['list', '--tag', 'toString']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('Tag "toString" not found');
+	});
+
+	// The tag check reads tasks.json first; a parse error keeps its message
+	it('list --tag on a corrupt tasks.json says the file is invalid', () => {
+		fs.writeFileSync(
+			path.join(dir, '.taskgraph', 'tasks', 'tasks.json'),
+			'{ "master": '
+		);
+
+		const result = run(['list', '--tag', 'other']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain("isn't valid JSON");
+		expect(result.stderr).not.toContain('Failed to get tags');
+	});
+
+	// After a git checkout the active tag can be missing from tasks.json;
+	// prime runs at session start and passes the active tag itself
+	it('prime still works when the active tag is missing from tasks.json', () => {
+		const statePath = path.join(dir, '.taskgraph', 'state.json');
+		const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+		fs.writeFileSync(
+			statePath,
+			JSON.stringify({ ...state, currentTag: 'gone' })
+		);
+
+		const result = run(['prime']);
+
+		expect(result.status).toBe(0);
+		expect(result.stderr).not.toContain('not found');
+	});
+
 	it('refuses to delete a tag with tasks without a terminal or --yes', () => {
 		run(['tags', 'copy', 'master', 'backup']);
 		const result = run(['tags', 'remove', 'backup']);

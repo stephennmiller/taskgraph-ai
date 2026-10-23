@@ -102,6 +102,12 @@ export class TaskService {
 		const tag = options.tag || activeTag;
 
 		try {
+			// Callers such as prime pass the active tag explicitly; it reads as
+			// empty when missing, the same as passing no tag
+			if (options.tag && options.tag !== activeTag) {
+				await this.assertTagExists(options.tag);
+			}
+
 			// Determine if we can push filters to storage layer
 			const canPushStatusFilter =
 				options.filter?.status &&
@@ -188,6 +194,23 @@ export class TaskService {
 				},
 				error as Error
 			);
+		}
+	}
+
+	/**
+	 * Fail on a tag the project doesn't have, so a typo isn't read as an empty
+	 * tag. "master" always passes (reads fall back to it), and so does any tag
+	 * while tasks.json has none yet
+	 */
+	private async assertTagExists(tag: string): Promise<void> {
+		if (tag === 'master') {
+			return;
+		}
+		const tags = await this.storage.getAllTags();
+		if (tags.length > 0 && !tags.includes(tag)) {
+			throw new TaskGraphError(`Tag "${tag}" not found`, ERROR_CODES.NOT_FOUND, {
+				tagName: tag
+			});
 		}
 	}
 
@@ -304,21 +327,6 @@ export class TaskService {
 		);
 		// Show the dependencies it really has; archived ones count as done
 		return picked ? withStoredDependencies(picked, tasks) : null;
-	}
-
-	/**
-	 * Throw NOT_FOUND when a tag is named that the project doesn't have, so
-	 * a typo isn't read as an empty tag. A project with no tags yet passes.
-	 */
-	async assertTagExists(tag: string): Promise<void> {
-		const tags = await this.storage.getAllTags();
-		if (tags.length && !tags.includes(tag)) {
-			throw new TaskGraphError(
-				`Tag "${tag}" not found`,
-				ERROR_CODES.NOT_FOUND,
-				{ tagName: tag }
-			);
-		}
 	}
 
 	/**

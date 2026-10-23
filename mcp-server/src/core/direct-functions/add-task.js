@@ -92,7 +92,7 @@ export async function addTaskDirect(args, log, context = {}) {
 			: dependencies // Check if dependencies exist and are a string
 				? String(dependencies)
 						.split(',')
-						.map((id) => parseInt(id.trim(), 10)) // Split, trim, and parse
+						.map((id) => id.trim()) // 3.2 stays a subtask ID
 				: []; // Default to empty array if null/undefined
 		const taskPriority = priority || 'medium'; // Default priority
 

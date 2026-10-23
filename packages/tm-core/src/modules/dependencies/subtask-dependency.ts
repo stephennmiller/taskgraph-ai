@@ -40,6 +40,16 @@ export function resolveSubtaskDependency(
 		: String(dependency);
 }
 
+/**
+ * The form a top-level task stores a dependency in: a string, `"3"` for a
+ * task and `"3.2"` for a subtask, as tm-core's file storage saves it. On a
+ * task, `3` and `"3"` name the same task, so only the type changes. Never
+ * apply it to a subtask's list, where a bare number is a sibling.
+ */
+export function toTaskDependency(dependency: string | number): string {
+	return String(dependency);
+}
+
 /** A task ID (`3`) or a subtask ID (`3.2`), as a user or the AI writes it */
 const DEPENDENCY_ID = /^[1-9]\d*(\.[1-9]\d*)?$/;
 
