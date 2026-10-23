@@ -43,14 +43,60 @@ export function isInsideRoot(root, candidate) {
 	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
 }
 
-// Names that hold credentials. .env.example and friends hold none. .aws and
-// .kube are refused whole: besides credentials and kubeconfigs (config,
-// config-staging, ...) they hold SSO, CLI and OIDC token caches.
-const SECRET_NAME =
-	/^(\.env([._-].*)?|\.envrc|\.git|\.git-credentials|\.aws|\.kube|\.npmrc|[._]netrc|\.pypirc|\.pgpass|id_(rsa|dsa|ecdsa|ed25519).*)$|\.(pem|key|p12|pfx|keystore|jks|ppk)$/i;
+// Names that hold credentials, in lower case. Both the name check and the rg
+// globs that make a directory-wide Grep skip them are built from this table,
+// so the two can't drift apart. .aws and .kube are refused whole: besides
+// credentials and kubeconfigs (config, config-staging, ...) they hold SSO, CLI
+// and OIDC token caches.
+const SECRETS = {
+	// Whole names
+	names: [
+		'.env',
+		'.envrc',
+		'.git',
+		'.git-credentials',
+		'.aws',
+		'.kube',
+		'kubeconfig',
+		'.npmrc',
+		'.netrc',
+		'_netrc',
+		'.pypirc',
+		'.pgpass',
+		// libpq's name for .pgpass on Windows
+		'pgpass.conf'
+	],
+	// Names starting with one of these
+	prefixes: [
+		'.env.',
+		'.env-',
+		'.env_',
+		'id_rsa',
+		'id_dsa',
+		'id_ecdsa',
+		'id_ed25519'
+	],
+	// Names ending in `.<extension>`
+	extensions: [
+		'pem',
+		'key',
+		'p12',
+		'pfx',
+		'keystore',
+		'jks',
+		'ppk',
+		'kubeconfig'
+	],
+	// Files that are secret only inside given directories, as path segments.
+	// .config/git/credentials is where git's store helper writes when
+	// XDG_CONFIG_HOME is set or the file already exists.
+	paths: [
+		['.docker', 'config.json'],
+		['.config', 'git', 'credentials']
+	]
+};
+// .env.example and friends hold none
 const PUBLIC_ENV = /^\.env[._-](example|sample|template)$/i;
-// Files that are secret only inside a given directory: [directory, file]
-const SECRET_PAIRS = [['.docker', 'config.json']];
 // A Windows 8.3 short name such as ENV~1 or ENVLOC~1.LOC. It can stand for
 // any long name, .env included, so it is refused whatever it points at.
 const SHORT_NAME = /^[^.~]{1,7}~\d+(\.[^.]{0,3})?$/;
@@ -88,10 +134,21 @@ function namesSecret(candidate) {
 		.split(/[\\/,]/)
 		.map((part) => foldCase(normalizeSegment(part)));
 	const secret = (part) =>
-		SHORT_NAME.test(part) || (SECRET_NAME.test(part) && !PUBLIC_ENV.test(part));
+		SHORT_NAME.test(part) || (isSecretName(part) && !PUBLIC_ENV.test(part));
 	if (parts.some(secret)) return true;
-	return SECRET_PAIRS.some(([dir, file]) =>
-		parts.some((part, i) => part === dir && parts[i + 1] === file)
+	return SECRETS.paths.some((segments) =>
+		parts.some((_, i) =>
+			segments.every((segment, j) => parts[i + j] === segment)
+		)
+	);
+}
+
+/** True when one case-folded path segment is a secret name */
+function isSecretName(part) {
+	return (
+		SECRETS.names.includes(part) ||
+		SECRETS.prefixes.some((prefix) => part.startsWith(prefix)) ||
+		SECRETS.extensions.some((extension) => part.endsWith(`.${extension}`))
 	);
 }
 
@@ -103,37 +160,15 @@ function anyCase(name) {
 	);
 }
 
-// rg globs for the names SECRET_NAME matches; keep the two in step. They hold
-// no commas or spaces, since Claude Code splits Grep's glob on both. They also
-// skip .env.example: rg can't re-include a file without turning every other
-// glob into an allow-list.
+// rg globs for the names in SECRETS. They hold no commas or spaces, since
+// Claude Code splits Grep's glob on both. They also skip .env.example: rg
+// can't re-include a file without turning every other glob into an
+// allow-list.
 const SECRET_GLOBS = [
-	'.env',
-	'.env.*',
-	'.env-*',
-	'.env_*',
-	'.envrc',
-	'.git',
-	'.git-credentials',
-	'.aws',
-	'.kube',
-	'.npmrc',
-	'.netrc',
-	'_netrc',
-	'.pypirc',
-	'.pgpass',
-	'id_rsa*',
-	'id_dsa*',
-	'id_ecdsa*',
-	'id_ed25519*',
-	'*.pem',
-	'*.key',
-	'*.p12',
-	'*.pfx',
-	'*.keystore',
-	'*.jks',
-	'*.ppk',
-	...SECRET_PAIRS.map(([dir, file]) => `**/${dir}/${file}`)
+	...SECRETS.names,
+	...SECRETS.prefixes.map((prefix) => `${prefix}*`),
+	...SECRETS.extensions.map((extension) => `*.${extension}`),
+	...SECRETS.paths.map((segments) => `**/${segments.join('/')}`)
 ].map((name) => `!${anyCase(name)}`);
 
 /**
