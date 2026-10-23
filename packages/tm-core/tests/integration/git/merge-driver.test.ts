@@ -245,9 +245,14 @@ describe('installMergeDriver', () => {
 		expect(
 			git(repo, 'check-attr', 'merge', '.taskgraph/tasks/tasks.json')
 		).toBe('.taskgraph/tasks/tasks.json: merge: taskgraph');
+		// A name of its own, so a CLI from before archive.json had a driver
+		// (configured only for `taskgraph`) text-merges it instead
 		expect(
 			git(repo, 'check-attr', 'merge', '.taskgraph/tasks/archive.json')
-		).toBe('.taskgraph/tasks/archive.json: merge: taskgraph');
+		).toBe('.taskgraph/tasks/archive.json: merge: taskgraph-archive');
+		expect(git(repo, 'config', '--get', 'merge.taskgraph-archive.driver')).toBe(
+			'taskgraph merge-driver %O %A %B %P'
+		);
 	});
 
 	it('adds the archive.json line to a project set up before it had one', () => {

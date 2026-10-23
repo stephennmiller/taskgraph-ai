@@ -2,7 +2,7 @@
  * @fileoverview Three-way merge of archive.json for the Git merge driver
  */
 
-import { archiveTag, archivedTasksById } from '../../tasks/utils/archive.js';
+import { archivedTasksById } from '../../tasks/utils/archive.js';
 import { type TasksMergeResult, mergeTasksJson } from './merge-tasks-json.js';
 
 /**
@@ -25,9 +25,7 @@ export function mergeArchiveJson(
 	for (const tag of tags) {
 		const before = archivedTasksById(base, tag).tasks;
 		// tasks.json has the archive's shape: { <tag>: { tasks } }
-		const live = new Map(
-			archiveTag(options.tasks, tag).tasks.map((t) => [String(t.id), t])
-		);
+		const live = archivedTasksById(options.tasks, tag).tasks;
 		for (const [id, archived] of archivedTasksById(theirs, tag).tasks) {
 			const here = live.get(id);
 			if (before.has(id) || !here || here.title === archived.title) continue;

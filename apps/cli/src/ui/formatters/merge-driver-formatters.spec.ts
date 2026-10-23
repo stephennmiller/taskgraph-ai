@@ -179,6 +179,30 @@ describe('formatMergeConflicts', () => {
 			'Run taskgraph move --from=9 --to=<free ID>, then git add both files'
 		]);
 	});
+
+	it('names the tag in the move hint outside master', () => {
+		const output = plain(
+			formatMergeConflicts(
+				[
+					{
+						tag: 'feature',
+						id: '9',
+						field: '',
+						kind: 'archived-theirs',
+						ours: { id: 9 },
+						theirs: { id: 9 }
+					}
+				],
+				'.taskgraph/tasks/archive.json',
+				[],
+				80
+			)
+		);
+
+		expect(output.split('\n').at(-1)).toBe(
+			'Run taskgraph move --from=9 --to=<free ID> --tag=feature, then git add both files'
+		);
+	});
 });
 
 describe('formatMergeDriverSetup', () => {

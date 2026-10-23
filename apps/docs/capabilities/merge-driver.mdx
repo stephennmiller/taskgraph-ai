@@ -45,6 +45,8 @@ Moving this branch's task frees the ID for the archived one. `move` also moves d
 
 The driver tells the tasks apart by title, and it can only check when Git runs it, which is when both branches changed the file. If only the incoming branch touched `archive.json`, Git takes its version without a merge and the reused ID isn't reported; `taskgraph archive restore 9` then says the ID is already in `tasks.json`.
 
+`archive.json` has a driver name of its own, `taskgraph-archive`, so a teammate whose clone was set up by an older TaskGraph (which only knows `taskgraph`) gets Git's normal text merge for it, as before, until they upgrade and run `taskgraph init --merge-driver`.
+
 The driver reads the other file of the pair from the working tree, which during a merge still holds this branch's version, so the order in which Git merges the two files doesn't matter.
 
 ## When both branches change the same field
@@ -104,8 +106,8 @@ The setup has two parts:
 
 | Part | Where | Shared? |
 |------|-------|---------|
-| `.taskgraph/tasks/tasks.json merge=taskgraph` and `.taskgraph/tasks/archive.json merge=taskgraph` | `.gitattributes` in the project root | Yes, commit it |
-| `merge.taskgraph.driver` (the command Git runs) | `.git/config` | **No.** Git never pushes or clones config |
+| `.taskgraph/tasks/tasks.json merge=taskgraph` and `.taskgraph/tasks/archive.json merge=taskgraph-archive` | `.gitattributes` in the project root | Yes, commit it |
+| `merge.taskgraph.driver` and `merge.taskgraph-archive.driver` (the command Git runs) | `.git/config` | **No.** Git never pushes or clones config |
 
 <Warning>
 **Each clone runs `taskgraph init --merge-driver` once.** The committed `.gitattributes` line names the driver, but the command behind it lives in each clone's own `.git/config`. A teammate who clones the repository and skips this step gets Git's normal line-by-line merge of `tasks.json`: nothing breaks, but colliding task IDs conflict as before.

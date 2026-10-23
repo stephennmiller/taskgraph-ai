@@ -10,10 +10,11 @@
  * can't be parsed it doesn't touch `%A` at all (the current branch's file).
  *
  * Setup is two parts: `.gitattributes` lines, committed, that route
- * tasks.json and archive.json to the driver named `taskgraph`, and the
- * `merge.taskgraph.*` entries in `.git/config`, which git never shares, so
- * each clone runs the setup once. A clone without the config falls back to git's normal text
- * merge, so the attribute is safe to commit.
+ * tasks.json to the driver named `taskgraph` and archive.json to
+ * `taskgraph-archive`, and the `merge.<name>.*` entries in `.git/config`,
+ * which git never shares, so each clone runs the setup once. A clone
+ * without the config falls back to git's normal text merge, so the
+ * attributes are safe to commit.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -31,15 +32,27 @@ import { type TasksMergeResult, mergeTasksJson } from './merge-tasks-json.js';
 /** The driver's name in `.gitattributes` and `merge.<name>.*` */
 export const MERGE_DRIVER_NAME = 'taskgraph';
 
-/** The files the driver merges, relative to the project root */
+/**
+ * The files the driver merges (relative to the project root) and the driver
+ * name each is routed to. archive.json has a name of its own because a CLI
+ * from before it had a driver would merge it as tasks.json and renumber
+ * archived tasks; such a clone has no `merge.taskgraph-archive` config, so
+ * git text-merges archive.json there instead.
+ */
 const MERGED_FILES = [
-	TASKGRAPH_TASKS_FILE,
-	path.posix.join(path.posix.dirname(TASKGRAPH_TASKS_FILE), ARCHIVE_FILE_NAME)
+	{ file: TASKGRAPH_TASKS_FILE, driver: MERGE_DRIVER_NAME },
+	{
+		file: path.posix.join(
+			path.posix.dirname(TASKGRAPH_TASKS_FILE),
+			ARCHIVE_FILE_NAME
+		),
+		driver: `${MERGE_DRIVER_NAME}-archive`
+	}
 ];
 
 /** The `.gitattributes` lines, relative to the project root */
 export const MERGE_DRIVER_ATTRIBUTES = MERGED_FILES.map(
-	(file) => `${file} merge=${MERGE_DRIVER_NAME}`
+	({ file, driver }) => `${file} merge=${driver}`
 );
 
 /** Git's placeholders: ancestor, current (also the output), other, path */
@@ -237,8 +250,9 @@ export interface MergeDriverInstallResult {
 	 */
 	attributes: 'created' | 'updated' | 'unchanged' | 'kept';
 	/**
-	 * Whether `.git/config` already had this exact driver command. `kept`:
-	 * `merge.taskgraph.driver` is a command TaskGraph didn't write, left as it is
+	 * Whether `.git/config` already had this exact driver command (for both
+	 * driver names). `kept`: a `merge.<name>.driver` is a command TaskGraph
+	 * didn't write, left as it is
 	 */
 	config: 'set' | 'unchanged' | 'kept';
 }
@@ -294,9 +308,10 @@ export function isInsideGitWorkTree(projectRoot: string): boolean {
 
 /**
  * Set up the merge driver: add the `.gitattributes` lines (keeping what's
- * there) and point `merge.taskgraph.driver` at `command`. Safe to repeat,
- * and a project set up before archive.json had a driver gets its line.
- * A merge attribute for either file or a `merge.taskgraph.driver` that
+ * there) and point `merge.taskgraph.driver` and
+ * `merge.taskgraph-archive.driver` at `command`. Safe to repeat, and a
+ * project set up before archive.json had a driver gets its line and config.
+ * A merge attribute for either file or a `merge.<name>.driver` that
  * TaskGraph didn't write is the user's own setup and is left alone (`kept`).
  *
  * @throws NotAGitRepositoryError when `projectRoot` isn't in a Git work tree
@@ -316,10 +331,10 @@ export function installMergeDriver(
 		: null;
 	const lines = (existing ?? '').split(/\r?\n/).map((line) => line.trim());
 	const missing: string[] = [];
-	for (const [i, file] of MERGED_FILES.entries()) {
+	for (const [i, { file, driver }] of MERGED_FILES.entries()) {
 		const current = existingMergeAttribute(lines, file);
 		if (current === undefined) missing.push(MERGE_DRIVER_ATTRIBUTES[i]);
-		else if (current !== `merge=${MERGE_DRIVER_NAME}`) attributes = 'kept';
+		else if (current !== `merge=${driver}`) attributes = 'kept';
 	}
 	if (missing.length > 0) {
 		const separator = existing && !existing.endsWith('\n') ? '\n' : '';
@@ -333,34 +348,44 @@ export function installMergeDriver(
 		}
 	}
 
-	const key = `merge.${MERGE_DRIVER_NAME}`;
-	const read = (name: string) => {
+	let config: MergeDriverInstallResult['config'] = 'unchanged';
+	for (const { driver: name } of MERGED_FILES) {
+		const result = configureDriver(projectRoot, name, command);
+		if (result === 'kept' || config === 'unchanged') config = result;
+	}
+
+	return { attributes, config };
+}
+
+/** Point `merge.<name>.driver` at `command`, unless the user set their own */
+function configureDriver(
+	projectRoot: string,
+	name: string,
+	command: string
+): MergeDriverInstallResult['config'] {
+	const key = `merge.${name}`;
+	const read = (entry: string) => {
 		try {
-			return git(projectRoot, ['config', '--local', '--get', `${key}.${name}`]);
+			return git(projectRoot, [
+				'config',
+				'--local',
+				'--get',
+				`${key}.${entry}`
+			]);
 		} catch {
 			return ''; // not set
 		}
 	};
 	const driver = read('driver');
-	let config: MergeDriverInstallResult['config'] = 'unchanged';
-	if (driver !== command && driver !== '' && !isOurCommand(driver)) {
-		// Someone set up their own driver under this name; don't replace it
-		config = 'kept';
-	} else if (driver !== command) {
-		// The command first: a `merge.taskgraph` section with a name but no
-		// driver makes git stop with "lacks command line" instead of falling
-		// back to a text merge
-		git(projectRoot, ['config', '--local', `${key}.driver`, command]);
-		if (read('name') === '') {
-			git(projectRoot, [
-				'config',
-				'--local',
-				`${key}.name`,
-				'TaskGraph tasks.json and archive.json merge'
-			]);
-		}
-		config = 'set';
+	if (driver === command) return 'unchanged';
+	// Someone set up their own driver under this name; don't replace it
+	if (driver !== '' && !isOurCommand(driver)) return 'kept';
+	// The command first: a `merge.<name>` section with a name but no driver
+	// makes git stop with "lacks command line" instead of falling back to a
+	// text merge
+	git(projectRoot, ['config', '--local', `${key}.driver`, command]);
+	if (read('name') === '') {
+		git(projectRoot, ['config', '--local', `${key}.name`, 'TaskGraph merge']);
 	}
-
-	return { attributes, config };
+	return 'set';
 }

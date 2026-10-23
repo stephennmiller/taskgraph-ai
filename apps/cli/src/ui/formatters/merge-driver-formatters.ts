@@ -165,9 +165,13 @@ export function formatMergeConflicts(
 	// Renumbering this branch's task frees the ID for the archived one
 	const reused = conflicts.filter((row) => row.kind === 'archived-theirs');
 	const from = reused.length === 1 ? reused[0].id : '<id>';
+	const tag =
+		reused.length === 1 && reused[0].tag !== DEFAULT_TAG
+			? ` --tag=${reused[0].tag}`
+			: '';
 	const fix =
 		reused.length > 0
-			? `Run taskgraph move --from=${from} --to=<free ID>, then git add both files`
+			? `Run taskgraph move --from=${from} --to=<free ID>${tag}, then git add both files`
 			: `Edit ${tasksFile} to choose, then git add it`;
 	return [head, ...rows, ...(note ? [note] : []), theme.muted(fix)].join('\n');
 }

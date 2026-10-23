@@ -93,14 +93,16 @@ export function mergeTagChanges<T>(
 	base: unknown,
 	mine: T,
 	theirs: unknown,
-	archived: () => ArchivedIds = () => ({ ids: new Set(), highestId: 0 })
+	archived?: () => ArchivedIds
 ): MergeTagChangesResult<T> {
 	const tasksOf = (tag: unknown) =>
 		isPlainObject(tag) && isItemList(tag.tasks) ? tag.tasks : [];
 	const baseIds = new Set(tasksOf(base).map(keyOf));
 	const added = tasksOf(mine).filter((task) => !baseIds.has(keyOf(task)));
-	const reserved =
-		added.length > 0 ? archived() : { ids: new Set<string>(), highestId: 0 };
+	const reserved = (added.length > 0 && archived?.()) || {
+		ids: new Set<string>(),
+		highestId: 0
+	};
 	const ctx: Context = {
 		renumbered: [],
 		archived: reserved,

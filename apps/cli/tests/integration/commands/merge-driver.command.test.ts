@@ -138,7 +138,7 @@ describe('merge driver with git merge', () => {
 
 	it('init routes tasks.json and archive.json to the driver and turns it on for this clone', () => {
 		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
-			`${TASKS_FILE} merge=taskgraph\n${ARCHIVE_FILE} merge=taskgraph\n`
+			`${TASKS_FILE} merge=taskgraph\n${ARCHIVE_FILE} merge=taskgraph-archive\n`
 		);
 		expect(gitOk('check-attr', 'merge', TASKS_FILE)).toBe(
 			`${TASKS_FILE}: merge: taskgraph`
@@ -296,6 +296,32 @@ describe('merge driver with git merge', () => {
 					.master.metadata.highestId
 			).toBe(3);
 			expect(readTasks().map((t) => t.title)).toEqual(['Two']);
+		});
+
+		it('leaves archive.json to a text merge in a clone set up only for tasks.json', () => {
+			// An older CLI configured only `taskgraph`; it would renumber archived tasks
+			gitOk('config', '--remove-section', 'merge.taskgraph-archive');
+
+			const merge = archiveOnBothBranches(
+				{
+					tasks: [done(2, 'Two'), done(3, 'Three')],
+					archived: [done(1, 'One')],
+					highestId: 1
+				},
+				{
+					tasks: [done(1, 'One'), done(2, 'Two')],
+					archived: [done(3, 'Three')],
+					highestId: 3
+				}
+			);
+
+			expect(merge.status).not.toBe(0);
+			expect(gitOk('diff', '--name-only', '--diff-filter=U')).toBe(
+				ARCHIVE_FILE
+			);
+			expect(fs.readFileSync(path.join(repo, ARCHIVE_FILE), 'utf8')).toContain(
+				'<<<<<<<'
+			);
 		});
 
 		it('reports an ID the incoming branch archived and this branch reused', () => {
