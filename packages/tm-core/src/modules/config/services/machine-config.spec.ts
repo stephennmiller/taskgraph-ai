@@ -131,6 +131,31 @@ describe('splitMachineConfig', () => {
 		});
 	});
 
+	it('keeps defaults config.json leaves out from being pinned in config.local.json', () => {
+		// config.json saves only non-default keys, so its main role has no
+		// maxTokens or temperature; the merged config has the defaults
+		const defaults = {
+			models: {
+				main: { modelId: 'sonnet', maxTokens: 64000, temperature: 0.2 }
+			}
+		};
+		const currentShared = { models: { main: { modelId: 'sonnet' } } };
+		const currentLocal = { models: { main: { modelId: 'opus' } } };
+		const config = {
+			models: { main: { modelId: 'opus', maxTokens: 64000, temperature: 0.2 } }
+		};
+
+		const { shared, local } = splitMachineConfig(
+			config,
+			currentShared,
+			currentLocal,
+			defaults
+		);
+
+		expect(local).toEqual({ models: { main: { modelId: 'opus' } } });
+		expect(shared).toEqual({ models: { main: { modelId: 'sonnet' } } });
+	});
+
 	it('leaves a key out of config.json when only the local file had it', () => {
 		const config = {
 			global: { logLevel: 'info' },
@@ -188,5 +213,32 @@ describe('hasPerMachineSettings', () => {
 	it('is false for shared settings only, or no config', () => {
 		expect(hasPerMachineSettings({ claudeCode: { maxTurns: 5 } })).toBe(false);
 		expect(hasPerMachineSettings(null)).toBe(false);
+	});
+});
+
+describe('__proto__ and constructor keys in a config file', () => {
+	it('are skipped when merging', () => {
+		const local = JSON.parse('{"__proto__":{"polluted":"yes"},"a":2}');
+
+		const merged = mergeMachineConfig({ a: 1 }, local) as Record<
+			string,
+			unknown
+		>;
+
+		expect(merged).toEqual({ a: 2 });
+		expect(merged.polluted).toBeUndefined();
+		expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+	});
+
+	it('are skipped when splitting, so Object.prototype stays unchanged', () => {
+		const shared = JSON.parse('{"__proto__":{"polluted":"shared"}}');
+		const local = JSON.parse(
+			'{"__proto__":{"polluted":"local"},"constructor":{"prototype":{"x":1}}}'
+		);
+
+		splitMachineConfig({ a: 1 }, shared, local);
+
+		expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+		expect(({} as Record<string, unknown>).x).toBeUndefined();
 	});
 });

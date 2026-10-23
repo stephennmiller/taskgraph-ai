@@ -228,8 +228,12 @@ describe('per-machine config and state', () => {
 				claudeCode: { pathToClaudeCodeExecutable: '/usr/local/bin/claude' }
 			});
 
-			run(['init', '--yes', '--no-aliases', '--no-git']);
+			const result = run(['init', '--yes', '--no-aliases', '--no-git']);
 
+			// The move is reported even though config.local.json already existed
+			expect(result.stdout).toMatch(
+				/\.taskgraph\/config\.local\.json\s+this machine's settings, moved from config\.json/
+			);
 			expect(readJson(sharedPath()).claudeCode).toBeUndefined();
 			expect(readJson(localPath())).toEqual({
 				claudeCode: { pathToClaudeCodeExecutable: '/usr/local/bin/claude' }
@@ -247,6 +251,27 @@ describe('per-machine config and state', () => {
 		expect(result.stdout).toMatch(
 			/\.taskgraph\/state\.json\s+ignored but still tracked; git rm --cached it/
 		);
+
+		// Run again with nothing left to change: the row is a hint, not a change
+		const again = run(['init', '--yes', '--no-aliases', '--no-git']);
+		expect(again.stdout).toContain('TaskGraph is already set up in');
+		expect(again.stdout).toContain('ignored but still tracked');
+	});
+
+	it('warns once about a broken config.local.json and uses config.json', () => {
+		fs.writeFileSync(localPath(), '{ "models": ');
+
+		const models = run(['models']);
+		const list = run(['list']);
+
+		expect(models.status).toBe(0);
+		expect(models.stdout).toMatch(/Main\s+sonnet/);
+		const warnings = `${models.stdout}${models.stderr}`.match(
+			/Couldn't read \.taskgraph\/config\.local\.json/g
+		);
+		expect(warnings).toHaveLength(1);
+		expect(list.status).toBe(0);
+		expect(fs.readFileSync(localPath(), 'utf8')).toBe('{ "models": ');
 	});
 
 	it('says nothing about state.json when Git does not track it', () => {

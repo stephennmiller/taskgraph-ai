@@ -16,12 +16,24 @@ type JsonObject = Record<string, unknown>;
  * config.local.json, and moves them there from config.json if an earlier
  * release put them in the shared file.
  */
-export const PER_MACHINE_CONFIG_KEYS = [
+const PER_MACHINE_CONFIG_KEYS = [
 	'claudeCode.pathToClaudeCodeExecutable'
 ] as const;
 
 function isPlainObject(value: unknown): value is JsonObject {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Keys that reach Object.prototype through `obj[key]`. A config file that
+ * names one is skipped there, so it can't change the prototype of every
+ * object in the process.
+ */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/** Own entries of a parsed config object, without UNSAFE_KEYS */
+function safeEntries(obj: JsonObject): [string, unknown][] {
+	return Object.entries(obj).filter(([key]) => !UNSAFE_KEYS.has(key));
 }
 
 function clone<T>(value: T): T {
@@ -31,7 +43,9 @@ function clone<T>(value: T): T {
 function getPath(obj: unknown, keyPath: string): unknown {
 	let current: unknown = obj;
 	for (const key of keyPath.split('.')) {
-		if (!isPlainObject(current)) return undefined;
+		if (!isPlainObject(current) || !Object.hasOwn(current, key)) {
+			return undefined;
+		}
 		current = current[key];
 	}
 	return current;
@@ -66,7 +80,7 @@ function deletePath(obj: JsonObject, keyPath: string): void {
 /** Dot paths of every non-object value in `obj` */
 function leafPaths(obj: unknown, prefix = ''): string[] {
 	if (!isPlainObject(obj)) return [];
-	return Object.entries(obj).flatMap(([key, value]) => {
+	return safeEntries(obj).flatMap(([key, value]) => {
 		const keyPath = prefix ? `${prefix}.${key}` : key;
 		return isPlainObject(value) ? leafPaths(value, keyPath) : [keyPath];
 	});
@@ -103,7 +117,7 @@ export function mergeMachineConfig<T extends object>(
 	const merge = (base: unknown, over: unknown): unknown => {
 		if (!isPlainObject(over)) return over === undefined ? base : clone(over);
 		const result: JsonObject = isPlainObject(base) ? { ...base } : {};
-		for (const [key, value] of Object.entries(over)) {
+		for (const [key, value] of safeEntries(over)) {
 			result[key] = merge(result[key], value);
 		}
 		return result;
@@ -127,14 +141,20 @@ export function mergeMachineConfig<T extends object>(
  * @param config - The full config to save (usually shared + local merged)
  * @param currentShared - config.json as it is on disk, or null
  * @param currentLocal - config.local.json as it is on disk, or null
+ * @param defaults - The defaults the loader fills in under config.json. A key
+ *   of a local model role that only repeats config.json's value, or the
+ *   default config.json leaves out, isn't a local change and stays out of
+ *   config.local.json.
  */
 export function splitMachineConfig<T extends object>(
 	config: T,
 	currentShared: object | null | undefined,
-	currentLocal: object | null | undefined
+	currentLocal: object | null | undefined,
+	defaults?: object | null
 ): { shared: T; local: JsonObject } {
 	const shared = clone(config) as unknown as JsonObject;
 	const local: JsonObject = clone((currentLocal ?? {}) as JsonObject);
+	const effectiveShared = mergeMachineConfig(defaults, currentShared);
 
 	const units = new Set(leafPaths(currentLocal).map(overrideUnit));
 	for (const unit of units) {
@@ -145,9 +165,10 @@ export function splitMachineConfig<T extends object>(
 		if (value === undefined) deletePath(local, unit);
 		else if (isPlainObject(value) && isPlainObject(localValue)) {
 			// Keys the local file had, plus keys that now differ from config.json
-			const sharedObject = isPlainObject(sharedValue) ? sharedValue : {};
+			const effectiveValue = getPath(effectiveShared, unit);
+			const sharedObject = isPlainObject(effectiveValue) ? effectiveValue : {};
 			const localObject: JsonObject = {};
-			for (const [key, keyValue] of Object.entries(value)) {
+			for (const [key, keyValue] of safeEntries(value)) {
 				if (key in localValue || !sameValue(keyValue, sharedObject[key])) {
 					localObject[key] = clone(keyValue);
 				}

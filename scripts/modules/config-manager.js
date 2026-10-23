@@ -252,17 +252,21 @@ function readLocalConfig(root) {
 	}
 }
 
+/** Marks a file that exists but isn't valid JSON (see readJsonIfPresent) */
+const UNREADABLE = Symbol('unreadable');
+
 /**
- * Parse a JSON file for writeConfig; null when missing or unreadable.
+ * Parse a JSON file for writeConfig.
  * @param {string} filePath
- * @returns {object|null}
+ * @returns {object|null|typeof UNREADABLE} null when missing, UNREADABLE
+ *   when it exists but can't be parsed
  */
 function readJsonIfPresent(filePath) {
 	try {
 		if (!fs.existsSync(filePath)) return null;
 		return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 	} catch {
-		return null;
+		return UNREADABLE;
 	}
 }
 
@@ -860,21 +864,35 @@ function saveCleanedConfig(configPath, cleaned) {
 function writeSplitConfig(rootPath, config) {
 	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
 	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
-	const currentShared = readJsonIfPresent(configPath);
+	const sharedOnDisk = readJsonIfPresent(configPath);
+	const currentShared = sharedOnDisk === UNREADABLE ? null : sharedOnDisk;
 	const currentLocal = readJsonIfPresent(localPath);
+	if (currentLocal === UNREADABLE) {
+		// Leave a broken config.local.json for the user to fix rather than
+		// overwrite the settings in it; save everything to config.json as
+		// before config.local.json existed.
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify(toSavedConfig(config, currentShared, DEFAULTS), null, 2)
+		);
+		return;
+	}
 	const { shared, local } = splitMachineConfig(
 		config,
 		currentShared,
-		currentLocal
+		currentLocal,
+		DEFAULTS
 	);
 
+	// Local file first: if the shared write then fails, a moved setting is
+	// in both files rather than in neither
+	if (currentLocal || Object.keys(local).length > 0) {
+		fs.writeFileSync(localPath, `${JSON.stringify(local, null, 2)}\n`);
+	}
 	fs.writeFileSync(
 		configPath,
 		JSON.stringify(toSavedConfig(shared, currentShared, DEFAULTS), null, 2)
 	);
-	if (currentLocal || Object.keys(local).length > 0) {
-		fs.writeFileSync(localPath, `${JSON.stringify(local, null, 2)}\n`);
-	}
 }
 
 /**
@@ -893,6 +911,8 @@ function moveMachineSettings(rootPath) {
 	const local = readJsonIfPresent(
 		path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE)
 	);
+	// A broken config.local.json stays as it is; readLocalConfig reports it
+	if (local === UNREADABLE) return false;
 	try {
 		writeSplitConfig(rootPath, mergeMachineConfig(shared, local));
 	} catch (error) {

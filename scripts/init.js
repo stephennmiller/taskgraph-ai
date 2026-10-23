@@ -151,7 +151,6 @@ function trackedPaths(targetDir) {
 	return [
 		path.join(targetDir, TASKGRAPH_DIR),
 		path.join(targetDir, TASKGRAPH_CONFIG_FILE),
-		path.join(targetDir, TASKGRAPH_LOCAL_CONFIG_FILE),
 		path.join(targetDir, TASKGRAPH_TASKS_FILE),
 		path.join(targetDir, '.git'),
 		path.join(targetDir, GITIGNORE_FILE),
@@ -209,13 +208,6 @@ function describeInitChanges(targetDir, before, after) {
 		});
 	} else if (alreadySetUp && created(at(TASKGRAPH_CONFIG_FILE))) {
 		changes.push({ path: TASKGRAPH_CONFIG_FILE, note: 'restored' });
-	}
-
-	if (created(at(TASKGRAPH_LOCAL_CONFIG_FILE))) {
-		changes.push({
-			path: TASKGRAPH_LOCAL_CONFIG_FILE,
-			note: "this machine's settings, moved from config.json"
-		});
 	}
 
 	if (created(at('.git'))) {
@@ -821,12 +813,7 @@ async function createProjectStructure(
 
 	// Move per-machine settings an earlier release kept in the shared
 	// config.json to the gitignored config.local.json
-	if (moveMachineSettings(targetDir)) {
-		log(
-			'debug',
-			`Moved per-machine settings to ${TASKGRAPH_LOCAL_CONFIG_FILE}`
-		);
-	}
+	const movedMachineSettings = moveMachineSettings(targetDir);
 
 	// Copy .gitignore with GitTasks preference
 	try {
@@ -941,21 +928,36 @@ async function createProjectStructure(
 			before,
 			snapshotPaths(watched)
 		);
-		// .gitignore doesn't untrack a state.json an earlier init let in
-		if (isTrackedInGit(targetDir, TASKGRAPH_STATE_FILE)) {
-			changes.push({
-				path: TASKGRAPH_STATE_FILE,
-				note: 'ignored but still tracked; `git rm --cached` it'
+		// Listed whether config.local.json is new or already had settings.
+		// A move needs an existing config.json, so this is the first row.
+		if (movedMachineSettings) {
+			changes.unshift({
+				path: TASKGRAPH_LOCAL_CONFIG_FILE,
+				note: "this machine's settings, moved from config.json"
 			});
 		}
+		// .gitignore doesn't untrack a state.json an earlier init let in
+		const hints = isTrackedInGit(targetDir, TASKGRAPH_STATE_FILE)
+			? [
+					{
+						path: TASKGRAPH_STATE_FILE,
+						note: 'ignored but still tracked; `git rm --cached` it'
+					}
+				]
+			: [];
 		if (imported) {
-			upstream.printUpstreamImportSummary(imported, changes, TASKGRAPH_DIR);
+			upstream.printUpstreamImportSummary(
+				imported,
+				[...changes, ...hints],
+				TASKGRAPH_DIR
+			);
 			return;
 		}
 		console.log(
 			`${ui.formatInitSummary({
 				folder: path.basename(targetDir),
 				changes,
+				hints,
 				alreadySetUp,
 				claudeCode: selectedRuleProfiles.includes('claude'),
 				defaultModels: Boolean(options?.yes)

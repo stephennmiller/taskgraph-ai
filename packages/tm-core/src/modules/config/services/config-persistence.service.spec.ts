@@ -65,4 +65,20 @@ describe('ConfigPersistence.saveConfig', () => {
 			models: { main: { modelId: 'haiku' } }
 		});
 	});
+
+	it('leaves a broken config.local.json as it is', async () => {
+		fs.mkdirSync(path.join(root, '.taskgraph'));
+		fs.writeFileSync(localPath(), '{ "models": ');
+
+		await new ConfigPersistence(root).saveConfig({
+			global: { logLevel: 'info' },
+			claudeCode: { pathToClaudeCodeExecutable: EXECUTABLE }
+		} as never);
+
+		expect(fs.readFileSync(localPath(), 'utf8')).toBe('{ "models": ');
+		expect(read(sharedPath())).toEqual({
+			global: { logLevel: 'info' },
+			claudeCode: { pathToClaudeCodeExecutable: EXECUTABLE }
+		});
+	});
 });

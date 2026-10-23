@@ -103,6 +103,18 @@ describe('ConfigLoader', () => {
 			expect(result).toEqual(shared);
 		});
 
+		it('skips a broken config.local.json and uses config.json', async () => {
+			const shared = { models: { main: { modelId: 'sonnet' } } };
+			vi.mocked(fsPromises.readFile).mockImplementation(async (file) => {
+				if (String(file).endsWith('config.local.json')) return '{ "models": ';
+				return JSON.stringify(shared);
+			});
+
+			const result = await configLoader.loadLocalConfig();
+
+			expect(result).toEqual(shared);
+		});
+
 		it('should return null when config file does not exist', async () => {
 			const error = new Error('File not found') as any;
 			error.code = 'ENOENT';

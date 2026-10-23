@@ -12,7 +12,11 @@ import {
 import type { PartialConfiguration } from '../../../common/interfaces/configuration.interface.js';
 import { TASKGRAPH_LOCAL_CONFIG_FILE } from '../../../common/constants/paths.js';
 import { getLogger } from '../../../common/logger/index.js';
+import { ConfigLoader } from './config-loader.service.js';
 import { splitMachineConfig } from './machine-config.js';
+
+/** A file that exists but isn't valid JSON */
+const UNREADABLE = Symbol('unreadable');
 
 /**
  * Persistence options
@@ -36,7 +40,7 @@ export class ConfigPersistence {
 	private backupDir: string;
 	private readonly logger = getLogger('ConfigPersistence');
 
-	constructor(projectRoot: string) {
+	constructor(private readonly projectRoot: string) {
 		this.localConfigPath = path.join(projectRoot, '.taskgraph', 'config.json');
 		this.machineConfigPath = path.join(
 			projectRoot,
@@ -66,16 +70,28 @@ export class ConfigPersistence {
 
 			// Per-machine settings go to config.local.json, the rest to config.json
 			const currentMachine = await this.readJson(this.machineConfigPath);
+			if (currentMachine === UNREADABLE) {
+				// Keep a broken config.local.json for the user to fix rather than
+				// overwrite the settings in it
+				await this.writeJson(this.localConfigPath, config, atomic);
+				return;
+			}
+			const currentShared = currentMachine
+				? await this.readJson(this.localConfigPath)
+				: null;
 			const { shared, local } = splitMachineConfig(
 				config,
-				currentMachine ? await this.readJson(this.localConfigPath) : null,
-				currentMachine
+				currentShared === UNREADABLE ? null : currentShared,
+				currentMachine,
+				new ConfigLoader(this.projectRoot).getDefaultConfig()
 			);
 
-			await this.writeJson(this.localConfigPath, shared, atomic);
+			// Local file first: if the shared write then fails, a moved setting
+			// is in both files rather than in neither
 			if (currentMachine || Object.keys(local).length > 0) {
 				await this.writeJson(this.machineConfigPath, local, atomic);
 			}
+			await this.writeJson(this.localConfigPath, shared, atomic);
 		} catch (error) {
 			throw new TaskGraphError(
 				'Failed to save configuration',
@@ -86,12 +102,20 @@ export class ConfigPersistence {
 		}
 	}
 
-	/** Parse a JSON file; null when it's missing or unreadable */
-	private async readJson(filePath: string): Promise<object | null> {
+	/** Parse a JSON file; null when it's missing, UNREADABLE when it isn't JSON */
+	private async readJson(
+		filePath: string
+	): Promise<object | null | typeof UNREADABLE> {
+		let text: string;
 		try {
-			return JSON.parse(await fs.readFile(filePath, 'utf-8'));
+			text = await fs.readFile(filePath, 'utf-8');
 		} catch {
 			return null;
+		}
+		try {
+			return JSON.parse(text);
+		} catch {
+			return UNREADABLE;
 		}
 	}
 

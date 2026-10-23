@@ -97,9 +97,24 @@ export class ConfigLoader {
 		if (!shared) {
 			this.logger.debug('No local config.json found, using defaults');
 		}
-		const machine = await this.readConfigFile(this.machineConfigPath);
+		const machine = await this.readMachineConfig();
 		if (!shared && !machine) return null;
 		return mergeMachineConfig(shared, machine);
+	}
+
+	/**
+	 * Read config.local.json. A broken file is skipped with a warning so
+	 * config.json still applies, as the legacy loader does.
+	 */
+	private async readMachineConfig(): Promise<PartialConfiguration | null> {
+		try {
+			return await this.readConfigFile(this.machineConfigPath);
+		} catch (error: any) {
+			this.logger.warn(
+				`Couldn't read ${TASKGRAPH_LOCAL_CONFIG_FILE}, using config.json only: ${error.cause?.message ?? error.message}`
+			);
+			return null;
+		}
 	}
 
 	/** Parse a config file; null when it doesn't exist */
