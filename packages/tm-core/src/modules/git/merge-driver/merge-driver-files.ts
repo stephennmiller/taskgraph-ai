@@ -1,6 +1,7 @@
 /**
- * @fileoverview The Git side of the tasks.json merge driver: run a merge on
- * git's three temporary files, and set the driver up in a repository.
+ * @fileoverview The Git side of the merge driver for tasks.json and
+ * archive.json: run a merge on git's three temporary files, and set the
+ * driver up in a repository.
  *
  * Git calls the driver as `<command> %O %A %B %P` (ancestor, current, other,
  * path) and takes the content of `%A` afterwards as the result. Exit 0 means
@@ -8,25 +9,49 @@
  * as unmerged. The driver always leaves `%A` as valid JSON: when a side
  * can't be parsed it doesn't touch `%A` at all (the current branch's file).
  *
- * Setup is two parts: a `.gitattributes` line, committed, that routes
- * tasks.json to the driver named `taskgraph`, and the `merge.taskgraph.*`
- * entries in `.git/config`, which git never shares, so each clone runs the
- * setup once. A clone without the config falls back to git's normal text
- * merge, so the attribute is safe to commit.
+ * Setup is two parts: `.gitattributes` lines, committed, that route
+ * tasks.json to the driver named `taskgraph` and archive.json to
+ * `taskgraph-archive`, and the `merge.<name>.*` entries in `.git/config`,
+ * which git never shares, so each clone runs the setup once. A clone
+ * without the config falls back to git's normal text merge, so the
+ * attributes are safe to commit.
  */
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
-import { readArchiveSync } from '../../tasks/utils/archive.js';
+import {
+	ARCHIVE_FILE_NAME,
+	archivePathFor,
+	readArchiveSync
+} from '../../tasks/utils/archive.js';
+import { mergeArchiveJson } from './merge-archive-json.js';
 import { type TasksMergeResult, mergeTasksJson } from './merge-tasks-json.js';
 
 /** The driver's name in `.gitattributes` and `merge.<name>.*` */
 export const MERGE_DRIVER_NAME = 'taskgraph';
 
-/** The `.gitattributes` line, relative to the project root */
-export const MERGE_DRIVER_ATTRIBUTE = `${TASKGRAPH_TASKS_FILE} merge=${MERGE_DRIVER_NAME}`;
+/**
+ * The files the driver merges (relative to the project root) and the driver
+ * name each is routed to. archive.json has a name of its own because a CLI
+ * from before it had a driver would merge it as tasks.json and renumber
+ * archived tasks; such a clone has no `merge.taskgraph-archive` config, so
+ * git text-merges archive.json there instead.
+ */
+const MERGED_FILES = [
+	{ file: TASKGRAPH_TASKS_FILE, driver: MERGE_DRIVER_NAME },
+	{
+		// Beside tasks.json; not path.posix, which some CLI specs mock away
+		file: TASKGRAPH_TASKS_FILE.replace(/[^/]+$/, ARCHIVE_FILE_NAME),
+		driver: `${MERGE_DRIVER_NAME}-archive`
+	}
+];
+
+/** The `.gitattributes` lines, relative to the project root */
+export const MERGE_DRIVER_ATTRIBUTES = MERGED_FILES.map(
+	({ file, driver }) => `${file} merge=${driver}`
+);
 
 /** Git's placeholders: ancestor, current (also the output), other, path */
 const DRIVER_ARGS = 'merge-driver %O %A %B %P';
@@ -39,11 +64,15 @@ export interface MergeDriverFiles {
 	/** `%B`, the branch being merged in */
 	theirsPath: string;
 	/**
-	 * archive.json in the working tree, next to the file being merged. New
-	 * incoming tasks never take an ID it holds. Optional; an archive that is
-	 * missing or can't be read (mid-merge conflict markers) is skipped.
+	 * `%P`, the file being merged, resolved. archive.json merges as the
+	 * archive; anything else as tasks.json. The other file of the pair is
+	 * read from beside it in the working tree, which during a merge still
+	 * holds this branch's version (git writes results after all drivers run).
+	 * There, new incoming tasks never take an ID archive.json holds, and the
+	 * archive reports an incoming archived ID tasks.json reuses. A file
+	 * that is missing or can't be read is skipped.
 	 */
-	archivePath?: string;
+	path?: string;
 }
 
 export type MergeDriverOutcome =
@@ -98,12 +127,17 @@ export function runTasksMergeDriver(
 		}
 	}
 
-	const { merged, renumbered, conflicts } = mergeTasksJson(
-		parsed.base,
-		parsed.ours,
-		parsed.theirs,
-		{ archive: files.archivePath ? readArchiveOrNone(files.archivePath) : {} }
-	);
+	const file = files.path;
+	const { merged, renumbered, conflicts } =
+		file && path.basename(file) === ARCHIVE_FILE_NAME
+			? mergeArchiveJson(parsed.base, parsed.ours, parsed.theirs, {
+					tasks: readJsonOrNone(
+						path.join(path.dirname(file), path.basename(TASKGRAPH_TASKS_FILE))
+					)
+				})
+			: mergeTasksJson(parsed.base, parsed.ours, parsed.theirs, {
+					archive: file ? readJsonOrNone(archivePathFor(file)) : {}
+				});
 	const content =
 		JSON.stringify(merged, null, 2) + (oursText.endsWith('\n') ? '\n' : '');
 	writeAtomically(files.oursPath, content);
@@ -115,10 +149,10 @@ export function runTasksMergeDriver(
 	};
 }
 
-/** The parsed archive, or none when it is missing or unreadable */
-function readArchiveOrNone(archivePath: string): unknown {
+/** The parsed file, or none when it is missing or unreadable */
+function readJsonOrNone(file: string): unknown {
 	try {
-		return readArchiveSync(archivePath);
+		return readArchiveSync(file);
 	} catch {
 		return {};
 	}
@@ -209,12 +243,14 @@ export function isOnPath(
 export interface MergeDriverInstallResult {
 	/**
 	 * What happened to `.gitattributes` in the project root. `kept`: a line
-	 * already gives tasks.json another merge attribute, left as it is
+	 * already gives tasks.json or archive.json another merge attribute, left
+	 * as it is (a missing line for the other file is still added)
 	 */
 	attributes: 'created' | 'updated' | 'unchanged' | 'kept';
 	/**
-	 * Whether `.git/config` already had this exact driver command. `kept`:
-	 * `merge.taskgraph.driver` is a command TaskGraph didn't write, left as it is
+	 * Whether `.git/config` already had this exact driver command (for both
+	 * driver names). `kept`: a `merge.<name>.driver` is a command TaskGraph
+	 * didn't write, left as it is
 	 */
 	config: 'set' | 'unchanged' | 'kept';
 }
@@ -225,16 +261,19 @@ const isOurCommand = (command: string) =>
 	command.includes(MERGE_DRIVER_FALLBACK);
 
 /**
- * The merge attribute an existing `.gitattributes` line gives tasks.json
+ * The merge attribute an existing `.gitattributes` line gives `file`
  * (`merge=x`, `merge`, `-merge`, `!merge`), or undefined. Only lines naming
  * the file itself count; a wider pattern is the user's business, and ours,
  * added after it, takes precedence for this one file.
  */
-function existingMergeAttribute(lines: string[]): string | undefined {
+function existingMergeAttribute(
+	lines: string[],
+	file: string
+): string | undefined {
 	let found: string | undefined;
 	for (const line of lines) {
 		const [pattern, ...attributes] = line.split(/\s+/);
-		if (pattern.replace(/^\//, '') !== TASKGRAPH_TASKS_FILE) continue;
+		if (pattern.replace(/^\//, '') !== file) continue;
 		for (const attribute of attributes) {
 			if (/^[-!]?merge(=|$)/.test(attribute)) found = attribute;
 		}
@@ -266,9 +305,11 @@ export function isInsideGitWorkTree(projectRoot: string): boolean {
 }
 
 /**
- * Set up the merge driver: add the `.gitattributes` line (keeping what's
- * there) and point `merge.taskgraph.driver` at `command`. Safe to repeat.
- * A merge attribute for tasks.json or a `merge.taskgraph.driver` that
+ * Set up the merge driver: add the `.gitattributes` lines (keeping what's
+ * there) and point `merge.taskgraph.driver` and
+ * `merge.taskgraph-archive.driver` at `command`. Safe to repeat, and a
+ * project set up before archive.json had a driver gets its line and config.
+ * A merge attribute for either file or a `merge.<name>.driver` that
  * TaskGraph didn't write is the user's own setup and is left alone (`kept`).
  *
  * @throws NotAGitRepositoryError when `projectRoot` isn't in a Git work tree
@@ -287,47 +328,62 @@ export function installMergeDriver(
 		? fs.readFileSync(attributesFile, 'utf8')
 		: null;
 	const lines = (existing ?? '').split(/\r?\n/).map((line) => line.trim());
-	const current = existingMergeAttribute(lines);
-	if (current !== undefined && current !== `merge=${MERGE_DRIVER_NAME}`) {
-		attributes = 'kept';
-	} else if (current === undefined) {
+	const missing: string[] = [];
+	for (const [i, { file, driver }] of MERGED_FILES.entries()) {
+		const current = existingMergeAttribute(lines, file);
+		if (current === undefined) missing.push(MERGE_DRIVER_ATTRIBUTES[i]);
+		else if (current !== `merge=${driver}`) attributes = 'kept';
+	}
+	if (missing.length > 0) {
 		const separator = existing && !existing.endsWith('\n') ? '\n' : '';
 		fs.writeFileSync(
 			attributesFile,
-			`${existing ?? ''}${separator}${MERGE_DRIVER_ATTRIBUTE}\n`,
+			`${existing ?? ''}${separator}${missing.join('\n')}\n`,
 			'utf8'
 		);
-		attributes = existing === null ? 'created' : 'updated';
+		if (attributes !== 'kept') {
+			attributes = existing === null ? 'created' : 'updated';
+		}
 	}
 
-	const key = `merge.${MERGE_DRIVER_NAME}`;
-	const read = (name: string) => {
+	let config: MergeDriverInstallResult['config'] = 'unchanged';
+	for (const { driver: name } of MERGED_FILES) {
+		const result = configureDriver(projectRoot, name, command);
+		if (result === 'kept' || config === 'unchanged') config = result;
+	}
+
+	return { attributes, config };
+}
+
+/** Point `merge.<name>.driver` at `command`, unless the user set their own */
+function configureDriver(
+	projectRoot: string,
+	name: string,
+	command: string
+): MergeDriverInstallResult['config'] {
+	const key = `merge.${name}`;
+	const read = (entry: string) => {
 		try {
-			return git(projectRoot, ['config', '--local', '--get', `${key}.${name}`]);
+			return git(projectRoot, [
+				'config',
+				'--local',
+				'--get',
+				`${key}.${entry}`
+			]);
 		} catch {
 			return ''; // not set
 		}
 	};
 	const driver = read('driver');
-	let config: MergeDriverInstallResult['config'] = 'unchanged';
-	if (driver !== command && driver !== '' && !isOurCommand(driver)) {
-		// Someone set up their own driver under this name; don't replace it
-		config = 'kept';
-	} else if (driver !== command) {
-		// The command first: a `merge.taskgraph` section with a name but no
-		// driver makes git stop with "lacks command line" instead of falling
-		// back to a text merge
-		git(projectRoot, ['config', '--local', `${key}.driver`, command]);
-		if (read('name') === '') {
-			git(projectRoot, [
-				'config',
-				'--local',
-				`${key}.name`,
-				'TaskGraph tasks.json merge'
-			]);
-		}
-		config = 'set';
+	if (driver === command) return 'unchanged';
+	// Someone set up their own driver under this name; don't replace it
+	if (driver !== '' && !isOurCommand(driver)) return 'kept';
+	// The command first: a `merge.<name>` section with a name but no driver
+	// makes git stop with "lacks command line" instead of falling back to a
+	// text merge
+	git(projectRoot, ['config', '--local', `${key}.driver`, command]);
+	if (read('name') === '') {
+		git(projectRoot, ['config', '--local', `${key}.name`, 'TaskGraph merge']);
 	}
-
-	return { attributes, config };
+	return 'set';
 }

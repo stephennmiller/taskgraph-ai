@@ -352,4 +352,61 @@ describe('mergeTagChanges', () => {
 			definitionOfDoneChecked: ['Tests pass']
 		});
 	});
+
+	describe('with archived IDs', () => {
+		const archivedIds = (ids: string[], highestId: number) => () => ({
+			ids: new Set(ids),
+			highestId
+		});
+
+		it('moves a task added under an ID that was archived meanwhile', () => {
+			// Someone added 2 and archived it while the command ran
+			const base = tag([task(1)]);
+			const mine = tag([
+				task(1),
+				task(2, { title: 'Mine' }),
+				task(3, { dependencies: [2] })
+			]);
+
+			const { merged, renumbered } = mergeTagChanges(
+				base,
+				mine,
+				base,
+				archivedIds(['2'], 2)
+			);
+
+			expect(renumbered).toEqual([{ from: '2', to: '4' }]);
+			expect(merged.tasks).toEqual([
+				task(1),
+				task(4, { title: 'Mine' }),
+				task(3, { dependencies: [4] })
+			]);
+		});
+
+		it('numbers a renumbered task above the highest archived ID', () => {
+			const base = tag([task(1)]);
+			const mine = tag([task(1), task(2, { title: 'Mine' })]);
+			const theirs = tag([task(1), task(2, { title: 'Theirs' })]);
+
+			const { renumbered } = mergeTagChanges(
+				base,
+				mine,
+				theirs,
+				archivedIds(['7'], 7)
+			);
+
+			expect(renumbered).toEqual([{ from: '2', to: '8' }]);
+		});
+
+		it("doesn't read the archive when the command added no task", () => {
+			const base = tag([task(1)]);
+			const mine = tag([task(1, { status: 'done' })]);
+
+			const { merged } = mergeTagChanges(base, mine, base, () => {
+				throw new Error('read the archive');
+			});
+
+			expect(merged).toEqual(mine);
+		});
+	});
 });

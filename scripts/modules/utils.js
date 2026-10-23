@@ -10,6 +10,7 @@ import {
 	mergeTagChanges,
 	normalizeTaskStatus,
 	getOwnKey,
+	readArchivedIdsSync,
 	stampTasksFileSchemaVersion
 } from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
@@ -1201,7 +1202,8 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						const { merged, renumbered } = mergeTagChanges(
 							tagAsRead,
 							cleanResolvedData,
-							tagNowNormalized
+							tagNowNormalized,
+							() => readArchivedIdsSync(filepath, resolvedTag)
 						);
 						tagToSave = merged;
 						for (const { from, to } of renumbered) {
