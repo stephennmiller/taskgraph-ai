@@ -172,6 +172,15 @@ export {
 	type SuggestedAction
 } from './suggested-actions.js';
 
+// What generate wrote
+export {
+	formatGenerateError,
+	formatGenerateResult
+} from './formatters/generate-formatters.js';
+
+// The notice before TaskGraph updates itself
+export { formatUpdateNotice } from './formatters/update-formatters.js';
+
 // What add-task confirms
 export {
 	formatTaskCreated,
@@ -277,22 +286,12 @@ export {
 
 // Layout helpers
 export {
-	getBoxWidth,
 	getContentWidth,
 	terminalWidth,
 	truncate,
 	wrapLine,
 	createProgressBar
 } from './layout/helpers.js';
-
-// Display messages
-export {
-	displayBanner,
-	displayErrorBox,
-	displaySuccess,
-	displayWarning,
-	displayInfo
-} from './display/messages.js';
 
 // Display tables
 export { createTaskTable } from './display/tables.js';

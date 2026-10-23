@@ -27,8 +27,7 @@ vi.mock('../../../src/utils/display-helpers.js', () => ({
 }));
 
 vi.mock('../../../src/utils/ui.js', () => ({
-	createTaskTable: vi.fn(() => 'Table output'),
-	displayWarning: vi.fn()
+	createTaskTable: vi.fn(() => 'Table output')
 }));
 
 import { ShowCommand } from '../../../src/commands/show.command.js';

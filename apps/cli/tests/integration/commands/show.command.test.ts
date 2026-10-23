@@ -408,4 +408,14 @@ describe('show command output', () => {
 		expect(res.stderr).toContain('Task 9 not found');
 		expect(res.stderr).toContain('taskgraph list');
 	});
+
+	it('prints one error with a hint when none of several IDs exist', () => {
+		const res = show('98,99');
+
+		expect(res.status).toBe(1);
+		expect(res.stdout).toBe('');
+		expect(res.stderr).toContain('✗ Tasks 98, 99 not found');
+		expect(res.stderr).toContain('taskgraph list');
+		expect(res.stderr).not.toMatch(/[╭╮╰╯│]/);
+	});
 });

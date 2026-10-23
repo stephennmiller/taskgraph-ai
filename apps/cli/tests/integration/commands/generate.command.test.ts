@@ -210,6 +210,47 @@ describe('generate command', () => {
 		expect(output).toContain('.taskgraph/tasks');
 	});
 
+	it('confirms in one line, with no box', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({ id: 1, title: 'Task 1', status: 'pending' }),
+					createTask({ id: 2, title: 'Task 2', status: 'pending' })
+				]
+			})
+		);
+
+		const { output, exitCode } = runGenerate();
+
+		expect(exitCode).toBe(0);
+		expect(output.trim()).toBe('✓ Generated 2 task files in .taskgraph/tasks');
+	});
+
+	it('says how to add tasks when there are none, in one line', () => {
+		const { output, exitCode } = runGenerate();
+
+		expect(exitCode).toBe(0);
+		expect(output.trim()).toBe(
+			'No tasks to generate files for; add one with taskgraph add-task'
+		);
+	});
+
+	it('prints a failure as an error with a hint and exits 1', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [createTask({ id: 1, title: 'Task 1', status: 'pending' })]
+			})
+		);
+		// A file where the output folder should be
+		fs.writeFileSync(path.join(testDir, 'not-a-dir'), '');
+
+		const { output, exitCode } = runGenerate('--output not-a-dir');
+
+		expect(exitCode).toBe(1);
+		expect(output).toContain("✗ Couldn't generate task files");
+		expect(output).not.toMatch(/[╭╮╰╯│]/);
+	});
+
 	it('should exit with non-zero code for invalid --format value', () => {
 		const testData = createTasksFile({
 			tasks: [createTask({ id: 1, title: 'Test Task', status: 'pending' })]

@@ -4,7 +4,7 @@
  * @deprecated: This file is kept for backward compatibility.
  * All functionality has been moved to organized modules under src/ui/:
  * - ui/formatters/ (status, priority, complexity, dependencies)
- * - ui/display/ (messages, tables)
+ * - ui/display/ (tables)
  * - ui/layout/ (helpers)
  * - ui/components/ (high-level UI components)
  *

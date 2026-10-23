@@ -298,6 +298,16 @@ export class ShowCommand extends Command {
 		result: ShowMultipleTasksResult,
 		_options: ShowCommandOptions
 	): void {
+		// Every ID missed: one error, as for a single ID, not a warning and a box
+		if (result.tasks.length === 0) {
+			printError(
+				`Tasks ${result.notFound.join(', ')} not found`,
+				'Run `taskgraph list` to see task IDs'
+			);
+			process.exitCode = 1;
+			return;
+		}
+
 		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
 		// A blank line separates each block from the one above it, but nothing
 		// comes before the first block
@@ -312,11 +322,6 @@ export class ShowCommand extends Command {
 				chalk.yellow(`${gap}⚠ Not found: ${result.notFound.join(', ')}`)
 			);
 			printed = true;
-		}
-
-		if (result.tasks.length === 0) {
-			ui.displayWarning('No tasks found matching the criteria.');
-			return;
 		}
 
 		// Task table

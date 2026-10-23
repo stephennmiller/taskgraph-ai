@@ -28,8 +28,7 @@ vi.mock('../utils/display-helpers.js', () => ({
 }));
 
 vi.mock('../utils/ui.js', () => ({
-	createTaskTable: vi.fn(() => 'Table output'),
-	displayWarning: vi.fn()
+	createTaskTable: vi.fn(() => 'Table output')
 }));
 
 import { displayError } from '../utils/error-handler.js';
