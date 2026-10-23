@@ -10,4 +10,5 @@
 ^\.github/scripts/(run-parity\.sh|parity-paths\.txt)$
 ^\.github/workflows/ci\.yml$
 ^tsdown\.config\.ts$
-^package(-lock)?\.json$
+^(packages/(tm-core|tm-profiles)/|apps/(cli|mcp)/)?package\.json$
+^package-lock\.json$

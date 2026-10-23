@@ -46,14 +46,15 @@ with the target branch as build A and the pull request as build B.
 - **When it runs:** when the pull request changes anything that goes into the
   two builds or the comparison: the code bundled into `dist/` (`scripts/`,
   `mcp-server/`, `src/`, the `src/` of `@tm/core`, `@tm/profiles`, `@tm/cli`
-  and `@tm/mcp`), `assets/` (what `init` copies), the build config, the root
-  `package.json` or `package-lock.json`, this folder, the MCP smoke client the
-  MCP steps use, `.github/scripts/run-parity.sh` or `ci.yml`. The patterns are
-  in `.github/scripts/parity-paths.txt`, one `grep -E` pattern per line;
-  `tests/integration/parity-paths.test.ts` checks them. The `Parity changes`
-  job matches the changed files against them and `Parity` is skipped when
-  none match (docs and test-only changes). It runs alongside `Test`, so it
-  adds no time to that job.
+  and `@tm/mcp`), `assets/` (what `init` copies), the build config, the
+  `package.json` of the root or of a bundled package, `package-lock.json`,
+  this folder, the MCP smoke client the MCP steps use,
+  `.github/scripts/run-parity.sh` or `ci.yml`. The patterns are in
+  `.github/scripts/parity-paths.txt`, one `grep -E` pattern per line;
+  `apps/cli/tests/integration/parity-paths.test.ts` checks them. The
+  `Parity changes` job matches the changed files against them and `Parity` is
+  skipped when none match (docs and test-only changes). It runs alongside
+  `Test`, so it adds no time to that job.
 - **Where to read it:** the job summary has one row per scenario, and the first
   60 lines of each report that differs. The full reports are in the
   `parity-reports` artifact (kept for 7 days).
@@ -187,11 +188,12 @@ tidy-up that "fixes" a type can change what a dependency means.
   `phase1-flat-format.json` and `phase1-no-master.json` leave 2.2 with
   `[1, "1"]`: both, because the duplicate check compares them as different.
   A migration that normalizes `"1"` to `1` would silently turn a dependency
-  on task 1 into one on sibling 2.1.
+  on task 1 into one on sibling 2.1. Tracked in #290.
 - **Removing a dependency that is not there succeeds.** `remove-dependency`
   exits 0 and `remove_dependency` succeeds with `removed: false` and "Task 2
   doesn't depend on task 5; nothing changed" for a task that never depended on
-  the other (`phase1-dependencies.json`). An unknown task ID does fail.
+  the other (`phase1-dependencies.json`). An unknown task ID does fail. The
+  MCP reply used to claim a removal (#291, fixed in #367).
 - **`validate_dependencies` does not report a duplicate** such as `[2, 3, 3]`,
   while `fix_dependencies` removes it and lists it as `duplicate`.
 - **`move` keeps the old `parentTaskId`** on the subtasks of a moved task

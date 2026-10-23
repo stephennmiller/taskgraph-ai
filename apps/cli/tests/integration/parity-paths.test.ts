@@ -1,6 +1,6 @@
 /**
  * @fileoverview The `Parity changes` CI job runs the build comparison when a
- * changed file matches a line of .github/scripts/parity-paths.txt (grep -Ef).
+ * changed file matches a line of .github/scripts/parity-paths.txt (grep -zEf).
  * These checks keep that list matching what goes into the compared builds.
  *
  * @integration
@@ -34,7 +34,7 @@ describe('parity-paths.txt', () => {
 			path.join(root, '.github/workflows/ci.yml'),
 			'utf8'
 		);
-		expect(ci).toContain('grep -Eqf .github/scripts/parity-paths.txt');
+		expect(ci).toContain('grep -zEqf .github/scripts/parity-paths.txt');
 	});
 
 	it.each([
@@ -54,6 +54,8 @@ describe('parity-paths.txt', () => {
 		'.github/workflows/ci.yml',
 		'tsdown.config.ts',
 		'package.json',
+		'packages/tm-core/package.json',
+		'apps/mcp/package.json',
 		'package-lock.json'
 	])('runs the comparison for %s', (file) => {
 		expect(fs.existsSync(path.join(root, file))).toBe(true);
@@ -67,6 +69,7 @@ describe('parity-paths.txt', () => {
 		'packages/tm-core/tests/integration/example.test.ts',
 		'packages/claude-code-plugin/commands/next.md',
 		'.github/workflows/release.yml',
+		'packages/claude-code-plugin/package.json',
 		'tests/unit/ci/job-timeouts.test.js'
 	])('skips the comparison for %s', (file) => {
 		expect(runs(file)).toBe(false);

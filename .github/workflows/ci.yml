@@ -335,11 +335,13 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          git diff --name-only "origin/${BASE_REF}...HEAD" > changed-files.txt
+          # -z: names unquoted, so a non-ASCII path still matches its pattern;
+          # --no-renames: a file moved out of a covered folder counts too
+          git diff -z --no-renames --name-only "origin/${BASE_REF}...HEAD" > changed-files.txt
           # grep exits 1 for no match; anything else (a missing or bad pattern
           # file) must fail the job rather than skip the comparison
           code=0
-          grep -Eqf .github/scripts/parity-paths.txt changed-files.txt || code=$?
+          grep -zEqf .github/scripts/parity-paths.txt changed-files.txt || code=$?
           case $code in
           0) echo "run=true" >> "$GITHUB_OUTPUT" ;;
           1) echo "run=false" >> "$GITHUB_OUTPUT" ;;
