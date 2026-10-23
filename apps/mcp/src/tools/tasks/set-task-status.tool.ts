@@ -6,7 +6,13 @@
 import { z } from 'zod';
 import { handleApiResult, withToolContext } from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
-import { TASK_STATUSES, taskIdsSchema, parseTaskIds, type TaskStatus } from '@tm/core';
+import {
+	TASK_STATUSES,
+	taskIdsSchema,
+	parseTaskIds,
+	getUncheckedCriteria,
+	type TaskStatus
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 
 const SetTaskStatusSchema = z.object({
@@ -15,8 +21,27 @@ const SetTaskStatusSchema = z.object({
 	),
 	status: z
 		.enum(TASK_STATUSES as unknown as [string, ...string[]])
+		.optional()
 		.describe(
-			"New status to set (e.g., 'pending', 'done', 'in-progress', 'review', 'deferred', 'cancelled')."
+			"New status to set (e.g., 'pending', 'done', 'in-progress', 'review', 'deferred', 'cancelled'). Optional when only checking criteria."
+		),
+	check: z
+		.array(z.number().int().positive())
+		.optional()
+		.describe(
+			"Checklist items to check off, by number. A task's acceptance criteria are numbered from 1 in the order get_task lists them, then the project's Definition of Done items follow (top-level tasks only); a refused done lists every unchecked item with its number. Needs a single task ID. Applied before the status."
+		),
+	uncheck: z
+		.array(z.number().int().positive())
+		.optional()
+		.describe(
+			'Checklist items to clear again, by number (same numbering as check). Needs a single task ID.'
+		),
+	force: z
+		.boolean()
+		.optional()
+		.describe(
+			'Set done even while acceptance criteria or Definition of Done items are unchecked.'
 		),
 	projectRoot: z
 		.string()
@@ -39,7 +64,7 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 			destructiveHint: true
 		},
 		execute: withToolContext(async (args: SetTaskStatusArgs, { log, tmCore }: ToolContext) => {
-				const { id, status, projectRoot, tag } = args;
+				const { id, status, check, uncheck, force, projectRoot, tag } = args;
 
 				try {
 					log.info(
@@ -49,6 +74,22 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 					// Parse and validate task IDs (validation already done by schema, this handles splitting)
 					const taskIds = parseTaskIds(id);
 
+					const changesChecklist = Boolean(check?.length || uncheck?.length);
+					if (!status && !changesChecklist) {
+						throw new Error('Pass a status, criteria to check, or both');
+					}
+					let checklist;
+					if (changesChecklist) {
+						if (taskIds.length !== 1) {
+							throw new Error('check and uncheck take one task ID');
+						}
+						checklist = await tmCore.tasks.updateChecklist(
+							taskIds[0],
+							{ check, uncheck },
+							tag
+						);
+					}
+
 					const results: Array<{
 						success: boolean;
 						oldStatus: TaskStatus;
@@ -56,11 +97,12 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 						taskId: string;
 					}> = [];
 
-					for (const taskId of taskIds) {
+					for (const taskId of status ? taskIds : []) {
 						const result = await tmCore.tasks.updateStatus(
 							taskId,
 							status as TaskStatus,
-							tag
+							tag,
+							{ force }
 						);
 						results.push(result);
 						log.info(
@@ -68,16 +110,18 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 						);
 					}
 
-					log.info(
-						`Successfully updated status for ${results.length} task(s) to "${status}"`
-					);
+					const message = status
+						? `Successfully updated ${results.length} task(s) to "${status}"`
+						: `Updated the checklist of task ${taskIds[0]} (${checklist?.checkedCount ?? 0} of ${checklist?.items.length ?? 0} checked)`;
+					log.info(message);
 
 					return handleApiResult({
 						result: {
 							success: true,
 							data: {
-								message: `Successfully updated ${results.length} task(s) to "${status}"`,
-								tasks: results
+								message,
+								tasks: results,
+								...(checklist && { checklist })
 							}
 						},
 						log,
@@ -91,12 +135,19 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 					if (err.stack) {
 						log.debug(err.stack);
 					}
+					// A refused done names what is left and how to clear it
+					const gate = getUncheckedCriteria(error);
+					const message = gate
+						? [
+								`${err.message}:`,
+								...gate.unchecked.map((item) => `  ${item.number}. ${item.text}`),
+								`Check them with check: [${gate.unchecked.map((item) => item.number).join(', ')}], or pass force: true`
+							].join('\n')
+						: `Failed to set task status: ${err.message}`;
 					return handleApiResult({
 						result: {
 							success: false,
-							error: {
-								message: `Failed to set task status: ${err.message}`
-							}
+							error: { message }
 						},
 						log,
 						projectRoot,

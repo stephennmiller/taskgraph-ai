@@ -1,0 +1,8 @@
+{
+	"currentTag": "feature-auth",
+	"lastSwitched": "2026-03-30T10:00:00.000Z",
+	"branchTagMapping": {
+		"feature/auth": "feature-auth"
+	},
+	"migrationNoticeShown": true
+}

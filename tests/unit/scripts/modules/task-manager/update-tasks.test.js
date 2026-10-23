@@ -297,6 +297,61 @@ describe('updateTasks', () => {
 		return writeJSON.mock.calls[0][1]._rawTaggedData.master.tasks;
 	};
 
+	test('keeps task and subtask acceptance criteria the AI schema cannot return', async () => {
+		const criteria = [
+			{ text: 'Login works', checked: true },
+			{ text: 'Tokens expire', checked: false }
+		];
+		const written = await runUpdate(
+			[
+				{
+					id: 2,
+					title: 'Two',
+					status: 'pending',
+					dependencies: [],
+					acceptanceCriteria: criteria,
+					definitionOfDoneChecked: ['Tests pass'],
+					subtasks: [
+						{
+							id: 1,
+							title: 'Sub',
+							status: 'pending',
+							dependencies: [],
+							acceptanceCriteria: ['Sub criterion']
+						}
+					]
+				}
+			],
+			[
+				{
+					id: 2,
+					title: 'Two, revised',
+					description: 'd',
+					status: 'pending',
+					dependencies: [],
+					priority: null,
+					details: null,
+					testStrategy: null,
+					subtasks: [
+						{
+							id: 1,
+							title: 'Sub, revised',
+							status: 'pending',
+							dependencies: []
+						}
+					]
+				}
+			]
+		);
+
+		expect(written[0].acceptanceCriteria).toEqual(criteria);
+		expect(written[0].definitionOfDoneChecked).toEqual(['Tests pass']);
+		expect(written[0].subtasks[0]).toMatchObject({
+			title: 'Sub, revised',
+			acceptanceCriteria: ['Sub criterion']
+		});
+	});
+
 	test('keeps existing details, priority and test strategy when the AI returns null for them', async () => {
 		const written = await runUpdate(
 			[

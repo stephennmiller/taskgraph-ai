@@ -1,0 +1,3 @@
+Shop API
+
+A small store backend with products and orders.

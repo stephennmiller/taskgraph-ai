@@ -56,6 +56,9 @@ export {
 	type HelpRow
 } from './formatters/help-formatters.js';
 
+// Session context for coding agents (`taskgraph prime`)
+export { formatPrimeContext } from './formatters/prime-formatters.js';
+
 // What clear-subtasks removed
 export {
 	formatClearedSubtasks,
@@ -74,12 +77,39 @@ export {
 	type ResearchSaveTarget
 } from './formatters/research-formatters.js';
 
+// What `show` prints about one task
+export {
+	formatTaskDetail,
+	type TaskDetailOptions
+} from './formatters/task-detail-formatters.js';
+
+// What add-task confirms
+export {
+	formatTaskCreated,
+	type CreatedTask,
+	type CreatedTaskDependency
+} from './formatters/task-created-formatters.js';
+
+// Markdown and text wrapped to the terminal
+export {
+	fit,
+	formatMarkdown,
+	terminalSafe,
+	visibleLength
+} from './formatters/markdown-formatters.js';
+
 // What init did and what to do next
 export {
 	formatInitSummary,
 	type InitChange,
 	type InitSummary
 } from './formatters/init-summary-formatters.js';
+
+// What init's upstream import moved
+export {
+	formatUpstreamImport,
+	type UpstreamImportSummary
+} from './formatters/upstream-import-formatters.js';
 
 // What `taskgraph models` shows and confirms
 export {
@@ -93,6 +123,13 @@ export {
 	type ModelChange,
 	type ModelRoleName
 } from './formatters/model-formatters.js';
+
+// Checklist formatters (acceptance criteria, Definition of Done)
+export {
+	formatChecklist,
+	formatChecklistUpdate,
+	formatUncheckedCriteria
+} from './formatters/checklist-formatters.js';
 
 // Dependency formatters
 export { formatDependenciesWithStatus } from './formatters/dependency-formatters.js';
@@ -143,6 +180,7 @@ export {
 	getContentWidth,
 	terminalWidth,
 	truncate,
+	wrapLine,
 	createProgressBar
 } from './layout/helpers.js';
 

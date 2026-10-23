@@ -23,6 +23,7 @@ import { createLogWrapper } from '../../tools/utils.js';
  * @param {string} [args.priority='medium'] - Task priority (high, medium, low)
  * @param {string} [args.tasksJsonPath] - Path to the tasks.json file (resolved by tool)
  * @param {boolean} [args.research=false] - Whether to use research capabilities for task creation
+ * @param {string[]} [args.acceptanceCriteria] - Acceptance criteria, stored unchecked
  * @param {string} [args.projectRoot] - Project root path
  * @param {string} [args.tag] - Tag for the task (optional)
  * @param {Object} log - Logger object
@@ -128,7 +129,8 @@ export async function addTaskDirect(args, log, context = {}) {
 				},
 				'json', // outputFormat
 				manualTaskData, // Pass the manual task data
-				false // research flag is false for manual creation
+				false, // research flag is false for manual creation
+				{ acceptanceCriteria: args.acceptanceCriteria }
 			);
 			newTaskId = result.newTaskId;
 			telemetryData = result.telemetryData;
@@ -155,7 +157,8 @@ export async function addTaskDirect(args, log, context = {}) {
 				},
 				'json', // outputFormat
 				null, // manualTaskData is null for AI creation
-				research // Pass the research flag
+				research, // Pass the research flag
+				{ acceptanceCriteria: args.acceptanceCriteria }
 			);
 			newTaskId = result.newTaskId;
 			telemetryData = result.telemetryData;

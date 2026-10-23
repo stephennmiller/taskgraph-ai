@@ -51,6 +51,13 @@ export { FileStorage } from './modules/storage/index.js';
 // File operations - for atomic file modifications
 export { FileOperations } from './modules/storage/adapters/file-storage/file-operations.js';
 
+// Keep changes other processes saved while a command waited before saving
+export {
+	mergeTagChanges,
+	type MergeTagChangesResult,
+	type RenumberedItem
+} from './modules/storage/adapters/file-storage/merge-tag-changes.js';
+
 // Constants
 export * from './common/constants/index.js';
 
@@ -67,6 +74,9 @@ export * from './modules/tasks/validation/index.js';
 // Dependency tree layout
 export * from './modules/dependencies/index.js';
 export * from './modules/dependencies/dependency-provenance.js';
+
+// Importing the upstream project TaskGraph was forked from (init flag)
+export * from './modules/migration/index.js';
 
 // Zod schemas for validation
 export * from './common/schemas/index.js';
@@ -194,9 +204,33 @@ export {
 	readTagNamesSync,
 	shouldShowTagIndicator,
 	shouldShowTagIndicatorForProject,
+	rankNextTasks,
+	buildPrimeContext,
+	PRIME_RULES,
+	type PrimeContext,
+	type PrimeTask,
+	type PrimeInProgressTask,
+	type PrimeRule,
+	type BuildPrimeContextOptions,
 	type TaskWithBlocks,
 	type InvalidDependency,
 	type BuildBlocksMapResult
+} from './modules/tasks/utils/index.js';
+
+// Acceptance criteria and the Definition of Done
+export {
+	normalizeAcceptanceCriteria,
+	normalizeDefinitionOfDone,
+	buildChecklist,
+	applyChecklistChanges,
+	checkDoneGate,
+	getUncheckedCriteria,
+	parseChecklistNumbers,
+	keepChecklistFields,
+	type ChecklistItem,
+	type TaskChecklist,
+	type ChecklistChanges,
+	type ChecklistFields
 } from './modules/tasks/utils/index.js';
 
 // ========== Testing Utilities ==========

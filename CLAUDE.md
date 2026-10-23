@@ -109,7 +109,7 @@ Structure tests as Arrange, Act, Assert.
 - `packages/tm-core` (`@tm/core`): all business logic
 - `apps/cli` (`@tm/cli`), `apps/mcp` (`@tm/mcp`): thin presentation layers over tm-core
 - `packages/tm-profiles` (`@tm/profiles`): shell utils and `pruneLegacySlashCommands`, which removes the files older `init` runs wrote to `.claude/commands/tm`. Slash commands live only in the plugin
-- `packages/claude-code-plugin` (`@tm/claude-code-plugin`): the Claude Code plugin, markdown only (`commands/`, `agents/`, `.claude-plugin/plugin.json`), no TypeScript
+- `packages/claude-code-plugin` (`@tm/claude-code-plugin`): the Claude Code plugin, markdown and JSON only (`commands/`, `agents/`, `hooks/hooks.json`, `.claude-plugin/plugin.json`), no TypeScript. Hook commands are shell one-liners in `hooks.json`, tested in `tests/unit/packages/claude-code-plugin/`
 - `packages/build-config` (`@tm/build-config`): shared tsdown base config, compiled with `tsc` and imported by the root `tsdown.config.ts`; `npm run build` builds it first
 - `apps/docs`: Mintlify docs source (not a code package)
 - `apps/extension`, `packages/tm-bridge`, `packages/ai-sdk-provider-grok-cli` hold only untracked build artifacts and have no `package.json`. Don't add code there.
