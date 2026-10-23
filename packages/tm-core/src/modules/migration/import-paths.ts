@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /** Whether `child` is `parent` or a path under it (both already resolved) */
-export function isWithin(parent: string, child: string): boolean {
+function isWithin(parent: string, child: string): boolean {
 	const relative = path.relative(parent, child);
 	return (
 		relative === '' ||

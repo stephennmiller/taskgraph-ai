@@ -4,7 +4,4 @@
  */
 
 // Re-export terminal status utilities from @tm/core (single source of truth)
-export {
-	TERMINAL_COMPLETE_STATUSES,
-	isTaskComplete
-} from '@tm/core';
+export { isTaskComplete } from '@tm/core';

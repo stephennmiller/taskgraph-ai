@@ -715,4 +715,3 @@ export class FileStorage implements IStorage {
 }
 
 // Export as default for convenience
-export default FileStorage;
