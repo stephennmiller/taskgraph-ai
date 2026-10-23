@@ -89,7 +89,7 @@ See [Archiving finished tasks](/capabilities/archive) for how archived IDs and d
 | `TASKGRAPH_MODEL_MAIN`, `TASKGRAPH_MODEL_RESEARCH`, `TASKGRAPH_MODEL_FALLBACK` | Override a model role. |
 | `TASKGRAPH_RESPONSE_LANGUAGE` | Override the language of generated content. |
 | `TASKGRAPH_TAG` | Override the active tag. |
-| `TASKGRAPH_PROJECT_ROOT` | Project root, for tools that run outside the project folder. The CLI uses it when you don't pass `--project`, and the MCP server when a tool call passes no `projectRoot`: an explicit path always wins. `loop --parallel` sets it for each task's Claude Code process. |
+| `TASKGRAPH_PROJECT_ROOT` | Project root, for tools that run outside the project folder. The CLI uses it when you don't pass `--project`, and the MCP server when a tool call passes no `projectRoot`: an explicit path wins, except a path inside this project's `.taskgraph/worktrees/` (a `loop --parallel` task worktree), which gives this project. `loop --parallel` sets it for each task's Claude Code process. |
 | `TASKGRAPH_LOG_LEVEL` | Console log level. |
 | `TASKGRAPH_DEBUG` | Set to `true` for debug logging. |
 

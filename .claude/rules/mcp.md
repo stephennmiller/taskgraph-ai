@@ -195,7 +195,7 @@ To ensure consistent handling of project paths across different client environme
 
 This HOF, defined in [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js), performs the following before calling the tool's core logic:
 
-1.  **Determines the Root:** It uses the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` if the client passed one, else the `TASKGRAPH_PROJECT_ROOT` environment variable (from the process or the session), else the root folder in the session (`getProjectRootFromSession`). An explicit `projectRoot` always wins over the variable.
+1.  **Determines the Root:** It uses the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` if the client passed one, else the `TASKGRAPH_PROJECT_ROOT` environment variable (from the process or the session), else the root folder in the session (`getProjectRootFromSession`). An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
 2.  **Normalizes the Path:** It uses the `normalizeProjectRoot` helper on `args.projectRoot` to decode URIs, strip `file://` prefixes, fix potential Windows drive letter prefixes (e.g., `/C:/`), convert backslashes (`\`) to forward slashes (`/`), and resolve the path to an absolute path suitable for the server's OS.
 3.  **Injects Normalized Path:** It updates the `args` object by replacing the original `projectRoot` (or adding it) with the normalized, absolute path.
 4.  **Executes Original Logic:** It calls the original `execute` function body, passing the updated `args` object.

@@ -436,7 +436,7 @@ These utilities specifically support the implementation and execution of MCP too
 - **`withNormalizedProjectRoot(executeFn)`**:
     - **Purpose**: A Higher-Order Function (HOF) designed to wrap a tool's `execute` method.
     - **Logic**: 
-        1. Picks the project root in the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` (normalized with `normalizeProjectRoot`), else `TASKGRAPH_PROJECT_ROOT` from `process.env` or the session's env, else the session's root folder (`getProjectRootFromSession`). An explicit `projectRoot` always wins over the variable.
+        1. Picks the project root in the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` (normalized with `normalizeProjectRoot`), else `TASKGRAPH_PROJECT_ROOT` from `process.env` or the session's env, else the session's root folder (`getProjectRootFromSession`). An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
         2. Injects the absolute path back into the `args` object as `args.projectRoot`.
         3. Calls the original `executeFn` with the updated `args`.
     - **Usage**: Should wrap the `execute` function of *every* MCP tool that needs a reliable, normalized project root path.

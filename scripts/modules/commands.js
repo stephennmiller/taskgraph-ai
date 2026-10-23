@@ -3607,7 +3607,8 @@ function requireProject(_hookedCommand, actionCommand) {
 	const root = resolveProjectRoot(explicitRoot ?? undefined);
 	if (isTaskGraphProject(root)) return;
 
-	if (explicitRoot) {
+	// A --project inside the variable's worktrees resolves to the variable's project
+	if (explicitRoot === root) {
 		printError(
 			`No TaskGraph project at ${explicitRoot}`,
 			'Run `taskgraph init` in that folder to set one up'

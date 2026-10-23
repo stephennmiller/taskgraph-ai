@@ -8,7 +8,25 @@ import {
 	TASKGRAPH_TASKS_FILE,
 	TASKGRAPH_WORKTREES_DIR
 } from '../constants/paths.js';
-import { isWithin } from '../../modules/migration/import-paths.js';
+
+/** Whether `child` is `parent` or a path under it (both already resolved) */
+export function isWithin(parent: string, child: string): boolean {
+	const relative = path.relative(parent, child);
+	return (
+		relative === '' ||
+		(!relative.startsWith(`..${path.sep}`) &&
+			relative !== '..' &&
+			!path.isAbsolute(relative))
+	);
+}
+
+function realpathOr(p: string): string {
+	try {
+		return fs.realpathSync(p);
+	} catch {
+		return p;
+	}
+}
 
 function markerExists(dir: string, marker: string): boolean {
 	try {
@@ -130,7 +148,11 @@ export function namedProjectRoot(
 	const envRoot = fromEnv ? path.resolve(fromEnv) : undefined;
 	if (!explicit) return envRoot;
 	const root = path.resolve(explicit);
-	return envRoot && isWithin(path.join(envRoot, TASKGRAPH_WORKTREES_DIR), root)
+	if (!envRoot) return root;
+	const worktrees = path.join(envRoot, TASKGRAPH_WORKTREES_DIR);
+	// Also compare real paths: the variable may name the project via a symlink
+	return isWithin(worktrees, root) ||
+		isWithin(realpathOr(worktrees), realpathOr(root))
 		? envRoot
 		: root;
 }

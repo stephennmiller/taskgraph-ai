@@ -480,6 +480,23 @@ describe('namedProjectRoot', () => {
 		expect(namedProjectRoot(main, env)).toBe(main);
 	});
 
+	it('matches a worktree when the variable names the project through a symlink', () => {
+		const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-')));
+		try {
+			const real = path.join(tmp, 'real');
+			const worktree = path.join(real, '.taskgraph', 'worktrees', 'task-3');
+			fs.mkdirSync(worktree, { recursive: true });
+			const link = path.join(tmp, 'link');
+			fs.symlinkSync(real, link, 'junction');
+
+			expect(namedProjectRoot(worktree, { TASKGRAPH_PROJECT_ROOT: link })).toBe(
+				link
+			);
+		} finally {
+			fs.rmSync(tmp, { recursive: true, force: true });
+		}
+	});
+
 	it('names no project when there is no path and no variable', () => {
 		expect(namedProjectRoot(undefined, {}, undefined)).toBeUndefined();
 		expect(namedProjectRoot('')).toBeUndefined();

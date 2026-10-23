@@ -7,7 +7,8 @@ import { resolveProjectRoot } from '@tm/core';
 
 /**
  * The project a command works on, always an absolute path:
- * 1. `projectPath` (the `--project` flag) when given
+ * 1. `projectPath` (the `--project` flag) when given, except that a path in
+ *    TASKGRAPH_PROJECT_ROOT's `.taskgraph/worktrees` gives that project
  * 2. the TASKGRAPH_PROJECT_ROOT environment variable when set (`loop
  *    --parallel` sets it for each task's Claude Code process)
  * 3. the root found from the current directory: the nearest `.taskgraph`,
