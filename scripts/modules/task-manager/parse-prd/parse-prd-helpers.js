@@ -16,7 +16,8 @@ import {
 	setGeneratedCriteria,
 	withPrdSnapshot,
 	getOwnKey,
-	setOwnKey
+	setOwnKey,
+	stampTasksFileSchemaVersion
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
@@ -377,6 +378,8 @@ export function saveTasksToFile(
 			ensureTagMetadata(tagData, {
 				description: `Tasks for ${targetTag} context`
 			});
+
+			stampTasksFileSchemaVersion(outputData);
 
 			// Write to a temp file and rename it over the tasks file
 			const tempPath = `${tasksPath}.tmp.${process.pid}`;

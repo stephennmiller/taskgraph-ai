@@ -18,7 +18,12 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { ui } from '@tm/cli';
-import { installMergeDriver, isOnPath, mergeDriverCommand } from '@tm/core';
+import {
+	installMergeDriver,
+	isOnPath,
+	mergeDriverCommand,
+	stampTasksFileSchemaVersion
+} from '@tm/core';
 import chalk from 'chalk';
 import { RULE_PROFILES } from '../src/constants/profiles.js';
 import {
@@ -367,7 +372,7 @@ function createInitialTasksFile(targetDir) {
 	const tasksPath = path.join(targetDir, TASKGRAPH_TASKS_FILE);
 	if (fs.existsSync(tasksPath)) return;
 
-	const emptyTasks = {
+	const emptyTasks = stampTasksFileSchemaVersion({
 		master: {
 			tasks: [],
 			metadata: {
@@ -375,7 +380,7 @@ function createInitialTasksFile(targetDir) {
 				description: 'Tasks for master context'
 			}
 		}
-	};
+	});
 	try {
 		fs.writeFileSync(tasksPath, `${JSON.stringify(emptyTasks, null, 2)}\n`);
 		log('debug', `Created empty tasks file: ${tasksPath}`);
@@ -1019,4 +1024,4 @@ function displayDryRun(initGit, storeTasksInGit, options, ruleProfiles = []) {
 }
 
 // Ensure necessary functions are exported
-export { initializeProject, log, setUpMergeDriver };
+export { createInitialTasksFile, initializeProject, log, setUpMergeDriver };
