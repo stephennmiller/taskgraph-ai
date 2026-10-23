@@ -14,6 +14,8 @@
  *   others added stay, items the command removed go, items the command added
  *   are appended. When someone else took the ID of an item the command added,
  *   the command's item gets the next free ID and is reported in `renumbered`.
+ *   A task the command added under an ID that was archived meanwhile moves
+ *   too, and a new ID is always above the archive's `highestId`.
  *   Dependencies on a renumbered item, their provenance marks and
  *   non-blocking links follow it.
  * - When the command reordered items it kept, its order wins; items others
@@ -23,6 +25,7 @@
 
 import { isDeepStrictEqual } from 'node:util';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
+import type { ArchivedIds } from '../../../tasks/utils/archive.js';
 import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
@@ -69,21 +72,42 @@ const put = (object: Record<string, unknown>, key: string, value: unknown) => {
 	});
 };
 
+interface Context {
+	renumbered: RenumberedItem[];
+	/** The tag's archived IDs now; empty unless the command added a task */
+	archived: ArchivedIds;
+	/** The command added a task under an ID archived since it read the tag */
+	reusesArchivedId: boolean;
+}
+
 /**
  * Apply the changes between `base` and `mine` to `theirs`.
  *
  * @param base - The tag as the command read it
  * @param mine - The tag as the command wants to save it
  * @param theirs - The tag as it is in the file now
+ * @param archived - Reads the tag's archived IDs (readArchivedIdsSync);
+ *   none by default
  */
 export function mergeTagChanges<T>(
 	base: unknown,
 	mine: T,
-	theirs: unknown
+	theirs: unknown,
+	archived: () => ArchivedIds = () => ({ ids: new Set(), highestId: 0 })
 ): MergeTagChangesResult<T> {
-	const renumbered: RenumberedItem[] = [];
-	const merged = mergeValue(base, mine, theirs, '', renumbered) as T;
-	return { merged, renumbered };
+	const tasksOf = (tag: unknown) =>
+		isPlainObject(tag) && isItemList(tag.tasks) ? tag.tasks : [];
+	const baseIds = new Set(tasksOf(base).map(keyOf));
+	const added = tasksOf(mine).filter((task) => !baseIds.has(keyOf(task)));
+	const reserved =
+		added.length > 0 ? archived() : { ids: new Set<string>(), highestId: 0 };
+	const ctx: Context = {
+		renumbered: [],
+		archived: reserved,
+		reusesArchivedId: added.some((task) => reserved.ids.has(keyOf(task)))
+	};
+	const merged = mergeValue(base, mine, theirs, '', ctx) as T;
+	return { merged, renumbered: ctx.renumbered };
 }
 
 function mergeValue(
@@ -91,15 +115,19 @@ function mergeValue(
 	mine: unknown,
 	theirs: unknown,
 	scope: string,
-	renumbered: RenumberedItem[]
+	ctx: Context
 ): unknown {
 	if (same(base, mine)) return theirs;
-	if (same(base, theirs) || same(mine, theirs)) return mine;
+	if (same(mine, theirs)) return mine;
+	// Unchanged by others, unless the tag's task list has an ID to move
+	if (same(base, theirs) && !(scope === '' && ctx.reusesArchivedId)) {
+		return mine;
+	}
 	if (isPlainObject(base) && isPlainObject(mine) && isPlainObject(theirs)) {
-		return mergeObjects(base, mine, theirs, scope, renumbered);
+		return mergeObjects(base, mine, theirs, scope, ctx);
 	}
 	if (isItemList(base) && isItemList(mine) && isItemList(theirs)) {
-		return mergeItemLists(base, mine, theirs, scope, renumbered);
+		return mergeItemLists(base, mine, theirs, scope, ctx);
 	}
 	return mine;
 }
@@ -109,7 +137,7 @@ function mergeObjects(
 	mine: Record<string, unknown>,
 	theirs: Record<string, unknown>,
 	scope: string,
-	renumbered: RenumberedItem[]
+	ctx: Context
 ): Record<string, unknown> {
 	// The subtasks of task 5 are reported as 5.<id>
 	const mineId = own(mine, 'id');
@@ -127,7 +155,7 @@ function mergeObjects(
 			own(mine, key),
 			own(theirs, key),
 			childScope,
-			renumbered
+			ctx
 		);
 		if (value !== undefined) put(result, key, value);
 	}
@@ -148,7 +176,7 @@ function mergeItemLists(
 	mine: Item[],
 	theirs: Item[],
 	scope: string,
-	renumbered: RenumberedItem[]
+	ctx: Context
 ): Item[] {
 	const baseById = new Map(base.map((item) => [keyOf(item), item]));
 	const mineById = new Map(mine.map((item) => [keyOf(item), item]));
@@ -168,19 +196,22 @@ function mergeItemLists(
 		const ours = mineById.get(key);
 		// Removed by the command
 		if (ours === undefined) continue;
-		const merged = mergeValue(original, ours, now, scope, renumbered) as Item;
+		const merged = mergeValue(original, ours, now, scope, ctx) as Item;
 		current.push(merged);
 		kept.set(key, merged);
 	}
 
 	// Items the command added, under a free ID when someone else took theirs
+	const added = mine.filter((item) => !baseById.has(keyOf(item)));
 	const taken = new Set(current.map(keyOf));
+	let nextId = nextFreeId([...current, ...added]);
+	// Archived IDs are taken too; tasks are the list at the top of the tag
+	if (scope === '') {
+		for (const id of ctx.archived.ids) taken.add(id);
+		nextId = Math.max(nextId, ctx.archived.highestId + 1);
+	}
 	const newIds = new Map<string, unknown>();
 	const ownAdded = new Map<string, Item>();
-	let nextId = nextFreeId([
-		...current,
-		...mine.filter((item) => !baseById.has(keyOf(item)))
-	]);
 	for (const item of mine) {
 		const key = keyOf(item);
 		if (baseById.has(key)) continue;
@@ -194,7 +225,7 @@ function mergeItemLists(
 		const id = typeof item.id === 'number' ? nextId : String(nextId);
 		nextId++;
 		newIds.set(key, id);
-		renumbered.push({ from: `${scope}${key}`, to: `${scope}${id}` });
+		ctx.renumbered.push({ from: `${scope}${key}`, to: `${scope}${id}` });
 		ownAdded.set(key, { ...item, id });
 		taken.add(String(id));
 	}

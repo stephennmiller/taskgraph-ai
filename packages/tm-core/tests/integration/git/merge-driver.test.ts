@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-	MERGE_DRIVER_ATTRIBUTE,
+	MERGE_DRIVER_ATTRIBUTES,
 	MERGE_DRIVER_FALLBACK,
 	NotAGitRepositoryError,
 	installMergeDriver,
@@ -84,7 +84,7 @@ describe('runTasksMergeDriver', () => {
 
 		const outcome = runTasksMergeDriver({
 			...files(),
-			archivePath: at('archive.json')
+			path: at('tasks.json')
 		});
 
 		expect(outcome).toMatchObject({
@@ -101,10 +101,39 @@ describe('runTasksMergeDriver', () => {
 
 		const outcome = runTasksMergeDriver({
 			...files(),
-			archivePath: at('archive.json')
+			path: at('tasks.json')
 		});
 
 		expect(outcome).toMatchObject({ status: 'merged', renumbered: [] });
+	});
+
+	it('merges archive.json as an archive, checking the tasks.json beside it', () => {
+		const archived = (id: number, title: string) => ({
+			...task(id, title, { status: 'done' }),
+			archivedAt: '2026-02-01T00:00:00.000Z'
+		});
+		const archive = (tasks: unknown[], highestId: number) => ({
+			master: { tasks, metadata: { highestId } }
+		});
+		write('base', archive([], 0));
+		write('ours', archive([archived(1, 'A')], 1));
+		write('theirs', archive([archived(2, 'Theirs')], 2));
+		// This branch reused 2 for a live task
+		write('tasks.json', tag([task(2, 'Ours')]));
+
+		const outcome = runTasksMergeDriver({
+			...files(),
+			path: at('archive.json')
+		});
+
+		expect(outcome).toMatchObject({
+			status: 'conflicted',
+			renumbered: [],
+			conflicts: [{ id: '2', kind: 'archived-theirs' }]
+		});
+		expect(JSON.parse(fs.readFileSync(at('ours'), 'utf8'))).toEqual(
+			archive([archived(1, 'A'), archived(2, 'Theirs')], 2)
+		);
 	});
 
 	it('treats an empty ancestor as a file both branches added', () => {
@@ -208,7 +237,7 @@ describe('installMergeDriver', () => {
 		expect(first).toEqual({ attributes: 'updated', config: 'set' });
 		expect(again).toEqual({ attributes: 'unchanged', config: 'unchanged' });
 		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
-			`*.png binary\n${MERGE_DRIVER_ATTRIBUTE}\n`
+			`*.png binary\n${MERGE_DRIVER_ATTRIBUTES.join('\n')}\n`
 		);
 		expect(git(repo, 'config', '--get', 'merge.taskgraph.driver')).toBe(
 			'taskgraph merge-driver %O %A %B %P'
@@ -216,6 +245,20 @@ describe('installMergeDriver', () => {
 		expect(
 			git(repo, 'check-attr', 'merge', '.taskgraph/tasks/tasks.json')
 		).toBe('.taskgraph/tasks/tasks.json: merge: taskgraph');
+		expect(
+			git(repo, 'check-attr', 'merge', '.taskgraph/tasks/archive.json')
+		).toBe('.taskgraph/tasks/archive.json: merge: taskgraph');
+	});
+
+	it('adds the archive.json line to a project set up before it had one', () => {
+		git(repo, 'init', '--initial-branch=main');
+		const attributes = `${MERGE_DRIVER_ATTRIBUTES[0]}\n`;
+		fs.writeFileSync(path.join(repo, '.gitattributes'), attributes);
+
+		expect(installMergeDriver(repo, 'x').attributes).toBe('updated');
+		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
+			`${MERGE_DRIVER_ATTRIBUTES.join('\n')}\n`
+		);
 	});
 
 	it('updates the config when the command it wrote changed', () => {
@@ -259,13 +302,15 @@ describe('installMergeDriver', () => {
 
 		expect(result).toEqual({ attributes: 'kept', config: 'set' });
 		expect(fs.readFileSync(path.join(repo, '.gitattributes'), 'utf8')).toBe(
-			attributes
+			`${attributes}${MERGE_DRIVER_ATTRIBUTES[1]}\n`
 		);
 	});
 
-	it('counts its own line among other attributes as already there', () => {
+	it('counts its own lines among other attributes as already there', () => {
 		git(repo, 'init', '--initial-branch=main');
-		const attributes = `${MERGE_DRIVER_ATTRIBUTE} -diff\n`;
+		const attributes = MERGE_DRIVER_ATTRIBUTES.map(
+			(line) => `${line} -diff\n`
+		).join('');
 		fs.writeFileSync(path.join(repo, '.gitattributes'), attributes);
 
 		expect(installMergeDriver(repo, 'x').attributes).toBe('unchanged');

@@ -16,13 +16,16 @@
  *   subtask's `parentId`.
  * - An incoming new task under an archived ID (options.archive) gets the
  *   next ID above every archived one.
+ * - archive.json merges the same way (`renumber: false`), except that IDs
+ *   never move: the same ID on both sides is one task, merged field by field.
  * - The same field changed to different values on both sides is a conflict.
  *   The current branch's value (`ours`) is written, and the conflict is
  *   reported with the incoming value, so the caller can exit non-zero and
  *   git marks the file as conflicted. Nothing is dropped: the incoming value
  *   is in the report and in git's index (`git show :3:<path>`).
  *   Exceptions that merge cleanly: timestamps (`updatedAt`, `updated`,
- *   `lastModified`) take the later one, `created`/`createdAt` the earlier, `schemaVersion` the higher one,
+ *   `lastModified`) take the later one, `created`/`createdAt`/`archivedAt`
+ *   the earlier, `schemaVersion` and the archive's `highestId` the higher one,
  *   lists of plain values (dependencies, tags) take both sides' additions
  *   and removals, `details` that both sides appended to keeps both
  *   appendices, and a tag's `taskCount`/`completedCount` are recounted.
@@ -33,12 +36,24 @@
  * `merge-driver-files.ts` for the file I/O git's driver protocol needs.
  */
 
-import { isDeepStrictEqual } from 'node:util';
 import {
 	DEPENDENCY_SOURCES_KEY,
 	TASK_LINKS_KEY
 } from '../../dependencies/dependency-provenance.js';
 import { archivedTasksById } from '../../tasks/utils/archive.js';
+import {
+	type Item,
+	type Json,
+	byKey,
+	isItemList,
+	isObject,
+	isPrimitiveList,
+	keyOf,
+	own,
+	put,
+	same,
+	withIdType
+} from './merge-json-utils.js';
 import {
 	isSiblingReference,
 	resolveSubtaskDependency
@@ -67,8 +82,10 @@ export interface MergeConflict {
 	 * `changed-both`: both sides set different values.
 	 * `removed-ours` / `removed-theirs`: that side removed the task (or tag)
 	 * and the other changed it, so it was kept.
+	 * `archived-theirs`: the incoming branch archived a task under an ID this
+	 * branch's tasks.json gives a different live task (`ours`); both are kept.
 	 */
-	kind: 'changed-both' | 'removed-ours' | 'removed-theirs';
+	kind: 'changed-both' | 'removed-ours' | 'removed-theirs' | 'archived-theirs';
 	ours: unknown;
 	theirs: unknown;
 }
@@ -80,13 +97,12 @@ export interface TasksMergeResult {
 	conflicts: MergeConflict[];
 }
 
-type Json = Record<string, unknown>;
-type Item = Json & { id: unknown };
-
 /** Timestamps where both sides moving forward is not a conflict: later wins */
 const LATEST_FIELDS = new Set(['updatedAt', 'updated', 'lastModified']);
 /** Creation times two writers both filled in: earlier wins */
-const EARLIEST_FIELDS = new Set(['createdAt', 'created']);
+const EARLIEST_FIELDS = new Set(['createdAt', 'created', 'archivedAt']);
+/** Numbers that only grow: higher wins */
+const HIGHEST_FIELDS = new Set(['schemaVersion', 'highestId']);
 /** Tag metadata counts that are recomputed from the merged tasks */
 const DERIVED_COUNT_FIELDS = new Set(['taskCount', 'completedCount']);
 /** Text fields that commands append notes to (update-subtask) */
@@ -94,66 +110,20 @@ const APPEND_FIELDS = new Set(['details']);
 /** The tag a legacy `{ "tasks": [...] }` file is read as */
 const LEGACY_TAG = 'master';
 
-const same = (a: unknown, b: unknown) => isDeepStrictEqual(a, b);
-
-const isObject = (value: unknown): value is Json =>
-	value !== null && typeof value === 'object' && !Array.isArray(value);
-
-/**
- * A list of tasks or subtasks: objects with unique number or string IDs.
- * Anything else (a duplicate ID from a bad hand merge, an object as an ID)
- * isn't merged item by item, so a clash in it is reported, never collapsed.
- */
-const isItemList = (value: unknown): value is Item[] => {
-	if (!Array.isArray(value)) return false;
-	const seen = new Set<string>();
-	for (const item of value) {
-		if (!isObject(item)) return false;
-		const id = own(item, 'id');
-		if (typeof id !== 'number' && typeof id !== 'string') return false;
-		if (seen.has(String(id))) return false;
-		seen.add(String(id));
-	}
-	return true;
-};
-
-const isPrimitiveList = (value: unknown): value is unknown[] =>
-	Array.isArray(value) &&
-	value.every((item) => item === null || typeof item !== 'object');
-
-const keyOf = (item: Item) => String(item.id);
-
-/** Own property only, so keys such as `constructor` never read the prototype */
-const own = (object: Json | undefined, key: string): unknown =>
-	object && Object.hasOwn(object, key) ? object[key] : undefined;
-
-/** Define an own property, so a `__proto__` key stays data */
-const put = (object: Json, key: string, value: unknown) => {
-	Object.defineProperty(object, key, {
-		value,
-		enumerable: true,
-		writable: true,
-		configurable: true
-	});
-};
-
-const byKey = (items: Item[] | undefined) =>
-	new Map((items ?? []).map((item) => [keyOf(item), item]));
-
-/** Keep the ID's JSON type: a number stays a number */
-const withIdType = (original: unknown, id: number) =>
-	typeof original === 'number' ? id : String(id);
-
 interface Context {
 	tag: string;
 	renumbered: MergeRenumbered[];
 	conflicts: MergeConflict[];
 	archived: ReturnType<typeof archivedTasksById>;
+	/** false for archive.json: an archived task keeps its ID */
+	renumber: boolean;
 }
 
 export interface MergeTasksOptions {
 	/** The parsed archive.json, whose IDs stay reserved */
 	archive?: unknown;
+	/** false keeps every ID, for archive.json (see mergeArchiveJson) */
+	renumber?: boolean;
 }
 
 /**
@@ -181,7 +151,13 @@ export function mergeTasksJson(
 	const tags = [...new Set([...Object.keys(o.tags), ...Object.keys(t.tags)])];
 	for (const tag of tags) {
 		const archived = archivedTasksById(options.archive, tag);
-		const ctx: Context = { tag, renumbered, conflicts, archived };
+		const ctx: Context = {
+			tag,
+			renumbered,
+			conflicts,
+			archived,
+			renumber: options.renumber ?? true
+		};
 		const value = mergeTag(
 			own(b.tags, tag),
 			own(o.tags, tag),
@@ -240,7 +216,9 @@ function mergeTag(
 		return mergeField(baseTag, ours, theirs, '', undefined, ctx);
 	}
 
-	const incoming = renumberIncoming(baseTag, ours, theirs, ctx);
+	const incoming = ctx.renumber
+		? renumberIncoming(baseTag, ours, theirs, ctx)
+		: theirs;
 	const merged = mergeObject(baseTag, ours, incoming, '', undefined, ctx);
 	recount(merged);
 	return merged;
@@ -446,7 +424,7 @@ function mergeField(
 		if (EARLIEST_FIELDS.has(field)) return later ? ours : theirs;
 	}
 	if (
-		field === 'schemaVersion' &&
+		HIGHEST_FIELDS.has(field) &&
 		typeof ours === 'number' &&
 		typeof theirs === 'number'
 	) {
@@ -553,15 +531,15 @@ function mergeItems(
 		const key = keyOf(item);
 		const original = baseById.get(key);
 		const incoming = theirsById.get(key);
-		if (original === undefined || incoming === undefined) {
+		if (incoming === undefined) {
 			if (original !== undefined) removed(key, item, 'theirs');
-			// Added here (renumbering left only identical twins)
 			else result.push(item);
 			continue;
 		}
-		// Items are scoped by ID: a field path starts again inside each one
+		// Items are scoped by ID: a field path starts again inside each one.
+		// Added on both sides: twins after renumbering, or a task both archived
 		result.push(
-			mergeObject(original, item, incoming, '', fullId(key), ctx) as Item
+			mergeObject(original ?? {}, item, incoming, '', fullId(key), ctx) as Item
 		);
 	}
 	const added: Item[] = [];

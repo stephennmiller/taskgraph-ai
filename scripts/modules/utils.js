@@ -5,7 +5,12 @@
 
 import { theme } from '@tm/cli/theme';
 // Import FileOperations from tm-core for atomic file modifications
-import { FileOperations, mergeTagChanges, normalizeTaskStatus } from '@tm/core';
+import {
+	FileOperations,
+	mergeTagChanges,
+	normalizeTaskStatus,
+	readArchivedIdsSync
+} from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
@@ -1190,7 +1195,8 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 						const { merged, renumbered } = mergeTagChanges(
 							tagAsRead,
 							cleanResolvedData,
-							tagNowNormalized
+							tagNowNormalized,
+							() => readArchivedIdsSync(filepath, resolvedTag)
 						);
 						tagToSave = merged;
 						for (const { from, to } of renumbered) {
