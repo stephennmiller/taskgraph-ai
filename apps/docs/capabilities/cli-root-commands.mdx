@@ -19,6 +19,8 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
 
     In a terminal, each task is printed as soon as Claude finishes writing it, with an elapsed-time counter. `--force` numbers the new tasks from 1; `--append` continues after the highest existing ID.
+
+    Each task records the PRD section it came from in `metadata.source`, such as `docs/prd.md#authentication`, and `taskgraph show` prints it.
   </Accordion>
 
   <Accordion title="List Tasks">
@@ -295,6 +297,17 @@ description: "A comprehensive reference of all available TaskGraph commands"
 
     # Find and fix invalid dependencies automatically
     taskgraph fix-dependencies
+    ```
+
+    Once `parse-prd` has recorded where tasks came from, `validate-dependencies` also checks the PRD: it lists sections no task covers, tasks that cite a heading the PRD no longer has (renamed or removed), and tasks with no section. A task covers its section and the sections inside it. These are warnings: only dependency problems make the command exit 1.
+
+    ```
+    ✓ No dependency problems · 6 tasks, 4 dependencies
+    ⚠ 2 of 10 PRD sections have no task · docs/prd.md
+      #search--tags   Search & Tags
+      #rate-limiting  Rate limiting
+    ⚠ 1 task cites a heading docs/prd.md no longer has
+      3  #password-reset
     ```
   </Accordion>
 

@@ -3,7 +3,12 @@
  */
 
 import { ui } from '@tm/cli';
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
+import {
+	assignMetadata,
+	formatPrdSectionList,
+	prdSourceFor,
+	reconcileDependencySources
+} from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
@@ -193,13 +198,16 @@ export function validateFileOperations({
  * @param {number} startId - Starting ID for new tasks
  * @param {Array} existingTasks - Existing tasks for dependency validation
  * @param {string} defaultPriority - Default priority for tasks
+ * @param {{path: string, sections: Array}} [prd] - The PRD's path and
+ *   headings; a task naming one of them gets `metadata.source`
  * @returns {Array} Processed tasks with remapped IDs
  */
 export function processTasks(
 	rawTasks,
 	startId,
 	existingTasks,
-	defaultPriority
+	defaultPriority,
+	prd
 ) {
 	// Runtime guard: ensure PRD task IDs are unique and sequential (1..N).
 	validateSequentialTaskIds(rawTasks, startId);
@@ -208,12 +216,15 @@ export function processTasks(
 	const taskMap = new Map();
 
 	// First pass: assign new IDs and create mapping
-	const processedTasks = rawTasks.map((task) => {
+	const processedTasks = rawTasks.map(({ section, ...task }) => {
 		const newId = currentId++;
 		taskMap.set(task.id, newId);
+		// Only a section the PRD has; an invented slug would point nowhere
+		const source = prd ? prdSourceFor(section, prd.sections, prd.path) : null;
 
 		return {
 			...task,
+			...(source ? { metadata: { ...task.metadata, source } } : {}),
 			id: newId,
 			status: task.status || 'pending',
 			priority: task.priority || defaultPriority,
@@ -331,9 +342,10 @@ export function saveTasksToFile(tasksPath, tasks, targetTag, logger) {
  * @param {Object} config - Configuration object
  * @param {string} prdContent - PRD content
  * @param {number} nextId - Next task ID
+ * @param {{sections: Array}} [prd] - The PRD's headings, for tasks to cite
  * @returns {Promise<{systemPrompt: string, userPrompt: string}>}
  */
-export async function buildPrompts(config, prdContent, nextId) {
+export async function buildPrompts(config, prdContent, nextId, prd) {
 	const promptManager = getPromptManager();
 	const defaultTaskPriority =
 		getDefaultPriority(config.projectRoot) || 'medium';
@@ -344,6 +356,9 @@ export async function buildPrompts(config, prdContent, nextId) {
 		nextId,
 		prdContent,
 		prdPath: config.prdPath,
+		prdSections: prd?.sections?.length
+			? formatPrdSectionList(prd.sections)
+			: '',
 		defaultTaskPriority,
 		hasCodebaseAnalysis: config.hasCodebaseAnalysis(),
 		projectRoot: config.projectRoot || ''

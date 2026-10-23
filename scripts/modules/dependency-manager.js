@@ -5,6 +5,7 @@
 
 import {
 	assignMetadata,
+	checkPrdCoverage,
 	hasDependency,
 	isSiblingReference,
 	pruneDependencySources,
@@ -843,7 +844,13 @@ async function validateDependenciesCommand(tasksPath, options = {}) {
 	);
 
 	const { valid, issues } = validateTaskDependencies(data.tasks);
-	return { valid, issues, ...counts };
+	// PRD sections with no task, and tasks with no section. Null unless
+	// parse-prd recorded sources; gaps are reported but don't fail the check
+	const prdCoverage = checkPrdCoverage(
+		data.tasks,
+		context.projectRoot || process.cwd()
+	);
+	return { valid, issues, ...counts, prdCoverage };
 }
 
 /**

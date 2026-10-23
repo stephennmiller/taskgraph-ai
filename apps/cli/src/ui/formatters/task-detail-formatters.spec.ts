@@ -92,6 +92,25 @@ describe('formatTaskDetail', () => {
 		]);
 	});
 
+	it('names the PRD section the task came from under the status line', () => {
+		const task = {
+			...signIn(),
+			metadata: { source: 'docs/prd.md#authentication' }
+		};
+
+		expect(lines(formatTaskDetail(task, { width: 80 })).slice(0, 3)).toEqual([
+			'Task 2  Email and password sign-in with sessions',
+			'▶ in-progress · high priority · complexity 7 (high) · depends on 1',
+			'From docs/prd.md#authentication'
+		]);
+	});
+
+	it('prints no source line for a task without one', () => {
+		expect(plain(formatTaskDetail(signIn(), { width: 80 }))).not.toContain(
+			'From '
+		);
+	});
+
 	it('prints details, test strategy and subtasks as headed sections, with no boxes or tables', () => {
 		const output = plain(formatTaskDetail(signIn(), { width: 80 }));
 

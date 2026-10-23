@@ -130,7 +130,9 @@ describe('validate-dependencies', () => {
 			],
 			taskCount: 2,
 			subtaskCount: 0,
-			dependencyCount: 2
+			dependencyCount: 2,
+			// No task records a PRD section, so there is no coverage to report
+			prdCoverage: null
 		});
 	});
 });

@@ -1,3 +1,4 @@
+import { parsePrdSections, prdPathForSource } from '@tm/core';
 import chalk from 'chalk';
 import {
 	STREAMING_ERROR_CODES,
@@ -62,9 +63,17 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			logger
 		});
 
-		// Read PRD content and build prompts
+		// Read PRD content and build prompts. Each task names the PRD section
+		// it implements, so the prompt lists the headings it can cite
 		const prdContent = readPrdContent(config.prdPath);
-		const prompts = await buildPrompts(config, prdContent, nextId);
+		const prd = {
+			path: prdPathForSource(
+				config.projectRoot || process.cwd(),
+				config.prdPath
+			),
+			sections: parsePrdSections(prdContent)
+		};
+		const prompts = await buildPrompts(config, prdContent, nextId, prd);
 
 		// Call the appropriate service handler
 		const serviceResult = await serviceHandler(
@@ -80,7 +89,8 @@ async function parsePRDCore(config, serviceHandler, isStreaming) {
 			serviceResult.parsedTasks,
 			nextId,
 			existingTasks,
-			defaultPriority
+			defaultPriority,
+			prd
 		);
 
 		// Combine with existing if appending

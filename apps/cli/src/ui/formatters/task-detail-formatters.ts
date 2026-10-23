@@ -3,6 +3,7 @@
  *
  *   Task 2  Email and password sign-in with sessions
  *   ▶ in-progress · high priority · complexity 7 (high) · depends on 1
+ *   From docs/prd.md#authentication
  *
  *   Let people create an account with an email and password, sign in, and
  *   stay signed in across browser restarts.
@@ -33,6 +34,7 @@ import {
 	type TaskChecklist,
 	type TaskStatus,
 	buildChecklist,
+	getPrdSource,
 	resolveSubtaskDependency
 } from '@tm/core';
 import chalk from 'chalk';
@@ -167,6 +169,13 @@ function facts(task: Task | Subtask, width: number): string[] {
 		parts.push(theme.accent(task.skills.join(', ')));
 	}
 	return joinFacts(parts, width);
+}
+
+/** `From docs/prd.md#authentication`: the PRD section parse-prd made it from */
+function sourceLine(task: Task | Subtask, width: number): string[] {
+	const source = getPrdSource(task);
+	if (!source) return [];
+	return [theme.muted('From ') + theme.text(fit(source, width - 5))];
 }
 
 const heading = (text: string, note?: string) =>
@@ -352,7 +361,11 @@ export function formatTaskDetail(
 	const label = id.includes('.') ? `Subtask ${id}` : `Task ${id}`;
 	const sections: string[][] = [];
 
-	sections.push([...header(label, task.title, width), ...facts(task, width)]);
+	sections.push([
+		...header(label, task.title, width),
+		...facts(task, width),
+		...sourceLine(task, width)
+	]);
 
 	if (task.description) sections.push(body(task.description, width, ''));
 
