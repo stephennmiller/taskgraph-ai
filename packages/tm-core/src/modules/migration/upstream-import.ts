@@ -69,6 +69,17 @@ const KEPT_GLOBAL_SETTINGS = [
 	'enableCodebaseAnalysis'
 ];
 
+/** Dropped `global` key for Task Master's saved task count, see below */
+export const DROPPED_NUM_TASKS_SETTING = 'global.defaultNumTasks';
+
+/**
+ * Task Master saves every default, so its `defaultNumTasks: 10` is rarely a
+ * count the user chose. Leaving it out lets parse-prd size the list to the
+ * PRD (TaskGraph's default, 0). Any other count is the user's and is kept.
+ */
+const isSavedNumTasksDefault = (key: string, value: unknown) =>
+	key === 'defaultNumTasks' && value === 10;
+
 export const UPSTREAM_IMPORT_ERRORS = {
 	NO_UPSTREAM_PROJECT: 'NO_UPSTREAM_PROJECT',
 	TASKGRAPH_HAS_TASKS: 'TASKGRAPH_HAS_TASKS',
@@ -120,7 +131,10 @@ export interface UpstreamImportResult {
 	keptModels: ImportedModel[];
 	/** Model roles on another provider; TaskGraph's default stays */
 	droppedModels: DroppedModel[];
-	/** Config keys left behind: provider, API-key and unsafe Claude Code settings */
+	/**
+	 * Config keys left behind: provider, API-key and unsafe Claude Code
+	 * settings, and Task Master's saved default task count
+	 */
 	droppedSettings: string[];
 	/** The tag Task Master had selected, if it was carried over */
 	currentTag?: string;
@@ -326,8 +340,12 @@ export function importUpstreamConfig(
 	const sourceGlobal = isObject(source.global) ? source.global : {};
 	const global: JsonObject = isObject(config.global) ? config.global : {};
 	for (const [key, value] of Object.entries(sourceGlobal)) {
-		if (KEPT_GLOBAL_SETTINGS.includes(key)) global[key] = value;
-		else droppedSettings.push(`global.${key}`);
+		if (
+			KEPT_GLOBAL_SETTINGS.includes(key) &&
+			!isSavedNumTasksDefault(key, value)
+		) {
+			global[key] = value;
+		} else droppedSettings.push(`global.${key}`);
 	}
 	config.global = global;
 
