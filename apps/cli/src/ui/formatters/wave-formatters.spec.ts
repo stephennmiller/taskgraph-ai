@@ -70,4 +70,24 @@ describe('formatWaveSummary', () => {
 			/^1 wave · 60 tasks can run now: 1, 2, 3, .*, … · 1 can't be scheduled$/
 		);
 	});
+
+	it('still names the first task when the width leaves no room for IDs', () => {
+		const ready = Array.from({ length: 40 }, (_, i) => String(i + 1));
+		const line = plain(
+			formatWaveSummary(
+				waves([ready], [{ id: '99', reason: 'held', blockers: [] }]),
+				40
+			)
+		);
+
+		expect(line).toBe(
+			"1 wave · 40 tasks can run now: 1, … · 1 can't be scheduled"
+		);
+	});
+
+	it('adds no ellipsis when the only ready task is cut for width', () => {
+		expect(plain(formatWaveSummary(waves([['12345']]), 10))).toBe(
+			'1 wave · 1 task can run now: 12345'
+		);
+	});
 });

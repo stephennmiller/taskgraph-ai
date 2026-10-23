@@ -147,6 +147,65 @@ describe('parallelWaves', () => {
 		expect(result.waveOf).toEqual({ '1': 1, '2': 1, '3': 2, '4': 1 });
 	});
 
+	it('reads numeric IDs and dependencies as tasks.json stores them', () => {
+		const result = parallelWaves([
+			{ ...task('1', [], 'pending', [sub(1)]), id: 1 },
+			{ ...task('2'), id: 2, dependencies: [1] },
+			{ ...task('3'), id: 3, dependencies: ['1.1', 2] }
+		] as unknown as Task[]);
+
+		expect(result.waveOf).toEqual({ '1': 1, '2': 2, '3': 3 });
+	});
+
+	it('reports a loop that runs through a subtask', () => {
+		const result = parallelWaves([
+			task('1', ['2'], 'pending', [sub(1)]),
+			task('2', ['1.1'])
+		]);
+
+		expect(result.waves).toEqual([]);
+		expect(result.unscheduled.map((u) => [u.id, u.reason])).toEqual([
+			['1', 'cycle'],
+			['2', 'cycle']
+		]);
+	});
+
+	it('treats IDs that name Object properties as plain IDs', () => {
+		const result = parallelWaves([
+			task('constructor'),
+			task('__proto__', ['constructor']),
+			task('toString', ['__proto__'])
+		]);
+
+		expect(result.waves).toEqual([
+			['constructor'],
+			['__proto__'],
+			['toString']
+		]);
+		expect(result.waveOf.toString).toBe(3);
+		expect(JSON.parse(JSON.stringify(result.waveOf))).toEqual({
+			constructor: 1,
+			['__proto__']: 2,
+			toString: 3
+		});
+	});
+
+	it('schedules a 10k wide fan-out and fan-in quickly', () => {
+		const ids = Array.from({ length: 10_000 }, (_, i) => String(i + 1));
+		const wide = [
+			task('0'),
+			...ids.map((id) => task(id, ['0'])),
+			task('end', ids)
+		];
+		const started = performance.now();
+
+		const result = parallelWaves(wide);
+
+		expect(result.waves.map((w) => w.length)).toEqual([1, 10_000, 1]);
+		// Generous bound: linear work, but CI runners can be busy
+		expect(performance.now() - started).toBeLessThan(5000);
+	});
+
 	it('handles a long chain without overflowing the stack', () => {
 		const tasks = Array.from({ length: 20000 }, (_, i) =>
 			task(String(i + 1), i ? [String(i)] : [])

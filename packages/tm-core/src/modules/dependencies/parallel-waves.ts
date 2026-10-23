@@ -138,7 +138,8 @@ export function parallelWaves(tasks: Task[]): ParallelWaves {
 	}
 
 	// Kahn's order, dependencies first; loop members are never released
-	const waveOf: Record<string, number> = {};
+	// No prototype: IDs like "constructor" or "__proto__" are plain keys
+	const waveOf: Record<string, number> = Object.create(null);
 	const left = new Map(
 		open.map((id) => [id, (blockers.get(id) as string[]).length])
 	);

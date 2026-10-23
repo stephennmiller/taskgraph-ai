@@ -18,7 +18,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
  * Format the waves summary, fitted to `width` (IDs that don't fit end in
- * "…"). Returns null when there's no unfinished work to summarize.
+ * "…", the first is always kept). Returns null when there's no unfinished work to summarize.
  */
 export function formatWaveSummary(
 	waves: ParallelWaves,
@@ -37,12 +37,14 @@ export function formatWaveSummary(
 	const room = width - head.length - tail.length - 2;
 	let ids = ready.join(', ');
 	if (ids.length > room) {
-		const kept: string[] = [];
-		for (const id of ready) {
+		// Always name the first task, so the line keeps a next step even
+		// when it is too narrow for more
+		const kept = [ready[0]];
+		for (const id of ready.slice(1)) {
 			if ([...kept, id].join(', ').length + 3 > room) break;
 			kept.push(id);
 		}
-		ids = kept.length ? `${kept.join(', ')}, …` : '…';
+		ids = kept.length < ready.length ? `${kept.join(', ')}, …` : kept[0];
 	}
 	return `${theme.muted(`${head}:`)} ${ids}${theme.muted(tail)}`;
 }
