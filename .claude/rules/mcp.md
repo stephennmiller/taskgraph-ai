@@ -208,7 +208,7 @@ import {
     handleApiResult,
     createErrorResponse,
     withNormalizedProjectRoot // <<< Import HOF
-} from './utils.js';
+} from '@tm/mcp';
 import { yourDirectFunction } from '../core/taskgraph-core.js';
 import { findTasksJsonPath } from '../core/utils/path-utils.js'; // If needed
 
@@ -241,7 +241,7 @@ export function registerYourTool(server) {
                     { session }
                 );
 
-                return handleApiResult(result, log);
+                return handleApiResult({ result, log, projectRoot });
             } catch (error) {
                 log.error(`Error in your_tool: ${error.message}`);
                 return createErrorResponse(error.message);
@@ -261,7 +261,7 @@ The `initialize_project` tool allows integrated clients like Claude Code to set 
 // In initialize-project.js
 import { z } from "zod";
 import { initializeProjectDirect } from "../core/taskgraph-core.js";
-import { handleApiResult, createErrorResponse } from "./utils.js";
+import { handleApiResult, createErrorResponse } from "@tm/mcp";
 
 export function registerInitializeProjectTool(server) {
   server.addTool({
@@ -280,7 +280,7 @@ export function registerInitializeProjectTool(server) {
       try {
         // Since we're initializing, we don't need project root
         const result = await initializeProjectDirect(args, log);
-        return handleApiResult(result, log, 'Error initializing project');
+        return handleApiResult({ result, log, errorPrefix: 'Error initializing project' });
       } catch (error) {
         log.error(`Error in initialize_project: ${error.message}`);
         return createErrorResponse(`Failed to initialize project: ${error.message}`);
@@ -333,7 +333,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 ## Key Principles
 
 - **Prefer Direct Function Calls**: MCP tools should always call `*Direct` wrappers instead of running the CLI.
-- **Standardized Execution Flow**: Follow the pattern: MCP Tool -> `getProjectRootFromSession` -> `*Direct` Function -> Core Logic / AI Logic.
+- **Standardized Execution Flow**: Follow the pattern: MCP Tool (`withNormalizedProjectRoot` resolves `projectRoot`) -> `*Direct` Function -> Core Logic / AI Logic.
 - **Path Resolution via Direct Functions**: The `*Direct` function is responsible for finding the exact `tasks.json` path using `findTasksJsonPath`, relying on the `projectRoot` passed in `args`.
 - **AI Logic in Core Modules**: AI interactions (prompt building, calling unified service) reside within the core logic functions (`scripts/modules/*`), not direct functions.
 - **Silent Mode in Direct Functions**: Wrap *core function* calls (from `scripts/modules`) with `enableSilentMode()` and `disableSilentMode()` if they produce console output not handled by `outputFormat`. Do not wrap AI calls.
@@ -341,7 +341,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 - **Progress Reporting**: For long work (like `parse_prd`), take `reportProgress` from the tool context, validate it with `checkProgressCapability(reportProgress, log)` from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)), and pass the result in the `*Direct` function's `context`. The direct function forwards it to core logic, which calls it only when it is defined. Otherwise use `log.info()`.
 - **Output Formatting**: Ensure core functions called by `*Direct` functions can suppress CLI output, ideally via an `outputFormat` parameter.
 - **Project Initialization**: Use the initialize_project tool for setting up new projects in integrated environments.
-- **Centralized Utilities**: Use helpers from `mcp-server/src/tools/utils.js`, `mcp-server/src/core/utils/path-utils.js`, and `mcp-server/src/core/utils/ai-client-utils.js`. See `utilities.md`.
+- **Centralized Utilities**: Tools import their helpers (`withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse`, `checkProgressCapability`) from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)). Direct functions use `mcp-server/src/core/utils/path-utils.js` for paths and `createLogWrapper` from `mcp-server/src/tools/utils.js`. See `utilities.md`.
 
 ## Resources and Resource Templates
 
@@ -361,11 +361,11 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 2. **Create Direct Function File in `mcp-server/src/core/direct-functions/`**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case** naming.
-    - Import necessary core functions, `findTasksJsonPath`, silent mode utilities, and potentially AI client/prompt utilities.
+    - Import necessary core functions, `findTasksJsonPath`, and silent mode utilities.
     - Implement `async function yourCommandDirect(args, log, context = {})` using **camelCase** with `Direct` suffix. **Remember `context` should only contain `{ session }` if needed (for AI keys/config).**
         - **Path Resolution**: Obtain `tasksPath` using `findTasksJsonPath(args, log)`.
         - Parse other `args` and perform necessary validation.
-        - **Handle AI (if applicable)**: Initialize clients using `get*ClientForMCP(session, log)`, build prompts, call AI, parse response. Handle AI-specific errors.
+        - **AI commands**: Don't create AI clients or build prompts here. The core function calls the unified AI service; pass it `session` (and `mcpLog`) so it can read API keys from `session.env`.
         - **Call Core Logic**:
             - Wrap with `enableSilentMode/disableSilentMode` if necessary.
             - Pass `outputFormat: 'json'` (or similar) if applicable.
@@ -378,25 +378,23 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, `handleApiResult`, `createErrorResponse`, `getProjectRootFromSession`, and your `yourCommandDirect` function. Import `checkProgressCapability` from `@tm/mcp` if the command reports progress.
+    - Import `zod`, your `yourCommandDirect` function, and from `@tm/mcp`: `withNormalizedProjectRoot`, `handleApiResult` and `createErrorResponse` (plus `checkProgressCapability` if the command reports progress).
     - Implement `registerYourCommandTool(server)`.
     - Define the tool `name` using **snake_case** (e.g., `your_command`).
     - Define the `parameters` using `zod`. Include `projectRoot: z.string().optional()`.
-    - Implement the `async execute(args, { log, session })` method.
-        - Get `rootFolder` using `getProjectRootFromSession(session, log)`.
-        - Call `await yourCommandDirect({ ...args, projectRoot }, log, { session });` and handle the result with `handleApiResult`.
+    - Wrap `execute` in `withNormalizedProjectRoot(async (args, { log, session }) => { ... })`, which resolves and normalizes `args.projectRoot` (see `mcp-server/src/tools/next-task.js`).
+        - Call `await yourCommandDirect({ ...args }, log, { session });` and return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot, tag })`.
         - **If the command is long-running**: also destructure `reportProgress`, and pass `{ session, reportProgress: checkProgressCapability(reportProgress, log) }` as the context (see `mcp-server/src/tools/parse-prd.js`).
 
-5.  **Register Tool**: Import and call `registerYourCommandTool` in `mcp-server/src/tools/index.js`.
+5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. Then update `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js`.
 
-6.  **Update `mcp.json`**: Add the new tool definition to the `tools` array in `.mcp.json`.
+6.  **No `.mcp.json` change**: `.mcp.json` only starts the server; it has no list of tools.
 
 ## Handling Responses
 
-- MCP tools should return the object generated by `handleApiResult`.
-- `handleApiResult` uses `createContentResponse` or `createErrorResponse` internally.
-- `handleApiResult` also uses `processMCPResponseData` by default to filter potentially large fields (`details`, `testStrategy`) from task data. Provide a custom processor function to `handleApiResult` if different filtering is needed.
-- The final JSON response sent to the MCP client will include the `fromCache` boolean flag (obtained from the `*Direct` function's result) alongside the actual data (e.g., `{ "fromCache": true, "data": { ... } }` or `{ "fromCache": false, "data": { ... } }`).
+- MCP tools should return the object generated by `handleApiResult` from `@tm/mcp`.
+- `handleApiResult` takes one options object: `{ result, log, errorPrefix, projectRoot, tag }`. Only `result` is required. `errorPrefix` defaults to `'API error'`; `tag` overrides the current tag it otherwise reads from `projectRoot`'s `state.json`.
+- On success it returns `{ data, version, tag }` as JSON text, where `data` is the `*Direct` function's `data` unchanged. On failure it returns an `isError` response with the error message, version and tag. It does not filter fields, so trim large task data in the direct function if needed.
 
 ## Parameter Type Handling
 
@@ -405,15 +403,15 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - The `execute` method within each MCP tool (in `mcp-server/src/tools/*.js`) should:
         1.  Call the corresponding `*Direct` function wrapper (e.g., `listTasksDirect`) from [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js), passing necessary arguments and the logger.
         2.  Receive the result object (typically `{ success, data/error, fromCache }`).
-        3.  Pass this result object to the `handleApiResult` utility (from [`tools/utils.js`](../../mcp-server/src/tools/utils.js)) for standardized response formatting and error handling.
+        3.  Pass this result object to the `handleApiResult` utility from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)) as `handleApiResult({ result, log, errorPrefix, projectRoot })` for standardized response formatting and error handling.
         4.  Return the formatted response object provided by `handleApiResult`.
 - **Centralized Utilities** (See also: `utilities.md`):
     - Use `findTasksJsonPath` (in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
-    - **Leverage MCP Utilities**: The file [`tools/utils.js`](../../mcp-server/src/tools/utils.js) contains essential helpers for MCP tool implementation:
-        - `withNormalizedProjectRoot`: Resolves and normalizes `args.projectRoot` (see above).
-        - `handleApiResult`: Takes the raw result from a `*Direct` function and formats it into a standard MCP success or error response, automatically handling data processing via `processMCPResponseData`. This is called by the tool's `execute` method.
-        - `createContentResponse`/`createErrorResponse`: Used by `handleApiResult` to format successful/error MCP responses.
-        - `processMCPResponseData`: Filters/cleans data (e.g., removing `details`, `testStrategy`) before it's sent in the MCP response. Called by `handleApiResult`.
+    - **Leverage MCP Utilities**: `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)) exports the helpers tools use:
+        - `withNormalizedProjectRoot`: Wraps `execute`; resolves and normalizes `args.projectRoot` (see above).
+        - `withToolContext`: Does the same and adds a `tmCore` instance to the context, which then holds only `log`, `session` and `tmCore` (no `reportProgress`).
+        - `handleApiResult`: Takes the raw result from a `*Direct` function and formats it into a standard MCP success or error response (see Handling Responses). This is called by the tool's `execute` method.
+        - `createContentResponse`/`createErrorResponse`: Format a success or error MCP response directly.
 
 **MCP Tool Implementation Checklist**:
 
@@ -434,7 +432,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
    - [ ] Define zod schema for all parameters
    - [ ] Implement the `execute` method following the standard pattern
    - [ ] For long-running operations, pass `reportProgress` through `checkProgressCapability` to the direct function
-   - [ ] Register tool in `mcp-server/src/tools/index.js`
+   - [ ] Add the tool to `toolRegistry` in `mcp-server/src/tools/tool-registry.js` (and to `coreTools`/`standardTools` if it belongs in that tier)
 
 4. **Testing**:
    - [ ] Write unit tests for the direct function wrapper

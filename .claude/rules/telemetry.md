@@ -140,13 +140,13 @@ These are the exposed endpoints for MCP clients.
 - **Actions**:
     1.  Call the corresponding direct function wrapper.
     2.  The direct function returns an object structured like `{ success: true, data: { operationSpecificData: ..., telemetryData: ... } }` (or an error object).
-    3.  Pass this entire result object to `handleApiResult(result, log)` from [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js).
+    3.  Pass this entire result object to `handleApiResult({ result, log, projectRoot })` from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)).
     4.  `handleApiResult` ensures that the `data` field from the direct function's response (which correctly includes `telemetryData`) is part of the final MCP response.
 
 - **Example Snippet (MCP Tool `some_ai_action.js`)**:
   ```javascript
   import { someAiActionDirect } from '../core/taskgraph-core.js';
-  import { handleApiResult, withNormalizedProjectRoot } from './utils.js';
+  import { handleApiResult, withNormalizedProjectRoot } from '@tm/mcp';
   // ... zod for parameters ...
 
   export function registerSomeAiActionTool(server) {
@@ -160,7 +160,11 @@ These are the exposed endpoints for MCP clients.
             log,
             { session }
           );
-          return handleApiResult(resultFromDirectFunction, log); // This passes the nested telemetryData through
+          return handleApiResult({
+            result: resultFromDirectFunction,
+            log,
+            projectRoot: args.projectRoot
+          }); // This passes the nested telemetryData through
         } catch (error) {
           // ... error handling ...
         }
@@ -222,7 +226,7 @@ The telemetry data flows as follows:
     *   Returns `{ success: true, data: { operationSpecificData, telemetryData } }`.
 4.  **MCP Tool**:
     *   Receives direct function response.
-    *   `handleApiResult` ensures the final MCP response to the client is `{ success: true, data: { operationSpecificData, telemetryData } }`.
+    *   `handleApiResult` ensures the final MCP response to the client is `{ data: { operationSpecificData, telemetryData }, version, tag }`.
 5.  **CLI Command**:
     *   Calls core logic with `outputFormat: 'text'`. Display is handled by core logic.
 
