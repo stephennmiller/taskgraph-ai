@@ -1,5 +1,5 @@
 ---
-description: "Update a single task with new information."
+description: "TaskGraph: change one task's details, with AI. Use when a TaskGraph task's plan changed."
 argument-hint: "<task ID> <changes>"
 ---
 

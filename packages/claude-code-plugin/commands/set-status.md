@@ -1,5 +1,5 @@
 ---
-description: "Set a task's status (pending, review, deferred, cancelled, ...)."
+description: "TaskGraph: set a task's status (pending, in-progress, review, done, deferred, cancelled, blocked)."
 argument-hint: "<task ID> <status>"
 ---
 

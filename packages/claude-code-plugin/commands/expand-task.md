@@ -1,5 +1,5 @@
 ---
-description: "Break down a complex task into subtasks."
+description: "TaskGraph: break one task into subtasks. Use when a TaskGraph task is too big to do in one go."
 argument-hint: "[task ID]"
 ---
 

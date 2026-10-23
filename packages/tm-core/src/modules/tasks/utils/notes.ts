@@ -78,3 +78,42 @@ export function appendNote(
 	const block = formatNoteBlock(text, addedAt);
 	return details ? `${details}\n${block}` : block;
 }
+
+/** Opening tag of a timestamped block; the closing tag starts with `</` */
+const NOTE_BLOCK_START = /<info added on ([^>\n]+)>/g;
+
+/**
+ * When each timestamped block in `details` was added, oldest first as they
+ * appear. Covers `taskgraph note`, update-subtask and research --save blocks;
+ * a block whose time doesn't parse is skipped.
+ */
+export function noteTimes(details: string | undefined): Date[] {
+	if (!details) return [];
+	const times: Date[] = [];
+	for (const match of details.matchAll(NOTE_BLOCK_START)) {
+		const time = new Date(match[1].trim());
+		if (!Number.isNaN(time.getTime())) times.push(time);
+	}
+	return times;
+}
+
+/** Whether `details` has a timestamped block added at or after `since` */
+export function hasNoteSince(details: string | undefined, since: Date): boolean {
+	return noteTimes(details).some((time) => time >= since);
+}
+
+/**
+ * Parse the start of a session as given on the command line (an ISO time).
+ * Throws INVALID_INPUT when it isn't a time.
+ */
+export function parseNoteSince(value: string): Date {
+	const since = new Date(String(value).trim());
+	if (!String(value).trim() || Number.isNaN(since.getTime())) {
+		throw new TaskGraphError(
+			`Not a time: ${value}`,
+			ERROR_CODES.INVALID_INPUT,
+			{ userMessage: `Not a time: "${value}". Use an ISO time like 2026-10-23T14:02:11Z` }
+		);
+	}
+	return since;
+}

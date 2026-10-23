@@ -1,12 +1,23 @@
 {
-	"description": "Gives Claude the project's TaskGraph state and workflow rules at session start and after compaction. Does nothing outside a TaskGraph project.",
+	"description": "Gives Claude the project's TaskGraph state and workflow rules at session start and after compaction, and reminds it once per session to log a note on the task in progress before it stops. Does nothing outside a TaskGraph project.",
 	"hooks": {
 		"SessionStart": [
 			{
 				"hooks": [
 					{
 						"type": "command",
-						"command": "d=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; [ -f \"$d/.taskgraph/config.json\" ] || [ -f \"$d/.taskgraph/tasks/tasks.json\" ] || exit 0; pre=\"This project tracks work in TaskGraph, but\"; if ! command -v taskgraph >/dev/null 2>&1; then echo \"$pre the taskgraph CLI is not installed. Ask the user to run: npm install -g taskgraph-ai\"; exit 0; fi; export TASKGRAPH_SKIP_AUTO_UPDATE=1; if out=$(taskgraph prime --project \"$d\" 2>/dev/null); then printf '%s\\n' \"$out\"; else out=$(taskgraph prime --project \"$d\" 2>&1); case \"$out\" in *\"nknown command\"*) echo \"$pre the installed taskgraph CLI is too old for the plugin. Ask the user to run: npm install -g taskgraph-ai@latest\";; *) echo \"$pre taskgraph prime failed:\"; printf '%s\\n' \"$out\";; esac; fi",
+						"command": "d=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; [ -f \"$d/.taskgraph/config.json\" ] || [ -f \"$d/.taskgraph/tasks/tasks.json\" ] || exit 0; in=; while IFS= read -r l || [ -n \"$l\" ]; do in=\"$in$l\"; done; case \"$in\" in *'\"session_id\":\"'*) sid=${in#*\\\"session_id\\\":\\\"}; sid=${sid%%\\\"*};; *) sid=;; esac; case \"$sid\" in ''|*[!A-Za-z0-9_-]*) ;; *) m=\"${TMPDIR:-/tmp}/taskgraph-session-$sid\"; case \"$in\" in *'\"source\":\"compact\"'*) [ -f \"$m\" ] || { date -u +%Y-%m-%dT%H:%M:%SZ > \"$m\"; } 2>/dev/null;; *) { date -u +%Y-%m-%dT%H:%M:%SZ > \"$m\"; } 2>/dev/null;; esac;; esac; pre=\"This project tracks work in TaskGraph, but\"; if ! command -v taskgraph >/dev/null 2>&1; then echo \"$pre the taskgraph CLI is not installed. Ask the user to run: npm install -g taskgraph-ai\"; exit 0; fi; export TASKGRAPH_SKIP_AUTO_UPDATE=1; if out=$(taskgraph prime --project \"$d\" 2>/dev/null); then printf '%s\\n' \"$out\"; else out=$(taskgraph prime --project \"$d\" 2>&1); case \"$out\" in *\"nknown command\"*) echo \"$pre the installed taskgraph CLI is too old for the plugin. Ask the user to run: npm install -g taskgraph-ai@latest\";; *) echo \"$pre taskgraph prime failed:\"; printf '%s\\n' \"$out\";; esac; fi",
+						"timeout": 20
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "d=\"${CLAUDE_PROJECT_DIR:-$PWD}\"; [ -f \"$d/.taskgraph/config.json\" ] || [ -f \"$d/.taskgraph/tasks/tasks.json\" ] || exit 0; in=; while IFS= read -r l || [ -n \"$l\" ]; do in=\"$in$l\"; done; case \"$in\" in *'\"stop_hook_active\":true'*) exit 0;; *'\"session_id\":\"'*) sid=${in#*\\\"session_id\\\":\\\"}; sid=${sid%%\\\"*};; *) exit 0;; esac; case \"$sid\" in ''|*[!A-Za-z0-9_-]*) exit 0;; esac; m=\"${TMPDIR:-/tmp}/taskgraph-session-$sid\"; [ -f \"$m\" ] || exit 0; since=; shown=; { read -r since; read -r shown; } < \"$m\"; [ -n \"$since\" ] && [ -z \"$shown\" ] || exit 0; command -v taskgraph >/dev/null 2>&1 || exit 0; export TASKGRAPH_SKIP_AUTO_UPDATE=1; msg=$(taskgraph prime --project \"$d\" --unnoted-since \"$since\" 2>/dev/null) || exit 0; [ -n \"$msg\" ] || exit 0; { echo shown >> \"$m\"; } 2>/dev/null; printf '%s\\n' \"$msg\" >&2; exit 2",
 						"timeout": 20
 					}
 				]

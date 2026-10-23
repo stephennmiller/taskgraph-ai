@@ -1,5 +1,5 @@
 ---
-description: "Learn about TaskGraph capabilities through interactive exploration."
+description: "TaskGraph: explain what TaskGraph can do. Use when the user asks how to use TaskGraph."
 argument-hint: "[arguments]"
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: "Parse PRD with enhanced research mode for better task generation."
+description: "TaskGraph: turn a PRD into tasks, researching the tech first. Use for a PRD with unfamiliar tech."
 argument-hint: "[PRD file path]"
 ---
 

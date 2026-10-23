@@ -1,5 +1,5 @@
 ---
-description: "View current AI model configuration."
+description: "TaskGraph: show which AI models TaskGraph is set to use."
 ---
 
 View current AI model configuration.

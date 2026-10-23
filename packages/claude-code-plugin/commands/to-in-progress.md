@@ -1,5 +1,5 @@
 ---
-description: "Start working on a task by setting its status to in-progress."
+description: "TaskGraph: claim a task by setting it in-progress. Use when starting work on a TaskGraph task."
 argument-hint: "[task ID]"
 ---
 

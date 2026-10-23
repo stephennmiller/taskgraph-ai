@@ -1,5 +1,5 @@
 ---
-description: "Run interactive setup to configure AI models."
+description: "TaskGraph: choose the AI models TaskGraph uses for planning and research."
 ---
 
 Run interactive setup to configure AI models.

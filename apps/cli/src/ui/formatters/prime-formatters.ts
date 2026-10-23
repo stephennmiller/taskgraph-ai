@@ -197,3 +197,34 @@ function formatReady(context: PrimeContext, width: number): string[] {
 		...context.ready.map((task) => taskRow(task, idWidth, width))
 	];
 }
+
+/**
+ * The end-of-session reminder (`prime --unnoted-since`), which the plugin's
+ * Stop hook hands to Claude once per session, e.g.
+ *
+ *   Task 3.2 is still in progress with no note from this session.
+ *   If you worked on it, log what you did:
+ *     taskgraph note 3.2 "<what you did or decided>"
+ *   If it's finished, check its criteria and close it:
+ *     taskgraph set-status --id=3.2 --status=done
+ *   If you didn't work on it, say so in one line and stop.
+ *
+ * IDs only, no titles: Claude already has them from prime, and it keeps the
+ * reminder to a fixed shape.
+ */
+export function formatUnnotedReminder(tasks: PrimeTask[]): string {
+	const ids = tasks.map((t) => t.id);
+	const one = ids.length === 1;
+	const id = one ? ids[0] : '<id>';
+	const list = one
+		? `Task ${ids[0]} is`
+		: `Tasks ${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]} are`;
+	return [
+		`${list} still in progress with no note from this session.`,
+		`If you worked on ${one ? 'it' : 'one'}, log what you did:`,
+		`${INDENT}${theme.brand(`taskgraph note ${id} "<what you did or decided>"`)}`,
+		`If ${one ? "it's" : 'one is'} finished, check its criteria and close it:`,
+		`${INDENT}${theme.brand(`taskgraph set-status --id=${id} --status=done`)}`,
+		`If you didn't work on ${one ? 'it' : 'them'}, say so in one line and stop.`
+	].join('\n');
+}

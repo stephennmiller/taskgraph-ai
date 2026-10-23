@@ -157,6 +157,10 @@ description: "A comprehensive reference of all available TaskGraph commands"
     # Another tag, or the same context as JSON
     taskgraph prime --tag=feature-auth
     taskgraph prime --json
+
+    # Only the in-progress tasks with no note since a time (ISO); prints
+    # nothing when every one has a note. The plugin's Stop hook uses it.
+    taskgraph prime --unnoted-since=2026-10-23T09:00:00Z
     ```
 
     `prime` is for agents, so `taskgraph --help` mentions it under its groups
@@ -168,7 +172,12 @@ description: "A comprehensive reference of all available TaskGraph commands"
     The JSON has `tag`, `counts` (`total`, `done`), `inProgress` (each with
     `id`, `title`, `status`, `priority`, `doneWhen`, and `parentTitle` for a
     subtask), `ready` (the same fields without `doneWhen`) and `rules`
-    (`text` and `command`).
+    (`text` and `command`). With `--unnoted-since`, the JSON is
+    `{ "unnoted": [...] }` with the `ready` fields for each task.
+
+    A note counts if a `taskgraph note`, `update-subtask` or `research --save`
+    block was added to the task (or its parent or subtask) at or after that
+    time.
   </Accordion>
 
   <Accordion title="Show Specific Task">

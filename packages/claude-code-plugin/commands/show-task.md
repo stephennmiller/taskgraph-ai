@@ -1,5 +1,5 @@
 ---
-description: "Show detailed task information with rich context and insights."
+description: "TaskGraph: show one task in full, with criteria and dependencies. Use for a task ID like 3 or 3.2."
 argument-hint: "[arguments]"
 ---
 

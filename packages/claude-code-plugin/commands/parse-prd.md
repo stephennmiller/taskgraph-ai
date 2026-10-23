@@ -1,5 +1,5 @@
 ---
-description: "Ask about gaps in a PRD, save the answers in it, then generate tasks."
+description: "TaskGraph: turn a PRD or spec into tasks, asking about gaps first. Use when the user has a requirements doc."
 argument-hint: "[PRD file path] [number of tasks] [research]"
 ---
 

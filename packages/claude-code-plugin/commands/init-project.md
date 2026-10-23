@@ -1,5 +1,5 @@
 ---
-description: "Initialize a new TaskGraph project."
+description: "TaskGraph: set up TaskGraph in this project. Use when asked to start tracking work with TaskGraph."
 argument-hint: "[--quick] [<prd-file>]"
 ---
 

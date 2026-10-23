@@ -1,5 +1,5 @@
 ---
-description: "Analyze task complexity and generate expansion recommendations."
+description: "TaskGraph: score how complex each task is and which to break down. Use before expanding tasks."
 argument-hint: "[arguments]"
 ---
 

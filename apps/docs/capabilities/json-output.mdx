@@ -36,6 +36,7 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `why <id>` | `--format json` | `id`, `title`, `status`, `tag`, `blocked`, `blockers`, `rootCauses` |
 | `tags`, `tags list` | `--json` | `tags`, `currentTag`, `totalTags` |
 | `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules` |
+| `prime --unnoted-since <time>` | `--json` | `unnoted` |
 | `generate` | `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
 | `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
 | `start <id>` | `--format json` | `found`, `started`, `task`, `command`, `executionOutput` |

@@ -1,5 +1,5 @@
 ---
-description: "Update multiple tasks starting from a specific ID."
+description: "TaskGraph: rewrite every task from an ID onward after a change of direction."
 argument-hint: "[arguments]"
 ---
 

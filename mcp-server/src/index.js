@@ -12,6 +12,18 @@ import {
 
 dotenv.config({ quiet: true });
 
+/**
+ * What the client tells the model about this server. Claude Code loads it at
+ * startup even when tool schemas are deferred, so it says when to reach for
+ * TaskGraph and which tools to start with. It names only core tools, which
+ * every tool tier includes.
+ */
+export const SERVER_INSTRUCTIONS = [
+	"TaskGraph tracks this project's tasks, their dependencies and status in .taskgraph/.",
+	'Use next_task to pick what to work on, get_task for its details and done-when criteria, and set_task_status to claim it (in-progress) or close it (done).',
+	'Log progress with add_note as you go, and file new work you find as a new task instead of doing it now.'
+].join('\n');
+
 // Constants
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +35,8 @@ class TaskGraphMCPServer {
 	constructor() {
 		this.options = {
 			name: 'TaskGraph MCP Server',
-			version: packageJson.version
+			version: packageJson.version,
+			instructions: SERVER_INSTRUCTIONS
 		};
 
 		// Create FastMCP instance

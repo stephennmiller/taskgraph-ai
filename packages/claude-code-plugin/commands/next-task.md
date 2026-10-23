@@ -1,5 +1,5 @@
 ---
-description: "Intelligently determine and prepare the next action based on comprehensive context."
+description: "TaskGraph: pick the next task to work on. Use when the user asks what to do next or what's ready."
 argument-hint: "[arguments]"
 ---
 

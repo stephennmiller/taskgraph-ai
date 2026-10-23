@@ -1,5 +1,5 @@
 ---
-description: "Advanced project analysis with actionable insights and recommendations."
+description: "TaskGraph: review the plan's progress, risks and bottlenecks. Use when asked how the project is going."
 argument-hint: "[arguments]"
 ---
 

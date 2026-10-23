@@ -1,5 +1,5 @@
 ---
-description: "Add a subtask to a parent task."
+description: "TaskGraph: add a subtask to a task. Use when a TaskGraph task needs a smaller step."
 argument-hint: "[arguments]"
 ---
 

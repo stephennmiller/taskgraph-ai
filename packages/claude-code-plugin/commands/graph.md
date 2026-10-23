@@ -1,5 +1,5 @@
 ---
-description: "Show tasks as a dependency tree."
+description: "TaskGraph: show tasks as a dependency tree. Use to see what blocks what."
 argument-hint: "[task-id]"
 ---
 

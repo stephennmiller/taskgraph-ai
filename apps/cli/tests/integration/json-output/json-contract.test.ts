@@ -541,6 +541,19 @@ describe('--json contract', () => {
 		`);
 	});
 
+	it('prime --unnoted-since', () => {
+		expect(
+			shapeOf(
+				json(['prime', '--unnoted-since', '2026-01-01T00:00:00Z', '--json'])
+			)
+		).toMatchInlineSnapshot(`
+			{
+			  "schemaVersion": "number",
+			  "unnoted": [],
+			}
+		`);
+	});
+
 	it('generate', () => {
 		expect(
 			shapeOf(json(['generate', '--format', 'json']))

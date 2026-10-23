@@ -1,5 +1,5 @@
 ---
-description: "Remove a task permanently from the project."
+description: "TaskGraph: delete a task permanently."
 argument-hint: "[task ID]"
 ---
 

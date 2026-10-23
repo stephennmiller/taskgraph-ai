@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph",
-	"description": "Task management for AI-driven development in Claude Code: slash commands, orchestration agents, and a session hook that loads the project's TaskGraph state.",
+	"description": "Task management for AI-driven development in Claude Code: slash commands, agents, a taskgraph skill, and hooks that load the project's TaskGraph state and remind Claude to log progress on the task in progress.",
 	"author": {
 		"name": "Stephen Miller",
 		"url": "https://github.com/stephennmiller/taskgraph-ai"

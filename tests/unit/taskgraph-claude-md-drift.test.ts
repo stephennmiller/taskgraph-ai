@@ -164,6 +164,46 @@ describe('taskgraph prime rules', () => {
 	});
 });
 
+describe('the plugin skill and hooks', () => {
+	const skill = fs.readFileSync(
+		path.join(rootDir, 'packages/claude-code-plugin/skills/taskgraph/SKILL.md'),
+		'utf8'
+	);
+	const hooks = JSON.parse(
+		fs.readFileSync(
+			path.join(rootDir, 'packages/claude-code-plugin/hooks/hooks.json'),
+			'utf8'
+		)
+	);
+	const hookCommands: string[] = Object.values(hooks.hooks).flatMap(
+		(entries: any) =>
+			entries.flatMap((e: any) => e.hooks.map((h: any) => h.command))
+	);
+	const calls = [
+		...codeSpans(skill).flatMap(invocations),
+		...hookCommands.flatMap(invocations)
+	];
+
+	it('name taskgraph commands (guards the extraction)', () => {
+		const names = unique(calls.map((c) => c.command));
+		expect(names).toEqual(expect.arrayContaining(['prime', 'next', 'note']));
+		expect(calls).toContainEqual({
+			command: 'prime',
+			flags: ['--project', '--unnoted-since']
+		});
+	});
+
+	it('only name CLI commands the program registers', () => {
+		expect(
+			calls.map((c) => c.command).filter((c) => !commandsByName.has(c))
+		).toEqual([]);
+	});
+
+	it('only use flags those commands define', () => {
+		expect(unknownFlags(calls)).toEqual([]);
+	});
+});
+
 describe('other places that state the tool tier counts', () => {
 	const read = (file: string) =>
 		fs.readFileSync(path.join(rootDir, file), 'utf8');

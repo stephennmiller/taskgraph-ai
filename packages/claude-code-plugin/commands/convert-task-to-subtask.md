@@ -1,5 +1,5 @@
 ---
-description: "Convert an existing task into a subtask."
+description: "TaskGraph: turn a task into a subtask of another task."
 argument-hint: "[arguments]"
 ---
 

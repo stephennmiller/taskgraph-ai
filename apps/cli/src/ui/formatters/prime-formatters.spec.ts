@@ -1,7 +1,10 @@
 import type { PrimeContext } from '@tm/core';
 import { PRIME_RULES } from '@tm/core';
 import { describe, expect, it } from 'vitest';
-import { formatPrimeContext } from './prime-formatters.js';
+import {
+	formatPrimeContext,
+	formatUnnotedReminder
+} from './prime-formatters.js';
 
 const stripAnsi = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
@@ -211,5 +214,50 @@ describe('formatPrimeContext', () => {
 		expect(text).not.toContain('In progress');
 		expect(text).not.toContain('Next:');
 		expect(text).toContain('Rules');
+	});
+});
+
+describe('formatUnnotedReminder', () => {
+	const task = (id: string) => ({
+		id,
+		title: `Task "${id}"; rm -rf /`,
+		status: 'in-progress',
+		priority: 'medium'
+	});
+
+	it('names the one task and gives its note and done commands', () => {
+		expect(stripAnsi(formatUnnotedReminder([task('3.2')]))).toBe(
+			[
+				'Task 3.2 is still in progress with no note from this session.',
+				'If you worked on it, log what you did:',
+				'  taskgraph note 3.2 "<what you did or decided>"',
+				"If it's finished, check its criteria and close it:",
+				'  taskgraph set-status --id=3.2 --status=done',
+				"If you didn't work on it, say so in one line and stop."
+			].join('\n')
+		);
+	});
+
+	it('lists several tasks and uses <id> in the commands', () => {
+		const lines = stripAnsi(
+			formatUnnotedReminder([task('1'), task('3.2'), task('7')])
+		).split('\n');
+
+		expect(lines[0]).toBe(
+			'Tasks 1, 3.2 and 7 are still in progress with no note from this session.'
+		);
+		expect(lines[2]).toBe('  taskgraph note <id> "<what you did or decided>"');
+		expect(lines[5]).toBe(
+			"If you didn't work on them, say so in one line and stop."
+		);
+	});
+
+	it('leaves task titles out and fits 80 columns', () => {
+		const text = stripAnsi(formatUnnotedReminder([task('12.10')]));
+
+		expect(text).not.toContain('rm -rf');
+		for (const line of text.split('\n')) {
+			expect(line.length).toBeLessThanOrEqual(80);
+		}
 	});
 });

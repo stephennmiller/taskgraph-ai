@@ -1,5 +1,5 @@
 ---
-description: "Expand all pending tasks that need subtasks."
+description: "TaskGraph: break every pending task that needs it into subtasks."
 ---
 
 Expand all pending tasks that need subtasks.
