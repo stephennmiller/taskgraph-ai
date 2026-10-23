@@ -124,10 +124,10 @@ function transformToClaudeFormat(mcpConfig) {
 }
 
 /**
- * @param {{mcp?: boolean}} [options] - mcp: false when init was not asked to
- *   set up MCP (`--mcp`), so a .mcp.json the user keeps is left alone
+ * @param {{mcp?: boolean}} [options] - mcp: true only when init was asked to
+ *   set up MCP (`--mcp`); otherwise a .mcp.json the user keeps is left alone
  */
-function onPostConvertRulesProfile(targetDir, assetsDir, { mcp = true } = {}) {
+function onPostConvertRulesProfile(targetDir, assetsDir, { mcp = false } = {}) {
 	// onAddRulesProfile already ran before this hook; only the MCP config needs converting
 	if (!mcp) return;
 	// Transform MCP configuration to Claude format

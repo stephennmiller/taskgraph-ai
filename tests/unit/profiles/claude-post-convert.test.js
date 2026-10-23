@@ -31,13 +31,25 @@ describe('Claude onPostConvertRulesProfile', () => {
 		expect(fs.existsSync(path.join(projectDir, '.taskgraph'))).toBe(false);
 	});
 
-	it('converts an existing .mcp.json to the Claude format', () => {
+	it('leaves an existing .mcp.json alone unless mcp is asked for', () => {
+		const file = path.join(projectDir, '.mcp.json');
+		const mine = JSON.stringify({
+			mcpServers: { tm: { command: 'npx', args: ['x'] } }
+		});
+		fs.writeFileSync(file, mine);
+
+		onPostConvertRulesProfile(projectDir, assetsDir);
+
+		expect(fs.readFileSync(file, 'utf8')).toBe(mine);
+	});
+
+	it('converts an existing .mcp.json to the Claude format with mcp: true', () => {
 		fs.writeFileSync(
 			path.join(projectDir, '.mcp.json'),
 			JSON.stringify({ mcpServers: { tm: { command: 'npx', args: ['x'] } } })
 		);
 
-		onPostConvertRulesProfile(projectDir, assetsDir);
+		onPostConvertRulesProfile(projectDir, assetsDir, { mcp: true });
 
 		const config = JSON.parse(
 			fs.readFileSync(path.join(projectDir, '.mcp.json'), 'utf8')

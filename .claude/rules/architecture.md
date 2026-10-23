@@ -81,7 +81,7 @@ paths:
 
   - **[`init.js`](../../scripts/init.js): Project Initialization Logic**
     - **Purpose**: Sets up new TaskGraph project structure.
-    - **Responsibilities**: Creates directories, copies templates, manages `package.json`, sets up `.mcp.json`, initializes state.json for tagged system.
+    - **Responsibilities**: Creates directories, copies templates, manages `package.json`, sets up the Claude Code `CLAUDE.md` import (and `.mcp.json` only with `--mcp`), initializes state.json for tagged system.
 
 ## Tagged Task Lists System Architecture
 
