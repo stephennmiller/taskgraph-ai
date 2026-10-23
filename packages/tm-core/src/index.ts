@@ -264,6 +264,12 @@ export {
 	type ArchivedIds
 } from './modules/tasks/utils/index.js';
 
+// Older status spellings ('completed') read as 'done' on load
+export {
+	normalizeTaskStatus,
+	normalizeTaskStatuses
+} from './modules/tasks/utils/index.js';
+
 // Acceptance criteria and the Definition of Done
 export {
 	normalizeAcceptanceCriteria,

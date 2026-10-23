@@ -11,3 +11,4 @@ export * from './prime-context.js';
 export * from './claim.js';
 export * from './archive.js';
 export * from './notes.js';
+export * from './legacy-status.js';

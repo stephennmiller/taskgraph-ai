@@ -1,6 +1,7 @@
 /**
  * @fileoverview Change one tag of a tasks file under the file lock
  */
+import { normalizeTaskStatuses } from '@tm/core';
 import { modifyJSON } from '../utils.js';
 
 /**
@@ -29,6 +30,10 @@ export async function updateTagTasks(filepath, tag, mutate, options = {}) {
 			throw new Error(`Tag "${tag}" no longer exists in ${filepath}`);
 		}
 		result = mutate(tagData);
+		// Write the older 'completed' status as 'done', as every other save does
+		if (Array.isArray(data[tag]?.tasks)) {
+			data[tag].tasks = normalizeTaskStatuses(data[tag].tasks);
+		}
 		return data;
 	});
 	return result;
