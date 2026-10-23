@@ -193,7 +193,7 @@ execute: async (args, { log, session }) => {
 
 To ensure consistent handling of project paths across different client environments (Windows, macOS, Linux, WSL) and input formats (e.g., `file:///...`, URI encoded paths), all MCP tool `execute` methods that require access to the project root **MUST** be wrapped with the `withNormalizedProjectRoot` Higher-Order Function (HOF).
 
-This HOF, defined in [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js), performs the following before calling the tool's core logic:
+This HOF, exported by `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)), performs the following before calling the tool's core logic:
 
 1.  **Determines the Root:** It uses the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` if the client passed one, else the `TASKGRAPH_PROJECT_ROOT` environment variable (from the process or the session), else the root folder in the session (`getProjectRootFromSession`). An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
 2.  **Normalizes the Path:** It uses the `normalizeProjectRoot` helper on `args.projectRoot` to decode URIs, strip `file://` prefixes, fix potential Windows drive letter prefixes (e.g., `/C:/`), convert backslashes (`\`) to forward slashes (`/`), and resolve the path to an absolute path suitable for the server's OS.
@@ -386,7 +386,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         - Call `await yourCommandDirect({ ...args }, log, { session });` and return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot, tag })`.
         - **If the command is long-running**: also destructure `reportProgress`, and pass `{ session, reportProgress: checkProgressCapability(reportProgress, log) }` as the context (see `mcp-server/src/tools/parse-prd.js`).
 
-5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. Then update `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js`.
+5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. Then update `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js` (and `EXPECTED_CORE_TOOLS` there for a core tool). A core or standard tool also changes the tier counts asserted in `tests/unit/mcp-server/tools/tool-registry.test.js`.
 
 6.  **No `.mcp.json` change**: `.mcp.json` only starts the server; it has no list of tools.
 

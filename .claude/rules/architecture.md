@@ -71,7 +71,7 @@ paths:
   - **[`mcp-server/`](../../mcp-server/): MCP Server Integration**
     - **Purpose**: Provides MCP interface using FastMCP.
     - **Responsibilities** (See also: `mcp.md`):
-      - Registers tools (`mcp-server/src/tools/*.js`). Tool `execute` methods **should be wrapped** with the `withNormalizedProjectRoot` HOF (from `tools/utils.js`) to ensure consistent path handling.
+      - Registers tools (`mcp-server/src/tools/*.js`). Tool `execute` methods **should be wrapped** with the `withNormalizedProjectRoot` HOF (from `@tm/mcp`) to ensure consistent path handling.
       - The HOF provides a normalized `args.projectRoot` to the `execute` method.
       - Tool `execute` methods call **direct function wrappers** (`mcp-server/src/core/direct-functions/*.js`), passing the normalized `projectRoot` and other args.
       - Direct functions use path utilities (`mcp-server/src/core/utils/`) to resolve paths based on `projectRoot` from session.

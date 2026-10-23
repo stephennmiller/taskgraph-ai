@@ -550,7 +550,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
       })
       ```
 
-5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. Then update `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js`.
+5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. Then update `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js` (and `EXPECTED_CORE_TOOLS` there for a core tool). A core or standard tool also changes the tier counts asserted in `tests/unit/mcp-server/tools/tool-registry.test.js`.
 
 6.  **No `.mcp.json` change**: `.mcp.json` only starts the server; it has no list of tools.
 

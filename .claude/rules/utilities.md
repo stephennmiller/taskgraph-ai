@@ -448,7 +448,7 @@ These utilities specifically support the implementation and execution of MCP too
     - **Example**:
       ```javascript
       // In mcp-server/src/tools/your-tool.js
-      import { withNormalizedProjectRoot } from './utils.js';
+      import { withNormalizedProjectRoot } from '@tm/mcp';
       
       export function registerYourTool(server) {
           server.addTool({
