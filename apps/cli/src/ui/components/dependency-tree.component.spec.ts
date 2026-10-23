@@ -13,6 +13,7 @@ const node = (
 	alsoNeeds: [],
 	missing: [],
 	inferred: [],
+	wave: null,
 	children,
 	...extra
 });
@@ -30,6 +31,7 @@ const tree = (
 	total: 0,
 	bottlenecks: [],
 	criticalPath: [],
+	waves: { waves: [], waveOf: {}, unscheduled: [] },
 	...analysis
 });
 
@@ -211,6 +213,35 @@ describe('renderDependencyTree', () => {
 			const lines = plain(renderDependencyTree(tree([node('1')])));
 
 			expect(lines.join('\n')).not.toMatch(/Bottlenecks|Critical path|◆/);
+		});
+
+		it("shows each task's wave on its line and sums the waves up after the path", () => {
+			const lines = plain(
+				renderDependencyTree(
+					tree(
+						[
+							node('1', [node('2', [], { wave: 2, alsoNeeds: ['3'] })], {
+								wave: 1
+							}),
+							node('3', [], { wave: 1 })
+						],
+						[],
+						{
+							criticalPath: ['1', '2'],
+							waves: {
+								waves: [['1', '3'], ['2']],
+								waveOf: { '1': 1, '2': 2, '3': 1 },
+								unscheduled: []
+							}
+						}
+					)
+				)
+			);
+
+			expect(lines[0]).toBe('○ 1  Task 1 · wave 1 ◆');
+			expect(lines[1]).toBe('└─ ○ 2  Task 2 · wave 2 · needs 3 ◆');
+			const path = lines.indexOf('Critical path: 1 → 2');
+			expect(lines[path + 1]).toBe('2 waves · 2 tasks can run now: 1, 3');
 		});
 
 		it('explains the markers in the legend', () => {

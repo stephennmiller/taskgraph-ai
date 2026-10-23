@@ -56,6 +56,9 @@ export {
 	type ClaimSummary
 } from './formatters/claim-formatters.js';
 
+// The parallel-waves line under `taskgraph graph`
+export { formatWaveSummary } from './formatters/wave-formatters.js';
+
 // What expand just created
 export {
 	formatAddedSubtasks,
