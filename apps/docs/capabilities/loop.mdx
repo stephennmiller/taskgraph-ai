@@ -92,7 +92,7 @@ It then prints the number of iterations, the tasks completed and the final statu
 
 | Option                   | Type   | Default                         | Description                                                                                                   |
 | ------------------------ | ------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `-n, --iterations`       | number | see description                 | Maximum number of iterations to run. Without it: 1 with `--id`; the number of pending tasks and subtasks with the `default` and `tdd` presets; otherwise 10. |
+| `-n, --iterations`       | number | see description                 | Maximum number of iterations to run. Without it: 1 with `--id`; the number of pending tasks and subtasks with the `default` and `tdd` presets (10 when none are pending); otherwise 10. |
 | `-i, --id`               | string | -                               | Work on this task or subtask (`3`, `3.2`) instead of the next one. Runs 1 iteration unless `-n` is given. Works with the `default` and `tdd` presets and custom prompt files. |
 | `-p, --prompt`           | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `tdd`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
 | `--progress-file`        | string | `.taskgraph/progress.txt`       | Path to the progress log file, attached to every iteration's prompt.                                          |
@@ -245,7 +245,7 @@ Task 5.3: validated the login form input
 # Loop Complete: 2026-01-09T10:41:12.000Z
 - Total iterations: 2
 - Tasks completed: 2
-- Final status: max_iterations
+- Final status: all_complete
 ```
 
 The `# Tag:` line appears only with `--tag`.
