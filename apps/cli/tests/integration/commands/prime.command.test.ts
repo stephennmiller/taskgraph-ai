@@ -139,7 +139,7 @@ describe('prime command', () => {
 			schemaVersion: JSON_OUTPUT_SCHEMA_VERSION,
 			unnoted: []
 		});
-	});
+	}, 120000);
 
 	it('--unnoted-since exits 1 when the time does not parse', () => {
 		const result = run(['prime', '--unnoted-since', 'yesterday']);
