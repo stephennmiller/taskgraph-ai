@@ -37,10 +37,7 @@ const commands = [
 	new WhyCommand()
 ].flatMap((command) => withSubcommands(command));
 
-/**
- * Command source files that define a --format option. The deprecated `start`
- * keeps a hidden --format only to say it is gone, so it isn't one of them.
- */
+/** Command source files that define a --format option */
 const COMMANDS_DIR = dirname(fileURLToPath(import.meta.url));
 const filesWithFormat = readdirSync(COMMANDS_DIR, { recursive: true })
 	.map(String)
