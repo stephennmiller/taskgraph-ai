@@ -14,8 +14,8 @@ import {
  */
 export const EXPECTED_TOOL_COUNTS = {
 	core: 7,
-	standard: 15,
-	total: 47
+	standard: 16,
+	total: 48
 };
 
 /**
@@ -26,7 +26,7 @@ export const EXPECTED_CORE_TOOLS = [
 	'next_task',
 	'get_task',
 	'set_task_status',
-	'update_subtask',
+	'add_note',
 	'parse_prd',
 	'expand_task'
 ];

@@ -11,6 +11,7 @@ export { GraphCommand } from './commands/graph.command.js';
 export { WhyCommand } from './commands/why.command.js';
 export { ArchiveCommand } from './commands/archive.command.js';
 export { PrimeCommand } from './commands/prime.command.js';
+export { NoteCommand } from './commands/note.command.js';
 export { StartCommand } from './commands/start.command.js';
 export { SetStatusCommand } from './commands/set-status.command.js';
 export { TagsCommand } from './commands/tags.command.js';

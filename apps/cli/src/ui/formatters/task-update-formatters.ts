@@ -8,6 +8,8 @@
  *     Found that the CLI parser needs an alias table, so `ls` maps to
  *     `list` before the command runs.
  *
+ *   ✓ Added a note to task 3  Store sessions in SQLite
+ *
  *   ✓ Updated 3 tasks
  *     2  Build the login API
  *     3  Store sessions in SQLite
@@ -95,6 +97,21 @@ export function formatNotesAdded(
 		.map((line) => (line ? `${indent}${line}` : line))
 		.join('\n');
 	return `${resultLine(`Added notes to ${name}`, target.title, width)}\n${body}`;
+}
+
+/**
+ * Format the line `taskgraph note` prints once the note is saved. The note
+ * isn't echoed: it was saved as typed, so showing it again says it twice.
+ *
+ * @param note - The task or subtask the note was added to
+ * @param width - Terminal width; the title is cut to fit on one line
+ */
+export function formatNoteAdded(
+	note: UpdatedTaskRef & { isSubtask: boolean },
+	width = terminalWidth()
+): string {
+	const kind = note.isSubtask ? 'subtask' : 'task';
+	return resultLine(`Added a note to ${kind} ${note.id}`, note.title, width);
 }
 
 /**

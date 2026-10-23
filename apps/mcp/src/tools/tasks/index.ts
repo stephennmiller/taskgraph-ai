@@ -3,6 +3,7 @@
  * Exports all task-related tool registration functions
  */
 
+export { registerAddNoteTool } from './add-note.tool.js';
 export { registerArchiveTasksTool } from './archive.tool.js';
 export { registerDependencyAnalysisTool } from './dependency-analysis.tool.js';
 export { registerGetTasksTool } from './get-tasks.tool.js';

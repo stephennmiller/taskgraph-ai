@@ -203,7 +203,7 @@ describe('formatListNextStep', () => {
 		const out = plain(formatListNextStep(next, { width: 80 }));
 
 		expect(out).not.toContain('--status=in-progress');
-		expect(out).toMatch(/^Next: taskgraph update-task --id=4/);
+		expect(out).toBe('Next: taskgraph note 4 "..." to log progress');
 	});
 
 	it('is empty when nothing is ready', () => {

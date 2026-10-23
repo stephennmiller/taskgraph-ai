@@ -49,10 +49,10 @@ Note: `taskgraph research` (the CLI and MCP command) runs with its own restricte
 
 ## Saving findings
 
-To keep the result with a task, hand it to the user to run, for example:
+To keep the result with a task, save a summary to it as written, for example:
 
 ```bash
-taskgraph update-subtask --id=<id> --prompt="<summary of findings>"
+taskgraph note <id> "<summary of findings, with source URLs>"
 ```
 
 ## Gotchas

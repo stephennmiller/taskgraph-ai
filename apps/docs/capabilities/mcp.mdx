@@ -27,7 +27,7 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
 - `next_task` - Find the next task to work on
 - `get_task` - Get detailed task information
 - `set_task_status` - Update task status
-- `update_subtask` - Add implementation notes
+- `add_note` - Log a progress note on a task or subtask, as written (no AI call)
 - `parse_prd` - Generate tasks from PRD
 - `expand_task` - Break down tasks into subtasks
 
@@ -48,9 +48,10 @@ Loads only 7 essential tools for daily development. Ideal for minimal context us
 You can also use `"lean"` as an alias for `"core"`. If `TASKGRAPH_TOOLS` is not set, core tools are loaded by default.
 
 #### Standard Tools
-Loads 15 commonly used tools. Balances functionality with context efficiency.
+Loads 16 commonly used tools. Balances functionality with context efficiency.
 
 **Standard tools include all core tools plus:**
+- `update_subtask` - Have the AI write notes onto a subtask
 - `initialize_project` - Set up new projects
 - `analyze_project_complexity` - Analyze task complexity
 - `expand_all` - Expand all eligible tasks
@@ -84,7 +85,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
       "command": "npx",
       "args": ["-y", "taskgraph-ai"],
       "env": {
-        "TASKGRAPH_TOOLS": "get_tasks,next_task,set_task_status,update_subtask"
+        "TASKGRAPH_TOOLS": "get_tasks,next_task,set_task_status,add_note"
       }
     }
   }
@@ -92,7 +93,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
 ```
 
 #### All Tools
-Loads all available (47) tools, including `github_status` and `github_push` (see [GitHub Sync](/capabilities/github-sync)). Use when you need full TaskGraph functionality.
+Loads all available (48) tools, including `github_status` and `github_push` (see [GitHub Sync](/capabilities/github-sync)). Use when you need full TaskGraph functionality.
 
 ```json
 {
@@ -123,8 +124,8 @@ When the MCP server starts, it logs which tools were loaded:
 TaskGraph MCP Server starting...
 Tool mode configuration: standard
 Loading standard tools
-Registering 15 MCP tools (mode: standard)
-Successfully registered 15/15 tools
+Registering 16 MCP tools (mode: standard)
+Successfully registered 16/16 tools
 ```
 
 ## Tool Categories
@@ -138,7 +139,8 @@ The MCP tools can be categorized in the same way as the core functionalities:
 -   **`remove_task`**: Removes one or more tasks or subtasks.
 -   **`remove_subtask`**: Removes a subtask from its parent.
 -   **`update_task`**: Updates a single task.
--   **`update_subtask`**: Appends information to a subtask.
+-   **`add_note`**: Appends a progress note to a task or subtask as written, with a timestamp. No AI call.
+-   **`update_subtask`**: Has the AI write notes onto a subtask.
 -   **`update`**: Updates multiple tasks.
 -   **`move_task`**: Moves a task or subtask.
 -   **`clear_subtasks`**: Clears all subtasks from one or more tasks.

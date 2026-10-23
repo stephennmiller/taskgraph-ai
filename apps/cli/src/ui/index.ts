@@ -70,8 +70,9 @@ export {
 	type HelpRow
 } from './formatters/help-formatters.js';
 
-// What update-task, update and update-subtask changed
+// What update-task, update, update-subtask and note changed
 export {
+	formatNoteAdded,
 	formatNotesAdded,
 	formatNothingToUpdate,
 	formatTasksUpdated,

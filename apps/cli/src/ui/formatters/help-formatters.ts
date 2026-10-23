@@ -62,7 +62,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 			{ name: 'generate', desc: 'Write a file for each task' },
 			{ name: 'update', desc: 'Update tasks from an ID onwards' },
 			{ name: 'update-task', desc: 'Update one task' },
-			{ name: 'update-subtask', desc: 'Add notes to a subtask' },
+			{ name: 'note', desc: 'Log a progress note on a task, as written' },
 			{ name: 'add-subtask', desc: 'Add a subtask, or make a task one' },
 			{ name: 'remove-task', desc: 'Remove a task or subtask' },
 			{ name: 'remove-subtask', desc: 'Remove a subtask' },

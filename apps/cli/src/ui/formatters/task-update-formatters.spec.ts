@@ -1,6 +1,7 @@
 import { stripVTControlCharacters } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
+	formatNoteAdded,
 	formatNotesAdded,
 	formatNothingToUpdate,
 	formatTasksUpdated,
@@ -35,6 +36,38 @@ describe('formatTaskUpdated', () => {
 
 		expect(widest(output)).toBeLessThanOrEqual(width);
 		expect(plain(output).split('\n')[0].endsWith('…')).toBe(true);
+	});
+});
+
+describe('formatNoteAdded', () => {
+	it('prints one result line naming the task, without echoing the note', () => {
+		const output = plain(
+			formatNoteAdded({ id: 3, title: 'Store sessions', isSubtask: false }, 80)
+		);
+
+		expect(output).toBe('✓ Added a note to task 3  Store sessions');
+	});
+
+	it('says subtask for a subtask ID', () => {
+		const output = plain(
+			formatNoteAdded(
+				{ id: '3.2', title: 'Hash passwords', isSubtask: true },
+				80
+			)
+		);
+
+		expect(output).toBe('✓ Added a note to subtask 3.2  Hash passwords');
+	});
+
+	it('cuts a long title to fit 80 columns on one line', () => {
+		const output = formatNoteAdded(
+			{ id: '12.10', title: longTitle, isSubtask: true },
+			80
+		);
+
+		expect(plain(output).split('\n')).toHaveLength(1);
+		expect(widest(output)).toBeLessThanOrEqual(80);
+		expect(plain(output)).toContain('…');
 	});
 });
 

@@ -19,7 +19,7 @@ const ALLOWED_COMMANDS = new Set([
 	'generate',
 	'update',
 	'update-task',
-	'update-subtask',
+	'note',
 	'remove-task',
 	'add-subtask',
 	'remove-subtask',

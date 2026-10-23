@@ -27,6 +27,11 @@ import {
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
 import {
+	appendNote,
+	normalizeNoteText,
+	type TaskNote
+} from './utils/notes.js';
+import {
 	applyChecklistChanges,
 	buildChecklist,
 	checkDoneGate,
@@ -430,6 +435,37 @@ export class TasksDomain {
 			tag
 		);
 		return buildChecklist(saved, definitionOfDone, taskId.includes('.'));
+	}
+
+	// ========== Notes ==========
+
+	/**
+	 * Append a progress note to a task or subtask's details, as written and
+	 * timestamped, in one locked write that changes only that item. No AI
+	 * call: use update-subtask/update-task for an AI rewrite.
+	 * Throws INVALID_INPUT for an empty note (before touching the file) and
+	 * TASK_NOT_FOUND for an unknown ID.
+	 */
+	async addNote(
+		taskId: string,
+		text: string,
+		options: { tag?: string } = {}
+	): Promise<TaskNote> {
+		const note = normalizeNoteText(text);
+		const id = String(taskId).trim();
+		const addedAt = new Date().toISOString();
+		const saved = await this.taskService.modifyTask(
+			id,
+			(task) => ({ details: appendNote(task.details, note, addedAt) }),
+			options.tag
+		);
+		return {
+			id,
+			title: saved.title,
+			isSubtask: id.includes('.'),
+			addedAt,
+			text: note
+		};
 	}
 
 	/**

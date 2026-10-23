@@ -198,6 +198,25 @@ description: "A comprehensive reference of all available TaskGraph commands"
     ```
   </Accordion>
 
+  <Accordion title="Log a Progress Note">
+    ```bash
+    # Append a note to a task or subtask, exactly as written, with a timestamp.
+    # No AI call, so it takes well under a second.
+    taskgraph note 3 "Chose argon2 over bcrypt: the login API already uses it"
+    taskgraph note 3.2 "Cookie path was wrong; fixed in auth/session.ts"
+
+    # A longer note from a file, or from stdin with -
+    taskgraph note 3 --file notes.md
+    git log -1 --format=%B | taskgraph note 3 --file -
+    ```
+
+    Prints one line, `✓ Added a note to task 3  <title>`. The note goes at the
+    end of the task's details in an `<info added on <time>>` block, the same
+    block `update-subtask` writes, and nothing else in `tasks.json` changes.
+    MCP clients use the `add_note` tool. Use `update-subtask` or
+    `update-task --append` when you want the AI to write the note instead.
+  </Accordion>
+
   <Accordion title="Update a Subtask">
     ```bash
     # Append additional information to a specific subtask
@@ -210,7 +229,7 @@ description: "A comprehensive reference of all available TaskGraph commands"
     taskgraph update-subtask --id=<parentId.subtaskId> --prompt="<prompt>" --research
     ```
 
-    Unlike the `update-task` command which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. This is useful for iteratively enhancing subtasks while preserving the original content.
+    Unlike the `update-task` command which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. The AI writes the appended text from your prompt; to save a note exactly as written, use `taskgraph note`.
   </Accordion>
 
   <Accordion title="Generate Task Files">

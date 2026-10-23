@@ -5,6 +5,7 @@
 
 // Import TypeScript tools from apps/mcp
 import {
+	registerAddNoteTool,
 	registerArchiveTasksTool,
 	registerAutopilotAbortTool,
 	registerAutopilotCommitTool,
@@ -79,6 +80,7 @@ export const toolRegistry = {
 	update: registerUpdateTool,
 	update_task: registerUpdateTaskTool,
 	update_subtask: registerUpdateSubtaskTool,
+	add_note: registerAddNoteTool,
 	remove_task: registerRemoveTaskTool,
 	remove_subtask: registerRemoveSubtaskTool,
 	clear_subtasks: registerClearSubtasksTool,
@@ -117,17 +119,18 @@ export const coreTools = [
 	'next_task',
 	'get_task',
 	'set_task_status',
-	'update_subtask',
+	'add_note',
 	'parse_prd',
 	'expand_task'
 ];
 
 /**
- * Standard tools array containing the 15 most commonly used tools
+ * Standard tools array containing the 16 most commonly used tools
  * Includes all core tools plus frequently used additional tools
  */
 export const standardTools = [
 	...coreTools,
+	'update_subtask',
 	'initialize_project',
 	'analyze_project_complexity',
 	'expand_all',

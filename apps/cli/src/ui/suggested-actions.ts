@@ -19,15 +19,10 @@ export function getSuggestedActions(
 ): SuggestedAction[] {
 	const id = String(taskId);
 	const isSubtask = id.includes('.');
-	const logProgress: SuggestedAction = isSubtask
-		? {
-				command: `taskgraph update-subtask --id=${id} --prompt="..."`,
-				description: 'to log progress notes'
-			}
-		: {
-				command: `taskgraph update-task --id=${id} --prompt="..."`,
-				description: 'to update details'
-			};
+	const logProgress: SuggestedAction = {
+		command: `taskgraph note ${id} "..."`,
+		description: 'to log progress'
+	};
 	const expand: SuggestedAction[] =
 		!isSubtask && !hasSubtasks
 			? [

@@ -114,7 +114,7 @@ claude mcp add taskgraph-ai --scope user \
   -- npx -y taskgraph-ai
 ```
 
-Restart Claude Code and run `/mcp`; `taskgraph-ai` should show as connected. `standard` loads 15 tools, enough for everything in [How to use it](#how-to-use-it). See [MCP tool tiers](#mcp-tool-tiers) for the others.
+Restart Claude Code and run `/mcp`; `taskgraph-ai` should show as connected. `standard` loads 16 tools, enough for everything in [How to use it](#how-to-use-it). See [MCP tool tiers](#mcp-tool-tiers) for the others.
 
 To share the setup with your team instead, put it in the project's `.mcp.json`:
 
@@ -217,7 +217,7 @@ taskgraph expand --id=4 --research           # split into subtasks
 taskgraph expand --all                       # expand every eligible task
 taskgraph update-task --id=5 --prompt="..."  # change one task
 taskgraph update --from=5 --prompt="..."     # change task 5 onward
-taskgraph update-subtask --id=3.2 --prompt="notes"
+taskgraph note 3.2 "chose argon2"           # log progress, as written
 taskgraph analyze-complexity --research
 taskgraph complexity-report
 taskgraph add-dependency --id=5 --depends-on=3
@@ -238,9 +238,9 @@ Only relevant if you added the optional MCP server. Each tool you load costs con
 
 | Value | Tools | Includes |
 |---|---|---|
-| `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `update_subtask`, `parse_prd`, `expand_task` |
-| `standard` | 15 | core, plus `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
-| `all` | 47 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
+| `core` (default, alias `lean`) | 7 | `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task` |
+| `standard` | 16 | core, plus `update_subtask`, `initialize_project`, `analyze_project_complexity`, `expand_all`, `add_subtask`, `remove_task`, `add_task`, `complexity_report`, `dependency_analysis` |
+| `all` | 48 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task`, `generate`, and the `autopilot_*` TDD workflow |
 | a list | custom | e.g. `get_tasks,next_task,set_task_status` |
 
 Set it when you add the server:
