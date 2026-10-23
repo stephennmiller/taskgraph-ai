@@ -478,14 +478,17 @@ function registerCommands(programInstance) {
 				process.exit(1);
 			}
 
-			// Call core updateTasks, passing context for CLI
-			await updateTasks(
-				taskGraph.getTasksPath(),
-				fromId,
-				prompt,
-				useResearch,
-				{ projectRoot: taskGraph.getProjectRoot(), tag } // Pass context with projectRoot and tag
-			);
+			try {
+				await updateTasks(
+					taskGraph.getTasksPath(),
+					fromId,
+					prompt,
+					useResearch,
+					{ projectRoot: taskGraph.getProjectRoot(), tag }
+				);
+			} catch (error) {
+				displayError(error, { hint: aiErrorHint(error) });
+			}
 		});
 
 	// update-task command

@@ -154,20 +154,16 @@ function _loadAndValidateConfig(explicitRoot = null) {
 			configSource = `file (${configPath})`; // Update source info
 
 			// --- Validation (Warn if file content is invalid) ---
-			// Use log.warn for consistency
+			const unsupported = [];
 			if (!validateProvider(config.models.main.provider)) {
-				console.warn(
-					chalk.yellow(
-						`Warning: Invalid main provider "${config.models.main.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
-					)
+				unsupported.push(
+					`Main provider "${config.models.main.provider}" isn't supported; using ${defaults.models.main.modelId}`
 				);
 				config.models.main = { ...defaults.models.main };
 			}
 			if (!validateProvider(config.models.research.provider)) {
-				console.warn(
-					chalk.yellow(
-						`Warning: Invalid research provider "${config.models.research.provider}" in ${configPath}. Falling back to default. Run 'taskgraph models --setup' to choose a Claude Code model.`
-					)
+				unsupported.push(
+					`Research provider "${config.models.research.provider}" isn't supported; using ${defaults.models.research.modelId}`
 				);
 				config.models.research = { ...defaults.models.research };
 			}
@@ -175,13 +171,19 @@ function _loadAndValidateConfig(explicitRoot = null) {
 				config.models.fallback?.provider &&
 				!validateProvider(config.models.fallback.provider)
 			) {
-				console.warn(
-					chalk.yellow(
-						`Warning: Invalid fallback provider "${config.models.fallback.provider}" in ${configPath}. Fallback model configuration will be ignored. Run 'taskgraph models --setup' to choose a Claude Code model.`
-					)
+				unsupported.push(
+					`Fallback provider "${config.models.fallback.provider}" isn't supported; no fallback model`
 				);
 				config.models.fallback.provider = undefined;
 				config.models.fallback.modelId = undefined;
+			}
+			if (unsupported.length > 0) {
+				console.warn(
+					unsupported.map((line) => `${chalk.yellow('⚠')} ${line}`).join('\n') +
+						chalk.dim(
+							`\n  Run taskgraph models --setup to update ${path.relative(rootToUse, configPath)}`
+						)
+				);
 			}
 			if (config.claudeCode && !isEmpty(config.claudeCode)) {
 				config.claudeCode = validateClaudeCodeSettings(config.claudeCode);
@@ -214,11 +216,11 @@ function _loadAndValidateConfig(explicitRoot = null) {
 		configSource = `defaults (no config file found at ${rootToUse})`;
 	}
 
-	return config;
+	return { config, root: rootToUse, fromFile: configExists };
 }
 
 // Roots already warned about in this run. getConfig() runs several times per
-// command and doesn't cache loads without an explicit root, so the warning
+// command and doesn't cache defaults loaded without a root, so the warning
 // used to print up to five times in a row.
 const warnedMissingConfigRoots = new Set();
 
@@ -250,16 +252,16 @@ function getConfig(explicitRoot = null, forceReload = false) {
 		(explicitRoot && explicitRoot !== loadedConfigRoot);
 
 	if (needsLoad) {
-		const newConfig = _loadAndValidateConfig(explicitRoot); // _load handles null explicitRoot
+		const { config, root, fromFile } = _loadAndValidateConfig(explicitRoot);
 
-		// Only update the global cache if loading was forced or if an explicit root
-		// was provided (meaning we attempted to load a specific project's config).
-		// We avoid caching the initial default load triggered without an explicitRoot.
-		if (forceReload || explicitRoot) {
-			loadedConfig = newConfig;
-			loadedConfigRoot = explicitRoot; // Store the root used for this loaded config
+		// log() reads the config without a root on every call, so a file found
+		// that way is cached too; each reload repeated its warnings (#269).
+		// Defaults aren't cached, so a config written later in the run is found.
+		if (forceReload || explicitRoot || fromFile) {
+			loadedConfig = config;
+			loadedConfigRoot = explicitRoot || root;
 		}
-		return newConfig; // Return the newly loaded/default config
+		return config;
 	}
 
 	// If no load was needed, return the cached config
