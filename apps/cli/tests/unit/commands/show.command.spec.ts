@@ -50,7 +50,8 @@ describe('ShowCommand', () => {
 						description: 'Test description'
 					},
 					isSubtask: false
-				})
+				}),
+				getChecklist: vi.fn().mockReturnValue(undefined)
 			} as any,
 			config: {
 				getActiveTag: vi.fn().mockReturnValue('master')
@@ -117,6 +118,7 @@ describe('ShowCommand', () => {
 			// Should use text format (not JSON)
 			// Text format prints the header (mocked) and the formatted task
 			expect(consoleLogSpy).toHaveBeenCalled();
+			expect(consoleLogSpy.mock.calls.flat().join('\n')).toContain('Test Task');
 		});
 
 		it('should default to text format when neither flag is set', async () => {
