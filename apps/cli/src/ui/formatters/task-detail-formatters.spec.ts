@@ -296,6 +296,28 @@ describe('formatTaskDetail', () => {
 		expect(output[2]).toBe('discovered from 3');
 	});
 
+	it('names a few links of each type and counts the rest, within 80 columns', () => {
+		const taskLinks = Object.fromEntries(
+			Array.from({ length: 40 }, (_, i) => [String(100 + i), 'related'])
+		);
+		const task = {
+			...createTask({
+				id: 5,
+				title: 'Export bookmarks',
+				description: '',
+				status: 'pending'
+			}),
+			metadata: { taskLinks }
+		};
+
+		const output = lines(formatTaskDetail(task, { width: 80 }));
+
+		expect(output).toContain(
+			'related to 100, 101, 102, 103, 104, 105 and 34 more'
+		);
+		for (const line of output) expect(line.length).toBeLessThanOrEqual(80);
+	});
+
 	it('shows no link facts for a file without links', () => {
 		const output = plain(formatTaskDetail(signIn(), { width: 80 }));
 

@@ -216,4 +216,50 @@ describe('updateSubtaskById validation', () => {
 
 		expect(writeJSON).toHaveBeenCalled();
 	});
+
+	test('--metadata cannot overwrite or remove the related links', async () => {
+		const fs = await import('fs');
+		const { writeJSON } = await import(
+			'../../../../../scripts/modules/utils.js'
+		);
+		fs.existsSync.mockReturnValue(true);
+		writeJSON.mockClear();
+		readJSON.mockReturnValue({
+			tag: 'master',
+			tasks: [
+				{ id: 2, title: 'Other' },
+				{
+					id: 1,
+					title: 'Parent Task',
+					subtasks: [
+						{
+							id: 1,
+							title: 'Original subtask',
+							status: 'pending',
+							metadata: { taskLinks: { 2: 'related' } }
+						}
+					]
+				}
+			]
+		});
+
+		await updateSubtaskById(
+			'tasks/tasks.json',
+			'1.1',
+			'',
+			false,
+			{
+				tag: 'master',
+				metadata: { owner: 'kim', taskLinks: { 9: 'related' } }
+			},
+			'json'
+		);
+
+		const data = writeJSON.mock.calls[0][1];
+		const subtask = data.tasks[1].subtasks[0];
+		expect(subtask.metadata).toEqual({
+			taskLinks: { 2: 'related' },
+			owner: 'kim'
+		});
+	});
 });

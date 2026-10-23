@@ -143,6 +143,9 @@ function header(label: string, title: string, width: number): string[] {
 	];
 }
 
+/** Link IDs named per type in `show` before `and N more` */
+const MAX_LINK_IDS = 6;
+
 /**
  * Links that don't block, apart from what the task depends on:
  * `related to 4 and 6`, `discovered from 3`
@@ -151,11 +154,16 @@ function linkFacts(task: Task | Subtask): string[] {
 	const links = getTaskLinks(task, isSubtask(task) ? task.parentId : undefined);
 	const ids = (type: string) =>
 		links.filter((link) => link.type === type).map((link) => link.id);
+	// Links aren't limited the way blockers are; keep each fact to one line
+	const someIds = (all: string[]) =>
+		all.length <= MAX_LINK_IDS
+			? listIds(all)
+			: `${all.slice(0, MAX_LINK_IDS).join(', ')} and ${all.length - MAX_LINK_IDS} more`;
 	const facts: string[] = [];
 	const related = ids('related');
-	if (related.length > 0) facts.push(`related to ${listIds(related)}`);
+	if (related.length > 0) facts.push(`related to ${someIds(related)}`);
 	const found = ids('discovered-from');
-	if (found.length > 0) facts.push(`discovered from ${listIds(found)}`);
+	if (found.length > 0) facts.push(`discovered from ${someIds(found)}`);
 	return facts.map((fact) => theme.muted(fact));
 }
 

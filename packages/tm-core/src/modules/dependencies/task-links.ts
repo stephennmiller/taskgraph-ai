@@ -23,6 +23,7 @@
  * `dependencies` is a blocker: the dependency wins and the link is ignored.
  */
 
+import { isDeepStrictEqual } from 'node:util';
 import {
 	TASK_LINKS_KEY,
 	assignMetadata,
@@ -66,6 +67,13 @@ const isNonBlocking = (value: unknown): value is NonBlockingLinkType =>
 	typeof value === 'string' && NON_BLOCKING.includes(value);
 
 /**
+ * A full task or subtask ID ("5", "2.1"). Keys come from a hand-editable
+ * file, so anything else (`__proto__`, terminal escape codes, junk) is
+ * ignored rather than shown or kept.
+ */
+const FULL_ID = /^\d+(\.\d+)?$/;
+
+/**
  * The link type a user typed, or undefined when it isn't one. No value
  * means `blocks`, today's behavior.
  */
@@ -88,7 +96,7 @@ function readLinks(
 	}
 	const links: Record<string, NonBlockingLinkType> = {};
 	for (const [id, type] of Object.entries(stored)) {
-		if (isNonBlocking(type)) links[id] = type;
+		if (FULL_ID.test(id) && isNonBlocking(type)) links[id] = type;
 	}
 	return links;
 }
@@ -137,7 +145,10 @@ export function getLinkType(
 	parentId?: DependencyId
 ): LinkType | undefined {
 	if (hasDependency(task, targetId, parentId)) return 'blocks';
-	return readLinks(task.metadata)[String(targetId)];
+	const links = readLinks(task.metadata);
+	const key = String(targetId);
+	// Own keys only: "constructor" must not find Object.prototype's
+	return Object.hasOwn(links, key) ? links[key] : undefined;
 }
 
 /** Metadata with a non-blocking link to `targetId` (replacing any other type) */
@@ -177,7 +188,10 @@ function* everyItem(
 	}
 }
 
-/** Rewrite each item's link keys; only items whose links change are touched */
+/**
+ * Rewrite each item's link keys; only items whose stored links change are
+ * touched. Malformed entries (see readLinks) are dropped along the way.
+ */
 function rewriteLinks(
 	tasks: LinkableTask[],
 	rewrite: (
@@ -186,10 +200,10 @@ function rewriteLinks(
 	) => Record<string, NonBlockingLinkType>
 ): void {
 	for (const { item, fullId } of everyItem(tasks)) {
-		const links = readLinks(item.metadata);
-		if (Object.keys(links).length === 0) continue;
-		const next = rewrite(links, fullId);
-		if (JSON.stringify(next) !== JSON.stringify(links)) {
+		const stored = item.metadata?.[TASK_LINKS_KEY];
+		if (stored === undefined) continue;
+		const next = rewrite(readLinks(item.metadata), fullId);
+		if (!isDeepStrictEqual(stored, next)) {
 			assignMetadata(item, withLinks(item.metadata, next));
 		}
 	}
@@ -267,7 +281,8 @@ export function findDanglingLinks(
 
 /**
  * Drop links to tasks that don't exist, as removing a task drops the
- * dependencies on it. Returns what was dropped.
+ * dependencies on it, and any malformed entry. Returns the dropped links
+ * (malformed entries aren't listed: they never named a task).
  *
  * @param exists - Which IDs count as existing; defaults to `tasks` itself.
  *   A move to another tag passes the moved IDs, since a link must not point
@@ -278,7 +293,7 @@ export function pruneTaskLinks(
 	exists?: (id: string) => boolean
 ): DanglingLink[] {
 	const dangling = findDanglingLinks(tasks, exists);
-	if (dangling.length === 0) return dangling;
+	// Runs even with nothing dangling, so malformed entries are dropped too
 	const drop = new Set(dangling.map((d) => `${d.taskId}\u0000${d.linkedId}`));
 	rewriteLinks(tasks, (links, fullId) =>
 		Object.fromEntries(

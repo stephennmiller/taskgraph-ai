@@ -1538,7 +1538,7 @@ function registerCommands(programInstance) {
 	// remove-dependency command
 	programInstance
 		.command('remove-dependency')
-		.description('Remove a dependency (or a related link) from a task')
+		.description('Remove a dependency or a non-blocking link from a task')
 		.option('-i, --id <id>', 'Task ID to remove dependency from')
 		.option('-d, --depends-on <id>', 'Task ID to remove as a dependency')
 		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)

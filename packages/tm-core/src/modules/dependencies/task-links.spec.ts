@@ -89,6 +89,31 @@ describe('reading links', () => {
 		expect(getTaskLinks(t)).toEqual([{ id: '3', type: 'related' }]);
 	});
 
+	it('ignores keys that are not task IDs in a hand-edited file', () => {
+		// JSON.parse makes __proto__ an own key, unlike an object literal
+		const links = JSON.parse(
+			'{"__proto__":"related","constructor":"related","\\u001b[31mx":"related","2.1":"related","4":"discovered-from"}'
+		);
+		const t = task(5, { metadata: { taskLinks: links } });
+
+		expect(getTaskLinks(t)).toEqual([
+			{ id: '2.1', type: 'related' },
+			{ id: '4', type: 'discovered-from' }
+		]);
+		expect(getLinkType(t, '__proto__')).toBeUndefined();
+		expect(getLinkType(t, 'constructor')).toBeUndefined();
+		expect(Object.getPrototypeOf(setTaskLink(t.metadata, 3, 'related'))).toBe(
+			Object.prototype
+		);
+	});
+
+	it('ignores a taskLinks value that is not an object', () => {
+		expect(getTaskLinks(task(5, { metadata: { taskLinks: ['1'] } }))).toEqual(
+			[]
+		);
+		expect(getTaskLinks(task(5, { metadata: { taskLinks: 'x' } }))).toEqual([]);
+	});
+
 	it('lets a dependency on the same task win over a link', () => {
 		const t = task(5, { dependencies: [3], ...linked({ '3': 'related' }) });
 
@@ -225,6 +250,24 @@ describe('pruneTaskLinks', () => {
 		expect(tasks[0].metadata).toEqual({ taskLinks: { '2': 'related' } });
 		expect(tasks[1].subtasks[0].metadata).toBeUndefined();
 		expect(findDanglingLinks(tasks)).toEqual([]);
+	});
+
+	it('drops malformed entries even when no link dangles', () => {
+		const tasks = [
+			task(1, {
+				metadata: {
+					owner: 'sam',
+					taskLinks: JSON.parse(
+						'{"__proto__":"related","\\u001b]0;x":"related","2":"blocks","2.1.3":"related"}'
+					)
+				}
+			}),
+			task(2, { metadata: { taskLinks: 'related' } })
+		];
+
+		expect(pruneTaskLinks(tasks)).toEqual([]);
+		expect(tasks[0].metadata).toEqual({ owner: 'sam' });
+		expect(tasks[1].metadata).toBeUndefined();
 	});
 
 	it('takes a custom test of which IDs exist', () => {
