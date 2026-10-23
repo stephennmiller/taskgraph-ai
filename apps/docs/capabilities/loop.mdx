@@ -21,7 +21,13 @@ This pattern is ideal for batch operations like clearing task backlogs, improvin
 
 ## Basic Usage
 
-Run 10 iterations with the default task-completion preset:
+Work through the backlog with the default task-completion preset, one iteration per pending task:
+
+```bash
+taskgraph loop
+```
+
+Cap the run at 10 iterations:
 
 ```bash
 taskgraph loop -n 10
@@ -54,50 +60,48 @@ taskgraph loop --id 3.2 --prompt tdd
 
 `--id` works with the `default` and `tdd` presets and with custom prompt files. The other presets pick their own work, so `loop` refuses `--id` with them. A task ID that doesn't exist fails before Claude Code starts.
 
+Watch Claude work as it goes, instead of seeing each iteration's output when it ends:
+
+```bash
+taskgraph loop -n 5 --verbose
+```
+
+### Permission prompts
+
+Each iteration runs `claude -p` with permission prompts off (`--dangerously-skip-permissions`), so Claude can read, edit and run anything in the project without asking. The first run in a project asks you to allow that and remembers your answer in `~/.taskgraph/loop-trusted.json`. In a script or CI, where nothing can answer, pass `--trust`. To keep Claude off your machine, pass `--sandbox` to run each iteration in a Docker sandbox (`docker sandbox run claude`) instead; the first sandbox run asks you to sign in.
+
 ## How It Works
 
 Each loop iteration:
 
-1. Generates a prompt combining context header + preset content
-2. Spawns `claude -p <prompt>` as a fresh subprocess
+1. Builds a prompt from a short header (the progress file and `CLAUDE.md` as `@` references, the iteration number, the tag and any `--id` task) followed by the preset or custom prompt
+2. Spawns `claude -p <prompt>` as a fresh subprocess in the project root
 3. Captures output and checks for completion markers
-4. Appends progress notes to the progress file
-5. Sleeps before the next iteration (configurable)
+4. Waits 5 seconds before the next iteration
 
-The loop exits early when:
+The agent appends its own notes to the progress file as the prompt tells it to.
+
+The loop stops when:
 - An agent outputs `<loop-complete>REASON</loop-complete>` - all work done
 - An agent outputs `<loop-blocked>REASON</loop-blocked>` - cannot proceed
 - Maximum iterations reached
 
-## Progress File
-
-Each iteration's agent has access to a shared progress file (default: `.taskgraph/loop-progress.txt`) via the `@` file reference syntax. Agents append notes about what they completed, allowing subsequent iterations to build on previous work.
-
-Example progress file content:
-
-```
-# Loop Progress - Started 2025-01-09 10:30:00
-# Preset: test-coverage | Iterations: 10
-
-[10:30:45] Iteration 1 (Task 5.2): Added unit tests for UserService
-[10:35:22] Iteration 2 (Task 5.3): Added integration tests for auth flow
-[10:40:18] Iteration 3: All pending test tasks complete
-```
+It then prints the number of iterations, the tasks completed and the final status. The exit code is 1 when the loop ended blocked or on an error, and 0 otherwise, so a script can tell a stuck loop from a finished one.
 
 ## CLI Options
 
 | Option                   | Type   | Default                         | Description                                                                                                   |
 | ------------------------ | ------ | ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `-n, --iterations`       | number | `10`                            | Maximum number of iterations to run.                                                                          |
+| `-n, --iterations`       | number | see description                 | Maximum number of iterations to run. Without it: 1 with `--id`; the number of pending tasks and subtasks with the `default` and `tdd` presets; otherwise 10. |
 | `-i, --id`               | string | -                               | Work on this task or subtask (`3`, `3.2`) instead of the next one. Runs 1 iteration unless `-n` is given. Works with the `default` and `tdd` presets and custom prompt files. |
 | `-p, --prompt`           | string | `default`                       | Preset name or path to a custom prompt file. Accepts: `default`, `tdd`, `test-coverage`, `linting`, `duplication`, `entropy`, or a file path like `./my-prompt.md`. |
-| `--progress-file`        | string | `.taskgraph/loop-progress.txt` | Path to the progress log file where iteration notes are appended.                                             |
-| `--sleep`                | number | `5`                             | Seconds to wait between iterations. Gives the system time to settle before spawning the next agent.          |
-| `--on-complete`          | string | -                               | Shell command to run when all tasks complete (status becomes `all_complete`). Example: `--on-complete 'notify-send "Done!"'` |
+| `--progress-file`        | string | `.taskgraph/progress.txt`       | Path to the progress log file, attached to every iteration's prompt.                                          |
 | `-t, --tag`              | string | -                               | Filter to only work on tasks with this tag.                                                                   |
-| `--status`               | string | `pending`                       | Filter to only work on tasks with this status.                                                                |
 | `--project`              | string | -                               | Project root directory. Auto-detected if not provided.                                                        |
-| `--json`                 | flag   | -                               | Output results as JSON instead of formatted text.                                                             |
+| `--sandbox`              | flag   | -                               | Run each iteration in a Docker sandbox (`docker sandbox run claude`) instead of on this machine.              |
+| `--trust`                | flag   | -                               | Run Claude with permission prompts off without asking first. For scripts and CI.                              |
+| `--no-output`            | flag   | -                               | Leave Claude's full output out of the iteration results.                                                      |
+| `-v, --verbose`          | flag   | -                               | Show Claude's work (its messages and tool calls) as it happens.                                               |
 | `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](/capabilities/loop-parallel). |
 
 ### Option Details
@@ -105,9 +109,6 @@ Example progress file content:
 **`--prompt` accepts two types of values:**
 - **Preset names**: Use built-in presets like `default`, `tdd`, `test-coverage`, `linting`, `duplication`, or `entropy`
 - **File paths**: Provide a path to a custom prompt file (e.g., `./my-custom-loop.md`)
-
-**`--on-complete` runs only on success:**
-The shell command only executes when `finalStatus` is `all_complete`, meaning an agent output the `<loop-complete>` marker. It does not run on `max_iterations`, `blocked`, or `error` outcomes.
 
 ## Run tasks in parallel
 
@@ -143,7 +144,6 @@ Brief description of what this loop does.
 ## Files Available
 
 - @.taskgraph/tasks/tasks.json - Your task backlog
-- @.taskgraph/loop-progress.txt - Progress log from previous iterations
 - @path/to/other/file.ts - Any other files the agent needs
 
 ## Process
@@ -170,7 +170,6 @@ The `@` prefix makes files available to the agent. Claude Code will read these f
 
 - @src/index.ts - Main entry point
 - @package.json - Dependencies and scripts
-- @.taskgraph/loop-progress.txt - Progress from previous iterations
 ```
 
 Without the `@` prefix, file paths are just text. With `@`, the agent can actually read and reference the file contents.
@@ -199,7 +198,7 @@ When either marker is detected, the loop exits early. The reason text is capture
 
 1. **Be specific**: Clearly define what "done" means for your workflow
 2. **One task per iteration**: Instruct agents to complete exactly one unit of work
-3. **Use the progress file**: Reference `@.taskgraph/loop-progress.txt` so agents can see what previous iterations accomplished
+3. **Use the progress file**: It is attached to every prompt; tell agents to append a note to it so the next iteration sees what was done
 4. **Include quality checks**: Add steps for running tests or type checks before completing
 5. **Define completion criteria**: Tell agents exactly when to output `<loop-complete>`
 6. **Handle edge cases**: Define when to output `<loop-blocked>` to avoid infinite loops
@@ -211,7 +210,7 @@ The progress file is a shared log that persists notes across loop iterations. Si
 ### Default Location
 
 ```
-.taskgraph/loop-progress.txt
+.taskgraph/progress.txt
 ```
 
 Override with the `--progress-file` option:
@@ -222,40 +221,38 @@ taskgraph loop -n 10 --progress-file ./my-progress.txt
 
 ### How It Works
 
-1. **Initialization**: The loop creates the progress file at the start with a header
-2. **Each iteration**: Agents read the file via `@` reference and append notes about their work
-3. **Context continuity**: Subsequent agents see what previous iterations accomplished
+1. **Start**: The loop appends a header to the file, creating it if needed. Earlier runs' notes are kept.
+2. **Each iteration**: The prompt attaches the file with an `@` reference, and the agent appends notes about its work
+3. **End**: The loop appends a summary of the run
 
 ### File Format
 
-The progress file uses a simple timestamped format:
+The loop writes the header and the summary; the lines in between are whatever the agents append:
 
 ```
-# Loop Progress - Started 2025-01-09 10:30:00
-# Preset: default | Iterations: 10 | Tag: backend
+# TaskGraph Loop Progress
+# Started: 2026-01-09T10:30:00.000Z
+# Preset: default
+# Max Iterations: 10
+# Tag: backend
 
-[10:30:45] Iteration 1 (Task 5.2): Implemented user authentication endpoint
-[10:35:22] Iteration 2 (Task 5.3): Added input validation for login form
-[10:40:18] Iteration 3 (Task 5.4): Fixed edge case in token refresh logic
-[10:45:01] Iteration 4: All pending backend tasks complete
+---
+
+Task 5.2: added the login endpoint. Learned: tokens live in src/auth/token.ts
+Task 5.3: validated the login form input
+
+---
+# Loop Complete: 2026-01-09T10:41:12.000Z
+- Total iterations: 2
+- Tasks completed: 2
+- Final status: max_iterations
 ```
 
-**Format breakdown:**
-- **Header**: Timestamp, preset name, max iterations, optional tag filter
-- **Entries**: `[HH:MM:SS] Iteration N (Task ID): Description`
-- **Task ID**: Optional - included when agent worked on a specific task
+The `# Tag:` line appears only with `--tag`.
 
 ### Using Progress in Custom Prompts
 
-Always include the progress file in your `## Files Available` section:
-
-```markdown
-## Files Available
-
-- @.taskgraph/loop-progress.txt - Progress log from previous iterations
-```
-
-And instruct agents to append notes:
+The loop attaches the progress file to every prompt, so a custom prompt doesn't need to reference it. Tell agents to append notes:
 
 ```markdown
 ## Process
@@ -275,17 +272,17 @@ Here are practical scenarios for using the loop command in your development work
 Run a loop overnight or over the weekend to clear your task backlog while you're away:
 
 ```bash
-taskgraph loop -n 50 --prompt default --on-complete 'notify-send "Loop complete!"'
+taskgraph loop -n 50 --trust && notify-send "Loop finished"
 ```
 
-This runs up to 50 iterations, completing tasks one by one. When all tasks are done, you'll get a desktop notification.
+This runs up to 50 iterations, completing tasks one by one. `--trust` skips the permission question so nothing waits for you, and `&&` sends a desktop notification only if the loop didn't end blocked or on an error.
 
 ### Test Coverage Sprint
 
 Push your test coverage from 60% to 80% systematically:
 
 ```bash
-taskgraph loop -n 20 --prompt test-coverage --on-complete 'echo "Coverage target reached!"'
+taskgraph loop -n 20 --prompt test-coverage
 ```
 
 Each iteration identifies the most important untested user-facing behavior and writes a meaningful test. The agent prioritizes error handling, API endpoints, and CLI commands over internal utilities.
@@ -295,20 +292,20 @@ Each iteration identifies the most important untested user-facing behavior and w
 Dedicate a day to cleaning up lint errors across your codebase:
 
 ```bash
-taskgraph loop -n 30 --prompt linting --sleep 3
+taskgraph loop -n 30 --prompt linting
 ```
 
-With `--sleep 3`, iterations run faster for quick fixes. The agent systematically addresses type errors first (they break builds), then security-related lint errors, then others.
+The agent systematically addresses type errors first (they break builds), then security-related lint errors, then others.
 
 ### Code Review Prep
 
 Reduce code duplication before opening a PR:
 
 ```bash
-taskgraph loop -n 10 --prompt duplication --tag backend
+taskgraph loop -n 10 --prompt duplication
 ```
 
-The `--tag backend` flag focuses the loop on backend code only. Each iteration finds and refactors one instance of duplicated code into a shared utility.
+Each iteration finds and refactors one instance of duplicated code into a shared utility.
 
 ### Multi-Tag Workflow
 
@@ -316,10 +313,10 @@ Process different parts of your codebase in sequence:
 
 ```bash
 # First, handle critical backend tasks
-taskgraph loop -n 10 --tag backend --status pending
+taskgraph loop -n 10 --tag backend
 
 # Then, address frontend tasks
-taskgraph loop -n 10 --tag frontend --status pending
+taskgraph loop -n 10 --tag frontend
 ```
 
 ### Custom Migration Script
