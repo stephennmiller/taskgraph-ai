@@ -1,344 +1,123 @@
 /**
- * Tests for the add-task MCP tool
- *
- * Note: This test does NOT test the actual implementation. It tests that:
- * 1. The tool is registered correctly with the correct parameters
- * 2. Arguments are passed correctly to addTaskDirect
- * 3. Error handling works as expected
- *
- * We do NOT import the real implementation - everything is mocked
+ * add_task MCP tool, run through the real @tm/mcp wrappers on a temp project.
+ * Only the direct function, which calls the AI, is mocked.
  */
-
-import { vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { registerAddTaskTool } from '../../../../mcp-server/src/tools/add-task.js';
 import {
-	emptySampleTasks,
-	sampleTasks
-} from '../../../fixtures/sample-tasks.js';
+	createLog,
+	createProject,
+	registerTool,
+	removeProject,
+	responseText,
+	tasksJsonPathOf
+} from '../../../helpers/legacy-mcp-tool.js';
 
-// Mock EVERYTHING
-const mockAddTaskDirect = vi.fn();
+const { addTaskDirect } = vi.hoisted(() => ({ addTaskDirect: vi.fn() }));
 vi.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
-	addTaskDirect: mockAddTaskDirect
+	addTaskDirect
 }));
 
-const mockHandleApiResult = vi.fn((result) => result);
-const mockGetProjectRootFromSession = vi.fn(() => '/mock/project/root');
-const mockCreateErrorResponse = vi.fn((msg) => ({
-	success: false,
-	error: { code: 'ERROR', message: msg }
-}));
-
-vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
-	getProjectRootFromSession: mockGetProjectRootFromSession,
-	handleApiResult: mockHandleApiResult,
-	createErrorResponse: mockCreateErrorResponse,
-	createContentResponse: vi.fn((content) => ({
-		success: true,
-		data: content
-	}))
-}));
-
-// Mock the z object from zod
-const mockZod = {
-	object: vi.fn(() => mockZod),
-	string: vi.fn(() => mockZod),
-	boolean: vi.fn(() => mockZod),
-	optional: vi.fn(() => mockZod),
-	describe: vi.fn(() => mockZod),
-	_def: {
-		shape: () => ({
-			prompt: {},
-			dependencies: {},
-			priority: {},
-			research: {},
-			file: {},
-			projectRoot: {}
-		})
-	}
-};
-
-vi.mock('zod', () => ({
-	z: mockZod
-}));
-
-// DO NOT import the real module - create a fake implementation
-// This is the fake implementation of registerAddTaskTool
-const registerAddTaskTool = (server) => {
-	// Create simplified version of the tool config
-	const toolConfig = {
-		name: 'add_task',
-		description: 'Add a new task using AI',
-		parameters: mockZod,
-
-		// Create a simplified mock of the execute function
-		execute: (args, context) => {
-			const { log, reportProgress, session } = context;
-
-			try {
-				log.info &&
-					log.info(`Starting add-task with args: ${JSON.stringify(args)}`);
-
-				// Get project root
-				const rootFolder = mockGetProjectRootFromSession(session, log);
-
-				// Call addTaskDirect
-				const result = mockAddTaskDirect(
-					{
-						...args,
-						projectRoot: rootFolder
-					},
-					log,
-					{ reportProgress, session }
-				);
-
-				// Handle result
-				return mockHandleApiResult(result, log);
-			} catch (error) {
-				log.error && log.error(`Error in add-task tool: ${error.message}`);
-				return mockCreateErrorResponse(error.message);
-			}
-		}
-	};
-
-	// Register the tool with the server
-	server.addTool(toolConfig);
-};
-
-describe('MCP Tool: add-task', () => {
-	// Create mock server
-	let mockServer;
-	let executeFunction;
-
-	// Create mock logger
-	const mockLogger = {
-		debug: vi.fn(),
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn()
-	};
-
-	// Test data
-	const validArgs = {
-		prompt: 'Create a new task',
-		dependencies: '1,2',
-		priority: 'high',
-		research: true
-	};
-
-	// Standard responses
-	const successResponse = {
-		success: true,
-		data: {
-			taskId: '5',
-			message: 'Successfully added new task #5'
-		}
-	};
-
-	const errorResponse = {
-		success: false,
-		error: {
-			code: 'ADD_TASK_ERROR',
-			message: 'Failed to add task'
-		}
-	};
+describe('MCP tool: add_task', () => {
+	const tool = registerTool(registerAddTaskTool);
+	let projectRoot;
+	let log;
 
 	beforeEach(() => {
-		// Reset all mocks
-		vi.clearAllMocks();
-
-		// Create mock server
-		mockServer = {
-			addTool: vi.fn((config) => {
-				executeFunction = config.execute;
-			})
-		};
-
-		// Setup default successful response
-		mockAddTaskDirect.mockReturnValue(successResponse);
-
-		// Register the tool
-		registerAddTaskTool(mockServer);
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+		projectRoot = createProject();
+		log = createLog();
 	});
 
-	test('should register the tool correctly', () => {
-		// Verify tool was registered
-		expect(mockServer.addTool).toHaveBeenCalledWith(
-			expect.objectContaining({
-				name: 'add_task',
-				description: 'Add a new task using AI',
-				parameters: expect.any(Object),
-				execute: expect.any(Function)
-			})
-		);
-
-		// Verify the tool config was passed
-		const toolConfig = mockServer.addTool.mock.calls[0][0];
-		expect(toolConfig).toHaveProperty('parameters');
-		expect(toolConfig).toHaveProperty('execute');
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		removeProject(projectRoot);
 	});
 
-	test('should execute the tool with valid parameters', () => {
-		// Setup context
-		const mockContext = {
-			log: mockLogger,
-			reportProgress: vi.fn(),
-			session: { workingDirectory: '/mock/dir' }
-		};
-
-		// Execute the function
-		executeFunction(validArgs, mockContext);
-
-		// Verify getProjectRootFromSession was called
-		expect(mockGetProjectRootFromSession).toHaveBeenCalledWith(
-			mockContext.session,
-			mockLogger
-		);
-
-		// Verify addTaskDirect was called with correct arguments
-		expect(mockAddTaskDirect).toHaveBeenCalledWith(
-			expect.objectContaining({
-				...validArgs,
-				projectRoot: '/mock/project/root'
-			}),
-			mockLogger,
-			{
-				reportProgress: mockContext.reportProgress,
-				session: mockContext.session
-			}
-		);
-
-		// Verify handleApiResult was called
-		expect(mockHandleApiResult).toHaveBeenCalledWith(
-			successResponse,
-			mockLogger
-		);
+	it('registers add_task with a schema that takes a prompt and project root', () => {
+		expect(tool.name).toBe('add_task');
+		expect(
+			tool.parameters.safeParse({ prompt: 'Add login', projectRoot }).success
+		).toBe(true);
 	});
 
-	test('should handle errors from addTaskDirect', () => {
-		// Setup error response
-		mockAddTaskDirect.mockReturnValueOnce(errorResponse);
-
-		// Setup context
-		const mockContext = {
-			log: mockLogger,
-			reportProgress: vi.fn(),
-			session: { workingDirectory: '/mock/dir' }
-		};
-
-		// Execute the function
-		executeFunction(validArgs, mockContext);
-
-		// Verify addTaskDirect was called
-		expect(mockAddTaskDirect).toHaveBeenCalled();
-
-		// Verify handleApiResult was called with error response
-		expect(mockHandleApiResult).toHaveBeenCalledWith(errorResponse, mockLogger);
-	});
-
-	test('should handle unexpected errors', () => {
-		// Setup error
-		const testError = new Error('Unexpected error');
-		mockAddTaskDirect.mockImplementationOnce(() => {
-			throw testError;
+	it('passes the resolved tasks path and current tag to addTaskDirect', async () => {
+		addTaskDirect.mockResolvedValue({
+			success: true,
+			data: { taskId: 5, message: 'Added task 5' }
 		});
 
-		// Setup context
-		const mockContext = {
-			log: mockLogger,
-			reportProgress: vi.fn(),
-			session: { workingDirectory: '/mock/dir' }
-		};
-
-		// Execute the function
-		executeFunction(validArgs, mockContext);
-
-		// Verify error was logged
-		expect(mockLogger.error).toHaveBeenCalledWith(
-			'Error in add-task tool: Unexpected error'
-		);
-
-		// Verify error response was created
-		expect(mockCreateErrorResponse).toHaveBeenCalledWith('Unexpected error');
-	});
-
-	test('should pass research parameter correctly', () => {
-		// Setup context
-		const mockContext = {
-			log: mockLogger,
-			reportProgress: vi.fn(),
-			session: { workingDirectory: '/mock/dir' }
-		};
-
-		// Test with research=true
-		executeFunction(
+		const response = await tool.execute(
 			{
-				...validArgs,
-				research: true
+				prompt: 'Add login',
+				dependencies: '1,2',
+				priority: 'high',
+				research: true,
+				acceptanceCriteria: ['Logs in'],
+				projectRoot
 			},
-			mockContext
+			{ log, session: {} }
 		);
 
-		// Verify addTaskDirect was called with research=true
-		expect(mockAddTaskDirect).toHaveBeenCalledWith(
+		expect(addTaskDirect).toHaveBeenCalledWith(
 			expect.objectContaining({
-				research: true
+				tasksJsonPath: tasksJsonPathOf(projectRoot),
+				prompt: 'Add login',
+				dependencies: '1,2',
+				priority: 'high',
+				research: true,
+				acceptanceCriteria: ['Logs in'],
+				projectRoot,
+				tag: 'master'
 			}),
-			expect.any(Object),
-			expect.any(Object)
+			log,
+			{ session: {} }
 		);
-
-		// Reset mocks
-		vi.clearAllMocks();
-
-		// Test with research=false
-		executeFunction(
-			{
-				...validArgs,
-				research: false
-			},
-			mockContext
-		);
-
-		// Verify addTaskDirect was called with research=false
-		expect(mockAddTaskDirect).toHaveBeenCalledWith(
-			expect.objectContaining({
-				research: false
-			}),
-			expect.any(Object),
-			expect.any(Object)
-		);
-	});
-
-	test('should pass priority parameter correctly', () => {
-		// Setup context
-		const mockContext = {
-			log: mockLogger,
-			reportProgress: vi.fn(),
-			session: { workingDirectory: '/mock/dir' }
-		};
-
-		// Test different priority values
-		['high', 'medium', 'low'].forEach((priority) => {
-			// Reset mocks
-			vi.clearAllMocks();
-
-			// Execute with specific priority
-			executeFunction(
-				{
-					...validArgs,
-					priority
-				},
-				mockContext
-			);
-
-			// Verify addTaskDirect was called with correct priority
-			expect(mockAddTaskDirect).toHaveBeenCalledWith(
-				expect.objectContaining({
-					priority
-				}),
-				expect.any(Object),
-				expect.any(Object)
-			);
+		expect(response.isError).toBeUndefined();
+		expect(JSON.parse(responseText(response))).toMatchObject({
+			data: { taskId: 5 },
+			tag: 'master'
 		});
+	});
+
+	it('returns an error response when addTaskDirect fails', async () => {
+		addTaskDirect.mockResolvedValue({
+			success: false,
+			error: { code: 'ADD_TASK_ERROR', message: 'Dependency 9 not found' }
+		});
+
+		const response = await tool.execute(
+			{ prompt: 'Add login', projectRoot },
+			{ log, session: {} }
+		);
+
+		expect(response.isError).toBe(true);
+		expect(responseText(response)).toContain('Error: Dependency 9 not found');
+		expect(log.error).toHaveBeenCalledWith(
+			'Error adding task: Dependency 9 not found'
+		);
+	});
+
+	it('returns an error response when addTaskDirect throws', async () => {
+		addTaskDirect.mockRejectedValue(new Error('Model unavailable'));
+
+		const response = await tool.execute(
+			{ prompt: 'Add login', projectRoot },
+			{ log, session: {} }
+		);
+
+		expect(response.isError).toBe(true);
+		expect(responseText(response)).toContain('Error: Model unavailable');
+	});
+
+	it('refuses a tag that is not a safe name before calling addTaskDirect', async () => {
+		const response = await tool.execute(
+			{ prompt: 'Add login', projectRoot, tag: '../main' },
+			{ log, session: {} }
+		);
+
+		expect(response.isError).toBe(true);
+		expect(responseText(response)).toContain('Invalid tag "../main"');
+		expect(addTaskDirect).not.toHaveBeenCalled();
 	});
 });

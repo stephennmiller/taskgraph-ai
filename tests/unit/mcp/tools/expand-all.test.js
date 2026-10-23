@@ -1,324 +1,109 @@
 /**
- * Tests for the expand-all MCP tool
- *
- * Note: This test does NOT test the actual implementation. It tests that:
- * 1. The tool is registered correctly with the correct parameters
- * 2. Arguments are passed correctly to expandAllTasksDirect
- * 3. Error handling works as expected
- *
- * We do NOT import the real implementation - everything is mocked
+ * expand_all MCP tool, run through the real @tm/mcp wrappers on a temp
+ * project. Only the direct function, which calls the AI, is mocked.
  */
+import path from 'path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { registerExpandAllTool } from '../../../../mcp-server/src/tools/expand-all.js';
+import {
+	createLog,
+	createProject,
+	registerTool,
+	removeProject,
+	responseText,
+	tasksJsonPathOf
+} from '../../../helpers/legacy-mcp-tool.js';
 
-import { vi } from 'vitest';
-
-// Mock EVERYTHING
-const mockExpandAllTasksDirect = vi.fn();
+const { expandAllTasksDirect } = vi.hoisted(() => ({
+	expandAllTasksDirect: vi.fn()
+}));
 vi.mock('../../../../mcp-server/src/core/taskgraph-core.js', () => ({
-	expandAllTasksDirect: mockExpandAllTasksDirect
+	expandAllTasksDirect
 }));
 
-const mockHandleApiResult = vi.fn((result) => result);
-const mockGetProjectRootFromSession = vi.fn(() => '/mock/project/root');
-const mockCreateErrorResponse = vi.fn((msg) => ({
-	success: false,
-	error: { code: 'ERROR', message: msg }
-}));
-const mockWithNormalizedProjectRoot = vi.fn((fn) => fn);
-
-vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
-	getProjectRootFromSession: mockGetProjectRootFromSession,
-	handleApiResult: mockHandleApiResult,
-	createErrorResponse: mockCreateErrorResponse,
-	withNormalizedProjectRoot: mockWithNormalizedProjectRoot
-}));
-
-// Mock the z object from zod
-const mockZod = {
-	object: vi.fn(() => mockZod),
-	string: vi.fn(() => mockZod),
-	number: vi.fn(() => mockZod),
-	boolean: vi.fn(() => mockZod),
-	optional: vi.fn(() => mockZod),
-	describe: vi.fn(() => mockZod),
-	_def: {
-		shape: () => ({
-			num: {},
-			research: {},
-			prompt: {},
-			force: {},
-			tag: {},
-			projectRoot: {}
-		})
-	}
-};
-
-vi.mock('zod', () => ({
-	z: mockZod
-}));
-
-// DO NOT import the real module - create a fake implementation
-// This is the fake implementation of registerExpandAllTool
-const registerExpandAllTool = (server) => {
-	// Create simplified version of the tool config
-	const toolConfig = {
-		name: 'expand_all',
-		description: 'Use TaskGraph to expand all eligible pending tasks',
-		parameters: mockZod,
-
-		// Create a simplified mock of the execute function
-		execute: mockWithNormalizedProjectRoot(async (args, context) => {
-			const { log, session } = context;
-
-			try {
-				log.info &&
-					log.info(`Starting expand-all with args: ${JSON.stringify(args)}`);
-
-				// Call expandAllTasksDirect
-				const result = await mockExpandAllTasksDirect(args, log, { session });
-
-				// Handle result
-				return mockHandleApiResult(result, log);
-			} catch (error) {
-				log.error && log.error(`Error in expand-all tool: ${error.message}`);
-				return mockCreateErrorResponse(error.message);
-			}
-		})
-	};
-
-	// Register the tool with the server
-	server.addTool(toolConfig);
-};
-
-describe('MCP Tool: expand-all', () => {
-	// Create mock server
-	let mockServer;
-	let executeFunction;
-
-	// Create mock logger
-	const mockLogger = {
-		debug: vi.fn(),
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn()
-	};
-
-	// Test data
-	const validArgs = {
-		num: 3,
-		research: true,
-		prompt: 'additional context',
-		force: false,
-		tag: 'master',
-		projectRoot: '/test/project'
-	};
-
-	// Standard responses
-	const successResponse = {
-		success: true,
-		data: {
-			message:
-				'Expand all operation completed. Expanded: 2, Failed: 0, Skipped: 1',
-			details: {
-				expandedCount: 2,
-				failedCount: 0,
-				skippedCount: 1,
-				tasksToExpand: 3,
-				telemetryData: {
-					commandName: 'expand-all-tasks',
-					totalCost: 0.15,
-					totalTokens: 2500
-				}
-			}
-		}
-	};
-
-	const errorResponse = {
-		success: false,
-		error: {
-			code: 'EXPAND_ALL_ERROR',
-			message: 'Failed to expand tasks'
-		}
-	};
+describe('MCP tool: expand_all', () => {
+	const tool = registerTool(registerExpandAllTool);
+	let projectRoot;
+	let log;
 
 	beforeEach(() => {
-		// Reset all mocks
-		vi.clearAllMocks();
-
-		// Create mock server
-		mockServer = {
-			addTool: vi.fn((config) => {
-				executeFunction = config.execute;
-			})
-		};
-
-		// Setup default successful response
-		mockExpandAllTasksDirect.mockResolvedValue(successResponse);
-
-		// Register the tool
-		registerExpandAllTool(mockServer);
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+		projectRoot = createProject();
+		log = createLog();
 	});
 
-	test('should register the tool correctly', () => {
-		// Verify tool was registered
-		expect(mockServer.addTool).toHaveBeenCalledWith(
-			expect.objectContaining({
-				name: 'expand_all',
-				description: expect.stringContaining('expand all eligible pending'),
-				parameters: expect.any(Object),
-				execute: expect.any(Function)
-			})
-		);
-
-		// Verify the tool config was passed
-		const toolConfig = mockServer.addTool.mock.calls[0][0];
-		expect(toolConfig).toHaveProperty('parameters');
-		expect(toolConfig).toHaveProperty('execute');
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		removeProject(projectRoot);
 	});
 
-	test('should execute the tool with valid parameters', async () => {
-		// Setup context
-		const mockContext = {
-			log: mockLogger,
-			session: { workingDirectory: '/mock/dir' }
-		};
-
-		// Execute the function
-		const result = await executeFunction(validArgs, mockContext);
-
-		// Verify expandAllTasksDirect was called with correct arguments
-		expect(mockExpandAllTasksDirect).toHaveBeenCalledWith(
-			validArgs,
-			mockLogger,
-			{ session: mockContext.session }
-		);
-
-		// Verify handleApiResult was called
-		expect(mockHandleApiResult).toHaveBeenCalledWith(
-			successResponse,
-			mockLogger
-		);
-		expect(result).toEqual(successResponse);
+	it('registers expand_all', () => {
+		expect(tool.name).toBe('expand_all');
+		expect(
+			tool.parameters.safeParse({ num: '3', force: true, projectRoot }).success
+		).toBe(true);
 	});
 
-	test('should handle expand all with no eligible tasks', async () => {
-		// Arrange
-		const mockDirectResult = {
+	it('passes the options, tasks path and complexity report path to the direct function', async () => {
+		expandAllTasksDirect.mockResolvedValue({
 			success: true,
-			data: {
-				message:
-					'Expand all operation completed. Expanded: 0, Failed: 0, Skipped: 0',
-				details: {
-					expandedCount: 0,
-					failedCount: 0,
-					skippedCount: 0,
-					tasksToExpand: 0,
-					telemetryData: null
-				}
-			}
-		};
-
-		mockExpandAllTasksDirect.mockResolvedValue(mockDirectResult);
-		mockHandleApiResult.mockReturnValue({
-			success: true,
-			data: mockDirectResult.data
+			data: { expandedCount: 2, failedCount: 1, skippedCount: 0 }
 		});
 
-		// Act
-		const result = await executeFunction(validArgs, {
-			log: mockLogger,
-			session: { workingDirectory: '/test' }
-		});
-
-		// Assert
-		expect(result.success).toBe(true);
-		expect(result.data.details.expandedCount).toBe(0);
-		expect(result.data.details.tasksToExpand).toBe(0);
-	});
-
-	test('should handle expand all with mixed success/failure', async () => {
-		// Arrange
-		const mockDirectResult = {
-			success: true,
-			data: {
-				message:
-					'Expand all operation completed. Expanded: 2, Failed: 1, Skipped: 0',
-				details: {
-					expandedCount: 2,
-					failedCount: 1,
-					skippedCount: 0,
-					tasksToExpand: 3,
-					telemetryData: {
-						commandName: 'expand-all-tasks',
-						totalCost: 0.1,
-						totalTokens: 1500
-					}
-				}
-			}
-		};
-
-		mockExpandAllTasksDirect.mockResolvedValue(mockDirectResult);
-		mockHandleApiResult.mockReturnValue({
-			success: true,
-			data: mockDirectResult.data
-		});
-
-		// Act
-		const result = await executeFunction(validArgs, {
-			log: mockLogger,
-			session: { workingDirectory: '/test' }
-		});
-
-		// Assert
-		expect(result.success).toBe(true);
-		expect(result.data.details.expandedCount).toBe(2);
-		expect(result.data.details.failedCount).toBe(1);
-	});
-
-	test('should handle errors from expandAllTasksDirect', async () => {
-		// Arrange
-		mockExpandAllTasksDirect.mockRejectedValue(
-			new Error('Direct function error')
+		const response = await tool.execute(
+			{
+				num: '3',
+				research: true,
+				prompt: 'Keep it small',
+				force: true,
+				projectRoot,
+				tag: 'feature'
+			},
+			{ log, session: {} }
 		);
 
-		// Act
-		const result = await executeFunction(validArgs, {
-			log: mockLogger,
-			session: { workingDirectory: '/test' }
+		const [args] = expandAllTasksDirect.mock.calls[0];
+		expect(args).toMatchObject({
+			tasksJsonPath: tasksJsonPathOf(projectRoot),
+			num: '3',
+			research: true,
+			prompt: 'Keep it small',
+			force: true,
+			projectRoot,
+			tag: 'feature'
+		});
+		expect(
+			args.complexityReportPath.startsWith(path.join(projectRoot, '.taskgraph'))
+		).toBe(true);
+		expect(JSON.parse(responseText(response))).toMatchObject({
+			data: { expandedCount: 2, failedCount: 1 },
+			tag: 'feature'
+		});
+	});
+
+	it('returns an error response when the direct function fails', async () => {
+		expandAllTasksDirect.mockResolvedValue({
+			success: false,
+			error: { code: 'EXPAND_ALL_ERROR', message: 'No tasks to expand' }
 		});
 
-		// Assert
-		expect(mockLogger.error).toHaveBeenCalledWith(
-			expect.stringContaining('Error in expand-all tool')
-		);
-		expect(mockCreateErrorResponse).toHaveBeenCalledWith(
-			'Direct function error'
+		const response = await tool.execute({ projectRoot }, { log, session: {} });
+
+		expect(response.isError).toBe(true);
+		expect(responseText(response)).toContain('Error: No tasks to expand');
+		expect(log.error).toHaveBeenCalledWith(
+			'Error expanding all tasks: No tasks to expand'
 		);
 	});
 
-	test('should handle different argument combinations', async () => {
-		// Test with minimal args
-		const minimalArgs = {
-			projectRoot: '/test/project'
-		};
+	it('returns an error response when the direct function throws', async () => {
+		expandAllTasksDirect.mockRejectedValue(new Error('Model timeout'));
 
-		// Act
-		await executeFunction(minimalArgs, {
-			log: mockLogger,
-			session: { workingDirectory: '/test' }
-		});
+		const response = await tool.execute({ projectRoot }, { log, session: {} });
 
-		// Assert
-		expect(mockExpandAllTasksDirect).toHaveBeenCalledWith(
-			minimalArgs,
-			mockLogger,
-			expect.any(Object)
-		);
-	});
-
-	test('should use withNormalizedProjectRoot wrapper correctly', () => {
-		// Verify that the execute function is wrapped with withNormalizedProjectRoot
-		expect(mockWithNormalizedProjectRoot).toHaveBeenCalledWith(
-			expect.any(Function)
+		expect(response.isError).toBe(true);
+		expect(responseText(response)).toContain(
+			'An unexpected error occurred: Model timeout'
 		);
 	});
 });
