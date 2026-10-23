@@ -224,7 +224,6 @@ export class TasksDomain {
 	async getDependencyTree(
 		options: { tag?: string; rootId?: string } = {}
 	): Promise<DependencyTree> {
-		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return buildDependencyTree(tasks, { rootId: options.rootId });
 	}
@@ -238,7 +237,6 @@ export class TasksDomain {
 	async analyzeDependencies(
 		options: { tag?: string; limit?: number; taskId?: string } = {}
 	): Promise<DependencyAnalysis> {
-		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return analyzeDependencies(tasks, {
 			limit: options.limit,
@@ -256,7 +254,6 @@ export class TasksDomain {
 		taskId: string,
 		options: { tag?: string } = {}
 	): Promise<BlockerExplanation> {
-		if (options.tag) await this.taskService.assertTagExists(options.tag);
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return explainBlockers(tasks, String(taskId));
 	}
