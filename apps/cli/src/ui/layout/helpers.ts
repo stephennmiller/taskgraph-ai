@@ -81,7 +81,8 @@ export interface ColumnPlan {
 /**
  * Fit table columns into a total width. Hides optional columns (lowest
  * dropOrder first) until the table fits, then gives the flexible column all
- * remaining space. Accounts for the vertical borders cli-table3 draws.
+ * remaining space, going below `flexMin` (to 10) only once nothing is left
+ * to hide. Accounts for the vertical borders cli-table3 draws.
  */
 export function planColumns(
 	totalWidth: number,
@@ -110,7 +111,7 @@ export function planColumns(
 		0
 	);
 	const flexWidth = Math.max(
-		flexMin,
+		Math.min(flexMin, 10),
 		totalWidth - fixedSum - active.length - 1
 	);
 

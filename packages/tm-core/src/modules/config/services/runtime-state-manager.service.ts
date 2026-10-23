@@ -97,7 +97,16 @@ export class RuntimeStateManager {
 		try {
 			await fs.mkdir(stateDir, { recursive: true });
 
+			// Keep keys this class doesn't manage (branchTagMapping, lastSwitched, ...)
+			let existing: Record<string, unknown> = {};
+			try {
+				existing = JSON.parse(await fs.readFile(this.stateFilePath, 'utf-8'));
+			} catch {
+				// No file or unreadable: nothing to keep
+			}
+
 			const stateToSave = {
+				...existing,
 				...this.currentState,
 				lastUpdated: new Date().toISOString()
 			};

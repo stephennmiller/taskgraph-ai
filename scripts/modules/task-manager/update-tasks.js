@@ -5,11 +5,10 @@ import {
 	keepStoredFields,
 	reconcileDependencySources
 } from '@tm/core';
-import chalk from 'chalk';
 import path from 'path';
 import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
-import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
+import { hasCodebaseAnalysis } from '../config-manager.js';
 import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
@@ -280,39 +279,13 @@ async function updateTasks(
 				telemetryData: aiServiceResponse.telemetryData,
 				tagInfo: aiServiceResponse.tagInfo
 			};
-		} catch (error) {
-			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
-			if (isMCP) logFn.error(`Error during AI service call: ${error.message}`);
-			else logFn('error', `Error during AI service call: ${error.message}`);
-			if (error.message.includes('API key')) {
-				if (isMCP)
-					logFn.error(
-						'Please ensure API keys are configured correctly in .env or mcp.json.'
-					);
-				else
-					logFn(
-						'error',
-						'Please ensure API keys are configured correctly in .env or mcp.json.'
-					);
-			}
-			throw error;
 		} finally {
 			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
 		}
 	} catch (error) {
-		// --- General Error Handling (Unchanged) ---
+		// The CLI command prints the error once, so only MCP logs it here (#272)
 		if (isMCP) logFn.error(`Error updating tasks: ${error.message}`);
-		else logFn('error', `Error updating tasks: ${error.message}`);
-		if (outputFormat === 'text') {
-			console.error(chalk.red(`Error: ${error.message}`));
-			if (getDebugFlag(session)) {
-				console.error(error);
-			}
-			process.exit(1);
-		} else {
-			throw error; // Re-throw for MCP/programmatic callers
-		}
-		// --- End General Error Handling ---
+		throw error;
 	}
 }
 
