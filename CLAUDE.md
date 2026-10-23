@@ -11,8 +11,8 @@
 npm run build                     # tsdown production build
 npm run turbo:typecheck           # run before pushing
 npm run format-check              # Biome; `npm run format` to fix
-npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp)
-npm run test:coverage -w @tm/core # coverage (also @tm/cli); Vitest
+npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
+npm run test:coverage -w @tm/core # with coverage and thresholds (not met yet); Vitest
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
 ```
 
