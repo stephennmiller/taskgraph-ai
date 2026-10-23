@@ -9,9 +9,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+	DROPPED_NUM_TASKS_SETTING,
 	UPSTREAM_IMPORT_ERRORS,
 	UpstreamImportError,
 	checkUpstreamImport,
+	importUpstreamConfig,
 	importUpstreamProject
 } from '../../../src/modules/migration/index.js';
 import { CURRENT_SCHEMA_VERSION } from '../../../src/modules/storage/adapters/file-storage/index.js';
@@ -137,6 +139,23 @@ describe('importUpstreamProject', () => {
 			defaultSubtasks: 4,
 			defaultPriority: 'high'
 		});
+	});
+
+	it('leaves out the saved defaultNumTasks: 10, so parse-prd sizes the list to the PRD (#350)', () => {
+		const result = importUpstreamProject(project);
+		const config = readJson('.taskgraph', 'config.json');
+
+		expect(config.global).not.toHaveProperty('defaultNumTasks');
+		expect(result.droppedSettings).toContain(DROPPED_NUM_TASKS_SETTING);
+	});
+
+	it('keeps a defaultNumTasks other than 10, which the user chose', () => {
+		const { config, droppedSettings } = importUpstreamConfig({
+			global: { defaultNumTasks: 15 }
+		});
+
+		expect(config.global).toEqual({ defaultNumTasks: 15 });
+		expect(droppedSettings).toEqual([]);
 	});
 
 	it('keeps model roles that map to Claude Code and drops the rest', () => {

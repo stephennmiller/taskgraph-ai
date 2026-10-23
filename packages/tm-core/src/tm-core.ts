@@ -15,7 +15,6 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from './common/errors/taskgraph-error.js';
-import type { IConfiguration } from './common/interfaces/configuration.interface.js';
 import {
 	type Logger,
 	type LoggerConfig,
@@ -28,8 +27,6 @@ import {
 export interface TmCoreOptions {
 	/** Absolute path to project root */
 	projectPath: string;
-	/** Optional configuration overrides */
-	configuration?: Partial<IConfiguration>;
 	/** Optional logger configuration for MCP integration and debugging */
 	loggerConfig?: LoggerConfig;
 }
@@ -152,11 +149,6 @@ export class TmCore {
 
 			// Create config manager
 			this._configManager = await ConfigManager.create(this._projectPath);
-
-			// Apply configuration overrides if provided
-			if (this._options.configuration) {
-				await this._configManager.updateConfig(this._options.configuration);
-			}
 
 			// Initialize domain facades
 			this._tasks = new TasksDomain(this._configManager);

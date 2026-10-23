@@ -31,7 +31,7 @@ import { RuntimeStateManager } from '../services/runtime-state-manager.service.j
  * - ConfigLoader: Loads configuration from files
  * - ConfigMerger: Merges configurations with precedence
  * - RuntimeStateManager: Manages runtime state
- * - ConfigPersistence: Handles file persistence
+ * - ConfigPersistence: Deletes the config file on reset
  * - EnvironmentConfigProvider: Extracts env var configuration
  */
 export class ConfigManager {
@@ -226,44 +226,6 @@ export class ConfigManager {
 	 */
 	async setActiveTag(tag: string): Promise<void> {
 		await this.stateManager.setCurrentTag(tag);
-	}
-
-	// ==================== Configuration Updates ====================
-
-	/**
-	 * Update configuration
-	 */
-	async updateConfig(updates: PartialConfiguration): Promise<void> {
-		// Merge updates into current config
-		Object.assign(this.config, updates);
-
-		// Save to persistence
-		await this.persistence.saveConfig(this.config);
-
-		// Re-initialize to respect precedence
-		this.initialized = false;
-		await this.initialize();
-	}
-
-	/**
-	 * Set response language
-	 */
-	async setResponseLanguage(language: string): Promise<void> {
-		if (!this.config.custom) {
-			this.config.custom = {};
-		}
-		(this.config.custom as any).responseLanguage = language;
-		await this.persistence.saveConfig(this.config);
-	}
-
-	/**
-	 * Save current configuration
-	 */
-	async saveConfig(): Promise<void> {
-		await this.persistence.saveConfig(this.config, {
-			createBackup: true,
-			atomic: true
-		});
 	}
 
 	// ==================== Utilities ====================
