@@ -27,6 +27,8 @@ Parse natural language or IDs:
 taskgraph add-dependency --id=<task-id> --depends-on=<dependency-id>
 ```
 
+Put each ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID.
+
 ## Links That Don't Block
 
 When the tasks are only connected ("5 is related to 3", "found 5 while doing 3"), link them without making one wait:

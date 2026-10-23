@@ -32,8 +32,10 @@ Natural language updates:
 ## Execution
 
 ```bash
-taskgraph update-task --id=<id> --prompt="<context>"
+taskgraph update-task --id=<id> --prompt='<context>'
 ```
+
+Put the ID into the command only when it is digits and dots (`5`, `5.2`); otherwise ask the user for the task ID. Keep the text in single quotes, and write any `'` inside it as `'\''`. In double quotes the shell would run backticks and `$(...)` in it, and prompts often quote file names and code.
 
 ## Update Types
 
