@@ -169,8 +169,8 @@ Then, optionally, check how big each task is and break the big ones down:
 | `/taskgraph:to-in-progress 3`, then ask Claude to implement it | `taskgraph set-status --id=3 --status=in-progress` | Claude Code does the work, guided by the task |
 | `/taskgraph:to-done 3` | `taskgraph set-status --id=3 --status=done` | Updates status and unlocks dependent tasks |
 | `/taskgraph:expand-task 4` | `taskgraph expand --id=4` | Splits it into subtasks |
-| `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt="..."` | Creates a task with AI help |
-| `/taskgraph:update-task 5 we now use Postgres` | `taskgraph update-task --id=5 --prompt="..."` | Rewrites it for the new direction |
+| `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'` | Creates a task with AI help |
+| `/taskgraph:update-task 5 we now use Postgres` | `taskgraph update-task --id=5 --prompt='...'` | Rewrites it for the new direction |
 | (CLI only) | `taskgraph research "JWT best practices"` | Web research with project context |
 
 The loop is simple: **next, implement, done, next.** Task IDs look like `3` for a task and `3.2` for a subtask.
@@ -212,12 +212,12 @@ taskgraph graph                              # tasks as a dependency tree
 taskgraph why 7                              # why task 7 is blocked
 taskgraph show 1,3,5                         # one or more tasks
 taskgraph set-status --id=3 --status=done    # change status
-taskgraph add-task --prompt="..." --research # add a task
+taskgraph add-task --prompt='...' --research # add a task
 taskgraph expand --id=4 --research           # split into subtasks
 taskgraph expand --all                       # expand every eligible task
-taskgraph update-task --id=5 --prompt="..."  # change one task
-taskgraph update --from=5 --prompt="..."     # change task 5 onward
-taskgraph note 3.2 "chose argon2"           # log progress, as written
+taskgraph update-task --id=5 --prompt='...'  # change one task
+taskgraph update --from=5 --prompt='...'     # change task 5 onward
+taskgraph note 3.2 'chose argon2'            # log progress, as written
 taskgraph analyze-complexity --research
 taskgraph complexity-report
 taskgraph add-dependency --id=5 --depends-on=3

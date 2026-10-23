@@ -100,9 +100,9 @@ taskgraph add-task --prompt="describe the task"
 | Slash command | CLI |
 |---|---|
 | `/taskgraph:expand-task <id>` | `taskgraph expand --id=<id>` |
-| `/taskgraph:add-task <description>` | `taskgraph add-task --prompt="..."` |
+| `/taskgraph:add-task <description>` | `taskgraph add-task --prompt='...'` |
 | `/taskgraph:analyze-complexity` | `taskgraph analyze-complexity` |
-| `/taskgraph:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt="..."` |
+| `/taskgraph:update-task <id> <changes>` | `taskgraph update-task --id=<id> --prompt='...'` |
 
 With the MCP server, the user can say the same things in plain language, such as "What's the next task I should work on?".
 

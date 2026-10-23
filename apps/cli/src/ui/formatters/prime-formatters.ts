@@ -16,6 +16,7 @@
  *     1. Claim a task before you start it
  *        taskgraph set-status --id=<id> --status=in-progress
  *     …
+ *     Keep free text in single quotes, and write ' in it as '\''.
  *
  *   Next: taskgraph show <id> for a task's full details
  *
@@ -99,7 +100,7 @@ export function formatPrimeContext(
 		lines.push(
 			'',
 			'No tasks yet. Add some with:',
-			`${INDENT}${theme.brand('taskgraph parse-prd <file>')}${theme.muted(' or ')}${theme.brand('taskgraph add-task --prompt="<task>"')}`
+			`${INDENT}${theme.brand('taskgraph parse-prd <file>')}${theme.muted(' or ')}${theme.brand("taskgraph add-task --prompt='<task>'")}`
 		);
 	} else {
 		lines.push('', ...formatInProgress(context, width));
@@ -115,6 +116,9 @@ export function formatPrimeContext(
 			`${INDENT}${pad}${theme.brand(cut(rule.command, width - INDENT.length - pad.length))}`
 		);
 	});
+	lines.push(
+		`${INDENT}${theme.muted("Keep free text in single quotes, and write ' in it as '\\''.")}`
+	);
 
 	if (counts.total > 0) {
 		lines.push(
@@ -203,8 +207,8 @@ function formatReady(context: PrimeContext, width: number): string[] {
  * Stop hook hands to Claude once per session, e.g.
  *
  *   Task 3.2 is still in progress with no note from this session.
- *   If you worked on it, log what you did:
- *     taskgraph note 3.2 "<what you did or decided>"
+ *   If you worked on it, log what you did (write ' as '\''):
+ *     taskgraph note 3.2 '<what you did or decided>'
  *   If it's finished, check its criteria and close it:
  *     taskgraph set-status --id=3.2 --status=done
  *   If you didn't work on it, say so in one line and stop.
@@ -221,8 +225,8 @@ export function formatUnnotedReminder(tasks: PrimeTask[]): string {
 		: `Tasks ${ids.slice(0, -1).join(', ')} and ${ids[ids.length - 1]} are`;
 	return [
 		`${list} still in progress with no note from this session.`,
-		`If you worked on ${one ? 'it' : 'one'}, log what you did:`,
-		`${INDENT}${theme.brand(`taskgraph note ${id} "<what you did or decided>"`)}`,
+		`If you worked on ${one ? 'it' : 'one'}, log what you did (write ' as '\\''):`,
+		`${INDENT}${theme.brand(`taskgraph note ${id} '<what you did or decided>'`)}`,
 		`If ${one ? "it's" : 'one is'} finished, check its criteria and close it:`,
 		`${INDENT}${theme.brand(`taskgraph set-status --id=${id} --status=done`)}`,
 		`If you didn't work on ${one ? 'it' : 'them'}, say so in one line and stop.`

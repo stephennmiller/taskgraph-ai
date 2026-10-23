@@ -130,7 +130,7 @@ describe('formatTaskDetail', () => {
 	it('ends with one next step that fits the status', () => {
 		const output = lines(formatTaskDetail(signIn(), { width: 80 }));
 
-		expect(output.at(-1)).toBe('Next: taskgraph note 2 "..." to log progress');
+		expect(output.at(-1)).toBe("Next: taskgraph note 2 '...' to log progress");
 		expect(output.filter((line) => line.startsWith('Next:'))).toHaveLength(1);
 	});
 
@@ -159,7 +159,7 @@ describe('formatTaskDetail', () => {
 				'                      after 2.1'
 		);
 		expect(lines(output).at(-1)).toBe(
-			'Next: taskgraph note 2 "..." to log progress'
+			"Next: taskgraph note 2 '...' to log progress"
 		);
 	});
 
@@ -266,7 +266,7 @@ describe('formatTaskDetail', () => {
 			'▶ in-progress · medium priority · depends on 2.1 and 5'
 		);
 		expect(output.at(-1)).toBe(
-			'Next: taskgraph note 2.2 "..." to log progress'
+			"Next: taskgraph note 2.2 '...' to log progress"
 		);
 	});
 
