@@ -35,8 +35,7 @@ vi.mock('../../../../mcp-server/src/tools/utils.js', () => ({
 	createContentResponse: vi.fn((content) => ({
 		success: true,
 		data: content
-	})),
-	executeTaskGraphCommand: vi.fn()
+	}))
 }));
 
 // Mock the z object from zod

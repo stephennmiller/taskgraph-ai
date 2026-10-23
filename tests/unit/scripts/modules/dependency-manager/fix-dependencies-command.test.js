@@ -24,7 +24,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	isSilentMode: vi.fn(() => true),
 	resolveTag: vi.fn(() => 'master'),
 	getTasksForTag: vi.fn(() => []),
-	setTasksForTag: vi.fn(),
 	enableSilentMode: vi.fn(),
 	disableSilentMode: vi.fn(),
 	isEmpty: vi.fn((value) => {

@@ -1,5 +1,6 @@
 import {
 	assignMetadata,
+	cleanGeneratedSubtaskDependencies,
 	getPrdSource,
 	reconcileDependencySources,
 	removeAllSubtasks,
@@ -326,7 +327,10 @@ async function expandTask(
 				// The AI's criteria are stored as unchecked items (none: no field)
 				const generated = setGeneratedCriteria({
 					...subtask,
-					dependencies: subtask.dependencies ?? [],
+					dependencies: cleanGeneratedSubtaskDependencies(
+						subtask.dependencies,
+						task.id
+					),
 					status: subtask.status ?? 'pending',
 					testStrategy: subtask.testStrategy ?? null
 				});

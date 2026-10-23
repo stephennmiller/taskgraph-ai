@@ -104,6 +104,18 @@ describe('first run', () => {
 		);
 	});
 
+	it('names the variable when --project is one of its task worktrees', () => {
+		const worktree = path.join(home, '.taskgraph', 'worktrees', 'task-1');
+		const result = run(['list', '--project', worktree], {
+			env: { TASKGRAPH_PROJECT_ROOT: home }
+		});
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain(
+			`No TaskGraph project at ${home}, which TASKGRAPH_PROJECT_ROOT names`
+		);
+	});
+
 	it('summarizes init with relative paths and next steps', () => {
 		const result = run(['init', '--yes', '--no-aliases', '--no-git']);
 

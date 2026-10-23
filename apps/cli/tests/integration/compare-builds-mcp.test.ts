@@ -48,7 +48,7 @@ describe('deriveServerCommand', () => {
 });
 
 describe('buildEnv for the MCP server', () => {
-	it('removes TASKGRAPH_PROJECT_ROOT, which the server prefers over projectRoot', () => {
+	it('removes TASKGRAPH_PROJECT_ROOT, which older servers prefer over projectRoot', () => {
 		const env = buildEnv('/tmp/work-x', {
 			HOME: '/home/dev',
 			TASKGRAPH_PROJECT_ROOT: '/real/project'

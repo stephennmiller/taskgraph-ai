@@ -11,6 +11,8 @@ export const TASKGRAPH_TEMPLATES_DIR = '.taskgraph/templates';
 
 // TaskGraph configuration files
 export const TASKGRAPH_CONFIG_FILE = '.taskgraph/config.json';
+// Per-machine settings merged over config.json; gitignored
+export const TASKGRAPH_LOCAL_CONFIG_FILE = '.taskgraph/config.local.json';
 export const TASKGRAPH_STATE_FILE = '.taskgraph/state.json';
 
 // TaskGraph report files
@@ -33,15 +35,3 @@ export const GITIGNORE_FILE = '.gitignore';
 // Task file naming pattern
 export const TASK_FILE_PREFIX = 'task_';
 export const TASK_FILE_EXTENSION = '.txt';
-
-/**
- * Project markers used to identify a taskgraph project root
- * These files/directories indicate that a directory is a TaskGraph project
- */
-export const PROJECT_MARKERS = [
-	'.taskgraph', // TaskGraph data directory
-	'tasks.json', // Generic tasks file
-	TASKGRAPH_TASKS_FILE, // .taskgraph/tasks/tasks.json
-	'.git', // Git repository
-	'.svn' // SVN repository
-];

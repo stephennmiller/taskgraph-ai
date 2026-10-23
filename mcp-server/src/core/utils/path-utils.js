@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { isInsideRoot } from '../../../../src/ai-providers/claude-code-path-guard.js';
-import { PROJECT_MARKERS } from '../../../../src/constants/paths.js';
 import {
 	findComplexityReportPath as coreFindComplexityReportPath,
 	findPRDPath as coreFindPrdPath,
@@ -47,11 +46,6 @@ const silentLogger = {
 	debug: () => {},
 	success: () => {}
 };
-
-/**
- * Cache for last found project root to improve performance
- */
-export const lastFoundProjectRoot = null;
 
 /**
  * Find PRD file with MCP support
@@ -277,6 +271,3 @@ export function findPRDPath(explicitPath, args = null, log = silentLogger) {
 // Legacy aliases for backward compatibility - DEPRECATED
 export const findTasksJsonPath = findTasksPath;
 export const findComplexityReportJsonPath = findComplexityReportPath;
-
-// Re-export PROJECT_MARKERS for MCP tools that import it from this module
-export { PROJECT_MARKERS };

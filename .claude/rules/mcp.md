@@ -195,8 +195,8 @@ To ensure consistent handling of project paths across different client environme
 
 This HOF, defined in [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js), performs the following before calling the tool's core logic:
 
-1.  **Determines the Raw Root:** It prioritizes `args.projectRoot` if provided by the client, otherwise it calls `getRawProjectRootFromSession` to extract the path from the session.
-2.  **Normalizes the Path:** It uses the `normalizeProjectRoot` helper to decode URIs, strip `file://` prefixes, fix potential Windows drive letter prefixes (e.g., `/C:/`), convert backslashes (`\`) to forward slashes (`/`), and resolve the path to an absolute path suitable for the server's OS.
+1.  **Determines the Root:** It uses the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` if the client passed one, else the `TASKGRAPH_PROJECT_ROOT` environment variable (from the process or the session), else the root folder in the session (`getProjectRootFromSession`). An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
+2.  **Normalizes the Path:** It uses the `normalizeProjectRoot` helper on `args.projectRoot` to decode URIs, strip `file://` prefixes, fix potential Windows drive letter prefixes (e.g., `/C:/`), convert backslashes (`\`) to forward slashes (`/`), and resolve the path to an absolute path suitable for the server's OS.
 3.  **Injects Normalized Path:** It updates the `args` object by replacing the original `projectRoot` (or adding it) with the normalized, absolute path.
 4.  **Executes Original Logic:** It calls the original `execute` function body, passing the updated `args` object.
 
@@ -332,7 +332,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 
 ## Key Principles
 
-- **Prefer Direct Function Calls**: MCP tools should always call `*Direct` wrappers instead of `executeTaskGraphCommand`.
+- **Prefer Direct Function Calls**: MCP tools should always call `*Direct` wrappers instead of running the CLI.
 - **Standardized Execution Flow**: Follow the pattern: MCP Tool -> `getProjectRootFromSession` -> `*Direct` Function -> Core Logic / AI Logic.
 - **Path Resolution via Direct Functions**: The `*Direct` function is responsible for finding the exact `tasks.json` path using `findTasksJsonPath`, relying on the `projectRoot` passed in `args`.
 - **AI Logic in Core Modules**: AI interactions (prompt building, calling unified service) reside within the core logic functions (`scripts/modules/*`), not direct functions.
@@ -409,15 +409,13 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         2.  Receive the result object (typically `{ success, data/error, fromCache }`).
         3.  Pass this result object to the `handleApiResult` utility (from [`tools/utils.js`](../../mcp-server/src/tools/utils.js)) for standardized response formatting and error handling.
         4.  Return the formatted response object provided by `handleApiResult`.
-- **CLI Execution as Fallback**: The `executeTaskGraphCommand` utility in [`tools/utils.js`](../../mcp-server/src/tools/utils.js) allows executing commands via the CLI (`taskgraph ...`). This should **only** be used as a fallback if a direct function wrapper is not yet implemented or if a specific command intrinsically requires CLI execution.
 - **Centralized Utilities** (See also: `utilities.md`):
     - Use `findTasksJsonPath` (in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
     - **Leverage MCP Utilities**: The file [`tools/utils.js`](../../mcp-server/src/tools/utils.js) contains essential helpers for MCP tool implementation:
-        - `getProjectRoot`: Normalizes project paths.
+        - `withNormalizedProjectRoot`: Resolves and normalizes `args.projectRoot` (see above).
         - `handleApiResult`: Takes the raw result from a `*Direct` function and formats it into a standard MCP success or error response, automatically handling data processing via `processMCPResponseData`. This is called by the tool's `execute` method.
         - `createContentResponse`/`createErrorResponse`: Used by `handleApiResult` to format successful/error MCP responses.
         - `processMCPResponseData`: Filters/cleans data (e.g., removing `details`, `testStrategy`) before it's sent in the MCP response. Called by `handleApiResult`.
-        - `executeTaskGraphCommand`: Fallback for executing CLI commands.
 
 **MCP Tool Implementation Checklist**:
 
