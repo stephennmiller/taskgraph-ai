@@ -20,6 +20,7 @@ This reads the PRD and prints only JSON, at most five questions, each with the a
 
 ```json
 {
+  "schemaVersion": 1,
   "prd": "prd.md",
   "questions": [
     { "question": "Which database should the app use?", "suggestedAnswer": "PostgreSQL 16" }

@@ -25,3 +25,22 @@ export function printJson(
 ): void {
 	console.log(formatJson(payload, options));
 }
+
+/**
+ * Does this command line ask for JSON output (`--json`, `--format json`,
+ * `-f json`)? Such a run prints only its JSON on stdout, so the CLI skips
+ * notices around the command, like the update check.
+ * @param args - The arguments after the program name
+ */
+export function wantsJsonOutput(args: readonly string[]): boolean {
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		if (arg === '--') return false;
+		if (arg === '--json') return true;
+		if (arg === '--format=json' || arg === '-f=json') return true;
+		if ((arg === '--format' || arg === '-f') && args[i + 1] === 'json') {
+			return true;
+		}
+	}
+	return false;
+}

@@ -18,7 +18,7 @@ export {
 } from './error-handler.js';
 
 // Versioned JSON output
-export { formatJson, printJson } from './json-output.js';
+export { formatJson, printJson, wantsJsonOutput } from './json-output.js';
 
 // Auto-update utilities
 export {

@@ -19,10 +19,12 @@ import {
 	formatCommanderError,
 	printError,
 	performAutoUpdate,
+	printJson,
 	registerAllCommands,
 	restartWithNewVersion,
 	runInteractiveSetup,
-	ui
+	ui,
+	wantsJsonOutput
 } from '@tm/cli';
 import { syncTasksToReadme } from './sync-readme.js';
 import { log, readJSON } from './utils.js';
@@ -307,13 +309,7 @@ function registerCommands(programInstance) {
 						projectRoot: taskGraph.getProjectRoot(),
 						research
 					});
-					console.log(
-						JSON.stringify(
-							{ prd: displayPath(taskGraph.getPrdPath()), questions },
-							null,
-							2
-						)
-					);
+					printJson({ prd: displayPath(taskGraph.getPrdPath()), questions });
 				} catch (error) {
 					printError(`Couldn't find questions to ask: ${error.message}`);
 					process.exit(1);
@@ -3674,9 +3670,11 @@ async function runCLI(argv = process.argv) {
 		// `completion` output is usually redirected into a file, so nothing else
 		// may be printed to stdout before or after it
 		// The merge driver runs inside `git merge`: no update check, no notices
-		const printsOnlyItsOwnOutput = ['completion', 'merge-driver'].includes(
-			argv[2]
-		);
+		// A --json / --format json run prints only its JSON on stdout, for a
+		// script or agent to parse
+		const printsOnlyItsOwnOutput =
+			['completion', 'merge-driver'].includes(argv[2]) ||
+			wantsJsonOutput(argv.slice(2));
 		const skipAutoUpdate =
 			process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1' ||
 			process.env.CI ||

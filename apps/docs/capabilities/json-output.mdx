@@ -37,15 +37,18 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `tags`, `tags list` | `--json` | `tags`, `currentTag`, `totalTags` |
 | `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules` |
 | `generate` | `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
-| `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId` |
+| `set-status` | `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
 | `start <id>` | `--format json` | `found`, `started`, `task`, `command`, `executionOutput` |
 | `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |
 | `github push` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `created`, `updated`, `skipped`, `closed`, `orphans` |
 | `github pull` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `applied`, `synced`, `conflicts`, `skipped` |
 | `github unlink <id>` | `--json` | `tag`, `taskId`, `issueNumber`, `url` |
 | `autopilot *` | `--json` | depends on the subcommand |
+| `parse-prd --clarify` | `--json` | `prd`, `questions` |
 
-`set-status` prints its JSON on one line. `autopilot` prints errors and warnings as JSON on stderr, and those carry `schemaVersion` too.
+`set-status` prints its JSON on one line, including when it fails. `autopilot` prints errors and warnings as JSON on stderr, and those carry `schemaVersion` too. Other commands print an error as text on stderr and exit with a non-zero code, leaving stdout empty.
+
+In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.
 
 Some keys are only present when they apply. For example, a task has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
 
@@ -67,7 +70,8 @@ The output's `schemaVersion` is not the `metadata.schemaVersion` stored on each 
 
 ## How the contract is kept
 
-Each command's shape (keys and value types) is pinned in a test; for `autopilot`, `status` is pinned. A change to the shape fails CI until the pinned shape is updated, and a breaking change also needs a version bump:
+Each command's shape (keys and value types) is pinned in a test; for `autopilot`, `status` with no active workflow is pinned. A change to the shape fails CI until the pinned shape is updated, and a breaking change also needs a version bump:
 
 - `apps/cli/tests/integration/json-output/json-contract.test.ts` runs the built CLI on a fixture project.
 - `apps/cli/src/commands/github/github.command.spec.ts` covers `github push`, `pull` and `unlink`, which need a GitHub repository to run for real.
+- `apps/cli/tests/integration/commands/parse-prd-clarify.command.test.ts` covers `parse-prd --clarify --json`, which needs a model to answer.
