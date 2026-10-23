@@ -70,11 +70,11 @@ describe('ShowCommand', () => {
 			// Mock the tmCore initialization
 			(command as any).tmCore = mockTmCore;
 
-			// Execute with --json flag
+			// Commander passes --json as format json too (jsonOption)
 			await (command as any).executeCommand('1', {
 				id: '1',
 				json: true,
-				format: 'text' // Should be overridden by --json
+				format: 'json'
 			});
 
 			// Verify JSON output was called
@@ -90,19 +90,19 @@ describe('ShowCommand', () => {
 			expect(parsed).not.toHaveProperty('storageType');
 		});
 
-		it('should override --format when --json is set', async () => {
+		it('gives way to a --format typed alongside --json', async () => {
 			const command = new ShowCommand();
 			(command as any).tmCore = mockTmCore;
 
 			await (command as any).executeCommand('1', {
 				id: '1',
 				json: true,
-				format: 'text' // Should be overridden
+				format: 'text'
 			});
 
-			// Should output JSON, not text format
+			// Same as --format text on every other command with --json
 			const output = consoleLogSpy.mock.calls[0][0];
-			expect(() => JSON.parse(output)).not.toThrow();
+			expect(() => JSON.parse(output)).toThrow();
 		});
 
 		it('should use text format when --json is not set', async () => {

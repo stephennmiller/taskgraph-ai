@@ -9,7 +9,12 @@ import {
 	withToolContext
 } from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
-import type { TaskStatus, Task } from '@tm/core';
+import {
+	DEFAULT_TASK_FIELDS,
+	type TaskStatus,
+	parseTaskFields,
+	selectTaskFields
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 
 const GetTasksSchema = z.object({
@@ -22,10 +27,18 @@ const GetTasksSchema = z.object({
 		.describe(
 			"Filter tasks by status (e.g., 'pending', 'done') or multiple statuses separated by commas (e.g., 'blocked,deferred')"
 		),
+	fields: z
+		.string()
+		.optional()
+		.describe(
+			`Comma-separated task fields to return (e.g. 'title,details,testStrategy'); id is always returned. Default: ${DEFAULT_TASK_FIELDS.join(',')}. 'all' returns every field`
+		),
 	withSubtasks: z
 		.boolean()
 		.optional()
-		.describe('Include subtasks nested within their parent tasks in the response'),
+		.describe(
+			'Include subtasks nested within their parent tasks, with the same fields'
+		),
 	tag: z.string().optional().describe('Tag context to operate on')
 });
 
@@ -38,16 +51,18 @@ export function registerGetTasksTool(server: FastMCP) {
 	server.addTool({
 		name: 'get_tasks',
 		description:
-			'Get all tasks from TaskGraph, optionally filtering by status and including subtasks.',
+			'List tasks as compact JSON: id, title, status, priority and dependencies by default. Ask for more with fields, filter with status, add subtasks with withSubtasks. Use get_task for one task in full.',
 		parameters: GetTasksSchema,
 		annotations: {
 			title: 'Get Tasks',
 			readOnlyHint: true
 		},
 		execute: withToolContext(async (args: GetTasksArgs, { log, tmCore }: ToolContext) => {
-				const { projectRoot, status, withSubtasks, tag } = args;
+				const { projectRoot, status, fields, withSubtasks, tag } = args;
 
 				try {
+					const selected = parseTaskFields(fields, { withSubtasks });
+
 					log.info(
 						`Getting tasks from ${projectRoot}${status ? ` with status filter: ${status}` : ''}${tag ? ` for tag: ${tag}` : ''}`
 					);
@@ -108,7 +123,7 @@ export function registerGetTasksTool(server: FastMCP) {
 						result: {
 							success: true,
 							data: {
-								tasks: tasks as Task[],
+								tasks: selectTaskFields(tasks, selected),
 								filter: status || 'all',
 								stats: {
 									total: totalTasks,
@@ -135,7 +150,8 @@ export function registerGetTasksTool(server: FastMCP) {
 						},
 						log,
 						projectRoot,
-						tag: result.tag
+						tag: result.tag,
+						minify: true
 					});
 				} catch (error: any) {
 					log.error(`Error in get-tasks: ${error.message}`);

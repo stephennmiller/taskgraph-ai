@@ -10,7 +10,7 @@ import { Command } from 'commander';
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
 import { theme } from '../ui/theme.js';
@@ -65,7 +65,7 @@ export class ShowCommand extends Command {
 			)
 			.option('-s, --status <status>', 'Filter subtasks by status')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
-			.option('--json', 'Output in JSON format (shorthand for --format json)')
+			.addOption(jsonOption())
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
 			.option(
 				'-p, --project <path>',
@@ -220,8 +220,8 @@ export class ShowCommand extends Command {
 		result: ShowTaskResult | ShowMultipleTasksResult,
 		options: ShowCommandOptions
 	): void {
-		// If --json flag is set, override format to 'json'
-		const format = options.json ? 'json' : options.format || 'text';
+		// --json sets format to json unless --format is typed too (jsonOption)
+		const format = options.format ?? (options.json ? 'json' : 'text');
 
 		switch (format) {
 			case 'json':

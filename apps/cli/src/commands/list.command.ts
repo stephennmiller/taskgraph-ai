@@ -34,7 +34,7 @@ import {
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { theme } from '../ui/theme.js';
 import * as ui from '../utils/ui.js';
@@ -74,7 +74,7 @@ export class ListTasksCommand extends Command {
 				'Output format (text, json, compact)',
 				'text'
 			)
-			.option('--json', 'Output in JSON format (shorthand for --format json)')
+			.addOption(jsonOption())
 			.option(
 				'-c, --compact',
 				'Output in compact format (shorthand for --format compact)'
@@ -291,9 +291,7 @@ export class ListTasksCommand extends Command {
 		// the task `next` picks; JSON, compact and --ready/--blocking don't
 		const showsSummary =
 			!options.plain &&
-			!options.json &&
-			!options.compact &&
-			(options.format ?? 'text') === 'text' &&
+			this.resolveFormat(options) === 'text' &&
 			!options.ready &&
 			!options.blocking;
 
@@ -476,21 +474,22 @@ export class ListTasksCommand extends Command {
 	}
 
 	/**
+	 * The output format. --json sets format to json unless --format is typed
+	 * too (jsonOption); --compact overrides --format but not --json.
+	 */
+	private resolveFormat(options: ListCommandOptions): OutputFormat {
+		if (options.compact && !options.json) return 'compact';
+		return options.format ?? (options.json ? 'json' : 'text');
+	}
+
+	/**
 	 * Display results based on format
 	 */
 	private displayResults(
 		result: ListTasksResult,
 		options: ListCommandOptions
 	): void {
-		// Resolve format: --json and --compact flags override --format option
-		let format: OutputFormat = options.format || 'text';
-		if (options.json) {
-			format = 'json';
-		} else if (options.compact) {
-			format = 'compact';
-		}
-
-		switch (format) {
+		switch (this.resolveFormat(options)) {
 			case 'json':
 				this.displayJson(result);
 				break;

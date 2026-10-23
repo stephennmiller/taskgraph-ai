@@ -69,10 +69,10 @@ describe('ListTasksCommand', () => {
 			// Mock the tmCore initialization
 			(command as any).tmCore = mockTmCore;
 
-			// Execute with --json flag
+			// Commander passes --json as format json too (jsonOption)
 			await (command as any).executeCommand({
 				json: true,
-				format: 'text' // Should be overridden by --json
+				format: 'json'
 			});
 
 			// Verify JSON output was called
@@ -87,16 +87,30 @@ describe('ListTasksCommand', () => {
 			expect(parsed).toHaveProperty('metadata');
 		});
 
-		it('should override --format when --json is set', async () => {
+		it('gives way to a --format typed alongside --json', async () => {
 			const command = new ListTasksCommand();
 			(command as any).tmCore = mockTmCore;
 
 			await (command as any).executeCommand({
 				json: true,
-				format: 'compact' // Should be overridden
+				format: 'compact'
 			});
 
-			// Should output JSON, not compact format
+			// Same as --format compact on every other command with --json
+			const output = consoleLogSpy.mock.calls[0][0];
+			expect(() => JSON.parse(output)).toThrow();
+		});
+
+		it('keeps JSON when --compact is given with --json', async () => {
+			const command = new ListTasksCommand();
+			(command as any).tmCore = mockTmCore;
+
+			await (command as any).executeCommand({
+				json: true,
+				compact: true,
+				format: 'json'
+			});
+
 			const output = consoleLogSpy.mock.calls[0][0];
 			expect(() => JSON.parse(output)).not.toThrow();
 		});

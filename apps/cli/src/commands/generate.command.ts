@@ -16,7 +16,7 @@ import {
 } from '../ui/formatters/generate-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -52,6 +52,7 @@ export class GenerateCommand extends Command {
 				'Project root directory (auto-detected if not provided)'
 			)
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.action(async (options: GenerateCommandOptions) => {
 				await this.executeCommand(options);
 			});

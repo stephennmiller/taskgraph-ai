@@ -12,7 +12,7 @@ import { getContentWidth } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface GraphCommandOptions {
@@ -40,6 +40,7 @@ export class GraphCommand extends Command {
 			)
 			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.option(
 				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'

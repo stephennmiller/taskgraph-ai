@@ -15,7 +15,7 @@ import { renderBlockerExplanation } from '../ui/components/blocker-explanation.c
 import { getContentWidth } from '../ui/layout/helpers.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface WhyCommandOptions {
@@ -40,6 +40,7 @@ export class WhyCommand extends Command {
 			.option('-i, --id <id>', 'Task ID, or a subtask ID like 3.1')
 			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.option(
 				'-p, --project <path>',
 				'Project root directory (auto-detected if not provided)'

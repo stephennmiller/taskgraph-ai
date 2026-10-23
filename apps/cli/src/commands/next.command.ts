@@ -17,7 +17,7 @@ import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { formatNoNextTask } from '../ui/formatters/task-list-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
-import { printJson } from '../utils/json-output.js';
+import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 /**
@@ -70,6 +70,7 @@ export class NextCommand extends Command {
 		this.description('Find the next available task to work on')
 			.option('-t, --tag <tag>', 'Filter by tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
+			.addOption(jsonOption())
 			.option(
 				'--claim',
 				'Start the next task and record who took it, in one locked write'
