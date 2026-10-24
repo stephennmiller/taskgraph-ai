@@ -1,15 +1,15 @@
 /**
  * @fileoverview File operations with atomic writes and cross-process locking
  *
- * Uses steno for atomic writes (same pattern as workflow-state-manager.ts)
- * and proper-lockfile for cross-process locking to prevent lost updates.
+ * Writes go through a randomly named temp file that is renamed into place,
+ * and proper-lockfile provides cross-process locking to prevent lost updates.
  */
 
+import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import lockfile from 'proper-lockfile';
-import { Writer } from 'steno';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -59,27 +59,69 @@ const LOCK_OPTIONS = {
 };
 
 /**
+ * Refuse a file that is a symlink, so a write can't be pointed elsewhere (#616)
+ */
+async function refuseSymlink(filePath: string): Promise<void> {
+	const info = await fs.lstat(filePath).catch((err: any) => {
+		if (err.code === 'ENOENT') return null;
+		throw err;
+	});
+	if (info?.isSymbolicLink()) {
+		throw new TaskGraphError(
+			`Refusing to write ${filePath}: it is a symlink`,
+			ERROR_CODES.FILE_WRITE_ERROR,
+			{
+				resource: filePath,
+				userMessage: `${filePath} is a symlink; TaskGraph won't write through it. Replace it with a regular file.`
+			}
+		);
+	}
+}
+
+/**
+ * On Windows, renaming over a file another process has open (an antivirus
+ * scan, an editor) fails briefly with EPERM/EACCES/EBUSY. Retry as steno did:
+ * up to 10 tries, 100 ms apart.
+ */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await fs.rename(from, to);
+		} catch (err: any) {
+			if (attempt >= 10 || !RENAME_RETRY_CODES.has(err?.code)) throw err;
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
+}
+
+const RENAME_RETRY_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
+
+/**
+ * Replace a file atomically. The temp file gets a random name and is created
+ * with O_CREAT|O_EXCL, so a symlink planted next to the file can't redirect
+ * the write (#616).
+ */
+async function writeFileAtomic(
+	filePath: string,
+	content: string
+): Promise<void> {
+	const tempPath = path.join(
+		path.dirname(filePath),
+		`.${path.basename(filePath)}.${randomBytes(8).toString('hex')}.tmp`
+	);
+	try {
+		await fs.writeFile(tempPath, content, { flag: 'wx' });
+		await renameWithRetry(tempPath, filePath);
+	} catch (err) {
+		await fs.rm(tempPath, { force: true }).catch(() => undefined);
+		throw err;
+	}
+}
+
+/**
  * Handles atomic file operations with cross-process locking mechanism.
- *
- * Writers are cached for reuse. Call {@link cleanup} when disposing of
- * long-lived instances to prevent memory leaks.
  */
 export class FileOperations {
-	/** Map of file paths to steno Writers for reuse */
-	private writers = new Map<string, Writer>();
-
-	/**
-	 * Get or create a steno Writer for a file path
-	 */
-	private getWriter(filePath: string): Writer {
-		let writer = this.writers.get(filePath);
-		if (!writer) {
-			writer = new Writer(filePath);
-			this.writers.set(filePath, writer);
-		}
-		return writer;
-	}
-
 	/**
 	 * Read and parse JSON file
 	 */
@@ -103,8 +145,10 @@ export class FileOperations {
 	 * plain file, but proper-lockfile needs a directory there and fails with
 	 * ENOTDIR when it tries to expire a crashed writer's file. Move a stale
 	 * lock file aside first; a fresh one is left, so its owner still blocks us.
+	 * Every write takes this lock, so a symlinked file is refused here.
 	 */
 	private async acquireLock(filePath: string): Promise<() => Promise<void>> {
+		await refuseSymlink(filePath);
 		const lockPath = `${filePath}.lock`;
 		try {
 			const info = await fs.lstat(lockPath);
@@ -125,7 +169,7 @@ export class FileOperations {
 
 	/**
 	 * Write JSON file with atomic operation and cross-process locking.
-	 * Uses steno for atomic writes and proper-lockfile for cross-process safety.
+	 * Writes atomically (see writeFileAtomic) under a proper-lockfile lock.
 	 * WARNING: This replaces the entire file. For concurrent modifications,
 	 * use modifyJson() instead to prevent lost updates.
 	 */
@@ -141,10 +185,7 @@ export class FileOperations {
 		try {
 			release = await this.acquireLock(filePath);
 
-			// Use steno Writer for atomic writes (same pattern as workflow-state-manager)
-			const content = JSON.stringify(data, null, 2);
-			const writer = this.getWriter(filePath);
-			await writer.write(content);
+			await writeFileAtomic(filePath, JSON.stringify(data, null, 2));
 		} finally {
 			if (release) {
 				try {
@@ -164,7 +205,7 @@ export class FileOperations {
 
 	/**
 	 * Read-modify-write JSON file with cross-process locking.
-	 * Uses steno for atomic writes and proper-lockfile for cross-process safety.
+	 * Writes atomically (see writeFileAtomic) under a proper-lockfile lock.
 	 * Re-reads file inside lock to prevent lost updates from stale snapshots.
 	 * @param filePath - Path to the JSON file
 	 * @param modifier - Function that receives current data and returns modified data
@@ -217,10 +258,7 @@ export class FileOperations {
 			// Apply modification
 			const newData = await modifier(currentData);
 
-			// Write atomically using steno (same pattern as workflow-state-manager)
-			const content = JSON.stringify(newData, null, 2);
-			const writer = this.getWriter(filePath);
-			await writer.write(content);
+			await writeFileAtomic(filePath, JSON.stringify(newData, null, 2));
 			await options.afterWrite?.();
 		} finally {
 			if (release) {
@@ -333,17 +371,5 @@ export class FileOperations {
 				`Failed to copy file from ${srcPath} to ${destPath}: ${error.message}`
 			);
 		}
-	}
-
-	/**
-	 * Clean up resources - releases cached steno Writers
-	 * Call this when the FileOperations instance is no longer needed
-	 * to prevent memory leaks in long-running processes.
-	 */
-	async cleanup(): Promise<void> {
-		// Clear cached Writers to allow garbage collection
-		// Note: steno Writers don't have explicit close methods;
-		// they handle file descriptor cleanup internally
-		this.writers.clear();
 	}
 }

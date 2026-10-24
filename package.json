@@ -86,7 +86,6 @@
 		"ora": "^9.4.1",
 		"proper-lockfile": "^4.1.2",
 		"simple-git": "^4.0.2",
-		"steno": "^4.0.2",
 		"terminal-link": "^5.0.0",
 		"turndown": "^7.2.4",
 		"zod": "^4.1.12"
