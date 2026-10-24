@@ -94,8 +94,14 @@ export function orderGeneratedSubtasks<T extends GeneratedSubtask>(
 			});
 		let next = pending.find((i) => waitsOn(i).length === 0);
 		if (next === undefined) {
-			// A loop: break it at the earliest subtask
+			// A loop: follow the waits from the earliest subtask until one repeats,
+			// so the edges dropped are on the loop, not ones leading into it
+			const seen = new Set<number>();
 			next = pending[0];
+			while (!seen.has(next)) {
+				seen.add(next);
+				next = siblingIndex(waitsOn(next)[0]) as number;
+			}
 			const loop = new Set(waitsOn(next));
 			const sub = subtasks[next];
 			for (const raw of loop) {

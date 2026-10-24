@@ -81,6 +81,37 @@ describe('orderGeneratedSubtasks', () => {
 		]);
 	});
 
+	it('keeps a dependency that only leads into a loop', () => {
+		const log: string[] = [];
+		const result = orderGeneratedSubtasks(
+			{ id: '2' },
+			[sub(1, [2]), sub(2, [3]), sub(3, [2])],
+			(message) => log.push(message)
+		);
+
+		expect(result.map((s) => [s.title, s.id, s.dependencies])).toEqual([
+			['Subtask 2', 1, []],
+			['Subtask 1', 2, [1]],
+			['Subtask 3', 3, [1]]
+		]);
+		expect(log).toEqual([
+			'Dropped dependency 2.3 of subtask 2.2: it made a loop'
+		]);
+	});
+
+	it('keeps existing subtask IDs when appending', () => {
+		// Task 4 has subtasks 1-2; expand appended 3-4, and 3 waits on 4
+		const result = orderGeneratedSubtasks({ id: '4' }, [
+			sub(3, [4, 2]),
+			sub(4, ['4.1'])
+		]);
+
+		expect(result.map((s) => [s.title, s.id, s.dependencies])).toEqual([
+			['Subtask 4', 3, ['4.1']],
+			['Subtask 3', 4, [3, 2]]
+		]);
+	});
+
 	it('leaves subtasks without forward dependencies as they are', () => {
 		const subtasks = [sub(5, ['1']), sub(6, [5, '2.3']), sub(7, [6, 3])];
 		const result = orderGeneratedSubtasks({ id: '2' }, subtasks);
