@@ -22,7 +22,11 @@ import {
 	it
 } from 'vitest';
 import { installFakeClaude } from '../../fakes/install-fake-claude.mjs';
-import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	copyProject,
+	getCliBinPath,
+	RM_OPTS
+} from '../../helpers/test-utils.js';
 
 const binPath = getCliBinPath();
 const built = fs.existsSync(binPath);
@@ -31,14 +35,6 @@ if (!built && process.env.CI) {
 		`${binPath} is missing; run npm run build before these tests in CI`
 	);
 }
-
-// Retries: on Windows the spawned CLI can still hold a handle when cleanup runs (EPERM, #570).
-const RM_OPTS = {
-	recursive: true,
-	force: true,
-	maxRetries: 5,
-	retryDelay: 100
-};
 
 const BOX = /[╭╮╰╯│┌┐└┘]/;
 const USAGE = /tokens \(/;

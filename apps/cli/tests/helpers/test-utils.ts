@@ -46,3 +46,14 @@ export function copyProject(template: string, prefix: string): string {
 	fs.cpSync(template, dir, { recursive: true });
 	return dir;
 }
+
+/**
+ * rmSync options for test temp dirs. Retries because on Windows a spawned CLI
+ * can still hold a handle when cleanup runs (EPERM, #570).
+ */
+export const RM_OPTS = {
+	recursive: true,
+	force: true,
+	maxRetries: 5,
+	retryDelay: 100
+};
