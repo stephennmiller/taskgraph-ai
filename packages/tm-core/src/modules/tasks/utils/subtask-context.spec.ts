@@ -34,7 +34,11 @@ describe('subtaskInContext', () => {
 	});
 
 	it('gives a hand-edited subtask with no title or status the ones next shows', () => {
-		const sub = stored({ title: undefined, status: undefined, dependencies: [] });
+		const sub = stored({
+			title: undefined,
+			status: undefined,
+			dependencies: []
+		});
 		const parent = createTask({
 			id: 3,
 			title: 'Cycles',

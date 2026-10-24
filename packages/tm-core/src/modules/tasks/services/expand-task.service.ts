@@ -368,9 +368,7 @@ export class ExpandTaskService {
 			skippedCount: 0,
 			failedCount: 0,
 			tasksToExpand: eligible.length,
-			alreadyExpandedCount: options.force
-				? 0
-				: open.length - eligible.length,
+			alreadyExpandedCount: options.force ? 0 : open.length - eligible.length,
 			telemetryData: null
 		};
 		if (eligible.length === 0) return result;

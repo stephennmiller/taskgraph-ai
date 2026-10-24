@@ -78,7 +78,9 @@ export class DependencyService {
 	 * a summary and PRD coverage (null unless parse-prd recorded sources).
 	 * Dependencies on archived tasks count as done.
 	 */
-	async validate(options: { tag?: string } = {}): Promise<DependencyCheckResult> {
+	async validate(
+		options: { tag?: string } = {}
+	): Promise<DependencyCheckResult> {
 		const { tasks, archivedIds } = await this.taskService.loadStoredTasks(
 			options.tag
 		);

@@ -15,7 +15,9 @@ import {
 
 describe('normalizeAcceptanceCriteria', () => {
 	it('reads legacy strings as unchecked criteria', () => {
-		expect(normalizeAcceptanceCriteria(['Login works', 'Tokens expire'])).toEqual([
+		expect(
+			normalizeAcceptanceCriteria(['Login works', 'Tokens expire'])
+		).toEqual([
 			{ text: 'Login works', checked: false },
 			{ text: 'Tokens expire', checked: false }
 		]);
@@ -58,7 +60,10 @@ describe('normalizeDefinitionOfDone', () => {
 
 describe('buildChecklist', () => {
 	const task = {
-		acceptanceCriteria: ['Login works', { text: 'Tokens expire', checked: true }],
+		acceptanceCriteria: [
+			'Login works',
+			{ text: 'Tokens expire', checked: true }
+		],
 		definitionOfDoneChecked: ['Docs updated']
 	};
 
@@ -138,19 +143,16 @@ describe('applyChecklistChanges', () => {
 
 	it('refuses a number past the end of the checklist', () => {
 		expect(() =>
-			applyChecklistChanges(
-				{ acceptanceCriteria: ['Login works'] },
-				'3',
-				[],
-				{ check: [4] }
-			)
+			applyChecklistChanges({ acceptanceCriteria: ['Login works'] }, '3', [], {
+				check: [4]
+			})
 		).toThrow("Task 3 has 1 criterion; there's no 4");
 	});
 
 	it('refuses to check a task with no checklist', () => {
-		expect(() =>
-			applyChecklistChanges({}, '3', [], { check: [1] })
-		).toThrow('Task 3 has no criteria to check');
+		expect(() => applyChecklistChanges({}, '3', [], { check: [1] })).toThrow(
+			'Task 3 has no criteria to check'
+		);
 	});
 });
 

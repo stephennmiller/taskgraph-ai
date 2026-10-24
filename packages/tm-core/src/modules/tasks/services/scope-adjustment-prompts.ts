@@ -153,8 +153,7 @@ export function targetSubtaskCount(
 	} else {
 		// Scope down: Fewer subtasks for decreased complexity
 		// High complexity tasks get reduced more aggressively
-		const aggressiveFactor =
-			score >= 8 ? 0.7 : score >= 6 ? 0.85 : 1.0;
+		const aggressiveFactor = score >= 8 ? 0.7 : score >= 6 ? 0.85 : 1.0;
 
 		if (strength === 'light') {
 			const base = Math.max(
@@ -172,8 +171,7 @@ export function targetSubtaskCount(
 			// heavy
 			// Heavy scope-down should be much more aggressive - aim for only core functionality
 			// Very high complexity tasks (9-10) get reduced to almost nothing
-			const ultraAggressiveFactor =
-				score >= 9 ? 0.3 : score >= 7 ? 0.5 : 0.7;
+			const ultraAggressiveFactor = score >= 9 ? 0.3 : score >= 7 ? 0.5 : 0.7;
 			const base = Math.max(
 				2,
 				preservedCount + Math.ceil(currentPendingCount * 0.25)

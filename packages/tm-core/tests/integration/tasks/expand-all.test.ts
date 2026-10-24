@@ -131,7 +131,12 @@ describe('tasks.expandAll', () => {
 
 	it('counts tasks the complexity report skips, without calling the AI for them', async () => {
 		fs.writeFileSync(
-			path.join(projectDir, '.taskgraph', 'reports', 'task-complexity-report.json'),
+			path.join(
+				projectDir,
+				'.taskgraph',
+				'reports',
+				'task-complexity-report.json'
+			),
 			JSON.stringify({
 				meta: {},
 				complexityAnalysis: [{ taskId: 2, recommendedSubtasks: 0 }]
@@ -155,7 +160,8 @@ describe('tasks.expandAll', () => {
 			{},
 			{
 				onTaskDone: (id, outcome) => {
-					if (outcome instanceof Error) failures.push(`${id}: ${outcome.message}`);
+					if (outcome instanceof Error)
+						failures.push(`${id}: ${outcome.message}`);
 				}
 			}
 		);

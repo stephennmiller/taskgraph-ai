@@ -17,7 +17,10 @@ export {
 	registerScopeUpTool
 } from './scope.tool.js';
 export { registerArchiveTasksTool } from './archive.tool.js';
-export { registerExpandAllTool, registerExpandTaskTool } from './expand.tool.js';
+export {
+	registerExpandAllTool,
+	registerExpandTaskTool
+} from './expand.tool.js';
 export {
 	registerAddDependencyTool,
 	registerFixDependenciesTool,
@@ -37,4 +40,7 @@ export {
 	registerRemoveSubtaskTool,
 	registerRemoveTaskTool
 } from './removal.tool.js';
-export { registerUpdateTaskTool, registerUpdateTool } from './update-task.tool.js';
+export {
+	registerUpdateTaskTool,
+	registerUpdateTool
+} from './update-task.tool.js';

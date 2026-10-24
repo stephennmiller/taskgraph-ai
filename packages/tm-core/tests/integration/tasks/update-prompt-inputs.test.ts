@@ -92,7 +92,10 @@ interface Scenario {
 describe('update prompt inputs', () => {
 	let projectDir: string;
 	let tmCore: TmCore;
-	let ai: { object: ReturnType<typeof vi.spyOn>; text: ReturnType<typeof vi.spyOn> };
+	let ai: {
+		object: ReturnType<typeof vi.spyOn>;
+		text: ReturnType<typeof vi.spyOn>;
+	};
 
 	beforeEach(async () => {
 		projectDir = fs.realpathSync(
@@ -146,7 +149,8 @@ describe('update prompt inputs', () => {
 		const [, { task: one, tasks, ...vars }, variant] =
 			loadPrompt.mock.calls.find((c) => c[0] === promptName) as any;
 		const kind = ai.text.mock.calls.length ? 'text' : 'object';
-		const call = (kind === 'text' ? ai.text : ai.object).mock.calls[0][0] as any;
+		const call = (kind === 'text' ? ai.text : ai.object).mock
+			.calls[0][0] as any;
 		const strip = (value: unknown) =>
 			JSON.parse(JSON.stringify(value).split(projectDir).join('<root>'));
 		return strip({

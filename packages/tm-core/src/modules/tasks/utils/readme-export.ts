@@ -45,10 +45,7 @@ const percent = (part: number, total: number) =>
 
 // A title is one table cell: no row breaks, no column breaks, no export markers
 const cell = (text: string) =>
-	text
-		.replace(/\r?\n/g, ' ')
-		.replace(/\|/g, '\\|')
-		.replace(/<!--/g, '&lt;!--');
+	text.replace(/\r?\n/g, ' ').replace(/\|/g, '\\|').replace(/<!--/g, '&lt;!--');
 
 const dependencyList = (deps: unknown[] | undefined) =>
 	deps && deps.length > 0 ? deps.join(', ') : 'None';

@@ -105,7 +105,9 @@ describe('remove_subtask', () => {
 			message: 'Subtask 2.1 successfully converted to task #7',
 			task
 		});
-		expect(removed.data).toEqual({ message: 'Subtask 2.2 successfully removed' });
+		expect(removed.data).toEqual({
+			message: 'Subtask 2.2 successfully removed'
+		});
 	});
 });
 

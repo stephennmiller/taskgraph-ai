@@ -88,16 +88,16 @@ describe('tasks.analyzeComplexity', () => {
 					outputType: 'mcp'
 				});
 
-				const call = load.mock.calls.find(
-					(c) => c[0] === 'analyze-complexity'
-				);
+				const call = load.mock.calls.find((c) => c[0] === 'analyze-complexity');
 				const sent = generate.mock.calls[0]?.[0];
 				const report = readReport(s.tag);
 				delete report.meta.generatedAt;
 				const scrub = (value: unknown) =>
 					value === undefined
 						? null
-						: JSON.parse(JSON.stringify(value).split(projectDir).join('<root>'));
+						: JSON.parse(
+								JSON.stringify(value).split(projectDir).join('<root>')
+							);
 				expect(
 					scrub({
 						vars: call?.[1],
@@ -183,9 +183,9 @@ describe('tasks.analyzeComplexity', () => {
 
 			const result = await core.tasks.analyzeComplexity({ ids: '2' });
 
-			expect(
-				readReport().complexityAnalysis.map((e: any) => e.taskId)
-			).toEqual([8, 2]);
+			expect(readReport().complexityAnalysis.map((e: any) => e.taskId)).toEqual(
+				[8, 2]
+			);
 			expect(result.kept).toBe(1);
 		});
 	});
@@ -346,7 +346,12 @@ describe('tasks.getComplexityReport', () => {
 			path.join(root, '.taskgraph', 'config.json'),
 			JSON.stringify({ models: {}, global: {} })
 		);
-		const file = path.join(root, '.taskgraph', 'reports', 'complexity-report.json');
+		const file = path.join(
+			root,
+			'.taskgraph',
+			'reports',
+			'complexity-report.json'
+		);
 		fs.writeFileSync(file, '{"meta":{}}');
 		const core = await createTmCore({ projectPath: root });
 
@@ -357,9 +362,9 @@ describe('tasks.getComplexityReport', () => {
 	it('reads a file given relative to the project root', () => {
 		fs.writeFileSync(path.join(projectDir, 'r.json'), '{"meta":{}}');
 
-		expect(tmCore.tasks.getComplexityReport({ file: 'r.json' })?.report).toEqual(
-			{ meta: {} }
-		);
+		expect(
+			tmCore.tasks.getComplexityReport({ file: 'r.json' })?.report
+		).toEqual({ meta: {} });
 	});
 
 	it('says when the report is not valid JSON', () => {

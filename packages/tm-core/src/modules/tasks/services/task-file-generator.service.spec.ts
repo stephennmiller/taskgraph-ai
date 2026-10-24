@@ -137,7 +137,11 @@ describe('TaskFileGeneratorService', () => {
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-test-'));
 		mockStorage = createMockStorage(createSampleTasks());
 		mockConfigManager = createMockConfigManager();
-		service = new TaskFileGeneratorService(mockStorage, tempDir, mockConfigManager);
+		service = new TaskFileGeneratorService(
+			mockStorage,
+			tempDir,
+			mockConfigManager
+		);
 	});
 
 	afterEach(() => {
@@ -176,7 +180,9 @@ describe('TaskFileGeneratorService', () => {
 			expect(task1Content).toContain('**Title:** First Task');
 			expect(task1Content).toContain('**Status:** pending');
 			expect(task1Content).toContain('**Priority:** high');
-			expect(task1Content).toContain('**Description:** Description for first task');
+			expect(task1Content).toContain(
+				'**Description:** Description for first task'
+			);
 			expect(task1Content).toContain('**Details:**');
 			expect(task1Content).toContain('Implementation details for task 1');
 			expect(task1Content).toContain('**Test Strategy:**');
@@ -246,7 +252,11 @@ describe('TaskFileGeneratorService', () => {
 
 		it('should handle empty task list', async () => {
 			const emptyStorage = createMockStorage([]);
-			const emptyService = new TaskFileGeneratorService(emptyStorage, tempDir, mockConfigManager);
+			const emptyService = new TaskFileGeneratorService(
+				emptyStorage,
+				tempDir,
+				mockConfigManager
+			);
 
 			const result = await emptyService.generateTaskFiles();
 
@@ -285,7 +295,11 @@ describe('TaskFileGeneratorService', () => {
 			(errorStorage.loadTasks as any).mockRejectedValue(
 				new Error('Storage error')
 			);
-			const errorService = new TaskFileGeneratorService(errorStorage, tempDir, mockConfigManager);
+			const errorService = new TaskFileGeneratorService(
+				errorStorage,
+				tempDir,
+				mockConfigManager
+			);
 
 			const result = await errorService.generateTaskFiles();
 
@@ -308,15 +322,15 @@ describe('TaskFileGeneratorService', () => {
 
 			// Verify files were created with the active tag suffix
 			const outputDir = result.directory;
-			expect(
-				fs.existsSync(path.join(outputDir, 'task_001_feature-x.md'))
-			).toBe(true);
-			expect(
-				fs.existsSync(path.join(outputDir, 'task_002_feature-x.md'))
-			).toBe(true);
-			expect(
-				fs.existsSync(path.join(outputDir, 'task_003_feature-x.md'))
-			).toBe(true);
+			expect(fs.existsSync(path.join(outputDir, 'task_001_feature-x.md'))).toBe(
+				true
+			);
+			expect(fs.existsSync(path.join(outputDir, 'task_002_feature-x.md'))).toBe(
+				true
+			);
+			expect(fs.existsSync(path.join(outputDir, 'task_003_feature-x.md'))).toBe(
+				true
+			);
 		});
 
 		it('should override active tag when tag is explicitly provided', async () => {
@@ -329,7 +343,9 @@ describe('TaskFileGeneratorService', () => {
 			);
 
 			// Explicitly provide a different tag
-			const result = await masterService.generateTaskFiles({ tag: 'override-tag' });
+			const result = await masterService.generateTaskFiles({
+				tag: 'override-tag'
+			});
 
 			expect(result.success).toBe(true);
 

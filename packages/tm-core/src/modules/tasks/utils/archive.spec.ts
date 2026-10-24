@@ -31,14 +31,42 @@ const daysAgo = (days: number) =>
 describe('selectArchivable', () => {
 	it('archives done and cancelled tasks last changed at least N days ago', () => {
 		const tasks = [
-			createTask({ id: 1, title: 'Old done', status: 'done', updatedAt: daysAgo(40) }),
-			createTask({ id: 2, title: 'Old cancelled', status: 'cancelled', updatedAt: daysAgo(31) }),
-			createTask({ id: 3, title: 'Recent done', status: 'done', updatedAt: daysAgo(2) }),
-			createTask({ id: 4, title: 'Old pending', status: 'pending', updatedAt: daysAgo(90) }),
-			createTask({ id: 5, title: 'Old review', status: 'review', updatedAt: daysAgo(90) })
+			createTask({
+				id: 1,
+				title: 'Old done',
+				status: 'done',
+				updatedAt: daysAgo(40)
+			}),
+			createTask({
+				id: 2,
+				title: 'Old cancelled',
+				status: 'cancelled',
+				updatedAt: daysAgo(31)
+			}),
+			createTask({
+				id: 3,
+				title: 'Recent done',
+				status: 'done',
+				updatedAt: daysAgo(2)
+			}),
+			createTask({
+				id: 4,
+				title: 'Old pending',
+				status: 'pending',
+				updatedAt: daysAgo(90)
+			}),
+			createTask({
+				id: 5,
+				title: 'Old review',
+				status: 'review',
+				updatedAt: daysAgo(90)
+			})
 		];
 
-		const { archive, keep } = selectArchivable(tasks, { olderThanDays: 30, now: NOW });
+		const { archive, keep } = selectArchivable(tasks, {
+			olderThanDays: 30,
+			now: NOW
+		});
 
 		expect(archive.map((t) => t.id)).toEqual(['1', '2']);
 		expect(keep.map((t) => t.id)).toEqual(['3', '4', '5']);
@@ -48,7 +76,10 @@ describe('selectArchivable', () => {
 		const task = createTask({ id: 1, title: 'Done long ago', status: 'done' });
 		delete task.updatedAt;
 
-		const { archive } = selectArchivable([task], { olderThanDays: 30, now: NOW });
+		const { archive } = selectArchivable([task], {
+			olderThanDays: 30,
+			now: NOW
+		});
 
 		expect(archive).toHaveLength(1);
 	});
@@ -60,18 +91,33 @@ describe('selectArchivable', () => {
 			status: 'done',
 			updatedAt: daysAgo(60),
 			subtasks: [
-				createSubtask({ id: 1, parentId: '1', title: 'Late', status: 'done', updatedAt: daysAgo(3) })
+				createSubtask({
+					id: 1,
+					parentId: '1',
+					title: 'Late',
+					status: 'done',
+					updatedAt: daysAgo(3)
+				})
 			]
 		});
 
 		expect(lastChangedAt(task)).toBe(Date.parse(daysAgo(3)));
-		expect(selectArchivable([task], { olderThanDays: 30, now: NOW }).archive).toEqual([]);
+		expect(
+			selectArchivable([task], { olderThanDays: 30, now: NOW }).archive
+		).toEqual([]);
 	});
 
 	it('archives every finished task with --older-than 0', () => {
-		const task = createTask({ id: 1, title: 'Just done', status: 'done', updatedAt: NOW.toISOString() });
+		const task = createTask({
+			id: 1,
+			title: 'Just done',
+			status: 'done',
+			updatedAt: NOW.toISOString()
+		});
 
-		expect(selectArchivable([task], { olderThanDays: 0, now: NOW }).archive).toHaveLength(1);
+		expect(
+			selectArchivable([task], { olderThanDays: 0, now: NOW }).archive
+		).toHaveLength(1);
 	});
 });
 
@@ -80,7 +126,10 @@ describe('archive round trip', () => {
 		const archived = addToArchive(
 			{},
 			'master',
-			[createTask({ id: 3, title: 'Three', status: 'done' }), createTask({ id: 7, title: 'Seven', status: 'done' })],
+			[
+				createTask({ id: 3, title: 'Three', status: 'done' }),
+				createTask({ id: 7, title: 'Seven', status: 'done' })
+			],
 			NOW
 		);
 
@@ -96,7 +145,9 @@ describe('archive round trip', () => {
 	});
 
 	it('keeps the highest archived ID reserved after a restore', () => {
-		const archived = addToArchive({}, 'master', [createTask({ id: 9, title: 'Nine', status: 'done' })]);
+		const archived = addToArchive({}, 'master', [
+			createTask({ id: 9, title: 'Nine', status: 'done' })
+		]);
 		const taken = takeFromArchive(archived, 'master', '9');
 
 		expect(taken?.archive.master.metadata.highestId).toBe(9);
@@ -104,14 +155,18 @@ describe('archive round trip', () => {
 
 	it('keeps tags apart', () => {
 		const archived = addToArchive(
-			addToArchive({}, 'master', [createTask({ id: 1, title: 'M', status: 'done' })]),
+			addToArchive({}, 'master', [
+				createTask({ id: 1, title: 'M', status: 'done' })
+			]),
 			'feature',
 			[createTask({ id: 1, title: 'F', status: 'done' })]
 		);
 
 		expect(archived.master.tasks[0].title).toBe('M');
 		expect(archived.feature.tasks[0].title).toBe('F');
-		expect(takeFromArchive(archived, 'feature', '1')?.archive.master.tasks).toHaveLength(1);
+		expect(
+			takeFromArchive(archived, 'feature', '1')?.archive.master.tasks
+		).toHaveLength(1);
 	});
 
 	it('returns null for a task that is not archived', () => {
@@ -119,8 +174,12 @@ describe('archive round trip', () => {
 	});
 
 	it('replaces a copy left by an interrupted run instead of duplicating it', () => {
-		const once = addToArchive({}, 'master', [createTask({ id: 2, title: 'Old copy', status: 'done' })]);
-		const twice = addToArchive(once, 'master', [createTask({ id: 2, title: 'New copy', status: 'done' })]);
+		const once = addToArchive({}, 'master', [
+			createTask({ id: 2, title: 'Old copy', status: 'done' })
+		]);
+		const twice = addToArchive(once, 'master', [
+			createTask({ id: 2, title: 'New copy', status: 'done' })
+		]);
 
 		expect(twice.master.tasks.map((t) => t.title)).toEqual(['New copy']);
 	});
@@ -144,10 +203,14 @@ describe('archived dependencies', () => {
 	});
 
 	it('makes a pending task that depends on an archived one ready', () => {
-		const tasks = [createTask({ id: 5, title: 'Waiting', dependencies: ['3'] })];
+		const tasks = [
+			createTask({ id: 5, title: 'Waiting', dependencies: ['3'] })
+		];
 
 		expect(selectNextTask(tasks)).toBeNull();
-		expect(selectNextTask(satisfyArchivedDependencies(tasks, archivedIds))?.id).toBe('5');
+		expect(
+			selectNextTask(satisfyArchivedDependencies(tasks, archivedIds))?.id
+		).toBe('5');
 	});
 
 	it('keeps sibling subtask dependencies and drops ones on archived tasks', () => {
@@ -158,7 +221,12 @@ describe('archived dependencies', () => {
 					title: 'Parent',
 					subtasks: [
 						createSubtask({ id: 1, parentId: '5', title: 'A' }),
-						createSubtask({ id: 2, parentId: '5', title: 'B', dependencies: [1, '3.1', '3'] })
+						createSubtask({
+							id: 2,
+							parentId: '5',
+							title: 'B',
+							dependencies: [1, '3.1', '3']
+						})
 					]
 				})
 			],
@@ -174,7 +242,9 @@ describe('archived dependencies', () => {
 			createTask({ id: 5, title: 'Waiting', dependencies: ['3'] })
 		];
 
-		expect(satisfyArchivedDependencies(tasks, archivedIds)[1].dependencies).toEqual(['3']);
+		expect(
+			satisfyArchivedDependencies(tasks, archivedIds)[1].dependencies
+		).toEqual(['3']);
 	});
 });
 
@@ -191,17 +261,29 @@ describe('readArchivedIdsSync', () => {
 		const tasksPath = path.join(dir, 'tasks.json');
 		fs.writeFileSync(
 			archivePathFor(tasksPath),
-			JSON.stringify(addToArchive({}, 'feature', [createTask({ id: 8, title: 'E', status: 'done' })]))
+			JSON.stringify(
+				addToArchive({}, 'feature', [
+					createTask({ id: 8, title: 'E', status: 'done' })
+				])
+			)
 		);
 
-		expect(readArchivedIdsSync(tasksPath, 'feature')).toEqual({ ids: new Set(['8']), highestId: 8 });
-		expect(readArchivedIdsSync(tasksPath, 'master')).toEqual({ ids: new Set(), highestId: 0 });
+		expect(readArchivedIdsSync(tasksPath, 'feature')).toEqual({
+			ids: new Set(['8']),
+			highestId: 8
+		});
+		expect(readArchivedIdsSync(tasksPath, 'master')).toEqual({
+			ids: new Set(),
+			highestId: 0
+		});
 	});
 
 	it('has nothing reserved when there is no archive', () => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-archive-'));
 
-		expect(readArchivedIdsSync(path.join(dir, 'tasks.json'), 'master').highestId).toBe(0);
+		expect(
+			readArchivedIdsSync(path.join(dir, 'tasks.json'), 'master').highestId
+		).toBe(0);
 	});
 
 	it('refuses an archive that is not valid JSON, so reserved IDs are not lost', () => {
@@ -209,25 +291,39 @@ describe('readArchivedIdsSync', () => {
 		const tasksPath = path.join(dir, 'tasks.json');
 		fs.writeFileSync(archivePathFor(tasksPath), '{ nope');
 
-		expect(() => readArchivedIdsSync(tasksPath, 'master')).toThrow(/isn't valid JSON/);
+		expect(() => readArchivedIdsSync(tasksPath, 'master')).toThrow(
+			/isn't valid JSON/
+		);
 	});
 });
 
 describe('tag rename and delete', () => {
 	const archive = () => ({
-		...addToArchive({}, 'feature', [createTask({ id: 4, title: 'F', status: 'done' })], NOW),
-		...addToArchive({}, 'master', [createTask({ id: 2, title: 'M', status: 'done' })], NOW)
+		...addToArchive(
+			{},
+			'feature',
+			[createTask({ id: 4, title: 'F', status: 'done' })],
+			NOW
+		),
+		...addToArchive(
+			{},
+			'master',
+			[createTask({ id: 2, title: 'M', status: 'done' })],
+			NOW
+		)
 	});
 
-	it('moves a renamed tag\'s section and leaves the others', () => {
+	it("moves a renamed tag's section and leaves the others", () => {
 		const renamed = renameArchiveTag(archive(), 'feature', 'launch');
 
 		expect(Object.keys(renamed ?? {}).sort()).toEqual(['launch', 'master']);
 		expect(renamed?.launch.metadata.highestId).toBe(4);
 	});
 
-	it('drops a deleted tag\'s section', () => {
-		expect(Object.keys(dropArchiveTag(archive(), 'feature') ?? {})).toEqual(['master']);
+	it("drops a deleted tag's section", () => {
+		expect(Object.keys(dropArchiveTag(archive(), 'feature') ?? {})).toEqual([
+			'master'
+		]);
 	});
 
 	it('returns null when the tag has nothing archived', () => {
@@ -235,10 +331,14 @@ describe('tag rename and delete', () => {
 		expect(dropArchiveTag(archive(), 'other')).toBeNull();
 	});
 
-	it('copies a tag\'s section for a tag copy and leaves the source', () => {
+	it("copies a tag's section for a tag copy and leaves the source", () => {
 		const copied = copyArchiveTag(archive(), 'feature', 'copy');
 
-		expect(Object.keys(copied ?? {}).sort()).toEqual(['copy', 'feature', 'master']);
+		expect(Object.keys(copied ?? {}).sort()).toEqual([
+			'copy',
+			'feature',
+			'master'
+		]);
 		expect(copied?.copy).toEqual(copied?.feature);
 		expect(copied?.copy).not.toBe(copied?.feature);
 		expect(copyArchiveTag(archive(), 'other', 'copy')).toBeNull();
@@ -256,7 +356,12 @@ describe('tag rename and delete', () => {
 	it('keeps a tag named __proto__ as data through a JSON round trip', () => {
 		const stored = JSON.parse(
 			JSON.stringify(
-				addToArchive({}, '__proto__', [createTask({ id: 7, title: 'P', status: 'done' })], NOW)
+				addToArchive(
+					{},
+					'__proto__',
+					[createTask({ id: 7, title: 'P', status: 'done' })],
+					NOW
+				)
 			)
 		);
 
@@ -274,12 +379,16 @@ describe('tag rename and delete', () => {
 
 			fs.writeFileSync(archivePathFor(tasksPath), JSON.stringify(archive()));
 			await renameArchivedTag(tasksPath, 'feature', 'launch');
-			expect(readArchivedIdsSync(tasksPath, 'launch').ids).toEqual(new Set(['4']));
+			expect(readArchivedIdsSync(tasksPath, 'launch').ids).toEqual(
+				new Set(['4'])
+			);
 			expect(readArchivedIdsSync(tasksPath, 'feature').highestId).toBe(0);
 
 			await deleteArchivedTag(tasksPath, 'launch');
 			expect(readArchivedIdsSync(tasksPath, 'launch').highestId).toBe(0);
-			expect(readArchivedIdsSync(tasksPath, 'master').ids).toEqual(new Set(['2']));
+			expect(readArchivedIdsSync(tasksPath, 'master').ids).toEqual(
+				new Set(['2'])
+			);
 			expect(fs.readdirSync(dir).sort()).toEqual(['archive.json']);
 		} finally {
 			fs.rmSync(dir, { recursive: true, force: true });
@@ -288,14 +397,19 @@ describe('tag rename and delete', () => {
 });
 
 describe('filterReadyTasks with archived IDs', () => {
-	const withBlocks = (task: ReturnType<typeof createTask>) => ({ ...task, blocks: [] });
+	const withBlocks = (task: ReturnType<typeof createTask>) => ({
+		...task,
+		blocks: []
+	});
 
 	it('counts a dependency on an archived task or its subtask as done', () => {
 		const tasks = [
 			withBlocks(createTask({ id: 3, title: 'T', dependencies: ['1', '1.2'] }))
 		];
 
-		expect(filterReadyTasks(tasks, new Set(['1'])).map((t) => String(t.id))).toEqual(['3']);
+		expect(
+			filterReadyTasks(tasks, new Set(['1'])).map((t) => String(t.id))
+		).toEqual(['3']);
 	});
 
 	it('goes by the live task when the same ID is also archived (left by an interrupted run)', () => {
@@ -304,6 +418,8 @@ describe('filterReadyTasks with archived IDs', () => {
 			withBlocks(createTask({ id: 3, title: 'T', dependencies: ['1.2'] }))
 		];
 
-		expect(filterReadyTasks(tasks, new Set(['1'])).map((t) => String(t.id))).toEqual(['1']);
+		expect(
+			filterReadyTasks(tasks, new Set(['1'])).map((t) => String(t.id))
+		).toEqual(['1']);
 	});
 });

@@ -200,7 +200,10 @@ describe('tasks.updateWithPrompt', () => {
 	it('drops the mark of a dependency the AI removed', async () => {
 		write(
 			stored({ id: '3' }),
-			stored({ dependencies: ['3'], metadata: { dependencySources: { 3: 'inferred' } } })
+			stored({
+				dependencies: ['3'],
+				metadata: { dependencySources: { 3: 'inferred' } }
+			})
 		);
 
 		await update();
@@ -280,7 +283,7 @@ describe('tasks.updateWithPrompt', () => {
 		);
 	});
 
-	it("keeps the status unless the prompt mentions it", async () => {
+	it('keeps the status unless the prompt mentions it', async () => {
 		answer(fromAi({ status: 'done' }));
 		const warnings: string[] = [];
 
@@ -309,8 +312,14 @@ describe('tasks.updateWithPrompt', () => {
 
 		await update({ metadata: { sprint: 2, taskLinks: { 9: 'related' } } });
 
-		expect(saved().metadata).toEqual({ owner: 'sam', sprint: 2, taskLinks: links });
-		expect(saved().subtasks[0].metadata).toEqual({ taskLinks: { 4: 'related' } });
+		expect(saved().metadata).toEqual({
+			owner: 'sam',
+			sprint: 2,
+			taskLinks: links
+		});
+		expect(saved().subtasks[0].metadata).toEqual({
+			taskLinks: { 4: 'related' }
+		});
 	});
 
 	it('saves metadata alone without an AI call, ignoring the reserved keys', async () => {
@@ -318,7 +327,11 @@ describe('tasks.updateWithPrompt', () => {
 
 		const result = await update({
 			prompt: '',
-			metadata: { sprint: 2, taskLinks: {}, dependencySources: { 9: 'inferred' } }
+			metadata: {
+				sprint: 2,
+				taskLinks: {},
+				dependencySources: { 9: 'inferred' }
+			}
 		});
 
 		expect(generateObject).not.toHaveBeenCalled();
@@ -341,7 +354,9 @@ describe('tasks.updateWithPrompt', () => {
 		expect(saved().details).toMatch(
 			/^Stored details\n<info added on (.+)>\nKeep the alias table\.\n<\/info added on \1>$/
 		);
-		expect(saved().description).toMatch(/^Original description \[Updated: .+\]$/);
+		expect(saved().description).toMatch(
+			/^Original description \[Updated: .+\]$/
+		);
 		expect(saved().title).toBe('Original Task');
 	});
 
@@ -383,14 +398,20 @@ describe('tasks.updateWithPrompt', () => {
 
 	it.each([
 		[{ task: null }, 'Received invalid task object from AI'],
-		[{ task: { id: 1, status: 'pending' } }, 'Updated task missing required fields']
-	])('leaves the file as it was on a bad AI reply %#', async (mainResult, message) => {
-		generateObject.mockResolvedValue(reply(mainResult) as any);
-		const before = fs.readFileSync(tasksPath, 'utf8');
+		[
+			{ task: { id: 1, status: 'pending' } },
+			'Updated task missing required fields'
+		]
+	])(
+		'leaves the file as it was on a bad AI reply %#',
+		async (mainResult, message) => {
+			generateObject.mockResolvedValue(reply(mainResult) as any);
+			const before = fs.readFileSync(tasksPath, 'utf8');
 
-		await expect(update()).rejects.toThrow(message);
-		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
-	});
+			await expect(update()).rejects.toThrow(message);
+			expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
+		}
+	);
 
 	it('keeps a status set and a criterion checked while the AI was writing (#243)', async () => {
 		write(stored({ acceptanceCriteria: [{ text: 'Works', checked: false }] }));
@@ -475,7 +496,11 @@ describe('tasks.updateWithPrompt', () => {
 	});
 
 	it('keeps a dependency added during the call when the AI keeps the list (number IDs)', async () => {
-		write(stored({ id: 3, dependencies: [1] }), stored({ id: 1 }), stored({ id: 2 }));
+		write(
+			stored({ id: 3, dependencies: [1] }),
+			stored({ id: 1 }),
+			stored({ id: 2 })
+		);
 		generateObject.mockImplementation(async () => {
 			const data = readFile();
 			data.master.tasks[0].dependencies = [1, 2];

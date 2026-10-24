@@ -58,8 +58,7 @@ export function registerAddNoteTool(server: FastMCP) {
 						tag
 					});
 				} catch (error: unknown) {
-					const err =
-						error instanceof Error ? error : new Error(String(error));
+					const err = error instanceof Error ? error : new Error(String(error));
 					log.error(`Error in add-note: ${err.message}`);
 					return handleApiResult({
 						result: {

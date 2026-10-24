@@ -234,8 +234,18 @@ describe('findUnnotedInProgress', () => {
 
 	it('lists an in-progress task with no note since the session started', () => {
 		const tasks = [
-			createTask({ id: 1, title: 'Old note', status: 'in-progress', details: noted(before) }),
-			createTask({ id: 2, title: 'Fresh note', status: 'in-progress', details: noted(after) }),
+			createTask({
+				id: 1,
+				title: 'Old note',
+				status: 'in-progress',
+				details: noted(before)
+			}),
+			createTask({
+				id: 2,
+				title: 'Fresh note',
+				status: 'in-progress',
+				details: noted(after)
+			}),
 			createTask({ id: 3, title: 'Never noted', status: 'in-progress' }),
 			createTask({ id: 4, title: 'Pending', details: '' })
 		];
@@ -259,7 +269,11 @@ describe('findUnnotedInProgress', () => {
 				status: 'in-progress',
 				subtasks: [
 					createSubtask({ id: 1, title: 'Hash passwords', status: 'done' }),
-					createSubtask({ id: 2, title: 'Login endpoint', status: 'in-progress' })
+					createSubtask({
+						id: 2,
+						title: 'Login endpoint',
+						status: 'in-progress'
+					})
 				]
 			})
 		];
@@ -281,7 +295,9 @@ describe('findUnnotedInProgress', () => {
 				id: 3,
 				title: 'Auth',
 				details: noted(after),
-				subtasks: [createSubtask({ id: 2, title: 'Login', status: 'in-progress' })]
+				subtasks: [
+					createSubtask({ id: 2, title: 'Login', status: 'in-progress' })
+				]
 			})
 		];
 		const subtaskNoted = [
@@ -290,7 +306,12 @@ describe('findUnnotedInProgress', () => {
 				title: 'Billing',
 				status: 'in-progress',
 				subtasks: [
-					createSubtask({ id: 1, title: 'Checkout', status: 'done', details: noted(after) })
+					createSubtask({
+						id: 1,
+						title: 'Checkout',
+						status: 'done',
+						details: noted(after)
+					})
 				]
 			})
 		];

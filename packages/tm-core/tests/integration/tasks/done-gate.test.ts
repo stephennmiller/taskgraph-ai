@@ -11,7 +11,10 @@ import { ERROR_CODES } from '../../../src/common/errors/taskgraph-error.js';
 import type { Task } from '../../../src/common/types/index.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { getUncheckedCriteria } from '../../../src/modules/tasks/utils/acceptance-criteria.js';
-import { createTask, createSubtask } from '../../../src/testing/task-fixtures.js';
+import {
+	createTask,
+	createSubtask
+} from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 describe('done gate', () => {
@@ -54,10 +57,19 @@ describe('done gate', () => {
 
 	it('refuses done while legacy string criteria are unchecked', async () => {
 		await setup([
-			createTask({ id: '1', title: 'Task 1', acceptanceCriteria: ['Login works', 'Tokens expire'] })
+			createTask({
+				id: '1',
+				title: 'Task 1',
+				acceptanceCriteria: ['Login works', 'Tokens expire']
+			})
 		]);
 
-		const tasksPath = path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json');
+		const tasksPath = path.join(
+			projectDir,
+			'.taskgraph',
+			'tasks',
+			'tasks.json'
+		);
 		const before = fs.readFileSync(tasksPath, 'utf-8');
 
 		const error = await tmCore.tasks
@@ -77,10 +89,16 @@ describe('done gate', () => {
 
 	it('marks the task done once every criterion is checked', async () => {
 		await setup([
-			createTask({ id: '1', title: 'Task 1', acceptanceCriteria: ['Login works', 'Tokens expire'] })
+			createTask({
+				id: '1',
+				title: 'Task 1',
+				acceptanceCriteria: ['Login works', 'Tokens expire']
+			})
 		]);
 
-		const checklist = await tmCore.tasks.updateChecklist('1', { check: [1, 2] });
+		const checklist = await tmCore.tasks.updateChecklist('1', {
+			check: [1, 2]
+		});
 		await tmCore.tasks.updateStatus('1', 'done');
 
 		expect(checklist.unchecked).toEqual([]);
@@ -93,7 +111,13 @@ describe('done gate', () => {
 	});
 
 	it('marks the task done with force while criteria are unchecked', async () => {
-		await setup([createTask({ id: '1', title: 'Task 1', acceptanceCriteria: ['Login works'] })]);
+		await setup([
+			createTask({
+				id: '1',
+				title: 'Task 1',
+				acceptanceCriteria: ['Login works']
+			})
+		]);
 
 		await tmCore.tasks.updateStatus('1', 'done', undefined, { force: true });
 
@@ -121,7 +145,12 @@ describe('done gate', () => {
 					id: '1',
 					title: 'Task 1',
 					subtasks: [
-						createSubtask({ id: 1, parentId: '1', title: 'Subtask 1', acceptanceCriteria: ['Ok'] }),
+						createSubtask({
+							id: 1,
+							parentId: '1',
+							title: 'Subtask 1',
+							acceptanceCriteria: ['Ok']
+						}),
 						createSubtask({ id: 2, parentId: '1', title: 'Subtask 2' })
 					]
 				})
@@ -160,7 +189,13 @@ describe('done gate', () => {
 	});
 
 	it('refuses a criterion number the checklist does not have, changing nothing', async () => {
-		await setup([createTask({ id: '1', title: 'Task 1', acceptanceCriteria: ['Login works'] })]);
+		await setup([
+			createTask({
+				id: '1',
+				title: 'Task 1',
+				acceptanceCriteria: ['Login works']
+			})
+		]);
 
 		await expect(
 			tmCore.tasks.updateChecklist('1', { check: [1, 5] })
@@ -199,7 +234,12 @@ describe('done gate', () => {
 					title: 'Task 1',
 					acceptanceCriteria: [{ text: 'Login works', checked: true }],
 					subtasks: [
-						createSubtask({ id: 1, parentId: '1', title: 'Sub', acceptanceCriteria: ['Sub works'] })
+						createSubtask({
+							id: 1,
+							parentId: '1',
+							title: 'Sub',
+							acceptanceCriteria: ['Sub works']
+						})
 					]
 				})
 			],
@@ -215,7 +255,9 @@ describe('done gate', () => {
 			[1, 'Login works', true],
 			[2, 'Tests pass', false]
 		]);
-		expect(sub?.items.map((i) => [i.number, i.text])).toEqual([[1, 'Sub works']]);
+		expect(sub?.items.map((i) => [i.number, i.text])).toEqual([
+			[1, 'Sub works']
+		]);
 		expect(missing).toBeUndefined();
 	});
 });

@@ -105,9 +105,8 @@ export function rankNextTasks(
 				if (!pickable(stStatus)) return;
 
 				const fullDeps =
-					st.dependencies?.map((d) =>
-						resolveSubtaskDependency(parent.id, d)
-					) ?? [];
+					st.dependencies?.map((d) => resolveSubtaskDependency(parent.id, d)) ??
+					[];
 				const depsSatisfied =
 					fullDeps.length === 0 ||
 					fullDeps.every((depId) => completedIds.has(String(depId)));
@@ -126,10 +125,8 @@ export function rankNextTasks(
 	// Sort by priority → blocked count → work of the same task it holds up →
 	// dependency count → parent ID → subtask ID
 	candidateSubtasks.sort((a, b) => {
-		const pa =
-			priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
-		const pb =
-			priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
+		const pa = priorityValues[a.priority as keyof typeof priorityValues] ?? 2;
+		const pb = priorityValues[b.priority as keyof typeof priorityValues] ?? 2;
 		if (pb !== pa) return pb - pa;
 
 		if (blocks(a) !== blocks(b)) return blocks(b) - blocks(a);

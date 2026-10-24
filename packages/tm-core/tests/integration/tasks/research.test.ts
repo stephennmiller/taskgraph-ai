@@ -57,7 +57,12 @@ describe('tasks.research', () => {
 						task(2, 'Session store', {
 							details: 'Use argon2.',
 							subtasks: [
-								{ id: 1, title: 'Pick a library', status: 'pending', details: '' }
+								{
+									id: 1,
+									title: 'Pick a library',
+									status: 'pending',
+									details: ''
+								}
 							]
 						})
 					],
@@ -67,7 +72,10 @@ describe('tasks.research', () => {
 			})
 		);
 		fs.mkdirSync(path.join(projectDir, 'src'));
-		fs.writeFileSync(path.join(projectDir, 'src', 'a.js'), 'export const a = 1;');
+		fs.writeFileSync(
+			path.join(projectDir, 'src', 'a.js'),
+			'export const a = 1;'
+		);
 		generateText = vi
 			.spyOn(AiService.prototype, 'generateText')
 			.mockResolvedValue(answer() as any);
@@ -95,7 +103,10 @@ describe('tasks.research', () => {
 			{ onAiCall }
 		);
 
-		expect(prompt()).toMatchObject({ role: 'research', commandName: 'research' });
+		expect(prompt()).toMatchObject({
+			role: 'research',
+			commandName: 'research'
+		});
 		const sent = prompt().prompt as string;
 		expect(sent).toContain('How should we store sessions?');
 		expect(sent).toContain('## Additional Context\n\nWe use Postgres');

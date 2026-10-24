@@ -40,7 +40,8 @@ export function registerGenerateTool(server: FastMCP) {
 			title: 'Generate Task Files',
 			destructiveHint: true
 		},
-		execute: withToolContext(async (args: GenerateArgs, { log, tmCore }: ToolContext) => {
+		execute: withToolContext(
+			async (args: GenerateArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot, tag, output } = args;
 
 				try {
@@ -83,7 +84,9 @@ export function registerGenerateTool(server: FastMCP) {
 										orphanedFilesRemoved: result.orphanedFilesRemoved
 									}
 								: undefined,
-							error: result.success ? undefined : { message: result.error || 'Unknown error' }
+							error: result.success
+								? undefined
+								: { message: result.error || 'Unknown error' }
 						},
 						log,
 						projectRoot,

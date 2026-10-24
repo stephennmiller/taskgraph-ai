@@ -7,9 +7,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -27,9 +25,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -39,10 +35,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -163,9 +156,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -183,9 +174,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -195,10 +184,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -319,9 +305,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -339,9 +323,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -351,10 +333,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -409,10 +388,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -600,9 +576,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -620,9 +594,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -632,10 +604,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -690,9 +659,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						"1"
-					],
+					"dependencies": ["1"],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -710,9 +677,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -777,9 +742,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -797,9 +760,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -809,10 +770,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -886,9 +844,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -906,9 +862,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -988,9 +942,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -1008,9 +960,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -1020,10 +970,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -1144,9 +1091,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -1164,9 +1109,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -1176,10 +1119,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -1300,9 +1240,7 @@
 					"title": "Implement CLI parser",
 					"description": "Implement CLI parser description about the command line flags and data",
 					"status": "pending",
-					"dependencies": [
-						1
-					],
+					"dependencies": [1],
 					"priority": "medium",
 					"details": "Implement CLI parser details: build the parser and authentication login",
 					"testStrategy": "unit tests",
@@ -1320,9 +1258,7 @@
 							"title": "Parse commands",
 							"description": "Parse commands sub description",
 							"status": "pending",
-							"dependencies": [
-								1
-							],
+							"dependencies": [1],
 							"details": ""
 						}
 					]
@@ -1332,10 +1268,7 @@
 					"title": "Add user authentication",
 					"description": "Add user authentication description about the command line flags and data",
 					"status": "in-progress",
-					"dependencies": [
-						1,
-						2
-					],
+					"dependencies": [1, 2],
 					"priority": "medium",
 					"details": "Add user authentication details: build the parser and authentication login",
 					"testStrategy": "unit tests",

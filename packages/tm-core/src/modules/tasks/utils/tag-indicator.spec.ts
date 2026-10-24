@@ -18,9 +18,7 @@ describe('shouldShowTagIndicator', () => {
 	});
 
 	it('shows the line on any tag other than master', () => {
-		expect(shouldShowTagIndicator('feature-auth', ['feature-auth'])).toBe(
-			true
-		);
+		expect(shouldShowTagIndicator('feature-auth', ['feature-auth'])).toBe(true);
 	});
 
 	it('shows the line on master once the project has another tag', () => {

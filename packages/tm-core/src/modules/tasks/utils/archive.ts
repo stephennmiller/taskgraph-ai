@@ -61,7 +61,10 @@ function isFinishedStatus(status: string | undefined): boolean {
  * subtasks, in ms. Null when none is recorded.
  */
 export function lastChangedAt(task: Task): number | null {
-	const times = [task.updatedAt, ...(task.subtasks ?? []).map((s) => s.updatedAt)]
+	const times = [
+		task.updatedAt,
+		...(task.subtasks ?? []).map((s) => s.updatedAt)
+	]
 		.map((value) => (value ? Date.parse(value) : Number.NaN))
 		.filter((ms) => !Number.isNaN(ms));
 	return times.length > 0 ? Math.max(...times) : null;
@@ -88,7 +91,10 @@ export function selectArchivable(
 	const keep: Task[] = [];
 	for (const task of tasks) {
 		const changed = lastChangedAt(task);
-		if (isFinishedStatus(task.status) && (changed === null || changed <= cutoff)) {
+		if (
+			isFinishedStatus(task.status) &&
+			(changed === null || changed <= cutoff)
+		) {
 			archive.push(task);
 		} else {
 			keep.push(task);
@@ -122,9 +128,13 @@ function ownSection(archive: unknown, tag: string): unknown {
 export function archiveTag(archive: unknown, tag: string): ArchiveTagData {
 	const section = ownSection(archive, tag);
 	const tasks = Array.isArray((section as ArchiveTagData | undefined)?.tasks)
-		? (normalizeTaskStatuses((section as ArchiveTagData).tasks) as ArchivedTask[])
+		? (normalizeTaskStatuses(
+				(section as ArchiveTagData).tasks
+			) as ArchivedTask[])
 		: [];
-	const stored = Number((section as ArchiveTagData | undefined)?.metadata?.highestId);
+	const stored = Number(
+		(section as ArchiveTagData | undefined)?.metadata?.highestId
+	);
 	return {
 		tasks,
 		metadata: {
@@ -191,7 +201,10 @@ export function takeFromArchive(
 			...archive,
 			[tag]: {
 				tasks,
-				metadata: { ...current.metadata, lastModified: new Date().toISOString() }
+				metadata: {
+					...current.metadata,
+					lastModified: new Date().toISOString()
+				}
 			}
 		},
 		task: task as Task
@@ -372,7 +385,10 @@ export interface ArchivedIds {
  * synchronously. Read tasks.json before calling this: archive writes
  * archive.json first, so a task is always in at least one of them.
  */
-export function readArchivedIdsSync(tasksPath: string, tag: string): ArchivedIds {
+export function readArchivedIdsSync(
+	tasksPath: string,
+	tag: string
+): ArchivedIds {
 	const section = archiveTag(readArchiveSync(archivePathFor(tasksPath)), tag);
 	return {
 		ids: new Set(section.tasks.map((t) => String(t.id))),
@@ -462,8 +478,13 @@ export function renameArchivedTag(
 }
 
 /** Remove a deleted tag's archived tasks (see dropArchiveTag) */
-export function deleteArchivedTag(tasksPath: string, tag: string): Promise<void> {
-	return updateArchiveFile(tasksPath, (archive) => dropArchiveTag(archive, tag));
+export function deleteArchivedTag(
+	tasksPath: string,
+	tag: string
+): Promise<void> {
+	return updateArchiveFile(tasksPath, (archive) =>
+		dropArchiveTag(archive, tag)
+	);
 }
 
 /** Copy a tag's archived tasks to a copy of the tag (see copyArchiveTag) */

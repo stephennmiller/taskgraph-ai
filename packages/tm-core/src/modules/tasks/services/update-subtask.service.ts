@@ -56,7 +56,11 @@ export interface UpdateSubtaskHooks {
 	/** AI service detail, sent only with `global.debug` on */
 	onDebug?: (message: string) => void;
 	/** The AI call is about to start */
-	onAiCall?: (subtask: { id: string; title: string; research: boolean }) => void;
+	onAiCall?: (subtask: {
+		id: string;
+		title: string;
+		research: boolean;
+	}) => void;
 }
 
 export interface UpdateSubtaskResult {
@@ -138,7 +142,10 @@ export class UpdateSubtaskService {
 		const index = subtasks.findIndex((s) => String(s.id) === subId);
 		if (index === -1) {
 			throw Object.assign(
-				new TaskGraphError(`Subtask ${id} not found`, ERROR_CODES.TASK_NOT_FOUND),
+				new TaskGraphError(
+					`Subtask ${id} not found`,
+					ERROR_CODES.TASK_NOT_FOUND
+				),
 				{ hint: `Run \`taskgraph show ${parentId}\` to see its subtasks` }
 			);
 		}

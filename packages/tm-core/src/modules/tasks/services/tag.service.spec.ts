@@ -67,9 +67,7 @@ describe('TagService.createTag', () => {
 			sourceTag: null
 		});
 		expect(readTasks().sprint.tasks).toEqual([]);
-		expect(readTasks().sprint.metadata.description).toMatch(
-			/^Tag created on /
-		);
+		expect(readTasks().sprint.metadata.description).toMatch(/^Tag created on /);
 	});
 
 	it('copies the current tag with copyFromCurrent', async () => {

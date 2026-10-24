@@ -60,7 +60,12 @@ describe('removeTasksIn', () => {
 	it('removes a task and every dependency, mark and link on it', () => {
 		const tasks = tasksOf();
 
-		const result = removeTasksIn(asTasks(tasks), ['1'], 'master', new Set(['7']));
+		const result = removeTasksIn(
+			asTasks(tasks),
+			['1'],
+			'master',
+			new Set(['7'])
+		);
 
 		expect(tasks.map((t) => t.id)).toEqual([2, 3]);
 		expect(tasks[0].dependencies).toEqual([]);
@@ -140,18 +145,18 @@ describe('removeTasksIn', () => {
 
 describe('previewTaskRemoval', () => {
 	it('lists what exists, what does not, subtasks and dependents', () => {
-		expect(previewTaskRemoval(asTasks(tasksOf()), ['1', '2.2', '9', '2'])).toEqual(
-			{
-				found: [
-					{ id: '1', title: 'One' },
-					{ id: '2.2', title: 'Two.2', parent: { id: '2', title: 'Two' } },
-					{ id: '2', title: 'Two' }
-				],
-				missing: ['9'],
-				subtaskCount: 2,
-				dependents: [{ id: '1', dependentIds: ['2', '3'] }]
-			}
-		);
+		expect(
+			previewTaskRemoval(asTasks(tasksOf()), ['1', '2.2', '9', '2'])
+		).toEqual({
+			found: [
+				{ id: '1', title: 'One' },
+				{ id: '2.2', title: 'Two.2', parent: { id: '2', title: 'Two' } },
+				{ id: '2', title: 'Two' }
+			],
+			missing: ['9'],
+			subtaskCount: 2,
+			dependents: [{ id: '1', dependentIds: ['2', '3'] }]
+		});
 	});
 });
 

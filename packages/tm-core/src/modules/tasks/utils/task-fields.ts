@@ -84,14 +84,17 @@ export function parseTaskFields(
 		);
 	}
 	if (names.includes('all')) return 'all';
-	const fields = names.length > 0 ? (names as TaskField[]) : DEFAULT_TASK_FIELDS;
+	const fields =
+		names.length > 0 ? (names as TaskField[]) : DEFAULT_TASK_FIELDS;
 	return [
 		...new Set<TaskField>([
 			'id',
 			...fields,
 			...(options.withSubtasks ? (['subtasks'] as const) : [])
 		])
-	].filter((field) => !(field === 'subtasks' && options.withSubtasks === false));
+	].filter(
+		(field) => !(field === 'subtasks' && options.withSubtasks === false)
+	);
 }
 
 /**

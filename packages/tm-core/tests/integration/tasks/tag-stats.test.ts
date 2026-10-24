@@ -28,13 +28,30 @@ describe('tag statistics', () => {
 			[
 				createTask({ id: '1', title: 'Task 1', status: 'done' }),
 				createTask({ id: '2', title: 'Task 2', status: 'cancelled' }),
-				createTask({ id: '3', title: 'Task 3', status: 'pending', dependencies: ['1'] }),
-				createTask({ id: '4', title: 'Task 4', status: 'pending', dependencies: ['3'] })
+				createTask({
+					id: '3',
+					title: 'Task 3',
+					status: 'pending',
+					dependencies: ['1']
+				}),
+				createTask({
+					id: '4',
+					title: 'Task 4',
+					status: 'pending',
+					dependencies: ['3']
+				})
 			],
 			'master'
 		);
 		await storage.saveTasks(
-			[createTask({ id: '1', title: 'Task 1', status: 'pending', dependencies: ['2'] })],
+			[
+				createTask({
+					id: '1',
+					title: 'Task 1',
+					status: 'pending',
+					dependencies: ['2']
+				})
+			],
 			'blocked-only'
 		);
 		tmCore = await createTmCore({ projectPath: projectDir });

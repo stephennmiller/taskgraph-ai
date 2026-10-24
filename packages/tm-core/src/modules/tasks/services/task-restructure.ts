@@ -41,9 +41,13 @@ function mutateTag<R>(
 	return storage.mutateTags((tags) => {
 		const tasks = tags.get(tag);
 		if (!tasks) {
-			throw new TaskGraphError(`Tag "${tag}" not found`, ERROR_CODES.NOT_FOUND, {
-				details: { tagName: tag }
-			});
+			throw new TaskGraphError(
+				`Tag "${tag}" not found`,
+				ERROR_CODES.NOT_FOUND,
+				{
+					details: { tagName: tag }
+				}
+			);
 		}
 		return { result: change(tasks), changed: [tag] };
 	});

@@ -58,8 +58,7 @@ export class TaskFileGeneratorService {
 	): Promise<GenerateTaskFilesResult> {
 		const tag = options.tag || this.configManager.getActiveTag();
 		const outputDir =
-			options.outputDir ||
-			path.join(this.projectPath, '.taskgraph', 'tasks');
+			options.outputDir || path.join(this.projectPath, '.taskgraph', 'tasks');
 
 		try {
 			// Ensure output directory exists
@@ -163,7 +162,9 @@ export class TaskFileGeneratorService {
 
 			// Tag-aware file patterns
 			const masterFilePattern = /^task_(\d+)\.md$/;
-			const taggedFilePattern = new RegExp(`^task_(\\d+)_${this.escapeRegExp(tag)}\\.md$`);
+			const taggedFilePattern = new RegExp(
+				`^task_(\\d+)_${this.escapeRegExp(tag)}\\.md$`
+			);
 
 			// Collect files to remove
 			const filesToRemove: string[] = [];
@@ -298,9 +299,7 @@ export class TaskFileGeneratorService {
 	): string {
 		return dependencies
 			.map((depId) => {
-				const depTask = allTasks.find(
-					(t) => String(t.id) === String(depId)
-				);
+				const depTask = allTasks.find((t) => String(t.id) === String(depId));
 				if (depTask) {
 					const statusSymbol = this.getStatusSymbol(depTask.status);
 					return `${depId}${statusSymbol}`;

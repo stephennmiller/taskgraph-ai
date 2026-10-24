@@ -121,10 +121,7 @@ function parseInput(input: ScopeTaskInput): {
 		)
 	];
 	if (ids.length === 0) {
-		throw new TaskGraphError(
-			'No task ID given',
-			ERROR_CODES.VALIDATION_ERROR
-		);
+		throw new TaskGraphError('No task ID given', ERROR_CODES.VALIDATION_ERROR);
 	}
 	for (const id of ids) {
 		if (!/^\d+$/.test(id) || Number(id) === 0) {
@@ -304,7 +301,8 @@ export class ScopeAdjustmentService {
 			if (response?.telemetryData) telemetry.push(response.telemetryData);
 			const generated: any[] = response?.mainResult?.subtasks ?? [];
 			// No subtasks back would delete every pending one
-			if (generated.length === 0) throw new Error('the AI returned no subtasks');
+			if (generated.length === 0)
+				throw new Error('the AI returned no subtasks');
 			ensureSequentialSubtaskIds(generated);
 			return generated.map((subtask) => ({
 				...subtask,
@@ -344,7 +342,10 @@ export class ScopeAdjustmentService {
 			if (generated) {
 				target.subtasks = [...kept, ...renumber(generated, kept, target.id)];
 			}
-			return { tasks: current, result: { task: target, preserved: kept.length } };
+			return {
+				tasks: current,
+				result: { task: target, preserved: kept.length }
+			};
 		}, tag);
 		return result;
 	}
@@ -356,10 +357,9 @@ export class ScopeAdjustmentService {
 		warn: (message: string) => void
 	): { score: number; reportPath: string } | null {
 		try {
-			const found = readComplexityReport(
-				this.configManager.getProjectRoot(),
-				{ tag }
-			);
+			const found = readComplexityReport(this.configManager.getProjectRoot(), {
+				tag
+			});
 			const entry = found?.report.complexityAnalysis?.find(
 				(a) => String(a.taskId) === id
 			);
@@ -409,7 +409,9 @@ export class ScopeAdjustmentService {
 }
 
 /** The AI's fields that hold something; a null or empty one keeps the stored value */
-function scopedFields(result: Record<string, unknown> | undefined): ScopedFields {
+function scopedFields(
+	result: Record<string, unknown> | undefined
+): ScopedFields {
 	const fields: Record<string, unknown> = {};
 	for (const key of ['title', 'description', 'details', 'testStrategy']) {
 		const value = result?.[key];

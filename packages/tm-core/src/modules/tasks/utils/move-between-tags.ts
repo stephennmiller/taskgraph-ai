@@ -47,7 +47,9 @@ function forwardDependencies(sources: Item[], tasks: Item[]): DependencyId[] {
 		const task = findTask(tasks, taskId);
 		for (const dep of task?.dependencies ?? []) {
 			const id =
-				typeof dep === 'string' && !dep.includes('.') && !Number.isNaN(parseInt(dep, 10))
+				typeof dep === 'string' &&
+				!dep.includes('.') &&
+				!Number.isNaN(parseInt(dep, 10))
 					? parseInt(dep, 10)
 					: dep;
 			if (id == null || id === taskId) continue;
@@ -101,7 +103,10 @@ export function moveTasksBetweenTags(
 ): CrossTagMoveResult {
 	const source = tags.get(sourceTag) as Item[] | undefined;
 	if (!source) {
-		fail(`Source tag "${sourceTag}" not found or invalid`, ERROR_CODES.NOT_FOUND);
+		fail(
+			`Source tag "${sourceTag}" not found or invalid`,
+			ERROR_CODES.NOT_FOUND
+		);
 	}
 	if (!tags.has(targetTag)) {
 		if (isReservedNewTagName(targetTag)) {

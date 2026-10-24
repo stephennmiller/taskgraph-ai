@@ -27,15 +27,46 @@ const fixtureTask = (withSubtasks = true, noTestStrategy = false) => ({
 	dependencies: [1],
 	subtasks: withSubtasks
 		? [
-				{ id: 1, title: 'Hash passwords', description: 'd', status: 'done', dependencies: [] },
-				{ id: 2, title: 'Login route', description: 'd', status: 'pending', dependencies: [1] },
-				{ id: 3, title: 'Session tokens', description: 'd', status: 'pending', dependencies: [2] },
-				{ id: 5, title: 'Audit log', description: 'd', status: 'in-progress', dependencies: [] }
+				{
+					id: 1,
+					title: 'Hash passwords',
+					description: 'd',
+					status: 'done',
+					dependencies: []
+				},
+				{
+					id: 2,
+					title: 'Login route',
+					description: 'd',
+					status: 'pending',
+					dependencies: [1]
+				},
+				{
+					id: 3,
+					title: 'Session tokens',
+					description: 'd',
+					status: 'pending',
+					dependencies: [2]
+				},
+				{
+					id: 5,
+					title: 'Audit log',
+					description: 'd',
+					status: 'in-progress',
+					dependencies: []
+				}
 			]
 		: []
 });
 
-const otherTask = { id: 4, title: 'Other', description: 'o', status: 'pending', dependencies: [], subtasks: [] };
+const otherTask = {
+	id: 4,
+	title: 'Other',
+	description: 'o',
+	status: 'pending',
+	dependencies: [],
+	subtasks: []
+};
 
 const adjustAnswer = () => ({
 	mainResult: {
@@ -45,17 +76,43 @@ const adjustAnswer = () => ({
 		testStrategy: 'Adjusted tests',
 		priority: 'high'
 	},
-	telemetryData: { modelUsed: 'sonnet', inputTokens: 10, outputTokens: 2, totalTokens: 12 }
+	telemetryData: {
+		modelUsed: 'sonnet',
+		inputTokens: 10,
+		outputTokens: 2,
+		totalTokens: 12
+	}
 });
 
 const regenAnswer = () => ({
 	mainResult: {
 		subtasks: [
-			{ id: 1, title: 'New step one', description: 'New step one description', dependencies: [], details: 'New step one details text', status: 'pending', testStrategy: 'ts1' },
-			{ id: 2, title: 'New step two', description: 'New step two description', dependencies: ['3.1'], details: 'New step two details text', status: 'pending', testStrategy: 'ts2' }
+			{
+				id: 1,
+				title: 'New step one',
+				description: 'New step one description',
+				dependencies: [],
+				details: 'New step one details text',
+				status: 'pending',
+				testStrategy: 'ts1'
+			},
+			{
+				id: 2,
+				title: 'New step two',
+				description: 'New step two description',
+				dependencies: ['3.1'],
+				details: 'New step two details text',
+				status: 'pending',
+				testStrategy: 'ts2'
+			}
 		]
 	},
-	telemetryData: { modelUsed: 'sonnet', inputTokens: 20, outputTokens: 4, totalTokens: 24 }
+	telemetryData: {
+		modelUsed: 'sonnet',
+		inputTokens: 20,
+		outputTokens: 4,
+		totalTokens: 24
+	}
 });
 
 describe('tasks.scope', () => {
@@ -69,27 +126,46 @@ describe('tasks.scope', () => {
 			(t: { id: unknown }) => String(t.id) === String(id)
 		);
 	const write = (tasks: unknown[]) =>
-		fs.writeFileSync(tasksPath, JSON.stringify({ master: { tasks, metadata: {} } }));
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({ master: { tasks, metadata: {} } })
+		);
 	const reportPath = () =>
-		path.join(projectDir, '.taskgraph', 'reports', 'task-complexity-report.json');
+		path.join(
+			projectDir,
+			'.taskgraph',
+			'reports',
+			'task-complexity-report.json'
+		);
 	const writeReport = (score: number) =>
 		fs.writeFileSync(
 			reportPath(),
-			JSON.stringify({ meta: {}, complexityAnalysis: [{ taskId: 3, complexityScore: score }] })
+			JSON.stringify({
+				meta: {},
+				complexityAnalysis: [{ taskId: 3, complexityScore: score }]
+			})
 		);
 
 	beforeEach(async () => {
-		projectDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-scope-')));
+		projectDir = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-scope-'))
+		);
 		const tgDir = path.join(projectDir, '.taskgraph');
 		fs.mkdirSync(path.join(tgDir, 'tasks'), { recursive: true });
 		fs.mkdirSync(path.join(tgDir, 'reports'), { recursive: true });
-		fs.writeFileSync(path.join(tgDir, 'config.json'), JSON.stringify({ models: {}, global: {} }));
+		fs.writeFileSync(
+			path.join(tgDir, 'config.json'),
+			JSON.stringify({ models: {}, global: {} })
+		);
 		tasksPath = path.join(tgDir, 'tasks', 'tasks.json');
 		write([fixtureTask(), otherTask]);
 		generateObject = vi
 			.spyOn(AiService.prototype, 'generateObject')
-			.mockImplementation(async (params: any) =>
-				(params.objectName === 'updated_task' ? adjustAnswer() : regenAnswer()) as any
+			.mockImplementation(
+				async (params: any) =>
+					(params.objectName === 'updated_task'
+						? adjustAnswer()
+						: regenAnswer()) as any
 			);
 		tmCore = await createTmCore({ projectPath: projectDir });
 	});
@@ -142,7 +218,9 @@ describe('tasks.scope', () => {
 	it('refuses a bad strength before reading tasks or calling the AI', async () => {
 		await expect(
 			tmCore.tasks.scope({ ids: '3', direction: 'up', strength: 'extreme' })
-		).rejects.toThrow('Invalid strength level: extreme. Must be one of: light, regular, heavy');
+		).rejects.toThrow(
+			'Invalid strength level: extreme. Must be one of: light, regular, heavy'
+		);
 		expect(generateObject).not.toHaveBeenCalled();
 	});
 
@@ -153,9 +231,9 @@ describe('tasks.scope', () => {
 		await expect(
 			tmCore.tasks.scope({ ids: '3,3.2', direction: 'down' })
 		).rejects.toThrow('"3.2" is a subtask; scope-down takes task IDs');
-		await expect(tmCore.tasks.scope({ ids: 'abc', direction: 'up' })).rejects.toThrow(
-			'Invalid task ID: abc'
-		);
+		await expect(
+			tmCore.tasks.scope({ ids: 'abc', direction: 'up' })
+		).rejects.toThrow('Invalid task ID: abc');
 		expect(generateObject).not.toHaveBeenCalled();
 		expect(readTask().title).toBe('Add user authentication');
 	});
@@ -170,7 +248,12 @@ describe('tasks.scope', () => {
 
 	it('keeps stored fields the AI returns empty or null', async () => {
 		generateObject.mockResolvedValueOnce({
-			mainResult: { title: '', description: null, details: 'New details', priority: 'urgent' },
+			mainResult: {
+				title: '',
+				description: null,
+				details: 'New details',
+				priority: 'urgent'
+			},
 			telemetryData: null
 		} as any);
 		write([fixtureTask(false)]);
@@ -210,7 +293,13 @@ describe('tasks.scope', () => {
 	it('keeps a completed subtask and rewrites one with no status', async () => {
 		const task = fixtureTask();
 		task.subtasks = [
-			{ id: 1, title: 'Shipped', description: 'd', status: 'completed', dependencies: [] },
+			{
+				id: 1,
+				title: 'Shipped',
+				description: 'd',
+				status: 'completed',
+				dependencies: []
+			},
 			{ id: 2, title: 'No status', description: 'd', dependencies: [] } as any
 		];
 		write([task]);
@@ -228,10 +317,16 @@ describe('tasks.scope', () => {
 	it('keeps the pending subtasks when the AI returns none', async () => {
 		generateObject
 			.mockResolvedValueOnce(adjustAnswer() as any)
-			.mockResolvedValueOnce({ mainResult: { subtasks: [] }, telemetryData: null } as any);
+			.mockResolvedValueOnce({
+				mainResult: { subtasks: [] },
+				telemetryData: null
+			} as any);
 		const onWarning = vi.fn();
 
-		const result = await tmCore.tasks.scope({ ids: '3', direction: 'down' }, { onWarning });
+		const result = await tmCore.tasks.scope(
+			{ ids: '3', direction: 'down' },
+			{ onWarning }
+		);
 
 		expect(onWarning).toHaveBeenCalledWith(
 			'Failed to regenerate subtasks for task 3: the AI returned no subtasks'
@@ -247,7 +342,9 @@ describe('tasks.scope', () => {
 		await tmCore.tasks.scope({ ids: '3', direction: 'up' }, { onWarning });
 
 		expect(onWarning).toHaveBeenCalledWith(
-			expect.stringMatching(/^Couldn't read the complexity report: .*; scoping without its score$/)
+			expect.stringMatching(
+				/^Couldn't read the complexity report: .*; scoping without its score$/
+			)
 		);
 		expect(readTask().title).toBe('Adjusted title');
 	});
@@ -258,9 +355,9 @@ describe('tasks.scope', () => {
 			return adjustAnswer() as any;
 		});
 
-		await expect(tmCore.tasks.scope({ ids: '3', direction: 'up' })).rejects.toThrow(
-			'Task 3 was removed while it was being scoped up'
-		);
+		await expect(
+			tmCore.tasks.scope({ ids: '3', direction: 'up' })
+		).rejects.toThrow('Task 3 was removed while it was being scoped up');
 		expect(readTask()).toBeUndefined();
 	});
 
@@ -270,7 +367,10 @@ describe('tasks.scope', () => {
 			.mockRejectedValueOnce(new Error('model overloaded'));
 		const onWarning = vi.fn();
 
-		const result = await tmCore.tasks.scope({ ids: '3', direction: 'up' }, { onWarning });
+		const result = await tmCore.tasks.scope(
+			{ ids: '3', direction: 'up' },
+			{ onWarning }
+		);
 
 		expect(onWarning).toHaveBeenCalledWith(
 			'Failed to regenerate subtasks for task 3: model overloaded'
@@ -296,33 +396,45 @@ describe('tasks.scope', () => {
 			.mockResolvedValueOnce(adjustAnswer() as any)
 			.mockResolvedValueOnce(regenAnswer() as any)
 			.mockRejectedValueOnce(new Error('boom'));
-		await expect(tmCore.tasks.scope({ ids: '3,4', direction: 'down' })).rejects.toThrow(
-			'boom (task 3 already scoped down)'
-		);
+		await expect(
+			tmCore.tasks.scope({ ids: '3,4', direction: 'down' })
+		).rejects.toThrow('boom (task 3 already scoped down)');
 	});
 
 	it('re-scores the task in the report only with a session (MCP)', async () => {
 		writeReport(5);
-		generateObject.mockImplementation(async (params: any) =>
-			(params.objectName === 'complexityAnalysis'
-				? {
-						mainResult: {
-							complexityAnalysis: [
-								{ taskId: 3, taskTitle: 't', complexityScore: 8, recommendedSubtasks: 4, expansionPrompt: 'e', reasoning: 'r' }
-							]
-						},
-						telemetryData: null
-					}
-				: params.objectName === 'updated_task'
-					? adjustAnswer()
-					: regenAnswer()) as any
+		generateObject.mockImplementation(
+			async (params: any) =>
+				(params.objectName === 'complexityAnalysis'
+					? {
+							mainResult: {
+								complexityAnalysis: [
+									{
+										taskId: 3,
+										taskTitle: 't',
+										complexityScore: 8,
+										recommendedSubtasks: 4,
+										expansionPrompt: 'e',
+										reasoning: 'r'
+									}
+								]
+							},
+							telemetryData: null
+						}
+					: params.objectName === 'updated_task'
+						? adjustAnswer()
+						: regenAnswer()) as any
 		);
 
 		const cli = await tmCore.tasks.scope({ ids: '3', direction: 'up' });
 		expect(cli.tasks[0].complexity).toBeUndefined();
 		expect(generateObject).toHaveBeenCalledTimes(2);
 
-		const mcp = await tmCore.tasks.scope({ ids: '3', direction: 'up', session: {} });
+		const mcp = await tmCore.tasks.scope({
+			ids: '3',
+			direction: 'up',
+			session: {}
+		});
 		expect(mcp.tasks[0].complexity).toEqual({ before: 5, after: 8 });
 		const report = JSON.parse(fs.readFileSync(reportPath(), 'utf8'));
 		expect(report.complexityAnalysis[0].complexityScore).toBe(8);

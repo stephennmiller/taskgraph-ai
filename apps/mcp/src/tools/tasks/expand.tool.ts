@@ -61,7 +61,9 @@ const ExpandAllSchema = z.object({
 	force: z
 		.boolean()
 		.optional()
-		.describe('Force regeneration of subtasks for tasks that already have them'),
+		.describe(
+			'Force regeneration of subtasks for tasks that already have them'
+		),
 	file: z
 		.string()
 		.optional()
@@ -100,46 +102,51 @@ export function registerExpandTaskTool(server: FastMCP) {
 			async (args: ExpandTaskArgs, context: ToolContext) => {
 				const { tmCore, session } = context;
 				const tag = args.tag || tmCore.config.getActiveTag();
-				return replyWith({ ...args, tag }, context, 'Error expanding task', async () => {
-					const expanded = await tmCore.tasks.expand(
-						{
-							id: args.id,
-							num: args.num || undefined,
-							research: args.research === true,
-							prompt: args.prompt,
-							force: args.force === true,
+				return replyWith(
+					{ ...args, tag },
+					context,
+					'Error expanding task',
+					async () => {
+						const expanded = await tmCore.tasks.expand(
+							{
+								id: args.id,
+								num: args.num || undefined,
+								research: args.research === true,
+								prompt: args.prompt,
+								force: args.force === true,
+								tag,
+								session,
+								outputType: 'mcp',
+								keepExpanded: true
+							},
+							reportTo(context)
+						);
+						const { hadSubtasks } = expanded;
+						// A task left as it was is the one read, with the legacy number ID
+						const task = expanded.skipped
+							? { ...expanded.task, id: replyId(expanded.task.id) }
+							: expanded.task;
+						return {
 							tag,
-							session,
-							outputType: 'mcp',
-							keepExpanded: true
-						},
-						reportTo(context)
-					);
-					const { hadSubtasks } = expanded;
-					// A task left as it was is the one read, with the legacy number ID
-					const task = expanded.skipped
-						? { ...expanded.task, id: replyId(expanded.task.id) }
-						: expanded.task;
-					return {
-						tag,
-						data:
-							expanded.skipped === 'has-subtasks'
-								? {
-										message: `Task ${task.id} already has subtasks. Expansion skipped.`,
-										task,
-										subtasksAdded: 0,
-										hasExistingSubtasks: hadSubtasks
-									}
-								: {
-										task,
-										// Any old subtasks were replaced, so all of them are new
-										subtasksAdded: task.subtasks?.length ?? 0,
-										hasExistingSubtasks: hadSubtasks,
-										telemetryData: expanded.telemetryData ?? undefined,
-										tagInfo: expanded.tagInfo ?? undefined
-									}
-					};
-				});
+							data:
+								expanded.skipped === 'has-subtasks'
+									? {
+											message: `Task ${task.id} already has subtasks. Expansion skipped.`,
+											task,
+											subtasksAdded: 0,
+											hasExistingSubtasks: hadSubtasks
+										}
+									: {
+											task,
+											// Any old subtasks were replaced, so all of them are new
+											subtasksAdded: task.subtasks?.length ?? 0,
+											hasExistingSubtasks: hadSubtasks,
+											telemetryData: expanded.telemetryData ?? undefined,
+											tagInfo: expanded.tagInfo ?? undefined
+										}
+						};
+					}
+				);
 			}
 		)
 	});
@@ -171,35 +178,45 @@ export function registerExpandAllTool(server: FastMCP) {
 					session,
 					outputType: 'mcp'
 				};
-				return replyWith({ ...args, tag }, context, 'Error expanding all tasks', async () => {
-					const summary = await tmCore.tasks.expandAll(options, {
-						...reportTo(context),
-						onStart: (ids) =>
-							log.info(`Found ${ids.length} tasks eligible for expansion.`),
-						onTaskDone: (id, outcome) => {
-							if (outcome instanceof Error) {
-								log.error(`Couldn't expand task ${id}: ${outcome.message}`);
-							} else if (outcome.skipped) {
-								log.info(
-									`Skipped task ${id}: complexity report recommends no expansion.`
-								);
-							} else {
-								log.info(`Expanded task ${id}.`);
+				return replyWith(
+					{ ...args, tag },
+					context,
+					'Error expanding all tasks',
+					async () => {
+						const summary = await tmCore.tasks.expandAll(options, {
+							...reportTo(context),
+							onStart: (ids) =>
+								log.info(`Found ${ids.length} tasks eligible for expansion.`),
+							onTaskDone: (id, outcome) => {
+								if (outcome instanceof Error) {
+									log.error(`Couldn't expand task ${id}: ${outcome.message}`);
+								} else if (outcome.skipped) {
+									log.info(
+										`Skipped task ${id}: complexity report recommends no expansion.`
+									);
+								} else {
+									log.info(`Expanded task ${id}.`);
+								}
 							}
-						}
-					});
-					const { expandedCount, failedCount, skippedCount, tasksToExpand } =
-						summary;
-					return {
-						tag,
-						data: {
-							message: `Expand all operation completed. Expanded: ${expandedCount}, Failed: ${failedCount}, Skipped: ${skippedCount}`,
-							details: { expandedCount, failedCount, skippedCount, tasksToExpand },
-							// The legacy reply had [] here when no task was eligible
-							telemetryData: tasksToExpand === 0 ? [] : summary.telemetryData
-						}
-					};
-				});
+						});
+						const { expandedCount, failedCount, skippedCount, tasksToExpand } =
+							summary;
+						return {
+							tag,
+							data: {
+								message: `Expand all operation completed. Expanded: ${expandedCount}, Failed: ${failedCount}, Skipped: ${skippedCount}`,
+								details: {
+									expandedCount,
+									failedCount,
+									skippedCount,
+									tasksToExpand
+								},
+								// The legacy reply had [] here when no task was eligible
+								telemetryData: tasksToExpand === 0 ? [] : summary.telemetryData
+							}
+						};
+					}
+				);
 			}
 		)
 	});

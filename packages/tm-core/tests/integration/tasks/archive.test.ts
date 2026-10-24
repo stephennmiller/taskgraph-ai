@@ -58,8 +58,18 @@ describe('archive', () => {
 		await setup({
 			master: [
 				original,
-				createTask({ id: 2, title: 'Dropped', status: 'cancelled', updatedAt: OLD }),
-				createTask({ id: 3, title: 'Fresh', status: 'done', updatedAt: new Date().toISOString() }),
+				createTask({
+					id: 2,
+					title: 'Dropped',
+					status: 'cancelled',
+					updatedAt: OLD
+				}),
+				createTask({
+					id: 3,
+					title: 'Fresh',
+					status: 'done',
+					updatedAt: new Date().toISOString()
+				}),
 				createTask({ id: 4, title: 'Open', updatedAt: OLD })
 			]
 		});
@@ -115,7 +125,9 @@ describe('archive', () => {
 
 	it('lists without moving anything on a dry run', async () => {
 		await setup({
-			master: [createTask({ id: 1, title: 'Done', status: 'done', updatedAt: OLD })]
+			master: [
+				createTask({ id: 1, title: 'Done', status: 'done', updatedAt: OLD })
+			]
 		});
 
 		const result = await tmCore.tasks.archive({ dryRun: true });
@@ -128,13 +140,26 @@ describe('archive', () => {
 	it('takes the age from global.archiveAfterDays, and --older-than overrides it', async () => {
 		const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000).toISOString();
 		await setup(
-			{ master: [createTask({ id: 1, title: 'Done', status: 'done', updatedAt: tenDaysAgo })] },
+			{
+				master: [
+					createTask({
+						id: 1,
+						title: 'Done',
+						status: 'done',
+						updatedAt: tenDaysAgo
+					})
+				]
+			},
 			{ archiveAfterDays: 7 }
 		);
 
-		expect(ids((await tmCore.tasks.archive({ dryRun: true })).tasks)).toEqual(['1']);
+		expect(ids((await tmCore.tasks.archive({ dryRun: true })).tasks)).toEqual([
+			'1'
+		]);
 		expect(
-			ids((await tmCore.tasks.archive({ dryRun: true, olderThanDays: 14 })).tasks)
+			ids(
+				(await tmCore.tasks.archive({ dryRun: true, olderThanDays: 14 })).tasks
+			)
 		).toEqual([]);
 	});
 
@@ -151,7 +176,9 @@ describe('archive', () => {
 		expect((await tmCore.tasks.explainBlockers('2')).blocked).toBe(false);
 		const tree = await tmCore.tasks.getDependencyTree();
 		expect(JSON.stringify(tree)).not.toContain('"missing":["1"]');
-		expect((await tmCore.tasks.claimNext({ claimant: 'me' }))?.task.id).toBe('2');
+		expect((await tmCore.tasks.claimNext({ claimant: 'me' }))?.task.id).toBe(
+			'2'
+		);
 
 		// The dependency itself is kept in tasks.json
 		const [task] = (await tmCore.tasks.list()).tasks;
@@ -160,17 +187,33 @@ describe('archive', () => {
 
 	it('keeps each tag in its own archive section', async () => {
 		await setup({
-			master: [createTask({ id: 1, title: 'Master done', status: 'done', updatedAt: OLD })],
+			master: [
+				createTask({
+					id: 1,
+					title: 'Master done',
+					status: 'done',
+					updatedAt: OLD
+				})
+			],
 			feature: [
-				createTask({ id: 1, title: 'Feature done', status: 'done', updatedAt: OLD }),
+				createTask({
+					id: 1,
+					title: 'Feature done',
+					status: 'done',
+					updatedAt: OLD
+				}),
 				createTask({ id: 2, title: 'Feature open' })
 			]
 		});
 
 		await tmCore.tasks.archive({ tag: 'feature' });
 
-		expect(ids((await tmCore.tasks.list({ tag: 'master' })).tasks)).toEqual(['1']);
-		expect(ids((await tmCore.tasks.list({ tag: 'feature' })).tasks)).toEqual(['2']);
+		expect(ids((await tmCore.tasks.list({ tag: 'master' })).tasks)).toEqual([
+			'1'
+		]);
+		expect(ids((await tmCore.tasks.list({ tag: 'feature' })).tasks)).toEqual([
+			'2'
+		]);
 		expect(readArchive().feature.tasks[0].title).toBe('Feature done');
 		expect(readArchive().master).toBeUndefined();
 
@@ -206,10 +249,12 @@ describe('archive', () => {
 		expect(ids(readArchive().master.tasks)).toEqual(['1']);
 	});
 
-	it('moves a tag\'s archived tasks when the tag is renamed, and drops them when it is deleted', async () => {
+	it("moves a tag's archived tasks when the tag is renamed, and drops them when it is deleted", async () => {
 		await setup({
 			master: [createTask({ id: 1, title: 'Main' })],
-			feature: [createTask({ id: 1, title: 'Done', status: 'done', updatedAt: OLD })]
+			feature: [
+				createTask({ id: 1, title: 'Done', status: 'done', updatedAt: OLD })
+			]
 		});
 		await tmCore.tasks.archive({ tag: 'feature' });
 		const storage = new FileStorage(projectDir);
@@ -221,7 +266,7 @@ describe('archive', () => {
 		await storage.deleteTag('launch');
 		expect(readArchive().launch).toBeUndefined();
 	});
-	it('gives a copied tag the source\'s archive, so it never reuses an archived ID', async () => {
+	it("gives a copied tag the source's archive, so it never reuses an archived ID", async () => {
 		await setup({
 			master: [
 				createTask({ id: 1, title: 'Done', status: 'done', updatedAt: OLD }),

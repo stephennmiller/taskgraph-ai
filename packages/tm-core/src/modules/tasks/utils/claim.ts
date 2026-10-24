@@ -8,11 +8,7 @@
  */
 
 import os from 'node:os';
-import type {
-	Subtask,
-	Task,
-	TaskStatus
-} from '../../../common/types/index.js';
+import type { Subtask, Task, TaskStatus } from '../../../common/types/index.js';
 import { satisfyArchivedDependencies } from './archive.js';
 import { rankNextTasks } from './next-task.js';
 
@@ -117,18 +113,15 @@ export function claimNextInTasks(
 			})
 			.map((task) => String(task.id))
 	);
-	const next = rankNextTasks(
-		satisfyArchivedDependencies(tasks, archivedIds),
-		{ unstartedOnly: true }
-	).find(
-		(item) => {
-			const parentId = (item as Task & { parentId?: string }).parentId;
-			if (options.among) {
-				return parentId === undefined && options.among.has(String(item.id));
-			}
-			return parentId === undefined || !claimedByOther.has(parentId);
+	const next = rankNextTasks(satisfyArchivedDependencies(tasks, archivedIds), {
+		unstartedOnly: true
+	}).find((item) => {
+		const parentId = (item as Task & { parentId?: string }).parentId;
+		if (options.among) {
+			return parentId === undefined && options.among.has(String(item.id));
 		}
-	);
+		return parentId === undefined || !claimedByOther.has(parentId);
+	});
 	if (!next) return null;
 
 	const claim = { claimedBy, claimedAt };

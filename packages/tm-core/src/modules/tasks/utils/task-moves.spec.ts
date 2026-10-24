@@ -18,9 +18,27 @@ const sample = (): Task[] =>
 				{ id: 2, title: 'Validate', status: 'pending', dependencies: [1] }
 			]
 		},
-		{ id: 3, title: 'Plugins', status: 'pending', dependencies: [], subtasks: [] },
-		{ id: 4, title: 'Report', status: 'pending', dependencies: [2, 3], subtasks: [] },
-		{ id: 5, title: 'Publish', status: 'pending', dependencies: [4], subtasks: [] }
+		{
+			id: 3,
+			title: 'Plugins',
+			status: 'pending',
+			dependencies: [],
+			subtasks: []
+		},
+		{
+			id: 4,
+			title: 'Report',
+			status: 'pending',
+			dependencies: [2, 3],
+			subtasks: []
+		},
+		{
+			id: 5,
+			title: 'Publish',
+			status: 'pending',
+			dependencies: [4],
+			subtasks: []
+		}
 	] as unknown as Task[];
 
 const ids = (tasks: Task[]) => tasks.map((t) => String(t.id));
@@ -246,7 +264,14 @@ describe('moveTasksBetweenTags', () => {
 
 	it('refuses a subtask and an ID the target tag has', () => {
 		expect(() =>
-			moveTasksBetweenTags(tagsWith(), ['2.1'], 'master', 'feature', {}, archived)
+			moveTasksBetweenTags(
+				tagsWith(),
+				['2.1'],
+				'master',
+				'feature',
+				{},
+				archived
+			)
 		).toThrow('Cannot move subtask 2.1 directly between tags');
 		expect(() =>
 			moveTasksBetweenTags(tagsWith(), ['1'], 'master', 'feature', {}, archived)

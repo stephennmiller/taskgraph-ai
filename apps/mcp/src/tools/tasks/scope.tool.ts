@@ -65,31 +65,31 @@ function registerScopeTool(server: FastMCP, direction: 'up' | 'down') {
 					const warnings: string[] = [];
 					const result = await tmCore.tasks
 						.scope(
-						{
-							ids: args.id,
-							direction,
-							strength: args.strength,
-							prompt: args.prompt,
-							research: args.research === true,
-							tag,
-							session,
-							outputType: 'mcp'
-						},
-						{
-							onWarning: (message) => {
-								warnings.push(message);
-								log.warn(message);
+							{
+								ids: args.id,
+								direction,
+								strength: args.strength,
+								prompt: args.prompt,
+								research: args.research === true,
+								tag,
+								session,
+								outputType: 'mcp'
 							},
-							onDebug: (message) => log.debug(message)
-						}
-					)
-					.catch((error: unknown) => {
-						// A task saved before the failure may have warned; the error reply is all the client gets
-						if (error instanceof Error && warnings.length > 0) {
-							error.message += `. Warnings: ${warnings.join('; ')}`;
-						}
-						throw error;
-					});
+							{
+								onWarning: (message) => {
+									warnings.push(message);
+									log.warn(message);
+								},
+								onDebug: (message) => log.debug(message)
+							}
+						)
+						.catch((error: unknown) => {
+							// A task saved before the failure may have warned; the error reply is all the client gets
+							if (error instanceof Error && warnings.length > 0) {
+								error.message += `. Warnings: ${warnings.join('; ')}`;
+							}
+							throw error;
+						});
 					for (const { task, complexity } of result.tasks) {
 						if (!complexity) continue;
 						const change = complexity.after - complexity.before;
