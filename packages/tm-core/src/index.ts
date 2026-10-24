@@ -140,8 +140,10 @@ export {
 	TASK_PRESETS
 } from './modules/loop/index.js';
 export {
+	DEFAULT_CONTAINER_IMAGE,
 	MAX_PARALLEL,
 	ParallelLoopError,
+	assertContainerFlags,
 	assertParallelFlags,
 	parseParallelCount
 } from './modules/loop/index.js';

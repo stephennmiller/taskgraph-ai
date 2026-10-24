@@ -23,6 +23,8 @@ vi.mock('@tm/core', async (importOriginal) => {
 		MAX_PARALLEL: actual.MAX_PARALLEL,
 		ParallelLoopError: actual.ParallelLoopError,
 		assertParallelFlags: actual.assertParallelFlags,
+		assertContainerFlags: actual.assertContainerFlags,
+		DEFAULT_CONTAINER_IMAGE: actual.DEFAULT_CONTAINER_IMAGE,
 		parseParallelCount: actual.parseParallelCount,
 		// So is making task text safe to print
 		sanitizeForTerminal: actual.sanitizeForTerminal,
@@ -84,6 +86,7 @@ describe('LoopCommand --parallel', () => {
 			loop: {
 				run: mockLoopRun,
 				runParallel,
+				checkContainer: vi.fn(),
 				isTrusted: vi.fn().mockReturnValue(true),
 				trust: vi.fn()
 			}
@@ -125,6 +128,51 @@ describe('LoopCommand --parallel', () => {
 			{ skipExit: true }
 		);
 		expect(process.exitCode).toBe(1);
+	});
+
+	it('passes --container and its image to tm-core', async () => {
+		await execute({
+			parallel: '2',
+			trust: true,
+			container: true,
+			containerImage: 'my/image:1'
+		});
+
+		expect(runParallel).toHaveBeenCalledWith(
+			expect.objectContaining({ container: { image: 'my/image:1' } })
+		);
+	});
+
+	it('checks what --container needs before asking for approval', async () => {
+		const core = await (createTmCore as Mock)();
+		core.loop.checkContainer.mockRejectedValue(new Error('no token'));
+
+		await execute({ parallel: '2', container: true });
+
+		expect(core.loop.checkContainer).toHaveBeenCalledWith({ image: undefined });
+		expect(core.loop.isTrusted).not.toHaveBeenCalled();
+		expect(runParallel).not.toHaveBeenCalled();
+		expect(process.exitCode).toBe(1);
+	});
+
+	it('refuses --container without --parallel before starting tm-core', async () => {
+		const exit = vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('process.exit called');
+		});
+
+		await expect(execute({ container: true })).rejects.toThrow(
+			'process.exit called'
+		);
+
+		expect(createTmCore).not.toHaveBeenCalled();
+		expect(displayError).toHaveBeenCalledWith(
+			expect.objectContaining({
+				message: '--container only works with --parallel'
+			}),
+			{ skipExit: true }
+		);
+		expect(exit).toHaveBeenCalledWith(1);
+		exit.mockRestore();
 	});
 
 	it('refuses flags it cannot combine with', async () => {

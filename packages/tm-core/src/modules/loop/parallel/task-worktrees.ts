@@ -259,14 +259,7 @@ export class TaskWorktrees {
 			);
 		}
 		fs.mkdirSync(path.dirname(worktree), { recursive: true });
-		if (
-			await this.succeeds([
-				'rev-parse',
-				'--verify',
-				'--quiet',
-				`refs/heads/${branch}`
-			])
-		) {
+		if (await this.branchExists(branch)) {
 			await this.git(['worktree', 'add', '--quiet', worktree, branch]);
 			return { createdBranch: false };
 		}
@@ -280,6 +273,115 @@ export class TaskWorktrees {
 			base
 		]);
 		return { createdBranch: true };
+	}
+
+	/** `user.name` and `user.email`, or undefined when either isn't set */
+	async identity(): Promise<{ name: string; email: string } | undefined> {
+		const get = (key: string) =>
+			this.git(['config', '--get', key]).then(
+				(v) => v.trim(),
+				() => ''
+			);
+		const [name, email] = await Promise.all([
+			get('user.name'),
+			get('user.email')
+		]);
+		return name && email ? { name, email } : undefined;
+	}
+
+	/** `sha1` or `sha256` */
+	async objectFormat(): Promise<string> {
+		return (await this.git(['rev-parse', '--show-object-format'])).trim();
+	}
+
+	async branchExists(branch: string): Promise<boolean> {
+		return this.succeeds([
+			'rev-parse',
+			'--verify',
+			'--quiet',
+			`refs/heads/${branch}`
+		]);
+	}
+
+	/**
+	 * A standalone clone for a container worker, holding only `start` (no
+	 * other branches, no tags) on `branch`. The objects come through git's
+	 * transport: no hardlinks into this repository and no alternates.
+	 */
+	async cloneFor(clone: string, branch: string, start: string): Promise<void> {
+		const top = (await this.git(['rev-parse', '--show-toplevel'])).trim();
+		const sha = (
+			await this.git(['rev-parse', '--verify', `${start}^{commit}`])
+		).trim();
+		await this.git([
+			'init',
+			'--quiet',
+			`--object-format=${await this.objectFormat()}`,
+			clone
+		]);
+		await this.git(
+			[
+				'fetch',
+				'--quiet',
+				'--no-tags',
+				'--',
+				top,
+				`${sha}:refs/heads/${branch}`
+			],
+			clone
+		);
+		await this.git(['checkout', '--quiet', branch], clone);
+	}
+
+	/**
+	 * Bring a worker's branch into this repository. Run here, never in the
+	 * clone; the caller has already replaced the clone's config and removed
+	 * its hooks (sanitizeClone). Not forced, so a rewritten history is
+	 * refused rather than replacing the branch.
+	 */
+	async fetchFromClone(clone: string, branch: string): Promise<void> {
+		await run(
+			'git',
+			[
+				'-c',
+				'core.fsmonitor=false',
+				'-c',
+				'core.hooksPath=/dev/null',
+				'-c',
+				'protocol.file.allow=always',
+				'-c',
+				'transfer.fsckObjects=true',
+				'fetch',
+				'--quiet',
+				'--no-tags',
+				'--no-recurse-submodules',
+				'--no-write-fetch-head',
+				'--',
+				clone,
+				`refs/heads/${branch}:refs/heads/${branch}`
+			],
+			{
+				cwd: this.projectRoot,
+				encoding: 'utf8',
+				timeout: 10 * 60_000,
+				// upload-pack sets this itself; said again so nothing undoes it
+				env: { ...process.env, GIT_NO_LAZY_FETCH: '1' }
+			}
+		);
+	}
+
+	/** Commits on `branch` that `base` doesn't have (0 without the branch) */
+	async commitsSince(branch: string, base: string): Promise<number> {
+		const count = await this.git([
+			'rev-list',
+			'--count',
+			`${base}..refs/heads/${branch}`
+		]).catch(() => '0');
+		return Number.parseInt(count.trim(), 10) || 0;
+	}
+
+	async deleteBranch(branch: string): Promise<void> {
+		await this.succeeds(['branch', '-d', branch]);
 	}
 
 	/** Commits and uncommitted changes in a task's worktree */

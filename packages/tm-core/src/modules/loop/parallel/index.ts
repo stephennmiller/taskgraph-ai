@@ -3,6 +3,10 @@
  */
 
 export {
+	DEFAULT_CONTAINER_IMAGE,
+	assertContainerFlags
+} from './container.js';
+export {
 	MAX_PARALLEL,
 	ParallelLoopError,
 	assertParallelFlags,

@@ -442,7 +442,7 @@
         "description": "Give loop --parallel workers an optional container each, as a safer sandbox than the two modes they run in today.",
         "details": "GitHub issue #420: https://github.com/stephennmiller/taskgraph-ai/issues/420\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
         "subtasks": []

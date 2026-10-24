@@ -21,9 +21,11 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
+import { ContainerWorkers, preflightContainer } from './container-workers.js';
 import {
 	buildParallelPrompt,
 	isSafeTaskId,
@@ -47,6 +49,8 @@ interface Running {
 	hasWorktree: boolean;
 	/** This run made the branch, so it may delete it if unused */
 	createdBranch: boolean;
+	/** With --container: the container's name, for removing it */
+	container?: string;
 	child?: ChildProcess;
 	exited: Promise<void>;
 }
@@ -83,7 +87,9 @@ export class ParallelLoopRunner {
 
 	constructor(
 		private readonly projectRoot: string,
-		private readonly tasks: TasksDomain
+		private readonly tasks: TasksDomain,
+		/** The tag a run without --tag works on */
+		private readonly activeTag: () => string
 	) {}
 
 	async run(options: ParallelLoopOptions): Promise<ParallelLoopResult> {
@@ -93,6 +99,15 @@ export class ParallelLoopRunner {
 		const spawner = options.spawner ?? spawn;
 		const claimant = options.claimant?.trim() || resolveClaimant();
 		const git = new TaskWorktrees(this.projectRoot);
+		// Checked before anything is claimed, so a missing runtime or token
+		// costs nothing
+		const workers =
+			options.container &&
+			new ContainerWorkers(
+				fs.realpathSync(this.projectRoot),
+				git,
+				await preflightContainer(this.projectRoot, git, options.container)
+			);
 
 		const base = await git.head();
 		await git.assertClean();
@@ -111,7 +126,13 @@ export class ParallelLoopRunner {
 		// If this process exits before the run is over (a second Ctrl-C, a
 		// crash), Claude Code mustn't go on alone with permission prompts off:
 		// its process group is in no terminal's way, so kill it here
+		const runningContainers = () =>
+			running.flatMap((r) =>
+				r.task.state === 'running' && r.container ? [r.container] : []
+			);
 		const killOnExit = () => {
+			// Killing the docker client leaves its container running
+			workers?.stop(runningContainers());
 			for (const r of running) {
 				if (r.task.state === 'running' && r.child) {
 					this.kill(r.child, 'SIGKILL');
@@ -121,6 +142,7 @@ export class ParallelLoopRunner {
 		process.on('exit', killOnExit);
 		const stopAll = () => {
 			aborted = true;
+			workers?.stop(runningContainers());
 			for (const r of running) {
 				if (r.task.state !== 'running' || !r.child) continue;
 				this.kill(r.child, 'SIGTERM');
@@ -165,26 +187,44 @@ export class ParallelLoopRunner {
 						await git.ignoreWorktreesDir(dir);
 						ignored = true;
 					}
-					const { createdBranch } = await git.add(
-						entry.task.worktree,
-						entry.task.branch,
-						base
-					);
-					entry.hasWorktree = true;
-					entry.createdBranch = createdBranch;
 					// Awaited before the abort check: an abort that lands while
 					// this runs must not be followed by a start
-					const cwd = await git.projectIn(entry.task.worktree);
+					const prompt = buildParallelPrompt({
+						taskId: id,
+						tag,
+						container: !!workers
+					});
+					let cmd = command;
+					let args = ['-p', prompt, '--dangerously-skip-permissions'];
+					let cwd: string;
+					if (workers) {
+						const prepared = await workers.prepare(entry.task, base, prompt);
+						entry.hasWorktree = true;
+						entry.createdBranch = prepared.createdBranch;
+						entry.container = prepared.name;
+						cmd = workers.runtime;
+						args = prepared.args;
+						cwd = this.projectRoot;
+					} else {
+						const { createdBranch } = await git.add(
+							entry.task.worktree,
+							entry.task.branch,
+							base
+						);
+						entry.hasWorktree = true;
+						entry.createdBranch = createdBranch;
+						cwd = await git.projectIn(entry.task.worktree);
+					}
 					if (aborted) {
 						this.finish(entry, 'stopped');
 						callbacks?.onTaskEnd?.({ ...entry.task });
 						continue;
 					}
 					entry.exited = this.start(entry, {
-						command,
+						command: cmd,
+						args,
 						spawner,
 						cwd,
-						prompt: buildParallelPrompt({ taskId: id, tag }),
 						isAborted: () => aborted
 					});
 					callbacks?.onTaskStart?.({ ...entry.task });
@@ -206,7 +246,7 @@ export class ParallelLoopRunner {
 			// Something broke mid-setup: don't leave processes behind
 			stopAll();
 			await Promise.all(running.map((r) => r.exited));
-			await this.settle(running, git, base, tag, claimant, true);
+			await this.settle(running, git, workers, base, tag, claimant, true);
 			throw error;
 		} finally {
 			signal?.removeEventListener('abort', stopAll);
@@ -214,7 +254,7 @@ export class ParallelLoopRunner {
 			for (const timer of killTimers) clearTimeout(timer);
 		}
 
-		await this.settle(running, git, base, tag, claimant, aborted);
+		await this.settle(running, git, workers, base, tag, claimant, aborted);
 		return {
 			tasks: running.map((r) => r.task),
 			readyCount: wave.length,
@@ -228,9 +268,9 @@ export class ParallelLoopRunner {
 		entry: Running,
 		ctx: {
 			command: string;
+			args: string[];
 			spawner: NonNullable<ParallelLoopOptions['spawner']>;
 			cwd: string;
-			prompt: string;
 			isAborted: () => boolean;
 		}
 	): Promise<void> {
@@ -251,24 +291,20 @@ export class ParallelLoopRunner {
 			};
 			try {
 				// argv array, no shell: the prompt is one argument whatever it holds
-				const child = ctx.spawner(
-					ctx.command,
-					['-p', ctx.prompt, '--dangerously-skip-permissions'],
-					{
-						cwd: ctx.cwd,
-						// `taskgraph` run in the worktree would otherwise find the
-						// worktree's own copy of tasks.json, checked out from HEAD:
-						// status changes would land on the branch, and tasks not yet
-						// committed would be missing. An env value, never a shell
-						env: {
-							...process.env,
-							[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
-						},
-						stdio: ['ignore', log, log],
-						// Own process group, so an abort can stop Claude's children too
-						detached: process.platform !== 'win32'
-					}
-				);
+				const child = ctx.spawner(ctx.command, ctx.args, {
+					cwd: ctx.cwd,
+					// `taskgraph` run in the worktree would otherwise find the
+					// worktree's own copy of tasks.json, checked out from HEAD:
+					// status changes would land on the branch, and tasks not yet
+					// committed would be missing. An env value, never a shell
+					env: {
+						...process.env,
+						[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
+					},
+					stdio: ['ignore', log, log],
+					// Own process group, so an abort can stop Claude's children too
+					detached: process.platform !== 'win32'
+				});
 				entry.child = child;
 				child.once('error', (error: NodeJS.ErrnoException) =>
 					done('failed', describeSpawnError(error, ctx.command))
@@ -326,19 +362,45 @@ export class ParallelLoopRunner {
 	 * empty ones, and release claims on tasks with nothing to review (all of
 	 * them on abort). Claude updates the task in the main project (see
 	 * start), so `claimed` is read back from there: a task Claude marked
-	 * `review` is no longer claimed.
+	 * `review` is no longer claimed. With --container, every container is
+	 * removed first, and the work comes back through ContainerWorkers.
 	 */
 	private async settle(
 		running: Running[],
 		git: TaskWorktrees,
+		workers: ContainerWorkers | undefined,
 		base: string,
 		tag: string | undefined,
 		claimant: string,
 		aborted: boolean
 	): Promise<void> {
-		for (const { task, hasWorktree, createdBranch } of running) {
+		const stuck = new Set(
+			workers?.stop(running.flatMap((r) => (r.container ? [r.container] : [])))
+		);
+		for (const { task, hasWorktree, createdBranch, container } of running) {
 			let hasWork = false;
-			if (hasWorktree) {
+			const isStuck = !!container && stuck.has(container);
+			if (isStuck) {
+				// It may still be writing to the clone: leave the clone and claim
+				task.state = 'failed';
+				task.error = `its container may still be running; remove it with docker rm -f ${container}`;
+				task.kept = true;
+				hasWork = true;
+			} else if (workers && hasWorktree) {
+				// Read before bringBack removes the copy; applied only if the
+				// branch came back, so a failed task doesn't leave `review`
+				const status = workers.readStatus(task, tag ?? this.activeTag());
+				const back = await workers.bringBack(
+					task,
+					base,
+					createdBranch,
+					aborted
+				);
+				hasWork = back.hasWork;
+				if (back.fetched && status) {
+					await this.applyStatus(task.id, status, tag, claimant);
+				}
+			} else if (hasWorktree) {
 				const work = await git.work(task.worktree, task.branch, base);
 				task.commits = work.commits;
 				task.uncommitted = work.uncommitted;
@@ -349,8 +411,29 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
-			if (aborted || !hasWork) await this.release(task.id, tag, claimant);
+			if ((aborted && !isStuck) || !hasWork) {
+				await this.release(task.id, tag, claimant);
+			}
 			task.claimed = await this.isClaimed(task.id, tag, claimant);
+		}
+	}
+
+	/**
+	 * The status a container worker set on its own copy of tasks.json,
+	 * applied here while the task is still this run's claim. Only the status
+	 * comes back; notes and other changes the worker made stay in the copy.
+	 */
+	private async applyStatus(
+		id: string,
+		status: TaskStatus,
+		tag: string | undefined,
+		claimant: string
+	): Promise<void> {
+		if (!(await this.isClaimed(id, tag, claimant))) return;
+		try {
+			await this.tasks.updateStatus(id, status, tag);
+		} catch (error) {
+			this.logger.warn(`Couldn't set task ${id} to ${status}:`, error);
 		}
 	}
 
