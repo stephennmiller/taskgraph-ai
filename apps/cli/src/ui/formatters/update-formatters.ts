@@ -9,6 +9,7 @@
  * "Auto-updating…". It replaces a yellow box headed "Update Available!".
  */
 
+import { stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -17,7 +18,8 @@ import { theme } from '../theme.js';
  * Format the update notice.
  *
  * @param highlights - Changelog lines for the new version; long ones wrap
- *   under their text
+ *   under their text. They come from the remote changelog (or the update
+ *   cache), so escape sequences and line breaks are stripped
  * @param width - Terminal width
  */
 export function formatUpdateNotice(
@@ -27,10 +29,16 @@ export function formatUpdateNotice(
 	width = terminalWidth()
 ): string {
 	const lines = [
-		`${theme.brand('TaskGraph')} ${chalk.green(latestVersion)} is out ${theme.muted(`(you have ${currentVersion})`)}`
+		`${theme.brand('TaskGraph')} ${chalk.green(stripTerminalControls(latestVersion, { singleLine: true }))} is out ${theme.muted(`(you have ${currentVersion})`)}`
 	];
 	for (const highlight of highlights) {
-		lines.push(...wrapLine(`  • ${highlight}`, width, '    '));
+		lines.push(
+			...wrapLine(
+				`  • ${stripTerminalControls(highlight, { singleLine: true })}`,
+				width,
+				'    '
+			)
+		);
 	}
 	return lines.join('\n');
 }
