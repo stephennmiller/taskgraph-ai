@@ -11,6 +11,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { inspect } from 'node:util';
 import {
 	TASKGRAPH_DOCS_DIR,
 	TASKGRAPH_TASKS_FILE
@@ -26,7 +27,7 @@ import {
 	type AiTagInfo,
 	type AiTelemetryData
 } from '../../ai/ai-service.js';
-import { AiConfig } from '../../ai/config-ai-host.js';
+import { AiConfig, type AiReport } from '../../ai/config-ai-host.js';
 import { estimateTokens } from '../../ai/project-context.js';
 import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { COMMAND_SCHEMAS } from '../../ai/schemas/registry.js';
@@ -92,11 +93,19 @@ export interface ParsePrdInput extends PrdInput {
 	stream?: boolean;
 }
 
-export interface ParsePrdHooks extends ParsePrdGenerateHooks {
-	/** A heads-up, such as a numTasks that isn't a number */
+interface PrdLogHooks {
+	/** A heads-up, such as a numTasks that isn't a number or a config problem */
 	onWarning?: (message: string) => void;
-	/** AI service detail, sent only with `global.debug` on */
+	/** AI service detail and the full error on failure, sent only with `global.debug` on */
 	onDebug?: (message: string) => void;
+}
+
+const reportTo =
+	(hooks: PrdLogHooks): AiReport =>
+	(level, message) =>
+		level === 'warn' ? hooks.onWarning?.(message) : hooks.onDebug?.(message);
+
+export interface ParsePrdHooks extends ParsePrdGenerateHooks, PrdLogHooks {
 	/** With append: what changed in a PRD parsed before, before any AI call */
 	onPrdDelta?: (delta: PrdDelta) => void;
 }
@@ -186,14 +195,29 @@ export class ParsePrdService {
 	}
 
 	/** Ask the model which gaps in the PRD would change the tasks */
-	async findGaps(input: PrdInput = {}): Promise<PrdGapsResult> {
+	async findGaps(
+		input: PrdInput = {},
+		hooks: PrdLogHooks = {}
+	): Promise<PrdGapsResult> {
+		const aiConfig = new AiConfig(this.configManager, reportTo(hooks));
+		try {
+			return await this.askForGaps(input, aiConfig);
+		} catch (error) {
+			if (aiConfig.debug) hooks.onDebug?.(inspect(error));
+			throw error;
+		}
+	}
+
+	private async askForGaps(
+		input: PrdInput,
+		aiConfig: AiConfig
+	): Promise<PrdGapsResult> {
 		const prdPath = this.resolvePrdPath(input.prdPath);
 		const prdContent = fs.readFileSync(prdPath, 'utf8');
 		const { systemPrompt, userPrompt } = getPromptManager().loadPrompt(
 			'parse-prd-clarify',
 			{ prdContent, maxQuestions: MAX_CLARIFYING_QUESTIONS }
 		);
-		const aiConfig = new AiConfig(this.configManager);
 		const response = await new AiService(aiConfig.toHost()).generateObject({
 			role: input.research ? 'research' : 'main',
 			session: input.session,
@@ -226,10 +250,22 @@ export class ParsePrdService {
 		input: ParsePrdInput = {},
 		hooks: ParsePrdHooks = {}
 	): Promise<ParsePrdResult> {
+		const aiConfig = new AiConfig(this.configManager, reportTo(hooks));
+		try {
+			return await this.generate(input, hooks, aiConfig);
+		} catch (error) {
+			// The whole error (stack, cause), as the legacy command printed it
+			if (aiConfig.debug) hooks.onDebug?.(inspect(error));
+			throw error;
+		}
+	}
+
+	private async generate(
+		input: ParsePrdInput,
+		hooks: ParsePrdHooks,
+		aiConfig: AiConfig
+	): Promise<ParsePrdResult> {
 		const warn = (message: string) => hooks.onWarning?.(message);
-		const aiConfig = new AiConfig(this.configManager, (level, message) =>
-			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
-		);
 		const prdPath = this.resolvePrdPath(input.prdPath);
 		const tag = input.tag || this.configManager.getActiveTag();
 		const append = input.append === true;

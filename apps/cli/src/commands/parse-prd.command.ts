@@ -251,10 +251,11 @@ export class ParsePrdCommand extends Command {
 		// stdout carries only the JSON
 		if (options.clarify && options.json) {
 			try {
-				const { questions } = await tmCore.tasks.findPrdGaps({
-					prdPath,
-					research
-				});
+				// stderr, so stdout stays JSON
+				const { questions } = await tmCore.tasks.findPrdGaps(
+					{ prdPath, research },
+					this.logHooks(console.error)
+				);
 				printJson({ prd: displayPath(prdPath), questions });
 			} catch (error) {
 				printError(
@@ -329,17 +330,26 @@ export class ParsePrdCommand extends Command {
 		}
 	}
 
-	/** Progress for the AI call: the streamed list, else a spinner */
-	private hooks(prdPath: string, research: boolean): ParsePrdHooks {
+	/** Warnings, and with global.debug on AI detail and the full error, above the spinner */
+	private logHooks(
+		write: (line: string) => void = console.log
+	): Pick<ParsePrdHooks, 'onWarning' | 'onDebug'> {
 		const print = (line: string) => {
 			this.spinner?.clear();
-			console.log(line);
+			write(line);
 			this.spinner?.render();
 		};
 		return {
 			onWarning: (message) =>
 				print(`${chalk.yellow('⚠')} ${terminalSafe(message)}`),
-			onDebug: (message) => print(theme.muted(terminalSafe(message))),
+			onDebug: (message) => print(theme.muted(terminalSafe(message)))
+		};
+	}
+
+	/** Progress for the AI call: the streamed list, else a spinner */
+	private hooks(prdPath: string, research: boolean): ParsePrdHooks {
+		return {
+			...this.logHooks(),
 			onPrdDelta: (delta) => console.log(formatPrdDelta(delta)),
 			onAiCall: ({ numTasks, startId, streaming }) => {
 				if (streaming) {
@@ -392,7 +402,10 @@ export class ParsePrdCommand extends Command {
 		this.spinner = createSpinner(`Reading ${prdName} for gaps…`).start();
 		let questions;
 		try {
-			({ questions } = await tmCore.tasks.findPrdGaps({ prdPath, research }));
+			({ questions } = await tmCore.tasks.findPrdGaps(
+				{ prdPath, research },
+				this.logHooks()
+			));
 		} finally {
 			this.stopProgress();
 		}

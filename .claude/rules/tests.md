@@ -1,898 +1,122 @@
 ---
-description: Guidelines for implementing and maintaining tests for TaskGraph CLI
+description: How to write and place TaskGraph tests (Vitest), with examples from the package code
 paths:
-  - "**/*.test.js"
+  - "**/*.spec.ts"
+  - "**/*.test.ts"
   - "tests/**/*"
 ---
 
-# Testing Guidelines for TaskGraph CLI
+# Testing Guidelines
 
-*Note:* Never use asynchronous operations in tests. Always mock tests properly based on the way the tested functions are defined and used. Do not arbitrarily create tests. Based them on the low-level details and execution of the underlying code being tested. 
+CLAUDE.md's "Test Guidelines" are the rules: where tests go, when to write them, what to mock. This file adds the patterns the packages already use. Copy the nearest existing test before writing a new one.
 
-## Test Organization Structure
+## Where tests go
 
-- **Unit Tests**
-  - Located in `tests/unit/`
-  - Test individual functions and utilities in isolation
-  - Mock all external dependencies
-  - Keep tests small, focused, and fast
-  - Example naming: `utils.test.js`, `task-manager.test.js`
+| What | Where | Example |
+| --- | --- | --- |
+| Unit test, one module | next to the source, `<file>.spec.ts` | `apps/cli/src/commands/parse-prd.command.spec.ts` |
+| tm-core integration | `packages/tm-core/tests/integration/<module>/<file>.test.ts` | `packages/tm-core/tests/integration/tasks/parse-prd.test.ts` |
+| CLI through the built binary | `apps/cli/tests/integration/<area>/<file>.test.ts` | `apps/cli/tests/integration/commands/parse-prd-clarify.command.test.ts` |
+| MCP tool | `apps/mcp/src/tools/<area>/<tool>.spec.ts`, `apps/mcp/tests/integration/tools/` | `apps/mcp/src/tools/tasks/parse-prd.tool.spec.ts` |
+| Plugin hooks, git hooks, CI scripts | `tests/unit/` (root suite) | `tests/unit/githooks/check-file-size.test.ts` |
 
-- **Integration Tests**
-  - Located in `tests/integration/`
-  - Test interactions between modules
-  - Focus on component interfaces rather than implementation details
-  - Use more realistic but still controlled test environments
-  - Example naming: `task-workflow.test.js`, `command-integration.test.js`
+- New tests are TypeScript. The root `tests/` suite (`vitest.root.config.ts`, `.js` allowed) holds only repo-level checks; don't add feature tests there.
+- Use `tests/unit/packages/<package>/` only when the test can't sit next to the source.
+- Shared test data lives beside the tests that use it as a named-export module (for example `packages/tm-core/tests/integration/tasks/parse-prd-fixture.ts`), not in a global fixtures folder.
 
-- **End-to-End Tests**
-  - Located in `tests/e2e/`
-  - Test complete workflows from a user perspective
-  - Focus on CLI commands as they would be used by users
-  - Example naming: `create-task.e2e.test.js`, `expand-task.e2e.test.js`
+## Running tests
 
-- **Test Fixtures**
-  - Located in `tests/fixtures/`
-  - Provide reusable test data
-  - Keep fixtures small and representative
-  - Export fixtures as named exports for reuse
+```bash
+npm run test -w @tm/core -- parse-prd     # one package, files matching a pattern
+npm run test -w @tm/cli -- -t "exits 1"   # tests whose name matches
+npm run test:coverage -w @tm/core         # with coverage
+npm test                                  # root tests/ suite
+```
 
-## Test File Organization
+Tests that run `dist/taskgraph.js` (CLI and MCP integration) need `npm run build` first.
 
-```javascript
-// 1. Imports
-import { vi } from 'vitest'; // optional: `vi`, `describe`, `it`, `expect` are also globals
+## Unit tests in the CLI and MCP
 
-// 2. Mock setup (MUST come before importing the modules under test)
-vi.mock('fs');
-vi.mock('@anthropic-ai/sdk');
-vi.mock('../../scripts/modules/utils.js', () => ({
-  CONFIG: {
-    projectVersion: '1.5.0'
-  },
-  log: vi.fn()
+Mock tm-core; let Commander, chalk and the MCP framework run. Drive the real command class and assert on what it printed and handed tm-core:
+
+```typescript
+vi.mock('@tm/core', async (importOriginal) => ({
+	...(await importOriginal<typeof import('@tm/core')>()),
+	createTmCore: vi.fn()
 }));
 
-// 3. Import modules AFTER all mocks are defined
-import { functionToTest } from '../../scripts/modules/module-name.js';
-import { testFixture } from '../fixtures/fixture-name.js';
-import fs from 'fs';
+import { createTmCore } from '@tm/core';
+import { ParsePrdCommand } from './parse-prd.command.js';
 
-// 4. Set up spies on mocked modules (if needed)
-const mockReadFileSync = vi.spyOn(fs, 'readFileSync');
+const parsePrd = vi.fn();
 
-// 5. Test suite with descriptive name
-describe('Feature or Function Name', () => {
-  // 6. Setup and teardown (if needed)
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Additional setup code
-  });
-  
-  afterEach(() => {
-    // Cleanup code
-  });
-  
-  // 7. Grouped tests for related functionality
-  describe('specific functionality', () => {
-    // 8. Individual test cases with clear descriptions
-    test('should behave in expected way when given specific input', () => {
-      // Arrange - set up test data
-      const input = testFixture.sampleInput;
-      mockReadFileSync.mockReturnValue('mocked content');
-      
-      // Act - call the function being tested
-      const result = functionToTest(input);
-      
-      // Assert - verify the result
-      expect(result).toBe(expectedOutput);
-      expect(mockReadFileSync).toHaveBeenCalledWith(expect.stringContaining('path'));
-    });
-  });
+beforeEach(() => {
+	vi.mocked(createTmCore).mockResolvedValue({ tasks: { parsePrd } } as any);
+	vi.spyOn(console, 'log').mockImplementation(() => {});
+	vi.spyOn(process, 'exit').mockImplementation(((code: number) => {
+		throw new Error(`exit ${code}`);
+	}) as never);
+});
+
+it('says why it failed and exits 1', async () => {
+	parsePrd.mockRejectedValue(new Error('Claude is overloaded'));
+
+	await expect(
+		new ParsePrdCommand().parseAsync(['prd.md'], { from: 'user' })
+	).rejects.toThrow('exit 1');
 });
 ```
 
-## Commander.js Command Testing Best Practices
+- Don't rebuild a command's action as a "test version" or mock Commander's chain: that tests the copy, not the command.
+- A hook tm-core calls (`onWarning`, `onPartial`) is tested by calling it from the mock: `parsePrd.mockImplementation(async (_input, hooks) => { hooks.onWarning('...'); ... })`.
+- Strip ANSI codes before comparing printed text (`sgrFree` in `apps/cli/tests/helpers/hostile-text.ts`), and match the key part with `toContain`, not the whole styled line.
+- Formatters in `apps/cli/src/ui/formatters/` are pure functions; test them with data in, string out, no console spies.
 
-When testing CLI commands built with Commander.js, several special considerations must be made to avoid common pitfalls:
+## tm-core tests
 
-- **Direct Action Handler Testing**
-  - ✅ **DO**: Test the command action handlers directly rather than trying to mock the entire Commander.js chain
-  - ✅ **DO**: Create simplified test-specific implementations of command handlers that match the original behavior
-  - ✅ **DO**: Explicitly handle all options, including defaults and shorthand flags (e.g., `-p` for `--prompt`)
-  - ✅ **DO**: Include null/undefined checks in test implementations for parameters that might be optional
-  - ✅ **DO**: Use fixtures from `tests/fixtures/` for consistent sample data across tests
-  
-  ```javascript
-  // ✅ DO: Create a simplified test version of the command handler
-  const testAddTaskAction = async (options) => {
-    options = options || {}; // Ensure options aren't undefined
-    
-    // Validate parameters
-    const isManualCreation = options.title && options.description;
-    const prompt = options.prompt || options.p; // Handle shorthand flags
-    
-    if (!prompt && !isManualCreation) {
-      throw new Error('Expected error message');
-    }
-    
-    // Call the mocked task manager
-    return mockTaskManager.addTask(/* parameters */);
-  };
-  
-  test('should handle required parameters correctly', async () => {
-    // Call the test implementation directly
-    await expect(async () => {
-      await testAddTaskAction({ file: 'tasks.json' });
-    }).rejects.toThrow('Expected error message');
-  });
-  ```
+Mock only I/O at the edge. Use a real temp project and real services, and spy on the AI call:
 
-- **Commander Chain Mocking (If Necessary)**
-  - ✅ **DO**: Mock ALL chainable methods (`option`, `argument`, `action`, `on`, etc.)
-  - ✅ **DO**: Return `this` (or the mock object) from all chainable method mocks
-  - ✅ **DO**: Remember to mock not only the initial object but also all objects returned by methods
-  - ✅ **DO**: Implement a mechanism to capture the action handler for direct testing
-  
-  ```javascript
-  // If you must mock the Commander.js chain:
-  const mockCommand = {
-    command: vi.fn().mockReturnThis(),
-    description: vi.fn().mockReturnThis(),
-    option: vi.fn().mockReturnThis(),
-    argument: vi.fn().mockReturnThis(), // Don't forget this one
-    action: vi.fn(fn => { 
-      actionHandler = fn; // Capture the handler for testing
-      return mockCommand; 
-    }),
-    on: vi.fn().mockReturnThis() // Don't forget this one
-  };
-  ```
+```typescript
+import { AiService } from '../../../src/modules/ai/ai-service.js';
+import { createTmCore } from '../../../src/tm-core.js';
 
-- **Parameter Handling**
-  - ✅ **DO**: Check for both main flag and shorthand flags (e.g., `prompt` and `p`)
-  - ✅ **DO**: Handle parameters like Commander would (comma-separated lists, etc.)
-  - ✅ **DO**: Set proper default values as defined in the command
-  - ✅ **DO**: Validate that required parameters are actually required in tests
-  
-  ```javascript
-  // Parse dependencies like Commander would
-  const dependencies = options.dependencies 
-    ? options.dependencies.split(',').map(id => id.trim())
-    : [];
-  ```
+const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-')));
+// write .taskgraph/config.json and .taskgraph/tasks/tasks.json here
+const generateObject = vi
+	.spyOn(AiService.prototype, 'generateObject')
+	.mockResolvedValue({ mainResult: { tasks: [] }, telemetryData: null } as any);
+const tmCore = await createTmCore({ projectPath: root });
 
-- **Environment and Session Handling**
-  - ✅ **DO**: Properly mock session objects when required by functions
-  - ✅ **DO**: Reset environment variables between tests if modified
-  - ✅ **DO**: Use a consistent pattern for environment-dependent tests
-  
-  ```javascript
-  // Session parameter mock pattern
-  const sessionMock = { session: process.env };
-  
-  // In test:
-  expect(mockAddTask).toHaveBeenCalledWith(
-    expect.any(String),
-    'Test prompt',
-    [],
-    'medium',
-    sessionMock,
-    false,
-    null,
-    null
-  );
-  ```
-
-- **Common Pitfalls to Avoid**
-  - ❌ **DON'T**: Try to use the real action implementation without proper mocking
-  - ❌ **DON'T**: Mock Commander partially - either mock it completely or test the action directly
-  - ❌ **DON'T**: Forget to handle optional parameters that may be undefined
-  - ❌ **DON'T**: Neglect to test shorthand flag functionality (e.g., `-p`, `-r`)
-  - ❌ **DON'T**: Create circular dependencies in your test mocks
-  - ❌ **DON'T**: Access variables before initialization in your test implementations
-  - ❌ **DON'T**: Include actual command execution in unit tests
-  - ❌ **DON'T**: Overwrite the same file path in multiple tests
-  
-  ```javascript
-  // ❌ DON'T: Create circular references in mocks
-  const badMock = {
-    method: vi.fn().mockImplementation(() => badMock.method())
-  };
-  
-  // ❌ DON'T: Access uninitialized variables
-  const badImplementation = () => {
-    const result = uninitialized;
-    let uninitialized = 'value';
-    return result;
-  };
-  ```
-
-## Vitest Module Mocking Best Practices
-
-- **Mock Hoisting Behavior**
-  - Vitest hoists `vi.mock()` calls to the top of the file, even above imports
-  - Variables used inside a `vi.mock()` factory must be created with `vi.hoisted()`
-  - Use the factory pattern for complex mocks
-  - Under native ESM, Jest's `jest.mock()` was a silent no-op for statically imported modules; `vi.mock()` does work for them
-
-  ```javascript
-  // ✅ DO: Use vi.hoisted for variables referenced in a mock factory
-  const { mockFn } = vi.hoisted(() => ({ mockFn: vi.fn() }));
-  vi.mock('module', () => ({
-    func: mockFn
-  }));
-  import { program } from 'commander';
-  
-  // ❌ DON'T: Reference a plain top-level variable in the factory
-  const mockFn = vi.fn();
-  vi.mock('module', () => ({
-    func: mockFn // ReferenceError: the factory runs before this line (hoisting)
-  }));
-  ```
-
-- **Mocking Modules with Function References**
-  - Use `vi.spyOn()` after imports to create spies on mock functions
-  - Reference these spies in test assertions
-  
-  ```javascript
-  // Mock the module first
-  vi.mock('fs');
-  
-  // Import the mocked module
-  import fs from 'fs';
-  
-  // Create spies on the mock functions
-  const mockExistsSync = vi.spyOn(fs, 'existsSync').mockReturnValue(true);
-  
-  test('should call existsSync', () => {
-    // Call function that uses fs.existsSync
-    const result = functionUnderTest();
-    
-    // Verify the mock was called correctly
-    expect(mockExistsSync).toHaveBeenCalled();
-  });
-  ```
-
-- **Testing Functions with Callbacks**
-  - Get the callback from your mock's call arguments
-  - Execute it directly with test inputs
-  - Verify the results match expectations
-  
-  ```javascript
-  vi.mock('commander');
-  import { program } from 'commander';
-  import { setupCLI } from './program.js';
-  
-  const mockVersion = vi.spyOn(program, 'version').mockReturnValue(program);
-  
-  test('version callback should return correct version', () => {
-    // Call the function that registers the callback
-    setupCLI();
-    
-    // Extract the callback function
-    const versionCallback = mockVersion.mock.calls[0][0];
-    expect(typeof versionCallback).toBe('function');
-    
-    // Execute the callback and verify results
-    const result = versionCallback();
-    expect(result).toBe('1.5.0');
-  });
-  ```
-
-## ES Module Testing Strategies
-
-When testing ES modules (`"type": "module"` in package.json), traditional mocking approaches require special handling to avoid reference and scoping issues.
-
-- **Module Import Challenges**
-  - Functions imported from ES modules may still reference internal module-scoped variables
-  - Imported functions may not use your mocked dependencies even with proper vi.mock() setup
-  - ES module exports are read-only properties (cannot be reassigned during tests)
-
-- **Mocking Modules Statically Imported**
-  - For modules imported with standard `import` statements at the top level:
-    - Use `vi.mock('path/to/module', factory)`; Vitest hoists it above the imports.
-    - Use `vi.importActual` inside the factory to keep real exports you do not mock.
-    - Ensure the factory function returns the mocked structure correctly.
-
-- **Mocking Dependencies for Dynamically Imported Modules**
-  - **Problem**: `vi.mock()` is hoisted and applies to the whole file; when a test needs a different mock per test, or must mock before a dynamic `import('path/to/module')`, use the non-hoisted `vi.doMock()`.
-  - **Solution**: Use `vi.doMock(modulePath, factory)` **before** the dynamic `import()` call.
-  ```javascript
-  // 1. Define mock function instances
-  const mockExistsSync = vi.fn();
-  const mockReadFileSync = vi.fn();
-  // ... other mocks
-
-  // 2. Mock the dependency module *before* the dynamic import
-  vi.doMock('fs', () => ({
-    __esModule: true, // Important for ES module mocks
-    // Mock named exports
-    existsSync: mockExistsSync,
-    readFileSync: mockReadFileSync,
-    // Mock default export if necessary
-    // default: { ... }
-  }));
-
-  // 3. Dynamically import the module under test (e.g., in beforeAll or test case)
-  let moduleUnderTest;
-  beforeAll(async () => {
-    // Ensure mocks are reset if needed before import
-    mockExistsSync.mockReset();
-    mockReadFileSync.mockReset();
-    // ... reset other mocks ...
-
-    // Import *after* vi.doMock is called (call vi.resetModules() first to drop cached modules)
-    moduleUnderTest = await import('../../scripts/modules/module-using-fs.js');
-  });
-
-  // 4. Now tests can use moduleUnderTest, and its 'fs' calls will hit the mocks
-  test('should use mocked fs.readFileSync', () => {
-    mockReadFileSync.mockReturnValue('mock data');
-    moduleUnderTest.readFileAndProcess();
-    expect(mockReadFileSync).toHaveBeenCalled();
-    // ... other assertions
-  });
-  ```
-  - ✅ **DO**: Call `vi.doMock()` before `await import()`.
-  - ✅ **DO**: Include `__esModule: true` in the mock factory for ES modules.
-  - ✅ **DO**: Mock named and default exports as needed within the factory.
-  - ✅ **DO**: Reset mock functions (`mockFn.mockReset()`) before the dynamic import if they might have been called previously.
-
-- **Mocking Entire Modules (Static Import)**
-  ```javascript
-  // Mock the entire module with custom implementation for static imports
-  // ... (existing example remains valid) ...
-  ```
-
-- **Direct Implementation Testing**
-  - Instead of calling the actual function which may have module-scope reference issues:
-  ```javascript
-  // ... (existing example remains valid) ...
-  ```
-
-- **Avoiding Module Property Assignment**
-  ```javascript
-  // ... (existing example remains valid) ...
-  ```
-
-- **Handling Mock Verification Failures**
-  - If verification like `expect(mockFn).toHaveBeenCalled()` fails:
-    1.  Check that your mock setup (`vi.mock` or `vi.doMock`) is correctly placed **before** imports (static or dynamic).
-    2.  Ensure you're using the right mock instance and it's properly passed to the module.
-    3.  Verify your test invokes behavior that *should* call the mock.
-    4.  Use `vi.clearAllMocks()` or specific `mockFn.mockReset()` in `beforeEach` to prevent state leakage between tests.
-    5.  **Check Console Assertions**: If verifying `console.log`, `console.warn`, or `console.error` calls, ensure your assertion matches the *actual* arguments passed. If the code logs a single formatted string, assert against that single string (using `expect.stringContaining` or exact match), not multiple `expect.stringContaining` arguments.
-        ```javascript
-        // Example: Code logs console.error(`Error: ${message}. Details: ${details}`)
-        // ❌ DON'T: Assert multiple arguments if only one is logged
-        // expect(console.error).toHaveBeenCalledWith(
-        //   expect.stringContaining('Error:'),
-        //   expect.stringContaining('Details:')
-        // );
-        // ✅ DO: Assert the single string argument
-        expect(console.error).toHaveBeenCalledWith(
-           expect.stringContaining('Error: Specific message. Details: More details')
-        );
-        // or for exact match:
-        expect(console.error).toHaveBeenCalledWith(
-           'Error: Specific message. Details: More details'
-        );
-        ```
-    6.  Consider implementing a simpler test that *only* verifies the mock behavior in isolation.
-
-## Vitest Gotchas
-
-- **Constructor mocks**: Vitest 4 cannot `new` an arrow-function mock. Use `vi.fn(function () { ... })` (or a class) for anything called with `new`.
-- **Missing exports throw**: accessing an export that a `vi.mock` factory did not return throws in Vitest, where Jest returned `undefined`. Spread `await vi.importActual(...)` or list every export the code under test touches.
-- **Circular imports**: mocking a module that takes part in an import cycle can surface "Cannot access 'X' before initialization"; mock at the module boundary or use `vi.importActual` for the cycle member.
-- **Slow tests that exec the built CLI**: raise the timeout per file with `vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })` (see `tests/integration/cli/complex-cross-tag-scenarios.test.js`).
-- **Fake timers**: use `vi.useFakeTimers()` / `vi.useRealTimers()`; reset modules with `vi.resetModules()`.
-
-## Mocking Guidelines
-
-- **File System Operations**: use a real temporary directory rather than a mocked file system
-  ```javascript
-  let dir;
-
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-test-'));
-    fs.writeFileSync(
-      path.join(dir, 'tasks.json'),
-      JSON.stringify({ master: { tasks: [], metadata: {} } })
-    );
-  });
-
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-  ```
-
-- **API Calls (Anthropic/Claude)**
-  ```javascript
-  import { Anthropic } from '@anthropic-ai/sdk';
-  
-  vi.mock('@anthropic-ai/sdk');
-  
-  beforeEach(() => {
-    Anthropic.mockImplementation(() => ({
-      messages: {
-        create: vi.fn().mockResolvedValue({
-          content: [{ text: 'Mocked response' }]
-        })
-      }
-    }));
-  });
-  ```
-
-- **Environment Variables**
-  ```javascript
-  const originalEnv = process.env;
-  
-  beforeEach(() => {
-    vi.resetModules();
-    process.env = { ...originalEnv };
-    process.env.MODEL = 'test-model';
-  });
-  
-  afterEach(() => {
-    process.env = originalEnv;
-  });
-  ```
-
-## Testing Common Components
-
-- **CLI Commands**
-  - Mock tm-core responses and test the command classes in `apps/cli/src/commands/` (see the `--help` rows check in `apps/cli/src/program.spec.ts`)
-  - Test command registration and option parsing
-  - Use `commander` test utilities or custom mocks
-
-- **Task Operations**
-  - Use sample task fixtures for consistent test data
-  - Mock file system operations
-  - Test both success and error paths
-
-- **UI Functions**
-  - Mock console output and verify correct formatting
-  - Test conditional output logic
-  - When testing strings with emojis or formatting, use `toContain()` or `toMatch()` rather than exact `toBe()` comparisons
-  - For functions with different behavior modes (e.g., `forConsole`, `forTable` parameters), create separate tests for each mode
-  - Test the structure of formatted output (e.g., check that it's a comma-separated list with the right number of items) rather than exact string matching
-  - When testing chalk-formatted output, remember that strict equality comparison (`toBe()`) can fail even when the visible output looks identical
-  - Consider using more flexible assertions like checking for the presence of key elements when working with styled text
-  - Mock chalk functions to return the input text to make testing easier while still verifying correct function calls
-
-## Test Quality Guidelines
-
-- ✅ **DO**: Write tests before implementing features (TDD approach when possible)
-- ✅ **DO**: Test edge cases and error conditions, not just happy paths
-- ✅ **DO**: Keep tests independent and isolated from each other
-- ✅ **DO**: Use descriptive test names that explain the expected behavior
-- ✅ **DO**: Maintain test fixtures separate from test logic
-- ✅ **DO**: Aim for 80%+ code coverage, with critical paths at 100%
-- ✅ **DO**: Use `vi.mock` (hoisted) with `vi.hoisted` for all module mocks
-
-- ❌ **DON'T**: Test implementation details that might change
-- ❌ **DON'T**: Write brittle tests that depend on specific output formatting
-- ❌ **DON'T**: Skip testing error handling and validation
-- ❌ **DON'T**: Duplicate test fixtures across multiple test files
-- ❌ **DON'T**: Write tests that depend on execution order
-- ❌ **DON'T**: Reference plain top-level variables inside a `vi.mock()` factory (use `vi.hoisted`)
-
-
-- **Task File Operations**
-  - ✅ DO: Use test-specific file paths (e.g., 'test-tasks.json') for all operations
-  - ✅ DO: Mock `readJSON` and `writeJSON` to avoid real file system interactions
-  - ✅ DO: Verify file operations use the correct paths in `expect` statements
-  - ✅ DO: Use different paths for each test to avoid test interdependence
-  - ✅ DO: Verify modifications on the in-memory task objects passed to `writeJSON`
-  - ❌ DON'T: Modify real task files (tasks.json) during tests
-  - ❌ DON'T: Skip testing file operations because they're "just I/O"
-  
-  ```javascript
-  // ✅ DO: Test file operations without real file system changes
-  test('should update task status in tasks.json', async () => {
-    // Setup mock to return sample data
-    readJSON.mockResolvedValue(JSON.parse(JSON.stringify(sampleTasks)));
-    
-    // Use test-specific file path
-    await setTaskStatus('test-tasks.json', '2', 'done');
-    
-    // Verify correct file path was read
-    expect(readJSON).toHaveBeenCalledWith('test-tasks.json');
-    
-    // Verify correct file path was written with updated content
-    expect(writeJSON).toHaveBeenCalledWith(
-      'test-tasks.json',
-      expect.objectContaining({
-        tasks: expect.arrayContaining([
-          expect.objectContaining({
-            id: 2,
-            status: 'done'
-          })
-        ])
-      })
-    );
-  });
-  ```
-
-## Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage reporting
-npm run test:coverage
-
-# Run a specific test file
-npx vitest run -c vitest.root.config.ts tests/unit/specific-file.test.js
-
-# Run tests whose name matches a pattern
-npx vitest run -c vitest.root.config.ts -t "pattern to match"
-
-# Run only unit or integration tests (path filter)
-npm run test:unit
-npm run test:integration
+afterEach(async () => {
+	vi.restoreAllMocks();
+	await tmCore.close();
+	fs.rmSync(root, { recursive: true, force: true });
+});
 ```
 
-## Troubleshooting Test Issues
+- Assert on the file on disk (re-read `tasks.json`), not on what a mock received, when the point is what got saved.
+- Zod schemas get table tests for both the replies they take and the ones they reject (`packages/tm-core/src/modules/ai/schemas/parse-prd.spec.ts`).
+- Never reach a real model or the Claude Code subprocess. The `claude-code` provider needs no API key, so a test must not set or depend on `ANTHROPIC_API_KEY`. CLI integration tests use the fake `claude` in `apps/cli/tests/fakes/install-fake-claude.mjs`.
 
-- **Mock Functions Not Called**
-  - Ensure mocks are defined before imports (Vitest hoists `vi.mock()` calls)
-  - Check that you're referencing the correct mock instance
-  - Verify the import paths match exactly
+## Async
 
-- **Unexpected Mock Behavior**
-  - Clear mocks between tests with `vi.clearAllMocks()` in `beforeEach`
-  - Check mock implementation for conditional behavior
-  - Ensure mock return values are correctly configured for each test
+Keep test bodies synchronous unless the code under test is async (CLAUDE.md "Synchronous Tests"). Import statically at the top; use `await import()` only after `vi.doMock()` when a test needs a different mock per test, with `vi.resetModules()` first.
 
-- **Tests Affecting Each Other**
-  - Isolate tests by properly mocking shared resources
-  - Reset state in `beforeEach` and `afterEach` hooks
-  - Avoid global state modifications
+## Vitest gotchas
 
-## Common Testing Pitfalls and Solutions
+- **Hoisting:** `vi.mock()` runs before the imports. A variable its factory uses must come from `vi.hoisted(() => ({ mockFn: vi.fn() }))`; a plain top-level `const` throws `ReferenceError`.
+- **Missing exports throw:** an export the factory didn't return throws when used. Spread `await importOriginal()` (or `vi.importActual`) and override only what you mock.
+- **Constructors:** an arrow-function mock can't be called with `new`. Use `vi.fn(function () { ... })` or a class.
+- **Circular imports:** mocking a module in an import cycle can raise "Cannot access 'X' before initialization"; mock at the module boundary instead.
+- **Console spies:** give them an implementation (`mockImplementation(() => {})`); `mockImplementation(console.log)` recurses.
+- **Mock state:** call `vi.clearAllMocks()` in `beforeEach`, and `vi.restoreAllMocks()` when the test spied on a real object. Change `process.env` with `vi.stubEnv` so it is undone.
+- **Slow tests that run the built CLI:** raise the file's timeout with `vi.setConfig({ testTimeout: 60000, hookTimeout: 60000 })` (see `tests/integration/cli/complex-cross-tag-scenarios.test.js`).
+- **Fake timers:** `vi.useFakeTimers()`, and `vi.useRealTimers()` in `afterEach`.
 
-- **Complex Library Mocking**
-  - **Problem**: Trying to create full mocks of complex libraries like Commander.js can be error-prone
-  - **Solution**: Instead of mocking the entire library, test the command handlers directly by calling your action handlers with the expected arguments
-  ```javascript
-  // ❌ DON'T: Create complex mocks of Commander.js
-  class MockCommand {
-    constructor() { /* Complex mock implementation */ }
-    option() { /* ... */ }
-    action() { /* ... */ }
-    // Many methods to implement
-  }
-  
-  // ✅ DO: Test the command handlers directly
-  test('should use default PRD path when no arguments provided', async () => {
-    // Call the action handler directly with the right params
-    await parsePrdAction(undefined, { numTasks: '10', output: 'tasks/tasks.json' });
-    
-    // Assert on behavior
-    expect(mockParsePRD).toHaveBeenCalledWith('scripts/prd.txt', 'tasks/tasks.json', 10);
-  });
-  ```
+## Test quality
 
-- **ES Module Mocking Challenges**
-  - **Problem**: ES modules don't support `require()` and imports are read-only
-  - **Solution**: Use the `vi.mock` module factory pattern and ensure mocks are defined before imports
-  ```javascript
-  // ❌ DON'T: Try to modify imported modules
-  import { detectCamelCaseFlags } from '../../scripts/modules/utils.js';
-  detectCamelCaseFlags = vi.fn(); // Error: Assignment to constant variable
-  
-  // ❌ DON'T: Try to use require with ES modules
-  const utils = require('../../scripts/modules/utils.js'); // Error in ES modules
-  
-  // ✅ DO: Use the vi.mock module factory pattern
-  vi.mock('../../scripts/modules/utils.js', () => ({
-    detectCamelCaseFlags: vi.fn(),
-    toKebabCase: vi.fn()
-  }));
-  
-  // Import after mocks are defined
-  import { detectCamelCaseFlags } from '../../scripts/modules/utils.js';
-  ```
-
-- **Function Redeclaration Errors**
-  - **Problem**: Declaring the same function twice in a test file causes errors
-  - **Solution**: Use different function names or create local test-specific implementations
-  ```javascript
-  // ❌ DON'T: Redefine imported functions with the same name
-  import { detectCamelCaseFlags } from '../../scripts/modules/utils.js';
-  
-  function detectCamelCaseFlags() { /* Test implementation */ }
-  // Error: Identifier has already been declared
-  
-  // ✅ DO: Use a different name for test implementations
-  function testDetectCamelCaseFlags() { /* Test implementation */ }
-  ```
-
-- **Console.log Circular References**
-  - **Problem**: Creating infinite recursion by spying on console.log while also allowing it to log
-  - **Solution**: Implement a mock that doesn't call the original function
-  ```javascript
-  // ❌ DON'T: Create circular references with console.log
-  const mockConsoleLog = vi.spyOn(console, 'log');
-  mockConsoleLog.mockImplementation(console.log); // Creates infinite recursion
-  
-  // ✅ DO: Use a non-recursive mock implementation
-  const mockConsoleLog = vi.spyOn(console, 'log').mockImplementation(() => {});
-  ```
-
-- **Mock Function Method Issues**
-  - **Problem**: Trying to use vi.fn() methods on imported functions that aren't properly mocked
-  - **Solution**: Create explicit vi.fn() mocks for functions you need to call mock methods on
-  ```javascript
-  // ❌ DON'T: Try to use mock methods on imported functions without proper mocking
-  import { parsePRD } from '../../scripts/modules/task-manager.js';
-  parsePRD.mockClear(); // Error: parsePRD.mockClear is not a function
-  
-  // ✅ DO: Create proper vi.fn() mocks
-  const mockParsePRD = vi.fn().mockResolvedValue(undefined);
-  vi.mock('../../scripts/modules/task-manager.js', () => ({
-    parsePRD: mockParsePRD
-  }));
-  // Now you can use:
-  mockParsePRD.mockClear();
-  ```
-
-- **EventEmitter Max Listeners Warning**
-  - **Problem**: Commander.js adds many listeners in complex mocks, causing warnings
-  - **Solution**: Either increase the max listeners limit or avoid deep mocking
-  ```javascript
-  // Option 1: Increase max listeners if you must mock Commander
-  class MockCommand extends EventEmitter {
-    constructor() {
-      super();
-      this.setMaxListeners(20); // Avoid MaxListenersExceededWarning
-    }
-  }
-  
-  // Option 2 (preferred): Test command handlers directly instead
-  // (as shown in the first example)
-  ```
-
-- **Test Isolation Issues**
-  - **Problem**: Tests affecting each other due to shared mock state
-  - **Solution**: Reset all mocks in beforeEach and use separate test-specific mocks
-  ```javascript
-  // ❌ DON'T: Allow mock state to persist between tests
-  const globalMock = vi.fn().mockReturnValue('test');
-  
-  // ✅ DO: Clear mocks before each test
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Set up test-specific mock behavior
-    mockFunction.mockReturnValue('test-specific value');
-  });
-  ```
-
-## Testing AI Service Integrations
-
-- **DO NOT import real AI service clients**
-  - ❌ DON'T: Import actual AI clients from their libraries
-  - ✅ DO: Create fully mocked versions that return predictable responses
-
-  ```javascript
-  // ❌ DON'T: Spawn the real Claude Code provider in a unit test
-  import { ClaudeCodeProvider } from '@tm/core';
-  await new ClaudeCodeProvider(options).generateText({ prompt: 'hi' });
-
-  // ✅ DO: Mock the provider with controlled behavior
-  vi.mock('@tm/core', async () => ({
-    ...(await vi.importActual('@tm/core')),
-    ClaudeCodeProvider: vi.fn().mockImplementation(() => ({
-      generateText: vi.fn().mockResolvedValue({ text: 'Mocked AI response' })
-    }))
-  }));
-  ```
-
-- **The `claude-code` provider needs no API key**
-  - It uses the local Claude Code sign-in, so tests must never depend on or set `ANTHROPIC_API_KEY`
-  - ✅ DO: Mock the provider; never let a test reach the real Claude Code subprocess
-
-- **DO NOT use real AI client initialization logic**
-  - ❌ DON'T: Use code that attempts to initialize or validate real AI clients
-  - ✅ DO: Create test-specific paths that bypass client initialization
-
-  ```javascript
-  // ❌ DON'T: Test functions that require valid AI client initialization
-  // This will fail without proper API keys or network access
-  test('should use AI client', async () => {
-    const result = await functionThatInitializesAIClient();
-    expect(result).toBeDefined();
-  });
-
-  // ✅ DO: Test with bypassed initialization or manual task paths
-  test('should handle manual task creation without AI', () => {
-    // Using a path that doesn't require AI client initialization
-    const result = addManualTask({ 
-      title: 'Manual Task', 
-      description: 'Test Description'
-    }, mockLogger);
-    
-    expect(result.success).toBe(true);
-  });
-  ```
-
-## Testing Asynchronous Code
-
-- **DO NOT rely on asynchronous operations in tests**
-  - ❌ DON'T: Use real async/await or Promise resolution in tests
-  - ✅ DO: Make all mocks return synchronous values when possible
-
-  ```javascript
-  // ❌ DON'T: Use real async functions that might fail unpredictably
-  test('should handle async operation', async () => {
-    const result = await realAsyncFunction(); // Can time out or fail for external reasons
-    expect(result).toBe(expectedValue);
-  });
-
-  // ✅ DO: Make async operations synchronous in tests
-  test('should handle operation', () => {
-    mockAsyncFunction.mockReturnValue({ success: true, data: 'test' });
-    const result = functionUnderTest();
-    expect(result).toEqual({ success: true, data: 'test' });
-  });
-  ```
-
-- **DO NOT test exact error messages**
-  - ❌ DON'T: Assert on exact error message text that might change
-  - ✅ DO: Test for error presence and general properties
-
-  ```javascript
-  // ❌ DON'T: Test for exact error message text
-  expect(result.error).toBe('Could not connect to API: Network error');
-
-  // ✅ DO: Test for general error properties or message patterns
-  expect(result.success).toBe(false);
-  expect(result.error).toContain('Could not connect');
-  // Or even better:
-  expect(result).toMatchObject({ 
-    success: false,
-    error: expect.stringContaining('connect')
-  });
-  ```
-
-## Reliable Testing Techniques
-
-- **Create Simplified Test Functions**
-  - Create simplified versions of complex functions that focus only on core logic
-  - Remove file system operations, API calls, and other external dependencies
-  - Pass all dependencies as parameters to make testing easier
-  
-  ```javascript
-  // Original function (hard to test)
-  const setTaskStatus = async (taskId, newStatus) => {
-    const tasksPath = 'tasks/tasks.json';
-    const data = await readJSON(tasksPath);
-    // [implementation]
-    await writeJSON(tasksPath, data);
-    return { success: true };
-  };
-  
-  // Test-friendly version (easier to test)
-  const updateTaskStatus = (tasks, taskId, newStatus) => {
-    // Pure logic without side effects
-    const updatedTasks = [...tasks];
-    const taskIndex = findTaskById(updatedTasks, taskId);
-    if (taskIndex === -1) return { success: false, error: 'Task not found' };
-    updatedTasks[taskIndex].status = newStatus;
-    return { success: true, tasks: updatedTasks };
-  };
-  ```
-
-See [tests/README.md](../../tests/README.md) for more details on the testing approach.
-
-Refer to [vitest.root.config.ts](../../vitest.root.config.ts) for the Vitest configuration (globals, `clearMocks`, `tests/setup.js`).
-
-## Variable Hoisting and Module Initialization Issues
-
-When testing ES modules or working with complex module imports, you may encounter variable hoisting and initialization issues. These can be particularly tricky to debug and often appear as "Cannot access 'X' before initialization" errors.
-
-- **Understanding Module Initialization Order**
-  - ✅ **DO**: Declare and initialize global variables at the top of modules
-  - ✅ **DO**: Use proper function declarations to avoid hoisting issues
-  - ✅ **DO**: Initialize variables before they are referenced, especially in imported modules
-  - ✅ **DO**: Be aware that imports are hoisted to the top of the file
-  
-  ```javascript
-  // ✅ DO: Define global state variables at the top of the module
-  let silentMode = false; // Declare and initialize first
-  
-  const CONFIG = { /* configuration */ };
-  
-  function isSilentMode() {
-    return silentMode; // Reference variable after it's initialized
-  }
-  
-  function log(level, message) {
-    if (isSilentMode()) return; // Use the function instead of accessing variable directly
-    // ...
-  }
-  ```
-
-- **Testing Modules with Initialization-Dependent Functions**
-  - ✅ **DO**: Create test-specific implementations that initialize all variables correctly
-  - ✅ **DO**: Use factory functions in mocks to ensure proper initialization order
-  - ✅ **DO**: Be careful with how you mock or stub functions that depend on module state
-  
-  ```javascript
-  // ✅ DO: Test-specific implementation that avoids initialization issues
-  const testLog = (level, ...args) => {
-    // Local implementation with proper initialization
-    const isSilent = false; // Explicit initialization
-    if (isSilent) return;
-    // Test implementation...
-  };
-  ```
-
-- **Common Hoisting-Related Errors to Avoid**
-  - ❌ **DON'T**: Reference variables before their declaration in module scope
-  - ❌ **DON'T**: Create circular dependencies between modules
-  - ❌ **DON'T**: Rely on variable initialization order across module boundaries
-  - ❌ **DON'T**: Define functions that use hoisted variables before they're initialized
-  
-  ```javascript
-  // ❌ DON'T: Create reference-before-initialization patterns
-  function badFunction() {
-    if (silentMode) { /* ... */ } // ReferenceError if silentMode is declared later
-  }
-  
-  let silentMode = false;
-  
-  // ❌ DON'T: Create cross-module references that depend on initialization order
-  // module-a.js
-  import { getSetting } from './module-b.js';
-  export const config = { value: getSetting() };
-  
-  // module-b.js
-  import { config } from './module-a.js';
-  export function getSetting() {
-    return config.value; // Circular dependency causing initialization issues
-  }
-  ```
-
-- **Dynamic Imports as a Solution**
-  - ✅ **DO**: Use dynamic imports (`import()`) to avoid initialization order issues
-  - ✅ **DO**: Structure modules to avoid circular dependencies that cause initialization issues
-  - ✅ **DO**: Consider factory functions for modules with complex state
-  
-  ```javascript
-  // ✅ DO: Use dynamic imports to avoid initialization issues
-  async function getTaskManager() {
-    return import('./task-manager.js');
-  }
-  
-  async function someFunction() {
-    const taskManager = await getTaskManager();
-    return taskManager.someMethod();
-  }
-  ```
-
-- **Testing Approach for Modules with Initialization Issues**
-  - ✅ **DO**: Create self-contained test implementations rather than using real implementations
-  - ✅ **DO**: Mock dependencies at module boundaries instead of trying to mock deep dependencies
-  - ✅ **DO**: Isolate module-specific state in tests
-  
-  ```javascript
-  // ✅ DO: Create isolated test implementation instead of reusing module code
-  test('should log messages when not in silent mode', () => {
-    // Local test implementation instead of importing from module
-    const testLog = (level, message) => {
-      if (false) return; // Always non-silent for this test
-      mockConsole(level, message);
-    };
-    
-    testLog('info', 'test message');
-    expect(mockConsole).toHaveBeenCalledWith('info', 'test message');
-  });
-  ``` 
+- Write the failing test first for a bug fix; it goes in the same commit as the fix.
+- Test error paths and edge cases (missing IDs, empty files, hostile text from `apps/cli/tests/helpers/hostile-text.ts`), not only the happy path.
+- Name tests for the behavior a user sees: `'exits 1 when no task ID exists'`, not `'calls handleError'`.
+- Keep tests independent: each writes its own temp folder and never touches the repo's `.taskgraph/`.
+- Match error text by its key phrase (`toThrow('not found')`) unless the exact wording is the point.

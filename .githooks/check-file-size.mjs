@@ -34,8 +34,6 @@ const IGNORED_PATTERNS = [
 // folders are still checked. Remove an entry once its file is split.
 const LEGACY_OVERSIZED = new Set([
 	'.claude/rules/mcp.md',
-	// Contributor guide that still describes Jest and needs a Vitest rewrite (#79).
-	'.claude/rules/tests.md',
 	// Over the limit on main; a one-line default or parameter change must be
 	// committable until it is split.
 	'packages/tm-core/src/modules/ai/prompts/README.md',

@@ -110,6 +110,11 @@ export function registerParsePrdTool(server: FastMCP) {
 		execute: withToolContext(
 			async (args: ParsePrdArgs, context: ToolContext) => {
 				const { tmCore, session, log, reportProgress } = context;
+				// tm-core's warnings, and AI detail with global.debug on, to the client log
+				const logHooks = {
+					onWarning: (message: string) => log.warn(message),
+					onDebug: (message: string) => log.debug(message)
+				};
 				const tag = args.tag || tmCore.config.getActiveTag();
 				return replyWith(
 					{ ...args, tag, file: args.output },
@@ -133,12 +138,15 @@ export function registerParsePrdTool(server: FastMCP) {
 						// clarify: the questions for the agent to ask the user; no tasks yet
 						if (args.clarify) {
 							const { questions, telemetryData } =
-								await tmCore.tasks.findPrdGaps({
-									prdPath,
-									research: args.research === true,
-									session,
-									outputType: 'mcp'
-								});
+								await tmCore.tasks.findPrdGaps(
+									{
+										prdPath,
+										research: args.research === true,
+										session,
+										outputType: 'mcp'
+									},
+									logHooks
+								);
 							return {
 								tag,
 								data: {
@@ -171,10 +179,7 @@ export function registerParsePrdTool(server: FastMCP) {
 								session,
 								outputType: 'mcp'
 							},
-							{
-								onWarning: (message) => log.warn(message),
-								onDebug: (message) => log.debug(message)
-							}
+							logHooks
 						);
 						// Sent once the AI's tasks are saved; an append with nothing new made no call
 						const delta = result.prdDelta?.known ? result.prdDelta : null;

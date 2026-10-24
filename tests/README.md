@@ -1,13 +1,12 @@
 # TaskGraph Test Suite
 
-This directory contains tests for the TaskGraph CLI. The tests are organized into different categories to ensure comprehensive test coverage.
+This directory holds the root test suite: repo-level checks such as the git hooks, CI scripts and plugin hooks. Feature tests live next to the code in `packages/` and `apps/` (see "Test Guidelines" in CLAUDE.md and `.claude/rules/tests.md`).
 
 ## Test Structure
 
 - `unit/`: Unit tests for individual functions and components
 - `integration/`: Integration tests for testing interactions between components
-- `e2e/`: End-to-end tests for testing complete workflows
-- `fixtures/`: Test fixtures and sample data
+- `manual/`: Scripts run by hand, such as the prompt test harness
 
 ## Running Tests
 
@@ -37,7 +36,7 @@ off by default and enabled by `npm run test:coverage` (reports in `coverage/`).
 
 ```bash
 # Run a single file (or directory)
-npx vitest run -c vitest.root.config.ts tests/unit/task-manager/tag-boundary.test.js
+npx vitest run -c vitest.root.config.ts tests/unit/githooks/check-file-size.test.ts
 
 # Run unit or integration tests only (path filter)
 npm run test:unit
@@ -53,14 +52,6 @@ Unit tests focus on testing individual functions and components in isolation. Th
 ### Integration Tests
 
 Integration tests focus on testing interactions between components. These tests ensure that components work together correctly.
-
-### End-to-End Tests
-
-End-to-end tests focus on testing complete workflows from a user's perspective. These tests ensure that the CLI works correctly as a whole.
-
-## Test Fixtures
-
-Test fixtures provide sample data for tests. Fixtures should be small, focused, and representative of real-world data.
 
 ## Mocking
 
