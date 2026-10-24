@@ -5,12 +5,7 @@
  * tasks.json lock without dropping changes made while the AI was writing.
  */
 
-import path from 'node:path';
-import {
-	TASKGRAPH_TASKS_FILE,
-	type AddTaskResult,
-	createTmCore
-} from '@tm/core';
+import { type AddTaskResult, createTmCore } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import type { Ora } from 'ora';
@@ -27,6 +22,10 @@ import {
 	printError
 } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import {
+	legacyFileOption,
+	otherTasksFileError
+} from '../utils/tasks-file-option.js';
 
 export interface AddTaskCommandOptions {
 	file?: string;
@@ -60,10 +59,7 @@ export class AddTaskCommand extends Command {
 		this.description(
 			'Add a new task using AI, optionally providing manual details'
 		)
-			.option(
-				'-f, --file <file>',
-				`Path to the tasks file (only ${TASKGRAPH_TASKS_FILE})`
-			)
+			.addOption(legacyFileOption())
 			.option(
 				'-p, --prompt <prompt>',
 				'Description of the task to add (required if not using manual fields)'
@@ -113,19 +109,9 @@ export class AddTaskCommand extends Command {
 			process.exit(1);
 		}
 
+		const fileError = otherTasksFileError(options.file, 'add-task');
+		if (fileError) displayError(fileError);
 		const projectRoot = getProjectRoot();
-		// tm-core writes the project's tasks.json; any other file is refused
-		if (
-			options.file &&
-			path.resolve(projectRoot, options.file) !==
-				path.join(projectRoot, TASKGRAPH_TASKS_FILE)
-		) {
-			printError(
-				`add-task writes only ${TASKGRAPH_TASKS_FILE}, not ${terminalSafe(options.file)}`,
-				'Leave out --file, or run the command in the project that file belongs to'
-			);
-			process.exit(1);
-		}
 
 		let spinner: Ora | undefined;
 		// A line printed while the spinner runs would be drawn over

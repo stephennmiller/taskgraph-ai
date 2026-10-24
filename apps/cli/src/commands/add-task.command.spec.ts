@@ -114,9 +114,7 @@ describe('add-task', () => {
 			'exit 1'
 		);
 
-		expect(err.join('\n')).toContain(
-			'add-task writes only .taskgraph/tasks/tasks.json'
-		);
+		expect(err.join('\n')).toContain('--file is no longer supported');
 		expect(add).not.toHaveBeenCalled();
 	});
 
