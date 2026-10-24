@@ -269,7 +269,6 @@ export class LoopDomain {
 			tag: partial.tag,
 			taskId: partial.taskId,
 			sandbox: partial.sandbox ?? false,
-			includeOutput: partial.includeOutput ?? false,
 			verbose: partial.verbose ?? false,
 			callbacks: partial.callbacks
 		};

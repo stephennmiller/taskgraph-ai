@@ -246,13 +246,6 @@ describe('LoopCommand', () => {
 		});
 	});
 
-	it('--no-output keeps only status lines', () => {
-		const cb = (loopCommand as any).createOutputCallbacks(false);
-		expect(cb.onOutput ?? cb.onText ?? cb.onToolUse).toBeUndefined();
-		cb.onIterationEnd({ iteration: 1, status: 'error' });
-		expect(consoleLogSpy.mock.calls.join()).toContain('completed: error');
-	});
-
 	describe('displayResult', () => {
 		it('should display loop completion summary', () => {
 			const displayResult = (loopCommand as any).displayResult.bind(
@@ -545,6 +538,13 @@ describe('LoopCommand', () => {
 					progressFile: '/custom/progress.txt'
 				})
 			);
+		});
+
+		it('--no-output hides Claude output (#408)', async () => {
+			mockLoopRun.mockResolvedValue(createMockResult());
+			await (loopCommand as any).execute({ output: false });
+			const cb = mockLoopRun.mock.calls[0][0].callbacks;
+			expect(cb.onOutput ?? cb.onText ?? cb.onToolUse).toBeUndefined();
 		});
 
 		it('should check sandbox auth when --sandbox flag is provided', async () => {
