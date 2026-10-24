@@ -130,8 +130,8 @@ function timeRun(cli, args, cwd) {
 }
 
 /**
- * The module URLs that `cli args` resolves through import (not require),
- * recorded by a resolve hook.
+ * The module URLs that `cli args` loads: imports recorded by a resolve hook,
+ * and require() calls read from the CommonJS cache when the process exits.
  */
 function loadedModules(cli, args, cwd) {
 	const log = join(cwd, 'resolved.log');
@@ -148,9 +148,20 @@ function loadedModules(cli, args, cwd) {
 			'}'
 		].join('\n')
 	);
+	// require() (createRequire) skips the resolve hook: its modules are
+	// listed from the CommonJS cache on exit
 	writeFileSync(
 		register,
-		`import { register } from 'node:module';\nregister(${JSON.stringify(pathToFileURL(hooks).href)});\n`
+		[
+			"import { appendFileSync } from 'node:fs';",
+			"import Module, { register } from 'node:module';",
+			"import { pathToFileURL } from 'node:url';",
+			`register(${JSON.stringify(pathToFileURL(hooks).href)});`,
+			"process.on('exit', () => {",
+			'\tconst urls = Object.keys(Module._cache).map((file) => pathToFileURL(file).href);',
+			"\tappendFileSync(process.env.TASKGRAPH_RESOLVE_LOG, urls.map((url) => `${url}\\n`).join(''));",
+			'});'
+		].join('\n')
 	);
 	writeFileSync(log, '');
 	execFileSync(

@@ -53,10 +53,12 @@ let claudeCodeProvider;
 
 async function _getProvider(providerName) {
 	if (providerName === 'claude-code') {
-		const { ClaudeCodeProvider } = await import(
-			'../../src/ai-providers/index.js'
-		);
-		claudeCodeProvider ??= new ClaudeCodeProvider();
+		if (!claudeCodeProvider) {
+			const { ClaudeCodeProvider } = await import(
+				'../../src/ai-providers/index.js'
+			);
+			claudeCodeProvider ??= new ClaudeCodeProvider();
+		}
 		return claudeCodeProvider;
 	}
 

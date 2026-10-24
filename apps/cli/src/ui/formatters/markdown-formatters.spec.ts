@@ -31,6 +31,63 @@ describe('formatMarkdown', () => {
 		}
 	);
 
+	// Generated text near the edges of the plain-prose check: whichever path
+	// it takes, the output must match marked's
+	it('matches marked on generated text', () => {
+		const words = [
+			'The',
+			'word',
+			'www',
+			'www.x.io',
+			'https://a.b/c',
+			'x.com',
+			'e.g.',
+			'(note)',
+			'"q"',
+			"it's",
+			'a/b',
+			'1',
+			'2.',
+			'10)',
+			'-',
+			'---',
+			'-x',
+			'x-y',
+			':',
+			';',
+			'?',
+			'!',
+			'...',
+			'O(n)',
+			'3:1',
+			'http:',
+			'://',
+			'Www.a.b',
+			'v1.2.3'
+		];
+		const separators = [' ', ' ', ' ', '\n', '\n\n', ' \n', '\n\n\n'];
+		let seed = 248;
+		const pick = <T>(items: T[]) => {
+			seed = (Math.imul(seed, 1103515245) + 12345) >>> 0;
+			return items[(seed >>> 16) % items.length];
+		};
+		const mismatches: string[] = [];
+		for (let i = 0; i < 1500; i++) {
+			const count = pick([1, 2, 3, 5, 8, 12]);
+			let text = pick(words);
+			for (let j = 1; j < count; j++) text += pick(separators) + pick(words);
+			const columns = pick([8, 20, 40, 80]);
+			const breaks = pick([true, false]);
+			if (
+				formatMarkdown(text, columns, { breaks }) !==
+				renderMarkdown(text, columns, { breaks })
+			) {
+				mismatches.push(JSON.stringify({ text, columns, breaks }));
+			}
+		}
+		expect(mismatches).toEqual([]);
+	});
+
 	// GFM autolinks URLs and marked-terminal styles them, so text with one
 	// must not take the plain-prose path
 	it('spells out a www. link as marked-terminal does', () => {
