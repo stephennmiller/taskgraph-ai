@@ -377,6 +377,23 @@ describe('ClaudeCodeProvider', () => {
 				expect(settings).not.toHaveProperty('pathToClaudeCodeExecutable');
 			});
 
+			it('refuses a claude.cmd with a warning that says to use claude.exe (#524)', async () => {
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
+					pathToClaudeCodeExecutable: '/opt/npm/claude.cmd'
+				});
+
+				await provider.getClient({
+					role: 'main',
+					projectRoot: '/work/project'
+				});
+
+				expect(lastSettings()).not.toHaveProperty('pathToClaudeCodeExecutable');
+				expect(log).toHaveBeenCalledWith(
+					'warn',
+					expect.stringContaining('claude.exe on Windows, not claude.cmd')
+				);
+			});
+
 			it('gives the research role only WebSearch and WebFetch', async () => {
 				await provider.getClient({ role: 'research' });
 

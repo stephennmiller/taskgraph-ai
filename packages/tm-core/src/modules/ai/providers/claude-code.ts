@@ -68,7 +68,9 @@ const DEFAULT_RESEARCH_MAX_TURNS = 8;
 // spend most of its tokens exploring the repo. `claudeCode.maxTurns` (or a
 // command's `commandSpecific` entry) overrides it.
 const DEFAULT_MAX_TURNS = 6;
-const CLAUDE_EXECUTABLE_NAME = /^claude(\.exe|\.cmd)?$/i;
+// Not claude.cmd: the SDK spawns it without a shell, which Node refuses on
+// Windows (EINVAL), and a shell would expose the prompt arguments to cmd.exe
+const CLAUDE_EXECUTABLE_NAME = /^claude(\.exe)?$/i;
 
 function isWithin(root: string, candidate: string): boolean {
 	const relative = path.relative(root, candidate);
@@ -84,8 +86,8 @@ function isWithin(root: string, candidate: string): boolean {
  * Whether `pathToClaudeCodeExecutable` from config may be run. It comes from
  * the project's own .taskgraph/config.json, so a repo you didn't write could
  * otherwise name any program. Allowed: an absolute path to a file named
- * `claude` (`claude.exe`, `claude.cmd`) that is outside the project, both as
- * written and after resolving symlinks.
+ * `claude` (`claude.exe`; not npm's `claude.cmd` shim) that is outside the
+ * project, both as written and after resolving symlinks.
  * @param candidate - Configured executable path
  * @param projectRoot - Project root, when known
  */
@@ -132,7 +134,7 @@ function withTrustedExecutable(
 	}
 	log(
 		'warn',
-		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude outside the project`
+		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude (claude.exe on Windows, not claude.cmd) outside the project`
 	);
 	const { pathToClaudeCodeExecutable: _dropped, ...rest } = settings;
 	return rest;
@@ -169,7 +171,11 @@ export function claudeFromPath(
 	bundled = hasBundledClaudeBinary()
 ): string | undefined {
 	if (bundled) return undefined;
-	const claude = findOnPath('claude');
+	const claude = findOnPath(
+		'claude',
+		undefined,
+		process.platform === 'win32' ? ['.exe'] : undefined
+	);
 	return claude && isTrustedClaudeExecutable(claude, projectRoot)
 		? claude
 		: undefined;
