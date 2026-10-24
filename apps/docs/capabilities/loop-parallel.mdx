@@ -72,9 +72,9 @@ Use it when you want parallel tasks without giving each Claude Code process your
 
 Your `.git`, your `tasks.json`, your home folder, `~/.claude` and the other tasks' folders aren't mounted. The container still runs the image you chose, with Docker's usual access (see below).
 
-**When a task's container is done**, TaskGraph runs `docker rm -f` on it by name and checks that it's gone. If the container can't be confirmed gone, the task is marked failed with the `docker rm -f` command to run, and its clone and claim are left untouched. Otherwise TaskGraph brings the work back:
+**When a task's container is done**, TaskGraph runs `docker rm -f` on it by name and checks that it's gone (when Docker stops answering, it counts as still there). If the container can't be confirmed gone, the task is marked failed with the `docker rm -f` command to run, and its clone and claim are left untouched. Otherwise TaskGraph brings the work back:
 
-1. **Commits.** TaskGraph deletes the clone's git config, hooks, attributes and submodule data. It refuses to go on if anything left in the clone's `.git` isn't a plain file or folder (a symlink, say), or if it's over 4 GB. Then it writes a fresh config and fetches the task's branch into your repository. The fetch runs in your repository, with hooks and `core.fsmonitor` off, object checks on and a 10-minute limit. Before the container stops, it commits anything Claude left uncommitted, so that work comes back too.
+1. **Commits.** TaskGraph deletes the clone's git config, hooks, attributes and submodule data. It refuses to go on if anything left in the clone's `.git` isn't a plain file or folder (a symlink, say), or if it's over 4 GB or a million entries. Then it writes a fresh config and fetches the task's branch into your repository. The fetch runs in your repository, with hooks and `core.fsmonitor` off, object checks on and a 10-minute limit. Before the container stops, it commits anything Claude left uncommitted, so that work comes back too.
 2. **Status.** Only once the branch is back, TaskGraph reads the task's status from the copy of `tasks.json`, and takes it only if it's `review` or `blocked`. Notes and any other changes Claude made there are dropped.
 3. **Cleanup.** The clone and the copy are removed.
 
@@ -82,7 +82,7 @@ When something goes wrong, the clone stays and the summary says where:
 
 - If the branch can't be fetched (Claude deleted it or rewrote its history), the task is marked failed. Its clone is kept with its git config and hooks already replaced, and the task stays claimed.
 - If the clone's `.git` can't be made safe, its `.git` is deleted and only its files are kept.
-- After Ctrl-C the clone is kept as well, and `taskgraph loop --parallel N --container` carries on in it.
+- After Ctrl-C the clone is kept as well, and `taskgraph loop --parallel N --container` carries on in it. It first checks that no `taskgraph-task-<id>-*` container from an earlier run is still listed, and refuses with the `docker rm -f` command if one is.
 
 Don't run git commands inside a nested repository a task may have created in its clone.
 

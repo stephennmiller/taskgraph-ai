@@ -52,8 +52,9 @@ export interface ContainerSetup {
  */
 const STATE_FILES = ['tasks/tasks.json', 'config.json', 'state.json'];
 
-/** A clone's `.git` bigger than this isn't fetched from */
+/** A clone's `.git` bigger than this, or with more entries, isn't fetched from */
 const MAX_CLONE_GIT_BYTES = 4 * 1024 ** 3;
+const MAX_CLONE_GIT_ENTRIES = 1_000_000;
 
 /**
  * Everything `--container` needs, checked before the first claim: platform,
@@ -138,12 +139,13 @@ const UNTRUSTED_GIT_ENTRIES = [
  * host's git read, or hang on, something outside the clone), and write a
  * fresh config. fs.rmSync removes a symlink rather than following it.
  * @throws ParallelLoopError naming the first entry that isn't plain, or
- *   when the `.git` folder is too big
+ *   when the `.git` folder is too big or has too many entries
  */
 export function sanitizeClone(
 	clone: string,
 	gitConfig: string,
-	maxBytes = MAX_CLONE_GIT_BYTES
+	maxBytes = MAX_CLONE_GIT_BYTES,
+	maxEntries = MAX_CLONE_GIT_ENTRIES
 ): void {
 	const gitDir = path.join(clone, '.git');
 	const refuse = (p: string, why: string) =>
@@ -160,10 +162,14 @@ export function sanitizeClone(
 		}
 	}
 	let total = 0;
+	let entries = 0;
 	const pending = [gitDir];
 	while (pending.length > 0) {
 		const dir = pending.pop() as string;
 		for (const name of fs.readdirSync(dir)) {
+			if (++entries > maxEntries) {
+				throw refuse(gitDir, 'has too many files to fetch from');
+			}
 			const p = path.join(dir, name);
 			const stat = fs.lstatSync(p);
 			if (stat.isDirectory()) {
@@ -218,6 +224,21 @@ export function readWorkerStatus(
 	}
 }
 
+/**
+ * A fresh copy of the project's TaskGraph files (STATE_FILES) for a worker.
+ * Plain files only: a symlink would copy whatever it points at.
+ */
+export function copyStateFiles(projectRoot: string, stateDir: string): void {
+	fs.rmSync(stateDir, { recursive: true, force: true });
+	for (const file of STATE_FILES) {
+		const from = path.join(projectRoot, '.taskgraph', file);
+		if (!lstatOrNull(from)?.isFile()) continue;
+		const to = path.join(stateDir, '.taskgraph', file);
+		fs.mkdirSync(path.dirname(to), { recursive: true });
+		fs.copyFileSync(from, to);
+	}
+}
+
 export class ContainerWorkers {
 	constructor(
 		/** Symlinks resolved: the container sees only real paths */
@@ -255,6 +276,7 @@ export class ContainerWorkers {
 		const createdBranch = !(await this.git.branchExists(task.branch));
 		const shown = path.relative(this.projectRoot, clone);
 		if (lstatOrNull(clone)) {
+			await this.assertNoContainer(task.id);
 			if (lstatOrNull(path.join(clone, '.git'))?.isFile()) {
 				throw new ParallelLoopError(
 					`${shown} is a worktree from a run without --container`,
@@ -277,15 +299,7 @@ export class ContainerWorkers {
 		sanitizeClone(clone, this.setup.gitConfig);
 
 		const stateDir = this.stateDir(task);
-		fs.rmSync(stateDir, { recursive: true, force: true });
-		for (const file of STATE_FILES) {
-			const from = path.join(this.projectRoot, '.taskgraph', file);
-			// Plain files only: a symlink would copy whatever it points at
-			if (!lstatOrNull(from)?.isFile()) continue;
-			const to = path.join(stateDir, '.taskgraph', file);
-			fs.mkdirSync(path.dirname(to), { recursive: true });
-			fs.copyFileSync(from, to);
-		}
+		copyStateFiles(this.projectRoot, stateDir);
 
 		const name = `taskgraph-task-${task.id}-${randomBytes(4).toString('hex')}`;
 		return {
@@ -309,6 +323,38 @@ export class ContainerWorkers {
 	}
 
 	/**
+	 * A kept clone may still be mounted by a container from an earlier run
+	 * that wasn't removed; reusing it would let that container keep writing.
+	 * @throws ParallelLoopError when one is listed or the list can't be read
+	 */
+	private async assertNoContainer(id: string): Promise<void> {
+		const runtime = path.basename(this.setup.runtime);
+		let stdout: string;
+		try {
+			({ stdout } = await promisify(execFile)(this.setup.runtime, [
+				'ps',
+				'-a',
+				'--format',
+				'{{.Names}}',
+				'--filter',
+				`name=^/?taskgraph-task-${id}-`
+			]));
+		} catch (error) {
+			throw new ParallelLoopError(
+				`couldn't check that task ${id} has no container left (${gitReason(error)})`,
+				`Check with ${runtime} ps -a, then try again`
+			);
+		}
+		const names = stdout.trim().split(/\s+/).filter(Boolean).join(' ');
+		if (names) {
+			throw new ParallelLoopError(
+				`task ${id} still has a container; remove it with ${runtime} rm -f ${names}`,
+				`Remove it: ${runtime} rm -f ${names}`
+			);
+		}
+	}
+
+	/**
 	 * Remove containers by name: a killed docker client doesn't stop its
 	 * container. Synchronous, so it works in an exit handler.
 	 * @returns The ones that may still be there (`container inspect` didn't
@@ -323,10 +369,15 @@ export class ContainerWorkers {
 			});
 		run(['rm', '--force', ...names]);
 		// Gone only when inspect says so; a timeout or error counts as still there
-		return names.filter((name) => {
+		const left = names.filter((name) => {
 			const { status } = run(['container', 'inspect', name]);
 			return status === 0 || status === null;
 		});
+		// An unreachable daemon fails inspect like "No such container" does
+		const daemonUp =
+			left.length === names.length ||
+			run(['version', '--format', '{{.Server.Version}}']).status === 0;
+		return daemonUp ? left : names;
 	}
 
 	/** The status the worker set, read from its copy; see readWorkerStatus */

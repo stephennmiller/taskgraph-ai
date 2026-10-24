@@ -5,7 +5,9 @@
  * the task's status in its copy of tasks.json, and then plants hooks and a
  * `core.fsmonitor` command in the clone, which the host must never run.
  * FAKE_DOCKER_MODE makes it misbehave in one way; `hang` makes it wait
- * until `rm` kills it, and FAKE_DOCKER_STUCK makes `rm` fail.
+ * until `rm` kills it, and FAKE_DOCKER_STUCK makes `rm` fail. FAKE_DOCKER_LOST
+ * makes every later call fail as an unreachable daemon does, and
+ * FAKE_DOCKER_PS is what `ps` prints (`fail` makes it fail).
  *
  * @integration
  */
@@ -41,7 +43,19 @@ const args = process.argv.slice(2);
 fs.appendFileSync(env.FAKE_DOCKER_LOG, JSON.stringify(args) + '\\n');
 const [command, ...rest] = args;
 const pidFile = (name) => path.join(env.FAKE_PIDS, name);
-if (command === 'version') process.exit(env.FAKE_DOCKER_DOWN ? 1 : 0);
+const lost = path.join(env.FAKE_PIDS, '..', 'daemon-lost');
+if (command === 'version') {
+	process.exit(env.FAKE_DOCKER_DOWN || fs.existsSync(lost) ? 1 : 0);
+}
+if (command === 'ps') {
+	process.stdout.write(env.FAKE_DOCKER_PS ?? '');
+	process.exit(env.FAKE_DOCKER_PS === 'fail' ? 1 : 0);
+}
+if (env.FAKE_DOCKER_LOST && command !== 'run') {
+	fs.writeFileSync(lost, '');
+	console.error('Cannot connect to the Docker daemon');
+	process.exit(1);
+}
 if (command === 'rm') {
 	if (env.FAKE_DOCKER_STUCK) process.exit(1);
 	for (const name of rest.slice(1)) {
@@ -70,7 +84,7 @@ fs.writeFileSync(
 		tags: sh('tag')
 	})
 );
-if (mode === 'hang' || env.FAKE_DOCKER_STUCK) {
+if (mode === 'hang' || env.FAKE_DOCKER_STUCK || env.FAKE_DOCKER_LOST) {
 	fs.writeFileSync(path.join(cwd, 'wip.txt'), 'wip\\n');
 	fs.writeFileSync(pidFile(name), String(process.pid));
 	setInterval(() => {}, 1000);
@@ -318,6 +332,75 @@ describe('loop --parallel --container', () => {
 		});
 		expect(fs.existsSync(path.join(clone, '.git'))).toBe(true);
 		expect(fs.existsSync(`${clone}.state`)).toBe(true);
+	});
+
+	it('counts a container as still there when the daemon stops answering', async () => {
+		vi.stubEnv('FAKE_DOCKER_LOST', '1');
+		const controller = new AbortController();
+		const running = runParallel(controller.signal);
+		await vi.waitFor(
+			() => expect(fs.readdirSync(file('pids'))).toHaveLength(1),
+			{ timeout: 10_000 }
+		);
+		const [name] = fs.readdirSync(file('pids'));
+
+		controller.abort();
+		const result = await running;
+
+		expect(result.tasks[0]).toMatchObject({ state: 'failed', kept: true });
+		expect(result.tasks[0].error).toBe(
+			`its container may still be running; remove it with docker rm -f ${name}`
+		);
+		expect(dockerCalls()).toContainEqual(['container', 'inspect', name]);
+		expect(readTask()).toMatchObject({
+			status: 'in-progress',
+			metadata: { claimedBy: 'tester' }
+		});
+		expect(fs.existsSync(path.join(clone, '.git'))).toBe(true);
+	});
+
+	it('refuses to reuse a kept clone while an earlier container is listed, or when it cannot tell', async () => {
+		vi.stubEnv('FAKE_DOCKER_MODE', 'hang');
+		const controller = new AbortController();
+		const running = runParallel(controller.signal);
+		await vi.waitFor(
+			() => expect(fs.readdirSync(file('pids'))).toHaveLength(1),
+			{ timeout: 10_000 }
+		);
+		controller.abort();
+		await running;
+		vi.stubEnv('FAKE_DOCKER_MODE', '');
+		const before = dockerCalls().length;
+
+		vi.stubEnv('FAKE_DOCKER_PS', 'taskgraph-task-1-abcd1234\n');
+		const listed = await runParallel();
+		vi.stubEnv('FAKE_DOCKER_PS', 'fail');
+		const unknown = await runParallel();
+
+		expect(listed.tasks[0]).toMatchObject({
+			state: 'failed',
+			error:
+				'task 1 still has a container; remove it with docker rm -f taskgraph-task-1-abcd1234'
+		});
+		expect(unknown.tasks[0]).toMatchObject({ state: 'failed' });
+		expect(unknown.tasks[0].error).toContain(
+			"couldn't check that task 1 has no container left"
+		);
+		const later = dockerCalls()
+			.slice(before)
+			.map((c) => c[0]);
+		expect(later).not.toContain('run');
+		expect(later).toContain('ps');
+		expect(dockerCalls().slice(before)).toContainEqual([
+			'ps',
+			'-a',
+			'--format',
+			'{{.Names}}',
+			'--filter',
+			'name=^/?taskgraph-task-1-'
+		]);
+		expect(fs.readFileSync(path.join(clone, 'wip.txt'), 'utf8')).toBe('wip\n');
+		expect(readTask().status).toBe('pending');
 	});
 
 	it('refuses before claiming anything when no token is set', async () => {

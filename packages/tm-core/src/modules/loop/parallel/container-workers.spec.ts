@@ -3,7 +3,11 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readWorkerStatus, sanitizeClone } from './container-workers.js';
+import {
+	copyStateFiles,
+	readWorkerStatus,
+	sanitizeClone
+} from './container-workers.js';
 
 describe('sanitizeClone', () => {
 	let dir: string;
@@ -142,6 +146,17 @@ describe('sanitizeClone', () => {
 			'too big to fetch from'
 		);
 	});
+
+	it('refuses a .git with more entries than the cap', () => {
+		for (let i = 0; i < 5; i++) {
+			fs.writeFileSync(path.join(gitDir, 'objects', `o${i}`), '');
+		}
+
+		expect(() => sanitizeClone(clone, '[core]\n', 1024, 4)).toThrow(
+			'.git has too many files to fetch from'
+		);
+		expect(() => sanitizeClone(clone, '[core]\n', 1024, 100)).not.toThrow();
+	});
 });
 
 describe('readWorkerStatus', () => {
@@ -193,5 +208,38 @@ describe('readWorkerStatus', () => {
 		fs.truncateSync(tasksFile, 33 * 1024 * 1024);
 
 		expect(readWorkerStatus(stateDir, '3', 'master')).toBeUndefined();
+	});
+});
+
+describe('copyStateFiles', () => {
+	let dir: string;
+
+	beforeEach(() => {
+		dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-state-')));
+		fs.mkdirSync(path.join(dir, 'repo', '.taskgraph', 'tasks'), {
+			recursive: true
+		});
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('copies plain files and skips a symlinked tasks.json and config.local.json', () => {
+		const taskgraph = path.join(dir, 'repo', '.taskgraph');
+		fs.writeFileSync(path.join(dir, 'secret.json'), '{"secret":true}');
+		fs.symlinkSync(
+			path.join(dir, 'secret.json'),
+			path.join(taskgraph, 'tasks', 'tasks.json')
+		);
+		fs.writeFileSync(path.join(taskgraph, 'config.json'), '{}');
+		fs.writeFileSync(path.join(taskgraph, 'config.local.json'), '{"k":1}');
+		const state = path.join(dir, 'state');
+
+		copyStateFiles(path.join(dir, 'repo'), state);
+
+		expect(fs.readdirSync(path.join(state, '.taskgraph'))).toEqual([
+			'config.json'
+		]);
 	});
 });
