@@ -1,0 +1,98 @@
+{
+	"tasks": [
+		{
+			"id": 1,
+			"title": "Set up the server",
+			"status": "pending",
+			"dependencies": [],
+			"acceptanceCriteria": ["The server starts with npm start"],
+			"metadata": { "source": "prd.md#setup" },
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Scaffold the project",
+					"dependencies": [],
+					"acceptanceCriteria": [{ "text": "npm test runs", "checked": false }]
+				},
+				{
+					"id": 2,
+					"title": "Add the Dockerfile",
+					"dependencies": [1],
+					"acceptanceCriteria": ["docker build succeeds"]
+				}
+			]
+		},
+		{
+			"id": 2,
+			"title": "Email and password sign-in",
+			"status": "pending",
+			"dependencies": [1],
+			"acceptanceCriteria": ["A user can sign up and sign in"],
+			"metadata": { "source": "prd.md#authentication" },
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Sign-up endpoint",
+					"dependencies": ["1"],
+					"acceptanceCriteria": ["POST /signup creates a user"]
+				},
+				{
+					"id": 2,
+					"title": "Sessions",
+					"dependencies": [1],
+					"acceptanceCriteria": ["A session cookie is set"]
+				},
+				{
+					"id": 3,
+					"title": "Password reset email",
+					"dependencies": [2, "1.2"],
+					"acceptanceCriteria": ["A reset link is sent"]
+				}
+			]
+		},
+		{
+			"id": 3,
+			"title": "Bookmarks CRUD",
+			"status": "pending",
+			"dependencies": [2],
+			"acceptanceCriteria": ["Users manage only their own bookmarks"],
+			"metadata": { "source": "prd.md#bookmarks-api" },
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Create and list",
+					"dependencies": [],
+					"acceptanceCriteria": ["POST and GET work"]
+				},
+				{
+					"id": 2,
+					"title": "Update and delete",
+					"dependencies": [1],
+					"acceptanceCriteria": ["PUT and DELETE work"]
+				}
+			]
+		},
+		{
+			"id": 4,
+			"title": "Search and rate limits",
+			"status": "pending",
+			"dependencies": ["3"],
+			"acceptanceCriteria": ["Search finds a bookmark by a word in its note"],
+			"metadata": { "source": "prd.md#search--tags" },
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Full-text index",
+					"dependencies": [],
+					"acceptanceCriteria": ["Titles and notes are indexed"]
+				}
+			]
+		}
+	],
+	"complexity": [
+		{ "taskId": 1, "complexityScore": 3 },
+		{ "taskId": 2, "complexityScore": 7 },
+		{ "taskId": 3, "complexityScore": 5 },
+		{ "taskId": 4, "complexityScore": 2 }
+	]
+}

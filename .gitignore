@@ -93,3 +93,6 @@ dev-debug.log
 .scannerwork
 
 # OS specific
+
+# npm run evals output; evals/baseline.json is the committed run
+evals/results/
