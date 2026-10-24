@@ -164,6 +164,24 @@ describe('expand_task', () => {
 		expect(result.content[0].text).toContain('Current Tag: master');
 	});
 
+	it("adds the error's hint, so a misspelled tag points to `taskgraph tags` (#548)", async () => {
+		tasks.expand.mockRejectedValue(
+			Object.assign(new Error('Tag "featuer" not found'), {
+				hint: 'Run `taskgraph tags` to see your tags'
+			})
+		);
+
+		const result = await tool().execute(
+			{ id: '2', tag: 'featuer', projectRoot: project },
+			ctx
+		);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain(
+			'Error: Tag "featuer" not found. Run `taskgraph tags` to see your tags'
+		);
+	});
+
 	it('refuses a tasks file other than the project tasks.json', async () => {
 		const result = await tool().execute(
 			{ id: '3', file: 'other.json', projectRoot: project },

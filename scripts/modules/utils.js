@@ -10,6 +10,7 @@ import {
 	mergeTagChanges,
 	normalizeTaskStatus,
 	getOwnKey,
+	MISSING_TAG_HINT,
 	readArchivedIdsSync,
 	stampTasksFileSchemaVersion,
 	stripTerminalControls
@@ -661,6 +662,14 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 					}
 				}
 			}
+		}
+
+		// A tag the caller named but the file lacks is likely a typo: returning
+		// master's tasks in its place would change the wrong tag (#548)
+		if (tag && !getOwnKey(data, tag)) {
+			throw Object.assign(new Error(`Tag "${tag}" not found`), {
+				hint: MISSING_TAG_HINT
+			});
 		}
 
 		// Store reference to the raw tagged data for functions that need it

@@ -14,6 +14,13 @@ interface ToolArgs {
 	file?: string;
 }
 
+/** An error's message, followed by the fix tm-core suggests in its `hint` */
+export function errorMessage(error: unknown): string {
+	const message = error instanceof Error ? error.message : String(error);
+	const hint = (error as { hint?: unknown } | null)?.hint;
+	return typeof hint === 'string' ? `${message}. ${hint}` : message;
+}
+
 /**
  * Run a tool's work and reply with its data, or with the error it threw.
  * `file` is kept for older clients; tasks live only in the project's
@@ -41,9 +48,8 @@ export async function replyWith(
 			tag: usedTag ?? args.tag
 		});
 	} catch (error: unknown) {
-		const message = error instanceof Error ? error.message : String(error);
 		return handleApiResult({
-			result: { success: false, error: { message } },
+			result: { success: false, error: { message: errorMessage(error) } },
 			log,
 			errorPrefix,
 			projectRoot: args.projectRoot,
