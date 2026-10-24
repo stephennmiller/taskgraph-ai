@@ -579,6 +579,17 @@ describe('tasks.expand', () => {
 			expect(result.addedSubtasks.map((s) => s.id)).toEqual([4, 5]);
 		});
 
+		it('gives each new subtask its own ID when the AI repeats one', async () => {
+			generateObject.mockResolvedValue(
+				answer([aiSubtask(3), aiSubtask(3), aiSubtask(4)]) as any
+			);
+
+			await tmCore.tasks.expand({ id: '2', num: 3 });
+
+			const saved = readFile().master.tasks[1].subtasks;
+			expect(saved.map((s: any) => s.id)).toEqual([1, 2, 3, 4, 5]);
+		});
+
 		it('finds the task in a file saved with string IDs (#392)', async () => {
 			write(fixture(true));
 
