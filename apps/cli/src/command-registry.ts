@@ -33,6 +33,7 @@ import {
 } from './commands/removal.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 import { GraphCommand } from './commands/graph.command.js';
+import { InitCommand } from './commands/init.command.js';
 // Import all commands
 import { ListTasksCommand } from './commands/list.command.js';
 import { GithubCommand } from './commands/github/github.command.js';
@@ -310,6 +311,12 @@ export class CommandRegistry {
 			commandClass: MergeDriverCommand as any,
 			category: 'utility',
 			hidden: true
+		},
+		{
+			name: 'init',
+			description: 'Initialize a new project with TaskGraph structure',
+			commandClass: InitCommand as any,
+			category: 'utility'
 		}
 	];
 

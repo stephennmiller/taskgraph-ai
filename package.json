@@ -125,7 +125,6 @@
 		"@tm/cli": "*",
 		"@tm/core": "*",
 		"@tm/mcp": "*",
-		"@tm/profiles": "*",
 		"@types/marked-terminal": "^6.1.1",
 		"@vitest/coverage-v8": "^5.0.5",
 		"cross-env": "^10.0.0",

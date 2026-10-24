@@ -131,4 +131,19 @@ describe('init and the Claude Code integration', () => {
 		);
 		expect(init('--dry-run', '--no-claude').stdout).not.toContain('CLAUDE.md');
 	});
+
+	it('without a terminal or --yes, exits 1 with a fix and changes nothing', () => {
+		const result = spawnSync('node', [getCliBinPath(), 'init'], {
+			cwd: dir,
+			encoding: 'utf8',
+			input: '',
+			timeout: 60000,
+			env: { ...process.env, HOME: home, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+		});
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain('init needs a terminal');
+		expect(result.stderr).toContain('taskgraph init --yes');
+		expect(fs.readdirSync(dir)).toEqual([]);
+	});
 });

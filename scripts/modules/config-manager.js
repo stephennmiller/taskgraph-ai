@@ -8,11 +8,8 @@ import {
 	CUSTOM_PROVIDERS_ARRAY,
 	DEFAULT_PROJECT_CONFIG,
 	dropOldNumTasksDefault,
-	hasPerMachineSettings,
 	mergeMachineConfig,
-	readConfigJson,
 	SUPPORTED_MODELS as MODEL_MAP,
-	UNREADABLE_CONFIG,
 	writeSplitConfig
 } from '@tm/core';
 import chalk from 'chalk';
@@ -731,34 +728,6 @@ function saveCleanedConfig(configPath, cleaned) {
 }
 
 /**
- * Move per-machine settings (such as claudeCode.pathToClaudeCodeExecutable)
- * that an earlier release kept in the shared config.json into
- * config.local.json. A value already in config.local.json wins. Does nothing
- * when config.json has none.
- * @param {string} rootPath - Project root
- * @returns {boolean} true when settings moved
- */
-function moveMachineSettings(rootPath) {
-	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
-	try {
-		const shared = readConfigJson(configPath);
-		if (!hasPerMachineSettings(shared)) return false;
-
-		const local = readConfigJson(
-			path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE)
-		);
-		// A broken config.local.json stays as it is; readLocalConfig reports it
-		if (local === UNREADABLE_CONFIG) return false;
-		writeSplitConfig(rootPath, mergeMachineConfig(shared, local));
-	} catch (error) {
-		log('warn', `Couldn't move per-machine settings: ${error.message}`);
-		return false;
-	}
-	loadedConfig = null;
-	return true;
-}
-
-/**
  * Checks if a configuration file exists at the project root (new or legacy location)
  * @param {string|null} explicitRoot - Optional explicit path to the project root
  * @returns {boolean} True if the file exists, false otherwise
@@ -807,7 +776,6 @@ export {
 	// Core config access
 	getConfig,
 	writeConfig,
-	moveMachineSettings,
 	isConfigFilePresent,
 	// Claude Code settings
 	getClaudeCodeSettings,

@@ -36,9 +36,7 @@ const IDENTITY_FILES = [
 	'packages/tm-core/src/modules/loop/presets/default.ts',
 	'packages/claude-code-plugin/commands/install-taskgraph.md',
 	'scripts/loop.sh',
-	'scripts/modules/commands.js',
-	'src/utils/asset-resolver.js',
-	'src/utils/create-mcp-config.js'
+	'scripts/modules/commands.js'
 ];
 
 const SOURCE_DIRS = [

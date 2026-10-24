@@ -25,11 +25,7 @@ import { log } from './utils.js';
 import { setSuppressConfigWarnings } from './config-manager.js';
 
 import {
-	UPSTREAM_DIR,
-	UPSTREAM_IMPORT_FLAG,
-	UPSTREAM_NAME,
 	PROJECT_ROOT_ENV,
-	findProjectRoot,
 	isTaskGraphProject,
 	resolveProjectRoot
 } from '@tm/core';
@@ -38,12 +34,7 @@ import { initTaskGraph } from '../../src/taskgraph.js';
 
 import { displayBanner, displayHelp, displayTaggedTasksFYI } from './ui.js';
 
-import {
-	RULE_PROFILES,
-	findInvalidRulesProfiles
-} from '../../src/constants/profiles.js';
 import { getTaskGraphVersion } from '../../src/utils/getVersion.js';
-import { initializeProject, setUpMergeDriver } from '../init.js';
 
 /**
  * Configure and register CLI commands
@@ -79,110 +70,6 @@ function registerCommands(programInstance) {
 	// Use the centralized command registry to register all CLI commands
 	// This replaces individual command registrations and reduces duplication
 	registerAllCommands(programInstance);
-
-	// init command (Directly calls the implementation from init.js)
-	programInstance
-		.command('init')
-		.description('Initialize a new project with TaskGraph structure')
-		.option('-y, --yes', 'Skip prompts and use default values')
-		.option('-n, --name <name>', 'Project name')
-		.option('-d, --description <description>', 'Project description')
-		.option('-v, --version <version>', 'Project version', '0.1.0') // Set default here
-		.option('-a, --author <author>', 'Author name')
-		.option(
-			'-r, --rules <rules...>',
-			'Rule profiles to install (claude). Accepts comma or space separated values.'
-		)
-		.option('--claude', 'Set up Claude Code integration (the default)')
-		.option(
-			'--no-claude',
-			'Skip the Claude Code integration (CLAUDE.md import)'
-		)
-		.option(
-			'--mcp',
-			'Also register the TaskGraph MCP server in .mcp.json (Claude Code)'
-		)
-		.option('--skip-install', 'Skip installing dependencies')
-		.option('--dry-run', 'Show what would be done without making changes')
-		.option('--aliases', 'Add the tm alias to your shell startup file')
-		.option('--no-aliases', "Don't add the tm alias, and don't ask")
-		.option('--git', 'Initialize Git repository')
-		.option('--no-git', 'Skip Git repository initialization')
-		.option('--git-tasks', 'Store tasks in Git')
-		.option('--no-git-tasks', 'No Git storage of tasks')
-		.option(
-			'--merge-driver',
-			'Only set up Git to merge tasks.json by task (existing projects)'
-		)
-		.option(
-			UPSTREAM_IMPORT_FLAG,
-			`Import a ${UPSTREAM_NAME} project (${UPSTREAM_DIR}/)`
-		)
-		.action(async (cmdOptions) => {
-			if (cmdOptions.mergeDriver) {
-				const root = findProjectRoot() || process.cwd();
-				try {
-					console.log(ui.formatMergeDriverSetup(setUpMergeDriver(root)));
-				} catch (error) {
-					if (error?.name === 'NotAGitRepositoryError') {
-						printError(
-							"This folder isn't in a Git repository",
-							'Run `git init` first, then `taskgraph init --merge-driver`'
-						);
-					} else {
-						printError(
-							`Couldn't set up the tasks.json merge driver: ${error.message}`
-						);
-					}
-					process.exit(1);
-				}
-				return;
-			}
-
-			// cmdOptions contains parsed arguments
-			// Parse rules: accept space or comma separated, default to all available rules
-			let selectedProfiles = RULE_PROFILES;
-			let rulesExplicitlyProvided = false;
-
-			if (cmdOptions.rules && Array.isArray(cmdOptions.rules)) {
-				const userSpecifiedProfiles = cmdOptions.rules
-					.flatMap((r) => r.split(','))
-					.map((r) => r.trim())
-					.filter(Boolean);
-				// Only override defaults if user specified valid rules
-				const invalidProfiles = findInvalidRulesProfiles(userSpecifiedProfiles);
-				if (invalidProfiles.length > 0) {
-					printError(
-						`"${invalidProfiles.join(', ')}" isn't a rule profile`,
-						`TaskGraph supports Claude Code only; use \`--rules ${RULE_PROFILES.join(',')}\``
-					);
-					process.exit(1);
-				}
-				if (userSpecifiedProfiles.length > 0) {
-					selectedProfiles = userSpecifiedProfiles;
-					rulesExplicitlyProvided = true;
-				}
-			}
-
-			if (cmdOptions.mcp && cmdOptions.claude === false) {
-				printError(
-					'--mcp writes Claude Code’s .mcp.json, so it needs the Claude Code integration',
-					'Drop --no-claude, or drop --mcp'
-				);
-				process.exit(1);
-			}
-
-			cmdOptions.rules = selectedProfiles;
-			cmdOptions.rulesExplicitlyProvided = rulesExplicitlyProvided;
-
-			try {
-				// Directly call the initializeProject function, passing the parsed options
-				await initializeProject(cmdOptions);
-				// initializeProject handles its own flow, including potential process.exit()
-			} catch (error) {
-				displayError(error);
-			}
-		});
 
 	return programInstance;
 }
