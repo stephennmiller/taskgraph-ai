@@ -3,6 +3,7 @@ import {
 	type JudgeVerdict,
 	PLAN_JUDGE_RUBRIC,
 	buildJudgePrompt,
+	judgeModelMismatch,
 	planForJudge,
 	scoreJudgeVerdict
 } from './plan-judge.js';
@@ -105,5 +106,26 @@ describe('planForJudge', () => {
 			testStrategy: 'Request it with supertest',
 			acceptanceCriteria: ['Returns 200']
 		});
+	});
+});
+
+describe('judgeModelMismatch', () => {
+	const main = { provider: 'claude-code', modelId: 'sonnet' };
+
+	it('accepts a verdict from the main model', () => {
+		expect(
+			judgeModelMismatch(
+				{ providerName: 'claude-code', modelId: 'sonnet' },
+				main
+			)
+		).toBeNull();
+	});
+
+	it('flags a verdict from a fallback model', () => {
+		expect(
+			judgeModelMismatch({ providerName: 'anthropic', modelId: 'opus' }, main)
+		).toBe(
+			"the judge ran on anthropic/opus, not the main model claude-code/sonnet, so its verdict can't be compared with the baseline"
+		);
 	});
 });

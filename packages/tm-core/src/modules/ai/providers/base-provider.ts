@@ -4,6 +4,7 @@
  */
 
 import type { LanguageModel, ModelMessage } from 'ai';
+import type { ZodType } from 'zod';
 
 export type ProviderLogLevel = 'debug' | 'info' | 'warn' | 'error';
 /** The host's logger; the legacy CLI passes its `log`, which honours silent mode */
@@ -571,18 +572,39 @@ export abstract class BaseAIProvider {
 					`${this.name} generated malformed JSON, attempting to repair...`
 				);
 
+				let parsed: unknown;
 				try {
 					// Use jsonrepair to fix the malformed JSON
 					const { jsonrepair } = await import('jsonrepair');
-					const repairedJson = jsonrepair(error.cause.text);
-					const parsed = JSON.parse(repairedJson);
+					parsed = JSON.parse(jsonrepair(error.cause.text));
+				} catch (repairError: any) {
+					this.log(
+						'error',
+						`Failed to repair ${this.name} JSON: ${repairError.message}`
+					);
+					// Fall through to handleError with original error
+				}
+
+				if (parsed !== undefined) {
+					// Repair can turn a truncated reply into valid JSON with fields missing
+					const checked = (params.schema as ZodType).safeParse(parsed);
+					if (!checked.success) {
+						const issues = checked.error.issues
+							.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+							.join('; ');
+						this.handleError(
+							'object generation',
+							new Error(
+								`repaired ${params.objectName} JSON does not match the schema (${issues})`
+							)
+						);
+					}
 
 					this.log('debug', `Successfully repaired ${this.name} JSON output`);
 
 					const usage = error.usage as ReportedUsage | undefined;
-					// Return in the expected format
 					return {
-						object: parsed,
+						object: checked.data as any,
 						usage: {
 							// Extract usage information from the error if available
 							inputTokens: usage?.promptTokens || usage?.inputTokens || 0,
@@ -590,12 +612,6 @@ export abstract class BaseAIProvider {
 							totalTokens: usage?.totalTokens || 0
 						}
 					};
-				} catch (repairError: any) {
-					this.log(
-						'error',
-						`Failed to repair ${this.name} JSON: ${repairError.message}`
-					);
-					// Fall through to handleError with original error
 				}
 			}
 

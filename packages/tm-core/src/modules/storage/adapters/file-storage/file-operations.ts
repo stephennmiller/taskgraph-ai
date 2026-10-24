@@ -157,8 +157,11 @@ export class FileOperations {
 				Date.now() - info.mtimeMs > LOCK_OPTIONS.stale
 			) {
 				const aside = `${lockPath}.stale.${process.pid}.${Date.now()}`;
-				// A concurrent writer may already have moved it; that is fine
-				await fs.rename(lockPath, aside).catch(() => undefined);
+				// A concurrent writer may already have moved it; that is fine.
+				// Anything else (EACCES) surfaces here instead of as proper-lockfile's ENOTDIR
+				await fs.rename(lockPath, aside).catch((err) => {
+					if (err.code !== 'ENOENT') throw err;
+				});
 				await fs.rm(aside, { force: true });
 			}
 		} catch (err: any) {

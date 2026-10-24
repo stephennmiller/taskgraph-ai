@@ -167,3 +167,17 @@ export function scoreJudgeVerdict(verdict: JudgeVerdict): JudgeScore | null {
 		summary: verdict.summary ?? ''
 	};
 }
+
+/**
+ * Why a verdict can't be compared with a baseline the main model graded:
+ * the AI service fell back from the main model to another role's model.
+ * Null when the main model answered.
+ */
+export function judgeModelMismatch(
+	served: { providerName: string; modelId: string },
+	main: { provider?: string | null; modelId?: string | null }
+): string | null {
+	if (served.providerName === main.provider && served.modelId === main.modelId)
+		return null;
+	return `the judge ran on ${served.providerName}/${served.modelId}, not the main model ${main.provider}/${main.modelId}, so its verdict can't be compared with the baseline`;
+}
