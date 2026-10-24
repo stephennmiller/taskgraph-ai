@@ -41,7 +41,6 @@ export function setUpClaudeCode(
 	report: InitReport
 ): void {
 	const log = getLogger('Init');
-	const assetsDir = getAssetsDir();
 
 	// Remove the command copies an older init wrote; the plugin replaces them
 	try {
@@ -58,35 +57,33 @@ export function setUpClaudeCode(
 		);
 	}
 
-	const sourceFile = path.join(assetsDir, 'AGENTS.md');
 	const userClaudeFile = path.join(projectRoot, 'CLAUDE.md');
-	if (fs.existsSync(sourceFile)) {
-		try {
-			fs.mkdirSync(path.join(projectRoot, '.taskgraph'), { recursive: true });
-			fs.copyFileSync(
-				sourceFile,
-				path.join(projectRoot, '.taskgraph', 'CLAUDE.md')
-			);
-			if (fs.existsSync(userClaudeFile)) {
-				const content = fs.readFileSync(userClaudeFile, 'utf8');
-				if (!content.includes(IMPORT_LINE)) {
-					fs.writeFileSync(
-						userClaudeFile,
-						`${content.trim()}\n${IMPORT_SECTION}\n`
-					);
-				}
-			} else {
+	try {
+		const sourceFile = path.join(getAssetsDir(), 'AGENTS.md');
+		fs.mkdirSync(path.join(projectRoot, '.taskgraph'), { recursive: true });
+		fs.copyFileSync(
+			sourceFile,
+			path.join(projectRoot, '.taskgraph', 'CLAUDE.md')
+		);
+		if (fs.existsSync(userClaudeFile)) {
+			const content = fs.readFileSync(userClaudeFile, 'utf8');
+			if (!content.includes(IMPORT_LINE)) {
 				fs.writeFileSync(
 					userClaudeFile,
-					`# Claude Code Instructions\n${IMPORT_SECTION}\n`
+					`${content.trim()}\n${IMPORT_SECTION}\n`
 				);
 			}
-		} catch (error) {
-			report(
-				'error',
-				`[Claude] Failed to set up Claude instructions: ${errorText(error)}`
+		} else {
+			fs.writeFileSync(
+				userClaudeFile,
+				`# Claude Code Instructions\n${IMPORT_SECTION}\n`
 			);
 		}
+	} catch (error) {
+		report(
+			'error',
+			`[Claude] Failed to set up Claude instructions: ${errorText(error)}`
+		);
 	}
 
 	if (!mcp) return;

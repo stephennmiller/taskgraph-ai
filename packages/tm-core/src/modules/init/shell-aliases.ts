@@ -28,27 +28,21 @@ export function shellConfigFiles(): string[] {
 
 /**
  * The startup file of the user's shell that the `tm` alias would go in, or
- * null when the shell isn't zsh or bash, or its file doesn't exist
+ * why there is none: the shell isn't zsh or bash, or its file doesn't exist
  */
-function aliasConfigFile(): string | null {
+function aliasConfigFile(): { file: string } | { reason: string } {
 	const home = homeDir();
-	if (!home) return null;
+	if (!home) return { reason: 'no home directory' };
 	let file: string;
 	if (process.env.SHELL?.includes('zsh')) {
 		file = path.join(home, '.zshrc');
 	} else if (process.env.SHELL?.includes('bash')) {
 		file = path.join(home, '.bashrc');
 	} else {
-		getLogger('Init').debug(
-			'Could not determine shell type. Aliases not added.'
-		);
-		return null;
+		return { reason: 'the shell is not zsh or bash' };
 	}
-	if (!fs.existsSync(file)) {
-		getLogger('Init').debug(`Shell config file ${file} not found.`);
-		return null;
-	}
-	return file;
+	if (!fs.existsSync(file)) return { reason: `${file} not found` };
+	return { file };
 }
 
 /**
@@ -56,8 +50,9 @@ function aliasConfigFile(): string | null {
  * is none or it already has the alias, so init doesn't ask for nothing
  */
 export function aliasMissingFile(): string | null {
-	const file = aliasConfigFile();
-	if (!file) return null;
+	const found = aliasConfigFile();
+	if (!('file' in found)) return null;
+	const { file } = found;
 	try {
 		return fs.readFileSync(file, 'utf8').includes(ALIAS_LINE) ? null : file;
 	} catch {
@@ -67,28 +62,26 @@ export function aliasMissingFile(): string | null {
 
 /**
  * Append the `tm` alias to the user's shell startup file, unless it's there
- * @returns false when there is no file to add it to, or the write failed
+ * @returns null when the file has the alias, else why it couldn't be added
  */
-export function addShellAliases(): boolean {
-	const shellConfigFile = aliasConfigFile();
-	if (!shellConfigFile) return false;
+export function addShellAliases(): string | null {
+	const found = aliasConfigFile();
+	if (!('file' in found)) return found.reason;
+	const shellConfigFile = found.file;
 
 	try {
 		// `taskgraph` is already the command name, so `tm` is the only alias
 		if (fs.readFileSync(shellConfigFile, 'utf8').includes(ALIAS_LINE)) {
 			getLogger('Init').debug('All TaskGraph aliases already exist.');
-			return true;
+			return null;
 		}
 		fs.appendFileSync(
 			shellConfigFile,
 			`\n# TaskGraph aliases added on ${new Date().toLocaleDateString()}\n${ALIAS_LINE}\n`
 		);
 		getLogger('Init').debug('Added 1 alias(es): tm');
-		return true;
+		return null;
 	} catch (error) {
-		getLogger('Init').debug(
-			`Failed to add aliases: ${(error as Error).message}`
-		);
-		return false;
+		return (error as Error).message;
 	}
 }

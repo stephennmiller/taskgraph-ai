@@ -173,22 +173,33 @@ describe('initializeProject', () => {
 		]);
 	});
 
-	it('does nothing for aliases when the shell or its file is unknown', () => {
+	it('warns and writes nothing for aliases when the shell or its file is unknown', () => {
 		process.env.SHELL = '/bin/fish';
-		initializeProject({
+		const fish = initializeProject({
 			projectRoot: projectDir,
 			claudeCode: false,
 			aliases: true
 		});
 		process.env.SHELL = '/bin/zsh';
-		const result = initializeProject({
+		const zsh = initializeProject({
 			projectRoot: projectDir,
 			claudeCode: false,
 			aliases: true
 		});
 
 		expect(fs.readdirSync(homeDir)).toEqual([]);
-		expect(result.problems).toEqual([]);
+		expect(fish.problems).toEqual([
+			{
+				level: 'warn',
+				message: "Couldn't add the tm alias: the shell is not zsh or bash"
+			}
+		]);
+		expect(zsh.problems).toEqual([
+			{
+				level: 'warn',
+				message: `Couldn't add the tm alias: ${path.join(homeDir, '.zshrc')} not found`
+			}
+		]);
 	});
 
 	it('moves per-machine settings from config.json to config.local.json', () => {
@@ -245,6 +256,25 @@ describe('initializeProject', () => {
 			)
 		).toBe(true);
 		expect(exists('.gitignore')).toBe(true);
+	});
+
+	it('hands each problem to onProblem before a later step throws', () => {
+		write('.taskgraph/config.json', '{ not json');
+		const seen: string[] = [];
+
+		// No upstream folder: the import throws after the config steps failed
+		expect(() =>
+			initializeProject({
+				projectRoot: projectDir,
+				claudeCode: false,
+				importUpstream: true,
+				onProblem: (problem) => seen.push(problem.message)
+			})
+		).toThrow();
+
+		expect(
+			seen.some((message) => message.startsWith('Error updating config'))
+		).toBe(true);
 	});
 });
 

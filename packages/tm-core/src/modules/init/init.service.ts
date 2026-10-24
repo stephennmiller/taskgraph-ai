@@ -76,6 +76,11 @@ export interface InitProjectOptions {
 	responseLanguage?: string;
 	/** Import the upstream project's folder after setting up */
 	importUpstream?: boolean;
+	/**
+	 * Called with each problem as it happens, so a caller can show it even
+	 * when a later step throws
+	 */
+	onProblem?: (problem: InitProblem) => void;
 }
 
 /** A step that failed without stopping init, to show as it ended */
@@ -159,8 +164,10 @@ export function initializeProject(
 	const targetDir = options.projectRoot;
 	const log = getLogger('Init');
 	const problems: InitProblem[] = [];
-	const report: InitReport = (level, message) =>
+	const report: InitReport = (level, message) => {
 		problems.push({ level, message });
+		options.onProblem?.({ level, message });
+	};
 	const initGit = options.initGit ?? true;
 	const storeTasksInGit = resolveStoreTasksInGit(
 		targetDir,
@@ -264,7 +271,10 @@ export function initializeProject(
 		? importUpstreamProject(targetDir)
 		: undefined;
 
-	if (options.aliases) addShellAliases();
+	if (options.aliases) {
+		const failed = addShellAliases();
+		if (failed) report('warn', `Couldn't add the tm alias: ${failed}`);
+	}
 
 	const { alreadySetUp, changes } = describeInitChanges(
 		targetDir,

@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import {
 	RULE_PROFILES,
+	type InitProblem,
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
 	UPSTREAM_IMPORT_OPTION,
@@ -68,6 +69,18 @@ class InitCancelled extends Error {}
 
 const answerLine = (question: string, yes: boolean) =>
 	`${theme.brand(question)} ${yes ? chalk.green('✓') : chalk.dim('–')} ${chalk.dim(yes ? 'Yes' : 'No')}`;
+
+/** One step init couldn't finish, shown as it happens */
+const printInitProblem = (problem: InitProblem) => {
+	if (problem.level === 'error') {
+		console.error(chalk.red('✗'), chalk.red(terminalSafe(problem.message)));
+	} else {
+		console.warn(
+			chalk.yellow('!'),
+			chalk.yellow(terminalSafe(problem.message))
+		);
+	}
+};
 
 export class InitCommand extends Command {
 	constructor(name?: string) {
@@ -206,22 +219,15 @@ export class InitCommand extends Command {
 			return;
 		}
 
+		// Each problem prints as it happens, so a later step that throws
+		// doesn't hide the warnings before it
 		const result = initializeProject({
 			projectRoot,
 			...answers,
 			mcp: options.mcp === true,
-			importUpstream
+			importUpstream,
+			onProblem: printInitProblem
 		});
-		for (const problem of result.problems) {
-			if (problem.level === 'error') {
-				console.error(chalk.red('✗'), chalk.red(terminalSafe(problem.message)));
-			} else {
-				console.warn(
-					chalk.yellow('!'),
-					chalk.yellow(terminalSafe(problem.message))
-				);
-			}
-		}
 
 		// Interactive runs choose models now; --yes keeps the defaults, which
 		// the summary mentions. An import brings its models.
