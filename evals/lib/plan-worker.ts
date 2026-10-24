@@ -184,7 +184,8 @@ async function main(judge: boolean): Promise<void> {
 				hooks
 			)
 		);
-		output.verdict = graded.mainResult as JudgeVerdict;
+		// A repaired reply isn't checked against the schema; a bad one is an error
+		output.verdict = verdictSchema.parse(graded.mainResult) as JudgeVerdict;
 	} finally {
 		await tmCore.close();
 	}
@@ -193,6 +194,8 @@ async function main(judge: boolean): Promise<void> {
 main(process.env.EVALS_NO_JUDGE !== '1')
 	.catch((error: unknown) => {
 		output.error = error instanceof Error ? error.message : String(error);
+		const cause = error instanceof Error ? error.cause : undefined;
+		if (cause instanceof Error) output.error += ` (${cause.message})`;
 		const failed = fs.existsSync(tasksPath) ? readTasks() : [];
 		if (failed.length > 0) output.tasks = failed;
 	})

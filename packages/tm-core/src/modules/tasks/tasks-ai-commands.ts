@@ -276,11 +276,14 @@ export class TaskAiCommands {
 	 */
 	async generateObject(
 		params: AiServiceParams,
-		hooks?: { onWarning?: (message: string) => void }
+		hooks?: {
+			onWarning?: (message: string) => void;
+			onDebug?: (message: string) => void;
+		}
 	): Promise<AiServiceResult> {
-		const aiConfig = new AiConfig(this.configManager, (level, message) => {
-			if (level === 'warn') hooks?.onWarning?.(message);
-		});
+		const aiConfig = new AiConfig(this.configManager, (level, message) =>
+			level === 'warn' ? hooks?.onWarning?.(message) : hooks?.onDebug?.(message)
+		);
 		return new AiService(aiConfig.toHost()).generateObject(params);
 	}
 
