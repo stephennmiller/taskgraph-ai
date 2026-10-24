@@ -871,7 +871,7 @@
         "description": "Nothing checks that plugin command bodies only use flags the plugin's minimum CLI version has; fail CI when they do.",
         "details": "GitHub issue #488: https://github.com/stephennmiller/taskgraph-ai/issues/488\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": []

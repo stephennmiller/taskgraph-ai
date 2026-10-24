@@ -2,31 +2,25 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import {
+	cliSurface,
+	codeLines,
+	invocations,
+	unknownFlags as unknownFlagsIn,
+	unknownStandaloneFlags as unknownStandaloneFlagsIn
+} from './cli-surface.js';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const commandsDir = join(repoRoot, 'packages/claude-code-plugin/commands');
 
+// The CLI commands and long flags this checkout declares
+const flagsByCommand = cliSurface((file) =>
+	readFileSync(join(repoRoot, file), 'utf-8')
+);
+
 /** A plugin command's markdown, by name */
 const body = (name: string) =>
 	readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
-
-/**
- * The code in a command body: each line of a fenced block, and each inline
- * `code` span outside one. Bodies name the commands to run in both forms.
- */
-function codeLines(markdown: string): string[] {
-	const lines: string[] = [];
-	let inFence = false;
-	for (const line of markdown.split('\n')) {
-		if (line.trim().startsWith('```')) {
-			inFence = !inFence;
-			continue;
-		}
-		if (inFence) lines.push(line);
-		else for (const span of line.matchAll(/`([^`]+)`/g)) lines.push(span[1]);
-	}
-	return lines;
-}
 
 // The plugin is the only slash-command channel (#169): these files are canonical
 const EXPECTED_COMMANDS = [
@@ -175,39 +169,20 @@ describe('status and subtask commands', () => {
 });
 
 describe('taskgraph commands used in command bodies', () => {
-	const cliSources = [
-		'scripts/modules/commands.js',
-		'apps/cli/src/command-registry.ts'
-	].map((file) =>
-		readFileSync(join(repoRoot, file), 'utf-8')
-			.replace(/\/\*[\s\S]*?\*\//g, '')
-			.replace(/^\s*\/\/.*$/gm, '')
-	);
-
-	const realCommands = new Set(
-		[
-			...cliSources[0].matchAll(/\.command\('([a-z-]+)'/g),
-			...cliSources[1].matchAll(/^\s+name: '([a-z-]+)'/gm)
-		].map((match) => match[1])
-	);
-
-	// `taskgraph <name>` at the start of a code line or inline code span
-	const invokedCommands = (markdown: string): string[] =>
-		codeLines(markdown).flatMap(
-			(line) => line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)/)?.[1] ?? []
-		);
-
 	it('finds the CLI commands to compare against', () => {
-		expect(realCommands.has('set-status')).toBe(true);
-		expect(realCommands.has('clear-subtasks')).toBe(true);
+		expect(flagsByCommand.has('set-status')).toBe(true);
+		expect(flagsByCommand.has('clear-subtasks')).toBe(true);
+		expect(flagsByCommand.get('status')).toBe(flagsByCommand.get('set-status'));
 	});
 
 	it.each(readdirSync(commandsDir).filter((file) => file.endsWith('.md')))(
 		'%s only runs real taskgraph commands',
 		(file) => {
-			const unknown = invokedCommands(
-				readFileSync(join(commandsDir, file), 'utf-8')
-			).filter((name) => !realCommands.has(name));
+			const unknown = invocations(
+				codeLines(readFileSync(join(commandsDir, file), 'utf-8'))
+			)
+				.map((call) => call.command)
+				.filter((name) => !flagsByCommand.has(name));
 
 			expect(unknown).toEqual([]);
 		}
@@ -215,99 +190,8 @@ describe('taskgraph commands used in command bodies', () => {
 });
 
 describe('taskgraph flags used in command bodies', () => {
-	const stripComments = (source: string) =>
-		source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-
-	// The long flags declared with .option('-x, --name <value>', ...),
-	// .requiredOption(...) or .addOption(new Option(...)), plus --json from
-	// the CLI's shared .addOption(jsonOption())
-	const longFlags = (source: string): string[] => [
-		...[
-			...source.matchAll(
-				/(?:\.option|\.requiredOption|new Option)\(\s*(['"`])(.*?)\1/g
-			)
-		].flatMap((match) =>
-			[...match[2].matchAll(/--([a-z][a-z-]*)/g)].map((flag) => flag[1])
-		),
-		...[...source.matchAll(/\.addOption\(\s*jsonOption\(\)\s*\)/g)].map(
-			() => 'json'
-		)
-	];
-
-	const legacySource = stripComments(
-		readFileSync(join(repoRoot, 'scripts/modules/commands.js'), 'utf-8')
-	);
-	const registrySource = stripComments(
-		readFileSync(join(repoRoot, 'apps/cli/src/command-registry.ts'), 'utf-8')
-	);
-
-	const flagsByCommand = new Map<string, Set<string>>();
-
-	// Legacy commands: the options between one .command('name') and the next
-	const legacyStarts = [...legacySource.matchAll(/\.command\('([a-z-]+)'/g)];
-	legacyStarts.forEach((match, index) => {
-		const block = legacySource.slice(
-			match.index,
-			legacyStarts[index + 1]?.index ?? legacySource.length
-		);
-		flagsByCommand.set(match[1], new Set(longFlags(block)));
-	});
-
-	// Registry commands: the options in the class file each entry points at
-	const classFiles = new Map(
-		[
-			...registrySource.matchAll(
-				/import \{ (\w+) \} from '\.\/(commands\/[^']+)\.js'/g
-			)
-		].map((match) => [match[1], `apps/cli/src/${match[2]}.ts`])
-	);
-	for (const match of registrySource.matchAll(
-		/name: '([a-z-]+)',[\s\S]*?commandClass: (\w+)/g
-	)) {
-		const file = classFiles.get(match[2]);
-		if (!file) continue;
-		flagsByCommand.set(
-			match[1],
-			new Set(
-				longFlags(stripComments(readFileSync(join(repoRoot, file), 'utf-8')))
-			)
-		);
-	}
-
-	// `taskgraph <name> ...` code lines and inline spans, with their flags
-	const invocations = (markdown: string) => {
-		const calls: Array<{ command: string; flags: string[] }> = [];
-		for (const line of codeLines(markdown)) {
-			const match = line.match(/^\s*(?:\$ )?taskgraph ([a-z][a-z-]*)(.*)$/);
-			if (!match) continue;
-			// Drop quoted text (a prompt can mention flags) and comments
-			const args = match[2]
-				.replace(/\\'/g, '')
-				.replace(/'[^']*'|"[^"]*"/g, '""')
-				.split('#')[0];
-			calls.push({
-				command: match[1],
-				flags: [...args.matchAll(/(?:^|\s)--([a-z][a-z-]*)/g)].map(
-					(flag) => flag[1]
-				)
-			});
-		}
-		return calls;
-	};
-
-	const unknownFlags = (markdown: string): string[] =>
-		invocations(markdown).flatMap(({ command, flags }) => {
-			const known = flagsByCommand.get(command);
-			return flags
-				.filter(
-					(flag) =>
-						flag !== 'help' &&
-						!known?.has(flag) &&
-						!known?.has(`no-${flag}`) &&
-						!(flag.startsWith('no-') && known?.has(flag.slice(3)))
-				)
-				.map((flag) => `${command} --${flag}`);
-		});
+	const unknownFlags = (markdown: string) =>
+		unknownFlagsIn(invocations(codeLines(markdown)), flagsByCommand);
 
 	it('reads the flags each CLI command declares', () => {
 		for (const flag of ['id', 'status', 'check', 'force']) {
@@ -349,23 +233,8 @@ describe('taskgraph flags used in command bodies', () => {
 		}
 	);
 
-	// Slash-command arguments written as flags, not passed to the CLI
-	const SLASH_ARGUMENTS = new Set(['quick', 'subtasks']);
-
-	// A flag named on its own (`--research`) is one of the body's commands' flags
-	const unknownStandaloneFlags = (markdown: string): string[] => {
-		const known = new Set(
-			invocations(markdown).flatMap(({ command }) => [
-				...(flagsByCommand.get(command) ?? [])
-			])
-		);
-		return codeLines(markdown).flatMap((line) => {
-			const flag = line.match(/^--([a-z][a-z-]*)/)?.[1];
-			return flag && !known.has(flag) && !SLASH_ARGUMENTS.has(flag)
-				? [`--${flag}`]
-				: [];
-		});
-	};
+	const unknownStandaloneFlags = (markdown: string) =>
+		unknownStandaloneFlagsIn(markdown, flagsByCommand);
 
 	it('flags a standalone flag none of the body commands declare', () => {
 		expect(
@@ -387,7 +256,7 @@ describe('taskgraph flags used in command bodies', () => {
 	it('to-done passes only flags its commands declare', () => {
 		const body = readFileSync(join(commandsDir, 'to-done.md'), 'utf-8');
 
-		expect(invocations(body).map((call) => call.command)).toEqual(
+		expect(invocations(codeLines(body)).map((call) => call.command)).toEqual(
 			expect.arrayContaining(['show', 'set-status', 'note', 'next'])
 		);
 		expect(unknownFlags(body)).toEqual([]);
