@@ -30,7 +30,6 @@ function createMockStorage(tasks: Task[] = []): IStorage {
 		deleteTask: vi.fn(),
 		exists: vi.fn().mockResolvedValue(true),
 		loadMetadata: vi.fn(),
-		saveMetadata: vi.fn(),
 		getAllTags: vi.fn().mockResolvedValue(['master']),
 		createTag: vi.fn(),
 		deleteTag: vi.fn(),
