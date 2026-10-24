@@ -67,9 +67,17 @@ export async function generatePrdTasks(
 			// at the top, so it loads only for AI commands (#248)
 			const { APICallError } = await import('ai');
 			const failure = error instanceof Error ? error : new Error(String(error));
-			const retrying = !(
-				APICallError.isInstance(error) && !hasOtherModel(context)
-			);
+			// AiService and the provider wrap a start error, so look through
+			// `cause`; the depth limit also stops a cycle (#588)
+			let refused = false;
+			for (
+				let e: any = error, depth = 0;
+				e && depth < 10 && !refused;
+				e = e.cause, depth++
+			) {
+				refused = APICallError.isInstance(e);
+			}
+			const retrying = !(refused && !hasOtherModel(context));
 			hooks.onStreamFailed?.(failure, retrying);
 			context.debug(
 				retrying

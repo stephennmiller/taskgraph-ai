@@ -4,7 +4,7 @@
  */
 
 import * as fs from 'node:fs';
-import { APICallError } from 'ai';
+import { APICallError, streamObject as sdkStreamObject } from 'ai';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
 import {
@@ -13,6 +13,12 @@ import {
 	generated,
 	reply
 } from './parse-prd-fixture.js';
+
+// The SDK call, for the test that goes through the real AiService and provider
+vi.mock('ai', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('ai')>();
+	return { ...actual, streamObject: vi.fn(actual.streamObject) };
+});
 
 /** A streamObject result: its partial lists, then `object` (or its failure) */
 function streamed(
@@ -113,6 +119,20 @@ describe('tasks.parsePrd streaming', () => {
 
 		await expect(parse({ onStreamFailed })).rejects.toThrow('model not found');
 
+		expect(onStreamFailed).toHaveBeenCalledWith(expect.any(Error), false);
+		expect(p.generateObject).not.toHaveBeenCalled();
+	});
+
+	it('does not ask again when the refusal comes wrapped by AiService and the provider (#588)', async () => {
+		p.streamObject.mockRestore();
+		vi.mocked(sdkStreamObject).mockImplementationOnce(() => {
+			throw refused();
+		});
+		const onStreamFailed = vi.fn();
+
+		await expect(parse({ onStreamFailed })).rejects.toThrow('model not found');
+
+		expect(sdkStreamObject).toHaveBeenCalledTimes(1);
 		expect(onStreamFailed).toHaveBeenCalledWith(expect.any(Error), false);
 		expect(p.generateObject).not.toHaveBeenCalled();
 	});
