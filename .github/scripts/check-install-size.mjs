@@ -9,12 +9,30 @@ import { fileURLToPath } from 'node:url';
 // else, so a new heavy dependency fails CI instead of growing every install.
 const DEFAULT_BUDGET_MB = 150;
 
+// Only the os/cpu packages, so a new non-binary sibling still counts
+const AGENT_SDK_BINARY =
+	/^claude-agent-sdk-(darwin|linux|win32)-(x64|arm64)(-musl)?$/;
+
 /** Whether a directory is one of the Agent SDK's platform binary packages */
 export function isAgentSdkBinary(dir) {
 	return (
 		basename(dirname(dir)) === '@anthropic-ai' &&
-		basename(dir).startsWith('claude-agent-sdk-')
+		AGENT_SDK_BINARY.test(basename(dir))
 	);
+}
+
+/**
+ * The budget in MB from the command line, or the default when it's absent
+ * @throws {Error} When the argument isn't a positive number, which would
+ * otherwise compare as NaN and pass every install
+ */
+export function parseBudgetMB(arg) {
+	if (arg === undefined) return DEFAULT_BUDGET_MB;
+	const budgetMB = Number(arg);
+	if (arg.trim() === '' || !Number.isFinite(budgetMB) || budgetMB <= 0) {
+		throw new Error(`Budget must be a positive number of MB, got "${arg}"`);
+	}
+	return budgetMB;
 }
 
 /**
@@ -54,7 +72,13 @@ const toMB = (bytes) => bytes / 1024 / 1024;
 // Usage: node check-install-size.mjs <node_modules> [budgetMB]
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const [dir = 'node_modules', budgetArg] = process.argv.slice(2);
-	const budgetMB = Number(budgetArg ?? DEFAULT_BUDGET_MB);
+	let budgetMB;
+	try {
+		budgetMB = parseBudgetMB(budgetArg);
+	} catch (error) {
+		console.error(error.message);
+		process.exit(2);
+	}
 	const { totalBytes, agentSdkBinaryBytes } = measureInstall(dir);
 	const counted = toMB(totalBytes - agentSdkBinaryBytes);
 

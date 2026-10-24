@@ -13,6 +13,7 @@ import {
 	readJSON,
 	truncate
 } from '../utils.js';
+import { estimateTokens } from './estimate-tokens.js';
 
 /**
  * Context Gatherer class for collecting and formatting context from various sources
@@ -49,10 +50,7 @@ export class ContextGatherer {
 	 * @returns {number} Estimated token count
 	 */
 	countTokens(text) {
-		if (!text || typeof text !== 'string') {
-			return 0;
-		}
-		return Math.ceil(text.length / 4);
+		return estimateTokens(text);
 	}
 
 	/**

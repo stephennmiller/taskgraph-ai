@@ -141,6 +141,12 @@ Then set the path in `.taskgraph/config.local.json` in each project:
 
 `which claude` prints the path. Without it, AI calls fail with `Native CLI binary for <platform> not found`.
 
+Auto-update runs a plain `npm install -g taskgraph-ai@<version>`, which puts the binary back. To keep the smaller install, set `TASKGRAPH_SKIP_AUTO_UPDATE=1` in your shell profile and update by hand with the same flag:
+
+```bash
+npm install -g taskgraph-ai@latest --omit=optional
+```
+
 ## Troubleshooting
 
 ### "Claude Code CLI not available"
