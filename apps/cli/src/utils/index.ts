@@ -8,6 +8,7 @@
 
 // Error handling utilities
 export {
+	aiErrorHint,
 	describeError,
 	displayError,
 	formatCommanderError,

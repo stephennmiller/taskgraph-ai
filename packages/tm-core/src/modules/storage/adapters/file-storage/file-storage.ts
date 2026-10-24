@@ -274,7 +274,12 @@ export class FileStorage implements IStorage {
 		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
 		await this.fileOps.modifyJson(
 			filePath,
-			async (existingData: any) => {
+			async (fileData: any) => {
+				// A missing or empty file starts tagged, as the legacy writers create it
+				const existingData =
+					fileData && Object.keys(fileData).length > 0
+						? fileData
+						: { [resolvedTag]: { tasks: [], metadata: {} } };
 				const current = this.formatHandler.extractTasks(
 					existingData,
 					resolvedTag
@@ -283,7 +288,7 @@ export class FileStorage implements IStorage {
 				result = outcome.result;
 				afterWrite = outcome.afterWrite;
 				if (outcome.tasks === null) {
-					return existingData;
+					return fileData;
 				}
 				return applyTagUpdate(
 					this.formatHandler,

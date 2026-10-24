@@ -8,7 +8,6 @@
 import '../../../../../scripts/modules/ui.js';
 import fs from 'fs';
 import path from 'path';
-import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
 import { validateFileOperations } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 
 const TEMP_DIR = path.join(process.cwd(), '.tmp_internal_key_tag_names');
@@ -56,30 +55,6 @@ describe.each(['tag', '_rawTaggedData'])('a tag named %s', (name) => {
 					logger: { report: () => {} }
 				})
 			).toThrow(`"${name}" is a reserved tag name`);
-		});
-	});
-
-	describe('already in tasks.json', () => {
-		// Writes add metadata.schemaVersion, so these match rather than equal it
-		const existing = tagWithOneTask('Kept task');
-
-		beforeEach(() => seed({ [name]: existing }));
-
-		it('survives a task being added to master', async () => {
-			await addTask(
-				TASKS_PATH,
-				'New task',
-				[],
-				null,
-				{ ...CONTEXT, tag: 'master' },
-				'json',
-				{ title: 'New', description: '-', details: '-', testStrategy: '-' },
-				false
-			);
-
-			const data = readFile();
-			expect(data.master.tasks).toHaveLength(2);
-			expect(data[name]).toMatchObject(existing);
 		});
 	});
 });

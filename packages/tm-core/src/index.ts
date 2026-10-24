@@ -356,3 +356,17 @@ export * from './modules/ai/providers/index.js';
 
 // Role fallback, retries and usage telemetry over the providers; the host passes config and log
 export * from './modules/ai/ai-service.js';
+
+// ========== Add task ==========
+
+export type {
+	AddTaskHooks,
+	AddTaskInput,
+	AddTaskResult,
+	AddedTaskReference
+} from './modules/tasks/services/add-task.service.js';
+export { ClaudeCodeSettingsSchema } from './modules/ai/claude-code-settings.js';
+export {
+	SUPPORTED_MODELS,
+	type SupportedModel
+} from './modules/ai/config-ai-host.js';

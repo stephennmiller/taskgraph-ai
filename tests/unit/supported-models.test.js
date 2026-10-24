@@ -1,4 +1,4 @@
-import MODEL_MAP from '../../scripts/modules/supported-models.json' with {
+import MODEL_MAP from '../../packages/tm-core/src/modules/ai/supported-models.json' with {
 	type: 'json'
 };
 

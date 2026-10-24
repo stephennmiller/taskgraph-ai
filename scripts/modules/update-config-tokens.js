@@ -4,7 +4,7 @@
  */
 
 import fs from 'fs';
-import supportedModels from './supported-models.json' with { type: 'json' };
+import { SUPPORTED_MODELS as supportedModels } from '@tm/core';
 
 /**
  * Updates the config file with correct maxTokens values from supported-models.json

@@ -103,7 +103,6 @@ vi.doMock('../../scripts/modules/ui.js', () => ({
 
 // Mock constants
 vi.doMock('../../src/constants/task-priority.js', () => ({
-	DEFAULT_TASK_PRIORITY: 'medium',
 	TASK_PRIORITY_OPTIONS: ['low', 'medium', 'high']
 }));
 

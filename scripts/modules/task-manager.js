@@ -3,7 +3,6 @@
  * Task management functions for the TaskGraph CLI
  */
 
-import addTask from './task-manager/add-task.js';
 import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
 import expandAllTasks from './task-manager/expand-all-tasks.js';
 import expandTask from './task-manager/expand-task.js';
@@ -30,7 +29,6 @@ export {
 	updateSubtaskById,
 	expandTask,
 	expandAllTasks,
-	addTask,
 	findNextTask,
 	analyzeTaskComplexity,
 	findTaskById,
