@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
+import { extractErrorMessage, isAbort, isRetryableError } from './ai-errors.js';
 import type { ProviderLog } from './providers/base-provider.js';
 import {
 	ClaudeCodeProvider,
@@ -134,67 +135,6 @@ const TOOL_USE_UNSUPPORTED = [
 	'function calling is not supported'
 ];
 
-function isRetryableError(error: any): boolean {
-	const errorMessage = error?.message?.toLowerCase() || '';
-	// A call we gave up on stays given up; retrying would wait out the limit again
-	if (error?.name === 'TimeoutError' || errorMessage.includes('aborted')) {
-		return false;
-	}
-	return (
-		errorMessage.includes('rate limit') ||
-		errorMessage.includes('overloaded') ||
-		errorMessage.includes('service temporarily unavailable') ||
-		errorMessage.includes('timeout') ||
-		errorMessage.includes('network error') ||
-		error?.status === 429 ||
-		error?.status >= 500
-	);
-}
-
-/**
- * Extracts a user-friendly error message from a potentially complex AI error object.
- * Prioritizes nested messages and falls back to the top-level message.
- */
-function extractErrorMessage(error: any): string {
-	try {
-		// Attempt 1: Look for Vercel SDK specific nested structure (common)
-		if (error?.data?.error?.message) {
-			return error.data.error.message;
-		}
-
-		// Attempt 2: Look for nested error message directly in the error object
-		if (error?.error?.message) {
-			return error.error.message;
-		}
-
-		// Attempt 3: Look for nested error message in response body if it's JSON string
-		if (typeof error?.responseBody === 'string') {
-			try {
-				const body = JSON.parse(error.responseBody);
-				if (body?.error?.message) {
-					return body.error.message;
-				}
-			} catch {
-				// Ignore if responseBody is not valid JSON
-			}
-		}
-
-		// Attempt 4: Use the top-level message if it exists
-		if (typeof error?.message === 'string' && error.message) {
-			return error.message;
-		}
-
-		// Attempt 5: Handle simple string errors
-		if (typeof error === 'string') {
-			return error;
-		}
-
-		return 'An unknown AI service error occurred.';
-	} catch {
-		return 'Failed to extract error message.';
-	}
-}
-
 function calculateCost(
 	inputTokens: number | undefined,
 	outputTokens: number | undefined,
@@ -259,7 +199,6 @@ export class AiService {
 	generateObject(params: AiServiceParams): Promise<AiServiceResult> {
 		return this.run('generateObject', {
 			objectName: 'generated_object',
-			maxRetries: 3,
 			outputType: 'cli',
 			...params
 		});
@@ -555,6 +494,7 @@ export class AiService {
 
 		// provider/model pairs that already failed, so identical roles are not retried
 		const failedModels = new Set<string>();
+		let lastError: any;
 		let lastCleanErrorMessage =
 			'AI service call failed for all configured roles.';
 
@@ -677,13 +617,16 @@ export class AiService {
 					providerName,
 					modelId
 				};
-			} catch (error) {
+			} catch (error: any) {
 				const cleanMessage = extractErrorMessage(error);
 				log(
 					'debug',
 					`Service call failed for role ${currentRole} (Provider: ${providerName || 'unknown'}, Model: ${modelId || 'unknown'}): ${cleanMessage}`
 				);
+				lastError = error;
 				lastCleanErrorMessage = cleanMessage;
+				// Another role would wait out a fresh timeout, or ignore the cancel
+				if (isAbort(error)) throw error;
 				if (providerName && modelId) {
 					failedModels.add(`${providerName}/${modelId}`);
 				}
@@ -700,6 +643,13 @@ export class AiService {
 		}
 
 		log('debug', `All roles in the sequence [${sequence.join(', ')}] failed.`);
-		throw new Error(lastCleanErrorMessage);
+		// Keep what callers and retry checks read: name, status, the original
+		throw Object.assign(
+			new Error(lastCleanErrorMessage, { cause: lastError }),
+			{
+				...(typeof lastError?.name === 'string' && { name: lastError.name }),
+				...(lastError?.status !== undefined && { status: lastError.status })
+			}
+		);
 	}
 }

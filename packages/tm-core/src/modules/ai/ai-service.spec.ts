@@ -242,6 +242,56 @@ describe('AiService', () => {
 			);
 		});
 
+		it('does not retry an error the AI SDK already retried', async () => {
+			mockClaudeProvider.generateText
+				.mockRejectedValueOnce(
+					Object.assign(
+						new Error('Failed after 3 attempts. Last error: Overloaded'),
+						{ name: 'AI_RetryError' }
+					)
+				)
+				.mockResolvedValueOnce(okResponse('Served by the fallback role'));
+
+			await service.generateText({ role: 'main', prompt: 'Stacked retries' });
+
+			expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(2);
+			expect(mockClaudeProvider.generateText).toHaveBeenLastCalledWith(
+				expect.objectContaining({ role: 'fallback' })
+			);
+		});
+
+		it.each(['TimeoutError', 'AbortError'])(
+			'stops at a %s instead of trying the other roles',
+			async (name) => {
+				const aborted = Object.assign(new Error('Call aborted'), { name });
+				mockClaudeProvider.generateText.mockRejectedValue(aborted);
+
+				await expect(
+					service.generateText({ role: 'main', prompt: 'Abort test' })
+				).rejects.toBe(aborted);
+				expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(1);
+			}
+		);
+
+		it('keeps the last error as cause, with its name and status', async () => {
+			const last = Object.assign(new Error('Bad request'), {
+				name: 'AI_APICallError',
+				status: 400
+			});
+			mockClaudeProvider.generateText.mockRejectedValue(last);
+
+			const thrown = await service
+				.generateText({ role: 'main', prompt: 'All fail' })
+				.catch((error: unknown) => error);
+
+			expect(thrown).toMatchObject({
+				message: 'Bad request',
+				name: 'AI_APICallError',
+				status: 400,
+				cause: last
+			});
+		});
+
 		it('should skip a role configured with an unsupported provider', async () => {
 			models.main.provider = 'openai';
 			mockClaudeProvider.generateText.mockResolvedValue(
