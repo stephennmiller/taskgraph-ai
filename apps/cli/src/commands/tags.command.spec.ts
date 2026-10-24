@@ -241,4 +241,38 @@ describe('the deprecated tag commands', () => {
 		);
 		expect(useTag).toHaveBeenCalledWith('feature');
 	});
+
+	it('accept --file naming the project tasks file', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(getProjectPaths).mockReturnValue({
+			projectRoot: '/test/project',
+			tasksPath: '/test/project/.taskgraph/tasks/tasks.json'
+		});
+		const program = new Command().exitOverride();
+		TagsCommand.register(program).setThrowOnError(true);
+
+		await program.parseAsync(
+			['use-tag', 'feature', '-f', '.taskgraph/tasks/tasks.json'],
+			{ from: 'user' }
+		);
+
+		expect(useTag).toHaveBeenCalledWith('feature');
+	});
+
+	it('refuse --file naming another file without touching the project', async () => {
+		vi.spyOn(console, 'error').mockImplementation(() => {});
+		vi.mocked(getProjectPaths).mockReturnValue({
+			projectRoot: '/test/project',
+			tasksPath: '/test/project/.taskgraph/tasks/tasks.json'
+		});
+		const program = new Command().exitOverride();
+		TagsCommand.register(program).setThrowOnError(true);
+
+		await expect(
+			program.parseAsync(['use-tag', 'feature', '--file', 'other.json'], {
+				from: 'user'
+			})
+		).rejects.toThrow('--file is no longer supported');
+		expect(useTag).not.toHaveBeenCalled();
+	});
 });

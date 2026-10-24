@@ -183,6 +183,13 @@ export class TagOperations {
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
 		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
 			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
+			// Checked under the lock: a tag created since the caller's check would be overwritten
+			if (Object.hasOwn(data, newTag)) {
+				throw new TaskGraphError(
+					`Tag "${newTag}" already exists`,
+					ERROR_CODES.VALIDATION_ERROR
+				);
+			}
 			const tagData = { ...getOwnKey(data, oldTag) };
 			if (tagData.metadata) {
 				tagData.metadata = {

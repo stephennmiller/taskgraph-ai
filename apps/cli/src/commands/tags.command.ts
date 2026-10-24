@@ -3,10 +3,11 @@
  * Provides tag management for the local tasks file
  */
 
+import path from 'node:path';
 import type { TmCore } from '@tm/core';
 import { createTmCore, getProjectPaths } from '@tm/core';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import {
 	formatTagCopied,
 	formatTagCreated,
@@ -470,6 +471,22 @@ Examples:
 	}
 
 	/**
+	 * Fail on a deprecated alias's --file that names a file other than the
+	 * project's tasks.json, rather than change the project's file instead
+	 */
+	private rejectOtherTasksFile(file: string | undefined): void {
+		if (file === undefined) return;
+		const { projectRoot, tasksPath } = getProjectPaths();
+		if (path.resolve(projectRoot, file) === path.resolve(tasksPath)) return;
+		const error = withHint(
+			`--file is no longer supported: tag commands use ${terminalSafe(tasksPath)}`,
+			'Run the command from the project that holds the tasks file'
+		);
+		displayError(error);
+		this.handleError(error);
+	}
+
+	/**
 	 * Register this command on an existing program
 	 */
 	static register(program: Command, name?: string): TagsCommand {
@@ -490,7 +507,12 @@ Examples:
 				.description(
 					`[DEPRECATED] ${what} (use "taskgraph ${replacement}" instead)`
 				)
-				.hook('preAction', () => warnDeprecated(name, replacement));
+				// The old commands took -f/--file; only the project's own tasks file still works
+				.addOption(new Option('-f, --file <file>').hideHelp())
+				.hook('preAction', (command) => {
+					warnDeprecated(name, replacement);
+					this.rejectOtherTasksFile(command.opts().file);
+				});
 
 		alias(
 			'add-tag',

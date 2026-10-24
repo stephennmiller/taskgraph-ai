@@ -258,6 +258,17 @@ describe('TagService.renameTag', () => {
 });
 
 // Names that are also Object.prototype members are ordinary names (#379)
+describe('FileStorage.renameTag', () => {
+	it('refuses a target that exists by the time it writes, keeping its tasks', async () => {
+		await expect(
+			new FileStorage(projectRoot).renameTag('master', 'feature')
+		).rejects.toThrow('Tag "feature" already exists');
+
+		expect(readTasks().feature.tasks).toHaveLength(2);
+		expect(readTasks().master.tasks).toHaveLength(1);
+	});
+});
+
 describe('TagService and a tag named constructor', () => {
 	it('creates, uses, copies, renames and deletes it', async () => {
 		const tags = service();
