@@ -608,10 +608,11 @@
         "description": "FileStorage.loadTask builds its own subtask view (copying parent fields) that disagrees with tasks.get.",
         "details": "GitHub issue #458: https://github.com/stephennmiller/taskgraph-ai/issues/458\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T11:27:00.920Z"
       },
       {
         "id": "45",
@@ -876,9 +877,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T11:20:22.138Z",
+      "lastModified": "2026-10-24T11:27:00.920Z",
       "taskCount": 67,
-      "completedCount": 31,
+      "completedCount": 32,
       "tags": [
         "master"
       ]
