@@ -61,6 +61,24 @@ describe('a missing tag', () => {
 		await expect(tmCore.tasks.get('1')).rejects.toThrow(stale);
 	});
 
+	it('is not created by a write when tasks.json has other tags only (#556)', async () => {
+		await setup();
+		const tasksPath = path.join(projectDir, '.taskgraph/tasks/tasks.json');
+		const sprintOnly = {
+			sprint: {
+				tasks: [createTask({ id: 1, title: 'Set up the database' })],
+				metadata: {}
+			}
+		};
+		fs.writeFileSync(tasksPath, JSON.stringify(sprintOnly));
+
+		await expect(tmCore.tasks.updateStatus('1', 'done')).rejects.toThrow(
+			`Tag "master" isn't in tasks.json`
+		);
+
+		expect(JSON.parse(fs.readFileSync(tasksPath, 'utf-8'))).toEqual(sprintOnly);
+	});
+
 	it('gives prime an empty context that says so, not a failure', async () => {
 		await setup('gone');
 

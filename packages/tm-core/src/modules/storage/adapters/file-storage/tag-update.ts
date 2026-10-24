@@ -2,6 +2,11 @@
  * @fileoverview Pure helpers that build the tasks.json contents for one tag
  */
 
+import {
+	ERROR_CODES,
+	TaskGraphError,
+	errorWithHint
+} from '../../../../common/errors/taskgraph-error.js';
 import type { MutateTags } from '../../../../common/interfaces/storage.interface.js';
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import type { FormatHandler } from './format-handler.js';
@@ -79,6 +84,35 @@ export function applyTagUpdate(
 			metadata: withSchemaVersion(metadata)
 		}
 	};
+}
+
+/**
+ * Throw unless a write may save `tag` in the parsed file. With `requireTag`
+ * the file must have it (it was deleted or renamed since the caller read
+ * it). Master it must always have: a missing master reads as the first tag,
+ * so saving it would copy that tag (#556)
+ */
+export function checkWritableTag(
+	formatHandler: FormatHandler,
+	data: any,
+	tag: string,
+	requireTag: boolean,
+	filePath: string
+): void {
+	if (formatHandler.extractTags(data).includes(tag)) return;
+	if (requireTag) {
+		throw new TaskGraphError(
+			`Tag "${tag}" no longer exists in ${filePath}`,
+			ERROR_CODES.NOT_FOUND
+		);
+	}
+	if (tag === 'master') {
+		throw errorWithHint(
+			ERROR_CODES.NOT_FOUND,
+			`Tag "master" isn't in tasks.json`,
+			'Switch with `taskgraph tags use <tag>`; `taskgraph tags` lists them'
+		);
+	}
 }
 
 /**
