@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import { ui } from '@tm/cli';
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 import { generateTextService } from '../ai-services-unified.js';
 import { getPromptManager } from '../prompt-manager.js';
 import {
@@ -310,6 +309,7 @@ async function handleFollowUpQuestions(
 	logFn,
 	conversationHistory
 ) {
+	const { default: inquirer } = await import('inquirer');
 	let interactiveSaveOccurred = false;
 
 	try {
@@ -481,6 +481,7 @@ async function handleSaveToTask(
 	context,
 	logFn
 ) {
+	const { default: inquirer } = await import('inquirer');
 	const { taskId } = await inquirer.prompt([
 		{
 			type: 'input',

@@ -10,33 +10,55 @@
 
 // Must stay first: disables color before chalk loads when NO_COLOR is set
 import './modules/no-color.js';
-import { join } from 'node:path';
-import { findProjectRoot } from '@tm/core';
+import nodeModule from 'node:module';
 
-import dotenv from 'dotenv';
+// Caches compiled code between runs (#248). Optional call: a named import
+// would fail to link on a Node without it, before engines can be reported.
+nodeModule.enableCompileCache?.();
 
-// Store the original working directory
-// This is needed for commands that take relative paths as arguments
-const originalCwd = process.cwd();
+const args = process.argv.slice(2);
+const version = process.env.TM_PUBLIC_VERSION || 'unknown';
 
-// Find project root for .env loading
-// We don't change the working directory to avoid breaking relative path logic
-const projectRoot = findProjectRoot();
-
-// Load .env from project root without changing cwd. quiet: dotenv 17+ logs
-// "injected env (N) from .env" otherwise, which led every command's output.
-dotenv.config({ path: join(projectRoot, '.env'), quiet: true });
-
-// Make original cwd available to commands that need it
-process.env.TASKGRAPH_ORIGINAL_CWD = originalCwd;
-
-// Add at the very beginning of the file
-if (process.env.DEBUG === '1') {
-	console.error('DEBUG - dev.js received args:', process.argv.slice(2));
+// `--version` and the top-level help screen are answered before the rest of
+// the CLI loads (#248). Everything else is imported only when a command runs.
+if (args.length === 1 && (args[0] === '--version' || args[0] === '-V')) {
+	console.log(version);
+} else {
+	const help = await import('@tm/cli/help');
+	if (help.isTopLevelHelpRequest(args)) {
+		help.printTopLevelHelp(args, version);
+	} else {
+		await runCommand();
+	}
 }
 
-// Use dynamic import to ensure dotenv.config() runs before module-level code executes
-const { runCLI } = await import('./modules/commands.js');
+async function runCommand() {
+	const { join } = await import('node:path');
+	const { findProjectRoot } = await import('@tm/core');
+	const { default: dotenv } = await import('dotenv');
 
-// Run the CLI with the process arguments
-runCLI(process.argv);
+	// Store the original working directory
+	// This is needed for commands that take relative paths as arguments
+	const originalCwd = process.cwd();
+
+	// Find project root for .env loading
+	// We don't change the working directory to avoid breaking relative path logic
+	const projectRoot = findProjectRoot();
+
+	// Load .env from project root without changing cwd. quiet: dotenv 17+ logs
+	// "injected env (N) from .env" otherwise, which led every command's output.
+	dotenv.config({ path: join(projectRoot, '.env'), quiet: true });
+
+	// Make original cwd available to commands that need it
+	process.env.TASKGRAPH_ORIGINAL_CWD = originalCwd;
+
+	if (process.env.DEBUG === '1') {
+		console.error('DEBUG - dev.js received args:', args);
+	}
+
+	// Imported after dotenv.config() so module-level code sees the .env values
+	const { runCLI } = await import('./modules/commands.js');
+
+	// Run the CLI with the process arguments (not awaited, as before)
+	runCLI(process.argv);
+}

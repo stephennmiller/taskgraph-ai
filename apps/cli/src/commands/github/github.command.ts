@@ -11,7 +11,6 @@ import {
 	createTmCore
 } from '@tm/core';
 import { Command } from 'commander';
-import inquirer from 'inquirer';
 import { displayError } from '../../utils/error-handler.js';
 import { formatJson } from '../../utils/json-output.js';
 import { getProjectRoot } from '../../utils/project-root.js';
@@ -301,6 +300,7 @@ Examples:
 	}
 
 	protected async confirm(message: string): Promise<boolean> {
+		const { default: inquirer } = await import('inquirer');
 		const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
 			{
 				type: 'confirm',

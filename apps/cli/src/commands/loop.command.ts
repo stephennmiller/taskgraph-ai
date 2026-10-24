@@ -20,7 +20,6 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import inquirer from 'inquirer';
 import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
@@ -302,6 +301,7 @@ export class LoopCommand extends Command {
 				`loop runs ${who} with permission prompts off. Pass --trust to allow that here${instead}.`
 			);
 		}
+		const { default: inquirer } = await import('inquirer');
 		const { confirmed } = await inquirer.prompt([
 			{
 				type: 'confirm',

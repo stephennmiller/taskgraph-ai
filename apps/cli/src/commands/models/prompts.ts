@@ -8,7 +8,6 @@
  */
 
 import chalk from 'chalk';
-import inquirer from 'inquirer';
 import {
 	MODEL_NOTES,
 	MODEL_ROLES,
@@ -75,6 +74,7 @@ export async function promptForModel(
 	choices: ModelChoice[],
 	currentModelId: string | null
 ): Promise<string> {
+	const { default: inquirer } = await import('inquirer');
 	const ask = inquirer.createPromptModule({ clearPromptOnDone: true });
 	const { model } = await ask<{ model: string }>([
 		{

@@ -5,16 +5,31 @@
  * @module git-adapter
  */
 
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'path';
-import fs from 'fs-extra';
-import { type SimpleGit, type StatusResult, simpleGit } from 'simple-git';
+import type { SimpleGit, StatusResult } from 'simple-git';
+
+// simple-git loads on the first git call, not when @tm/core is imported:
+// every CLI command creates a GitAdapter, few run git (#248)
+const require = createRequire(import.meta.url);
 
 /**
  * GitAdapter class for safe git operations
  */
 export class GitAdapter {
 	public projectPath: string;
-	public git: SimpleGit;
+	private simpleGit?: SimpleGit;
+
+	/** The simple-git client for this project, created on first use */
+	public get git(): SimpleGit {
+		if (!this.simpleGit) {
+			const { simpleGit } =
+				require('simple-git') as typeof import('simple-git');
+			this.simpleGit = simpleGit(this.projectPath);
+		}
+		return this.simpleGit;
+	}
 
 	/**
 	 * Creates a new GitAdapter instance.
@@ -38,9 +53,6 @@ export class GitAdapter {
 
 		// Normalize path
 		this.projectPath = path.normalize(projectPath);
-
-		// Initialize simple-git
-		this.git = simpleGit(this.projectPath);
 	}
 
 	/**
@@ -60,7 +72,7 @@ export class GitAdapter {
 			// Check if .git exists (directory or file for submodules/worktrees)
 			const gitPath = path.join(this.projectPath, '.git');
 
-			if (await fs.pathExists(gitPath)) {
+			if (existsSync(gitPath)) {
 				return true;
 			}
 

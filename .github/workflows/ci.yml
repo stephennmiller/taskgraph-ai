@@ -313,6 +313,47 @@ jobs:
             junit.xml
           retention-days: 30
 
+  # Fails when the built CLI starts slower than its budget (#248): an agent
+  # runs taskgraph dozens of times a session. Budgets and the fixture are in
+  # .github/scripts/check-startup-time.mjs.
+  startup-time:
+    name: Startup Time
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore node_modules cache
+        id: cache-node-modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+          key: node-modules-v2-${{ runner.os }}-node${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: build-artifacts
+          path: dist/
+
+      - name: Check startup time
+        run: node .github/scripts/check-startup-time.mjs dist/taskgraph.js 9
+
   # The full suites above run on ubuntu only. This builds on each OS, then runs,
   # on Node 24 and on the oldest Node that `engines` allows, the CLI smoke tests (the
   # @tm/cli integration tests that spawn the built CLI for the everyday
