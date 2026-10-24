@@ -205,7 +205,7 @@
         "description": "Move the non-AI commands (dependencies, remove-task and subtasks, add-subtask, move, tags) from legacy JS into @tm/core, one command family per PR.",
         "details": "GitHub issue #328: https://github.com/stephennmiller/taskgraph-ai/issues/328\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": [
