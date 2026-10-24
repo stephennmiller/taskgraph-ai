@@ -185,6 +185,8 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
 		SNAPSHOT_FILE,
 		`${JSON.stringify({ version, commands }, null, '\t')}\n`
 	);
+	// Biome's style, so CI's format check passes on the written file
+	execFileSync('npx', ['biome', 'format', '--write', SNAPSHOT_FILE]);
 	console.log(
 		`Wrote the taskgraph ${version} commands and flags to ${SNAPSHOT_FILE}`
 	);
