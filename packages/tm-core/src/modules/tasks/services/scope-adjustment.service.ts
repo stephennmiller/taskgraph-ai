@@ -26,6 +26,8 @@ import {
 	assignMetadata,
 	reconcileDependencySources
 } from '../../dependencies/dependency-provenance.js';
+import { dropReferences } from '../../dependencies/removed-references.js';
+import { fullSubtaskId } from '../validation/task-id.js';
 import {
 	AnalyzeComplexityService,
 	readComplexityReport
@@ -222,6 +224,11 @@ export class ScopeAdjustmentService {
 					warn
 				);
 				const saved = await this.save(id, tag, fields, generated, direction);
+				if (saved.dropped.length > 0) {
+					warn(
+						`Dropped dependencies on replaced subtasks of task ${id} from ${saved.dropped.join(', ')}`
+					);
+				}
 				const scoped: ScopedTask = {
 					task: saved.task,
 					regenerated: generated !== null,
@@ -306,7 +313,8 @@ export class ScopeAdjustmentService {
 			ensureSequentialSubtaskIds(generated);
 			return generated.map((subtask) => ({
 				...subtask,
-				status: subtask.status || 'pending',
+				// New subtasks have no work on them, whatever the AI said
+				status: 'pending',
 				testStrategy: subtask.testStrategy || ''
 			}));
 		} catch (error) {
@@ -320,7 +328,8 @@ export class ScopeAdjustmentService {
 	/**
 	 * Apply the new fields and subtasks to the task as tasks.json has it now,
 	 * under the lock. The subtasks kept are the ones with work on them at
-	 * save time; the new ones are numbered after them.
+	 * save time; the new ones are numbered after every subtask the task had,
+	 * so no ID is reused, and dependencies on the replaced ones are dropped.
 	 */
 	private async save(
 		id: string,
@@ -328,7 +337,7 @@ export class ScopeAdjustmentService {
 		fields: ScopedFields,
 		generated: Subtask[] | null,
 		direction: ScopeDirection
-	): Promise<{ task: Task; preserved: number }> {
+	): Promise<{ task: Task; preserved: number; dropped: string[] }> {
 		const { result } = await this.taskService.modifyTasks((current) => {
 			const target = current.find((t) => String(t.id) === id);
 			if (!target) {
@@ -338,13 +347,20 @@ export class ScopeAdjustmentService {
 				);
 			}
 			Object.assign(target, fields);
-			const kept = (target.subtasks ?? []).filter((s) => !isPending(s));
+			const all = target.subtasks ?? [];
+			const kept = all.filter((s) => !isPending(s));
+			let dropped: string[] = [];
 			if (generated) {
-				target.subtasks = [...kept, ...renumber(generated, kept, target.id)];
+				// New IDs come after every old one, so this can't hit a new subtask
+				target.subtasks = [...kept, ...renumber(generated, all, target.id)];
+				dropped = dropReferences(
+					current,
+					all.filter(isPending).map((s) => fullSubtaskId(target.id, s.id))
+				);
 			}
 			return {
 				tasks: current,
-				result: { task: target, preserved: kept.length }
+				result: { task: target, preserved: kept.length, dropped }
 			};
 		}, tag);
 		return result;
@@ -399,8 +415,15 @@ export class ScopeAdjustmentService {
 			if (result.telemetryData) telemetry.push(result.telemetryData);
 			// This run's entry only: the report's older entry isn't a new score
 			const entry = result.analyses.find((a) => String(a.taskId) === id);
-			if (entry) return entry.complexityScore;
-			warn(`Could not find updated complexity analysis for task ${id}`);
+			if (entry?.placeholder) {
+				warn(
+					`The AI returned no complexity analysis for task ${id}; its score was not updated`
+				);
+			} else if (entry) {
+				return entry.complexityScore;
+			} else {
+				warn(`Could not find updated complexity analysis for task ${id}`);
+			}
 		} catch (error) {
 			warn(`Failed to re-analyze task complexity: ${(error as Error).message}`);
 		}
@@ -439,16 +462,17 @@ function ensureSequentialSubtaskIds(subtasks: Array<{ id: unknown }>) {
 }
 
 /**
- * Number the new subtasks after the kept ones, and point their "<task>.<n>"
+ * Number the new subtasks after `existing`, and point their "<task>.<n>"
  * sibling dependencies at the new numbers. The AI chose those dependencies,
  * so they are recorded as inferred.
  */
 function renumber(
 	generated: Subtask[],
-	kept: Subtask[],
+	existing: Subtask[],
 	taskId: Task['id']
 ): Subtask[] {
-	let nextId = kept.reduce((max, s) => Math.max(max, Number(s.id) || 0), 0) + 1;
+	let nextId =
+		existing.reduce((max, s) => Math.max(max, Number(s.id) || 0), 0) + 1;
 	const idMapping = new Map<number, number>();
 	const numbered = generated.map((subtask) => {
 		const newId = nextId++;

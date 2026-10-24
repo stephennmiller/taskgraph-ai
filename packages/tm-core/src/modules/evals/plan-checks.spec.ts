@@ -269,6 +269,15 @@ describe('checkSubtaskComplexity', () => {
 		expect(result.score).toBeCloseTo(4.5 / Math.sqrt(22.5));
 	});
 
+	it('leaves out placeholder entries the model did not score', () => {
+		const result = checkSubtaskComplexity(plan(), [
+			{ taskId: 1, complexityScore: 3 },
+			{ taskId: 2, complexityScore: 5, placeholder: true }
+		]);
+
+		expect(result.pairs.map((p) => p.taskId)).toEqual(['1']);
+	});
+
 	it('scores 0 when the most complex task got the fewest subtasks', () => {
 		const result = checkSubtaskComplexity(plan(), [
 			{ taskId: 1, complexityScore: 2 },

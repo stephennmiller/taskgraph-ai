@@ -308,10 +308,69 @@ describe('tasks.scope', () => {
 
 		expect(readTask().subtasks.map((s: any) => [s.id, s.title])).toEqual([
 			[1, 'Shipped'],
-			[2, 'New step one'],
-			[3, 'New step two']
+			[3, 'New step one'],
+			[4, 'New step two']
 		]);
 		expect(result.tasks[0]).toMatchObject({ preserved: 1, generated: 2 });
+	});
+
+	it('numbers new subtasks after every old one and drops dependencies on the replaced ones', async () => {
+		const task = fixtureTask();
+		task.subtasks = [
+			{
+				id: 1,
+				title: 'Done',
+				description: 'd',
+				status: 'done',
+				dependencies: []
+			},
+			{
+				id: 2,
+				title: 'Started',
+				description: 'd',
+				status: 'in-progress',
+				dependencies: [3, 1]
+			},
+			{
+				id: 3,
+				title: 'Old',
+				description: 'd',
+				status: 'pending',
+				dependencies: []
+			}
+		];
+		write([task, { ...otherTask, dependencies: ['3.3', '3.1'] }]);
+		const onWarning = vi.fn();
+
+		await tmCore.tasks.scope({ ids: '3', direction: 'up' }, { onWarning });
+
+		const saved = readTask();
+		expect(saved.subtasks.map((s: any) => [s.id, s.dependencies])).toEqual([
+			[1, []],
+			[2, [1]],
+			[4, []],
+			[5, ['3.4']]
+		]);
+		expect(readTask(4).dependencies).toEqual(['3.1']);
+		expect(onWarning).toHaveBeenCalledWith(
+			'Dropped dependencies on replaced subtasks of task 3 from 3.2, 4'
+		);
+	});
+
+	it('saves new subtasks as pending whatever status the AI gives', async () => {
+		const answer = regenAnswer();
+		answer.mainResult.subtasks[0].status = 'done';
+		generateObject
+			.mockResolvedValueOnce(adjustAnswer() as any)
+			.mockResolvedValueOnce(answer as any);
+
+		await tmCore.tasks.scope({ ids: '3', direction: 'up' });
+
+		expect(
+			readTask()
+				.subtasks.slice(-2)
+				.map((s: any) => s.status)
+		).toEqual(['pending', 'pending']);
 	});
 
 	it('keeps the pending subtasks when the AI returns none', async () => {
@@ -438,5 +497,32 @@ describe('tasks.scope', () => {
 		expect(mcp.tasks[0].complexity).toEqual({ before: 5, after: 8 });
 		const report = JSON.parse(fs.readFileSync(reportPath(), 'utf8'));
 		expect(report.complexityAnalysis[0].complexityScore).toBe(8);
+	});
+
+	it('does not report a placeholder as the new score (MCP)', async () => {
+		writeReport(8);
+		generateObject.mockImplementation(
+			async (params: any) =>
+				(params.objectName === 'complexityAnalysis'
+					? { mainResult: { complexityAnalysis: [] }, telemetryData: null }
+					: params.objectName === 'updated_task'
+						? adjustAnswer()
+						: regenAnswer()) as any
+		);
+		const onWarning = vi.fn();
+
+		const result = await tmCore.tasks.scope(
+			{ ids: '3', direction: 'up', session: {} },
+			{ onWarning }
+		);
+
+		expect(result.tasks[0].complexity).toBeUndefined();
+		expect(onWarning).toHaveBeenCalledWith(
+			'The AI returned no complexity analysis for task 3; its score was not updated'
+		);
+		const report = JSON.parse(fs.readFileSync(reportPath(), 'utf8'));
+		expect(report.complexityAnalysis).toEqual([
+			{ taskId: 3, complexityScore: 8 }
+		]);
 	});
 });

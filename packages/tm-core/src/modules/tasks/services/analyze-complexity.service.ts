@@ -45,6 +45,8 @@ export interface ComplexityAnalysisItem {
 	recommendedSubtasks: number;
 	expansionPrompt: string;
 	reasoning: string;
+	/** Filled in because the AI left the task out: a default, not a score */
+	placeholder?: true;
 }
 
 export interface ComplexityReportFile {
@@ -92,7 +94,10 @@ export interface AnalyzeComplexityResult {
 	report: ComplexityReportFile;
 	reportPath: string;
 	tag: string;
-	/** The entries this run wrote */
+	/**
+	 * This run's entries. A `placeholder` one is saved only when the report
+	 * had no real entry for the task.
+	 */
 	analyses: ComplexityAnalysisItem[];
 	/** Done, cancelled or deferred tasks among those asked for */
 	skipped: number;
@@ -411,26 +416,33 @@ export class AnalyzeComplexityService {
 					recommendedSubtasks: 3,
 					expansionPrompt: `Break down this task with a focus on ${task.title.toLowerCase()}.`,
 					reasoning:
-						'Automatically added due to missing analysis in AI response.'
+						'Automatically added due to missing analysis in AI response.',
+					placeholder: true
 				});
 			}
 		}
 
 		// Read now, not before the AI call, so a report written meanwhile is kept
 		const existing = this.readExistingReport(reportPath);
-		const analyzedIds = new Set(analyses.map((a) => String(a.taskId)));
 		const tagTaskIds = new Set(allTasks.map((t) => String(t.id)));
-		// Earlier entries of tasks still in this tag that this run didn't analyze
-		const earlier = (
+		const previous = (
 			Array.isArray(existing?.complexityAnalysis)
 				? existing.complexityAnalysis
 				: []
-		).filter(
-			(item) =>
-				!analyzedIds.has(String(item.taskId)) &&
-				tagTaskIds.has(String(item.taskId))
+		).filter((item) => tagTaskIds.has(String(item.taskId)));
+		// A placeholder doesn't replace a real score from an earlier run
+		const realIds = new Set(
+			previous.filter((a) => !a.placeholder).map((a) => String(a.taskId))
 		);
-		const complexityAnalysis = [...earlier, ...analyses];
+		const saved = analyses.filter(
+			(a) => !(a.placeholder && realIds.has(String(a.taskId)))
+		);
+		const savedIds = new Set(saved.map((a) => String(a.taskId)));
+		// Earlier entries of tasks still in this tag that this run didn't replace
+		const earlier = previous.filter(
+			(item) => !savedIds.has(String(item.taskId))
+		);
+		const complexityAnalysis = [...earlier, ...saved];
 		const report = {
 			meta: meta({
 				totalTasks: allTasks.length,

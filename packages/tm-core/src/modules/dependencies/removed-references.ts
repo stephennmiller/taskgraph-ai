@@ -31,13 +31,16 @@ interface Referrer {
  * given full IDs ("5", "5.2"), on every task and subtask of `tasks`. Links to
  * an item's own ID and malformed link entries are dropped along the way, as
  * pruneTaskLinks does.
+ *
+ * @returns The full IDs of the tasks and subtasks that lost a dependency
  */
 export function dropReferences(
 	tasks: Referrer[],
 	removedIds: Iterable<string>
-): void {
+): string[] {
 	const removed = new Set(removedIds);
-	if (removed.size === 0) return;
+	const changed: string[] = [];
+	if (removed.size === 0) return changed;
 
 	const drop = (
 		item: Referrer,
@@ -50,6 +53,11 @@ export function dropReferences(
 		if (kept.length === item.dependencies.length) return;
 		item.dependencies = kept;
 		assignMetadata(item, pruneDependencySources(item, parentId));
+		changed.push(
+			parentId === undefined
+				? String(item.id)
+				: fullSubtaskId(parentId, item.id as DependencyId)
+		);
 	};
 
 	for (const task of tasks) {
@@ -63,6 +71,7 @@ export function dropReferences(
 		}
 	}
 	pruneTaskLinks(tasks, (id) => !removed.has(id));
+	return changed;
 }
 
 /**

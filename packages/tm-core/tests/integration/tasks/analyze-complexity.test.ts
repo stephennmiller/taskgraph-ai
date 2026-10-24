@@ -289,6 +289,41 @@ describe('tasks.analyzeComplexity', () => {
 		);
 	});
 
+	it('marks a placeholder entry, and keeps a real score over it', async () => {
+		fs.writeFileSync(
+			reportPath(),
+			JSON.stringify({
+				meta: {},
+				complexityAnalysis: [
+					{ taskId: 2, complexityScore: 8, reasoning: 'real' }
+				]
+			})
+		);
+		vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue(
+			answerFor({ name: '', ids: '2,3', omit: [2, 3] }) as any
+		);
+		const core = await setUp();
+
+		const result = await core.tasks.analyzeComplexity({ ids: '2,3' });
+
+		expect(
+			result.analyses.map((a) => [a.taskId, a.complexityScore, a.placeholder])
+		).toEqual([
+			[2, 5, true],
+			[3, 5, true]
+		]);
+		expect(
+			readReport().complexityAnalysis.map((a: any) => [
+				a.taskId,
+				a.complexityScore,
+				a.placeholder
+			])
+		).toEqual([
+			[2, 8, undefined],
+			[3, 5, true]
+		]);
+	});
+
 	it('throws, and leaves the report alone, when the AI returns no analysis', async () => {
 		vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue({
 			mainResult: {},
