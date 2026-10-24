@@ -27,7 +27,6 @@
 			"ignoreDependencies": [
 				"cli-table3",
 				"date-fns",
-				"figlet",
 				"fs-extra",
 				"gradient-string",
 				"ora",

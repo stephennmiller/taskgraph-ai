@@ -112,7 +112,7 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 | `maxTurns` | Maximum conversation turns in a single request. Useful for complex multi-step operations. |
 | `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
 | `appendSystemPrompt` | Adds standards or context to the system prompt. |
-| `pathToClaudeCodeExecutable` | Absolute path to the `claude` executable if it is not on your `PATH`. It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
+| `pathToClaudeCodeExecutable` | Absolute path to a `claude` executable to run instead of the Claude Code binary the Agent SDK installs (see [Smaller install](#smaller-install)). It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
 
 Tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here. See [What AI calls can access](#what-ai-calls-can-access).
 
@@ -120,6 +120,32 @@ Tools, permission mode, MCP servers, settings sources, working directory, extra 
 
 - Claude Code does not report usage costs, so cost shows as 0 in telemetry.
 - `temperature` and `maxTokens` are not supported by the Claude Code CLI and may be ignored.
+
+## Smaller install
+
+Installing TaskGraph also installs the Agent SDK's own Claude Code binary for your platform, about 230 MB of the roughly 340 MB total. AI calls run that binary, not the `claude` on your `PATH`, so the SDK always gets the build it was made for.
+
+If you already have Claude Code, you can skip the binary and point TaskGraph at yours:
+
+```bash
+npm install -g taskgraph-ai --omit=optional
+```
+
+Then set the path in `.taskgraph/config.local.json` in each project:
+
+```json
+{
+  "claudeCode": { "pathToClaudeCodeExecutable": "/absolute/path/to/claude" }
+}
+```
+
+`which claude` prints the path. Without it, AI calls fail with `Native CLI binary for <platform> not found`.
+
+Auto-update runs a plain `npm install -g taskgraph-ai@<version>`, which puts the binary back. To keep the smaller install, set `TASKGRAPH_SKIP_AUTO_UPDATE=1` in your shell profile and update by hand with the same flag:
+
+```bash
+npm install -g taskgraph-ai@latest --omit=optional
+```
 
 ## Troubleshooting
 

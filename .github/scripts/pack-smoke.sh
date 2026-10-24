@@ -4,9 +4,10 @@
 #   pack-smoke.sh [repo-root]
 #
 # Packs <repo-root> (default: the current directory, with a built dist/),
-# installs the tarball into a new temp project, and runs init, add-task, list
-# and next there through the installed `taskgraph` bin. A file missing from
-# "files" or a broken bin fails here instead of after a release.
+# installs the tarball into a new temp project, checks the install against the
+# size budget in check-install-size.mjs, and runs init, add-task, list and next
+# there through the installed `taskgraph` bin. A file missing from "files", a
+# broken bin or a heavy new dependency fails here instead of after a release.
 set -euo pipefail
 
 root=$(cd "${1:-.}" && pwd)
@@ -20,6 +21,7 @@ mkdir "$work/project"
 cd "$work/project"
 npm init -y >/dev/null
 npm install --no-audit --no-fund "$work/$tarball"
+node "$root/.github/scripts/check-install-size.mjs" node_modules
 
 export TASKGRAPH_SKIP_AUTO_UPDATE=1
 run() {
