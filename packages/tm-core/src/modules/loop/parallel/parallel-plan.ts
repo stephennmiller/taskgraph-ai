@@ -60,7 +60,7 @@ export function assertParallelFlags(flags: ParallelFlags): void {
 		// outside the folder a Docker sandbox mounts, so Claude couldn't commit
 		throw new ParallelLoopError(
 			"--parallel can't run in the Docker sandbox: a task worktree's git data is outside the folder the sandbox mounts, so Claude couldn't commit there",
-			'Drop --sandbox to run the tasks on this machine with permission prompts off, or run `taskgraph loop --sandbox` without --parallel'
+			'Use --container instead to run each task in its own container, or run `taskgraph loop --sandbox` without --parallel'
 		);
 	}
 	const conflict =

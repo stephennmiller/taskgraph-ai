@@ -103,6 +103,8 @@ It then prints the number of iterations, the tasks completed and the final statu
 | `--no-output`            | flag   | -                               | Hide Claude's output, including with `--verbose`; show only each iteration's status line and the summary.     |
 | `-v, --verbose`          | flag   | -                               | Show Claude's work (its messages and tool calls) as it happens.                                               |
 | `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](/capabilities/loop-parallel). |
+| `--container`            | flag   | -                               | With `--parallel`: run each task in its own Docker container. See [Run each task in a container](/capabilities/loop-parallel#run-each-task-in-a-container). |
+| `--container-image`      | string | `docker/sandbox-templates:claude-code` | The image `--container` uses.                                                                          |
 
 ### Option Details
 

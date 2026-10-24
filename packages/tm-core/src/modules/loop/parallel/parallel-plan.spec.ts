@@ -65,9 +65,7 @@ describe('assertParallelFlags', () => {
 		expect((error as ParallelLoopError).message).toContain(
 			"can't run in the Docker sandbox"
 		);
-		expect((error as ParallelLoopError).hint).toContain(
-			'permission prompts off'
-		);
+		expect((error as ParallelLoopError).hint).toContain('--container');
 	});
 });
 

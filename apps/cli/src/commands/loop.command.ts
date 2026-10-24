@@ -10,10 +10,12 @@ import {
 	type LoopOutputCallbacks,
 	type LoopResult,
 	type LoopTask,
+	DEFAULT_CONTAINER_IMAGE,
 	MAX_PARALLEL,
 	PRESET_NAMES,
 	type ParallelTask,
 	type TmCore,
+	assertContainerFlags,
 	assertParallelFlags,
 	createTmCore,
 	parseParallelCount
@@ -43,6 +45,8 @@ export interface LoopCommandOptions {
 	output?: boolean;
 	verbose?: boolean;
 	parallel?: string;
+	container?: boolean;
+	containerImage?: string;
 }
 
 export class LoopCommand extends Command {
@@ -86,6 +90,14 @@ export class LoopCommand extends Command {
 				'--parallel <n>',
 				`Run up to n ready tasks at once (1-${MAX_PARALLEL}), each in its own git worktree and branch`
 			)
+			.option(
+				'--container',
+				'With --parallel: run each task in its own Docker container (needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)'
+			)
+			.option(
+				'--container-image <image>',
+				`Image for --container (default: ${DEFAULT_CONTAINER_IMAGE})`
+			)
 			.action((options: LoopCommandOptions) => this.execute(options));
 	}
 
@@ -97,6 +109,7 @@ export class LoopCommand extends Command {
 		const progressFile = options.progressFile || '.taskgraph/progress.txt';
 
 		try {
+			assertContainerFlags(options);
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
 
@@ -213,6 +226,7 @@ export class LoopCommand extends Command {
 				verbose: options.verbose,
 				taskId: options.id
 			});
+			assertContainerFlags(options);
 
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
@@ -241,6 +255,9 @@ export class LoopCommand extends Command {
 				parallel,
 				tag: options.tag,
 				trusted: true,
+				container: options.container
+					? { image: options.containerImage }
+					: undefined,
 				signal: controller.signal,
 				callbacks: {
 					onTaskStart: (task) => {

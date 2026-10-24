@@ -19,7 +19,7 @@ TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks
 Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`.
 
 <Warning>
-Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable.
+Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable, or add `--container` to run each one in its own container (see [below](#run-each-task-in-a-container)).
 </Warning>
 
 While they run you get one status line per task. When all have finished you get a summary:
@@ -40,7 +40,7 @@ Next: review with git log -p HEAD..taskgraph/task-1
 
 `.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
 
-`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust` and `--project`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project` and `--container`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
 
 ## Status goes to the main project
 
@@ -53,3 +53,47 @@ Because of that:
 - The task branches carry only Claude's work, so merging several of them doesn't bring `tasks.json` conflicts.
 
 Claude marks a finished task `review`, not `done`, because its work is on a branch you haven't merged. A task in `review` doesn't count as finished, so the tasks that depend on it wait: a later `loop --parallel` won't start them from a commit that lacks their dependency. After you merge the branch, mark the task done with `taskgraph set-status --id=<id> --status=done`.
+
+## Run each task in a container
+
+Add `--container` to run each task's Claude Code in its own Docker container instead of on your machine:
+
+```bash
+export CLAUDE_CODE_OAUTH_TOKEN=<token>   # from `claude setup-token`
+taskgraph loop --parallel 3 --container --trust
+```
+
+Use it when you want parallel tasks without giving each Claude Code process your whole user account: permission prompts are still off, but what a task can reach is limited to what the container mounts. Everything else works as above: the same claims, worktrees, branches, logs and summary.
+
+**What the container sees**, at the same paths as on your machine:
+
+- the task's worktree, read-write
+- your repository's `.git`, read-write so Claude can commit to the task's branch, with `.git/config` and `.git/hooks` read-only, so a task can't plant a hook or setting that your own `git` would run later
+- your project's `.taskgraph/tasks/`, read-write, for the status changes and notes Claude writes, and `.taskgraph/config.json` and `state.json`, read-only
+
+Nothing else from your machine: not your home folder, not `~/.claude`, not the other tasks' worktrees, not the rest of your project. The network is Docker's default. Because `.git/config` is read-only, git commands that write it, such as deleting a branch, print a warning; the branch is still deleted.
+
+**Credentials.** The containers don't get your Claude Code login. Set `CLAUDE_CODE_OAUTH_TOKEN` (run `claude setup-token` to get one for your subscription) or `ANTHROPIC_API_KEY` in your shell. TaskGraph passes the variable by name (`docker run -e CLAUDE_CODE_OAUTH_TOKEN`), so its value never appears in a command line or in `ps`. Without either, `--container` stops before claiming anything:
+
+```
+✗ --container needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY set: the containers get no access to your Claude Code login
+  Run claude setup-token and export the token it prints as CLAUDE_CODE_OAUTH_TOKEN
+```
+
+**Docker** must be installed and on your `PATH`; otherwise `--container` stops with a message saying so. Without `--container`, nothing changes and Docker isn't needed.
+
+**The image** is `docker/sandbox-templates:claude-code` (the one Docker's own sandboxes use: Node.js, git and Claude Code) unless you pass `--container-image <image>`. Each container runs as your user ID, with `HOME` set to `/tmp`. If the image has no `taskgraph` command, each container installs TaskGraph from npm before it starts Claude (the version you're running, or the latest if that one isn't published), which needs network access and takes about half a minute. To skip that, build your own image with `taskgraph` installed:
+
+```dockerfile
+FROM docker/sandbox-templates:claude-code
+RUN npm install --global taskgraph-ai
+```
+
+```bash
+docker build -t my-taskgraph .
+taskgraph loop --parallel 3 --container --container-image my-taskgraph --trust
+```
+
+A custom image needs `sh`, `git` and `claude`, plus `node` and `npm` unless it already has `taskgraph`. TaskGraph replaces the image's entrypoint.
+
+**Ctrl-C** works the same way: each container gets the stop signal, is removed, and the claims are released. Containers are started with `--rm`, so none are left behind after a run.

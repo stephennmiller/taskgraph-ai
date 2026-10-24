@@ -70,6 +70,11 @@ export interface ParallelLoopOptions {
 	/** Stops the run: children are killed, claims released */
 	signal?: AbortSignal;
 	callbacks?: ParallelLoopCallbacks;
+	/**
+	 * Run each task's Claude Code in its own container (`--container`), from
+	 * this image or DEFAULT_CONTAINER_IMAGE
+	 */
+	container?: { image?: string };
 	/** The Claude Code executable; `claude` by default */
 	command?: string;
 	/** Starts the processes; `child_process.spawn` by default */

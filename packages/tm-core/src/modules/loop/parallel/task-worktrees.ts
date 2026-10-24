@@ -180,6 +180,18 @@ export class TaskWorktrees {
 		return path.join(worktree, path.relative(top, this.projectRoot));
 	}
 
+	/** The main repository's `.git`, absolute, symlinks resolved */
+	async gitCommonDir(worktree: string): Promise<string> {
+		return canonical(
+			(
+				await this.git(
+					['rev-parse', '--path-format=absolute', '--git-common-dir'],
+					worktree
+				)
+			).trim()
+		);
+	}
+
 	/**
 	 * Make the folder the task worktrees and logs go in. It must be a real
 	 * folder: a symlink there (one committed to the repository, say) would

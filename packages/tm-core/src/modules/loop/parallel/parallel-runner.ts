@@ -17,13 +17,22 @@
  * claim, and keeps the worktrees that have work in them.
  */
 
-import { type ChildProcess, spawn } from 'node:child_process';
+import { type ChildProcess, execFile, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
+import { TASKGRAPH_VERSION } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
+import {
+	CONTAINER_RUNTIME,
+	DEFAULT_CONTAINER_IMAGE,
+	buildContainerArgs,
+	containerRuntimeMissing,
+	containerTokenVar
+} from './container.js';
 import {
 	buildParallelPrompt,
 	isSafeTaskId,
@@ -78,6 +87,18 @@ const describeSpawnError = (error: NodeJS.ErrnoException, command: string) =>
 		? `${command} isn't installed or isn't on PATH`
 		: `Couldn't start ${command}: ${error.message}`;
 
+/** @throws ParallelLoopError when the container runtime isn't installed */
+async function assertRuntime(runtime: string): Promise<void> {
+	try {
+		await promisify(execFile)(runtime, ['--version']);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+			throw containerRuntimeMissing(runtime);
+		}
+		throw error;
+	}
+}
+
 export class ParallelLoopRunner {
 	private readonly logger = getLogger('ParallelLoopRunner');
 
@@ -93,6 +114,13 @@ export class ParallelLoopRunner {
 		const spawner = options.spawner ?? spawn;
 		const claimant = options.claimant?.trim() || resolveClaimant();
 		const git = new TaskWorktrees(this.projectRoot);
+		// Checked before anything is claimed, so a missing runtime or token
+		// costs nothing
+		if (options.container) await assertRuntime(CONTAINER_RUNTIME);
+		const container = options.container && {
+			image: options.container.image?.trim() || DEFAULT_CONTAINER_IMAGE,
+			tokenVar: containerTokenVar(process.env)
+		};
 
 		const base = await git.head();
 		await git.assertClean();
@@ -175,16 +203,29 @@ export class ParallelLoopRunner {
 					// Awaited before the abort check: an abort that lands while
 					// this runs must not be followed by a start
 					const cwd = await git.projectIn(entry.task.worktree);
+					const prompt = buildParallelPrompt({ taskId: id, tag });
+					const [cmd, args] = container
+						? [
+								CONTAINER_RUNTIME,
+								await this.containerArgs(
+									entry.task.worktree,
+									cwd,
+									prompt,
+									container,
+									git
+								)
+							]
+						: [command, ['-p', prompt, '--dangerously-skip-permissions']];
 					if (aborted) {
 						this.finish(entry, 'stopped');
 						callbacks?.onTaskEnd?.({ ...entry.task });
 						continue;
 					}
 					entry.exited = this.start(entry, {
-						command,
+						command: cmd,
+						args,
 						spawner,
 						cwd,
-						prompt: buildParallelPrompt({ taskId: id, tag }),
 						isAborted: () => aborted
 					});
 					callbacks?.onTaskStart?.({ ...entry.task });
@@ -223,14 +264,46 @@ export class ParallelLoopRunner {
 		};
 	}
 
+	/** `docker run` arguments for one task: see container.ts */
+	private async containerArgs(
+		worktree: string,
+		cwd: string,
+		prompt: string,
+		c: { image: string; tokenVar: string },
+		git: TaskWorktrees
+	): Promise<string[]> {
+		const gitCommonDir = await git.gitCommonDir(worktree);
+		// Mounted read-only; if it were missing a worker could create it
+		fs.mkdirSync(path.join(gitCommonDir, 'hooks'), { recursive: true });
+		return buildContainerArgs({
+			image: c.image,
+			tokenVar: c.tokenVar,
+			// The container has only the real paths, which git's links use
+			projectRoot: fs.realpathSync(this.projectRoot),
+			worktree: fs.realpathSync(worktree),
+			cwd: fs.realpathSync(cwd),
+			gitCommonDir,
+			prompt,
+			taskgraphPackage:
+				TASKGRAPH_VERSION === 'unknown'
+					? 'taskgraph-ai'
+					: `taskgraph-ai@${TASKGRAPH_VERSION}`,
+			user:
+				process.getuid && process.getgid
+					? `${process.getuid()}:${process.getgid()}`
+					: undefined,
+			exists: fs.existsSync
+		});
+	}
+
 	/** Start Claude Code in the task's worktree; resolves when it's gone */
 	private start(
 		entry: Running,
 		ctx: {
 			command: string;
+			args: string[];
 			spawner: NonNullable<ParallelLoopOptions['spawner']>;
 			cwd: string;
-			prompt: string;
 			isAborted: () => boolean;
 		}
 	): Promise<void> {
@@ -251,24 +324,20 @@ export class ParallelLoopRunner {
 			};
 			try {
 				// argv array, no shell: the prompt is one argument whatever it holds
-				const child = ctx.spawner(
-					ctx.command,
-					['-p', ctx.prompt, '--dangerously-skip-permissions'],
-					{
-						cwd: ctx.cwd,
-						// `taskgraph` run in the worktree would otherwise find the
-						// worktree's own copy of tasks.json, checked out from HEAD:
-						// status changes would land on the branch, and tasks not yet
-						// committed would be missing. An env value, never a shell
-						env: {
-							...process.env,
-							[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
-						},
-						stdio: ['ignore', log, log],
-						// Own process group, so an abort can stop Claude's children too
-						detached: process.platform !== 'win32'
-					}
-				);
+				const child = ctx.spawner(ctx.command, ctx.args, {
+					cwd: ctx.cwd,
+					// `taskgraph` run in the worktree would otherwise find the
+					// worktree's own copy of tasks.json, checked out from HEAD:
+					// status changes would land on the branch, and tasks not yet
+					// committed would be missing. An env value, never a shell
+					env: {
+						...process.env,
+						[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
+					},
+					stdio: ['ignore', log, log],
+					// Own process group, so an abort can stop Claude's children too
+					detached: process.platform !== 'win32'
+				});
 				entry.child = child;
 				child.once('error', (error: NodeJS.ErrnoException) =>
 					done('failed', describeSpawnError(error, ctx.command))
