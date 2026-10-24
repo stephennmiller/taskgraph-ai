@@ -49,10 +49,20 @@ import { createTmCore } from '@tm/core';
 import { ParsePrdCommand } from './parse-prd.command.js';
 
 const parsePrd = vi.fn();
+const parsePrdTarget = vi.fn();
+let prd: string;
 
 beforeEach(() => {
-	vi.mocked(createTmCore).mockResolvedValue({ tasks: { parsePrd } } as any);
+	prd = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'tm-')), 'prd.md');
+	fs.writeFileSync(prd, '# PRD');
+	// Mock every tm-core call the command makes before the one under test,
+	// or the test passes on an earlier error's exit 1
+	vi.mocked(createTmCore).mockResolvedValue({
+		tasks: { parsePrd, parsePrdTarget }
+	} as any);
+	parsePrdTarget.mockResolvedValue({ prdPath: prd, tag: 'master', taskCount: 0 });
 	vi.spyOn(console, 'log').mockImplementation(() => {});
+	vi.spyOn(console, 'error').mockImplementation(() => {});
 	vi.spyOn(process, 'exit').mockImplementation(((code: number) => {
 		throw new Error(`exit ${code}`);
 	}) as never);
@@ -62,8 +72,9 @@ it('says why it failed and exits 1', async () => {
 	parsePrd.mockRejectedValue(new Error('Claude is overloaded'));
 
 	await expect(
-		new ParsePrdCommand().parseAsync(['prd.md'], { from: 'user' })
+		new ParsePrdCommand().parseAsync([prd], { from: 'user' })
 	).rejects.toThrow('exit 1');
+	expect(parsePrd).toHaveBeenCalled();
 });
 ```
 
