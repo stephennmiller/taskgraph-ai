@@ -11,6 +11,7 @@ import {
 	errorWithHint
 } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
+import { writeAtomically } from '../../../common/utils/write-atomically.js';
 
 export interface ReadmeExportOptions {
 	/** Include each task's subtasks as rows */
@@ -189,8 +190,11 @@ export function writeReadmeExport(
 ): string {
 	const readmePath = path.join(projectRoot, 'README.md');
 	let readme: string | null = null;
+	// A symlinked README keeps its link: write the file it points to
+	let target = readmePath;
 	try {
 		readme = fs.readFileSync(readmePath, 'utf8');
+		target = fs.realpathSync(readmePath);
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
 	}
@@ -199,10 +203,9 @@ export function writeReadmeExport(
 		timestamp: `${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC`,
 		projectRoot
 	});
-	fs.writeFileSync(
-		readmePath,
-		mergeReadmeSection(readme, section, options.projectName),
-		'utf8'
+	writeAtomically(
+		target,
+		mergeReadmeSection(readme, section, options.projectName)
 	);
 	return readmePath;
 }

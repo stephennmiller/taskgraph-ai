@@ -132,4 +132,29 @@ describe('writeReadmeExport', () => {
 		expect(readme.match(/TASKGRAPH_EXPORT_START/g)).toHaveLength(1);
 		expect(readme).toContain('| 2 | Parser |');
 	});
+
+	it('leaves the old README.md whole when the write fails', () => {
+		const readmePath = path.join(dir, 'README.md');
+		fs.writeFileSync(readmePath, '# App\nMine\n');
+		// A folder at the temp file's name makes the write fail
+		fs.mkdirSync(`${readmePath}.taskgraph-${process.pid}.tmp`);
+
+		expect(() =>
+			writeReadmeExport(dir, tasks(), { projectName: 'App' })
+		).toThrow(/EEXIST/);
+		expect(fs.readFileSync(readmePath, 'utf8')).toBe('# App\nMine\n');
+	});
+
+	it('writes through a symlinked README.md and keeps the link', () => {
+		const real = path.join(dir, 'docs.md');
+		fs.writeFileSync(real, '# App\n');
+		fs.symlinkSync(real, path.join(dir, 'README.md'));
+
+		writeReadmeExport(dir, tasks(), { projectName: 'App' });
+
+		expect(fs.lstatSync(path.join(dir, 'README.md')).isSymbolicLink()).toBe(
+			true
+		);
+		expect(fs.readFileSync(real, 'utf8')).toContain('| 2 | Parser |');
+	});
 });

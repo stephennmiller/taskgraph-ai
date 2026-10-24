@@ -21,6 +21,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../../common/constants/paths.js';
+import { writeAtomically } from '../../../common/utils/write-atomically.js';
 import {
 	ARCHIVE_FILE_NAME,
 	archivePathFor,
@@ -155,22 +156,6 @@ function readJsonOrNone(file: string): unknown {
 		return readArchiveSync(file);
 	} catch {
 		return {};
-	}
-}
-
-/**
- * Write next to `file`, then rename over it, so `%A` is either the old
- * content or the whole merge. `wx` refuses a temp name that already exists
- * (including a symlink planted there) instead of writing through it.
- */
-function writeAtomically(file: string, content: string): void {
-	const temp = `${file}.taskgraph-merge-${process.pid}`;
-	try {
-		fs.writeFileSync(temp, content, { encoding: 'utf8', flag: 'wx' });
-		fs.renameSync(temp, file);
-	} catch (error) {
-		fs.rmSync(temp, { force: true });
-		throw error;
 	}
 }
 

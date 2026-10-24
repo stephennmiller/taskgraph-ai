@@ -200,7 +200,7 @@ describe('runTasksMergeDriver', () => {
 		write('theirs', tag([task(1, 'A'), task(2, 'Theirs')]));
 		const taken = path.join(dir, 'elsewhere');
 		write('elsewhere', 'not yours');
-		fs.symlinkSync(taken, `${at('ours')}.taskgraph-merge-${process.pid}`);
+		fs.symlinkSync(taken, `${at('ours')}.taskgraph-${process.pid}.tmp`);
 
 		expect(() => runTasksMergeDriver(files())).toThrow(/EEXIST/);
 		expect(fs.readFileSync(at('ours'), 'utf8')).toBe(ours);

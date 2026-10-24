@@ -150,12 +150,11 @@ function readScore(
 	args: NextTaskArgs
 ): number | undefined {
 	try {
-		const found = tmCore.tasks.getComplexityReport({
-			tag,
-			file: args.complexityReport
-				? resolveInsideRoot(args.projectRoot, args.complexityReport)
-				: undefined
-		});
+		const file = args.complexityReport
+			? resolveInsideRoot(args.projectRoot, args.complexityReport)
+			: undefined;
+		const found = tmCore.tasks.getComplexityReport({ tag, file });
+		if (!found && file) log.warn(`No complexity report found at ${file}`);
 		return found?.report.complexityAnalysis?.find(
 			(entry) => String(entry.taskId) === taskId
 		)?.complexityScore;
