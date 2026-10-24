@@ -4,17 +4,17 @@
  * them, while files that only contain the word stay readable.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
 	excludeSecretsFromGrep,
 	getPathViolation
-} from '../../../src/ai-providers/claude-code-path-guard.js';
-import { ripgrep, runGrep } from './claude-code-ripgrep.js';
+} from './claude-code-path-guard.js';
+import { ripgrep, runGrep } from './ripgrep.test-helper.js';
 
 describe('claude-code path guard: kubeconfig names (#438)', () => {
-	let project;
+	let project: string;
 
 	const secrets = [
 		'kubeconfig',

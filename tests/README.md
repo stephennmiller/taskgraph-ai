@@ -34,8 +34,6 @@ npm run test:coverage
 The root suite runs on Vitest with `vitest.root.config.ts` (globals, node env,
 `clearMocks`, `@/` alias, `tests/setup.js`; `.js` and `.ts` tests). Coverage is
 off by default and enabled by `npm run test:coverage` (reports in `coverage/`).
-The real-SDK tests in `tests/sdk-contract/` have their own config
-(`vitest.sdk-contract.config.ts`) and run with `npm run test:sdk-contract`.
 
 ```bash
 # Run a single file (or directory)

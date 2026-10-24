@@ -1,20 +1,20 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
 	createPathGuardHook,
 	excludeSecretsFromGrep,
 	getPathViolation,
 	isInsideRoot,
 	normalizeSegment
-} from '../../../src/ai-providers/claude-code-path-guard.js';
-import { ripgrep, runGrep } from './claude-code-ripgrep.js';
+} from './claude-code-path-guard.js';
+import { ripgrep, runGrep } from './ripgrep.test-helper.js';
 
 describe('claude-code path guard', () => {
-	let base;
-	let root;
-	let outside;
+	let base: string;
+	let root: string;
+	let outside: string;
 
 	beforeAll(() => {
 		base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tg-guard-')));
@@ -417,7 +417,7 @@ describe('claude-code path guard', () => {
 	});
 
 	describe('directory-wide Grep (#225)', () => {
-		let project;
+		let project: string;
 		const secrets = [
 			'.env',
 			'.env.local',

@@ -1,12 +1,14 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createClaudeCode as mockedCreateClaudeCode } from 'ai-sdk-provider-claude-code';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ClaudeCodeProvider } from './claude-code.js';
 
 // Mock the ai-sdk-provider-claude-code package
-vi.doMock('ai-sdk-provider-claude-code', () => ({
+vi.mock('ai-sdk-provider-claude-code', () => ({
 	createClaudeCode: vi.fn(() => {
-		const provider = (modelId, settings) => ({
+		const provider: any = (modelId: string, settings: unknown) => ({
 			// Minimal mock language model surface
 			id: modelId,
 			settings,
@@ -19,36 +21,22 @@ vi.doMock('ai-sdk-provider-claude-code', () => ({
 	})
 }));
 
-// Mock the base provider
-vi.doMock('../../../src/ai-providers/base-provider.js', () => ({
-	BaseAIProvider: class {
-		constructor() {
-			this.name = 'Base Provider';
-		}
-		handleError(context, error) {
-			throw error;
-		}
-	}
-}));
-
-// Mock config getters
-vi.doMock('../../../scripts/modules/config-manager.js', () => ({
-	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
-	getSupportedModelsForProvider: vi.fn(() => ['opus', 'sonnet', 'haiku']),
-	getDebugFlag: vi.fn(() => false),
-	getLogLevel: vi.fn(() => 'info')
-}));
-
-// Import after mocking
-const { ClaudeCodeProvider } = await import(
-	'../../../src/ai-providers/claude-code.js'
-);
+const createClaudeCode = mockedCreateClaudeCode as any;
+// The config's settings for a command, as the host passes them in
+const getClaudeCodeSettingsForCommand = vi.fn((): any => ({}));
+const log = vi.fn();
+const newProvider = () =>
+	new ClaudeCodeProvider({
+		log,
+		getSettingsForCommand: getClaudeCodeSettingsForCommand,
+		supportedModels: ['opus', 'sonnet', 'haiku']
+	});
 
 describe('ClaudeCodeProvider', () => {
-	let provider;
+	let provider: ClaudeCodeProvider;
 
 	beforeEach(() => {
-		provider = new ClaudeCodeProvider();
+		provider = newProvider();
 		vi.clearAllMocks();
 	});
 
@@ -78,35 +66,33 @@ describe('ClaudeCodeProvider', () => {
 	});
 
 	describe('getClient', () => {
-		it('should return a claude code client', () => {
-			const client = provider.getClient({});
+		it('should return a claude code client', async () => {
+			const client = await provider.getClient({});
 			expect(client).toBeDefined();
 			expect(typeof client).toBe('function');
 		});
 
-		it('should create client without parameters', () => {
-			const client = provider.getClient();
+		it('should create client without parameters', async () => {
+			const client = await provider.getClient();
 			expect(client).toBeDefined();
 		});
 
-		it('should handle commandName parameter', () => {
-			const client = provider.getClient({
+		it('should handle commandName parameter', async () => {
+			const client = await provider.getClient({
 				commandName: 'test-command'
 			});
 			expect(client).toBeDefined();
 		});
 
-		it('should have languageModel and chat methods', () => {
-			const client = provider.getClient({});
+		it('should have languageModel and chat methods', async () => {
+			const client: any = await provider.getClient({});
 			expect(client.languageModel).toBeDefined();
 			expect(client.chat).toBeDefined();
 			expect(client.chat).toBe(client.languageModel);
 		});
 
 		it('should pass systemPrompt configuration to createClaudeCode', async () => {
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
-
-			provider.getClient({});
+			await provider.getClient({});
 
 			expect(createClaudeCode).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -121,9 +107,7 @@ describe('ClaudeCodeProvider', () => {
 		});
 
 		it('should pass settingSources configuration to createClaudeCode', async () => {
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
-
-			provider.getClient({});
+			await provider.getClient({});
 
 			expect(createClaudeCode).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -135,16 +119,14 @@ describe('ClaudeCodeProvider', () => {
 		});
 
 		it('should pass defaultSettings from config to createClaudeCode', async () => {
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
-			const { getClaudeCodeSettingsForCommand } = await import(
-				'../../../scripts/modules/config-manager.js'
-			);
-
 			const mockSettings = { maxTokens: 4096, temperature: 0.7 };
 			getClaudeCodeSettingsForCommand.mockReturnValueOnce(mockSettings);
 
-			provider.getClient({ commandName: 'test-command' });
+			await provider.getClient({ commandName: 'test-command' });
 
+			expect(getClaudeCodeSettingsForCommand).toHaveBeenCalledWith(
+				'test-command'
+			);
 			expect(createClaudeCode).toHaveBeenCalledWith(
 				expect.objectContaining({
 					defaultSettings: expect.objectContaining({
@@ -160,14 +142,18 @@ describe('ClaudeCodeProvider', () => {
 		});
 
 		it('keeps the SDK warnings out of the terminal at the default log level', async () => {
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
 			const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 			const out = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-			provider.getClient({ commandName: 'parse-prd' });
+			await provider.getClient({ commandName: 'parse-prd' });
 			const { logger } = createClaudeCode.mock.calls.at(-1)[0].defaultSettings;
 			logger.warn('[claude-code] Received tool result for unknown tool ID: x');
 
+			// The host's logger gets it at debug level, which it hides by default
+			expect(log).toHaveBeenCalledWith(
+				'debug',
+				'[claude-code] Received tool result for unknown tool ID: x'
+			);
 			expect(warn).not.toHaveBeenCalled();
 			expect(out).not.toHaveBeenCalled();
 			warn.mockRestore();
@@ -175,15 +161,10 @@ describe('ClaudeCodeProvider', () => {
 		});
 
 		it('should pass complete configuration object to createClaudeCode', async () => {
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
-			const { getClaudeCodeSettingsForCommand } = await import(
-				'../../../scripts/modules/config-manager.js'
-			);
-
 			const mockSettings = { maxTokens: 2048 };
 			getClaudeCodeSettingsForCommand.mockReturnValueOnce(mockSettings);
 
-			provider.getClient({
+			await provider.getClient({
 				commandName: 'analyze',
 				projectRoot: '/work/project'
 			});
@@ -224,12 +205,8 @@ describe('ClaudeCodeProvider', () => {
 		});
 
 		describe('API key handling', () => {
-			const lastEnv = async () => {
-				const { createClaudeCode } = await import(
-					'ai-sdk-provider-claude-code'
-				);
-				return createClaudeCode.mock.calls.at(-1)[0].defaultSettings.env;
-			};
+			const lastEnv = () =>
+				createClaudeCode.mock.calls.at(-1)[0].defaultSettings.env;
 			const saved = {
 				anthropic: process.env.ANTHROPIC_API_KEY,
 				claudeCode: process.env.CLAUDE_CODE_API_KEY
@@ -239,7 +216,7 @@ describe('ClaudeCodeProvider', () => {
 				for (const [key, value] of [
 					['ANTHROPIC_API_KEY', saved.anthropic],
 					['CLAUDE_CODE_API_KEY', saved.claudeCode]
-				]) {
+				] as const) {
 					if (value === undefined) delete process.env[key];
 					else process.env[key] = value;
 				}
@@ -249,9 +226,9 @@ describe('ClaudeCodeProvider', () => {
 				process.env.ANTHROPIC_API_KEY = 'sk-ant-should-not-be-used';
 				delete process.env.CLAUDE_CODE_API_KEY;
 
-				provider.getClient({});
+				await provider.getClient({});
 
-				const env = await lastEnv();
+				const env = lastEnv();
 				expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
 				// The process environment itself is left untouched
 				expect(process.env.ANTHROPIC_API_KEY).toBe('sk-ant-should-not-be-used');
@@ -265,9 +242,9 @@ describe('ClaudeCodeProvider', () => {
 				);
 				delete process.env.CLAUDE_CODE_API_KEY;
 
-				provider.getClient({ projectRoot: root });
+				await provider.getClient({ projectRoot: root });
 
-				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('sk-ant-from-project');
+				expect(lastEnv().ANTHROPIC_API_KEY).toBe('sk-ant-from-project');
 				expect(process.env.CLAUDE_CODE_API_KEY).toBeUndefined();
 			});
 
@@ -279,9 +256,9 @@ describe('ClaudeCodeProvider', () => {
 				);
 				process.env.CLAUDE_CODE_API_KEY = 'from-host';
 
-				provider.getClient({ projectRoot: root });
+				await provider.getClient({ projectRoot: root });
 
-				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('from-host');
+				expect(lastEnv().ANTHROPIC_API_KEY).toBe('from-host');
 			});
 
 			it("passes the project's other .env settings to Claude Code", async () => {
@@ -291,11 +268,9 @@ describe('ClaudeCodeProvider', () => {
 					'TM_TEST_PROXY=http://proxy.example:8080\n'
 				);
 
-				provider.getClient({ projectRoot: root });
+				await provider.getClient({ projectRoot: root });
 
-				expect((await lastEnv()).TM_TEST_PROXY).toBe(
-					'http://proxy.example:8080'
-				);
+				expect(lastEnv().TM_TEST_PROXY).toBe('http://proxy.example:8080');
 				expect(process.env.TM_TEST_PROXY).toBeUndefined();
 			});
 
@@ -303,26 +278,22 @@ describe('ClaudeCodeProvider', () => {
 				process.env.ANTHROPIC_API_KEY = 'sk-ant-other';
 				process.env.CLAUDE_CODE_API_KEY = 'sk-ant-claude-code';
 
-				provider.getClient({});
+				await provider.getClient({});
 
-				expect((await lastEnv()).ANTHROPIC_API_KEY).toBe('sk-ant-claude-code');
+				expect(lastEnv().ANTHROPIC_API_KEY).toBe('sk-ant-claude-code');
 			});
 		});
 
 		describe('tool restrictions per role', () => {
-			const lastSettings = async () => {
-				const { createClaudeCode } = await import(
-					'ai-sdk-provider-claude-code'
-				);
-				return createClaudeCode.mock.calls.at(-1)[0].defaultSettings;
-			};
+			const lastSettings = () =>
+				createClaudeCode.mock.calls.at(-1)[0].defaultSettings;
 
 			it.each([['main'], ['fallback'], [undefined]])(
 				'gives the %s role read-only repo tools and no web, shell or MCP access',
 				async (role) => {
-					provider.getClient({ role, projectRoot: '/work/project' });
+					await provider.getClient({ role, projectRoot: '/work/project' });
 
-					const settings = await lastSettings();
+					const settings = lastSettings();
 					expect(settings.tools).toEqual(['Read', 'Grep', 'Glob']);
 					expect(settings.allowedTools).toEqual(['Read', 'Grep', 'Glob']);
 					expect(settings.permissionMode).toBe('dontAsk');
@@ -333,9 +304,9 @@ describe('ClaudeCodeProvider', () => {
 			);
 
 			it('withholds file tools when no project root is known', async () => {
-				provider.getClient({ role: 'main' });
+				await provider.getClient({ role: 'main' });
 
-				const settings = await lastSettings();
+				const settings = lastSettings();
 				expect(settings.tools).toEqual([]);
 				expect(settings.allowedTools).toEqual([]);
 				expect(settings.settingSources).toEqual([]);
@@ -345,9 +316,9 @@ describe('ClaudeCodeProvider', () => {
 			it.each([['main'], ['fallback'], [undefined]])(
 				'isolates settings and scopes files to the project root for the %s role',
 				async (role) => {
-					provider.getClient({ role, projectRoot: '/work/project' });
+					await provider.getClient({ role, projectRoot: '/work/project' });
 
-					const settings = await lastSettings();
+					const settings = lastSettings();
 					expect(settings.settingSources).toEqual([]);
 					expect(settings.cwd).toBe('/work/project');
 					expect(settings.additionalDirectories).toBeUndefined();
@@ -358,9 +329,12 @@ describe('ClaudeCodeProvider', () => {
 			);
 
 			it('denies reads outside the project root through the hook', async () => {
-				provider.getClient({ role: 'main', projectRoot: '/work/project' });
+				await provider.getClient({
+					role: 'main',
+					projectRoot: '/work/project'
+				});
 
-				const [hook] = (await lastSettings()).hooks.PreToolUse[0].hooks;
+				const [hook] = lastSettings().hooks.PreToolUse[0].hooks;
 				const out = await hook({
 					tool_name: 'Read',
 					tool_input: { file_path: '/etc/passwd' }
@@ -369,9 +343,6 @@ describe('ClaudeCodeProvider', () => {
 			});
 
 			it('does not let config settings reopen settings sources or file scope', async () => {
-				const { getClaudeCodeSettingsForCommand } = await import(
-					'../../../scripts/modules/config-manager.js'
-				);
 				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
 					settingSources: ['user', 'project', 'local'],
 					additionalDirectories: ['/'],
@@ -379,9 +350,12 @@ describe('ClaudeCodeProvider', () => {
 					hooks: {}
 				});
 
-				provider.getClient({ role: 'main', projectRoot: '/work/project' });
+				await provider.getClient({
+					role: 'main',
+					projectRoot: '/work/project'
+				});
 
-				const settings = await lastSettings();
+				const settings = lastSettings();
 				expect(settings.settingSources).toEqual([]);
 				expect(settings.additionalDirectories).toBeUndefined();
 				expect(settings.cwd).toBe('/work/project');
@@ -390,23 +364,23 @@ describe('ClaudeCodeProvider', () => {
 			});
 
 			it('drops a pathToClaudeCodeExecutable that is not a trusted claude binary', async () => {
-				const { getClaudeCodeSettingsForCommand } = await import(
-					'../../../scripts/modules/config-manager.js'
-				);
 				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
 					pathToClaudeCodeExecutable: '/bin/sh'
 				});
 
-				provider.getClient({ role: 'main', projectRoot: '/work/project' });
+				await provider.getClient({
+					role: 'main',
+					projectRoot: '/work/project'
+				});
 
-				const settings = await lastSettings();
+				const settings = lastSettings();
 				expect(settings).not.toHaveProperty('pathToClaudeCodeExecutable');
 			});
 
 			it('gives the research role only WebSearch and WebFetch', async () => {
-				provider.getClient({ role: 'research' });
+				await provider.getClient({ role: 'research' });
 
-				const settings = await lastSettings();
+				const settings = lastSettings();
 				expect(settings.tools).toEqual(['WebSearch', 'WebFetch']);
 				expect(settings.allowedTools).toEqual(['WebSearch', 'WebFetch']);
 				expect(settings.permissionMode).toBe('dontAsk');
@@ -415,44 +389,36 @@ describe('ClaudeCodeProvider', () => {
 			});
 
 			it('does not load user, project or local settings for the research role', async () => {
-				provider.getClient({ role: 'research' });
+				await provider.getClient({ role: 'research' });
 
-				const settings = await lastSettings();
+				const settings = lastSettings();
 				expect(settings.settingSources).toEqual([]);
 			});
 
 			it('caps research turns unless the config sets maxTurns', async () => {
-				const { getClaudeCodeSettingsForCommand } = await import(
-					'../../../scripts/modules/config-manager.js'
-				);
-
-				provider.getClient({ role: 'research' });
-				expect((await lastSettings()).maxTurns).toBe(8);
+				await provider.getClient({ role: 'research' });
+				expect(lastSettings().maxTurns).toBe(8);
 
 				getClaudeCodeSettingsForCommand.mockReturnValueOnce({ maxTurns: 3 });
-				provider.getClient({ role: 'research' });
-				expect((await lastSettings()).maxTurns).toBe(3);
+				await provider.getClient({ role: 'research' });
+				expect(lastSettings().maxTurns).toBe(3);
 			});
 
 			it('caps main and fallback turns at 6 unless the config sets maxTurns', async () => {
-				const { getClaudeCodeSettingsForCommand } = await import(
-					'../../../scripts/modules/config-manager.js'
-				);
-
-				provider.getClient({ role: 'main', projectRoot: '/tmp/project' });
-				expect((await lastSettings()).maxTurns).toBe(6);
-				provider.getClient({ role: 'fallback', projectRoot: '/tmp/project' });
-				expect((await lastSettings()).maxTurns).toBe(6);
+				await provider.getClient({ role: 'main', projectRoot: '/tmp/project' });
+				expect(lastSettings().maxTurns).toBe(6);
+				await provider.getClient({
+					role: 'fallback',
+					projectRoot: '/tmp/project'
+				});
+				expect(lastSettings().maxTurns).toBe(6);
 
 				getClaudeCodeSettingsForCommand.mockReturnValueOnce({ maxTurns: 12 });
-				provider.getClient({ role: 'main', projectRoot: '/tmp/project' });
-				expect((await lastSettings()).maxTurns).toBe(12);
+				await provider.getClient({ role: 'main', projectRoot: '/tmp/project' });
+				expect(lastSettings().maxTurns).toBe(12);
 			});
 
 			it('does not let config settings widen the allowed tools', async () => {
-				const { getClaudeCodeSettingsForCommand } = await import(
-					'../../../scripts/modules/config-manager.js'
-				);
 				getClaudeCodeSettingsForCommand.mockReturnValueOnce({
 					allowedTools: ['Bash', 'Write'],
 					tools: ['Bash'],
@@ -460,9 +426,9 @@ describe('ClaudeCodeProvider', () => {
 					mcpServers: { evil: { command: 'x' } }
 				});
 
-				provider.getClient({ role: 'research' });
+				await provider.getClient({ role: 'research' });
 
-				const settings = await lastSettings();
+				const settings = lastSettings();
 				expect(settings.tools).toEqual(['WebSearch', 'WebFetch']);
 				expect(settings.allowedTools).toEqual(['WebSearch', 'WebFetch']);
 				expect(settings.permissionMode).toBe('dontAsk');
@@ -471,14 +437,9 @@ describe('ClaudeCodeProvider', () => {
 		});
 
 		it('should pass empty defaultSettings when config returns null', async () => {
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
-			const { getClaudeCodeSettingsForCommand } = await import(
-				'../../../scripts/modules/config-manager.js'
-			);
-
 			getClaudeCodeSettingsForCommand.mockReturnValueOnce(null);
 
-			provider.getClient({});
+			await provider.getClient({});
 
 			expect(createClaudeCode).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -511,14 +472,13 @@ describe('ClaudeCodeProvider', () => {
 	describe('error handling', () => {
 		it('should handle client initialization errors', async () => {
 			// Force an error by making createClaudeCode throw
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
 			createClaudeCode.mockImplementationOnce(() => {
 				throw new Error('Mock initialization error');
 			});
 
 			// Create a new provider instance to use the mocked createClaudeCode
-			const errorProvider = new ClaudeCodeProvider();
-			expect(() => errorProvider.getClient({})).toThrow(
+			const errorProvider = newProvider();
+			await expect(errorProvider.getClient({})).rejects.toThrow(
 				'Mock initialization error'
 			);
 		});

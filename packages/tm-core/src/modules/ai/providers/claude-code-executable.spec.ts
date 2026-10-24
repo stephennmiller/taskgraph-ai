@@ -1,12 +1,27 @@
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { vi } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createClaudeCode as mockedCreateClaudeCode } from 'ai-sdk-provider-claude-code';
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	describe,
+	expect,
+	it,
+	vi
+} from 'vitest';
+import {
+	ClaudeCodeProvider,
+	claudeFromPath,
+	hasBundledClaudeBinary,
+	isTrustedClaudeExecutable
+} from './claude-code.js';
 
 // Mock the ai-sdk-provider-claude-code package
-vi.doMock('ai-sdk-provider-claude-code', () => ({
+vi.mock('ai-sdk-provider-claude-code', () => ({
 	createClaudeCode: vi.fn(() => {
-		const provider = (modelId, settings) => ({
+		const provider: any = (modelId: string, settings: unknown) => ({
 			// Minimal mock language model surface
 			id: modelId,
 			settings,
@@ -19,38 +34,12 @@ vi.doMock('ai-sdk-provider-claude-code', () => ({
 	})
 }));
 
-// Mock the base provider
-vi.doMock('../../../src/ai-providers/base-provider.js', () => ({
-	BaseAIProvider: class {
-		constructor() {
-			this.name = 'Base Provider';
-		}
-		handleError(context, error) {
-			throw error;
-		}
-	}
-}));
-
-// Mock config getters
-vi.doMock('../../../scripts/modules/config-manager.js', () => ({
-	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
-	getSupportedModelsForProvider: vi.fn(() => ['opus', 'sonnet', 'haiku']),
-	getDebugFlag: vi.fn(() => false),
-	getLogLevel: vi.fn(() => 'info')
-}));
-
-// Import after mocking
-const {
-	ClaudeCodeProvider,
-	claudeFromPath,
-	hasBundledClaudeBinary,
-	isTrustedClaudeExecutable
-} = await import('../../../src/ai-providers/claude-code.js');
+const createClaudeCode = mockedCreateClaudeCode as any;
 
 describe('isTrustedClaudeExecutable', () => {
-	let base;
-	let project;
-	let outsideClaude;
+	let base: string;
+	let project: string;
+	let outsideClaude: string;
 
 	beforeAll(() => {
 		base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tg-exe-')));
@@ -95,7 +84,7 @@ describe('isTrustedClaudeExecutable', () => {
 
 	describe('claude on PATH', () => {
 		const originalPath = process.env.PATH;
-		const usePath = (dir) => {
+		const usePath = (dir: string) => {
 			process.env.PATH = dir;
 		};
 
@@ -129,8 +118,11 @@ describe('isTrustedClaudeExecutable', () => {
 			expect(hasBundledClaudeBinary()).toBe(true);
 			expect(claudeFromPath(project)).toBeUndefined();
 
-			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
-			new ClaudeCodeProvider().getClient({
+			await new ClaudeCodeProvider({
+				log: vi.fn(),
+				getSettingsForCommand: () => ({}),
+				supportedModels: ['opus', 'sonnet', 'haiku']
+			}).getClient({
 				role: 'main',
 				projectRoot: project
 			});

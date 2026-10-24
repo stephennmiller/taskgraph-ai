@@ -2,16 +2,17 @@
  * Every AI call gets a time limit, and the output-token limit reaches the
  * SDK under the name it reads (maxOutputTokens) for object calls too.
  */
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { BaseAIProvider } from './base-provider.js';
 
-const sdk = vi.hoisted(() => ({
+const sdk: Record<string, any> = vi.hoisted(() => ({
 	generateText: vi.fn(),
 	streamText: vi.fn(),
 	generateObject: vi.fn(),
 	streamObject: vi.fn()
 }));
 
-vi.doMock('ai', () => ({
+vi.mock('ai', () => ({
 	...sdk,
 	zodSchema: vi.fn((schema) => schema),
 	jsonSchema: undefined,
@@ -22,28 +23,18 @@ vi.doMock('ai', () => ({
 	},
 	JSONParseError: class extends Error {}
 }));
-vi.doMock('jsonrepair', () => ({ jsonrepair: vi.fn() }));
-vi.doMock('../../../scripts/modules/utils.js', () => ({
-	log: vi.fn(),
-	findProjectRoot: vi.fn(() => '/mock/project/root'),
-	isEmpty: vi.fn(() => false),
-	resolveEnvVariable: vi.fn((key) => process.env[key])
-}));
-
-const { BaseAIProvider } = await import(
-	'../../../src/ai-providers/base-provider.js'
-);
+vi.mock('jsonrepair', () => ({ jsonrepair: vi.fn() }));
 
 class TestProvider extends BaseAIProvider {
 	constructor() {
-		super();
+		super(vi.fn());
 		this.name = 'TestProvider';
 	}
 	getRequiredApiKeyName() {
 		return 'TEST_API_KEY';
 	}
 	async getClient() {
-		return (modelId) => ({ modelId });
+		return (modelId: string) => ({ modelId }) as any;
 	}
 }
 
@@ -60,7 +51,7 @@ const objectParams = {
 };
 
 describe('AI call limits', () => {
-	let provider;
+	let provider: TestProvider;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -71,7 +62,7 @@ describe('AI call limits', () => {
 		sdk.streamObject.mockReturnValue({});
 	});
 
-	const calls = [
+	const calls: [string, () => Promise<unknown>][] = [
 		['generateText', () => provider.generateText(base)],
 		['streamText', () => provider.streamText(base)],
 		['generateObject', () => provider.generateObject(objectParams)],
@@ -80,7 +71,7 @@ describe('AI call limits', () => {
 
 	test.each(calls.filter(([name]) => !name.startsWith('stream')))(
 		'%s can be abandoned after a time limit',
-		async (name, run) => {
+		async (name: string, run: () => Promise<unknown>) => {
 			await run();
 
 			const options = sdk[name].mock.calls[0][0];
@@ -92,7 +83,7 @@ describe('AI call limits', () => {
 	test.each([['streamText'], ['streamObject']])(
 		'%s is not cut off, since it runs as long as the model writes',
 		async (name) => {
-			await calls.find(([n]) => n === name)[1]();
+			await calls.find(([n]) => n === name)?.[1]();
 
 			expect(sdk[name].mock.calls[0][0].abortSignal).toBeUndefined();
 		}
@@ -101,7 +92,7 @@ describe('AI call limits', () => {
 	test.each([['generateObject'], ['streamObject']])(
 		'%s passes the token limit as maxOutputTokens',
 		async (name) => {
-			await calls.find(([n]) => n === name)[1]();
+			await calls.find(([n]) => n === name)?.[1]();
 
 			const options = sdk[name].mock.calls[0][0];
 			expect(options.maxOutputTokens).toBe(1000);

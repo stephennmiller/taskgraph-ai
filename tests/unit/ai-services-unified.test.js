@@ -32,7 +32,9 @@ vi.doMock('../../scripts/modules/config-manager.js', () => ({
 	getParametersForRole: mockGetParametersForRole,
 	getResponseLanguage: mockGetResponseLanguage,
 	getUserId: mockGetUserId,
-	getDebugFlag: mockGetDebugFlag
+	getDebugFlag: mockGetDebugFlag,
+	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
+	getSupportedModelsForProvider: vi.fn(() => ['sonnet'])
 }));
 
 // Claude Code mock provider instance
@@ -44,7 +46,8 @@ const mockClaudeProvider = {
 	isRequiredApiKey: vi.fn(() => false)
 };
 
-vi.doMock('../../src/ai-providers/index.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	ClaudeCodeProvider: vi.fn(function () {
 		return mockClaudeProvider;
 	})

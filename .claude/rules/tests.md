@@ -686,11 +686,12 @@ npm run test:integration
 
   ```javascript
   // ❌ DON'T: Spawn the real Claude Code provider in a unit test
-  import { ClaudeCodeProvider } from '../src/ai-providers/claude-code.js';
-  await new ClaudeCodeProvider().generateText({ prompt: 'hi' });
+  import { ClaudeCodeProvider } from '@tm/core';
+  await new ClaudeCodeProvider(options).generateText({ prompt: 'hi' });
 
-  // ✅ DO: Mock the provider module with controlled behavior
-  vi.mock('../src/ai-providers/claude-code.js', () => ({
+  // ✅ DO: Mock the provider with controlled behavior
+  vi.mock('@tm/core', async () => ({
+    ...(await vi.importActual('@tm/core')),
     ClaudeCodeProvider: vi.fn().mockImplementation(() => ({
       generateText: vi.fn().mockResolvedValue({ text: 'Mocked AI response' })
     }))

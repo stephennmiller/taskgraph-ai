@@ -1,14 +1,14 @@
 /**
  * Run ripgrep the way Claude Code's Grep tool does, for path guard tests.
  */
-import { spawnSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
-	'../../..'
+	'../../../../../..'
 );
 
 /**
@@ -34,7 +34,10 @@ function findRipgrep() {
  * mode: --hidden, then each `glob` token as --glob. Tokens split on spaces,
  * then on commas unless the token holds a brace group.
  */
-function grepArgs({ pattern, glob, type, path: searchPath }) {
+/** A Grep call's input */
+type GrepInput = Record<string, any>;
+
+function grepArgs({ pattern, glob, type, path: searchPath }: GrepInput) {
 	const args = ['--hidden', '--no-heading', '-n'];
 	for (const token of (glob ?? '').split(/\s+/).filter(Boolean)) {
 		const parts =
@@ -50,7 +53,8 @@ function grepArgs({ pattern, glob, type, path: searchPath }) {
 export const ripgrep = findRipgrep();
 
 /** Lines a Grep call returns when run from cwd */
-export function runGrep(cwd, input) {
+export function runGrep(cwd: string, input: GrepInput): string[] {
+	if (!ripgrep) throw new Error('ripgrep is not installed');
 	const result = spawnSync(
 		ripgrep.command,
 		[...ripgrep.args, ...grepArgs(input)],
