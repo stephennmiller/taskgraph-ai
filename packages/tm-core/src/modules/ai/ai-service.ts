@@ -8,7 +8,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
-import { extractErrorMessage, isAbort, isRetryableError } from './ai-errors.js';
+import {
+	extractErrorMessage,
+	isAbort,
+	isAccountError,
+	isRetryableError
+} from './ai-errors.js';
 import type { ProviderLog } from './providers/base-provider.js';
 import {
 	ClaudeCodeProvider,
@@ -190,7 +195,7 @@ export class AiService {
 
 	async streamObject(params: AiServiceParams): Promise<AiServiceResult> {
 		if (!params.schema) {
-			throw new Error('streamObjectService requires a schema parameter');
+			throw new Error('streamObject requires a schema parameter');
 		}
 		return this.run('streamObject', { outputType: 'cli', ...params });
 	}
@@ -355,10 +360,11 @@ export class AiService {
 			);
 			return tags.length > 0 ? tags : DEFAULT_TAGS;
 		} catch (readError: any) {
-			if (this.host.getDebugFlag()) {
+			// No tasks file yet means only master; anything else (bad JSON) is worth a warning (#560)
+			if (readError?.code !== 'ENOENT') {
 				this.host.log(
-					'debug',
-					`Could not read tasks file for available tags: ${readError.message}`
+					'warn',
+					`Could not read ${TASKGRAPH_TASKS_FILE} for the tag list, so it shows only 'master': ${readError.message}`
 				);
 			}
 			return DEFAULT_TAGS;
@@ -493,9 +499,9 @@ export class AiService {
 
 		// provider/model pairs that already failed, so identical roles are not retried
 		const failedModels = new Set<string>();
-		let lastError: any;
-		let lastCleanErrorMessage =
-			'AI service call failed for all configured roles.';
+		// The first role's error is the real reason; later roles often fail differently
+		let firstError: any;
+		const skipped: string[] = [];
 
 		for (const currentRole of sequence) {
 			let providerName: string | null | undefined;
@@ -514,6 +520,7 @@ export class AiService {
 						'warn',
 						`Skipping role '${currentRole}': Provider or Model ID not configured.`
 					);
+					skipped.push(`${currentRole}: provider or model not configured`);
 					continue;
 				}
 
@@ -530,6 +537,9 @@ export class AiService {
 					log(
 						'warn',
 						`Skipping role '${currentRole}': Provider '${providerName}' not supported.`
+					);
+					skipped.push(
+						`${currentRole}: provider '${providerName}' not supported`
 					);
 					continue;
 				}
@@ -582,8 +592,12 @@ export class AiService {
 					currentRole
 				);
 
+				// A stream's usage is a promise that settles when it ends, so telemetry
+				// stays null and callers rebuild it then
+				const isStream =
+					serviceType === 'streamText' || serviceType === 'streamObject';
 				let telemetryData: AiTelemetryData | null = null;
-				if (userId && providerResponse?.usage) {
+				if (!isStream && userId && providerResponse?.usage) {
 					// logUsage logs its own errors and returns null on failure
 					telemetryData = await this.logUsage({
 						userId,
@@ -595,10 +609,10 @@ export class AiService {
 						cachedInputTokens: providerResponse.usage.cachedInputTokens,
 						outputType
 					});
-				} else if (userId && providerResponse && !providerResponse.usage) {
+				} else if (!isStream && userId && providerResponse) {
 					log(
 						'warn',
-						`Cannot log telemetry for ${commandName} (${providerName}/${modelId}): AI result missing 'usage' data. (May be expected for streams)`
+						`Cannot log telemetry for ${commandName} (${providerName}/${modelId}): AI result missing 'usage' data.`
 					);
 				}
 
@@ -622,10 +636,10 @@ export class AiService {
 					'debug',
 					`Service call failed for role ${currentRole} (Provider: ${providerName || 'unknown'}, Model: ${modelId || 'unknown'}): ${cleanMessage}`
 				);
-				lastError = error;
-				lastCleanErrorMessage = cleanMessage;
-				// Another role would wait out a fresh timeout, or ignore the cancel
-				if (isAbort(error)) throw error;
+				firstError ??= error;
+				// Another role would wait out a fresh timeout, or ignore the cancel;
+				// a sign-in or billing problem fails the same way on every model
+				if (isAbort(error) || isAccountError(error)) throw error;
 				if (providerName && modelId) {
 					failedModels.add(`${providerName}/${modelId}`);
 				}
@@ -633,7 +647,7 @@ export class AiService {
 				if (serviceType === 'generateObject') {
 					const lowerCaseMessage = cleanMessage.toLowerCase();
 					if (TOOL_USE_UNSUPPORTED.some((m) => lowerCaseMessage.includes(m))) {
-						const specificErrorMsg = `Model '${modelId || 'unknown'}' via provider '${providerName || 'unknown'}' does not support the 'tool use' required by generateObjectService. Please configure a model that supports tool/function calling for the '${currentRole}' role, or use generateTextService if structured output is not strictly required.`;
+						const specificErrorMsg = `Model '${modelId || 'unknown'}' via provider '${providerName || 'unknown'}' does not support the 'tool use' required by generateObject. Please configure a model that supports tool/function calling for the '${currentRole}' role, or use generateText if structured output is not strictly required.`;
 						log('debug', `[Tool Support Error] ${specificErrorMsg}`);
 						throw new Error(specificErrorMsg);
 					}
@@ -642,12 +656,17 @@ export class AiService {
 		}
 
 		log('debug', `All roles in the sequence [${sequence.join(', ')}] failed.`);
+		if (firstError === undefined) {
+			throw new Error(
+				`AI service call failed: every role was skipped (${skipped.join('; ')}).`
+			);
+		}
 		// Keep what callers and retry checks read: name, status, the original
 		throw Object.assign(
-			new Error(lastCleanErrorMessage, { cause: lastError }),
+			new Error(extractErrorMessage(firstError), { cause: firstError }),
 			{
-				...(typeof lastError?.name === 'string' && { name: lastError.name }),
-				...(lastError?.status !== undefined && { status: lastError.status })
+				...(typeof firstError?.name === 'string' && { name: firstError.name }),
+				...(firstError?.status !== undefined && { status: firstError.status })
 			}
 		);
 	}

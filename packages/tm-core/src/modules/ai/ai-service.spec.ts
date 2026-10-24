@@ -1,4 +1,8 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import { AiService, type AiServiceHost } from './ai-service.js';
 import { ClaudeCodeProvider } from './providers/claude-code.js';
 
@@ -159,7 +163,7 @@ describe('AiService', () => {
 			);
 		});
 
-		it('should throw the last error if every role fails', async () => {
+		it("throws the first role's error if every role fails (#560)", async () => {
 			mockClaudeProvider.generateText
 				.mockRejectedValueOnce(new Error('Main failed'))
 				.mockRejectedValueOnce(new Error('Fallback failed'))
@@ -167,7 +171,7 @@ describe('AiService', () => {
 
 			await expect(
 				service.generateText({ role: 'main', prompt: 'All fail test' })
-			).rejects.toThrow('Research failed');
+			).rejects.toThrow('Main failed');
 
 			expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(3);
 		});
@@ -273,12 +277,14 @@ describe('AiService', () => {
 			}
 		);
 
-		it('keeps the last error as cause, with its name and status', async () => {
-			const last = Object.assign(new Error('Bad request'), {
+		it('keeps the first error as cause, with its name and status', async () => {
+			const first = Object.assign(new Error('Bad request'), {
 				name: 'AI_APICallError',
 				status: 400
 			});
-			mockClaudeProvider.generateText.mockRejectedValue(last);
+			mockClaudeProvider.generateText
+				.mockRejectedValueOnce(first)
+				.mockRejectedValue(new Error('Something else'));
 
 			const thrown = await service
 				.generateText({ role: 'main', prompt: 'All fail' })
@@ -288,8 +294,47 @@ describe('AiService', () => {
 				message: 'Bad request',
 				name: 'AI_APICallError',
 				status: 400,
-				cause: last
+				cause: first
 			});
+		});
+
+		it.each([
+			[
+				'a sign-in error',
+				Object.assign(new Error('Authentication failed'), {
+					name: 'AI_LoadAPIKeyError'
+				})
+			],
+			[
+				'a billing error (wrapped by the provider)',
+				Object.assign(new Error('API error: billing problem'), {
+					name: 'AI_APICallError',
+					cause: { data: { errorKind: 'billing_error' } }
+				})
+			]
+		])(
+			'stops at %s instead of trying the other roles (#560)',
+			async (_, error) => {
+				mockClaudeProvider.generateText.mockRejectedValue(error);
+
+				await expect(
+					service.generateText({ role: 'main', prompt: 'Account test' })
+				).rejects.toBe(error);
+				expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(1);
+			}
+		);
+
+		it('says which roles were skipped and why when none could run (#560)', async () => {
+			models.main.modelId = '';
+			models.fallback.provider = 'openai';
+			models.research.provider = '';
+
+			await expect(
+				service.generateText({ role: 'main', prompt: 'Nothing configured' })
+			).rejects.toThrow(
+				"every role was skipped (main: provider or model not configured; fallback: provider 'openai' not supported; research: provider or model not configured)"
+			);
+			expect(mockClaudeProvider.generateText).not.toHaveBeenCalled();
 		});
 
 		it('should skip a role configured with an unsupported provider', async () => {
@@ -400,5 +445,40 @@ describe('AiService', () => {
 			expect(callArgs).toHaveProperty('temperature', 0.7);
 			expect(callArgs.maxTokens).toBe(64000);
 		});
+	});
+
+	it('leaves telemetry null for a stream, whose usage is still a promise (#560)', async () => {
+		const usage = Promise.resolve({ inputTokens: 10, outputTokens: 20 });
+		mockClaudeProvider.streamText.mockResolvedValue({ usage });
+		const logUsage = vi.spyOn(service, 'logUsage');
+
+		const result = await service.streamText({ role: 'main', prompt: 'Hi' });
+
+		expect(result.telemetryData).toBeNull();
+		expect(logUsage).not.toHaveBeenCalled();
+	});
+
+	it('warns when tasks.json does not parse instead of quietly listing master (#560)', async () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-ai-tags-'));
+		const tasksFile = path.join(root, TASKGRAPH_TASKS_FILE);
+		fs.mkdirSync(path.dirname(tasksFile), { recursive: true });
+		fs.writeFileSync(tasksFile, '{ not json');
+		mockClaudeProvider.generateText.mockResolvedValue(okResponse('ok'));
+
+		try {
+			const result = await service.generateText({
+				role: 'main',
+				prompt: 'Hi',
+				projectRoot: root
+			});
+
+			expect(result.tagInfo.availableTags).toEqual(['master']);
+			expect(host.log).toHaveBeenCalledWith(
+				'warn',
+				expect.stringContaining("so it shows only 'master'")
+			);
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true });
+		}
 	});
 });

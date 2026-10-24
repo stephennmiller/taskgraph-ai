@@ -70,3 +70,23 @@ export function extractErrorMessage(error: any): string {
 		return 'Failed to extract error message.';
 	}
 }
+
+/**
+ * A sign-in, account-hold or billing error: every role uses the same account,
+ * so trying another model fails the same way (#560). Provider errors wrap the
+ * SDK error, which holds the details, as `cause`.
+ */
+export function isAccountError(error: any): boolean {
+	for (let e = error, depth = 0; e && depth < 3; e = e.cause, depth++) {
+		const kind = e.data?.errorKind;
+		if (
+			e.name === 'AI_LoadAPIKeyError' ||
+			kind === 'billing_error' ||
+			kind === 'account_on_hold' ||
+			e.data?.exitCode === 401
+		) {
+			return true;
+		}
+	}
+	return false;
+}
