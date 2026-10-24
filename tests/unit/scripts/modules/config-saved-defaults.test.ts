@@ -111,16 +111,14 @@ describe('a save without a readable config.json', () => {
 		expect(getConfig(root, true).global.userId).toBeUndefined();
 	});
 
-	it('saves a change made to a config.json that is not valid JSON', () => {
+	it('refuses to save over a config.json that is not valid JSON', () => {
 		fs.writeFileSync(configPath, '{ not json');
 		const config = getConfig(root, true);
 		config.global.responseLanguage = 'German';
 
-		writeConfig(config, root);
+		expect(writeConfig(config, root)).toBe(false);
 
-		expect(readFile().global.responseLanguage).toBe('German');
-		fs.rmSync(configPath);
-		expect(getConfig(root, true).global.responseLanguage).toBe('English');
+		expect(fs.readFileSync(configPath, 'utf-8')).toBe('{ not json');
 	});
 });
 

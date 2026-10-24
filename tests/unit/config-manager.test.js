@@ -820,6 +820,13 @@ describe('getConfig Tests', () => {
 
 // --- writeConfig Tests ---
 describe('writeConfig', () => {
+	// Only config.json exists; the saver reads config.local.json too
+	beforeEach(() => {
+		fsExistsSyncSpy.mockImplementation(
+			(filePath) => filePath === MOCK_CONFIG_PATH
+		);
+	});
+
 	test("doesn't serve another project's written config as the cached one", () => {
 		mockFindConfigPath.mockImplementation((_, { projectRoot }) =>
 			path.join(projectRoot, '.taskgraph/config.json')

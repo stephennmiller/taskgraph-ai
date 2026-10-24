@@ -98,7 +98,17 @@ export function getModelConfiguration(
 	activeModels: Record<AiRole, ActiveModel>;
 	message: string;
 }> {
-	assertConfigPresent(configManager.getProjectRoot());
+	const projectRoot = configManager.getProjectRoot();
+	assertConfigPresent(projectRoot);
+	// The loader skips a broken config.local.json; say so, as legacy did
+	if (
+		readConfigJson(path.join(projectRoot, TASKGRAPH_LOCAL_CONFIG_FILE)) ===
+		UNREADABLE_CONFIG
+	) {
+		onWarning?.(
+			`Couldn't read ${TASKGRAPH_LOCAL_CONFIG_FILE}, using config.json only`
+		);
+	}
 	const available = getAvailableModels();
 	const config = new AiConfig(configManager, (level, message) => {
 		if (level === 'warn') onWarning?.(message);
@@ -253,23 +263,25 @@ function updateProjectConfig(
 	projectRoot: string,
 	change: (config: Record<string, any>) => void
 ): SettingResult<never> | { success: true } {
-	const shared = readConfigJson(path.join(projectRoot, TASKGRAPH_CONFIG_FILE));
-	const local = readConfigJson(
-		path.join(projectRoot, TASKGRAPH_LOCAL_CONFIG_FILE)
-	);
-	if (shared === UNREADABLE_CONFIG) {
-		return failure(
-			'CONFIG_WRITE_ERROR',
-			`${TASKGRAPH_CONFIG_FILE} isn't valid JSON; fix it before changing settings`
-		);
-	}
-	// A file an old release saved keeps its cleanup, as the legacy loader does
-	const config = mergeMachineConfig<Record<string, any>>(
-		dropOldNumTasksDefault(shared) ?? shared,
-		local === UNREADABLE_CONFIG ? null : local
-	);
-	change(config);
 	try {
+		const shared = readConfigJson(
+			path.join(projectRoot, TASKGRAPH_CONFIG_FILE)
+		);
+		const local = readConfigJson(
+			path.join(projectRoot, TASKGRAPH_LOCAL_CONFIG_FILE)
+		);
+		if (shared === UNREADABLE_CONFIG) {
+			return failure(
+				'CONFIG_WRITE_ERROR',
+				`${TASKGRAPH_CONFIG_FILE} isn't valid JSON; fix it before changing settings`
+			);
+		}
+		// A file an old release saved keeps its cleanup, as the legacy loader does
+		const config = mergeMachineConfig<Record<string, any>>(
+			dropOldNumTasksDefault(shared) ?? shared,
+			local === UNREADABLE_CONFIG ? null : local
+		);
+		change(config);
 		writeSplitConfig(projectRoot, config);
 	} catch (error) {
 		return failure(

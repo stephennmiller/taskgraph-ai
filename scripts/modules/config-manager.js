@@ -740,15 +740,15 @@ function saveCleanedConfig(configPath, cleaned) {
  */
 function moveMachineSettings(rootPath) {
 	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
-	const shared = readConfigJson(configPath);
-	if (!hasPerMachineSettings(shared)) return false;
-
-	const local = readConfigJson(
-		path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE)
-	);
-	// A broken config.local.json stays as it is; readLocalConfig reports it
-	if (local === UNREADABLE_CONFIG) return false;
 	try {
+		const shared = readConfigJson(configPath);
+		if (!hasPerMachineSettings(shared)) return false;
+
+		const local = readConfigJson(
+			path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE)
+		);
+		// A broken config.local.json stays as it is; readLocalConfig reports it
+		if (local === UNREADABLE_CONFIG) return false;
 		writeSplitConfig(rootPath, mergeMachineConfig(shared, local));
 	} catch (error) {
 		log('warn', `Couldn't move per-machine settings: ${error.message}`);

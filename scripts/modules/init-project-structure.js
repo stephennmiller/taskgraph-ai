@@ -182,7 +182,8 @@ async function createProjectStructure(
 	// Set language directly if provided via interactive prompt
 	if (options.preferredLanguage && !dryRun) {
 		try {
-			setResponseLanguage(targetDir, options.preferredLanguage);
+			const result = setResponseLanguage(targetDir, options.preferredLanguage);
+			if (!result.success) throw new Error(result.error.message);
 			log('debug', `Response language set to: ${options.preferredLanguage}`);
 		} catch (error) {
 			log('warn', `Failed to set response language: ${error.message}`);

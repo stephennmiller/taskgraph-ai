@@ -179,14 +179,16 @@ export const UNREADABLE_CONFIG = Symbol('unreadable');
 
 /**
  * Parse a config file for saving
- * @returns null when missing, UNREADABLE_CONFIG when it can't be parsed
+ * @returns null when missing, UNREADABLE_CONFIG when it isn't valid JSON
+ * @throws When the file can't be read (permissions, a directory)
  */
 export function readConfigJson(
 	filePath: string
 ): JsonObject | null | typeof UNREADABLE_CONFIG {
+	if (!fs.existsSync(filePath)) return null;
+	const text = fs.readFileSync(filePath, 'utf-8');
 	try {
-		if (!fs.existsSync(filePath)) return null;
-		return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+		return JSON.parse(text);
 	} catch {
 		return UNREADABLE_CONFIG;
 	}
@@ -198,6 +200,7 @@ export function readConfigJson(
  * per-machine setting an earlier release wrote to config.json moves to the
  * local file on the next write. config.json gets only the keys it already
  * has or that differ from the defaults (see toSavedConfig).
+ * Throws, writing nothing, when config.json isn't valid JSON.
  * @param rootPath - Project root
  * @param config - Full config (shared and local merged)
  */
@@ -205,9 +208,13 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 	const configPath = path.join(rootPath, TASKGRAPH_CONFIG_FILE);
 	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
 	fs.mkdirSync(path.dirname(configPath), { recursive: true });
-	const sharedOnDisk = readConfigJson(configPath);
-	const currentShared =
-		sharedOnDisk === UNREADABLE_CONFIG ? null : sharedOnDisk;
+	const currentShared = readConfigJson(configPath);
+	if (currentShared === UNREADABLE_CONFIG) {
+		// Saving over it would replace the user's settings with defaults
+		throw new Error(
+			`${TASKGRAPH_CONFIG_FILE} isn't valid JSON; fix it before changing settings`
+		);
+	}
 	const currentLocal = readConfigJson(localPath);
 	if (currentLocal === UNREADABLE_CONFIG) {
 		// Leave a broken config.local.json for the user to fix rather than

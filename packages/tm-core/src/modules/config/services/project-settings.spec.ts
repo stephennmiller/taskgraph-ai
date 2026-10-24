@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { writeSplitConfig } from './config-file.js';
 import {
 	getAvailableModelsList,
 	setModel,
@@ -121,5 +122,28 @@ describe('setResponseLanguage', () => {
 			error: { code: 'CONFIG_WRITE_ERROR' }
 		});
 		expect(fs.readFileSync(configPath(), 'utf8')).toBe('{ not json');
+	});
+});
+
+describe('writeSplitConfig', () => {
+	it('refuses to save over a config.json that is not valid JSON', () => {
+		fs.writeFileSync(configPath(), '{ not json');
+
+		expect(() =>
+			writeSplitConfig(root, { global: { userId: '1234567890' } })
+		).toThrow("isn't valid JSON");
+		expect(fs.readFileSync(configPath(), 'utf8')).toBe('{ not json');
+	});
+
+	it('reports a config.local.json it cannot read instead of moving its settings to config.json', () => {
+		writeConfig({ global: { projectName: 'App' } });
+		const before = fs.readFileSync(configPath(), 'utf8');
+		fs.mkdirSync(localPath());
+
+		expect(setResponseLanguage(root, 'German')).toMatchObject({
+			success: false,
+			error: { code: 'CONFIG_WRITE_ERROR' }
+		});
+		expect(fs.readFileSync(configPath(), 'utf8')).toBe(before);
 	});
 });
