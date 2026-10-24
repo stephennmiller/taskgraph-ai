@@ -65,6 +65,7 @@
 							},
 							"capabilities/task-structure",
 							"capabilities/dependency-graph",
+							"capabilities/cross-tag-movement",
 							"capabilities/archive",
 							"capabilities/loop",
 							"capabilities/loop-parallel",
