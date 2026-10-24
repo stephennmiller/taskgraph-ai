@@ -37,7 +37,7 @@ export class EnvironmentConfigProvider {
 		{ env: 'TASKGRAPH_MODEL_FALLBACK', path: ['models', 'fallback'] },
 		{
 			env: 'TASKGRAPH_RESPONSE_LANGUAGE',
-			path: ['custom', 'responseLanguage']
+			path: ['global', 'responseLanguage']
 		}
 	];
 

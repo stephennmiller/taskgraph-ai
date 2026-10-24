@@ -31,7 +31,7 @@ import { RuntimeStateManager } from '../services/runtime-state-manager.service.j
  * - ConfigLoader: Loads configuration from files
  * - ConfigMerger: Merges configurations with precedence
  * - RuntimeStateManager: Manages runtime state
- * - ConfigPersistence: Deletes the config file on reset
+ * - ConfigPersistence: Deletes the config files on reset
  * - EnvironmentConfigProvider: Extracts env var configuration
  */
 export class ConfigManager {
@@ -174,11 +174,13 @@ export class ConfigManager {
 	}
 
 	/**
-	 * Get response language setting
+	 * Response language (`global.responseLanguage`, where `lang` writes it);
+	 * English when unset
 	 */
 	getResponseLanguage(): string {
-		const customConfig = this.config.custom as any;
-		return customConfig?.responseLanguage || 'English';
+		const global = (this.config as { global?: { responseLanguage?: string } })
+			.global;
+		return global?.responseLanguage || 'English';
 	}
 
 	/**
