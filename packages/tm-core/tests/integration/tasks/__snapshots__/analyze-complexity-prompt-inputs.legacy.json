@@ -1078,7 +1078,8 @@
 					"complexityScore": 5,
 					"recommendedSubtasks": 3,
 					"expansionPrompt": "Break down this task with a focus on add task dependency handling.",
-					"reasoning": "Automatically added due to missing analysis in AI response."
+					"reasoning": "Automatically added due to missing analysis in AI response.",
+					"placeholder": true
 				}
 			]
 		}

@@ -39,6 +39,8 @@ export interface PlanTask {
 export interface PlanComplexity {
 	taskId: number | string;
 	complexityScore: number;
+	/** Filled in for a task the model left out; not a score it gave */
+	placeholder?: boolean;
 }
 
 /** How big a PRD is */
@@ -295,14 +297,17 @@ export interface SubtaskComplexityCheck {
 
 /**
  * Whether more complex tasks got more subtasks: the rank correlation of
- * each task's complexity score with its subtask count.
+ * each task's complexity score with its subtask count. Placeholder entries
+ * are left out.
  */
 export function checkSubtaskComplexity(
 	tasks: PlanTask[],
 	complexity: PlanComplexity[]
 ): SubtaskComplexityCheck {
 	const scores = new Map(
-		complexity.map((entry) => [String(entry.taskId), entry.complexityScore])
+		complexity
+			.filter((entry) => !entry.placeholder)
+			.map((entry) => [String(entry.taskId), entry.complexityScore])
 	);
 	const pairs = tasks.flatMap((task) => {
 		const score = scores.get(String(task.id));
