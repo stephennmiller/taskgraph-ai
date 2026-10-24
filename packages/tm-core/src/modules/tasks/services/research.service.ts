@@ -286,7 +286,8 @@ export class ResearchService {
 
 		// Every ID, file and path is checked before spending an AI call
 		const taskIds = (input.taskIds ?? []).map((id) => String(id).trim());
-		const saveTo = input.saveTo?.trim();
+		// An empty saveTo means don't save, as legacy MCP treated it
+		const saveTo = input.saveTo?.trim() || undefined;
 		for (const id of [...taskIds, ...(saveTo !== undefined ? [saveTo] : [])]) {
 			if (!isTaskOrSubtaskId(id)) {
 				throw withHint(
@@ -529,6 +530,12 @@ export class ResearchService {
 		if (!resolved) {
 			throw new TaskGraphError(
 				`Can't save to "${saveAs}": the file must be inside the project`,
+				ERROR_CODES.INVALID_INPUT
+			);
+		}
+		if (fs.statSync(resolved, { throwIfNoEntry: false })?.isDirectory()) {
+			throw new TaskGraphError(
+				`Can't save to "${saveAs}": it's a folder, name a file`,
 				ERROR_CODES.INVALID_INPUT
 			);
 		}

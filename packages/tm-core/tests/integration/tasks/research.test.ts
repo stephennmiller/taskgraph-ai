@@ -254,6 +254,19 @@ describe('tasks.research', () => {
 		expect(generateText).not.toHaveBeenCalled();
 	});
 
+	it('refuses a --save path that is a folder before any AI call', async () => {
+		await expect(
+			tmCore.tasks.research({ query: 'q', saveAs: projectDir })
+		).rejects.toThrow("it's a folder");
+		expect(generateText).not.toHaveBeenCalled();
+	});
+
+	it('treats an empty saveTo as no save, as legacy MCP did', async () => {
+		const result = await tmCore.tasks.research({ query: 'q', saveTo: '' });
+		expect(result.savedTo).toBeUndefined();
+		expect(result.saveFailures).toEqual([]);
+	});
+
 	it('gives a follow-up the conversation so far and saves the whole conversation', async () => {
 		const first = await tmCore.tasks.research({
 			query: 'First?',
