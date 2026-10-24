@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { archivePathFor } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const ai = vi.hoisted(() => ({
@@ -145,6 +146,31 @@ describe('parse-prd --append', () => {
 		expect(readTag()[10]).toMatchObject({ id: '11', dependencies: ['3'] });
 	});
 
+	it('keeps a dependency on a task archived during the AI call', async () => {
+		writeTag([existing(1), existing(2)]);
+		ai.generateObjectService.mockImplementation(async () => {
+			// Another command archives task 2 while the model is running
+			fs.writeFileSync(
+				archivePathFor(tasksPath),
+				JSON.stringify({
+					master: {
+						tasks: [{ ...existing(2), status: 'done' }],
+						metadata: { highestId: 2 }
+					}
+				})
+			);
+			writeTag([existing(1)]);
+			return {
+				mainResult: { tasks: [generated(3, [2])] },
+				telemetryData: null
+			};
+		});
+
+		await append();
+
+		expect(readTag()[1]).toMatchObject({ id: '3', dependencies: ['2'] });
+	});
+
 	it('lists the existing tasks in the prompt', async () => {
 		writeTag([existing(1), existing(2)]);
 		ai.generateObjectService.mockResolvedValue({
@@ -159,12 +185,77 @@ describe('parse-prd --append', () => {
 	});
 });
 
+describe('parse-prd without --append or --force', () => {
+	let dir: string;
+	let tasksPath: string;
+	let prdPath: string;
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-parse-prd-empty-'));
+		tasksPath = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+		prdPath = path.join(dir, 'prd.txt');
+		fs.mkdirSync(path.dirname(tasksPath), { recursive: true });
+		fs.writeFileSync(prdPath, 'Build the reporting page.');
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('fails instead of replacing tasks added to the empty tag during the AI call', async () => {
+		ai.generateObjectService.mockImplementation(async () => {
+			fs.writeFileSync(
+				tasksPath,
+				JSON.stringify({ master: { tasks: [existing(1)], metadata: {} } })
+			);
+			return {
+				mainResult: { tasks: [generated(1)] },
+				telemetryData: null
+			};
+		});
+
+		await expect(
+			parsePRD(prdPath, tasksPath, 0, {
+				tag: 'master',
+				projectRoot: dir,
+				mcpLog
+			})
+		).rejects.toThrow(/--append.*--force/);
+
+		const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8')).master.tasks;
+		expect(tasks.map((t: { title: string }) => t.title)).toEqual(['Old 1']);
+	});
+
+	it('names the tag without its escape codes', async () => {
+		const tag = 'evil\x1b[2J';
+		ai.generateObjectService.mockImplementation(async () => {
+			fs.writeFileSync(
+				tasksPath,
+				JSON.stringify({ [tag]: { tasks: [existing(1)], metadata: {} } })
+			);
+			return {
+				mainResult: { tasks: [generated(1)] },
+				telemetryData: null
+			};
+		});
+
+		const error = await parsePRD(prdPath, tasksPath, 0, {
+			tag,
+			projectRoot: dir,
+			mcpLog
+		}).catch((e: Error) => e);
+
+		expect((error as Error).message).toContain("tag 'evil'");
+		expect((error as Error).message).not.toContain('\x1b');
+	});
+});
+
 describe('processTasks', () => {
 	it('keeps a dependency on an existing task instead of dropping it', () => {
 		const tasks = processTasks(
 			[generated(11, [3]), generated(12, [11, 3])],
 			11,
-			Array.from({ length: 10 }, (_, i) => existing(i + 1)),
+			Array.from({ length: 10 }, (_, i) => i + 1),
 			'medium'
 		);
 

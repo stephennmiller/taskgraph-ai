@@ -8,7 +8,8 @@ import {
 	parsePrdSections,
 	prdDeltaContent,
 	prdPathForSource,
-	readArchivedIdsSync
+	readArchivedIdsSync,
+	stripTerminalControls
 } from '@tm/core';
 import { getDebugFlag, getDefaultPriority } from '../../config-manager.js';
 
@@ -153,15 +154,26 @@ async function parsePRDCore(config) {
 		saveTasksToFile(
 			config.tasksPath,
 			(currentTasks) => {
+				// A plain parse was allowed because the tag was empty; tasks added
+				// since then are replaced only with --force
+				if (!config.append && !config.force && currentTasks.length > 0) {
+					throw new Error(
+						`Tasks were added to tag '${stripTerminalControls(String(config.targetTag), { singleLine: true })}' while the PRD was being parsed. Run again with --append to add to them or --force to replace them`
+					);
+				}
 				// Overwriting (--force) replaces the list
 				const keptTasks = config.append ? currentTasks : [];
+				const keptIds = keptTasks.map((t) => t.id);
+				const archived = readArchivedIdsSync(
+					config.tasksPath,
+					config.targetTag
+				);
 				processedNewTasks = processTasks(
 					serviceResult.parsedTasks,
-					nextTaskId(
-						keptTasks.map((t) => t.id),
-						readArchivedIdsSync(config.tasksPath, config.targetTag).highestId
-					),
-					keptTasks,
+					nextTaskId(keptIds, archived.highestId),
+					// A dependency on a task archived while the model ran still
+					// names a real task
+					config.append ? [...keptIds, ...archived.ids] : [],
 					defaultPriority,
 					prd,
 					nextId

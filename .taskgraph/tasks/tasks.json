@@ -632,7 +632,7 @@
         "description": "parse-prd into an empty tag overwrites tasks added to that tag while the model runs.",
         "details": "GitHub issue #460: https://github.com/stephennmiller/taskgraph-ai/issues/460\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []
@@ -794,7 +794,7 @@
         "description": "Without a TTY, parse-prd's overwrite prompt waits forever or exits silently; it should fail and name --force and --append.",
         "details": "GitHub issue #481: https://github.com/stephennmiller/taskgraph-ai/issues/481\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []
