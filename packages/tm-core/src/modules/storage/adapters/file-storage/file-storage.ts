@@ -260,11 +260,15 @@ export class FileStorage implements IStorage {
 	 * Read-modify-write one tag under the file lock. The tasks are read inside
 	 * the lock, so a change made by another writer since the caller started is
 	 * never overwritten. Return `tasks: null` to leave the file untouched.
-	 * A throw from `mutate` aborts the write.
+	 * A throw from `mutate` aborts the write. With `requireTag`, a file that
+	 * has tags but not this one throws instead of gaining it (the tag was
+	 * deleted or renamed since the caller read it); a missing or empty file
+	 * still starts with it.
 	 */
 	private async mutateTasks<R>(
 		tag: string | undefined,
-		mutate: (tasks: Task[]) => MutateOutcome<R> | Promise<MutateOutcome<R>>
+		mutate: (tasks: Task[]) => MutateOutcome<R> | Promise<MutateOutcome<R>>,
+		{ requireTag = false } = {}
 	): Promise<R> {
 		const filePath = this.pathResolver.getTasksPath();
 		const resolvedTag = tag || 'master';
@@ -280,6 +284,15 @@ export class FileStorage implements IStorage {
 					fileData && Object.keys(fileData).length > 0
 						? fileData
 						: { [resolvedTag]: { tasks: [], metadata: {} } };
+				if (
+					requireTag &&
+					!this.formatHandler.extractTags(existingData).includes(resolvedTag)
+				) {
+					throw new TaskGraphError(
+						`Tag "${resolvedTag}" no longer exists in ${filePath}`,
+						ERROR_CODES.NOT_FOUND
+					);
+				}
 				const current = this.formatHandler.extractTasks(
 					existingData,
 					resolvedTag
@@ -374,8 +387,11 @@ export class FileStorage implements IStorage {
 
 	/** Append tasks (see withFreeIds) */
 	async appendTasks(tasks: Task[], tag?: string): Promise<Task[]> {
-		return this.mutateTasks(tag, async (existing) =>
-			withFreeIds(existing, tasks, await this.readArchive(), tag || 'master')
+		return this.mutateTasks(
+			tag,
+			async (existing) =>
+				withFreeIds(existing, tasks, await this.readArchive(), tag || 'master'),
+			{ requireTag: true }
 		);
 	}
 

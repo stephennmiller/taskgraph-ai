@@ -53,7 +53,9 @@ const AddTaskSchema = z.object({
 	file: z
 		.string()
 		.optional()
-		.describe('Path to the tasks file (default: tasks/tasks.json)'),
+		.describe(
+			'Path to the tasks file; only .taskgraph/tasks/tasks.json is accepted, so leave it out'
+		),
 	projectRoot: z
 		.string()
 		.describe('The directory of the project. Must be an absolute path.'),
@@ -97,7 +99,7 @@ export function registerAddTaskTool(server: FastMCP) {
 						path.join(projectRoot, TASKGRAPH_TASKS_FILE)
 				) {
 					return createErrorResponse(
-						`Failed to find tasks.json: add_task writes only ${TASKGRAPH_TASKS_FILE}; leave out file`
+						`add_task writes only ${TASKGRAPH_TASKS_FILE}, not ${args.file}; leave out file`
 					);
 				}
 
@@ -113,7 +115,8 @@ export function registerAddTaskTool(server: FastMCP) {
 							testStrategy: args.testStrategy,
 							dependencies: args.dependencies
 								?.split(',')
-								.map((id) => id.trim()),
+								.map((id) => id.trim())
+								.filter(Boolean),
 							discoveredFrom: args.discoveredFrom,
 							priority: args.priority,
 							research: isManual ? false : args.research,
@@ -122,7 +125,10 @@ export function registerAddTaskTool(server: FastMCP) {
 							session,
 							outputType: 'mcp'
 						},
-						{ onWarning: (message) => log.warn(message) }
+						{
+							onWarning: (message) => log.warn(message),
+							onDebug: (message) => log.debug(message)
+						}
 					);
 					// The reply has always given the ID as a number
 					const taskId = Number(result.task.id);
@@ -144,9 +150,13 @@ export function registerAddTaskTool(server: FastMCP) {
 				} catch (error: unknown) {
 					const err =
 						error instanceof Error ? error : new Error(String(error));
-					log.error(`Error in addTaskDirect: ${err.message}`);
+					// The fix tm-core suggests, e.g. how to list task IDs
+					const hint = (err as { hint?: unknown }).hint;
+					const message =
+						typeof hint === 'string' ? `${err.message}. ${hint}` : err.message;
+					log.error(`Error in addTaskDirect: ${message}`);
 					return handleApiResult({
-						result: { success: false, error: { message: err.message } },
+						result: { success: false, error: { message } },
 						log,
 						errorPrefix: 'Error adding task',
 						projectRoot,

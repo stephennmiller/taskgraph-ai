@@ -75,7 +75,7 @@ describe('add_task', () => {
 		const result = await register().execute(
 			{
 				prompt: 'Add login',
-				dependencies: '1, 3.2',
+				dependencies: '1, 3.2,',
 				priority: 'high',
 				research: true,
 				acceptanceCriteria: ['Logs in'],
@@ -147,6 +147,23 @@ describe('add_task', () => {
 		expect(result.content[0].text).toContain('Current Tag: master');
 	});
 
+	it("adds tm-core's hint to the error", async () => {
+		tasks.add.mockRejectedValue(
+			Object.assign(new Error("Task 42 doesn't exist"), {
+				hint: 'Run `taskgraph list` to see task IDs'
+			})
+		);
+
+		const result = await register().execute(
+			{ prompt: 'p', discoveredFrom: '42', projectRoot: project },
+			ctx
+		);
+
+		expect(result.content[0].text).toContain(
+			"Error: Task 42 doesn't exist. Run `taskgraph list` to see task IDs"
+		);
+	});
+
 	it('refuses a tasks file other than the project tasks.json', async () => {
 		const outside = await register().execute(
 			{ prompt: 'p', file: '/etc/passwd', projectRoot: project },
@@ -162,7 +179,9 @@ describe('add_task', () => {
 		);
 
 		expect(outside.isError).toBe(true);
-		expect(outside.content[0].text).toContain('Failed to find tasks.json');
+		expect(outside.content[0].text).toContain(
+			'add_task writes only .taskgraph/tasks/tasks.json, not /etc/passwd'
+		);
 		expect(other.isError).toBe(true);
 		expect(same.isError).toBeFalsy();
 		expect(tasks.add).toHaveBeenCalledTimes(1);

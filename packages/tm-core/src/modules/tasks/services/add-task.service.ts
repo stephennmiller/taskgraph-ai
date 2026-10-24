@@ -70,6 +70,8 @@ export interface AddTaskInput {
 export interface AddTaskHooks {
 	/** A heads-up such as a dependency that doesn't exist */
 	onWarning?: (message: string) => void;
+	/** AI service detail, sent only with `global.debug` on */
+	onDebug?: (message: string) => void;
 	/** The AI call is about to start, with the tasks it will see */
 	onAiCall?: (context: {
 		dependencyIds: string[];
@@ -156,7 +158,9 @@ export class AddTaskService {
 			);
 		}
 
-		const aiConfig = new AiConfig(this.configManager);
+		const aiConfig = new AiConfig(this.configManager, (level, message) =>
+			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
+		);
 		const priority = this.resolvePriority(input.priority, aiConfig, warn);
 		const tag = input.tag || this.configManager.getActiveTag();
 		const storage = this.storage();
@@ -236,7 +240,9 @@ export class AddTaskService {
 			existingIds
 		});
 		if (merged.missingSuggested.length > 0) {
-			warn('AI suggested invalid dependencies. Filtering them out...');
+			warn(
+				`The AI suggested dependencies that don't exist (${merged.missingSuggested.join(', ')}); left them out`
+			);
 		}
 
 		const newTask = {
@@ -301,10 +307,15 @@ export class AddTaskService {
 		warn: (message: string) => void
 	): string {
 		if (!priority) {
-			const configured = aiConfig.defaultPriority?.toLowerCase();
-			return configured && PRIORITIES.includes(configured)
-				? configured
-				: DEFAULT_PRIORITY;
+			const configured = aiConfig.defaultPriority;
+			if (configured === undefined) return DEFAULT_PRIORITY;
+			if (PRIORITIES.includes(configured.toLowerCase())) {
+				return configured.toLowerCase();
+			}
+			warn(
+				`global.defaultPriority "${configured}" isn't high, medium or low. Using "${DEFAULT_PRIORITY}".`
+			);
+			return DEFAULT_PRIORITY;
 		}
 		const normalized = priority.toLowerCase();
 		if (PRIORITIES.includes(normalized)) return normalized;

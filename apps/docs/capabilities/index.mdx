@@ -129,7 +129,7 @@ The core functionalities can be categorized as follows:
 
 These functions are the bread and butter of the application, allowing for the creation, modification, and deletion of tasks and subtasks.
 
--   **`addTask(prompt, dependencies, priority)`**: Creates a new task using an AI-powered prompt to generate the title, description, details, and test strategy. It can also be used to create a task manually by providing the task data directly.
+-   **`tmCore.tasks.add({ prompt, dependencies, priority })`**: Creates a new task using an AI-powered prompt to generate the title, description, details, and test strategy. It can also be used to create a task manually by providing the task data directly.
 -   **`addSubtask(parentId, existingTaskId, newSubtaskData)`**: Adds a subtask to a parent task. It can either convert an existing task into a subtask or create a new subtask from scratch.
 -   **`removeTask(taskIds)`**: Removes one or more tasks or subtasks.
 -   **`removeSubtask(subtaskId, convertToTask)`**: Removes a subtask from its parent. It can optionally convert the subtask into a standalone task.

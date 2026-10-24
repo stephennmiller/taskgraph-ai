@@ -87,8 +87,7 @@ export class AddTaskCommand extends Command {
 			)
 			.option(
 				'--priority <priority>',
-				'Task priority (high, medium, low)',
-				'medium'
+				'Task priority (high, medium, low; default: global.defaultPriority, else medium)'
 			)
 			.option(
 				'-r, --research',
@@ -129,6 +128,16 @@ export class AddTaskCommand extends Command {
 		}
 
 		let spinner: Ora | undefined;
+		// A line printed while the spinner runs would be drawn over
+		const print = (line: string) => {
+			if (spinner?.isSpinning) {
+				spinner.clear();
+				console.log(line);
+				spinner.render();
+			} else {
+				console.log(line);
+			}
+		};
 		try {
 			const tmCore = await createTmCore({ projectPath: projectRoot });
 			const tag = options.tag || tmCore.config.getActiveTag();
@@ -153,7 +162,8 @@ export class AddTaskCommand extends Command {
 				},
 				{
 					onWarning: (message) =>
-						console.log(`${chalk.yellow('⚠')} ${terminalSafe(message)}`),
+						print(`${chalk.yellow('⚠')} ${terminalSafe(message)}`),
+					onDebug: (message) => print(theme.muted(terminalSafe(message))),
 					onAiCall: ({ dependencyIds, relatedTaskIds }) => {
 						const context = formatResearchContext({
 							taskIds: dependencyIds,
@@ -175,7 +185,7 @@ export class AddTaskCommand extends Command {
 				: '';
 			if (usage) console.log(`\n${theme.muted(usage)}`);
 		} catch (error: any) {
-			spinner?.stop();
+			if (spinner?.isSpinning) spinner.fail();
 			displayError(error, { hint: error?.hint ?? aiErrorHint(error) });
 		}
 	}

@@ -35,6 +35,12 @@ export const SUPPORTED_MODELS: Record<string, SupportedModel[]> =
 
 export type AiRole = 'main' | 'research' | 'fallback';
 
+/**
+ * Where AiConfig and the AiService host send what the user should see:
+ * warnings always, debug lines only with `global.debug` on
+ */
+export type AiReport = (level: 'warn' | 'debug', message: string) => void;
+
 interface RoleModel {
 	provider: string;
 	modelId: string;
@@ -75,6 +81,9 @@ interface RawAiConfig {
 	claudeCode?: unknown;
 }
 
+const describe = (value: unknown) =>
+	typeof value === 'string' ? value : JSON.stringify(value);
+
 const isObject = (value: unknown): value is Record<string, unknown> =>
 	typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -85,11 +94,35 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 export class AiConfig {
 	private readonly logger = getLogger('AiConfig');
 	private claudeCodeSettings?: Record<string, any>;
+	private readonly warned = new Set<string>();
 
-	constructor(private readonly configManager: ConfigManager) {}
+	constructor(
+		private readonly configManager: ConfigManager,
+		private readonly report?: AiReport
+	) {}
 
 	private get raw(): RawAiConfig {
 		return this.configManager.getConfig() as RawAiConfig;
+	}
+
+	/** Once per message: roleModel runs several times per AI call */
+	private warn(message: string): void {
+		this.logger.warn(message);
+		if (this.warned.has(message)) return;
+		this.warned.add(message);
+		this.report?.('warn', message);
+	}
+
+	/**
+	 * Models as config.json and config.local.json set them. The legacy loader
+	 * read only these files; TASKGRAPH_MODEL_* replaces a role's object with a
+	 * bare model name in the merged config, which would drop the file's model.
+	 */
+	private get fileModels(): RawAiConfig['models'] {
+		const file = this.configManager
+			.getConfigSources()
+			.find((source) => source.name === 'local');
+		return (file?.config as RawAiConfig | undefined)?.models;
 	}
 
 	get projectRoot(): string {
@@ -103,16 +136,15 @@ export class AiConfig {
 	 */
 	roleModel(role: AiRole): RoleModel {
 		const defaults = DEFAULT_ROLE_MODELS[role];
-		// TASKGRAPH_MODEL_* set a role to a bare string, which names no provider
-		const entry = this.raw.models?.[role];
+		const entry = this.fileModels?.[role];
 		const configured = isObject(entry) ? entry : {};
 		if (role === 'fallback' && !(configured.provider && configured.modelId)) {
 			return { ...defaults };
 		}
 		const model = { ...defaults, ...configured } as RoleModel;
 		if (!CUSTOM_PROVIDERS_ARRAY.includes(model.provider as never)) {
-			this.logger.warn(
-				`${role} provider "${model.provider}" isn't supported; using ${defaults.modelId}`
+			this.warn(
+				`${role} provider "${model.provider}" isn't supported; using ${defaults.modelId}. Run taskgraph models --setup to change it`
 			);
 			return { ...defaults };
 		}
@@ -160,7 +192,7 @@ export class AiConfig {
 				isObject(raw) ? raw : {}
 			);
 			if (!parsed.success) {
-				this.logger.warn(
+				this.warn(
 					`Invalid Claude Code settings in config: ${parsed.error.message}. Falling back to default.`
 				);
 			}
@@ -187,7 +219,7 @@ export class AiConfig {
 			if (fromFile) return fromFile;
 		} catch (error) {
 			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-				this.logger.warn(
+				this.warn(
 					`Could not read or parse ${path.join(this.projectRoot, '.env')}: ${(error as Error).message}`
 				);
 			}
@@ -214,7 +246,12 @@ export class AiConfig {
 	toHost(): AiServiceHost {
 		const logger = getLogger('AI');
 		return {
-			log: (level, message, ...args) => logger[level](message, ...args),
+			log: (level, message, ...args) => {
+				logger[level](message, ...args);
+				const text = [message, ...args.map(describe)].join(' ');
+				if (level === 'warn' || level === 'error') this.warn(text);
+				else if (this.debug) this.report?.('debug', text);
+			},
 			getDebugFlag: () => this.debug,
 			findProjectRoot: () => this.projectRoot,
 			getRoleModel: (role) => this.roleModel(role as AiRole),

@@ -84,7 +84,8 @@ describe('add-task', () => {
 				dependencies: ['1', '9'],
 				acceptanceCriteria: ['Has setup', 'Has scripts'],
 				discoveredFrom: '2',
-				priority: 'medium',
+				// Left to tm-core, which applies global.defaultPriority
+				priority: undefined,
 				tag: 'master',
 				outputType: 'cli'
 			}),

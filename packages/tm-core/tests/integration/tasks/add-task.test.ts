@@ -270,7 +270,7 @@ describe('tasks.add', () => {
 
 			expect(added().dependencies).toEqual(['2']);
 			expect(onWarning).toHaveBeenCalledWith(
-				'AI suggested invalid dependencies. Filtering them out...'
+				"The AI suggested dependencies that don't exist (42); left them out"
 			);
 		});
 
@@ -334,6 +334,50 @@ describe('tasks.add', () => {
 			);
 		});
 
+		it('uses global.defaultPriority without a priority, and warns when it is unknown', async () => {
+			const configPath = path.join(projectDir, '.taskgraph', 'config.json');
+			const withDefault = async (defaultPriority: string) => {
+				fs.writeFileSync(
+					configPath,
+					JSON.stringify({ models: {}, global: { defaultPriority } })
+				);
+				const core = await createTmCore({ projectPath: projectDir });
+				const onWarning = vi.fn();
+				const result = await core.tasks.add(
+					{ title: 'A', description: 'd' },
+					{ onWarning }
+				);
+				await core.close();
+				return { priority: result.task.priority, onWarning };
+			};
+
+			expect((await withDefault('High')).priority).toBe('high');
+			const unknown = await withDefault('urgent');
+			expect(unknown.priority).toBe('medium');
+			expect(unknown.onWarning).toHaveBeenCalledWith(
+				'global.defaultPriority "urgent" isn\'t high, medium or low. Using "medium".'
+			);
+		});
+
+		it('passes on the AI config warnings, such as an unsupported provider', async () => {
+			fs.writeFileSync(
+				path.join(projectDir, '.taskgraph', 'config.json'),
+				JSON.stringify({
+					models: { main: { provider: 'openai', modelId: 'gpt' } },
+					global: {}
+				})
+			);
+			const core = await createTmCore({ projectPath: projectDir });
+			const onWarning = vi.fn();
+
+			await core.tasks.add({ prompt: 'p' }, { onWarning });
+
+			expect(onWarning).toHaveBeenCalledWith(
+				expect.stringContaining('main provider "openai" isn\'t supported')
+			);
+			await core.close();
+		});
+
 		it('stores discoveredFrom as a link that never blocks', async () => {
 			const result = await tmCore.tasks.add({
 				title: 'Fix the flaky test',
@@ -391,6 +435,22 @@ describe('tasks.add', () => {
 			expect(saved.master.tasks[0].status).toBe('done');
 			expect(result.task.id).toBe('5');
 			expect(saved.feature.tasks).toHaveLength(1);
+		});
+
+		it('fails, writing nothing, when the tag is deleted during the AI call', async () => {
+			generateObject.mockImplementationOnce(async () => {
+				const current = readFile();
+				delete current.feature;
+				write(current);
+				return aiTask() as any;
+			});
+
+			await expect(
+				tmCore.tasks.add({ prompt: 'p', tag: 'feature' })
+			).rejects.toThrow('Tag "feature" no longer exists');
+
+			expect(readFile().feature).toBeUndefined();
+			expect(readFile().master.tasks).toHaveLength(3);
 		});
 
 		it('creates the file when there is none', async () => {
