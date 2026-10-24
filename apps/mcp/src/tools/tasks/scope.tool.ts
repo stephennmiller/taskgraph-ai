@@ -63,7 +63,8 @@ function registerScopeTool(server: FastMCP, direction: 'up' | 'down') {
 				async () => {
 					// Sent in the reply too: the client may not show the log
 					const warnings: string[] = [];
-					const result = await tmCore.tasks.scope(
+					const result = await tmCore.tasks
+						.scope(
 						{
 							ids: args.id,
 							direction,
@@ -81,7 +82,14 @@ function registerScopeTool(server: FastMCP, direction: 'up' | 'down') {
 							},
 							onDebug: (message) => log.debug(message)
 						}
-					);
+					)
+					.catch((error: unknown) => {
+						// A task saved before the failure may have warned; the error reply is all the client gets
+						if (error instanceof Error && warnings.length > 0) {
+							error.message += `. Warnings: ${warnings.join('; ')}`;
+						}
+						throw error;
+					});
 					for (const { task, complexity } of result.tasks) {
 						if (!complexity) continue;
 						const change = complexity.after - complexity.before;

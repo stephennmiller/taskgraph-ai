@@ -26,7 +26,7 @@ When implementing a new direct function in `mcp-server/src/core/direct-functions
    - **Example**:
      ```javascript
      // At top of direct-function file
-     import { removeTask, findTaskById, taskExists } from '../../../../scripts/modules/task-manager.js';
+     import { findTaskById, taskExists } from '../../../../scripts/modules/utils.js';
      ```
 
 2. **Parameter Verification and Completeness**:

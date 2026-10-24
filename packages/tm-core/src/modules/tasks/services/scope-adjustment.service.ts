@@ -196,7 +196,7 @@ export class ScopeAdjustmentService {
 						ERROR_CODES.TASK_NOT_FOUND
 					);
 				}
-				const before = this.reportScore(id, tag);
+				const before = this.reportScore(id, tag, warn);
 
 				hooks.onAiCall?.({ taskId: id, step: 'task' });
 				const adjusted = await call(
@@ -303,6 +303,8 @@ export class ScopeAdjustmentService {
 			);
 			if (response?.telemetryData) telemetry.push(response.telemetryData);
 			const generated: any[] = response?.mainResult?.subtasks ?? [];
+			// No subtasks back would delete every pending one
+			if (generated.length === 0) throw new Error('the AI returned no subtasks');
 			ensureSequentialSubtaskIds(generated);
 			return generated.map((subtask) => ({
 				...subtask,
@@ -350,7 +352,8 @@ export class ScopeAdjustmentService {
 	/** The task's score in the tag's complexity report, if it has one */
 	private reportScore(
 		id: string,
-		tag: string
+		tag: string,
+		warn: (message: string) => void
 	): { score: number; reportPath: string } | null {
 		try {
 			const found = readComplexityReport(
@@ -363,8 +366,9 @@ export class ScopeAdjustmentService {
 			return found && entry?.complexityScore
 				? { score: entry.complexityScore, reportPath: found.reportPath }
 				: null;
-		} catch {
-			// An unreadable report only means no score to start from
+		} catch (error) {
+			// A missing report returns null above; this one is there but unreadable
+			warn(`${(error as Error).message}; scoping without its score`);
 			return null;
 		}
 	}

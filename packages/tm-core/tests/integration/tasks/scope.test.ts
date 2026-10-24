@@ -207,6 +207,51 @@ describe('tasks.scope', () => {
 		]);
 	});
 
+	it('keeps a completed subtask and rewrites one with no status', async () => {
+		const task = fixtureTask();
+		task.subtasks = [
+			{ id: 1, title: 'Shipped', description: 'd', status: 'completed', dependencies: [] },
+			{ id: 2, title: 'No status', description: 'd', dependencies: [] } as any
+		];
+		write([task]);
+
+		const result = await tmCore.tasks.scope({ ids: '3', direction: 'up' });
+
+		expect(readTask().subtasks.map((s: any) => [s.id, s.title])).toEqual([
+			[1, 'Shipped'],
+			[2, 'New step one'],
+			[3, 'New step two']
+		]);
+		expect(result.tasks[0]).toMatchObject({ preserved: 1, generated: 2 });
+	});
+
+	it('keeps the pending subtasks when the AI returns none', async () => {
+		generateObject
+			.mockResolvedValueOnce(adjustAnswer() as any)
+			.mockResolvedValueOnce({ mainResult: { subtasks: [] }, telemetryData: null } as any);
+		const onWarning = vi.fn();
+
+		const result = await tmCore.tasks.scope({ ids: '3', direction: 'down' }, { onWarning });
+
+		expect(onWarning).toHaveBeenCalledWith(
+			'Failed to regenerate subtasks for task 3: the AI returned no subtasks'
+		);
+		expect(result.tasks[0]).toMatchObject({ regenerated: false, generated: 0 });
+		expect(readTask().subtasks).toHaveLength(4);
+	});
+
+	it('warns about an unreadable complexity report and scopes without its score', async () => {
+		fs.writeFileSync(reportPath(), '{not json');
+		const onWarning = vi.fn();
+
+		await tmCore.tasks.scope({ ids: '3', direction: 'up' }, { onWarning });
+
+		expect(onWarning).toHaveBeenCalledWith(
+			expect.stringMatching(/^Couldn't read the complexity report: .*; scoping without its score$/)
+		);
+		expect(readTask().title).toBe('Adjusted title');
+	});
+
 	it('fails without bringing back a task removed during the AI call', async () => {
 		generateObject.mockImplementationOnce(async () => {
 			write([otherTask]);

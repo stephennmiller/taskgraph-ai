@@ -120,6 +120,21 @@ describe('scope_up_task / scope_down_task', () => {
 		expect(result.content[0].text).toContain('Invalid strength level: max');
 	});
 
+	it('adds warnings from tasks saved before a failure to the error reply', async () => {
+		tasks.scope.mockImplementation(async (_input, hooks) => {
+			hooks.onWarning('Failed to regenerate subtasks for task 1: boom');
+			throw new Error('overloaded (task 1 already scoped up)');
+		});
+		const tool = register(registerScopeUpTool);
+
+		const result = await tool.execute({ id: '1,2', projectRoot: project }, ctx);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain(
+			'overloaded (task 1 already scoped up). Warnings: Failed to regenerate subtasks for task 1: boom'
+		);
+	});
+
 	it('refuses a tasks file other than the project one, before any AI call', async () => {
 		const tool = register(registerScopeUpTool);
 
