@@ -9,6 +9,9 @@ import {
 	vi
 } from 'vitest';
 
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 // Import the actual PromptManager to test with real prompt files
 import { PromptManager } from '../../scripts/modules/prompt-manager.js';
 
@@ -193,6 +196,60 @@ describe('PromptManager', () => {
 			expect(ids).toContain('expand-task');
 			expect(ids).toContain('add-task');
 			expect(ids).toContain('research');
+		});
+	});
+
+	describe('project summary', () => {
+		let project;
+		const expandParams = (extra) => ({
+			task: { id: 1, title: 'Add login', description: 'Login page' },
+			subtaskCount: 3,
+			nextSubtaskId: 1,
+			...extra
+		});
+
+		beforeEach(() => {
+			project = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-prompt-summary-'));
+			fs.mkdirSync(path.join(project, 'src'));
+			fs.writeFileSync(path.join(project, 'src', 'server.js'), '');
+		});
+
+		afterEach(() => {
+			fs.rmSync(project, { recursive: true, force: true });
+		});
+
+		it('gives a prompt with codebase tools the project summary and a turn budget', () => {
+			const { userPrompt } = promptManager.loadPrompt(
+				'expand-task',
+				expandParams({ hasCodebaseAnalysis: true, projectRoot: project })
+			);
+
+			expect(userPrompt).toContain('## Project summary');
+			expect(userPrompt).toContain('src/server.js');
+			expect(userPrompt).toContain('your turns are limited');
+			expect(userPrompt).not.toContain('Use the Glob tool to explore');
+		});
+
+		it('leaves the summary out when the model has no codebase tools', () => {
+			const { userPrompt } = promptManager.loadPrompt(
+				'expand-task',
+				expandParams({ hasCodebaseAnalysis: false, projectRoot: project })
+			);
+
+			expect(userPrompt).not.toContain('Project summary');
+		});
+
+		it('keeps a summary the caller passed', () => {
+			const { userPrompt } = promptManager.loadPrompt('add-task', {
+				prompt: 'Add login',
+				newTaskId: 2,
+				hasCodebaseAnalysis: true,
+				projectRoot: project,
+				repoSummary: 'Given summary'
+			});
+
+			expect(userPrompt).toContain('Given summary');
+			expect(userPrompt).not.toContain('src/server.js');
 		});
 	});
 

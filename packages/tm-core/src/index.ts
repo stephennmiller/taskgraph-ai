@@ -86,6 +86,9 @@ export * from './modules/prd/index.js';
 // Importing the upstream project TaskGraph was forked from (init flag)
 export * from './modules/migration/index.js';
 
+// The project summary AI calls get instead of exploring the repo
+export * from './modules/codebase/index.js';
+
 // Zod schemas for validation
 export * from './common/schemas/index.js';
 

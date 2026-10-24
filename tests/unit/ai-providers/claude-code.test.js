@@ -213,6 +213,7 @@ describe('ClaudeCodeProvider', () => {
 					permissionPrompts: 'none',
 					strictMcpConfig: true,
 					mcpServers: {},
+					maxTurns: 6,
 					cwd: '/work/project',
 					hooks: { PreToolUse: [expect.any(Object)] }
 				}
@@ -426,6 +427,21 @@ describe('ClaudeCodeProvider', () => {
 				getClaudeCodeSettingsForCommand.mockReturnValueOnce({ maxTurns: 3 });
 				provider.getClient({ role: 'research' });
 				expect((await lastSettings()).maxTurns).toBe(3);
+			});
+
+			it('caps main and fallback turns at 6 unless the config sets maxTurns', async () => {
+				const { getClaudeCodeSettingsForCommand } = await import(
+					'../../../scripts/modules/config-manager.js'
+				);
+
+				provider.getClient({ role: 'main', projectRoot: '/tmp/project' });
+				expect((await lastSettings()).maxTurns).toBe(6);
+				provider.getClient({ role: 'fallback', projectRoot: '/tmp/project' });
+				expect((await lastSettings()).maxTurns).toBe(6);
+
+				getClaudeCodeSettingsForCommand.mockReturnValueOnce({ maxTurns: 12 });
+				provider.getClient({ role: 'main', projectRoot: '/tmp/project' });
+				expect((await lastSettings()).maxTurns).toBe(12);
 			});
 
 			it('does not let config settings widen the allowed tools', async () => {
