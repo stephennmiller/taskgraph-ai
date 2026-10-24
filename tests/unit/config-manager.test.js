@@ -820,10 +820,11 @@ describe('getConfig Tests', () => {
 
 // --- writeConfig Tests ---
 describe('writeConfig', () => {
-	// Only config.json exists; the saver reads config.local.json too
+	// The .taskgraph folders and MOCK_CONFIG_PATH exist, no other config file
+	// (the saver reads config.local.json too)
 	beforeEach(() => {
 		fsExistsSyncSpy.mockImplementation(
-			(filePath) => filePath === MOCK_CONFIG_PATH
+			(filePath) => !filePath.endsWith('.json') || filePath === MOCK_CONFIG_PATH
 		);
 	});
 
