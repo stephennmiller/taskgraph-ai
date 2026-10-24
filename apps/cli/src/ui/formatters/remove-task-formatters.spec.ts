@@ -17,4 +17,13 @@ describe('formatTasksRemoved', () => {
 			'✓ Removed 3 tasks: 2, 5.1, 7'
 		);
 	});
+
+	it('points to fix-dependencies when tasks depend on missing tasks', () => {
+		expect(plain(formatTasksRemoved(['2'], 2))).toBe(
+			'✓ Removed task 2\n2 tasks depend on missing tasks. Run: taskgraph fix-dependencies'
+		);
+		expect(plain(formatTasksRemoved(['2'], 1, 'feature')).split('\n')[1]).toBe(
+			'1 task depends on missing tasks. Run: taskgraph fix-dependencies --tag feature'
+		);
+	});
 });

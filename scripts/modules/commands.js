@@ -1968,9 +1968,7 @@ function registerCommands(programInstance) {
 				if (!options.yes) {
 					console.log();
 					console.log(
-						chalk.red.bold(
-							`⚠️ WARNING: This will permanently delete the following ${existingTasksToRemove.length} item(s):`
-						)
+						`${chalk.yellow('⚠')} This will permanently delete ${existingTasksToRemove.length} item(s):`
 					);
 					console.log();
 
@@ -2004,16 +2002,14 @@ function registerCommands(programInstance) {
 					if (totalSubtasksToDelete > 0) {
 						console.log(
 							chalk.yellow(
-								`⚠️ This will also delete ${totalSubtasksToDelete} subtasks associated with the selected main tasks!`
+								`⚠ This also deletes ${totalSubtasksToDelete} ${totalSubtasksToDelete === 1 ? 'subtask' : 'subtasks'}`
 							)
 						);
 					}
 
 					if (dependentTaskMessages.length > 0) {
 						console.log(
-							chalk.yellow(
-								'⚠️ Warning: Dependencies on the following tasks will be removed:'
-							)
+							chalk.yellow('⚠ Dependencies on them will be removed:')
 						);
 						dependentTaskMessages.forEach((msg) =>
 							console.log(chalk.yellow(msg))
@@ -2055,7 +2051,11 @@ function registerCommands(programInstance) {
 
 				if (result.success) {
 					console.log(
-						ui.formatTasksRemoved(existingTasksToRemove.map(({ id }) => id))
+						ui.formatTasksRemoved(
+							existingTasksToRemove.map(({ id }) => id),
+							result.danglingDependents,
+							options.tag
+						)
 					);
 				} else {
 					printError(

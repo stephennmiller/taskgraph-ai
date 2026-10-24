@@ -118,7 +118,10 @@ export async function removeTaskDirect(args, log, context = {}) {
 					removedTasks: result.removedTasks,
 					message: result.message,
 					tasksPath: tasksJsonPath,
-					tag
+					tag,
+					...(result.danglingDependents > 0 && {
+						hint: `${result.danglingDependents === 1 ? '1 task depends' : `${result.danglingDependents} tasks depend`} on missing tasks. Run: taskgraph fix-dependencies${tag ? ` --tag ${tag}` : ''}`
+					})
 				}
 			};
 		} finally {

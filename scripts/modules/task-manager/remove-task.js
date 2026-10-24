@@ -1,6 +1,12 @@
-import { dropReferences, fullSubtaskId, getOwnKey } from '@tm/core';
+import {
+	dropReferences,
+	fullSubtaskId,
+	getOwnKey,
+	readArchivedIdsSync
+} from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
+import { validateTaskDependencies } from '../dependency-manager.js';
 import { findTaskById, log, readJSON } from '../utils.js';
 import { updateTagTasks } from '../utils/update-tag-tasks.js';
 import taskExists from './task-exists.js';
@@ -12,7 +18,9 @@ import taskExists from './task-exists.js';
  * @param {Object} context - Context object containing projectRoot and tag information
  * @param {string} [context.projectRoot] - Project root path
  * @param {string} [context.tag] - Tag for the task
- * @returns {Object} Result object with success status, messages, and removed task info
+ * @returns {Object} Result object with success status, messages, removed task
+ *   info, and `danglingDependents`: how many tasks and subtasks left in the tag
+ *   still depend on a missing task
  */
 async function removeTask(tasksPath, taskIds, context = {}) {
 	const { projectRoot, tag } = context;
@@ -48,6 +56,8 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 		}
 
 		const tasksToDeleteFiles = []; // Collect IDs of main tasks whose files should be deleted
+		let danglingDependents = 0;
+		let remainingTasks;
 
 		// Remove from the tag as it is in the file now. It may have changed since
 		// it was read above, so the IDs are looked up again here.
@@ -163,8 +173,27 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 
 				// Dependency IDs name tasks of the same tag, so only this tag changes
 				dropReferences(tasks, allRemovedIds);
+				remainingTasks = tasks;
 			}
 		});
+
+		// Dependencies that were already dangling stay; the caller only points
+		// to fix-dependencies. A failed check must not fail the removal.
+		if (remainingTasks) {
+			try {
+				const { issues } = validateTaskDependencies(
+					remainingTasks,
+					readArchivedIdsSync(tasksPath, tag).ids
+				);
+				danglingDependents = new Set(
+					issues
+						.filter((issue) => issue.type === 'missing')
+						.map((issue) => String(issue.taskId))
+				).size;
+			} catch (checkError) {
+				log('debug', `Dangling dependency check failed: ${checkError.message}`);
+			}
+		}
 
 		if (results.removedTasks.length > 0) {
 			// Delete task files AFTER saving tasks.json
@@ -211,7 +240,8 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 			success: results.success,
 			message: finalMessage || 'No tasks were removed.',
 			error: finalError || null,
-			removedTasks: results.removedTasks
+			removedTasks: results.removedTasks,
+			danglingDependents
 		};
 	} catch (error) {
 		// Catch errors from reading file or other initial setup
