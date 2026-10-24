@@ -255,40 +255,7 @@ By using this HOF, the core logic within the `execute` method and any downstream
 
 ### Project Initialization Tool
 
-The `initialize_project` tool allows integrated clients like Claude Code to set up a new TaskGraph project:
-
-```javascript
-// In initialize-project.js
-import { z } from "zod";
-import { initializeProjectDirect } from "../core/taskgraph-core.js";
-import { handleApiResult, createErrorResponse } from "@tm/mcp";
-
-export function registerInitializeProjectTool(server) {
-  server.addTool({
-    name: "initialize_project",
-    description: "Initialize a new TaskGraph project",
-    parameters: z.object({
-      projectName: z.string().optional().describe("The name for the new project"),
-      projectDescription: z.string().optional().describe("A brief description"),
-      projectVersion: z.string().optional().describe("Initial version (e.g., '0.1.0')"),
-      authorName: z.string().optional().describe("The author's name"),
-      skipInstall: z.boolean().optional().describe("Skip installing dependencies"),
-      addAliases: z.boolean().optional().describe("Add shell aliases"),
-      yes: z.boolean().optional().describe("Skip prompts and use defaults")
-    }),
-    execute: async (args, { log, reportProgress }) => {
-      try {
-        // Since we're initializing, we don't need project root
-        const result = await initializeProjectDirect(args, log);
-        return handleApiResult({ result, log, errorPrefix: 'Error initializing project' });
-      } catch (error) {
-        log.error(`Error in initialize_project: ${error.message}`);
-        return createErrorResponse(`Failed to initialize project: ${error.message}`);
-      }
-    }
-  });
-}
-```
+The `initialize_project` tool (`apps/mcp/src/tools/setup/initialize-project.tool.ts`) sets up a new TaskGraph project through tm-core's `initializeProject`, as `taskgraph init --yes` does. It is wrapped in `withNormalizedProjectRoot` rather than `withToolContext`, because there is no project for `createTmCore` to open yet, and replies through `replyWith`.
 
 ### Logging Convention
 
@@ -382,7 +349,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - Implement `registerYourCommandTool(server)`.
     - Define the tool `name` using **snake_case** (e.g., `your_command`).
     - Define the `parameters` using `zod`. Include `projectRoot: z.string().optional()`.
-    - Wrap `execute` in `withNormalizedProjectRoot(async (args, { log, session }) => { ... })`, which resolves and normalizes `args.projectRoot` (see `mcp-server/src/tools/initialize-project.js`).
+    - Wrap `execute` in `withNormalizedProjectRoot(async (args, { log, session }) => { ... })`, which resolves and normalizes `args.projectRoot` (see `apps/mcp/src/tools/setup/initialize-project.tool.ts`).
         - Call `await yourCommandDirect({ ...args }, log, { session });` and return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot, tag })`.
         - **If the command is long-running**: also destructure `reportProgress` and pass `{ session, reportProgress }` as the context.
 
@@ -483,7 +450,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
   - ✅ DO: Use consistent directory structure: `mcp-server/src/tools/` for tool definitions, `mcp-server/src/core/direct-functions/` for direct function implementations
 
 - **JavaScript Functions**:
-  - ✅ DO: Use **camelCase** with `Direct` suffix for direct function implementations: `parsePRDDirect`, `initializeProjectDirect`
+  - ✅ DO: Use **camelCase** with `Direct` suffix for direct function implementations: `parsePRDDirect`
   - ✅ DO: Use **camelCase** with `Tool` suffix for tool registration functions: `registerListTasksTool`, `registerSetTaskStatusTool`
   - ✅ DO: Use consistent action function naming inside direct functions: `coreActionFn` or similar descriptive name
 

@@ -21,7 +21,7 @@ interface ToolArgs {
  */
 export async function replyWith(
 	args: ToolArgs,
-	{ log }: ToolContext,
+	{ log }: Pick<ToolContext, 'log'>,
 	errorPrefix: string,
 	work: () => Promise<{ data: unknown; tag?: string }>
 ) {

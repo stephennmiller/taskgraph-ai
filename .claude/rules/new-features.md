@@ -530,7 +530,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters**: Make `projectRoot` optional (`z.string().optional().describe(...)`) as the HOF handles fallback.
     - If the operation is long-running, report progress as described in Progress Reporting below.
-    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`** (see `mcp-server/src/tools/initialize-project.js`):
+    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`** (see `apps/mcp/src/tools/setup/initialize-project.tool.ts`):
       ```javascript
       execute: withNormalizedProjectRoot(async (args, { log, session }) => {
           // args.projectRoot is now normalized
@@ -588,36 +588,7 @@ When implementing project initialization commands:
    - ✅ **DO**: Handle project metadata like name, description, version
    - ✅ **DO**: Create necessary files and directories
 
-2. **In MCP Tool Implementation**:
-   ```javascript
-   // In initialize-project.js MCP tool:
-   import { createErrorResponse, handleApiResult } from "@tm/mcp";
-   import { z } from "zod";
-   import { initializeProjectDirect } from "../core/taskgraph-core.js";
-   
-   export function registerInitializeProjectTool(server) {
-     server.addTool({
-       name: "initialize_project",
-       description: "Initialize a new TaskGraph project",
-       parameters: z.object({
-         projectName: z.string().optional().describe("The name for the new project"),
-         projectDescription: z.string().optional().describe("A brief description"),
-         projectVersion: z.string().optional().describe("Initial version (e.g., '0.1.0')"),
-         // Add other parameters as needed
-       }),
-       execute: async (args, { log, reportProgress, session }) => {
-         try {
-           // No need for project root since we're creating a new project
-           const result = await initializeProjectDirect(args, log);
-           return handleApiResult({ result, log, errorPrefix: 'Error initializing project' });
-         } catch (error) {
-           log.error(`Error in initialize_project: ${error.message}`);
-           return createErrorResponse(`Failed to initialize project: ${error.message}`);
-         }
-       }
-     });
-   }
-   ```
+2. **In MCP Tool Implementation**: see `apps/mcp/src/tools/setup/initialize-project.tool.ts`, which calls tm-core's `initializeProject` inside `withNormalizedProjectRoot` and replies through `replyWith`.
 
 ## Feature Planning
 
