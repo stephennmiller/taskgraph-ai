@@ -1,8 +1,6 @@
 {
 	"$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
 	"ignoreBinaries": [
-		// The package's own bin, run by the legacy MCP tools
-		"taskgraph",
 		// ripgrep, a system binary the Claude Code path guard test calls
 		"rg"
 	],

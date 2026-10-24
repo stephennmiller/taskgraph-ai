@@ -59,7 +59,7 @@ export interface ColumnSpec {
 	dropOrder?: number;
 }
 
-export interface ColumnPlan {
+interface ColumnPlan {
 	keys: string[];
 	widths: number[];
 	hidden: string[];

@@ -300,7 +300,6 @@ export {
 
 // Layout helpers
 export {
-	getContentWidth,
 	terminalWidth,
 	truncate,
 	wrapLine,

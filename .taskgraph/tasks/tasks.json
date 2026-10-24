@@ -701,10 +701,11 @@
         "description": "`npm run knip` prints a configuration hint, `taskgraph: Remove from ignoreBinaries`, for the entry in `knip.jsonc` (commented \"The package's own bin, run by the legacy MCP tools\").",
         "details": "GitHub issue #467: https://github.com/stephennmiller/taskgraph-ai/issues/467\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:45:33.543Z"
       },
       {
         "id": "53",
@@ -865,10 +866,11 @@
         "description": "knip lists four unused exports in apps/cli; drop the barrel entry and three export keywords.",
         "details": "GitHub issue #487: https://github.com/stephennmiller/taskgraph-ai/issues/487\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:45:33.705Z"
       },
       {
         "id": "67",
@@ -888,9 +890,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:37:42.479Z",
+      "lastModified": "2026-10-24T12:45:33.705Z",
       "taskCount": 67,
-      "completedCount": 51,
+      "completedCount": 53,
       "tags": [
         "master"
       ]

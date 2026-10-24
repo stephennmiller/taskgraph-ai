@@ -429,6 +429,24 @@ describe('formatTaskDetail', () => {
 		expect(plain(output)).toContain('Move cursor');
 	});
 
+	it('removes escape sequences that HTML task text encodes as entities', () => {
+		const task = createTask({
+			id: 8,
+			title: 'From the web app',
+			description: '<p>Clear &#27;[2Jscreen</p>',
+			details: '<p>Set &#x1b;]0;pwned&#7;title</p>'
+		});
+
+		const output = formatTaskDetail(task, { width: 80 });
+
+		// Only color codes may remain
+		expect(output.replace(/\u001b\[[\d;]*m/g, '')).not.toMatch(
+			/[\u001b\u0007\u009b]/
+		);
+		expect(plain(output)).toMatch(/Clear .*screen/);
+		expect(plain(output)).toMatch(/Set .*title/);
+	});
+
 	it('renders HTML task text as plain text', () => {
 		const task = createTask({
 			id: 4,
