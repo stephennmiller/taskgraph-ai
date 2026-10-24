@@ -80,9 +80,11 @@ export function formatSubtaskRemoved(
 	convertedTo?: SubtaskRef | null,
 	width = terminalWidth()
 ): string {
-	if (!convertedTo) return `${chalk.green('✓')} Removed subtask ${subtaskId}`;
+	// The ID is what the user typed, which parseInt read leniently
+	const id = terminalSafe(subtaskId);
+	if (!convertedTo) return `${chalk.green('✓')} Removed subtask ${id}`;
 	return resultLine(
-		`Subtask ${subtaskId} is now task ${convertedTo.id}`,
+		`Subtask ${id} is now task ${convertedTo.id}`,
 		convertedTo.title,
 		width
 	);

@@ -1829,7 +1829,7 @@ function registerCommands(programInstance) {
 				);
 				process.exit(1);
 			}
-			// Check every ID before removing any, so a typo changes nothing
+			// A task ID gets a pointer to remove-task; removeSubtask checks the rest
 			const notSubtaskId = subtaskIdArray.find((id) => !id.includes('.'));
 			if (notSubtaskId) {
 				printError(
@@ -1840,16 +1840,17 @@ function registerCommands(programInstance) {
 			}
 
 			try {
-				for (const subtaskId of subtaskIdArray) {
-					const convertedTask = await removeSubtask(
-						taskGraph.getTasksPath(),
-						subtaskId,
-						convertToTask,
-						generateFiles,
-						{ projectRoot: taskGraph.getProjectRoot(), tag }
-					);
-					console.log(ui.formatSubtaskRemoved(subtaskId, convertedTask));
-				}
+				// One call checks every ID, then removes them all in one save
+				const convertedTasks = await removeSubtask(
+					taskGraph.getTasksPath(),
+					subtaskIdArray,
+					convertToTask,
+					generateFiles,
+					{ projectRoot: taskGraph.getProjectRoot(), tag }
+				);
+				subtaskIdArray.forEach((subtaskId, i) => {
+					console.log(ui.formatSubtaskRemoved(subtaskId, convertedTasks[i]));
+				});
 			} catch (error) {
 				displayError(error);
 			}
