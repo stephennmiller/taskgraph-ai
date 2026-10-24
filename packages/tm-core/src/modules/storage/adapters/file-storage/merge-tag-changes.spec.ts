@@ -136,6 +136,103 @@ describe('mergeTagChanges', () => {
 		expect(renumbered).toEqual([]);
 	});
 
+	it('keeps a subtask the command inserted first in place when others edited one (#635)', () => {
+		const sub = (id: number, title: string, status = 'pending') => ({
+			id,
+			title,
+			status
+		});
+		const base = tag([task(1, { subtasks: [sub(2, 'A'), sub(3, 'B')] })]);
+		const mine = tag([
+			task(1, { subtasks: [sub(1, 'New'), sub(2, 'A'), sub(3, 'B')] })
+		]);
+		const theirs = tag([
+			task(1, { subtasks: [sub(2, 'A', 'in-progress'), sub(3, 'B')] })
+		]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks[0].subtasks).toEqual([
+			sub(1, 'New'),
+			sub(2, 'A', 'in-progress'),
+			sub(3, 'B')
+		]);
+	});
+
+	it('puts a task the command inserted after its neighbour and the tasks others added there', () => {
+		const base = tag([task(1), task(2)]);
+		const mine = tag([task(1), task(5, { title: 'Mine' }), task(2)]);
+		const theirs = tag([task(1), task(3, { title: 'Theirs' }), task(2)]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks.map((t) => t.id)).toEqual([1, 3, 5, 2]);
+	});
+
+	it('keeps both tasks the command added under one ID, once each', () => {
+		const base = tag([task(1)]);
+		const mine = tag([
+			task(5, { title: 'A' }),
+			task(1),
+			task(5, { title: 'B' })
+		]);
+		const theirs = tag([task(1, { title: 'Theirs' })]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks.map((t) => [t.id, t.title])).toEqual([
+			[5, 'A'],
+			[1, 'Theirs'],
+			[6, 'B']
+		]);
+	});
+
+	it('never loses or repeats a task, over random concurrent edits', () => {
+		let seed = 1;
+		const rnd = (n: number) => {
+			seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+			return (seed >>> 16) % n;
+		};
+		const shuffle = <X>(list: X[]) =>
+			list
+				.map((x) => [rnd(1000), x] as const)
+				.sort((a, b) => a[0] - b[0])
+				.map(([, x]) => x);
+		// Drops, edits, maybe reorders, and inserts tasks from ID `from` on
+		const edit = (list: TestTask[], from: number, who: string) => {
+			const kept = list
+				.filter(() => rnd(4) > 0)
+				.map((t) => (rnd(3) === 0 ? { ...t, title: `${t.title} ${who}` } : t));
+			const result = rnd(5) === 0 ? shuffle(kept) : kept;
+			for (let i = rnd(4); i > 0; i--) {
+				result.splice(
+					rnd(result.length + 1),
+					0,
+					task(from + i, { title: who })
+				);
+			}
+			return result;
+		};
+		for (let run = 0; run < 2000; run++) {
+			const tasks = shuffle([1, 2, 3, 4, 5].filter(() => rnd(5) > 0)).map(
+				(id) => task(id)
+			);
+			// Half the runs add under the same IDs on both sides
+			const mine = edit(tasks, rnd(2) === 0 ? 10 : 20, 'mine');
+			const theirs = edit(tasks, 10, 'theirs');
+			const has = (list: TestTask[], t: TestTask) =>
+				list.some((other) => other.id === t.id);
+			const kept = tasks.filter((t) => has(mine, t) && has(theirs, t));
+			const added = [...mine, ...theirs].filter((t) => !has(tasks, t));
+
+			const { merged } = mergeTagChanges(tag(tasks), tag(mine), tag(theirs));
+
+			const ids = merged.tasks.map((t) => t.id);
+			expect(new Set(ids).size).toBe(ids.length);
+			expect(ids.length).toBe(kept.length + added.length);
+		}
+	});
+
 	it('gives an added task the next free ID when someone else took its ID', () => {
 		const base = tag([task(1)]);
 		const mine = tag([

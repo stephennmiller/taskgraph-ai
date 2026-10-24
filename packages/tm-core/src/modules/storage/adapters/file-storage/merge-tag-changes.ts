@@ -12,8 +12,9 @@
  *   else changed it too.
  * - Lists of items with an `id` (tasks, subtasks) merge item by item: items
  *   others added stay, items the command removed go, items the command added
- *   are appended. When someone else took the ID of an item the command added,
- *   the command's item gets the next free ID and is reported in `renumbered`.
+ *   go after the item they follow in the command's list. When someone else
+ *   took the ID of an item the command added, the command's item gets the
+ *   next free ID and is reported in `renumbered`.
  *   A task the command added under an ID that was archived meanwhile moves
  *   too, and a new ID is always above the archive's `highestId`.
  *   Dependencies on a renumbered item, their provenance marks and
@@ -193,12 +194,13 @@ function mergeItemLists(
 		nextId = Math.max(nextId, ctx.archived.highestId + 1);
 	}
 	const newIds = new Map<string, unknown>();
-	const ownAdded = new Map<string, Item>();
+	// By the item in `mine`, so two added items with one ID both stay
+	const ownAdded = new Map<Item, Item>();
 	for (const item of mine) {
 		const key = keyOf(item);
 		if (baseById.has(key)) continue;
 		if (!taken.has(key)) {
-			ownAdded.set(key, item);
+			ownAdded.set(item, item);
 			taken.add(key);
 			continue;
 		}
@@ -208,18 +210,43 @@ function mergeItemLists(
 		nextId++;
 		newIds.set(key, id);
 		ctx.renumbered.push({ from: `${scope}${key}`, to: `${scope}${id}` });
-		ownAdded.set(key, { ...item, id });
+		ownAdded.set(item, { ...item, id });
 		taken.add(String(id));
 	}
 
 	if (newIds.size > 0) {
-		for (const [key, item] of ownAdded) {
-			ownAdded.set(key, followRenumbered(item, scope, newIds));
+		for (const [original, item] of ownAdded) {
+			ownAdded.set(original, followRenumbered(item, scope, newIds));
 		}
 	}
 
 	if (!isReordered(base, mine)) {
-		return [...current, ...ownAdded.values()];
+		// Each added item goes after the kept item it follows in `mine` and
+		// after what others added there; with none before it, before the
+		// first kept item
+		const after = new Map<string | null, Item[]>();
+		let previous: string | null = null;
+		for (const item of mine) {
+			const key = keyOf(item);
+			const placed = ownAdded.get(item);
+			if (placed !== undefined) {
+				after.set(previous, [...(after.get(previous) ?? []), placed]);
+			} else if (kept.has(key)) {
+				previous = key;
+			}
+		}
+		const result: Item[] = [];
+		let pending = after.get(null) ?? [];
+		for (const item of current) {
+			const key = keyOf(item);
+			if (kept.has(key)) {
+				result.push(...pending);
+				pending = after.get(key) ?? [];
+			}
+			result.push(item);
+		}
+		result.push(...pending);
+		return result;
 	}
 
 	// The command reordered its items: follow its order, and keep each item
@@ -237,7 +264,7 @@ function mergeItemLists(
 	const result: Item[] = [...(following.get(null) ?? [])];
 	for (const item of mine) {
 		const key = keyOf(item);
-		const placed = kept.get(key) ?? ownAdded.get(key);
+		const placed = kept.get(key) ?? ownAdded.get(item);
 		if (placed === undefined) continue;
 		result.push(placed);
 		if (kept.has(key)) result.push(...(following.get(key) ?? []));
