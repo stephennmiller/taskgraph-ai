@@ -10,7 +10,10 @@ import { handleApiResult, withToolContext } from '../../shared/utils.js';
 
 const AddSubtaskSchema = z.object({
 	id: z.string().describe('Parent task ID (required)'),
-	taskId: z.string().optional().describe('Existing task ID to convert to subtask'),
+	taskId: z
+		.string()
+		.optional()
+		.describe('Existing task ID to convert to subtask'),
 	title: z
 		.string()
 		.optional()

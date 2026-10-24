@@ -76,9 +76,9 @@ describe('add-subtask and move through tasks', () => {
 		await expect(
 			tmCore.tasks.addSubtask('1', { title: 'x' }, { tag: 'nope' })
 		).rejects.toThrow('Tag "nope" not found');
-		await expect(
-			tmCore.tasks.move('3', '8', { tag: 'nope' })
-		).rejects.toThrow('Tag "nope" not found');
+		await expect(tmCore.tasks.move('3', '8', { tag: 'nope' })).rejects.toThrow(
+			'Tag "nope" not found'
+		);
 
 		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
 	});

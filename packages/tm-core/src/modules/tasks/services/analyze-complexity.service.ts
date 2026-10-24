@@ -239,7 +239,10 @@ export function readComplexityReport(
 	const reportPath = candidates.find((candidate) => fs.existsSync(candidate));
 	if (!reportPath) return null;
 	try {
-		return { report: JSON.parse(fs.readFileSync(reportPath, 'utf8')), reportPath };
+		return {
+			report: JSON.parse(fs.readFileSync(reportPath, 'utf8')),
+			reportPath
+		};
 	} catch (error) {
 		throw new TaskGraphError(
 			`Couldn't read the complexity report: ${(error as Error).message}`,

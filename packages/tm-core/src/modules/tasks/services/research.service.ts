@@ -32,10 +32,7 @@ import {
 	resolveContextFile
 } from '../../ai/project-context.js';
 import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
-import {
-	findTaskOrSubtask,
-	gatherTaskContext
-} from '../../ai/task-context.js';
+import { findTaskOrSubtask, gatherTaskContext } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import type { TaskService } from './task-service.js';
 
@@ -280,7 +277,10 @@ export class ResearchService {
 		// A missing file reads as an empty master tag; any other tag must exist
 		const tags = await storage.getAllTags();
 		if (!(tags.includes(tag) || (tags.length === 0 && tag === 'master'))) {
-			throw new TaskGraphError(`Tag "${tag}" not found.`, ERROR_CODES.NOT_FOUND);
+			throw new TaskGraphError(
+				`Tag "${tag}" not found.`,
+				ERROR_CODES.NOT_FOUND
+			);
 		}
 		const tasks = tags.length === 0 ? [] : await storage.loadTasks(tag);
 
@@ -309,7 +309,9 @@ export class ResearchService {
 			}
 		}
 		const filePaths = input.filePaths ?? [];
-		const files = filePaths.map((file) => resolveContextFile(projectRoot, file));
+		const files = filePaths.map((file) =>
+			resolveContextFile(projectRoot, file)
+		);
 		const saveAs =
 			input.saveAs === undefined ? undefined : this.resolveSaveAs(input.saveAs);
 

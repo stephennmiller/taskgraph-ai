@@ -2,7 +2,10 @@
  * @fileoverview Task entity with business rules and domain logic
  */
 
-import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import type {
 	Subtask,
 	Task,

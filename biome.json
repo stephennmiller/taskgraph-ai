@@ -5,7 +5,8 @@
 			"!**/build",
 			"!**/coverage",
 			"!**/.changeset",
-			"!**/tasks",
+			"!**/.taskgraph/**/tasks",
+			"!**/.taskmaster/tasks",
 			"!**/package-lock.json",
 			"!**/tests/fixture/**/*.json",
 			"!**/dist"

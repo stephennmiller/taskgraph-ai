@@ -101,8 +101,7 @@ export class TaskRemovalService {
 					convert: options.convert,
 					archivedIds,
 					highestArchivedId: options.convert
-						? readArchivedIdsSync(this.tasksPath(), tag)
-								.highestId
+						? readArchivedIdsSync(this.tasksPath(), tag).highestId
 						: 0
 				})
 			}),

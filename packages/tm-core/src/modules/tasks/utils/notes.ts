@@ -98,7 +98,10 @@ export function noteTimes(details: string | undefined): Date[] {
 }
 
 /** Whether `details` has a timestamped block added at or after `since` */
-export function hasNoteSince(details: string | undefined, since: Date): boolean {
+export function hasNoteSince(
+	details: string | undefined,
+	since: Date
+): boolean {
 	return noteTimes(details).some((time) => time >= since);
 }
 
@@ -112,7 +115,9 @@ export function parseNoteSince(value: string): Date {
 		throw new TaskGraphError(
 			`Not a time: ${value}`,
 			ERROR_CODES.INVALID_INPUT,
-			{ userMessage: `Not a time: "${value}". Use an ISO time like 2026-10-23T14:02:11Z` }
+			{
+				userMessage: `Not a time: "${value}". Use an ISO time like 2026-10-23T14:02:11Z`
+			}
 		);
 	}
 	return since;

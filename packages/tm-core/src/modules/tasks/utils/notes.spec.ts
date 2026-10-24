@@ -88,7 +88,9 @@ describe('noteTimes', () => {
 	});
 
 	it('skips a block whose time does not parse, and handles no details', () => {
-		expect(noteTimes('<info added on someday>\nx\n</info added on someday>')).toEqual([]);
+		expect(
+			noteTimes('<info added on someday>\nx\n</info added on someday>')
+		).toEqual([]);
 		expect(noteTimes(undefined)).toEqual([]);
 		expect(noteTimes('')).toEqual([]);
 	});
@@ -99,7 +101,9 @@ describe('hasNoteSince', () => {
 
 	it('counts a note added at or after the time', () => {
 		expect(hasNoteSince(details, new Date('2026-10-23T12:00:00Z'))).toBe(true);
-		expect(hasNoteSince(details, new Date('2026-10-23T12:00:00.500Z'))).toBe(true);
+		expect(hasNoteSince(details, new Date('2026-10-23T12:00:00.500Z'))).toBe(
+			true
+		);
 	});
 
 	it('ignores a note added before the time', () => {

@@ -148,7 +148,9 @@ function moveSubtaskToSubtask(
 			destParent.subtasks.splice(adjusted + 1, 0, subtask);
 		}
 	} else {
-		if (destParent.subtasks.some((st: Item) => Number(st.id) === destSubtaskId)) {
+		if (
+			destParent.subtasks.some((st: Item) => Number(st.id) === destSubtaskId)
+		) {
 			taken(
 				`Subtask ${destParentId}.${destSubtaskId} already exists. Use a different destination ID`
 			);
@@ -218,7 +220,11 @@ function moveSubtaskToTask(
 	};
 	assignMetadata(newTask, moved.metadata);
 	sourceParent.subtasks.splice(sourceIndex, 1);
-	retargetDependents(tasks, `${sourceParent.id}.${sourceSubtaskId}`, destTaskId);
+	retargetDependents(
+		tasks,
+		`${sourceParent.id}.${sourceSubtaskId}`,
+		destTaskId
+	);
 
 	const insertIndex = tasks.findIndex((t) => Number(t.id) > destTaskId);
 	if (insertIndex === -1) tasks.push(newTask);
@@ -257,7 +263,9 @@ function moveTaskToSubtask(
 			`Task ${sourceTaskId} has subtasks and cannot become a subtask. Move or remove its subtasks first`
 		);
 	}
-	if (destParent.subtasks?.some((st: Item) => Number(st.id) === destSubtaskId)) {
+	if (
+		destParent.subtasks?.some((st: Item) => Number(st.id) === destSubtaskId)
+	) {
 		taken(
 			`Subtask ${destParentId}.${destSubtaskId} already exists. Use a different destination ID`
 		);
@@ -347,4 +355,3 @@ function moveTaskToTask(
 		movedItem: movedTask
 	};
 }
-

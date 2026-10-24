@@ -63,7 +63,8 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 			title: 'Set Task Status',
 			destructiveHint: true
 		},
-		execute: withToolContext(async (args: SetTaskStatusArgs, { log, tmCore }: ToolContext) => {
+		execute: withToolContext(
+			async (args: SetTaskStatusArgs, { log, tmCore }: ToolContext) => {
 				const { id, status, check, uncheck, force, projectRoot, tag } = args;
 
 				try {
@@ -129,8 +130,7 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 						tag
 					});
 				} catch (error: unknown) {
-					const err =
-						error instanceof Error ? error : new Error(String(error));
+					const err = error instanceof Error ? error : new Error(String(error));
 					log.error(`Error in set-task-status: ${err.message}`);
 					if (err.stack) {
 						log.debug(err.stack);
@@ -140,7 +140,9 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 					const message = gate
 						? [
 								`${err.message}:`,
-								...gate.unchecked.map((item) => `  ${item.number}. ${item.text}`),
+								...gate.unchecked.map(
+									(item) => `  ${item.number}. ${item.text}`
+								),
 								`Check them with check: [${gate.unchecked.map((item) => item.number).join(', ')}], or pass force: true`
 							].join('\n')
 						: `Failed to set task status: ${err.message}`;

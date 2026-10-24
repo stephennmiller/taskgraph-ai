@@ -10,7 +10,10 @@ import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Task } from '../../../src/common/types/index.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
-import { createSubtask, createTask } from '../../../src/testing/task-fixtures.js';
+import {
+	createSubtask,
+	createTask
+} from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 describe('dependency views', () => {
@@ -45,7 +48,11 @@ describe('dependency views', () => {
 				title: 'Build the login API',
 				dependencies: ['1'],
 				subtasks: [
-					createSubtask({ id: 1, title: 'Write the auth schema', parentId: '2' })
+					createSubtask({
+						id: 1,
+						title: 'Write the auth schema',
+						parentId: '2'
+					})
 				]
 			})
 		],

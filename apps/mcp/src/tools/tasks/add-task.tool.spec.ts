@@ -174,7 +174,11 @@ describe('add_task', () => {
 			ctx
 		);
 		const same = await register().execute(
-			{ prompt: 'p', file: '.taskgraph/tasks/tasks.json', projectRoot: project },
+			{
+				prompt: 'p',
+				file: '.taskgraph/tasks/tasks.json',
+				projectRoot: project
+			},
 			ctx
 		);
 

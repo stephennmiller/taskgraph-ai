@@ -52,7 +52,9 @@ afterEach(() => {
 describe('set_task_status criteria gate', () => {
 	it('returns the unchecked criteria and the fix as an error result', async () => {
 		tasks.updateStatus.mockRejectedValue(
-			checkDoneGate({ acceptanceCriteria: ['Login works'] }, '3', ['Tests pass'])
+			checkDoneGate({ acceptanceCriteria: ['Login works'] }, '3', [
+				'Tests pass'
+			])
 		);
 
 		const result = await register().execute(
@@ -65,7 +67,9 @@ describe('set_task_status criteria gate', () => {
 		expect(text).toContain('2 criteria unchecked on task 3:');
 		expect(text).toContain('  1. Login works');
 		expect(text).toContain('  2. Tests pass');
-		expect(text).toContain('Check them with check: [1, 2], or pass force: true');
+		expect(text).toContain(
+			'Check them with check: [1, 2], or pass force: true'
+		);
 	});
 
 	it('passes force through to tm-core', async () => {

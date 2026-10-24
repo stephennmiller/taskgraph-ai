@@ -288,7 +288,7 @@ describe('tasks.add', () => {
 			expect(result.dependencies[1]).toMatchObject({ id: '3.2', title: 'Sub' });
 		});
 
-		it("resolves within the target tag only (#288)", async () => {
+		it('resolves within the target tag only (#288)', async () => {
 			generateObject.mockResolvedValueOnce(
 				aiTask({ dependencies: [1, 3] }) as any
 			);
@@ -327,7 +327,10 @@ describe('tasks.add', () => {
 			expect(added().priority).toBe('high');
 
 			const onWarning = vi.fn();
-			await tmCore.tasks.add({ prompt: 'p', priority: 'urgent' }, { onWarning });
+			await tmCore.tasks.add(
+				{ prompt: 'p', priority: 'urgent' },
+				{ onWarning }
+			);
 			expect(added().priority).toBe('medium');
 			expect(onWarning).toHaveBeenCalledWith(
 				'Invalid priority "urgent". Using default priority "medium".'
@@ -423,15 +426,15 @@ describe('tasks.add', () => {
 			const result = await tmCore.tasks.add({ prompt: 'p' });
 
 			const saved = readFile();
-			expect(saved.master.tasks.map((t: any) => [String(t.id), t.title])).toEqual(
-				[
-					['1', 'Task 1'],
-					['2', 'Task 2'],
-					['3', 'Task 3'],
-					['4', 'Added meanwhile'],
-					['5', 'Task from the AI']
-				]
-			);
+			expect(
+				saved.master.tasks.map((t: any) => [String(t.id), t.title])
+			).toEqual([
+				['1', 'Task 1'],
+				['2', 'Task 2'],
+				['3', 'Task 3'],
+				['4', 'Added meanwhile'],
+				['5', 'Task from the AI']
+			]);
 			expect(saved.master.tasks[0].status).toBe('done');
 			expect(result.task.id).toBe('5');
 			expect(saved.feature.tasks).toHaveLength(1);
@@ -478,7 +481,11 @@ describe('tasks.add', () => {
 
 	describe('tags', () => {
 		it('adds to the tag given and leaves the others alone', async () => {
-			await tmCore.tasks.add({ title: 'API work', description: 'd', tag: 'feature' });
+			await tmCore.tasks.add({
+				title: 'API work',
+				description: 'd',
+				tag: 'feature'
+			});
 
 			const saved = readFile();
 			expect(saved.feature.tasks.map((t: any) => t.title)).toEqual([

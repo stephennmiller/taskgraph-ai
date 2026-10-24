@@ -179,9 +179,7 @@ export function filterReadyTasks(
  * // Returns only task 1 (the only task with non-empty blocks)
  * ```
  */
-export function filterBlockingTasks(
-	tasks: TaskWithBlocks[]
-): TaskWithBlocks[] {
+export function filterBlockingTasks(tasks: TaskWithBlocks[]): TaskWithBlocks[] {
 	return tasks.filter((task) => task.blocks.length > 0);
 }
 

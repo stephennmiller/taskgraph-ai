@@ -70,7 +70,7 @@ describe('claimNextInTasks', () => {
 
 		expect(claimNextInTasks(tasks, 'alice')).toBeNull();
 	});
-	it("leaves the subtasks of a task someone else claimed to them", () => {
+	it('leaves the subtasks of a task someone else claimed to them', () => {
 		const tasks = [
 			task('1', {
 				status: 'in-progress',

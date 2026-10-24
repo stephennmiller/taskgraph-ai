@@ -81,7 +81,9 @@ export function registerResearchTool(server: FastMCP) {
 			async (args: ResearchArgs, { log, session, tmCore }: ToolContext) => {
 				const { projectRoot } = args;
 				const tag = args.tag || tmCore.config.getActiveTag();
-				const reply = (result: Parameters<typeof handleApiResult>[0]['result']) =>
+				const reply = (
+					result: Parameters<typeof handleApiResult>[0]['result']
+				) =>
 					handleApiResult({
 						result,
 						log,
@@ -143,8 +145,7 @@ export function registerResearchTool(server: FastMCP) {
 						}
 					});
 				} catch (error: unknown) {
-					const err =
-						error instanceof Error ? error : new Error(String(error));
+					const err = error instanceof Error ? error : new Error(String(error));
 					const hint = (err as { hint?: unknown }).hint;
 					const message =
 						typeof hint === 'string' ? `${err.message}. ${hint}` : err.message;

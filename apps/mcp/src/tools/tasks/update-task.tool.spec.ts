@@ -17,7 +17,10 @@ vi.mock('@tm/core', async (importOriginal) => ({
 	createTmCore: vi.fn(async () => ({ tasks, config }))
 }));
 
-import { registerUpdateTaskTool, registerUpdateTool } from './update-task.tool.js';
+import {
+	registerUpdateTaskTool,
+	registerUpdateTool
+} from './update-task.tool.js';
 
 type Tool = {
 	name: string;
@@ -218,7 +221,12 @@ describe('update', () => {
 
 	it('hands tm-core the arguments and replies with the count', async () => {
 		const result = await tool().execute(
-			{ from: '3', prompt: 'Use TypeScript', tag: 'feature', projectRoot: project },
+			{
+				from: '3',
+				prompt: 'Use TypeScript',
+				tag: 'feature',
+				projectRoot: project
+			},
 			ctx
 		);
 

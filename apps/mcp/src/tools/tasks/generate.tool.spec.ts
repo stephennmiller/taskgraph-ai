@@ -36,7 +36,8 @@ const ctx = {
 	session: undefined
 };
 
-const tmp = () => fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gen-')));
+const tmp = () =>
+	fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'gen-')));
 
 let project: string;
 let outside: string;
@@ -86,7 +87,10 @@ describe('generate output directory', () => {
 	});
 
 	it('passes a directory inside the project to tm-core as an absolute path', async () => {
-		await register().execute({ projectRoot: project, output: 'out/tasks' }, ctx);
+		await register().execute(
+			{ projectRoot: project, output: 'out/tasks' },
+			ctx
+		);
 
 		expect(tasks.generateTaskFiles).toHaveBeenCalledWith({
 			tag: undefined,

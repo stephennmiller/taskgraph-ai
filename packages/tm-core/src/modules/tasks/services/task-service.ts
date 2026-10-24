@@ -28,7 +28,10 @@ import { normalizeTaskIds } from '../utils/task-ids.js';
 import { appendNote } from '../utils/notes.js';
 import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
 import { TASK_STATUSES } from '../../../common/constants/index.js';
-import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 
 /**
@@ -230,7 +233,9 @@ export class TaskService {
 				ERROR_CODES.NOT_FOUND,
 				{ tagName: resolved }
 			),
-			{ hint: 'Switch with `taskgraph tags use <tag>`; `taskgraph tags` lists them' }
+			{
+				hint: 'Switch with `taskgraph tags use <tag>`; `taskgraph tags` lists them'
+			}
 		);
 	}
 
@@ -653,7 +658,10 @@ export class TaskService {
 			return { result: change([], archivedIds).result, tag: resolvedTag };
 		}
 		const result = await this.storage.mutateTags((tags) => {
-			const { tasks, result } = change(tags.get(resolvedTag) ?? [], archivedIds);
+			const { tasks, result } = change(
+				tags.get(resolvedTag) ?? [],
+				archivedIds
+			);
 			if (tasks) tags.set(resolvedTag, tasks);
 			return { changed: tasks ? [resolvedTag] : [], result };
 		});

@@ -48,12 +48,17 @@ describe('selectNextTask', () => {
 	});
 
 	it('returns null when nothing is eligible', () => {
-		expect(selectNextTask([createTask({ id: 1, title: 'x', status: 'done' })])).toBeNull();
+		expect(
+			selectNextTask([createTask({ id: 1, title: 'x', status: 'done' })])
+		).toBeNull();
 	});
 
 	it('treats a task with no status as pending', () => {
 		const next = selectNextTask([
-			{ ...createTask({ id: 1, title: 'No status' }), status: undefined as never }
+			{
+				...createTask({ id: 1, title: 'No status' }),
+				status: undefined as never
+			}
 		]);
 
 		expect(next?.id).toBe('1');
@@ -90,7 +95,7 @@ describe('selectNextTask', () => {
 		expect(next?.id).toBe('3');
 	});
 
-	it('offers subtasks once the parent\'s dependencies are done', () => {
+	it("offers subtasks once the parent's dependencies are done", () => {
 		const next = selectNextTask([
 			createTask({ id: 1, title: 'Database', status: 'done' }),
 			createTask({

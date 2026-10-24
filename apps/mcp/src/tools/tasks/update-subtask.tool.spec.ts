@@ -133,12 +133,18 @@ describe('update_subtask', () => {
 		tasks.updateSubtask.mockResolvedValue({ ...coreResult, added: '' });
 
 		const result = await register().execute(
-			{ id: '2.2', prompt: 'Aliases', metadata: '{"owner":"kim"}', projectRoot: project },
+			{
+				id: '2.2',
+				prompt: 'Aliases',
+				metadata: '{"owner":"kim"}',
+				projectRoot: project
+			},
 			ctx
 		);
 
 		expect(reply(result).data).toMatchObject({
-			message: 'Nothing added to subtask 2.2: the AI returned no text (metadata saved)',
+			message:
+				'Nothing added to subtask 2.2: the AI returned no text (metadata saved)',
 			updated: true
 		});
 	});
@@ -148,7 +154,12 @@ describe('update_subtask', () => {
 		tasks.updateSubtask.mockResolvedValue({ ...coreResult, added: '' });
 
 		const result = await register().execute(
-			{ id: '2.2', prompt: '  ', metadata: '{"owner":"kim"}', projectRoot: project },
+			{
+				id: '2.2',
+				prompt: '  ',
+				metadata: '{"owner":"kim"}',
+				projectRoot: project
+			},
 			ctx
 		);
 
@@ -173,7 +184,11 @@ describe('update_subtask', () => {
 	});
 
 	it('refuses metadata unless TASKGRAPH_ALLOW_METADATA_UPDATES is on', async () => {
-		const args = { id: '2.2', metadata: '{"owner":"kim"}', projectRoot: project };
+		const args = {
+			id: '2.2',
+			metadata: '{"owner":"kim"}',
+			projectRoot: project
+		};
 
 		const refused = await register().execute(args, ctx);
 		expect(refused.content[0].text).toContain('Metadata updates are disabled');
@@ -188,12 +203,19 @@ describe('update_subtask', () => {
 
 	it('refuses a file other than the project tasks.json', async () => {
 		const result = await register().execute(
-			{ id: '2.2', prompt: 'x', file: '/elsewhere/tasks.json', projectRoot: project },
+			{
+				id: '2.2',
+				prompt: 'x',
+				file: '/elsewhere/tasks.json',
+				projectRoot: project
+			},
 			ctx
 		);
 
 		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toContain("a different file isn't supported");
+		expect(result.content[0].text).toContain(
+			"a different file isn't supported"
+		);
 		expect(tasks.updateSubtask).not.toHaveBeenCalled();
 	});
 

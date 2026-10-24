@@ -17,7 +17,10 @@ vi.mock('@tm/core', async (importOriginal) => ({
 	createTmCore: vi.fn(async () => ({ tasks, config }))
 }));
 
-import { registerExpandAllTool, registerExpandTaskTool } from './expand.tool.js';
+import {
+	registerExpandAllTool,
+	registerExpandTaskTool
+} from './expand.tool.js';
 
 type Tool = {
 	name: string;
@@ -168,7 +171,9 @@ describe('expand_task', () => {
 		);
 
 		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toContain("a different file isn't supported");
+		expect(result.content[0].text).toContain(
+			"a different file isn't supported"
+		);
 		expect(tasks.expand).not.toHaveBeenCalled();
 	});
 });

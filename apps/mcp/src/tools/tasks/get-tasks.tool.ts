@@ -4,10 +4,7 @@
  */
 
 import { z } from 'zod';
-import {
-	handleApiResult,
-	withToolContext
-} from '../../shared/utils.js';
+import { handleApiResult, withToolContext } from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
 import {
 	DEFAULT_TASK_FIELDS,
@@ -57,7 +54,8 @@ export function registerGetTasksTool(server: FastMCP) {
 			title: 'Get Tasks',
 			readOnlyHint: true
 		},
-		execute: withToolContext(async (args: GetTasksArgs, { log, tmCore }: ToolContext) => {
+		execute: withToolContext(
+			async (args: GetTasksArgs, { log, tmCore }: ToolContext) => {
 				const { projectRoot, status, fields, withSubtasks, tag } = args;
 
 				try {

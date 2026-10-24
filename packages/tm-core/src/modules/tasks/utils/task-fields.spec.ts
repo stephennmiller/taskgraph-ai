@@ -39,9 +39,10 @@ describe('parseTaskFields', () => {
 	});
 
 	it('drops subtasks with withSubtasks false', () => {
-		expect(parseTaskFields('title,subtasks', { withSubtasks: false })).toEqual(
-			['id', 'title']
-		);
+		expect(parseTaskFields('title,subtasks', { withSubtasks: false })).toEqual([
+			'id',
+			'title'
+		]);
 	});
 
 	it('reads all as every field', () => {

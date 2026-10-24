@@ -21,10 +21,7 @@ import {
 import { AiConfig } from '../../ai/config-ai-host.js';
 import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { COMMAND_SCHEMAS } from '../../ai/schemas/registry.js';
-import {
-	findTaskOrSubtask,
-	gatherTaskContext
-} from '../../ai/task-context.js';
+import { findTaskOrSubtask, gatherTaskContext } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import {
 	assignMetadata,

@@ -43,7 +43,9 @@ describe('tasks dependency commands', () => {
 				tasks: [
 					task(1),
 					task(2, [1], {
-						subtasks: [{ id: 1, title: 'S', status: 'pending', dependencies: [] }]
+						subtasks: [
+							{ id: 1, title: 'S', status: 'pending', dependencies: [] }
+						]
 					}),
 					task(3)
 				],

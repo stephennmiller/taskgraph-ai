@@ -44,7 +44,7 @@ describe('TaskService.getNextTask', () => {
 		expect(next?.dependencies).toEqual(['1']);
 	});
 
-	it('shows a subtask\'s dependency on an archived task in full', async () => {
+	it("shows a subtask's dependency on an archived task in full", async () => {
 		const service = serviceWith(
 			[
 				task(2, {
@@ -266,7 +266,9 @@ describe('TaskService.getTask', () => {
 			...task(2),
 			id: 2,
 			dependencies: [1],
-			subtasks: [{ id: 1, title: 'Schema', status: 'pending', dependencies: [] }]
+			subtasks: [
+				{ id: 1, title: 'Schema', status: 'pending', dependencies: [] }
+			]
 		});
 
 		const loaded = await service.getTask('2');
@@ -303,7 +305,10 @@ describe('TaskService.getTask', () => {
 
 describe('TaskService.getTaskList', () => {
 	/** A TaskService over a tasks.json with these tags (none: no file yet) */
-	const serviceWithTags = (tags: string[], activeTag = 'master'): TaskService => {
+	const serviceWithTags = (
+		tags: string[],
+		activeTag = 'master'
+	): TaskService => {
 		const service = new TaskService({
 			getActiveTag: () => activeTag
 		} as unknown as ConfigManager);
@@ -318,9 +323,10 @@ describe('TaskService.getTaskList', () => {
 	it('fails on a tag the project does not have', async () => {
 		const service = serviceWithTags(['master', 'feature']);
 
-		await expect(service.getTaskList({ tag: 'nosuch' })).rejects.toMatchObject(
-			{ message: 'Tag "nosuch" not found', code: 'NOT_FOUND' }
-		);
+		await expect(service.getTaskList({ tag: 'nosuch' })).rejects.toMatchObject({
+			message: 'Tag "nosuch" not found',
+			code: 'NOT_FOUND'
+		});
 	});
 
 	it('lists a tag the project has', async () => {

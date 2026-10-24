@@ -23,7 +23,10 @@ const AddTaskSchema = z.object({
 		.describe(
 			'Description of the task to add (required if not using manual fields)'
 		),
-	title: z.string().optional().describe('Task title (for manual task creation)'),
+	title: z
+		.string()
+		.optional()
+		.describe('Task title (for manual task creation)'),
 	description: z
 		.string()
 		.optional()
@@ -46,10 +49,7 @@ const AddTaskSchema = z.object({
 		.describe(
 			'ID of the task you found this work while doing; links them without blocking the new task'
 		),
-	priority: z
-		.string()
-		.optional()
-		.describe('Task priority (high, medium, low)'),
+	priority: z.string().optional().describe('Task priority (high, medium, low)'),
 	file: z
 		.string()
 		.optional()
@@ -148,8 +148,7 @@ export function registerAddTaskTool(server: FastMCP) {
 						tag
 					});
 				} catch (error: unknown) {
-					const err =
-						error instanceof Error ? error : new Error(String(error));
+					const err = error instanceof Error ? error : new Error(String(error));
 					// The fix tm-core suggests, e.g. how to list task IDs
 					const hint = (err as { hint?: unknown }).hint;
 					const message =

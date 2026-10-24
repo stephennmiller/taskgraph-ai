@@ -501,7 +501,10 @@ export class TasksDomain {
 			if (task.subtasks && task.subtasks.length > 0) {
 				for (const subtask of task.subtasks) {
 					// For pending, also count subtasks without status (default to pending)
-					if (subtask.status === status || (status === 'pending' && !subtask.status)) {
+					if (
+						subtask.status === status ||
+						(status === 'pending' && !subtask.status)
+					) {
 						count++;
 					}
 				}
@@ -559,10 +562,7 @@ export class TasksDomain {
 	 * an ID free at that moment. Dependencies that don't exist in the tag are
 	 * dropped with a warning; an unknown `discoveredFrom` throws before any AI call.
 	 */
-	async add(
-		input: AddTaskInput,
-		hooks?: AddTaskHooks
-	): Promise<AddTaskResult> {
+	async add(input: AddTaskInput, hooks?: AddTaskHooks): Promise<AddTaskResult> {
 		return new AddTaskService(
 			() => this.taskService.getStorage(),
 			this.configManager
@@ -720,12 +720,14 @@ export class TasksDomain {
 
 	/** The questions worth asking about gaps in a PRD before parsing it */
 	async findPrdGaps(
-		input: Pick<ParsePrdInput, 'prdPath' | 'research' | 'session' | 'outputType'>
+		input: Pick<
+			ParsePrdInput,
+			'prdPath' | 'research' | 'session' | 'outputType'
+		>
 	): Promise<PrdGapsResult> {
-		return new ParsePrdService(
-			this.taskService,
-			this.configManager
-		).findGaps(input);
+		return new ParsePrdService(this.taskService, this.configManager).findGaps(
+			input
+		);
 	}
 
 	/**

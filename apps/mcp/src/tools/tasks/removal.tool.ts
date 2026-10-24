@@ -51,7 +51,8 @@ export function registerRemoveTaskTool(server: FastMCP) {
 					const result = await context.tmCore.tasks.removeTasks(args.id, {
 						tag: args.tag
 					});
-					if (result.errors.length > 0) throw new Error(result.errors.join('\n'));
+					if (result.errors.length > 0)
+						throw new Error(result.errors.join('\n'));
 					const total = args.id.split(',').length;
 					const dangling = result.danglingDependents;
 					return {
@@ -81,12 +82,11 @@ const RemoveSubtaskSchema = z.object({
 	convert: z
 		.boolean()
 		.optional()
-		.describe('Convert the subtask to a standalone task instead of deleting it'),
+		.describe(
+			'Convert the subtask to a standalone task instead of deleting it'
+		),
 	file,
-	skipGenerate: z
-		.boolean()
-		.optional()
-		.describe('Skip regenerating task files'),
+	skipGenerate: z.boolean().optional().describe('Skip regenerating task files'),
 	projectRoot,
 	tag
 });
@@ -98,10 +98,7 @@ export function registerRemoveSubtaskTool(server: FastMCP) {
 		parameters: RemoveSubtaskSchema,
 		annotations: { title: 'Remove Subtask', destructiveHint: true },
 		execute: withToolContext(
-			async (
-				args: z.infer<typeof RemoveSubtaskSchema>,
-				context: ToolContext
-			) =>
+			async (args: z.infer<typeof RemoveSubtaskSchema>, context: ToolContext) =>
 				replyWith(args, context, 'Error removing subtask', async () => {
 					const {
 						converted: [task],
@@ -147,16 +144,16 @@ export function registerClearSubtasksTool(server: FastMCP) {
 		parameters: ClearSubtasksSchema,
 		annotations: { title: 'Clear Subtasks', destructiveHint: true },
 		execute: withToolContext(
-			async (
-				args: z.infer<typeof ClearSubtasksSchema>,
-				context: ToolContext
-			) =>
+			async (args: z.infer<typeof ClearSubtasksSchema>, context: ToolContext) =>
 				replyWith(args, context, 'Error clearing subtasks', async () => {
-					const { cleared, empty, tag: usedTag } =
-						await context.tmCore.tasks.clearSubtasks(
-							args.all ? 'all' : (args.id as string),
-							{ tag: args.tag }
-						);
+					const {
+						cleared,
+						empty,
+						tag: usedTag
+					} = await context.tmCore.tasks.clearSubtasks(
+						args.all ? 'all' : (args.id as string),
+						{ tag: args.tag }
+					);
 					if (args.all && cleared.length + empty.length === 0) {
 						throw new Error(`No tasks found in tag context '${usedTag}'`);
 					}

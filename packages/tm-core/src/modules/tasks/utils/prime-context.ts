@@ -144,8 +144,7 @@ export function buildPrimeContext(
 	);
 	const ready = rankNextTasks(tasks)
 		.filter(
-			(t) =>
-				(t.status || 'pending') === 'pending' && !working.has(String(t.id))
+			(t) => (t.status || 'pending') === 'pending' && !working.has(String(t.id))
 		)
 		.slice(0, readyLimit)
 		.map((t): PrimeTask => {

@@ -270,7 +270,10 @@ describe('tasks.updateSubtask', () => {
 			taskLinks: { 3: 'related' },
 			owner: 'kim'
 		});
-		expect(result).toMatchObject({ telemetryData: null, tagInfo: { tag: 'master' } });
+		expect(result).toMatchObject({
+			telemetryData: null,
+			tagInfo: { tag: 'master' }
+		});
 	});
 
 	it('saves metadata with the notes, and alone when the AI returns none', async () => {

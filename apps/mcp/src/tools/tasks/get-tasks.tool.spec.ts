@@ -52,9 +52,8 @@ const FIXTURE: Task[] = Array.from({ length: 40 }, (_, index) => {
 		priority: id % 3 === 0 ? 'high' : 'medium',
 		dependencies: id > 1 ? [String(id - 1)] : [],
 		details: `Add a service for feature ${id} in tm-core. `.repeat(16),
-		testStrategy: `Unit tests for feature ${id}, then an integration test. `.repeat(
-			5
-		),
+		testStrategy:
+			`Unit tests for feature ${id}, then an integration test. `.repeat(5),
 		subtasks: [1, 2].map((sub) =>
 			createSubtask({
 				id: sub,

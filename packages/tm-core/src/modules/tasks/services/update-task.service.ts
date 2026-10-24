@@ -676,7 +676,11 @@ export class UpdateTaskService {
 				return restored;
 			});
 			if (task.subtasks?.length) {
-				merged.subtasks = keepDoneSubtasks(task.subtasks, merged.subtasks, warn);
+				merged.subtasks = keepDoneSubtasks(
+					task.subtasks,
+					merged.subtasks,
+					warn
+				);
 			}
 		}
 		keepStatus(task, merged, prompt, warn);

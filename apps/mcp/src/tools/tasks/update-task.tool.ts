@@ -82,10 +82,7 @@ type UpdateArgs = z.infer<typeof UpdateSchema>;
  * tm-core's warnings, and AI detail with global.debug on, to the client log;
  * warnings also go in `warnings`, since the client may not show the log
  */
-const reportTo = (
-	{ log }: ToolContext,
-	warnings: string[]
-): UpdateHooks => ({
+const reportTo = ({ log }: ToolContext, warnings: string[]): UpdateHooks => ({
 	onWarning: (message) => {
 		warnings.push(message);
 		log.warn(message);
@@ -122,59 +119,66 @@ export function registerUpdateTaskTool(server: FastMCP) {
 				const tag = args.tag || tmCore.config.getActiveTag();
 				const taskId = String(args.id);
 				const warnings: string[] = [];
-				return replyWith({ ...args, tag }, context, 'Error updating task', async () => {
-					const result = await tmCore.tasks.updateWithPrompt(
-						{
-							id: taskId,
-							prompt: args.prompt,
-							research: args.research === true,
-							append: args.append === true,
-							metadata: parsedMetadata,
-							tag,
-							session,
-							outputType: 'mcp'
-						},
-						reportTo(context, warnings)
-					);
-					if (args.append && args.prompt && result.appended === '') {
-						reportTo(context, warnings).onWarning?.(
-							'AI response was empty or whitespace after trimming. Original details remain unchanged.'
+				return replyWith(
+					{ ...args, tag },
+					context,
+					'Error updating task',
+					async () => {
+						const result = await tmCore.tasks.updateWithPrompt(
+							{
+								id: taskId,
+								prompt: args.prompt,
+								research: args.research === true,
+								append: args.append === true,
+								metadata: parsedMetadata,
+								tag,
+								session,
+								outputType: 'mcp'
+							},
+							reportTo(context, warnings)
 						);
-					}
-					if (result.skipped === 'done') {
-						log.warn(
-							`Task ${taskId} is already marked as done and cannot be updated`
-						);
+						if (args.append && args.prompt && result.appended === '') {
+							reportTo(context, warnings).onWarning?.(
+								'AI response was empty or whitespace after trimming. Original details remain unchanged.'
+							);
+						}
+						if (result.skipped === 'done') {
+							log.warn(
+								`Task ${taskId} is already marked as done and cannot be updated`
+							);
+							return {
+								tag,
+								data: {
+									message: `Task ${taskId} was not updated (likely already completed).`,
+									taskId,
+									updated: false
+								}
+							};
+						}
 						return {
 							tag,
 							data: {
-								message: `Task ${taskId} was not updated (likely already completed).`,
+								message: `Successfully updated task with ID ${taskId} based on the prompt`,
 								taskId,
-								updated: false
+								tasksPath: tasksPathOf(args.projectRoot),
+								useResearch: args.research === true,
+								updated: true,
+								// The legacy rewrite replied with the ID as given; append and
+								// metadata-only replied with the task as read (a number ID)
+								updatedTask:
+									args.prompt && !args.append
+										? result.task
+										: { ...result.task, id: replyId(result.task.id) },
+								telemetryData: result.telemetryData,
+								// A metadata-only update makes no AI call; the legacy reply named the tag
+								tagInfo:
+									result.tagInfo ??
+									(result.telemetryData ? undefined : { tag }),
+								...(warnings.length > 0 && { warnings })
 							}
 						};
 					}
-					return {
-						tag,
-						data: {
-							message: `Successfully updated task with ID ${taskId} based on the prompt`,
-							taskId,
-							tasksPath: tasksPathOf(args.projectRoot),
-							useResearch: args.research === true,
-							updated: true,
-							// The legacy rewrite replied with the ID as given; append and
-							// metadata-only replied with the task as read (a number ID)
-							updatedTask:
-								args.prompt && !args.append
-									? result.task
-									: { ...result.task, id: replyId(result.task.id) },
-							telemetryData: result.telemetryData,
-							// A metadata-only update makes no AI call; the legacy reply named the tag
-							tagInfo: result.tagInfo ?? (result.telemetryData ? undefined : { tag }),
-							...(warnings.length > 0 && { warnings })
-						}
-					};
-				});
+				);
 			}
 		)
 	});
@@ -191,40 +195,48 @@ export function registerUpdateTool(server: FastMCP) {
 		parameters: UpdateSchema,
 		annotations: { title: 'Update Tasks', destructiveHint: true },
 		execute: withToolContext(
-			async (args: UpdateArgs & { projectRoot: string }, context: ToolContext) => {
+			async (
+				args: UpdateArgs & { projectRoot: string },
+				context: ToolContext
+			) => {
 				const { tmCore, session } = context;
 				const tag = args.tag || tmCore.config.getActiveTag();
 				const warnings: string[] = [];
-				return replyWith({ ...args, tag }, context, 'Error updating tasks', async () => {
-					const result = await tmCore.tasks.updateFrom(
-						{
-							from: args.from,
-							prompt: args.prompt,
-							research: args.research === true,
-							tag,
-							session,
-							outputType: 'mcp'
-						},
-						reportTo(context, warnings)
-					);
-					if (result.sentCount === 0) {
-						throw new Error(
-							`No tasks to update: none from ${args.from} on are unfinished`
+				return replyWith(
+					{ ...args, tag },
+					context,
+					'Error updating tasks',
+					async () => {
+						const result = await tmCore.tasks.updateFrom(
+							{
+								from: args.from,
+								prompt: args.prompt,
+								research: args.research === true,
+								tag,
+								session,
+								outputType: 'mcp'
+							},
+							reportTo(context, warnings)
 						);
-					}
-					const count = result.updatedTasks.length;
-					return {
-						tag,
-						data: {
-							message: `Successfully updated ${count} tasks.`,
-							tasksPath: tasksPathOf(args.projectRoot),
-							updatedCount: count,
-							telemetryData: result.telemetryData,
-							tagInfo: result.tagInfo,
-							...(warnings.length > 0 && { warnings })
+						if (result.sentCount === 0) {
+							throw new Error(
+								`No tasks to update: none from ${args.from} on are unfinished`
+							);
 						}
-					};
-				});
+						const count = result.updatedTasks.length;
+						return {
+							tag,
+							data: {
+								message: `Successfully updated ${count} tasks.`,
+								tasksPath: tasksPathOf(args.projectRoot),
+								updatedCount: count,
+								telemetryData: result.telemetryData,
+								tagInfo: result.tagInfo,
+								...(warnings.length > 0 && { warnings })
+							}
+						};
+					}
+				);
 			}
 		)
 	});

@@ -89,7 +89,10 @@ export function notFound(message: string): never {
 	fail(message, ERROR_CODES.TASK_NOT_FOUND);
 }
 
-export function taken(message: string, details?: Record<string, unknown>): never {
+export function taken(
+	message: string,
+	details?: Record<string, unknown>
+): never {
 	fail(message, ERROR_CODES.VALIDATION_ERROR, {
 		moveCode: MOVE_ERROR_CODES.TASK_ALREADY_EXISTS,
 		...details
@@ -117,8 +120,11 @@ function isDependentOn(
 ): boolean {
 	if (task.parentTaskId !== undefined && String(task.parentTaskId) === targetId)
 		return true;
-	const fullDeps: string[] = (task.dependencies || []).map((dep: DependencyId) =>
-		parentId === undefined ? String(dep) : resolveSubtaskDependency(parentId, dep)
+	const fullDeps: string[] = (task.dependencies || []).map(
+		(dep: DependencyId) =>
+			parentId === undefined
+				? String(dep)
+				: resolveSubtaskDependency(parentId, dep)
 	);
 	if (fullDeps.includes(targetId)) return true;
 	for (const depId of fullDeps) {
@@ -193,7 +199,10 @@ export function addSubtaskIn(
 	assignMetadata(subtask, metadata);
 	parentTask.subtasks.push(subtask);
 	items.splice(taskIndex, 1);
-	retargetDependents(items, String(taskIdNum), `${parentIdNum}.${newSubtaskId}`);
+	retargetDependents(
+		items,
+		String(taskIdNum),
+		`${parentIdNum}.${newSubtaskId}`
+	);
 	return subtask as unknown as Subtask;
 }
-

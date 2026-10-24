@@ -172,8 +172,7 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 						tag
 					});
 				} catch (error: unknown) {
-					const err =
-						error instanceof Error ? error : new Error(String(error));
+					const err = error instanceof Error ? error : new Error(String(error));
 					// The fix tm-core suggests, e.g. the threshold's range
 					const hint = (err as { hint?: unknown }).hint;
 					const message =

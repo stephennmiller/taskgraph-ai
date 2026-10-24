@@ -265,7 +265,11 @@ describe('tasks.expand', () => {
 		generateObject.mockResolvedValue(
 			answer([
 				aiSubtask(1, {
-					acceptanceCriteria: ['Returns 401 on a bad password', '  Trim me  ', '']
+					acceptanceCriteria: [
+						'Returns 401 on a bad password',
+						'  Trim me  ',
+						''
+					]
 				}),
 				aiSubtask(2, { acceptanceCriteria: null })
 			]) as any
@@ -301,9 +305,9 @@ describe('tasks.expand', () => {
 	it('appends to existing subtasks, numbering on', async () => {
 		await tmCore.tasks.expand({ id: '2', num: 2 });
 
-		expect(readFile().master.tasks[1].subtasks.map((s: any) => s.title)).toEqual(
-			['Parse flags', 'Parse commands', 'Step 1', 'Step 2']
-		);
+		expect(
+			readFile().master.tasks[1].subtasks.map((s: any) => s.title)
+		).toEqual(['Parse flags', 'Parse commands', 'Step 1', 'Step 2']);
 	});
 
 	it('uses the research role with research', async () => {
@@ -349,25 +353,27 @@ describe('tasks.expand', () => {
 				{ onWarning: (message) => warnings.push(message) }
 			);
 
-			expect(warnings).toEqual([expect.stringContaining('nope.json not found')]);
+			expect(warnings).toEqual([
+				expect.stringContaining('nope.json not found')
+			]);
 			expect(generateObject).toHaveBeenCalledOnce();
 		});
 
-		it.each([
-			'task-complexity.json',
-			'complexity-report.json'
-		])('falls back to %s, as the legacy MCP tool did', async (name) => {
-			fs.writeFileSync(
-				path.join(projectDir, '.taskgraph', 'reports', name),
-				JSON.stringify({
-					complexityAnalysis: [{ taskId: 3, recommendedSubtasks: 0 }]
-				})
-			);
+		it.each(['task-complexity.json', 'complexity-report.json'])(
+			'falls back to %s, as the legacy MCP tool did',
+			async (name) => {
+				fs.writeFileSync(
+					path.join(projectDir, '.taskgraph', 'reports', name),
+					JSON.stringify({
+						complexityAnalysis: [{ taskId: 3, recommendedSubtasks: 0 }]
+					})
+				);
 
-			const result = await tmCore.tasks.expand({ id: '3' });
+				const result = await tmCore.tasks.expand({ id: '3' });
 
-			expect(result.skipped).toBe('complexity-report');
-		});
+				expect(result.skipped).toBe('complexity-report');
+			}
+		);
 	});
 
 	describe('subtask count', () => {
@@ -385,17 +391,15 @@ describe('tasks.expand', () => {
 			expect(askedFor()).toContain('exactly 5');
 		});
 
-		it.each([
-			-2,
-			'-2',
-			'abc',
-			'3abc'
-		])('refuses %j before any AI call', async (num) => {
-			await expect(tmCore.tasks.expand({ id: '3', num })).rejects.toThrow(
-				"isn't a number of subtasks"
-			);
-			expect(generateObject).not.toHaveBeenCalled();
-		});
+		it.each([-2, '-2', 'abc', '3abc'])(
+			'refuses %j before any AI call',
+			async (num) => {
+				await expect(tmCore.tasks.expand({ id: '3', num })).rejects.toThrow(
+					"isn't a number of subtasks"
+				);
+				expect(generateObject).not.toHaveBeenCalled();
+			}
+		);
 	});
 
 	describe('force', () => {
@@ -485,7 +489,10 @@ describe('tasks.expand', () => {
 				num: 2
 			});
 
-			expect(kept).toMatchObject({ skipped: 'has-subtasks', hadSubtasks: true });
+			expect(kept).toMatchObject({
+				skipped: 'has-subtasks',
+				hadSubtasks: true
+			});
 			expect(forced).toMatchObject({ hadSubtasks: true });
 			expect(forced.task.subtasks).toHaveLength(2);
 			expect(generateObject).toHaveBeenCalledOnce();
@@ -494,7 +501,12 @@ describe('tasks.expand', () => {
 
 	describe('tags', () => {
 		it('expands in the tag given and leaves the others as they were', async () => {
-			await tmCore.tasks.expand({ id: '2', tag: 'feature', num: 2, force: true });
+			await tmCore.tasks.expand({
+				id: '2',
+				tag: 'feature',
+				num: 2,
+				force: true
+			});
 
 			const saved = readFile();
 			expect(saved.feature.tasks[1].subtasks.map((s: any) => s.title)).toEqual([

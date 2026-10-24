@@ -22,9 +22,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": []
 		}
 	},
@@ -60,9 +58,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -91,9 +87,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -136,9 +130,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -167,9 +159,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -214,9 +204,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -245,9 +233,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -291,9 +277,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -322,9 +306,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -368,9 +350,7 @@
 			"details": "Adjusted details",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -399,9 +379,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -446,9 +424,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -477,9 +453,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -522,9 +496,7 @@
 			"testStrategy": "Adjusted tests",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [
 				{
 					"id": 1,
@@ -553,9 +525,7 @@
 					"id": 7,
 					"title": "New step two",
 					"description": "New step two description",
-					"dependencies": [
-						"3.6"
-					],
+					"dependencies": ["3.6"],
 					"details": "New step two details text",
 					"status": "pending",
 					"testStrategy": "ts2",
@@ -592,9 +562,7 @@
 			"details": "Adjusted details",
 			"priority": "high",
 			"status": "pending",
-			"dependencies": [
-				1
-			],
+			"dependencies": [1],
 			"subtasks": [],
 			"testStrategy": "Adjusted tests"
 		}

@@ -43,7 +43,13 @@ const coreResult = {
 	result: 'Use Postgres',
 	contextSize: 40,
 	contextTokens: 10,
-	tokenBreakdown: { total: 10, customContext: null, tasks: [], files: [], projectTree: null },
+	tokenBreakdown: {
+		total: 10,
+		customContext: null,
+		tasks: [],
+		files: [],
+		projectTree: null
+	},
 	systemPromptTokens: 5,
 	userPromptTokens: 6,
 	totalInputTokens: 11,
@@ -62,7 +68,9 @@ let project: string;
 beforeEach(() => {
 	vi.clearAllMocks();
 	vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
-	project = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'research-')));
+	project = fs.realpathSync(
+		fs.mkdtempSync(path.join(os.tmpdir(), 'research-'))
+	);
 	tasks.research.mockResolvedValue({ ...coreResult });
 });
 
@@ -148,7 +156,10 @@ describe('research', () => {
 		});
 
 		const body = reply(
-			await register().execute({ query: 'q', projectRoot: project, saveToFile: true }, ctx)
+			await register().execute(
+				{ query: 'q', projectRoot: project, saveToFile: true },
+				ctx
+			)
 		);
 
 		expect(body.data.savedFilePath).toBe(
