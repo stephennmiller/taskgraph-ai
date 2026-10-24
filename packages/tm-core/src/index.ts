@@ -111,7 +111,7 @@ export type {
 
 // Task domain result types
 export type TaskWithSubtaskResult = Awaited<ReturnType<TasksDomain['get']>>;
-export type { ArchiveResult } from './modules/tasks/tasks-domain.js';
+export type { ArchiveResult } from './modules/tasks/tasks-edit-commands.js';
 
 // Git types
 export type { CommitMessageOptions } from './modules/git/services/commit-message-generator.js';

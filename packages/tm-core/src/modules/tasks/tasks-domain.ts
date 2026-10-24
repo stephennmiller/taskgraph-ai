@@ -8,64 +8,9 @@ import { TaskService } from './services/task-service.js';
 import { DependencyService } from './services/dependency.service.js';
 import { TaskRemovalService } from './services/task-removal.service.js';
 import { TagService } from './services/tag.service.js';
-import {
-	AnalyzeComplexityService,
-	type AnalyzeComplexityHooks,
-	type AnalyzeComplexityInput,
-	type AnalyzeComplexityResult,
-	type ComplexityReportFile,
-	readComplexityReport
-} from './services/analyze-complexity.service.js';
-import {
-	AddTaskService,
-	type AddTaskHooks,
-	type AddTaskInput,
-	type AddTaskResult
-} from './services/add-task.service.js';
-import {
-	ExpandTaskService,
-	type ExpandAllHooks,
-	type ExpandAllResult,
-	type ExpandOptions,
-	type ExpandTaskHooks,
-	type ExpandTaskInput,
-	type ExpandTaskResult
-} from './services/expand-task.service.js';
-import {
-	ParsePrdService,
-	type ParsePrdHooks,
-	type ParsePrdInput,
-	type ParsePrdResult,
-	type PrdGapsResult
-} from './services/parse-prd.service.js';
-import {
-	ScopeAdjustmentService,
-	type ScopeTaskHooks,
-	type ScopeTaskInput,
-	type ScopeTaskResult
-} from './services/scope-adjustment.service.js';
-import {
-	ResearchService,
-	type ResearchExchange,
-	type ResearchHooks,
-	type ResearchInput,
-	type ResearchResult,
-	type ResearchSaved
-} from './services/research.service.js';
-import {
-	type UpdateSubtaskHooks,
-	type UpdateSubtaskInput,
-	type UpdateSubtaskResult,
-	UpdateSubtaskService
-} from './services/update-subtask.service.js';
-import {
-	UpdateTaskService,
-	type UpdateFromInput,
-	type UpdateFromResult,
-	type UpdateHooks,
-	type UpdateTaskInput,
-	type UpdateTaskResult
-} from './services/update-task.service.js';
+import { TaskAiCommands } from './tasks-ai-commands.js';
+import { TaskEditCommands } from './tasks-edit-commands.js';
+import { TaskDependencyViews } from './tasks-dependency-views.js';
 import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
@@ -96,11 +41,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
-import {
-	normalizeNoteText,
-	parseNoteSince,
-	type TaskNote
-} from './utils/notes.js';
+import { parseNoteSince } from './utils/notes.js';
 import {
 	applyChecklistChanges,
 	buildChecklist,
@@ -109,17 +50,7 @@ import {
 	type TaskChecklist
 } from './utils/acceptance-criteria.js';
 import {
-	analyzeDependencies,
-	buildDependencyTree,
-	explainBlockers,
-	type DependencyAnalysis,
-	type BlockerExplanation,
-	type DependencyTree
-} from '../dependencies/index.js';
-import {
-	buildPrimeContext,
 	findUnnotedInProgress,
-	type PrimeContext,
 	type PrimeTask
 } from './utils/prime-context.js';
 import type {
@@ -131,25 +62,6 @@ import type {
 	WatchOptions,
 	WatchSubscription
 } from '../../common/interfaces/storage.interface.js';
-import {
-	type AddSubtaskInput,
-	addSubtaskToTag,
-	moveTasksToTag,
-	moveTasksWithinTag
-} from './services/task-restructure.js';
-import type {
-	CrossTagMoveOptions,
-	CrossTagMoveResult,
-	WithinTagMoveResult
-} from './utils/task-moves.js';
-
-/** What `archive` moved, or would move with dryRun */
-export interface ArchiveResult {
-	tasks: Task[];
-	tag: string;
-	olderThanDays: number;
-	dryRun: boolean;
-}
 
 /**
  * Tasks Domain - Unified API for all task operations
@@ -159,6 +71,9 @@ export class TasksDomain {
 	private tagService!: TagService;
 	private dependencyService: DependencyService;
 	private removalService: TaskRemovalService;
+	private ai: TaskAiCommands;
+	private edits: TaskEditCommands;
+	private views: TaskDependencyViews;
 	private taskFileGenerator!: TaskFileGeneratorService;
 	private projectRoot: string;
 	private configManager: ConfigManager;
@@ -175,6 +90,9 @@ export class TasksDomain {
 			this.taskService,
 			this.projectRoot
 		);
+		this.ai = new TaskAiCommands(this.taskService, configManager);
+		this.edits = new TaskEditCommands(this.taskService, configManager);
+		this.views = new TaskDependencyViews(this.taskService, configManager);
 	}
 
 	async initialize(): Promise<void> {
@@ -325,47 +243,16 @@ export class TasksDomain {
 		);
 	}
 
-	/**
-	 * Lay tasks out as a dependency tree for display (each task once, under
-	 * its deepest dependency). Pass rootId for one task and what depends on it.
-	 * Throws NOT_FOUND for a tag the project doesn't have.
-	 */
-	async getDependencyTree(
-		options: { tag?: string; rootId?: string } = {}
-	): Promise<DependencyTree> {
-		const tasks = await this.taskService.getDependencyView(options.tag);
-		return buildDependencyTree(tasks, { rootId: options.rootId });
-	}
+	// ===== Dependency views (TaskDependencyViews) =====
 
-	/**
-	 * Bottlenecks (top 5 unless limit is set), critical path and dependency
-	 * cycles for a tag's tasks. With taskId, also explains what blocks that
-	 * task (see explainBlockers) from the same task list. Throws NOT_FOUND for
-	 * a tag the project doesn't have.
-	 */
-	async analyzeDependencies(
-		options: { tag?: string; limit?: number; taskId?: string } = {}
-	): Promise<DependencyAnalysis> {
-		const tasks = await this.taskService.getDependencyView(options.tag);
-		return analyzeDependencies(tasks, {
-			limit: options.limit,
-			id: options.taskId
-		});
-	}
-
-	/**
-	 * Explain why a task can't be started: its unfinished dependencies, down
-	 * to the root causes (ready work, stalled tasks, missing IDs, cycles).
-	 * Works for subtask IDs like "2.1"; a subtask also waits on its parent's
-	 * dependencies. Throws if the task or the named tag doesn't exist.
-	 */
-	async explainBlockers(
-		taskId: string,
-		options: { tag?: string } = {}
-	): Promise<BlockerExplanation> {
-		const tasks = await this.taskService.getDependencyView(options.tag);
-		return explainBlockers(tasks, String(taskId));
-	}
+	getDependencyTree: TaskDependencyViews['getDependencyTree'] = (...a) =>
+		this.views.getDependencyTree(...a);
+	analyzeDependencies: TaskDependencyViews['analyzeDependencies'] = (...a) =>
+		this.views.analyzeDependencies(...a);
+	explainBlockers: TaskDependencyViews['explainBlockers'] = (...a) =>
+		this.views.explainBlockers(...a);
+	getPrimeContext: TaskDependencyViews['getPrimeContext'] = (...a) =>
+		this.views.getPrimeContext(...a);
 
 	// ===== Dependencies and removal (DependencyService, TaskRemovalService) =====
 
@@ -387,81 +274,18 @@ export class TasksDomain {
 	clearSubtasks: TaskRemovalService['clearSubtasks'] = (...a) =>
 		this.removalService.clearSubtasks(...a);
 
-	/**
-	 * Session context for a coding agent (`taskgraph prime`): the task in
-	 * progress with its done-when criteria, the next three ready tasks in
-	 * `next` order, and the workflow rules. Uses the active tag by default.
-	 * An active tag tasks.json doesn't have gives an empty context with
-	 * `tagMissing`, so session start still gets the rules.
-	 */
-	async getPrimeContext(options: { tag?: string } = {}): Promise<PrimeContext> {
-		const activeTag = this.configManager.getActiveTag();
-		const tag = options.tag || activeTag;
-		if (tag === activeTag && !(await this.taskService.tagExists(tag))) {
-			return { ...buildPrimeContext([], { tag }), tagMissing: true };
-		}
-		const tasks = await this.taskService.getDependencyView(tag);
-		return buildPrimeContext(tasks, { tag });
-	}
+	// ===== Archive, notes, restructuring (TaskEditCommands) =====
 
-	// ========== Archive ==========
-
-	/**
-	 * Move done and cancelled tasks out of tasks.json into
-	 * .taskgraph/tasks/archive.json, in one locked write. A task qualifies
-	 * when its last change is at least `olderThanDays` old (default: config
-	 * `global.archiveAfterDays`, else 30); one with no timestamp qualifies.
-	 * Archived IDs are never reused, and dependencies on them count as done.
-	 * @returns The tasks archived (or that would be, with dryRun)
-	 */
-	async archive(
-		options: { tag?: string; olderThanDays?: number; dryRun?: boolean } = {}
-	): Promise<ArchiveResult> {
-		const olderThanDays =
-			options.olderThanDays ?? this.configManager.getArchiveAfterDays();
-		if (!Number.isInteger(olderThanDays) || olderThanDays < 0) {
-			throw new TaskGraphError(
-				`"${olderThanDays}" isn't a number of days`,
-				ERROR_CODES.INVALID_INPUT
-			);
-		}
-		const tag = options.tag || this.configManager.getActiveTag();
-		const tasks = await this.taskService.archiveTasks(
-			{ olderThanDays, dryRun: options.dryRun },
-			tag
-		);
-		return { tasks, tag, olderThanDays, dryRun: options.dryRun === true };
-	}
-
-	/**
-	 * Move one archived task, with its subtasks, back into tasks.json
-	 * @param taskId - A task ID like "5" (subtasks come back with their task)
-	 */
-	async restore(
-		taskId: string,
-		options: { tag?: string } = {}
-	): Promise<{ task: Task; tag: string }> {
-		const id = String(taskId).trim();
-		if (id.includes('.')) {
-			throw Object.assign(
-				new TaskGraphError(
-					`${id} is a subtask; restore its task instead`,
-					ERROR_CODES.INVALID_INPUT
-				),
-				{ hint: `Run \`taskgraph archive restore ${id.split('.')[0]}\`` }
-			);
-		}
-		const tag = options.tag || this.configManager.getActiveTag();
-		const task = await this.taskService.restoreArchivedTask(id, tag);
-		return { task, tag };
-	}
-
-	/**
-	 * IDs of the tasks archived in a tag (the active tag when omitted)
-	 */
-	async getArchivedIds(tag?: string): Promise<Set<string>> {
-		return this.taskService.getArchivedTaskIds(tag);
-	}
+	archive: TaskEditCommands['archive'] = (...a) => this.edits.archive(...a);
+	restore: TaskEditCommands['restore'] = (...a) => this.edits.restore(...a);
+	getArchivedIds: TaskEditCommands['getArchivedIds'] = (...a) =>
+		this.edits.getArchivedIds(...a);
+	addNote: TaskEditCommands['addNote'] = (...a) => this.edits.addNote(...a);
+	addSubtask: TaskEditCommands['addSubtask'] = (...a) =>
+		this.edits.addSubtask(...a);
+	move: TaskEditCommands['move'] = (...a) => this.edits.move(...a);
+	moveToTag: TaskEditCommands['moveToTag'] = (...a) =>
+		this.edits.moveToTag(...a);
 
 	/**
 	 * In-progress tasks and subtasks with no note added at or after `since`
@@ -527,208 +351,29 @@ export class TasksDomain {
 			.appendTasks(tasks, tag || this.configManager.getActiveTag());
 	}
 
-	/**
-	 * Score the tag's active tasks (pending, blocked, in-progress), or those
-	 * named by `ids` or the `from`-`to` range, and save them to the tag's
-	 * complexity report. Entries for the tag's other tasks stay in the report.
-	 */
-	async analyzeComplexity(
-		input: AnalyzeComplexityInput = {},
-		hooks?: AnalyzeComplexityHooks
-	): Promise<AnalyzeComplexityResult> {
-		return new AnalyzeComplexityService(this.configManager).analyze(
-			input,
-			hooks
-		);
-	}
+	// ===== AI commands (TaskAiCommands, tasks-ai-commands.ts) =====
 
-	/**
-	 * The tag's complexity report, or `file` (relative to the project root).
-	 * Null when there is none.
-	 */
-	getComplexityReport(
-		options: { tag?: string; file?: string } = {}
-	): { report: ComplexityReportFile; reportPath: string } | null {
-		return readComplexityReport(this.configManager.getProjectRoot(), {
-			tag: options.tag || this.configManager.getActiveTag(),
-			file: options.file
-		});
-	}
-
-	/**
-	 * Add one task: written by the AI from `prompt`, or given as `title` and
-	 * `description` (no AI call). The AI call runs without the file lock; the
-	 * save re-reads tasks.json under it and appends only the new task, with
-	 * an ID free at that moment. Dependencies that don't exist in the tag are
-	 * dropped with a warning; an unknown `discoveredFrom` throws before any AI call.
-	 */
-	async add(input: AddTaskInput, hooks?: AddTaskHooks): Promise<AddTaskResult> {
-		return new AddTaskService(
-			() => this.taskService.getStorage(),
-			this.configManager
-		).add(input, hooks);
-	}
-
-	/**
-	 * Expand a top-level task into subtasks with the AI. The count and prompt
-	 * come from `num`, else the complexity report, else defaultSubtasks; a
-	 * report count of 0 skips the task without an AI call. New subtasks are
-	 * added, or with `force` replace the old ones. The AI call runs without
-	 * the file lock; the save changes only this task's subtasks.
-	 */
-	async expand(
-		input: ExpandTaskInput,
-		hooks?: ExpandTaskHooks
-	): Promise<ExpandTaskResult> {
-		return new ExpandTaskService(this.taskService, this.configManager).expand(
-			input,
-			hooks
-		);
-	}
-
-	/**
-	 * Make tasks more (`direction: 'up'`) or less complex with the AI, then
-	 * rewrite their pending subtasks to match; subtasks with work on them
-	 * stay. Strength and every ID are checked before any AI call; each task
-	 * is saved on its own, changing only that task.
-	 */
-	async scope(
-		input: ScopeTaskInput,
-		hooks?: ScopeTaskHooks
-	): Promise<ScopeTaskResult> {
-		return new ScopeAdjustmentService(
-			this.taskService,
-			this.configManager
-		).scope(input, hooks);
-	}
-
-	/**
-	 * Ask the research model a question with project context: the tasks you
-	 * name plus the ones matching the question, files inside the project
-	 * (never secrets), the project tree and your notes. Task IDs and files
-	 * are checked before the AI call. saveTo appends the answer to a task's
-	 * details in one locked write; a save that fails is reported in
-	 * `saveFailures`, and the answer is kept.
-	 */
-	async research(
-		input: ResearchInput,
-		hooks?: ResearchHooks
-	): Promise<ResearchResult> {
-		return new ResearchService(this.taskService, this.configManager).research(
-			input,
-			hooks
-		);
-	}
-
-	/**
-	 * Have the AI write notes for a subtask ("5.2") from a prompt, appended
-	 * to its details as a timestamped block; `metadata` alone skips the AI.
-	 * The AI call runs without the file lock; the save changes only that
-	 * subtask, and an empty answer saves no notes.
-	 */
-	async updateSubtask(
-		input: UpdateSubtaskInput,
-		hooks?: UpdateSubtaskHooks
-	): Promise<UpdateSubtaskResult> {
-		return new UpdateSubtaskService(
-			this.taskService,
-			this.configManager
-		).updateSubtask(input, hooks);
-	}
-
-	/**
-	 * Expand every pending or in-progress task that has no subtasks (any,
-	 * with `force`), three at a time. Failures are counted, not thrown.
-	 */
-	async expandAll(
-		options: ExpandOptions,
-		hooks?: ExpandAllHooks
-	): Promise<ExpandAllResult> {
-		return new ExpandTaskService(
-			this.taskService,
-			this.configManager
-		).expandAll(options, hooks);
-	}
-
-	/**
-	 * Save a research conversation to a task's details (one locked write) or
-	 * to .taskgraph/docs/research/
-	 */
-	async saveResearch(
-		history: ResearchExchange[],
-		target: { taskId: string } | { file: true },
-		tag?: string
-	): Promise<ResearchSaved> {
-		return new ResearchService(
-			this.taskService,
-			this.configManager
-		).saveResearch(history, target, tag);
-	}
-
-	/**
-	 * Rewrite a top-level task with the AI from `prompt`, or with `append`
-	 * add the AI's text to its details; `metadata` alone saves without a
-	 * call. A done task is skipped. The AI call runs without the file lock;
-	 * the save applies only what the rewrite changed.
-	 */
-	async updateWithPrompt(
-		input: UpdateTaskInput,
-		hooks?: UpdateHooks
-	): Promise<UpdateTaskResult> {
-		return new UpdateTaskService(
-			this.taskService,
-			this.configManager
-		).updateTask(input, hooks);
-	}
-
-	/** Rewrite every unfinished task from `from` on with the AI, in one call */
-	async updateFrom(
-		input: UpdateFromInput,
-		hooks?: UpdateHooks
-	): Promise<UpdateFromResult> {
-		return new UpdateTaskService(
-			this.taskService,
-			this.configManager
-		).updateFrom(input, hooks);
-	}
-
-	/**
-	 * Generate the tag's tasks from a PRD with the AI. Refuses a tag that has
-	 * tasks unless `force` (replace them) or `append` (add to them; for a PRD
-	 * parsed before, only its new sections). The AI call runs without the
-	 * file lock; the save re-reads the tag.
-	 */
-	async parsePrd(
-		input: ParsePrdInput,
-		hooks?: ParsePrdHooks
-	): Promise<ParsePrdResult> {
-		return new ParsePrdService(this.taskService, this.configManager).parse(
-			input,
-			hooks
-		);
-	}
-
-	/**
-	 * The PRD a parsePrd with these options would read (the default one in
-	 * .taskgraph/docs when none is named), its tag, and the tag's task count
-	 */
-	async parsePrdTarget(input: Pick<ParsePrdInput, 'prdPath' | 'tag'>) {
-		return new ParsePrdService(this.taskService, this.configManager).target(
-			input
-		);
-	}
-
-	/** The questions worth asking about gaps in a PRD before parsing it */
-	async findPrdGaps(
-		input: Pick<
-			ParsePrdInput,
-			'prdPath' | 'research' | 'session' | 'outputType'
-		>
-	): Promise<PrdGapsResult> {
-		return new ParsePrdService(this.taskService, this.configManager).findGaps(
-			input
-		);
-	}
+	analyzeComplexity: TaskAiCommands['analyzeComplexity'] = (...a) =>
+		this.ai.analyzeComplexity(...a);
+	getComplexityReport: TaskAiCommands['getComplexityReport'] = (...a) =>
+		this.ai.getComplexityReport(...a);
+	add: TaskAiCommands['add'] = (...a) => this.ai.add(...a);
+	expand: TaskAiCommands['expand'] = (...a) => this.ai.expand(...a);
+	scope: TaskAiCommands['scope'] = (...a) => this.ai.scope(...a);
+	research: TaskAiCommands['research'] = (...a) => this.ai.research(...a);
+	updateSubtask: TaskAiCommands['updateSubtask'] = (...a) =>
+		this.ai.updateSubtask(...a);
+	expandAll: TaskAiCommands['expandAll'] = (...a) => this.ai.expandAll(...a);
+	saveResearch: TaskAiCommands['saveResearch'] = (...a) =>
+		this.ai.saveResearch(...a);
+	updateWithPrompt: TaskAiCommands['updateWithPrompt'] = (...a) =>
+		this.ai.updateWithPrompt(...a);
+	updateFrom: TaskAiCommands['updateFrom'] = (...a) => this.ai.updateFrom(...a);
+	parsePrd: TaskAiCommands['parsePrd'] = (...a) => this.ai.parsePrd(...a);
+	parsePrdTarget: TaskAiCommands['parsePrdTarget'] = (...a) =>
+		this.ai.parsePrdTarget(...a);
+	findPrdGaps: TaskAiCommands['findPrdGaps'] = (...a) =>
+		this.ai.findPrdGaps(...a);
 
 	/**
 	 * Update task with new data (direct structural update)
@@ -822,85 +467,6 @@ export class TasksDomain {
 			tag
 		);
 		return buildChecklist(saved, definitionOfDone, taskId.includes('.'));
-	}
-
-	// ========== Notes ==========
-
-	/**
-	 * Append a progress note to a task or subtask's details, as written and
-	 * timestamped, in one locked write that changes only that item. No AI
-	 * call: use update-subtask/update-task for an AI rewrite.
-	 * Throws INVALID_INPUT for an empty note (before touching the file) and
-	 * TASK_NOT_FOUND for an unknown ID.
-	 */
-	async addNote(
-		taskId: string,
-		text: string,
-		options: { tag?: string } = {}
-	): Promise<TaskNote> {
-		const note = normalizeNoteText(text);
-		const id = String(taskId).trim();
-		const { saved, addedAt } = await this.taskService.appendToDetails(
-			id,
-			note,
-			options.tag
-		);
-		return {
-			id,
-			title: saved.title,
-			isSubtask: id.includes('.'),
-			addedAt,
-			text: note
-		};
-	}
-
-	// ========== Restructuring ==========
-
-	/**
-	 * Add a subtask to `parentId`, or with `fromTaskId` turn that task into
-	 * one (what depended on it then depends on the subtask), in one locked
-	 * write. Throws when the parent or task is missing, the task is already
-	 * a subtask, or the parent depends on it.
-	 */
-	async addSubtask(
-		parentId: string,
-		input: AddSubtaskInput,
-		options: { tag?: string } = {}
-	): Promise<{ subtask: Subtask; tag: string }> {
-		const tag = options.tag || this.configManager.getActiveTag();
-		const storage = this.taskService.getStorage();
-		const subtask = await addSubtaskToTag(storage, tag, parentId, input);
-		return { subtask, tag };
-	}
-
-	/**
-	 * Move tasks or subtasks to new IDs within a tag, in one locked write:
-	 * `from` and `to` are one ID each ("5", "5.2") or as many
-	 * comma-separated. Nothing moves if any pair fails.
-	 */
-	async move(
-		from: string,
-		to: string,
-		options: { tag?: string } = {}
-	): Promise<WithinTagMoveResult & { tag: string }> {
-		const tag = options.tag || this.configManager.getActiveTag();
-		const storage = this.taskService.getStorage();
-		return { ...(await moveTasksWithinTag(storage, tag, from, to)), tag };
-	}
-
-	/**
-	 * Move tasks, with their subtasks, to another tag (created if missing),
-	 * keeping their IDs, in one locked write. Dependencies left in the source
-	 * tag block the move unless `withDependencies` or `ignoreDependencies`.
-	 */
-	async moveToTag(
-		taskIds: string[],
-		fromTag: string,
-		toTag: string,
-		options: CrossTagMoveOptions = {}
-	): Promise<CrossTagMoveResult> {
-		const storage = this.taskService.getStorage();
-		return moveTasksToTag(storage, taskIds, fromTag, toTag, options);
 	}
 
 	/**
