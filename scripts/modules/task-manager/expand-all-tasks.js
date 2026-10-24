@@ -1,9 +1,22 @@
 import { ui } from '@tm/cli';
+import { mapWithConcurrency } from '@tm/core';
 import { getDebugFlag } from '../config-manager.js';
-import { displayAiUsageSummary } from '../ui.js';
+import {
+	displayAddedSubtasks,
+	displayAiUsageSummary,
+	startLoadingIndicator,
+	stopLoadingIndicator
+} from '../ui.js';
 import { findProjectRoot, isSilentMode, log, readJSON } from '../utils.js';
 import { aggregateTelemetry } from '../utils.js';
 import expandTask from './expand-task.js';
+
+/**
+ * Tasks expanded at once. Each expansion saves only the subtasks it added,
+ * re-reading tasks.json under the file lock (#243), so parallel runs don't
+ * undo each other's writes.
+ */
+const EXPAND_ALL_CONCURRENCY = 3;
 
 /**
  * Expand all eligible pending or in-progress tasks using the expandTask function.
@@ -126,49 +139,83 @@ async function expandAllTasks(
 			// --- End Fix ---
 		}
 
-		// Iterate over the already filtered tasks
-		for (const task of tasksToExpand) {
-			// expandTask shows its own spinner and what it added
-			try {
-				// Call the refactored expandTask function AND capture result
-				const result = await expandTask(
-					tasksPath,
-					task.id,
-					numSubtasks,
-					useResearch,
-					additionalContext,
-					{
-						...context,
-						projectRoot,
-						tag: data.tag || tag,
-						complexityReportPath,
-						// One usage line for the whole run, after the summary
-						showUsage: false
-					}, // Pass the whole context object with projectRoot and resolved tag
-					force
-				);
-				if (result?.skipped) {
-					// The complexity report recommended no expansion for this task
-					skippedCount++;
-					progress(
-						`Skipped task ${task.id}: complexity report recommends no expansion.`
-					);
-					continue;
+		// One spinner for the whole run; each task's result prints above it
+		// as that task finishes
+		const showText = outputFormat === 'text' && !isMCPCall;
+		const started = Date.now();
+		let finished = 0;
+		const spinnerText = () =>
+			ui.formatExpandAllProgress({
+				total: tasksToExpandCount,
+				done: finished,
+				elapsedMs: Date.now() - started
+			});
+		const spinner = showText ? startLoadingIndicator(spinnerText()) : null;
+		const ticker = spinner
+			? setInterval(() => {
+					spinner.text = spinnerText();
+				}, 1000)
+			: null;
+		const printAboveSpinner = (print) => {
+			spinner?.clear();
+			print();
+			spinner?.render();
+		};
+
+		try {
+			await mapWithConcurrency(
+				tasksToExpand,
+				EXPAND_ALL_CONCURRENCY,
+				async (task) => {
+					try {
+						const result = await expandTask(
+							tasksPath,
+							task.id,
+							numSubtasks,
+							useResearch,
+							additionalContext,
+							{
+								...context,
+								projectRoot,
+								tag: data.tag || tag,
+								complexityReportPath,
+								inBatch: true
+							},
+							force
+						);
+						if (result?.skipped) {
+							// The complexity report recommended no expansion for this task
+							skippedCount++;
+							progress(
+								`Skipped task ${task.id}: complexity report recommends no expansion.`
+							);
+							return;
+						}
+
+						expandedCount++;
+						if (result?.telemetryData) {
+							allTelemetryData.push(result.telemetryData);
+						}
+						if (showText) {
+							printAboveSpinner(() =>
+								displayAddedSubtasks(task.id, result?.addedSubtasks)
+							);
+						}
+						progress(`Expanded task ${task.id}.`);
+					} catch (error) {
+						failedCount++;
+						printAboveSpinner(() =>
+							logger.error(`Couldn't expand task ${task.id}: ${error.message}`)
+						);
+					} finally {
+						finished++;
+						if (spinner) spinner.text = spinnerText();
+					}
 				}
-
-				expandedCount++;
-
-				// Collect individual telemetry data
-				if (result && result.telemetryData) {
-					allTelemetryData.push(result.telemetryData);
-				}
-
-				progress(`Expanded task ${task.id}.`);
-			} catch (error) {
-				failedCount++;
-				logger.error(`Couldn't expand task ${task.id}: ${error.message}`);
-				// Continue to the next task
-			}
+			);
+		} finally {
+			if (ticker) clearInterval(ticker);
+			stopLoadingIndicator(spinner);
 		}
 
 		// --- AGGREGATION AND DISPLAY ---

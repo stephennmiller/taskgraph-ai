@@ -45,6 +45,11 @@ let _claudeCliAvailable = null;
 const RESEARCH_TOOLS = ['WebSearch', 'WebFetch'];
 const REPO_READ_TOOLS = ['Read', 'Grep', 'Glob'];
 const DEFAULT_RESEARCH_MAX_TURNS = 8;
+// Main and fallback get the project summary in the prompt (see
+// getRepoSummary), so a few file reads are enough. Without a cap a call can
+// spend most of its tokens exploring the repo. `claudeCode.maxTurns` (or a
+// command's `commandSpecific` entry) overrides it.
+const DEFAULT_MAX_TURNS = 6;
 const CLAUDE_EXECUTABLE_NAME = /^claude(\.exe|\.cmd)?$/i;
 
 function isWithin(root, candidate) {
@@ -141,8 +146,11 @@ function getRoleRestrictions(role, settings, projectRoot) {
 		mcpServers: {},
 		// Do not inherit user hooks, CLAUDE.md or permission rules
 		settingSources: [],
+		maxTurns:
+			settings.maxTurns ??
+			(isResearch ? DEFAULT_RESEARCH_MAX_TURNS : DEFAULT_MAX_TURNS),
 		...(isResearch
-			? { maxTurns: settings.maxTurns ?? DEFAULT_RESEARCH_MAX_TURNS }
+			? {}
 			: {
 					cwd: projectRoot ?? undefined,
 					additionalDirectories: undefined,

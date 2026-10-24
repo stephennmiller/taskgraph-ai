@@ -112,6 +112,7 @@ import { initTaskGraph } from '../../src/taskgraph.js';
 
 import {
 	confirmTaskOverwrite,
+	displayAiUsageSummary,
 	displayBanner,
 	displayComplexityReport,
 	displayCrossTagDependencyError,
@@ -147,6 +148,10 @@ function aiErrorHint(error) {
 	}
 	if (/empty stream response|did not return a valid/i.test(message)) {
 		return 'Try again, or reword the prompt';
+	}
+	// Claude Code stops a call at claudeCode.maxTurns (6 by default)
+	if (/max(imum)?[ _-]?(number of )?turns/i.test(message)) {
+		return 'Raise claudeCode.maxTurns in .taskgraph/config.json, or try again';
 	}
 	return undefined;
 }
@@ -807,6 +812,8 @@ function registerCommands(programInstance) {
 						`✓ Scoped up ${result.updatedTasks.length} ${result.updatedTasks.length === 1 ? 'task' : 'tasks'}`
 					)
 				);
+				// One usage line for every task's AI calls
+				displayAiUsageSummary(result.telemetryData, 'cli');
 			} catch (error) {
 				displayError(error, { hint: aiErrorHint(error) });
 			}
@@ -908,6 +915,8 @@ function registerCommands(programInstance) {
 						`✓ Scoped down ${result.updatedTasks.length} ${result.updatedTasks.length === 1 ? 'task' : 'tasks'}`
 					)
 				);
+				// One usage line for every task's AI calls
+				displayAiUsageSummary(result.telemetryData, 'cli');
 			} catch (error) {
 				displayError(error, { hint: aiErrorHint(error) });
 			}

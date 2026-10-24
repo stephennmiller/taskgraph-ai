@@ -42,9 +42,9 @@ import { updateTagTasks } from '../utils/update-tag-tasks.js';
  * @param {Object} [context.mcpLog] - MCP logger object.
  * @param {string} [context.projectRoot] - Project root path
  * @param {string} [context.tag] - Tag for the task
- * @param {boolean} [context.showUsage=true] - Print the AI usage line (expand --all prints one for the whole run)
+ * @param {boolean} [context.inBatch=false] - Part of expand --all: print nothing (no spinner, added subtasks or usage line); the caller shows progress and one usage line for the run
  * @param {boolean} [force=false] - If true, replace existing subtasks; otherwise, append.
- * @returns {Promise<Object>} The updated parent task object with new subtasks.
+ * @returns {Promise<Object>} {task, addedSubtasks, telemetryData, tagInfo}, or {task, skipped: true} when the complexity report says no expansion is needed.
  * @throws {Error} If task not found, AI service fails, or parsing fails.
  */
 async function expandTask(
@@ -64,6 +64,8 @@ async function expandTask(
 		complexityReportPath
 	} = context;
 	const outputFormat = mcpLog ? 'json' : 'text';
+	// expand --all shows one spinner and one usage line for the whole run
+	const showOutput = outputFormat === 'text' && !context.inBatch;
 
 	// Determine projectRoot: Use from context if available, otherwise derive from tasksPath
 	const projectRoot = contextProjectRoot || findProjectRoot(tasksPath);
@@ -295,7 +297,7 @@ async function expandTask(
 		// --- AI Subtask Generation using generateObjectService ---
 		let generatedSubtasks = [];
 		let loadingIndicator = null;
-		if (outputFormat === 'text') {
+		if (showOutput) {
 			loadingIndicator = startLoadingIndicator(
 				`Breaking task ${task.id} into ${finalSubtaskCount || 'a few'} subtasks…`
 			);
@@ -375,24 +377,15 @@ async function expandTask(
 		// await generateTaskFiles(tasksPath, path.dirname(tasksPath));
 
 		// Say what was created; the usage line follows
-		if (outputFormat === 'text') {
+		if (showOutput) {
 			displayAddedSubtasks(task.id, generatedSubtasks);
-		}
-
-		// Display AI Usage Summary for CLI
-		// expand --all prints one usage line for the whole run instead
-		if (
-			outputFormat === 'text' &&
-			context.showUsage !== false &&
-			aiServiceResponse &&
-			aiServiceResponse.telemetryData
-		) {
-			displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli');
+			displayAiUsageSummary(aiServiceResponse?.telemetryData, 'cli');
 		}
 
 		// Return the updated task object AND telemetry data
 		return {
 			task,
+			addedSubtasks: generatedSubtasks,
 			telemetryData: aiServiceResponse?.telemetryData,
 			tagInfo: aiServiceResponse?.tagInfo
 		};

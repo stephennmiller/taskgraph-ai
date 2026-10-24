@@ -57,7 +57,7 @@ Each AI call is confined by its role. Your project's own Claude setup, a prompt 
 | Your Claude settings, hooks and `CLAUDE.md` | Not loaded | Not loaded |
 | Files | The project root only (none if TaskGraph can't find the project) | None |
 | Permission prompts | Never shown; anything not allowed is denied | Same |
-| Turn limit | Claude Code's default | 8, unless `maxTurns` is set |
+| Turn limit | 6, unless `maxTurns` is set | 8, unless `maxTurns` is set |
 
 In practice:
 
@@ -79,29 +79,37 @@ What this doesn't cover:
 - For `Grep`, only `path` and `glob` are checked. Its regex only filters lines, and `glob` only filters files under that path, so neither can reach outside it.
 - The project root is the one TaskGraph uses for the command: `--project-root` if you pass it, otherwise the project it finds from the current directory. If that's a parent of several projects, all of them are readable. If no root is found, `main` and `fallback` get no file tools.
 
+## Project summary
+
+Exploring a repo with `Glob`, `Grep` and `Read` on every call is what makes AI commands slow and expensive. So `main` and `fallback` calls get a short summary of the project in the prompt instead: the files git tracks (to three folders deep, fewer for big repos), the `package.json` fields that say what the project is (name, scripts, dependency names, entry points) and the first lines of other manifests (`pyproject.toml`, `Cargo.toml`, `go.mod` and similar), the `README.md` headings, and the likely entry points. The prompt tells the model to plan from it and read only the few files the work depends on, within the turn limit above.
+
+The summary is built once per commit and cached in `.taskgraph/cache/repo-summary.json`, keyed by the git `HEAD` commit. The folder has its own `.gitignore`, so it never shows up in `git status`. Outside a git repository the summary is built for each call and not cached. In a repository only files git tracks are read, and files that are symlinks are skipped. Manifest lines that look like credentials (a `password` or `token` value, a login in a URL) are hidden. The summary goes in the prompt between `<project_summary>` tags, marked as data from the repository. Setting `enableCodebaseAnalysis` to `false` in the `global` section of `.taskgraph/config.json` (or `TASKGRAPH_ENABLE_CODEBASE_ANALYSIS=false`) leaves the codebase section, summary included, out of prompts.
+
+If a call runs out of turns, the command fails with `Reached maximum number of turns (6)`. Raise `maxTurns` (below) for that command or for all of them.
+
 ## Structured outputs
 
 Commands that generate structured data (`parse-prd`, `add-task`, `expand`, `update`, `update-task`, `analyze-complexity`) use Claude Code's native structured output support. Responses are constrained to the expected schema, so there are no JSON parsing retries.
 
 ## Advanced settings
 
-Claude Code settings can be set globally in the `claudeCode` section of `.taskgraph/config.json`, or per command in `commandSpecific`. Command-specific settings override global ones.
+Claude Code settings can be set globally in the `claudeCode` section of `.taskgraph/config.json`, or per command in its `commandSpecific` object. Command-specific settings override global ones.
 
 ```json
 {
   "claudeCode": {
-    "maxTurns": 5,
+    "maxTurns": 8,
     "customSystemPrompt": "You are a helpful assistant focused on code quality",
-    "appendSystemPrompt": "Always follow coding best practices"
-  },
-  "commandSpecific": {
-    "parse-prd": {
-      "maxTurns": 10,
-      "customSystemPrompt": "You are a task breakdown specialist"
-    },
-    "analyze-complexity": {
-      "maxTurns": 3,
-      "appendSystemPrompt": "Focus on identifying bottlenecks"
+    "appendSystemPrompt": "Always follow coding best practices",
+    "commandSpecific": {
+      "parse-prd": {
+        "maxTurns": 10,
+        "customSystemPrompt": "You are a task breakdown specialist"
+      },
+      "analyze-complexity": {
+        "maxTurns": 3,
+        "appendSystemPrompt": "Focus on identifying bottlenecks"
+      }
     }
   }
 }
@@ -109,7 +117,7 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 
 | Setting | Purpose |
 | --- | --- |
-| `maxTurns` | Maximum conversation turns in a single request. Useful for complex multi-step operations. |
+| `maxTurns` | Most turns (model replies, each with its tool calls) in one call. Defaults to 6 for `main` and `fallback` and 8 for `research`. Raise it if calls fail with `Reached maximum number of turns`. |
 | `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
 | `appendSystemPrompt` | Adds standards or context to the system prompt. |
 | `pathToClaudeCodeExecutable` | Absolute path to a `claude` executable to run instead of the Claude Code binary the Agent SDK installs (see [Smaller install](#smaller-install)). It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |

@@ -1,6 +1,11 @@
 /**
- * @fileoverview The line `expand --all` ends with, after each task's own
- * "✓ Added 3 subtasks to task 1" lines, e.g.
+ * @fileoverview What `expand --all` shows. While it works, one spinner for
+ * the whole run (tasks are expanded a few at a time):
+ *
+ *   ⠼ Expanding 5 tasks · 2 done  0:31
+ *
+ * Each task's "✓ Added 3 subtasks to task 1" lines print as it finishes, and
+ * the run ends with:
  *
  *   ✓ Expanded 3 tasks · 1 skipped · 1 failed
  *   Next: taskgraph next
@@ -12,6 +17,7 @@
 
 import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
+import { formatElapsed } from '../components/parse-prd-progress.component.js';
 import { theme } from '../theme.js';
 
 export interface ExpandAllSummary {
@@ -82,4 +88,24 @@ export function formatExpandAll(summary: ExpandAllSummary): string {
 		`${chalk.green('✓')} Expanded ${plural(expandedCount, 'task')}${skipped}${failed}`,
 		theme.muted('Next: ') + theme.brand('taskgraph next')
 	].join('\n');
+}
+
+/**
+ * The spinner text while `expand --all` runs.
+ *
+ * @param progress.total - Tasks being expanded
+ * @param progress.done - Tasks finished so far, expanded, skipped or failed
+ * @param progress.elapsedMs - Time since the run started
+ */
+export function formatExpandAllProgress(progress: {
+	total: number;
+	done: number;
+	elapsedMs: number;
+}): string {
+	const { total, done, elapsedMs } = progress;
+	const running = `Expanding ${plural(total, 'task')}`;
+	// The first frame is also the one line a non-terminal run prints
+	if (elapsedMs < 1000 && done === 0) return `${running}…`;
+	const count = done > 0 ? theme.muted(` · ${done} done`) : '';
+	return `${running}${count}  ${theme.muted(formatElapsed(elapsedMs))}`;
 }

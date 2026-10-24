@@ -1,4 +1,5 @@
 import { createRequire } from 'module';
+import { getRepoSummary } from '@tm/core';
 import { log } from './utils.js';
 
 import addTaskPrompt from '../../src/prompts/add-task.json' with {
@@ -36,6 +37,30 @@ import promptTemplateSchema from '../../src/prompts/schemas/prompt-template.sche
 };
 
 const require = createRequire(import.meta.url);
+
+/**
+ * Add the project summary to a prompt that lets the model read the codebase,
+ * so it can plan from the summary instead of exploring with tools first.
+ * @param {Object} variables - Prompt variables
+ * @returns {Object} The variables, with `repoSummary` when it applies
+ */
+function withRepoSummary(variables) {
+	if (
+		!variables.hasCodebaseAnalysis ||
+		!variables.projectRoot ||
+		variables.repoSummary !== undefined
+	) {
+		return variables;
+	}
+	let repoSummary;
+	try {
+		repoSummary = getRepoSummary(variables.projectRoot);
+	} catch (error) {
+		log('debug', `No project summary: ${error.message}`);
+		repoSummary = 'No project summary is available.';
+	}
+	return { ...variables, repoSummary };
+}
 
 /**
  * Manages prompt templates for AI interactions
@@ -90,6 +115,8 @@ export class PromptManager {
 	 */
 	loadPrompt(promptId, variables = {}, variantKey = null) {
 		try {
+			variables = withRepoSummary(variables);
+
 			// Check cache first
 			const cacheKey = `${promptId}-${JSON.stringify(variables)}-${variantKey}`;
 			if (this.cache.has(cacheKey)) {

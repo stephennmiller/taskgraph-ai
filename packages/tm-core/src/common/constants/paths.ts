@@ -11,6 +11,8 @@ export const TASKGRAPH_REPORTS_DIR = '.taskgraph/reports';
 export const TASKGRAPH_TEMPLATES_DIR = '.taskgraph/templates';
 /** Where `loop --parallel` puts each task's git worktree */
 export const TASKGRAPH_WORKTREES_DIR = '.taskgraph/worktrees';
+/** Rebuildable data such as the repo summary for AI prompts; gitignored by its own .gitignore */
+export const TASKGRAPH_CACHE_DIR = '.taskgraph/cache';
 
 // TaskGraph configuration files
 export const TASKGRAPH_CONFIG_FILE = '.taskgraph/config.json';

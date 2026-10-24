@@ -171,6 +171,31 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		expect(readTrace(fakeDir)).toHaveLength(1);
 	});
 
+	it('caps a main-role call at 6 turns and gives it the project summary', () => {
+		install();
+		fs.writeFileSync(path.join(project, 'server.js'), '');
+		spawnSync('git', ['add', 'server.js'], { cwd: project });
+
+		const res = taskgraph('add-task', '--prompt', 'Add a health check');
+
+		expect(res.status, res.stderr).toBe(0);
+		const [call] = readTrace(fakeDir);
+		const turns = call.args.indexOf('--max-turns');
+		expect(call.args[turns + 1]).toBe('6');
+		expect(call.prompt).toContain('## Project summary');
+		expect(call.prompt).toContain('server.js');
+	});
+
+	it('points at claudeCode.maxTurns when a call runs out of turns', () => {
+		install([{ error: 'Reached maximum number of turns (6)' }]);
+
+		const res = taskgraph('add-task', '--prompt', 'Too much to read');
+
+		expect(res.status).not.toBe(0);
+		expect(res.stderr).toContain('Reached maximum number of turns (6)');
+		expect(res.stderr).toContain('Raise claudeCode.maxTurns');
+	});
+
 	it('parse-prd writes tasks with valid statuses', () => {
 		install();
 		fs.writeFileSync(
