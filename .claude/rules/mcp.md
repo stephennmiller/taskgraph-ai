@@ -10,7 +10,7 @@ How the TaskGraph Model Context Protocol (MCP) server is built and how to add a 
 ## Architecture Overview (See also: `architecture.md`)
 
 - **Flow**: `External Tool (Claude Code)` <-> FastMCP server ([`apps/mcp/src/server.ts`](../../apps/mcp/src/server.ts)) <-> MCP tools (`apps/mcp/src/tools/<area>/*.tool.ts`) <-> `@tm/core` (`tmCore.tasks`, `tmCore.config`, ...).
-- **Entry**: [`apps/mcp/src/main.ts`](../../apps/mcp/src/main.ts), built by the root `tsdown.config.ts` to `dist/mcp-server.js`. It sets `TASKGRAPH_MCP=true` (tm-core's logger then stays off stdout) and calls `startServer()`.
+- **Entry**: [`apps/mcp/src/main.ts`](../../apps/mcp/src/main.ts), built by the root `tsdown.config.ts` to `dist/mcp-server.js`. It sets `TASKGRAPH_MCP=true` (tm-core's logger then stays off stdout), then dynamically imports `server.js` and calls `startServer()`. Keep that order: a static import runs first, and modules that build a logger at load time would miss MCP mode (#612).
 - **Server**: `TaskGraphMCPServer` in `server.ts` creates the FastMCP instance with `SERVER_INSTRUCTIONS`, registers the tools `TASKGRAPH_TOOLS` picks, and starts on stdio. `SERVER_INSTRUCTIONS` reach the model even when tool schemas are deferred; keep them three lines naming only core tools (`server.spec.ts` checks this).
 - **Startup log**: [`apps/mcp/src/logger.ts`](../../apps/mcp/src/logger.ts) writes to stderr at the project's `global.logLevel`. Inside a tool, log through the context's `log` instead.
 - **No business logic in tools**: a tool validates its parameters, calls tm-core and shapes the reply. Parsing, validation of task data and file I/O belong in `@tm/core` (see `CLAUDE.md`).

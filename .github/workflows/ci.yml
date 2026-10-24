@@ -405,6 +405,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run smoke:mcp
 
+      # With a log level set, a tm-core logger built before TASKGRAPH_MCP was set
+      # printed to stdout. get_tasks logs that no complexity report exists (#612).
+      - name: MCP smoke test with debug logging
+        if: ${{ !cancelled() }}
+        # node prints the cwd as JSON, so Windows paths keep their backslashes escaped
+        run: npm run smoke:mcp -- --call get_tasks --args "{\"projectRoot\":$(node -p 'JSON.stringify(process.cwd())')}"
+        env:
+          TASKGRAPH_LOG_LEVEL: debug
+
   # Installs the tarball `npm pack` makes, as a user would get it from the
   # registry, and runs the CLI from it. Catches a file missing from "files",
   # a broken bin or an install over the size budget before release.

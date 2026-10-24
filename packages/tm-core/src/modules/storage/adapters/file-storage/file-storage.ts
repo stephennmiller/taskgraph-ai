@@ -99,11 +99,9 @@ export class FileStorage implements IStorage {
 	}
 
 	/**
-	 * Close storage and cleanup resources
+	 * Close storage. File storage holds no open resources.
 	 */
-	async close(): Promise<void> {
-		await this.fileOps.cleanup();
-	}
+	async close(): Promise<void> {}
 
 	/**
 	 * Get statistics about the storage

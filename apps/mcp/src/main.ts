@@ -4,9 +4,12 @@
  * (the taskgraph-mcp and taskgraph-ai bins).
  */
 
-import { startServer } from './server.js';
-
-// Silences tm-core's console output, which would corrupt the stdio stream
+// Silences tm-core's console output, which would corrupt the stdio stream.
+// Set before any import runs: modules build loggers at load time (#612).
 process.env.TASKGRAPH_MCP = 'true';
 
+const { startServer } = await import('./server.js');
 startServer();
+
+// Marks the file as a module, which top-level await needs
+export {};

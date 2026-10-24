@@ -7,7 +7,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileOperations } from './file-operations.js';
 
 describe('FileOperations', () => {
@@ -23,8 +23,6 @@ describe('FileOperations', () => {
 	});
 
 	afterEach(async () => {
-		// Clean up
-		await fileOps.cleanup();
 		if (tempDir && fsSync.existsSync(tempDir)) {
 			fsSync.rmSync(tempDir, { recursive: true, force: true });
 		}
@@ -215,9 +213,6 @@ describe('FileOperations', () => {
 
 			await Promise.all(writes);
 
-			// Cleanup all instances
-			await Promise.all(instances.map((ops) => ops.cleanup()));
-
 			const result = JSON.parse(await fs.readFile(testFilePath, 'utf-8'));
 			expect(result.count).toBe(numInstances);
 		});
@@ -243,6 +238,82 @@ describe('FileOperations', () => {
 			// Also verify no lock files remain
 			const lockFiles = files.filter((f) => f.endsWith('.lock'));
 			expect(lockFiles).toHaveLength(0);
+		});
+	});
+
+	describe('symlinks (#616)', () => {
+		let outside: string;
+
+		beforeEach(() => {
+			outside = path.join(tempDir, 'outside.txt');
+			fsSync.writeFileSync(outside, 'keep me');
+		});
+
+		it('leaves a symlink planted at the old fixed temp name alone', async () => {
+			// steno's temp name was `.<file>.tmp`
+			const planted = path.join(tempDir, '.test.json.tmp');
+			fsSync.symlinkSync(outside, planted);
+
+			await fileOps.writeJson(testFilePath, { a: 1 });
+			await fileOps.modifyJson(testFilePath, () => ({ a: 2 }));
+
+			expect(fsSync.readFileSync(outside, 'utf-8')).toBe('keep me');
+			expect(fsSync.lstatSync(planted).isSymbolicLink()).toBe(true);
+			expect(JSON.parse(fsSync.readFileSync(testFilePath, 'utf-8'))).toEqual({
+				a: 2
+			});
+		});
+
+		it('refuses to write when the file itself is a symlink', async () => {
+			fsSync.symlinkSync(outside, testFilePath);
+
+			await expect(fileOps.writeJson(testFilePath, { a: 1 })).rejects.toThrow(
+				/symlink/
+			);
+			await expect(
+				fileOps.modifyJson(testFilePath, () => ({ a: 1 }))
+			).rejects.toThrow(/symlink/);
+
+			expect(fsSync.readFileSync(outside, 'utf-8')).toBe('keep me');
+			expect(fsSync.lstatSync(testFilePath).isSymbolicLink()).toBe(true);
+			expect(
+				fsSync.readdirSync(tempDir).filter((f) => f.includes('.tmp'))
+			).toHaveLength(0);
+		});
+	});
+
+	describe('rename into place', () => {
+		const tempFiles = () =>
+			fsSync.readdirSync(tempDir).filter((f) => f.endsWith('.tmp'));
+
+		afterEach(() => {
+			vi.restoreAllMocks();
+		});
+
+		it('retries a rename Windows refuses while the file is open', async () => {
+			const rename = fs.rename;
+			vi.spyOn(fs, 'rename').mockImplementationOnce(() =>
+				Promise.reject(Object.assign(new Error('busy'), { code: 'EPERM' }))
+			);
+			vi.mocked(fs.rename).mockImplementation(rename);
+
+			await fileOps.writeJson(testFilePath, { a: 1 });
+
+			expect(JSON.parse(fsSync.readFileSync(testFilePath, 'utf-8'))).toEqual({
+				a: 1
+			});
+			expect(tempFiles()).toHaveLength(0);
+		});
+
+		it('removes the temp file when the rename fails', async () => {
+			vi.spyOn(fs, 'rename').mockRejectedValue(
+				Object.assign(new Error('nope'), { code: 'EXDEV' })
+			);
+
+			await expect(fileOps.writeJson(testFilePath, { a: 1 })).rejects.toThrow(
+				'nope'
+			);
+			expect(tempFiles()).toHaveLength(0);
 		});
 	});
 
@@ -281,22 +352,6 @@ describe('FileOperations', () => {
 				ok: true
 			});
 			expect(fsSync.existsSync(lockPath)).toBe(false);
-		});
-	});
-
-	describe('cleanup', () => {
-		it('should clear cached writers', async () => {
-			// Write to create a cached writer
-			await fileOps.writeJson(testFilePath, { test: 1 });
-
-			// Cleanup
-			await fileOps.cleanup();
-
-			// Should still work after cleanup (creates new writer)
-			await fileOps.writeJson(testFilePath, { test: 2 });
-
-			const result = JSON.parse(await fs.readFile(testFilePath, 'utf-8'));
-			expect(result.test).toBe(2);
 		});
 	});
 });

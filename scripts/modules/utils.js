@@ -16,6 +16,7 @@ import {
 	stripTerminalControls
 } from '@tm/core';
 import chalk from 'chalk';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -1131,15 +1132,24 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 				// Label every tag with the schema version, as @tm/core's writer does
 				cleanData = stampTasksFileSchemaVersion(cleanData);
 
-				// Use atomic write: write to temp file then rename
-				// This prevents partial writes from corrupting the file
-				const tempPath = `${filepath}.tmp.${process.pid}`;
-				try {
-					fs.writeFileSync(
-						tempPath,
-						JSON.stringify(cleanData, null, 2),
-						'utf8'
+				// Atomic write via a random-named temp file created with O_EXCL, so a
+				// planted symlink can't redirect it; refuse a symlinked target (#616)
+				if (
+					fs.lstatSync(filepath, { throwIfNoEntry: false })?.isSymbolicLink()
+				) {
+					throw new Error(
+						`Refusing to write ${filepath}: it is a symlink. Replace it with a regular file.`
 					);
+				}
+				const tempPath = path.join(
+					path.dirname(filepath),
+					`.${path.basename(filepath)}.${crypto.randomBytes(8).toString('hex')}.tmp`
+				);
+				try {
+					fs.writeFileSync(tempPath, JSON.stringify(cleanData, null, 2), {
+						encoding: 'utf8',
+						flag: 'wx'
+					});
 					fs.renameSync(tempPath, filepath);
 				} catch (writeError) {
 					// Clean up temp file on failure

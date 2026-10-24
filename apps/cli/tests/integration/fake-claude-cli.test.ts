@@ -13,7 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { installFakeClaude, readTrace } from '../fakes/install-fake-claude.mjs';
-import { getCliBinPath } from '../helpers/test-utils.js';
+import { getCliBinPath, RM_OPTS } from '../helpers/test-utils.js';
 
 const binPath = getCliBinPath();
 const built = fs.existsSync(binPath);
@@ -70,8 +70,8 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(project, { recursive: true, force: true });
-		fs.rmSync(work, { recursive: true, force: true });
+		fs.rmSync(project, RM_OPTS);
+		fs.rmSync(work, RM_OPTS);
 	});
 
 	it('add-task writes a task built from the schema the CLI sent', () => {
