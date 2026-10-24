@@ -5,6 +5,8 @@
 **Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskgraph/CLAUDE.md
 
+This repo's tasks mirror its open GitHub issues (titles end in `(#<n>)`), and the issue wins where they differ. When a PR closes an issue, set its task to `done` in the same PR. See "Roadmap" in `CONTRIBUTING.md`.
+
 ## Commands
 
 ```bash
@@ -16,7 +18,10 @@ npm run knip                      # unused files, exports and dependencies; CI r
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
 npm run test:coverage -w @tm/core # with coverage and thresholds (not met yet); Vitest
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
+npm run evals                     # real-model plan evals (parse-prd, expand, analyze-complexity); not in CI
 ```
+
+Changing a parse-prd, expand or analyze-complexity prompt, or the default model: run `npm run evals` before and after, and update `evals/baseline.json` (`-- --update-baseline`) when the plans got better. See CONTRIBUTING.md.
 
 `npm install` points git at `.githooks/`. The pre-push hook runs `biome format` on files changed since `origin/main`. Fix with `npm run format`; `git push --no-verify` skips it once.
 

@@ -83,8 +83,14 @@ export * from './modules/dependencies/dependency-provenance.js';
 // PRD sections, coverage and clarifications (parse-prd, validate-dependencies)
 export * from './modules/prd/index.js';
 
+// Scoring generated plans (npm run evals)
+export * from './modules/evals/index.js';
+
 // Importing the upstream project TaskGraph was forked from (init flag)
 export * from './modules/migration/index.js';
+
+// Setup checks (`taskgraph doctor`, plugin and CLI versions)
+export * from './modules/setup/index.js';
 
 // Zod schemas for validation
 export * from './common/schemas/index.js';

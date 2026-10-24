@@ -11,7 +11,8 @@
 			"entry": [
 				".github/scripts/{check-job-timeouts,check-pre-release-mode,check-startup-time,version-bump}.mjs",
 				".githooks/{check-file-size,install}.mjs",
-				"tests/manual/**/*.js"
+				"tests/manual/**/*.js",
+				"evals/lib/plan-worker.ts"
 			],
 			"project": [
 				"scripts/**/*.js",
@@ -25,7 +26,6 @@
 			// keeps npm packages external, so the published package needs them
 			"ignoreDependencies": [
 				"cli-table3",
-				"figlet",
 				"gradient-string",
 				"ora",
 				"proper-lockfile",

@@ -6,12 +6,11 @@
 
 import { createRequire } from 'node:module';
 import chalk from 'chalk';
-import type figletModule from 'figlet';
 import { createLink } from '../formatters/link-formatters.js';
 import { terminalWidth } from '../layout/helpers.js';
 import { BANNER_GRADIENT } from '../theme.js';
 
-// figlet and gradient-string load when a banner is drawn, not at startup
+// gradient-string loads when a banner is drawn, not at startup
 // (#248). require() keeps the banner functions synchronous.
 const require = createRequire(import.meta.url);
 
@@ -22,15 +21,16 @@ function coolGradient(text: string): string {
 	return gradient(BANNER_GRADIENT)(text);
 }
 
-/** The banner's "TaskGraph" in ASCII art */
-function bannerArt(): string {
-	const figlet = require('figlet') as typeof figletModule;
-	return figlet.textSync('TaskGraph', {
-		font: 'Standard',
-		horizontalLayout: 'default',
-		verticalLayout: 'default'
-	});
-}
+// "TaskGraph" in figlet's Standard font, pre-rendered so the package doesn't
+// ship figlet and its 22 MB of fonts for one banner
+const BANNER_ART = [
+	'  _____         _     ____                 _     ',
+	' |_   _|_ _ ___| | __/ ___|_ __ __ _ _ __ | |__  ',
+	"   | |/ _` / __| |/ / |  _| '__/ _` | '_ \\| '_ \\ ",
+	'   | | (_| \\__ \\   <| |_| | | | (_| | |_) | | | |',
+	'   |_|\\__,_|___/_|\\_\\\\____|_|  \\__,_| .__/|_| |_|',
+	'                                    |_|          '
+].join('\n');
 
 export interface AsciiBannerOptions {
 	/** Version string to display */
@@ -88,12 +88,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	const { version } = options;
 
-	// Render ASCII banner
-	try {
-		console.log(coolGradient(bannerArt()));
-	} catch {
-		console.log(coolGradient('=== TaskGraph ==='));
-	}
+	console.log(coolGradient(BANNER_ART));
 
 	// Credits line with version right-aligned. Link text already names the
 	// destination, so unsupported terminals get the text without the long URL.
@@ -138,12 +133,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 export function displayInitBanner(): void {
 	if (isBannerHidden()) return;
 
-	// Render ASCII banner
-	try {
-		console.log(coolGradient(bannerArt()));
-	} catch {
-		console.log(coolGradient('=== TaskGraph ==='));
-	}
+	console.log(coolGradient(BANNER_ART));
 
 	// Credits line
 	const xLink = createLink(

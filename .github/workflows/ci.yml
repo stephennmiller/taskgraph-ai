@@ -414,8 +414,8 @@ jobs:
         run: npm run smoke:mcp
 
   # Installs the tarball `npm pack` makes, as a user would get it from the
-  # registry, and runs the CLI from it. Catches a file missing from "files"
-  # or a broken bin before release.
+  # registry, and runs the CLI from it. Catches a file missing from "files",
+  # a broken bin or an install over the size budget before release.
   pack:
     name: Packed tarball
     runs-on: ubuntu-latest
@@ -436,7 +436,7 @@ jobs:
           name: build-artifacts
           path: dist/
 
-      - name: Install and run the packed CLI
+      - name: Install, size-check and run the packed CLI
         run: .github/scripts/pack-smoke.sh
 
   # Does this PR touch what the build comparison covers: the code bundled into

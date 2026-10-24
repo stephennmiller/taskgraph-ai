@@ -34,6 +34,10 @@ export const BANNER_GRADIENT = [
  */
 export const TABLE_BORDER = ['dim'];
 
+/** Render `code` segments in the brand color, like error hints do */
+export const withCode = (text: string): string =>
+	text.replace(/`([^`]+)`/g, (_, code: string) => theme.brand(code));
+
 export const theme = {
 	/** Brand-colored text */
 	brand: chalk.cyan,

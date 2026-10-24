@@ -24,6 +24,11 @@ export const TASKGRAPH_VERSION = packageJson.version || 'unknown';
 export const PACKAGE_NAME = packageJson.name || 'taskgraph-ai';
 
 /**
+ * Node versions the package supports, from root package.json's `engines`
+ */
+export const NODE_VERSION_RANGE: string = packageJson.engines?.node ?? '';
+
+/**
  * Valid task status values
  */
 export const TASK_STATUSES: readonly TaskStatus[] = [

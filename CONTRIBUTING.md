@@ -75,6 +75,18 @@ npm run format
 - **`main`**: The only long-lived branch. PRs target it, and releases are cut from it
 - **Feature branches**: `feat/description`, `fix/description`, `docs/description`
 
+### Roadmap: GitHub issues and TaskGraph
+
+The roadmap is tracked in two places: [GitHub issues](https://github.com/stephennmiller/taskgraph-ai/issues) and this repo's own `.taskgraph/tasks/tasks.json`, so that `taskgraph next` here returns current work. **The GitHub issue wins.** Its scope, done criteria and open or closed state are the source of truth; the task points at it and sets the order.
+
+- Each open issue has one task in the `master` tag, titled `<issue title> (#<n>)`, with the issue link in its details. Epics that only group other issues (#195, #242) have no task; epics with steps of their own (#254, #328) have a subtask per step.
+- Task dependencies follow the "Order" sections of the epics.
+- New issue: add its task, without AI: `taskgraph add-task --title='<issue title> (#<n>)' --description='<one line>' --details='GitHub issue #<n>: <url>'` (write a `'` in the title as `'\''`).
+- Closing an issue: in the PR that closes it, run `taskgraph set-status --id=<task id> --status=done` (`--status=cancelled` if it closes as not planned).
+- When the task and the issue disagree, change the task to match the issue.
+
+Don't run `taskgraph github push` here: these tasks aren't linked to their issues, so it would open a second issue for each one.
+
 ### Code Quality Standards
 
 1. **Write tests** for new functionality
@@ -152,6 +164,22 @@ npm run test:coverage
 npm run test -w @tm/cli
 npm run test -w @tm/core
 ```
+
+### Plan Evals
+
+`npm run evals` checks the plans the AI commands make. It runs parse-prd, analyze-complexity and expand on each sample PRD in `evals/samples/`, through the same Claude Code backend as the CLI, so it calls the real model and uses your Claude Code sign-in. It is never run in CI.
+
+Each plan gets plain checks (every PRD heading has a task, apart from out of scope, non-goals and open questions and the headings inside them; dependencies point to existing earlier tasks with no cycles, subtask counts follow complexity scores, acceptance criteria are present, and task counts grow with PRD size) and, separately, a 1–5 grade on a fixed rubric from an LLM judge. The run is saved to `evals/results/<date and time>.json` with tokens and seconds per call, and compared with `evals/baseline.json`. A run with `--only` is compared with the same samples of the baseline.
+
+```bash
+npm run evals                          # every sample, then the change from the baseline
+npm run evals -- --only cli-notes      # some samples, comma-separated
+npm run evals -- --no-judge            # skip the judge
+npm run evals -- --config path.json    # models from a TaskGraph config.json
+npm run evals -- --update-baseline     # save this run as the baseline (every sample, with the judge)
+```
+
+Run it before and after changing a prompt or the default model, and update the baseline in the same PR when the change is an improvement. The scoring lives in `packages/tm-core/src/modules/evals/`.
 
 ### Code Formatting
 

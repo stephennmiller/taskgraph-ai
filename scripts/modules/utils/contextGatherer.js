@@ -5,7 +5,6 @@
  */
 
 import fs from 'fs';
-import { createRequire } from 'module';
 import path from 'path';
 import Fuse from 'fuse.js';
 import {
@@ -14,9 +13,7 @@ import {
 	readJSON,
 	truncate
 } from '../utils.js';
-
-// gpt-tokens loads on the first count, not at startup (#248)
-const require = createRequire(import.meta.url);
+import { estimateTokens } from './estimate-tokens.js';
 
 /**
  * Context Gatherer class for collecting and formatting context from various sources
@@ -48,22 +45,12 @@ export class ContextGatherer {
 	}
 
 	/**
-	 * Count tokens in a text string using gpt-tokens
+	 * Estimate the tokens in a text string (about 4 characters per token)
 	 * @param {string} text - Text to count tokens for
-	 * @returns {number} Token count
+	 * @returns {number} Estimated token count
 	 */
 	countTokens(text) {
-		if (!text || typeof text !== 'string') {
-			return 0;
-		}
-		try {
-			const { encode } = require('gpt-tokens');
-			return encode(text).length;
-		} catch (error) {
-			// Fallback to rough character-based estimation if tokenizer fails
-			// Rough estimate: ~4 characters per token for English text
-			return Math.ceil(text.length / 4);
-		}
+		return estimateTokens(text);
 	}
 
 	/**

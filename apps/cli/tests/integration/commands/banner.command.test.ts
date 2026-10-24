@@ -23,8 +23,10 @@ const forceTty = pathToFileURL(
 	path.resolve(__dirname, '../../fakes/force-tty.mjs')
 ).href;
 
-// The banner's credit line; the figlet art itself varies by font
+// The banner's credit line, printed under the ASCII art
 const BANNER_CREDIT = 'by x.com/stephennmiller_';
+// The bottom row of the pre-rendered "TaskGraph" art
+const BANNER_ART_ROW = '|_|\\__,_|___/_|\\_\\\\____|_|  \\__,_| .__/|_| |_|';
 
 describe('ASCII banner in a terminal', () => {
 	let testDir: string;
@@ -79,6 +81,7 @@ describe('ASCII banner in a terminal', () => {
 	it('shows the banner above the top-level help screen', () => {
 		const output = run('--help');
 
+		expect(output).toContain(BANNER_ART_ROW);
 		expect(output).toContain(BANNER_CREDIT);
 		expect(output).toContain('Daily workflow');
 	});

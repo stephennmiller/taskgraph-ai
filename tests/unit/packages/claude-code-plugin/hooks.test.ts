@@ -140,7 +140,7 @@ describe('plugin hooks.json', () => {
 
 		expect(result.status).toBe(0);
 		expect(result.stdout).toBe(
-			`TaskGraph tracks work in this project · args: prime --project ${dir}\nskip=1\n`
+			`TaskGraph tracks work in this project · args: prime --project ${dir} --plugin-root \nskip=1\n`
 		);
 	});
 
@@ -153,7 +153,9 @@ describe('plugin hooks.json', () => {
 			env: { TASKGRAPH_PROJECT_ROOT: main }
 		});
 
-		expect(result.stdout).toBe(`args: prime --project ${main}\n`);
+		expect(result.stdout).toBe(
+			`args: prime --project ${main} --plugin-root \n`
+		);
 	});
 
 	it('keeps warnings prime writes to stderr out of the context when it succeeds', () => {
@@ -210,6 +212,49 @@ describe('plugin hooks.json', () => {
 		expect(result.stdout).toContain('too old');
 		expect(result.stdout).toContain('npm install -g taskgraph-ai@latest');
 		expect(result.stdout).not.toContain('Unknown command');
+	});
+
+	it('passes the plugin folder so prime can check the CLI version', () => {
+		const dir = project('tg-hook-plugin-root-');
+		const bin = fakeCli('echo "args: $*"');
+
+		const result = runHook(sessionStart, dir, bin, {
+			env: { CLAUDE_PLUGIN_ROOT: '/plugins/taskgraph/0.58.0' }
+		});
+
+		expect(result.stdout).toBe(
+			`args: prime --project ${dir} --plugin-root /plugins/taskgraph/0.58.0\n`
+		);
+	});
+
+	it('passes a plugin folder with spaces and shell characters as one argument', () => {
+		const dir = project('tg-hook-plugin-root-space-');
+		const bin = fakeCli('printf \'[%s]\' "$@"; echo');
+		const pluginRoot = '/Users/Jane Doe/plugins/$(touch pwned) `x`;';
+
+		const result = runHook(sessionStart, dir, bin, {
+			env: { CLAUDE_PLUGIN_ROOT: pluginRoot }
+		});
+
+		expect(result.stdout).toBe(
+			`[prime][--project][${dir}][--plugin-root][${pluginRoot}]\n`
+		);
+	});
+
+	it('says to update when the CLI predates the plugin version check', () => {
+		const dir = project('tg-hook-noplugincheck-');
+		const bin = fakeCli(
+			`echo "✗ Unknown option '--plugin-root'" >&2; echo "  Run taskgraph prime --help to see its options" >&2; exit 1`
+		);
+
+		const result = runHook(sessionStart, dir, bin, {
+			env: { CLAUDE_PLUGIN_ROOT: '/plugins/taskgraph' }
+		});
+
+		expect(result.status).toBe(0);
+		expect(result.stdout).toBe(
+			'This project tracks work in TaskGraph, but the installed taskgraph CLI is too old for the plugin. Ask the user to run: npm install -g taskgraph-ai@latest\n'
+		);
 	});
 
 	it('passes any other prime error on to Claude', () => {
