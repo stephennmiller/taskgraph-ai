@@ -128,11 +128,6 @@ export class ParsePrdProgress {
 		this.write(`${chalk.green('✓')} ${chalk.bold(message)}\n`);
 	}
 
-	fail(message: string): void {
-		this.stop();
-		this.write(`${chalk.red('✗')} ${message}\n`);
-	}
-
 	/**
 	 * Stop without a closing line, e.g. before falling back to a slower path.
 	 * Tasks already printed stay on screen.

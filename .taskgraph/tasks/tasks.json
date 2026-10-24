@@ -344,10 +344,11 @@
         "description": "When parse-prd fails, the error prints across two lines and gives no hint on how to fix it.",
         "details": "GitHub issue #388: https://github.com/stephennmiller/taskgraph-ai/issues/388\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:22:28.545Z"
       },
       {
         "id": "23",
@@ -367,10 +368,11 @@
         "description": "`COMMAND_SCHEMAS['parse-prd']` (`ParsePRDResponseSchema` in `src/schemas/parse-prd.js`) is never passed to an AI call.",
         "details": "GitHub issue #402: https://github.com/stephennmiller/taskgraph-ai/issues/402\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:22:28.551Z"
       },
       {
         "id": "25",
@@ -868,9 +870,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T04:10:31.795Z",
+      "lastModified": "2026-10-24T04:22:28.551Z",
       "taskCount": 67,
-      "completedCount": 23,
+      "completedCount": 25,
       "tags": [
         "master"
       ]

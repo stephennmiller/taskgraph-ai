@@ -168,7 +168,6 @@ vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
 const mockProgress = {
 	update: vi.fn(),
 	succeed: vi.fn(),
-	fail: vi.fn(),
 	stop: vi.fn(),
 	printedCount: 0
 };
@@ -933,7 +932,8 @@ describe('parsePRD', () => {
 				parsePRD('path/to/prd.txt', 'tasks/tasks.json', 3)
 			).rejects.toThrow('model not found');
 			expect(generateObjectService).not.toHaveBeenCalled();
-			expect(mockProgress.fail).toHaveBeenCalled();
+			// The command prints the failure; the progress line adds no ✗ (#388)
+			expect(mockProgress.stop).toHaveBeenCalled();
 		});
 
 		test('should try the one-shot request when a fallback role uses another model', async () => {
