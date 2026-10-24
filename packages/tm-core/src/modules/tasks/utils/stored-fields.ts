@@ -23,5 +23,10 @@ export function keepStoredFields<T extends object>(
 	for (const [key, value] of Object.entries(source)) {
 		if (fields[key] == null) fields[key] = value;
 	}
+	// A null for a field the stored one lacks would wipe a value another
+	// writer saves meanwhile (the save merges against the stored task)
+	for (const key of Object.keys(fields)) {
+		if (fields[key] === null && !Object.hasOwn(source, key)) delete fields[key];
+	}
 	return target;
 }

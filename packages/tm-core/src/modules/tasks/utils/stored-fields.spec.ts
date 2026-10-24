@@ -26,6 +26,14 @@ describe('keepStoredFields', () => {
 		expect(rewrite).toEqual({ id: 1, title: 'New', details: 'stored' });
 	});
 
+	it('drops a null for a field the stored one lacks', () => {
+		const rewrite = { id: 1, title: 'New', subtasks: null, details: null };
+
+		keepStoredFields(rewrite, { id: 1, title: 'Old' });
+
+		expect(rewrite).toEqual({ id: 1, title: 'New' });
+	});
+
 	it('leaves the rewrite alone when nothing was stored', () => {
 		const rewrite = { id: 1, title: 'New' };
 

@@ -9,14 +9,10 @@ import { initializeProjectDirect } from './direct-functions/initialize-project.j
 import { modelsDirect } from './direct-functions/models.js';
 import { nextTaskDirect } from './direct-functions/next-task.js';
 import { parsePRDDirect } from './direct-functions/parse-prd.js';
-import { updateTaskByIdDirect } from './direct-functions/update-task-by-id.js';
-import { updateTasksDirect } from './direct-functions/update-tasks.js';
 
 // Re-export all direct function implementations
 export {
 	parsePRDDirect,
-	updateTasksDirect,
-	updateTaskByIdDirect,
 	nextTaskDirect,
 	initializeProjectDirect,
 	modelsDirect

@@ -1,0 +1,52 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["update-task", "--id=2", "--prompt", "Use SQLite"],
+		["update-task", "4", "Note", "the", "indexes", "--append"],
+		["update-task", "--id=5", "--research", "--prompt", "Use SQLite"],
+		["update-task", "--id=4", "--tag=master", "--prompt", "Keep it short"],
+		{ "args": ["update-task", "--id=1", "--prompt", "x"], "expectExit": 1 },
+		{ "args": ["update-task", "--id=99", "--prompt", "x"], "expectExit": 1 },
+		{ "args": ["update-task", "--id=2.1", "--prompt", "x"], "expectExit": 1 },
+		{ "args": ["update-task", "--id=2"], "expectExit": 1 },
+		["update", "--from=2", "--prompt", "Use TypeScript"],
+		["update", "--from=1", "--tag=feature", "--prompt", "Use TypeScript"],
+		["update", "--from=9", "--prompt", "x"],
+		{ "args": ["update", "--from=2"], "expectExit": 1 },
+		{
+			"mcp": "update_task",
+			"input": { "id": "2", "prompt": "Use SQLite", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "update_task",
+			"input": {
+				"id": "4",
+				"prompt": "Note it",
+				"append": true,
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "update_task",
+			"input": { "id": "1", "prompt": "x", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "update_task",
+			"input": { "id": "99", "prompt": "x", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{
+			"mcp": "update",
+			"input": {
+				"from": "2",
+				"prompt": "Use TypeScript",
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "update",
+			"input": { "from": "9", "prompt": "x", "projectRoot": "<project>" },
+			"expectError": true
+		}
+	]
+}

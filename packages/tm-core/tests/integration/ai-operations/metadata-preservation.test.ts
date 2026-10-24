@@ -91,7 +91,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// Simulate AI response: AI updates title/description but doesn't include metadata
-			// This is the exact pattern from update-task-by-id.js
+			// As an AI rewrite (update-task) returns it: no metadata field
 			const aiGeneratedUpdate: Partial<Task> = {
 				title: 'AI Updated Title',
 				description: 'AI refined description with more detail',

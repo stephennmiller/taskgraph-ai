@@ -424,3 +424,13 @@ export type {
 	ScopeTaskInput,
 	ScopeTaskResult
 } from './modules/tasks/services/scope-adjustment.service.js';
+
+// ========== Update (AI rewrite) ==========
+
+export type {
+	UpdateFromInput,
+	UpdateFromResult,
+	UpdateHooks,
+	UpdateTaskInput,
+	UpdateTaskResult
+} from './modules/tasks/services/update-task.service.js';

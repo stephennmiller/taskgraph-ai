@@ -197,15 +197,3 @@ export function resolveProjectPath(relativePath, args) {
 	// Resolve relative to normalized projectRoot
 	return path.resolve(projectRoot, relativePath);
 }
-
-// MAIN EXPORTS FOR MCP TOOLS - these are the functions MCP tools should use
-
-/**
- * Find tasks.json path from arguments - primary MCP function
- * @param {Object} args - Arguments object containing projectRoot and optional file path
- * @param {Object} [log] - Log function to prevent console logging
- * @returns {string|null} - Resolved path to tasks.json or null if not found
- */
-export function findTasksPath(args, log = silentLogger) {
-	return resolveTasksPath(args, log);
-}

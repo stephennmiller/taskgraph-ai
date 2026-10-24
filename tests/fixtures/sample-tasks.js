@@ -88,34 +88,3 @@ export const emptySampleTasks = {
 	},
 	tasks: []
 };
-
-// ============================================================================
-// Tagged Format Fixtures (for tag-aware system tests)
-// ============================================================================
-
-/**
- * Single task in master tag - minimal fixture
- * Use: Basic happy path tests
- */
-export const taggedOneTask = {
-	tag: 'master',
-	tasks: [
-		{
-			id: 1,
-			title: 'Task 1',
-			description: 'First task',
-			status: 'pending',
-			dependencies: [],
-			priority: 'medium'
-		}
-	]
-};
-
-/**
- * Empty tag - no tasks
- * Use: Testing edge cases, "add first task" scenarios
- */
-export const taggedEmptyTasks = {
-	tag: 'master',
-	tasks: []
-};
