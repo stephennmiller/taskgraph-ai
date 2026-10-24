@@ -96,16 +96,20 @@ async function searchTasks(tasks: Task[], query: string): Promise<Task[]> {
 	return relevant;
 }
 
-/** IDs of the given tasks and everything they depend on, 5 levels deep */
+/** IDs of the given tasks or subtasks and everything they depend on, 5 levels deep */
 function dependencyChainIds(tasks: Task[], ids: Array<string | number>) {
 	const visited = new Set<string>();
 	const visit = (id: string | number, depth: number) => {
 		const key = String(id);
 		if (visited.has(key) || depth > 5) return;
-		const task = tasks.find((t) => String(t.id) === key);
-		if (!task) return;
+		const found = findTaskOrSubtask(tasks, key);
+		if (!found) return;
 		visited.add(key);
-		for (const dep of task.dependencies ?? []) visit(dep, depth + 1);
+		// A subtask ("3.2") brings its parent's chain
+		const next = found.subtask
+			? [found.parent.id]
+			: (found.parent.dependencies ?? []);
+		for (const dep of next) visit(dep, depth + 1);
 	};
 	for (const id of ids) visit(id, 0);
 	return visited;

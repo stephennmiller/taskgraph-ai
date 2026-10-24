@@ -104,6 +104,7 @@ export function registerAddTaskTool(server: FastMCP) {
 					);
 				}
 
+				const warnings: string[] = [];
 				try {
 					const isManual = Boolean(args.title && args.description);
 					const result = await tmCore.tasks.add(
@@ -127,7 +128,10 @@ export function registerAddTaskTool(server: FastMCP) {
 							outputType: 'mcp'
 						},
 						{
-							onWarning: (message) => log.warn(message),
+							onWarning: (message) => {
+								log.warn(message);
+								warnings.push(message);
+							},
 							onDebug: (message) => log.debug(message)
 						}
 					);
@@ -140,7 +144,9 @@ export function registerAddTaskTool(server: FastMCP) {
 								taskId,
 								message: `Successfully added new task #${taskId}`,
 								telemetryData: result.telemetryData,
-								tagInfo: result.tagInfo
+								tagInfo: result.tagInfo,
+								// Left out when empty, so the reply keeps its old shape
+								...(warnings.length > 0 && { warnings })
 							}
 						},
 						log,
