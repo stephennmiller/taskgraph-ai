@@ -3,7 +3,7 @@
  * SDK under the name it reads (maxOutputTokens) for object calls too.
  */
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { BaseAIProvider } from './base-provider.js';
+import { aiCallTimeoutMs, BaseAIProvider } from './base-provider.js';
 
 const sdk: Record<string, any> = vi.hoisted(() => ({
 	generateText: vi.fn(),
@@ -88,6 +88,29 @@ describe('AI call limits', () => {
 			expect(sdk[name].mock.calls[0][0].abortSignal).toBeUndefined();
 		}
 	);
+
+	test("streamObject passes the caller's abort signal on", async () => {
+		const abortSignal = new AbortController().signal;
+
+		await provider.streamObject({ ...objectParams, abortSignal });
+
+		expect(sdk.streamObject.mock.calls[0][0].abortSignal).toBe(abortSignal);
+	});
+
+	test.each([
+		[undefined, 600_000],
+		['abc', 600_000],
+		['0', 600_000],
+		['5000', 5000],
+		// A longer setTimeout fires after 1 ms
+		['99999999999', 2 ** 31 - 1]
+	])('TASKGRAPH_AI_TIMEOUT_MS=%s gives a limit of %i ms', (value, expected) => {
+		vi.stubEnv('TASKGRAPH_AI_TIMEOUT_MS', value);
+
+		expect(aiCallTimeoutMs()).toBe(expected);
+
+		vi.unstubAllEnvs();
+	});
 
 	test.each([['generateObject'], ['streamObject']])(
 		'%s passes the token limit as maxOutputTokens',

@@ -174,9 +174,11 @@ const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
 /** The AI call limit: TASKGRAPH_AI_TIMEOUT_MS, else ten minutes */
 export function aiCallTimeoutMs(): number {
 	const configured = Number(process.env.TASKGRAPH_AI_TIMEOUT_MS);
-	return Number.isFinite(configured) && configured > 0
-		? configured
-		: DEFAULT_AI_CALL_TIMEOUT_MS;
+	if (!(Number.isFinite(configured) && configured > 0)) {
+		return DEFAULT_AI_CALL_TIMEOUT_MS;
+	}
+	// Node fires a longer timer after 1 ms, so cap at its maximum (about 24 days)
+	return Math.min(configured, 2 ** 31 - 1);
 }
 
 const aiCallSignal = () => AbortSignal.timeout(aiCallTimeoutMs());
