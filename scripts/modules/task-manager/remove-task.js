@@ -7,7 +7,7 @@ import {
 import * as fs from 'fs';
 import path from 'path';
 import { validateTaskDependencies } from '../dependency-manager.js';
-import { findTaskById, log, readJSON } from '../utils.js';
+import { findTaskById, log, normalizeTaskIds, readJSON } from '../utils.js';
 import { updateTagTasks } from '../utils/update-tag-tasks.js';
 import taskExists from './task-exists.js';
 
@@ -181,8 +181,11 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 		// to fix-dependencies. A failed check must not fail the removal.
 		if (remainingTasks) {
 			try {
+				// The validator looks tasks up by number, as readJSON leaves them
+				const checked = structuredClone(remainingTasks);
+				normalizeTaskIds(checked);
 				const { issues } = validateTaskDependencies(
-					remainingTasks,
+					checked,
 					readArchivedIdsSync(tasksPath, tag).ids
 				);
 				danglingDependents = new Set(

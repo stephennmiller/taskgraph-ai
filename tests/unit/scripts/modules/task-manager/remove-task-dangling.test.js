@@ -88,6 +88,28 @@ describe('removeTask and dependencies on missing tasks', () => {
 		expect(result.danglingDependents).toBe(0);
 	});
 
+	test('counts nothing when the remaining dependencies all exist', async () => {
+		write([
+			task('1'),
+			task('2', ['3.2']),
+			task(
+				'3',
+				[],
+				[
+					{ id: 1, title: 'Sub', dependencies: [] },
+					{ id: 2, title: 'Sub', dependencies: [1, '2'] }
+				]
+			)
+		]);
+
+		const result = await removeTask(tasksPath, '1', {
+			projectRoot: dir,
+			tag: 'master'
+		});
+
+		expect(result.danglingDependents).toBe(0);
+	});
+
 	test('MCP remove_task replies with the fix-dependencies hint', async () => {
 		write([task('1'), task('3', ['9'])]);
 		const log = { info: vi.fn(), error: vi.fn() };
