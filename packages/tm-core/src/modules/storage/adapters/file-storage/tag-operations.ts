@@ -263,6 +263,9 @@ export class TagOperations {
 
 		const tagsWithStats = await Promise.all(
 			availableTags.map(async (tagName) => {
+				// Outside the catch below: an unreadable archive.json is an error,
+				// not a tag with no tasks
+				const archivedIds = await this.reader.loadArchivedTaskIds(tagName);
 				try {
 					// Load tasks for this tag
 					const tasks = await this.reader.loadTasks(tagName);
@@ -301,7 +304,7 @@ export class TagOperations {
 					// tasks count as done
 					const readyTasks = filterReadyTasks(
 						tasks.map((task) => ({ ...task, blocks: [] })),
-						await this.reader.loadArchivedTaskIds(tagName)
+						archivedIds
 					).length;
 
 					// Load metadata to get created date and description

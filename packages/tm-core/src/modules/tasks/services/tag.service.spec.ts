@@ -370,6 +370,15 @@ describe('TagService.listTags', () => {
 		expect(result.totalTags).toBe(2);
 	});
 
+	it('fails on an unreadable archive.json instead of listing empty tags', async () => {
+		fs.writeFileSync(
+			path.join(projectRoot, '.taskgraph', 'tasks', 'archive.json'),
+			'{bad'
+		);
+
+		await expect(service().listTags()).rejects.toThrow();
+	});
+
 	it('counts a task whose dependency was archived as ready', async () => {
 		writeTasks({
 			master: { tasks: [task('2', 'pending', ['1'])], metadata: {} }
