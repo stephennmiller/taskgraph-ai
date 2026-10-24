@@ -825,7 +825,7 @@
         "description": "updateStatus writes any status string to tasks.json, and later reads then throw on it.",
         "details": "GitHub issue #484: https://github.com/stephennmiller/taskgraph-ai/issues/484\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []

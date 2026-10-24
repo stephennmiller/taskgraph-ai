@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import type { Task } from '../../../common/types/index.js';
+import { describe, expect, it, vi } from 'vitest';
+import { TASK_STATUSES } from '../../../common/constants/index.js';
+import type { Task, TaskStatus } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { TaskService } from './task-service.js';
@@ -355,5 +356,24 @@ describe('TaskService.getTaskList', () => {
 		const result = await serviceWithTags([]).getTaskList({ tag: 'nosuch' });
 
 		expect(result.tasks).toEqual([]);
+	});
+});
+
+// Regression: #484, any string was saved as a status
+describe('TaskService.updateTaskStatus', () => {
+	it('rejects a status outside TASK_STATUSES before writing anything', async () => {
+		const service = new TaskService({
+			getActiveTag: () => 'master'
+		} as unknown as ConfigManager);
+		const updateTaskStatus = vi.fn();
+		(service as any).storage = { updateTaskStatus };
+
+		await expect(
+			service.updateTaskStatus('1', 'bogus' as TaskStatus)
+		).rejects.toMatchObject({
+			code: 'VALIDATION_ERROR',
+			message: `"bogus" isn't a status. Use one of: ${TASK_STATUSES.join(', ')}`
+		});
+		expect(updateTaskStatus).not.toHaveBeenCalled();
 	});
 });
