@@ -2,6 +2,7 @@ import {
 	assignMetadata,
 	cleanGeneratedSubtaskDependencies,
 	getPrdSource,
+	orderGeneratedSubtasks,
 	reconcileDependencySources,
 	removeAllSubtasks,
 	setGeneratedCriteria
@@ -325,14 +326,22 @@ async function expandTask(
 			if (!mainResult || !Array.isArray(mainResult.subtasks)) {
 				throw new Error('AI response did not include a valid subtasks array.');
 			}
-			generatedSubtasks = mainResult.subtasks.map((subtask) => {
-				// The AI's criteria are stored as unchecked items (none: no field)
-				const generated = setGeneratedCriteria({
+			// No subtask waits on a later sibling or on a task its parent doesn't
+			const ordered = orderGeneratedSubtasks(
+				task,
+				mainResult.subtasks.map((subtask) => ({
 					...subtask,
 					dependencies: cleanGeneratedSubtaskDependencies(
 						subtask.dependencies,
 						task.id
-					),
+					)
+				})),
+				(message) => logger.debug(message)
+			);
+			generatedSubtasks = ordered.map((subtask) => {
+				// The AI's criteria are stored as unchecked items (none: no field)
+				const generated = setGeneratedCriteria({
+					...subtask,
 					status: subtask.status ?? 'pending',
 					testStrategy: subtask.testStrategy ?? null
 				});
