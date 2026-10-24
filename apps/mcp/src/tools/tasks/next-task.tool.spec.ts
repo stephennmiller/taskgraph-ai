@@ -10,7 +10,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tasks = {
 	getNext: vi.fn(),
 	claimNext: vi.fn(),
-	getComplexityReport: vi.fn()
+	getComplexityReport: vi.fn(),
+	requireTasksFile: vi.fn()
 };
 const config = { getActiveTag: vi.fn(() => 'master') };
 
@@ -149,6 +150,18 @@ describe('next_task', () => {
 				'No eligible next task found. All tasks are either completed or have unsatisfied dependencies',
 			nextTask: null
 		});
+	});
+
+	it('fails when the project has no tasks file', async () => {
+		tasks.requireTasksFile.mockImplementationOnce(() => {
+			throw new Error('No tasks file at /p/.taskgraph/tasks/tasks.json');
+		});
+
+		const result = await register().execute({ projectRoot }, ctx);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain('No tasks file at');
+		expect(tasks.getNext).not.toHaveBeenCalled();
 	});
 
 	it('refuses a tasks file other than the project one', async () => {

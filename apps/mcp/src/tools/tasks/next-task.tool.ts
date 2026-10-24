@@ -96,6 +96,8 @@ export function registerNextTaskTool(server: FastMCP) {
 					context,
 					'Error finding next task',
 					async () => {
+						// getNext reads a missing tasks.json as no tasks; legacy refused it
+						tmCore.tasks.requireTasksFile();
 						const nextTask = await tmCore.tasks.getNext(tag);
 						if (!nextTask) {
 							log.info(NO_NEXT_TASK);

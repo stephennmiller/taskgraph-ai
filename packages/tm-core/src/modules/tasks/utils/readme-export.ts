@@ -6,6 +6,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+	ERROR_CODES,
+	errorWithHint
+} from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
 
 export interface ReadmeExportOptions {
@@ -155,7 +159,15 @@ export function mergeReadmeSection(
 		`# ${projectName}\n\nThis project is managed using TaskGraph.\n\n`;
 	const start = current.indexOf(START);
 	const end = start === -1 ? -1 : current.indexOf(END, start);
-	if (start !== -1 && end !== -1) {
+	// Appending here would let the next sync delete the text after the orphan
+	if (start !== -1 && end === -1) {
+		throw errorWithHint(
+			ERROR_CODES.INVALID_INPUT,
+			`README.md has ${START} with no ${END} after it`,
+			`Add ${END} where the old export ends, or delete ${START}, then run sync-readme again`
+		);
+	}
+	if (start !== -1) {
 		return (
 			current.substring(0, start) +
 			section +

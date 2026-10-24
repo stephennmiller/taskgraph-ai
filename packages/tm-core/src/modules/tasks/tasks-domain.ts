@@ -70,6 +70,9 @@ import type {
 	CopyTagOptions
 } from './services/tag.service.js';
 
+import fs from 'node:fs';
+import path from 'node:path';
+import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
 import { subtaskInContext } from './utils/subtask-context.js';
@@ -194,12 +197,31 @@ export class TasksDomain {
 	}
 
 	/**
+	 * Throw NOT_FOUND, naming the path, when the project has no tasks.json.
+	 * list() and getNext() read a missing file as no tasks; call this first
+	 * where that would hide a wrong project root.
+	 */
+	requireTasksFile(): void {
+		const tasksPath = path.join(
+			this.configManager.getProjectRoot(),
+			TASKGRAPH_TASKS_FILE
+		);
+		if (!fs.existsSync(tasksPath)) {
+			throw new TaskGraphError(
+				`No tasks file at ${tasksPath}`,
+				ERROR_CODES.NOT_FOUND
+			);
+		}
+	}
+
+	/**
 	 * Write the tag's task list into the project's README.md, between export
 	 * markers (replacing an earlier export)
 	 */
 	async syncReadme(
 		options: ReadmeExportOptions & { tag?: string } = {}
 	): Promise<{ readmePath: string }> {
+		this.requireTasksFile();
 		const { tasks } = await this.list({ tag: options.tag });
 		return {
 			readmePath: writeReadmeExport(

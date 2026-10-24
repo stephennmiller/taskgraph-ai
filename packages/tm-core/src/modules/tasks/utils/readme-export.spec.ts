@@ -84,13 +84,16 @@ describe('mergeReadmeSection', () => {
 		);
 	});
 
-	it('keeps text an end marker before the export start leaves', () => {
-		const readme =
-			'# App\n<!-- TASKGRAPH_EXPORT_END -->\nNotes\n<!-- TASKGRAPH_EXPORT_START -->\nold\n';
-
-		expect(mergeReadmeSection(readme, section, 'App')).toBe(
-			`${readme}\n${section}`
-		);
+	it('refuses a start marker with no end marker after it', () => {
+		// Appending would let the next sync delete "Notes" and "old"
+		for (const readme of [
+			'# App\n<!-- TASKGRAPH_EXPORT_START -->\nNotes\n',
+			'# App\n<!-- TASKGRAPH_EXPORT_END -->\nNotes\n<!-- TASKGRAPH_EXPORT_START -->\nold\n'
+		]) {
+			expect(() => mergeReadmeSection(readme, section, 'App')).toThrow(
+				'with no <!-- TASKGRAPH_EXPORT_END --> after it'
+			);
+		}
 	});
 
 	it('appends to a README without one, and starts a README when there is none', () => {
@@ -109,6 +112,16 @@ describe('writeReadmeExport', () => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-readme-'));
 	});
 	afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
+
+	it('leaves README.md as it was when it has an orphan start marker', () => {
+		const readme = '# App\n<!-- TASKGRAPH_EXPORT_START -->\nNotes\n';
+		fs.writeFileSync(path.join(dir, 'README.md'), readme);
+
+		expect(() =>
+			writeReadmeExport(dir, tasks(), { projectName: 'App' })
+		).toThrow('TASKGRAPH_EXPORT_END');
+		expect(fs.readFileSync(path.join(dir, 'README.md'), 'utf8')).toBe(readme);
+	});
 
 	it('writes README.md twice without repeating the section', () => {
 		writeReadmeExport(dir, tasks(), { projectName: 'App' });
