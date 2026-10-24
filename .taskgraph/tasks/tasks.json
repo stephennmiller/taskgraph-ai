@@ -841,10 +841,11 @@
         "description": "Removed start and autopilot fall through to Commander's nearest-name hint, which suggests `taskgraph status`.",
         "details": "GitHub issue #485: https://github.com/stephennmiller/taskgraph-ai/issues/485\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:37:42.479Z"
       },
       {
         "id": "65",
@@ -887,9 +888,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:30:48.096Z",
+      "lastModified": "2026-10-24T12:37:42.479Z",
       "taskCount": 67,
-      "completedCount": 50,
+      "completedCount": 51,
       "tags": [
         "master"
       ]
