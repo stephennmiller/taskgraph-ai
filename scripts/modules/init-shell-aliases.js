@@ -18,29 +18,54 @@ function shellConfigFiles() {
 	);
 }
 
-// Function to add shell aliases to the user's shell configuration
-// Silently checks each alias individually and adds only missing ones
-function addShellAliases() {
+/**
+ * The startup file of the user's shell that the `tm` alias would go in, or
+ * null when the shell isn't zsh or bash, or its file doesn't exist.
+ * @returns {string|null}
+ */
+function aliasConfigFile() {
 	const homeDir = process.env.HOME || process.env.USERPROFILE;
-	let shellConfigFile;
-
-	// Determine which shell config file to use
+	if (!homeDir) return null;
+	let file;
 	if (process.env.SHELL?.includes('zsh')) {
-		shellConfigFile = path.join(homeDir, '.zshrc');
+		file = path.join(homeDir, '.zshrc');
 	} else if (process.env.SHELL?.includes('bash')) {
-		shellConfigFile = path.join(homeDir, '.bashrc');
+		file = path.join(homeDir, '.bashrc');
 	} else {
 		log('debug', 'Could not determine shell type. Aliases not added.');
-		return false;
+		return null;
 	}
+	if (!fs.existsSync(file)) {
+		log('debug', `Shell config file ${file} not found.`);
+		return null;
+	}
+	return file;
+}
+
+/**
+ * The shell startup file the `tm` alias would be added to, or null when there
+ * is none or it already has the alias, so init doesn't ask for nothing.
+ * @returns {string|null}
+ */
+function aliasMissingFile() {
+	const file = aliasConfigFile();
+	if (!file) return null;
+	try {
+		return fs.readFileSync(file, 'utf8').includes(ALIAS_LINE) ? null : file;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Append the `tm` alias to the user's shell startup file, unless it's there.
+ * init calls this only with --aliases or a Yes to its question.
+ */
+function addShellAliases() {
+	const shellConfigFile = aliasConfigFile();
+	if (!shellConfigFile) return false;
 
 	try {
-		// Check if file exists
-		if (!fs.existsSync(shellConfigFile)) {
-			log('debug', `Shell config file ${shellConfigFile} not found.`);
-			return false;
-		}
-
 		const configContent = fs.readFileSync(shellConfigFile, 'utf8');
 
 		// `taskgraph` is already the command name, so `tm` is the only alias
@@ -76,4 +101,4 @@ ${aliasLines}
 	}
 }
 
-export { ALIAS_LINE, addShellAliases, shellConfigFiles };
+export { ALIAS_LINE, addShellAliases, aliasMissingFile, shellConfigFiles };

@@ -1,5 +1,5 @@
 /**
- * baseConfig.external decides what stays an import in dist/ instead of being
+ * baseConfig.deps.neverBundle decides what stays an import in dist/ instead of being
  * bundled. Rolldown also checks it against resolved file paths, and on Windows
  * those start with a drive letter (D:\...), so a pattern for bare package
  * names must not match them: if it does, the build leaves imports of our own
@@ -9,10 +9,10 @@
 import { describe, expect, it } from 'vitest';
 import { baseConfig } from '../../../../packages/build-config/src/tsdown.base.js';
 
-const patterns = baseConfig.external as RegExp[];
+const patterns = baseConfig.deps?.neverBundle as RegExp[];
 const isExternal = (id: string) => patterns.some((re) => re.test(id));
 
-describe('baseConfig.external', () => {
+describe('baseConfig.deps.neverBundle', () => {
 	it.each([
 		'chalk',
 		'commander',
@@ -29,8 +29,10 @@ describe('baseConfig.external', () => {
 		'/home/runner/work/taskgraph-ai/scripts/modules/no-color.js',
 		'D:\\a\\taskgraph-ai\\taskgraph-ai\\scripts\\modules\\no-color.js',
 		'c:/projects/taskgraph-ai/mcp-server/src/index.js',
-		'@tm/core'
-	])('bundles our own module %s', (id) => {
+		'@tm/core',
+		'date-fns',
+		'date-fns/format'
+	])('bundles %s', (id) => {
 		expect(isExternal(id)).toBe(false);
 	});
 });

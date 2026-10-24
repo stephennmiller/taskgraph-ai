@@ -5,6 +5,8 @@
 **Import TaskGraph's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskgraph/CLAUDE.md
 
+This repo's tasks mirror its open GitHub issues (titles end in `(#<n>)`), and the issue wins where they differ. When a PR closes an issue, set its task to `done` in the same PR. See "Roadmap" in `CONTRIBUTING.md`.
+
 ## Commands
 
 ```bash
@@ -16,7 +18,10 @@ npm run knip                      # unused files, exports and dependencies; CI r
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
 npm run test:coverage -w @tm/core # with coverage and thresholds (not met yet); Vitest
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
+npm run evals                     # real-model plan evals (parse-prd, expand, analyze-complexity); not in CI
 ```
+
+Changing a parse-prd, expand or analyze-complexity prompt, or the default model: run `npm run evals` before and after, and update `evals/baseline.json` (`-- --update-baseline`) when the plans got better. See CONTRIBUTING.md.
 
 `npm install` points git at `.githooks/`. The pre-push hook runs `biome format` on files changed since `origin/main`. Fix with `npm run format`; `git push --no-verify` skips it once.
 
@@ -155,6 +160,8 @@ Structure tests as Arrange, Act, Assert.
 ## Code Quality
 
 Extract a pattern into a shared utility once it appears twice, not before. Export new modules from the package's index file.
+
+CLI startup has a CI budget (`.github/scripts/check-startup-time.mjs`, about 40 ms for `--version` and 160 ms for `list` locally), and that check also fails if `list` or `next` imports a package on its `HEAVY_PACKAGES` list. Import heavy packages (AI SDKs, markdown, prompts, inquirer) inside the function that uses them: `await import()`, or `createRequire(import.meta.url)` when the caller must stay synchronous. A top-level import runs on every command.
 
 Remove what a change leaves unused: files, exports, types and dependencies. `npm run knip` finds them and CI fails on them. Fix the code rather than adding to the allowlist in `knip.jsonc`; an entry there needs a one-line reason.
 

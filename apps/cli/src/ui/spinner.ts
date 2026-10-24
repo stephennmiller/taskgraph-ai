@@ -6,9 +6,14 @@
  * terminals and drops it entirely under NO_COLOR.
  */
 
+import { createRequire } from 'node:module';
 import chalk, { type ChalkInstance } from 'chalk';
-import ora, { type Options, type Ora } from 'ora';
+import type { Options, Ora } from 'ora';
 import { BRAND_COLORS } from './theme.js';
+
+// ora loads with the first spinner, not at startup (#248). require() keeps
+// createSpinner synchronous.
+const require = createRequire(import.meta.url);
 
 const DOTS = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
@@ -27,6 +32,7 @@ export function brandSpinner(
  */
 export function createSpinner(options: string | Options = {}): Ora {
 	const base = typeof options === 'string' ? { text: options } : options;
+	const { default: ora } = require('ora') as typeof import('ora');
 	const spinner = ora({ ...base, spinner: brandSpinner(), color: false });
 	const finish = (symbol: string) => (text?: string) =>
 		spinner.stopAndPersist({ symbol, text });

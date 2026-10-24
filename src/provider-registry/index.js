@@ -2,8 +2,8 @@
  * Provider Registry - Singleton for managing AI providers
  *
  * This module implements a singleton registry that allows dynamic registration
- * of AI providers at runtime, while maintaining compatibility with the existing
- * static PROVIDERS object in ai-services-unified.js.
+ * of AI providers at runtime, alongside the built-in Claude Code provider that
+ * ai-services-unified.js creates on first use.
  */
 
 // Singleton instance

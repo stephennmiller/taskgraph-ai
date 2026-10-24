@@ -11,7 +11,8 @@ import {
 	normalizeTaskStatus,
 	getOwnKey,
 	readArchivedIdsSync,
-	stampTasksFileSchemaVersion
+	stampTasksFileSchemaVersion,
+	stripTerminalControls
 } from '@tm/core';
 import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
@@ -534,9 +535,12 @@ function log(level, ...args) {
 		const prefix = prefixes[currentLevel] || '';
 		// Use console.log for all levels, let chalk handle coloring
 		// Construct the message properly
-		const message = args
-			.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : arg))
-			.join(' ');
+		// Log lines carry task titles and AI text, which can hold escape codes
+		const message = stripTerminalControls(
+			args
+				.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : arg))
+				.join(' ')
+		);
 		console.log(prefix ? `${prefix} ${message}` : message);
 	}
 }

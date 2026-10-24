@@ -36,10 +36,17 @@ export const baseConfig: Partial<UserConfig> = {
 		keepNames: true,
 		splitting: false // Disable code splitting for better stack traces
 	}),
-	// Keep all npm dependencies external (available via node_modules). Rolldown
-	// also tests resolved file paths here; on Windows they start with a drive
-	// letter (D:\...), which must not count as a bare package name.
-	external: [/^(?![a-zA-Z]:[\\/])[^@./]/, /^@(?!tm\/)/]
+	// Bundle our workspace packages and date-fns; keep other npm dependencies
+	// external (available via node_modules). date-fns's index loads ~300
+	// files, which took 0.9 s on every command; bundled, only the two
+	// functions @tm/core uses remain (#248). Rolldown also tests resolved file
+	// paths here; on Windows they start with a drive letter (D:\...), which
+	// must not count as a bare package name.
+	deps: {
+		neverBundle: [/^(?![a-zA-Z]:[\\/]|date-fns(\/|$))[^@./]/, /^@(?!tm\/)/],
+		alwaysBundle: [/^@tm\//, /^date-fns(\/|$)/],
+		onlyBundle: [/^date-fns(\/|$)/]
+	}
 };
 
 /**

@@ -40,8 +40,12 @@ export class TaskEntity implements Task {
 	complexityReasoning?: string;
 	metadata?: Record<string, unknown>;
 
+	/** The task as loaded, so toJSON keeps the fields this class doesn't model (acceptanceCriteria, ...) */
+	readonly #source: Partial<Task>;
+
 	constructor(data: Task | (Omit<Task, 'id'> & { id: number | string })) {
 		this.validate(data);
+		this.#source = data as Partial<Task>;
 
 		// IDs as strings: the task's, its dependencies', and each subtask's
 		// (with parentId, which older files leave out)
@@ -233,6 +237,7 @@ export class TaskEntity implements Task {
 	 */
 	toJSON(): Task {
 		return {
+			...this.#source,
 			id: this.id,
 			title: this.title,
 			description: this.description,

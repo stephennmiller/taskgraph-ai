@@ -66,7 +66,7 @@ In practice:
 - **Secret files stay closed.** The same hook refuses a `Read`, `Grep` or `Glob` that names one of these (any letter case):
   - env files: `.env`, `.env.*`, `.env-*`, `.env_*`, `.envrc`. `.env.example`, `.env.sample` and `.env.template` (or with `-`/`_`) can still be read.
   - keys and certificates: `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.keystore`, `*.jks`, PuTTY's `*.ppk`, and `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519` and their `.pub` files.
-  - credential stores: `.git`, `.git-credentials` and `.config/git/credentials`, `.npmrc`, `.netrc`, `_netrc`, `.pypirc`, `.pgpass` and its Windows name `pgpass.conf`, the whole `.aws` and `.kube` directories, kubeconfigs kept elsewhere (`kubeconfig`, `*.kubeconfig`), and `.docker/config.json`.
+  - credential stores: `.git`, `.git-credentials` and `.config/git/credentials`, `.npmrc`, `.netrc`, `_netrc`, `.pypirc`, `.pgpass` and its Windows name `pgpass.conf`, the whole `.aws` and `.kube` directories, kubeconfigs kept elsewhere (`kubeconfig`, `kubeconfig.yaml`, `kubeconfig.yml`, `kubeconfig-*`, `kubeconfig_*`, `*-kubeconfig` such as `kind-kubeconfig`, `*_kubeconfig`, `*.kubeconfig`), and `.docker/config.json`. A directory with one of these names is refused whole, since a `Grep` can't skip a file by name without skipping a directory of that name too, so a source directory named `kubeconfig/` can't be read or searched. Files such as `src/kubeconfig.ts`, `docs/kubeconfig.md` or `src/my-kubeconfig-loader.ts` can.
 
   A `Grep` over a whole directory is rewritten to skip those files, so a search for `API_KEY` across the project can't return lines from `.env`. Its `path` is rewritten to the resolved absolute path, so `.docker//`, `src/../.docker` or a symlink to `.docker` skips `.docker/config.json` just as `.docker` does. A search path that Windows or macOS would open as `.docker`, `.config` or `git` under another spelling (`.docker.`, a trailing space, a Kelvin sign `K` for `k`, a dotless `ı` for `i`) is refused. That search also skips `.env.example`. Other spellings that Windows or macOS open as one of these are refused too: an alternate data stream (`.env::$DATA`), a trailing dot or space (`.env.`, `.env `), any 8.3 short name such as `ENV~1`, and non-ASCII letters a case-insensitive filesystem matches to ASCII (`.awſ`, with a long s, can open `.aws`).
 - **Config can't widen it.** The settings below are applied first and these limits after, so config can't add tools or MCP servers, load settings sources, add directories or replace the hook. `pathToClaudeCodeExecutable` is only used when it's an absolute path to a file named `claude` outside the project, so a repo's config can't point it at another program.
@@ -120,7 +120,7 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 | `maxTurns` | Most turns (model replies, each with its tool calls) in one call. Defaults to 6 for `main` and `fallback` and 8 for `research`. Raise it if calls fail with `Reached maximum number of turns`. |
 | `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
 | `appendSystemPrompt` | Adds standards or context to the system prompt. |
-| `pathToClaudeCodeExecutable` | Absolute path to the `claude` executable if it is not on your `PATH`. It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
+| `pathToClaudeCodeExecutable` | Absolute path to a `claude` executable to run instead of the Claude Code binary the Agent SDK installs (see [Smaller install](#smaller-install)). It must be named `claude` (`claude.exe` or `claude.cmd` on Windows) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
 
 Tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here. See [What AI calls can access](#what-ai-calls-can-access).
 
@@ -128,6 +128,32 @@ Tools, permission mode, MCP servers, settings sources, working directory, extra 
 
 - Claude Code does not report usage costs, so cost shows as 0 in telemetry.
 - `temperature` and `maxTokens` are not supported by the Claude Code CLI and may be ignored.
+
+## Smaller install
+
+Installing TaskGraph also installs the Agent SDK's own Claude Code binary for your platform, about 230 MB of the roughly 340 MB total. AI calls run that binary, not the `claude` on your `PATH`, so the SDK always gets the build it was made for.
+
+If you already have Claude Code, you can skip the binary and point TaskGraph at yours:
+
+```bash
+npm install -g taskgraph-ai --omit=optional
+```
+
+Then set the path in `.taskgraph/config.local.json` in each project:
+
+```json
+{
+  "claudeCode": { "pathToClaudeCodeExecutable": "/absolute/path/to/claude" }
+}
+```
+
+`which claude` prints the path. Without it, AI calls fail with `Native CLI binary for <platform> not found`.
+
+Auto-update runs a plain `npm install -g taskgraph-ai@<version>`, which puts the binary back. To keep the smaller install, set `TASKGRAPH_SKIP_AUTO_UPDATE=1` in your shell profile and update by hand with the same flag:
+
+```bash
+npm install -g taskgraph-ai@latest --omit=optional
+```
 
 ## Troubleshooting
 

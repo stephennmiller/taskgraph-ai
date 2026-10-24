@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import { prdResponseSchema } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-config.js';
 import { processTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import { PromptManager } from '../../../../../scripts/modules/prompt-manager.js';
-import { ParsePRDResponseSchema } from '../../../../../src/schemas/parse-prd.js';
 
 const aiTask = (id, extra = {}) => ({
 	id,
@@ -45,11 +44,9 @@ describe('parse-prd response schema: acceptanceCriteria', () => {
 
 	it('lists the field as required in the JSON Schema sent to the model', () => {
 		// OpenAI's Structured Outputs needs every property in `required`
-		for (const schema of [prdResponseSchema, ParsePRDResponseSchema]) {
-			const task = zodSchema(schema).jsonSchema.properties.tasks.items;
+		const task = zodSchema(prdResponseSchema).jsonSchema.properties.tasks.items;
 
-			expect(task.required).toContain('acceptanceCriteria');
-		}
+		expect(task.required).toContain('acceptanceCriteria');
 	});
 });
 

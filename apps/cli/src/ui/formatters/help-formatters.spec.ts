@@ -14,6 +14,7 @@ const ALLOWED_COMMANDS = new Set([
 	'add-task',
 	'loop',
 	'init',
+	'doctor',
 	'models',
 	'lang',
 	'completion',
@@ -67,10 +68,11 @@ describe('formatHelp', () => {
 	// 30 rows left out loop, move, lang, scope-up, scope-down and github
 	// (#219). Each command a user runs now has one row, so the cap is the
 	// command count; raise it only for a new command, not a second row.
-	it('lists at most 36 rows with no repeated command', () => {
+	// 37 with doctor (#256).
+	it('lists at most 37 rows with no repeated command', () => {
 		const names = rowNames();
 
-		expect(names.length).toBeLessThanOrEqual(36);
+		expect(names.length).toBeLessThanOrEqual(37);
 		expect(new Set(names).size).toBe(names.length);
 	});
 
@@ -98,7 +100,7 @@ describe('formatHelp', () => {
 		}
 	);
 
-	it.each(['merge-driver', 'tui'])('gives %s no row', (command) => {
+	it.each(['merge-driver'])('gives %s no row', (command) => {
 		expect(rowNames()).not.toContain(command);
 	});
 

@@ -24,8 +24,8 @@ export function getAssetsDir() {
 		// When running from dist (bundled) - assets are in dist/assets
 		path.join(__dirname, 'assets'),
 		path.join(__dirname, '..', 'assets'),
-		// When running from source in development - now in public/assets
-		path.join(__dirname, '..', '..', 'public', 'assets'),
+		// When running from source (scripts/dev.js) - assets at the repo root
+		path.join(__dirname, '..', '..', 'assets'),
 		// When installed as npm package - assets at package root
 		path.join(process.cwd(), 'assets'),
 		// For npx usage - check node_modules

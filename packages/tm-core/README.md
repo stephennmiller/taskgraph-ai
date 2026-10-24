@@ -58,6 +58,8 @@ Run them from the repo root with `-w @tm/core`, for example `npm run test -w @tm
 | Script | What it runs |
 | --- | --- |
 | `test` | All tests (`vitest run`) |
+| `test:unit` | Unit tests only (`*.spec.ts`) |
+| `test:integration` | Integration tests only (`*.test.ts`) |
 | `test:watch` | Vitest in watch mode |
 | `test:coverage` | Tests with coverage |
 | `typecheck` | `tsc --noEmit` |

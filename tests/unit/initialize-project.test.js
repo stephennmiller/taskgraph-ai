@@ -59,8 +59,6 @@ vi.doMock('../../scripts/modules/config-manager.js', () => ({
 }));
 
 // Mock display libraries
-vi.doMock('figlet', () => ({ textSync: vi.fn(() => 'MOCKED BANNER') }));
-vi.doMock('gradient-string', () => vi.fn(() => vi.fn((text) => text)));
 vi.doMock('chalk', () => ({
 	blue: vi.fn((text) => text),
 	green: vi.fn((text) => text),

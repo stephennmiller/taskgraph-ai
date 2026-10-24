@@ -358,7 +358,9 @@ async function expandTask(
 		// Add the subtasks to the task as it is in the file now. The file may
 		// have changed since it was read (the AI call can take a minute).
 		await updateTagTasks(tasksPath, tag ?? data.tag ?? 'master', (tagData) => {
-			const current = tagData.tasks.find((t) => t.id === task.id);
+			const current = tagData.tasks.find(
+				(t) => String(t.id) === String(task.id)
+			);
 			if (!current) {
 				throw new Error(
 					`Task ${taskId} was removed while it was being expanded`

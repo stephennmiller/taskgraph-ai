@@ -35,7 +35,12 @@ const SECRETS = {
 		'.git-credentials',
 		'.aws',
 		'.kube',
+		// Like every entry here, these match a directory of that name too: rg
+		// globs can't match files only, so a Grep skips a `kubeconfig/` source
+		// directory, and Read refuses it to agree (#438)
 		'kubeconfig',
+		'kubeconfig.yaml',
+		'kubeconfig.yml',
 		'.npmrc',
 		'.netrc',
 		'_netrc',
@@ -52,8 +57,16 @@ const SECRETS = {
 		'id_rsa',
 		'id_dsa',
 		'id_ecdsa',
-		'id_ed25519'
+		'id_ed25519',
+		// kubeconfig-<cluster>, and Terraform EKS modules' kubeconfig_<name>.
+		// Not a bare `kubeconfig`, which would refuse src/kubeconfig.ts
+		'kubeconfig-',
+		'kubeconfig_'
 	],
+	// Names ending in one of these: `kind-kubeconfig`, `<cluster>_kubeconfig`.
+	// Not a bare `kubeconfig` suffix or a substring, so my-kubeconfig-loader.ts
+	// and kubeconfigs.md stay readable
+	suffixes: ['-kubeconfig', '_kubeconfig'],
 	// Names ending in `.<extension>`
 	extensions: [
 		'pem',
@@ -130,6 +143,7 @@ function isSecretName(part) {
 	return (
 		SECRETS.names.includes(part) ||
 		SECRETS.prefixes.some((prefix) => part.startsWith(prefix)) ||
+		SECRETS.suffixes.some((suffix) => part.endsWith(suffix)) ||
 		SECRETS.extensions.some((extension) => part.endsWith(`.${extension}`))
 	);
 }
@@ -149,6 +163,7 @@ function anyCase(name) {
 const SECRET_GLOBS = [
 	...SECRETS.names,
 	...SECRETS.prefixes.map((prefix) => `${prefix}*`),
+	...SECRETS.suffixes.map((suffix) => `*${suffix}`),
 	...SECRETS.extensions.map((extension) => `*.${extension}`),
 	...SECRETS.paths.map((segments) => `**/${segments.join('/')}`)
 ].map((name) => `!${anyCase(name)}`);

@@ -9,13 +9,12 @@ import {
 } from '../../mcp-server/src/tools/tool-registry.js';
 
 /**
- * Expected tool counts - update these when tools are added/removed
- * These serve as the canonical source of truth for expected counts
+ * Expected sizes of the curated tiers - update when a tool joins core/standard.
+ * The total isn't pinned: parallel PRs that each add a tool would all conflict on it.
  */
 export const EXPECTED_TOOL_COUNTS = {
 	core: 7,
-	standard: 16,
-	total: 40
+	standard: 16
 };
 
 /**
@@ -40,9 +39,7 @@ export function validateToolCounts() {
 	const expected = EXPECTED_TOOL_COUNTS;
 
 	const isValid =
-		actual.core === expected.core &&
-		actual.standard === expected.standard &&
-		actual.total === expected.total;
+		actual.core === expected.core && actual.standard === expected.standard;
 
 	return {
 		isValid,
@@ -50,8 +47,7 @@ export function validateToolCounts() {
 		expected,
 		differences: {
 			core: actual.core - expected.core,
-			standard: actual.standard - expected.standard,
-			total: actual.total - expected.total
+			standard: actual.standard - expected.standard
 		}
 	};
 }

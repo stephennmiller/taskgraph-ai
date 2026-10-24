@@ -1,6 +1,5 @@
+import { createRequire } from 'module';
 import { getRepoSummary } from '@tm/core';
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
 import { log } from './utils.js';
 
 import addTaskPrompt from '../../src/prompts/add-task.json' with {
@@ -36,6 +35,8 @@ import updateTasksPrompt from '../../src/prompts/update-tasks.json' with {
 import promptTemplateSchema from '../../src/prompts/schemas/prompt-template.schema.json' with {
 	type: 'json'
 };
+
+const require = createRequire(import.meta.url);
 
 /**
  * Add the project summary to a prompt that lets the model read the codebase,
@@ -88,6 +89,10 @@ export class PromptManager {
 	 * @private
 	 */
 	setupValidation() {
+		// ajv loads here, not at the top, so commands that never build a
+		// prompt skip it (#248)
+		const { default: Ajv } = require('ajv');
+		const { default: addFormats } = require('ajv-formats');
 		this.ajv = new Ajv({ allErrors: true, strict: false });
 		addFormats(this.ajv);
 

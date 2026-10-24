@@ -100,16 +100,6 @@ vi.doMock('../../scripts/modules/ui.js', () => ({
 	failLoadingIndicator: vi.fn()
 }));
 
-// Mock other potential UI elements
-vi.doMock('ora', () => ({
-	default: vi.fn(() => ({
-		start: vi.fn(),
-		stop: vi.fn(),
-		succeed: vi.fn(),
-		fail: vi.fn()
-	}))
-}));
-
 // Mock constants
 vi.doMock('../../src/constants/task-priority.js', () => ({
 	DEFAULT_TASK_PRIORITY: 'medium',

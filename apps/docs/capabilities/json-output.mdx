@@ -35,7 +35,7 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `graph` | `--json` or `--format json` | `tag`, `total`, `roots`, `criticalPath`, `bottlenecks`, `cyclic`, `nextId`, `waves` (each node also has `wave`) |
 | `why <id>` | `--json` or `--format json` | `id`, `title`, `status`, `tag`, `blocked`, `blockers`, `rootCauses` |
 | `tags`, `tags list` | `--json` | `tags`, `currentTag`, `totalTags` |
-| `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules` |
+| `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules`; `tagMissing: true` when the active tag isn't in tasks.json |
 | `prime --unnoted-since <time>` | `--json` | `unnoted` |
 | `generate` | `--json` or `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
 | `set-status` | `--json` or `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
@@ -53,7 +53,7 @@ In `list` JSON, each task's `blocks` lists the IDs of the tasks that depend on i
 
 In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.
 
-Some keys are only present when they apply. For example, a task has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
+Some keys are only present when they apply. For example, a task in `list`, `show` or `next` has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
 
 ## Plain lines from `list` in a pipe
 

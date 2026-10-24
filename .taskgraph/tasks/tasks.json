@@ -1,0 +1,886 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Spike: mirror the ready queue into Claude Code's built-in Tasks (#209)",
+        "description": "Claude Code's built-in Tasks now support dependencies and a list shared across sessions (`CLAUDE_CODE_TASK_LIST_ID`). It's free and already there, so it's the biggest overlap with TaskGraph.",
+        "details": "GitHub issue #209: https://github.com/stephennmiller/taskgraph-ai/issues/209\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": "2",
+        "title": "Cut CLI startup from ~1.6 s to under 200 ms (#248)",
+        "description": "Every command takes 1.5–1.8 s, including `taskgraph --version` (bare `node -e 1` takes 24 ms). An agent runs TaskGraph 20–50 times a session, so that's 30–80 s of waiting per session.",
+        "details": "GitHub issue #248: https://github.com/stephennmiller/taskgraph-ai/issues/248\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "3",
+        "title": "Cut the install size from 802 MB (#249)",
+        "description": "`npm pack` then a clean `npm install` of `taskgraph-ai@0.54.12` adds 345 packages and 802 MB.",
+        "details": "GitHub issue #249: https://github.com/stephennmiller/taskgraph-ai/issues/249\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "4",
+        "title": "Compact output for agents: plain lines when piped, smaller MCP `get_tasks`, `--json` everywhere (#250)",
+        "description": "Agents read TaskGraph through pipes and MCP, and the output is large. Print plain lines when piped, shrink MCP get_tasks, and offer --json on every command.",
+        "details": "GitHub issue #250: https://github.com/stephennmiller/taskgraph-ai/issues/250\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [
+          "2",
+          "3"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:46.822Z"
+      },
+      {
+        "id": "5",
+        "title": "Make AI calls cheaper: cap turns, cache a repo summary, run `expand --all` in parallel (#251)",
+        "description": "`taskgraph add-task --prompt=\"Add a login page\"` in an empty project took 31 s and 69,845 tokens (67k in, 73% cached). That's one sample through a real signed-in Claude Code.",
+        "details": "GitHub issue #251: https://github.com/stephennmiller/taskgraph-ai/issues/251\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "6"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "6",
+        "title": "Add evals for generated plans (parse-prd, expand, analyze-complexity) (#252)",
+        "description": "The generated plan is the product, and nothing measures it. The fake claude (#236) and build comparison (#238) test plumbing, not output. `tests/manual/prompts/prompt-test.js` is manual.",
+        "details": "GitHub issue #252: https://github.com/stephennmiller/taskgraph-ai/issues/252\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "7",
+        "title": "Epic: move AI commands from legacy JS into @tm/core (#254)",
+        "description": "Move the AI commands (add-task, expand, parse-prd, analyze-complexity, update, research) from scripts/modules into @tm/core, leaving one MCP server.",
+        "details": "GitHub issue #254: https://github.com/stephennmiller/taskgraph-ai/issues/254\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "14"
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "AI service in @tm/core",
+            "description": "Prompt loading, a Claude Code provider with the role restrictions, schema validation and patch-based saves.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 7,
+            "parentId": "7"
+          },
+          {
+            "id": 2,
+            "title": "Move the AI commands",
+            "description": "One PR each, verified with the build comparison: add-task, expand, parse-prd, analyze-complexity, update-task/update, research.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [
+              "7.1"
+            ],
+            "parentTaskId": 7,
+            "parentId": "7"
+          },
+          {
+            "id": 3,
+            "title": "Retire the legacy CLI and MCP server",
+            "description": "Delete commands.js, utils.js and mcp-server/src, and move the MCP tools into apps/mcp, leaving one MCP server.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [
+              "7.2"
+            ],
+            "parentTaskId": 7,
+            "parentId": "7"
+          }
+        ]
+      },
+      {
+        "id": "8",
+        "title": "Setup check: plugin verifies the CLI, `taskgraph doctor`, versioned plugin, no shell rc edits (#256)",
+        "description": "Setup is four steps (`npm i -g`, `init`, two `/plugin` commands, optional MCP), and nothing checks that they worked.",
+        "details": "GitHub issue #256: https://github.com/stephennmiller/taskgraph-ai/issues/256\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "9",
+        "title": "CI: test on macOS, Windows and Node 22, and run the packed tarball (#258)",
+        "description": "Every CI job runs on `ubuntu-latest` with Node 24. But `engines` allows `>=22.13.0`, and the code has Windows-specific paths (`claude.cmd`/`claude.exe` in `src/ai-providers/claude-code.js`, lock files, path guards).",
+        "details": "GitHub issue #258: https://github.com/stephennmiller/taskgraph-ai/issues/258\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "10",
+        "title": "Launch readiness: link the docs site, fix the npm author, list the plugin (#261)",
+        "description": "Before launch: link the docs site, fix the npm author field and list the Claude Code plugin.",
+        "details": "GitHub issue #261: https://github.com/stephennmiller/taskgraph-ai/issues/261\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "11",
+        "title": "CLI prints task text from tasks.json/config to the terminal without stripping control sequences (#287)",
+        "description": "The CLI writes task text straight to the terminal: titles, descriptions, details, and (since #283) acceptance criteria and the config's `global.definitionOfDone` items.",
+        "details": "GitHub issue #287: https://github.com/stephennmiller/taskgraph-ai/issues/287\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:21:26.848Z"
+      },
+      {
+        "id": "12",
+        "title": "Run the CLI and MCP build comparison on every pull request that touches the compared code (#296)",
+        "description": "Run the CLI and MCP build comparison in CI on every PR that touches the compared code, so moving legacy scripts can't change behavior.",
+        "details": "GitHub issue #296: https://github.com/stephennmiller/taskgraph-ai/issues/296\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:44.561Z"
+      },
+      {
+        "id": "13",
+        "title": "Replace the boxes left outside the daily commands (add-subtask, remove-subtask, generate, complexity-report, update notice) (#318)",
+        "description": "Replace the boxed output left in add-subtask, remove-subtask, generate, complexity-report and the update notice with the plain style of the daily commands.",
+        "details": "GitHub issue #318: https://github.com/stephennmiller/taskgraph-ai/issues/318\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:49.007Z"
+      },
+      {
+        "id": "14",
+        "title": "Epic: move the non-AI task commands (dependencies, removal, structure, tags) into @tm/core (#328)",
+        "description": "Move the non-AI commands (dependencies, remove-task and subtasks, add-subtask, move, tags) from legacy JS into @tm/core, one command family per PR.",
+        "details": "GitHub issue #328: https://github.com/stephennmiller/taskgraph-ai/issues/328\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Dependencies: add, remove, validate, fix",
+            "description": "Move dependency-manager.js into @tm/core, including #214; decide the typing in #290 first.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [],
+            "parentTaskId": 14,
+            "parentId": "14"
+          },
+          {
+            "id": 2,
+            "title": "remove-task, remove-subtask, clear-subtasks",
+            "description": "Move the removal commands into @tm/core.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [
+              "14.1"
+            ],
+            "parentTaskId": 14,
+            "parentId": "14"
+          },
+          {
+            "id": 3,
+            "title": "add-subtask and move",
+            "description": "Move add-subtask and move-task.js into @tm/core.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [
+              "14.2"
+            ],
+            "parentTaskId": 14,
+            "parentId": "14"
+          },
+          {
+            "id": 4,
+            "title": "Tags",
+            "description": "Move tag-management.js into @tm/core, with #221 (create from branch) and #220 (root tsc in CI) as follow-ups.",
+            "details": "",
+            "status": "pending",
+            "dependencies": [
+              "14.3"
+            ],
+            "parentTaskId": 14,
+            "parentId": "14"
+          }
+        ]
+      },
+      {
+        "id": "15",
+        "title": "cli-root-commands.mdx is over the pre-commit size limit, so any edit to it is refused (#334)",
+        "description": "`apps/docs/capabilities/cli-root-commands.mdx` is about 6,100 tokens, over the 5,000-token limit in `.githooks/check-file-size.mjs`.",
+        "details": "GitHub issue #334: https://github.com/stephennmiller/taskgraph-ai/issues/334\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:50.915Z"
+      },
+      {
+        "id": "16",
+        "title": "Stop producing the `completed` status now that every loader reads it as `done` (#341)",
+        "description": "Loaders already read completed as done; remove the places that still write or special-case completed.",
+        "details": "GitHub issue #341: https://github.com/stephennmiller/taskgraph-ai/issues/341\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:21:28.629Z"
+      },
+      {
+        "id": "17",
+        "title": "Remove the start alias and the tm-core code only autopilot and start used (#343)",
+        "description": "The cleanup PR for #255 removed `autopilot`, its MCP tools and the tm-core `workflow` module, and turned `start` into a hidden alias of `loop -n 1 --id <id>` for one release.",
+        "details": "GitHub issue #343: https://github.com/stephennmiller/taskgraph-ai/issues/343\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:21:30.295Z"
+      },
+      {
+        "id": "18",
+        "title": "--help can silently miss a new command: rows are a static list, not read from the registered commands (#364)",
+        "description": "`taskgraph --help` is built from `HELP_GROUPS` in `apps/cli/src/ui/formatters/help-formatters.ts`, a hand-kept list.",
+        "details": "GitHub issue #364: https://github.com/stephennmiller/taskgraph-ai/issues/364\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:28:59.212Z"
+      },
+      {
+        "id": "19",
+        "title": "list and next --json leave out a task's acceptanceCriteria (#369)",
+        "description": "list --json and next --json leave out a task's acceptanceCriteria, which show --json includes.",
+        "details": "GitHub issue #369: https://github.com/stephennmiller/taskgraph-ai/issues/369\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:36:13.191Z"
+      },
+      {
+        "id": "20",
+        "title": "chore: remove the unused exports in legacy JS and drop the knip allowlist for it (#373)",
+        "description": "The knip check from #361 skips unused and duplicate exports in the legacy JS (`scripts/`, `mcp-server/`, `src/`, `tests/`) through `ignoreIssues` in `knip.jsonc`. Unused files and dependencies are still checked there.",
+        "details": "GitHub issue #373: https://github.com/stephennmiller/taskgraph-ai/issues/373\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "21",
+        "title": "taskgraph tags writes an empty tasks.json in a project that has none (#375)",
+        "description": "Running taskgraph tags in a project with no tasks.json creates an empty one instead of only reading.",
+        "details": "GitHub issue #375: https://github.com/stephennmiller/taskgraph-ai/issues/375\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:55:22.919Z"
+      },
+      {
+        "id": "22",
+        "title": "A failed parse-prd prints the error in two lines, without a fix hint (#388)",
+        "description": "When parse-prd fails, the error prints across two lines and gives no hint on how to fix it.",
+        "details": "GitHub issue #388: https://github.com/stephennmiller/taskgraph-ai/issues/388\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:22:28.545Z"
+      },
+      {
+        "id": "23",
+        "title": "tm-core saves rewrite every top-level task ID and dependency as a string; the legacy writers use numbers (#392)",
+        "description": "tm-core saves rewrite top-level task IDs and dependencies as strings while the legacy writers use numbers, so the stored form flips between commands.",
+        "details": "GitHub issue #392: https://github.com/stephennmiller/taskgraph-ai/issues/392\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:48:30.078Z"
+      },
+      {
+        "id": "24",
+        "title": "parse-prd has two response schemas; the registry one is unused and has drifted (#402)",
+        "description": "`COMMAND_SCHEMAS['parse-prd']` (`ParsePRDResponseSchema` in `src/schemas/parse-prd.js`) is never passed to an AI call.",
+        "details": "GitHub issue #402: https://github.com/stephennmiller/taskgraph-ai/issues/402\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:22:28.551Z"
+      },
+      {
+        "id": "25",
+        "title": "loop run from a subfolder writes the progress header to the wrong file (#407)",
+        "description": "loop resolves --progress-file against the current folder, so run from a subfolder it writes the progress header to the wrong file.",
+        "details": "GitHub issue #407: https://github.com/stephennmiller/taskgraph-ai/issues/407\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:33:43.776Z"
+      },
+      {
+        "id": "26",
+        "title": "loop --no-output changes nothing a CLI user can see (#408)",
+        "description": "`taskgraph loop --no-output` (\"Exclude full Claude output from iteration results\") sets `includeOutput: false`, which only drops `output` from each `LoopIteration` in the result.",
+        "details": "GitHub issue #408: https://github.com/stephennmiller/taskgraph-ai/issues/408\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:33:43.781Z"
+      },
+      {
+        "id": "27",
+        "title": "docs: .claude/rules MCP walkthrough points at registration steps and files that no longer exist (#414)",
+        "description": "The add-MCP-support steps in .claude/rules/mcp.md, architecture.md and new-features.md still describe code that is gone.",
+        "details": "GitHub issue #414: https://github.com/stephennmiller/taskgraph-ai/issues/414\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:46.764Z"
+      },
+      {
+        "id": "28",
+        "title": "A missing tag still reads as empty outside list/next: show, set-status and a stale active tag (#418)",
+        "description": "show, set-status and a stale active tag still treat a missing tag as empty, where list and next now fail with Tag not found.",
+        "details": "GitHub issue #418: https://github.com/stephennmiller/taskgraph-ai/issues/418\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:55:22.926Z"
+      },
+      {
+        "id": "29",
+        "title": "Debug log lines print raw task titles (escape sequences reach the terminal with --debug) (#419)",
+        "description": "With --debug, some legacy log lines print task titles without stripTerminalControls, so escape sequences reach the terminal.",
+        "details": "GitHub issue #419: https://github.com/stephennmiller/taskgraph-ai/issues/419\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:10:31.795Z"
+      },
+      {
+        "id": "30",
+        "title": "loop --parallel: optional container per worker as a safer sandbox (#420)",
+        "description": "Give loop --parallel workers an optional container each, as a safer sandbox than the two modes they run in today.",
+        "details": "GitHub issue #420: https://github.com/stephennmiller/taskgraph-ai/issues/420\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": "31",
+        "title": "CLI integration tests that spawn the built CLI several times hit the 30 s test timeout on a loaded machine (#422)",
+        "description": "CLI integration tests that spawn the built CLI several times time out at 30 s when the machine is loaded.",
+        "details": "GitHub issue #422: https://github.com/stephennmiller/taskgraph-ai/issues/422\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:44:19.212Z"
+      },
+      {
+        "id": "32",
+        "title": "fix: test:unit and test:integration in the workspaces match no test files (#424)",
+        "description": "The test:unit and test:integration scripts in tm-core, tm-profiles, cli and mcp match no test files.",
+        "details": "GitHub issue #424: https://github.com/stephennmiller/taskgraph-ai/issues/424\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:44:19.387Z"
+      },
+      {
+        "id": "33",
+        "title": "BaseStorage.validateTask is never called (#426)",
+        "description": "`BaseStorage.validateTask` in `packages/tm-core/src/common/interfaces/storage.interface.ts` (a protected method that throws `Task description is required` and similar) has no callers in `packages/`, `apps/` or `scripts/`.",
+        "details": "GitHub issue #426: https://github.com/stephennmiller/taskgraph-ai/issues/426\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:42.625Z"
+      },
+      {
+        "id": "34",
+        "title": "Split packages/tm-core/src/modules/tasks/tasks-domain.ts below the 5,000-token file-size limit (#429)",
+        "description": "`packages/tm-core/src/modules/tasks/tasks-domain.ts` is 20,218 bytes (about 5,050 tokens at the hook's bytes / 4) on main, just over `MAX_TOKENS` in `.githooks/check-file-size.mjs`, and it is not in `LEGACY_OVERSIZED`.",
+        "details": "GitHub issue #429: https://github.com/stephennmiller/taskgraph-ai/issues/429\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:44:19.563Z"
+      },
+      {
+        "id": "35",
+        "title": "fix-dependencies doesn't remove a duplicate when one copy is a number and one a string (#432)",
+        "description": "Older tasks.json files can hold the same top-level dependency twice, once as a number and once as a string (`[1, \"1\"]`), now that new dependencies are stored as strings (#393).",
+        "details": "GitHub issue #432: https://github.com/stephennmiller/taskgraph-ai/issues/432\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:48:30.082Z"
+      },
+      {
+        "id": "36",
+        "title": "Remove the unused scaffold exports generateTaskId, generateId and PlaceholderTask from @tm/core (#437)",
+        "description": "@tm/core still exports generateTaskId, generateId and PlaceholderTask from the original scaffold; nothing uses them.",
+        "details": "GitHub issue #437: https://github.com/stephennmiller/taskgraph-ai/issues/437\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:48.969Z"
+      },
+      {
+        "id": "37",
+        "title": "Claude Code path guard: kubeconfig.yaml and kubeconfig-prod are still readable, and a pkg/kubeconfig/ source directory is refused (#438)",
+        "description": "The path guard still lets Claude read kubeconfig.yaml, kubeconfig-prod and similar names, and wrongly refuses a pkg/kubeconfig/ source directory.",
+        "details": "GitHub issue #438: https://github.com/stephennmiller/taskgraph-ai/issues/438\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "38",
+        "title": "Claude Code path guard: hand rg a normalized Grep path so .docker// can't skip the **/.docker/config.json exclusion (#439)",
+        "description": "Normalize the Grep path before handing it to rg, so a path like .docker// can't skip the **/.docker/config.json exclusion.",
+        "details": "GitHub issue #439: https://github.com/stephennmiller/taskgraph-ai/issues/439\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:44.538Z"
+      },
+      {
+        "id": "39",
+        "title": "chore: mcp-server/src/tools/utils.js keeps old copies of helpers that tools now import from @tm/mcp (#445)",
+        "description": "mcp-server/src/tools/utils.js keeps old copies of helpers that the tools now import from @tm/mcp.",
+        "details": "GitHub issue #445: https://github.com/stephennmiller/taskgraph-ai/issues/445\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:38.575Z"
+      },
+      {
+        "id": "40",
+        "title": "Remove the rest of the unused @tm/core scaffold utils: id-generator.ts helpers, formatDate and deepClone (#449)",
+        "description": "Remove the rest of the unused scaffold utils from @tm/core: the id-generator helpers, formatDate and deepClone.",
+        "details": "GitHub issue #449: https://github.com/stephennmiller/taskgraph-ai/issues/449\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-23T23:41:51.195Z"
+      },
+      {
+        "id": "41",
+        "title": "TaskLoaderService.loadAndValidateTask is never called by a command (#451)",
+        "description": "`TaskLoaderService.loadAndValidateTask` (`packages/tm-core/src/modules/tasks/services/task-loader.service.ts`) and its wrapper `TasksDomain.loadAndValidate` (`packages/tm-core/src/modules/tasks/tasks-domain.ts`) have no callers in `apps/cli`, `apps/mcp`, `scripts/` or `mcp-server/`.",
+        "details": "GitHub issue #451: https://github.com/stephennmiller/taskgraph-ai/issues/451\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T00:04:40.579Z"
+      },
+      {
+        "id": "42",
+        "title": "remove-task of a whole task leaves other tasks' dependencies on its subtasks (#456)",
+        "description": "`scripts/modules/task-manager/remove-task.js` builds the removed-ID set from the IDs passed on the command line only.",
+        "details": "GitHub issue #456: https://github.com/stephennmiller/taskgraph-ai/issues/456\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:47:33.569Z"
+      },
+      {
+        "id": "43",
+        "title": "clear-subtasks --all rescans every task per task, and removeAllSubtasks mishandles dotted subtask IDs (#457)",
+        "description": "clear-subtasks --all rescans every task once per task, and removeAllSubtasks turns a stored dotted subtask ID like 3.2 into 3.3.2.",
+        "details": "GitHub issue #457: https://github.com/stephennmiller/taskgraph-ai/issues/457\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:47:33.574Z"
+      },
+      {
+        "id": "44",
+        "title": "FileStorage.loadTask builds its own subtask view that disagrees with tasks.get (#458)",
+        "description": "FileStorage.loadTask builds its own subtask view (copying parent fields) that disagrees with tasks.get.",
+        "details": "GitHub issue #458: https://github.com/stephennmiller/taskgraph-ai/issues/458\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "45",
+        "title": "MCP expand_task checks and reports the task from the current tag, not the tag passed (#459)",
+        "description": "`expandTaskDirect` (`mcp-server/src/core/direct-functions/expand-task.js`) calls `readJSON(tasksPath, projectRoot)` without the tag, both before expanding (lines ~102-160: task lookup, the done/completed check, the existing-subtasks check) and after (line ~204: `subtasksAdded`).",
+        "details": "GitHub issue #459: https://github.com/stephennmiller/taskgraph-ai/issues/459\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "46",
+        "title": "parse-prd into an empty tag overwrites tasks added while the model runs (#460)",
+        "description": "parse-prd into an empty tag overwrites tasks added to that tag while the model runs.",
+        "details": "GitHub issue #460: https://github.com/stephennmiller/taskgraph-ai/issues/460\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "47",
+        "title": "ConfigManager.reset leaves config.local.json in place (#461)",
+        "description": "`ConfigManager.reset()` (`packages/tm-core/src/modules/config/managers/config-manager.ts`) calls `ConfigPersistence.deleteConfig()`, which unlinks only `.taskgraph/config.json` (`packages/tm-core/src/modules/config/services/config-persistence.service.ts`).",
+        "details": "GitHub issue #461: https://github.com/stephennmiller/taskgraph-ai/issues/461\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "48",
+        "title": "tm-core getResponseLanguage reads custom.responseLanguage, but lang writes global.responseLanguage (#462)",
+        "description": "`ConfigManager.getResponseLanguage()` (`packages/tm-core/src/modules/config/managers/config-manager.ts`) returns `config.custom.responseLanguage || 'English'`, and `ConfigDomain.getResponseLanguage()` (`packages/tm-core/src/modules/config/config-domain.ts`) wraps it.",
+        "details": "GitHub issue #462: https://github.com/stephennmiller/taskgraph-ai/issues/462\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "49",
+        "title": "list's invalid-dependency warning line runs past a 50-column terminal (#463)",
+        "description": "`formatInvalidDependencyWarning` (`apps/cli/src/ui/formatters/task-list-formatters.ts`) prints its header as one unwrapped line.",
+        "details": "GitHub issue #463: https://github.com/stephennmiller/taskgraph-ai/issues/463\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "50",
+        "title": ".claude/rules/commands.md is over the pre-commit size limit, so any edit to it is refused (#464)",
+        "description": "`.claude/rules/commands.md` is 20,793 bytes, about 5,200 tokens by `.githooks/check-file-size.mjs` (bytes / 4), over the 5,000-token limit, and it is not in `LEGACY_OVERSIZED`.",
+        "details": "GitHub issue #464: https://github.com/stephennmiller/taskgraph-ai/issues/464\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "51",
+        "title": "merge-tag-changes.ts keeps its own copies of the merge-driver JSON helpers (#466)",
+        "description": "`packages/tm-core/src/modules/storage/adapters/file-storage/merge-tag-changes.ts` defines `isPlainObject`, `isItemList`, `keyOf` and `same` locally.",
+        "details": "GitHub issue #466: https://github.com/stephennmiller/taskgraph-ai/issues/466\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "52",
+        "title": "knip: drop \"taskgraph\" from ignoreBinaries in knip.jsonc (#467)",
+        "description": "`npm run knip` prints a configuration hint, `taskgraph: Remove from ignoreBinaries`, for the entry in `knip.jsonc` (commented \"The package's own bin, run by the legacy MCP tools\").",
+        "details": "GitHub issue #467: https://github.com/stephennmiller/taskgraph-ai/issues/467\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "53",
+        "title": "docs: loop-presets.mdx fails to parse, and cross-tag-movement.mdx isn't in the nav (#468)",
+        "description": "docs: loop-presets.mdx fails to parse, and cross-tag-movement.mdx is not in the nav.",
+        "details": "GitHub issue #468: https://github.com/stephennmiller/taskgraph-ai/issues/468\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "54",
+        "title": "apps/mcp resolveInsideRoot duplicates @tm/core's resolvePathInsideRoot (#470)",
+        "description": "Once #439 moves the path rule into @tm/core as resolvePathInsideRoot, make apps/mcp import it instead of keeping its own copy.",
+        "details": "GitHub issue #470: https://github.com/stephennmiller/taskgraph-ai/issues/470\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [
+          "38"
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "55",
+        "title": "taskgraph github: import existing issues as tasks, and pull status for them (#471)",
+        "description": "Add an import from existing GitHub issues to linked tasks, and let pull update tasks from issues it did not create.",
+        "details": "GitHub issue #471: https://github.com/stephennmiller/taskgraph-ai/issues/471\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "56",
+        "title": "Tests: the fake claude shim only runs on POSIX, so AI-path CLI tests can't run on Windows (#476)",
+        "description": "The fake claude is a #!/bin/sh script, so tests on the AI path fail on Windows and the Windows smoke leg leaves them out.",
+        "details": "GitHub issue #476: https://github.com/stephennmiller/taskgraph-ai/issues/476\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "57",
+        "title": "engines says Node >=22.13.0, but fastmcp's swagger-parser chain declares >=22.19.0 (#478)",
+        "description": "Two production dependencies declare Node >=22.19.0 while engines allows 22.13; raise engines or hold the packages back.",
+        "details": "GitHub issue #478: https://github.com/stephennmiller/taskgraph-ai/issues/478\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "58",
+        "title": "Claude Code path guard: a Read of `symlinkdir/../file` is judged lexically but the OS follows the symlink first (#479)",
+        "description": "The guard collapses `link/..` as text, but the OS follows the symlink first, so a Read can reach a file outside the root.",
+        "details": "GitHub issue #479: https://github.com/stephennmiller/taskgraph-ai/issues/479\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "59",
+        "title": "remove-task's confirmation and MCP parse-prd's completion message still use emoji (#480)",
+        "description": "remove-task's confirmation and parse-prd's MCP completion message still print emoji, against .claude/rules/ui.md.",
+        "details": "GitHub issue #480: https://github.com/stephennmiller/taskgraph-ai/issues/480\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "60",
+        "title": "parse-prd's overwrite prompt reads stdin even when it isn't a terminal (#481)",
+        "description": "Without a TTY, parse-prd's overwrite prompt waits forever or exits silently; it should fail and name --force and --append.",
+        "details": "GitHub issue #481: https://github.com/stephennmiller/taskgraph-ai/issues/481\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "61",
+        "title": "Update notice prints changelog highlights without stripping terminal escape sequences (#482)",
+        "description": "Changelog highlights in the update notice reach the terminal with escape sequences intact.",
+        "details": "GitHub issue #482: https://github.com/stephennmiller/taskgraph-ai/issues/482\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "62",
+        "title": "remove-subtask --id=1.1,9.9 removes 1.1, then fails on 9.9 (#483)",
+        "description": "remove-subtask removes the valid IDs before it finds a missing one; a list with any missing subtask should change nothing.",
+        "details": "GitHub issue #483: https://github.com/stephennmiller/taskgraph-ai/issues/483\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "63",
+        "title": "tm-core TasksDomain.updateStatus saves any status string without checking it (#484)",
+        "description": "updateStatus writes any status string to tasks.json, and later reads then throw on it.",
+        "details": "GitHub issue #484: https://github.com/stephennmiller/taskgraph-ai/issues/484\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "64",
+        "title": "taskgraph start 3 suggests `taskgraph status` instead of `taskgraph loop -n 1 --id 3` (#485)",
+        "description": "Removed start and autopilot fall through to Commander's nearest-name hint, which suggests `taskgraph status`.",
+        "details": "GitHub issue #485: https://github.com/stephennmiller/taskgraph-ai/issues/485\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "high",
+        "subtasks": []
+      },
+      {
+        "id": "65",
+        "title": "tests/manual/progress/ still describes parse-prd streaming modes that #443 removed (#486)",
+        "description": "The manual progress scripts still describe and exercise the streaming parse-prd path that #443 deleted.",
+        "details": "GitHub issue #486: https://github.com/stephennmiller/taskgraph-ai/issues/486\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "66",
+        "title": "knip: unused exports getContentWidth, TaskTableItem, ColumnPlan and Shape in apps/cli (#487)",
+        "description": "knip lists four unused exports in apps/cli; drop the barrel entry and three export keywords.",
+        "details": "GitHub issue #487: https://github.com/stephennmiller/taskgraph-ai/issues/487\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "67",
+        "title": "CI: fail when a plugin command body uses a flag older than the plugin's CLI range (#488)",
+        "description": "Nothing checks that plugin command bodies only use flags the plugin's minimum CLI version has; fail CI when they do.",
+        "details": "GitHub issue #488: https://github.com/stephennmiller/taskgraph-ai/issues/488\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2026-10-23T23:05:46.810Z",
+      "description": "Tasks for master context",
+      "schemaVersion": 1,
+      "updated": "2026-10-24T00:05:11.748Z",
+      "version": "1.0.0",
+      "lastModified": "2026-10-24T04:44:19.563Z",
+      "taskCount": 67,
+      "completedCount": 30,
+      "tags": [
+        "master"
+      ]
+    }
+  }
+}

@@ -9,26 +9,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	isEmpty: vi.fn(() => false)
 }));
 
-// Mock marked-terminal to avoid chalk dependency issues
-vi.doMock('marked-terminal', () => ({
-	markedTerminal: vi.fn(() => ({}))
-}));
-
-// Mock marked to avoid terminal rendering
-vi.doMock('marked', () => ({
-	marked: Object.assign(
-		vi.fn((text) => text),
-		{
-			use: vi.fn(),
-			setOptions: vi.fn(),
-			parse: vi.fn((text) => text)
-		}
-	),
-	Marked: vi.fn(function () {
-		return { use: vi.fn(), parse: vi.fn((text) => text) };
-	})
-}));
-
 // Mock UI-affecting external libs to minimal no-op implementations
 vi.doMock('chalk', () => ({
 	// Callable like the real chalk: theme.text is plain chalk

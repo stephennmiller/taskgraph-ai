@@ -14,7 +14,7 @@ The `ContextGatherer` class (`scripts/modules/utils/contextGatherer.js`) provide
 
 ### **Key Features**
 - **Multi-source Context**: Tasks, files, custom text, project file tree
-- **Token Counting**: Detailed breakdown using `gpt-tokens` library
+- **Token Counting**: Estimated breakdown (about 4 characters per token)
 - **Format Support**: Different output formats (research, chat, system-prompt)
 - **Error Handling**: Graceful handling of missing files, invalid task IDs
 - **Performance**: File size limits, depth limits for tree generation

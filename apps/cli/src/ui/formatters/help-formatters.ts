@@ -38,8 +38,9 @@ export interface HelpGroup {
  *
  * Every command a user runs gets a row. Left out on purpose: `prime` (for
  * agents, named in the footer), the hidden `merge-driver` (git runs it),
- * `help`, the placeholder `tui`, `update-subtask` (the help points at `note`
+ * `help`, `update-subtask` (the help points at `note`
  * instead, #245) and the old per-tag commands that `tags <…>` replaces.
+ * tests/unit/help-rows.test.ts fails when a visible command has no row (#364).
  */
 export const HELP_GROUPS: readonly HelpGroup[] = [
 	{
@@ -57,6 +58,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		title: 'Setup',
 		commands: [
 			{ name: 'init', desc: 'Set up TaskGraph in this project' },
+			{ name: 'doctor', desc: 'Check that TaskGraph and Claude Code work' },
 			{ name: 'models', desc: 'View or change the AI models' },
 			{ name: 'lang', desc: 'View or change the AI response language' },
 			{ name: 'completion', desc: 'Install Tab completion for your shell' }

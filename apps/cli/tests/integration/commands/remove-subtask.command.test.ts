@@ -30,9 +30,10 @@ describe('converting a subtask with no description into a task', () => {
 		});
 
 	const tasksPath = () => path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+	// Task IDs are stored as strings (#392)
 	const readTask = (id: number) =>
 		JSON.parse(fs.readFileSync(tasksPath(), 'utf8')).master.tasks.find(
-			(t: { id: number }) => t.id === id
+			(t: { id: string }) => t.id === String(id)
 		);
 
 	beforeEach(() => {

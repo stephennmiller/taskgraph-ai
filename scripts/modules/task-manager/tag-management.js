@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import inquirer from 'inquirer';
 
 import { ui } from '@tm/cli';
 import { theme } from '@tm/cli/theme';
@@ -340,6 +339,7 @@ async function deleteTag(
 
 			let proceed = false;
 			try {
+				const { default: inquirer } = await import('inquirer');
 				const prompt = inquirer.createPromptModule({ clearPromptOnDone: true });
 				({ proceed } = await prompt([
 					{
@@ -535,8 +535,11 @@ async function tags(
 		// Use raw tagged data if available, otherwise use the data directly
 		const rawData = data._rawTaggedData || data;
 
-		// Enhance existing tags with metadata if they don't have it
-		await enhanceTagsWithMetadata(tasksPath, rawData, context);
+		// Fill in missing tag metadata, unless that would create tasks.json:
+		// listing must not write a file the project doesn't have yet
+		if (fs.existsSync(tasksPath)) {
+			await enhanceTagsWithMetadata(tasksPath, rawData, context);
+		}
 
 		// Extract all tags
 		const tagList = [];

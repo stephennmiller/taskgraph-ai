@@ -245,9 +245,15 @@ export class TasksDomain {
 	 * Session context for a coding agent (`taskgraph prime`): the task in
 	 * progress with its done-when criteria, the next three ready tasks in
 	 * `next` order, and the workflow rules. Uses the active tag by default.
+	 * An active tag tasks.json doesn't have gives an empty context with
+	 * `tagMissing`, so session start still gets the rules.
 	 */
 	async getPrimeContext(options: { tag?: string } = {}): Promise<PrimeContext> {
-		const tag = options.tag || this.configManager.getActiveTag();
+		const activeTag = this.configManager.getActiveTag();
+		const tag = options.tag || activeTag;
+		if (tag === activeTag && !(await this.taskService.tagExists(tag))) {
+			return { ...buildPrimeContext([], { tag }), tagMissing: true };
+		}
 		const tasks = await this.taskService.getDependencyView(tag);
 		return buildPrimeContext(tasks, { tag });
 	}

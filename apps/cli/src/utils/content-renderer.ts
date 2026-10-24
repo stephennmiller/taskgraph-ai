@@ -3,58 +3,71 @@
  * Handles HTML to Markdown conversion and terminal-friendly rendering
  */
 
+import { createRequire } from 'node:module';
 import chalk from 'chalk';
-import { MarkedExtension, marked } from 'marked';
-import { markedTerminal } from 'marked-terminal';
-import TurndownService from 'turndown';
+import type { Marked, MarkedExtension } from 'marked';
+import type TurndownService from 'turndown';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { theme } from '../ui/theme.js';
 
-// Initialize turndown for HTML to Markdown conversion
-const turndownService = new TurndownService({
-	headingStyle: 'atx',
-	codeBlockStyle: 'fenced',
-	bulletListMarker: '-'
-});
+// turndown and marked are loaded on first use, not at startup, where they
+// cost every command about 0.2 s (#248). require() keeps these synchronous.
+const require = createRequire(import.meta.url);
 
-// Configure marked to use terminal renderer with subtle colors
-marked.use(
-	markedTerminal({
-		// More subtle colors that match the overall design
-		code: (code: string) => {
-			// Custom code block handler to preserve formatting
-			return code
-				.split('\n')
-				.map((line) => '    ' + chalk.cyan(line))
-				.join('\n');
-		},
-		blockquote: theme.muted.italic,
-		html: theme.muted, // Any remaining HTML will be grayed out (should be rare after turndown)
-		heading: theme.text.bold, // White bold for headings
-		hr: theme.muted,
-		listitem: theme.text, // White for list items
-		paragraph: theme.text, // White for paragraphs (default text color)
-		strong: theme.text.bold, // White bold for strong text
-		em: theme.text.italic, // White italic for emphasis
-		codespan: chalk.cyan, // Cyan for inline code (no background)
-		del: chalk.dim.strikethrough,
-		link: theme.brand,
-		href: theme.brand.underline,
-		// Add more explicit code block handling
-		showSectionPrefix: false,
-		unescape: true,
-		emoji: false,
-		// Try to preserve whitespace in code blocks
-		tab: 4,
-		width: 120
-	}) as MarkedExtension
-);
+let turndownService: TurndownService | undefined;
 
-// Also set marked options to preserve whitespace
-marked.setOptions({
-	breaks: true,
-	gfm: true
-});
+/** HTML to markdown converter, created on first use */
+function getTurndownService(): TurndownService {
+	turndownService ??= new (require('turndown') as typeof TurndownService)({
+		headingStyle: 'atx',
+		codeBlockStyle: 'fenced',
+		bulletListMarker: '-'
+	});
+	return turndownService;
+}
+
+let terminalMarked: Marked | undefined;
+
+/** marked with the terminal renderer in subtle colors, created on first use */
+function getTerminalMarked(): Marked {
+	if (terminalMarked) return terminalMarked;
+	const { Marked } = require('marked') as typeof import('marked');
+	const { markedTerminal } =
+		require('marked-terminal') as typeof import('marked-terminal');
+	terminalMarked = new Marked({ breaks: true, gfm: true });
+	terminalMarked.use(
+		markedTerminal({
+			// More subtle colors that match the overall design
+			code: (code: string) => {
+				// Custom code block handler to preserve formatting
+				return code
+					.split('\n')
+					.map((line) => '    ' + chalk.cyan(line))
+					.join('\n');
+			},
+			blockquote: theme.muted.italic,
+			html: theme.muted, // Any remaining HTML will be grayed out (should be rare after turndown)
+			heading: theme.text.bold, // White bold for headings
+			hr: theme.muted,
+			listitem: theme.text, // White for list items
+			paragraph: theme.text, // White for paragraphs (default text color)
+			strong: theme.text.bold, // White bold for strong text
+			em: theme.text.italic, // White italic for emphasis
+			codespan: chalk.cyan, // Cyan for inline code (no background)
+			del: chalk.dim.strikethrough,
+			link: theme.brand,
+			href: theme.brand.underline,
+			// Add more explicit code block handling
+			showSectionPrefix: false,
+			unescape: true,
+			emoji: false,
+			// Try to preserve whitespace in code blocks
+			tab: 4,
+			width: 120
+		}) as MarkedExtension
+	);
+	return terminalMarked;
+}
 
 /**
  * Turn stored task text into markdown: undo escaped newlines, tabs and
@@ -71,7 +84,9 @@ export function toMarkdown(content: string): string {
 		.replace(/\\"/g, '"');
 
 	// Check if content has HTML tags - if so, convert to markdown first
-	return /<[^>]+>/.test(cleaned) ? turndownService.turndown(cleaned) : cleaned;
+	return /<[^>]+>/.test(cleaned)
+		? getTurndownService().turndown(cleaned)
+		: cleaned;
 }
 
 /**
@@ -86,6 +101,6 @@ export function renderContent(content: string): string {
 	const cleaned = toMarkdown(terminalSafe(content));
 
 	// Render markdown to terminal
-	const result = marked(cleaned);
+	const result = getTerminalMarked().parse(cleaned);
 	return typeof result === 'string' ? result.trim() : cleaned;
 }

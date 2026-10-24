@@ -7,7 +7,6 @@
  */
 
 import path from 'path';
-import { APICallError } from 'ai';
 import chalk from 'chalk';
 import {
 	getFallbackModelId,
@@ -20,7 +19,7 @@ import {
 	streamObjectService
 } from '../../ai-services-unified.js';
 import {
-	failLoadingIndicator,
+	stopLoadingIndicator,
 	startLoadingIndicator,
 	startParsePrdProgress,
 	succeedLoadingIndicator
@@ -69,12 +68,14 @@ export async function handleNonStreamingService(
 		} catch (error) {
 			// The provider refused (bad model, sign-in, limits). The one-shot path
 			// would retry the same model and fail again, slower; it only helps
-			// when another role is set to a different model
+			// when another role is set to a different model. `ai` is imported
+			// here, not at the top, so it loads only for AI commands (#248)
+			const { APICallError } = await import('ai');
+			// No ✗ here: the command prints the failure once, with its reason (#388)
+			progress?.stop();
 			if (APICallError.isInstance(error) && !hasOtherModel(config)) {
-				progress?.fail("Couldn't generate tasks");
 				throw error;
 			}
-			progress?.stop();
 			logger.report(
 				`Streaming task generation failed (${error.message}); retrying in one request`,
 				'debug'
@@ -187,10 +188,8 @@ async function generateTasks(config, prompts, isCli) {
 		}
 		return { parsedTasks: generatedData.tasks, aiServiceResponse };
 	} catch (error) {
-		if (spinner) {
-			// The reason is printed once, by the command
-			failLoadingIndicator(spinner, "Couldn't generate tasks");
-		}
+		// The command prints the failure once, with its reason (#388)
+		stopLoadingIndicator(spinner);
 		throw error;
 	}
 }

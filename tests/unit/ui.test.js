@@ -32,27 +32,12 @@ vi.doMock('chalk', () => {
 	return chalk;
 });
 
-vi.doMock('figlet', () => ({
-	textSync: vi.fn(() => 'TaskGraph Banner')
-}));
-
-vi.doMock('ora', () =>
-	vi.fn(() => ({
-		start: vi.fn(),
-		succeed: vi.fn(),
-		fail: vi.fn(),
-		stop: vi.fn()
-	}))
-);
-
 vi.doMock('cli-table3', () =>
 	vi.fn().mockImplementation(() => ({
 		push: vi.fn(),
 		toString: vi.fn(() => 'Table Content')
 	}))
 );
-
-vi.doMock('gradient-string', () => vi.fn(() => vi.fn((text) => text)));
 
 vi.doMock('../../scripts/modules/utils.js', () => ({
 	CONFIG: {

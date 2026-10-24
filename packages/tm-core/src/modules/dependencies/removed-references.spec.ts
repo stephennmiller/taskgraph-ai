@@ -6,7 +6,7 @@ import {
 import { dropReferences, removeAllSubtasks } from './removed-references.js';
 
 type Item = {
-	id: number;
+	id: number | string;
 	dependencies?: (string | number)[];
 	metadata?: Record<string, unknown>;
 	subtasks?: Item[];
@@ -123,6 +123,27 @@ describe('removeAllSubtasks', () => {
 		list[1].subtasks?.push({ id: 2, dependencies: [] });
 
 		expect(list[2].dependencies).not.toContain('5.2');
+	});
+
+	it('reads a subtask stored with its dotted ID as that subtask', () => {
+		const list = tasks();
+		list[1].subtasks = [{ id: '5.2', dependencies: [] }];
+
+		removeAllSubtasks(list, list[1]);
+
+		expect(list[2].dependencies).toEqual([1]);
+		expect(list[2].subtasks?.[0].dependencies).toEqual([2]);
+	});
+
+	it('clears several tasks in one call', () => {
+		const list = tasks();
+
+		const count = removeAllSubtasks(list, list[1], list[2]);
+
+		expect(count).toBe(4);
+		expect(list[1].subtasks).toEqual([]);
+		expect(list[2].subtasks).toEqual([]);
+		expect(list[2].dependencies).toEqual([1]);
 	});
 
 	it('returns 0 for subtasks that are not a list', () => {

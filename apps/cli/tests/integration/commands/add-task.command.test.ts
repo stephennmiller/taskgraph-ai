@@ -140,7 +140,7 @@ describe.skipIf(!built)('add-task command output', () => {
 			)
 		);
 		expect(
-			saved.master.tasks.find((t: { id: number }) => t.id === 3).dependencies
+			saved.master.tasks.find((t: { id: string }) => t.id === '3').dependencies
 		).toEqual(['1', '2']);
 		expect(res.stdout).not.toMatch(BOXES);
 		expect(res.stdout).not.toContain('Context Analysis');

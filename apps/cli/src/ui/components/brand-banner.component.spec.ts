@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	displayAsciiBanner,
 	displayInitBanner,
+	isTopLevelHelpRequest,
 	shouldShowAsciiBanner
 } from './brand-banner.component.js';
 
@@ -85,7 +86,7 @@ describe('shouldShowAsciiBanner', () => {
 		[['--version']],
 		[['list', '--help']],
 		[['init']],
-		[['tui']]
+		[['doctor']]
 	])('leads with the result for %j', (args) => {
 		expect(shouldShowAsciiBanner(args, true)).toBe(false);
 	});
@@ -97,5 +98,28 @@ describe('shouldShowAsciiBanner', () => {
 
 	it('still honors --no-banner on the help screen', () => {
 		expect(shouldShowAsciiBanner(['--help', '--no-banner'], true)).toBe(false);
+	});
+});
+
+describe('isTopLevelHelpRequest', () => {
+	it.each([
+		[['--help']],
+		[['-h']],
+		[['help']],
+		[['--help', '--no-banner']],
+		[['--no-banner', '-h']]
+	])('is the top-level help screen for %j', (args) => {
+		expect(isTopLevelHelpRequest(args)).toBe(true);
+	});
+
+	it.each([
+		[[]],
+		[['--no-banner']],
+		[['list', '--help']],
+		[['--help', 'list']],
+		[['--version']],
+		[['next']]
+	])('is not for %j', (args) => {
+		expect(isTopLevelHelpRequest(args)).toBe(false);
 	});
 });

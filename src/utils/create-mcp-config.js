@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { MCP_SERVER_KEY, launchesTaskGraphPackage } from '@tm/core';
 import { log } from '../../scripts/modules/utils.js';
-import { MCP_SERVER_KEY, launchesTaskGraphPackage } from './mcp-server-key.js';
 
 // Return JSON with existing mcp.json formatting style
 function formatJSONWithTabs(obj) {
@@ -44,7 +44,7 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 
 	// New MCP config to be added - references the installed package
 	// TASKGRAPH_TOOLS: "core" loads essential daily workflow tools (7 tools, default)
-	// Options: "core" (7 essential tools), "standard" (16 common tools), "all" (40 tools)
+	// Options: "core" (7 essential tools), "standard" (16 common tools), "all" (every tool)
 	// See agent rules for tool tier details and how to upgrade if needed
 	const newMCPServer = {
 		[MCP_SERVER_KEY]: {

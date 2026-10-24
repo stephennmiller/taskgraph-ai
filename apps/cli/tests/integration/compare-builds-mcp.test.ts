@@ -13,7 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCliBinPath } from '../helpers/test-utils.js';
+import { getCliBinPath, spawnTimeout } from '../helpers/test-utils.js';
 import {
 	buildEnv,
 	deriveServerCommand,
@@ -58,7 +58,8 @@ describe('buildEnv for the MCP server', () => {
 	});
 });
 
-describe.skipIf(!built)('mcp steps', () => {
+// Up to two compares a test, each running init and the server once per build
+describe.skipIf(!built)('mcp steps', { timeout: spawnTimeout(8) }, () => {
 	let work: string;
 
 	beforeEach(() => {
@@ -275,6 +276,12 @@ require('readline').createInterface({ input: process.stdin }).on('line', (line) 
 
 		it('does not accept a timeout as the expected error', () => {
 			const build = makeBuild('a', { silentCall: true });
+			// The 8 s step bound below also bounds init, which the real CLI can
+			// overrun on a loaded machine (#422); a stand-in init is enough here
+			fs.writeFileSync(
+				build,
+				"#!/bin/sh\nmkdir -p .taskgraph/tasks && echo '{}' > .taskgraph/config.json\n"
+			);
 
 			const run = runScenario(
 				build,

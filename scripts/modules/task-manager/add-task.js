@@ -485,7 +485,7 @@ async function addTask(
 			tasksPath,
 			targetTag,
 			(tagData) => {
-				if (tagData.tasks.some((t) => t.id === newTask.id)) {
+				if (tagData.tasks.some((t) => String(t.id) === String(newTask.id))) {
 					newTask.id = nextTaskId(
 						tagData.tasks.map((t) => t.id),
 						archived.highestId

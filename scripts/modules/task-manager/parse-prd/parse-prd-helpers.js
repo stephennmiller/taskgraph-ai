@@ -78,15 +78,7 @@ export function recoverTaskList(text) {
 	}
 }
 
-/**
- * Estimate token count from text
- * @param {string} text - Text to estimate tokens for
- * @returns {number} Estimated token count
- */
-export function estimateTokens(text) {
-	// Common approximation: ~4 characters per token for English
-	return Math.ceil(text.length / 4);
-}
+export { estimateTokens } from '../../utils/estimate-tokens.js';
 
 /**
  * Read and validate PRD content

@@ -190,6 +190,30 @@ describe('clearSubtasks', () => {
 		});
 	});
 
+	test('should drop dependencies on cleared subtasks, including dotted stored IDs (#457)', () => {
+		readJSON.mockImplementation(() => {
+			const data = {
+				master: {
+					tasks: [
+						{
+							id: 3,
+							title: 'Task 3',
+							subtasks: [{ id: '3.2', title: 'Dotted' }]
+						},
+						{ id: 4, title: 'Task 4', subtasks: [{ id: 1, title: 'Sub 4.1' }] },
+						{ id: 5, title: 'Task 5', dependencies: ['3.2', '4.1', '3'] }
+					]
+				}
+			};
+			return { ...data.master, tag: 'master', _rawTaggedData: data };
+		});
+
+		clearSubtasks('tasks/tasks.json', '3,4', { tag: 'master' });
+
+		const written = writeJSON.mock.calls[0][1];
+		expect(written.tasks.find((t) => t.id === 5).dependencies).toEqual(['3']);
+	});
+
 	test('should clear nothing when one of several IDs is not found', () => {
 		// Arrange
 		const taskIds = '3,99'; // Mix of valid and invalid IDs

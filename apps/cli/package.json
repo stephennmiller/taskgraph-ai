@@ -7,6 +7,7 @@
 	"types": "./src/index.ts",
 	"exports": {
 		".": "./src/index.ts",
+		"./help": "./src/help.ts",
 		"./theme": "./src/ui/theme.ts",
 		"./errors": "./src/utils/error-handler.ts",
 		"./suggested-actions": "./src/ui/suggested-actions.ts"
@@ -22,8 +23,8 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"test:unit": "vitest run '**/*.spec.ts'",
-		"test:integration": "vitest run '**/*.test.ts'",
+		"test:unit": "vitest run .spec.ts",
+		"test:integration": "vitest run .test.ts",
 		"test:smoke": "vitest run tests/integration/task-lifecycle.test.ts tests/integration/lock-interop.test.ts tests/integration/commands/first-run.command.test.ts tests/integration/commands/help.command.test.ts tests/integration/commands/version.command.test.ts tests/integration/commands/list.command.test.ts tests/integration/commands/next.command.test.ts tests/integration/commands/show.command.test.ts tests/integration/commands/set-status.command.test.ts",
 		"test:ci": "vitest run --coverage --reporter=dot"
 	},
@@ -32,7 +33,6 @@
 		"chalk": "6.0.1",
 		"cli-table3": "^0.6.5",
 		"commander": "^15.0.0",
-		"figlet": "^1.12.0",
 		"gradient-string": "^3.0.0",
 		"inquirer": "^14.2.3",
 		"ora": "^9.4.1",

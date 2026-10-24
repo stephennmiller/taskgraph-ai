@@ -26,6 +26,7 @@
  */
 
 import {
+	type PluginCliCheck,
 	type PrimeContext,
 	type PrimeTask,
 	sanitizeForTerminal
@@ -101,7 +102,12 @@ export function formatPrimeContext(
 		)}`
 	];
 
-	if (counts.total === 0) {
+	if (context.tagMissing) {
+		lines.push(
+			'',
+			`Tag ${context.tag} isn't in tasks.json. Switch with ${theme.brand('taskgraph tags use <tag>')}`
+		);
+	} else if (counts.total === 0) {
 		lines.push(
 			'',
 			'No tasks yet. Add some with:',
@@ -236,5 +242,21 @@ export function formatUnnotedReminder(tasks: PrimeTask[]): string {
 		`If ${one ? "it's" : 'one is'} finished, check its criteria and close it:`,
 		`${INDENT}${theme.brand(`taskgraph set-status --id=${id} --status=done`)}`,
 		`If you didn't work on ${one ? 'it' : 'them'}, say so in one line and stop.`
+	].join('\n');
+}
+
+/**
+ * The line `prime --plugin-root` prints first when this CLI is older than the
+ * Claude Code plugin needs, worded for the agent that reads it:
+ *
+ *   The taskgraph CLI is 0.57.1, but the TaskGraph plugin needs >=0.58.0.
+ *   Ask the user to run: npm install -g taskgraph-ai@latest
+ */
+export function formatCliTooOldForPlugin(
+	check: Extract<PluginCliCheck, { ok: false }>
+): string {
+	return [
+		`The taskgraph CLI is ${sanitizeForTerminal(check.cliVersion)}, but the TaskGraph plugin needs ${sanitizeForTerminal(check.cliRange)}.`,
+		'Ask the user to run: npm install -g taskgraph-ai@latest'
 	].join('\n');
 }

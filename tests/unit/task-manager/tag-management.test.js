@@ -290,3 +290,25 @@ describe('Tag Management – --ready filter', () => {
 		expect(result.totalTags).toBe(0);
 	});
 });
+
+describe('Tag Management – listing with no tasks.json (#375)', () => {
+	beforeEach(() => {
+		fs.mkdirSync(TEMP_DIR, { recursive: true });
+	});
+
+	afterEach(() => {
+		fs.rmSync(TEMP_DIR, { recursive: true, force: true });
+	});
+
+	it('lists an empty master tag and writes no file', async () => {
+		const result = await listTags(
+			TASKS_PATH,
+			{ showTaskCounts: true },
+			{ projectRoot: TEMP_DIR },
+			'json'
+		);
+
+		expect(result.tags.map((t) => t.name)).toEqual(['master']);
+		expect(fs.readdirSync(TEMP_DIR)).toEqual([]);
+	});
+});

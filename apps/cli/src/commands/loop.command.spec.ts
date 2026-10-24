@@ -540,6 +540,13 @@ describe('LoopCommand', () => {
 			);
 		});
 
+		it('--no-output hides Claude output (#408)', async () => {
+			mockLoopRun.mockResolvedValue(createMockResult());
+			await (loopCommand as any).execute({ output: false });
+			const cb = mockLoopRun.mock.calls[0][0].callbacks;
+			expect(cb.onOutput ?? cb.onText ?? cb.onToolUse).toBeUndefined();
+		});
+
 		it('should check sandbox auth when --sandbox flag is provided', async () => {
 			const result = createMockResult();
 			mockLoopRun.mockResolvedValue(result);

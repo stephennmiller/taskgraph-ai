@@ -141,7 +141,6 @@ export class LoopService {
 				prompt,
 				i,
 				config.sandbox ?? false,
-				config.includeOutput ?? false,
 				config.verbose ?? false,
 				config.callbacks
 			);
@@ -312,7 +311,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		prompt: string,
 		iterationNum: number,
 		sandbox: boolean,
-		includeOutput = false,
 		verbose = false,
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
@@ -325,7 +323,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				iterationNum,
 				command,
 				sandbox,
-				includeOutput,
 				startTime,
 				callbacks
 			);
@@ -365,8 +362,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			iteration: iterationNum,
 			status,
 			duration: Date.now() - startTime,
-			message,
-			...(includeOutput && { output })
+			message
 		};
 	}
 
@@ -377,7 +373,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 	 * @param iterationNum - Current iteration number (1-indexed)
 	 * @param command - The command to execute ('claude' or 'docker')
 	 * @param sandbox - Whether running in Docker sandbox mode
-	 * @param includeOutput - Whether to include full output in the result
 	 * @param startTime - Timestamp when iteration started (for duration calculation)
 	 * @param callbacks - Optional callbacks for presentation layer output
 	 * @returns Promise resolving to the iteration result
@@ -387,7 +382,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		iterationNum: number,
 		command: string,
 		sandbox: boolean,
-		includeOutput: boolean,
 		startTime: number,
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
@@ -426,7 +420,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 					this.handleStreamEvent(event, callbacks);
 
-					// Capture final result for includeOutput feature
+					// Final result text, checked for completion markers
 					if (event.type === 'result') {
 						finalResult = typeof event.result === 'string' ? event.result : '';
 					}
@@ -524,8 +518,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 					iteration: iterationNum,
 					status,
 					duration: Date.now() - startTime,
-					message,
-					...(includeOutput && { output: finalResult })
+					message
 				});
 			});
 		});

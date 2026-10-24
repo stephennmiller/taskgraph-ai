@@ -20,7 +20,6 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import inquirer from 'inquirer';
 import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
@@ -80,7 +79,7 @@ export class LoopCommand extends Command {
 			)
 			.option(
 				'--no-output',
-				'Exclude full Claude output from iteration results'
+				"Hide Claude's output; show only each iteration's status"
 			)
 			.option('-v, --verbose', "Show Claude's work in real-time")
 			.option(
@@ -170,11 +169,8 @@ export class LoopCommand extends Command {
 				taskId: pinned?.id,
 				sandbox: options.sandbox,
 				trusted: options.trust,
-				// CLI defaults to including output (users typically want to see it)
-				// Domain defaults to false (library consumers opt-in explicitly)
-				includeOutput: options.output ?? true,
 				verbose: options.verbose ?? false,
-				callbacks: this.createOutputCallbacks()
+				callbacks: this.createOutputCallbacks(options.output ?? true)
 			};
 
 			const result = await this.tmCore.loop.run(config);
@@ -302,6 +298,7 @@ export class LoopCommand extends Command {
 				`loop runs ${who} with permission prompts off. Pass --trust to allow that here${instead}.`
 			);
 		}
+		const { default: inquirer } = await import('inquirer');
 		const { confirmed } = await inquirer.prompt([
 			{
 				type: 'confirm',
@@ -355,18 +352,19 @@ export class LoopCommand extends Command {
 		}
 	}
 
-	private createOutputCallbacks(): LoopOutputCallbacks {
+	private createOutputCallbacks(showOutput: boolean): LoopOutputCallbacks {
 		return {
 			onIterationStart: (iteration: number, total: number) => {
 				console.log();
 				console.log(chalk.cyan(`━━━ Iteration ${iteration} of ${total} ━━━`));
 			},
-			onText: (text: string) => {
-				console.log(text);
-			},
-			onToolUse: (toolName: string) => {
-				console.log(chalk.dim(`  → ${toolName}`));
-			},
+			// --no-output: Claude's text and tool calls aren't printed
+			...(showOutput && {
+				onText: (text: string) => console.log(text),
+				onToolUse: (toolName: string) =>
+					console.log(chalk.dim(`  → ${toolName}`)),
+				onOutput: (output: string) => console.log(output)
+			}),
 			onError: (message: string, severity?: 'warning' | 'error') => {
 				if (severity === 'warning') {
 					console.error(chalk.yellow(`[Loop Warning] ${message}`));
@@ -376,9 +374,6 @@ export class LoopCommand extends Command {
 			},
 			onStderr: (iteration: number, text: string) => {
 				process.stderr.write(chalk.dim(`[Iteration ${iteration}] `) + text);
-			},
-			onOutput: (output: string) => {
-				console.log(output);
 			},
 			onIterationEnd: (iteration: LoopIteration) => {
 				const statusColor =

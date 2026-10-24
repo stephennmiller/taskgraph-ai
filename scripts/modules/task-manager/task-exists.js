@@ -1,3 +1,5 @@
+import { fullSubtaskId } from '@tm/core';
+
 /**
  * Checks if a task with the given ID exists
  * @param {Array} tasks - Array of tasks to search
@@ -11,28 +13,27 @@ function taskExists(tasks, taskId) {
 		// Validate that it's a proper subtask format (parentId.subtaskId)
 		if (parts.length !== 2 || !parts[0] || !parts[1]) {
 			// Invalid format - treat as regular task ID
-			const id = parseInt(taskId, 10);
-			return tasks.some((t) => t.id === id);
+			const id = String(parseInt(taskId, 10));
+			return tasks.some((t) => String(t.id) === id);
 		}
 
 		const [parentIdStr, subtaskIdStr] = parts;
-		const parentId = parseInt(parentIdStr, 10);
-		const subtaskId = parseInt(subtaskIdStr, 10);
+		const parentId = String(parseInt(parentIdStr, 10));
+		const fullId = `${parentId}.${parseInt(subtaskIdStr, 10)}`;
 
-		// Find the parent task
-		const parentTask = tasks.find((t) => t.id === parentId);
-
-		// If parent exists, check if subtask exists
-		return (
-			parentTask &&
-			parentTask.subtasks &&
-			parentTask.subtasks.some((st) => st.id === subtaskId)
+		// Stored IDs may be numbers or strings, and a subtask's may be "1.2"
+		const parentTask = tasks.find((t) => String(t.id) === parentId);
+		return Boolean(
+			Array.isArray(parentTask?.subtasks) &&
+				parentTask.subtasks.some(
+					(st) => fullSubtaskId(parentTask.id, st.id) === fullId
+				)
 		);
 	}
 
 	// Handle regular task IDs
-	const id = parseInt(taskId, 10);
-	return tasks.some((t) => t.id === id);
+	const id = String(parseInt(taskId, 10));
+	return tasks.some((t) => String(t.id) === id);
 }
 
 export default taskExists;

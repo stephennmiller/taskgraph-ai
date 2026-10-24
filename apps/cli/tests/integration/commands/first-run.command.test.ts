@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import { getCliBinPath, spawnTimeout } from '../../helpers/test-utils.js';
 
 describe('first run', () => {
 	let dir: string;
@@ -67,7 +67,9 @@ describe('first run', () => {
 		expect(result.stderr).toContain(`No TaskGraph project at ${dir}`);
 	});
 
-	it('works on the project TASKGRAPH_PROJECT_ROOT names, from any folder', () => {
+	it('works on the project TASKGRAPH_PROJECT_ROOT names, from any folder', {
+		timeout: spawnTimeout(3)
+	}, () => {
 		// What a loop --parallel task worktree does
 		run(['init', '--yes', '--no-aliases', '--no-git']);
 		const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-first-run-'));
@@ -178,7 +180,9 @@ describe('first run', () => {
 		expect(result.stdout).toContain('master');
 	});
 
-	it("doesn't show the tag migration notice in a new project", () => {
+	it("doesn't show the tag migration notice in a new project", {
+		timeout: spawnTimeout(3)
+	}, () => {
 		run(['init', '--yes', '--no-aliases', '--no-git']);
 		run(['add-task', '--title', 'First', '--description', 'd']);
 

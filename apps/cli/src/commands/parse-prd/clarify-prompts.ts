@@ -10,7 +10,6 @@ import {
 	type Clarification,
 	type ClarifyingQuestion
 } from '@tm/core';
-import inquirer from 'inquirer';
 import {
 	formatAcceptedSuggestions,
 	formatClarifyAnswer,
@@ -57,6 +56,7 @@ export async function collectClarifications(
 	console.log(formatClarifyIntro(questions.length, options.prdName));
 	// Cleared when done so Ctrl-C leaves nothing half-drawn; the answer line
 	// is printed here instead
+	const { default: inquirer } = await import('inquirer');
 	const ask = inquirer.createPromptModule({ clearPromptOnDone: true });
 	const answers: Clarification[] = [];
 	try {

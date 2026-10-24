@@ -167,6 +167,6 @@ describe('add-subtask, remove-subtask and remove-task output', () => {
 
 		expect(res.status).toBe(0);
 		expect(lines(res.stdout)).toEqual(['✓ Removed task 2']);
-		expect(readTasks().map((t: { id: number }) => t.id)).toEqual([1, 3]);
+		expect(readTasks().map((t: { id: string }) => t.id)).toEqual(['1', '3']);
 	});
 });

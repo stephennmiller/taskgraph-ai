@@ -149,6 +149,33 @@ describe('prime command', () => {
 		expect(result.stderr).toContain('ISO time');
 	});
 
+	it('--plugin-root leads with a line to update when the plugin needs a newer CLI', () => {
+		const plugin = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-prime-plugin-'));
+		const manifest = (range: string) =>
+			fs.writeFileSync(
+				path.join(plugin, '.claude-plugin', 'plugin.json'),
+				JSON.stringify({ version: '99.0.0', metadata: { taskgraphCli: range } })
+			);
+		fs.mkdirSync(path.join(plugin, '.claude-plugin'));
+
+		try {
+			manifest('>=99.0.0');
+			const tooOld = run(['prime', '--plugin-root', plugin]);
+			manifest('>=0.0.1');
+			const newEnough = run(['prime', '--plugin-root', plugin]);
+			const withoutRoot = run(['prime', '--plugin-root', '']);
+
+			expect(tooOld.status).toBe(0);
+			expect(tooOld.stdout).toMatch(
+				/^The taskgraph CLI is \S+, but the TaskGraph plugin needs >=99\.0\.0\.\nAsk the user to run: npm install -g taskgraph-ai@latest\n\nTaskGraph tracks work/
+			);
+			expect(newEnough.stdout).toMatch(/^TaskGraph tracks work/);
+			expect(withoutRoot.stdout).toMatch(/^TaskGraph tracks work/);
+		} finally {
+			fs.rmSync(plugin, { recursive: true, force: true });
+		}
+	});
+
 	it('exits 1 with a fix outside a TaskGraph project', () => {
 		const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-prime-empty-'));
 		try {

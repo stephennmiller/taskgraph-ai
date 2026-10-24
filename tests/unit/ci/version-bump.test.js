@@ -1,7 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+	VERSION_FILES,
 	applyVersion,
 	bumpVersion,
 	determineBump,
@@ -132,8 +139,32 @@ describe('bumpVersion', () => {
 describe('applyVersion', () => {
 	let dir;
 
+	const pluginManifest = (version) =>
+		`{\n\t"name": "taskgraph",\n\t"version": "${version}",\n\t"metadata": { "taskgraphCli": ">=0.1.0" }\n}\n`;
+	const pluginPath = () =>
+		join(dir, 'packages/claude-code-plugin/.claude-plugin/plugin.json');
+
 	beforeEach(() => {
 		dir = mkdtempSync(join(tmpdir(), 'version-bump-'));
+		mkdirSync(join(dir, 'packages/claude-code-plugin/.claude-plugin'), {
+			recursive: true
+		});
+		writeFileSync(pluginPath(), pluginManifest('1.0.0'));
+	});
+
+	it('bumps the plugin manifest with the package, leaving its CLI range alone', () => {
+		writeFileSync(join(dir, 'package.json'), '{\n\t"version": "1.0.0"\n}\n');
+		writeFileSync(
+			join(dir, 'package-lock.json'),
+			'{\n  "version": "1.0.0",\n  "packages": {\n    "": { "version": "1.0.0" }\n  }\n}\n'
+		);
+
+		applyVersion(dir, '1.1.0');
+
+		expect(VERSION_FILES).toContain(
+			'packages/claude-code-plugin/.claude-plugin/plugin.json'
+		);
+		expect(readFileSync(pluginPath(), 'utf8')).toBe(pluginManifest('1.1.0'));
 	});
 
 	afterEach(() => {
