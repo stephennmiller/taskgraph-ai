@@ -84,6 +84,12 @@ describe('formatSubtaskRemoved', () => {
 		).toBe('✓ Subtask 1.2 is now task 4  Add indexes');
 	});
 
+	it('strips escape sequences from the typed ID', () => {
+		expect(formatSubtaskRemoved('1.1\x1b]0;pwned\x07', null)).not.toContain(
+			'\x1b]'
+		);
+	});
+
 	it('cuts a long title to fit narrow terminals', () => {
 		const line = plain(
 			formatSubtaskRemoved('1.2', { id: 4, title: 'B'.repeat(200) }, 40)
