@@ -146,6 +146,28 @@ interface TaskAnalysis {
 
 const logger = getLogger('ExpandTask');
 
+/** Report names the legacy MCP tools also looked for, after the default */
+const LEGACY_REPORT_NAMES = ['task-complexity', 'complexity-report'];
+
+/** An expansion that failed after its AI call, with that call's usage */
+interface ExpandError extends Error {
+	telemetryData?: AiTelemetryData | null;
+}
+
+/** `num` as a count, undefined when not given; anything but 0 or more is refused */
+function explicitCount(num: ExpandOptions['num']): number | undefined {
+	if (num === undefined || num === null || String(num).trim() === '') {
+		return undefined;
+	}
+	if (!/^\d+$/.test(String(num).trim())) {
+		throw new TaskGraphError(
+			`${JSON.stringify(String(num))} isn't a number of subtasks; use 0 or more`,
+			ERROR_CODES.VALIDATION_ERROR
+		);
+	}
+	return Number(String(num).trim());
+}
+
 export class ExpandTaskService {
 	constructor(
 		private readonly taskService: TaskService,
@@ -163,6 +185,7 @@ export class ExpandTaskService {
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
+		const num = explicitCount(input.num);
 		const { tasks, tag } = await this.taskService.loadStoredTasks(input.tag);
 		const stored = tasks.find((t) => String(t.id) === taskId);
 		if (!stored) {
@@ -204,7 +227,7 @@ export class ExpandTaskService {
 			input.complexityReportPath,
 			warn
 		);
-		const subtaskCount = this.subtaskCount(input.num, analysis, aiConfig, warn);
+		const subtaskCount = this.subtaskCount(num, analysis, aiConfig, warn);
 		if (subtaskCount === null) return skip('complexity-report');
 
 		const useResearch = input.research === true;
@@ -256,27 +279,32 @@ export class ExpandTaskService {
 			commandName: 'expand-task',
 			outputType: input.outputType ?? 'cli'
 		});
-		const generated = response?.mainResult?.subtasks;
-		if (!Array.isArray(generated)) {
-			throw new Error('AI response did not include a valid subtasks array.');
-		}
-		const addedSubtasks = this.prepareSubtasks(task, generated);
-
-		const { result: saved } = await this.taskService.modifyTasks((current) => {
-			const target = current.find((t) => String(t.id) === taskId);
-			if (!target) {
+		let saved: Task;
+		let addedSubtasks: Subtask[];
+		try {
+			const generated = response?.mainResult?.subtasks;
+			if (!Array.isArray(generated)) {
+				throw new Error('AI response did not include a valid subtasks array.');
+			}
+			// Saving none would leave the task as it was, or with force, empty it
+			if (generated.length === 0) {
 				throw new TaskGraphError(
-					`Task ${taskId} was removed while it was being expanded`,
-					ERROR_CODES.TASK_NOT_FOUND
+					`The AI returned no subtasks for task ${taskId}; the task was left as it was`,
+					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
-			// force replaces what is there, first dropping dependencies and links
-			// on the old subtasks: the new ones reuse their IDs
-			if (input.force) removeAllSubtasks(current as never, target as never);
-			if (!Array.isArray(target.subtasks)) target.subtasks = [];
-			target.subtasks.push(...addedSubtasks);
-			return { tasks: current, result: target };
-		}, tag);
+			addedSubtasks = this.prepareSubtasks(task, generated, (message) => {
+				logger.debug(message);
+				if (aiConfig.debug) hooks.onDebug?.(message);
+			});
+			saved = await this.save(taskId, tag, addedSubtasks, input.force === true);
+		} catch (error) {
+			// The call was made and paid for, even though nothing was saved
+			if (error instanceof Error) {
+				(error as ExpandError).telemetryData = response?.telemetryData;
+			}
+			throw error;
+		}
 
 		return {
 			task: saved,
@@ -289,6 +317,34 @@ export class ExpandTaskService {
 	}
 
 	/**
+	 * Add the subtasks to the task as tasks.json has it now, under the lock;
+	 * with force, in place of the ones it has
+	 */
+	private async save(
+		taskId: string,
+		tag: string,
+		addedSubtasks: Subtask[],
+		force: boolean
+	): Promise<Task> {
+		const { result } = await this.taskService.modifyTasks((current) => {
+			const target = current.find((t) => String(t.id) === taskId);
+			if (!target) {
+				throw new TaskGraphError(
+					`Task ${taskId} was removed while it was being expanded`,
+					ERROR_CODES.TASK_NOT_FOUND
+				);
+			}
+			// force replaces what is there, first dropping dependencies and links
+			// on the old subtasks: the new ones reuse their IDs
+			if (force) removeAllSubtasks(current as never, target as never);
+			if (!Array.isArray(target.subtasks)) target.subtasks = [];
+			target.subtasks.push(...addedSubtasks);
+			return { tasks: current, result: target };
+		}, tag);
+		return result;
+	}
+
+	/**
 	 * Expand every pending or in-progress task without subtasks (with force,
 	 * with them too), a few at a time. A task that fails is counted and the
 	 * rest go on.
@@ -297,6 +353,8 @@ export class ExpandTaskService {
 		options: ExpandOptions,
 		hooks: ExpandAllHooks = {}
 	): Promise<ExpandAllResult> {
+		// A bad count would fail every task the same way
+		explicitCount(options.num);
 		const { tasks, tag } = await this.taskService.loadStoredTasks(options.tag);
 		const open = tasks.filter(
 			(t) => t.status === 'pending' || t.status === 'in-progress'
@@ -321,22 +379,23 @@ export class ExpandTaskService {
 		const telemetry: AiTelemetryData[] = [];
 		await mapWithConcurrency(eligible, EXPAND_ALL_CONCURRENCY, async (task) => {
 			const id = String(task.id);
+			let outcome: ExpandTaskResult | Error;
 			try {
-				const expanded = await this.expand({ ...options, id, tag }, hooks);
-				if (expanded.skipped) {
+				outcome = await this.expand({ ...options, id, tag }, hooks);
+				if (outcome.skipped) {
 					result.skippedCount++;
 				} else {
 					result.expandedCount++;
-					if (expanded.telemetryData) telemetry.push(expanded.telemetryData);
+					if (outcome.telemetryData) telemetry.push(outcome.telemetryData);
 				}
-				hooks.onTaskDone?.(id, expanded);
 			} catch (error) {
 				result.failedCount++;
-				hooks.onTaskDone?.(
-					id,
-					error instanceof Error ? error : new Error(String(error))
-				);
+				outcome = error instanceof Error ? error : new Error(String(error));
+				const spent = (outcome as ExpandError).telemetryData;
+				if (spent) telemetry.push(spent);
 			}
+			// Outside the try: a hook that throws must not count the task twice
+			hooks.onTaskDone?.(id, outcome);
 		});
 		result.telemetryData = aggregateTelemetry(telemetry, 'expand-all-tasks');
 		return result;
@@ -349,16 +408,25 @@ export class ExpandTaskService {
 		reportPath: string | undefined,
 		warn: (message: string) => void
 	): TaskAnalysis | undefined {
+		const suffix = tag === 'master' ? '.json' : `_${tag}.json`;
+		const defaultFile = path.join(
+			this.configManager.getProjectRoot(),
+			COMPLEXITY_REPORT_FILE.replace('.json', suffix)
+		);
 		const file =
 			reportPath ??
-			path.join(
-				this.configManager.getProjectRoot(),
-				tag === 'master'
-					? COMPLEXITY_REPORT_FILE
-					: COMPLEXITY_REPORT_FILE.replace('.json', `_${tag}.json`)
-			);
+			[
+				defaultFile,
+				...LEGACY_REPORT_NAMES.map((name) =>
+					path.join(path.dirname(defaultFile), `${name}${suffix}`)
+				)
+			].find((candidate) => fs.existsSync(candidate));
+		if (!file) return undefined;
 		try {
-			if (!fs.existsSync(file)) return undefined;
+			if (!fs.existsSync(file)) {
+				warn(`Complexity report ${file} not found. Proceeding without it.`);
+				return undefined;
+			}
 			const report = JSON.parse(fs.readFileSync(file, 'utf-8'));
 			return (report?.complexityAnalysis as TaskAnalysis[] | undefined)?.find(
 				(a) => String(a.taskId) === String(task.id)
@@ -377,14 +445,13 @@ export class ExpandTaskService {
 	 * task; an explicit 0 instead lets the AI choose.
 	 */
 	private subtaskCount(
-		num: ExpandOptions['num'],
+		explicit: number | undefined,
 		analysis: TaskAnalysis | undefined,
 		aiConfig: AiConfig,
 		warn: (message: string) => void
 	): number | null {
 		let count: number;
-		const explicit = parseInt(String(num), 10);
-		if (!Number.isNaN(explicit) && explicit >= 0) {
+		if (explicit !== undefined) {
 			count = explicit;
 		} else if (analysis?.recommendedSubtasks != null) {
 			count = parseInt(String(analysis.recommendedSubtasks), 10);
@@ -426,7 +493,11 @@ export class ExpandTaskService {
 	}
 
 	/** The AI's subtasks, ordered and ready to store */
-	private prepareSubtasks(task: Task, generated: any[]): Subtask[] {
+	private prepareSubtasks(
+		task: Task,
+		generated: any[],
+		debug: (message: string) => void
+	): Subtask[] {
 		// No subtask waits on a later sibling or on a task its parent doesn't
 		const ordered = orderGeneratedSubtasks(
 			task,
@@ -437,7 +508,7 @@ export class ExpandTaskService {
 					task.id
 				)
 			})),
-			(message) => logger.debug(message)
+			debug
 		);
 		const source = getPrdSource(task);
 		return ordered.map((subtask) => {

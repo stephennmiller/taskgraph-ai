@@ -340,6 +340,34 @@ describe('tasks.expand', () => {
 
 			expect(generateObject.mock.calls[0][0].prompt).toContain('exactly 5');
 		});
+
+		it('warns when the report given does not exist', async () => {
+			const warnings: string[] = [];
+
+			await tmCore.tasks.expand(
+				{ id: '3', complexityReportPath: path.join(projectDir, 'nope.json') },
+				{ onWarning: (message) => warnings.push(message) }
+			);
+
+			expect(warnings).toEqual([expect.stringContaining('nope.json not found')]);
+			expect(generateObject).toHaveBeenCalledOnce();
+		});
+
+		it.each([
+			'task-complexity.json',
+			'complexity-report.json'
+		])('falls back to %s, as the legacy MCP tool did', async (name) => {
+			fs.writeFileSync(
+				path.join(projectDir, '.taskgraph', 'reports', name),
+				JSON.stringify({
+					complexityAnalysis: [{ taskId: 3, recommendedSubtasks: 0 }]
+				})
+			);
+
+			const result = await tmCore.tasks.expand({ id: '3' });
+
+			expect(result.skipped).toBe('complexity-report');
+		});
 	});
 
 	describe('subtask count', () => {
@@ -351,10 +379,22 @@ describe('tasks.expand', () => {
 			expect(askedFor()).toContain('an appropriate number of');
 		});
 
-		it('falls back to defaultSubtasks for a negative or missing count', async () => {
-			await tmCore.tasks.expand({ id: '3', num: -2 });
+		it('falls back to defaultSubtasks for a missing count', async () => {
+			await tmCore.tasks.expand({ id: '3', num: '' });
 
 			expect(askedFor()).toContain('exactly 5');
+		});
+
+		it.each([
+			-2,
+			'-2',
+			'abc',
+			'3abc'
+		])('refuses %j before any AI call', async (num) => {
+			await expect(tmCore.tasks.expand({ id: '3', num })).rejects.toThrow(
+				"isn't a number of subtasks"
+			);
+			expect(generateObject).not.toHaveBeenCalled();
 		});
 	});
 
@@ -377,6 +417,19 @@ describe('tasks.expand', () => {
 			]);
 			expect(saved[0].dependencies).toEqual([]);
 			expect(saved[0].metadata).toBeUndefined();
+		});
+
+		it('keeps the subtasks when the AI returns none, and fails with its usage', async () => {
+			generateObject.mockResolvedValue(answer([]) as any);
+
+			const error = await tmCore.tasks
+				.expand({ id: '2', num: 2, force: true })
+				.catch((e: unknown) => e);
+
+			expect(error).toBeInstanceOf(Error);
+			expect((error as Error).message).toContain('returned no subtasks');
+			expect((error as any).telemetryData).toEqual({ totalTokens: 10 });
+			expect(readFile().master.tasks[1].subtasks).toHaveLength(2);
 		});
 
 		it('leaves the subtasks as they were when the AI call fails', async () => {

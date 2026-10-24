@@ -178,22 +178,29 @@ async function main(judge: boolean): Promise<void> {
 	output.complexity = analysis.report.complexityAnalysis ?? [];
 
 	const tmCore = await createTmCore({ projectPath: projectDir });
-	for (const [index, task] of output.tasks.entries()) {
-		step(`expanding task ${index + 1} of ${output.tasks.length}`);
-		await timed(
-			'expand',
-			() =>
-				tmCore.tasks.expand({
-					id: task.id,
-					force: true,
-					tag: TAG,
-					complexityReportPath: reportPath,
-					outputType: 'mcp'
-				}),
-			String(task.id)
-		);
+	try {
+		for (const [index, task] of output.tasks.entries()) {
+			step(`expanding task ${index + 1} of ${output.tasks.length}`);
+			await timed(
+				'expand',
+				() =>
+					tmCore.tasks.expand(
+						{
+							id: task.id,
+							force: true,
+							tag: TAG,
+							complexityReportPath: reportPath,
+							outputType: 'mcp'
+						},
+						// A report that doesn't parse changes the plan; say so
+						{ onWarning: (message) => quiet.error(`warning: ${message}`) }
+					),
+				String(task.id)
+			);
+		}
+	} finally {
+		await tmCore.close();
 	}
-	await tmCore.close();
 	output.tasks = readTasks();
 
 	if (!judge) return;

@@ -165,6 +165,43 @@ describe('tasks.expandAll', () => {
 		expect(readFile().master.tasks[1].subtasks).toEqual([]);
 	});
 
+	it('sums the usage of a call whose result could not be saved', async () => {
+		generateObject.mockImplementation(async (params: any) =>
+			taskIdOf(params) === '2'
+				? ({ ...answer(7), mainResult: { subtasks: [] } } as any)
+				: (answer(10) as any)
+		);
+
+		const result = await tmCore.tasks.expandAll({ num: 1 });
+
+		expect(result).toMatchObject({ expandedCount: 2, failedCount: 1 });
+		expect(result.telemetryData?.inputTokens).toBe(27);
+	});
+
+	it('calls onTaskDone once per task, even when it throws', async () => {
+		const calls: string[] = [];
+
+		await expect(
+			tmCore.tasks.expandAll(
+				{ num: 1 },
+				{
+					onTaskDone: (id) => {
+						calls.push(id);
+						throw new Error('display broke');
+					}
+				}
+			)
+		).rejects.toThrow('display broke');
+		expect(new Set(calls).size).toBe(calls.length);
+	});
+
+	it('refuses a bad count before any AI call', async () => {
+		await expect(tmCore.tasks.expandAll({ num: 'abc' })).rejects.toThrow(
+			"isn't a number of subtasks"
+		);
+		expect(generateObject).not.toHaveBeenCalled();
+	});
+
 	it('expands up to three tasks at once, every one saved', async () => {
 		let running = 0;
 		let most = 0;

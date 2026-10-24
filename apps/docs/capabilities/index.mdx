@@ -79,9 +79,8 @@ The CLI is organized into a series of commands, each with its own set of options
     -   `--num-tasks <numTasks>`: About how many tasks to generate. Without it, the list is sized to the PRD (`global.defaultNumTasks` in config overrides that).
 -   **`expand`**: Expands a task into subtasks.
     -   `--id <taskId>`: The ID of the task to expand.
-    -   `--num-subtasks <numSubtasks>`: The number of subtasks to generate.
--   **`expand-all`**: Expands all eligible tasks.
-    -   `--num-subtasks <numSubtasks>`: The number of subtasks to generate for each task.
+    -   `--num <number>`: The number of subtasks to generate (the complexity report's count, or `global.defaultSubtasks`, when left out).
+    -   `--all`: Expands every pending or in-progress task without subtasks (with `--force`, those with subtasks too).
 -   **`analyze-complexity`**: Analyzes task complexity.
     -   `--file <file>`: The path to the tasks file.
 -   **`complexity-report`**: Displays the complexity analysis report.
@@ -153,8 +152,8 @@ These functions are used to retrieve information about tasks and manage their st
 These functions leverage AI to analyze and break down tasks.
 
 -   **`parsePRD(prdPath, numTasks)`**: Parses a Product Requirements Document (PRD) to generate an initial set of tasks.
--   **`expandTask(taskId, numSubtasks)`**: Expands a task into a specified number of subtasks using AI.
--   **`expandAllTasks(numSubtasks)`**: Expands all eligible pending or in-progress tasks.
+-   **`tmCore.tasks.expand({ id, num })`**: Expands a task into a specified number of subtasks using AI.
+-   **`tmCore.tasks.expandAll({ num })`**: Expands all eligible pending or in-progress tasks.
 -   **`analyzeTaskComplexity(options)`**: Analyzes the complexity of tasks and generates recommendations for expansion.
 -   **`readComplexityReport()`**: Reads the complexity analysis report.
 

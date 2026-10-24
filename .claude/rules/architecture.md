@@ -26,7 +26,7 @@ paths:
       - **Tag Resolution**: Provides backward compatibility by resolving tagged format to legacy format transparently.
       - **Delegating AI interactions** to the `ai-services-unified.js` layer.
       - Accessing non-AI configuration via `config-manager.js` getters.
-    - **Key Files**: Individual files within `scripts/modules/task-manager/` handle specific actions (e.g., `expand-task.js`). `add-task` lives in `@tm/core` (`tmCore.tasks.add`).
+    - **Key Files**: Individual files within `scripts/modules/task-manager/` handle specific actions (e.g., `update-task-by-id.js`). `add-task` and `expand` live in `@tm/core` (`tmCore.tasks.add`, `tmCore.tasks.expand`).
 
   - **[`modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/) in `@tm/core`: Dependency Management**
     - **Purpose**: Manages task dependencies.
