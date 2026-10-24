@@ -34,9 +34,9 @@ describe('checkHeadingCoverage', () => {
 	it('lists the headings no task covers', () => {
 		const result = checkHeadingCoverage(plan(), 'prd.md', prd);
 
-		expect(result.uncovered).toEqual(['Overview', 'Rate limiting', 'Setup']);
-		expect(result.sections).toBe(10);
-		expect(result.score).toBeCloseTo(0.7);
+		expect(result.uncovered).toEqual(['Rate limiting', 'Setup']);
+		expect(result.sections).toBe(9);
+		expect(result.score).toBeCloseTo(7 / 9);
 		expect(result.unsourced).toEqual([]);
 	});
 
@@ -46,7 +46,7 @@ describe('checkHeadingCoverage', () => {
 		const result = checkHeadingCoverage(tasks, 'prd.md', prd);
 
 		expect(result.score).toBe(0);
-		expect(result.uncovered).toHaveLength(10);
+		expect(result.uncovered).toHaveLength(9);
 		expect(result.unsourced).toEqual(['1', '2', '3', '4']);
 	});
 
@@ -88,6 +88,54 @@ describe('checkHeadingCoverage', () => {
 
 		expect(result.uncovered).toEqual(['Billing']);
 		expect(result.sections).toBe(3);
+	});
+
+	it('needs no task for top-level intro headings', () => {
+		const content = [
+			'# App',
+			'## Overview',
+			'## Summary',
+			'## Background',
+			'## Context',
+			'## Introduction',
+			'## Goals',
+			'## Motivation',
+			'## Problem',
+			'## Login'
+		].join('\n\n');
+
+		const result = checkHeadingCoverage(
+			[{ id: 1, metadata: { source: 'prd.md#login' } }],
+			'prd.md',
+			content
+		);
+
+		expect(result).toMatchObject({ score: 1, sections: 2, uncovered: [] });
+	});
+
+	it('still counts Users, Sources, Performance and nested intro headings', () => {
+		const content = [
+			'# App',
+			'## Users',
+			'## Sources',
+			'## Performance',
+			'### Overview',
+			'## Login'
+		].join('\n\n');
+
+		const result = checkHeadingCoverage(
+			[{ id: 1, metadata: { source: 'prd.md#login' } }],
+			'prd.md',
+			content
+		);
+
+		expect(result.uncovered).toEqual([
+			'Users',
+			'Sources',
+			'Performance',
+			'Overview'
+		]);
+		expect(result.sections).toBe(6);
 	});
 
 	it('reports tasks without a section', () => {
@@ -257,7 +305,7 @@ describe('checkPlan', () => {
 		});
 
 		expect(checks.subtaskComplexity.score).toBeNull();
-		// coverage 0.7, dependencies 1, criteria 1
-		expect(score).toBeCloseTo(2.7 / 3);
+		// coverage 7/9, dependencies 1, criteria 1
+		expect(score).toBeCloseTo((7 / 9 + 2) / 3);
 	});
 });
