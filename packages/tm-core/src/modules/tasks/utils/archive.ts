@@ -455,15 +455,11 @@ async function updateArchiveFile(
 ): Promise<void> {
 	const archivePath = archivePathFor(tasksPath);
 	const fileOps = new FileOperations();
-	try {
-		if (!(await fileOps.exists(archivePath))) return;
-		await fileOps.modifyJson(
-			archivePath,
-			(current: ArchiveData) => change(current ?? {}) ?? current
-		);
-	} finally {
-		await fileOps.cleanup();
-	}
+	if (!(await fileOps.exists(archivePath))) return;
+	await fileOps.modifyJson(
+		archivePath,
+		(current: ArchiveData) => change(current ?? {}) ?? current
+	);
 }
 
 /** Move a renamed tag's archived tasks to its new name (see renameArchiveTag) */

@@ -79,6 +79,24 @@ async function refuseSymlink(filePath: string): Promise<void> {
 }
 
 /**
+ * On Windows, renaming over a file another process has open (an antivirus
+ * scan, an editor) fails briefly with EPERM/EACCES/EBUSY. Retry as steno did:
+ * up to 10 tries, 100 ms apart.
+ */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await fs.rename(from, to);
+		} catch (err: any) {
+			if (attempt >= 10 || !RENAME_RETRY_CODES.has(err?.code)) throw err;
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
+}
+
+const RENAME_RETRY_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
+
+/**
  * Replace a file atomically. The temp file gets a random name and is created
  * with O_CREAT|O_EXCL, so a symlink planted next to the file can't redirect
  * the write (#616).
@@ -93,7 +111,7 @@ async function writeFileAtomic(
 	);
 	try {
 		await fs.writeFile(tempPath, content, { flag: 'wx' });
-		await fs.rename(tempPath, filePath);
+		await renameWithRetry(tempPath, filePath);
 	} catch (err) {
 		await fs.rm(tempPath, { force: true }).catch(() => undefined);
 		throw err;
@@ -354,10 +372,4 @@ export class FileOperations {
 			);
 		}
 	}
-
-	/**
-	 * Release resources. Nothing is cached now; kept for callers that dispose
-	 * of instances.
-	 */
-	async cleanup(): Promise<void> {}
 }

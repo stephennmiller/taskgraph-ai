@@ -7,7 +7,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileOperations } from './file-operations.js';
 
 describe('FileOperations', () => {
@@ -23,8 +23,6 @@ describe('FileOperations', () => {
 	});
 
 	afterEach(async () => {
-		// Clean up
-		await fileOps.cleanup();
 		if (tempDir && fsSync.existsSync(tempDir)) {
 			fsSync.rmSync(tempDir, { recursive: true, force: true });
 		}
@@ -215,9 +213,6 @@ describe('FileOperations', () => {
 
 			await Promise.all(writes);
 
-			// Cleanup all instances
-			await Promise.all(instances.map((ops) => ops.cleanup()));
-
 			const result = JSON.parse(await fs.readFile(testFilePath, 'utf-8'));
 			expect(result.count).toBe(numInstances);
 		});
@@ -287,6 +282,41 @@ describe('FileOperations', () => {
 		});
 	});
 
+	describe('rename into place', () => {
+		const tempFiles = () =>
+			fsSync.readdirSync(tempDir).filter((f) => f.endsWith('.tmp'));
+
+		afterEach(() => {
+			vi.restoreAllMocks();
+		});
+
+		it('retries a rename Windows refuses while the file is open', async () => {
+			const rename = fs.rename;
+			vi.spyOn(fs, 'rename').mockImplementationOnce(() =>
+				Promise.reject(Object.assign(new Error('busy'), { code: 'EPERM' }))
+			);
+			vi.mocked(fs.rename).mockImplementation(rename);
+
+			await fileOps.writeJson(testFilePath, { a: 1 });
+
+			expect(JSON.parse(fsSync.readFileSync(testFilePath, 'utf-8'))).toEqual({
+				a: 1
+			});
+			expect(tempFiles()).toHaveLength(0);
+		});
+
+		it('removes the temp file when the rename fails', async () => {
+			vi.spyOn(fs, 'rename').mockRejectedValue(
+				Object.assign(new Error('nope'), { code: 'EXDEV' })
+			);
+
+			await expect(fileOps.writeJson(testFilePath, { a: 1 })).rejects.toThrow(
+				'nope'
+			);
+			expect(tempFiles()).toHaveLength(0);
+		});
+	});
+
 	describe('lock file left by the legacy writer', () => {
 		// The legacy scripts take `<file>.lock` as a plain file; tm-core's lock is a
 		// directory at the same path. A crashed legacy write leaves the file behind.
@@ -322,22 +352,6 @@ describe('FileOperations', () => {
 				ok: true
 			});
 			expect(fsSync.existsSync(lockPath)).toBe(false);
-		});
-	});
-
-	describe('cleanup', () => {
-		it('should clear cached writers', async () => {
-			// Write to create a cached writer
-			await fileOps.writeJson(testFilePath, { test: 1 });
-
-			// Cleanup
-			await fileOps.cleanup();
-
-			// Should still work after cleanup (creates new writer)
-			await fileOps.writeJson(testFilePath, { test: 2 });
-
-			const result = JSON.parse(await fs.readFile(testFilePath, 'utf-8'));
-			expect(result.test).toBe(2);
 		});
 	});
 });

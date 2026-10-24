@@ -1165,7 +1165,9 @@ function writeJSON(filepath, data, projectRoot = null, tag = null) {
 				if (
 					fs.lstatSync(filepath, { throwIfNoEntry: false })?.isSymbolicLink()
 				) {
-					throw new Error(`Refusing to write ${filepath}: it is a symlink`);
+					throw new Error(
+						`Refusing to write ${filepath}: it is a symlink. Replace it with a regular file.`
+					);
 				}
 				const tempPath = path.join(
 					path.dirname(filepath),
