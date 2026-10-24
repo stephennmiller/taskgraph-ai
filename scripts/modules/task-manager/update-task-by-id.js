@@ -5,17 +5,17 @@ import {
 	keepStoredFields,
 	reconcileDependencySources,
 	stripTerminalControls,
-	withoutReservedMetadata
+	withoutReservedMetadata,
+	COMMAND_SCHEMAS,
+	getPromptManager
 } from '@tm/core';
 import fs from 'fs';
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import {
 	generateObjectService,
 	generateTextService
 } from '../ai-services-unified.js';
 import { createBridgeLogger } from '../bridge-utils.js';
 import { hasCodebaseAnalysis } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
 	startLoadingIndicator,

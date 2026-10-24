@@ -88,8 +88,9 @@ vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
 	}))
 }));
 
-// Mock prompt-manager module
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+// Mock the prompt manager
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn((promptId, params) => ({
 			systemPrompt:
@@ -137,8 +138,7 @@ const { default: updateTaskById } = await import(
 	'../../../../../scripts/modules/task-manager/update-task-by-id.js'
 );
 
-import { resolveSubtaskDependency } from '@tm/core';
-import { COMMAND_SCHEMAS } from '../../../../../src/schemas/registry.js';
+import { COMMAND_SCHEMAS, resolveSubtaskDependency } from '@tm/core';
 
 const subtask = (id, title, dependencies) => ({
 	id,

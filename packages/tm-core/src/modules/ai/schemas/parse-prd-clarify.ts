@@ -1,7 +1,5 @@
 import { z } from 'zod';
-
-/** The most questions `parse-prd --clarify` asks (MAX_CLARIFYING_QUESTIONS in @tm/core) */
-const MAX_QUESTIONS = 5;
+import { MAX_CLARIFYING_QUESTIONS } from '../../prd/clarifications.js';
 
 const ClarifyingQuestionSchema = z
 	.object({
@@ -19,6 +17,6 @@ const ClarifyingQuestionSchema = z
 // What `parse-prd --clarify` asks before generating tasks
 export const ParsePRDClarifyResponseSchema = z
 	.object({
-		questions: z.array(ClarifyingQuestionSchema).max(MAX_QUESTIONS)
+		questions: z.array(ClarifyingQuestionSchema).max(MAX_CLARIFYING_QUESTIONS)
 	})
 	.strict();

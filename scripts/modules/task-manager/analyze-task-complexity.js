@@ -1,3 +1,4 @@
+import { COMMAND_SCHEMAS, getPromptManager } from '@tm/core';
 import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
@@ -10,7 +11,6 @@ import {
 	stopLoadingIndicator
 } from '../ui.js';
 
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 
 import { printError, ui } from '@tm/cli';
@@ -21,7 +21,6 @@ import {
 	getProjectName,
 	hasCodebaseAnalysis
 } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
 import { flattenTasksWithSubtasks } from '../utils.js';
 import { ContextGatherer } from '../utils/contextGatherer.js';
 import { FuzzyTaskSearch } from '../utils/fuzzyTaskSearch.js';

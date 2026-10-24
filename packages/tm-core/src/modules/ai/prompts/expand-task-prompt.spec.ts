@@ -1,13 +1,13 @@
-import { PromptManager } from '../../../scripts/modules/prompt-manager.js';
+import { PromptManager } from './prompt-manager.js';
 import { zodSchema } from 'ai';
-import { SubtaskSchema } from '../../../src/schemas/base-schemas.js';
+import { SubtaskSchema } from '../schemas/base-schemas.js';
 import {
 	ExpandedSubtaskSchema,
 	ExpandTaskResponseSchema
-} from '../../../src/schemas/expand-task.js';
+} from '../schemas/expand-task.js';
 
 describe('expand-task prompt template', () => {
-	let promptManager;
+	let promptManager: PromptManager;
 
 	beforeEach(() => {
 		promptManager = new PromptManager();
@@ -127,8 +127,8 @@ describe('expand-task prompt template', () => {
 		});
 
 		test('the JSON Schema sent to the model lists the field as required', () => {
-			const item = zodSchema(ExpandTaskResponseSchema).jsonSchema.properties
-				.subtasks.items;
+			const item = (zodSchema(ExpandTaskResponseSchema).jsonSchema as any)
+				.properties.subtasks.items;
 
 			expect(item.required).toContain('acceptanceCriteria');
 			expect(item.additionalProperties).toBe(false);

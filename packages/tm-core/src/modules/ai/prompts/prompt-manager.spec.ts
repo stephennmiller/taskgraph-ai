@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 // Import the actual PromptManager to test with real prompt files
-import { PromptManager } from '../../scripts/modules/prompt-manager.js';
+import { PromptManager } from './prompt-manager.js';
 
 // Mock only the console logging
 const originalLog = console.log;
@@ -33,7 +33,7 @@ afterAll(() => {
 });
 
 describe('PromptManager', () => {
-	let promptManager;
+	let promptManager: PromptManager;
 
 	beforeEach(() => {
 		promptManager = new PromptManager();
@@ -105,12 +105,12 @@ describe('PromptManager', () => {
 			const result1 = promptManager.loadPrompt('research', { query: 'test' });
 
 			// Mark the result to verify cache is used
-			result1._cached = true;
+			(result1 as any)._cached = true;
 
 			// Second call with same parameters should return cached result
 			const result2 = promptManager.loadPrompt('research', { query: 'test' });
 
-			expect(result2._cached).toBe(true);
+			expect((result2 as any)._cached).toBe(true);
 			expect(result1).toBe(result2); // Same object reference
 		});
 
@@ -200,8 +200,8 @@ describe('PromptManager', () => {
 	});
 
 	describe('project summary', () => {
-		let project;
-		const expandParams = (extra) => ({
+		let project: string;
+		const expandParams = (extra: Record<string, unknown>) => ({
 			task: { id: 1, title: 'Add login', description: 'Login page' },
 			subtaskCount: 3,
 			nextSubtaskId: 1,

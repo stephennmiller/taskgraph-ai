@@ -2,9 +2,9 @@
  * Configuration classes and schemas for PRD parsing
  */
 
+import { GeneratedAcceptanceCriteriaSchema } from '@tm/core';
 import { z } from 'zod';
 import { TASK_PRIORITY_OPTIONS } from '../../../../src/constants/task-priority.js';
-import { GeneratedAcceptanceCriteriaSchema } from '../../../../src/schemas/base-schemas.js';
 import { hasCodebaseAnalysis } from '../../config-manager.js';
 import { getCurrentTag, isSilentMode, log } from '../../utils.js';
 

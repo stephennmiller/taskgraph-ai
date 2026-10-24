@@ -7,11 +7,11 @@
 import fs from 'fs';
 import {
 	MAX_CLARIFYING_QUESTIONS,
-	normalizeClarifyingQuestions
+	normalizeClarifyingQuestions,
+	COMMAND_SCHEMAS,
+	getPromptManager
 } from '@tm/core';
-import { COMMAND_SCHEMAS } from '../../../../src/schemas/registry.js';
 import { generateObjectService } from '../../ai-services-unified.js';
-import { getPromptManager } from '../../prompt-manager.js';
 
 /**
  * Ask the model which gaps in the PRD would change the tasks

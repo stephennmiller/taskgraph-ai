@@ -6,6 +6,7 @@ import { UpdateSubtaskResponseSchema } from './update-subtask.js';
 import { UpdateTaskResponseSchema } from './update-task.js';
 import { UpdateTasksResponseSchema } from './update-tasks.js';
 
+/** The response schema each AI command passes to the model */
 export const COMMAND_SCHEMAS = {
 	'update-tasks': UpdateTasksResponseSchema,
 	'expand-task': ExpandTaskResponseSchema,
@@ -15,13 +16,3 @@ export const COMMAND_SCHEMAS = {
 	'add-task': AddTaskResponseSchema,
 	'parse-prd-clarify': ParsePRDClarifyResponseSchema
 };
-
-// Export individual schemas for direct access
-export * from './update-tasks.js';
-export * from './expand-task.js';
-export * from './analyze-complexity.js';
-export * from './update-subtask.js';
-export * from './update-task.js';
-export * from './add-task.js';
-export * from './parse-prd-clarify.js';
-export * from './base-schemas.js';

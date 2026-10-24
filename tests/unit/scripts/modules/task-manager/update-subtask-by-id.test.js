@@ -54,7 +54,8 @@ vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 	hasCodebaseAnalysis: vi.fn(() => false)
 }));
 
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	default: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn().mockReturnValue('Update the subtask')
 	}),

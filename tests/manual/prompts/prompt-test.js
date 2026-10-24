@@ -13,6 +13,7 @@
  *   node prompt-test.js --help       # Show help
  */
 
+import { getPromptManager } from '@tm/core';
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
@@ -24,7 +25,6 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '../../..');
 
 // Import prompt manager
-import { getPromptManager } from '../../../scripts/modules/prompt-manager.js';
 const promptManager = getPromptManager();
 
 // ANSI color codes for better output formatting

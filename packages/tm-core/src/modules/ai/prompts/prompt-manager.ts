@@ -1,50 +1,79 @@
-import { createRequire } from 'module';
-import { getRepoSummary } from '@tm/core';
-import { log } from './utils.js';
+import { createRequire } from 'node:module';
+import type { ValidateFunction } from 'ajv';
+import { getLogger } from '../../../common/logger/index.js';
+import { getRepoSummary } from '../../codebase/index.js';
 
-import addTaskPrompt from '../../src/prompts/add-task.json' with {
-	type: 'json'
-};
+import addTaskPrompt from './add-task.json' with { type: 'json' };
 // Import all prompt templates directly
-import analyzeComplexityPrompt from '../../src/prompts/analyze-complexity.json' with {
+import analyzeComplexityPrompt from './analyze-complexity.json' with {
 	type: 'json'
 };
-import expandTaskPrompt from '../../src/prompts/expand-task.json' with {
+import expandTaskPrompt from './expand-task.json' with { type: 'json' };
+import parsePrdPrompt from './parse-prd.json' with { type: 'json' };
+import parsePrdClarifyPrompt from './parse-prd-clarify.json' with {
 	type: 'json'
 };
-import parsePrdPrompt from '../../src/prompts/parse-prd.json' with {
-	type: 'json'
-};
-import parsePrdClarifyPrompt from '../../src/prompts/parse-prd-clarify.json' with {
-	type: 'json'
-};
-import researchPrompt from '../../src/prompts/research.json' with {
-	type: 'json'
-};
-import updateSubtaskPrompt from '../../src/prompts/update-subtask.json' with {
-	type: 'json'
-};
-import updateTaskPrompt from '../../src/prompts/update-task.json' with {
-	type: 'json'
-};
-import updateTasksPrompt from '../../src/prompts/update-tasks.json' with {
-	type: 'json'
-};
+import researchPrompt from './research.json' with { type: 'json' };
+import updateSubtaskPrompt from './update-subtask.json' with { type: 'json' };
+import updateTaskPrompt from './update-task.json' with { type: 'json' };
+import updateTasksPrompt from './update-tasks.json' with { type: 'json' };
 
 // Import schema for validation
-import promptTemplateSchema from '../../src/prompts/schemas/prompt-template.schema.json' with {
+import promptTemplateSchema from './schemas/prompt-template.schema.json' with {
 	type: 'json'
 };
 
 const require = createRequire(import.meta.url);
+const logger = getLogger('PromptManager');
+
+type PromptVariables = Record<string, any>;
+
+interface PromptParameter {
+	type: string;
+	required?: boolean;
+	enum?: unknown[];
+	pattern?: string;
+	minimum?: number;
+	maximum?: number;
+}
+
+interface PromptVariant {
+	system: string;
+	user: string;
+	condition?: string;
+}
+
+/** A prompt template as stored in this folder's `*.json` files */
+interface PromptTemplate {
+	id: string;
+	version: string;
+	description: string;
+	parameters?: Record<string, PromptParameter>;
+	prompts: Record<string, PromptVariant>;
+	metadata?: { tags?: string[] };
+}
+
+interface RenderedPrompt {
+	systemPrompt: string;
+	userPrompt: string;
+	metadata: {
+		templateId: string;
+		version: string;
+		variant: string;
+		parameters: PromptVariables;
+	};
+}
+
+const schemaErrors = (validate: ValidateFunction) =>
+	(validate.errors ?? [])
+		.map((err) => `${err.instancePath || 'root'}: ${err.message}`)
+		.join(', ');
 
 /**
  * Add the project summary to a prompt that lets the model read the codebase,
  * so it can plan from the summary instead of exploring with tools first.
- * @param {Object} variables - Prompt variables
- * @returns {Object} The variables, with `repoSummary` when it applies
  */
-function withRepoSummary(variables) {
+function withRepoSummary(variables: PromptVariables): PromptVariables {
 	if (
 		!variables.hasCodebaseAnalysis ||
 		!variables.projectRoot ||
@@ -52,11 +81,11 @@ function withRepoSummary(variables) {
 	) {
 		return variables;
 	}
-	let repoSummary;
+	let repoSummary: string;
 	try {
 		repoSummary = getRepoSummary(variables.projectRoot);
 	} catch (error) {
-		log('debug', `No project summary: ${error.message}`);
+		logger.debug(`No project summary: ${(error as Error).message}`);
 		repoSummary = 'No project summary is available.';
 	}
 	return { ...variables, repoSummary };
@@ -66,9 +95,13 @@ function withRepoSummary(variables) {
  * Manages prompt templates for AI interactions
  */
 export class PromptManager {
+	readonly prompts: Map<string, PromptTemplate>;
+	readonly cache = new Map<string, RenderedPrompt>();
+	validatePrompt?: ValidateFunction | ((data: unknown) => boolean);
+
 	constructor() {
 		// Store all prompts in a map for easy lookup
-		this.prompts = new Map([
+		this.prompts = new Map<string, PromptTemplate>([
 			['analyze-complexity', analyzeComplexityPrompt],
 			['expand-task', expandTaskPrompt],
 			['add-task', addTaskPrompt],
@@ -80,54 +113,55 @@ export class PromptManager {
 			['update-subtask', updateSubtaskPrompt]
 		]);
 
-		this.cache = new Map();
 		this.setupValidation();
 	}
 
 	/**
 	 * Set up JSON schema validation
-	 * @private
 	 */
-	setupValidation() {
+	private setupValidation() {
 		// ajv loads here, not at the top, so commands that never build a
 		// prompt skip it (#248)
 		const { default: Ajv } = require('ajv');
 		const { default: addFormats } = require('ajv-formats');
-		this.ajv = new Ajv({ allErrors: true, strict: false });
-		addFormats(this.ajv);
+		const ajv = new Ajv({ allErrors: true, strict: false });
+		addFormats(ajv);
 
 		try {
 			// Use the imported schema directly
-			this.validatePrompt = this.ajv.compile(promptTemplateSchema);
-			log('debug', '✓ JSON schema validation enabled');
+			this.validatePrompt = ajv.compile(promptTemplateSchema);
+			logger.debug('✓ JSON schema validation enabled');
 		} catch (error) {
-			log('warn', `⚠ Schema validation disabled: ${error.message}`);
+			logger.warn(`⚠ Schema validation disabled: ${(error as Error).message}`);
 			this.validatePrompt = () => true; // Fallback to no validation
 		}
 	}
 
 	/**
 	 * Load a prompt template and render it with variables
-	 * @param {string} promptId - The prompt template ID
-	 * @param {Object} variables - Variables to inject into the template
-	 * @param {string} [variantKey] - Optional specific variant to use
-	 * @returns {{systemPrompt: string, userPrompt: string, metadata: Object}}
+	 * @param promptId - The prompt template ID
+	 * @param variables - Variables to inject into the template
+	 * @param variantKey - Optional specific variant to use
 	 */
-	loadPrompt(promptId, variables = {}, variantKey = null) {
+	loadPrompt(
+		promptId: string,
+		variables: PromptVariables = {},
+		variantKey: string | null = null
+	): RenderedPrompt {
 		try {
 			variables = withRepoSummary(variables);
 
 			// Check cache first
 			const cacheKey = `${promptId}-${JSON.stringify(variables)}-${variantKey}`;
 			if (this.cache.has(cacheKey)) {
-				return this.cache.get(cacheKey);
+				return this.cache.get(cacheKey)!;
 			}
 
 			// Load template
 			const template = this.loadTemplate(promptId);
 
 			// Validate parameters if schema validation is available
-			if (this.validatePrompt && this.validatePrompt !== true) {
+			if (this.validatePrompt) {
 				this.validateParameters(template, variables);
 			}
 
@@ -137,7 +171,7 @@ export class PromptManager {
 				: this.selectVariant(template, variables);
 
 			// Render the prompts with variables
-			const rendered = {
+			const rendered: RenderedPrompt = {
 				systemPrompt: this.renderTemplate(variant.system, variables),
 				userPrompt: this.renderTemplate(variant.user, variables),
 				metadata: {
@@ -153,16 +187,17 @@ export class PromptManager {
 
 			return rendered;
 		} catch (error) {
-			log('error', `Failed to load prompt ${promptId}: ${error.message}`);
+			logger.error(
+				`Failed to load prompt ${promptId}: ${(error as Error).message}`
+			);
 			throw error;
 		}
 	}
 
 	/**
 	 * Load a prompt template from the imported prompts
-	 * @private
 	 */
-	loadTemplate(promptId) {
+	private loadTemplate(promptId: string): PromptTemplate {
 		// Get template from the map
 		const template = this.prompts.get(promptId);
 
@@ -171,12 +206,10 @@ export class PromptManager {
 		}
 
 		// Schema validation if available (do this first for detailed errors)
-		if (this.validatePrompt && this.validatePrompt !== true) {
+		if (this.validatePrompt) {
 			const valid = this.validatePrompt(template);
 			if (!valid) {
-				const errors = this.validatePrompt.errors
-					.map((err) => `${err.instancePath || 'root'}: ${err.message}`)
-					.join(', ');
+				const errors = schemaErrors(this.validatePrompt as ValidateFunction);
 				throw new Error(`Schema validation failed: ${errors}`);
 			}
 		} else {
@@ -193,12 +226,14 @@ export class PromptManager {
 
 	/**
 	 * Validate parameters against template schema
-	 * @private
 	 */
-	validateParameters(template, variables) {
+	private validateParameters(
+		template: PromptTemplate,
+		variables: PromptVariables
+	) {
 		if (!template.parameters) return;
 
-		const errors = [];
+		const errors: string[] = [];
 
 		for (const [paramName, paramConfig] of Object.entries(
 			template.parameters
@@ -260,9 +295,8 @@ export class PromptManager {
 
 	/**
 	 * Validate parameter type
-	 * @private
 	 */
-	validateParameterType(value, expectedType) {
+	private validateParameterType(value: unknown, expectedType: string) {
 		switch (expectedType) {
 			case 'string':
 				return typeof value === 'string';
@@ -283,9 +317,8 @@ export class PromptManager {
 
 	/**
 	 * Select the best variant based on conditions
-	 * @private
 	 */
-	selectVariant(template, variables) {
+	private selectVariant(template: PromptTemplate, variables: PromptVariables) {
 		// Check each variant's condition
 		for (const [name, variant] of Object.entries(template.prompts)) {
 			if (name === 'default') continue;
@@ -304,9 +337,8 @@ export class PromptManager {
 
 	/**
 	 * Evaluate a condition string
-	 * @private
 	 */
-	evaluateCondition(condition, variables) {
+	private evaluateCondition(condition: string, variables: PromptVariables) {
 		try {
 			// Create a safe evaluation context
 			const context = { ...variables };
@@ -315,38 +347,40 @@ export class PromptManager {
 			// For now, supports basic comparisons
 			const func = new Function(...Object.keys(context), `return ${condition}`);
 			return func(...Object.values(context));
-		} catch (error) {
-			log('warn', `Failed to evaluate condition: ${condition}`);
+		} catch {
+			logger.warn(`Failed to evaluate condition: ${condition}`);
 			return false;
 		}
 	}
 
 	/**
 	 * Render a template string with variables
-	 * @private
 	 */
-	renderTemplate(template, variables) {
+	renderTemplate(template: string, variables: PromptVariables): string {
 		let rendered = template;
 
 		// Handle helper functions like (eq variable "value")
 		rendered = rendered.replace(
 			/\(eq\s+(\w+(?:\.\w+)*)\s+"([^"]+)"\)/g,
-			(match, path, compareValue) => {
+			(_match, path, compareValue) => {
 				const value = this.getNestedValue(variables, path);
 				return value === compareValue ? 'true' : 'false';
 			}
 		);
 
 		// Handle not helper function like (not variable)
-		rendered = rendered.replace(/\(not\s+(\w+(?:\.\w+)*)\)/g, (match, path) => {
-			const value = this.getNestedValue(variables, path);
-			return !value ? 'true' : 'false';
-		});
+		rendered = rendered.replace(
+			/\(not\s+(\w+(?:\.\w+)*)\)/g,
+			(_match, path) => {
+				const value = this.getNestedValue(variables, path);
+				return !value ? 'true' : 'false';
+			}
+		);
 
 		// Handle gt (greater than) helper function like (gt variable 0)
 		rendered = rendered.replace(
 			/\(gt\s+(\w+(?:\.\w+)*)\s+(\d+(?:\.\d+)?)\)/g,
-			(match, path, compareValue) => {
+			(_match, path, compareValue) => {
 				const value = this.getNestedValue(variables, path);
 				const numValue = parseFloat(compareValue);
 				return typeof value === 'number' && value > numValue ? 'true' : 'false';
@@ -356,7 +390,7 @@ export class PromptManager {
 		// Handle gte (greater than or equal) helper function like (gte variable 0)
 		rendered = rendered.replace(
 			/\(gte\s+(\w+(?:\.\w+)*)\s+(\d+(?:\.\d+)?)\)/g,
-			(match, path, compareValue) => {
+			(_match, path, compareValue) => {
 				const value = this.getNestedValue(variables, path);
 				const numValue = parseFloat(compareValue);
 				return typeof value === 'number' && value >= numValue
@@ -368,7 +402,7 @@ export class PromptManager {
 		// Handle conditionals with else {{#if variable}}...{{else}}...{{/if}}
 		rendered = rendered.replace(
 			/\{\{#if\s+([^}]+)\}\}([\s\S]*?)(?:\{\{else\}\}([\s\S]*?))?\{\{\/if\}\}/g,
-			(match, condition, trueContent, falseContent = '') => {
+			(_match, condition, trueContent, falseContent = '') => {
 				// Handle boolean values and helper function results
 				let value;
 				if (condition === 'true') {
@@ -385,16 +419,16 @@ export class PromptManager {
 		// Handle each loops {{#each array}}...{{/each}}
 		rendered = rendered.replace(
 			/\{\{#each\s+(\w+(?:\.\w+)*)\}\}([\s\S]*?)\{\{\/each\}\}/g,
-			(match, path, content) => {
+			(_match, path, content) => {
 				const array = this.getNestedValue(variables, path);
 				if (!Array.isArray(array)) return '';
 
 				return array
-					.map((item, index) => {
+					.map((item: unknown, index: number) => {
 						// Create a context with item properties and special variables
 						const itemContext = {
 							...variables,
-							...item,
+							...(item as object),
 							'@index': index,
 							'@first': index === 0,
 							'@last': index === array.length - 1
@@ -410,16 +444,16 @@ export class PromptManager {
 		// Handle json helper {{{json variable}}} (triple braces for raw output)
 		rendered = rendered.replace(
 			/\{\{\{json\s+(\w+(?:\.\w+)*)\}\}\}/g,
-			(match, path) => {
+			(_match, path) => {
 				const value = this.getNestedValue(variables, path);
 				return value !== undefined ? JSON.stringify(value, null, 2) : '';
 			}
 		);
 
 		// Handle variable substitution {{variable}}
-		rendered = rendered.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
+		rendered = rendered.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_match, path) => {
 			const value = this.getNestedValue(variables, path);
-			return value !== undefined ? value : '';
+			return value !== undefined ? String(value) : '';
 		});
 
 		return rendered;
@@ -427,13 +461,12 @@ export class PromptManager {
 
 	/**
 	 * Get nested value from object using dot notation
-	 * @private
 	 */
-	getNestedValue(obj, path) {
+	private getNestedValue(obj: PromptVariables, path: string): any {
 		return path
 			.split('.')
 			.reduce(
-				(current, key) =>
+				(current: any, key) =>
 					current && current[key] !== undefined ? current[key] : undefined,
 				obj
 			);
@@ -443,7 +476,11 @@ export class PromptManager {
 	 * Validate all prompt templates
 	 */
 	validateAllPrompts() {
-		const results = { total: 0, errors: [], valid: [] };
+		const results = {
+			total: 0,
+			errors: [] as string[],
+			valid: [] as string[]
+		};
 
 		// Iterate through all imported prompts
 		for (const [promptId, template] of this.prompts.entries()) {
@@ -451,18 +488,18 @@ export class PromptManager {
 
 			try {
 				// Validate the template
-				if (this.validatePrompt && this.validatePrompt !== true) {
+				if (this.validatePrompt) {
 					const valid = this.validatePrompt(template);
 					if (!valid) {
-						const errors = this.validatePrompt.errors
-							.map((err) => `${err.instancePath || 'root'}: ${err.message}`)
-							.join(', ');
+						const errors = schemaErrors(
+							this.validatePrompt as ValidateFunction
+						);
 						throw new Error(`Schema validation failed: ${errors}`);
 					}
 				}
 				results.valid.push(promptId);
 			} catch (error) {
-				results.errors.push(`${promptId}: ${error.message}`);
+				results.errors.push(`${promptId}: ${(error as Error).message}`);
 			}
 		}
 
@@ -486,7 +523,9 @@ export class PromptManager {
 					tags: template.metadata?.tags || []
 				});
 			} catch (error) {
-				log('warn', `Failed to process template ${promptId}: ${error.message}`);
+				logger.warn(
+					`Failed to process template ${promptId}: ${(error as Error).message}`
+				);
 			}
 		}
 
@@ -495,11 +534,14 @@ export class PromptManager {
 
 	/**
 	 * Validate template structure
-	 * @param {string|Object} templateOrId - Either a template ID or a template object
+	 * @param templateOrId - Either a template ID or a template object
 	 */
-	validateTemplate(templateOrId) {
+	validateTemplate(templateOrId: string | PromptTemplate): {
+		valid: boolean;
+		error?: string;
+	} {
 		try {
-			let template;
+			let template: PromptTemplate | undefined;
 
 			// Handle both template ID and direct template object
 			if (typeof templateOrId === 'string') {
@@ -515,7 +557,7 @@ export class PromptManager {
 			}
 
 			// Check required fields
-			const required = ['id', 'version', 'description', 'prompts'];
+			const required = ['id', 'version', 'description', 'prompts'] as const;
 			for (const field of required) {
 				if (!template[field]) {
 					return { valid: false, error: `Missing required field: ${field}` };
@@ -538,31 +580,28 @@ export class PromptManager {
 			}
 
 			// Schema validation if available
-			if (this.validatePrompt && this.validatePrompt !== true) {
+			if (this.validatePrompt) {
 				const valid = this.validatePrompt(template);
 				if (!valid) {
-					const errors = this.validatePrompt.errors
-						.map((err) => `${err.instancePath || 'root'}: ${err.message}`)
-						.join(', ');
+					const errors = schemaErrors(this.validatePrompt as ValidateFunction);
 					return { valid: false, error: `Schema validation failed: ${errors}` };
 				}
 			}
 
 			return { valid: true };
 		} catch (error) {
-			return { valid: false, error: error.message };
+			return { valid: false, error: (error as Error).message };
 		}
 	}
 }
 
 // Singleton instance
-let promptManager = null;
+let promptManager: PromptManager | null = null;
 
 /**
  * Get or create the prompt manager instance
- * @returns {PromptManager}
  */
-export function getPromptManager() {
+export function getPromptManager(): PromptManager {
 	if (!promptManager) {
 		promptManager = new PromptManager();
 	}

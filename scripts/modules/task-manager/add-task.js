@@ -7,7 +7,9 @@ import {
 	readArchivedIdsSync,
 	reconcileDependencySources,
 	setTaskLink,
-	getOwnKey
+	getOwnKey,
+	COMMAND_SCHEMAS,
+	getPromptManager
 } from '@tm/core';
 import Fuse from 'fuse.js'; // Import Fuse.js for advanced fuzzy search
 import path from 'path';
@@ -17,10 +19,8 @@ import {
 	normalizeTaskPriority,
 	TASK_PRIORITY_OPTIONS
 } from '../../../src/constants/task-priority.js';
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDefaultPriority, hasCodebaseAnalysis } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
 	failLoadingIndicator,

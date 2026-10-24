@@ -127,11 +127,11 @@ The VS Code profile automatically configures schema validation:
   "json.schemas": [
     {
       "fileMatch": [
-        "src/prompts/**/*.json",
+        "packages/tm-core/src/modules/ai/prompts/**/*.json",
         ".taskgraph/prompts/**/*.json",
         "prompts/**/*.json"
       ],
-      "url": "./src/prompts/schemas/prompt-template.schema.json"
+      "url": "./packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json"
     }
   ]
 }
@@ -147,11 +147,11 @@ The VS Code profile automatically configures schema validation:
 For other development environments:
 
 **Schema URLs**:
-- **Local Development**: `./src/prompts/schemas/prompt-template.schema.json`
-- **GitHub Reference**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/src/prompts/schemas/prompt-template.schema.json`
+- **Local Development**: `./packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json`
+- **GitHub Reference**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json`
 
 **File Patterns**:
-- `src/prompts/**/*.json`
+- `packages/tm-core/src/modules/ai/prompts/**/*.json`
 - `.taskgraph/prompts/**/*.json`
 - `prompts/**/*.json`
 
@@ -379,9 +379,9 @@ The schema includes custom validation for:
 ### Getting Help
 
 **Internal Resources**:
-- Main prompt README: `src/prompts/README.md`
-- Schema files: `src/prompts/schemas/*.json`
-- PromptManager code: `scripts/modules/prompt-manager.js`
+- Main prompt README: `packages/tm-core/src/modules/ai/prompts/README.md`
+- Schema files: `packages/tm-core/src/modules/ai/prompts/schemas/*.json`
+- PromptManager code: `packages/tm-core/src/modules/ai/prompts/prompt-manager.ts`
 
 **External Resources**:
 - JSON Schema documentation: https://json-schema.org/
@@ -391,8 +391,8 @@ The schema includes custom validation for:
 ## Schema URLs and References
 
 ### Current Schema Locations
-- **Local Development**: `./src/prompts/schemas/prompt-template.schema.json`
-- **GitHub Blob**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/src/prompts/schemas/prompt-template.schema.json`
+- **Local Development**: `./packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json`
+- **GitHub Blob**: `https://github.com/stephennmiller/taskgraph-ai/blob/main/packages/tm-core/src/modules/ai/prompts/schemas/prompt-template.schema.json`
 - **Schema ID**: Used for internal references and validation
 
 ### URL Usage Guidelines

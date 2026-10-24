@@ -1,9 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const promptsDir = path.join(__dirname, '../../../src/prompts');
+const promptsDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('Prompt Migration Validation', () => {
 	const bannedPhrases = [
@@ -16,7 +15,7 @@ describe('Prompt Migration Validation', () => {
 	];
 
 	// Map banned phrases to contexts where they're allowed
-	const allowedContexts = {
+	const allowedContexts: Record<string, string[]> = {
 		'respond only with': ['Use markdown formatting for better readability'],
 		'return only the': ['Use markdown formatting for better readability']
 	};
@@ -44,10 +43,10 @@ describe('Prompt Migration Validation', () => {
 							lowerContent.includes(context.toLowerCase())
 						);
 
-					expect(isAllowed).toBe(
-						true,
+					expect(
+						isAllowed,
 						`File ${file} contains banned phrase "${phrase}" without allowed context`
-					);
+					).toBe(true);
 				}
 			});
 		});

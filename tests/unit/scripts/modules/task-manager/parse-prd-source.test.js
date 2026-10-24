@@ -1,9 +1,8 @@
 /**
  * parse-prd records the PRD section each task came from (#202)
  */
-import { hashPrdSection, parsePrdSections } from '@tm/core';
+import { PromptManager, hashPrdSection, parsePrdSections } from '@tm/core';
 import { processTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
-import { PromptManager } from '../../../../../scripts/modules/prompt-manager.js';
 
 const prd = {
 	path: 'docs/prd.md',

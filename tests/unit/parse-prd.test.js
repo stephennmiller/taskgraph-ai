@@ -84,7 +84,8 @@ vi.doMock('../../scripts/modules/utils.js', () => ({
 }));
 
 // Mock prompt manager
-vi.doMock('../../scripts/modules/prompt-manager.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn(() => ({
 		loadPrompt: vi.fn(() => ({
 			systemPrompt: 'Test system prompt',
