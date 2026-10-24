@@ -86,6 +86,13 @@ describe('LoopDomain', () => {
 			expect(config.progressFile).toBe('/custom/progress.txt');
 		});
 
+		it('resolves a relative progressFile against the project root, not cwd (#407)', () => {
+			const config = (loopDomain as any).buildConfig({
+				progressFile: '.taskgraph/progress.txt'
+			});
+			expect(config.progressFile).toBe('/test/project/.taskgraph/progress.txt');
+		});
+
 		it('should respect provided tag', () => {
 			const config = (loopDomain as any).buildConfig({ tag: 'my-tag' });
 			expect(config.tag).toBe('my-tag');

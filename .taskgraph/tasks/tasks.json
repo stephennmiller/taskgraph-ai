@@ -376,10 +376,11 @@
         "description": "loop resolves --progress-file against the current folder, so run from a subfolder it writes the progress header to the wrong file.",
         "details": "GitHub issue #407: https://github.com/stephennmiller/taskgraph-ai/issues/407\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:33:43.776Z"
       },
       {
         "id": "26",
@@ -387,10 +388,11 @@
         "description": "`taskgraph loop --no-output` (\"Exclude full Claude output from iteration results\") sets `includeOutput: false`, which only drops `output` from each `LoopIteration` in the result.",
         "details": "GitHub issue #408: https://github.com/stephennmiller/taskgraph-ai/issues/408\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:33:43.781Z"
       },
       {
         "id": "27",
@@ -732,7 +734,7 @@
         "subtasks": []
       },
       {
-        "id": 57,
+        "id": "57",
         "title": "engines says Node >=22.13.0, but fastmcp's swagger-parser chain declares >=22.19.0 (#478)",
         "description": "Two production dependencies declare Node >=22.19.0 while engines allows 22.13; raise engines or hold the packages back.",
         "details": "GitHub issue #478: https://github.com/stephennmiller/taskgraph-ai/issues/478\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -743,7 +745,7 @@
         "subtasks": []
       },
       {
-        "id": 58,
+        "id": "58",
         "title": "Claude Code path guard: a Read of `symlinkdir/../file` is judged lexically but the OS follows the symlink first (#479)",
         "description": "The guard collapses `link/..` as text, but the OS follows the symlink first, so a Read can reach a file outside the root.",
         "details": "GitHub issue #479: https://github.com/stephennmiller/taskgraph-ai/issues/479\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -754,7 +756,7 @@
         "subtasks": []
       },
       {
-        "id": 59,
+        "id": "59",
         "title": "remove-task's confirmation and MCP parse-prd's completion message still use emoji (#480)",
         "description": "remove-task's confirmation and parse-prd's MCP completion message still print emoji, against .claude/rules/ui.md.",
         "details": "GitHub issue #480: https://github.com/stephennmiller/taskgraph-ai/issues/480\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -765,7 +767,7 @@
         "subtasks": []
       },
       {
-        "id": 60,
+        "id": "60",
         "title": "parse-prd's overwrite prompt reads stdin even when it isn't a terminal (#481)",
         "description": "Without a TTY, parse-prd's overwrite prompt waits forever or exits silently; it should fail and name --force and --append.",
         "details": "GitHub issue #481: https://github.com/stephennmiller/taskgraph-ai/issues/481\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -776,7 +778,7 @@
         "subtasks": []
       },
       {
-        "id": 61,
+        "id": "61",
         "title": "Update notice prints changelog highlights without stripping terminal escape sequences (#482)",
         "description": "Changelog highlights in the update notice reach the terminal with escape sequences intact.",
         "details": "GitHub issue #482: https://github.com/stephennmiller/taskgraph-ai/issues/482\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -787,7 +789,7 @@
         "subtasks": []
       },
       {
-        "id": 62,
+        "id": "62",
         "title": "remove-subtask --id=1.1,9.9 removes 1.1, then fails on 9.9 (#483)",
         "description": "remove-subtask removes the valid IDs before it finds a missing one; a list with any missing subtask should change nothing.",
         "details": "GitHub issue #483: https://github.com/stephennmiller/taskgraph-ai/issues/483\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -798,7 +800,7 @@
         "subtasks": []
       },
       {
-        "id": 63,
+        "id": "63",
         "title": "tm-core TasksDomain.updateStatus saves any status string without checking it (#484)",
         "description": "updateStatus writes any status string to tasks.json, and later reads then throw on it.",
         "details": "GitHub issue #484: https://github.com/stephennmiller/taskgraph-ai/issues/484\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -809,7 +811,7 @@
         "subtasks": []
       },
       {
-        "id": 64,
+        "id": "64",
         "title": "taskgraph start 3 suggests `taskgraph status` instead of `taskgraph loop -n 1 --id 3` (#485)",
         "description": "Removed start and autopilot fall through to Commander's nearest-name hint, which suggests `taskgraph status`.",
         "details": "GitHub issue #485: https://github.com/stephennmiller/taskgraph-ai/issues/485\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -820,7 +822,7 @@
         "subtasks": []
       },
       {
-        "id": 65,
+        "id": "65",
         "title": "tests/manual/progress/ still describes parse-prd streaming modes that #443 removed (#486)",
         "description": "The manual progress scripts still describe and exercise the streaming parse-prd path that #443 deleted.",
         "details": "GitHub issue #486: https://github.com/stephennmiller/taskgraph-ai/issues/486\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -831,7 +833,7 @@
         "subtasks": []
       },
       {
-        "id": 66,
+        "id": "66",
         "title": "knip: unused exports getContentWidth, TaskTableItem, ColumnPlan and Shape in apps/cli (#487)",
         "description": "knip lists four unused exports in apps/cli; drop the barrel entry and three export keywords.",
         "details": "GitHub issue #487: https://github.com/stephennmiller/taskgraph-ai/issues/487\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -842,7 +844,7 @@
         "subtasks": []
       },
       {
-        "id": 67,
+        "id": "67",
         "title": "CI: fail when a plugin command body uses a flag older than the plugin's CLI range (#488)",
         "description": "Nothing checks that plugin command bodies only use flags the plugin's minimum CLI version has; fail CI when they do.",
         "details": "GitHub issue #488: https://github.com/stephennmiller/taskgraph-ai/issues/488\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
@@ -859,9 +861,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T00:04:50.915Z",
-      "taskCount": 56,
-      "completedCount": 14,
+      "lastModified": "2026-10-24T03:33:43.781Z",
+      "taskCount": 67,
+      "completedCount": 16,
       "tags": [
         "master"
       ]

@@ -260,9 +260,11 @@ export class LoopDomain {
 		return {
 			iterations: partial.iterations ?? 10,
 			prompt: partial.prompt ?? 'default',
-			progressFile:
-				partial.progressFile ??
-				path.join(this.projectRoot, '.taskgraph', 'progress.txt'),
+			// Relative to the project root, where Claude runs and reads it from
+			progressFile: path.resolve(
+				this.projectRoot,
+				partial.progressFile ?? '.taskgraph/progress.txt'
+			),
 			sleepSeconds: partial.sleepSeconds ?? 5,
 			tag: partial.tag,
 			taskId: partial.taskId,

@@ -246,6 +246,13 @@ describe('LoopCommand', () => {
 		});
 	});
 
+	it('--no-output keeps only status lines', () => {
+		const cb = (loopCommand as any).createOutputCallbacks(false);
+		expect(cb.onOutput ?? cb.onText ?? cb.onToolUse).toBeUndefined();
+		cb.onIterationEnd({ iteration: 1, status: 'error' });
+		expect(consoleLogSpy.mock.calls.join()).toContain('completed: error');
+	});
+
 	describe('displayResult', () => {
 		it('should display loop completion summary', () => {
 			const displayResult = (loopCommand as any).displayResult.bind(
