@@ -23,7 +23,6 @@
  * - An item someone else removed stays removed.
  */
 
-import { isDeepStrictEqual } from 'node:util';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import type { ArchivedIds } from '../../../tasks/utils/archive.js';
 import {
@@ -31,9 +30,15 @@ import {
 	TASK_LINKS_KEY
 } from '../../../dependencies/dependency-provenance.js';
 import {
-	getOwnKey as own,
-	setOwnKey as put
-} from '../../../../common/utils/own-key.js';
+	byKey,
+	type Item,
+	hasItemIds,
+	isObject,
+	keyOf,
+	own,
+	put,
+	same
+} from '../../../git/merge-driver/merge-json-utils.js';
 
 export interface RenumberedItem {
 	/** The ID the command gave the item, such as `11` or `5.3` */
@@ -46,21 +51,6 @@ export interface MergeTagChangesResult<T> {
 	merged: T;
 	renumbered: RenumberedItem[];
 }
-
-type Item = Record<string, unknown> & { id: unknown };
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-	value !== null && typeof value === 'object' && !Array.isArray(value);
-
-const isItemList = (value: unknown): value is Item[] =>
-	Array.isArray(value) &&
-	value.every(
-		(item) => isPlainObject(item) && item.id !== undefined && item.id !== null
-	);
-
-const keyOf = (item: Item) => String(item.id);
-
-const same = (a: unknown, b: unknown) => isDeepStrictEqual(a, b);
 
 interface Context {
 	renumbered: RenumberedItem[];
@@ -86,7 +76,7 @@ export function mergeTagChanges<T>(
 	archived?: () => ArchivedIds
 ): MergeTagChangesResult<T> {
 	const tasksOf = (tag: unknown) =>
-		isPlainObject(tag) && isItemList(tag.tasks) ? tag.tasks : [];
+		isObject(tag) && hasItemIds(tag.tasks) ? tag.tasks : [];
 	const baseIds = new Set(tasksOf(base).map(keyOf));
 	const added = tasksOf(mine).filter((task) => !baseIds.has(keyOf(task)));
 	const reserved = (added.length > 0 && archived?.()) || {
@@ -115,10 +105,10 @@ function mergeValue(
 	if (same(base, theirs) && !(scope === '' && ctx.reusesArchivedId)) {
 		return mine;
 	}
-	if (isPlainObject(base) && isPlainObject(mine) && isPlainObject(theirs)) {
+	if (isObject(base) && isObject(mine) && isObject(theirs)) {
 		return mergeObjects(base, mine, theirs, scope, ctx);
 	}
-	if (isItemList(base) && isItemList(mine) && isItemList(theirs)) {
+	if (hasItemIds(base) && hasItemIds(mine) && hasItemIds(theirs)) {
 		return mergeItemLists(base, mine, theirs, scope, ctx);
 	}
 	return mine;
@@ -170,9 +160,9 @@ function mergeItemLists(
 	scope: string,
 	ctx: Context
 ): Item[] {
-	const baseById = new Map(base.map((item) => [keyOf(item), item]));
-	const mineById = new Map(mine.map((item) => [keyOf(item), item]));
-	const theirsById = new Map(theirs.map((item) => [keyOf(item), item]));
+	const baseById = byKey(base);
+	const mineById = byKey(mine);
+	const theirsById = byKey(theirs);
 
 	// Items as they are now, with the command's changes applied, in their order
 	const current: Item[] = [];
@@ -280,7 +270,7 @@ function followRenumbered(
 	const fixed = rewriteDependencies(item, parentOf, remap);
 
 	// The subtasks of an added task name siblings relative to its old ID
-	if (scope === '' && isItemList(fixed.subtasks)) {
+	if (scope === '' && hasItemIds(fixed.subtasks)) {
 		const oldParent = keyOf(item);
 		fixed.subtasks = fixed.subtasks.map((subtask) =>
 			rewriteDependencies(subtask, oldParent, remap)
@@ -311,12 +301,12 @@ function rewriteDependencies(
 		});
 	}
 	const metadata = own(item, 'metadata');
-	if (isPlainObject(metadata)) {
+	if (isObject(metadata)) {
 		// Both maps are keyed by full ID
 		let movedMetadata: Record<string, unknown> | undefined;
 		for (const mapKey of [DEPENDENCY_SOURCES_KEY, TASK_LINKS_KEY]) {
 			const entries = own(metadata, mapKey);
-			if (!isPlainObject(entries)) continue;
+			if (!isObject(entries)) continue;
 			const moved: Record<string, unknown> = {};
 			for (const [key, value] of Object.entries(entries)) {
 				put(moved, remap(key), value);

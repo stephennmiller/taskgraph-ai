@@ -36,6 +36,17 @@ export const isItemList = (value: unknown): value is Item[] => {
 	return true;
 };
 
+/**
+ * A list of objects that each have an ID, duplicates allowed. The
+ * concurrent-save merge has no way to report a clash, so it still merges a
+ * list with a duplicate ID item by item rather than drop others' changes.
+ */
+export const hasItemIds = (value: unknown): value is Item[] =>
+	Array.isArray(value) &&
+	value.every(
+		(item) => isObject(item) && item.id !== undefined && item.id !== null
+	);
+
 export const isPrimitiveList = (value: unknown): value is unknown[] =>
 	Array.isArray(value) &&
 	value.every((item) => item === null || typeof item !== 'object');
