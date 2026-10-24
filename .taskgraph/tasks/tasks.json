@@ -619,10 +619,11 @@
         "description": "`expandTaskDirect` (`mcp-server/src/core/direct-functions/expand-task.js`) calls `readJSON(tasksPath, projectRoot)` without the tag, both before expanding (lines ~102-160: task lookup, the done/completed check, the existing-subtasks check) and after (line ~204: `subtasksAdded`).",
         "details": "GitHub issue #459: https://github.com/stephennmiller/taskgraph-ai/issues/459\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T11:20:22.137Z"
       },
       {
         "id": "46",
@@ -875,9 +876,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T04:44:19.563Z",
+      "lastModified": "2026-10-24T11:20:22.138Z",
       "taskCount": 67,
-      "completedCount": 30,
+      "completedCount": 31,
       "tags": [
         "master"
       ]
