@@ -133,6 +133,9 @@ describe('resolveInsideRoot', () => {
 	);
 	fs.mkdirSync(path.join(root, 'docs'));
 	fs.symlinkSync(outside, path.join(root, 'escape'));
+	fs.symlinkSync(path.join(root, 'docs'), path.join(root, 'docs-link'));
+	const linkedRoot = path.join(outside, 'linked-root');
+	fs.symlinkSync(root, linkedRoot);
 
 	it('resolves relative and absolute paths inside the root', () => {
 		expect(resolveInsideRoot(root, 'docs/new/dir')).toBe(
@@ -142,6 +145,25 @@ describe('resolveInsideRoot', () => {
 			path.join(root, 'docs')
 		);
 		expect(resolveInsideRoot(root, 'docs/../out')).toBe(path.join(root, 'out'));
+		expect(resolveInsideRoot(root, '')).toBe(root);
+	});
+
+	it('follows symlinks that stay inside the root', () => {
+		expect(resolveInsideRoot(root, 'docs-link/new')).toBe(
+			path.join(root, 'docs', 'new')
+		);
+	});
+
+	it('accepts a symlinked project root and returns the real path', () => {
+		expect(resolveInsideRoot(linkedRoot, 'docs/new')).toBe(
+			path.join(root, 'docs', 'new')
+		);
+		expect(resolveInsideRoot(linkedRoot, path.join(linkedRoot, 'docs'))).toBe(
+			path.join(root, 'docs')
+		);
+		expect(() => resolveInsideRoot(linkedRoot, '../sibling')).toThrow(
+			'is outside the project root'
+		);
 	});
 
 	it.each([
