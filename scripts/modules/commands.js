@@ -26,7 +26,6 @@ import {
 	ui,
 	wantsJsonOutput
 } from '@tm/cli';
-import { syncTasksToReadme } from './sync-readme.js';
 import { log } from './utils.js';
 
 import { parsePRD, setResponseLanguage } from './task-manager.js';
@@ -660,48 +659,6 @@ Examples:
 					? `${theme.brand(language)} ${theme.muted('(unchanged)')}`
 					: `${current} → ${theme.brand(language)}`;
 			console.log(`${chalk.green('✓')} Response language  ${change}`);
-		});
-
-	// sync-readme command
-	programInstance
-		.command('sync-readme')
-		.description('Sync the current task list to README.md in the project root')
-		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
-		.option('--with-subtasks', 'Include subtasks in the README output')
-		.option(
-			'-s, --status <status>',
-			'Show only tasks matching this status (e.g., pending, done)'
-		)
-		.option('-t, --tag <tag>', 'Tag to use for the task list (default: master)')
-		.action(async (options) => {
-			// Initialize TaskGraph
-			const taskGraph = initTaskGraph({
-				tasksPath: options.file || true,
-				tag: options.tag
-			});
-
-			const withSubtasks = options.withSubtasks || false;
-			const status = options.status || null;
-
-			const tag = taskGraph.getCurrentTag();
-
-			console.log(
-				theme.brand(
-					`📝 Syncing tasks to README.md${withSubtasks ? ' (with subtasks)' : ''}${status ? ` (status: ${status})` : ''}...`
-				)
-			);
-
-			const success = await syncTasksToReadme(taskGraph.getProjectRoot(), {
-				withSubtasks,
-				status,
-				tasksPath: taskGraph.getTasksPath(),
-				tag
-			});
-
-			if (!success) {
-				console.error(chalk.red('❌ Failed to sync tasks to README.md'));
-				process.exit(1);
-			}
 		});
 
 	return programInstance;

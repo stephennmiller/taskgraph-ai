@@ -15,10 +15,8 @@ import {
 } from '@tm/core';
 import { isConfigWarningSuppressed } from '../../scripts/modules/config-manager.js';
 import {
-	COMPLEXITY_REPORT_FILE,
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_DOCS_DIR,
-	TASKGRAPH_REPORTS_DIR,
 	TASKGRAPH_TASKS_FILE
 } from '../constants/paths.js';
 import { getLoggerOrDefault } from './logger-utils.js';
@@ -155,75 +153,6 @@ export function findPRDPath(explicitPath = null, args = null, log = null) {
 	}
 
 	logger.warn?.(`No PRD document found in project: ${projectRoot}`);
-	return null;
-}
-
-/**
- * Find the complexity report file path with fallback logic
- * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
- * @param {Object|null} args - Args object for MCP context (optional)
- * @param {Object|null} log - Logger object (optional)
- * @returns {string|null} - Resolved complexity report path or null if not found
- */
-export function findComplexityReportPath(
-	explicitPath = null,
-	args = null,
-	log = null
-) {
-	const logger = getLoggerOrDefault(log);
-
-	// 1. If explicit path is provided, use it (highest priority)
-	if (explicitPath) {
-		// Use original cwd if available (set by dev.js), otherwise current cwd
-		const cwdForResolution =
-			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
-
-		const resolvedPath = path.isAbsolute(explicitPath)
-			? explicitPath
-			: path.resolve(cwdForResolution, explicitPath);
-
-		if (fs.existsSync(resolvedPath)) {
-			logger.info?.(`Using explicit complexity report path: ${resolvedPath}`);
-			return resolvedPath;
-		} else {
-			logger.warn?.(
-				`Explicit complexity report path not found: ${resolvedPath}, trying fallbacks`
-			);
-		}
-	}
-
-	// 2. Try to get project root from args (MCP) or find it
-	const rawProjectRoot = args?.projectRoot || findProjectRoot();
-
-	if (!rawProjectRoot) {
-		logger.warn?.('Could not determine project root directory');
-		return null;
-	}
-
-	// 3. Normalize project root to prevent double .taskgraph paths
-	const projectRoot = normalizeProjectRoot(rawProjectRoot);
-
-	// 4. Look in the .taskgraph/reports directory
-	const fileNames = [
-		'task-complexity-report',
-		'task-complexity',
-		'complexity-report'
-	].map((fileName) => {
-		if (args?.tag && args?.tag !== 'master') {
-			return `${fileName}_${args.tag}.json`;
-		}
-		return `${fileName}.json`;
-	});
-
-	for (const fileName of fileNames) {
-		const reportPath = path.join(projectRoot, TASKGRAPH_REPORTS_DIR, fileName);
-		if (fs.existsSync(reportPath)) {
-			logger.info?.(`Found complexity report at: ${reportPath}`);
-			return reportPath;
-		}
-	}
-
-	logger.warn?.(`No complexity report found in project: ${projectRoot}`);
 	return null;
 }
 

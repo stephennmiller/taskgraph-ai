@@ -382,7 +382,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - Implement `registerYourCommandTool(server)`.
     - Define the tool `name` using **snake_case** (e.g., `your_command`).
     - Define the `parameters` using `zod`. Include `projectRoot: z.string().optional()`.
-    - Wrap `execute` in `withNormalizedProjectRoot(async (args, { log, session }) => { ... })`, which resolves and normalizes `args.projectRoot` (see `mcp-server/src/tools/next-task.js`).
+    - Wrap `execute` in `withNormalizedProjectRoot(async (args, { log, session }) => { ... })`, which resolves and normalizes `args.projectRoot` (see `mcp-server/src/tools/initialize-project.js`).
         - Call `await yourCommandDirect({ ...args }, log, { session });` and return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot, tag })`.
         - **If the command is long-running**: also destructure `reportProgress`, and pass `{ session, reportProgress: checkProgressCapability(reportProgress, log) }` as the context (see `mcp-server/src/tools/parse-prd.js`).
 

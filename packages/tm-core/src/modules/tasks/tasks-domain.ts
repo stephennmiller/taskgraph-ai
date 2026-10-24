@@ -74,6 +74,10 @@ import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import type { TaskClaim } from './utils/claim.js';
 import { subtaskInContext } from './utils/subtask-context.js';
 import {
+	type ReadmeExportOptions,
+	writeReadmeExport
+} from './utils/readme-export.js';
+import {
 	createTagFromBranch,
 	type CreateBranchTag,
 	type CreateTagFromBranchResult
@@ -187,6 +191,29 @@ export class TasksDomain {
 	 */
 	async list(options?: GetTaskListOptions): Promise<TaskListResult> {
 		return this.taskService.getTaskList(options);
+	}
+
+	/**
+	 * Write the tag's task list into the project's README.md, between export
+	 * markers (replacing an earlier export)
+	 */
+	async syncReadme(
+		options: ReadmeExportOptions & { tag?: string } = {}
+	): Promise<{ readmePath: string }> {
+		const { tasks } = await this.list({ tag: options.tag });
+		const global = (
+			this.configManager.getConfig() as { global?: { projectName?: string } }
+		).global;
+		return {
+			readmePath: writeReadmeExport(
+				this.configManager.getProjectRoot(),
+				tasks,
+				{
+					...options,
+					projectName: global?.projectName || 'TaskGraph'
+				}
+			)
+		};
 	}
 
 	/**

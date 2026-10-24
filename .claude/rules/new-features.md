@@ -530,7 +530,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters**: Make `projectRoot` optional (`z.string().optional().describe(...)`) as the HOF handles fallback.
     - If the operation is long-running, report progress as described in Progress Reporting below.
-    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`** (see `mcp-server/src/tools/next-task.js`):
+    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`** (see `mcp-server/src/tools/initialize-project.js`):
       ```javascript
       execute: withNormalizedProjectRoot(async (args, { log, session }) => {
           // args.projectRoot is now normalized

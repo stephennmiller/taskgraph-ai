@@ -27,6 +27,7 @@ import {
 	registerGithubStatusTool,
 	registerListTagsTool,
 	registerMoveTaskTool,
+	registerNextTaskTool,
 	registerRemoveDependencyTool,
 	registerRemoveSubtaskTool,
 	registerRemoveTaskTool,
@@ -43,7 +44,6 @@ import {
 } from '@tm/mcp';
 import { registerInitializeProjectTool } from './initialize-project.js';
 import { registerModelsTool } from './models.js';
-import { registerNextTaskTool } from './next-task.js';
 import { registerParsePRDTool } from './parse-prd.js';
 import { registerResponseLanguageTool } from './response-language.js';
 

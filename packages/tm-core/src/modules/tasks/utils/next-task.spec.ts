@@ -153,4 +153,42 @@ describe('selectNextTask', () => {
 
 		expect(next?.id).toBe('2');
 	});
+
+	describe('subtask dependencies', () => {
+		const project = (dependencies: (string | number)[]) => [
+			createTask({
+				id: 1,
+				title: 'Parent',
+				status: 'in-progress',
+				// Lower than task 2, so task 2 wins when no subtask is eligible
+				priority: 'low',
+				subtasks: [
+					createSubtask({ id: 1, title: 'S1', dependencies } as any),
+					createSubtask({ id: 2, title: 'S2', status: 'done' })
+				]
+			}),
+			createTask({ id: 2, title: 'Other', priority: 'medium' })
+		];
+
+		it('reads a string without a dot as a task, not a sibling', () => {
+			// "2" is task 2 (pending), so 1.1 waits although sibling 1.2 is done
+			expect(selectNextTask(project(['2']))?.id).toBe('2');
+		});
+
+		it('reads a bare number as a sibling subtask', () => {
+			const next = selectNextTask(project([2]));
+
+			expect(next?.id).toBe('1.1');
+			expect(next?.dependencies).toEqual(['1.2']);
+		});
+
+		it('reads a number of 100 or more as a task', () => {
+			const tasks = project([100]);
+			tasks.push(
+				createTask({ id: 100, title: 'Far', status: 'done', priority: 'low' })
+			);
+
+			expect(selectNextTask(tasks)?.id).toBe('1.1');
+		});
+	});
 });

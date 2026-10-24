@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { resolvePathInsideRoot } from '@tm/core';
 import {
-	findComplexityReportPath as coreFindComplexityReportPath,
 	findPRDPath as coreFindPrdPath,
 	findTasksPath as coreFindTasksPath,
 	normalizeProjectRoot
@@ -132,46 +131,6 @@ export function resolvePrdPath(args, log = silentLogger) {
 
 	// Fallback to core function without projectRoot context
 	return coreFindPrdPath(explicitPath, null, log);
-}
-
-/**
- * Resolve complexity report path from arguments
- * @param {Object} args - Arguments object containing projectRoot and optional complexityReport path
- * @param {Object} [log] - Logger object to prevent console logging
- * @returns {string|null} - Resolved path to complexity report or null if not found
- */
-export function resolveComplexityReportPath(args, log = silentLogger) {
-	// Get explicit path from args.complexityReport if provided
-	const explicitPath = args?.complexityReport;
-	const rawProjectRoot = args?.projectRoot;
-	const tag = args?.tag;
-
-	// Without a project root there is nothing to check an absolute path against
-	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
-		throw new Error('projectRoot is required when a file path is absolute');
-	}
-
-	// Normalize project root if provided
-	const projectRoot = rawProjectRoot
-		? normalizeProjectRoot(rawProjectRoot)
-		: null;
-
-	// If explicit path is relative, resolve it relative to normalized projectRoot
-	if (explicitPath && projectRoot) {
-		return assertInsideRoot(projectRoot, explicitPath);
-	}
-
-	// Use core findComplexityReportPath with explicit path and normalized projectRoot context
-	if (projectRoot) {
-		return coreFindComplexityReportPath(
-			explicitPath,
-			{ projectRoot, tag },
-			log
-		);
-	}
-
-	// Fallback to core function without projectRoot context
-	return coreFindComplexityReportPath(explicitPath, null, log);
 }
 
 /**
