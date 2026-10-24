@@ -20,7 +20,9 @@ import {
 	isTaskPreset
 } from './loop-task.js';
 import { isLoopTrusted, trustLoop } from './loop-trust.js';
+import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
+import { TaskWorktrees } from './parallel/task-worktrees.js';
 import type {
 	ParallelLoopOptions,
 	ParallelLoopResult
@@ -41,7 +43,7 @@ export class LoopDomain {
 	private readonly projectRoot: string;
 
 	constructor(
-		configManager: ConfigManager,
+		private readonly configManager: ConfigManager,
 		private readonly tasks?: TasksDomain
 	) {
 		this.projectRoot = configManager.getProjectRoot();
@@ -156,7 +158,26 @@ export class LoopDomain {
 		if (!this.tasks) {
 			throw new Error('loop --parallel needs the tasks domain');
 		}
-		return new ParallelLoopRunner(this.projectRoot, this.tasks).run(options);
+		return new ParallelLoopRunner(this.projectRoot, this.tasks, () =>
+			this.configManager.getActiveTag()
+		).run(options);
+	}
+
+	/**
+	 * What `--container` needs (token, a running Docker, a git identity),
+	 * checked without claiming anything, so the CLI can stop before it asks
+	 * for approval.
+	 * @throws ParallelLoopError for the first thing missing
+	 */
+	async checkContainer(options: {
+		image?: string;
+		runtime?: string;
+	}): Promise<void> {
+		await preflightContainer(
+			this.projectRoot,
+			new TaskWorktrees(this.projectRoot),
+			options
+		);
 	}
 
 	/**

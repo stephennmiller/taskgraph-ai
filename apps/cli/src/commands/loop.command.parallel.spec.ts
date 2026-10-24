@@ -86,6 +86,7 @@ describe('LoopCommand --parallel', () => {
 			loop: {
 				run: mockLoopRun,
 				runParallel,
+				checkContainer: vi.fn(),
 				isTrusted: vi.fn().mockReturnValue(true),
 				trust: vi.fn()
 			}
@@ -140,6 +141,18 @@ describe('LoopCommand --parallel', () => {
 		expect(runParallel).toHaveBeenCalledWith(
 			expect.objectContaining({ container: { image: 'my/image:1' } })
 		);
+	});
+
+	it('checks what --container needs before asking for approval', async () => {
+		const core = await (createTmCore as Mock)();
+		core.loop.checkContainer.mockRejectedValue(new Error('no token'));
+
+		await execute({ parallel: '2', container: true });
+
+		expect(core.loop.checkContainer).toHaveBeenCalledWith({ image: undefined });
+		expect(core.loop.isTrusted).not.toHaveBeenCalled();
+		expect(runParallel).not.toHaveBeenCalled();
+		expect(process.exitCode).toBe(1);
 	});
 
 	it('refuses --container without --parallel before starting tm-core', async () => {

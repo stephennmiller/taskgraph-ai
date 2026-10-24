@@ -230,6 +230,11 @@ export class LoopCommand extends Command {
 
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
+			const container = options.container
+				? { image: options.containerImage }
+				: undefined;
+			// Before asking for approval: a missing token or Docker stops here
+			if (container) await this.tmCore.loop.checkContainer(container);
 			if (!options.trust) await this.confirmTrust(parallel);
 
 			const logsDir = '.taskgraph/worktrees';
@@ -255,9 +260,7 @@ export class LoopCommand extends Command {
 				parallel,
 				tag: options.tag,
 				trusted: true,
-				container: options.container
-					? { image: options.containerImage }
-					: undefined,
+				container,
 				signal: controller.signal,
 				callbacks: {
 					onTaskStart: (task) => {

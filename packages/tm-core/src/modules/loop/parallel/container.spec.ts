@@ -3,67 +3,56 @@ import {
 	type ContainerRun,
 	DEFAULT_CONTAINER_IMAGE,
 	assertContainerFlags,
+	assertMountablePath,
 	buildContainerArgs,
+	checkContainerSetup,
+	cloneGitConfig,
+	containerRuntimeDown,
 	containerRuntimeMissing,
-	containerTokenVar
+	importedStatus
 } from './container.js';
 
 const run = (overrides: Partial<ContainerRun> = {}): ContainerRun => ({
 	image: DEFAULT_CONTAINER_IMAGE,
 	tokenVar: 'CLAUDE_CODE_OAUTH_TOKEN',
-	projectRoot: '/repo',
-	worktree: '/repo/.taskgraph/worktrees/task-3',
+	name: 'taskgraph-task-3-abcd1234',
+	clone: '/repo/.taskgraph/worktrees/task-3',
 	cwd: '/repo/.taskgraph/worktrees/task-3',
-	gitCommonDir: '/repo/.git',
+	stateDir: '/repo/.taskgraph/worktrees/task-3.state',
 	prompt: "Work on task 3; don't `rm -rf` $HOME",
 	taskgraphPackage: 'taskgraph-ai@1.2.3',
 	user: '501:20',
-	exists: () => true,
 	...overrides
 });
 
-/** The --mount values, in order */
-const mounts = (args: string[]) =>
-	args.flatMap((a, i) => (args[i - 1] === '--mount' ? [a] : []));
+const after = (args: string[], flag: string) =>
+	args.flatMap((a, i) => (args[i - 1] === flag ? [a] : []));
 
 describe('buildContainerArgs', () => {
-	it('mounts the worktree, .git with its config and hooks read-only, and the task files', () => {
-		expect(mounts(buildContainerArgs(run()))).toEqual([
+	it("mounts only the worker's clone and its copy of the TaskGraph files", () => {
+		expect(after(buildContainerArgs(run()), '--mount')).toEqual([
 			'type=bind,src=/repo/.taskgraph/worktrees/task-3,dst=/repo/.taskgraph/worktrees/task-3',
-			'type=bind,src=/repo/.git,dst=/repo/.git',
-			'type=bind,src=/repo/.git/config,dst=/repo/.git/config,readonly',
-			'type=bind,src=/repo/.git/hooks,dst=/repo/.git/hooks,readonly',
-			'type=bind,src=/repo/.taskgraph/tasks,dst=/repo/.taskgraph/tasks',
-			'type=bind,src=/repo/.taskgraph/config.json,dst=/repo/.taskgraph/config.json,readonly',
-			'type=bind,src=/repo/.taskgraph/state.json,dst=/repo/.taskgraph/state.json,readonly'
+			'type=bind,src=/repo/.taskgraph/worktrees/task-3.state,dst=/repo/.taskgraph/worktrees/task-3.state'
 		]);
 	});
 
-	it('leaves out config.json and state.json when the project has none', () => {
-		const args = buildContainerArgs(run({ exists: () => false }));
-
-		expect(mounts(args).some((m) => m.includes('config.json'))).toBe(false);
-		expect(mounts(args).some((m) => m.includes('state.json'))).toBe(false);
-	});
-
-	it('passes the token by name only, never its value', () => {
-		const args = buildContainerArgs(run());
-
-		const envs = args.flatMap((a, i) => (args[i - 1] === '-e' ? [a] : []));
-		expect(envs).toEqual([
+	it('passes the token by name only, and points taskgraph at the copy', () => {
+		expect(after(buildContainerArgs(run()), '-e')).toEqual([
 			'CLAUDE_CODE_OAUTH_TOKEN',
-			'TASKGRAPH_PROJECT_ROOT=/repo',
+			'TASKGRAPH_PROJECT_ROOT=/repo/.taskgraph/worktrees/task-3.state',
 			'HOME=/tmp'
 		]);
 	});
 
-	it('runs as the given user in the project folder, removed on exit', () => {
+	it('names the container, runs it as the given user in the project folder', () => {
 		const args = buildContainerArgs(run({ cwd: '/repo/wt/app' }));
 
-		expect(args.slice(0, 7)).toEqual([
+		expect(args.slice(0, 9)).toEqual([
 			'run',
 			'--rm',
 			'--init',
+			'--name',
+			'taskgraph-task-3-abcd1234',
 			'--user',
 			'501:20',
 			'--workdir',
@@ -78,10 +67,10 @@ describe('buildContainerArgs', () => {
 		const args = buildContainerArgs(run({ image: 'my/image:1' }));
 		const at = args.indexOf('my/image:1');
 
-		expect(args[at - 2]).toBe('--entrypoint');
-		expect(args[at - 1]).toBe('sh');
+		expect(args.slice(at - 2, at)).toEqual(['--entrypoint', 'sh']);
 		expect(args[at + 1]).toBe('-c');
 		expect(args[at + 2]).not.toContain('task 3');
+		expect(args[at + 2]).not.toContain('latest');
 		expect(args.slice(at + 3)).toEqual([
 			'sh',
 			"Work on task 3; don't `rm -rf` $HOME",
@@ -90,47 +79,159 @@ describe('buildContainerArgs', () => {
 	});
 
 	it('refuses a path with a comma, which would split a --mount value', () => {
-		expect(() => buildContainerArgs(run({ projectRoot: '/a,b' }))).toThrow(
-			"--container can't mount /a,b/.taskgraph/tasks: the path has a comma in it"
+		expect(() => buildContainerArgs(run({ clone: '/a,b' }))).toThrow(
+			"--container can't mount"
 		);
 	});
 });
 
-describe('containerTokenVar', () => {
+describe('assertMountablePath', () => {
+	it('refuses commas, quotes and line breaks', () => {
+		for (const p of ['/a,b', '/a"b', '/a\nb', '/a\rb']) {
+			expect(() => assertMountablePath(p)).toThrow();
+		}
+		expect(() => assertMountablePath('/home/me/my project')).not.toThrow();
+	});
+});
+
+describe('checkContainerSetup', () => {
+	const env = { CLAUDE_CODE_OAUTH_TOKEN: 't' };
+
 	it('prefers CLAUDE_CODE_OAUTH_TOKEN, then ANTHROPIC_API_KEY', () => {
 		expect(
-			containerTokenVar({
-				CLAUDE_CODE_OAUTH_TOKEN: 't',
-				ANTHROPIC_API_KEY: 'k'
+			checkContainerSetup({
+				env: { ...env, ANTHROPIC_API_KEY: 'k' },
+				platform: 'linux'
 			})
-		).toBe('CLAUDE_CODE_OAUTH_TOKEN');
+		).toEqual({
+			image: DEFAULT_CONTAINER_IMAGE,
+			tokenVar: 'CLAUDE_CODE_OAUTH_TOKEN'
+		});
 		expect(
-			containerTokenVar({
-				CLAUDE_CODE_OAUTH_TOKEN: ' ',
-				ANTHROPIC_API_KEY: 'k'
-			})
+			checkContainerSetup({
+				env: { CLAUDE_CODE_OAUTH_TOKEN: ' ', ANTHROPIC_API_KEY: 'k' },
+				platform: 'darwin'
+			}).tokenVar
 		).toBe('ANTHROPIC_API_KEY');
 	});
 
-	it('refuses with a fix when neither is set', () => {
-		expect(() => containerTokenVar({})).toThrow(
+	it('refuses with a fix when neither token is set', () => {
+		expect(() => checkContainerSetup({ env: {}, platform: 'linux' })).toThrow(
 			expect.objectContaining({
 				message:
-					'--container needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY set: the containers get no access to your Claude Code login',
-				hint: 'Run `claude setup-token` and export the token it prints as CLAUDE_CODE_OAUTH_TOKEN'
+					'--container needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY',
+				hint: 'Run `claude setup-token`, then export CLAUDE_CODE_OAUTH_TOKEN'
 			})
 		);
 	});
+
+	it('refuses Windows, pointing at WSL', () => {
+		expect(() => checkContainerSetup({ env, platform: 'win32' })).toThrow(
+			expect.objectContaining({ hint: expect.stringContaining('WSL') })
+		);
+	});
+
+	it('takes an image name, and refuses one that looks like a flag or has spaces', () => {
+		expect(
+			checkContainerSetup({
+				image: 'ghcr.io/me/img:1@sha256:ab',
+				env,
+				platform: 'linux'
+			}).image
+		).toBe('ghcr.io/me/img:1@sha256:ab');
+		for (const image of ['--privileged', 'a b', 'im\ng']) {
+			expect(() =>
+				checkContainerSetup({ image, env, platform: 'linux' })
+			).toThrow("isn't an image name");
+		}
+	});
 });
 
-describe('containerRuntimeMissing', () => {
-	it('names the runtime and how to get it', () => {
-		const error = containerRuntimeMissing('docker');
+describe('runtime errors', () => {
+	it('tell a missing runtime from a stopped one, each in one short line', () => {
+		const missing = containerRuntimeMissing('docker');
+		const down = containerRuntimeDown('docker');
 
-		expect(error.message).toBe(
-			"--container needs docker, and it isn't installed or isn't on PATH"
+		expect(missing.message).toBe(
+			"--container needs docker, and it isn't on PATH"
 		);
-		expect(error.hint).toContain('drop --container');
+		expect(down.message).toBe("docker is installed but isn't running");
+		expect(down.hint).toBe('Start Docker and try again');
+		for (const line of [missing.message, missing.hint, down.message]) {
+			expect(`✗ ${line}`.length).toBeLessThanOrEqual(80);
+		}
+	});
+});
+
+describe('cloneGitConfig', () => {
+	it('holds only the format and the identity, quoted', () => {
+		expect(
+			cloneGitConfig({
+				objectFormat: 'sha1',
+				userName: 'Ann "A" \\ Lee',
+				userEmail: 'ann@example.com'
+			})
+		).toBe(
+			[
+				'[core]',
+				'\trepositoryformatversion = 0',
+				'\tbare = false',
+				'[user]',
+				'\tname = "Ann \\"A\\" \\\\ Lee"',
+				'\temail = "ann@example.com"',
+				''
+			].join('\n')
+		);
+	});
+
+	it('keeps a sha256 repository readable, and drops line breaks', () => {
+		const config = cloneGitConfig({
+			objectFormat: 'sha256',
+			userName: 'a\nb',
+			userEmail: 'e'
+		});
+
+		expect(config).toContain('repositoryformatversion = 1');
+		expect(config).toContain('objectformat = sha256');
+		expect(config).toContain('name = "a b"');
+	});
+});
+
+describe('importedStatus', () => {
+	const file = (tasks: unknown, tag = 'master') =>
+		JSON.stringify({ [tag]: { tasks } });
+
+	it("reads the task's status in the tag", () => {
+		expect(
+			importedStatus(
+				file([
+					{ id: 2, status: 'done' },
+					{ id: '3', status: 'review' }
+				]),
+				'3',
+				'master'
+			)
+		).toBe('review');
+	});
+
+	it('ignores an unknown status, another tag, broken JSON and odd shapes', () => {
+		expect(
+			importedStatus(file([{ id: '3', status: 'shipped' }]), '3', 'master')
+		).toBeUndefined();
+		expect(
+			importedStatus(
+				file([{ id: '3', status: 'done' }], 'other'),
+				'3',
+				'master'
+			)
+		).toBeUndefined();
+		expect(importedStatus('{not json', '3', 'master')).toBeUndefined();
+		expect(importedStatus('null', '3', 'master')).toBeUndefined();
+		expect(importedStatus(file('x'), '3', 'master')).toBeUndefined();
+		expect(importedStatus(file([null, 7]), '3', 'master')).toBeUndefined();
+		expect(
+			importedStatus('{"__proto__": {"tasks": []}}', '3', '__proto__')
+		).toBeUndefined();
 	});
 });
 
