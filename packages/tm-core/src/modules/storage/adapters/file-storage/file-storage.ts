@@ -26,6 +26,7 @@ import type {
 	TaskStatus
 } from '../../../../common/types/index.js';
 import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
+import { subtaskInContext } from '../../../tasks/utils/subtask-context.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
 import {
 	type ArchiveData,
@@ -207,39 +208,16 @@ export class FileStorage implements IStorage {
 				return null;
 			}
 
-			const resolvedDependencies =
-				subtask.dependencies?.map((dep) =>
-					resolveSubtaskDependency(parentTask.id, dep)
-				) ?? [];
-
-			// Return a Task-like object for the subtask with the full dotted ID
-			// Following the same pattern as findTaskById in utils.js
-			const subtaskResult = {
-				...subtask,
-				id: taskId, // Use the full dotted ID
-				title: subtask.title || `Subtask ${subtaskId}`,
-				description: subtask.description || '',
-				status: subtask.status || 'pending',
-				priority: subtask.priority || parentTask.priority || 'medium',
-				dependencies: resolvedDependencies,
-				details: subtask.details || '',
-				testStrategy: subtask.testStrategy || '',
-				subtasks: [],
-				tags: parentTask.tags || [],
-				assignee: subtask.assignee || parentTask.assignee,
-				complexity: subtask.complexity || parentTask.complexity,
-				createdAt: subtask.createdAt || parentTask.createdAt,
-				updatedAt: subtask.updatedAt || parentTask.updatedAt,
-				// Add reference to parent task for context (like utils.js does)
-				parentTask: {
-					id: parentTask.id,
-					title: parentTask.title,
-					status: parentTask.status
-				},
-				isSubtask: true
+			// The view tasks.get gives, with the full dotted ID and resolved deps
+			return {
+				...subtaskInContext(parentTask, subtask),
+				id: taskId,
+				dependencies:
+					subtask.dependencies?.map((dep) =>
+						resolveSubtaskDependency(parentTask.id, dep)
+					) ?? [],
+				subtasks: []
 			};
-
-			return subtaskResult;
 		}
 
 		return tasks.find((task) => String(task.id) === String(taskId)) || null;
