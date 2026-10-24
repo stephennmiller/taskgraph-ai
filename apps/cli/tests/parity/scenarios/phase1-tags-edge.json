@@ -1,0 +1,55 @@
+{
+	"steps": [
+		{
+			"args": ["tags", "--json"],
+			"capture": "stdout"
+		},
+		["tags"],
+		{
+			"mcp": "list_tags",
+			"input": { "projectRoot": "<project>" }
+		},
+		["tags", "add", "first"],
+		["tags", "add", "second", "--copy-from", "nope"],
+		{
+			"mcp": "add_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"name": "third",
+				"copyFromTag": "nope"
+			}
+		},
+		{
+			"args": ["tags", "add", "Main"],
+			"expectExit": 1
+		},
+		{
+			"args": ["tags", "add", "bad name"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "rename_tag",
+			"input": {
+				"projectRoot": "<project>",
+				"oldName": "first",
+				"newName": "default"
+			},
+			"expectError": true
+		},
+		["add-tag", "fourth", "--copy-from-current", "-d", "From master"],
+		{
+			"shell": "node -e \"const fs=require('fs');const f='.taskgraph/tasks/tasks.json';const j=JSON.parse(fs.readFileSync(f,'utf8'));j.second.tasks=[{id:1,title:'A',description:'',status:'pending',dependencies:[],priority:'medium',details:'',testStrategy:'',subtasks:[]}];delete j.second.metadata;fs.writeFileSync(f,JSON.stringify(j,null,2))\""
+		},
+		{
+			"mcp": "list_tags",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"args": ["tags", "remove", "second"],
+			"expectExit": 1
+		},
+		["tags", "use", "second"],
+		["copy-tag", "second", "second-copy"],
+		["tags", "remove", "second", "--yes"]
+	]
+}

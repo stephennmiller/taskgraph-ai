@@ -1,6 +1,7 @@
 /**
  * @fileoverview Create a tag named after the current git branch, and remember
- * which tag each branch maps to (`branchTagMapping` in state.json).
+ * which tag each branch maps to (`branchTagMapping` in state.json) and which
+ * tag is current (`currentTag`).
  */
 
 import fs from 'node:fs/promises';
@@ -93,13 +94,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Record in state.json that branchName maps to tagName. Every other key in
- * the file is kept as it is; a missing file is created.
+ * Change state.json under projectRoot in place. Every key the change leaves
+ * alone is kept as it is; a missing file is created.
  */
-export async function recordBranchTag(
+async function updateStateFile(
 	projectRoot: string,
-	branchName: string,
-	tagName: string
+	change: (state: Record<string, unknown>) => void
 ): Promise<void> {
 	const statePath = path.join(projectRoot, TASKGRAPH_STATE_FILE);
 	let state: unknown = {};
@@ -108,16 +108,52 @@ export async function recordBranchTag(
 	} catch (error: any) {
 		if (error?.code !== 'ENOENT') throw error;
 	}
-	// JSON.stringify drops a key set on an array, so the mapping would be lost
+	// JSON.stringify drops a key set on an array, so the change would be lost
 	if (!isRecord(state)) {
 		throw new Error('state.json does not hold a JSON object');
 	}
-	const mapping = isRecord(state.branchTagMapping)
-		? (state.branchTagMapping as Record<string, string>)
-		: {};
-	mapping[branchName] = tagName;
-	state.branchTagMapping = mapping;
+	change(state);
 	await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
+}
+
+/**
+ * Record in state.json that branchName maps to tagName. Every other key in
+ * the file is kept as it is; a missing file is created.
+ */
+export async function recordBranchTag(
+	projectRoot: string,
+	branchName: string,
+	tagName: string
+): Promise<void> {
+	await updateStateFile(projectRoot, (state) => {
+		const mapping = isRecord(state.branchTagMapping)
+			? (state.branchTagMapping as Record<string, string>)
+			: {};
+		mapping[branchName] = tagName;
+		state.branchTagMapping = mapping;
+	});
+}
+
+/**
+ * Make tagName the current tag in state.json. A failed write is logged, not
+ * thrown: the tag change it follows has already been saved.
+ */
+export async function recordCurrentTag(
+	projectRoot: string,
+	tagName: string
+): Promise<void> {
+	try {
+		await updateStateFile(projectRoot, (state) => {
+			state.currentTag = tagName;
+			state.lastSwitched = new Date().toISOString();
+			state.branchTagMapping ??= {};
+			state.migrationNoticeShown ??= false;
+		});
+	} catch (error) {
+		getLogger('BranchTag').warn(
+			`Could not update current tag in state.json: ${(error as Error).message}`
+		);
+	}
 }
 
 /**
