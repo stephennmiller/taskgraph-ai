@@ -10,7 +10,7 @@ import type {
 	AiServiceParams,
 	AiServiceResult
 } from '../../ai/ai-service.js';
-import { isAbort } from '../../ai/ai-errors.js';
+import { isAbort, isAccountError } from '../../ai/ai-errors.js';
 import type { AiConfig, AiRole } from '../../ai/config-ai-host.js';
 import { aiCallTimeoutMs } from '../../ai/providers/base-provider.js';
 import { ParsePrdResponseSchema } from '../../ai/schemas/parse-prd.js';
@@ -69,8 +69,9 @@ export async function generatePrdTasks(
 			// at the top, so it loads only for AI commands (#248)
 			const { APICallError } = await import('ai');
 			const failure = error instanceof Error ? error : new Error(String(error));
-			// The stream stalled: one request would wait out a fresh limit (#587)
-			if (isAbort(error)) {
+			// The stream stalled: one request would wait out a fresh limit (#587).
+			// A sign-in or billing error fails the same way on every model (#560)
+			if (isAbort(error) || isAccountError(error)) {
 				hooks.onStreamFailed?.(failure, false);
 				throw error;
 			}

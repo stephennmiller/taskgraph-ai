@@ -152,6 +152,22 @@ describe('tasks.parsePrd streaming', () => {
 		expect(p.generateObject).toHaveBeenCalledTimes(1);
 	});
 
+	it('does not ask again on a sign-in error, even with another model set (#560)', async () => {
+		await p.close();
+		p = await createPrdProject({
+			models: { fallback: { provider: 'claude-code', modelId: 'opus' } }
+		});
+		p.streamObject.mockRejectedValue(
+			Object.assign(new Error('Not signed in'), { name: 'AI_LoadAPIKeyError' })
+		);
+		const onStreamFailed = vi.fn();
+
+		await expect(parse({ onStreamFailed })).rejects.toThrow('Not signed in');
+
+		expect(onStreamFailed).toHaveBeenCalledWith(expect.any(Error), false);
+		expect(p.generateObject).not.toHaveBeenCalled();
+	});
+
 	it('gives up when the stream goes quiet, without asking again (#587)', async () => {
 		vi.stubEnv('TASKGRAPH_AI_TIMEOUT_MS', '50');
 		p.streamObject.mockResolvedValue({
