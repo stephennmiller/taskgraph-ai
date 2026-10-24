@@ -327,6 +327,26 @@ describe('tasks.expand', () => {
 			expect(readFile().master.tasks[2].subtasks).toEqual([]);
 		});
 
+		it('ignores a placeholder entry, which is not a score (#634)', async () => {
+			writeReport([
+				{
+					taskId: 3,
+					complexityScore: 5,
+					recommendedSubtasks: 0,
+					reasoning: 'Automatically added due to missing analysis',
+					placeholder: true
+				}
+			]);
+
+			const result = await tmCore.tasks.expand({ id: '3' });
+
+			expect(result.skipped).toBeUndefined();
+			expect(generateObject.mock.calls[0][0].prompt).toContain('exactly 5');
+			expect(generateObject.mock.calls[0][0].prompt).not.toContain(
+				'Automatically added'
+			);
+		});
+
 		it('still expands when an explicit count outranks the report', async () => {
 			writeReport([{ taskId: 3, recommendedSubtasks: 0 }]);
 

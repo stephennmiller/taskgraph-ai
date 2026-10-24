@@ -5,7 +5,11 @@
  */
 
 import path from 'node:path';
-import { COMPLEXITY_REPORT_FILE, TASKGRAPH_TASKS_FILE } from '@tm/core';
+import {
+	COMPLEXITY_REPORT_FILE,
+	countComplexity,
+	TASKGRAPH_TASKS_FILE
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import { errorMessage } from '../../shared/tool-reply.js';
@@ -144,8 +148,6 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 							onDebug: (message) => log.debug(message)
 						}
 					);
-					const analyses = result.report.complexityAnalysis ?? [];
-					const scores = analyses.map((t) => t.complexityScore);
 					return handleApiResult({
 						result: {
 							success: true,
@@ -154,13 +156,9 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 									? `No active task matched, so the report at ${result.reportPath} is unchanged`
 									: `Task complexity analysis complete. Report saved to ${result.reportPath}`,
 								reportPath: result.reportPath,
-								reportSummary: {
-									taskCount: analyses.length,
-									highComplexityTasks: scores.filter((s) => s >= 8).length,
-									mediumComplexityTasks: scores.filter((s) => s >= 5 && s < 8)
-										.length,
-									lowComplexityTasks: scores.filter((s) => s < 5).length
-								},
+								reportSummary: countComplexity(
+									result.report.complexityAnalysis ?? []
+								),
 								fullReport: result.report,
 								telemetryData: result.telemetryData,
 								tagInfo: result.tagInfo,

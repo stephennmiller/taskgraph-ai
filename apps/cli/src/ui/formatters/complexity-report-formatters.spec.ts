@@ -67,6 +67,34 @@ describe('formatComplexityRun', () => {
 		expect(output).toContain('Saved to report.json, with 2 earlier analyses');
 	});
 
+	it('leaves out placeholders, which are not scores (#634)', () => {
+		const output = plain(
+			formatComplexityRun(
+				{
+					analyses: [
+						analyses[1],
+						{
+							taskId: 2,
+							taskTitle: 'Add Postgres with migrations',
+							complexityScore: 5,
+							placeholder: true
+						}
+					],
+					skipped: 0,
+					kept: 1,
+					reportPath: 'report.json'
+				},
+				80
+			)
+		);
+
+		expect(output.split('\n').slice(0, 3)).toEqual([
+			'✓ Analyzed 1 task',
+			'  3  Email and password sign-in  ● 7  6 subtasks',
+			'Saved to report.json, with 1 earlier analysis'
+		]);
+	});
+
 	it('mentions web research when it was used', () => {
 		const output = plain(
 			formatComplexityRun(

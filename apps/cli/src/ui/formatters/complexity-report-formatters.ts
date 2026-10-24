@@ -14,7 +14,7 @@
  * task's whole expansion prompt in a 22-column cell.
  */
 
-import { sanitizeForTerminal } from '@tm/core';
+import { sanitizeForTerminal, withoutPlaceholders } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -31,6 +31,8 @@ export interface ComplexityAnalysisItem {
 	recommendedSubtasks?: number;
 	expansionPrompt?: string;
 	reasoning?: string;
+	/** A default for a task the AI left out, not a score */
+	placeholder?: true;
 }
 
 /** task-complexity-report.json */
@@ -150,10 +152,12 @@ export function formatComplexityRun(
 	width = terminalWidth()
 ): string {
 	summary = sanitizeForTerminal(summary);
-	const { analyses, skipped, kept, reportPath } = summary;
-	if (analyses.length === 0) {
+	const { skipped, kept, reportPath } = summary;
+	if (summary.analyses.length === 0) {
 		return theme.muted('No pending tasks to analyze');
 	}
+	// A placeholder isn't a score; the "Missing analysis" warning names its task
+	const analyses = withoutPlaceholders(summary.analyses);
 
 	const details = [
 		summary.usedResearch ? 'with web research' : null,

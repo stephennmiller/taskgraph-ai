@@ -36,6 +36,7 @@ import {
 	formatTasksContext
 } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
+import { withoutPlaceholders } from '../../reports/managers/complexity-report-manager.js';
 import {
 	assignMetadata,
 	reconcileDependencySources
@@ -146,6 +147,7 @@ interface TaskAnalysis {
 	recommendedSubtasks?: number | string | null;
 	expansionPrompt?: string | { text?: string };
 	reasoning?: string;
+	placeholder?: boolean;
 }
 
 const logger = getLogger('ExpandTask');
@@ -471,7 +473,8 @@ export class ExpandTaskService {
 				return undefined;
 			}
 			const report = JSON.parse(fs.readFileSync(file, 'utf-8'));
-			return (report?.complexityAnalysis as TaskAnalysis[] | undefined)?.find(
+			const entries: TaskAnalysis[] = report?.complexityAnalysis ?? [];
+			return withoutPlaceholders(entries).find(
 				(a) => String(a.taskId) === String(task.id)
 			);
 		} catch (error) {

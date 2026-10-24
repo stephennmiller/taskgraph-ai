@@ -28,7 +28,10 @@ import {
 	formatTasksContext
 } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
-import { complexityReportPath } from '../../reports/managers/complexity-report-manager.js';
+import {
+	complexityReportPath,
+	withoutPlaceholders
+} from '../../reports/managers/complexity-report-manager.js';
 import type { ComplexityReportMetadata } from '../../reports/types.js';
 import { normalizeTaskStatus } from '../utils/legacy-status.js';
 
@@ -225,7 +228,8 @@ const REPORT_NAMES = [
 /**
  * A complexity report: `file` (relative to the project root) when given,
  * else the tag's report under .taskgraph/reports, under any name older
- * versions used. Null when there is none; throws when it isn't valid JSON.
+ * versions used, without placeholder entries. Null when there is none;
+ * throws when it isn't valid JSON.
  */
 export function readComplexityReport(
 	projectRoot: string,
@@ -243,17 +247,30 @@ export function readComplexityReport(
 			});
 	const reportPath = candidates.find((candidate) => fs.existsSync(candidate));
 	if (!reportPath) return null;
+	let report: ComplexityReportFile;
 	try {
-		return {
-			report: JSON.parse(fs.readFileSync(reportPath, 'utf8')),
-			reportPath
-		};
+		report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 	} catch (error) {
 		throw new TaskGraphError(
 			`Couldn't read the complexity report: ${(error as Error).message}`,
 			ERROR_CODES.PARSE_ERROR
 		);
 	}
+	if (Array.isArray(report?.complexityAnalysis)) {
+		report.complexityAnalysis = withoutPlaceholders(report.complexityAnalysis);
+	}
+	return { report, reportPath };
+}
+
+/** How many of the AI's scores are high (8+), medium (5-7) and low; placeholders aren't scores */
+export function countComplexity(entries: readonly ComplexityAnalysisItem[]) {
+	const scores = withoutPlaceholders(entries).map((e) => e.complexityScore);
+	return {
+		taskCount: scores.length,
+		highComplexityTasks: scores.filter((s) => s >= 8).length,
+		mediumComplexityTasks: scores.filter((s) => s >= 5 && s < 8).length,
+		lowComplexityTasks: scores.filter((s) => s < 5).length
+	};
 }
 
 export class AnalyzeComplexityService {

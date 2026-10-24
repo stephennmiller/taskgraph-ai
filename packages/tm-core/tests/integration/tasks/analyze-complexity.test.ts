@@ -324,6 +324,24 @@ describe('tasks.analyzeComplexity', () => {
 		]);
 	});
 
+	it('leaves a saved placeholder out when list and show read scores (#634)', async () => {
+		vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue(
+			answerFor({ name: '', ids: '2,3', omit: [3] }) as any
+		);
+		const core = await setUp();
+		await core.tasks.analyzeComplexity({ ids: '2,3' });
+		const fresh = await createTmCore({ projectPath: projectDir });
+
+		const { tasks } = await fresh.tasks.list();
+		const { task } = await fresh.tasks.get('3');
+		await fresh.close();
+
+		const byId = (id: string) => tasks.find((t) => String(t.id) === id);
+		expect(byId('2')?.complexity).toEqual(expect.any(Number));
+		expect(byId('3')?.complexity).toBeUndefined();
+		expect(task?.complexity).toBeUndefined();
+	});
+
 	it('throws, and leaves the report alone, when the AI returns no analysis', async () => {
 		vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue({
 			mainResult: {},
@@ -392,6 +410,23 @@ describe('tasks.getComplexityReport', () => {
 
 		expect(core.tasks.getComplexityReport()?.reportPath).toBe(file);
 		await core.close();
+	});
+
+	it('leaves out placeholder entries, which are not scores (#634)', () => {
+		fs.writeFileSync(
+			path.join(reports(), reportName()),
+			JSON.stringify({
+				meta: {},
+				complexityAnalysis: [
+					{ taskId: 1, complexityScore: 8 },
+					{ taskId: 2, complexityScore: 5, placeholder: true }
+				]
+			})
+		);
+
+		expect(
+			tmCore.tasks.getComplexityReport()?.report.complexityAnalysis
+		).toEqual([{ taskId: 1, complexityScore: 8 }]);
 	});
 
 	it('reads a file given relative to the project root', () => {

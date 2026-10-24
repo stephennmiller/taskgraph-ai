@@ -137,6 +137,28 @@ describe('analyze_project_complexity', () => {
 		});
 	});
 
+	it('leaves placeholders out of the summary counts (#634)', async () => {
+		tasks.analyzeComplexity.mockResolvedValueOnce({
+			report: {
+				meta: {},
+				complexityAnalysis: [entry(1, 9), { ...entry(2, 5), placeholder: true }]
+			},
+			reportPath: `${project}/r.json`
+		});
+
+		const result = await tool.execute(
+			tool.parameters.parse({ projectRoot: project }),
+			ctx
+		);
+
+		expect(reply(result).data.reportSummary).toEqual({
+			taskCount: 1,
+			highComplexityTasks: 1,
+			mediumComplexityTasks: 0,
+			lowComplexityTasks: 0
+		});
+	});
+
 	it('writes output inside the project and refuses one outside it', async () => {
 		await tool.execute({ output: 'r/out.json', projectRoot: project }, ctx);
 		expect(tasks.analyzeComplexity.mock.calls[0][0].output).toBe(

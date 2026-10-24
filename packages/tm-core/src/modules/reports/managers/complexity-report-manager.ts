@@ -32,6 +32,13 @@ export function complexityReportPath(
  * Manages complexity analysis reports
  * Handles loading, caching, and providing complexity data for tasks
  */
+/** The entries the AI scored: a `placeholder` is a default for a task it left out */
+export function withoutPlaceholders<T extends { placeholder?: boolean }>(
+	entries: readonly T[]
+): T[] {
+	return entries.filter((entry) => !entry?.placeholder);
+}
+
 export class ComplexityReportManager {
 	private projectRoot: string;
 	private reportCache: Map<string, ComplexityReport> = new Map();
@@ -77,6 +84,10 @@ export class ComplexityReportManager {
 				);
 				return null;
 			}
+
+			report.complexityAnalysis = withoutPlaceholders(
+				report.complexityAnalysis
+			);
 
 			// Cache the report
 			this.reportCache.set(cacheKey, report);
