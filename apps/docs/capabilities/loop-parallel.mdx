@@ -63,26 +63,35 @@ export CLAUDE_CODE_OAUTH_TOKEN=<token>   # from `claude setup-token`
 taskgraph loop --parallel 3 --container --trust
 ```
 
-Use it when you want parallel tasks without giving each Claude Code process your user account. Permission prompts are still off inside the container, but a task can only change what's mounted into it. Claims, branches, logs and the summary work as above.
+Use it when you want parallel tasks without giving each Claude Code process your user account. Permission prompts are still off inside the container, but a task can only change the two folders it gets. Claims, branches, logs and the summary work as above.
 
-**What a task's container gets.** Before starting it, TaskGraph makes two folders for the task, and the container mounts only those, read-write:
+**What a task's container gets.** Before starting it, TaskGraph makes two folders for the task. The container mounts only those, read-write:
 
-- `.taskgraph/worktrees/task-<id>`: a **standalone clone** of your repository on the task's branch. It's a copy, with no links into your `.git` (`git clone --no-local`), and it already has your `user.name` and `user.email`, so Claude can commit.
-- `.taskgraph/worktrees/task-<id>.state`: a **copy** of your project's `.taskgraph/tasks/tasks.json`, `config.json`, `config.local.json` and `state.json`. The `taskgraph` commands Claude runs read and write this copy.
+- `.taskgraph/worktrees/task-<id>`: a **standalone clone** holding only the commit the task starts from, on the task's branch. It has no other branches, no tags and no links into your `.git`, and it already has your `user.name` and `user.email`, so Claude can commit. Your repository's own hooks (including a `core.hooksPath` such as `.githooks`) don't run for those commits.
+- `.taskgraph/worktrees/task-<id>.state`: a **copy** of your project's `.taskgraph/tasks/tasks.json`, `config.json` and `state.json`. The `taskgraph` commands Claude runs read and write this copy. `config.local.json` isn't copied, since it can hold API keys.
 
-The container gets nothing else from your machine: not your `.git`, not your `tasks.json`, not your home folder or `~/.claude`, and not the other tasks' folders.
+Your `.git`, your `tasks.json`, your home folder, `~/.claude` and the other tasks' folders aren't mounted. The container still runs the image you chose, with Docker's usual access (see below).
 
-**When a task's container is done**, TaskGraph removes it (by name, so a killed `docker` command can't leave it running) and then brings the work back:
+**When a task's container is done**, TaskGraph runs `docker rm -f` on it by name and checks that it's gone. If the container can't be confirmed gone, the task is marked failed with the `docker rm -f` command to run, and its clone and claim are left untouched. Otherwise TaskGraph brings the work back:
 
-1. **Status.** Only the task's status is read from the copy of `tasks.json`, and only a known one (`review`, `done` and so on). Notes and any other changes Claude made there are dropped.
-2. **Commits.** TaskGraph deletes the clone's git config, hooks, attributes and submodule data, writes a fresh config, and only then fetches the task's branch into your repository. The fetch runs in your repository with hooks and `core.fsmonitor` turned off. Before the run ends, the container commits anything Claude left uncommitted, so its work isn't lost.
-3. **Cleanup.** The clone and the copy are removed. If the branch can't be brought back (Claude deleted it, or rewrote its history), the task is marked failed and its clone is kept, already stripped of config and hooks. The summary says where. After Ctrl-C, the clone is kept too, and the next `loop --parallel --container` run carries on in it.
+1. **Commits.** TaskGraph deletes the clone's git config, hooks, attributes and submodule data. It refuses to go on if anything left in the clone's `.git` isn't a plain file or folder (a symlink, say), or if it's over 4 GB. Then it writes a fresh config and fetches the task's branch into your repository. The fetch runs in your repository, with hooks and `core.fsmonitor` off, object checks on and a 10-minute limit. Before the container stops, it commits anything Claude left uncommitted, so that work comes back too.
+2. **Status.** Only once the branch is back, TaskGraph reads the task's status from the copy of `tasks.json`, and takes it only if it's `review` or `blocked`. Notes and any other changes Claude made there are dropped.
+3. **Cleanup.** The clone and the copy are removed.
+
+When something goes wrong, the clone stays and the summary says where:
+
+- If the branch can't be fetched (Claude deleted it or rewrote its history), the task is marked failed. Its clone is kept with its git config and hooks already replaced, and the task stays claimed.
+- If the clone's `.git` can't be made safe, its `.git` is deleted and only its files are kept.
+- After Ctrl-C the clone is kept as well, and `taskgraph loop --parallel N --container` carries on in it.
+
+Don't run git commands inside a nested repository a task may have created in its clone.
 
 **What isn't isolated:**
 
-- **Network.** The containers use Docker's default network, so Claude can reach the internet and anything else your machine can reach.
-- **The token.** It goes in by name (`docker run -e CLAUDE_CODE_OAUTH_TOKEN`), so its value doesn't appear on a command line or in `ps`. But Claude can read it inside the container, and anyone who can use Docker on your machine can read it from the container while it runs.
-- **Docker itself.** A container is only as isolated as your Docker setup. Anyone in the `docker` group effectively has root.
+- **Network.** The containers use Docker's default network, so Claude can reach the internet and anything your machine can reach.
+- **The token.** It goes in by name (`docker run -e CLAUDE_CODE_OAUTH_TOKEN`), so its value doesn't appear on a command line or in `ps`. But Claude can read it inside the container, and so can anyone who can use Docker on your machine while the container runs.
+- **Docker itself.** A container is only as isolated as your Docker setup. TaskGraph drops every Linux capability (`--cap-drop ALL`) and blocks privilege escalation (`no-new-privileges`), but anyone in the `docker` group effectively has root.
+- **If TaskGraph itself is killed** (`kill -9`, a crash), it can't remove its containers. They're named `taskgraph-task-<id>-…`, so `docker ps` shows them; they're removed when they stop.
 
 **What it needs**, checked before any task is claimed and before the approval prompt:
 
@@ -112,4 +121,4 @@ taskgraph loop --parallel 3 --container --container-image my-taskgraph --trust
 
 A custom image needs `sh`, `git` and `claude`, plus `node` and `npm` unless it already has `taskgraph`.
 
-**Each task gets a full copy of your repository**, so a large repository takes longer to start and uses more disk per task than a worktree does.
+**Each task gets its own copy of the starting commit's history**, so a large repository takes longer to start and uses more disk per task than a worktree does.

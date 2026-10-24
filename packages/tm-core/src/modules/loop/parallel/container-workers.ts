@@ -46,13 +46,14 @@ export interface ContainerSetup {
 	gitConfig: string;
 }
 
-/** The project's TaskGraph files a worker gets a copy of */
-const STATE_FILES = [
-	'tasks/tasks.json',
-	'config.json',
-	'config.local.json',
-	'state.json'
-];
+/**
+ * The project's TaskGraph files a worker gets a copy of. Not
+ * config.local.json: it can hold API keys, and the container has network.
+ */
+const STATE_FILES = ['tasks/tasks.json', 'config.json', 'state.json'];
+
+/** A clone's `.git` bigger than this isn't fetched from */
+const MAX_CLONE_GIT_BYTES = 4 * 1024 ** 3;
 
 /**
  * Everything `--container` needs, checked before the first claim: platform,
@@ -132,30 +133,63 @@ const UNTRUSTED_GIT_ENTRIES = [
 
 /**
  * Make a worker's clone safe for the host's git: remove everything in its
- * `.git` that holds commands or points outside it, and write a fresh
- * config. Each entry removed sits in a folder checked to be real, and
- * fs.rmSync removes a symlink rather than following it.
- * @throws ParallelLoopError when `.git` (or its objects or refs) isn't a
- *   real folder
+ * `.git` that holds commands or points outside it, check that all that's
+ * left is plain folders and files (a symlink, FIFO or device would have the
+ * host's git read, or hang on, something outside the clone), and write a
+ * fresh config. fs.rmSync removes a symlink rather than following it.
+ * @throws ParallelLoopError naming the first entry that isn't plain, or
+ *   when the `.git` folder is too big
  */
-export function sanitizeClone(clone: string, gitConfig: string): void {
+export function sanitizeClone(
+	clone: string,
+	gitConfig: string,
+	maxBytes = MAX_CLONE_GIT_BYTES
+): void {
 	const gitDir = path.join(clone, '.git');
-	for (const dir of [
-		clone,
-		gitDir,
-		path.join(gitDir, 'objects'),
-		path.join(gitDir, 'refs')
-	]) {
-		if (!isRealDir(dir)) {
-			throw new ParallelLoopError(
-				`${dir} isn't a real folder; don't run git there`
-			);
-		}
+	const refuse = (p: string, why: string) =>
+		new ParallelLoopError(`${path.relative(clone, p) || '.'} ${why}`);
+	for (const dir of [clone, gitDir]) {
+		if (!isRealDir(dir)) throw refuse(dir, "isn't a plain folder");
 	}
 	for (const entry of UNTRUSTED_GIT_ENTRIES) {
 		fs.rmSync(path.join(gitDir, entry), { recursive: true, force: true });
 	}
+	for (const dir of ['objects', 'refs']) {
+		if (!isRealDir(path.join(gitDir, dir))) {
+			throw refuse(path.join(gitDir, dir), "isn't a plain folder");
+		}
+	}
+	let total = 0;
+	const pending = [gitDir];
+	while (pending.length > 0) {
+		const dir = pending.pop() as string;
+		for (const name of fs.readdirSync(dir)) {
+			const p = path.join(dir, name);
+			const stat = fs.lstatSync(p);
+			if (stat.isDirectory()) {
+				pending.push(p);
+			} else if (stat.isFile()) {
+				total += stat.size;
+				if (total > maxBytes) throw refuse(gitDir, 'is too big to fetch from');
+			} else {
+				throw refuse(p, "isn't a plain file or folder");
+			}
+		}
+	}
 	fs.writeFileSync(path.join(gitDir, 'config'), gitConfig, { flag: 'wx' });
+}
+
+/** The last line git wrote to stderr, else the error's first line */
+function gitReason(error: unknown): string {
+	const stderr = (error as { stderr?: unknown })?.stderr;
+	const last =
+		typeof stderr === 'string'
+			? stderr.trim().split('\n').pop()?.trim()
+			: undefined;
+	if (last) return last.replace(/^(fatal|error): /, '');
+	return (error instanceof Error ? error.message : String(error)).split(
+		'\n'
+	)[0];
 }
 
 /**
@@ -219,10 +253,17 @@ export class ContainerWorkers {
 	): Promise<{ name: string; createdBranch: boolean; args: string[] }> {
 		const clone = this.clone(task);
 		const createdBranch = !(await this.git.branchExists(task.branch));
+		const shown = path.relative(this.projectRoot, clone);
 		if (lstatOrNull(clone)) {
+			if (lstatOrNull(path.join(clone, '.git'))?.isFile()) {
+				throw new ParallelLoopError(
+					`${shown} is a worktree from a run without --container`,
+					`Run without --container, or remove it: \`git worktree remove ${shown}\``
+				);
+			}
 			if (!isRealDir(clone) || !isRealDir(path.join(clone, '.git'))) {
 				throw new ParallelLoopError(
-					`${path.relative(this.projectRoot, clone)} already exists and isn't a task clone`,
+					`${shown} already exists and isn't a task clone`,
 					'Move or delete it, then try again'
 				);
 			}
@@ -239,7 +280,8 @@ export class ContainerWorkers {
 		fs.rmSync(stateDir, { recursive: true, force: true });
 		for (const file of STATE_FILES) {
 			const from = path.join(this.projectRoot, '.taskgraph', file);
-			if (!fs.existsSync(from)) continue;
+			// Plain files only: a symlink would copy whatever it points at
+			if (!lstatOrNull(from)?.isFile()) continue;
 			const to = path.join(stateDir, '.taskgraph', file);
 			fs.mkdirSync(path.dirname(to), { recursive: true });
 			fs.copyFileSync(from, to);
@@ -267,14 +309,23 @@ export class ContainerWorkers {
 	}
 
 	/**
-	 * Remove containers by name and wait for it: a killed docker client
-	 * doesn't stop its container. Synchronous, so it works in an exit handler.
+	 * Remove containers by name: a killed docker client doesn't stop its
+	 * container. Synchronous, so it works in an exit handler.
+	 * @returns The ones that may still be there (`container inspect` didn't
+	 *   say they're gone)
 	 */
-	stop(names: string[]): void {
-		if (names.length === 0) return;
-		spawnSync(this.setup.runtime, ['rm', '--force', ...names], {
-			stdio: 'ignore',
-			timeout: 60_000
+	stop(names: string[]): string[] {
+		if (names.length === 0) return [];
+		const run = (args: string[]) =>
+			spawnSync(this.setup.runtime, args, {
+				stdio: 'ignore',
+				timeout: 60_000
+			});
+		run(['rm', '--force', ...names]);
+		// Gone only when inspect says so; a timeout or error counts as still there
+		return names.filter((name) => {
+			const { status } = run(['container', 'inspect', name]);
+			return status === 0 || status === null;
 		});
 	}
 
@@ -285,26 +336,32 @@ export class ContainerWorkers {
 
 	/**
 	 * After the container is gone: fetch the branch, then remove the clone
-	 * unless the fetch failed or the run was stopped. Sets the task's
-	 * commits, kept and (on a failed fetch) error.
-	 * @returns Whether the task has work to keep its claim for
+	 * unless the fetch failed or the run was stopped. A clone whose `.git`
+	 * can't be made safe loses its `.git`; its files stay. Sets the task's
+	 * commits, kept and (on failure) error.
 	 */
 	async bringBack(
 		task: ParallelTask,
 		base: string,
 		createdBranch: boolean,
 		aborted: boolean
-	): Promise<boolean> {
+	): Promise<{ fetched: boolean; hasWork: boolean }> {
 		const clone = this.clone(task);
+		const shown = path.relative(this.projectRoot, clone);
 		let fetched = false;
 		try {
 			sanitizeClone(clone, this.setup.gitConfig);
-			await this.git.fetchFromClone(clone, task.branch);
-			fetched = true;
+			try {
+				await this.git.fetchFromClone(clone, task.branch);
+				fetched = true;
+			} catch (error) {
+				task.state = 'failed';
+				task.error = `couldn't bring the branch back (${gitReason(error).replaceAll(clone, shown)}); its clone is kept in ${shown}`;
+			}
 		} catch (error) {
-			const why = error instanceof Error ? error.message : String(error);
+			fs.rmSync(path.join(clone, '.git'), { recursive: true, force: true });
 			task.state = 'failed';
-			task.error = `couldn't bring the branch back (${why.split('\n')[0]}); its clone is kept in ${path.relative(this.projectRoot, clone)}`;
+			task.error = `its git data was unsafe (${gitReason(error)}), so it was removed; the files are kept in ${shown}`;
 		}
 		fs.rmSync(this.stateDir(task), { recursive: true, force: true });
 		task.commits = await this.git.commitsSince(task.branch, base);
@@ -316,6 +373,6 @@ export class ContainerWorkers {
 			}
 		}
 		task.kept = task.commits > 0 || keepClone;
-		return task.kept;
+		return { fetched, hasWork: task.kept };
 	}
 }

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -89,14 +90,56 @@ describe('sanitizeClone', () => {
 		fs.symlinkSync(outside, path.join(gitDir, 'objects'));
 
 		expect(() => sanitizeClone(clone, '[core]\n')).toThrow(
-			"isn't a real folder"
+			"isn't a plain folder"
 		);
 		expect(fs.readdirSync(outside)).toEqual(['keep.txt']);
 
 		fs.rmSync(gitDir, { recursive: true });
 		fs.symlinkSync(outside, gitDir);
 		expect(() => sanitizeClone(clone, '[core]\n')).toThrow(
-			"isn't a real folder"
+			"isn't a plain folder"
+		);
+	});
+
+	it('refuses a symlinked packed-refs before any fetch, naming it', () => {
+		fs.writeFileSync(path.join(outside, 'packed-refs'), 'x');
+		fs.symlinkSync(
+			path.join(outside, 'packed-refs'),
+			path.join(gitDir, 'packed-refs')
+		);
+
+		expect(() => sanitizeClone(clone, '[core]\n')).toThrow(
+			".git/packed-refs isn't a plain file or folder"
+		);
+	});
+
+	it('refuses a symlink deep in objects, such as objects/pack', () => {
+		fs.symlinkSync(outside, path.join(gitDir, 'objects', 'pack'));
+
+		expect(() => sanitizeClone(clone, '[core]\n')).toThrow(
+			".git/objects/pack isn't a plain file or folder"
+		);
+	});
+
+	it('refuses a socket or FIFO, which could hang the fetch', async () => {
+		const server = net.createServer();
+		await new Promise<void>((resolve) =>
+			server.listen(path.join(gitDir, 'packed-refs'), resolve)
+		);
+		try {
+			expect(() => sanitizeClone(clone, '[core]\n')).toThrow(
+				".git/packed-refs isn't a plain file or folder"
+			);
+		} finally {
+			server.close();
+		}
+	});
+
+	it('refuses a .git bigger than the cap', () => {
+		fs.writeFileSync(path.join(gitDir, 'objects', 'big'), Buffer.alloc(2048));
+
+		expect(() => sanitizeClone(clone, '[core]\n', 1024)).toThrow(
+			'too big to fetch from'
 		);
 	});
 });

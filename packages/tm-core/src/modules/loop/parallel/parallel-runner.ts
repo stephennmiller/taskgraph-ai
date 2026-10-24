@@ -21,6 +21,7 @@ import { type ChildProcess, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
@@ -188,7 +189,11 @@ export class ParallelLoopRunner {
 					}
 					// Awaited before the abort check: an abort that lands while
 					// this runs must not be followed by a start
-					const prompt = buildParallelPrompt({ taskId: id, tag });
+					const prompt = buildParallelPrompt({
+						taskId: id,
+						tag,
+						container: !!workers
+					});
 					let cmd = command;
 					let args = ['-p', prompt, '--dangerously-skip-permissions'];
 					let cwd: string;
@@ -369,12 +374,32 @@ export class ParallelLoopRunner {
 		claimant: string,
 		aborted: boolean
 	): Promise<void> {
-		workers?.stop(running.flatMap((r) => (r.container ? [r.container] : [])));
-		for (const { task, hasWorktree, createdBranch } of running) {
+		const stuck = new Set(
+			workers?.stop(running.flatMap((r) => (r.container ? [r.container] : [])))
+		);
+		for (const { task, hasWorktree, createdBranch, container } of running) {
 			let hasWork = false;
-			if (workers && hasWorktree) {
-				await this.importStatus(workers, task, tag, claimant);
-				hasWork = await workers.bringBack(task, base, createdBranch, aborted);
+			const isStuck = !!container && stuck.has(container);
+			if (isStuck) {
+				// It may still be writing to the clone: leave the clone and claim
+				task.state = 'failed';
+				task.error = `its container may still be running; remove it with docker rm -f ${container}`;
+				task.kept = true;
+				hasWork = true;
+			} else if (workers && hasWorktree) {
+				// Read before bringBack removes the copy; applied only if the
+				// branch came back, so a failed task doesn't leave `review`
+				const status = workers.readStatus(task, tag ?? this.activeTag());
+				const back = await workers.bringBack(
+					task,
+					base,
+					createdBranch,
+					aborted
+				);
+				hasWork = back.hasWork;
+				if (back.fetched && status) {
+					await this.applyStatus(task.id, status, tag, claimant);
+				}
 			} else if (hasWorktree) {
 				const work = await git.work(task.worktree, task.branch, base);
 				task.commits = work.commits;
@@ -386,7 +411,9 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
-			if (aborted || !hasWork) await this.release(task.id, tag, claimant);
+			if ((aborted && !isStuck) || !hasWork) {
+				await this.release(task.id, tag, claimant);
+			}
 			task.claimed = await this.isClaimed(task.id, tag, claimant);
 		}
 	}
@@ -396,19 +423,17 @@ export class ParallelLoopRunner {
 	 * applied here while the task is still this run's claim. Only the status
 	 * comes back; notes and other changes the worker made stay in the copy.
 	 */
-	private async importStatus(
-		workers: ContainerWorkers,
-		task: ParallelTask,
+	private async applyStatus(
+		id: string,
+		status: TaskStatus,
 		tag: string | undefined,
 		claimant: string
 	): Promise<void> {
-		const status = workers.readStatus(task, tag ?? this.activeTag());
-		if (!status || status === 'in-progress') return;
-		if (!(await this.isClaimed(task.id, tag, claimant))) return;
+		if (!(await this.isClaimed(id, tag, claimant))) return;
 		try {
-			await this.tasks.updateStatus(task.id, status, tag);
+			await this.tasks.updateStatus(id, status, tag);
 		} catch (error) {
-			this.logger.warn(`Couldn't set task ${task.id} to ${status}:`, error);
+			this.logger.warn(`Couldn't set task ${id} to ${status}:`, error);
 		}
 	}
 

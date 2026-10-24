@@ -155,6 +155,27 @@ describe('formatParallelSummary', () => {
 		);
 	});
 
+	it('on abort keeps --container in the resume command, so the rerun reuses the clones', () => {
+		const aborted = result([task('1', { state: 'stopped', kept: true })], {
+			aborted: true
+		});
+		const resume = (container: { image?: string }) =>
+			strip(
+				formatParallelSummary(aborted, {
+					projectRoot: ROOT,
+					parallel: 3,
+					container
+				})
+			);
+
+		expect(resume({})).toContain(
+			'Next: taskgraph loop --parallel 3 --container picks up where they left off'
+		);
+		expect(resume({ image: 'my-img:1' })).toContain(
+			'taskgraph loop --parallel 3 --container --container-image my-img:1'
+		);
+	});
+
 	it('says when nothing is ready', () => {
 		expect(summary(result([]))).toBe(
 			'No tasks are ready to run\nRun taskgraph graph to see what the rest wait on'

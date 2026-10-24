@@ -304,9 +304,9 @@ export class TaskWorktrees {
 	}
 
 	/**
-	 * A standalone clone for a container worker, on `branch` at `start`.
-	 * `--no-local` copies the objects through git's transport: no hardlinks
-	 * into this repository and no alternates pointing back at it.
+	 * A standalone clone for a container worker, holding only `start` (no
+	 * other branches, no tags) on `branch`. The objects come through git's
+	 * transport: no hardlinks into this repository and no alternates.
 	 */
 	async cloneFor(clone: string, branch: string, start: string): Promise<void> {
 		const top = (await this.git(['rev-parse', '--show-toplevel'])).trim();
@@ -314,16 +314,23 @@ export class TaskWorktrees {
 			await this.git(['rev-parse', '--verify', `${start}^{commit}`])
 		).trim();
 		await this.git([
-			'clone',
+			'init',
 			'--quiet',
-			'--no-local',
-			'--no-hardlinks',
-			'--no-checkout',
-			'--',
-			top,
+			`--object-format=${await this.objectFormat()}`,
 			clone
 		]);
-		await this.git(['checkout', '--quiet', '-B', branch, sha], clone);
+		await this.git(
+			[
+				'fetch',
+				'--quiet',
+				'--no-tags',
+				'--',
+				top,
+				`${sha}:refs/heads/${branch}`
+			],
+			clone
+		);
+		await this.git(['checkout', '--quiet', branch], clone);
 	}
 
 	/**
@@ -342,6 +349,8 @@ export class TaskWorktrees {
 				'core.hooksPath=/dev/null',
 				'-c',
 				'protocol.file.allow=always',
+				'-c',
+				'transfer.fsckObjects=true',
 				'fetch',
 				'--quiet',
 				'--no-tags',
@@ -354,6 +363,7 @@ export class TaskWorktrees {
 			{
 				cwd: this.projectRoot,
 				encoding: 'utf8',
+				timeout: 10 * 60_000,
 				// upload-pack sets this itself; said again so nothing undoes it
 				env: { ...process.env, GIT_NO_LAZY_FETCH: '1' }
 			}

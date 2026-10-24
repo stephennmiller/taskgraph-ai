@@ -138,6 +138,15 @@ describe('buildParallelPrompt', () => {
 		expect(prompt).not.toMatch(/--project[ =]\S/);
 	});
 
+	it('in a container, says Claude works in its own clone on a copy of the tasks', () => {
+		const prompt = buildParallelPrompt({ taskId: '7', container: true });
+
+		expect(prompt).toContain('your own clone');
+		expect(prompt).toContain('a copy of the project');
+		expect(prompt).not.toContain('worktree');
+		expect(prompt).toContain('`taskgraph set-status --id=7 --status=review`');
+	});
+
 	it('passes the tag to the taskgraph commands', () => {
 		expect(buildParallelPrompt({ taskId: '7', tag: 'api' })).toContain(
 			'`taskgraph show 7 --tag=api`'

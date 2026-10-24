@@ -285,7 +285,8 @@ export class LoopCommand extends Command {
 			console.log(
 				formatParallelSummary(result, {
 					projectRoot: this.tmCore.projectPath,
-					parallel
+					parallel,
+					container
 				})
 			);
 			if (result.aborted) process.exitCode = 130;

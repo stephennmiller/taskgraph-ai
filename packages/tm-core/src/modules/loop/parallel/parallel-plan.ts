@@ -137,17 +137,23 @@ export function taskLogPath(projectRoot: string, id: string): string {
 export function buildParallelPrompt(options: {
 	taskId: string;
 	tag?: string;
+	/** `--container`: Claude works in its own clone, on a copy of the tasks */
+	container?: boolean;
 }): string {
-	const { taskId, tag } = options;
+	const { taskId, tag, container } = options;
 	const branch = taskBranchName(taskId);
 	if (tag !== undefined && !/^[A-Za-z0-9_-]+$/.test(tag)) {
 		throw new ParallelLoopError(`"${tag}" isn't a tag name`);
 	}
 	const tagFlag = tag ? ` --tag=${tag}` : '';
 	return [
-		`You are working on TaskGraph task ${taskId}, alone, in its own git worktree on branch ${branch}. Other tasks are being worked on in other worktrees at the same time.`,
+		container
+			? `You are working on TaskGraph task ${taskId}, alone, in a container, in your own clone of the repository on branch ${branch}. Other tasks are being worked on in other containers at the same time.`
+			: `You are working on TaskGraph task ${taskId}, alone, in its own git worktree on branch ${branch}. Other tasks are being worked on in other worktrees at the same time.`,
 		'',
-		"`taskgraph` commands here work on the main project's tasks, not this worktree's copy: TASKGRAPH_PROJECT_ROOT points there. Don't change it, don't pass --project, and don't edit or commit anything under .taskgraph/tasks/.",
+		container
+			? "`taskgraph` commands here work on a copy of the project's tasks that TASKGRAPH_PROJECT_ROOT points to; the task's status is read back from it when you're done. Don't change it, don't pass --project, and don't edit or commit anything under .taskgraph/tasks/."
+			: "`taskgraph` commands here work on the main project's tasks, not this worktree's copy: TASKGRAPH_PROJECT_ROOT points there. Don't change it, don't pass --project, and don't edit or commit anything under .taskgraph/tasks/.",
 		'',
 		`1. Read the task: \`taskgraph show ${taskId}${tagFlag}\`.`,
 		'2. Implement it here, with the smallest change that does the job, and run the tests and type checks that cover it.',

@@ -47,10 +47,14 @@ describe('buildContainerArgs', () => {
 	it('names the container, runs it as the given user in the project folder', () => {
 		const args = buildContainerArgs(run({ cwd: '/repo/wt/app' }));
 
-		expect(args.slice(0, 9)).toEqual([
+		expect(args.slice(0, 13)).toEqual([
 			'run',
 			'--rm',
 			'--init',
+			'--cap-drop',
+			'ALL',
+			'--security-opt',
+			'no-new-privileges',
 			'--name',
 			'taskgraph-task-3-abcd1234',
 			'--user',
@@ -215,9 +219,11 @@ describe('importedStatus', () => {
 	});
 
 	it('ignores an unknown status, another tag, broken JSON and odd shapes', () => {
-		expect(
-			importedStatus(file([{ id: '3', status: 'shipped' }]), '3', 'master')
-		).toBeUndefined();
+		for (const status of ['shipped', 'done', 'cancelled', 'pending']) {
+			expect(
+				importedStatus(file([{ id: '3', status }]), '3', 'master')
+			).toBeUndefined();
+		}
 		expect(
 			importedStatus(
 				file([{ id: '3', status: 'done' }], 'other'),

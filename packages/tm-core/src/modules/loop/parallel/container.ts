@@ -11,7 +11,6 @@
  * container-workers.ts).
  */
 
-import { TASK_STATUSES } from '../../../common/constants/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import { ParallelLoopError } from './parallel-plan.js';
@@ -23,6 +22,12 @@ export const CONTAINER_RUNTIME = 'docker';
 
 /** Claude Code reads either; the first one set is passed in */
 const TOKEN_VARS = ['CLAUDE_CODE_OAUTH_TOKEN', 'ANTHROPIC_API_KEY'];
+
+/**
+ * The statuses a worker may give its task. Not `done`: the work is on an
+ * unmerged branch, and `done` would let dependent tasks start without it.
+ */
+const IMPORTABLE_STATUSES: readonly TaskStatus[] = ['review', 'blocked'];
 
 /** The worker's tasks.json is read back only up to this size */
 export const MAX_IMPORTED_TASKS_BYTES = 32 * 1024 * 1024;
@@ -142,8 +147,8 @@ export function cloneGitConfig(options: {
 
 /**
  * The status the worker gave its task, read from its own tasks.json, which
- * it fully controls: only this task's top-level `status`, and only a known
- * status. Anything else in the file is ignored.
+ * it fully controls: only this task's top-level `status`, and only
+ * `review` or `blocked`. Anything else in the file is ignored.
  */
 export function importedStatus(
 	text: string,
@@ -165,7 +170,7 @@ export function importedStatus(
 		(t) => t && typeof t === 'object' && String(t.id) === taskId
 	);
 	const status = task?.status;
-	return TASK_STATUSES.includes(status) ? status : undefined;
+	return IMPORTABLE_STATUSES.includes(status) ? status : undefined;
 }
 
 export interface ContainerRun {
@@ -214,6 +219,11 @@ export function buildContainerArgs(run: ContainerRun): string[] {
 		'run',
 		'--rm',
 		'--init',
+		// Claude needs no root powers: drop them, and let nothing regain them
+		'--cap-drop',
+		'ALL',
+		'--security-opt',
+		'no-new-privileges',
 		'--name',
 		run.name,
 		...(run.user ? ['--user', run.user] : []),

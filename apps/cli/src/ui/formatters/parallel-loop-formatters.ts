@@ -116,13 +116,24 @@ function outcome(task: ParallelTask, projectRoot: string): string {
 	return `${theme.brand(task.branch)}${work.length ? ` ${theme.muted(`· ${work.join(', ')}`)}` : ''}${failed}`;
 }
 
+/** The flags a rerun needs to stay in containers and reuse the clones */
+const rerunFlags = (container?: { image?: string }) =>
+	container
+		? ` --container${container.image ? ` --container-image ${container.image}` : ''}`
+		: '';
+
 /**
  * The end-of-run summary. Never suggests merging: the branches are left
  * for review.
  */
 export function formatParallelSummary(
 	result: ParallelLoopResult,
-	options: { projectRoot: string; parallel: number }
+	options: {
+		projectRoot: string;
+		parallel: number;
+		/** The run used --container (and maybe --container-image) */
+		container?: { image?: string };
+	}
 ): string {
 	const { tasks } = result;
 	const { projectRoot } = options;
@@ -158,7 +169,7 @@ export function formatParallelSummary(
 			`Stopped ${plural(tasks.length, 'task')}; claims released${kept.length ? `, ${plural(kept.length, 'worktree')} with work kept` : ''}`
 		);
 		next = kept.length
-			? `Next: ${theme.brand(`taskgraph loop --parallel ${options.parallel}`)} picks up where they left off`
+			? `Next: ${theme.brand(`taskgraph loop --parallel ${options.parallel}${rerunFlags(options.container)}`)} picks up where they left off`
 			: null;
 	} else if (done === 0) {
 		lead = `${chalk.red('✗')} ${plural(tasks.length, 'task')} failed${review}`;
