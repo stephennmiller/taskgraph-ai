@@ -53,8 +53,7 @@ export const DEFAULT_PROJECT_CONFIG = {
 		defaultPriority: 'medium',
 		projectName: 'TaskGraph',
 		responseLanguage: 'English',
-		enableCodebaseAnalysis: true,
-		enableProxy: false
+		enableCodebaseAnalysis: true
 	},
 	claudeCode: {}
 };

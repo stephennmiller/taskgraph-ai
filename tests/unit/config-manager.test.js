@@ -137,7 +137,6 @@ const DEFAULT_CONFIG = {
 		defaultPriority: 'medium',
 		projectName: 'TaskGraph',
 		enableCodebaseAnalysis: true,
-		enableProxy: false,
 		responseLanguage: 'English'
 	},
 	claudeCode: {}
