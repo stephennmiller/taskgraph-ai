@@ -251,6 +251,29 @@ describe('tasks.updateFrom', () => {
 		]);
 	});
 
+	it('updates every unfinished task from 0, as legacy did', async () => {
+		answer(fromAi(1), fromAi(2), fromAi(3, { status: 'in-progress' }));
+
+		const result = await update({ from: 0 });
+
+		expect(result.updatedTasks.map((t) => t.id)).toEqual(['1', '2', '3']);
+	});
+
+	it.each(['3.5', 'abc'])('refuses --from=%s before any AI call', async (from) => {
+		await expect(update({ from })).rejects.toThrow("isn't a task ID");
+		expect(generateObject).not.toHaveBeenCalled();
+	});
+
+	it.each(['nosuch', 'master'])('fails on a tag the file does not have: %s', async (tag) => {
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({ feature: { tasks: [stored('2')], metadata: {} } })
+		);
+
+		await expect(update({ tag })).rejects.toThrow(`Tag "${tag}" not found`);
+		expect(generateObject).not.toHaveBeenCalled();
+	});
+
 	it('makes no AI call and changes nothing when no unfinished task is from the ID on', async () => {
 		const before = fs.readFileSync(tasksPath, 'utf8');
 
@@ -288,7 +311,6 @@ describe('tasks.updateFrom', () => {
 
 	it.each([
 		[{ from: 'abc' }, '"abc" isn\'t a task ID'],
-		[{ from: '0' }, '"0" isn\'t a task ID'],
 		[{ prompt: ' ' }, 'Update prompt is required']
 	])('refuses %o before any AI call', async (input, message) => {
 		await expect(update(input)).rejects.toThrow(message);

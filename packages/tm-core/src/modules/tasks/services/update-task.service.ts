@@ -108,9 +108,9 @@ export interface UpdateFromResult {
 }
 
 /** A positive whole number, as a string; `hint` says what to use instead */
-function taskIdOf(id: unknown, hint: string): string {
+function taskIdOf(id: unknown, hint: string, allowZero = false): string {
 	const text = String(id ?? '').trim();
-	if (!/^\d+$/.test(text) || Number(text) === 0) {
+	if (!/^\d+$/.test(text) || (Number(text) === 0 && !allowZero)) {
 		throw errorWithHint(
 			ERROR_CODES.VALIDATION_ERROR,
 			`${JSON.stringify(text)} isn't a task ID`,
@@ -199,14 +199,14 @@ function keepDoneSubtasks(
 	subtasks: Subtask[],
 	warn: (message: string) => void
 ): Subtask[] {
-	let result = subtasks;
+	const result = [...subtasks];
 	for (const done of original.filter((st) => st.status === 'done')) {
-		const sameId = (st: Subtask) => String(st.id) === String(done.id);
-		const now = result.find(sameId);
-		if (!now || JSON.stringify(now) !== JSON.stringify(done)) {
-			warn(`Completed subtask ${done.id} was modified or removed. Restoring.`);
-			result = [...result.filter((st) => !sameId(st)), done];
-		}
+		const index = result.findIndex((st) => String(st.id) === String(done.id));
+		if (index !== -1 && same(result[index], done)) continue;
+		warn(`Completed subtask ${done.id} was modified or removed. Restoring.`);
+		// In its place when the AI kept it, else at the end
+		if (index === -1) result.push(done);
+		else result[index] = done;
 	}
 	const seen = new Set<string>();
 	return result.filter((st) => {
@@ -217,6 +217,19 @@ function keepDoneSubtasks(
 		seen.add(String(st.id));
 		return true;
 	});
+}
+
+/**
+ * The AI's dependency list as strings, or the stored list as it is when the
+ * AI left it out or kept it (so an old file's number IDs aren't a change the
+ * save would apply over a dependency added meanwhile)
+ */
+function aiDependencies(dependencies: unknown, stored: Task) {
+	if (!Array.isArray(dependencies)) return stored.dependencies ?? [];
+	const next = dependencies.map(String);
+	return same(next, (stored.dependencies ?? []).map(String))
+		? stored.dependencies
+		: next;
 }
 
 const removedError = (id: string) =>
@@ -249,7 +262,7 @@ export class UpdateTaskService {
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
-		const { tasks, tag } = await this.taskService.loadStoredTasks(input.tag);
+		const { tasks, tag } = await this.loadTag(input.tag);
 		const stored = tasks.find((t) => String(t.id) === taskId);
 		if (!stored) {
 			throw new TaskGraphError(
@@ -370,6 +383,24 @@ export class UpdateTaskService {
 		};
 	}
 
+	/**
+	 * The tag's tasks. A tag tasks.json lacks fails, master included (the
+	 * loader reads a missing master as empty), unless the file has no tags yet
+	 */
+	private async loadTag(tag?: string) {
+		const loaded = await this.taskService.loadStoredTasks(tag);
+		if (loaded.tasks.length === 0) {
+			const tags = await this.taskService.getStorage().getAllTags();
+			if (tags.length > 0 && !tags.includes(loaded.tag)) {
+				throw new TaskGraphError(
+					`Tag "${loaded.tag}" not found`,
+					ERROR_CODES.NOT_FOUND
+				);
+			}
+		}
+		return loaded;
+	}
+
 	/** Change one task as tasks.json has it now, under the lock */
 	private async patch(
 		taskId: string,
@@ -403,7 +434,7 @@ export class UpdateTaskService {
 		}
 		const updated = {
 			...aiTask,
-			dependencies: (aiTask.dependencies ?? []).map(String),
+			dependencies: aiDependencies(aiTask.dependencies, stored),
 			priority: aiTask.priority ?? null,
 			details: aiTask.details ?? null,
 			testStrategy: aiTask.testStrategy ?? null
@@ -481,7 +512,10 @@ export class UpdateTaskService {
 		input: UpdateFromInput,
 		hooks: UpdateHooks = {}
 	): Promise<UpdateFromResult> {
-		const from = Number(taskIdOf(input.from, 'Use a number like `--from=3`'));
+		// 0 updates every task, as the legacy command did
+		const from = Number(
+			taskIdOf(input.from, 'Use a number like `--from=3`', true)
+		);
 		const prompt = input.prompt ?? '';
 		if (prompt.trim() === '') {
 			throw new TaskGraphError(
@@ -489,7 +523,7 @@ export class UpdateTaskService {
 				ERROR_CODES.VALIDATION_ERROR
 			);
 		}
-		const { tasks, tag } = await this.taskService.loadStoredTasks(input.tag);
+		const { tasks, tag } = await this.loadTag(input.tag);
 		const toUpdate = tasks.filter(
 			(t) => Number(t.id) >= from && t.status !== 'done'
 		);
@@ -608,7 +642,7 @@ export class UpdateTaskService {
 				...task,
 				...ai,
 				id: task.id,
-				dependencies: (ai.dependencies ?? []).map(String),
+				dependencies: aiDependencies(ai.dependencies, task),
 				priority: ai.priority ?? null,
 				details: ai.details ?? null,
 				testStrategy: ai.testStrategy ?? null,

@@ -434,6 +434,60 @@ describe('tasks.updateWithPrompt', () => {
 		]);
 	});
 
+	it('keeps an unchanged done subtask in place, without a warning', async () => {
+		const done = {
+			id: 1,
+			title: 'Shipped',
+			description: 'd',
+			status: 'done',
+			dependencies: [],
+			details: 'kept',
+			testStrategy: 't'
+		};
+		write(stored({ subtasks: [done, sub(2)] }));
+		// The AI sends the same done subtask with its keys in another order
+		const { testStrategy, details, ...rest } = done;
+		answer(fromAi({ subtasks: [{ details, testStrategy, ...rest }, sub(2)] }));
+		const warnings: string[] = [];
+
+		await tmCore.tasks.updateWithPrompt(
+			{ id: '1', prompt: 'Rewrite it' },
+			{ onWarning: (m) => warnings.push(m) }
+		);
+
+		expect(saved().subtasks.map((s: any) => s.id)).toEqual([1, 2]);
+		expect(warnings).toEqual([]);
+	});
+
+	it('keeps subtasks added during the call when the AI sends null for a field the task lacked', async () => {
+		const { subtasks: _none, ...noSubtasks } = stored();
+		write(noSubtasks);
+		generateObject.mockImplementation(async () => {
+			const data = readFile();
+			data.master.tasks[0].subtasks = [sub(1, { title: 'Added meanwhile' })];
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			return reply({ task: fromAi({ subtasks: null }) }) as any;
+		});
+
+		await update();
+
+		expect(saved().subtasks).toMatchObject([{ title: 'Added meanwhile' }]);
+	});
+
+	it('keeps a dependency added during the call when the AI keeps the list (number IDs)', async () => {
+		write(stored({ id: 3, dependencies: [1] }), stored({ id: 1 }), stored({ id: 2 }));
+		generateObject.mockImplementation(async () => {
+			const data = readFile();
+			data.master.tasks[0].dependencies = [1, 2];
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			return reply({ task: fromAi({ id: 3, dependencies: [1] }) }) as any;
+		});
+
+		await update({ id: '3' });
+
+		expect(saved().dependencies.map(String)).toEqual(['1', '2']);
+	});
+
 	it('fails without saving when the task was removed during the AI call', async () => {
 		generateObject.mockImplementation(async () => {
 			write(stored({ id: '2' }));
