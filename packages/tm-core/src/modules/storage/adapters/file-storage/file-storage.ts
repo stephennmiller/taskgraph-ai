@@ -374,14 +374,6 @@ export class FileStorage implements IStorage {
 		}
 	}
 
-	/**
-	 * Save metadata (stored with tasks)
-	 */
-	async saveMetadata(_metadata: TaskMetadata, tag?: string): Promise<void> {
-		const tasks = await this.loadTasks(tag);
-		await this.saveTasks(tasks, tag);
-	}
-
 	/** Append tasks (see withFreeIds) */
 	async appendTasks(tasks: Task[], tag?: string): Promise<Task[]> {
 		return this.mutateTasks(
