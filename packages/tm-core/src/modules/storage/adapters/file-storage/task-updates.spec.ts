@@ -2,18 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { createTask } from '../../../../testing/index.js';
 import { withFreeIds } from './task-updates.js';
 
+const task = (id: string) => createTask({ id, title: `Task ${id}` });
+
 describe('withFreeIds', () => {
 	it('keeps free IDs and moves ones in use or reserved by the archive', () => {
-		const existing = [createTask({ id: '1' }), createTask({ id: '2' })];
+		const existing = [task('1'), task('2')];
 		const archive = { master: { tasks: [], metadata: { highestId: 4 } } };
 
 		const { tasks, result } = withFreeIds(
 			existing,
-			[
-				createTask({ id: '2' }),
-				createTask({ id: '3' }),
-				createTask({ id: '9' })
-			],
+			[task('2'), task('3'), task('9')],
 			archive,
 			'master'
 		);
