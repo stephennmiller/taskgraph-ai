@@ -8,6 +8,7 @@ import path from 'node:path';
 import { COMPLEXITY_REPORT_FILE, TASKGRAPH_TASKS_FILE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
+import { errorMessage } from '../../shared/tool-reply.js';
 import type { ToolContext } from '../../shared/types.js';
 import {
 	createErrorResponse,
@@ -172,11 +173,8 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 						tag
 					});
 				} catch (error: unknown) {
-					const err = error instanceof Error ? error : new Error(String(error));
 					// The fix tm-core suggests, e.g. the threshold's range
-					const hint = (err as { hint?: unknown }).hint;
-					const message =
-						typeof hint === 'string' ? `${err.message}. ${hint}` : err.message;
+					const message = errorMessage(error);
 					return handleApiResult({
 						result: {
 							success: false,

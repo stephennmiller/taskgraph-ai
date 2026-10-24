@@ -6,6 +6,7 @@
 
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
+import { errorMessage } from '../../shared/tool-reply.js';
 import type { ToolContext } from '../../shared/types.js';
 import { handleApiResult, withToolContext } from '../../shared/utils.js';
 
@@ -145,10 +146,7 @@ export function registerResearchTool(server: FastMCP) {
 						}
 					});
 				} catch (error: unknown) {
-					const err = error instanceof Error ? error : new Error(String(error));
-					const hint = (err as { hint?: unknown }).hint;
-					const message =
-						typeof hint === 'string' ? `${err.message}. ${hint}` : err.message;
+					const message = errorMessage(error);
 					log.error(`research failed: ${message}`);
 					return reply({ success: false, error: { message } });
 				}
