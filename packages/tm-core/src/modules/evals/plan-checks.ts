@@ -74,32 +74,35 @@ const INTRO_HEADING =
 	/^(overview|summary|background|context|introduction|goals|motivation|problem)$/i;
 
 /**
- * Slugs of the headings that need no task: what not to build, top-level
- * intro headings, the Clarifications section, and every heading inside them.
+ * Slugs of the headings that need no task: what not to build and the
+ * Clarifications section, with every heading inside them, and top-level
+ * intro headings alone (a subsection under Goals can still ask for work).
  */
 function noTaskSlugs(sections: PrdSection[]): Set<string> {
 	const skip = new Set<string>();
+	const intro: string[] = [];
 	// Sections come in document order, so a parent is decided before its children
 	for (const section of sections) {
 		if (
 			NO_TASK_HEADING.test(section.title.trim()) ||
-			(section.level <= 2 && INTRO_HEADING.test(section.title.trim())) ||
 			isClarificationsHeading(section.title, section.level) ||
 			(section.parentSlug && skip.has(section.parentSlug))
 		) {
 			skip.add(section.slug);
+		} else if (section.level <= 2 && INTRO_HEADING.test(section.title.trim())) {
+			intro.push(section.slug);
 		}
 	}
-	return skip;
+	return new Set([...skip, ...intro]);
 }
 
 /**
  * Share of PRD headings covered by a task, using the sections parse-prd
  * records in `metadata.source` (see `computePrdCoverage`). With no task
  * citing the PRD at all, nothing is covered. Out of scope, non-goals, open
- * questions, top-level intro headings (Overview, Goals...) and the
- * Clarifications section (and headings inside them) need no task, so they
- * aren't counted.
+ * questions and the Clarifications section (and headings inside them), and
+ * top-level intro headings (Overview, Goals...) themselves, need no task,
+ * so they aren't counted.
  *
  * @param prdPath - The path tasks cite the PRD by
  */

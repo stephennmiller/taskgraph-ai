@@ -138,6 +138,21 @@ describe('checkHeadingCoverage', () => {
 		expect(result.sections).toBe(6);
 	});
 
+	it('still counts subsections under an intro heading', () => {
+		const content = ['# App', '## Goals', '### Offline sync', '## Login'].join(
+			'\n\n'
+		);
+
+		const result = checkHeadingCoverage(
+			[{ id: 1, metadata: { source: 'prd.md#login' } }],
+			'prd.md',
+			content
+		);
+
+		expect(result.uncovered).toEqual(['Offline sync']);
+		expect(result.sections).toBe(3);
+	});
+
 	it('reports tasks without a section', () => {
 		const tasks = plan();
 		delete tasks[3].metadata;
