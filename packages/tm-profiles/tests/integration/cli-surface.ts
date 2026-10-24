@@ -70,7 +70,15 @@ export function cliSurface(read: (file: string) => string): CliSurface {
 	)) {
 		const file = classFiles.get(match[2]);
 		if (!file) continue;
-		surface.set(match[1], new Set(longFlags(stripComments(read(file)))));
+		const source = stripComments(read(file));
+		const flags = new Set(longFlags(source));
+		// .alias('status') makes `taskgraph status` the same command
+		for (const name of [
+			match[1],
+			...[...source.matchAll(/\.alias\('([a-z-]+)'\)/g)].map((m) => m[1])
+		]) {
+			surface.set(name, flags);
+		}
 	}
 
 	return surface;

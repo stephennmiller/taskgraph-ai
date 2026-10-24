@@ -128,6 +128,21 @@
 			"trust",
 			"verbose"
 		],
+		"ls": [
+			"all-tags",
+			"blocking",
+			"compact",
+			"format",
+			"json",
+			"no-header",
+			"project",
+			"ready",
+			"silent",
+			"status",
+			"tag",
+			"watch",
+			"with-subtasks"
+		],
 		"merge-driver": [],
 		"models": [
 			"azure",
@@ -202,6 +217,17 @@
 			"uncheck"
 		],
 		"show": ["format", "id", "json", "project", "silent", "status"],
+		"status": [
+			"check",
+			"force",
+			"format",
+			"id",
+			"json",
+			"project",
+			"silent",
+			"status",
+			"uncheck"
+		],
 		"sync-readme": ["file", "status", "tag", "with-subtasks"],
 		"tags": [
 			"copy-from",

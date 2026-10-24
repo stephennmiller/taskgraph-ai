@@ -172,6 +172,7 @@ describe('taskgraph commands used in command bodies', () => {
 	it('finds the CLI commands to compare against', () => {
 		expect(flagsByCommand.has('set-status')).toBe(true);
 		expect(flagsByCommand.has('clear-subtasks')).toBe(true);
+		expect(flagsByCommand.get('status')).toBe(flagsByCommand.get('set-status'));
 	});
 
 	it.each(readdirSync(commandsDir).filter((file) => file.endsWith('.md')))(
