@@ -851,17 +851,6 @@ function registerCommands(programInstance) {
 	// This replaces individual command registrations and reduces duplication
 	registerAllCommands(programInstance);
 
-	// Initialize TaskGraph
-			const taskGraph = initTaskGraph(initOptions);
-
-			// Show current tag context
-			await displayCurrentTagIndicator(taskGraph.getCurrentTag(), {
-				tasksPath: taskGraph.getTasksPath()
-			});
-
-			await displayComplexityReport(taskGraph.getComplexityReportPath());
-		});
-
 	// init command (Directly calls the implementation from init.js)
 	programInstance
 		.command('init')
