@@ -12,8 +12,9 @@
  *   else changed it too.
  * - Lists of items with an `id` (tasks, subtasks) merge item by item: items
  *   others added stay, items the command removed go, items the command added
- *   are appended. When someone else took the ID of an item the command added,
- *   the command's item gets the next free ID and is reported in `renumbered`.
+ *   go after the item they follow in the command's list. When someone else
+ *   took the ID of an item the command added, the command's item gets the
+ *   next free ID and is reported in `renumbered`.
  *   A task the command added under an ID that was archived meanwhile moves
  *   too, and a new ID is always above the archive's `highestId`.
  *   Dependencies on a renumbered item, their provenance marks and
@@ -219,7 +220,32 @@ function mergeItemLists(
 	}
 
 	if (!isReordered(base, mine)) {
-		return [...current, ...ownAdded.values()];
+		// Each added item goes after the kept item it follows in `mine` and
+		// after what others added there; with none before it, before the
+		// first kept item
+		const after = new Map<string | null, Item[]>();
+		let previous: string | null = null;
+		for (const item of mine) {
+			const key = keyOf(item);
+			const placed = ownAdded.get(key);
+			if (placed !== undefined) {
+				after.set(previous, [...(after.get(previous) ?? []), placed]);
+			} else if (kept.has(key)) {
+				previous = key;
+			}
+		}
+		const result: Item[] = [];
+		let pending = after.get(null) ?? [];
+		for (const item of current) {
+			const key = keyOf(item);
+			if (kept.has(key)) {
+				result.push(...pending);
+				pending = after.get(key) ?? [];
+			}
+			result.push(item);
+		}
+		result.push(...pending);
+		return result;
 	}
 
 	// The command reordered its items: follow its order, and keep each item

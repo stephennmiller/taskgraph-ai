@@ -136,6 +136,39 @@ describe('mergeTagChanges', () => {
 		expect(renumbered).toEqual([]);
 	});
 
+	it('keeps a subtask the command inserted first in place when others edited one (#635)', () => {
+		const sub = (id: number, title: string, status = 'pending') => ({
+			id,
+			title,
+			status
+		});
+		const base = tag([task(1, { subtasks: [sub(2, 'A'), sub(3, 'B')] })]);
+		const mine = tag([
+			task(1, { subtasks: [sub(1, 'New'), sub(2, 'A'), sub(3, 'B')] })
+		]);
+		const theirs = tag([
+			task(1, { subtasks: [sub(2, 'A', 'in-progress'), sub(3, 'B')] })
+		]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks[0].subtasks).toEqual([
+			sub(1, 'New'),
+			sub(2, 'A', 'in-progress'),
+			sub(3, 'B')
+		]);
+	});
+
+	it('puts a task the command inserted after its neighbour and the tasks others added there', () => {
+		const base = tag([task(1), task(2)]);
+		const mine = tag([task(1), task(5, { title: 'Mine' }), task(2)]);
+		const theirs = tag([task(1), task(3, { title: 'Theirs' }), task(2)]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks.map((t) => t.id)).toEqual([1, 3, 5, 2]);
+	});
+
 	it('gives an added task the next free ID when someone else took its ID', () => {
 		const base = tag([task(1)]);
 		const mine = tag([
