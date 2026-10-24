@@ -6,7 +6,10 @@
 import fs from 'fs';
 import path from 'path';
 import { parseClarificationAnswers, writeClarifications } from '@tm/core';
-import { getDefaultNumTasks } from '../../../../scripts/modules/config-manager.js';
+import {
+	getConfig,
+	getDefaultNumTasks
+} from '../../../../scripts/modules/config-manager.js';
 import { findPrdGaps } from '../../../../scripts/modules/task-manager/parse-prd/index.js';
 import { parsePRD } from '../../../../scripts/modules/task-manager.js';
 import {
@@ -196,6 +199,9 @@ export async function parsePRDDirect(args, log, context = {}) {
 		};
 	}
 
+	// The models and response-language tools save through @tm/core, which
+	// doesn't update this server's cached legacy config
+	getConfig(projectRoot, true);
 	let numTasks = getDefaultNumTasks(projectRoot);
 	if (numTasksArg) {
 		numTasks =
