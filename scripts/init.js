@@ -31,7 +31,7 @@ import {
 	createProjectStructure,
 	setUpMergeDriver
 } from './modules/init-project-structure.js';
-import { aliasConfigFile } from './modules/init-shell-aliases.js';
+import { aliasMissingFile } from './modules/init-shell-aliases.js';
 import * as upstream from './modules/init-upstream-import.js';
 import { isSilentMode } from './modules/utils.js';
 import { insideGitWorkTree } from './modules/utils/git-utils.js';
@@ -248,7 +248,7 @@ async function initializeProject(options = {}) {
 			// The shell startup file is outside the project, so ask first, with
 			// No as the default, unless --aliases or --no-aliases answered
 			let addAliases = options.aliases === true;
-			const rcFile = options.aliases === undefined ? aliasConfigFile() : null;
+			const rcFile = options.aliases === undefined ? aliasMissingFile() : null;
 			if (rcFile) {
 				const shown = displayPath(rcFile);
 				const aliasInput = await promptQuestion(
@@ -358,7 +358,7 @@ function displayDryRun(initGit, storeTasksInGit, options, ruleProfiles = []) {
 	lines.push(
 		storeTasksInGit ? '  keep tasks in Git' : '  keep tasks out of Git'
 	);
-	const rcFile = options?.aliases ? aliasConfigFile() : null;
+	const rcFile = options?.aliases ? aliasMissingFile() : null;
 	if (rcFile) {
 		lines.push(`  add the tm alias to ${displayPath(rcFile)}`);
 	}

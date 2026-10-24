@@ -43,6 +43,21 @@ function aliasConfigFile() {
 }
 
 /**
+ * The shell startup file the `tm` alias would be added to, or null when there
+ * is none or it already has the alias, so init doesn't ask for nothing.
+ * @returns {string|null}
+ */
+function aliasMissingFile() {
+	const file = aliasConfigFile();
+	if (!file) return null;
+	try {
+		return fs.readFileSync(file, 'utf8').includes(ALIAS_LINE) ? null : file;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Append the `tm` alias to the user's shell startup file, unless it's there.
  * init calls this only with --aliases or a Yes to its question.
  */
@@ -86,4 +101,4 @@ ${aliasLines}
 	}
 }
 
-export { ALIAS_LINE, addShellAliases, aliasConfigFile, shellConfigFiles };
+export { ALIAS_LINE, addShellAliases, aliasMissingFile, shellConfigFiles };

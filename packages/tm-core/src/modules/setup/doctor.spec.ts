@@ -2,7 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { type CommandRunner, type DoctorCheck, runDoctor } from './doctor.js';
+import {
+	type CommandRunner,
+	type DoctorCheck,
+	createCommandRunner,
+	runDoctor
+} from './doctor.js';
 
 const dirs: string[] = [];
 const tempDir = (prefix: string) => {
@@ -223,16 +228,29 @@ describe('runDoctor', () => {
 		const root = project();
 		const configFile = path.join(tempDir('tg-doctor-home-'), '.claude.json');
 		const server = { command: 'npx', args: ['-y', 'taskgraph-ai'] };
-		const mcpFrom = async (config: object) => {
+		const mcpFrom = async (config: object, projectPath = root) => {
 			fs.writeFileSync(configFile, JSON.stringify(config));
 			const report = await runDoctor({
-				projectPath: root,
+				projectPath,
 				nodeVersion: '22.13.0',
 				run: noClaude,
 				claudeConfigFile: configFile
 			});
 			return byName(report.checks).mcp;
 		};
+
+		// Claude Code keys projects by the real path, with / on Windows
+		const linked = path.join(tempDir('tg-doctor-link-'), 'project');
+		fs.symlinkSync(root, linked, 'junction');
+		const realKey = fs.realpathSync(root).replace(/\\/g, '/');
+		expect(
+			(
+				await mcpFrom(
+					{ projects: { [realKey]: { mcpServers: { tg: server } } } },
+					linked
+				)
+			).status
+		).toBe('pass');
 
 		expect(
 			await mcpFrom({ projects: { [root]: { mcpServers: { tg: server } } } })
@@ -277,4 +295,84 @@ describe('runDoctor', () => {
 		expect(checks['signed-in'].status).toBe('skip');
 		expect(checks.plugin.status).toBe('skip');
 	});
+
+	it('uses the entry for this project, and an enabled one, when the plugin is listed per scope', async () => {
+		const root = project();
+		const pluginPath = installedPlugin({ version: '0.58.1' });
+
+		const report = await runDoctor({
+			projectPath: root,
+			nodeVersion: '22.13.0',
+			run: claude({
+				version: '2.1.309',
+				auth: { loggedIn: true },
+				plugins: [
+					{
+						id: 'taskgraph@taskgraph',
+						scope: 'local',
+						projectPath: '/somewhere/else',
+						enabled: false
+					},
+					{ id: 'taskgraph@taskgraph', scope: 'project', enabled: false },
+					{
+						id: 'taskgraph@taskgraph',
+						scope: 'user',
+						enabled: true,
+						readFromFolder: pluginPath
+					}
+				]
+			})
+		});
+
+		expect(byName(report.checks).plugin).toEqual({
+			name: 'plugin',
+			status: 'pass',
+			detail: '0.58.1'
+		});
+	});
+});
+
+describe('createCommandRunner', () => {
+	const node = process.execPath;
+	// On Windows the runner joins the command into one shell string, which
+	// these inline scripts don't survive
+	const posix = process.platform !== 'win32';
+
+	it('resolves null when the command does not exist', async () => {
+		const run = createCommandRunner(5_000);
+
+		expect(await run('taskgraph-no-such-command', [], os.tmpdir())).toBeNull();
+	});
+
+	it.runIf(posix)(
+		'keeps the output of a command that exits non-zero, as claude auth status does when signed out',
+		async () => {
+			const run = createCommandRunner(5_000);
+
+			const out = await run(
+				node,
+				['-e', 'console.log(JSON.stringify({loggedIn:false}));process.exit(1)'],
+				os.tmpdir()
+			);
+
+			expect(JSON.parse(out ?? '')).toEqual({ loggedIn: false });
+		}
+	);
+
+	it.runIf(posix)(
+		'gives up on a command that runs past the deadline',
+		async () => {
+			const run = createCommandRunner(200);
+			const started = Date.now();
+
+			const out = await run(
+				node,
+				['-e', 'console.log("partial");setTimeout(()=>{},10000)'],
+				os.tmpdir()
+			);
+
+			expect(out).toBeNull();
+			expect(Date.now() - started).toBeLessThan(5_000);
+		}
+	);
 });

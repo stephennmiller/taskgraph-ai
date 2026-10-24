@@ -85,22 +85,42 @@ export interface DoctorOptions {
 const PLUGIN_ID_PREFIX = 'taskgraph@';
 const COMMAND_TIMEOUT_MS = 15_000;
 
-const runCommand: CommandRunner = (command, args, cwd) =>
-	new Promise((resolve) => {
-		execFile(
-			command,
-			args,
-			{
-				cwd,
-				timeout: COMMAND_TIMEOUT_MS,
-				// npm installs `claude` as a .cmd shim on Windows. The arguments
-				// are fixed strings, so the shell sees nothing from the user.
-				shell: process.platform === 'win32',
-				windowsHide: true
-			},
-			(error, stdout) => resolve(error ? null : stdout)
-		);
-	});
+/**
+ * Runs commands with a deadline. A command that exits non-zero still gives
+ * its stdout (`claude auth status` exits 1 when signed out); one that can't
+ * start, or runs past the deadline, gives null. At the deadline execFile
+ * kills the command and closes its output pipes, so nothing can hang doctor.
+ */
+export function createCommandRunner(
+	timeoutMs: number = COMMAND_TIMEOUT_MS
+): CommandRunner {
+	const windows = process.platform === 'win32';
+	return (command, args, cwd) =>
+		new Promise((resolve) => {
+			execFile(
+				// npm installs `claude` as a .cmd shim, which Windows runs only
+				// through a shell. The arguments are fixed strings, so the shell
+				// sees nothing from the user; one string avoids Node's DEP0190.
+				windows ? [command, ...args].join(' ') : command,
+				windows ? [] : args,
+				{
+					cwd,
+					timeout: timeoutMs,
+					shell: windows,
+					windowsHide: true,
+					// Don't let cmd.exe run a claude.cmd planted in the project
+					env: windows
+						? { ...process.env, NoDefaultCurrentDirectoryInExePath: '1' }
+						: process.env
+				},
+				(error, stdout) => {
+					if (!error) return resolve(stdout);
+					const exitedNonZero = typeof error.code === 'number' && !error.killed;
+					resolve(exitedNonZero && stdout ? stdout : null);
+				}
+			);
+		});
+}
 
 function parseJson(text: string | null): unknown {
 	if (text === null) return undefined;
@@ -153,25 +173,42 @@ interface ListedPlugin {
 	id?: unknown;
 	enabled?: unknown;
 	installPath?: unknown;
+	/** Set instead of installPath for a plugin loaded in place from its marketplace folder */
+	readFromFolder?: unknown;
+	/** The project a `project` or `local` scope install belongs to */
+	projectPath?: unknown;
+}
+
+/** The folder the plugin loads from, if `claude plugin list` names one */
+function pluginFolder(plugin: ListedPlugin): string | null {
+	if (typeof plugin.installPath === 'string') return plugin.installPath;
+	if (typeof plugin.readFromFolder === 'string') return plugin.readFromFolder;
+	return null;
 }
 
 function checkPlugin(
 	listOutput: string | null,
-	cliVersion: string
+	cliVersion: string,
+	root: string
 ): DoctorCheck {
 	const listed = parseJson(listOutput);
 	if (!Array.isArray(listed)) return { name: 'plugin', status: 'skip' };
-	const plugin = (listed as ListedPlugin[]).find(
+	// One entry per scope it's installed at; project and local installs count
+	// only in their own project, and an enabled one decides
+	const candidates = (listed as ListedPlugin[]).filter(
 		(entry) =>
-			typeof entry?.id === 'string' && entry.id.startsWith(PLUGIN_ID_PREFIX)
+			typeof entry?.id === 'string' &&
+			entry.id.startsWith(PLUGIN_ID_PREFIX) &&
+			(typeof entry.projectPath !== 'string' ||
+				samePath(entry.projectPath, root))
 	);
+	const plugin =
+		candidates.find((entry) => entry.enabled !== false) ?? candidates[0];
 	if (!plugin) {
 		return { name: 'plugin', status: 'fail', problem: 'not-installed' };
 	}
-	const manifest =
-		typeof plugin.installPath === 'string'
-			? readPluginManifest(plugin.installPath)
-			: null;
+	const folder = pluginFolder(plugin);
+	const manifest = folder ? readPluginManifest(folder) : null;
 	const detail = manifest?.version;
 	if (plugin.enabled === false) {
 		return { name: 'plugin', status: 'fail', detail, problem: 'disabled' };
@@ -187,6 +224,22 @@ function checkPlugin(
 		};
 	}
 	return { name: 'plugin', status: 'pass', detail };
+}
+
+/** The ways Claude Code may have written a project path: as given, real, with / */
+function pathForms(dir: string): string[] {
+	let real = dir;
+	try {
+		real = fs.realpathSync(dir);
+	} catch {
+		// Keep the path as given
+	}
+	return [...new Set([dir, real].flatMap((p) => [p, p.replace(/\\/g, '/')]))];
+}
+
+function samePath(a: string, b: string): boolean {
+	const forms = new Set(pathForms(b));
+	return pathForms(a).some((form) => forms.has(form));
 }
 
 type McpServers = Record<string, unknown> | undefined;
@@ -219,7 +272,10 @@ function checkMcp(root: string, configFile: string): DoctorCheck {
 				projects?: Record<string, { mcpServers?: McpServers } | undefined>;
 		  }
 		| undefined;
-	if (launchesTaskGraph(claudeConfig?.projects?.[root]?.mcpServers)) {
+	const projectServers = pathForms(root).map(
+		(key) => claudeConfig?.projects?.[key]?.mcpServers
+	);
+	if (projectServers.some(launchesTaskGraph)) {
 		return { name: 'mcp', status: 'pass', detail: 'Claude Code, this project' };
 	}
 	if (launchesTaskGraph(claudeConfig?.mcpServers)) {
@@ -243,7 +299,7 @@ function readText(file: string): string | null {
 export async function runDoctor(
 	options: DoctorOptions = {}
 ): Promise<DoctorReport> {
-	const run = options.run ?? runCommand;
+	const run = options.run ?? createCommandRunner();
 	const cliVersion = options.cliVersion ?? TASKGRAPH_VERSION;
 	const root = path.resolve(resolveProjectRoot(options.projectPath));
 	const inProject = isTaskGraphProject(root);
@@ -266,7 +322,7 @@ export async function runDoctor(
 			: { name: 'signed-in', status: 'skip' },
 		checkProject(root),
 		claudeFound
-			? checkPlugin(pluginList, cliVersion)
+			? checkPlugin(pluginList, cliVersion, root)
 			: { name: 'plugin', status: 'skip' },
 		inProject
 			? checkMcp(root, options.claudeConfigFile ?? claudeConfigFile())

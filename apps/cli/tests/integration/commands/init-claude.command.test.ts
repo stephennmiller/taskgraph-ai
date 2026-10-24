@@ -80,6 +80,16 @@ describe('init and the Claude Code integration', () => {
 		expect(result.stdout).toContain('~/.bashrc');
 	});
 
+	it('lists the alias in a dry run only when the startup file lacks it', () => {
+		const before = run('--aliases', '--dry-run');
+		fs.appendFileSync(path.join(home, '.bashrc'), "alias tm='taskgraph'\n");
+		const after = run('--aliases', '--dry-run');
+
+		expect(before.stdout).toContain('add the tm alias to ~/.bashrc');
+		expect(after.status).toBe(0);
+		expect(after.stdout).not.toContain('add the tm alias');
+	});
+
 	it('--no-claude skips it', () => {
 		const result = init('--no-claude');
 

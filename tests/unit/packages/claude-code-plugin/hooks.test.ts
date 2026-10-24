@@ -227,6 +227,20 @@ describe('plugin hooks.json', () => {
 		);
 	});
 
+	it('passes a plugin folder with spaces and shell characters as one argument', () => {
+		const dir = project('tg-hook-plugin-root-space-');
+		const bin = fakeCli('printf \'[%s]\' "$@"; echo');
+		const pluginRoot = '/Users/Jane Doe/plugins/$(touch pwned) `x`;';
+
+		const result = runHook(sessionStart, dir, bin, {
+			env: { CLAUDE_PLUGIN_ROOT: pluginRoot }
+		});
+
+		expect(result.stdout).toBe(
+			`[prime][--project][${dir}][--plugin-root][${pluginRoot}]\n`
+		);
+	});
+
 	it('says to update when the CLI predates the plugin version check', () => {
 		const dir = project('tg-hook-noplugincheck-');
 		const bin = fakeCli(

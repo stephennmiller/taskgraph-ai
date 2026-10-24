@@ -21,6 +21,7 @@ import {
 	type DoctorCheck,
 	type DoctorCheckName,
 	type DoctorReport,
+	minimumVersion,
 	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
@@ -91,7 +92,9 @@ function row(
 			return {
 				mark: fail,
 				value: `${detail}, needs ${check.required}`,
-				fix: [`Install Node ${check.required?.replace(/^>=\s*/, '')} or later`]
+				fix: [
+					`Install Node ${minimumVersion(check.required ?? '') ?? check.required} or later`
+				]
 			};
 		case 'claude':
 			return {

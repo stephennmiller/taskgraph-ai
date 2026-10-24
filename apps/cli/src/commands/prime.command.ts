@@ -75,16 +75,17 @@ export class PrimeCommand extends Command {
 				}
 				return;
 			}
+			// Say it before reading the tasks, so it shows even if that fails
+			if (options.pluginRoot && !options.json) {
+				const plugin = checkCliForPlugin(options.pluginRoot);
+				if (!plugin.ok) console.log(`${formatCliTooOldForPlugin(plugin)}\n`);
+			}
 			const context = await this.tmCore.tasks.getPrimeContext({
 				tag: options.tag
 			});
 			if (options.json) {
 				printJson(context);
 				return;
-			}
-			if (options.pluginRoot) {
-				const plugin = checkCliForPlugin(options.pluginRoot);
-				if (!plugin.ok) console.log(`${formatCliTooOldForPlugin(plugin)}\n`);
 			}
 			console.log(formatPrimeContext(context));
 		} catch (error: any) {
