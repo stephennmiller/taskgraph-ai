@@ -336,3 +336,8 @@ export { GeneratedAcceptanceCriteriaSchema } from './modules/ai/schemas/base-sch
 
 // Claude Code provider; it loads the AI SDKs on first call, not on import
 export * from './modules/ai/providers/index.js';
+
+// ========== AI service ==========
+
+// Role fallback, retries and usage telemetry over the providers; the host passes config and log
+export * from './modules/ai/ai-service.js';

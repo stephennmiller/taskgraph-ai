@@ -257,7 +257,6 @@ async function updateSubtaskById(
 				role,
 				session,
 				projectRoot,
-				maxRetries: 2,
 				commandName: 'update-subtask',
 				outputType: isMCP ? 'mcp' : 'cli'
 			});
