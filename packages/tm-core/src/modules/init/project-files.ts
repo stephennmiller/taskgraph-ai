@@ -88,8 +88,13 @@ export function copyTemplateFile(
 	let content: string;
 	try {
 		content = readAsset(templateName);
-	} catch {
-		report('error', `Source file not found: ${templateName}`);
+	} catch (error) {
+		report(
+			'error',
+			(error as NodeJS.ErrnoException).code === 'ENOENT'
+				? `Source file not found: ${templateName}`
+				: `Couldn't read the ${templateName} template: ${errorText(error)}`
+		);
 		return;
 	}
 	if (fs.existsSync(targetPath)) {

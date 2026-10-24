@@ -71,6 +71,7 @@ describe('initializeProject', () => {
 		expect(read('.gitattributes')).toContain('merge=taskgraph');
 
 		expect(result.alreadySetUp).toBe(false);
+		expect(result.failed).toBe(false);
 		expect(result.changes.map((change) => change.path)).toEqual([
 			'.taskgraph/',
 			'.git/',
@@ -250,12 +251,52 @@ describe('initializeProject', () => {
 
 		expect(read('.taskgraph/config.json')).toBe('{ not json');
 		expect(result.problems.map((problem) => problem.level)).toContain('error');
+		expect(result.failed).toBe(true);
 		expect(
 			result.problems.some((problem) =>
 				problem.message.startsWith('Failed to set response language')
 			)
 		).toBe(true);
 		expect(exists('.gitignore')).toBe(true);
+	});
+
+	it('reports a .gitignore it could not write once', () => {
+		fs.mkdirSync(path.join(projectDir, '.gitignore'));
+
+		const result = initializeProject({
+			projectRoot: projectDir,
+			initGit: false,
+			claudeCode: false
+		});
+
+		expect(
+			result.problems.filter((problem) => problem.message.includes('gitignore'))
+		).toEqual([
+			{
+				level: 'error',
+				message: expect.stringMatching(/^Failed to create \.gitignore: EISDIR/)
+			}
+		]);
+		expect(result.failed).toBe(true);
+	});
+
+	it('says why git init failed instead of "Git not available"', () => {
+		write('.git', 'not a gitdir line');
+
+		const result = initializeProject({
+			projectRoot: projectDir,
+			claudeCode: false
+		});
+
+		expect(result.problems).toEqual([
+			{
+				level: 'warn',
+				message: expect.stringMatching(
+					/^Couldn't start a Git repository: fatal: .*gitfile/
+				)
+			}
+		]);
+		expect(result.failed).toBe(false);
 	});
 
 	it('hands each problem to onProblem before a later step throws', () => {
