@@ -414,6 +414,26 @@ describe('tasks.updateWithPrompt', () => {
 		expect(second.title).toBe('Added meanwhile');
 	});
 
+	it('warns when a field the AI rewrote was also changed during the call', async () => {
+		generateObject.mockImplementation(async () => {
+			const data = readFile();
+			data.master.tasks[0].details = 'Edited meanwhile';
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			return reply({ task: fromAi() }) as any;
+		});
+		const warnings: string[] = [];
+
+		await tmCore.tasks.updateWithPrompt(
+			{ id: '1', prompt: 'Rewrite it' },
+			{ onWarning: (m) => warnings.push(m) }
+		);
+
+		expect(saved().details).toBe(fromAi().details);
+		expect(warnings).toEqual([
+			"The details of task 1 changed while the AI was writing; the AI's version was saved"
+		]);
+	});
+
 	it('fails without saving when the task was removed during the AI call', async () => {
 		generateObject.mockImplementation(async () => {
 			write(stored({ id: '2' }));

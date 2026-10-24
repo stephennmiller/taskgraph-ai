@@ -35,6 +35,11 @@ import {
 	withoutReservedMetadata
 } from '../../dependencies/dependency-provenance.js';
 import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
+import {
+	hasItemIds,
+	isObject,
+	same
+} from '../../git/merge-driver/merge-json-utils.js';
 import { mergeTagChanges } from '../../storage/adapters/file-storage/merge-tag-changes.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
 import type { TaskService } from './task-service.js';
@@ -117,12 +122,21 @@ function taskIdOf(id: unknown, hint: string): string {
 
 /**
  * The task as the legacy reader handed it to the prompt, with number IDs
- * ("3" -> 3) for the task and its subtasks
+ * ("3" -> 3) for the task and its subtasks, and without the fields the
+ * loader adds from the complexity report (the legacy reader added none)
  */
 function promptView(task: Task): Task {
 	const num = (id: unknown) => (/^\d+$/.test(String(id)) ? Number(id) : id);
+	// shortcut: also drops these fields when tasks.json itself holds them; read the raw file if that matters
+	const {
+		complexity: _c,
+		recommendedSubtasks: _r,
+		expansionPrompt: _e,
+		complexityReasoning: _cr,
+		...rest
+	} = task;
 	return {
-		...task,
+		...rest,
 		id: num(task.id),
 		...(Array.isArray(task.subtasks) && {
 			subtasks: task.subtasks.map((s) => ({ ...s, id: num(s.id) }))
@@ -130,13 +144,79 @@ function promptView(task: Task): Task {
 	} as Task;
 }
 
-/** Apply what the rewrite changed (stored -> updated) to the task as it is now */
-function mergeRewrite(stored: Task, updated: Task, now: Task): Task {
+/**
+ * Apply what the rewrite changed (stored -> updated) to the task as it is
+ * now, and warn about each field someone else changed too: the AI's wins
+ */
+function mergeRewrite(
+	stored: Task,
+	updated: Task,
+	now: Task,
+	warn: (message: string) => void
+): Task {
+	const fields = stored as unknown as Record<string, unknown>;
+	const mine = updated as unknown as Record<string, unknown>;
+	const theirs = now as unknown as Record<string, unknown>;
+	for (const key of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
+		const values = [fields[key], mine[key], theirs[key]];
+		const [base, ours, current] = values;
+		// Objects and lists of items with IDs (subtasks) merge inside
+		if (values.every(isObject) || values.every(hasItemIds)) continue;
+		if (!same(base, ours) && !same(base, current) && !same(ours, current)) {
+			warn(
+				`The ${key} of task ${stored.id} changed while the AI was writing; the AI's version was saved`
+			);
+		}
+	}
 	return mergeTagChanges(
 		{ tasks: [stored] },
 		{ tasks: [updated] },
 		{ tasks: [now] }
 	).merged.tasks[0];
+}
+
+/** The stored status, unless the prompt mentions status */
+function keepStatus(
+	stored: Task,
+	updated: { status?: unknown },
+	prompt: string,
+	warn: (message: string) => void
+) {
+	if (
+		updated.status !== stored.status &&
+		!prompt.toLowerCase().includes('status')
+	) {
+		warn(
+			`AI changed task status. Restoring original status '${stored.status}'.`
+		);
+		updated.status = stored.status;
+	}
+}
+
+/** `subtasks` with each done one of `original` restored as it was, no ID twice */
+function keepDoneSubtasks(
+	original: Subtask[],
+	subtasks: Subtask[],
+	warn: (message: string) => void
+): Subtask[] {
+	let result = subtasks;
+	for (const done of original.filter((st) => st.status === 'done')) {
+		const sameId = (st: Subtask) => String(st.id) === String(done.id);
+		const now = result.find(sameId);
+		if (!now || JSON.stringify(now) !== JSON.stringify(done)) {
+			warn(`Completed subtask ${done.id} was modified or removed. Restoring.`);
+			result = [...result.filter((st) => !sameId(st)), done];
+		}
+	}
+	const seen = new Set<string>();
+	return result.filter((st) => {
+		if (seen.has(String(st.id))) {
+			warn(`Duplicate subtask ID ${st.id} removed.`);
+			return false;
+		}
+		seen.add(String(st.id));
+		return true;
+	});
 }
 
 const removedError = (id: string) =>
@@ -280,7 +360,7 @@ export class UpdateTaskService {
 		const { result: saved } = await this.taskService.modifyTasks((current) => {
 			const index = current.findIndex((t) => String(t.id) === taskId);
 			if (index === -1) throw removedError(taskId);
-			current[index] = mergeRewrite(stored, updated, current[index]);
+			current[index] = mergeRewrite(stored, updated, current[index], warn);
 			return { tasks: current, result: current[index] };
 		}, tag);
 		return {
@@ -336,15 +416,7 @@ export class UpdateTaskService {
 			debug(`AI changed task ID. Restoring original ID ${stored.id}.`);
 		}
 		updated.id = stored.id;
-		if (
-			updated.status !== stored.status &&
-			!prompt.toLowerCase().includes('status')
-		) {
-			warn(
-				`AI changed task status. Restoring original status '${stored.status}'.`
-			);
-			updated.status = stored.status;
-		}
+		keepStatus(stored, updated, prompt, warn);
 		const original = stored.subtasks ?? [];
 		if (Array.isArray(updated.subtasks)) {
 			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
@@ -385,28 +457,7 @@ export class UpdateTaskService {
 				warn('Subtasks removed by AI. Restoring original subtasks.');
 				updated.subtasks = original;
 			} else {
-				for (const done of original.filter((st) => st.status === 'done')) {
-					const same = (st: Subtask) => String(st.id) === String(done.id);
-					const now = updated.subtasks.find(same);
-					if (!now || JSON.stringify(now) !== JSON.stringify(done)) {
-						warn(
-							`Completed subtask ${done.id} was modified or removed. Restoring.`
-						);
-						updated.subtasks = updated.subtasks.filter(
-							(st: Subtask) => !same(st)
-						);
-						updated.subtasks.push(done);
-					}
-				}
-				const seen = new Set<string>();
-				updated.subtasks = updated.subtasks.filter((st: Subtask) => {
-					if (seen.has(String(st.id))) {
-						warn(`Duplicate subtask ID ${st.id} removed.`);
-						return false;
-					}
-					seen.add(String(st.id));
-					return true;
-				});
+				updated.subtasks = keepDoneSubtasks(original, updated.subtasks, warn);
 			}
 		}
 		// The schema has only some fields and sends null for the ones the AI
@@ -500,14 +551,24 @@ export class UpdateTaskService {
 		const byId = new Map<string, any>(returned.map((t) => [String(t.id), t]));
 		// The model may return tasks it was never sent; only those sent change
 		const rewritten = new Map<string, { stored: Task; updated: Task }>();
+		const missing: string[] = [];
 		for (const task of toUpdate) {
 			const ai = byId.get(String(task.id));
-			if (ai) {
-				rewritten.set(String(task.id), {
-					stored: task,
-					updated: this.rewriteOne(task, ai)
-				});
+			if (!ai) {
+				missing.push(String(task.id));
+				continue;
 			}
+			rewritten.set(String(task.id), {
+				stored: task,
+				updated: this.rewriteOne(task, ai, prompt, (message) =>
+					warn(`Task ${task.id}: ${message}`)
+				)
+			});
+		}
+		if (missing.length > 0) {
+			warn(
+				`The AI didn't return ${missing.length === 1 ? 'task' : 'tasks'} ${missing.join(', ')}, so ${missing.length === 1 ? 'it was' : 'they were'} left as ${missing.length === 1 ? 'it was' : 'they were'}`
+			);
 		}
 
 		const { result: saved } = await this.taskService.modifyTasks((current) => {
@@ -518,7 +579,7 @@ export class UpdateTaskService {
 					warn(`Task ${id} was removed while it was being updated`);
 					continue;
 				}
-				current[index] = mergeRewrite(stored, updated, current[index]);
+				current[index] = mergeRewrite(stored, updated, current[index], warn);
 				kept.push(current[index]);
 			}
 			return { tasks: kept.length ? current : null, result: kept };
@@ -532,8 +593,16 @@ export class UpdateTaskService {
 		};
 	}
 
-	/** One task of an `update --from` reply merged onto the stored task */
-	private rewriteOne(task: Task, ai: any): Task {
+	/**
+	 * One task of an `update --from` reply merged onto the stored task, with
+	 * its status (unless the prompt mentions it) and done subtasks kept
+	 */
+	private rewriteOne(
+		task: Task,
+		ai: any,
+		prompt: string,
+		warn: (message: string) => void
+	): Task {
 		const merged = keepStoredFields(
 			{
 				...task,
@@ -572,7 +641,11 @@ export class UpdateTaskService {
 				);
 				return restored;
 			});
+			if (task.subtasks?.length) {
+				merged.subtasks = keepDoneSubtasks(task.subtasks, merged.subtasks, warn);
+			}
 		}
+		keepStatus(task, merged, prompt, warn);
 		return merged;
 	}
 

@@ -111,6 +111,28 @@ describe('update_task', () => {
 		});
 	});
 
+	it('warns, as legacy did, when the AI appended nothing', async () => {
+		tasks.updateWithPrompt.mockResolvedValue({
+			task: savedTask,
+			tag: 'master',
+			appended: '',
+			telemetryData: null,
+			tagInfo
+		});
+
+		const result = await tool().execute(
+			{ id: '3', prompt: 'x', append: true, projectRoot: project },
+			ctx
+		);
+
+		expect(reply(result).data).toMatchObject({
+			updated: true,
+			warnings: [
+				'AI response was empty or whitespace after trimming. Original details remain unchanged.'
+			]
+		});
+	});
+
 	it('replies that a done task was not updated, without failing', async () => {
 		tasks.updateWithPrompt.mockResolvedValue({
 			task: savedTask,
@@ -219,6 +241,32 @@ describe('update', () => {
 			telemetryData: { totalTokens: 5 },
 			tagInfo
 		});
+	});
+
+	it("adds tm-core's warnings to the reply", async () => {
+		tasks.updateFrom.mockImplementation(async (_input, hooks) => {
+			hooks.onWarning("The AI didn't return task 4, so it was left as it was");
+			return {
+				tag: 'master',
+				sentCount: 2,
+				updatedTasks: [savedTask],
+				telemetryData: null,
+				tagInfo
+			};
+		});
+
+		const result = await tool().execute(
+			{ from: '3', prompt: 'x', projectRoot: project },
+			ctx
+		);
+
+		expect(reply(result).data).toMatchObject({
+			updatedCount: 1,
+			warnings: ["The AI didn't return task 4, so it was left as it was"]
+		});
+		expect(ctx.log.warn).toHaveBeenCalledWith(
+			"The AI didn't return task 4, so it was left as it was"
+		);
 	});
 
 	it('fails when no unfinished task is from the ID on', async () => {

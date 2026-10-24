@@ -202,6 +202,37 @@ describe('update prompt inputs', () => {
 		});
 	}
 
+	// The legacy reader ignored the report; tm-core's loader adds its fields
+	it('leaves complexity report fields out of the prompt, as legacy did', async () => {
+		const reports = path.join(projectDir, '.taskgraph', 'reports');
+		fs.mkdirSync(reports, { recursive: true });
+		fs.writeFileSync(
+			path.join(reports, 'task-complexity-report.json'),
+			JSON.stringify({
+				meta: { generatedAt: '2026-01-01T00:00:00.000Z' },
+				complexityAnalysis: [3, 4, 5].map((taskId) => ({
+					taskId,
+					taskTitle: `Task ${taskId}`,
+					complexityScore: 7,
+					recommendedSubtasks: 4,
+					expansionPrompt: 'Split it',
+					complexityReasoning: 'Many parts'
+				}))
+			})
+		);
+
+		const one = await capture(updateTask.default, 'update-task', () =>
+			tmCore.tasks.updateWithPrompt(updateTask.default as any)
+		);
+		expect(one).toEqual(legacy['update-task'].default);
+
+		ai.object.mockClear();
+		const many = await capture(updateFrom.default, 'update-tasks', () =>
+			tmCore.tasks.updateFrom(updateFrom.default as any)
+		);
+		expect(many).toEqual(legacy.update.default);
+	});
+
 	// The legacy command asked for a 'research' variant the prompt doesn't
 	// have, so `update-task --research` failed before any AI call
 	it('update-task --research uses the default prompt with its research wording', async () => {

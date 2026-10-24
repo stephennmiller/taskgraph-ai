@@ -178,6 +178,21 @@ describe('update-task and update', () => {
 		expect(printed).toContain('  4  Write docs');
 	});
 
+	it('update exits 1 when the AI returned none of the tasks it was sent', async () => {
+		updateFrom.mockResolvedValue({
+			tag: 'master',
+			sentCount: 2,
+			updatedTasks: [],
+			telemetryData: usage,
+			tagInfo: null
+		});
+
+		await update('--from=3', '--prompt=x');
+
+		expect(out.join('\n')).toContain('No tasks changed');
+		expect(process.exitCode).toBe(1);
+	});
+
 	it('update says when there is nothing to update', async () => {
 		updateFrom.mockResolvedValue({
 			tag: 'master',

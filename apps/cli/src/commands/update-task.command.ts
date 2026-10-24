@@ -289,6 +289,8 @@ export class UpdateCommand extends Command {
 			}
 			console.log(formatTasksUpdated(result.updatedTasks));
 			printUsage(result.telemetryData);
+			// Tasks were sent and none changed: the AI returned none of them
+			if (result.updatedTasks.length === 0) process.exitCode = 1;
 		});
 	}
 

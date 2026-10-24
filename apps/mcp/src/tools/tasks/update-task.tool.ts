@@ -78,9 +78,18 @@ const UpdateSchema = z.object({
 type UpdateTaskArgs = z.infer<typeof UpdateTaskSchema>;
 type UpdateArgs = z.infer<typeof UpdateSchema>;
 
-/** tm-core's warnings, and AI detail with global.debug on, to the client log */
-const reportTo = ({ log }: ToolContext): UpdateHooks => ({
-	onWarning: (message) => log.warn(message),
+/**
+ * tm-core's warnings, and AI detail with global.debug on, to the client log;
+ * warnings also go in `warnings`, since the client may not show the log
+ */
+const reportTo = (
+	{ log }: ToolContext,
+	warnings: string[]
+): UpdateHooks => ({
+	onWarning: (message) => {
+		warnings.push(message);
+		log.warn(message);
+	},
 	onDebug: (message) => log.debug(message)
 });
 
@@ -112,6 +121,7 @@ export function registerUpdateTaskTool(server: FastMCP) {
 				}
 				const tag = args.tag || tmCore.config.getActiveTag();
 				const taskId = String(args.id);
+				const warnings: string[] = [];
 				return replyWith({ ...args, tag }, context, 'Error updating task', async () => {
 					const result = await tmCore.tasks.updateWithPrompt(
 						{
@@ -124,8 +134,13 @@ export function registerUpdateTaskTool(server: FastMCP) {
 							session,
 							outputType: 'mcp'
 						},
-						reportTo(context)
+						reportTo(context, warnings)
 					);
+					if (args.append && args.prompt && result.appended === '') {
+						reportTo(context, warnings).onWarning?.(
+							'AI response was empty or whitespace after trimming. Original details remain unchanged.'
+						);
+					}
 					if (result.skipped === 'done') {
 						log.warn(
 							`Task ${taskId} is already marked as done and cannot be updated`
@@ -155,7 +170,8 @@ export function registerUpdateTaskTool(server: FastMCP) {
 									: { ...result.task, id: replyId(result.task.id) },
 							telemetryData: result.telemetryData,
 							// A metadata-only update makes no AI call; the legacy reply named the tag
-							tagInfo: result.tagInfo ?? (result.telemetryData ? undefined : { tag })
+							tagInfo: result.tagInfo ?? (result.telemetryData ? undefined : { tag }),
+							...(warnings.length > 0 && { warnings })
 						}
 					};
 				});
@@ -178,6 +194,7 @@ export function registerUpdateTool(server: FastMCP) {
 			async (args: UpdateArgs & { projectRoot: string }, context: ToolContext) => {
 				const { tmCore, session } = context;
 				const tag = args.tag || tmCore.config.getActiveTag();
+				const warnings: string[] = [];
 				return replyWith({ ...args, tag }, context, 'Error updating tasks', async () => {
 					const result = await tmCore.tasks.updateFrom(
 						{
@@ -188,7 +205,7 @@ export function registerUpdateTool(server: FastMCP) {
 							session,
 							outputType: 'mcp'
 						},
-						reportTo(context)
+						reportTo(context, warnings)
 					);
 					if (result.sentCount === 0) {
 						throw new Error(
@@ -203,7 +220,8 @@ export function registerUpdateTool(server: FastMCP) {
 							tasksPath: tasksPathOf(args.projectRoot),
 							updatedCount: count,
 							telemetryData: result.telemetryData,
-							tagInfo: result.tagInfo
+							tagInfo: result.tagInfo,
+							...(warnings.length > 0 && { warnings })
 						}
 					};
 				});

@@ -211,6 +211,46 @@ describe('tasks.updateFrom', () => {
 		expect(three.metadata).toEqual({ dependencySources: { 2: 'inferred' } });
 	});
 
+	it('warns about each sent task the AI did not return', async () => {
+		answer(fromAi(2));
+		const warnings: string[] = [];
+
+		const result = await tmCore.tasks.updateFrom(
+			{ from: 2, prompt: 'New direction' },
+			{ onWarning: (m) => warnings.push(m) }
+		);
+
+		expect(result.updatedTasks.map((t) => t.id)).toEqual(['2']);
+		expect(savedTasks()[2].title).toBe('Task 3');
+		expect(warnings).toEqual([
+			"The AI didn't return task 3, so it was left as it was"
+		]);
+	});
+
+	it('keeps the status unless the prompt mentions it, and done subtasks', async () => {
+		const done = { id: 1, title: 'Shipped', status: 'done', dependencies: [] };
+		write([stored('2', { subtasks: [done] })]);
+		answer(
+			fromAi(2, {
+				status: 'done',
+				subtasks: [{ ...done, title: 'Shipped v2', status: 'pending' }]
+			})
+		);
+		const warnings: string[] = [];
+
+		await tmCore.tasks.updateFrom(
+			{ from: 2, prompt: 'New direction' },
+			{ onWarning: (m) => warnings.push(m) }
+		);
+
+		expect(savedTasks()[0].status).toBe('pending');
+		expect(savedTasks()[0].subtasks).toMatchObject([done]);
+		expect(warnings).toEqual([
+			'Task 2: Completed subtask 1 was modified or removed. Restoring.',
+			"Task 2: AI changed task status. Restoring original status 'pending'."
+		]);
+	});
+
 	it('makes no AI call and changes nothing when no unfinished task is from the ID on', async () => {
 		const before = fs.readFileSync(tasksPath, 'utf8');
 
@@ -278,6 +318,6 @@ describe('tasks.updateFrom', () => {
 			['5', 'Added meanwhile', 'pending']
 		]);
 		expect(result.updatedTasks.map((t) => t.id)).toEqual(['2']);
-		expect(warnings).toEqual(['Task 3 was removed while it was being updated']);
+		expect(warnings).toContain('Task 3 was removed while it was being updated');
 	});
 });

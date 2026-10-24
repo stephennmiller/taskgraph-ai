@@ -219,6 +219,30 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 	}, 240000);
 
 	it('update --from keeps a status change and a new task made meanwhile', async () => {
+		// A reply for the task sent, so the save has something to apply
+		fs.writeFileSync(
+			path.join(fakeDir, 'replies.json'),
+			JSON.stringify([
+				{
+					holdUntil: 'release',
+					object: {
+						tasks: [
+							{
+								id: 10,
+								title: 'Task 10, on postgres',
+								description: 'Task 10 description',
+								status: 'pending',
+								dependencies: [],
+								priority: 'medium',
+								details: null,
+								testStrategy: null,
+								subtasks: null
+							}
+						]
+					}
+				}
+			])
+		);
 		const running = startAiCommand(
 			'update',
 			'--from=10',
@@ -232,6 +256,7 @@ describe.skipIf(!built)('changes made while an AI command runs', () => {
 
 		expect(result.status, result.stderr).toBe(0);
 		expectChangesKept();
+		expect(task(10)?.title).toBe('Task 10, on postgres');
 	}, 240000);
 
 	it('a status set on the task being updated survives the update', async () => {
