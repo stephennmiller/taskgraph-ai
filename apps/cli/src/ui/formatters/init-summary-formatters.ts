@@ -16,7 +16,7 @@
  */
 
 import chalk from 'chalk';
-import { theme } from '../theme.js';
+import { theme, withCode } from '../theme.js';
 
 /** One file or folder that init created or changed */
 export interface InitChange {
@@ -50,10 +50,6 @@ export const PLUGIN_NAME = 'taskgraph@taskgraph';
 
 const PRD_PATH = '.taskgraph/docs/prd.md';
 const TEMPLATES_DIR = '.taskgraph/templates/';
-
-/** Render `code` segments in the brand color, like error hints do */
-const withCode = (text: string) =>
-	text.replace(/`([^`]+)`/g, (_, code: string) => theme.brand(code));
 
 function formatChanges(changes: InitChange[]): string[] {
 	const width = Math.max(0, ...changes.map((change) => change.path.length));

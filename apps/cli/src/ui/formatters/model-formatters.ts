@@ -20,7 +20,7 @@
 
 import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
-import { theme } from '../theme.js';
+import { theme, withCode } from '../theme.js';
 
 export type ModelRoleName = 'main' | 'research' | 'fallback';
 
@@ -56,9 +56,6 @@ export interface ModelChange {
 	from: string | null;
 	to: string;
 }
-
-const withCode = (text: string) =>
-	text.replace(/`([^`]+)`/g, (_, code: string) => theme.brand(code));
 
 /** `opus (most capable), sonnet (balanced), haiku (fastest)` */
 export function formatModelChoices(modelIds: string[]): string {

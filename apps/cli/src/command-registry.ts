@@ -7,6 +7,7 @@ import type { Command } from 'commander';
 
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
+import { DoctorCommand } from './commands/doctor.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 import { GraphCommand } from './commands/graph.command.js';
 // Import all commands
@@ -119,6 +120,12 @@ export class CommandRegistry {
 			name: 'github',
 			description: 'Push tasks to GitHub Issues (status, push, unlink)',
 			commandClass: GithubCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'doctor',
+			description: 'Check that TaskGraph and Claude Code are set up',
+			commandClass: DoctorCommand as any,
 			category: 'utility'
 		},
 		{

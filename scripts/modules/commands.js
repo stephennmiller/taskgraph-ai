@@ -2094,8 +2094,8 @@ function registerCommands(programInstance) {
 		)
 		.option('--skip-install', 'Skip installing dependencies')
 		.option('--dry-run', 'Show what would be done without making changes')
-		.option('--aliases', 'Add shell aliases (tm, taskgraph)')
-		.option('--no-aliases', 'Skip shell aliases (tm, taskgraph)')
+		.option('--aliases', 'Add the tm alias to your shell startup file')
+		.option('--no-aliases', "Don't add the tm alias, and don't ask")
 		.option('--git', 'Initialize Git repository')
 		.option('--no-git', 'Skip Git repository initialization')
 		.option('--git-tasks', 'Store tasks in Git')
@@ -3145,26 +3145,7 @@ Examples:
 			displayError(err);
 		});
 
-	// tui / repl command - launches the interactive TUI
-	programInstance
-		.command('tui')
-		.alias('repl')
-		.description('Launch the interactive TUI/REPL mode')
-		.action(async () => {
-			await launchREPL();
-		});
-
 	return programInstance;
-}
-
-/**
- * Launch the interactive TUI REPL. The TUI is not built yet, so this shows
- * help instead.
- */
-async function launchREPL() {
-	console.log(chalk.yellow('TUI mode coming soon!'));
-	console.log(chalk.dim('Showing help instead...\n'));
-	displayHelp();
 }
 
 // Commands that work outside a project
@@ -3256,8 +3237,7 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	// Git runs the merge driver from the repository root, which may not be
 	// the project root
 	'merge-driver',
-	'tui',
-	'repl'
+	'doctor'
 ]);
 
 /**
@@ -3367,16 +3347,14 @@ function setupCLI() {
  */
 async function runCLI(argv = process.argv) {
 	try {
-		// Bare `taskgraph` gets the banner like `--help`: until the TUI ships,
-		// launchREPL falls back to the help screen (a real TUI clears the screen
-		// and draws its own)
+		// Bare `taskgraph` is the help screen, banner included
 		if (argv.length <= 2) {
 			if (
 				ui.shouldShowAsciiBanner(argv.slice(2), Boolean(process.stdout.isTTY))
 			) {
 				displayBanner();
 			}
-			await launchREPL();
+			displayHelp();
 			return;
 		}
 
@@ -3465,4 +3443,4 @@ async function runCLI(argv = process.argv) {
 	}
 }
 
-export { registerCommands, setupCLI, runCLI, launchREPL };
+export { registerCommands, setupCLI, runCLI };

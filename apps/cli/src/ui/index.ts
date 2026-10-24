@@ -50,6 +50,12 @@ export {
 	type ArchivedTaskRow
 } from './formatters/archive-formatters.js';
 
+// What taskgraph doctor found
+export {
+	formatDoctorReport,
+	type DoctorFormatOptions
+} from './formatters/doctor-formatters.js';
+
 // What next --claim took
 export {
 	formatClaim,

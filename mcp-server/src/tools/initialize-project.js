@@ -23,8 +23,10 @@ export function registerInitializeProjectTool(server) {
 			addAliases: z
 				.boolean()
 				.optional()
-				.default(true)
-				.describe('Add shell aliases (tm, taskgraph) to shell config file.'),
+				.default(false)
+				.describe(
+					"Add the tm alias to the user's shell startup file. Only when the user asks for it."
+				),
 			initGit: z
 				.boolean()
 				.optional()

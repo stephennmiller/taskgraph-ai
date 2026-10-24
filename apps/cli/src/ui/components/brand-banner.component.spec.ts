@@ -85,7 +85,7 @@ describe('shouldShowAsciiBanner', () => {
 		[['--version']],
 		[['list', '--help']],
 		[['init']],
-		[['tui']]
+		[['doctor']]
 	])('leads with the result for %j', (args) => {
 		expect(shouldShowAsciiBanner(args, true)).toBe(false);
 	});

@@ -1,7 +1,8 @@
 /**
  * @fileoverview `init` sets up the Claude Code integration by default (also
- * under --yes), writes .mcp.json only with --mcp, and never edits the shell
- * startup file for MCP. Run against the built CLI.
+ * under --yes), writes .mcp.json only with --mcp, and edits the shell startup
+ * file only with --aliases (never under --yes alone). Run against the built
+ * CLI.
  *
  * @integration
  */
@@ -17,25 +18,23 @@ describe('init and the Claude Code integration', () => {
 	let dir: string;
 	let home: string;
 
-	const init = (...args: string[]) =>
-		spawnSync(
-			'node',
-			[getCliBinPath(), 'init', '--yes', '--no-git', '--no-aliases', ...args],
-			{
-				cwd: dir,
-				encoding: 'utf8',
-				input: '',
-				timeout: 60000,
-				env: {
-					...process.env,
-					HOME: home,
-					SHELL: '/bin/bash',
-					FORCE_COLOR: '0',
-					COLUMNS: '80',
-					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
-				}
+	const run = (...args: string[]) =>
+		spawnSync('node', [getCliBinPath(), 'init', '--yes', '--no-git', ...args], {
+			cwd: dir,
+			encoding: 'utf8',
+			input: '',
+			timeout: 60000,
+			env: {
+				...process.env,
+				HOME: home,
+				SHELL: '/bin/bash',
+				FORCE_COLOR: '0',
+				COLUMNS: '80',
+				TASKGRAPH_SKIP_AUTO_UPDATE: '1'
 			}
-		);
+		});
+	const init = (...args: string[]) => run('--no-aliases', ...args);
+	const bashrc = () => fs.readFileSync(path.join(home, '.bashrc'), 'utf8');
 	const exists = (file: string) => fs.existsSync(path.join(dir, file));
 
 	beforeEach(() => {
@@ -63,6 +62,32 @@ describe('init and the Claude Code integration', () => {
 		);
 		expect(result.stdout).toContain('/plugin install taskgraph@taskgraph');
 		expect(result.stdout).not.toContain('.mcp.json');
+	});
+
+	it('leaves the shell startup file alone under --yes without --no-aliases', () => {
+		const result = run();
+
+		expect(result.status).toBe(0);
+		expect(bashrc()).toBe('# mine\n');
+		expect(result.stdout).not.toContain('.bashrc');
+	});
+
+	it('adds the tm alias under --yes only with --aliases', () => {
+		const result = run('--aliases');
+
+		expect(result.status).toBe(0);
+		expect(bashrc()).toContain("alias tm='taskgraph'");
+		expect(result.stdout).toContain('~/.bashrc');
+	});
+
+	it('lists the alias in a dry run only when the startup file lacks it', () => {
+		const before = run('--aliases', '--dry-run');
+		fs.appendFileSync(path.join(home, '.bashrc'), "alias tm='taskgraph'\n");
+		const after = run('--aliases', '--dry-run');
+
+		expect(before.stdout).toContain('add the tm alias to ~/.bashrc');
+		expect(after.status).toBe(0);
+		expect(after.stdout).not.toContain('add the tm alias');
 	});
 
 	it('--no-claude skips it', () => {

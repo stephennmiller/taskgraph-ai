@@ -65,7 +65,8 @@ export async function initializeProjectDirect(args, log, context = {}) {
 		// Construct options ONLY from the relevant flags in args
 		// The core initializeProject operates in the current CWD, which we just set
 		const options = {
-			addAliases: args.addAliases,
+			// init reads `aliases`; only an explicit true edits the shell rc
+			aliases: args.addAliases === true,
 			initGit: args.initGit,
 			storeTasksInGit: args.storeTasksInGit,
 			skipInstall: args.skipInstall,

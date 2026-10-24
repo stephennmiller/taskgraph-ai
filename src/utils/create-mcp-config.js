@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import { MCP_SERVER_KEY, launchesTaskGraphPackage } from '@tm/core';
 import { log } from '../../scripts/modules/utils.js';
-import { MCP_SERVER_KEY, launchesTaskGraphPackage } from './mcp-server-key.js';
 
 // Return JSON with existing mcp.json formatting style
 function formatJSONWithTabs(obj) {
