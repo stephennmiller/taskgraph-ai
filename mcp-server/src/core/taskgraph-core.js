@@ -37,44 +37,6 @@ import { updateTasksDirect } from './direct-functions/update-tasks.js';
 import { useTagDirect } from './direct-functions/use-tag.js';
 import { validateDependenciesDirect } from './direct-functions/validate-dependencies.js';
 
-// Re-export utility functions
-export { findTasksPath } from './utils/path-utils.js';
-
-// Use Map for potential future enhancements like introspection or dynamic dispatch
-export const directFunctions = new Map([
-	['parsePRDDirect', parsePRDDirect],
-	['updateTasksDirect', updateTasksDirect],
-	['updateTaskByIdDirect', updateTaskByIdDirect],
-	['updateSubtaskByIdDirect', updateSubtaskByIdDirect],
-	['nextTaskDirect', nextTaskDirect],
-	['expandTaskDirect', expandTaskDirect],
-	['addTaskDirect', addTaskDirect],
-	['addSubtaskDirect', addSubtaskDirect],
-	['removeSubtaskDirect', removeSubtaskDirect],
-	['analyzeTaskComplexityDirect', analyzeTaskComplexityDirect],
-	['clearSubtasksDirect', clearSubtasksDirect],
-	['expandAllTasksDirect', expandAllTasksDirect],
-	['removeDependencyDirect', removeDependencyDirect],
-	['validateDependenciesDirect', validateDependenciesDirect],
-	['fixDependenciesDirect', fixDependenciesDirect],
-	['complexityReportDirect', complexityReportDirect],
-	['addDependencyDirect', addDependencyDirect],
-	['removeTaskDirect', removeTaskDirect],
-	['initializeProjectDirect', initializeProjectDirect],
-	['modelsDirect', modelsDirect],
-	['moveTaskDirect', moveTaskDirect],
-	['moveTaskCrossTagDirect', moveTaskCrossTagDirect],
-	['researchDirect', researchDirect],
-	['addTagDirect', addTagDirect],
-	['deleteTagDirect', deleteTagDirect],
-	['listTagsDirect', listTagsDirect],
-	['useTagDirect', useTagDirect],
-	['renameTagDirect', renameTagDirect],
-	['copyTagDirect', copyTagDirect],
-	['scopeUpDirect', scopeUpDirect],
-	['scopeDownDirect', scopeDownDirect]
-]);
-
 // Re-export all direct function implementations
 export {
 	parsePRDDirect,

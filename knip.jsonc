@@ -6,14 +6,6 @@
 		// ripgrep, a system binary the Claude Code path guard test calls
 		"rg"
 	],
-	// Legacy JS being moved into @tm/core: unused exports there are cleaned up
-	// in #373, and these entries go when it is done
-	"ignoreIssues": {
-		"scripts/**": ["exports", "duplicates"],
-		"mcp-server/**": ["exports", "duplicates"],
-		"src/**": ["exports", "duplicates"],
-		"tests/**": ["exports"]
-	},
 	"workspaces": {
 		".": {
 			"entry": [

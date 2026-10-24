@@ -338,37 +338,3 @@ export class FuzzyTaskSearch {
 		return summary;
 	}
 }
-
-/**
- * Factory function to create a fuzzy search instance
- * @param {Array} tasks - Array of task objects
- * @param {string} [searchType='default'] - Type of search configuration to use
- * @returns {FuzzyTaskSearch} Fuzzy search instance
- */
-export function createFuzzyTaskSearch(tasks, searchType = 'default') {
-	return new FuzzyTaskSearch(tasks, searchType);
-}
-
-/**
- * Quick utility function to find relevant task IDs for a prompt
- * @param {Array} tasks - Array of task objects
- * @param {string} prompt - Search prompt
- * @param {Object} options - Search options
- * @returns {Array<string>} Array of relevant task ID strings
- */
-export function findRelevantTaskIds(tasks, prompt, options = {}) {
-	const {
-		searchType = 'default',
-		maxResults = 8,
-		includeSubtasks = false
-	} = options;
-
-	const fuzzySearch = new FuzzyTaskSearch(tasks, searchType);
-	const results = fuzzySearch.findRelevantTasks(prompt, { maxResults });
-
-	return includeSubtasks
-		? fuzzySearch.getTaskIdsWithSubtasks(results, true)
-		: fuzzySearch.getTaskIds(results);
-}
-
-export default FuzzyTaskSearch;

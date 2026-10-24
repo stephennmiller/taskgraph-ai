@@ -176,5 +176,3 @@ export function getToolRegistration(toolName) {
 export function isValidTool(toolName) {
 	return toolName in toolRegistry;
 }
-
-export default toolRegistry;

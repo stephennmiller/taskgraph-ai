@@ -68,11 +68,9 @@ global.console = mockConsole;
 // Mock path-utils to prevent file system discovery issues
 vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
-	findProjectRoot: vi.fn(() => '/mock/project'),
 	findConfigPath: vi.fn(() => null), // Always return null to prevent config discovery
 	findTasksPath: vi.fn(() => '/mock/tasks.json'),
 	findComplexityReportPath: vi.fn(() => null),
-	resolveTasksOutputPath: vi.fn(() => '/mock/tasks.json'),
 	resolveComplexityReportOutputPath: vi.fn(() => '/mock/report.json')
 }));
 

@@ -513,16 +513,16 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
 1.  **Core Logic**: Ensure the command's core logic exists and is exported from the appropriate module (e.g., [`task-manager.js`](../../scripts/modules/task-manager.js)).
 2.  **Direct Function Wrapper (`mcp-server/src/core/direct-functions/`)**:
     - Create a new file (e.g., `your-command.js`) in `mcp-server/src/core/direct-functions/` using **kebab-case** naming.
-    - Import the core logic function, necessary MCP utilities like **`findTasksJsonPath` from `../utils/path-utils.js`**, and **silent mode utilities**: `import { enableSilentMode, disableSilentMode } from '../../../../scripts/modules/utils.js';`
+    - Import the core logic function, necessary MCP utilities like **`findTasksPath` from `../utils/path-utils.js`**, and **silent mode utilities**: `import { enableSilentMode, disableSilentMode } from '../../../../scripts/modules/utils.js';`
     - Implement an `async function yourCommandDirect(args, log)` using **camelCase** with `Direct` suffix.
-    - **Path Finding**: Inside this function, obtain the `tasksPath` by calling `const tasksPath = findTasksJsonPath(args, log);`. This relies on `args.projectRoot` (derived from the session) being passed correctly.
+    - **Path Finding**: Inside this function, obtain the `tasksPath` by calling `const tasksPath = findTasksPath(args, log);`. This relies on `args.projectRoot` (derived from the session) being passed correctly.
     - Perform validation on other arguments received in `args`.
     - **Implement Silent Mode**: Wrap core function calls with `enableSilentMode()` and `disableSilentMode()` to prevent logs from interfering with JSON responses.
     - Call the core logic function within a try/catch block.
     - Format the return as `{ success: true/false, data/error, fromCache: boolean }`.
     - Export the wrapper function.
 
-3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
+3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function.
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
@@ -715,14 +715,14 @@ When implementing project initialization commands:
 - **Direct Function Pattern**:
   - ✅ DO: Create direct function wrappers in `mcp-server/src/core/direct-functions/`
   - ✅ DO: Follow silent mode patterns to prevent console output interference
-  - ✅ DO: Use `findTasksJsonPath` for consistent path resolution
+  - ✅ DO: Use `findTasksPath` for consistent path resolution
   - ✅ DO: Ensure tagged system compatibility
 
   ```javascript
   // ✅ DO: Implement MCP direct functions with tagged awareness
   export async function newFeatureDirect(args, log, context = {}) {
     try {
-      const tasksPath = findTasksJsonPath(args, log);
+      const tasksPath = findTasksPath(args, log);
       
       // Enable silent mode for clean MCP responses
       enableSilentMode();

@@ -5,7 +5,7 @@ import { log, readJSON, writeJSON } from '../utils.js';
  * An error for a task ID that clearSubtasks can't act on. Nothing is cleared
  * when one is found, so a typo in a list of IDs changes nothing.
  */
-export class ClearSubtasksError extends Error {
+class ClearSubtasksError extends Error {
 	/**
 	 * @param {'NO_TASKS'|'INVALID_TASK_ID'|'SUBTASK_ID'|'TASK_NOT_FOUND'} code
 	 * @param {string} message

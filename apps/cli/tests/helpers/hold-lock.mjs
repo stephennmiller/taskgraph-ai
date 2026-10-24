@@ -18,10 +18,13 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const [mode, file, id, status, release] = process.argv.slice(2);
 const repoRoot = resolve(fileURLToPath(import.meta.url), '../../../../..');
+// import() takes a URL; a Windows path (D:\...) reads as a "d:" scheme
+const load = (relative) =>
+	import(pathToFileURL(resolve(repoRoot, relative)).href);
 
 const setStatus = (data) => {
 	data.master.tasks.find((t) => String(t.id) === id).status = status;
@@ -29,9 +32,7 @@ const setStatus = (data) => {
 };
 
 if (mode === 'legacy') {
-	const { withFileLockSync } = await import(
-		resolve(repoRoot, 'scripts/modules/utils.js')
-	);
+	const { withFileLockSync } = await load('scripts/modules/utils.js');
 	console.log('trying');
 	withFileLockSync(file, () => {
 		const data = JSON.parse(readFileSync(file, 'utf8'));
@@ -42,11 +43,8 @@ if (mode === 'legacy') {
 		writeFileSync(file, JSON.stringify(setStatus(data), null, 2));
 	});
 } else if (mode === 'tm-core') {
-	const { FileOperations } = await import(
-		resolve(
-			repoRoot,
-			'packages/tm-core/src/modules/storage/adapters/file-storage/file-operations.ts'
-		)
+	const { FileOperations } = await load(
+		'packages/tm-core/src/modules/storage/adapters/file-storage/file-operations.ts'
 	);
 	console.log('trying');
 	await new FileOperations().modifyJson(file, async (data) => {

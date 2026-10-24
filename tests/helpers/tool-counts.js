@@ -98,26 +98,3 @@ export function validateToolStructure() {
 		counts
 	};
 }
-
-/**
- * Get a detailed report of all tool information
- * @returns {Object} Comprehensive tool information
- */
-export function getToolReport() {
-	const counts = getToolCounts();
-	const categories = getToolCategories();
-	const validation = validateToolCounts();
-	const structure = validateToolStructure();
-
-	return {
-		counts,
-		categories,
-		validation,
-		structure,
-		summary: {
-			totalValid: validation.isValid && structure.isValid,
-			countsValid: validation.isValid,
-			structureValid: structure.isValid
-		}
-	};
-}

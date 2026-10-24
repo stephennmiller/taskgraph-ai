@@ -21,7 +21,6 @@ import path from 'path';
 import { COMPLEXITY_REPORT_FILE } from '../../src/constants/paths.js';
 // Import specific config getters needed here
 import { getDebugFlag, getLogLevel } from './config-manager.js';
-import * as gitUtils from './utils/git-utils.js';
 
 // Global silent mode flag
 let silentMode = false;
@@ -737,17 +736,6 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 			// Perform complete migration (config.json, state.json)
 			performCompleteTagMigration(filepath);
 
-			// Check and auto-switch git tags if enabled (after migration)
-			// This needs to run synchronously BEFORE tag resolution
-			if (projectRoot) {
-				try {
-					// Run git integration synchronously
-					gitUtils.checkAndAutoSwitchGitTagSync(projectRoot, filepath);
-				} catch (error) {
-					// Silent fail - don't break normal operations
-				}
-			}
-
 			// Mark for migration notice
 			markMigrationForNotice(filepath);
 		} catch (writeError) {
@@ -801,17 +789,6 @@ function readJSON(filepath, projectRoot = null, tag = null) {
 				Array.isArray(originalTaggedData[tagName].tasks)
 			) {
 				normalizeTaskIds(originalTaggedData[tagName].tasks);
-			}
-		}
-
-		// Check and auto-switch git tags if enabled (for existing tagged format)
-		// This needs to run synchronously BEFORE tag resolution
-		if (projectRoot) {
-			try {
-				// Run git integration synchronously
-				gitUtils.checkAndAutoSwitchGitTagSync(projectRoot, filepath);
-			} catch (error) {
-				// Silent fail - don't break normal operations
 			}
 		}
 

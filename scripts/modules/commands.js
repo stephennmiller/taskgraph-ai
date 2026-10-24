@@ -3466,31 +3466,4 @@ async function runCLI(argv = process.argv) {
 	}
 }
 
-/**
- * Resolve the final complexity-report path.
- * Rules:
- *  1. If caller passes --output, always respect it.
- *  2. If no explicit output AND tag === 'master' → default report file
- *  3. If no explicit output AND tag !== 'master' → append _<tag>.json
- *
- * @param {string|undefined} outputOpt  --output value from CLI (may be undefined)
- * @param {string} targetTag            resolved tag (defaults to 'master')
- * @param {string} projectRoot          absolute project root
- * @returns {string} absolute path for the report
- */
-export function resolveComplexityReportPath({
-	projectRoot,
-	tag = 'master',
-	output // may be undefined
-}) {
-	// 1. user knows best
-	if (output) {
-		return path.isAbsolute(output) ? output : path.join(projectRoot, output);
-	}
-
-	// 2. default naming
-	const base = path.join(projectRoot, COMPLEXITY_REPORT_FILE);
-	return tag !== 'master' ? base.replace('.json', `_${tag}.json`) : base;
-}
-
 export { registerCommands, setupCLI, runCLI, launchREPL };

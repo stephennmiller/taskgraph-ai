@@ -968,19 +968,3 @@ export class ContextGatherer {
 		}
 	}
 }
-
-/**
- * Factory function to create a context gatherer instance
- * @param {string} projectRoot - Project root directory
- * @param {string} tag - Tag for the task
- * @returns {ContextGatherer} Context gatherer instance
- * @throws {Error} If tag is not provided
- */
-export function createContextGatherer(projectRoot, tag) {
-	if (!tag) {
-		throw new Error('Tag is required');
-	}
-	return new ContextGatherer(projectRoot, tag);
-}
-
-export default ContextGatherer;

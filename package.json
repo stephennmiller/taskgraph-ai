@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph-ai",
-	"version": "0.57.1",
+	"version": "0.58.0",
 	"description": "Task management for AI-driven development, built for Claude Code: plan from a PRD, then work tasks one at a time with slash commands, a CLI or an MCP server.",
 	"type": "module",
 	"bin": {
@@ -91,7 +91,7 @@
 		"steno": "^4.0.2",
 		"terminal-link": "^5.0.0",
 		"turndown": "^7.2.4",
-		"undici": "^8.11.2",
+		"undici": "^7.30.1",
 		"zod": "^4.1.12"
 	},
 	"optionalDependencies": {

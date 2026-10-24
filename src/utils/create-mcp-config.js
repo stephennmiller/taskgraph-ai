@@ -120,6 +120,3 @@ export function setupMCPConfiguration(projectRoot, mcpConfigPath) {
 
 	log('debug', 'MCP server will use the installed taskgraph-ai package');
 }
-
-// Export the formatting function for use by other modules
-export { formatJSONWithTabs };

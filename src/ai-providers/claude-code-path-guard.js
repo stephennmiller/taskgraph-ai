@@ -7,26 +7,10 @@
  * loaded.
  */
 
-import fs from 'fs';
 import path from 'path';
+import { realpathOfExistingPrefix, resolvePathInsideRoot } from '@tm/core';
 
 const GUARDED_TOOLS = ['Read', 'Grep', 'Glob'];
-
-/** Resolve symlinks for the longest existing prefix of a path. */
-function realpathOfExistingPrefix(target) {
-	let current = target;
-	const rest = [];
-	for (;;) {
-		try {
-			return path.join(fs.realpathSync(current), ...rest.reverse());
-		} catch {
-			const parent = path.dirname(current);
-			if (parent === current) return target;
-			rest.push(path.basename(current));
-			current = parent;
-		}
-	}
-}
 
 /**
  * @param {string} root - Absolute, real path of the allowed directory
@@ -34,13 +18,7 @@ function realpathOfExistingPrefix(target) {
  * @returns {boolean} True when candidate is root or inside it
  */
 export function isInsideRoot(root, candidate) {
-	if (typeof candidate !== 'string') return false;
-	// Shell-style home expansion is not resolved by path.resolve; refuse it
-	if (candidate.startsWith('~')) return false;
-	const resolved = realpathOfExistingPrefix(path.resolve(root, candidate));
-	const relative = path.relative(root, resolved);
-	const leavesRoot = relative === '..' || relative.startsWith(`..${path.sep}`);
-	return relative === '' || (!leavesRoot && !path.isAbsolute(relative));
+	return resolvePathInsideRoot(root, candidate) !== null;
 }
 
 // Names that hold credentials, in lower case. Both the name check and the rg
@@ -122,18 +100,21 @@ export function normalizeSegment(segment) {
  * Fold case the way a case-insensitive filesystem compares names. NTFS
  * upper-cases both sides, so `.aw\u017F` (long s) and `.g\u0131t` (dotless i)
  * can open `.aws` and `.git`; APFS case-folds, so `server.\u212Aey` (Kelvin
- * sign) can open `server.key`. Upper- then lower-casing maps all three to
- * ASCII, which a plain `/i` regex does not.
+ * sign) can open `server.key`. NFKC, then upper- then lower-casing maps all
+ * three to ASCII, which a plain `/i` regex does not.
  */
 function foldCase(name) {
-	return name.toUpperCase().toLowerCase();
+	return name.normalize('NFKC').toUpperCase().toLowerCase();
 }
 
 /** True when any part of a path or glob names a credentials file. */
 function namesSecret(candidate) {
+	// Empty parts come from `//` and `/./` (normalizeSegment drops the dot), so
+	// `.docker//config.json` is judged as `.docker/config.json`
 	const parts = candidate
 		.split(/[\\/,]/)
-		.map((part) => foldCase(normalizeSegment(part)));
+		.map((part) => foldCase(normalizeSegment(part)))
+		.filter(Boolean);
 	const secret = (part) =>
 		SHORT_NAME.test(part) || (isSecretName(part) && !PUBLIC_ENV.test(part));
 	if (parts.some(secret)) return true;
@@ -187,6 +168,34 @@ export function excludeSecretsFromGrep(toolInput = {}) {
 		...toolInput,
 		glob: [own, ...SECRET_GLOBS].filter(Boolean).join(' ')
 	};
+}
+
+// Directories that hold a path-scoped secret: .docker, .config and git
+const SECRET_DIRS = new Set(
+	SECRETS.paths.flatMap((segments) => segments.slice(0, -1))
+);
+
+/**
+ * True when the resolved path names a directory in SECRET_DIRS in a spelling
+ * that only Windows or a case-insensitive filesystem opens as that directory:
+ * `.docker.`, `.docker `, `.doc\u212Aer` (Kelvin sign), `.config/g\u0131t`
+ * (dotless i). rg matches its exclusion for `.docker/config.json` against the
+ * spelling it is given, so a Grep there would read the secret. Plain ASCII
+ * case is fine, since those exclusions match any ASCII case. Only ASCII
+ * letters are lower-cased for that comparison: toLowerCase maps the Kelvin
+ * sign to k too.
+ */
+function spellsSecretDirOddly(root, candidate) {
+	const resolved = resolvePathInsideRoot(root, candidate);
+	if (resolved === null) return false;
+	return path
+		.relative(root, resolved)
+		.split(/[\\/]/)
+		.some((part) => {
+			const opened = foldCase(normalizeSegment(part));
+			const typed = part.replace(/[A-Z]/g, (c) => c.toLowerCase());
+			return opened !== typed && SECRET_DIRS.has(opened);
+		});
 }
 
 /** Judge the path below the root, and where a symlink really leads */
@@ -244,7 +253,7 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		if (!isInsideRoot(root, p)) {
 			return `${toolName} is limited to the project directory (${root}); ${p} is outside it.`;
 		}
-		if (targetsSecret(root, p)) {
+		if (targetsSecret(root, p) || spellsSecretDirOddly(root, p)) {
 			return `${toolName} may not open secret files such as .env, .git or keys (${p}).`;
 		}
 	}
@@ -303,12 +312,19 @@ export function createPathGuardHook(rootDir) {
 					};
 				}
 				if (input?.tool_name !== 'Grep') return {};
+				// rg matches the exclusion globs against the path as typed, so
+				// `.docker//` or a symlink to .docker would skip
+				// `**/.docker/config.json`; hand it the path judged above (#439)
+				const toolInput = { ...input.tool_input };
+				if (toolInput.path !== undefined && toolInput.path !== null) {
+					toolInput.path = resolvePathInsideRoot(root, toolInput.path);
+				}
 				// No permissionDecision: the rewritten input still goes through
 				// the session's own permission rules
 				return {
 					hookSpecificOutput: {
 						hookEventName: 'PreToolUse',
-						updatedInput: excludeSecretsFromGrep(input.tool_input)
+						updatedInput: excludeSecretsFromGrep(toolInput)
 					}
 				};
 			}

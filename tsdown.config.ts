@@ -35,14 +35,6 @@ const shared = mergeConfig(baseConfig, {
 	// package is "type": "module", so .js is ESM. tsdown >= 0.16 defaults to .mjs.
 	outExtensions: () => ({ js: '.js' }),
 	ignoreWatch: ['node_modules', 'dist', 'tests'],
-	// Bundle our workspace packages and date-fns, keep other npm dependencies
-	// external. date-fns's index loads ~300 files, which took 0.9 s on every
-	// command; bundled, only the two functions @tm/core uses remain (#248).
-	deps: {
-		neverBundle: [/^(?!date-fns(\/|$))[^@./]/, /^@(?!tm\/)/],
-		alwaysBundle: [/^@tm\//, /^date-fns(\/|$)/],
-		onlyBundle: [/^date-fns(\/|$)/]
-	},
 	env: getBuildTimeEnvs()
 });
 
@@ -54,7 +46,15 @@ export default defineConfig([
 	{
 		...shared,
 		entry: { taskgraph: 'scripts/dev.js' },
-		copy: ['assets']
+		copy: ['assets'],
+		// @tm/core in one chunk. Left to itself, rolldown may put a core module
+		// in the chunk of whichever lazy import uses it, such as the AI
+		// provider's, and loading core then loads the AI SDK too.
+		outputOptions: {
+			codeSplitting: {
+				groups: [{ name: 'tm-core', test: /[\\/]packages[\\/]tm-core[\\/]/ }]
+			}
+		}
 	},
 	{ ...shared, entry: { 'mcp-server': 'mcp-server/server.js' } }
 ]);
