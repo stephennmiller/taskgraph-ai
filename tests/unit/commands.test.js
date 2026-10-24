@@ -38,8 +38,7 @@ vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
 	findConfigPath: vi.fn(() => null),
 	findTasksPath: vi.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: vi.fn(() => null),
-	resolveComplexityReportOutputPath: vi.fn(() => '/mock/report.json')
+	findComplexityReportPath: vi.fn(() => null)
 }));
 
 vi.doMock('../../scripts/modules/ui.js', () => ({

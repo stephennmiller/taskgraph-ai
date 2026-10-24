@@ -6,6 +6,7 @@
 import {
 	aggregateTelemetry,
 	assignMetadata,
+	createTmCore,
 	reconcileDependencySources
 } from '@tm/core';
 import { z } from 'zod';
@@ -23,7 +24,6 @@ import {
 	readJSON,
 	writeJSON
 } from '../utils.js';
-import analyzeTaskComplexity from './analyze-task-complexity.js';
 
 /**
  * Valid strength levels for scope adjustments
@@ -75,12 +75,6 @@ async function reanalyzeTaskComplexity(task, tasksPath, context) {
 	const { projectRoot, tag, session } = context;
 
 	try {
-		// Create a minimal tasks data structure for analysis
-		const tasksForAnalysis = {
-			tasks: [task],
-			metadata: { analyzedAt: new Date().toISOString() }
-		};
-
 		// Find the complexity report path for this tag
 		const complexityReportPath = findComplexityReportPath(
 			null,
@@ -93,19 +87,14 @@ async function reanalyzeTaskComplexity(task, tasksPath, context) {
 			return null;
 		}
 
-		// Use analyze-task-complexity to re-analyze just this task
-		const analysisOptions = {
-			file: tasksPath,
+		// Re-analyze just this task (saved already); the report's other entries stay
+		const tmCore = await createTmCore({ projectPath: projectRoot });
+		await tmCore.tasks.analyzeComplexity({
+			ids: task.id.toString(),
 			output: complexityReportPath,
-			id: task.id.toString(), // Analyze only this specific task
-			projectRoot,
 			tag,
-			_filteredTasksData: tasksForAnalysis, // Pass pre-filtered data
-			_originalTaskCount: 1
-		};
-
-		// Run the analysis with proper context
-		await analyzeTaskComplexity(analysisOptions, { session });
+			session
+		});
 
 		// Read the updated complexity report to get the new score
 		const updatedReport = readComplexityReport(complexityReportPath);

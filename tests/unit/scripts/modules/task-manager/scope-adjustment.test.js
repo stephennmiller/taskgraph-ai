@@ -24,13 +24,6 @@ vi.doMock('../../../../../scripts/modules/task-manager.js', () => ({
 	taskExists: vi.fn()
 }));
 
-vi.doMock(
-	'../../../../../scripts/modules/task-manager/analyze-task-complexity.js',
-	() => ({
-		default: vi.fn()
-	})
-);
-
 vi.doMock('../../../../../src/utils/path-utils.js', () => ({
 	findComplexityReportPath: vi.fn()
 }));

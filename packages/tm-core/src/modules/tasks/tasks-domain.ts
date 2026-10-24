@@ -9,6 +9,14 @@ import { DependencyService } from './services/dependency.service.js';
 import { TaskRemovalService } from './services/task-removal.service.js';
 import { TagService } from './services/tag.service.js';
 import {
+	AnalyzeComplexityService,
+	type AnalyzeComplexityHooks,
+	type AnalyzeComplexityInput,
+	type AnalyzeComplexityResult,
+	type ComplexityReportFile,
+	readComplexityReport
+} from './services/analyze-complexity.service.js';
+import {
 	AddTaskService,
 	type AddTaskHooks,
 	type AddTaskInput,
@@ -444,6 +452,34 @@ export class TasksDomain {
 		return this.taskService
 			.getStorage()
 			.appendTasks(tasks, tag || this.configManager.getActiveTag());
+	}
+
+	/**
+	 * Score the tag's active tasks (pending, blocked, in-progress), or those
+	 * named by `ids` or the `from`-`to` range, and save them to the tag's
+	 * complexity report. Entries for the tag's other tasks stay in the report.
+	 */
+	async analyzeComplexity(
+		input: AnalyzeComplexityInput = {},
+		hooks?: AnalyzeComplexityHooks
+	): Promise<AnalyzeComplexityResult> {
+		return new AnalyzeComplexityService(this.configManager).analyze(
+			input,
+			hooks
+		);
+	}
+
+	/**
+	 * The tag's complexity report, or `file` (relative to the project root).
+	 * Null when there is none.
+	 */
+	getComplexityReport(
+		options: { tag?: string; file?: string } = {}
+	): { report: ComplexityReportFile; reportPath: string } | null {
+		return readComplexityReport(this.configManager.getProjectRoot(), {
+			tag: options.tag || this.configManager.getActiveTag(),
+			file: options.file
+		});
 	}
 
 	/**

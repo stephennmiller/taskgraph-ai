@@ -56,8 +56,7 @@ vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
 	findConfigPath: mockFindConfigPath, // Use the mock function instance
 	findTasksPath: vi.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: vi.fn(() => null),
-	resolveComplexityReportOutputPath: vi.fn(() => '/mock/report.json')
+	findComplexityReportPath: vi.fn(() => null)
 }));
 
 // --- Read REAL supported-models.json data BEFORE mocks ---

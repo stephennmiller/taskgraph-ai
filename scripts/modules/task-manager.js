@@ -3,7 +3,6 @@
  * Task management functions for the TaskGraph CLI
  */
 
-import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
 import findNextTask from './task-manager/find-next-task.js';
 import parsePRD from './task-manager/parse-prd/index.js';
 import setResponseLanguage from './task-manager/response-language.js';
@@ -25,7 +24,6 @@ export {
 	updateTaskById,
 	updateSubtaskById,
 	findNextTask,
-	analyzeTaskComplexity,
 	findTaskById,
 	taskExists,
 	setResponseLanguage,

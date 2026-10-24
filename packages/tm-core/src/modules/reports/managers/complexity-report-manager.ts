@@ -14,6 +14,20 @@ import type {
 
 const logger = getLogger('ComplexityReportManager');
 
+/** A tag's report: task-complexity-report.json for master, _<tag> before .json otherwise */
+export function complexityReportPath(
+	projectRoot: string,
+	tag?: string
+): string {
+	const tagSuffix = tag && tag !== 'master' ? `_${tag}` : '';
+	return path.join(
+		projectRoot,
+		'.taskgraph',
+		'reports',
+		`task-complexity-report${tagSuffix}.json`
+	);
+}
+
 /**
  * Manages complexity analysis reports
  * Handles loading, caching, and providing complexity data for tasks
@@ -30,9 +44,7 @@ export class ComplexityReportManager {
 	 * Get the path to the complexity report file for a given tag
 	 */
 	private getReportPath(tag?: string): string {
-		const reportsDir = path.join(this.projectRoot, '.taskgraph', 'reports');
-		const tagSuffix = tag && tag !== 'master' ? `_${tag}` : '';
-		return path.join(reportsDir, `task-complexity-report${tagSuffix}.json`);
+		return complexityReportPath(this.projectRoot, tag);
 	}
 
 	/**

@@ -27,10 +27,7 @@ export {
 	getComplexityWithColor
 } from './ui/formatters.js';
 export { displayHelp } from './ui/help.js';
-export {
-	displayComplexityReport,
-	confirmTaskOverwrite
-} from './ui/complexity.js';
+export { confirmTaskOverwrite } from './ui/complexity.js';
 export {
 	displayAiUsageSummary,
 	displayAddedSubtasks

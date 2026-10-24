@@ -1,0 +1,37 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["analyze-complexity"],
+		["analyze-complexity", "--id=2,3,99", "--threshold=7"],
+		["analyze-complexity", "--from=4", "--to=5", "--research"],
+		["analyze-complexity", "--id=1"],
+		["analyze-complexity", "--tag=feature"],
+		["analyze-complexity", "--output=custom/report.json"],
+		["complexity-report"],
+		["complexity-report", "--tag=feature"],
+		{ "args": ["complexity-report", "--tag=nope"], "expectExit": 1 },
+		{
+			"args": ["analyze-complexity", "--file=other.json"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "analyze_project_complexity",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "analyze_project_complexity",
+			"input": { "ids": "4", "threshold": "8", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "analyze_project_complexity",
+			"input": { "output": "../outside.json", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{ "mcp": "complexity_report", "input": { "projectRoot": "<project>" } },
+		{
+			"mcp": "complexity_report",
+			"input": { "file": "missing.json", "projectRoot": "<project>" },
+			"expectError": true
+		}
+	]
+}

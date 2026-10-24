@@ -14,8 +14,9 @@ const modulesDir = path.resolve(
 
 // The public names ui.js exports: what it exported before the split into
 // ui/*.js, minus the functions #165 removed and the
-// context-analysis box add-task no longer prints (#182), and BORDER_COLOR,
-// whose last box went in #318
+// context-analysis box add-task no longer prints (#182), BORDER_COLOR,
+// whose last box went in #318, and displayComplexityReport, now the
+// complexity-report command in @tm/cli
 const EXPECTED_EXPORTS = [
 	'confirmTaskOverwrite',
 	'createProgressBar',
@@ -23,7 +24,6 @@ const EXPECTED_EXPORTS = [
 	'displayAiUsageSummary',
 	'displayAsciiBanner',
 	'displayBanner',
-	'displayComplexityReport',
 	'displayCurrentTagIndicator',
 	'displayHelp',
 	'displayTaggedTasksFYI',
