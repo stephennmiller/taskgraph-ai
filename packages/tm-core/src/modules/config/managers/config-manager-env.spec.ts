@@ -28,4 +28,18 @@ describe('ConfigManager project .env', () => {
 		expect(without.getModelConfig().main).not.toBe('opus');
 		expect(process.env.TASKGRAPH_MODEL_MAIN).toBeUndefined();
 	});
+
+	it('lets TASKGRAPH_RESPONSE_LANGUAGE override the config file (#547)', async () => {
+		const dir = projectWith('');
+		fs.mkdirSync(path.join(dir, '.taskgraph'));
+		fs.writeFileSync(
+			path.join(dir, '.taskgraph', 'config.json'),
+			JSON.stringify({ global: { responseLanguage: 'German' } })
+		);
+		process.env.TASKGRAPH_RESPONSE_LANGUAGE = 'French';
+
+		const manager = await ConfigManager.create(dir);
+
+		expect(manager.getResponseLanguage()).toBe('French');
+	});
 });

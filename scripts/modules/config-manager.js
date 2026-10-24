@@ -523,8 +523,12 @@ function getProjectName(explicitRoot = null) {
 }
 
 function getResponseLanguage(explicitRoot = null) {
-	// Directly return value from config
-	return getGlobalConfig(explicitRoot).responseLanguage;
+	// The shell env wins over the project .env, as in tm-core's readProjectEnv
+	return (
+		process.env.TASKGRAPH_RESPONSE_LANGUAGE ||
+		resolveEnvVariable('TASKGRAPH_RESPONSE_LANGUAGE', null, explicitRoot) ||
+		getGlobalConfig(explicitRoot).responseLanguage
+	);
 }
 
 function getCodebaseAnalysisEnabled(explicitRoot = null) {
