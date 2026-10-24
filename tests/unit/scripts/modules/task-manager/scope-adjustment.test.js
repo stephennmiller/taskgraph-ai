@@ -4,15 +4,20 @@
 import { vi } from 'vitest';
 
 // Mock dependencies using unstable_mockModule for ES modules
-vi.doMock('../../../../../scripts/modules/utils.js', () => ({
-	log: vi.fn(),
-	readJSON: vi.fn(),
-	writeJSON: vi.fn(),
-	getCurrentTag: vi.fn(() => 'master'),
-	readComplexityReport: vi.fn(),
-	findTaskInComplexityReport: vi.fn(),
-	findProjectRoot: vi.fn()
-}));
+vi.doMock(
+	'../../../../../scripts/modules/utils.js',
+	async (importOriginal) => ({
+		// The real sum, so the usage line's totals are checked
+		aggregateTelemetry: (await importOriginal()).aggregateTelemetry,
+		log: vi.fn(),
+		readJSON: vi.fn(),
+		writeJSON: vi.fn(),
+		getCurrentTag: vi.fn(() => 'master'),
+		readComplexityReport: vi.fn(),
+		findTaskInComplexityReport: vi.fn(),
+		findProjectRoot: vi.fn()
+	})
+);
 
 vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
 	generateObjectService: vi.fn(),
@@ -382,7 +387,13 @@ describe('Scope Adjustment Commands', () => {
 					details: 'Enhanced details',
 					testStrategy: 'Enhanced testing'
 				},
-				telemetryData: { tokens: 100, cost: 0.01 }
+				telemetryData: {
+					modelUsed: 'sonnet',
+					inputTokens: 100,
+					outputTokens: 20,
+					cachedInputTokens: 50,
+					totalTokens: 120
+				}
 			});
 
 			const context = {
@@ -403,6 +414,15 @@ describe('Scope Adjustment Commands', () => {
 
 			expect(result.updatedTasks).toHaveLength(2);
 			expect(generateObjectService).toHaveBeenCalledTimes(2);
+			// One total for the usage line, cached tokens included
+			expect(result.telemetryData).toMatchObject({
+				commandName: 'scope-up',
+				modelUsed: 'sonnet',
+				inputTokens: 200,
+				outputTokens: 40,
+				cachedInputTokens: 100,
+				totalTokens: 240
+			});
 		});
 	});
 });

@@ -98,6 +98,8 @@ taskgraph expand --all --research
 
 Each new subtask gets 2-5 acceptance criteria of its own, unchecked. A subtask can't be marked done until they are checked off with `taskgraph set-status <id> --check <n>`.
 
+`expand --all` expands three tasks at a time and ends with one usage line for the whole run. Each task's new subtasks print as it finishes, so they can arrive out of order. Each expansion saves only the subtasks it added, so parallel saves, or changes you make while it runs, aren't lost.
+
 `--force` replaces a task's subtasks. Dependencies and `related` / `discovered-from` links on the old subtasks are dropped first, so they don't end up naming the new subtasks that reuse their IDs.
 
 ## Clear Subtasks

@@ -1,6 +1,9 @@
 import { stripVTControlCharacters } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { formatExpandAll } from './expand-all-formatters.js';
+import {
+	formatExpandAll,
+	formatExpandAllProgress
+} from './expand-all-formatters.js';
 
 const plain = (text: string) => stripVTControlCharacters(text);
 
@@ -72,5 +75,25 @@ describe('formatExpandAll', () => {
 			expect(line.length).toBeLessThanOrEqual(60);
 		}
 		expect(output).not.toMatch(/[╭╮╰╯│]/);
+	});
+});
+
+describe('formatExpandAllProgress', () => {
+	it('names the run and the elapsed time before any task is done', () => {
+		expect(
+			plain(formatExpandAllProgress({ total: 5, done: 0, elapsedMs: 4000 }))
+		).toBe('Expanding 5 tasks  0:04');
+	});
+
+	it('adds how many tasks are done', () => {
+		expect(
+			plain(formatExpandAllProgress({ total: 5, done: 2, elapsedMs: 31000 }))
+		).toBe('Expanding 5 tasks · 2 done  0:31');
+	});
+
+	it('starts as a plain label, with the singular for one task', () => {
+		expect(
+			plain(formatExpandAllProgress({ total: 1, done: 0, elapsedMs: 0 }))
+		).toBe('Expanding 1 task…');
 	});
 });

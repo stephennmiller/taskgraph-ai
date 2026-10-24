@@ -110,9 +110,10 @@ export {
 	type ClarificationsSaved
 } from './formatters/clarify-formatters.js';
 
-// The line expand --all ends with
+// What expand --all shows while it runs and when it ends
 export {
 	formatExpandAll,
+	formatExpandAllProgress,
 	type ExpandAllSummary
 } from './formatters/expand-all-formatters.js';
 

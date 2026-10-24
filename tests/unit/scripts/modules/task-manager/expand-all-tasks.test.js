@@ -23,7 +23,8 @@ vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	startLoadingIndicator: vi.fn(),
 	stopLoadingIndicator: vi.fn(),
-	displayAiUsageSummary: vi.fn()
+	displayAiUsageSummary: vi.fn(),
+	displayAddedSubtasks: vi.fn()
 }));
 
 // Import the mocked modules
@@ -32,6 +33,9 @@ const { default: expandTask } = await import(
 );
 const { readJSON, aggregateTelemetry, findProjectRoot } = await import(
 	'../../../../../scripts/modules/utils.js'
+);
+const { displayAddedSubtasks, displayAiUsageSummary } = await import(
+	'../../../../../scripts/modules/ui.js'
 );
 
 // Import the module under test
@@ -370,6 +374,43 @@ describe('expandAllTasks', () => {
 		});
 	});
 
+	describe('concurrency', () => {
+		test('expands up to three tasks at once and starts the next as one ends', async () => {
+			mockReadJSON.mockReturnValue({
+				tag: 'master',
+				tasks: Array.from({ length: 5 }, (_, i) => ({
+					id: i + 1,
+					title: `Task ${i + 1}`,
+					status: 'pending',
+					subtasks: []
+				}))
+			});
+			let running = 0;
+			let mostAtOnce = 0;
+			mockExpandTask.mockImplementation(async () => {
+				running++;
+				mostAtOnce = Math.max(mostAtOnce, running);
+				await new Promise((resolve) => setTimeout(resolve, 5));
+				running--;
+				return { telemetryData: null };
+			});
+
+			const result = await expandAllTasks(
+				mockTasksPath,
+				3,
+				false,
+				'',
+				false,
+				{ mcpLog: mockMcpLog, projectRoot: mockProjectRoot, tag: 'master' },
+				'json'
+			);
+
+			expect(mostAtOnce).toBe(3);
+			expect(mockExpandTask).toHaveBeenCalledTimes(5);
+			expect(result.expandedCount).toBe(5);
+		});
+	});
+
 	describe('error handling', () => {
 		test('should handle expandTask failures gracefully', async () => {
 			// Arrange
@@ -544,6 +585,33 @@ describe('expandAllTasks', () => {
 			expect(result.success).toBe(true);
 			// In text mode, loading indicators and console output would be used
 			// This is harder to test directly but we can verify the result structure
+		});
+
+		test("prints each task's new subtasks and one usage line for the run", async () => {
+			const added = [{ id: 1, title: 'Write the schema' }];
+			mockExpandTask.mockResolvedValue({
+				addedSubtasks: added,
+				telemetryData: { commandName: 'expand-task', totalTokens: 10 }
+			});
+
+			const result = await expandAllTasks(
+				mockTasksPath,
+				3,
+				false,
+				'',
+				false,
+				{ projectRoot: mockProjectRoot, tag: 'master' },
+				'text'
+			);
+
+			expect(result.expandedCount).toBe(2);
+			// Each expansion prints nothing itself
+			for (const call of mockExpandTask.mock.calls) {
+				expect(call[5]).toMatchObject({ inBatch: true });
+			}
+			expect(displayAddedSubtasks).toHaveBeenCalledWith(1, added);
+			expect(displayAddedSubtasks).toHaveBeenCalledWith(2, added);
+			expect(displayAiUsageSummary).toHaveBeenCalledTimes(1);
 		});
 
 		test('should handle context tag properly', async () => {

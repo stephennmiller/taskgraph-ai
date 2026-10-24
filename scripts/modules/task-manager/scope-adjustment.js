@@ -12,6 +12,7 @@ import {
 } from '../ai-services-unified.js';
 import { findTaskById, taskExists } from '../task-manager.js';
 import {
+	aggregateTelemetry,
 	findTaskInComplexityReport,
 	getCurrentTag,
 	log,
@@ -434,7 +435,8 @@ Ensure the JSON is valid and properly formatted.`;
 			updatedTask: task,
 			regenerated: true,
 			preserved: preservedSubtasks.length,
-			generated: normalizedGeneratedSubtasks.length
+			generated: normalizedGeneratedSubtasks.length,
+			telemetryData: aiResult.telemetryData
 		};
 	} catch (error) {
 		log(
@@ -647,7 +649,8 @@ export async function scopeUpTask(
 	}
 
 	const updatedTasks = [];
-	let combinedTelemetryData = null;
+	// Every AI call's usage, summed into one line for the whole run
+	const telemetry = [];
 
 	// Process each task
 	for (const taskId of taskIds) {
@@ -728,21 +731,11 @@ export async function scopeUpTask(
 			}
 		}
 
-		// Combine telemetry data
-		if (adjustResult.telemetryData) {
-			if (!combinedTelemetryData) {
-				combinedTelemetryData = { ...adjustResult.telemetryData };
-			} else {
-				// Sum up costs and tokens
-				combinedTelemetryData.inputTokens +=
-					adjustResult.telemetryData.inputTokens || 0;
-				combinedTelemetryData.outputTokens +=
-					adjustResult.telemetryData.outputTokens || 0;
-				combinedTelemetryData.totalTokens +=
-					adjustResult.telemetryData.totalTokens || 0;
-				combinedTelemetryData.totalCost +=
-					adjustResult.telemetryData.totalCost || 0;
-			}
+		for (const item of [
+			adjustResult.telemetryData,
+			subtaskResult.telemetryData
+		]) {
+			if (item) telemetry.push(item);
 		}
 	}
 
@@ -755,7 +748,7 @@ export async function scopeUpTask(
 
 	return {
 		updatedTasks,
-		telemetryData: combinedTelemetryData
+		telemetryData: aggregateTelemetry(telemetry, 'scope-up')
 	};
 }
 
@@ -798,7 +791,8 @@ export async function scopeDownTask(
 	}
 
 	const updatedTasks = [];
-	let combinedTelemetryData = null;
+	// Every AI call's usage, summed into one line for the whole run
+	const telemetry = [];
 
 	// Process each task
 	for (const taskId of taskIds) {
@@ -879,21 +873,11 @@ export async function scopeDownTask(
 			}
 		}
 
-		// Combine telemetry data
-		if (adjustResult.telemetryData) {
-			if (!combinedTelemetryData) {
-				combinedTelemetryData = { ...adjustResult.telemetryData };
-			} else {
-				// Sum up costs and tokens
-				combinedTelemetryData.inputTokens +=
-					adjustResult.telemetryData.inputTokens || 0;
-				combinedTelemetryData.outputTokens +=
-					adjustResult.telemetryData.outputTokens || 0;
-				combinedTelemetryData.totalTokens +=
-					adjustResult.telemetryData.totalTokens || 0;
-				combinedTelemetryData.totalCost +=
-					adjustResult.telemetryData.totalCost || 0;
-			}
+		for (const item of [
+			adjustResult.telemetryData,
+			subtaskResult.telemetryData
+		]) {
+			if (item) telemetry.push(item);
 		}
 	}
 
@@ -906,6 +890,6 @@ export async function scopeDownTask(
 
 	return {
 		updatedTasks,
-		telemetryData: combinedTelemetryData
+		telemetryData: aggregateTelemetry(telemetry, 'scope-down')
 	};
 }

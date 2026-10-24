@@ -72,3 +72,6 @@ export {
 
 // Own-key access that ignores the prototype (`constructor`, `__proto__` keys)
 export { getOwnKey, setOwnKey } from './own-key.js';
+
+// Run async work a few at a time (expand --all)
+export { mapWithConcurrency } from './map-with-concurrency.js';
