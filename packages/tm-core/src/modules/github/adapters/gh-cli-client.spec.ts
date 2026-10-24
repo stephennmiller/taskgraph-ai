@@ -168,6 +168,22 @@ describe('GhCliClient', () => {
 		});
 	});
 
+	it('reads every page of unlabelled issues, counting pull requests toward a full page', () => {
+		const page1 = Array.from({ length: 100 }, (_, i) =>
+			rawIssue(i + 1, i === 0 ? { pull_request: {} } : {})
+		);
+		respond(200, page1);
+		respond(200, [rawIssue(101)]);
+
+		return client.listIssues(undefined, 'all').then((issues) => {
+			expect(callArgs(1)[4]).toBe(
+				'repos/acme/app/issues?state=all&per_page=100&page=2'
+			);
+			expect(issues).toHaveLength(100);
+			expect(execFileMock).toHaveBeenCalledTimes(2);
+		});
+	});
+
 	it('reads the repo from the API', () => {
 		respond(200, {
 			full_name: 'acme/app',

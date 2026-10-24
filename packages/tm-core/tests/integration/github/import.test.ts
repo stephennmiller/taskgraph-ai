@@ -185,6 +185,17 @@ describe('GitHub import', () => {
 		expect((await taskFor(41)).status).toBe('pending');
 	});
 
+	it('pull cancels the task when its imported issue closes as not planned', async () => {
+		await setup();
+		await domain.import({ repo: REPO });
+		issue(40).state = 'closed';
+		issue(40).stateReason = 'not_planned';
+
+		await domain.pull({ repo: REPO });
+
+		expect((await taskFor(40)).status).toBe('cancelled');
+	});
+
 	it('push leaves imported issues untouched', async () => {
 		await setup();
 		await domain.import({ repo: REPO });
