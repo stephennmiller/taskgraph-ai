@@ -154,6 +154,10 @@ const buildSafeSchema = (ai: AiModule, schema: unknown): any => {
 	return { ...baseSchema, jsonSchema: sanitizedSchema };
 };
 
+// One promise for every caller, so concurrent first calls share one load
+let aiModule: Promise<AiModule> | undefined;
+const loadAi = () => (aiModule ??= import('ai'));
+
 /**
  * A call that never answers would hang the command forever. Ten minutes is
  * far past a normal answer, so only a stuck call hits it. Streams are left
@@ -161,10 +165,6 @@ const buildSafeSchema = (ai: AiModule, schema: unknown): any => {
  * times its own stream.
  */
 const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
-
-// One promise for every caller, so concurrent first calls share one load
-let aiModule: Promise<AiModule> | undefined;
-const loadAi = () => (aiModule ??= import('ai'));
 
 function aiCallSignal(): AbortSignal {
 	const configured = Number(process.env.TASKGRAPH_AI_TIMEOUT_MS);
