@@ -86,18 +86,46 @@ describe('registerTaskGraphTools', () => {
 		]);
 	});
 
-	it('skips unknown names in a list', () => {
-		expect(
-			register('invalid_tool,get_tasks,fake_tool').result.registeredTools
-		).toEqual(['get_tasks']);
-	});
+	it.each([
+		['an unknown tier', 'standart', ['"standart"']],
+		[
+			'a partly unknown list',
+			'invalid_tool,get_tasks,fake_tool',
+			['"invalid_tool"', '"fake_tool"']
+		],
+		[
+			'an all-unknown list',
+			'completely_invalid,nope',
+			['"completely_invalid"', '"nope"']
+		],
+		['escape codes', 'bad\u001b[31m', ['"bad\\u001b[31m"']]
+	])(
+		'throws on %s, naming each unknown entry and the tiers',
+		(_, mode, named) => {
+			const { server, names } = recordingServer();
 
-	it.each(['completely_invalid', ',,,', '   ', 'special!@#$%^&*()characters'])(
-		'registers every tool for a list with no known tool (%j)',
-		(mode) => {
-			expect(register(mode).names).toHaveLength(ALL_COUNT);
+			let message = '';
+			try {
+				registerTaskGraphTools(server, mode);
+			} catch (error) {
+				message = (error as Error).message;
+			}
+
+			expect(message).toMatch(
+				/^TASKGRAPH_TOOLS names unknown tiers or tools: /
+			);
+			for (const entry of named) expect(message).toContain(entry);
+			expect(message).toContain('core, standard, all');
+			expect(message).not.toContain('get_tasks"');
+			expect(names).toEqual([]);
 		}
 	);
+
+	it('throws on a list with no entries', () => {
+		expect(() => register(',,,')).toThrow(
+			/TASKGRAPH_TOOLS names no tools: ",,,"/
+		);
+	});
 
 	it('counts a tool the server already has as registered', () => {
 		const server = {

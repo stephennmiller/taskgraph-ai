@@ -157,7 +157,11 @@ function resolveToolName(toolName: string): string | null {
 	return null;
 }
 
-/** The tools a TASKGRAPH_TOOLS value names, logging what it can't resolve */
+/**
+ * The tools a TASKGRAPH_TOOLS value names. Throws, naming the bad entries, when
+ * the value is not a tier and any entry is not a tool, so a typo stops startup
+ * instead of loading a different set of tools than the user asked for.
+ */
 function selectTools(enabledTools: string): string[] {
 	switch (enabledTools.toLowerCase()) {
 		case 'all':
@@ -186,30 +190,27 @@ function selectTools(enabledTools: string): string[] {
 			logger.debug(`Resolved tool "${toolName}" to "${resolvedName}"`);
 		} else {
 			unknownTools.push(toolName);
-			logger.warn(`Unknown tool specified: "${toolName}"`);
 		}
 	}
 
-	if (unknownTools.length > 0) {
-		logger.warn(`Unknown tools: ${unknownTools.join(', ')}`);
-	}
-
-	if (uniqueTools.size === 0) {
-		logger.warn(
-			`No valid tools found in custom list. Loading all tools as fallback.`
+	if (unknownTools.length > 0 || uniqueTools.size === 0) {
+		// JSON.stringify escapes control characters from the env value
+		const problem =
+			unknownTools.length > 0
+				? `names unknown tiers or tools: ${unknownTools.map((t) => JSON.stringify(t)).join(', ')}`
+				: `names no tools: ${JSON.stringify(enabledTools)}`;
+		throw new Error(
+			`TASKGRAPH_TOOLS ${problem}. Set it to a tier (core, standard, all; lean is core) or a comma-separated list of tool names, such as "get_tasks,next_task", in your MCP client's config.`
 		);
-		return Object.keys(toolRegistry);
 	}
-	logger.info(
-		`Loading ${uniqueTools.size} custom tools from list (${uniqueTools.size} unique after normalization)`
-	);
+	logger.info(`Loading ${uniqueTools.size} custom tools from list`);
 	return Array.from(uniqueTools);
 }
 
 /**
  * Register the tools a TASKGRAPH_TOOLS value names: `all`, `core` (or
- * `lean`), `standard`, or a comma-separated list of tool names. A list with
- * no known tool registers all of them.
+ * `lean`), `standard`, or a comma-separated list of tool names. Throws on a
+ * value that names an unknown tier or tool (see selectTools).
  */
 export function registerTaskGraphTools(server: FastMCP, toolMode = 'core') {
 	const registeredTools: string[] = [];
@@ -241,9 +242,6 @@ export function registerTaskGraphTools(server: FastMCP, toolMode = 'core') {
 	logger.info(
 		`Successfully registered ${registeredTools.length}/${toolsToRegister.length} tools`
 	);
-	if (failedTools.length > 0) {
-		logger.warn(`Failed tools: ${failedTools.join(', ')}`);
-	}
 
 	return {
 		registeredTools,

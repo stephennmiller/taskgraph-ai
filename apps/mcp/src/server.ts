@@ -35,7 +35,10 @@ export class TaskGraphMCPServer {
 	readonly server = new FastMCP(this.options);
 	private initialized = false;
 
-	/** Register the tools TASKGRAPH_TOOLS picks; a second call does nothing */
+	/**
+	 * Register the tools TASKGRAPH_TOOLS picks; a second call does nothing.
+	 * Throws on a bad TASKGRAPH_TOOLS value or when any tool fails to register.
+	 */
 	init() {
 		if (this.initialized) return this;
 
@@ -60,10 +63,14 @@ export class TaskGraphMCPServer {
 			);
 		}
 
+		// A client would otherwise see a healthy server with tools missing
 		if (registrationResult.failedTools.length > 0) {
-			logger.warn(
+			throw new Error(
 				`Failed to register ${registrationResult.failedTools.length} tools: ${registrationResult.failedTools.join(', ')}`
 			);
+		}
+		if (registrationResult.registeredTools.length === 0) {
+			throw new Error('No MCP tools were registered');
 		}
 
 		this.initialized = true;

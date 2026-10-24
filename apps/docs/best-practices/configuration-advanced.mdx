@@ -40,8 +40,8 @@ claude mcp add taskgraph-ai --scope user \
 Behavior:
 
 - When `TASKGRAPH_TOOLS` is unset or empty, `core` is used.
-- Invalid tool names in a custom list are ignored (a warning is emitted for each).
-- If every name in a custom list is invalid, the server falls back to `all`.
+- An unknown tier (such as `standart`) or any unknown name in a custom list stops the server with exit code 1 and an error on stderr naming the unknown entries. It does not fall back to another set of tools.
+- If a tool fails to register, the server also exits with code 1 instead of starting without it.
 - Values are case-insensitive.
 
 ## MCP timeouts
