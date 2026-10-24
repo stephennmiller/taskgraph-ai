@@ -420,8 +420,9 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 			'Warning: 1 invalid dependency reference(s) found',
 			'(tag: feature-branch):',
 			'  Task 12.3 depends on non-existent task 45.6',
-			'Run taskgraph fix-dependencies --tag',
-			'feature-branch to remove them'
+			'Run',
+			'taskgraph fix-dependencies --tag feature-branch to',
+			'remove them'
 		]);
 	});
 

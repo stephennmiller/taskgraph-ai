@@ -460,12 +460,15 @@ export function formatInvalidDependencyWarning(
 				)
 			),
 		...(more > 0 ? [theme.muted(`  ...and ${more} more`)] : []),
+		// No-break spaces keep the command on one line, so it copies whole
 		...wrapLine(
 			theme.muted('Run ') +
-				theme.brand(`taskgraph fix-dependencies${tagFlag}`) +
+				theme.brand(
+					`taskgraph fix-dependencies${tagFlag}`.replaceAll(' ', '\u00a0')
+				) +
 				theme.muted(' to remove them'),
 			width,
 			''
-		)
+		).map((line) => line.replaceAll('\u00a0', ' '))
 	].join('\n');
 }
