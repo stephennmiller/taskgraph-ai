@@ -1673,7 +1673,6 @@ export {
 	getCurrentTag,
 	getTagAwareFilePath,
 	isEmpty,
-	isSilentMode,
 	log,
 	markMigrationForNotice,
 	modifyJSON,

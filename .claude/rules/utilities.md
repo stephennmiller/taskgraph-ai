@@ -115,7 +115,7 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
 
 - **Silent Mode Control**:
   - `enableSilentMode()` turns legacy console output off for the rest of the process; there is no way to turn it back on. Use it only in a process that must stay quiet end to end (the eval worker, `evals/lib/plan-worker.ts`).
-  - ✅ DO: Check `isSilentMode()` before printing from legacy UI code
+  - The legacy `log` checks it (through the module-private `isSilentMode()`) and prints nothing once it is on.
   - ❌ DON'T: Access the module's `silentMode` variable directly
 
 - **Integration with Logging**:
@@ -129,13 +129,6 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
     
     // Rest of logging logic...
   }
-  ```
-
-- **Common Patterns for Silent Mode**:
-  - ✅ DO: For functions that accept a silent mode parameter but also need to check global state (less common):
-  ```javascript
-  // Check both the passed parameter and global silent mode
-  const isSilent = options.silentMode || (typeof options.silentMode === 'undefined' && isSilentMode());
   ```
 
 ## File Operations (in `scripts/modules/utils.js`)
@@ -937,7 +930,6 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     // Logging utilities
     log,
     enableSilentMode,
-    isSilentMode,
     
     // Task utilities
     findTaskById,

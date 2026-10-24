@@ -68,8 +68,7 @@ global.console = mockConsole;
 // Mock path-utils to prevent file system discovery issues
 vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
-	findConfigPath: vi.fn(() => null), // Always return null to prevent config discovery
-	findTasksPath: vi.fn(() => '/mock/tasks.json')
+	findConfigPath: vi.fn(() => null) // Always return null to prevent config discovery
 }));
 
 // Import the actual module to test
