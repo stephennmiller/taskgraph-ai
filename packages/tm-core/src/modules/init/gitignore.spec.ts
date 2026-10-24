@@ -1,15 +1,26 @@
 /**
- * Unit tests for manage-gitignore.js module
+ * Unit tests for init's .gitignore module
  * Tests the logic with Vitest spies instead of mocked modules
  */
 
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { vi } from 'vitest';
+import {
+	type Mock,
+	type MockInstance,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi
+} from 'vitest';
 
 // Import the module under test and its exports
-import manageGitignoreFile, {
+import {
+	type GitignoreLog,
+	manageGitignoreFile,
 	normalizeLine,
 	readStoreTasksInGit,
 	isTaskLine,
@@ -17,10 +28,10 @@ import manageGitignoreFile, {
 	TASK_FILES_COMMENT,
 	TASK_JSON_PATTERN,
 	TASK_DIR_PATTERN
-} from '../../src/utils/manage-gitignore.js';
+} from './gitignore.js';
 
-describe('manage-gitignore.js Unit Tests', () => {
-	let tempDir;
+describe('init .gitignore unit tests', () => {
+	let tempDir: string;
 
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -106,7 +117,7 @@ describe('manage-gitignore.js Unit Tests', () => {
 			}).toThrow('targetPath must be a non-empty string');
 
 			expect(() => {
-				manageGitignoreFile(null, 'content', false);
+				manageGitignoreFile(null as unknown as string, 'content', false);
 			}).toThrow('targetPath must be a non-empty string');
 
 			expect(() => {
@@ -120,22 +131,26 @@ describe('manage-gitignore.js Unit Tests', () => {
 			}).toThrow('content must be a non-empty string');
 
 			expect(() => {
-				manageGitignoreFile('.gitignore', null, false);
+				manageGitignoreFile('.gitignore', null as unknown as string, false);
 			}).toThrow('content must be a non-empty string');
 		});
 
 		test('should throw error for invalid storeTasksInGit', () => {
 			expect(() => {
-				manageGitignoreFile('.gitignore', 'content', 'not-boolean');
+				manageGitignoreFile(
+					'.gitignore',
+					'content',
+					'not-boolean' as unknown as boolean
+				);
 			}).toThrow('storeTasksInGit must be a boolean');
 		});
 	});
 
 	describe('manageGitignoreFile function - File Operations with Spies', () => {
-		let writeFileSyncSpy;
-		let readFileSyncSpy;
-		let existsSyncSpy;
-		let mockLog;
+		let writeFileSyncSpy: MockInstance;
+		let readFileSyncSpy: MockInstance;
+		let existsSyncSpy: MockInstance;
+		let mockLog: Mock<GitignoreLog>;
 
 		beforeEach(() => {
 			// Set up spies
@@ -445,7 +460,7 @@ tasks/ `;
 describe('manageGitignoreFile with a template that has no task lines', () => {
 	// Like assets/gitignore, which leaves the task section to the code
 	const template = '# Logs\nlogs\n*.log\n\n# OS specific\n.DS_Store\n';
-	let dir;
+	let dir: string;
 
 	beforeEach(() => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitignore-section-'));
@@ -477,7 +492,7 @@ describe('manageGitignoreFile with a template that has no task lines', () => {
 });
 
 describe('readStoreTasksInGit', () => {
-	let dir;
+	let dir: string;
 
 	beforeEach(() => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gitignore-choice-'));

@@ -1,10 +1,10 @@
+import { RULE_PROFILES } from '@tm/core';
 import {
 	createErrorResponse,
 	handleApiResult,
 	withNormalizedProjectRoot
 } from '@tm/mcp';
 import { z } from 'zod';
-import { RULE_PROFILES } from '../../../src/constants/profiles.js';
 import { initializeProjectDirect } from '../core/taskgraph-core.js';
 
 export function registerInitializeProjectTool(server) {

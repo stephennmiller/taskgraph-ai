@@ -40,7 +40,7 @@ describe('parity-paths.txt', () => {
 	it.each([
 		'scripts/dev.js',
 		'mcp-server/server.js',
-		'src/profiles/claude.js',
+		'src/taskgraph.js',
 		'assets/config.json',
 		'packages/tm-core/src/index.ts',
 		'packages/tm-profiles/src/index.ts',

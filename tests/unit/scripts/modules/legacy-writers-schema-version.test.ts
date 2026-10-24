@@ -9,7 +9,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { CURRENT_SCHEMA_VERSION } from '@tm/core';
-import { createInitialTasksFile } from '../../../../scripts/modules/init-project-files.js';
 import { readJSON, writeJSON } from '../../../../scripts/modules/utils.js';
 import { updateTagTasks } from '../../../../scripts/modules/utils/update-tag-tasks.js';
 
@@ -90,13 +89,5 @@ describe('legacy tasks.json writers stamp schemaVersion', () => {
 		});
 
 		expect(read().master.metadata.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-	});
-
-	it('init stamps the empty tasks file it creates', () => {
-		createInitialTasksFile(dir);
-
-		const saved = read();
-		expect(saved.master.tasks).toEqual([]);
-		expect(saved.master.metadata.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
 	});
 });

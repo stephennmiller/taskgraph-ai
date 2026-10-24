@@ -73,9 +73,8 @@ paths:
       - **Tagged Task Lists**: MCP tools fully support the tagged format with complete tag management capabilities.
       - Formats MCP responses.
 
-  - **[`init.js`](../../scripts/init.js): Project Initialization Logic**
-    - **Purpose**: Sets up new TaskGraph project structure.
-    - **Responsibilities**: Creates directories, copies templates, manages `package.json`, sets up the Claude Code `CLAUDE.md` import (and `.mcp.json` only with `--mcp`), initializes state.json for tagged system.
+  - **[`modules/init/`](../../packages/tm-core/src/modules/init/) in `@tm/core`: Project Initialization**
+    - **Purpose**: `initializeProject` sets up .taskgraph/, templates, the `CLAUDE.md` import (`.mcp.json` only with `--mcp`) and state.json; `apps/cli`'s `init` asks and prints.
 
 ## Tagged Task Lists System Architecture
 

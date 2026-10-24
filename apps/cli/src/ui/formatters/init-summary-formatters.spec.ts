@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+	type InitDryRun,
 	type InitSummary,
+	formatInitDryRun,
 	formatInitSummary
 } from './init-summary-formatters.js';
 
@@ -127,5 +129,57 @@ describe('formatInitSummary', () => {
 			'  .gitignore             added TaskGraph entries',
 			'  .taskgraph/state.json  still tracked'
 		]);
+	});
+});
+
+describe('formatInitDryRun', () => {
+	const plan: InitDryRun = {
+		startGit: false,
+		mergeDriver: false,
+		storeTasksInGit: false,
+		aliasFile: null,
+		claudeCode: false,
+		mcp: false
+	};
+
+	it('lists only the steps that would run', () => {
+		expect(formatInitDryRun(plan)).toBe(
+			[
+				'Dry run; nothing was changed. Init would:',
+				'  create .taskgraph/ with tasks, settings and PRD templates',
+				'  create or update .gitignore and .env.example',
+				'  keep tasks out of Git'
+			].join('\n')
+		);
+	});
+
+	it('lists every step, each within 80 columns', () => {
+		const text = formatInitDryRun({
+			importFrom: '.upstream',
+			startGit: true,
+			mergeDriver: true,
+			storeTasksInGit: true,
+			aliasFile: '~/.zshrc',
+			claudeCode: true,
+			mcp: true
+		});
+
+		expect(text.split('\n').slice(1)).toEqual([
+			'  create .taskgraph/ with tasks, settings and PRD templates',
+			'  import tasks, docs, reports and settings from .upstream/',
+			'  create or update .gitignore and .env.example',
+			'  start a Git repository',
+			'  set up Git to merge tasks.json by task (.gitattributes)',
+			'  keep tasks in Git',
+			'  add the tm alias to ~/.zshrc',
+			'  import TaskGraph’s guide in CLAUDE.md and add the MCP server to .mcp.json'
+		]);
+		for (const line of text.split('\n')) expect(line.length).toBeLessThan(80);
+	});
+
+	it('strips escape codes from the alias path', () => {
+		expect(
+			formatInitDryRun({ ...plan, aliasFile: '~/\u001b[31m.zshrc' })
+		).not.toContain('\u001b');
 	});
 });

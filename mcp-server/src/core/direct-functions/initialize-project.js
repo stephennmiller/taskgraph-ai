@@ -1,12 +1,5 @@
 import os from 'os'; // Import os module for home directory check
-import { initializeProject } from '../../../../scripts/init.js'; // Import core function and its logger if needed separately
-import {
-	disableSilentMode,
-	enableSilentMode
-	// isSilentMode // Not used directly here
-} from '../../../../scripts/modules/utils.js';
-import { RULE_PROFILES } from '../../../../src/constants/profiles.js';
-import { convertAllRulesToProfileRules } from '../../../../src/utils/rule-transformer.js';
+import { initializeProject } from '@tm/core';
 
 /**
  * Direct function wrapper for initializing a project.
@@ -50,49 +43,30 @@ export async function initializeProjectDirect(args, log, context = {}) {
 	// --- Proceed with validated targetDirectory ---
 	log.info(`Validated target directory for initialization: ${targetDirectory}`);
 
-	const originalCwd = process.cwd();
 	let resultData;
 	let success = false;
 	let errorResult = null;
 
-	log.info(
-		`Temporarily changing CWD to ${targetDirectory} for initialization.`
-	);
-	process.chdir(targetDirectory); // Change CWD to the HOF-provided root
-
-	enableSilentMode();
 	try {
-		// Construct options ONLY from the relevant flags in args
-		// The core initializeProject operates in the current CWD, which we just set
-		const options = {
-			// init reads `aliases`; only an explicit true edits the shell rc
-			aliases: args.addAliases === true,
+		// rules accepts only claude, so the Claude Code integration is always
+		// set up; the language is English, as `init --yes` sets it
+		const result = initializeProject({
+			projectRoot: targetDirectory,
 			initGit: args.initGit,
 			storeTasksInGit: args.storeTasksInGit,
-			skipInstall: args.skipInstall,
-			yes: true // Force yes mode
-		};
-
-		// Handle rules option with MCP-specific defaults
-		if (Array.isArray(args.rules) && args.rules.length > 0) {
-			options.rules = args.rules;
-			options.rulesExplicitlyProvided = true;
-			log.info(`Including rules: ${args.rules.join(', ')}`);
-		} else {
-			// For MCP initialization, default to Claude profile only
-			options.rules = ['claude'];
-			options.rulesExplicitlyProvided = true;
-			log.info(`No rule profiles specified, defaulting to: Claude`);
+			claudeCode: true,
+			// only an explicit true edits the shell rc
+			aliases: args.addAliases === true,
+			responseLanguage: 'English'
+		});
+		for (const problem of result.problems) {
+			log.warn(problem.message);
 		}
-
-		log.info(`Initializing project with options: ${JSON.stringify(options)}`);
-		const result = await initializeProject(options); // Call core logic
 
 		resultData = {
 			message: 'Project initialized successfully.',
 			next_step:
-				'Now that the project is initialized, the next step is to create the tasks by parsing a PRD. This will create the tasks folder and the initial task files (tasks folder will be created when parse-prd is run). The parse-prd tool will require a prd.txt file as input (typically found in .taskgraph/docs/ directory). You can create a prd.txt file by asking the user about their idea, and then using the .taskgraph/templates/example_prd.txt file as a template to generate a prd.txt file in .taskgraph/docs/. You may skip all of this if the user already has a prd.txt file. You can THEN use the parse-prd tool to create the tasks. So: step 1 after initialization is to create a prd.txt file in .taskgraph/docs/prd.txt or confirm the user already has one. Step 2 is to use the parse-prd tool to create the tasks. Do not bother looking for tasks after initialization, just use the parse-prd tool to create the tasks after creating a prd.txt from which to parse the tasks. You do NOT need to reinitialize the project to parse-prd.',
-			...result
+				'Now that the project is initialized, the next step is to create the tasks by parsing a PRD. This will create the tasks folder and the initial task files (tasks folder will be created when parse-prd is run). The parse-prd tool will require a prd.txt file as input (typically found in .taskgraph/docs/ directory). You can create a prd.txt file by asking the user about their idea, and then using the .taskgraph/templates/example_prd.txt file as a template to generate a prd.txt file in .taskgraph/docs/. You may skip all of this if the user already has a prd.txt file. You can THEN use the parse-prd tool to create the tasks. So: step 1 after initialization is to create a prd.txt file in .taskgraph/docs/prd.txt or confirm the user already has one. Step 2 is to use the parse-prd tool to create the tasks. Do not bother looking for tasks after initialization, just use the parse-prd tool to create the tasks after creating a prd.txt from which to parse the tasks. You do NOT need to reinitialize the project to parse-prd.'
 		};
 		success = true;
 		log.info(
@@ -106,10 +80,6 @@ export async function initializeProjectDirect(args, log, context = {}) {
 			details: error.stack
 		};
 		success = false;
-	} finally {
-		disableSilentMode();
-		log.info(`Restoring original CWD: ${originalCwd}`);
-		process.chdir(originalCwd);
 	}
 
 	if (success) {

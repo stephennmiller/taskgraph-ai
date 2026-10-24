@@ -1,0 +1,50 @@
+{
+	"steps": [
+		{
+			"shell": "mkdir -p .taskgraph/reports/s1 && cp .gitignore .gitattributes .env.example CLAUDE.md .taskgraph/templates/example_prd.txt .taskgraph/templates/example_prd_rpg.txt .taskgraph/reports/s1/ && cp .taskgraph/CLAUDE.md .taskgraph/reports/s1/guide.md"
+		},
+		{
+			"shell": "printf '# Mine\\n' >> CLAUDE.md && printf 'X=1\\n' > .env.example && printf 'dist/\\n' >> .gitignore && printf 'mine' > .taskgraph/templates/example_prd.txt"
+		},
+		["init", "--yes"],
+		{
+			"shell": "mkdir -p .taskgraph/reports/s2 && cp .gitignore .gitattributes .env.example CLAUDE.md .taskgraph/templates/example_prd.txt .taskgraph/reports/s2/"
+		},
+		{
+			"args": ["init", "--yes", "--dry-run", "--mcp", "--aliases"],
+			"capture": "stdout"
+		},
+		{
+			"args": [
+				"init",
+				"-y",
+				"--dry-run",
+				"--no-git",
+				"--no-git-tasks",
+				"--no-claude"
+			],
+			"capture": "stdout"
+		},
+		["init", "--yes", "--mcp"],
+		{
+			"shell": "mkdir -p .taskgraph/reports/s3 && cp .mcp.json CLAUDE.md .taskgraph/reports/s3/"
+		},
+		["init", "--yes", "--no-git-tasks", "--no-claude"],
+		{
+			"shell": "mkdir -p .taskgraph/reports/s4 && cp .gitignore .gitattributes .taskgraph/reports/s4/"
+		},
+		{ "args": ["init", "--yes", "--rules", "cursor,claude"], "expectExit": 1 },
+		{ "args": ["init", "--yes", "--mcp", "--no-claude"], "expectExit": 1 },
+		{ "args": ["init", "--merge-driver"], "capture": "stdout" },
+		{
+			"shell": "rm .taskgraph/config.json .taskgraph/state.json CLAUDE.md"
+		},
+		{
+			"mcp": "initialize_project",
+			"input": { "projectRoot": "<project>" }
+		},
+		{
+			"shell": "mkdir -p .taskgraph/reports/s5 && cp .gitignore CLAUDE.md .taskgraph/reports/s5/"
+		}
+	]
+}

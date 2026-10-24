@@ -17,6 +17,7 @@
 
 import chalk from 'chalk';
 import { theme, withCode } from '../theme.js';
+import { terminalSafe } from './markdown-formatters.js';
 
 /** One file or folder that init created or changed */
 export interface InitChange {
@@ -133,5 +134,57 @@ export function formatInitSummary(summary: InitSummary): string {
 		}
 	}
 
+	return lines.join('\n');
+}
+
+/** What `taskgraph init --dry-run` would do */
+export interface InitDryRun {
+	/** The upstream folder an import would read (UPSTREAM_DIR) */
+	importFrom?: string;
+	startGit: boolean;
+	mergeDriver: boolean;
+	storeTasksInGit: boolean;
+	/** The shell startup file the `tm` alias would go in, as shown */
+	aliasFile: string | null;
+	claudeCode: boolean;
+	mcp: boolean;
+}
+
+/**
+ * Say what init would do without doing it, e.g.
+ *
+ *   Dry run; nothing was changed. Init would:
+ *     create .taskgraph/ with tasks, settings and PRD templates
+ *     create or update .gitignore and .env.example
+ *     keep tasks in Git
+ */
+export function formatInitDryRun(plan: InitDryRun): string {
+	const lines = [
+		'Dry run; nothing was changed. Init would:',
+		'  create .taskgraph/ with tasks, settings and PRD templates'
+	];
+	if (plan.importFrom) {
+		lines.push(
+			`  import tasks, docs, reports and settings from ${plan.importFrom}/`
+		);
+	}
+	lines.push('  create or update .gitignore and .env.example');
+	if (plan.startGit) lines.push('  start a Git repository');
+	if (plan.mergeDriver) {
+		lines.push('  set up Git to merge tasks.json by task (.gitattributes)');
+	}
+	lines.push(
+		plan.storeTasksInGit ? '  keep tasks in Git' : '  keep tasks out of Git'
+	);
+	if (plan.aliasFile) {
+		lines.push(`  add the tm alias to ${terminalSafe(plan.aliasFile)}`);
+	}
+	if (plan.claudeCode) {
+		lines.push(
+			plan.mcp
+				? '  import TaskGraph’s guide in CLAUDE.md and add the MCP server to .mcp.json'
+				: '  import TaskGraph’s guide in CLAUDE.md'
+		);
+	}
 	return lines.join('\n');
 }

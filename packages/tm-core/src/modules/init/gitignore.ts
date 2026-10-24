@@ -1,18 +1,27 @@
-// Utility to manage .gitignore files with task file preferences and template merging
-import fs from 'fs';
-import path from 'path';
+/**
+ * @fileoverview init's .gitignore: create it from the template, or merge the
+ * template's missing lines into the user's file, with the task files section
+ * commented out (tasks committed) or not (tasks ignored)
+ */
+import fs from 'node:fs';
+
+/** Where the merge reports what it did: init's debug log and warnings */
+export type GitignoreLog = (
+	level: 'debug' | 'success' | 'error',
+	message: string
+) => void;
 
 // Constants
-const TASK_FILES_COMMENT = '# Task files';
-const TASK_JSON_PATTERN = 'tasks.json';
-const TASK_DIR_PATTERN = 'tasks/';
+export const TASK_FILES_COMMENT = '# Task files';
+export const TASK_JSON_PATTERN = 'tasks.json';
+export const TASK_DIR_PATTERN = 'tasks/';
 
 /**
  * Normalizes a line by removing comments and trimming whitespace
  * @param {string} line - Line to normalize
  * @returns {string} Normalized line
  */
-function normalizeLine(line) {
+export function normalizeLine(line: string): string {
 	return line.trim().replace(/^#/, '').trim();
 }
 
@@ -21,7 +30,7 @@ function normalizeLine(line) {
  * @param {string} line - Line to check
  * @returns {boolean} True if line is task-related
  */
-function isTaskLine(line) {
+export function isTaskLine(line: string): boolean {
 	const normalized = normalizeLine(line);
 	return normalized === TASK_JSON_PATTERN || normalized === TASK_DIR_PATTERN;
 }
@@ -32,12 +41,15 @@ function isTaskLine(line) {
  * @param {boolean} storeTasksInGit - Whether to comment out task lines
  * @returns {string[]} Adjusted template lines
  */
-function adjustTaskLinesInTemplate(templateLines, storeTasksInGit) {
+function adjustTaskLinesInTemplate(
+	templateLines: string[],
+	storeTasksInGit: boolean
+): string[] {
 	return templateLines.map((line) => {
 		if (isTaskLine(line)) {
 			const normalized = normalizeLine(line);
 			// Preserve original trailing whitespace from the line
-			const originalTrailingSpace = line.match(/\s*$/)[0];
+			const originalTrailingSpace = line.match(/\s*$/)?.[0] ?? '';
 			return storeTasksInGit
 				? `# ${normalized}${originalTrailingSpace}`
 				: `${normalized}${originalTrailingSpace}`;
@@ -51,8 +63,8 @@ function adjustTaskLinesInTemplate(templateLines, storeTasksInGit) {
  * @param {string[]} existingLines - Existing file lines
  * @returns {string[]} Lines with task section removed
  */
-function removeExistingTaskSection(existingLines) {
-	const cleanedLines = [];
+function removeExistingTaskSection(existingLines: string[]): string[] {
+	const cleanedLines: string[] = [];
 	let inTaskSection = false;
 
 	for (const line of existingLines) {
@@ -92,7 +104,10 @@ function removeExistingTaskSection(existingLines) {
  * @param {Set<string>} existingLinesSet - Set of existing trimmed lines
  * @returns {string[]} New lines to add
  */
-function filterNewTemplateLines(templateLines, existingLinesSet) {
+function filterNewTemplateLines(
+	templateLines: string[],
+	existingLinesSet: Set<string>
+): string[] {
 	return templateLines.filter((line) => {
 		const trimmed = line.trim();
 		if (!trimmed) return false;
@@ -112,7 +127,7 @@ function filterNewTemplateLines(templateLines, existingLinesSet) {
  * @param {boolean} storeTasksInGit - Whether to comment out task lines
  * @returns {string[]} Task files section lines
  */
-function buildTaskFilesSection(storeTasksInGit) {
+export function buildTaskFilesSection(storeTasksInGit: boolean): string[] {
 	const section = [TASK_FILES_COMMENT];
 
 	if (storeTasksInGit) {
@@ -133,7 +148,10 @@ function buildTaskFilesSection(storeTasksInGit) {
  * @param {boolean} storeTasksInGit - Whether to comment out task lines
  * @returns {string[]} Lines with exactly one task files section
  */
-function withTaskFilesSection(templateLines, storeTasksInGit) {
+function withTaskFilesSection(
+	templateLines: string[],
+	storeTasksInGit: boolean
+): string[] {
 	if (templateLines.some(isTaskLine)) return templateLines;
 	const lines = [...templateLines];
 	while (lines.length > 0 && !lines[lines.length - 1].trim()) lines.pop();
@@ -146,7 +164,7 @@ function withTaskFilesSection(templateLines, storeTasksInGit) {
  * Adds a separator line if needed (avoids double spacing)
  * @param {string[]} lines - Current lines array
  */
-function addSeparatorIfNeeded(lines) {
+function addSeparatorIfNeeded(lines: string[]): void {
 	if (lines.some((line) => line.trim())) {
 		const lastLine = lines[lines.length - 1];
 		if (lastLine && lastLine.trim()) {
@@ -162,7 +180,11 @@ function addSeparatorIfNeeded(lines) {
  * @param {boolean} storeTasksInGit - Storage preference
  * @throws {Error} If validation fails
  */
-function validateInputs(targetPath, content, storeTasksInGit) {
+function validateInputs(
+	targetPath: unknown,
+	content: unknown,
+	storeTasksInGit: unknown
+): void {
 	if (!targetPath || typeof targetPath !== 'string') {
 		throw new Error('targetPath must be a non-empty string');
 	}
@@ -186,7 +208,11 @@ function validateInputs(targetPath, content, storeTasksInGit) {
  * @param {string[]} templateLines - Adjusted template lines
  * @param {function} log - Logging function
  */
-function createNewGitignoreFile(targetPath, templateLines, log) {
+function createNewGitignoreFile(
+	targetPath: string,
+	templateLines: string[],
+	log: GitignoreLog | null
+): void {
 	try {
 		fs.writeFileSync(targetPath, templateLines.join('\n') + '\n');
 		if (typeof log === 'function') {
@@ -194,7 +220,10 @@ function createNewGitignoreFile(targetPath, templateLines, log) {
 		}
 	} catch (error) {
 		if (typeof log === 'function') {
-			log('error', `Failed to create ${targetPath}: ${error.message}`);
+			log(
+				'error',
+				`Failed to create ${targetPath}: ${(error as Error).message}`
+			);
 		}
 		throw error;
 	}
@@ -208,11 +237,11 @@ function createNewGitignoreFile(targetPath, templateLines, log) {
  * @param {function} log - Logging function
  */
 function mergeWithExistingFile(
-	targetPath,
-	templateLines,
-	storeTasksInGit,
-	log
-) {
+	targetPath: string,
+	templateLines: string[],
+	storeTasksInGit: boolean,
+	log: GitignoreLog | null
+): void {
 	try {
 		// Read and process existing file
 		const existingContent = fs.readFileSync(targetPath, 'utf8');
@@ -255,7 +284,7 @@ function mergeWithExistingFile(
 		if (typeof log === 'function') {
 			log(
 				'error',
-				`Failed to merge content with ${targetPath}: ${error.message}`
+				`Failed to merge content with ${targetPath}: ${(error as Error).message}`
 			);
 		}
 		throw error;
@@ -269,7 +298,7 @@ function mergeWithExistingFile(
  * @returns {boolean|undefined} true when tasks are committed, false when
  *   they're ignored, undefined when the file has no task lines
  */
-function readStoreTasksInGit(targetPath) {
+export function readStoreTasksInGit(targetPath: string): boolean | undefined {
 	try {
 		if (!fs.existsSync(targetPath)) return undefined;
 		const taskLine = fs
@@ -290,12 +319,12 @@ function readStoreTasksInGit(targetPath) {
  * @param {function} log - Logging function (level, message)
  * @throws {Error} If validation or file operations fail
  */
-function manageGitignoreFile(
-	targetPath,
-	content,
+export function manageGitignoreFile(
+	targetPath: string,
+	content: string,
 	storeTasksInGit = true,
-	log = null
-) {
+	log: GitignoreLog | null = null
+): void {
 	// Validate inputs
 	validateInputs(targetPath, content, storeTasksInGit);
 
@@ -322,15 +351,3 @@ function manageGitignoreFile(
 		);
 	}
 }
-
-export default manageGitignoreFile;
-export {
-	manageGitignoreFile,
-	readStoreTasksInGit,
-	normalizeLine,
-	isTaskLine,
-	buildTaskFilesSection,
-	TASK_FILES_COMMENT,
-	TASK_JSON_PATTERN,
-	TASK_DIR_PATTERN
-};

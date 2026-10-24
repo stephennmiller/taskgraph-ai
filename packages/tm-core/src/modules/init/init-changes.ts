@@ -1,21 +1,35 @@
-/** What init changed: before/after snapshots for the summary at the end */
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
+/**
+ * @fileoverview What init changed: before/after snapshots of the files it may
+ * write, turned into the rows of init's summary
+ */
+
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
 	ENV_EXAMPLE_FILE,
 	GITIGNORE_FILE,
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_DIR,
 	TASKGRAPH_TASKS_FILE
-} from '../../src/constants/paths.js';
-import { ALIAS_LINE, shellConfigFiles } from './init-shell-aliases.js';
+} from '../../common/constants/paths.js';
+import { ALIAS_LINE, shellConfigFiles } from './shell-aliases.js';
 
-// Committed next to .gitignore; routes tasks.json to the merge driver
-const GITATTRIBUTES_FILE = '.gitattributes';
+/** Committed next to .gitignore; routes tasks.json to the merge driver */
+export const GITATTRIBUTES_FILE = '.gitattributes';
+
+/** One file or folder init created or changed, as the summary lists it */
+export interface InitChange {
+	/** Path as the user would type it, e.g. `.gitignore` or `~/.zshrc` */
+	path: string;
+	note: string;
+}
+
+/** null = missing, '' for a directory, else the file's text */
+export type PathSnapshot = Map<string, string | null>;
 
 /** Paths whose before/after state the init summary compares */
-function trackedPaths(targetDir) {
+export function trackedPaths(targetDir: string): string[] {
 	return [
 		path.join(targetDir, TASKGRAPH_DIR),
 		path.join(targetDir, TASKGRAPH_CONFIG_FILE),
@@ -30,14 +44,11 @@ function trackedPaths(targetDir) {
 	];
 }
 
-/**
- * Record whether each path exists and, for files, its content.
- * @returns {Map<string, string|null>} null = missing, '' for directories
- */
-function snapshotPaths(paths) {
-	const snapshot = new Map();
+/** Record whether each path exists and, for files, its content */
+export function snapshotPaths(paths: string[]): PathSnapshot {
+	const snapshot: PathSnapshot = new Map();
 	for (const filePath of paths) {
-		let state = null;
+		let state: string | null = null;
 		try {
 			if (fs.existsSync(filePath)) {
 				state = fs.statSync(filePath).isDirectory()
@@ -52,14 +63,16 @@ function snapshotPaths(paths) {
 	return snapshot;
 }
 
-/**
- * Turn before/after snapshots into the summary's list of changes.
- * @returns {{alreadySetUp: boolean, changes: Array<{path: string, note: string}>}}
- */
-function describeInitChanges(targetDir, before, after) {
-	const at = (relative) => path.join(targetDir, relative);
-	const created = (file) => before.get(file) == null && after.get(file) != null;
-	const changed = (file) =>
+/** Turn before/after snapshots into the summary's list of changes */
+export function describeInitChanges(
+	targetDir: string,
+	before: PathSnapshot,
+	after: PathSnapshot
+): { alreadySetUp: boolean; changes: InitChange[] } {
+	const at = (relative: string) => path.join(targetDir, relative);
+	const created = (file: string) =>
+		before.get(file) == null && after.get(file) != null;
+	const changed = (file: string) =>
 		before.get(file) != null &&
 		after.get(file) != null &&
 		before.get(file) !== after.get(file);
@@ -67,7 +80,7 @@ function describeInitChanges(targetDir, before, after) {
 	const alreadySetUp =
 		before.get(at(TASKGRAPH_CONFIG_FILE)) != null ||
 		before.get(at(TASKGRAPH_TASKS_FILE)) != null;
-	const changes = [];
+	const changes: InitChange[] = [];
 
 	if (!alreadySetUp && after.get(at(TASKGRAPH_CONFIG_FILE)) != null) {
 		changes.push({
@@ -82,7 +95,7 @@ function describeInitChanges(targetDir, before, after) {
 		changes.push({ path: '.git/', note: 'new Git repository' });
 	}
 
-	const projectFiles = [
+	const projectFiles: [string, string, string][] = [
 		[GITIGNORE_FILE, 'created', 'added TaskGraph entries'],
 		[
 			GITATTRIBUTES_FILE,
@@ -123,14 +136,12 @@ function describeInitChanges(targetDir, before, after) {
 }
 
 /**
- * Whether Git tracks `file` in the repository at `targetDir`.
- * @param {string} targetDir - Project root
- * @param {string} file - Path relative to the project root
- * @returns {boolean} false outside a Git repository
+ * Whether Git tracks `file` (relative to `targetDir`); false outside a Git
+ * repository
  */
-function isTrackedInGit(targetDir, file) {
+export function isTrackedInGit(targetDir: string, file: string): boolean {
 	try {
-		execSync(`git ls-files --error-unmatch -- "${file}"`, {
+		execFileSync('git', ['ls-files', '--error-unmatch', '--', file], {
 			cwd: targetDir,
 			stdio: 'ignore'
 		});
@@ -139,11 +150,3 @@ function isTrackedInGit(targetDir, file) {
 		return false;
 	}
 }
-
-export {
-	GITATTRIBUTES_FILE,
-	describeInitChanges,
-	isTrackedInGit,
-	snapshotPaths,
-	trackedPaths
-};

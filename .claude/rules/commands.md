@@ -36,7 +36,7 @@ How output should look (results, errors, prompts, spinners) is in `ui.md`. This 
 - **Command Handler Organization**:
   - ✅ DO: Keep action handlers concise and focused
   - ✅ DO: Extract core functionality to appropriate modules
-  - ✅ DO: Have the action handler import and call the relevant functions from core modules, like `task-manager.js` or `init.js`, passing the parsed `options`.
+  - ✅ DO: Have the action handler import and call the relevant functions from core modules, like `task-manager.js`, passing the parsed `options`.
   - ✅ DO: Perform basic parameter validation, such as checking for required options, within the action handler or at the start of the called core function.
   - ❌ DON'T: Implement business logic in command handlers
 

@@ -1,20 +1,21 @@
 /**
- * Integration tests for manage-gitignore.js module
+ * Integration tests for init's .gitignore module
  * Tests actual file system operations in a temporary directory
  */
 
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import manageGitignoreFile from '../../src/utils/manage-gitignore.js';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { manageGitignoreFile } from '../../../src/modules/init/gitignore.js';
 
 // Root ignores file permissions, so chmod can't make a path unreadable or
 // unwritable. Dev and CI containers often run as root.
 const testUnlessRoot = process.getuid?.() === 0 ? test.skip : test;
 
-describe('manage-gitignore.js Integration Tests', () => {
-	let tempDir;
-	let testGitignorePath;
+describe('init .gitignore integration tests', () => {
+	let tempDir: string;
+	let testGitignorePath: string;
 
 	beforeEach(() => {
 		// Create a temporary directory for each test
@@ -48,8 +49,9 @@ tasks.json
 tasks/ `;
 
 		test('should create new .gitignore file with commented task lines (storeTasksInGit = true)', () => {
-			const logs = [];
-			const mockLog = (level, message) => logs.push({ level, message });
+			const logs: { level: string; message: string }[] = [];
+			const mockLog = (level: string, message: string) =>
+				logs.push({ level, message });
 
 			manageGitignoreFile(testGitignorePath, templateContent, true, mockLog);
 
@@ -79,8 +81,9 @@ tasks/ `;
 		});
 
 		test('should create new .gitignore file with uncommented task lines (storeTasksInGit = false)', () => {
-			const logs = [];
-			const mockLog = (level, message) => logs.push({ level, message });
+			const logs: { level: string; message: string }[] = [];
+			const mockLog = (level: string, message: string) =>
+				logs.push({ level, message });
 
 			manageGitignoreFile(testGitignorePath, templateContent, false, mockLog);
 
@@ -143,8 +146,9 @@ cache/`;
 
 			fs.writeFileSync(testGitignorePath, existingContent);
 
-			const logs = [];
-			const mockLog = (level, message) => logs.push({ level, message });
+			const logs: { level: string; message: string }[] = [];
+			const mockLog = (level: string, message: string) =>
+				logs.push({ level, message });
 
 			manageGitignoreFile(testGitignorePath, templateContent, false, mockLog);
 
@@ -401,8 +405,9 @@ test.txt
 tasks.json
 tasks/ `;
 
-			const logs = [];
-			const mockLog = (level, message) => logs.push({ level, message });
+			const logs: { level: string; message: string }[] = [];
+			const mockLog = (level: string, message: string) =>
+				logs.push({ level, message });
 
 			expect(() => {
 				manageGitignoreFile(
@@ -435,8 +440,9 @@ test.txt
 tasks.json
 tasks/ `;
 
-			const logs = [];
-			const mockLog = (level, message) => logs.push({ level, message });
+			const logs: { level: string; message: string }[] = [];
+			const mockLog = (level: string, message: string) =>
+				logs.push({ level, message });
 
 			expect(() => {
 				manageGitignoreFile(testGitignorePath, templateContent, false, mockLog);

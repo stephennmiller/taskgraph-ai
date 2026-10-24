@@ -205,8 +205,10 @@ export {
 
 // What init did and what to do next
 export {
+	formatInitDryRun,
 	formatInitSummary,
 	type InitChange,
+	type InitDryRun,
 	type InitSummary
 } from './formatters/init-summary-formatters.js';
 
