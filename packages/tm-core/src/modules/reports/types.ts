@@ -18,6 +18,8 @@ export interface ComplexityAnalysis {
 	expansionPrompt: string;
 	/** Reasoning behind the complexity assessment */
 	complexityReasoning: string;
+	/** Filled in because the AI left the task out: a default, not a score */
+	placeholder?: true;
 }
 
 /**

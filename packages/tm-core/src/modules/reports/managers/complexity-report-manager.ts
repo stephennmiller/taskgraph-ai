@@ -78,6 +78,11 @@ export class ComplexityReportManager {
 				return null;
 			}
 
+			// A placeholder is a default for a task the AI left out, not a score
+			report.complexityAnalysis = report.complexityAnalysis.filter(
+				(analysis) => !analysis?.placeholder
+			);
+
 			// Cache the report
 			this.reportCache.set(cacheKey, report);
 

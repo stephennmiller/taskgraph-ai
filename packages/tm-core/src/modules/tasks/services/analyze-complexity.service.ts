@@ -225,7 +225,8 @@ const REPORT_NAMES = [
 /**
  * A complexity report: `file` (relative to the project root) when given,
  * else the tag's report under .taskgraph/reports, under any name older
- * versions used. Null when there is none; throws when it isn't valid JSON.
+ * versions used, without placeholder entries. Null when there is none;
+ * throws when it isn't valid JSON.
  */
 export function readComplexityReport(
 	projectRoot: string,
@@ -243,17 +244,22 @@ export function readComplexityReport(
 			});
 	const reportPath = candidates.find((candidate) => fs.existsSync(candidate));
 	if (!reportPath) return null;
+	let report: ComplexityReportFile;
 	try {
-		return {
-			report: JSON.parse(fs.readFileSync(reportPath, 'utf8')),
-			reportPath
-		};
+		report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 	} catch (error) {
 		throw new TaskGraphError(
 			`Couldn't read the complexity report: ${(error as Error).message}`,
 			ERROR_CODES.PARSE_ERROR
 		);
 	}
+	// A placeholder is a default for a task the AI left out, not a score
+	if (Array.isArray(report?.complexityAnalysis)) {
+		report.complexityAnalysis = report.complexityAnalysis.filter(
+			(entry) => !entry?.placeholder
+		);
+	}
+	return { report, reportPath };
 }
 
 export class AnalyzeComplexityService {

@@ -146,6 +146,7 @@ interface TaskAnalysis {
 	recommendedSubtasks?: number | string | null;
 	expansionPrompt?: string | { text?: string };
 	reasoning?: string;
+	placeholder?: boolean;
 }
 
 const logger = getLogger('ExpandTask');
@@ -471,8 +472,9 @@ export class ExpandTaskService {
 				return undefined;
 			}
 			const report = JSON.parse(fs.readFileSync(file, 'utf-8'));
+			// A placeholder is a default for a task the AI left out, not a score
 			return (report?.complexityAnalysis as TaskAnalysis[] | undefined)?.find(
-				(a) => String(a.taskId) === String(task.id)
+				(a) => String(a.taskId) === String(task.id) && !a.placeholder
 			);
 		} catch (error) {
 			warn(
