@@ -20,8 +20,8 @@ const smokeScript = path.resolve(__dirname, '../smoke/mcp-stdio.smoke.mjs');
 
 const TASK_COUNT = 12;
 const ids = Array.from({ length: TASK_COUNT }, (_, i) => i + 1);
-// How long the MCP server needs to boot before its first call can save
-const CLI_START_DELAY_MS = 600;
+// How long to wait for the MCP side's first save before starting the CLI side
+const FIRST_MCP_SAVE_TIMEOUT_MS = 60000;
 
 interface Finished {
 	status: number | null;
@@ -48,6 +48,20 @@ const runAsync = (
 		child.stderr.on('data', (d) => (stderr += d));
 		child.on('close', (status) => resolve({ status, stdout, stderr }));
 	});
+
+/** Resolve once any of `ids` is saved as done, or after `timeoutMs` */
+async function firstSave(file: string, ids: number[], timeoutMs: number) {
+	const deadline = Date.now() + timeoutMs;
+	while (Date.now() < deadline) {
+		try {
+			const tasks = JSON.parse(fs.readFileSync(file, 'utf8')).master.tasks;
+			if (ids.some((id) => tasks[id - 1]?.status === 'done')) return;
+		} catch {
+			// Read while a writer was replacing the file; try again
+		}
+		await new Promise((resolve) => setTimeout(resolve, 20));
+	}
+}
 
 describe('CLI and MCP server writing at the same time', () => {
 	let dir: string;
@@ -122,12 +136,13 @@ describe('CLI and MCP server writing at the same time', () => {
 			);
 
 		// Odd tasks through the CLI, even tasks through the MCP server. The server
-		// takes a while to boot, so the CLI side starts after it to make the
-		// writes overlap instead of running one side after the other.
+		// takes a while to boot, and the CLI now starts in well under that, so
+		// the CLI side starts once the first MCP save lands. The other MCP saves
+		// are still in flight, so the two sides write at the same time (#513).
 		const mcpIds = ids.filter((id) => id % 2 === 0);
 		const cliIds = ids.filter((id) => id % 2 === 1);
 		const mcpRuns = mcpIds.map(viaMcp);
-		await new Promise((resolve) => setTimeout(resolve, CLI_START_DELAY_MS));
+		await firstSave(tasksFile(), mcpIds, FIRST_MCP_SAVE_TIMEOUT_MS);
 		const cliRuns = cliIds.map(viaCli);
 		const [mcpResults, cliResults] = await Promise.all([
 			Promise.all(mcpRuns),
