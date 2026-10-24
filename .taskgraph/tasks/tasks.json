@@ -355,10 +355,11 @@
         "description": "tm-core saves rewrite top-level task IDs and dependencies as strings while the legacy writers use numbers, so the stored form flips between commands.",
         "details": "GitHub issue #392: https://github.com/stephennmiller/taskgraph-ai/issues/392\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:48:30.078Z"
       },
       {
         "id": "24",
@@ -492,10 +493,11 @@
         "description": "Older tasks.json files can hold the same top-level dependency twice, once as a number and once as a string (`[1, \"1\"]`), now that new dependencies are stored as strings (#393).",
         "details": "GitHub issue #432: https://github.com/stephennmiller/taskgraph-ai/issues/432\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:48:30.082Z"
       },
       {
         "id": "36",
@@ -867,7 +869,7 @@
       "version": "1.0.0",
       "lastModified": "2026-10-24T03:55:22.926Z",
       "taskCount": 67,
-      "completedCount": 20,
+      "completedCount": 22,
       "tags": [
         "master"
       ]

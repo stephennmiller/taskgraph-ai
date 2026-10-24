@@ -63,13 +63,7 @@ vi.doMock('@tm/core', () => ({
 	selectNextTask,
 	satisfyArchivedDependencies,
 	withStoredDependencies,
-	readArchivedIdsSync: vi.fn(() => ({ ids: new Set(), highestId: 0 })),
-	createTmCore: vi.fn(async () => ({
-		tasks: {
-			list: mockTasksList,
-			getArchivedIds: vi.fn(async () => new Set())
-		}
-	}))
+	createTmCore: vi.fn(async () => ({ tasks: { list: mockTasksList } }))
 }));
 
 // Import the mocked modules

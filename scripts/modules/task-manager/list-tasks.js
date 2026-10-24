@@ -1,4 +1,3 @@
-import { satisfyArchivedDependencies } from '@tm/core';
 import chalk from 'chalk';
 
 import {
@@ -7,7 +6,6 @@ import {
 	readComplexityReport,
 	truncate
 } from '../utils.js';
-import findNextTask from './find-next-task.js';
 import { loadListTasks } from './load-list-tasks.js';
 
 import { getStatusWithColor, theme } from '../ui.js';
@@ -36,7 +34,7 @@ async function listTasks(
 	const { projectRoot, tag } = context;
 	try {
 		// BRIDGE: tm-core for unified task access, readJSON as the fallback
-		const { data, archivedIds } = await loadListTasks(tasksPath, {
+		const { data } = await loadListTasks(tasksPath, {
 			projectRoot,
 			tag
 		});
@@ -140,74 +138,6 @@ async function listTasks(
 		const subtaskCompletionPercentage =
 			totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
-		// Calculate dependency statistics (moved up to be available for all output formats)
-		// Dependencies on archived tasks count as done
-		const dependencyView = satisfyArchivedDependencies(data.tasks, archivedIds);
-		const completedTaskIds = new Set(
-			data.tasks.filter((t) => t.status === 'done').map((t) => t.id)
-		);
-
-		const tasksWithNoDeps = dependencyView.filter(
-			(t) =>
-				t.status !== 'done' && (!t.dependencies || t.dependencies.length === 0)
-		).length;
-
-		const tasksWithAllDepsSatisfied = dependencyView.filter(
-			(t) =>
-				t.status !== 'done' &&
-				t.dependencies &&
-				t.dependencies.length > 0 &&
-				t.dependencies.every((depId) => completedTaskIds.has(depId))
-		).length;
-
-		const tasksWithUnsatisfiedDeps = dependencyView.filter(
-			(t) =>
-				t.status !== 'done' &&
-				t.dependencies &&
-				t.dependencies.length > 0 &&
-				!t.dependencies.every((depId) => completedTaskIds.has(depId))
-		).length;
-
-		// Calculate total tasks ready to work on (no deps + satisfied deps)
-		const tasksReadyToWork = tasksWithNoDeps + tasksWithAllDepsSatisfied;
-
-		// Calculate most depended-on tasks
-		const dependencyCount = {};
-		data.tasks.forEach((task) => {
-			if (task.dependencies && task.dependencies.length > 0) {
-				task.dependencies.forEach((depId) => {
-					dependencyCount[depId] = (dependencyCount[depId] || 0) + 1;
-				});
-			}
-		});
-
-		// Find the most depended-on task
-		let mostDependedOnTaskId = null;
-		let maxDependents = 0;
-
-		for (const [taskId, count] of Object.entries(dependencyCount)) {
-			if (count > maxDependents) {
-				maxDependents = count;
-				mostDependedOnTaskId = parseInt(taskId);
-			}
-		}
-
-		// Get the most depended-on task
-		const mostDependedOnTask =
-			mostDependedOnTaskId !== null
-				? data.tasks.find((t) => t.id === mostDependedOnTaskId)
-				: null;
-
-		// Calculate average dependencies per task
-		const totalDependencies = data.tasks.reduce(
-			(sum, task) => sum + (task.dependencies ? task.dependencies.length : 0),
-			0
-		);
-		const avgDependenciesPerTask = totalDependencies / data.tasks.length;
-
-		// Find next task to work on, passing the complexity report
-		const nextItem = findNextTask(data.tasks, complexityReport, archivedIds);
-
 		// Structured data: the JSON output, and what any other format but
 		// markdown-readme and compact returns
 		const listData = () => {
@@ -261,7 +191,7 @@ async function listTasks(
 
 		// For markdown-readme output, return formatted markdown
 		if (outputFormat === 'markdown-readme') {
-			return generateMarkdownOutput(data, filteredTasks, {
+			return generateMarkdownOutput(filteredTasks, {
 				totalTasks,
 				completedTasks,
 				completionPercentage,
@@ -280,16 +210,7 @@ async function listTasks(
 				deferredSubtasks,
 				cancelledSubtasks,
 				reviewSubtasks,
-				tasksWithNoDeps,
-				tasksReadyToWork,
-				tasksWithUnsatisfiedDeps,
-				mostDependedOnTask,
-				mostDependedOnTaskId,
-				maxDependents,
-				avgDependenciesPerTask,
-				complexityReport,
-				withSubtasks,
-				nextItem
+				withSubtasks
 			});
 		}
 
@@ -320,12 +241,11 @@ async function listTasks(
 
 /**
  * Generate markdown-formatted output for README files
- * @param {Object} data - Full tasks data
  * @param {Array} filteredTasks - Filtered tasks array
  * @param {Object} stats - Statistics object
  * @returns {string} - Formatted markdown string
  */
-function generateMarkdownOutput(data, filteredTasks, stats) {
+function generateMarkdownOutput(filteredTasks, stats) {
 	const {
 		totalTasks,
 		completedTasks,
@@ -344,16 +264,7 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 		blockedSubtasks,
 		deferredSubtasks,
 		cancelledSubtasks,
-		tasksWithNoDeps,
-		tasksReadyToWork,
-		tasksWithUnsatisfiedDeps,
-		mostDependedOnTask,
-		mostDependedOnTaskId,
-		maxDependents,
-		avgDependenciesPerTask,
-		complexityReport,
-		withSubtasks,
-		nextItem
+		withSubtasks
 	} = stats;
 
 	let markdown = '';
@@ -418,14 +329,9 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 	};
 
 	// Helper function to format dependencies without color codes
-	const formatDependenciesForMarkdown = (deps, allTasks) => {
+	const formatDependenciesForMarkdown = (deps) => {
 		if (!deps || deps.length === 0) return 'None';
-		return deps
-			.map((depId) => {
-				const depTask = allTasks.find((t) => t.id === depId);
-				return depTask ? depId.toString() : depId.toString();
-			})
-			.join(', ');
+		return deps.join(', ');
 	};
 
 	// Process all tasks
@@ -433,7 +339,7 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 		const taskTitle = task.title; // No truncation for README
 		const statusSymbol = getStatusSymbol(task.status);
 		const priority = task.priority || 'medium';
-		const deps = formatDependenciesForMarkdown(task.dependencies, data.tasks);
+		const deps = formatDependenciesForMarkdown(task.dependencies);
 		const complexity = task.complexityScore
 			? `● ${task.complexityScore}`
 			: 'N/A';
@@ -445,10 +351,7 @@ function generateMarkdownOutput(data, filteredTasks, stats) {
 			task.subtasks.forEach((subtask) => {
 				const subtaskTitle = `${subtask.title}`; // No truncation
 				const subtaskStatus = getStatusSymbol(subtask.status);
-				const subtaskDeps = formatDependenciesForMarkdown(
-					subtask.dependencies,
-					data.tasks
-				);
+				const subtaskDeps = formatDependenciesForMarkdown(subtask.dependencies);
 				const subtaskComplexity = subtask.complexityScore
 					? subtask.complexityScore.toString()
 					: 'N/A';

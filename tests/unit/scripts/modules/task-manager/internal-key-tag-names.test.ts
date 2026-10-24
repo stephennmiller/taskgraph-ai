@@ -24,7 +24,7 @@ const CONTEXT = { projectRoot: TEMP_DIR };
 
 function tagWithOneTask(title: string) {
 	return {
-		tasks: [{ id: 1, title, status: 'pending', dependencies: [] }],
+		tasks: [{ id: '1', title, status: 'pending', dependencies: [] }],
 		metadata: { created: '2026-01-01T00:00:00.000Z', description: title }
 	};
 }

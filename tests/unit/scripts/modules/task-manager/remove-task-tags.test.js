@@ -63,10 +63,29 @@ describe('removeTask with several tags', () => {
 
 		expect(result.success).toBe(true);
 		const saved = readFile();
-		expect(saved.master.tasks.map((t) => t.id)).toEqual([2]);
+		expect(saved.master.tasks.map((t) => t.id)).toEqual(['2']);
 		expect(saved.master.tasks[0].dependencies).toEqual([]);
-		expect(saved.feature.tasks.map((t) => t.id)).toEqual([1, 7]);
-		expect(saved.feature.tasks[1].dependencies).toEqual([1]);
+		expect(saved.feature.tasks.map((t) => t.id)).toEqual(['1', '7']);
+		expect(saved.feature.tasks[1].dependencies).toEqual(['1']);
+	});
+
+	test('removes from a file saved with string IDs, as tm-core saves them (#392)', async () => {
+		const current = readFile();
+		current.master.tasks = [task('1', []), task('2', ['1'])];
+		current.master.tasks[1].subtasks = [
+			{ id: 1, title: 'Sub', dependencies: [] }
+		];
+		fs.writeFileSync(tasksPath, JSON.stringify(current));
+
+		const result = await removeTask(tasksPath, '1,2.1', {
+			projectRoot: dir,
+			tag: 'master'
+		});
+
+		expect(result.error).toBeNull();
+		expect(readFile().master.tasks).toMatchObject([
+			{ id: '2', dependencies: [], subtasks: [] }
+		]);
 	});
 
 	test('removes from the file as it is, not as it was read', async () => {
@@ -87,6 +106,6 @@ describe('removeTask with several tags', () => {
 		await removeTask(tasksPath, '1', { projectRoot: dir, tag: 'master' });
 		vi.restoreAllMocks();
 
-		expect(readFile().master.tasks.map((t) => t.id)).toEqual([2, 3]);
+		expect(readFile().master.tasks.map((t) => t.id)).toEqual(['2', '3']);
 	});
 });

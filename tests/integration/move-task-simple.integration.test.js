@@ -366,13 +366,21 @@ describe('Cross-Tag Task Movement Simple Integration Tests', () => {
 			expect(rawData['in-progress']?.tasks || []).toHaveLength(5); // Task 5 + Tasks 1, 2, 3, 4
 
 			// Verify dependency relationships are preserved
-			const task1 = rawData['in-progress']?.tasks?.find((t) => t.id === 1);
-			const task2 = rawData['in-progress']?.tasks?.find((t) => t.id === 2);
-			const task3 = rawData['in-progress']?.tasks?.find((t) => t.id === 3);
-			const task4 = rawData['in-progress']?.tasks?.find((t) => t.id === 4);
+			const task1 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '1'
+			);
+			const task2 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '2'
+			);
+			const task3 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '3'
+			);
+			const task4 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '4'
+			);
 
-			expect(task1?.dependencies).toEqual([2, 3]);
-			expect(task2?.dependencies).toEqual([4]);
+			expect(task1?.dependencies).toEqual(['2', '3']);
+			expect(task2?.dependencies).toEqual(['4']);
 			expect(task3?.dependencies).toEqual([]);
 			expect(task4?.dependencies).toEqual([]);
 		});
@@ -467,14 +475,22 @@ describe('Cross-Tag Task Movement Simple Integration Tests', () => {
 			expect(rawData['in-progress']?.tasks || []).toHaveLength(5); // Task 5 + Tasks 1, 2, 3, 4
 
 			// Verify dependency relationships are preserved
-			const task1 = rawData['in-progress']?.tasks?.find((t) => t.id === 1);
-			const task2 = rawData['in-progress']?.tasks?.find((t) => t.id === 2);
-			const task3 = rawData['in-progress']?.tasks?.find((t) => t.id === 3);
-			const task4 = rawData['in-progress']?.tasks?.find((t) => t.id === 4);
+			const task1 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '1'
+			);
+			const task2 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '2'
+			);
+			const task3 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '3'
+			);
+			const task4 = rawData['in-progress']?.tasks?.find(
+				(t) => String(t.id) === '4'
+			);
 
-			expect(task1?.dependencies).toEqual([2]);
-			expect(task2?.dependencies).toEqual([3]);
-			expect(task3?.dependencies).toEqual([4]);
+			expect(task1?.dependencies).toEqual(['2']);
+			expect(task2?.dependencies).toEqual(['3']);
+			expect(task3?.dependencies).toEqual(['4']);
 			expect(task4?.dependencies).toEqual([]);
 		});
 
@@ -527,11 +543,11 @@ describe('Cross-Tag Task Movement Simple Integration Tests', () => {
 
 			// Verify Task 1 is now in in-progress with its dependency preserved
 			const taskInProgress = rawData['in-progress']?.tasks?.find(
-				(t) => t.id === 1
+				(t) => String(t.id) === '1'
 			);
 			expect(taskInProgress).toBeDefined();
 			expect(taskInProgress.title).toBe('Task 1');
-			expect(taskInProgress.dependencies).toEqual([5]); // Cross-tag dependency preserved
+			expect(taskInProgress.dependencies).toEqual(['5']); // Cross-tag dependency preserved
 		});
 	});
 });

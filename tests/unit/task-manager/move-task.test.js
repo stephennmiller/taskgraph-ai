@@ -36,8 +36,8 @@ describe('moveTask basic scenarios', () => {
 
 		const data = JSON.parse(fs.readFileSync(TASKS, 'utf8'));
 		const ids = data.master.tasks.map((t) => t.id);
-		expect(ids).toEqual(expect.arrayContaining([2, 3]));
-		expect(ids).not.toContain(1);
+		expect(ids).toEqual(expect.arrayContaining(['2', '3']));
+		expect(ids).not.toContain('1');
 	});
 
 	it('refuses to move across tags', async () => {

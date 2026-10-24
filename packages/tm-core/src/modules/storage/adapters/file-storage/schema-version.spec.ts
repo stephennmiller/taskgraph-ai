@@ -18,9 +18,32 @@ describe('stampTasksFileSchemaVersion', () => {
 			schemaVersion: CURRENT_SCHEMA_VERSION
 		});
 		expect(data.feature).toEqual({
-			tasks: [{ id: 1 }],
+			tasks: [{ id: '1' }],
 			metadata: { schemaVersion: CURRENT_SCHEMA_VERSION }
 		});
+	});
+
+	it('stores task IDs and dependencies as strings, as FileStorage does (#392)', () => {
+		const task = {
+			id: 2,
+			dependencies: [1, '3.1'],
+			subtasks: [{ id: 1, dependencies: [2, '3'] }]
+		};
+		const data = { master: { tasks: [task] } };
+
+		stampTasksFileSchemaVersion(data);
+
+		expect(data.master.tasks).toEqual([
+			{
+				id: '2',
+				dependencies: ['1', '3.1'],
+				// On a subtask a bare number is a sibling, so it keeps its type
+				subtasks: [{ id: 1, dependencies: [2, '3'] }]
+			}
+		]);
+		// The caller's task object is not changed
+		expect(task.id).toBe(2);
+		expect(task.dependencies).toEqual([1, '3.1']);
 	});
 
 	it('never lowers a newer version already recorded on a tag', () => {

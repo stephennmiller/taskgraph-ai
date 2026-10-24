@@ -140,15 +140,25 @@ describe('expandTask with another writer', () => {
 
 		const saved = readFile();
 		expect(saved.master.tasks.map((t) => [t.id, t.status])).toEqual([
-			[1, 'done'],
-			[2, 'pending'],
-			[3, 'pending']
+			['1', 'done'],
+			['2', 'pending'],
+			['3', 'pending']
 		]);
 		expect(saved.master.tasks[1].subtasks.map((s) => s.title)).toEqual([
 			'Step one',
 			'Step two'
 		]);
 		expect(saved.other.tasks).toHaveLength(1);
+	});
+
+	test('finds the task in a file saved with string IDs, as tm-core saves them (#392)', async () => {
+		const current = readFile();
+		for (const t of current.master.tasks) t.id = String(t.id);
+		fs.writeFileSync(tasksPath, JSON.stringify(current));
+
+		await expandTask(tasksPath, 2, 2, false, '', context(), false);
+
+		expect(readFile().master.tasks[1].subtasks).toHaveLength(2);
 	});
 
 	test('force drops dependencies and links on the old subtasks before adding new ones (#320)', async () => {

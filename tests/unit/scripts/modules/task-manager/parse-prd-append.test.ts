@@ -107,15 +107,15 @@ describe('parse-prd --append', () => {
 
 		const tasks = readTag();
 		expect(tasks.map((t) => [t.id, t.title])).toEqual([
-			[1, 'Old 1'],
-			[2, 'Old 2'],
-			[3, 'Old 3'],
-			[4, 'New 3'],
-			[5, 'New 4']
+			['1', 'Old 1'],
+			['2', 'Old 2'],
+			['3', 'Old 3'],
+			['4', 'New 3'],
+			['5', 'New 4']
 		]);
 		// Dependencies follow the new tasks; the one on existing task 1 stays
-		expect(tasks[3].dependencies).toEqual([1]);
-		expect(tasks[4].dependencies).toEqual([4]);
+		expect(tasks[3].dependencies).toEqual(['1']);
+		expect(tasks[4].dependencies).toEqual(['4']);
 	});
 
 	it('keeps a status change made during the AI call', async () => {
@@ -130,7 +130,7 @@ describe('parse-prd --append', () => {
 
 		await append();
 
-		expect(readTag()[0]).toMatchObject({ id: 1, status: 'done' });
+		expect(readTag()[0]).toMatchObject({ id: '1', status: 'done' });
 	});
 
 	it('keeps a new task dependency on an existing task', async () => {
@@ -142,7 +142,7 @@ describe('parse-prd --append', () => {
 
 		await append();
 
-		expect(readTag()[10]).toMatchObject({ id: 11, dependencies: [3] });
+		expect(readTag()[10]).toMatchObject({ id: '11', dependencies: ['3'] });
 	});
 
 	it('lists the existing tasks in the prompt', async () => {

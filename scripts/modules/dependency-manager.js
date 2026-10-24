@@ -1020,6 +1020,23 @@ function validateTaskDependencies(tasks, archivedIds = new Set()) {
 }
 
 /**
+ * A dependency list without repeats, keeping the first of each. `key` says
+ * when two entries name the same thing: `String` on a task, where `1` and
+ * `"1"` are task 1, the resolved ID on a subtask, where `1` is a sibling.
+ * @param {Array<string|number>} dependencies
+ * @param {(dep: string|number) => string} key
+ */
+function withoutDuplicates(dependencies, key) {
+	const seen = new Set();
+	return dependencies.filter((dep) => {
+		const id = key(dep);
+		if (seen.has(id)) return false;
+		seen.add(id);
+		return true;
+	});
+}
+
+/**
  * Remove duplicate dependencies from tasks
  * @param {Object} tasksData - Tasks data object with tasks array
  * @returns {Object} Updated tasks data with duplicates removed
@@ -1030,11 +1047,9 @@ function removeDuplicateDependencies(tasksData) {
 			return task;
 		}
 
-		// Convert to Set and back to array to remove duplicates
-		const uniqueDeps = [...new Set(task.dependencies)];
 		return {
 			...task,
-			dependencies: uniqueDeps
+			dependencies: withoutDuplicates(task.dependencies, String)
 		};
 	});
 
@@ -1552,16 +1567,17 @@ function validateAndFixDependencies(
 	tasksData.tasks = tasksData.tasks.map((task) => {
 		// Handle task dependencies
 		if (task.dependencies) {
-			const uniqueDeps = [...new Set(task.dependencies)];
-			task.dependencies = uniqueDeps;
+			task.dependencies = withoutDuplicates(task.dependencies, String);
 		}
 
 		// Handle subtask dependencies
 		if (task.subtasks) {
 			task.subtasks = task.subtasks.map((subtask) => {
 				if (subtask.dependencies) {
-					const uniqueDeps = [...new Set(subtask.dependencies)];
-					subtask.dependencies = uniqueDeps;
+					subtask.dependencies = withoutDuplicates(
+						subtask.dependencies,
+						(dep) => resolveSubtaskDependency(task.id, dep)
+					);
 				}
 				return subtask;
 			});

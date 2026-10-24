@@ -97,10 +97,11 @@ describe('addTask with another writer', () => {
 
 	test('keeps a task added while the AI call runs and picks a free ID', async () => {
 		generateObjectService.mockImplementation(async () => {
-			// Another process adds task 2 and finishes task 1 during the AI call
+			// Another process adds task 2 and finishes task 1 during the AI call,
+			// saving the ID as a string as tm-core does (#392)
 			const current = readFile();
 			current.master.tasks[0].status = 'done';
-			current.master.tasks.push(task(2, 'Added meanwhile'));
+			current.master.tasks.push(task('2', 'Added meanwhile'));
 			fs.writeFileSync(tasksPath, JSON.stringify(current));
 			return {
 				mainResult: {
@@ -137,9 +138,9 @@ describe('addTask with another writer', () => {
 
 		const saved = readFile();
 		expect(saved.master.tasks.map((t) => [t.id, t.title])).toEqual([
-			[1, 'First'],
-			[2, 'Added meanwhile'],
-			[3, 'From the AI']
+			['1', 'First'],
+			['2', 'Added meanwhile'],
+			['3', 'From the AI']
 		]);
 		expect(saved.master.tasks[0].status).toBe('done');
 		expect(result.newTaskId).toBe(3);
