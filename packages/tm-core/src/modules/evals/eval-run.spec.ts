@@ -110,9 +110,24 @@ describe('diffEvalRuns', () => {
 			delta: null
 		});
 		expect(all.id).toBe('all');
-		expect(all.taskCount).toEqual({ current: 10, baseline: 8, delta: 2 });
+		// Over the samples both runs have, so `new` and `gone` don't count
+		expect(all.taskCount).toEqual({ current: 6, baseline: 4, delta: 2 });
 		expect(diff.added).toEqual(['new']);
 		expect(diff.removed).toEqual(['gone']);
+	});
+
+	it('compares an --only run with the same samples of the baseline', () => {
+		const baseline = run([
+			sample('a', { checkScore: 0.6 }),
+			sample('b', { checkScore: 1, taskCount: 40 })
+		]);
+		const current = run([sample('a', { checkScore: 0.7 })]);
+
+		const all = diffEvalRuns(current, baseline).rows.at(-1);
+
+		expect(all?.taskCount).toEqual({ current: 4, baseline: 4, delta: 0 });
+		expect(all?.checkScore.delta).toBeCloseTo(0.1);
+		expect(all?.tokens.delta).toBe(0);
 	});
 
 	it('has no judge change when either run lacks a judge score', () => {

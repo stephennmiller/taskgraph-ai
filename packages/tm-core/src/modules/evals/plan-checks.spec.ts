@@ -69,6 +69,27 @@ describe('checkHeadingCoverage', () => {
 		expect(result).toMatchObject({ score: 1, sections: 2, uncovered: [] });
 	});
 
+	it('needs no task for headings inside a what-not-to-build section', () => {
+		const content = [
+			'# App',
+			'## Login',
+			'## Out-of-scope',
+			'### Payments',
+			'## Non-goals',
+			'### Offline mode',
+			'## Billing'
+		].join('\n\n');
+
+		const result = checkHeadingCoverage(
+			[{ id: 1, metadata: { source: 'prd.md#login' } }],
+			'prd.md',
+			content
+		);
+
+		expect(result.uncovered).toEqual(['Billing']);
+		expect(result.sections).toBe(3);
+	});
+
 	it('reports tasks without a section', () => {
 		const tasks = plan();
 		delete tasks[3].metadata;

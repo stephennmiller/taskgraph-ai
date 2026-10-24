@@ -7,6 +7,7 @@
  *   npm run evals -- --no-judge          skip the LLM judge
  *   npm run evals -- --config my.json    models from a TaskGraph config.json
  *   npm run evals -- --update-baseline   save this run as evals/baseline.json
+ *                                        (every sample, with the judge)
  *   npm run evals -- --keep              keep each sample's project
  *
  * Each sample runs in a fresh project in the system temp dir: `taskgraph
@@ -14,7 +15,7 @@
  * it has one), then parse-prd, analyze-complexity, expand on each task and
  * the judge, through the same code and AI backend as the CLI. It calls the
  * model for real and is never run in CI. The run is saved to
- * evals/results/<date>.json.
+ * evals/results/<date>T<time>.json.
  */
 
 import { spawn, spawnSync } from 'node:child_process';
@@ -82,6 +83,12 @@ if (only && args['update-baseline']) {
 		'Run `npm run evals -- --update-baseline`'
 	);
 }
+if (args['no-judge'] && args['update-baseline']) {
+	fail(
+		"--update-baseline needs the judge's scores, so it can't be used with --no-judge",
+		'Run `npm run evals -- --update-baseline`'
+	);
+}
 const configPath = args.config ? path.resolve(args.config) : undefined;
 if (configPath && !fs.existsSync(configPath)) {
 	fail(
@@ -104,24 +111,34 @@ function prepareProject(sample: Sample): string {
 	const dir = fs.mkdtempSync(
 		path.join(os.tmpdir(), `taskgraph-eval-${sample.id}-`)
 	);
-	const codebase = path.join(samplesDir, sample.id, 'codebase');
-	if (fs.existsSync(codebase)) fs.cpSync(codebase, dir, { recursive: true });
-	spawnSync('git', ['init', '-q'], { cwd: dir });
-	const init = spawnSync(
-		process.execPath,
-		[tsx, path.join(repoRoot, 'scripts', 'dev.js'), 'init', '--yes'],
-		{ cwd: dir, env: childEnv, encoding: 'utf8' }
-	);
-	if (init.status !== 0) {
-		throw new Error(`taskgraph init failed: ${init.stderr.trim()}`);
+	try {
+		const codebase = path.join(samplesDir, sample.id, 'codebase');
+		if (fs.existsSync(codebase)) fs.cpSync(codebase, dir, { recursive: true });
+		spawnSync('git', ['init', '-q'], { cwd: dir });
+		const init = spawnSync(
+			process.execPath,
+			[tsx, path.join(repoRoot, 'scripts', 'dev.js'), 'init', '--yes'],
+			{ cwd: dir, env: childEnv, encoding: 'utf8' }
+		);
+		// init exits 0 even when a step fails, so check it made the config
+		if (
+			init.status !== 0 ||
+			!fs.existsSync(path.join(dir, '.taskgraph', 'config.json'))
+		) {
+			throw new Error(`taskgraph init failed: ${init.stderr.trim()}`);
+		}
+		if (configPath) {
+			fs.copyFileSync(configPath, path.join(dir, '.taskgraph', 'config.json'));
+		}
+		const prd = path.join(dir, PRD_PATH);
+		fs.mkdirSync(path.dirname(prd), { recursive: true });
+		fs.copyFileSync(path.join(samplesDir, sample.id, 'prd.md'), prd);
+		return dir;
+	} catch (error) {
+		// evaluate() only cleans up a project it got back
+		fs.rmSync(dir, { recursive: true, force: true });
+		throw error;
 	}
-	if (configPath) {
-		fs.copyFileSync(configPath, path.join(dir, '.taskgraph', 'config.json'));
-	}
-	const prd = path.join(dir, PRD_PATH);
-	fs.mkdirSync(path.dirname(prd), { recursive: true });
-	fs.copyFileSync(path.join(samplesDir, sample.id, 'prd.md'), prd);
-	return dir;
 }
 
 /** Run the worker for one project; resolves with what it wrote */
@@ -140,11 +157,11 @@ function runWorker(projectDir: string): Promise<WorkerOutput> {
 		child.on('error', reject);
 		child.on('close', (code) => {
 			try {
-				const output = JSON.parse(fs.readFileSync(outFile, 'utf8'));
-				fs.rmSync(outFile, { force: true });
-				resolve(output);
+				resolve(JSON.parse(fs.readFileSync(outFile, 'utf8')));
 			} catch {
 				reject(new Error(`the plan worker exited with ${code} and no result`));
+			} finally {
+				fs.rmSync(outFile, { force: true });
 			}
 		});
 	});
@@ -182,7 +199,9 @@ async function evaluate(sample: Sample): Promise<EvalSampleResult> {
 				(sum, t) => sum + (t.subtasks?.length ?? 0),
 				0
 			),
-			checkScore: score,
+			// A plan cut short by an error keeps its checks for reading, but
+			// its score would move the run's averages, so it has none
+			checkScore: output.error ? null : score,
 			checks,
 			judge: output.verdict ? scoreJudgeVerdict(output.verdict) : null,
 			calls: output.calls,
@@ -234,12 +253,22 @@ const run: EvalRun = {
 };
 
 fs.mkdirSync(resultsDir, { recursive: true });
-const resultFile = path.join(resultsDir, `${run.date.slice(0, 10)}.json`);
+// Date and time, so a before and an after run on one day both stay
+const resultFile = path.join(
+	resultsDir,
+	`${run.date.slice(0, 19).replaceAll(':', '-')}.json`
+);
 fs.writeFileSync(resultFile, `${JSON.stringify(run, null, '\t')}\n`);
 
 console.log(`\n${formatRun(run)}\n`);
-if (fs.existsSync(baselinePath)) {
-	const baseline: EvalRun = JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
+const baseline: EvalRun | null = fs.existsSync(baselinePath)
+	? JSON.parse(fs.readFileSync(baselinePath, 'utf8'))
+	: null;
+if (baseline && baseline.schemaVersion !== EVAL_RUN_SCHEMA_VERSION) {
+	console.log(
+		`The baseline has schemaVersion ${baseline.schemaVersion}, this run ${EVAL_RUN_SCHEMA_VERSION}, so they can't be compared; save a new one with npm run evals -- --update-baseline\n`
+	);
+} else if (baseline) {
 	console.log(`${formatDiff(diffEvalRuns(run, baseline), baseline)}\n`);
 } else if (!args['update-baseline']) {
 	console.log(

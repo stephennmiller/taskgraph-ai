@@ -12,7 +12,7 @@ import { findCycles } from '../dependencies/dependency-graph.js';
 import { resolveSubtaskDependency } from '../dependencies/subtask-dependency.js';
 import { isClarificationsHeading } from '../prd/clarifications.js';
 import { computePrdCoverage } from '../prd/prd-coverage.js';
-import { parsePrdSections } from '../prd/prd-sections.js';
+import { type PrdSection, parsePrdSections } from '../prd/prd-sections.js';
 import { normalizeAcceptanceCriteria } from '../tasks/utils/acceptance-criteria.js';
 
 /** A subtask as tasks.json stores it */
@@ -64,22 +64,33 @@ export interface HeadingCoverageCheck {
  * Headings that say what not to build, which no task should implement.
  * Matched on the whole heading, ignoring case.
  */
-const NO_TASK_HEADING = /^(out of scope|non-goals?|open questions)$/i;
+const NO_TASK_HEADING = /^(out[- ]of[- ]scope|non[- ]?goals?|open questions)$/i;
 
-/** Whether a PRD heading needs a task to cover it */
-function needsTask(section: { title: string; level: number }): boolean {
-	return (
-		!NO_TASK_HEADING.test(section.title.trim()) &&
-		!isClarificationsHeading(section.title, section.level)
-	);
+/**
+ * Slugs of the headings that need no task: what not to build, the
+ * Clarifications section, and every heading inside them.
+ */
+function noTaskSlugs(sections: PrdSection[]): Set<string> {
+	const skip = new Set<string>();
+	// Sections come in document order, so a parent is decided before its children
+	for (const section of sections) {
+		if (
+			NO_TASK_HEADING.test(section.title.trim()) ||
+			isClarificationsHeading(section.title, section.level) ||
+			(section.parentSlug && skip.has(section.parentSlug))
+		) {
+			skip.add(section.slug);
+		}
+	}
+	return skip;
 }
 
 /**
  * Share of PRD headings covered by a task, using the sections parse-prd
  * records in `metadata.source` (see `computePrdCoverage`). With no task
  * citing the PRD at all, nothing is covered. Out of scope, non-goals, open
- * questions and the Clarifications section need no task, so they aren't
- * counted.
+ * questions and the Clarifications section (and headings inside them) need
+ * no task, so they aren't counted.
  *
  * @param prdPath - The path tasks cite the PRD by
  */
@@ -88,13 +99,15 @@ export function checkHeadingCoverage(
 	prdPath: string,
 	prdContent: string
 ): HeadingCoverageCheck {
-	const sections = parsePrdSections(prdContent).filter(needsTask);
+	const all = parsePrdSections(prdContent);
+	const skip = noTaskSlugs(all);
+	const sections = all.filter((s) => !skip.has(s.slug));
 	const coverage = computePrdCoverage(tasks, (cited) =>
 		cited === prdPath ? prdContent : null
 	);
 	const file = coverage?.files.find((f) => f.path === prdPath);
 	const uncovered = (file ? file.uncovered : sections)
-		.filter(needsTask)
+		.filter((s) => !skip.has(s.slug))
 		.map((s) => s.title);
 	const unsourced = coverage
 		? coverage.unsourced

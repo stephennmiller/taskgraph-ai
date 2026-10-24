@@ -36,7 +36,7 @@ export interface EvalSampleResult {
 	sections: number;
 	taskCount: number;
 	subtaskCount: number;
-	/** Mean of the deterministic checks; null when the plan wasn't made */
+	/** Mean of the deterministic checks; null when the plan wasn't made or an error cut it short */
 	checkScore: number | null;
 	checks: PlanChecks | null;
 	/** Null when the judge wasn't run or its answer was unusable */
@@ -142,9 +142,14 @@ function change(
 	};
 }
 
-/** Each sample's change from the baseline, then the run's as `all` */
+/**
+ * Each sample's change from the baseline, then the run's as `all`. When the
+ * two runs hold different samples (a run with `--only`), `all` compares the
+ * samples both have, so the totals don't move by the samples left out.
+ */
 export function diffEvalRuns(current: EvalRun, baseline: EvalRun): EvalDiff {
 	const before = new Map(baseline.samples.map((s) => [s.id, s]));
+	const ids = new Set(current.samples.map((s) => s.id));
 	const rows: EvalDiffRow[] = current.samples.map((s) => {
 		const b = before.get(s.id);
 		return {
@@ -156,8 +161,14 @@ export function diffEvalRuns(current: EvalRun, baseline: EvalRun): EvalDiff {
 			seconds: change(sampleSeconds(s), b ? sampleSeconds(b) : null)
 		};
 	});
-	const now = current.summary;
-	const then = baseline.summary;
+	const sameSamples =
+		ids.size === before.size && [...ids].every((id) => before.has(id));
+	const now = sameSamples
+		? current.summary
+		: summarizeEvalRun(current.samples.filter((s) => before.has(s.id)));
+	const then = sameSamples
+		? baseline.summary
+		: summarizeEvalRun(baseline.samples.filter((s) => ids.has(s.id)));
 	rows.push({
 		id: 'all',
 		checkScore: change(now.checkScore, then.checkScore),
@@ -169,7 +180,6 @@ export function diffEvalRuns(current: EvalRun, baseline: EvalRun): EvalDiff {
 		),
 		seconds: change(now.seconds, then.seconds)
 	});
-	const ids = new Set(current.samples.map((s) => s.id));
 	return {
 		rows,
 		taskScaling: change(

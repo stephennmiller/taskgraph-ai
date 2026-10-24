@@ -37,6 +37,8 @@ interface Telemetry {
 
 interface Called {
 	telemetryData?: Telemetry | null;
+	/** expand made no call: the complexity report recommends no subtasks */
+	skipped?: boolean;
 }
 
 /**
@@ -103,7 +105,7 @@ const output: WorkerOutput = {
 	verdict: null
 };
 
-/** Time one model call and record its usage */
+/** Time one model call and record its usage; a skipped expand isn't a call */
 async function timed<T extends Called>(
 	command: EvalCall['command'],
 	run: () => Promise<T>,
@@ -111,7 +113,9 @@ async function timed<T extends Called>(
 ): Promise<T> {
 	const start = performance.now();
 	const result = await run();
+	if (result?.skipped) return result;
 	const usage = result?.telemetryData;
+	const reported = typeof usage?.inputTokens === 'number';
 	output.calls.push({
 		command,
 		...(taskId ? { taskId } : {}),
@@ -121,13 +125,17 @@ async function timed<T extends Called>(
 		...(usage?.cachedInputTokens
 			? { cachedInputTokens: usage.cachedInputTokens }
 			: {}),
-		...(usage ? { model: usage.modelUsed } : { usageMissing: true })
+		...(usage?.modelUsed ? { model: usage.modelUsed } : {}),
+		...(reported ? {} : { usageMissing: true })
 	});
 	return result;
 }
 
+/** The tag every step reads and writes, so a config can't move the plan */
+const TAG = 'master';
+
 const readTasks = (): PlanTask[] =>
-	JSON.parse(fs.readFileSync(tasksPath, 'utf8')).master?.tasks ?? [];
+	JSON.parse(fs.readFileSync(tasksPath, 'utf8'))[TAG]?.tasks ?? [];
 
 const verdictSchema = z.object({
 	grades: z.array(
@@ -144,6 +152,7 @@ async function main(judge: boolean): Promise<void> {
 	enableSilentMode();
 	const context = {
 		projectRoot: projectDir,
+		tag: TAG,
 		mcpLog: quiet,
 		outputType: 'mcp'
 	};
@@ -157,10 +166,16 @@ async function main(judge: boolean): Promise<void> {
 		})
 	);
 	output.tasks = readTasks();
+	if (output.tasks.length === 0) throw new Error('parse-prd made no tasks');
 
 	const analysis = await timed('analyze-complexity', () =>
 		legacy.analyzeTaskComplexity(
-			{ file: tasksPath, output: reportPath, projectRoot: projectDir },
+			{
+				file: tasksPath,
+				output: reportPath,
+				projectRoot: projectDir,
+				tag: TAG
+			},
 			{ ...context, commandName: 'analyze-complexity' }
 		)
 	);

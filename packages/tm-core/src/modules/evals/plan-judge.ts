@@ -5,6 +5,8 @@
  * model's grade moves with the model.
  */
 
+import { normalizeAcceptanceCriteria } from '../tasks/utils/acceptance-criteria.js';
+
 export interface JudgeCriterion {
 	id: string;
 	/** What the judge grades, as a question */
@@ -75,16 +77,15 @@ interface JudgedTask {
 		id: number | string;
 		title?: string;
 		description?: string;
+		details?: string;
+		testStrategy?: string;
 		dependencies?: Array<number | string>;
+		acceptanceCriteria?: unknown;
 	}>;
 }
 
-function criteriaText(raw: unknown): string[] {
-	if (!Array.isArray(raw)) return [];
-	return raw
-		.map((c) => (typeof c === 'string' ? c : (c as { text?: string })?.text))
-		.filter((c): c is string => typeof c === 'string' && c.trim() !== '');
-}
+const criteriaText = (raw: unknown): string[] =>
+	normalizeAcceptanceCriteria(raw).map((c) => c.text);
 
 /** The plan in the compact shape the judge prompt carries */
 export function planForJudge(tasks: JudgedTask[]): unknown[] {
@@ -100,7 +101,10 @@ export function planForJudge(tasks: JudgedTask[]): unknown[] {
 			id: `${task.id}.${sub.id}`,
 			title: sub.title,
 			description: sub.description,
-			dependencies: sub.dependencies ?? []
+			details: sub.details,
+			testStrategy: sub.testStrategy,
+			dependencies: sub.dependencies ?? [],
+			acceptanceCriteria: criteriaText(sub.acceptanceCriteria)
 		}))
 	}));
 }

@@ -82,4 +82,28 @@ describe('planForJudge', () => {
 
 		expect(task.acceptanceCriteria).toEqual(['Works', 'Tested']);
 	});
+
+	it("gives the judge each subtask's details, test strategy and criteria", () => {
+		const [task] = planForJudge([
+			{
+				id: 3,
+				subtasks: [
+					{
+						id: 1,
+						title: 'Add the route',
+						details: 'GET /export returns CSV',
+						testStrategy: 'Request it with supertest',
+						acceptanceCriteria: ['Returns 200']
+					}
+				]
+			}
+		]) as Array<{ subtasks: unknown[] }>;
+
+		expect(task.subtasks[0]).toMatchObject({
+			id: '3.1',
+			details: 'GET /export returns CSV',
+			testStrategy: 'Request it with supertest',
+			acceptanceCriteria: ['Returns 200']
+		});
+	});
 });
