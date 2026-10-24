@@ -18,6 +18,6 @@ Reviews of the October 2026 issue batches kept catching the same six bugs. Check
 - **AI updates that wipe fields.** When the AI returns `null` or leaves a field out (details, priority, testStrategy, acceptanceCriteria, subtasks), keep the stored value. A failed AI call leaves the task as it was (#283, #286, MCP `expand_task --force`).
 - **Secret paths.** AI calls go through `src/ai-providers/claude-code-path-guard.js`. A change there gets tests for Windows and macOS spellings, case, `//`, look-alike Unicode and `*-kubeconfig` style names, and must not allow any path that main refuses (#357, #389, #433, #469, #499).
 - **Exit codes.** A command that failed exits non-zero, including partial failures such as `show 98,99` when no ID exists. A multi-ID command validates every ID before changing anything (#318).
-- **ID types.** Stored top-level task IDs and dependency IDs are strings. In a subtask's dependencies, a bare number means a sibling subtask (#290, #383).
+- **ID types.** tm-core stores top-level task IDs and dependency IDs as strings, but older files may still hold numbers, so compare with `String()`. In a subtask's dependencies, a bare number up to 99 means a sibling subtask (see `dependencies.md`; #290, #383).
 
 Free text you pass to a shell (prompts, notes, plugin command bodies) goes in single quotes, with `'` written as `'\''` (#298, #360).
