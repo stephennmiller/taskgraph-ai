@@ -1681,7 +1681,6 @@ function stripAnsiCodes(text) {
 
 // Export all utility functions and configuration
 export {
-	addComplexityToTask,
 	disableSilentMode,
 	enableSilentMode,
 	ensureTagMetadata,

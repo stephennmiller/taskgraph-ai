@@ -90,6 +90,7 @@ with the target branch as build A and the pull request as build B.
 | `phase3-update.json` | `update-task` (`--id`, positional ID and prompt, `--append`, `--research`, `--tag`), `update --from` (`--tag`, past the last task), the MCP `update_task` (rewrite, append, a done task) and `update` tools, and the failures (done task, unknown ID, subtask ID, no prompt, nothing to update over MCP). |
 | `phase3-update-subtask.json` | `update-subtask` (twice on one subtask, a prompt over 100 characters, `--research`), the MCP `update_subtask` tool, and the failures (a task ID, unknown subtask, a task with no subtasks, no `--prompt`, a tag without the task, no prompt or metadata over MCP, metadata while it is disabled). |
 | `phase3-scope.json` | `scope-up` and `scope-down` (one and several IDs, `--strength`, `--prompt`, `--research`, `--tag`), with and without a complexity report, the MCP `scope_up_task` and `scope_down_task` tools (the MCP call re-scores the task in the report), and the failures (no ID, unknown ID, bad strength, `--file`). |
+| `phase4-next.json` | The MCP `next_task` tool (a task, another tag, the complexity score from the tag's report and from `complexityReport`, `file` naming the project's tasks.json, a subtask of an in-progress task, nothing left, an unknown tag) beside `next --format json`, and `sync-readme` (with and without `--with-subtasks` and `--status`, an unknown tag, `--file`). |
 
 A step is a list of CLI arguments, or an object: `{"args": [...], "capture":
 "stdout"}` also compares what the command printed (use a JSON format), and

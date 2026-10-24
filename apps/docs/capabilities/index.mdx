@@ -142,10 +142,10 @@ These functions are the bread and butter of the application, allowing for the cr
 
 These functions are used to retrieve information about tasks and manage their status.
 
--   **`listTasks(statusFilter, withSubtasks)`**: Lists all tasks, with options to filter by status and include subtasks.
+-   **`tmCore.tasks.list({ tag })`**: Lists a tag's tasks, with options to filter by status and include subtasks.
 -   **`findTaskById(taskId)`**: Finds a task by its ID.
 -   **`taskExists(taskId)`**: Checks if a task with a given ID exists.
--   **`findNextTask()`**: Determines the next task to work on based on dependencies and status.
+-   **`tmCore.tasks.getNext()`**: Determines the next task to work on based on dependencies and status.
 
 ### 3. Task Analysis and Expansion
 

@@ -13,6 +13,7 @@ import { UpdateSubtaskCommand } from './commands/update-subtask.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { ComplexityReportCommand } from './commands/complexity-report.command.js';
+import { SyncReadmeCommand } from './commands/sync-readme.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
 import { ScopeDownCommand, ScopeUpCommand } from './commands/scope.command.js';
 import {
@@ -255,6 +256,13 @@ export class CommandRegistry {
 			name: 'generate',
 			description: 'Generate individual task files from tasks.json',
 			commandClass: GenerateCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'sync-readme',
+			description:
+				'Sync the current task list to README.md in the project root',
+			commandClass: SyncReadmeCommand as any,
 			category: 'utility'
 		},
 		{

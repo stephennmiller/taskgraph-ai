@@ -1,15 +1,12 @@
 /**
- * Archived tasks (`taskgraph archive`) keep their IDs and count as done in
- * the legacy commands: parse-prd never hands out an archived ID, and the MCP
- * next_task treats dependencies on
- * archived tasks as done. Real files in a temp dir; only logging is silenced.
+ * Archived tasks (`taskgraph archive`) keep their IDs: parse-prd never hands
+ * out an archived ID. Real files in a temp dir; only logging is silenced.
  */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { vi } from 'vitest';
 import { loadExistingTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
-import { nextTaskDirect } from '../../../../../mcp-server/src/core/direct-functions/next-task.js';
 
 // vi.mock is hoisted above the imports: real file I/O, logging silenced
 vi.mock('../../../../../scripts/modules/utils.js', async (importOriginal) => ({
@@ -28,14 +25,6 @@ const task = (id, extra = {}) => ({
 	subtasks: [],
 	...extra
 });
-
-const silentLog = {
-	info: vi.fn(),
-	warn: vi.fn(),
-	error: vi.fn(),
-	debug: vi.fn(),
-	success: vi.fn()
-};
 
 describe('archived task IDs in the legacy commands', () => {
 	let dir;
@@ -107,20 +96,6 @@ describe('archived task IDs in the legacy commands', () => {
 				nextId: 3,
 				firstFreeId: 1
 			});
-		});
-	});
-
-	describe('dependencies on archived tasks', () => {
-		test('MCP next_task picks a task whose dependency is archived', async () => {
-			setup([task(3, { dependencies: [1] })], [task(1)]);
-
-			const result = await nextTaskDirect(
-				{ tasksJsonPath: tasksPath, projectRoot: dir, tag: 'master' },
-				silentLog
-			);
-
-			expect(result.success).toBe(true);
-			expect(result.data.nextTask?.id).toBe(3);
 		});
 	});
 });

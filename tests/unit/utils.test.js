@@ -69,8 +69,7 @@ global.console = mockConsole;
 vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
 	findConfigPath: vi.fn(() => null), // Always return null to prevent config discovery
-	findTasksPath: vi.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: vi.fn(() => null)
+	findTasksPath: vi.fn(() => '/mock/tasks.json')
 }));
 
 // Import the actual module to test

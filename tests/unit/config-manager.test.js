@@ -55,8 +55,7 @@ const mockFindConfigPath = vi.fn(() => null); // Default to null, can be overrid
 vi.doMock('../../src/utils/path-utils.js', () => ({
 	__esModule: true,
 	findConfigPath: mockFindConfigPath, // Use the mock function instance
-	findTasksPath: vi.fn(() => '/mock/tasks.json'),
-	findComplexityReportPath: vi.fn(() => null)
+	findTasksPath: vi.fn(() => '/mock/tasks.json')
 }));
 
 // --- Read REAL supported-models.json data BEFORE mocks ---

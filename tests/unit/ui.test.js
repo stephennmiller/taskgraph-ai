@@ -51,10 +51,6 @@ vi.doMock('../../scripts/modules/utils.js', () => ({
 	truncate: vi.fn((text) => text)
 }));
 
-vi.doMock('../../scripts/modules/task-manager.js', () => ({
-	findNextTask: vi.fn()
-}));
-
 describe('UI Module', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();

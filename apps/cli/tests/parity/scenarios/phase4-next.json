@@ -1,0 +1,87 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "feature"
+			}
+		},
+		{
+			"shell": "mkdir -p .taskgraph/reports && printf '%s' '{\"meta\":{},\"complexityAnalysis\":[{\"taskId\":2,\"taskTitle\":\"Write the parser\",\"complexityScore\":6,\"recommendedSubtasks\":3,\"expansionPrompt\":\"Split it\",\"reasoning\":\"Medium\"}]}' > .taskgraph/reports/task-complexity-report.json"
+		},
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"shell": "printf '%s' '{\"meta\":{},\"complexityAnalysis\":[{\"taskId\":2,\"taskTitle\":\"Write the parser\",\"complexityScore\":9,\"recommendedSubtasks\":3,\"expansionPrompt\":\"Split it\",\"reasoning\":\"High\"}]}' > other-report.json"
+		},
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>",
+				"complexityReport": "other-report.json"
+			}
+		},
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>",
+				"file": ".taskgraph/tasks/tasks.json"
+			}
+		},
+		["set-status", "--id=2", "--status=in-progress"],
+		["sync-readme"],
+		[
+			"sync-readme",
+			"--with-subtasks",
+			"--status",
+			"pending,in-progress",
+			"--tag",
+			"master"
+		],
+		{
+			"args": ["sync-readme", "--tag", "nope"],
+			"expectExit": 1
+		},
+		{
+			"args": ["sync-readme", "--file", "other.json"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"args": ["next", "--format", "json"],
+			"capture": "stdout"
+		},
+		["set-status", "--id=2.1,2.2,2,4,5", "--status=done"],
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "next_task",
+			"input": {
+				"projectRoot": "<project>",
+				"tag": "nope"
+			},
+			"expectError": true
+		}
+	]
+}
