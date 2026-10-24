@@ -187,7 +187,12 @@ describe('show command', () => {
 		expect(output).toContain('pending');
 	});
 
-	it('should show task with all status types', () => {
+	it.each([
+		['1', 'Done Task'],
+		['2', 'Pending Task'],
+		['3', 'In Progress'],
+		['4', 'Review Task']
+	])('should show task %s of each status type', (id, title) => {
 		const testData = createTasksFile({
 			tasks: [
 				createTask({ id: 1, title: 'Done Task', status: 'done' }),
@@ -198,25 +203,17 @@ describe('show command', () => {
 		});
 		writeTasks(testData);
 
-		// Test each status
-		let result = runShow('1');
-		expect(result.exitCode).toBe(0);
-		expect(result.output).toContain('Done Task');
+		const result = runShow(id);
 
-		result = runShow('2');
 		expect(result.exitCode).toBe(0);
-		expect(result.output).toContain('Pending Task');
-
-		result = runShow('3');
-		expect(result.exitCode).toBe(0);
-		expect(result.output).toContain('In Progress');
-
-		result = runShow('4');
-		expect(result.exitCode).toBe(0);
-		expect(result.output).toContain('Review Task');
+		expect(result.output).toContain(title);
 	});
 
-	it('should show task with priority levels', () => {
+	it.each([
+		['1', 'High Priority', 'high'],
+		['2', 'Medium Priority', 'medium'],
+		['3', 'Low Priority', 'low']
+	])('should show task %s with its priority level', (id, title, priority) => {
 		const testData = createTasksFile({
 			tasks: [
 				createTask({
@@ -241,17 +238,10 @@ describe('show command', () => {
 		});
 		writeTasks(testData);
 
-		let result = runShow('1');
-		expect(result.output).toContain('High Priority');
-		expect(result.output).toContain('high');
+		const result = runShow(id);
 
-		result = runShow('2');
-		expect(result.output).toContain('Medium Priority');
-		expect(result.output).toContain('medium');
-
-		result = runShow('3');
-		expect(result.output).toContain('Low Priority');
-		expect(result.output).toContain('low');
+		expect(result.output).toContain(title);
+		expect(result.output).toContain(priority);
 	});
 });
 

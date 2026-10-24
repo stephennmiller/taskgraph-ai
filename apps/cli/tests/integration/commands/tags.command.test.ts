@@ -18,7 +18,11 @@ import {
 	expect,
 	it
 } from 'vitest';
-import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	copyProject,
+	getCliBinPath,
+	spawnTimeout
+} from '../../helpers/test-utils.js';
 
 describe('tags command', () => {
 	let dir: string;
@@ -108,7 +112,9 @@ describe('tags command', () => {
 		expect(width('120')).toBeGreaterThan(80);
 	});
 
-	it('runs add, use, rename, copy and remove with one result line each', () => {
+	it('runs add, use, rename, copy and remove with one result line each', {
+		timeout: spawnTimeout(5)
+	}, () => {
 		const added = run(['tags', 'add', 'feature-auth']);
 		expect(added.stdout).toContain('✓ Created tag feature-auth');
 
@@ -227,7 +233,9 @@ describe('tags command', () => {
 		expect(result.stderr).not.toContain('not found');
 	});
 
-	it('refuses to delete a tag with tasks without a terminal or --yes', () => {
+	it('refuses to delete a tag with tasks without a terminal or --yes', {
+		timeout: spawnTimeout(3)
+	}, () => {
 		run(['tags', 'copy', 'master', 'backup']);
 		const result = run(['tags', 'remove', 'backup']);
 

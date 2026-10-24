@@ -13,7 +13,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createTask, createTasksFile } from '@tm/core/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import { getCliBinPath, spawnTimeout } from '../../helpers/test-utils.js';
 
 // Capture initial working directory at module load time
 const initialCwd = process.cwd();
@@ -102,7 +102,9 @@ describe('set-status command', () => {
 		expect(updatedTask.title).toBe('Task to Complete');
 	});
 
-	it('should handle multiple status changes in sequence', () => {
+	it('should handle multiple status changes in sequence', {
+		timeout: spawnTimeout(3)
+	}, () => {
 		const testData = createTasksFile({
 			tasks: [createTask({ id: 1, title: 'Task', status: 'pending' })]
 		});
@@ -135,27 +137,23 @@ describe('set-status command', () => {
 		expect(tasks.master.tasks[0].status).toBe('pending');
 	});
 
-	it('should update status to all valid values', () => {
-		const validStatuses = [
-			'pending',
-			'in-progress',
-			'done',
-			'review',
-			'deferred',
-			'cancelled'
-		];
+	it.each([
+		'pending',
+		'in-progress',
+		'done',
+		'review',
+		'deferred',
+		'cancelled'
+	])('should update status to %s', (status) => {
+		const testData = createTasksFile({
+			tasks: [createTask({ id: 1, title: 'Test', status: 'pending' })]
+		});
+		writeTasks(testData);
 
-		for (const status of validStatuses) {
-			const testData = createTasksFile({
-				tasks: [createTask({ id: 1, title: 'Test', status: 'pending' })]
-			});
-			writeTasks(testData);
+		runSetStatus(1, status);
 
-			runSetStatus(1, status);
-
-			const tasks = readTasks();
-			expect(tasks.master.tasks[0].status).toBe(status);
-		}
+		const tasks = readTasks();
+		expect(tasks.master.tasks[0].status).toBe(status);
 	});
 
 	it('should preserve other task fields when updating status', () => {

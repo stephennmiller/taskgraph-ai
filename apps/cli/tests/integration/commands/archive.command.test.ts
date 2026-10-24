@@ -21,7 +21,11 @@ import {
 	expect,
 	it
 } from 'vitest';
-import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
+import {
+	copyProject,
+	getCliBinPath,
+	spawnTimeout
+} from '../../helpers/test-utils.js';
 
 interface SavedTask {
 	id: number | string;
@@ -117,7 +121,9 @@ describe('archive', () => {
 		expect(fs.existsSync(archivePath)).toBe(false);
 	});
 
-	it('moves old finished tasks out, keeps their IDs and counts them as done', () => {
+	it('moves old finished tasks out, keeps their IDs and counts them as done', {
+		timeout: spawnTimeout(4)
+	}, () => {
 		const archived = run(['archive']);
 
 		expect(archived.status, archived.stderr).toBe(0);
@@ -194,7 +200,9 @@ describe('archive', () => {
 		expect(liveIds('feature')).toEqual(['7']);
 	});
 
-	it('restores a task by ID, and says so when it is not archived', () => {
+	it('restores a task by ID, and says so when it is not archived', {
+		timeout: spawnTimeout(3)
+	}, () => {
 		run(['archive']);
 
 		const restored = run(['archive', 'restore', '1']);
@@ -218,7 +226,9 @@ describe('archive', () => {
 		expect(result.stderr).toContain('taskgraph archive --older-than 30');
 	});
 
-	it('moves archived tasks with a renamed tag and drops them with a deleted one', () => {
+	it('moves archived tasks with a renamed tag and drops them with a deleted one', {
+		timeout: spawnTimeout(3)
+	}, () => {
 		const file = readJson(tasksPath);
 		file.feature = {
 			tasks: [

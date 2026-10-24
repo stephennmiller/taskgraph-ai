@@ -453,10 +453,11 @@
         "description": "CLI integration tests that spawn the built CLI several times time out at 30 s when the machine is loaded.",
         "details": "GitHub issue #422: https://github.com/stephennmiller/taskgraph-ai/issues/422\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:44:19.212Z"
       },
       {
         "id": "32",
@@ -464,10 +465,11 @@
         "description": "The test:unit and test:integration scripts in tm-core, tm-profiles, cli and mcp match no test files.",
         "details": "GitHub issue #424: https://github.com/stephennmiller/taskgraph-ai/issues/424\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:44:19.387Z"
       },
       {
         "id": "33",
@@ -487,10 +489,11 @@
         "description": "`packages/tm-core/src/modules/tasks/tasks-domain.ts` is 20,218 bytes (about 5,050 tokens at the hook's bytes / 4) on main, just over `MAX_TOKENS` in `.githooks/check-file-size.mjs`, and it is not in `LEGACY_OVERSIZED`.",
         "details": "GitHub issue #429: https://github.com/stephennmiller/taskgraph-ai/issues/429\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:44:19.563Z"
       },
       {
         "id": "35",
@@ -872,9 +875,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T04:36:13.191Z",
+      "lastModified": "2026-10-24T04:44:19.563Z",
       "taskCount": 67,
-      "completedCount": 27,
+      "completedCount": 30,
       "tags": [
         "master"
       ]

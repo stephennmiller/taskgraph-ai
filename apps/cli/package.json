@@ -23,8 +23,8 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
-		"test:unit": "vitest run '**/*.spec.ts'",
-		"test:integration": "vitest run '**/*.test.ts'",
+		"test:unit": "vitest run .spec.ts",
+		"test:integration": "vitest run .test.ts",
 		"test:smoke": "vitest run tests/integration/task-lifecycle.test.ts tests/integration/lock-interop.test.ts tests/integration/commands/first-run.command.test.ts tests/integration/commands/help.command.test.ts tests/integration/commands/version.command.test.ts tests/integration/commands/list.command.test.ts tests/integration/commands/next.command.test.ts tests/integration/commands/show.command.test.ts tests/integration/commands/set-status.command.test.ts",
 		"test:ci": "vitest run --coverage --reporter=dot"
 	},
