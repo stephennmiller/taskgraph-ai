@@ -193,6 +193,11 @@ function normalizeUsage(reported: ReportedUsage | undefined) {
 	return { inputTokens, outputTokens, totalTokens, cachedInputTokens };
 }
 
+/** An error handleError already wrapped, with the original's HTTP status */
+class ProviderError extends Error {
+	status?: number;
+}
+
 /**
  * Base class for all AI providers
  */
@@ -277,15 +282,22 @@ export abstract class BaseAIProvider {
 	 * Common error handler
 	 */
 	handleError(operation: string, error: any): never {
+		// getClient errors arrive here already wrapped; don't wrap them twice
+		if (error instanceof ProviderError) throw error;
 		const errorMessage = error?.message || 'Unknown error occurred';
 		// The caller prints the thrown error; this copy dumps the request (#272)
 		this.log('debug', `${this.name} ${operation} failed: ${errorMessage}`, {
 			error
 		});
-		throw new Error(
+		const wrapped = new ProviderError(
 			`${this.name} API error during ${operation}: ${errorMessage}`,
 			{ cause: error }
 		);
+		// The service's retry check reads these (#555); the SDK calls it statusCode
+		const status = error?.status ?? error?.statusCode;
+		if (status !== undefined) wrapped.status = status;
+		if (typeof error?.name === 'string') wrapped.name = error.name;
+		throw wrapped;
 	}
 
 	/**

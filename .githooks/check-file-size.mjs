@@ -35,7 +35,6 @@ const IGNORED_PATTERNS = [
 const LEGACY_OVERSIZED = new Set([
 	'.claude/rules/mcp.md',
 	'.claude/rules/utilities.md',
-	'scripts/modules/ai-services-unified.js',
 	'tests/integration/cli/move-cross-tag.test.js',
 	'tests/integration/mcp-server/direct-functions.test.js',
 	'tests/integration/move-task-cross-tag.integration.test.js',
