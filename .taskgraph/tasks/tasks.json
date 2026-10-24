@@ -814,7 +814,7 @@
         "description": "remove-subtask removes the valid IDs before it finds a missing one; a list with any missing subtask should change nothing.",
         "details": "GitHub issue #483: https://github.com/stephennmiller/taskgraph-ai/issues/483\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []
