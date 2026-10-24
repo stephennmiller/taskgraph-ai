@@ -172,15 +172,22 @@ export function formatCommanderError(
 	const message = reason.charAt(0).toUpperCase() + reason.slice(1);
 	const suggestion = /\(Did you mean (.+?)\?\)/.exec(rest.join(' '))?.[1];
 
-	const [name = '', id] = args;
+	const [name = '', ...after] = args;
 	if (
 		!commandPath &&
 		/^unknown command/i.test(reason) &&
 		Object.hasOwn(REMOVED_COMMANDS, name)
 	) {
-		const safeId = id
-			? stripTerminalControls(id, { singleLine: true }).replaceAll('`', '')
-			: '';
+		// The removed commands took the ID as `[id]`, `--id <id>` or `-i <id>`
+		const flag = after.findIndex((a) => a === '--id' || a === '-i');
+		const id =
+			flag >= 0
+				? after[flag + 1]
+				: (after.find((a) => a.startsWith('--id='))?.slice(5) ?? after[0]);
+		const safeId =
+			id && !id.startsWith('-')
+				? stripTerminalControls(id, { singleLine: true }).replaceAll('`', '')
+				: '';
 		return formatErrorMessage({
 			message: `Command '${name}' was removed`,
 			hint: `Run \`taskgraph loop -n 1 --id ${safeId || '<id>'}${REMOVED_COMMANDS[name]}\` instead`

@@ -198,6 +198,34 @@ describe('formatCommanderError', () => {
 		);
 	});
 
+	it.each([
+		[['start', '--id', '3'], '3'],
+		[['start', '-i', '3'], '3'],
+		[['start', '--id=3'], '3'],
+		[['start', '-v', '3'], '<id>'],
+		[['start', '--id'], '<id>']
+	])('takes the ID of a removed command from %j', (args, id) => {
+		expect(
+			plain(
+				formatCommanderError("error: unknown command 'start'", undefined, args)
+			)
+		).toBe(
+			`✗ Command 'start' was removed\n  Run taskgraph loop -n 1 --id ${id} instead`
+		);
+	});
+
+	it('keeps the nearest-name hint for other unknown commands', () => {
+		expect(
+			plain(
+				formatCommanderError(
+					"error: unknown command 'shwo'\n(Did you mean show?)",
+					undefined,
+					['shwo', '3']
+				)
+			)
+		).toBe("✗ Unknown command 'shwo'\n  Did you mean taskgraph show?");
+	});
+
 	it('points to the command list when there is no suggestion', () => {
 		expect(plain(formatCommanderError("error: unknown command 'zzz'"))).toBe(
 			"✗ Unknown command 'zzz'\n  Run taskgraph --help to see all commands"
