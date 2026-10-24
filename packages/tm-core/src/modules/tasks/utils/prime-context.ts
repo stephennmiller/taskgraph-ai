@@ -76,6 +76,8 @@ export interface PrimeContext {
 	/** Up to `readyLimit` pending tasks or subtasks, in `next` order */
 	ready: PrimeTask[];
 	rules: readonly PrimeRule[];
+	/** The active tag isn't in tasks.json (a stale state.json, say) */
+	tagMissing?: true;
 }
 
 export interface BuildPrimeContextOptions {

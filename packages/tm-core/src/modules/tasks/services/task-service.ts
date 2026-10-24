@@ -98,16 +98,10 @@ export class TaskService {
 	 * This is the main method that retrieves tasks from storage and applies filters
 	 */
 	async getTaskList(options: GetTaskListOptions = {}): Promise<TaskListResult> {
-		// Determine which tag to use
-		const activeTag = this.configManager.getActiveTag();
-		const tag = options.tag || activeTag;
+		const tag = options.tag || this.getActiveTag();
 
 		try {
-			// Callers such as prime pass the active tag explicitly; it reads as
-			// empty when missing, the same as passing no tag
-			if (options.tag && options.tag !== activeTag) {
-				await this.assertTagExists(options.tag);
-			}
+			await this.resolveTag(tag);
 
 			// Determine if we can push filters to storage layer
 			const canPushStatusFilter =
@@ -199,20 +193,43 @@ export class TaskService {
 	}
 
 	/**
-	 * Fail on a tag the project doesn't have, so a typo isn't read as an empty
-	 * tag. "master" always passes (reads fall back to it), and so does any tag
-	 * while tasks.json has none yet
+	 * Whether the project has this tag. "master" always does (reads fall back
+	 * to it), and so does any tag while tasks.json has none yet
 	 */
-	private async assertTagExists(tag: string): Promise<void> {
+	async tagExists(tag: string): Promise<boolean> {
 		if (tag === 'master') {
-			return;
+			return true;
 		}
 		const tags = await this.storage.getAllTags();
-		if (tags.length > 0 && !tags.includes(tag)) {
-			throw new TaskGraphError(`Tag "${tag}" not found`, ERROR_CODES.NOT_FOUND, {
-				tagName: tag
-			});
+		return tags.length === 0 || tags.includes(tag);
+	}
+
+	/**
+	 * The tag to read or change: `tag`, else the active tag. Fails on one the
+	 * project doesn't have, so a typo or a stale active tag (say after a git
+	 * checkout) isn't read as an empty tag
+	 */
+	private async resolveTag(tag?: string): Promise<string> {
+		const activeTag = this.getActiveTag();
+		const resolved = tag || activeTag;
+		if (await this.tagExists(resolved)) {
+			return resolved;
 		}
+		if (resolved !== activeTag) {
+			throw new TaskGraphError(
+				`Tag "${resolved}" not found`,
+				ERROR_CODES.NOT_FOUND,
+				{ tagName: resolved }
+			);
+		}
+		throw Object.assign(
+			new TaskGraphError(
+				`Active tag "${resolved}" isn't in tasks.json`,
+				ERROR_CODES.NOT_FOUND,
+				{ tagName: resolved }
+			),
+			{ hint: 'Switch with `taskgraph tags use <tag>`; `taskgraph tags` lists them' }
+		);
 	}
 
 	/**
@@ -220,8 +237,7 @@ export class TaskService {
 	 * strings (see normalizeTaskIds)
 	 */
 	async getTask(taskId: string, tag?: string): Promise<Task | null> {
-		// Use provided tag or get active tag
-		const activeTag = tag || this.getActiveTag();
+		const activeTag = await this.resolveTag(tag);
 
 		try {
 			// Delegate to storage layer which handles the specific logic for tasks vs subtasks
@@ -407,7 +423,7 @@ export class TaskService {
 				ERROR_CODES.STORAGE_ERROR
 			);
 		}
-		const activeTag = tag || this.getActiveTag();
+		const activeTag = await this.resolveTag(tag);
 		return this.storage.claimNextTask(
 			claimant?.trim() || resolveClaimant(),
 			activeTag,
@@ -529,8 +545,7 @@ export class TaskService {
 			await this.initialize();
 		}
 
-		// Use provided tag or get active tag
-		const activeTag = tag || this.getActiveTag();
+		const activeTag = await this.resolveTag(tag);
 		const taskIdStr = String(taskId);
 
 		try {
@@ -576,7 +591,7 @@ export class TaskService {
 		return this.storage.modifyTask(
 			String(taskId),
 			change,
-			tag || this.getActiveTag()
+			await this.resolveTag(tag)
 		);
 	}
 
@@ -602,8 +617,7 @@ export class TaskService {
 			);
 		}
 
-		// Use provided tag or get active tag
-		const activeTag = tag || this.getActiveTag();
+		const activeTag = await this.resolveTag(tag);
 		const taskIdStr = String(taskId);
 
 		try {

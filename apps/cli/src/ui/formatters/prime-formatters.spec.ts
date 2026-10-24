@@ -237,6 +237,25 @@ describe('formatPrimeContext', () => {
 		);
 	});
 
+	// Regression: #418, a stale active tag read as an empty project
+	it('says a missing active tag is missing and how to switch, then the rules', () => {
+		const text = render(
+			context({
+				tag: 'gone',
+				counts: { total: 0, done: 0 },
+				inProgress: [],
+				ready: [],
+				tagMissing: true
+			})
+		);
+
+		expect(text).toContain(
+			"Tag gone isn't in tasks.json. Switch with taskgraph tags use <tag>"
+		);
+		expect(text).not.toContain('No tasks yet');
+		expect(text).toContain('Rules');
+	});
+
 	it('points an empty project at parse-prd and add-task, then the rules', () => {
 		const text = render(
 			context({ counts: { total: 0, done: 0 }, inProgress: [], ready: [] })

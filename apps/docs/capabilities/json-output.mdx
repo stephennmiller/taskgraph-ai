@@ -35,7 +35,7 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `graph` | `--json` or `--format json` | `tag`, `total`, `roots`, `criticalPath`, `bottlenecks`, `cyclic`, `nextId`, `waves` (each node also has `wave`) |
 | `why <id>` | `--json` or `--format json` | `id`, `title`, `status`, `tag`, `blocked`, `blockers`, `rootCauses` |
 | `tags`, `tags list` | `--json` | `tags`, `currentTag`, `totalTags` |
-| `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules` |
+| `prime` | `--json` | `tag`, `counts`, `inProgress`, `ready`, `rules`; `tagMissing: true` when the active tag isn't in tasks.json |
 | `prime --unnoted-since <time>` | `--json` | `unnoted` |
 | `generate` | `--json` or `--format json` | `success`, `count`, `directory`, `orphanedFilesRemoved` |
 | `set-status` | `--json` or `--format json` | `success`, `updatedTasks`; on failure `success`, `error`, `taskId`, `timestamp` |
