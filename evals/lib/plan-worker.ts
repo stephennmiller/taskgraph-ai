@@ -19,7 +19,8 @@ import {
 	PLAN_JUDGE_RUBRIC,
 	type PlanComplexity,
 	type PlanTask,
-	buildJudgePrompt
+	buildJudgePrompt,
+	createTmCore
 } from '@tm/core';
 import { z } from 'zod';
 import * as aiServices from '../../scripts/modules/ai-services-unified.js';
@@ -38,7 +39,7 @@ interface Telemetry {
 interface Called {
 	telemetryData?: Telemetry | null;
 	/** expand made no call: the complexity report recommends no subtasks */
-	skipped?: boolean;
+	skipped?: unknown;
 }
 
 /**
@@ -61,15 +62,6 @@ const legacy = {
 		options: object,
 		context: object
 	): Promise<Called & { report: { complexityAnalysis?: PlanComplexity[] } }>;
-	expandTask(
-		tasksPath: string,
-		taskId: number | string,
-		numSubtasks: number | undefined,
-		useResearch: boolean,
-		additionalContext: string,
-		context: object,
-		force: boolean
-	): Promise<Called>;
 	generateObjectService(
 		params: object
 	): Promise<Called & { mainResult: unknown }>;
@@ -185,26 +177,29 @@ async function main(judge: boolean): Promise<void> {
 	);
 	output.complexity = analysis.report.complexityAnalysis ?? [];
 
-	for (const [index, task] of output.tasks.entries()) {
-		step(`expanding task ${index + 1} of ${output.tasks.length}`);
-		await timed(
-			'expand',
-			() =>
-				legacy.expandTask(
-					tasksPath,
-					task.id,
-					undefined,
-					false,
-					'',
-					{
-						...context,
-						complexityReportPath: reportPath,
-						commandName: 'expand-task'
-					},
-					true
-				),
-			String(task.id)
-		);
+	const tmCore = await createTmCore({ projectPath: projectDir });
+	try {
+		for (const [index, task] of output.tasks.entries()) {
+			step(`expanding task ${index + 1} of ${output.tasks.length}`);
+			await timed(
+				'expand',
+				() =>
+					tmCore.tasks.expand(
+						{
+							id: task.id,
+							force: true,
+							tag: TAG,
+							complexityReportPath: reportPath,
+							outputType: 'mcp'
+						},
+						// A report that doesn't parse changes the plan; say so
+						{ onWarning: (message) => quiet.error(`warning: ${message}`) }
+					),
+				String(task.id)
+			);
+		}
+	} finally {
+		await tmCore.close();
 	}
 	output.tasks = readTasks();
 

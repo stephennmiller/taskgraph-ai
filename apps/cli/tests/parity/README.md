@@ -85,6 +85,7 @@ with the target branch as build A and the pull request as build B.
 | `phase1-tags-edge.json` | Tags in a project with no tasks yet (`tags`, `tags --json`, `list_tags`, the first `tags add`), copying from a missing tag (CLI and MCP), reserved and invalid names, `tags remove` without `--yes` outside a terminal, and listing, using and copying a tag that has no metadata. |
 | `phase1-flat-format.json` | Reads and writes on an old file with no tags (`{"tasks": [...]}`): a legacy write moves it under `master`; a tm-core write such as `add-dependency` keeps it flat. |
 | `phase1-no-master.json` | A file whose only tag is `sprint`: reads fall back to it, writes to the missing current tag `master` fail until `tags use sprint`. |
+| `phase3-expand.json` | `expand` (one task, `--num`, `--force`, `--research`, `--tag`, `--all`), the complexity report's count, prompt and a count of 0, the MCP `expand_task` and `expand_all` tools, and the failures (unknown ID, no ID, a done task over MCP). |
 
 A step is a list of CLI arguments, or an object: `{"args": [...], "capture":
 "stdout"}` also compares what the command printed (use a JSON format), and

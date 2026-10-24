@@ -32,7 +32,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	disableSilentMode: vi.fn(),
 	truncate: vi.fn((text) => text),
 	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
-	aggregateTelemetry: vi.fn((telemetryArray) => telemetryArray[0] || {}),
 	ensureTagMetadata: vi.fn((tagObj) => tagObj),
 	getCurrentTag: vi.fn(() => 'master'),
 	resolveTag: vi.fn(() => 'master'),

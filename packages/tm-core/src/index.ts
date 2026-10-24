@@ -370,3 +370,18 @@ export {
 	SUPPORTED_MODELS,
 	type SupportedModel
 } from './modules/ai/config-ai-host.js';
+
+// ========== Expand ==========
+
+export type {
+	ExpandAllHooks,
+	ExpandAllResult,
+	ExpandOptions,
+	ExpandTaskHooks,
+	ExpandTaskInput,
+	ExpandTaskResult
+} from './modules/tasks/services/expand-task.service.js';
+export {
+	type AggregatedTelemetry,
+	aggregateTelemetry
+} from './modules/ai/aggregate-telemetry.js';

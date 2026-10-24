@@ -1135,10 +1135,7 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     
     // Environment utilities
     resolveEnvVariable,
-    getDebugFlag,
-    
-    // Legacy utilities (maintained for compatibility)
-    aggregateTelemetry
+    getDebugFlag
   };
   ```
 

@@ -15,6 +15,15 @@ import {
 	type AddTaskResult
 } from './services/add-task.service.js';
 import {
+	ExpandTaskService,
+	type ExpandAllHooks,
+	type ExpandAllResult,
+	type ExpandOptions,
+	type ExpandTaskHooks,
+	type ExpandTaskInput,
+	type ExpandTaskResult
+} from './services/expand-task.service.js';
+import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
 	type GenerateTaskFilesResult
@@ -445,6 +454,37 @@ export class TasksDomain {
 			() => this.taskService.getStorage(),
 			this.configManager
 		).add(input, hooks);
+	}
+
+	/**
+	 * Expand a top-level task into subtasks with the AI. The count and prompt
+	 * come from `num`, else the complexity report, else defaultSubtasks; a
+	 * report count of 0 skips the task without an AI call. New subtasks are
+	 * added, or with `force` replace the old ones. The AI call runs without
+	 * the file lock; the save changes only this task's subtasks.
+	 */
+	async expand(
+		input: ExpandTaskInput,
+		hooks?: ExpandTaskHooks
+	): Promise<ExpandTaskResult> {
+		return new ExpandTaskService(this.taskService, this.configManager).expand(
+			input,
+			hooks
+		);
+	}
+
+	/**
+	 * Expand every pending or in-progress task that has no subtasks (any,
+	 * with `force`), three at a time. Failures are counted, not thrown.
+	 */
+	async expandAll(
+		options: ExpandOptions,
+		hooks?: ExpandAllHooks
+	): Promise<ExpandAllResult> {
+		return new ExpandTaskService(
+			this.taskService,
+			this.configManager
+		).expandAll(options, hooks);
 	}
 
 	/**

@@ -156,6 +156,141 @@ function formatById(tasks: Task[], id: string): string | null {
 }
 
 /**
+ * An ID as the legacy reader held it: a number, and a subtask stored as
+ * "3.2" as 2. The related-task search compares IDs this way, so a subtask
+ * match stands for the top-level task with its number, as it always has.
+ */
+function legacyIdKey(id: unknown): string {
+	const text = String(id);
+	const number = parseInt(text.split('.').pop() as string, 10);
+	return !Number.isNaN(number) && number > 0 ? String(number) : text;
+}
+
+/** Topics the query is checked against; the first that matches adds tasks too */
+const PURPOSE_PATTERNS = [
+	/(command|cli|flag)/i,
+	/(task|subtask|add)/i,
+	/(dependency|depend)/i,
+	/(AI|model|prompt|research)/i,
+	/(UI|display|show|interface)/i,
+	/(schedule|time|cron)/i,
+	/(config|setting|option)/i,
+	/(test|testing|spec)/i,
+	/(auth|login|user)/i,
+	/(database|db|data)/i,
+	/(api|endpoint|route)/i,
+	/(deploy|build|release)/i,
+	/(security|auth|login|user)/i,
+	/.*/
+];
+
+/**
+ * IDs of the tasks most related to `query`, as the legacy FuzzyTaskSearch
+ * found them for expand (`scripts/modules/utils/fuzzyTaskSearch.js`, its
+ * default settings): fuzzy matches over tasks and subtasks, then up to three
+ * on the query's topic, then the five newest, best first. The expand prompt
+ * is eval-gated, so this keeps that search as it was, quirks included.
+ */
+export async function findRelatedTaskIds(
+	tasks: Task[],
+	query: string,
+	maxResults: number
+): Promise<string[]> {
+	const { default: Fuse } = await import('fuse.js');
+	const flat: Task[] = tasks.flatMap((task) => [
+		task,
+		...(task.subtasks ?? []).map(
+			(subtask) =>
+				({
+					...subtask,
+					title: `${subtask.title} (subtask of: ${task.title})`,
+					description: `${subtask.description} [Parent: ${task.description}]`
+				}) as unknown as Task
+		)
+	]);
+	const searchable = flat.map((item) => ({
+		...item,
+		dependencyTitles: (item.dependencies ?? [])
+			.map(
+				(depId) =>
+					flat.find((t) => legacyIdKey(t.id) === String(depId))?.title ?? ''
+			)
+			.filter(Boolean)
+			.join(' ')
+	}));
+	const fuse = new Fuse(searchable, {
+		includeScore: true,
+		threshold: 0.4,
+		keys: [
+			{ name: 'title', weight: 2.0 },
+			{ name: 'description', weight: 1.5 },
+			{ name: 'details', weight: 1.0 },
+			{ name: 'dependencyTitles', weight: 0.5 }
+		],
+		shouldSort: true,
+		useExtendedSearch: true
+	});
+
+	const sameId = (a: { id: unknown }, b: { id: unknown }) =>
+		legacyIdKey(a.id) === legacyIdKey(b.id);
+	const results = fuse.search(query);
+	const words = query
+		.toLowerCase()
+		.replace(/[^\w\s-]/g, ' ')
+		.split(/\s+/)
+		.filter((word) => word.length > 5);
+	for (const word of words) {
+		for (const hit of fuse.search(word)) {
+			if (!results.some((r) => sameId(r.item, hit.item))) results.push(hit);
+		}
+	}
+
+	const related: Task[] = [];
+	const add = (item: Task) => {
+		if (!related.some((t) => sameId(t, item))) related.push(item);
+	};
+	const score = (r: (typeof results)[number]) => r.score as number;
+	for (const [low, high] of [
+		[0, 0.25],
+		[0.25, 0.4],
+		[0.4, 0.6]
+	]) {
+		results
+			.filter((r) => score(r) >= low && score(r) < high)
+			.forEach((r) => add(r.item));
+	}
+	const topic = PURPOSE_PATTERNS.find((pattern) => pattern.test(query));
+	if (topic) {
+		flat
+			.filter(
+				(t) =>
+					topic.test(t.title) ||
+					topic.test(t.description) ||
+					(t.details && topic.test(t.details))
+			)
+			.slice(0, 3)
+			.forEach(add);
+	}
+	[...flat]
+		.sort((a, b) => Number(legacyIdKey(b.id)) - Number(legacyIdKey(a.id)))
+		.slice(0, 5)
+		.forEach(add);
+	return related.slice(0, maxResults).map((item) => legacyIdKey(item.id));
+}
+
+/**
+ * The given top-level tasks formatted as a task context, in order; IDs with
+ * no task are left out. Empty when none is found.
+ */
+export function formatTasksContext(tasks: Task[], ids: string[]): string {
+	const items = ids
+		.map((id) => tasks.find((t) => legacyIdKey(t.id) === id))
+		.filter((task): task is Task => task !== undefined)
+		.map(formatTask);
+	return items.length ? `## Task Context\n\n${items.join('\n\n---\n\n')}` : '';
+}
+
+/**
  * Build the task context for a prompt from one tag's tasks.
  * Task IDs are compared as strings: tm-core stores "3", older files 3.
  */

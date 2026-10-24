@@ -7,6 +7,7 @@ export { registerAddNoteTool } from './add-note.tool.js';
 export { registerAddSubtaskTool } from './add-subtask.tool.js';
 export { registerAddTaskTool } from './add-task.tool.js';
 export { registerArchiveTasksTool } from './archive.tool.js';
+export { registerExpandAllTool, registerExpandTaskTool } from './expand.tool.js';
 export {
 	registerAddDependencyTool,
 	registerFixDependenciesTool,

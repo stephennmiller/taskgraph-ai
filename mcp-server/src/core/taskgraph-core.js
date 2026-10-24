@@ -7,8 +7,6 @@
 import { analyzeTaskComplexityDirect } from './direct-functions/analyze-task-complexity.js';
 // Import direct function implementations
 import { complexityReportDirect } from './direct-functions/complexity-report.js';
-import { expandAllTasksDirect } from './direct-functions/expand-all-tasks.js';
-import { expandTaskDirect } from './direct-functions/expand-task.js';
 import { initializeProjectDirect } from './direct-functions/initialize-project.js';
 import { modelsDirect } from './direct-functions/models.js';
 import { nextTaskDirect } from './direct-functions/next-task.js';
@@ -27,9 +25,7 @@ export {
 	updateTaskByIdDirect,
 	updateSubtaskByIdDirect,
 	nextTaskDirect,
-	expandTaskDirect,
 	analyzeTaskComplexityDirect,
-	expandAllTasksDirect,
 	complexityReportDirect,
 	initializeProjectDirect,
 	modelsDirect,

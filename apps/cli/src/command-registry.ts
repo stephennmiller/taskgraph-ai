@@ -9,6 +9,7 @@ import { AddSubtaskCommand } from './commands/add-subtask.command.js';
 import { AddTaskCommand } from './commands/add-task.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
+import { ExpandCommand } from './commands/expand.command.js';
 import {
 	AddDependencyCommand,
 	FixDependenciesCommand,
@@ -117,6 +118,12 @@ export class CommandRegistry {
 			description:
 				'Add a new task using AI, optionally providing manual details',
 			commandClass: AddTaskCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'expand',
+			description: 'Expand a task into subtasks using AI',
+			commandClass: ExpandCommand as any,
 			category: 'task'
 		},
 		{
