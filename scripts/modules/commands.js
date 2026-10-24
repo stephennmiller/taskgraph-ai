@@ -5,8 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import chalk from 'chalk';
-import { Command, Option } from 'commander';
+import { Command } from 'commander';
 
 // Import command registry and utilities from @tm/cli
 import {
@@ -22,7 +21,6 @@ import {
 	printJson,
 	registerAllCommands,
 	restartWithNewVersion,
-	runInteractiveSetup,
 	ui,
 	wantsJsonOutput
 } from '@tm/cli';
@@ -33,15 +31,11 @@ import { parsePRD } from './task-manager.js';
 import { findPrdGaps } from './task-manager/parse-prd/index.js';
 
 import {
-	getConfig,
 	getDefaultNumTasks,
-	getResponseLanguage,
-	isConfigFilePresent,
 	setSuppressConfigWarnings
 } from './config-manager.js';
 
 import {
-	CUSTOM_PROVIDERS,
 	parseClarificationAnswers,
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
