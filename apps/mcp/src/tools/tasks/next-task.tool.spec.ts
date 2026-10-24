@@ -123,6 +123,30 @@ describe('next_task', () => {
 		);
 	});
 
+	it('warns when the complexity report it is given does not exist', async () => {
+		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
+
+		const result = reply(
+			await register().execute(
+				{ projectRoot, complexityReport: 'reprot.json' },
+				ctx
+			)
+		);
+
+		expect(result.data.nextTask).toEqual({ id: 2, title: 'Parser' });
+		expect(ctx.log.warn).toHaveBeenCalledWith(
+			`No complexity report found at ${path.join(fs.realpathSync(projectRoot), 'reprot.json')}`
+		);
+	});
+
+	it('stays quiet when the default report does not exist', async () => {
+		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
+
+		await register().execute({ projectRoot }, ctx);
+
+		expect(ctx.log.warn).not.toHaveBeenCalled();
+	});
+
 	it('ignores a complexity report outside the project', async () => {
 		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
 

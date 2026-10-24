@@ -11,6 +11,8 @@ import {
 	errorWithHint
 } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
+import { resolvePathInsideRoot } from '../../../common/utils/path-inside-root.js';
+import { writeAtomically } from '../../../common/utils/write-atomically.js';
 
 export interface ReadmeExportOptions {
 	/** Include each task's subtasks as rows */
@@ -185,9 +187,21 @@ export function writeReadmeExport(
 	options: ReadmeExportOptions & { projectName: string }
 ): string {
 	const readmePath = path.join(projectRoot, 'README.md');
+	// A symlinked README keeps its link, but only to a file inside the project
+	const target = resolvePathInsideRoot(
+		fs.realpathSync(projectRoot),
+		readmePath
+	);
+	if (target === null) {
+		throw errorWithHint(
+			ERROR_CODES.INVALID_INPUT,
+			`README.md links to a file outside ${projectRoot}`,
+			'Point README.md at a file inside the project, or replace the link with a regular file'
+		);
+	}
 	let readme: string | null = null;
 	try {
-		readme = fs.readFileSync(readmePath, 'utf8');
+		readme = fs.readFileSync(target, 'utf8');
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
 	}
@@ -196,10 +210,9 @@ export function writeReadmeExport(
 		timestamp: `${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC`,
 		projectRoot
 	});
-	fs.writeFileSync(
-		readmePath,
-		mergeReadmeSection(readme, section, options.projectName),
-		'utf8'
+	writeAtomically(
+		target,
+		mergeReadmeSection(readme, section, options.projectName)
 	);
 	return readmePath;
 }
