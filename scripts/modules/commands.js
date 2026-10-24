@@ -785,12 +785,6 @@ function registerCommands(programInstance) {
 					process.exit(1);
 				}
 
-				console.log(
-					theme.brand(
-						`Scoping up ${taskIds.length === 1 ? 'task' : 'tasks'} ${taskIds.join(', ')}`
-					)
-				);
-
 				const context = {
 					projectRoot: taskGraph.getProjectRoot(),
 					tag,
@@ -891,12 +885,6 @@ function registerCommands(programInstance) {
 					);
 					process.exit(1);
 				}
-
-				console.log(
-					theme.brand(
-						`Scoping down ${taskIds.length === 1 ? 'task' : 'tasks'} ${taskIds.join(', ')}`
-					)
-				);
 
 				const context = {
 					projectRoot: taskGraph.getProjectRoot(),

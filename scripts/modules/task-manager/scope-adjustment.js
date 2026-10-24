@@ -54,6 +54,12 @@ export function validateStrength(strength) {
 	return VALID_STRENGTHS.includes(strength);
 }
 
+// A missing complexity report is normal for scope-up/down; keep the lookup at debug level
+const reportLookupLogger = {
+	info: (message) => log('debug', message),
+	warn: (message) => log('debug', message)
+};
+
 /**
  * Re-analyzes the complexity of a single task after scope adjustment
  * @param {Object} task - The task to analyze
@@ -75,7 +81,7 @@ async function reanalyzeTaskComplexity(task, tasksPath, context) {
 		const complexityReportPath = findComplexityReportPath(
 			null,
 			{ projectRoot, tag },
-			null
+			reportLookupLogger
 		);
 
 		if (!complexityReportPath) {
@@ -135,7 +141,7 @@ function getCurrentComplexityScore(taskId, context) {
 		const complexityReportPath = findComplexityReportPath(
 			null,
 			{ projectRoot, tag },
-			null
+			reportLookupLogger
 		);
 
 		if (!complexityReportPath) {
@@ -688,7 +694,7 @@ export async function scopeUpTask(
 		// Log subtask regeneration info if in text mode
 		if (outputFormat === 'text' && subtaskResult.regenerated) {
 			log(
-				'info',
+				'debug',
 				`Regenerated ${subtaskResult.generated} pending subtasks (preserved ${subtaskResult.preserved} completed)`
 			);
 		}
@@ -714,11 +720,9 @@ export async function scopeUpTask(
 				);
 				if (newComplexity && outputFormat === 'text') {
 					const complexityChange = newComplexity - originalComplexity;
-					const arrow =
-						complexityChange > 0 ? '↗️' : complexityChange < 0 ? '↘️' : '➡️';
 					log(
 						'info',
-						`New complexity: ${originalComplexity}/10 ${arrow} ${newComplexity}/10 (${complexityChange > 0 ? '+' : ''}${complexityChange})`
+						`New complexity: ${originalComplexity}/10 → ${newComplexity}/10 (${complexityChange > 0 ? '+' : ''}${complexityChange})`
 					);
 				}
 			} catch (error) {
@@ -839,7 +843,7 @@ export async function scopeDownTask(
 		// Log subtask regeneration info if in text mode
 		if (outputFormat === 'text' && subtaskResult.regenerated) {
 			log(
-				'info',
+				'debug',
 				`Regenerated ${subtaskResult.generated} pending subtasks (preserved ${subtaskResult.preserved} completed)`
 			);
 		}
@@ -865,11 +869,9 @@ export async function scopeDownTask(
 				);
 				if (newComplexity && outputFormat === 'text') {
 					const complexityChange = newComplexity - originalComplexity;
-					const arrow =
-						complexityChange > 0 ? '↗️' : complexityChange < 0 ? '↘️' : '➡️';
 					log(
 						'info',
-						`New complexity: ${originalComplexity}/10 ${arrow} ${newComplexity}/10 (${complexityChange > 0 ? '+' : ''}${complexityChange})`
+						`New complexity: ${originalComplexity}/10 → ${newComplexity}/10 (${complexityChange > 0 ? '+' : ''}${complexityChange})`
 					);
 				}
 			} catch (error) {
