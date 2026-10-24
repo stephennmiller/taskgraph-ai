@@ -40,10 +40,10 @@ function findItem(
 	tasks: Task[],
 	id: string
 ): { task: Task; subtask?: StoredSubtask } | undefined {
+	// "2.", "2x" or "2.1.1" names nothing; parseInt read them as task 2 or 2.1
+	if (!/^\d+(\.\d+)?$/.test(id)) return undefined;
 	const parts = id.split('.');
 	if (parts.length > 1) {
-		// "2." or "2.1.1" names nothing; read as "2" it removed all of task 2
-		if (parts.length !== 2 || !parts[0] || !parts[1]) return undefined;
 		const parentId = String(parseInt(parts[0], 10));
 		const fullId = `${parentId}.${parseInt(parts[1], 10)}`;
 		const task = tasks.find((t) => String(t.id) === parentId);
@@ -223,7 +223,8 @@ function removeSubtaskIn(
 	id: string,
 	{ convert, highestArchivedId, archivedIds }: RemoveSubtaskOptions
 ): Task | null {
-	if (!id.includes('.')) {
+	// Exactly "<task>.<subtask>": parseInt read "1.1x" as 1.1 (#539)
+	if (!/^\d+\.\d+$/.test(id)) {
 		throw errorWithHint(
 			ERROR_CODES.INVALID_INPUT,
 			`Invalid subtask ID format: ${id}. Expected format: "parentId.subtaskId"`

@@ -125,6 +125,15 @@ describe('removeTasksIn', () => {
 		expect(tasks).toEqual(tasksOf());
 	});
 
+	it('refuses an ID with trailing text rather than reading its number', () => {
+		const tasks = tasksOf();
+
+		expect(() =>
+			removeTasksIn(asTasks(tasks), ['1x', '2.1x'], 'master', none)
+		).toThrow("The following tasks were not found in tag 'master': 1x, 2.1x");
+		expect(tasks).toEqual(tasksOf());
+	});
+
 	it('skips an ID gone already: listed twice, or under a removed task', () => {
 		const tasks = tasksOf();
 
@@ -213,6 +222,18 @@ describe('removeSubtasksIn', () => {
 		);
 		expect(() => remove('2.9')).toThrow('Subtask 2.9 not found');
 	});
+
+	it.each(['2.1x', '2.1.5', '2.1 oops', '2x.1'])(
+		'refuses %s, changing nothing (#539)',
+		(id) => {
+			const tasks = tasksOf();
+
+			expect(() => removeSubtasksIn(asTasks(tasks), [id], options)).toThrow(
+				`Invalid subtask ID format: ${id}.`
+			);
+			expect(tasks).toEqual(tasksOf());
+		}
+	);
 });
 
 describe('clearSubtasksIn', () => {
