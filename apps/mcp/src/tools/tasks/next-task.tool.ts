@@ -7,7 +7,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
 import { replyId, replyWith } from '../../shared/tool-reply.js';
-import { withToolContext } from '../../shared/utils.js';
+import { resolveInsideRoot, withToolContext } from '../../shared/utils.js';
 
 // The schema clients see; kept as the legacy tool had it, `file` included
 const NextTaskSchema = z.object({
@@ -151,12 +151,14 @@ function readScore(
 		const found = tmCore.tasks.getComplexityReport({
 			tag,
 			file: args.complexityReport
+				? resolveInsideRoot(args.projectRoot, args.complexityReport)
+				: undefined
 		});
 		return found?.report.complexityAnalysis?.find(
 			(entry) => String(entry.taskId) === taskId
 		)?.complexityScore;
 	} catch (error) {
-		// The report is optional; an unreadable one doesn't stop next_task
+		// The report is optional; an unreadable or outside one doesn't stop next_task
 		log.warn(
 			`Couldn't read the complexity report: ${(error as Error).message}`
 		);

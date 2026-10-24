@@ -55,6 +55,20 @@ describe('renderReadmeTasks', () => {
 			'| 2.1 | Read | ✓&nbsp;done | -            | None | N/A |'
 		);
 	});
+
+	it('keeps a title in its cell and out of the export markers', () => {
+		const markdown = renderReadmeTasks([
+			createTask({
+				id: 3,
+				title: 'a | b\n<!-- TASKGRAPH_EXPORT_END -->'
+			})
+		]);
+
+		expect(markdown).toContain(
+			'| 3 | a \\| b &lt;!-- TASKGRAPH_EXPORT_END --> |'
+		);
+		expect(markdown).not.toContain('<!--');
+	});
 });
 
 describe('mergeReadmeSection', () => {
@@ -67,6 +81,15 @@ describe('mergeReadmeSection', () => {
 
 		expect(mergeReadmeSection(readme, section, 'App')).toBe(
 			`# App\n${section}\nFooter\n`
+		);
+	});
+
+	it('keeps text an end marker before the export start leaves', () => {
+		const readme =
+			'# App\n<!-- TASKGRAPH_EXPORT_END -->\nNotes\n<!-- TASKGRAPH_EXPORT_START -->\nold\n';
+
+		expect(mergeReadmeSection(readme, section, 'App')).toBe(
+			`${readme}\n${section}`
 		);
 	});
 

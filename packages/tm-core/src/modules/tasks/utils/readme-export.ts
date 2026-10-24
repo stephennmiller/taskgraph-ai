@@ -39,6 +39,13 @@ const progressBar = (percentage: number, width = 20) => {
 const percent = (part: number, total: number) =>
 	total > 0 ? (part / total) * 100 : 0;
 
+// A title is one table cell: no row breaks, no column breaks, no export markers
+const cell = (text: string) =>
+	text
+		.replace(/\r?\n/g, ' ')
+		.replace(/\|/g, '\\|')
+		.replace(/<!--/g, '&lt;!--');
+
 const dependencyList = (deps: unknown[] | undefined) =>
 	deps && deps.length > 0 ? deps.join(', ') : 'None';
 
@@ -96,13 +103,13 @@ export function renderReadmeTasks(
 		const score =
 			task.complexity ?? (task as { complexityScore?: number }).complexityScore;
 		const complexity = score ? `● ${score}` : 'N/A';
-		markdown += `| ${task.id} | ${task.title} | ${statusLabel(task.status)} | ${task.priority || 'medium'} | ${dependencyList(task.dependencies)} | ${complexity} |\n`;
+		markdown += `| ${task.id} | ${cell(task.title)} | ${statusLabel(task.status)} | ${task.priority || 'medium'} | ${dependencyList(task.dependencies)} | ${complexity} |\n`;
 
 		if (!withSubtasks) continue;
 		for (const subtask of task.subtasks ?? []) {
 			const subtaskScore = (subtask as { complexityScore?: number })
 				.complexityScore;
-			markdown += `| ${task.id}.${subtask.id} | ${subtask.title} | ${statusLabel(subtask.status)} | -            | ${dependencyList(subtask.dependencies)} | ${subtaskScore ? String(subtaskScore) : 'N/A'} |\n`;
+			markdown += `| ${task.id}.${subtask.id} | ${cell(subtask.title)} | ${statusLabel(subtask.status)} | -            | ${dependencyList(subtask.dependencies)} | ${subtaskScore ? String(subtaskScore) : 'N/A'} |\n`;
 		}
 	}
 
@@ -147,7 +154,7 @@ export function mergeReadmeSection(
 		readme ??
 		`# ${projectName}\n\nThis project is managed using TaskGraph.\n\n`;
 	const start = current.indexOf(START);
-	const end = current.indexOf(END);
+	const end = start === -1 ? -1 : current.indexOf(END, start);
 	if (start !== -1 && end !== -1) {
 		return (
 			current.substring(0, start) +

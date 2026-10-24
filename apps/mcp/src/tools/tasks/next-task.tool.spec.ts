@@ -3,6 +3,8 @@
  * tm-core is faked at the createTmCore boundary; everything else is real.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tasks = {
@@ -90,7 +92,7 @@ describe('next_task', () => {
 
 		expect(tasks.getComplexityReport).toHaveBeenCalledWith({
 			tag: 'feature',
-			file: 'other.json'
+			file: path.join(fs.realpathSync(projectRoot), 'other.json')
 		});
 		expect(result.tag).toBe('feature');
 		expect(result.data.isSubtask).toBe(true);
@@ -117,6 +119,23 @@ describe('next_task', () => {
 		expect(result.data.nextTask).toEqual({ id: 2, title: 'Parser' });
 		expect(ctx.log.warn).toHaveBeenCalledWith(
 			expect.stringContaining('bad JSON')
+		);
+	});
+
+	it('ignores a complexity report outside the project', async () => {
+		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
+
+		const result = reply(
+			await register().execute(
+				{ projectRoot, complexityReport: '/etc/passwd' },
+				ctx
+			)
+		);
+
+		expect(tasks.getComplexityReport).not.toHaveBeenCalled();
+		expect(result.data.nextTask).toEqual({ id: 2, title: 'Parser' });
+		expect(ctx.log.warn).toHaveBeenCalledWith(
+			expect.stringContaining('outside the project root')
 		);
 	});
 
