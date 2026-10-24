@@ -369,25 +369,18 @@ export function createPathGuardHook(rootDir) {
 
 /** True when the path is a file that Read refuses */
 function isSecretFile(root, file) {
+	let stat;
+	try {
+		stat = fs.statSync(file, { throwIfNoEntry: false });
+	} catch {
+		// A throw would end the hook, and Claude Code would then hand the
+		// model the Grep output unfiltered
+		return false;
+	}
 	return (
-		fs.statSync(file, { throwIfNoEntry: false })?.isFile() === true &&
+		stat?.isFile() === true &&
 		getPathViolation(root, 'Read', { file_path: file }) !== null
 	);
-}
-
-/**
- * True when a line of a directory-wide Grep comes from a file Read refuses.
- * The line starts with the file's path and then `:` or `-` (`a.js:3:x`,
- * `a.js-4-x`, `a.js:2` in count mode). Paths can hold either character, so
- * every prefix that ends at one is tried.
- */
-function fromSecretFile(secret, line) {
-	for (let i = 1; i < line.length; i++) {
-		if ((line[i] === ':' || line[i] === '-') && secret(line.slice(0, i))) {
-			return true;
-		}
-	}
-	return false;
 }
 
 /**
@@ -405,15 +398,56 @@ export function dropSecretMatches(root, cwd, output) {
 	const filenames = Array.isArray(output.filenames) ? output.filenames : [];
 	const lines =
 		typeof output.content === 'string' ? output.content.split('\n') : [];
-	// Lines of one file share a prefix, so judge each path once
+	// Each name is looked up in its directory's listing before it is judged,
+	// so a line full of `:` and `-` costs no stat or path.resolve per
+	// character: a hook that runs too long times out, and Claude Code then
+	// passes the output on unfiltered
+	const listings = new Map();
+	const listing = (dir) => {
+		if (!listings.has(dir)) {
+			let names = null;
+			try {
+				names = new Set(fs.readdirSync(dir));
+			} catch {}
+			listings.set(dir, names);
+		}
+		return listings.get(dir);
+	};
 	const judged = new Map();
-	const secret = (relative) => {
-		const file = path.resolve(cwd, relative);
+	const secret = (dir, name) => {
+		if (listing(dir)?.has(name) !== true) return false;
+		const file = path.join(dir, name);
 		if (!judged.has(file)) judged.set(file, isSecretFile(root, file));
 		return judged.get(file);
 	};
-	const keptFiles = filenames.filter((file) => !secret(file));
-	const keptLines = lines.filter((line) => !fromSecretFile(secret, line));
+	const secretFile = (file) => {
+		const resolved = path.resolve(cwd, file);
+		return secret(path.dirname(resolved), path.basename(resolved));
+	};
+	// A line starts with the file's path and then `:` or `-` (`a.js:3:x`,
+	// `a.js-4-x`, `a.js:2` in count mode). Names can hold either character, so
+	// every prefix that ends at one is tried.
+	const fromSecretFile = (line) => {
+		let dir = cwd;
+		let start = 0;
+		for (let i = 0; i < line.length; i++) {
+			const c = line[i];
+			if (c === '/' || c === path.sep) {
+				// Real result paths are normalized, so every directory on them exists
+				if (i > 0 && listing(dir) === null) return false;
+				dir = path.resolve(cwd, line.slice(0, i + 1));
+				start = i + 1;
+			} else if (
+				(c === ':' || c === '-') &&
+				secret(dir, line.slice(start, i))
+			) {
+				return true;
+			}
+		}
+		return false;
+	};
+	const keptFiles = filenames.filter((file) => !secretFile(file));
+	const keptLines = lines.filter((line) => !fromSecretFile(line));
 	if (
 		keptFiles.length === filenames.length &&
 		keptLines.length === lines.length

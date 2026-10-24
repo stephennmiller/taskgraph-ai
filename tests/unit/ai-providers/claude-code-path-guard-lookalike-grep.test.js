@@ -38,12 +38,14 @@ describe('claude-code path guard: Grep results from look-alike secret names (#50
 		'prod_Kubeconfıg'
 	];
 	const others = ['src/a.js', 'src/my-notes.js', 'docs/env.md'];
+	// A secret under a directory whose name holds `-`
+	const nested = 'my-dir/.ＥNV';
 
 	beforeAll(() => {
 		project = fs.realpathSync(
 			fs.mkdtempSync(path.join(os.tmpdir(), 'tg-guard-lookalike-'))
 		);
-		for (const file of [...secrets, ...others]) {
+		for (const file of [...secrets, ...others, nested]) {
 			fs.mkdirSync(path.dirname(path.join(project, file)), { recursive: true });
 			fs.writeFileSync(path.join(project, file), 'KEY=1\n');
 		}
@@ -108,6 +110,26 @@ describe('claude-code path guard: Grep results from look-alike secret names (#50
 			numFiles: 1,
 			numMatches: 2
 		});
+	});
+
+	it('still drops secret lines when other lines make stat fail', () => {
+		// A prefix too long for one name (ENAMETOOLONG), and one that runs
+		// through a file (ENOTDIR), used to throw and leave the output unfiltered
+		const filtered = dropSecretMatches(project, project, {
+			mode: 'content',
+			numFiles: 0,
+			filenames: [],
+			content: [
+				`src/a.js:1:${'x'.repeat(300)}-y`,
+				'src/a.js:2:/../a.js/x-y',
+				`${secrets[0]}:1:KEY=1`,
+				`${nested}-2-KEY=2`
+			].join('\n')
+		});
+		expect(filtered.content.split('\n')).toEqual([
+			`src/a.js:1:${'x'.repeat(300)}-y`,
+			'src/a.js:2:/../a.js/x-y'
+		]);
 	});
 
 	it('leaves output with no secret matches unchanged', () => {
