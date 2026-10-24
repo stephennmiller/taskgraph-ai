@@ -157,18 +157,6 @@ export interface IStorage {
 	): Promise<Task | Subtask>;
 
 	/**
-	 * Read-modify-write a tag's tasks, as stored, in one locked write
-	 * @param change - Gets the tasks (it may change them in place); returns
-	 *   the tasks to save, or `tasks: null` to leave the file untouched, and a
-	 *   result. A throw leaves the file unchanged.
-	 * @returns The change's result
-	 */
-	modifyTasks<R>(
-		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
-		tag?: string
-	): Promise<R>;
-
-	/**
 	 * Read-modify-write tasks.json under its lock with every tag's tasks, for
 	 * a change that spans tags. `mutate` gets the tags the file has, in file
 	 * order (a file without tags has only master), changes the arrays in
@@ -475,10 +463,6 @@ export abstract class BaseStorage implements IStorage {
 		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
 		tag?: string
 	): Promise<Task | Subtask>;
-	abstract modifyTasks<R>(
-		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
-		tag?: string
-	): Promise<R>;
 
 	abstract mutateTags<R>(mutate: MutateTags<R>): Promise<R>;
 

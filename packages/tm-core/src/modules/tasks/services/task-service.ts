@@ -597,8 +597,9 @@ export class TaskService {
 	}
 
 	/**
-	 * Change a tag's tasks, as stored, in one locked write (see
-	 * IStorage.modifyTasks). `change` also gets the tag's archived task IDs.
+	 * Change a tag's tasks, as stored, in one locked write: `change` returns
+	 * the tasks to save (null saves nothing) and a result. It also gets the
+	 * tag's archived task IDs.
 	 * @returns The change's result and the tag it ran on
 	 */
 	async modifyTasks<R>(
@@ -624,10 +625,11 @@ export class TaskService {
 			// saving that would copy it
 			return { result: change([], archivedIds).result, tag: resolvedTag };
 		}
-		const result = await this.storage.modifyTasks(
-			(tasks) => change(tasks, archivedIds),
-			resolvedTag
-		);
+		const result = await this.storage.mutateTags((tags) => {
+			const { tasks, result } = change(tags.get(resolvedTag) ?? [], archivedIds);
+			if (tasks) tags.set(resolvedTag, tasks);
+			return { changed: tasks ? [resolvedTag] : [], result };
+		});
 		return { result, tag: resolvedTag };
 	}
 

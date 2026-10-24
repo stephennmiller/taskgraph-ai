@@ -2410,4 +2410,4 @@ async function runCLI(argv = process.argv) {
 	}
 }
 
-export { registerCommands, setupCLI, runCLI };
+export { setupCLI, runCLI };
