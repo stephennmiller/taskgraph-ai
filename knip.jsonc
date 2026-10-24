@@ -23,8 +23,10 @@
 			// Imported by workspace code that tsdown bundles into dist/, which
 			// keeps npm packages external, so the published package needs them
 			"ignoreDependencies": [
+				"ai-sdk-provider-claude-code",
 				"cli-table3",
 				"gradient-string",
+				"jsonrepair",
 				"ora",
 				"proper-lockfile",
 				"simple-git",

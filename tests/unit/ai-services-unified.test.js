@@ -11,6 +11,8 @@ const mockGetParametersForRole = vi.fn();
 const mockGetResponseLanguage = vi.fn();
 const mockGetUserId = vi.fn();
 const mockGetDebugFlag = vi.fn();
+const mockGetClaudeCodeSettingsForCommand = vi.fn(() => ({}));
+const mockGetSupportedModelsForProvider = vi.fn(() => ['sonnet']);
 
 const mockModelMap = {
 	'claude-code': [
@@ -32,7 +34,9 @@ vi.doMock('../../scripts/modules/config-manager.js', () => ({
 	getParametersForRole: mockGetParametersForRole,
 	getResponseLanguage: mockGetResponseLanguage,
 	getUserId: mockGetUserId,
-	getDebugFlag: mockGetDebugFlag
+	getDebugFlag: mockGetDebugFlag,
+	getClaudeCodeSettingsForCommand: mockGetClaudeCodeSettingsForCommand,
+	getSupportedModelsForProvider: mockGetSupportedModelsForProvider
 }));
 
 // Claude Code mock provider instance
@@ -44,8 +48,12 @@ const mockClaudeProvider = {
 	isRequiredApiKey: vi.fn(() => false)
 };
 
-vi.doMock('../../src/ai-providers/index.js', () => ({
-	ClaudeCodeProvider: vi.fn(function () {
+// Kept outside the mock: clearAllMocks would forget the one construction
+const providerOptions = [];
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
+	ClaudeCodeProvider: vi.fn(function (options) {
+		providerOptions.push(options);
 		return mockClaudeProvider;
 	})
 }));
@@ -101,6 +109,24 @@ describe('Unified AI Services', () => {
 		mockFindProjectRoot.mockReturnValue(fakeProjectRoot);
 		mockGetDebugFlag.mockReturnValue(false);
 		mockGetUserId.mockReturnValue('test-user-id');
+	});
+
+	// First test in the file: the provider is built once, on the first call
+	test('builds the provider with the host logger, settings and models', async () => {
+		mockClaudeProvider.generateText.mockResolvedValue(okResponse('ok'));
+
+		await generateTextService({ role: 'main', prompt: 'Test' });
+
+		expect(mockGetSupportedModelsForProvider).toHaveBeenCalledWith(
+			'claude-code'
+		);
+		expect(providerOptions).toEqual([
+			{
+				log: mockLog,
+				getSettingsForCommand: mockGetClaudeCodeSettingsForCommand,
+				supportedModels: ['sonnet']
+			}
+		]);
 	});
 
 	describe('generateTextService', () => {

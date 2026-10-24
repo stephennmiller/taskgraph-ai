@@ -1,35 +1,48 @@
 /**
- * src/ai-providers/claude-code.js
- *
- * Claude Code provider implementation using the ai-sdk-provider-claude-code package.
- * This provider uses the local Claude Agent SDK (via Claude Code CLI) with OAuth token authentication.
+ * @fileoverview Claude Code provider implementation using the
+ * ai-sdk-provider-claude-code package. This provider uses the local Claude
+ * Agent SDK (via Claude Code CLI) with OAuth token authentication.
  *
  * Authentication:
  * - Uses CLAUDE_CODE_OAUTH_TOKEN managed by Claude Code CLI
  * - Token is set up via: claude setup-token
  * - No manual API key configuration required
  *
+ * ai-sdk-provider-claude-code loads in getClient, not on import: it pulls in
+ * the Agent SDK, which took about 0.4 s on every command (#248).
  */
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import { createRequire } from 'module';
-import path from 'path';
-import { createClaudeCode } from 'ai-sdk-provider-claude-code';
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { readProjectEnv } from '../../config/services/project-env.js';
+import { findOnPath } from '../../git/merge-driver/merge-driver-files.js';
 import {
-	getClaudeCodeSettingsForCommand,
-	getSupportedModelsForProvider
-} from '../../scripts/modules/config-manager.js';
-import { findOnPath, readProjectEnv } from '@tm/core';
-import { log } from '../../scripts/modules/utils.js';
+	BaseAIProvider,
+	type ModelFactory,
+	type ProviderCallParams,
+	type ProviderLog
+} from './base-provider.js';
 import {
 	createGrepResultHook,
 	createPathGuardHook
 } from './claude-code-path-guard.js';
-import { BaseAIProvider } from './base-provider.js';
+
+/** `claudeCode` from config, merged with the command's `commandSpecific` entry */
+export type ClaudeCodeConfigSettings = Record<string, any>;
+
+export interface ClaudeCodeProviderOptions {
+	log: ProviderLog;
+	/** The config's Claude Code settings for a command */
+	getSettingsForCommand: (
+		commandName?: string
+	) => ClaudeCodeConfigSettings | null | undefined;
+	/** Model IDs from supported-models.json */
+	supportedModels: string[];
+}
 
 let _claudeCliChecked = false;
-let _claudeCliAvailable = null;
 
 // Tools each role may use. Everything else is denied (deny by default).
 // Research reaches the web but has no file or shell tools, so a hostile page
@@ -57,7 +70,7 @@ const DEFAULT_RESEARCH_MAX_TURNS = 8;
 const DEFAULT_MAX_TURNS = 6;
 const CLAUDE_EXECUTABLE_NAME = /^claude(\.exe|\.cmd)?$/i;
 
-function isWithin(root, candidate) {
+function isWithin(root: string, candidate: string): boolean {
 	const relative = path.relative(root, candidate);
 	return (
 		relative === '' ||
@@ -73,16 +86,18 @@ function isWithin(root, candidate) {
  * otherwise name any program. Allowed: an absolute path to a file named
  * `claude` (`claude.exe`, `claude.cmd`) that is outside the project, both as
  * written and after resolving symlinks.
- * @param {string} candidate - Configured executable path
- * @param {string|null} projectRoot - Project root, when known
- * @returns {boolean}
+ * @param candidate - Configured executable path
+ * @param projectRoot - Project root, when known
  */
-export function isTrustedClaudeExecutable(candidate, projectRoot) {
+export function isTrustedClaudeExecutable(
+	candidate: unknown,
+	projectRoot: string | null
+): boolean {
 	if (typeof candidate !== 'string' || !path.isAbsolute(candidate)) {
 		return false;
 	}
 	if (!CLAUDE_EXECUTABLE_NAME.test(path.basename(candidate))) return false;
-	let real;
+	let real: string;
 	try {
 		real = fs.realpathSync(candidate);
 	} catch {
@@ -101,11 +116,13 @@ export function isTrustedClaudeExecutable(candidate, projectRoot) {
 
 /**
  * Drop an untrusted `pathToClaudeCodeExecutable` from config settings.
- * @param {object} settings - Settings from config
- * @param {string|null} projectRoot
- * @returns {object} Settings safe to pass to the SDK
+ * @returns Settings safe to pass to the SDK
  */
-function withTrustedExecutable(settings, projectRoot) {
+function withTrustedExecutable(
+	settings: ClaudeCodeConfigSettings,
+	projectRoot: string | null,
+	log: ProviderLog
+): ClaudeCodeConfigSettings {
 	const executable = settings.pathToClaudeCodeExecutable;
 	if (
 		executable === undefined ||
@@ -117,16 +134,15 @@ function withTrustedExecutable(settings, projectRoot) {
 		'warn',
 		`Ignoring pathToClaudeCodeExecutable "${executable}": it must be an absolute path to a file named claude outside the project`
 	);
-	const { pathToClaudeCodeExecutable, ...rest } = settings;
+	const { pathToClaudeCodeExecutable: _dropped, ...rest } = settings;
 	return rest;
 }
 
 /**
  * Whether the Agent SDK's platform binary (an optional dependency, skipped by
  * `--omit=optional`) is installed where the SDK looks for it.
- * @returns {boolean}
  */
-export function hasBundledClaudeBinary() {
+export function hasBundledClaudeBinary(): boolean {
 	const sdkPath = createRequire(
 		createRequire(import.meta.url).resolve('ai-sdk-provider-claude-code')
 	).resolve('@anthropic-ai/claude-agent-sdk');
@@ -146,14 +162,12 @@ export function hasBundledClaudeBinary() {
 /**
  * The `claude` on PATH, for when the SDK has no binary of its own. The SDK
  * doesn't look on PATH itself. Only a trusted one (outside the project).
- * @param {string|null} projectRoot
- * @param {boolean} [bundled] - Whether the SDK's own binary is installed
- * @returns {string|undefined}
+ * @param bundled - Whether the SDK's own binary is installed
  */
 export function claudeFromPath(
-	projectRoot,
+	projectRoot: string | null,
 	bundled = hasBundledClaudeBinary()
-) {
+): string | undefined {
 	if (bundled) return undefined;
 	const claude = findOnPath('claude');
 	return claude && isTrustedClaudeExecutable(claude, projectRoot)
@@ -165,12 +179,15 @@ export function claudeFromPath(
  * Settings that confine a Claude Code session to the tools its role needs.
  * Applied after user config so config cannot widen the tool set, reopen
  * settings sources or move the file boundary.
- * @param {string} [role] - 'main', 'research' or 'fallback'
- * @param {object} settings - Settings from config, used for maxTurns
- * @param {string|null} projectRoot - Directory file tools are confined to
- * @returns {object} SDK settings
+ * @param role - 'main', 'research' or 'fallback'
+ * @param settings - Settings from config, used for maxTurns
+ * @param projectRoot - Directory file tools are confined to
  */
-function getRoleRestrictions(role, settings, projectRoot) {
+function getRoleRestrictions(
+	role: string | undefined,
+	settings: ClaudeCodeConfigSettings,
+	projectRoot: string | null
+) {
 	const isResearch = role === 'research';
 	// Without a known project root there is no boundary to enforce, so the
 	// file tools are withheld rather than scoped to wherever the process runs
@@ -218,15 +235,18 @@ function getRoleRestrictions(role, settings, projectRoot) {
  * - Command-specific configuration support
  */
 export class ClaudeCodeProvider extends BaseAIProvider {
-	constructor() {
-		super();
+	readonly supportedModels: string[];
+	private readonly getSettingsForCommand: ClaudeCodeProviderOptions['getSettingsForCommand'];
+
+	constructor(options: ClaudeCodeProviderOptions) {
+		super(options.log);
 		this.name = 'Claude Code';
-		// Load supported models from supported-models.json
-		this.supportedModels = getSupportedModelsForProvider('claude-code');
+		this.supportedModels = options.supportedModels;
+		this.getSettingsForCommand = options.getSettingsForCommand;
 
 		// Validate that models were loaded successfully
 		if (this.supportedModels.length === 0) {
-			log(
+			this.log(
 				'warn',
 				'No supported models found for claude-code provider. Check supported-models.json configuration.'
 			);
@@ -239,24 +259,23 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 	}
 
 	/**
-	 * @returns {string} The environment variable name for API key (not used)
+	 * @returns The environment variable name for API key (not used)
 	 */
-	getRequiredApiKeyName() {
+	getRequiredApiKeyName(): string {
 		return 'CLAUDE_CODE_API_KEY';
 	}
 
 	/**
-	 * @returns {boolean} False - Claude Code doesn't require API keys
+	 * @returns False - Claude Code doesn't require API keys
 	 */
-	isRequiredApiKey() {
+	isRequiredApiKey(): boolean {
 		return false;
 	}
 
 	/**
 	 * Optional CLI availability check for Claude Code
-	 * @param {object} params - Parameters (ignored)
 	 */
-	validateAuth(params) {
+	validateAuth(_params?: Partial<ProviderCallParams>): void {
 		// Claude Code uses local CLI - perform lightweight availability check
 		// This is optional validation that fails fast with actionable guidance
 		if (
@@ -266,12 +285,10 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 		) {
 			try {
 				execSync('claude --version', { stdio: 'pipe', timeout: 1000 });
-				_claudeCliAvailable = true;
-			} catch (error) {
-				_claudeCliAvailable = false;
+			} catch {
 				// Not a problem: the Agent SDK ships its own Claude Code binary, so
 				// AI calls work without a global install. Only worth a debug note.
-				log(
+				this.log(
 					'debug',
 					'No `claude` on PATH; using the Claude Code bundled with the Agent SDK'
 				);
@@ -283,22 +300,23 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 
 	/**
 	 * Creates a Claude Code client instance
-	 * @param {object} params - Client parameters
-	 * @param {string} [params.commandName] - Command name for settings lookup
-	 * @param {string} [params.role] - AI role ('main', 'research', 'fallback') used to restrict tools
-	 * @param {string} [params.projectRoot] - Directory file tools are confined to; without it main and fallback get no file tools
-	 * @returns {Function} Claude Code provider function
-	 * @throws {Error} If Claude Code CLI is not available or client creation fails
+	 * @param params.commandName - Command name for settings lookup
+	 * @param params.role - AI role ('main', 'research', 'fallback') used to restrict tools
+	 * @param params.projectRoot - Directory file tools are confined to; without it main and fallback get no file tools
+	 * @throws If Claude Code CLI is not available or client creation fails
 	 */
-	getClient(params = {}) {
+	async getClient(
+		params: Partial<ProviderCallParams> = {}
+	): Promise<ModelFactory> {
 		try {
 			const projectRoot = params.projectRoot
 				? path.resolve(params.projectRoot)
 				: null;
 
 			let settings = withTrustedExecutable(
-				getClaudeCodeSettingsForCommand(params.commandName) || {},
-				projectRoot
+				this.getSettingsForCommand(params.commandName) || {},
+				projectRoot,
+				this.log
 			);
 			if (!settings.pathToClaudeCodeExecutable) {
 				const claude = claudeFromPath(projectRoot);
@@ -321,56 +339,63 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 				delete env.ANTHROPIC_API_KEY;
 			}
 
-			return createClaudeCode({
-				defaultSettings: {
-					// Restore previous default behavior from pre-2.0 versions
-					// These must be inside defaultSettings to be applied by the provider
-					systemPrompt: {
-						type: 'preset',
-						preset: 'claude_code'
-					},
-					env,
-					// The SDK's own warnings (e.g. "unknown tool ID") are internal; keep
-					// them out of the terminal unless debug logging is on
-					logger: {
-						debug: (message) => log('debug', message),
-						info: (message) => log('debug', message),
-						warn: (message) => log('debug', message),
-						error: (message) => log('error', message)
-					},
-					...settings,
-					...getRoleRestrictions(params.role, settings, projectRoot)
-				}
-			});
-		} catch (error) {
+			const { createClaudeCode } = await import('ai-sdk-provider-claude-code');
+			const defaultSettings: ClaudeCodeConfigSettings = {
+				// Restore previous default behavior from pre-2.0 versions
+				// These must be inside defaultSettings to be applied by the provider
+				systemPrompt: {
+					type: 'preset',
+					preset: 'claude_code'
+				},
+				env,
+				// The SDK's own warnings (e.g. "unknown tool ID") are internal; keep
+				// them out of the terminal unless debug logging is on
+				logger: {
+					debug: (message: string) => this.log('debug', message),
+					info: (message: string) => this.log('debug', message),
+					warn: (message: string) => this.log('debug', message),
+					error: (message: string) => this.log('error', message)
+				},
+				...settings,
+				...getRoleRestrictions(params.role, settings, projectRoot)
+			};
+			return createClaudeCode({ defaultSettings }) as unknown as ModelFactory;
+		} catch (error: any) {
 			// Provide more helpful error message
 			const msg = String(error?.message || '');
 			const code = error?.code;
+			// A missing npm package names claude too, but reinstalling fixes it
+			if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+				this.handleError(
+					'client initialization',
+					new Error(
+						`A package TaskGraph needs is missing; reinstall TaskGraph. Original error: ${msg}`,
+						{ cause: error }
+					)
+				);
+			}
 			if (code === 'ENOENT' || /claude/i.test(msg)) {
 				const enhancedError = new Error(
-					`Claude Code CLI not available. Please install Claude Code CLI first. Original error: ${error.message}`
+					`Claude Code CLI not available. Please install Claude Code CLI first. Original error: ${error.message}`,
+					{ cause: error }
 				);
-				enhancedError.cause = error;
 				this.handleError('Claude Code CLI initialization', enhancedError);
-			} else {
-				this.handleError('client initialization', error);
 			}
+			this.handleError('client initialization', error);
 		}
 	}
 
 	/**
-	 * @returns {string[]} List of supported model IDs
+	 * @returns List of supported model IDs
 	 */
-	getSupportedModels() {
+	getSupportedModels(): string[] {
 		return this.supportedModels;
 	}
 
 	/**
 	 * Check if a model is supported
-	 * @param {string} modelId - Model ID to check
-	 * @returns {boolean} True if supported
 	 */
-	isModelSupported(modelId) {
+	isModelSupported(modelId: unknown): boolean {
 		if (!modelId) return false;
 		return this.supportedModels.includes(String(modelId).toLowerCase());
 	}

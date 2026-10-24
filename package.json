@@ -31,7 +31,6 @@
 		"test": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts",
 		"evals": "tsx evals/run.ts",
 		"smoke:mcp": "node apps/mcp/tests/smoke/mcp-stdio.smoke.mjs --tools all",
-		"test:sdk-contract": "cross-env NODE_ENV=test vitest run -c vitest.sdk-contract.config.ts",
 		"test:unit": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts unit",
 		"test:integration": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts integration",
 		"test:watch": "cross-env NODE_ENV=test vitest -c vitest.root.config.ts",
@@ -90,7 +89,6 @@
 		"steno": "^4.0.2",
 		"terminal-link": "^5.0.0",
 		"turndown": "^7.2.4",
-		"undici": "^7.30.1",
 		"zod": "^4.1.12"
 	},
 	"engines": {

@@ -1,5 +1,6 @@
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { ClaudeCodeProvider } from './claude-code.js';
 
 /**
  * Tests for Claude Code native structured output support (v2.2.0+)
@@ -15,38 +16,40 @@ import { z } from 'zod';
  */
 
 // Mock generateObject from 'ai' SDK
-const mockGenerateObject = vi.fn();
+const mockGenerateObject = vi.hoisted(() => vi.fn());
 
-vi.doMock('ai', () => ({
+vi.mock('ai', () => ({
 	generateObject: mockGenerateObject,
 	generateText: vi.fn(),
 	streamText: vi.fn(),
 	streamObject: vi.fn(),
 	zodSchema: vi.fn((schema) => schema),
-	// Vitest throws on access to an undefined mock export; Jest returned undefined
+	// Vitest throws on access to an undefined mock export
 	jsonSchema: undefined,
 	JSONParseError: class JSONParseError extends Error {
-		constructor(message, text) {
+		constructor(
+			message: string,
+			public text: string
+		) {
 			super(message);
-			this.text = text;
 		}
 	},
 	NoObjectGeneratedError: class NoObjectGeneratedError extends Error {
-		static isInstance(error) {
+		static isInstance(error: unknown) {
 			return error instanceof NoObjectGeneratedError;
 		}
 	}
 }));
 
 // Mock jsonrepair
-vi.doMock('jsonrepair', () => ({
+vi.mock('jsonrepair', () => ({
 	jsonrepair: vi.fn((text) => text)
 }));
 
 // Mock the ai-sdk-provider-claude-code package
-vi.doMock('ai-sdk-provider-claude-code', () => ({
+vi.mock('ai-sdk-provider-claude-code', () => ({
 	createClaudeCode: vi.fn(() => {
-		const provider = (modelId) => ({
+		const provider: any = (modelId: string) => ({
 			id: modelId,
 			specificationVersion: 'v1',
 			provider: 'claude-code',
@@ -58,35 +61,15 @@ vi.doMock('ai-sdk-provider-claude-code', () => ({
 	})
 }));
 
-// Mock config getters
-vi.doMock('../../../scripts/modules/config-manager.js', () => ({
-	getClaudeCodeSettingsForCommand: vi.fn(() => ({})),
-	getSupportedModelsForProvider: vi.fn(() => ['opus', 'sonnet', 'haiku']),
-	getDebugFlag: vi.fn(() => false),
-	getLogLevel: vi.fn(() => 'info'),
-	isProxyEnabled: vi.fn(() => false),
-	getAnonymousTelemetryEnabled: vi.fn(() => true),
-	setSuppressConfigWarnings: vi.fn(),
-	isConfigWarningSuppressed: vi.fn(() => false)
-}));
-
-// Mock utils
-vi.doMock('../../../scripts/modules/utils.js', () => ({
-	log: vi.fn(),
-	findProjectRoot: vi.fn(() => '/test/project'),
-	resolveEnvVariable: vi.fn((key) => process.env[key])
-}));
-
-// Import after mocking
-const { ClaudeCodeProvider } = await import(
-	'../../../src/ai-providers/claude-code.js'
-);
-
 describe('ClaudeCodeProvider structured outputs (v2.2.0+)', () => {
-	let provider;
+	let provider: any;
 
 	beforeEach(() => {
-		provider = new ClaudeCodeProvider();
+		provider = new ClaudeCodeProvider({
+			log: vi.fn(),
+			getSettingsForCommand: () => ({}),
+			supportedModels: ['opus', 'sonnet', 'haiku']
+		});
 		vi.clearAllMocks();
 	});
 

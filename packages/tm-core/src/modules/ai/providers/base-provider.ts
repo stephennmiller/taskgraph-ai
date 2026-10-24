@@ -1,20 +1,53 @@
-import * as ai from 'ai';
-import { jsonrepair } from 'jsonrepair';
-import { EnvHttpProxyAgent } from 'undici';
-import { isProxyEnabled } from '../../scripts/modules/config-manager.js';
-import { findProjectRoot, log } from '../../scripts/modules/utils.js';
+/**
+ * @fileoverview Base class for AI providers. The `ai` SDK and jsonrepair load
+ * on the first call, not on import: @tm/core is imported by every command.
+ */
 
-const {
-	JSONParseError,
-	NoObjectGeneratedError,
-	generateObject,
-	generateText,
-	streamObject,
-	streamText,
-	zodSchema
-} = ai;
+import type { LanguageModel, ModelMessage } from 'ai';
 
-const jsonSchemaHelper = ai.jsonSchema;
+export type ProviderLogLevel = 'debug' | 'info' | 'warn' | 'error';
+/** The host's logger; the legacy CLI passes its `log`, which honours silent mode */
+export type ProviderLog = (
+	level: ProviderLogLevel,
+	message: string,
+	...args: unknown[]
+) => void;
+
+type AiModule = typeof import('ai');
+type JsonSchemaNode = Record<string, any>;
+
+export interface ProviderMessage {
+	role: string;
+	content: any;
+}
+
+export interface ProviderCallParams {
+	apiKey?: string;
+	modelId: string;
+	messages: ProviderMessage[];
+	maxTokens?: number | string;
+	temperature?: number;
+	schema?: unknown;
+	objectName?: string;
+	experimental_transform?: unknown;
+	commandName?: string;
+	role?: string;
+	projectRoot?: string;
+	[key: string]: unknown;
+}
+
+/** Usage as the SDK reports it, in its current and older spellings */
+interface ReportedUsage {
+	inputTokens?: number;
+	outputTokens?: number;
+	totalTokens?: number;
+	promptTokens?: number;
+	completionTokens?: number;
+	cachedInputTokens?: number;
+	inputTokenDetails?: { cacheReadTokens?: number };
+}
+
+export type ModelFactory = (modelId: string) => LanguageModel;
 
 const INTEGER_CONSTRAINT_KEYS = new Set([
 	'minimum',
@@ -43,7 +76,7 @@ const SCHEMA_RECORD_KEYS = [
 	'properties'
 ];
 
-const isIntegerType = (type) => {
+const isIntegerType = (type: unknown): boolean => {
 	if (!type) {
 		return false;
 	}
@@ -53,7 +86,7 @@ const isIntegerType = (type) => {
 	return type === 'integer';
 };
 
-const sanitizeIntegerConstraints = (schema) => {
+const sanitizeIntegerConstraints = (schema: any): any => {
 	if (!schema || typeof schema !== 'object') {
 		return schema;
 	}
@@ -62,7 +95,7 @@ const sanitizeIntegerConstraints = (schema) => {
 		return schema.map(sanitizeIntegerConstraints);
 	}
 
-	const next = { ...schema };
+	const next: JsonSchemaNode = { ...schema };
 
 	if (isIntegerType(next.type)) {
 		for (const key of INTEGER_CONSTRAINT_KEYS) {
@@ -86,7 +119,7 @@ const sanitizeIntegerConstraints = (schema) => {
 
 	for (const key of SCHEMA_RECORD_KEYS) {
 		if (next[key] && typeof next[key] === 'object') {
-			const mapped = {};
+			const mapped: JsonSchemaNode = {};
 			for (const [entryKey, entryValue] of Object.entries(next[key])) {
 				mapped[entryKey] = sanitizeIntegerConstraints(entryValue);
 			}
@@ -101,8 +134,8 @@ const sanitizeIntegerConstraints = (schema) => {
 	return next;
 };
 
-const buildSafeSchema = (schema) => {
-	const baseSchema = zodSchema(schema);
+const buildSafeSchema = (ai: AiModule, schema: unknown): any => {
+	const baseSchema: any = ai.zodSchema(schema as any);
 	if (!baseSchema || typeof baseSchema !== 'object') {
 		return baseSchema;
 	}
@@ -113,12 +146,22 @@ const buildSafeSchema = (schema) => {
 
 	const sanitizedSchema = sanitizeIntegerConstraints(baseSchema.jsonSchema);
 
+	const jsonSchemaHelper = ai.jsonSchema;
 	if (typeof jsonSchemaHelper === 'function') {
 		return jsonSchemaHelper(sanitizedSchema, { validate: baseSchema.validate });
 	}
 
 	return { ...baseSchema, jsonSchema: sanitizedSchema };
 };
+
+// One promise for every caller, so concurrent first calls share one load
+let aiModule: Promise<AiModule> | undefined;
+const loadAi = () =>
+	(aiModule ??= import('ai').catch((error) => {
+		// Let the next call try again rather than replay the failure
+		aiModule = undefined;
+		throw error;
+	}));
 
 /**
  * A call that never answers would hang the command forever. Ten minutes is
@@ -128,7 +171,7 @@ const buildSafeSchema = (schema) => {
  */
 const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
 
-function aiCallSignal() {
+function aiCallSignal(): AbortSignal {
 	const configured = Number(process.env.TASKGRAPH_AI_TIMEOUT_MS);
 	return AbortSignal.timeout(
 		Number.isFinite(configured) && configured > 0
@@ -137,83 +180,52 @@ function aiCallSignal() {
 	);
 }
 
+function normalizeUsage(reported: ReportedUsage | undefined) {
+	const inputTokens = reported?.inputTokens ?? reported?.promptTokens ?? 0;
+	const outputTokens =
+		reported?.outputTokens ?? reported?.completionTokens ?? 0;
+	const totalTokens = reported?.totalTokens ?? inputTokens + outputTokens;
+	// Part of inputTokens read from the prompt cache
+	const cachedInputTokens =
+		reported?.inputTokenDetails?.cacheReadTokens ??
+		reported?.cachedInputTokens ??
+		0;
+	return { inputTokens, outputTokens, totalTokens, cachedInputTokens };
+}
+
 /**
  * Base class for all AI providers
  */
-export class BaseAIProvider {
-	constructor() {
-		if (this.constructor === BaseAIProvider) {
+export abstract class BaseAIProvider {
+	name: string;
+	/** Whether this provider needs explicit schema in JSON mode */
+	needsExplicitJsonSchema = false;
+	/** Whether this provider supports temperature parameter */
+	supportsTemperature = true;
+
+	constructor(protected readonly log: ProviderLog) {
+		if (new.target === (BaseAIProvider as unknown)) {
 			throw new Error('BaseAIProvider cannot be instantiated directly');
 		}
 
 		// Each provider must set their name
-		this.name = this.constructor.name;
-
-		// Cache proxy agent to avoid creating multiple instances
-		this._proxyAgent = null;
-
-		/**
-		 * Whether this provider needs explicit schema in JSON mode
-		 * Can be overridden by subclasses
-		 * @type {boolean}
-		 */
-		this.needsExplicitJsonSchema = false;
-
-		/**
-		 * Whether this provider supports temperature parameter
-		 * Can be overridden by subclasses
-		 * @type {boolean}
-		 */
-		this.supportsTemperature = true;
+		this.name = new.target.name;
 	}
 
 	/**
 	 * Validates authentication parameters - can be overridden by providers
-	 * @param {object} params - Parameters to validate
 	 */
-	validateAuth(params) {
+	validateAuth(params?: Partial<ProviderCallParams>): void {
 		// Default: require API key (most providers need this)
-		if (!params.apiKey) {
+		if (!params?.apiKey) {
 			throw new Error(`${this.name} API key is required`);
 		}
 	}
 
 	/**
-	 * Creates a custom fetch function with proxy support.
-	 * Only enables proxy when TASKGRAPH_ENABLE_PROXY environment variable is set to 'true'
-	 * or enableProxy is set to true in config.json.
-	 * Automatically reads http_proxy/https_proxy environment variables when enabled.
-	 * @returns {Function} Custom fetch function with proxy support, or undefined if proxy is disabled
-	 */
-	createProxyFetch() {
-		// Cache project root to avoid repeated lookups
-		if (!this._projectRoot) {
-			this._projectRoot = findProjectRoot();
-		}
-		const projectRoot = this._projectRoot;
-
-		if (!isProxyEnabled(null, projectRoot)) {
-			// Return undefined to use default fetch without proxy
-			return undefined;
-		}
-
-		// Proxy is enabled, create and return proxy fetch
-		if (!this._proxyAgent) {
-			this._proxyAgent = new EnvHttpProxyAgent();
-		}
-		return (url, options = {}) => {
-			return fetch(url, {
-				...options,
-				dispatcher: this._proxyAgent
-			});
-		};
-	}
-
-	/**
 	 * Validates common parameters across all methods
-	 * @param {object} params - Parameters to validate
 	 */
-	validateParams(params) {
+	validateParams(params: Partial<ProviderCallParams>): void {
 		// Validate authentication (can be overridden by providers)
 		this.validateAuth(params);
 
@@ -228,9 +240,8 @@ export class BaseAIProvider {
 
 	/**
 	 * Validates optional parameters like temperature and maxTokens
-	 * @param {object} params - Parameters to validate
 	 */
-	validateOptionalParams(params) {
+	validateOptionalParams(params: Partial<ProviderCallParams>): void {
 		if (
 			params.temperature !== undefined &&
 			(params.temperature < 0 || params.temperature > 1)
@@ -248,7 +259,7 @@ export class BaseAIProvider {
 	/**
 	 * Validates message array structure
 	 */
-	validateMessages(messages) {
+	validateMessages(messages: unknown): void {
 		if (!messages || !Array.isArray(messages) || messages.length === 0) {
 			throw new Error('Invalid or empty messages array provided');
 		}
@@ -265,50 +276,49 @@ export class BaseAIProvider {
 	/**
 	 * Common error handler
 	 */
-	handleError(operation, error) {
-		const errorMessage = error.message || 'Unknown error occurred';
+	handleError(operation: string, error: any): never {
+		const errorMessage = error?.message || 'Unknown error occurred';
 		// The caller prints the thrown error; this copy dumps the request (#272)
-		log('debug', `${this.name} ${operation} failed: ${errorMessage}`, {
+		this.log('debug', `${this.name} ${operation} failed: ${errorMessage}`, {
 			error
 		});
 		throw new Error(
-			`${this.name} API error during ${operation}: ${errorMessage}`
+			`${this.name} API error during ${operation}: ${errorMessage}`,
+			{ cause: error }
 		);
 	}
 
 	/**
 	 * Creates and returns a client instance for the provider
-	 * @abstract
 	 */
-	getClient(params) {
+	getClient(
+		_params?: Partial<ProviderCallParams>
+	): ModelFactory | Promise<ModelFactory> {
 		throw new Error('getClient must be implemented by provider');
 	}
 
 	/**
-	 * Returns if the API key is required
-	 * @abstract
-	 * @returns {boolean} if the API key is required, defaults to true
+	 * Returns if the API key is required, defaults to true
 	 */
-	isRequiredApiKey() {
+	isRequiredApiKey(): boolean {
 		return true;
 	}
 
 	/**
-	 * Returns the required API key environment variable name
-	 * @abstract
-	 * @returns {string|null} The environment variable name, or null if no API key is required
+	 * Returns the required API key environment variable name, or null if no
+	 * API key is required
 	 */
-	getRequiredApiKeyName() {
+	getRequiredApiKeyName(): string | null {
 		throw new Error('getRequiredApiKeyName must be implemented by provider');
 	}
 
 	/**
 	 * Prepares token limit parameter based on model requirements
-	 * @param {string} modelId - The model ID
-	 * @param {number} maxTokens - The maximum tokens value
-	 * @returns {object} Object with either maxTokens or max_completion_tokens
 	 */
-	prepareTokenParam(modelId, maxTokens) {
+	prepareTokenParam(
+		_modelId: string,
+		maxTokens: number | string | undefined
+	): { maxOutputTokens?: number } {
 		if (maxTokens === undefined) {
 			return {};
 		}
@@ -322,79 +332,68 @@ export class BaseAIProvider {
 	/**
 	 * AI SDK 7 rejects system messages inside `messages`; they must be passed as
 	 * `instructions`. Splits system-role messages out of the conversation.
-	 * @param {Array<{role: string, content: any}>} messages
-	 * @returns {{messages: Array, instructions?: string}}
 	 */
-	prepareMessages(messages) {
+	prepareMessages(messages: ProviderMessage[]): {
+		messages: ModelMessage[];
+		instructions?: string;
+	} {
 		const systemMessages = messages.filter((m) => m.role === 'system');
 		if (systemMessages.length === 0) {
-			return { messages };
+			return { messages: messages as ModelMessage[] };
 		}
 
 		const instructions = systemMessages
 			.map((m) =>
 				typeof m.content === 'string'
 					? m.content
-					: m.content.map((part) => part.text ?? '').join('')
+					: m.content.map((part: { text?: string }) => part.text ?? '').join('')
 			)
 			.join('\n\n');
 
 		return {
 			instructions,
-			messages: messages.filter((m) => m.role !== 'system')
+			messages: messages.filter((m) => m.role !== 'system') as ModelMessage[]
 		};
+	}
+
+	private temperatureParam(params: ProviderCallParams) {
+		return this.supportsTemperature && params.temperature !== undefined
+			? { temperature: params.temperature }
+			: {};
 	}
 
 	/**
 	 * Generates text using the provider's model
 	 */
-	async generateText(params) {
+	async generateText(params: ProviderCallParams) {
 		try {
+			const ai = await loadAi();
 			this.validateParams(params);
 			this.validateMessages(params.messages);
 
-			log(
+			this.log(
 				'debug',
 				`Generating ${this.name} text with model: ${params.modelId}`
 			);
 
 			const client = await this.getClient(params);
 
-			const result = await generateText({
+			const result = await ai.generateText({
 				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
-				...(this.supportsTemperature && params.temperature !== undefined
-					? { temperature: params.temperature }
-					: {})
-			});
+				...this.temperatureParam(params)
+			} as Parameters<AiModule['generateText']>[0]);
 
-			log(
+			this.log(
 				'debug',
 				`${this.name} generateText completed successfully for model: ${params.modelId}`
 			);
 
-			const inputTokens =
-				result.usage?.inputTokens ?? result.usage?.promptTokens ?? 0;
-			const outputTokens =
-				result.usage?.outputTokens ?? result.usage?.completionTokens ?? 0;
-			const totalTokens =
-				result.usage?.totalTokens ?? inputTokens + outputTokens;
-			// Part of inputTokens read from the prompt cache
-			const cachedInputTokens =
-				result.usage?.inputTokenDetails?.cacheReadTokens ??
-				result.usage?.cachedInputTokens ??
-				0;
-
 			return {
 				text: result.text,
-				usage: {
-					inputTokens,
-					outputTokens,
-					totalTokens,
-					cachedInputTokens
-				}
+				usage: normalizeUsage(result.usage as ReportedUsage)
 			};
 		} catch (error) {
 			this.handleError('text generation', error);
@@ -404,28 +403,30 @@ export class BaseAIProvider {
 	/**
 	 * Streams text using the provider's model
 	 */
-	async streamText(params) {
+	async streamText(params: ProviderCallParams) {
 		try {
+			const ai = await loadAi();
 			this.validateParams(params);
 			this.validateMessages(params.messages);
 
-			log('debug', `Streaming ${this.name} text with model: ${params.modelId}`);
+			this.log(
+				'debug',
+				`Streaming ${this.name} text with model: ${params.modelId}`
+			);
 
 			const client = await this.getClient(params);
 
-			const stream = await streamText({
+			const stream = await ai.streamText({
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
-				...(this.supportsTemperature && params.temperature !== undefined
-					? { temperature: params.temperature }
-					: {}),
-				...(params.experimental_transform && {
-					experimental_transform: params.experimental_transform
-				})
-			});
+				...this.temperatureParam(params),
+				...(params.experimental_transform
+					? { experimental_transform: params.experimental_transform }
+					: {})
+			} as Parameters<AiModule['streamText']>[0]);
 
-			log(
+			this.log(
 				'debug',
 				`${this.name} streamText initiated successfully for model: ${params.modelId}`
 			);
@@ -439,8 +440,9 @@ export class BaseAIProvider {
 	/**
 	 * Streams a structured object using the provider's model
 	 */
-	async streamObject(params) {
+	async streamObject(params: ProviderCallParams) {
 		try {
+			const ai = await loadAi();
 			this.validateParams(params);
 			this.validateMessages(params.messages);
 
@@ -448,36 +450,39 @@ export class BaseAIProvider {
 				throw new Error('Schema is required for object streaming');
 			}
 
-			log(
+			this.log(
 				'debug',
 				`Streaming ${this.name} object with model: ${params.modelId}`
 			);
 
 			const client = await this.getClient(params);
 
-			const schema = buildSafeSchema(params.schema);
+			const schema = buildSafeSchema(ai, params.schema);
 
 			// Same options as generateObject, so both paths ask the model the same way
-			const result = await streamObject({
+			const result = await ai.streamObject({
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,
 				mode: this.needsExplicitJsonSchema ? 'json' : 'auto',
-				...(params.objectName && {
-					schemaName: params.objectName,
-					schemaDescription: `Generate a valid JSON object for ${params.objectName}`
-				}),
-				...this.prepareTokenParam(params.modelId, params.maxTokens),
-				...(this.supportsTemperature && params.temperature !== undefined
-					? { temperature: params.temperature }
+				...(params.objectName
+					? {
+							schemaName: params.objectName,
+							schemaDescription: `Generate a valid JSON object for ${params.objectName}`
+						}
 					: {}),
+				...this.prepareTokenParam(params.modelId, params.maxTokens),
+				...this.temperatureParam(params),
 				// The default prints the whole error object to the terminal; callers
 				// already get the error from the stream's promises
-				onError: ({ error }) =>
-					log('debug', `${this.name} stream error: ${error?.message ?? error}`)
-			});
+				onError: ({ error }: { error: any }) =>
+					this.log(
+						'debug',
+						`${this.name} stream error: ${error?.message ?? error}`
+					)
+			} as unknown as Parameters<AiModule['streamObject']>[0]);
 
-			log(
+			this.log(
 				'debug',
 				`${this.name} streamObject initiated successfully for model: ${params.modelId}`
 			);
@@ -493,7 +498,9 @@ export class BaseAIProvider {
 	/**
 	 * Generates a structured object using the provider's model
 	 */
-	async generateObject(params) {
+	async generateObject(params: ProviderCallParams) {
+		// Outside the try: the repair below needs the SDK's error classes
+		const ai = await loadAi();
 		try {
 			this.validateParams(params);
 			this.validateMessages(params.messages);
@@ -505,16 +512,16 @@ export class BaseAIProvider {
 				throw new Error('Object name is required for object generation');
 			}
 
-			log(
+			this.log(
 				'debug',
 				`Generating ${this.name} object ('${params.objectName}') with model: ${params.modelId}`
 			);
 
 			const client = await this.getClient(params);
 
-			const schema = buildSafeSchema(params.schema);
+			const schema = buildSafeSchema(ai, params.schema);
 
-			const result = await generateObject({
+			const result = await ai.generateObject({
 				abortSignal: aiCallSignal(),
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
@@ -523,70 +530,51 @@ export class BaseAIProvider {
 				schemaName: params.objectName,
 				schemaDescription: `Generate a valid JSON object for ${params.objectName}`,
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
-				...(this.supportsTemperature && params.temperature !== undefined
-					? { temperature: params.temperature }
-					: {})
-			});
+				...this.temperatureParam(params)
+			} as unknown as Parameters<AiModule['generateObject']>[0]);
 
-			log(
+			this.log(
 				'debug',
 				`${this.name} generateObject completed successfully for model: ${params.modelId}`
 			);
 
-			const inputTokens =
-				result.usage?.inputTokens ?? result.usage?.promptTokens ?? 0;
-			const outputTokens =
-				result.usage?.outputTokens ?? result.usage?.completionTokens ?? 0;
-			const totalTokens =
-				result.usage?.totalTokens ?? inputTokens + outputTokens;
-			// Part of inputTokens read from the prompt cache
-			const cachedInputTokens =
-				result.usage?.inputTokenDetails?.cacheReadTokens ??
-				result.usage?.cachedInputTokens ??
-				0;
-
 			return {
-				object: result.object,
-				usage: {
-					inputTokens,
-					outputTokens,
-					totalTokens,
-					cachedInputTokens
-				}
+				object: result.object as any,
+				usage: normalizeUsage(result.usage as ReportedUsage)
 			};
-		} catch (error) {
+		} catch (error: any) {
 			// Check if this is a JSON parsing error that we can potentially fix
 			if (
-				NoObjectGeneratedError.isInstance(error) &&
-				error.cause instanceof JSONParseError &&
+				ai.NoObjectGeneratedError.isInstance(error) &&
+				error.cause instanceof ai.JSONParseError &&
 				error.cause.text
 			) {
-				log(
+				this.log(
 					'warn',
 					`${this.name} generated malformed JSON, attempting to repair...`
 				);
 
 				try {
 					// Use jsonrepair to fix the malformed JSON
+					const { jsonrepair } = await import('jsonrepair');
 					const repairedJson = jsonrepair(error.cause.text);
 					const parsed = JSON.parse(repairedJson);
 
-					log('debug', `Successfully repaired ${this.name} JSON output`);
+					this.log('debug', `Successfully repaired ${this.name} JSON output`);
 
+					const usage = error.usage as ReportedUsage | undefined;
 					// Return in the expected format
 					return {
 						object: parsed,
 						usage: {
 							// Extract usage information from the error if available
-							inputTokens:
-								error.usage?.promptTokens || error.usage?.inputTokens || 0,
-							outputTokens:
-								error.usage?.completionTokens || error.usage?.outputTokens || 0,
-							totalTokens: error.usage?.totalTokens || 0
+							inputTokens: usage?.promptTokens || usage?.inputTokens || 0,
+							outputTokens: usage?.completionTokens || usage?.outputTokens || 0,
+							totalTokens: usage?.totalTokens || 0
 						}
 					};
-				} catch (repairError) {
-					log(
+				} catch (repairError: any) {
+					this.log(
 						'error',
 						`Failed to repair ${this.name} JSON: ${repairError.message}`
 					);

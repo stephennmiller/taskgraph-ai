@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { isInsideRoot } from '../../../../src/ai-providers/claude-code-path-guard.js';
+import { resolvePathInsideRoot } from '@tm/core';
 import {
 	findComplexityReportPath as coreFindComplexityReportPath,
 	findPRDPath as coreFindPrdPath,
@@ -27,7 +27,7 @@ export function assertInsideRoot(projectRoot, candidate) {
 	try {
 		root = fs.realpathSync(projectRoot);
 	} catch {}
-	if (!isInsideRoot(root, candidate)) {
+	if (resolvePathInsideRoot(root, candidate) === null) {
 		throw new Error(
 			`Path '${candidate}' is outside the project root '${projectRoot}'`
 		);

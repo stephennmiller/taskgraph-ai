@@ -8,10 +8,14 @@
  * concrete provider implementation.
  */
 
-import { ClaudeCodeProvider } from '../../../src/ai-providers/claude-code.js';
+import { describe, expect, it } from 'vitest';
+import { ClaudeCodeProvider } from '../../../src/index.js';
+import { providerOptions } from './provider-options.js';
 
 describe('Provider Temperature Support', () => {
 	it('should verify Claude Code has supportsTemperature = false', () => {
-		expect(new ClaudeCodeProvider().supportsTemperature).toBe(false);
+		expect(new ClaudeCodeProvider(providerOptions()).supportsTemperature).toBe(
+			false
+		);
 	});
 });

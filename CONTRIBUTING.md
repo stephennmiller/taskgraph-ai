@@ -263,7 +263,7 @@ taskgraph-ai/
 - **CLI Commands**: `scripts/modules/commands.js`
 - **MCP Tools**: `mcp-server/src/tools/`
 - **Core Logic**: `scripts/modules/task-manager/`
-- **AI Providers**: `src/ai-providers/`
+- **AI Providers**: `packages/tm-core/src/modules/ai/providers/`
 - **Tests**: `tests/`
 
 ## 🐛 Reporting Issues

@@ -7,8 +7,10 @@
 // import { generateText, streamText, generateObject } from 'ai';
 
 // --- Core Dependencies ---
+import { ClaudeCodeProvider } from '@tm/core';
 import {
 	MODEL_MAP,
+	getClaudeCodeSettingsForCommand,
 	getDebugFlag,
 	getFallbackModelId,
 	getFallbackProvider,
@@ -18,6 +20,7 @@ import {
 	getResearchModelId,
 	getResearchProvider,
 	getResponseLanguage,
+	getSupportedModelsForProvider,
 	getUserId
 } from './config-manager.js';
 import {
@@ -26,9 +29,6 @@ import {
 	log,
 	resolveEnvVariable
 } from './utils.js';
-
-// Import the provider registry
-import ProviderRegistry from '../../src/provider-registry/index.js';
 
 // Create provider instances
 // The AI SDK's warnings (deprecated APIs, settings a provider ignores) are for
@@ -47,30 +47,16 @@ if (globalThis.AI_SDK_LOG_WARNINGS === undefined) {
 	};
 }
 
-// Created on first use: the provider loads the AI SDK and the Claude Agent
-// SDK, which took about 0.4 s and slowed every command, AI or not (#248)
 let claudeCodeProvider;
 
 async function _getProvider(providerName) {
-	if (providerName === 'claude-code') {
-		if (!claudeCodeProvider) {
-			const { ClaudeCodeProvider } = await import(
-				'../../src/ai-providers/index.js'
-			);
-			claudeCodeProvider ??= new ClaudeCodeProvider();
-		}
-		return claudeCodeProvider;
-	}
-
-	// If not found, check the provider registry
-	const providerRegistry = ProviderRegistry.getInstance();
-	if (providerRegistry.hasProvider(providerName)) {
-		log('debug', `Provider "${providerName}" found in dynamic registry`);
-		return providerRegistry.getProvider(providerName);
-	}
-
-	// Provider not found in either location
-	return null;
+	if (providerName !== 'claude-code') return null;
+	claudeCodeProvider ??= new ClaudeCodeProvider({
+		log,
+		getSettingsForCommand: getClaudeCodeSettingsForCommand,
+		supportedModels: getSupportedModelsForProvider('claude-code')
+	});
+	return claudeCodeProvider;
 }
 
 // Helper function to get cost for a specific model
