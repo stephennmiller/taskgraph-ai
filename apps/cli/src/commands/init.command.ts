@@ -112,7 +112,8 @@ export class InitCommand extends Command {
 				try {
 					await this.executeCommand(options);
 				} catch (error) {
-					if (!(error instanceof InitCancelled)) displayError(error);
+					// displayError exits 1; only Ctrl-C at a prompt gets here
+					if (!(error instanceof InitCancelled)) return displayError(error);
 					console.log(theme.muted('\nCancelled; nothing changed'));
 					process.exitCode = 130;
 				}
@@ -164,7 +165,7 @@ export class InitCommand extends Command {
 		if (!skipPrompts && !(process.stdin.isTTY && process.stdout.isTTY)) {
 			printError(
 				'init needs a terminal to ask its questions',
-				'Run `taskgraph init --yes` to use the defaults, or pass the answers as flags'
+				'Run `taskgraph init --yes`; flags such as `--no-git-tasks` or `--no-claude` change its defaults'
 			);
 			process.exit(1);
 		}
@@ -372,7 +373,7 @@ async function askInitQuestions(
 	let aliases = options.aliases === true;
 	const rcFile = options.aliases === undefined ? aliasMissingFile() : null;
 	if (rcFile) {
-		const shown = displayPath(rcFile);
+		const shown = terminalSafe(displayPath(rcFile));
 		aliases = await confirm(
 			`Add a tm alias for taskgraph to ${shown}?`,
 			`Add a tm alias to ${shown}?`,
