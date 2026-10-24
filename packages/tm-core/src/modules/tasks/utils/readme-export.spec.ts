@@ -157,4 +157,31 @@ describe('writeReadmeExport', () => {
 		);
 		expect(fs.readFileSync(real, 'utf8')).toContain('| 2 | Parser |');
 	});
+
+	it('replaces a dangling README.md link instead of creating its target', () => {
+		const missing = path.join(os.tmpdir(), `readme-missing-${process.pid}.md`);
+		fs.symlinkSync(missing, path.join(dir, 'README.md'));
+
+		writeReadmeExport(dir, tasks(), { projectName: 'App' });
+
+		expect(fs.existsSync(missing)).toBe(false);
+		expect(fs.lstatSync(path.join(dir, 'README.md')).isFile()).toBe(true);
+	});
+
+	it('refuses a README.md symlinked outside the project and leaves the target alone', () => {
+		const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'readme-outside-'));
+		const real = path.join(outside, 'notes.md');
+		fs.writeFileSync(real, 'keep me\n');
+		fs.symlinkSync(real, path.join(dir, 'README.md'));
+
+		try {
+			expect(() =>
+				writeReadmeExport(dir, tasks(), { projectName: 'App' })
+			).toThrow(/outside/);
+			expect(fs.readFileSync(real, 'utf8')).toBe('keep me\n');
+			expect(fs.readdirSync(outside)).toEqual(['notes.md']);
+		} finally {
+			fs.rmSync(outside, { recursive: true, force: true });
+		}
+	});
 });
