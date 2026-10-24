@@ -168,12 +168,11 @@ describe('parse-prd', () => {
 		expect(parsePrd.mock.calls[0][0]).toMatchObject({ force: true });
 	});
 
-	it('--clarify --json prints only the questions', async () => {
+	it('--clarify --json prints only the questions, with warnings on stderr', async () => {
 		const questions = [{ question: 'Which DB?', suggestedAnswer: 'SQLite' }];
-		findPrdGaps.mockResolvedValue({
-			prdPath: prd,
-			questions,
-			telemetryData: null
+		findPrdGaps.mockImplementation(async (_input, hooks) => {
+			hooks.onWarning('main provider "nope" isn\'t supported');
+			return { prdPath: prd, questions, telemetryData: null };
 		});
 
 		await run('prd.md', '--clarify', '--json');
@@ -182,6 +181,7 @@ describe('parse-prd', () => {
 			prd: 'prd.md',
 			questions
 		});
+		expect(err.join('\n')).toContain('main provider "nope" isn\'t supported');
 		expect(parsePrd).not.toHaveBeenCalled();
 	});
 

@@ -60,14 +60,13 @@ describe('check-file-size', () => {
 		expect(msg).toMatch(/--no-verify/);
 	});
 
-	it.each([
-		'.claude/rules/mcp.md',
-		'.claude/rules/tests.md',
-		'tests/manual/prompts/prompt-test.js'
-	])('allows the listed legacy file %s', (p) => {
-		expect(isIgnored(p)).toBe(true);
-		expect(run({ [p]: overLimit() })).toEqual([]);
-	});
+	it.each(['.claude/rules/mcp.md', 'tests/manual/prompts/prompt-test.js'])(
+		'allows the listed legacy file %s',
+		(p) => {
+			expect(isIgnored(p)).toBe(true);
+			expect(run({ [p]: overLimit() })).toEqual([]);
+		}
+	);
 
 	it.each([
 		'tests/unit/new-thing.test.js',

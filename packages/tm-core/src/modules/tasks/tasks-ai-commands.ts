@@ -292,10 +292,12 @@ export class TaskAiCommands {
 		input: Pick<
 			ParsePrdInput,
 			'prdPath' | 'research' | 'session' | 'outputType'
-		>
+		>,
+		hooks?: Pick<ParsePrdHooks, 'onWarning' | 'onDebug'>
 	): Promise<PrdGapsResult> {
 		return new ParsePrdService(this.taskService, this.configManager).findGaps(
-			input
+			input,
+			hooks
 		);
 	}
 }

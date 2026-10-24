@@ -242,3 +242,67 @@ describe('tasks.findPrdGaps', () => {
 		).rejects.toThrow('AI service returned unexpected data for the questions');
 	});
 });
+
+describe('parse-prd warnings and the debug flag (#590)', () => {
+	let p: PrdProject | undefined;
+	afterEach(() => p?.close());
+
+	const failure = () =>
+		new Error('The AI call failed', { cause: new Error('socket hang up') });
+
+	it('findPrdGaps reports config warnings', async () => {
+		p = await createPrdProject({
+			models: { main: { provider: 'nope', modelId: 'x' } }
+		});
+		// The real generateObject reads the role's model from the host
+		p.generateObject.mockImplementation(function (this: any) {
+			this.host.getRoleModel('main');
+			return Promise.resolve({ ...reply(), mainResult: { questions: [] } });
+		});
+		const onWarning = vi.fn();
+
+		await p.tmCore.tasks.findPrdGaps({ prdPath: p.prdPath }, { onWarning });
+
+		expect(onWarning).toHaveBeenCalledWith(
+			expect.stringContaining('main provider "nope" isn\'t supported')
+		);
+	});
+
+	it.each([
+		[
+			'parsePrd',
+			(q: PrdProject, onDebug: any) =>
+				q.tmCore.tasks.parsePrd({ prdPath: q.prdPath }, { onDebug })
+		],
+		[
+			'findPrdGaps',
+			(q: PrdProject, onDebug: any) =>
+				q.tmCore.tasks.findPrdGaps({ prdPath: q.prdPath }, { onDebug })
+		]
+	])(
+		'%s sends the full error, with its cause, to onDebug with global.debug on',
+		async (_name, run) => {
+			p = await createPrdProject({ global: { debug: true } });
+			p.generateObject.mockRejectedValue(failure());
+			const onDebug = vi.fn();
+
+			await expect(run(p, onDebug)).rejects.toThrow('The AI call failed');
+
+			const printed = onDebug.mock.calls.map((c) => c[0]).join('\n');
+			expect(printed).toContain('socket hang up');
+			expect(printed).toMatch(/\n\s+at /);
+		}
+	);
+
+	it('keeps the full error out of onDebug with global.debug off', async () => {
+		p = await createPrdProject();
+		p.generateObject.mockRejectedValue(failure());
+		const onDebug = vi.fn();
+
+		await expect(
+			p.tmCore.tasks.parsePrd({ prdPath: p.prdPath }, { onDebug })
+		).rejects.toThrow('The AI call failed');
+
+		expect(onDebug).not.toHaveBeenCalled();
+	});
+});
