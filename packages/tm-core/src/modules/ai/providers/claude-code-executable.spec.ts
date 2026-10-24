@@ -50,6 +50,8 @@ describe('isTrustedClaudeExecutable', () => {
 		fs.writeFileSync(outsideClaude, '');
 		fs.writeFileSync(path.join(project, 'bin', 'claude'), '');
 		fs.writeFileSync(path.join(base, 'bin', 'sh'), '');
+		fs.writeFileSync(path.join(base, 'bin', 'claude.cmd'), '');
+		fs.writeFileSync(path.join(base, 'bin', 'claude.exe'), '');
 		// A link outside the project named claude that points into it
 		fs.symlinkSync(
 			path.join(project, 'bin', 'claude'),
@@ -61,6 +63,15 @@ describe('isTrustedClaudeExecutable', () => {
 
 	it('allows an absolute claude binary outside the project', () => {
 		expect(isTrustedClaudeExecutable(outsideClaude, project)).toBe(true);
+	});
+
+	it('allows claude.exe but refuses an npm claude.cmd shim (#524)', () => {
+		expect(
+			isTrustedClaudeExecutable(path.join(base, 'bin', 'claude.exe'), project)
+		).toBe(true);
+		expect(
+			isTrustedClaudeExecutable(path.join(base, 'bin', 'claude.cmd'), project)
+		).toBe(false);
 	});
 
 	it('refuses relative paths, other names and missing files', () => {
@@ -99,6 +110,23 @@ describe('isTrustedClaudeExecutable', () => {
 		it('uses the claude on PATH when the SDK binary is missing', () => {
 			usePath(path.join(base, 'bin'));
 			expect(claudeFromPath(project, false)).toBe(outsideClaude);
+		});
+
+		it('on Windows takes claude.exe from PATH, never claude.cmd (#524)', () => {
+			const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+			const pathext = process.env.PATHEXT;
+			Object.defineProperty(process, 'platform', { value: 'win32' });
+			process.env.PATHEXT = '.CMD;.EXE';
+			try {
+				usePath(path.join(base, 'bin'));
+				expect(claudeFromPath(project, false)).toBe(
+					path.join(base, 'bin', 'claude.exe')
+				);
+			} finally {
+				Object.defineProperty(process, 'platform', platform);
+				if (pathext === undefined) delete process.env.PATHEXT;
+				else process.env.PATHEXT = pathext;
+			}
 		});
 
 		it('does not use a claude inside the project', () => {
