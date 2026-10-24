@@ -4,7 +4,7 @@ import { HELP_GROUPS, formatHelp } from './help-formatters.js';
 const stripAnsi = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
 // Every command the help screen may list. Commands are registered in two
-// places (commands.js and registerAllCommands), so there is no registry to
+// places (program.ts and registerAllCommands), so there is no registry to
 // read; a new row has to be added here on purpose.
 const ALLOWED_COMMANDS = new Set([
 	'next',

@@ -1,7 +1,9 @@
 ---
 description: Guidelines for implementing CLI commands using Commander.js
 paths:
-  - "scripts/modules/commands.js"
+  - "apps/cli/src/program.ts"
+  - "apps/cli/src/command-registry.ts"
+  - "apps/cli/src/commands/**/*.ts"
 ---
 
 # Command-Line Interface Implementation Guidelines
@@ -14,7 +16,7 @@ While this document details the implementation of TaskGraph's **CLI commands**, 
 - **CLI as Fallback/User Interface**: The `taskgraph` CLI commands described here are primarily intended for:
     - Direct user interaction in the terminal.
     - A fallback mechanism if the MCP server is unavailable or a specific functionality is not exposed via an MCP tool.
-- **Implementation Context**: This document (`commands.md`) focuses on the standards for *implementing* the CLI commands using Commander.js within the [`commands.js`](../../scripts/modules/commands.js) module.
+- **Implementation Context**: This document (`commands.md`) focuses on the standards for *implementing* the CLI commands using Commander.js in `apps/cli/src/commands/`, registered in [`command-registry.ts`](../../apps/cli/src/command-registry.ts) and run by [`program.ts`](../../apps/cli/src/program.ts).
 
 How output should look (results, errors, prompts, spinners) is in `ui.md`. This file covers command structure; its examples print the way `ui.md` describes.
 
@@ -179,22 +181,6 @@ console.log(boxen(chalk.white.bold('Subtasks Cleared Successfully') + '\n\nNext 
   - ✅ DO: Add related commands in a logical order
   - ✅ DO: Use comments to delineate command groups
 
-- **Command Export**:
-  - ✅ DO: Export the registerCommands function
-  - ✅ DO: Keep the CLI setup code clean and maintainable
-
-  ```javascript
-  // ✅ DO: Follow this export pattern
-  export {
-    registerCommands,
-    setupCLI,
-    runCLI,
-    checkForUpdate, // Include version checking functions
-    compareVersions,
-    displayUpgradeNotification
-  };
-  ```
-
 ## Context-Aware Command Pattern
 
 For AI-powered commands that benefit from project context, follow the research command pattern:
@@ -307,7 +293,6 @@ For AI-powered commands that benefit from project context, follow the research c
   import https from 'https';
   
   import { CONFIG, log, readJSON } from './utils.js';
-  import { displayBanner, displayHelp } from './ui.js';
   import { parsePRD, listTasks } from './task-manager.js';
   ```
 
@@ -341,50 +326,6 @@ For AI-powered commands that benefit from project context, follow the research c
 
 ## Version Checking and Updates
 
-- **Automatic Version Checking**:
-  - ✅ DO: Implement version checking to notify users of available updates
-  - ✅ DO: Use non-blocking version checks that don't delay command execution
-  - ✅ DO: Display update notifications after command completion
+`runCLI` in [`program.ts`](../../apps/cli/src/program.ts) checks for an update before the command runs (skipped in CI, tests, `--json` runs, `completion` and `merge-driver`), using `checkForUpdate`, `displayUpgradeNotification` and `performAutoUpdate` from `apps/cli/src/utils/auto-update/`.
 
-  ```javascript
-  // ✅ DO: Implement version checking function
-  async function checkForUpdate() {
-    // Implementation details...
-    // Example return structure:
-    return { currentVersion, latestVersion, updateAvailable };
-  }
-  
-  // ✅ DO: Implement semantic version comparison
-  function compareVersions(v1, v2) {
-    const v1Parts = v1.split('.').map(p => parseInt(p, 10));
-    const v2Parts = v2.split('.').map(p => parseInt(p, 10));
-    
-    // Implementation details...
-    return result; // -1, 0, or 1
-  }
-  
-  // The notification itself is displayUpgradeNotification in
-  // apps/cli/src/utils/auto-update/display.ts
-
-  // ✅ DO: Integrate version checking in CLI run function
-  async function runCLI(argv = process.argv) {
-    try {
-      // Start the update check in the background - don't await yet
-      const updateCheckPromise = checkForUpdate();
-      
-      // Setup and parse
-      const programInstance = setupCLI();
-      await programInstance.parseAsync(argv);
-      
-      // After command execution, check if an update is available
-      const updateInfo = await updateCheckPromise;
-      if (updateInfo.updateAvailable) {
-        displayUpgradeNotification(updateInfo.currentVersion, updateInfo.latestVersion);
-      }
-    } catch (error) {
-      // Error handling...
-    }
-  }
-  ```
-
-Refer to [`commands.js`](../../scripts/modules/commands.js) for implementation examples, `ui.md` for output, and `new-features.md` for integration guidelines.
+Refer to the commands in `apps/cli/src/commands/` for implementation examples, `ui.md` for output, and `new-features.md` for integration guidelines.

@@ -49,13 +49,13 @@ Functions in this layer that invoke AI services are responsible for handling the
 - **CLI Output Handling (If Applicable)**:
     -   If the core function also handles CLI output (e.g., it has an `outputFormat` parameter that can be `'text'` or `'cli'`):
         1.  Check if `outputFormat === 'text'` (or `'cli'`).
-        2.  If so, and if `aiServiceResponse.telemetryData` is available, call `displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli')` from [`scripts/modules/ui.js`](../../scripts/modules/ui.js).
+        2.  If so, and if `aiServiceResponse.telemetryData` is available, print `ui.formatUsageLine(aiServiceResponse.telemetryData)` from `@tm/cli` (muted, on its own line).
         - This ensures telemetry is displayed directly to CLI users after the main command output.
 
 - **Example Snippet (Core Logic in `scripts/modules/task-manager/someAiAction.js`)**:
   ```javascript
   import { generateObjectService } from '../ai-services-unified.js';
-  import { displayAiUsageSummary } from '../ui.js';
+  import { ui } from '@tm/cli';
 
   async function performAiRelatedAction(params, context, outputFormat = 'text') {
     const { commandNameFromContext, /* other context vars */ } = context;
@@ -72,7 +72,8 @@ Functions in this layer that invoke AI services are responsible for handling the
       // ... do work with usefulAiOutput ...
 
       if (outputFormat === 'text' && aiServiceResponse.telemetryData) {
-        displayAiUsageSummary(aiServiceResponse.telemetryData, 'cli');
+        const usage = ui.formatUsageLine(aiServiceResponse.telemetryData);
+        if (usage) console.log(`\n${ui.theme.muted(usage)}`);
       }
 
       return {
@@ -172,19 +173,18 @@ These are the exposed endpoints for MCP clients.
   }
   ```
 
-### 4. CLI Commands (`scripts/modules/commands.js`)
+### 4. CLI Commands (`apps/cli/src/commands/`)
 
 These define the command-line interface.
 
 - **Actions**:
     1.  Call the appropriate core logic function.
     2.  Pass `outputFormat: 'text'` (or ensure the core function defaults to text-based output for CLI).
-    3.  The core logic function (as per Section 1) is responsible for calling `displayAiUsageSummary` if telemetry data is available and it's in CLI mode.
-    4.  The command action itself **should not** call `displayAiUsageSummary` if the core logic function already handles this. This avoids duplicate display.
+    3.  The core logic function (as per Section 1) is responsible for printing the usage line if telemetry data is available and it's in CLI mode.
+    4.  The command action itself **should not** print the usage line if the core logic function already handles this. This avoids duplicate display.
 
-- **Example Snippet (CLI Command in `commands.js`)**:
+- **Example Snippet (CLI command)**:
   ```javascript
-  // In scripts/modules/commands.js
   import { performAiRelatedAction } from './task-manager/someAiAction.js'; // Core function
 
   programInstance
@@ -203,7 +203,7 @@ These define the command-line interface.
           },
           'text' // Explicitly request text output format for CLI
         );
-        // Core function handles displayAiUsageSummary internally for 'text' outputFormat
+        // Core function prints the usage line itself for 'text' outputFormat
       } catch (error) {
         // ... error handling ...
       }
@@ -218,7 +218,7 @@ The telemetry data flows as follows:
 2.  **Core Logic Function**:
     *   Receives `{ mainResult, telemetryData }`.
     *   Uses `mainResult`.
-    *   If CLI (`outputFormat: 'text'`), calls `displayAiUsageSummary(telemetryData)`.
+    *   If CLI (`outputFormat: 'text'`), prints `ui.formatUsageLine(telemetryData)`.
     *   Returns `{ operationSpecificData, telemetryData }`.
 3.  **Direct Function Wrapper**:
     *   Receives `{ operationSpecificData, telemetryData }` from core logic.

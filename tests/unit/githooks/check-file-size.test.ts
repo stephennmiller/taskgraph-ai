@@ -64,8 +64,7 @@ describe('check-file-size', () => {
 		'tests/unit/config-manager.test.js',
 		'tests/integration/mcp-server/direct-functions.test.js',
 		'.claude/rules/tests.md',
-		'.claude/rules/new-features.md',
-		'scripts/modules/commands.js'
+		'.claude/rules/new-features.md'
 	])('allows the listed legacy file %s', (p) => {
 		expect(isIgnored(p)).toBe(true);
 		expect(run({ [p]: overLimit() })).toEqual([]);

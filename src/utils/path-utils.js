@@ -13,7 +13,6 @@ import {
 	findProjectRoot as findProjectRootCore,
 	normalizeProjectRoot as normalizeProjectRootCore
 } from '@tm/core';
-import { isConfigWarningSuppressed } from '../../scripts/modules/config-manager.js';
 import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
@@ -145,22 +144,15 @@ export function findConfigPath(explicitPath = null, args = null, log = null) {
 		return configPath;
 	}
 
-	// Only warn once per command execution to prevent spam during init
-	// Skip warning if the global suppress flag is set
-	const shouldSkipWarning = isConfigWarningSuppressed();
-
-	if (!shouldSkipWarning) {
-		const warningKey = `config_warning_${projectRoot}`;
-
-		if (!global._tmConfigWarningsThisRun) {
-			global._tmConfigWarningsThisRun = new Set();
-		}
-
-		if (!global._tmConfigWarningsThisRun.has(warningKey)) {
-			global._tmConfigWarningsThisRun.add(warningKey);
-			// Debug only: config-manager tells the user, once
-			logger.debug?.(`No configuration file found in project: ${projectRoot}`);
-		}
+	// Only log once per command execution to prevent spam during init
+	const warningKey = `config_warning_${projectRoot}`;
+	if (!global._tmConfigWarningsThisRun) {
+		global._tmConfigWarningsThisRun = new Set();
+	}
+	if (!global._tmConfigWarningsThisRun.has(warningKey)) {
+		global._tmConfigWarningsThisRun.add(warningKey);
+		// Debug only: config-manager tells the user, once
+		logger.debug?.(`No configuration file found in project: ${projectRoot}`);
 	}
 
 	return null;

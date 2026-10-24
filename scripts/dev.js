@@ -19,13 +19,14 @@ nodeModule.enableCompileCache?.();
 const args = process.argv.slice(2);
 const version = process.env.TM_PUBLIC_VERSION || 'unknown';
 
-// `--version` and the top-level help screen are answered before the rest of
-// the CLI loads (#248). Everything else is imported only when a command runs.
+// `--version`, bare `taskgraph` and the top-level help screen are answered
+// before the rest of the CLI loads (#248). Everything else is imported only
+// when a command runs.
 if (args.length === 1 && (args[0] === '--version' || args[0] === '-V')) {
 	console.log(version);
 } else {
 	const help = await import('@tm/cli/help');
-	if (help.isTopLevelHelpRequest(args)) {
+	if (args.length === 0 || help.isTopLevelHelpRequest(args)) {
 		help.printTopLevelHelp(args, version);
 	} else {
 		await runCommand();
@@ -57,7 +58,7 @@ async function runCommand() {
 	}
 
 	// Imported after dotenv.config() so module-level code sees the .env values
-	const { runCLI } = await import('./modules/commands.js');
+	const { runCLI } = await import('@tm/cli');
 
 	// Run the CLI with the process arguments (not awaited, as before)
 	runCLI(process.argv);

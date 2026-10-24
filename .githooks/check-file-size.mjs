@@ -45,9 +45,6 @@ const LEGACY_OVERSIZED = new Set([
 	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
 	'.claude/rules/new-features.md',
-	// The legacy CLI command registry, far over the limit. Splitting it is its own
-	// task; until then a dependency bump that touches one line must be committable.
-	'scripts/modules/commands.js',
 	// Over the limit on main; a one-line default or parameter change must be
 	// committable until each is split.
 	'scripts/modules/config-manager.js',

@@ -129,7 +129,8 @@ async function commandAction(prompt, options) {
     
     // 7. Print the answer once, rendered, then the AI usage line
     console.log(ui.formatResearchAnswer(aiResult.mainResult));
-    displayAiUsageSummary(aiResult.telemetryData, 'cli');
+    const usage = ui.formatUsageLine(aiResult.telemetryData);
+    if (usage) console.log(`\n${ui.theme.muted(usage)}`);
 }
 ```
 
@@ -149,7 +150,7 @@ sonnet · 13,735 tokens (12,188 in, 1,547 out) · 100% cached
 - ✅ **DO**: One muted context line (`ui.formatResearchContext`)
 - ✅ **DO**: A spinner with the elapsed time while the model runs
 - ✅ **DO**: Print the answer once, rendered (`ui.formatResearchAnswer`)
-- ✅ **DO**: End with `displayAiUsageSummary`, which has the real token counts
+- ✅ **DO**: End with the usage line (`ui.formatUsageLine`), which has the real token counts
 - ❌ **DON'T**: Print a per-task token table or "Context Analysis" box. The counts are estimates, and the usage line already reports what was used
 - ❌ **DON'T**: Stream raw text and then print the same answer again in a box
 - ❌ **DON'T**: Add header boxes repeating the query the user just typed

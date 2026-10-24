@@ -60,7 +60,7 @@ export function getStatusIcon(status: TaskStatus): string {
 }
 
 /**
- * Get colored status display with ASCII icons (matches scripts/modules/ui.js style)
+ * Get colored status display with ASCII icons
  */
 export function getStatusWithColor(
 	status: TaskStatus,

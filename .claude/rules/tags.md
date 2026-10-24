@@ -19,7 +19,7 @@ This document outlines the standardized patterns that **ALL** TaskGraph commands
 All command files must import `getCurrentTag`:
 
 ```javascript
-// ✅ DO: Import getCurrentTag in commands.js
+// ✅ DO: Import getCurrentTag in each command file
 import { 
   log, 
   readJSON, 

@@ -260,9 +260,9 @@ taskgraph-ai/
 
 ### Key Areas for Contribution
 
-- **CLI Commands**: `scripts/modules/commands.js`
+- **CLI Commands**: `apps/cli/src/commands/` (registered in `apps/cli/src/command-registry.ts`)
 - **MCP Tools**: `mcp-server/src/tools/`
-- **Core Logic**: `scripts/modules/task-manager/`
+- **Core Logic**: `packages/tm-core/src/`
 - **AI Providers**: `packages/tm-core/src/modules/ai/providers/`
 - **Tests**: `tests/`
 

@@ -38,7 +38,13 @@ const longFlags = (source: string): string[] => [
 
 /** The surface of the CLI whose repo-relative files `read` returns */
 export function cliSurface(read: (file: string) => string): CliSurface {
-	const legacySource = stripComments(read('scripts/modules/commands.js'));
+	// Refs before #254 also declared commands in the legacy commands.js
+	let legacySource = '';
+	try {
+		legacySource = stripComments(read('scripts/modules/commands.js'));
+	} catch {
+		// Removed at this ref
+	}
 	const registrySource = stripComments(
 		read('apps/cli/src/command-registry.ts')
 	);

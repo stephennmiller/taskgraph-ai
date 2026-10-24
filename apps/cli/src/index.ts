@@ -40,6 +40,9 @@ export {
 	type CommandMetadata
 } from './command-registry.js';
 
+// The taskgraph program and its run (scripts/dev.js)
+export { runCLI, setupCLI } from './program.js';
+
 // General utilities (error handling, auto-update, etc.)
 export * from './utils/index.js';
 

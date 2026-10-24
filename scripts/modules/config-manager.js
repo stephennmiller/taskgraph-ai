@@ -32,23 +32,6 @@ const DEFAULTS = DEFAULT_PROJECT_CONFIG;
 let loadedConfig = null;
 let loadedConfigRoot = null; // Track which root loaded the config
 
-/**
- * Suppress config file warnings (useful during API mode detection)
- * Uses global object so it can be shared across modules without circular deps
- * @param {boolean} suppress - Whether to suppress warnings
- */
-export function setSuppressConfigWarnings(suppress) {
-	global._tmSuppressConfigWarnings = suppress;
-}
-
-/**
- * Check if config warnings are currently suppressed
- * @returns {boolean}
- */
-export function isConfigWarningSuppressed() {
-	return global._tmSuppressConfigWarnings === true;
-}
-
 function _loadAndValidateConfig(explicitRoot = null) {
 	const defaults = DEFAULTS; // Use the defined defaults
 	let rootToUse = explicitRoot;
@@ -167,7 +150,6 @@ function _loadAndValidateConfig(explicitRoot = null) {
 		}
 	} else {
 		// Config file doesn't exist at the determined rootToUse.
-		// Skip warnings if the global suppress flag is set
 		// Don't warn during initialization: only an explicit root or a folder
 		// with tasks is expected to have a config. An empty .taskgraph folder
 		// isn't a project, so the "No TaskGraph project" error covers it.
@@ -175,7 +157,7 @@ function _loadAndValidateConfig(explicitRoot = null) {
 			Boolean(explicitRoot) ||
 			fs.existsSync(path.join(rootToUse, TASKGRAPH_TASKS_FILE));
 
-		if (expectsConfig && !isConfigWarningSuppressed()) {
+		if (expectsConfig) {
 			warnMissingConfigOnce(explicitRoot || rootToUse);
 		}
 		// Keep config as defaults
@@ -374,16 +356,6 @@ function getMainModelId(explicitRoot = null) {
 	return getModelConfigForRole('main', explicitRoot).modelId;
 }
 
-function getMainMaxTokens(explicitRoot = null) {
-	// Directly return value from config (which includes defaults)
-	return getModelConfigForRole('main', explicitRoot).maxTokens;
-}
-
-function getMainTemperature(explicitRoot = null) {
-	// Directly return value from config
-	return getModelConfigForRole('main', explicitRoot).temperature;
-}
-
 function getResearchProvider(explicitRoot = null) {
 	return getModelConfigForRole('research', explicitRoot).provider;
 }
@@ -451,16 +423,6 @@ function getResearchModelId(explicitRoot = null) {
 	return getModelConfigForRole('research', explicitRoot).modelId;
 }
 
-function getResearchMaxTokens(explicitRoot = null) {
-	// Directly return value from config
-	return getModelConfigForRole('research', explicitRoot).maxTokens;
-}
-
-function getResearchTemperature(explicitRoot = null) {
-	// Directly return value from config
-	return getModelConfigForRole('research', explicitRoot).temperature;
-}
-
 function getFallbackProvider(explicitRoot = null) {
 	// Directly return value from config (will be undefined if not set)
 	return getModelConfigForRole('fallback', explicitRoot).provider;
@@ -469,16 +431,6 @@ function getFallbackProvider(explicitRoot = null) {
 function getFallbackModelId(explicitRoot = null) {
 	// Directly return value from config
 	return getModelConfigForRole('fallback', explicitRoot).modelId;
-}
-
-function getFallbackMaxTokens(explicitRoot = null) {
-	// Directly return value from config
-	return getModelConfigForRole('fallback', explicitRoot).maxTokens;
-}
-
-function getFallbackTemperature(explicitRoot = null) {
-	// Directly return value from config
-	return getModelConfigForRole('fallback', explicitRoot).temperature;
 }
 
 // --- Global Settings Getters ---
@@ -499,27 +451,10 @@ function getDebugFlag(explicitRoot = null) {
 	return getGlobalConfig(explicitRoot).debug === true;
 }
 
-function getDefaultSubtasks(explicitRoot = null) {
-	// Directly return value from config, ensure integer
-	const val = getGlobalConfig(explicitRoot).defaultSubtasks;
-	const parsedVal = parseInt(val, 10);
-	return Number.isNaN(parsedVal) ? DEFAULTS.global.defaultSubtasks : parsedVal;
-}
-
 function getDefaultNumTasks(explicitRoot = null) {
 	const val = getGlobalConfig(explicitRoot).defaultNumTasks;
 	const parsedVal = parseInt(val, 10);
 	return Number.isNaN(parsedVal) ? DEFAULTS.global.defaultNumTasks : parsedVal;
-}
-
-function getDefaultPriority(explicitRoot = null) {
-	// Directly return value from config
-	return getGlobalConfig(explicitRoot).defaultPriority;
-}
-
-function getProjectName(explicitRoot = null) {
-	// Directly return value from config
-	return getGlobalConfig(explicitRoot).projectName;
 }
 
 function getResponseLanguage(explicitRoot = null) {
@@ -529,11 +464,6 @@ function getResponseLanguage(explicitRoot = null) {
 		resolveEnvVariable('TASKGRAPH_RESPONSE_LANGUAGE', null, explicitRoot) ||
 		getGlobalConfig(explicitRoot).responseLanguage
 	);
-}
-
-function getCodebaseAnalysisEnabled(explicitRoot = null) {
-	// Return boolean-safe value with default true
-	return getGlobalConfig(explicitRoot).enableCodebaseAnalysis !== false;
 }
 
 /**
@@ -612,57 +542,6 @@ function getParametersForRole(role, explicitRoot = null) {
 		maxTokens: effectiveMaxTokens,
 		temperature: effectiveTemperature
 	};
-}
-
-/**
- * Checks whether a provider is ready to use without further setup.
- * Claude Code authenticates through the local Claude Code CLI, so no API key
- * is involved; any other provider is unsupported.
- * @param {string} providerName - The name of the provider.
- * @returns {boolean} True for the Claude Code provider, false otherwise.
- */
-function isApiKeySet(providerName) {
-	return providerName?.toLowerCase() === CUSTOM_PROVIDERS.CLAUDE_CODE;
-}
-
-/**
- * Gets a list of available models based on the MODEL_MAP.
- * @returns {Array<{id: string, name: string, provider: string, swe_score: number|null, cost_per_1m_tokens: {input: number|null, output: number|null}|null, allowed_roles: string[]}>}
- */
-function getAvailableModels() {
-	const available = [];
-	for (const [provider, models] of Object.entries(MODEL_MAP)) {
-		if (models.length > 0) {
-			models
-				.filter((modelObj) => Boolean(modelObj.supported))
-				.forEach((modelObj) => {
-					const modelId = modelObj.id;
-					const sweScore = modelObj.swe_score;
-					const cost = modelObj.cost_per_1m_tokens;
-					const allowedRoles = modelObj.allowed_roles || ['main', 'fallback'];
-
-					// Use name from JSON if available, otherwise generate from ID
-					let name = modelObj.name;
-					if (!name) {
-						const nameParts = modelId
-							.split('-')
-							.map((p) => p.charAt(0).toUpperCase() + p.slice(1));
-						name = nameParts.join(' ');
-					}
-
-					available.push({
-						id: modelId,
-						name: name,
-						provider: provider,
-						swe_score: sweScore,
-						cost_per_1m_tokens: cost,
-						allowed_roles: allowedRoles,
-						max_tokens: modelObj.max_tokens
-					});
-				});
-		}
-	}
-	return available;
 }
 
 /**
@@ -791,36 +670,23 @@ export {
 	CUSTOM_PROVIDERS,
 	ALL_PROVIDERS,
 	MODEL_MAP,
-	getAvailableModels,
 	// Role-specific getters (No env var overrides)
 	getMainProvider,
 	getMainModelId,
-	getMainMaxTokens,
-	getMainTemperature,
 	getResearchProvider,
 	getResearchModelId,
-	getResearchMaxTokens,
-	getResearchTemperature,
 	hasCodebaseAnalysis,
 	getFallbackProvider,
 	getFallbackModelId,
-	getFallbackMaxTokens,
-	getFallbackTemperature,
 	// Global setting getters (No env var overrides)
 	getLogLevel,
 	getDebugFlag,
 	getDefaultNumTasks,
-	getDefaultSubtasks,
-	getDefaultPriority,
-	getProjectName,
 	getResponseLanguage,
-	getCodebaseAnalysisEnabled,
-	isCodebaseAnalysisEnabled,
 	getParametersForRole,
 	getUserId,
 	// Operating mode
 	// API Key Checkers (still relevant)
-	isApiKeySet,
 	// ADD: Function to get all provider names
 	getAllProviders
 };
