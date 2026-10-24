@@ -7,7 +7,7 @@
         "description": "Claude Code's built-in Tasks now support dependencies and a list shared across sessions (`CLAUDE_CODE_TASK_LIST_ID`). It's free and already there, so it's the biggest overlap with TaskGraph.",
         "details": "GitHub issue #209: https://github.com/stephennmiller/taskgraph-ai/issues/209\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "cancelled",
         "dependencies": [],
         "priority": "low",
         "subtasks": []
