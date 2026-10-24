@@ -57,7 +57,7 @@ paths:
       - Logging (`log` function), File I/O (`readJSON`, `writeJSON`), String utils (`truncate`).
       - Task utils (`findTaskById`), Dependency utils (`findCycles`).
       - API Key Resolution (`resolveEnvVariable`).
-      - Silent Mode Control (`enableSilentMode`, `disableSilentMode`).
+      - Silent Mode (`enableSilentMode`, `isSilentMode`).
       - **Tagged Task Lists**: Silent migration system, tag resolution, current tag management.
       - **Migration System**: `performCompleteTagMigration`, `migrateConfigJson`, `createStateJson`.
 

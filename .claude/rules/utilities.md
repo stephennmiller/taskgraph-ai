@@ -114,52 +114,9 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
 ## Silent Mode Utilities (in `scripts/modules/utils.js`)
 
 - **Silent Mode Control**:
-  - ✅ DO: Use the exported silent mode functions rather than accessing global variables
-  - ✅ DO: Always use `isSilentMode()` to check the current silent mode state
-  - ✅ DO: Ensure silent mode is disabled in a `finally` block to prevent it from staying enabled
-  - ❌ DON'T: Access the global `silentMode` variable directly
-  - ❌ DON'T: Forget to disable silent mode after enabling it
-
-  ```javascript
-  // ✅ DO: Use the silent mode control functions properly
-  
-  // Example of proper implementation in utils.js:
-  
-  // Global silent mode flag (private to the module)
-  let silentMode = false;
-  
-  // Enable silent mode
-  function enableSilentMode() {
-    silentMode = true;
-  }
-  
-  // Disable silent mode
-  function disableSilentMode() {
-    silentMode = false;
-  }
-  
-  // Check if silent mode is enabled
-  function isSilentMode() {
-    return silentMode;
-  }
-  
-  // Example of proper usage in another module:
-  import { enableSilentMode, disableSilentMode, isSilentMode } from './utils.js';
-  
-  // Check current status
-  if (!isSilentMode()) {
-    console.log('Silent mode is not enabled');
-  }
-  
-  // Use try/finally pattern to ensure silent mode is disabled
-  try {
-    enableSilentMode();
-    // Do something that should suppress console output
-    performOperation();
-  } finally {
-    disableSilentMode();
-  }
-  ```
+  - `enableSilentMode()` turns legacy console output off for the rest of the process; there is no way to turn it back on. Use it only in a process that must stay quiet end to end (the eval worker, `evals/lib/plan-worker.ts`).
+  - ✅ DO: Check `isSilentMode()` before printing from legacy UI code
+  - ❌ DON'T: Access the module's `silentMode` variable directly
 
 - **Integration with Logging**:
   - ✅ DO: Make the `log` function respect silent mode
@@ -737,10 +694,6 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     silentMode = true;
   }
   
-  function disableSilentMode() {
-    silentMode = false;
-  }
-  
   function isSilentMode() {
     return silentMode;
   }
@@ -984,7 +937,6 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     // Logging utilities
     log,
     enableSilentMode,
-    disableSilentMode,
     isSilentMode,
     
     // Task utilities
