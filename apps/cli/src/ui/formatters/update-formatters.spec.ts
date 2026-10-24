@@ -42,4 +42,20 @@ describe('formatUpdateNotice', () => {
 				expect(line.startsWith('    ')).toBe(true);
 		}
 	);
+
+	it('strips escape sequences and line breaks from highlights and the version', () => {
+		const output = formatUpdateNotice(
+			'1.0.0',
+			'1.1.0\x1b[2J',
+			['Add \x1b]52;c;ZXZpbA==\x07provider\r\nnext\x1b[2J line'],
+			80
+		);
+
+		expect(output).not.toContain('\x1b]52');
+		expect(output).not.toContain('\x1b[2J');
+		expect(plain(output).split('\n')).toEqual([
+			'TaskGraph 1.1.0 is out (you have 1.0.0)',
+			'  • Add provider next line'
+		]);
+	});
 });

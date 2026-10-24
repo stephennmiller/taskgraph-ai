@@ -807,10 +807,11 @@
         "description": "Changelog highlights in the update notice reach the terminal with escape sequences intact.",
         "details": "GitHub issue #482: https://github.com/stephennmiller/taskgraph-ai/issues/482\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:23:40.037Z"
       },
       {
         "id": "62",
@@ -885,9 +886,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:16:43.275Z",
+      "lastModified": "2026-10-24T12:23:40.037Z",
       "taskCount": 67,
-      "completedCount": 47,
+      "completedCount": 49,
       "tags": [
         "master"
       ]
