@@ -184,14 +184,27 @@ describe('mergeTagChanges', () => {
 		expect(merged.tasks).toEqual([task(1), task(2)]);
 	});
 
-	it('does not merge a task list with a duplicate ID item by item, like the git merge driver', () => {
-		const base = tag([task(1), task(2)]);
-		const mine = tag([task(1, { title: 'New' }), task(2)]);
-		const theirs = tag([task(1), task(2), task(2, { title: 'Dup' })]);
+	it('keeps changes others saved when the tag already holds a duplicate ID', () => {
+		const dup = task(3, { title: 'Dup' });
+		const base = tag([task(1), task(2), task(3), dup]);
+		const mine = tag([task(1), task(2, { title: 'Mine' }), task(3), dup]);
+		const theirs = tag([
+			task(1, { status: 'done' }),
+			task(2),
+			task(3),
+			dup,
+			task(4)
+		]);
 
 		const { merged } = mergeTagChanges(base, mine, theirs);
 
-		expect(merged.tasks).toEqual(mine.tasks);
+		expect(merged.tasks).toEqual([
+			task(1, { status: 'done' }),
+			task(2, { title: 'Mine' }),
+			task(3),
+			dup,
+			task(4)
+		]);
 	});
 
 	it('keeps fields others added and merges tag metadata by field', () => {
