@@ -1,10 +1,10 @@
 ---
 title: GitHub Sync
 sidebarTitle: "GitHub Sync"
-description: "Push your tasks to GitHub Issues from the CLI or an MCP client, with a preview first, and pull issue status back"
+description: "Push your tasks to GitHub Issues from the CLI or an MCP client, with a preview first, import issues you already have, and pull issue status back"
 ---
 
-TaskGraph can mirror your tasks as GitHub Issues. Pushing is one way: TaskGraph writes the issues. Pulling is optional and reads status only: whether an issue was closed, reopened or relabelled. Nothing else is read back from GitHub. It runs through the [`gh` CLI](https://cli.github.com), so there is no token to configure.
+TaskGraph can mirror your tasks as GitHub Issues. Pushing is one way: TaskGraph writes the issues. Pulling is optional and reads status only: whether an issue was closed, reopened or relabelled. Importing goes the other way once: it turns issues you already have into tasks. It runs through the [`gh` CLI](https://cli.github.com), so there is no token to configure.
 
 ## Requirements
 
@@ -23,6 +23,8 @@ taskgraph github push --all-tags -y     # every tag, no confirmation
 taskgraph github push --id 1,2          # only top-level tasks 1 and 2
 taskgraph github pull --dry-run         # show which task statuses would change
 taskgraph github pull                   # show the plan, ask, then update the tasks
+taskgraph github import --dry-run       # list the open issues that would become tasks
+taskgraph github import                 # add a linked task for each open issue
 taskgraph github unlink 3               # forget the issue task 3 is linked to
 ```
 
@@ -53,11 +55,28 @@ For each linked task, pull compares three statuses: the one at the last push or 
 - **Both changed to the same status:** pull records them as in sync.
 - **Both changed to different statuses:** this is a conflict. The task keeps its local status and is listed in the plan. Run `taskgraph github push` to overwrite GitHub with it.
 
-Tasks that were never pushed, or whose issue is gone, are skipped.
+Tasks that were never pushed or imported, or whose issue is gone, are skipped. Pull reads issues with the `taskgraph` label; when a linked issue lacks it (an imported one), pull reads every issue in the repository instead.
+
+## Importing existing issues
+
+`taskgraph github import` reads the repository's open issues and adds a task for each one that no task is linked to yet. It writes only to your tasks, never to GitHub.
+
+- Each new task is titled `<issue title> (#<n>)`, with the issue's link and body in its details, and goes in the active tag (or `--tag <name>`).
+- A task in that tag that isn't linked and whose title already ends in `(#<n>)` is linked to issue `#<n>` instead of getting a duplicate. This covers tasks you added by hand.
+- Issues that are already linked, and issues written by `push`, are skipped, so running `import` again adds nothing.
+- `--label <name>` imports only issues with that label. `--dry-run`, `--repo` and `--json` work as for `push`.
+
+An imported issue stays yours: `push` never changes its title, body, labels or state. `pull` reads only whether it is open or closed. Closing the issue makes the task `done` (`cancelled` when closed as not planned), whatever its status was, and reopening it makes the task `pending` again. While the issue is open, the task's status is yours to change. Status labels on an imported issue are ignored.
+
+```bash
+taskgraph github import
+# ...close issue #41 on GitHub...
+taskgraph github pull -y   # the task for #41 is now done
+```
 
 ## MCP tools
 
-There is no MCP tool for pull, because it changes your local tasks. Use the CLI. Both tools below are in the `all` tier. Set `TASKGRAPH_TOOLS` to `all` (see [MCP Tools](/capabilities/mcp)) to load them.
+There is no MCP tool for pull or import, because it changes your local tasks. Use the CLI. Both tools below are in the `all` tier. Set `TASKGRAPH_TOOLS` to `all` (see [MCP Tools](/capabilities/mcp)) to load them.
 
 ### `github_status`
 
@@ -102,6 +121,6 @@ After the first push, each task stores its issue in its `metadata.github` field.
 
 ## Limits
 
-- **Content is one way.** Only status is read back, by `pull`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
+- **Content is one way.** Only status is read back, by `pull`, and an issue's body is read once, by `import`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
 - **Orphans are reported, not closed,** unless you pass `--close-orphans` or `closeOrphans: true`.
 - **`--id` and `id` match top-level tasks.** Subtasks follow their parent.

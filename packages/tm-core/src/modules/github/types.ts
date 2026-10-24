@@ -14,6 +14,11 @@ export interface GitHubLink {
 	lastPushedStatus: TaskStatus;
 	/** Hash of the issue content last written to GitHub */
 	bodyHash: string;
+	/**
+	 * The issue was written by hand and imported; push never changes it, and
+	 * pull reads only whether it is open or closed
+	 */
+	imported?: boolean;
 }
 
 export type IssueState = 'open' | 'closed';
@@ -153,6 +158,41 @@ export interface PullResult {
 	applied: number;
 	synced: number;
 	conflicts: number;
+	skipped: number;
+}
+
+export interface ImportOptions {
+	/** `owner/name`; defaults to the repo reported by `gh repo view` */
+	repo?: string;
+	/** Tag the new tasks go in; defaults to the active tag */
+	tag?: string;
+	/** Import only open issues carrying this label */
+	label?: string;
+	dryRun?: boolean;
+}
+
+/**
+ * create: a new task for the issue
+ * link: an unlinked task titled `<title> (#<n>)` already stands for the issue
+ */
+export interface ImportStep {
+	action: 'create' | 'link';
+	issueNumber: number;
+	/** The issue's title */
+	title: string;
+	url: string;
+	/** The task's id; unknown for a create in a dry run */
+	taskId?: string;
+}
+
+export interface ImportResult {
+	dryRun: boolean;
+	repo: string;
+	tag: string;
+	steps: ImportStep[];
+	created: number;
+	linked: number;
+	/** Open issues already linked to a task, or written by push */
 	skipped: number;
 }
 

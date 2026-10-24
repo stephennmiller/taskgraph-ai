@@ -23,8 +23,8 @@ export interface UpdateIssueInput extends Partial<CreateIssueInput> {
 
 export interface GitHubClient {
 	getRepo(): Promise<RepoInfo>;
-	/** All issues (open and closed) carrying the label */
-	listIssues(label: string): Promise<RemoteIssue[]>;
+	/** Issues carrying the label (any label when omitted), open and closed by default */
+	listIssues(label?: string, state?: 'open' | 'all'): Promise<RemoteIssue[]>;
 	createIssue(input: CreateIssueInput): Promise<RemoteIssue>;
 	updateIssue(number: number, input: UpdateIssueInput): Promise<RemoteIssue>;
 	/** Create any of the labels that do not exist yet */

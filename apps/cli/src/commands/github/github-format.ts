@@ -4,6 +4,7 @@
 
 import {
 	type GitHubStatus,
+	type ImportResult,
 	type PlanStep,
 	type PullPlan,
 	type PullResult,
@@ -14,6 +15,7 @@ import {
 	type UnlinkResult
 } from '@tm/core';
 import chalk from 'chalk';
+import { terminalWidth, truncate } from '../../ui/layout/helpers.js';
 import { theme } from '../../ui/theme.js';
 
 const ACTION_LABEL: Record<PlanStep['action'], (text: string) => string> = {
@@ -161,5 +163,53 @@ export function formatUnlink(result: UnlinkResult): string {
 		theme.muted(
 			'The issue was not changed. If it still carries its taskgraph marker, the next push will link it again.'
 		)
+	].join('\n');
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * ✓ Imported 2 issues from acme/app into tag master
+ *   #40  12  Fix login
+ *   #41   7  Ship it  linked
+ * 1 new · 1 linked to an existing task · 5 already linked
+ * Next: taskgraph github pull -y once issues close
+ */
+export function formatImport(
+	result: ImportResult,
+	width = terminalWidth()
+): string {
+	result = sanitizeForTerminal(result);
+	const { steps, repo, tag, skipped } = result;
+	const already = skipped > 0 ? `${skipped} already linked` : '';
+	if (steps.length === 0) {
+		return `No new issues to import from ${repo}${already ? theme.muted(` · ${already}`) : ''}`;
+	}
+	const head = result.dryRun
+		? `Would import ${plural(steps.length, 'issue')} from ${repo} into tag ${tag} (dry run, nothing written)`
+		: `${chalk.green('✓')} Imported ${plural(steps.length, 'issue')} from ${repo} into tag ${tag}`;
+	const numWidth = Math.max(...steps.map((s) => `#${s.issueNumber}`.length));
+	const idWidth = Math.max(...steps.map((s) => (s.taskId ?? '+').length));
+	const rows = steps.map((step) => {
+		const lead = `  ${`#${step.issueNumber}`.padEnd(numWidth)}  ${(step.taskId ?? '+').padStart(idWidth)}  `;
+		const tail = step.action === 'link' ? '  linked' : '';
+		const title = truncate(
+			step.title,
+			Math.max(10, width - lead.length - tail.length)
+		);
+		return `${lead}${title}${theme.muted(tail)}`;
+	});
+	const facts = [
+		result.created > 0 ? `${result.created} new` : '',
+		result.linked > 0 ? `${result.linked} linked to an existing task` : '',
+		already
+	].filter(Boolean);
+	return [
+		head,
+		...rows,
+		theme.muted(facts.join(' · ')),
+		result.dryRun
+			? 'Next: taskgraph github import'
+			: 'Next: taskgraph github pull -y once issues close'
 	].join('\n');
 }

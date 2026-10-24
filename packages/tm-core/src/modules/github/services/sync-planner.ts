@@ -79,6 +79,14 @@ export function planSync(input: PlanInput): PushPlan {
 					reason: 'link recovered from issue marker'
 				};
 			}
+			if (link.imported) {
+				return {
+					...base,
+					action: 'skip',
+					issueNumber: number,
+					reason: 'imported issue, push leaves it alone'
+				};
+			}
 			const rendered = renderIssue(task, {
 				tag,
 				includeDetails: input.includeDetails,

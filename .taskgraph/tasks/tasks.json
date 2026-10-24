@@ -738,10 +738,11 @@
         "description": "Add an import from existing GitHub issues to linked tasks, and let pull update tasks from issues it did not create.",
         "details": "GitHub issue #471: https://github.com/stephennmiller/taskgraph-ai/issues/471\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:09:09.174Z"
       },
       {
         "id": "56",
@@ -883,9 +884,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T11:58:32.122Z",
+      "lastModified": "2026-10-24T12:09:09.175Z",
       "taskCount": 67,
-      "completedCount": 38,
+      "completedCount": 39,
       "tags": [
         "master"
       ]

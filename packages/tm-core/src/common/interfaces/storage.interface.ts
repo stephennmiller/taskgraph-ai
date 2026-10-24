@@ -97,12 +97,13 @@ export interface IStorage {
 	saveTasks(tasks: Task[], tag?: string): Promise<void>;
 
 	/**
-	 * Append new tasks to existing storage without replacing
+	 * Append new tasks to existing storage without replacing. A task whose
+	 * ID is already taken gets the next free one.
 	 * @param tasks - Array of tasks to append
 	 * @param tag - Optional tag context for the tasks
-	 * @returns Promise that resolves when append is complete
+	 * @returns The tasks as stored, with their final IDs
 	 */
-	appendTasks(tasks: Task[], tag?: string): Promise<void>;
+	appendTasks(tasks: Task[], tag?: string): Promise<Task[]>;
 
 	/**
 	 * Update a specific task by ID (direct structural update)
@@ -420,7 +421,7 @@ export abstract class BaseStorage implements IStorage {
 	abstract loadTasks(tag?: string, options?: LoadTasksOptions): Promise<Task[]>;
 	abstract loadTask(taskId: string, tag?: string): Promise<Task | null>;
 	abstract saveTasks(tasks: Task[], tag?: string): Promise<void>;
-	abstract appendTasks(tasks: Task[], tag?: string): Promise<void>;
+	abstract appendTasks(tasks: Task[], tag?: string): Promise<Task[]>;
 	abstract updateTask(
 		taskId: string,
 		updates: Partial<Task>,

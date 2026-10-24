@@ -1,5 +1,5 @@
 /**
- * @fileoverview Refactored file-based storage implementation for TaskGraph
+ * @fileoverview File-based storage implementation for TaskGraph
  */
 
 import fs from 'node:fs';
@@ -46,7 +46,12 @@ import { PathResolver } from './path-resolver.js';
 import { applyTagUpdate, buildTagMetadata } from './tag-update.js';
 import { warnIfUnsupportedSchema } from './schema-version.js';
 import { TagOperations } from './tag-operations.js';
-import { modifyTaskIn, setTaskStatusIn, taskNotFound } from './task-updates.js';
+import {
+	modifyTaskIn,
+	setTaskStatusIn,
+	taskNotFound,
+	withFreeIds
+} from './task-updates.js';
 
 /** What a mutateTasks change returns */
 interface MutateOutcome<R> {
@@ -342,14 +347,11 @@ export class FileStorage implements IStorage {
 		await this.saveTasks(tasks, tag);
 	}
 
-	/**
-	 * Append tasks to existing storage
-	 */
-	async appendTasks(tasks: Task[], tag?: string): Promise<void> {
-		await this.mutateTasks(tag, (existing) => ({
-			tasks: [...existing, ...tasks],
-			result: undefined
-		}));
+	/** Append tasks (see withFreeIds) */
+	async appendTasks(tasks: Task[], tag?: string): Promise<Task[]> {
+		return this.mutateTasks(tag, async (existing) =>
+			withFreeIds(existing, tasks, await this.readArchive(), tag || 'master')
+		);
 	}
 
 	/**

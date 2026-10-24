@@ -10,17 +10,23 @@ import {
 	getGitHubRepoInfo,
 	isGhCliAvailable
 } from '../../common/utils/git-utils.js';
+import type { Task } from '../../common/types/index.js';
 import type { TasksDomain } from '../tasks/tasks-domain.js';
+import { nextTaskId } from '../tasks/utils/archive.js';
 import { parseTaskIds } from '../tasks/validation/task-id.js';
 import type { GitHubClient } from './adapters/github-client.interface.js';
 import { GhCliClient } from './adapters/gh-cli-client.js';
 import { BASE_LABEL } from './services/issue-renderer.js';
+import { planImport } from './services/import-planner.js';
 import { executePush } from './services/push-executor.js';
 import { planPull } from './services/pull-planner.js';
 import { getLink, planSync } from './services/sync-planner.js';
 import type {
 	GitHubLink,
 	GitHubStatus,
+	ImportOptions,
+	ImportResult,
+	ImportStep,
 	PullOptions,
 	PullPlan,
 	PullResult,
@@ -142,6 +148,77 @@ export class GitHubDomain {
 	}
 
 	/**
+	 * Create a linked task for each open issue no task is linked to yet, or
+	 * link the unlinked task titled `<title> (#<n>)`. Reads GitHub, writes
+	 * only local tasks. The links are marked imported, so push leaves these
+	 * issues alone and pull follows whether they are open or closed.
+	 */
+	async import(options: ImportOptions = {}): Promise<ImportResult> {
+		const repo = await this.resolveRepo(options.repo);
+		const tag = options.tag ?? this.options.getActiveTag?.() ?? 'master';
+		const issues = await this.client(repo).listIssues(options.label, 'open');
+		const all = await this.loadTasks();
+		const { steps, skipped } = planImport({ repo, tag, issues, tasks: all });
+		const result: ImportResult = {
+			dryRun: Boolean(options.dryRun),
+			repo,
+			tag,
+			steps,
+			created: steps.filter((s) => s.action === 'create').length,
+			linked: steps.filter((s) => s.action === 'link').length,
+			skipped
+		};
+		if (options.dryRun || steps.length === 0) return result;
+
+		const tasksDomain = this.requireTasks();
+		const syncedAt = (this.options.now?.() ?? new Date()).toISOString();
+		const linkFor = (step: ImportStep): GitHubLink => ({
+			repo,
+			issueNumber: step.issueNumber,
+			url: step.url,
+			syncedAt,
+			lastPushedStatus: 'pending',
+			bodyHash: '',
+			imported: true
+		});
+		const byNumber = new Map(issues.map((i) => [i.number, i]));
+		const inTag = all.filter((t) => t.tag === tag).map((t) => t.task);
+
+		for (const step of steps.filter((s) => s.action === 'link')) {
+			const task = inTag.find((t) => String(t.id) === step.taskId) as Task;
+			await tasksDomain.update(
+				task.id,
+				{ metadata: { ...task.metadata, github: linkFor(step) } },
+				tag
+			);
+		}
+
+		const creates = steps.filter((s) => s.action === 'create');
+		// The store moves an ID that was taken meanwhile or is archived
+		const firstId = nextTaskId(inTag.map((t) => t.id));
+		const stored = await tasksDomain.append(
+			creates.map((step, i) => ({
+				id: String(firstId + i),
+				title: `${step.title} (#${step.issueNumber})`,
+				description: `GitHub issue #${step.issueNumber}`,
+				details:
+					`GitHub issue #${step.issueNumber}: ${step.url}\n\n${byNumber.get(step.issueNumber)?.body ?? ''}`.trim(),
+				testStrategy: '',
+				status: 'pending',
+				priority: 'medium',
+				dependencies: [],
+				subtasks: [],
+				metadata: { github: linkFor(step) }
+			})),
+			tag
+		);
+		creates.forEach((step, i) => {
+			step.taskId = String(stored[i].id);
+		});
+		return result;
+	}
+
+	/**
 	 * Forget the issue a task is linked to. The issue itself is left alone.
 	 * Without a tag the task id must be linked in exactly one tag.
 	 */
@@ -186,16 +263,8 @@ export class GitHubDomain {
 
 	/** Repo, client, the tasks in scope and the issues on GitHub, for push and pull */
 	private async scope(options: ScopeOptions) {
-		const repo = options.repo ?? (await this.detectRepo());
-		if (!repo) {
-			throw new TaskGraphError(
-				'Could not determine the GitHub repository. Pass a repo as owner/name or run `gh auth login` in a GitHub checkout.',
-				ERROR_CODES.MISSING_CONFIGURATION
-			);
-		}
-		const client = this.options.clientFactory
-			? this.options.clientFactory(repo)
-			: new GhCliClient(repo, { cwd: this.projectRoot });
+		const repo = await this.resolveRepo(options.repo);
+		const client = this.client(repo);
 		const tag = this.resolveTag(options);
 		const tasks = await this.loadTasks(tag);
 		const remote = await client.listIssues(BASE_LABEL);
@@ -238,10 +307,18 @@ export class GitHubDomain {
 	}
 
 	private async preparePull(options: PullOptions) {
-		const { repo, tasks, remote, wanted } = await this.scope(options);
+		const { repo, client, tasks, wanted, ...rest } = await this.scope(options);
 		const selected = wanted
 			? tasks.filter((t) => wanted.includes(String(t.task.id)))
 			: tasks;
+		// Imported issues don't carry the taskgraph label: read every issue
+		let remote = rest.remote;
+		const labeled = new Set(remote.map((i) => i.number));
+		const missing = selected.some((t) => {
+			const link = getLink(t.task, repo);
+			return link && !labeled.has(link.issueNumber);
+		});
+		if (missing) remote = await client.listIssues(undefined, 'all');
 		return {
 			plan: planPull({ repo, tasks: selected, remote }),
 			tasks: selected
@@ -273,6 +350,23 @@ export class GitHubDomain {
 			{ metadata: { ...task.metadata, github } },
 			step.tag
 		);
+	}
+
+	private async resolveRepo(repo?: string): Promise<string> {
+		const resolved = repo ?? (await this.detectRepo());
+		if (!resolved) {
+			throw new TaskGraphError(
+				'Could not determine the GitHub repository. Pass a repo as owner/name or run `gh auth login` in a GitHub checkout.',
+				ERROR_CODES.MISSING_CONFIGURATION
+			);
+		}
+		return resolved;
+	}
+
+	private client(repo: string): GitHubClient {
+		return this.options.clientFactory
+			? this.options.clientFactory(repo)
+			: new GhCliClient(repo, { cwd: this.projectRoot });
 	}
 
 	/** The one tag a push covers, or undefined for every tag */

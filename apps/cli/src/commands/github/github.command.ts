@@ -15,6 +15,7 @@ import { displayError } from '../../utils/error-handler.js';
 import { formatJson } from '../../utils/json-output.js';
 import { getProjectRoot } from '../../utils/project-root.js';
 import {
+	formatImport,
 	formatPlan,
 	formatPullPlan,
 	formatPullResult,
@@ -55,6 +56,13 @@ interface PullCommandOptions extends CommonOptions {
 	repo?: string;
 }
 
+interface ImportCommandOptions extends CommonOptions {
+	tag?: string;
+	label?: string;
+	dryRun?: boolean;
+	repo?: string;
+}
+
 interface UnlinkOptions extends CommonOptions {
 	tag?: string;
 }
@@ -65,10 +73,13 @@ export class GithubCommand extends Command {
 	constructor(name?: string) {
 		super(name || 'github');
 
-		this.description('Push tasks to GitHub Issues and pull issue status back');
+		this.description(
+			'Push tasks to GitHub Issues, import existing issues and pull issue status back'
+		);
 		this.addStatusCommand();
 		this.addPushCommand();
 		this.addPullCommand();
+		this.addImportCommand();
 		this.addUnlinkCommand();
 	}
 
@@ -136,6 +147,35 @@ Examples:
 			)
 			.action((options: PullCommandOptions) =>
 				this.guard(options, () => this.runPull(options))
+			);
+	}
+
+	private addImportCommand(): void {
+		this.command('import')
+			.description(
+				'Create a linked task for each open GitHub issue (reads GitHub, never writes to it)'
+			)
+			.option('--label <name>', 'Only import issues with this label')
+			.option('--tag <name>', 'Tag for the new tasks (default: the active tag)')
+			.option('--dry-run', 'Show what would be imported without adding tasks')
+			.option('--repo <owner/name>', 'Repository (default: detected via gh)')
+			.option('-p, --project <path>', 'Project root directory')
+			.option('--json', 'Output as JSON')
+			.addHelpText(
+				'after',
+				`
+An issue already linked to a task is skipped, so running import again adds
+nothing. An unlinked task titled "<title> (#<n>)" is linked to issue #<n>
+instead of getting a duplicate. Push never changes an imported issue; pull
+marks its task done when the issue closes.
+
+Examples:
+  $ taskgraph github import --dry-run      # Preview
+  $ taskgraph github import --label bug    # Only issues labelled bug
+`
+			)
+			.action((options: ImportCommandOptions) =>
+				this.guard(options, () => this.runImport(options))
 			);
 	}
 
@@ -283,6 +323,16 @@ Examples:
 			...(options.yes ? [formatPullPlan(result.plan)] : []),
 			formatPullResult(result)
 		]);
+	}
+
+	private async runImport(options: ImportCommandOptions): Promise<void> {
+		const result = await this.core().github.import({
+			repo: options.repo,
+			tag: options.tag,
+			label: options.label,
+			dryRun: options.dryRun
+		});
+		console.log(options.json ? formatJson(result) : formatImport(result));
 	}
 
 	private async runUnlink(id: string, options: UnlinkOptions): Promise<void> {

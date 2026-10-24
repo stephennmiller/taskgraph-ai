@@ -12,7 +12,7 @@ import { getLink } from './sync-planner.js';
 export interface PullPlanInput {
 	repo: string;
 	tasks: SyncTask[];
-	/** Issues carrying the taskgraph label, open and closed */
+	/** Issues carrying the taskgraph label, open and closed, plus imported ones */
 	remote: RemoteIssue[];
 }
 
@@ -23,7 +23,11 @@ export function planPull(input: PullPlanInput): PullPlan {
 		const base = { tag, taskId: String(task.id), title: task.title };
 		const link = getLink(task, input.repo);
 		if (!link) {
-			return { ...base, action: 'skip', reason: 'not linked, push first' };
+			return {
+				...base,
+				action: 'skip',
+				reason: 'not linked, push first'
+			};
 		}
 		const issue = byNumber.get(link.issueNumber);
 		if (!issue) {
@@ -36,9 +40,15 @@ export function planPull(input: PullPlanInput): PullPlan {
 		}
 
 		const from = task.status;
-		const to = statusFromIssue(issue, link.lastPushedStatus);
+		// An imported issue says only open (pending) or closed. Push never
+		// writes to it, so a local change can't conflict with it
+		const to =
+			link.imported && issue.state === 'open'
+				? 'pending'
+				: statusFromIssue(issue, link.lastPushedStatus);
 		const step = { ...base, issueNumber: link.issueNumber, from, to };
-		const localChanged = !sameStatus(from, link.lastPushedStatus);
+		const localChanged =
+			!link.imported && !sameStatus(from, link.lastPushedStatus);
 		const remoteChanged = !sameStatus(to, link.lastPushedStatus);
 
 		if (!remoteChanged) {
@@ -50,10 +60,10 @@ export function planPull(input: PullPlanInput): PullPlan {
 					: 'unchanged'
 			};
 		}
-		if (!localChanged) return { ...step, action: 'apply' };
 		if (sameStatus(from, to)) {
 			return { ...step, action: 'sync', reason: 'already in sync' };
 		}
+		if (!localChanged) return { ...step, action: 'apply' };
 		return {
 			...step,
 			action: 'conflict',

@@ -44,6 +44,7 @@ Check `schemaVersion` before you parse. If it is higher than the version your sc
 | `github status` | `--json` | `ghAvailable`, `repo`, `linkedTasks`, `unlinkedTasks` |
 | `github push` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `created`, `updated`, `skipped`, `closed`, `orphans` |
 | `github pull` | `--json` (with `--yes` or `--dry-run`) | `dryRun`, `plan`, `applied`, `synced`, `conflicts`, `skipped` |
+| `github import` | `--json` | `dryRun`, `repo`, `tag`, `steps`, `created`, `linked`, `skipped` |
 | `github unlink <id>` | `--json` | `tag`, `taskId`, `issueNumber`, `url` |
 | `parse-prd --clarify` | `--json` | `prd`, `questions` |
 
@@ -93,5 +94,5 @@ The output's `schemaVersion` is not the `metadata.schemaVersion` stored on each 
 Each command's shape (keys and value types) is pinned in a test. A change to the shape fails CI until the pinned shape is updated, and a breaking change also needs a version bump:
 
 - `apps/cli/tests/integration/json-output/json-contract.test.ts` runs the built CLI on a fixture project.
-- `apps/cli/src/commands/github/github.command.spec.ts` covers `github push`, `pull` and `unlink`, which need a GitHub repository to run for real.
+- `apps/cli/src/commands/github/github.command.spec.ts` covers `github push`, `pull`, `import` and `unlink`, which need a GitHub repository to run for real.
 - `apps/cli/tests/integration/commands/parse-prd-clarify.command.test.ts` covers `parse-prd --clarify --json`, which needs a model to answer.

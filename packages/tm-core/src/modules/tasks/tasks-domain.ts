@@ -368,6 +368,17 @@ export class TasksDomain {
 	// ========== Task Status Management ==========
 
 	/**
+	 * Add tasks to a tag (the active tag when omitted) as given, without AI.
+	 * A task whose ID is taken gets the next free one; the result holds the
+	 * IDs as stored.
+	 */
+	async append(tasks: Task[], tag?: string): Promise<Task[]> {
+		return this.taskService
+			.getStorage()
+			.appendTasks(tasks, tag || this.configManager.getActiveTag());
+	}
+
+	/**
 	 * Update task with new data (direct structural update)
 	 * @param taskId - Task ID (supports numeric, alphanumeric like TAS-49, and subtask IDs like 1.2)
 	 * @param updates - Partial task object with fields to update

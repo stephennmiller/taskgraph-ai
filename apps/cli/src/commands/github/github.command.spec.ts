@@ -2,8 +2,15 @@
  * @fileoverview Unit tests for GithubCommand (tm-core is mocked)
  */
 
-import type { PullPlan, PullResult, PushPlan, PushResult } from '@tm/core';
+import type {
+	ImportResult,
+	PullPlan,
+	PullResult,
+	PushPlan,
+	PushResult
+} from '@tm/core';
 import { JSON_OUTPUT_SCHEMA_VERSION } from '@tm/core';
+import { stripVTControlCharacters } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { shapeOf } from '../../../tests/helpers/json-shape.js';
 
@@ -93,6 +100,34 @@ const UP_TO_DATE: PullPlan = {
 	steps: [{ action: 'skip', tag: 'master', taskId: '3', title: 'Third' }]
 };
 
+const IMPORT_RESULT = (
+	overrides: Partial<ImportResult> = {}
+): ImportResult => ({
+	dryRun: false,
+	repo: 'acme/app',
+	tag: 'master',
+	steps: [
+		{
+			action: 'create',
+			issueNumber: 40,
+			title: 'Fix login \u001b[31mnow',
+			url: 'https://github.com/acme/app/issues/40',
+			taskId: '12'
+		},
+		{
+			action: 'link',
+			issueNumber: 41,
+			title: 'Ship it',
+			url: 'https://github.com/acme/app/issues/41',
+			taskId: '7'
+		}
+	],
+	created: 1,
+	linked: 1,
+	skipped: 5,
+	...overrides
+});
+
 describe('GithubCommand', () => {
 	let logSpy: any;
 	let github: Record<string, ReturnType<typeof vi.fn>>;
@@ -115,6 +150,7 @@ describe('GithubCommand', () => {
 			push: vi.fn().mockResolvedValue(RESULT()),
 			planPull: vi.fn().mockResolvedValue(PULL_PLAN),
 			pull: vi.fn().mockResolvedValue(PULL_RESULT()),
+			import: vi.fn().mockResolvedValue(IMPORT_RESULT()),
 			unlink: vi.fn().mockResolvedValue({
 				tag: 'master',
 				taskId: '1',
@@ -376,6 +412,73 @@ describe('GithubCommand', () => {
 		});
 	});
 
+	describe('import', () => {
+		const plain = () => stripVTControlCharacters(output());
+
+		it('forwards its options and prints one row per issue, with escape codes removed', async () => {
+			await (command as any).runImport({
+				repo: 'o/n',
+				tag: 'feat',
+				label: 'bug',
+				dryRun: true
+			});
+
+			expect(github.import).toHaveBeenCalledWith({
+				repo: 'o/n',
+				tag: 'feat',
+				label: 'bug',
+				dryRun: true
+			});
+			expect(output()).not.toContain('\u001b[31m');
+			expect(plain().split('\n')).toEqual([
+				'✓ Imported 2 issues from acme/app into tag master',
+				'  #40  12  Fix login now',
+				'  #41   7  Ship it  linked',
+				'1 new · 1 linked to an existing task · 5 already linked',
+				'Next: taskgraph github pull -y once issues close'
+			]);
+		});
+
+		it('says so in one line when there is nothing new', async () => {
+			github.import.mockResolvedValue(
+				IMPORT_RESULT({ steps: [], created: 0, linked: 0 })
+			);
+
+			await (command as any).runImport({});
+
+			expect(plain()).toBe(
+				'No new issues to import from acme/app · 5 already linked'
+			);
+		});
+
+		it('marks a dry run and fits long titles in the terminal', async () => {
+			const prev = process.env.COLUMNS;
+			process.env.COLUMNS = '40';
+			github.import.mockResolvedValue(
+				IMPORT_RESULT({
+					dryRun: true,
+					steps: [
+						{
+							action: 'create',
+							issueNumber: 40,
+							title: 'A very long issue title that goes on and on',
+							url: 'u'
+						}
+					]
+				})
+			);
+
+			await (command as any).runImport({ dryRun: true });
+			if (prev === undefined) delete process.env.COLUMNS;
+			else process.env.COLUMNS = prev;
+
+			const lines = plain().split('\n');
+			expect(lines[0]).toContain('(dry run, nothing written)');
+			expect(lines[1]).toMatch(/^ {2}#40 {2}\+ {2}A very/);
+			expect(lines[1].length).toBeLessThanOrEqual(40);
+		});
+	});
+
 	describe('unlink', () => {
 		it('unlinks by id and tag', async () => {
 			await (command as any).runUnlink('1', { tag: 'master' });
@@ -500,6 +603,31 @@ describe('GithubCommand', () => {
 				  "schemaVersion": "number",
 				  "skipped": "number",
 				  "synced": "number",
+				}
+			`);
+		});
+
+		it('import', async () => {
+			await (command as any).runImport({ json: true });
+
+			expect(printed()).toMatchInlineSnapshot(`
+				{
+				  "created": "number",
+				  "dryRun": "boolean",
+				  "linked": "number",
+				  "repo": "string",
+				  "schemaVersion": "number",
+				  "skipped": "number",
+				  "steps": [
+				    {
+				      "action": "string",
+				      "issueNumber": "number",
+				      "taskId": "string",
+				      "title": "string",
+				      "url": "string",
+				    },
+				  ],
+				  "tag": "string",
 				}
 			`);
 		});
