@@ -161,8 +161,8 @@ Follow `ui.md`. In short:
 ```javascript
 // ✅ DO: Return data from the core function; the command prints it
 // (this is clear-subtasks)
-const result = clearSubtasks(tasksPath, ids, { projectRoot, tag });
-console.log(ui.formatClearedSubtasks(result));
+const result = await tmCore.tasks.clearSubtasks(ids, { tag });
+console.log(formatClearedSubtasks(result));
 //   ✓ Cleared 4 subtasks from 2 tasks
 //     1  3 subtasks  Set up the database schema
 //     2  1 subtask   Build the login API
@@ -336,21 +336,6 @@ For AI-powered commands that benefit from project context, follow the research c
       }
       
       // Implementation with detailed error handling
-    });
-  ```
-
-- **Remove Subtask Command Structure**:
-  ```javascript
-  // ✅ DO: Follow this structure for removing subtasks
-  programInstance
-    .command('remove-subtask')
-    .description('Remove a subtask from its parent task, optionally converting it to a standalone task')
-    .option('-f, --file <path>', 'Path to the tasks file', 'tasks/tasks.json')
-    .option('-i, --id <id>', 'ID of the subtask to remove in format parentId.subtaskId, required')
-    .option('-c, --convert', 'Convert the subtask to a standalone task instead of deleting')
-    .option('--generate', 'Regenerate task files after removing subtask')
-    .action(async (options) => {
-      // Implementation; errors go through printError
     });
   ```
 

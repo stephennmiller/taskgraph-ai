@@ -15,6 +15,11 @@ import {
 	ValidateDependenciesCommand
 } from './commands/dependency.command.js';
 import { DoctorCommand } from './commands/doctor.command.js';
+import {
+	ClearSubtasksCommand,
+	RemoveSubtaskCommand,
+	RemoveTaskCommand
+} from './commands/removal.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 import { GraphCommand } from './commands/graph.command.js';
 // Import all commands
@@ -134,6 +139,24 @@ export class CommandRegistry {
 			name: 'fix-dependencies',
 			description: 'Fix invalid dependencies automatically',
 			commandClass: FixDependenciesCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'remove-task',
+			description: 'Remove one or more tasks or subtasks permanently',
+			commandClass: RemoveTaskCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'remove-subtask',
+			description: 'Remove a subtask from its parent task',
+			commandClass: RemoveSubtaskCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'clear-subtasks',
+			description: 'Clear subtasks from specified tasks',
+			commandClass: ClearSubtasksCommand as any,
 			category: 'task'
 		},
 		{

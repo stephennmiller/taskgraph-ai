@@ -11,7 +11,7 @@
 
 import {
 	ERROR_CODES,
-	TaskGraphError
+	errorWithHint
 } from '../../common/errors/taskgraph-error.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import { isArchivedReference } from '../tasks/utils/archive.js';
@@ -54,14 +54,6 @@ export interface RemoveDependencyResult {
 	message: string;
 }
 
-function failure(
-	code: string,
-	message: string,
-	hint?: string
-): TaskGraphError & { hint?: string } {
-	return Object.assign(new TaskGraphError(message, code), { hint });
-}
-
 /** `3` and `03` are task 3; `3.2` is kept as typed */
 function formatId(id: string): string {
 	const trimmed = String(id).trim();
@@ -78,7 +70,7 @@ function findTarget(
 	if (!taskId.includes('.')) {
 		const task = tasks.find((t) => String(t.id) === taskId);
 		if (!task) {
-			throw failure(
+			throw errorWithHint(
 				ERROR_CODES.TASK_NOT_FOUND,
 				`Task ${taskId} not found`,
 				LIST_HINT
@@ -90,14 +82,14 @@ function findTarget(
 	const [parentId, subtaskId] = taskId.split('.').map((n) => parseInt(n, 10));
 	const parent = tasks.find((t) => String(t.id) === String(parentId));
 	if (!parent) {
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.TASK_NOT_FOUND,
 			`Task ${parentId} not found`,
 			LIST_HINT
 		);
 	}
 	if (!parent.subtasks) {
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.VALIDATION_ERROR,
 			`Task ${parentId} has no subtasks`,
 			`Add some with \`taskgraph expand --id=${parentId}\``
@@ -107,7 +99,7 @@ function findTarget(
 		(s) => String(s.id) === String(subtaskId)
 	);
 	if (!subtask) {
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.TASK_NOT_FOUND,
 			`Subtask ${taskId} not found`,
 			LIST_HINT
@@ -163,7 +155,7 @@ export function addDependencyIn(
 ): AddDependencyResult {
 	const type = parseLinkType(linkType);
 	if (!type) {
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.VALIDATION_ERROR,
 			`"${linkType}" isn't a link type`,
 			'Use --type=blocks, related or discovered-from'
@@ -182,13 +174,13 @@ export function addDependencyIn(
 	if (!createTaskLookup(tasks)(dependencyId)) {
 		if (isArchivedReference(dependencyId, archivedIds)) {
 			const archivedId = dependencyId.split('.')[0];
-			throw failure(
+			throw errorWithHint(
 				ERROR_CODES.TASK_NOT_FOUND,
 				`Task ${archivedId} is archived, so it already counts as done`,
 				`Run \`taskgraph archive restore ${archivedId}\` to depend on it again`
 			);
 		}
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.TASK_NOT_FOUND,
 			`Task ${dependencyId} not found`,
 			LIST_HINT
@@ -202,7 +194,7 @@ export function addDependencyIn(
 	// so it can't hold the task back and can't make a loop
 	if (type !== 'blocks') {
 		if (taskId === dependencyId) {
-			throw failure(
+			throw errorWithHint(
 				ERROR_CODES.VALIDATION_ERROR,
 				`Task ${taskId} can't link to itself`
 			);
@@ -249,13 +241,13 @@ export function addDependencyIn(
 	}
 
 	if (taskId === dependencyId) {
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.VALIDATION_ERROR,
 			`Task ${taskId} can't depend on itself`
 		);
 	}
 	if (dependsOnTransitively(tasks, dependencyId, taskId)) {
-		throw failure(
+		throw errorWithHint(
 			ERROR_CODES.TASK_DEPENDENCY_ERROR,
 			`That would make a loop: task ${dependencyId} already depends on task ${taskId}`,
 			'Run `taskgraph graph` to see how they connect'

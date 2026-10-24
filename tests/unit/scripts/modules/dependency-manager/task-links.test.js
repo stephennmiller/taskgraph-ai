@@ -1,7 +1,7 @@
 /**
  * Related and discovered-from links (#200): add-task --discovered-from, and
- * the commands that must keep or clean them up (remove-task; the dependency
- * commands and move are tested in @tm/core). They
+ * the commands that must keep or clean them up (the dependency, removal and
+ * move commands are tested in @tm/core). They
  * live in metadata.taskLinks, never in dependencies. Only tasks.json I/O is
  * mocked.
  */
@@ -32,8 +32,6 @@ vi.mock('../../../../../scripts/modules/utils/update-tag-tasks.js', () => ({
 }));
 
 import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
-import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
-import removeTask from '../../../../../scripts/modules/task-manager/remove-task.js';
 
 const context = { projectRoot: '/project', tag: 'master' };
 
@@ -94,28 +92,6 @@ const writtenTasks = (tag = 'master') => {
 	return (saved[tag] ?? saved).tasks;
 };
 const find = (tasks, id) => tasks.find((t) => t.id === id);
-
-describe('remove-task cleans up links like dependencies', () => {
-	test('drops links to a removed task', async () => {
-		await removeTask('tasks.json', '1', context);
-
-		expect(find(writtenTasks(), 3).metadata).toEqual(
-			links({ 2.2: 'discovered-from' })
-		);
-	});
-
-	test("drops links to a removed task's subtasks", async () => {
-		await removeTask('tasks.json', '2', context);
-
-		expect(find(writtenTasks(), 3).metadata).toEqual(links({ 1: 'related' }));
-	});
-
-	test('remove-subtask drops links to the subtask', async () => {
-		await removeSubtask('tasks.json', '2.2', false, false, context);
-
-		expect(find(writtenTasks(), 3).metadata).toEqual(links({ 1: 'related' }));
-	});
-});
 
 describe('add-task --discovered-from', () => {
 	const manual = { title: 'Fix the flaky test', description: 'Found it' };

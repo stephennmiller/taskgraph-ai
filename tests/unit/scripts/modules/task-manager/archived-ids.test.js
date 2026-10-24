@@ -1,7 +1,6 @@
 /**
  * Archived tasks (`taskgraph archive`) keep their IDs and count as done in
- * the legacy commands: add-task, parse-prd and remove-subtask never
- * hand out an archived ID, and the MCP next_task treats dependencies on
+ * the legacy commands: add-task and parse-prd never hand out an archived ID, and the MCP next_task treats dependencies on
  * archived tasks as done. Real files in a temp dir; only logging is silenced.
  */
 import fs from 'fs';
@@ -10,8 +9,6 @@ import path from 'path';
 import { vi } from 'vitest';
 import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
 import { loadExistingTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
-import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
-import removeTask from '../../../../../scripts/modules/task-manager/remove-task.js';
 import { nextTaskDirect } from '../../../../../mcp-server/src/core/direct-functions/next-task.js';
 
 // vi.mock is hoisted above the imports: real file I/O, logging silenced
@@ -153,45 +150,7 @@ describe('archived task IDs in the legacy commands', () => {
 		});
 	});
 
-	describe('remove-subtask --convert', () => {
-		test('gives the new task an ID above the archived ones', async () => {
-			setup(
-				[
-					task(1, {
-						subtasks: [
-							{
-								id: 1,
-								title: 'Sub',
-								description: 'Sub',
-								status: 'pending',
-								dependencies: []
-							}
-						]
-					})
-				],
-				[task(4)]
-			);
-
-			const converted = await removeSubtask(tasksPath, '1.1', true, false, {
-				projectRoot: dir,
-				tag: 'master'
-			});
-
-			expect(converted.id).toBe(5);
-		});
-	});
-
 	describe('dependencies on archived tasks', () => {
-		test('remove-task keeps links to archived tasks', async () => {
-			const links = { taskLinks: { 1: 'discovered-from' } };
-			setup([task(3, { metadata: links }), task(4)], [task(1)]);
-
-			await removeTask(tasksPath, '4', { projectRoot: dir, tag: 'master' });
-			expect(readTasks()[0].metadata.taskLinks).toEqual({
-				1: 'discovered-from'
-			});
-		});
-
 		test('MCP next_task picks a task whose dependency is archived', async () => {
 			setup([task(3, { dependencies: [1] })], [task(1)]);
 

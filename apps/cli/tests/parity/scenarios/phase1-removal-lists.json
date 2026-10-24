@@ -1,0 +1,27 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["add-subtask", "--parent=4", "--title=First", "--description=One"],
+		["add-subtask", "--parent=4", "--title=Second", "--description=Two"],
+		["add-subtask", "--parent=4", "--title=Third", "--description=Three"],
+		{ "args": ["remove-subtask", "--id=4.1,4.9"], "expectExit": 1 },
+		["remove-subtask", "--id=4.1,4.2"],
+		{ "args": ["clear-subtasks", "--id=4,99"], "expectExit": 1 },
+		{
+			"mcp": "clear_subtasks",
+			"input": { "projectRoot": "<project>", "id": "3,4" }
+		},
+		["remove-task", "--id=2.1", "--yes"],
+		{
+			"mcp": "remove_task",
+			"input": { "projectRoot": "<project>", "id": "2.2,99", "confirm": true },
+			"expectError": true
+		},
+		{
+			"mcp": "remove_task",
+			"input": { "projectRoot": "<project>", "id": "2.2,3", "confirm": true }
+		},
+		["remove-task", "--id=1,99", "--yes"],
+		{ "args": ["list", "--format", "json"], "capture": "stdout" }
+	]
+}

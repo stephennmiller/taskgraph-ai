@@ -11,24 +11,10 @@
  * success message and a boxed "Next Steps" list.
  */
 
-import { sanitizeForTerminal } from '@tm/core';
+import { type ClearSubtasksResult, sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
-
-export interface ClearedTask {
-	id: number | string;
-	title: string;
-	/** How many subtasks were removed */
-	count: number;
-}
-
-export interface ClearSubtasksResult {
-	/** Tasks whose subtasks were removed, in order */
-	cleared: ClearedTask[];
-	/** Tasks that had no subtasks to remove */
-	empty: Array<{ id: number | string; title: string }>;
-}
 
 const plural = (count: number, noun: string) =>
 	`${count} ${count === 1 ? noun : `${noun}s`}`;
@@ -49,7 +35,7 @@ function describeEmpty(ids: Array<number | string>): string {
 /**
  * Format the result of clearing subtasks.
  *
- * @param result - What clearSubtasks returned
+ * @param result - What tasks.clearSubtasks returned
  * @param width - Terminal width; titles are cut to fit on one line
  */
 export function formatClearedSubtasks(

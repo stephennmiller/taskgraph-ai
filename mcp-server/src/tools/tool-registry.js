@@ -10,6 +10,7 @@ import {
 	registerAddTagTool,
 	registerAddSubtaskTool,
 	registerArchiveTasksTool,
+	registerClearSubtasksTool,
 	registerCopyTagTool,
 	registerDeleteTagTool,
 	registerDependencyAnalysisTool,
@@ -22,6 +23,8 @@ import {
 	registerListTagsTool,
 	registerMoveTaskTool,
 	registerRemoveDependencyTool,
+	registerRemoveSubtaskTool,
+	registerRemoveTaskTool,
 	registerRenameTagTool,
 	registerSetTaskStatusTool,
 	registerUseTagTool,
@@ -29,7 +32,6 @@ import {
 } from '@tm/mcp';
 import { registerAddTaskTool } from './add-task.js';
 import { registerAnalyzeProjectComplexityTool } from './analyze.js';
-import { registerClearSubtasksTool } from './clear-subtasks.js';
 import { registerComplexityReportTool } from './complexity-report.js';
 import { registerExpandAllTool } from './expand-all.js';
 import { registerExpandTaskTool } from './expand-task.js';
@@ -37,8 +39,6 @@ import { registerInitializeProjectTool } from './initialize-project.js';
 import { registerModelsTool } from './models.js';
 import { registerNextTaskTool } from './next-task.js';
 import { registerParsePRDTool } from './parse-prd.js';
-import { registerRemoveSubtaskTool } from './remove-subtask.js';
-import { registerRemoveTaskTool } from './remove-task.js';
 import { registerResearchTool } from './research.js';
 import { registerResponseLanguageTool } from './response-language.js';
 import { registerScopeDownTool } from './scope-down.js';
