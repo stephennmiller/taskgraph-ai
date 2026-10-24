@@ -37,4 +37,16 @@ describe('copyTemplateFile', () => {
 		]);
 		expect(fs.existsSync(path.join(dir, 'out'))).toBe(false);
 	});
+
+	it('reports a file it cannot write instead of throwing', () => {
+		// A link to a missing folder: not there, and writing through it fails
+		const target = path.join(dir, '.env.example');
+		fs.symlinkSync(path.join(dir, 'missing', 'x'), target);
+
+		copyTemplateFile('env.example', target, report);
+
+		expect(problems).toEqual([
+			expect.stringMatching(/^error: Couldn't write \.env\.example: ENOENT/)
+		]);
+	});
 });

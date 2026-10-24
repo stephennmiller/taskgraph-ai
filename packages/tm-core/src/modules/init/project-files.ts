@@ -101,7 +101,14 @@ export function copyTemplateFile(
 		getLogger('Init').debug(`${targetPath} already exists, skipping.`);
 		return;
 	}
-	fs.writeFileSync(targetPath, content);
+	try {
+		fs.writeFileSync(targetPath, content);
+	} catch (error) {
+		report(
+			'error',
+			`Couldn't write ${path.basename(targetPath)}: ${errorText(error)}`
+		);
+	}
 }
 
 /**
