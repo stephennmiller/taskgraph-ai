@@ -229,6 +229,16 @@ export class InitCommand extends Command {
 			onProblem: printInitProblem
 		});
 
+		// The errors printed as they happened; a summary would read as success
+		if (result.failed) {
+			printError(
+				"Init didn't finish; see the errors above",
+				'Fix the cause and run `taskgraph init` again; it keeps what is already set up'
+			);
+			process.exitCode = 1;
+			return;
+		}
+
 		// Interactive runs choose models now; --yes keeps the defaults, which
 		// the summary mentions. An import brings its models.
 		if (!options.yes && !result.imported) {

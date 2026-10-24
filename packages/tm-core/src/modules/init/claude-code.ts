@@ -90,10 +90,7 @@ export function setUpClaudeCode(
 	try {
 		setUpMcpConfig(projectRoot, report);
 	} catch (error) {
-		report(
-			'error',
-			`[Rule Transformer] MCP setup failed for claude: ${errorText(error)}`
-		);
+		report('error', `MCP setup failed: ${errorText(error)}`);
 	}
 	// Claude Code's format: `type` first in each server
 	const mcpPath = path.join(projectRoot, '.mcp.json');
@@ -179,14 +176,14 @@ function setUpMcpConfig(projectRoot: string, report: InitReport): void {
 		}
 		fs.writeFileSync(mcpPath, `${formatJSONWithTabs(config)}\n`);
 	} catch (error) {
-		report('error', `Failed to update MCP configuration: ${errorText(error)}`);
-		const backupPath = `${mcpPath}.backup-${Date.now()}`;
-		fs.copyFileSync(mcpPath, backupPath);
-		report('warn', `Saved the old file as ${backupPath}`);
+		// Recovered: the old file is kept beside the new one. If this throws,
+		// setUpClaudeCode reports the failure.
+		const backupName = `.mcp.json.backup-${Date.now()}`;
+		fs.copyFileSync(mcpPath, path.join(projectRoot, backupName));
 		fresh();
 		report(
 			'warn',
-			'Created new MCP configuration file (backup of original file was created if it existed)'
+			`Couldn't update .mcp.json: ${errorText(error)}. Saved it as ${backupName} and wrote a new one`
 		);
 	}
 }

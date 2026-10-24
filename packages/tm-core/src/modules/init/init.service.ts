@@ -101,6 +101,8 @@ export interface InitProjectResult {
 	/** What the upstream import brought, when it ran */
 	imported?: UpstreamImportResult;
 	problems: InitProblem[];
+	/** A step failed at level `error`: init didn't finish setting up */
+	failed: boolean;
 }
 
 /** What init would do, for `--dry-run` */
@@ -211,10 +213,8 @@ export function initializeProject(
 			path.join(targetDir, GITIGNORE_FILE),
 			readAsset('gitignore'),
 			storeTasksInGit,
-			(level, message) => {
-				if (level === 'error') report('error', message);
-				else log.debug(message);
-			}
+			// A failure throws, and the catch below reports it once
+			(_level, message) => log.debug(message)
 		);
 	} catch (error) {
 		report('error', `Failed to create .gitignore: ${(error as Error).message}`);
@@ -234,10 +234,19 @@ export function initializeProject(
 	// A repository unless --no-git or there already is one
 	try {
 		if (initGit && !isInsideGitWorkTree(targetDir)) {
-			execFileSync('git', ['init'], { cwd: targetDir, stdio: 'ignore' });
+			execFileSync('git', ['init'], {
+				cwd: targetDir,
+				stdio: ['ignore', 'ignore', 'pipe']
+			});
 		}
-	} catch {
-		report('warn', 'Git not available, skipping repository initialization');
+	} catch (error) {
+		const failure = error as NodeJS.ErrnoException & { stderr?: Buffer };
+		report(
+			'warn',
+			failure.code === 'ENOENT'
+				? 'Git not available, skipping repository initialization'
+				: `Couldn't start a Git repository: ${failure.stderr?.toString().trim() || failure.message}`
+		);
 	}
 
 	// Let Git merge tasks.json by task, so two branches that both add a task
@@ -301,5 +310,12 @@ export function initializeProject(
 			]
 		: [];
 
-	return { alreadySetUp, changes, hints, imported, problems };
+	return {
+		alreadySetUp,
+		changes,
+		hints,
+		imported,
+		problems,
+		failed: problems.some((problem) => problem.level === 'error')
+	};
 }

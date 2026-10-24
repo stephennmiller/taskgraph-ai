@@ -13,8 +13,8 @@ import {
 describe('setUpClaudeCode', () => {
 	let projectDir: string;
 	const problems: string[] = [];
-	const report = (_level: string, message: string) => {
-		problems.push(message);
+	const report = (level: string, message: string) => {
+		problems.push(`${level}: ${message}`);
 	};
 	const read = (file: string) =>
 		fs.readFileSync(path.join(projectDir, file), 'utf8');
@@ -133,7 +133,7 @@ describe('setUpClaudeCode', () => {
 		});
 	});
 
-	it('backs up an .mcp.json that is not valid JSON before replacing it', () => {
+	it('backs up an .mcp.json that is not valid JSON, replaces it and warns once', () => {
 		fs.writeFileSync(path.join(projectDir, '.mcp.json'), '{ broken');
 
 		setUpClaudeCode(projectDir, { mcp: true }, report);
@@ -148,7 +148,12 @@ describe('setUpClaudeCode', () => {
 		expect(Object.keys(JSON.parse(read('.mcp.json')).mcpServers)).toEqual([
 			'taskgraph-ai'
 		]);
-		expect(problems[0]).toMatch(/^Failed to update MCP configuration/);
+		// Recovered, so a warning that names the backup, not an error (#589)
+		expect(problems).toHaveLength(1);
+		expect(problems[0]).toMatch(
+			/^warn: Couldn't update \.mcp\.json: .+\. Saved it as \.mcp\.json\.backup-\d+ and wrote a new one$/
+		);
+		expect(problems[0]).toContain(backups[0]);
 	});
 });
 

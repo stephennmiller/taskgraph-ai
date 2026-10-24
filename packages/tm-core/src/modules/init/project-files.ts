@@ -88,15 +88,27 @@ export function copyTemplateFile(
 	let content: string;
 	try {
 		content = readAsset(templateName);
-	} catch {
-		report('error', `Source file not found: ${templateName}`);
+	} catch (error) {
+		report(
+			'error',
+			(error as NodeJS.ErrnoException).code === 'ENOENT'
+				? `Source file not found: ${templateName}`
+				: `Couldn't read the ${templateName} template: ${errorText(error)}`
+		);
 		return;
 	}
 	if (fs.existsSync(targetPath)) {
 		getLogger('Init').debug(`${targetPath} already exists, skipping.`);
 		return;
 	}
-	fs.writeFileSync(targetPath, content);
+	try {
+		fs.writeFileSync(targetPath, content);
+	} catch (error) {
+		report(
+			'error',
+			`Couldn't write ${path.basename(targetPath)}: ${errorText(error)}`
+		);
+	}
 }
 
 /**

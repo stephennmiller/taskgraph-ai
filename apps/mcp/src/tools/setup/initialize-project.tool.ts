@@ -122,9 +122,7 @@ export function registerInitializeProjectTool(server: FastMCP) {
 					const warnings = result.problems.map((problem) => problem.message);
 					return {
 						data: {
-							message: result.problems.some(
-								(problem) => problem.level === 'error'
-							)
+							message: result.failed
 								? 'Project initialized, but some steps failed: see warnings.'
 								: 'Project initialized successfully.',
 							next_step: NEXT_STEP,
