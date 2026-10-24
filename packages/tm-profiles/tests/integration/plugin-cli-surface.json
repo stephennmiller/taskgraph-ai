@@ -1,0 +1,364 @@
+{
+	"version": "0.58.1",
+	"commands": {
+		"add-dependency": [
+			"depends-on",
+			"file",
+			"id",
+			"tag",
+			"type"
+		],
+		"add-subtask": [
+			"dependencies",
+			"description",
+			"details",
+			"file",
+			"generate",
+			"parent",
+			"status",
+			"tag",
+			"task-id",
+			"title"
+		],
+		"add-tag": [
+			"copy-from",
+			"copy-from-current",
+			"description",
+			"file",
+			"from-branch"
+		],
+		"add-task": [
+			"ac",
+			"dependencies",
+			"description",
+			"details",
+			"discovered-from",
+			"file",
+			"priority",
+			"prompt",
+			"research",
+			"tag",
+			"title"
+		],
+		"analyze-complexity": [
+			"file",
+			"from",
+			"id",
+			"model",
+			"output",
+			"research",
+			"tag",
+			"threshold",
+			"to"
+		],
+		"archive": [
+			"dry-run",
+			"format",
+			"json",
+			"older-than",
+			"project",
+			"tag"
+		],
+		"clear-subtasks": [
+			"all",
+			"file",
+			"id",
+			"tag"
+		],
+		"completion": [
+			"install",
+			"script"
+		],
+		"complexity-report": [
+			"file",
+			"tag"
+		],
+		"copy-tag": [
+			"description",
+			"file"
+		],
+		"delete-tag": [
+			"file",
+			"yes"
+		],
+		"doctor": [
+			"json",
+			"project"
+		],
+		"expand": [
+			"all",
+			"complexity-report",
+			"file",
+			"force",
+			"id",
+			"num",
+			"prompt",
+			"research",
+			"tag"
+		],
+		"fix-dependencies": [
+			"file",
+			"tag"
+		],
+		"generate": [
+			"format",
+			"json",
+			"output",
+			"project",
+			"tag"
+		],
+		"github": [
+			"all-tags",
+			"close-orphans",
+			"dry-run",
+			"id",
+			"include-details",
+			"json",
+			"project",
+			"repo",
+			"tag",
+			"yes"
+		],
+		"graph": [
+			"format",
+			"id",
+			"json",
+			"project",
+			"tag"
+		],
+		"help": [],
+		"init": [
+			"aliases",
+			"author",
+			"claude",
+			"description",
+			"dry-run",
+			"git",
+			"git-tasks",
+			"mcp",
+			"merge-driver",
+			"name",
+			"no-aliases",
+			"no-claude",
+			"no-git",
+			"no-git-tasks",
+			"rules",
+			"skip-install",
+			"version",
+			"yes"
+		],
+		"lang": [
+			"response",
+			"setup"
+		],
+		"list": [
+			"all-tags",
+			"blocking",
+			"compact",
+			"format",
+			"json",
+			"no-header",
+			"project",
+			"ready",
+			"silent",
+			"status",
+			"tag",
+			"watch",
+			"with-subtasks"
+		],
+		"loop": [
+			"id",
+			"iterations",
+			"no-output",
+			"parallel",
+			"progress-file",
+			"project",
+			"prompt",
+			"sandbox",
+			"tag",
+			"trust",
+			"verbose"
+		],
+		"merge-driver": [],
+		"models": [
+			"azure",
+			"base",
+			"bedrock",
+			"claude-code",
+			"codex-cli",
+			"gemini-cli",
+			"lmstudio",
+			"ollama",
+			"openai-compatible",
+			"openrouter",
+			"set-fallback",
+			"set-main",
+			"set-research",
+			"setup",
+			"vertex"
+		],
+		"move": [
+			"file",
+			"from",
+			"from-tag",
+			"ignore-dependencies",
+			"tag",
+			"to",
+			"to-tag",
+			"with-dependencies"
+		],
+		"next": [
+			"claim",
+			"format",
+			"json",
+			"project",
+			"silent",
+			"tag"
+		],
+		"note": [
+			"file",
+			"project",
+			"tag"
+		],
+		"parse-prd": [
+			"answers",
+			"append",
+			"clarify",
+			"force",
+			"input",
+			"json",
+			"num-tasks",
+			"output",
+			"research",
+			"tag",
+			"yes"
+		],
+		"prime": [
+			"json",
+			"plugin-root",
+			"project",
+			"tag",
+			"unnoted-since"
+		],
+		"remove-dependency": [
+			"depends-on",
+			"file",
+			"id",
+			"tag"
+		],
+		"remove-subtask": [
+			"convert",
+			"file",
+			"generate",
+			"id",
+			"tag"
+		],
+		"remove-task": [
+			"file",
+			"id",
+			"tag",
+			"yes"
+		],
+		"rename-tag": [
+			"file"
+		],
+		"research": [
+			"context",
+			"detail",
+			"file",
+			"files",
+			"id",
+			"save",
+			"save-file",
+			"save-to",
+			"tag",
+			"tree"
+		],
+		"scope-down": [
+			"file",
+			"id",
+			"prompt",
+			"research",
+			"strength",
+			"tag"
+		],
+		"scope-up": [
+			"file",
+			"id",
+			"prompt",
+			"research",
+			"strength",
+			"tag"
+		],
+		"set-status": [
+			"check",
+			"force",
+			"format",
+			"id",
+			"json",
+			"project",
+			"silent",
+			"status",
+			"uncheck"
+		],
+		"show": [
+			"format",
+			"id",
+			"json",
+			"project",
+			"silent",
+			"status"
+		],
+		"sync-readme": [
+			"file",
+			"status",
+			"tag",
+			"with-subtasks"
+		],
+		"tags": [
+			"copy-from",
+			"description",
+			"from-branch",
+			"json",
+			"ready",
+			"show-metadata",
+			"yes"
+		],
+		"update": [
+			"file",
+			"from",
+			"prompt",
+			"research",
+			"tag"
+		],
+		"update-subtask": [
+			"file",
+			"id",
+			"prompt",
+			"research",
+			"tag"
+		],
+		"update-task": [
+			"append",
+			"file",
+			"id",
+			"prompt",
+			"research",
+			"tag"
+		],
+		"use-tag": [
+			"file"
+		],
+		"validate-dependencies": [
+			"file",
+			"tag"
+		],
+		"why": [
+			"format",
+			"id",
+			"json",
+			"project",
+			"tag"
+		]
+	}
+}
