@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildRepoSummary, getRepoSummary } from './repo-summary.js';
 
 const git = (cwd: string, ...args: string[]) =>
@@ -25,9 +25,12 @@ describe('repo summary', () => {
 
 	beforeEach(() => {
 		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-repo-summary-'));
+		// Keep git from finding a repository above the temp dir (#549)
+		vi.stubEnv('GIT_CEILING_DIRECTORIES', path.dirname(root));
 	});
 
 	afterEach(() => {
+		vi.unstubAllEnvs();
 		fs.rmSync(root, { recursive: true, force: true });
 	});
 
