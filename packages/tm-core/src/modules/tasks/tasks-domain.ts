@@ -52,6 +52,14 @@ import {
 	UpdateSubtaskService
 } from './services/update-subtask.service.js';
 import {
+	UpdateTaskService,
+	type UpdateFromInput,
+	type UpdateFromResult,
+	type UpdateHooks,
+	type UpdateTaskInput,
+	type UpdateTaskResult
+} from './services/update-task.service.js';
+import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
 	type GenerateTaskFilesResult
@@ -605,6 +613,33 @@ export class TasksDomain {
 			this.taskService,
 			this.configManager
 		).saveResearch(history, target, tag);
+	}
+
+	/**
+	 * Rewrite a top-level task with the AI from `prompt`, or with `append`
+	 * add the AI's text to its details; `metadata` alone saves without a
+	 * call. A done task is skipped. The AI call runs without the file lock;
+	 * the save applies only what the rewrite changed.
+	 */
+	async updateWithPrompt(
+		input: UpdateTaskInput,
+		hooks?: UpdateHooks
+	): Promise<UpdateTaskResult> {
+		return new UpdateTaskService(
+			this.taskService,
+			this.configManager
+		).updateTask(input, hooks);
+	}
+
+	/** Rewrite every unfinished task from `from` on with the AI, in one call */
+	async updateFrom(
+		input: UpdateFromInput,
+		hooks?: UpdateHooks
+	): Promise<UpdateFromResult> {
+		return new UpdateTaskService(
+			this.taskService,
+			this.configManager
+		).updateFrom(input, hooks);
 	}
 
 	/**

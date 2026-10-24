@@ -35,3 +35,4 @@ export {
 	registerRemoveSubtaskTool,
 	registerRemoveTaskTool
 } from './removal.tool.js';
+export { registerUpdateTaskTool, registerUpdateTool } from './update-task.tool.js';

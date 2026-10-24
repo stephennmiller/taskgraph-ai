@@ -132,9 +132,9 @@ These functions are the bread and butter of the application, allowing for the cr
 -   **`addSubtask(parentId, existingTaskId, newSubtaskData)`**: Adds a subtask to a parent task. It can either convert an existing task into a subtask or create a new subtask from scratch.
 -   **`removeTask(taskIds)`**: Removes one or more tasks or subtasks.
 -   **`removeSubtask(subtaskId, convertToTask)`**: Removes a subtask from its parent. It can optionally convert the subtask into a standalone task.
--   **`updateTaskById(taskId, prompt)`**: Updates a task's information based on a prompt.
+-   **`tmCore.tasks.updateWithPrompt({ id, prompt, append })`**: Rewrites a task from a prompt with AI, or with `append` adds the AI's notes to its details.
 -   **`tmCore.tasks.updateSubtask({ id, prompt, research })`**: Has the AI write notes for a subtask ("5.2") and appends them to its details, timestamped.
--   **`updateTasks(fromId, prompt)`**: Updates multiple tasks starting from a specific ID based on a new context.
+-   **`tmCore.tasks.updateFrom({ from, prompt })`**: Rewrites every unfinished task from a specific ID on, based on a new context.
 -   **`moveTask(sourceId, destinationId)`**: Moves a task or subtask to a new position.
 -   **`clearSubtasks(taskIds)`**: Clears all subtasks from one or more tasks.
 

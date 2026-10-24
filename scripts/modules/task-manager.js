@@ -6,14 +6,6 @@
 import findNextTask from './task-manager/find-next-task.js';
 import parsePRD from './task-manager/parse-prd/index.js';
 import setResponseLanguage from './task-manager/response-language.js';
-import updateTaskById from './task-manager/update-task-by-id.js';
-import updateTasks from './task-manager/update-tasks.js';
 
 // Export task manager functions
-export {
-	parsePRD,
-	updateTasks,
-	updateTaskById,
-	findNextTask,
-	setResponseLanguage
-};
+export { parsePRD, findNextTask, setResponseLanguage };

@@ -36,6 +36,8 @@ import {
 	registerScopeUpTool,
 	registerSetTaskStatusTool,
 	registerUpdateSubtaskTool,
+	registerUpdateTaskTool,
+	registerUpdateTool,
 	registerUseTagTool,
 	registerValidateDependenciesTool
 } from '@tm/mcp';
@@ -44,8 +46,6 @@ import { registerModelsTool } from './models.js';
 import { registerNextTaskTool } from './next-task.js';
 import { registerParsePRDTool } from './parse-prd.js';
 import { registerResponseLanguageTool } from './response-language.js';
-import { registerUpdateTool } from './update.js';
-import { registerUpdateTaskTool } from './update-task.js';
 
 /**
  * Comprehensive tool registry mapping tool names to their registration functions

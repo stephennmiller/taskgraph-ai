@@ -41,6 +41,10 @@ import { PrimeCommand } from './commands/prime.command.js';
 import { SetStatusCommand } from './commands/set-status.command.js';
 import { ShowCommand } from './commands/show.command.js';
 import { TagsCommand } from './commands/tags.command.js';
+import {
+	UpdateCommand,
+	UpdateTaskCommand
+} from './commands/update-task.command.js';
 import { WhyCommand } from './commands/why.command.js';
 
 /**
@@ -154,6 +158,19 @@ export class CommandRegistry {
 			description:
 				'Update a subtask by appending additional timestamped information',
 			commandClass: UpdateSubtaskCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'update-task',
+			description: 'Update a single specific task by ID with new information',
+			commandClass: UpdateTaskCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'update',
+			description:
+				'Update multiple tasks with ID >= "from" based on new information',
+			commandClass: UpdateCommand as any,
 			category: 'task'
 		},
 		{
