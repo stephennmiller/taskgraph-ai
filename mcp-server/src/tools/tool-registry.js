@@ -33,6 +33,7 @@ import {
 	registerRenameTagTool,
 	registerResearchTool,
 	registerSetTaskStatusTool,
+	registerUpdateSubtaskTool,
 	registerUseTagTool,
 	registerValidateDependenciesTool
 } from '@tm/mcp';
@@ -44,7 +45,6 @@ import { registerResponseLanguageTool } from './response-language.js';
 import { registerScopeDownTool } from './scope-down.js';
 import { registerScopeUpTool } from './scope-up.js';
 import { registerUpdateTool } from './update.js';
-import { registerUpdateSubtaskTool } from './update-subtask.js';
 import { registerUpdateTaskTool } from './update-task.js';
 
 /**

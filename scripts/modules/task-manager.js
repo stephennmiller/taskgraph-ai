@@ -12,7 +12,6 @@ import {
 	validateStrength
 } from './task-manager/scope-adjustment.js';
 import taskExists from './task-manager/task-exists.js';
-import updateSubtaskById from './task-manager/update-subtask-by-id.js';
 import updateTaskById from './task-manager/update-task-by-id.js';
 import updateTasks from './task-manager/update-tasks.js';
 import { findTaskById } from './utils.js';
@@ -22,7 +21,6 @@ export {
 	parsePRD,
 	updateTasks,
 	updateTaskById,
-	updateSubtaskById,
 	findNextTask,
 	findTaskById,
 	taskExists,

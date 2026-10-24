@@ -40,6 +40,12 @@ import {
 	type ResearchSaved
 } from './services/research.service.js';
 import {
+	type UpdateSubtaskHooks,
+	type UpdateSubtaskInput,
+	type UpdateSubtaskResult,
+	UpdateSubtaskService
+} from './services/update-subtask.service.js';
+import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
 	type GenerateTaskFilesResult
@@ -532,6 +538,22 @@ export class TasksDomain {
 			input,
 			hooks
 		);
+	}
+
+	/**
+	 * Have the AI write notes for a subtask ("5.2") from a prompt, appended
+	 * to its details as a timestamped block; `metadata` alone skips the AI.
+	 * The AI call runs without the file lock; the save changes only that
+	 * subtask, and an empty answer saves no notes.
+	 */
+	async updateSubtask(
+		input: UpdateSubtaskInput,
+		hooks?: UpdateSubtaskHooks
+	): Promise<UpdateSubtaskResult> {
+		return new UpdateSubtaskService(
+			this.taskService,
+			this.configManager
+		).updateSubtask(input, hooks);
 	}
 
 	/**

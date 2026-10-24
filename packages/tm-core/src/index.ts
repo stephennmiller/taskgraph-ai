@@ -407,3 +407,11 @@ export type {
 	ComplexityAnalysisItem,
 	ComplexityReportFile
 } from './modules/tasks/services/analyze-complexity.service.js';
+
+// ========== Update subtask ==========
+
+export type {
+	UpdateSubtaskHooks,
+	UpdateSubtaskInput,
+	UpdateSubtaskResult
+} from './modules/tasks/services/update-subtask.service.js';

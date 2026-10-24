@@ -9,6 +9,7 @@ import { AddSubtaskCommand } from './commands/add-subtask.command.js';
 import { AddTaskCommand } from './commands/add-task.command.js';
 import { AnalyzeComplexityCommand } from './commands/analyze-complexity.command.js';
 import { ResearchCommand } from './commands/research.command.js';
+import { UpdateSubtaskCommand } from './commands/update-subtask.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { ComplexityReportCommand } from './commands/complexity-report.command.js';
@@ -133,6 +134,13 @@ export class CommandRegistry {
 			name: 'research',
 			description: 'Perform AI-powered research queries with project context',
 			commandClass: ResearchCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'update-subtask',
+			description:
+				'Update a subtask by appending additional timestamped information',
+			commandClass: UpdateSubtaskCommand as any,
 			category: 'task'
 		},
 		{
