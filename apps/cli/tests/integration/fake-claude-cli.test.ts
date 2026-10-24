@@ -177,7 +177,8 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 	});
 
 	it('parse-prd prints a failed call once, with its reason (#388)', () => {
-		install([{ error: 'boom' }]);
+		// The reason is model/CLI text: an escape in it must not reach the terminal
+		install([{ error: 'boom\u001b]0;pwned\u0007' }]);
 		fs.writeFileSync(path.join(project, 'prd.md'), '# Product\nA todo tool.\n');
 
 		const res = taskgraph('parse-prd', 'prd.md', '--force');
@@ -185,6 +186,7 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		expect(res.status).toBe(1);
 		const output = res.stdout + res.stderr;
 		expect(res.stderr).toContain("✗ Couldn't generate tasks: boom");
+		expect(res.stderr).not.toContain('\u001b]0;');
 		expect(output.match(/Couldn't generate tasks/g)).toHaveLength(1);
 		expect(output).not.toContain('Error parsing PRD');
 		expect(readTasks()).toEqual([]);
