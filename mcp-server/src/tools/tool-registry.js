@@ -25,6 +25,7 @@ import {
 	registerGetTaskTool,
 	registerGithubPushTool,
 	registerGithubStatusTool,
+	registerInitializeProjectTool,
 	registerListTagsTool,
 	registerModelsTool,
 	registerMoveTaskTool,
@@ -45,7 +46,6 @@ import {
 	registerUseTagTool,
 	registerValidateDependenciesTool
 } from '@tm/mcp';
-import { registerInitializeProjectTool } from './initialize-project.js';
 
 /**
  * Comprehensive tool registry mapping tool names to their registration functions
