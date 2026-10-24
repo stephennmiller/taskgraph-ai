@@ -763,10 +763,11 @@
         "description": "Two production dependencies declare Node >=22.19.0 while engines allows 22.13; raise engines or hold the packages back.",
         "details": "GitHub issue #478: https://github.com/stephennmiller/taskgraph-ai/issues/478\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:52:37.003Z"
       },
       {
         "id": "58",
@@ -890,9 +891,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:45:33.705Z",
+      "lastModified": "2026-10-24T12:52:37.003Z",
       "taskCount": 67,
-      "completedCount": 53,
+      "completedCount": 54,
       "tags": [
         "master"
       ]
