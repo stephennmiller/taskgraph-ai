@@ -94,7 +94,10 @@ export class TasksDomain {
 		await this.taskService.initialize();
 
 		// TagService needs storage - get it from TaskService AFTER initialization
-		this.tagService = new TagService(this.taskService.getStorage());
+		this.tagService = new TagService(this.taskService.getStorage(), {
+			projectRoot: this.projectRoot,
+			getActiveTag: () => this.taskService.getActiveTag()
+		});
 
 		// TaskFileGeneratorService needs storage and config for active tag
 		this.taskFileGenerator = new TaskFileGeneratorService(
@@ -513,7 +516,7 @@ export class TasksDomain {
 	// ========== Tag Management ==========
 
 	/**
-	 * Create a new tag, with optional task copying
+	 * Create a new tag, empty or with a copy of another tag's tasks
 	 */
 	async createTag(name: string, options?: CreateTagOptions) {
 		return this.tagService.createTag(name, options);
@@ -531,16 +534,23 @@ export class TasksDomain {
 	}
 
 	/**
-	 * Delete an existing tag
-	 * Cannot delete master tag
+	 * Delete a tag and its tasks; master becomes current if it was.
+	 * Cannot delete master.
 	 */
 	async deleteTag(name: string, options?: DeleteTagOptions) {
 		return this.tagService.deleteTag(name, options);
 	}
 
 	/**
-	 * Rename an existing tag
-	 * Cannot rename master tag
+	 * Make a tag the current one, and find its next task
+	 */
+	async useTag(name: string) {
+		const result = await this.tagService.useTag(name);
+		return { ...result, nextTask: await this.getNext(name) };
+	}
+
+	/**
+	 * Rename a tag, keeping it current if it was. Cannot rename master.
 	 */
 	async renameTag(oldName: string, newName: string) {
 		return this.tagService.renameTag(oldName, newName);
@@ -562,6 +572,14 @@ export class TasksDomain {
 		if (!options.ready) return result;
 		const tags = result.tags.filter((tag) => tag.readyTasks > 0);
 		return { ...result, tags, totalTags: tags.length };
+	}
+
+	/**
+	 * The tags to list, current first, every field filled in (see TagService)
+	 * @param options.ready - Only tags with at least one task ready to start
+	 */
+	async listTags(options: { ready?: boolean } = {}) {
+		return this.tagService.listTags(options);
 	}
 
 	// ========== Watch ==========

@@ -5,6 +5,7 @@
 
 export * from './tools/github/index.js';
 export * from './tools/tasks/index.js';
+export * from './tools/tags/index.js';
 // TODO: Re-enable when TypeScript dependency tools are implemented
 // export * from './tools/dependencies/index.js';
 export * from './shared/utils.js';

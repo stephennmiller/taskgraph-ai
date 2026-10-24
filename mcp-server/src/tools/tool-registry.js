@@ -6,29 +6,31 @@
 // Import TypeScript tools from apps/mcp
 import {
 	registerAddNoteTool,
+	registerAddTagTool,
 	registerArchiveTasksTool,
+	registerCopyTagTool,
+	registerDeleteTagTool,
 	registerDependencyAnalysisTool,
 	registerGenerateTool,
 	registerGetTasksTool,
 	registerGetTaskTool,
 	registerGithubPushTool,
 	registerGithubStatusTool,
-	registerSetTaskStatusTool
+	registerListTagsTool,
+	registerRenameTagTool,
+	registerSetTaskStatusTool,
+	registerUseTagTool
 } from '@tm/mcp';
 import { registerAddDependencyTool } from './add-dependency.js';
 import { registerAddSubtaskTool } from './add-subtask.js';
-import { registerAddTagTool } from './add-tag.js';
 import { registerAddTaskTool } from './add-task.js';
 import { registerAnalyzeProjectComplexityTool } from './analyze.js';
 import { registerClearSubtasksTool } from './clear-subtasks.js';
 import { registerComplexityReportTool } from './complexity-report.js';
-import { registerCopyTagTool } from './copy-tag.js';
-import { registerDeleteTagTool } from './delete-tag.js';
 import { registerExpandAllTool } from './expand-all.js';
 import { registerExpandTaskTool } from './expand-task.js';
 import { registerFixDependenciesTool } from './fix-dependencies.js';
 import { registerInitializeProjectTool } from './initialize-project.js';
-import { registerListTagsTool } from './list-tags.js';
 import { registerModelsTool } from './models.js';
 import { registerMoveTaskTool } from './move-task.js';
 import { registerNextTaskTool } from './next-task.js';
@@ -36,7 +38,6 @@ import { registerParsePRDTool } from './parse-prd.js';
 import { registerRemoveDependencyTool } from './remove-dependency.js';
 import { registerRemoveSubtaskTool } from './remove-subtask.js';
 import { registerRemoveTaskTool } from './remove-task.js';
-import { registerRenameTagTool } from './rename-tag.js';
 import { registerResearchTool } from './research.js';
 import { registerResponseLanguageTool } from './response-language.js';
 import { registerScopeDownTool } from './scope-down.js';
@@ -44,7 +45,6 @@ import { registerScopeUpTool } from './scope-up.js';
 import { registerUpdateTool } from './update.js';
 import { registerUpdateSubtaskTool } from './update-subtask.js';
 import { registerUpdateTaskTool } from './update-task.js';
-import { registerUseTagTool } from './use-tag.js';
 import { registerValidateDependenciesTool } from './validate-dependencies.js';
 
 /**
