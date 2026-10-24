@@ -1,7 +1,5 @@
 /**
  * @fileoverview Dependencies domain
- * Dependency validation still lives in scripts/modules/dependency-manager.js
- * until it is migrated here.
  */
 
 export {
@@ -81,3 +79,19 @@ export {
 	type MergeNewTaskDependenciesOptions,
 	type NewTaskDependencies
 } from './new-task-dependencies.js';
+export {
+	countTasksAndDependencies,
+	fixTaskDependencies,
+	validateTaskDependencies,
+	type DependencyCheckResult,
+	type DependencyCounts,
+	type DependencyFix,
+	type DependencyFixResult,
+	type DependencyIssue
+} from './dependency-check.js';
+export {
+	addDependencyIn,
+	removeDependencyIn,
+	type AddDependencyResult,
+	type RemoveDependencyResult
+} from './dependency-edit.js';

@@ -309,7 +309,6 @@ For AI-powered commands that benefit from project context, follow the research c
   import { CONFIG, log, readJSON } from './utils.js';
   import { displayBanner, displayHelp } from './ui.js';
   import { parsePRD, listTasks } from './task-manager.js';
-  import { addDependency } from './dependency-manager.js';
   ```
 
 ## Subtask Management Commands

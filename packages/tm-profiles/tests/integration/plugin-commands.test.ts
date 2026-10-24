@@ -202,6 +202,8 @@ describe('taskgraph flags used in command bodies', () => {
 		expect(flagsByCommand.get('update-task')?.has('append')).toBe(true);
 		expect(flagsByCommand.get('update-subtask')?.has('prompt')).toBe(true);
 		expect(flagsByCommand.get('update-subtask')?.has('append')).toBe(false);
+		// Imported together with three other classes from one file
+		expect(flagsByCommand.get('add-dependency')?.has('depends-on')).toBe(true);
 	});
 
 	it('flags a flag the command does not declare', () => {

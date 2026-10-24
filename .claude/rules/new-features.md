@@ -9,7 +9,7 @@ paths:
 
 - **Identify Feature Type** (See `architecture.md` for module details):
   - **Data Manipulation**: Features that create, read, update, or delete tasks belong in [`task-manager.js`](../../scripts/modules/task-manager.js). Follow guidelines in `tasks.md`.
-  - **Dependency Management**: Features that handle task relationships belong in [`dependency-manager.js`](../../scripts/modules/dependency-manager.js). Follow guidelines in `dependencies.md`.
+  - **Dependency Management**: Features that handle task relationships belong in [`@tm/core` `modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/). Follow guidelines in `dependencies.md`.
   - **User Interface**: Output is formatted by pure functions in `apps/cli/src/ui/formatters/` and printed by the command. Follow `ui.md`. Don't add new display functions to the legacy [`ui.js`](../../scripts/modules/ui.js).
   - **AI Integration**: Features that use AI models belong in [`ai-services.js`](../../scripts/modules/ai-services.js).
   - **Cross-Cutting**: Features that don't fit one category may need components in multiple modules

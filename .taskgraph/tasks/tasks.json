@@ -214,7 +214,7 @@
             "title": "Dependencies: add, remove, validate, fix",
             "description": "Move dependency-manager.js into @tm/core, including #214; decide the typing in #290 first.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 14,
             "parentId": "14"

@@ -597,6 +597,73 @@ export class TaskService {
 	}
 
 	/**
+	 * Change a tag's tasks, as stored, in one locked write (see
+	 * IStorage.modifyTasks). `change` also gets the tag's archived task IDs.
+	 * @returns The change's result and the tag it ran on
+	 */
+	async modifyTasks<R>(
+		change: (
+			tasks: Task[],
+			archivedIds: ReadonlySet<string>
+		) => { tasks: Task[] | null; result: R },
+		tag?: string
+	): Promise<{ result: R; tag: string }> {
+		if (!this.storage) {
+			throw new TaskGraphError(
+				'Storage not initialized',
+				ERROR_CODES.STORAGE_ERROR
+			);
+		}
+		if (!this.initialized) {
+			await this.initialize();
+		}
+		const resolvedTag = await this.resolveTag(tag);
+		const archivedIds = await this.storage.loadArchivedTaskIds(resolvedTag);
+		if (!(await this.tagInFile(resolvedTag))) {
+			// Never written: storage reads a missing master as the first tag, and
+			// saving that would copy it
+			return { result: change([], archivedIds).result, tag: resolvedTag };
+		}
+		const result = await this.storage.modifyTasks(
+			(tasks) => change(tasks, archivedIds),
+			resolvedTag
+		);
+		return { result, tag: resolvedTag };
+	}
+
+	/**
+	 * Whether tasks.json has the tag. tagExists also accepts a missing master,
+	 * which storage reads as the first tag; the dependency commands read it as
+	 * empty instead, as the legacy commands did.
+	 */
+	private async tagInFile(tag: string): Promise<boolean> {
+		const tags = await this.storage.getAllTags();
+		return tags.length === 0 || tags.includes(tag);
+	}
+
+	/**
+	 * A tag's tasks as stored (IDs not normalized) and its archived task IDs,
+	 * read without taking the write lock
+	 */
+	async loadStoredTasks(tag?: string): Promise<{
+		tasks: Task[];
+		archivedIds: ReadonlySet<string>;
+		tag: string;
+	}> {
+		if (!this.initialized) {
+			await this.initialize();
+		}
+		const resolvedTag = await this.resolveTag(tag);
+		return {
+			tasks: (await this.tagInFile(resolvedTag))
+				? await this.storage.loadTasks(resolvedTag)
+				: [],
+			archivedIds: await this.storage.loadArchivedTaskIds(resolvedTag),
+			tag: resolvedTag
+		};
+	}
+
+	/**
 	 * Update task status - delegates to storage layer which handles storage-specific logic
 	 */
 	async updateTaskStatus(

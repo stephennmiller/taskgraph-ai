@@ -7,6 +7,12 @@ import type { Command } from 'commander';
 
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
+import {
+	AddDependencyCommand,
+	FixDependenciesCommand,
+	RemoveDependencyCommand,
+	ValidateDependenciesCommand
+} from './commands/dependency.command.js';
 import { DoctorCommand } from './commands/doctor.command.js';
 import { GenerateCommand } from './commands/generate.command.js';
 import { GraphCommand } from './commands/graph.command.js';
@@ -90,6 +96,30 @@ export class CommandRegistry {
 			name: 'note',
 			description: 'Log a progress note on a task, as written (no AI)',
 			commandClass: NoteCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'add-dependency',
+			description: 'Add a dependency to a task',
+			commandClass: AddDependencyCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'remove-dependency',
+			description: 'Remove a dependency or a non-blocking link from a task',
+			commandClass: RemoveDependencyCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'validate-dependencies',
+			description: 'Identify invalid dependencies without fixing them',
+			commandClass: ValidateDependenciesCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'fix-dependencies',
+			description: 'Fix invalid dependencies automatically',
+			commandClass: FixDependenciesCommand as any,
 			category: 'task'
 		},
 		{

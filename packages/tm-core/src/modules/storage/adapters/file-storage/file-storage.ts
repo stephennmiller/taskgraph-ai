@@ -540,6 +540,14 @@ export class FileStorage implements IStorage {
 		);
 	}
 
+	/** See IStorage.modifyTasks */
+	async modifyTasks<R>(
+		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
+		tag?: string
+	): Promise<R> {
+		return this.mutateTasks(tag, change);
+	}
+
 	/**
 	 * Delete a task
 	 */

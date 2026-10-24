@@ -42,11 +42,6 @@ vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	}
 }));
 
-vi.doMock('../../../../../scripts/modules/dependency-manager.js', () => ({
-	validateAndFixDependencies: vi.fn(),
-	validateTaskDependencies: vi.fn()
-}));
-
 // Mock @tm/core to control task data in tests
 const mockTasksList = vi.fn();
 const { resolveSubtaskDependency } = await import(
@@ -76,9 +71,6 @@ const {
 } = await import('../../../../../scripts/modules/utils.js');
 const { displayTaskList } = await import(
 	'../../../../../scripts/modules/ui.js'
-);
-const { validateAndFixDependencies } = await import(
-	'../../../../../scripts/modules/dependency-manager.js'
 );
 
 // Import the module under test
@@ -169,7 +161,6 @@ describe('listTasks', () => {
 			tasks: defaultSampleTasks.tasks
 		});
 		readComplexityReport.mockReturnValue(null);
-		validateAndFixDependencies.mockImplementation(() => {});
 		displayTaskList.mockImplementation(() => {});
 		addComplexityToTask.mockImplementation(() => {});
 	});
@@ -385,9 +376,7 @@ describe('listTasks', () => {
 		// Act
 		await listTasks(tasksPath, null, null, false, 'json', { tag: 'master' });
 
-		// Assert
-		// Note: validateAndFixDependencies is not called by listTasks function
-		// This test just verifies the function runs without error
+		// Assert: the function runs without error
 	});
 
 	test('should pass correct options to displayTaskList', async () => {

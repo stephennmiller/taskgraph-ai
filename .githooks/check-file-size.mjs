@@ -40,7 +40,6 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/integration/mcp-server/direct-functions.test.js',
 	'tests/integration/move-task-cross-tag.integration.test.js',
 	'tests/unit/config-manager.test.js',
-	'tests/unit/dependency-manager.test.js',
 	'tests/unit/utils.test.js',
 	'tests/unit/scripts/modules/task-manager/complexity-report-tag-isolation.test.js',
 	'tests/unit/scripts/modules/task-manager/expand-task.test.js',
@@ -48,7 +47,6 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
 	// Legacy task-manager sources that were already over the limit. Splitting
 	// them is its own issue; until then a small edit to one must be committable.
-	'scripts/modules/dependency-manager.js',
 	'scripts/modules/task-manager/move-task.js',
 	'scripts/modules/task-manager/add-task.js',
 	'scripts/modules/task-manager/scope-adjustment.js',

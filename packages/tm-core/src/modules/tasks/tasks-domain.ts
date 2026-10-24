@@ -5,6 +5,7 @@
 
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import { TaskService } from './services/task-service.js';
+import { DependencyService } from './services/dependency.service.js';
 import { TagService } from './services/tag.service.js';
 import {
 	TaskFileGeneratorService,
@@ -46,7 +47,11 @@ import {
 	analyzeDependencies,
 	buildDependencyTree,
 	explainBlockers,
+	type AddDependencyResult,
 	type DependencyAnalysis,
+	type DependencyCheckResult,
+	type DependencyFixResult,
+	type RemoveDependencyResult,
 	type BlockerExplanation,
 	type DependencyTree
 } from '../dependencies/index.js';
@@ -80,6 +85,7 @@ export interface ArchiveResult {
 export class TasksDomain {
 	private taskService: TaskService;
 	private tagService!: TagService;
+	private dependencyService: DependencyService;
 	private taskFileGenerator!: TaskFileGeneratorService;
 	private projectRoot: string;
 	private configManager: ConfigManager;
@@ -88,6 +94,10 @@ export class TasksDomain {
 		this.projectRoot = configManager.getProjectRoot();
 		this.configManager = configManager;
 		this.taskService = new TaskService(configManager);
+		this.dependencyService = new DependencyService(
+			this.taskService,
+			this.projectRoot
+		);
 	}
 
 	async initialize(): Promise<void> {
@@ -242,6 +252,36 @@ export class TasksDomain {
 	): Promise<BlockerExplanation> {
 		const tasks = await this.taskService.getDependencyView(options.tag);
 		return explainBlockers(tasks, String(taskId));
+	}
+
+	// ========== Dependencies (see DependencyService) ==========
+
+	async addDependency(
+		taskId: string,
+		dependsOn: string,
+		options: { tag?: string; type?: string } = {}
+	): Promise<AddDependencyResult & { tag: string }> {
+		return this.dependencyService.add(taskId, dependsOn, options);
+	}
+
+	async removeDependency(
+		taskId: string,
+		dependsOn: string,
+		options: { tag?: string } = {}
+	): Promise<RemoveDependencyResult & { tag: string }> {
+		return this.dependencyService.remove(taskId, dependsOn, options);
+	}
+
+	async validateDependencies(
+		options: { tag?: string } = {}
+	): Promise<DependencyCheckResult> {
+		return this.dependencyService.validate(options);
+	}
+
+	async fixDependencies(
+		options: { tag?: string } = {}
+	): Promise<DependencyFixResult> {
+		return this.dependencyService.fix(options);
 	}
 
 	/**

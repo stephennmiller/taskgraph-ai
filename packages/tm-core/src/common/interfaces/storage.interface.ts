@@ -147,6 +147,18 @@ export interface IStorage {
 	): Promise<Task | Subtask>;
 
 	/**
+	 * Read-modify-write a tag's tasks, as stored, in one locked write
+	 * @param change - Gets the tasks (it may change them in place); returns
+	 *   the tasks to save, or `tasks: null` to leave the file untouched, and a
+	 *   result. A throw leaves the file unchanged.
+	 * @returns The change's result
+	 */
+	modifyTasks<R>(
+		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
+		tag?: string
+	): Promise<R>;
+
+	/**
 	 * Pick the next task nobody has started and set it in-progress, recording
 	 * the claim in its metadata, all in one locked write
 	 * @param claimant - Recorded as `metadata.claimedBy`
@@ -443,6 +455,10 @@ export abstract class BaseStorage implements IStorage {
 		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
 		tag?: string
 	): Promise<Task | Subtask>;
+	abstract modifyTasks<R>(
+		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
+		tag?: string
+	): Promise<R>;
 
 	abstract claimNextTask(
 		claimant: string,
