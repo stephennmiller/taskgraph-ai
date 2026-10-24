@@ -6,6 +6,7 @@
  */
 
 import fs from 'node:fs';
+import path from 'node:path';
 import {
 	type PrdDelta,
 	PRD_FILE,
@@ -115,7 +116,9 @@ export function registerParsePrdTool(server: FastMCP) {
 					context,
 					'Error parsing PRD',
 					async () => {
-						const prdPath = resolveInsideRoot(args.projectRoot, args.input);
+						resolveInsideRoot(args.projectRoot, args.input);
+						// Not the real path: the PRD's path in the tasks is relative to tm-core's root
+						const prdPath = path.resolve(args.projectRoot, args.input);
 						if (!fs.existsSync(prdPath)) {
 							throw new Error(
 								`Input PRD file not found at resolved path: ${prdPath}`

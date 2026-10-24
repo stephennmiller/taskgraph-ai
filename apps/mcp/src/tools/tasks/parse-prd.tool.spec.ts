@@ -115,6 +115,22 @@ describe('parse_prd', () => {
 		});
 	});
 
+	it('hands tm-core the PRD under the project root as given, not its real path', async () => {
+		// macOS /tmp is a symlink: a realpath here would not sit under tm-core's root
+		const link = `${project}-link`;
+		fs.symlinkSync(project, link);
+		try {
+			await tool().execute({ projectRoot: link, input: 'prd.md' }, ctx);
+		} finally {
+			fs.rmSync(link);
+		}
+
+		expect(tasks.parsePrd).toHaveBeenCalledWith(
+			expect.objectContaining({ prdPath: path.join(link, 'prd.md') }),
+			expect.any(Object)
+		);
+	});
+
 	it('loads tm-core for each call, so models and language saved since the last one apply', async () => {
 		await tool().execute({ projectRoot: project, input: prd }, ctx);
 		await tool().execute({ projectRoot: project, input: prd }, ctx);

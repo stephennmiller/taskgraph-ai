@@ -223,6 +223,19 @@ describe('tasks.parsePrd', () => {
 		expect(vars).toMatchObject({ numTasks: 6 });
 	});
 
+	it('reads the 10 an old release saved next to enableProxy as unset (#336)', async () => {
+		await p.close();
+		p = await createPrdProject({
+			global: { defaultNumTasks: 10, enableProxy: false }
+		});
+		const loadPrompt = vi.spyOn(getPromptManager(), 'loadPrompt');
+
+		await parse();
+
+		const vars = loadPrompt.mock.calls.find((c) => c[0] === 'parse-prd')?.[1];
+		expect(vars).toMatchObject({ numTasks: 0 });
+	});
+
 	describe('append', () => {
 		it('keeps a task added and a status changed during the AI call, and numbers after them', async () => {
 			p.write({ master: { tasks: EXISTING.slice(0, 1), metadata: {} } });

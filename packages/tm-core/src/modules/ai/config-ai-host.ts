@@ -14,6 +14,7 @@ import {
 } from '../../common/constants/providers.js';
 import { getLogger } from '../../common/logger/index.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
+import { dropOldNumTasksDefault } from '../config/services/config-file.js';
 import type { AiServiceHost } from './ai-service.js';
 import { ClaudeCodeSettingsSchema } from './claude-code-settings.js';
 import supportedModels from './supported-models.json' with { type: 'json' };
@@ -194,6 +195,8 @@ export class AiConfig {
 
 	/** How many tasks parse-prd asks for; 0 (sized to the PRD) by default */
 	get defaultNumTasks(): number {
+		// The 10 an old release saved with enableProxy isn't a count the user chose (#336)
+		if (dropOldNumTasksDefault(this.raw)) return 0;
 		const count = parseInt(String(this.raw.global?.defaultNumTasks), 10);
 		return Number.isNaN(count) ? 0 : count;
 	}

@@ -27,6 +27,7 @@ import {
 	type AiTelemetryData
 } from '../../ai/ai-service.js';
 import { AiConfig } from '../../ai/config-ai-host.js';
+import { estimateTokens } from '../../ai/project-context.js';
 import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { COMMAND_SCHEMAS } from '../../ai/schemas/registry.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
@@ -390,8 +391,8 @@ export class ParsePrdService {
 		return done(generated.length, saved.length, {
 			telemetryData: response.telemetryData,
 			tagInfo: response.tagInfo,
-			estimatedInputTokens: Math.ceil(
-				(prompts.systemPrompt + prompts.userPrompt).length / 4
+			estimatedInputTokens: estimateTokens(
+				prompts.systemPrompt + prompts.userPrompt
 			)
 		});
 	}
