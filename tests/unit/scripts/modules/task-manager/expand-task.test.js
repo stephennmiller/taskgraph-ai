@@ -144,7 +144,8 @@ vi.doMock('../../../../../scripts/modules/utils/fuzzyTaskSearch.js', () => ({
 	})
 }));
 
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn().mockReturnValue({
 			systemPrompt: 'Mocked system prompt',
@@ -870,9 +871,7 @@ describe('expandTask', () => {
 	describe('Complexity Report Integration (Tag-Specific)', () => {
 		test('should use tag-specific complexity report when available', async () => {
 			// Arrange
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt: 'Generate exactly 5 subtasks for complexity report',
 				userPrompt:
@@ -1257,9 +1256,7 @@ describe('expandTask', () => {
 
 		test('should handle additional context correctly', async () => {
 			// Arrange
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt: 'Mocked system prompt',
 				userPrompt: 'Mocked user prompt with context'
@@ -1386,9 +1383,7 @@ describe('expandTask', () => {
 
 		test('should use dynamic prompting when numSubtasks is 0', async () => {
 			// Mock getPromptManager to return realistic prompt with dynamic content
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into an appropriate number of specific subtasks that can be implemented one by one.',
@@ -1414,9 +1409,7 @@ describe('expandTask', () => {
 
 		test('should use specific count prompting when numSubtasks is positive', async () => {
 			// Mock getPromptManager to return realistic prompt with specific count
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 5 specific subtasks that can be implemented one by one.',
@@ -1442,9 +1435,7 @@ describe('expandTask', () => {
 			getDefaultSubtasks.mockReturnValue(4);
 
 			// Mock getPromptManager to return realistic prompt with default count
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 4 specific subtasks that can be implemented one by one.',
@@ -1468,9 +1459,7 @@ describe('expandTask', () => {
 			getDefaultSubtasks.mockReturnValue(6);
 
 			// Mock getPromptManager to return realistic prompt with default count
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 6 specific subtasks that can be implemented one by one.',
@@ -1494,9 +1483,7 @@ describe('expandTask', () => {
 			getDefaultSubtasks.mockReturnValue(7);
 
 			// Mock getPromptManager to return realistic prompt with default count
-			const { getPromptManager } = await import(
-				'../../../../../scripts/modules/prompt-manager.js'
-			);
+			const { getPromptManager } = await import('@tm/core');
 			const mockLoadPrompt = vi.fn().mockReturnValue({
 				systemPrompt:
 					'You are an AI assistant helping with task breakdown for software development. You need to break down a high-level task into 7 specific subtasks that can be implemented one by one.',

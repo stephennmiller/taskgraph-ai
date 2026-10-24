@@ -5,7 +5,7 @@ import { zodSchema } from 'ai';
 import { describe, expect, it } from 'vitest';
 import { prdResponseSchema } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-config.js';
 import { processTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
-import { PromptManager } from '../../../../../scripts/modules/prompt-manager.js';
+import { PromptManager } from '@tm/core';
 
 const aiTask = (id, extra = {}) => ({
 	id,

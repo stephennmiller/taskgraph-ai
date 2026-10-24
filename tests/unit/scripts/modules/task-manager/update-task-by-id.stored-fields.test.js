@@ -88,8 +88,9 @@ vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
 	}))
 }));
 
-// Mock prompt-manager module
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+// Mock the prompt manager
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn((promptId, params) => ({
 			systemPrompt:

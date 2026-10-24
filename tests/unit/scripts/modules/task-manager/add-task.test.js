@@ -108,7 +108,8 @@ vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
 	})
 }));
 
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn().mockResolvedValue({
 			systemPrompt: 'Mocked system prompt',

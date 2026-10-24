@@ -83,8 +83,9 @@ vi.doMock('../../../../../scripts/modules/bridge-utils.js', () => ({
 	}))
 }));
 
-// Mock prompt-manager module
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+// Mock the prompt manager
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn((promptId, params) => ({
 			systemPrompt:
@@ -129,9 +130,7 @@ const { readJSON, log } = await import(
 const { createBridgeLogger } = await import(
 	'../../../../../scripts/modules/bridge-utils.js'
 );
-const { getPromptManager } = await import(
-	'../../../../../scripts/modules/prompt-manager.js'
-);
+const { getPromptManager } = await import('@tm/core');
 const { ContextGatherer } = await import(
 	'../../../../../scripts/modules/utils/contextGatherer.js'
 );

@@ -1,6 +1,6 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
-	"$id": "https://github.com/stephennmiller/taskgraph-ai/blob/main/src/prompts/schemas/variant.schema.json",
+	"$id": "https://github.com/stephennmiller/taskgraph-ai/blob/main/packages/tm-core/src/modules/ai/prompts/schemas/variant.schema.json",
 	"version": "1.0.0",
 	"title": "TaskGraph Prompt Variant",
 	"description": "Schema for prompt template variants",

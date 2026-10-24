@@ -5,14 +5,14 @@ import {
 	orderGeneratedSubtasks,
 	reconcileDependencySources,
 	removeAllSubtasks,
-	setGeneratedCriteria
+	setGeneratedCriteria,
+	COMMAND_SCHEMAS,
+	getPromptManager
 } from '@tm/core';
 import fs from 'fs';
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { createBridgeLogger } from '../bridge-utils.js';
 import { getDefaultSubtasks, hasCodebaseAnalysis } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAddedSubtasks,
 	displayAiUsageSummary,

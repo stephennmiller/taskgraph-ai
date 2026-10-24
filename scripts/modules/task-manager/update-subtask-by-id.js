@@ -1,10 +1,13 @@
 import { ui } from '@tm/cli';
-import { stripTerminalControls, withoutReservedMetadata } from '@tm/core';
+import {
+	stripTerminalControls,
+	withoutReservedMetadata,
+	getPromptManager
+} from '@tm/core';
 import fs from 'fs';
 import path from 'path';
 import { generateTextService } from '../ai-services-unified.js';
 import { getDebugFlag, hasCodebaseAnalysis } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
 	startLoadingIndicator,

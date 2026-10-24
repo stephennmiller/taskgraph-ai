@@ -3,7 +3,7 @@
  * and sizes the task list to the PRD unless a count is given (#253)
  */
 import { describe, expect, it } from 'vitest';
-import { PromptManager } from '../../../../../scripts/modules/prompt-manager.js';
+import { PromptManager } from './prompt-manager.js';
 
 const params = {
 	nextId: 1,

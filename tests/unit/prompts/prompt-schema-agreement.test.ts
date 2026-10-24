@@ -5,9 +5,8 @@
  * validation (issue #309: expand-task offered a "metadata" object).
  */
 import { zodSchema } from 'ai';
-import { PromptManager } from '../../../scripts/modules/prompt-manager.js';
+import { COMMAND_SCHEMAS, PromptManager } from '@tm/core';
 import { prdResponseSchema } from '../../../scripts/modules/task-manager/parse-prd/parse-prd-config.js';
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 
 const task = { id: 1, title: 'Login', description: 'Log in', details: 'Form' };
 

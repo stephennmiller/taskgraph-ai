@@ -322,3 +322,12 @@ export {
 	TaskScenarios,
 	type TasksFile
 } from './testing/index.js';
+
+// ========== AI prompts and response schemas ==========
+
+export {
+	PromptManager,
+	getPromptManager
+} from './modules/ai/prompts/prompt-manager.js';
+export { COMMAND_SCHEMAS } from './modules/ai/schemas/registry.js';
+export { GeneratedAcceptanceCriteriaSchema } from './modules/ai/schemas/base-schemas.js';

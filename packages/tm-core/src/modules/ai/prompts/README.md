@@ -5,7 +5,7 @@ This directory contains the centralized prompt templates for all AI-powered feat
 ## Overview
 
 The prompt management system provides:
-- **Centralized Storage**: All prompts in one location (`/src/prompts`)
+- **Centralized Storage**: All prompts in one location (`packages/tm-core/src/modules/ai/prompts`)
 - **JSON Schema Validation**: Comprehensive validation using AJV with detailed error reporting
 - **Version Control**: Track changes to prompts over time
 - **Variant Support**: Different prompts for different contexts (research mode, complexity levels, etc.)
@@ -15,7 +15,7 @@ The prompt management system provides:
 ## Directory Structure
 
 ```
-src/prompts/
+packages/tm-core/src/modules/ai/prompts/
 ├── README.md                # This file
 ├── schemas/                 # JSON schemas for validation
 │   ├── README.md           # Schema documentation
@@ -34,7 +34,7 @@ src/prompts/
 
 ## Schema Validation
 
-All prompt templates are validated against JSON schemas located in `/src/prompts/schemas/`. The validation system:
+All prompt templates are validated against JSON schemas located in `packages/tm-core/src/modules/ai/prompts/schemas/`. The validation system:
 
 - **Structural Validation**: Ensures required fields and proper nesting
 - **Parameter Type Checking**: Validates parameter types, patterns, and ranges
@@ -57,7 +57,7 @@ All prompt templates are validated against JSON schemas located in `/src/prompts
 3. **File Watching**: Changes to templates trigger automatic validation
 
 ### Creating New Prompts
-1. Create a new `.json` file in `/src/prompts/`
+1. Create a new `.json` file in `packages/tm-core/src/modules/ai/prompts/`
 2. Follow the schema structure (see Template Structure section)
 3. Define parameters with proper types and validation
 4. Create system and user prompts with template variables
@@ -375,7 +375,7 @@ Conditions are JavaScript expressions evaluated with parameter values as context
 
 ## PromptManager Module
 
-The PromptManager is implemented in `scripts/modules/prompt-manager.js` and provides:
+The PromptManager is implemented in `packages/tm-core/src/modules/ai/prompts/prompt-manager.ts` and provides:
 - **Template loading and caching**: Templates are loaded once and cached for performance
 - **Schema validation**: Comprehensive validation using AJV with detailed error reporting
 - **Variable substitution**: Handlebars-like syntax for dynamic content
@@ -393,7 +393,7 @@ The PromptManager is implemented in `scripts/modules/prompt-manager.js` and prov
 
 ### Basic Usage
 ```javascript
-import { getPromptManager } from '../prompt-manager.js';
+import { getPromptManager } from '@tm/core';
 
 const promptManager = getPromptManager();
 const { systemPrompt, userPrompt, metadata } = promptManager.loadPrompt('add-task', {

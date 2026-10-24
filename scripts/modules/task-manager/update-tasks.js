@@ -3,13 +3,13 @@ import {
 	assignMetadata,
 	cleanGeneratedSubtaskDependencies,
 	keepStoredFields,
-	reconcileDependencySources
+	reconcileDependencySources,
+	COMMAND_SCHEMAS,
+	getPromptManager
 } from '@tm/core';
 import path from 'path';
-import { COMMAND_SCHEMAS } from '../../../src/schemas/registry.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { hasCodebaseAnalysis } from '../config-manager.js';
-import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
 	startLoadingIndicator,

@@ -3,12 +3,12 @@
  * Core research functionality for AI-powered queries with project context
  */
 
+import { getPromptManager } from '@tm/core';
 import fs from 'fs';
 import path from 'path';
 import { ui } from '@tm/cli';
 import chalk from 'chalk';
 import { generateTextService } from '../ai-services-unified.js';
-import { getPromptManager } from '../prompt-manager.js';
 import {
 	displayAiUsageSummary,
 	startLoadingIndicator,

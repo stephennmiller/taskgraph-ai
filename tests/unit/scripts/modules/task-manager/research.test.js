@@ -111,7 +111,8 @@ vi.doMock('../../../../../scripts/modules/ui.js', () => ({
 	stopLoadingIndicator: vi.fn()
 }));
 
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn().mockResolvedValue({
 			systemPrompt: 'System prompt',

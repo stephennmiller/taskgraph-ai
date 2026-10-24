@@ -205,7 +205,10 @@ vi.doMock('../../../../../scripts/modules/task-manager/models.js', () => ({
 	}))
 }));
 
-vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
+vi.doMock('@tm/core', async () => ({
+	...(await vi.importActual('@tm/core')),
+	// fs is mocked, so there is no archive file: no task IDs are reserved
+	readArchivedIdsSync: vi.fn(() => ({ ids: new Set(), highestId: 0 })),
 	getPromptManager: vi.fn().mockReturnValue({
 		loadPrompt: vi.fn().mockImplementation((templateName, params) => {
 			// Create dynamic mock prompts based on the parameters
@@ -227,12 +230,6 @@ vi.doMock('../../../../../scripts/modules/prompt-manager.js', () => ({
 }));
 
 // Mock fs module
-// fs is mocked, so there is no archive file: no task IDs are reserved
-vi.doMock('@tm/core', async () => ({
-	...(await vi.importActual('@tm/core')),
-	readArchivedIdsSync: vi.fn(() => ({ ids: new Set(), highestId: 0 }))
-}));
-
 vi.doMock('fs', () => ({
 	default: {
 		readFileSync: vi.fn(),

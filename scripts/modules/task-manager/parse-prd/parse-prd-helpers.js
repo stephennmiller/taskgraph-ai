@@ -18,12 +18,12 @@ import {
 	withPrdSnapshot,
 	getOwnKey,
 	setOwnKey,
-	stampTasksFileSchemaVersion
+	stampTasksFileSchemaVersion,
+	getPromptManager
 } from '@tm/core';
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-import { getPromptManager } from '../../prompt-manager.js';
 import { displayAiUsageSummary } from '../../ui.js';
 import { ensureTagMetadata, withFileLockSync } from '../../utils.js';
 import { prdResponseSchema } from './parse-prd-config.js';
