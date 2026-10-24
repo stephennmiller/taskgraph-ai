@@ -38,7 +38,7 @@ When implementing a new direct function in `mcp-server/src/core/direct-functions
      ```javascript
      // Correct parameter handling in direct function
      async function generateTaskFilesDirect(args, log) {
-       const tasksPath = findTasksJsonPath(args, log);
+       const tasksPath = findTasksPath(args, log);
        const outputDir = args.output || path.dirname(tasksPath);
        
        try {
@@ -124,7 +124,7 @@ When implementing a new direct function in `mcp-server/src/core/direct-functions
       ```javascript
       export async function coreWrapperDirect(args, log, context = {}) {
         const { session } = context;
-        const tasksPath = findTasksJsonPath(args, log);
+        const tasksPath = findTasksPath(args, log);
         const logWrapper = { /* ... */ };
 
         enableSilentMode(); // Ensure silence for direct console output
@@ -210,7 +210,7 @@ import {
     withNormalizedProjectRoot // <<< Import HOF
 } from '@tm/mcp';
 import { yourDirectFunction } from '../core/taskgraph-core.js';
-import { findTasksJsonPath } from '../core/utils/path-utils.js'; // If needed
+import { findTasksPath } from '../core/utils/path-utils.js'; // If needed
 
 export function registerYourTool(server) {
     server.addTool({
@@ -229,7 +229,7 @@ export function registerYourTool(server) {
                 log.info(`Executing your_tool with normalized root: ${projectRoot}`);
 
                 // Resolve paths using the normalized projectRoot
-                let tasksPath = findTasksJsonPath({ projectRoot, file: args.file }, log);
+                let tasksPath = findTasksPath({ projectRoot, file: args.file }, log);
 
                 // Call direct function, passing normalized projectRoot if needed by direct func
                 const result = await yourDirectFunction(
@@ -251,7 +251,7 @@ export function registerYourTool(server) {
 }
 ```
 
-By using this HOF, the core logic within the `execute` method and any downstream functions (like `findTasksJsonPath` or direct functions) can reliably expect `args.projectRoot` to be a clean, absolute path suitable for the server environment.
+By using this HOF, the core logic within the `execute` method and any downstream functions (like `findTasksPath` or direct functions) can reliably expect `args.projectRoot` to be a clean, absolute path suitable for the server environment.
 
 ### Project Initialization Tool
 
@@ -319,7 +319,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 - **Purpose**: Bridge MCP tools and core TaskGraph modules (`scripts/modules/*`). Handle AI interactions if applicable.
 - **Responsibilities**:
   - Receive `args` (including `projectRoot`), `log`, and optionally `{ session }` context.
-  - Find `tasks.json` using `findTasksJsonPath`.
+  - Find `tasks.json` using `findTasksPath`.
   - Validate arguments.
   - **Call Core Logic**: Invoke function from `scripts/modules/*`.
     - Pass `outputFormat: 'json'` if applicable.
@@ -334,7 +334,7 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 
 - **Prefer Direct Function Calls**: MCP tools should always call `*Direct` wrappers instead of running the CLI.
 - **Standardized Execution Flow**: Follow the pattern: MCP Tool (`withNormalizedProjectRoot` resolves `projectRoot`) -> `*Direct` Function -> Core Logic / AI Logic.
-- **Path Resolution via Direct Functions**: The `*Direct` function is responsible for finding the exact `tasks.json` path using `findTasksJsonPath`, relying on the `projectRoot` passed in `args`.
+- **Path Resolution via Direct Functions**: The `*Direct` function is responsible for finding the exact `tasks.json` path using `findTasksPath`, relying on the `projectRoot` passed in `args`.
 - **AI Logic in Core Modules**: AI interactions (prompt building, calling unified service) reside within the core logic functions (`scripts/modules/*`), not direct functions.
 - **Silent Mode in Direct Functions**: Wrap *core function* calls (from `scripts/modules`) with `enableSilentMode()` and `disableSilentMode()` if they produce console output not handled by `outputFormat`. Do not wrap AI calls.
 - **Long-Running Work Runs Inline**: Tools await their `*Direct` function and return the finished result. There is no background job queue or operation-status tool.
@@ -361,9 +361,9 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 2. **Create Direct Function File in `mcp-server/src/core/direct-functions/`**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case** naming.
-    - Import necessary core functions, `findTasksJsonPath`, and silent mode utilities.
+    - Import necessary core functions, `findTasksPath`, and silent mode utilities.
     - Implement `async function yourCommandDirect(args, log, context = {})` using **camelCase** with `Direct` suffix. **Remember `context` should only contain `{ session }` if needed (for AI keys/config).**
-        - **Path Resolution**: Obtain `tasksPath` using `findTasksJsonPath(args, log)`.
+        - **Path Resolution**: Obtain `tasksPath` using `findTasksPath(args, log)`.
         - Parse other `args` and perform necessary validation.
         - **AI commands**: Don't create AI clients or build prompts here. The core function calls the unified AI service; pass it `session` (and `mcpLog`) so it can read API keys from `session.env`.
         - **Call Core Logic**:
@@ -374,7 +374,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         - ❌ **DON'T**: Call `reportProgress` yourself; forward it from `context` to core logic if the tool passed it.
     - Export the wrapper function.
 
-3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function and add it to the `directFunctions` map.
+3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function.
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
@@ -406,7 +406,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
         3.  Pass this result object to the `handleApiResult` utility from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)) as `handleApiResult({ result, log, errorPrefix, projectRoot })` for standardized response formatting and error handling.
         4.  Return the formatted response object provided by `handleApiResult`.
 - **Centralized Utilities** (See also: `utilities.md`):
-    - Use `findTasksJsonPath` (in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
+    - Use `findTasksPath` (in [`core/utils/path-utils.js`](../../mcp-server/src/core/utils/path-utils.js)) *within direct function wrappers* to locate the `tasks.json` file consistently.
     - **Leverage MCP Utilities**: `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)) exports the helpers tools use:
         - `withNormalizedProjectRoot`: Wraps `execute`; resolves and normalizes `args.projectRoot` (see above).
         - `withToolContext`: Does the same and adds a `tmCore` instance to the context, which then holds only `log`, `session` and `tmCore` (no `reportProgress`).
@@ -496,16 +496,6 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
   - Direct Function: `listTasksDirect`
   - Tool Registration: `registerListTasksTool`
   - MCP Tool Name: `list_tasks`
-
-- **Mapping**:
-  - The `directFunctions` map in `taskgraph-core.js` maps the core function name (in camelCase) to its direct implementation:
-    ```javascript
-    export const directFunctions = {
-      list: listTasksDirect,
-      next: nextTaskDirect,
-      // Add more functions as implemented
-    };
-    ```
 
 ## Telemetry Integration
 

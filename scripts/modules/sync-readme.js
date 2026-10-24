@@ -182,5 +182,3 @@ export async function syncTasksToReadme(projectRoot = null, options = {}) {
 		return false;
 	}
 }
-
-export default syncTasksToReadme;

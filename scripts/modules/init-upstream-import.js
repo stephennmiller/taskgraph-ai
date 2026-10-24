@@ -15,7 +15,7 @@ import {
 import { isSilentMode } from './utils.js';
 
 /** Whether init was asked to import the upstream project */
-export const wantsUpstreamImport = (options = {}) =>
+const wantsUpstreamImport = (options = {}) =>
 	Boolean(options[UPSTREAM_IMPORT_OPTION]);
 
 /**

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ComplexityAnalysisItemSchema = z
+const ComplexityAnalysisItemSchema = z
 	.object({
 		taskId: z.number().int().positive(),
 		taskTitle: z.string(),

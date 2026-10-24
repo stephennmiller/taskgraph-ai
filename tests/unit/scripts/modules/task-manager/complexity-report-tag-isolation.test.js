@@ -42,7 +42,6 @@ vi.doMock('../../../../../src/utils/path-utils.js', () => ({
 	findConfigPath: vi.fn(),
 	findPRDPath: vi.fn(() => '/mock/project/root/.taskgraph/docs/PRD.md'),
 	findTasksPath: vi.fn(() => '/mock/project/root/.taskgraph/tasks/tasks.json'),
-	findProjectRoot: vi.fn(() => '/mock/project/root'),
 	normalizeProjectRoot: vi.fn((root) => root)
 }));
 
@@ -422,11 +421,7 @@ vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => {
 	}
 
 	return {
-		default: MockContextGatherer,
-		ContextGatherer: MockContextGatherer,
-		createContextGatherer: vi.fn(
-			(projectRoot, tag) => new MockContextGatherer(projectRoot, tag)
-		)
+		ContextGatherer: MockContextGatherer
 	};
 });
 

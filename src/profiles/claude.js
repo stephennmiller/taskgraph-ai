@@ -170,8 +170,4 @@ export const claudeProfile = createProfile({
 });
 
 // Export lifecycle functions separately to avoid naming conflicts
-export {
-	onAddRulesProfile,
-	onPostConvertRulesProfile,
-	transformToClaudeFormat
-};
+export { onPostConvertRulesProfile, transformToClaudeFormat };

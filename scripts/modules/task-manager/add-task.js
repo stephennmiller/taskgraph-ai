@@ -27,7 +27,7 @@ import {
 	startLoadingIndicator,
 	stopLoadingIndicator
 } from '../ui.js';
-import ContextGatherer from '../utils/contextGatherer.js';
+import { ContextGatherer } from '../utils/contextGatherer.js';
 import {
 	log as consoleLog,
 	ensureTagMetadata,

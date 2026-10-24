@@ -35,7 +35,7 @@ vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 }));
 
 vi.doMock('../../../../../scripts/modules/utils/contextGatherer.js', () => ({
-	default: vi.fn().mockImplementation(function () {
+	ContextGatherer: vi.fn().mockImplementation(function () {
 		return {
 			gather: vi.fn().mockResolvedValue({
 				contextSummary: '',

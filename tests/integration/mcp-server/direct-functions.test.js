@@ -21,7 +21,6 @@ const mockReadFileSync = vi.fn();
 const mockUnlinkSync = vi.fn();
 const mockMkdirSync = vi.fn();
 
-const mockFindTasksJsonPath = vi.fn().mockReturnValue(testTasksPath);
 const mockReadJSON = vi.fn();
 const mockWriteJSON = vi.fn();
 const mockEnableSilentMode = vi.fn();
@@ -138,11 +137,6 @@ vi.doMock('../../../scripts/modules/utils.js', () => ({
 	}
 }));
 
-// Mock path-utils with findTasksJsonPath
-vi.doMock('../../../mcp-server/src/core/utils/path-utils.js', () => ({
-	findTasksJsonPath: mockFindTasksJsonPath
-}));
-
 // Mock the AI module to prevent any real API calls
 vi.doMock('../../../scripts/modules/ai-services-unified.js', () => ({
 	// Mock the functions exported by ai-services-unified.js as needed
@@ -197,15 +191,6 @@ describe('MCP Server Direct Functions', () => {
 		mockTaskExists.mockImplementation((tasks, taskId) => {
 			const id = parseInt(taskId, 10);
 			return tasks.some((t) => t.id === id);
-		});
-
-		// Default findTasksJsonPath implementation
-		mockFindTasksJsonPath.mockImplementation((args) => {
-			// Mock returning null for non-existent files
-			if (args.file === 'non-existent-file.json') {
-				return null;
-			}
-			return testTasksPath;
 		});
 	});
 

@@ -178,7 +178,7 @@ Each MCP tool call runs in its own silent scope (`scopeToolExecution` in `mcp-se
    export async function someDirectFunction(args, log) {
      try {
        // Argument preparation
-       const tasksPath = findTasksJsonPath(args, log);
+       const tasksPath = findTasksPath(args, log);
        const someArg = args.someArg;
        
        // Enable silent mode to prevent console logs
@@ -280,9 +280,9 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 2.  **Create Direct Function File in `mcp-server/src/core/direct-functions/`:**
     - Create a new file (e.g., `your-command.js`) using **kebab-case** naming.
-    - Import necessary core functions, **`findTasksJsonPath` from `../utils/path-utils.js`**, and **silent mode utilities**.
+    - Import necessary core functions, **`findTasksPath` from `../utils/path-utils.js`**, and **silent mode utilities**.
     - Implement `async function yourCommandDirect(args, log)` using **camelCase** with `Direct` suffix:
-        - **Path Resolution**: Obtain the tasks file path using `const tasksPath = findTasksJsonPath(args, log);`. This relies on `args.projectRoot` being provided.
+        - **Path Resolution**: Obtain the tasks file path using `const tasksPath = findTasksPath(args, log);`. This relies on `args.projectRoot` being provided.
         - Parse other `args` and perform necessary validation.
         - **Implement Silent Mode**: Wrap core function calls with `enableSilentMode()` and `disableSilentMode()`.
         - Call core logic.

@@ -13,7 +13,7 @@ import { getCurrentTag, isSilentMode, log } from '../../utils.js';
 // ============================================================================
 
 // Define the Zod schema for a SINGLE task object
-export const prdSingleTaskSchema = z.object({
+const prdSingleTaskSchema = z.object({
 	id: z.number(),
 	title: z.string().min(1),
 	description: z.string().min(1),

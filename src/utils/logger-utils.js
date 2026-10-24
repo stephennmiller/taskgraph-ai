@@ -10,7 +10,7 @@ import { log as utilLog } from '../../scripts/modules/utils.js';
  * This provides a consistent logger interface across different parts of the application
  * @returns {Object} A logger object with standard logging methods (info, warn, error, debug, success)
  */
-export function createStandardLogger() {
+function createStandardLogger() {
 	return {
 		info: (msg, ...args) => utilLog('info', msg, ...args),
 		warn: (msg, ...args) => utilLog('warn', msg, ...args),

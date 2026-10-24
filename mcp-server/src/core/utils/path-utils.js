@@ -4,7 +4,6 @@ import { isInsideRoot } from '../../../../src/ai-providers/claude-code-path-guar
 import {
 	findComplexityReportPath as coreFindComplexityReportPath,
 	findPRDPath as coreFindPrdPath,
-	findProjectRoot as coreFindProjectRoot,
 	findTasksPath as coreFindTasksPath,
 	resolveComplexityReportOutputPath as coreResolveComplexityReportOutputPath,
 	normalizeProjectRoot
@@ -46,17 +45,6 @@ const silentLogger = {
 	debug: () => {},
 	success: () => {}
 };
-
-/**
- * Find PRD file with MCP support
- * @param {string} [explicitPath] - Explicit path to PRD file (highest priority)
- * @param {Object} [args] - Arguments object for context
- * @param {Object} [log] - Logger object to prevent console logging
- * @returns {string|null} - Resolved path to PRD file or null if not found
- */
-export function findPrdPath(explicitPath, args = null, log = silentLogger) {
-	return coreFindPrdPath(explicitPath, args, log);
-}
 
 /**
  * Resolve tasks.json path from arguments
@@ -211,15 +199,6 @@ export function resolveProjectPath(relativePath, args) {
 	return path.resolve(projectRoot, relativePath);
 }
 
-/**
- * Find project root using core utility
- * @param {string} [startDir] - Directory to start searching from
- * @returns {string|null} - Project root path or null if not found
- */
-export function findProjectRoot(startDir) {
-	return coreFindProjectRoot(startDir);
-}
-
 // MAIN EXPORTS FOR MCP TOOLS - these are the functions MCP tools should use
 
 /**
@@ -256,18 +235,3 @@ export function resolveComplexityReportOutputPath(
 ) {
 	return coreResolveComplexityReportOutputPath(explicitPath, args, log);
 }
-
-/**
- * Find PRD path - primary MCP function
- * @param {string} [explicitPath] - Explicit path to PRD file
- * @param {Object} [args] - Arguments object for context (not used in current implementation)
- * @param {Object} [log] - Logger object to prevent console logging
- * @returns {string|null} - Resolved path to PRD file or null if not found
- */
-export function findPRDPath(explicitPath, args = null, log = silentLogger) {
-	return findPrdPath(explicitPath, args, log);
-}
-
-// Legacy aliases for backward compatibility - DEPRECATED
-export const findTasksJsonPath = findTasksPath;
-export const findComplexityReportJsonPath = findComplexityReportPath;

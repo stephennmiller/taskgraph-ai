@@ -66,7 +66,10 @@ const LEGACY_OVERSIZED = new Set([
 	'src/prompts/README.md',
 	// Manual prompt test harness (~15,000 tokens on main); a stale parameter
 	// removal must be committable until it is split.
-	'tests/manual/prompts/prompt-test.js'
+	'tests/manual/prompts/prompt-test.js',
+	// Over the limit on main; removing its unused exports (#373) must be
+	// committable until it is split.
+	'scripts/modules/utils/contextGatherer.js'
 ]);
 
 export const isIgnored = (path) =>

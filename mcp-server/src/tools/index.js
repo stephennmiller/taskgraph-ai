@@ -7,9 +7,7 @@ import logger from '../logger.js';
 import { scopeToolExecution } from './silent-scope.js';
 import {
 	coreTools,
-	getAvailableTools,
 	getToolRegistration,
-	isValidTool,
 	standardTools,
 	toolRegistry
 } from './tool-registry.js';
@@ -227,16 +225,3 @@ export function registerTaskGraphTools(rawServer, toolMode = 'core') {
 		};
 	}
 }
-
-export {
-	coreTools,
-	getAvailableTools,
-	getToolRegistration,
-	isValidTool,
-	standardTools,
-	toolRegistry
-};
-
-export default {
-	registerTaskGraphTools
-};

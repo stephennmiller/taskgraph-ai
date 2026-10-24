@@ -48,7 +48,7 @@ export function normalizeProjectRoot(projectRoot) {
  * @param {string} startDir - Directory to start searching from (defaults to process.cwd())
  * @returns {string} - Project root path (falls back to current directory if no markers found)
  */
-export function findProjectRoot(startDir = process.cwd()) {
+function findProjectRoot(startDir = process.cwd()) {
 	return findProjectRootCore(startDir);
 }
 
@@ -225,55 +225,6 @@ export function findComplexityReportPath(
 
 	logger.warn?.(`No complexity report found in project: ${projectRoot}`);
 	return null;
-}
-
-/**
- * Resolve output path for tasks.json (create if needed)
- * @param {string|null} explicitPath - Explicit output path provided by user
- * @param {Object|null} args - Args object for MCP context (optional)
- * @param {Object|null} log - Logger object (optional)
- * @returns {string} - Resolved output path for tasks.json
- */
-export function resolveTasksOutputPath(
-	explicitPath = null,
-	args = null,
-	log = null
-) {
-	const logger = getLoggerOrDefault(log);
-
-	// 1. If explicit path is provided, use it
-	if (explicitPath) {
-		// Use original cwd if available (set by dev.js), otherwise current cwd
-		const cwdForResolution =
-			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
-
-		const resolvedPath = path.isAbsolute(explicitPath)
-			? explicitPath
-			: path.resolve(cwdForResolution, explicitPath);
-
-		logger.info?.(`Using explicit output path: ${resolvedPath}`);
-		return resolvedPath;
-	}
-
-	// 2. Try to get project root from args (MCP) or find it
-	const rawProjectRoot =
-		args?.projectRoot || findProjectRoot() || process.cwd();
-
-	// 3. Normalize project root to prevent double .taskgraph paths
-	const projectRoot = normalizeProjectRoot(rawProjectRoot);
-
-	// 4. Use new .taskgraph structure by default
-	const defaultPath = path.join(projectRoot, TASKGRAPH_TASKS_FILE);
-	logger.info?.(`Using default output path: ${defaultPath}`);
-
-	// Ensure the directory exists
-	const outputDir = path.dirname(defaultPath);
-	if (!fs.existsSync(outputDir)) {
-		logger.info?.(`Creating tasks directory: ${outputDir}`);
-		fs.mkdirSync(outputDir, { recursive: true });
-	}
-
-	return defaultPath;
 }
 
 /**
