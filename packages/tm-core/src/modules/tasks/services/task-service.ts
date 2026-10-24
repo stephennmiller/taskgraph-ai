@@ -26,6 +26,7 @@ import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
 import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
+import { TASK_STATUSES } from '../../../common/constants/index.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
 
@@ -609,6 +610,16 @@ export class TaskService {
 		newStatus: TaskStatus;
 		taskId: string;
 	}> {
+		// TaskStatus is compile-time only; MCP, GitHub sync and JS callers pass raw strings
+		if (!TASK_STATUSES.includes(newStatus)) {
+			throw new TaskGraphError(
+				// JSON.stringify escapes control characters a raw string could carry
+				`${JSON.stringify(newStatus)} isn't a status. Use one of: ${TASK_STATUSES.join(', ')}`,
+				ERROR_CODES.VALIDATION_ERROR,
+				{ taskId: String(taskId), newStatus }
+			);
+		}
+
 		// Ensure we have storage
 		if (!this.storage) {
 			throw new TaskGraphError(
