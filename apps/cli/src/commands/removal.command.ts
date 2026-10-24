@@ -6,13 +6,21 @@
 
 import { splitIds, type TaskRemovalPreview, type TmCore } from '@tm/core';
 import chalk from 'chalk';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { formatClearedSubtasks } from '../ui/formatters/clear-subtasks-formatters.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { formatTasksRemoved } from '../ui/formatters/remove-task-formatters.js';
 import { formatSubtaskRemoved } from '../ui/formatters/subtask-change-formatters.js';
 import { theme } from '../ui/theme.js';
-import { describeError, printError } from '../utils/error-handler.js';
+import {
+	describeError,
+	displayError,
+	printError
+} from '../utils/error-handler.js';
+import {
+	legacyFileOption,
+	otherTasksFileError
+} from '../utils/tasks-file-option.js';
 import { withTmCore } from '../utils/with-tm-core.js';
 
 interface RemovalOptions {
@@ -22,6 +30,7 @@ interface RemovalOptions {
 	yes?: boolean;
 	tag?: string;
 	project?: string;
+	file?: string;
 }
 
 /** The options every removal command takes */
@@ -32,7 +41,17 @@ function removalCommand(name: string, description: string): Command {
 		.option(
 			'-p, --project <path>',
 			'Project root directory (auto-detected if not provided)'
-		);
+		)
+		.addOption(legacyFileOption())
+		.hook('preAction', (cmd) => {
+			const { file, project } = cmd.opts<RemovalOptions>();
+			const fileError = otherTasksFileError(
+				file,
+				'remove-task, remove-subtask and clear-subtasks',
+				project
+			);
+			if (fileError) displayError(fileError);
+		});
 }
 
 /** The items, the subtasks that go with them and the dependents */
@@ -180,6 +199,8 @@ export class RemoveSubtaskCommand {
 				'-c, --convert',
 				'Convert the subtask to a standalone task instead of deleting it'
 			)
+			// Task files are written by `generate`; the old flag already did nothing
+			.addOption(new Option('--generate').hideHelp())
 			.action((options: RemovalOptions) => {
 				const ids = splitIds(options.id ?? '');
 				if (ids.length === 0) {

@@ -12,7 +12,7 @@ vi.mock('@tm/core', async (importOriginal) => ({
 	createTmCore: vi.fn()
 }));
 
-import { createTmCore } from '@tm/core';
+import { TASKGRAPH_TASKS_FILE, createTmCore } from '@tm/core';
 import {
 	ClearSubtasksCommand,
 	RemoveSubtaskCommand,
@@ -153,6 +153,37 @@ describe('remove-subtask', () => {
 		});
 		expect(output('log')).toContain('Removed subtask 2.1');
 		expect(output('log')).toContain('Subtask 2.2 is now task 7');
+	});
+
+	it("still takes the old --generate, and -f naming the project's file", async () => {
+		tasks.removeSubtasks.mockResolvedValue({
+			converted: [null],
+			tag: 'master'
+		});
+
+		await run(
+			'remove-subtask',
+			'--id=2.1',
+			'--generate',
+			'-f',
+			TASKGRAPH_TASKS_FILE
+		);
+
+		expect(tasks.removeSubtasks).toHaveBeenCalled();
+		expect(process.exitCode).toBeUndefined();
+	});
+
+	it('refuses -f naming another file, before changing anything', async () => {
+		vi.spyOn(process, 'exit').mockImplementation(() => {
+			throw new Error('exit');
+		});
+
+		await expect(
+			run('remove-subtask', '--id=2.1', '-f', 'other/tasks.json')
+		).rejects.toThrow('exit');
+
+		expect(output('error')).toContain('--file is no longer supported');
+		expect(tasks.removeSubtasks).not.toHaveBeenCalled();
 	});
 
 	it('exits 1 when tm-core refuses an ID', async () => {
