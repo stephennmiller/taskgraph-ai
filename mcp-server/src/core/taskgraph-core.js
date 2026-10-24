@@ -4,9 +4,7 @@
  * for improved organization and maintainability.
  */
 
-import { analyzeTaskComplexityDirect } from './direct-functions/analyze-task-complexity.js';
 // Import direct function implementations
-import { complexityReportDirect } from './direct-functions/complexity-report.js';
 import { initializeProjectDirect } from './direct-functions/initialize-project.js';
 import { modelsDirect } from './direct-functions/models.js';
 import { nextTaskDirect } from './direct-functions/next-task.js';
@@ -24,8 +22,6 @@ export {
 	updateTaskByIdDirect,
 	updateSubtaskByIdDirect,
 	nextTaskDirect,
-	analyzeTaskComplexityDirect,
-	complexityReportDirect,
 	initializeProjectDirect,
 	modelsDirect,
 	scopeUpDirect,

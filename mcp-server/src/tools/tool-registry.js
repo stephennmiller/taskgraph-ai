@@ -8,6 +8,8 @@ import {
 	registerAddDependencyTool,
 	registerAddNoteTool,
 	registerAddTaskTool,
+	registerAnalyzeComplexityTool,
+	registerComplexityReportTool,
 	registerAddTagTool,
 	registerAddSubtaskTool,
 	registerArchiveTasksTool,
@@ -34,8 +36,6 @@ import {
 	registerUseTagTool,
 	registerValidateDependenciesTool
 } from '@tm/mcp';
-import { registerAnalyzeProjectComplexityTool } from './analyze.js';
-import { registerComplexityReportTool } from './complexity-report.js';
 import { registerInitializeProjectTool } from './initialize-project.js';
 import { registerModelsTool } from './models.js';
 import { registerNextTaskTool } from './next-task.js';
@@ -56,7 +56,7 @@ export const toolRegistry = {
 	models: registerModelsTool,
 	parse_prd: registerParsePRDTool,
 	'response-language': registerResponseLanguageTool,
-	analyze_project_complexity: registerAnalyzeProjectComplexityTool,
+	analyze_project_complexity: registerAnalyzeComplexityTool,
 	expand_task: registerExpandTaskTool,
 	expand_all: registerExpandAllTool,
 	scope_up_task: registerScopeUpTool,

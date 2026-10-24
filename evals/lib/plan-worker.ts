@@ -58,10 +58,6 @@ const legacy = {
 		numTasks: number,
 		options: object
 	): Promise<Called>;
-	analyzeTaskComplexity(
-		options: object,
-		context: object
-	): Promise<Called & { report: { complexityAnalysis?: PlanComplexity[] } }>;
 	generateObjectService(
 		params: object
 	): Promise<Called & { mainResult: unknown }>;
@@ -163,22 +159,20 @@ async function main(judge: boolean): Promise<void> {
 	output.tasks = readTasks();
 	if (output.tasks.length === 0) throw new Error('parse-prd made no tasks');
 
-	step('scoring complexity');
-	const analysis = await timed('analyze-complexity', () =>
-		legacy.analyzeTaskComplexity(
-			{
-				file: tasksPath,
-				output: reportPath,
-				projectRoot: projectDir,
-				tag: TAG
-			},
-			{ ...context, commandName: 'analyze-complexity' }
-		)
-	);
-	output.complexity = analysis.report.complexityAnalysis ?? [];
-
 	const tmCore = await createTmCore({ projectPath: projectDir });
 	try {
+		step('scoring complexity');
+		// Its `skipped` counts done tasks; timed() would read it as a skipped call
+		const { report } = await timed('analyze-complexity', async () => {
+			const { telemetryData, report } = await tmCore.tasks.analyzeComplexity(
+				{ output: reportPath, tag: TAG, outputType: 'mcp' },
+				// A task the AI left out gets a default score; say so
+				{ onWarning: (message) => quiet.error(`warning: ${message}`) }
+			);
+			return { telemetryData, report };
+		});
+		output.complexity = report.complexityAnalysis as PlanComplexity[];
+
 		for (const [index, task] of output.tasks.entries()) {
 			step(`expanding task ${index + 1} of ${output.tasks.length}`);
 			await timed(

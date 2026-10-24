@@ -228,64 +228,6 @@ export function findComplexityReportPath(
 }
 
 /**
- * Resolve output path for complexity report (create if needed)
- * @param {string|null} explicitPath - Explicit output path provided by user
- * @param {Object|null} args - Args object for MCP context (optional)
- * @param {Object|null} log - Logger object (optional)
- * @returns {string} - Resolved output path for complexity report
- */
-export function resolveComplexityReportOutputPath(
-	explicitPath = null,
-	args = null,
-	log = null
-) {
-	const logger = getLoggerOrDefault(log);
-	const tag = args?.tag;
-
-	// 1. If explicit path is provided, use it
-	if (explicitPath) {
-		// Use original cwd if available (set by dev.js), otherwise current cwd
-		const cwdForResolution =
-			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
-
-		const resolvedPath = path.isAbsolute(explicitPath)
-			? explicitPath
-			: path.resolve(cwdForResolution, explicitPath);
-
-		logger.info?.(
-			`Using explicit complexity report output path: ${resolvedPath}`
-		);
-		return resolvedPath;
-	}
-
-	// 2. Try to get project root from args (MCP) or find it
-	const rawProjectRoot =
-		args?.projectRoot || findProjectRoot() || process.cwd();
-	const projectRoot = normalizeProjectRoot(rawProjectRoot);
-
-	// 3. Use tag-aware filename
-	let filename = 'task-complexity-report.json';
-	if (tag && tag !== 'master') {
-		filename = `task-complexity-report_${tag}.json`;
-	}
-
-	// 4. Use new .taskgraph structure by default
-	const defaultPath = path.join(projectRoot, '.taskgraph/reports', filename);
-	logger.info?.(
-		`Using tag-aware complexity report output path: ${defaultPath}`
-	);
-
-	// Ensure the directory exists
-	const outputDir = path.dirname(defaultPath);
-	if (!fs.existsSync(outputDir)) {
-		logger.info?.(`Creating reports directory: ${outputDir}`);
-		fs.mkdirSync(outputDir, { recursive: true });
-	}
-
-	return defaultPath;
-}
-
-/**
  * Find the configuration file path with fallback logic
  * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
  * @param {Object|null} args - Args object for MCP context (optional)

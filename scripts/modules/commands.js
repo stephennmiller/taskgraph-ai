@@ -30,7 +30,6 @@ import { syncTasksToReadme } from './sync-readme.js';
 import { log } from './utils.js';
 
 import {
-	analyzeTaskComplexity,
 	parsePRD,
 	scopeDownTask,
 	scopeUpTask,
@@ -72,7 +71,6 @@ import {
 } from '@tm/core';
 
 import {
-	COMPLEXITY_REPORT_FILE,
 	TASKGRAPH_DOCS_DIR,
 	TASKGRAPH_TASKS_FILE
 } from '../../src/constants/paths.js';
@@ -83,7 +81,6 @@ import {
 	confirmTaskOverwrite,
 	displayAiUsageSummary,
 	displayBanner,
-	displayComplexityReport,
 	displayCurrentTagIndicator,
 	displayHelp,
 	displayTaggedTasksFYI,
@@ -853,102 +850,6 @@ function registerCommands(programInstance) {
 	// Use the centralized command registry to register all CLI commands
 	// This replaces individual command registrations and reduces duplication
 	registerAllCommands(programInstance);
-
-	// analyze-complexity command
-	programInstance
-		.command('analyze-complexity')
-		.description(
-			`Analyze tasks and generate expansion recommendations${chalk.reset('')}`
-		)
-		.option('-o, --output <file>', 'Output file path for the report')
-		.option(
-			'-m, --model <model>',
-			'LLM model to use for analysis (defaults to configured model)'
-		)
-		.option(
-			'-t, --threshold <number>',
-			'Minimum complexity score to recommend expansion (1-10)',
-			'5'
-		)
-		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
-		.option(
-			'-r, --research',
-			'Use configured research model for research-backed complexity analysis'
-		)
-		.option(
-			'-i, --id <ids>',
-			'Comma-separated list of specific task IDs to analyze (e.g., "1,3,5")'
-		)
-		.option('--from <id>', 'Starting task ID in a range to analyze')
-		.option('--to <id>', 'Ending task ID in a range to analyze')
-		.option('--tag <tag>', 'Specify tag context for task operations')
-		.action(async (options) => {
-			// Initialize TaskGraph
-			const initOptions = {
-				tasksPath: options.file || true, // Tasks file is required to analyze
-				tag: options.tag
-			};
-			// Only include complexityReportPath if output is explicitly specified
-			if (options.output) {
-				initOptions.complexityReportPath = options.output;
-			}
-
-			const taskGraph = initTaskGraph(initOptions);
-
-			// Use the provided tag, or the current active tag, or default to 'master'
-			const targetTag = taskGraph.getCurrentTag();
-
-			// Show current tag context
-			await displayCurrentTagIndicator(targetTag, {
-				tasksPath: taskGraph.getTasksPath()
-			});
-
-			// Use user's explicit output path if provided, otherwise use tag-aware default
-			const outputPath = taskGraph.getComplexityReportPath();
-
-			// The spinner and the summary say what's analyzed and where the
-			// report goes; no separate lines with absolute paths up front
-			// Update options with tag-aware output path and context
-			const updatedOptions = {
-				...options,
-				output: outputPath,
-				tag: targetTag,
-				projectRoot: taskGraph.getProjectRoot(),
-				file: taskGraph.getTasksPath()
-			};
-
-			await analyzeTaskComplexity(updatedOptions);
-		});
-
-	// complexity-report command
-	programInstance
-		.command('complexity-report')
-		.description(`Display the complexity analysis report${chalk.reset('')}`)
-		.option(
-			'-f, --file <file>',
-			'Path to the report file',
-			COMPLEXITY_REPORT_FILE
-		)
-		.option('--tag <tag>', 'Specify tag context for task operations')
-		.action(async (options) => {
-			const initOptions = {
-				tag: options.tag
-			};
-
-			if (options.file && options.file !== COMPLEXITY_REPORT_FILE) {
-				initOptions.complexityReportPath = options.file;
-			}
-
-			// Initialize TaskGraph
-			const taskGraph = initTaskGraph(initOptions);
-
-			// Show current tag context
-			await displayCurrentTagIndicator(taskGraph.getCurrentTag(), {
-				tasksPath: taskGraph.getTasksPath()
-			});
-
-			await displayComplexityReport(taskGraph.getComplexityReportPath());
-		});
 
 	// init command (Directly calls the implementation from init.js)
 	programInstance

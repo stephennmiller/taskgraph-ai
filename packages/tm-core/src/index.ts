@@ -397,3 +397,13 @@ export type {
 	ResearchSaved
 } from './modules/tasks/services/research.service.js';
 export { isTaskOrSubtaskId } from './modules/tasks/services/research.service.js';
+
+// ========== Analyze complexity ==========
+
+export type {
+	AnalyzeComplexityHooks,
+	AnalyzeComplexityInput,
+	AnalyzeComplexityResult,
+	ComplexityAnalysisItem,
+	ComplexityReportFile
+} from './modules/tasks/services/analyze-complexity.service.js';

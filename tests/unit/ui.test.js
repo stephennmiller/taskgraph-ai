@@ -52,8 +52,7 @@ vi.doMock('../../scripts/modules/utils.js', () => ({
 }));
 
 vi.doMock('../../scripts/modules/task-manager.js', () => ({
-	findNextTask: vi.fn(),
-	analyzeTaskComplexity: vi.fn()
+	findNextTask: vi.fn()
 }));
 
 describe('UI Module', () => {

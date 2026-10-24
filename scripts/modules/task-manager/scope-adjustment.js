@@ -6,9 +6,12 @@
 import {
 	aggregateTelemetry,
 	assignMetadata,
+	createTmCore,
 	reconcileDependencySources
 } from '@tm/core';
+import path from 'path';
 import { z } from 'zod';
+import { TASKGRAPH_TASKS_FILE } from '../../../src/constants/paths.js';
 import { findComplexityReportPath } from '../../../src/utils/path-utils.js';
 import {
 	generateObjectService,
@@ -23,7 +26,6 @@ import {
 	readJSON,
 	writeJSON
 } from '../utils.js';
-import analyzeTaskComplexity from './analyze-task-complexity.js';
 
 /**
  * Valid strength levels for scope adjustments
@@ -72,14 +74,24 @@ const reportLookupLogger = {
  * @returns {Promise<number|null>} New complexity score or null if analysis failed
  */
 async function reanalyzeTaskComplexity(task, tasksPath, context) {
-	const { projectRoot, tag, session } = context;
+	const { projectRoot, tag, session, mcpLog } = context;
+	// MCP runs in silent mode, where log() prints nothing
+	const report = (level, message) =>
+		mcpLog ? mcpLog[level](message) : log(level, message);
 
 	try {
-		// Create a minimal tasks data structure for analysis
-		const tasksForAnalysis = {
-			tasks: [task],
-			metadata: { analyzedAt: new Date().toISOString() }
-		};
+		// tm-core reads only the project's tasks.json; scoring another file's
+		// task with the same ID would save the wrong score
+		if (
+			path.resolve(projectRoot, tasksPath) !==
+			path.join(projectRoot, TASKGRAPH_TASKS_FILE)
+		) {
+			report(
+				'warn',
+				`Complexity not re-analyzed: only ${TASKGRAPH_TASKS_FILE} can be analyzed, not ${tasksPath}`
+			);
+			return null;
+		}
 
 		// Find the complexity report path for this tag
 		const complexityReportPath = findComplexityReportPath(
@@ -89,44 +101,46 @@ async function reanalyzeTaskComplexity(task, tasksPath, context) {
 		);
 
 		if (!complexityReportPath) {
-			log('warn', 'No complexity report found - cannot re-analyze complexity');
+			report(
+				'warn',
+				'No complexity report found - cannot re-analyze complexity'
+			);
 			return null;
 		}
 
-		// Use analyze-task-complexity to re-analyze just this task
-		const analysisOptions = {
-			file: tasksPath,
-			output: complexityReportPath,
-			id: task.id.toString(), // Analyze only this specific task
-			projectRoot,
-			tag,
-			_filteredTasksData: tasksForAnalysis, // Pass pre-filtered data
-			_originalTaskCount: 1
-		};
+		// Re-analyze just this task (saved already), whatever its status; the
+		// report's other entries stay
+		const tmCore = await createTmCore({ projectPath: projectRoot });
+		const { analyses } = await tmCore.tasks.analyzeComplexity(
+			{
+				ids: task.id.toString(),
+				anyStatus: true,
+				output: complexityReportPath,
+				tag,
+				session
+			},
+			{ onWarning: (message) => report('warn', message) }
+		);
 
-		// Run the analysis with proper context
-		await analyzeTaskComplexity(analysisOptions, { session });
-
-		// Read the updated complexity report to get the new score
-		const updatedReport = readComplexityReport(complexityReportPath);
-		if (updatedReport) {
-			const taskAnalysis = findTaskInComplexityReport(updatedReport, task.id);
-			if (taskAnalysis) {
-				log(
-					'info',
-					`Re-analyzed task ${task.id} complexity: ${taskAnalysis.complexityScore}/10`
-				);
-				return taskAnalysis.complexityScore;
-			}
+		// This run's entry only: the report's older entry isn't a new score
+		const taskAnalysis = analyses.find(
+			(entry) => String(entry.taskId) === String(task.id)
+		);
+		if (taskAnalysis) {
+			report(
+				'info',
+				`Re-analyzed task ${task.id} complexity: ${taskAnalysis.complexityScore}/10`
+			);
+			return taskAnalysis.complexityScore;
 		}
 
-		log(
+		report(
 			'warn',
 			`Could not find updated complexity analysis for task ${task.id}`
 		);
 		return null;
 	} catch (error) {
-		log('error', `Failed to re-analyze task complexity: ${error.message}`);
+		report('error', `Failed to re-analyze task complexity: ${error.message}`);
 		return null;
 	}
 }

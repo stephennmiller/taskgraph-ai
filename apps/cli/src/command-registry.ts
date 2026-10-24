@@ -7,9 +7,11 @@ import type { Command } from 'commander';
 
 import { AddSubtaskCommand } from './commands/add-subtask.command.js';
 import { AddTaskCommand } from './commands/add-task.command.js';
+import { AnalyzeComplexityCommand } from './commands/analyze-complexity.command.js';
 import { ResearchCommand } from './commands/research.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
+import { ComplexityReportCommand } from './commands/complexity-report.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
 import {
 	AddDependencyCommand,
@@ -137,6 +139,18 @@ export class CommandRegistry {
 			name: 'note',
 			description: 'Log a progress note on a task, as written (no AI)',
 			commandClass: NoteCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'analyze-complexity',
+			description: 'Analyze tasks and generate expansion recommendations',
+			commandClass: AnalyzeComplexityCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'complexity-report',
+			description: 'Display the complexity analysis report',
+			commandClass: ComplexityReportCommand as any,
 			category: 'task'
 		},
 		{
