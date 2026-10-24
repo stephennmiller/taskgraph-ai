@@ -353,5 +353,26 @@ describe('FileOperations', () => {
 			});
 			expect(fsSync.existsSync(lockPath)).toBe(false);
 		});
+
+		it('reports why a stale lock file could not be moved aside', async () => {
+			await fs.writeFile(testFilePath, '{}');
+			const lockPath = leaveStaleLockFile();
+			const rename = fs.rename;
+			vi.spyOn(fs, 'rename').mockImplementation((from, to) =>
+				from === lockPath
+					? Promise.reject(
+							Object.assign(new Error('permission denied'), { code: 'EACCES' })
+						)
+					: rename(from, to)
+			);
+
+			try {
+				await expect(
+					fileOps.writeJson(testFilePath, { ok: true })
+				).rejects.toMatchObject({ code: 'EACCES' });
+			} finally {
+				vi.restoreAllMocks();
+			}
+		});
 	});
 });

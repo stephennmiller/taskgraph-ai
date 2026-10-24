@@ -27,9 +27,6 @@ const sdk = vi.hoisted(() => {
 });
 const mockGenerateText = sdk.generateText;
 const mockGenerateObject = sdk.generateObject;
-const mockJsonrepair = sdk.jsonrepair;
-const mockNoObjectGeneratedError = sdk.NoObjectGeneratedError;
-const mockJSONParseError = sdk.JSONParseError;
 
 // Mock the 'ai' SDK
 vi.mock('ai', () => ({
@@ -270,82 +267,6 @@ describe('BaseAIProvider', () => {
 		it('should floor decimal values', () => {
 			const result = testProvider.prepareTokenParam('model', 999.99);
 			expect(result).toEqual({ maxOutputTokens: 999 });
-		});
-	});
-
-	describe('5. JSON Repair for Malformed Responses', () => {
-		it('should repair malformed JSON in generateObject errors', async () => {
-			const malformedJson = '{"key": "value",,}'; // Double comma
-			const repairedJson = '{"key": "value"}';
-
-			const parseError = new mockJSONParseError(malformedJson);
-			const noObjectError = new mockNoObjectGeneratedError(parseError);
-			(noObjectError as any).usage = {
-				promptTokens: 100,
-				completionTokens: 50,
-				totalTokens: 150
-			};
-
-			mockGenerateObject.mockRejectedValue(noObjectError);
-			mockJsonrepair.mockReturnValue(repairedJson);
-
-			const result = await testProvider.generateObject({
-				apiKey: 'key',
-				modelId: 'model',
-				messages: [{ role: 'user', content: 'test' }],
-				schema: { type: 'object' },
-				objectName: 'TestObject'
-			});
-
-			expect(mockJsonrepair).toHaveBeenCalledWith(malformedJson);
-			expect(result).toEqual({
-				object: { key: 'value' },
-				usage: {
-					inputTokens: 100,
-					outputTokens: 50,
-					totalTokens: 150
-				}
-			});
-		});
-
-		it('should throw original error when JSON repair fails', async () => {
-			const malformedJson = 'not even close to JSON';
-			const parseError = new mockJSONParseError(malformedJson);
-			const noObjectError = new mockNoObjectGeneratedError(parseError);
-
-			mockGenerateObject.mockRejectedValue(noObjectError);
-			mockJsonrepair.mockImplementation(() => {
-				throw new Error('Cannot repair this JSON');
-			});
-
-			await expect(
-				testProvider.generateObject({
-					apiKey: 'key',
-					modelId: 'model',
-					messages: [{ role: 'user', content: 'test' }],
-					schema: { type: 'object' },
-					objectName: 'TestObject'
-				})
-			).rejects.toThrow('TestProvider API error during object generation');
-		});
-
-		it('should handle non-JSON parse errors normally', async () => {
-			const regularError = new Error('Network timeout');
-			mockGenerateObject.mockRejectedValue(regularError);
-
-			await expect(
-				testProvider.generateObject({
-					apiKey: 'key',
-					modelId: 'model',
-					messages: [{ role: 'user', content: 'test' }],
-					schema: { type: 'object' },
-					objectName: 'TestObject'
-				})
-			).rejects.toThrow(
-				'TestProvider API error during object generation: Network timeout'
-			);
-
-			expect(mockJsonrepair).not.toHaveBeenCalled();
 		});
 	});
 

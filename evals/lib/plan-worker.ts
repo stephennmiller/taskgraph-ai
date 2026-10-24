@@ -20,7 +20,8 @@ import {
 	type PlanComplexity,
 	type PlanTask,
 	buildJudgePrompt,
-	createTmCore
+	createTmCore,
+	judgeModelMismatch
 } from '@tm/core';
 import { z } from 'zod';
 import { PRD_PATH, type WorkerOutput } from './shared.js';
@@ -184,8 +185,15 @@ async function main(judge: boolean): Promise<void> {
 				hooks
 			)
 		);
-		// A repaired reply isn't checked against the schema; a bad one is an error
-		output.verdict = verdictSchema.parse(graded.mainResult) as JudgeVerdict;
+		// The service falls back to other roles when main fails; a verdict from
+		// another model isn't comparable, so the sample fails instead
+		const mismatch = judgeModelMismatch(
+			graded,
+			tmCore.config.getModelConfiguration().data.activeModels.main
+		);
+		if (mismatch) throw new Error(mismatch);
+		// The provider checked the reply against verdictSchema, repaired or not
+		output.verdict = graded.mainResult as JudgeVerdict;
 	} finally {
 		await tmCore.close();
 	}
