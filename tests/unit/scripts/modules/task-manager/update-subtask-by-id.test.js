@@ -26,7 +26,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	getCurrentTag: vi.fn(() => 'master'),
 	resolveTag: vi.fn(() => 'master'),
 	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
-	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
 	ensureTagMetadata: vi.fn((tagObj) => tagObj)
 }));
 

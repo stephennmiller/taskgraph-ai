@@ -284,6 +284,13 @@ export { isReservedNewTagName } from './modules/tasks/utils/index.js';
 // An AI rewrite keeps the stored fields its schema has no place for
 export { keepStoredFields } from './modules/tasks/utils/index.js';
 
+// add-subtask and move: error codes a command explains, and what a
+// cross-tag move found in its way
+export {
+	MOVE_ERROR_CODES,
+	type CrossTagConflict
+} from './modules/tasks/utils/index.js';
+
 // A subtask that becomes a task gets a description it can load with
 export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
 

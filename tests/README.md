@@ -37,7 +37,7 @@ off by default and enabled by `npm run test:coverage` (reports in `coverage/`).
 
 ```bash
 # Run a single file (or directory)
-npx vitest run -c vitest.root.config.ts tests/unit/task-manager/move-task.test.js
+npx vitest run -c vitest.root.config.ts tests/unit/task-manager/tag-boundary.test.js
 
 # Run unit or integration tests only (path filter)
 npm run test:unit
@@ -66,7 +66,7 @@ Test fixtures provide sample data for tests. Fixtures should be small, focused, 
 
 For external dependencies like file system operations and API calls, we use mocking to isolate the code being tested.
 
-- File system operations: Use `mock-fs` to mock the file system
+- File system operations: use a temporary directory (`fs.mkdtempSync`) or `vi.mock` the `fs` calls
 - API calls: Use Vitest's mocking capabilities (`vi.fn`, `vi.mock`) to mock API responses
 
 ## Test Coverage

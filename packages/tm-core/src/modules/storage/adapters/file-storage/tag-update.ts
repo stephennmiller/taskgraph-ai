@@ -2,6 +2,7 @@
  * @fileoverview Pure helpers that build the tasks.json contents for one tag
  */
 
+import type { MutateTags } from '../../../../common/interfaces/storage.interface.js';
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
@@ -94,4 +95,35 @@ function normalizeTaskIds(tasks: Task[]): Task[] {
 				parentId: String(subtask.parentId ?? task.id) // Parent ID is string (Task ID); older files omit it
 			})) || []
 	}));
+}
+
+/**
+ * Run a MutateTags change on the parsed file contents: it gets every tag's
+ * tasks (a file without tags has only master) and the tags it names are
+ * written back
+ */
+export async function mutateTagsIn<R>(
+	formatHandler: FormatHandler,
+	data: any,
+	mutate: MutateTags<R>
+): Promise<{ data: any; result: R }> {
+	const names =
+		formatHandler.detectFormat(data) === 'legacy'
+			? formatHandler.extractTags(data)
+			: ['master'];
+	const tags = new Map(
+		names.map((tag) => [tag, formatHandler.extractTasks(data, tag)])
+	);
+	const { changed, result } = await mutate(tags);
+	for (const tag of new Set(changed)) {
+		const tasks = tags.get(tag) ?? [];
+		data = applyTagUpdate(
+			formatHandler,
+			data,
+			tag,
+			tasks,
+			buildTagMetadata(tasks, tag)
+		);
+	}
+	return { data, result };
 }

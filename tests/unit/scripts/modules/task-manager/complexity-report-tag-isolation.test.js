@@ -104,7 +104,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	resolveTag: vi.fn(() => 'master'),
 	markMigrationForNotice: vi.fn(),
 	performCompleteTagMigration: vi.fn(),
-	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
 	findProjectRoot: vi.fn(() => '/mock/project/root'),
 	readComplexityReport: vi.fn(),
 	findTaskInComplexityReport: vi.fn(),
@@ -132,7 +131,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 		}
 		return path.join(projectRoot || '.', basePath);
 	}),
-	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => []),
 	CONFIG: {
 		defaultSubtasks: 3
 	}

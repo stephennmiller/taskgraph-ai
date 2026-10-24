@@ -1,6 +1,6 @@
 /**
  * Archived tasks (`taskgraph archive`) keep their IDs and count as done in
- * the legacy commands: add-task, parse-prd, move and remove-subtask never
+ * the legacy commands: add-task, parse-prd and remove-subtask never
  * hand out an archived ID, and the MCP next_task treats dependencies on
  * archived tasks as done. Real files in a temp dir; only logging is silenced.
  */
@@ -9,9 +9,6 @@ import os from 'os';
 import path from 'path';
 import { vi } from 'vitest';
 import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
-import moveTask, {
-	moveTasksBetweenTags
-} from '../../../../../scripts/modules/task-manager/move-task.js';
 import { loadExistingTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
 import removeTask from '../../../../../scripts/modules/task-manager/remove-task.js';
@@ -153,47 +150,6 @@ describe('archived task IDs in the legacy commands', () => {
 				nextId: 3,
 				firstFreeId: 1
 			});
-		});
-	});
-
-	describe('move', () => {
-		test('refuses to move a task onto an archived ID in the same tag', async () => {
-			setup([task(1)], [task(2)]);
-
-			await expect(
-				moveTask(tasksPath, '1', '2', false, {
-					projectRoot: dir,
-					tag: 'master'
-				})
-			).rejects.toThrow(/Task 2 is archived/);
-			expect(readTasks().map((t) => t.id)).toEqual([1]);
-		});
-
-		test('refuses to move a task into a tag where its ID is archived', async () => {
-			setup([task(2)], [], { feature: [task(7)] });
-			fs.writeFileSync(
-				archivePath,
-				JSON.stringify({
-					feature: {
-						tasks: [{ ...task(2), status: 'done', archivedAt: 'x' }],
-						metadata: { highestId: 2 }
-					}
-				})
-			);
-
-			await expect(
-				moveTasksBetweenTags(
-					tasksPath,
-					['2'],
-					'master',
-					'feature',
-					{},
-					{
-						projectRoot: dir
-					}
-				)
-			).rejects.toThrow(/Task 2 is archived in tag "feature"/);
-			expect(readTasks('feature').map((t) => t.id)).toEqual([7]);
 		});
 	});
 

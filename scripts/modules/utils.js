@@ -72,119 +72,6 @@ function sleepSync(ms) {
 }
 
 /**
- * Acquires an exclusive lock on a file and executes a callback
- * Uses same lock file format as withFileLockSync for cross-process compatibility
- * @param {string} filepath - Path to the file to lock
- * @param {Function} callback - Async function to execute while holding the lock
- * @param {Object} [options] - Options for lock behavior
- * @param {boolean} [options.createIfMissing=false] - If true, creates the file with '{}' if it doesn't exist.
- *        Set to true for write operations. Leave false for read-only operations that should handle
- *        file-not-found scenarios in the callback.
- * @returns {Promise<*>} Result of the callback
- */
-async function withFileLock(filepath, callback, options = {}) {
-	const { createIfMissing = false } = options;
-	const fsPromises = fs.promises;
-
-	// Ensure parent directory exists
-	const dir = path.dirname(filepath);
-	await fsPromises.mkdir(dir, { recursive: true });
-
-	// Only create the file if explicitly requested (for write operations)
-	if (createIfMissing) {
-		try {
-			// Use 'wx' flag for atomic create - fails if file exists (prevents race)
-			await fsPromises.writeFile(filepath, '{}', { flag: 'wx' });
-		} catch (err) {
-			// EEXIST is expected if another process created the file - that's fine
-			if (err.code !== 'EEXIST') {
-				throw err;
-			}
-		}
-	}
-
-	const lockPath = `${filepath}.lock`;
-	const { maxRetries, retryDelay, staleLockAge } = LOCK_CONFIG;
-
-	// Try to acquire lock with retries
-	let acquired = false;
-	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		try {
-			// Try to create lock file exclusively first
-			const lockContent = JSON.stringify({
-				pid: process.pid,
-				timestamp: Date.now()
-			});
-			await fsPromises.writeFile(lockPath, lockContent, { flag: 'wx' });
-			acquired = true;
-			break;
-		} catch (err) {
-			if (err.code === 'EEXIST') {
-				// Lock file exists - check if it's stale
-				try {
-					const lockStat = await fsPromises.stat(lockPath);
-					const age = Date.now() - lockStat.mtimeMs;
-					if (age > staleLockAge) {
-						// Stale lock - use atomic rename to safely take ownership
-						// This prevents race where we delete another process's fresh lock
-						const stalePath = `${lockPath}.stale.${process.pid}.${Date.now()}`;
-						try {
-							await fsPromises.rename(lockPath, stalePath);
-							// We successfully took ownership of the stale lock
-							// Clean it up and retry immediately
-							try {
-								await fsPromises.unlink(stalePath);
-							} catch {
-								// Ignore cleanup errors
-							}
-							continue; // Retry lock acquisition
-						} catch {
-							// Rename failed - another process handled it or lock was refreshed
-							// Just continue to retry
-						}
-					}
-				} catch (statErr) {
-					// Lock was removed between writeFile and stat - retry immediately
-					if (statErr.code === 'ENOENT') {
-						continue;
-					}
-					throw statErr;
-				}
-
-				// Lock exists and isn't stale (or we couldn't handle it), wait and retry
-				if (attempt < maxRetries - 1) {
-					const waitMs = retryDelay * Math.pow(2, attempt);
-					await sleep(waitMs);
-				}
-			} else {
-				throw err;
-			}
-		}
-	}
-
-	if (!acquired) {
-		throw new Error(
-			`Failed to acquire lock on ${filepath} after ${maxRetries} attempts`
-		);
-	}
-
-	try {
-		return await callback();
-	} finally {
-		// Release lock
-		try {
-			await fsPromises.unlink(lockPath);
-		} catch (releaseError) {
-			// Always log lock release failures - they indicate potential issues
-			log(
-				'warn',
-				`Failed to release lock for ${filepath}: ${releaseError.message}`
-			);
-		}
-	}
-}
-
-/**
  * Synchronous version of file locking for compatibility with existing sync code
  * Uses a lock file approach with retries and stale lock detection
  * @param {string} filepath - Path to the file to lock
@@ -439,14 +326,6 @@ const LOG_LEVELS = {
 	error: 3,
 	success: 1 // Treat success like info level
 };
-
-/**
- * Returns the task manager module
- * @returns {Promise<Object>} The task manager module object
- */
-async function getTaskManager() {
-	return import('./task-manager.js');
-}
 
 // Inside a scope, silent mode belongs to that call alone. A server runs many
 // calls at once, so one call finishing must not un-silence another.
@@ -1618,139 +1497,6 @@ function findCycles(
 }
 
 /**
- * Unified dependency traversal utility that supports both forward and reverse dependency traversal
- * @param {Array} sourceTasks - Array of source tasks to start traversal from
- * @param {Array} allTasks - Array of all tasks to search within
- * @param {Object} options - Configuration options
- * @param {number} options.maxDepth - Maximum recursion depth (default: 50)
- * @param {boolean} options.includeSelf - Whether to include self-references (default: false)
- * @param {'forward'|'reverse'} options.direction - Direction of traversal (default: 'forward')
- * @param {Function} options.logger - Optional logger function for warnings
- * @returns {Array} Array of all dependency task IDs found through traversal
- */
-function traverseDependencies(sourceTasks, allTasks, options = {}) {
-	const {
-		maxDepth = 50,
-		includeSelf = false,
-		direction = 'forward',
-		logger = null
-	} = options;
-
-	const dependentTaskIds = new Set();
-	const processedIds = new Set();
-
-	// Helper function to normalize dependency IDs while preserving subtask format
-	function normalizeDependencyId(depId) {
-		if (typeof depId === 'string') {
-			// Preserve string format for subtask IDs like "1.2"
-			if (depId.includes('.')) {
-				return depId;
-			}
-			// Convert simple string numbers to numbers for consistency
-			const parsed = parseInt(depId, 10);
-			return isNaN(parsed) ? depId : parsed;
-		}
-		return depId;
-	}
-
-	// Helper function for forward dependency traversal
-	function findForwardDependencies(taskId, currentDepth = 0) {
-		// Check depth limit
-		if (currentDepth >= maxDepth) {
-			const warnMsg = `Maximum recursion depth (${maxDepth}) reached for task ${taskId}`;
-			if (logger && typeof logger.warn === 'function') {
-				logger.warn(warnMsg);
-			} else if (typeof log !== 'undefined' && log.warn) {
-				log.warn(warnMsg);
-			} else {
-				console.warn(warnMsg);
-			}
-			return;
-		}
-
-		if (processedIds.has(taskId)) {
-			return; // Avoid infinite loops
-		}
-		processedIds.add(taskId);
-
-		const task = allTasks.find((t) => t.id === taskId);
-		if (!task || !Array.isArray(task.dependencies)) {
-			return;
-		}
-
-		task.dependencies.forEach((depId) => {
-			const normalizedDepId = normalizeDependencyId(depId);
-
-			// Skip invalid dependencies and optionally skip self-references
-			if (
-				normalizedDepId == null ||
-				(!includeSelf && normalizedDepId === taskId)
-			) {
-				return;
-			}
-
-			dependentTaskIds.add(normalizedDepId);
-			// Recursively find dependencies of this dependency
-			findForwardDependencies(normalizedDepId, currentDepth + 1);
-		});
-	}
-
-	// Helper function for reverse dependency traversal
-	function findReverseDependencies(taskId, currentDepth = 0) {
-		// Check depth limit
-		if (currentDepth >= maxDepth) {
-			const warnMsg = `Maximum recursion depth (${maxDepth}) reached for task ${taskId}`;
-			if (logger && typeof logger.warn === 'function') {
-				logger.warn(warnMsg);
-			} else if (typeof log !== 'undefined' && log.warn) {
-				log.warn(warnMsg);
-			} else {
-				console.warn(warnMsg);
-			}
-			return;
-		}
-
-		if (processedIds.has(taskId)) {
-			return; // Avoid infinite loops
-		}
-		processedIds.add(taskId);
-
-		allTasks.forEach((task) => {
-			if (task.dependencies && Array.isArray(task.dependencies)) {
-				const dependsOnTaskId = task.dependencies.some((depId) => {
-					const normalizedDepId = normalizeDependencyId(depId);
-					return normalizedDepId === taskId;
-				});
-
-				if (dependsOnTaskId) {
-					// Skip invalid dependencies and optionally skip self-references
-					if (task.id == null || (!includeSelf && task.id === taskId)) {
-						return;
-					}
-
-					dependentTaskIds.add(task.id);
-					// Recursively find tasks that depend on this task
-					findReverseDependencies(task.id, currentDepth + 1);
-				}
-			}
-		});
-	}
-
-	// Choose traversal function based on direction
-	const traversalFunc =
-		direction === 'reverse' ? findReverseDependencies : findForwardDependencies;
-
-	// Start traversal from each source task
-	sourceTasks.forEach((sourceTask) => {
-		if (sourceTask && sourceTask.id) {
-			traversalFunc(sourceTask.id);
-		}
-	});
-
-	return Array.from(dependentTaskIds);
-}
-
-/**
  * Convert a string from camelCase to kebab-case
  * @param {string} str - The string to convert
  * @returns {string} The kebab-case version of the string
@@ -1774,37 +1520,6 @@ const toKebabCase = (str) => {
 		.toLowerCase()
 		.replace(/^-/, ''); // Remove leading hyphen if present
 };
-
-/**
- * Detect camelCase flags in command arguments
- * @param {string[]} args - Command line arguments to check
- * @returns {Array<{original: string, kebabCase: string}>} - List of flags that should be converted
- */
-function detectCamelCaseFlags(args) {
-	const camelCaseFlags = [];
-	for (const arg of args) {
-		if (arg.startsWith('--')) {
-			const flagName = arg.split('=')[0].slice(2); // Remove -- and anything after =
-
-			// Skip single-word flags - they can't be camelCase
-			if (!flagName.includes('-') && !/[A-Z]/.test(flagName)) {
-				continue;
-			}
-
-			// Check for camelCase pattern (lowercase followed by uppercase)
-			if (/[a-z][A-Z]/.test(flagName)) {
-				const kebabVersion = toKebabCase(flagName);
-				if (kebabVersion !== flagName) {
-					camelCaseFlags.push({
-						original: flagName,
-						kebabCase: kebabVersion
-					});
-				}
-			}
-		}
-	}
-	return camelCaseFlags;
-}
 
 /**
  * Aggregates an array of telemetry objects into a single summary object.
@@ -1930,22 +1645,6 @@ function resolveTag(options = {}) {
 }
 
 /**
- * Gets the tasks array for a specific tag from tagged tasks.json data
- * @param {Object} data - The parsed tasks.json data (after migration)
- * @param {string} tagName - The tag name to get tasks for
- * @returns {Array} The tasks array for the specified tag, or empty array if not found
- */
-function getTasksForTag(data, tagName) {
-	if (!data || !tagName) {
-		return [];
-	}
-
-	// Handle migrated format: { "master": { "tasks": [...] }, "otherTag": { "tasks": [...] } }
-	const tasks = getOwnKey(data, tagName)?.tasks;
-	return Array.isArray(tasks) ? tasks : [];
-}
-
-/**
  * Flatten tasks array to include subtasks as individual searchable items
  * @param {Array} tasks - Array of task objects
  * @returns {Array} Flattened array including both tasks and subtasks
@@ -2041,8 +1740,6 @@ function stripAnsiCodes(text) {
 export {
 	addComplexityToTask,
 	aggregateTelemetry,
-	createStateJson,
-	detectCamelCaseFlags,
 	disableSilentMode,
 	enableSilentMode,
 	ensureTagMetadata,
@@ -2054,18 +1751,11 @@ export {
 	formatTaskId,
 	getCurrentTag,
 	getTagAwareFilePath,
-	getTaskManager,
-	getTasksForTag,
-	isTagData,
-	withoutReadJSONFields,
 	isEmpty,
 	isSilentMode,
-	LOG_LEVELS,
 	log,
 	markMigrationForNotice,
-	migrateConfigJson,
 	modifyJSON,
-	normalizeTaskIds,
 	performCompleteTagMigration,
 	readComplexityReport,
 	readJSON,
@@ -2076,9 +1766,7 @@ export {
 	stripAnsiCodes,
 	taskExists,
 	toKebabCase,
-	traverseDependencies,
 	truncate,
-	withFileLock,
 	withFileLockSync,
 	withSilentScope,
 	writeJSON

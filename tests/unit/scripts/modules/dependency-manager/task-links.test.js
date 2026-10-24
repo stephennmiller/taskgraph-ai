@@ -1,8 +1,7 @@
 /**
  * Related and discovered-from links (#200): add-task --discovered-from, and
- * the commands that must keep or clean them up (remove-task, move; the
- * dependency commands are tested in @tm/core's dependency-edit and
- * dependency-check specs). They
+ * the commands that must keep or clean them up (remove-task; the dependency
+ * commands and move are tested in @tm/core). They
  * live in metadata.taskLinks, never in dependencies. Only tasks.json I/O is
  * mocked.
  */
@@ -33,9 +32,6 @@ vi.mock('../../../../../scripts/modules/utils/update-tag-tasks.js', () => ({
 }));
 
 import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
-import moveTask, {
-	moveTasksBetweenTags
-} from '../../../../../scripts/modules/task-manager/move-task.js';
 import removeSubtask from '../../../../../scripts/modules/task-manager/remove-subtask.js';
 import removeTask from '../../../../../scripts/modules/task-manager/remove-task.js';
 
@@ -118,48 +114,6 @@ describe('remove-task cleans up links like dependencies', () => {
 		await removeSubtask('tasks.json', '2.2', false, false, context);
 
 		expect(find(writtenTasks(), 3).metadata).toEqual(links({ 1: 'related' }));
-	});
-});
-
-describe('move keeps links pointing at the moved task', () => {
-	test('a task moved to a new ID, with its subtasks', async () => {
-		await moveTask('tasks.json', '2', '7', false, context);
-
-		const tasks = writtenTasks();
-		expect(find(tasks, 3).metadata).toEqual(
-			links({ 1: 'related', 7.2: 'discovered-from' })
-		);
-		// The moved task's own links, and its subtasks', follow it too
-		expect(find(tasks, 7).subtasks[1].metadata).toEqual(
-			links({ 7.1: 'related' })
-		);
-	});
-
-	test('a subtask that becomes a task', async () => {
-		await moveTask('tasks.json', '2.2', '9', false, context);
-
-		const tasks = writtenTasks();
-		expect(find(tasks, 3).metadata).toEqual(
-			links({ 1: 'related', 9: 'discovered-from' })
-		);
-		expect(find(tasks, 9).metadata).toEqual(links({ 2.1: 'related' }));
-	});
-
-	test('a task moved to another tag keeps no links across tags', async () => {
-		data.master.tasks[3].metadata = links({ 3: 'related' });
-
-		await moveTasksBetweenTags(
-			'tasks.json',
-			['3'],
-			'master',
-			'other',
-			{},
-			context
-		);
-
-		const moved = find(writtenTasks('other'), 3);
-		expect(moved.metadata.taskLinks).toBeUndefined();
-		expect(find(writtenTasks('master'), 4).metadata).toBeUndefined();
 	});
 });
 

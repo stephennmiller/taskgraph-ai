@@ -5,6 +5,7 @@
 
 import type { Command } from 'commander';
 
+import { AddSubtaskCommand } from './commands/add-subtask.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import {
@@ -21,6 +22,7 @@ import { ListTasksCommand } from './commands/list.command.js';
 import { GithubCommand } from './commands/github/github.command.js';
 import { LoopCommand } from './commands/loop.command.js';
 import { MergeDriverCommand } from './commands/merge-driver.command.js';
+import { MoveCommand } from './commands/move.command.js';
 import { NextCommand } from './commands/next.command.js';
 import { NoteCommand } from './commands/note.command.js';
 import { PrimeCommand } from './commands/prime.command.js';
@@ -90,6 +92,18 @@ export class CommandRegistry {
 			name: 'set-status',
 			description: 'Update the status of one or more tasks',
 			commandClass: SetStatusCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'add-subtask',
+			description: 'Add a subtask to an existing task',
+			commandClass: AddSubtaskCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'move',
+			description: 'Move tasks to another position or tag',
+			commandClass: MoveCommand as any,
 			category: 'task'
 		},
 		{

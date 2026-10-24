@@ -68,6 +68,16 @@ export type TaskFieldUpdates = Partial<
 >;
 
 /**
+ * A change to every tag's tasks (see IStorage.mutateTags): edits the arrays
+ * in place or adds a tag, and names the tags to save
+ */
+export type MutateTags<R> = (
+	tags: Map<string, Task[]>
+) =>
+	| { changed: string[]; result: R }
+	| Promise<{ changed: string[]; result: R }>;
+
+/**
  * Interface for storage operations on tasks
  * All storage implementations must implement this interface
  */
@@ -147,16 +157,14 @@ export interface IStorage {
 	): Promise<Task | Subtask>;
 
 	/**
-	 * Read-modify-write a tag's tasks, as stored, in one locked write
-	 * @param change - Gets the tasks (it may change them in place); returns
-	 *   the tasks to save, or `tasks: null` to leave the file untouched, and a
-	 *   result. A throw leaves the file unchanged.
-	 * @returns The change's result
+	 * Read-modify-write tasks.json under its lock with every tag's tasks, for
+	 * a change that spans tags. `mutate` gets the tags the file has, in file
+	 * order (a file without tags has only master), changes the arrays in
+	 * place or adds a tag, and names the tags to save. A throw leaves the
+	 * file unchanged.
+	 * @returns What `mutate` returned as `result`
 	 */
-	modifyTasks<R>(
-		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
-		tag?: string
-	): Promise<R>;
+	mutateTags<R>(mutate: MutateTags<R>): Promise<R>;
 
 	/**
 	 * Pick the next task nobody has started and set it in-progress, recording
@@ -455,10 +463,8 @@ export abstract class BaseStorage implements IStorage {
 		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
 		tag?: string
 	): Promise<Task | Subtask>;
-	abstract modifyTasks<R>(
-		change: (tasks: Task[]) => { tasks: Task[] | null; result: R },
-		tag?: string
-	): Promise<R>;
+
+	abstract mutateTags<R>(mutate: MutateTags<R>): Promise<R>;
 
 	abstract claimNextTask(
 		claimant: string,

@@ -4,7 +4,6 @@
  * for improved organization and maintainability.
  */
 
-import { addSubtaskDirect } from './direct-functions/add-subtask.js';
 import { addTaskDirect } from './direct-functions/add-task.js';
 import { analyzeTaskComplexityDirect } from './direct-functions/analyze-task-complexity.js';
 // Import direct function implementations
@@ -14,8 +13,6 @@ import { expandAllTasksDirect } from './direct-functions/expand-all-tasks.js';
 import { expandTaskDirect } from './direct-functions/expand-task.js';
 import { initializeProjectDirect } from './direct-functions/initialize-project.js';
 import { modelsDirect } from './direct-functions/models.js';
-import { moveTaskCrossTagDirect } from './direct-functions/move-task-cross-tag.js';
-import { moveTaskDirect } from './direct-functions/move-task.js';
 import { nextTaskDirect } from './direct-functions/next-task.js';
 import { parsePRDDirect } from './direct-functions/parse-prd.js';
 import { removeSubtaskDirect } from './direct-functions/remove-subtask.js';
@@ -36,7 +33,6 @@ export {
 	nextTaskDirect,
 	expandTaskDirect,
 	addTaskDirect,
-	addSubtaskDirect,
 	removeSubtaskDirect,
 	analyzeTaskComplexityDirect,
 	clearSubtasksDirect,
@@ -45,8 +41,6 @@ export {
 	removeTaskDirect,
 	initializeProjectDirect,
 	modelsDirect,
-	moveTaskDirect,
-	moveTaskCrossTagDirect,
 	researchDirect,
 	scopeUpDirect,
 	scopeDownDirect
