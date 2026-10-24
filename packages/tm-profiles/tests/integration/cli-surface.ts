@@ -36,23 +36,46 @@ const longFlags = (source: string): string[] => [
 	)
 ];
 
+/** `read(file)`, or '' when the file isn't there (on disk or at the git ref) */
+function readIfPresent(read: (file: string) => string, file: string): string {
+	try {
+		return read(file);
+	} catch (error) {
+		const { code, stderr } = error as { code?: string; stderr?: unknown };
+		if (
+			code === 'ENOENT' ||
+			/does not exist in|exists on disk, but not in/.test(String(stderr))
+		) {
+			return '';
+		}
+		throw error;
+	}
+}
+
 /** The surface of the CLI whose repo-relative files `read` returns */
 export function cliSurface(read: (file: string) => string): CliSurface {
-	const legacySource = stripComments(read('scripts/modules/commands.js'));
 	const registrySource = stripComments(
 		read('apps/cli/src/command-registry.ts')
 	);
 	const surface: CliSurface = new Map();
 
-	// Legacy commands: the options between one .command('name') and the next
-	const legacyStarts = [...legacySource.matchAll(/\.command\('([a-z-]+)'/g)];
-	legacyStarts.forEach((match, index) => {
-		const block = legacySource.slice(
-			match.index,
-			legacyStarts[index + 1]?.index ?? legacySource.length
-		);
-		surface.set(match[1], new Set(longFlags(block)));
-	});
+	// Commands added inline with .command('name'): `help` in program.ts, and
+	// before #254 most of them in the legacy commands.js. The options between
+	// one .command('name') and the next belong to it.
+	for (const file of [
+		'scripts/modules/commands.js',
+		'apps/cli/src/program.ts'
+	]) {
+		const source = stripComments(readIfPresent(read, file));
+		const starts = [...source.matchAll(/\.command\('([a-z-]+)'/g)];
+		starts.forEach((match, index) => {
+			const block = source.slice(
+				match.index,
+				starts[index + 1]?.index ?? source.length
+			);
+			surface.set(match[1], new Set(longFlags(block)));
+		});
+	}
 
 	// Registry commands: the options in the class file each entry points at
 	for (const match of registrySource.matchAll(/^\s+name: '([a-z-]+)'/gm)) {

@@ -96,14 +96,13 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   - ❌ DON'T: Write `config.json` directly with `fs`; go through `writeConfig` so per-machine settings stay out of the shared file.
 
 - **Configuration Getters (`config-manager.js`)**:
-  - ✅ DO: Import and use specific getters from `config-manager.js` (e.g., `getMainProvider()`, `getLogLevel()`, `getMainMaxTokens()`) to access configuration values *needed for application logic* (like `getDefaultSubtasks`).
+  - ✅ DO: Import and use specific getters from `config-manager.js` (e.g., `getMainProvider()`, `getLogLevel()`, `getDefaultNumTasks()`) to access configuration values *needed for application logic*.
   - ✅ DO: Pass the `explicitRoot` parameter to getters if calling from MCP direct functions to ensure the correct project's config is loaded.
-  - ❌ DON'T: Call AI-specific getters (like `getMainModelId`, `getMainMaxTokens`) from core logic functions (`scripts/modules/task-manager/*`). Instead, pass the `role` to the unified AI service.
+  - ❌ DON'T: Call AI-specific getters (like `getMainModelId`, `getParametersForRole`) from core logic functions (`scripts/modules/task-manager/*`). Instead, pass the `role` to the unified AI service.
   - ❌ DON'T: Access configuration values directly from environment variables (except API keys).
 
 - **API Key Handling (`utils.js` & `ai-services-unified.js`)**:
   - ✅ DO: Store API keys **only** in `.env` (for CLI, loaded by `dotenv` in `scripts/dev.js`) or `.mcp.json` (for MCP, accessed via `session.env`).
-  - ✅ DO: Use `isApiKeySet(providerName, session)` from `config-manager.js` to check if a provider's key is available *before* potentially attempting an AI call if needed, but note the unified service performs its own internal check.
   - ✅ DO: Understand that the unified service layer (`ai-services-unified.js`) internally resolves API keys using `resolveEnvVariable(key, session)` from `utils.js`.
 
 ## Logging Utilities (in `scripts/modules/utils.js`)

@@ -172,6 +172,8 @@ describe('taskgraph commands used in command bodies', () => {
 	it('finds the CLI commands to compare against', () => {
 		expect(flagsByCommand.has('set-status')).toBe(true);
 		expect(flagsByCommand.has('clear-subtasks')).toBe(true);
+		// Added inline in apps/cli/src/program.ts, not through the registry
+		expect(flagsByCommand.has('help')).toBe(true);
 		expect(flagsByCommand.get('status')).toBe(flagsByCommand.get('set-status'));
 	});
 

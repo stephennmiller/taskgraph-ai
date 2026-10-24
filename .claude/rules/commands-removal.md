@@ -1,7 +1,6 @@
 ---
 description: Guidelines for CLI commands that delete or remove data
 paths:
-  - "scripts/modules/commands.js"
   - "apps/cli/src/commands/removal.command.ts"
 ---
 

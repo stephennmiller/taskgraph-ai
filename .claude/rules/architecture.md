@@ -9,11 +9,11 @@ paths:
 
 - **Main Modules and Responsibilities**:
 
-  - **[`commands.js`](../../scripts/modules/commands.js): Command Handling**
-    - **Purpose**: Defines and registers all CLI commands using Commander.js.
+  - **[`apps/cli`](../../apps/cli/src/): Command Handling**
+    - **Purpose**: Defines the CLI commands (`apps/cli/src/commands/`), registers them ([`command-registry.ts`](../../apps/cli/src/command-registry.ts)) and runs them ([`program.ts`](../../apps/cli/src/program.ts)) using Commander.js.
     - **Responsibilities** (See also: `commands.md`):
       - Parses command-line arguments and options.
-      - Invokes appropriate core logic functions from `scripts/modules/`.
+      - Invokes `@tm/core`.
       - Handles user input/output for CLI.
       - Implements CLI-specific validation.
 
@@ -32,9 +32,8 @@ paths:
     - **Purpose**: Manages task dependencies.
     - **Responsibilities**: Add/remove/validate/fix dependencies across tagged task contexts (`tmCore.tasks.addDependency` and friends).
 
-  - **[`ui.js`](../../scripts/modules/ui.js): User Interface Components**
-    - **Purpose**: Handles CLI output formatting (tables, colors, boxes, spinners).
-    - **Responsibilities**: Displaying tasks, reports, progress, suggestions, and migration notices for tagged systems.
+  - **[`apps/cli/src/ui/`](../../apps/cli/src/ui/): User Interface Components**
+    - **Purpose**: Pure formatters (`formatters/*-formatters.ts`), the theme and spinners for CLI output. See `ui.md`.
 
   - **[`@tm/core` AI service](../../packages/tm-core/src/modules/ai/ai-service.ts): Unified AI Service Layer**
     - **Purpose**: `AiService` runs every LLM call: role-based provider/model selection, fallback, retries, telemetry. Config getters and `log` come from the host.
@@ -48,7 +47,7 @@ paths:
     - **Purpose**: Loads, validates, and provides access to configuration.
     - **Responsibilities** (See also: `utilities.md`):
       - Reads and merges `.taskgraph/config.json` with defaults, with the gitignored per-machine `.taskgraph/config.local.json` over it.
-      - Provides getters (e.g., `getMainProvider`, `getLogLevel`, `getDefaultSubtasks`) for accessing settings.
+      - Provides getters (e.g., `getMainProvider`, `getLogLevel`, `getDefaultNumTasks`) for accessing settings.
       - **Tag Configuration**: Manages `global.defaultTag` and `tags` section for tag system settings.
       - **Note**: Does **not** store or directly handle API keys (keys are in `.env` or MCP `session.env`).
 
@@ -103,7 +102,7 @@ paths:
 
 - **Data Flow and Module Dependencies (Updated)**:
 
-  - **CLI**: `scripts/dev.js` (loads `.env`) -> `scripts/modules/commands.js` -> Core Logic (`scripts/modules/*`) -> **Tag Resolution Layer** -> Unified AI Service (`ai-services-unified.js`) -> Provider Adapters -> LLM API.
+  - **CLI**: `scripts/dev.js` (loads `.env`) -> `apps/cli/src/program.ts` -> Command (`apps/cli/src/commands/*`) -> `@tm/core` -> AI Service -> Provider Adapters -> LLM API.
   - **MCP**: External Tool -> `mcp-server/server.js` -> Tool (`mcp-server/src/tools/*`) -> Direct Function (`mcp-server/src/core/direct-functions/*`) -> Core Logic (`scripts/modules/*`) -> **Tag Resolution Layer** -> Unified AI Service (`ai-services-unified.js`) -> Provider Adapters -> LLM API.
   - **Configuration**: Core logic needing non-AI settings calls `config-manager.js` getters (passing `session.env` via `explicitRoot` if from MCP). Unified AI Service internally calls `config-manager.js` getters (using `role`) for AI params and `utils.js` (`resolveEnvVariable` with `session.env`) for API keys.
 
@@ -238,7 +237,6 @@ By following these patterns consistently, direct functions will properly manage 
     - **External Libraries**: Libraries like `fs`, `commander`, and `@anthropic-ai/sdk` are mocked at module level
     - **Internal Modules**: Application modules are mocked with appropriate spy functions
     - **Testing Function Callbacks**: Callbacks are extracted from mock call arguments and tested in isolation
-    - **UI Elements**: Output functions from `ui.js` are mocked to verify display calls
     - **Tagged Data Mocking**: Test both legacy and tagged task data structures
 
   - **Testing Flow**:

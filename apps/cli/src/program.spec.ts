@@ -3,13 +3,11 @@
  * registered commands, so a new command can go missing from it silently, as
  * loop, move, lang, scope-up, scope-down and github did (#219, #364). This
  * checks the list against the built Commander program.
- *
- * Lives in the legacy root suite because it needs the legacy program
- * (scripts/modules/commands.js), which also registers the @tm/cli commands.
  */
 
-import { HELP_GROUPS } from '../../apps/cli/src/ui/formatters/help-formatters.js';
-import { setupCLI } from '../../scripts/modules/commands.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setupCLI } from './program.js';
+import { HELP_GROUPS } from './ui/formatters/help-formatters.js';
 
 // Visible commands left out on purpose; see the HELP_GROUPS comment
 const NOT_IN_HELP = new Set([
@@ -49,5 +47,28 @@ describe('--help rows', () => {
 	it('excludes only commands that exist', () => {
 		// Keeps the exclusion list from outliving a removed command
 		expect([...NOT_IN_HELP].filter((n) => !visible.includes(n))).toEqual([]);
+	});
+});
+
+describe('setupCLI', () => {
+	const originalVersion = process.env.TM_PUBLIC_VERSION;
+
+	afterEach(() => {
+		if (originalVersion === undefined) delete process.env.TM_PUBLIC_VERSION;
+		else process.env.TM_PUBLIC_VERSION = originalVersion;
+	});
+
+	it('is named taskgraph', () => {
+		expect(program.name()).toBe('taskgraph');
+	});
+
+	it('reports the build-time version', () => {
+		process.env.TM_PUBLIC_VERSION = '1.2.3';
+		expect(setupCLI().version()).toBe('1.2.3');
+	});
+
+	it('reports unknown without a build-time version', () => {
+		delete process.env.TM_PUBLIC_VERSION;
+		expect(setupCLI().version()).toBe('unknown');
 	});
 });

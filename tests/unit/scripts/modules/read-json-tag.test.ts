@@ -2,9 +2,6 @@
  * Legacy readJSON refuses a tag it was given but the file lacks, rather than
  * returning master's tasks for it (#548)
  */
-// Load ui.js first: Vitest's module runner mishandles the @tm/cli <-> ui.js
-// import cycle (`export * as ui`) when @tm/cli is the entry point.
-import '../../../../scripts/modules/ui.js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';

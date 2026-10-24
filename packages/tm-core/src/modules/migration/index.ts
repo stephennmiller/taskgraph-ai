@@ -3,3 +3,4 @@
  */
 
 export * from './upstream-import.js';
+export * from './migration-notice.js';

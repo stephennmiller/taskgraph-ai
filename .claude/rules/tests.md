@@ -262,7 +262,7 @@ When testing CLI commands built with Commander.js, several special consideration
   ```javascript
   vi.mock('commander');
   import { program } from 'commander';
-  import { setupCLI } from '../../scripts/modules/commands.js';
+  import { setupCLI } from './program.js';
   
   const mockVersion = vi.spyOn(program, 'version').mockReturnValue(program);
   
@@ -443,7 +443,7 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
 ## Testing Common Components
 
 - **CLI Commands**
-  - Mock the action handlers (defined in [`commands.js`](../../scripts/modules/commands.js)) and verify they're called with correct arguments
+  - Mock tm-core responses and test the command classes in `apps/cli/src/commands/` (see the `--help` rows check in `apps/cli/src/program.spec.ts`)
   - Test command registration and option parsing
   - Use `commander` test utilities or custom mocks
 

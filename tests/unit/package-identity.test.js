@@ -36,7 +36,7 @@ const IDENTITY_FILES = [
 	'packages/tm-core/src/modules/loop/presets/default.ts',
 	'packages/claude-code-plugin/commands/install-taskgraph.md',
 	'scripts/loop.sh',
-	'scripts/modules/commands.js'
+	'apps/cli/src/program.ts'
 ];
 
 const SOURCE_DIRS = [

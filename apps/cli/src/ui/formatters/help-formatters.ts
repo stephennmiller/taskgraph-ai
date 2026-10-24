@@ -33,14 +33,15 @@ export interface HelpGroup {
 
 /**
  * One row per command, in the order a user reaches for them. Commands are
- * registered in two places (commands.js and registerAllCommands), so this list
- * is static rather than read from a registry.
+ * registered in two places (`help` in program.ts, the rest by
+ * registerAllCommands), so this list is static rather than read from a
+ * registry.
  *
  * Every command a user runs gets a row. Left out on purpose: `prime` (for
  * agents, named in the footer), the hidden `merge-driver` (git runs it),
  * `help`, `update-subtask` (the help points at `note`
  * instead, #245) and the old per-tag commands that `tags <…>` replaces.
- * tests/unit/help-rows.test.ts fails when a visible command has no row (#364).
+ * program.spec.ts fails when a visible command has no row (#364).
  */
 export const HELP_GROUPS: readonly HelpGroup[] = [
 	{

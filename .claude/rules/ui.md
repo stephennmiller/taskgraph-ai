@@ -1,9 +1,7 @@
 ---
 description: How TaskGraph CLI output should look, and where the code that prints it lives
 paths:
-  - "scripts/modules/ui.js"
-  - "scripts/modules/ui/**/*.js"
-  - "scripts/modules/commands.js"
+  - "apps/cli/src/program.ts"
   - "scripts/modules/task-manager/**/*.js"
   - "apps/cli/src/ui/**/*.ts"
   - "apps/cli/src/commands/**/*.ts"
@@ -70,7 +68,7 @@ It prints to stderr as `✗ <message>` with the hint muted underneath.
 
 ## Waiting and prompts
 
-- **AI calls show a spinner** (`startLoadingIndicator` in `ui.js`, or `ui.createSpinner`) with a short label: `Analyzing 5 tasks…`. For waits over a few seconds, add the elapsed time (`Researching… 12s`). Stop the spinner in a `finally` block.
+- **AI calls show a spinner** (`createSpinner` from `apps/cli/src/ui/spinner.ts`) with a short label: `Analyzing 5 tasks…`. For waits over a few seconds, add the elapsed time (`Researching… 12s`). Stop the spinner in a `finally` block.
 - **Print a result once, when it's complete.** Don't stream raw text and then print it again formatted.
 - **Prompt only when stdin and stdout are terminals** (`process.stdin.isTTY && process.stdout.isTTY`). Scripts, CI and agents run without one: a prompt there hangs forever. For a read-only command, print an error with a hint instead of asking.
 - **Use inquirer 14 prompt types:** `select`, `input`, `confirm`, `checkbox`. There's no `list` type; using it throws, and code that swallows the error hides the menu.
@@ -97,7 +95,7 @@ Prefer aligned rows (`padEnd`) over `cli-table3`. A bordered table is right only
 
 ## AI usage line
 
-AI commands end with `displayAiUsageSummary(telemetryData, 'cli')`, which prints one muted line (`sonnet · 13,735 tokens (12,188 in, 1,547 out) · 100% cached`). Don't print separate token or context tables; the usage line has the real counts.
+AI commands end with the muted line `ui.formatUsageLine(telemetryData)` returns (`sonnet · 13,735 tokens (12,188 in, 1,547 out) · 100% cached`). Don't print separate token or context tables; the usage line has the real counts.
 
 ## Before you open a PR
 

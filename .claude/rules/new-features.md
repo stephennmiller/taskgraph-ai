@@ -10,12 +10,12 @@ paths:
 - **Identify Feature Type** (See `architecture.md` for module details):
   - **Data Manipulation**: Features that create, read, update, or delete tasks belong in [`@tm/core`](../../packages/tm-core/src/modules/tasks/). Follow guidelines in `tasks.md`.
   - **Dependency Management**: Features that handle task relationships belong in [`@tm/core` `modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/). Follow guidelines in `dependencies.md`.
-  - **User Interface**: Output is formatted by pure functions in `apps/cli/src/ui/formatters/` and printed by the command. Follow `ui.md`. Don't add new display functions to the legacy [`ui.js`](../../scripts/modules/ui.js).
+  - **User Interface**: Output is formatted by pure functions in `apps/cli/src/ui/formatters/` and printed by the command. Follow `ui.md`. 
   - **AI Integration**: Features that use AI models belong in [`ai-services.js`](../../scripts/modules/ai-services.js).
   - **Cross-Cutting**: Features that don't fit one category may need components in multiple modules
 
 - **Command-Line Interface** (See `commands.md`):
-  - All new user-facing commands should be added to [`commands.js`](../../scripts/modules/commands.js)
+  - Add new user-facing commands as classes in `apps/cli/src/commands/` and register them in [`command-registry.ts`](../../apps/cli/src/command-registry.ts)
   - Use consistent patterns for option naming and help text
   - Follow the Commander.js model for subcommand structure
 
@@ -36,7 +36,7 @@ The standard pattern for adding a feature follows this workflow:
    - Handle the response (direct text or stream object).
    - **Important**: Prefer `generateTextService` for calls sending large context (like stringified JSON) where incremental display is not needed. See `ai-services.md` for detailed usage patterns and cautions.
 4. **Output**: Add a formatter in `apps/cli/src/ui/formatters/<name>-formatters.ts` with a `.spec.ts` next to it, export it from `apps/cli/src/ui/index.ts`, and follow `ui.md`.
-5. **Command Integration**: Add the CLI command to [`commands.js`](../../scripts/modules/commands.js) following `commands.md`.
+5. **Command Integration**: Add the CLI command in `apps/cli/src/commands/` and register it in [`command-registry.ts`](../../apps/cli/src/command-registry.ts), following `commands.md`.
 6. **Testing**: Write tests for all components of the feature (following `tests.md`)
 7. **Configuration**: Update configuration settings or add new ones in [`config-manager.js`](../../scripts/modules/config-manager.js) and ensure getters/setters are appropriate. Update documentation in `utilities.md` and `taskgraph.md`. Update the `.taskgraph/config.json` structure if needed.
 8. **Documentation**: Update help text and documentation in `dev-workflow.md` and `taskgraph.md`.
@@ -263,7 +263,7 @@ export function formatArchived(count: number, archivePath: string): string {
 ```
 
 ```javascript
-// 4. COMMAND INTEGRATION: Add to commands.js
+// 4. COMMAND INTEGRATION: a command in apps/cli/src/commands/, registered in command-registry.ts
 import { archiveTasks } from './task-manager.js';
 import { ui } from '@tm/cli';
 
@@ -626,7 +626,7 @@ When implementing project initialization commands:
 ## CLI Command Implementation
 
 - **Command Structure**:
-  - ✅ DO: Follow the established pattern in [`commands.js`](../../scripts/modules/commands.js)
+  - ✅ DO: Follow the established pattern in `apps/cli/src/commands/`
   - ✅ DO: Use Commander.js for argument parsing
   - ✅ DO: Include comprehensive help text and examples
   - ✅ DO: Support tagged task context awareness

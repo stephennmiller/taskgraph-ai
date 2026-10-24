@@ -11,9 +11,6 @@
 // Re-export version utilities
 export { compareVersions } from './version.js';
 
-// Re-export changelog utilities (parseChangelogHighlights exported for testing)
-export { parseChangelogHighlights } from './changelog.js';
-
 // Re-export update checking
 export { checkForUpdate } from './check-update.js';
 

@@ -63,7 +63,7 @@ export function isTopLevelHelpRequest(args: string[]): boolean {
 }
 
 /**
- * Whether `runCLI` should print the ASCII banner before a command.
+ * Whether the top-level help screen (help.ts) prints the ASCII banner.
  *
  * Only bare `taskgraph` and the top-level help screen (`taskgraph --help`,
  * `-h`, `help`) get the banner. Routine commands lead with their result and

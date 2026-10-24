@@ -8,8 +8,8 @@
  * each one is registered, so a rename or removal fails CI instead of silently
  * misleading agents.
  *
- * Lives in the legacy root suite because it needs both the legacy Commander
- * program (scripts/) and the MCP tool registry (mcp-server/). Slash commands
+ * Lives in the legacy root suite because it needs both the Commander program
+ * (apps/cli) and the MCP tool registry (mcp-server/). Slash commands
  * are checked against the plugin's command files.
  */
 
@@ -22,7 +22,7 @@ import {
 	toolRegistry
 } from '../../mcp-server/src/tools/tool-registry.js';
 import { PRIME_RULES } from '../../packages/tm-core/src/modules/tasks/utils/prime-context.js';
-import { setupCLI } from '../../scripts/modules/commands.js';
+import { setupCLI } from '../../apps/cli/src/program.js';
 
 const rootDir = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
