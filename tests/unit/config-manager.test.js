@@ -1007,6 +1007,32 @@ describe('Getter Functions', () => {
 		expect(responseLanguage).toBe('中文');
 	});
 
+	test('TASKGRAPH_RESPONSE_LANGUAGE overrides responseLanguage in config (#547)', () => {
+		// Arrange
+		fsReadFileSyncSpy.mockImplementation((filePath) => {
+			if (filePath === MOCK_CONFIG_PATH) {
+				return JSON.stringify({ global: { responseLanguage: '中文' } });
+			}
+			throw new Error(`Unexpected fs.readFileSync call: ${filePath}`);
+		});
+		fsExistsSyncSpy.mockImplementation(
+			(filePath) => path.basename(filePath) !== '.env'
+		);
+		configManager.getConfig(MOCK_PROJECT_ROOT, true);
+		vi.stubEnv('TASKGRAPH_RESPONSE_LANGUAGE', 'French');
+
+		try {
+			// Act
+			const responseLanguage =
+				configManager.getResponseLanguage(MOCK_PROJECT_ROOT);
+
+			// Assert
+			expect(responseLanguage).toBe('French');
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
 	test('getResponseLanguage should return undefined when responseLanguage is not in config', () => {
 		// Arrange
 		const configWithoutLanguage = JSON.stringify({
