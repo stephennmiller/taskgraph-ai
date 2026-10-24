@@ -98,6 +98,8 @@ describe('update_subtask', () => {
 		expect(result.isError).toBeFalsy();
 		expect(reply(result).data).toEqual({
 			message: 'Successfully updated subtask with ID 2.2',
+			updated: true,
+			added: 'notes',
 			subtaskId: '2.2',
 			parentId: '2',
 			subtask,
@@ -108,10 +110,10 @@ describe('update_subtask', () => {
 		});
 	});
 
-	it('warns when the AI added nothing', async () => {
+	it('says so when the AI added nothing', async () => {
 		tasks.updateSubtask.mockResolvedValue({ ...coreResult, added: '' });
 
-		await register().execute(
+		const result = await register().execute(
 			{ id: '2.2', prompt: 'Aliases', projectRoot: project },
 			ctx
 		);
@@ -119,6 +121,42 @@ describe('update_subtask', () => {
 		expect(ctx.log.warn).toHaveBeenCalledWith(
 			expect.stringContaining('Original details remain unchanged')
 		);
+		expect(reply(result).data).toMatchObject({
+			message: 'Nothing added to subtask 2.2: the AI returned no text',
+			updated: false,
+			added: ''
+		});
+	});
+
+	it('counts saved metadata as an update when the AI added nothing', async () => {
+		vi.stubEnv('TASKGRAPH_ALLOW_METADATA_UPDATES', 'true');
+		tasks.updateSubtask.mockResolvedValue({ ...coreResult, added: '' });
+
+		const result = await register().execute(
+			{ id: '2.2', prompt: 'Aliases', metadata: '{"owner":"kim"}', projectRoot: project },
+			ctx
+		);
+
+		expect(reply(result).data).toMatchObject({
+			message: 'Nothing added to subtask 2.2: the AI returned no text (metadata saved)',
+			updated: true
+		});
+	});
+
+	it('does not warn for a blank prompt with metadata (no AI call)', async () => {
+		vi.stubEnv('TASKGRAPH_ALLOW_METADATA_UPDATES', 'true');
+		tasks.updateSubtask.mockResolvedValue({ ...coreResult, added: '' });
+
+		const result = await register().execute(
+			{ id: '2.2', prompt: '  ', metadata: '{"owner":"kim"}', projectRoot: project },
+			ctx
+		);
+
+		expect(ctx.log.warn).not.toHaveBeenCalled();
+		expect(reply(result).data).toMatchObject({
+			message: 'Successfully updated subtask with ID 2.2',
+			updated: true
+		});
 	});
 
 	it('needs a prompt or metadata', async () => {

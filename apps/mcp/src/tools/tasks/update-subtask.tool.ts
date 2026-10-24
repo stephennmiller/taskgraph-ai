@@ -90,7 +90,8 @@ export function registerUpdateSubtaskTool(server: FastMCP) {
 								onDebug: (message) => log.debug(message)
 							}
 						);
-						if (args.prompt && !result.added) {
+						const nothingAdded = Boolean(args.prompt?.trim()) && !result.added;
+						if (nothingAdded) {
 							log.warn(
 								'AI response was empty or whitespace after trimming. Original details remain unchanged.'
 							);
@@ -98,7 +99,11 @@ export function registerUpdateSubtaskTool(server: FastMCP) {
 						return {
 							tag: result.tag,
 							data: {
-								message: `Successfully updated subtask with ID ${result.id}`,
+								message: nothingAdded
+									? `Nothing added to subtask ${result.id}: the AI returned no text${parsedMetadata ? ' (metadata saved)' : ''}`
+									: `Successfully updated subtask with ID ${result.id}`,
+								updated: !nothingAdded || Boolean(parsedMetadata),
+								added: result.added,
 								subtaskId: result.id,
 								parentId: result.parentId,
 								subtask: result.subtask,
