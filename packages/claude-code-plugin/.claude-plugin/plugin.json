@@ -1,6 +1,6 @@
 {
 	"name": "taskgraph",
-	"version": "0.59.23",
+	"version": "0.59.24",
 	"description": "Task management for AI-driven development in Claude Code: slash commands, agents, a taskgraph skill, and hooks that load the project's TaskGraph state and remind Claude to log progress on the task in progress.",
 	"author": {
 		"name": "Stephen Miller",
