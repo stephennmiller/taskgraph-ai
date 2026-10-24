@@ -38,7 +38,6 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/integration/mcp-server/direct-functions.test.js',
 	'tests/unit/config-manager.test.js',
 	'tests/unit/utils.test.js',
-	'tests/unit/scripts/modules/task-manager/complexity-report-tag-isolation.test.js',
 	'tests/unit/scripts/modules/task-manager/list-tasks.test.js',
 	'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
 	// Legacy task-manager sources that were already over the limit. Splitting
