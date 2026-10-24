@@ -11,7 +11,7 @@ paths:
 
 ## Test Organization Structure
 
-- **Unit Tests** (See `architecture.md` for module breakdown)
+- **Unit Tests**
   - Located in `tests/unit/`
   - Test individual functions and utilities in isolation
   - Mock all external dependencies

@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
-const SCAN_DIRS = ['scripts', 'src/utils'];
+const SCAN_DIRS = ['scripts'];
 
 // chalk.white, chalk.bold.white, chalk.blue.underline, ...
 const FIXED_TEXT_COLOR = /chalk(\.\w+)*\.(white|blue)\b/;
@@ -35,7 +35,7 @@ function findOffenders(pattern) {
 
 // chalk.gray is bright black, nearly invisible on Solarized Dark and similar themes
 const BRIGHT_BLACK = /chalk\.gr[ae]y\b/;
-const GRAY_SCAN_DIRS = ['scripts', 'src', ...packageSrcDirs()];
+const GRAY_SCAN_DIRS = ['scripts', ...packageSrcDirs()];
 
 function packageSrcDirs() {
 	return fs

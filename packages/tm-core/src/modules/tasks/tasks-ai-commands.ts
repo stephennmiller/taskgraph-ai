@@ -4,6 +4,12 @@
  * each one as `tmCore.tasks.<name>`; add a new AI command here.
  */
 
+import {
+	AiService,
+	type AiServiceParams,
+	type AiServiceResult
+} from '../ai/ai-service.js';
+import { AiConfig } from '../ai/config-ai-host.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import type { TaskService } from './services/task-service.js';
 
@@ -262,6 +268,20 @@ export class TaskAiCommands {
 		return new ParsePrdService(this.taskService, this.configManager).target(
 			input
 		);
+	}
+
+	/**
+	 * One structured AI call with the project's models and settings, for a
+	 * caller that isn't a task command (the plan evals' judge)
+	 */
+	async generateObject(
+		params: AiServiceParams,
+		hooks?: { onWarning?: (message: string) => void }
+	): Promise<AiServiceResult> {
+		const aiConfig = new AiConfig(this.configManager, (level, message) => {
+			if (level === 'warn') hooks?.onWarning?.(message);
+		});
+		return new AiService(aiConfig.toHost()).generateObject(params);
 	}
 
 	/** The questions worth asking about gaps in a PRD before parsing it */

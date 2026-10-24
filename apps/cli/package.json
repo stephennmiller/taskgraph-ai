@@ -8,6 +8,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./help": "./src/help.ts",
+		"./no-color": "./src/no-color.ts",
 		"./theme": "./src/ui/theme.ts",
 		"./errors": "./src/utils/error-handler.ts",
 		"./suggested-actions": "./src/ui/suggested-actions.ts"

@@ -7,7 +7,7 @@ paths:
 
 How the TaskGraph Model Context Protocol (MCP) server is built and how to add a tool to it. The server runs on FastMCP over stdio and is the published `taskgraph-mcp` / `taskgraph-ai` bin.
 
-## Architecture Overview (See also: `architecture.md`)
+## Architecture Overview
 
 - **Flow**: `External Tool (Claude Code)` <-> FastMCP server ([`apps/mcp/src/server.ts`](../../apps/mcp/src/server.ts)) <-> MCP tools (`apps/mcp/src/tools/<area>/*.tool.ts`) <-> `@tm/core` (`tmCore.tasks`, `tmCore.config`, ...).
 - **Entry**: [`apps/mcp/src/main.ts`](../../apps/mcp/src/main.ts), built by the root `tsdown.config.ts` to `dist/mcp-server.js`. It sets `TASKGRAPH_MCP=true` (tm-core's logger then stays off stdout), then dynamically imports `server.js` and calls `startServer()`. Keep that order: a static import runs first, and modules that build a logger at load time would miss MCP mode (#612).

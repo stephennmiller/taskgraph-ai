@@ -2,8 +2,7 @@
  * @fileoverview The AI service: picks the provider and model for a role, falls
  * back to the other roles, retries provider-side failures, and returns the
  * result with usage telemetry and tag info. Config getters and the logger come
- * from the host (the legacy CLI wires config-manager.js and utils.js in
- * `scripts/modules/ai-services-unified.js`).
+ * from the host (`AiConfig.toHost()` in config-ai-host.ts).
  */
 
 import fs from 'node:fs';

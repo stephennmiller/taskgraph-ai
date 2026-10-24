@@ -1,7 +1,7 @@
 /**
  * @fileoverview The AiService host for tm-core's own commands: role models,
  * model parameters, Claude Code settings and API-key lookup read from
- * ConfigManager, the way the legacy config-manager.js reads them (its role
+ * ConfigManager, the way the legacy config-manager.js read them (its role
  * defaults, the supported-models.json token caps, the claudeCode schema).
  */
 

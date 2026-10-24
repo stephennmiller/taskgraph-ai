@@ -9,7 +9,7 @@
  */
 
 // Must stay first: disables color before chalk loads when NO_COLOR is set
-import './modules/no-color.js';
+import '@tm/cli/no-color';
 import nodeModule from 'node:module';
 
 // Caches compiled code between runs (#248). Optional call: a named import

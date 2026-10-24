@@ -374,6 +374,8 @@ export class TasksDomain {
 		this.ai.parsePrdTarget(...a);
 	findPrdGaps: TaskAiCommands['findPrdGaps'] = (...a) =>
 		this.ai.findPrdGaps(...a);
+	generateObject: TaskAiCommands['generateObject'] = (...a) =>
+		this.ai.generateObject(...a);
 
 	/**
 	 * Update task with new data (direct structural update)

@@ -61,10 +61,9 @@ describe('check-file-size', () => {
 	});
 
 	it.each([
-		'tests/unit/config-manager.test.js',
-		'tests/integration/mcp-server/direct-functions.test.js',
+		'.claude/rules/mcp.md',
 		'.claude/rules/tests.md',
-		'.claude/rules/new-features.md'
+		'tests/manual/prompts/prompt-test.js'
 	])('allows the listed legacy file %s', (p) => {
 		expect(isIgnored(p)).toBe(true);
 		expect(run({ [p]: overLimit() })).toEqual([]);
@@ -72,8 +71,8 @@ describe('check-file-size', () => {
 
 	it.each([
 		'tests/unit/new-thing.test.js',
-		'tests/unit/scripts/modules/task-manager/brand-new.test.js',
-		'packages/tm-core/tests/unit/config-manager.test.js'
+		'.claude/rules/brand-new.md',
+		'tests/manual/prompts/other-test.js'
 	])('still checks %s, a neighbor of a legacy file', (p) => {
 		expect(isIgnored(p)).toBe(false);
 		expect(run({ [p]: overLimit() })).toEqual([p]);

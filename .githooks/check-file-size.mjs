@@ -34,29 +34,16 @@ const IGNORED_PATTERNS = [
 // folders are still checked. Remove an entry once its file is split.
 const LEGACY_OVERSIZED = new Set([
 	'.claude/rules/mcp.md',
-	'.claude/rules/utilities.md',
-	'tests/integration/mcp-server/direct-functions.test.js',
-	'tests/unit/config-manager.test.js',
-	'tests/unit/utils.test.js',
-	'tests/unit/scripts/modules/task-manager/list-tasks.test.js',
-	// Legacy task-manager sources that were already over the limit. Splitting
-	// them is its own issue; until then a small edit to one must be committable.
-	'scripts/modules/utils.js',
-	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
+	// Contributor guide that still describes Jest and needs a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
-	'.claude/rules/new-features.md',
 	// Over the limit on main; a one-line default or parameter change must be
-	// committable until each is split.
-	'scripts/modules/config-manager.js',
+	// committable until it is split.
 	'packages/tm-core/src/modules/ai/prompts/README.md',
 	// Over the limit on main; #248 moves its simple-git import to load on demand
 	'packages/tm-core/src/modules/git/adapters/git-adapter.ts',
 	// Manual prompt test harness (~15,000 tokens on main); a stale parameter
 	// removal must be committable until it is split.
-	'tests/manual/prompts/prompt-test.js',
-	// Over the limit on main; removing its unused exports (#373) must be
-	// committable until it is split.
-	'scripts/modules/utils/contextGatherer.js'
+	'tests/manual/prompts/prompt-test.js'
 ]);
 
 export const isIgnored = (path) =>

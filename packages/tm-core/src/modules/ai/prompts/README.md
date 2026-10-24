@@ -404,8 +404,9 @@ const { systemPrompt, userPrompt, metadata } = promptManager.loadPrompt('add-tas
   useResearch: false
 });
 
-// Use with AI service
-const result = await generateObjectService({
+// Use with AI service (AiService, over an AiConfig host)
+const result = await new AiService(new AiConfig(configManager).toHost()).generateObject({
+  role: 'main',
   systemPrompt,
   prompt: userPrompt,
   // ... other AI parameters

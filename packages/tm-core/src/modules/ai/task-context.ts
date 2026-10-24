@@ -2,7 +2,7 @@
  * @fileoverview The task context an AI prompt gets: the tasks that match a
  * query (fuzzy search over titles, descriptions and details, plus the newest
  * tasks) and the dependency chains of given tasks, formatted as the legacy
- * ContextGatherer's 'research' format (`scripts/modules/utils/contextGatherer.js`).
+ * ContextGatherer's 'research' format.
  */
 
 import type { Subtask, Task } from '../../common/types/index.js';
@@ -208,8 +208,7 @@ const PURPOSE_PATTERNS = [
 
 /**
  * IDs of the tasks most related to `query`, as the legacy FuzzyTaskSearch
- * found them for expand (`scripts/modules/utils/fuzzyTaskSearch.js`, its
- * default settings): fuzzy matches over tasks and subtasks, then up to three
+ * found them for expand (with its default settings): fuzzy matches over tasks and subtasks, then up to three
  * on the query's topic, then the five newest, best first. The expand prompt
  * is eval-gated, so this keeps that search as it was, quirks included.
  */

@@ -4,7 +4,6 @@ paths:
   - "packages/**/*.ts"
   - "apps/**/*.ts"
   - "scripts/**/*.js"
-  - "src/**/*.js"
   - "packages/claude-code-plugin/**"
 ---
 

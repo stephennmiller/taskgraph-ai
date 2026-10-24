@@ -112,7 +112,7 @@
             "title": "Retire the legacy CLI and MCP server",
             "description": "Delete commands.js, utils.js and mcp-server/src, and move the MCP tools into apps/mcp, leaving one MCP server.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               "7.2"
             ],
