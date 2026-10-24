@@ -145,9 +145,10 @@ export function toMarkdown(content: string): string {
 		.replace(/\\t/g, '\t')
 		.replace(/\\"/g, '"');
 
-	// Check if content has HTML tags - if so, convert to markdown first
+	// Check if content has HTML tags - if so, convert to markdown first.
+	// turndown decodes entities, so `&#27;[2J` becomes an escape sequence here
 	return /<[^>]+>/.test(cleaned)
-		? getTurndownService().turndown(cleaned)
+		? terminalSafe(getTurndownService().turndown(cleaned))
 		: cleaned;
 }
 
