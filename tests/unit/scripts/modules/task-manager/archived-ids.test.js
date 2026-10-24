@@ -1,13 +1,13 @@
 /**
  * Archived tasks (`taskgraph archive`) keep their IDs and count as done in
- * the legacy commands: add-task and parse-prd never hand out an archived ID, and the MCP next_task treats dependencies on
+ * the legacy commands: parse-prd never hands out an archived ID, and the MCP
+ * next_task treats dependencies on
  * archived tasks as done. Real files in a temp dir; only logging is silenced.
  */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { vi } from 'vitest';
-import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
 import { loadExistingTasks } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 import { nextTaskDirect } from '../../../../../mcp-server/src/core/direct-functions/next-task.js';
 
@@ -85,46 +85,6 @@ describe('archived task IDs in the legacy commands', () => {
 
 	afterEach(() => {
 		fs.rmSync(dir, { recursive: true, force: true });
-	});
-
-	describe('add-task', () => {
-		test('numbers a new task above the archived IDs', async () => {
-			setup([task(1)], [task(2), task(3)]);
-
-			const result = await addTask(
-				tasksPath,
-				null,
-				[],
-				'medium',
-				{ mcpLog: silentLog, projectRoot: dir, tag: 'master' },
-				'json',
-				{ title: 'New', description: 'New task' }
-			);
-
-			expect(result.newTaskId).toBe(4);
-			expect(readTasks().map((t) => t.id)).toEqual(['1', '4']);
-		});
-
-		test('keeps a restored ID reserved: highestId never goes down', async () => {
-			// Task 3 was archived, then everything after it restored or removed
-			setup([task(1)], []);
-			fs.writeFileSync(
-				archivePath,
-				JSON.stringify({ master: { tasks: [], metadata: { highestId: 3 } } })
-			);
-
-			const result = await addTask(
-				tasksPath,
-				null,
-				[],
-				'medium',
-				{ mcpLog: silentLog, projectRoot: dir, tag: 'master' },
-				'json',
-				{ title: 'New', description: 'New task' }
-			);
-
-			expect(result.newTaskId).toBe(4);
-		});
 	});
 
 	describe('parse-prd', () => {

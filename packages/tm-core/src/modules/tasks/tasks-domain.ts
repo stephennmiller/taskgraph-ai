@@ -9,6 +9,12 @@ import { DependencyService } from './services/dependency.service.js';
 import { TaskRemovalService } from './services/task-removal.service.js';
 import { TagService } from './services/tag.service.js';
 import {
+	AddTaskService,
+	type AddTaskHooks,
+	type AddTaskInput,
+	type AddTaskResult
+} from './services/add-task.service.js';
+import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
 	type GenerateTaskFilesResult
@@ -422,6 +428,23 @@ export class TasksDomain {
 		return this.taskService
 			.getStorage()
 			.appendTasks(tasks, tag || this.configManager.getActiveTag());
+	}
+
+	/**
+	 * Add one task: written by the AI from `prompt`, or given as `title` and
+	 * `description` (no AI call). The AI call runs without the file lock; the
+	 * save re-reads tasks.json under it and appends only the new task, with
+	 * an ID free at that moment. Dependencies that don't exist in the tag are
+	 * dropped with a warning; an unknown `discoveredFrom` throws before any AI call.
+	 */
+	async add(
+		input: AddTaskInput,
+		hooks?: AddTaskHooks
+	): Promise<AddTaskResult> {
+		return new AddTaskService(
+			() => this.taskService.getStorage(),
+			this.configManager
+		).add(input, hooks);
 	}
 
 	/**

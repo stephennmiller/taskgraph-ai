@@ -7,6 +7,7 @@
 import {
 	registerAddDependencyTool,
 	registerAddNoteTool,
+	registerAddTaskTool,
 	registerAddTagTool,
 	registerAddSubtaskTool,
 	registerArchiveTasksTool,
@@ -30,7 +31,6 @@ import {
 	registerUseTagTool,
 	registerValidateDependenciesTool
 } from '@tm/mcp';
-import { registerAddTaskTool } from './add-task.js';
 import { registerAnalyzeProjectComplexityTool } from './analyze.js';
 import { registerComplexityReportTool } from './complexity-report.js';
 import { registerExpandAllTool } from './expand-all.js';

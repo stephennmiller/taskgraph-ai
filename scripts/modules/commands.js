@@ -10,6 +10,7 @@ import { Command, Option } from 'commander';
 
 // Import command registry and utilities from @tm/cli
 import {
+	aiErrorHint,
 	checkForUpdate,
 	collectClarifications,
 	describeError,
@@ -29,7 +30,6 @@ import { syncTasksToReadme } from './sync-readme.js';
 import { log, readJSON } from './utils.js';
 
 import {
-	addTask,
 	analyzeTaskComplexity,
 	expandAllTasks,
 	expandTask,
@@ -100,28 +100,6 @@ import {
 } from '../../src/constants/profiles.js';
 import { getTaskGraphVersion } from '../../src/utils/getVersion.js';
 import { initializeProject, setUpMergeDriver } from '../init.js';
-
-/**
- * The next step to suggest when an AI-backed command fails for a reason the
- * user can act on. Returns undefined to fall back to the default hint for
- * the error (e.g. listing tasks when an ID isn't found).
- * @param {Error} error
- * @returns {string|undefined}
- */
-function aiErrorHint(error) {
-	const message = error?.message ?? '';
-	if (/overloaded|rate limit|\b(429|529)\b/i.test(message)) {
-		return 'Claude is busy. Wait a minute and try again';
-	}
-	if (/empty stream response|did not return a valid/i.test(message)) {
-		return 'Try again, or reword the prompt';
-	}
-	// Claude Code stops a call at claudeCode.maxTurns (6 by default)
-	if (/max(imum)?[ _-]?(number of )?turns/i.test(message)) {
-		return 'Raise claudeCode.maxTurns in .taskgraph/config.json, or try again';
-	}
-	return undefined;
-}
 
 /**
  * Configure and register CLI commands
@@ -1247,121 +1225,6 @@ function registerCommands(programInstance) {
 					console.log(ui.formatResearchSaveFailed(target, error.message));
 					process.exitCode = 1;
 				}
-			}
-		});
-
-	// add-task command
-	programInstance
-		.command('add-task')
-		.description('Add a new task using AI, optionally providing manual details')
-		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
-		.option(
-			'-p, --prompt <prompt>',
-			'Description of the task to add (required if not using manual fields)'
-		)
-		.option('-t, --title <title>', 'Task title (for manual task creation)')
-		.option(
-			'-d, --description <description>',
-			'Task description (for manual task creation)'
-		)
-		.option(
-			'--details <details>',
-			'Implementation details (for manual task creation)'
-		)
-		.option(
-			'--dependencies <dependencies>',
-			'Comma-separated list of task IDs this task depends on'
-		)
-		.option(
-			'--discovered-from <id>',
-			'Task you found this work while doing; links them without blocking'
-		)
-		.option(
-			'--priority <priority>',
-			'Task priority (high, medium, low)',
-			'medium'
-		)
-		.option(
-			'-r, --research',
-			'Whether to use research capabilities for task creation'
-		)
-		.option(
-			'--ac <criterion>',
-			'Acceptance criterion; repeat for more (set-status --check ticks them)',
-			(value, previous = []) => [...previous, value]
-		)
-		.option('--tag <tag>', 'Specify tag context for task operations')
-		.action(async (options) => {
-			const isManualCreation = options.title && options.description;
-
-			// Validate that either prompt or title+description are provided
-			if (!options.prompt && !isManualCreation) {
-				console.error(
-					chalk.red(
-						'Error: Either --prompt or both --title and --description must be provided'
-					)
-				);
-				process.exit(1);
-			}
-
-			// No check that tasks.json exists: addTask creates it for the first
-			// task. The old check also resolved the path from the current folder,
-			// so it failed in any subfolder of the project.
-			const taskGraph = initTaskGraph({
-				tasksPath: options.file || true,
-				tag: options.tag
-			});
-
-			const projectRoot = taskGraph.getProjectRoot();
-
-			const tag = taskGraph.getCurrentTag();
-
-			// Show current tag context
-			await displayCurrentTagIndicator(tag, {
-				tasksPath: taskGraph.getTasksPath()
-			});
-
-			let manualTaskData = null;
-			if (isManualCreation) {
-				manualTaskData = {
-					title: options.title,
-					description: options.description,
-					details: options.details || '',
-					testStrategy: options.testStrategy || ''
-				};
-			}
-
-			const dependenciesArray = options.dependencies
-				? options.dependencies.split(',').map((id) => id.trim())
-				: [];
-
-			const context = {
-				projectRoot,
-				tag,
-				commandName: 'add-task',
-				outputType: 'cli'
-			};
-
-			try {
-				const { newTaskId, telemetryData } = await addTask(
-					taskGraph.getTasksPath(),
-					options.prompt,
-					dependenciesArray,
-					options.priority,
-					context,
-					'text',
-					manualTaskData,
-					options.research,
-					{
-						acceptanceCriteria: options.ac,
-						discoveredFrom: options.discoveredFrom
-					}
-				);
-
-				// addTask handles detailed CLI success logging AND telemetry display when outputFormat is 'text'
-				// No need to call displayAiUsageSummary here anymore.
-			} catch (error) {
-				displayError(error, { hint: error.hint ?? aiErrorHint(error) });
 			}
 		});
 

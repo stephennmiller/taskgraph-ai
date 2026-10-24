@@ -6,6 +6,7 @@
 import type { Command } from 'commander';
 
 import { AddSubtaskCommand } from './commands/add-subtask.command.js';
+import { AddTaskCommand } from './commands/add-task.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import {
@@ -109,6 +110,13 @@ export class CommandRegistry {
 			name: 'move',
 			description: 'Move tasks to another position or tag',
 			commandClass: MoveCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'add-task',
+			description:
+				'Add a new task using AI, optionally providing manual details',
+			commandClass: AddTaskCommand as any,
 			category: 'task'
 		},
 		{

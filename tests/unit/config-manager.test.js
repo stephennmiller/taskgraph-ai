@@ -65,7 +65,7 @@ const __filename = fileURLToPath(import.meta.url); // Get current file path
 const __dirname = path.dirname(__filename); // Get current directory
 const realSupportedModelsPath = path.resolve(
 	__dirname,
-	'../../scripts/modules/supported-models.json'
+	'../../packages/tm-core/src/modules/ai/supported-models.json'
 );
 let REAL_SUPPORTED_MODELS_CONTENT;
 let REAL_SUPPORTED_MODELS_DATA;

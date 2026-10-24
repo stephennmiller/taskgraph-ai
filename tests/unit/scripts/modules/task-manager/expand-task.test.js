@@ -45,8 +45,7 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	getTagAwareFilePath: createGetTagAwareFilePathMock(),
 	slugifyTagForFilePath: createSlugifyTagForFilePathMock(),
 	readComplexityReport: vi.fn(),
-	markMigrationForNotice: vi.fn(),
-	performCompleteTagMigration: vi.fn()
+	markMigrationForNotice: vi.fn()
 }));
 
 vi.doMock('../../../../../scripts/modules/ui.js', () => ({

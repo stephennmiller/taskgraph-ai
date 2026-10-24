@@ -209,6 +209,26 @@ export function formatCommanderError(
 }
 
 /**
+ * The next step to suggest when an AI-backed command fails for a reason the
+ * user can act on; undefined falls back to the default hint for the error
+ * (e.g. listing tasks when an ID isn't found).
+ */
+export function aiErrorHint(error: unknown): string | undefined {
+	const message = (error as { message?: string })?.message ?? '';
+	if (/overloaded|rate limit|\b(429|529)\b/i.test(message)) {
+		return 'Claude is busy. Wait a minute and try again';
+	}
+	if (/empty stream response|did not return a valid/i.test(message)) {
+		return 'Try again, or reword the prompt';
+	}
+	// Claude Code stops a call at claudeCode.maxTurns (6 by default)
+	if (/max(imum)?[ _-]?(number of )?turns/i.test(message)) {
+		return 'Raise claudeCode.maxTurns in .taskgraph/config.json, or try again';
+	}
+	return undefined;
+}
+
+/**
  * Print an error message (and hint) to stderr, preceded by a blank line so
  * it separates from whatever the command printed before failing.
  */

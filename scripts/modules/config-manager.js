@@ -3,15 +3,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import {
 	ALL_PROVIDERS,
+	ClaudeCodeSettingsSchema,
 	CUSTOM_PROVIDERS,
 	CUSTOM_PROVIDERS_ARRAY,
 	hasPerMachineSettings,
 	mergeMachineConfig,
+	SUPPORTED_MODELS as MODEL_MAP,
 	splitMachineConfig
 } from '@tm/core';
 import chalk from 'chalk';
-import { z } from 'zod';
-import { AI_COMMAND_NAMES } from '../../src/constants/commands.js';
 import {
 	TASKGRAPH_DIR,
 	TASKGRAPH_LOCAL_CONFIG_FILE,
@@ -19,7 +19,6 @@ import {
 } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
 import { dropOldNumTasksDefault, toSavedConfig } from './config-file.js';
-import MODEL_MAP from './supported-models.json' with { type: 'json' };
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
 
 // Calculate __dirname in ESM
@@ -369,51 +368,10 @@ export function getSupportedModelsForProvider(providerName) {
  * @returns {object} The validated settings
  */
 function validateClaudeCodeSettings(settings) {
-	// Define the base settings schema without commandSpecific first
-	const BaseSettingsSchema = z.object({
-		pathToClaudeCodeExecutable: z.string().optional(),
-		// Use number().int() for integer validation in Zod
-		maxTurns: z.number().int().positive().optional(),
-		customSystemPrompt: z.string().optional(),
-		appendSystemPrompt: z.string().optional(),
-		permissionMode: z
-			.enum(['default', 'acceptEdits', 'plan', 'bypassPermissions'])
-			.optional(),
-		allowedTools: z.array(z.string()).optional(),
-		disallowedTools: z.array(z.string()).optional(),
-		mcpServers: z
-			.record(
-				z.string(),
-				z.object({
-					type: z.enum(['stdio', 'sse']).optional(),
-					command: z.string(),
-					args: z.array(z.string()).optional(),
-					env: z.record(z.string(), z.string()).optional(),
-					url: z.url().optional(),
-					headers: z.record(z.string(), z.string()).optional()
-				})
-			)
-			.optional()
-	});
-
-	// Define CommandSpecificSchema using flexible keys, but restrict to known commands
-	const CommandSpecificSchema = z
-		.record(z.string(), BaseSettingsSchema)
-		.refine(
-			(obj) =>
-				Object.keys(obj || {}).every((k) => AI_COMMAND_NAMES.includes(k)),
-			{ message: 'Invalid command name in commandSpecific' }
-		);
-
-	// Define the full settings schema with commandSpecific
-	const SettingsSchema = BaseSettingsSchema.extend({
-		commandSpecific: CommandSpecificSchema.optional()
-	});
-
 	let validatedSettings = {};
 
 	try {
-		validatedSettings = SettingsSchema.parse(settings);
+		validatedSettings = ClaudeCodeSettingsSchema.parse(settings);
 	} catch (error) {
 		console.warn(
 			chalk.yellow(

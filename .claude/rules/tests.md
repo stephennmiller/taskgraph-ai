@@ -714,7 +714,7 @@ npm run test:integration
   // ✅ DO: Test with bypassed initialization or manual task paths
   test('should handle manual task creation without AI', () => {
     // Using a path that doesn't require AI client initialization
-    const result = addTaskDirect({ 
+    const result = addManualTask({ 
       title: 'Manual Task', 
       description: 'Test Description'
     }, mockLogger);

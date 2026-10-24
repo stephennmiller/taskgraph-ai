@@ -77,7 +77,6 @@ vi.doMock('../../scripts/modules/utils.js', () => ({
 	getTagFromPath: vi.fn(() => 'master'),
 	isValidTag: vi.fn(() => true),
 	migrateToTaggedFormat: vi.fn(() => ({ master: { tasks: [] } })),
-	performCompleteTagMigration: vi.fn(),
 	resolveCurrentTag: vi.fn(() => 'master'),
 	getDefaultTag: vi.fn(() => 'master'),
 	performMigrationIfNeeded: vi.fn()
@@ -103,7 +102,6 @@ vi.doMock('../../scripts/modules/ui.js', () => ({
 
 // Mock constants
 vi.doMock('../../src/constants/task-priority.js', () => ({
-	DEFAULT_TASK_PRIORITY: 'medium',
 	TASK_PRIORITY_OPTIONS: ['low', 'medium', 'high']
 }));
 
