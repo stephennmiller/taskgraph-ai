@@ -7,6 +7,7 @@
  * loaded.
  */
 
+import fs from 'fs';
 import path from 'path';
 import { realpathOfExistingPrefix, resolvePathInsideRoot } from '@tm/core';
 
@@ -220,6 +221,25 @@ function targetsSecret(root, candidate) {
 	return [resolved, real].some((p) => namesSecret(path.relative(root, p)));
 }
 
+/**
+ * True when a `..` in the path follows a symlink, so that the OS (which applies
+ * `..` to the link's target) and path.resolve (which drops `link/..` as text)
+ * reach different files. The Claude Code the Agent SDK ships (0.3.283)
+ * normalizes file_path and path as text before opening them, so it opens what
+ * the guard judged, but the guard shouldn't depend on that (#479).
+ */
+function climbsOutOfSymlink(root, candidate) {
+	const parts = candidate.split(/[\\/]/);
+	return parts.some((part, i) => {
+		if (part !== '..') return false;
+		const before = path.resolve(root, parts.slice(0, i).join('/'));
+		return (
+			path.dirname(realpathOfExistingPrefix(before)) !==
+			realpathOfExistingPrefix(path.dirname(before))
+		);
+	});
+}
+
 function hasParentSegment(pattern) {
 	return pattern.split(/[\\/]/).includes('..');
 }
@@ -265,7 +285,7 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 		(p) => p !== undefined && p !== null
 	);
 	for (const p of paths) {
-		if (!isInsideRoot(root, p)) {
+		if (!isInsideRoot(root, p) || climbsOutOfSymlink(root, p)) {
 			return `${toolName} is limited to the project directory (${root}); ${p} is outside it.`;
 		}
 		if (targetsSecret(root, p) || spellsSecretDirOddly(root, p)) {
@@ -342,6 +362,105 @@ export function createPathGuardHook(rootDir) {
 						updatedInput: excludeSecretsFromGrep(toolInput)
 					}
 				};
+			}
+		]
+	};
+}
+
+/** True when the path is a file that Read refuses */
+function isSecretFile(root, file) {
+	return (
+		fs.statSync(file, { throwIfNoEntry: false })?.isFile() === true &&
+		getPathViolation(root, 'Read', { file_path: file }) !== null
+	);
+}
+
+/**
+ * True when a line of a directory-wide Grep comes from a file Read refuses.
+ * The line starts with the file's path and then `:` or `-` (`a.js:3:x`,
+ * `a.js-4-x`, `a.js:2` in count mode). Paths can hold either character, so
+ * every prefix that ends at one is tried.
+ */
+function fromSecretFile(secret, line) {
+	for (let i = 1; i < line.length; i++) {
+		if ((line[i] === ':' || line[i] === '-') && secret(line.slice(0, i))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Grep output without the matches from files Read refuses. rg matches the
+ * exclusion globs against names as they are on disk, so `.\uFF25NV` or
+ * `\u212Aubeconfig` slips past `!.env` and `!kubeconfig` (#500); this judges
+ * each result with the Read check instead.
+ * @param {string} root - Absolute, real path of the allowed directory
+ * @param {string} cwd - Directory Claude Code makes result paths relative to
+ * @param {object} output - Grep's tool output
+ * @returns {object|null} The filtered output, or null when nothing was dropped
+ */
+export function dropSecretMatches(root, cwd, output) {
+	if (!output || typeof output !== 'object') return null;
+	const filenames = Array.isArray(output.filenames) ? output.filenames : [];
+	const lines =
+		typeof output.content === 'string' ? output.content.split('\n') : [];
+	// Lines of one file share a prefix, so judge each path once
+	const judged = new Map();
+	const secret = (relative) => {
+		const file = path.resolve(cwd, relative);
+		if (!judged.has(file)) judged.set(file, isSecretFile(root, file));
+		return judged.get(file);
+	};
+	const keptFiles = filenames.filter((file) => !secret(file));
+	const keptLines = lines.filter((line) => !fromSecretFile(secret, line));
+	if (
+		keptFiles.length === filenames.length &&
+		keptLines.length === lines.length
+	) {
+		return null;
+	}
+	const filtered = { ...output, filenames: keptFiles };
+	if (output.mode === 'files_with_matches') {
+		filtered.numFiles = keptFiles.length;
+	}
+	if (typeof output.content === 'string') {
+		filtered.content = keptLines.join('\n');
+		if (output.numLines !== undefined) filtered.numLines = keptLines.length;
+	}
+	if (output.mode === 'count') {
+		const counts = keptLines.map((line) => Number(line.split(':').pop()));
+		filtered.numFiles = counts.length;
+		filtered.numMatches = counts.reduce((sum, n) => sum + (n || 0), 0);
+	}
+	return filtered;
+}
+
+/**
+ * Build a PostToolUse hook entry that removes matches from secret files from
+ * every Grep result.
+ * @param {string} rootDir - Project root
+ * @returns {{matcher: string, hooks: Function[]}}
+ */
+export function createGrepResultHook(rootDir) {
+	const root = realpathOfExistingPrefix(path.resolve(rootDir));
+	return {
+		matcher: 'Grep',
+		hooks: [
+			async (input) => {
+				const filtered = dropSecretMatches(
+					root,
+					input?.cwd ?? root,
+					input?.tool_response
+				);
+				return filtered
+					? {
+							hookSpecificOutput: {
+								hookEventName: 'PostToolUse',
+								updatedToolOutput: filtered
+							}
+						}
+					: {};
 			}
 		]
 	};

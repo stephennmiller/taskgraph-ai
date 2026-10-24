@@ -58,6 +58,55 @@ describe('claude-code path guard', () => {
 		expect(getPathViolation(root, 'Glob', { pattern: '**/*.js' })).toBeNull();
 	});
 
+	// The OS applies `..` to a symlink's target, path.resolve drops `link/..`
+	// as text (#479)
+	describe('.. after a symlink', () => {
+		beforeAll(() => {
+			fs.mkdirSync(path.join(base, 'outside/sub'), { recursive: true });
+			fs.writeFileSync(path.join(base, 'outside/passwd'), 'x');
+			// 'junction' lets Windows make them without admin rights
+			fs.symlinkSync(
+				path.join(base, 'outside/sub'),
+				path.join(root, 'linkout'),
+				'junction'
+			);
+			fs.symlinkSync(
+				path.join(root, 'src'),
+				path.join(root, 'srclink'),
+				'junction'
+			);
+		});
+
+		it.each([['linkout/../passwd'], ['src/../linkout/../passwd']])(
+			'denies Read of %j, relative or absolute',
+			(file) => {
+				expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
+					/outside/
+				);
+				expect(
+					getPathViolation(root, 'Read', { file_path: `${root}/${file}` })
+				).toMatch(/outside/);
+			}
+		);
+
+		it('denies Glob and Grep paths that climb out of a symlink', () => {
+			for (const tool of ['Glob', 'Grep']) {
+				expect(
+					getPathViolation(root, tool, { pattern: '*', path: 'linkout/..' })
+				).toMatch(/outside/);
+			}
+		});
+
+		it('allows .. where the OS and the text agree', () => {
+			for (const file of ['src/../src/a.js', 'srclink/../src/a.js']) {
+				expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
+			}
+			expect(
+				getPathViolation(root, 'Glob', { pattern: '*', path: 'src/..' })
+			).toBeNull();
+		});
+	});
+
 	it('rejects glob patterns that leave the root', () => {
 		expect(getPathViolation(root, 'Glob', { pattern: '../**/*' })).toMatch(
 			/may not leave/

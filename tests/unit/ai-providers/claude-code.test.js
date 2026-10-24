@@ -214,7 +214,10 @@ describe('ClaudeCodeProvider', () => {
 					strictMcpConfig: true,
 					mcpServers: {},
 					cwd: '/work/project',
-					hooks: { PreToolUse: [expect.any(Object)] }
+					hooks: {
+						PreToolUse: [expect.any(Object)],
+						PostToolUse: [expect.any(Object)]
+					}
 				}
 			});
 		});
@@ -349,6 +352,7 @@ describe('ClaudeCodeProvider', () => {
 					expect(settings.additionalDirectories).toBeUndefined();
 					const [guard] = settings.hooks.PreToolUse;
 					expect(guard.matcher).toBe('Read|Grep|Glob');
+					expect(settings.hooks.PostToolUse[0].matcher).toBe('Grep');
 				}
 			);
 
@@ -381,6 +385,7 @@ describe('ClaudeCodeProvider', () => {
 				expect(settings.additionalDirectories).toBeUndefined();
 				expect(settings.cwd).toBe('/work/project');
 				expect(settings.hooks.PreToolUse).toHaveLength(1);
+				expect(settings.hooks.PostToolUse).toHaveLength(1);
 			});
 
 			it('drops a pathToClaudeCodeExecutable that is not a trusted claude binary', async () => {
