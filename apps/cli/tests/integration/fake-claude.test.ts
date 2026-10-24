@@ -369,10 +369,15 @@ describe('installFakeClaude', () => {
 			workDir: work
 		});
 
-		expect(path.basename(executable)).toBe('claude');
+		expect(path.basename(executable)).toBe(
+			process.platform === 'win32' ? 'claude.exe' : 'claude'
+		);
 		expect(path.isAbsolute(executable)).toBe(true);
 		expect(path.relative(project, executable).startsWith('..')).toBe(true);
-		expect(fs.statSync(executable).mode & 0o111).not.toBe(0);
+		// Windows has no execute bit
+		if (process.platform !== 'win32') {
+			expect(fs.statSync(executable).mode & 0o111).not.toBe(0);
+		}
 	});
 
 	it('points the project config at the shim and keeps other settings', () => {

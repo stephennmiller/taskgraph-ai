@@ -750,10 +750,11 @@
         "description": "The fake claude is a #!/bin/sh script, so tests on the AI path fail on Windows and the Windows smoke leg leaves them out.",
         "details": "GitHub issue #476: https://github.com/stephennmiller/taskgraph-ai/issues/476\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:16:43.275Z"
       },
       {
         "id": "57",
@@ -884,9 +885,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:09:09.175Z",
+      "lastModified": "2026-10-24T12:16:43.275Z",
       "taskCount": 67,
-      "completedCount": 39,
+      "completedCount": 47,
       "tags": [
         "master"
       ]
