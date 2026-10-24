@@ -175,11 +175,11 @@ This overview should provide a solid foundation for creating user-facing documen
 
 # MCP Interface Synopsis
 
-This document provides an overview of the MCP (Model Context Protocol) interface for the TaskGraph application. The MCP interface is defined in the `mcp-server/` directory and exposes the application's core functionalities as a set of tools that can be called remotely.
+This document provides an overview of the MCP (Model Context Protocol) interface for the TaskGraph application. The MCP interface is defined in `apps/mcp/` and exposes the application's core functionalities as a set of tools that can be called remotely.
 
 ## Core Concepts
 
-The MCP interface is built on top of the `fastmcp` library and registers a set of tools that correspond to the core functionalities of the TaskGraph application. These tools are defined in the `mcp-server/src/tools/` directory and are registered with the MCP server in `mcp-server/src/tools/index.js`.
+The MCP interface is built on top of the `fastmcp` library and registers a set of tools that correspond to the core functionalities of the TaskGraph application. These tools are defined in `apps/mcp/src/tools/` and are registered with the MCP server in `apps/mcp/src/tools/tool-registry.ts`.
 
 Each tool is defined with a name, a description, and a set of parameters that are validated using the `zod` library. The `execute` function of each tool calls the corresponding `@tm/core` method.
 

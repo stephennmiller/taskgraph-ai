@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
-const SCAN_DIRS = ['scripts', 'src', 'mcp-server', 'apps', 'packages'];
+const SCAN_DIRS = ['scripts', 'src', 'apps', 'packages'];
 
 function listSourceFiles(dir) {
 	return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

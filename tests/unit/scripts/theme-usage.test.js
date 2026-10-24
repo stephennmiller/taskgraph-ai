@@ -35,12 +35,7 @@ function findOffenders(pattern) {
 
 // chalk.gray is bright black, nearly invisible on Solarized Dark and similar themes
 const BRIGHT_BLACK = /chalk\.gr[ae]y\b/;
-const GRAY_SCAN_DIRS = [
-	'scripts',
-	'src',
-	'mcp-server/src',
-	...packageSrcDirs()
-];
+const GRAY_SCAN_DIRS = ['scripts', 'src', ...packageSrcDirs()];
 
 function packageSrcDirs() {
 	return fs

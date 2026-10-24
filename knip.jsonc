@@ -14,7 +14,6 @@
 			],
 			"project": [
 				"scripts/**/*.js",
-				"mcp-server/**/*.js",
 				"src/**/*.js",
 				"tests/**/*.js",
 				".github/scripts/*.mjs",
@@ -24,7 +23,10 @@
 			// keeps npm packages external, so the published package needs them
 			"ignoreDependencies": [
 				"ai-sdk-provider-claude-code",
+				"ajv",
+				"ajv-formats",
 				"cli-table3",
+				"fastmcp",
 				"gradient-string",
 				"inquirer",
 				"jsonrepair",

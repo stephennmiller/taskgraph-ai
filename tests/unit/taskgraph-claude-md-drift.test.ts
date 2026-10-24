@@ -9,7 +9,7 @@
  * misleading agents.
  *
  * Lives in the legacy root suite because it needs both the Commander program
- * (apps/cli) and the MCP tool registry (mcp-server/). Slash commands
+ * (apps/cli) and the MCP tool registry (apps/mcp/). Slash commands
  * are checked against the plugin's command files.
  */
 
@@ -18,9 +18,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Command } from 'commander';
 import {
-	getToolCounts,
+	standardTools,
 	toolRegistry
-} from '../../mcp-server/src/tools/tool-registry.js';
+} from '../../apps/mcp/src/tools/tool-registry.js';
 import { PRIME_RULES } from '../../packages/tm-core/src/modules/tasks/utils/prime-context.js';
 import { setupCLI } from '../../apps/cli/src/program.js';
 
@@ -210,24 +210,23 @@ describe('other places that state the tool tier counts', () => {
 
 	it('README tier table and setup text match the registry', () => {
 		const readme = read('README.md');
-		const counts = getToolCounts();
 		const row = (tier: string) =>
 			Number(
 				readme.match(
 					new RegExp(`\\|\\s*\`${tier}\`[^|]*\\|\\s*(\\d+)\\s*\\|`)
 				)?.[1]
 			);
-		expect(row('standard')).toBe(counts.standard);
-		expect(row('all')).toBe(counts.total);
+		expect(row('standard')).toBe(standardTools.length);
+		expect(row('all')).toBe(Object.keys(toolRegistry).length);
 		expect(Number(readme.match(/`standard` loads (\d+) tools/)?.[1])).toBe(
-			counts.standard
+			standardTools.length
 		);
 	});
 
 	it('llms-install.md states the standard tier count', () => {
 		const text = read('llms-install.md');
 		expect(Number(text.match(/`standard` \((\d+)\)/)?.[1])).toBe(
-			getToolCounts().standard
+			standardTools.length
 		);
 	});
 });

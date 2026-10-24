@@ -56,5 +56,5 @@ export default defineConfig([
 			}
 		}
 	},
-	{ ...shared, entry: { 'mcp-server': 'mcp-server/server.js' } }
+	{ ...shared, entry: { 'mcp-server': 'apps/mcp/src/main.ts' } }
 ]);

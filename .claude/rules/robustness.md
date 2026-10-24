@@ -5,7 +5,6 @@ paths:
   - "apps/**/*.ts"
   - "scripts/**/*.js"
   - "src/**/*.js"
-  - "mcp-server/**/*.js"
   - "packages/claude-code-plugin/**"
 ---
 

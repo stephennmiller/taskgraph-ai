@@ -1,5 +1,4 @@
 ^scripts/
-^mcp-server/
 ^src/
 ^assets/
 ^packages/(tm-core|tm-profiles)/src/

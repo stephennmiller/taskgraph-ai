@@ -129,12 +129,13 @@ describe('withToolContext callers', () => {
 		// variable) fails every call at runtime. Skip the definition itself.
 		const wrongFirstArgument =
 			/(?<!function\s)\b(?:withToolContext|withNormalizedProjectRoot)\(\s*(?!\s|async\b|function\b|\()/;
-		const root = path.join(repoRoot, 'mcp-server', 'src');
+		const root = path.join(repoRoot, 'apps', 'mcp', 'src');
 		const offenders = (
 			fs.readdirSync(root, { recursive: true }) as string[]
 		).filter(
 			(f) =>
-				f.endsWith('.js') &&
+				f.endsWith('.ts') &&
+				!f.endsWith('.spec.ts') &&
 				wrongFirstArgument.test(fs.readFileSync(path.join(root, f), 'utf8'))
 		);
 		expect(offenders).toEqual([]);

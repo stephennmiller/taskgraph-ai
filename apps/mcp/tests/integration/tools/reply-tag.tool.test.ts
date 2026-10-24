@@ -163,11 +163,6 @@ function offenders(dir: string, tagKnownAt: RegExp): string[] {
 describe('tools that take a tag', () => {
 	// Without `tag`, handleApiResult names the current tag, not the one the
 	// tool worked in
-	it('legacy tools pass the resolved tag to every reply', () => {
-		const root = path.join(repoRoot, 'mcp-server', 'src', 'tools');
-		expect(offenders(root, /= resolveTag\(/)).toEqual([]);
-	});
-
 	it('@tm/mcp tools pass the tag argument to every reply', () => {
 		const root = path.join(repoRoot, 'apps', 'mcp', 'src', 'tools');
 		expect(offenders(root, /const \{[^}]*\btag\b[^}]*\} = args/)).toEqual([]);

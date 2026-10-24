@@ -24,7 +24,6 @@ const mockMkdirSync = vi.fn();
 const mockReadJSON = vi.fn();
 const mockWriteJSON = vi.fn();
 const mockEnableSilentMode = vi.fn();
-const mockDisableSilentMode = vi.fn();
 const mockReadComplexityReport = vi.fn().mockReturnValue(null);
 
 const mockGetAnthropicClient = vi.fn().mockReturnValue({});
@@ -81,7 +80,6 @@ vi.doMock('../../../scripts/modules/utils.js', () => ({
 	readJSON: mockReadJSON,
 	writeJSON: mockWriteJSON,
 	enableSilentMode: mockEnableSilentMode,
-	disableSilentMode: mockDisableSilentMode,
 	readComplexityReport: mockReadComplexityReport,
 	CONFIG: {
 		model: 'claude-3-7-sonnet-20250219',

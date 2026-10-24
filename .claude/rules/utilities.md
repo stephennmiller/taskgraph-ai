@@ -46,9 +46,7 @@ paths:
 
 - **Location**:
     - **Core CLI Utilities**: Place utilities used primarily by the core `taskgraph` CLI logic and command modules (`scripts/modules/*`) into [`scripts/modules/utils.js`](../../scripts/modules/utils.js).
-    - **MCP Server Utilities**: Place utilities specifically designed to support the MCP server implementation into the appropriate subdirectories within `mcp-server/src/`.
-        - Path/Core Logic Helpers: [`mcp-server/src/core/utils/`](../../mcp-server/src/core/utils) (e.g., `path-utils.js`).
-        - Tool Execution/Response Helpers: `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)).
+    - **MCP Server Utilities**: Tool execution and response helpers live in `@tm/mcp` ([`apps/mcp/src/shared/`](../../apps/mcp/src/shared/)). Anything that isn't about the MCP protocol (paths, task data) goes in `@tm/core`.
 
 ## Documentation Standards
 
@@ -97,7 +95,6 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
 
 - **Configuration Getters (`config-manager.js`)**:
   - ✅ DO: Import and use specific getters from `config-manager.js` (e.g., `getMainProvider()`, `getLogLevel()`, `getDefaultNumTasks()`) to access configuration values *needed for application logic*.
-  - ✅ DO: Pass the `explicitRoot` parameter to getters if calling from MCP direct functions to ensure the correct project's config is loaded.
   - ❌ DON'T: Call AI-specific getters (like `getMainModelId`, `getParametersForRole`) from core logic functions (`scripts/modules/task-manager/*`). Instead, pass the `role` to the unified AI service.
   - ❌ DON'T: Access configuration values directly from environment variables (except API keys).
 
@@ -112,104 +109,14 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   - ✅ DO: Use appropriate icons for different log levels
   - ✅ DO: Respect the configured log level
   - ❌ DON'T: Add direct console.log calls outside the logging utility
-  - **Note on Passed Loggers**: When a logger object (like the FastMCP `log` object) is passed *as a parameter* (e.g., as `mcpLog`) into core TaskGraph functions, the receiving function often expects specific methods (`.info`, `.warn`, `.error`, etc.) to be directly callable on that object (e.g., `mcpLog[level](../../...)`). If the passed logger doesn't have this exact structure, a wrapper object may be needed. See the **Handling Logging Context (`mcpLog`)** section in `mcp.md` for the standard pattern used in direct functions.
-
-- **Logger Wrapper Pattern**: 
-  - ✅ DO: Use the logger wrapper pattern when passing loggers to prevent `mcpLog[level] is not a function` errors:
-  ```javascript
-  // Standard logWrapper pattern to wrap FastMCP's log object
-  const logWrapper = {
-    info: (message, ...args) => log.info(message, ...args),
-    warn: (message, ...args) => log.warn(message, ...args),
-    error: (message, ...args) => log.error(message, ...args),
-    debug: (message, ...args) => log.debug && log.debug(message, ...args),
-    success: (message, ...args) => log.info(message, ...args) // Map success to info
-  };
-  
-  // Pass this wrapper as mcpLog to ensure consistent method availability
-  // This also ensures output format is set to 'json' in many core functions
-  const options = { mcpLog: logWrapper, session };
-  ```
-  - ✅ DO: Implement this pattern in any direct function that calls core functions expecting `mcpLog`
-  - ✅ DO: Use this solution in conjunction with silent mode for complete output control
-  - ❌ DON'T: Pass the FastMCP `log` object directly as `mcpLog` to core functions
-  - **Important**: This pattern has successfully fixed multiple issues in MCP tools (e.g., `update-task`, `update-subtask`) where using or omitting `mcpLog` incorrectly led to runtime errors or JSON parsing failures.
-  - For complete implementation details, see the **Handling Logging Context (`mcpLog`)** section in `mcp.md`.
-
-  ```javascript
-  // ✅ DO: Implement a proper logging utility
-  const LOG_LEVELS = {
-    debug: 0,
-    info: 1,
-    warn: 2,
-    error: 3
-  };
-  
-  function log(level, ...args) {
-    const icons = {
-      debug: chalk.dim('🔍'),
-      info: chalk.blue('ℹ️'),
-      warn: chalk.yellow('⚠️'),
-      error: chalk.red('❌'),
-      success: chalk.green('✅')
-    };
-    
-    if (LOG_LEVELS[level] >= LOG_LEVELS[CONFIG.logLevel]) {
-      const icon = icons[level] || '';
-      console.log(`${icon} ${args.join(' ')}`);
-    }
-  }
-  ```
+  - **MCP tools** don't use this logger: they log through the FastMCP context's `log`, and `withToolContext` gives tm-core a logger that forwards to it (see `mcp.md`).
 
 ## Silent Mode Utilities (in `scripts/modules/utils.js`)
 
 - **Silent Mode Control**:
-  - ✅ DO: Use the exported silent mode functions rather than accessing global variables
-  - ✅ DO: Always use `isSilentMode()` to check the current silent mode state
-  - ✅ DO: Ensure silent mode is disabled in a `finally` block to prevent it from staying enabled
-  - ❌ DON'T: Access the global `silentMode` variable directly
-  - ❌ DON'T: Forget to disable silent mode after enabling it
-
-  ```javascript
-  // ✅ DO: Use the silent mode control functions properly
-  
-  // Example of proper implementation in utils.js:
-  
-  // Global silent mode flag (private to the module)
-  let silentMode = false;
-  
-  // Enable silent mode
-  function enableSilentMode() {
-    silentMode = true;
-  }
-  
-  // Disable silent mode
-  function disableSilentMode() {
-    silentMode = false;
-  }
-  
-  // Check if silent mode is enabled
-  function isSilentMode() {
-    return silentMode;
-  }
-  
-  // Example of proper usage in another module:
-  import { enableSilentMode, disableSilentMode, isSilentMode } from './utils.js';
-  
-  // Check current status
-  if (!isSilentMode()) {
-    console.log('Silent mode is not enabled');
-  }
-  
-  // Use try/finally pattern to ensure silent mode is disabled
-  try {
-    enableSilentMode();
-    // Do something that should suppress console output
-    performOperation();
-  } finally {
-    disableSilentMode();
-  }
-  ```
+  - `enableSilentMode()` turns legacy console output off for the rest of the process; there is no way to turn it back on. Use it only in a process that must stay quiet end to end (the eval worker, `evals/lib/plan-worker.ts`).
+  - The legacy `log` checks it (through the module-private `isSilentMode()`) and prints nothing once it is on.
+  - ❌ DON'T: Access the module's `silentMode` variable directly
 
 - **Integration with Logging**:
   - ✅ DO: Make the `log` function respect silent mode
@@ -222,44 +129,6 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
     
     // Rest of logging logic...
   }
-  ```
-
-- **Common Patterns for Silent Mode**:
-  - ✅ DO: In **direct functions** (`mcp-server/src/core/direct-functions/*`) that call **core functions** (`scripts/modules/*`), ensure console output from the core function is suppressed to avoid breaking MCP JSON responses.
-    - **Preferred Method**: Update the core function to accept an `outputFormat` parameter (e.g., `outputFormat = 'text'`) and make it check `outputFormat === 'text'` before displaying any UI elements (banners, spinners, boxes, direct `console.log`s). Pass `'json'` from the direct function.
-    - **Necessary Fallback/Guarantee**: If the core function *cannot* be modified or its output suppression via `outputFormat` is unreliable, **wrap the core function call within the direct function** using `enableSilentMode()` and `disableSilentMode()` in a `try/finally` block. This acts as a safety net.
-  ```javascript
-  // Example in a direct function
-  export async function someOperationDirect(args, log) {
-    let result;
-    const tasksPath = findTasksPath(args, log); // Get path first
-    
-    // Option 1: Core function handles 'json' format (Preferred)
-    try {
-      result = await coreFunction(tasksPath, ...otherArgs, 'json'); // Pass 'json'
-      return { success: true, data: result, fromCache: false };
-    } catch (error) {
-      // Handle error...
-    }
-
-    // Option 2: Core function output unreliable (Fallback/Guarantee)
-    try {
-      enableSilentMode(); // Enable before call
-      result = await coreFunction(tasksPath, ...otherArgs); // Call without format param
-    } catch (error) {
-      // Handle error...
-      log.error(`Failed: ${error.message}`);
-      return { success: false, error: { /* ... */ } };
-    } finally {
-      disableSilentMode(); // ALWAYS disable in finally
-    }
-    return { success: true, data: result, fromCache: false }; // Assuming success if no error caught
-  }
-  ```
-  - ✅ DO: For functions that accept a silent mode parameter but also need to check global state (less common):
-  ```javascript
-  // Check both the passed parameter and global silent mode
-  const isSilent = options.silentMode || (typeof options.silentMode === 'undefined' && isSilentMode());
   ```
 
 ## File Operations (in `scripts/modules/utils.js`)
@@ -411,22 +280,9 @@ TaskGraph configuration (excluding API keys) is primarily managed through the `.
   }
   ```
 
-## MCP Server Core Utilities (`mcp-server/src/core/utils/`)
-
-### Project Root and Task File Path Detection (`path-utils.js`)
-
-- **Purpose**: This module ([`mcp-server/src/core/utils/path-utils.js`](../../mcp-server/src/core/utils/path-utils.js)) provides the mechanism for locating the user's `tasks.json` file, used by direct functions.
-- **`findTasksPath(args, log)`**:
-    - ✅ **DO**: Call this function from within **direct function wrappers** (e.g., `listTasksDirect` in `mcp-server/src/core/direct-functions/`) to get the absolute path to the relevant `tasks.json`.
-    - Pass the *entire `args` object* received by the MCP tool (which should include `projectRoot` derived from the session) and the `log` object.
-    - Implements a **simplified precedence system** for finding the `tasks.json` path:
-        1.  Explicit `projectRoot` passed in `args` (Expected from MCP tools).
-        2.  Search upwards from `process.cwd()` (CLI fallback).
-    - Throws a specific error if the `tasks.json` file cannot be located.
-
 ## MCP Server Tool Utilities (`@tm/mcp`)
 
-MCP tools, the legacy JS ones in `mcp-server/src/tools/` included, import their response and project-root helpers from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)).
+MCP tools in `apps/mcp/src/tools/` import their response and project-root helpers from [`apps/mcp/src/shared/`](../../apps/mcp/src/shared/). See `mcp.md` for a whole tool.
 
 - **`withNormalizedProjectRoot(executeFn)`**:
     - **Purpose**: A Higher-Order Function (HOF) designed to wrap a tool's `execute` method.
@@ -434,39 +290,21 @@ MCP tools, the legacy JS ones in `mcp-server/src/tools/` included, import their 
         1. Rejects a `tag` argument that is not letters, numbers, hyphens and underscores.
         2. Picks the project root in the order the CLI uses (`namedProjectRoot` in `@tm/core`): `args.projectRoot` (normalized with `normalizeProjectRoot`), else `TASKGRAPH_PROJECT_ROOT` from `process.env` or the session's env, else the session's root folder. An explicit `projectRoot` wins over the variable, except one inside the variable's `.taskgraph/worktrees/`, which gives the variable's project.
         3. Injects the absolute path back into the `args` object as `args.projectRoot` and calls the original `executeFn`.
-    - **Usage**: Should wrap the `execute` function of *every* MCP tool that needs a reliable, normalized project root path.
-    - **Example**:
-      ```javascript
-      // In mcp-server/src/tools/your-tool.js
-      import { handleApiResult, withNormalizedProjectRoot } from '@tm/mcp';
-      
-      export function registerYourTool(server) {
-          server.addTool({
-              // ... name, description, parameters ...
-              execute: withNormalizedProjectRoot(async (args, { log, session }) => {
-                  const result = await yourDirectFunction(args, log, { session });
-                  return handleApiResult({
-                      result,
-                      log,
-                      errorPrefix: 'Error doing your thing',
-                      projectRoot: args.projectRoot
-                  });
-              })
-          });
-      }
-      ```
+    - **Usage**: Wrap a tool's `execute` in it directly only when there is no project to open yet (`initialize_project`). Every other tool uses **`withToolContext(executeFn)`**, which does the same and adds a `tmCore` for the project to the context.
+
+- **`replyWith(args, context, errorPrefix, work)`** (`tool-reply.ts`): runs `work`, which calls tm-core and returns `{ data, tag? }`, and replies with that data or with the error it threw.
 
 - **`handleApiResult({ result, log, errorPrefix, projectRoot, tag })`**:
-    - **Purpose**: Turns a direct function's `{ success, data/error }` into the MCP response, with version and current tag. A failed result becomes an `isError` response.
+    - **Purpose**: Turns a `{ success, data/error }` result into the MCP response, with version and current tag. A failed result becomes an `isError` response. `replyWith` calls it.
     - **Usage**: Call this at the end of the tool's `execute` method with one options object. Only `result` is required; pass `projectRoot` (or `tag`) so the response names the current tag.
 
 - **`createContentResponse(content)` / `createErrorResponse(errorMessage)`**:
-    - **Purpose**: Build a success or error response directly, for errors caught before or around the direct function call.
+    - **Purpose**: Build a success or error response directly.
 
 ## Export Organization
 
 - **Grouping Related Functions**:
-  - ✅ DO: Keep utilities relevant to their location (e.g., core CLI utils in `scripts/modules/utils.js`, MCP path utils in `mcp-server/src/core/utils/path-utils.js`, MCP tool helpers in `@tm/mcp`).
+  - ✅ DO: Keep utilities relevant to their location (e.g., core CLI utils in `scripts/modules/utils.js`, MCP tool helpers in `@tm/mcp`).
   - ✅ DO: Export all utility functions in a single statement per file.
   - ✅ DO: Group related exports together.
   - ✅ DO: Export configuration constants (from `scripts/modules/utils.js`).
@@ -496,12 +334,6 @@ export {
   
   // Graph algorithms
   findCycles,
-};
-
-// Example export from mcp-server/src/core/utils/path-utils.js
-export {
-  resolveTasksPath,
-  findTasksPath
 };
 ```
 
@@ -855,10 +687,6 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     silentMode = true;
   }
   
-  function disableSilentMode() {
-    silentMode = false;
-  }
-  
   function isSilentMode() {
     return silentMode;
   }
@@ -1102,8 +930,6 @@ Refer to `context-gathering.md` for detailed implementation patterns, `mcp.md` a
     // Logging utilities
     log,
     enableSilentMode,
-    disableSilentMode,
-    isSilentMode,
     
     // Task utilities
     findTaskById,

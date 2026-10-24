@@ -2,7 +2,7 @@
 description: Guidelines for integrating AI usage telemetry across TaskGraph.
 paths:
   - "scripts/modules/**/*.js"
-  - "mcp-server/src/**/*.js"
+  - "apps/mcp/src/**/*.ts"
 ---
 
 # AI Usage Telemetry Integration
@@ -87,93 +87,31 @@ Functions in this layer that invoke AI services are responsible for handling the
   }
   ```
 
-### 2. Direct Function Wrappers (in `mcp-server/src/core/direct-functions/`)
+### 2. MCP Tools (in `apps/mcp/src/tools/`)
 
-These functions adapt core logic for the MCP server, ensuring structured responses.
+These are the exposed endpoints for MCP clients. A tool calls a tm-core method, whose result carries the `telemetryData` of its AI call, and puts that `telemetryData` in the reply's `data` next to the result (see `apps/mcp/src/tools/tasks/research.tool.ts`).
 
-- **Actions**:
-    1.  Call the corresponding core logic function.
-        -   Pass necessary context (e.g., `session`, `mcpLog`, `projectRoot`).
-        -   Provide the `commandName` (typically derived from the MCP tool name) and `outputType: 'mcp'` in the context object passed to the core function.
-        -   If the core function supports an `outputFormat` parameter, pass `'json'` to suppress CLI-specific UI.
-    2.  The core logic function returns an object (e.g., `coreResult = { actionData: ..., telemetryData: ... }`).
-    3.  Include `coreResult.telemetryData` as a field within the `data` object of the successful response returned by the direct function.
-
-- **Example Snippet (Direct Function `someAiActionDirect.js`)**:
-  ```javascript
-  import { performAiRelatedAction } from '../../../../scripts/modules/task-manager/someAiAction.js'; // Core function
-
-  export async function someAiActionDirect(args, log, context = {}) {
-    const { session } = context;
-    // ... prepare arguments for core function from args, including args.projectRoot ...
-
-    try {
-      const coreResult = await performAiRelatedAction(
-        { /* parameters for core function */ },
-        { // Context for core function
-          session,
-          mcpLog: log, // The MCP logger: info, warn, error, debug
-          projectRoot: args.projectRoot,
-          commandNameFromContext: 'mcp_tool_some_ai_action', // Example command name
-          outputType: 'mcp'
-        },
-        'json' // Request 'json' output format from core function
-      );
-
-      return {
-        success: true,
-        data: {
-          operationSpecificData: coreResult.actionData,
-          telemetryData: coreResult.telemetryData // Pass telemetry through
-        }
-      };
-    } catch (error) {
-      // ... error handling, return { success: false, error: ... } ...
-    }
-  }
-  ```
-
-### 3. MCP Tools (in `mcp-server/src/tools/`)
-
-These are the exposed endpoints for MCP clients.
-
-- **Actions**:
-    1.  Call the corresponding direct function wrapper.
-    2.  The direct function returns an object structured like `{ success: true, data: { operationSpecificData: ..., telemetryData: ... } }` (or an error object).
-    3.  Pass this entire result object to `handleApiResult({ result, log, projectRoot })` from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)).
-    4.  `handleApiResult` ensures that the `data` field from the direct function's response (which correctly includes `telemetryData`) is part of the final MCP response.
-
-- **Example Snippet (MCP Tool `some_ai_action.js`)**:
-  ```javascript
-  import { someAiActionDirect } from '../core/taskgraph-core.js';
-  import { handleApiResult, withNormalizedProjectRoot } from '@tm/mcp';
-  // ... zod for parameters ...
-
-  export function registerSomeAiActionTool(server) {
-    server.addTool({
-      name: "some_ai_action",
-      // ... description, parameters ...
-      execute: withNormalizedProjectRoot(async (args, { log, session }) => {
-        try {
-          const resultFromDirectFunction = await someAiActionDirect(
-            { /* args including projectRoot */ },
-            log,
-            { session }
-          );
-          return handleApiResult({
-            result: resultFromDirectFunction,
-            log,
-            projectRoot: args.projectRoot
-          }); // This passes the nested telemetryData through
-        } catch (error) {
-          // ... error handling ...
-        }
+- **Example Snippet**:
+  ```typescript
+  execute: withToolContext(
+    async (args: z.infer<typeof SomeAiActionSchema>, context: ToolContext) =>
+      replyWith(args, context, 'Error running some_ai_action', async () => {
+        const result = await context.tmCore.tasks.someAiAction(args.id, {
+          tag: args.tag
+        });
+        return {
+          tag: result.tag,
+          data: {
+            operationSpecificData: result.actionData,
+            telemetryData: result.telemetryData
+          }
+        };
       })
-    });
-  }
+  )
   ```
+- `replyWith` (and `handleApiResult` under it) put `data` in the reply unchanged, so the client gets `{ data: { ..., telemetryData }, version, tag }`.
 
-### 4. CLI Commands (`apps/cli/src/commands/`)
+### 3. CLI Commands (`apps/cli/src/commands/`)
 
 These define the command-line interface.
 
@@ -220,13 +158,9 @@ The telemetry data flows as follows:
     *   Uses `mainResult`.
     *   If CLI (`outputFormat: 'text'`), prints `ui.formatUsageLine(telemetryData)`.
     *   Returns `{ operationSpecificData, telemetryData }`.
-3.  **Direct Function Wrapper**:
-    *   Receives `{ operationSpecificData, telemetryData }` from core logic.
-    *   Returns `{ success: true, data: { operationSpecificData, telemetryData } }`.
-4.  **MCP Tool**:
-    *   Receives direct function response.
-    *   `handleApiResult` ensures the final MCP response to the client is `{ data: { operationSpecificData, telemetryData }, version, tag }`.
-5.  **CLI Command**:
+3.  **MCP Tool**:
+    *   Receives the tm-core result and replies `{ data: { operationSpecificData, telemetryData }, version, tag }` through `replyWith` or `handleApiResult`.
+4.  **CLI Command**:
     *   Calls core logic with `outputFormat: 'text'`. Display is handled by core logic.
 
 This pattern ensures telemetry is captured and appropriately handled/exposed across all interaction modes.
