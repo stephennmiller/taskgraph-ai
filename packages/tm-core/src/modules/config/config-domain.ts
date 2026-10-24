@@ -12,6 +12,7 @@ import {
 	getAvailableModelsList,
 	getModelConfiguration,
 	setModel,
+	setModels,
 	setResponseLanguage
 } from './services/project-settings.js';
 
@@ -106,6 +107,14 @@ export class ConfigDomain {
 	 */
 	setModel(role: string, modelId: unknown) {
 		return setModel(this.configManager.getProjectRoot(), role, modelId);
+	}
+
+	/**
+	 * Save several roles' models: checks them all first, so one bad model
+	 * saves none. Throws when the project has no config.json.
+	 */
+	setModels(requested: [role: string, modelId: unknown][]) {
+		return setModels(this.configManager.getProjectRoot(), requested);
 	}
 
 	/**

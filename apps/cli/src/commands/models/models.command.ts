@@ -117,11 +117,9 @@ Examples:
 
 		let active;
 		try {
-			const result = config.getModelConfiguration((message) =>
+			active = config.getModelConfiguration((message) =>
 				console.error(`${chalk.yellow('⚠')} ${terminalSafe(message)}`)
-			);
-			if (!result.success) throw new Error(result.error.message);
-			active = result.data.activeModels;
+			).data.activeModels;
 		} catch (error) {
 			printError(
 				`Couldn't read the model settings: ${(error as Error).message}`,
@@ -146,9 +144,9 @@ Examples:
 			console.log(
 				formatModelConfiguration(
 					{
-						main: active.main?.modelId ?? null,
-						research: active.research?.modelId ?? null,
-						fallback: active.fallback?.modelId ?? null
+						main: active.main.modelId,
+						research: active.research.modelId,
+						fallback: active.fallback.modelId
 					},
 					availableIds
 				)
@@ -178,7 +176,7 @@ Examples:
 			}
 			changes.push({
 				role,
-				from: active[role]?.modelId ?? null,
+				from: active[role].modelId,
 				to: modelId as string
 			});
 		}

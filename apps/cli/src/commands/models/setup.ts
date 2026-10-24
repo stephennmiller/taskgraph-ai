@@ -34,12 +34,11 @@ type ModelSettings = Pick<
 >;
 
 function currentModels(settings: ModelSettings): ModelAssignments {
-	const result = settings.getModelConfiguration();
-	const active = result.success ? result.data.activeModels : undefined;
+	const active = settings.getModelConfiguration().data.activeModels;
 	return {
-		main: active?.main?.modelId ?? null,
-		research: active?.research?.modelId ?? null,
-		fallback: active?.fallback?.modelId ?? null
+		main: active.main.modelId,
+		research: active.research.modelId,
+		fallback: active.fallback.modelId
 	};
 }
 
