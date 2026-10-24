@@ -23,7 +23,7 @@ import { z } from 'zod/v3';  // ✅ Draft-07 compatible
 
 ### What This Means
 
-- ✅ **MCP tools** → use `zod/v3` (apps/mcp & mcp-server/src/tools)
+- ✅ **MCP tools** → use `zod/v3` (apps/mcp)
 - ✅ **Rest of codebase** → uses `zod` (Zod v4)
 - ✅ **No conflicts** → they're from the same package, just different versions
 
@@ -67,4 +67,3 @@ import { z } from 'zod';  // Don't do this in apps/mcp/src/tools/
 
 **Last Updated:** 2025-10-18
 **Affects:** All files in `apps/mcp/src/tools/`
-**See Also:** `mcp-server/src/tools/README-ZOD-V3.md` (same workaround)

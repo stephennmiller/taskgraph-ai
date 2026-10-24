@@ -18,7 +18,7 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_LOCAL_CONFIG_FILE
 } from '../../../common/constants/paths.js';
-import { splitMachineConfig } from './machine-config.js';
+import { mergeMachineConfig, splitMachineConfig } from './machine-config.js';
 
 type JsonObject = Record<string, any>;
 
@@ -248,4 +248,25 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 			2
 		)
 	);
+}
+
+/**
+ * The project's global.logLevel, lower-cased: config.local.json over
+ * config.json, 'info' when neither sets it. A file that isn't valid JSON is
+ * skipped. Read synchronously, for a logger set up at startup.
+ * @throws When a file can't be read (permissions, a directory)
+ */
+export function readLogLevel(rootPath: string): string {
+	const read = (file: string) => {
+		const json = readConfigJson(path.join(rootPath, file));
+		return json === UNREADABLE_CONFIG ? null : json;
+	};
+	const config = mergeMachineConfig<JsonObject>(
+		read(TASKGRAPH_CONFIG_FILE),
+		read(TASKGRAPH_LOCAL_CONFIG_FILE)
+	);
+	const level = config.global?.logLevel;
+	return typeof level === 'string'
+		? level.toLowerCase()
+		: DEFAULT_PROJECT_CONFIG.global.logLevel;
 }

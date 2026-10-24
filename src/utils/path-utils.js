@@ -13,10 +13,7 @@ import {
 	findProjectRoot as findProjectRootCore,
 	normalizeProjectRoot as normalizeProjectRootCore
 } from '@tm/core';
-import {
-	TASKGRAPH_CONFIG_FILE,
-	TASKGRAPH_TASKS_FILE
-} from '../constants/paths.js';
+import { TASKGRAPH_CONFIG_FILE } from '../constants/paths.js';
 import { getLoggerOrDefault } from './logger-utils.js';
 
 /**
@@ -27,7 +24,7 @@ import { getLoggerOrDefault } from './logger-utils.js';
  * @param {string} projectRoot - The project root path to normalize
  * @returns {string} - Normalized project root path
  */
-export function normalizeProjectRoot(projectRoot) {
+function normalizeProjectRoot(projectRoot) {
 	return normalizeProjectRootCore(projectRoot);
 }
 
@@ -46,55 +43,6 @@ export function normalizeProjectRoot(projectRoot) {
  */
 function findProjectRoot(startDir = process.cwd()) {
 	return findProjectRootCore(startDir);
-}
-
-/**
- * Find the tasks.json file path with fallback logic
- * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
- * @param {Object|null} args - Args object from MCP args (optional)
- * @param {Object|null} log - Logger object (optional)
- * @returns {string|null} - Resolved tasks.json path or null if not found
- */
-export function findTasksPath(explicitPath = null, args = null, log = null) {
-	// Use the passed logger if available, otherwise use the default logger
-	const logger = getLoggerOrDefault(log);
-
-	// 1. First determine project root to use as base for all path resolution
-	const rawProjectRoot = args?.projectRoot || findProjectRoot();
-
-	if (!rawProjectRoot) {
-		logger.warn?.('Could not determine project root directory');
-		return null;
-	}
-
-	// 2. Normalize project root to prevent double .taskgraph paths
-	const projectRoot = normalizeProjectRoot(rawProjectRoot);
-
-	// 3. If explicit path is provided, resolve it relative to project root (highest priority)
-	if (explicitPath) {
-		const resolvedPath = path.isAbsolute(explicitPath)
-			? explicitPath
-			: path.resolve(projectRoot, explicitPath);
-
-		if (fs.existsSync(resolvedPath)) {
-			logger.info?.(`Using explicit tasks path: ${resolvedPath}`);
-			return resolvedPath;
-		} else {
-			logger.warn?.(
-				`Explicit tasks path not found: ${resolvedPath}, trying fallbacks`
-			);
-		}
-	}
-
-	// 4. Look in the .taskgraph directory
-	const tasksPath = path.join(projectRoot, TASKGRAPH_TASKS_FILE);
-	if (fs.existsSync(tasksPath)) {
-		logger.info?.(`Found tasks file at: ${tasksPath}`);
-		return tasksPath;
-	}
-
-	logger.warn?.(`No tasks.json found in project: ${projectRoot}`);
-	return null;
 }
 
 /**

@@ -98,7 +98,7 @@ describe('ScopeDetector', () => {
 		});
 
 		it('should detect mcp scope from MCP server files', () => {
-			const files = ['packages/mcp-server/src/tools.ts'];
+			const files = ['apps/mcp/src/tools/tool-registry.ts'];
 			const scope = scopeDetector.detectScope(files);
 
 			expect(scope).toBe('mcp');

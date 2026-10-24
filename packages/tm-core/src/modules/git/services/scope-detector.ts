@@ -46,7 +46,7 @@ const DEFAULT_SCOPE_MAPPINGS: Array<[string, string]> = [
 	// Package-level scopes (more specific than feature-level)
 	['packages/cli/**', 'cli'],
 	['packages/tm-core/**', 'core'],
-	['packages/mcp-server/**', 'mcp'],
+	['apps/mcp/**', 'mcp'],
 
 	// Feature-level scopes (within any package)
 	['**/workflow/**', 'workflow'],

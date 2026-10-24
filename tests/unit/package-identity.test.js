@@ -42,7 +42,6 @@ const IDENTITY_FILES = [
 const SOURCE_DIRS = [
 	'scripts',
 	'src',
-	'mcp-server/src',
 	'apps/cli/src',
 	'apps/mcp/src',
 	'packages/tm-core/src',

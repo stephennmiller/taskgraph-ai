@@ -61,16 +61,12 @@ paths:
       - **Tagged Task Lists**: Silent migration system, tag resolution, current tag management.
       - **Migration System**: `performCompleteTagMigration`, `migrateConfigJson`, `createStateJson`.
 
-  - **[`mcp-server/`](../../mcp-server/): MCP Server Integration**
-    - **Purpose**: Provides MCP interface using FastMCP.
+  - **[`apps/mcp/`](../../apps/mcp/) (`@tm/mcp`): MCP Server**
+    - **Purpose**: The MCP interface, on FastMCP over stdio; built to `dist/mcp-server.js`.
     - **Responsibilities** (See also: `mcp.md`):
-      - Registers tools (`mcp-server/src/tools/*.js`). Tool `execute` methods **should be wrapped** with the `withNormalizedProjectRoot` HOF (from `@tm/mcp`) to ensure consistent path handling.
-      - The HOF provides a normalized `args.projectRoot` to the `execute` method.
-      - Tool `execute` methods call **direct function wrappers** (`mcp-server/src/core/direct-functions/*.js`), passing the normalized `projectRoot` and other args.
-      - Direct functions use path utilities (`mcp-server/src/core/utils/`) to resolve paths based on `projectRoot` from session.
-      - Direct functions implement silent mode, logger wrappers, and call core logic functions from `scripts/modules/`.
-      - **Tagged Task Lists**: MCP tools fully support the tagged format with complete tag management capabilities.
-      - Formats MCP responses.
+      - `src/server.ts` starts the server; `src/tools/tool-registry.ts` maps tool names to their `register*Tool` functions and holds the tiers `TASKGRAPH_TOOLS` picks.
+      - Each tool (`src/tools/<area>/*.tool.ts`) wraps `execute` in `withToolContext`, which normalizes `args.projectRoot` and passes a `tmCore` for it, calls tm-core, and replies through `replyWith` or `handleApiResult`.
+      - Tools are thin: no business logic, as for the CLI.
 
   - **[`modules/init/`](../../packages/tm-core/src/modules/init/) in `@tm/core`: Project Initialization**
     - **Purpose**: `initializeProject` sets up .taskgraph/, templates, the `CLAUDE.md` import (`.mcp.json` only with `--mcp`) and state.json; `apps/cli`'s `init` asks and prints.
@@ -103,117 +99,12 @@ paths:
 - **Data Flow and Module Dependencies (Updated)**:
 
   - **CLI**: `scripts/dev.js` (loads `.env`) -> `apps/cli/src/program.ts` -> Command (`apps/cli/src/commands/*`) -> `@tm/core` -> AI Service -> Provider Adapters -> LLM API.
-  - **MCP**: External Tool -> `mcp-server/server.js` -> Tool (`mcp-server/src/tools/*`) -> Direct Function (`mcp-server/src/core/direct-functions/*`) -> Core Logic (`scripts/modules/*`) -> **Tag Resolution Layer** -> Unified AI Service (`ai-services-unified.js`) -> Provider Adapters -> LLM API.
+  - **MCP**: External Tool -> `apps/mcp/src/main.ts` (`dist/mcp-server.js`) -> Tool (`apps/mcp/src/tools/*`, via `withToolContext`) -> `@tm/core` (`tmCore.tasks`, `tmCore.config`, ...) -> AI service (`packages/tm-core/src/modules/ai/`) when the tool needs one.
   - **Configuration**: Core logic needing non-AI settings calls `config-manager.js` getters (passing `session.env` via `explicitRoot` if from MCP). Unified AI Service internally calls `config-manager.js` getters (using `role`) for AI params and `utils.js` (`resolveEnvVariable` with `session.env`) for API keys.
 
-## Silent Mode Implementation Pattern in MCP Direct Functions
+## Keeping MCP output off stdout
 
-Direct functions (the `*Direct` functions in `mcp-server/src/core/direct-functions/`) need to carefully implement silent mode to prevent console logs from interfering with the structured JSON responses required by MCP. This involves both using `enableSilentMode`/`disableSilentMode` around core function calls AND passing the MCP logger via the standard wrapper pattern (see mcp.md). Here's the standard pattern for correct implementation:
-
-Each MCP tool call runs in its own silent scope (`scopeToolExecution` in `mcp-server/src/tools/silent-scope.js`, applied in `registerTaskGraphTools`). Inside it, `enableSilentMode`/`disableSilentMode` change only that call's switch, so one call finishing cannot un-silence another running at the same time. Outside a scope (the CLI) they still flip one global switch. Keep calling them as below; a new tool needs nothing extra.
-
-1. **Import Silent Mode Utilities**:
-   ```javascript
-   import { enableSilentMode, disableSilentMode, isSilentMode } from '../../../../scripts/modules/utils.js';
-   ```
-
-2. **Parameter Matching with Core Functions**:
-   - ✅ **DO**: Ensure direct function parameters match the core function parameters
-   - ✅ **DO**: Check the original core function signature before implementing
-   - ❌ **DON'T**: Add parameters to direct functions that don't exist in core functions
-   ```javascript
-   // Example: Core function signature
-   // async function expandTask(tasksPath, taskId, numSubtasks, useResearch, additionalContext, options)
-   
-   // Direct function implementation - extract only parameters that exist in core
-   export async function expandTaskDirect(args, log, context = {}) {
-     // Extract parameters that match the core function
-     const taskId = parseInt(args.id, 10);
-     const numSubtasks = args.num ? parseInt(args.num, 10) : undefined;
-     const useResearch = args.research === true;
-     const additionalContext = args.prompt || '';
-     
-     // Later pass these parameters in the correct order to the core function
-     const result = await expandTask(
-       tasksPath, 
-       taskId, 
-       numSubtasks, 
-       useResearch, 
-       additionalContext,
-       { mcpLog: log, session: context.session }
-     );
-   }
-   ```
-
-3. **Checking Silent Mode State**:
-   - ✅ **DO**: Always use `isSilentMode()` function to check current status
-   - ❌ **DON'T**: Directly access the global `silentMode` variable or `global.silentMode`
-   ```javascript
-   // CORRECT: Use the function to check current state
-   if (!isSilentMode()) {
-     // Only create a loading indicator if not in silent mode
-     loadingIndicator = startLoadingIndicator('Processing...');
-   }
-   
-   // INCORRECT: Don't access global variables directly
-   if (!silentMode) { // ❌ WRONG
-     loadingIndicator = startLoadingIndicator('Processing...');
-   }
-   ```
-
-4. **Wrapping Core Function Calls**:
-   - ✅ **DO**: Use a try/finally block pattern to ensure silent mode is always restored
-   - ✅ **DO**: Enable silent mode before calling core functions that produce console output
-   - ✅ **DO**: Disable silent mode in a finally block to ensure it runs even if errors occur
-   - ❌ **DON'T**: Enable silent mode without ensuring it gets disabled
-   ```javascript
-   export async function someDirectFunction(args, log) {
-     try {
-       // Argument preparation
-       const tasksPath = findTasksPath(args, log);
-       const someArg = args.someArg;
-       
-       // Enable silent mode to prevent console logs
-       enableSilentMode();
-       
-       try {
-         // Call core function which might produce console output
-         const result = await someCoreFunction(tasksPath, someArg);
-         
-         // Return standardized result object
-         return { 
-           success: true, 
-           data: result, 
-           fromCache: false 
-         };
-       } finally {
-         // ALWAYS disable silent mode in finally block
-         disableSilentMode();
-       }
-     } catch (error) {
-       // Standard error handling
-       log.error(`Error in direct function: ${error.message}`);
-       return { 
-         success: false, 
-         error: { code: 'OPERATION_ERROR', message: error.message }, 
-         fromCache: false 
-       };
-     }
-   }
-   ```
-
-5. **Mixed Parameter and Global Silent Mode Handling**:
-   - For functions that need to handle both a passed `silentMode` parameter and check global state:
-   ```javascript
-   // Check both the function parameter and global state
-   const isSilent = options.silentMode || (typeof options.silentMode === 'undefined' && isSilentMode());
-   
-   if (!isSilent) {
-     console.log('Operation starting...');
-   }
-   ```
-
-By following these patterns consistently, direct functions will properly manage console output suppression while ensuring that silent mode is always properly reset, even when errors occur. This creates a more robust system that helps prevent unexpected silent mode states that could cause logging problems in subsequent operations.
+The MCP server speaks JSON-RPC on stdout, so nothing else may write there. `apps/mcp/src/main.ts` sets `TASKGRAPH_MCP=true`, which keeps tm-core's logger quiet on the console, and the server's own startup log (`apps/mcp/src/logger.ts`) goes to stderr. Inside a tool, log through the context's `log`; `withToolContext` hands tm-core a logger that forwards to it. Never `console.log` from tool or tm-core code the server runs.
 
 - **Testing Architecture**:
 
@@ -265,35 +156,7 @@ This architectural overview should help AI models understand the structure and o
 
 ## Implementing MCP Support for a Command
 
-Follow these steps to add MCP support for an existing TaskGraph command (see `new-features.md` for more detail):
-
-1.  **Ensure Core Logic Exists**: Verify the core functionality is implemented and exported from the relevant module in `scripts/modules/`.
-
-2.  **Create Direct Function File in `mcp-server/src/core/direct-functions/`:**
-    - Create a new file (e.g., `your-command.js`) using **kebab-case** naming.
-    - Import necessary core functions, **`findTasksPath` from `../utils/path-utils.js`**, and **silent mode utilities**.
-    - Implement `async function yourCommandDirect(args, log)` using **camelCase** with `Direct` suffix:
-        - **Path Resolution**: Obtain the tasks file path using `const tasksPath = findTasksPath(args, log);`. This relies on `args.projectRoot` being provided.
-        - Parse other `args` and perform necessary validation.
-        - **Implement Silent Mode**: Wrap core function calls with `enableSilentMode()` and `disableSilentMode()`.
-        - Call core logic.
-        - Return `{ success: true/false, data/error, fromCache: boolean }`.
-    - Export the wrapper function.
-    - **Note**: Tag-aware MCP tools are fully implemented with complete tag management support.
-
-3.  **Update `taskgraph-core.js` with Import/Export**: Add imports/exports for the new `*Direct` function.
-
-4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
-    - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, `yourCommandDirect`, and `withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse` from `@tm/mcp`.
-    - Implement `registerYourCommandTool(server)`.
-    - **Define parameters, making `projectRoot` optional**: `projectRoot: z.string().optional().describe(...)`.
-    - If the operation is long-running, report progress with `reportProgress` from the tool context (see `mcp.md`).
-    - Wrap `execute` in `withNormalizedProjectRoot` (it normalizes `args.projectRoot`):
-      - Call `yourCommandDirect({ ...args }, log, { session })`.
-      - Return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot })`.
-
-5.  **Register Tool**: Add `your_command: registerYourCommandTool` to `toolRegistry` in `mcp-server/src/tools/tool-registry.js` (tiers and counts: `mcp.md`). `.mcp.json` lists no tools, so it needs no change.
+Put the logic in a tm-core method, then add a tool in `apps/mcp/src/tools/` that calls it and register it in `toolRegistry` (`apps/mcp/src/tools/tool-registry.ts`). `mcp.md` has the pattern, the tiers and the tests. `.mcp.json` lists no tools, so it needs no change.
 
 ## Project Initialization
 

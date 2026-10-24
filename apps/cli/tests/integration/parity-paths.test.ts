@@ -39,7 +39,6 @@ describe('parity-paths.txt', () => {
 
 	it.each([
 		'scripts/dev.js',
-		'mcp-server/server.js',
 		'src/taskgraph.js',
 		'assets/config.json',
 		'packages/tm-core/src/index.ts',

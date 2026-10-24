@@ -446,6 +446,7 @@ export {
 	DEFAULT_PROJECT_CONFIG,
 	dropOldNumTasksDefault,
 	readConfigJson,
+	readLogLevel,
 	toSavedConfig,
 	UNREADABLE_CONFIG,
 	writeSplitConfig

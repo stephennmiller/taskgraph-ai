@@ -10,3 +10,10 @@ export * from './tools/settings/index.js';
 export * from './tools/setup/index.js';
 export * from './shared/utils.js';
 export * from './shared/types.js';
+export { SERVER_INSTRUCTIONS, TaskGraphMCPServer } from './server.js';
+export {
+	coreTools,
+	registerTaskGraphTools,
+	standardTools,
+	toolRegistry
+} from './tools/tool-registry.js';

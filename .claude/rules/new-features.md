@@ -63,10 +63,6 @@ The standard pattern for adding a feature follows this workflow:
 - **Parameter Completeness and Matching**:
   - ✅ **DO**: Pass all required parameters to functions you call within your implementation
   - ✅ **DO**: Check function signatures before implementing calls to them
-  - ✅ **DO**: Verify that direct function parameters match their core function counterparts
-  - ✅ **DO**: When implementing a direct function for MCP, ensure it only accepts parameters that exist in the core function
-  - ✅ **DO**: Verify the expected *internal structure* of complex object parameters (like the `mcpLog` object, see mcp.md for the required logger wrapper pattern)
-  - ❌ **DON'T**: Add parameters to direct functions that don't exist in core functions
   - ❌ **DON'T**: Assume default parameter values will handle missing arguments
   - ❌ **DON'T**: Assume object parameters will work without verifying their required internal structure or methods.
   - **Example**: When calling file generation, pass all required parameters:
@@ -76,53 +72,6 @@ The standard pattern for adding a feature follows this workflow:
   
   // ❌ DON'T: Omit required parameters
   await generateTaskFiles(tasksPath); // Error - missing outputDir parameter
-  ```
-  
-  **Example**: Properly match direct function parameters to core function:
-  ```javascript
-  // Core function signature
-  async function expandTask(tasksPath, taskId, numSubtasks, useResearch = false, additionalContext = '', options = {}) {
-    // Implementation...
-  }
-  
-  // ✅ DO: Match direct function parameters to core function
-  export async function expandTaskDirect(args, log, context = {}) {
-    // Extract only parameters that exist in the core function
-    const taskId = parseInt(args.id, 10);
-    const numSubtasks = args.num ? parseInt(args.num, 10) : undefined;
-    const useResearch = args.research === true;
-    const additionalContext = args.prompt || '';
-    
-    // Call core function with matched parameters
-    const result = await expandTask(
-      tasksPath,
-      taskId,
-      numSubtasks,
-      useResearch,
-      additionalContext,
-      { mcpLog: log, session: context.session }
-    );
-    
-    // Return result
-    return { success: true, data: result, fromCache: false };
-  }
-  
-  // ❌ DON'T: Use parameters that don't exist in the core function
-  export async function expandTaskDirect(args, log, context = {}) {
-    // DON'T extract parameters that don't exist in the core function!
-    const force = args.force === true; // ❌ WRONG - 'force' doesn't exist in core function
-    
-    // DON'T pass non-existent parameters to core functions
-    const result = await expandTask(
-      tasksPath,
-      args.id,
-      args.num,
-      args.research,
-      args.prompt,
-      force, // ❌ WRONG - this parameter doesn't exist in the core function
-      { mcpLog: log }
-    );
-  }
   ```
 
 - **Consistent File Path Handling**:
@@ -161,40 +110,9 @@ The standard pattern for adding a feature follows this workflow:
   }
   ```
 
-- **Silent Mode Implementation**:
-  - ✅ **DO**: Import all silent mode utilities together:
-    ```javascript
-    import { enableSilentMode, disableSilentMode, isSilentMode } from '../../../../scripts/modules/utils.js';
-    ```
-  - ✅ **DO**: Always use `isSilentMode()` function to check global silent mode status, never reference global variables.
-  - ✅ **DO**: Wrap core function calls **within direct functions** using `enableSilentMode()` and `disableSilentMode()` in a `try/finally` block if the core function might produce console output (like banners, spinners, direct `console.log`s) that isn't reliably controlled by an `outputFormat` parameter.
-    ```javascript
-    // Direct Function Example:
-    try {
-      // Prefer passing 'json' if the core function reliably handles it
-      const result = await coreFunction(...args, 'json'); 
-      // OR, if outputFormat is not enough/unreliable:
-      // enableSilentMode(); // Enable *before* the call
-      // const result = await coreFunction(...args);
-      // disableSilentMode(); // Disable *after* the call (typically in finally)
-
-      return { success: true, data: result };
-    } catch (error) {
-       log.error(`Error: ${error.message}`);
-       return { success: false, error: { message: error.message } };
-    } finally {
-       // If you used enable/disable, ensure disable is called here
-       // disableSilentMode(); 
-    }
-    ```
-  - ✅ **DO**: Core functions themselves *should* ideally check `outputFormat === 'text'` before displaying UI elements (banners, spinners, boxes) and use internal logging (`log`/`report`) that respects silent mode. The `enable/disableSilentMode` wrapper in the direct function is a safety net.
-  - ✅ **DO**: Handle mixed parameter/global silent mode correctly for functions accepting both (less common now, prefer `outputFormat`):
-    ```javascript
-    // Check both the passed parameter and global silent mode
-    const isSilent = silentMode || (typeof silentMode === 'undefined' && isSilentMode());
-    ```
-  - ❌ **DON'T**: Forget to disable silent mode in a `finally` block if you enabled it.
-  - ❌ **DON'T**: Access the global `silentMode` flag directly.
+- **MCP output**:
+  - ✅ **DO**: Keep code the MCP server runs off stdout, which carries the protocol. Tools log through the context's `log`, and tm-core through the logger `withToolContext` gives it (see `architecture.md`, "Keeping MCP output off stdout").
+  - ❌ **DON'T**: `console.log` from tm-core or tool code.
 
 - **Debugging Strategy**:
   - ✅ **DO**: If an MCP tool fails with vague errors (e.g., JSON parsing issues like `Unexpected token ... is not valid JSON`), **try running the equivalent CLI command directly in the terminal** (e.g., `taskgraph expand --all`). CLI output often provides much more specific error messages (like missing function definitions or stack traces from the core logic) that pinpoint the root cause.
@@ -503,80 +421,32 @@ For more information on module structure, see [`MODULE_PLAN.md`](../../scripts/m
 
 ## Adding MCP Server Support for Commands
 
-Integrating TaskGraph commands with the MCP server (for use by tools like Claude Code) follows a specific pattern distinct from the CLI command implementation, prioritizing performance and reliability.
-
-- **Goal**: Leverage direct function calls to core logic, avoiding CLI overhead.
-- **Reference**: See `mcp.md` for full details.
+An MCP tool is a thin layer over a tm-core method, as a CLI command is. See `mcp.md` for the full pattern.
 
 **MCP Integration Workflow**:
 
-1.  **Core Logic**: Ensure the command's core logic exists and is exported from the appropriate module (e.g., [`@tm/core`](../../packages/tm-core/src/modules/tasks/)).
-2.  **Direct Function Wrapper (`mcp-server/src/core/direct-functions/`)**:
-    - Create a new file (e.g., `your-command.js`) in `mcp-server/src/core/direct-functions/` using **kebab-case** naming.
-    - Import the core logic function, necessary MCP utilities like **`findTasksPath` from `../utils/path-utils.js`**, and **silent mode utilities**: `import { enableSilentMode, disableSilentMode } from '../../../../scripts/modules/utils.js';`
-    - Implement an `async function yourCommandDirect(args, log)` using **camelCase** with `Direct` suffix.
-    - **Path Finding**: Inside this function, obtain the `tasksPath` by calling `const tasksPath = findTasksPath(args, log);`. This relies on `args.projectRoot` (derived from the session) being passed correctly.
-    - Perform validation on other arguments received in `args`.
-    - **Implement Silent Mode**: Wrap core function calls with `enableSilentMode()` and `disableSilentMode()` to prevent logs from interfering with JSON responses.
-    - Call the core logic function within a try/catch block.
-    - Format the return as `{ success: true/false, data/error, fromCache: boolean }`.
-    - Export the wrapper function.
-
-3.  **Update `taskgraph-core.js` with Import/Export**: Import and re-export your `*Direct` function.
-
-4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
-    - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, your `yourCommandDirect` function, and **`withNormalizedProjectRoot`**, `handleApiResult` and `createErrorResponse` from `@tm/mcp`.
-    - Implement `registerYourCommandTool(server)`.
-    - **Define parameters**: Make `projectRoot` optional (`z.string().optional().describe(...)`) as the HOF handles fallback.
-    - If the operation is long-running, report progress as described in Progress Reporting below.
-    - Implement the standard `execute` method **wrapped with `withNormalizedProjectRoot`** (see `apps/mcp/src/tools/setup/initialize-project.tool.ts`):
-      ```javascript
-      execute: withNormalizedProjectRoot(async (args, { log, session }) => {
-          // args.projectRoot is now normalized
-          const { projectRoot /*, other args */ } = args;
-          // ... resolve tasks path if needed using normalized projectRoot ...
-          const result = await yourCommandDirect(
-              { /* other args */, projectRoot /* if needed by direct func */ },
-              log,
-              { session }
-          );
-          return handleApiResult({
-              result,
-              log,
-              errorPrefix: 'Error running your_command',
-              projectRoot
-          });
-      })
+1.  **Core Logic**: Add or extend the method in [`@tm/core`](../../packages/tm-core/src/modules/tasks/) (for example on `TasksDomain`) with its tests.
+2.  **Create the tool** in `apps/mcp/src/tools/<area>/<name>.tool.ts`, exporting `registerYourCommandTool(server: FastMCP)` from the area's `index.ts`:
+    - Define parameters with zod, `projectRoot` included; keep names clients already send.
+    - Wrap `execute` in `withToolContext` (`apps/mcp/src/shared/utils.ts`), which normalizes `args.projectRoot` and passes `tmCore`.
+    - Call tm-core inside `replyWith` (`apps/mcp/src/shared/tool-reply.ts`), which replies with the data or the error:
+      ```typescript
+      execute: withToolContext(
+          async (args: z.infer<typeof YourSchema>, context: ToolContext) =>
+              replyWith(args, context, 'Error running your_command', async () => {
+                  const result = await context.tmCore.tasks.yourMethod(args.id, {
+                      tag: args.tag
+                  });
+                  return { tag: result.tag, data: result };
+              })
+      )
       ```
-
-5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. A core or standard tool also needs `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js` updated (and `EXPECTED_CORE_TOOLS` there for a core tool); the total isn't pinned, so other tools need no count change. A core or standard tool also changes the tier counts asserted in `tests/unit/mcp-server/tools/tool-registry.test.js`.
-
-6.  **No `.mcp.json` change**: `.mcp.json` only starts the server; it has no list of tools.
+3.  **Register Tool**: Add `your_command: registerYourCommandTool` to `toolRegistry` in `apps/mcp/src/tools/tool-registry.ts`, and the name to `coreTools` or `standardTools` if it belongs in that tier. `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. A tier change also changes the counts in `apps/mcp/src/tools/tool-registry.spec.ts`, the README tier table and `llms-install.md`.
+4.  **No `.mcp.json` change**: `.mcp.json` only starts the server; it has no list of tools.
 
 ## Progress Reporting
 
-MCP tools run inline: `execute` awaits the direct function and returns the finished result. For long-running work, such as PRD parsing, report progress through the tool context:
-
-1. **In the MCP tool**, take `reportProgress` from the context and pass it to the direct function:
-   ```javascript
-   import { handleApiResult, withNormalizedProjectRoot } from '@tm/mcp';
-
-   execute: withNormalizedProjectRoot(async (args, { log, session, reportProgress }) => {
-     const result = await yourCommandDirect(args, log, { session, reportProgress });
-     return handleApiResult({ result, log, projectRoot: args.projectRoot });
-   })
-   ```
-   A TypeScript tool gets it from `withToolContext` instead (see `apps/mcp/src/tools/tasks/parse-prd.tool.ts`).
-
-2. **In the direct function**, forward it from `context` to the core function; don't call it there.
-
-3. **In core logic**, call it only when it is defined:
-   ```javascript
-   if (reportProgress) {
-     await reportProgress({ progress: current, total });
-   }
-   ```
+MCP tools run inline: `execute` awaits tm-core and returns the finished result. For long-running work, such as PRD parsing, take `reportProgress` from the `withToolContext` context and call it only when it is defined; don't let a failed report fail work that is already saved (see `apps/mcp/src/tools/tasks/parse-prd.tool.ts`).
 
 ## Project Initialization
 
@@ -676,92 +546,10 @@ When implementing project initialization commands:
 
 ## MCP Tool Implementation
 
-- **Direct Function Pattern**:
-  - ✅ DO: Create direct function wrappers in `mcp-server/src/core/direct-functions/`
-  - ✅ DO: Follow silent mode patterns to prevent console output interference
-  - ✅ DO: Use `findTasksPath` for consistent path resolution
-  - ✅ DO: Ensure tagged system compatibility
-
-  ```javascript
-  // ✅ DO: Implement MCP direct functions with tagged awareness
-  export async function newFeatureDirect(args, log, context = {}) {
-    try {
-      const tasksPath = findTasksPath(args, log);
-      
-      // Enable silent mode for clean MCP responses
-      enableSilentMode();
-      
-      try {
-        const result = await newFeatureCore(
-          tasksPath,
-          { param: args.param },
-          { 
-            force: args.force,
-            targetTag: args.tag || 'master', // Support tag specification
-            mcpLog: log,
-            session: context.session,
-            outputFormat: 'json'
-          }
-        );
-        
-        return {
-          success: true,
-          data: result,
-          fromCache: false
-        };
-      } finally {
-        disableSilentMode();
-      }
-    } catch (error) {
-      log.error(`Error in newFeatureDirect: ${error.message}`);
-      return {
-        success: false,
-        error: { code: 'FEATURE_ERROR', message: error.message },
-        fromCache: false
-      };
-    }
-  }
-  ```
-
-- **Tool Registration**:
-  - ✅ DO: Create tool definitions in `mcp-server/src/tools/`
-  - ✅ DO: Use Zod for parameter validation
-  - ✅ DO: Include optional tag parameter for multi-context support
-  - ✅ DO: Follow established naming conventions
-
-  ```javascript
-  // ✅ DO: Register MCP tools with tagged system support
-  export function registerNewFeatureTool(server) {
-    server.addTool({
-      name: "new_feature",
-      description: "Description of the new feature with tagged task lists support",
-      inputSchema: z.object({
-        param: z.string().describe("Feature-specific parameter"),
-        tag: z.string().optional().describe("Target tag context (defaults to current tag)"),
-        force: z.boolean().optional().describe("Force operation without confirmation"),
-        projectRoot: z.string().optional().describe("Project root directory")
-      }),
-      execute: withNormalizedProjectRoot(async (args, { log, session }) => {
-        try {
-          const result = await newFeatureDirect(
-            { ...args, projectRoot: args.projectRoot },
-            log,
-            { session }
-          );
-          return handleApiResult({ result, log, projectRoot: args.projectRoot });
-        } catch (error) {
-          return handleApiResult({
-            result: {
-              success: false,
-              error: { code: 'EXECUTION_ERROR', message: error.message }
-            },
-            log
-          });
-        }
-      })
-    });
-  }
-  ```
+- ✅ DO: Write the tool in `apps/mcp/src/tools/` as `mcp.md` describes: zod parameters, `withToolContext`, one tm-core call, a reply through `replyWith` or `handleApiResult`.
+- ✅ DO: Take an optional `tag` and pass it to tm-core and to the reply, so the reply names the tag the tool worked in.
+- ✅ DO: Follow the naming in `mcp.md` (`<name>.tool.ts`, `register<Name>Tool`, snake_case tool names).
+- ❌ DON'T: Put parsing, validation of task data or file I/O in the tool; it belongs in tm-core.
 
 ## Testing Strategy
 

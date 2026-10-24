@@ -45,7 +45,7 @@ with the target branch as build A and the pull request as build B.
 
 - **When it runs:** when the pull request changes anything that goes into the
   two builds or the comparison: the code bundled into `dist/` (`scripts/`,
-  `mcp-server/`, `src/`, the `src/` of `@tm/core`, `@tm/profiles`, `@tm/cli`
+  `src/`, the `src/` of `@tm/core`, `@tm/profiles`, `@tm/cli`
   and `@tm/mcp`), `assets/` (what `init` copies), the build config, the
   `package.json` of the root or of a bundled package, `package-lock.json`,
   this folder, the MCP smoke client the MCP steps use,

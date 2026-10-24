@@ -249,7 +249,7 @@ Any additional context or notes for reviewers.
 ```
 taskgraph-ai/
 ├── bin/                    # CLI executables
-├── mcp-server/            # MCP server implementation
+├── apps/mcp/              # MCP server (@tm/mcp)
 ├── scripts/               # Core task management logic
 ├── src/                   # Shared utilities and providers and well refactored code (we are slowly moving everything here)
 ├── tests/                 # Test files
@@ -261,7 +261,7 @@ taskgraph-ai/
 ### Key Areas for Contribution
 
 - **CLI Commands**: `apps/cli/src/commands/` (registered in `apps/cli/src/command-registry.ts`)
-- **MCP Tools**: `mcp-server/src/tools/`
+- **MCP Tools**: `apps/mcp/src/tools/`
 - **Core Logic**: `packages/tm-core/src/`
 - **AI Providers**: `packages/tm-core/src/modules/ai/providers/`
 - **Tests**: `tests/`

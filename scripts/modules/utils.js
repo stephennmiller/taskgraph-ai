@@ -15,7 +15,6 @@ import {
 	stampTasksFileSchemaVersion,
 	stripTerminalControls
 } from '@tm/core';
-import { AsyncLocalStorage } from 'async_hooks';
 import chalk from 'chalk';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -329,37 +328,11 @@ const LOG_LEVELS = {
 	success: 1 // Treat success like info level
 };
 
-// Inside a scope, silent mode belongs to that call alone. A server runs many
-// calls at once, so one call finishing must not un-silence another.
-const silentScope = new AsyncLocalStorage();
-
-/**
- * Run fn with its own silent-mode switch, starting from the current value
- * (the enclosing scope's, or the global one outside any scope). Calls made from
- * fn, including after awaits, enable and disable only this switch.
- * @param {Function} fn
- * @returns {*} Whatever fn returns
- */
-function withSilentScope(fn) {
-	return silentScope.run({ silent: isSilentMode() }, fn);
-}
-
 /**
  * Enable silent logging mode
  */
 function enableSilentMode() {
-	const scope = silentScope.getStore();
-	if (scope) scope.silent = true;
-	else silentMode = true;
-}
-
-/**
- * Disable silent logging mode
- */
-function disableSilentMode() {
-	const scope = silentScope.getStore();
-	if (scope) scope.silent = false;
-	else silentMode = false;
+	silentMode = true;
 }
 
 /**
@@ -367,8 +340,7 @@ function disableSilentMode() {
  * @returns {boolean} True if silent mode is enabled
  */
 function isSilentMode() {
-	const scope = silentScope.getStore();
-	return scope ? scope.silent : silentMode;
+	return silentMode;
 }
 
 /**
@@ -1691,7 +1663,6 @@ function stripAnsiCodes(text) {
 
 // Export all utility functions and configuration
 export {
-	disableSilentMode,
 	enableSilentMode,
 	findCycles,
 	findProjectRoot,
@@ -1715,6 +1686,5 @@ export {
 	taskExists,
 	toKebabCase,
 	truncate,
-	withSilentScope,
 	writeJSON
 };

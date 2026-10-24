@@ -133,26 +133,13 @@ const tag = options.tag || getCurrentTag(projectRoot) || 'master';
 
 ## MCP Integration Pattern
 
-MCP direct functions must also follow the tag-aware pattern:
+MCP tools take an optional `tag`, pass it to tm-core, and name it in the reply (`apps/mcp/src/tools/`, see `mcp.md`):
 
-```javascript
-// ✅ DO: Tag-aware MCP direct function
-export async function coreActionDirect(args, log, context = {}) {
-  const { session } = context;
-  const { projectRoot, tag } = args; // MCP passes these in args
-  
-  try {
-    const result = await coreAction(
-      tasksPath,
-      // ... other parameters ...
-      { projectRoot, tag, session, mcpLog: logWrapper }
-    );
-    
-    return { success: true, data: result };
-  } catch (error) {
-    return { success: false, error: { code: 'ERROR_CODE', message: error.message } };
-  }
-}
+```typescript
+replyWith(args, context, 'Error running core_action', async () => {
+  const result = await context.tmCore.tasks.coreAction(args.id, { tag: args.tag });
+  return { tag: result.tag, data: result };
+})
 ```
 
 ## File Generation Tag-Aware Naming
