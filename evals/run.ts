@@ -229,7 +229,11 @@ async function evaluate(sample: Sample): Promise<EvalSampleResult> {
 
 const started = new Date();
 const results: EvalSampleResult[] = [];
-for (const sample of samples) {
+console.error(
+	`Running ${samples.length === 1 ? '1 sample' : `${samples.length} samples`}; each takes a few minutes of model calls`
+);
+for (const [index, sample] of samples.entries()) {
+	console.error(`${sample.id} (${index + 1} of ${samples.length})`);
 	const result = await evaluate(sample);
 	const secs = Math.round(sampleSeconds(result));
 	console.error(
