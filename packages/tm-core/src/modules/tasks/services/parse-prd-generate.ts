@@ -179,8 +179,8 @@ async function streamTasks(
 }
 
 /**
- * Usage for a stream is only known once it ends, after the service has
- * already built its telemetry, so rebuild it from the real token counts
+ * Usage for a stream is only known once it ends, so the service leaves its
+ * telemetry null; build it here from the real token counts
  */
 async function streamTelemetry(
 	stream: any,
@@ -188,12 +188,11 @@ async function streamTelemetry(
 	context: GenerateContext
 ): Promise<AiServiceResult['telemetryData']> {
 	const previous = response.telemetryData;
-	if (!previous?.userId) return previous;
 	try {
 		const usage = await stream.usage;
 		return (
 			(await context.ai.logUsage({
-				userId: previous.userId,
+				userId: context.aiConfig.userId,
 				commandName: 'parse-prd',
 				providerName: response.providerName,
 				modelId: response.modelId,
@@ -205,7 +204,7 @@ async function streamTelemetry(
 		);
 	} catch (error) {
 		context.debug(
-			`Couldn't read the stream's token usage (${(error as Error)?.message}); keeping the usage the service reported`
+			`Couldn't read the stream's token usage (${(error as Error)?.message}); leaving the usage unreported`
 		);
 		return previous;
 	}
