@@ -180,17 +180,21 @@ describe('analyze_project_complexity', () => {
 		);
 	});
 
-	it('logs tm-core warnings', async () => {
+	it('logs tm-core warnings and sends them in the reply', async () => {
 		tasks.analyzeComplexity.mockImplementation(async (_input, hooks) => {
 			hooks.onWarning('No active tasks found with IDs: 9');
-			return { report, reportPath: 'r', telemetryData: null };
+			return { report, reportPath: 'r', telemetryData: null, unchanged: true };
 		});
 
-		await tool.execute({ projectRoot: project }, ctx);
+		const result = await tool.execute({ projectRoot: project }, ctx);
 
 		expect(ctx.log.warn).toHaveBeenCalledWith(
 			'No active tasks found with IDs: 9'
 		);
+		expect(reply(result).data).toMatchObject({
+			message: 'No active task matched, so the report at r is unchanged',
+			warnings: ['No active tasks found with IDs: 9']
+		});
 	});
 });
 

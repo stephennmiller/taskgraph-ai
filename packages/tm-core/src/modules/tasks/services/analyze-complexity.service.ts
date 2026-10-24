@@ -67,6 +67,11 @@ export interface AnalyzeComplexityInput {
 	output?: string;
 	/** The active tag when left out */
 	tag?: string;
+	/**
+	 * Analyze the tasks named by `ids` whatever their status (scope-up/down
+	 * re-scores the task it just changed, even one in review or done)
+	 */
+	anyStatus?: boolean;
 	/** The MCP session, for its env */
 	session?: unknown;
 	/** 'cli' or 'mcp', for usage telemetry */
@@ -288,9 +293,11 @@ export class AnalyzeComplexityService {
 		} else if (fromId !== undefined || toId !== undefined) {
 			inScope = (task) => idOf(task) >= first && idOf(task) <= last;
 		}
-		const tasks = allTasks.filter((task) => isActive(task) && inScope(task));
+		const counts = (task: Task) =>
+			isActive(task) || (input.anyStatus === true && Boolean(specificIds));
+		const tasks = allTasks.filter((task) => counts(task) && inScope(task));
 		const skipped = allTasks.filter(
-			(task) => inScope(task) && !isActive(task)
+			(task) => inScope(task) && !counts(task)
 		).length;
 
 		if (specificIds && specificIds.length > 0) {
@@ -317,7 +324,7 @@ export class AnalyzeComplexityService {
 		});
 
 		if (tasks.length === 0) {
-			const existing = this.readExistingReport(reportPath, warn);
+			const existing = this.readExistingReport(reportPath);
 			if (existing && filtered) {
 				return {
 					report: existing,
@@ -347,6 +354,8 @@ export class AnalyzeComplexityService {
 			};
 		}
 
+		// A report that can't be read stops the run before the AI is paid for
+		this.readExistingReport(reportPath);
 		const aiConfig = new AiConfig(this.configManager, (level, message) =>
 			level === 'warn' ? warn(message) : debug(message)
 		);
@@ -405,7 +414,7 @@ export class AnalyzeComplexityService {
 		}
 
 		// Read now, not before the AI call, so a report written meanwhile is kept
-		const existing = this.readExistingReport(reportPath, warn);
+		const existing = this.readExistingReport(reportPath);
 		const analyzedIds = new Set(analyses.map((a) => String(a.taskId)));
 		const tagTaskIds = new Set(allTasks.map((t) => String(t.id)));
 		// Earlier entries of tasks still in this tag that this run didn't analyze
@@ -475,20 +484,22 @@ export class AnalyzeComplexityService {
 		}
 	}
 
-	/** The report at `reportPath`, or null when there is none or it can't be read */
-	private readExistingReport(
-		reportPath: string,
-		warn: (message: string) => void
-	): ComplexityReportFile | null {
+	/**
+	 * The report at `reportPath`, or null when there is none. Throws when it
+	 * exists but can't be read: writing over it would lose every entry in it.
+	 */
+	private readExistingReport(reportPath: string): ComplexityReportFile | null {
 		try {
 			return JSON.parse(fs.readFileSync(reportPath, 'utf8'));
 		} catch (error) {
-			if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-				warn(
-					`Could not read existing report: ${(error as Error).message}; writing a new one`
-				);
-			}
-			return null;
+			if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+			throw Object.assign(
+				new TaskGraphError(
+					`Couldn't read the complexity report ${reportPath}: ${(error as Error).message}`,
+					ERROR_CODES.PARSE_ERROR
+				),
+				{ hint: 'Fix the file, or move it aside to start a new report' }
+			);
 		}
 	}
 

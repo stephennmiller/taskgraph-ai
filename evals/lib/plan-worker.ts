@@ -164,11 +164,11 @@ async function main(judge: boolean): Promise<void> {
 		step('scoring complexity');
 		// Its `skipped` counts done tasks; timed() would read it as a skipped call
 		const { report } = await timed('analyze-complexity', async () => {
-			const { telemetryData, report } = await tmCore.tasks.analyzeComplexity({
-				output: reportPath,
-				tag: TAG,
-				outputType: 'mcp'
-			});
+			const { telemetryData, report } = await tmCore.tasks.analyzeComplexity(
+				{ output: reportPath, tag: TAG, outputType: 'mcp' },
+				// A task the AI left out gets a default score; say so
+				{ onWarning: (message) => quiet.error(`warning: ${message}`) }
+			);
 			return { telemetryData, report };
 		});
 		output.complexity = report.complexityAnalysis as PlanComplexity[];

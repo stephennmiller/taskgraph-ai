@@ -120,6 +120,8 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 					return createErrorResponse((error as Error).message);
 				}
 
+				// Sent in the reply too: the client may not show the log
+				const warnings: string[] = [];
 				try {
 					const result = await tmCore.tasks.analyzeComplexity(
 						{
@@ -134,7 +136,10 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 							outputType: 'mcp'
 						},
 						{
-							onWarning: (message) => log.warn(message),
+							onWarning: (message) => {
+								warnings.push(message);
+								log.warn(message);
+							},
 							onDebug: (message) => log.debug(message)
 						}
 					);
@@ -144,7 +149,9 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 						result: {
 							success: true,
 							data: {
-								message: `Task complexity analysis complete. Report saved to ${result.reportPath}`,
+								message: result.unchanged
+									? `No active task matched, so the report at ${result.reportPath} is unchanged`
+									: `Task complexity analysis complete. Report saved to ${result.reportPath}`,
 								reportPath: result.reportPath,
 								reportSummary: {
 									taskCount: analyses.length,
@@ -155,7 +162,8 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 								},
 								fullReport: result.report,
 								telemetryData: result.telemetryData,
-								tagInfo: result.tagInfo
+								tagInfo: result.tagInfo,
+								...(warnings.length > 0 && { warnings })
 							}
 						},
 						log,

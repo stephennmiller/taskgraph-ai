@@ -229,6 +229,21 @@ describe('tasks.analyzeComplexity', () => {
 			expect(generate).not.toHaveBeenCalled();
 		});
 
+		it('a report that exists but is not valid JSON, so its entries are not lost', async () => {
+			fs.writeFileSync(reportPath(), '{ "complexityAnalysis": [');
+			const core = await setUp();
+
+			for (const ids of [undefined, '99']) {
+				await expect(core.tasks.analyzeComplexity({ ids })).rejects.toThrow(
+					"Couldn't read the complexity report"
+				);
+			}
+			expect(fs.readFileSync(reportPath(), 'utf8')).toBe(
+				'{ "complexityAnalysis": ['
+			);
+			expect(generate).not.toHaveBeenCalled();
+		});
+
 		it('an --id that is not a task ID', async () => {
 			const core = await setUp();
 
@@ -239,6 +254,22 @@ describe('tasks.analyzeComplexity', () => {
 			}
 			expect(generate).not.toHaveBeenCalled();
 		});
+	});
+
+	it('analyzes named tasks whatever their status with anyStatus', async () => {
+		const generate = vi
+			.spyOn(AiService.prototype, 'generateObject')
+			.mockResolvedValue(answerFor({ name: '', ids: '2' }) as any);
+		const core = await setUp();
+
+		const result = await core.tasks.analyzeComplexity({
+			ids: '1',
+			anyStatus: true
+		});
+
+		const sent = generate.mock.calls[0]?.[0];
+		expect(sent?.prompt).toContain('Set up project scaffolding');
+		expect(result).toMatchObject({ skipped: 0, unchanged: false });
 	});
 
 	it('warns about IDs with no active task', async () => {
