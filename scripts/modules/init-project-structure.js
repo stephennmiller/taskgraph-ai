@@ -2,7 +2,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import { ui } from '@tm/cli';
-import { installMergeDriver, isOnPath, mergeDriverCommand } from '@tm/core';
+import { findOnPath, installMergeDriver, mergeDriverCommand } from '@tm/core';
 import {
 	ENV_EXAMPLE_FILE,
 	EXAMPLE_PRD_FILE,
@@ -276,7 +276,7 @@ async function createProjectStructure(
  */
 function setUpMergeDriver(targetDir) {
 	const command = mergeDriverCommand({
-		onPath: isOnPath('taskgraph'),
+		onPath: findOnPath('taskgraph') !== null,
 		execPath: process.execPath,
 		scriptPath: path.resolve(process.argv[1])
 	});

@@ -214,14 +214,14 @@ export function mergeDriverCommand(options: MergeDriverCommandOptions): string {
 	return `if [ -x ${node} ] && [ -f ${script} ]; then ${node} ${script} ${DRIVER_ARGS}; ${fallback}`;
 }
 
-/** Whether an executable with this name is in a PATH directory */
-export function isOnPath(
+/** The path of the first executable with this name in a PATH directory, or null */
+export function findOnPath(
 	name: string,
 	envPath = process.env.PATH ?? '',
 	extensions = process.platform === 'win32'
 		? (process.env.PATHEXT ?? '.EXE;.CMD;.BAT').split(';')
 		: ['']
-): boolean {
+): string | null {
 	for (const dir of envPath.split(path.delimiter)) {
 		if (!dir) continue;
 		for (const ext of extensions) {
@@ -231,13 +231,13 @@ export function isOnPath(
 				if (!stat.isFile()) continue;
 				if (process.platform !== 'win32')
 					fs.accessSync(file, fs.constants.X_OK);
-				return true;
+				return file;
 			} catch {
 				// not here
 			}
 		}
 	}
-	return false;
+	return null;
 }
 
 export interface MergeDriverInstallResult {

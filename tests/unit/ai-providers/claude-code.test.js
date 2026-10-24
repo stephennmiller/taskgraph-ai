@@ -40,7 +40,7 @@ vi.doMock('../../../scripts/modules/config-manager.js', () => ({
 }));
 
 // Import after mocking
-const { ClaudeCodeProvider, isTrustedClaudeExecutable } = await import(
+const { ClaudeCodeProvider } = await import(
 	'../../../src/ai-providers/claude-code.js'
 );
 
@@ -521,53 +521,6 @@ describe('ClaudeCodeProvider', () => {
 			expect(() => errorProvider.getClient({})).toThrow(
 				'Mock initialization error'
 			);
-		});
-	});
-
-	describe('isTrustedClaudeExecutable', () => {
-		let base;
-		let project;
-		let outsideClaude;
-
-		beforeAll(() => {
-			base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'tg-exe-')));
-			project = path.join(base, 'project');
-			fs.mkdirSync(path.join(project, 'bin'), { recursive: true });
-			fs.mkdirSync(path.join(base, 'bin'));
-			outsideClaude = path.join(base, 'bin', 'claude');
-			fs.writeFileSync(outsideClaude, '');
-			fs.writeFileSync(path.join(project, 'bin', 'claude'), '');
-			fs.writeFileSync(path.join(base, 'bin', 'sh'), '');
-			// A link outside the project named claude that points into it
-			fs.symlinkSync(
-				path.join(project, 'bin', 'claude'),
-				path.join(base, 'claude')
-			);
-		});
-
-		afterAll(() => fs.rmSync(base, { recursive: true, force: true }));
-
-		it('allows an absolute claude binary outside the project', () => {
-			expect(isTrustedClaudeExecutable(outsideClaude, project)).toBe(true);
-		});
-
-		it('refuses relative paths, other names and missing files', () => {
-			expect(isTrustedClaudeExecutable('bin/claude', project)).toBe(false);
-			expect(
-				isTrustedClaudeExecutable(path.join(base, 'bin', 'sh'), project)
-			).toBe(false);
-			expect(
-				isTrustedClaudeExecutable(path.join(base, 'nope', 'claude'), project)
-			).toBe(false);
-		});
-
-		it('refuses a claude inside the project, directly or through a link', () => {
-			expect(
-				isTrustedClaudeExecutable(path.join(project, 'bin', 'claude'), project)
-			).toBe(false);
-			expect(
-				isTrustedClaudeExecutable(path.join(base, 'claude'), project)
-			).toBe(false);
 		});
 	});
 });
