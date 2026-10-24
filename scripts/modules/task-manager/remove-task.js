@@ -1,10 +1,4 @@
-import {
-	dropReferences,
-	getOwnKey,
-	liveOrArchived,
-	pruneTaskLinks,
-	readArchivedIdsSync
-} from '@tm/core';
+import { dropReferences, fullSubtaskId, getOwnKey } from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
 import { findTaskById, log, readJSON } from '../utils.js';
@@ -147,14 +141,21 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 					)
 				);
 
+				// A removed task's subtasks go with it, so references to them do too
+				for (const removed of results.removedTasks) {
+					if (
+						removed.parentTaskId !== undefined ||
+						!Array.isArray(removed.subtasks)
+					) {
+						continue;
+					}
+					for (const subtask of removed.subtasks) {
+						allRemovedIds.add(fullSubtaskId(removed.id, subtask.id));
+					}
+				}
+
 				// Dependency IDs name tasks of the same tag, so only this tag changes
 				dropReferences(tasks, allRemovedIds);
-				// Related and discovered-from links to the subtasks of a removed
-				// task go too
-				pruneTaskLinks(
-					tasks,
-					liveOrArchived(tasks, () => readArchivedIdsSync(tasksPath, tag).ids)
-				);
 			}
 		});
 

@@ -572,10 +572,11 @@
         "description": "`scripts/modules/task-manager/remove-task.js` builds the removed-ID set from the IDs passed on the command line only.",
         "details": "GitHub issue #456: https://github.com/stephennmiller/taskgraph-ai/issues/456\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:47:33.569Z"
       },
       {
         "id": "43",
@@ -583,10 +584,11 @@
         "description": "clear-subtasks --all rescans every task once per task, and removeAllSubtasks turns a stored dotted subtask ID like 3.2 into 3.3.2.",
         "details": "GitHub issue #457: https://github.com/stephennmiller/taskgraph-ai/issues/457\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:47:33.574Z"
       },
       {
         "id": "44",
@@ -861,9 +863,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T03:33:43.781Z",
+      "lastModified": "2026-10-24T03:47:33.574Z",
       "taskCount": 67,
-      "completedCount": 16,
+      "completedCount": 18,
       "tags": [
         "master"
       ]

@@ -184,6 +184,28 @@ describe('removeTask', () => {
 			expect(parent.subtasks[1].dependencies).toEqual([1, 150]);
 		});
 
+		test('removing a task drops dependencies on its subtasks (#456)', async () => {
+			readJSON.mockImplementation(() => {
+				const data = tagged();
+				data.master.tasks.push({
+					id: 7,
+					title: 'Task 7',
+					status: 'pending',
+					dependencies: ['2.2', '1'],
+					metadata: { dependencySources: { 2.2: 'inferred' } }
+				});
+				return { ...data.master, tag: 'master', _rawTaggedData: data };
+			});
+
+			await removeTask('tasks/tasks.json', '2', { tag: 'master' });
+
+			const task7 = writeJSON.mock.calls[0][1].master.tasks.find(
+				(t) => t.id === 7
+			);
+			expect(task7.dependencies).toEqual(['1']);
+			expect(task7.metadata).toBeUndefined();
+		});
+
 		test('removing a subtask drops the sibling number, not the task string', async () => {
 			const parent = await remove('2.1');
 

@@ -12,6 +12,7 @@ import {
 	assignMetadata,
 	pruneDependencySources
 } from './dependency-provenance.js';
+import { fullSubtaskId } from '../tasks/validation/task-id.js';
 import { resolveSubtaskDependency } from './subtask-dependency.js';
 import { pruneTaskLinks } from './task-links.js';
 
@@ -65,17 +66,27 @@ export function dropReferences(
 }
 
 /**
- * Remove all of `task`'s subtasks, and with them every dependency, mark and
- * link elsewhere in `tasks` that names one. Call it before adding new
- * subtasks, which reuse the IDs.
+ * Remove all subtasks of the given tasks, and with them every dependency,
+ * mark and link elsewhere in `tasks` that names one, in a single pass. Call
+ * it before adding new subtasks, which reuse the IDs.
  *
- * @returns How many subtasks were removed (0 leaves the task as it is)
+ * @returns How many subtasks were removed (0 leaves the tasks as they are)
  */
-export function removeAllSubtasks(tasks: Referrer[], task: Referrer): number {
-	const subtasks = Array.isArray(task.subtasks) ? task.subtasks : [];
-	if (subtasks.length === 0) return 0;
-	const ids = subtasks.map((subtask) => `${task.id}.${subtask.id}`);
-	task.subtasks = [];
+export function removeAllSubtasks(
+	tasks: Referrer[],
+	...cleared: Referrer[]
+): number {
+	const ids: string[] = [];
+	for (const task of cleared) {
+		if (!Array.isArray(task.subtasks) || task.subtasks.length === 0) continue;
+		// A subtask may be stored as "3.2" rather than 2
+		for (const subtask of task.subtasks) {
+			ids.push(
+				fullSubtaskId(task.id as DependencyId, subtask.id as DependencyId)
+			);
+		}
+		task.subtasks = [];
+	}
 	dropReferences(tasks, ids);
 	return ids.length;
 }

@@ -36,6 +36,7 @@ function resolveTasks(tasks, taskIds) {
 		throw new ClearSubtasksError('INVALID_TASK_ID', 'No task IDs given');
 	}
 
+	const byId = new Map(tasks.map((t) => [String(t.id), t]));
 	return ids.map((id) => {
 		// parseInt('1.2') is 1, which used to clear every subtask of task 1
 		if (/^\d+\.\d+/.test(id)) {
@@ -52,7 +53,7 @@ function resolveTasks(tasks, taskIds) {
 				id
 			);
 		}
-		const task = tasks.find((t) => String(t.id) === id);
+		const task = byId.get(id);
 		if (!task) {
 			throw new ClearSubtasksError(
 				'TASK_NOT_FOUND',
@@ -91,15 +92,16 @@ function clearSubtasks(tasksPath, taskIds, context = {}) {
 	const empty = [];
 
 	for (const task of tasks) {
-		// Dependencies and links on the subtasks go with them
-		const count = removeAllSubtasks(data.tasks, task);
+		const count = Array.isArray(task.subtasks) ? task.subtasks.length : 0;
 		if (count === 0) {
 			empty.push({ id: task.id, title: task.title });
 			continue;
 		}
 		cleared.push({ id: task.id, title: task.title, count });
-		log('debug', `Cleared ${count} subtasks from task ${task.id}`);
+		log('debug', `Clearing ${count} subtasks from task ${task.id}`);
 	}
+	// Dependencies and links on the subtasks go with them, in one pass
+	removeAllSubtasks(data.tasks, ...tasks);
 
 	if (cleared.length > 0) {
 		writeJSON(tasksPath, data, projectRoot, tag);
