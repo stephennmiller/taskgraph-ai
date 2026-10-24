@@ -147,6 +147,8 @@ taskgraph move --from=5 --to=25
 # Move multiple tasks at once (must have the same number of IDs)
 taskgraph move --from=10,11,12 --to=16,17,18
 
-# Move a task to another tag (see Cross-Tag Task Movement)
+# Move a task to another tag
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
 ```
+
+Moving between tags, and handling dependencies that cross tags, is covered in [Cross-Tag Task Movement](/capabilities/cross-tag-movement).
