@@ -8,7 +8,8 @@ import {
 	parsePrdSections,
 	prdDeltaContent,
 	prdPathForSource,
-	readArchivedIdsSync
+	readArchivedIdsSync,
+	stripTerminalControls
 } from '@tm/core';
 import { getDebugFlag, getDefaultPriority } from '../../config-manager.js';
 
@@ -157,7 +158,7 @@ async function parsePRDCore(config) {
 				// since then are replaced only with --force
 				if (!config.append && !config.force && currentTasks.length > 0) {
 					throw new Error(
-						`Tasks were added to tag '${config.targetTag}' while the PRD was being parsed. Run again with --append to add to them or --force to replace them`
+						`Tasks were added to tag '${stripTerminalControls(String(config.targetTag), { singleLine: true })}' while the PRD was being parsed. Run again with --append to add to them or --force to replace them`
 					);
 				}
 				// Overwriting (--force) replaces the list

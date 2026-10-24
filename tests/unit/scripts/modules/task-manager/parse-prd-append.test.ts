@@ -225,6 +225,29 @@ describe('parse-prd without --append or --force', () => {
 		const tasks = JSON.parse(fs.readFileSync(tasksPath, 'utf8')).master.tasks;
 		expect(tasks.map((t: { title: string }) => t.title)).toEqual(['Old 1']);
 	});
+
+	it('names the tag without its escape codes', async () => {
+		const tag = 'evil\x1b[2J';
+		ai.generateObjectService.mockImplementation(async () => {
+			fs.writeFileSync(
+				tasksPath,
+				JSON.stringify({ [tag]: { tasks: [existing(1)], metadata: {} } })
+			);
+			return {
+				mainResult: { tasks: [generated(1)] },
+				telemetryData: null
+			};
+		});
+
+		const error = await parsePRD(prdPath, tasksPath, 0, {
+			tag,
+			projectRoot: dir,
+			mcpLog
+		}).catch((e: Error) => e);
+
+		expect((error as Error).message).toContain("tag 'evil'");
+		expect((error as Error).message).not.toContain('\x1b');
+	});
 });
 
 describe('processTasks', () => {
