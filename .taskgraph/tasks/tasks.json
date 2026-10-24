@@ -667,7 +667,7 @@
         "description": "`formatInvalidDependencyWarning` (`apps/cli/src/ui/formatters/task-list-formatters.ts`) prints its header as one unwrapped line.",
         "details": "GitHub issue #463: https://github.com/stephennmiller/taskgraph-ai/issues/463\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
         "subtasks": []

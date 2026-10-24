@@ -43,7 +43,7 @@ import {
 	calculateSubtaskStatistics,
 	calculateTaskStatistics
 } from '../components/dashboard.component.js';
-import { terminalWidth } from '../layout/helpers.js';
+import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { getSuggestedActions } from '../suggested-actions.js';
 import { theme } from '../theme.js';
 import { fit, joinFacts, visibleLength } from './markdown-formatters.js';
@@ -423,13 +423,17 @@ const INVALID_DEPENDENCIES_SHOWN = 5;
  *     Task 3 depends on non-existent task 9
  *   Run taskgraph fix-dependencies to remove them
  *
+ * Each line wraps at spaces to the terminal width (#463).
+ *
  * @param invalidDependencies - From `buildBlocksMap`; must not be empty
  * @param tagName - The tag, when `list` was given one or every tag. The
  *   command names it only when add-tag would accept it, `<tag>` otherwise
+ * @param width - Terminal width
  */
 export function formatInvalidDependencyWarning(
 	invalidDependencies: InvalidDependency[],
-	tagName?: string
+	tagName?: string,
+	width = terminalWidth()
 ): string {
 	const tag = tagName === undefined ? undefined : oneLine(tagName);
 	const tagContext = tag === undefined ? '' : ` (tag: ${tag})`;
@@ -438,20 +442,30 @@ export function formatInvalidDependencyWarning(
 			? ''
 			: ` --tag ${TAG_NAME_PATTERN.test(tagName) ? tagName : '<tag>'}`;
 	const more = invalidDependencies.length - INVALID_DEPENDENCIES_SHOWN;
+	const wrap = (text: string, paint: (line: string) => string, hang = '') =>
+		wrapLine(text, width, hang).map((line) => paint(line));
 	return [
-		chalk.yellow(
-			`\nWarning: ${invalidDependencies.length} invalid dependency reference(s) found${tagContext}:`
+		'',
+		...wrap(
+			`Warning: ${invalidDependencies.length} invalid dependency reference(s) found${tagContext}:`,
+			chalk.yellow
 		),
 		...invalidDependencies
 			.slice(0, INVALID_DEPENDENCIES_SHOWN)
-			.map(({ taskId, depId }) =>
-				theme.muted(
-					`  Task ${oneLine(taskId)} depends on non-existent task ${oneLine(depId)}`
+			.flatMap(({ taskId, depId }) =>
+				wrap(
+					`  Task ${oneLine(taskId)} depends on non-existent task ${oneLine(depId)}`,
+					theme.muted,
+					'    '
 				)
 			),
 		...(more > 0 ? [theme.muted(`  ...and ${more} more`)] : []),
-		theme.muted('Run ') +
-			theme.brand(`taskgraph fix-dependencies${tagFlag}`) +
-			theme.muted(' to remove them')
+		...wrapLine(
+			theme.muted('Run ') +
+				theme.brand(`taskgraph fix-dependencies${tagFlag}`) +
+				theme.muted(' to remove them'),
+			width,
+			''
+		)
 	].join('\n');
 }
