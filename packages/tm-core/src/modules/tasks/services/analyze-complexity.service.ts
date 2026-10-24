@@ -38,7 +38,7 @@ const MAX_RELATED_TASKS = 10;
 const ACTIVE_STATUSES = ['pending', 'blocked', 'in-progress'];
 
 /** One task's entry in the report, as the AI writes it */
-export interface ComplexityAnalysisEntry {
+export interface ComplexityAnalysisItem {
 	taskId: number | string;
 	taskTitle: string;
 	complexityScore: number;
@@ -49,7 +49,7 @@ export interface ComplexityAnalysisEntry {
 
 export interface ComplexityReportFile {
 	meta: ComplexityReportMetadata;
-	complexityAnalysis: ComplexityAnalysisEntry[];
+	complexityAnalysis: ComplexityAnalysisItem[];
 }
 
 export interface AnalyzeComplexityInput {
@@ -88,7 +88,7 @@ export interface AnalyzeComplexityResult {
 	reportPath: string;
 	tag: string;
 	/** The entries this run wrote */
-	analyses: ComplexityAnalysisEntry[];
+	analyses: ComplexityAnalysisItem[];
 	/** Done, cancelled or deferred tasks among those asked for */
 	skipped: number;
 	/** Earlier entries kept in the report */
@@ -185,6 +185,26 @@ function parseRangeId(value: number | string | undefined, name: string) {
 	return id;
 }
 
+/** The IDs of `--id` ("1,3,5") as numbers; refuses one that isn't an ID */
+function parseIds(value: string | undefined): number[] | null {
+	if (!value) return null;
+	const tokens = value
+		.split(',')
+		.map((id) => id.trim())
+		.filter(Boolean);
+	const bad = tokens.filter((id) => Number.isNaN(parseInt(id, 10)));
+	if (bad.length > 0 || tokens.length === 0) {
+		throw Object.assign(
+			new TaskGraphError(
+				`"${bad.join(',') || value}" isn't a task ID`,
+				ERROR_CODES.INVALID_INPUT
+			),
+			{ hint: 'Example: --id=1,3,5' }
+		);
+	}
+	return tokens.map((id) => parseInt(id, 10));
+}
+
 /** Report file names older versions wrote, newest first */
 const REPORT_NAMES = [
 	'task-complexity-report',
@@ -203,12 +223,14 @@ export function readComplexityReport(
 ): { report: ComplexityReportFile; reportPath: string } | null {
 	const candidates = file
 		? [path.resolve(projectRoot, file)]
-		: REPORT_NAMES.map((name) =>
-				complexityReportPath(projectRoot, tag).replace(
-					'task-complexity-report',
-					name
-				)
-			);
+		: REPORT_NAMES.map((name) => {
+				// Only the file name: the project path may hold the same words
+				const tagReport = complexityReportPath(projectRoot, tag);
+				return path.join(
+					path.dirname(tagReport),
+					path.basename(tagReport).replace('task-complexity-report', name)
+				);
+			});
 	const reportPath = candidates.find((candidate) => fs.existsSync(candidate));
 	if (!reportPath) return null;
 	try {
@@ -234,12 +256,7 @@ export class AnalyzeComplexityService {
 		const tag = input.tag || this.configManager.getActiveTag();
 		const useResearch = input.research === true;
 		const threshold = parseThreshold(input.threshold);
-		const specificIds = input.ids
-			? input.ids
-					.split(',')
-					.map((id) => parseInt(id.trim(), 10))
-					.filter((id) => !Number.isNaN(id))
-			: null;
+		const specificIds = parseIds(input.ids);
 		const fromId = parseRangeId(input.from, '--from');
 		const toId = parseRangeId(input.to, '--to');
 		const filtered =
@@ -366,7 +383,7 @@ export class AnalyzeComplexityService {
 		if (!Array.isArray(returned)) {
 			throw new Error('AI service did not return a complexity analysis.');
 		}
-		const analyses: ComplexityAnalysisEntry[] = [...returned];
+		const analyses: ComplexityAnalysisItem[] = [...returned];
 
 		const answered = new Set(analyses.map((a) => String(a.taskId)));
 		const unanswered = tasks.filter((t) => !answered.has(String(t.id)));

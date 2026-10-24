@@ -404,6 +404,6 @@ export type {
 	AnalyzeComplexityHooks,
 	AnalyzeComplexityInput,
 	AnalyzeComplexityResult,
-	ComplexityAnalysisEntry,
+	ComplexityAnalysisItem,
 	ComplexityReportFile
 } from './modules/tasks/services/analyze-complexity.service.js';

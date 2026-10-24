@@ -89,24 +89,26 @@ async function reanalyzeTaskComplexity(task, tasksPath, context) {
 
 		// Re-analyze just this task (saved already); the report's other entries stay
 		const tmCore = await createTmCore({ projectPath: projectRoot });
-		await tmCore.tasks.analyzeComplexity({
-			ids: task.id.toString(),
-			output: complexityReportPath,
-			tag,
-			session
-		});
+		const { analyses } = await tmCore.tasks.analyzeComplexity(
+			{
+				ids: task.id.toString(),
+				output: complexityReportPath,
+				tag,
+				session
+			},
+			{ onWarning: (message) => log('warn', message) }
+		);
 
-		// Read the updated complexity report to get the new score
-		const updatedReport = readComplexityReport(complexityReportPath);
-		if (updatedReport) {
-			const taskAnalysis = findTaskInComplexityReport(updatedReport, task.id);
-			if (taskAnalysis) {
-				log(
-					'info',
-					`Re-analyzed task ${task.id} complexity: ${taskAnalysis.complexityScore}/10`
-				);
-				return taskAnalysis.complexityScore;
-			}
+		// This run's entry only: the report's older entry isn't a new score
+		const taskAnalysis = analyses.find(
+			(entry) => String(entry.taskId) === String(task.id)
+		);
+		if (taskAnalysis) {
+			log(
+				'info',
+				`Re-analyzed task ${task.id} complexity: ${taskAnalysis.complexityScore}/10`
+			);
+			return taskAnalysis.complexityScore;
 		}
 
 		log(

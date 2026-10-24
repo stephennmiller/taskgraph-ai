@@ -228,6 +228,17 @@ describe('tasks.analyzeComplexity', () => {
 			}
 			expect(generate).not.toHaveBeenCalled();
 		});
+
+		it('an --id that is not a task ID', async () => {
+			const core = await setUp();
+
+			for (const ids of ['abc', '2,abc', ' , ']) {
+				await expect(core.tasks.analyzeComplexity({ ids })).rejects.toThrow(
+					"isn't a task ID"
+				);
+			}
+			expect(generate).not.toHaveBeenCalled();
+		});
 	});
 
 	it('warns about IDs with no active task', async () => {
@@ -294,6 +305,22 @@ describe('tasks.getComplexityReport', () => {
 			reportPath: path.join(reports(), 'complexity-report_feature.json')
 		});
 		expect(tmCore.tasks.getComplexityReport()).toBeNull();
+	});
+
+	it('finds an older report name in a project whose path holds the name', async () => {
+		const root = path.join(projectDir, 'task-complexity-report-demo');
+		fs.mkdirSync(path.join(root, '.taskgraph', 'reports'), { recursive: true });
+		fs.mkdirSync(path.join(root, '.taskgraph', 'tasks'));
+		fs.writeFileSync(
+			path.join(root, '.taskgraph', 'config.json'),
+			JSON.stringify({ models: {}, global: {} })
+		);
+		const file = path.join(root, '.taskgraph', 'reports', 'complexity-report.json');
+		fs.writeFileSync(file, '{"meta":{}}');
+		const core = await createTmCore({ projectPath: root });
+
+		expect(core.tasks.getComplexityReport()?.reportPath).toBe(file);
+		await core.close();
 	});
 
 	it('reads a file given relative to the project root', () => {
