@@ -30,6 +30,7 @@ import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
 import { TASK_STATUSES } from '../../../common/constants/index.js';
 import {
 	ERROR_CODES,
+	MISSING_TAG_HINT,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
 import { getLogger } from '../../../common/logger/factory.js';
@@ -221,10 +222,13 @@ export class TaskService {
 			return resolved;
 		}
 		if (resolved !== activeTag) {
-			throw new TaskGraphError(
-				`Tag "${resolved}" not found`,
-				ERROR_CODES.NOT_FOUND,
-				{ tagName: resolved }
+			throw Object.assign(
+				new TaskGraphError(
+					`Tag "${resolved}" not found`,
+					ERROR_CODES.NOT_FOUND,
+					{ tagName: resolved }
+				),
+				{ hint: MISSING_TAG_HINT }
 			);
 		}
 		throw Object.assign(

@@ -7,6 +7,7 @@
 export {
 	TaskGraphError,
 	ERROR_CODES,
+	MISSING_TAG_HINT,
 	type ErrorCode,
 	type ErrorContext,
 	type SerializableError

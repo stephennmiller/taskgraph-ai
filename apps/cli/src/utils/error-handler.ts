@@ -7,7 +7,7 @@
  *     Run taskgraph list to see task IDs
  */
 
-import { stripTerminalControls } from '@tm/core';
+import { MISSING_TAG_HINT, stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../ui/theme.js';
 
@@ -93,7 +93,7 @@ function defaultHint(message: string, code?: string): string | undefined {
 	}
 	// Before the task checks: a tag named "task-old" mentions "task"
 	if (MISSING_TAG.test(message) || DUPLICATE_TAG.test(message)) {
-		return 'Run `taskgraph tags` to see your tags';
+		return MISSING_TAG_HINT;
 	}
 	const subtask = MISSING_SUBTASK.exec(message);
 	if (subtask) {

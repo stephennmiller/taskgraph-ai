@@ -516,6 +516,19 @@ describe('tasks.expand', () => {
 			expect(saved.master.tasks[1].subtasks).toHaveLength(2);
 			expect(saved.master.tasks[1].subtasks[0].title).toBe('Parse flags');
 		});
+
+		it("refuses a tag that doesn't exist and leaves master alone (#548)", async () => {
+			const before = readFile();
+
+			await expect(
+				tmCore.tasks.expand({ id: '3', tag: 'featuer', keepExpanded: true })
+			).rejects.toMatchObject({
+				message: 'Tag "featuer" not found',
+				hint: 'Run `taskgraph tags` to see your tags'
+			});
+			expect(generateObject).not.toHaveBeenCalled();
+			expect(readFile()).toEqual(before);
+		});
 	});
 
 	describe('with another writer during the AI call', () => {

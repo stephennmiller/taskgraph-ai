@@ -3,6 +3,9 @@
  * Provides comprehensive error handling with metadata, context, and serialization support
  */
 
+/** The next step for an error about a tag that doesn't exist */
+export const MISSING_TAG_HINT = 'Run `taskgraph tags` to see your tags';
+
 /**
  * Error codes used throughout the TaskGraph system
  */

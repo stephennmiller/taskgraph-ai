@@ -41,7 +41,10 @@ export async function replyWith(
 			tag: usedTag ?? args.tag
 		});
 	} catch (error: unknown) {
-		const message = error instanceof Error ? error.message : String(error);
+		const hint = (error as { hint?: unknown } | null)?.hint;
+		const message =
+			(error instanceof Error ? error.message : String(error)) +
+			(typeof hint === 'string' ? `. ${hint}` : '');
 		return handleApiResult({
 			result: { success: false, error: { message } },
 			log,
