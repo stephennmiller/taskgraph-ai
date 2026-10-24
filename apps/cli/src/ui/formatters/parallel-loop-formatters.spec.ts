@@ -118,6 +118,17 @@ describe('formatParallelSummary', () => {
 		]);
 	});
 
+	it('says "branches" for more than one kept branch', () => {
+		const out = summary(
+			result([
+				task('1', { commits: 1, kept: true }),
+				task('2', { commits: 1, kept: true })
+			])
+		);
+
+		expect(out).toContain('✓ 2 of 2 tasks done · 2 branches to review');
+	});
+
 	it('keeps a failed task that left work, and says it failed', () => {
 		const out = summary(
 			result([

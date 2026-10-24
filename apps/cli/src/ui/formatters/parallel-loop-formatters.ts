@@ -29,7 +29,8 @@ import chalk from 'chalk';
 import { formatDuration } from '../components/parse-prd-progress.component.js';
 import { theme } from '../theme.js';
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const plural = (n: number, word: string, many = `${word}s`) =>
+	`${n} ${n === 1 ? word : many}`;
 
 /**
  * Task text or a git error as one plain line: escape sequences and control
@@ -159,7 +160,7 @@ export function formatParallelSummary(
 	const done = tasks.filter((t) => t.state === 'done').length;
 	const failed = tasks.filter((t) => t.state === 'failed').length;
 	const review = kept.length
-		? ` · ${plural(kept.length, 'branch')} to review`
+		? ` · ${plural(kept.length, 'branch', 'branches')} to review`
 		: '';
 
 	let lead: string;
