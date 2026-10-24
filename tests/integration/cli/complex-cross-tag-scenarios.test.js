@@ -201,9 +201,11 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Check that the move was not performed
 			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-			expect(tasksAfter.backlog.tasks.find((t) => t.id === 1)).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 1)
+				tasksAfter.backlog.tasks.find((t) => String(t.id) === '1')
+			).toBeDefined();
+			expect(
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '1')
 			).toBeUndefined();
 		});
 	});
@@ -274,26 +276,36 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Verify all tasks in the chain were moved
 			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-			expect(tasksAfter.master.tasks.find((t) => t.id === 1)).toBeUndefined();
-			expect(tasksAfter.master.tasks.find((t) => t.id === 2)).toBeUndefined();
-			expect(tasksAfter.master.tasks.find((t) => t.id === 3)).toBeUndefined();
-			expect(tasksAfter.master.tasks.find((t) => t.id === 4)).toBeUndefined();
-			expect(tasksAfter.master.tasks.find((t) => t.id === 5)).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '1')
+			).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '2')
+			).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '3')
+			).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '4')
+			).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '5')
+			).toBeUndefined();
 
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 1)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '1')
 			).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 2)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '2')
 			).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 3)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '3')
 			).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 4)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '4')
 			).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 5)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '5')
 			).toBeDefined();
 		});
 	});
@@ -310,7 +322,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Verify subtask was not moved
 			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-			const task2 = tasksAfter.master.tasks.find((t) => t.id === 2);
+			const task2 = tasksAfter.master.tasks.find((t) => String(t.id) === '2');
 			expect(task2).toBeDefined();
 			expect(task2.subtasks.find((s) => s.id === '2.1')).toBeDefined();
 		});
@@ -324,9 +336,11 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Verify parent and subtasks were moved
 			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-			expect(tasksAfter.master.tasks.find((t) => t.id === 2)).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '2')
+			).toBeUndefined();
 			const movedTask2 = tasksAfter['in-progress'].tasks.find(
-				(t) => t.id === 2
+				(t) => String(t.id) === '2'
 			);
 			expect(movedTask2).toBeDefined();
 			expect(movedTask2.subtasks).toHaveLength(2);
@@ -387,16 +401,22 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Verify all tasks in the dependency chain were moved
 			for (let i = 1; i <= 25; i++) {
-				expect(tasksAfter.master.tasks.find((t) => t.id === i)).toBeUndefined();
 				expect(
-					tasksAfter['in-progress'].tasks.find((t) => t.id === i)
+					tasksAfter.master.tasks.find((t) => String(t.id) === String(i))
+				).toBeUndefined();
+				expect(
+					tasksAfter['in-progress'].tasks.find(
+						(t) => String(t.id) === String(i)
+					)
 				).toBeDefined();
 			}
 
 			// Verify in-progress still has its original tasks (26-50)
 			for (let i = 26; i <= 50; i++) {
 				expect(
-					tasksAfter['in-progress'].tasks.find((t) => t.id === i)
+					tasksAfter['in-progress'].tasks.find(
+						(t) => String(t.id) === String(i)
+					)
 				).toBeDefined();
 			}
 
@@ -441,7 +461,9 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
 			expect(tasksAfter['new-tag']).toBeDefined();
-			expect(tasksAfter['new-tag'].tasks.find((t) => t.id === 1)).toBeDefined();
+			expect(
+				tasksAfter['new-tag'].tasks.find((t) => String(t.id) === '1')
+			).toBeDefined();
 		});
 	});
 
@@ -497,18 +519,24 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 			// Verify all tasks were moved
 			const tasksAfter = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-			expect(tasksAfter.master.tasks.find((t) => t.id === 1)).toBeUndefined();
-			expect(tasksAfter.master.tasks.find((t) => t.id === 2)).toBeUndefined();
-			expect(tasksAfter.master.tasks.find((t) => t.id === 3)).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '1')
+			).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '2')
+			).toBeUndefined();
+			expect(
+				tasksAfter.master.tasks.find((t) => String(t.id) === '3')
+			).toBeUndefined();
 
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 1)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '1')
 			).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 2)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '2')
 			).toBeDefined();
 			expect(
-				tasksAfter['in-progress'].tasks.find((t) => t.id === 3)
+				tasksAfter['in-progress'].tasks.find((t) => String(t.id) === '3')
 			).toBeDefined();
 		});
 	});

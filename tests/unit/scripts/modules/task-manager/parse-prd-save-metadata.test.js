@@ -80,7 +80,7 @@ describe('saveTasksToFile metadata', () => {
 		});
 
 		const saved = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
-		expect(saved.master.tasks.map((task) => task.id)).toEqual([1, 2]);
+		expect(saved.master.tasks.map((task) => task.id)).toEqual(['1', '2']);
 		expect(saved.master.metadata.prdSections).toEqual({
 			'docs/prd.md': { overview: 'abc' }
 		});

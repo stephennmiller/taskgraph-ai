@@ -61,13 +61,21 @@ describe('importUpstreamProject', () => {
 	it('copies every tag with its tasks, subtasks and dependencies unchanged', () => {
 		const result = importUpstreamProject(project);
 
-		// Only the schema version stamp is added to each tag's metadata
+		// Only the schema version stamp is added to each tag's metadata, and
+		// task IDs and dependencies are stored as strings (#392)
 		const source = readJson('.taskmaster', 'tasks', 'tasks.json');
-		for (const tag of Object.values<{ metadata?: object }>(source)) {
+		for (const tag of Object.values<{
+			metadata?: object;
+			tasks: { id: unknown; dependencies?: unknown[] }[];
+		}>(source)) {
 			tag.metadata = {
 				...tag.metadata,
 				schemaVersion: CURRENT_SCHEMA_VERSION
 			};
+			for (const task of tag.tasks) {
+				task.id = String(task.id);
+				task.dependencies = task.dependencies?.map(String);
+			}
 		}
 		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual(source);
 		expect(result.tags).toEqual([
@@ -226,7 +234,7 @@ describe('importUpstreamProject', () => {
 
 		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual({
 			master: {
-				...legacy,
+				tasks: [{ id: '1', title: 'Old task', dependencies: [] }],
 				metadata: { schemaVersion: CURRENT_SCHEMA_VERSION }
 			}
 		});

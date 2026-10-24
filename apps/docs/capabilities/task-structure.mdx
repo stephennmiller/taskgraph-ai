@@ -10,16 +10,18 @@ Tasks in tasks.json have the following structure:
 
 | Field          | Description                                     | Example                                                |
 | -------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| `id`           | Unique identifier for the task.                 | `1`                                                    |
+| `id`           | Unique identifier for the task.                 | `"1"`                                                  |
 | `title`        | Brief, descriptive title.                       | `"Initialize Repo"`                                    |
 | `description`  | What the task involves.                         | `"Create a new repository, set up initial structure."` |
 | `status`       | Current state.                                  | `"pending"`, `"done"`, `"deferred"`                    |
-| `dependencies` | Prerequisite task IDs. ✅ Completed, ⏱️ Pending | `[1, 2]`                                               |
+| `dependencies` | Prerequisite task IDs. ✅ Completed, ⏱️ Pending | `["1", "2.3"]`                                         |
 | `priority`     | Task importance.                                | `"high"`, `"medium"`, `"low"`                          |
 | `details`      | Implementation instructions.                    | `"Use GitHub client ID/secret, handle callback..."`    |
 | `testStrategy` | How to verify success.                          | `"Deploy and confirm 'Hello World' response."`         |
 | `subtasks`     | Nested subtasks related to the main task.       | `[{"id": 1, "title": "Configure OAuth", ...}]`         |
 | `metadata`     | Optional user-defined data (see below).         | `{"githubIssue": 42, "sprint": "Q1-S3"}`               |
+
+A task's `id` and its `dependencies` are saved as strings (`"3"` for a task, `"3.2"` for a subtask). Older files may hold numbers; both are read the same way. A subtask's `id` is a number, and in a subtask's `dependencies` a bare number such as `1` means a sibling subtask.
 
 The statuses are `pending`, `in-progress`, `review`, `done`, `deferred`, `cancelled` and `blocked`. Files from Task Master or an AI tool may say `completed`: TaskGraph reads it as `done` on a task or a subtask, in tasks.json and archive.json, and the next save writes `done`.
 
@@ -76,7 +78,7 @@ The `metadata` field allows you to store arbitrary custom data on tasks without 
 
 ```json
 {
-  "id": 1,
+  "id": "1",
   "title": "Implement authentication",
   "metadata": {
     "githubIssue": 42,
@@ -89,7 +91,7 @@ The `metadata` field allows you to store arbitrary custom data on tasks without 
 
 ```json
 {
-  "id": 2,
+  "id": "2",
   "title": "Refactor API endpoints",
   "metadata": {
     "sprint": "Q1-S3",
@@ -103,7 +105,7 @@ The `metadata` field allows you to store arbitrary custom data on tasks without 
 
 ```json
 {
-  "id": 3,
+  "id": "3",
   "title": "Fix login bug",
   "metadata": {
     "jira": {
@@ -121,7 +123,7 @@ The `metadata` field allows you to store arbitrary custom data on tasks without 
 
 ```json
 {
-  "id": 4,
+  "id": "4",
   "title": "Add user preferences",
   "metadata": {
     "uuid": "550e8400-e29b-41d4-a716-446655440000",
@@ -347,12 +349,12 @@ The `show` command:
 {
   "master": {
     "tasks": [
-      { "id": 1, "title": "Setup API", "status": "pending" }
+      { "id": "1", "title": "Setup API", "status": "pending" }
     ]
   },
   "feature-branch": {
     "tasks": [
-      { "id": 1, "title": "New Feature", "status": "pending" }
+      { "id": "1", "title": "New Feature", "status": "pending" }
     ]
   }
 }

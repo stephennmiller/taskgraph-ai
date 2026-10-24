@@ -497,6 +497,19 @@ describe('Dependency Manager Module', () => {
 			expect(result.tasks[2].dependencies).toEqual([]);
 		});
 
+		test('removes a duplicate stored once as a number and once as a string (#432)', () => {
+			const tasksData = {
+				tasks: [
+					{ id: 1, dependencies: [] },
+					{ id: 2, dependencies: [1, '1', '1.2', '1.2'] }
+				]
+			};
+
+			const result = removeDuplicateDependencies(tasksData);
+
+			expect(result.tasks[1].dependencies).toEqual([1, '1.2']);
+		});
+
 		test('should handle empty dependencies array', () => {
 			const tasksData = {
 				tasks: [
@@ -641,6 +654,29 @@ describe('Dependency Manager Module', () => {
 	});
 
 	describe('validateAndFixDependencies function', () => {
+		test('removes a duplicate stored once as a number and once as a string (#432)', () => {
+			mockTaskExists.mockReturnValue(true);
+			const tasksData = {
+				tasks: [
+					{
+						id: 1,
+						dependencies: [],
+						subtasks: [
+							{ id: 1, dependencies: [] },
+							// 1 and '1.1' are both sibling 1.1; '1' is task 1
+							{ id: 2, dependencies: [1, '1.1', '1'] }
+						]
+					},
+					{ id: 2, dependencies: [1, '1'] }
+				]
+			};
+
+			expect(validateAndFixDependencies(tasksData)).toBe(true);
+
+			expect(tasksData.tasks[1].dependencies).toEqual([1]);
+			expect(tasksData.tasks[0].subtasks[1].dependencies).toEqual([1, '1']);
+		});
+
 		test('should fix multiple dependency issues and return true if changes made', () => {
 			const tasksData = {
 				tasks: [

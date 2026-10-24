@@ -602,8 +602,8 @@ describe('parsePRD', () => {
 		});
 
 		const written = JSON.parse(fs.default.writeFileSync.mock.calls[0][1]);
-		expect(written.master.tasks.map((t) => t.id)).toEqual([1, 2]);
-		expect(written.master.tasks[1].dependencies).toEqual([1]);
+		expect(written.master.tasks.map((t) => t.id)).toEqual(['1', '2']);
+		expect(written.master.tasks[1].dependencies).toEqual(['1']);
 	});
 
 	test('should throw error when tasks in tag exist without force flag in MCP mode', async () => {
@@ -904,7 +904,7 @@ describe('parsePRD', () => {
 			expect(mockProgress.succeed).toHaveBeenCalledWith(sampleClaudeResponse);
 			expect(result.success).toBe(true);
 			const written = JSON.parse(fs.default.writeFileSync.mock.calls[0][1]);
-			expect(written.master.tasks.map((t) => t.id)).toEqual([1, 2]);
+			expect(written.master.tasks.map((t) => t.id)).toEqual(['1', '2']);
 		});
 
 		test('should fall back to one request when the stream fails', async () => {

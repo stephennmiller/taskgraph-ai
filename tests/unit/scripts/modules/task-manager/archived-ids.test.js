@@ -118,7 +118,7 @@ describe('archived task IDs in the legacy commands', () => {
 			);
 
 			expect(result.newTaskId).toBe(4);
-			expect(readTasks().map((t) => t.id)).toEqual([1, 4]);
+			expect(readTasks().map((t) => t.id)).toEqual(['1', '4']);
 		});
 
 		test('keeps a restored ID reserved: highestId never goes down', async () => {
@@ -274,7 +274,7 @@ describe('archived task IDs in the legacy commands', () => {
 			});
 
 			const [saved] = readTasks();
-			expect(saved.dependencies).toEqual([1]);
+			expect(saved.dependencies).toEqual(['1']);
 			expect(saved.subtasks[0].dependencies).toEqual(['1.1']);
 			expect(result.fixes.map((f) => String(f.dependencyId))).toEqual(
 				expect.arrayContaining(['9', '9.1'])

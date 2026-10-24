@@ -46,9 +46,33 @@ function isTagObject(value: unknown): value is Record<string, unknown> {
 	);
 }
 
+/**
+ * A top-level task in its stored form: the ID and each dependency a string,
+ * as FileStorage saves them. A copy, so a caller's in-memory task (the legacy
+ * scripts keep numeric IDs) is left alone. Subtasks keep their types: there a
+ * bare number is a sibling.
+ */
+function withStringIds(task: unknown): unknown {
+	if (!task || typeof task !== 'object' || Array.isArray(task)) return task;
+	const { id, dependencies } = task as Record<string, unknown>;
+	const copy: Record<string, unknown> = { ...task };
+	if (typeof id === 'number') copy.id = String(id);
+	if (Array.isArray(dependencies)) {
+		copy.dependencies = dependencies.map((dep) =>
+			typeof dep === 'number' ? String(dep) : dep
+		);
+	}
+	return copy;
+}
+
 // Own-key reads and writes: tag objects may come from a null-prototype
 // writer, and an inherited `metadata` or `schemaVersion` is not the file's
 function stampTag(tag: Record<string, unknown>): void {
+	setOwnKey(
+		tag,
+		'tasks',
+		(getOwnKey(tag, 'tasks') as unknown[]).map(withStringIds)
+	);
 	const current = getOwnKey(tag, 'metadata');
 	// Leave metadata that is not a plain object alone rather than rewrite it
 	if (
@@ -68,11 +92,13 @@ function stampTag(tag: Record<string, unknown>): void {
 }
 
 /**
- * Stamp every tag of a whole tasks.json object with the schema version, for
- * writers that save the file in one piece. Takes the tagged format
+ * Stamp every tag of a whole tasks.json object with the schema version, and
+ * store its task IDs and dependencies as strings, for writers that save the
+ * file in one piece (the legacy scripts). Takes the tagged format
  * (`{ <tag>: { tasks, metadata } }`) or the single-tag `{ tasks, metadata }`.
  * Keys that are not tags are left alone, so a file that holds no tasks passes
- * through unchanged. Mutates and returns `data`.
+ * through unchanged. Mutates and returns `data`; each tag gets a new `tasks`
+ * array, so the task objects a caller holds are not changed.
  */
 export function stampTasksFileSchemaVersion<T>(data: T): T {
 	if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
