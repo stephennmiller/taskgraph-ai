@@ -45,6 +45,10 @@ export {
 	toTaskDependency
 } from './subtask-dependency.js';
 export {
+	isForwardDependency,
+	orderGeneratedSubtasks
+} from './forward-dependencies.js';
+export {
 	buildDependencyTree,
 	type BuildDependencyTreeOptions,
 	type DependencyTree,

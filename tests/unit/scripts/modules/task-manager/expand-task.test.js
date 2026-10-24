@@ -472,6 +472,52 @@ describe('expandTask', () => {
 			expect(third.metadata.dependencySources).toEqual({ 2.2: 'inferred' });
 		});
 
+		test('orders subtasks before saving so none waits on a later one (#515)', async () => {
+			generateObjectService.mockResolvedValueOnce({
+				mainResult: {
+					subtasks: [
+						{
+							id: 1,
+							title: 'Wire the UI',
+							dependencies: [2],
+							status: 'pending'
+						},
+						{
+							id: 2,
+							title: 'Build the API',
+							dependencies: ['3'],
+							status: 'pending'
+						}
+					]
+				},
+				telemetryData: {}
+			});
+
+			const result = await expandTask(
+				'tasks/tasks.json',
+				'2',
+				2,
+				false,
+				'',
+				{ mcpLog: createMcpLogMock(), projectRoot: '/mock/project/root' },
+				false
+			);
+
+			const [first, second] = result.task.subtasks;
+			// Task 2 doesn't depend on task 3, so 2.1 can't either
+			expect([first.id, first.title, first.dependencies]).toEqual([
+				1,
+				'Build the API',
+				[]
+			]);
+			expect([second.id, second.title, second.dependencies]).toEqual([
+				2,
+				'Wire the UI',
+				[1]
+			]);
+			expect(second.metadata.dependencySources).toEqual({ 2.1: 'inferred' });
+		});
+
 		test("keeps the task's related and discovered-from links", async () => {
 			const links = { 1: 'discovered-from', 3: 'related' };
 			readJSON.mockImplementation((tasksPath, projectRoot, tag) => {

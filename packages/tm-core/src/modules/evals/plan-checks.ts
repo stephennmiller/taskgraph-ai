@@ -9,6 +9,7 @@
 
 import type { Task } from '../../common/types/index.js';
 import { findCycles } from '../dependencies/dependency-graph.js';
+import { isForwardDependency } from '../dependencies/forward-dependencies.js';
 import { resolveSubtaskDependency } from '../dependencies/subtask-dependency.js';
 import { isClarificationsHeading } from '../prd/clarifications.js';
 import { computePrdCoverage } from '../prd/prd-coverage.js';
@@ -152,8 +153,6 @@ export interface DependencyCheck {
 	invalid: InvalidDependency[];
 }
 
-const compareNumbers = (a: string, b: string): number => Number(a) - Number(b);
-
 /**
  * No cycles, and every dependency names an existing, earlier item: a task
  * a lower task (or one of its subtasks), a subtask a lower sibling or an
@@ -190,7 +189,7 @@ export function checkDependencies(tasks: PlanTask[]): DependencyCheck {
 					? 'self'
 					: !ids.has(dep)
 						? 'missing'
-						: compareNumbers(dep.split('.')[0], id) >= 0
+						: isForwardDependency(id, dep)
 							? 'not-lower'
 							: null
 			);
@@ -202,13 +201,7 @@ export function checkDependencies(tasks: PlanTask[]): DependencyCheck {
 				let reason: InvalidDependencyReason | null = null;
 				if (dep === subId) reason = 'self';
 				else if (!ids.has(dep)) reason = 'missing';
-				else if (dep.startsWith(`${id}.`)) {
-					if (compareNumbers(dep.slice(id.length + 1), String(sub.id)) >= 0)
-						reason = 'not-lower';
-				} else {
-					const [taskPart] = dep.split('.');
-					if (compareNumbers(taskPart, id) >= 0) reason = 'not-lower';
-				}
+				else if (isForwardDependency(subId, dep)) reason = 'not-lower';
 				record(subId, dep, reason);
 			}
 		}
