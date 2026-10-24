@@ -6,6 +6,7 @@
 import type { ConfigManager } from '../config/managers/config-manager.js';
 import { TaskService } from './services/task-service.js';
 import { DependencyService } from './services/dependency.service.js';
+import { TaskRemovalService } from './services/task-removal.service.js';
 import { TagService } from './services/tag.service.js';
 import {
 	TaskFileGeneratorService,
@@ -47,11 +48,7 @@ import {
 	analyzeDependencies,
 	buildDependencyTree,
 	explainBlockers,
-	type AddDependencyResult,
 	type DependencyAnalysis,
-	type DependencyCheckResult,
-	type DependencyFixResult,
-	type RemoveDependencyResult,
 	type BlockerExplanation,
 	type DependencyTree
 } from '../dependencies/index.js';
@@ -97,6 +94,7 @@ export class TasksDomain {
 	private taskService: TaskService;
 	private tagService!: TagService;
 	private dependencyService: DependencyService;
+	private removalService: TaskRemovalService;
 	private taskFileGenerator!: TaskFileGeneratorService;
 	private projectRoot: string;
 	private configManager: ConfigManager;
@@ -106,6 +104,10 @@ export class TasksDomain {
 		this.configManager = configManager;
 		this.taskService = new TaskService(configManager);
 		this.dependencyService = new DependencyService(
+			this.taskService,
+			this.projectRoot
+		);
+		this.removalService = new TaskRemovalService(
 			this.taskService,
 			this.projectRoot
 		);
@@ -265,35 +267,25 @@ export class TasksDomain {
 		return explainBlockers(tasks, String(taskId));
 	}
 
-	// ========== Dependencies (see DependencyService) ==========
+	// ===== Dependencies and removal (DependencyService, TaskRemovalService) =====
 
-	async addDependency(
-		taskId: string,
-		dependsOn: string,
-		options: { tag?: string; type?: string } = {}
-	): Promise<AddDependencyResult & { tag: string }> {
-		return this.dependencyService.add(taskId, dependsOn, options);
-	}
+	addDependency: DependencyService['add'] = (...a) =>
+		this.dependencyService.add(...a);
+	removeDependency: DependencyService['remove'] = (...a) =>
+		this.dependencyService.remove(...a);
+	validateDependencies: DependencyService['validate'] = (...a) =>
+		this.dependencyService.validate(...a);
+	fixDependencies: DependencyService['fix'] = (...a) =>
+		this.dependencyService.fix(...a);
 
-	async removeDependency(
-		taskId: string,
-		dependsOn: string,
-		options: { tag?: string } = {}
-	): Promise<RemoveDependencyResult & { tag: string }> {
-		return this.dependencyService.remove(taskId, dependsOn, options);
-	}
-
-	async validateDependencies(
-		options: { tag?: string } = {}
-	): Promise<DependencyCheckResult> {
-		return this.dependencyService.validate(options);
-	}
-
-	async fixDependencies(
-		options: { tag?: string } = {}
-	): Promise<DependencyFixResult> {
-		return this.dependencyService.fix(options);
-	}
+	previewTaskRemoval: TaskRemovalService['preview'] = (...a) =>
+		this.removalService.preview(...a);
+	removeTasks: TaskRemovalService['removeTasks'] = (...a) =>
+		this.removalService.removeTasks(...a);
+	removeSubtasks: TaskRemovalService['removeSubtasks'] = (...a) =>
+		this.removalService.removeSubtasks(...a);
+	clearSubtasks: TaskRemovalService['clearSubtasks'] = (...a) =>
+		this.removalService.clearSubtasks(...a);
 
 	/**
 	 * Session context for a coding agent (`taskgraph prime`): the task in

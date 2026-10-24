@@ -224,7 +224,7 @@
             "title": "remove-task, remove-subtask, clear-subtasks",
             "description": "Move the removal commands into @tm/core.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               "14.1"
             ],

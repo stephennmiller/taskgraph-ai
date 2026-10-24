@@ -23,7 +23,7 @@ TaskGraph's output follows Apple's Human Interface Guidelines and Emil Kowalski'
   console.log(ui.formatClearedSubtasks(result));
   ```
 
-- **Core functions return data and print nothing.** The command (or the `outputFormat === 'text'` branch) prints the formatted result. `clear-subtasks.js` returns `{ cleared, empty }`, and `commands.js` prints it.
+- **Core functions return data and print nothing.** The command (or the `outputFormat === 'text'` branch) prints the formatted result. `tmCore.tasks.clearSubtasks` returns `{ cleared, empty }`, and the `clear-subtasks` command prints it.
 - **Test the formatter with a `.spec.ts` next to it.** Assert on plain text with ANSI codes stripped. Check line widths at 80 columns (and narrower when text wraps). Add an integration test against the built CLI for exit codes and stdout/stderr.
 - Start each formatter file with a `@fileoverview` showing example output, as the existing formatters do.
 

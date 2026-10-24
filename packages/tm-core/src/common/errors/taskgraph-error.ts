@@ -331,3 +331,12 @@ export class TaskGraphError extends Error {
 		return new TaskGraphError(message, code, context, this);
 	}
 }
+
+/** A TaskGraphError with the next step to suggest, which the CLI prints */
+export function errorWithHint(
+	code: string,
+	message: string,
+	hint?: string
+): TaskGraphError & { hint?: string } {
+	return Object.assign(new TaskGraphError(message, code), { hint });
+}

@@ -4,7 +4,7 @@
  * removeDependency, validateDependencies and fixDependencies.
  */
 
-import { type TmCore, createTmCore, sanitizeForTerminal } from '@tm/core';
+import { sanitizeForTerminal } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
@@ -13,9 +13,8 @@ import {
 } from '../ui/formatters/dependency-check-formatters.js';
 import { formatPrdCoverage } from '../ui/formatters/prd-coverage-formatters.js';
 import { theme } from '../ui/theme.js';
-import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError, printError } from '../utils/error-handler.js';
-import { getProjectRoot } from '../utils/project-root.js';
+import { printError } from '../utils/error-handler.js';
+import { withTmCore } from '../utils/with-tm-core.js';
 
 interface DependencyOptions {
 	id?: string;
@@ -23,32 +22,6 @@ interface DependencyOptions {
 	type?: string;
 	tag?: string;
 	project?: string;
-}
-
-/**
- * Run `action` on a TmCore after the `[tag] X` line; any error is printed
- * and exits 1
- */
-async function withTmCore(
-	options: DependencyOptions,
-	action: (tmCore: TmCore) => Promise<void>
-): Promise<void> {
-	let tmCore: TmCore | undefined;
-	try {
-		tmCore = await createTmCore({
-			projectPath: getProjectRoot(options.project)
-		});
-		displayCommandHeader({
-			tag: options.tag || tmCore.config.getActiveTag(),
-			projectRoot: tmCore.projectPath
-		});
-		await action(tmCore);
-	} catch (error: unknown) {
-		displayError(error, { skipExit: true });
-		process.exitCode = 1;
-	} finally {
-		await tmCore?.close();
-	}
 }
 
 /** `✓ Task 3 now depends on task 1`; muted when nothing changed */

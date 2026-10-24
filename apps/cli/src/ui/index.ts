@@ -129,13 +129,6 @@ export {
 	formatUnnotedReminder
 } from './formatters/prime-formatters.js';
 
-// What clear-subtasks removed
-export {
-	formatClearedSubtasks,
-	type ClearedTask,
-	type ClearSubtasksResult
-} from './formatters/clear-subtasks-formatters.js';
-
 // What research says around the answer
 export {
 	formatResearchAnswer,
@@ -193,9 +186,6 @@ export {
 	formatSubtaskRemoved,
 	type SubtaskRef
 } from './formatters/subtask-change-formatters.js';
-
-// What remove-task removed
-export { formatTasksRemoved } from './formatters/remove-task-formatters.js';
 
 // What add-task confirms
 export {

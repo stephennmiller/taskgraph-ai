@@ -5,13 +5,10 @@
 
 import addTask from './task-manager/add-task.js';
 import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
-import clearSubtasks from './task-manager/clear-subtasks.js';
 import expandAllTasks from './task-manager/expand-all-tasks.js';
 import expandTask from './task-manager/expand-task.js';
 import findNextTask from './task-manager/find-next-task.js';
 import parsePRD from './task-manager/parse-prd/index.js';
-import removeSubtask from './task-manager/remove-subtask.js';
-import removeTask from './task-manager/remove-task.js';
 import { performResearch } from './task-manager/research.js';
 import setResponseLanguage from './task-manager/response-language.js';
 import {
@@ -33,12 +30,9 @@ export {
 	updateSubtaskById,
 	expandTask,
 	expandAllTasks,
-	clearSubtasks,
 	addTask,
-	removeSubtask,
 	findNextTask,
 	analyzeTaskComplexity,
-	removeTask,
 	findTaskById,
 	taskExists,
 	setResponseLanguage,

@@ -291,6 +291,14 @@ export {
 	type CrossTagConflict
 } from './modules/tasks/utils/index.js';
 
+// remove-task, remove-subtask and clear-subtasks (tasks.removeTasks and others)
+export {
+	splitIds,
+	type ClearSubtasksResult,
+	type TaskRemovalPreview
+} from './modules/tasks/utils/task-removal.js';
+export type { RemoveTasksResult } from './modules/tasks/services/task-removal.service.js';
+
 // A subtask that becomes a task gets a description it can load with
 export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
 
