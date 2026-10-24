@@ -63,6 +63,10 @@ const SECRETS = {
 		'kubeconfig-',
 		'kubeconfig_'
 	],
+	// Names ending in one of these: `kind-kubeconfig`, `<cluster>_kubeconfig`.
+	// Not a bare `kubeconfig` suffix or a substring, so my-kubeconfig-loader.ts
+	// and kubeconfigs.md stay readable
+	suffixes: ['-kubeconfig', '_kubeconfig'],
 	// Names ending in `.<extension>`
 	extensions: [
 		'pem',
@@ -139,6 +143,7 @@ function isSecretName(part) {
 	return (
 		SECRETS.names.includes(part) ||
 		SECRETS.prefixes.some((prefix) => part.startsWith(prefix)) ||
+		SECRETS.suffixes.some((suffix) => part.endsWith(suffix)) ||
 		SECRETS.extensions.some((extension) => part.endsWith(`.${extension}`))
 	);
 }
@@ -158,6 +163,7 @@ function anyCase(name) {
 const SECRET_GLOBS = [
 	...SECRETS.names,
 	...SECRETS.prefixes.map((prefix) => `${prefix}*`),
+	...SECRETS.suffixes.map((suffix) => `*${suffix}`),
 	...SECRETS.extensions.map((extension) => `*.${extension}`),
 	...SECRETS.paths.map((segments) => `**/${segments.join('/')}`)
 ].map((name) => `!${anyCase(name)}`);
