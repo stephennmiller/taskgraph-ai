@@ -132,6 +132,7 @@ describe('remove-task', () => {
 
 		await run('remove-task', '--id=2', '--yes');
 
+		expect(output('error')).toContain('Removed 1 of 1');
 		expect(output('error')).toContain('EACCES');
 		expect(process.exitCode).toBe(1);
 	});

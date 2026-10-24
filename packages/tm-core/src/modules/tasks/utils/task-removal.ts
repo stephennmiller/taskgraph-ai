@@ -41,7 +41,9 @@ function findItem(
 	id: string
 ): { task: Task; subtask?: StoredSubtask } | undefined {
 	const parts = id.split('.');
-	if (parts.length === 2 && parts[0] && parts[1]) {
+	if (parts.length > 1) {
+		// "2." or "2.1.1" names nothing; read as "2" it removed all of task 2
+		if (parts.length !== 2 || !parts[0] || !parts[1]) return undefined;
 		const parentId = String(parseInt(parts[0], 10));
 		const fullId = `${parentId}.${parseInt(parts[1], 10)}`;
 		const task = tasks.find((t) => String(t.id) === parentId);

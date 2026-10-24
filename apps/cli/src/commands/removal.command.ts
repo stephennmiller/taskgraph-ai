@@ -128,8 +128,9 @@ async function removeTasks(
 		tag: options.tag
 	});
 	if (result.errors.length > 0) {
+		// The tasks are gone even so; say so, or a retry reports them not found
 		printError(
-			result.errors.join('\n'),
+			`Removed ${result.removedTasks.length} of ${ids.length}: ${result.errors.map(terminalSafe).join('\n')}`,
 			'Run `taskgraph list` to see what is left'
 		);
 		process.exitCode = 1;

@@ -111,6 +111,15 @@ describe('removeTasksIn', () => {
 		expect(tasks).toEqual(tasksOf());
 	});
 
+	it('refuses a malformed subtask ID rather than removing its task', () => {
+		const tasks = tasksOf();
+
+		expect(() =>
+			removeTasksIn(asTasks(tasks), ['2.', '2.1.1'], 'master', none)
+		).toThrow("The following tasks were not found in tag 'master': 2., 2.1.1");
+		expect(tasks).toEqual(tasksOf());
+	});
+
 	it('skips an ID gone already: listed twice, or under a removed task', () => {
 		const tasks = tasksOf();
 
