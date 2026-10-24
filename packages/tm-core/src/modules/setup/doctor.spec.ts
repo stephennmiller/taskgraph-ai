@@ -80,7 +80,7 @@ describe('runDoctor', () => {
 
 		const report = await runDoctor({
 			projectPath: root,
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			cliVersion: '0.58.0',
 			run: claude({
 				version: '2.1.309 (Claude Code)\n',
@@ -94,7 +94,7 @@ describe('runDoctor', () => {
 		expect(report.ok).toBe(true);
 		expect(report.cliVersion).toBe('0.58.0');
 		expect(report.checks).toEqual([
-			{ name: 'node', status: 'pass', detail: '22.13.0' },
+			{ name: 'node', status: 'pass', detail: '22.19.0' },
 			{ name: 'claude', status: 'pass', detail: '2.1.309' },
 			{ name: 'signed-in', status: 'pass' },
 			{ name: 'project', status: 'pass', detail: root },
@@ -122,7 +122,7 @@ describe('runDoctor', () => {
 	it('skips the sign-in and plugin checks when claude is missing', async () => {
 		const report = await runDoctor({
 			projectPath: project(),
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			run: noClaude
 		});
 		const checks = byName(report.checks);
@@ -140,7 +140,7 @@ describe('runDoctor', () => {
 	it('fails when Claude Code is signed out', async () => {
 		const report = await runDoctor({
 			projectPath: project(),
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			run: claude({
 				version: '2.1.309',
 				auth: { loggedIn: false },
@@ -159,7 +159,7 @@ describe('runDoctor', () => {
 		const run = (plugins: object[]) =>
 			runDoctor({
 				projectPath: project(),
-				nodeVersion: '22.13.0',
+				nodeVersion: '22.19.0',
 				run: claude({ version: '2.1.309', auth: { loggedIn: true }, plugins })
 			});
 
@@ -185,7 +185,7 @@ describe('runDoctor', () => {
 
 		const report = await runDoctor({
 			projectPath: project(),
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			cliVersion: '0.57.1',
 			run: claude({
 				version: '2.1.309',
@@ -210,7 +210,7 @@ describe('runDoctor', () => {
 
 		const report = await runDoctor({
 			projectPath: dir,
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			run: noClaude
 		});
 		const checks = byName(report.checks);
@@ -232,7 +232,7 @@ describe('runDoctor', () => {
 			fs.writeFileSync(configFile, JSON.stringify(config));
 			const report = await runDoctor({
 				projectPath,
-				nodeVersion: '22.13.0',
+				nodeVersion: '22.19.0',
 				run: noClaude,
 				claudeConfigFile: configFile
 			});
@@ -270,7 +270,7 @@ describe('runDoctor', () => {
 		const report = await runDoctor({
 			projectPath: project({ mcpServers: { other: { args: ['x'] } } }),
 			claudeConfigFile: path.join(tempDir('tg-doctor-home-'), '.claude.json'),
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			run: claude({ version: '2.1.309', auth: { loggedIn: true }, plugins: [] })
 		});
 
@@ -287,7 +287,7 @@ describe('runDoctor', () => {
 
 		const report = await runDoctor({
 			projectPath: project(),
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			run
 		});
 		const checks = byName(report.checks);
@@ -302,7 +302,7 @@ describe('runDoctor', () => {
 
 		const report = await runDoctor({
 			projectPath: root,
-			nodeVersion: '22.13.0',
+			nodeVersion: '22.19.0',
 			run: claude({
 				version: '2.1.309',
 				auth: { loggedIn: true },
