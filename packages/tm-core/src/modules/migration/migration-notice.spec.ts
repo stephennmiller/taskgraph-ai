@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { takeMigrationNotice } from './migration-notice.js';
 
 describe('takeMigrationNotice', () => {
@@ -16,6 +16,8 @@ describe('takeMigrationNotice', () => {
 	});
 
 	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 		fs.rmSync(root, { recursive: true, force: true });
 	});
 
@@ -47,5 +49,31 @@ describe('takeMigrationNotice', () => {
 
 		fs.writeFileSync(statePath, '{not json');
 		expect(takeMigrationNotice(root)).toBe(false);
+	});
+
+	it('names a broken state.json under TASKGRAPH_DEBUG, but not a missing one', () => {
+		vi.stubEnv('TASKGRAPH_DEBUG', 'true');
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		expect(takeMigrationNotice(root)).toBe(false);
+		expect(warn).not.toHaveBeenCalled();
+
+		fs.writeFileSync(statePath, '{not json');
+		expect(takeMigrationNotice(root)).toBe(false);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining(statePath));
+	});
+
+	it('still shows the notice when state.json cannot be written', () => {
+		vi.stubEnv('TASKGRAPH_DEBUG', 'true');
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const state = { currentTag: 'master', migrationNoticePending: true };
+		fs.writeFileSync(statePath, JSON.stringify(state));
+		vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
+			throw Object.assign(new Error('read-only'), { code: 'EROFS' });
+		});
+
+		expect(takeMigrationNotice(root)).toBe(true);
+		expect(warn).toHaveBeenCalledWith(expect.stringContaining('EROFS'));
+		expect(readState()).toEqual(state);
 	});
 });

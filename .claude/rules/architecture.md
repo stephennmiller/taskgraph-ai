@@ -47,7 +47,7 @@ paths:
     - **Purpose**: Loads, validates, and provides access to configuration.
     - **Responsibilities** (See also: `utilities.md`):
       - Reads and merges `.taskgraph/config.json` with defaults, with the gitignored per-machine `.taskgraph/config.local.json` over it.
-      - Provides getters (e.g., `getMainProvider`, `getLogLevel`, `getDefaultSubtasks`) for accessing settings.
+      - Provides getters (e.g., `getMainProvider`, `getLogLevel`, `getDefaultNumTasks`) for accessing settings.
       - **Tag Configuration**: Manages `global.defaultTag` and `tags` section for tag system settings.
       - **Note**: Does **not** store or directly handle API keys (keys are in `.env` or MCP `session.env`).
 
