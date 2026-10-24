@@ -47,6 +47,7 @@ import { PathResolver } from './path-resolver.js';
 import {
 	applyTagUpdate,
 	buildTagMetadata,
+	checkWritableTag,
 	mutateTagsIn
 } from './tag-update.js';
 import { warnIfUnsupportedSchema } from './schema-version.js';
@@ -260,10 +261,8 @@ export class FileStorage implements IStorage {
 	 * Read-modify-write one tag under the file lock. The tasks are read inside
 	 * the lock, so a change made by another writer since the caller started is
 	 * never overwritten. Return `tasks: null` to leave the file untouched.
-	 * A throw from `mutate` aborts the write. With `requireTag`, a file that
-	 * has tags but not this one throws instead of gaining it (the tag was
-	 * deleted or renamed since the caller read it); a missing or empty file
-	 * still starts with it.
+	 * A throw from `mutate` aborts the write. checkWritableTag says which
+	 * tags it may write; a missing or empty file starts with this one.
 	 */
 	private async mutateTasks<R>(
 		tag: string | undefined,
@@ -284,15 +283,13 @@ export class FileStorage implements IStorage {
 					fileData && Object.keys(fileData).length > 0
 						? fileData
 						: { [resolvedTag]: { tasks: [], metadata: {} } };
-				if (
-					requireTag &&
-					!this.formatHandler.extractTags(existingData).includes(resolvedTag)
-				) {
-					throw new TaskGraphError(
-						`Tag "${resolvedTag}" no longer exists in ${filePath}`,
-						ERROR_CODES.NOT_FOUND
-					);
-				}
+				checkWritableTag(
+					this.formatHandler,
+					existingData,
+					resolvedTag,
+					requireTag,
+					filePath
+				);
 				const current = this.formatHandler.extractTasks(
 					existingData,
 					resolvedTag
