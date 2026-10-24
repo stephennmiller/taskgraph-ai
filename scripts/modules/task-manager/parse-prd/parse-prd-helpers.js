@@ -209,8 +209,8 @@ export function validateFileOperations({
  * Process and transform tasks with ID remapping
  * @param {Array} rawTasks - Raw tasks from AI
  * @param {number} startId - ID the first new task gets
- * @param {Array} existingTasks - The tag's tasks now; a new task may depend
- *   on one of them
+ * @param {Array<string|number>} existingIds - IDs of the tag's tasks now,
+ *   live or archived; a new task may depend on one of them
  * @param {string} defaultPriority - Default priority for tasks
  * @param {{path: string, sections: Array}} [prd] - The PRD's path and
  *   headings; a task naming one of them gets `metadata.source`
@@ -221,7 +221,7 @@ export function validateFileOperations({
 export function processTasks(
 	rawTasks,
 	startId,
-	existingTasks,
+	existingIds,
 	defaultPriority,
 	prd,
 	promptStartId = startId
@@ -232,7 +232,7 @@ export function processTasks(
 	const numbered = numberGeneratedTasks(rawTasks, {
 		promptStartId,
 		startId,
-		existingIds: existingTasks.map((task) => task.id)
+		existingIds
 	});
 
 	return rawTasks.map(({ section, ...task }, index) => {

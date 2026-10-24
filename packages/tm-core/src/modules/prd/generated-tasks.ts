@@ -16,7 +16,7 @@ export interface NumberGeneratedTasksOptions {
 	 * added to the tag while the model ran
 	 */
 	startId: number;
-	/** IDs of the tasks in the tag now */
+	/** IDs of the tasks in the tag now, live or archived */
 	existingIds: Iterable<string | number>;
 }
 

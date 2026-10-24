@@ -41,6 +41,15 @@ export async function displayComplexityReport(reportPath) {
  * @returns {Promise<boolean>} - Promise resolving to true if user confirms, false otherwise
  */
 export async function confirmTaskOverwrite(tasksPath) {
+	// Without a terminal nobody can answer, and readline would wait forever
+	if (!process.stdin.isTTY) {
+		printError(
+			"This tag has tasks and there's no terminal to ask before replacing them",
+			'Run again with --append to add to them or --force to replace them'
+		);
+		process.exit(1);
+	}
+
 	console.log(
 		`${chalk.yellow('⚠')} This tag has tasks; parse-prd replaces them` +
 			theme.muted(' (--append adds to them)')
