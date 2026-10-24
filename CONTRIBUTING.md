@@ -132,7 +132,7 @@ feat: refactor research.js
 
 ### Prerequisites
 
-- Node.js 22.13+
+- Node.js 22.19+
 - npm or yarn
 
 ### Environment Setup

@@ -94,7 +94,7 @@
 		"zod": "^4.1.12"
 	},
 	"engines": {
-		"node": ">=22.13.0"
+		"node": ">=22.19.0"
 	},
 	"packageManager": "npm@11.21.0",
 	"repository": {
