@@ -68,22 +68,11 @@ export interface LoopConfig {
 	 */
 	trusted?: boolean;
 	/**
-	 * Include full Claude output in iteration results (default: false)
-	 *
-	 * When true: `LoopIteration.output` will contain full stdout+stderr text
-	 * When false: `LoopIteration.output` will be undefined (saves memory)
-	 *
-	 * Can be combined with `verbose=true` to both display and capture output.
-	 * Note: Output can be large (up to 50MB per iteration).
-	 */
-	includeOutput?: boolean;
-	/**
 	 * Show Claude's work in real-time instead of just the result (default: false)
 	 *
 	 * When true: Output appears as Claude generates it (shows thinking, tool calls)
 	 * When false: Output appears only after iteration completes
 	 *
-	 * Independent of `includeOutput` - controls display timing, not capture.
 	 * Note: NOT compatible with `sandbox=true` (will return error).
 	 */
 	verbose?: boolean;
@@ -108,15 +97,6 @@ export interface LoopIteration {
 	message?: string;
 	/** Duration of this iteration in milliseconds */
 	duration?: number;
-	/**
-	 * Full Claude output text
-	 *
-	 * ONLY present when `LoopConfig.includeOutput=true`.
-	 * Contains concatenated stdout and stderr from Claude CLI execution.
-	 * May include ANSI color codes and tool call output.
-	 * Can be large - use `includeOutput=false` to save memory.
-	 */
-	output?: string;
 }
 
 /**
