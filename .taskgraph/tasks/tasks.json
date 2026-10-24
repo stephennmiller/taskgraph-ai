@@ -248,7 +248,7 @@
             "title": "Tags",
             "description": "Move tag-management.js into @tm/core, with #221 (create from branch) and #220 (root tsc in CI) as follow-ups.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               "14.3"
             ],

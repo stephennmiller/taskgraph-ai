@@ -81,6 +81,7 @@ with the target branch as build A and the pull request as build B.
 | `phase1-move-dependencies.json` | `move` across tags with `--with-dependencies` (the moved task's dependencies must arrive in the target tag) and `--ignore-dependencies` (they stay behind), CLI and MCP. |
 | `phase1-tag-flag.json` | Every non-tag command and tool with `--tag` / the MCP `tag` parameter on a tag that is not current, and an unknown tag. The current tag's tasks must stay untouched. |
 | `phase1-tags.json` | `add-tag` (`--copy-from-current`, `--copy-from`, `--from-branch`, also the MCP `fromBranch`), the `tags` subcommands, renaming and deleting the current tag, the older `use-tag`/`rename-tag`/`copy-tag`/`delete-tag`, the six tag MCP tools, and the failures (existing tag, unknown tag, removing `master`). |
+| `phase1-tags-edge.json` | Tags in a project with no tasks yet (`tags`, `tags --json`, `list_tags`, the first `tags add`), copying from a missing tag (CLI and MCP), reserved and invalid names, `tags remove` without `--yes` outside a terminal, and listing, using and copying a tag that has no metadata. |
 | `phase1-flat-format.json` | Reads and writes on an old file with no tags (`{"tasks": [...]}`): the first write moves it under `master`. |
 | `phase1-no-master.json` | A file whose only tag is `sprint`: reads fall back to it, writes to the missing current tag `master` fail until `tags use sprint`. |
 
@@ -148,12 +149,12 @@ path in some scenario, so a gap shows up there.
 | `remove-subtask` | `remove_subtask` | `phase1-removal.json` | `phase1-removal.json` (not a subtask) |
 | `add-subtask` | `add_subtask` | `phase1-structure.json`, `phase1-removal.json` | `phase1-structure.json` (circular) |
 | `move` | `move_task` | `phase1-structure.json`, `phase1-move-dependencies.json`, `phase1-tag-flag.json` | `phase1-structure.json` (existing ID, cross-tag conflict), `phase1-no-master.json` |
-| `add-tag`, `tags add` | `add_tag` | `phase1-tags.json` | `phase1-tags.json` (existing tag) |
-| `tags` / `tags list` | `list_tags` | `phase1-tags.json`, `phase1-flat-format.json` (CLI and MCP) | none |
+| `add-tag`, `tags add` | `add_tag` | `phase1-tags.json`, `phase1-tags-edge.json` | `phase1-tags.json` (existing tag), `phase1-tags-edge.json` (reserved, invalid name) |
+| `tags` / `tags list` | `list_tags` | `phase1-tags.json`, `phase1-flat-format.json`, `phase1-tags-edge.json` (CLI and MCP) | none |
 | `tags use`, `use-tag` | `use_tag` | `phase1-tags.json`, `phase1-no-master.json` | `phase1-tags.json` (unknown tag) |
-| `tags rename`, `rename-tag` | `rename_tag` | `phase1-tags.json` (also the current tag) | `phase1-tags.json` (unknown tag, CLI and MCP) |
+| `tags rename`, `rename-tag` | `rename_tag` | `phase1-tags.json` (also the current tag) | `phase1-tags.json` (unknown tag, CLI and MCP), `phase1-tags-edge.json` (reserved name) |
 | `tags copy`, `copy-tag` | `copy_tag` | `phase1-tags.json` | `phase1-tags.json` (unknown tag, CLI and MCP) |
-| `tags remove`, `delete-tag` | `delete_tag` | `phase1-tags.json` (also the current tag) | `phase1-tags.json` (`master`) |
+| `tags remove`, `delete-tag` | `delete_tag` | `phase1-tags.json` (also the current tag) | `phase1-tags.json` (`master`), `phase1-tags-edge.json` (no `--yes` outside a terminal) |
 
 `--from-branch` (CLI) and `fromBranch` (MCP `add_tag`, which then ignores
 `name`) name the tag after the current git branch. The tags scenario creates

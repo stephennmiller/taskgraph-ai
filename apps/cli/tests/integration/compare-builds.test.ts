@@ -318,7 +318,10 @@ describe('scenario files', () => {
 			fs.readFileSync(path.join(dir, file), 'utf8')
 		);
 
-		expect(fs.existsSync(path.resolve(dir, scenarioJson.fixture))).toBe(true);
+		// A scenario without a fixture starts from a project with no tasks yet
+		if (scenarioJson.fixture !== undefined) {
+			expect(fs.existsSync(path.resolve(dir, scenarioJson.fixture))).toBe(true);
+		}
 		expect(() => validateScenario(scenarioJson)).not.toThrow();
 	});
 
