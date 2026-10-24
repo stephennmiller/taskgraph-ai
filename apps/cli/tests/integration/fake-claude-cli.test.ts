@@ -125,6 +125,21 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		expect(readTrace(fakeDir)).toHaveLength(2);
 	});
 
+	it('scope-up prints only the result line, without a complexity report', () => {
+		install();
+		expect(taskgraph('add-task', '--prompt', 'First task').status).toBe(0);
+		expect(taskgraph('expand', '--id=1', '--num=1', '--force').status).toBe(0);
+
+		const res = taskgraph('scope-up', '--id=1');
+
+		expect(res.status).toBe(0);
+		const output = res.stdout + res.stderr;
+		expect(output).toContain('✓ Scoped up 1 task');
+		expect(output).not.toContain('No complexity report');
+		expect(output).not.toContain('Regenerated');
+		expect(output).not.toContain('Scoping up');
+	});
+
 	it('never reaches a real model: every command goes through the fake', () => {
 		install();
 
