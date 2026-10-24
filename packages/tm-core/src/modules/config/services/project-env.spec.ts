@@ -64,3 +64,13 @@ describe('project .env', () => {
 		expect(manager.getCurrentTag()).toBe('feature');
 	});
 });
+
+describe('TASKGRAPH_RESPONSE_LANGUAGE', () => {
+	it('sets global.responseLanguage, where lang writes it (#462)', () => {
+		const config = new EnvironmentConfigProvider(undefined, {
+			TASKGRAPH_RESPONSE_LANGUAGE: 'French'
+		}).loadConfig();
+
+		expect(config).toEqual({ global: { responseLanguage: 'French' } });
+	});
+});

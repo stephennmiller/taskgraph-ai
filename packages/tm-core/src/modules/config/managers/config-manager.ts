@@ -236,7 +236,7 @@ export class ConfigManager {
 	 * Reset configuration to defaults
 	 */
 	async reset(): Promise<void> {
-		// Clear configuration file
+		// Delete config.json and config.local.json
 		await this.persistence.deleteConfig();
 
 		// Clear runtime state
