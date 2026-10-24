@@ -53,7 +53,7 @@ In `list` JSON, each task's `blocks` lists the IDs of the tasks that depend on i
 
 In a JSON run, stdout holds only the JSON: banners, the update check and other notices are skipped, and warnings (such as a missing config file) go to stderr.
 
-Some keys are only present when they apply. For example, a task has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
+Some keys are only present when they apply. For example, a task in `list`, `show` or `next` has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
 
 ## Plain lines from `list` in a pipe
 

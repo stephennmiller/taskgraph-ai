@@ -168,6 +168,12 @@ describe('--json contract', () => {
 			  "schemaVersion": "number",
 			  "tasks": [
 			    {
+			      "acceptanceCriteria?": [
+			        {
+			          "checked": "boolean",
+			          "text": "string",
+			        },
+			      ],
 			      "blocks": [
 			        "string",
 			      ],
@@ -329,6 +335,12 @@ describe('--json contract', () => {
 			  "schemaVersion": "number",
 			  "tag": "string",
 			  "task": {
+			    "acceptanceCriteria": [
+			      {
+			        "checked": "boolean",
+			        "text": "string",
+			      },
+			    ],
 			    "dependencies": [
 			      "string",
 			    ],

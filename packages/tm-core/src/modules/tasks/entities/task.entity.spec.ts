@@ -57,6 +57,35 @@ describe('TaskEntity', () => {
 		});
 	});
 
+	describe('toJSON() fields the entity does not model', () => {
+		it('keeps acceptanceCriteria and definitionOfDoneChecked (#369)', () => {
+			const task = createMinimalTask({
+				acceptanceCriteria: ['Migrations run', { text: 'Docs', checked: true }],
+				definitionOfDoneChecked: ['Tests pass']
+			});
+
+			const json = new TaskEntity(task).toJSON();
+
+			expect(json.acceptanceCriteria).toEqual(task.acceptanceCriteria);
+			expect(json.definitionOfDoneChecked).toEqual(['Tests pass']);
+		});
+
+		it('still prints the normalized and updated values', () => {
+			const entity = new TaskEntity({
+				...createMinimalTask(),
+				id: 7,
+				dependencies: [3 as unknown as string]
+			});
+			entity.updateStatus('in-progress');
+
+			const json = entity.toJSON();
+
+			expect(json.id).toBe('7');
+			expect(json.dependencies).toEqual(['3']);
+			expect(json.status).toBe('in-progress');
+		});
+	});
+
 	describe('metadata property', () => {
 		it('should preserve metadata through constructor', () => {
 			const metadata = { uuid: '123', custom: 'value' };
