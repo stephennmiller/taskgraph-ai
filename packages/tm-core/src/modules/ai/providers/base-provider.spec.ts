@@ -1,70 +1,63 @@
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BaseAIProvider } from './base-provider.js';
+
+const sdk = vi.hoisted(() => {
+	class NoObjectGeneratedError extends Error {
+		static isInstance(error: unknown) {
+			return error instanceof NoObjectGeneratedError;
+		}
+		usage: unknown;
+		constructor(public cause: any) {
+			super('No object generated');
+			this.usage = cause.usage;
+		}
+	}
+	class JSONParseError extends Error {
+		constructor(public text: string) {
+			super('JSON parse error');
+		}
+	}
+	return {
+		generateText: vi.fn(),
+		generateObject: vi.fn(),
+		jsonrepair: vi.fn(),
+		NoObjectGeneratedError,
+		JSONParseError
+	};
+});
+const mockGenerateText = sdk.generateText;
+const mockGenerateObject = sdk.generateObject;
+const mockJsonrepair = sdk.jsonrepair;
+const mockNoObjectGeneratedError = sdk.NoObjectGeneratedError;
+const mockJSONParseError = sdk.JSONParseError;
 
 // Mock the 'ai' SDK
-const mockGenerateText = vi.fn();
-const mockGenerateObject = vi.fn();
-const mockNoObjectGeneratedError = class NoObjectGeneratedError extends Error {
-	static isInstance(error) {
-		return error instanceof mockNoObjectGeneratedError;
-	}
-	constructor(cause) {
-		super('No object generated');
-		this.cause = cause;
-		this.usage = cause.usage;
-	}
-};
-const mockJSONParseError = class JSONParseError extends Error {
-	constructor(text) {
-		super('JSON parse error');
-		this.text = text;
-	}
-};
-
-vi.doMock('ai', () => ({
-	generateText: mockGenerateText,
+vi.mock('ai', () => ({
+	generateText: sdk.generateText,
 	streamText: vi.fn(),
-	generateObject: mockGenerateObject,
+	generateObject: sdk.generateObject,
 	streamObject: vi.fn(),
 	zodSchema: vi.fn((schema) => schema),
-	// Vitest throws on access to an undefined mock export; Jest returned undefined
+	// Vitest throws on access to an undefined mock export
 	jsonSchema: undefined,
-	NoObjectGeneratedError: mockNoObjectGeneratedError,
-	JSONParseError: mockJSONParseError
+	NoObjectGeneratedError: sdk.NoObjectGeneratedError,
+	JSONParseError: sdk.JSONParseError
 }));
 
 // Mock jsonrepair
-const mockJsonrepair = vi.fn();
-vi.doMock('jsonrepair', () => ({
-	jsonrepair: mockJsonrepair
-}));
+vi.mock('jsonrepair', () => ({ jsonrepair: sdk.jsonrepair }));
 
-// Mock logging and utilities
-vi.doMock('../../../scripts/modules/utils.js', () => ({
-	log: vi.fn(),
-	findProjectRoot: vi.fn(() => '/mock/project/root'),
-	isEmpty: vi.fn(
-		(val) =>
-			!val ||
-			(Array.isArray(val) && val.length === 0) ||
-			(typeof val === 'object' && Object.keys(val).length === 0)
-	),
-	resolveEnvVariable: vi.fn((key) => process.env[key])
-}));
-
-// Import after mocking
-const { BaseAIProvider } = await import(
-	'../../../src/ai-providers/base-provider.js'
-);
+const log = vi.fn();
 
 describe('BaseAIProvider', () => {
-	let testProvider;
-	let mockClient;
+	let testProvider: any;
+	let mockClient: any;
 
 	beforeEach(() => {
 		// Create a concrete test provider
 		class TestProvider extends BaseAIProvider {
 			constructor() {
-				super();
+				super(log);
 				this.name = 'TestProvider';
 			}
 
@@ -77,7 +70,7 @@ describe('BaseAIProvider', () => {
 			}
 		}
 
-		mockClient = vi.fn((modelId) => ({ modelId }));
+		mockClient = vi.fn((modelId: string) => ({ modelId }));
 		vi.clearAllMocks();
 		testProvider = new TestProvider();
 	});
@@ -236,7 +229,7 @@ describe('BaseAIProvider', () => {
 
 	describe('3. Abstract Class Protection', () => {
 		it('should prevent direct instantiation of BaseAIProvider', () => {
-			expect(() => new BaseAIProvider()).toThrow(
+			expect(() => new (BaseAIProvider as any)(log)).toThrow(
 				'BaseAIProvider cannot be instantiated directly'
 			);
 		});
@@ -244,7 +237,7 @@ describe('BaseAIProvider', () => {
 		it('should throw when abstract methods are not implemented', () => {
 			class IncompleteProvider extends BaseAIProvider {
 				constructor() {
-					super();
+					super(log);
 				}
 			}
 			const provider = new IncompleteProvider();
@@ -287,7 +280,7 @@ describe('BaseAIProvider', () => {
 
 			const parseError = new mockJSONParseError(malformedJson);
 			const noObjectError = new mockNoObjectGeneratedError(parseError);
-			noObjectError.usage = {
+			(noObjectError as any).usage = {
 				promptTokens: 100,
 				completionTokens: 50,
 				totalTokens: 150
@@ -605,7 +598,7 @@ describe('BaseAIProvider', () => {
 		it('should allow override of isRequiredApiKey', () => {
 			class NoAuthProvider extends BaseAIProvider {
 				constructor() {
-					super();
+					super(log);
 				}
 				isRequiredApiKey() {
 					return false;
@@ -616,7 +609,7 @@ describe('BaseAIProvider', () => {
 				getClient() {
 					return mockClient;
 				}
-				getRequiredApiKeyName() {
+				getRequiredApiKeyName(): null {
 					return null;
 				}
 			}

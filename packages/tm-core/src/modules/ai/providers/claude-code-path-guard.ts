@@ -1,24 +1,28 @@
 /**
- * src/ai-providers/claude-code-path-guard.js
- *
- * PreToolUse hook that keeps Claude Code's file tools (Read, Grep, Glob)
+ * @fileoverview PreToolUse hook that keeps Claude Code's file tools (Read, Grep, Glob)
  * inside one directory and away from the secret files in it. It is passed to
  * the SDK as a programmatic hook, so it runs even when no settings sources are
  * loaded.
  */
 
-import fs from 'fs';
-import path from 'path';
-import { realpathOfExistingPrefix, resolvePathInsideRoot } from '@tm/core';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+	realpathOfExistingPrefix,
+	resolvePathInsideRoot
+} from '../../../common/utils/path-inside-root.js';
+
+/** A Read, Grep or Glob call's input, as Claude Code sends it */
+type ToolInput = Record<string, any>;
 
 const GUARDED_TOOLS = ['Read', 'Grep', 'Glob'];
 
 /**
- * @param {string} root - Absolute, real path of the allowed directory
- * @param {string} candidate - Path to test, relative paths resolve against root
- * @returns {boolean} True when candidate is root or inside it
+ * @param root - Absolute, real path of the allowed directory
+ * @param candidate - Path to test, relative paths resolve against root
+ * @returns True when candidate is root or inside it
  */
-export function isInsideRoot(root, candidate) {
+export function isInsideRoot(root: string, candidate: unknown): boolean {
 	return resolvePathInsideRoot(root, candidate) !== null;
 }
 
@@ -27,7 +31,10 @@ export function isInsideRoot(root, candidate) {
 // so the two can't drift apart. .aws and .kube are refused whole: besides
 // credentials and kubeconfigs (config, config-staging, ...) they hold SSO, CLI
 // and OIDC token caches.
-const SECRETS = {
+const SECRETS: Record<
+	'names' | 'prefixes' | 'suffixes' | 'extensions',
+	string[]
+> & { paths: string[][] } = {
 	// Whole names
 	names: [
 		'.env',
@@ -100,10 +107,9 @@ const SHORT_NAME = /^[^.~]{1,7}~\d+(\.[^.]{0,3})?$/;
  * `.env `), all of which open the file the plain name does. Glob characters
  * are dropped too, so `.env*` is judged as `.env`. Applied on every platform:
  * on POSIX these are odd names, and refusing them costs nothing.
- * @param {string} segment - One path segment
- * @returns {string}
+ * @param segment - One path segment
  */
-export function normalizeSegment(segment) {
+export function normalizeSegment(segment: string): string {
 	return segment
 		.replace(/[*?[\]{}]/g, '')
 		.split(':')[0]
@@ -117,19 +123,19 @@ export function normalizeSegment(segment) {
  * sign) can open `server.key`. NFKC, then upper- then lower-casing maps all
  * three to ASCII, which a plain `/i` regex does not.
  */
-function foldCase(name) {
+function foldCase(name: string): string {
 	return name.normalize('NFKC').toUpperCase().toLowerCase();
 }
 
 /** True when any part of a path or glob names a credentials file. */
-function namesSecret(candidate) {
+function namesSecret(candidate: string): boolean {
 	// Empty parts come from `//` and `/./` (normalizeSegment drops the dot), so
 	// `.docker//config.json` is judged as `.docker/config.json`
 	const parts = candidate
 		.split(/[\\/,]/)
 		.map((part) => foldCase(normalizeSegment(part)))
 		.filter(Boolean);
-	const secret = (part) =>
+	const secret = (part: string) =>
 		SHORT_NAME.test(part) || (isSecretName(part) && !PUBLIC_ENV.test(part));
 	if (parts.some(secret)) return true;
 	return SECRETS.paths.some((segments) =>
@@ -140,7 +146,7 @@ function namesSecret(candidate) {
 }
 
 /** True when one case-folded path segment is a secret name */
-function isSecretName(part) {
+function isSecretName(part: string): boolean {
 	return (
 		SECRETS.names.includes(part) ||
 		SECRETS.prefixes.some((prefix) => part.startsWith(prefix)) ||
@@ -150,7 +156,7 @@ function isSecretName(part) {
 }
 
 /** `env` -> `[eE][nN][vV]`, since rg globs are case-sensitive */
-function anyCase(name) {
+function anyCase(name: string): string {
 	return name.replace(
 		/[a-z]/gi,
 		(c) => `[${c.toLowerCase()}${c.toUpperCase()}]`
@@ -175,10 +181,10 @@ const SECRET_GLOBS = [
  * over the project would otherwise return lines from .env. Claude Code passes
  * each glob token to rg as `--glob`, and a later negated glob wins over the
  * caller's own globs and `type`.
- * @param {object} toolInput - Grep input
- * @returns {object} The input with exclusions appended to `glob`
+ * @param toolInput - Grep input
+ * @returns The input with exclusions appended to `glob`
  */
-export function excludeSecretsFromGrep(toolInput = {}) {
+export function excludeSecretsFromGrep(toolInput: ToolInput = {}): ToolInput {
 	const own = typeof toolInput.glob === 'string' ? toolInput.glob.trim() : '';
 	return {
 		...toolInput,
@@ -201,7 +207,7 @@ const SECRET_DIRS = new Set(
  * letters are lower-cased for that comparison: toLowerCase maps the Kelvin
  * sign to k too.
  */
-function spellsSecretDirOddly(root, candidate) {
+function spellsSecretDirOddly(root: string, candidate: unknown): boolean {
 	const resolved = resolvePathInsideRoot(root, candidate);
 	if (resolved === null) return false;
 	return path
@@ -215,7 +221,7 @@ function spellsSecretDirOddly(root, candidate) {
 }
 
 /** Judge the path below the root, and where a symlink really leads */
-function targetsSecret(root, candidate) {
+function targetsSecret(root: string, candidate: string): boolean {
 	const resolved = path.resolve(root, candidate);
 	const real = realpathOfExistingPrefix(resolved);
 	return [resolved, real].some((p) => namesSecret(path.relative(root, p)));
@@ -228,7 +234,7 @@ function targetsSecret(root, candidate) {
  * normalizes file_path and path as text before opening them, so it opens what
  * the guard judged, but the guard shouldn't depend on that (#479).
  */
-function climbsOutOfSymlink(root, candidate) {
+function climbsOutOfSymlink(root: string, candidate: string): boolean {
 	const parts = candidate.split(/[\\/]/);
 	return parts.some((part, i) => {
 		if (part !== '..') return false;
@@ -240,7 +246,7 @@ function climbsOutOfSymlink(root, candidate) {
 	});
 }
 
-function hasParentSegment(pattern) {
+function hasParentSegment(pattern: string): boolean {
 	return pattern.split(/[\\/]/).includes('..');
 }
 
@@ -250,7 +256,7 @@ function hasParentSegment(pattern) {
  * character, so `/w/project*` is searched from `/w`, not `/w/project`.
  * Windows forms (`C:/x`, `C:\\x`, `\\\\server\\share`) count as absolute too.
  */
-function absoluteGlobBase(pattern) {
+function absoluteGlobBase(pattern: string): string | null {
 	if (!path.posix.isAbsolute(pattern) && !path.win32.isAbsolute(pattern)) {
 		return null;
 	}
@@ -273,13 +279,18 @@ function absoluteGlobBase(pattern) {
 
 /**
  * Decide whether a tool call stays inside the root.
- * @param {string} root - Allowed directory
- * @param {string} toolName
- * @param {object} toolInput
- * @returns {string|null} Reason to deny, or null when the call is allowed
+ * @param root - Allowed directory
+ * @param toolName
+ * @param toolInput
+ * @returns Reason to deny, or null when the call is allowed
  */
-export function getPathViolation(root, toolName, toolInput = {}) {
-	if (!GUARDED_TOOLS.includes(toolName)) return null;
+export function getPathViolation(
+	root: string,
+	toolName: unknown,
+	toolInput: ToolInput = {}
+): string | null {
+	if (typeof toolName !== 'string' || !GUARDED_TOOLS.includes(toolName))
+		return null;
 
 	const paths = [toolInput.file_path, toolInput.path].filter(
 		(p) => p !== undefined && p !== null
@@ -323,15 +334,14 @@ export function getPathViolation(root, toolName, toolInput = {}) {
 /**
  * Build a PreToolUse hook entry that denies file access outside rootDir or to
  * secret files, and makes every Grep skip secret files.
- * @param {string} rootDir - Project root
- * @returns {{matcher: string, hooks: Function[]}}
+ * @param rootDir - Project root
  */
-export function createPathGuardHook(rootDir) {
+export function createPathGuardHook(rootDir: string) {
 	const root = realpathOfExistingPrefix(path.resolve(rootDir));
 	return {
 		matcher: GUARDED_TOOLS.join('|'),
 		hooks: [
-			async (input) => {
+			async (input: any): Promise<any> => {
 				const reason = getPathViolation(
 					root,
 					input?.tool_name,
@@ -368,8 +378,8 @@ export function createPathGuardHook(rootDir) {
 }
 
 /** True when the path is a file that Read refuses */
-function isSecretFile(root, file) {
-	let stat;
+function isSecretFile(root: string, file: string): boolean {
+	let stat: fs.Stats | undefined;
 	try {
 		stat = fs.statSync(file, { throwIfNoEntry: false });
 	} catch {
@@ -388,24 +398,30 @@ function isSecretFile(root, file) {
  * exclusion globs against names as they are on disk, so `.\uFF25NV` or
  * `\u212Aubeconfig` slips past `!.env` and `!kubeconfig` (#500); this judges
  * each result with the Read check instead.
- * @param {string} root - Absolute, real path of the allowed directory
- * @param {string} cwd - Directory Claude Code makes result paths relative to
- * @param {object} output - Grep's tool output
- * @returns {object|null} The filtered output, or null when nothing was dropped
+ * @param root - Absolute, real path of the allowed directory
+ * @param cwd - Directory Claude Code makes result paths relative to
+ * @param output - Grep's tool output
+ * @returns The filtered output, or null when nothing was dropped
  */
-export function dropSecretMatches(root, cwd, output) {
+export function dropSecretMatches(
+	root: string,
+	cwd: string,
+	output: any
+): Record<string, any> | null {
 	if (!output || typeof output !== 'object') return null;
-	const filenames = Array.isArray(output.filenames) ? output.filenames : [];
-	const lines =
+	const filenames: string[] = Array.isArray(output.filenames)
+		? output.filenames
+		: [];
+	const lines: string[] =
 		typeof output.content === 'string' ? output.content.split('\n') : [];
 	// Each name is looked up in its directory's listing before it is judged,
 	// so a line full of `:` and `-` costs no stat or path.resolve per
 	// character: a hook that runs too long times out, and Claude Code then
 	// passes the output on unfiltered
-	const listings = new Map();
-	const listing = (dir) => {
+	const listings = new Map<string, Set<string> | null>();
+	const listing = (dir: string) => {
 		if (!listings.has(dir)) {
-			let names = null;
+			let names: Set<string> | null = null;
 			try {
 				names = new Set(fs.readdirSync(dir));
 			} catch {}
@@ -413,21 +429,21 @@ export function dropSecretMatches(root, cwd, output) {
 		}
 		return listings.get(dir);
 	};
-	const judged = new Map();
-	const secret = (dir, name) => {
+	const judged = new Map<string, boolean>();
+	const secret = (dir: string, name: string): boolean => {
 		if (listing(dir)?.has(name) !== true) return false;
 		const file = path.join(dir, name);
 		if (!judged.has(file)) judged.set(file, isSecretFile(root, file));
-		return judged.get(file);
+		return judged.get(file) === true;
 	};
-	const secretFile = (file) => {
+	const secretFile = (file: string) => {
 		const resolved = path.resolve(cwd, file);
 		return secret(path.dirname(resolved), path.basename(resolved));
 	};
 	// A line starts with the file's path and then `:` or `-` (`a.js:3:x`,
 	// `a.js-4-x`, `a.js:2` in count mode). Names can hold either character, so
 	// every prefix that ends at one is tried.
-	const fromSecretFile = (line) => {
+	const fromSecretFile = (line: string) => {
 		let dir = cwd;
 		let start = 0;
 		for (let i = 0; i < line.length; i++) {
@@ -454,7 +470,7 @@ export function dropSecretMatches(root, cwd, output) {
 	) {
 		return null;
 	}
-	const filtered = { ...output, filenames: keptFiles };
+	const filtered: Record<string, any> = { ...output, filenames: keptFiles };
 	if (output.mode === 'files_with_matches') {
 		filtered.numFiles = keptFiles.length;
 	}
@@ -473,15 +489,14 @@ export function dropSecretMatches(root, cwd, output) {
 /**
  * Build a PostToolUse hook entry that removes matches from secret files from
  * every Grep result.
- * @param {string} rootDir - Project root
- * @returns {{matcher: string, hooks: Function[]}}
+ * @param rootDir - Project root
  */
-export function createGrepResultHook(rootDir) {
+export function createGrepResultHook(rootDir: string) {
 	const root = realpathOfExistingPrefix(path.resolve(rootDir));
 	return {
 		matcher: 'Grep',
 		hooks: [
-			async (input) => {
+			async (input: any): Promise<any> => {
 				const filtered = dropSecretMatches(
 					root,
 					input?.cwd ?? root,

@@ -5,19 +5,19 @@
  * that Read would refuse.
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
 	createGrepResultHook,
 	dropSecretMatches,
 	excludeSecretsFromGrep,
 	getPathViolation
-} from '../../../src/ai-providers/claude-code-path-guard.js';
-import { ripgrep, runGrep } from './claude-code-ripgrep.js';
+} from './claude-code-path-guard.js';
+import { ripgrep, runGrep } from './ripgrep.test-helper.js';
 
 describe('claude-code path guard: Grep results from look-alike secret names (#500)', () => {
-	let project;
+	let project: string;
 
 	// Every look-alike in the other guard tests, plus a fullwidth .env
 	const secrets = [
@@ -80,12 +80,12 @@ describe('claude-code path guard: Grep results from look-alike secret names (#50
 			});
 
 			// rg prints `.\src\a.js` on Windows
-			expect(filtered.content.replaceAll('\\', '/').split('\n')).toEqual([
+			expect(filtered!.content.replaceAll('\\', '/').split('\n')).toEqual([
 				'./docs/env.md:1:KEY in ./.ＥNV: x',
 				'./src/a.js:1:KEY=1',
 				'./src/my-notes.js:1:KEY=1'
 			]);
-			expect(filtered.numLines).toBe(3);
+			expect(filtered!.numLines).toBe(3);
 		}
 	);
 
@@ -95,8 +95,8 @@ describe('claude-code path guard: Grep results from look-alike secret names (#50
 			filenames: [...secrets, ...others],
 			numFiles: secrets.length + others.length
 		});
-		expect(files.filenames).toEqual(others);
-		expect(files.numFiles).toBe(others.length);
+		expect(files!.filenames).toEqual(others);
+		expect(files!.numFiles).toBe(others.length);
 
 		const counts = dropSecretMatches(project, project, {
 			mode: 'count',
@@ -126,7 +126,7 @@ describe('claude-code path guard: Grep results from look-alike secret names (#50
 				`${nested}-2-KEY=2`
 			].join('\n')
 		});
-		expect(filtered.content.split('\n')).toEqual([
+		expect(filtered!.content.split('\n')).toEqual([
 			`src/a.js:1:${'x'.repeat(300)}-y`,
 			'src/a.js:2:/../a.js/x-y'
 		]);

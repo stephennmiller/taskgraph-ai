@@ -3,36 +3,19 @@
  * mock) against a mock language model, so SDK upgrades that rename or drop
  * options fail here instead of silently at runtime.
  */
-import { vi } from 'vitest';
 import { MockLanguageModelV4 } from 'ai/test';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { BaseAIProvider } from '../../src/ai-providers/base-provider.js';
-
-// Runs in its own vitest process (`npm run test:sdk-contract:vitest`): the real SDK stack
-// leaves process-level state that breaks unrelated suites sharing a worker.
-//
-// Only the app-side utils module is mocked (as in base-provider.test.js). The
-// `ai` package itself stays real.
-vi.mock('../../scripts/modules/utils.js', () => ({
-	log: vi.fn(),
-	findProjectRoot: vi.fn(() => '/mock/project/root'),
-	isEmpty: vi.fn(
-		(val) =>
-			!val ||
-			(Array.isArray(val) && val.length === 0) ||
-			(typeof val === 'object' && Object.keys(val).length === 0)
-	),
-	resolveEnvVariable: vi.fn((key) => process.env[key])
-}));
+import { BaseAIProvider } from '../../../src/modules/ai/providers/base-provider.js';
 
 const usage = {
 	inputTokens: { total: 11, noCache: 11, cacheRead: 0, cacheWrite: 0 },
 	outputTokens: { total: 7, text: 7, reasoning: 0 }
 };
 
-const makeModel = (text, calls) =>
+const makeModel = (text: string, calls: any[]) =>
 	new MockLanguageModelV4({
-		doGenerate: async (options) => {
+		doGenerate: async (options: any) => {
 			calls.push(options);
 			return {
 				content: [{ type: 'text', text }],
@@ -44,9 +27,8 @@ const makeModel = (text, calls) =>
 	});
 
 class ContractProvider extends BaseAIProvider {
-	constructor(model) {
-		super();
-		this.model = model;
+	constructor(private readonly model: MockLanguageModelV4) {
+		super(vi.fn());
 	}
 	getClient() {
 		return () => this.model;
@@ -57,7 +39,7 @@ class ContractProvider extends BaseAIProvider {
 	validateAuth() {}
 }
 
-const params = (extra = {}) => ({
+const params = (extra: Record<string, unknown> = {}) => ({
 	modelId: 'mock-model',
 	maxTokens: 321,
 	temperature: 0.2,
@@ -70,7 +52,7 @@ const params = (extra = {}) => ({
 
 describe('BaseAIProvider against the real AI SDK', () => {
 	it('generateText returns text and normalized usage', async () => {
-		const calls = [];
+		const calls: any[] = [];
 		const provider = new ContractProvider(makeModel('hi there', calls));
 
 		const result = await provider.generateText(params());
@@ -118,7 +100,7 @@ describe('BaseAIProvider against the real AI SDK', () => {
 	});
 
 	it('generateObject returns a parsed object and normalized usage', async () => {
-		const calls = [];
+		const calls: any[] = [];
 		const provider = new ContractProvider(
 			makeModel(JSON.stringify({ title: 'Ship it' }), calls)
 		);
@@ -136,7 +118,7 @@ describe('BaseAIProvider against the real AI SDK', () => {
 	});
 
 	it('generateObject repairs malformed JSON via jsonrepair', async () => {
-		const calls = [];
+		const calls: any[] = [];
 		const provider = new ContractProvider(
 			makeModel("{title: 'Ship it',}", calls)
 		);

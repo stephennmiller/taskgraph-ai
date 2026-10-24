@@ -5,14 +5,14 @@
  * the spelling rg is given, so these must be refused (#439).
  */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {
 	createPathGuardHook,
 	getPathViolation
-} from '../../../src/ai-providers/claude-code-path-guard.js';
-import { ripgrep, runGrep } from './claude-code-ripgrep.js';
+} from './claude-code-path-guard.js';
+import { ripgrep, runGrep } from './ripgrep.test-helper.js';
 
 /** True when this machine's temp filesystem ignores ASCII case */
 function tmpIgnoresCase() {
@@ -25,7 +25,7 @@ function tmpIgnoresCase() {
 }
 
 describe('claude-code path guard: secret directory spellings', () => {
-	let project;
+	let project: string;
 
 	beforeAll(() => {
 		project = fs.realpathSync(
@@ -76,7 +76,7 @@ describe('claude-code path guard: secret directory spellings', () => {
 	 * Run a Grep through the hook against the real filesystem: it is either
 	 * refused, or the rewritten search returns no secret lines.
 	 */
-	async function grepLeaks(searchPath) {
+	async function grepLeaks(searchPath: string) {
 		const [hook] = createPathGuardHook(project).hooks;
 		const result = await hook({
 			tool_name: 'Grep',

@@ -331,3 +331,8 @@ export {
 } from './modules/ai/prompts/prompt-manager.js';
 export { COMMAND_SCHEMAS } from './modules/ai/schemas/registry.js';
 export { GeneratedAcceptanceCriteriaSchema } from './modules/ai/schemas/base-schemas.js';
+
+// ========== AI Providers ==========
+
+// Claude Code provider; it loads the AI SDKs on first call, not on import
+export * from './modules/ai/providers/index.js';
