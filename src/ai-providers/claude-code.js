@@ -13,13 +13,14 @@
 
 import { execSync } from 'child_process';
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 import { createClaudeCode } from 'ai-sdk-provider-claude-code';
 import {
 	getClaudeCodeSettingsForCommand,
 	getSupportedModelsForProvider
 } from '../../scripts/modules/config-manager.js';
-import { readProjectEnv } from '@tm/core';
+import { findOnPath, readProjectEnv } from '@tm/core';
 import { log } from '../../scripts/modules/utils.js';
 import {
 	createGrepResultHook,
@@ -118,6 +119,46 @@ function withTrustedExecutable(settings, projectRoot) {
 	);
 	const { pathToClaudeCodeExecutable, ...rest } = settings;
 	return rest;
+}
+
+/**
+ * Whether the Agent SDK's platform binary (an optional dependency, skipped by
+ * `--omit=optional`) is installed where the SDK looks for it.
+ * @returns {boolean}
+ */
+export function hasBundledClaudeBinary() {
+	const sdkPath = createRequire(
+		createRequire(import.meta.url).resolve('ai-sdk-provider-claude-code')
+	).resolve('@anthropic-ai/claude-agent-sdk');
+	const sdkRequire = createRequire(sdkPath);
+	const base = `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`;
+	const exe = process.platform === 'win32' ? 'claude.exe' : 'claude';
+	// The SDK tries both Linux libc variants, so either one will do
+	return [base, `${base}-musl`].some((pkg) => {
+		try {
+			return fs.existsSync(sdkRequire.resolve(`${pkg}/${exe}`));
+		} catch {
+			return false;
+		}
+	});
+}
+
+/**
+ * The `claude` on PATH, for when the SDK has no binary of its own. The SDK
+ * doesn't look on PATH itself. Only a trusted one (outside the project).
+ * @param {string|null} projectRoot
+ * @param {boolean} [bundled] - Whether the SDK's own binary is installed
+ * @returns {string|undefined}
+ */
+export function claudeFromPath(
+	projectRoot,
+	bundled = hasBundledClaudeBinary()
+) {
+	if (bundled) return undefined;
+	const claude = findOnPath('claude');
+	return claude && isTrustedClaudeExecutable(claude, projectRoot)
+		? claude
+		: undefined;
 }
 
 /**
@@ -255,10 +296,15 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 				? path.resolve(params.projectRoot)
 				: null;
 
-			const settings = withTrustedExecutable(
+			let settings = withTrustedExecutable(
 				getClaudeCodeSettingsForCommand(params.commandName) || {},
 				projectRoot
 			);
+			if (!settings.pathToClaudeCodeExecutable) {
+				const claude = claudeFromPath(projectRoot);
+				if (claude)
+					settings = { ...settings, pathToClaudeCodeExecutable: claude };
+			}
 
 			// The SDK reads the environment when a query runs, so the key choice has
 			// to travel with the client rather than be swapped around this call.

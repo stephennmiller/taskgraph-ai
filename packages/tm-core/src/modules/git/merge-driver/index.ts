@@ -20,7 +20,7 @@ export {
 	NotAGitRepositoryError,
 	installMergeDriver,
 	isInsideGitWorkTree,
-	isOnPath,
+	findOnPath,
 	mergeDriverCommand,
 	runTasksMergeDriver
 } from './merge-driver-files.js';

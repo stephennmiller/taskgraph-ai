@@ -14,7 +14,7 @@ import {
 	MERGE_DRIVER_FALLBACK,
 	NotAGitRepositoryError,
 	installMergeDriver,
-	isOnPath,
+	findOnPath,
 	mergeDriverCommand,
 	runTasksMergeDriver
 } from '../../../src/modules/git/merge-driver/index.js';
@@ -496,15 +496,15 @@ describe('merge driver when the CLI is gone', () => {
 	});
 });
 
-describe('isOnPath', () => {
+describe('findOnPath', () => {
 	it('finds an executable in a PATH directory and nothing elsewhere', () => {
 		const bin = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-path-'));
 		const file = path.join(bin, 'tool');
 		fs.writeFileSync(file, '#!/bin/sh\n');
 		fs.chmodSync(file, 0o755);
 		try {
-			expect(isOnPath('tool', bin, [''])).toBe(true);
-			expect(isOnPath('missing', bin, [''])).toBe(false);
+			expect(findOnPath('tool', bin, [''])).toBe(file);
+			expect(findOnPath('missing', bin, [''])).toBeNull();
 		} finally {
 			fs.rmSync(bin, { recursive: true, force: true });
 		}
