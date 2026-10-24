@@ -601,18 +601,23 @@ export class TaskService {
 	 * Append text to a task or subtask's details as a timestamped
 	 * `<info added on …>` block, in one locked write that changes only that
 	 * item: `note`, research's save to a task, update-subtask's append.
-	 * The text is saved as given.
+	 * The text is saved as given. `alsoChange` returns other fields to save
+	 * in the same write.
 	 * @returns The item as saved and the block's ISO time
 	 */
 	async appendToDetails(
 		taskId: string,
 		text: string,
-		tag?: string
+		tag?: string,
+		alsoChange?: (task: Task | Subtask) => TaskFieldUpdates
 	): Promise<{ saved: Task | Subtask; addedAt: string }> {
 		const addedAt = new Date().toISOString();
 		const saved = await this.modifyTask(
 			taskId,
-			(task) => ({ details: appendNote(task.details, text, addedAt) }),
+			(task) => ({
+				...alsoChange?.(task),
+				details: appendNote(task.details, text, addedAt)
+			}),
 			tag
 		);
 		return { saved, addedAt };

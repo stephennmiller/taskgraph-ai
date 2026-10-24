@@ -34,7 +34,6 @@ import {
 	scopeDownTask,
 	scopeUpTask,
 	setResponseLanguage,
-	updateSubtaskById,
 	updateTaskById,
 	updateTasks,
 	validateStrength
@@ -534,105 +533,6 @@ function registerCommands(programInstance) {
 					);
 					process.exitCode = 1;
 				}
-			} catch (error) {
-				displayError(error, { hint: aiErrorHint(error) });
-			}
-		});
-
-	// update-subtask command
-	programInstance
-		.command('update-subtask')
-		.description(
-			'Update a subtask by appending additional timestamped information'
-		)
-		.option('-f, --file <file>', 'Path to the tasks file', TASKGRAPH_TASKS_FILE)
-		.option('-i, --id <id>', 'Subtask ID to update (required)')
-		.option(
-			'-p, --prompt <text>',
-			'Prompt explaining what information to add (required)'
-		)
-		.option(
-			'-r, --research',
-			'Use Claude Code web research for research-backed updates'
-		)
-		.option('--tag <tag>', 'Specify tag context for task operations')
-		.action(async (options) => {
-			try {
-				// Initialize TaskGraph
-				const taskGraph = initTaskGraph({
-					tasksPath: options.file || true,
-					tag: options.tag
-				});
-				const tasksPath = taskGraph.getTasksPath();
-
-				// Resolve tag using standard pattern
-				const tag = taskGraph.getCurrentTag();
-
-				// Show current tag context
-				await displayCurrentTagIndicator(tag, {
-					tasksPath: taskGraph.getTasksPath()
-				});
-
-				// Validate required parameters
-				if (!options.id) {
-					console.error(chalk.red('Error: --id parameter is required'));
-					console.log(
-						chalk.yellow(
-							'Usage example: taskgraph update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
-						)
-					);
-					process.exit(1);
-				}
-
-				// Get subtask ID - validation happens in the core function
-				// Subtask IDs must be in format "parentId.subtaskId"
-				const subtaskId = options.id;
-
-				if (!options.prompt) {
-					console.error(
-						chalk.red(
-							'Error: --prompt parameter is required. Please provide information to add to the subtask.'
-						)
-					);
-					console.log(
-						chalk.yellow(
-							'Usage example: taskgraph update-subtask --id=5.2 --prompt="Add more details about the API endpoint"'
-						)
-					);
-					process.exit(1);
-				}
-
-				const prompt = options.prompt;
-				const useResearch = options.research || false;
-
-				// Validate tasks file exists
-				if (!fs.existsSync(tasksPath)) {
-					console.error(
-						chalk.red(`Error: Tasks file not found at path: ${tasksPath}`)
-					);
-					if (tasksPath === TASKGRAPH_TASKS_FILE) {
-						console.log(
-							chalk.yellow(
-								'Hint: Run taskgraph init or taskgraph parse-prd to create tasks.json first'
-							)
-						);
-					} else {
-						console.log(
-							chalk.yellow(
-								`Hint: Check if the file path is correct: ${tasksPath}`
-							)
-						);
-					}
-					process.exit(1);
-				}
-
-				await updateSubtaskById(
-					taskGraph.getTasksPath(),
-					subtaskId,
-					prompt,
-					useResearch,
-					{ projectRoot: taskGraph.getProjectRoot(), tag }
-				);
 			} catch (error) {
 				displayError(error, { hint: aiErrorHint(error) });
 			}

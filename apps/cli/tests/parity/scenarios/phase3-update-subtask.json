@@ -1,0 +1,44 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["update-subtask", "--id=2.1", "--prompt=Note the flag syntax"],
+		["update-subtask", "--id=2.1", "--prompt=Add more about errors"],
+		[
+			"update-subtask",
+			"--id=2.2",
+			"--prompt=A prompt long enough to skip the description stamp, because it runs past one hundred characters in all"
+		],
+		["update-subtask", "--id=2.2", "--prompt=With research", "--research"],
+		{ "args": ["update-subtask", "--id=2", "--prompt=x"], "expectExit": 1 },
+		{ "args": ["update-subtask", "--id=2.9", "--prompt=x"], "expectExit": 1 },
+		{ "args": ["update-subtask", "--id=4.1", "--prompt=x"], "expectExit": 1 },
+		{ "args": ["update-subtask", "--id=2.1"], "expectExit": 1 },
+		{
+			"args": ["update-subtask", "--id=1.1", "--prompt=x", "--tag=feature"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "update_subtask",
+			"input": { "id": "2.2", "prompt": "Over MCP", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "update_subtask",
+			"input": { "id": "2.2", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{
+			"mcp": "update_subtask",
+			"input": {
+				"id": "2.2",
+				"metadata": "{\"owner\":\"kim\"}",
+				"projectRoot": "<project>"
+			},
+			"expectError": true
+		},
+		{
+			"mcp": "update_subtask",
+			"input": { "id": "9.1", "prompt": "x", "projectRoot": "<project>" },
+			"expectError": true
+		}
+	]
+}

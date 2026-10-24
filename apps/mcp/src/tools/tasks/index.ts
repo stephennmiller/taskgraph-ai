@@ -11,6 +11,7 @@ export {
 	registerComplexityReportTool
 } from './analyze-complexity.tool.js';
 export { registerResearchTool } from './research.tool.js';
+export { registerUpdateSubtaskTool } from './update-subtask.tool.js';
 export { registerArchiveTasksTool } from './archive.tool.js';
 export { registerExpandAllTool, registerExpandTaskTool } from './expand.tool.js';
 export {
