@@ -550,6 +550,46 @@ describe('tasks.expand', () => {
 			expect(saved.feature.tasks).toHaveLength(4);
 		});
 
+		it('numbers the new subtasks after one added meanwhile (#569)', async () => {
+			generateObject.mockImplementation(async () => {
+				const current = readFile();
+				current.master.tasks[1].subtasks.push(sub(3, 'Added meanwhile'));
+				write(current);
+				// The AI numbered on from the two subtasks it was shown
+				return answer([
+					aiSubtask(3),
+					aiSubtask(4, { dependencies: [3, 1] })
+				]) as any;
+			});
+
+			const result = await tmCore.tasks.expand({ id: '2', num: 2 });
+
+			const saved = readFile().master.tasks[1].subtasks;
+			expect(saved.map((s: any) => [s.id, s.title, s.dependencies])).toEqual([
+				[1, 'Parse flags', []],
+				[2, 'Parse commands', [1]],
+				[3, 'Added meanwhile', []],
+				[4, 'Step 3', []],
+				[5, 'Step 4', [4, 1]]
+			]);
+			expect(saved[4].metadata.dependencySources).toEqual({
+				'2.4': 'inferred',
+				'2.1': 'inferred'
+			});
+			expect(result.addedSubtasks.map((s) => s.id)).toEqual([4, 5]);
+		});
+
+		it('gives each new subtask its own ID when the AI repeats one', async () => {
+			generateObject.mockResolvedValue(
+				answer([aiSubtask(3), aiSubtask(3), aiSubtask(4)]) as any
+			);
+
+			await tmCore.tasks.expand({ id: '2', num: 3 });
+
+			const saved = readFile().master.tasks[1].subtasks;
+			expect(saved.map((s: any) => s.id)).toEqual([1, 2, 3, 4, 5]);
+		});
+
 		it('finds the task in a file saved with string IDs (#392)', async () => {
 			write(fixture(true));
 
