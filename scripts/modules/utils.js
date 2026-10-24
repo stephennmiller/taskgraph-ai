@@ -1756,7 +1756,6 @@ export {
 	log,
 	markMigrationForNotice,
 	modifyJSON,
-	performCompleteTagMigration,
 	readComplexityReport,
 	readJSON,
 	resolveEnvVariable,

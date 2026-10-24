@@ -103,7 +103,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	getCurrentTag: vi.fn(() => 'master'),
 	resolveTag: vi.fn(() => 'master'),
 	markMigrationForNotice: vi.fn(),
-	performCompleteTagMigration: vi.fn(),
 	findProjectRoot: vi.fn(() => '/mock/project/root'),
 	readComplexityReport: vi.fn(),
 	findTaskInComplexityReport: vi.fn(),

@@ -77,7 +77,6 @@ vi.doMock('../../scripts/modules/utils.js', () => ({
 	getTagFromPath: vi.fn(() => 'master'),
 	isValidTag: vi.fn(() => true),
 	migrateToTaggedFormat: vi.fn(() => ({ master: { tasks: [] } })),
-	performCompleteTagMigration: vi.fn(),
 	resolveCurrentTag: vi.fn(() => 'master'),
 	getDefaultTag: vi.fn(() => 'master'),
 	performMigrationIfNeeded: vi.fn()

@@ -39,8 +39,7 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	flattenTasksWithSubtasks: vi.fn((tasks) => tasks),
 	getTagAwareFilePath: createGetTagAwareFilePathMock(),
 	slugifyTagForFilePath: createSlugifyTagForFilePathMock(),
-	markMigrationForNotice: vi.fn(),
-	performCompleteTagMigration: vi.fn()
+	markMigrationForNotice: vi.fn()
 }));
 
 vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
