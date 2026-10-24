@@ -28,9 +28,9 @@ paths:
       - Accessing non-AI configuration via `config-manager.js` getters.
     - **Key Files**: Individual files within `scripts/modules/task-manager/` handle specific actions (e.g., `add-task.js`, `expand-task.js`).
 
-  - **[`dependency-manager.js`](../../scripts/modules/dependency-manager.js): Dependency Management**
+  - **[`modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/) in `@tm/core`: Dependency Management**
     - **Purpose**: Manages task dependencies.
-    - **Responsibilities**: Add/remove/validate/fix dependencies across tagged task contexts.
+    - **Responsibilities**: Add/remove/validate/fix dependencies across tagged task contexts (`tmCore.tasks.addDependency` and friends). The legacy [`dependency-manager.js`](../../scripts/modules/dependency-manager.js) keeps only the cross-tag checks `move` uses.
 
   - **[`ui.js`](../../scripts/modules/ui.js): User Interface Components**
     - **Purpose**: Handles CLI output formatting (tables, colors, boxes, spinners).

@@ -5,23 +5,26 @@
 
 // Import TypeScript tools from apps/mcp
 import {
+	registerAddDependencyTool,
 	registerAddNoteTool,
 	registerAddTagTool,
 	registerArchiveTasksTool,
 	registerCopyTagTool,
 	registerDeleteTagTool,
 	registerDependencyAnalysisTool,
+	registerFixDependenciesTool,
 	registerGenerateTool,
 	registerGetTasksTool,
 	registerGetTaskTool,
 	registerGithubPushTool,
 	registerGithubStatusTool,
 	registerListTagsTool,
+	registerRemoveDependencyTool,
 	registerRenameTagTool,
 	registerSetTaskStatusTool,
-	registerUseTagTool
+	registerUseTagTool,
+	registerValidateDependenciesTool
 } from '@tm/mcp';
-import { registerAddDependencyTool } from './add-dependency.js';
 import { registerAddSubtaskTool } from './add-subtask.js';
 import { registerAddTaskTool } from './add-task.js';
 import { registerAnalyzeProjectComplexityTool } from './analyze.js';
@@ -29,13 +32,11 @@ import { registerClearSubtasksTool } from './clear-subtasks.js';
 import { registerComplexityReportTool } from './complexity-report.js';
 import { registerExpandAllTool } from './expand-all.js';
 import { registerExpandTaskTool } from './expand-task.js';
-import { registerFixDependenciesTool } from './fix-dependencies.js';
 import { registerInitializeProjectTool } from './initialize-project.js';
 import { registerModelsTool } from './models.js';
 import { registerMoveTaskTool } from './move-task.js';
 import { registerNextTaskTool } from './next-task.js';
 import { registerParsePRDTool } from './parse-prd.js';
-import { registerRemoveDependencyTool } from './remove-dependency.js';
 import { registerRemoveSubtaskTool } from './remove-subtask.js';
 import { registerRemoveTaskTool } from './remove-task.js';
 import { registerResearchTool } from './research.js';
@@ -45,7 +46,6 @@ import { registerScopeUpTool } from './scope-up.js';
 import { registerUpdateTool } from './update.js';
 import { registerUpdateSubtaskTool } from './update-subtask.js';
 import { registerUpdateTaskTool } from './update-task.js';
-import { registerValidateDependenciesTool } from './validate-dependencies.js';
 
 /**
  * Comprehensive tool registry mapping tool names to their registration functions

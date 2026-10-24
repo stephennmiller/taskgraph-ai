@@ -1,17 +1,13 @@
 /**
  * Archived tasks (`taskgraph archive`) keep their IDs and count as done in
  * the legacy commands: add-task, parse-prd, move and remove-subtask never
- * hand out an archived ID, and validate/fix-dependencies and the MCP
- * next_task treat dependencies on archived tasks as done. Real files in a temp dir; only logging is silenced.
+ * hand out an archived ID, and the MCP next_task treats dependencies on
+ * archived tasks as done. Real files in a temp dir; only logging is silenced.
  */
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { vi } from 'vitest';
-import {
-	fixDependenciesCommand,
-	validateDependenciesCommand
-} from '../../../../../scripts/modules/dependency-manager.js';
 import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
 import moveTask, {
 	moveTasksBetweenTags
@@ -230,64 +226,9 @@ describe('archived task IDs in the legacy commands', () => {
 	});
 
 	describe('dependencies on archived tasks', () => {
-		test('validate-dependencies does not report them as missing', async () => {
-			setup(
-				[task(3, { dependencies: [1] })],
-				[task(1, { subtasks: [{ id: 1, title: 's', status: 'done' }] })]
-			);
-
-			const result = await validateDependenciesCommand(tasksPath, {
-				context: { projectRoot: dir, tag: 'master' }
-			});
-
-			expect(result.valid).toBe(true);
-			expect(result.issues).toEqual([]);
-		});
-
-		test('fix-dependencies keeps them and still removes missing ones', async () => {
-			setup(
-				[
-					task(3, {
-						dependencies: [1, 9],
-						subtasks: [
-							{
-								id: 1,
-								title: 'Sub',
-								description: 'Sub',
-								status: 'pending',
-								dependencies: ['1.1', '9.1']
-							}
-						]
-					})
-				],
-				[task(1, { subtasks: [{ id: 1, title: 's', status: 'done' }] })]
-			);
-
-			const result = await fixDependenciesCommand(tasksPath, {
-				context: { projectRoot: dir, tag: 'master' }
-			});
-
-			const [saved] = readTasks();
-			expect(saved.dependencies).toEqual(['1']);
-			expect(saved.subtasks[0].dependencies).toEqual(['1.1']);
-			expect(result.fixes.map((f) => String(f.dependencyId))).toEqual(
-				expect.arrayContaining(['9', '9.1'])
-			);
-			expect(
-				result.fixes.some((f) => ['1', '1.1'].includes(String(f.dependencyId)))
-			).toBe(false);
-		});
-
-		test('fix-dependencies and remove-task keep links to archived tasks', async () => {
-			const links = { taskLinks: { 1: 'discovered-from', 9: 'related' } };
+		test('remove-task keeps links to archived tasks', async () => {
+			const links = { taskLinks: { 1: 'discovered-from' } };
 			setup([task(3, { metadata: links }), task(4)], [task(1)]);
-
-			await fixDependenciesCommand(tasksPath, {
-				context: { projectRoot: dir, tag: 'master' }
-			});
-			expect(readTasks()[0].metadata.taskLinks).toEqual({
-				1: 'discovered-from'
-			});
 
 			await removeTask(tasksPath, '4', { projectRoot: dir, tag: 'master' });
 			expect(readTasks()[0].metadata.taskLinks).toEqual({

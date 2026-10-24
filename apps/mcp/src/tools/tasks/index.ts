@@ -5,6 +5,12 @@
 
 export { registerAddNoteTool } from './add-note.tool.js';
 export { registerArchiveTasksTool } from './archive.tool.js';
+export {
+	registerAddDependencyTool,
+	registerFixDependenciesTool,
+	registerRemoveDependencyTool,
+	registerValidateDependenciesTool
+} from './dependencies.tool.js';
 export { registerDependencyAnalysisTool } from './dependency-analysis.tool.js';
 export { registerGetTasksTool } from './get-tasks.tool.js';
 export { registerGetTaskTool } from './get-task.tool.js';

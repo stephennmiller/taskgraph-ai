@@ -58,12 +58,19 @@ export function cliSurface(read: (file: string) => string): CliSurface {
 	for (const match of registrySource.matchAll(/^\s+name: '([a-z-]+)'/gm)) {
 		surface.set(match[1], new Set());
 	}
+	// One import may name several classes from the same file
 	const classFiles = new Map(
 		[
 			...registrySource.matchAll(
-				/import \{ (\w+) \} from '\.\/(commands\/[^']+)\.js'/g
+				/import \{([^}]+)\} from '\.\/(commands\/[^']+)\.js'/g
 			)
-		].map((match) => [match[1], `apps/cli/src/${match[2]}.ts`])
+		].flatMap((match) =>
+			match[1]
+				.split(',')
+				.map((name) => name.trim())
+				.filter(Boolean)
+				.map((name) => [name, `apps/cli/src/${match[2]}.ts`] as const)
+		)
 	);
 	for (const match of registrySource.matchAll(
 		/name: '([a-z-]+)',[\s\S]*?commandClass: (\w+)/g

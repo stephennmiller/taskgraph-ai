@@ -82,7 +82,7 @@ with the target branch as build A and the pull request as build B.
 | `phase1-tag-flag.json` | Every non-tag command and tool with `--tag` / the MCP `tag` parameter on a tag that is not current, and an unknown tag. The current tag's tasks must stay untouched. |
 | `phase1-tags.json` | `add-tag` (`--copy-from-current`, `--copy-from`, `--from-branch`, also the MCP `fromBranch`), the `tags` subcommands, renaming and deleting the current tag, the older `use-tag`/`rename-tag`/`copy-tag`/`delete-tag`, the six tag MCP tools, and the failures (existing tag, unknown tag, removing `master`). |
 | `phase1-tags-edge.json` | Tags in a project with no tasks yet (`tags`, `tags --json`, `list_tags`, the first `tags add`), copying from a missing tag (CLI and MCP), reserved and invalid names, `tags remove` without `--yes` outside a terminal, and listing, using and copying a tag that has no metadata. |
-| `phase1-flat-format.json` | Reads and writes on an old file with no tags (`{"tasks": [...]}`): the first write moves it under `master`. |
+| `phase1-flat-format.json` | Reads and writes on an old file with no tags (`{"tasks": [...]}`): a legacy write moves it under `master`; a tm-core write such as `add-dependency` keeps it flat. |
 | `phase1-no-master.json` | A file whose only tag is `sprint`: reads fall back to it, writes to the missing current tag `master` fail until `tags use sprint`. |
 
 A step is a list of CLI arguments, or an object: `{"args": [...], "capture":
@@ -181,7 +181,7 @@ tidy-up that "fixes" a type can change what a dependency means.
   subtask's list a bare number up to 99 names a sibling subtask and a string
   names a task (`resolveSubtaskDependency` in
   `packages/tm-core/src/modules/dependencies/subtask-dependency.ts`, used by
-  `scripts/modules/dependency-manager.js`). `add-dependency` and
+  `dependency-edit.ts` there). `add-dependency` and
   `add_dependency` write `"1"` (a string) on a subtask, and
   `remove-subtask --convert` makes the parent a string dependency of the new task
   (`["4"]`). So on subtask

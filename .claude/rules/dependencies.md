@@ -1,7 +1,7 @@
 ---
 description: Guidelines for managing task dependencies and relationships
 paths:
-  - "scripts/modules/dependency-manager.js"
+  - "packages/tm-core/src/modules/dependencies/**"
 ---
 
 # Dependency Management Guidelines
@@ -210,4 +210,4 @@ A task moved to `.taskgraph/tasks/archive.json` by `taskgraph archive` is done f
   const inLoop = findLoopMembers(graph); // Set of full IDs ("3", "3.2")
   ```
 
-Refer to [`dependency-manager.js`](../../scripts/modules/dependency-manager.js) for implementation examples and `new-features.md` for integration guidelines. 
+Refer to [`packages/tm-core/src/modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/) (`dependency-edit.ts`, `dependency-check.ts`) for the implementation and `new-features.md` for integration guidelines. 
