@@ -7,7 +7,6 @@
  */
 
 import path from 'path';
-import { APICallError } from 'ai';
 import chalk from 'chalk';
 import {
 	getFallbackModelId,
@@ -69,7 +68,9 @@ export async function handleNonStreamingService(
 		} catch (error) {
 			// The provider refused (bad model, sign-in, limits). The one-shot path
 			// would retry the same model and fail again, slower; it only helps
-			// when another role is set to a different model
+			// when another role is set to a different model. `ai` is imported
+			// here, not at the top, so it loads only for AI commands (#248)
+			const { APICallError } = await import('ai');
 			if (APICallError.isInstance(error) && !hasOtherModel(config)) {
 				progress?.fail("Couldn't generate tasks");
 				throw error;

@@ -9,13 +9,18 @@
  *     account after 20 failed attempts
  */
 
+import { createRequire } from 'node:module';
 import { stripVTControlCharacters } from 'node:util';
 import { stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
-import { Marked, type MarkedExtension } from 'marked';
-import { markedTerminal } from 'marked-terminal';
+import type { MarkedExtension } from 'marked';
 import { wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
+
+// marked and marked-terminal (with its syntax highlighter) are loaded on the
+// first render, not at startup, where they cost every command about 0.2 s
+// (#248). require() keeps formatMarkdown synchronous.
+const require = createRequire(import.meta.url);
 
 /**
  * Text from a task file, safe to print: escape sequences and other control
@@ -78,8 +83,44 @@ function wrapListItems(text: string, width: number): string {
 }
 
 /**
- * Render markdown for the terminal, with every line at most `columns` wide
- * (a single word longer than that, such as a URL, stays whole).
+ * Text that markdown would print unchanged apart from wrapping: ASCII
+ * letters, digits and plain punctuation, single spaces, no line that could
+ * start a list, and no word longer than `columns` (marked-terminal splits
+ * those). Deliberately narrow: anything else goes through marked.
+ */
+function isPlainProse(text: string, columns: number): boolean {
+	return (
+		/^[A-Za-z0-9 .,;:?!'"()/\n-]*$/.test(text) &&
+		!/ {2}|^[ \d-]/m.test(text) &&
+		text.split(/[ \n]/).every((word) => word.length <= columns)
+	);
+}
+
+/** Plain prose wrapped as marked-terminal wraps it, without loading it */
+function formatPlainProse(
+	text: string,
+	columns: number,
+	breaks: boolean
+): string {
+	return text
+		.trim()
+		.split(/\n{2,}/)
+		.map((paragraph) => {
+			const lines = breaks
+				? paragraph.split('\n')
+				: [paragraph.replace(/\n/g, ' ')];
+			return lines
+				.flatMap((line) => wrapLine(line.trim(), columns, ''))
+				.join('\n');
+		})
+		.join('\n\n');
+}
+
+/**
+ * Render markdown for the terminal, with every line at most `columns` wide.
+ *
+ * Plain prose, the common case for a task description, is wrapped directly:
+ * marked-terminal and its syntax highlighter take about 0.1 s to load (#248).
  *
  * @param options.breaks - Keep single newlines as line breaks, as task text
  *   written one item per line expects (markdown joins them by default)
@@ -89,6 +130,24 @@ export function formatMarkdown(
 	columns: number,
 	options: { breaks?: boolean } = {}
 ): string {
+	if (isPlainProse(markdown, columns)) {
+		return formatPlainProse(markdown, columns, options.breaks ?? false);
+	}
+	return renderMarkdown(markdown, columns, options);
+}
+
+/**
+ * Render markdown for the terminal through marked-terminal, with every line
+ * at most `columns` wide. {@link formatMarkdown} skips this for plain prose.
+ */
+export function renderMarkdown(
+	markdown: string,
+	columns: number,
+	options: { breaks?: boolean } = {}
+): string {
+	const { Marked } = require('marked') as typeof import('marked');
+	const { markedTerminal } =
+		require('marked-terminal') as typeof import('marked-terminal');
 	const renderer = new Marked({ gfm: true, breaks: options.breaks ?? false });
 
 	renderer.use(

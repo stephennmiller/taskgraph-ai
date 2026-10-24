@@ -27,9 +27,6 @@ import {
 	resolveEnvVariable
 } from './utils.js';
 
-// Import provider classes
-import { ClaudeCodeProvider } from '../../src/ai-providers/index.js';
-
 // Import the provider registry
 import ProviderRegistry from '../../src/provider-registry/index.js';
 
@@ -50,14 +47,17 @@ if (globalThis.AI_SDK_LOG_WARNINGS === undefined) {
 	};
 }
 
-const PROVIDERS = {
-	'claude-code': new ClaudeCodeProvider()
-};
+// Created on first use: the provider loads the AI SDK and the Claude Agent
+// SDK, which took about 0.4 s and slowed every command, AI or not (#248)
+let claudeCodeProvider;
 
-function _getProvider(providerName) {
-	// First check the static PROVIDERS object
-	if (PROVIDERS[providerName]) {
-		return PROVIDERS[providerName];
+async function _getProvider(providerName) {
+	if (providerName === 'claude-code') {
+		const { ClaudeCodeProvider } = await import(
+			'../../src/ai-providers/index.js'
+		);
+		claudeCodeProvider ??= new ClaudeCodeProvider();
+		return claudeCodeProvider;
 	}
 
 	// If not found, check the provider registry
@@ -308,12 +308,12 @@ function _getRoleConfiguration(role, projectRoot) {
  * @param {string} providerName - The name of the provider (lowercase).
  * @param {object|null} session - Optional MCP session object.
  * @param {string|null} projectRoot - Optional project root path for .env fallback.
- * @returns {string|null} The API key or null if not found/needed.
+ * @returns {Promise<string|null>} The API key or null if not found/needed.
  * @throws {Error} If a required API key is missing.
  */
-function _resolveApiKey(providerName, session, projectRoot = null) {
+async function _resolveApiKey(providerName, session, projectRoot = null) {
 	// Get provider instance
-	const provider = _getProvider(providerName);
+	const provider = await _getProvider(providerName);
 	if (!provider) {
 		throw new Error(
 			`Unknown provider '${providerName}' for API key resolution.`
@@ -526,7 +526,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 			}
 
 			// Get provider instance
-			provider = _getProvider(providerName?.toLowerCase());
+			provider = await _getProvider(providerName?.toLowerCase());
 			if (!provider) {
 				log(
 					'warn',
@@ -540,7 +540,7 @@ async function _unifiedServiceRunner(serviceType, params) {
 
 			// Get AI parameters for the current role
 			roleParams = getParametersForRole(currentRole, effectiveProjectRoot);
-			apiKey = _resolveApiKey(
+			apiKey = await _resolveApiKey(
 				providerName?.toLowerCase(),
 				session,
 				effectiveProjectRoot

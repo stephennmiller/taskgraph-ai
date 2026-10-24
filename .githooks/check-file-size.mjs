@@ -64,6 +64,9 @@ const LEGACY_OVERSIZED = new Set([
 	// committable until each is split.
 	'scripts/modules/config-manager.js',
 	'src/prompts/README.md',
+	// Over the limit on main; #248 moves two imports in each to load on demand
+	'packages/tm-core/src/modules/git/adapters/git-adapter.ts',
+	'scripts/modules/utils/contextGatherer.js',
 	// Manual prompt test harness (~15,000 tokens on main); a stale parameter
 	// removal must be committable until it is split.
 	'tests/manual/prompts/prompt-test.js'

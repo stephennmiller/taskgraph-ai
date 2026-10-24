@@ -156,6 +156,8 @@ Structure tests as Arrange, Act, Assert.
 
 Extract a pattern into a shared utility once it appears twice, not before. Export new modules from the package's index file.
 
+CLI startup has a CI budget (`.github/scripts/check-startup-time.mjs`, about 40 ms for `--version` and 160 ms for `list` locally). Import heavy packages (AI SDKs, markdown, prompts, inquirer) inside the function that uses them: `await import()`, or `createRequire(import.meta.url)` when the caller must stay synchronous. A top-level import runs on every command.
+
 Remove what a change leaves unused: files, exports, types and dependencies. `npm run knip` finds them and CI fails on them. Fix the code rather than adding to the allowlist in `knip.jsonc`; an entry there needs a one-line reason.
 
 ## Documentation Guidelines

@@ -37,7 +37,7 @@ export const baseConfig: Partial<UserConfig> = {
 		splitting: false // Disable code splitting for better stack traces
 	}),
 	// Keep all npm dependencies external (available via node_modules)
-	external: [/^[^@./]/, /^@(?!tm\/)/]
+	deps: { neverBundle: [/^[^@./]/, /^@(?!tm\/)/] }
 };
 
 /**

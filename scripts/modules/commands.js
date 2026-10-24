@@ -7,7 +7,6 @@ import fs from 'fs';
 import path from 'path';
 import chalk from 'chalk';
 import { Command, Option } from 'commander';
-import inquirer from 'inquirer';
 
 // Import command registry and utilities from @tm/cli
 import {
@@ -2024,6 +2023,7 @@ function registerCommands(programInstance) {
 
 					console.log();
 
+					const { default: inquirer } = await import('inquirer');
 					const { confirm } = await inquirer.prompt([
 						{
 							type: 'confirm',
@@ -2359,6 +2359,7 @@ Examples:
 
 			if (options.setup) {
 				try {
+					const { default: inquirer } = await import('inquirer');
 					const answer = await inquirer.prompt([
 						{
 							type: 'input',

@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import inquirer from 'inquirer';
 
 import { ui } from '@tm/cli';
 import { theme } from '@tm/cli/theme';
@@ -340,6 +339,7 @@ async function deleteTag(
 
 			let proceed = false;
 			try {
+				const { default: inquirer } = await import('inquirer');
 				const prompt = inquirer.createPromptModule({ clearPromptOnDone: true });
 				({ proceed } = await prompt([
 					{

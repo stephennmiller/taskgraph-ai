@@ -4,15 +4,33 @@
  * Can be hidden by setting TM_HIDE_BANNER=true
  */
 
+import { createRequire } from 'node:module';
 import chalk from 'chalk';
-import figlet from 'figlet';
-import gradient from 'gradient-string';
+import type figletModule from 'figlet';
 import { createLink } from '../formatters/link-formatters.js';
 import { terminalWidth } from '../layout/helpers.js';
 import { BANNER_GRADIENT } from '../theme.js';
 
-// Brand gradient for the banner
-const coolGradient = gradient(BANNER_GRADIENT);
+// figlet and gradient-string load when a banner is drawn, not at startup
+// (#248). require() keeps the banner functions synchronous.
+const require = createRequire(import.meta.url);
+
+/** Paint text in the brand gradient */
+function coolGradient(text: string): string {
+	const { default: gradient } =
+		require('gradient-string') as typeof import('gradient-string');
+	return gradient(BANNER_GRADIENT)(text);
+}
+
+/** The banner's "TaskGraph" in ASCII art */
+function bannerArt(): string {
+	const figlet = require('figlet') as typeof figletModule;
+	return figlet.textSync('TaskGraph', {
+		font: 'Standard',
+		horizontalLayout: 'default',
+		verticalLayout: 'default'
+	});
+}
 
 export interface AsciiBannerOptions {
 	/** Version string to display */
@@ -32,6 +50,17 @@ function isBannerHidden(): boolean {
 
 /** Arguments that ask for the top-level help screen */
 const TOP_LEVEL_HELP_ARGS = new Set(['--help', '-h', 'help']);
+
+/**
+ * Whether the arguments ask only for the top-level help screen:
+ * `taskgraph --help`, `-h` or `help`, with or without `--no-banner`.
+ *
+ * @param args - The arguments after the script path (`process.argv.slice(2)`)
+ */
+export function isTopLevelHelpRequest(args: string[]): boolean {
+	const rest = args.filter((arg) => arg !== '--no-banner');
+	return rest.length === 1 && TOP_LEVEL_HELP_ARGS.has(rest[0]);
+}
 
 /**
  * Whether `runCLI` should print the ASCII banner before a command.
@@ -61,12 +90,7 @@ export function displayAsciiBanner(options: AsciiBannerOptions = {}): void {
 
 	// Render ASCII banner
 	try {
-		const bannerText = figlet.textSync('TaskGraph', {
-			font: 'Standard',
-			horizontalLayout: 'default',
-			verticalLayout: 'default'
-		});
-		console.log(coolGradient(bannerText));
+		console.log(coolGradient(bannerArt()));
 	} catch {
 		console.log(coolGradient('=== TaskGraph ==='));
 	}
@@ -116,12 +140,7 @@ export function displayInitBanner(): void {
 
 	// Render ASCII banner
 	try {
-		const bannerText = figlet.textSync('TaskGraph', {
-			font: 'Standard',
-			horizontalLayout: 'default',
-			verticalLayout: 'default'
-		});
-		console.log(coolGradient(bannerText));
+		console.log(coolGradient(bannerArt()));
 	} catch {
 		console.log(coolGradient('=== TaskGraph ==='));
 	}
