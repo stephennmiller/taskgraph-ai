@@ -643,10 +643,11 @@
         "description": "`ConfigManager.reset()` (`packages/tm-core/src/modules/config/managers/config-manager.ts`) calls `ConfigPersistence.deleteConfig()`, which unlinks only `.taskgraph/config.json` (`packages/tm-core/src/modules/config/services/config-persistence.service.ts`).",
         "details": "GitHub issue #461: https://github.com/stephennmiller/taskgraph-ai/issues/461\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T11:58:32.117Z"
       },
       {
         "id": "48",
@@ -654,10 +655,11 @@
         "description": "`ConfigManager.getResponseLanguage()` (`packages/tm-core/src/modules/config/managers/config-manager.ts`) returns `config.custom.responseLanguage || 'English'`, and `ConfigDomain.getResponseLanguage()` (`packages/tm-core/src/modules/config/config-domain.ts`) wraps it.",
         "details": "GitHub issue #462: https://github.com/stephennmiller/taskgraph-ai/issues/462\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T11:58:32.122Z"
       },
       {
         "id": "49",
@@ -881,9 +883,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T11:52:59.800Z",
+      "lastModified": "2026-10-24T11:58:32.122Z",
       "taskCount": 67,
-      "completedCount": 35,
+      "completedCount": 38,
       "tags": [
         "master"
       ]

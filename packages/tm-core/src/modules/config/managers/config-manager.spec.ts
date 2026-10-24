@@ -231,10 +231,9 @@ describe('ConfigManager', () => {
 			expect(language).toBe('English');
 		});
 
-		it('should return custom response language', () => {
-			// Update config for current instance
+		it('should return the response language lang writes (#462)', () => {
 			(manager as any).config = {
-				custom: { responseLanguage: 'Spanish' }
+				global: { responseLanguage: 'Spanish' }
 			};
 
 			const language = manager.getResponseLanguage();
