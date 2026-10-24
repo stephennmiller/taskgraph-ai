@@ -184,7 +184,13 @@ describe('claude-code path guard', () => {
 			['kubeconfig', '**/kubeconfig'],
 			['deploy/prod.kubeconfig', '**/*.kubeconfig'],
 			['.config/git/credentials', '**/.config/git/credentials'],
-			['AppData/Roaming/postgresql/pgpass.conf', '**/pgpass.conf']
+			['AppData/Roaming/postgresql/pgpass.conf', '**/pgpass.conf'],
+			// #438
+			['kubeconfig.yaml', '**/kubeconfig.yaml'],
+			['deploy/kubeconfig.yml', '**/kubeconfig.yml'],
+			['kubeconfig-prod', '**/kubeconfig-*'],
+			['terraform/kubeconfig_prod', '**/kubeconfig_*'],
+			['deploy/Kubeconfig-Staging.yaml', 'Kubeconfig-*']
 		])('denies Read, Glob and Grep of %s (#370, #396)', (file, pattern) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toMatch(
 				/secret/
@@ -271,7 +277,11 @@ describe('claude-code path guard', () => {
 			['.config/git/ignore'],
 			['git/credentials'],
 			['.config/credentials'],
-			['docs/pgpass.conf.md']
+			['docs/pgpass.conf.md'],
+			// #438 look-alikes: no bare kubeconfig prefix
+			['src/kubeconfig.yaml.ts'],
+			['src/kubeconfigLoader.ts'],
+			['docs/kubeconfigs.md']
 		])('still allows %s', (file) => {
 			expect(getPathViolation(root, 'Read', { file_path: file })).toBeNull();
 		});
@@ -409,13 +419,24 @@ describe('claude-code path guard', () => {
 			'deploy/STAGING.KUBECONFIG',
 			'.config/git/credentials',
 			'nested/.config/git/credentials',
-			'AppData/Roaming/postgresql/pgpass.conf'
+			'AppData/Roaming/postgresql/pgpass.conf',
+			// #438
+			'kubeconfig.yaml',
+			'deploy/kubeconfig.yml',
+			'KUBECONFIG.YAML',
+			'kubeconfig-prod',
+			'terraform/kubeconfig_prod',
+			// A directory named kubeconfig is skipped whole, see below
+			'pkg/kubeconfig/kubeconfig.go'
 		];
 		const others = [
 			'src/app.js',
 			'README.md',
 			'.docker/daemon.json',
-			'.config/git/config'
+			'.config/git/config',
+			// #438 look-alikes
+			'src/kubeconfig.ts',
+			'docs/kubeconfig.md'
 		];
 
 		beforeAll(() => {
@@ -490,6 +511,31 @@ describe('claude-code path guard', () => {
 			}
 		});
 
+		// rg globs can't match files only, so `!kubeconfig` skips a directory of
+		// that name too. Read refuses one as well, so the two agree (#438). To
+		// let such directories through, change these tests together with
+		// isSecretName and the SECRET_GLOBS built from it.
+		describe('a directory named kubeconfig (#438)', () => {
+			it.each([
+				['Read', { file_path: 'pkg/kubeconfig/kubeconfig.go' }],
+				['Read', { file_path: 'pkg/kubeconfig/' }],
+				['Grep', { pattern: 'x', path: 'pkg/kubeconfig' }],
+				['Grep', { pattern: 'x', glob: 'pkg/kubeconfig/*.go' }],
+				['Glob', { pattern: 'pkg/kubeconfig/**' }]
+			])('is refused on %s %o', (tool, input) => {
+				expect(getPathViolation(project, tool, input)).toMatch(/secret/);
+			});
+
+			it.skipIf(!ripgrep)('is skipped by a rewritten Grep', () => {
+				const input = { pattern: 'API_KEY', path: 'pkg' };
+				const line = 'pkg/kubeconfig/kubeconfig.go:1:';
+				expect(runGrep(project, input).join('\n')).toContain(line);
+				expect(
+					runGrep(project, excludeSecretsFromGrep(input)).join('\n')
+				).not.toContain(line);
+			});
+		});
+
 		describe('search path spellings (#439)', () => {
 			// rg matches `**/.docker/config.json` against the path as typed, so
 			// these walked into the directory-scoped secrets before the hook
@@ -561,7 +607,9 @@ describe('claude-code path guard', () => {
 				'./.config/git/config:1:API_KEY=.config/git/config',
 				'./.docker/daemon.json:1:API_KEY=.docker/daemon.json',
 				'./README.md:1:API_KEY=README.md',
-				'./src/app.js:1:API_KEY=src/app.js'
+				'./docs/kubeconfig.md:1:API_KEY=docs/kubeconfig.md',
+				'./src/app.js:1:API_KEY=src/app.js',
+				'./src/kubeconfig.ts:1:API_KEY=src/kubeconfig.ts'
 			]);
 		});
 	});

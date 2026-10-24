@@ -35,7 +35,12 @@ const SECRETS = {
 		'.git-credentials',
 		'.aws',
 		'.kube',
+		// Like every entry here, these match a directory of that name too: rg
+		// globs can't match files only, so a Grep skips a `kubeconfig/` source
+		// directory, and Read refuses it to agree (#438)
 		'kubeconfig',
+		'kubeconfig.yaml',
+		'kubeconfig.yml',
 		'.npmrc',
 		'.netrc',
 		'_netrc',
@@ -52,7 +57,11 @@ const SECRETS = {
 		'id_rsa',
 		'id_dsa',
 		'id_ecdsa',
-		'id_ed25519'
+		'id_ed25519',
+		// kubeconfig-<cluster>, and Terraform EKS modules' kubeconfig_<name>.
+		// Not a bare `kubeconfig`, which would refuse src/kubeconfig.ts
+		'kubeconfig-',
+		'kubeconfig_'
 	],
 	// Names ending in `.<extension>`
 	extensions: [
