@@ -21,7 +21,10 @@ import {
 } from '../../scripts/modules/config-manager.js';
 import { readProjectEnv } from '@tm/core';
 import { log } from '../../scripts/modules/utils.js';
-import { createPathGuardHook } from './claude-code-path-guard.js';
+import {
+	createGrepResultHook,
+	createPathGuardHook
+} from './claude-code-path-guard.js';
 import { BaseAIProvider } from './base-provider.js';
 
 let _claudeCliChecked = false;
@@ -40,8 +43,9 @@ let _claudeCliAvailable = null;
 // - cwd is the project root and no additionalDirectories are added. With no
 //   known project root they get no file tools at all.
 // - A programmatic PreToolUse hook denies Read/Grep/Glob calls that resolve
-//   (symlinks included) outside the project root. Programmatic hooks are not
-//   settings, so they still run with no settings sources.
+//   (symlinks included) outside the project root, and a PostToolUse hook drops
+//   Grep matches from secret files. Programmatic hooks are not settings, so
+//   they still run with no settings sources.
 const RESEARCH_TOOLS = ['WebSearch', 'WebFetch'];
 const REPO_READ_TOOLS = ['Read', 'Grep', 'Glob'];
 const DEFAULT_RESEARCH_MAX_TURNS = 8;
@@ -155,7 +159,10 @@ function getRoleRestrictions(role, settings, projectRoot) {
 					cwd: projectRoot ?? undefined,
 					additionalDirectories: undefined,
 					hooks: projectRoot
-						? { PreToolUse: [createPathGuardHook(projectRoot)] }
+						? {
+								PreToolUse: [createPathGuardHook(projectRoot)],
+								PostToolUse: [createGrepResultHook(projectRoot)]
+							}
 						: {}
 				})
 	};
