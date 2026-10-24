@@ -32,6 +32,13 @@ import {
 	type ExpandTaskResult
 } from './services/expand-task.service.js';
 import {
+	ParsePrdService,
+	type ParsePrdHooks,
+	type ParsePrdInput,
+	type ParsePrdResult,
+	type PrdGapsResult
+} from './services/parse-prd.service.js';
+import {
 	ScopeAdjustmentService,
 	type ScopeTaskHooks,
 	type ScopeTaskInput,
@@ -683,6 +690,42 @@ export class TasksDomain {
 			this.taskService,
 			this.configManager
 		).updateFrom(input, hooks);
+	}
+
+	/**
+	 * Generate the tag's tasks from a PRD with the AI. Refuses a tag that has
+	 * tasks unless `force` (replace them) or `append` (add to them; for a PRD
+	 * parsed before, only its new sections). The AI call runs without the
+	 * file lock; the save re-reads the tag.
+	 */
+	async parsePrd(
+		input: ParsePrdInput,
+		hooks?: ParsePrdHooks
+	): Promise<ParsePrdResult> {
+		return new ParsePrdService(this.taskService, this.configManager).parse(
+			input,
+			hooks
+		);
+	}
+
+	/**
+	 * The PRD a parsePrd with these options would read (the default one in
+	 * .taskgraph/docs when none is named), its tag, and the tag's task count
+	 */
+	async parsePrdTarget(input: Pick<ParsePrdInput, 'prdPath' | 'tag'>) {
+		return new ParsePrdService(this.taskService, this.configManager).target(
+			input
+		);
+	}
+
+	/** The questions worth asking about gaps in a PRD before parsing it */
+	async findPrdGaps(
+		input: Pick<ParsePrdInput, 'prdPath' | 'research' | 'session' | 'outputType'>
+	): Promise<PrdGapsResult> {
+		return new ParsePrdService(
+			this.taskService,
+			this.configManager
+		).findGaps(input);
 	}
 
 	/**

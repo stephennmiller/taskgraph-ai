@@ -16,7 +16,6 @@ import {
 import { isConfigWarningSuppressed } from '../../scripts/modules/config-manager.js';
 import {
 	TASKGRAPH_CONFIG_FILE,
-	TASKGRAPH_DOCS_DIR,
 	TASKGRAPH_TASKS_FILE
 } from '../constants/paths.js';
 import { getLoggerOrDefault } from './logger-utils.js';
@@ -96,63 +95,6 @@ export function findTasksPath(explicitPath = null, args = null, log = null) {
 	}
 
 	logger.warn?.(`No tasks.json found in project: ${projectRoot}`);
-	return null;
-}
-
-/**
- * Find the PRD document file path with fallback logic
- * @param {string|null} explicitPath - Explicit path provided by user (highest priority)
- * @param {Object|null} args - Args object for MCP context (optional)
- * @param {Object|null} log - Logger object (optional)
- * @returns {string|null} - Resolved PRD document path or null if not found
- */
-export function findPRDPath(explicitPath = null, args = null, log = null) {
-	const logger = getLoggerOrDefault(log);
-
-	// 1. If explicit path is provided, use it (highest priority)
-	if (explicitPath) {
-		// Use original cwd if available (set by dev.js), otherwise current cwd
-		// This ensures relative paths are resolved from where the user invoked the command
-		const cwdForResolution =
-			process.env.TASKGRAPH_ORIGINAL_CWD || process.cwd();
-
-		const resolvedPath = path.isAbsolute(explicitPath)
-			? explicitPath
-			: path.resolve(cwdForResolution, explicitPath);
-
-		if (fs.existsSync(resolvedPath)) {
-			logger.info?.(`Using explicit PRD path: ${resolvedPath}`);
-			return resolvedPath;
-		} else {
-			logger.warn?.(
-				`Explicit PRD path not found: ${resolvedPath}, trying fallbacks`
-			);
-		}
-	}
-
-	// 2. Try to get project root from args (MCP) or find it
-	const rawProjectRoot = args?.projectRoot || findProjectRoot();
-
-	if (!rawProjectRoot) {
-		logger.warn?.('Could not determine project root directory');
-		return null;
-	}
-
-	// 3. Normalize project root to prevent double .taskgraph paths
-	const projectRoot = normalizeProjectRoot(rawProjectRoot);
-
-	// 4. Look in the .taskgraph/docs directory
-	const fileNames = ['PRD.md', 'prd.md', 'PRD.txt', 'prd.txt'];
-
-	for (const fileName of fileNames) {
-		const prdPath = path.join(projectRoot, TASKGRAPH_DOCS_DIR, fileName);
-		if (fs.existsSync(prdPath)) {
-			logger.info?.(`Found PRD document at: ${prdPath}`);
-			return prdPath;
-		}
-	}
-
-	logger.warn?.(`No PRD document found in project: ${projectRoot}`);
 	return null;
 }
 

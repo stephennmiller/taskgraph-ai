@@ -5,10 +5,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { parsePRDDirect } from '../../../../mcp-server/src/core/direct-functions/parse-prd.js';
 import {
 	assertInsideRoot,
-	resolvePrdPath,
 	resolveTasksPath
 } from '../../../../mcp-server/src/core/utils/path-utils.js';
 
@@ -66,9 +64,6 @@ describe('tool path resolvers', () => {
 		expect(() => resolveTasksPath({ file: '/etc/passwd' })).toThrow(
 			/projectRoot is required/
 		);
-		expect(() => resolvePrdPath({ input: '/etc/passwd' })).toThrow(
-			/projectRoot is required/
-		);
 	});
 
 	test('resolveTasksPath refuses a file outside projectRoot', () => {
@@ -78,29 +73,6 @@ describe('tool path resolvers', () => {
 				file: path.join(outside, 't.json')
 			})
 		).toThrow(/outside the project/);
-	});
-
-	test('resolvePrdPath refuses an input outside projectRoot', () => {
-		expect(() =>
-			resolvePrdPath({ projectRoot: root, input: '../secrets/.env' })
-		).toThrow(/outside the project/);
-	});
-});
-
-describe('parsePRDDirect output', () => {
-	test('refuses an output file outside projectRoot before doing any work', async () => {
-		const input = path.join(root, 'prd.md');
-		fs.writeFileSync(input, 'prd');
-		const target = path.join(outside, 'tasks.json');
-
-		const result = await parsePRDDirect(
-			{ projectRoot: root, input, output: target },
-			{ info() {}, error() {}, warn() {}, debug() {} }
-		);
-
-		expect(result.success).toBe(false);
-		expect(result.error.code).toBe('INVALID_PATH');
-		expect(fs.existsSync(target)).toBe(false);
 	});
 });
 

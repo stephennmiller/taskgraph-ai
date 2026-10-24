@@ -18,6 +18,7 @@ import { ModelsCommand } from './commands/models/models.command.js';
 import { SyncReadmeCommand } from './commands/sync-readme.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
 import { ScopeDownCommand, ScopeUpCommand } from './commands/scope.command.js';
+import { ParsePrdCommand } from './commands/parse-prd.command.js';
 import {
 	AddDependencyCommand,
 	FixDependenciesCommand,
@@ -136,6 +137,12 @@ export class CommandRegistry {
 			name: 'expand',
 			description: 'Expand a task into subtasks using AI',
 			commandClass: ExpandCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'parse-prd',
+			description: 'Parse a PRD file and generate tasks',
+			commandClass: ParsePrdCommand as any,
 			category: 'task'
 		},
 		{

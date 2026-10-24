@@ -59,6 +59,4 @@ const ai = () =>
 		getModelMap: () => MODEL_MAP
 	}));
 
-export const streamObjectService = (params) => ai().streamObject(params);
 export const generateObjectService = (params) => ai().generateObject(params);
-export const logAiUsage = (params) => ai().logUsage(params);

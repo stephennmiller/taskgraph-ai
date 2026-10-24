@@ -78,6 +78,7 @@ interface RawAiConfig {
 		enableCodebaseAnalysis?: unknown;
 		defaultPriority?: unknown;
 		defaultSubtasks?: unknown;
+		defaultNumTasks?: unknown;
 	};
 	claudeCode?: unknown;
 }
@@ -189,6 +190,12 @@ export class AiConfig {
 	get defaultSubtasks(): number {
 		const count = parseInt(String(this.raw.global?.defaultSubtasks), 10);
 		return Number.isNaN(count) ? 5 : count;
+	}
+
+	/** How many tasks parse-prd asks for; 0 (sized to the PRD) by default */
+	get defaultNumTasks(): number {
+		const count = parseInt(String(this.raw.global?.defaultNumTasks), 10);
+		return Number.isNaN(count) ? 0 : count;
 	}
 
 	/** `claudeCode` merged with the command's `commandSpecific` entry */

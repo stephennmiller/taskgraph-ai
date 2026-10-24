@@ -81,3 +81,45 @@ describe('parse-prd prompt: task count', () => {
 		expect(userPrompt).toContain('break down into approximately 12 tasks');
 	});
 });
+
+describe('parse-prd prompt: acceptance criteria and PRD sections', () => {
+	it.each([false, true])(
+		'asks for 2-5 criteria per task and keeps the guidelines numbered in order (research: %s)',
+		(research) => {
+			const { systemPrompt } = load(0, research);
+
+			expect(systemPrompt).toContain('"acceptanceCriteria": string[]');
+			expect(systemPrompt).toContain(
+				'13. Give each task 2-5 acceptance criteria'
+			);
+			expect(systemPrompt).toContain('12. Set "section"');
+			expect(systemPrompt.includes('14. For each task')).toBe(research);
+			expect(systemPrompt).not.toContain('13. For each task');
+		}
+	);
+
+	it('lists the sections for the AI to cite, and leaves the list out without headings', () => {
+		const withSections = new PromptManager().loadPrompt('parse-prd', {
+			...params,
+			numTasks: 3,
+			prdSections: '- authentication (Authentication)'
+		});
+		expect(withSections.userPrompt).toContain(
+			'- authentication (Authentication)'
+		);
+		expect(withSections.systemPrompt).toContain('"section"');
+		expect(load(3).userPrompt).not.toContain('Sections of this PRD');
+	});
+
+	it('says when only new sections are sent (#203)', () => {
+		const prompt = (newSectionsOnly: boolean) =>
+			new PromptManager().loadPrompt('parse-prd', {
+				...params,
+				numTasks: 0,
+				nextId: 5,
+				newSectionsOnly
+			}).userPrompt;
+		expect(prompt(true)).toContain('only the sections added since then');
+		expect(prompt(false)).not.toContain('only the sections added');
+	});
+});

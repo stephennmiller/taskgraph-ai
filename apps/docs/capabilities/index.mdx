@@ -151,7 +151,7 @@ These functions are used to retrieve information about tasks and manage their st
 
 These functions leverage AI to analyze and break down tasks.
 
--   **`parsePRD(prdPath, numTasks)`**: Parses a Product Requirements Document (PRD) to generate an initial set of tasks.
+-   **`tmCore.tasks.parsePrd({ prdPath, numTasks })`**: Parses a Product Requirements Document (PRD) to generate an initial set of tasks.
 -   **`tmCore.tasks.expand({ id, num })`**: Expands a task into a specified number of subtasks using AI.
 -   **`tmCore.tasks.expandAll({ num })`**: Expands all eligible pending or in-progress tasks.
 -   **`analyzeTaskComplexity(options)`**: Analyzes the complexity of tasks and generates recommendations for expansion.

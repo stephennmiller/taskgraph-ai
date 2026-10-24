@@ -30,6 +30,7 @@ export { registerGetTaskTool } from './get-task.tool.js';
 export { registerGenerateTool } from './generate.tool.js';
 export { registerMoveTaskTool } from './move-task.tool.js';
 export { registerNextTaskTool } from './next-task.tool.js';
+export { registerParsePrdTool } from './parse-prd.tool.js';
 export { registerSetTaskStatusTool } from './set-task-status.tool.js';
 export {
 	registerClearSubtasksTool,

@@ -62,7 +62,6 @@ describe('check-file-size', () => {
 
 	it.each([
 		'tests/unit/config-manager.test.js',
-		'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
 		'tests/integration/mcp-server/direct-functions.test.js',
 		'.claude/rules/tests.md',
 		'.claude/rules/new-features.md',

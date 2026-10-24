@@ -1,6 +1,7 @@
 import { AddTaskResponseSchema } from './add-task.js';
 import { ComplexityAnalysisResponseSchema } from './analyze-complexity.js';
 import { ExpandTaskResponseSchema } from './expand-task.js';
+import { ParsePrdResponseSchema } from './parse-prd.js';
 import { ParsePRDClarifyResponseSchema } from './parse-prd-clarify.js';
 import { UpdateSubtaskResponseSchema } from './update-subtask.js';
 import { UpdateTaskResponseSchema } from './update-task.js';
@@ -14,5 +15,6 @@ export const COMMAND_SCHEMAS = {
 	'update-subtask-by-id': UpdateSubtaskResponseSchema,
 	'update-task-by-id': UpdateTaskResponseSchema,
 	'add-task': AddTaskResponseSchema,
+	'parse-prd': ParsePrdResponseSchema,
 	'parse-prd-clarify': ParsePRDClarifyResponseSchema
 };

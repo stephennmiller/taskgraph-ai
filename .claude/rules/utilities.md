@@ -48,7 +48,7 @@ paths:
     - **Core CLI Utilities**: Place utilities used primarily by the core `taskgraph` CLI logic and command modules (`scripts/modules/*`) into [`scripts/modules/utils.js`](../../scripts/modules/utils.js).
     - **MCP Server Utilities**: Place utilities specifically designed to support the MCP server implementation into the appropriate subdirectories within `mcp-server/src/`.
         - Path/Core Logic Helpers: [`mcp-server/src/core/utils/`](../../mcp-server/src/core/utils) (e.g., `path-utils.js`).
-        - Tool Execution/Response Helpers: `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)); the direct functions' logger adapter is in [`mcp-server/src/tools/utils.js`](../../mcp-server/src/tools/utils.js).
+        - Tool Execution/Response Helpers: `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)).
 
 ## Documentation Standards
 
@@ -467,12 +467,6 @@ MCP tools, the legacy JS ones in `mcp-server/src/tools/` included, import their 
 - **`checkProgressCapability(reportProgress, log)`**:
     - **Purpose**: Returns `reportProgress` when the client supports progress updates, otherwise `undefined`.
 
-### Direct Function Logger (`mcp-server/src/tools/utils.js`)
-
-- **`createLogWrapper(log)`**:
-    - **Purpose**: Creates a logger object wrapper with standard methods (`info`, `warn`, `error`, `debug`, `success`) mapping to the passed MCP `log` object's methods. Ensures compatibility when passing loggers to core functions.
-    - **Usage**: Used within direct functions before passing the `log` object down to core logic that expects the standard method names. It is the file's only export.
-
 ## Export Organization
 
 - **Grouping Related Functions**:
@@ -513,9 +507,6 @@ export {
   resolveTasksPath,
   findTasksPath
 };
-
-// Example export from mcp-server/src/tools/utils.js
-export { createLogWrapper };
 ```
 
 ## Context Gathering Utilities

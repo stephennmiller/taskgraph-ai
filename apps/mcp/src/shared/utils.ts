@@ -385,6 +385,7 @@ export function withToolContext<TArgs extends { projectRoot?: string }>(
 			const enhancedContext: ToolContext = {
 				log: context.log,
 				session: context.session,
+				reportProgress: context.reportProgress,
 				tmCore
 			};
 

@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { resolvePathInsideRoot } from '@tm/core';
 import {
-	findPRDPath as coreFindPrdPath,
 	findTasksPath as coreFindTasksPath,
 	normalizeProjectRoot
 } from '../../../../src/utils/path-utils.js';
@@ -96,63 +95,4 @@ export function resolveTasksPath(args, log = silentLogger) {
 	// Note: When no projectRoot is available, we can't construct a default path
 	// so we return null and let the calling code handle the error
 	return foundPath;
-}
-
-/**
- * Resolve PRD path from arguments
- * @param {Object} args - Arguments object containing projectRoot and optional input path
- * @param {Object} [log] - Logger object to prevent console logging
- * @returns {string|null} - Resolved path to PRD file or null if not found
- */
-export function resolvePrdPath(args, log = silentLogger) {
-	// Get explicit path from args.input if provided
-	const explicitPath = args?.input;
-	const rawProjectRoot = args?.projectRoot;
-
-	// Without a project root there is nothing to check an absolute path against
-	if (explicitPath && !rawProjectRoot && path.isAbsolute(explicitPath)) {
-		throw new Error('projectRoot is required when a file path is absolute');
-	}
-
-	// Normalize project root if provided
-	const projectRoot = rawProjectRoot
-		? normalizeProjectRoot(rawProjectRoot)
-		: null;
-
-	// If explicit path is relative, resolve it relative to normalized projectRoot
-	if (explicitPath && projectRoot) {
-		return assertInsideRoot(projectRoot, explicitPath);
-	}
-
-	// Use core findPRDPath with explicit path and normalized projectRoot context
-	if (projectRoot) {
-		return coreFindPrdPath(explicitPath, { projectRoot }, log);
-	}
-
-	// Fallback to core function without projectRoot context
-	return coreFindPrdPath(explicitPath, null, log);
-}
-
-/**
- * Resolve any project-relative path from arguments
- * @param {string} relativePath - Relative path to resolve
- * @param {Object} args - Arguments object containing projectRoot
- * @returns {string} - Resolved absolute path
- */
-export function resolveProjectPath(relativePath, args) {
-	// Ensure we have a projectRoot from args
-	if (!args?.projectRoot) {
-		throw new Error('projectRoot is required in args to resolve project paths');
-	}
-
-	// Normalize the project root to prevent double .taskgraph paths
-	const projectRoot = normalizeProjectRoot(args.projectRoot);
-
-	// If already absolute, return as-is
-	if (path.isAbsolute(relativePath)) {
-		return relativePath;
-	}
-
-	// Resolve relative to normalized projectRoot
-	return path.resolve(projectRoot, relativePath);
 }

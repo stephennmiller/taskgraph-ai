@@ -556,7 +556,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
 
 ## Progress Reporting
 
-MCP tools run inline: `execute` awaits the direct function and returns the finished result. For long-running work, such as PRD parsing, report progress through the tool context (see `mcp-server/src/tools/parse-prd.js`):
+MCP tools run inline: `execute` awaits the direct function and returns the finished result. For long-running work, such as PRD parsing, report progress through the tool context:
 
 1. **In the MCP tool**, take `reportProgress` from the context, validate it, and pass it to the direct function:
    ```javascript

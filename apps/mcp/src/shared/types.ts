@@ -52,6 +52,12 @@ export interface ToolContext {
 			sampling?: Record<string, unknown>;
 		};
 	};
+	/** Progress notifications to the client, when it asked for them */
+	reportProgress?: (progress: {
+		progress: number;
+		total?: number;
+		message?: string;
+	}) => Promise<void>;
 	/** TmCore instance (already initialized) */
 	tmCore: TmCore;
 }

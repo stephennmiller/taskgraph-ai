@@ -6,7 +6,6 @@
  */
 import { zodSchema } from 'ai';
 import { COMMAND_SCHEMAS, PromptManager } from '@tm/core';
-import { prdResponseSchema } from '../../../scripts/modules/task-manager/parse-prd/parse-prd-config.js';
 
 const task = { id: 1, title: 'Login', description: 'Log in', details: 'Form' };
 
@@ -33,7 +32,7 @@ const cases = [
 		'parse-prd',
 		'default',
 		{ numTasks: 0, nextId: 1, prdContent: 'Users log in.', prdPath: 'p.md' },
-		prdResponseSchema,
+		COMMAND_SCHEMAS['parse-prd'],
 		'json',
 		'tasks'
 	],
