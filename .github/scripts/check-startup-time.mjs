@@ -37,7 +37,6 @@ export const HEAVY_PACKAGES = [
 	'@ai-sdk/',
 	'@anthropic-ai/',
 	'ai-sdk-provider-claude-code',
-	'undici',
 	'jsonrepair',
 	'marked',
 	'marked-terminal',

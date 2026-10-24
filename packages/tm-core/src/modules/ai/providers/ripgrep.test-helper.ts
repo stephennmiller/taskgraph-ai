@@ -29,14 +29,14 @@ function findRipgrep() {
 	return probe.status === 0 ? { command: 'rg', args: [] } : null;
 }
 
+/** A Grep call's input */
+type GrepInput = Record<string, any>;
+
 /**
  * The rg arguments Claude Code (2.1.x) builds for a Grep call in content
  * mode: --hidden, then each `glob` token as --glob. Tokens split on spaces,
  * then on commas unless the token holds a brace group.
  */
-/** A Grep call's input */
-type GrepInput = Record<string, any>;
-
 function grepArgs({ pattern, glob, type, path: searchPath }: GrepInput) {
 	const args = ['--hidden', '--no-heading', '-n'];
 	for (const token of (glob ?? '').split(/\s+/).filter(Boolean)) {

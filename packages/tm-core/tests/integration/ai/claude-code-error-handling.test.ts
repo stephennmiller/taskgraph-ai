@@ -1,3 +1,4 @@
+import { createClaudeCode } from 'ai-sdk-provider-claude-code';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClaudeCodeProvider } from '../../../src/index.js';
 import { providerOptions } from './provider-options.js';
@@ -35,6 +36,21 @@ describe('Claude Code Error Handling', () => {
 		await expect(provider.getClient({ commandName: 'test' })).rejects.toThrow(
 			/Claude Code CLI not available/i
 		);
+	});
+
+	it('says to reinstall, not to install the CLI, when a package is missing', async () => {
+		vi.mocked(createClaudeCode).mockImplementationOnce(() => {
+			throw Object.assign(
+				new Error("Cannot find package 'ai-sdk-provider-claude-code'"),
+				{ code: 'ERR_MODULE_NOT_FOUND' }
+			);
+		});
+		const provider = new ClaudeCodeProvider(providerOptions());
+
+		const result = provider.getClient();
+
+		await expect(result).rejects.toThrow(/reinstall TaskGraph/);
+		await expect(result).rejects.not.toThrow(/CLI not available/);
 	});
 
 	it('should still support basic provider functionality', () => {

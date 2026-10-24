@@ -156,7 +156,12 @@ const buildSafeSchema = (ai: AiModule, schema: unknown): any => {
 
 // One promise for every caller, so concurrent first calls share one load
 let aiModule: Promise<AiModule> | undefined;
-const loadAi = () => (aiModule ??= import('ai'));
+const loadAi = () =>
+	(aiModule ??= import('ai').catch((error) => {
+		// Let the next call try again rather than replay the failure
+		aiModule = undefined;
+		throw error;
+	}));
 
 /**
  * A call that never answers would hang the command forever. Ten minutes is
@@ -278,7 +283,8 @@ export abstract class BaseAIProvider {
 			error
 		});
 		throw new Error(
-			`${this.name} API error during ${operation}: ${errorMessage}`
+			`${this.name} API error during ${operation}: ${errorMessage}`,
+			{ cause: error }
 		);
 	}
 

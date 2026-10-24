@@ -626,32 +626,6 @@ function getCodebaseAnalysisEnabled(explicitRoot = null) {
 	return getGlobalConfig(explicitRoot).enableCodebaseAnalysis !== false;
 }
 
-function getProxyEnabled(explicitRoot = null) {
-	// Return boolean-safe value with default false
-	return getGlobalConfig(explicitRoot).enableProxy === true;
-}
-
-function isProxyEnabled(session = null, projectRoot = null) {
-	// Priority 1: Environment variable
-	const envFlag = resolveEnvVariable(
-		'TASKGRAPH_ENABLE_PROXY',
-		session,
-		projectRoot
-	);
-	if (envFlag !== null && envFlag !== undefined && envFlag !== '') {
-		return envFlag.toLowerCase() === 'true' || envFlag === '1';
-	}
-
-	// Priority 2: MCP session environment (explicit check for parity with other flags)
-	if (session?.env?.TASKGRAPH_ENABLE_PROXY) {
-		const mcpFlag = session.env.TASKGRAPH_ENABLE_PROXY;
-		return mcpFlag.toLowerCase() === 'true' || mcpFlag === '1';
-	}
-
-	// Priority 3: Configuration file
-	return getProxyEnabled(projectRoot);
-}
-
 /**
  * Gets model parameters (maxTokens, temperature) for a specific role,
  * considering model-specific overrides from supported-models.json.
@@ -1004,8 +978,6 @@ export {
 	getResponseLanguage,
 	getCodebaseAnalysisEnabled,
 	isCodebaseAnalysisEnabled,
-	getProxyEnabled,
-	isProxyEnabled,
 	getParametersForRole,
 	getUserId,
 	// Operating mode

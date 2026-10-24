@@ -364,6 +364,16 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			// Provide more helpful error message
 			const msg = String(error?.message || '');
 			const code = error?.code;
+			// A missing npm package names claude too, but reinstalling fixes it
+			if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+				this.handleError(
+					'client initialization',
+					new Error(
+						`A package TaskGraph needs is missing; reinstall TaskGraph. Original error: ${msg}`,
+						{ cause: error }
+					)
+				);
+			}
 			if (code === 'ENOENT' || /claude/i.test(msg)) {
 				const enhancedError = new Error(
 					`Claude Code CLI not available. Please install Claude Code CLI first. Original error: ${error.message}`,
