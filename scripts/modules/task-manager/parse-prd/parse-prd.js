@@ -228,9 +228,9 @@ async function handleCompletionReporting(
 		if (hasValidTelemetry) {
 			const cost = aiServiceResponse.telemetryData.totalCost || 0;
 			const currency = aiServiceResponse.telemetryData.currency || 'USD';
-			completionMessage = `✅ Task Generation Completed | Tokens (I/O): ${aiServiceResponse.telemetryData.inputTokens}/${aiServiceResponse.telemetryData.outputTokens} | Cost: ${currency === 'USD' ? '$' : currency}${cost.toFixed(4)}`;
+			completionMessage = `Task generation complete | Tokens (I/O): ${aiServiceResponse.telemetryData.inputTokens}/${aiServiceResponse.telemetryData.outputTokens} | Cost: ${currency === 'USD' ? '$' : currency}${cost.toFixed(4)}`;
 		} else {
-			completionMessage = `✅ Task Generation Completed | ~Tokens (I/O): ${estimatedInputTokens}/unknown | Cost: ~$0.00`;
+			completionMessage = `Task generation complete | ~Tokens (I/O): ${estimatedInputTokens}/unknown | Cost: ~$0.00`;
 		}
 
 		// The count asked for can be 0 (sized to the PRD), so report what came back

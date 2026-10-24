@@ -91,7 +91,7 @@ class MockProgressReporter {
 
 		const hasCompletionMessage = this.progressHistory.some(
 			(entry) =>
-				entry.message.includes('✅ Task Generation Completed') &&
+				entry.message.includes('Task generation complete') &&
 				entry.message.includes('Tokens (I/O):')
 		);
 
