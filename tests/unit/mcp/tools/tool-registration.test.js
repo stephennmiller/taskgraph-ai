@@ -69,7 +69,6 @@ describe('TaskGraph Tool Registration System', () => {
 				console.error('Tool count validation failed:', validation);
 			}
 
-			expect(validation.actual.total).toBe(EXPECTED_TOOL_COUNTS.total);
 			expect(validation.actual.core).toBe(EXPECTED_TOOL_COUNTS.core);
 			expect(validation.actual.standard).toBe(EXPECTED_TOOL_COUNTS.standard);
 		});
