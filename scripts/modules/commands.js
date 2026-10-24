@@ -12,6 +12,7 @@ import { Command, Option } from 'commander';
 import {
 	checkForUpdate,
 	collectClarifications,
+	describeError,
 	displayError,
 	displayUpgradeNotification,
 	formatCommanderError,
@@ -397,7 +398,8 @@ function registerCommands(programInstance) {
 					tag: tag
 				});
 			} catch (error) {
-				console.error(chalk.red(`Error parsing PRD: ${error.message}`));
+				const { message, hint } = describeError(error, aiErrorHint(error));
+				printError(`Couldn't generate tasks: ${message}`, hint);
 				process.exit(1);
 			}
 		});

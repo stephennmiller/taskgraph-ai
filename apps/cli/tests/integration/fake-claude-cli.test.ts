@@ -176,6 +176,20 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		for (const task of tasks) expect(task.status).toBe('pending');
 	});
 
+	it('parse-prd prints a failed call once, with its reason (#388)', () => {
+		install([{ error: 'boom' }]);
+		fs.writeFileSync(path.join(project, 'prd.md'), '# Product\nA todo tool.\n');
+
+		const res = taskgraph('parse-prd', 'prd.md', '--force');
+
+		expect(res.status).toBe(1);
+		const output = res.stdout + res.stderr;
+		expect(res.stderr).toContain("✗ Couldn't generate tasks: boom");
+		expect(output.match(/Couldn't generate tasks/g)).toHaveLength(1);
+		expect(output).not.toContain('Error parsing PRD');
+		expect(readTasks()).toEqual([]);
+	});
+
 	it('research asks for plain text and prints the answer', () => {
 		install();
 

@@ -125,11 +125,4 @@ describe('ParsePrdProgress', () => {
 		progress.succeed({ tasks: [{ title: 'word '.repeat(40) }] });
 		expect(lines()[1].length).toBeLessThanOrEqual(50);
 	});
-
-	it('ends with ✗ and the message on failure', () => {
-		const { stream, lines } = capture();
-		progress = new ParsePrdProgress({ prdName: 'prd.md', stream }).start();
-		progress.fail('Claude Code is not signed in');
-		expect(lines().at(-1)).toBe('✗ Claude Code is not signed in');
-	});
 });
