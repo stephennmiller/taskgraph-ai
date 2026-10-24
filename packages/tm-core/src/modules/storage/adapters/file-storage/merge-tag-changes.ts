@@ -194,12 +194,13 @@ function mergeItemLists(
 		nextId = Math.max(nextId, ctx.archived.highestId + 1);
 	}
 	const newIds = new Map<string, unknown>();
-	const ownAdded = new Map<string, Item>();
+	// By the item in `mine`, so two added items with one ID both stay
+	const ownAdded = new Map<Item, Item>();
 	for (const item of mine) {
 		const key = keyOf(item);
 		if (baseById.has(key)) continue;
 		if (!taken.has(key)) {
-			ownAdded.set(key, item);
+			ownAdded.set(item, item);
 			taken.add(key);
 			continue;
 		}
@@ -209,13 +210,13 @@ function mergeItemLists(
 		nextId++;
 		newIds.set(key, id);
 		ctx.renumbered.push({ from: `${scope}${key}`, to: `${scope}${id}` });
-		ownAdded.set(key, { ...item, id });
+		ownAdded.set(item, { ...item, id });
 		taken.add(String(id));
 	}
 
 	if (newIds.size > 0) {
-		for (const [key, item] of ownAdded) {
-			ownAdded.set(key, followRenumbered(item, scope, newIds));
+		for (const [original, item] of ownAdded) {
+			ownAdded.set(original, followRenumbered(item, scope, newIds));
 		}
 	}
 
@@ -227,7 +228,7 @@ function mergeItemLists(
 		let previous: string | null = null;
 		for (const item of mine) {
 			const key = keyOf(item);
-			const placed = ownAdded.get(key);
+			const placed = ownAdded.get(item);
 			if (placed !== undefined) {
 				after.set(previous, [...(after.get(previous) ?? []), placed]);
 			} else if (kept.has(key)) {
@@ -263,7 +264,7 @@ function mergeItemLists(
 	const result: Item[] = [...(following.get(null) ?? [])];
 	for (const item of mine) {
 		const key = keyOf(item);
-		const placed = kept.get(key) ?? ownAdded.get(key);
+		const placed = kept.get(key) ?? ownAdded.get(item);
 		if (placed === undefined) continue;
 		result.push(placed);
 		if (kept.has(key)) result.push(...(following.get(key) ?? []));
