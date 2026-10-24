@@ -36,6 +36,7 @@ import {
 	formatTasksContext
 } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
+import { withoutPlaceholders } from '../../reports/managers/complexity-report-manager.js';
 import {
 	assignMetadata,
 	reconcileDependencySources
@@ -472,9 +473,9 @@ export class ExpandTaskService {
 				return undefined;
 			}
 			const report = JSON.parse(fs.readFileSync(file, 'utf-8'));
-			// A placeholder is a default for a task the AI left out, not a score
-			return (report?.complexityAnalysis as TaskAnalysis[] | undefined)?.find(
-				(a) => String(a.taskId) === String(task.id) && !a.placeholder
+			const entries: TaskAnalysis[] = report?.complexityAnalysis ?? [];
+			return withoutPlaceholders(entries).find(
+				(a) => String(a.taskId) === String(task.id)
 			);
 		} catch (error) {
 			warn(

@@ -28,7 +28,10 @@ import {
 	formatTasksContext
 } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
-import { complexityReportPath } from '../../reports/managers/complexity-report-manager.js';
+import {
+	complexityReportPath,
+	withoutPlaceholders
+} from '../../reports/managers/complexity-report-manager.js';
 import type { ComplexityReportMetadata } from '../../reports/types.js';
 import { normalizeTaskStatus } from '../utils/legacy-status.js';
 
@@ -253,13 +256,21 @@ export function readComplexityReport(
 			ERROR_CODES.PARSE_ERROR
 		);
 	}
-	// A placeholder is a default for a task the AI left out, not a score
 	if (Array.isArray(report?.complexityAnalysis)) {
-		report.complexityAnalysis = report.complexityAnalysis.filter(
-			(entry) => !entry?.placeholder
-		);
+		report.complexityAnalysis = withoutPlaceholders(report.complexityAnalysis);
 	}
 	return { report, reportPath };
+}
+
+/** How many of the AI's scores are high (8+), medium (5-7) and low; placeholders aren't scores */
+export function countComplexity(entries: readonly ComplexityAnalysisItem[]) {
+	const scores = withoutPlaceholders(entries).map((e) => e.complexityScore);
+	return {
+		taskCount: scores.length,
+		highComplexityTasks: scores.filter((s) => s >= 8).length,
+		mediumComplexityTasks: scores.filter((s) => s >= 5 && s < 8).length,
+		lowComplexityTasks: scores.filter((s) => s < 5).length
+	};
 }
 
 export class AnalyzeComplexityService {

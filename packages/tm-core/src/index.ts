@@ -412,6 +412,8 @@ export type {
 	ComplexityAnalysisItem,
 	ComplexityReportFile
 } from './modules/tasks/services/analyze-complexity.service.js';
+export { countComplexity } from './modules/tasks/services/analyze-complexity.service.js';
+export { withoutPlaceholders } from './modules/reports/managers/complexity-report-manager.js';
 
 // ========== Update subtask ==========
 

@@ -14,7 +14,7 @@
  * task's whole expansion prompt in a 22-column cell.
  */
 
-import { sanitizeForTerminal } from '@tm/core';
+import { sanitizeForTerminal, withoutPlaceholders } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -157,7 +157,7 @@ export function formatComplexityRun(
 		return theme.muted('No pending tasks to analyze');
 	}
 	// A placeholder isn't a score; the "Missing analysis" warning names its task
-	const analyses = summary.analyses.filter((item) => !item.placeholder);
+	const analyses = withoutPlaceholders(summary.analyses);
 
 	const details = [
 		summary.usedResearch ? 'with web research' : null,
