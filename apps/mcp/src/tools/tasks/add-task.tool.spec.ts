@@ -110,6 +110,29 @@ describe('add_task', () => {
 		});
 	});
 
+	it("lists tm-core's warnings in the reply, and leaves them out when there are none (#563)", async () => {
+		const tool = register();
+		const quiet = reply(
+			await tool.execute({ prompt: 'p', projectRoot: project }, ctx)
+		);
+		tasks.add.mockImplementationOnce(async (_request, { onWarning }) => {
+			onWarning(
+				"Task 9 doesn't exist; adding the task without that dependency"
+			);
+			return { task: { id: '5' }, tag: 'master', dependencies: [] };
+		});
+
+		const result = await tool.execute(
+			{ prompt: 'p', dependencies: '1,9', projectRoot: project },
+			ctx
+		);
+
+		expect(quiet.data).not.toHaveProperty('warnings');
+		expect(reply(result).data.warnings).toEqual([
+			"Task 9 doesn't exist; adding the task without that dependency"
+		]);
+	});
+
 	it('uses the manual fields over a prompt, without research', async () => {
 		await register().execute(
 			{

@@ -9,6 +9,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
+import { gatherTaskContext } from '../../../src/modules/ai/task-context.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 const task = (id: string | number, title: string, extra = {}) => ({
@@ -175,6 +176,18 @@ describe('tasks.add', () => {
 			expect(dependencyIds).toEqual(['1']);
 			expect(relatedTaskIds).toContain('2');
 			expect(relatedTaskIds).not.toContain('1');
+		});
+
+		it('sends a subtask given as a dependency, with its parent chain (#563)', async () => {
+			await tmCore.tasks.add({ prompt: 'p', dependencies: ['3.2'] });
+
+			const { prompt } = generateObject.mock.calls[0][0];
+			expect(prompt).toContain('**Subtask 3.2: Sub**');
+			// The newest tasks fill the prompt too, so check the chain on its own
+			const { items } = await gatherTaskContext(readFile().master.tasks, {
+				dependencyIds: ['3.2']
+			});
+			expect(items.map((item) => item.id)).toEqual(['3.2', '3', '1']);
 		});
 	});
 
