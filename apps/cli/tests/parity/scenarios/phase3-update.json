@@ -1,5 +1,61 @@
 {
 	"fixture": "../fixtures/tasks-tagged.json",
+	"replies": [
+		{},
+		{},
+		{},
+		{},
+		{
+			"object": {
+				"tasks": [
+					{
+						"id": 2,
+						"title": "Write the parser",
+						"description": "Parse the input files into tasks",
+						"status": "pending",
+						"dependencies": [1],
+						"priority": "high",
+						"details": "Use TypeScript",
+						"testStrategy": null,
+						"subtasks": null
+					},
+					{
+						"id": 3,
+						"title": "Add a plugin system",
+						"description": "Let users add commands",
+						"status": "cancelled",
+						"dependencies": [],
+						"priority": "low",
+						"details": "Use TypeScript",
+						"testStrategy": null,
+						"subtasks": null
+					},
+					{
+						"id": 4,
+						"title": "Write the report",
+						"description": "Print a summary of the tasks",
+						"status": "pending",
+						"dependencies": [2, 3],
+						"priority": "medium",
+						"details": "Use TypeScript",
+						"testStrategy": null,
+						"subtasks": null
+					},
+					{
+						"id": 5,
+						"title": "Publish the first version",
+						"description": "Tag and publish",
+						"status": "pending",
+						"dependencies": [4],
+						"priority": "critical",
+						"details": "Use TypeScript",
+						"testStrategy": null,
+						"subtasks": null
+					}
+				]
+			}
+		}
+	],
 	"steps": [
 		["update-task", "--id=2", "--prompt", "Use SQLite"],
 		["update-task", "4", "Note", "the", "indexes", "--append"],
