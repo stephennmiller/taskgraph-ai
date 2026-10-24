@@ -132,7 +132,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 		}
 		return path.join(projectRoot || '.', basePath);
 	}),
-	traverseDependencies: vi.fn((sourceTasks, allTasks, options = {}) => []),
 	CONFIG: {
 		defaultSubtasks: 3
 	}

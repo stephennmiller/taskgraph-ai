@@ -236,7 +236,7 @@
             "title": "add-subtask and move",
             "description": "Move add-subtask and move-task.js into @tm/core.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               "14.2"
             ],

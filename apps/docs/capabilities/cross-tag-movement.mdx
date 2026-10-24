@@ -78,61 +78,37 @@ Note: Force moves are no longer supported. Instead, use one of these options:
 
 ## Error Handling
 
-TaskGraph provides enhanced error messages with specific resolution suggestions:
+A refused move changes nothing and says how to go on.
 
 ### Cross-Tag Dependency Conflicts
 
-When you encounter dependency conflicts, you'll see:
+When a task you move depends on tasks that stay behind:
 
 ```text
-❌ Cannot move tasks from "backlog" to "in-progress"
-
-Cross-tag dependency conflicts detected:
-  • Task 5 depends on 2 (in backlog)
-  • Task 6 depends on 3 (in done)
-
-Resolution options:
-  1. Move with dependencies: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --with-dependencies
-  2. Break dependencies: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --ignore-dependencies
-  3. Validate and fix dependencies: taskgraph validate-dependencies && taskgraph fix-dependencies
-  4. Move dependencies first: taskgraph move --from=2,3 --from-tag=backlog --to-tag=in-progress
-  5. After deciding, re-run the move with either --with-dependencies or --ignore-dependencies
+✗ Can't move tasks from "backlog" to "in-progress": 2 dependencies stay behind
+  Task 5 depends on 2 (in backlog)
+  Task 6 depends on 3 (in backlog)
+  Move them too: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --with-dependencies, or drop them with --ignore-dependencies
 ```
+
+After `--ignore-dependencies`, the result line is followed by
+`Next: taskgraph validate-dependencies, then taskgraph fix-dependencies`.
 
 ### Subtask Movement Restrictions
 
 Subtasks cannot be moved directly between tags:
 
 ```text
-❌ Cannot move subtask 5.2 directly between tags
-
-Subtask movement restriction:
-  • Subtasks cannot be moved directly between tags
-  • They must be promoted to full tasks first
-
-Resolution options:
-  1. Promote subtask to full task: taskgraph remove-subtask --id=5.2 --convert
-  2. Then move the promoted task: taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress
-  3. Or move the parent task with all subtasks: taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress --with-dependencies
+✗ Subtask 5.2 can't move to another tag on its own
+  Make it a task first: taskgraph remove-subtask --id=5.2 --convert
 ```
 
-### Invalid Tag Combinations
+Then move the new task, or move the parent task, which takes its subtasks along.
 
-When source and target tags are the same:
+### Same Source and Target Tag
 
-```text
-❌ Invalid tag combination
-
-Error details:
-  • Source tag: "backlog"
-  • Target tag: "backlog"
-  • Reason: Source and target tags are identical
-
-Resolution options:
-  1. Use different tags for cross-tag moves
-  2. Use within-tag move: taskgraph move --from=<id> --to=<id> --tag=backlog
-  3. Check available tags: taskgraph tags
-```
+When `--from-tag` and `--to-tag` name the same tag, `move` moves within that
+tag and needs `--to`.
 
 ## Best Practices
 

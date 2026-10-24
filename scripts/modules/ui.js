@@ -35,10 +35,3 @@ export {
 	displayAiUsageSummary,
 	displayAddedSubtasks
 } from './ui/context-analysis.js';
-export {
-	displayCrossTagDependencyError,
-	formatTaskIdForDisplay,
-	displaySubtaskMoveError,
-	displayInvalidTagCombinationError,
-	displayDependencyValidationHints
-} from './ui/errors.js';

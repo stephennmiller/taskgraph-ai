@@ -18,9 +18,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', async () => {
 const { default: clearSubtasks } = await import(
 	'../../../../../scripts/modules/task-manager/clear-subtasks.js'
 );
-const { default: addSubtask } = await import(
-	'../../../../../scripts/modules/task-manager/add-subtask.js'
-);
 const { default: removeSubtask } = await import(
 	'../../../../../scripts/modules/task-manager/remove-subtask.js'
 );
@@ -80,20 +77,6 @@ describe('writing to a tag that does not exist', () => {
 
 	test('clear-subtasks', async () => {
 		await attempt(() => clearSubtasks(tasksPath, '1', context()));
-		expect(tags()).toEqual(['master']);
-	});
-
-	test('add-subtask', async () => {
-		await attempt(() =>
-			addSubtask(
-				tasksPath,
-				1,
-				null,
-				{ title: 'New', description: 'd' },
-				false,
-				context()
-			)
-		);
 		expect(tags()).toEqual(['master']);
 	});
 

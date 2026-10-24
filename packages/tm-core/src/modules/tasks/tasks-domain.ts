@@ -70,6 +70,17 @@ import type {
 	WatchOptions,
 	WatchSubscription
 } from '../../common/interfaces/storage.interface.js';
+import {
+	type AddSubtaskInput,
+	addSubtaskToTag,
+	moveTasksToTag,
+	moveTasksWithinTag
+} from './services/task-restructure.js';
+import type {
+	CrossTagMoveOptions,
+	CrossTagMoveResult,
+	WithinTagMoveResult
+} from './utils/task-moves.js';
 
 /** What `archive` moved, or would move with dryRun */
 export interface ArchiveResult {
@@ -544,6 +555,55 @@ export class TasksDomain {
 			addedAt,
 			text: note
 		};
+	}
+
+	// ========== Restructuring ==========
+
+	/**
+	 * Add a subtask to `parentId`, or with `fromTaskId` turn that task into
+	 * one (what depended on it then depends on the subtask), in one locked
+	 * write. Throws when the parent or task is missing, the task is already
+	 * a subtask, or the parent depends on it.
+	 */
+	async addSubtask(
+		parentId: string,
+		input: AddSubtaskInput,
+		options: { tag?: string } = {}
+	): Promise<{ subtask: Subtask; tag: string }> {
+		const tag = options.tag || this.configManager.getActiveTag();
+		const storage = this.taskService.getStorage();
+		const subtask = await addSubtaskToTag(storage, tag, parentId, input);
+		return { subtask, tag };
+	}
+
+	/**
+	 * Move tasks or subtasks to new IDs within a tag, in one locked write:
+	 * `from` and `to` are one ID each ("5", "5.2") or as many
+	 * comma-separated. Nothing moves if any pair fails.
+	 */
+	async move(
+		from: string,
+		to: string,
+		options: { tag?: string } = {}
+	): Promise<WithinTagMoveResult & { tag: string }> {
+		const tag = options.tag || this.configManager.getActiveTag();
+		const storage = this.taskService.getStorage();
+		return { ...(await moveTasksWithinTag(storage, tag, from, to)), tag };
+	}
+
+	/**
+	 * Move tasks, with their subtasks, to another tag (created if missing),
+	 * keeping their IDs, in one locked write. Dependencies left in the source
+	 * tag block the move unless `withDependencies` or `ignoreDependencies`.
+	 */
+	async moveToTag(
+		taskIds: string[],
+		fromTag: string,
+		toTag: string,
+		options: CrossTagMoveOptions = {}
+	): Promise<CrossTagMoveResult> {
+		const storage = this.taskService.getStorage();
+		return moveTasksToTag(storage, taskIds, fromTag, toTag, options);
 	}
 
 	/**

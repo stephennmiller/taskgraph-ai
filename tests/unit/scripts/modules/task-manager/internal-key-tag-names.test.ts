@@ -9,7 +9,6 @@ import '../../../../../scripts/modules/ui.js';
 import fs from 'fs';
 import path from 'path';
 import addTask from '../../../../../scripts/modules/task-manager/add-task.js';
-import { moveTasksBetweenTags } from '../../../../../scripts/modules/task-manager/move-task.js';
 import { validateFileOperations } from '../../../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 
 const TEMP_DIR = path.join(process.cwd(), '.tmp_internal_key_tag_names');
@@ -45,16 +44,6 @@ describe.each(['tag', '_rawTaggedData'])('a tag named %s', (name) => {
 
 	describe('as a new name', () => {
 		beforeEach(() => seed({ feature: tagWithOneTask('Feature task') }));
-
-		it('is refused by a move into a new tag', async () => {
-			const before = readFile();
-
-			await expect(
-				moveTasksBetweenTags(TASKS_PATH, ['1'], 'master', name, {}, CONTEXT)
-			).rejects.toThrow(`"${name}" is a reserved tag name`);
-
-			expect(readFile()).toEqual(before);
-		});
 
 		it('is refused by parse-prd as its target tag', () => {
 			expect(() =>

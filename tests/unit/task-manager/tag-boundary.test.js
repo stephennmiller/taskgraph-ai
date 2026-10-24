@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { moveTasksBetweenTags } from '../../../scripts/modules/task-manager/move-task.js';
 import { validateFileOperations } from '../../../scripts/modules/task-manager/parse-prd/parse-prd-helpers.js';
 
 // Temporary workspace for each test run
@@ -158,12 +157,9 @@ describe('Tag names shared with Object.prototype', () => {
 
 	const ctx = { projectRoot: TEMP_DIR };
 
-	it('refuses to create a __proto__ tag by moving or parsing a PRD into it', async () => {
+	it('refuses to create a __proto__ tag by parsing a PRD into it', () => {
 		const before = fs.readFileSync(TASKS_PATH, 'utf8');
 
-		await expect(
-			moveTasksBetweenTags(TASKS_PATH, ['1'], 'master', '__proto__', {}, ctx)
-		).rejects.toThrow('"__proto__" is a reserved tag name');
 		expect(() =>
 			validateFileOperations({
 				existingTasks: [],

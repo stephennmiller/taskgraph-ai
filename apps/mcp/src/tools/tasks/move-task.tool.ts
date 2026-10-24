@@ -1,0 +1,140 @@
+/**
+ * @fileoverview move_task MCP tool
+ * Move tasks or subtasks to new IDs within a tag, or tasks to another tag
+ */
+
+import type { FastMCP } from 'fastmcp';
+import { z } from 'zod';
+import type { ToolContext } from '../../shared/types.js';
+import {
+	createErrorResponse,
+	handleApiResult,
+	withToolContext
+} from '../../shared/utils.js';
+
+const MoveTaskSchema = z.object({
+	from: z
+		.string()
+		.describe(
+			'ID of the task/subtask to move (e.g., "5" or "5.2"). Can be comma-separated to move multiple tasks (e.g., "5,6,7")'
+		),
+	to: z
+		.string()
+		.optional()
+		.describe(
+			'ID of the destination (e.g., "7" or "7.3"). Required for within-tag moves. For cross-tag moves, if omitted, task will be moved to the target tag maintaining its ID'
+		),
+	file: z.string().optional().describe('Custom path to tasks.json file'),
+	projectRoot: z
+		.string()
+		.describe('Root directory of the project (typically derived from session)'),
+	tag: z.string().optional().describe('Tag context to operate on'),
+	fromTag: z.string().optional().describe('Source tag for cross-tag moves'),
+	toTag: z.string().optional().describe('Target tag for cross-tag moves'),
+	withDependencies: z
+		.boolean()
+		.optional()
+		.describe('Move dependent tasks along with main task'),
+	ignoreDependencies: z
+		.boolean()
+		.optional()
+		.describe('Break cross-tag dependencies during move')
+});
+
+type MoveTaskArgs = z.infer<typeof MoveTaskSchema>;
+
+/**
+ * Register the move_task tool with the MCP server
+ */
+export function registerMoveTaskTool(server: FastMCP) {
+	server.addTool({
+		name: 'move_task',
+		description: 'Move a task or subtask to a new position',
+		parameters: MoveTaskSchema,
+		annotations: {
+			title: 'Move Task',
+			destructiveHint: true
+		},
+		execute: withToolContext(
+			async (args: MoveTaskArgs, { log, tmCore }: ToolContext) => {
+				const { from, to, fromTag, toTag, projectRoot } = args;
+
+				if (fromTag && toTag && fromTag !== toTag) {
+					if (to) {
+						log.warn(
+							'The "to" parameter is not used for cross-tag moves and will be ignored. Tasks retain their original IDs in the target tag.'
+						);
+					}
+					const moveOptions = {
+						withDependencies: args.withDependencies || false,
+						ignoreDependencies: args.ignoreDependencies || false
+					};
+					try {
+						const sourceIds = from.split(',').map((id) => id.trim());
+						const result = await tmCore.tasks.moveToTag(
+							sourceIds,
+							fromTag,
+							toTag,
+							moveOptions
+						);
+						return handleApiResult({
+							result: {
+								success: true,
+								data: {
+									...result,
+									message: `Successfully moved ${sourceIds.length} task(s) from "${fromTag}" to "${toTag}"`,
+									moveOptions,
+									sourceTag: fromTag,
+									targetTag: toTag
+								}
+							},
+							log,
+							projectRoot
+						});
+					} catch (error: any) {
+						return handleApiResult({
+							result: { success: false, error: { message: error.message } },
+							log,
+							errorPrefix: 'Error moving tasks between tags',
+							projectRoot
+						});
+					}
+				}
+
+				if (!to) {
+					return createErrorResponse(
+						'Destination ID is required for within-tag moves'
+					);
+				}
+				const tag = args.tag || tmCore.config.getActiveTag();
+				try {
+					const { moves, skipped } = await tmCore.tasks.move(from, to, { tag });
+					const message = `Successfully moved task/subtask ${from} to ${to}`;
+					const data =
+						// One ID gets the one move; a list gets all of them
+						from.includes(',')
+							? {
+									message,
+									moves,
+									...(skipped.length > 0 ? { skipped } : {})
+								}
+							: { ...moves[0], message };
+					return handleApiResult({
+						result: { success: true, data },
+						log,
+						projectRoot,
+						tag
+					});
+				} catch (error: any) {
+					return handleApiResult({
+						result: { success: false, error: { message: error.message } },
+						log,
+						errorPrefix: 'Error moving task',
+						projectRoot,
+						tag
+					});
+				}
+			}
+		)
+	});
+}

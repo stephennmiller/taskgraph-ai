@@ -8,6 +8,7 @@ import {
 	registerAddDependencyTool,
 	registerAddNoteTool,
 	registerAddTagTool,
+	registerAddSubtaskTool,
 	registerArchiveTasksTool,
 	registerCopyTagTool,
 	registerDeleteTagTool,
@@ -19,13 +20,13 @@ import {
 	registerGithubPushTool,
 	registerGithubStatusTool,
 	registerListTagsTool,
+	registerMoveTaskTool,
 	registerRemoveDependencyTool,
 	registerRenameTagTool,
 	registerSetTaskStatusTool,
 	registerUseTagTool,
 	registerValidateDependenciesTool
 } from '@tm/mcp';
-import { registerAddSubtaskTool } from './add-subtask.js';
 import { registerAddTaskTool } from './add-task.js';
 import { registerAnalyzeProjectComplexityTool } from './analyze.js';
 import { registerClearSubtasksTool } from './clear-subtasks.js';
@@ -34,7 +35,6 @@ import { registerExpandAllTool } from './expand-all.js';
 import { registerExpandTaskTool } from './expand-task.js';
 import { registerInitializeProjectTool } from './initialize-project.js';
 import { registerModelsTool } from './models.js';
-import { registerMoveTaskTool } from './move-task.js';
 import { registerNextTaskTool } from './next-task.js';
 import { registerParsePRDTool } from './parse-prd.js';
 import { registerRemoveSubtaskTool } from './remove-subtask.js';

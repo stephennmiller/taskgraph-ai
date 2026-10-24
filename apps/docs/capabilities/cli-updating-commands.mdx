@@ -144,7 +144,7 @@ taskgraph move --from=5.2 --to=5.4
 # Move a task to a new ID position (creates placeholder if it doesn't exist)
 taskgraph move --from=5 --to=25
 
-# Move multiple tasks at once (must have the same number of IDs)
+# Move multiple tasks at once (same number of IDs; if one pair fails, nothing moves)
 taskgraph move --from=10,11,12 --to=16,17,18
 
 # Move a task to another tag

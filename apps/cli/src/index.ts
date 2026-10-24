@@ -13,6 +13,8 @@ export { ArchiveCommand } from './commands/archive.command.js';
 export { PrimeCommand } from './commands/prime.command.js';
 export { NoteCommand } from './commands/note.command.js';
 export { SetStatusCommand } from './commands/set-status.command.js';
+export { AddSubtaskCommand } from './commands/add-subtask.command.js';
+export { MoveCommand } from './commands/move.command.js';
 export { TagsCommand } from './commands/tags.command.js';
 export { LoopCommand } from './commands/loop.command.js';
 export { CompletionCommand } from './commands/completion.command.js';

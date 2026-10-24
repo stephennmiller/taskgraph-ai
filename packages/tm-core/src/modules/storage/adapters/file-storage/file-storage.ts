@@ -11,6 +11,7 @@ import type {
 	ArchiveTasksOptions,
 	IStorage,
 	LoadTasksOptions,
+	MutateTags,
 	StorageStats,
 	TaskFieldUpdates,
 	UpdateStatusOptions,
@@ -43,7 +44,11 @@ import {
 import { FileOperations } from './file-operations.js';
 import { FormatHandler } from './format-handler.js';
 import { PathResolver } from './path-resolver.js';
-import { applyTagUpdate, buildTagMetadata } from './tag-update.js';
+import {
+	applyTagUpdate,
+	buildTagMetadata,
+	mutateTagsIn
+} from './tag-update.js';
 import { warnIfUnsupportedSchema } from './schema-version.js';
 import { TagOperations } from './tag-operations.js';
 import {
@@ -291,6 +296,21 @@ export class FileStorage implements IStorage {
 			{ afterWrite: () => afterWrite?.() ?? Promise.resolve() }
 		);
 
+		return result;
+	}
+
+	/** See IStorage.mutateTags */
+	async mutateTags<R>(mutate: MutateTags<R>): Promise<R> {
+		let result!: R;
+		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
+		await this.fileOps.modifyJson(
+			this.pathResolver.getTasksPath(),
+			async (data) => {
+				const outcome = await mutateTagsIn(this.formatHandler, data, mutate);
+				result = outcome.result;
+				return outcome.data;
+			}
+		);
 		return result;
 	}
 

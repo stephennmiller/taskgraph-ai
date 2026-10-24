@@ -41,8 +41,7 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	slugifyTagForFilePath: createSlugifyTagForFilePathMock(),
 	markMigrationForNotice: vi.fn(),
 	performCompleteTagMigration: vi.fn(),
-	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || []),
-	traverseDependencies: vi.fn((tasks, taskId, visited) => [])
+	getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || [])
 }));
 
 vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
