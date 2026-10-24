@@ -154,7 +154,7 @@ export function registerAddTaskTool(server: FastMCP) {
 					const hint = (err as { hint?: unknown }).hint;
 					const message =
 						typeof hint === 'string' ? `${err.message}. ${hint}` : err.message;
-					log.error(`Error in addTaskDirect: ${message}`);
+					log.error(`add_task failed: ${message}`);
 					return handleApiResult({
 						result: { success: false, error: { message } },
 						log,

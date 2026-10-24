@@ -120,6 +120,12 @@ describe('add-task', () => {
 		expect(add).not.toHaveBeenCalled();
 	});
 
+	it('reads a relative --file from the project root, not the current folder', async () => {
+		await run('--prompt=p', '--file=.taskgraph/tasks/tasks.json');
+
+		expect(add).toHaveBeenCalled();
+	});
+
 	it('prints a failure once with the hint for it and exits 1', async () => {
 		add.mockRejectedValue(new Error('Reached maximum number of turns (6)'));
 

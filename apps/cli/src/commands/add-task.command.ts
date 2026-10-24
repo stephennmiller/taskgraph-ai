@@ -117,7 +117,7 @@ export class AddTaskCommand extends Command {
 		// tm-core writes the project's tasks.json; any other file is refused
 		if (
 			options.file &&
-			path.resolve(options.file) !==
+			path.resolve(projectRoot, options.file) !==
 				path.join(projectRoot, TASKGRAPH_TASKS_FILE)
 		) {
 			printError(
