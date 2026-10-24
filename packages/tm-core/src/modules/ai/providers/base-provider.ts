@@ -165,20 +165,21 @@ const loadAi = () =>
 
 /**
  * A call that never answers would hang the command forever. Ten minutes is
- * far past a normal answer, so only a stuck call hits it. Streams are left
- * alone: they run for as long as the model writes, and parse-prd already
- * times its own stream.
+ * far past a normal answer, so only a stuck call hits it. Streams get no
+ * total limit, since they run for as long as the model writes; parse-prd
+ * uses this as the longest wait between two parts of its stream (#587).
  */
 const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
 
-function aiCallSignal(): AbortSignal {
+/** The AI call limit: TASKGRAPH_AI_TIMEOUT_MS, else ten minutes */
+export function aiCallTimeoutMs(): number {
 	const configured = Number(process.env.TASKGRAPH_AI_TIMEOUT_MS);
-	return AbortSignal.timeout(
-		Number.isFinite(configured) && configured > 0
-			? configured
-			: DEFAULT_AI_CALL_TIMEOUT_MS
-	);
+	return Number.isFinite(configured) && configured > 0
+		? configured
+		: DEFAULT_AI_CALL_TIMEOUT_MS;
 }
+
+const aiCallSignal = () => AbortSignal.timeout(aiCallTimeoutMs());
 
 function normalizeUsage(reported: ReportedUsage | undefined) {
 	const inputTokens = reported?.inputTokens ?? reported?.promptTokens ?? 0;
@@ -473,6 +474,8 @@ export abstract class BaseAIProvider {
 
 			// Same options as generateObject, so both paths ask the model the same way
 			const result = await ai.streamObject({
+				// The caller's, if any; a stream has no total limit (see above)
+				abortSignal: params.abortSignal as AbortSignal | undefined,
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,

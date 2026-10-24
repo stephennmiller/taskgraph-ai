@@ -10,7 +10,9 @@ import type {
 	AiServiceParams,
 	AiServiceResult
 } from '../../ai/ai-service.js';
+import { isAbort } from '../../ai/ai-errors.js';
 import type { AiConfig, AiRole } from '../../ai/config-ai-host.js';
+import { aiCallTimeoutMs } from '../../ai/providers/base-provider.js';
 import { ParsePrdResponseSchema } from '../../ai/schemas/parse-prd.js';
 import { type GeneratedPrdTask, recoverTaskList } from '../utils/prd-tasks.js';
 
@@ -67,6 +69,11 @@ export async function generatePrdTasks(
 			// at the top, so it loads only for AI commands (#248)
 			const { APICallError } = await import('ai');
 			const failure = error instanceof Error ? error : new Error(String(error));
+			// The stream stalled: one request would wait out a fresh limit (#587)
+			if (isAbort(error)) {
+				hooks.onStreamFailed?.(failure, false);
+				throw error;
+			}
 			// AiService and the provider wrap a start error, so look through
 			// `cause`; the depth limit also stops a cycle (#588)
 			let refused = false;
@@ -102,37 +109,73 @@ export async function generatePrdTasks(
 async function streamTasks(
 	context: GenerateContext
 ): Promise<GeneratedPrdTasks> {
-	const response = await context.ai.streamObject(context.params);
-	const stream = response?.mainResult;
-	// Read the getter once: each read pipes the underlying stream, so a second
-	// read fails with "ReadableStream is locked"
-	const partials = stream?.partialObjectStream;
-	if (!partials) {
-		throw new Error('AI service did not return a stream');
-	}
-
-	for await (const partial of partials) {
-		context.hooks.onPartial?.(partial);
-	}
-
-	let generated: { tasks: GeneratedPrdTask[] } | null;
-	try {
-		generated = await stream.object;
-	} catch (error) {
-		// A reply with the JSON repeated fails to parse; keep the first copy
-		generated = recoverTaskList((error as { text?: unknown })?.text);
-		if (!generated) throw error;
-		context.debug(
-			`The reply did not parse (${(error as Error)?.message}); kept its first complete task list`
+	// A long PRD streams for minutes, so the limit is on the gap between parts
+	const idleMs = aiCallTimeoutMs();
+	const idle = new AbortController();
+	const stalled = new Promise<never>((_, reject) =>
+		idle.signal.addEventListener('abort', () => reject(idle.signal.reason))
+	);
+	stalled.catch(() => {});
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const resetIdle = () => {
+		clearTimeout(timer);
+		timer = setTimeout(
+			() =>
+				idle.abort(
+					new DOMException(
+						`The AI stopped sending tasks: nothing arrived for ${Math.round(idleMs / 1000)} seconds. Try again, or set TASKGRAPH_AI_TIMEOUT_MS (milliseconds) to wait longer.`,
+						'TimeoutError'
+					)
+				),
+			idleMs
 		);
-	}
-	if (!generated || !Array.isArray(generated.tasks)) {
-		throw new Error('AI service returned unexpected data structure.');
-	}
-	context.hooks.onGenerated?.(generated.tasks, true);
+	};
+	resetIdle();
+	try {
+		const response = await Promise.race([
+			context.ai.streamObject({ ...context.params, abortSignal: idle.signal }),
+			stalled
+		]);
+		const stream = response?.mainResult;
+		// Read the getter once: each read pipes the underlying stream, so a second
+		// read fails with "ReadableStream is locked"
+		const partials = stream?.partialObjectStream;
+		if (!partials) {
+			throw new Error('AI service did not return a stream');
+		}
 
-	response.telemetryData = await streamTelemetry(stream, response, context);
-	return { tasks: generated.tasks, response };
+		// Race each part against the timer: a provider may ignore the signal
+		const iterator = partials[Symbol.asyncIterator]();
+		for (;;) {
+			const next = await Promise.race([iterator.next(), stalled]);
+			if (next.done) break;
+			resetIdle();
+			context.hooks.onPartial?.(next.value);
+		}
+		// The SDK may end the stream quietly on abort rather than throw
+		if (idle.signal.aborted) throw idle.signal.reason;
+
+		let generated: { tasks: GeneratedPrdTask[] } | null;
+		try {
+			generated = await stream.object;
+		} catch (error) {
+			// A reply with the JSON repeated fails to parse; keep the first copy
+			generated = recoverTaskList((error as { text?: unknown })?.text);
+			if (!generated) throw error;
+			context.debug(
+				`The reply did not parse (${(error as Error)?.message}); kept its first complete task list`
+			);
+		}
+		if (!generated || !Array.isArray(generated.tasks)) {
+			throw new Error('AI service returned unexpected data structure.');
+		}
+		context.hooks.onGenerated?.(generated.tasks, true);
+
+		response.telemetryData = await streamTelemetry(stream, response, context);
+		return { tasks: generated.tasks, response };
+	} finally {
+		clearTimeout(timer);
+	}
 }
 
 /**
