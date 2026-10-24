@@ -246,6 +246,47 @@ describe('FileOperations', () => {
 		});
 	});
 
+	describe('symlinks (#616)', () => {
+		let outside: string;
+
+		beforeEach(() => {
+			outside = path.join(tempDir, 'outside.txt');
+			fsSync.writeFileSync(outside, 'keep me');
+		});
+
+		it('leaves a symlink planted at the old fixed temp name alone', async () => {
+			// steno's temp name was `.<file>.tmp`
+			const planted = path.join(tempDir, '.test.json.tmp');
+			fsSync.symlinkSync(outside, planted);
+
+			await fileOps.writeJson(testFilePath, { a: 1 });
+			await fileOps.modifyJson(testFilePath, () => ({ a: 2 }));
+
+			expect(fsSync.readFileSync(outside, 'utf-8')).toBe('keep me');
+			expect(fsSync.lstatSync(planted).isSymbolicLink()).toBe(true);
+			expect(JSON.parse(fsSync.readFileSync(testFilePath, 'utf-8'))).toEqual({
+				a: 2
+			});
+		});
+
+		it('refuses to write when the file itself is a symlink', async () => {
+			fsSync.symlinkSync(outside, testFilePath);
+
+			await expect(fileOps.writeJson(testFilePath, { a: 1 })).rejects.toThrow(
+				/symlink/
+			);
+			await expect(
+				fileOps.modifyJson(testFilePath, () => ({ a: 1 }))
+			).rejects.toThrow(/symlink/);
+
+			expect(fsSync.readFileSync(outside, 'utf-8')).toBe('keep me');
+			expect(fsSync.lstatSync(testFilePath).isSymbolicLink()).toBe(true);
+			expect(
+				fsSync.readdirSync(tempDir).filter((f) => f.includes('.tmp'))
+			).toHaveLength(0);
+		});
+	});
+
 	describe('lock file left by the legacy writer', () => {
 		// The legacy scripts take `<file>.lock` as a plain file; tm-core's lock is a
 		// directory at the same path. A crashed legacy write leaves the file behind.
