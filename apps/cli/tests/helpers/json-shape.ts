@@ -11,7 +11,7 @@
  *    (such as counts by status): it becomes `{ "<key>": shape }`
  */
 
-export type Shape = string | Shape[] | { [key: string]: Shape };
+type Shape = string | Shape[] | { [key: string]: Shape };
 
 const isObject = (shape: Shape): shape is { [key: string]: Shape } =>
 	typeof shape === 'object' && !Array.isArray(shape);

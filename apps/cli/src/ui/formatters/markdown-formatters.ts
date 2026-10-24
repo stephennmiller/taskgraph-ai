@@ -14,12 +14,13 @@ import { stripVTControlCharacters } from 'node:util';
 import { stripTerminalControls } from '@tm/core';
 import chalk from 'chalk';
 import type { MarkedExtension } from 'marked';
+import type TurndownService from 'turndown';
 import { wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
-// marked and marked-terminal (with its syntax highlighter) are loaded on the
-// first render, not at startup, where they cost every command about 0.2 s
-// (#248). require() keeps formatMarkdown synchronous.
+// marked and marked-terminal (with its syntax highlighter), and turndown, are
+// loaded on first use, not at startup, where they cost every command about
+// 0.2 s (#248). require() keeps formatMarkdown and toMarkdown synchronous.
 const require = createRequire(import.meta.url);
 
 /**
@@ -116,6 +117,38 @@ function formatPlainProse(
 				.join('\n');
 		})
 		.join('\n\n');
+}
+
+let turndownService: TurndownService | undefined;
+
+/** HTML to markdown converter, created on first use */
+function getTurndownService(): TurndownService {
+	turndownService ??= new (require('turndown') as typeof TurndownService)({
+		headingStyle: 'atx',
+		codeBlockStyle: 'fenced',
+		bulletListMarker: '-'
+	});
+	return turndownService;
+}
+
+/**
+ * Turn stored task text into markdown: undo escaped newlines, tabs and
+ * quotes, and convert HTML (tiptap) to markdown.
+ */
+export function toMarkdown(content: string): string {
+	if (!content) return '';
+
+	// Clean up escape characters first - order matters: handle escaped backslashes first
+	const cleaned = content
+		.replace(/\\\\/g, '\\')
+		.replace(/\\n/g, '\n')
+		.replace(/\\t/g, '\t')
+		.replace(/\\"/g, '"');
+
+	// Check if content has HTML tags - if so, convert to markdown first
+	return /<[^>]+>/.test(cleaned)
+		? getTurndownService().turndown(cleaned)
+		: cleaned;
 }
 
 /**

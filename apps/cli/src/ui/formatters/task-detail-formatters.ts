@@ -42,7 +42,6 @@ import {
 	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
-import { toMarkdown } from '../../utils/content-renderer.js';
 import {
 	getSuggestedActions,
 	type SuggestedAction
@@ -51,7 +50,12 @@ import { terminalWidth, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 import { formatChecklist } from './checklist-formatters.js';
 import { complexityLevel } from './complexity-formatters.js';
-import { fit, formatMarkdown, joinFacts } from './markdown-formatters.js';
+import {
+	fit,
+	formatMarkdown,
+	joinFacts,
+	toMarkdown
+} from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
 import { getStatusWithColor } from './status-formatters.js';
 

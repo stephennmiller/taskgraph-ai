@@ -33,7 +33,7 @@ const DEFAULT_PRIORITY: TaskPriority = 'medium';
  * Task-like object that can optionally have blocks field and tag name
  * Used for table display - accepts both enriched TaskWithBlocks and regular Task/Subtask
  */
-export type TaskTableItem = (Task | Subtask) & {
+type TaskTableItem = (Task | Subtask) & {
 	blocks?: string[];
 	tagName?: string;
 };
