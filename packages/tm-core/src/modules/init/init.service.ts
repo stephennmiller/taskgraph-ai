@@ -81,6 +81,8 @@ export interface InitProjectOptions {
 	 * when a later step throws
 	 */
 	onProblem?: (problem: InitProblem) => void;
+	/** The CLI script the merge driver runs when `taskgraph` isn't on PATH (default: this process's) */
+	mergeDriverScript?: string;
 }
 
 /** A step that failed without stopping init, to show as it ended */
@@ -242,7 +244,7 @@ export function initializeProject(
 	// don't conflict (#210). Pointless when tasks.json isn't committed.
 	if (storeTasksInGit && isInsideGitWorkTree(targetDir)) {
 		try {
-			setUpMergeDriver(targetDir);
+			setUpMergeDriver(targetDir, options.mergeDriverScript);
 		} catch (error) {
 			report(
 				'warn',

@@ -3,6 +3,7 @@
  * project (an isolated HOME, no git init)
  */
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -95,6 +96,52 @@ describe('initialize_project', () => {
 			`Error: Cannot initialize project: Invalid target directory '${home}'`
 		);
 		expect(fs.readdirSync(home)).toEqual([]);
+	});
+
+	it('lists the steps that failed and says so', async () => {
+		fs.mkdirSync(path.join(projectRoot, '.gitignore'));
+
+		const response = await run({ projectRoot });
+
+		const reply = JSON.parse(response.content[0].text);
+		expect(reply.data.message).toBe(
+			'Project initialized, but some steps failed: see warnings.'
+		);
+		expect(reply.data.warnings).toContainEqual(
+			expect.stringMatching(/^Failed to create \.gitignore/)
+		);
+		expect(log.error).toHaveBeenCalledWith(
+			expect.stringMatching(/^Failed to create \.gitignore/)
+		);
+	});
+
+	it('points the merge driver at the CLI beside the server, not the server', async () => {
+		// shortcut: only git on PATH, so `taskgraph` is not found and the
+		// driver names a script
+		const gitDir = path.dirname(
+			execFileSync('sh', ['-c', 'command -v git'], { encoding: 'utf8' }).trim()
+		);
+		vi.stubEnv('PATH', gitDir);
+		const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-dist-'));
+		const server = path.join(dist, 'mcp-server.js');
+		fs.writeFileSync(server, '');
+		const argv1 = process.argv[1];
+		process.argv[1] = server;
+		try {
+			await run({ projectRoot, initGit: true });
+		} finally {
+			process.argv[1] = argv1;
+		}
+
+		const driver = execFileSync(
+			'git',
+			['config', '--get', 'merge.taskgraph.driver'],
+			{ cwd: projectRoot, encoding: 'utf8' }
+		);
+		const cli = path.join(fs.realpathSync(dist), 'taskgraph.js');
+		fs.rmSync(dist, { recursive: true, force: true });
+		expect(driver).toContain(cli);
+		expect(driver).not.toContain('mcp-server.js');
 	});
 
 	it('replies with an error when initialization fails', async () => {

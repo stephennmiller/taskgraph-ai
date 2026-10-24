@@ -4,7 +4,9 @@
  * Claude Code always on. Name, schema and reply are the legacy tool's.
  */
 
+import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import { RULE_PROFILES, initializeProject } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
@@ -62,6 +64,18 @@ const NEXT_STEP =
 	'Now that the project is initialized, the next step is to create the tasks by parsing a PRD. This will create the tasks folder and the initial task files (tasks folder will be created when parse-prd is run). The parse-prd tool will require a prd.txt file as input (typically found in .taskgraph/docs/ directory). You can create a prd.txt file by asking the user about their idea, and then using the .taskgraph/templates/example_prd.txt file as a template to generate a prd.txt file in .taskgraph/docs/. You may skip all of this if the user already has a prd.txt file. You can THEN use the parse-prd tool to create the tasks. So: step 1 after initialization is to create a prd.txt file in .taskgraph/docs/prd.txt or confirm the user already has one. Step 2 is to use the parse-prd tool to create the tasks. Do not bother looking for tasks after initialization, just use the parse-prd tool to create the tasks after creating a prd.txt from which to parse the tasks. You do NOT need to reinitialize the project to parse-prd.';
 
 /**
+ * The CLI beside this server's script (dist/taskgraph.js), for the merge
+ * driver: run with merge-driver arguments, the server itself would exit 0 on
+ * git's stdin and leave "ours", dropping the other branch's tasks. When it
+ * isn't there (a source checkout), the driver falls back to git merge-file.
+ */
+function cliScriptPath(): string {
+	const script = process.argv[1] ?? '';
+	const real = fs.existsSync(script) ? fs.realpathSync(script) : script;
+	return path.join(path.dirname(path.resolve(real)), 'taskgraph.js');
+}
+
+/**
  * Register the initialize_project tool with the MCP server
  */
 export function registerInitializeProjectTool(server: FastMCP) {
@@ -94,20 +108,27 @@ export function registerInitializeProjectTool(server: FastMCP) {
 							storeTasksInGit: args.storeTasksInGit,
 							claudeCode: true,
 							aliases: args.addAliases === true,
-							responseLanguage: 'English'
+							responseLanguage: 'English',
+							mergeDriverScript: cliScriptPath(),
+							// Logged as they happen, so they show even when a later step throws
+							onProblem: (problem) =>
+								context.log[problem.level](problem.message)
 						});
 					} catch (error) {
 						throw new Error(
 							`Core project initialization failed: ${(error as Error).message}`
 						);
 					}
-					for (const problem of result.problems) {
-						context.log.warn(problem.message);
-					}
+					const warnings = result.problems.map((problem) => problem.message);
 					return {
 						data: {
-							message: 'Project initialized successfully.',
-							next_step: NEXT_STEP
+							message: result.problems.some(
+								(problem) => problem.level === 'error'
+							)
+								? 'Project initialized, but some steps failed: see warnings.'
+								: 'Project initialized successfully.',
+							next_step: NEXT_STEP,
+							...(warnings.length > 0 && { warnings })
 						}
 					};
 				})
