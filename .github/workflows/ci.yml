@@ -358,8 +358,7 @@ jobs:
   # on Node 24 and on the oldest Node that `engines` allows, the CLI smoke tests (the
   # @tm/cli integration tests that spawn the built CLI for the everyday
   # commands; list in apps/cli/package.json "test:smoke") and the MCP stdio
-  # smoke test. Tests that need the fake `claude` are left out: its shim is a
-  # POSIX shell script.
+  # smoke test, including the AI-path tests that run the fake `claude`.
   smoke:
     name: Smoke (${{ matrix.os }}, Node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}

@@ -3,7 +3,10 @@
  *
  * TaskGraph reads `claudeCode.pathToClaudeCodeExecutable` from the project
  * config, but only runs it if it is an absolute path to a file named `claude`
- * outside the project. So the shim goes in a separate work directory.
+ * (or `claude.exe`) outside the project. So the shim goes in a separate work
+ * directory. On Windows the shim is a small compiled `claude.exe`: the Agent
+ * SDK spawns the path without a shell, which can run neither a shell script
+ * nor a `.cmd` (#524).
  *
  * The returned `env` must be set on the process that runs the CLI or MCP
  * server. It also blanks the credentials and points Claude's config at the
@@ -11,7 +14,10 @@
  * real, signed-in Claude Code. Tests should still check the trace grew.
  */
 
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,6 +33,59 @@ function writeFileAtomic(file, content, options) {
 	const temp = `${file}.${process.pid}.tmp`;
 	fs.writeFileSync(temp, content, options);
 	fs.renameSync(temp, file);
+}
+
+/**
+ * A claude.exe that runs `node fake-claude.mjs` with the arguments it got.
+ * It passes its own command line on unparsed, so node splits the arguments
+ * exactly as the SDK quoted them. Compiled once with the C# compiler that
+ * ships with Windows and cached in the temp directory.
+ * @returns {string} Path of the cached launcher
+ */
+function windowsLauncher() {
+	const literal = (text) => `@"${text.replaceAll('"', '""')}"`;
+	const source = `using System.Diagnostics;
+static class FakeClaude {
+	static int Main() {
+		string line = System.Environment.CommandLine;
+		int end = line.StartsWith("\\"") ? line.IndexOf('"', 1) + 1 : line.IndexOf(' ');
+		string rest = end <= 0 ? "" : line.Substring(end);
+		var info = new ProcessStartInfo(${literal(process.execPath)}, ${literal(`"${fakeClaude}"`)} + rest) { UseShellExecute = false };
+		using (var child = Process.Start(info)) { child.WaitForExit(); return child.ExitCode; }
+	}
+}
+`;
+	const hash = createHash('sha256').update(source).digest('hex').slice(0, 16);
+	const exe = path.join(os.tmpdir(), `fake-claude-${hash}.exe`);
+	if (fs.existsSync(exe)) return exe;
+
+	const temp = `${exe}.${process.pid}`;
+	fs.writeFileSync(`${temp}.cs`, source);
+	const csc = path.join(
+		process.env.WINDIR ?? 'C:\\Windows',
+		'Microsoft.NET',
+		'Framework64',
+		'v4.0.30319',
+		'csc.exe'
+	);
+	if (!fs.existsSync(csc)) {
+		throw new Error(
+			`${csc} not found: the Windows fake claude is compiled with the .NET Framework 4 C# compiler`
+		);
+	}
+	// csc prints compile errors on stdout, which execFileSync would swallow
+	execFileSync(csc, ['/nologo', `/out:${temp}.exe`, `${temp}.cs`], {
+		stdio: ['ignore', 'inherit', 'inherit']
+	});
+	fs.rmSync(`${temp}.cs`);
+	try {
+		fs.renameSync(`${temp}.exe`, exe);
+	} catch (error) {
+		// Another test process cached the same launcher first
+		if (!fs.existsSync(exe)) throw error;
+		fs.rmSync(`${temp}.exe`, { force: true });
+	}
+	return exe;
 }
 
 /**
@@ -57,12 +116,18 @@ export function installFakeClaude({ projectDir, workDir, replies }) {
 		}
 	}
 
-	const executable = path.join(binDir, 'claude');
-	writeFileAtomic(
-		executable,
-		`#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(fakeClaude)} "$@"\n`,
-		{ mode: 0o755 }
-	);
+	let executable;
+	if (process.platform === 'win32') {
+		executable = path.join(binDir, 'claude.exe');
+		fs.copyFileSync(windowsLauncher(), executable);
+	} else {
+		executable = path.join(binDir, 'claude');
+		writeFileAtomic(
+			executable,
+			`#!/bin/sh\nexec ${shellQuote(process.execPath)} ${shellQuote(fakeClaude)} "$@"\n`,
+			{ mode: 0o755 }
+		);
+	}
 	if (replies) {
 		writeFileAtomic(path.join(dir, 'replies.json'), JSON.stringify(replies));
 	}
