@@ -179,6 +179,15 @@ describe('Utils Module', () => {
 		});
 	});
 
+	test('log strips terminal escape sequences from the message (#419)', () => {
+		log('warn', 'Expanding task 1: Fix \x1b]0;pwned\x07login\x1b[2J');
+
+		expect(console.log).toHaveBeenCalledWith(
+			expect.stringMatching(/ Expanding task 1: Fix login$/)
+		);
+		expect(console.log.mock.calls[0][0]).not.toMatch(/\x1b\]|\x1b\[2J/);
+	});
+
 	describe.skip('log function', () => {
 		// const originalConsoleLog = console.log; // Keep original for potential restore if needed
 		beforeEach(() => {
