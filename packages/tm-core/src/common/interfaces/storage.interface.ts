@@ -69,10 +69,13 @@ export type TaskFieldUpdates = Partial<
 
 /**
  * A change to every tag's tasks (see IStorage.mutateTags): edits the arrays
- * in place or adds a tag, and names the tags to save
+ * in place or adds a tag, and names the tags to save. `metadata` holds a
+ * copy of each tag's metadata; keys set on a saved tag's entry (or on a new
+ * entry for a new tag) are written with it.
  */
 export type MutateTags<R> = (
-	tags: Map<string, Task[]>
+	tags: Map<string, Task[]>,
+	metadata: Map<string, Record<string, unknown>>
 ) =>
 	| { changed: string[]; result: R }
 	| Promise<{ changed: string[]; result: R }>;

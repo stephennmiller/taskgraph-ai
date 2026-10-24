@@ -98,7 +98,7 @@ This synopsis provides a comprehensive overview of the CLI commands and their op
 
 # Core Implementation Synopsis
 
-This document provides a high-level overview of the core implementation of the TaskGraph application, focusing on the functionalities exposed through `scripts/modules/task-manager.js`. This serves as a guide for understanding the application's capabilities when writing user-facing documentation.
+This document provides a high-level overview of the core implementation of the TaskGraph application, focusing on the functionalities exposed through `@tm/core` (`packages/tm-core`). This serves as a guide for understanding the application's capabilities when writing user-facing documentation.
 
 ## Core Concepts
 
@@ -151,7 +151,7 @@ These functions are used to retrieve information about tasks and manage their st
 
 These functions leverage AI to analyze and break down tasks.
 
--   **`parsePRD(prdPath, numTasks)`**: Parses a Product Requirements Document (PRD) to generate an initial set of tasks.
+-   **`tmCore.tasks.parsePrd({ prdPath, numTasks })`**: Parses a Product Requirements Document (PRD) to generate an initial set of tasks.
 -   **`tmCore.tasks.expand({ id, num })`**: Expands a task into a specified number of subtasks using AI.
 -   **`tmCore.tasks.expandAll({ num })`**: Expands all eligible pending or in-progress tasks.
 -   **`analyzeTaskComplexity(options)`**: Analyzes the complexity of tasks and generates recommendations for expansion.
@@ -181,7 +181,7 @@ This document provides an overview of the MCP (Model Context Protocol) interface
 
 The MCP interface is built on top of the `fastmcp` library and registers a set of tools that correspond to the core functionalities of the TaskGraph application. These tools are defined in the `mcp-server/src/tools/` directory and are registered with the MCP server in `mcp-server/src/tools/index.js`.
 
-Each tool is defined with a name, a description, and a set of parameters that are validated using the `zod` library. The `execute` function of each tool calls the corresponding core logic function from `scripts/modules/task-manager.js`.
+Each tool is defined with a name, a description, and a set of parameters that are validated using the `zod` library. The `execute` function of each tool calls the corresponding `@tm/core` method.
 
 ## Tool Categories
 

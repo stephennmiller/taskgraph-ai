@@ -9,16 +9,12 @@ import { Command } from 'commander';
 
 // Import command registry and utilities from @tm/cli
 import {
-	aiErrorHint,
 	checkForUpdate,
-	collectClarifications,
-	describeError,
 	displayError,
 	displayUpgradeNotification,
 	formatCommanderError,
 	printError,
 	performAutoUpdate,
-	printJson,
 	registerAllCommands,
 	restartWithNewVersion,
 	ui,
@@ -26,47 +22,22 @@ import {
 } from '@tm/cli';
 import { log } from './utils.js';
 
-import { parsePRD } from './task-manager.js';
-
-import { findPrdGaps } from './task-manager/parse-prd/index.js';
+import { setSuppressConfigWarnings } from './config-manager.js';
 
 import {
-	getDefaultNumTasks,
-	setSuppressConfigWarnings
-} from './config-manager.js';
-
-import {
-	parseClarificationAnswers,
 	UPSTREAM_DIR,
 	UPSTREAM_IMPORT_FLAG,
 	UPSTREAM_NAME,
 	PROJECT_ROOT_ENV,
 	findProjectRoot,
-	getOwnKey,
 	isTaskGraphProject,
-	resolveProjectRoot,
-	writeClarifications
+	resolveProjectRoot
 } from '@tm/core';
-
-import {
-	TASKGRAPH_DOCS_DIR,
-	TASKGRAPH_TASKS_FILE
-} from '../../src/constants/paths.js';
 
 import { initTaskGraph } from '../../src/taskgraph.js';
 
-import {
-	confirmTaskOverwrite,
-	displayAiUsageSummary,
-	displayBanner,
-	displayCurrentTagIndicator,
-	displayHelp,
-	displayTaggedTasksFYI,
-	startLoadingIndicator,
-	stopLoadingIndicator
-} from './ui.js';
+import { displayBanner, displayHelp, displayTaggedTasksFYI } from './ui.js';
 
-import { theme } from '@tm/cli/theme';
 import {
 	RULE_PROFILES,
 	findInvalidRulesProfiles
@@ -101,213 +72,6 @@ function registerCommands(programInstance) {
 		helpWidth: 120,
 		sortSubcommands: false
 	});
-
-	// parse-prd command
-	programInstance
-		.command('parse-prd')
-		.description('Parse a PRD file and generate tasks')
-		.argument('[file]', 'Path to the PRD file')
-		.option(
-			'-i, --input <file>',
-			'Path to the PRD file (alternative to positional argument)'
-		)
-		.option('-o, --output <file>', 'Output file path')
-		.option(
-			'-n, --num-tasks <number>',
-			'About how many tasks (default: sized to the PRD)'
-		)
-		.option('-f, --force', 'Skip confirmation when overwriting existing tasks')
-		.option(
-			'--append',
-			'Append new tasks to existing tasks.json instead of overwriting'
-		)
-		.option(
-			'-r, --research',
-			'Use Claude Code web research for research-backed task generation, providing more comprehensive and accurate task breakdown'
-		)
-		.option(
-			'--clarify',
-			'Ask up to 5 questions about gaps in the PRD first and save the answers in it'
-		)
-		.option(
-			'--answers <file>',
-			'Save answers (JSON from --clarify --json, or - for stdin) in the PRD, then generate tasks'
-		)
-		.option('--json', 'With --clarify: print the questions as JSON and stop')
-		.option('-y, --yes', 'With --clarify: accept the suggested answers')
-		.option('--tag <tag>', 'Specify tag context for task operations')
-		.action(async (file, options) => {
-			// Resolve PRD path: prioritize --input option, then positional argument
-			const prdPath = options.input || file;
-
-			// A mistyped path is the common failure; say so before anything else
-			if (prdPath && !fs.existsSync(path.resolve(prdPath))) {
-				printError(
-					`${prdPath} not found`,
-					'Check the spelling; paths are relative to this folder'
-				);
-				process.exit(1);
-			}
-
-			// Flags that only work together; checked before any AI call or write
-			const flagError = clarifyFlagError(options);
-			if (flagError) {
-				printError(flagError.message, flagError.hint);
-				process.exit(1);
-			}
-			let answersFromFile = null;
-			if (
-				options.answers &&
-				options.answers !== '-' &&
-				!fs.existsSync(path.resolve(options.answers))
-			) {
-				printError(
-					`${options.answers} not found`,
-					'Check the spelling; paths are relative to this folder'
-				);
-				process.exit(1);
-			}
-			if (options.answers) {
-				try {
-					answersFromFile = readClarificationAnswers(options.answers);
-				} catch (error) {
-					printError(
-						`Couldn't read the answers in ${options.answers}: ${error.message}`,
-						'Add an "answer" to each question in the output of --clarify --json'
-					);
-					process.exit(1);
-				}
-			}
-
-			// Initialize TaskGraph
-			let taskGraph;
-			try {
-				const initOptions = {
-					prdPath: prdPath || true,
-					tag: options.tag
-				};
-				// Only include tasksPath if output is explicitly specified
-				if (options.output) {
-					initOptions.tasksPath = options.output;
-				}
-				taskGraph = initTaskGraph(initOptions);
-			} catch (error) {
-				displayError(error, {
-					hint: prdPath ? undefined : 'Try `taskgraph parse-prd prd.md`'
-				});
-				process.exit(1);
-			}
-
-			// Without the flag, the config's defaultNumTasks; 0 sizes it to the PRD
-			const numTasks = parseInt(
-				options.numTasks ?? getDefaultNumTasks(taskGraph.getProjectRoot()),
-				10
-			);
-			const force = options.force || false;
-			const append = options.append || false;
-			const research = options.research || false;
-			let useForce = force;
-			const useAppend = append;
-
-			// Resolve tag using standard pattern
-			const tag = taskGraph.getCurrentTag();
-
-			// --clarify --json: print the questions for an agent to ask, and stop.
-			// stdout carries only the JSON
-			if (options.clarify && options.json) {
-				try {
-					const { questions } = await findPrdGaps({
-						prdPath: taskGraph.getPrdPath(),
-						projectRoot: taskGraph.getProjectRoot(),
-						research
-					});
-					printJson({ prd: displayPath(taskGraph.getPrdPath()), questions });
-				} catch (error) {
-					printError(`Couldn't find questions to ask: ${error.message}`);
-					process.exit(1);
-				}
-				return;
-			}
-
-			// Show current tag context
-			await displayCurrentTagIndicator(tag, {
-				tasksPath: taskGraph.getTasksPath()
-			});
-
-			// Helper function to check if there are existing tasks in the target tag and confirm overwrite
-			async function confirmOverwriteIfNeeded() {
-				// Check if there are existing tasks in the target tag
-				let hasExistingTasksInTag = false;
-				const tasksPath = taskGraph.getTasksPath();
-				if (fs.existsSync(tasksPath)) {
-					try {
-						// Read the entire file to check if the tag exists
-						const existingFileContent = fs.readFileSync(tasksPath, 'utf8');
-						const allData = JSON.parse(existingFileContent);
-
-						// Check if the target tag exists and has tasks
-						const tagTasks = getOwnKey(allData, tag)?.tasks;
-						if (Array.isArray(tagTasks) && tagTasks.length > 0) {
-							hasExistingTasksInTag = true;
-						}
-					} catch (error) {
-						// If we can't read the file or parse it, assume no existing tasks in this tag
-						hasExistingTasksInTag = false;
-					}
-				}
-
-				// Only show confirmation if there are existing tasks in the target tag
-				if (hasExistingTasksInTag && !useForce && !useAppend) {
-					const overwrite = await confirmTaskOverwrite(tasksPath);
-					if (!overwrite) {
-						console.log(theme.muted('Cancelled; no tasks changed'));
-						return false;
-					}
-					// If user confirms 'y', we should set useForce = true for the parsePRD call
-					// Only overwrite if not appending
-					useForce = true;
-				}
-				return true;
-			}
-
-			try {
-				if (!(await confirmOverwriteIfNeeded())) return;
-
-				// Answers go into the PRD first, so the tasks are generated from them
-				const answers =
-					answersFromFile ??
-					(options.clarify
-						? await clarifyPrd(taskGraph, { research, yes: options.yes })
-						: []);
-				if (answers.length > 0) {
-					const saved = writeClarifications(taskGraph.getPrdPath(), answers);
-					console.log(
-						ui.formatClarificationsSaved(
-							saved,
-							displayPath(taskGraph.getPrdPath())
-						)
-					);
-				}
-
-				// The progress display names the file, task count and research,
-				// and the saved line the new total, so no preamble
-				// Handle case where getTasksPath() returns null
-				const outputPath =
-					taskGraph.getTasksPath() ||
-					path.join(taskGraph.getProjectRoot(), TASKGRAPH_TASKS_FILE);
-				await parsePRD(taskGraph.getPrdPath(), outputPath, numTasks, {
-					append: useAppend,
-					force: useForce,
-					research: research,
-					projectRoot: taskGraph.getProjectRoot(),
-					tag: tag
-				});
-			} catch (error) {
-				const { message, hint } = describeError(error, aiErrorHint(error));
-				printError(`Couldn't generate tasks: ${message}`, hint);
-				process.exit(1);
-			}
-		});
 
 	// ========================================
 	// Register All Commands from @tm/cli
@@ -421,85 +185,6 @@ function registerCommands(programInstance) {
 		});
 
 	return programInstance;
-}
-
-/**
- * parse-prd's --clarify flags that need each other, or exclude each other
- * @returns {{message: string, hint: string} | null}
- */
-function clarifyFlagError(options) {
-	if (options.clarify && options.answers) {
-		return {
-			message: '--clarify and --answers both supply the answers',
-			hint: 'Use --clarify to be asked, or --answers <file> to pass them in'
-		};
-	}
-	if (options.json && !options.clarify) {
-		return {
-			message: '--json only works with --clarify',
-			hint: 'Try `taskgraph parse-prd prd.md --clarify --json`'
-		};
-	}
-	if (options.yes && !options.clarify) {
-		return {
-			message: '--yes only works with --clarify',
-			hint: 'Try `taskgraph parse-prd prd.md --clarify --yes`'
-		};
-	}
-	return null;
-}
-
-/** Read --answers: a JSON file, or - for stdin */
-function readClarificationAnswers(source) {
-	const text =
-		source === '-'
-			? fs.readFileSync(0, 'utf8')
-			: fs.readFileSync(source, 'utf8');
-	let json;
-	try {
-		json = JSON.parse(text);
-	} catch {
-		throw new Error("it isn't valid JSON");
-	}
-	return parseClarificationAnswers(json);
-}
-
-/** A path as the user typed it: relative to the current folder */
-function displayPath(file) {
-	const relative = path.relative(process.cwd(), file);
-	return relative && !relative.startsWith('..') ? relative : file;
-}
-
-/**
- * parse-prd --clarify in the terminal: find gaps in the PRD, then ask about
- * them (or take the suggested answers without a terminal or with --yes)
- * @returns {Promise<Array<{question: string, answer: string}>>}
- */
-async function clarifyPrd(taskGraph, { research, yes }) {
-	const prdPath = taskGraph.getPrdPath();
-	const prdName = displayPath(prdPath);
-	const spinner = startLoadingIndicator(`Reading ${prdName} for gaps…`);
-	let questions;
-	try {
-		({ questions } = await findPrdGaps({
-			prdPath,
-			projectRoot: taskGraph.getProjectRoot(),
-			research
-		}));
-	} finally {
-		stopLoadingIndicator(spinner);
-	}
-
-	if (questions.length === 0) {
-		console.log(ui.formatNoClarifyQuestions(prdName));
-		return [];
-	}
-	const answers = await collectClarifications(questions, { prdName, yes });
-	if (answers === null) {
-		console.log(ui.formatClarifyCancelled(prdName));
-		process.exit(130);
-	}
-	return answers;
 }
 
 const RUNS_WITHOUT_PROJECT = new Set([

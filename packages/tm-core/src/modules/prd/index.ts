@@ -1,6 +1,6 @@
 /**
- * @fileoverview PRD helpers. Parsing a PRD into tasks still lives in
- * scripts/modules/task-manager/parse-prd/ until it is migrated here.
+ * @fileoverview PRD helpers: sections, snapshots and deltas. Parsing a PRD
+ * into tasks is tasks.parsePrd (modules/tasks/services/parse-prd.service.ts).
  */
 
 export * from './prd-sections.js';

@@ -454,3 +454,12 @@ export {
 	type SettingResult,
 	setResponseLanguage
 } from './modules/config/services/project-settings.js';
+
+// ========== Parse PRD ==========
+
+export type {
+	ParsePrdHooks,
+	ParsePrdInput,
+	ParsePrdResult,
+	PrdGapsResult
+} from './modules/tasks/services/parse-prd.service.js';

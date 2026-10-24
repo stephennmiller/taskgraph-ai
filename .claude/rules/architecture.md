@@ -17,7 +17,7 @@ paths:
       - Handles user input/output for CLI.
       - Implements CLI-specific validation.
 
-  - **[`task-manager.js`](../../scripts/modules/task-manager.js) & `task-manager/` directory: Task Data & Core Logic**
+  - **[`@tm/core` tasks module](../../packages/tm-core/src/modules/tasks/): Task Data & Core Logic**
     - **Purpose**: Contains core functions for task data manipulation (CRUD), AI interactions, and related logic.
     - **Responsibilities**:
       - Reading/writing `tasks.json` with tagged task lists support.
@@ -26,7 +26,7 @@ paths:
       - **Tag Resolution**: Provides backward compatibility by resolving tagged format to legacy format transparently.
       - **Delegating AI interactions** to the `ai-services-unified.js` layer.
       - Accessing non-AI configuration via `config-manager.js` getters.
-    - **Key Files**: Individual files within `scripts/modules/task-manager/` handle specific actions (e.g., `models.js`). `next`, `sync-readme`, `add-task`, `expand`, `analyze-complexity`, `research`, `update-task`, `update`, `update-subtask`, `scope-up` and `scope-down` live in `@tm/core` (`tmCore.tasks.*`).
+    - **Key Files**: Individual files within `scripts/modules/task-manager/` handle specific actions (e.g., `models.js`). `next`, `sync-readme`, `add-task`, `expand`, `parse-prd`, `analyze-complexity`, `research`, `update-task`, `update`, `update-subtask`, `scope-up` and `scope-down` live in `@tm/core` (`tmCore.tasks.*`).
 
   - **[`modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/) in `@tm/core`: Dependency Management**
     - **Purpose**: Manages task dependencies.
@@ -291,7 +291,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - Import `zod`, `yourCommandDirect`, and `withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse` from `@tm/mcp`.
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters, making `projectRoot` optional**: `projectRoot: z.string().optional().describe(...)`.
-    - If the operation is long-running, pass `reportProgress` from the tool context through `checkProgressCapability` to the direct function (see `mcp.md`).
+    - If the operation is long-running, report progress with `reportProgress` from the tool context (see `mcp.md`).
     - Wrap `execute` in `withNormalizedProjectRoot` (it normalizes `args.projectRoot`):
       - Call `yourCommandDirect({ ...args }, log, { session })`.
       - Return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot })`.

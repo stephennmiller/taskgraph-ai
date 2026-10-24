@@ -84,6 +84,15 @@ describe('ParsePrdProgress', () => {
 		expect(progress.printedCount).toBe(3);
 	});
 
+	it('prints the titles the model wrote without their escape codes', () => {
+		const { stream, lines } = capture();
+		progress = new ParsePrdProgress({ prdName: 'prd.md', stream }).start();
+		progress.succeed({
+			tasks: [{ title: '\x1b]0;pwned\x07Evil \x1b[2Jtitle' }]
+		});
+		expect(lines()[1]).toBe('✓ 1  Evil title');
+	});
+
 	it('says "planning tasks" when the model picks the count', () => {
 		const { stream, lines } = capture();
 		progress = new ParsePrdProgress({ prdName: 'spec.txt', stream }).start();

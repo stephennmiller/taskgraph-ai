@@ -13,7 +13,6 @@ export {
 } from './ui/banner-tags.js';
 export {
 	startLoadingIndicator,
-	startParsePrdProgress,
 	stopLoadingIndicator,
 	succeedLoadingIndicator,
 	failLoadingIndicator,
@@ -27,7 +26,6 @@ export {
 	getComplexityWithColor
 } from './ui/formatters.js';
 export { displayHelp } from './ui/help.js';
-export { confirmTaskOverwrite } from './ui/complexity.js';
 export {
 	displayAiUsageSummary,
 	displayAddedSubtasks

@@ -39,7 +39,6 @@ const LEGACY_OVERSIZED = new Set([
 	'tests/unit/config-manager.test.js',
 	'tests/unit/utils.test.js',
 	'tests/unit/scripts/modules/task-manager/list-tasks.test.js',
-	'tests/unit/scripts/modules/task-manager/parse-prd.test.js',
 	// Legacy task-manager sources that were already over the limit. Splitting
 	// them is its own issue; until then a small edit to one must be committable.
 	'scripts/modules/utils.js',

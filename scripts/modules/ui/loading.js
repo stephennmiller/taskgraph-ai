@@ -15,16 +15,6 @@ export function startLoadingIndicator(message) {
 }
 
 /**
- * Live progress for parse-prd: prints each task as the model finishes it.
- * Returns null in silent mode.
- * @param {Object} options - See ParsePrdProgressOptions in @tm/cli
- */
-export function startParsePrdProgress(options) {
-	if (isSilentMode()) return null;
-	return new ui.ParsePrdProgress(options).start();
-}
-
-/**
  * Stop a loading indicator (basic stop, no success/fail indicator)
  * @param {Object} spinner - Spinner object to stop
  */

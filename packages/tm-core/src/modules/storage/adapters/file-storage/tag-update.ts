@@ -65,7 +65,9 @@ export function applyTagUpdate(
 	}
 	// Convert to legacy format when adding non-master tags
 	const masterTasks = existingData.tasks || [];
-	const masterMetadata = existingData.metadata || metadata;
+	// Not the new tag's metadata: its prdSections would make master's next append skip sections
+	const masterMetadata =
+		existingData.metadata ?? buildTagMetadata(masterTasks, 'master');
 
 	return {
 		master: {
@@ -114,16 +116,21 @@ export async function mutateTagsIn<R>(
 	const tags = new Map(
 		names.map((tag) => [tag, formatHandler.extractTasks(data, tag)])
 	);
-	const { changed, result } = await mutate(tags);
+	const metadata = new Map<string, Record<string, unknown>>(
+		names.map((tag) => [tag, { ...formatHandler.extractMetadata(data, tag) }])
+	);
+	const { changed, result } = await mutate(tags, metadata);
 	for (const tag of new Set(changed)) {
+		// A missing or empty file starts tagged, as the legacy writers create it
+		if (!data || Object.keys(data).length === 0) {
+			data = {};
+			setOwnKey(data, tag, { tasks: [], metadata: {} });
+		}
 		const tasks = tags.get(tag) ?? [];
-		data = applyTagUpdate(
-			formatHandler,
-			data,
-			tag,
-			tasks,
-			buildTagMetadata(tasks, tag)
-		);
+		data = applyTagUpdate(formatHandler, data, tag, tasks, {
+			...metadata.get(tag),
+			...buildTagMetadata(tasks, tag)
+		} as TaskMetadata);
 	}
 	return { data, result };
 }

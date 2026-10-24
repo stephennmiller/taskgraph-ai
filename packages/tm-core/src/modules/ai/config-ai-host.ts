@@ -14,6 +14,7 @@ import {
 } from '../../common/constants/providers.js';
 import { getLogger } from '../../common/logger/index.js';
 import type { ConfigManager } from '../config/managers/config-manager.js';
+import { dropOldNumTasksDefault } from '../config/services/config-file.js';
 import type { AiServiceHost } from './ai-service.js';
 import { ClaudeCodeSettingsSchema } from './claude-code-settings.js';
 import supportedModels from './supported-models.json' with { type: 'json' };
@@ -78,6 +79,7 @@ interface RawAiConfig {
 		enableCodebaseAnalysis?: unknown;
 		defaultPriority?: unknown;
 		defaultSubtasks?: unknown;
+		defaultNumTasks?: unknown;
 	};
 	claudeCode?: unknown;
 }
@@ -189,6 +191,14 @@ export class AiConfig {
 	get defaultSubtasks(): number {
 		const count = parseInt(String(this.raw.global?.defaultSubtasks), 10);
 		return Number.isNaN(count) ? 5 : count;
+	}
+
+	/** How many tasks parse-prd asks for; 0 (sized to the PRD) by default */
+	get defaultNumTasks(): number {
+		// The 10 an old release saved with enableProxy isn't a count the user chose (#336)
+		if (dropOldNumTasksDefault(this.raw)) return 0;
+		const count = parseInt(String(this.raw.global?.defaultNumTasks), 10);
+		return Number.isNaN(count) ? 0 : count;
 	}
 
 	/** `claudeCode` merged with the command's `commandSpecific` entry */

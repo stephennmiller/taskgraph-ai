@@ -99,12 +99,6 @@ vi.doMock('../../../scripts/modules/ai-services-unified.js', () => ({
 	// Add other mocks for generateObjectService, streamTextService if used
 }));
 
-// Mock task-manager.js to avoid real operations
-vi.doMock('../../../scripts/modules/task-manager.js', () => ({
-	findTaskById: mockFindTaskById,
-	taskExists: mockTaskExists
-}));
-
 // Import dependencies after mocks are set up
 import { sampleTasks } from '../../fixtures/sample-tasks.js';
 

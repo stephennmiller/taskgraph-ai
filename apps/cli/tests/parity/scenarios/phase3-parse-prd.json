@@ -1,0 +1,76 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		{
+			"shell": "printf '# Bookmarks\\n\\nSave links.\\n\\n## Sign-in\\n\\nEmail and password.\\n\\n## Saving links\\n\\nSave a URL with tags.\\n' > prd.md"
+		},
+		{ "args": ["parse-prd", "prd.md"], "expectExit": 1 },
+		["parse-prd", "prd.md", "--force"],
+		["parse-prd", "prd.md", "--append"],
+		{
+			"shell": "printf '\\n## Export\\n\\nExport bookmarks as JSON.\\n' >> prd.md"
+		},
+		["parse-prd", "prd.md", "--append"],
+		[
+			"parse-prd",
+			"--input=prd.md",
+			"--tag=feature",
+			"-n",
+			"2",
+			"--research",
+			"--force"
+		],
+		["parse-prd", "prd.md", "--tag=sprint"],
+		{ "args": ["parse-prd", "missing.md"], "expectExit": 1 },
+		{ "args": ["parse-prd", "prd.md", "--json"], "expectExit": 1 },
+		{
+			"args": ["parse-prd", "prd.md", "--force", "-o", "other.json"],
+			"expectExit": 1
+		},
+		{
+			"args": ["parse-prd", "prd.md", "--clarify", "--json"],
+			"capture": "stdout"
+		},
+		{
+			"mcp": "parse_prd",
+			"input": { "input": "prd.md", "force": true, "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "parse_prd",
+			"input": { "input": "prd.md", "append": true, "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "parse_prd",
+			"input": {
+				"input": "prd.md",
+				"tag": "feature",
+				"numTasks": "1",
+				"force": true,
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "parse_prd",
+			"input": {
+				"input": "prd.md",
+				"clarify": true,
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "parse_prd",
+			"input": { "input": "prd.md", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{
+			"mcp": "parse_prd",
+			"input": { "input": "../outside.md", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{
+			"mcp": "parse_prd",
+			"input": { "input": "missing.md", "projectRoot": "<project>" },
+			"expectError": true
+		}
+	]
+}

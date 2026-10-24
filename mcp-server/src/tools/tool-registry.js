@@ -29,6 +29,7 @@ import {
 	registerModelsTool,
 	registerMoveTaskTool,
 	registerNextTaskTool,
+	registerParsePrdTool,
 	registerRemoveDependencyTool,
 	registerRemoveSubtaskTool,
 	registerRemoveTaskTool,
@@ -45,7 +46,6 @@ import {
 	registerValidateDependenciesTool
 } from '@tm/mcp';
 import { registerInitializeProjectTool } from './initialize-project.js';
-import { registerParsePRDTool } from './parse-prd.js';
 
 /**
  * Comprehensive tool registry mapping tool names to their registration functions
@@ -54,7 +54,7 @@ import { registerParsePRDTool } from './parse-prd.js';
 export const toolRegistry = {
 	initialize_project: registerInitializeProjectTool,
 	models: registerModelsTool,
-	parse_prd: registerParsePRDTool,
+	parse_prd: registerParsePrdTool,
 	'response-language': registerResponseLanguageTool,
 	analyze_project_complexity: registerAnalyzeComplexityTool,
 	expand_task: registerExpandTaskTool,

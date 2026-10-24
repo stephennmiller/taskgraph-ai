@@ -1,7 +1,7 @@
 ---
 description: Guidelines for implementing task management operations
 paths:
-  - "scripts/modules/task-manager.js"
+  - "packages/tm-core/src/modules/tasks/**"
 ---
 # Task Management Guidelines
 
@@ -324,4 +324,4 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   }
   ```
 
-Refer to [`task-manager.js`](../../scripts/modules/task-manager.js) for implementation examples and `new-features.md` for integration guidelines. 
+Refer to [`@tm/core`](../../packages/tm-core/src/modules/tasks/) for implementation examples and `new-features.md` for integration guidelines. 

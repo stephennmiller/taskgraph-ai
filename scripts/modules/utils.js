@@ -81,8 +81,9 @@ function sleepSync(ms) {
  *        Set to true for write operations. Leave false for read-only operations that should handle
  *        file-not-found scenarios in the callback.
  * @returns {*} Result of the callback
+ * @public loaded by tests and apps/cli/tests/helpers/hold-lock.mjs through dynamic imports
  */
-function withFileLockSync(filepath, callback, options = {}) {
+export function withFileLockSync(filepath, callback, options = {}) {
 	const { createIfMissing = false } = options;
 
 	// Ensure parent directory exists
@@ -1683,7 +1684,6 @@ function stripAnsiCodes(text) {
 export {
 	disableSilentMode,
 	enableSilentMode,
-	ensureTagMetadata,
 	findCycles,
 	findProjectRoot,
 	findTaskById,
@@ -1700,14 +1700,12 @@ export {
 	readComplexityReport,
 	readJSON,
 	resolveEnvVariable,
-	resolveTag,
 	sanitizePrompt,
 	slugifyTagForFilePath,
 	stripAnsiCodes,
 	taskExists,
 	toKebabCase,
 	truncate,
-	withFileLockSync,
 	withSilentScope,
 	writeJSON
 };

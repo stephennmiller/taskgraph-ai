@@ -19,9 +19,6 @@ export const TASKGRAPH_STATE_FILE = '.taskgraph/state.json';
 export const COMPLEXITY_REPORT_FILE =
 	'.taskgraph/reports/task-complexity-report.json';
 
-// TaskGraph PRD file paths
-export const PRD_FILE = '.taskgraph/docs/prd.txt';
-
 // TaskGraph template files
 export const EXAMPLE_PRD_FILE = '.taskgraph/templates/example_prd.txt';
 

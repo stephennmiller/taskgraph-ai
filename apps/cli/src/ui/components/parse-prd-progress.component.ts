@@ -13,6 +13,7 @@
 
 import chalk from 'chalk';
 import type { Ora } from 'ora';
+import { terminalSafe } from '../formatters/markdown-formatters.js';
 import { terminalWidth } from '../layout/helpers.js';
 import { createSpinner } from '../spinner.js';
 import { theme } from '../theme.js';
@@ -68,7 +69,8 @@ export function formatDuration(ms: number): string {
 }
 
 function clip(text: string, max: number): string {
-	const clean = text.replace(/\s+/g, ' ').trim();
+	// The model wrote the title: no escape codes
+	const clean = terminalSafe(text).replace(/\s+/g, ' ').trim();
 	return clean.length > max ? `${clean.slice(0, max - 1).trimEnd()}…` : clean;
 }
 

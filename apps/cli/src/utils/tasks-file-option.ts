@@ -18,11 +18,13 @@ export const legacyFileOption = (): Option =>
  * @param file - The --file value, relative to the project root
  * @param commands - What uses the project's file, for the message ("tag commands")
  * @param projectPath - The --project value, if any
+ * @param flag - The flag, for the message
  */
 export function otherTasksFileError(
 	file: string | undefined,
 	commands: string,
-	projectPath?: string
+	projectPath?: string,
+	flag = '--file'
 ): Error | undefined {
 	if (file === undefined) return undefined;
 	const { projectRoot, tasksPath } = getProjectPaths(projectPath);
@@ -31,7 +33,7 @@ export function otherTasksFileError(
 	}
 	return Object.assign(
 		new Error(
-			`--file is no longer supported: ${commands} use ${terminalSafe(tasksPath)}`
+			`${flag} is no longer supported: ${commands} use ${terminalSafe(tasksPath)}`
 		),
 		{ hint: 'Run the command from the project that holds the tasks file' }
 	);

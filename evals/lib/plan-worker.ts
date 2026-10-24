@@ -23,9 +23,7 @@ import {
 	createTmCore
 } from '@tm/core';
 import { z } from 'zod';
-import * as aiServices from '../../scripts/modules/ai-services-unified.js';
-import * as configManager from '../../scripts/modules/config-manager.js';
-import * as taskManager from '../../scripts/modules/task-manager.js';
+import { generateObjectService } from '../../scripts/modules/ai-services-unified.js';
 import { enableSilentMode } from '../../scripts/modules/utils.js';
 import { PRD_PATH, type WorkerOutput } from './shared.js';
 
@@ -42,27 +40,10 @@ interface Called {
 	skipped?: unknown;
 }
 
-/**
- * The legacy functions the CLI commands call, with the arguments the CLI
- * passes. Their JSDoc types are narrower than those calls, so they are
- * typed here.
- */
-const legacy = {
-	...taskManager,
-	...aiServices,
-	...configManager
-} as unknown as {
-	parsePRD(
-		prdPath: string,
-		tasksPath: string,
-		numTasks: number,
-		options: object
-	): Promise<Called>;
-	generateObjectService(
-		params: object
-	): Promise<Called & { mainResult: unknown }>;
-	getDefaultNumTasks(projectRoot: string): number;
-};
+/** The legacy AI call the judge uses; its JSDoc type is narrower than the call */
+const judgeCall = generateObjectService as unknown as (
+	params: object
+) => Promise<Called & { mainResult: unknown }>;
 
 const [projectDir, outFile] = process.argv.slice(2);
 if (!projectDir || !outFile) {
@@ -140,34 +121,31 @@ const verdictSchema = z.object({
 
 async function main(judge: boolean): Promise<void> {
 	enableSilentMode();
-	const context = {
-		projectRoot: projectDir,
-		tag: TAG,
-		mcpLog: quiet,
-		outputType: 'mcp'
-	};
 	const prdFile = path.join(projectDir, PRD_PATH);
 
-	step('parsing the PRD');
-	await timed('parse-prd', () =>
-		legacy.parsePRD(prdFile, tasksPath, legacy.getDefaultNumTasks(projectDir), {
-			...context,
-			force: true,
-			commandName: 'parse-prd'
-		})
-	);
-	output.tasks = readTasks();
-	if (output.tasks.length === 0) throw new Error('parse-prd made no tasks');
-
+	// A config or report warning changes the plan; say so
+	const hooks = {
+		onWarning: (message: string) => quiet.error(`warning: ${message}`)
+	};
 	const tmCore = await createTmCore({ projectPath: projectDir });
 	try {
+		step('parsing the PRD');
+		await timed('parse-prd', () =>
+			tmCore.tasks.parsePrd(
+				{ prdPath: prdFile, force: true, tag: TAG, outputType: 'mcp' },
+				hooks
+			)
+		);
+		output.tasks = readTasks();
+		if (output.tasks.length === 0) throw new Error('parse-prd made no tasks');
+
 		step('scoring complexity');
 		// Its `skipped` counts done tasks; timed() would read it as a skipped call
 		const { report } = await timed('analyze-complexity', async () => {
 			const { telemetryData, report } = await tmCore.tasks.analyzeComplexity(
 				{ output: reportPath, tag: TAG, outputType: 'mcp' },
-				// A task the AI left out gets a default score; say so
-				{ onWarning: (message) => quiet.error(`warning: ${message}`) }
+				// A task the AI left out gets a default score
+				hooks
 			);
 			return { telemetryData, report };
 		});
@@ -186,8 +164,7 @@ async function main(judge: boolean): Promise<void> {
 							complexityReportPath: reportPath,
 							outputType: 'mcp'
 						},
-						// A report that doesn't parse changes the plan; say so
-						{ onWarning: (message) => quiet.error(`warning: ${message}`) }
+						hooks
 					),
 				String(task.id)
 			);
@@ -204,7 +181,7 @@ async function main(judge: boolean): Promise<void> {
 	);
 	step('judging the plan');
 	const graded = await timed('judge', () =>
-		legacy.generateObjectService({
+		judgeCall({
 			role: 'main',
 			projectRoot: projectDir,
 			schema: verdictSchema,

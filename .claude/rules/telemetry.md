@@ -101,7 +101,6 @@ These functions adapt core logic for the MCP server, ensuring structured respons
 - **Example Snippet (Direct Function `someAiActionDirect.js`)**:
   ```javascript
   import { performAiRelatedAction } from '../../../../scripts/modules/task-manager/someAiAction.js'; // Core function
-  import { createLogWrapper } from '../../tools/utils.js'; // MCP Log wrapper
 
   export async function someAiActionDirect(args, log, context = {}) {
     const { session } = context;
@@ -112,7 +111,7 @@ These functions adapt core logic for the MCP server, ensuring structured respons
         { /* parameters for core function */ },
         { // Context for core function
           session,
-          mcpLog: createLogWrapper(log),
+          mcpLog: log, // The MCP logger: info, warn, error, debug
           projectRoot: args.projectRoot,
           commandNameFromContext: 'mcp_tool_some_ai_action', // Example command name
           outputType: 'mcp'
