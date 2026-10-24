@@ -98,6 +98,8 @@ const quiet = {
 		process.stderr.write(`${message}\n`);
 	}
 };
+/** One progress line per model step, so a long run doesn't look stuck */
+const step = (text: string) => process.stderr.write(`  ${text}\n`);
 const output: WorkerOutput = {
 	tasks: [],
 	complexity: [],
@@ -158,6 +160,7 @@ async function main(judge: boolean): Promise<void> {
 	};
 	const prdFile = path.join(projectDir, PRD_PATH);
 
+	step('parsing the PRD');
 	await timed('parse-prd', () =>
 		legacy.parsePRD(prdFile, tasksPath, legacy.getDefaultNumTasks(projectDir), {
 			...context,
@@ -168,6 +171,7 @@ async function main(judge: boolean): Promise<void> {
 	output.tasks = readTasks();
 	if (output.tasks.length === 0) throw new Error('parse-prd made no tasks');
 
+	step('scoring complexity');
 	const analysis = await timed('analyze-complexity', () =>
 		legacy.analyzeTaskComplexity(
 			{
@@ -181,7 +185,8 @@ async function main(judge: boolean): Promise<void> {
 	);
 	output.complexity = analysis.report.complexityAnalysis ?? [];
 
-	for (const task of output.tasks) {
+	for (const [index, task] of output.tasks.entries()) {
+		step(`expanding task ${index + 1} of ${output.tasks.length}`);
 		await timed(
 			'expand',
 			() =>
@@ -208,6 +213,7 @@ async function main(judge: boolean): Promise<void> {
 		fs.readFileSync(prdFile, 'utf8'),
 		output.tasks
 	);
+	step('judging the plan');
 	const graded = await timed('judge', () =>
 		legacy.generateObjectService({
 			role: 'main',
