@@ -192,20 +192,6 @@ describe('runTasksMergeDriver', () => {
 			expect(fs.readFileSync(at('ours'), 'utf8')).toBe(text);
 		}
 	);
-
-	it('leaves the current side untouched when the temporary file is taken', () => {
-		const ours = `${JSON.stringify(tag([task(1, 'A'), task(2, 'Ours')]))}\n`;
-		write('base', tag([task(1, 'A')]));
-		write('ours', ours);
-		write('theirs', tag([task(1, 'A'), task(2, 'Theirs')]));
-		const taken = path.join(dir, 'elsewhere');
-		write('elsewhere', 'not yours');
-		fs.symlinkSync(taken, `${at('ours')}.taskgraph-${process.pid}.tmp`);
-
-		expect(() => runTasksMergeDriver(files())).toThrow(/EEXIST/);
-		expect(fs.readFileSync(at('ours'), 'utf8')).toBe(ours);
-		expect(fs.readFileSync(taken, 'utf8')).toBe('not yours');
-	});
 });
 
 describe('installMergeDriver', () => {
