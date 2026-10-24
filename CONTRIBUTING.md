@@ -79,13 +79,13 @@ npm run format
 
 The roadmap is tracked in two places: [GitHub issues](https://github.com/stephennmiller/taskgraph-ai/issues) and this repo's own `.taskgraph/tasks/tasks.json`, so that `taskgraph next` here returns current work. **The GitHub issue wins.** Its scope, done criteria and open or closed state are the source of truth; the task points at it and sets the order.
 
-- Each open issue has one task in the `master` tag, titled `<issue title> (#<n>)`, with the issue link in its details. Epics that only group other issues (#195, #242) have no task; epics with steps of their own (#254, #328) have a subtask per step.
+- Each open issue has one task in the `master` tag, titled `<issue title> (#<n>)`, with the issue link in its details. Epics that only group other issues (#195, #242) have no task (or a cancelled one); epics with steps of their own (#254, #328) have a subtask per step.
 - Task dependencies follow the "Order" sections of the epics.
-- New issue: add its task, without AI: `taskgraph add-task --title='<issue title> (#<n>)' --description='<one line>' --details='GitHub issue #<n>: <url>'` (write a `'` in the title as `'\''`).
-- Closing an issue: in the PR that closes it, run `taskgraph set-status --id=<task id> --status=done` (`--status=cancelled` if it closes as not planned).
+- New issue: run `taskgraph github import`. It adds a task titled `<issue title> (#<n>)`, linked to the issue, for each open issue that has none, and links any unlinked task already titled that way. Running it again adds nothing. It also adds a task for an epic that only groups other issues: set that one to `cancelled` (don't remove it, or the next import adds it back).
+- Closing an issue: `taskgraph github pull -y` marks its task `done` (`cancelled` if it closes as not planned). In the PR that closes it, you can still set the task to done by hand: `taskgraph set-status --id=<task id> --status=done`.
 - When the task and the issue disagree, change the task to match the issue.
 
-Don't run `taskgraph github push` here: these tasks aren't linked to their issues, so it would open a second issue for each one.
+`taskgraph github push` leaves imported issues alone, so running it here doesn't rewrite or duplicate them. Tasks that aren't linked to an issue would still get a new one, so run `import` first.
 
 ### Code Quality Standards
 

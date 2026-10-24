@@ -119,10 +119,14 @@ export class GhCliClient implements GitHubClient {
 		return { fullName: data.full_name, url: data.html_url };
 	}
 
-	async listIssues(label: string): Promise<RemoteIssue[]> {
+	async listIssues(
+		label?: string,
+		state: 'open' | 'all' = 'all'
+	): Promise<RemoteIssue[]> {
 		const issues: RemoteIssue[] = [];
+		const filter = label ? `labels=${encodeURIComponent(label)}&` : '';
 		for (let page = 1; ; page++) {
-			const query = `labels=${encodeURIComponent(label)}&state=all&per_page=${PAGE_SIZE}&page=${page}`;
+			const query = `${filter}state=${state}&per_page=${PAGE_SIZE}&page=${page}`;
 			const { data } = await this.request(
 				'GET',
 				`repos/${this.repo}/issues?${query}`

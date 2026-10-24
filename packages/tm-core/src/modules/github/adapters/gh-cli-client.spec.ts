@@ -158,6 +158,16 @@ describe('GhCliClient', () => {
 		);
 	});
 
+	it('lists open issues with any label when no label is given', () => {
+		respond(200, [rawIssue(1)]);
+
+		return client.listIssues(undefined, 'open').then(() => {
+			expect(callArgs(0)[4]).toBe(
+				'repos/acme/app/issues?state=open&per_page=100&page=1'
+			);
+		});
+	});
+
 	it('reads the repo from the API', () => {
 		respond(200, {
 			full_name: 'acme/app',

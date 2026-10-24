@@ -18,8 +18,11 @@ export class FakeGitHub implements GitHubClient {
 	async getRepo() {
 		return { fullName: REPO, url: `https://github.com/${REPO}` };
 	}
-	async listIssues(label: string) {
-		return this.issues.filter((i) => i.labels.includes(label));
+	async listIssues(label?: string, state: 'open' | 'all' = 'all') {
+		return this.issues
+			.filter((i) => !label || i.labels.includes(label))
+			.filter((i) => state === 'all' || i.state === 'open')
+			.map((i) => ({ ...i }));
 	}
 	async createIssue(input: CreateIssueInput) {
 		const number = this.issues.length + 1;

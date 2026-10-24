@@ -1,5 +1,6 @@
 /**
- * @fileoverview In-memory status and field updates for one task or subtask.
+ * @fileoverview In-memory status and field updates for one task or subtask,
+ * and free IDs for appended tasks.
  * FileStorage runs these inside its locked read-modify-write; a returned
  * `tasks: null` means nothing changed.
  */
@@ -18,6 +19,7 @@ import type {
 	Task,
 	TaskStatus
 } from '../../../../common/types/index.js';
+import { archiveTag, nextTaskId } from '../../../tasks/utils/archive.js';
 import { releaseClaimIfPending } from '../../../tasks/utils/claim.js';
 
 type Outcome<R> = { tasks: Task[] | null; result: R };
@@ -255,4 +257,26 @@ export function modifyTaskIn(
 	subtasks[subIndex] = saved;
 	updated[taskIndex] = { ...tasks[taskIndex], subtasks, updatedAt: now };
 	return { tasks: updated, result: saved };
+}
+
+/**
+ * Append `tasks` to `existing`. A task whose ID is in use, or reserved by the
+ * tag's archive (at or below its `highestId`), gets the next free ID;
+ * dependencies on it are not rewritten. `result` holds the appended tasks.
+ */
+export function withFreeIds(
+	existing: Task[],
+	tasks: Task[],
+	archive: unknown,
+	tag: string
+): { tasks: Task[]; result: Task[] } {
+	const { highestId } = archiveTag(archive, tag).metadata;
+	const taken = new Set(existing.map((t) => String(t.id)));
+	const added = tasks.map((task) => {
+		const free = !taken.has(String(task.id)) && !(Number(task.id) <= highestId);
+		const id = free ? task.id : String(nextTaskId(taken, highestId));
+		taken.add(String(id));
+		return id === task.id ? task : { ...task, id };
+	});
+	return { tasks: [...existing, ...added], result: added };
 }
