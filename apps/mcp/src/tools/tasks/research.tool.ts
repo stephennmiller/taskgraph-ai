@@ -109,11 +109,11 @@ export function registerResearchTool(server: FastMCP) {
 							onDebug: (message) => log.debug(message)
 						}
 					);
-					// A failed save to a task was only a warning; a failed file save an error
+					// The answer is kept: a save that failed after the AI call is
+					// reported in saveFailures, not as an error a retry would repeat
 					for (const failure of result.saveFailures) {
-						if (failure.kind === 'file') throw new Error(failure.message);
 						log.warn(
-							`Error saving research to task/subtask: ${failure.message}`
+							`Error saving research to ${failure.kind === 'task' ? 'task/subtask' : 'file'}: ${failure.message}`
 						);
 					}
 					if (result.savedTo) {
@@ -135,7 +135,11 @@ export function registerResearchTool(server: FastMCP) {
 							detailLevel: result.detailLevel,
 							telemetryData: result.telemetryData,
 							tagInfo: result.tagInfo,
-							savedFilePath: result.savedFilePath
+							savedFilePath: result.savedFilePath,
+							savedTo: result.savedTo,
+							...(result.saveFailures.length
+								? { saveFailures: result.saveFailures }
+								: {})
 						}
 					});
 				} catch (error: unknown) {

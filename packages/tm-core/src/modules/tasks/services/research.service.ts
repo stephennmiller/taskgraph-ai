@@ -358,11 +358,15 @@ export class ResearchService {
 			sections.push(fileContext.context);
 			breakdown.files = fileContext.breakdown;
 		}
+		let treeGathered = false;
 		if (input.includeProjectTree) {
 			const tree = gatherProjectTree(projectRoot);
 			if (tree.context) {
 				sections.push(tree.context);
 				breakdown.projectTree = tree.breakdown;
+				treeGathered = true;
+			} else {
+				warn(`Could not read the project tree at ${projectRoot}`);
 			}
 		}
 		breakdown.total =
@@ -390,7 +394,7 @@ export class ResearchService {
 			taskIds,
 			relatedTaskIds,
 			files: filePaths,
-			projectTree: Boolean(input.includeProjectTree),
+			projectTree: treeGathered,
 			customContext: Boolean(notes)
 		});
 

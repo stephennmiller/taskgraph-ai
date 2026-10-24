@@ -137,7 +137,11 @@ interface TreeNode {
 	dirCount: number;
 }
 
-function buildTree(dir: string, depth: number): TreeNode | null {
+function buildTree(
+	dir: string,
+	depth: number,
+	root = realpathOfExistingPrefix(dir)
+): TreeNode | null {
 	if (depth >= TREE_DEPTH) return null;
 	let names: string[];
 	try {
@@ -162,7 +166,9 @@ function buildTree(dir: string, depth: number): TreeNode | null {
 		}
 		if (isDirectory) {
 			node.dirCount++;
-			const child = buildTree(full, depth + 1);
+			// A link to a directory outside the project is counted, not listed
+			if (!isInsideRoot(root, full)) continue;
+			const child = buildTree(full, depth + 1, root);
 			if (child) node.children.push(child);
 		} else {
 			node.fileCount++;

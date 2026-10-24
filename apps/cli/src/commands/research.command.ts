@@ -297,7 +297,9 @@ export class ResearchCommand extends Command {
 		} catch (error: any) {
 			// Ctrl-C at a prompt ends the session quietly
 			if (error?.name !== 'ExitPromptError') {
+				const hint = aiErrorHint(error);
 				console.log(chalk.red(`✗ ${terminalSafe(error.message)}`));
+				if (hint) console.log(theme.muted(hint));
 			}
 		}
 	}

@@ -171,9 +171,13 @@ describe('research', () => {
 		expect(ctx.log.warn).toHaveBeenCalledWith(
 			'Error saving research to task/subtask: gone'
 		);
+		expect(reply(result).data.saveFailures).toEqual([
+			{ kind: 'task', id: '15', message: 'gone' }
+		]);
 	});
 
-	it('fails when the file save failed', async () => {
+	// A task save may already have happened, so an error would invite a retry that appends twice
+	it('keeps the answer and reports a failed file save', async () => {
 		tasks.research.mockResolvedValue({
 			...coreResult,
 			saveFailures: [{ kind: 'file', path: '', message: 'EACCES' }]
@@ -184,8 +188,12 @@ describe('research', () => {
 			ctx
 		);
 
-		expect(result.isError).toBe(true);
-		expect(result.content[0].text).toContain('EACCES');
+		expect(result.isError).toBeUndefined();
+		const body = reply(result);
+		expect(body.data.result).toBe(coreResult.result);
+		expect(body.data.saveFailures).toEqual([
+			{ kind: 'file', path: '', message: 'EACCES' }
+		]);
 	});
 
 	it('replies with the error and hint tm-core threw', async () => {

@@ -83,6 +83,15 @@ describe('resolveContextFile', () => {
 		expect(() => resolveContextFile(root, 'link.txt')).toThrow();
 	});
 
+	it.each(['notes.txt', 'src/../.env'])(
+		'refuses %s, which reaches .env through a link or ..',
+		(file) => {
+			fs.writeFileSync(path.join(root, '.env'), 'TOKEN=1');
+			fs.symlinkSync('.env', path.join(root, 'notes.txt'));
+			expect(() => resolveContextFile(root, file)).toThrow('secret file');
+		}
+	);
+
 	it('refuses a file that does not exist', () => {
 		expect(() => resolveContextFile(root, 'src/nope.js')).toThrow(
 			'File not found: src/nope.js'
@@ -142,5 +151,16 @@ describe('gatherProjectTree', () => {
 		expect(context).toContain('a.js');
 		expect(context).not.toMatch(/node_modules|\.git|\.env/);
 		expect(breakdown).toMatchObject({ fileCount: 0, dirCount: 1 });
+	});
+
+	it('does not list a linked directory outside the project', () => {
+		fs.mkdirSync(path.join(base, 'home', '.ssh'), { recursive: true });
+		fs.writeFileSync(path.join(base, 'home', '.ssh', 'id_rsa'), 'KEY');
+		fs.symlinkSync(path.join(base, 'home'), path.join(root, 'home'));
+
+		const { context } = gatherProjectTree(root);
+
+		expect(context).toContain('project/ (0 files, 2 dirs)');
+		expect(context).not.toMatch(/\.ssh|id_rsa/);
 	});
 });

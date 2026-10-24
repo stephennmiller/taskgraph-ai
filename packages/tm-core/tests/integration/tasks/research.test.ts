@@ -205,6 +205,27 @@ describe('tasks.research', () => {
 		]);
 	});
 
+	it('reports a save to a tag deleted during the AI call, without recreating it', async () => {
+		generateText.mockImplementation(async () => {
+			const data = readFile();
+			delete data.feature;
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			return answer() as any;
+		});
+
+		const result = await tmCore.tasks.research({
+			query: 'q',
+			saveTo: '1',
+			tag: 'feature'
+		});
+
+		expect(result.result).toBe('Use connect-pg-simple.');
+		expect(result.saveFailures).toEqual([
+			expect.objectContaining({ kind: 'task', id: '1' })
+		]);
+		expect(Object.keys(readFile())).toEqual(['master']);
+	});
+
 	it('saves the answer to .taskgraph/docs/research and to a file you name', async () => {
 		const result = await tmCore.tasks.research({
 			query: 'How to cache?',
