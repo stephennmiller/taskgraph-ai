@@ -32,6 +32,8 @@ Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capa
 
 `init` changes your shell startup file only if you agree. Interactive runs ask whether to add `alias tm='taskgraph'` to `~/.zshrc` or `~/.bashrc`, with No as the default. `--yes` never adds it; pass `--aliases` to add it without asking, or `--no-aliases` to skip the question.
 
+Without a terminal (scripts, CI, agents), `init` asks nothing: it stops with an error and exits 1 unless `--yes` (or `--name` with `--description`) answers the questions. Ctrl-C at a question exits 130 and changes nothing.
+
 ## Check the Setup
 
 ```bash

@@ -36,7 +36,7 @@ const ALLOWED_FILES = new Set([
 	'package-lock.json',
 	'apps/docs/upgrading.mdx',
 	// The frozen list of names older inits wrote, which the cleanup removes
-	'tests/unit/profiles/claude-no-slash-commands.test.js',
+	'packages/tm-core/src/modules/init/claude-code.spec.ts',
 	'packages/tm-profiles/src/legacy-commands.ts',
 	'packages/tm-profiles/src/legacy-commands.spec.ts',
 	'packages/tm-profiles/tests/integration/stale-command-names.test.ts'
