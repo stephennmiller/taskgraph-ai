@@ -721,12 +721,13 @@
         "description": "Once #439 moves the path rule into @tm/core as resolvePathInsideRoot, make apps/mcp import it instead of keeping its own copy.",
         "details": "GitHub issue #470: https://github.com/stephennmiller/taskgraph-ai/issues/470\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "38"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T11:45:53.843Z"
       },
       {
         "id": "55",
@@ -878,9 +879,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T11:34:03.833Z",
+      "lastModified": "2026-10-24T11:45:53.844Z",
       "taskCount": 67,
-      "completedCount": 33,
+      "completedCount": 34,
       "tags": [
         "master"
       ]

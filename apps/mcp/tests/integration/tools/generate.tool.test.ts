@@ -21,7 +21,10 @@ describe('generate MCP tool', () => {
 	let cliPath: string;
 
 	beforeEach(() => {
-		testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-generate-'));
+		// Real path: generate returns the output directory with symlinks followed
+		testDir = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-generate-'))
+		);
 		process.chdir(testDir);
 
 		cliPath = path.resolve(__dirname, '../../../../../dist/taskgraph.js');
