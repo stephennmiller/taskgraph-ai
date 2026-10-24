@@ -1,0 +1,52 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["set-status", "--id=5", "--status=pending"],
+		["expand", "--id=4", "--num=2"],
+		["expand", "--id=2", "--num=1"],
+		["expand", "--id=2", "--num=2", "--force", "--research"],
+		["expand", "--id=1", "--num=1"],
+		["expand", "--id=1", "--tag=feature", "--num=2"],
+		{ "args": ["expand", "--id=99"], "expectExit": 1 },
+		{ "args": ["expand"], "expectExit": 1 },
+		{
+			"shell": "mkdir -p .taskgraph/reports && printf '%s' '{\"meta\":{},\"complexityAnalysis\":[{\"taskId\":5,\"recommendedSubtasks\":0},{\"taskId\":4,\"recommendedSubtasks\":3,\"expansionPrompt\":\"Split by section\",\"reasoning\":\"Long\"}]}' > .taskgraph/reports/task-complexity-report.json"
+		},
+		["expand", "--id=5"],
+		["expand", "--id=4", "--force"],
+		["expand", "--all"],
+		["expand", "--all", "--force", "--num=1"],
+		{
+			"mcp": "expand_task",
+			"input": { "id": "4", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "expand_task",
+			"input": {
+				"id": "4",
+				"num": "2",
+				"force": true,
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "expand_task",
+			"input": { "id": "5", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "expand_task",
+			"input": { "id": "1", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{
+			"mcp": "expand_task",
+			"input": { "id": "99", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{ "mcp": "expand_all", "input": { "projectRoot": "<project>" } },
+		{
+			"mcp": "expand_all",
+			"input": { "force": true, "num": "1", "projectRoot": "<project>" }
+		}
+	]
+}

@@ -13,6 +13,8 @@ import {
 	registerArchiveTasksTool,
 	registerClearSubtasksTool,
 	registerCopyTagTool,
+	registerExpandAllTool,
+	registerExpandTaskTool,
 	registerDeleteTagTool,
 	registerDependencyAnalysisTool,
 	registerFixDependenciesTool,
@@ -33,8 +35,6 @@ import {
 } from '@tm/mcp';
 import { registerAnalyzeProjectComplexityTool } from './analyze.js';
 import { registerComplexityReportTool } from './complexity-report.js';
-import { registerExpandAllTool } from './expand-all.js';
-import { registerExpandTaskTool } from './expand-task.js';
 import { registerInitializeProjectTool } from './initialize-project.js';
 import { registerModelsTool } from './models.js';
 import { registerNextTaskTool } from './next-task.js';

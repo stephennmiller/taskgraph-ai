@@ -77,6 +77,7 @@ interface RawAiConfig {
 		userId?: unknown;
 		enableCodebaseAnalysis?: unknown;
 		defaultPriority?: unknown;
+		defaultSubtasks?: unknown;
 	};
 	claudeCode?: unknown;
 }
@@ -182,6 +183,12 @@ export class AiConfig {
 	get defaultPriority(): string | undefined {
 		const priority = this.raw.global?.defaultPriority;
 		return typeof priority === 'string' ? priority : undefined;
+	}
+
+	/** How many subtasks expand asks for when nothing else says; 5 by default */
+	get defaultSubtasks(): number {
+		const count = parseInt(String(this.raw.global?.defaultSubtasks), 10);
+		return Number.isNaN(count) ? 5 : count;
 	}
 
 	/** `claudeCode` merged with the command's `commandSpecific` entry */

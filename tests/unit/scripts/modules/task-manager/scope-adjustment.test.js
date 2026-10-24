@@ -4,20 +4,15 @@
 import { vi } from 'vitest';
 
 // Mock dependencies using unstable_mockModule for ES modules
-vi.doMock(
-	'../../../../../scripts/modules/utils.js',
-	async (importOriginal) => ({
-		// The real sum, so the usage line's totals are checked
-		aggregateTelemetry: (await importOriginal()).aggregateTelemetry,
-		log: vi.fn(),
-		readJSON: vi.fn(),
-		writeJSON: vi.fn(),
-		getCurrentTag: vi.fn(() => 'master'),
-		readComplexityReport: vi.fn(),
-		findTaskInComplexityReport: vi.fn(),
-		findProjectRoot: vi.fn()
-	})
-);
+vi.doMock('../../../../../scripts/modules/utils.js', () => ({
+	log: vi.fn(),
+	readJSON: vi.fn(),
+	writeJSON: vi.fn(),
+	getCurrentTag: vi.fn(() => 'master'),
+	readComplexityReport: vi.fn(),
+	findTaskInComplexityReport: vi.fn(),
+	findProjectRoot: vi.fn()
+}));
 
 vi.doMock('../../../../../scripts/modules/ai-services-unified.js', () => ({
 	generateObjectService: vi.fn(),

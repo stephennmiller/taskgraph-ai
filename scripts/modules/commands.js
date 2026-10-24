@@ -31,8 +31,6 @@ import { log, readJSON } from './utils.js';
 
 import {
 	analyzeTaskComplexity,
-	expandAllTasks,
-	expandTask,
 	parsePRD,
 	scopeDownTask,
 	scopeUpTask,
@@ -855,117 +853,6 @@ function registerCommands(programInstance) {
 	// Use the centralized command registry to register all CLI commands
 	// This replaces individual command registrations and reduces duplication
 	registerAllCommands(programInstance);
-
-	// expand command
-	programInstance
-		.command('expand')
-		.description('Expand a task into subtasks using AI')
-		.option('-i, --id <id>', 'ID of the task to expand')
-		.option(
-			'-a, --all',
-			'Expand all pending tasks based on complexity analysis'
-		)
-		.option(
-			'-n, --num <number>',
-			'Number of subtasks to generate (uses complexity analysis by default if available)'
-		)
-		.option(
-			'-r, --research',
-			'Enable research-backed generation (web research via Claude Code)',
-			false
-		)
-		.option('-p, --prompt <text>', 'Additional context for subtask generation')
-		.option('-f, --force', 'Force expansion even if subtasks exist', false) // Ensure force option exists
-		.option(
-			'--file <file>',
-			'Path to the tasks file (relative to project root)',
-			TASKGRAPH_TASKS_FILE // Allow file override
-		) // Allow file override
-		.option(
-			'--complexity-report <file>',
-			'Path to the complexity report file (use this to specify the complexity report, not --file)'
-			// Removed default value to allow tag-specific auto-detection
-		)
-		.option('--tag <tag>', 'Specify tag context for task operations')
-		.action(async (options) => {
-			// Initialize TaskGraph
-			const initOptions = {
-				tasksPath: options.file || true,
-				tag: options.tag
-			};
-
-			if (options.complexityReport) {
-				initOptions.complexityReportPath = options.complexityReport;
-			}
-
-			const taskGraph = initTaskGraph(initOptions);
-
-			const tag = taskGraph.getCurrentTag();
-
-			// Show current tag context
-			await displayCurrentTagIndicator(tag, {
-				tasksPath: taskGraph.getTasksPath()
-			});
-
-			if (options.all) {
-				// --- Handle expand --all ---
-				// Each task's spinner and result, then one summary line, say it all
-				try {
-					const result = await expandAllTasks(
-						taskGraph.getTasksPath(),
-						options.num, // Pass num
-						options.research, // Pass research flag
-						options.prompt, // Pass additional context
-						options.force, // Pass force flag
-						{
-							projectRoot: taskGraph.getProjectRoot(),
-							tag,
-							complexityReportPath: taskGraph.getComplexityReportPath()
-						} // Pass context with projectRoot and tag
-						// outputFormat defaults to 'text' in expandAllTasks for CLI
-					);
-					// Some tasks failed: the work that succeeded is saved, but the
-					// run did not do everything asked
-					if (result?.failedCount > 0) process.exitCode = 1;
-				} catch (error) {
-					displayError(error, { hint: aiErrorHint(error) });
-				}
-			} else if (options.id) {
-				// --- Handle expand --id <id> (Should be correct from previous refactor) ---
-				if (!options.id) {
-					console.error(
-						chalk.red('Error: Task ID is required unless using --all.')
-					);
-					process.exit(1);
-				}
-
-				try {
-					// Call the refactored expandTask function
-					await expandTask(
-						taskGraph.getTasksPath(),
-						options.id,
-						options.num,
-						options.research,
-						options.prompt,
-						{
-							projectRoot: taskGraph.getProjectRoot(),
-							tag,
-							complexityReportPath: taskGraph.getComplexityReportPath()
-						}, // Pass context with projectRoot and tag
-						options.force // Pass the force flag down
-					);
-					// expandTask logs its own success/failure for single task
-				} catch (error) {
-					displayError(error, { hint: aiErrorHint(error) });
-				}
-			} else {
-				printError(
-					'Missing task ID',
-					'Try `taskgraph expand --id=3`, or `--all` for every pending task'
-				);
-				process.exit(1);
-			}
-		});
 
 	// analyze-complexity command
 	programInstance

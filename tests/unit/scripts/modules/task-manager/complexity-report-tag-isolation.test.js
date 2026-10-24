@@ -98,7 +98,6 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => ({
 	findCycles: vi.fn(() => []),
 	truncate: vi.fn((text) => text),
 	addComplexityToTask: vi.fn((task, complexity) => ({ ...task, complexity })),
-	aggregateTelemetry: vi.fn((telemetryArray) => telemetryArray[0] || {}),
 	ensureTagMetadata: vi.fn((tagObj) => tagObj),
 	getCurrentTag: vi.fn(() => 'master'),
 	resolveTag: vi.fn(() => 'master'),
@@ -500,10 +499,6 @@ const { default: analyzeTaskComplexity } = await import(
 	'../../../../../scripts/modules/task-manager/analyze-task-complexity.js'
 );
 
-const { default: expandTask } = await import(
-	'../../../../../scripts/modules/task-manager/expand-task.js'
-);
-
 describe('Complexity Report Tag Isolation', () => {
 	const projectRoot = '/mock/project/root';
 	const sampleTasks = {
@@ -899,100 +894,6 @@ describe('Complexity Report Tag Isolation', () => {
 
 			// Should NOT check for master report
 			expect(mockExistsSync).not.toHaveBeenCalledWith(
-				path.join(
-					projectRoot,
-					'.taskgraph/reports',
-					'task-complexity-report.json'
-				)
-			);
-		});
-	});
-
-	describe('Expand Task Tag Isolation', () => {
-		test('should use tag-specific complexity report for expansion', async () => {
-			// Mock existing feature tag report
-			mockExistsSync.mockImplementation((filepath) => {
-				return filepath.endsWith('task-complexity-report_feature-auth.json');
-			});
-			mockReadFileSync.mockReturnValue(JSON.stringify(sampleComplexityReport));
-
-			const tasksPath = path.join(projectRoot, 'tasks/tasks.json');
-			const taskId = 1;
-			const numSubtasks = 3;
-
-			await expandTask(
-				tasksPath,
-				taskId,
-				numSubtasks,
-				false, // useResearch
-				'', // additionalContext
-				{
-					projectRoot,
-					tag: 'feature-auth',
-					complexityReportPath: path.join(
-						projectRoot,
-						'.taskgraph/reports',
-						'task-complexity-report_feature-auth.json'
-					),
-					mcpLog: {
-						info: vi.fn(),
-						warn: vi.fn(),
-						error: vi.fn(),
-						debug: vi.fn(),
-						success: vi.fn()
-					}
-				},
-				false // force
-			);
-
-			// Should read from feature tag report
-			expect(readJSON).toHaveBeenCalledWith(
-				path.join(
-					projectRoot,
-					'.taskgraph/reports',
-					'task-complexity-report_feature-auth.json'
-				)
-			);
-		});
-
-		test('should use master complexity report for master tag expansion', async () => {
-			// Mock existing master report
-			mockExistsSync.mockImplementation((filepath) => {
-				return filepath.endsWith('task-complexity-report.json');
-			});
-			mockReadFileSync.mockReturnValue(JSON.stringify(sampleComplexityReport));
-
-			const tasksPath = path.join(projectRoot, 'tasks/tasks.json');
-			const taskId = 1;
-			const numSubtasks = 3;
-
-			await expandTask(
-				tasksPath,
-				taskId,
-				numSubtasks,
-				false, // useResearch
-				'', // additionalContext
-				{
-					projectRoot,
-					tag: 'master',
-					complexityReportPath: path.join(
-						projectRoot,
-						'.taskgraph/reports',
-						'task-complexity-report.json'
-					),
-					mcpLog: {
-						info: vi.fn(),
-						warn: vi.fn(),
-						error: vi.fn(),
-						debug: vi.fn(),
-						success: vi.fn()
-					}
-				},
-				false // force
-			);
-
-			// Should read from master report
-			expect(readJSON).toHaveBeenCalledWith(
 				path.join(
 					projectRoot,
 					'.taskgraph/reports',

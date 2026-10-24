@@ -3,7 +3,11 @@
  * Core logic for dynamic task complexity adjustment (scope-up and scope-down)
  */
 
-import { assignMetadata, reconcileDependencySources } from '@tm/core';
+import {
+	aggregateTelemetry,
+	assignMetadata,
+	reconcileDependencySources
+} from '@tm/core';
 import { z } from 'zod';
 import { findComplexityReportPath } from '../../../src/utils/path-utils.js';
 import {
@@ -12,7 +16,6 @@ import {
 } from '../ai-services-unified.js';
 import { findTaskById, taskExists } from '../task-manager.js';
 import {
-	aggregateTelemetry,
 	findTaskInComplexityReport,
 	getCurrentTag,
 	log,
