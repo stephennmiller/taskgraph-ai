@@ -53,7 +53,10 @@ describe('tasks.parsePrd streaming', () => {
 	beforeEach(async () => {
 		p = await createPrdProject();
 	});
-	afterEach(() => p.close());
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		return p.close();
+	});
 
 	it('reports each partial list and the usage from the finished stream', async () => {
 		const tasks = [generated(1), generated(2)];
@@ -147,6 +150,30 @@ describe('tasks.parsePrd streaming', () => {
 		await parse();
 
 		expect(p.generateObject).toHaveBeenCalledTimes(1);
+	});
+
+	it('gives up when the stream goes quiet, without asking again (#587)', async () => {
+		vi.stubEnv('TASKGRAPH_AI_TIMEOUT_MS', '50');
+		p.streamObject.mockResolvedValue({
+			...reply(),
+			mainResult: {
+				partialObjectStream: (async function* () {
+					yield { tasks: [generated(1)] };
+					await new Promise(() => {});
+				})()
+			}
+		} as any);
+		const onPartial = vi.fn();
+		const onStreamFailed = vi.fn();
+
+		await expect(parse({ onPartial, onStreamFailed })).rejects.toThrow(
+			'The AI stopped sending tasks'
+		);
+
+		expect(onPartial).toHaveBeenCalledTimes(1);
+		expect(p.streamObject.mock.calls[0][0].abortSignal.aborted).toBe(true);
+		expect(onStreamFailed).toHaveBeenCalledWith(expect.any(Error), false);
+		expect(p.generateObject).not.toHaveBeenCalled();
 	});
 });
 
