@@ -14,6 +14,7 @@ import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { ComplexityReportCommand } from './commands/complexity-report.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
+import { ScopeDownCommand, ScopeUpCommand } from './commands/scope.command.js';
 import {
 	AddDependencyCommand,
 	FixDependenciesCommand,
@@ -128,6 +129,18 @@ export class CommandRegistry {
 			name: 'expand',
 			description: 'Expand a task into subtasks using AI',
 			commandClass: ExpandCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'scope-up',
+			description: 'Increase task complexity with AI assistance',
+			commandClass: ScopeUpCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'scope-down',
+			description: 'Decrease task complexity with AI assistance',
+			commandClass: ScopeDownCommand as any,
 			category: 'task'
 		},
 		{

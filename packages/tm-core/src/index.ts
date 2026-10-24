@@ -415,3 +415,12 @@ export type {
 	UpdateSubtaskInput,
 	UpdateSubtaskResult
 } from './modules/tasks/services/update-subtask.service.js';
+
+// ========== Scope up / down ==========
+
+export type {
+	ScopedTask,
+	ScopeTaskHooks,
+	ScopeTaskInput,
+	ScopeTaskResult
+} from './modules/tasks/services/scope-adjustment.service.js';

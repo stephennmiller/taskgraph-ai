@@ -32,6 +32,8 @@ import {
 	registerRemoveTaskTool,
 	registerRenameTagTool,
 	registerResearchTool,
+	registerScopeDownTool,
+	registerScopeUpTool,
 	registerSetTaskStatusTool,
 	registerUpdateSubtaskTool,
 	registerUseTagTool,
@@ -42,8 +44,6 @@ import { registerModelsTool } from './models.js';
 import { registerNextTaskTool } from './next-task.js';
 import { registerParsePRDTool } from './parse-prd.js';
 import { registerResponseLanguageTool } from './response-language.js';
-import { registerScopeDownTool } from './scope-down.js';
-import { registerScopeUpTool } from './scope-up.js';
 import { registerUpdateTool } from './update.js';
 import { registerUpdateTaskTool } from './update-task.js';
 

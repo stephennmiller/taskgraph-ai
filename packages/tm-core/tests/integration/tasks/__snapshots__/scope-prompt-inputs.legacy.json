@@ -1,0 +1,602 @@
+{
+	"up-regular-plain": {
+		"scenario": {
+			"dir": "up",
+			"strength": "regular",
+			"subtasks": false
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: INCREASE complexity\n- Strength: regular (moderate complexity increases)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Add more detailed requirements, edge cases, or advanced features\n- Include additional implementation considerations\n- Enhance error handling and validation requirements\n- Expand testing strategies with more comprehensive scenarios\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-up"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": []
+		}
+	},
+	"up-light-subtasks-c7-prompt": {
+		"scenario": {
+			"dir": "up",
+			"strength": "light",
+			"subtasks": true,
+			"complexity": 7,
+			"prompt": "Focus on security"
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: INCREASE complexity\n- Strength: light (minor enhancements)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Add more detailed requirements, edge cases, or advanced features\n- Include additional implementation considerations\n- Enhance error handling and validation requirements\n- Expand testing strategies with more comprehensive scenarios\n\nCUSTOM INSTRUCTIONS:\nFocus on security\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-up"
+			},
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 4 NEW subtasks that reflect the increased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped up (light strength) to increase complexity.\n**Original Complexity**: 7/10 - consider this when determining appropriate scope level.\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Add some additional implementation details\n- Include basic error handling considerations\n- Cover a few common edge cases\n- Enhance testing approaches slightly\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-up"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			]
+		}
+	},
+	"up-regular-subtasks": {
+		"scenario": {
+			"dir": "up",
+			"strength": "regular",
+			"subtasks": true
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: INCREASE complexity\n- Strength: regular (moderate complexity increases)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Add more detailed requirements, edge cases, or advanced features\n- Include additional implementation considerations\n- Enhance error handling and validation requirements\n- Expand testing strategies with more comprehensive scenarios\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-up"
+			},
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 6 NEW subtasks that reflect the increased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped up (regular strength) to increase complexity.\n\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Add more detailed implementation steps\n- Include additional error handling and validation\n- Cover more edge cases and advanced features\n- Provide more comprehensive testing approaches\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-up"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			]
+		}
+	},
+	"up-heavy-subtasks-c4-research": {
+		"scenario": {
+			"dir": "up",
+			"strength": "heavy",
+			"subtasks": true,
+			"complexity": 4,
+			"research": true
+		},
+		"calls": [
+			{
+				"role": "research",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: INCREASE complexity\n- Strength: heavy (significant complexity additions)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Add more detailed requirements, edge cases, or advanced features\n- Include additional implementation considerations\n- Enhance error handling and validation requirements\n- Expand testing strategies with more comprehensive scenarios\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-up"
+			},
+			{
+				"role": "research",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 7 NEW subtasks that reflect the increased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped up (heavy strength) to increase complexity.\n**Original Complexity**: 4/10 - consider this when determining appropriate scope level.\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Add comprehensive implementation steps with advanced features\n- Include extensive error handling, validation, and edge cases\n- Cover multiple integration scenarios and advanced testing\n- Provide thorough documentation and optimization approaches\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-up"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			]
+		}
+	},
+	"down-light-subtasks-c9": {
+		"scenario": {
+			"dir": "down",
+			"strength": "light",
+			"subtasks": true,
+			"complexity": 9
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: DECREASE complexity\n- Strength: light (slight simplifications)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Focus on core functionality and essential requirements\n- Remove or simplify non-essential features  \n- Streamline implementation details\n- Simplify testing to focus on basic functionality\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-down"
+			},
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 1 NEW subtasks that reflect the decreased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped down (light strength) to decrease complexity.\n**Original Complexity**: 9/10 - consider this when determining appropriate scope level.\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Focus mainly on core functionality\n- Slightly simplify implementation steps\n- Remove some non-essential features\n- Streamline most requirements\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-down"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			]
+		}
+	},
+	"down-regular-subtasks-c6-nots": {
+		"scenario": {
+			"dir": "down",
+			"strength": "regular",
+			"subtasks": true,
+			"complexity": 6,
+			"noTestStrategy": true
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Not specified\n\nADJUSTMENT REQUIREMENTS:\n- Direction: DECREASE complexity\n- Strength: regular (moderate simplifications)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Focus on core functionality and essential requirements\n- Remove or simplify non-essential features  \n- Streamline implementation details\n- Simplify testing to focus on basic functionality\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-down"
+			},
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 1 NEW subtasks that reflect the decreased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped down (regular strength) to decrease complexity.\n**Original Complexity**: 6/10 - consider this when determining appropriate scope level.\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Focus on core functionality only\n- Simplify implementation steps\n- Remove non-essential features\n- Streamline to basic requirements\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-down"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			],
+			"testStrategy": "Adjusted tests"
+		}
+	},
+	"down-heavy-subtasks-c9": {
+		"scenario": {
+			"dir": "down",
+			"strength": "heavy",
+			"subtasks": true,
+			"complexity": 9
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: DECREASE complexity\n- Strength: heavy (major simplifications)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Focus on core functionality and essential requirements\n- Remove or simplify non-essential features  \n- Streamline implementation details\n- Simplify testing to focus on basic functionality\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-down"
+			},
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 1 NEW subtasks that reflect the decreased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped down (heavy strength) to decrease complexity.\n**Original Complexity**: 9/10 - consider this when determining appropriate scope level.\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Focus ONLY on absolutely essential core functionality\n- Strip out ALL non-critical features (error handling, advanced testing, etc.)\n- Provide only the minimum viable implementation\n- Eliminate any complex integrations or advanced scenarios\n- Aim for the simplest possible working solution\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-down"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			]
+		}
+	},
+	"down-heavy-subtasks": {
+		"scenario": {
+			"dir": "down",
+			"strength": "heavy",
+			"subtasks": true
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Unit tests for login\n\nADJUSTMENT REQUIREMENTS:\n- Direction: DECREASE complexity\n- Strength: heavy (major simplifications)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Focus on core functionality and essential requirements\n- Remove or simplify non-essential features  \n- Streamline implementation details\n- Simplify testing to focus on basic functionality\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-down"
+			},
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert project manager who creates task breakdowns that match complexity levels.",
+				"prompt": "Based on this updated task, generate 1 NEW subtasks that reflect the decreased complexity level:\n\n**Task Title**: Adjusted title\n**Task Description**: Adjusted description\n**Implementation Details**: Adjusted details\n**Test Strategy**: Adjusted tests\n\n**Complexity Direction**: This task was recently scoped down (heavy strength) to decrease complexity.\n\n\n**Preserved Subtasks**: 2 existing subtasks with work already done will be kept.\n\nGenerate subtasks that:\n- Focus ONLY on absolutely essential core functionality\n- Strip out ALL non-critical features (error handling, advanced testing, etc.)\n- Provide only the minimum viable implementation\n- Eliminate any complex integrations or advanced scenarios\n- Aim for the simplest possible working solution\n\nReturn a JSON object with a \"subtasks\" array. Each subtask should have:\n- id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT \"1\", \"2\", \"3\")\n- title: Clear, specific title\n- description: Detailed description\n- dependencies: Array of dependency IDs as STRINGS (use format [\"3.1\", \"3.2\"] for siblings, or empty array [] for no dependencies)\n- details: Implementation guidance\n- status: \"pending\"\n- testStrategy: Testing approach\n\nIMPORTANT: \n- The 'id' field must be a NUMBER, not a string!\n- Dependencies must be strings, not numbers!\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "subtask_regeneration",
+				"commandName": "scope-down"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"testStrategy": "Adjusted tests",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [
+				{
+					"id": 1,
+					"title": "Hash passwords",
+					"description": "d",
+					"status": "done",
+					"dependencies": []
+				},
+				{
+					"id": 5,
+					"title": "Audit log",
+					"description": "d",
+					"status": "in-progress",
+					"dependencies": []
+				},
+				{
+					"id": 6,
+					"title": "New step one",
+					"description": "New step one description",
+					"dependencies": [],
+					"details": "New step one details text",
+					"status": "pending",
+					"testStrategy": "ts1"
+				},
+				{
+					"id": 7,
+					"title": "New step two",
+					"description": "New step two description",
+					"dependencies": [
+						"3.6"
+					],
+					"details": "New step two details text",
+					"status": "pending",
+					"testStrategy": "ts2",
+					"metadata": {
+						"dependencySources": {
+							"3.6": "inferred"
+						}
+					}
+				}
+			]
+		}
+	},
+	"down-regular-plain-nots-prompt": {
+		"scenario": {
+			"dir": "down",
+			"strength": "regular",
+			"subtasks": false,
+			"noTestStrategy": true,
+			"prompt": "Only the API"
+		},
+		"calls": [
+			{
+				"role": "main",
+				"systemPrompt": "You are an expert software project manager who helps adjust task complexity while maintaining clarity and actionability.",
+				"prompt": "You are tasked with adjusting the complexity of a task. \n\nCURRENT TASK:\nTitle: Add user authentication\nDescription: Let users sign in with email and password\nDetails: Use bcrypt for hashes and JWT sessions\nTest Strategy: Not specified\n\nADJUSTMENT REQUIREMENTS:\n- Direction: DECREASE complexity\n- Strength: regular (moderate simplifications)\n- Preserve the core purpose and functionality of the task\n- Maintain consistency with the existing task structure\n- Focus on core functionality and essential requirements\n- Remove or simplify non-essential features  \n- Streamline implementation details\n- Simplify testing to focus on basic functionality\n\nCUSTOM INSTRUCTIONS:\nOnly the API\n\nReturn a JSON object with the updated task containing these fields:\n- title: Updated task title\n- description: Updated task description  \n- details: Updated implementation details\n- testStrategy: Updated test strategy\n- priority: Task priority ('low', 'medium', or 'high')\n\nEnsure the JSON is valid and properly formatted.",
+				"objectName": "updated_task",
+				"commandName": "scope-down"
+			}
+		],
+		"saved": {
+			"id": 3,
+			"title": "Adjusted title",
+			"description": "Adjusted description",
+			"details": "Adjusted details",
+			"priority": "high",
+			"status": "pending",
+			"dependencies": [
+				1
+			],
+			"subtasks": [],
+			"testStrategy": "Adjusted tests"
+		}
+	}
+}

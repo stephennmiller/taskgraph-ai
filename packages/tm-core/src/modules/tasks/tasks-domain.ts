@@ -32,6 +32,12 @@ import {
 	type ExpandTaskResult
 } from './services/expand-task.service.js';
 import {
+	ScopeAdjustmentService,
+	type ScopeTaskHooks,
+	type ScopeTaskInput,
+	type ScopeTaskResult
+} from './services/scope-adjustment.service.js';
+import {
 	ResearchService,
 	type ResearchExchange,
 	type ResearchHooks,
@@ -520,6 +526,22 @@ export class TasksDomain {
 			input,
 			hooks
 		);
+	}
+
+	/**
+	 * Make tasks more (`direction: 'up'`) or less complex with the AI, then
+	 * rewrite their pending subtasks to match; subtasks with work on them
+	 * stay. Strength and every ID are checked before any AI call; each task
+	 * is saved on its own, changing only that task.
+	 */
+	async scope(
+		input: ScopeTaskInput,
+		hooks?: ScopeTaskHooks
+	): Promise<ScopeTaskResult> {
+		return new ScopeAdjustmentService(
+			this.taskService,
+			this.configManager
+		).scope(input, hooks);
 	}
 
 	/**
