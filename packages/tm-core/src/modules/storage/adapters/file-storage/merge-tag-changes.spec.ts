@@ -184,6 +184,16 @@ describe('mergeTagChanges', () => {
 		expect(merged.tasks).toEqual([task(1), task(2)]);
 	});
 
+	it('does not merge a task list with a duplicate ID item by item, like the git merge driver', () => {
+		const base = tag([task(1), task(2)]);
+		const mine = tag([task(1, { title: 'New' }), task(2)]);
+		const theirs = tag([task(1), task(2), task(2, { title: 'Dup' })]);
+
+		const { merged } = mergeTagChanges(base, mine, theirs);
+
+		expect(merged.tasks).toEqual(mine.tasks);
+	});
+
 	it('keeps fields others added and merges tag metadata by field', () => {
 		const base = tag([task(1)], { updated: 'a' });
 		const mine = tag([task(1)], { updated: 'b' });
