@@ -110,6 +110,10 @@ Model IDs, `maxTokens`, `temperature`, `defaultSubtasks`, `defaultPriority` and 
 Upgrading? Variables named `TASK_MASTER_*` and `TASKMASTER_*` were renamed to `TASKGRAPH_*` in 0.47, and the old names are ignored. See the [upgrade guide](/upgrading).
 </Note>
 
+## Behind a proxy
+
+TaskGraph has no proxy setting of its own. AI calls run through Claude Code, which follows the standard `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` variables. Set them in your shell or in the project's `.env`, which TaskGraph passes to Claude Code. An `"enableProxy"` line left in an older `config.json` is ignored, and you can delete it.
+
 ## Troubleshooting
 
 ### If `taskgraph init` doesn't respond
