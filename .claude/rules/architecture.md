@@ -17,7 +17,7 @@ paths:
       - Handles user input/output for CLI.
       - Implements CLI-specific validation.
 
-  - **[`task-manager.js`](../../scripts/modules/task-manager.js) & `task-manager/` directory: Task Data & Core Logic**
+  - **[`@tm/core` tasks module](../../packages/tm-core/src/modules/tasks/): Task Data & Core Logic**
     - **Purpose**: Contains core functions for task data manipulation (CRUD), AI interactions, and related logic.
     - **Responsibilities**:
       - Reading/writing `tasks.json` with tagged task lists support.
@@ -291,7 +291,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
     - Import `zod`, `yourCommandDirect`, and `withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse` from `@tm/mcp`.
     - Implement `registerYourCommandTool(server)`.
     - **Define parameters, making `projectRoot` optional**: `projectRoot: z.string().optional().describe(...)`.
-    - If the operation is long-running, pass `reportProgress` from the tool context through `checkProgressCapability` to the direct function (see `mcp.md`).
+    - If the operation is long-running, report progress with `reportProgress` from the tool context (see `mcp.md`).
     - Wrap `execute` in `withNormalizedProjectRoot` (it normalizes `args.projectRoot`):
       - Call `yourCommandDirect({ ...args }, log, { session })`.
       - Return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot })`.

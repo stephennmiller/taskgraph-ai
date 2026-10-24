@@ -323,7 +323,9 @@ export class ParsePrdService {
 		// A count meant for the whole PRD doesn't fit a few new sections, so
 		// for those the model decides how many tasks they need
 		const promptNumTasks = deltaOnly ? 0 : numTasks;
-		const promptSections = deltaOnly ? (prdDelta as PrdDelta).added : prd.sections;
+		const promptSections = deltaOnly
+			? (prdDelta as PrdDelta).added
+			: prd.sections;
 		const prompts = getPromptManager().loadPrompt('parse-prd', {
 			research,
 			numTasks: promptNumTasks,
@@ -363,6 +365,12 @@ export class ParsePrdService {
 				if (aiConfig.debug) hooks.onDebug?.(message);
 			}
 		});
+
+		// An empty reply would replace the tag's tasks with none and record the
+		// PRD as parsed; with append it only adds nothing
+		if (generated.length === 0 && !append) {
+			throw new Error('The AI returned no tasks; nothing was saved');
+		}
 
 		const defaultPriority = aiConfig.defaultPriority || 'medium';
 		const saved = await this.save(tag, snapshot, (current) => {

@@ -131,6 +131,18 @@ describe('parse_prd', () => {
 		);
 	});
 
+	it('still replies with the saved tasks when the progress report fails', async () => {
+		reportProgress.mockRejectedValueOnce(new Error('client went away'));
+
+		const result = await tool().execute(
+			{ projectRoot: project, input: prd },
+			ctx
+		);
+
+		expect(result.isError).toBeFalsy();
+		expect(reply(result).data.addedTasks).toBe(3);
+	});
+
 	it('loads tm-core for each call, so models and language saved since the last one apply', async () => {
 		await tool().execute({ projectRoot: project, input: prd }, ctx);
 		await tool().execute({ projectRoot: project, input: prd }, ctx);
@@ -179,7 +191,11 @@ describe('parse_prd', () => {
 
 	it('clarify returns the questions and generates nothing', async () => {
 		const questions = [{ question: 'Which DB?', suggestedAnswer: 'SQLite' }];
-		tasks.findPrdGaps.mockResolvedValue({ prdPath: prd, questions, telemetryData });
+		tasks.findPrdGaps.mockResolvedValue({
+			prdPath: prd,
+			questions,
+			telemetryData
+		});
 
 		const result = await tool().execute(
 			{ projectRoot: project, input: prd, clarify: true },
@@ -198,7 +214,15 @@ describe('parse_prd', () => {
 	it('saves clarifications in the PRD before the tasks are generated', async () => {
 		tasks.parsePrd.mockImplementation(async () => {
 			expect(fs.readFileSync(prd, 'utf8')).toContain('**A:** SQLite');
-			return { tasksPath: 't', added: 1, total: 1, prdDelta: null, telemetryData: null, tagInfo: null, estimatedInputTokens: 5 };
+			return {
+				tasksPath: 't',
+				added: 1,
+				total: 1,
+				prdDelta: null,
+				telemetryData: null,
+				tagInfo: null,
+				estimatedInputTokens: 5
+			};
 		});
 
 		const result = await tool().execute(
@@ -217,7 +241,8 @@ describe('parse_prd', () => {
 		});
 		expect(reportProgress).toHaveBeenCalledWith(
 			expect.objectContaining({
-				message: 'Task generation complete | ~Tokens (I/O): 5/unknown | Cost: ~$0.00'
+				message:
+					'Task generation complete | ~Tokens (I/O): 5/unknown | Cost: ~$0.00'
 			})
 		);
 	});
@@ -225,7 +250,10 @@ describe('parse_prd', () => {
 	it.each([
 		[{ input: '../secrets/.env' }, 'outside the project root'],
 		[{ input: 'missing.md' }, 'Input PRD file not found at resolved path'],
-		[{ input: 'prd.md', output: '../elsewhere/tasks.json' }, "a different file isn't supported"],
+		[
+			{ input: 'prd.md', output: '../elsewhere/tasks.json' },
+			"a different file isn't supported"
+		],
 		[
 			{ input: 'prd.md', clarify: true, clarifications: [] },
 			'Pass clarify to get questions, or clarifications to save answers, not both'

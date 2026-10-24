@@ -179,11 +179,19 @@ export function registerParsePrdTool(server: FastMCP) {
 						// Sent once the AI's tasks are saved; an append with nothing new made no call
 						const delta = result.prdDelta?.known ? result.prdDelta : null;
 						if (reportProgress && !(delta && delta.added.length === 0)) {
-							await reportProgress({
-								progress: result.added,
-								total: result.added,
-								message: completionMessage(result)
-							});
+							// The tasks are saved; a failed notification must not report a
+							// failure an agent would retry
+							try {
+								await reportProgress({
+									progress: result.added,
+									total: result.added,
+									message: completionMessage(result)
+								});
+							} catch (error) {
+								log.debug(
+									`Progress report failed: ${(error as Error)?.message}`
+								);
+							}
 						}
 
 						// With append only new PRD sections get tasks; an unchanged PRD
@@ -222,11 +230,19 @@ export function registerParsePrdTool(server: FastMCP) {
 
 /** The progress line the legacy tool sent when the tasks were saved */
 function completionMessage(result: {
-	telemetryData: { inputTokens?: number; outputTokens?: number; totalCost?: number; currency?: string } | null;
+	telemetryData: {
+		inputTokens?: number;
+		outputTokens?: number;
+		totalCost?: number;
+		currency?: string;
+	} | null;
 	estimatedInputTokens: number;
 }): string {
 	const usage = result.telemetryData;
-	if (usage && ((usage.inputTokens ?? 0) > 0 || (usage.outputTokens ?? 0) > 0)) {
+	if (
+		usage &&
+		((usage.inputTokens ?? 0) > 0 || (usage.outputTokens ?? 0) > 0)
+	) {
 		const currency = usage.currency || 'USD';
 		return `Task generation complete | Tokens (I/O): ${usage.inputTokens}/${usage.outputTokens} | Cost: ${currency === 'USD' ? '$' : currency}${(usage.totalCost || 0).toFixed(4)}`;
 	}

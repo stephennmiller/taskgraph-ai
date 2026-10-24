@@ -80,7 +80,9 @@ describe('tasks.parsePrd streaming', () => {
 	it('keeps the first copy when the reply repeats the JSON', async () => {
 		const tasks = [generated(1)];
 		const text = JSON.stringify({ tasks }).repeat(2);
-		const object = Promise.reject(Object.assign(new Error('bad JSON'), { text }));
+		const object = Promise.reject(
+			Object.assign(new Error('bad JSON'), { text })
+		);
 		// Read only after the partials; mark it handled until then
 		object.catch(() => {});
 		p.streamObject.mockResolvedValue(streamed(tasks, { object }) as any);

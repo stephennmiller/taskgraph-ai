@@ -84,7 +84,8 @@ describe('tasks.parsePrd prompt inputs (eval-gated)', () => {
 			});
 			if (s.archivedHighest) project.archive(tag, s.archivedHighest);
 			fs.writeFileSync(project.prdPath, s.prd);
-			project.generateObject.mockResolvedValue(reply([]) as any);
+			// The reply doesn't change the prompt; an empty one is refused
+			project.generateObject.mockResolvedValue(reply() as any);
 			const loadPrompt = vi.spyOn(getPromptManager(), 'loadPrompt');
 
 			await project.tmCore.tasks.parsePrd({
@@ -159,7 +160,9 @@ describe('tasks.parsePrd', () => {
 	});
 
 	it('with force, replaces the tasks and numbers above the archived IDs', async () => {
-		p.write({ master: { tasks: EXISTING, metadata: { schemaVersion: 1, kept: 'yes' } } });
+		p.write({
+			master: { tasks: EXISTING, metadata: { schemaVersion: 1, kept: 'yes' } }
+		});
 		p.archive('master', 4);
 		p.generateObject.mockResolvedValue(
 			reply([generated(5), generated(6, { dependencies: [5] })]) as any
@@ -172,6 +175,17 @@ describe('tasks.parsePrd', () => {
 			['6', ['5']]
 		]);
 		expect(tag().metadata).toMatchObject({ schemaVersion: 1, kept: 'yes' });
+	});
+
+	it('with force, keeps the tasks when the AI returns none', async () => {
+		p.write({ master: { tasks: EXISTING, metadata: {} } });
+		const before = fs.readFileSync(p.tasksPath, 'utf8');
+		p.generateObject.mockResolvedValue(reply([]) as any);
+
+		await expect(parse({ force: true })).rejects.toThrow(
+			'The AI returned no tasks; nothing was saved'
+		);
+		expect(fs.readFileSync(p.tasksPath, 'utf8')).toBe(before);
 	});
 
 	it('creates a tag that does not exist, leaving the others as they were', async () => {
@@ -250,7 +264,10 @@ describe('tasks.parsePrd', () => {
 						metadata: {}
 					}
 				});
-				return reply([generated(2), generated(3, { dependencies: [2] })]) as any;
+				return reply([
+					generated(2),
+					generated(3, { dependencies: [2] })
+				]) as any;
 			});
 
 			await parse({ append: true });

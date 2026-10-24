@@ -158,6 +158,8 @@ describe('prepareGeneratedTasks', () => {
 		['starting elsewhere', [3, 4]],
 		['with a gap', [1, 3]]
 	])('refuses model IDs %s', (_name, ids) => {
-		expect(() => prepare(ids.map((id) => raw(id)))).toThrow(/PRD tasks? (must|IDs)/);
+		expect(() => prepare(ids.map((id) => raw(id)))).toThrow(
+			/PRD tasks? (must|IDs)/
+		);
 	});
 });

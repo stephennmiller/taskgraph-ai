@@ -8,7 +8,7 @@ paths:
 ## Feature Placement Decision Process
 
 - **Identify Feature Type** (See `architecture.md` for module details):
-  - **Data Manipulation**: Features that create, read, update, or delete tasks belong in [`task-manager.js`](../../scripts/modules/task-manager.js). Follow guidelines in `tasks.md`.
+  - **Data Manipulation**: Features that create, read, update, or delete tasks belong in [`@tm/core`](../../packages/tm-core/src/modules/tasks/). Follow guidelines in `tasks.md`.
   - **Dependency Management**: Features that handle task relationships belong in [`@tm/core` `modules/dependencies/`](../../packages/tm-core/src/modules/dependencies/). Follow guidelines in `dependencies.md`.
   - **User Interface**: Output is formatted by pure functions in `apps/cli/src/ui/formatters/` and printed by the command. Follow `ui.md`. Don't add new display functions to the legacy [`ui.js`](../../scripts/modules/ui.js).
   - **AI Integration**: Features that use AI models belong in [`ai-services.js`](../../scripts/modules/ai-services.js).
@@ -23,7 +23,7 @@ paths:
 
 The standard pattern for adding a feature follows this workflow:
 
-1. **Core Logic**: Implement the business logic in the appropriate module (e.g., [`task-manager.js`](../../scripts/modules/task-manager.js)).
+1. **Core Logic**: Implement the business logic in the appropriate module (e.g., [`@tm/core`](../../packages/tm-core/src/modules/tasks/)).
 2. **Context Gathering (If Applicable)**: 
    - For AI-powered commands that benefit from project context, use the standardized context gathering patterns from `context-gathering.md`.
    - Import `ContextGatherer` and `FuzzyTaskSearch` utilities for reusable context extraction.
@@ -510,7 +510,7 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
 
 **MCP Integration Workflow**:
 
-1.  **Core Logic**: Ensure the command's core logic exists and is exported from the appropriate module (e.g., [`task-manager.js`](../../scripts/modules/task-manager.js)).
+1.  **Core Logic**: Ensure the command's core logic exists and is exported from the appropriate module (e.g., [`@tm/core`](../../packages/tm-core/src/modules/tasks/)).
 2.  **Direct Function Wrapper (`mcp-server/src/core/direct-functions/`)**:
     - Create a new file (e.g., `your-command.js`) in `mcp-server/src/core/direct-functions/` using **kebab-case** naming.
     - Import the core logic function, necessary MCP utilities like **`findTasksPath` from `../utils/path-utils.js`**, and **silent mode utilities**: `import { enableSilentMode, disableSilentMode } from '../../../../scripts/modules/utils.js';`
@@ -558,23 +558,16 @@ Integrating TaskGraph commands with the MCP server (for use by tools like Claude
 
 MCP tools run inline: `execute` awaits the direct function and returns the finished result. For long-running work, such as PRD parsing, report progress through the tool context:
 
-1. **In the MCP tool**, take `reportProgress` from the context, validate it, and pass it to the direct function:
+1. **In the MCP tool**, take `reportProgress` from the context and pass it to the direct function:
    ```javascript
-   import {
-     checkProgressCapability,
-     handleApiResult,
-     withNormalizedProjectRoot
-   } from '@tm/mcp';
+   import { handleApiResult, withNormalizedProjectRoot } from '@tm/mcp';
 
    execute: withNormalizedProjectRoot(async (args, { log, session, reportProgress }) => {
-     const result = await yourCommandDirect(args, log, {
-       session,
-       reportProgress: checkProgressCapability(reportProgress, log)
-     });
+     const result = await yourCommandDirect(args, log, { session, reportProgress });
      return handleApiResult({ result, log, projectRoot: args.projectRoot });
    })
    ```
-   `checkProgressCapability` returns `undefined` when the client did not provide `reportProgress`.
+   A TypeScript tool gets it from `withToolContext` instead (see `apps/mcp/src/tools/tasks/parse-prd.tool.ts`).
 
 2. **In the direct function**, forward it from `context` to the core function; don't call it there.
 

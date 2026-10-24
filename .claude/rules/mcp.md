@@ -338,10 +338,10 @@ These functions, located in `mcp-server/src/core/direct-functions/`, form the co
 - **AI Logic in Core Modules**: AI interactions (prompt building, calling unified service) reside within the core logic functions (`scripts/modules/*`), not direct functions.
 - **Silent Mode in Direct Functions**: Wrap *core function* calls (from `scripts/modules`) with `enableSilentMode()` and `disableSilentMode()` if they produce console output not handled by `outputFormat`. Do not wrap AI calls.
 - **Long-Running Work Runs Inline**: Tools await their `*Direct` function and return the finished result. There is no background job queue or operation-status tool.
-- **Progress Reporting**: For long work (like `parse_prd`), take `reportProgress` from the tool context, validate it with `checkProgressCapability(reportProgress, log)` from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)), and pass the result in the `*Direct` function's `context`. The direct function forwards it to core logic, which calls it only when it is defined. Otherwise use `log.info()`.
+- **Progress Reporting**: For long work (like `parse_prd`), take `reportProgress` from the `withToolContext` context ([`apps/mcp/src/tools/tasks/parse-prd.tool.ts`](../../apps/mcp/src/tools/tasks/parse-prd.tool.ts)). It is optional: call it only when it is defined, and don't let a failed report fail work that is already saved. Otherwise use `log.info()`.
 - **Output Formatting**: Ensure core functions called by `*Direct` functions can suppress CLI output, ideally via an `outputFormat` parameter.
 - **Project Initialization**: Use the initialize_project tool for setting up new projects in integrated environments.
-- **Centralized Utilities**: Tools import their helpers (`withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse`, `checkProgressCapability`) from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)). Direct functions use `mcp-server/src/core/utils/path-utils.js` for paths. See `utilities.md`.
+- **Centralized Utilities**: Tools import their helpers (`withNormalizedProjectRoot`, `handleApiResult`, `createErrorResponse`) from `@tm/mcp` ([`apps/mcp/src/shared/utils.ts`](../../apps/mcp/src/shared/utils.ts)). Direct functions use `mcp-server/src/core/utils/path-utils.js` for paths. See `utilities.md`.
 
 ## Resources and Resource Templates
 
@@ -378,13 +378,13 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 4.  **Create MCP Tool (`mcp-server/src/tools/`)**:
     - Create a new file (e.g., `your-command.js`) using **kebab-case**.
-    - Import `zod`, your `yourCommandDirect` function, and from `@tm/mcp`: `withNormalizedProjectRoot`, `handleApiResult` and `createErrorResponse` (plus `checkProgressCapability` if the command reports progress).
+    - Import `zod`, your `yourCommandDirect` function, and from `@tm/mcp`: `withNormalizedProjectRoot`, `handleApiResult` and `createErrorResponse`.
     - Implement `registerYourCommandTool(server)`.
     - Define the tool `name` using **snake_case** (e.g., `your_command`).
     - Define the `parameters` using `zod`. Include `projectRoot: z.string().optional()`.
     - Wrap `execute` in `withNormalizedProjectRoot(async (args, { log, session }) => { ... })`, which resolves and normalizes `args.projectRoot` (see `mcp-server/src/tools/initialize-project.js`).
         - Call `await yourCommandDirect({ ...args }, log, { session });` and return `handleApiResult({ result, log, errorPrefix, projectRoot: args.projectRoot, tag })`.
-        - **If the command is long-running**: also destructure `reportProgress`, and pass `{ session, reportProgress: checkProgressCapability(reportProgress, log) }` as the context.
+        - **If the command is long-running**: also destructure `reportProgress` and pass `{ session, reportProgress }` as the context.
 
 5.  **Register Tool**: Import `registerYourCommandTool` in `mcp-server/src/tools/tool-registry.js` and add it to `toolRegistry` under the tool's name (`your_command: registerYourCommandTool`). Add the name to `coreTools` or `standardTools` too if it belongs in that tier; `TASKGRAPH_TOOLS=all` loads every tool in `toolRegistry`, and a comma-separated list can name any of them. A core or standard tool also needs `EXPECTED_TOOL_COUNTS` in `tests/helpers/tool-counts.js` updated (and `EXPECTED_CORE_TOOLS` there for a core tool); the total isn't pinned, so other tools need no count change. A core or standard tool also changes the tier counts asserted in `tests/unit/mcp-server/tools/tool-registry.test.js`.
 
@@ -398,7 +398,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
 
 ## Parameter Type Handling
 
-- **Prefer Direct Function Calls**: For optimal performance and error handling, MCP tools should utilize direct function wrappers defined in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js). These wrappers call the underlying logic from the core modules (e.g., [`task-manager.js`](../../scripts/modules/task-manager.js)).
+- **Prefer Direct Function Calls**: For optimal performance and error handling, MCP tools should utilize direct function wrappers defined in [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js). These wrappers call the underlying logic from the core modules. New tools call @tm/core through `withToolContext` instead (see `apps/mcp/src/tools/tasks/`).
 - **Standard Tool Execution Pattern**:
     - The `execute` method within each MCP tool (in `mcp-server/src/tools/*.js`) should:
         1.  Call the corresponding `*Direct` function wrapper (e.g., `listTasksDirect`) from [`taskgraph-core.js`](../../mcp-server/src/core/taskgraph-core.js), passing necessary arguments and the logger.
@@ -431,7 +431,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
    - [ ] Create new file in `mcp-server/src/tools/` with kebab-case naming
    - [ ] Define zod schema for all parameters
    - [ ] Implement the `execute` method following the standard pattern
-   - [ ] For long-running operations, pass `reportProgress` through `checkProgressCapability` to the direct function
+   - [ ] For long-running operations, report progress with the context's `reportProgress` when it is defined
    - [ ] Add the tool to `toolRegistry` in `mcp-server/src/tools/tool-registry.js` (and to `coreTools`/`standardTools` if it belongs in that tier)
 
 4. **Testing**:

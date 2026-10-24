@@ -65,7 +65,9 @@ export function applyTagUpdate(
 	}
 	// Convert to legacy format when adding non-master tags
 	const masterTasks = existingData.tasks || [];
-	const masterMetadata = existingData.metadata || metadata;
+	// Not the new tag's metadata: its prdSections would make master's next append skip sections
+	const masterMetadata =
+		existingData.metadata ?? buildTagMetadata(masterTasks, 'master');
 
 	return {
 		master: {

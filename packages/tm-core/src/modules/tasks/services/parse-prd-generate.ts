@@ -26,7 +26,9 @@ export interface ParsePrdGenerateHooks {
 		streaming: boolean;
 	}) => void;
 	/** The streamed task list so far; its last task may still be growing */
-	onPartial?: (partial: { tasks?: Array<{ title?: string } | undefined> }) => void;
+	onPartial?: (partial: {
+		tasks?: Array<{ title?: string } | undefined>;
+	}) => void;
 	/** The model's tasks arrived (before they are saved) */
 	onGenerated?: (tasks: GeneratedPrdTask[], streamed: boolean) => void;
 	/** The stream failed; `retrying`: one request is tried next */
@@ -69,10 +71,12 @@ export async function generatePrdTasks(
 				APICallError.isInstance(error) && !hasOtherModel(context)
 			);
 			hooks.onStreamFailed?.(failure, retrying);
-			if (!retrying) throw error;
 			context.debug(
-				`Streaming task generation failed (${failure.message}); retrying in one request`
+				retrying
+					? `Streaming task generation failed (${failure.message}); retrying in one request`
+					: `Streaming task generation failed (${failure.message}); every role uses the same model, so not retrying`
 			);
+			if (!retrying) throw error;
 		}
 	}
 	hooks.onAiCall?.({ numTasks, startId, streaming: false });
@@ -87,7 +91,9 @@ export async function generatePrdTasks(
 	return { tasks: generated.tasks, response };
 }
 
-async function streamTasks(context: GenerateContext): Promise<GeneratedPrdTasks> {
+async function streamTasks(
+	context: GenerateContext
+): Promise<GeneratedPrdTasks> {
 	const response = await context.ai.streamObject(context.params);
 	const stream = response?.mainResult;
 	// Read the getter once: each read pipes the underlying stream, so a second
@@ -108,6 +114,9 @@ async function streamTasks(context: GenerateContext): Promise<GeneratedPrdTasks>
 		// A reply with the JSON repeated fails to parse; keep the first copy
 		generated = recoverTaskList((error as { text?: unknown })?.text);
 		if (!generated) throw error;
+		context.debug(
+			`The reply did not parse (${(error as Error)?.message}); kept its first complete task list`
+		);
 	}
 	if (!generated || !Array.isArray(generated.tasks)) {
 		throw new Error('AI service returned unexpected data structure.');
@@ -143,7 +152,10 @@ async function streamTelemetry(
 				outputType: context.params.outputType
 			})) || previous
 		);
-	} catch {
+	} catch (error) {
+		context.debug(
+			`Couldn't read the stream's token usage (${(error as Error)?.message}); keeping the usage the service reported`
+		);
 		return previous;
 	}
 }

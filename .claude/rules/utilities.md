@@ -464,9 +464,6 @@ MCP tools, the legacy JS ones in `mcp-server/src/tools/` included, import their 
 - **`createContentResponse(content)` / `createErrorResponse(errorMessage)`**:
     - **Purpose**: Build a success or error response directly, for errors caught before or around the direct function call.
 
-- **`checkProgressCapability(reportProgress, log)`**:
-    - **Purpose**: Returns `reportProgress` when the client supports progress updates, otherwise `undefined`.
-
 ## Export Organization
 
 - **Grouping Related Functions**:

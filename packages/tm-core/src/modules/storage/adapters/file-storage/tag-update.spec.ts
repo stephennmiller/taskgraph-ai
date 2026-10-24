@@ -43,6 +43,23 @@ describe('applyTagUpdate', () => {
 		expect(saved.metadata).toMatchObject({ taskCount: 1, prdSections });
 	});
 
+	it("does not give master the new tag's metadata when the single-tag file has none", () => {
+		const saved = applyTagUpdate(
+			new FormatHandler(),
+			{ tasks: [task] },
+			'feature',
+			[task],
+			{ ...buildTagMetadata([task], 'feature'), prdSections } as any
+		);
+
+		expect(saved.master.metadata.prdSections).toBeUndefined();
+		expect(saved.master.metadata).toMatchObject({
+			taskCount: 1,
+			tags: ['master']
+		});
+		expect(saved.feature.metadata.prdSections).toEqual(prdSections);
+	});
+
 	it('copies a __proto__ key from the file as data, without touching prototypes', () => {
 		const existing = JSON.parse(
 			'{"tasks":[],"metadata":{"__proto__":{"polluted":true},"note":"kept"}}'

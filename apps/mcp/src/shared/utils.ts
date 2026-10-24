@@ -78,28 +78,6 @@ Current Tag: ${tagInfo.currentTag}`;
 }
 
 /**
- * Function signature for progress reporting
- */
-export type ReportProgressFn = (progress: number, total?: number) => void;
-
-/**
- * Validate that reportProgress is available for long-running operations
- */
-export function checkProgressCapability(
-	reportProgress: any,
-	log: any
-): ReportProgressFn | undefined {
-	if (typeof reportProgress !== 'function') {
-		log?.debug?.(
-			'reportProgress not available - operation will run without progress updates'
-		);
-		return undefined;
-	}
-
-	return reportProgress;
-}
-
-/**
  * Get current tag for a project root
  */
 export function getCurrentTag(projectRoot: string): string | null {
