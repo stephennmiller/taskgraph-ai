@@ -335,16 +335,29 @@ export class UpdateTaskService {
 				String(st.id) === String(subtask.id);
 			const sameTitle = (st: Subtask, subtask: any) =>
 				Boolean(subtask.title) && st.title === subtask.title;
+			// Each stored subtask matches once, across all of the AI's subtasks:
+			// ID and title first, then title (the AI may renumber a reorder or an
+			// insert itself), then ID (the AI may send strings)
+			const matched: (Subtask | undefined)[] = [];
+			for (const same of [
+				(st: Subtask, subtask: any) =>
+					sameId(st, subtask) && sameTitle(st, subtask),
+				sameTitle,
+				sameId
+			]) {
+				updated.subtasks.forEach((subtask: any, i: number) => {
+					if (matched[i]) return;
+					const before = original.find(
+						(st) => !newIdOf.has(String(st.id)) && same(st, subtask)
+					);
+					if (!before) return;
+					matched[i] = before;
+					newIdOf.set(String(before.id), i + 1);
+				});
+			}
 			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
 				const id = i + 1;
-				// Each stored subtask matches once: ID and title, else title (the
-				// AI may renumber a reorder itself), else ID (the AI may send strings)
-				const open = original.filter((st) => !newIdOf.has(String(st.id)));
-				const before =
-					open.find((st) => sameId(st, subtask) && sameTitle(st, subtask)) ??
-					open.find((st) => sameTitle(st, subtask)) ??
-					open.find((st) => sameId(st, subtask));
-				if (before) newIdOf.set(String(before.id), id);
+				const before = matched[i];
 				const corrected = {
 					...subtask,
 					id,
