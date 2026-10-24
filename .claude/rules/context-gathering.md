@@ -135,7 +135,7 @@ async function commandAction(prompt, options) {
 
 ### **2. What to Show the User**
 
-`research` is the reference (`scripts/modules/task-manager/research.js`, formatters in `apps/cli/src/ui/formatters/research-formatters.ts`):
+`research` is the reference (`packages/tm-core/src/modules/tasks/services/research.service.ts` and `apps/cli/src/commands/research.command.ts`, formatters in `apps/cli/src/ui/formatters/research-formatters.ts`):
 
 ```
 Context: task 3 · related 1, 2, 4 · README.md · project tree

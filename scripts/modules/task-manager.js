@@ -6,7 +6,6 @@
 import analyzeTaskComplexity from './task-manager/analyze-task-complexity.js';
 import findNextTask from './task-manager/find-next-task.js';
 import parsePRD from './task-manager/parse-prd/index.js';
-import { performResearch } from './task-manager/research.js';
 import setResponseLanguage from './task-manager/response-language.js';
 import {
 	scopeDownTask,
@@ -30,7 +29,6 @@ export {
 	findTaskById,
 	taskExists,
 	setResponseLanguage,
-	performResearch,
 	scopeUpTask,
 	scopeDownTask,
 	validateStrength

@@ -23,6 +23,13 @@ import {
 	type ExpandTaskInput,
 	type ExpandTaskResult
 } from './services/expand-task.service.js';
+	ResearchService,
+	type ResearchExchange,
+	type ResearchHooks,
+	type ResearchInput,
+	type ResearchResult,
+	type ResearchSaved
+} from './services/research.service.js';
 import {
 	TaskFileGeneratorService,
 	type GenerateTaskFilesOptions,
@@ -47,7 +54,6 @@ import {
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
 import {
-	appendNote,
 	normalizeNoteText,
 	parseNoteSince,
 	type TaskNote
@@ -474,6 +480,24 @@ export class TasksDomain {
 	}
 
 	/**
+	 * Ask the research model a question with project context: the tasks you
+	 * name plus the ones matching the question, files inside the project
+	 * (never secrets), the project tree and your notes. Task IDs and files
+	 * are checked before the AI call. saveTo appends the answer to a task's
+	 * details in one locked write; a save that fails is reported in
+	 * `saveFailures`, and the answer is kept.
+	 */
+	async research(
+		input: ResearchInput,
+		hooks?: ResearchHooks
+	): Promise<ResearchResult> {
+		return new ResearchService(this.taskService, this.configManager).research(
+			input,
+			hooks
+		);
+	}
+
+	/**
 	 * Expand every pending or in-progress task that has no subtasks (any,
 	 * with `force`), three at a time. Failures are counted, not thrown.
 	 */
@@ -485,6 +509,21 @@ export class TasksDomain {
 			this.taskService,
 			this.configManager
 		).expandAll(options, hooks);
+	}
+
+	/**
+	 * Save a research conversation to a task's details (one locked write) or
+	 * to .taskgraph/docs/research/
+	 */
+	async saveResearch(
+		history: ResearchExchange[],
+		target: { taskId: string } | { file: true },
+		tag?: string
+	): Promise<ResearchSaved> {
+		return new ResearchService(
+			this.taskService,
+			this.configManager
+		).saveResearch(history, target, tag);
 	}
 
 	/**
@@ -597,10 +636,9 @@ export class TasksDomain {
 	): Promise<TaskNote> {
 		const note = normalizeNoteText(text);
 		const id = String(taskId).trim();
-		const addedAt = new Date().toISOString();
-		const saved = await this.taskService.modifyTask(
+		const { saved, addedAt } = await this.taskService.appendToDetails(
 			id,
-			(task) => ({ details: appendNote(task.details, note, addedAt) }),
+			note,
 			options.tag
 		);
 		return {

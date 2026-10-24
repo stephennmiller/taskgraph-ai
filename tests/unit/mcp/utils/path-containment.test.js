@@ -6,7 +6,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { parsePRDDirect } from '../../../../mcp-server/src/core/direct-functions/parse-prd.js';
-import { researchDirect } from '../../../../mcp-server/src/core/direct-functions/research.js';
 import {
 	assertInsideRoot,
 	resolvePrdPath,
@@ -102,21 +101,6 @@ describe('parsePRDDirect output', () => {
 		expect(result.success).toBe(false);
 		expect(result.error.code).toBe('INVALID_PATH');
 		expect(fs.existsSync(target)).toBe(false);
-	});
-});
-
-describe('researchDirect filePaths', () => {
-	test('refuses a context file outside projectRoot before any AI call', async () => {
-		const secret = path.join(outside, 'id_rsa');
-		fs.writeFileSync(secret, 'PRIVATE');
-
-		const result = await researchDirect(
-			{ query: 'q', projectRoot: root, filePaths: `src/a.js,${secret}` },
-			{ info() {}, error() {}, warn() {}, debug() {} }
-		);
-
-		expect(result.success).toBe(false);
-		expect(result.error.code).toBe('INVALID_PATH');
 	});
 });
 
