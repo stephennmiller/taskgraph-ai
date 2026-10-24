@@ -12,6 +12,7 @@ describe('formatMarkdown', () => {
 		'Paragraphs\n\n\n\nfar apart',
 		"Quotes: \"double\" and 'single', it's fine (really) / ok?",
 		'Ends with a space ',
+		'A line that ends with a space \nthen goes on',
 		'Uses well-known hyphenated words; and e.g. abbreviations!'
 	];
 
@@ -29,6 +30,26 @@ describe('formatMarkdown', () => {
 			);
 		}
 	);
+
+	// GFM autolinks URLs and marked-terminal styles them, so text with one
+	// must not take the plain-prose path
+	it('spells out a www. link as marked-terminal does', () => {
+		const output = formatMarkdown('See www.example.com for details', 80);
+		expect(stripVTControlCharacters(output)).toBe(
+			'See www.example.com (http://www.example.com) for details'
+		);
+	});
+
+	it.each([
+		'See WWW.example.com for details',
+		'Docs at https://example.com/docs now',
+		'Mirror: ftp://example.com/pub',
+		'Trailing colon:\nhttp://x.io'
+	])('renders the link in %j through marked', (text) => {
+		expect(formatMarkdown(text, 80, { breaks: true })).toBe(
+			renderMarkdown(text, 80, { breaks: true })
+		);
+	});
 
 	it.each([
 		['**bold** text', 'bold text'],

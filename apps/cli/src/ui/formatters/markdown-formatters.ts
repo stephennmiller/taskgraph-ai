@@ -85,13 +85,15 @@ function wrapListItems(text: string, width: number): string {
 /**
  * Text that markdown would print unchanged apart from wrapping: ASCII
  * letters, digits and plain punctuation, single spaces, no line that could
- * start a list, and no word longer than `columns` (marked-terminal splits
- * those). Deliberately narrow: anything else goes through marked.
+ * start a list, no URL (GFM turns `www.` and `https://` into styled links),
+ * and no word longer than `columns` (marked-terminal splits those).
+ * Deliberately narrow: anything else goes through marked.
  */
 function isPlainProse(text: string, columns: number): boolean {
 	return (
 		/^[A-Za-z0-9 .,;:?!'"()/\n-]*$/.test(text) &&
 		!/ {2}|^[ \d-]/m.test(text) &&
+		!/:\/\/|www\./i.test(text) &&
 		text.split(/[ \n]/).every((word) => word.length <= columns)
 	);
 }
@@ -108,7 +110,7 @@ function formatPlainProse(
 		.map((paragraph) => {
 			const lines = breaks
 				? paragraph.split('\n')
-				: [paragraph.replace(/\n/g, ' ')];
+				: [paragraph.replace(/ ?\n/g, ' ')];
 			return lines
 				.flatMap((line) => wrapLine(line.trim(), columns, ''))
 				.join('\n');

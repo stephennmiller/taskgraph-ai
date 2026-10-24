@@ -10,9 +10,11 @@
 
 // Must stay first: disables color before chalk loads when NO_COLOR is set
 import './modules/no-color.js';
-import { enableCompileCache } from 'node:module';
+import nodeModule from 'node:module';
 
-enableCompileCache();
+// Caches compiled code between runs (#248). Optional call: a named import
+// would fail to link on a Node without it, before engines can be reported.
+nodeModule.enableCompileCache?.();
 
 const args = process.argv.slice(2);
 const version = process.env.TM_PUBLIC_VERSION || 'unknown';
