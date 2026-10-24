@@ -311,10 +311,11 @@
         "description": "list --json and next --json leave out a task's acceptanceCriteria, which show --json includes.",
         "details": "GitHub issue #369: https://github.com/stephennmiller/taskgraph-ai/issues/369\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T04:36:13.191Z"
       },
       {
         "id": "20",
@@ -871,9 +872,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T04:28:59.212Z",
+      "lastModified": "2026-10-24T04:36:13.191Z",
       "taskCount": 67,
-      "completedCount": 26,
+      "completedCount": 27,
       "tags": [
         "master"
       ]
