@@ -371,7 +371,8 @@ export {
 	type SupportedModel
 } from './modules/ai/config-ai-host.js';
 
-// ========== Expand ===
+// ========== Expand ==========
+
 export type {
 	ExpandAllHooks,
 	ExpandAllResult,
@@ -384,7 +385,7 @@ export {
 	type AggregatedTelemetry,
 	aggregateTelemetry
 } from './modules/ai/aggregate-telemetry.js';
-=======
+
 // ========== Research ==========
 
 export type {

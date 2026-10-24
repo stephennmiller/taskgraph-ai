@@ -23,6 +23,7 @@ import {
 	type ExpandTaskInput,
 	type ExpandTaskResult
 } from './services/expand-task.service.js';
+import {
 	ResearchService,
 	type ResearchExchange,
 	type ResearchHooks,
