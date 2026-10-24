@@ -483,7 +483,7 @@ Follow these steps to add MCP support for an existing TaskGraph command (see `ne
   - ✅ DO: Use consistent directory structure: `mcp-server/src/tools/` for tool definitions, `mcp-server/src/core/direct-functions/` for direct function implementations
 
 - **JavaScript Functions**:
-  - ✅ DO: Use **camelCase** with `Direct` suffix for direct function implementations: `parsePRDDirect`, `modelsDirect`
+  - ✅ DO: Use **camelCase** with `Direct` suffix for direct function implementations: `parsePRDDirect`, `initializeProjectDirect`
   - ✅ DO: Use **camelCase** with `Tool` suffix for tool registration functions: `registerListTasksTool`, `registerSetTaskStatusTool`
   - ✅ DO: Use consistent action function naming inside direct functions: `coreActionFn` or similar descriptive name
 

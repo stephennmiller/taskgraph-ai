@@ -434,3 +434,23 @@ export type {
 	UpdateTaskInput,
 	UpdateTaskResult
 } from './modules/tasks/services/update-task.service.js';
+
+// ========== Project settings (models, response language) ==========
+
+export {
+	DEFAULT_PROJECT_CONFIG,
+	dropOldNumTasksDefault,
+	readConfigJson,
+	toSavedConfig,
+	UNREADABLE_CONFIG,
+	writeSplitConfig
+} from './modules/config/services/config-file.js';
+export {
+	type ActiveModel,
+	type AvailableModel,
+	getAvailableModels,
+	isConfigFilePresent,
+	MODEL_ROLES,
+	type SettingResult,
+	setResponseLanguage
+} from './modules/config/services/project-settings.js';

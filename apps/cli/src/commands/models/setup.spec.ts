@@ -1,19 +1,11 @@
 import inquirer from 'inquirer';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as modelManagement from '../../lib/model-management.js';
 import { runInteractiveSetup } from './setup.js';
 
-vi.mock('../../lib/model-management.js', () => ({
-	getAvailableModels: vi.fn(),
+const settings = {
 	getModelConfiguration: vi.fn(),
 	setModel: vi.fn()
-}));
-
-const MODELS = ['opus', 'sonnet', 'haiku'].map((id) => ({
-	id,
-	provider: 'claude-code',
-	allowed_roles: ['main', 'research', 'fallback']
-}));
+};
 
 const plain = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
@@ -38,8 +30,8 @@ describe('runInteractiveSetup', () => {
 	let log: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
-		vi.mocked(modelManagement.getAvailableModels).mockReturnValue(MODELS);
-		vi.mocked(modelManagement.getModelConfiguration).mockResolvedValue({
+		vi.clearAllMocks();
+		settings.getModelConfiguration.mockReturnValue({
 			success: true,
 			data: {
 				activeModels: {
@@ -65,7 +57,7 @@ describe('runInteractiveSetup', () => {
 				message: ''
 			}
 		});
-		vi.mocked(modelManagement.setModel).mockResolvedValue({ success: true });
+		settings.setModel.mockReturnValue({ success: true });
 		log = vi.spyOn(console, 'log').mockImplementation(() => {});
 		process.exitCode = undefined;
 	});
@@ -78,7 +70,7 @@ describe('runInteractiveSetup', () => {
 	it('starts each prompt on the current model', async () => {
 		const prompt = answerWith('sonnet', 'sonnet', 'haiku');
 
-		await runInteractiveSetup('/project');
+		await runInteractiveSetup(settings as never);
 
 		const defaults = prompt.mock.calls.map(
 			([questions]) =>
@@ -90,13 +82,11 @@ describe('runInteractiveSetup', () => {
 	it('saves only the roles that changed', async () => {
 		answerWith('opus', 'sonnet', 'haiku');
 
-		const ok = await runInteractiveSetup('/project');
+		const ok = await runInteractiveSetup(settings as never);
 
 		expect(ok).toBe(true);
-		expect(modelManagement.setModel).toHaveBeenCalledTimes(1);
-		expect(modelManagement.setModel).toHaveBeenCalledWith('main', 'opus', {
-			projectRoot: '/project'
-		});
+		expect(settings.setModel).toHaveBeenCalledTimes(1);
+		expect(settings.setModel).toHaveBeenCalledWith('main', 'opus');
 		expect(plain(String(log.mock.calls.at(-1)?.[0]))).toContain(
 			'Main model  sonnet → opus'
 		);
@@ -105,9 +95,9 @@ describe('runInteractiveSetup', () => {
 	it('saves nothing and adds nothing when every answer is the current model', async () => {
 		answerWith('sonnet', 'sonnet', 'haiku');
 
-		await runInteractiveSetup('/project');
+		await runInteractiveSetup(settings as never);
 
-		expect(modelManagement.setModel).not.toHaveBeenCalled();
+		expect(settings.setModel).not.toHaveBeenCalled();
 		const printed = log.mock.calls.map((call: unknown[]) =>
 			plain(String(call[0]))
 		);
@@ -121,7 +111,7 @@ describe('runInteractiveSetup', () => {
 	it('clears each list when its prompt ends, so Ctrl-C leaves nothing behind', async () => {
 		answerWith('opus', ctrlC());
 
-		await runInteractiveSetup('/project');
+		await runInteractiveSetup(settings as never);
 
 		expect(inquirer.createPromptModule).toHaveBeenCalledWith({
 			clearPromptOnDone: true
@@ -138,22 +128,22 @@ describe('runInteractiveSetup', () => {
 	it('saves nothing when Ctrl-C is pressed part way through', async () => {
 		answerWith('opus', ctrlC());
 
-		const ok = await runInteractiveSetup('/project');
+		const ok = await runInteractiveSetup(settings as never);
 
 		expect(ok).toBe(false);
 		expect(process.exitCode).toBe(130);
-		expect(modelManagement.setModel).not.toHaveBeenCalled();
+		expect(settings.setModel).not.toHaveBeenCalled();
 	});
 
 	it('exits 1 when a model cannot be saved', async () => {
 		answerWith('opus', 'opus', 'haiku');
-		vi.mocked(modelManagement.setModel).mockResolvedValueOnce({
+		settings.setModel.mockReturnValueOnce({
 			success: false,
 			error: { code: 'CONFIG_WRITE_ERROR', message: 'disk full' }
 		});
 		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-		const ok = await runInteractiveSetup('/project');
+		const ok = await runInteractiveSetup(settings as never);
 
 		expect(ok).toBe(false);
 		expect(process.exitCode).toBe(1);

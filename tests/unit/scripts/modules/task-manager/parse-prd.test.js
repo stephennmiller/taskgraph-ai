@@ -197,14 +197,6 @@ vi.doMock('../../../../../scripts/modules/config-manager.js', () => ({
 	hasCodebaseAnalysis: vi.fn(() => false)
 }));
 
-vi.doMock('../../../../../scripts/modules/task-manager/models.js', () => ({
-	getModelConfiguration: vi.fn(() => ({
-		model: 'mock-model',
-		maxTokens: 4000,
-		temperature: 0.7
-	}))
-}));
-
 vi.doMock('@tm/core', async () => ({
 	...(await vi.importActual('@tm/core')),
 	// fs is mocked, so there is no archive file: no task IDs are reserved

@@ -113,9 +113,8 @@ describe('models and lang commands', () => {
 
 		expect(result.status).toBe(0);
 		expect(result.stderr).toBe(
-			'⚠ Main provider "anthropic" isn\'t supported; using sonnet\n' +
-				'⚠ Research provider "perplexity" isn\'t supported; using sonnet\n' +
-				'  Run taskgraph models --setup to update .taskgraph/config.json\n'
+			'⚠ main provider "anthropic" isn\'t supported; using sonnet. Run taskgraph models --setup to change it\n' +
+				'⚠ research provider "perplexity" isn\'t supported; using sonnet. Run taskgraph models --setup to change it\n'
 		);
 		expect(result.stdout).toMatch(/Main\s+sonnet/);
 	});

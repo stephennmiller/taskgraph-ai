@@ -26,6 +26,7 @@
 				"ai-sdk-provider-claude-code",
 				"cli-table3",
 				"gradient-string",
+				"inquirer",
 				"jsonrepair",
 				"ora",
 				"proper-lockfile",

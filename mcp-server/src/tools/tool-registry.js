@@ -26,12 +26,14 @@ import {
 	registerGithubPushTool,
 	registerGithubStatusTool,
 	registerListTagsTool,
+	registerModelsTool,
 	registerMoveTaskTool,
 	registerNextTaskTool,
 	registerRemoveDependencyTool,
 	registerRemoveSubtaskTool,
 	registerRemoveTaskTool,
 	registerRenameTagTool,
+	registerResponseLanguageTool,
 	registerResearchTool,
 	registerScopeDownTool,
 	registerScopeUpTool,
@@ -43,9 +45,7 @@ import {
 	registerValidateDependenciesTool
 } from '@tm/mcp';
 import { registerInitializeProjectTool } from './initialize-project.js';
-import { registerModelsTool } from './models.js';
 import { registerParsePRDTool } from './parse-prd.js';
-import { registerResponseLanguageTool } from './response-language.js';
 
 /**
  * Comprehensive tool registry mapping tool names to their registration functions

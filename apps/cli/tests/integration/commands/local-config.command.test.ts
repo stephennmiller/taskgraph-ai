@@ -160,16 +160,16 @@ describe('per-machine config and state', () => {
 			});
 		});
 
-		it('cleans config.json on load without copying local settings into it', () => {
+		// `models` runs on @tm/core and no longer goes through the legacy
+		// loader's save-on-load cleanup; the first save cleans (next test)
+		it('shows local settings over config.json without writing either', () => {
+			const before = fs.readFileSync(sharedPath(), 'utf8');
+
 			const result = run(['models']);
 
 			expect(result.status).toBe(0);
 			expect(result.stdout).toMatch(/Main\s+opus/);
-			const shared = readJson(sharedPath());
-			expect(shared.global.defaultNumTasks).toBeUndefined();
-			expect(shared.global.enableProxy).toBeUndefined();
-			expect(shared.models.main.modelId).toBe('sonnet');
-			expect(shared.claudeCode).toBeUndefined();
+			expect(fs.readFileSync(sharedPath(), 'utf8')).toBe(before);
 		});
 
 		it('saves a shared change to config.json and keeps local settings local', () => {

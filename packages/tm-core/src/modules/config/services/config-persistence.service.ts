@@ -1,8 +1,8 @@
 /**
  * @fileoverview Configuration Persistence Service
- * Deletes the project config files. tm-core never writes config.json: the
- * legacy writer (scripts/modules/config-file.js) saves only the keys a user
- * set, and a second writer here saved every merged default (#356).
+ * Deletes the project config files. Saving goes through writeSplitConfig
+ * (config-file.ts), which keeps only the keys a user set; a second writer
+ * here saved every merged default (#356).
  */
 
 import fs from 'node:fs/promises';
