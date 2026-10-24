@@ -209,13 +209,3 @@ export function resolveProjectPath(relativePath, args) {
 export function findTasksPath(args, log = silentLogger) {
 	return resolveTasksPath(args, log);
 }
-
-/**
- * Find complexity report path from arguments - primary MCP function
- * @param {Object} args - Arguments object containing projectRoot and optional complexityReport path
- * @param {Object} [log] - Log function to prevent console logging
- * @returns {string|null} - Resolved path to complexity report or null if not found
- */
-export function findComplexityReportPath(args, log = silentLogger) {
-	return resolveComplexityReportPath(args, log);
-}

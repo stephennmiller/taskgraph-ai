@@ -44,9 +44,6 @@ export function createProject({ currentTag } = {}) {
 export const removeProject = (root) =>
 	fs.rmSync(root, { recursive: true, force: true });
 
-export const tasksJsonPathOf = (root) =>
-	path.join(root, '.taskgraph', 'tasks', 'tasks.json');
-
 export const createLog = () => ({
 	info: vi.fn(),
 	warn: vi.fn(),
