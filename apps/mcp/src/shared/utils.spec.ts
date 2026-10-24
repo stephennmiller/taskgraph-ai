@@ -2,7 +2,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { withNormalizedProjectRoot, withToolContext } from './utils.js';
+import {
+	resolveInsideRoot,
+	withNormalizedProjectRoot,
+	withToolContext
+} from './utils.js';
 
 vi.mock('@tm/core', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@tm/core')>()),
@@ -117,5 +121,45 @@ describe('withToolContext project .env', () => {
 
 		expect(fn).toHaveBeenCalledOnce();
 		expect(process.env.TM_LEAK_CHECK).toBeUndefined();
+	});
+});
+
+describe('resolveInsideRoot', () => {
+	const root = fs.realpathSync(
+		fs.mkdtempSync(path.join(os.tmpdir(), 'tm-inside-root-'))
+	);
+	const outside = fs.realpathSync(
+		fs.mkdtempSync(path.join(os.tmpdir(), 'tm-outside-root-'))
+	);
+	fs.mkdirSync(path.join(root, 'docs'));
+	fs.symlinkSync(outside, path.join(root, 'escape'));
+
+	it('resolves relative and absolute paths inside the root', () => {
+		expect(resolveInsideRoot(root, 'docs/new/dir')).toBe(
+			path.join(root, 'docs', 'new', 'dir')
+		);
+		expect(resolveInsideRoot(root, path.join(root, 'docs'))).toBe(
+			path.join(root, 'docs')
+		);
+		expect(resolveInsideRoot(root, 'docs/../out')).toBe(path.join(root, 'out'));
+	});
+
+	it.each([
+		['../sibling'],
+		['docs/../../sibling'],
+		['/etc'],
+		['~/tasks'],
+		['escape'],
+		['escape/new/dir']
+	])('refuses %s', (candidate) => {
+		expect(() => resolveInsideRoot(root, candidate)).toThrow(
+			`Path '${candidate}' is outside the project root '${root}'`
+		);
+	});
+
+	it('throws when the project root does not exist', () => {
+		expect(() =>
+			resolveInsideRoot(path.join(root, 'missing'), 'docs')
+		).toThrow();
 	});
 });
