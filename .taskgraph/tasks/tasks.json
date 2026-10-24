@@ -852,10 +852,11 @@
         "description": "The manual progress scripts still describe and exercise the streaming parse-prd path that #443 deleted.",
         "details": "GitHub issue #486: https://github.com/stephennmiller/taskgraph-ai/issues/486\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T12:30:48.095Z"
       },
       {
         "id": "66",
@@ -886,9 +887,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:23:40.037Z",
+      "lastModified": "2026-10-24T12:30:48.096Z",
       "taskCount": 67,
-      "completedCount": 49,
+      "completedCount": 50,
       "tags": [
         "master"
       ]
