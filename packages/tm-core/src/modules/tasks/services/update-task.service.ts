@@ -14,7 +14,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
-import type { Task } from '../../../common/types/index.js';
+import type { Subtask, Task } from '../../../common/types/index.js';
 import {
 	AiService,
 	type AiTagInfo,
@@ -230,7 +230,7 @@ export class UpdateTaskService {
 			schema: COMMAND_SCHEMAS['update-task-by-id'],
 			objectName: 'task'
 		});
-		const updated = this.rewrite(
+		const { updated, relabel } = this.rewrite(
 			stored,
 			response.mainResult?.task,
 			prompt,
@@ -243,7 +243,12 @@ export class UpdateTaskService {
 		const { result: saved } = await this.taskService.modifyTasks((current) => {
 			const index = current.findIndex((t) => String(t.id) === taskId);
 			if (index === -1) throw removedError(taskId);
-			current[index] = mergeRewrite(stored, updated, current[index], warn);
+			current[index] = mergeRewrite(
+				relabel(stored),
+				updated,
+				relabel(current[index]),
+				warn
+			);
 			return { tasks: current, result: current[index] };
 		}, tag);
 		return {
@@ -289,7 +294,10 @@ export class UpdateTaskService {
 	/**
 	 * The AI's rewrite of `stored`, ready to save: its ID and status kept
 	 * (status unless the prompt mentions it), subtasks renumbered, done
-	 * subtasks restored, and every field the AI left out or nulled kept
+	 * subtasks restored, and every field the AI left out or nulled kept.
+	 * `relabel` gives a copy of the task as stored (or as saved since) with
+	 * each subtask under the ID the rewrite gave it, so the save merges
+	 * changes made during the call into the right subtask (#576)
 	 */
 	private rewrite(
 		stored: Task,
@@ -298,7 +306,7 @@ export class UpdateTaskService {
 		metadata: Record<string, unknown> | undefined,
 		warn: (message: string) => void,
 		debug: (message: string) => void
-	): Task {
+	): { updated: Task; relabel: (task: Task) => Task } {
 		if (!aiTask || typeof aiTask !== 'object') {
 			throw new Error('Received invalid task object from AI.');
 		}
@@ -319,15 +327,24 @@ export class UpdateTaskService {
 		updated.id = stored.id;
 		keepStatus(stored, updated, prompt, warn);
 		const original = stored.subtasks ?? [];
+		let relabel = (task: Task) => task;
 		if (Array.isArray(updated.subtasks)) {
+			// Stored subtask ID -> the ID the rewrite gives it
+			const newIdOf = new Map<string, number>();
+			const sameId = (st: Subtask, subtask: any) =>
+				String(st.id) === String(subtask.id);
+			const sameTitle = (st: Subtask, subtask: any) =>
+				Boolean(subtask.title) && st.title === subtask.title;
 			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
 				const id = i + 1;
-				// Match by ID (the AI may send strings), else by title
-				const before = original.find(
-					(st) =>
-						String(st.id) === String(subtask.id) ||
-						(subtask.title && st.title === subtask.title)
-				);
+				// Each stored subtask matches once: ID and title, else title (the
+				// AI may renumber a reorder itself), else ID (the AI may send strings)
+				const open = original.filter((st) => !newIdOf.has(String(st.id)));
+				const before =
+					open.find((st) => sameId(st, subtask) && sameTitle(st, subtask)) ??
+					open.find((st) => sameTitle(st, subtask)) ??
+					open.find((st) => sameId(st, subtask));
+				if (before) newIdOf.set(String(before.id), id);
 				const corrected = {
 					...subtask,
 					id,
@@ -352,13 +369,30 @@ export class UpdateTaskService {
 			debug(
 				`Fixed ${updated.subtasks.length} subtask IDs to be sequential numeric IDs.`
 			);
+			// Subtasks the AI dropped, or someone added meanwhile, get new IDs
+			let next = updated.subtasks.length;
+			relabel = (task) =>
+				Array.isArray(task.subtasks)
+					? {
+							...task,
+							subtasks: task.subtasks.map((st) => {
+								const key = String(st.id);
+								if (!newIdOf.has(key)) newIdOf.set(key, ++next);
+								return { ...st, id: newIdOf.get(key) as number };
+							})
+						}
+					: task;
 		}
 		if (original.length > 0) {
 			if (!updated.subtasks) {
 				warn('Subtasks removed by AI. Restoring original subtasks.');
 				updated.subtasks = original;
 			} else {
-				updated.subtasks = keepDoneSubtasks(original, updated.subtasks, warn);
+				updated.subtasks = keepDoneSubtasks(
+					relabel(stored).subtasks ?? [],
+					updated.subtasks,
+					warn
+				);
 			}
 		}
 		// The schema has only some fields and sends null for the ones the AI
@@ -371,7 +405,7 @@ export class UpdateTaskService {
 			updated,
 			marks || metadata ? { ...(marks || {}), ...(metadata || {}) } : undefined
 		);
-		return updated as Task;
+		return { updated: updated as Task, relabel };
 	}
 
 	/**
