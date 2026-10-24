@@ -32,10 +32,6 @@ vi.doMock('chalk', () => {
 	return chalk;
 });
 
-vi.doMock('figlet', () => ({
-	textSync: vi.fn(() => 'TaskGraph Banner')
-}));
-
 vi.doMock('ora', () =>
 	vi.fn(() => ({
 		start: vi.fn(),

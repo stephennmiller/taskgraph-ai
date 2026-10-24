@@ -525,7 +525,7 @@ export { createLogWrapper };
 - **Multi-Source Context Extraction**:
   - ✅ DO: Use for AI-powered commands that need project context
   - ✅ DO: Support tasks, files, custom text, and project tree context
-  - ✅ DO: Implement detailed token counting with `gpt-tokens` library
+  - ✅ DO: Report estimated token counts (about 4 characters per token)
   - ✅ DO: Provide multiple output formats (research, chat, system-prompt)
 
   ```javascript

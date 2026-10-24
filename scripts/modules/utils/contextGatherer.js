@@ -7,15 +7,12 @@
 import fs from 'fs';
 import path from 'path';
 import Fuse from 'fuse.js';
-import pkg from 'gpt-tokens';
 import {
 	findTaskById,
 	flattenTasksWithSubtasks,
 	readJSON,
 	truncate
 } from '../utils.js';
-
-const { encode } = pkg;
 
 /**
  * Context Gatherer class for collecting and formatting context from various sources
@@ -47,21 +44,15 @@ export class ContextGatherer {
 	}
 
 	/**
-	 * Count tokens in a text string using gpt-tokens
+	 * Estimate the tokens in a text string (about 4 characters per token)
 	 * @param {string} text - Text to count tokens for
-	 * @returns {number} Token count
+	 * @returns {number} Estimated token count
 	 */
 	countTokens(text) {
 		if (!text || typeof text !== 'string') {
 			return 0;
 		}
-		try {
-			return encode(text).length;
-		} catch (error) {
-			// Fallback to rough character-based estimation if tokenizer fails
-			// Rough estimate: ~4 characters per token for English text
-			return Math.ceil(text.length / 4);
-		}
+		return Math.ceil(text.length / 4);
 	}
 
 	/**
