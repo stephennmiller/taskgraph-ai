@@ -22,7 +22,7 @@ import path from 'node:path';
 import { JSON_OUTPUT_SCHEMA_VERSION } from '@tm/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { shapeOf } from '../../helpers/json-shape.js';
-import { getCliBinPath } from '../../helpers/test-utils.js';
+import { getCliBinPath, spawnTimeout } from '../../helpers/test-utils.js';
 
 /** The schemaVersion the shapes below describe */
 const PINNED_VERSION = 2;
@@ -389,7 +389,9 @@ describe('--json contract', () => {
 	});
 
 	// #311: show gave numeric ids where list and next give strings
-	it('show, list and next give the same ids', () => {
+	it('show, list and next give the same ids', {
+		timeout: spawnTimeout(4)
+	}, () => {
 		const listed = json(['list', '--with-subtasks', '--json']).tasks.find(
 			(t: { id: string }) => t.id === '2'
 		);

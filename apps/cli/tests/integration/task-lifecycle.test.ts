@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../helpers/test-utils.js';
+import { getCliBinPath, spawnTimeout } from '../helpers/test-utils.js';
 
 // Capture initial working directory at module load time
 const initialCwd = process.cwd();
@@ -259,7 +259,9 @@ describe('Task Lifecycle Integration Tests', () => {
 			expect(otherSubtask.status).toBe('pending');
 		});
 
-		it('should handle multiple status changes in sequence', () => {
+		it('should handle multiple status changes in sequence', {
+			timeout: spawnTimeout(3)
+		}, () => {
 			// ARRANGE: Create task
 			const testData = {
 				master: {
@@ -336,7 +338,9 @@ describe('Task Lifecycle Integration Tests', () => {
 	 * This is the kind of flow a real developer would follow.
 	 */
 	describe('Realistic Task Workflow', () => {
-		it('should support typical development workflow', () => {
+		it('should support typical development workflow', {
+			timeout: spawnTimeout(6)
+		}, () => {
 			// ARRANGE: Create realistic project tasks
 			const testData = {
 				master: {

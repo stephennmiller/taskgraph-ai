@@ -14,7 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { getCliBinPath } from '../helpers/test-utils.js';
+import { getCliBinPath, spawnTimeout } from '../helpers/test-utils.js';
 import {
 	buildEnv,
 	compareRuns,
@@ -484,7 +484,10 @@ describe('summarizeRun', () => {
 	});
 });
 
-describe.skipIf(!built)('compare-builds script', () => {
+// Each compare runs init and every step once per build
+const timeout = spawnTimeout(6);
+
+describe.skipIf(!built)('compare-builds script', { timeout }, () => {
 	let work: string;
 
 	beforeEach(() => {
