@@ -1,0 +1,105 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>"
+			}
+		},
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>",
+				"listAvailableModels": true
+			}
+		},
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>",
+				"setMain": "opus"
+			}
+		},
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>",
+				"setFallback": "haiku"
+			}
+		},
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>",
+				"setResearch": "gpt-4"
+			},
+			"expectError": true
+		},
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>"
+			}
+		},
+		["models", "--set-research", "haiku", "--set-main", "sonnet"],
+		{
+			"args": ["models", "--set-main", "gpt-4"],
+			"expectExit": 1
+		},
+		{
+			"args": ["models", "--ollama"],
+			"expectExit": 1
+		},
+		{
+			"mcp": "response-language",
+			"input": {
+				"projectRoot": "<project>",
+				"language": "Français"
+			}
+		},
+		{
+			"args": ["lang"],
+			"capture": "stdout"
+		},
+		["lang", "--response", "  German  "],
+		{
+			"mcp": "response-language",
+			"input": {
+				"projectRoot": "<project>",
+				"language": " "
+			},
+			"expectError": true
+		},
+		{
+			"args": ["lang", "--response", " "],
+			"expectExit": 1
+		},
+		{
+			"shell": "rm .taskgraph/config.json"
+		},
+		{
+			"mcp": "models",
+			"input": {
+				"projectRoot": "<project>"
+			},
+			"expectError": true
+		},
+		{
+			"mcp": "response-language",
+			"input": {
+				"projectRoot": "<project>",
+				"language": "English"
+			},
+			"expectError": true
+		},
+		{
+			"args": ["models"],
+			"expectExit": 1
+		},
+		{
+			"args": ["lang", "--response", "English"],
+			"expectExit": 1
+		}
+	]
+}

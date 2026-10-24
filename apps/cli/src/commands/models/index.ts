@@ -1,7 +1,8 @@
 /**
- * @fileoverview Model setup module exports, command not yet here, still lives in commands.js (old structure)
+ * @fileoverview The models command and its interactive setup
  */
 
 export * from './types.js';
 export * from './prompts.js';
 export * from './setup.js';
+export * from './models.command.js';

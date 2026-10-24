@@ -13,6 +13,8 @@ import { UpdateSubtaskCommand } from './commands/update-subtask.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { ComplexityReportCommand } from './commands/complexity-report.command.js';
+import { LangCommand } from './commands/lang.command.js';
+import { ModelsCommand } from './commands/models/models.command.js';
 import { SyncReadmeCommand } from './commands/sync-readme.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
 import { ScopeDownCommand, ScopeUpCommand } from './commands/scope.command.js';
@@ -263,6 +265,18 @@ export class CommandRegistry {
 			description:
 				'Sync the current task list to README.md in the project root',
 			commandClass: SyncReadmeCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'models',
+			description: 'Manage AI model configurations (Claude Code models)',
+			commandClass: ModelsCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'lang',
+			description: 'Show or set the language AI responses are written in',
+			commandClass: LangCommand as any,
 			category: 'utility'
 		},
 		{

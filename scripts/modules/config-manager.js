@@ -6,10 +6,14 @@ import {
 	ClaudeCodeSettingsSchema,
 	CUSTOM_PROVIDERS,
 	CUSTOM_PROVIDERS_ARRAY,
+	DEFAULT_PROJECT_CONFIG,
+	dropOldNumTasksDefault,
 	hasPerMachineSettings,
 	mergeMachineConfig,
+	readConfigJson,
 	SUPPORTED_MODELS as MODEL_MAP,
-	splitMachineConfig
+	UNREADABLE_CONFIG,
+	writeSplitConfig
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -18,7 +22,6 @@ import {
 	TASKGRAPH_TASKS_FILE
 } from '../../src/constants/paths.js';
 import { findConfigPath } from '../../src/utils/path-utils.js';
-import { dropOldNumTasksDefault, toSavedConfig } from './config-file.js';
 import { findProjectRoot, isEmpty, log, resolveEnvVariable } from './utils.js';
 
 // Calculate __dirname in ESM
@@ -26,41 +29,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Default configuration values (used if config file is missing or incomplete)
-const DEFAULTS = {
-	models: {
-		main: {
-			provider: 'claude-code',
-			modelId: 'sonnet',
-			maxTokens: 64000,
-			temperature: 0.2
-		},
-		research: {
-			provider: 'claude-code',
-			modelId: 'sonnet',
-			maxTokens: 8700,
-			temperature: 0.1
-		},
-		fallback: {
-			provider: 'claude-code',
-			modelId: 'sonnet',
-			maxTokens: 64000,
-			temperature: 0.2
-		}
-	},
-	global: {
-		logLevel: 'info',
-		debug: false,
-		// 0: parse-prd sizes the task list to the PRD
-		defaultNumTasks: 0,
-		defaultSubtasks: 5,
-		defaultPriority: 'medium',
-		projectName: 'TaskGraph',
-		responseLanguage: 'English',
-		enableCodebaseAnalysis: true,
-		enableProxy: false
-	},
-	claudeCode: {}
-};
+const DEFAULTS = DEFAULT_PROJECT_CONFIG;
 
 // --- Internal Config Loading ---
 let loadedConfig = null;
@@ -242,24 +211,6 @@ function readLocalConfig(root) {
 				chalk.dim('  Fix the JSON or delete the file; using config.json only')
 		);
 		return null;
-	}
-}
-
-/** Marks a file that exists but isn't valid JSON (see readJsonIfPresent) */
-const UNREADABLE = Symbol('unreadable');
-
-/**
- * Parse a JSON file for writeConfig.
- * @param {string} filePath
- * @returns {object|null|typeof UNREADABLE} null when missing, UNREADABLE
- *   when it exists but can't be parsed
- */
-function readJsonIfPresent(filePath) {
-	try {
-		if (!fs.existsSync(filePath)) return null;
-		return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-	} catch {
-		return UNREADABLE;
 	}
 }
 
@@ -780,49 +731,6 @@ function saveCleanedConfig(configPath, cleaned) {
 }
 
 /**
- * Write a config to config.json and config.local.json. Per-machine settings
- * go to config.local.json (gitignored), the rest to config.json, so a
- * per-machine setting an earlier release wrote to config.json moves to the
- * local file on the next write. config.json gets only the keys it already
- * has or that differ from DEFAULTS (see toSavedConfig).
- * @param {string} rootPath - Project root
- * @param {object} config - Full config (shared and local merged)
- */
-function writeSplitConfig(rootPath, config) {
-	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
-	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
-	const sharedOnDisk = readJsonIfPresent(configPath);
-	const currentShared = sharedOnDisk === UNREADABLE ? null : sharedOnDisk;
-	const currentLocal = readJsonIfPresent(localPath);
-	if (currentLocal === UNREADABLE) {
-		// Leave a broken config.local.json for the user to fix rather than
-		// overwrite the settings in it; save everything to config.json as
-		// before config.local.json existed.
-		fs.writeFileSync(
-			configPath,
-			JSON.stringify(toSavedConfig(config, currentShared, DEFAULTS), null, 2)
-		);
-		return;
-	}
-	const { shared, local } = splitMachineConfig(
-		config,
-		currentShared,
-		currentLocal,
-		DEFAULTS
-	);
-
-	// Local file first: if the shared write then fails, a moved setting is
-	// in both files rather than in neither
-	if (currentLocal || Object.keys(local).length > 0) {
-		fs.writeFileSync(localPath, `${JSON.stringify(local, null, 2)}\n`);
-	}
-	fs.writeFileSync(
-		configPath,
-		JSON.stringify(toSavedConfig(shared, currentShared, DEFAULTS), null, 2)
-	);
-}
-
-/**
  * Move per-machine settings (such as claudeCode.pathToClaudeCodeExecutable)
  * that an earlier release kept in the shared config.json into
  * config.local.json. A value already in config.local.json wins. Does nothing
@@ -832,14 +740,14 @@ function writeSplitConfig(rootPath, config) {
  */
 function moveMachineSettings(rootPath) {
 	const configPath = path.join(rootPath, '.taskgraph', 'config.json');
-	const shared = readJsonIfPresent(configPath);
+	const shared = readConfigJson(configPath);
 	if (!hasPerMachineSettings(shared)) return false;
 
-	const local = readJsonIfPresent(
+	const local = readConfigJson(
 		path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE)
 	);
 	// A broken config.local.json stays as it is; readLocalConfig reports it
-	if (local === UNREADABLE) return false;
+	if (local === UNREADABLE_CONFIG) return false;
 	try {
 		writeSplitConfig(rootPath, mergeMachineConfig(shared, local));
 	} catch (error) {

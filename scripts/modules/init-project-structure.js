@@ -2,7 +2,12 @@
 import { execSync } from 'child_process';
 import path from 'path';
 import { ui } from '@tm/cli';
-import { findOnPath, installMergeDriver, mergeDriverCommand } from '@tm/core';
+import {
+	findOnPath,
+	installMergeDriver,
+	mergeDriverCommand,
+	setResponseLanguage
+} from '@tm/core';
 import {
 	ENV_EXAMPLE_FILE,
 	EXAMPLE_PRD_FILE,
@@ -177,14 +182,7 @@ async function createProjectStructure(
 	// Set language directly if provided via interactive prompt
 	if (options.preferredLanguage && !dryRun) {
 		try {
-			const responseLanguageModule = await import(
-				'./task-manager/response-language.js'
-			);
-			const setResponseLanguage = responseLanguageModule.default;
-			setResponseLanguage(options.preferredLanguage, {
-				projectRoot: targetDir,
-				silent: true
-			});
+			setResponseLanguage(targetDir, options.preferredLanguage);
 			log('debug', `Response language set to: ${options.preferredLanguage}`);
 		} catch (error) {
 			log('warn', `Failed to set response language: ${error.message}`);

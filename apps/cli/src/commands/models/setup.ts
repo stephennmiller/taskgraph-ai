@@ -11,11 +11,7 @@
  * changes nothing.
  */
 
-import {
-	getAvailableModels,
-	getModelConfiguration,
-	setModel
-} from '../../lib/model-management.js';
+import { type TmCore, getAvailableModels } from '@tm/core';
 import {
 	MODEL_ROLE_ORDER,
 	type ModelAssignments,
@@ -31,9 +27,15 @@ import type { ModelInfo } from './types.js';
 const isPromptExit = (error: unknown) =>
 	error instanceof Error && error.name === 'ExitPromptError';
 
-async function currentModels(projectRoot: string): Promise<ModelAssignments> {
-	const result = await getModelConfiguration({ projectRoot });
-	const active = result.success ? result.data?.activeModels : undefined;
+/** The project settings setup reads and saves */
+type ModelSettings = Pick<
+	TmCore['config'],
+	'getModelConfiguration' | 'setModel'
+>;
+
+function currentModels(settings: ModelSettings): ModelAssignments {
+	const result = settings.getModelConfiguration();
+	const active = result.success ? result.data.activeModels : undefined;
 	return {
 		main: active?.main?.modelId ?? null,
 		research: active?.research?.modelId ?? null,
@@ -46,16 +48,16 @@ async function currentModels(projectRoot: string): Promise<ModelAssignments> {
  *
  * @returns The changes that were saved, and whether every save worked
  */
-async function saveChanges(
+function saveChanges(
 	changes: ModelChange[],
-	projectRoot: string
-): Promise<{ saved: ModelChange[]; ok: boolean }> {
+	settings: ModelSettings
+): { saved: ModelChange[]; ok: boolean } {
 	const saved: ModelChange[] = [];
 	for (const change of changes) {
-		const result = await setModel(change.role, change.to, { projectRoot });
+		const result = settings.setModel(change.role, change.to);
 		if (!result.success) {
 			printError(
-				`Couldn't set the ${change.role} model: ${result.error?.message ?? 'unknown error'}`
+				`Couldn't set the ${change.role} model: ${result.error.message}`
 			);
 			return { saved, ok: false };
 		}
@@ -70,9 +72,9 @@ async function saveChanges(
  * @returns false if the user cancelled or a model couldn't be saved
  */
 export async function runInteractiveSetup(
-	projectRoot: string
+	settings: ModelSettings
 ): Promise<boolean> {
-	const current = await currentModels(projectRoot);
+	const current = currentModels(settings);
 	const models = (getAvailableModels() as ModelInfo[]).filter(
 		(model) => model.allowed_roles
 	);
@@ -101,7 +103,7 @@ export async function runInteractiveSetup(
 	// The answer lines already show what each role uses
 	if (changes.length === 0) return true;
 
-	const { saved, ok } = await saveChanges(changes, projectRoot);
+	const { saved, ok } = saveChanges(changes, settings);
 	if (saved.length > 0) {
 		console.log(`\n${formatModelChanges(saved)}`);
 	}
