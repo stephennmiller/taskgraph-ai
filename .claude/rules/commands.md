@@ -245,7 +245,7 @@ For AI-powered commands that benefit from project context, follow the research c
       });
       
       // 5. One context line, then a spinner while the AI call runs
-      // Implementation continues in task-manager/research.js
+      // Implementation continues in apps/cli/src/commands/research.command.ts
     });
   ```
 

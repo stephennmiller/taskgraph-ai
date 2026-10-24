@@ -11,7 +11,6 @@ import { initializeProjectDirect } from './direct-functions/initialize-project.j
 import { modelsDirect } from './direct-functions/models.js';
 import { nextTaskDirect } from './direct-functions/next-task.js';
 import { parsePRDDirect } from './direct-functions/parse-prd.js';
-import { researchDirect } from './direct-functions/research.js';
 import { scopeDownDirect } from './direct-functions/scope-down.js';
 import { scopeUpDirect } from './direct-functions/scope-up.js';
 import { updateSubtaskByIdDirect } from './direct-functions/update-subtask-by-id.js';
@@ -29,7 +28,6 @@ export {
 	complexityReportDirect,
 	initializeProjectDirect,
 	modelsDirect,
-	researchDirect,
 	scopeUpDirect,
 	scopeDownDirect
 };

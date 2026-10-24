@@ -168,7 +168,7 @@ These functions are crucial for managing the relationships between tasks.
 These functions are for managing the project and its configuration.
 
 -   **`generateTaskFiles()`**: Generates individual task files from `tasks.json`.
--   **`performResearch(query, options)`**: Performs AI-powered research with project context.
+-   **`tmCore.tasks.research({ query, taskIds, filePaths })`**: Performs AI-powered research with project context; `saveTo` appends the answer to a task's details.
 
 This overview should provide a solid foundation for creating user-facing documentation. For more detailed information on each function, refer to the source code in `scripts/modules/task-manager/`.
 

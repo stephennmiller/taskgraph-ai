@@ -385,3 +385,15 @@ export {
 	type AggregatedTelemetry,
 	aggregateTelemetry
 } from './modules/ai/aggregate-telemetry.js';
+
+// ========== Research ==========
+
+export type {
+	ResearchExchange,
+	ResearchHooks,
+	ResearchInput,
+	ResearchResult,
+	ResearchSaveFailure,
+	ResearchSaved
+} from './modules/tasks/services/research.service.js';
+export { isTaskOrSubtaskId } from './modules/tasks/services/research.service.js';

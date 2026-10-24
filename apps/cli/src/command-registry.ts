@@ -7,6 +7,7 @@ import type { Command } from 'commander';
 
 import { AddSubtaskCommand } from './commands/add-subtask.command.js';
 import { AddTaskCommand } from './commands/add-task.command.js';
+import { ResearchCommand } from './commands/research.command.js';
 import { ArchiveCommand } from './commands/archive.command.js';
 import { CompletionCommand } from './commands/completion.command.js';
 import { ExpandCommand } from './commands/expand.command.js';
@@ -124,6 +125,12 @@ export class CommandRegistry {
 			name: 'expand',
 			description: 'Expand a task into subtasks using AI',
 			commandClass: ExpandCommand as any,
+			category: 'task'
+		},
+		{
+			name: 'research',
+			description: 'Perform AI-powered research queries with project context',
+			commandClass: ResearchCommand as any,
 			category: 'task'
 		},
 		{

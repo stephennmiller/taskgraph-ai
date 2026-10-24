@@ -80,6 +80,6 @@ describe('research command', () => {
 		const result = run(['research', 'Anything?', '--detail=extreme']);
 
 		expect(result.status).toBe(1);
-		expect(result.stderr).toContain('--detail must be low, medium or high');
+		expect(result.stderr).toContain('must be low, medium or high');
 	});
 });

@@ -25,6 +25,7 @@ import { selectNextTask } from '../utils/next-task.js';
 import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { TaskEntity } from '../entities/task.entity.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
+import { appendNote } from '../utils/notes.js';
 import { promotedSubtaskDescription } from '../utils/promoted-subtask.js';
 import { TASK_STATUSES } from '../../../common/constants/index.js';
 import { ERROR_CODES, TaskGraphError } from '../../../common/errors/taskgraph-error.js';
@@ -594,6 +595,27 @@ export class TaskService {
 			change,
 			await this.resolveTag(tag)
 		);
+	}
+
+	/**
+	 * Append text to a task or subtask's details as a timestamped
+	 * `<info added on …>` block, in one locked write that changes only that
+	 * item: `note`, research's save to a task, update-subtask's append.
+	 * The text is saved as given.
+	 * @returns The item as saved and the block's ISO time
+	 */
+	async appendToDetails(
+		taskId: string,
+		text: string,
+		tag?: string
+	): Promise<{ saved: Task | Subtask; addedAt: string }> {
+		const addedAt = new Date().toISOString();
+		const saved = await this.modifyTask(
+			taskId,
+			(task) => ({ details: appendNote(task.details, text, addedAt) }),
+			tag
+		);
+		return { saved, addedAt };
 	}
 
 	/**

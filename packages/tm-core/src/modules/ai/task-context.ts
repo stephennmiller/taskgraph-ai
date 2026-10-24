@@ -14,6 +14,19 @@ export interface TaskContextOptions {
 	maxResults?: number;
 	/** Tasks whose dependency chains go into the context */
 	dependencyIds?: Array<string | number>;
+	/** Tasks or subtasks ("3", "3.2") that go into the context first, as given */
+	taskIds?: string[];
+}
+
+/** One task or subtask in the context */
+interface TaskContextItem {
+	id: string;
+	type: 'task' | 'subtask';
+	title: string;
+	/** The parent's title, for a subtask */
+	parentTitle?: string;
+	/** The item as formatted in the context */
+	text: string;
 }
 
 export interface TaskContext {
@@ -21,6 +34,8 @@ export interface TaskContext {
 	context: string;
 	/** Every task the search matched, best first, then the newest ones */
 	relevantTasks: Task[];
+	/** What the context holds, in its order */
+	items: TaskContextItem[];
 }
 
 const truncate = (text: string, max: number) =>
@@ -147,12 +162,19 @@ export function findTaskOrSubtask(
 }
 
 /** A task ("3") or subtask ("3.2") formatted for the context, if it exists */
-function formatById(tasks: Task[], id: string): string | null {
+function formatById(tasks: Task[], id: string): TaskContextItem | null {
 	const found = findTaskOrSubtask(tasks, id);
 	if (!found) return null;
-	return found.subtask
-		? formatSubtask(found.subtask, found.parent)
-		: formatTask(found.parent);
+	const { parent, subtask } = found;
+	return subtask
+		? {
+				id,
+				type: 'subtask',
+				title: subtask.title,
+				parentTitle: parent.title,
+				text: formatSubtask(subtask, parent)
+			}
+		: { id, type: 'task', title: parent.title, text: formatTask(parent) };
 }
 
 /**
@@ -296,9 +318,14 @@ export function formatTasksContext(tasks: Task[], ids: string[]): string {
  */
 export async function gatherTaskContext(
 	tasks: Task[],
-	{ query, maxResults = 10, dependencyIds = [] }: TaskContextOptions
+	{
+		query,
+		maxResults = 10,
+		dependencyIds = [],
+		taskIds = []
+	}: TaskContextOptions
 ): Promise<TaskContext> {
-	const ids = new Set<string>();
+	const ids = new Set<string>(taskIds);
 	let relevantTasks: Task[] = [];
 	if (query && tasks.length > 0) {
 		relevantTasks = await searchTasks(tasks, query);
@@ -310,11 +337,12 @@ export async function gatherTaskContext(
 
 	const items = [...ids]
 		.map((id) => formatById(tasks, id))
-		.filter((item): item is string => item !== null);
+		.filter((item): item is TaskContextItem => item !== null);
 	return {
 		context: items.length
-			? `## Task Context\n\n${items.join('\n\n---\n\n')}`
+			? `## Task Context\n\n${items.map((item) => item.text).join('\n\n---\n\n')}`
 			: '',
-		relevantTasks
+		relevantTasks,
+		items
 	};
 }
