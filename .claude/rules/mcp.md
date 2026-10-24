@@ -21,7 +21,7 @@ How the TaskGraph Model Context Protocol (MCP) server is built and how to add a 
 
 - `toolRegistry`: every tool by the name clients see, mapped to its `register*Tool` function.
 - `coreTools` (7) and `standardTools` (16, core included): the tiers.
-- `registerTaskGraphTools(server, toolMode)`: registers `all`, `core` (alias `lean`, the default), `standard`, or a comma-separated list of names. List names match in any case and with `_` and `-` swapped; a list with no known name registers every tool.
+- `registerTaskGraphTools(server, toolMode)`: registers `all`, `core` (alias `lean`, the default), `standard`, or a comma-separated list of names. List names match in any case and with `_` and `-` swapped. An unknown tier or any unknown list name throws, naming them, and `TaskGraphMCPServer.init()` throws when a tool fails to register, so `startServer` exits 1 instead of serving the wrong set of tools.
 
 `TASKGRAPH_TOOLS` in the client's MCP config sets the mode. `.mcp.json` only starts the server; it has no list of tools.
 

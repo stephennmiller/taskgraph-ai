@@ -4,7 +4,7 @@
  * tier registers.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SERVER_INSTRUCTIONS, TaskGraphMCPServer } from './server.js';
 import { coreTools } from './tools/tool-registry.js';
 
@@ -29,5 +29,42 @@ describe('MCP server instructions', () => {
 		const server = new TaskGraphMCPServer();
 
 		expect(server.options.instructions).toBe(SERVER_INSTRUCTIONS);
+	});
+});
+
+describe('TaskGraphMCPServer.init', () => {
+	const original = process.env.TASKGRAPH_TOOLS;
+	afterEach(() => {
+		if (original === undefined) delete process.env.TASKGRAPH_TOOLS;
+		else process.env.TASKGRAPH_TOOLS = original;
+		vi.restoreAllMocks();
+	});
+
+	it('registers the core tools by default', () => {
+		delete process.env.TASKGRAPH_TOOLS;
+		const server = new TaskGraphMCPServer();
+		const addTool = vi.spyOn(server.server, 'addTool');
+
+		server.init();
+
+		expect(addTool).toHaveBeenCalledTimes(coreTools.length);
+	});
+
+	it('throws on an unknown TASKGRAPH_TOOLS entry', () => {
+		process.env.TASKGRAPH_TOOLS = 'standart';
+
+		expect(() => new TaskGraphMCPServer().init()).toThrow(/"standart"/);
+	});
+
+	it('throws when a requested tool fails to register', () => {
+		process.env.TASKGRAPH_TOOLS = 'get_tasks,next_task';
+		const server = new TaskGraphMCPServer();
+		vi.spyOn(server.server, 'addTool').mockImplementation((tool) => {
+			if (tool.name === 'next_task') throw new Error('bad schema');
+		});
+
+		expect(() => server.init()).toThrow(
+			'Failed to register 1 tools: next_task'
+		);
 	});
 });

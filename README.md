@@ -282,7 +282,7 @@ Full details are in the [upgrade guide](https://taskgraph-ai.com/upgrading).
 
 ## Troubleshooting
 
-- **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `npx -y taskgraph-ai` starts on its own in a terminal (it waits for input; press Ctrl+C to stop).
+- **`0 tools enabled` or the server won't connect:** restart Claude Code, run `/mcp`, and confirm `npx -y taskgraph-ai` starts on its own in a terminal (it waits for input; press Ctrl+C to stop). If it exits instead, its error names the problem, such as an unknown `TASKGRAPH_TOOLS` tier or tool name.
 - **Working on TaskGraph itself:** build from source with `git clone https://github.com/stephennmiller/taskgraph-ai.git && cd taskgraph-ai && npm install && npm run build`, then run `node dist/taskgraph.js` for the CLI. This repository's own `.mcp.json` starts `dist/mcp-server.js` relative to the repo, so run `npm run build` first or the server won't connect.
 - **Something in the setup doesn't work:** run `taskgraph doctor`. It prints a line per setup step and the fix under each one that failed.
 - **AI commands fail:** run `claude` once and make sure you're signed in.

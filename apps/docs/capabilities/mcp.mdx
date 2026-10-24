@@ -75,7 +75,7 @@ Loads 16 commonly used tools. Balances functionality with context efficiency.
 ```
 
 #### Custom Tool Selection
-Specify exactly which tools to load using a comma-separated list. Tool names are case-insensitive and support both underscores and hyphens.
+Specify exactly which tools to load using a comma-separated list. Tool names are case-insensitive and support both underscores and hyphens. If any name is unknown, the server exits with an error naming it, so check the client's MCP log if the server fails to connect.
 
 ```json
 {
