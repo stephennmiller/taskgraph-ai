@@ -68,7 +68,15 @@ static class FakeClaude {
 		'v4.0.30319',
 		'csc.exe'
 	);
-	execFileSync(csc, ['/nologo', `/out:${temp}.exe`, `${temp}.cs`]);
+	if (!fs.existsSync(csc)) {
+		throw new Error(
+			`${csc} not found: the Windows fake claude is compiled with the .NET Framework 4 C# compiler`
+		);
+	}
+	// csc prints compile errors on stdout, which execFileSync would swallow
+	execFileSync(csc, ['/nologo', `/out:${temp}.exe`, `${temp}.cs`], {
+		stdio: ['ignore', 'inherit', 'inherit']
+	});
 	fs.rmSync(`${temp}.cs`);
 	try {
 		fs.renameSync(`${temp}.exe`, exe);
