@@ -455,6 +455,72 @@ describe('tasks.updateWithPrompt', () => {
 		]);
 	});
 
+	it('merges a change made during the call into the subtask the AI moved (#576)', async () => {
+		const done = sub(1, { title: 'Shipped', status: 'done' });
+		write(stored({ subtasks: [done, sub(2), sub(3)] }));
+		generateObject.mockImplementation(async () => {
+			const data = readFile();
+			data.master.tasks[0].subtasks[1].status = 'in-progress';
+			data.master.tasks[0].subtasks.push(sub(4, { title: 'Added meanwhile' }));
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			// The AI puts S3 first and renumbers by position itself
+			return reply({
+				task: fromAi({
+					subtasks: [
+						sub(1, { title: 'S3' }),
+						{ ...done, id: 2 },
+						sub(3, { title: 'S2' })
+					]
+				})
+			}) as any;
+		});
+
+		await update();
+
+		expect(saved().subtasks.map((s: any) => [s.id, s.title, s.status])).toEqual(
+			[
+				[1, 'S3', 'pending'],
+				// Still after the subtask it followed
+				[4, 'Added meanwhile', 'pending'],
+				[2, 'Shipped', 'done'],
+				[3, 'S2', 'in-progress']
+			]
+		);
+	});
+
+	it('matches by title when the AI inserts a subtask first and renumbers the rest (#576)', async () => {
+		write(
+			stored({ subtasks: [sub(1, { title: 'A' }), sub(2, { title: 'B' })] })
+		);
+		generateObject.mockImplementation(async () => {
+			const data = readFile();
+			data.master.tasks[0].subtasks[0].status = 'in-progress';
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			return reply({
+				task: fromAi({
+					subtasks: [
+						sub(1, { title: 'New' }),
+						sub(2, { title: 'A' }),
+						sub(3, { title: 'B' })
+					]
+				})
+			}) as any;
+		});
+
+		await update();
+
+		const byId = (a: any, b: any) => a.id - b.id;
+		expect(
+			saved()
+				.subtasks.sort(byId)
+				.map((s: any) => [s.id, s.title, s.status])
+		).toEqual([
+			[1, 'New', 'pending'],
+			[2, 'A', 'in-progress'],
+			[3, 'B', 'pending']
+		]);
+	});
+
 	it('keeps an unchanged done subtask in place, without a warning', async () => {
 		const done = {
 			id: 1,

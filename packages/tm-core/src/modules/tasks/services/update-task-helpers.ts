@@ -103,6 +103,39 @@ export function keepStatus(
 	}
 }
 
+/**
+ * The stored subtask each of the AI's `subtasks` is, by index. Each stored
+ * one matches once, across the whole list: ID and title first, then title
+ * (the AI may renumber a reorder or an insert itself), then ID (the AI may
+ * send strings)
+ */
+export function matchSubtasks(
+	original: Subtask[],
+	subtasks: Array<{ id?: unknown; title?: unknown }>
+): (Subtask | undefined)[] {
+	const sameId = (st: Subtask, subtask: { id?: unknown }) =>
+		String(st.id) === String(subtask.id);
+	const sameTitle = (st: Subtask, subtask: { title?: unknown }) =>
+		Boolean(subtask.title) && st.title === subtask.title;
+	const matched: (Subtask | undefined)[] = [];
+	const taken = new Set<Subtask>();
+	for (const same of [
+		(st: Subtask, subtask: { id?: unknown; title?: unknown }) =>
+			sameId(st, subtask) && sameTitle(st, subtask),
+		sameTitle,
+		sameId
+	]) {
+		subtasks.forEach((subtask, i) => {
+			if (matched[i]) return;
+			const before = original.find((st) => !taken.has(st) && same(st, subtask));
+			if (!before) return;
+			matched[i] = before;
+			taken.add(before);
+		});
+	}
+	return matched;
+}
+
 /** `subtasks` with each done one of `original` restored as it was, no ID twice */
 export function keepDoneSubtasks(
 	original: Subtask[],

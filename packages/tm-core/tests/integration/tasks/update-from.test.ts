@@ -253,6 +253,43 @@ describe('tasks.updateFrom', () => {
 		]);
 	});
 
+	it('keeps each subtask its identity when the AI inserts one and renumbers (#576)', async () => {
+		const sub = (id: number, title: string, extra = {}) => ({
+			id,
+			title,
+			status: 'pending',
+			dependencies: [],
+			...extra
+		});
+		const done = sub(1, 'A', { status: 'done', details: 'Kept' });
+		write([
+			stored('2', { subtasks: [done, sub(2, 'B', { details: 'B notes' })] })
+		]);
+		generateObject.mockImplementation(async () => {
+			const data = readFile();
+			data.master.tasks[0].subtasks[1].status = 'in-progress';
+			fs.writeFileSync(tasksPath, JSON.stringify(data));
+			return reply([
+				fromAi(2, {
+					subtasks: [sub(1, 'New'), sub(2, 'A'), sub(3, 'B')]
+				})
+			]) as any;
+		});
+
+		await update();
+
+		const byId = (a: any, b: any) => a.id - b.id;
+		expect(
+			savedTasks()[0]
+				.subtasks.sort(byId)
+				.map((s: any) => [s.id, s.title, s.status, s.details])
+		).toEqual([
+			[1, 'A', 'done', 'Kept'],
+			[2, 'B', 'in-progress', 'B notes'],
+			[3, 'New', 'pending', undefined]
+		]);
+	});
+
 	it('updates every unfinished task from 0, as legacy did', async () => {
 		answer(fromAi(1), fromAi(2), fromAi(3, { status: 'in-progress' }));
 
