@@ -110,6 +110,13 @@ describe('ASCII banner in a terminal', () => {
 		expect(output.split('\n')[0]).toBe('✓ Task 2  ○ pending → ▶ in-progress');
 	});
 
+	it('prints the help screen without the banner for bare --no-banner', () => {
+		const output = run('--no-banner');
+
+		expect(output).not.toContain(BANNER_CREDIT);
+		expect(output).toContain('Daily workflow');
+	});
+
 	it('accepts --no-banner as a no-op on routine commands', () => {
 		const output = run('--no-banner', 'tags');
 

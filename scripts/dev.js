@@ -26,7 +26,10 @@ if (args.length === 1 && (args[0] === '--version' || args[0] === '-V')) {
 	console.log(version);
 } else {
 	const help = await import('@tm/cli/help');
-	if (args.length === 0 || help.isTopLevelHelpRequest(args)) {
+	if (
+		args.every((a) => a === '--no-banner') ||
+		help.isTopLevelHelpRequest(args)
+	) {
 		help.printTopLevelHelp(args, version);
 	} else {
 		await runCommand();
