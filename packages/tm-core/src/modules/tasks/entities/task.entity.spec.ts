@@ -70,6 +70,20 @@ describe('TaskEntity', () => {
 			expect(json.definitionOfDoneChecked).toEqual(['Tests pass']);
 		});
 
+		it('copies a __proto__ key from tasks.json as plain data', () => {
+			const task = JSON.parse(
+				JSON.stringify(createMinimalTask()).replace(
+					'{',
+					'{"__proto__":{"polluted":true},'
+				)
+			);
+
+			const json = new TaskEntity(task).toJSON();
+
+			expect(Object.getPrototypeOf(json)).toBe(Object.prototype);
+			expect((json as { polluted?: boolean }).polluted).toBeUndefined();
+		});
+
 		it('still prints the normalized and updated values', () => {
 			const entity = new TaskEntity({
 				...createMinimalTask(),
