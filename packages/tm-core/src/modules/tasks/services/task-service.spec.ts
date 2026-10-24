@@ -339,14 +339,16 @@ describe('TaskService.getTaskList', () => {
 		expect(result.tag).toBe('master');
 	});
 
-	// The active tag can be missing after a git checkout; prime passes it
-	// explicitly and must not fail at session start
-	it('accepts the active tag even when tasks.json lacks it', async () => {
-		const result = await serviceWithTags(['feature'], 'gone').getTaskList({
-			tag: 'gone'
-		});
+	// Regression: #418, a stale active tag (say after a git checkout) listed
+	// "No tasks found"
+	it('fails on an active tag tasks.json lacks, pointing at tags use', async () => {
+		const service = serviceWithTags(['feature'], 'gone');
 
-		expect(result.tag).toBe('gone');
+		await expect(service.getTaskList()).rejects.toMatchObject({
+			message: `Active tag "gone" isn't in tasks.json`,
+			code: 'NOT_FOUND',
+			hint: expect.stringContaining('taskgraph tags use <tag>')
+		});
 	});
 
 	it('accepts any tag before tasks.json exists', async () => {

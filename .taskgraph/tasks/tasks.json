@@ -332,10 +332,11 @@
         "description": "Running taskgraph tags in a project with no tasks.json creates an empty one instead of only reading.",
         "details": "GitHub issue #375: https://github.com/stephennmiller/taskgraph-ai/issues/375\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:55:22.919Z"
       },
       {
         "id": "22",
@@ -412,10 +413,11 @@
         "description": "show, set-status and a stale active tag still treat a missing tag as empty, where list and next now fail with Tag not found.",
         "details": "GitHub issue #418: https://github.com/stephennmiller/taskgraph-ai/issues/418\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-10-24T03:55:22.926Z"
       },
       {
         "id": "29",
@@ -863,9 +865,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T03:47:33.574Z",
+      "lastModified": "2026-10-24T03:55:22.926Z",
       "taskCount": 67,
-      "completedCount": 18,
+      "completedCount": 20,
       "tags": [
         "master"
       ]

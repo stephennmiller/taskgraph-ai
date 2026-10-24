@@ -102,7 +102,12 @@ export function formatPrimeContext(
 		)}`
 	];
 
-	if (counts.total === 0) {
+	if (context.tagMissing) {
+		lines.push(
+			'',
+			`Tag ${context.tag} isn't in tasks.json. Switch with ${theme.brand('taskgraph tags use <tag>')}`
+		);
+	} else if (counts.total === 0) {
 		lines.push(
 			'',
 			'No tasks yet. Add some with:',
