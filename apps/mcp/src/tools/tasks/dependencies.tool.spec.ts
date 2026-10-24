@@ -69,8 +69,9 @@ describe('add_dependency', () => {
 			tag: 'dev',
 			data: {
 				message: 'Successfully added dependency: Task 5 now depends on 1',
-				taskId: '5',
-				dependencyId: '1',
+				// Numbers, as the legacy replies gave them
+				taskId: 5,
+				dependencyId: 1,
 				type: 'blocks'
 			}
 		});
@@ -162,9 +163,56 @@ describe('remove_dependency', () => {
 		expect(reply(result).data).toEqual({
 			message: "Task 2 doesn't depend on task 5; nothing changed",
 			removed: false,
-			taskId: '2',
-			dependencyId: '5'
+			taskId: 2,
+			dependencyId: 5
 		});
+	});
+});
+
+describe('reply IDs', () => {
+	it('gives a task ID as a number and a subtask ID as a string, as legacy did', async () => {
+		tasks.addDependency.mockResolvedValue({
+			taskId: '2.3',
+			dependencyId: '4',
+			type: 'blocks',
+			changed: true,
+			message: '',
+			tag: 'master'
+		});
+		tasks.validateDependencies.mockResolvedValue({
+			valid: false,
+			issues: [
+				{ type: 'missing', taskId: '1', dependencyId: '99', message: 'x' },
+				{ type: 'circular', taskId: '2.1', message: 'x' },
+				{ type: 'missing-link', taskId: '3', dependencyId: '9', message: 'x' }
+			],
+			taskCount: 3,
+			subtaskCount: 1,
+			dependencyCount: 1,
+			prdCoverage: null,
+			tasksPath: '/p/.taskgraph/tasks/tasks.json'
+		});
+
+		const added = reply(
+			await register(registerAddDependencyTool).execute(
+				{ projectRoot, id: '2.3', dependsOn: '4' },
+				ctx
+			)
+		).data;
+		const issues = reply(
+			await register(registerValidateDependenciesTool).execute(
+				{ projectRoot },
+				ctx
+			)
+		).data.issues;
+
+		expect([added.taskId, added.dependencyId]).toEqual(['2.3', 4]);
+		// dependencyId stays as stored; a link issue's taskId was a string
+		expect(issues.map((i: any) => [i.taskId, i.dependencyId])).toEqual([
+			[1, '99'],
+			['2.1', undefined],
+			['3', '9']
+		]);
 	});
 });
 

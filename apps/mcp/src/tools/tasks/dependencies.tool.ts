@@ -16,6 +16,29 @@ const projectRoot = z
 	.describe('The directory of the project. Must be an absolute path.');
 const tag = z.string().optional().describe('Tag context to operate on');
 
+/**
+ * A task's ID as the legacy replies gave it: a number for a task ("3" -> 3),
+ * a string for a subtask ("3.2"). tm-core stores and returns strings.
+ */
+function replyId(id: string | number): string | number {
+	return typeof id === 'string' && /^\d+$/.test(id) ? Number(id) : id;
+}
+
+/**
+ * Validate and fix issues with each task's ID as the legacy replies gave it.
+ * A link issue's `taskId` was already a string, and `dependencyId` is as
+ * stored in both.
+ */
+function withReplyIds<T extends { type: string; taskId: string | number }>(
+	items: T[]
+): T[] {
+	return items.map((item) =>
+		item.type === 'missing-link'
+			? item
+			: { ...item, taskId: replyId(item.taskId) }
+	);
+}
+
 interface DependencyArgs {
 	projectRoot: string;
 	tag?: string;
@@ -99,8 +122,8 @@ export function registerAddDependencyTool(server: FastMCP) {
 								result.type === 'blocks'
 									? `Successfully added dependency: Task ${result.taskId} now depends on ${result.dependencyId}`
 									: `Linked task ${result.taskId} to ${result.dependencyId} as ${result.type}; it doesn't block`,
-							taskId: result.taskId,
-							dependencyId: result.dependencyId,
+							taskId: replyId(result.taskId),
+							dependencyId: replyId(result.dependencyId),
 							type: result.type
 						}
 					};
@@ -144,8 +167,8 @@ export function registerRemoveDependencyTool(server: FastMCP) {
 						data: {
 							message: result.message,
 							removed: result.removed,
-							taskId: result.taskId,
-							dependencyId: result.dependencyId
+							taskId: replyId(result.taskId),
+							dependencyId: replyId(result.dependencyId)
 						}
 					};
 				})
@@ -177,7 +200,8 @@ export function registerValidateDependenciesTool(server: FastMCP) {
 							message: result.valid
 								? 'No dependency problems'
 								: `Found ${result.issues.length} dependency problem(s)`,
-							...result
+							...result,
+							issues: withReplyIds(result.issues)
 						}
 					};
 				})
@@ -204,7 +228,9 @@ export function registerFixDependenciesTool(server: FastMCP) {
 								result.remaining.length > 0
 									? `Fixed ${result.fixes.length} dependency problem(s); ${result.remaining.length} left that need a decision, such as loops between tasks`
 									: `Fixed ${result.fixes.length} dependency problem(s)`,
-							...result
+							...result,
+							fixes: withReplyIds(result.fixes),
+							remaining: withReplyIds(result.remaining)
 						}
 					};
 				})

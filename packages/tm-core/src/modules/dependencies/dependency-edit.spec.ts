@@ -175,6 +175,21 @@ describe('addDependencyIn', () => {
 		expect(() => add(tasks, '150', '2.1')).toThrow(/would make a loop/);
 	});
 
+	it('finds a loop through a sibling stored as a bare number', () => {
+		// 2.2 depends on sibling 1 (2.1), so 2.1 can't depend on 2.2
+		const tasks = [task(2, [], { subtasks: [subtask(1), subtask(2, [1])] })];
+
+		expect(() => add(tasks, '2.1', '2.2')).toThrow(/would make a loop/);
+	});
+
+	it('allows a dependency when the loop is elsewhere in the graph', () => {
+		const tasks = [task(1, [2]), task(2, [1]), task(3), task(4)];
+
+		add(tasks, '3', '4');
+
+		expect(tasks[2].dependencies).toEqual(['4']);
+	});
+
 	it('checks a loop along a chain too deep for recursion', () => {
 		const tasks = Array.from({ length: 100000 }, (_, i) =>
 			task(i + 1, i === 0 ? [] : [i])
