@@ -100,7 +100,7 @@ Your PR **must pass all CI checks**:
 
 - ✅ **Tests**: `npm test`, plus `npm run test -w @tm/cli` and `npm run test -w @tm/core` for the packages you touched
 - ✅ **Types**: `npm run turbo:typecheck`
-- ✅ **Legacy JS types**: `npm run typecheck:root` (checks the JSDoc in `scripts/` against the TypeScript that calls it)
+- ✅ **Scripts and evals types**: `npm run typecheck:root` (checks `scripts/dev.js` and `evals/`, which no workspace typecheck covers)
 - ✅ **Format check**: `npm run format-check`
 - ✅ **Unused code**: `npm run knip` (files, exports and dependencies nothing uses)
 

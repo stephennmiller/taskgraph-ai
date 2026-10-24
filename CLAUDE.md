@@ -12,7 +12,7 @@ This repo's tasks mirror its open GitHub issues (titles end in `(#<n>)`), and th
 ```bash
 npm run build                     # tsdown production build
 npm run turbo:typecheck           # run before pushing
-npm run typecheck:root            # root tsc: legacy JS (JSDoc) checked against its TS callers; CI runs it
+npm run typecheck:root            # root tsc: scripts/dev.js and evals/, which no workspace covers; CI runs it
 npm run format-check              # Biome; `npm run format` to fix
 npm run knip                      # unused files, exports and dependencies; CI runs it
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off

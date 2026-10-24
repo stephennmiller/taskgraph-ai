@@ -1,5 +1,4 @@
 ^scripts/
-^src/
 ^assets/
 ^packages/(tm-core|tm-profiles)/src/
 ^packages/build-config/

@@ -2,7 +2,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readLogLevel } from './config-file.js';
+import {
+	dropOldNumTasksDefault,
+	readLogLevel,
+	toSavedConfig
+} from './config-file.js';
 
 let root: string;
 const write = (file: string, text: string) =>
@@ -43,5 +47,61 @@ describe('readLogLevel', () => {
 		);
 
 		expect(readLogLevel(root)).toBe('error');
+	});
+});
+
+// Moved from the legacy config-manager tests (#336)
+describe('toSavedConfig', () => {
+	const defaults = {
+		global: { a: 1, b: 1 },
+		models: { main: { provider: 'p', modelId: 'm', maxTokens: 1 } }
+	};
+
+	it('leaves out nested defaults the file does not have', () => {
+		const config = {
+			global: { a: 1, b: 2 },
+			models: { main: { provider: 'p', modelId: 'm', maxTokens: 2 } }
+		};
+
+		expect(toSavedConfig(config, null, defaults)).toEqual({
+			global: { b: 2 },
+			models: { main: { maxTokens: 2 } }
+		});
+		config.models.main.modelId = 'n';
+		expect(toSavedConfig(config, null, defaults).models).toEqual({
+			main: { provider: 'p', modelId: 'n', maxTokens: 2 }
+		});
+	});
+
+	it("keeps the file's keys, their order and sections it doesn't know", () => {
+		const saved = { storage: { type: 'file' }, global: { b: 1, a: 1 } };
+		const config = { global: { a: 1, b: 1 }, models: defaults.models };
+
+		const out = toSavedConfig(config, saved, defaults);
+
+		expect(out).toEqual({ storage: { type: 'file' }, global: { b: 1, a: 1 } });
+		expect(Object.keys(out.global as object)).toEqual(['b', 'a']);
+	});
+});
+
+describe('dropOldNumTasksDefault', () => {
+	it('drops the 10 and enableProxy the old save wrote together', () => {
+		expect(
+			dropOldNumTasksDefault({
+				global: { defaultNumTasks: 10, enableProxy: false, userId: 'u' }
+			})
+		).toEqual({ global: { userId: 'u' } });
+	});
+
+	it('leaves files without the old save alone', () => {
+		expect(dropOldNumTasksDefault({ global: { defaultNumTasks: 10 } })).toBe(
+			null
+		);
+		expect(
+			dropOldNumTasksDefault({
+				global: { defaultNumTasks: 12, enableProxy: false }
+			})
+		).toBe(null);
+		expect(dropOldNumTasksDefault({})).toBe(null);
 	});
 });

@@ -1,6 +1,6 @@
 /**
  * AiConfig reads AI settings from ConfigManager the way the legacy
- * config-manager.js does: role defaults, the token cap from
+ * config-manager.js did: role defaults, the token cap from
  * supported-models.json, the claudeCode schema and the env lookup order.
  */
 

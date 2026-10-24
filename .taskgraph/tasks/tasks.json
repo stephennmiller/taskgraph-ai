@@ -79,7 +79,7 @@
         "description": "Move the AI commands (add-task, expand, parse-prd, analyze-complexity, update, research) from scripts/modules into @tm/core, leaving one MCP server.",
         "details": "GitHub issue #254: https://github.com/stephennmiller/taskgraph-ai/issues/254\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "14"
         ],
@@ -90,7 +90,7 @@
             "title": "AI service in @tm/core",
             "description": "Prompt loading, a Claude Code provider with the role restrictions, schema validation and patch-based saves.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "parentTaskId": 7,
             "parentId": "7"
@@ -100,7 +100,7 @@
             "title": "Move the AI commands",
             "description": "One PR each, verified with the build comparison: add-task, expand, parse-prd, analyze-complexity, update-task/update, research.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               "7.1"
             ],
@@ -112,7 +112,7 @@
             "title": "Retire the legacy CLI and MCP server",
             "description": "Delete commands.js, utils.js and mcp-server/src, and move the MCP tools into apps/mcp, leaving one MCP server.",
             "details": "",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               "7.2"
             ],

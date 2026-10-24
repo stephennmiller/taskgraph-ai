@@ -278,12 +278,12 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
 ## Migration and Compatibility
 
 - **Silent Migration Handling**:
-  - ✅ DO: Implement silent migration in `readJSON()` function
+  - ✅ DO: Migrate in the file storage read path (`FormatHandler` in `packages/tm-core/src/modules/storage/adapters/file-storage/format-handler.ts`)
   - ✅ DO: Detect legacy format and convert automatically
   - ✅ DO: Preserve all existing task data during migration
 
   ```javascript
-  // ✅ DO: Handle silent migration (implemented in utils.js)
+  // ✅ DO: Handle silent migration (the shape of what FormatHandler does)
   function readJSON(filepath) {
     let data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
     
@@ -324,4 +324,4 @@ TaskGraph now uses a **tagged task lists system** for multi-context task managem
   }
   ```
 
-Refer to [`@tm/core`](../../packages/tm-core/src/modules/tasks/) for implementation examples and `new-features.md` for integration guidelines. 
+Refer to [`@tm/core`](../../packages/tm-core/src/modules/tasks/) for implementation examples. 

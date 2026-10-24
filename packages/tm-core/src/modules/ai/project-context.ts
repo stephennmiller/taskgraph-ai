@@ -1,7 +1,6 @@
 /**
  * @fileoverview The file and project-tree context `research` sends the model,
- * in the legacy ContextGatherer's 'research' format
- * (`scripts/modules/utils/contextGatherer.js`). Files are read only when they
+ * in the legacy ContextGatherer's 'research' format. Files are read only when they
  * stay inside the project and aren't secrets: their content goes to the model.
  */
 

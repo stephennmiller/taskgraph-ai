@@ -1,58 +1,32 @@
 #!/usr/bin/env node
 /**
- * Hold one of the two tasks.json locks while changing a task's status, so a
- * test can see whether the other lock scheme waits for it.
+ * Change a task's status through tm-core's tasks.json lock
+ * (FileOperations.modifyJson, a tasks.json.lock directory), so a test can see
+ * whether it waits for another lock holder.
  *
- *   node --import tsx hold-lock.mjs <legacy|tm-core> <tasks.json> <task id> <status> <release file|none>
+ *   node --import tsx hold-lock.mjs <tasks.json> <task id> <status>
  *
- * Loads the code, prints "trying", takes the lock, prints "held", waits until the release file
- * exists (not at all for "none"), then sets the status and saves. The data is
- * read inside the lock before the wait, so a writer that got past the lock
- * during the wait loses its change when this one saves.
- *
- * "legacy" is withFileLockSync from scripts/modules/utils.js (a plain
- * tasks.json.lock file); "tm-core" is FileOperations.modifyJson (a
- * tasks.json.lock directory). Run through tsx because both pull in TypeScript.
+ * Prints "trying" once the code is loaded, before it takes the lock. Run
+ * through tsx because it pulls in TypeScript.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const [mode, file, id, status, release] = process.argv.slice(2);
+const [file, id, status] = process.argv.slice(2);
 const repoRoot = resolve(fileURLToPath(import.meta.url), '../../../../..');
 // import() takes a URL; a Windows path (D:\...) reads as a "d:" scheme
-const load = (relative) =>
-	import(pathToFileURL(resolve(repoRoot, relative)).href);
+const { FileOperations } = await import(
+	pathToFileURL(
+		resolve(
+			repoRoot,
+			'packages/tm-core/src/modules/storage/adapters/file-storage/file-operations.ts'
+		)
+	).href
+);
 
-const setStatus = (data) => {
+console.log('trying');
+await new FileOperations().modifyJson(file, async (data) => {
 	data.master.tasks.find((t) => String(t.id) === id).status = status;
 	return data;
-};
-
-if (mode === 'legacy') {
-	const { withFileLockSync } = await load('scripts/modules/utils.js');
-	console.log('trying');
-	withFileLockSync(file, () => {
-		const data = JSON.parse(readFileSync(file, 'utf8'));
-		console.log('held');
-		while (release !== 'none' && !existsSync(release)) {
-			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
-		}
-		writeFileSync(file, JSON.stringify(setStatus(data), null, 2));
-	});
-} else if (mode === 'tm-core') {
-	const { FileOperations } = await load(
-		'packages/tm-core/src/modules/storage/adapters/file-storage/file-operations.ts'
-	);
-	console.log('trying');
-	await new FileOperations().modifyJson(file, async (data) => {
-		console.log('held');
-		while (release !== 'none' && !existsSync(release)) await sleep(20);
-		return setStatus(data);
-	});
-} else {
-	console.error(`unknown mode ${mode}`);
-	process.exit(2);
-}
+});

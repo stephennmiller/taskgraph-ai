@@ -24,10 +24,10 @@ describe('baseConfig.deps.neverBundle', () => {
 	});
 
 	it.each([
-		'./modules/no-color.js',
+		'./no-color.js',
 		'../apps/mcp/src/server.ts',
-		'/home/runner/work/taskgraph-ai/scripts/modules/no-color.js',
-		'D:\\a\\taskgraph-ai\\taskgraph-ai\\scripts\\modules\\no-color.js',
+		'/home/runner/work/taskgraph-ai/apps/cli/src/no-color.ts',
+		'D:\\a\\taskgraph-ai\\taskgraph-ai\\apps\\cli\\src\\no-color.ts',
 		'c:/projects/taskgraph-ai/apps/mcp/src/server.ts',
 		'@tm/core',
 		'date-fns',

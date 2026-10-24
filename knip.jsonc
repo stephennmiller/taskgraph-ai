@@ -14,7 +14,6 @@
 			],
 			"project": [
 				"scripts/**/*.js",
-				"src/**/*.js",
 				"tests/**/*.js",
 				".github/scripts/*.mjs",
 				".githooks/*.mjs"
@@ -27,6 +26,7 @@
 				"ajv-formats",
 				"cli-table3",
 				"fastmcp",
+				"fuse.js",
 				"gradient-string",
 				"inquirer",
 				"jsonrepair",

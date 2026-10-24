@@ -1,11 +1,12 @@
 /**
  * NO_COLOR convention (https://no-color.org)
  */
-import { applyNoColor } from '../../../../scripts/modules/no-color.js';
+import { describe, expect, it } from 'vitest';
+import { applyNoColor } from './no-color.js';
 
 describe('applyNoColor', () => {
 	it('disables color when NO_COLOR is set', () => {
-		const env = { NO_COLOR: '1' };
+		const env: NodeJS.ProcessEnv = { NO_COLOR: '1' };
 		const colors = { level: 3 };
 		applyNoColor(env, colors);
 		expect(env.FORCE_COLOR).toBe('0');
@@ -13,7 +14,7 @@ describe('applyNoColor', () => {
 	});
 
 	it('leaves color alone when NO_COLOR is unset', () => {
-		const env = {};
+		const env: NodeJS.ProcessEnv = {};
 		const colors = { level: 3 };
 		applyNoColor(env, colors);
 		expect(env.FORCE_COLOR).toBeUndefined();
@@ -21,13 +22,13 @@ describe('applyNoColor', () => {
 	});
 
 	it('ignores an empty NO_COLOR, as the convention specifies', () => {
-		const env = { NO_COLOR: '' };
+		const env: NodeJS.ProcessEnv = { NO_COLOR: '' };
 		applyNoColor(env, { level: 3 });
 		expect(env.FORCE_COLOR).toBeUndefined();
 	});
 
 	it('lets an explicit FORCE_COLOR win over NO_COLOR', () => {
-		const env = { NO_COLOR: '1', FORCE_COLOR: '3' };
+		const env: NodeJS.ProcessEnv = { NO_COLOR: '1', FORCE_COLOR: '3' };
 		const colors = { level: 3 };
 		applyNoColor(env, colors);
 		expect(env.FORCE_COLOR).toBe('3');

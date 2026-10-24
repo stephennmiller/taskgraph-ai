@@ -4,7 +4,6 @@ paths:
   - "packages/**/*.ts"
   - "apps/**/*.ts"
   - "scripts/**/*.js"
-  - "src/**/*.js"
 ---
 
 # Reviewing a PR
@@ -39,7 +38,6 @@ Skip these unless you can show a real trigger in this code:
 - "Missing await" on a call marked `void` or commented as fire-and-forget.
 - "Function too long" for exhaustive switches, test tables or config objects.
 - "Hardcoded value" in tests and fixtures.
-- "Should be TypeScript" in legacy JS under `scripts/modules/`. Match the file's language.
 
 ## TypeScript and Node bugs worth flagging
 

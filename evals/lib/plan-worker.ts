@@ -23,8 +23,6 @@ import {
 	createTmCore
 } from '@tm/core';
 import { z } from 'zod';
-import { generateObjectService } from '../../scripts/modules/ai-services-unified.js';
-import { enableSilentMode } from '../../scripts/modules/utils.js';
 import { PRD_PATH, type WorkerOutput } from './shared.js';
 
 interface Telemetry {
@@ -39,11 +37,6 @@ interface Called {
 	/** expand made no call: the complexity report recommends no subtasks */
 	skipped?: unknown;
 }
-
-/** The legacy AI call the judge uses; its JSDoc type is narrower than the call */
-const judgeCall = generateObjectService as unknown as (
-	params: object
-) => Promise<Called & { mainResult: unknown }>;
 
 const [projectDir, outFile] = process.argv.slice(2);
 if (!projectDir || !outFile) {
@@ -120,7 +113,6 @@ const verdictSchema = z.object({
 });
 
 async function main(judge: boolean): Promise<void> {
-	enableSilentMode();
 	const prdFile = path.join(projectDir, PRD_PATH);
 
 	// A config or report warning changes the plan; say so
@@ -169,35 +161,41 @@ async function main(judge: boolean): Promise<void> {
 				String(task.id)
 			);
 		}
+		output.tasks = readTasks();
+
+		if (!judge) return;
+		const { systemPrompt, prompt } = buildJudgePrompt(
+			fs.readFileSync(prdFile, 'utf8'),
+			output.tasks
+		);
+		step('judging the plan');
+		const graded = await timed('judge', () =>
+			tmCore.tasks.generateObject(
+				{
+					role: 'main',
+					projectRoot: projectDir,
+					schema: verdictSchema,
+					objectName: 'plan_grades',
+					systemPrompt,
+					prompt,
+					commandName: 'eval-judge',
+					outputType: 'mcp'
+				},
+				hooks
+			)
+		);
+		// A repaired reply isn't checked against the schema; a bad one is an error
+		output.verdict = verdictSchema.parse(graded.mainResult) as JudgeVerdict;
 	} finally {
 		await tmCore.close();
 	}
-	output.tasks = readTasks();
-
-	if (!judge) return;
-	const { systemPrompt, prompt } = buildJudgePrompt(
-		fs.readFileSync(prdFile, 'utf8'),
-		output.tasks
-	);
-	step('judging the plan');
-	const graded = await timed('judge', () =>
-		judgeCall({
-			role: 'main',
-			projectRoot: projectDir,
-			schema: verdictSchema,
-			objectName: 'plan_grades',
-			systemPrompt,
-			prompt,
-			commandName: 'eval-judge',
-			outputType: 'mcp'
-		})
-	);
-	output.verdict = graded.mainResult as JudgeVerdict;
 }
 
 main(process.env.EVALS_NO_JUDGE !== '1')
 	.catch((error: unknown) => {
 		output.error = error instanceof Error ? error.message : String(error);
+		const cause = error instanceof Error ? error.cause : undefined;
+		if (cause instanceof Error) output.error += ` (${cause.message})`;
 		const failed = fs.existsSync(tasksPath) ? readTasks() : [];
 		if (failed.length > 0) output.tasks = failed;
 	})

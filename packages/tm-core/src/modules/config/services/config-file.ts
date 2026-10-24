@@ -1,8 +1,7 @@
 /**
  * @fileoverview What gets written to .taskgraph/config.json and
- * config.local.json. The one writer for both: the legacy config-manager.js
- * and tm-core's settings (models, response language) save through
- * writeSplitConfig.
+ * config.local.json. The one writer for both: tm-core's settings (models,
+ * response language) save through writeSplitConfig.
  *
  * Callers hand writeSplitConfig a merged config. Saving that whole object
  * pinned the defaults of the day into the project: when `defaultNumTasks`

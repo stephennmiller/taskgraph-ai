@@ -1,14 +1,14 @@
 /**
  * The Hamster cloud integration is removed (issue #16): TaskGraph is local-first
  * and keeps shared state in GitHub. This guards the plain-JS side of the
- * codebase (scripts/ and src/) against Hamster, the bridge package that
+ * codebase (scripts/) against Hamster, the bridge package that
  * redirected commands to it, and the auth/brief helpers that served it.
  */
 import fs from 'fs';
 import path from 'path';
 
 const ROOT = path.resolve(import.meta.dirname, '../../..');
-const SCAN_DIRS = ['scripts', 'src'];
+const SCAN_DIRS = ['scripts'];
 
 const HAMSTER =
 	/hamster|@tm\/bridge|AuthManager|AuthDomain|checkAndBlockIfAuthenticated|ensureOrgSelected|storageType|\bham-?\d/i;
@@ -38,7 +38,7 @@ function findOffenders() {
 }
 
 describe('Hamster integration', () => {
-	it('is not referenced from scripts/ or src/', () => {
+	it('is not referenced from scripts/', () => {
 		expect(findOffenders()).toEqual([]);
 	});
 

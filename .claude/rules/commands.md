@@ -292,8 +292,8 @@ For AI-powered commands that benefit from project context, follow the research c
   import chalk from 'chalk';
   import https from 'https';
   
-  import { CONFIG, log, readJSON } from './utils.js';
-  import { parsePRD, listTasks } from './task-manager.js';
+  import { createTmCore } from '@tm/core';
+  import { theme } from '../ui/theme.js';
   ```
 
 ## Subtask Management Commands
@@ -328,4 +328,4 @@ For AI-powered commands that benefit from project context, follow the research c
 
 `runCLI` in [`program.ts`](../../apps/cli/src/program.ts) checks for an update before the command runs (skipped in CI, tests, `--json` runs, `completion` and `merge-driver`), using `checkForUpdate`, `displayUpgradeNotification` and `performAutoUpdate` from `apps/cli/src/utils/auto-update/`.
 
-Refer to the commands in `apps/cli/src/commands/` for implementation examples, `ui.md` for output, and `new-features.md` for integration guidelines.
+Refer to the commands in `apps/cli/src/commands/` for implementation examples and `ui.md` for output.
