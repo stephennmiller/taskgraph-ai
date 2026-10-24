@@ -139,6 +139,12 @@ export function formatErrorMessage({ message, hint }: ErrorMessage): string {
 	return output;
 }
 
+/** Removed commands that `loop` replaces, with the extra `loop` flags each needs */
+const REMOVED_COMMANDS: Record<string, string> = {
+	start: '',
+	autopilot: ' --prompt tdd'
+};
+
 /**
  * Restyle an error Commander raised while parsing arguments ("error: unknown
  * command 'shwo'\n(Did you mean show?)") into the same two lines as every
@@ -147,10 +153,13 @@ export function formatErrorMessage({ message, hint }: ErrorMessage): string {
  * @param text - What Commander would have printed
  * @param commandPath - The subcommand that rejected its arguments ("tags use"),
  *   or undefined for the top-level program
+ * @param args - The arguments Commander was parsing (`["start", "3"]`), so a
+ *   removed command can point at its replacement with the same task ID
  */
 export function formatCommanderError(
 	text: string,
-	commandPath?: string
+	commandPath?: string,
+	args: readonly string[] = []
 ): string {
 	const [first = '', ...rest] = text.trim().split('\n');
 	const reason = first
@@ -162,6 +171,28 @@ export function formatCommanderError(
 		);
 	const message = reason.charAt(0).toUpperCase() + reason.slice(1);
 	const suggestion = /\(Did you mean (.+?)\?\)/.exec(rest.join(' '))?.[1];
+
+	const [name = '', ...after] = args;
+	if (
+		!commandPath &&
+		/^unknown command/i.test(reason) &&
+		Object.hasOwn(REMOVED_COMMANDS, name)
+	) {
+		// The removed commands took the ID as `[id]`, `--id <id>` or `-i <id>`
+		const flag = after.findIndex((a) => a === '--id' || a === '-i');
+		const id =
+			flag >= 0
+				? after[flag + 1]
+				: (after.find((a) => a.startsWith('--id='))?.slice(5) ?? after[0]);
+		const safeId =
+			id && !id.startsWith('-')
+				? stripTerminalControls(id, { singleLine: true }).replaceAll('`', '')
+				: '';
+		return formatErrorMessage({
+			message: `Command '${name}' was removed`,
+			hint: `Run \`taskgraph loop -n 1 --id ${safeId || '<id>'}${REMOVED_COMMANDS[name]}\` instead`
+		});
+	}
 
 	let hint: string | undefined;
 	if (/^unknown command/i.test(reason)) {

@@ -158,6 +158,74 @@ describe('formatCommanderError', () => {
 		);
 	});
 
+	it.each([
+		['start', 'taskgraph loop -n 1 --id 3'],
+		['autopilot', 'taskgraph loop -n 1 --id 3 --prompt tdd']
+	])('says `%s <id>` was removed and points at loop', (name, replacement) => {
+		const text = formatCommanderError(
+			`error: unknown command '${name}'\n(Did you mean status?)`,
+			undefined,
+			[name, '3']
+		);
+
+		expect(plain(text)).toBe(
+			`✗ Command '${name}' was removed\n  Run ${replacement} instead`
+		);
+	});
+
+	it('strips escape sequences from the echoed ID of a removed command', () => {
+		const text = formatCommanderError(
+			"error: unknown command 'start'",
+			undefined,
+			['start', '3\x1b]0;pwned\x07\x1b[2J']
+		);
+
+		expect(text).not.toContain('\x1b]0');
+		expect(plain(text)).toBe(
+			"✗ Command 'start' was removed\n  Run taskgraph loop -n 1 --id 3 instead"
+		);
+	});
+
+	it('uses a placeholder when a removed command has no ID', () => {
+		expect(
+			plain(
+				formatCommanderError("error: unknown command 'start'", undefined, [
+					'start'
+				])
+			)
+		).toBe(
+			"✗ Command 'start' was removed\n  Run taskgraph loop -n 1 --id <id> instead"
+		);
+	});
+
+	it.each([
+		[['start', '--id', '3'], '3'],
+		[['start', '-i', '3'], '3'],
+		[['start', '--id=3'], '3'],
+		[['start', '-v', '3'], '<id>'],
+		[['start', '--id'], '<id>']
+	])('takes the ID of a removed command from %j', (args, id) => {
+		expect(
+			plain(
+				formatCommanderError("error: unknown command 'start'", undefined, args)
+			)
+		).toBe(
+			`✗ Command 'start' was removed\n  Run taskgraph loop -n 1 --id ${id} instead`
+		);
+	});
+
+	it('keeps the nearest-name hint for other unknown commands', () => {
+		expect(
+			plain(
+				formatCommanderError(
+					"error: unknown command 'shwo'\n(Did you mean show?)",
+					undefined,
+					['shwo', '3']
+				)
+			)
+		).toBe("✗ Unknown command 'shwo'\n  Did you mean taskgraph show?");
+	});
+
 	it('points to the command list when there is no suggestion', () => {
 		expect(plain(formatCommanderError("error: unknown command 'zzz'"))).toBe(
 			"✗ Unknown command 'zzz'\n  Run taskgraph --help to see all commands"

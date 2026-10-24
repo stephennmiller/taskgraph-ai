@@ -3328,7 +3328,9 @@ function setupCLI() {
 	const styleParseErrors = (command, path) => {
 		command.configureOutput({
 			outputError: (text, write) =>
-				write(`\n${formatCommanderError(text, path || undefined)}\n`)
+				write(
+					`\n${formatCommanderError(text, path || undefined, command.args)}\n`
+				)
 		});
 		for (const sub of command.commands) {
 			styleParseErrors(sub, path ? `${path} ${sub.name()}` : sub.name());
