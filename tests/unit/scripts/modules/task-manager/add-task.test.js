@@ -49,8 +49,7 @@ vi.doMock('../../../../../scripts/modules/utils.js', () => {
 			return allTasks;
 		}),
 		markMigrationForNotice: vi.fn(),
-		performCompleteTagMigration: vi.fn(),
-		getTasksForTag: vi.fn((data, tag) => data[tag]?.tasks || [])
+		performCompleteTagMigration: vi.fn()
 	};
 });
 

@@ -391,23 +391,20 @@ When testing ES modules (`"type": "module"` in package.json), traditional mockin
 
 ## Mocking Guidelines
 
-- **File System Operations**
+- **File System Operations**: use a real temporary directory rather than a mocked file system
   ```javascript
-  import mockFs from 'mock-fs';
-  
+  let dir;
+
   beforeEach(() => {
-    mockFs({
-      'tasks': {
-        'tasks.json': JSON.stringify({
-          meta: { projectName: 'Test Project' },
-          tasks: []
-        })
-      }
-    });
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-test-'));
+    fs.writeFileSync(
+      path.join(dir, 'tasks.json'),
+      JSON.stringify({ master: { tasks: [], metadata: {} } })
+    );
   });
-  
+
   afterEach(() => {
-    mockFs.restore();
+    fs.rmSync(dir, { recursive: true, force: true });
   });
   ```
 

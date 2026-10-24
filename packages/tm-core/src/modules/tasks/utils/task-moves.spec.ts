@@ -117,6 +117,15 @@ describe('moveTasksIn', () => {
 		);
 	});
 
+	it('refuses an ID that is not a number, instead of storing task "NaN"', () => {
+		const tasks = sample();
+
+		expect(() => moveTasksIn(tasks, '5', 'abc', 'master', noArchive)).toThrow(
+			'Invalid task ID "abc"'
+		);
+		expect(ids(tasks)).toEqual(['1', '2', '3', '4', '5']);
+	});
+
 	it('fails a batch on a taken ID, and skips pairs that name the same ID', () => {
 		expect(() =>
 			moveTasksIn(sample(), '3,4', '8,1', 'master', noArchive)

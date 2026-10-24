@@ -18,6 +18,10 @@ import {
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import {
+	legacyFileOption,
+	otherTasksFileError
+} from '../utils/tasks-file-option.js';
 
 interface MoveOptions {
 	from?: string;
@@ -28,6 +32,7 @@ interface MoveOptions {
 	withDependencies?: boolean;
 	ignoreDependencies?: boolean;
 	project?: string;
+	file?: string;
 }
 
 export class MoveCommand extends Command {
@@ -60,11 +65,18 @@ export class MoveCommand extends Command {
 				'--project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
+			.addOption(legacyFileOption())
 			.action((options: MoveOptions) => this.execute(options));
 	}
 
 	private async execute(options: MoveOptions): Promise<void> {
 		const { from, to, toTag } = options;
+		const fileError = otherTasksFileError(
+			options.file,
+			'add-subtask and move',
+			options.project
+		);
+		if (fileError) displayError(fileError);
 		try {
 			const tmCore = await createTmCore({
 				projectPath: getProjectRoot(options.project)

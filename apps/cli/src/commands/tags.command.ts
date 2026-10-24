@@ -3,11 +3,10 @@
  * Provides tag management for the local tasks file
  */
 
-import path from 'node:path';
 import type { TmCore } from '@tm/core';
 import { createTmCore, getProjectPaths } from '@tm/core';
 import chalk from 'chalk';
-import { Command, Option } from 'commander';
+import { Command } from 'commander';
 import {
 	formatTagCopied,
 	formatTagCreated,
@@ -20,6 +19,10 @@ import {
 import { theme } from '../ui/theme.js';
 import { displayError, fromBranchError } from '../utils/index.js';
 import { printJson } from '../utils/json-output.js';
+import {
+	legacyFileOption,
+	otherTasksFileError
+} from '../utils/tasks-file-option.js';
 
 /**
  * Result type from tags command
@@ -475,13 +478,8 @@ Examples:
 	 * project's tasks.json, rather than change the project's file instead
 	 */
 	private rejectOtherTasksFile(file: string | undefined): void {
-		if (file === undefined) return;
-		const { projectRoot, tasksPath } = getProjectPaths();
-		if (path.resolve(projectRoot, file) === path.resolve(tasksPath)) return;
-		const error = withHint(
-			`--file is no longer supported: tag commands use ${terminalSafe(tasksPath)}`,
-			'Run the command from the project that holds the tasks file'
-		);
+		const error = otherTasksFileError(file, 'tag commands');
+		if (!error) return;
 		displayError(error);
 		this.handleError(error);
 	}
@@ -507,8 +505,7 @@ Examples:
 				.description(
 					`[DEPRECATED] ${what} (use "taskgraph ${replacement}" instead)`
 				)
-				// The old commands took -f/--file; only the project's own tasks file still works
-				.addOption(new Option('-f, --file <file>').hideHelp())
+				.addOption(legacyFileOption())
 				.hook('preAction', (command) => {
 					warnDeprecated(name, replacement);
 					this.rejectOtherTasksFile(command.opts().file);

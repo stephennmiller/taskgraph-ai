@@ -15,6 +15,7 @@ import {
 	dependenciesForMovedItem,
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
+import { isValidTaskIdFormat } from '../validation/task-id.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 import {
 	type DependencyId,
@@ -45,6 +46,16 @@ export function moveTasksIn(
 	if (sourceIds.length !== destinationIds.length) {
 		fail(
 			`Number of source IDs (${sourceIds.length}) must match number of destination IDs (${destinationIds.length})`,
+			ERROR_CODES.INVALID_INPUT
+		);
+	}
+	// parseInt would turn "abc" into a task stored with ID "NaN"
+	const invalid = [...sourceIds, ...destinationIds].find(
+		(id) => !isValidTaskIdFormat(id)
+	);
+	if (invalid !== undefined) {
+		fail(
+			`Invalid task ID "${invalid}": use a task ID such as 5 or a subtask ID such as 5.2`,
 			ERROR_CODES.INVALID_INPUT
 		);
 	}

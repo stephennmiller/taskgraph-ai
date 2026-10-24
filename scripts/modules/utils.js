@@ -1645,22 +1645,6 @@ function resolveTag(options = {}) {
 }
 
 /**
- * Gets the tasks array for a specific tag from tagged tasks.json data
- * @param {Object} data - The parsed tasks.json data (after migration)
- * @param {string} tagName - The tag name to get tasks for
- * @returns {Array} The tasks array for the specified tag, or empty array if not found
- */
-function getTasksForTag(data, tagName) {
-	if (!data || !tagName) {
-		return [];
-	}
-
-	// Handle migrated format: { "master": { "tasks": [...] }, "otherTag": { "tasks": [...] } }
-	const tasks = getOwnKey(data, tagName)?.tasks;
-	return Array.isArray(tasks) ? tasks : [];
-}
-
-/**
  * Flatten tasks array to include subtasks as individual searchable items
  * @param {Array} tasks - Array of task objects
  * @returns {Array} Flattened array including both tasks and subtasks
@@ -1767,9 +1751,6 @@ export {
 	formatTaskId,
 	getCurrentTag,
 	getTagAwareFilePath,
-	getTasksForTag,
-	isTagData,
-	withoutReadJSONFields,
 	isEmpty,
 	isSilentMode,
 	log,

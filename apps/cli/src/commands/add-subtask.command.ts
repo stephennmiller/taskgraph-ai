@@ -5,10 +5,14 @@
  */
 
 import { createTmCore } from '@tm/core';
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { formatSubtaskAdded } from '../ui/formatters/subtask-change-formatters.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { getProjectRoot } from '../utils/project-root.js';
+import {
+	legacyFileOption,
+	otherTasksFileError
+} from '../utils/tasks-file-option.js';
 
 interface AddSubtaskOptions {
 	parent?: string;
@@ -20,6 +24,7 @@ interface AddSubtaskOptions {
 	status?: string;
 	tag?: string;
 	project?: string;
+	file?: string;
 }
 
 export class AddSubtaskCommand extends Command {
@@ -45,10 +50,19 @@ export class AddSubtaskCommand extends Command {
 				'--project <path>',
 				'Project root directory (auto-detected if not provided)'
 			)
+			.addOption(legacyFileOption())
+			// Task files are written by `generate`; the old flag already did nothing
+			.addOption(new Option('--generate').hideHelp())
 			.action((options: AddSubtaskOptions) => this.execute(options));
 	}
 
 	private async execute(options: AddSubtaskOptions): Promise<void> {
+		const fileError = otherTasksFileError(
+			options.file,
+			'add-subtask and move',
+			options.project
+		);
+		if (fileError) displayError(fileError);
 		const parentId = options.parent;
 		if (!parentId) {
 			printError(
