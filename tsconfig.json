@@ -32,7 +32,9 @@
 		"bin/**/*",
 		"scripts/**/*",
 		"packages/*/src/**/*",
-		"apps/*/src/**/*"
+		"apps/*/src/**/*",
+		"evals/*.ts",
+		"evals/lib/**/*"
 	],
 	"exclude": ["node_modules", "dist", "**/dist"]
 }

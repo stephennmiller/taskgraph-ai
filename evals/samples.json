@@ -1,0 +1,32 @@
+[
+	{
+		"id": "cli-notes",
+		"kind": "one-pager",
+		"description": "A small CLI; the plan should stay small"
+	},
+	{
+		"id": "link-shortener",
+		"kind": "explicit stack",
+		"description": "A web service with fixed technology choices"
+	},
+	{
+		"id": "invoice-export",
+		"kind": "existing codebase",
+		"description": "A feature added to an existing Express app in codebase/"
+	},
+	{
+		"id": "sales-pipeline",
+		"kind": "explicit stack",
+		"description": "A data pipeline on a mandated Airflow, dbt and Snowflake stack"
+	},
+	{
+		"id": "habit-tracker",
+		"kind": "product",
+		"description": "A mobile app with offline sync"
+	},
+	{
+		"id": "team-chat",
+		"kind": "large multi-feature",
+		"description": "A large PRD with many feature areas"
+	}
+]

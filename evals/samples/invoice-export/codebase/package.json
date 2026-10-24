@@ -1,0 +1,15 @@
+{
+	"name": "acme-backoffice",
+	"version": "1.4.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "node src/server.js",
+		"test": "node --test"
+	},
+	"dependencies": {
+		"express": "^4.21.0",
+		"pg": "^8.13.0",
+		"pg-query-stream": "^4.7.0"
+	}
+}

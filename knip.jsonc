@@ -19,7 +19,8 @@
 			"entry": [
 				".github/scripts/{check-job-timeouts,check-pre-release-mode,version-bump}.mjs",
 				".githooks/{check-file-size,install}.mjs",
-				"tests/manual/**/*.js"
+				"tests/manual/**/*.js",
+				"evals/lib/plan-worker.ts"
 			],
 			"project": [
 				"scripts/**/*.js",
