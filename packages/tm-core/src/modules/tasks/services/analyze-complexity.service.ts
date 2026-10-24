@@ -319,7 +319,7 @@ export class AnalyzeComplexityService {
 			tasksAnalyzed: tasks.length,
 			...extra,
 			thresholdScore: threshold,
-			projectName: this.projectName,
+			projectName: this.configManager.getProjectName(),
 			usedResearch: useResearch
 		});
 
@@ -451,15 +451,6 @@ export class AnalyzeComplexityService {
 			telemetryData: response.telemetryData,
 			tagInfo: response.tagInfo
 		};
-	}
-
-	/** global.projectName, as the legacy getProjectName read it */
-	private get projectName(): string {
-		const config = this.configManager.getConfig() as {
-			global?: { projectName?: unknown };
-		};
-		const name = config.global?.projectName;
-		return typeof name === 'string' ? name : 'TaskGraph';
 	}
 
 	/**

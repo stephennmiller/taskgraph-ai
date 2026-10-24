@@ -184,6 +184,18 @@ export class ConfigManager {
 	}
 
 	/**
+	 * Project name (`global.projectName`), as the legacy getProjectName read
+	 * it; 'TaskGraph' when unset
+	 */
+	getProjectName(): string {
+		const global = (this.config as { global?: { projectName?: unknown } })
+			.global;
+		return typeof global?.projectName === 'string'
+			? global.projectName
+			: 'TaskGraph';
+	}
+
+	/**
 	 * The project's Definition of Done (`global.definitionOfDone` in
 	 * .taskgraph/config.json): checklist items every task must clear before
 	 * it can be marked done. Empty when unset or not a list of strings.

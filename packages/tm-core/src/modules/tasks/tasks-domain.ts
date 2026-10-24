@@ -201,17 +201,11 @@ export class TasksDomain {
 		options: ReadmeExportOptions & { tag?: string } = {}
 	): Promise<{ readmePath: string }> {
 		const { tasks } = await this.list({ tag: options.tag });
-		const global = (
-			this.configManager.getConfig() as { global?: { projectName?: string } }
-		).global;
 		return {
 			readmePath: writeReadmeExport(
 				this.configManager.getProjectRoot(),
 				tasks,
-				{
-					...options,
-					projectName: global?.projectName || 'TaskGraph'
-				}
+				{ ...options, projectName: this.configManager.getProjectName() }
 			)
 		};
 	}
