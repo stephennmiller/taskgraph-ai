@@ -1,11 +1,17 @@
 /**
  * @fileoverview TagService - Business logic for tag management
- * Handles tag creation, deletion, renaming, and copying
+ * Handles tag creation, deletion, switching, renaming, copying and listing
  */
 
-import type { IStorage } from '../../../common/interfaces/storage.interface.js';
-import type { TagInfo } from '../../../common/interfaces/storage.interface.js';
-import { TaskGraphError, ERROR_CODES } from '../../../common/errors/taskgraph-error.js';
+import type {
+	IStorage,
+	TagInfo
+} from '../../../common/interfaces/storage.interface.js';
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
+import { recordCurrentTag } from '../utils/branch-tag.js';
 import { isReservedNewTagName } from '../utils/tag-names.js';
 
 /**
@@ -18,38 +24,103 @@ export interface CreateTagOptions {
 	copyFromTag?: string;
 	/** Tag description */
 	description?: string;
-	/** Create from git branch name */
-	fromBranch?: boolean;
+	/** Stored when description is empty */
+	defaultDescription?: string;
 }
 
 /**
  * Options for deleting a tag
- * Note: Confirmation prompts are a CLI presentation concern
- * and are not handled by TagService (business logic layer)
  */
 export interface DeleteTagOptions {
-	// Currently no options - interface kept for future extensibility
+	/**
+	 * Asked before deleting a tag that has tasks; false keeps the tag. The
+	 * caller owns the question (a CLI prompt); omit it to delete without asking.
+	 */
+	confirm?: (taskCount: number) => Promise<boolean>;
 }
 
 /**
  * Options for copying a tag
  */
 export interface CopyTagOptions {
-	// Currently no options - interface kept for future extensibility
+	/** Description for the new tag */
+	description?: string;
+}
+
+export interface CreateTagResult {
+	tagName: string;
+	created: true;
+	tasksCopied: number;
+	/** The tag the tasks were copied from, or null for an empty tag */
+	sourceTag: string | null;
+	/** The description stored */
+	description: string;
+}
+
+export type DeleteTagResult =
+	| {
+			tagName: string;
+			deleted: true;
+			tasksDeleted: number;
+			wasCurrentTag: boolean;
+			/** The current tag was deleted, so master is current now */
+			switchedToMaster: boolean;
+	  }
+	| { tagName: string; deleted: false; cancelled: true };
+
+export interface UseTagResult {
+	previousTag: string;
+	currentTag: string;
+	switched: true;
+	taskCount: number;
+}
+
+export interface RenameTagResult {
+	oldName: string;
+	newName: string;
+	renamed: true;
+	taskCount: number;
+	wasCurrentTag: boolean;
+	isCurrentTag: boolean;
+}
+
+export interface CopyTagResult {
+	sourceName: string;
+	targetName: string;
+	copied: true;
+	tasksCopied: number;
+	/** The description stored */
+	description: string;
+}
+
+/** A tag as `tags` lists it: every field filled in */
+type ListedTag = Required<
+	Pick<
+		TagInfo,
+		| 'name'
+		| 'isCurrent'
+		| 'taskCount'
+		| 'completedTasks'
+		| 'readyTasks'
+		| 'statusBreakdown'
+		| 'subtaskCounts'
+		| 'created'
+		| 'description'
+	>
+>;
+
+export interface ListTagsResult {
+	/** The current tag first, then by name */
+	tags: ListedTag[];
+	currentTag: string | null;
+	totalTags: number;
 }
 
 /**
- * Reserved tag names that cannot be used
- * Only 'master' is reserved as it's the system default tag
- * Users can use 'main' or 'default' if desired
+ * Names no new tag may take: the default tag, and names that would be
+ * confused with it
  */
-const RESERVED_TAG_NAMES = ['master'];
-
-
-/**
- * Maximum length for tag names (prevents filesystem/UI issues)
- */
-const MAX_TAG_NAME_LENGTH = 50;
+const RESERVED_TAG_NAMES = ['master', 'main', 'default'];
 
 /**
  * The characters a tag name may use: letters, numbers, hyphens and
@@ -57,234 +128,212 @@ const MAX_TAG_NAME_LENGTH = 50;
  */
 export const TAG_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
+const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
+
+/** What TagService needs from the project beyond storage */
+export interface TagServiceContext {
+	projectRoot: string;
+	/** The current tag, as state.json records it */
+	getActiveTag: () => string;
+}
+
+function validationError(message: string, hint?: string): TaskGraphError {
+	const error = new TaskGraphError(message, ERROR_CODES.VALIDATION_ERROR);
+	// The CLI prints the hint under the message
+	return hint ? Object.assign(error, { hint }) : error;
+}
+
+function requireName(name: unknown, what: string): asserts name is string {
+	if (!name || typeof name !== 'string') {
+		throw validationError(`${what} is required and must be a string`);
+	}
+}
+
+/** Today's date as the user's locale writes it, for default descriptions */
+function today(): string {
+	return new Date().toLocaleDateString();
+}
+
 /**
  * TagService - Handles tag management business logic
  * Validates operations and delegates to storage layer
  */
 export class TagService {
-	constructor(private storage: IStorage) {}
+	constructor(
+		private storage: IStorage,
+		private readonly context: TagServiceContext
+	) {}
 
 	/**
-	 * Validate tag name format and restrictions
-	 * @throws {TaskGraphError} if validation fails
+	 * The name of a tag about to be created (or a rename or copy target)
+	 * @throws {TaskGraphError} if the name has other characters or is reserved
 	 */
-	private validateTagName(name: string, context = 'Tag name'): void {
-		if (!name || typeof name !== 'string') {
-			throw new TaskGraphError(
-				`${context} is required and must be a string`,
-				ERROR_CODES.VALIDATION_ERROR
-			);
-		}
-
-		// Check length
-		if (name.length > MAX_TAG_NAME_LENGTH) {
-			throw new TaskGraphError(
-				`${context} must be ${MAX_TAG_NAME_LENGTH} characters or less`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: name, maxLength: MAX_TAG_NAME_LENGTH }
-			);
-		}
-
-		// Check format: alphanumeric, hyphens, underscores only
+	private validateNewTagName(name: string): void {
 		if (!TAG_NAME_PATTERN.test(name)) {
+			throw validationError(`"${name}" isn't a valid tag name`, TAG_NAME_HINT);
+		}
+		if (
+			RESERVED_TAG_NAMES.includes(name.toLowerCase()) ||
+			isReservedNewTagName(name)
+		) {
+			throw validationError(`"${name}" is a reserved tag name`);
+		}
+	}
+
+	/**
+	 * @returns Every tag in the file
+	 * @throws {TaskGraphError} NOT_FOUND when the tag is not in the file
+	 */
+	private async requireTag(name: string, what = 'Tag'): Promise<string[]> {
+		const tags = await this.storage.getAllTags();
+		if (!tags.includes(name)) {
 			throw new TaskGraphError(
-				`${context} can only contain letters, numbers, hyphens, and underscores`,
-				ERROR_CODES.VALIDATION_ERROR,
+				`${what} "${name}" does not exist`,
+				ERROR_CODES.NOT_FOUND,
 				{ tagName: name }
 			);
 		}
-
-		// Check reserved names
-		if (RESERVED_TAG_NAMES.includes(name.toLowerCase())) {
-			throw new TaskGraphError(
-				`"${name}" is a reserved tag name`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: name, reserved: true }
-			);
-		}
+		return tags;
 	}
 
 	/**
-	 * Validate the name of a tag about to be created
-	 * @throws {TaskGraphError} if validation fails
-	 */
-	private validateNewTagName(name: string, context = 'Tag name'): void {
-		this.validateTagName(name, context);
-		if (isReservedNewTagName(name)) {
-			throw new TaskGraphError(
-				`"${name}" is a reserved tag name`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: name, reserved: true }
-			);
-		}
-	}
-
-	/**
-	 * Create a new tag, with optional task copying
+	 * Create a new tag, empty or with a copy of another tag's tasks. A source
+	 * tag that is missing or empty gives an empty tag (tasksCopied 0).
 	 */
 	async createTag(
 		name: string,
 		options: CreateTagOptions = {}
-	): Promise<TagInfo> {
-		// Validate tag name
+	): Promise<CreateTagResult> {
+		requireName(name, 'Tag name');
 		this.validateNewTagName(name);
 
-		// Check if tag already exists
-		const allTags = await this.storage.getAllTags();
-		if (allTags.includes(name)) {
-			throw new TaskGraphError(
-				`Tag "${name}" already exists`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: name }
-			);
-		}
+		const sourceTag =
+			options.copyFromTag ||
+			(options.copyFromCurrent ? this.context.getActiveTag() : null);
+		const description =
+			options.description ||
+			options.defaultDescription ||
+			`Tag created on ${today()}`;
 
-		// Validate copyFromTag if provided
-		if (options.copyFromTag && !allTags.includes(options.copyFromTag)) {
-			throw new TaskGraphError(
-				`Cannot copy from missing tag "${options.copyFromTag}"`,
-				ERROR_CODES.NOT_FOUND,
-				{ tagName: options.copyFromTag }
-			);
-		}
-
-		// Determine which tag to copy from
-		let copyFrom: string | undefined;
-		if (options.copyFromTag) {
-			copyFrom = options.copyFromTag;
-		} else if (options.copyFromCurrent) {
-			const result = await this.storage.getTagsWithStats();
-			copyFrom = result.currentTag || undefined;
-		}
-
-		// Delegate to storage layer
-		await this.storage.createTag(name, {
-			copyFrom,
-			description: options.description
+		const tasksCopied = await this.storage.createTag(name, {
+			copyFrom: sourceTag ?? undefined,
+			description
 		});
-
-		// Return tag info
-		const tagInfo: TagInfo = {
-			name,
-			taskCount: 0,
-			completedTasks: 0,
-			readyTasks: 0,
-			isCurrent: false,
-			statusBreakdown: {},
-			description: options.description || `Tag created on ${new Date().toLocaleDateString()}`
+		return {
+			tagName: name,
+			created: true,
+			tasksCopied,
+			sourceTag,
+			description
 		};
-
-		return tagInfo;
 	}
 
 	/**
-	 * Delete an existing tag
-	 * Cannot delete master tag
+	 * Delete a tag and its tasks. Deleting the current tag makes master
+	 * current. Cannot delete master.
 	 */
 	async deleteTag(
 		name: string,
-		_options: DeleteTagOptions = {}
-	): Promise<void> {
-		// Validate tag name
-		this.validateTagName(name);
-
-		// Cannot delete master tag
+		options: DeleteTagOptions = {}
+	): Promise<DeleteTagResult> {
+		requireName(name, 'Tag name');
 		if (name === 'master') {
-			throw new TaskGraphError(
-				'Cannot delete the "master" tag',
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: name, protected: true }
-			);
+			throw validationError('Cannot delete the "master" tag');
+		}
+		await this.requireTag(name);
+
+		const wasCurrentTag = this.context.getActiveTag() === name;
+		const tasksDeleted = (await this.storage.loadTasks(name)).length;
+		if (
+			options.confirm &&
+			tasksDeleted > 0 &&
+			!(await options.confirm(tasksDeleted))
+		) {
+			return { tagName: name, deleted: false, cancelled: true };
 		}
 
-		// Check if tag exists
-		const allTags = await this.storage.getAllTags();
-		if (!allTags.includes(name)) {
-			throw new TaskGraphError(
-				`Tag "${name}" does not exist`,
-				ERROR_CODES.NOT_FOUND,
-				{ tagName: name }
-			);
-		}
-
-		// Delegate to storage
 		await this.storage.deleteTag(name);
+		if (wasCurrentTag) {
+			await recordCurrentTag(this.context.projectRoot, 'master');
+		}
+		return {
+			tagName: name,
+			deleted: true,
+			tasksDeleted,
+			wasCurrentTag,
+			switchedToMaster: wasCurrentTag
+		};
 	}
 
 	/**
-	 * Rename an existing tag
-	 * Cannot rename master tag
+	 * Make a tag the current one (in state.json)
 	 */
-	async renameTag(oldName: string, newName: string): Promise<void> {
-		// Validate both names
-		this.validateTagName(oldName, 'Old tag name');
-		this.validateNewTagName(newName, 'New tag name');
+	async useTag(name: string): Promise<UseTagResult> {
+		requireName(name, 'Tag name');
+		await this.requireTag(name);
 
-		// Cannot rename master tag
-		if (oldName === 'master') {
-			throw new TaskGraphError(
-				'Cannot rename the "master" tag',
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: oldName, protected: true }
-			);
-		}
-
-		// Check if old tag exists
-		const allTags = await this.storage.getAllTags();
-		if (!allTags.includes(oldName)) {
-			throw new TaskGraphError(
-				`Tag "${oldName}" does not exist`,
-				ERROR_CODES.NOT_FOUND,
-				{ tagName: oldName }
-			);
-		}
-
-		// Check if new name already exists
-		if (allTags.includes(newName)) {
-			throw new TaskGraphError(
-				`Tag "${newName}" already exists`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: newName }
-			);
-		}
-
-		// Delegate to storage
-		await this.storage.renameTag(oldName, newName);
+		const previousTag = this.context.getActiveTag();
+		await recordCurrentTag(this.context.projectRoot, name);
+		const taskCount = (await this.storage.loadTasks(name)).length;
+		return { previousTag, currentTag: name, switched: true, taskCount };
 	}
 
 	/**
-	 * Copy an existing tag to create a new tag with the same tasks
+	 * Rename a tag, keeping it current if it was. Cannot rename master.
+	 */
+	async renameTag(oldName: string, newName: string): Promise<RenameTagResult> {
+		requireName(oldName, 'Old tag name');
+		requireName(newName, 'New tag name');
+		if (oldName === 'master') {
+			throw validationError('Cannot rename the "master" tag');
+		}
+		this.validateNewTagName(newName);
+		const tags = await this.requireTag(oldName);
+		if (tags.includes(newName)) {
+			throw validationError(`Tag "${newName}" already exists`);
+		}
+
+		const wasCurrentTag = this.context.getActiveTag() === oldName;
+		await this.storage.renameTag(oldName, newName);
+		if (wasCurrentTag) {
+			await recordCurrentTag(this.context.projectRoot, newName);
+		}
+		const taskCount = (await this.storage.loadTasks(newName)).length;
+		return {
+			oldName,
+			newName,
+			renamed: true,
+			taskCount,
+			wasCurrentTag,
+			isCurrentTag: wasCurrentTag
+		};
+	}
+
+	/**
+	 * Copy a tag with all its tasks to a new tag
 	 */
 	async copyTag(
 		sourceName: string,
 		targetName: string,
-		_options: CopyTagOptions = {}
-	): Promise<void> {
-		// Validate both names
-		this.validateTagName(sourceName, 'Source tag name');
-		this.validateNewTagName(targetName, 'Target tag name');
+		options: CopyTagOptions = {}
+	): Promise<CopyTagResult> {
+		requireName(sourceName, 'Source tag name');
+		requireName(targetName, 'Target tag name');
+		this.validateNewTagName(targetName);
+		await this.requireTag(sourceName, 'Source tag');
 
-		// Check if source tag exists
-		const allTags = await this.storage.getAllTags();
-		if (!allTags.includes(sourceName)) {
-			throw new TaskGraphError(
-				`Source tag "${sourceName}" does not exist`,
-				ERROR_CODES.NOT_FOUND,
-				{ tagName: sourceName }
-			);
-		}
-
-		// Check if target name already exists
-		if (allTags.includes(targetName)) {
-			throw new TaskGraphError(
-				`Target tag "${targetName}" already exists`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ tagName: targetName }
-			);
-		}
-
-		// Delegate to storage
-		await this.storage.copyTag(sourceName, targetName);
+		const description =
+			options.description || `Copy of "${sourceName}" created on ${today()}`;
+		const tasksCopied = await this.storage.copyTag(sourceName, targetName, {
+			description
+		});
+		return {
+			sourceName,
+			targetName,
+			copied: true,
+			tasksCopied,
+			description
+		};
 	}
 
 	/**
@@ -292,5 +341,53 @@ export class TagService {
 	 */
 	async getTagsWithStats() {
 		return await this.storage.getTagsWithStats();
+	}
+
+	/**
+	 * The tags to list: the current tag first, then by name, with every field
+	 * filled in. A project with no tasks file yet lists an empty master.
+	 * @param options.ready - Only tags with at least one task ready to start
+	 */
+	async listTags(options: { ready?: boolean } = {}): Promise<ListTagsResult> {
+		const { tags, currentTag } = await this.storage.getTagsWithStats();
+		const found: TagInfo[] =
+			tags.length > 0
+				? tags
+				: [
+						{
+							name: 'master',
+							isCurrent: currentTag === 'master',
+							taskCount: 0,
+							completedTasks: 0,
+							readyTasks: 0,
+							statusBreakdown: {}
+						}
+					];
+		const listed = found
+			.filter((tag) => !options.ready || tag.readyTasks > 0)
+			.map(
+				(tag): ListedTag => ({
+					name: tag.name,
+					isCurrent: tag.isCurrent,
+					taskCount: tag.taskCount,
+					completedTasks: tag.completedTasks,
+					readyTasks: tag.readyTasks,
+					statusBreakdown: tag.statusBreakdown,
+					subtaskCounts: tag.subtaskCounts ?? {
+						totalSubtasks: 0,
+						subtasksByStatus: {}
+					},
+					created: tag.created || 'Unknown',
+					description: tag.description || 'No description'
+				})
+			)
+			.sort((a, b) =>
+				a.isCurrent !== b.isCurrent
+					? a.isCurrent
+						? -1
+						: 1
+					: a.name.localeCompare(b.name)
+			);
+		return { tags: listed, currentTag, totalTags: listed.length };
 	}
 }

@@ -561,7 +561,7 @@ export class FileStorage implements IStorage {
 	async createTag(
 		tagName: string,
 		options?: { copyFrom?: string; description?: string }
-	): Promise<void> {
+	): Promise<number> {
 		return this.tagOps.createTag(tagName, options);
 	}
 
@@ -575,18 +575,13 @@ export class FileStorage implements IStorage {
 		return this.tagOps.renameTag(oldTag, newTag);
 	}
 
-	/**
-	 * Copy a tag within the single tasks.json file
-	 */
-	async copyTag(sourceTag: string, targetTag: string): Promise<void> {
-		const tasks = await this.loadTasks(sourceTag);
-
-		if (tasks.length === 0) {
-			throw new Error(`Source tag ${sourceTag} not found or has no tasks`);
-		}
-
-		await this.saveTasks(tasks, targetTag);
-		await this.tagOps.copyArchivedTasks(sourceTag, targetTag);
+	/** See TagOperations */
+	async copyTag(
+		sourceTag: string,
+		targetTag: string,
+		options?: { description?: string }
+	): Promise<number> {
+		return this.tagOps.copyTag(sourceTag, targetTag, options);
 	}
 
 	/** See TagOperations */

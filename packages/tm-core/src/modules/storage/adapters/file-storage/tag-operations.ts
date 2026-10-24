@@ -20,12 +20,19 @@ import type { FormatHandler } from './format-handler.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 import type { PathResolver } from './path-resolver.js';
 import { filterReadyTasks } from '../../../tasks/utils/task-filters.js';
-import { withSchemaVersion } from './schema-version.js';
+import { stampTasksFileSchemaVersion } from './schema-version.js';
 
 /**
  * Tag-level operations extracted from FileStorage. Reads go back through the
  * storage instance so load behavior (complexity enrichment, schema checks) is shared.
  */
+function tagNotFound(tag: string): TaskGraphError {
+	return new TaskGraphError(
+		`Tag "${tag}" does not exist`,
+		ERROR_CODES.NOT_FOUND
+	);
+}
+
 export class TagOperations {
 	constructor(
 		private readonly pathResolver: PathResolver,
@@ -33,215 +40,173 @@ export class TagOperations {
 		private readonly formatHandler: FormatHandler,
 		private readonly reader: Pick<
 			IStorage,
-			'loadTasks' | 'loadMetadata' | 'getAllTags'
+			'loadTasks' | 'loadMetadata' | 'getAllTags' | 'loadArchivedTaskIds'
 		>
 	) {}
 
 	/**
-	 * Create a new tag in the tasks.json file
+	 * Create a new tag in the tasks.json file, empty or with a copy of
+	 * another tag's tasks. A missing file is created with an empty master.
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
+	 * @returns How many tasks were copied (0 when the source has none or is missing)
 	 */
 	async createTag(
 		tagName: string,
 		options?: { copyFrom?: string; description?: string }
-	): Promise<void> {
+	): Promise<number> {
 		const filePath = this.pathResolver.getTasksPath();
-		// The tag the new one copied its tasks from, if any
-		let copiedFrom: string | undefined;
+		let tasksCopied = 0;
 
-		try {
-			await this.fileOps.modifyJson(filePath, (existingData: any) => {
-				const format = this.formatHandler.detectFormat(existingData);
-
-				if (format === 'legacy') {
-					// Legacy format - add new tag key
-					if (Object.hasOwn(existingData, tagName)) {
-						throw new TaskGraphError(
-							`Tag ${tagName} already exists`,
-							ERROR_CODES.VALIDATION_ERROR
-						);
-					}
-
-					// Get tasks to copy if specified
-					let tasksToCopy: any[] = [];
-					const sourceTasks = options?.copyFrom
-						? getOwnKey(existingData, options.copyFrom)?.tasks
-						: undefined;
-					if (sourceTasks) {
-						tasksToCopy = JSON.parse(JSON.stringify(sourceTasks));
-						copiedFrom = options?.copyFrom;
-					}
-
-					// Create new tag structure
-					setOwnKey(existingData, tagName, {
-						tasks: tasksToCopy,
-						metadata: withSchemaVersion({
-							created: new Date().toISOString(),
-							updatedAt: new Date().toISOString(),
-							description:
-								options?.description ||
-								`Tag created on ${new Date().toLocaleDateString()}`,
-							tags: [tagName]
-						})
-					});
-
-					return existingData;
-				} else {
-					// Standard format - need to convert to legacy format first
-					const masterTasks = existingData.tasks || [];
-					const masterMetadata = existingData.metadata || {};
-
-					// Get tasks to copy (from master in this case)
-					let tasksToCopy: any[] = [];
-					if (options?.copyFrom === 'master' || !options?.copyFrom) {
-						tasksToCopy = JSON.parse(JSON.stringify(masterTasks));
-						copiedFrom = 'master';
-					}
-
-					return {
-						master: {
-							tasks: masterTasks,
-							metadata: withSchemaVersion(
-								{ ...masterMetadata, tags: ['master'] },
-								masterMetadata
-							)
-						},
-						[tagName]: {
-							tasks: tasksToCopy,
-							metadata: withSchemaVersion({
-								created: new Date().toISOString(),
-								updatedAt: new Date().toISOString(),
-								description:
-									options?.description ||
-									`Tag created on ${new Date().toLocaleDateString()}`,
-								tags: [tagName]
-							})
-						}
-					};
+		await this.modifyTagged(filePath, (data) => {
+			if (Object.hasOwn(data, tagName)) {
+				throw new TaskGraphError(
+					`Tag "${tagName}" already exists`,
+					ERROR_CODES.VALIDATION_ERROR
+				);
+			}
+			const sourceTasks = options?.copyFrom
+				? getOwnKey(data, options.copyFrom)?.tasks
+				: undefined;
+			const tasks = Array.isArray(sourceTasks)
+				? JSON.parse(JSON.stringify(sourceTasks))
+				: [];
+			tasksCopied = tasks.length;
+			const now = new Date().toISOString();
+			setOwnKey(data, tagName, {
+				tasks,
+				metadata: {
+					created: now,
+					updated: now,
+					description: options?.description
 				}
 			});
-			// A copy keeps the source's archived tasks: its dependencies on them
-			// still count as done, and their IDs stay reserved in the copy
-			if (copiedFrom !== undefined) {
-				await this.copyArchivedTasks(copiedFrom, tagName);
-			}
-		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				throw new Error('Tasks file not found - initialize project first');
-			}
-			throw error;
+			return data;
+		});
+		// A copy keeps the source's archived tasks: its dependencies on them
+		// still count as done, and their IDs stay reserved in the copy
+		if (options?.copyFrom !== undefined) {
+			await this.copyArchivedTasks(options.copyFrom, tagName);
 		}
+		return tasksCopied;
 	}
 
 	/**
-	 * Delete a tag from the single tasks.json file
+	 * Copy a tag with all its tasks (deep copied) and its archived tasks
+	 * @returns How many tasks were copied
+	 */
+	async copyTag(
+		sourceTag: string,
+		targetTag: string,
+		options?: { description?: string }
+	): Promise<number> {
+		const filePath = this.pathResolver.getTasksPath();
+		let tasksCopied = 0;
+
+		await this.modifyTagged(filePath, (data) => {
+			const source = getOwnKey(data, sourceTag);
+			if (!source) {
+				throw new TaskGraphError(
+					`Source tag "${sourceTag}" does not exist`,
+					ERROR_CODES.NOT_FOUND
+				);
+			}
+			if (Object.hasOwn(data, targetTag)) {
+				throw new TaskGraphError(
+					`Target tag "${targetTag}" already exists`,
+					ERROR_CODES.VALIDATION_ERROR
+				);
+			}
+			const tasks = JSON.parse(
+				JSON.stringify(Array.isArray(source.tasks) ? source.tasks : [])
+			);
+			tasksCopied = tasks.length;
+			const now = new Date().toISOString();
+			setOwnKey(data, targetTag, {
+				tasks,
+				metadata: {
+					created: now,
+					updated: now,
+					description: options?.description,
+					copiedFrom: { tag: sourceTag, date: now }
+				}
+			});
+			return data;
+		});
+		await this.copyArchivedTasks(sourceTag, targetTag);
+		return tasksCopied;
+	}
+
+	/**
+	 * Read-modify-write tasks.json in the tagged form: an old single-list
+	 * file becomes its master tag, and a missing one starts with an empty
+	 * master. Every tag is stamped as the other writers stamp it.
+	 */
+	private async modifyTagged(
+		filePath: string,
+		change: (data: Record<string, any>) => Record<string, any>
+	): Promise<void> {
+		await this.fileOps.modifyJson(filePath, (existingData: any) => {
+			let data = existingData ?? {};
+			if (this.formatHandler.detectFormat(data) !== 'legacy') {
+				data = {
+					master: {
+						tasks: data.tasks || [],
+						metadata: data.metadata || {
+							created: new Date().toISOString(),
+							description: 'Tasks for master context'
+						}
+					}
+				};
+			}
+			return stampTasksFileSchemaVersion(change(data));
+		});
+	}
+
+	/**
+	 * Delete a tag and its archived tasks
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async deleteTag(tag: string): Promise<void> {
-		const filePath = this.pathResolver.getTasksPath();
-
-		try {
-			// Use modifyJson to handle all cases atomically
-			let shouldDeleteFile = false;
-
-			await this.fileOps.modifyJson(filePath, (data: any) => {
-				if (
-					this.formatHandler.detectFormat(data) !== 'legacy' &&
-					tag === 'master'
-				) {
-					// Standard format - mark for file deletion after lock release
-					shouldDeleteFile = true;
-					return data; // Return unchanged, we'll delete the file after
-				}
-
-				if (this.formatHandler.detectFormat(data) === 'legacy') {
-					// Legacy format - remove the tag key
-					if (Object.hasOwn(data, tag)) {
-						delete data[tag];
-						return data;
-					} else {
-						throw new Error(`Tag ${tag} not found`);
-					}
-				} else {
-					throw new Error(`Tag ${tag} not found in standard format`);
-				}
-			});
-
-			// Delete the file if we're removing master tag from standard format
-			if (shouldDeleteFile) {
-				await this.fileOps.deleteFile(filePath);
-			}
-			// Its archived tasks go with it
-			await this.updateArchive((archive) => dropArchiveTag(archive, tag));
-		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				throw new Error(`Tag ${tag} not found - file doesn't exist`);
-			}
-			throw error;
-		}
+		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
+			if (!Object.hasOwn(data, tag)) throw tagNotFound(tag);
+			delete data[tag];
+			return data;
+		});
+		await this.updateArchive((archive) => dropArchiveTag(archive, tag));
 	}
 
 	/**
-	 * Rename a tag within the single tasks.json file
+	 * Rename a tag, noting the old name in its metadata, and move its
+	 * archived tasks with it
 	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
 	 */
 	async renameTag(oldTag: string, newTag: string): Promise<void> {
-		const filePath = this.pathResolver.getTasksPath();
-
-		try {
-			await this.fileOps.modifyJson(filePath, (existingData: any) => {
-				if (this.formatHandler.detectFormat(existingData) === 'legacy') {
-					// Legacy format - rename the tag key
-					if (Object.hasOwn(existingData, oldTag)) {
-						setOwnKey(existingData, newTag, existingData[oldTag]);
-						delete existingData[oldTag];
-
-						// Update metadata tags array and stamp the schema version
-						const metadata = existingData[newTag].metadata;
-						existingData[newTag].metadata = withSchemaVersion(
-							{ ...metadata, tags: [newTag] },
-							metadata
-						);
-
-						return existingData;
-					} else {
-						throw new Error(`Tag ${oldTag} not found`);
-					}
-				} else if (oldTag === 'master') {
-					// Convert standard format to legacy when renaming master
-					const masterTasks = existingData.tasks || [];
-					const masterMetadata = existingData.metadata || {};
-
-					return {
-						[newTag]: {
-							tasks: masterTasks,
-							metadata: withSchemaVersion(
-								{ ...masterMetadata, tags: [newTag] },
-								masterMetadata
-							)
-						}
-					};
-				} else {
-					throw new Error(`Tag ${oldTag} not found in standard format`);
-				}
-			});
-			// Its archived tasks move with it
-			await this.updateArchive((archive) =>
-				renameArchiveTag(archive, oldTag, newTag)
-			);
-		} catch (error: any) {
-			if (error.code === 'ENOENT') {
-				throw new Error(`Tag ${oldTag} not found - file doesn't exist`);
+		await this.modifyTagged(this.pathResolver.getTasksPath(), (data) => {
+			if (!Object.hasOwn(data, oldTag)) throw tagNotFound(oldTag);
+			const tagData = { ...getOwnKey(data, oldTag) };
+			if (tagData.metadata) {
+				tagData.metadata = {
+					...tagData.metadata,
+					renamed: { from: oldTag, date: new Date().toISOString() }
+				};
 			}
-			throw error;
-		}
+			setOwnKey(data, newTag, tagData);
+			delete data[oldTag];
+			return data;
+		});
+		await this.updateArchive((archive) =>
+			renameArchiveTag(archive, oldTag, newTag)
+		);
 	}
 
 	/**
 	 * Give a copy of a tag the source's archived tasks: the copy's
 	 * dependencies on them still count as done, and their IDs stay reserved
 	 */
-	async copyArchivedTasks(fromTag: string, toTag: string): Promise<void> {
+	private async copyArchivedTasks(
+		fromTag: string,
+		toTag: string
+	): Promise<void> {
 		await this.updateArchive((archive) =>
 			copyArchiveTag(archive, fromTag, toTag)
 		);
@@ -325,9 +290,11 @@ export class TagOperations {
 						}
 					});
 
-					// Ready: actionable, with every dependency complete
+					// Ready: actionable, with every dependency complete; archived
+					// tasks count as done
 					const readyTasks = filterReadyTasks(
-						tasks.map((task) => ({ ...task, blocks: [] }))
+						tasks.map((task) => ({ ...task, blocks: [] })),
+						await this.reader.loadArchivedTaskIds(tagName)
 					).length;
 
 					// Load metadata to get created date and description

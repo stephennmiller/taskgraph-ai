@@ -53,7 +53,6 @@ const LEGACY_OVERSIZED = new Set([
 	'scripts/modules/task-manager/add-task.js',
 	'scripts/modules/task-manager/scope-adjustment.js',
 	'scripts/modules/utils.js',
-	'scripts/modules/task-manager/tag-management.js',
 	// Contributor guides that still describe Jest and need a Vitest rewrite (#79).
 	'.claude/rules/tests.md',
 	'.claude/rules/new-features.md',

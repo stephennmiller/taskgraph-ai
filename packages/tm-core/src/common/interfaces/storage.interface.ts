@@ -222,12 +222,12 @@ export interface IStorage {
 	 * @param options - Creation options
 	 * @param options.copyFrom - Tag to copy tasks from (optional)
 	 * @param options.description - Tag description (optional)
-	 * @returns Promise that resolves when creation is complete
+	 * @returns How many tasks were copied
 	 */
 	createTag(
 		tagName: string,
 		options?: { copyFrom?: string; description?: string }
-	): Promise<void>;
+	): Promise<number>;
 
 	/**
 	 * Delete all tasks and metadata for a specific tag
@@ -248,9 +248,14 @@ export interface IStorage {
 	 * Copy all tasks from one tag to another
 	 * @param sourceTag - Source tag to copy from
 	 * @param targetTag - Target tag to copy to
-	 * @returns Promise that resolves when copy is complete
+	 * @param options.description - Description for the copy
+	 * @returns How many tasks were copied
 	 */
-	copyTag(sourceTag: string, targetTag: string): Promise<void>;
+	copyTag(
+		sourceTag: string,
+		targetTag: string,
+		options?: { description?: string }
+	): Promise<number>;
 
 	/**
 	 * Initialize storage (create necessary directories, files, etc.)
@@ -458,10 +463,14 @@ export abstract class BaseStorage implements IStorage {
 	abstract createTag(
 		tagName: string,
 		options?: { copyFrom?: string; description?: string }
-	): Promise<void>;
+	): Promise<number>;
 	abstract deleteTag(tag: string): Promise<void>;
 	abstract renameTag(oldTag: string, newTag: string): Promise<void>;
-	abstract copyTag(sourceTag: string, targetTag: string): Promise<void>;
+	abstract copyTag(
+		sourceTag: string,
+		targetTag: string,
+		options?: { description?: string }
+	): Promise<number>;
 	abstract initialize(): Promise<void>;
 	abstract close(): Promise<void>;
 	abstract getStats(): Promise<StorageStats>;

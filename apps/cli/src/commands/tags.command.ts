@@ -5,37 +5,20 @@
 
 import type { TmCore } from '@tm/core';
 import { createTmCore, getProjectPaths } from '@tm/core';
+import chalk from 'chalk';
 import { Command } from 'commander';
+import {
+	formatTagCopied,
+	formatTagCreated,
+	formatTagDeleted,
+	formatTagList,
+	formatTagRenamed,
+	formatTagSwitched,
+	terminalSafe
+} from '../ui/index.js';
+import { theme } from '../ui/theme.js';
 import { displayError, fromBranchError } from '../utils/index.js';
 import { printJson } from '../utils/json-output.js';
-
-/**
- * TODO: TECH DEBT - Architectural Refactor Needed
- *
- * Current State:
- * - This command imports legacy JS functions from scripts/modules/task-manager/tag-management.js
- * - These functions contain business logic that violates architecture guidelines (see CLAUDE.md)
- *
- * Target State:
- * - Move all business logic to TagService in @tm/core
- * - CLI should only handle presentation (argument parsing, output formatting)
- * - Remove dependency on legacy scripts/ directory
- *
- * Complexity:
- * - Legacy functions handle both API and file storage via bridge pattern
- * - Need to migrate API integration logic to @tm/core first
- * - Affects MCP layer as well (should share same @tm/core APIs)
- *
- * Priority: Medium (improves testability, maintainability, and code reuse)
- */
-import {
-	copyTag as legacyCopyTag,
-	createTag as legacyCreateTag,
-	deleteTag as legacyDeleteTag,
-	tags as legacyListTags,
-	renameTag as legacyRenameTag,
-	useTag as legacyUseTag
-} from '../../../../scripts/modules/task-manager/tag-management.js';
 
 /**
  * Result type from tags command
@@ -49,30 +32,49 @@ export interface TagsResult {
 }
 
 /**
- * Legacy function return types
- */
-interface LegacyListTagsResult {
-	tags: any[];
-	currentTag: string | null;
-	totalTags: number;
-}
-
-interface LegacyUseTagResult {
-	currentTag: string;
-}
-
-interface LegacyCreateTagOptions {
-	description?: string;
-	copyFromTag?: string;
-	/** Stored when description is empty, but not printed as the user's */
-	defaultDescription?: string;
-}
-
-/**
  * An Error carrying the next step; the CLI error display prints it as a hint.
  */
 function withHint(message: string, hint: string): Error {
 	return Object.assign(new Error(message), { hint });
+}
+
+/** One line on stderr pointing at the command that replaces an alias */
+function warnDeprecated(alias: string, replacement: string): void {
+	console.error(
+		`${chalk.yellow('⚠')} ${alias} is deprecated; use ${theme.brand(`taskgraph ${replacement}`)}`
+	);
+}
+
+/**
+ * Ask before deleting a tag and its tasks. Without a terminal a prompt would
+ * wait forever, so that needs --yes instead.
+ */
+async function confirmDelete(tagName: string, taskCount: number) {
+	const what = `tag ${terminalSafe(tagName)} and its ${taskCount === 1 ? 'task' : `${taskCount} tasks`}`;
+	if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+		throw withHint(
+			`Deleting ${what} needs confirmation`,
+			'Pass `--yes` to delete it without asking'
+		);
+	}
+	try {
+		const { default: inquirer } = await import('inquirer');
+		const prompt = inquirer.createPromptModule({ clearPromptOnDone: true });
+		const { proceed } = await prompt([
+			{
+				type: 'confirm',
+				name: 'proceed',
+				message: `Delete ${what}? This can't be undone.`,
+				default: false
+			}
+		]);
+		return proceed as boolean;
+	} catch (error: any) {
+		if (error?.name !== 'ExitPromptError') throw error;
+		// Ctrl-C
+		console.log(theme.muted('Cancelled; nothing was deleted'));
+		process.exit(130);
+	}
 }
 
 /**
@@ -244,13 +246,33 @@ Examples:
 
 	/**
 	 * Initialize TmCore if not already initialized
-	 * Required for bridge functions to work properly
 	 */
-	private async initTmCore(): Promise<void> {
+	private async initTmCore(): Promise<TmCore> {
 		if (!this.tmCore) {
 			this.tmCore = await createTmCore({
 				projectPath: getProjectPaths().projectRoot
 			});
+		}
+		return this.tmCore;
+	}
+
+	/**
+	 * Run one subcommand: record its result, or show its error and exit
+	 */
+	private async run(
+		action: TagsResult['action'],
+		work: () => Promise<Omit<TagsResult, 'success' | 'action'>>
+	): Promise<void> {
+		try {
+			this.setLastResult({ success: true, action, ...(await work()) });
+		} catch (error: any) {
+			displayError(error);
+			this.setLastResult({ success: false, action, message: error.message });
+			this.handleError(
+				error instanceof Error
+					? error
+					: new Error(error.message || String(error))
+			);
 		}
 	}
 
@@ -262,59 +284,27 @@ Examples:
 		ready?: boolean;
 		json?: boolean;
 	}): Promise<void> {
-		try {
-			// Initialize tmCore first (needed by bridge functions)
-			await this.initTmCore();
-
+		await this.run('list', async () => {
+			const tmCore = await this.initTmCore();
+			const result = options?.json
+				? await tmCore.tasks.getTagsWithStats({ ready: options.ready })
+				: await tmCore.tasks.listTags({ ready: options?.ready });
 			if (options?.json) {
-				const result = await this.tmCore!.tasks.getTagsWithStats({
-					ready: options.ready
-				});
 				printJson(result);
-				this.setLastResult({
-					success: true,
-					action: 'list',
-					tags: result.tags,
-					currentTag: result.currentTag,
-					message: `Found ${result.totalTags} tag(s)`
-				});
-				return;
+			} else {
+				console.log(
+					formatTagList(result.tags, {
+						showMetadata: options?.showMetadata,
+						ready: options?.ready
+					})
+				);
 			}
-
-			const { projectRoot, tasksPath } = getProjectPaths();
-
-			// Use legacy function which handles both API and file storage
-			const listResult = (await legacyListTags(
-				tasksPath,
-				{
-					showTaskCounts: true,
-					showMetadata: options?.showMetadata || false,
-					ready: options?.ready || false
-				},
-				{ projectRoot },
-				'text'
-			)) as LegacyListTagsResult;
-
-			this.setLastResult({
-				success: true,
-				action: 'list',
-				tags: listResult.tags,
-				currentTag: listResult.currentTag,
-				message: `Found ${listResult.totalTags} tag(s)`
-			});
-		} catch (error: any) {
-			displayError(error);
-			this.setLastResult({
-				success: false,
-				action: 'list',
-				message: error.message
-			});
-			this.handleError(
-				error instanceof Error
-					? error
-					: new Error(error.message || String(error))
-			);
-		}
+			return {
+				tags: result.tags,
+				currentTag: result.currentTag,
+				message: `Found ${result.totalTags} tag(s)`
+			};
+		});
 	}
 
 	/**
@@ -325,10 +315,11 @@ Examples:
 		options?: {
 			description?: string;
 			copyFrom?: string;
+			copyFromCurrent?: boolean;
 			fromBranch?: boolean;
 		}
 	): Promise<void> {
-		try {
+		await this.run('add', async () => {
 			if (name && options?.fromBranch) {
 				throw withHint(
 					'Give a tag name or --from-branch, not both',
@@ -342,99 +333,52 @@ Examples:
 				);
 			}
 
-			// Initialize tmCore first (needed by bridge functions)
-			await this.initTmCore();
-
-			const { projectRoot, tasksPath } = getProjectPaths();
-
+			const tmCore = await this.initTmCore();
 			const createOptions = {
 				description: options?.description,
-				copyFromTag: options?.copyFrom
-			} as LegacyCreateTagOptions;
+				copyFromTag: options?.copyFrom,
+				copyFromCurrent: options?.copyFromCurrent
+			};
+			const created = options?.fromBranch
+				? (
+						await tmCore.tasks
+							.createTagFromBranch((tagName, { defaultDescription }) =>
+								tmCore.tasks.createTag(tagName, {
+									...createOptions,
+									defaultDescription
+								})
+							)
+							.catch((error: unknown) => {
+								throw fromBranchError(error);
+							})
+					).created
+				: await tmCore.tasks.createTag(name as string, createOptions);
 
-			if (options?.fromBranch) {
-				const created = await this.tmCore!.tasks.createTagFromBranch(
-					(tagName, { defaultDescription }) =>
-						legacyCreateTag(
-							tasksPath,
-							tagName,
-							{ ...createOptions, defaultDescription },
-							{ projectRoot },
-							'text'
-						)
-				).catch((error: unknown) => {
-					throw fromBranchError(error);
-				});
-				name = created.tagName;
-			} else {
-				// Use legacy function which handles both API and file storage
-				await legacyCreateTag(
-					tasksPath,
-					name as string,
-					createOptions,
-					{ projectRoot },
-					'text'
+			if (options?.copyFrom && created.tasksCopied === 0) {
+				console.log(
+					`${chalk.yellow('⚠')} Source tag "${terminalSafe(options.copyFrom)}" not found or has no tasks`
 				);
 			}
-
-			this.setLastResult({
-				success: true,
-				action: 'add',
-				message: `Created tag: ${name}`
-			});
-		} catch (error: any) {
-			displayError(error);
-			this.setLastResult({
-				success: false,
-				action: 'add',
-				message: error.message
-			});
-			this.handleError(
-				error instanceof Error
-					? error
-					: new Error(error.message || String(error))
+			// Only a description the user gave, not the default
+			console.log(
+				formatTagCreated({ ...created, description: options?.description })
 			);
-		}
+			return { message: `Created tag: ${created.tagName}` };
+		});
 	}
 
 	/**
 	 * Execute use/switch tag
 	 */
 	private async executeUse(name: string): Promise<void> {
-		try {
-			// Initialize tmCore first (needed by bridge functions)
-			await this.initTmCore();
-
-			const { projectRoot, tasksPath } = getProjectPaths();
-
-			// Use legacy function which handles both API and file storage
-			const useResult = (await legacyUseTag(
-				tasksPath,
-				name,
-				{},
-				{ projectRoot },
-				'text'
-			)) as LegacyUseTagResult;
-
-			this.setLastResult({
-				success: true,
-				action: 'use',
-				currentTag: useResult.currentTag,
+		await this.run('use', async () => {
+			const result = await (await this.initTmCore()).tasks.useTag(name);
+			console.log(formatTagSwitched(result));
+			return {
+				currentTag: result.currentTag,
 				message: `Switched to tag: ${name}`
-			});
-		} catch (error: any) {
-			displayError(error);
-			this.setLastResult({
-				success: false,
-				action: 'use',
-				message: error.message
-			});
-			this.handleError(
-				error instanceof Error
-					? error
-					: new Error(error.message || String(error))
-			);
-		}
+			};
+		});
 	}
 
 	/**
@@ -444,81 +388,33 @@ Examples:
 		name: string,
 		options?: { yes?: boolean }
 	): Promise<void> {
-		try {
-			// Initialize tmCore first (needed by bridge functions)
-			await this.initTmCore();
-
-			const { projectRoot, tasksPath } = getProjectPaths();
-
-			// Use legacy function which handles both API and file storage
-			const removeResult = (await legacyDeleteTag(
-				tasksPath,
-				name,
-				{ yes: options?.yes || false },
-				{ projectRoot },
-				'text'
-			)) as { cancelled?: boolean } | undefined;
-
-			this.setLastResult({
-				success: true,
-				action: 'remove',
-				message: removeResult?.cancelled
-					? `Cancelled; tag ${name} was not removed`
-					: `Removed tag: ${name}`
+		await this.run('remove', async () => {
+			const result = await (await this.initTmCore()).tasks.deleteTag(name, {
+				confirm: options?.yes
+					? undefined
+					: (taskCount) => confirmDelete(name, taskCount)
 			});
-		} catch (error: any) {
-			displayError(error);
-			this.setLastResult({
-				success: false,
-				action: 'remove',
-				message: error.message
-			});
-			this.handleError(
-				error instanceof Error
-					? error
-					: new Error(error.message || String(error))
-			);
-		}
+			if (!result.deleted) {
+				console.log(theme.muted('Cancelled; nothing was deleted'));
+				return { message: `Cancelled; tag ${name} was not removed` };
+			}
+			console.log(formatTagDeleted(result));
+			return { message: `Removed tag: ${name}` };
+		});
 	}
 
 	/**
 	 * Execute rename tag
 	 */
 	private async executeRename(oldName: string, newName: string): Promise<void> {
-		try {
-			// Initialize tmCore first (needed by bridge functions)
-			await this.initTmCore();
-
-			const { projectRoot, tasksPath } = getProjectPaths();
-
-			// Use legacy function which handles both API and file storage
-			await legacyRenameTag(
-				tasksPath,
+		await this.run('rename', async () => {
+			const result = await (await this.initTmCore()).tasks.renameTag(
 				oldName,
-				newName,
-				{},
-				{ projectRoot },
-				'text'
+				newName
 			);
-
-			this.setLastResult({
-				success: true,
-				action: 'rename',
-				message: `Renamed tag from "${oldName}" to "${newName}"`
-			});
-		} catch (error: any) {
-			displayError(error);
-			this.setLastResult({
-				success: false,
-				action: 'rename',
-				message: error.message
-			});
-			this.handleError(
-				error instanceof Error
-					? error
-					: new Error(error.message || String(error))
-			);
-		}
+			console.log(formatTagRenamed(result));
+			return { message: `Renamed tag from "${oldName}" to "${newName}"` };
+		});
 	}
 
 	/**
@@ -529,40 +425,15 @@ Examples:
 		target: string,
 		options?: { description?: string }
 	): Promise<void> {
-		try {
-			// Initialize tmCore first (needed by bridge functions)
-			await this.initTmCore();
-
-			const { projectRoot, tasksPath } = getProjectPaths();
-
-			// Use legacy function which handles both API and file storage
-			await legacyCopyTag(
-				tasksPath,
+		await this.run('copy', async () => {
+			const result = await (await this.initTmCore()).tasks.copyTag(
 				source,
 				target,
-				{ description: options?.description },
-				{ projectRoot },
-				'text'
+				{ description: options?.description }
 			);
-
-			this.setLastResult({
-				success: true,
-				action: 'copy',
-				message: `Copied tag from "${source}" to "${target}"`
-			});
-		} catch (error: any) {
-			displayError(error);
-			this.setLastResult({
-				success: false,
-				action: 'copy',
-				message: error.message
-			});
-			this.handleError(
-				error instanceof Error
-					? error
-					: new Error(error.message || String(error))
-			);
-		}
+			console.log(formatTagCopied(result));
+			return { message: `Copied tag from "${source}" to "${target}"` };
+		});
 	}
 
 	/**
@@ -604,6 +475,81 @@ Examples:
 	static register(program: Command, name?: string): TagsCommand {
 		const tagsCommand = new TagsCommand(name);
 		program.addCommand(tagsCommand);
+		tagsCommand.registerDeprecatedAliases(program);
 		return tagsCommand;
+	}
+
+	/**
+	 * The commands `tags <…>` replaced, kept working: each warns, then runs
+	 * its replacement
+	 */
+	private registerDeprecatedAliases(program: Command): void {
+		const alias = (name: string, replacement: string, what: string) =>
+			program
+				.command(name)
+				.description(
+					`[DEPRECATED] ${what} (use "taskgraph ${replacement}" instead)`
+				)
+				.hook('preAction', () => warnDeprecated(name, replacement));
+
+		alias(
+			'add-tag',
+			'tags add',
+			'Create a new tag context for organizing tasks'
+		)
+			.argument(
+				'[tagName]',
+				'Name of the new tag to create (optional when using --from-branch)'
+			)
+			.option(
+				'--copy-from-current',
+				'Copy tasks from the current tag to the new tag'
+			)
+			.option(
+				'--copy-from <tag>',
+				'Copy tasks from the specified tag to the new tag'
+			)
+			.option(
+				'--from-branch',
+				'Create tag name from current git branch (ignores tagName argument)'
+			)
+			.option('-d, --description <text>', 'Optional description for the tag')
+			.action((tagName, options) =>
+				// --from-branch named the tag after the branch even with a name given
+				this.executeAdd(options.fromBranch ? undefined : tagName, options)
+			);
+
+		alias(
+			'delete-tag',
+			'tags remove',
+			'Delete an existing tag and all its tasks'
+		)
+			.argument('<tagName>', 'Name of the tag to delete')
+			.option('-y, --yes', 'Skip confirmation prompts')
+			.action((tagName, options) => this.executeRemove(tagName, options));
+
+		alias('use-tag', 'tags use', 'Switch to a different tag context')
+			.argument('<tagName>', 'Name of the tag to switch to')
+			.action((tagName) => this.executeUse(tagName));
+
+		alias('rename-tag', 'tags rename', 'Rename an existing tag')
+			.argument('<oldName>', 'Current name of the tag')
+			.argument('<newName>', 'New name for the tag')
+			.action((oldName, newName) => this.executeRename(oldName, newName));
+
+		alias(
+			'copy-tag',
+			'tags copy',
+			'Copy an existing tag to create a new tag with the same tasks'
+		)
+			.argument('<sourceName>', 'Name of the source tag to copy from')
+			.argument('<targetName>', 'Name of the new tag to create')
+			.option(
+				'-d, --description <text>',
+				'Optional description for the new tag'
+			)
+			.action((sourceName, targetName, options) =>
+				this.executeCopy(sourceName, targetName, options)
+			);
 	}
 }

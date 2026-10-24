@@ -89,10 +89,10 @@ describe('FileStorage tag names shared with Object.prototype', () => {
 
 	it('reports a missing tag named toString as not found on delete and rename', async () => {
 		await expect(storage.deleteTag('toString')).rejects.toThrow(
-			'Tag toString not found'
+			'Tag "toString" does not exist'
 		);
 		await expect(storage.renameTag('toString', 'other')).rejects.toThrow(
-			'Tag toString not found'
+			'Tag "toString" does not exist'
 		);
 	});
 
@@ -110,7 +110,10 @@ describe('FileStorage tag names shared with Object.prototype', () => {
 	});
 
 	it('refuses to create a tag named __proto__', async () => {
-		const tags = new TagService(storage);
+		const tags = new TagService(storage, {
+			projectRoot: tempDir,
+			getActiveTag: () => 'master'
+		});
 
 		await expect(tags.createTag('__proto__')).rejects.toThrow(
 			'"__proto__" is a reserved tag name'
@@ -130,7 +133,10 @@ describe('FileStorage tag names shared with Object.prototype', () => {
 			tasksPath,
 			'{"master":{"tasks":[],"metadata":{}},"__proto__":{"tasks":[],"metadata":{}}}'
 		);
-		const tags = new TagService(storage);
+		const tags = new TagService(storage, {
+			projectRoot: tempDir,
+			getActiveTag: () => 'master'
+		});
 
 		await tags.renameTag('__proto__', 'renamed');
 		expect(Object.keys(readFile())).toEqual(['master', 'renamed']);
