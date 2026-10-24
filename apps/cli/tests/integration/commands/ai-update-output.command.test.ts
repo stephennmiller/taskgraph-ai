@@ -32,6 +32,14 @@ if (!built && process.env.CI) {
 	);
 }
 
+// Retries: on Windows the spawned CLI can still hold a handle when cleanup runs (EPERM, #570).
+const RM_OPTS = {
+	recursive: true,
+	force: true,
+	maxRetries: 5,
+	retryDelay: 100
+};
+
 const BOX = /[╭╮╰╯│┌┐└┘]/;
 const USAGE = /tokens \(/;
 
@@ -128,7 +136,7 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 	});
 
 	afterAll(() => {
-		fs.rmSync(template, { recursive: true, force: true });
+		fs.rmSync(template, RM_OPTS);
 	});
 
 	beforeEach(() => {
@@ -138,8 +146,8 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 	});
 
 	afterEach(() => {
-		fs.rmSync(project, { recursive: true, force: true });
-		fs.rmSync(work, { recursive: true, force: true });
+		fs.rmSync(project, RM_OPTS);
+		fs.rmSync(work, RM_OPTS);
 	});
 
 	it('parse-prd ends with where the tasks went and one next step', () => {
