@@ -94,10 +94,10 @@ export function getAvailableModels(): AvailableModel[] {
 export function getModelConfiguration(
 	configManager: ConfigManager,
 	onWarning?: (message: string) => void
-): SettingResult<{
-	activeModels: Record<AiRole, ActiveModel>;
-	message: string;
-}> {
+): {
+	success: true;
+	data: { activeModels: Record<AiRole, ActiveModel>; message: string };
+} {
 	const projectRoot = configManager.getProjectRoot();
 	assertConfigPresent(projectRoot);
 	// The loader skips a broken config.local.json; say so, as legacy did
@@ -168,6 +168,14 @@ export function getAvailableModelsList(projectRoot: string): SettingResult<{
 	};
 }
 
+/** What setting one role's model replies with */
+export interface SetModelData {
+	role: string;
+	provider: string;
+	modelId: string;
+	message: string;
+}
+
 /**
  * Set a role's Claude Code model, keeping the role's other settings
  * (temperature). The model's token limit becomes the role's maxTokens.
@@ -176,54 +184,72 @@ export function setModel(
 	projectRoot: string,
 	role: string,
 	modelId: unknown
-): SettingResult<{
-	role: string;
-	provider: string;
-	modelId: string;
-	message: string;
-}> {
-	assertConfigPresent(projectRoot);
-	if (!MODEL_ROLES.includes(role as AiRole)) {
-		return failure(
-			'INVALID_ROLE',
-			`Invalid role: ${role}. Must be one of: ${MODEL_ROLES.join(', ')}.`
-		);
-	}
-	if (typeof modelId !== 'string' || modelId.trim() === '') {
-		return failure(
-			'INVALID_MODEL_ID',
-			`Invalid model ID: ${modelId}. Must be a non-empty string.`
-		);
-	}
+): SettingResult<SetModelData> {
+	return setModels(projectRoot, [
+		[role, modelId]
+	]) as SettingResult<SetModelData>;
+}
 
+/**
+ * Set each given role's model as setModel does. Every role and model is
+ * checked first, so one bad one sets none, then all are saved together.
+ * A single role replies as setModel does.
+ */
+export function setModels(
+	projectRoot: string,
+	requested: [role: string, modelId: unknown][]
+): SettingResult<SetModelData | { models: SetModelData[]; message: string }> {
+	assertConfigPresent(projectRoot);
 	const provider = CUSTOM_PROVIDERS.CLAUDE_CODE;
 	const supported = getAvailableModels().filter((m) => m.provider === provider);
-	const model = supported.find((m) => m.id === modelId);
-	if (!model) {
-		return failure(
-			'MODEL_NOT_FOUND',
-			`Model ID "${modelId}" is not supported. TaskGraph uses Claude Code; valid models: ${supported.map((m) => m.id).join(', ')}.`
-		);
+	const checked: [string, AvailableModel][] = [];
+	for (const [role, modelId] of requested) {
+		if (!MODEL_ROLES.includes(role as AiRole)) {
+			return failure(
+				'INVALID_ROLE',
+				`Invalid role: ${role}. Must be one of: ${MODEL_ROLES.join(', ')}.`
+			);
+		}
+		if (typeof modelId !== 'string' || modelId.trim() === '') {
+			return failure(
+				'INVALID_MODEL_ID',
+				`Invalid model ID: ${modelId}. Must be a non-empty string.`
+			);
+		}
+		const model = supported.find((m) => m.id === modelId);
+		if (!model) {
+			return failure(
+				'MODEL_NOT_FOUND',
+				`Model ID "${modelId}" is not supported. TaskGraph uses Claude Code; valid models: ${supported.map((m) => m.id).join(', ')}.`
+			);
+		}
+		checked.push([role, model]);
 	}
 
 	const written = updateProjectConfig(projectRoot, (config) => {
 		config.models ??= {};
-		// Keep existing params like temperature
-		const entry = { ...config.models[role], provider, modelId };
-		delete entry.baseURL;
-		if (model.max_tokens) entry.maxTokens = model.max_tokens;
-		config.models[role] = entry;
+		for (const [role, model] of checked) {
+			// Keep existing params like temperature
+			const entry = { ...config.models[role], provider, modelId: model.id };
+			delete entry.baseURL;
+			if (model.max_tokens) entry.maxTokens = model.max_tokens;
+			config.models[role] = entry;
+		}
 	});
 	if (!written.success) return written;
 
+	const models = checked.map(([role, model]) => ({
+		role,
+		provider,
+		modelId: model.id,
+		message: `Successfully set ${role} model to ${model.id} (Provider: ${provider})`
+	}));
 	return {
 		success: true,
-		data: {
-			role,
-			provider,
-			modelId,
-			message: `Successfully set ${role} model to ${modelId} (Provider: ${provider})`
-		}
+		data:
+			models.length === 1
+				? models[0]
+				: { models, message: models.map((m) => m.message).join('. ') }
 	};
 }
 

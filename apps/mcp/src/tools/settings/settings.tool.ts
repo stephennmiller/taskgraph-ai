@@ -86,18 +86,21 @@ export function registerModelsTool(server: FastMCP) {
 				if (args.listAvailableModels === true) {
 					return config.getAvailableModelsList();
 				}
-				// The first role given is set; the legacy tool set one per call
-				const [role, modelId] =
-					(
-						[
-							['main', args.setMain],
-							['research', args.setResearch],
-							['fallback', args.setFallback]
-						] as const
-					).find(([, id]) => id) ?? [];
-				return role
-					? config.setModel(role, modelId)
-					: config.getModelConfiguration();
+				const requested = (
+					[
+						['main', args.setMain],
+						['research', args.setResearch],
+						['fallback', args.setFallback]
+					] as [string, string | undefined][]
+				).filter(([, id]) => id);
+				if (requested.length > 0) return config.setModels(requested);
+				const warnings: string[] = [];
+				const result = config.getModelConfiguration((message) =>
+					warnings.push(message)
+				);
+				return warnings.length > 0
+					? { ...result, data: { ...result.data, warnings } }
+					: result;
 			})
 		)
 	});

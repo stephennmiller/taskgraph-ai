@@ -6,6 +6,7 @@ import { writeSplitConfig } from './config-file.js';
 import {
 	getAvailableModelsList,
 	setModel,
+	setModels,
 	setResponseLanguage
 } from './project-settings.js';
 
@@ -86,6 +87,39 @@ describe('setModel', () => {
 		expect(() => getAvailableModelsList(root)).toThrow(
 			'The configuration file is missing'
 		);
+	});
+});
+
+describe('setModels', () => {
+	it('sets every role together', () => {
+		writeConfig({ global: {} });
+
+		const result = setModels(root, [
+			['main', 'opus'],
+			['research', 'haiku']
+		]);
+
+		expect(result).toMatchObject({
+			success: true,
+			data: { models: [{ role: 'main' }, { role: 'research' }] }
+		});
+		expect(read(configPath()).models).toMatchObject({
+			main: { modelId: 'opus' },
+			research: { modelId: 'haiku' }
+		});
+	});
+
+	it('sets nothing when any model is unknown', () => {
+		writeConfig({ global: {} });
+		const before = fs.readFileSync(configPath(), 'utf8');
+
+		expect(
+			setModels(root, [
+				['main', 'opus'],
+				['research', 'gpt-4']
+			])
+		).toMatchObject({ success: false, error: { code: 'MODEL_NOT_FOUND' } });
+		expect(fs.readFileSync(configPath(), 'utf8')).toBe(before);
 	});
 });
 

@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const config = {
 	getModelConfiguration: vi.fn(),
 	getAvailableModelsList: vi.fn(),
-	setModel: vi.fn(),
+	setModels: vi.fn(),
 	setResponseLanguage: vi.fn()
 };
 
@@ -42,10 +42,10 @@ const ok = (data: unknown) => ({ success: true, data });
 beforeEach(() => vi.clearAllMocks());
 
 describe('models', () => {
-	it('lists models, sets the first role given, or shows the configuration', async () => {
+	it('lists models, sets every role given, or shows the configuration', async () => {
 		const tool = register(registerModelsTool);
 		config.getAvailableModelsList.mockReturnValue(ok({ models: [] }));
-		config.setModel.mockReturnValue(ok({ role: 'research' }));
+		config.setModels.mockReturnValue(ok({ models: [] }));
 		config.getModelConfiguration.mockReturnValue(ok({ activeModels: {} }));
 
 		await tool.execute({ projectRoot, listAvailableModels: true }, ctx);
@@ -56,10 +56,29 @@ describe('models', () => {
 		const shown = await tool.execute({ projectRoot }, ctx);
 
 		expect(config.getAvailableModelsList).toHaveBeenCalledTimes(1);
-		expect(config.setModel).toHaveBeenCalledWith('research', 'opus');
-		expect(config.setModel).toHaveBeenCalledTimes(1);
+		expect(config.setModels).toHaveBeenCalledWith([
+			['research', 'opus'],
+			['fallback', 'haiku']
+		]);
 		expect(JSON.parse(shown.content[0].text).data).toEqual({
 			activeModels: {}
+		});
+	});
+
+	it('replies with the provider warnings the configuration raised', async () => {
+		config.getModelConfiguration.mockImplementation((onWarning) => {
+			onWarning("Couldn't read .taskgraph/config.local.json");
+			return ok({ activeModels: {} });
+		});
+
+		const result = await register(registerModelsTool).execute(
+			{ projectRoot },
+			ctx
+		);
+
+		expect(JSON.parse(result.content[0].text).data).toEqual({
+			activeModels: {},
+			warnings: ["Couldn't read .taskgraph/config.local.json"]
 		});
 	});
 
