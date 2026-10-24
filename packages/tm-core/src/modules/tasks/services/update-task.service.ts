@@ -14,7 +14,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
-import type { Subtask, Task } from '../../../common/types/index.js';
+import type { Task } from '../../../common/types/index.js';
 import {
 	AiService,
 	type AiTagInfo,
@@ -40,6 +40,7 @@ import {
 	aiDependencies,
 	keepDoneSubtasks,
 	keepStatus,
+	matchSubtasks,
 	mergeRewrite,
 	promptView,
 	removedError,
@@ -331,30 +332,10 @@ export class UpdateTaskService {
 		if (Array.isArray(updated.subtasks)) {
 			// Stored subtask ID -> the ID the rewrite gives it
 			const newIdOf = new Map<string, number>();
-			const sameId = (st: Subtask, subtask: any) =>
-				String(st.id) === String(subtask.id);
-			const sameTitle = (st: Subtask, subtask: any) =>
-				Boolean(subtask.title) && st.title === subtask.title;
-			// Each stored subtask matches once, across all of the AI's subtasks:
-			// ID and title first, then title (the AI may renumber a reorder or an
-			// insert itself), then ID (the AI may send strings)
-			const matched: (Subtask | undefined)[] = [];
-			for (const same of [
-				(st: Subtask, subtask: any) =>
-					sameId(st, subtask) && sameTitle(st, subtask),
-				sameTitle,
-				sameId
-			]) {
-				updated.subtasks.forEach((subtask: any, i: number) => {
-					if (matched[i]) return;
-					const before = original.find(
-						(st) => !newIdOf.has(String(st.id)) && same(st, subtask)
-					);
-					if (!before) return;
-					matched[i] = before;
-					newIdOf.set(String(before.id), i + 1);
-				});
-			}
+			const matched = matchSubtasks(original, updated.subtasks);
+			matched.forEach((st, i) => {
+				if (st) newIdOf.set(String(st.id), i + 1);
+			});
 			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
 				const id = i + 1;
 				const before = matched[i];
@@ -580,12 +561,19 @@ export class UpdateTaskService {
 		// Dependencies the AI added are recorded as inferred; earlier marks stay
 		assignMetadata(merged, reconcileDependencySources(merged, task));
 		if (Array.isArray(merged.subtasks)) {
-			// Restore what the schema can't return from the subtask with the same ID
-			merged.subtasks = merged.subtasks.map((subtask) => {
-				const before = task.subtasks?.find(
-					(st) => String(st.id) === String(subtask.id)
+			// Each subtask keeps the ID of the stored one it matches, so the save
+			// and the restores below follow it when the AI renumbers (#576); a
+			// new one gets the next free ID
+			const original = task.subtasks ?? [];
+			const matched = matchSubtasks(original, merged.subtasks);
+			let next = Math.max(0, ...original.map((st) => Number(st.id) || 0));
+			// Restore what the schema can't return from the matched subtask
+			merged.subtasks = merged.subtasks.map((subtask, i) => {
+				const before = matched[i];
+				const restored = keepStoredFields(
+					{ ...subtask, id: before ? before.id : ++next },
+					before
 				);
-				const restored = keepStoredFields({ ...subtask }, before);
 				assignMetadata(
 					restored,
 					reconcileDependencySources(subtask, before, task.id)
