@@ -184,6 +184,85 @@ describe('removeTask', () => {
 			expect(parent.subtasks[1].dependencies).toEqual([1, 150]);
 		});
 
+		test('removing a task drops dependencies on its subtasks (#456)', async () => {
+			readJSON.mockImplementation(() => {
+				const data = tagged();
+				data.master.tasks.push({
+					id: 7,
+					title: 'Task 7',
+					status: 'pending',
+					dependencies: ['2.2', '1'],
+					metadata: { dependencySources: { 2.2: 'inferred' } }
+				});
+				return { ...data.master, tag: 'master', _rawTaggedData: data };
+			});
+
+			await removeTask('tasks/tasks.json', '2', { tag: 'master' });
+
+			const task7 = writeJSON.mock.calls[0][1].master.tasks.find(
+				(t) => t.id === 7
+			);
+			expect(task7.dependencies).toEqual(['1']);
+			expect(task7.metadata).toBeUndefined();
+		});
+
+		test('removing a task drops related links to its subtasks', async () => {
+			readJSON.mockImplementation(() => {
+				const data = tagged();
+				data.master.tasks.push({
+					id: 7,
+					title: 'Task 7',
+					status: 'pending',
+					dependencies: [],
+					metadata: { taskLinks: { 2.1: 'related', 1: 'discovered-from' } }
+				});
+				return { ...data.master, tag: 'master', _rawTaggedData: data };
+			});
+
+			await removeTask('tasks/tasks.json', '2', { tag: 'master' });
+
+			const task7 = writeJSON.mock.calls[0][1].master.tasks.find(
+				(t) => t.id === 7
+			);
+			expect(task7.metadata).toEqual({
+				taskLinks: { 1: 'discovered-from' }
+			});
+		});
+
+		test('finds tasks and subtasks stored with string IDs', async () => {
+			const stringIds = () => ({
+				master: {
+					tasks: [
+						{ id: '1', title: 'Task 1', status: 'pending', dependencies: [] },
+						{
+							id: '2',
+							title: 'Parent',
+							status: 'pending',
+							dependencies: [],
+							subtasks: [
+								{ id: '2.1', title: 'Dotted', status: 'pending' },
+								{ id: '2', title: 'String', status: 'pending' }
+							]
+						}
+					]
+				}
+			});
+			readJSON.mockImplementation(() => ({
+				...stringIds().master,
+				tag: 'master',
+				_rawTaggedData: stringIds()
+			}));
+
+			const result = await removeTask('tasks/tasks.json', '1,2.1,2.2', {
+				tag: 'master'
+			});
+
+			expect(result.success).toBe(true);
+			const written = writeJSON.mock.calls[0][1].master.tasks;
+			expect(written.map((t) => t.id)).toEqual(['2']);
+			expect(written[0].subtasks).toEqual([]);
+		});
+
 		test('removing a subtask drops the sibling number, not the task string', async () => {
 			const parent = await remove('2.1');
 

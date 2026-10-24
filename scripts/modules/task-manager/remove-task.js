@@ -1,10 +1,4 @@
-import {
-	dropReferences,
-	getOwnKey,
-	liveOrArchived,
-	pruneTaskLinks,
-	readArchivedIdsSync
-} from '@tm/core';
+import { dropReferences, fullSubtaskId, getOwnKey } from '@tm/core';
 import * as fs from 'fs';
 import path from 'path';
 import { findTaskById, log, readJSON } from '../utils.js';
@@ -76,7 +70,10 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 							.map((id) => parseInt(id, 10));
 
 						// Find the parent task
-						const parentTask = tasks.find((t) => t.id === parentTaskId);
+						// Stored IDs may be numbers or strings, and a subtask's may be "5.2"
+						const parentTask = tasks.find(
+							(t) => String(t.id) === String(parentTaskId)
+						);
 						if (!parentTask || !parentTask.subtasks) {
 							throw new Error(
 								`Parent task ${parentTaskId} or its subtasks not found for subtask ${taskId}`
@@ -85,7 +82,9 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 
 						// Find the subtask to remove
 						const subtaskIndex = parentTask.subtasks.findIndex(
-							(st) => st.id === subtaskId
+							(st) =>
+								fullSubtaskId(parentTask.id, st.id) ===
+								`${parentTaskId}.${subtaskId}`
 						);
 						if (subtaskIndex === -1) {
 							throw new Error(
@@ -110,7 +109,9 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 					// Handle main task removal
 					else {
 						const taskIdNum = parseInt(taskId, 10);
-						const taskIndex = tasks.findIndex((t) => t.id === taskIdNum);
+						const taskIndex = tasks.findIndex(
+							(t) => String(t.id) === String(taskIdNum)
+						);
 						if (taskIndex === -1) {
 							throw new Error(
 								`Task with ID ${taskId} not found in tag '${tag}'`
@@ -147,14 +148,21 @@ async function removeTask(tasksPath, taskIds, context = {}) {
 					)
 				);
 
+				// A removed task's subtasks go with it, so references to them do too
+				for (const removed of results.removedTasks) {
+					if (
+						removed.parentTaskId !== undefined ||
+						!Array.isArray(removed.subtasks)
+					) {
+						continue;
+					}
+					for (const subtask of removed.subtasks) {
+						allRemovedIds.add(fullSubtaskId(removed.id, subtask.id));
+					}
+				}
+
 				// Dependency IDs name tasks of the same tag, so only this tag changes
 				dropReferences(tasks, allRemovedIds);
-				// Related and discovered-from links to the subtasks of a removed
-				// task go too
-				pruneTaskLinks(
-					tasks,
-					liveOrArchived(tasks, () => readArchivedIdsSync(tasksPath, tag).ids)
-				);
 			}
 		});
 
