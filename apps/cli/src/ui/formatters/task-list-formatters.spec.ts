@@ -407,6 +407,25 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 		expect(output.at(-1)).toBe('Run taskgraph fix-dependencies to remove them');
 	});
 
+	it('wraps every line to a 50-column terminal (#463)', () => {
+		const output = formatInvalidDependencyWarning(
+			[{ taskId: '12.3', depId: '45.6' }],
+			'feature-branch',
+			50
+		);
+
+		expect(widest(output)).toBeLessThanOrEqual(50);
+		expect(lines(output)).toEqual([
+			'',
+			'Warning: 1 invalid dependency reference(s) found',
+			'(tag: feature-branch):',
+			'  Task 12.3 depends on non-existent task 45.6',
+			'Run',
+			'taskgraph fix-dependencies --tag feature-branch to',
+			'remove them'
+		]);
+	});
+
 	it('strips escape codes from the IDs and the tag', () => {
 		chalk.level = 0;
 
