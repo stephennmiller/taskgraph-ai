@@ -1,0 +1,41 @@
+{
+	"fixture": "../fixtures/tasks-tagged.json",
+	"steps": [
+		["scope-up", "--id=2"],
+		["scope-down", "--id=4,5", "--strength=heavy"],
+		[
+			"scope-up",
+			"--id=4",
+			"--strength=light",
+			"--prompt=Focus on security",
+			"--research"
+		],
+		["scope-down", "--id=1", "--tag=feature"],
+		{ "args": ["scope-up"], "expectExit": 1 },
+		{ "args": ["scope-up", "--id=99"], "expectExit": 1 },
+		{ "args": ["scope-down", "--id=2", "--strength=max"], "expectExit": 1 },
+		{ "args": ["scope-up", "--id=2", "--file=other.json"], "expectExit": 1 },
+		{
+			"shell": "mkdir -p .taskgraph/reports && printf '%s' '{\"meta\":{},\"complexityAnalysis\":[{\"taskId\":2,\"taskTitle\":\"Write the parser\",\"complexityScore\":6,\"recommendedSubtasks\":3,\"expansionPrompt\":\"Split it\",\"reasoning\":\"Medium\"}]}' > .taskgraph/reports/task-complexity-report.json"
+		},
+		["scope-up", "--id=2", "--strength=heavy"],
+		{
+			"mcp": "scope_up_task",
+			"input": { "id": "2", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "scope_down_task",
+			"input": { "id": "4,5", "strength": "light", "projectRoot": "<project>" }
+		},
+		{
+			"mcp": "scope_up_task",
+			"input": { "id": "2", "strength": "max", "projectRoot": "<project>" },
+			"expectError": true
+		},
+		{
+			"mcp": "scope_down_task",
+			"input": { "id": "99", "projectRoot": "<project>" },
+			"expectError": true
+		}
+	]
+}

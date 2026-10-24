@@ -88,6 +88,7 @@ with the target branch as build A and the pull request as build B.
 | `phase3-analyze-complexity.json` | `analyze-complexity` (all tasks, `--id`, `--from`/`--to`, `--research`, a tag, `--output`, an ID with no active task) and `complexity-report` (CLI and MCP), with the failures: missing report, `--file`, an output outside the project. |
 | `phase3-expand.json` | `expand` (one task, `--num`, `--force`, `--research`, `--tag`, `--all`), the complexity report's count, prompt and a count of 0, the MCP `expand_task` and `expand_all` tools, and the failures (unknown ID, no ID, a done task over MCP). |
 | `phase3-update-subtask.json` | `update-subtask` (twice on one subtask, a prompt over 100 characters, `--research`), the MCP `update_subtask` tool, and the failures (a task ID, unknown subtask, a task with no subtasks, no `--prompt`, a tag without the task, no prompt or metadata over MCP, metadata while it is disabled). |
+| `phase3-scope.json` | `scope-up` and `scope-down` (one and several IDs, `--strength`, `--prompt`, `--research`, `--tag`), with and without a complexity report, the MCP `scope_up_task` and `scope_down_task` tools (the MCP call re-scores the task in the report), and the failures (no ID, unknown ID, bad strength, `--file`). |
 
 A step is a list of CLI arguments, or an object: `{"args": [...], "capture":
 "stdout"}` also compares what the command printed (use a JSON format), and
