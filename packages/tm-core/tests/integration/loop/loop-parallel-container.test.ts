@@ -85,6 +85,8 @@ fs.writeFileSync(
 	})
 );
 if (mode === 'hang' || env.FAKE_DOCKER_STUCK || env.FAKE_DOCKER_LOST) {
+	// Only rm stops a hung container, as a killed docker client doesn't
+	if (mode === 'hang') process.on('SIGTERM', () => {});
 	fs.writeFileSync(path.join(cwd, 'wip.txt'), 'wip\\n');
 	fs.writeFileSync(pidFile(name), String(process.pid));
 	setInterval(() => {}, 1000);
@@ -308,6 +310,27 @@ describe('loop --parallel --container', () => {
 				.sort()
 		).toEqual(['wip.txt', 'work.txt']);
 	});
+
+	it('removes a container that runs past TASKGRAPH_LOOP_TIMEOUT_MS, keeps the clone, releases the claim', async () => {
+		vi.stubEnv('FAKE_DOCKER_MODE', 'hang');
+		// Long enough for a slow CI runner to start the worker before it fires
+		vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '3000');
+
+		// A grace period past the test's own timeout: only rm can end it in time
+		const result = await tmCore.loop.runParallel({
+			parallel: 1,
+			trusted: true,
+			claimant: 'tester',
+			container: { runtime: file('docker') },
+			killGraceMs: 60_000
+		});
+
+		expect(result.tasks[0]).toMatchObject({ state: 'failed', kept: true });
+		expect(result.tasks[0].error).toContain('TASKGRAPH_LOOP_TIMEOUT_MS');
+		expect(dockerCalls().some(([command]) => command === 'rm')).toBe(true);
+		expect(readTask().status).toBe('pending');
+		expect(fs.readFileSync(path.join(clone, 'wip.txt'), 'utf8')).toBe('wip\n');
+	}, 20_000);
 
 	it("leaves the clone and the claim alone when the container won't go away", async () => {
 		vi.stubEnv('FAKE_DOCKER_STUCK', '1');

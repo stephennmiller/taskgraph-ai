@@ -230,7 +230,8 @@ describe('loop --parallel', () => {
 
 	it('stops a worker past TASKGRAPH_LOOP_TIMEOUT_MS, keeps its work and releases it', async () => {
 		writePlan({ 'task-1': 'dirty-sleep' });
-		vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '1000');
+		// Long enough for a slow CI runner to start the worker before it fires
+		vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '3000');
 
 		const [only] = (
 			await tmCore.loop.runParallel({

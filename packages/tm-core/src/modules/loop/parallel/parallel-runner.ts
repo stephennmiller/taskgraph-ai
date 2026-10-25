@@ -57,6 +57,8 @@ interface Running {
 	/** With --container: the container's name, for removing it */
 	container?: string;
 	child?: ChildProcess;
+	/** Stopped for running past TASKGRAPH_LOOP_TIMEOUT_MS */
+	timedOut?: boolean;
 	exited: Promise<void>;
 }
 
@@ -225,7 +227,8 @@ export class ParallelLoopRunner {
 						spawner,
 						cwd,
 						isAborted: () => aborted,
-						killGraceMs: options.killGraceMs ?? 5000
+						killGraceMs: options.killGraceMs ?? 5000,
+						workers
 					});
 					callbacks?.onTaskStart?.({ ...entry.task });
 					entry.exited = entry.exited.then(() =>
@@ -273,13 +276,13 @@ export class ParallelLoopRunner {
 			cwd: string;
 			isAborted: () => boolean;
 			killGraceMs: number;
+			workers: ContainerWorkers | undefined;
 		}
 	): Promise<void> {
 		const { task } = entry;
 		const log = openLog(task.logFile);
 		const timeout = loopIterationTimeoutMs();
 		const timers: NodeJS.Timeout[] = [];
-		let timedOut = false;
 		return new Promise<void>((resolve) => {
 			let settled = false;
 			const done = (
@@ -314,7 +317,9 @@ export class ParallelLoopRunner {
 				// A hung worker would hold up the whole run: stop it like an abort does
 				timers.push(
 					setTimeout(() => {
-						timedOut = true;
+						entry.timedOut = true;
+						// Killing the docker client leaves its container running
+						if (entry.container) ctx.workers?.stop([entry.container]);
 						timers.push(this.terminate(child, ctx.killGraceMs));
 					}, timeout)
 				);
@@ -323,7 +328,8 @@ export class ParallelLoopRunner {
 				);
 				child.once('close', (code, sig) => {
 					if (ctx.isAborted()) return done('stopped', undefined, code);
-					if (timedOut) return done('failed', timeoutMessage(timeout), code);
+					if (entry.timedOut)
+						return done('failed', timeoutMessage(timeout), code);
 					if (code === 0) return done('done', undefined, 0);
 					done(
 						'failed',
@@ -398,7 +404,13 @@ export class ParallelLoopRunner {
 		const stuck = new Set(
 			workers?.stop(running.flatMap((r) => (r.container ? [r.container] : [])))
 		);
-		for (const { task, hasWorktree, createdBranch, container } of running) {
+		for (const {
+			task,
+			hasWorktree,
+			createdBranch,
+			container,
+			timedOut
+		} of running) {
 			let hasWork = false;
 			const isStuck = !!container && stuck.has(container);
 			// Claude failed: free the task so a later run retries it in the kept worktree
@@ -417,7 +429,8 @@ export class ParallelLoopRunner {
 					task,
 					base,
 					createdBranch,
-					aborted
+					// Killed, so its uncommitted work was never committed: keep the clone
+					aborted || !!timedOut
 				);
 				hasWork = back.hasWork;
 				// The work is only in the clone: keep the claim so no other run starts over
