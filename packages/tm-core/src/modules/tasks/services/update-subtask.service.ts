@@ -27,6 +27,7 @@ import {
 } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { withoutReservedMetadata } from '../../dependencies/dependency-provenance.js';
+import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import type { TaskService } from './task-service.js';
 
 /** How many tasks related to the prompt go into the context */
@@ -67,7 +68,7 @@ export interface UpdateSubtaskResult {
 	/** The subtask ID, "5.2" */
 	id: string;
 	parentId: string;
-	/** The subtask as saved, or as read when nothing was saved */
+	/** The subtask as saved, or as read when nothing was saved, with full-ID dependencies (`5.1`) */
 	subtask: Subtask;
 	/** The notes appended, trimmed; empty when the AI returned none */
 	added: string;
@@ -75,6 +76,14 @@ export interface UpdateSubtaskResult {
 	tagInfo: AiTagInfo | { tag: string } | null;
 	tag: string;
 }
+
+/** The saved subtask as replies give it: dependencies as full IDs, as show gives them */
+const withFullDependencies = (parentId: string, subtask: Subtask): Subtask => ({
+	...subtask,
+	dependencies: (subtask.dependencies ?? []).map((dep) =>
+		resolveSubtaskDependency(parentId, dep)
+	)
+});
 
 const invalidId = (message: string) =>
 	new TaskGraphError(message, ERROR_CODES.VALIDATION_ERROR);
@@ -158,7 +167,7 @@ export class UpdateSubtaskService {
 			return {
 				id,
 				parentId,
-				subtask: saved as Subtask,
+				subtask: withFullDependencies(parentId, saved as Subtask),
 				added: '',
 				telemetryData: null,
 				tagInfo: { tag },
@@ -250,7 +259,7 @@ export class UpdateSubtaskService {
 		return {
 			id,
 			parentId,
-			subtask: saved,
+			subtask: withFullDependencies(parentId, saved),
 			added,
 			telemetryData: response.telemetryData,
 			tagInfo: response.tagInfo,
