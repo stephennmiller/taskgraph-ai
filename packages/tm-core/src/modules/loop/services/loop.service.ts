@@ -482,6 +482,9 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			const timer = setTimeout(() => {
 				timedOut = true;
 				child.kill('SIGTERM');
+				// A subprocess Claude started can hold the pipes open: close them so 'close' fires
+				child.stdout?.destroy();
+				child.stderr?.destroy();
 			}, timeout);
 
 			// Track stdout completion to handle race between data and close events

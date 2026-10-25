@@ -3,7 +3,8 @@
  * Node's longest timer (about 24 days): a longer one fires after 1 ms.
  */
 export function timeoutFromEnv(name: string, fallbackMs: number): number {
-	const configured = Number(process.env[name]);
+	// Whole milliseconds: Node's timers and AbortSignal.timeout throw on a fraction
+	const configured = Math.floor(Number(process.env[name]));
 	if (!(Number.isFinite(configured) && configured > 0)) return fallbackMs;
 	return Math.min(configured, 2 ** 31 - 1);
 }

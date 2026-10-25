@@ -67,8 +67,8 @@ describe('LoopService limits', () => {
 		vi.useFakeTimers();
 		vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '1000');
 		const child = Object.assign(new EventEmitter(), {
-			stdout: new EventEmitter(),
-			stderr: new EventEmitter(),
+			stdout: Object.assign(new EventEmitter(), { destroy: vi.fn() }),
+			stderr: Object.assign(new EventEmitter(), { destroy: vi.fn() }),
 			killed: false,
 			kill: vi.fn(() => child.emit('close', null))
 		});
