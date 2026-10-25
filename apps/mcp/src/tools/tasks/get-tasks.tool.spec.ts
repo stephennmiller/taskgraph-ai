@@ -123,6 +123,7 @@ describe('get_tasks', () => {
 		expect(Object.keys(data.tasks[0])).toEqual(['id', 'title', 'testStrategy']);
 	});
 
+	// #661: with its full dotted ID, as get_task and next_task give it
 	it('nests subtasks with the same fields when asked', async () => {
 		const result = await register().execute(
 			{ projectRoot: project, withSubtasks: true },
@@ -131,7 +132,7 @@ describe('get_tasks', () => {
 
 		const { data } = JSON.parse(result.content[0].text);
 		expect(data.tasks[0].subtasks[0]).toEqual({
-			id: 1,
+			id: '1.1',
 			title: 'Step 1 of feature 1',
 			status: 'pending',
 			priority: 'medium',

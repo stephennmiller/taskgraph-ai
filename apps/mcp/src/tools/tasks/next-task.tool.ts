@@ -3,6 +3,7 @@
  * tm-core's tasks.getNext(), or with claim: true, tasks.claimNext()
  */
 
+import { withFullSubtaskIds } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -75,7 +76,7 @@ export function registerNextTaskTool(server: FastMCP) {
 							return {
 								data: claim
 									? {
-											nextTask: claim.task,
+											nextTask: withFullSubtaskIds(claim.task),
 											isSubtask: String(claim.task.id).includes('.'),
 											claimedBy: claim.claimedBy,
 											claimedAt: claim.claimedAt,
@@ -118,7 +119,7 @@ export function registerNextTaskTool(server: FastMCP) {
 									dependencies: nextTask.dependencies,
 									parentId: Number(parentId)
 								}
-							: { ...nextTask, id: replyId(nextTask.id) };
+							: { ...withFullSubtaskIds(nextTask), id: replyId(nextTask.id) };
 						const complexityScore = readScore(
 							context,
 							String(parentId ?? nextTask.id),

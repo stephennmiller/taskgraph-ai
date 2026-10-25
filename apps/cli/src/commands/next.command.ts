@@ -9,7 +9,8 @@ import {
 	type TaskChecklist,
 	type TaskClaim,
 	type TmCore,
-	createTmCore
+	createTmCore,
+	withFullSubtaskIds
 } from '@tm/core';
 import { Command } from 'commander';
 import { formatClaim } from '../ui/formatters/claim-formatters.js';
@@ -218,7 +219,10 @@ export class NextCommand extends Command {
 		options: NextCommandOptions
 	): void {
 		if (options.format === 'json') {
-			printJson(result);
+			printJson({
+				...result,
+				task: withFullSubtaskIds(result.task)
+			});
 			return;
 		}
 		console.log(
@@ -263,7 +267,10 @@ export class NextCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: NextTaskResult): void {
-		printJson(result);
+		printJson({
+			...result,
+			task: withFullSubtaskIds(result.task)
+		});
 	}
 
 	/**

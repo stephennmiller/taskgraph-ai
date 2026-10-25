@@ -382,13 +382,14 @@ describe('--json contract', () => {
 					st.parentId
 				])
 			).toEqual([
-				['1', '2'],
-				['2', '2']
+				['2.1', '2'],
+				['2.2', '2']
 			]);
 		}
 	});
 
 	// #311: show gave numeric ids where list and next give strings
+	// #661: and a subtask's bare "1", where next gives "2.1"
 	it('show, list and next give the same ids', {
 		timeout: spawnTimeout(4)
 	}, () => {
@@ -404,13 +405,17 @@ describe('--json contract', () => {
 			dependencies: t.dependencies,
 			subtaskIds: t.subtasks.map((st) => st.id)
 		});
-		const expected = { id: '2', dependencies: ['1'], subtaskIds: ['1', '2'] };
+		const expected = {
+			id: '2',
+			dependencies: ['1'],
+			subtaskIds: ['2.1', '2.2']
+		};
 
 		expect(ids(listed)).toEqual(expected);
 		expect(ids(json(['next', '--format', 'json']).task)).toEqual(expected);
 		expect(ids(json(['show', '2', '--json']).task)).toEqual(expected);
 		expect(json(['show', '2.1', '--json']).task).toMatchObject({
-			id: '1',
+			id: '2.1',
 			parentId: '2'
 		});
 	});

@@ -10,7 +10,8 @@ import {
 	DEFAULT_TASK_FIELDS,
 	type TaskStatus,
 	parseTaskFields,
-	selectTaskFields
+	selectTaskFields,
+	withFullSubtaskIds
 } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 
@@ -121,7 +122,10 @@ export function registerGetTasksTool(server: FastMCP) {
 						result: {
 							success: true,
 							data: {
-								tasks: selectTaskFields(tasks, selected),
+								tasks: selectTaskFields(
+									tasks.map(withFullSubtaskIds),
+									selected
+								),
 								filter: status || 'all',
 								stats: {
 									total: totalTasks,

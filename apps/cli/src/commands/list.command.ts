@@ -18,7 +18,8 @@ import {
 	TASK_STATUSES,
 	type TaskStatus,
 	type TmCore,
-	type WatchSubscription
+	type WatchSubscription,
+	withFullSubtaskIds
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -516,7 +517,7 @@ export class ListTasksCommand extends Command {
 	 */
 	private displayJson(data: ListTasksResult): void {
 		printJson({
-			tasks: data.tasks,
+			tasks: data.tasks.map(withFullSubtaskIds),
 			metadata: {
 				total: data.total,
 				filtered: data.filtered,
