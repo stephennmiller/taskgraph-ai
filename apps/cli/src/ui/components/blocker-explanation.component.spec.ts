@@ -155,6 +155,38 @@ describe('renderBlockerExplanation', () => {
 		);
 	});
 
+	it('names in-progress and review tasks instead of calling them ready', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation(
+					[
+						node('2', [], { kind: 'in-progress', status: 'in-progress' }),
+						node('3', [], { kind: 'review', status: 'review' })
+					],
+					{
+						rootCauses: [
+							{
+								id: '2',
+								title: 'Task 2',
+								status: 'in-progress',
+								kind: 'in-progress'
+							},
+							{ id: '3', title: 'Task 3', status: 'review', kind: 'review' }
+						]
+					}
+				)
+			)
+		);
+
+		expect(lines).toContain('├─ ▶ 2  Task 2  ← in progress');
+		expect(lines).toContain('└─ ? 3  Task 3  ← in review');
+		expect(lines).toContain("  Finish 2 (Task 2): it's in progress.");
+		expect(lines).toContain(
+			'  3 is in review. Close it with: taskgraph set-status --id=3 --status=done'
+		);
+		expect(lines.join('\n')).not.toContain('ready');
+	});
+
 	it('shows where a cycle closes and how to break it', () => {
 		const lines = plain(
 			renderBlockerExplanation(

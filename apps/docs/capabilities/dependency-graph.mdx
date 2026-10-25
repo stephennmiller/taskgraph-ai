@@ -140,7 +140,7 @@ To unblock:
 
 Each step wraps to the terminal width, continuing under a deeper indent.
 
-A chain ends at one of four root causes: `ready` (unfinished, nothing in its way), `stalled` (`deferred` or `blocked`), `missing` (the ID matches no task) or `cycle` (it depends on itself through the chain). The JSON has `id`, `title`, `status`, `blocked`, `tag`, a nested `blockers` tree and `rootCauses`; see [`why`](/capabilities/cli-viewing-commands#explain-why-a-task-is-blocked) for the full shape.
+A chain ends at one of six root causes: `ready` (pending, nothing in its way), `in-progress` (someone is on it), `review` (waiting to be set to `done`), `stalled` (`deferred` or `blocked`), `missing` (the ID matches no task) or `cycle` (it depends on itself through the chain). The JSON has `id`, `title`, `status`, `blocked`, `tag`, a nested `blockers` tree and `rootCauses`; see [`why`](/capabilities/cli-viewing-commands#explain-why-a-task-is-blocked) for the full shape.
 
 A subtask also waits on what its parent waits on. `why` draws those blockers under the parent, marked `← parent`:
 
