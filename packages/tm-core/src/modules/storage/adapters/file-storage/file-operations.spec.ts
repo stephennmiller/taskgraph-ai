@@ -172,6 +172,43 @@ describe('FileOperations', () => {
 			expect(result.tasks[0].subtasks).toHaveLength(1);
 			expect(result.metadata.tags).toEqual(['tag1', 'tag2']);
 		});
+
+		it('removes the file it created when the modifier throws (#667)', async () => {
+			const newFilePath = path.join(tempDir, 'new-file.json');
+
+			await expect(
+				fileOps.modifyJson(newFilePath, () => {
+					throw new Error('Task 1 not found');
+				})
+			).rejects.toThrow('Task 1 not found');
+
+			expect(fsSync.existsSync(newFilePath)).toBe(false);
+		});
+
+		it('keeps a created file that no longer holds the placeholder', async () => {
+			const newFilePath = path.join(tempDir, 'new-file.json');
+
+			await expect(
+				fileOps.modifyJson(newFilePath, () => {
+					fsSync.writeFileSync(newFilePath, '{"tasks":[]}');
+					throw new Error('boom');
+				})
+			).rejects.toThrow('boom');
+
+			expect(fsSync.readFileSync(newFilePath, 'utf-8')).toBe('{"tasks":[]}');
+		});
+
+		it('keeps an existing {} file when the modifier throws', async () => {
+			await fs.writeFile(testFilePath, '{}');
+
+			await expect(
+				fileOps.modifyJson(testFilePath, () => {
+					throw new Error('boom');
+				})
+			).rejects.toThrow('boom');
+
+			expect(fsSync.readFileSync(testFilePath, 'utf-8')).toBe('{}');
+		});
 	});
 
 	describe('concurrent operations', () => {
