@@ -244,4 +244,24 @@ describe('set-status command', () => {
 			checked: true
 		});
 	});
+
+	it('sets the status of a task in a non-active tag with --tag', () => {
+		writeTasks({
+			...createTasksFile({
+				tasks: [createTask({ id: 6, title: 'Master task' })]
+			}),
+			'feature-x': createTasksFile({
+				tasks: [createTask({ id: 6, title: 'Feature task' })]
+			}).master
+		});
+
+		execSync(`node "${binPath}" set-status 6 in-progress --tag feature-x`, {
+			stdio: 'pipe',
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+		});
+
+		const tasks = readTasks();
+		expect(tasks['feature-x'].tasks[0].status).toBe('in-progress');
+		expect(tasks.master.tasks[0].status).toBe('pending');
+	});
 });
