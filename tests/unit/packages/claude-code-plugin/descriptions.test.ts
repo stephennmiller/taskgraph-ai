@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { load } from 'js-yaml';
 
 const pluginDir = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
@@ -24,6 +25,24 @@ function description(file: string): string {
 const commandFiles = fs
 	.readdirSync(path.join(pluginDir, 'commands'))
 	.filter((file) => file.endsWith('.md'));
+
+const frontMatterFiles = [
+	...commandFiles.map((file) => `commands/${file}`),
+	...fs.readdirSync(path.join(pluginDir, 'agents')).map((f) => `agents/${f}`),
+	'skills/taskgraph/SKILL.md',
+	'skills/research/SKILL.md'
+];
+
+// Claude Code reads front matter leniently, but the plugin directory's scanner
+// is strict YAML: an unquoted `: ` in a value made it reject both agents
+describe('plugin front matter', () => {
+	it.each(frontMatterFiles)('%s is valid YAML', (file) => {
+		const text = fs.readFileSync(path.join(pluginDir, file), 'utf8');
+		const front = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+
+		expect(load(front)).toHaveProperty('description');
+	});
+});
 
 describe('plugin command descriptions', () => {
 	it.each(commandFiles)('%s leads with TaskGraph and stays short', (file) => {
