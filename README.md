@@ -68,7 +68,7 @@ TaskGraph turns a product requirements document (PRD) into a dependency-aware ta
 
 ## Contents
 
-[Set up in Claude Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) · [Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models) · [Upgrading](#upgrading) · [Troubleshooting](#troubleshooting) · [Docs](#documentation) · [Licensing](#licensing)
+[Set up in Claude Code](#set-up-in-claude-code) · [How to use it](#how-to-use-it) · [Commands](#commands) · [MCP tool tiers](#mcp-tool-tiers) · [Models](#models) · [Upgrading](#upgrading) · [Troubleshooting](#troubleshooting) · [Privacy](#privacy) · [Docs](#documentation) · [Licensing](#licensing)
 
 ## Set up in Claude Code
 
@@ -290,6 +290,28 @@ Full details are in the [upgrade guide](https://taskgraph-ai.com/upgrading).
 - **Commands behave oddly after `git pull`:** run `npm run build` again; the CLI and server run from `dist/`.
 - **Task files look out of sync:** run `taskgraph fix-dependencies`, or ask Claude to fix dependencies.
 - Don't hand-edit `.taskgraph/tasks/tasks.json` or `.taskgraph/config.json`; use the commands.
+
+## Privacy
+
+TaskGraph has no account, server or telemetry. Tasks stay in `.taskgraph/` in
+your project. Data leaves your machine only in these cases:
+
+- AI commands go through your own Claude Code to Anthropic, with the task text,
+  a short project summary and the project files Claude reads. `loop` runs
+  Claude Code with permission prompts off, so it can send anything your Claude
+  Code can.
+- The CLI checks `registry.npmjs.org` for updates, fetches release notes from
+  `raw.githubusercontent.com` and installs updates from npm
+  (`TASKGRAPH_SKIP_AUTO_UPDATE=1` turns this off).
+- `loop --parallel --container` installs TaskGraph from npm inside the
+  container when its image doesn't have it.
+- The research skill and command search and fetch web pages.
+- GitHub sync reads and writes GitHub Issues through your `gh` CLI.
+
+The plugin's SessionStart hook adds the task in progress, the tasks ready next
+and TaskGraph's workflow rules to Claude's context, all printed by your locally
+installed `taskgraph prime`. The plugin's hooks make no network calls. Details:
+[taskgraph-ai.com/privacy](https://taskgraph-ai.com/privacy).
 
 ## Documentation
 
