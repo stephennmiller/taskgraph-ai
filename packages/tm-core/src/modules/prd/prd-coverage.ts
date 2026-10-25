@@ -214,9 +214,13 @@ export function readPrdSection(
 	const end = sections.findIndex(
 		(s, i) => i > start && s.level <= sections[start].level
 	);
-	return sections
-		.slice(start, end === -1 ? undefined : end)
-		.map((s) => s.text)
+	return content
+		.replace(/\r\n?/g, '\n')
+		.split('\n')
+		.slice(
+			sections[start].line - 1,
+			end === -1 ? undefined : sections[end].line - 1
+		)
 		.join('\n')
 		.trimEnd();
 }

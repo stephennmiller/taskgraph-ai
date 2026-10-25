@@ -220,7 +220,7 @@ describe('readPrdSection', () => {
 		const text = readPrdSection('docs/prd.md#authentication', project());
 
 		expect(text?.split('\n')[0]).toBe('## Authentication');
-		expect(text).toContain('### Sign-up');
+		expect(text).toContain('\n\n### Sign-up');
 		expect(text).toContain('### Password reset');
 		expect(text).not.toContain('## Bookmarks API');
 	});
