@@ -204,6 +204,17 @@ describe('tasks.updateSubtask', () => {
 		expect(result.subtask.details).toBe(details);
 	});
 
+	// #700: the reply gave the stored [1], which reads as task 1
+	it('replies with full-ID dependencies and keeps the stored form', async () => {
+		const result = await tmCore.tasks.updateSubtask({
+			id: '2.2',
+			prompt: 'Aliases'
+		});
+
+		expect(result.subtask.dependencies).toEqual(['2.1']);
+		expect(subtaskIn(readFile(), 2, 2).dependencies).toEqual([1]);
+	});
+
 	it.each([
 		['', 'Subtask ID cannot be empty.'],
 		['invalid', 'Invalid subtask ID format: invalid'],
