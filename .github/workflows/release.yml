@@ -41,7 +41,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Update npm for trusted publishing
-        run: npm install -g npm@11.21.0
+        run: npm install -g npm@12.2.1
 
       - name: Cache node_modules
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
