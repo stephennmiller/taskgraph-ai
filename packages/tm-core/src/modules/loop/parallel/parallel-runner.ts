@@ -36,6 +36,10 @@ import {
 	taskWorktreePath,
 	worktreesDir
 } from './parallel-plan.js';
+import {
+	loopIterationTimeoutMs,
+	timeoutMessage
+} from '../services/iteration-limits.js';
 import { TaskWorktrees } from './task-worktrees.js';
 import type {
 	ParallelLoopOptions,
@@ -146,13 +150,7 @@ export class ParallelLoopRunner {
 			workers?.stop(runningContainers());
 			for (const r of running) {
 				if (r.task.state !== 'running' || !r.child) continue;
-				this.kill(r.child, 'SIGTERM');
-				const timer = setTimeout(
-					() => r.child && this.kill(r.child, 'SIGKILL'),
-					options.killGraceMs ?? 5000
-				);
-				timer.unref();
-				killTimers.push(timer);
+				killTimers.push(this.terminate(r.child, options.killGraceMs ?? 5000));
 			}
 		};
 		signal?.addEventListener('abort', stopAll, { once: true });
@@ -226,7 +224,8 @@ export class ParallelLoopRunner {
 						args,
 						spawner,
 						cwd,
-						isAborted: () => aborted
+						isAborted: () => aborted,
+						killGraceMs: options.killGraceMs ?? 5000
 					});
 					callbacks?.onTaskStart?.({ ...entry.task });
 					entry.exited = entry.exited.then(() =>
@@ -273,10 +272,14 @@ export class ParallelLoopRunner {
 			spawner: NonNullable<ParallelLoopOptions['spawner']>;
 			cwd: string;
 			isAborted: () => boolean;
+			killGraceMs: number;
 		}
 	): Promise<void> {
 		const { task } = entry;
 		const log = openLog(task.logFile);
+		const timeout = loopIterationTimeoutMs();
+		const timers: NodeJS.Timeout[] = [];
+		let timedOut = false;
 		return new Promise<void>((resolve) => {
 			let settled = false;
 			const done = (
@@ -286,6 +289,7 @@ export class ParallelLoopRunner {
 			) => {
 				if (settled) return;
 				settled = true;
+				for (const timer of timers) clearTimeout(timer);
 				task.exitCode = exitCode;
 				this.finish(entry, state, error);
 				resolve();
@@ -307,11 +311,19 @@ export class ParallelLoopRunner {
 					detached: process.platform !== 'win32'
 				});
 				entry.child = child;
+				// A hung worker would hold up the whole run: stop it like an abort does
+				timers.push(
+					setTimeout(() => {
+						timedOut = true;
+						timers.push(this.terminate(child, ctx.killGraceMs));
+					}, timeout)
+				);
 				child.once('error', (error: NodeJS.ErrnoException) =>
 					done('failed', describeSpawnError(error, ctx.command))
 				);
 				child.once('close', (code, sig) => {
 					if (ctx.isAborted()) return done('stopped', undefined, code);
+					if (timedOut) return done('failed', timeoutMessage(timeout), code);
 					if (code === 0) return done('done', undefined, 0);
 					done(
 						'failed',
@@ -338,6 +350,14 @@ export class ParallelLoopRunner {
 		entry.task.state = state;
 		entry.task.durationMs = Date.now() - entry.task.startedAt;
 		if (error) entry.task.error = error;
+	}
+
+	/** SIGTERM now, SIGKILL after the grace period; returns the SIGKILL timer */
+	private terminate(child: ChildProcess, graceMs: number): NodeJS.Timeout {
+		this.kill(child, 'SIGTERM');
+		const timer = setTimeout(() => this.kill(child, 'SIGKILL'), graceMs);
+		timer.unref();
+		return timer;
 	}
 
 	/** Signal the child's process group (or just the child on Windows) */

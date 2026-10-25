@@ -68,7 +68,7 @@ TaskGraph gives up on an AI request that has not answered after 10 minutes. When
 
 ## Loop iteration timeout
 
-`taskgraph loop` stops a Claude Code run that has not finished after 60 minutes and counts it as a failed iteration; three failed iterations in a row end the loop. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. `loop --parallel` doesn't use it.
+`taskgraph loop` stops a Claude Code run that has not finished after 60 minutes and counts it as a failed iteration; three failed iterations in a row end the loop. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. With `loop --parallel` the same limit applies to each task's Claude Code process: one that runs past it is stopped and marked failed, its worktree is kept and its claim released.
 
 ## Tagged task lists
 
