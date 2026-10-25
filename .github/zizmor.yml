@@ -41,3 +41,6 @@ rules:
       - release.yml:44
       # Same reason, in the job that stages the npm release.
       - version-bump.yml:138
+      # CI installs and packs with the same npm as release, at the same exact version.
+      - ci.yml:41
+      - ci.yml:439
