@@ -243,6 +243,23 @@ describe('show command', () => {
 		expect(result.output).toContain(title);
 		expect(result.output).toContain(priority);
 	});
+
+	it('shows a task from a non-active tag with --tag', () => {
+		writeTasks({
+			...createTasksFile({
+				tasks: [createTask({ id: 1, title: 'Master task' })]
+			}),
+			'feature-x': createTasksFile({
+				tasks: [createTask({ id: 6, title: 'Feature task' })]
+			}).master
+		});
+
+		const { output, exitCode } = runShow('6 --tag feature-x');
+
+		expect(exitCode).toBe(0);
+		expect(output).toContain('Feature task');
+		expect(output).toContain('feature-x');
+	});
 });
 
 describe('show command output', () => {
