@@ -28,6 +28,8 @@ class InMemoryGitHub implements GitHubClient {
 	writes = 0;
 	/** Throw on the Nth createIssue call (1-based) */
 	failCreateOn?: number;
+	/** Runs while an issue is being created, as another session would */
+	duringCreate?: () => Promise<unknown>;
 	private creates = 0;
 
 	async getRepo(): Promise<RepoInfo> {
@@ -41,6 +43,7 @@ class InMemoryGitHub implements GitHubClient {
 	async createIssue(input: CreateIssueInput): Promise<RemoteIssue> {
 		this.creates++;
 		if (this.creates === this.failCreateOn) throw new Error('network down');
+		await this.duringCreate?.();
 		this.writes++;
 		const number = this.issues.length + 1;
 		const issue: RemoteIssue = {
@@ -188,13 +191,29 @@ describe('GitHub push - integration', () => {
 	it('recovers a lost link from the marker instead of duplicating', async () => {
 		await setup([makeTask('1')]);
 		await push();
-		await tmCore.tasks.update('1', { metadata: {} }, 'master');
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
 
 		const rerun = await push();
 
 		expect(rerun.created).toBe(0);
 		expect(github.issues).toHaveLength(1);
 		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(1);
+	});
+
+	it('keeps a claim made while the issue was being created (#655)', async () => {
+		await setup([makeTask('1', { metadata: { source: 'prd' } })]);
+		github.duringCreate = () =>
+			tmCore.tasks.claimNext({ tag: 'master', claimant: 'session-b' });
+
+		await push();
+
+		const [task] = await readTasks();
+		expect(task.status).toBe('in-progress');
+		expect(task.metadata).toMatchObject({
+			source: 'prd',
+			claimedBy: 'session-b',
+			github: { issueNumber: 1 }
+		});
 	});
 
 	it('does not touch metadata keys that belong to the user', async () => {

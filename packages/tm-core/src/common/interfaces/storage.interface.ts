@@ -119,19 +119,6 @@ export interface IStorage {
 	appendTasks(tasks: Task[], tag?: string): Promise<Task[]>;
 
 	/**
-	 * Update a specific task by ID (direct structural update)
-	 * @param taskId - ID of the task to update
-	 * @param updates - Partial task object with fields to update
-	 * @param tag - Optional tag context for the task
-	 * @returns Promise that resolves when update is complete
-	 */
-	updateTask(
-		taskId: string,
-		updates: Partial<Task>,
-		tag?: string
-	): Promise<void>;
-
-	/**
 	 * Update task or subtask status by ID
 	 * @param taskId - ID of the task or subtask (e.g., "1" or "1.2")
 	 * @param newStatus - New status to set
