@@ -14,6 +14,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
+import { assertTaskStatus } from '../../../common/constants/index.js';
 import type { Subtask, Task } from '../../../common/types/index.js';
 import { assignMetadata } from '../../dependencies/dependency-provenance.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
@@ -155,12 +156,14 @@ export function addSubtaskIn(
 
 	if ('subtask' in source) {
 		const data = source.subtask;
+		const status = data.status || 'pending';
+		assertTaskStatus(status, { parentId, newStatus: status });
 		const subtask: Item = {
 			id: newSubtaskId,
 			title: data.title,
 			description: data.description || '',
 			details: data.details || '',
-			status: data.status || 'pending',
+			status,
 			dependencies: data.dependencies || [],
 			parentTaskId: parentIdNum
 		};

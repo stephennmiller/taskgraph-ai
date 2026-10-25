@@ -290,6 +290,23 @@ describe('tasks.scope', () => {
 		]);
 	});
 
+	it('keeps a note added to the task during the AI call, after the new details (#666)', async () => {
+		let added = '';
+		generateObject.mockImplementationOnce(async () => {
+			added = (await tmCore.tasks.addNote('3', 'found X')).addedAt;
+			return adjustAnswer() as any;
+		});
+		const onWarning = vi.fn();
+
+		await tmCore.tasks.scope({ ids: '3', direction: 'up' }, { onWarning });
+
+		expect(readTask().details).toBe(
+			`Adjusted details\n<info added on ${added}>\nfound X\n</info added on ${added}>`
+		);
+		expect(readTask().title).toBe('Adjusted title');
+		expect(onWarning).not.toHaveBeenCalled();
+	});
+
 	it('keeps a completed subtask and rewrites one with no status', async () => {
 		const task = fixtureTask();
 		task.subtasks = [

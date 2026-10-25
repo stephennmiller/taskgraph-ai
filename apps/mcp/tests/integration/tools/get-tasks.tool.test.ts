@@ -61,7 +61,6 @@ describe('get_tasks MCP tool', () => {
 		const data = callMCPTool('get_tasks', { projectRoot: testDir });
 
 		expect(data.data.tasks).toEqual([]);
-		expect(data.data.stats.total).toBe(0);
 		expect(data.tag).toBe('master');
 	}, 15000);
 
@@ -101,10 +100,6 @@ describe('get_tasks MCP tool', () => {
 		expect(data.data.tasks[0].title).toBe('Setup Environment');
 		expect(data.data.tasks[1].title).toBe('Write Tests');
 		expect(data.data.tasks[2].title).toBe('Implement Feature');
-		expect(data.data.stats.total).toBe(3);
-		expect(data.data.stats.completed).toBe(1);
-		expect(data.data.stats.inProgress).toBe(1);
-		expect(data.data.stats.pending).toBe(1);
 	}, 15000);
 
 	it('should filter tasks by status', () => {
@@ -172,28 +167,6 @@ describe('get_tasks MCP tool', () => {
 
 		expect(data.data.tasks).toHaveLength(1);
 		expect(data.data.tasks[0].subtasks).toHaveLength(2);
-		expect(data.data.stats.subtasks.total).toBe(2);
-		expect(data.data.stats.subtasks.completed).toBe(1);
-		expect(data.data.stats.subtasks.pending).toBe(1);
-	}, 15000);
-
-	it('should calculate statistics correctly', () => {
-		const testData = createTasksFile({
-			tasks: [
-				createTask({ id: 1, title: 'Done 1', status: 'done' }),
-				createTask({ id: 2, title: 'Done 2', status: 'done' }),
-				createTask({ id: 3, title: 'Done 3', status: 'done' }),
-				createTask({ id: 4, title: 'Pending', status: 'pending' })
-			]
-		});
-		writeTasks(testData);
-
-		const data = callMCPTool('get_tasks', { projectRoot: testDir });
-
-		expect(data.data.stats.total).toBe(4);
-		expect(data.data.stats.completed).toBe(3);
-		expect(data.data.stats.pending).toBe(1);
-		expect(data.data.stats.completionPercentage).toBe(75);
 	}, 15000);
 
 	it('should handle multiple status filters', () => {

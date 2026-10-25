@@ -70,6 +70,42 @@ describe('add-subtask and move through tasks', () => {
 		expect(idsIn('master')).toEqual(['1', '8', '9']);
 	});
 
+	it("moves dependencies on the moved task's subtasks and their parentId (#654)", async () => {
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({
+				master: {
+					tasks: [
+						{
+							id: '1',
+							title: 'Set up',
+							dependencies: [],
+							subtasks: [
+								{ id: 1, parentId: '1', title: 'A', dependencies: [] },
+								{ id: 2, parentId: '1', title: 'B', dependencies: [1] }
+							]
+						},
+						{ id: '2', title: 'Parser', dependencies: ['1.1'], subtasks: [] },
+						{ id: '3', title: 'Report', dependencies: ['1.2'], subtasks: [] }
+					],
+					metadata: {}
+				}
+			})
+		);
+
+		await tmCore.tasks.move('1', '9');
+
+		const tasks = readFile().master.tasks;
+		const byId = (id: string) =>
+			tasks.find((t: { id: unknown }) => String(t.id) === id);
+		expect(byId('2').dependencies).toEqual(['9.1']);
+		expect(byId('3').dependencies).toEqual(['9.2']);
+		expect(byId('9').subtasks).toMatchObject([
+			{ id: 1, parentId: '9', dependencies: [] },
+			{ id: 2, parentId: '9', dependencies: [1] }
+		]);
+	});
+
 	it('refuses a tag the file does not have instead of creating it', async () => {
 		const before = fs.readFileSync(tasksPath, 'utf8');
 

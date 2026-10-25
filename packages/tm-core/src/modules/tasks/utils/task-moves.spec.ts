@@ -64,6 +64,15 @@ describe('addSubtaskIn', () => {
 		expect(tasks[1].subtasks).toHaveLength(3);
 	});
 
+	it('refuses a status set-status would refuse, and adds nothing', () => {
+		const tasks = sample();
+
+		expect(() =>
+			addSubtaskIn(tasks, '2', { subtask: { title: 'Sub', status: 'bogus' } })
+		).toThrow('"bogus" isn\'t a status');
+		expect(tasks[1].subtasks).toHaveLength(2);
+	});
+
 	it('turns a task into a subtask and repoints what depended on it', () => {
 		const tasks = sample();
 

@@ -73,7 +73,7 @@ describe('FileStorage concurrent writes - Integration Tests', () => {
 
 		await Promise.all([
 			storage.deleteTask('2'),
-			storage.updateTask('1', { title: 'Renamed' })
+			storage.modifyTask('1', () => ({ title: 'Renamed' }))
 		]);
 
 		const tasks = await storage.loadTasks();

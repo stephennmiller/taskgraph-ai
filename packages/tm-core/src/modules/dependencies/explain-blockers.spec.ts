@@ -141,7 +141,7 @@ describe('explainBlockers', () => {
 		]);
 	});
 
-	it('treats in-progress and review dependencies as ready', () => {
+	it('names in-progress and review dependencies by their own kind, not ready', () => {
 		const result = explainBlockers(
 			[
 				task('1', [], 'in-progress'),
@@ -151,7 +151,11 @@ describe('explainBlockers', () => {
 			'3'
 		);
 
-		expect(shape(result.blockers)).toEqual([['1:ready'], ['2:ready']]);
+		expect(shape(result.blockers)).toEqual([['1:in-progress'], ['2:review']]);
+		expect(result.rootCauses.map((c) => c.kind)).toEqual([
+			'in-progress',
+			'review'
+		]);
 	});
 
 	it('stops at a dependency cycle and reports its members', () => {

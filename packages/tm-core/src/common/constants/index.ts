@@ -8,6 +8,7 @@ import type {
 	TaskPriority,
 	TaskStatus
 } from '../types/index.js';
+import { ERROR_CODES, TaskGraphError } from '../errors/taskgraph-error.js';
 
 // Import from root package.json (monorepo root) for version info
 import packageJson from '../../../../../package.json' with { type: 'json' };
@@ -40,6 +41,24 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
 	'blocked',
 	'review'
 ] as const;
+
+/**
+ * Throws a VALIDATION_ERROR unless `status` is one of TASK_STATUSES.
+ * TaskStatus is compile-time only; MCP, GitHub sync and JS callers pass raw strings
+ */
+export function assertTaskStatus(
+	status: unknown,
+	details?: Record<string, unknown>
+): asserts status is TaskStatus {
+	if (!TASK_STATUSES.includes(status as TaskStatus)) {
+		throw new TaskGraphError(
+			// JSON.stringify escapes control characters a raw string could carry
+			`${JSON.stringify(status)} isn't a status. Use one of: ${TASK_STATUSES.join(', ')}`,
+			ERROR_CODES.VALIDATION_ERROR,
+			details
+		);
+	}
+}
 
 /**
  * Terminal complete statuses - tasks that are finished and satisfy dependencies

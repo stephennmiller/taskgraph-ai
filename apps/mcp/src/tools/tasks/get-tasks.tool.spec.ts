@@ -109,8 +109,7 @@ describe('get_tasks', () => {
 			priority: 'medium',
 			dependencies: ['1']
 		});
-		expect(data.stats.total).toBe(40);
-		expect(data.stats.subtasks.total).toBe(80);
+		expect(data).not.toHaveProperty('stats');
 	});
 
 	it('adds the fields asked for', async () => {
@@ -148,6 +147,19 @@ describe('get_tasks', () => {
 		expect(tasks.list).toHaveBeenCalledWith(
 			expect.objectContaining({ filter: { status: ['pending', 'review'] } })
 		);
+	});
+
+	it('refuses an unknown status, naming the valid ones', async () => {
+		const result = await register().execute(
+			{ projectRoot: project, status: 'bogus' },
+			ctx
+		);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain(
+			'"bogus" isn\'t a status. Use one of: pending'
+		);
+		expect(tasks.list).not.toHaveBeenCalled();
 	});
 
 	it('names the valid fields when one is unknown', async () => {

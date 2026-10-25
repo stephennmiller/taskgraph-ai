@@ -13,7 +13,7 @@ import type {
 import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
 import { appendNote } from '../utils/notes.js';
-import { TASK_STATUSES } from '../../../common/constants/index.js';
+import { assertTaskStatus } from '../../../common/constants/index.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -89,56 +89,6 @@ export class TaskService extends TaskReader {
 	 */
 	async setActiveTag(tag: string): Promise<void> {
 		await this.configManager.setActiveTag(tag);
-	}
-
-	/**
-	 * Update a task with new data (direct structural update)
-	 * @param taskId - Task ID (supports numeric, alphanumeric, and subtask IDs)
-	 * @param updates - Partial task object with fields to update
-	 * @param tag - Optional tag context
-	 */
-	async updateTask(
-		taskId: string | number,
-		updates: Partial<Task>,
-		tag?: string
-	): Promise<void> {
-		// Ensure we have storage
-		if (!this.storage) {
-			throw new TaskGraphError(
-				'Storage not initialized',
-				ERROR_CODES.STORAGE_ERROR
-			);
-		}
-
-		// Auto-initialize if needed
-		if (!this.initialized) {
-			await this.initialize();
-		}
-
-		const activeTag = await this.resolveTag(tag);
-		const taskIdStr = String(taskId);
-
-		try {
-			// Direct update - no AI processing
-			await this.storage.updateTask(taskIdStr, updates, activeTag);
-		} catch (error) {
-			// Re-throw all TaskGraphErrors without wrapping
-			if (error instanceof TaskGraphError) {
-				throw error;
-			}
-
-			throw new TaskGraphError(
-				`Failed to update task ${taskId}`,
-				ERROR_CODES.STORAGE_ERROR,
-				{
-					operation: 'updateTask',
-					resource: 'task',
-					taskId: taskIdStr,
-					tag: activeTag
-				},
-				error as Error
-			);
-		}
 	}
 
 	/**
@@ -245,15 +195,7 @@ export class TaskService extends TaskReader {
 		newStatus: TaskStatus;
 		taskId: string;
 	}> {
-		// TaskStatus is compile-time only; MCP, GitHub sync and JS callers pass raw strings
-		if (!TASK_STATUSES.includes(newStatus)) {
-			throw new TaskGraphError(
-				// JSON.stringify escapes control characters a raw string could carry
-				`${JSON.stringify(newStatus)} isn't a status. Use one of: ${TASK_STATUSES.join(', ')}`,
-				ERROR_CODES.VALIDATION_ERROR,
-				{ taskId: String(taskId), newStatus }
-			);
-		}
+		assertTaskStatus(newStatus, { taskId: String(taskId), newStatus });
 
 		// Ensure we have storage
 		if (!this.storage) {

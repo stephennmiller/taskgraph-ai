@@ -44,6 +44,7 @@ export interface SetStatusCommandOptions {
 	format?: 'text' | 'json';
 	silent?: boolean;
 	project?: string;
+	tag?: string;
 	/** Checklist numbers to check off, as typed ("2", "2,4") */
 	check?: string[];
 	/** Checklist numbers to clear again */
@@ -107,6 +108,7 @@ export class SetStatusCommand extends Command {
 				collect
 			)
 			.option('--force', 'Mark done even with unchecked criteria')
+			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
 			.addOption(jsonOption())
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
@@ -214,10 +216,11 @@ export class SetStatusCommand extends Command {
 				try {
 					checklist = {
 						taskId: taskIds[0],
-						...(await this.tmCore.tasks.updateChecklist(taskIds[0], {
-							check,
-							uncheck
-						}))
+						...(await this.tmCore.tasks.updateChecklist(
+							taskIds[0],
+							{ check, uncheck },
+							options.tag
+						))
 					};
 				} catch (error: any) {
 					if (options.format === 'json') {
@@ -252,7 +255,7 @@ export class SetStatusCommand extends Command {
 					const result = await this.tmCore.tasks.updateStatus(
 						taskId,
 						options.status as TaskStatus,
-						undefined,
+						options.tag,
 						{ force: options.force }
 					);
 					updatedTasks.push({

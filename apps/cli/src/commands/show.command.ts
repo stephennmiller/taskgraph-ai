@@ -25,6 +25,7 @@ export interface ShowCommandOptions {
 	json?: boolean;
 	silent?: boolean;
 	project?: string;
+	tag?: string;
 }
 
 /**
@@ -69,6 +70,7 @@ export class ShowCommand extends Command {
 				'Task ID(s) to show (comma-separated for multiple)'
 			)
 			.option('-s, --status <status>', 'Filter subtasks by status')
+			.option('-t, --tag <tag>', 'Use a specific tag')
 			.option('-f, --format <format>', 'Output format (text, json)', 'text')
 			.addOption(jsonOption())
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
@@ -171,7 +173,7 @@ export class ShowCommand extends Command {
 	 */
 	private async getSingleTask(
 		taskId: string,
-		_options: ShowCommandOptions
+		options: ShowCommandOptions
 	): Promise<ShowTaskResult> {
 		if (!this.tmCore) {
 			throw new Error('TmCore not initialized');
@@ -179,10 +181,10 @@ export class ShowCommand extends Command {
 
 		// Get the task
 		this.requestedId = taskId;
-		const result = await this.tmCore.tasks.get(taskId);
+		const result = await this.tmCore.tasks.get(taskId, options.tag);
 
 		return {
-			task: await this.withPrdSection(taskId, result.task),
+			task: await this.withPrdSection(taskId, result.task, options.tag),
 			found: result.task !== null,
 			originalTaskId: result.isSubtask ? taskId : undefined
 		};
@@ -191,10 +193,11 @@ export class ShowCommand extends Command {
 	/** The task with its PRD section; null stays null, so a missing subtask gets no parent section */
 	private async withPrdSection(
 		taskId: string,
-		task: Task | Subtask | null
+		task: Task | Subtask | null,
+		tag?: string
 	): Promise<ShownTask | null> {
 		if (!task || !this.tmCore) return task;
-		const prdSection = await this.tmCore.tasks.getPrdSection(taskId);
+		const prdSection = await this.tmCore.tasks.getPrdSection(taskId, tag);
 		return prdSection ? { ...task, prdSection } : task;
 	}
 
@@ -203,7 +206,7 @@ export class ShowCommand extends Command {
 	 */
 	private async getMultipleTasks(
 		taskIds: string[],
-		_options: ShowCommandOptions
+		options: ShowCommandOptions
 	): Promise<ShowMultipleTasksResult> {
 		if (!this.tmCore) {
 			throw new Error('TmCore not initialized');
@@ -214,8 +217,8 @@ export class ShowCommand extends Command {
 
 		// Get each task individually
 		for (const taskId of taskIds) {
-			const result = await this.tmCore.tasks.get(taskId);
-			const task = await this.withPrdSection(taskId, result.task);
+			const result = await this.tmCore.tasks.get(taskId, options.tag);
+			const task = await this.withPrdSection(taskId, result.task, options.tag);
 			if (task) {
 				tasks.push(task);
 			} else {
@@ -288,7 +291,8 @@ export class ShowCommand extends Command {
 			return;
 		}
 
-		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
+		const activeTag =
+			options.tag || this.tmCore?.config.getActiveTag() || 'master';
 		const headerShown = displayCommandHeader({
 			tag: activeTag,
 			projectRoot: this.tmCore?.projectPath
@@ -313,7 +317,7 @@ export class ShowCommand extends Command {
 	 */
 	private displayMultipleTasks(
 		result: ShowMultipleTasksResult,
-		_options: ShowCommandOptions
+		options: ShowCommandOptions
 	): void {
 		// Every ID missed: one error, as for a single ID, not a warning and a box
 		if (result.tasks.length === 0) {
@@ -325,7 +329,8 @@ export class ShowCommand extends Command {
 			return;
 		}
 
-		const activeTag = this.tmCore?.config.getActiveTag() || 'master';
+		const activeTag =
+			options.tag || this.tmCore?.config.getActiveTag() || 'master';
 		// A blank line separates each block from the one above it, but nothing
 		// comes before the first block
 		let printed = displayCommandHeader({

@@ -26,12 +26,20 @@ import {
 
 /**
  * Why a chain of blockers ends at a task:
- * - `ready`: unfinished but nothing is in its way; this is work to do
+ * - `ready`: pending with nothing in its way; this is work to do
+ * - `in-progress`: someone is already working on it
+ * - `review`: finished work waiting to be accepted (set it to done)
  * - `stalled`: deferred or blocked; it won't move until someone decides
  * - `missing`: the ID matches no task
  * - `cycle`: it depends, through the chain above it, on itself
  */
-export type BlockerKind = 'ready' | 'stalled' | 'missing' | 'cycle';
+export type BlockerKind =
+	| 'ready'
+	| 'in-progress'
+	| 'review'
+	| 'stalled'
+	| 'missing'
+	| 'cycle';
 
 export interface BlockerNode {
 	id: string;
@@ -82,7 +90,13 @@ export interface BlockerExplanation {
 	rootCauses: BlockerRootCause[];
 }
 
-const STALLED: TaskStatus[] = ['deferred', 'blocked'];
+/** The kind of a chain end with this status; any other status is `ready` */
+const END_KINDS = new Map<string, BlockerKind>([
+	['in-progress', 'in-progress'],
+	['review', 'review'],
+	['deferred', 'stalled'],
+	['blocked', 'stalled']
+]);
 
 interface Frame {
 	node: DependencyGraphNode;
@@ -282,9 +296,7 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		onPath.delete(node.id);
 		const kind: BlockerKind | undefined = below.length
 			? undefined
-			: STALLED.includes(node.status)
-				? 'stalled'
-				: 'ready';
+			: (END_KINDS.get(node.status) ?? 'ready');
 		kinds.set(node.id, kind);
 		if (kind) {
 			addCause({ id: node.id, title: node.title, status: node.status, kind });

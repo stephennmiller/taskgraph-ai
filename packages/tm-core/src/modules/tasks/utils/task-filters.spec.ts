@@ -3,7 +3,8 @@ import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
 	buildBlocksMap,
 	filterByStatus,
-	filterReadyTasks
+	filterReadyTasks,
+	parseStatusFilter
 } from './task-filters.js';
 
 describe('filterByStatus', () => {
@@ -54,5 +55,22 @@ describe('a dependency on a subtask (#657)', () => {
 			'1',
 			'2'
 		]);
+	});
+});
+
+describe('parseStatusFilter', () => {
+	it('gives no statuses for no value or all', () => {
+		expect(parseStatusFilter()).toBeUndefined();
+		expect(parseStatusFilter('all')).toBeUndefined();
+	});
+
+	it('splits and trims the listed statuses', () => {
+		expect(parseStatusFilter('pending, review')).toEqual(['pending', 'review']);
+	});
+
+	it('refuses an unknown status, naming the valid ones', () => {
+		expect(() => parseStatusFilter('pending,bogus')).toThrow(
+			'"bogus" isn\'t a status. Use one of: pending, in-progress'
+		);
 	});
 });
