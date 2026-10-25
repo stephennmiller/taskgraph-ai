@@ -286,8 +286,14 @@ here works with `standard`.
 
 ### 4. Keep it organized
 
-- **Tags** keep separate task lists per branch, feature or experiment. Ask
-  "Make a tag for the auth rewrite", or use `taskgraph tags`.
+- **Tags** keep separate task lists per branch, feature or experiment. Ask:
+
+  ```txt
+  Make a tag for the auth rewrite
+  ```
+
+  The CLI commands are `taskgraph tags`, `taskgraph tags add` and
+  `taskgraph tags use` (MCP: `list_tags`, `add_tag`, `use_tag`).
 - **Dependencies** decide what counts as "next". If the graph looks wrong, ask:
 
   ```txt
@@ -451,7 +457,11 @@ step and the fix under each one that failed:
 taskgraph doctor
 ```
 
-**AI commands fail.** Run `claude` once and make sure you're signed in.
+**AI commands fail.** Run Claude Code once and make sure you're signed in:
+
+```bash
+claude
+```
 
 **Task files look out of sync.** Ask Claude to fix the task dependencies, or
 run:
@@ -484,10 +494,15 @@ npm install
 npm run build
 ```
 
-Then run `node dist/taskgraph.js` for the CLI. This repository's own
-`.mcp.json` starts `dist/mcp-server.js`, so build first or the server won't
-connect. After a `git pull`, run `npm run build` again; the CLI and server run
-from `dist/`.
+Then run the CLI from the build:
+
+```bash
+node dist/taskgraph.js
+```
+
+This repository's own `.mcp.json` starts `dist/mcp-server.js`, so build first
+or the server won't connect. After a `git pull`, run `npm run build` again;
+the CLI and server run from `dist/`.
 
 ## Privacy
 
