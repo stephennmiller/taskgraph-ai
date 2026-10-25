@@ -4,11 +4,12 @@
  */
 
 import type { Task, TaskStatus } from '../../../common/types/index.js';
-import {
-	TASK_STATUSES,
-	isTaskComplete
-} from '../../../common/constants/index.js';
+import { TASK_STATUSES } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
+import {
+	createDependencyState,
+	createTaskLookup
+} from '../../dependencies/dependency-check.js';
 import { isArchivedReference } from './archive.js';
 
 const logger = getLogger('TaskFilters');
@@ -53,8 +54,9 @@ export interface BuildBlocksMapResult {
  * Build a map of task ID -> array of task IDs that depend on it (blocks)
  * This is the inverse of the dependencies relationship
  *
- * Also validates dependencies and returns any references to non-existent tasks.
- * A dependency on an archived task isn't one of them.
+ * Also validates dependencies and returns any references to non-existent tasks,
+ * by the rule `validate-dependencies` uses. A dependency on a subtask
+ * (`"1.2"`; pass tasks with their subtasks) or an archived task isn't one.
  *
  * @param tasks - Array of tasks to analyze
  * @param archivedIds - IDs of the tag's archived tasks
@@ -82,6 +84,7 @@ export function buildBlocksMap(
 		tasks.map((task) => [String(task.id), []])
 	);
 	const invalidDependencies: InvalidDependency[] = [];
+	const exists = createTaskLookup(tasks);
 
 	// For each task, add it to the blocks list of each of its dependencies
 	for (const task of tasks) {
@@ -90,7 +93,10 @@ export function buildBlocksMap(
 			const blocks = blocksMap.get(depIdStr);
 			if (blocks) {
 				blocks.push(String(task.id));
-			} else if (!isArchivedReference(depIdStr, archivedIds)) {
+			} else if (
+				!exists(depIdStr) &&
+				!isArchivedReference(depIdStr, archivedIds)
+			) {
 				// Dependency references a non-existent task
 				invalidDependencies.push({
 					taskId: String(task.id),
@@ -107,7 +113,8 @@ export function buildBlocksMap(
  * Filter to only tasks that are ready to work on
  * A task is ready when:
  * 1. It has an actionable status (pending, in-progress, or review)
- * 2. All its dependencies are complete (done, completed, or cancelled) or archived
+ * 2. All its dependencies are satisfied (`createDependencyState`; pass tasks
+ *    with their subtasks) or archived
  *
  * @param tasks - Array of tasks with blocks information
  * @param archivedIds - IDs of the tag's archived tasks
@@ -129,10 +136,7 @@ export function filterReadyTasks(
 	tasks: TaskWithBlocks[],
 	archivedIds: ReadonlySet<string> = new Set()
 ): TaskWithBlocks[] {
-	// Build set of completed task IDs for dependency checking
-	const completedIds = new Set<string>(
-		tasks.filter((t) => isTaskComplete(t.status)).map((t) => String(t.id))
-	);
+	const dependencyState = createDependencyState(tasks);
 	const liveIds = new Set(tasks.map((t) => String(t.id)));
 
 	return tasks.filter((task) => {
@@ -150,14 +154,17 @@ export function filterReadyTasks(
 
 		// Ready if no dependencies or all dependencies are completed
 		const deps = task.dependencies ?? [];
-		return deps.every(
-			(depId) =>
-				completedIds.has(String(depId)) ||
+		return deps.every((depId) => {
+			const state = dependencyState(String(task.id), String(depId));
+			return (
+				state === 'satisfied' ||
 				// A task back in tasks.json isn't archived (as in
 				// satisfyArchivedDependencies), and neither are its subtasks
-				(!liveIds.has(String(depId).split('.')[0]) &&
+				(state === 'missing' &&
+					!liveIds.has(String(depId).split('.')[0]) &&
 					isArchivedReference(depId, archivedIds))
-		);
+			);
+		});
 	});
 }
 

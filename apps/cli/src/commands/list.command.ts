@@ -298,27 +298,23 @@ export class ListTasksCommand extends Command {
 		// Load every task, whatever the status filter, which comes last: the
 		// blocks map, --ready, --blocking and the summary all need them, and a
 		// dependency on a task with another status isn't a missing one (#365).
-		// The summary counts subtasks even when the table hides them (#246);
-		// the table only shows them with --with-subtasks.
+		// They need subtasks too, since a dependency can name one (#657). The
+		// summary counts subtasks even when the table hides them (#246); the
+		// table only shows them with --with-subtasks.
 		const result = await this.tmCore.tasks.list({
 			tag: options.tag,
-			includeSubtasks: showsSummary ? true : options.withSubtasks
+			includeSubtasks: true
 		});
-		// The rows keep subtasks only when asked for, as before
-		const listed =
-			showsSummary && !options.withSubtasks
-				? result.tasks.map((task) => ({ ...task, subtasks: [] }))
-				: result.tasks;
 
 		// Build blocks map and enrich tasks with blocks field. Dependencies on
 		// archived tasks count as done, not as missing
 		const archivedIds = await this.tmCore.tasks.getArchivedIds(options.tag);
 		const { blocksMap, invalidDependencies } = buildBlocksMap(
-			listed,
+			result.tasks,
 			archivedIds
 		);
 		this.displayInvalidDependencyWarnings(invalidDependencies, options.tag);
-		const enrichedTasks = listed.map((task) => ({
+		const enrichedTasks = result.tasks.map((task) => ({
 			...task,
 			blocks: blocksMap.get(String(task.id)) || []
 		}));
@@ -335,6 +331,9 @@ export class ListTasksCommand extends Command {
 		}
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
+		if (!options.withSubtasks) {
+			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
+		}
 
 		// The recommendation comes from tm-core so it matches `taskgraph next`.
 		// It may be a subtask (`2.2`), which isn't a row of the task list, so
@@ -378,10 +377,10 @@ export class ListTasksCommand extends Command {
 			const tagName = tagInfo.name;
 
 			try {
-				// Get tasks for this tag
+				// With subtasks, since a dependency can name one (#657)
 				const result = await this.tmCore.tasks.list({
 					tag: tagName,
-					includeSubtasks: options.withSubtasks
+					includeSubtasks: true
 				});
 
 				// Track total count before any filtering (consistent with getTasks)
@@ -404,9 +403,12 @@ export class ListTasksCommand extends Command {
 
 				// Apply ready filter per-tag to respect tag-scoped dependencies
 				// (task IDs may overlap between tags, so we must filter within each tag)
-				const tasksToAdd: TaskWithTag[] = options.ready
+				const ready: TaskWithTag[] = options.ready
 					? (filterReadyTasks(enrichedTasks, archivedIds) as TaskWithTag[])
 					: enrichedTasks;
+				const tasksToAdd = options.withSubtasks
+					? ready
+					: ready.map((task) => ({ ...task, subtasks: [] }));
 
 				allTaggedTasks.push(...tasksToAdd);
 			} catch (tagError: unknown) {

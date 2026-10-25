@@ -120,8 +120,7 @@ describe('TaskService.getNextTask', () => {
 			expect(id).toBe('2');
 		});
 
-		it('does not change which tasks are eligible', async () => {
-			// 1 is in review, so its done subtask does not satisfy 2's dependency
+		it('counts a done subtask of a task in review as done (#658)', async () => {
 			const id = await nextId([
 				task(1, {
 					status: 'review',
@@ -130,7 +129,7 @@ describe('TaskService.getNextTask', () => {
 				task(2, { dependencies: ['1.1'] })
 			]);
 
-			expect(id).toBeUndefined();
+			expect(id).toBe('2');
 		});
 
 		it('falls back to fewest dependencies when blocked counts tie', async () => {

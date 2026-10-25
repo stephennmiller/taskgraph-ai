@@ -391,13 +391,13 @@ describe('explainBlockers', () => {
 			]);
 		});
 
-		it('does not repeat the blockers of a parent already on the path', () => {
+		it("does not count a task's own subtask as its blocker (#658)", () => {
 			const result = explainBlockers(
 				[task('1'), task('2', ['1', '2.1'], 'pending', [sub(1)])],
 				'2'
 			);
 
-			expect(shape(result.blockers)).toEqual([['1:ready'], ['2.1:ready']]);
+			expect(shape(result.blockers)).toEqual([['1:ready']]);
 		});
 
 		it('reports a loop back to the path through a parent on it', () => {
