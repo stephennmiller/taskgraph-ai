@@ -143,6 +143,19 @@ describe('plugin hooks.json', () => {
 		);
 	});
 
+	it('checks the scripts out with LF endings, even under core.autocrlf on Windows', () => {
+		// A CR makes `exit 0` fail with status 2, which a Stop hook treats as "keep going"
+		const result = spawnSync(
+			'git',
+			['check-attr', 'eol', '--', 'hooks/session-start.sh', 'hooks/stop.sh'],
+			{ cwd: pluginDir, encoding: 'utf8' }
+		);
+
+		expect(result.stdout).toBe(
+			'hooks/session-start.sh: eol: lf\nhooks/stop.sh: eol: lf\n'
+		);
+	});
+
 	it('prints nothing and succeeds outside a TaskGraph project', () => {
 		const dir = tempDir('tg-hook-none-');
 		const bin = fakeCli('echo "should not run"');

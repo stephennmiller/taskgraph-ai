@@ -1,0 +1,2 @@
+# LF even under core.autocrlf (Git for Windows default): Git Bash fails on a CR in a .sh, and the plugin hooks run in it
+*.sh text eol=lf
