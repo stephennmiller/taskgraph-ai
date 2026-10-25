@@ -165,7 +165,9 @@ export function readTrace(dir) {
 		if (error.code === 'ENOENT') return [];
 		throw error;
 	}
+	// A test can poll while the fake is mid-append: drop the unfinished last line
 	return text
+		.slice(0, text.lastIndexOf('\n') + 1)
 		.split('\n')
 		.filter(Boolean)
 		.map((line) => JSON.parse(line))
