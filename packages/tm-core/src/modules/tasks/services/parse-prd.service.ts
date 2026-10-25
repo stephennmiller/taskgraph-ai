@@ -22,6 +22,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
 import { stripTerminalControls } from '../../../common/utils/terminal-text.js';
+import { neutralizeTag } from '../../../common/utils/prompt-tag.js';
 import {
 	AiService,
 	type AiTagInfo,
@@ -216,7 +217,10 @@ export class ParsePrdService {
 		const prdContent = fs.readFileSync(prdPath, 'utf8');
 		const { systemPrompt, userPrompt } = getPromptManager().loadPrompt(
 			'parse-prd-clarify',
-			{ prdContent, maxQuestions: MAX_CLARIFYING_QUESTIONS }
+			{
+				prdContent: neutralizeTag(prdContent, 'prd'),
+				maxQuestions: MAX_CLARIFYING_QUESTIONS
+			}
 		);
 		const response = await new AiService(aiConfig.toHost()).generateObject({
 			role: input.research ? 'research' : 'main',
@@ -367,9 +371,12 @@ export class ParsePrdService {
 			numTasks: promptNumTasks,
 			newSectionsOnly: deltaOnly,
 			nextId,
-			prdContent: deltaOnly
-				? prdDeltaContent(prdDelta as PrdDelta, prdContent)
-				: prdContent,
+			prdContent: neutralizeTag(
+				deltaOnly
+					? prdDeltaContent(prdDelta as PrdDelta, prdContent)
+					: prdContent,
+				'prd'
+			),
 			prdPath,
 			prdSections: promptSections.length
 				? formatPrdSectionList(promptSections)

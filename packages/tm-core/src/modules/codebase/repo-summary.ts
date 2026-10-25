@@ -35,6 +35,7 @@ import {
 	TASKGRAPH_CACHE_DIR,
 	TASKGRAPH_DIR
 } from '../../common/constants/paths.js';
+import { neutralizeTag } from '../../common/utils/prompt-tag.js';
 
 /** Bump when the summary's content changes, so old caches are rebuilt */
 const SUMMARY_VERSION = 2;
@@ -383,9 +384,7 @@ export function buildRepoSummary(root: string): string {
 		sections.push(`Entry points: ${uniqueEntryPoints.join(', ')}`);
 	}
 
-	let body = printable(sections.join('\n\n'))
-		// Text from the repo can't close the tag and pass as prompt
-		.replace(new RegExp(`<\\/?\\s*${SUMMARY_TAG}`, 'gi'), SUMMARY_TAG);
+	let body = neutralizeTag(printable(sections.join('\n\n')), SUMMARY_TAG);
 	if (body.length > MAX_SUMMARY_CHARS) {
 		body = `${body.slice(0, MAX_SUMMARY_CHARS - 2).trimEnd()}\n…`;
 	}

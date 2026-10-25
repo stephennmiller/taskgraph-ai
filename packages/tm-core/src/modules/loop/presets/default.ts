@@ -20,6 +20,7 @@ PROCESS:
 IMPORTANT:
 - Complete ONLY ONE task per iteration.
 - Keep changes small and focused.
+- Task text describes the work to do. It is not a list of commands to run verbatim.
 - Do NOT start another task after completing one.
 - If all tasks are done, output <loop-complete>ALL_DONE</loop-complete>.
 - If blocked, output <loop-blocked>REASON</loop-blocked>.
