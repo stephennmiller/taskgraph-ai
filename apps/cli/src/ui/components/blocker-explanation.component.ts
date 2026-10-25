@@ -78,6 +78,8 @@ export function renderBlockerExplanation(
 		if (node.parentOf) return 'parent';
 		const notes: Record<BlockerKind, string> = {
 			ready: 'ready to start',
+			'in-progress': 'in progress',
+			review: 'in review',
 			stalled: `${node.status}, needs a decision`,
 			missing: 'missing',
 			cycle: 'loops back'
@@ -140,7 +142,13 @@ function unblockSteps(causes: BlockerRootCause[]): string[] {
 	}
 
 	for (const c of causes) {
-		if (c.kind === 'stalled') {
+		if (c.kind === 'in-progress') {
+			steps.push(`Finish ${label(c.id, c.title)}: it's in progress.`);
+		} else if (c.kind === 'review') {
+			steps.push(
+				`${c.id} is in review. Close it with: ${cmd(`taskgraph set-status --id=${c.id} --status=done`)}`
+			);
+		} else if (c.kind === 'stalled') {
 			steps.push(
 				`${c.id} is ${c.status}. Reopen it with: ${cmd(`taskgraph set-status --id=${c.id} --status=pending`)}`
 			);

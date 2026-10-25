@@ -86,8 +86,9 @@ and AI-inferred dependencies (`*`), with a legend. See
 
 ```bash
 # Follow a task's unfinished dependencies down to the root causes: work
-# that is ready to start, deferred or blocked tasks, dependency IDs that
-# match no task, and dependency loops (including a task that lists itself).
+# that is ready to start or in progress, tasks in review, deferred or
+# blocked tasks, dependency IDs that match no task, and dependency loops
+# (including a task that lists itself).
 # Each root cause comes with the command that fixes it.
 taskgraph why <id>
 # or
@@ -102,7 +103,8 @@ taskgraph why <id> --format json
 
 The JSON has the task's `id`, `title`, `status`, `blocked`, the `tag`, a
 nested `blockers` tree (each node has `id`, `title`, `status`, `blockers`,
-and `kind` where a chain ends: `ready`, `stalled`, `missing` or `cycle`;
+and `kind` where a chain ends: `ready`, `in-progress`, `review`, `stalled`,
+`missing` or `cycle`;
 a task already shown elsewhere is marked `repeated`), and `rootCauses`.
 A subtask also waits on what its parent waits on: those blockers sit under
 a node for the parent with `parentOf` set to the subtask's ID. The parent
