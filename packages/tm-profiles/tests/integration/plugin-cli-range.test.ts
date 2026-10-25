@@ -68,9 +68,14 @@ const hooks: Record<
 > = JSON.parse(
 	readFileSync(join(pluginDir, 'hooks/hooks.json'), 'utf-8')
 ).hooks;
+/** Each hook's script, which its command runs by name */
 const hookCommands = Object.entries(hooks).flatMap(([event, groups]) =>
 	groups.flatMap((group) =>
-		group.hooks.map((hook) => [event, hook.command] as const)
+		group.hooks.map((hook) => {
+			const script = hook.command.match(/\/(hooks\/[\w-]+\.sh)/)?.[1];
+			if (!script) throw new Error(`${event} runs no hooks/*.sh script`);
+			return [event, readFileSync(join(pluginDir, script), 'utf-8')] as const;
+		})
 	)
 );
 

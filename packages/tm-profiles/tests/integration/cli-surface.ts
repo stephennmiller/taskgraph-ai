@@ -132,9 +132,9 @@ export function codeLines(markdown: string): string[] {
 	return lines;
 }
 
-/** A hook's shell one-liner as one line per command it runs */
-export const hookLines = (command: string): string[] =>
-	command.split(/;|&&|\|\||\||\$\(|\)/);
+/** A hook's shell script as one line per command it runs */
+export const hookLines = (script: string): string[] =>
+	script.split(/\n|;|&&|\|\||\||\$\(|\)/);
 
 /** `taskgraph <name> ...` at the start of each line, with its long flags */
 export function invocations(lines: string[]) {
