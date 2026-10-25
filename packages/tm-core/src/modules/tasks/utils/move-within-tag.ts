@@ -164,6 +164,7 @@ function moveSubtaskToSubtask(
 		const newSubtask: Item = {
 			...subtask,
 			id: destSubtaskId,
+			parentId: String(destParent.id),
 			dependencies: moved.dependencies
 		};
 		assignMetadata(newSubtask, moved.metadata);
@@ -277,6 +278,7 @@ function moveTaskToSubtask(
 	const converted = dependenciesForConvertedTask(sourceTask, destParent.id);
 	const newSubtask: Item = {
 		id: destSubtaskId,
+		parentId: String(destParent.id),
 		title: sourceTask.title,
 		description: sourceTask.description,
 		status: sourceTask.status || 'pending',

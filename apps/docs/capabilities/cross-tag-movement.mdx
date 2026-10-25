@@ -82,7 +82,7 @@ A refused move changes nothing and says how to go on.
 
 ### Cross-Tag Dependency Conflicts
 
-When a task you move depends on tasks that stay behind:
+When a task you move (or one of its subtasks) depends on tasks that stay behind, or tasks that stay behind depend on it or its subtasks (`Task 7 depends on 5, which moves to in-progress`):
 
 ```text
 ✗ Can't move tasks from "backlog" to "in-progress": 2 dependencies stay behind

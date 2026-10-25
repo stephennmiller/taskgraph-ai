@@ -455,7 +455,7 @@ describe('Complex Cross-Tag Scenarios', () => {
 
 		it('should create target tag if it does not exist', () => {
 			execSync(
-				`node ${binPath} move --from=1 --from-tag=master --to-tag=new-tag`,
+				`node ${binPath} move --from=1 --from-tag=master --to-tag=new-tag --ignore-dependencies`,
 				{ stdio: 'pipe' }
 			);
 

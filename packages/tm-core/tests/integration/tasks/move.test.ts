@@ -86,7 +86,15 @@ describe('add-subtask and move through tasks', () => {
 							]
 						},
 						{ id: '2', title: 'Parser', dependencies: ['1.1'], subtasks: [] },
-						{ id: '3', title: 'Report', dependencies: ['1.2'], subtasks: [] }
+						{ id: '3', title: 'Report', dependencies: ['1.2'], subtasks: [] },
+						{
+							id: '4',
+							title: 'Ship',
+							dependencies: [],
+							subtasks: [
+								{ id: 1, parentId: '4', title: 'C', dependencies: ['1.1'] }
+							]
+						}
 					],
 					metadata: {}
 				}
@@ -100,9 +108,39 @@ describe('add-subtask and move through tasks', () => {
 			tasks.find((t: { id: unknown }) => String(t.id) === id);
 		expect(byId('2').dependencies).toEqual(['9.1']);
 		expect(byId('3').dependencies).toEqual(['9.2']);
+		expect(byId('4').subtasks[0].dependencies).toEqual(['9.1']);
 		expect(byId('9').subtasks).toMatchObject([
 			{ id: 1, parentId: '9', dependencies: [] },
 			{ id: 2, parentId: '9', dependencies: [1] }
+		]);
+	});
+
+	it('gives a subtask moved to another parent, or a task made a subtask, its new parentId (#673)', async () => {
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({
+				master: {
+					tasks: [
+						{
+							id: '1',
+							title: 'Set up',
+							dependencies: [],
+							subtasks: [{ id: 1, parentId: '1', title: 'A', dependencies: [] }]
+						},
+						{ id: '2', title: 'Parser', dependencies: [], subtasks: [] },
+						{ id: '3', title: 'Report', dependencies: [], subtasks: [] }
+					],
+					metadata: {}
+				}
+			})
+		);
+
+		await tmCore.tasks.move('1.1,3', '2.1,2.2');
+
+		const [, parser] = readFile().master.tasks;
+		expect(parser.subtasks).toMatchObject([
+			{ id: 1, parentId: '2' },
+			{ id: 2, parentId: '2' }
 		]);
 	});
 
