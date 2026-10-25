@@ -23,15 +23,17 @@ const task = (id: string | number, title: string, extra = {}) => ({
 	...extra
 });
 
-/** What the model answers; `dependencies` are its suggestions */
+/** What the model answers, under `task`; `dependencies` are its suggestions */
 const aiTask = (extra: Record<string, unknown> = {}) => ({
 	mainResult: {
-		title: 'Task from the AI',
-		description: 'Description from the AI',
-		details: 'Details from the AI',
-		testStrategy: 'Tests from the AI',
-		dependencies: [],
-		...extra
+		task: {
+			title: 'Task from the AI',
+			description: 'Description from the AI',
+			details: 'Details from the AI',
+			testStrategy: 'Tests from the AI',
+			dependencies: [],
+			...extra
+		}
 	},
 	telemetryData: { totalTokens: 10 },
 	tagInfo: { currentTag: 'master', availableTags: ['master'] }
