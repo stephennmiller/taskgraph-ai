@@ -161,7 +161,11 @@ describe('next_task', () => {
 
 	it('claims the task with claim: true', async () => {
 		tasks.claimNext.mockResolvedValue({
-			task: { id: '3', title: 'Claimed' },
+			task: {
+				id: '3',
+				title: 'Claimed',
+				subtasks: [{ id: 1, parentId: '3' }]
+			},
 			claimedBy: 'me',
 			claimedAt: '2026-01-01T00:00:00.000Z'
 		});
@@ -172,7 +176,8 @@ describe('next_task', () => {
 
 		expect(tasks.claimNext).toHaveBeenCalledWith({ tag: 'master' });
 		expect(result.data).toMatchObject({
-			nextTask: { id: '3' },
+			// #661: subtask IDs in full, as get_task gives them
+			nextTask: { id: '3', subtasks: [{ id: '3.1', parentId: '3' }] },
 			isSubtask: false,
 			claimedBy: 'me'
 		});

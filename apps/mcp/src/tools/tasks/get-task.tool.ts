@@ -6,7 +6,13 @@
 import { z } from 'zod';
 import { handleApiResult, withToolContext } from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
-import { Subtask, taskIdsSchema, parseTaskIds, type Task } from '@tm/core';
+import {
+	Subtask,
+	taskIdsSchema,
+	parseTaskIds,
+	type Task,
+	withFullSubtaskIds
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 
 const GetTaskSchema = z.object({
@@ -99,7 +105,9 @@ export function registerGetTaskTool(server: FastMCP) {
 					);
 
 					// Return single task if only one ID was requested, otherwise array
-					const responseData = taskIds.length === 1 ? tasks[0] : tasks;
+					// Subtask IDs in full ("9.1"), as next_task gives them
+					const shown = tasks.map(withFullSubtaskIds);
+					const responseData = taskIds.length === 1 ? shown[0] : shown;
 
 					return handleApiResult({
 						result: {

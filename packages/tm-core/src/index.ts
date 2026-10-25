@@ -312,7 +312,8 @@ export { promotedSubtaskDescription } from './modules/tasks/utils/index.js';
 export {
 	DEFAULT_TASK_FIELDS,
 	parseTaskFields,
-	selectTaskFields
+	selectTaskFields,
+	withFullSubtaskIds
 } from './modules/tasks/utils/index.js';
 
 // Acceptance criteria and the Definition of Done

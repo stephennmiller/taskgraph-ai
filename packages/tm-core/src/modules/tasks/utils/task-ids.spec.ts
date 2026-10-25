@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
-import { normalizeTaskIds } from './task-ids.js';
+import { normalizeTaskIds, withFullSubtaskIds } from './task-ids.js';
 
 /** A task as tasks.json stores it: numeric IDs, no subtask parentId */
 const stored = (): Task =>
@@ -82,5 +82,34 @@ describe('normalizeTaskIds', () => {
 
 		expect(task.dependencies).toEqual([]);
 		expect(task.subtasks).toEqual([]);
+	});
+});
+
+// #661: list and show --json gave a subtask "id": "1", which set-status reads as task 1
+describe('withFullSubtaskIds', () => {
+	it('gives each subtask its full dotted ID and keeps parentId', () => {
+		const task = withFullSubtaskIds(normalizeTaskIds(stored()));
+
+		expect(task.subtasks.map((st) => [st.id, st.parentId])).toEqual([
+			['2.1', '2'],
+			['2.2', '2']
+		]);
+		expect(task.subtasks[1].dependencies).toEqual([1, '3', '2.1']);
+	});
+
+	it('keeps an ID that is already dotted', () => {
+		const task = withFullSubtaskIds({
+			...stored(),
+			subtasks: [{ ...stored().subtasks[0], id: '2.1' }]
+		} as unknown as Task);
+
+		expect(task.subtasks[0].id).toBe('2.1');
+	});
+
+	it('leaves a subtask view, which has no subtasks list, and null as they are', () => {
+		const view = { id: '2.1', parentId: '2', title: 'Schema' };
+
+		expect(withFullSubtaskIds(view)).toBe(view);
+		expect(withFullSubtaskIds(null)).toBeNull();
 	});
 });

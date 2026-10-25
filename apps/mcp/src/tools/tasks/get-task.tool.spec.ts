@@ -74,4 +74,24 @@ describe('get_task', () => {
 			{ id: '2', title: 'Task 2' }
 		]);
 	});
+
+	// #661: a subtask's bare "1" sent to set_task_status changed task 1
+	it('gives each subtask its full dotted ID, as next_task does', async () => {
+		tasks.get.mockResolvedValue({
+			task: {
+				id: '9',
+				title: 'Parent',
+				subtasks: [{ id: 1, parentId: '9', title: 'Step' }]
+			},
+			isSubtask: false
+		});
+
+		const result = reply(
+			await register().execute({ id: '9', projectRoot }, ctx)
+		);
+
+		expect(result.data.subtasks).toEqual([
+			{ id: '9.1', parentId: '9', title: 'Step' }
+		]);
+	});
 });
