@@ -82,9 +82,11 @@ Each loop iteration:
 The agent appends its own notes to the progress file as the prompt tells it to.
 
 The loop stops when:
-- An agent outputs `<loop-complete>REASON</loop-complete>` - all work done
-- An agent outputs `<loop-blocked>REASON</loop-blocked>` - cannot proceed
+- An agent ends its reply with `<loop-complete>REASON</loop-complete>` - all work done
+- An agent ends its reply with `<loop-blocked>REASON</loop-blocked>` - cannot proceed
 - Maximum iterations reached
+
+A marker counts only alone on the last line of the reply, so an agent that quotes one mid-sentence doesn't stop the loop. With the `default` and `tdd` presets, `<loop-complete>` also needs every task to be done: if pending or in-progress tasks remain, the loop warns and keeps going.
 
 It then prints the number of iterations, the tasks completed and the final status. The exit code is 1 when the loop ended blocked or on an error, and 0 otherwise, so a script can tell a stuck loop from a finished one.
 

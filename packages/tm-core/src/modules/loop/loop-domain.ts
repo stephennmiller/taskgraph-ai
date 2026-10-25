@@ -109,7 +109,15 @@ export class LoopDomain {
 		}
 
 		const fullConfig = this.buildConfig(config);
-		this.loopService = new LoopService({ projectRoot: this.projectRoot });
+		const tasks = this.tasks;
+		this.loopService = new LoopService({
+			projectRoot: this.projectRoot,
+			countRemainingTasks: tasks
+				? async (tag) =>
+						(await tasks.getCount('pending', tag)) +
+						(await tasks.getCount('in-progress', tag))
+				: undefined
+		});
 		return this.loopService.run(fullConfig);
 	}
 
