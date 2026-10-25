@@ -51,24 +51,31 @@ export function registerGetTaskTool(server: FastMCP) {
 					// Parse and validate task IDs (validation already done by schema, this handles splitting)
 					const taskIds = parseTaskIds(id);
 					const results = await Promise.all(
-						taskIds.map((taskId) => tmCore.tasks.get(taskId, tag))
+						taskIds.map(async (taskId) => ({
+							...(await tmCore.tasks.get(taskId, tag)),
+							prdSection: await tmCore.tasks.getPrdSection(taskId, tag)
+						}))
 					);
 
 					const tasks: (Task | Subtask)[] = [];
-					for (const result of results) {
+					for (const { prdSection, ...result } of results) {
 						if (!result.task) continue;
+						// The PRD section the task cites, as written, like `show` prints
+						const task = prdSection
+							? { ...result.task, prdSection }
+							: result.task;
 
 						// If status filter is provided, filter subtasks (create copy to avoid mutation)
-						if (status && result.task.subtasks) {
+						if (status && task.subtasks) {
 							const statusFilters = status
 								.split(',')
 								.map((s) => s.trim().toLowerCase());
-							const filteredSubtasks = result.task.subtasks.filter((st) =>
+							const filteredSubtasks = task.subtasks.filter((st) =>
 								statusFilters.includes(String(st.status).toLowerCase())
 							);
-							tasks.push({ ...result.task, subtasks: filteredSubtasks });
+							tasks.push({ ...task, subtasks: filteredSubtasks });
 						} else {
-							tasks.push(result.task);
+							tasks.push(task);
 						}
 					}
 

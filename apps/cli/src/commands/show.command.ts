@@ -31,16 +31,21 @@ export interface ShowCommandOptions {
  * Result type from show command
  */
 export interface ShowTaskResult {
-	task: Task | Subtask | null;
+	task: ShownTask | null;
 	found: boolean;
 	originalTaskId?: string; // The original task ID requested (for subtasks like "104.1")
 }
+
+/** A task with the PRD section it cites, as written (`tasks.getPrdSection`) */
+type ShownTask = (Task | Subtask) & {
+	prdSection?: { source: string; text: string };
+};
 
 /**
  * Result type for multiple tasks
  */
 export interface ShowMultipleTasksResult {
-	tasks: (Task | Subtask)[];
+	tasks: ShownTask[];
 	notFound: string[];
 }
 
@@ -52,7 +57,6 @@ export class ShowCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ShowTaskResult | ShowMultipleTasksResult;
 	private requestedId?: string;
-	private prdSection?: { source: string; text: string };
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -176,13 +180,22 @@ export class ShowCommand extends Command {
 		// Get the task
 		this.requestedId = taskId;
 		const result = await this.tmCore.tasks.get(taskId);
-		this.prdSection = await this.tmCore.tasks.getPrdSection(taskId);
 
 		return {
-			task: result.task,
+			task: await this.withPrdSection(taskId, result.task),
 			found: result.task !== null,
 			originalTaskId: result.isSubtask ? taskId : undefined
 		};
+	}
+
+	/** The task with its PRD section; null stays null, so a missing subtask gets no parent section */
+	private async withPrdSection(
+		taskId: string,
+		task: Task | Subtask | null
+	): Promise<ShownTask | null> {
+		if (!task || !this.tmCore) return task;
+		const prdSection = await this.tmCore.tasks.getPrdSection(taskId);
+		return prdSection ? { ...task, prdSection } : task;
 	}
 
 	/**
@@ -196,14 +209,15 @@ export class ShowCommand extends Command {
 			throw new Error('TmCore not initialized');
 		}
 
-		const tasks: (Task | Subtask)[] = [];
+		const tasks: ShownTask[] = [];
 		const notFound: string[] = [];
 
 		// Get each task individually
 		for (const taskId of taskIds) {
 			const result = await this.tmCore.tasks.get(taskId);
-			if (result.task) {
-				tasks.push(result.task);
+			const task = await this.withPrdSection(taskId, result.task);
+			if (task) {
+				tasks.push(task);
 			} else {
 				notFound.push(taskId);
 			}
@@ -284,7 +298,7 @@ export class ShowCommand extends Command {
 		console.log(
 			formatTaskDetail(result.task, {
 				id: result.originalTaskId,
-				prdSection: this.prdSection,
+				prdSection: result.task.prdSection,
 				statusFilter: options.status,
 				checklist: this.tmCore?.tasks.getChecklist(
 					result.task,

@@ -371,7 +371,18 @@ describe('show command output', () => {
 				'PRD · docs/prd.md#sessions\n  ## Sessions\n\n  `POST /sessions` takes `{ "email", "password" }`.\n\n'
 			);
 			expect(res.stdout).not.toContain('Billing');
+			expect(JSON.parse(show(id, '--json').stdout).task.prdSection).toEqual({
+				source: 'docs/prd.md#sessions',
+				text: '## Sessions\n\n`POST /sessions` takes `{ "email", "password" }`.'
+			});
 		}
+		expect(
+			JSON.parse(show('2,1', '--json').stdout).tasks.map(
+				(task: { prdSection?: { source: string } }) => task.prdSection?.source
+			)
+		).toEqual(['docs/prd.md#sessions', undefined]);
+		// A missing subtask doesn't borrow its parent's section
+		expect(JSON.parse(show('2.9', '--json').stdout).task).toBeNull();
 	});
 
 	it('prints the same facts line as next for a subtask stored without parentId or priority', () => {
