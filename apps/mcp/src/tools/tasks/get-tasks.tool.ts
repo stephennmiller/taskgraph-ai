@@ -8,7 +8,7 @@ import { handleApiResult, withToolContext } from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
 import {
 	DEFAULT_TASK_FIELDS,
-	type TaskStatus,
+	parseStatusFilter,
 	parseTaskFields,
 	selectTaskFields
 } from '@tm/core';
@@ -65,15 +65,8 @@ export function registerGetTasksTool(server: FastMCP) {
 						`Getting tasks from ${projectRoot}${status ? ` with status filter: ${status}` : ''}${tag ? ` for tag: ${tag}` : ''}`
 					);
 
-					// Build filter
-					const filter =
-						status && status !== 'all'
-							? {
-									status: status
-										.split(',')
-										.map((s: string) => s.trim() as TaskStatus)
-								}
-							: undefined;
+					const statuses = parseStatusFilter(status);
+					const filter = statuses && { status: statuses };
 
 					// Call tm-core tasks.list()
 					const result = await tmCore.tasks.list({
@@ -86,64 +79,13 @@ export function registerGetTasksTool(server: FastMCP) {
 						`Retrieved ${result.tasks?.length || 0} tasks (${result.filtered} filtered, ${result.total} total)`
 					);
 
-					// Calculate stats using reduce for cleaner code
 					const tasks = result.tasks ?? [];
-					const totalTasks = result.total;
-					const taskCounts = tasks.reduce(
-						(acc, task) => {
-							acc[task.status] = (acc[task.status] || 0) + 1;
-							return acc;
-						},
-						{} as Record<string, number>
-					);
-
-					const completionPercentage =
-						totalTasks > 0 ? ((taskCounts.done || 0) / totalTasks) * 100 : 0;
-
-					// Count subtasks using reduce
-					const subtaskCounts = tasks.reduce(
-						(acc, task) => {
-							task.subtasks?.forEach((st) => {
-								acc.total++;
-								acc[st.status] = (acc[st.status] || 0) + 1;
-							});
-							return acc;
-						},
-						{ total: 0 } as Record<string, number>
-					);
-
-					const subtaskCompletionPercentage =
-						subtaskCounts.total > 0
-							? ((subtaskCounts.done || 0) / subtaskCounts.total) * 100
-							: 0;
-
 					return handleApiResult({
 						result: {
 							success: true,
 							data: {
 								tasks: selectTaskFields(tasks, selected),
-								filter: status || 'all',
-								stats: {
-									total: totalTasks,
-									completed: taskCounts.done || 0,
-									inProgress: taskCounts['in-progress'] || 0,
-									pending: taskCounts.pending || 0,
-									blocked: taskCounts.blocked || 0,
-									deferred: taskCounts.deferred || 0,
-									cancelled: taskCounts.cancelled || 0,
-									review: taskCounts.review || 0,
-									completionPercentage,
-									subtasks: {
-										total: subtaskCounts.total,
-										completed: subtaskCounts.done || 0,
-										inProgress: subtaskCounts['in-progress'] || 0,
-										pending: subtaskCounts.pending || 0,
-										blocked: subtaskCounts.blocked || 0,
-										deferred: subtaskCounts.deferred || 0,
-										cancelled: subtaskCounts.cancelled || 0,
-										completionPercentage: subtaskCompletionPercentage
-									}
-								}
+								filter: status || 'all'
 							}
 						},
 						log,
