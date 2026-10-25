@@ -3,20 +3,44 @@ title: "Privacy"
 description: "What TaskGraph and its Claude Code plugin do with your data: it stays on your machine"
 ---
 
-TaskGraph is a local tool. It has no account, no server and no telemetry, and collects nothing about you or your project.
+TaskGraph is a local tool. It has no account, no server and no telemetry, and
+collects nothing about you or your project.
 
 ## What stays on your machine
 
-- Tasks, config, reports and notes live in `.taskgraph/` in your project. TaskGraph never uploads them.
-- The usage and cost summary printed after an AI command is computed locally and not sent anywhere.
-- The Claude Code plugin's hooks run your installed `taskgraph` CLI and read only `.taskgraph/` in the project. They make no network calls.
+- Tasks, config, reports and notes live in `.taskgraph/` in your project.
+  TaskGraph uploads them only when you run a
+  [GitHub sync](/capabilities/github-sync) command.
+- The usage and cost summary printed after an AI command is computed locally
+  and not sent anywhere.
+- The Claude Code plugin's hooks run your installed `taskgraph` CLI, read
+  `.taskgraph/` in the project and keep the session start time in your temp
+  folder. They turn off the update check and make no network calls.
 
 ## What leaves your machine
 
-- **AI calls** go through your own Claude Code, to Anthropic, under your Claude account and [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy). TaskGraph sends the task text and project context the command needs, and nothing else.
-- **Update checks:** the CLI asks `registry.npmjs.org` for the latest version and fetches release notes from `raw.githubusercontent.com`. Set `TASKGRAPH_SKIP_AUTO_UPDATE=1` to turn this off.
-- **Research:** the `research` skill and command search and fetch web pages for the question you ask.
+- **AI calls** go through your own Claude Code, to Anthropic, under your Claude
+  account and
+  [Anthropic's privacy policy](https://www.anthropic.com/legal/privacy).
+  TaskGraph sends the task text and project context the command needs: a short
+  summary of the project (file names, a few `package.json` fields and README
+  headings), and the files Claude reads in the project while it plans.
+  [`loop`](/capabilities/loop) runs Claude Code with permission prompts off, so
+  it can read, run and send anything your Claude Code can.
+- **Update checks:** the CLI asks `registry.npmjs.org` for the latest version.
+  When there is a newer one, it fetches release notes from
+  `raw.githubusercontent.com` and installs the update from npm. Set
+  `TASKGRAPH_SKIP_AUTO_UPDATE=1` to turn this off.
+- **GitHub sync:** `taskgraph github push` writes your tasks to GitHub Issues,
+  and `pull` and `import` read issues, through your signed-in `gh` CLI.
+- **Containers:** `loop --parallel --container` installs TaskGraph from npm
+  inside the container when its image doesn't have it.
+- **Research:** the `research` skill and command search and fetch web pages
+  for the question you ask.
 
 ## Questions
 
-Open an issue at [github.com/stephennmiller/taskgraph-ai/issues](https://github.com/stephennmiller/taskgraph-ai/issues). Report security problems privately as described in [SECURITY.md](https://github.com/stephennmiller/taskgraph-ai/blob/main/SECURITY.md).
+Open an issue at
+[github.com/stephennmiller/taskgraph-ai/issues](https://github.com/stephennmiller/taskgraph-ai/issues).
+Report security problems privately as described in
+[SECURITY.md](https://github.com/stephennmiller/taskgraph-ai/blob/main/SECURITY.md).
