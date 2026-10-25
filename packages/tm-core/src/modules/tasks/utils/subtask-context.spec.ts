@@ -22,7 +22,7 @@ describe('subtaskInContext', () => {
 
 		expect(subtask.parentId).toBe('3');
 		expect(subtask.priority).toBe('high');
-		expect(subtask.dependencies).toEqual([1]);
+		expect(subtask.dependencies).toEqual(['3.1']);
 	});
 
 	// #661: show 3.2 --json gave "id": "2", where next gives "3.2"
@@ -86,7 +86,9 @@ describe('subtaskInContext', () => {
 			id: next.id,
 			parentId: next.parentId,
 			priority: next.priority,
-			complexity: next.complexity
+			complexity: next.complexity,
+			// #700: show 3.2 read the sibling dependency as [1], the parent's form
+			dependencies: next.dependencies
 		});
 	});
 });

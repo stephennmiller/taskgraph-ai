@@ -12,11 +12,13 @@
  * dotted ID (`"9.1"`) instead, through withFullSubtaskIds, so `show`, `list`
  * and `next` agree.
  *
- * A subtask's `dependencies` keep their stored type, since the type carries
- * the meaning (a bare number is a sibling; see resolveSubtaskDependency).
+ * A subtask's `dependencies` keep their stored type inside @tm/core, since
+ * the type carries the meaning (a bare number is a sibling; see
+ * resolveSubtaskDependency). JSON replies give them as full IDs too.
  */
 
 import type { Task } from '../../../common/types/index.js';
+import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { fullSubtaskId } from '../validation/task-id.js';
 
 /**
@@ -38,8 +40,8 @@ export function normalizeTaskIds(task: Task): Task {
 }
 
 /**
- * The task as a JSON reply gives it: each subtask's `id` is its full dotted
- * ID (`"9.1"`), the form `show`, `set-status` and `next` take. Never save the
+ * The task as a JSON reply gives it: each subtask's `id` and `dependencies`
+ * are full dotted IDs (`"9.1"`), the form `show`, `set-status` and `next` take. Never save the
  * result; tasks.json keeps the subtask's own number. Null stays null.
  */
 export function withFullSubtaskIds<T extends { id: string | number } | null>(
@@ -51,7 +53,12 @@ export function withFullSubtaskIds<T extends { id: string | number } | null>(
 		...task,
 		subtasks: subtasks.map((subtask) => ({
 			...subtask,
-			id: fullSubtaskId(task.id, subtask.id)
+			id: fullSubtaskId(task.id, subtask.id),
+			...(subtask.dependencies && {
+				dependencies: subtask.dependencies.map((dep: string | number) =>
+					resolveSubtaskDependency(task.id, dep)
+				)
+			})
 		}))
 	};
 }

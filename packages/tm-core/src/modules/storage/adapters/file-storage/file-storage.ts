@@ -26,7 +26,6 @@ import type {
 	TaskMetadata,
 	TaskStatus
 } from '../../../../common/types/index.js';
-import { resolveSubtaskDependency } from '../../../dependencies/subtask-dependency.js';
 import { subtaskInContext } from '../../../tasks/utils/subtask-context.js';
 import { ComplexityReportManager } from '../../../reports/managers/complexity-report-manager.js';
 import {
@@ -221,10 +220,6 @@ export class FileStorage implements IStorage {
 			return {
 				...subtaskInContext(parentTask, subtask),
 				id: taskId,
-				dependencies:
-					subtask.dependencies?.map((dep) =>
-						resolveSubtaskDependency(parentTask.id, dep)
-					) ?? [],
 				subtasks: []
 			};
 		}

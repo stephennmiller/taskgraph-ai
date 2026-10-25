@@ -87,14 +87,14 @@ describe('normalizeTaskIds', () => {
 
 // #661: list and show --json gave a subtask "id": "1", which set-status reads as task 1
 describe('withFullSubtaskIds', () => {
-	it('gives each subtask its full dotted ID and keeps parentId', () => {
+	it('gives each subtask its full dotted ID and full-ID dependencies, and keeps parentId (#700)', () => {
 		const task = withFullSubtaskIds(normalizeTaskIds(stored()));
 
 		expect(task.subtasks.map((st) => [st.id, st.parentId])).toEqual([
 			['2.1', '2'],
 			['2.2', '2']
 		]);
-		expect(task.subtasks[1].dependencies).toEqual([1, '3', '2.1']);
+		expect(task.subtasks[1].dependencies).toEqual(['2.1', '3', '2.1']);
 	});
 
 	it('keeps an ID that is already dotted', () => {

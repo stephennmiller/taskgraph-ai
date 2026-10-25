@@ -25,7 +25,7 @@ import { shapeOf } from '../../helpers/json-shape.js';
 import { getCliBinPath, spawnTimeout } from '../../helpers/test-utils.js';
 
 /** The schemaVersion the shapes below describe */
-const PINNED_VERSION = 2;
+const PINNED_VERSION = 3;
 
 describe('--json contract', () => {
 	let dir: string;
@@ -217,7 +217,7 @@ describe('--json contract', () => {
 			    "subtasks": [
 			      {
 			        "dependencies": [
-			          "number",
+			          "string",
 			        ],
 			        "description": "string",
 			        "details": "string",
@@ -280,7 +280,7 @@ describe('--json contract', () => {
 			      "subtasks": [
 			        {
 			          "dependencies": [
-			            "number",
+			            "string",
 			          ],
 			          "description": "string",
 			          "details": "string",
@@ -352,7 +352,7 @@ describe('--json contract', () => {
 			    "subtasks": [
 			      {
 			        "dependencies": [
-			          "number",
+			          "string",
 			        ],
 			        "description": "string",
 			        "details": "string",

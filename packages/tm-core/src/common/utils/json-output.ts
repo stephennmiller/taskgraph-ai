@@ -15,7 +15,7 @@
  */
 
 /** Version of the shape of every JSON payload the CLI prints. */
-export const JSON_OUTPUT_SCHEMA_VERSION = 2;
+export const JSON_OUTPUT_SCHEMA_VERSION = 3;
 
 /** A JSON payload with its schema version stamped on. */
 export type VersionedJson<T extends object> = Omit<T, 'schemaVersion'> & {
