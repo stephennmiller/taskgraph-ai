@@ -414,6 +414,7 @@ describe('--json contract', () => {
 		expect(ids(listed)).toEqual(expected);
 		expect(ids(json(['next', '--format', 'json']).task)).toEqual(expected);
 		expect(ids(json(['show', '2', '--json']).task)).toEqual(expected);
+		expect(ids(json(['show', '2,3', '--json']).tasks[0])).toEqual(expected);
 		expect(json(['show', '2.1', '--json']).task).toMatchObject({
 			id: '2.1',
 			parentId: '2'

@@ -43,6 +43,8 @@ const savedTask = {
 	title: 'Auth',
 	subtasks: [{ id: 1 }, { id: 2 }]
 };
+// #661: the reply gives each subtask its full ID, which set_task_status takes
+const repliedSubtasks = [{ id: '3.1' }, { id: '3.2' }];
 
 let project: string;
 
@@ -98,7 +100,7 @@ describe('expand_task', () => {
 		expect(tool().name).toBe('expand_task');
 		expect(reply(result)).toMatchObject({
 			data: {
-				task: savedTask,
+				task: { ...savedTask, subtasks: repliedSubtasks },
 				subtasksAdded: 2,
 				hasExistingSubtasks: true,
 				telemetryData: { totalTokens: 3 },
@@ -124,7 +126,7 @@ describe('expand_task', () => {
 		expect(reply(result).data).toEqual({
 			message: 'Task 3 already has subtasks. Expansion skipped.',
 			// The legacy reply read the task with a number ID
-			task: { ...savedTask, id: 3 },
+			task: { ...savedTask, id: 3, subtasks: repliedSubtasks },
 			subtasksAdded: 0,
 			hasExistingSubtasks: true
 		});
