@@ -27,10 +27,10 @@ collects nothing about you or your project.
   headings), and the files Claude reads in the project while it plans.
   [`loop`](/capabilities/loop) runs Claude Code with permission prompts off, so
   it can read, run and send anything your Claude Code can.
-- **Update checks:** the CLI asks `registry.npmjs.org` for the latest version.
-  When there is a newer one, it fetches release notes from
-  `raw.githubusercontent.com` and installs the update from npm. Set
-  `TASKGRAPH_SKIP_AUTO_UPDATE=1` to turn this off.
+- **Updates:** the CLI checks for and installs updates. It asks
+  `registry.npmjs.org` for the latest version. When there is a newer one, it
+  fetches release notes from `raw.githubusercontent.com` and installs the
+  update from npm. Set `TASKGRAPH_SKIP_AUTO_UPDATE=1` to turn this off.
 - **GitHub sync:** `taskgraph github push` writes your tasks to GitHub Issues,
   and `pull` and `import` read issues, through your signed-in `gh` CLI.
 - **Containers:** `loop --parallel --container` installs TaskGraph from npm
