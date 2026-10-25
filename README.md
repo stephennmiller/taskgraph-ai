@@ -129,7 +129,7 @@ add it to the project's `.mcp.json`, or see step 4.
 
 ### 3. Install the plugin
 
-The plugin lets Claude act on plain requests about your tasks. It also adds 36
+The plugin lets Claude act on plain requests about your tasks. It also adds 34
 slash commands (as `/taskgraph:<name>`) and two agents (`task-executor`,
 `task-checker`). In Claude Code, run:
 
@@ -300,18 +300,23 @@ here works with `standard`.
   Check the task dependencies and fix any problems
   ```
 
-- **Statuses:** `pending`, `in-progress`, `done`, `review`, `deferred`,
-  `cancelled`.
+- **Statuses:** `pending`, `in-progress`, `review`, `done`, `blocked`,
+  `deferred`, `cancelled`.
 
 ## Commands
 
 Plain requests to Claude, slash commands and the `taskgraph` CLI all reach the
-same actions. Use whichever you like.
+same actions.
 
 ### Slash commands
 
-Install the plugin (step 3) and they appear as `/taskgraph:<name>` (type
-`/taskgraph` to see them). `taskgraph init` does not write slash commands.
+Install the plugin (step 3) and they appear as `/taskgraph:<name>`.
+`taskgraph init` does not write slash commands. To see them all, type this in
+Claude Code:
+
+```txt
+/taskgraph
+```
 
 | Purpose | Commands |
 |---|---|
