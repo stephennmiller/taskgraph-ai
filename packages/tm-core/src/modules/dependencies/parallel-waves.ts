@@ -14,9 +14,8 @@
  *   its subtasks run inside it. That matches the tree `graph` draws.
  * - Finished (`isTaskComplete`: done, completed, cancelled) tasks take no
  *   part and satisfy whatever waits on them.
- * - A dependency on a subtask ("2.1") is satisfied when that subtask, or its
- *   parent, is finished. Until then it orders the task after the parent
- *   (task 2). A task's dependency on one of its own subtasks is ignored.
+ * - Whether a dependency is satisfied follows `createDependencyState`. An
+ *   open subtask ("2.1") orders the task after its parent (task 2).
  * - Tasks that can't be scheduled get no wave and are listed in
  *   `unscheduled` with the reason: `cycle` (in a dependency loop, including
  *   a task that lists itself), `missing` (names a dependency ID that matches
@@ -32,6 +31,7 @@
 
 import { isTaskComplete } from '../../common/constants/index.js';
 import type { Task } from '../../common/types/index.js';
+import { createDependencyState } from './dependency-check.js';
 import { compareIds, stronglyConnectedComponents } from './dependency-graph.js';
 
 export type UnscheduledReason = 'cycle' | 'missing' | 'held' | 'waiting';
@@ -70,6 +70,7 @@ export function blockingDependencies(task: Task): string[] {
 
 export function parallelWaves(tasks: Task[]): ParallelWaves {
 	const byId = new Map(tasks.map((t) => [String(t.id), t]));
+	const dependencyState = createDependencyState(tasks);
 	const finished = (t: Task) => isTaskComplete(t.status);
 	const open = tasks.filter((t) => !finished(t)).map((t) => String(t.id));
 
@@ -85,29 +86,11 @@ export function parallelWaves(tasks: Task[]): ParallelWaves {
 				selfLoop.add(id);
 				continue;
 			}
-			const target = byId.get(dep);
-			if (target) {
-				if (!finished(target)) deps.add(dep);
-				continue;
-			}
-			const dot = dep.indexOf('.');
-			const parent = dot > 0 ? byId.get(dep.slice(0, dot)) : undefined;
-			const subtask = parent?.subtasks?.find(
-				(s) => String(s.id) === dep.slice(dot + 1)
-			);
-			if (!parent || !subtask) {
-				gone.push(dep);
-				continue;
-			}
-			const parentId = String(parent.id);
-			if (
-				parentId === id ||
-				finished(parent) ||
-				isTaskComplete(subtask.status ?? 'pending')
-			) {
-				continue;
-			}
-			deps.add(parentId);
+			const state = dependencyState(id, dep);
+			if (state === 'missing') gone.push(dep);
+			// A subtask orders the task after its parent
+			else if (state === 'open')
+				deps.add(byId.has(dep) ? dep : dep.split('.')[0]);
 		}
 		blockers.set(id, [...deps]);
 		missing.set(id, gone);

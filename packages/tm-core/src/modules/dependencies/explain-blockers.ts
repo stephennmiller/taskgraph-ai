@@ -16,6 +16,7 @@
 
 import { isTaskComplete } from '../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../common/types/index.js';
+import { createDependencyState } from './dependency-check.js';
 import {
 	type DependencyGraphNode,
 	buildDependencyGraph,
@@ -158,10 +159,12 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		};
 	};
 
-	const unfinished = (ids: string[]) =>
+	const dependencyState = createDependencyState(tasks);
+	/** The dependencies of `of` that still hold it up */
+	const unfinished = (of: string, ids: string[]) =>
 		ids
+			.filter((d) => dependencyState(of, d) === 'open')
 			.map((d) => nodes.get(d) as DependencyGraphNode)
-			.filter((d) => !isTaskComplete(d.status))
 			.sort((a, b) => compareIds(a.id, b.id));
 
 	const open = (node: DependencyGraphNode): Frame => {
@@ -177,7 +180,7 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 			// A parent on the path already shows its own blockers; only a way
 			// back onto the path (a loop) is news
 			const parentShown = onPath.has(parent.id);
-			for (const dep of unfinished(node.inherited)) {
+			for (const dep of unfinished(parent.id, node.inherited)) {
 				if (!parentShown || onPath.has(dep.id)) {
 					deps.push({ node: dep, inherited: true });
 				}
@@ -192,7 +195,7 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 				}
 			}
 		}
-		for (const dep of unfinished(node.dependencies)) {
+		for (const dep of unfinished(node.id, node.dependencies)) {
 			deps.push({ node: dep, inherited: false });
 		}
 		return { node, deps, at: 0, out, inheritedOut };

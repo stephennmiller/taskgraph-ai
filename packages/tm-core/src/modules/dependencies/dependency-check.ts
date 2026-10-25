@@ -11,6 +11,7 @@
  * subtask's dependencies is a sibling subtask (see subtask-dependency.ts).
  */
 
+import { isTaskComplete } from '../../common/constants/index.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import type { PrdCoverage } from '../prd/prd-coverage.js';
 import { isArchivedReference, liveOrArchived } from '../tasks/utils/archive.js';
@@ -181,6 +182,42 @@ export function createTaskLookup(tasks: Task[]): (id: Id) => boolean {
 		}
 		const taskId = parseInt(String(id), 10);
 		return !Number.isNaN(taskId) && subtaskIds.has(String(taskId));
+	};
+}
+
+/**
+ * Where a dependency stands: `open` holds its task up, `satisfied` doesn't,
+ * `missing` matches no task or subtask
+ */
+export type DependencyState = 'open' | 'satisfied' | 'missing';
+
+/**
+ * The one rule `next`, `why`, `graph` and `list --ready` share for whether a
+ * dependency still holds up the task (`"3"`) or subtask (`"3.2"`) that lists
+ * it. A finished task or subtask is satisfied, and so is a subtask of a
+ * finished task (setting a parent done leaves its subtasks as they were). A
+ * task's dependency on one of its own subtasks is satisfied: the subtask
+ * runs inside the task, so it can't come first. IDs match exactly, as
+ * stored; pass a subtask's dependencies through `resolveSubtaskDependency`.
+ */
+export function createDependencyState(
+	tasks: Task[]
+): (taskId: string, depId: string) => DependencyState {
+	const byId = new Map(tasks.map((t) => [String(t.id), t]));
+	return (taskId, depId) => {
+		const task = byId.get(depId);
+		if (task) return isTaskComplete(task.status) ? 'satisfied' : 'open';
+		const dot = depId.indexOf('.');
+		const parent = dot > 0 ? byId.get(depId.slice(0, dot)) : undefined;
+		const subtask = parent?.subtasks?.find(
+			(s) => String(s.id) === depId.slice(dot + 1)
+		);
+		if (!parent || !subtask) return 'missing';
+		return String(parent.id) === taskId ||
+			isTaskComplete(parent.status) ||
+			isTaskComplete(subtask.status ?? 'pending')
+			? 'satisfied'
+			: 'open';
 	};
 }
 

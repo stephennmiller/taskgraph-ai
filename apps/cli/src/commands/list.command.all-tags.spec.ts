@@ -215,6 +215,53 @@ describe('ListTasksCommand', () => {
 			expect(taskIds).not.toContain('tag-b:2'); // Not ready: depends on pending task
 		});
 
+		it('reads dependencies on subtasks, and leaves them out of the rows (#657)', async () => {
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const command = new ListTasksCommand();
+			const tasks = [
+				{
+					id: '1',
+					title: 'Parent',
+					status: 'review',
+					dependencies: [],
+					subtasks: [{ id: 1, title: 'Sub', status: 'done' }]
+				},
+				{ id: '2', title: 'Waiting', status: 'pending', dependencies: ['1.1'] }
+			];
+			(command as any).tmCore = {
+				tasks: {
+					getArchivedIds: vi.fn().mockResolvedValue(new Set()),
+					// As storage does: includeSubtasks false empties them
+					list: vi.fn(async ({ includeSubtasks }) => ({
+						tasks:
+							includeSubtasks === false
+								? tasks.map((task) => ({ ...task, subtasks: [] }))
+								: tasks,
+						total: 2,
+						filtered: 2
+					})),
+					getTagsWithStats: vi.fn().mockResolvedValue({
+						tags: [{ name: 'tag-a', taskCount: 2 }]
+					})
+				},
+				config: { getActiveTag: vi.fn().mockReturnValue('master') }
+			};
+
+			await (command as any).executeCommand({
+				allTags: true,
+				ready: true,
+				json: true
+			});
+
+			expect(warnSpy).not.toHaveBeenCalled();
+			const parsed = JSON.parse(consoleLogSpy.mock.calls[0][0]);
+			expect(parsed.tasks.map((t: any) => [t.id, t.subtasks])).toEqual([
+				['1', []],
+				['2', []]
+			]);
+			warnSpy.mockRestore();
+		});
+
 		it('should reject --all-tags combined with --watch', () => {
 			const consoleErrorSpy = vi
 				.spyOn(console, 'error')

@@ -8,7 +8,7 @@ Task dependencies form a graph. TaskGraph reads that graph to pick the next task
 
 ## How `next` orders tasks
 
-`taskgraph next` (and the recommendation in `taskgraph list`) considers tasks that are `pending` or `in-progress` and whose dependencies are all `done`. Subtasks of an in-progress parent are considered first, when both their own dependencies and their parent's are done (see [Parents and subtasks](#parents-and-subtasks)). A subtask whose parent is not `in-progress` is not offered on its own: `next` offers the parent, and once you start it, `next` offers its subtasks. Among the candidates it picks by:
+`taskgraph next` (and the recommendation in `taskgraph list`) considers tasks that are `pending` or `in-progress` and whose dependencies are all finished. Subtasks of an in-progress parent are considered first, when both their own dependencies and their parent's are finished (see [Parents and subtasks](#parents-and-subtasks)). A subtask whose parent is not `in-progress` is not offered on its own: `next` offers the parent, and once you start it, `next` offers its subtasks. A dependency is finished when its task or subtask is `done` or `cancelled`, or when it names a subtask of a `done` or `cancelled` task, whatever the subtask's own status. The task with the subtask can be in any status: a `done` subtask of a task in `review` counts as finished. A task's dependency on one of its own subtasks never holds it up, since the subtask runs inside it. `why`, `graph` and `list --ready` read dependencies by the same rule. Among the candidates it picks by:
 
 1. **Priority**: `critical`, then `high`, `medium`, `low`.
 2. **Unblocks the most**: the task with the most unfinished tasks waiting on it, directly or through other tasks. Between two subtasks that tie, the one more of its own task waits on.
@@ -247,6 +247,5 @@ The `dependency_analysis` tool, in the `standard` and `all` tiers, returns the b
 
 These are known and not yet fixed:
 
-- **What counts as finished differs for subtasks.** `next`, `why` and `graph` all treat `done` and `cancelled` as finished, but `next` only looks for finished work under parents that are `pending`, `in-progress`, `done` or `cancelled`. A `done` subtask under a parent in `review`, `blocked` or `deferred` satisfies a dependency in `why` and `graph`, but never in `next`.
 - **Older writers don't stamp a schema version.** Tags created by legacy code paths have no `schemaVersion` until the next `@tm/core` save; a missing value means version 1.
 - **Graph limits:** cycle members and tasks behind a loop are left out of the critical path, and the tree doesn't call out a loop formed only by a subtask's own dependencies (see [`taskgraph graph`](#known-limits)).

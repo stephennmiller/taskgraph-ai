@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import type { Task } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
+import {
+	bottlenecks,
+	criticalPath,
+	explainBlockers,
+	parallelWaves
+} from '../../dependencies/index.js';
 import { selectNextTask } from './next-task.js';
 
 describe('selectNextTask', () => {
@@ -194,6 +201,66 @@ describe('selectNextTask', () => {
 			);
 
 			expect(selectNextTask(tasks)?.id).toBe('1.1');
+		});
+	});
+	// next, why and graph share one rule for a dependency on a subtask (#658)
+	describe('a dependency on a subtask, as why and graph read it', () => {
+		const agree = (tasks: Task[], id: string) => {
+			expect(selectNextTask(tasks)?.id).toBe(id);
+			expect(explainBlockers(tasks, id).blocked).toBe(false);
+			expect(parallelWaves(tasks).waves[0]).toContain(id);
+		};
+
+		it('offers a task that depends on its own subtask', () => {
+			agree(
+				[
+					createTask({
+						id: 1,
+						title: 'Task',
+						dependencies: ['1.1'],
+						subtasks: [createSubtask({ id: 1, title: 'Sub', parentId: '1' })]
+					})
+				],
+				'1'
+			);
+		});
+
+		it('counts a done subtask of a task in review', () => {
+			agree(
+				[
+					createTask({ id: 7, title: 'Waiting', dependencies: ['8.1'] }),
+					createTask({
+						id: 8,
+						title: 'In review',
+						status: 'review',
+						subtasks: [
+							createSubtask({
+								id: 1,
+								title: 'Done',
+								parentId: '8',
+								status: 'done'
+							})
+						]
+					})
+				],
+				'7'
+			);
+		});
+
+		it('counts a pending subtask of a done task as finished', () => {
+			const tasks = [
+				createTask({
+					id: 13,
+					title: 'Done',
+					status: 'done',
+					subtasks: [createSubtask({ id: 1, title: 'Left', parentId: '13' })]
+				}),
+				createTask({ id: 14, title: 'Waiting', dependencies: ['13.1'] })
+			];
+
+			agree(tasks, '14');
+			expect(bottlenecks(tasks)).toEqual([]);
+			expect(criticalPath(tasks)).toEqual(['14']);
 		});
 	});
 });

@@ -19,10 +19,11 @@
  * edges. Self-dependencies are not edges either (the analyses ignore them),
  * but are flagged on the node as `selfDependency`.
  *
- * Finished means `isTaskComplete` (done, completed, cancelled). Finished
- * tasks take no part in `blockedCount`, `bottlenecks` or `criticalPath`. Every
- * other status, including deferred, blocked and review, is open: it still
- * stands in the way of its dependents.
+ * Finished means `isTaskComplete` (done, completed, cancelled); a subtask of
+ * a finished task counts as finished too. Finished tasks take no part in
+ * `blockedCount`, `bottlenecks` or `criticalPath`. Every other status,
+ * including deferred, blocked and review, is open: it still stands in the
+ * way of its dependents.
  *
  * Cycles: `findCycles` returns strongly connected groups of 2+ tasks, over
  * every task. That deliberately differs from `buildDependencyTree`'s
@@ -180,8 +181,15 @@ function startDependents(graph: DependencyGraph): Map<string, string[]> {
 	return waiting;
 }
 
-const isOpen = (node: DependencyGraphNode): boolean =>
-	!isTaskComplete(node.status);
+/** Unfinished, in a task that isn't finished (as `createDependencyState`) */
+const openIn =
+	(nodes: DependencyGraph['nodes']) =>
+	(node: DependencyGraphNode): boolean =>
+		!isTaskComplete(node.status) &&
+		!(
+			node.parent &&
+			isTaskComplete(nodes.get(node.parent)?.status as TaskStatus)
+		);
 
 /**
  * For every task, how much unfinished work is (transitively) waiting on it,
@@ -200,6 +208,7 @@ export function blockedCount(
 	graph: DependencyGraph = buildDependencyGraph(tasks)
 ): Map<string, number> {
 	const { nodes } = graph;
+	const isOpen = openIn(nodes);
 	const waiting = startDependents(graph);
 	const counts = new Map<string, number>();
 	const open: string[] = [];
@@ -264,6 +273,7 @@ export function blockedWithinTask(
 	graph: DependencyGraph = buildDependencyGraph(tasks)
 ): Map<string, number> {
 	const { nodes } = graph;
+	const isOpen = openIn(nodes);
 	const waiting = startDependents(graph);
 	const counts = new Map<string, number>();
 	for (const node of nodes.values()) {
@@ -309,6 +319,7 @@ export function bottlenecks(
 	graph: DependencyGraph = buildDependencyGraph(tasks)
 ): Bottleneck[] {
 	const { nodes } = graph;
+	const isOpen = openIn(nodes);
 	const ranked: Bottleneck[] = [];
 	for (const [id, blocks] of blockedCount(tasks, graph)) {
 		const node = nodes.get(id) as DependencyGraphNode;
@@ -353,6 +364,7 @@ export function criticalPath(
 	graph: DependencyGraph = buildDependencyGraph(tasks)
 ): string[] {
 	const { nodes } = graph;
+	const isOpen = openIn(nodes);
 	const open = [...nodes.values()].filter(isOpen).map((n) => n.id);
 	const isOpenId = (id: string) => isOpen(nodes.get(id) as DependencyGraphNode);
 

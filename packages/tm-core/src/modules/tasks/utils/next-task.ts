@@ -11,11 +11,8 @@ import {
 	buildDependencyGraph,
 	resolveSubtaskDependency
 } from '../../dependencies/index.js';
+import { createDependencyState } from '../../dependencies/dependency-check.js';
 import { subtaskInContext } from './subtask-context.js';
-
-// A cancelled task will never run, so work waiting on it is not held up
-const isSatisfied = (status: string | undefined) =>
-	status === 'done' || status === 'cancelled';
 
 export interface SelectNextTaskOptions {
 	/**
@@ -53,14 +50,6 @@ export function rankNextTasks(
 	const pickable = (status: string) =>
 		status === 'pending' ||
 		(status === 'in-progress' && !options.unstartedOnly);
-	// Eligibility and satisfied dependencies only see these statuses; blocked counts see every task,
-	// since deferred, blocked and review tasks still wait on their dependencies
-	// A hand-edited task may have no status; it counts as pending
-	const allTasks = tasks.filter((t) =>
-		['pending', 'in-progress', 'done', 'cancelled'].includes(
-			t.status || 'pending'
-		)
-	);
 	const graph = buildDependencyGraph(tasks);
 	const blockedCounts = blockedCount(tasks, graph);
 	const blocks = (task: Task) => blockedCounts.get(String(task.id)) ?? 0;
@@ -69,36 +58,25 @@ export function rankNextTasks(
 		siblingCounts.get(String(task.id)) ?? 0;
 	const priorityValues = { critical: 4, high: 3, medium: 2, low: 1 };
 
-	// Build satisfied IDs set (both tasks and subtasks)
-	const completedIds = new Set<string>();
-	allTasks.forEach((t) => {
-		if (isSatisfied(t.status)) {
-			completedIds.add(String(t.id));
-		}
-		if (Array.isArray(t.subtasks)) {
-			t.subtasks.forEach((st) => {
-				if (isSatisfied(st.status)) {
-					completedIds.add(`${t.id}.${st.id}`);
-				}
-			});
-		}
-	});
+	// Same rule as `why` and `graph`; sees every task, so a done subtask of a
+	// task in review counts as done
+	const dependencyState = createDependencyState(tasks);
+	const satisfied = (taskId: string, depId: unknown) =>
+		dependencyState(taskId, String(depId)) === 'satisfied';
 
 	// 1) Look for eligible subtasks from in-progress parent tasks
 	const candidateSubtasks: Array<Task & { parentId?: string }> = [];
 
-	allTasks
+	tasks
 		.filter((t) => t.status === 'in-progress' && Array.isArray(t.subtasks))
 		.forEach((parent) => {
 			// A subtask also waits on what its parent waits on (not on the
-			// parent's own subtasks, nor on the parent listing itself), as
-			// `why` shows it
+			// parent listing itself), as `why` shows it
 			const parentId = String(parent.id);
-			const ownPrefix = `${parentId}.`;
 			const parentDepsSatisfied = (parent.dependencies ?? [])
 				.map(String)
-				.filter((depId) => depId !== parentId && !depId.startsWith(ownPrefix))
-				.every((depId) => completedIds.has(depId));
+				.filter((depId) => depId !== parentId)
+				.every((depId) => satisfied(parentId, depId));
 			if (!parentDepsSatisfied) return;
 			parent.subtasks!.forEach((st) => {
 				const stStatus = (st.status || 'pending').toLowerCase();
@@ -109,7 +87,7 @@ export function rankNextTasks(
 					[];
 				const depsSatisfied =
 					fullDeps.length === 0 ||
-					fullDeps.every((depId) => completedIds.has(String(depId)));
+					fullDeps.every((depId) => satisfied(`${parentId}.${st.id}`, depId));
 
 				if (depsSatisfied) {
 					candidateSubtasks.push({
@@ -146,12 +124,12 @@ export function rankNextTasks(
 	});
 
 	// 2) Then top-level tasks
-	const eligibleTasks = allTasks.filter((task) => {
+	const eligibleTasks = tasks.filter((task) => {
 		const status = (task.status || 'pending').toLowerCase();
 		if (!pickable(status)) return false;
 
 		const deps = task.dependencies ?? [];
-		return deps.every((depId) => completedIds.has(String(depId)));
+		return deps.every((depId) => satisfied(String(task.id), depId));
 	});
 
 	// Sort by priority → blocked count → dependency count → task ID
