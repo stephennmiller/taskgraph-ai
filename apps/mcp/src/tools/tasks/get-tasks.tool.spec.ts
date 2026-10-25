@@ -109,8 +109,7 @@ describe('get_tasks', () => {
 			priority: 'medium',
 			dependencies: ['1']
 		});
-		expect(data.stats.total).toBe(40);
-		expect(data.stats.subtasks.total).toBe(80);
+		expect(data).not.toHaveProperty('stats');
 	});
 
 	it('adds the fields asked for', async () => {
@@ -123,6 +122,7 @@ describe('get_tasks', () => {
 		expect(Object.keys(data.tasks[0])).toEqual(['id', 'title', 'testStrategy']);
 	});
 
+	// #661: with its full dotted ID, as get_task and next_task give it
 	it('nests subtasks with the same fields when asked', async () => {
 		const result = await register().execute(
 			{ projectRoot: project, withSubtasks: true },
@@ -131,7 +131,7 @@ describe('get_tasks', () => {
 
 		const { data } = JSON.parse(result.content[0].text);
 		expect(data.tasks[0].subtasks[0]).toEqual({
-			id: 1,
+			id: '1.1',
 			title: 'Step 1 of feature 1',
 			status: 'pending',
 			priority: 'medium',
@@ -148,6 +148,19 @@ describe('get_tasks', () => {
 		expect(tasks.list).toHaveBeenCalledWith(
 			expect.objectContaining({ filter: { status: ['pending', 'review'] } })
 		);
+	});
+
+	it('refuses an unknown status, naming the valid ones', async () => {
+		const result = await register().execute(
+			{ projectRoot: project, status: 'bogus' },
+			ctx
+		);
+
+		expect(result.isError).toBe(true);
+		expect(result.content[0].text).toContain(
+			'"bogus" isn\'t a status. Use one of: pending'
+		);
+		expect(tasks.list).not.toHaveBeenCalled();
 	});
 
 	it('names the valid fields when one is unknown', async () => {

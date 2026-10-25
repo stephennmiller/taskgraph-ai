@@ -43,6 +43,7 @@ import {
 	targetSubtaskCount
 } from './scope-adjustment-prompts.js';
 import type { TaskService } from './task-service.js';
+import { mergeRewrite } from './update-task-helpers.js';
 
 export interface ScopeTaskInput {
 	/** Comma-separated top-level task IDs ("1,3,5") */
@@ -223,7 +224,14 @@ export class ScopeAdjustmentService {
 					telemetry,
 					warn
 				);
-				const saved = await this.save(id, tag, fields, generated, direction);
+				const saved = await this.save(
+					stored,
+					tag,
+					task,
+					generated,
+					direction,
+					warn
+				);
 				if (saved.dropped.length > 0) {
 					warn(
 						`Dropped dependencies on replaced subtasks of task ${id} from ${saved.dropped.join(', ')}`
@@ -326,27 +334,31 @@ export class ScopeAdjustmentService {
 	}
 
 	/**
-	 * Apply the new fields and subtasks to the task as tasks.json has it now,
-	 * under the lock. The subtasks kept are the ones with work on them at
-	 * save time; the new ones are numbered after every subtask the task had,
-	 * so no ID is reused, and dependencies on the replaced ones are dropped.
+	 * Merge the new fields into the task as tasks.json has it now, under the
+	 * lock, keeping edits made during the AI call (see mergeRewrite). The
+	 * subtasks kept are the ones with work on them at save time; the new ones
+	 * are numbered after every subtask the task had, so no ID is reused, and
+	 * dependencies on the replaced ones are dropped.
 	 */
 	private async save(
-		id: string,
+		stored: Task,
 		tag: string,
-		fields: ScopedFields,
+		updated: Task,
 		generated: Subtask[] | null,
-		direction: ScopeDirection
+		direction: ScopeDirection,
+		warn: (message: string) => void
 	): Promise<{ task: Task; preserved: number; dropped: string[] }> {
+		const id = String(stored.id);
 		const { result } = await this.taskService.modifyTasks((current) => {
-			const target = current.find((t) => String(t.id) === id);
-			if (!target) {
+			const index = current.findIndex((t) => String(t.id) === id);
+			if (index === -1) {
 				throw new TaskGraphError(
 					`Task ${id} was removed while it was being scoped ${direction}`,
 					ERROR_CODES.TASK_NOT_FOUND
 				);
 			}
-			Object.assign(target, fields);
+			const target = mergeRewrite(stored, updated, current[index], warn);
+			current[index] = target;
 			const all = target.subtasks ?? [];
 			const kept = all.filter((s) => !isPending(s));
 			let dropped: string[] = [];

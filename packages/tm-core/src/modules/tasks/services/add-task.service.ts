@@ -380,12 +380,9 @@ export class AddTaskService {
 		});
 
 		const result = response?.mainResult;
+		const candidate = result?.task ?? result?.object?.task;
 		const taskData: AiTaskData | undefined =
-			result?.title && result?.description
-				? result
-				: result?.object?.title && result?.object?.description
-					? result.object
-					: undefined;
+			candidate?.title && candidate?.description ? candidate : undefined;
 		if (!taskData) {
 			throw new Error(
 				result

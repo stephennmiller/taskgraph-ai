@@ -106,7 +106,7 @@ export function registerUpdateSubtaskTool(server: FastMCP) {
 								added: result.added,
 								subtaskId: result.id,
 								parentId: result.parentId,
-								subtask: result.subtask,
+								subtask: { ...result.subtask, id: result.id },
 								tasksPath: path.join(args.projectRoot, TASKGRAPH_TASKS_FILE),
 								useResearch: args.research === true,
 								telemetryData: result.telemetryData,

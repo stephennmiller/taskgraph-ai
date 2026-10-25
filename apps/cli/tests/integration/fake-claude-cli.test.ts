@@ -86,7 +86,7 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		const trace = readTrace(fakeDir);
 		expect(trace).toHaveLength(1);
 		expect(trace[0].prompt).toContain('Write a hello world');
-		expect(Object.keys(trace[0].schema.properties)).toEqual(
+		expect(Object.keys(trace[0].schema.properties.task.properties)).toEqual(
 			expect.arrayContaining(['title', 'description', 'details'])
 		);
 	});
@@ -95,11 +95,13 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		install([
 			{
 				object: {
-					title: 'Canned title',
-					description: 'Canned description of the work',
-					details: 'Canned details that are long enough to pass',
-					testStrategy: 'Canned test strategy',
-					dependencies: []
+					task: {
+						title: 'Canned title',
+						description: 'Canned description of the work',
+						details: 'Canned details that are long enough to pass',
+						testStrategy: 'Canned test strategy',
+						dependencies: []
+					}
 				}
 			}
 		]);

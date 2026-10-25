@@ -41,7 +41,7 @@ const cases = [
 		'default',
 		{ prompt: 'Add logout', newTaskId: 2, existingTasks: [] },
 		COMMAND_SCHEMAS['add-task'],
-		'json',
+		null,
 		null
 	],
 	[
@@ -79,12 +79,13 @@ describe.each(cases)(
 		const topLevel = Object.keys(json.properties);
 
 		it('names only top-level properties the schema accepts', () => {
-			// `a "subtasks" property`, `a "metadata" object`, `property named "task"`
+			// `Put the subtasks in the "subtasks" field`, `a "metadata" object`
 			const named = names(
 				prompt,
-				/"(\w+)" (?:property|object)|property named "(\w+)"/g
+				/"(\w+)" (?:property|object)|property named "(\w+)"|Put [^"\n]* in the "(\w+)" field/g
 			);
 
+			expect(named.length).toBeGreaterThan(0);
 			expect(topLevel).toEqual(expect.arrayContaining(named));
 		});
 

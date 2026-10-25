@@ -6,7 +6,7 @@
  * if even that save fails, the hidden marker lets the next run find the issue).
  */
 
-import type { Task } from '../../../common/types/index.js';
+import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import type { GitHubClient } from '../adapters/github-client.interface.js';
 import type {
 	GitHubLink,
@@ -19,13 +19,7 @@ import { BASE_LABEL, hashIssue, renderIssue } from './issue-renderer.js';
 import { getLink } from './sync-planner.js';
 
 /** The slice of TasksDomain the executor needs */
-interface TaskWriter {
-	update(
-		taskId: string | number,
-		updates: Partial<Task>,
-		tag?: string
-	): Promise<void>;
-}
+type TaskWriter = Pick<TasksDomain, 'modifyTask'>;
 
 export interface ExecutorDeps {
 	client: GitHubClient;
@@ -107,9 +101,13 @@ export async function executePush(
 			lastPushedStatus: task.status,
 			bodyHash
 		};
-		const metadata = { ...task.metadata, github: link };
-		await deps.tasks.update(task.id, { metadata }, tag);
-		task.metadata = metadata;
+		// Read metadata under the lock: a claim made during the push stays
+		const saved = await deps.tasks.modifyTask(
+			task.id,
+			(current) => ({ metadata: { ...current.metadata, github: link } }),
+			tag
+		);
+		task.metadata = saved.metadata;
 	};
 
 	let wrote = false;

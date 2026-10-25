@@ -6,7 +6,11 @@
  */
 
 import path from 'node:path';
-import { TASKGRAPH_TASKS_FILE, type UpdateHooks } from '@tm/core';
+import {
+	TASKGRAPH_TASKS_FILE,
+	type UpdateHooks,
+	withFullSubtaskIds
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -165,10 +169,11 @@ export function registerUpdateTaskTool(server: FastMCP) {
 								updated: true,
 								// The legacy rewrite replied with the ID as given; append and
 								// metadata-only replied with the task as read (a number ID)
-								updatedTask:
+								updatedTask: withFullSubtaskIds(
 									args.prompt && !args.append
 										? result.task
-										: { ...result.task, id: replyId(result.task.id) },
+										: { ...result.task, id: replyId(result.task.id) }
+								),
 								telemetryData: result.telemetryData,
 								// A metadata-only update makes no AI call; the legacy reply named the tag
 								tagInfo:

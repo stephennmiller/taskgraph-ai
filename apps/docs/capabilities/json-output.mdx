@@ -56,6 +56,8 @@ In a JSON run, stdout holds only the JSON: banners, the update check and other n
 
 Some keys are only present when they apply. For example, a task in `list`, `show` or `next` has `acceptanceCriteria` only when it has criteria, and `tags` has `subtaskCounts` only for tags with subtasks. Treat a missing key as "not set".
 
+A subtask's `id` is its full dotted ID (`2.1`) everywhere: nested in a task's `subtasks` in `list`, `show` and `next`, and on its own in `show 2.1`. Its `parentId` is its task's ID. Pass the `id` to `set-status --id` and the other commands as it is. The MCP tools give the same IDs: `get_task`, `get_tasks` and `next_task`, and the task or subtask in the replies of `expand_task`, `update_task`, `update_subtask`, `add_subtask`, `scope_up_task` and `scope_down_task`.
+
 ## Plain lines from `list` in a pipe
 
 When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--format` is given, `taskgraph list` prints one plain line per task instead of the summary and table: full titles, no color codes, no box characters.

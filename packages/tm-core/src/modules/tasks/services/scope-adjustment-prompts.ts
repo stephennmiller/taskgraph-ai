@@ -236,7 +236,7 @@ ${
 - Streamline most requirements`
 }
 
-Return a JSON object with a "subtasks" array. Each subtask should have:
+Put the subtasks in the "subtasks" field: the array itself, not an object containing it. Each subtask should have:
 - id: Sequential NUMBER starting from 1 (e.g., 1, 2, 3 - NOT "1", "2", "3")
 - title: Clear, specific title
 - description: Detailed description

@@ -383,59 +383,6 @@ export class FileStorage implements IStorage {
 	}
 
 	/**
-	 * Update a specific task
-	 */
-	async updateTask(
-		taskId: string,
-		updates: Partial<Task>,
-		tag?: string
-	): Promise<void> {
-		await this.mutateTasks(tag, (tasks) => {
-			const taskIndex = tasks.findIndex((t) => String(t.id) === String(taskId));
-
-			if (taskIndex === -1) {
-				throw taskNotFound(`Task ${taskId} not found`);
-			}
-
-			const existingTask = tasks[taskIndex];
-
-			// Preserve subtask metadata when subtasks are updated
-			// AI operations don't include metadata in returned subtasks
-			let mergedSubtasks = updates.subtasks;
-			if (updates.subtasks && existingTask.subtasks) {
-				mergedSubtasks = updates.subtasks.map((updatedSubtask) => {
-					// Type-coerce IDs for comparison; fall back to title match if IDs don't match
-					const originalSubtask = existingTask.subtasks?.find(
-						(st) =>
-							String(st.id) === String(updatedSubtask.id) ||
-							(updatedSubtask.title && st.title === updatedSubtask.title)
-					);
-					// Merge metadata: preserve original and add/override with new
-					if (originalSubtask?.metadata || updatedSubtask.metadata) {
-						return {
-							...updatedSubtask,
-							metadata: {
-								...(originalSubtask?.metadata || {}),
-								...(updatedSubtask.metadata || {})
-							}
-						};
-					}
-					return updatedSubtask;
-				});
-			}
-
-			const updated = [...tasks];
-			updated[taskIndex] = {
-				...existingTask,
-				...updates,
-				...(mergedSubtasks && { subtasks: mergedSubtasks }),
-				id: String(taskId) // Keep consistent with normalizeTaskIds
-			};
-			return { tasks: updated, result: undefined };
-		});
-	}
-
-	/**
 	 * Update task or subtask status by ID - handles file storage logic with parent/subtask relationships
 	 */
 	async updateTaskStatus(
