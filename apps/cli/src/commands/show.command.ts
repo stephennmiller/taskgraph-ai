@@ -3,7 +3,13 @@
  * Extends Commander.Command for better integration with the framework
  */
 
-import { type Task, type TmCore, createTmCore, TaskIdSchema } from '@tm/core';
+import {
+	type Task,
+	type TmCore,
+	createTmCore,
+	TaskIdSchema,
+	withFullSubtaskIds
+} from '@tm/core';
 import type { Subtask } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
@@ -268,7 +274,14 @@ export class ShowCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: ShowTaskResult | ShowMultipleTasksResult): void {
-		printJson(result);
+		printJson(
+			'tasks' in result
+				? { ...result, tasks: result.tasks.map(withFullSubtaskIds) }
+				: {
+						...result,
+						task: withFullSubtaskIds(result.task)
+					}
+		);
 	}
 
 	/**

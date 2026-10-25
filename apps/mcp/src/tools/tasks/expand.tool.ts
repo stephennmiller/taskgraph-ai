@@ -4,7 +4,11 @@
  * tasks.expandAll(). Reply shapes are the legacy tools'.
  */
 
-import type { ExpandOptions, ExpandTaskHooks } from '@tm/core';
+import {
+	type ExpandOptions,
+	type ExpandTaskHooks,
+	withFullSubtaskIds
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -123,9 +127,12 @@ export function registerExpandTaskTool(server: FastMCP) {
 						);
 						const { hadSubtasks } = expanded;
 						// A task left as it was is the one read, with the legacy number ID
-						const task = expanded.skipped
-							? { ...expanded.task, id: replyId(expanded.task.id) }
-							: expanded.task;
+						// Subtask IDs in full ("3.1"), as get_task gives them
+						const task = withFullSubtaskIds(
+							expanded.skipped
+								? { ...expanded.task, id: replyId(expanded.task.id) }
+								: expanded.task
+						);
 						return {
 							tag,
 							data:

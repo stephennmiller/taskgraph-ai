@@ -4,6 +4,7 @@
  * are the legacy tools', plus `warnings` when there are any.
  */
 
+import { withFullSubtaskIds } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -98,10 +99,9 @@ function registerScopeTool(server: FastMCP, direction: 'up' | 'down') {
 						);
 					}
 					// The legacy reply gave task IDs as numbers
-					const updatedTasks = result.tasks.map(({ task }) => ({
-						...task,
-						id: replyId(task.id)
-					}));
+					const updatedTasks = result.tasks.map(({ task }) =>
+						withFullSubtaskIds({ ...task, id: replyId(task.id) })
+					);
 					return {
 						tag: result.tag,
 						data: {

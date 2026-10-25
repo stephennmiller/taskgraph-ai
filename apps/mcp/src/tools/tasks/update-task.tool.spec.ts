@@ -106,7 +106,8 @@ describe('update_task', () => {
 				tasksPath: path.join(project, '.taskgraph', 'tasks', 'tasks.json'),
 				useResearch: true,
 				updated: true,
-				updatedTask: { ...savedTask, id: 3 },
+				// #661: with the subtask's full ID
+				updatedTask: { ...savedTask, id: 3, subtasks: [{ id: '3.1' }] },
 				telemetryData: { totalTokens: 3 },
 				tagInfo
 			},

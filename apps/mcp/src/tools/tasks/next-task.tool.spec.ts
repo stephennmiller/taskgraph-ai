@@ -3,8 +3,6 @@
  * tm-core is faked at the createTmCore boundary; everything else is real.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tasks = {
@@ -65,13 +63,11 @@ describe('next_task', () => {
 		expect(result.data).toEqual({
 			nextTask: { id: 2, title: 'Parser', complexityScore: 6 },
 			isSubtask: false,
-			nextSteps: expect.stringMatching(
-				/^When ready to work on the task, use set-status/
-			)
+			nextSteps: 'Start it with set_task_status id "2" status "in-progress"'
 		});
 	});
 
-	it("gives a subtask the legacy fields, its task's score and the report it is given", async () => {
+	it("gives a subtask the legacy fields and its task's score", async () => {
 		tasks.getNext.mockResolvedValue({
 			id: '2.1',
 			title: 'Read',
@@ -85,16 +81,10 @@ describe('next_task', () => {
 		tasks.getComplexityReport.mockReturnValue(report(2, 9));
 
 		const result = reply(
-			await register().execute(
-				{ projectRoot, tag: 'feature', complexityReport: 'other.json' },
-				ctx
-			)
+			await register().execute({ projectRoot, tag: 'feature' }, ctx)
 		);
 
-		expect(tasks.getComplexityReport).toHaveBeenCalledWith({
-			tag: 'feature',
-			file: path.join(fs.realpathSync(projectRoot), 'other.json')
-		});
+		expect(tasks.getComplexityReport).toHaveBeenCalledWith({ tag: 'feature' });
 		expect(result.tag).toBe('feature');
 		expect(result.data.isSubtask).toBe(true);
 		expect(result.data.nextTask).toEqual({
@@ -106,7 +96,9 @@ describe('next_task', () => {
 			parentId: 2,
 			complexityScore: 9
 		});
-		expect(result.data.nextSteps).toMatch(/work on the subtask/);
+		expect(result.data.nextSteps).toBe(
+			'Start it with set_task_status id "2.1" status "in-progress"'
+		);
 	});
 
 	it('leaves the score out when the report is unreadable', async () => {
@@ -123,45 +115,12 @@ describe('next_task', () => {
 		);
 	});
 
-	it('warns when the complexity report it is given does not exist', async () => {
-		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
-
-		const result = reply(
-			await register().execute(
-				{ projectRoot, complexityReport: 'reprot.json' },
-				ctx
-			)
-		);
-
-		expect(result.data.nextTask).toEqual({ id: 2, title: 'Parser' });
-		expect(ctx.log.warn).toHaveBeenCalledWith(
-			`No complexity report found at ${path.join(fs.realpathSync(projectRoot), 'reprot.json')}`
-		);
-	});
-
 	it('stays quiet when the default report does not exist', async () => {
 		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
 
 		await register().execute({ projectRoot }, ctx);
 
 		expect(ctx.log.warn).not.toHaveBeenCalled();
-	});
-
-	it('ignores a complexity report outside the project', async () => {
-		tasks.getNext.mockResolvedValue({ id: '2', title: 'Parser' });
-
-		const result = reply(
-			await register().execute(
-				{ projectRoot, complexityReport: '/etc/passwd' },
-				ctx
-			)
-		);
-
-		expect(tasks.getComplexityReport).not.toHaveBeenCalled();
-		expect(result.data.nextTask).toEqual({ id: 2, title: 'Parser' });
-		expect(ctx.log.warn).toHaveBeenCalledWith(
-			expect.stringContaining('outside the project root')
-		);
 	});
 
 	it('says so when no task is eligible', async () => {
@@ -188,19 +147,25 @@ describe('next_task', () => {
 		expect(tasks.getNext).not.toHaveBeenCalled();
 	});
 
-	it('refuses a tasks file other than the project one', async () => {
-		const result = await register().execute(
-			{ projectRoot, file: 'other.json' },
-			ctx
-		);
+	it('takes no legacy file or complexityReport', () => {
+		const { parameters } = register() as unknown as {
+			parameters: { shape: Record<string, unknown> };
+		};
 
-		expect(result.isError).toBe(true);
-		expect(tasks.getNext).not.toHaveBeenCalled();
+		expect(Object.keys(parameters.shape)).toEqual([
+			'projectRoot',
+			'tag',
+			'claim'
+		]);
 	});
 
 	it('claims the task with claim: true', async () => {
 		tasks.claimNext.mockResolvedValue({
-			task: { id: '3', title: 'Claimed' },
+			task: {
+				id: '3',
+				title: 'Claimed',
+				subtasks: [{ id: 1, parentId: '3' }]
+			},
 			claimedBy: 'me',
 			claimedAt: '2026-01-01T00:00:00.000Z'
 		});
@@ -211,7 +176,8 @@ describe('next_task', () => {
 
 		expect(tasks.claimNext).toHaveBeenCalledWith({ tag: 'master' });
 		expect(result.data).toMatchObject({
-			nextTask: { id: '3' },
+			// #661: subtask IDs in full, as get_task gives them
+			nextTask: { id: '3', subtasks: [{ id: '3.1', parentId: '3' }] },
 			isSubtask: false,
 			claimedBy: 'me'
 		});

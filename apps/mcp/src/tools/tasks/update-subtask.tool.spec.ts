@@ -102,7 +102,8 @@ describe('update_subtask', () => {
 			added: 'notes',
 			subtaskId: '2.2',
 			parentId: '2',
-			subtask,
+			// #661: with its full ID, as subtaskId gives it
+			subtask: { ...subtask, id: '2.2' },
 			tasksPath: path.join(project, '.taskgraph', 'tasks', 'tasks.json'),
 			useResearch: true,
 			telemetryData: { totalTokens: 3 },

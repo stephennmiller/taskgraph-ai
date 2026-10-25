@@ -114,7 +114,6 @@ export function rankNextTasks(
 				if (depsSatisfied) {
 					candidateSubtasks.push({
 						...subtaskInContext(parent, st),
-						id: `${parent.id}.${st.id}`,
 						dependencies: fullDeps,
 						subtasks: []
 					} as Task & { parentId: string });

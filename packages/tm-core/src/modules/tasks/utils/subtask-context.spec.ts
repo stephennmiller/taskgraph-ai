@@ -25,6 +25,14 @@ describe('subtaskInContext', () => {
 		expect(subtask.dependencies).toEqual([1]);
 	});
 
+	// #661: show 3.2 --json gave "id": "2", where next gives "3.2"
+	it('gives the full dotted ID, as next does', () => {
+		const parent = createTask({ id: 3, title: 'Cycles' });
+
+		expect(subtaskInContext(parent, stored()).id).toBe('3.2');
+		expect(subtaskInContext(parent, stored({ id: '3.2' })).id).toBe('3.2');
+	});
+
 	it('keeps a priority of its own', () => {
 		const parent = createTask({ id: 3, title: 'Cycles', priority: 'high' });
 
@@ -55,7 +63,7 @@ describe('subtaskInContext', () => {
 		});
 	});
 
-	it('matches what next picks for the same subtask, apart from the dotted ID', () => {
+	it('matches what next picks for the same subtask', () => {
 		const sub = stored({ complexity: 5 });
 		const parent = createTask({
 			id: 3,
@@ -75,6 +83,7 @@ describe('subtaskInContext', () => {
 			dependencies: ['3.1']
 		});
 		expect(subtaskInContext(parent, sub)).toMatchObject({
+			id: next.id,
 			parentId: next.parentId,
 			priority: next.priority,
 			complexity: next.complexity
