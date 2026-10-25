@@ -1,6 +1,7 @@
 /**
- * The plugin's hooks are shell one-liners in hooks/hooks.json (the plugin
- * ships no code). The plugin installs user-wide, so outside a TaskGraph
+ * The plugin's hooks are POSIX shell scripts in hooks/, which hooks.json runs
+ * by name (a plugin validator rejects inline commands it can't read). The
+ * plugin installs user-wide, so outside a TaskGraph
  * project they must print nothing; inside one they hand `taskgraph prime`
  * output to Claude, or say what to install.
  *
@@ -10,8 +11,8 @@
  * reads it to remind Claude, once per session, about an in-progress task
  * with no note since.
  *
- * Lives here rather than beside the plugin because the plugin package is
- * markdown and JSON only.
+ * Lives here rather than beside the plugin because the plugin package ships
+ * no TypeScript.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -24,14 +25,13 @@ const rootDir = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
 	'../../../..'
 );
-const hooksFile = path.join(
-	rootDir,
-	'packages/claude-code-plugin/hooks/hooks.json'
+const pluginDir = path.join(rootDir, 'packages/claude-code-plugin');
+const config = JSON.parse(
+	fs.readFileSync(path.join(pluginDir, 'hooks/hooks.json'), 'utf8')
 );
-const config = JSON.parse(fs.readFileSync(hooksFile, 'utf8'));
 
-const sessionStart: string = config.hooks.SessionStart[0].hooks[0].command;
-const stop: string = config.hooks.Stop[0].hooks[0].command;
+const sessionStart = path.join(pluginDir, 'hooks/session-start.sh');
+const stop = path.join(pluginDir, 'hooks/stop.sh');
 
 const tempDirs: string[] = [];
 const tempDir = (prefix: string) => {
@@ -52,7 +52,7 @@ function fakeCli(body: string): string {
 /** Only the system tools the hooks use, so a global taskgraph stays off PATH */
 const systemBin = (() => {
 	const bin = tempDir('tg-hook-sys-');
-	for (const tool of ['date', 'id', 'mkdir']) {
+	for (const tool of ['date', 'id', 'mkdir', 'sh']) {
 		const found = ['/usr/bin', '/bin']
 			.map((dir) => path.join(dir, tool))
 			.find((file) => fs.existsSync(file));
@@ -85,12 +85,12 @@ interface HookRun {
 }
 
 function runHook(
-	command: string,
+	script: string,
 	projectDir: string,
 	binDir: string,
 	options: HookRun = {}
 ) {
-	return spawnSync(options.shell ?? '/bin/bash', ['-c', command], {
+	return spawnSync(options.shell ?? '/bin/bash', [script], {
 		cwd: projectDir,
 		encoding: 'utf8',
 		input: options.input ?? '',
@@ -117,6 +117,30 @@ describe('plugin hooks.json', () => {
 		// No matcher: startup, resume, clear and compact all re-prime. That
 		// covers compaction: a PreCompact hook's output never reaches Claude
 		expect(config.hooks.SessionStart[0].matcher).toBeUndefined();
+	});
+
+	it('runs each hook script by name from the plugin folder', () => {
+		const dir = project('tg-hook-command-');
+		const bin = fakeCli('echo primed');
+
+		const result = spawnSync(
+			'/bin/sh',
+			['-c', config.hooks.SessionStart[0].hooks[0].command],
+			{
+				cwd: dir,
+				encoding: 'utf8',
+				env: {
+					PATH: `${bin}:${systemBin}`,
+					CLAUDE_PROJECT_DIR: dir,
+					CLAUDE_PLUGIN_ROOT: pluginDir
+				}
+			}
+		);
+
+		expect(result.stdout).toBe('primed\n');
+		expect(config.hooks.Stop[0].hooks[0].command).toBe(
+			'sh "${CLAUDE_PLUGIN_ROOT}/hooks/stop.sh"'
+		);
 	});
 
 	it('prints nothing and succeeds outside a TaskGraph project', () => {

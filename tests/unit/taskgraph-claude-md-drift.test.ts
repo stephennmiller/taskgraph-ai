@@ -175,9 +175,23 @@ describe('the plugin skill and hooks', () => {
 			'utf8'
 		)
 	);
+	// Each hook runs a script by name; check the script's lines
 	const hookCommands: string[] = Object.values(hooks.hooks).flatMap(
 		(entries: any) =>
-			entries.flatMap((e: any) => e.hooks.map((h: any) => h.command))
+			entries.flatMap((e: any) =>
+				e.hooks.flatMap((h: any) =>
+					fs
+						.readFileSync(
+							path.join(
+								rootDir,
+								'packages/claude-code-plugin',
+								h.command.match(/\/(hooks\/[\w-]+\.sh)/)[1]
+							),
+							'utf8'
+						)
+						.split('\n')
+				)
+			)
 	);
 	const calls = [
 		...codeSpans(skill).flatMap(invocations),
