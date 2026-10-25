@@ -243,7 +243,7 @@ describe('dependency commands', () => {
 			const result = run(['show', '1']);
 
 			expect(result.status).toBe(0);
-			expect(result.stdout).toContain('From docs/prd.md#api');
+			expect(result.stdout).toContain('PRD · docs/prd.md#api\n  ## API');
 		});
 	});
 });
