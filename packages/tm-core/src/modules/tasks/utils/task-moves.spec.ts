@@ -186,7 +186,7 @@ describe('moveTasksBetweenTags', () => {
 		}
 
 		expect(error.message).toBe(
-			'Cannot move tasks: 2 cross-tag dependency conflicts found'
+			'Cannot move tasks: 3 cross-tag dependency conflicts found'
 		);
 		expect(error.context.details.moveCode).toBe(
 			MOVE_ERROR_CODES.CROSS_TAG_DEPENDENCY_CONFLICTS
@@ -215,8 +215,9 @@ describe('moveTasksBetweenTags', () => {
 			{ id: '4', fromTag: 'master', toTag: 'feature' }
 		]);
 		expect(result.tips).toHaveLength(2);
-		// Task 5 still depends on 4, now in another tag
 		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '3', '5']);
+		// Task 5 no longer depends on 4, now in another tag
+		expect(tags.get('master')?.[3].dependencies).toEqual([]);
 	});
 
 	it('brings what the tasks depend on along with withDependencies', () => {
@@ -225,15 +226,32 @@ describe('moveTasksBetweenTags', () => {
 
 		const result = moveTasksBetweenTags(
 			tags,
-			['4'],
+			['5'],
 			'master',
 			'feature',
 			{ withDependencies: true },
 			archived
 		);
 
-		expect(result.movedTasks.map((m) => m.id)).toEqual(['4', 2, 1, 3]);
-		expect(ids(tags.get('master') ?? [])).toEqual(['5']);
+		expect(result.movedTasks.map((m) => m.id)).toEqual(['5', 4, 2, 1, 3]);
+		expect(ids(tags.get('master') ?? [])).toEqual([]);
+	});
+
+	it('still refuses dependents left behind with withDependencies (#674)', () => {
+		const tags = tagsWith();
+		tags.set('feature', []);
+
+		expect(() =>
+			moveTasksBetweenTags(
+				tags,
+				['4'],
+				'master',
+				'feature',
+				{ withDependencies: true },
+				archived
+			)
+		).toThrow('Cannot move tasks: 1 cross-tag dependency conflicts found');
+		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '3', '4', '5']);
 	});
 
 	it('moves tasks that depend on each other once each', () => {
@@ -260,10 +278,86 @@ describe('moveTasksBetweenTags', () => {
 		expect(ids(tags.get('master') ?? [])).toEqual([]);
 	});
 
+	// Task 3 with subtask 3.1 (which needs task 1); 4 needs 3, 5 needs 3.1, 6.1 needs 3
+	const withDependents = () =>
+		new Map<string, Task[]>([
+			[
+				'master',
+				[
+					{ id: '1', title: 'Set up', dependencies: [], subtasks: [] },
+					{
+						id: '3',
+						title: 'Plugins',
+						dependencies: [],
+						subtasks: [{ id: 1, title: 'Load', dependencies: ['1', 2] }]
+					},
+					{ id: '4', title: 'Report', dependencies: ['3'], subtasks: [] },
+					{ id: '5', title: 'Docs', dependencies: ['3.1'], subtasks: [] },
+					{
+						id: '6',
+						title: 'Ship',
+						dependencies: [],
+						subtasks: [{ id: 1, title: 'Tag', dependencies: ['3', 1] }]
+					}
+				] as any
+			]
+		]);
+
+	it('refuses a move that leaves tasks depending on the moved task or its subtasks (#674)', () => {
+		let error: any;
+		try {
+			moveTasksBetweenTags(
+				withDependents(),
+				['3'],
+				'master',
+				'feature',
+				{},
+				archived
+			);
+		} catch (e) {
+			error = e;
+		}
+
+		expect(error?.context.details.conflicts.map((c: any) => c.message)).toEqual(
+			[
+				'Task 3.1 depends on 1 (in master)',
+				'Task 4 depends on 3, which moves to feature',
+				'Task 5 depends on 3.1, which moves to feature',
+				'Task 6.1 depends on 3, which moves to feature'
+			]
+		);
+	});
+
+	it('drops the dependencies on the moved task with ignoreDependencies (#674)', () => {
+		const tags = withDependents();
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['3'],
+			'master',
+			'feature',
+			{ ignoreDependencies: true },
+			archived
+		);
+
+		const master = tags.get('master') as any[];
+		expect(master.map((t) => t.dependencies)).toEqual([[], [], [], []]);
+		expect(master[3].subtasks[0].dependencies).toEqual([1]);
+		expect(tags.get('feature')?.[0].subtasks?.[0].dependencies).toEqual([2]);
+		expect(result.tips).toHaveLength(2);
+	});
+
 	it('creates a missing target tag, but not a reserved one', () => {
 		const tags = tagsWith();
 
-		moveTasksBetweenTags(tags, ['1'], 'master', 'sprint', {}, archived);
+		moveTasksBetweenTags(
+			tags,
+			['1'],
+			'master',
+			'sprint',
+			{ ignoreDependencies: true },
+			archived
+		);
 		expect(ids(tags.get('sprint') ?? [])).toEqual(['1']);
 
 		expect(() =>
@@ -283,7 +377,14 @@ describe('moveTasksBetweenTags', () => {
 			)
 		).toThrow('Cannot move subtask 2.1 directly between tags');
 		expect(() =>
-			moveTasksBetweenTags(tagsWith(), ['1'], 'master', 'feature', {}, archived)
+			moveTasksBetweenTags(
+				tagsWith(),
+				['1'],
+				'master',
+				'feature',
+				{ ignoreDependencies: true },
+				archived
+			)
 		).toThrow('Task 1 already exists in target tag "feature"');
 	});
 });

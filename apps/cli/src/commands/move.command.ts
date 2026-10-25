@@ -132,7 +132,7 @@ export class MoveCommand extends Command {
 				);
 				printError(
 					`Can't move tasks from "${details.sourceTag}" to "${details.targetTag}": ${conflicts.length} ${conflicts.length === 1 ? 'dependency stays' : 'dependencies stay'} behind\n${formatCrossTagConflicts(conflicts)}`,
-					`Move them too: \`taskgraph move ${moveTo} --with-dependencies\`, or drop them with --ignore-dependencies`
+					`Move them too: \`taskgraph move ${moveTo} --with-dependencies\` (tasks that depend on them go in --from), or drop them with --ignore-dependencies`
 				);
 				process.exit(1);
 			}
