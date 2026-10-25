@@ -34,6 +34,8 @@ export interface ShowTaskResult {
 	task: Task | Subtask | null;
 	found: boolean;
 	originalTaskId?: string; // The original task ID requested (for subtasks like "104.1")
+	/** The PRD section the task cites, as written (`tasks.getPrdSection`) */
+	prdSection?: { source: string; text: string };
 }
 
 /**
@@ -52,7 +54,6 @@ export class ShowCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ShowTaskResult | ShowMultipleTasksResult;
 	private requestedId?: string;
-	private prdSection?: { source: string; text: string };
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -176,12 +177,13 @@ export class ShowCommand extends Command {
 		// Get the task
 		this.requestedId = taskId;
 		const result = await this.tmCore.tasks.get(taskId);
-		this.prdSection = await this.tmCore.tasks.getPrdSection(taskId);
+		const prdSection = await this.tmCore.tasks.getPrdSection(taskId);
 
 		return {
 			task: result.task,
 			found: result.task !== null,
-			originalTaskId: result.isSubtask ? taskId : undefined
+			originalTaskId: result.isSubtask ? taskId : undefined,
+			prdSection
 		};
 	}
 
@@ -284,7 +286,7 @@ export class ShowCommand extends Command {
 		console.log(
 			formatTaskDetail(result.task, {
 				id: result.originalTaskId,
-				prdSection: this.prdSection,
+				prdSection: result.prdSection,
 				statusFilter: options.status,
 				checklist: this.tmCore?.tasks.getChecklist(
 					result.task,

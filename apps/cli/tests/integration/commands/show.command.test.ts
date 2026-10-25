@@ -371,6 +371,10 @@ describe('show command output', () => {
 				'PRD · docs/prd.md#sessions\n  ## Sessions\n\n  `POST /sessions` takes `{ "email", "password" }`.\n\n'
 			);
 			expect(res.stdout).not.toContain('Billing');
+			expect(JSON.parse(show(id, '--json').stdout).prdSection).toEqual({
+				source: 'docs/prd.md#sessions',
+				text: '## Sessions\n\n`POST /sessions` takes `{ "email", "password" }`.'
+			});
 		}
 	});
 
