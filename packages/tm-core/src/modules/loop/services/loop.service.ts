@@ -8,6 +8,13 @@ import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
 import { isTaskPreset } from '../loop-task.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import {
+	CLAUDE_MISSING,
+	DOCKER_MISSING,
+	MAX_CONSECUTIVE_ERRORS,
+	loopIterationTimeoutMs,
+	timeoutMessage
+} from './iteration-limits.js';
 import type {
 	LoopConfig,
 	LoopIteration,
@@ -68,8 +75,7 @@ export class LoopService {
 			if (code === 'ENOENT') {
 				return {
 					ready: false,
-					error:
-						'Docker is not installed. Install Docker Desktop to use --sandbox mode.'
+					error: DOCKER_MISSING
 				};
 			}
 			return { ready: false, error: `Docker error: ${result.error.message}` };
@@ -100,8 +106,7 @@ export class LoopService {
 			if (code === 'ENOENT') {
 				return {
 					success: false,
-					error:
-						'Docker is not installed. Install Docker Desktop to use --sandbox mode.'
+					error: DOCKER_MISSING
 				};
 			}
 			return { success: false, error: `Docker error: ${result.error.message}` };
@@ -143,6 +148,7 @@ export class LoopService {
 		this._isRunning = true;
 		const iterations: LoopIteration[] = [];
 		let tasksCompleted = 0;
+		let consecutiveErrors = 0;
 
 		await this.initProgressFile(config);
 
@@ -192,6 +198,20 @@ export class LoopService {
 			if (iteration.status === 'success') {
 				tasksCompleted++;
 			}
+			consecutiveErrors =
+				iteration.status === 'error' ? consecutiveErrors + 1 : 0;
+			const missing =
+				iteration.message === CLAUDE_MISSING ||
+				iteration.message === DOCKER_MISSING;
+			if (missing || consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+				return this.finalize(
+					config,
+					iterations,
+					tasksCompleted,
+					'error',
+					iteration.message
+				);
+			}
 
 			// Sleep between iterations (except last)
 			if (i < config.iterations && config.sleepSeconds > 0) {
@@ -235,14 +255,16 @@ export class LoopService {
 		config: LoopConfig,
 		iterations: LoopIteration[],
 		tasksCompleted: number,
-		finalStatus: LoopResult['finalStatus']
+		finalStatus: LoopResult['finalStatus'],
+		errorMessage?: string
 	): Promise<LoopResult> {
 		this._isRunning = false;
 		const result: LoopResult = {
 			iterations,
 			totalIterations: iterations.length,
 			tasksCompleted,
-			finalStatus
+			finalStatus,
+			...(errorMessage ? { errorMessage } : {})
 		};
 		await this.appendFinalSummary(config.progressFile, result);
 		return result;
@@ -377,19 +399,21 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		}
 
 		const args = this.buildCommandArgs(prompt, sandbox, false);
+		const timeout = loopIterationTimeoutMs();
 		const result = spawnSync(command, args, {
 			cwd: this.projectRoot,
 			encoding: 'utf-8',
 			maxBuffer: 50 * 1024 * 1024,
-			stdio: ['inherit', 'pipe', 'pipe']
+			stdio: ['inherit', 'pipe', 'pipe'],
+			timeout
 		});
 
 		if (result.error) {
-			const errorMessage = this.formatCommandError(
-				result.error,
-				command,
-				sandbox
-			);
+			const error = result.error as NodeJS.ErrnoException;
+			const errorMessage =
+				error.code === 'ETIMEDOUT'
+					? timeoutMessage(timeout)
+					: this.formatCommandError(error, command, sandbox);
 			this.reportError(callbacks, errorMessage);
 			return this.createErrorIteration(iterationNum, startTime, errorMessage);
 		}
@@ -453,6 +477,15 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				cwd: this.projectRoot,
 				stdio: ['inherit', 'pipe', 'pipe']
 			});
+			const timeout = loopIterationTimeoutMs();
+			let timedOut = false;
+			const timer = setTimeout(() => {
+				timedOut = true;
+				child.kill('SIGTERM');
+				// A subprocess Claude started can hold the pipes open: close them so 'close' fires
+				child.stdout?.destroy();
+				child.stderr?.destroy();
+			}, timeout);
 
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
@@ -531,6 +564,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			});
 
 			child.on('error', (error: NodeJS.ErrnoException) => {
+				clearTimeout(timer);
 				const errorMessage = this.formatCommandError(error, command, sandbox);
 				this.reportError(callbacks, errorMessage);
 
@@ -552,12 +586,15 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			child.on('close', (exitCode: number | null) => {
 				// Process remaining buffer only if stdout hasn't already ended
+				clearTimeout(timer);
 				if (!stdoutEnded && buffer) {
 					processLine(buffer);
 				}
 
-				if (exitCode === null) {
-					const errorMsg = 'Command terminated abnormally (no exit code)';
+				if (timedOut || exitCode === null) {
+					const errorMsg = timedOut
+						? timeoutMessage(timeout)
+						: 'Command terminated abnormally (no exit code)';
 					this.reportError(callbacks, errorMsg);
 					resolveOnce(
 						this.createErrorIteration(iterationNum, startTime, errorMsg)
@@ -632,9 +669,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		sandbox: boolean
 	): string {
 		if (error.code === 'ENOENT') {
-			return sandbox
-				? 'Docker is not installed. Install Docker Desktop to use --sandbox mode.'
-				: 'Claude CLI is not installed. Install with: npm install -g @anthropic-ai/claude-code';
+			return sandbox ? DOCKER_MISSING : CLAUDE_MISSING;
 		}
 
 		if (error.code === 'EACCES') {

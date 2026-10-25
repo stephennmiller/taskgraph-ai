@@ -63,11 +63,11 @@ if (mode === 'review') {
 	taskgraph('set-status', '--id=' + id, '--status=review');
 	process.exit(0);
 }
-if (mode === 'commit') {
+if (mode === 'commit' || mode === 'commit-fail') {
 	fs.writeFileSync('work.txt', 'done\\n');
 	execFileSync('git', ['add', 'work.txt']);
 	execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
-	process.exit(0);
+	process.exit(mode === 'commit' ? 0 : 1);
 }
 if (mode === 'fail') process.exit(1);
 if (mode === 'sleep' || mode === 'dirty-sleep') {
@@ -285,6 +285,25 @@ describe('loop --parallel', () => {
 		expect(git(root, 'log', '-1', '--format=%s', 'main')).toBe('hostile title');
 		expect(git(root, 'status', '--porcelain')).not.toContain('worktrees');
 		expect(taskById('4')?.status).toBe('pending');
+	}, 60_000);
+
+	it('releases a failed task with work, keeps its worktree, and a rerun retries it', async () => {
+		writePlan({ 'task-1': 'commit-fail' });
+		const options = { parallel: 1, trusted: true, command: fakeClaude() };
+
+		const [first] = (
+			await tmCore.loop.runParallel({ ...options, claimant: 'tester' })
+		).tasks;
+
+		expect(first).toMatchObject({
+			state: 'failed',
+			kept: true,
+			claimed: false
+		});
+		expect(fs.existsSync(first.worktree)).toBe(true);
+		expect(taskById('1')?.status).toBe('pending');
+		const rerun = await tmCore.loop.runParallel({ ...options, claimant: 'b' });
+		expect(rerun.tasks.map((t) => t.id)).toEqual(['1']);
 	}, 60_000);
 
 	it("records the task's status in the main project, not in the worktree's copy", async () => {

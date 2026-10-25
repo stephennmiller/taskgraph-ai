@@ -101,7 +101,11 @@ describe('AI call limits', () => {
 		[undefined, 600_000],
 		['abc', 600_000],
 		['0', 600_000],
+		['-5', 600_000],
+		['0.5', 600_000],
 		['5000', 5000],
+		// AbortSignal.timeout throws on a fraction
+		['1500.5', 1500],
 		// A longer setTimeout fires after 1 ms
 		['99999999999', 2 ** 31 - 1]
 	])('TASKGRAPH_AI_TIMEOUT_MS=%s gives a limit of %i ms', (value, expected) => {

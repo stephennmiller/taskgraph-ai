@@ -143,8 +143,24 @@ describe('formatParallelSummary', () => {
 
 		expect(out).toContain('✗ 1 task failed · 1 branch to review');
 		expect(out).toContain(
-			'4  taskgraph/task-4 · uncommitted changes (failed: exit 2)'
+			'4  taskgraph/task-4 · uncommitted changes (failed: exit 2; worktree kept, claim released)'
 		);
+	});
+
+	it('keeps quiet about the claim when the failed task is still claimed', () => {
+		const out = summary(
+			result([
+				task('4', {
+					state: 'failed',
+					error: 'stuck',
+					commits: 1,
+					kept: true,
+					claimed: true
+				})
+			])
+		);
+
+		expect(out).toContain('4  taskgraph/task-4 · 1 commit (failed: stuck)');
 	});
 
 	it('on abort says the claims were released and how to resume', () => {

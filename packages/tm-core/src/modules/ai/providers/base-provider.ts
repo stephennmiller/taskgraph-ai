@@ -5,6 +5,7 @@
 
 import type { LanguageModel, ModelMessage } from 'ai';
 import type { ZodType } from 'zod';
+import { timeoutFromEnv } from '../../../common/utils/timeout-from-env.js';
 
 export type ProviderLogLevel = 'debug' | 'info' | 'warn' | 'error';
 /** The host's logger; the legacy CLI passes its `log`, which honours silent mode */
@@ -174,12 +175,7 @@ const DEFAULT_AI_CALL_TIMEOUT_MS = 10 * 60 * 1000;
 
 /** The AI call limit: TASKGRAPH_AI_TIMEOUT_MS, else ten minutes */
 export function aiCallTimeoutMs(): number {
-	const configured = Number(process.env.TASKGRAPH_AI_TIMEOUT_MS);
-	if (!(Number.isFinite(configured) && configured > 0)) {
-		return DEFAULT_AI_CALL_TIMEOUT_MS;
-	}
-	// Node fires a longer timer after 1 ms, so cap at its maximum (about 24 days)
-	return Math.min(configured, 2 ** 31 - 1);
+	return timeoutFromEnv('TASKGRAPH_AI_TIMEOUT_MS', DEFAULT_AI_CALL_TIMEOUT_MS);
 }
 
 const aiCallSignal = () => AbortSignal.timeout(aiCallTimeoutMs());

@@ -85,6 +85,9 @@ The loop stops when:
 - An agent ends its reply with `<loop-complete>REASON</loop-complete>` - all work done
 - An agent ends its reply with `<loop-blocked>REASON</loop-blocked>` - cannot proceed
 - Maximum iterations reached
+- Three iterations in a row fail (Claude Code exits non-zero or runs past the iteration timeout), or Claude Code isn't installed: the loop stops with status `error` and the last error
+
+Each iteration gets an hour. One that runs longer is stopped and counts as a failed iteration. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it; see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout).
 
 A marker counts only alone on the last line of the reply, so an agent that quotes one mid-sentence doesn't stop the loop. With the `default` and `tdd` presets, `<loop-complete>` also needs `taskgraph next` to find nothing: if a task is still ready, the loop warns and keeps going.
 
