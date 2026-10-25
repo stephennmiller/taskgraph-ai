@@ -346,6 +346,15 @@ function moveTaskToTask(
 		}
 		subtask.dependencies = subtask.dependencies.map(rewrite);
 	}
+	// Other tasks' dependencies on its subtasks ("4.1") follow too
+	for (const subtask of movedTask.subtasks ?? []) {
+		subtask.parentId = String(destTaskId);
+		retargetDependents(
+			tasks,
+			`${oldId}.${subtask.id}`,
+			`${destTaskId}.${subtask.id}`
+		);
+	}
 
 	// Related and discovered-from links to the task or its subtasks follow it
 	retargetTaskLinks(tasks, sourceTask.id, destTaskId, { withSubtasks: true });
