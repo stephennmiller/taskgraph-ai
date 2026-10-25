@@ -10,6 +10,7 @@ import type { Task } from '../../common/types/index.js';
 import {
 	breakSubtaskLoops,
 	countTasksAndDependencies,
+	createDependencyState,
 	createTaskLookup,
 	fixTaskDependencies,
 	validateTaskDependencies
@@ -283,6 +284,39 @@ describe('createTaskLookup', () => {
 		for (const id of [0, '', '2', '1.9', '3.1', '3.y', 'x.1', 'x', '.1']) {
 			expect(exists(id), `id ${id}`).toBe(false);
 		}
+	});
+});
+
+describe('createDependencyState', () => {
+	const as = (status: string | undefined, raw: Raw) => ({ ...raw, status });
+	const state = createDependencyState(
+		asTasks([
+			task(1, [], [subtask(1), as('done', subtask(2))]),
+			as('cancelled', task(2, [], [subtask(1)])),
+			as('deferred', task(3, [], [subtask(1)])),
+			task('4', [], [as(undefined, subtask('1'))]),
+			as('done', task(5))
+		])
+	);
+
+	it.each([
+		['2', '1.1', 'open'],
+		['2', '1.2', 'satisfied'],
+		// a subtask of a cancelled task never runs
+		['9', '2.1', 'satisfied'],
+		['9', '3.1', 'open'],
+		// a task's own subtask runs inside it; a sibling's doesn't count
+		['1', '1.1', 'satisfied'],
+		['1.2', '1.1', 'open'],
+		// number IDs in the file, a subtask with no status
+		['9', '4.1', 'open'],
+		['9', '5', 'satisfied'],
+		['9', '1', 'open'],
+		['9', '1.9', 'missing'],
+		['9', '6', 'missing'],
+		['9', '6.1', 'missing']
+	])('%s on %s is %s', (taskId, depId, expected) => {
+		expect(state(taskId, depId)).toBe(expected);
 	});
 });
 

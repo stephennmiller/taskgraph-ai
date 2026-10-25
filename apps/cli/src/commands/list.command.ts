@@ -32,7 +32,7 @@ import {
 	oneLine
 } from '../ui/index.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
-import { displayError } from '../utils/error-handler.js';
+import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import { theme } from '../ui/theme.js';
@@ -242,7 +242,7 @@ export class ListTasksCommand extends Command {
 		try {
 			parseStatusFilter(options.status);
 		} catch (error) {
-			console.error(chalk.red((error as Error).message));
+			printError((error as Error).message);
 			return false;
 		}
 

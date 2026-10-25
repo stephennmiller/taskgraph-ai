@@ -404,6 +404,24 @@ describe('explainBlockers', () => {
 			expect(shape(result.blockers)).toEqual([['1:ready']]);
 		});
 
+		it('does not repeat the blockers of a parent already on the path', () => {
+			// Explaining 2: 2 → 4 → 2.1, which inherits 1 and 4 from task 2;
+			// 1 is already shown under 2, so only the loop through 4 is news
+			const result = explainBlockers(
+				[
+					task('1'),
+					task('2', ['1', '4'], 'pending', [sub(1)]),
+					task('4', ['2.1'])
+				],
+				'2'
+			);
+
+			expect(shape(result.blockers)).toEqual([
+				['1:ready'],
+				['4', [['2.1', [['2:parent', [['4:cycle']]]]]]]
+			]);
+		});
+
 		it('reports a loop back to the path through a parent on it', () => {
 			// Explaining 2: 2 → 4 → 2.1, which waits on 4 through task 2
 			const result = explainBlockers(

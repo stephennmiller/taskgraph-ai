@@ -19,7 +19,8 @@ vi.mock('../utils/project-root.js', () => ({
 	getProjectRoot: vi.fn((path?: string) => path || '/test/project')
 }));
 
-vi.mock('../utils/error-handler.js', () => ({
+vi.mock('../utils/error-handler.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../utils/error-handler.js')>()),
 	displayError: vi.fn()
 }));
 
@@ -204,6 +205,26 @@ describe('ListTasksCommand', () => {
 			);
 			expect(consoleErrorSpy).toHaveBeenCalledWith(
 				expect.stringContaining('Invalid format: invalid')
+			);
+
+			consoleErrorSpy.mockRestore();
+		});
+
+		it('rejects an unknown status, and all inside a list', () => {
+			const consoleErrorSpy = vi
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+			const command = new ListTasksCommand();
+
+			expect((command as any).validateOptions({ status: 'pending' })).toBe(
+				true
+			);
+			expect((command as any).validateOptions({ status: 'bogus' })).toBe(false);
+			expect((command as any).validateOptions({ status: 'pending,all' })).toBe(
+				false
+			);
+			expect(consoleErrorSpy).toHaveBeenCalledWith(
+				expect.stringContaining('✗ "bogus" isn\'t a status. Use one of:')
 			);
 
 			consoleErrorSpy.mockRestore();
