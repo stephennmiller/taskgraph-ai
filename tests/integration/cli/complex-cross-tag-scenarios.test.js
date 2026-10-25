@@ -328,9 +328,9 @@ describe('Complex Cross-Tag Scenarios', () => {
 		});
 
 		it('should allow moving parent task with all subtasks', () => {
-			// Move parent task with dependencies (includes subtasks)
+			// Move parent task with dependencies (includes subtasks), and tasks 3-5, which depend on it in a chain
 			execSync(
-				`node ${binPath} move --from=2 --from-tag=master --to-tag=in-progress --with-dependencies`,
+				`node ${binPath} move --from=2,3,4,5 --from-tag=master --to-tag=in-progress --with-dependencies`,
 				{ stdio: 'pipe' }
 			);
 

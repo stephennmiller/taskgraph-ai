@@ -142,8 +142,11 @@ First promote it to a full task using:
 		for (const id of dependencies) {
 			if (!toMove.some((m) => String(m) === String(id))) toMove.push(id);
 		}
-	} else {
-		const movedIds = new Set(sourceTasks.map((t) => String(t.id)));
+	}
+	// withDependencies brings only what the tasks depend on, so dependents
+	// left behind and subtask-held dependencies are still checked
+	{
+		const movedIds = new Set(toMove.map((id) => String(dependencyTaskId(id))));
 		const isMoved = (id: DependencyId) =>
 			movedIds.has(String(dependencyTaskId(id)));
 		const conflicts: CrossTagConflict[] = [];

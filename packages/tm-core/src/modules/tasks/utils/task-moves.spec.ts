@@ -226,15 +226,32 @@ describe('moveTasksBetweenTags', () => {
 
 		const result = moveTasksBetweenTags(
 			tags,
-			['4'],
+			['5'],
 			'master',
 			'feature',
 			{ withDependencies: true },
 			archived
 		);
 
-		expect(result.movedTasks.map((m) => m.id)).toEqual(['4', 2, 1, 3]);
-		expect(ids(tags.get('master') ?? [])).toEqual(['5']);
+		expect(result.movedTasks.map((m) => m.id)).toEqual(['5', 4, 2, 1, 3]);
+		expect(ids(tags.get('master') ?? [])).toEqual([]);
+	});
+
+	it('still refuses dependents left behind with withDependencies (#674)', () => {
+		const tags = tagsWith();
+		tags.set('feature', []);
+
+		expect(() =>
+			moveTasksBetweenTags(
+				tags,
+				['4'],
+				'master',
+				'feature',
+				{ withDependencies: true },
+				archived
+			)
+		).toThrow('Cannot move tasks: 1 cross-tag dependency conflicts found');
+		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '3', '4', '5']);
 	});
 
 	it('moves tasks that depend on each other once each', () => {
