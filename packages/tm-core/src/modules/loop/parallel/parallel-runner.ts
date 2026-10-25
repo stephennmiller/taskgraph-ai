@@ -10,8 +10,9 @@
  *    to this project so its `taskgraph` commands update the main
  *    tasks.json, not the worktree's copy. Output goes to a log file.
  * 4. When all have exited: keep every worktree with commits or changes, and
- *    its claim if Claude didn't mark the task `review`; remove the empty
- *    ones and release their claims.
+ *    its claim if Claude finished without marking the task `review`; remove
+ *    the empty ones and release their claims. A failed task's claim is
+ *    released too, so a later run retries it in the kept worktree.
  *
  * Nothing is ever merged. An abort kills the processes, releases every
  * claim, and keeps the worktrees that have work in them.
@@ -359,9 +360,9 @@ export class ParallelLoopRunner {
 
 	/**
 	 * After every process is gone: keep worktrees with work, remove the
-	 * empty ones, and release claims on tasks with nothing to review (all of
-	 * them on abort). Claude updates the task in the main project (see
-	 * start), so `claimed` is read back from there: a task Claude marked
+	 * empty ones, and release claims on failed tasks and tasks with nothing
+	 * to review (all of them on abort). Claude updates the task in the main
+	 * project (see start), so `claimed` is read back from there: a task Claude marked
 	 * `review` is no longer claimed. With --container, every container is
 	 * removed first, and the work comes back through ContainerWorkers.
 	 */
@@ -380,6 +381,8 @@ export class ParallelLoopRunner {
 		for (const { task, hasWorktree, createdBranch, container } of running) {
 			let hasWork = false;
 			const isStuck = !!container && stuck.has(container);
+			// Claude failed: free the task so a later run retries it in the kept worktree
+			let releaseClaim = !isStuck && (aborted || task.state === 'failed');
 			if (isStuck) {
 				// It may still be writing to the clone: leave the clone and claim
 				task.state = 'failed';
@@ -397,6 +400,8 @@ export class ParallelLoopRunner {
 					aborted
 				);
 				hasWork = back.hasWork;
+				// The work is only in the clone: keep the claim so no other run starts over
+				if (!back.fetched) releaseClaim = aborted;
 				if (back.fetched && status) {
 					await this.applyStatus(task.id, status, tag, claimant);
 				}
@@ -411,7 +416,7 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
-			if ((aborted && !isStuck) || !hasWork) {
+			if (releaseClaim || !hasWork) {
 				await this.release(task.id, tag, claimant);
 			}
 			task.claimed = await this.isClaimed(task.id, tag, claimant);

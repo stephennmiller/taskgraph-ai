@@ -110,9 +110,11 @@ function outcome(task: ParallelTask, projectRoot: string): string {
 		task.commits ? plural(task.commits, 'commit') : null,
 		task.uncommitted ? 'uncommitted changes' : null
 	].filter(Boolean);
+	// Released by the runner: a later run retries it in this worktree
+	const released = task.claimed ? '' : '; worktree kept, claim released';
 	const failed =
 		task.state === 'failed'
-			? ` ${chalk.red(`(failed: ${plain(task.error ?? 'failed')})`)}`
+			? ` ${chalk.red(`(failed: ${plain(task.error ?? 'failed')}${released})`)}`
 			: '';
 	return `${theme.brand(task.branch)}${work.length ? ` ${theme.muted(`· ${work.join(', ')}`)}` : ''}${failed}`;
 }

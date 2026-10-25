@@ -66,6 +66,10 @@ If you still see `MCP request timed out after 60000ms`, check that `timeout` is 
 
 TaskGraph gives up on an AI request that has not answered after 10 minutes. When `parse-prd` streams its tasks, the same limit is the longest it waits between two parts of the stream, so a long PRD can stream for longer as long as tasks keep arriving. Set `TASKGRAPH_AI_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_AI_TIMEOUT_MS=1200000` for 20 minutes. Values above about 24 days are capped there.
 
+## Loop iteration timeout
+
+`taskgraph loop` stops a Claude Code run that has not finished after 60 minutes and counts it as a failed iteration; three failed iterations in a row end the loop. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. `loop --parallel` doesn't use it.
+
 ## Tagged task lists
 
 Tags keep separate task lists for branches, features or experiments.

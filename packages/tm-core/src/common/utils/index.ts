@@ -78,3 +78,6 @@ export { mapWithConcurrency } from './map-with-concurrency.js';
 
 // Write a file through a temp file and a rename, so a crash can't truncate it
 export { writeAtomically } from './write-atomically.js';
+
+// A timeout from an env var such as TASKGRAPH_AI_TIMEOUT_MS
+export { timeoutFromEnv } from './timeout-from-env.js';
