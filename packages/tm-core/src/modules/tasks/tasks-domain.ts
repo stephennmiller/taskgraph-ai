@@ -60,6 +60,7 @@ import type {
 	GetTaskListOptions
 } from './services/task-service.js';
 import type {
+	TaskFieldUpdates,
 	WatchEvent,
 	WatchOptions,
 	WatchSubscription
@@ -380,17 +381,17 @@ export class TasksDomain {
 		this.ai.generateObject(...a);
 
 	/**
-	 * Update task with new data (direct structural update)
-	 * @param taskId - Task ID (supports numeric, alphanumeric like TAS-49, and subtask IDs like 1.2)
-	 * @param updates - Partial task object with fields to update
-	 * @param tag - Optional tag context
+	 * Change one task or subtask (`1` or `1.2`) in a single locked
+	 * read-modify-write: `change` gets the item as stored now and returns the
+	 * fields to set, so a change saved meanwhile isn't overwritten
+	 * @returns The item as saved
 	 */
-	async update(
+	modifyTask(
 		taskId: string | number,
-		updates: Partial<Task>,
+		change: (task: Task | Subtask, isSubtask: boolean) => TaskFieldUpdates,
 		tag?: string
-	): Promise<void> {
-		return this.taskService.updateTask(taskId, updates, tag);
+	): Promise<Task | Subtask> {
+		return this.taskService.modifyTask(String(taskId), change, tag);
 	}
 
 	/**

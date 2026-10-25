@@ -92,56 +92,6 @@ export class TaskService extends TaskReader {
 	}
 
 	/**
-	 * Update a task with new data (direct structural update)
-	 * @param taskId - Task ID (supports numeric, alphanumeric, and subtask IDs)
-	 * @param updates - Partial task object with fields to update
-	 * @param tag - Optional tag context
-	 */
-	async updateTask(
-		taskId: string | number,
-		updates: Partial<Task>,
-		tag?: string
-	): Promise<void> {
-		// Ensure we have storage
-		if (!this.storage) {
-			throw new TaskGraphError(
-				'Storage not initialized',
-				ERROR_CODES.STORAGE_ERROR
-			);
-		}
-
-		// Auto-initialize if needed
-		if (!this.initialized) {
-			await this.initialize();
-		}
-
-		const activeTag = await this.resolveTag(tag);
-		const taskIdStr = String(taskId);
-
-		try {
-			// Direct update - no AI processing
-			await this.storage.updateTask(taskIdStr, updates, activeTag);
-		} catch (error) {
-			// Re-throw all TaskGraphErrors without wrapping
-			if (error instanceof TaskGraphError) {
-				throw error;
-			}
-
-			throw new TaskGraphError(
-				`Failed to update task ${taskId}`,
-				ERROR_CODES.STORAGE_ERROR,
-				{
-					operation: 'updateTask',
-					resource: 'task',
-					taskId: taskIdStr,
-					tag: activeTag
-				},
-				error as Error
-			);
-		}
-	}
-
-	/**
 	 * Change one task or subtask in a single locked read-modify-write
 	 */
 	async modifyTask(

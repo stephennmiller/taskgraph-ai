@@ -10,6 +10,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
+import type { TaskFieldUpdates } from '../../../src/common/interfaces/storage.interface.js';
 import type { Task } from '../../../src/common/types/index.js';
 
 /**
@@ -155,7 +156,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		});
 	});
 
-	describe('updateTask() metadata preservation', () => {
+	describe('modifyTask() metadata preservation', () => {
 		it('should preserve existing metadata when updating other fields', async () => {
 			const originalMetadata = { externalId: 'EXT-123', version: 1 };
 			const tasks: Task[] = [createTask('1', { metadata: originalMetadata })];
@@ -163,7 +164,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// Update title only, not metadata
-			await storage.updateTask('1', { title: 'Updated Title' });
+			await storage.modifyTask('1', () => ({ title: 'Updated Title' }));
 
 			const loadedTasks = await storage.loadTasks();
 			expect(loadedTasks[0].title).toBe('Updated Title');
@@ -176,9 +177,9 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// Update metadata
-			await storage.updateTask('1', {
+			await storage.modifyTask('1', () => ({
 				metadata: { original: true, updated: true, newField: 'value' }
-			});
+			}));
 
 			const loadedTasks = await storage.loadTasks();
 			expect(loadedTasks[0].metadata).toEqual({
@@ -196,7 +197,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// Replace metadata entirely
-			await storage.updateTask('1', { metadata: { newField: 'new' } });
+			await storage.modifyTask('1', () => ({ metadata: { newField: 'new' } }));
 
 			const loadedTasks = await storage.loadTasks();
 			expect(loadedTasks[0].metadata).toEqual({ newField: 'new' });
@@ -206,7 +207,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			const tasks: Task[] = [createTask('1', { metadata: { tracked: true } })];
 
 			await storage.saveTasks(tasks);
-			await storage.updateTask('1', { status: 'in-progress' });
+			await storage.modifyTask('1', () => ({ status: 'in-progress' }));
 
 			const loadedTasks = await storage.loadTasks();
 			expect(loadedTasks[0].status).toBe('in-progress');
@@ -308,14 +309,14 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 
 			// Simulate AI update - only updates specific fields, no metadata field
 			// This mimics what happens when AI processes update-task
-			const aiUpdate: Partial<Task> = {
+			const aiUpdate: TaskFieldUpdates = {
 				title: 'AI Updated Title',
 				description: 'AI generated description',
 				details: 'AI generated details'
 				// Note: no metadata field - AI schemas don't include it
 			};
 
-			await storage.updateTask('1', aiUpdate);
+			await storage.modifyTask('1', () => aiUpdate);
 
 			const loadedTasks = await storage.loadTasks();
 			expect(loadedTasks[0].title).toBe('AI Updated Title');
@@ -325,47 +326,6 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				externalId: 'JIRA-123',
 				version: 1
 			});
-		});
-
-		it('should preserve metadata when adding AI-generated subtasks', async () => {
-			const tasks: Task[] = [
-				createTask('1', {
-					metadata: { tracked: true, source: 'import' },
-					subtasks: []
-				})
-			];
-
-			await storage.saveTasks(tasks);
-
-			// Simulate expand-task adding subtasks
-			// Subtasks from AI don't have metadata field
-			const updatedTask: Partial<Task> = {
-				subtasks: [
-					{
-						id: 1,
-						parentId: '1',
-						title: 'AI Generated Subtask',
-						description: 'Description',
-						status: 'pending',
-						priority: 'medium',
-						dependencies: [],
-						details: 'Details',
-						testStrategy: 'Tests'
-						// No metadata - AI doesn't generate it
-					}
-				]
-			};
-
-			await storage.updateTask('1', updatedTask);
-
-			const loadedTasks = await storage.loadTasks();
-			// Parent task metadata preserved
-			expect(loadedTasks[0].metadata).toEqual({
-				tracked: true,
-				source: 'import'
-			});
-			// Subtask has no metadata (as expected from AI)
-			expect(loadedTasks[0].subtasks[0].metadata).toBeUndefined();
 		});
 
 		it('should handle multiple sequential AI updates preserving metadata', async () => {
@@ -378,11 +338,11 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// First AI update
-			await storage.updateTask('1', { title: 'First Update' });
+			await storage.modifyTask('1', () => ({ title: 'First Update' }));
 			// Second AI update
-			await storage.updateTask('1', { description: 'Second Update' });
+			await storage.modifyTask('1', () => ({ description: 'Second Update' }));
 			// Third AI update
-			await storage.updateTask('1', { priority: 'high' });
+			await storage.modifyTask('1', () => ({ priority: 'high' }));
 
 			const loadedTasks = await storage.loadTasks();
 			expect(loadedTasks[0].title).toBe('First Update');
@@ -403,8 +363,8 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			await storage.saveTasks(tasks);
 
 			// Update WITHOUT metadata field (AI schemas don't include it)
-			const updateWithoutMetadata: Partial<Task> = { title: 'Updated' };
-			await storage.updateTask('1', updateWithoutMetadata);
+			const updateWithoutMetadata: TaskFieldUpdates = { title: 'Updated' };
+			await storage.modifyTask('1', () => updateWithoutMetadata);
 
 			const loadedTasks = await storage.loadTasks();
 			// When metadata field is absent from updates, existing metadata is preserved
