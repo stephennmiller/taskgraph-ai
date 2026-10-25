@@ -7,7 +7,8 @@ import {
 	type PrdCoverageTask,
 	checkPrdCoverage,
 	computePrdCoverage,
-	hasPrdCoverageGaps
+	hasPrdCoverageGaps,
+	readPrdSection
 } from './prd-coverage.js';
 import { applyClarifications } from './clarifications.js';
 import { parsePrdSections } from './prd-sections.js';
@@ -199,5 +200,58 @@ describe('checkPrdCoverage', () => {
 		const coverage = checkPrdCoverage([task(1, 'big.md#x')], dir);
 
 		expect(coverage?.files[0]).toMatchObject({ path: 'big.md', missing: true });
+	});
+});
+
+describe('readPrdSection', () => {
+	let dir: string | undefined;
+	afterEach(() => {
+		if (dir) fs.rmSync(dir, { recursive: true, force: true });
+		dir = undefined;
+	});
+	const project = () => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-section-'));
+		fs.mkdirSync(path.join(dir, 'docs'));
+		fs.writeFileSync(path.join(dir, 'docs/prd.md'), prd);
+		return dir;
+	};
+
+	it('returns the cited section as written, subsections included', () => {
+		const text = readPrdSection('docs/prd.md#authentication', project());
+
+		expect(text?.split('\n')[0]).toBe('## Authentication');
+		expect(text).toContain('### Sign-up');
+		expect(text).toContain('### Password reset');
+		expect(text).not.toContain('## Bookmarks API');
+	});
+
+	it('returns undefined for a heading or file that is gone', () => {
+		const root = project();
+
+		expect(readPrdSection('docs/prd.md#gone', root)).toBeUndefined();
+		expect(readPrdSection('docs/gone.md#overview', root)).toBeUndefined();
+		expect(readPrdSection('not a source', root)).toBeUndefined();
+	});
+
+	it('reads nothing outside the project', () => {
+		const root = project();
+		const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-outside-'));
+		fs.writeFileSync(path.join(outside, 'secret.md'), '## Key\n\nhunter2\n');
+		try {
+			const escapes = [
+				`${path.join(outside, 'secret.md')}#key`,
+				`${path.relative(root, path.join(outside, 'secret.md'))}#key`
+			];
+			if (process.platform !== 'win32') {
+				fs.symlinkSync(outside, path.join(root, 'docs/link'));
+				escapes.push('docs/link/secret.md#key');
+			}
+
+			for (const source of escapes) {
+				expect(readPrdSection(source, root)).toBeUndefined();
+			}
+		} finally {
+			fs.rmSync(outside, { recursive: true, force: true });
+		}
 	});
 });

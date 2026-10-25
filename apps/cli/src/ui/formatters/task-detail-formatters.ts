@@ -54,6 +54,7 @@ import {
 	fit,
 	formatMarkdown,
 	joinFacts,
+	terminalSafe,
 	toMarkdown
 } from './markdown-formatters.js';
 import { getPriorityWithColor } from './priority-formatters.js';
@@ -75,6 +76,11 @@ export interface TaskDetailOptions {
 	 * (`tasks.getChecklist`). Without it, only the task's own criteria show.
 	 */
 	checklist?: TaskChecklist;
+	/**
+	 * The PRD section the task cites (`tasks.getPrdSection`), printed as
+	 * written so routes and field names reach the reader exactly
+	 */
+	prdSection?: { source: string; text: string };
 	/** Only list subtasks with this status (`show --status`) */
 	statusFilter?: string;
 	/** Terminal width */
@@ -355,10 +361,20 @@ export function formatTaskDetail(
 	sections.push([
 		...header(label, task.title, width),
 		...facts(task, width),
-		...sourceLine(task, width)
+		...(options.prdSection ? [] : sourceLine(task, width))
 	]);
 
 	if (task.description) sections.push(body(task.description, width, ''));
+
+	if (options.prdSection) {
+		const { source, text } = options.prdSection;
+		sections.push([
+			heading('PRD', terminalSafe(source)),
+			...terminalSafe(text)
+				.split('\n')
+				.map((line) => (line ? INDENT + line : line))
+		]);
+	}
 
 	const textSections: Array<[string, string | undefined]> = [
 		['Details', task.details],

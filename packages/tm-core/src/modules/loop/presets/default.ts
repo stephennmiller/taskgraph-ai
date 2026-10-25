@@ -8,7 +8,7 @@ TASK: Implement ONE task/subtask from the TaskGraph backlog.
 
 PROCESS:
 1. Run taskgraph next (or use MCP) to get the next available task/subtask.
-2. Read task details with taskgraph show <id>.
+2. Read task details with taskgraph show <id>. Routes, field names and formats must match the PRD section it prints exactly.
 3. Implement following codebase patterns.
 4. Write tests alongside implementation.
 5. Run type check (e.g., \`npm run typecheck\`, \`tsc --noEmit\`).
