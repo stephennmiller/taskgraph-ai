@@ -218,6 +218,7 @@ export {
 	filterReadyTasks,
 	filterBlockingTasks,
 	filterByStatus,
+	parseStatusFilter,
 	ACTIONABLE_STATUSES,
 	selectNextTask,
 	readTagNamesSync,

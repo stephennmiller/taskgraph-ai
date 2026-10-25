@@ -59,10 +59,13 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 		expect(getDependencySource(loaded as Task, '1')).toBe('inferred');
 	});
 
-	it('survives updateTask calls that do not touch metadata', async () => {
+	it('survives modifyTask calls that do not touch metadata', async () => {
 		await storage.saveTasks([createTask('1'), inferredTask()]);
 
-		await storage.updateTask('2', { title: 'Renamed', priority: 'high' });
+		await storage.modifyTask('2', () => ({
+			title: 'Renamed',
+			priority: 'high'
+		}));
 
 		const loaded = (await storage.loadTasks()).find((t) => t.id === '2');
 		expect(loaded?.title).toBe('Renamed');

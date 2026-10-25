@@ -213,7 +213,7 @@ describe('loop --parallel', () => {
 		writePlan({ 'task-1': 'commit', 'task-2': 'fail', 'task-3': 'nothing' });
 		// A title that looks like flags must not reach Claude's command line
 		const hostile = '--help --model x $(touch pwned)';
-		await tmCore.tasks.update('1', { title: hostile });
+		await tmCore.tasks.modifyTask('1', () => ({ title: hostile }));
 		git(root, 'commit', '-qam', 'hostile title');
 		const started: ParallelTask[] = [];
 

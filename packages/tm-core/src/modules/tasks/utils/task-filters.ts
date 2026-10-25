@@ -6,6 +6,7 @@
 import type { Task, TaskStatus } from '../../../common/types/index.js';
 import {
 	TASK_STATUSES,
+	assertTaskStatus,
 	isTaskComplete
 } from '../../../common/constants/index.js';
 import { getLogger } from '../../../common/logger/index.js';
@@ -199,7 +200,20 @@ export function filterByStatus<T extends Task>(
 	tasks: T[],
 	status?: string
 ): T[] {
-	if (!status || status === 'all') return tasks;
+	const statuses = parseStatusFilter(status);
+	return statuses
+		? tasks.filter((task) => statuses.includes(task.status))
+		: tasks;
+}
+
+/**
+ * The statuses a `--status` value names (`pending` or `pending,review`), or
+ * undefined for `all` or no value. Throws a VALIDATION_ERROR naming the valid
+ * statuses when one is unknown, so CLI and MCP refuse the same values.
+ */
+export function parseStatusFilter(status?: string): TaskStatus[] | undefined {
+	if (!status || status === 'all') return undefined;
 	const statuses = status.split(',').map((s) => s.trim());
-	return tasks.filter((task) => statuses.includes(task.status));
+	for (const s of statuses) assertTaskStatus(s);
+	return statuses as TaskStatus[];
 }

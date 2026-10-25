@@ -10,13 +10,12 @@ import {
 	filterBlockingTasks,
 	filterByStatus,
 	filterReadyTasks,
+	parseStatusFilter,
 	sanitizeForTerminal,
 	satisfyArchivedDependencies,
 	type InvalidDependency,
 	type OutputFormat,
 	STATUS_ICONS,
-	TASK_STATUSES,
-	type TaskStatus,
 	type TmCore,
 	type WatchSubscription,
 	withFullSubtaskIds
@@ -241,18 +240,11 @@ export class ListTasksCommand extends Command {
 		}
 
 		// Validate status
-		if (options.status) {
-			const statuses = options.status.split(',').map((s: string) => s.trim());
-
-			for (const status of statuses) {
-				if (status !== 'all' && !TASK_STATUSES.includes(status as TaskStatus)) {
-					console.error(chalk.red(`Invalid status: ${status}`));
-					console.error(
-						theme.muted(`Valid statuses: ${TASK_STATUSES.join(', ')}`)
-					);
-					return false;
-				}
-			}
+		try {
+			parseStatusFilter(options.status);
+		} catch (error) {
+			console.error(chalk.red((error as Error).message));
+			return false;
 		}
 
 		// Validate --all-tags cannot be used with --watch
