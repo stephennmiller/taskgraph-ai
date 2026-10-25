@@ -1,0 +1,40 @@
+---
+title: "Privacy"
+description: "What TaskGraph and its Claude Code plugin collect, store and send"
+---
+
+TaskGraph collects nothing about you. It has no telemetry, no analytics and no
+account, and there is no TaskGraph server.
+
+## What stays on your machine
+
+Tasks, notes, PRDs, reports and settings live in `.taskgraph/` in your project.
+Token counts from AI calls are printed for you and never sent anywhere.
+
+The Claude Code plugin's hooks run the `taskgraph` CLI you installed. They read
+`.taskgraph/` in your project and make no network calls.
+
+## What leaves your machine
+
+TaskGraph sends data only in these cases:
+
+- **AI commands** such as `parse-prd`, `expand`, `add-task` and `research` send
+  the prompt and the project context it needs (tasks, PRD text, file contents)
+  to Claude Code, the only AI backend TaskGraph uses. Claude Code sends it to
+  the model under your own Claude Code sign-in, and Anthropic's privacy policy
+  and terms apply to that data.
+- **Update checks** ask `registry.npmjs.org` for the latest version and fetch
+  the changelog from `raw.githubusercontent.com`. Each request carries only
+  the package name and your installed version. When a newer version is out,
+  the CLI installs it from npm. Set `TASKGRAPH_SKIP_AUTO_UPDATE=1` to turn
+  both off. They never run in CI or with `--json`.
+- **GitHub sync**, when you run it, creates and reads issues through your
+  signed-in `gh` CLI. See [GitHub sync](/capabilities/github-sync).
+- **The plugin's research skill** searches and fetches web pages through
+  Claude Code's own web tools.
+
+## Questions
+
+Open an issue on
+[GitHub](https://github.com/stephennmiller/taskgraph-ai/issues). Report a
+security problem privately, as described in the repository's `SECURITY.md`.
