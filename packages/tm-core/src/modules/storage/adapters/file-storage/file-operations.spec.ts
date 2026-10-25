@@ -185,6 +185,24 @@ describe('FileOperations', () => {
 			expect(fsSync.existsSync(newFilePath)).toBe(false);
 		});
 
+		it('keeps the modifier error when removing the placeholder fails', async () => {
+			const newFilePath = path.join(tempDir, 'new-file.json');
+			// A Windows scanner holding the file open makes unlink fail with EPERM
+			const rm = vi.spyOn(fs, 'rm').mockRejectedValueOnce(
+				Object.assign(new Error('EPERM: operation not permitted'), {
+					code: 'EPERM'
+				})
+			);
+
+			await expect(
+				fileOps.modifyJson(newFilePath, () => {
+					throw new Error('Task 1 not found');
+				})
+			).rejects.toThrow('Task 1 not found');
+
+			rm.mockRestore();
+		});
+
 		it('keeps a created file that no longer holds the placeholder', async () => {
 			const newFilePath = path.join(tempDir, 'new-file.json');
 

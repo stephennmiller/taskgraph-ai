@@ -77,7 +77,12 @@ export function mergeRewrite(
 		updated.details !== base;
 	const read = keepNote ? { ...stored, details: now.details } : stored;
 	const rewrite = keepNote
-		? { ...updated, details: updated.details + note.replace(/^\n?/, '\n') }
+		? {
+				...updated,
+				details: [updated.details, note.replace(/^\n/, '')]
+					.filter(Boolean)
+					.join('\n')
+			}
 		: updated;
 	const fields = read as unknown as Record<string, unknown>;
 	const mine = rewrite as unknown as Record<string, unknown>;

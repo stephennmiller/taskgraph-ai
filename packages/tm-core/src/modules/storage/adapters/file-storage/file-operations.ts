@@ -270,7 +270,9 @@ export class FileOperations {
 			// and only if no other process filled the file before we locked it
 			if (created && !written && release) {
 				const content = await fs.readFile(filePath, 'utf-8').catch(() => '');
-				if (content.trim() === '{}') await fs.rm(filePath, { force: true });
+				// A failed rm (Windows EPERM) must not hide the real error
+				if (content.trim() === '{}')
+					await fs.rm(filePath, { force: true }).catch(() => undefined);
 			}
 			throw err;
 		} finally {
