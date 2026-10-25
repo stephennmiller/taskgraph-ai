@@ -6,6 +6,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import { isTaskPreset } from '../loop-task.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
 import type {
 	LoopConfig,
@@ -17,15 +18,28 @@ import type {
 
 export interface LoopServiceOptions {
 	projectRoot: string;
+	/** The task `taskgraph next` would pick in a tag, checked before a run ends as all_complete */
+	findReadyTask?: (tag?: string) => Promise<string | undefined>;
 }
+
+/** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
+const SIGNAL_LINE = /^<loop-(complete|blocked)>([^<]*)<\/loop-\1>$/i;
+
+/** Appended to every prompt, presets and custom files alike */
+const SIGNAL_RULE =
+	'To stop the loop, end your reply with the <loop-complete> or <loop-blocked> marker alone on the last line. A marker anywhere else is ignored.';
 
 export class LoopService {
 	private readonly projectRoot: string;
+	private readonly findReadyTask?: (
+		tag?: string
+	) => Promise<string | undefined>;
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 
 	constructor(options: LoopServiceOptions) {
 		this.projectRoot = options.projectRoot;
+		this.findReadyTask = options.findReadyTask;
 	}
 
 	getProjectRoot(): string {
@@ -146,6 +160,20 @@ export class LoopService {
 			);
 			iterations.push(iteration);
 
+			// Claude can say all tasks are done while one is still ready; keep going then
+			if (iteration.status === 'complete') {
+				const ready = await this.readyTask(config);
+				if (ready) {
+					iteration.status = 'success';
+					iteration.message = `Claude said all tasks are done, but task ${ready} is ready`;
+					this.reportError(
+						config.callbacks,
+						`${iteration.message}. Continuing.`,
+						'warning'
+					);
+				}
+			}
+
 			// Notify presentation layer of iteration completion
 			config.callbacks?.onIterationEnd?.(iteration);
 
@@ -180,6 +208,28 @@ export class LoopService {
 	}
 
 	// ========== Private Helpers ==========
+
+	/**
+	 * The task `taskgraph next` would pick, for a task preset run over the
+	 * whole tag. Undefined when the run is pinned to one task, the prompt
+	 * picks its own work, or no lookup was given.
+	 */
+	private async readyTask(config: LoopConfig): Promise<string | undefined> {
+		if (!this.findReadyTask || config.taskId || !isTaskPreset(config.prompt)) {
+			return undefined;
+		}
+		try {
+			return await this.findReadyTask(config.tag);
+		} catch (error) {
+			// An unreadable tasks file shouldn't crash the run; trust the marker
+			this.reportError(
+				config.callbacks,
+				`Couldn't check for a ready task: ${error instanceof Error ? error.message : String(error)}`,
+				'warning'
+			);
+			return undefined;
+		}
+	}
 
 	private async finalize(
 		config: LoopConfig,
@@ -285,22 +335,20 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		iteration: number
 	): Promise<string> {
 		const basePrompt = await this.resolvePrompt(config.prompt);
-		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}`;
+		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${SIGNAL_RULE}`;
 	}
 
 	private parseCompletion(
 		output: string,
 		exitCode: number
 	): { status: LoopIteration['status']; message?: string } {
-		const completeMatch = output.match(
-			/<loop-complete>([^<]*)<\/loop-complete>/i
-		);
-		if (completeMatch)
-			return { status: 'complete', message: completeMatch[1].trim() };
-
-		const blockedMatch = output.match(/<loop-blocked>([^<]*)<\/loop-blocked>/i);
-		if (blockedMatch)
-			return { status: 'blocked', message: blockedMatch[1].trim() };
+		const lastLine = output.trimEnd().split('\n').pop()?.trim() ?? '';
+		const signal = lastLine.match(SIGNAL_LINE);
+		if (signal) {
+			const status =
+				signal[1].toLowerCase() === 'complete' ? 'complete' : 'blocked';
+			return { status, message: signal[2].trim() };
+		}
 
 		if (exitCode !== 0)
 			return { status: 'error', message: `Exit code ${exitCode}` };
@@ -357,7 +405,11 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			return this.createErrorIteration(iterationNum, startTime, errorMsg);
 		}
 
-		const { status, message } = this.parseCompletion(output, result.status);
+		// Markers come from Claude's reply on stdout; stderr would hide the last line
+		const { status, message } = this.parseCompletion(
+			result.stdout || '',
+			result.status
+		);
 		return {
 			iteration: iterationNum,
 			status,

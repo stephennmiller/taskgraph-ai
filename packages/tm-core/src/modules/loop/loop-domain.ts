@@ -109,7 +109,16 @@ export class LoopDomain {
 		}
 
 		const fullConfig = this.buildConfig(config);
-		this.loopService = new LoopService({ projectRoot: this.projectRoot });
+		const tasks = this.tasks;
+		this.loopService = new LoopService({
+			projectRoot: this.projectRoot,
+			findReadyTask: tasks
+				? async (tag) => {
+						const task = await tasks.getNext(tag);
+						return task ? String(task.id) : undefined;
+					}
+				: undefined
+		});
 		return this.loopService.run(fullConfig);
 	}
 
