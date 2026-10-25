@@ -1,6 +1,6 @@
 ---
 name: taskgraph
-description: Track and plan work with TaskGraph in a project that has a .taskgraph/ folder. Use when the user asks what to work on next, what's in progress or left to do, to plan or break down work, to add or close a task, or names a task ID like 3 or 3.2.
+description: Track and plan work with TaskGraph in a project that has a .taskgraph/ folder. Use when the user asks what to work on next, what's in progress or left to do, why a task is blocked, to plan, size or break down work, to add, change or close a task, about task dependencies, tags or TaskGraph's models, or names a task ID like 3 or 3.2.
 ---
 
 # TaskGraph
@@ -18,6 +18,13 @@ For what the user asked:
 - Start a task: `taskgraph set-status --id=<id> --status=in-progress`.
 - Log progress: `taskgraph note <id> '<what you did or decided>'`.
 - Finish: check its criteria, then `taskgraph set-status --id=<id> --status=done`.
+- Why blocked, or the whole graph: `taskgraph why <id>`, `taskgraph graph`.
+- Change a task: `taskgraph update-task --id=<id> --prompt='<change>'`.
+- Size the work: `taskgraph analyze-complexity`, then `taskgraph expand --all`.
+- Dependencies look wrong: `taskgraph validate-dependencies`, then `taskgraph fix-dependencies`.
+- Separate task lists: `taskgraph tags`, `taskgraph tags add <name>`, `taskgraph tags use <name>`.
+- Models: `taskgraph models --set-main <opus|sonnet|haiku>` (also `--set-research`, `--set-fallback`).
+- Anything else: `taskgraph --help` lists every command.
 
 Put free text (a prompt, a note) in single quotes and write any `'` in it as `'\''`. In double quotes the shell runs backticks and `$(...)` in the text.
 
