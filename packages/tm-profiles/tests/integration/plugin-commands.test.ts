@@ -389,7 +389,7 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		'next-task': 'next',
 		'parse-prd': 'parse-prd',
 		'parse-prd-with-research': 'parse-prd',
-		'project-status': 'list',
+		'project-status': 'prime',
 		'remove-dependency': 'remove-dependency',
 		'remove-subtask': 'remove-subtask',
 		'remove-task': 'remove-task',

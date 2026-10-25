@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-// Schema that matches the inline AiTaskDataSchema from add-task.js
-export const AddTaskResponseSchema = z
+const NewTaskSchema = z
 	.object({
 		title: z.string().describe('Clear, concise title for the task'),
 		description: z
@@ -23,3 +22,8 @@ export const AddTaskResponseSchema = z
 			)
 	})
 	.strict();
+
+// The fields sit under `task`: given them as top-level tool parameters, the
+// model often closes the long `details` value with `</details>`, which
+// swallows testStrategy and dependencies and fails the schema (#545)
+export const AddTaskResponseSchema = z.object({ task: NewTaskSchema }).strict();

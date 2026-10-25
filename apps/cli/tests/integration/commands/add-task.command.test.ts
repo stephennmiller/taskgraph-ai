@@ -111,12 +111,14 @@ describe.skipIf(!built)('add-task command output', () => {
 			replies: [
 				{
 					object: {
-						title: 'Export bookmarks as a Netscape HTML file',
-						description:
-							'Download all bookmarks in the format browsers import.',
-						details: 'Add GET /api/bookmarks/export that streams the file.',
-						testStrategy: 'Import the file into Firefox and Chrome.',
-						dependencies: [2]
+						task: {
+							title: 'Export bookmarks as a Netscape HTML file',
+							description:
+								'Download all bookmarks in the format browsers import.',
+							details: 'Add GET /api/bookmarks/export that streams the file.',
+							testStrategy: 'Import the file into Firefox and Chrome.',
+							dependencies: [2]
+						}
 					}
 				}
 			]

@@ -88,6 +88,9 @@ describe('replies name the tag the tool worked in (#292)', () => {
 		});
 		expect(out.tag).toBe('other');
 		expect(readTag('other')[0].subtasks).toHaveLength(1);
+		// #661: the reply gives the full ID; tasks.json keeps the subtask's own number
+		expect(out.data.subtask.id).toBe('1.1');
+		expect(String(readTag('other')[0].subtasks[0].id)).toBe('1');
 	}, 30000);
 
 	it('remove_subtask', () => {

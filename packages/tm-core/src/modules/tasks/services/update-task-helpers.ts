@@ -56,7 +56,8 @@ export function promptView(task: Task): Task {
 
 /**
  * Apply what the rewrite changed (stored -> updated) to the task as it is
- * now, and warn about each field someone else changed too: the AI's wins
+ * now, and warn about each field someone else changed too: the AI's wins.
+ * Text appended to details meanwhile (a note) is kept after the AI's details.
  */
 export function mergeRewrite(
 	stored: Task,
@@ -64,23 +65,37 @@ export function mergeRewrite(
 	now: Task,
 	warn: (message: string) => void
 ): Task {
-	const fields = stored as unknown as Record<string, unknown>;
-	const mine = updated as unknown as Record<string, unknown>;
+	// Notes appended meanwhile (`taskgraph note`) go after the AI's details
+	const base = stored.details ?? '';
+	const note =
+		typeof now.details === 'string' && now.details.startsWith(base)
+			? now.details.slice(base.length)
+			: '';
+	const keepNote =
+		note !== '' &&
+		typeof updated.details === 'string' &&
+		updated.details !== base;
+	const read = keepNote ? { ...stored, details: now.details } : stored;
+	const rewrite = keepNote
+		? { ...updated, details: updated.details + note.replace(/^\n?/, '\n') }
+		: updated;
+	const fields = read as unknown as Record<string, unknown>;
+	const mine = rewrite as unknown as Record<string, unknown>;
 	const theirs = now as unknown as Record<string, unknown>;
 	for (const key of new Set([...Object.keys(mine), ...Object.keys(theirs)])) {
 		const values = [fields[key], mine[key], theirs[key]];
-		const [base, ours, current] = values;
+		const [prior, ours, current] = values;
 		// Objects and lists of items with IDs (subtasks) merge inside
 		if (values.every(isObject) || values.every(hasItemIds)) continue;
-		if (!same(base, ours) && !same(base, current) && !same(ours, current)) {
+		if (!same(prior, ours) && !same(prior, current) && !same(ours, current)) {
 			warn(
 				`The ${key} of task ${stored.id} changed while the AI was writing; the AI's version was saved`
 			);
 		}
 	}
 	return mergeTagChanges(
-		{ tasks: [stored] },
-		{ tasks: [updated] },
+		{ tasks: [read] },
+		{ tasks: [rewrite] },
 		{ tasks: [now] }
 	).merged.tasks[0];
 }

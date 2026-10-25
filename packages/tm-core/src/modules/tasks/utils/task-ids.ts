@@ -3,15 +3,21 @@
  *
  * tasks.json stores task and subtask IDs as numbers or strings, and older
  * files leave a subtask's `parentId` out. Everything @tm/core hands to the
- * CLI and MCP gives IDs as strings, so `list`, `next` and `show` agree:
+ * CLI and MCP gives IDs as strings:
  *  - a task's `id` and `dependencies` are strings
  *  - a subtask's `id` is a string, and `parentId` is its task's ID
+ *
+ * Inside @tm/core a nested subtask's `id` stays its own number (`"1"`), which
+ * lookups and renderers join to the parent's. JSON replies give the full
+ * dotted ID (`"9.1"`) instead, through withFullSubtaskIds, so `show`, `list`
+ * and `next` agree.
  *
  * A subtask's `dependencies` keep their stored type, since the type carries
  * the meaning (a bare number is a sibling; see resolveSubtaskDependency).
  */
 
 import type { Task } from '../../../common/types/index.js';
+import { fullSubtaskId } from '../validation/task-id.js';
 
 /**
  * A task with string IDs throughout: its own `id`, its `dependencies`, and
@@ -27,6 +33,25 @@ export function normalizeTaskIds(task: Task): Task {
 			id: String(subtask.id),
 			// Older files leave parentId out
 			parentId: String(subtask.parentId ?? task.id)
+		}))
+	};
+}
+
+/**
+ * The task as a JSON reply gives it: each subtask's `id` is its full dotted
+ * ID (`"9.1"`), the form `show`, `set-status` and `next` take. Never save the
+ * result; tasks.json keeps the subtask's own number. Null stays null.
+ */
+export function withFullSubtaskIds<T extends { id: string | number } | null>(
+	task: T
+): T {
+	const subtasks = (task as Partial<Task> | null)?.subtasks;
+	if (!task || !Array.isArray(subtasks)) return task;
+	return {
+		...task,
+		subtasks: subtasks.map((subtask) => ({
+			...subtask,
+			id: fullSubtaskId(task.id, subtask.id)
 		}))
 	};
 }

@@ -55,7 +55,7 @@
         "description": "`taskgraph add-task --prompt=\"Add a login page\"` in an empty project took 31 s and 69,845 tokens (67k in, 73% cached). That's one sample through a real signed-in Claude Code.",
         "details": "GitHub issue #251: https://github.com/stephennmiller/taskgraph-ai/issues/251\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           "6"
         ],

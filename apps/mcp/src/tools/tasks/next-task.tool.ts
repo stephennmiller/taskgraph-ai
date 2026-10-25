@@ -3,21 +3,14 @@
  * tm-core's tasks.getNext(), or with claim: true, tasks.claimNext()
  */
 
+import { withFullSubtaskIds } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
 import { replyId, replyWith } from '../../shared/tool-reply.js';
-import { resolveInsideRoot, withToolContext } from '../../shared/utils.js';
+import { withToolContext } from '../../shared/utils.js';
 
-// The schema clients see; kept as the legacy tool had it, `file` included
 const NextTaskSchema = z.object({
-	file: z.string().optional().describe('Absolute path to the tasks file'),
-	complexityReport: z
-		.string()
-		.optional()
-		.describe(
-			'Path to the complexity report file (relative to project root or absolute)'
-		),
 	projectRoot: z
 		.string()
 		.describe('The directory of the project. Must be an absolute path.'),
@@ -34,11 +27,6 @@ type NextTaskArgs = z.infer<typeof NextTaskSchema>;
 
 const NO_NEXT_TASK =
 	'No eligible next task found. All tasks are either completed or have unsatisfied dependencies';
-
-const SUBTASK_ADVICE =
-	'Subtasks can be updated with timestamped details as you implement them. This is useful for tracking progress, marking milestones and insights (of successful or successive falures in attempting to implement the subtask). Research can be used when updating the subtask to collect up-to-date information, and can be helpful to solve a repeating problem the agent is unable to solve. It is a good idea to get-task the parent task to collect the overall context of the task, and to get-task the subtask to collect the specific details of the subtask.';
-const TASK_ADVICE =
-	'Tasks can be updated to reflect a change in the direction of the task, or to reformulate the task per your prompt. Research can be used when updating the task to collect up-to-date information. It is best to update subtasks as you work on them, and to update the task for more high-level changes that may affect pending subtasks or the general direction of the task.';
 
 /**
  * Register the next_task tool with the MCP server
@@ -75,7 +63,7 @@ export function registerNextTaskTool(server: FastMCP) {
 							return {
 								data: claim
 									? {
-											nextTask: claim.task,
+											nextTask: withFullSubtaskIds(claim.task),
 											isSubtask: String(claim.task.id).includes('.'),
 											claimedBy: claim.claimedBy,
 											claimedAt: claim.claimedAt,
@@ -118,12 +106,11 @@ export function registerNextTaskTool(server: FastMCP) {
 									dependencies: nextTask.dependencies,
 									parentId: Number(parentId)
 								}
-							: { ...nextTask, id: replyId(nextTask.id) };
+							: { ...withFullSubtaskIds(nextTask), id: replyId(nextTask.id) };
 						const complexityScore = readScore(
 							context,
 							String(parentId ?? nextTask.id),
-							tag,
-							args
+							tag
 						);
 						return {
 							data: {
@@ -132,7 +119,7 @@ export function registerNextTaskTool(server: FastMCP) {
 										? item
 										: { ...item, complexityScore },
 								isSubtask,
-								nextSteps: `When ready to work on the ${isSubtask ? 'subtask' : 'task'}, use set-status to set the status to "in progress" ${isSubtask ? SUBTASK_ADVICE : TASK_ADVICE}`
+								nextSteps: `Start it with set_task_status id "${nextTask.id}" status "in-progress"`
 							}
 						};
 					}
@@ -142,24 +129,20 @@ export function registerNextTaskTool(server: FastMCP) {
 	});
 }
 
-/** The task's score in the tag's (or the given) complexity report, if any */
+/** The task's score in the tag's complexity report, if any */
 function readScore(
 	{ tmCore, log }: ToolContext,
 	taskId: string,
-	tag: string,
-	args: NextTaskArgs
+	tag: string
 ): number | undefined {
 	try {
-		const file = args.complexityReport
-			? resolveInsideRoot(args.projectRoot, args.complexityReport)
-			: undefined;
-		const found = tmCore.tasks.getComplexityReport({ tag, file });
-		if (!found && file) log.warn(`No complexity report found at ${file}`);
-		return found?.report.complexityAnalysis?.find(
-			(entry) => String(entry.taskId) === taskId
-		)?.complexityScore;
+		return tmCore.tasks
+			.getComplexityReport({ tag })
+			?.report.complexityAnalysis?.find(
+				(entry) => String(entry.taskId) === taskId
+			)?.complexityScore;
 	} catch (error) {
-		// The report is optional; an unreadable or outside one doesn't stop next_task
+		// The report is optional; an unreadable one doesn't stop next_task
 		log.warn(
 			`Couldn't read the complexity report: ${(error as Error).message}`
 		);

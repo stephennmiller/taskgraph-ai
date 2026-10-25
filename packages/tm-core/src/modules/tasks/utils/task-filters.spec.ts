@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createTask } from '../../../testing/task-fixtures.js';
-import { filterByStatus } from './task-filters.js';
+import { filterByStatus, parseStatusFilter } from './task-filters.js';
 
 describe('filterByStatus', () => {
 	const tasks = [
@@ -18,5 +18,22 @@ describe('filterByStatus', () => {
 	it('keeps the tasks with one of the listed statuses', () => {
 		expect(ids(filterByStatus(tasks, 'pending'))).toEqual(['2']);
 		expect(ids(filterByStatus(tasks, 'pending, review'))).toEqual(['2', '3']);
+	});
+});
+
+describe('parseStatusFilter', () => {
+	it('gives no statuses for no value or all', () => {
+		expect(parseStatusFilter()).toBeUndefined();
+		expect(parseStatusFilter('all')).toBeUndefined();
+	});
+
+	it('splits and trims the listed statuses', () => {
+		expect(parseStatusFilter('pending, review')).toEqual(['pending', 'review']);
+	});
+
+	it('refuses an unknown status, naming the valid ones', () => {
+		expect(() => parseStatusFilter('pending,bogus')).toThrow(
+			'"bogus" isn\'t a status. Use one of: pending, in-progress'
+		);
 	});
 });

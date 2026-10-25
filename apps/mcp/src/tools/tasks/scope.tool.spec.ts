@@ -48,7 +48,7 @@ beforeEach(() => {
 			tag: 'master',
 			tasks: [
 				{
-					task: { id: '3', title: 'Bigger' },
+					task: { id: '3', title: 'Bigger', subtasks: [{ id: 1 }] },
 					regenerated: false,
 					preserved: 0,
 					generated: 0,
@@ -95,7 +95,8 @@ describe('scope_up_task / scope_down_task', () => {
 			expect.any(Object)
 		);
 		expect(reply(result).data).toEqual({
-			updatedTasks: [{ id: 3, title: 'Bigger' }],
+			// #661: each subtask with its full ID
+			updatedTasks: [{ id: 3, title: 'Bigger', subtasks: [{ id: '3.1' }] }],
 			tasksUpdated: 1,
 			message: 'Successfully scoped up 1 task(s)',
 			telemetryData: { totalTokens: 9 },

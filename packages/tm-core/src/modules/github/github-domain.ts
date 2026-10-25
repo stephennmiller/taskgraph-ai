@@ -186,9 +186,11 @@ export class GitHubDomain {
 
 		for (const step of steps.filter((s) => s.action === 'link')) {
 			const task = inTag.find((t) => String(t.id) === step.taskId) as Task;
-			await tasksDomain.update(
+			await tasksDomain.modifyTask(
 				task.id,
-				{ metadata: { ...task.metadata, github: linkFor(step) } },
+				(current) => ({
+					metadata: { ...current.metadata, github: linkFor(step) }
+				}),
 				tag
 			);
 		}
@@ -250,9 +252,15 @@ export class GitHubDomain {
 			);
 		}
 		const { tag, task } = linked[0];
-		const { github, ...rest } = task.metadata as Record<string, unknown>;
-		const link = github as GitHubLink;
-		await this.requireTasks().update(task.id, { metadata: rest }, tag);
+		const link = task.metadata?.github as GitHubLink;
+		await this.requireTasks().modifyTask(
+			task.id,
+			(current) => {
+				const { github: _, ...rest } = current.metadata ?? {};
+				return { metadata: rest };
+			},
+			tag
+		);
 		return {
 			tag,
 			taskId: id,
@@ -345,9 +353,9 @@ export class GitHubDomain {
 			lastPushedStatus: step.to,
 			syncedAt: (this.options.now?.() ?? new Date()).toISOString()
 		};
-		await tasksDomain.update(
+		await tasksDomain.modifyTask(
 			task.id,
-			{ metadata: { ...task.metadata, github } },
+			(current) => ({ metadata: { ...current.metadata, github } }),
 			step.tag
 		);
 	}
