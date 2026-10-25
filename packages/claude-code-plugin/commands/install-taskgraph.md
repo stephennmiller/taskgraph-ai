@@ -28,5 +28,5 @@ Arguments: $ARGUMENTS
 
 If the install fails:
 
-- permission error: set a user-owned npm prefix (`npm config set prefix ~/.npm-global`, then add `~/.npm-global/bin` to `PATH`) and install again. Don't use `sudo` without asking the user.
+- permission error: point the user to npm's guide, <https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally>, then install again. Don't change their npm config yourself, and don't use `sudo` without asking the user.
 - `command not found` after installing: the npm global bin folder isn't on `PATH`. `npm prefix -g` prints the folder; its `bin` goes on `PATH`.
