@@ -31,8 +31,11 @@ collects nothing about you or your project.
   `registry.npmjs.org` for the latest version. When there is a newer one, it
   fetches release notes from `raw.githubusercontent.com` and installs the
   update from npm. Set `TASKGRAPH_SKIP_AUTO_UPDATE=1` to turn this off.
+  [npm's privacy policy](https://docs.npmjs.com/policies/privacy) applies.
 - **GitHub sync:** `taskgraph github push` writes your tasks to GitHub Issues,
   and `pull` and `import` read issues, through your signed-in `gh` CLI.
+  [GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)
+  applies here and to the release notes from `raw.githubusercontent.com`.
 - **Containers:** `loop --parallel --container` installs TaskGraph from npm
   inside the container when its image doesn't have it.
 - **Research:** the `research` skill and command search and fetch web pages

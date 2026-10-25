@@ -40,7 +40,7 @@ If the Context7 tools are not installed or not enabled, do not mention an error 
 To enable it:
 
 ```bash
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp@4.4.4
 ```
 
 Then restart Claude Code. The plugin never requires this server and does not bundle it.
