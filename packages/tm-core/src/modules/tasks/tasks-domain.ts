@@ -26,6 +26,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
+import { readPrdSection } from '../prd/prd-coverage.js';
+import { getPrdSource } from '../prd/prd-sections.js';
 import type { TaskClaim } from './utils/claim.js';
 import { subtaskInContext } from './utils/subtask-context.js';
 import {
@@ -428,6 +430,28 @@ export class TasksDomain {
 			this.configManager.getDefinitionOfDone(),
 			isSubtask
 		);
+	}
+
+	/**
+	 * The PRD section a task cites in `metadata.source`, read from the PRD
+	 * verbatim; a subtask without one uses its parent's. Undefined when
+	 * neither cites one, or the file or heading is gone.
+	 */
+	async getPrdSection(
+		taskId: string,
+		tag?: string
+	): Promise<{ source: string; text: string } | undefined> {
+		const ids = taskId.includes('.')
+			? [taskId, taskId.split('.')[0]]
+			: [taskId];
+		for (const id of ids) {
+			const { task } = await this.get(id, tag);
+			const source = task ? getPrdSource(task) : undefined;
+			if (!source) continue;
+			const text = readPrdSection(source, this.projectRoot);
+			return text ? { source, text } : undefined;
+		}
+		return undefined;
 	}
 
 	/**

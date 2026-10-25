@@ -163,16 +163,66 @@ export function checkPrdCoverage(
 	tasks: PrdCoverageTask[],
 	projectRoot: string
 ): PrdCoverage | null {
-	return computePrdCoverage(tasks, (prdPath) => {
-		try {
-			const file = path.resolve(projectRoot, prdPath);
-			const stat = fs.statSync(file);
-			if (!stat.isFile() || stat.size > MAX_PRD_BYTES) return null;
-			return fs.readFileSync(file, 'utf8');
-		} catch {
-			return null;
+	return computePrdCoverage(tasks, (prdPath) =>
+		readPrdFile(path.resolve(projectRoot, prdPath))
+	);
+}
+
+/** A regular file up to `MAX_PRD_BYTES`, or null */
+function readPrdFile(file: string): string | null {
+	try {
+		const stat = fs.statSync(file);
+		if (!stat.isFile() || stat.size > MAX_PRD_BYTES) return null;
+		return fs.readFileSync(file, 'utf8');
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * The text of the section a `metadata.source` cites, subsections included,
+ * as written in the PRD; undefined when the file or heading is gone. Only a
+ * file inside the project is read, since the source comes from the task file.
+ */
+export function readPrdSection(
+	source: string,
+	projectRoot: string
+): string | undefined {
+	const parsed = parsePrdSource(source);
+	if (!parsed) return undefined;
+	let file: string;
+	try {
+		const root = fs.realpathSync(projectRoot);
+		file = fs.realpathSync(path.resolve(root, parsed.path));
+		const relative = path.relative(root, file);
+		if (
+			!relative ||
+			relative === '..' ||
+			relative.startsWith(`..${path.sep}`) ||
+			path.isAbsolute(relative)
+		) {
+			return undefined;
 		}
-	});
+	} catch {
+		return undefined;
+	}
+	const content = readPrdFile(file);
+	if (content === null) return undefined;
+	const sections = parsePrdSections(content);
+	const start = sections.findIndex((s) => s.slug === parsed.slug);
+	if (start === -1) return undefined;
+	const end = sections.findIndex(
+		(s, i) => i > start && s.level <= sections[start].level
+	);
+	return content
+		.replace(/\r\n?/g, '\n')
+		.split('\n')
+		.slice(
+			sections[start].line - 1,
+			end === -1 ? undefined : sections[end].line - 1
+		)
+		.join('\n')
+		.trimEnd();
 }
 
 /** Whether coverage found anything worth telling the user */

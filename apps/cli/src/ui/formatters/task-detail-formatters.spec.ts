@@ -105,6 +105,30 @@ describe('formatTaskDetail', () => {
 		]);
 	});
 
+	it('prints the cited PRD section as written, in place of the source line', () => {
+		const task = {
+			...signIn(),
+			metadata: { source: 'docs/prd.md#sessions' }
+		};
+		const text =
+			'## Sessions\n\nPOST /sessions takes `{ "email", "password" }`.';
+
+		const output = lines(
+			formatTaskDetail(task, {
+				width: 80,
+				prdSection: { source: 'docs/prd.md#sessions', text }
+			})
+		);
+
+		expect(output).not.toContain('From docs/prd.md#sessions');
+		const at = output.indexOf('PRD · docs/prd.md#sessions');
+		expect(output.slice(at + 1, at + 4)).toEqual([
+			'  ## Sessions',
+			'',
+			'  POST /sessions takes `{ "email", "password" }`.'
+		]);
+	});
+
 	it('prints no source line for a task without one', () => {
 		expect(plain(formatTaskDetail(signIn(), { width: 80 }))).not.toContain(
 			'From '

@@ -52,6 +52,7 @@ export class ShowCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ShowTaskResult | ShowMultipleTasksResult;
 	private requestedId?: string;
+	private prdSection?: { source: string; text: string };
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -175,6 +176,7 @@ export class ShowCommand extends Command {
 		// Get the task
 		this.requestedId = taskId;
 		const result = await this.tmCore.tasks.get(taskId);
+		this.prdSection = await this.tmCore.tasks.getPrdSection(taskId);
 
 		return {
 			task: result.task,
@@ -282,6 +284,7 @@ export class ShowCommand extends Command {
 		console.log(
 			formatTaskDetail(result.task, {
 				id: result.originalTaskId,
+				prdSection: this.prdSection,
 				statusFilter: options.status,
 				checklist: this.tmCore?.tasks.getChecklist(
 					result.task,

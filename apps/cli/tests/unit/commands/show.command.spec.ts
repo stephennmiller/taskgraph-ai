@@ -50,7 +50,8 @@ describe('ShowCommand', () => {
 					},
 					isSubtask: false
 				}),
-				getChecklist: vi.fn().mockReturnValue(undefined)
+				getChecklist: vi.fn().mockReturnValue(undefined),
+				getPrdSection: vi.fn().mockResolvedValue(undefined)
 			} as any,
 			config: {
 				getActiveTag: vi.fn().mockReturnValue('master')

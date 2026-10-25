@@ -353,6 +353,27 @@ describe('show command output', () => {
 		);
 	});
 
+	it("prints the PRD section a task cites, and its parent's for a subtask (#649)", () => {
+		const tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
+		const data = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		data.master.tasks[1].metadata = { source: 'docs/prd.md#sessions' };
+		fs.writeFileSync(tasksPath, JSON.stringify(data));
+		fs.mkdirSync(path.join(testDir, 'docs'));
+		fs.writeFileSync(
+			path.join(testDir, 'docs', 'prd.md'),
+			'# App\n\n## Sessions\n\n`POST /sessions` takes `{ "email", "password" }`.\n\n## Billing\n\nLater.\n'
+		);
+
+		for (const id of ['2', '2.2']) {
+			const res = show(id);
+
+			expect(res.stdout).toContain(
+				'PRD · docs/prd.md#sessions\n  ## Sessions\n\n  `POST /sessions` takes `{ "email", "password" }`.\n\n'
+			);
+			expect(res.stdout).not.toContain('Billing');
+		}
+	});
+
 	it('prints the same facts line as next for a subtask stored without parentId or priority', () => {
 		// As expand and add-subtask write them: no parentId, priority from the parent
 		const tasksPath = path.join(testDir, '.taskgraph', 'tasks', 'tasks.json');
