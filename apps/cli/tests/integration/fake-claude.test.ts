@@ -169,6 +169,15 @@ describe('fake claude program', () => {
 		expect(trace[1].schema).toBeNull();
 	});
 
+	it('skips a trace line the fake is still writing', () => {
+		fs.writeFileSync(
+			path.join(dir, 'trace.jsonl'),
+			`${JSON.stringify({ n: 0, prompt: 'done' })}\n{"n":1,"prompt":"half`
+		);
+
+		expect(readTrace(dir).map((t) => t.prompt)).toEqual(['done']);
+	});
+
 	it('works without a FAKE_CLAUDE_DIR', () => {
 		const res = spawnSync(process.execPath, [fakeClaude], {
 			input: `${JSON.stringify(userMessage('hi'))}\n`,
