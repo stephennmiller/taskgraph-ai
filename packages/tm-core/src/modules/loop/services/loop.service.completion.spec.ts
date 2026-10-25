@@ -1,7 +1,7 @@
 /**
  * @fileoverview When a loop iteration ends the run: the completion marker
  * must be the reply's last line, and a task preset also needs no open tasks
- * left (#648)
+ * ready (#648)
  */
 
 import * as childProcess from 'node:child_process';
@@ -80,35 +80,35 @@ describe('LoopService completion', () => {
 			expect(result.finalStatus).toBe('max_iterations');
 		});
 
-		it('keeps going when Claude says all done but tasks remain', async () => {
-			const countRemainingTasks = vi
+		it('keeps going when Claude says all done but a task is ready', async () => {
+			const findReadyTask = vi
 				.fn()
-				.mockResolvedValueOnce(4)
-				.mockResolvedValue(0);
+				.mockResolvedValueOnce('9')
+				.mockResolvedValue(undefined);
 			const onError = vi.fn();
 			spawnSync.mockReturnValue(reply(MARKER) as never);
 
 			const result = await new LoopService({
 				projectRoot: '/p',
-				countRemainingTasks
+				findReadyTask
 			}).run({ ...config, callbacks: { onError } });
 
 			expect(result.totalIterations).toBe(2);
 			expect(result.finalStatus).toBe('all_complete');
 			expect(result.iterations[0].status).toBe('success');
 			expect(onError).toHaveBeenCalledWith(
-				'Claude said all tasks are done, but 4 are still open. Continuing.',
+				'Claude said all tasks are done, but task 9 is ready. Continuing.',
 				'warning'
 			);
 		});
 
 		it('trusts the marker when the tasks file cannot be read', async () => {
-			const countRemainingTasks = vi.fn().mockRejectedValue(new Error('EIO'));
+			const findReadyTask = vi.fn().mockRejectedValue(new Error('EIO'));
 			spawnSync.mockReturnValue(reply(MARKER) as never);
 
 			const result = await new LoopService({
 				projectRoot: '/p',
-				countRemainingTasks
+				findReadyTask
 			}).run({ ...config, callbacks: { onError: vi.fn() } });
 
 			expect(result.finalStatus).toBe('all_complete');
@@ -118,16 +118,16 @@ describe('LoopService completion', () => {
 			['a preset that picks its own work', { prompt: 'linting' }],
 			['a run pinned to one task', { taskId: '3' }]
 		])("doesn't count tasks for %s", async (_name, overrides) => {
-			const countRemainingTasks = vi.fn().mockResolvedValue(4);
+			const findReadyTask = vi.fn().mockResolvedValue('9');
 			spawnSync.mockReturnValue(reply(MARKER) as never);
 
 			const result = await new LoopService({
 				projectRoot: '/p',
-				countRemainingTasks
+				findReadyTask
 			}).run({ ...config, ...overrides });
 
 			expect(result.finalStatus).toBe('all_complete');
-			expect(countRemainingTasks).not.toHaveBeenCalled();
+			expect(findReadyTask).not.toHaveBeenCalled();
 		});
 
 		it('tells Claude where the marker must go', async () => {

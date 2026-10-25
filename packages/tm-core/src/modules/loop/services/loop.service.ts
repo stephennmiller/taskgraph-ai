@@ -18,8 +18,8 @@ import type {
 
 export interface LoopServiceOptions {
 	projectRoot: string;
-	/** Pending and in-progress tasks left in a tag, checked before a run ends as all_complete */
-	countRemainingTasks?: (tag?: string) => Promise<number>;
+	/** The task `taskgraph next` would pick in a tag, checked before a run ends as all_complete */
+	findReadyTask?: (tag?: string) => Promise<string | undefined>;
 }
 
 /** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
@@ -31,13 +31,15 @@ const SIGNAL_RULE =
 
 export class LoopService {
 	private readonly projectRoot: string;
-	private readonly countRemainingTasks?: (tag?: string) => Promise<number>;
+	private readonly findReadyTask?: (
+		tag?: string
+	) => Promise<string | undefined>;
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 
 	constructor(options: LoopServiceOptions) {
 		this.projectRoot = options.projectRoot;
-		this.countRemainingTasks = options.countRemainingTasks;
+		this.findReadyTask = options.findReadyTask;
 	}
 
 	getProjectRoot(): string {
@@ -158,12 +160,12 @@ export class LoopService {
 			);
 			iterations.push(iteration);
 
-			// Claude can say all tasks are done while some remain; keep going then
+			// Claude can say all tasks are done while one is still ready; keep going then
 			if (iteration.status === 'complete') {
-				const remaining = await this.remainingTasks(config);
-				if (remaining > 0) {
+				const ready = await this.readyTask(config);
+				if (ready) {
 					iteration.status = 'success';
-					iteration.message = `Claude said all tasks are done, but ${remaining} ${remaining === 1 ? 'is' : 'are'} still open`;
+					iteration.message = `Claude said all tasks are done, but task ${ready} is ready`;
 					this.reportError(
 						config.callbacks,
 						`${iteration.message}. Continuing.`,
@@ -208,28 +210,24 @@ export class LoopService {
 	// ========== Private Helpers ==========
 
 	/**
-	 * Tasks still open, for a task preset run over the whole tag. 0 when the
-	 * run is pinned to one task, the prompt picks its own work, or no counter
-	 * was given.
+	 * The task `taskgraph next` would pick, for a task preset run over the
+	 * whole tag. Undefined when the run is pinned to one task, the prompt
+	 * picks its own work, or no lookup was given.
 	 */
-	private async remainingTasks(config: LoopConfig): Promise<number> {
-		if (
-			!this.countRemainingTasks ||
-			config.taskId ||
-			!isTaskPreset(config.prompt)
-		) {
-			return 0;
+	private async readyTask(config: LoopConfig): Promise<string | undefined> {
+		if (!this.findReadyTask || config.taskId || !isTaskPreset(config.prompt)) {
+			return undefined;
 		}
 		try {
-			return await this.countRemainingTasks(config.tag);
+			return await this.findReadyTask(config.tag);
 		} catch (error) {
 			// An unreadable tasks file shouldn't crash the run; trust the marker
 			this.reportError(
 				config.callbacks,
-				`Couldn't check for open tasks: ${error instanceof Error ? error.message : String(error)}`,
+				`Couldn't check for a ready task: ${error instanceof Error ? error.message : String(error)}`,
 				'warning'
 			);
-			return 0;
+			return undefined;
 		}
 	}
 
