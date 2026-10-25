@@ -9,6 +9,7 @@ import {
 	assignMetadata,
 	pruneDependencySources
 } from '../../dependencies/dependency-provenance.js';
+import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { pruneTaskLinks } from '../../dependencies/task-links.js';
 import { liveOrArchived } from './archive.js';
 import { isReservedNewTagName } from './tag-names.js';
@@ -141,21 +142,58 @@ First promote it to a full task using:
 		for (const id of dependencies) {
 			if (!toMove.some((m) => String(m) === String(id))) toMove.push(id);
 		}
-	} else {
+	}
+	// withDependencies brings only what the tasks depend on, so dependents
+	// left behind and subtask-held dependencies are still checked
+	{
+		const movedIds = new Set(toMove.map((id) => String(dependencyTaskId(id))));
+		const isMoved = (id: DependencyId) =>
+			movedIds.has(String(dependencyTaskId(id)));
 		const conflicts: CrossTagConflict[] = [];
-		for (const task of sourceTasks) {
-			for (const dep of task.dependencies ?? []) {
+		// What --ignore-dependencies drops, by the task or subtask holding it
+		const drops: { item: Item; parentId?: DependencyId; deps: unknown[] }[] =
+			[];
+		const holders = source.flatMap((task) => [
+			{ item: task, id: String(task.id) },
+			...(task.subtasks ?? []).map((st: Item) => ({
+				item: st,
+				id: `${task.id}.${st.id}`,
+				parentId: task.id as DependencyId
+			}))
+		]);
+		for (const { item, id, parentId } of holders) {
+			const holderMoved = isMoved(id);
+			const deps: unknown[] = [];
+			for (const dep of item.dependencies ?? []) {
 				if (dep == null) continue;
-				const tag = dependencyTag(dep, tags);
-				if (tag !== undefined && tag !== targetTag) {
+				const full =
+					parentId === undefined
+						? String(dep)
+						: resolveSubtaskDependency(parentId, dep);
+				if (holderMoved && !isMoved(full)) {
+					const tag = dependencyTag(full, tags);
+					if (tag !== undefined && tag !== targetTag) {
+						conflicts.push({
+							taskId: id,
+							dependencyId: dep,
+							dependencyTag: tag,
+							message: `Task ${id} depends on ${full} (in ${tag})`
+						});
+					}
+					const depTask = dependencyTaskId(full);
+					if (depTask !== null && findTask(source, depTask)) deps.push(dep);
+				} else if (!holderMoved && isMoved(full)) {
+					// Left behind, it would name an ID the source tag no longer has
 					conflicts.push({
-						taskId: task.id,
+						taskId: id,
 						dependencyId: dep,
-						dependencyTag: tag,
-						message: `Task ${task.id} depends on ${dep} (in ${tag})`
+						dependencyTag: targetTag,
+						message: `Task ${id} depends on ${full}, which moves to ${targetTag}`
 					});
+					deps.push(dep);
 				}
 			}
+			if (deps.length > 0) drops.push({ item, parentId, deps });
 		}
 		if (conflicts.length > 0 && !options.ignoreDependencies) {
 			fail(
@@ -171,16 +209,14 @@ First promote it to a full task using:
 			);
 		}
 		if (conflicts.length > 0) {
-			// Drop what would point into the source tag; keep the rest
-			const inSource = (dep: unknown) => {
-				const id = dependencyTaskId(dep);
-				return id !== null && findTask(source, id) !== undefined;
-			};
-			for (const task of sourceTasks) {
-				task.dependencies = task.dependencies.filter(
-					(dep: unknown) => !inSource(dep)
+			// Drop what would point across the tags; keep the rest
+			for (const { item, parentId, deps } of drops) {
+				item.dependencies = item.dependencies.filter(
+					(dep: unknown) => !deps.includes(dep)
 				);
-				if (task.metadata) assignMetadata(task, pruneDependencySources(task));
+				if (item.metadata) {
+					assignMetadata(item, pruneDependencySources(item, parentId));
+				}
 			}
 			ignored = true;
 		}
