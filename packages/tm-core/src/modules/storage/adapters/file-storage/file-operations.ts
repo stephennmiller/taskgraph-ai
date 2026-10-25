@@ -221,10 +221,11 @@ export class FileOperations {
 		options: { afterWrite?: () => Promise<void> } = {}
 	): Promise<void> {
 		// Ensure file exists for locking (proper-lockfile requires this)
-		await this.ensureFileExists(filePath);
+		const created = await this.ensureFileExists(filePath);
 
 		// Acquire cross-process lock
 		let release: (() => Promise<void>) | null = null;
+		let written = false;
 		try {
 			release = await this.acquireLock(filePath);
 
@@ -262,7 +263,18 @@ export class FileOperations {
 			const newData = await modifier(currentData);
 
 			await writeFileAtomic(filePath, JSON.stringify(newData, null, 2));
+			written = true;
 			await options.afterWrite?.();
+		} catch (err) {
+			// Don't leave our '{}' placeholder behind (#667); still under the lock,
+			// and only if no other process filled the file before we locked it
+			if (created && !written && release) {
+				const content = await fs.readFile(filePath, 'utf-8').catch(() => '');
+				// A failed rm (Windows EPERM) must not hide the real error
+				if (content.trim() === '{}')
+					await fs.rm(filePath, { force: true }).catch(() => undefined);
+			}
+			throw err;
 		} finally {
 			if (release) {
 				try {
@@ -283,18 +295,21 @@ export class FileOperations {
 	/**
 	 * Ensure file exists for locking (proper-lockfile requires the file to exist).
 	 * Uses atomic creation with 'wx' flag to prevent TOCTOU race conditions.
+	 * Returns true when this call created the file.
 	 */
-	private async ensureFileExists(filePath: string): Promise<void> {
+	private async ensureFileExists(filePath: string): Promise<boolean> {
 		const dir = path.dirname(filePath);
 		await fs.mkdir(dir, { recursive: true });
 		try {
 			// Use 'wx' flag for atomic create - fails if file exists (prevents race)
 			await fs.writeFile(filePath, '{}', { flag: 'wx' });
+			return true;
 		} catch (err: any) {
 			// EEXIST is expected if another process created the file - that's fine
 			if (err.code !== 'EEXIST') {
 				throw err;
 			}
+			return false;
 		}
 	}
 
