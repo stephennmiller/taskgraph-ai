@@ -57,6 +57,16 @@ describe('TaskEntity', () => {
 		});
 	});
 
+	describe('priority', () => {
+		it('reads a missing priority as medium', () => {
+			const task = createMinimalTask({ priority: undefined });
+
+			const entity = new TaskEntity(task);
+
+			expect(entity.priority).toBe('medium');
+		});
+	});
+
 	describe('toJSON() fields the entity does not model', () => {
 		it('keeps acceptanceCriteria and definitionOfDoneChecked (#369)', () => {
 			const task = createMinimalTask({

@@ -9,6 +9,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../../common/errors/taskgraph-error.js';
+import { isTaskComplete } from '../../../../common/constants/index.js';
 import type {
 	TaskFieldUpdates,
 	UpdateStatusOptions,
@@ -178,19 +179,20 @@ function setSubtaskStatusIn(
 	let parentNewStatus = parentTask.status;
 	if (subs.length > 0) {
 		const norm = (s: any) => s.status || 'pending';
-		const isDoneLike = (s: any) => norm(s) === 'done';
-		const allDone = subs.every(isDoneLike);
+		const allComplete = subs.every((s) => isTaskComplete(norm(s)));
 		const anyInProgress = subs.some((s) => norm(s) === 'in-progress');
-		const anyDone = subs.some(isDoneLike);
+		const anyDone = subs.some((s) => norm(s) === 'done');
 		const allPending = subs.every((s) => norm(s) === 'pending');
 
-		if (allDone) {
+		if (allComplete && anyDone) {
 			// A parent with unchecked criteria waits in progress for them
 			const refusal =
 				parentTask.status !== 'done'
 					? options.guardDone?.(parentTask, String(parentTask.id), true)
 					: undefined;
 			parentNewStatus = refusal ? 'in-progress' : 'done';
+		} else if (allComplete) {
+			// All cancelled: nothing was done, so the parent's own status stands
 		} else if (anyInProgress || anyDone) parentNewStatus = 'in-progress';
 		else if (allPending) parentNewStatus = 'pending';
 	}

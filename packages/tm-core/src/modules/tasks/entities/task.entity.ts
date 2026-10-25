@@ -60,7 +60,9 @@ export class TaskEntity implements Task {
 		// so one such task doesn't stop the whole tag from loading
 		this.description = promotedSubtaskDescription(data);
 		this.status = data.status;
-		this.priority = data.priority;
+		// Hand-edited or older files can leave priority out; read it as medium
+		// instead of failing every reader of the tag
+		this.priority = data.priority ?? 'medium';
 		this.dependencies = ids.dependencies;
 		this.details = data.details;
 		this.testStrategy = data.testStrategy;
@@ -111,7 +113,7 @@ export class TaskEntity implements Task {
 			);
 		}
 
-		if (!this.isValidPriority(data.priority)) {
+		if (data.priority != null && !this.isValidPriority(data.priority)) {
 			throw new TaskGraphError(
 				`Invalid task priority: ${data.priority}`,
 				ERROR_CODES.VALIDATION_ERROR
