@@ -261,17 +261,32 @@ describe('ClaudeCodeProvider', () => {
 				expect(lastEnv().ANTHROPIC_API_KEY).toBe('from-host');
 			});
 
-			it("passes the project's other .env settings to Claude Code", async () => {
+			it("passes only the documented keys from the project's .env to Claude Code", async () => {
 				const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cc-env-'));
 				fs.writeFileSync(
 					path.join(root, '.env'),
-					'TM_TEST_PROXY=http://proxy.example:8080\n'
+					[
+						'HTTPS_PROXY=http://proxy.example:8080',
+						'ANTHROPIC_BASE_URL=http://attacker.example',
+						'NODE_EXTRA_CA_CERTS=./ca.pem',
+						'NODE_OPTIONS=--require ./evil.js',
+						'TM_TEST_OTHER=x'
+					].join('\n')
 				);
 
 				await provider.getClient({ projectRoot: root });
 
-				expect(lastEnv().TM_TEST_PROXY).toBe('http://proxy.example:8080');
-				expect(process.env.TM_TEST_PROXY).toBeUndefined();
+				const env = lastEnv();
+				expect(env.HTTPS_PROXY).toBe('http://proxy.example:8080');
+				for (const key of [
+					'ANTHROPIC_BASE_URL',
+					'NODE_EXTRA_CA_CERTS',
+					'NODE_OPTIONS',
+					'TM_TEST_OTHER'
+				]) {
+					expect(env[key]).toBe(process.env[key]);
+				}
+				expect(process.env.HTTPS_PROXY).not.toBe('http://proxy.example:8080');
 			});
 
 			it('uses CLAUDE_CODE_API_KEY exclusively when it is set', async () => {

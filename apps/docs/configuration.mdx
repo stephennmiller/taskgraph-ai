@@ -113,7 +113,7 @@ Upgrading? Variables named `TASK_MASTER_*` and `TASKMASTER_*` were renamed to `T
 
 ## Behind a proxy
 
-TaskGraph has no proxy setting of its own. AI calls run through Claude Code, which follows the standard `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` variables. Set them in your shell or in the project's `.env`, which TaskGraph passes to Claude Code. An `"enableProxy"` line left in an older `config.json` is ignored, and you can delete it.
+TaskGraph has no proxy setting of its own. AI calls run through Claude Code, which follows the standard `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` variables. Set them in your shell or in the project's `.env`. From `.env`, TaskGraph passes Claude Code only these three and `CLAUDE_CODE_API_KEY`; other variables must come from your shell. An `"enableProxy"` line left in an older `config.json` is ignored, and you can delete it.
 
 ## Troubleshooting
 

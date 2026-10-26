@@ -116,6 +116,14 @@ export function isTrustedClaudeExecutable(
 	return !isWithin(root, path.resolve(candidate)) && !isWithin(realRoot, real);
 }
 
+/** Keys Claude Code may take from the project's .env: the documented key and proxy settings */
+const PROJECT_ENV_KEYS = [
+	'CLAUDE_CODE_API_KEY',
+	'HTTPS_PROXY',
+	'HTTP_PROXY',
+	'NO_PROXY'
+];
+
 /**
  * Drop an untrusted `pathToClaudeCodeExecutable` from config settings.
  * @returns Settings safe to pass to the SDK
@@ -336,10 +344,13 @@ export class ClaudeCodeProvider extends BaseAIProvider {
 			// to travel with the client rather than be swapped around this call.
 			// CLAUDE_CODE_API_KEY, when set, is used exclusively; otherwise
 			// ANTHROPIC_API_KEY is withheld so Claude Code uses its own sign-in.
-			// The host's variables win over the project's .env, as in tm-core's config
-			const env = projectRoot
-				? readProjectEnv(projectRoot)
-				: { ...process.env };
+			// The host's variables win over the project's .env, as in tm-core's config.
+			// A cloned repo's .env is untrusted, so only these keys come from it.
+			const projectEnv = projectRoot ? readProjectEnv(projectRoot) : {};
+			const env = { ...process.env };
+			for (const key of PROJECT_ENV_KEYS) {
+				if (projectEnv[key] !== undefined) env[key] = projectEnv[key];
+			}
 			const apiKey = env.CLAUDE_CODE_API_KEY;
 			if (apiKey) {
 				env.ANTHROPIC_API_KEY = apiKey;
