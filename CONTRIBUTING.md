@@ -128,6 +128,36 @@ fix: models --setup no longer leaves the menu on screen after Ctrl-C
 feat: refactor research.js
 ```
 
+### Releasing and rolling back (maintainers)
+
+Merging cuts the tag and the GitHub Release, but it does not publish to npm. The release workflow **stages** the build under the `next` dist-tag. Nothing is installable until a maintainer approves it, and `latest` (what `npm install -g taskgraph-ai` and the CLI's update check use) moves only when you promote it.
+
+1. **Approve** the staged build. It goes to `next`:
+
+   ```bash
+   npm stage list taskgraph-ai          # staged versions and their ids
+   npm stage approve <stage-id>         # publish one (asks for 2FA)
+   npm view taskgraph-ai dist-tags      # `next` is the new version, `latest` the old one
+   ```
+
+   Approve only the newest staged version. Each one is built from its own tag, so the newest already includes every earlier fix.
+
+2. **Soak.** Install it with `npm install -g taskgraph-ai@next` and use it for a while.
+
+3. **Promote.** Run the **Set npm latest** workflow with that version, then approve its `npm-release` deployment:
+
+   ```bash
+   gh workflow run npm-dist-tag.yml -f version=<version>
+   ```
+
+**Rollback**, when a bad version reached `latest`:
+
+1. Run **Set npm latest** with the last good version (`gh workflow run npm-dist-tag.yml -f version=<good-version>`). New installs and the CLI's update check get it straight away. Anyone already on the bad version runs `npm install -g taskgraph-ai@latest`.
+2. Revert the PR on `main` with a `revert:` title. That cuts a new patch release, staged under `next` like any other.
+3. Deprecate the bad version from your machine (it asks for 2FA; trusted publishing can't run `npm deprecate`): `npm deprecate "taskgraph-ai@<bad-version>" "<what breaks>; use <good-version>"`. Don't unpublish.
+
+A bad version that only reached `next` needs no rollback: don't promote it, and approve the fix when it's staged.
+
 ## 🔧 Development Setup
 
 ### Prerequisites
