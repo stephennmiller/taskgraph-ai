@@ -538,7 +538,9 @@ export class AnalyzeComplexityService {
 			reportPath,
 			(current: ComplexityReportFile) => {
 				// modifyJson hands a new file over as {}
-				report = build(Object.keys(current).length > 0 ? current : null);
+				report = build(
+					current && Object.keys(current).length > 0 ? current : null
+				);
 				return report;
 			}
 		);

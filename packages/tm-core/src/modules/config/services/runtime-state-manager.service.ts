@@ -105,11 +105,20 @@ export class RuntimeStateManager {
 				})
 			);
 		} catch (error) {
-			throw new TaskGraphError(
-				'Failed to save runtime state',
-				ERROR_CODES.CONFIG_ERROR,
-				{ statePath: this.stateFilePath },
-				error as Error
+			// Name the file and the way out: a corrupt state.json is never overwritten
+			throw Object.assign(
+				new TaskGraphError(
+					'Failed to save runtime state',
+					ERROR_CODES.CONFIG_ERROR,
+					{
+						statePath: this.stateFilePath,
+						userMessage: `Couldn't save ${this.stateFilePath}: ${(error as Error).message}`
+					},
+					error as Error
+				),
+				{
+					hint: 'Fix the file, or delete it: it holds only the current tag and branch-tag mappings'
+				}
 			);
 		}
 	}

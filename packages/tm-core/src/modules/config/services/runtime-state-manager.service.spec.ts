@@ -156,6 +156,16 @@ describe('RuntimeStateManager', () => {
 			);
 		});
 
+		it('refuses to overwrite an invalid state.json, and says how to recover', async () => {
+			writeState('{"branchTagMapping": ');
+
+			const error = await stateManager.setCurrentTag('next').catch((e) => e);
+
+			expect(error.getUserMessage()).toContain(statePath);
+			expect(error.hint).toMatch(/delete it/);
+			expect(readRaw()).toBe('{"branchTagMapping": ');
+		});
+
 		it('should format JSON with proper indentation', async () => {
 			await stateManager.saveState();
 

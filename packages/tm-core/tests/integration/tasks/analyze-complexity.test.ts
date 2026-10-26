@@ -12,6 +12,7 @@ import lockfile from 'proper-lockfile';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
 import { getPromptManager } from '../../../src/modules/ai/prompts/prompt-manager.js';
+import { FileOperations } from '../../../src/modules/storage/adapters/file-storage/file-operations.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 import legacyInputs from './__snapshots__/analyze-complexity-prompt-inputs.legacy.json' with {
 	type: 'json'
@@ -203,9 +204,22 @@ describe('tasks.analyzeComplexity', () => {
 					return answer([2]) as any;
 				}
 			);
+			// Sync point, no timer: the run has started its report write (or,
+			// without the lock, already finished it)
+			let writing!: () => void;
+			const started = new Promise<void>((resolve) => {
+				writing = resolve;
+			});
+			const modifyJson = FileOperations.prototype.modifyJson;
+			vi.spyOn(FileOperations.prototype, 'modifyJson').mockImplementation(
+				function (this: FileOperations, ...args) {
+					if (args[0] === reportPath()) writing();
+					return modifyJson.apply(this, args);
+				}
+			);
 
 			const run = core.tasks.analyzeComplexity({ ids: '2' });
-			await new Promise((resolve) => setTimeout(resolve, 300));
+			await Promise.race([started, run]);
 			// ...and writes its entry before letting go
 			fs.writeFileSync(
 				reportPath(),
