@@ -45,8 +45,9 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "::error::version must be an exact release like 0.62.0, got '$VERSION'"
+          # [[ =~ ]] matches the whole value; grep would pass "0.62.0<newline>anything".
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must be an exact release like 0.62.0"
             exit 1
           fi
           npm dist-tag ls taskgraph-ai
