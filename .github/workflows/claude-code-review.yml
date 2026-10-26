@@ -34,6 +34,7 @@ jobs:
     permissions:
       contents: read # checkout. Review comments use the action's app token
       pull-requests: read
+      issues: read # the review bot stopped posting without it after #726
       id-token: write # OIDC exchange for the Claude GitHub App token
 
     steps:

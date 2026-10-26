@@ -10,20 +10,19 @@ on:
   pull_request_review:
     types: [submitted]
 
-# No workflow-level grant: the job below declares exactly what it needs.
+# No workflow-level grant: each job declares exactly what it needs.
 # A skipped job never starts a runner, so CLAUDE_CODE_OAUTH_TOKEN is not
-# mounted for an event that fails the actor check.
+# mounted for an event that fails the actor or head-repository check.
 permissions: {}
 
 jobs:
-  claude:
-    # Trusted human actors only, and only when they mentioned @claude.
-    # The action's write check runs after the runner already has the token,
-    # so it cannot be the only gate. Association is the commenter, reviewer,
-    # or issue author (OWNER covers the repository owner). Assigning someone
-    # else's issue carries no actor association, so that path is limited to
-    # the repository owner. Bots are excluded so a Claude reply cannot
-    # start another run. Comment text is not interpolated into a run step.
+  # issue_comment on a pull request does not include the head repository.
+  # This job reads it with the default GITHUB_TOKEN and has no secrets.
+  # It does not check out the pull request or run any of its code.
+  # fork=true when the head repo is a fork, is missing, or is not this
+  # repository. Any other event, including an issue comment that is not
+  # on a pull request, sets fork=false so the Claude job is unchanged.
+  issue-comment-head:
     if: |
       github.event.sender.type != 'Bot' &&
       (
@@ -48,10 +47,84 @@ jobs:
             contains(github.event.issue.body, '@claude') ||
             contains(github.event.issue.title, '@claude')
           ) &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+        )
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      fork: ${{ steps.head.outputs.fork }}
+    steps:
+      - name: Read pull request head repository
+        id: head
+        env:
+          # Default workflow token, scoped to pull-requests: read above.
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          IS_PULL_REQUEST: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request != null && 'true' || 'false' }}
+        run: |
+          set -euo pipefail
+          if [ "$IS_PULL_REQUEST" != "true" ]; then
+            echo "fork=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$ISSUE_NUMBER" in
+            ''|*[!0-9]*)
+              echo "fork=true" >> "$GITHUB_OUTPUT"
+              exit 0
+              ;;
+          esac
+          # "missing" and "fork" are not owner/repo names, so neither
+          # equals REPOSITORY. A different head repository does not either.
+          kind="$(gh api --jq 'if .head.repo == null then "missing" elif .head.repo.fork == true then "fork" else .head.repo.full_name end' "repos/${REPOSITORY}/pulls/${ISSUE_NUMBER}")"
+          if [ "$kind" = "$REPOSITORY" ]; then
+            echo "fork=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "fork=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  claude:
+    needs: issue-comment-head
+    # Trusted human actors only, and only when they mentioned @claude.
+    # The action's write check runs after the runner already has the token,
+    # so it cannot be the only gate. Association is the commenter, reviewer,
+    # or issue author. Bots are excluded so a Claude reply cannot start
+    # another run. Comment text is not interpolated into a run step.
+    # issue_comment on a pull request also requires issue-comment-head to
+    # report that the head repository is this one. Review events carry
+    # head.repo on the payload, so they compare it here.
+    if: |
+      needs.issue-comment-head.result == 'success' &&
+      needs.issue-comment-head.outputs.fork == 'false' &&
+      github.event.sender.type != 'Bot' &&
+      (
+        (
+          github.event_name == 'issue_comment' &&
+          contains(github.event.comment.body, '@claude') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        ) ||
+        (
+          github.event_name == 'pull_request_review_comment' &&
+          contains(github.event.comment.body, '@claude') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        ) ||
+        (
+          github.event_name == 'pull_request_review' &&
+          contains(github.event.review.body, '@claude') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association) &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        ) ||
+        (
+          github.event_name == 'issues' &&
           (
-            contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) ||
-            (github.event.action == 'assigned' && github.actor == github.repository_owner)
-          )
+            contains(github.event.issue.body, '@claude') ||
+            contains(github.event.issue.title, '@claude')
+          ) &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
         )
       )
     runs-on: ubuntu-latest
