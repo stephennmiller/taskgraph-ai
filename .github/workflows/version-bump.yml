@@ -85,21 +85,22 @@ jobs:
         run: node ./.github/scripts/version-bump.mjs
 
       - name: Commit, tag and push
+        id: push
         if: steps.bump.outputs.bumped == 'true'
         env:
           VERSION: ${{ steps.bump.outputs.version }}
           TAG: ${{ steps.bump.outputs.tag }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json packages/claude-code-plugin/.claude-plugin/plugin.json
           git commit -m "chore(release): v${VERSION} [skip ci]"
           git tag "$TAG"
-          # Atomic: either the commit and tag both land, or neither does.
-          git push --atomic origin HEAD:main "$TAG"
+          .github/scripts/release-push.sh
 
       - name: Create GitHub Release
-        if: steps.bump.outputs.bumped == 'true'
+        if: steps.push.outputs.pushed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.bump.outputs.tag }}
@@ -115,7 +116,7 @@ jobs:
     # Placed after the steps so the lines above keep the positions that
     # .github/zizmor.yml ignores by line number.
     outputs:
-      bumped: ${{ steps.bump.outputs.bumped }}
+      pushed: ${{ steps.push.outputs.pushed }}
       tag: ${{ steps.bump.outputs.tag }}
 
   # Uploads the tagged build to npm as a STAGED release. `npm stage publish`
@@ -129,7 +130,7 @@ jobs:
   publish:
     name: Stage npm release
     needs: bump
-    if: needs.bump.outputs.bumped == 'true'
+    if: needs.bump.outputs.pushed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

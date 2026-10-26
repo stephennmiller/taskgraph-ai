@@ -35,6 +35,7 @@ import {
 	scoreJudgeVerdict,
 	summarizeEvalRun
 } from '@tm/core';
+import { biomeFormattedJson } from './lib/baseline.js';
 import { formatDiff, formatRun } from './lib/format.js';
 import { PRD_PATH, type WorkerOutput } from './lib/shared.js';
 
@@ -288,7 +289,10 @@ if (args['update-baseline']) {
 			'Fix the failures and run again'
 		);
 	}
-	fs.copyFileSync(resultFile, baselinePath);
+	fs.writeFileSync(
+		baselinePath,
+		biomeFormattedJson(run, repoRoot, baselinePath)
+	);
 	console.log(
 		`Saved as the baseline in ${path.relative(repoRoot, baselinePath)}`
 	);

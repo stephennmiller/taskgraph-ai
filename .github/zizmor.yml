@@ -37,7 +37,7 @@ rules:
       # Installed from the registry at an exact version, in the job that stages
       # the npm release. The npm CLI must be upgraded outside the lockfile for
       # trusted publishing. Bump it by hand when updating the release flow.
-      - version-bump.yml:153
+      - version-bump.yml:154
       # CI installs and packs with the same npm as release, at the same exact version.
       - ci.yml:41
       - ci.yml:442
