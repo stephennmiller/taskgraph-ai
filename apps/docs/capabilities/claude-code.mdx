@@ -141,7 +141,7 @@ npm install -g taskgraph-ai --omit=optional
 
 AI calls then run the `claude` on your `PATH` (`claude.exe` on Windows), as long as it sits outside the project. Without one, they fail with `Native CLI binary for <platform> not found`; set `pathToClaudeCodeExecutable` (above) to use a `claude` that isn't on your `PATH`.
 
-Auto-update runs a plain `npm install -g taskgraph-ai@<version>`, which puts the binary back. To keep the smaller install, set `TASKGRAPH_SKIP_AUTO_UPDATE=1` in your shell profile and update by hand with the same flag:
+A newer version is only announced. `taskgraph upgrade` and `TASKGRAPH_AUTO_UPDATE=install` still run `npm install -g taskgraph-ai@<version>`, which puts the binary back. To keep the smaller install, leave auto-install off and update by hand:
 
 ```bash
 npm install -g taskgraph-ai@latest --omit=optional

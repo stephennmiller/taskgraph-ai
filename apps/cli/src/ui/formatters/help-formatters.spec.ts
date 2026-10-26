@@ -15,6 +15,7 @@ const ALLOWED_COMMANDS = new Set([
 	'loop',
 	'init',
 	'doctor',
+	'upgrade',
 	'models',
 	'lang',
 	'completion',
@@ -68,11 +69,11 @@ describe('formatHelp', () => {
 	// 30 rows left out loop, move, lang, scope-up, scope-down and github
 	// (#219). Each command a user runs now has one row, so the cap is the
 	// command count; raise it only for a new command, not a second row.
-	// 37 with doctor (#256).
-	it('lists at most 37 rows with no repeated command', () => {
+	// 37 with doctor (#256). 38 with upgrade (#696).
+	it('lists at most 38 rows with no repeated command', () => {
 		const names = rowNames();
 
-		expect(names.length).toBeLessThanOrEqual(37);
+		expect(names.length).toBeLessThanOrEqual(38);
 		expect(new Set(names).size).toBe(names.length);
 	});
 

@@ -26,6 +26,7 @@ import {
 	ValidateDependenciesCommand
 } from './commands/dependency.command.js';
 import { DoctorCommand } from './commands/doctor.command.js';
+import { UpgradeCommand } from './commands/upgrade.command.js';
 import {
 	ClearSubtasksCommand,
 	RemoveSubtaskCommand,
@@ -297,6 +298,12 @@ export class CommandRegistry {
 			name: 'doctor',
 			description: 'Check that TaskGraph and Claude Code are set up',
 			commandClass: DoctorCommand as any,
+			category: 'utility'
+		},
+		{
+			name: 'upgrade',
+			description: 'Install the latest version of TaskGraph',
+			commandClass: UpgradeCommand as any,
 			category: 'utility'
 		},
 		{

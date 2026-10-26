@@ -281,6 +281,31 @@ describe('LoopService', () => {
 					})
 				);
 			});
+
+			it('marks the child as a loop process and skips auto-update', async () => {
+				mockSpawnSync.mockReturnValue({
+					stdout: 'Done',
+					stderr: '',
+					status: 0,
+					signal: null,
+					pid: 123,
+					output: []
+				});
+
+				await service.run({
+					prompt: 'default',
+					iterations: 1,
+					sleepSeconds: 0,
+					progressFile: '/test/progress.txt'
+				});
+
+				const env = mockSpawnSync.mock.calls[0][2]?.env;
+				expect(env).toMatchObject({
+					TASKGRAPH_LOOP_CHILD: '1',
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				});
+				expect(env?.TASKGRAPH_PARALLEL_WORKER).toBeUndefined();
+			});
 		});
 
 		describe('completion marker detection', () => {

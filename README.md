@@ -523,9 +523,11 @@ your project. Data leaves your machine only in these cases:
   a short project summary and the project files Claude reads. `loop` runs
   Claude Code with permission prompts off, so it can send anything your Claude
   Code can.
-- The CLI checks `registry.npmjs.org` for updates, fetches release notes from
-  `raw.githubusercontent.com` and installs updates from npm
-  (`TASKGRAPH_SKIP_AUTO_UPDATE=1` turns this off).
+- The CLI checks `registry.npmjs.org` for updates and fetches release notes
+  from `raw.githubusercontent.com`. It tells you when a newer version is out
+  and installs it only when you run `taskgraph upgrade` or opt in with
+  `TASKGRAPH_AUTO_UPDATE=install` (`TASKGRAPH_SKIP_AUTO_UPDATE=1` skips the
+  check).
 - `loop --parallel --container` installs TaskGraph from npm inside the
   container when its image doesn't have it.
 - The research skill and command search and fetch web pages.

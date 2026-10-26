@@ -60,6 +60,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		commands: [
 			{ name: 'init', desc: 'Set up TaskGraph in this project' },
 			{ name: 'doctor', desc: 'Check that TaskGraph and Claude Code work' },
+			{ name: 'upgrade', desc: 'Install the latest TaskGraph' },
 			{ name: 'models', desc: 'View or change the AI models' },
 			{ name: 'lang', desc: 'View or change the AI response language' },
 			{ name: 'completion', desc: 'Install Tab completion for your shell' }
