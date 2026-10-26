@@ -8,6 +8,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Task } from '../../../src/common/types/index.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 describe('add-subtask and move through tasks', () => {
@@ -166,6 +167,57 @@ describe('add-subtask and move through tasks', () => {
 		expect(tag).toBe('master');
 		expect(subtask).toMatchObject({ id: 1, dependencies: ['1'] });
 		expect(readFile().master.tasks[1].subtasks[0].title).toBe('Read files');
+	});
+
+	it('lets a subtask parent be renumbered and its old ID reused (#701)', async () => {
+		await tmCore.tasks.addSubtask('2', { title: 'Read files' });
+		await tmCore.tasks.move('2', '20');
+		await tmCore.tasks.move('3', '2');
+
+		const { subtask } = await tmCore.tasks.addSubtask('20', {
+			fromTaskId: '2'
+		});
+
+		expect(subtask).toMatchObject({ id: 2, title: 'Report' });
+		expect(idsIn('master')).toEqual(['1', '20']);
+		expect(readFile().master.tasks[1].subtasks[0]).not.toHaveProperty(
+			'parentTaskId'
+		);
+	});
+
+	it('moves a task to another tag without writing a tag field that a rename would leave stale (#702)', async () => {
+		await tmCore.tasks.moveToTag(['3'], 'master', 'feature');
+		await tmCore.tasks.renameTag('feature', 'later');
+
+		expect(readFile().later.tasks[0]).not.toHaveProperty('tag');
+	});
+
+	it('drops the stale tag and parentTaskId an older version saved (#701, #702)', async () => {
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({
+				feature: {
+					tasks: [
+						{
+							id: 4,
+							title: 'Moved',
+							tag: 'feature',
+							parentTaskId: 9,
+							dependencies: [],
+							subtasks: [{ id: 1, title: 'Step', parentTaskId: 2 }]
+						}
+					],
+					metadata: {}
+				}
+			})
+		);
+		await tmCore.tasks.renameTag('feature', 'later');
+
+		const { task } = await tmCore.tasks.get('4', 'later');
+
+		expect(task).not.toHaveProperty('tag');
+		expect(task).not.toHaveProperty('parentTaskId');
+		expect((task as Task).subtasks[0]).not.toHaveProperty('parentTaskId');
 	});
 
 	it('moves a task to another tag and saves both tags', async () => {

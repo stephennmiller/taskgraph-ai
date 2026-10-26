@@ -46,6 +46,30 @@ describe('normalizeTaskStatuses', () => {
 		expect(input[0].subtasks[0].status).toBe('completed');
 	});
 
+	it('drops the stale tag and parentTaskId older versions wrote (#701, #702)', () => {
+		const input = [
+			{
+				...createTask({ id: '1', title: 'A' }),
+				tag: 'renamed-away',
+				parentTaskId: 7,
+				subtasks: [
+					{
+						...createSubtask({ id: 1, parentId: '1', title: 'B' }),
+						parentTaskId: 4
+					}
+				]
+			}
+		];
+
+		const [task] = normalizeTaskStatuses(input as unknown as Task[]);
+
+		expect(task).not.toHaveProperty('tag');
+		expect(task).not.toHaveProperty('parentTaskId');
+		expect(task.subtasks[0]).not.toHaveProperty('parentTaskId');
+		expect(task.subtasks[0].parentId).toBe('1');
+		expect(input[0].tag).toBe('renamed-away');
+	});
+
 	it('leaves entries that are not objects for validation to report', () => {
 		const input = [
 			null,

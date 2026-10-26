@@ -58,8 +58,7 @@ describe('addSubtaskIn', () => {
 			description: '',
 			details: '',
 			status: 'pending',
-			dependencies: ['1', '2.1'],
-			parentTaskId: 2
+			dependencies: ['1', '2.1']
 		});
 		expect(tasks[1].subtasks).toHaveLength(3);
 	});
@@ -78,7 +77,7 @@ describe('addSubtaskIn', () => {
 
 		const subtask = addSubtaskIn(tasks, '2', { fromTaskId: '3' });
 
-		expect(subtask).toMatchObject({ id: 3, title: 'Plugins', parentTaskId: 2 });
+		expect(subtask).toMatchObject({ id: 3, title: 'Plugins' });
 		expect(ids(tasks)).toEqual(['1', '2', '4', '5']);
 		expect(tasks.find((t) => String(t.id) === '4')?.dependencies).toEqual([
 			2,
@@ -210,7 +209,6 @@ describe('moveTasksBetweenTags', () => {
 
 		const moved = tags.get('feature')?.find((t) => String(t.id) === '4');
 		expect(moved?.dependencies).toEqual([]);
-		expect((moved as any).tag).toBe('feature');
 		expect(result.movedTasks).toEqual([
 			{ id: '4', fromTag: 'master', toTag: 'feature' }
 		]);

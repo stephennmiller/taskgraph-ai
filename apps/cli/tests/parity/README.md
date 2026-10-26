@@ -210,8 +210,6 @@ tidy-up that "fixes" a type can change what a dependency means.
   MCP reply used to claim a removal (#291, fixed in #367).
 - **`validate_dependencies` does not report a duplicate** such as `[2, 3, 3]`,
   while `fix_dependencies` removes it and lists it as `duplicate`.
-- **`move` keeps the old `parentTaskId`** on the subtasks of a moved task
-  (task 4 moved to 9: its subtasks still say `parentTaskId: 4`).
 - **`list --format json` on the no-master file** reports `"tag": "master"` in
   its metadata while it shows the tasks of `sprint`.
 
