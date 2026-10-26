@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import type { Task } from '../../../src/common/types/index.js';
+import { seedTasks } from '../seed-tasks.js';
 
 function createTask(id: string, overrides: Partial<Task> = {}): Task {
 	return {
@@ -47,7 +48,10 @@ describe('FileStorage concurrent writes - Integration Tests', () => {
 
 	it('keeps every status change when several run at once', async () => {
 		const ids = ['1', '2', '3', '4', '5'];
-		await storage.saveTasks(ids.map((id) => createTask(id)));
+		await seedTasks(
+			storage,
+			ids.map((id) => createTask(id))
+		);
 
 		await Promise.all(ids.map((id) => storage.updateTaskStatus(id, 'done')));
 
@@ -56,7 +60,7 @@ describe('FileStorage concurrent writes - Integration Tests', () => {
 	});
 
 	it('does not revert an appended task when a status change runs at once', async () => {
-		await storage.saveTasks([createTask('1')]);
+		await seedTasks(storage, [createTask('1')]);
 
 		await Promise.all([
 			storage.updateTaskStatus('1', 'done'),
@@ -69,7 +73,7 @@ describe('FileStorage concurrent writes - Integration Tests', () => {
 	});
 
 	it('does not bring back a deleted task when an update runs at once', async () => {
-		await storage.saveTasks([createTask('1'), createTask('2')]);
+		await seedTasks(storage, [createTask('1'), createTask('2')]);
 
 		await Promise.all([
 			storage.deleteTask('2'),
@@ -82,7 +86,7 @@ describe('FileStorage concurrent writes - Integration Tests', () => {
 	});
 
 	it('never writes the text "undefined" as a subtask parentId', async () => {
-		await storage.saveTasks([
+		await seedTasks(storage, [
 			createTask('1', {
 				subtasks: [
 					{

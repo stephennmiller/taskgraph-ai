@@ -15,6 +15,7 @@ import {
 	createTask
 } from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('dependency views', () => {
 	let projectDir: string;
@@ -30,7 +31,7 @@ describe('dependency views', () => {
 			JSON.stringify({ models: {}, global: {} })
 		);
 		for (const [tag, tasks] of Object.entries(byTag)) {
-			await new FileStorage(projectDir).saveTasks(tasks, tag);
+			await seedTasks(new FileStorage(projectDir), tasks, tag);
 		}
 		tmCore = await createTmCore({ projectPath: projectDir });
 	}

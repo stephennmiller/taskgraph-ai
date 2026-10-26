@@ -18,6 +18,7 @@ import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/
 import { archivePathFor } from '../../../src/modules/tasks/utils/archive.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 import { FakeGitHub, REPO, makeTask } from './fake-github.js';
+import { seedTasks } from '../seed-tasks.js';
 
 const handWritten = (
 	number: number,
@@ -46,7 +47,7 @@ describe('GitHub import', () => {
 			path.join(tgDir, 'config.json'),
 			JSON.stringify({ models: {} })
 		);
-		await new FileStorage(projectDir).saveTasks(tasks, 'master');
+		await seedTasks(new FileStorage(projectDir), tasks, 'master');
 		if (archivedHighestId > 0) {
 			fs.writeFileSync(
 				archivePathFor(path.join(tgDir, 'tasks', 'tasks.json')),

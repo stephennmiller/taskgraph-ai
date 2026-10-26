@@ -229,29 +229,6 @@ export class FileStorage implements IStorage {
 	}
 
 	/**
-	 * Save tasks for a specific tag in the single tasks.json file
-	 * Uses modifyJson for atomic read-modify-write to prevent lost updates
-	 */
-	async saveTasks(tasks: Task[], tag?: string): Promise<void> {
-		const filePath = this.pathResolver.getTasksPath();
-		const resolvedTag = tag || 'master';
-
-		await this.fileOps.ensureDir(this.pathResolver.getTasksDir());
-
-		const metadata = buildTagMetadata(tasks, resolvedTag);
-
-		await this.fileOps.modifyJson(filePath, (existingData: any) =>
-			applyTagUpdate(
-				this.formatHandler,
-				existingData,
-				resolvedTag,
-				tasks,
-				metadata
-			)
-		);
-	}
-
-	/**
 	 * Read-modify-write one tag under the file lock. The tasks are read inside
 	 * the lock, so a change made by another writer since the caller started is
 	 * never overwritten. Return `tasks: null` to leave the file untouched.

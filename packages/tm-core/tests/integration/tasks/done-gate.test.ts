@@ -16,6 +16,7 @@ import {
 	createSubtask
 } from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('done gate', () => {
 	let projectDir: string;
@@ -32,7 +33,7 @@ describe('done gate', () => {
 				global: definitionOfDone ? { definitionOfDone } : {}
 			})
 		);
-		await new FileStorage(projectDir).saveTasks(tasks, 'master');
+		await seedTasks(new FileStorage(projectDir), tasks, 'master');
 		tmCore = await createTmCore({ projectPath: projectDir });
 	}
 

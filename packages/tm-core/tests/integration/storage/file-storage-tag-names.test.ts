@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Task } from '../../../src/common/types/index.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/index.js';
 import { TagService } from '../../../src/modules/tasks/services/tag.service.js';
+import { seedTasks } from '../seed-tasks.js';
 
 function createTask(id: string): Task {
 	return {
@@ -63,7 +64,7 @@ describe('FileStorage tag names shared with Object.prototype', () => {
 
 	it('saves to, renames and deletes a tag named constructor', async () => {
 		await storage.createTag('constructor');
-		await storage.saveTasks([createTask('7')], 'constructor');
+		await seedTasks(storage, [createTask('7')], 'constructor');
 
 		expect((await storage.loadTasks('constructor')).map((t) => t.id)).toEqual([
 			'7'
@@ -97,7 +98,7 @@ describe('FileStorage tag names shared with Object.prototype', () => {
 	});
 
 	it('keeps a __proto__ tag as data when saving to it', async () => {
-		await storage.saveTasks([createTask('3')], '__proto__');
+		await seedTasks(storage, [createTask('3')], '__proto__');
 
 		const raw = fs.readFileSync(tasksPath, 'utf-8');
 		expect(raw).toContain('"__proto__"');

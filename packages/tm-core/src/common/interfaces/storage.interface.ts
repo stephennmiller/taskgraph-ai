@@ -102,14 +102,6 @@ export interface IStorage {
 	loadTask(taskId: string, tag?: string): Promise<Task | null>;
 
 	/**
-	 * Save tasks to storage, replacing existing tasks
-	 * @param tasks - Array of tasks to save
-	 * @param tag - Optional tag context for the tasks
-	 * @returns Promise that resolves when save is complete
-	 */
-	saveTasks(tasks: Task[], tag?: string): Promise<void>;
-
-	/**
 	 * Append new tasks to existing storage without replacing. A task whose
 	 * ID is already taken gets the next free one.
 	 * @param tasks - Array of tasks to append

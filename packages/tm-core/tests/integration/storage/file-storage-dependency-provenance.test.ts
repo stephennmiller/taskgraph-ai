@@ -13,6 +13,7 @@ import {
 	getDependencySource
 } from '../../../src/modules/dependencies/dependency-provenance.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
+import { seedTasks } from '../seed-tasks.js';
 
 function createTask(id: string, overrides: Partial<Task> = {}): Task {
 	return {
@@ -52,7 +53,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 		});
 
 	it('survives a save and load round-trip', async () => {
-		await storage.saveTasks([createTask('1'), inferredTask()]);
+		await seedTasks(storage, [createTask('1'), inferredTask()]);
 
 		const loaded = (await storage.loadTasks()).find((t) => t.id === '2');
 
@@ -60,7 +61,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 	});
 
 	it('survives modifyTask calls that do not touch metadata', async () => {
-		await storage.saveTasks([createTask('1'), inferredTask()]);
+		await seedTasks(storage, [createTask('1'), inferredTask()]);
 
 		await storage.modifyTask('2', () => ({
 			title: 'Renamed',
@@ -73,7 +74,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 	});
 
 	it('survives appendTasks and status updates', async () => {
-		await storage.saveTasks([createTask('1'), inferredTask()]);
+		await seedTasks(storage, [createTask('1'), inferredTask()]);
 
 		await storage.appendTasks([createTask('3')]);
 		await storage.updateTaskStatus('2', 'in-progress');
@@ -83,7 +84,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 	});
 
 	it('reads the mark of a numeric sibling dependency through loadTask', async () => {
-		await storage.saveTasks([
+		await seedTasks(storage, [
 			createTask('2', {
 				subtasks: [
 					{

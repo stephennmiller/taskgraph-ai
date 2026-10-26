@@ -8,9 +8,11 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import lockfile from 'proper-lockfile';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
 import { getPromptManager } from '../../../src/modules/ai/prompts/prompt-manager.js';
+import { FileOperations } from '../../../src/modules/storage/adapters/file-storage/file-operations.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 import legacyInputs from './__snapshots__/analyze-complexity-prompt-inputs.legacy.json' with {
 	type: 'json'
@@ -187,6 +189,51 @@ describe('tasks.analyzeComplexity', () => {
 				[8, 2]
 			);
 			expect(result.kept).toBe(1);
+		});
+		it('waits for another process writing the report, and keeps its entry', async () => {
+			fs.writeFileSync(
+				reportPath(),
+				JSON.stringify({ meta: {}, complexityAnalysis: [] })
+			);
+			const core = await setUp();
+			let release!: () => Promise<void>;
+			vi.spyOn(AiService.prototype, 'generateObject').mockImplementation(
+				async () => {
+					// Another process takes the lock and reads the report
+					release = await lockfile.lock(reportPath(), { realpath: false });
+					return answer([2]) as any;
+				}
+			);
+			// Sync point, no timer: the run has started its report write (or,
+			// without the lock, already finished it)
+			let writing!: () => void;
+			const started = new Promise<void>((resolve) => {
+				writing = resolve;
+			});
+			const modifyJson = FileOperations.prototype.modifyJson;
+			vi.spyOn(FileOperations.prototype, 'modifyJson').mockImplementation(
+				function (this: FileOperations, ...args) {
+					if (args[0] === reportPath()) writing();
+					return modifyJson.apply(this, args);
+				}
+			);
+
+			const run = core.tasks.analyzeComplexity({ ids: '2' });
+			await Promise.race([started, run]);
+			// ...and writes its entry before letting go
+			fs.writeFileSync(
+				reportPath(),
+				JSON.stringify({
+					meta: {},
+					complexityAnalysis: answer([8]).mainResult.complexityAnalysis
+				})
+			);
+			await release();
+			await run;
+
+			expect(readReport().complexityAnalysis.map((e: any) => e.taskId)).toEqual(
+				[8, 2]
+			);
 		});
 	});
 

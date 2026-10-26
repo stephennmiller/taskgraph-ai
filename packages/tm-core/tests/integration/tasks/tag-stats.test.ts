@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { createTask } from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('tag statistics', () => {
 	let projectDir: string;
@@ -24,7 +25,8 @@ describe('tag statistics', () => {
 			JSON.stringify({ models: {}, global: {} })
 		);
 		const storage = new FileStorage(projectDir);
-		await storage.saveTasks(
+		await seedTasks(
+			storage,
 			[
 				createTask({ id: '1', title: 'Task 1', status: 'done' }),
 				createTask({ id: '2', title: 'Task 2', status: 'cancelled' }),
@@ -43,7 +45,8 @@ describe('tag statistics', () => {
 			],
 			'master'
 		);
-		await storage.saveTasks(
+		await seedTasks(
+			storage,
 			[
 				createTask({
 					id: '1',

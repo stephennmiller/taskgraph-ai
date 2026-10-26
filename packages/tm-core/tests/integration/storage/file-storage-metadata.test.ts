@@ -12,6 +12,7 @@ import * as os from 'os';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import type { TaskFieldUpdates } from '../../../src/common/interfaces/storage.interface.js';
 import type { Task } from '../../../src/common/types/index.js';
+import { seedTasks } from '../seed-tasks.js';
 
 /**
  * Creates a minimal valid task for testing
@@ -49,7 +50,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		fs.rmSync(tempDir, { recursive: true, force: true });
 	});
 
-	describe('saveTasks() and loadTasks() round-trip', () => {
+	describe('appendTasks() and loadTasks() round-trip', () => {
 		it('should preserve metadata through save and load cycle', async () => {
 			const tasks: Task[] = [
 				createTask('1', {
@@ -67,7 +68,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				})
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const loadedTasks = await storage.loadTasks();
 
 			expect(loadedTasks).toHaveLength(2);
@@ -85,7 +86,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		it('should preserve empty metadata object', async () => {
 			const tasks: Task[] = [createTask('1', { metadata: {} })];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const loadedTasks = await storage.loadTasks();
 
 			expect(loadedTasks[0].metadata).toEqual({});
@@ -94,7 +95,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		it('should handle tasks without metadata', async () => {
 			const tasks: Task[] = [createTask('1')]; // No metadata
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const loadedTasks = await storage.loadTasks();
 
 			expect(loadedTasks[0].metadata).toBeUndefined();
@@ -119,7 +120,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 
 			const tasks: Task[] = [createTask('1', { metadata: complexMetadata })];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const loadedTasks = await storage.loadTasks();
 
 			expect(loadedTasks[0].metadata).toEqual(complexMetadata);
@@ -146,7 +147,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				})
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const loadedTasks = await storage.loadTasks();
 
 			expect(loadedTasks[0].metadata).toEqual({ parentMeta: 'value' });
@@ -161,7 +162,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 			const originalMetadata = { externalId: 'EXT-123', version: 1 };
 			const tasks: Task[] = [createTask('1', { metadata: originalMetadata })];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Update title only, not metadata
 			await storage.modifyTask('1', () => ({ title: 'Updated Title' }));
@@ -174,7 +175,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		it('should allow updating metadata field directly', async () => {
 			const tasks: Task[] = [createTask('1', { metadata: { original: true } })];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Update metadata
 			await storage.modifyTask('1', () => ({
@@ -194,7 +195,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				createTask('1', { metadata: { oldField: 'old' } })
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Replace metadata entirely
 			await storage.modifyTask('1', () => ({ metadata: { newField: 'new' } }));
@@ -206,7 +207,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		it('should preserve metadata when updating status', async () => {
 			const tasks: Task[] = [createTask('1', { metadata: { tracked: true } })];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			await storage.modifyTask('1', () => ({ status: 'in-progress' }));
 
 			const loadedTasks = await storage.loadTasks();
@@ -221,7 +222,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				createTask('1', { metadata: { existing: true } })
 			];
 
-			await storage.saveTasks(existingTasks);
+			await seedTasks(storage, existingTasks);
 
 			// Append new tasks
 			const newTasks: Task[] = [
@@ -248,7 +249,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				createTask('2', { metadata: { other: 'data' } })
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const task = await storage.loadTask('1');
 
 			expect(task).toBeDefined();
@@ -279,7 +280,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				})
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			const loadedTasks = await storage.loadTasks();
 
 			// AI metadata preserved
@@ -305,7 +306,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				})
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Simulate AI update - only updates specific fields, no metadata field
 			// This mimics what happens when AI processes update-task
@@ -335,7 +336,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				})
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// First AI update
 			await storage.modifyTask('1', () => ({ title: 'First Update' }));
@@ -360,7 +361,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 				})
 			];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Update WITHOUT metadata field (AI schemas don't include it)
 			const updateWithoutMetadata: TaskFieldUpdates = { title: 'Updated' };
@@ -376,14 +377,14 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 		it('should write metadata to JSON file correctly', async () => {
 			const tasks: Task[] = [createTask('1', { metadata: { written: true } })];
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Read raw file to verify format
 			const filePath = path.join(tempDir, '.taskgraph', 'tasks', 'tasks.json');
 			const rawContent = fs.readFileSync(filePath, 'utf-8');
 			const parsed = JSON.parse(rawContent);
 
-			expect(parsed.tasks[0].metadata).toEqual({ written: true });
+			expect(parsed.master.tasks[0].metadata).toEqual({ written: true });
 		});
 
 		it('should load metadata from pre-existing JSON file', async () => {

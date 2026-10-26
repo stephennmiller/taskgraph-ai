@@ -33,6 +33,7 @@ import {
 	withoutPlaceholders
 } from '../../reports/managers/complexity-report-manager.js';
 import type { ComplexityReportMetadata } from '../../reports/types.js';
+import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 import { normalizeTaskStatus } from '../utils/legacy-status.js';
 
 /** How many related tasks go into the prompt's project context */
@@ -362,11 +363,10 @@ export class AnalyzeComplexityService {
 					telemetryData: null
 				};
 			}
-			const report = {
+			const report = await this.saveReport(reportPath, (current) => ({
 				meta: meta(),
-				complexityAnalysis: existing?.complexityAnalysis || []
-			};
-			this.writeReport(reportPath, report);
+				complexityAnalysis: current?.complexityAnalysis || []
+			}));
 			return {
 				report,
 				reportPath,
@@ -439,35 +439,37 @@ export class AnalyzeComplexityService {
 			}
 		}
 
-		// Read now, not before the AI call, so a report written meanwhile is kept
-		const existing = this.readExistingReport(reportPath);
 		const tagTaskIds = new Set(allTasks.map((t) => String(t.id)));
-		const previous = (
-			Array.isArray(existing?.complexityAnalysis)
-				? existing.complexityAnalysis
-				: []
-		).filter((item) => tagTaskIds.has(String(item.taskId)));
-		// A placeholder doesn't replace a real score from an earlier run
-		const realIds = new Set(
-			previous.filter((a) => !a.placeholder).map((a) => String(a.taskId))
-		);
-		const saved = analyses.filter(
-			(a) => !(a.placeholder && realIds.has(String(a.taskId)))
-		);
-		const savedIds = new Set(saved.map((a) => String(a.taskId)));
-		// Earlier entries of tasks still in this tag that this run didn't replace
-		const earlier = previous.filter(
-			(item) => !savedIds.has(String(item.taskId))
-		);
-		const complexityAnalysis = [...earlier, ...saved];
-		const report = {
-			meta: meta({
-				totalTasks: allTasks.length,
-				analysisCount: complexityAnalysis.length
-			}),
-			complexityAnalysis
-		};
-		this.writeReport(reportPath, report);
+		let kept = 0;
+		// Merged under the file lock, so a report written meanwhile is kept
+		const report = await this.saveReport(reportPath, (existing) => {
+			const previous = (
+				Array.isArray(existing?.complexityAnalysis)
+					? existing.complexityAnalysis
+					: []
+			).filter((item) => tagTaskIds.has(String(item.taskId)));
+			// A placeholder doesn't replace a real score from an earlier run
+			const realIds = new Set(
+				previous.filter((a) => !a.placeholder).map((a) => String(a.taskId))
+			);
+			const saved = analyses.filter(
+				(a) => !(a.placeholder && realIds.has(String(a.taskId)))
+			);
+			const savedIds = new Set(saved.map((a) => String(a.taskId)));
+			// Earlier entries of tasks still in this tag that this run didn't replace
+			const earlier = previous.filter(
+				(item) => !savedIds.has(String(item.taskId))
+			);
+			kept = earlier.length;
+			const complexityAnalysis = [...earlier, ...saved];
+			return {
+				meta: meta({
+					totalTasks: allTasks.length,
+					analysisCount: complexityAnalysis.length
+				}),
+				complexityAnalysis
+			};
+		});
 		if (aiConfig.debug) {
 			debug(`Final analysis object: ${JSON.stringify(report, null, 2)}`);
 		}
@@ -478,7 +480,7 @@ export class AnalyzeComplexityService {
 			tag,
 			analyses,
 			skipped,
-			kept: earlier.length,
+			kept,
 			unchanged: false,
 			telemetryData: response.telemetryData,
 			tagInfo: response.tagInfo
@@ -526,8 +528,22 @@ export class AnalyzeComplexityService {
 		}
 	}
 
-	private writeReport(reportPath: string, report: ComplexityReportFile) {
-		fs.mkdirSync(path.dirname(reportPath), { recursive: true });
-		fs.writeFileSync(reportPath, JSON.stringify(report, null, '\t'), 'utf8');
+	/** Build the report from the one on disk and write it, both under the file lock */
+	private async saveReport(
+		reportPath: string,
+		build: (existing: ComplexityReportFile | null) => ComplexityReportFile
+	): Promise<ComplexityReportFile> {
+		let report!: ComplexityReportFile;
+		await new FileOperations().modifyJson(
+			reportPath,
+			(current: ComplexityReportFile) => {
+				// modifyJson hands a new file over as {}
+				report = build(
+					current && Object.keys(current).length > 0 ? current : null
+				);
+				return report;
+			}
+		);
+		return report;
 	}
 }

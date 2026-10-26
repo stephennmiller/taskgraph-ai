@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { createTask } from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('tasks.syncReadme', () => {
 	let projectDir: string;
@@ -42,7 +43,8 @@ describe('tasks.syncReadme', () => {
 	});
 
 	it('writes the tasks into a new README.md', async () => {
-		await new FileStorage(projectDir).saveTasks(
+		await seedTasks(
+			new FileStorage(projectDir),
 			[createTask({ id: 1, title: 'Set up the database' })],
 			'master'
 		);

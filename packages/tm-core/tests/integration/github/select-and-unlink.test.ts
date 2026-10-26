@@ -17,6 +17,7 @@ import { GitHubDomain } from '../../../src/modules/github/github-domain.js';
 import type { RemoteIssue } from '../../../src/modules/github/types.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 const REPO = 'acme/app';
 
@@ -79,9 +80,9 @@ describe('GitHub push - id selection and unlink', () => {
 			JSON.stringify({ models: {} })
 		);
 		const storage = new FileStorage(projectDir);
-		await storage.saveTasks(tasks, 'master');
+		await seedTasks(storage, tasks, 'master');
 		for (const [tag, list] of Object.entries(extraTags)) {
-			await storage.saveTasks(list, tag);
+			await seedTasks(storage, list, tag);
 		}
 		tmCore = await createTmCore({ projectPath: projectDir });
 		github = new FakeGitHub();

@@ -11,6 +11,7 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import { DEFAULT_CONFIG_VALUES } from '../../../common/interfaces/configuration.interface.js';
 import { getLogger } from '../../../common/logger/index.js';
+import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 import type { EnvMap } from './project-env.js';
 
 /**
@@ -92,36 +93,32 @@ export class RuntimeStateManager {
 	 * Save runtime state to disk
 	 */
 	async saveState(): Promise<void> {
-		const stateDir = path.dirname(this.stateFilePath);
-
 		try {
-			await fs.mkdir(stateDir, { recursive: true });
-
-			// Keep keys this class doesn't manage (branchTagMapping, lastSwitched, ...)
-			let existing: Record<string, unknown> = {};
-			try {
-				existing = JSON.parse(await fs.readFile(this.stateFilePath, 'utf-8'));
-			} catch {
-				// No file or unreadable: nothing to keep
-			}
-
-			const stateToSave = {
-				...existing,
-				...this.currentState,
-				lastUpdated: new Date().toISOString()
-			};
-
-			await fs.writeFile(
+			// Under the file lock, keeping keys this class doesn't manage
+			// (branchTagMapping, lastSwitched, ...) as another writer left them
+			await new FileOperations().modifyJson(
 				this.stateFilePath,
-				JSON.stringify(stateToSave, null, 2),
-				'utf-8'
+				(existing: Record<string, unknown>) => ({
+					...existing,
+					...this.currentState,
+					lastUpdated: new Date().toISOString()
+				})
 			);
 		} catch (error) {
-			throw new TaskGraphError(
-				'Failed to save runtime state',
-				ERROR_CODES.CONFIG_ERROR,
-				{ statePath: this.stateFilePath },
-				error as Error
+			// Name the file and the way out: a corrupt state.json is never overwritten
+			throw Object.assign(
+				new TaskGraphError(
+					'Failed to save runtime state',
+					ERROR_CODES.CONFIG_ERROR,
+					{
+						statePath: this.stateFilePath,
+						userMessage: `Couldn't save ${this.stateFilePath}: ${(error as Error).message}`
+					},
+					error as Error
+				),
+				{
+					hint: 'Fix the file, or delete it: it holds only the current tag and branch-tag mappings'
+				}
 			);
 		}
 	}
