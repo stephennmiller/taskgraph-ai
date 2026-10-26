@@ -16,7 +16,7 @@ npm run typecheck:root            # root tsc: scripts/dev.js and evals/, which n
 npm run format-check              # Biome; `npm run format` to fix
 npm run knip                      # unused files, exports and dependencies; CI runs it
 npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverage off
-npm run test:coverage -w @tm/core # with coverage and thresholds (not met yet); Vitest
+npm run test:coverage -w @tm/core # coverage and the 80% thresholds; CI runs this; Vitest
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
 npm run evals                     # real-model plan evals (parse-prd, expand, analyze-complexity); not in CI
 ```

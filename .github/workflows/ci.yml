@@ -278,9 +278,12 @@ jobs:
           NODE_ENV: test
           CI: true
 
+      # 80% thresholds in packages/tm-core/vitest.config.ts apply only when
+      # coverage is on. Plain `npm run test` leaves it off (#259); this step
+      # runs test:coverage so a drop below 80% fails the job (#711).
       - name: Run @tm/core tests
         if: ${{ !cancelled() }}
-        run: npm run test -w @tm/core
+        run: npm run test:coverage -w @tm/core
         env:
           NODE_ENV: test
           CI: true
