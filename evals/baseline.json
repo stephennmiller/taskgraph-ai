@@ -1,0 +1,1789 @@
+{
+	"schemaVersion": 1,
+	"date": "2026-10-25T20:44:15.273Z",
+	"commit": "6f5e327f",
+	"samples": [
+		{
+			"id": "cli-notes",
+			"kind": "one-pager",
+			"words": 102,
+			"sections": 5,
+			"taskCount": 9,
+			"subtaskCount": 13,
+			"checkScore": 0.9073567449592883,
+			"checks": {
+				"headingCoverage": {
+					"score": 0.75,
+					"sections": 4,
+					"uncovered": ["Goal"],
+					"unsourced": ["1", "8"]
+				},
+				"dependencies": {
+					"score": 1,
+					"edges": 24,
+					"cycles": [],
+					"invalid": []
+				},
+				"acceptanceCriteria": {
+					"score": 1,
+					"items": 22,
+					"missing": []
+				},
+				"subtaskComplexity": {
+					"score": 0.8794269798371535,
+					"correlation": 0.8794269798371535,
+					"pairs": [
+						{
+							"taskId": "1",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "2",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "3",
+							"complexity": 2,
+							"subtasks": 0
+						},
+						{
+							"taskId": "4",
+							"complexity": 2,
+							"subtasks": 0
+						},
+						{
+							"taskId": "5",
+							"complexity": 2,
+							"subtasks": 0
+						},
+						{
+							"taskId": "6",
+							"complexity": 3,
+							"subtasks": 0
+						},
+						{
+							"taskId": "7",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "8",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "9",
+							"complexity": 1,
+							"subtasks": 0
+						}
+					]
+				}
+			},
+			"judge": {
+				"score": 0.9166666666666667,
+				"grades": {
+					"coverage": 5,
+					"fidelity": 5,
+					"sizing": 4,
+					"ordering": 5,
+					"actionability": 5,
+					"subtasks": 4
+				},
+				"summary": "The plan comprehensively and faithfully covers the PRD's four commands, atomic storage, and stated scope boundaries, with concrete acceptance criteria and sensible task ordering from scaffold through storage, commands, cross-cutting error handling, tests, and docs. Its main weaknesses are mild redundancy between task 1's dispatcher error handling and task 7's later audit of it, and an inconsistent depth of subtask decomposition (heavy for scaffolding/storage/tests, absent for the four command tasks and README)."
+			},
+			"calls": [
+				{
+					"command": "parse-prd",
+					"seconds": 69.57855475000001,
+					"inputTokens": 45239,
+					"outputTokens": 6581,
+					"cachedInputTokens": 29643,
+					"model": "sonnet"
+				},
+				{
+					"command": "analyze-complexity",
+					"seconds": 25.124205374999992,
+					"inputTokens": 41098,
+					"outputTokens": 2385,
+					"cachedInputTokens": 20260,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "1",
+					"seconds": 16.853625959,
+					"inputTokens": 15016,
+					"outputTokens": 1689,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "2",
+					"seconds": 35.39580754199999,
+					"inputTokens": 47711,
+					"outputTokens": 3721,
+					"cachedInputTokens": 42422,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "7",
+					"seconds": 22.217554167000024,
+					"inputTokens": 15187,
+					"outputTokens": 2155,
+					"cachedInputTokens": 11986,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "8",
+					"seconds": 26.793922167000012,
+					"inputTokens": 31191,
+					"outputTokens": 2321,
+					"cachedInputTokens": 27237,
+					"model": "sonnet"
+				},
+				{
+					"command": "judge",
+					"seconds": 43.81983900000001,
+					"inputTokens": 24272,
+					"outputTokens": 4120,
+					"model": "sonnet"
+				}
+			]
+		},
+		{
+			"id": "link-shortener",
+			"kind": "explicit stack",
+			"words": 263,
+			"sections": 10,
+			"taskCount": 15,
+			"subtaskCount": 69,
+			"checkScore": 0.9765298864911299,
+			"checks": {
+				"headingCoverage": {
+					"score": 1,
+					"sections": 8,
+					"uncovered": [],
+					"unsourced": []
+				},
+				"dependencies": {
+					"score": 1,
+					"edges": 122,
+					"cycles": [],
+					"invalid": []
+				},
+				"acceptanceCriteria": {
+					"score": 1,
+					"items": 84,
+					"missing": []
+				},
+				"subtaskComplexity": {
+					"score": 0.9061195459645197,
+					"correlation": 0.9061195459645197,
+					"pairs": [
+						{
+							"taskId": "1",
+							"complexity": 3,
+							"subtasks": 4
+						},
+						{
+							"taskId": "2",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "3",
+							"complexity": 6,
+							"subtasks": 6
+						},
+						{
+							"taskId": "4",
+							"complexity": 4,
+							"subtasks": 4
+						},
+						{
+							"taskId": "5",
+							"complexity": 7,
+							"subtasks": 6
+						},
+						{
+							"taskId": "6",
+							"complexity": 5,
+							"subtasks": 5
+						},
+						{
+							"taskId": "7",
+							"complexity": 5,
+							"subtasks": 5
+						},
+						{
+							"taskId": "8",
+							"complexity": 6,
+							"subtasks": 5
+						},
+						{
+							"taskId": "9",
+							"complexity": 6,
+							"subtasks": 5
+						},
+						{
+							"taskId": "10",
+							"complexity": 5,
+							"subtasks": 5
+						},
+						{
+							"taskId": "11",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "12",
+							"complexity": 5,
+							"subtasks": 5
+						},
+						{
+							"taskId": "13",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "14",
+							"complexity": 6,
+							"subtasks": 6
+						},
+						{
+							"taskId": "15",
+							"complexity": 5,
+							"subtasks": 4
+						}
+					]
+				}
+			},
+			"judge": {
+				"score": 0.875,
+				"grades": {
+					"coverage": 5,
+					"fidelity": 4,
+					"sizing": 4,
+					"ordering": 5,
+					"actionability": 5,
+					"subtasks": 4
+				},
+				"summary": "This is an unusually thorough, well-ordered plan that maps every PRD requirement to a task and decomposes each into concrete, testable subtasks with specific SQL, error handling, and test strategies. Minor deductions stem from a few near-trivial subtasks, small unrequested additions (HPA, extra test tooling), and occasional forward-referencing stubs for not-yet-built dependents."
+			},
+			"calls": [
+				{
+					"command": "parse-prd",
+					"seconds": 96.92619745900001,
+					"inputTokens": 14883,
+					"outputTokens": 10307,
+					"cachedInputTokens": 6831,
+					"model": "sonnet"
+				},
+				{
+					"command": "analyze-complexity",
+					"seconds": 56.49562645800001,
+					"inputTokens": 55297,
+					"outputTokens": 5844,
+					"cachedInputTokens": 33899,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "1",
+					"seconds": 24.43494,
+					"inputTokens": 15606,
+					"outputTokens": 2601,
+					"cachedInputTokens": 6834,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "2",
+					"seconds": 18.045317249999993,
+					"inputTokens": 15663,
+					"outputTokens": 1830,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "3",
+					"seconds": 41.646695583000024,
+					"inputTokens": 50499,
+					"outputTokens": 4427,
+					"cachedInputTokens": 44936,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "4",
+					"seconds": 30.275265625,
+					"inputTokens": 32412,
+					"outputTokens": 2785,
+					"cachedInputTokens": 28004,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "5",
+					"seconds": 40.87671095799998,
+					"inputTokens": 15775,
+					"outputTokens": 4246,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "6",
+					"seconds": 28.44182024999999,
+					"inputTokens": 16046,
+					"outputTokens": 2795,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "7",
+					"seconds": 32.979500707999975,
+					"inputTokens": 31765,
+					"outputTokens": 3123,
+					"cachedInputTokens": 27681,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "8",
+					"seconds": 38.10897700000001,
+					"inputTokens": 48244,
+					"outputTokens": 3186,
+					"cachedInputTokens": 43690,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "9",
+					"seconds": 41.051401833000014,
+					"inputTokens": 31848,
+					"outputTokens": 3788,
+					"cachedInputTokens": 27728,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "10",
+					"seconds": 63.07216191700002,
+					"inputTokens": 35757,
+					"outputTokens": 6936,
+					"cachedInputTokens": 27752,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "11",
+					"seconds": 25.092686749999935,
+					"inputTokens": 32205,
+					"outputTokens": 2306,
+					"cachedInputTokens": 27949,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "12",
+					"seconds": 30.697111582999934,
+					"inputTokens": 15594,
+					"outputTokens": 3061,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "13",
+					"seconds": 19.452467334000044,
+					"inputTokens": 15482,
+					"outputTokens": 1804,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "14",
+					"seconds": 30.863148833999993,
+					"inputTokens": 15817,
+					"outputTokens": 3183,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "15",
+					"seconds": 27.368068375000032,
+					"inputTokens": 15744,
+					"outputTokens": 2549,
+					"cachedInputTokens": 11987,
+					"model": "sonnet"
+				},
+				{
+					"command": "judge",
+					"seconds": 46.03519441700005,
+					"inputTokens": 62888,
+					"outputTokens": 4273,
+					"cachedInputTokens": 6666,
+					"model": "sonnet"
+				}
+			]
+		},
+		{
+			"id": "invoice-export",
+			"kind": "existing codebase",
+			"words": 228,
+			"sections": 9,
+			"taskCount": 7,
+			"subtaskCount": 18,
+			"checkScore": 0.9809401076758503,
+			"checks": {
+				"headingCoverage": {
+					"score": 1,
+					"sections": 7,
+					"uncovered": [],
+					"unsourced": []
+				},
+				"dependencies": {
+					"score": 1,
+					"edges": 34,
+					"cycles": [],
+					"invalid": []
+				},
+				"acceptanceCriteria": {
+					"score": 1,
+					"items": 25,
+					"missing": []
+				},
+				"subtaskComplexity": {
+					"score": 0.9237604307034012,
+					"correlation": 0.9237604307034012,
+					"pairs": [
+						{
+							"taskId": "1",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "2",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "3",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "4",
+							"complexity": 7,
+							"subtasks": 4
+						},
+						{
+							"taskId": "5",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "6",
+							"complexity": 2,
+							"subtasks": 0
+						},
+						{
+							"taskId": "7",
+							"complexity": 3,
+							"subtasks": 0
+						}
+					]
+				}
+			},
+			"judge": {
+				"score": 0.7916666666666667,
+				"grades": {
+					"coverage": 5,
+					"fidelity": 4,
+					"sizing": 4,
+					"ordering": 4,
+					"actionability": 4,
+					"subtasks": 4
+				},
+				"summary": "The plan is detailed and well-grounded in the existing codebase, covering every PRD requirement with concrete file paths, SQL/validation logic, streaming mechanics, timeout enforcement, role gating, auditing, and a UI button, while honestly flagging unverified assumptions about the existing schema and missing UI repo. Minor weaknesses are some overlapping responsibility across tasks 1/3/4's pipeline-cleanup logic, occasional dependency-notation ambiguity, and two tasks (6, 7) left without subtask breakdowns."
+			},
+			"calls": [
+				{
+					"command": "parse-prd",
+					"seconds": 98.363854542,
+					"inputTokens": 80304,
+					"outputTokens": 9203,
+					"cachedInputTokens": 69680,
+					"model": "sonnet"
+				},
+				{
+					"command": "analyze-complexity",
+					"seconds": 34.263147750000016,
+					"inputTokens": 62010,
+					"outputTokens": 3049,
+					"cachedInputTokens": 47169,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "1",
+					"seconds": 38.565236458,
+					"inputTokens": 65600,
+					"outputTokens": 3244,
+					"cachedInputTokens": 55322,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "2",
+					"seconds": 31.332610625,
+					"inputTokens": 47779,
+					"outputTokens": 2831,
+					"cachedInputTokens": 43210,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "3",
+					"seconds": 40.83871350000001,
+					"inputTokens": 48257,
+					"outputTokens": 3442,
+					"cachedInputTokens": 43517,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "4",
+					"seconds": 38.85373425000001,
+					"inputTokens": 47707,
+					"outputTokens": 3484,
+					"cachedInputTokens": 43270,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "5",
+					"seconds": 29.049040125,
+					"inputTokens": 48077,
+					"outputTokens": 2502,
+					"cachedInputTokens": 43395,
+					"model": "sonnet"
+				},
+				{
+					"command": "judge",
+					"seconds": 62.85640737500001,
+					"inputTokens": 29249,
+					"outputTokens": 5550,
+					"cachedInputTokens": 6666,
+					"model": "sonnet"
+				}
+			]
+		},
+		{
+			"id": "sales-pipeline",
+			"kind": "explicit stack",
+			"words": 264,
+			"sections": 11,
+			"taskCount": 13,
+			"subtaskCount": 53,
+			"checkScore": 0.928304175956338,
+			"checks": {
+				"headingCoverage": {
+					"score": 0.8888888888888888,
+					"sections": 9,
+					"uncovered": ["Sources"],
+					"unsourced": []
+				},
+				"dependencies": {
+					"score": 1,
+					"edges": 86,
+					"cycles": [],
+					"invalid": []
+				},
+				"acceptanceCriteria": {
+					"score": 1,
+					"items": 66,
+					"missing": []
+				},
+				"subtaskComplexity": {
+					"score": 0.8243278149364631,
+					"correlation": 0.8243278149364631,
+					"pairs": [
+						{
+							"taskId": "1",
+							"complexity": 3,
+							"subtasks": 4
+						},
+						{
+							"taskId": "2",
+							"complexity": 6,
+							"subtasks": 5
+						},
+						{
+							"taskId": "3",
+							"complexity": 6,
+							"subtasks": 5
+						},
+						{
+							"taskId": "4",
+							"complexity": 7,
+							"subtasks": 5
+						},
+						{
+							"taskId": "5",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "6",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "7",
+							"complexity": 4,
+							"subtasks": 4
+						},
+						{
+							"taskId": "8",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "9",
+							"complexity": 8,
+							"subtasks": 6
+						},
+						{
+							"taskId": "10",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "11",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "12",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "13",
+							"complexity": 2,
+							"subtasks": 0
+						}
+					]
+				}
+			},
+			"judge": {
+				"score": 0.7916666666666667,
+				"grades": {
+					"coverage": 5,
+					"fidelity": 4,
+					"sizing": 4,
+					"ordering": 4,
+					"actionability": 5,
+					"subtasks": 3
+				},
+				"summary": "This is a thorough, well-ordered plan that covers every PRD requirement with concrete, verifiable acceptance criteria and stays largely faithful to the mandated stack, with only minor scope creep into infra tooling choices. Its main weaknesses are a missing subtask breakdown for the runbook task and a few subtask-level dependency inconsistencies (notably around the shared Snowflake loader in task 3)."
+			},
+			"calls": [
+				{
+					"command": "parse-prd",
+					"seconds": 88.00691333299999,
+					"inputTokens": 30402,
+					"outputTokens": 9196,
+					"cachedInputTokens": 21773,
+					"model": "sonnet"
+				},
+				{
+					"command": "analyze-complexity",
+					"seconds": 63.252743792,
+					"inputTokens": 78413,
+					"outputTokens": 6417,
+					"cachedInputTokens": 58031,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "1",
+					"seconds": 24.38502766699999,
+					"inputTokens": 32445,
+					"outputTokens": 2646,
+					"cachedInputTokens": 22647,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "2",
+					"seconds": 42.82979908300002,
+					"inputTokens": 49092,
+					"outputTokens": 4247,
+					"cachedInputTokens": 44360,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "3",
+					"seconds": 29.12015733300001,
+					"inputTokens": 32742,
+					"outputTokens": 3051,
+					"cachedInputTokens": 27976,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "4",
+					"seconds": 36.46856241700004,
+					"inputTokens": 31904,
+					"outputTokens": 3578,
+					"cachedInputTokens": 27506,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "5",
+					"seconds": 49.319531875000045,
+					"inputTokens": 34622,
+					"outputTokens": 5177,
+					"cachedInputTokens": 27932,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "6",
+					"seconds": 29.71130462499999,
+					"inputTokens": 33049,
+					"outputTokens": 2770,
+					"cachedInputTokens": 28180,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "7",
+					"seconds": 26.470661666999977,
+					"inputTokens": 33066,
+					"outputTokens": 2645,
+					"cachedInputTokens": 28196,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "8",
+					"seconds": 30.110770041999988,
+					"inputTokens": 32241,
+					"outputTokens": 3143,
+					"cachedInputTokens": 27955,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "9",
+					"seconds": 34.33737995899998,
+					"inputTokens": 32528,
+					"outputTokens": 3425,
+					"cachedInputTokens": 28123,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "10",
+					"seconds": 29.61447533300001,
+					"inputTokens": 31778,
+					"outputTokens": 2897,
+					"cachedInputTokens": 27740,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "11",
+					"seconds": 23.594709374999976,
+					"inputTokens": 15632,
+					"outputTokens": 2395,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "12",
+					"seconds": 27.02878929200006,
+					"inputTokens": 15731,
+					"outputTokens": 2568,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "judge",
+					"seconds": 56.90925795800006,
+					"inputTokens": 53099,
+					"outputTokens": 4808,
+					"cachedInputTokens": 6666,
+					"model": "sonnet"
+				}
+			]
+		},
+		{
+			"id": "habit-tracker",
+			"kind": "product",
+			"words": 276,
+			"sections": 12,
+			"taskCount": 15,
+			"subtaskCount": 49,
+			"checkScore": 0.9072506684591277,
+			"checks": {
+				"headingCoverage": {
+					"score": 0.9,
+					"sections": 10,
+					"uncovered": ["Users"],
+					"unsourced": []
+				},
+				"dependencies": {
+					"score": 1,
+					"edges": 69,
+					"cycles": [],
+					"invalid": []
+				},
+				"acceptanceCriteria": {
+					"score": 1,
+					"items": 64,
+					"missing": []
+				},
+				"subtaskComplexity": {
+					"score": 0.7290026738365109,
+					"correlation": 0.7290026738365109,
+					"pairs": [
+						{
+							"taskId": "1",
+							"complexity": 3,
+							"subtasks": 4
+						},
+						{
+							"taskId": "2",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "3",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "4",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "5",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "6",
+							"complexity": 5,
+							"subtasks": 3
+						},
+						{
+							"taskId": "7",
+							"complexity": 3,
+							"subtasks": 2
+						},
+						{
+							"taskId": "8",
+							"complexity": 7,
+							"subtasks": 4
+						},
+						{
+							"taskId": "9",
+							"complexity": 5,
+							"subtasks": 3
+						},
+						{
+							"taskId": "10",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "11",
+							"complexity": 5,
+							"subtasks": 3
+						},
+						{
+							"taskId": "12",
+							"complexity": 7,
+							"subtasks": 4
+						},
+						{
+							"taskId": "13",
+							"complexity": 9,
+							"subtasks": 6
+						},
+						{
+							"taskId": "14",
+							"complexity": 2,
+							"subtasks": 0
+						},
+						{
+							"taskId": "15",
+							"complexity": 4,
+							"subtasks": 3
+						}
+					]
+				}
+			},
+			"judge": {
+				"score": 0.9166666666666667,
+				"grades": {
+					"coverage": 5,
+					"fidelity": 5,
+					"sizing": 4,
+					"ordering": 5,
+					"actionability": 5,
+					"subtasks": 4
+				},
+				"summary": "The plan comprehensively covers every PRD feature and both success metrics while staying faithful to the specified Expo/SQLite/Supabase stack, sequencing foundations (scaffold, schema, CRUD) before dependent UI and sync work in a logically sound order. Subtask breakdowns are detailed and actionable throughout, with only minor sizing inconsistencies and one task (crash reporting) left without further decomposition."
+			},
+			"calls": [
+				{
+					"command": "parse-prd",
+					"seconds": 86.702373875,
+					"inputTokens": 30069,
+					"outputTokens": 8912,
+					"cachedInputTokens": 21686,
+					"model": "sonnet"
+				},
+				{
+					"command": "analyze-complexity",
+					"seconds": 43.222960666,
+					"inputTokens": 50298,
+					"outputTokens": 4410,
+					"cachedInputTokens": 31528,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "1",
+					"seconds": 21.13859541699999,
+					"inputTokens": 30679,
+					"outputTokens": 2079,
+					"cachedInputTokens": 22028,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "2",
+					"seconds": 32.601526166,
+					"inputTokens": 31039,
+					"outputTokens": 3081,
+					"cachedInputTokens": 27222,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "3",
+					"seconds": 23.19040479100001,
+					"inputTokens": 30782,
+					"outputTokens": 2151,
+					"cachedInputTokens": 27173,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "4",
+					"seconds": 31.098486542,
+					"inputTokens": 15248,
+					"outputTokens": 1738,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "5",
+					"seconds": 17.75993324999997,
+					"inputTokens": 15518,
+					"outputTokens": 1755,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "6",
+					"seconds": 26.92502774999998,
+					"inputTokens": 31552,
+					"outputTokens": 2387,
+					"cachedInputTokens": 27641,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "7",
+					"seconds": 15.575470458999975,
+					"inputTokens": 15065,
+					"outputTokens": 1447,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "8",
+					"seconds": 27.012869209000026,
+					"inputTokens": 30992,
+					"outputTokens": 2613,
+					"cachedInputTokens": 27304,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "9",
+					"seconds": 19.72611825,
+					"inputTokens": 15211,
+					"outputTokens": 1877,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "10",
+					"seconds": 26.26510720799997,
+					"inputTokens": 30954,
+					"outputTokens": 2478,
+					"cachedInputTokens": 27317,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "11",
+					"seconds": 19.902853416000028,
+					"inputTokens": 15115,
+					"outputTokens": 1960,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "12",
+					"seconds": 25.080786125000042,
+					"inputTokens": 15365,
+					"outputTokens": 2507,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "13",
+					"seconds": 42.69659912499995,
+					"inputTokens": 15413,
+					"outputTokens": 4114,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "15",
+					"seconds": 23.701757500000006,
+					"inputTokens": 30584,
+					"outputTokens": 2086,
+					"cachedInputTokens": 27095,
+					"model": "sonnet"
+				},
+				{
+					"command": "judge",
+					"seconds": 50.84717737499997,
+					"inputTokens": 49337,
+					"outputTokens": 5078,
+					"cachedInputTokens": 6666,
+					"model": "sonnet"
+				}
+			]
+		},
+		{
+			"id": "team-chat",
+			"kind": "large multi-feature",
+			"words": 678,
+			"sections": 22,
+			"taskCount": 40,
+			"subtaskCount": 170,
+			"checkScore": 0.9598087799509909,
+			"checks": {
+				"headingCoverage": {
+					"score": 1,
+					"sections": 18,
+					"uncovered": [],
+					"unsourced": []
+				},
+				"dependencies": {
+					"score": 1,
+					"edges": 251,
+					"cycles": [],
+					"invalid": []
+				},
+				"acceptanceCriteria": {
+					"score": 1,
+					"items": 210,
+					"missing": []
+				},
+				"subtaskComplexity": {
+					"score": 0.8392351198039636,
+					"correlation": 0.8392351198039636,
+					"pairs": [
+						{
+							"taskId": "1",
+							"complexity": 4,
+							"subtasks": 5
+						},
+						{
+							"taskId": "2",
+							"complexity": 5,
+							"subtasks": 5
+						},
+						{
+							"taskId": "3",
+							"complexity": 7,
+							"subtasks": 6
+						},
+						{
+							"taskId": "4",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "5",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "6",
+							"complexity": 7,
+							"subtasks": 6
+						},
+						{
+							"taskId": "7",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "8",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "9",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "10",
+							"complexity": 4,
+							"subtasks": 4
+						},
+						{
+							"taskId": "11",
+							"complexity": 7,
+							"subtasks": 6
+						},
+						{
+							"taskId": "12",
+							"complexity": 9,
+							"subtasks": 7
+						},
+						{
+							"taskId": "13",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "14",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "15",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "16",
+							"complexity": 7,
+							"subtasks": 5
+						},
+						{
+							"taskId": "17",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "18",
+							"complexity": 3,
+							"subtasks": 3
+						},
+						{
+							"taskId": "19",
+							"complexity": 7,
+							"subtasks": 5
+						},
+						{
+							"taskId": "20",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "21",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "22",
+							"complexity": 6,
+							"subtasks": 5
+						},
+						{
+							"taskId": "23",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "24",
+							"complexity": 5,
+							"subtasks": 3
+						},
+						{
+							"taskId": "25",
+							"complexity": 8,
+							"subtasks": 6
+						},
+						{
+							"taskId": "26",
+							"complexity": 8,
+							"subtasks": 6
+						},
+						{
+							"taskId": "27",
+							"complexity": 7,
+							"subtasks": 5
+						},
+						{
+							"taskId": "28",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "29",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "30",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "31",
+							"complexity": 5,
+							"subtasks": 3
+						},
+						{
+							"taskId": "32",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "33",
+							"complexity": 5,
+							"subtasks": 3
+						},
+						{
+							"taskId": "34",
+							"complexity": 5,
+							"subtasks": 4
+						},
+						{
+							"taskId": "35",
+							"complexity": 6,
+							"subtasks": 4
+						},
+						{
+							"taskId": "36",
+							"complexity": 7,
+							"subtasks": 5
+						},
+						{
+							"taskId": "37",
+							"complexity": 4,
+							"subtasks": 3
+						},
+						{
+							"taskId": "38",
+							"complexity": 7,
+							"subtasks": 5
+						},
+						{
+							"taskId": "39",
+							"complexity": 8,
+							"subtasks": 5
+						},
+						{
+							"taskId": "40",
+							"complexity": 4,
+							"subtasks": 3
+						}
+					]
+				}
+			},
+			"judge": {
+				"score": 0.7916666666666667,
+				"grades": {
+					"coverage": 5,
+					"fidelity": 4,
+					"sizing": 4,
+					"ordering": 4,
+					"actionability": 4,
+					"subtasks": 4
+				},
+				"summary": "This is an unusually thorough, well-ordered plan that covers essentially the entire PRD feature set with concrete, implementable tasks and subtasks while staying faithful to the specified stack and constraints. Minor weaknesses are a few debatable dependency choices, some subtasks lacking test strategies, and one or two implementation decisions (e.g., Redis pub/sub) that go slightly beyond what the PRD explicitly names."
+			},
+			"calls": [
+				{
+					"command": "parse-prd",
+					"seconds": 166.33737925,
+					"inputTokens": 32208,
+					"outputTokens": 17147,
+					"cachedInputTokens": 22763,
+					"model": "sonnet"
+				},
+				{
+					"command": "analyze-complexity",
+					"seconds": 102.206532625,
+					"inputTokens": 73759,
+					"outputTokens": 11750,
+					"cachedInputTokens": 43439,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "1",
+					"seconds": 24.28744112500001,
+					"inputTokens": 30774,
+					"outputTokens": 2468,
+					"cachedInputTokens": 21898,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "2",
+					"seconds": 51.70504866600002,
+					"inputTokens": 65896,
+					"outputTokens": 5762,
+					"cachedInputTokens": 59000,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "3",
+					"seconds": 51.06478183300001,
+					"inputTokens": 30835,
+					"outputTokens": 5253,
+					"cachedInputTokens": 26861,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "4",
+					"seconds": 27.275938375000027,
+					"inputTokens": 30331,
+					"outputTokens": 2604,
+					"cachedInputTokens": 26927,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "5",
+					"seconds": 18.70925337499997,
+					"inputTokens": 14549,
+					"outputTokens": 1728,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "6",
+					"seconds": 26.945423083,
+					"inputTokens": 14965,
+					"outputTokens": 2580,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "7",
+					"seconds": 22.990238582999968,
+					"inputTokens": 14820,
+					"outputTokens": 2183,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "8",
+					"seconds": 49.370626042000076,
+					"inputTokens": 50226,
+					"outputTokens": 5412,
+					"cachedInputTokens": 43524,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "9",
+					"seconds": 17.414369084000004,
+					"inputTokens": 14792,
+					"outputTokens": 1641,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "10",
+					"seconds": 50.61783841600001,
+					"inputTokens": 50375,
+					"outputTokens": 5679,
+					"cachedInputTokens": 43611,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "11",
+					"seconds": 34.78731491700001,
+					"inputTokens": 14953,
+					"outputTokens": 3302,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "12",
+					"seconds": 32.582806416000004,
+					"inputTokens": 15104,
+					"outputTokens": 3272,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "13",
+					"seconds": 16.053716333999997,
+					"inputTokens": 14791,
+					"outputTokens": 1518,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "14",
+					"seconds": 18.89248762499995,
+					"inputTokens": 14543,
+					"outputTokens": 1801,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "15",
+					"seconds": 57.439818666999926,
+					"inputTokens": 51037,
+					"outputTokens": 6205,
+					"cachedInputTokens": 43855,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "16",
+					"seconds": 27.02509054200002,
+					"inputTokens": 15014,
+					"outputTokens": 2730,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "17",
+					"seconds": 21.33278937500005,
+					"inputTokens": 14900,
+					"outputTokens": 2033,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "18",
+					"seconds": 16.848845959000055,
+					"inputTokens": 14805,
+					"outputTokens": 1623,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "19",
+					"seconds": 21.371064459000017,
+					"inputTokens": 14947,
+					"outputTokens": 2171,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "20",
+					"seconds": 24.05942512499995,
+					"inputTokens": 14896,
+					"outputTokens": 2150,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "21",
+					"seconds": 43.12915545800002,
+					"inputTokens": 31813,
+					"outputTokens": 4265,
+					"cachedInputTokens": 26840,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "22",
+					"seconds": 24.722488458000008,
+					"inputTokens": 14658,
+					"outputTokens": 2443,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "23",
+					"seconds": 16.879500457999995,
+					"inputTokens": 14845,
+					"outputTokens": 1572,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "24",
+					"seconds": 17.835541833000025,
+					"inputTokens": 14898,
+					"outputTokens": 1598,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "25",
+					"seconds": 41.332317958,
+					"inputTokens": 15112,
+					"outputTokens": 3864,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "26",
+					"seconds": 30.49457954200008,
+					"inputTokens": 15013,
+					"outputTokens": 2987,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "27",
+					"seconds": 23.78325391699979,
+					"inputTokens": 15354,
+					"outputTokens": 2345,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "28",
+					"seconds": 21.226783500000135,
+					"inputTokens": 14620,
+					"outputTokens": 2048,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "29",
+					"seconds": 24.467038708999986,
+					"inputTokens": 30171,
+					"outputTokens": 2330,
+					"cachedInputTokens": 26892,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "30",
+					"seconds": 21.51162370799994,
+					"inputTokens": 14878,
+					"outputTokens": 2146,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "31",
+					"seconds": 25.060340084000025,
+					"inputTokens": 46721,
+					"outputTokens": 2244,
+					"cachedInputTokens": 42069,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "32",
+					"seconds": 38.79495779199991,
+					"inputTokens": 31202,
+					"outputTokens": 3938,
+					"cachedInputTokens": 26600,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "33",
+					"seconds": 19.263235375000164,
+					"inputTokens": 14873,
+					"outputTokens": 1757,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "34",
+					"seconds": 21.302873542000075,
+					"inputTokens": 14982,
+					"outputTokens": 2020,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "35",
+					"seconds": 44.60266191599984,
+					"inputTokens": 32472,
+					"outputTokens": 4773,
+					"cachedInputTokens": 27061,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "36",
+					"seconds": 48.104813374999914,
+					"inputTokens": 32681,
+					"outputTokens": 5487,
+					"cachedInputTokens": 26946,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "37",
+					"seconds": 15.834057541999966,
+					"inputTokens": 14874,
+					"outputTokens": 1517,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "38",
+					"seconds": 49.82917625000002,
+					"inputTokens": 32815,
+					"outputTokens": 5384,
+					"cachedInputTokens": 27081,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "39",
+					"seconds": 30.214228541000047,
+					"inputTokens": 15027,
+					"outputTokens": 2917,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "expand",
+					"taskId": "40",
+					"seconds": 18.683267958999846,
+					"inputTokens": 15117,
+					"outputTokens": 1759,
+					"cachedInputTokens": 11988,
+					"model": "sonnet"
+				},
+				{
+					"command": "judge",
+					"seconds": 51.305364041999916,
+					"inputTokens": 113464,
+					"outputTokens": 5005,
+					"cachedInputTokens": 6666,
+					"model": "sonnet"
+				}
+			]
+		}
+	],
+	"summary": {
+		"checkScore": 0.9433650605821208,
+		"judgeScore": 0.8472222222222223,
+		"taskScaling": {
+			"score": 0.8406680016960503,
+			"correlation": 0.8406680016960503,
+			"samples": [
+				{
+					"id": "cli-notes",
+					"words": 102,
+					"taskCount": 9
+				},
+				{
+					"id": "link-shortener",
+					"words": 263,
+					"taskCount": 15
+				},
+				{
+					"id": "invoice-export",
+					"words": 228,
+					"taskCount": 7
+				},
+				{
+					"id": "sales-pipeline",
+					"words": 264,
+					"taskCount": 13
+				},
+				{
+					"id": "habit-tracker",
+					"words": 276,
+					"taskCount": 15
+				},
+				{
+					"id": "team-chat",
+					"words": 678,
+					"taskCount": 40
+				}
+			]
+		},
+		"taskCount": 99,
+		"subtaskCount": 372,
+		"failed": 0,
+		"calls": 108,
+		"seconds": 3938.0731666290003,
+		"inputTokens": 3314297,
+		"outputTokens": 388368
+	}
+}
