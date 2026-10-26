@@ -39,6 +39,44 @@ export function taskNotFound(
 }
 
 /**
+ * Set the same status on several tasks or subtasks, in order, adjusting
+ * each subtask's parent as it goes. Throws on the first missing id or
+ * refused done, before returning, so the caller can save nothing.
+ * The `tasks` array it was given is left unchanged.
+ */
+export function setTaskStatusesIn(
+	tasks: Task[],
+	taskIds: string[],
+	newStatus: TaskStatus,
+	options: UpdateStatusOptions
+): Outcome<UpdateStatusResult[]> {
+	let current: Task[] | null = null;
+	const results: UpdateStatusResult[] = [];
+	for (const taskId of taskIds) {
+		let outcome: Outcome<UpdateStatusResult>;
+		try {
+			outcome = setTaskStatusIn(current ?? tasks, taskId, newStatus, options);
+		} catch (error) {
+			throw statusErrorFor(error, taskId);
+		}
+		if (outcome.tasks) current = outcome.tasks;
+		results.push(outcome.result);
+	}
+	return { tasks: current, result: results };
+}
+
+/** Name the id that stopped a batch, so callers can report it */
+function statusErrorFor(error: unknown, taskId: string): Error {
+	if (error instanceof TaskGraphError) {
+		return typeof error.context.taskId === 'string'
+			? error
+			: error.withContext({ taskId });
+	}
+	if (error instanceof Error) return Object.assign(error, { taskId });
+	return Object.assign(new Error(String(error)), { taskId });
+}
+
+/**
  * Set a task or subtask's status, adjusting a subtask's parent to match
  */
 export function setTaskStatusIn(

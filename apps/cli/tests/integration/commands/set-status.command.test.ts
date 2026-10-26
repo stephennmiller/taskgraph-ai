@@ -245,6 +245,92 @@ describe('set-status command', () => {
 		});
 	});
 
+	// Regression: #699. A later bad id used to leave the earlier ids saved.
+	it('changes nothing when a later id in the list does not exist', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({ id: 10, title: 'Keep pending', status: 'pending' }),
+					createTask({ id: 11, title: 'Leave alone', status: 'in-progress' })
+				]
+			})
+		);
+
+		let stdout = '';
+		let exitCode = 0;
+		try {
+			execSync(`node "${binPath}" set-status 10,99 done --json`, {
+				stdio: 'pipe',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			});
+		} catch (error: any) {
+			stdout = error.stdout?.toString() ?? '';
+			exitCode = error.status;
+		}
+
+		expect(exitCode).toBe(1);
+		const failure = JSON.parse(stdout.trim());
+		expect(failure).toMatchObject({
+			success: false,
+			error: 'Task 99 not found',
+			taskId: '99'
+		});
+		const saved = readTasks().master.tasks;
+		expect(saved.find((t: any) => t.id == 10).status).toBe('pending');
+		expect(saved.find((t: any) => t.id == 11).status).toBe('in-progress');
+	});
+
+	it('changes nothing when a later id is refused by the done gate', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({ id: 1, title: 'Ready', status: 'pending' }),
+					createTask({
+						id: 2,
+						title: 'Gated',
+						status: 'pending',
+						acceptanceCriteria: ['Tests pass']
+					})
+				]
+			})
+		);
+
+		let exitCode = 0;
+		try {
+			execSync(`node "${binPath}" set-status 1,2 done --json`, {
+				stdio: 'pipe',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			});
+		} catch (error: any) {
+			exitCode = error.status;
+		}
+
+		expect(exitCode).toBe(1);
+		const saved = readTasks().master.tasks;
+		expect(saved.find((t: any) => t.id == 1).status).toBe('pending');
+		expect(saved.find((t: any) => t.id == 2).status).toBe('pending');
+	});
+
+	it('sets every id when they all exist', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({ id: 1, title: 'One', status: 'pending' }),
+					createTask({ id: 2, title: 'Two', status: 'in-progress' })
+				]
+			})
+		);
+
+		execSync(`node "${binPath}" set-status 1,2 done --json`, {
+			stdio: 'pipe',
+			env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+		});
+
+		const saved = readTasks().master.tasks;
+		expect(saved.find((t: any) => t.id == 1).status).toBe('done');
+		expect(saved.find((t: any) => t.id == 2).status).toBe('done');
+	});
+
 	it('sets the status of a task in a non-active tag with --tag', () => {
 		writeTasks({
 			...createTasksFile({

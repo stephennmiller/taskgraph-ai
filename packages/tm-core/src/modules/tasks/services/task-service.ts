@@ -8,7 +8,8 @@ import type { Subtask, Task, TaskStatus } from '../../../common/types/index.js';
 import type {
 	ArchiveTasksOptions,
 	TaskFieldUpdates,
-	UpdateStatusOptions
+	UpdateStatusOptions,
+	UpdateStatusResult
 } from '../../../common/interfaces/storage.interface.js';
 import { type TaskClaim, resolveClaimant } from '../utils/claim.js';
 import { normalizeTaskIds } from '../utils/task-ids.js';
@@ -229,6 +230,54 @@ export class TaskService extends TaskReader {
 					operation: 'updateTaskStatus',
 					resource: 'task',
 					taskId: taskIdStr,
+					newStatus,
+					tag: activeTag
+				},
+				error as Error
+			);
+		}
+	}
+
+	/**
+	 * Update several tasks to one status in a single write. A missing id or
+	 * a refused done leaves every id as it was.
+	 */
+	async updateTaskStatuses(
+		taskIds: string[],
+		newStatus: TaskStatus,
+		tag?: string,
+		options?: UpdateStatusOptions
+	): Promise<UpdateStatusResult[]> {
+		assertTaskStatus(newStatus, { taskIds, newStatus });
+
+		if (!this.storage) {
+			throw new TaskGraphError(
+				'Storage not initialized',
+				ERROR_CODES.STORAGE_ERROR
+			);
+		}
+
+		const activeTag = await this.resolveTag(tag);
+
+		try {
+			return await this.storage.updateTaskStatuses(
+				taskIds.map(String),
+				newStatus,
+				activeTag,
+				options
+			);
+		} catch (error) {
+			if (error instanceof TaskGraphError) {
+				throw error;
+			}
+
+			throw new TaskGraphError(
+				'Failed to update task status',
+				ERROR_CODES.STORAGE_ERROR,
+				{
+					operation: 'updateTaskStatuses',
+					resource: 'task',
+					taskIds,
 					newStatus,
 					tag: activeTag
 				},

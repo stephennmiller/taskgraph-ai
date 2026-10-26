@@ -20,6 +20,7 @@ function createMockStorage(tasks: Task[] = []): IStorage {
 		saveTasks: vi.fn(),
 		appendTasks: vi.fn(),
 		updateTaskStatus: vi.fn(),
+		updateTaskStatuses: vi.fn(),
 		claimNextTask: vi.fn(),
 		loadArchivedTaskIds: vi.fn().mockResolvedValue(new Set()),
 		archiveTasks: vi.fn(),

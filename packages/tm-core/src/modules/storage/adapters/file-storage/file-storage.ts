@@ -54,6 +54,7 @@ import { TagOperations } from './tag-operations.js';
 import {
 	modifyTaskIn,
 	setTaskStatusIn,
+	setTaskStatusesIn,
 	taskNotFound,
 	withFreeIds
 } from './task-updates.js';
@@ -388,6 +389,18 @@ export class FileStorage implements IStorage {
 	): Promise<UpdateStatusResult> {
 		return this.mutateTasks(tag, (tasks) =>
 			setTaskStatusIn(tasks, taskId, newStatus, options)
+		);
+	}
+
+	/** See IStorage.updateTaskStatuses */
+	async updateTaskStatuses(
+		taskIds: string[],
+		newStatus: TaskStatus,
+		tag?: string,
+		options: UpdateStatusOptions = {}
+	): Promise<UpdateStatusResult[]> {
+		return this.mutateTasks(tag, (tasks) =>
+			setTaskStatusesIn(tasks, taskIds, newStatus, options)
 		);
 	}
 
