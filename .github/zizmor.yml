@@ -9,8 +9,6 @@ rules:
     ignore:
       # These jobs push with the credentials `actions/checkout` persists, so
       # `persist-credentials: false` would break them.
-      # `changeset publish` plus git-auto-commit-action push the release commit.
-      - release.yml:33
       # Checks out with RELEASE_TOKEN and runs `git push --atomic origin HEAD:main <tag>`.
       - version-bump.yml:42
       # The Claude action workflows. Their checkout feeds an action that does its own
@@ -35,11 +33,9 @@ rules:
       - version-bump.yml:8
   adhoc-packages:
     ignore:
-      # Installed from the registry at an exact version, in the publishing job only.
-      # The npm CLI must be upgraded outside the lockfile for trusted publishing.
-      # Bump it by hand when updating the release flow.
-      - release.yml:44
-      # Same reason, in the job that stages the npm release.
+      # Installed from the registry at an exact version, in the job that stages
+      # the npm release. The npm CLI must be upgraded outside the lockfile for
+      # trusted publishing. Bump it by hand when updating the release flow.
       - version-bump.yml:138
       # CI installs and packs with the same npm as release, at the same exact version.
       - ci.yml:41
