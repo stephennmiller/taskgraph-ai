@@ -37,8 +37,6 @@
 		"test:coverage": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts --coverage",
 		"test:ci": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts --coverage",
 		"postpack": "chmod +x dist/taskgraph.js dist/mcp-server.js",
-		"changeset": "changeset",
-		"publish-packages": "turbo run build lint test && changeset version && changeset publish",
 		"inspector": "npx @modelcontextprotocol/inspector node dist/mcp-server.js",
 		"mcp-server": "node dist/mcp-server.js",
 		"format-check": "biome format .",
@@ -117,8 +115,6 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
-		"@changesets/changelog-github": "^1.0.1",
-		"@changesets/cli": "^3.0.3",
 		"@manypkg/cli": "^0.25.1",
 		"@tm/build-config": "*",
 		"@tm/cli": "*",
