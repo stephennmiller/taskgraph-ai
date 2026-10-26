@@ -12,8 +12,7 @@ import { theme } from '../ui/theme.js';
 import {
 	checkForUpdate,
 	displayUpgradeNotification,
-	performAutoUpdate,
-	restartWithNewVersion
+	performAutoUpdate
 } from '../utils/auto-update/index.js';
 import { autoUpdateSkipReason } from '../utils/auto-update/policy.js';
 
@@ -26,6 +25,7 @@ export class UpgradeCommand extends Command {
 				const reason = autoUpdateSkipReason();
 				if (reason) {
 					console.log(theme.muted(`Not installing (${reason})`));
+					process.exitCode = 1;
 					return;
 				}
 
@@ -40,12 +40,10 @@ export class UpgradeCommand extends Command {
 					info.latestVersion,
 					info.highlights
 				);
-				const installed = await performAutoUpdate(info.latestVersion);
-				if (!installed) {
+				// No restart: it would only run `upgrade` again on the new version
+				if (!(await performAutoUpdate(info.latestVersion))) {
 					process.exitCode = 1;
-					return;
 				}
-				restartWithNewVersion(process.argv);
 			}
 		);
 	}

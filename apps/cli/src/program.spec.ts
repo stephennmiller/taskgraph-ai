@@ -126,6 +126,7 @@ describe('runCLI update check', () => {
 	afterEach(() => {
 		process.env = { ...saved };
 		process.stdin.isTTY = savedTTY;
+		process.exitCode = undefined;
 		fs.rmSync(home, { recursive: true, force: true });
 		vi.restoreAllMocks();
 	});
@@ -185,9 +186,22 @@ describe('runCLI update check', () => {
 	});
 
 	it('installs when the command is upgrade', async () => {
+		autoUpdate.performAutoUpdate.mockResolvedValue(true);
+
 		await runCLI(['node', 'taskgraph', 'upgrade']);
 
 		expect(autoUpdate.performAutoUpdate).toHaveBeenCalledWith('1.1.0');
 		expect(autoUpdate.checkForUpdate).toHaveBeenCalledTimes(1);
+		// A restart would only run `upgrade` again on the new version
+		expect(autoUpdate.restartWithNewVersion).not.toHaveBeenCalled();
+	});
+
+	it('exits 1 when upgrade refuses to install', async () => {
+		process.stdin.isTTY = false;
+
+		await runCLI(['node', 'taskgraph', 'upgrade']);
+
+		expect(autoUpdate.performAutoUpdate).not.toHaveBeenCalled();
+		expect(process.exitCode).toBe(1);
 	});
 });
