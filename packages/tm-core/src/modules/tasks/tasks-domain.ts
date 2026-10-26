@@ -420,9 +420,8 @@ export class TasksDomain {
 	}
 
 	/**
-	 * Update several tasks or subtasks to one status in a single write.
-	 * A missing id or a refused done leaves every id unchanged.
-	 * The done gate is the same as `updateStatus`.
+	 * `updateStatus` for several ids in one write: a missing id or a refused
+	 * done leaves every id unchanged
 	 */
 	async updateStatuses(
 		taskIds: string[],
