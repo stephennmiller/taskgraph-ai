@@ -18,7 +18,12 @@ import {
 	expect,
 	it
 } from 'vitest';
-import { copyProject, getCliBinPath } from '../../helpers/test-utils.js';
+import { createSubtask, createTask, createTasksFile } from '@tm/core/testing';
+import {
+	copyProject,
+	getCliBinPath,
+	spawnTimeout
+} from '../../helpers/test-utils.js';
 
 describe('dependency commands', () => {
 	let dir: string;
@@ -161,6 +166,79 @@ describe('dependency commands', () => {
 		expect(result.stdout).toContain('taskgraph remove-dependency');
 		expect(result.stdout).not.toContain('Run taskgraph fix-dependencies');
 	});
+
+	it(
+		'refuses a loop through a dependency a subtask inherits from its parent (#698)',
+		() => {
+			// Review repro: task 4 depends on 1.1, then task 1 is made to depend on 4
+			fs.writeFileSync(
+				tasksFile(),
+				JSON.stringify(
+					createTasksFile({
+						tasks: [
+							createTask({
+								id: '1',
+								title: 't1',
+								subtasks: [createSubtask({ id: 1, title: 's1', parentId: '1' })]
+							}),
+							createTask({
+								id: '4',
+								title: 't4',
+								dependencies: ['1.1']
+							})
+						]
+					}),
+					null,
+					2
+				)
+			);
+
+			const added = run(['add-dependency', '--id=1', '--depends-on=4']);
+
+			expect(added.status).toBe(1);
+			expect(added.stderr).toContain('would make a loop');
+			expect(
+				JSON.parse(fs.readFileSync(tasksFile(), 'utf8')).master.tasks[0]
+					.dependencies
+			).toEqual([]);
+
+			const next = run(['next']);
+			expect(next.status).toBe(0);
+			expect(next.stdout).toContain('t1');
+			expect(next.stdout).not.toContain('blocked by dependencies');
+
+			const validated = run(['validate-dependencies']);
+			expect(validated.status).toBe(0);
+			expect(validated.stdout).toContain('No dependency problems');
+
+			const why = run(['why', '4']);
+			expect(why.status).toBe(0);
+			expect(why.stdout).toContain('Blocked by:');
+			expect(why.stdout).toContain('1.1');
+
+			// Written straight into the file, the same loop is still a problem,
+			// and fix-dependencies leaves it for the user to break
+			const data = JSON.parse(fs.readFileSync(tasksFile(), 'utf8'));
+			data.master.tasks[0].dependencies = ['4'];
+			fs.writeFileSync(tasksFile(), JSON.stringify(data, null, 2));
+
+			const found = run(['validate-dependencies']);
+			expect(found.status).toBe(1);
+			expect(found.stdout).toContain('is part of a dependency loop');
+			expect(found.stdout).toContain('1.1');
+			expect(found.stdout).toContain('4');
+			expect(found.stdout).not.toContain('Run taskgraph fix-dependencies');
+
+			const fixed = run(['fix-dependencies']);
+			expect(fixed.status).toBe(1);
+			expect(fixed.stdout).toContain('is part of a dependency loop');
+			expect(
+				JSON.parse(fs.readFileSync(tasksFile(), 'utf8')).master.tasks[0]
+					.dependencies
+			).toEqual(['4']);
+		},
+		spawnTimeout(6)
+	);
 
 	it('add: a repeat dependency is one plain line, not a warning', () => {
 		run(['add-dependency', '--id=2', '--depends-on=1']);

@@ -20,9 +20,8 @@ const PREVIOUS_NAME = new RegExp(['task', '[-_ ]?', 'master'].join(''), 'i');
 // (registry lookups, installs, root detection, MCP launch, release links).
 const IDENTITY_FILES = [
 	'package.json',
-	'.changeset/config.json',
 	'.github/scripts/utils.mjs',
-	'.github/scripts/check-pre-release-mode.mjs',
+	'.github/scripts/check-release-config.mjs',
 	'apps/cli/src/utils/auto-update/changelog.ts',
 	'apps/cli/src/utils/auto-update/constants.ts',
 	'apps/cli/src/utils/auto-update/check-update.ts',
