@@ -551,12 +551,18 @@ structure](https://taskgraph-ai.com/capabilities/task-structure) ·
 ## Licensing
 
 TaskGraph is licensed under the MIT License with Commons Clause, the same
-license as Task Master.
+license as Task Master. The Commons Clause does not grant the right to Sell
+the software.
 
 **Allowed:** use it for any purpose (personal, commercial, academic), modify it,
-distribute copies, and sell products built with it.
+distribute copies, and sell products built with it when that is not Selling
+the software.
 
-**Not allowed:** selling TaskGraph itself, offering it as a hosted service, or
-creating competing products based on it.
+**Not allowed:** Selling the software. "Sell" means practicing any or all of
+the rights granted under the license to provide the software to third parties,
+for a fee or other consideration (including without limitation fees for hosting
+or consulting/support services related to the software), as part of a product
+or service whose value derives, entirely or substantially, from the
+functionality of the software.
 
 See [LICENSE](LICENSE) and [licensing details](docs/licensing.md).
