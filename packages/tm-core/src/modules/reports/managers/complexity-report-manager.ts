@@ -69,9 +69,9 @@ export class ComplexityReportManager {
 			return this.reportCache.get(cacheKey)!;
 		}
 
-		const reportPath = this.getReportPath(tag);
-
 		try {
+			// Inside the try: a tag that can't name a file (a hand edit) has no report
+			const reportPath = this.getReportPath(tag);
 			// Check if file exists
 			await fs.access(reportPath);
 
@@ -199,9 +199,8 @@ export class ComplexityReportManager {
 	 * Check if a complexity report exists for a tag
 	 */
 	async hasReport(tag?: string): Promise<boolean> {
-		const reportPath = this.getReportPath(tag);
 		try {
-			await fs.access(reportPath);
+			await fs.access(this.getReportPath(tag));
 			return true;
 		} catch {
 			return false;
