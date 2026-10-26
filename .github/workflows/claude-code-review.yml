@@ -10,18 +10,31 @@ on:
     #   - "src/**/*.js"
     #   - "src/**/*.jsx"
 
+# No workflow-level grant: the job below declares exactly what it needs.
+# A skipped job never starts a runner, so CLAUDE_CODE_OAUTH_TOKEN is not
+# mounted for a fork or an untrusted author.
+permissions: {}
+
 jobs:
   claude-review:
-    # Dependabot PRs don't receive repo secrets, so the review can't authenticate
-    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    # Same-repository pull requests from a trusted human only. A fork
+    # pull_request checks out the fork's code; that must not run in a job
+    # that holds the OAuth token. Dependabot is a bot on this repository
+    # and is outside the association allowlist, so it stays excluded.
+    # The prompt below interpolates the repository name and PR number only.
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.repo.fork == false &&
+      github.event.pull_request.user.type != 'Bot' &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
 
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: read # checkout. Review comments use the action's app token
       pull-requests: read
-      issues: read
-      id-token: write
+      id-token: write # OIDC exchange for the Claude GitHub App token
 
     steps:
       - name: Checkout repository

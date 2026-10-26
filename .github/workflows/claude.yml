@@ -10,20 +10,57 @@ on:
   pull_request_review:
     types: [submitted]
 
+# No workflow-level grant: the job below declares exactly what it needs.
+# A skipped job never starts a runner, so CLAUDE_CODE_OAUTH_TOKEN is not
+# mounted for an event that fails the actor check.
+permissions: {}
+
 jobs:
   claude:
+    # Trusted human actors only, and only when they mentioned @claude.
+    # The action's write check runs after the runner already has the token,
+    # so it cannot be the only gate. Association is the commenter, reviewer,
+    # or issue author (OWNER covers the repository owner). Assigning someone
+    # else's issue carries no actor association, so that path is limited to
+    # the repository owner. Bots are excluded so a Claude reply cannot
+    # start another run. Comment text is not interpolated into a run step.
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      github.event.sender.type != 'Bot' &&
+      (
+        (
+          github.event_name == 'issue_comment' &&
+          contains(github.event.comment.body, '@claude') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        ) ||
+        (
+          github.event_name == 'pull_request_review_comment' &&
+          contains(github.event.comment.body, '@claude') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        ) ||
+        (
+          github.event_name == 'pull_request_review' &&
+          contains(github.event.review.body, '@claude') &&
+          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)
+        ) ||
+        (
+          github.event_name == 'issues' &&
+          (
+            contains(github.event.issue.body, '@claude') ||
+            contains(github.event.issue.title, '@claude')
+          ) &&
+          (
+            contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) ||
+            (github.event.action == 'assigned' && github.actor == github.repository_owner)
+          )
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
+      contents: read # checkout. Git writes use the action's app token, not this token
       pull-requests: read
       issues: read
-      id-token: write
+      id-token: write # OIDC exchange for the Claude GitHub App token
       actions: read # Required for Claude to read CI results on PRs
     steps:
       - name: Checkout repository
