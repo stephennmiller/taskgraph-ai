@@ -13,13 +13,16 @@ const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
 /**
  * Start Claude in its own process group. On timeout the whole group gets
  * SIGTERM, so the processes Claude started stop too, and onTimeout runs.
+ * onStop runs on timeout and on a stop signal, for what lives outside the
+ * group (the `--sandbox` container, #743).
  */
 export function spawnIteration(
 	command: string,
 	args: string[],
 	cwd: string,
 	timeout: number,
-	onTimeout: () => void
+	onTimeout: () => void,
+	onStop?: () => void
 ): ChildProcess {
 	const child = spawn(command, args, {
 		cwd,
@@ -32,6 +35,7 @@ export function spawnIteration(
 	const timer = setTimeout(() => {
 		onTimeout();
 		killProcessGroup(child, 'SIGTERM');
+		onStop?.();
 		// A subprocess Claude started can hold the pipes open: close them so 'close' fires
 		child.stdout?.destroy();
 		child.stderr?.destroy();
@@ -41,6 +45,7 @@ export function spawnIteration(
 	// ignore SIGINT), then let the signal stop this process as before
 	const forward = (sig: NodeJS.Signals): void => {
 		killProcessGroup(child, 'SIGTERM');
+		onStop?.();
 		cleanup();
 		process.kill(process.pid, sig);
 	};

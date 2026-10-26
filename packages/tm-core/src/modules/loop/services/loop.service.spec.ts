@@ -140,7 +140,16 @@ describe('LoopService', () => {
 			expect(result.ready).toBe(true);
 			expect(mockSpawnSync).toHaveBeenCalledWith(
 				'docker',
-				['sandbox', 'run', 'claude', '-p', 'Say OK'],
+				[
+					'sandbox',
+					'run',
+					'--name',
+					expect.stringMatching(/^taskgraph-loop-[0-9a-f]{12}$/),
+					'claude',
+					'--',
+					'-p',
+					'Say OK'
+				],
 				expect.objectContaining({
 					cwd: '/test/project',
 					timeout: 30000
