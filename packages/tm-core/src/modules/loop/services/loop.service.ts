@@ -2,12 +2,17 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
-import { spawnSync } from 'node:child_process';
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
 import { isTaskPreset } from '../loop-task.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import {
+	checkSandboxAuth,
+	runInteractiveAuth,
+	sandboxRunArgs,
+	stopSandbox
+} from './docker-sandbox.js';
 import { spawnIteration } from './iteration-process.js';
 import {
 	CLAUDE_MISSING,
@@ -60,74 +65,12 @@ export class LoopService {
 
 	/** Check if Docker sandbox auth is ready */
 	checkSandboxAuth(): { ready: boolean; error?: string } {
-		const result = spawnSync(
-			'docker',
-			['sandbox', 'run', 'claude', '-p', 'Say OK'],
-			{
-				cwd: this.projectRoot,
-				timeout: 30000,
-				encoding: 'utf-8',
-				stdio: ['inherit', 'pipe', 'pipe']
-			}
-		);
-
-		if (result.error) {
-			const code = (result.error as NodeJS.ErrnoException).code;
-			if (code === 'ENOENT') {
-				return {
-					ready: false,
-					error: DOCKER_MISSING
-				};
-			}
-			return { ready: false, error: `Docker error: ${result.error.message}` };
-		}
-
-		const output = (result.stdout || '') + (result.stderr || '');
-		return { ready: output.toLowerCase().includes('ok') };
+		return checkSandboxAuth(this.projectRoot);
 	}
 
 	/** Run interactive Docker sandbox session for user authentication */
 	runInteractiveAuth(): { success: boolean; error?: string } {
-		const result = spawnSync(
-			'docker',
-			[
-				'sandbox',
-				'run',
-				'claude',
-				"You're authenticated! Press Ctrl+C to continue."
-			],
-			{
-				cwd: this.projectRoot,
-				stdio: 'inherit'
-			}
-		);
-
-		if (result.error) {
-			const code = (result.error as NodeJS.ErrnoException).code;
-			if (code === 'ENOENT') {
-				return {
-					success: false,
-					error: DOCKER_MISSING
-				};
-			}
-			return { success: false, error: `Docker error: ${result.error.message}` };
-		}
-
-		if (result.status === null) {
-			return {
-				success: false,
-				error: 'Docker terminated abnormally (no exit code)'
-			};
-		}
-
-		if (result.status !== 0) {
-			return {
-				success: false,
-				error: `Docker exited with code ${result.status}`
-			};
-		}
-
-		return { success: true };
+		return runInteractiveAuth(this.projectRoot);
 	}
 
 	/** Run a loop with the given configuration */
@@ -419,7 +362,8 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				timeout,
 				() => {
 					timedOut = true;
-				}
+				},
+				sandbox ? () => stopSandbox(this.projectRoot) : undefined
 			);
 			child.stdout?.setEncoding('utf-8').on('data', (d: string) => {
 				stdout += d;
@@ -500,7 +444,8 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				timeout,
 				() => {
 					timedOut = true;
-				}
+				},
+				sandbox ? () => stopSandbox(this.projectRoot) : undefined
 			);
 
 			// Track stdout completion to handle race between data and close events
@@ -666,7 +611,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		verbose: boolean
 	): string[] {
 		if (sandbox) {
-			return ['sandbox', 'run', 'claude', '-p', prompt];
+			return sandboxRunArgs(this.projectRoot, '-p', prompt);
 		}
 
 		const args = ['-p', prompt, '--dangerously-skip-permissions'];
