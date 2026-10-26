@@ -1,6 +1,6 @@
 name: Gitleaks
 
-# History-aware secret scan. ADVISORY: not a required check. No paid secrets: it
+# History-aware secret scan, a required check on main. No paid secrets: it
 # runs the open-source gitleaks CLI, not gitleaks-action (which needs a license
 # key for organisation repos). The binary is pinned by version and verified
 # against a sha256 before it is extracted.
@@ -29,6 +29,8 @@ name: Gitleaks
 # this file, an inline gitleaks:allow, or a new .gitleaksignore/.gitleaks.toml.
 on:
   pull_request:
+    branches: [main]
+  merge_group:
     branches: [main]
   push:
     branches: [main]

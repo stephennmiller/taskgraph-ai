@@ -39,5 +39,5 @@ rules:
       # trusted publishing. Bump it by hand when updating the release flow.
       - version-bump.yml:154
       # CI installs and packs with the same npm as release, at the same exact version.
-      - ci.yml:41
-      - ci.yml:442
+      - ci.yml:44
+      - ci.yml:445
