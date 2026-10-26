@@ -70,6 +70,7 @@ const NO_POSTING = [
 	'Bash(gh api:*)',
 	'mcp__github_inline_comment__create_inline_comment'
 ];
+const REVIEW_TOOLS = ['Read', 'Grep', 'Glob', 'Bash'];
 const EVAL_INSTRUCTIONS = `This is an offline evaluation of the review prompt, not a live review. Treat the pull request as having no earlier review rounds. Post nothing to GitHub. In place of the inline comments, end your reply with one line per finding, exactly:
 FINDING <path from the repository root>:<line in the PR's version of the file> <bug class>: <one sentence>
 With no findings, end your reply with: NO FINDINGS`;
@@ -205,6 +206,11 @@ function evaluate(
 				'json',
 				'--append-system-prompt',
 				EVAL_INSTRUCTIONS,
+				// No user/project settings or MCP servers: their allow rules (merge, push) must not reach an old PR's prompt
+				'--restricted',
+				'--strict-mcp-config',
+				'--tools',
+				...REVIEW_TOOLS,
 				...withTools(
 					'--allowedTools',
 					allowedTools(interpolate(step.claudeArgs, repo, pull))
