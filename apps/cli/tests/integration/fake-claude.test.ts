@@ -452,6 +452,20 @@ describe('installFakeClaude', () => {
 		expect(readTrace(second.dir)).toEqual([]);
 	});
 
+	it('skips a trace line the fake is still appending (#712)', () => {
+		const { dir: fakeDir } = installFakeClaude({
+			projectDir: project,
+			workDir: work
+		});
+		const line = JSON.stringify({ n: 0, prompt: 'x'.repeat(10000) });
+		fs.writeFileSync(
+			path.join(fakeDir, 'trace.jsonl'),
+			`${line}\n${line.slice(0, 8192)}`
+		);
+
+		expect(readTrace(fakeDir).map((t) => t.n)).toEqual([0]);
+	});
+
 	it('keeps real credentials and the real Claude config out of the env', () => {
 		const { env } = installFakeClaude({ projectDir: project, workDir: work });
 
