@@ -39,4 +39,4 @@ rules:
       - version-bump.yml:138
       # CI installs and packs with the same npm as release, at the same exact version.
       - ci.yml:41
-      - ci.yml:439
+      - ci.yml:442
