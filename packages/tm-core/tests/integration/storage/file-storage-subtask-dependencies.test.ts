@@ -10,6 +10,7 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Subtask, Task } from '../../../src/common/types/index.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
+import { seedTasks } from '../seed-tasks.js';
 
 const task = (id: string, overrides: Partial<Task> = {}): Task => ({
 	id,
@@ -49,7 +50,7 @@ describe('FileStorage subtask dependencies - Integration Tests', () => {
 			parentId: '2',
 			dependencies
 		};
-		await storage.saveTasks([task('2', { subtasks: [child] })]);
+		await seedTasks(storage, [task('2', { subtasks: [child] })]);
 
 		const loaded = await storage.loadTask('2.2');
 

@@ -10,6 +10,7 @@ import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Task } from '../../../src/common/types/index.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
+import { seedTasks } from '../seed-tasks.js';
 
 function createTask(id: string, overrides: Partial<Task> = {}): Task {
 	return {
@@ -44,7 +45,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('gives two sessions claiming at once different tasks', async () => {
-		await session().saveTasks([createTask('1'), createTask('2')]);
+		await seedTasks(session(), [createTask('1'), createTask('2')]);
 
 		const [first, second] = await Promise.all([
 			session().claimNextTask('alice'),
@@ -65,7 +66,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('hands out every ready task once and then reports nothing ready', async () => {
-		await session().saveTasks([
+		await seedTasks(session(), [
 			createTask('1'),
 			createTask('2'),
 			createTask('3')
@@ -85,7 +86,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('claims by the same order as next', async () => {
-		await session().saveTasks([
+		await seedTasks(session(), [
 			createTask('1', { priority: 'low' }),
 			createTask('2', { priority: 'high' }),
 			createTask('3', { dependencies: ['2'] })
@@ -102,7 +103,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('claims a subtask of a task in progress and records the claim on it', async () => {
-		await session().saveTasks([
+		await seedTasks(session(), [
 			createTask('1', {
 				status: 'in-progress',
 				subtasks: [
@@ -143,7 +144,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('keeps other metadata on the claimed task', async () => {
-		await session().saveTasks([
+		await seedTasks(session(), [
 			createTask('1', { metadata: { externalId: 'JIRA-1' } })
 		]);
 
@@ -177,7 +178,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('releases the claim when the task goes back to pending', async () => {
-		await session().saveTasks([
+		await seedTasks(session(), [
 			createTask('1', { metadata: { externalId: 'JIRA-1' } }),
 			createTask('2')
 		]);
@@ -197,7 +198,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('keeps the claim when the task is finished', async () => {
-		await session().saveTasks([createTask('1')]);
+		await seedTasks(session(), [createTask('1')]);
 		await session().claimNextTask('alice');
 
 		await session().updateTaskStatus('1', 'done');
@@ -207,7 +208,7 @@ describe('FileStorage claimNextTask', () => {
 	});
 
 	it('leaves the file untouched when nothing is ready', async () => {
-		await session().saveTasks([createTask('1', { status: 'done' })]);
+		await seedTasks(session(), [createTask('1', { status: 'done' })]);
 		const file = path.join(tempDir, '.taskgraph', 'tasks', 'tasks.json');
 		const before = fs.readFileSync(file, 'utf8');
 

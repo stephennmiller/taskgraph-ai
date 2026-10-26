@@ -4,7 +4,6 @@
  * tag is current (`currentTag`).
  */
 
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { TASKGRAPH_STATE_FILE } from '../../../common/constants/paths.js';
 import {
@@ -18,6 +17,7 @@ import {
 	isValidBranchForTag,
 	sanitizeBranchNameForTag
 } from '../../../common/utils/git-utils.js';
+import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 
 /** A git branch and the tag name it maps to */
 export interface BranchTag {
@@ -101,19 +101,17 @@ async function updateStateFile(
 	projectRoot: string,
 	change: (state: Record<string, unknown>) => void
 ): Promise<void> {
-	const statePath = path.join(projectRoot, TASKGRAPH_STATE_FILE);
-	let state: unknown = {};
-	try {
-		state = JSON.parse(await fs.readFile(statePath, 'utf8'));
-	} catch (error: any) {
-		if (error?.code !== 'ENOENT') throw error;
-	}
-	// JSON.stringify drops a key set on an array, so the change would be lost
-	if (!isRecord(state)) {
-		throw new Error('state.json does not hold a JSON object');
-	}
-	change(state);
-	await fs.writeFile(statePath, JSON.stringify(state, null, 2), 'utf8');
+	await new FileOperations().modifyJson(
+		path.join(projectRoot, TASKGRAPH_STATE_FILE),
+		(state: unknown) => {
+			// JSON.stringify drops a key set on an array, so the change would be lost
+			if (!isRecord(state)) {
+				throw new Error('state.json does not hold a JSON object');
+			}
+			change(state);
+			return state;
+		}
+	);
 }
 
 /**

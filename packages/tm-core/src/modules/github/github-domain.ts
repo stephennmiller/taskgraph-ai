@@ -339,23 +339,29 @@ export class GitHubDomain {
 		step: PullStep,
 		{ task }: SyncTask
 	): Promise<void> {
-		const link = getLink(task, repo);
-		if (!link || !step.to) return;
+		const { to } = step;
+		if (!getLink(task, repo) || !to) return;
 		const tasksDomain = this.requireTasks();
 		if (step.action === 'apply') {
 			// The issue's state wins a pull, criteria or not
-			await tasksDomain.updateStatus(step.taskId, step.to, step.tag, {
+			await tasksDomain.updateStatus(step.taskId, to, step.tag, {
 				force: true
 			});
 		}
-		const github: GitHubLink = {
-			...link,
-			lastPushedStatus: step.to,
-			syncedAt: (this.options.now?.() ?? new Date()).toISOString()
-		};
+		const syncedAt = (this.options.now?.() ?? new Date()).toISOString();
+		// Merge into the link as stored now, so a push that finished meanwhile keeps its fields
 		await tasksDomain.modifyTask(
 			task.id,
-			(current) => ({ metadata: { ...current.metadata, github } }),
+			(current) => {
+				const latest = getLink(current as Task, repo);
+				if (!latest) return {};
+				const github: GitHubLink = {
+					...latest,
+					lastPushedStatus: to,
+					syncedAt
+				};
+				return { metadata: { ...current.metadata, github } };
+			},
 			step.tag
 		);
 	}

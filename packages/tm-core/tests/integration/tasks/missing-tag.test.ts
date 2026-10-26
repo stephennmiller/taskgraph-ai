@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { createTask } from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('a missing tag', () => {
 	let projectDir: string;
@@ -29,7 +30,8 @@ describe('a missing tag', () => {
 				JSON.stringify({ currentTag: activeTag })
 			);
 		}
-		await new FileStorage(projectDir).saveTasks(
+		await seedTasks(
+			new FileStorage(projectDir),
 			[createTask({ id: 1, title: 'Set up the database' })],
 			'master'
 		);

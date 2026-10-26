@@ -8,6 +8,7 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import lockfile from 'proper-lockfile';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
 import { getPromptManager } from '../../../src/modules/ai/prompts/prompt-manager.js';
@@ -187,6 +188,38 @@ describe('tasks.analyzeComplexity', () => {
 				[8, 2]
 			);
 			expect(result.kept).toBe(1);
+		});
+		it('waits for another process writing the report, and keeps its entry', async () => {
+			fs.writeFileSync(
+				reportPath(),
+				JSON.stringify({ meta: {}, complexityAnalysis: [] })
+			);
+			const core = await setUp();
+			let release!: () => Promise<void>;
+			vi.spyOn(AiService.prototype, 'generateObject').mockImplementation(
+				async () => {
+					// Another process takes the lock and reads the report
+					release = await lockfile.lock(reportPath(), { realpath: false });
+					return answer([2]) as any;
+				}
+			);
+
+			const run = core.tasks.analyzeComplexity({ ids: '2' });
+			await new Promise((resolve) => setTimeout(resolve, 300));
+			// ...and writes its entry before letting go
+			fs.writeFileSync(
+				reportPath(),
+				JSON.stringify({
+					meta: {},
+					complexityAnalysis: answer([8]).mainResult.complexityAnalysis
+				})
+			);
+			await release();
+			await run;
+
+			expect(readReport().complexityAnalysis.map((e: any) => e.taskId)).toEqual(
+				[8, 2]
+			);
 		});
 	});
 

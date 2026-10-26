@@ -12,6 +12,7 @@ import { GitHubDomain } from '../../../src/modules/github/github-domain.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 import { FakeGitHub, REPO, makeTask } from './fake-github.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('GitHub push - tag and id scope', () => {
 	let projectDir: string;
@@ -28,8 +29,8 @@ describe('GitHub push - tag and id scope', () => {
 			JSON.stringify({ models: {} })
 		);
 		const storage = new FileStorage(projectDir);
-		await storage.saveTasks([makeTask('1'), makeTask('2')], 'master');
-		await storage.saveTasks([makeTask('3')], 'feature');
+		await seedTasks(storage, [makeTask('1'), makeTask('2')], 'master');
+		await seedTasks(storage, [makeTask('3')], 'feature');
 		tmCore = await createTmCore({ projectPath: projectDir });
 		github = new FakeGitHub();
 		const domain = new GitHubDomain(projectDir, {

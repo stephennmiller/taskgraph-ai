@@ -8,13 +8,14 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../src/common/types/index.js';
 import { GitHubDomain } from '../../../src/modules/github/github-domain.js';
 import type { GitHubLink } from '../../../src/modules/github/types.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 import { FakeGitHub, REPO, makeTask } from './fake-github.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('GitHub pull', () => {
 	let projectDir: string;
@@ -32,11 +33,12 @@ describe('GitHub pull', () => {
 			JSON.stringify({ models: {} })
 		);
 		const storage = new FileStorage(projectDir);
-		await storage.saveTasks(
+		await seedTasks(
+			storage,
 			[makeTask('1'), makeTask('2'), makeTask('3')],
 			'master'
 		);
-		await storage.saveTasks([makeTask('4')], 'other');
+		await seedTasks(storage, [makeTask('4')], 'other');
 		tmCore = await createTmCore({ projectPath: projectDir });
 		github = new FakeGitHub();
 		domain = new GitHubDomain(projectDir, {
@@ -68,6 +70,7 @@ describe('GitHub pull', () => {
 	};
 
 	afterEach(async () => {
+		vi.restoreAllMocks();
 		await tmCore?.close();
 		fs.rmSync(projectDir, { recursive: true, force: true });
 	});
@@ -82,6 +85,38 @@ describe('GitHub pull', () => {
 		expect((await readTask('1')).status).toBe('done');
 		expect((await linkOf('1')).lastPushedStatus).toBe('done');
 		expect((await readTask('2')).status).toBe('pending');
+	});
+
+	it('keeps link fields a push wrote while the pull was running', async () => {
+		await setup();
+		close(1);
+		const updateStatus = tmCore.tasks.updateStatus.bind(tmCore.tasks);
+		vi.spyOn(tmCore.tasks, 'updateStatus').mockImplementation(
+			async (...args) => {
+				// A push lands between the pull's read and its write
+				await tmCore.tasks.modifyTask(
+					'1',
+					(current) => ({
+						metadata: {
+							...current.metadata,
+							github: {
+								...(current.metadata?.github as GitHubLink),
+								bodyHash: 'from-push'
+							}
+						}
+					}),
+					'master'
+				);
+				return updateStatus(...args);
+			}
+		);
+
+		await domain.pull({ repo: REPO });
+
+		expect(await linkOf('1')).toMatchObject({
+			bodyHash: 'from-push',
+			lastPushedStatus: 'done'
+		});
 	});
 
 	it('follows a status label changed on GitHub', async () => {

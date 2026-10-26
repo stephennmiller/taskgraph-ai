@@ -20,6 +20,7 @@ import type {
 } from '../../../src/modules/github/types.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 const REPO = 'acme/app';
 
@@ -102,7 +103,7 @@ describe('GitHub push - integration', () => {
 			path.join(tgDir, 'config.json'),
 			JSON.stringify({ models: {} })
 		);
-		await new FileStorage(projectDir).saveTasks(tasks, 'master');
+		await seedTasks(new FileStorage(projectDir), tasks, 'master');
 
 		tmCore = await createTmCore({ projectPath: projectDir });
 		github = new InMemoryGitHub();
@@ -248,8 +249,7 @@ describe('GitHub push - integration', () => {
 	it('reports orphans and closes them only with closeOrphans', async () => {
 		await setup([makeTask('1'), makeTask('2')]);
 		await push();
-		const kept = (await readTasks()).filter((t) => t.id === '1');
-		await new FileStorage(projectDir).saveTasks(kept, 'master');
+		await new FileStorage(projectDir).deleteTask('2', 'master');
 
 		const report = await push();
 		expect(report.orphans.map((o) => o.taskId)).toEqual(['2']);

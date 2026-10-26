@@ -22,6 +22,7 @@ import * as os from 'os';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
 import type { TaskFieldUpdates } from '../../../src/common/interfaces/storage.interface.js';
 import type { Task } from '../../../src/common/types/index.js';
+import { seedTasks } from '../seed-tasks.js';
 
 /**
  * Creates a minimal valid task for testing
@@ -89,7 +90,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					metadata: originalMetadata
 				})
 			];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Simulate AI response: AI updates title/description but doesn't include metadata
 			// As an AI rewrite (update-task) returns it: no metadata field
@@ -121,7 +122,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 		it('should preserve metadata through multiple sequential AI updates', async () => {
 			const metadata = { externalId: 'EXT-999', version: 1 };
 			const tasks: Task[] = [createTask('1', { metadata })];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// First AI update
 			await storage.modifyTask('1', () => ({ title: 'First AI Update' }));
@@ -150,7 +151,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					metadata: realisticMetadata
 				})
 			];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// AI enriches the task
 			await storage.modifyTask('1', () => ({
@@ -208,7 +209,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					]
 				})
 			];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// AI updates parent task (not subtasks)
 			await storage.modifyTask('1', () => ({
@@ -255,7 +256,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 				}
 			];
 
-			await storage.saveTasks(aiGeneratedTasks);
+			await seedTasks(storage, aiGeneratedTasks);
 
 			// Verify tasks saved correctly without metadata
 			const loadedTasks = await storage.loadTasks();
@@ -293,7 +294,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					]
 				})
 			];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Update subtask details (like update-subtask command does)
 			await storage.modifyTask('1.1', () => ({
@@ -336,7 +337,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					}
 				})
 			];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// AI updates the task (doesn't touch metadata)
 			await storage.modifyTask('1', () => ({
@@ -372,7 +373,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					metadata: { sparse: true, tracking: 'minimal' }
 				})
 			];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// AI fills in all the other fields
 			await storage.modifyTask('1', () => ({
@@ -409,7 +410,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 				}
 			};
 			const tasks: Task[] = [createTask('1', { metadata: deepMetadata })];
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 
 			// Multiple AI operations
 			await storage.modifyTask('1', () => ({ title: 'Update 1' }));

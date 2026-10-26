@@ -15,6 +15,7 @@ import {
 	createTask
 } from '../../../src/testing/task-fixtures.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
+import { seedTasks } from '../seed-tasks.js';
 
 describe('tasks.addNote', () => {
 	let projectDir: string;
@@ -33,7 +34,8 @@ describe('tasks.addNote', () => {
 			JSON.stringify({ models: {}, global: {} })
 		);
 		tasksPath = path.join(tgDir, 'tasks', 'tasks.json');
-		await new FileStorage(projectDir).saveTasks(
+		await seedTasks(
+			new FileStorage(projectDir),
 			[
 				createTask({
 					id: '1',

@@ -14,6 +14,7 @@ import {
 	FileStorage,
 	getSchemaVersion
 } from '../../../src/modules/storage/adapters/file-storage/index.js';
+import { seedTasks } from '../seed-tasks.js';
 
 function createTask(id: string): Task {
 	return {
@@ -57,15 +58,17 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 		stderr.mock.calls.map((call: unknown[]) => String(call[0]));
 
 	describe('stamping', () => {
-		it('writes schemaVersion on a new standard-format file', async () => {
-			await storage.saveTasks([createTask('1')]);
+		it('writes schemaVersion on a new file', async () => {
+			await seedTasks(storage, [createTask('1')]);
 
-			expect(readFile().metadata.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+			expect(readFile().master.metadata.schemaVersion).toBe(
+				CURRENT_SCHEMA_VERSION
+			);
 		});
 
 		it('writes schemaVersion for every tag in a multi-tag file, including the converted master', async () => {
-			await storage.saveTasks([createTask('1')], 'master');
-			await storage.saveTasks([createTask('1')], 'feature');
+			await seedTasks(storage, [createTask('1')], 'master');
+			await seedTasks(storage, [createTask('1')], 'feature');
 
 			const data = readFile();
 			expect(data.master.metadata.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
@@ -75,7 +78,7 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 		it('stamps the master tag when a standard file without a version is converted', async () => {
 			writeFile({ tasks: [createTask('1')], metadata: { version: '1.0.0' } });
 
-			await storage.saveTasks([createTask('2')], 'feature');
+			await seedTasks(storage, [createTask('2')], 'feature');
 
 			expect(readFile().master.metadata.schemaVersion).toBe(
 				CURRENT_SCHEMA_VERSION
@@ -133,7 +136,7 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 			expect(metadata?.schemaVersion).toBeUndefined();
 			expect(warnings()).toEqual([]);
 
-			await storage.saveTasks(tasks);
+			await seedTasks(storage, tasks);
 			expect(readFile().master.metadata.schemaVersion).toBe(
 				CURRENT_SCHEMA_VERSION
 			);
@@ -194,7 +197,7 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 		it('keeps the newer version when saving a legacy-format tag', async () => {
 			writeFile(newerFile(999));
 
-			await storage.saveTasks([createTask('1'), createTask('2')]);
+			await seedTasks(storage, [createTask('1'), createTask('2')]);
 
 			expect(readFile().master.metadata.schemaVersion).toBe(999);
 		});
@@ -205,7 +208,7 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 				metadata: { version: '1.0.0', schemaVersion: 999 }
 			});
 
-			await storage.saveTasks([createTask('1'), createTask('2')]);
+			await seedTasks(storage, [createTask('1'), createTask('2')]);
 
 			expect(readFile().metadata.schemaVersion).toBe(999);
 		});
@@ -216,7 +219,7 @@ describe('FileStorage schemaVersion - Integration Tests', () => {
 				metadata: { version: '1.0.0', schemaVersion: 999 }
 			});
 
-			await storage.saveTasks([createTask('2')], 'feature');
+			await seedTasks(storage, [createTask('2')], 'feature');
 
 			expect(readFile().master.metadata.schemaVersion).toBe(999);
 			expect(readFile().feature.metadata.schemaVersion).toBe(
