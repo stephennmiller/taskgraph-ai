@@ -177,7 +177,10 @@ describe('addDependencyIn', () => {
 		];
 		const before = structuredClone(tasks);
 
-		expect(() => add(tasks, '1', '4')).toThrow(/would make a loop/);
+		// Names the subtask the loop runs through, not task 1, which 4 doesn't list
+		expect(() => add(tasks, '1', '4')).toThrow(
+			'That would make a loop: task 4 already depends on task 1.1'
+		);
 		expect(tasks).toEqual(before);
 	});
 

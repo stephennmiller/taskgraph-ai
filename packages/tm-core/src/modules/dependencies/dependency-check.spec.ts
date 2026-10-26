@@ -144,6 +144,13 @@ describe('validateTaskDependencies', () => {
 		]);
 	});
 
+	it('reports an inherited loop through a subtask stored without dependencies', () => {
+		const { dependencies: _, ...bare } = subtask(1);
+		const { issues } = validate([task('1', ['4'], [bare]), task('4', ['1.1'])]);
+
+		expect(issues.map((issue) => issue.taskId)).toEqual(['1.1', '4']);
+	});
+
 	it("does not call a task's dependency on its own subtask a loop", () => {
 		// 1.2 waits on its sibling 1.1. Task 1 also lists 1.2, which is not
 		// passed down, so 1.1 does not wait on 1.2 and there is no loop.
