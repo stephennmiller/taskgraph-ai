@@ -244,3 +244,26 @@ describe('other places that state the tool tier counts', () => {
 		);
 	});
 });
+
+describe('TASKGRAPH_TOOLS=all is documented as full project control', () => {
+	const read = (file: string) =>
+		fs.readFileSync(path.join(rootDir, file), 'utf8');
+	const files = [
+		'README.md',
+		'llms-install.md',
+		'.claude/rules/mcp.md',
+		'apps/docs/capabilities/mcp.mdx',
+		'apps/docs/best-practices/configuration-advanced.mdx',
+		'apps/docs/capabilities/github-sync.mdx',
+		'apps/docs/configuration.mdx'
+	];
+
+	it.each(files)(
+		'%s says all gives the MCP host full project control and prefers core or standard',
+		(file) => {
+			const text = read(file);
+			expect(text).toContain('gives the MCP host full project control');
+			expect(text).toContain('`core` or `standard`');
+		}
+	);
+});

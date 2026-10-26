@@ -378,11 +378,16 @@ get `core`.
 | `all` | 40 | everything: updates, dependencies, archive, tags, `research`, `move_task`, `scope_up_task`, `scope_down_task` and `generate` |
 | a list | custom | e.g. `get_tasks,next_task,set_task_status` |
 
-Set it when you add the server:
+`all` registers every tool. That gives the MCP host full project control: it
+can create, edit and delete tasks and tags, change settings, generate task
+files and write to GitHub. Prefer `core` or `standard` unless you need a tool
+only `all` includes.
+
+Set it when you add the server. `core` is the default:
 
 ```bash
 claude mcp add taskgraph-ai --scope user \
-  --env TASKGRAPH_TOOLS=all \
+  --env TASKGRAPH_TOOLS=core \
   -- npx -y taskgraph-ai
 ```
 
@@ -505,9 +510,9 @@ Then run the CLI from the build:
 node dist/taskgraph.js
 ```
 
-This repository's own `.mcp.json` starts `dist/mcp-server.js`, so build first
-or the server won't connect. After a `git pull`, run `npm run build` again;
-the CLI and server run from `dist/`.
+This repository's own `.mcp.json` starts `dist/mcp-server.js` with
+`TASKGRAPH_TOOLS=core`, so build first or the server won't connect. After a
+`git pull`, run `npm run build` again; the CLI and server run from `dist/`.
 
 ## Privacy
 

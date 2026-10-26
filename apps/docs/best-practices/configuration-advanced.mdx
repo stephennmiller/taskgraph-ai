@@ -12,7 +12,7 @@ The `TASKGRAPH_TOOLS` environment variable controls which tools the TaskGraph MC
 
 - **`core`** (default, alias `lean`): 7 essential tools. `get_tasks`, `next_task`, `get_task`, `set_task_status`, `add_note`, `parse_prd`, `expand_task`.
 - **`standard`**: 16 tools. Core plus `update_subtask`, project initialization, complexity analysis, `dependency_analysis`, `expand_all`, subtask and task add/remove.
-- **`all`**: every tool, including dependencies, tags, `research` and scope up/down.
+- **`all`**: every tool, including dependencies, tags, `research` and scope up/down. `all` gives the MCP host full project control. Prefer `core` or `standard`.
 - **Custom list**: comma-separated tool names, for example `"get_tasks,next_task,set_task_status"`.
 
 Set it in the `env` block of `.mcp.json` (recommended):

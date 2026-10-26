@@ -5,7 +5,7 @@
 			"command": "node",
 			"args": ["dist/mcp-server.js"],
 			"env": {
-				"TASKGRAPH_TOOLS": "all"
+				"TASKGRAPH_TOOLS": "core"
 			}
 		}
 	}

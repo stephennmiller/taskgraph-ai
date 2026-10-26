@@ -92,7 +92,7 @@ Specify exactly which tools to load using a comma-separated list. Tool names are
 ```
 
 #### All Tools
-Loads every tool, including `github_status` and `github_push` (see [GitHub Sync](/capabilities/github-sync)). Use when you need full TaskGraph functionality.
+Loads every tool, including `github_status` and `github_push` (see [GitHub Sync](/capabilities/github-sync)). That gives the MCP host full project control: the host can create, edit and delete tasks and tags, change settings, generate task files and write to GitHub. Prefer `core` or `standard` unless you need a tool only `all` includes.
 
 ```json
 {
@@ -112,7 +112,7 @@ Loads every tool, including `github_status` and `github_push` (see [GitHub Sync]
 
 - **Use `core`/`lean`**: Default setting, ideal for basic task management workflows or when context limits are strict
 - **Use `standard`**: For most development workflows that include task creation and analysis
-- **Use `all`**: When you need full functionality including tag management, dependencies, and advanced features
+- **Use `all`**: Only for a tool that `core` and `standard` omit. It gives the MCP host full project control. Prefer `core` or `standard`
 - **Use custom list**: When you have specific tool requirements or want to experiment with minimal sets
 
 ### Verification

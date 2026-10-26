@@ -23,7 +23,7 @@ How the TaskGraph Model Context Protocol (MCP) server is built and how to add a 
 - `coreTools` (7) and `standardTools` (16, core included): the tiers.
 - `registerTaskGraphTools(server, toolMode)`: registers `all`, `core` (alias `lean`, the default), `standard`, or a comma-separated list of names. List names match in any case and with `_` and `-` swapped. An unknown tier or any unknown list name throws, naming them, and `TaskGraphMCPServer.init()` throws when a tool fails to register, so `startServer` exits 1 instead of serving the wrong set of tools.
 
-`TASKGRAPH_TOOLS` in the client's MCP config sets the mode. `.mcp.json` only starts the server; it has no list of tools.
+`TASKGRAPH_TOOLS` in the client's MCP config sets the mode. This repo's `.mcp.json` sets `core`, the default. `all` registers every tool and gives the MCP host full project control. Prefer `core` or `standard`.
 
 ## Writing a tool
 
