@@ -68,7 +68,7 @@
         "description": "The generated plan is the product, and nothing measures it. The fake claude (#236) and build comparison (#238) test plumbing, not output. `tests/manual/prompts/prompt-test.js` is manual.",
         "details": "GitHub issue #252: https://github.com/stephennmiller/taskgraph-ai/issues/252\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": []
