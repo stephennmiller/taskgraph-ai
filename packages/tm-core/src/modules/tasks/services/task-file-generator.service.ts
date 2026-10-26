@@ -9,6 +9,7 @@ import type { Task, Subtask, TaskStatus } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
+import { assertTagName } from '../utils/tag-names.js';
 
 /**
  * Options for generating task files
@@ -61,6 +62,9 @@ export class TaskFileGeneratorService {
 			options.outputDir || path.join(this.projectPath, '.taskgraph', 'tasks');
 
 		try {
+			// The tag goes into each file name
+			assertTagName(tag);
+
 			// Ensure output directory exists
 			await fs.mkdir(outputDir, { recursive: true });
 

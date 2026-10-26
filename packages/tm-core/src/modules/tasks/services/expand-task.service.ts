@@ -11,7 +11,6 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { COMPLEXITY_REPORT_FILE } from '../../../common/constants/paths.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -36,7 +35,10 @@ import {
 	formatTasksContext
 } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
-import { withoutPlaceholders } from '../../reports/managers/complexity-report-manager.js';
+import {
+	complexityReportPath,
+	withoutPlaceholders
+} from '../../reports/managers/complexity-report-manager.js';
 import {
 	assignMetadata,
 	reconcileDependencySources
@@ -490,9 +492,9 @@ export class ExpandTaskService {
 		warn: (message: string) => void
 	): TaskAnalysis | undefined {
 		const suffix = tag === 'master' ? '.json' : `_${tag}.json`;
-		const defaultFile = path.join(
+		const defaultFile = complexityReportPath(
 			this.configManager.getProjectRoot(),
-			COMPLEXITY_REPORT_FILE.replace('.json', suffix)
+			tag
 		);
 		const file =
 			reportPath ??

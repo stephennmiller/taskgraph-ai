@@ -150,6 +150,26 @@ describe('TaskFileGeneratorService', () => {
 	});
 
 	describe('generateTaskFiles', () => {
+		it.each([
+			['a stored current tag', undefined],
+			['a passed tag', 'x/../../../escaped']
+		])(
+			'writes nothing outside the folder for %s with ../ in it',
+			async (_, tag) => {
+				service = new TaskFileGeneratorService(
+					mockStorage,
+					tempDir,
+					createMockConfigManager('x/../../../escaped')
+				);
+
+				const result = await service.generateTaskFiles({ tag });
+
+				expect(result.success).toBe(false);
+				expect(result.error).toContain("isn't a valid tag name");
+				expect(fs.existsSync(path.join(tempDir, 'escaped.md'))).toBe(false);
+			}
+		);
+
 		it('should generate task files for all tasks', async () => {
 			const result = await service.generateTaskFiles();
 

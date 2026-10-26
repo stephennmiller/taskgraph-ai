@@ -6,6 +6,7 @@
 import fs from 'node:fs/promises';
 import path from 'path';
 import { getLogger } from '../../../common/logger/index.js';
+import { assertTagName } from '../../tasks/utils/tag-names.js';
 import type {
 	ComplexityAnalysis,
 	ComplexityReport,
@@ -19,6 +20,7 @@ export function complexityReportPath(
 	projectRoot: string,
 	tag?: string
 ): string {
+	if (tag) assertTagName(tag);
 	const tagSuffix = tag && tag !== 'master' ? `_${tag}` : '';
 	return path.join(
 		projectRoot,

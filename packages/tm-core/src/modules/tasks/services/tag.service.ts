@@ -12,7 +12,7 @@ import {
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
 import { recordCurrentTag } from '../utils/branch-tag.js';
-import { isReservedNewTagName } from '../utils/tag-names.js';
+import { assertTagName, isReservedNewTagName } from '../utils/tag-names.js';
 
 /**
  * Options for creating a new tag
@@ -122,14 +122,6 @@ export interface ListTagsResult {
  */
 const RESERVED_TAG_NAMES = ['master', 'main', 'default'];
 
-/**
- * The characters a tag name may use: letters, numbers, hyphens and
- * underscores. Such a name is also safe to put in a shell command.
- */
-export const TAG_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
-
-const TAG_NAME_HINT = 'Use letters, numbers, - and _, like `feature-auth`';
-
 /** What TagService needs from the project beyond storage */
 export interface TagServiceContext {
 	projectRoot: string;
@@ -169,9 +161,7 @@ export class TagService {
 	 * @throws {TaskGraphError} if the name has other characters or is reserved
 	 */
 	private validateNewTagName(name: string): void {
-		if (!TAG_NAME_PATTERN.test(name)) {
-			throw validationError(`"${name}" isn't a valid tag name`, TAG_NAME_HINT);
-		}
+		assertTagName(name);
 		if (
 			RESERVED_TAG_NAMES.includes(name.toLowerCase()) ||
 			isReservedNewTagName(name)

@@ -1,3 +1,32 @@
+import {
+	ERROR_CODES,
+	TaskGraphError
+} from '../../../common/errors/taskgraph-error.js';
+
+/**
+ * The characters a tag name may use: letters, numbers, hyphens and
+ * underscores. Such a name is also safe to put in a shell command or a file name.
+ */
+export const TAG_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+/**
+ * Check a tag against TAG_NAME_PATTERN. Only new tags are checked when
+ * created, so run this on any tag (stored or passed) that goes into a file name.
+ * @throws {TaskGraphError} VALIDATION_ERROR, with a hint, when it doesn't match
+ */
+export function assertTagName(name: string): void {
+	if (TAG_NAME_PATTERN.test(name)) return;
+	const error = new TaskGraphError(
+		// JSON.stringify: a hand-edited name may hold control characters
+		`${JSON.stringify(name)} isn't a valid tag name`,
+		ERROR_CODES.VALIDATION_ERROR
+	);
+	// The CLI prints the hint under the message
+	throw Object.assign(error, {
+		hint: 'Use letters, numbers, - and _, like `feature-auth`'
+	});
+}
+
 /**
  * Names no new tag can take. JavaScript objects treat a `__proto__` key as
  * their prototype rather than as data, and the legacy scripts/ code that also
