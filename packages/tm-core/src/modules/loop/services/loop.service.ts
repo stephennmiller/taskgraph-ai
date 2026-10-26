@@ -2,13 +2,13 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
-import { childAutoUpdateEnv } from '../child-env.js';
 import { isTaskPreset } from '../loop-task.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import { spawnIteration } from './iteration-process.js';
 import {
 	CLAUDE_MISSING,
 	DOCKER_MISSING,
@@ -401,49 +401,63 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 		const args = this.buildCommandArgs(prompt, sandbox, false);
 		const timeout = loopIterationTimeoutMs();
-		const result = spawnSync(command, args, {
-			cwd: this.projectRoot,
-			encoding: 'utf-8',
-			maxBuffer: 50 * 1024 * 1024,
-			stdio: ['inherit', 'pipe', 'pipe'],
-			timeout,
-			// Claude runs `taskgraph`. Mark this child so that install can't
-			// start, and skip the update check entirely.
-			env: childAutoUpdateEnv('loop')
+		return new Promise((resolve) => {
+			let settled = false;
+			let timedOut = false;
+			let stdout = '';
+			let stderr = '';
+			const fail = (errorMessage: string): void => {
+				this.reportError(callbacks, errorMessage);
+				resolve(
+					this.createErrorIteration(iterationNum, startTime, errorMessage)
+				);
+			};
+			const child = spawnIteration(
+				command,
+				args,
+				this.projectRoot,
+				timeout,
+				() => {
+					timedOut = true;
+				}
+			);
+			child.stdout?.setEncoding('utf-8').on('data', (d: string) => {
+				stdout += d;
+			});
+			child.stderr?.setEncoding('utf-8').on('data', (d: string) => {
+				stderr += d;
+			});
+
+			child.once('error', (error: NodeJS.ErrnoException) => {
+				if (settled) return;
+				settled = true;
+				fail(this.formatCommandError(error, command, sandbox));
+			});
+
+			child.once('close', (exitCode: number | null) => {
+				if (settled) return;
+				settled = true;
+				if (timedOut) return fail(timeoutMessage(timeout));
+
+				const output = stdout + stderr;
+				if (output) {
+					callbacks?.onOutput?.(output);
+				}
+
+				if (exitCode === null) {
+					return fail('Command terminated abnormally (no exit code)');
+				}
+
+				// Markers come from Claude's reply on stdout; stderr would hide the last line
+				const { status, message } = this.parseCompletion(stdout, exitCode);
+				resolve({
+					iteration: iterationNum,
+					status,
+					duration: Date.now() - startTime,
+					message
+				});
+			});
 		});
-
-		if (result.error) {
-			const error = result.error as NodeJS.ErrnoException;
-			const errorMessage =
-				error.code === 'ETIMEDOUT'
-					? timeoutMessage(timeout)
-					: this.formatCommandError(error, command, sandbox);
-			this.reportError(callbacks, errorMessage);
-			return this.createErrorIteration(iterationNum, startTime, errorMessage);
-		}
-
-		const output = (result.stdout || '') + (result.stderr || '');
-		if (output) {
-			callbacks?.onOutput?.(output);
-		}
-
-		if (result.status === null) {
-			const errorMsg = 'Command terminated abnormally (no exit code)';
-			this.reportError(callbacks, errorMsg);
-			return this.createErrorIteration(iterationNum, startTime, errorMsg);
-		}
-
-		// Markers come from Claude's reply on stdout; stderr would hide the last line
-		const { status, message } = this.parseCompletion(
-			result.stdout || '',
-			result.status
-		);
-		return {
-			iteration: iterationNum,
-			status,
-			duration: Date.now() - startTime,
-			message
-		};
 	}
 
 	/**
@@ -477,21 +491,17 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				}
 			};
 
-			const child = spawn(command, args, {
-				cwd: this.projectRoot,
-				stdio: ['inherit', 'pipe', 'pipe'],
-				// Same marker as the non-verbose spawn above
-				env: childAutoUpdateEnv('loop')
-			});
 			const timeout = loopIterationTimeoutMs();
 			let timedOut = false;
-			const timer = setTimeout(() => {
-				timedOut = true;
-				child.kill('SIGTERM');
-				// A subprocess Claude started can hold the pipes open: close them so 'close' fires
-				child.stdout?.destroy();
-				child.stderr?.destroy();
-			}, timeout);
+			const child = spawnIteration(
+				command,
+				args,
+				this.projectRoot,
+				timeout,
+				() => {
+					timedOut = true;
+				}
+			);
 
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
@@ -570,7 +580,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			});
 
 			child.on('error', (error: NodeJS.ErrnoException) => {
-				clearTimeout(timer);
 				const errorMessage = this.formatCommandError(error, command, sandbox);
 				this.reportError(callbacks, errorMessage);
 
@@ -592,7 +601,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			child.on('close', (exitCode: number | null) => {
 				// Process remaining buffer only if stdout hasn't already ended
-				clearTimeout(timer);
 				if (!stdoutEnded && buffer) {
 					processLine(buffer);
 				}

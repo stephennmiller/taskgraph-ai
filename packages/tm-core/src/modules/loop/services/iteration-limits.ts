@@ -3,7 +3,10 @@
  * hangs or keeps failing (#659)
  */
 
-import { timeoutFromEnv } from '../../../common/utils/timeout-from-env.js';
+import {
+	formatTimeout,
+	timeoutFromEnv
+} from '../../../common/utils/timeout-from-env.js';
 
 /** Errors in a row that end the run, so a broken setup doesn't burn every iteration */
 export const MAX_CONSECUTIVE_ERRORS = 3;
@@ -20,9 +23,5 @@ export const DOCKER_MISSING =
 	'Docker is not installed. Install Docker Desktop to use --sandbox mode.';
 
 export function timeoutMessage(ms: number): string {
-	const limit =
-		ms >= 60000
-			? `${Math.round(ms / 60000)} minutes`
-			: `${Math.round(ms / 1000)} seconds`;
-	return `Claude didn't finish within ${limit} and was stopped. Set TASKGRAPH_LOOP_TIMEOUT_MS (milliseconds) to allow longer.`;
+	return `Claude didn't finish within ${formatTimeout(ms)} and was stopped. Set TASKGRAPH_LOOP_TIMEOUT_MS (milliseconds) to allow longer.`;
 }

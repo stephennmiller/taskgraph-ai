@@ -5,7 +5,10 @@
 
 import type { LanguageModel, ModelMessage } from 'ai';
 import type { ZodType } from 'zod';
-import { timeoutFromEnv } from '../../../common/utils/timeout-from-env.js';
+import {
+	formatTimeout,
+	timeoutFromEnv
+} from '../../../common/utils/timeout-from-env.js';
 
 export type ProviderLogLevel = 'debug' | 'info' | 'warn' | 'error';
 /** The host's logger; the legacy CLI passes its `log`, which honours silent mode */
@@ -179,6 +182,21 @@ export function aiCallTimeoutMs(): number {
 }
 
 const aiCallSignal = () => AbortSignal.timeout(aiCallTimeoutMs());
+
+/**
+ * A call the limit stopped says so and how to raise it. Without this, the
+ * Claude Code provider reports "process aborted by user" (#653).
+ */
+function timeoutOr(signal: AbortSignal, error: unknown): unknown {
+	if (signal.reason?.name !== 'TimeoutError') return error;
+	const timedOut = new Error(
+		`The AI call timed out after ${formatTimeout(aiCallTimeoutMs())} (if the computer slept, run it again). Set TASKGRAPH_AI_TIMEOUT_MS (milliseconds) to wait longer.`,
+		{ cause: error }
+	);
+	// isAbort reads the name: no retry or fallback role waits out the limit again
+	timedOut.name = 'TimeoutError';
+	return timedOut;
+}
 
 function normalizeUsage(reported: ReportedUsage | undefined) {
 	const inputTokens = reported?.inputTokens ?? reported?.promptTokens ?? 0;
@@ -378,6 +396,7 @@ export abstract class BaseAIProvider {
 	 * Generates text using the provider's model
 	 */
 	async generateText(params: ProviderCallParams) {
+		const signal = aiCallSignal();
 		try {
 			const ai = await loadAi();
 			this.validateParams(params);
@@ -391,7 +410,7 @@ export abstract class BaseAIProvider {
 			const client = await this.getClient(params);
 
 			const result = await ai.generateText({
-				abortSignal: aiCallSignal(),
+				abortSignal: signal,
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				...this.prepareTokenParam(params.modelId, params.maxTokens),
@@ -408,7 +427,7 @@ export abstract class BaseAIProvider {
 				usage: normalizeUsage(result.usage as ReportedUsage)
 			};
 		} catch (error) {
-			this.handleError('text generation', error);
+			this.handleError('text generation', timeoutOr(signal, error));
 		}
 	}
 
@@ -515,6 +534,7 @@ export abstract class BaseAIProvider {
 	async generateObject(params: ProviderCallParams) {
 		// Outside the try: the repair below needs the SDK's error classes
 		const ai = await loadAi();
+		const signal = aiCallSignal();
 		try {
 			this.validateParams(params);
 			this.validateMessages(params.messages);
@@ -536,7 +556,7 @@ export abstract class BaseAIProvider {
 			const schema = buildSafeSchema(ai, params.schema);
 
 			const result = await ai.generateObject({
-				abortSignal: aiCallSignal(),
+				abortSignal: signal,
 				model: client(params.modelId),
 				...this.prepareMessages(params.messages),
 				schema,
@@ -611,7 +631,7 @@ export abstract class BaseAIProvider {
 				}
 			}
 
-			this.handleError('object generation', error);
+			this.handleError('object generation', timeoutOr(signal, error));
 		}
 	}
 }

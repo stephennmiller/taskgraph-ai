@@ -1,6 +1,5 @@
 /**
  * @fileoverview Unit tests for simplified LoopService
- * Tests the synchronous spawnSync-based implementation
  */
 
 import {
@@ -12,6 +11,7 @@ import {
 	vi,
 	type MockInstance
 } from 'vitest';
+import { fakeClaude } from './fake-claude.js';
 import { LoopService, type LoopServiceOptions } from './loop.service.js';
 import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
@@ -26,6 +26,7 @@ describe('LoopService', () => {
 	};
 
 	let mockSpawnSync: MockInstance;
+	let mockSpawn: MockInstance;
 
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -36,6 +37,7 @@ describe('LoopService', () => {
 
 		// Default spawnSync mock
 		mockSpawnSync = vi.mocked(childProcess.spawnSync);
+		mockSpawn = vi.mocked(childProcess.spawn);
 
 		// Suppress console output in tests
 		vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -213,14 +215,14 @@ describe('LoopService', () => {
 
 		describe('successful iteration run', () => {
 			it('should run a single iteration successfully', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: 'Task completed',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: 'Task completed',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				const result = await service.run({
 					prompt: 'default',
@@ -235,14 +237,14 @@ describe('LoopService', () => {
 			});
 
 			it('should run multiple iterations', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: 'Done',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: 'Done',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				const result = await service.run({
 					prompt: 'default',
@@ -253,18 +255,18 @@ describe('LoopService', () => {
 
 				expect(result.totalIterations).toBe(3);
 				expect(result.tasksCompleted).toBe(3);
-				expect(mockSpawnSync).toHaveBeenCalledTimes(3);
+				expect(mockSpawn).toHaveBeenCalledTimes(3);
 			});
 
 			it('should call spawnSync with claude -p by default (non-sandbox)', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: 'Done',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: 'Done',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: 'default',
@@ -273,7 +275,7 @@ describe('LoopService', () => {
 					progressFile: '/test/progress.txt'
 				});
 
-				expect(mockSpawnSync).toHaveBeenCalledWith(
+				expect(mockSpawn).toHaveBeenCalledWith(
 					'claude',
 					expect.arrayContaining(['-p', expect.any(String)]),
 					expect.objectContaining({
@@ -283,14 +285,14 @@ describe('LoopService', () => {
 			});
 
 			it('marks the child as a loop process and skips auto-update', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: 'Done',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: 'Done',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: 'default',
@@ -299,7 +301,7 @@ describe('LoopService', () => {
 					progressFile: '/test/progress.txt'
 				});
 
-				const env = mockSpawnSync.mock.calls[0][2]?.env;
+				const env = mockSpawn.mock.calls[0][2]?.env;
 				expect(env).toMatchObject({
 					TASKGRAPH_LOOP_CHILD: '1',
 					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
@@ -310,14 +312,14 @@ describe('LoopService', () => {
 
 		describe('completion marker detection', () => {
 			it('should detect loop-complete marker and exit early', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '<loop-complete>ALL_DONE</loop-complete>',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '<loop-complete>ALL_DONE</loop-complete>',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				const result = await service.run({
 					prompt: 'default',
@@ -331,14 +333,14 @@ describe('LoopService', () => {
 			});
 
 			it('should detect loop-blocked marker and exit early', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '<loop-blocked>Missing API key</loop-blocked>',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '<loop-blocked>Missing API key</loop-blocked>',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				const result = await service.run({
 					prompt: 'default',
@@ -354,14 +356,14 @@ describe('LoopService', () => {
 
 		describe('error handling', () => {
 			it('should handle non-zero exit code', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: 'Error occurred',
-					status: 1,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: 'Error occurred',
+							status: 1
+						}) as never
+				);
 
 				const result = await service.run({
 					prompt: 'default',
@@ -375,14 +377,14 @@ describe('LoopService', () => {
 			});
 
 			it('should handle null status as error', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: '',
-					status: null,
-					signal: 'SIGTERM',
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: null
+						}) as never
+				);
 
 				const result = await service.run({
 					prompt: 'default',
@@ -397,14 +399,14 @@ describe('LoopService', () => {
 
 		describe('progress file operations', () => {
 			it('should initialize progress file at start', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: 'default',
@@ -425,14 +427,14 @@ describe('LoopService', () => {
 			});
 
 			it('should append final summary at end', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: 'default',
@@ -451,14 +453,14 @@ describe('LoopService', () => {
 
 		describe('preset resolution', () => {
 			it('should resolve built-in preset names', async () => {
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: 'test-coverage',
@@ -468,7 +470,7 @@ describe('LoopService', () => {
 				});
 
 				// Verify spawn was called with prompt containing iteration info
-				const spawnCall = mockSpawnSync.mock.calls[0];
+				const spawnCall = mockSpawn.mock.calls[0];
 				// Args are ['-p', prompt, '--dangerously-skip-permissions'] for non-sandbox
 				const promptArg = spawnCall[1][1];
 				expect(promptArg).toContain('iteration 1 of 1');
@@ -478,14 +480,14 @@ describe('LoopService', () => {
 				vi.mocked(fsPromises.readFile).mockResolvedValue(
 					'Custom prompt content'
 				);
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: '/custom/prompt.md',
@@ -504,14 +506,14 @@ describe('LoopService', () => {
 				vi.mocked(fsPromises.readFile).mockResolvedValue(
 					'Custom prompt content'
 				);
-				mockSpawnSync.mockReturnValue({
-					stdout: '',
-					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				});
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: 0
+						}) as never
+				);
 
 				await service.run({
 					prompt: 'toString',
@@ -521,7 +523,7 @@ describe('LoopService', () => {
 				});
 
 				expect(fsPromises.readFile).toHaveBeenCalledWith('toString', 'utf-8');
-				const promptArg = mockSpawnSync.mock.calls[0][1][1];
+				const promptArg = mockSpawn.mock.calls[0][1][1];
 				expect(promptArg).toContain('Custom prompt content');
 			});
 
@@ -727,16 +729,13 @@ describe('LoopService', () => {
 
 		it('should set isRunning to true during run', async () => {
 			let capturedIsRunning = false;
-			mockSpawnSync.mockImplementation(() => {
+			mockSpawn.mockImplementation(() => {
 				capturedIsRunning = service.isRunning;
-				return {
+				return fakeClaude({
 					stdout: '',
 					stderr: '',
-					status: 0,
-					signal: null,
-					pid: 123,
-					output: []
-				};
+					status: 0
+				});
 			});
 
 			await service.run({
@@ -750,14 +749,14 @@ describe('LoopService', () => {
 		});
 
 		it('should set isRunning to false on completion', async () => {
-			mockSpawnSync.mockReturnValue({
-				stdout: '',
-				stderr: '',
-				status: 0,
-				signal: null,
-				pid: 123,
-				output: []
-			});
+			mockSpawn.mockImplementation(
+				() =>
+					fakeClaude({
+						stdout: '',
+						stderr: '',
+						status: 0
+					}) as never
+			);
 
 			await service.run({
 				prompt: 'default',

@@ -64,11 +64,11 @@ If you still see `MCP request timed out after 60000ms`, check that `timeout` is 
 
 ## AI call timeout
 
-TaskGraph gives up on an AI request that has not answered after 10 minutes. When `parse-prd` streams its tasks, the same limit is the longest it waits between two parts of the stream, so a long PRD can stream for longer as long as tasks keep arriving. Set `TASKGRAPH_AI_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_AI_TIMEOUT_MS=1200000` for 20 minutes. Values above about 24 days are capped there.
+TaskGraph gives up on an AI request that has not answered after 10 minutes. When `parse-prd` streams its tasks, the same limit is the longest it waits between two parts of the stream, so a long PRD can stream for longer as long as tasks keep arriving. A request cut off this way fails with "The AI call timed out"; the limit counts clock time, so a computer that slept during the request can hit it, and running the command again is enough. Set `TASKGRAPH_AI_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_AI_TIMEOUT_MS=1200000` for 20 minutes. Values above about 24 days are capped there.
 
 ## Loop iteration timeout
 
-`taskgraph loop` stops a Claude Code run that has not finished after 60 minutes and counts it as a failed iteration; three failed iterations in a row end the loop. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. With `loop --parallel` the same limit applies to each task's Claude Code process: one that runs past it is stopped and marked failed, its worktree is kept and its claim released.
+`taskgraph loop` stops a Claude Code run that has not finished after 60 minutes, together with the processes it started, and counts it as a failed iteration; three failed iterations in a row end the loop. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it, for example `TASKGRAPH_LOOP_TIMEOUT_MS=7200000` for two hours. Values above about 24 days are capped there. With `loop --parallel` the same limit applies to each task's Claude Code process: one that runs past it is stopped and marked failed, its worktree is kept and its claim released.
 
 ## Tagged task lists
 
