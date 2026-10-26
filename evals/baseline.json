@@ -15,13 +15,8 @@
 				"headingCoverage": {
 					"score": 0.75,
 					"sections": 4,
-					"uncovered": [
-						"Goal"
-					],
-					"unsourced": [
-						"1",
-						"8"
-					]
+					"uncovered": ["Goal"],
+					"unsourced": ["1", "8"]
 				},
 				"dependencies": {
 					"score": 1,
@@ -605,9 +600,7 @@
 				"headingCoverage": {
 					"score": 0.8888888888888888,
 					"sections": 9,
-					"uncovered": [
-						"Sources"
-					],
+					"uncovered": ["Sources"],
 					"unsourced": []
 				},
 				"dependencies": {
@@ -852,9 +845,7 @@
 				"headingCoverage": {
 					"score": 0.9,
 					"sections": 10,
-					"uncovered": [
-						"Users"
-					],
+					"uncovered": ["Users"],
 					"unsourced": []
 				},
 				"dependencies": {
