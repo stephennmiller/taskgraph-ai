@@ -57,7 +57,12 @@ describe('tasks.expandAll', () => {
 		fs.mkdirSync(path.join(tgDir, 'reports'), { recursive: true });
 		fs.writeFileSync(
 			path.join(tgDir, 'config.json'),
-			JSON.stringify({ models: {}, global: { enableCodebaseAnalysis: false } })
+			// One subtask per task: the answer below has one, and a reply short of
+			// the count asked for is retried (#721)
+			JSON.stringify({
+				models: {},
+				global: { enableCodebaseAnalysis: false, defaultSubtasks: 1 }
+			})
 		);
 		tasksPath = path.join(tgDir, 'tasks', 'tasks.json');
 		fs.writeFileSync(

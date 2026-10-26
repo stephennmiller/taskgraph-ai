@@ -171,9 +171,10 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 	it('expand --all lists each task once, then one summary and one usage line', () => {
 		writeTasks([task(1, 'Parse commands'), task(2, 'Store todos')]);
 
-		const res = taskgraph('expand', '--all', '--num=2');
+		// The fake answers with one subtask, and a one-subtask reply to a
+		// larger count is retried (#721)
+		const res = taskgraph('expand', '--all', '--num=1');
 
-		// The fake answers with one subtask whatever the count asked for
 		expect(res.status).toBe(0);
 		expect(res.stdout).toContain('✓ Added 1 subtask to task 1');
 		expect(res.stdout).toContain('✓ Added 1 subtask to task 2');

@@ -50,6 +50,7 @@ import {
 } from '../../dependencies/subtask-dependency.js';
 import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
+import { degenerateReply } from './expand-reply-check.js';
 import type { TaskService } from './task-service.js';
 
 /**
@@ -314,17 +315,37 @@ export class ExpandTaskService {
 		);
 
 		hooks.onAiCall?.({ taskId, subtaskCount });
-		const response = await new AiService(aiConfig.toHost()).generateObject({
-			role: useResearch ? 'research' : 'main',
-			session: input.session,
-			projectRoot,
-			schema: COMMAND_SCHEMAS['expand-task'],
-			objectName: 'subtasks',
-			systemPrompt,
-			prompt: userPrompt,
-			commandName: 'expand-task',
-			outputType: input.outputType ?? 'cli'
-		});
+		const callAi = () =>
+			new AiService(aiConfig.toHost()).generateObject({
+				role: useResearch ? 'research' : 'main',
+				session: input.session,
+				projectRoot,
+				schema: COMMAND_SCHEMAS['expand-task'],
+				objectName: 'subtasks',
+				systemPrompt,
+				prompt: userPrompt,
+				commandName: 'expand-task',
+				outputType: input.outputType ?? 'cli'
+			});
+		let response = await callAi();
+		const firstProblem = degenerateReply(
+			response?.mainResult?.subtasks,
+			subtaskCount
+		);
+		if (firstProblem) {
+			// A stub reply is a bad draw, not the task: ask once more
+			warn(`Task ${taskId}: the AI returned ${firstProblem}; asking again`);
+			const first = response?.telemetryData;
+			response = await callAi();
+			const second = response?.telemetryData;
+			if (first && second) {
+				response.telemetryData = {
+					...second,
+					...aggregateTelemetry([first, second], 'expand-task'),
+					isUnknownCost: first.isUnknownCost || second.isUnknownCost
+				};
+			}
+		}
 		let saved: Task;
 		let addedSubtasks: Subtask[];
 		try {
@@ -336,6 +357,13 @@ export class ExpandTaskService {
 			if (generated.length === 0) {
 				throw new TaskGraphError(
 					`The AI returned no subtasks for task ${taskId}; the task was left as it was`,
+					ERROR_CODES.VALIDATION_ERROR
+				);
+			}
+			const problem = degenerateReply(generated, subtaskCount);
+			if (problem) {
+				throw new TaskGraphError(
+					`Task ${taskId}: the AI returned ${problem}, twice; the task was left as it was. Run expand again, or give it more context with a prompt`,
 					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
