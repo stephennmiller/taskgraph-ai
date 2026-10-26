@@ -109,9 +109,8 @@ const nextSubtaskId = (parent: Item) =>
 		: 1;
 
 /**
- * Whether `task` (a subtask of `parentId` when given) is under `targetId` or
- * depends on it, directly, through what it depends on, or through its
- * subtasks
+ * Whether `task` (a subtask of `parentId` when given) depends on `targetId`,
+ * directly, through what it depends on, or through its subtasks
  */
 function isDependentOn(
 	tasks: Item[],
@@ -119,8 +118,6 @@ function isDependentOn(
 	targetId: string,
 	parentId?: DependencyId
 ): boolean {
-	if (task.parentTaskId !== undefined && String(task.parentTaskId) === targetId)
-		return true;
 	const fullDeps: string[] = (task.dependencies || []).map(
 		(dep: DependencyId) =>
 			parentId === undefined
@@ -164,8 +161,7 @@ export function addSubtaskIn(
 			description: data.description || '',
 			details: data.details || '',
 			status,
-			dependencies: data.dependencies || [],
-			parentTaskId: parentIdNum
+			dependencies: data.dependencies || []
 		};
 		parentTask.subtasks.push(subtask);
 		return subtask as unknown as Subtask;
@@ -175,9 +171,6 @@ export function addSubtaskIn(
 	const taskIndex = items.findIndex((t) => String(t.id) === String(taskIdNum));
 	if (taskIndex === -1) notFound(`Task with ID ${taskIdNum} not found`);
 	const task = items[taskIndex];
-	if (task.parentTaskId) {
-		fail(`Task ${taskIdNum} is already a subtask of task ${task.parentTaskId}`);
-	}
 	if (taskIdNum === parentIdNum) {
 		fail('Cannot make a task a subtask of itself');
 	}
@@ -196,7 +189,6 @@ export function addSubtaskIn(
 	const subtask: Item = {
 		...task,
 		id: newSubtaskId,
-		parentTaskId: parentIdNum,
 		dependencies
 	};
 	assignMetadata(subtask, metadata);

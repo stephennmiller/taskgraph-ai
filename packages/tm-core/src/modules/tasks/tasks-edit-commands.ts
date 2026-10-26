@@ -133,8 +133,8 @@ export class TaskEditCommands {
 	/**
 	 * Add a subtask to `parentId`, or with `fromTaskId` turn that task into
 	 * one (what depended on it then depends on the subtask), in one locked
-	 * write. Throws when the parent or task is missing, the task is already
-	 * a subtask, or the parent depends on it.
+	 * write. Throws when the parent or task is missing, or the parent is
+	 * under or depends on it.
 	 */
 	async addSubtask(
 		parentId: string,

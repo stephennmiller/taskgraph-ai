@@ -168,6 +168,29 @@ describe('add-subtask and move through tasks', () => {
 		expect(readFile().master.tasks[1].subtasks[0].title).toBe('Read files');
 	});
 
+	it('lets a subtask parent be renumbered and its old ID reused (#701)', async () => {
+		await tmCore.tasks.addSubtask('2', { title: 'Read files' });
+		await tmCore.tasks.move('2', '20');
+		await tmCore.tasks.move('3', '2');
+
+		const { subtask } = await tmCore.tasks.addSubtask('20', {
+			fromTaskId: '2'
+		});
+
+		expect(subtask).toMatchObject({ id: 2, title: 'Report' });
+		expect(idsIn('master')).toEqual(['1', '20']);
+		expect(readFile().master.tasks[1].subtasks[0]).not.toHaveProperty(
+			'parentTaskId'
+		);
+	});
+
+	it('moves a task to another tag without writing a tag field that a rename would leave stale (#702)', async () => {
+		await tmCore.tasks.moveToTag(['3'], 'master', 'feature');
+		await tmCore.tasks.renameTag('feature', 'later');
+
+		expect(readFile().later.tasks[0]).not.toHaveProperty('tag');
+	});
+
 	it('moves a task to another tag and saves both tags', async () => {
 		const result = await tmCore.tasks.moveToTag(['3'], 'master', 'feature');
 

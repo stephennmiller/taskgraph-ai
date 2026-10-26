@@ -242,7 +242,6 @@ First promote it to a full task using:
 			});
 		}
 		const [task] = source.splice(index, 1);
-		task.tag = targetTag;
 		task.metadata ??= {};
 		task.metadata.moveHistory ??= [];
 		task.metadata.moveHistory.push({
