@@ -116,7 +116,7 @@ describe.skipIf(!built)('built CLI against the fake claude', () => {
 		install();
 		expect(taskgraph('add-task', '--prompt', 'First task').status).toBe(0);
 
-		const res = taskgraph('expand', '--id=1', '--num=3', '--force');
+		const res = taskgraph('expand', '--id=1', '--num=1', '--force');
 
 		expect(res.status).toBe(0);
 		const [task] = readTasks();

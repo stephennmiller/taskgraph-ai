@@ -57,7 +57,8 @@ describe.skipIf(!built)(
 			new Promise<Finished>((resolve) => {
 				const child = spawn(
 					process.execPath,
-					[binPath, 'expand', '--all', '--num=2'],
+					// One: the fake answers with one subtask (#721)
+					[binPath, 'expand', '--all', '--num=1'],
 					{
 						cwd: project,
 						env,
