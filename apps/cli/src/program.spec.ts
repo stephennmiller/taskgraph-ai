@@ -190,14 +190,16 @@ describe('runCLI update check', () => {
 
 		await runCLI(['node', 'taskgraph', 'upgrade']);
 
-		expect(autoUpdate.performAutoUpdate).toHaveBeenCalledWith('1.1.0');
+		expect(autoUpdate.performAutoUpdate).toHaveBeenCalledWith('1.1.0', {
+			explicit: true
+		});
 		expect(autoUpdate.checkForUpdate).toHaveBeenCalledTimes(1);
 		// A restart would only run `upgrade` again on the new version
 		expect(autoUpdate.restartWithNewVersion).not.toHaveBeenCalled();
 	});
 
-	it('exits 1 when upgrade refuses to install', async () => {
-		process.stdin.isTTY = false;
+	it('exits 1 when upgrade runs in a process loop started', async () => {
+		process.env.TASKGRAPH_LOOP_CHILD = '1';
 
 		await runCLI(['node', 'taskgraph', 'upgrade']);
 
