@@ -37,7 +37,7 @@ import {
 } from '@tm/core';
 import { biomeFormattedJson } from './lib/baseline.js';
 import { formatDiff, formatRun } from './lib/format.js';
-import { PRD_PATH, type WorkerOutput } from './lib/shared.js';
+import { PRD_PATH, type WorkerOutput, fail } from './lib/shared.js';
 
 interface Sample {
 	id: string;
@@ -61,11 +61,6 @@ const { values: args } = parseArgs({
 		keep: { type: 'boolean', default: false }
 	}
 });
-
-function fail(message: string, hint: string): never {
-	console.error(`✗ ${message}\n  ${hint}`);
-	process.exit(1);
-}
 
 const allSamples: Sample[] = JSON.parse(
 	fs.readFileSync(path.join(evalsDir, 'samples.json'), 'utf8')

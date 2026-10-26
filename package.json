@@ -30,6 +30,7 @@
 		"build:build-config": "npm run build -w @tm/build-config",
 		"test": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts",
 		"evals": "tsx evals/run.ts",
+		"evals:review": "tsx evals/review.ts",
 		"smoke:mcp": "node apps/mcp/tests/smoke/mcp-stdio.smoke.mjs --tools all",
 		"test:unit": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts unit",
 		"test:integration": "cross-env NODE_ENV=test vitest run -c vitest.root.config.ts integration",

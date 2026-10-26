@@ -1,5 +1,5 @@
 /**
- * What evals/run.ts and the plan worker share.
+ * What evals/run.ts, evals/review.ts and the plan worker share.
  */
 
 import type {
@@ -19,4 +19,10 @@ export interface WorkerOutput {
 	calls: EvalCall[];
 	verdict: JudgeVerdict | null;
 	error?: string;
+}
+
+/** Print the problem and how to fix it, then exit 1 */
+export function fail(message: string, hint: string): never {
+	console.error(`✗ ${message}\n  ${hint}`);
+	process.exit(1);
 }
