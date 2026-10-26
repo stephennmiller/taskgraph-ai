@@ -1,6 +1,8 @@
 /**
  * @fileoverview The MCP tools by name, the tiers TASKGRAPH_TOOLS picks from,
- * and registerTaskGraphTools, which registers the chosen set.
+ * and registerTaskGraphTools, which registers the chosen set. `core` is the
+ * default. `all` registers every tool and gives the MCP host full project
+ * control; prefer `core` or `standard`.
  */
 
 import type { FastMCP } from 'fastmcp';
@@ -165,7 +167,9 @@ function resolveToolName(toolName: string): string | null {
 function selectTools(enabledTools: string): string[] {
 	switch (enabledTools.toLowerCase()) {
 		case 'all':
-			logger.info('Loading all available tools');
+			logger.warn(
+				'TASKGRAPH_TOOLS=all registers every tool and gives the MCP host full project control. Prefer core or standard.'
+			);
 			return Object.keys(toolRegistry);
 		case 'core':
 		case 'lean':
@@ -209,8 +213,9 @@ function selectTools(enabledTools: string): string[] {
 
 /**
  * Register the tools a TASKGRAPH_TOOLS value names: `all`, `core` (or
- * `lean`), `standard`, or a comma-separated list of tool names. Throws on a
- * value that names an unknown tier or tool (see selectTools).
+ * `lean`, the default), `standard`, or a comma-separated list of tool names.
+ * `all` gives the MCP host full project control; prefer `core` or `standard`.
+ * Throws on a value that names an unknown tier or tool (see selectTools).
  */
 export function registerTaskGraphTools(server: FastMCP, toolMode = 'core') {
 	const registeredTools: string[] = [];
