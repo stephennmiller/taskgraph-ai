@@ -9,12 +9,16 @@
  * (older files) or a string (what tm-core saves): IDs are compared as
  * strings, and reported as they are stored. A bare number up to 99 in a
  * subtask's dependencies is a sibling subtask (see subtask-dependency.ts).
+ * A subtask also waits on its parent's dependencies, and those edges count
+ * when looking for a loop. A parent's dependency on one of its own subtasks
+ * is not passed down.
  */
 
 import { isTaskComplete } from '../../common/constants/index.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import type { PrdCoverage } from '../prd/prd-coverage.js';
 import { isArchivedReference, liveOrArchived } from '../tasks/utils/archive.js';
+import { dependencyEdges } from './dependency-edges.js';
 import { stronglyConnectedComponents } from './dependency-graph.js';
 import {
 	assignMetadata,
@@ -72,38 +76,6 @@ export interface DependencyFixResult extends DependencyCounts {
 	tasksPath: string;
 }
 
-/**
- * Every task and subtask's dependencies as full IDs ("3", "3.2"), without
- * self-dependencies, which are reported on their own
- * @param subtasksOnly - Keep only edges between subtasks, the ones
- *   fixDependencies can break
- */
-function dependencyEdges(
-	tasks: Task[],
-	{ subtasksOnly = false } = {}
-): Map<string, string[]> {
-	const graph = new Map<string, string[]>();
-	const add = (id: string, deps: string[]) => {
-		graph.set(
-			id,
-			deps.filter((dep) => dep !== id && (!subtasksOnly || dep.includes('.')))
-		);
-	};
-	for (const task of tasks) {
-		const taskId = String(task.id);
-		if (!subtasksOnly) add(taskId, (task.dependencies || []).map(String));
-		for (const subtask of task.subtasks || []) {
-			add(
-				`${taskId}.${subtask.id}`,
-				(subtask.dependencies || []).map((dep) =>
-					resolveSubtaskDependency(taskId, dep)
-				)
-			);
-		}
-	}
-	return graph;
-}
-
 /** Strongly connected components of an edge map (see dependency-graph.ts) */
 function components(
 	graph: Map<string, string[]>,
@@ -130,31 +102,6 @@ function findLoopMembers(graph: Map<string, string[]>): Set<string> {
 		}
 	}
 	return members;
-}
-
-/**
- * Whether `to` can be reached from `from` along dependencies. Iterative, so a
- * long chain can't overflow the stack.
- */
-export function dependsOnTransitively(
-	tasks: Task[],
-	from: string,
-	to: string
-): boolean {
-	const graph = dependencyEdges(tasks);
-	const seen = new Set<string>([from]);
-	const queue = [from];
-	while (queue.length > 0) {
-		const id = queue.pop() as string;
-		if (id === to) return true;
-		for (const next of graph.get(id) ?? []) {
-			if (!seen.has(next)) {
-				seen.add(next);
-				queue.push(next);
-			}
-		}
-	}
-	return false;
 }
 
 /**
@@ -271,10 +218,10 @@ export function validateTaskDependencies(
 		}
 
 		for (const subtask of task.subtasks || []) {
-			if (!subtask.dependencies) continue;
 			const fullSubtaskId = `${task.id}.${subtask.id}`;
 
-			for (const depId of subtask.dependencies) {
+			// No list of its own can still be in a loop through its parent's
+			for (const depId of subtask.dependencies || []) {
 				if (
 					String(depId) === fullSubtaskId ||
 					(isSiblingReference(depId) && depId === subtask.id)
