@@ -1,0 +1,20 @@
+# High-risk paths: a PR touching any of these needs the maintainer's approval
+# before it merges. Everything else is low risk. See "Merging and risk tiers"
+# in CONTRIBUTING.md.
+
+# CI, release and publish
+/.github/workflows/  @stephennmiller
+/.github/scripts/    @stephennmiller
+/.github/CODEOWNERS  @stephennmiller
+
+# Installer and upgrade path
+/apps/cli/src/utils/auto-update/            @stephennmiller
+/apps/cli/src/commands/upgrade.command.ts   @stephennmiller
+/.githooks/                                 @stephennmiller
+
+# Claude Code AI backend and its sandboxing (path guard, settingSources)
+/packages/tm-core/src/modules/ai/providers/claude-code*.ts  @stephennmiller
+
+# Dependencies
+package.json       @stephennmiller
+package-lock.json  @stephennmiller

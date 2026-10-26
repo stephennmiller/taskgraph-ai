@@ -87,6 +87,15 @@ The roadmap is tracked in two places: [GitHub issues](https://github.com/stephen
 
 `taskgraph github push` leaves imported issues alone, so running it here doesn't rewrite or duplicate them. Tasks that aren't linked to an issue would still get a new one, so run `import` first.
 
+### Merging and risk tiers
+
+A PR's risk tier comes from the paths it touches. [`.github/CODEOWNERS`](.github/CODEOWNERS) lists the high-risk paths.
+
+- **High risk**: anything in `.github/CODEOWNERS`: CI and release workflows (`.github/workflows/`, including `version-bump.yml` and `release-check.yml`), `.github/scripts/`, the installer and upgrade path, the Claude Code AI backend and its sandboxing, and any `package.json` or the lockfile. These need the maintainer's approval. Agents open the PR, then leave it for the maintainer; they never merge it.
+- **Low risk**: everything else (docs, tests, source outside those paths, formatting). Merges once review is done and CI is green.
+
+A bot's approval never counts as the maintainer's. A push after an approval needs a new approval.
+
 ### Code Quality Standards
 
 1. **Write tests** for new functionality
