@@ -1,6 +1,7 @@
 /**
- * @fileoverview A failed write on a project that has only config.json leaves
- * no tasks.json behind (#667), so later commands still see a missing file.
+ * @fileoverview A failed write, or one with nothing to save, on a project
+ * that has only config.json leaves no tasks.json behind (#667, #704), so
+ * later commands still see a missing file.
  */
 
 import * as fs from 'node:fs';
@@ -43,6 +44,26 @@ describe('failed write without tasks.json', () => {
 		await expect(tmCore.tasks.addNote('1', 'progress')).rejects.toThrow(
 			/not found/i
 		);
+
+		expect(fs.existsSync(tasksPath)).toBe(false);
+	});
+
+	// #704: each of these reads the tag under the write lock, finds nothing
+	// to change and saves nothing
+	it('next --claim with no tasks creates no tasks.json', async () => {
+		await expect(tmCore.tasks.claimNext()).resolves.toBeNull();
+
+		expect(fs.existsSync(tasksPath)).toBe(false);
+	});
+
+	it('archive with no tasks creates no tasks.json', async () => {
+		await tmCore.tasks.archive({ olderThanDays: 30 });
+
+		expect(fs.existsSync(tasksPath)).toBe(false);
+	});
+
+	it('fix-dependencies with no tasks creates no tasks.json', async () => {
+		await tmCore.tasks.fixDependencies();
 
 		expect(fs.existsSync(tasksPath)).toBe(false);
 	});

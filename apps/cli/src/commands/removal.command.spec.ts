@@ -80,18 +80,27 @@ afterEach(() => {
 });
 
 describe('remove-task', () => {
-	it('removes the IDs that exist with --yes, skipping the rest', async () => {
-		tasks.previewTaskRemoval.mockResolvedValue(preview(['2', '5.1'], ['9']));
+	it('removes every ID with --yes', async () => {
+		tasks.previewTaskRemoval.mockResolvedValue(preview(['2', '5.1']));
 
-		await run('remove-task', '--id=2,9,5.1', '--yes', '--tag=dev');
+		await run('remove-task', '--id=2,5.1', '--yes', '--tag=dev');
 
-		expect(tasks.previewTaskRemoval).toHaveBeenCalledWith('2,9,5.1', {
+		expect(tasks.previewTaskRemoval).toHaveBeenCalledWith('2,5.1', {
 			tag: 'dev'
 		});
 		expect(tasks.removeTasks).toHaveBeenCalledWith('2,5.1', { tag: 'dev' });
-		expect(output('warn')).toContain('Task 9 not found, skipping');
 		expect(output('log')).toContain('Removed 2 tasks: 2, 5.1');
 		expect(process.exitCode).toBeUndefined();
+	});
+
+	it('exits 1 and removes nothing when one ID of several is unknown', async () => {
+		tasks.previewTaskRemoval.mockResolvedValue(preview(['2', '5.1'], ['9']));
+
+		await run('remove-task', '--id=2,9,5.1', '--yes');
+
+		expect(tasks.removeTasks).not.toHaveBeenCalled();
+		expect(output('error')).toContain('Task 9 not found; nothing was removed');
+		expect(process.exitCode).toBe(1);
 	});
 
 	it('exits 1 and removes nothing when no ID exists', async () => {

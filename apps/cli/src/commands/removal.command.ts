@@ -111,14 +111,16 @@ async function removeTasks(
 		tag: options.tag
 	});
 	const { found, missing } = preview;
-	const notFound = `${missing.length === 1 ? 'Task' : 'Tasks'} ${missing.map(terminalSafe).join(', ')} not found`;
-	// Nothing to remove is a failure: the ID was probably mistyped
-	if (found.length === 0) {
-		printError(notFound, 'Run `taskgraph list` to see task IDs');
+	// One unknown ID refuses the whole list, as MCP and tm-core do: it was
+	// probably mistyped, and the rest may have been chosen with it in mind
+	if (missing.length > 0) {
+		printError(
+			`${missing.length === 1 ? 'Task' : 'Tasks'} ${missing.map(terminalSafe).join(', ')} not found; nothing was removed`,
+			'Run `taskgraph list` to see task IDs, then retry without the unknown ones'
+		);
 		process.exitCode = 1;
 		return;
 	}
-	if (missing.length > 0) console.warn(chalk.yellow(`${notFound}, skipping`));
 
 	if (!options.yes) {
 		// A prompt without a terminal hangs scripts and agents

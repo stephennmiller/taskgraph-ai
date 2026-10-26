@@ -21,7 +21,7 @@
 			"mcp": "remove_task",
 			"input": { "projectRoot": "<project>", "id": "2.2,3", "confirm": true }
 		},
-		["remove-task", "--id=1,99", "--yes"],
+		{ "args": ["remove-task", "--id=1,99", "--yes"], "expectExit": 1 },
 		{ "args": ["list", "--format", "json"], "capture": "stdout" }
 	]
 }

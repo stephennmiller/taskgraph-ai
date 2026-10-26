@@ -319,19 +319,20 @@ export class FileOperations {
 
 			// Apply modification
 			const newData = await modifier(currentData);
+			const json = JSON.stringify(newData, null, 2);
 
-			await writeFileAtomic(filePath, JSON.stringify(newData, null, 2));
-			written = true;
+			// Nothing to store in a file we created only to lock it (#704)
+			if (created && json === '{}') {
+				await this.removePlaceholder(filePath);
+			} else {
+				await writeFileAtomic(filePath, json);
+				written = true;
+			}
 			await options.afterWrite?.();
 		} catch (err) {
-			// Don't leave our '{}' placeholder behind (#667); still under the lock,
-			// and only if no other process filled the file before we locked it
-			if (created && !written && release) {
-				const content = await fs.readFile(filePath, 'utf-8').catch(() => '');
-				// A failed rm (Windows EPERM) must not hide the real error
-				if (content.trim() === '{}')
-					await fs.rm(filePath, { force: true }).catch(() => undefined);
-			}
+			// Don't leave our '{}' placeholder behind (#667)
+			if (created && !written && release)
+				await this.removePlaceholder(filePath);
 			throw err;
 		} finally {
 			if (release) {
@@ -348,6 +349,17 @@ export class FileOperations {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Remove the '{}' that ensureFileExists created. Call it under the lock;
+	 * it keeps a file another process filled before we locked it.
+	 */
+	private async removePlaceholder(filePath: string): Promise<void> {
+		const content = await fs.readFile(filePath, 'utf-8').catch(() => '');
+		// A failed rm (Windows EPERM) must not hide the caller's error
+		if (content.trim() === '{}')
+			await fs.rm(filePath, { force: true }).catch(() => undefined);
 	}
 
 	/**
