@@ -67,7 +67,7 @@ npm run format
 - Use a conventional-commit title (see Versioning below)
 - Write a clear description
 - Reference any related issues
-- Don't rebase onto `main` after other PRs merge. `main` has a merge queue: once the PR is approved and green, it goes into the queue ("Merge when ready"), which tests it on top of `main` and the PRs ahead of it, then squash-merges it
+- Don't rebase onto `main` after other PRs merge. `main` doesn't require branches to be up to date, and PRs are squash-merged once they are green
 
 ## 📋 Development Guidelines
 
