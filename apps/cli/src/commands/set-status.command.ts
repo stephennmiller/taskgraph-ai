@@ -268,7 +268,13 @@ export class SetStatusCommand extends Command {
 						options.tag,
 						{ force: options.force }
 					);
-					updatedTasks.push(...results);
+					updatedTasks.push(
+						...results.map(({ taskId, oldStatus, newStatus }) => ({
+							taskId,
+							oldStatus,
+							newStatus
+						}))
+					);
 				} catch (error: any) {
 					hasError = true;
 					if (options.format === 'json') {
