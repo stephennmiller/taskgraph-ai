@@ -21,12 +21,13 @@ import type {
 /**
  * GitHub `owner/name`.
  *
- * A login is 1-39 alphanumeric characters, with hyphens only between
- * them. Dots are not a login character, so an owner cannot be `.` or `..`.
+ * An owner has no dots, so it cannot be `.` or `..`. Underscores and loose
+ * hyphens stay allowed: Enterprise Managed User logins end in `_shortcode`,
+ * and some older logins break today's hyphen rules.
  * A repository name is 1-100 characters from `[A-Za-z0-9._-]`, is not
  * only dots, and does not end in `.git`.
  */
-const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
+const OWNER_PATTERN = /^[A-Za-z0-9_-]+$/;
 const NAME_PATTERN = /^(?!\.+$)(?!.*\.git$)[A-Za-z0-9._-]{1,100}$/i;
 
 function isGitHubRepo(repo: string): boolean {
