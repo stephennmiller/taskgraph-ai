@@ -223,8 +223,8 @@ describe('tasks.expand', () => {
 
 		const saved = readFile().master.tasks[2].subtasks;
 		expect(saved.map((s: any) => [s.id, s.status, s.dependencies])).toEqual([
-			[1, 'pending', []],
-			[2, 'pending', [1]]
+			['1', 'pending', []],
+			['2', 'pending', [1]]
 		]);
 		expect(saved[0].metadata).toBeUndefined();
 		expect(saved[1].metadata.dependencySources).toEqual({ '3.1': 'inferred' });
@@ -250,12 +250,12 @@ describe('tasks.expand', () => {
 		// Task 3 doesn't depend on task 4, so its subtask can't either
 		const [first, second] = readFile().master.tasks[2].subtasks;
 		expect([first.id, first.title, first.dependencies]).toEqual([
-			1,
+			'1',
 			'Build the API',
 			[]
 		]);
 		expect([second.id, second.title, second.dependencies]).toEqual([
-			2,
+			'2',
 			'Wire the UI',
 			[1]
 		]);
@@ -586,17 +586,17 @@ describe('tasks.expand', () => {
 
 			const saved = readFile().master.tasks[1].subtasks;
 			expect(saved.map((s: any) => [s.id, s.title, s.dependencies])).toEqual([
-				[1, 'Parse flags', []],
-				[2, 'Parse commands', [1]],
-				[3, 'Added meanwhile', []],
-				[4, 'Step 3', []],
-				[5, 'Step 4', [4, 1]]
+				['1', 'Parse flags', []],
+				['2', 'Parse commands', [1]],
+				['3', 'Added meanwhile', []],
+				['4', 'Step 3', []],
+				['5', 'Step 4', [4, 1]]
 			]);
 			expect(saved[4].metadata.dependencySources).toEqual({
 				'2.4': 'inferred',
 				'2.1': 'inferred'
 			});
-			expect(result.addedSubtasks.map((s) => s.id)).toEqual([4, 5]);
+			expect(result.addedSubtasks.map((s) => s.id)).toEqual(['4', '5']);
 		});
 
 		it('gives each new subtask its own ID when the AI repeats one', async () => {
@@ -607,7 +607,7 @@ describe('tasks.expand', () => {
 			await tmCore.tasks.expand({ id: '2', num: 3 });
 
 			const saved = readFile().master.tasks[1].subtasks;
-			expect(saved.map((s: any) => s.id)).toEqual([1, 2, 3, 4, 5]);
+			expect(saved.map((s: any) => s.id)).toEqual(['1', '2', '3', '4', '5']);
 		});
 
 		it('finds the task in a file saved with string IDs (#392)', async () => {

@@ -132,7 +132,7 @@ describe('FileStorage Metadata Preservation - Integration Tests', () => {
 					metadata: { parentMeta: 'value' },
 					subtasks: [
 						{
-							id: 1,
+							id: '1',
 							parentId: '1',
 							title: 'Subtask 1',
 							description: 'Description',

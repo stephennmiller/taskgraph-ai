@@ -66,7 +66,7 @@ function createSampleTasks(): Task[] {
 			testStrategy: 'Integration tests for task 2',
 			subtasks: [
 				{
-					id: 1,
+					id: '1',
 					parentId: '2',
 					title: 'Subtask 1',
 					description: 'First subtask description',
@@ -77,7 +77,7 @@ function createSampleTasks(): Task[] {
 					testStrategy: ''
 				},
 				{
-					id: 2,
+					id: '2',
 					parentId: '2',
 					title: 'Subtask 2',
 					description: 'Second subtask description',
@@ -89,7 +89,7 @@ function createSampleTasks(): Task[] {
 					testStrategy: ''
 				},
 				{
-					id: 3,
+					id: '3',
 					parentId: '2',
 					title: 'Subtask 3',
 					description: 'Depends on a task and a subtask of another task',

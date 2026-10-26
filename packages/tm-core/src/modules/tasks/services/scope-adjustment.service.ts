@@ -489,7 +489,7 @@ function renumber(
 	const numbered = generated.map((subtask) => {
 		const newId = nextId++;
 		idMapping.set(Number(subtask.id), newId);
-		return { ...subtask, id: newId };
+		return { ...subtask, id: String(newId) };
 	});
 	return numbered.map((subtask) => {
 		const remapped = {

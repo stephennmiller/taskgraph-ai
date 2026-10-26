@@ -220,7 +220,7 @@ export class FormatHandler {
 	}
 
 	/**
-	 * Normalize task IDs - keep Task IDs as strings, Subtask IDs as numbers
+	 * Normalize task and subtask IDs to strings
 	 */
 	private normalizeTasks(tasks: Task[]): Task[] {
 		return tasks.map((task) => ({
@@ -230,7 +230,7 @@ export class FormatHandler {
 			subtasks:
 				task.subtasks?.map((subtask) => ({
 					...subtask,
-					id: Number(subtask.id), // Subtask IDs are numbers
+					id: String(subtask.id), // Subtask IDs are strings since schema version 2
 					parentId: String(subtask.parentId ?? task.id) // Parent ID is string (Task ID); older files omit it
 				})) || []
 		}));

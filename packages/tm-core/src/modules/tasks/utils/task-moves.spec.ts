@@ -53,7 +53,7 @@ describe('addSubtaskIn', () => {
 		});
 
 		expect(subtask).toEqual({
-			id: 3,
+			id: '3',
 			title: 'Report errors',
 			description: '',
 			details: '',
@@ -77,7 +77,7 @@ describe('addSubtaskIn', () => {
 
 		const subtask = addSubtaskIn(tasks, '2', { fromTaskId: '3' });
 
-		expect(subtask).toMatchObject({ id: 3, title: 'Plugins' });
+		expect(subtask).toMatchObject({ id: '3', title: 'Plugins' });
 		expect(ids(tasks)).toEqual(['1', '2', '4', '5']);
 		expect(tasks.find((t) => String(t.id) === '4')?.dependencies).toEqual([
 			2,
@@ -122,7 +122,7 @@ describe('moveTasksIn', () => {
 		const six = tasks.find((t) => String(t.id) === '6');
 		// Its sibling dependency becomes a full ID, which reads the same on a task
 		expect(six?.dependencies).toEqual(['2.1']);
-		expect(tasks[1].subtasks.map((st) => st.id)).toEqual([1, 5]);
+		expect(tasks[1].subtasks.map((st) => st.id)).toEqual([1, '5']);
 		expect(tasks.find((t) => String(t.id) === '4')?.dependencies).toEqual([
 			2,
 			'2.5'

@@ -404,7 +404,7 @@ describe('TaskEntity', () => {
 				metadata: { tracked: true },
 				subtasks: [
 					{
-						id: 1,
+						id: '1',
 						parentId: '1',
 						title: 'Subtask 1',
 						description: 'Subtask desc',
@@ -453,7 +453,7 @@ describe('TaskEntity', () => {
 					id: '2',
 					subtasks: [
 						{
-							id: 1,
+							id: '1',
 							parentId: '2',
 							title: 'Schema',
 							description: 'Write the schema',

@@ -5,8 +5,12 @@
 import type { TaskMetadata } from '../../../../common/types/index.js';
 import { getOwnKey, setOwnKey } from '../../../../common/utils/own-key.js';
 
-/** Schema version this build writes to tasks.json (a missing value means 1). */
-export const CURRENT_SCHEMA_VERSION = 1;
+/**
+ * Schema version this build writes to tasks.json (a missing value means 1).
+ * 2: subtask IDs are strings (`"2"`), like task IDs; version 1 files stored
+ * numbers, which load as strings (#748).
+ */
+export const CURRENT_SCHEMA_VERSION = 2;
 
 function isValidVersion(value: unknown): value is number {
 	return typeof value === 'number' && Number.isInteger(value) && value >= 1;
@@ -47,19 +51,26 @@ function isTagObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * A top-level task in its stored form: the ID and each dependency a string,
- * as FileStorage saves them. A copy, so a caller's in-memory task (the legacy
- * scripts keep numeric IDs) is left alone. Subtasks keep their types: there a
- * bare number is a sibling.
+ * A top-level task in its stored form: the ID, each dependency and each
+ * subtask's ID a string, as FileStorage saves them. A copy, so a caller's
+ * in-memory task is left alone. Subtask dependencies keep their types: there
+ * a bare number is a sibling.
  */
 function withStringIds(task: unknown): unknown {
 	if (!task || typeof task !== 'object' || Array.isArray(task)) return task;
-	const { id, dependencies } = task as Record<string, unknown>;
+	const { id, dependencies, subtasks } = task as Record<string, unknown>;
 	const copy: Record<string, unknown> = { ...task };
 	if (typeof id === 'number') copy.id = String(id);
 	if (Array.isArray(dependencies)) {
 		copy.dependencies = dependencies.map((dep) =>
 			typeof dep === 'number' ? String(dep) : dep
+		);
+	}
+	if (Array.isArray(subtasks)) {
+		copy.subtasks = subtasks.map((subtask) =>
+			subtask && typeof subtask === 'object' && typeof subtask.id === 'number'
+				? { ...subtask, id: String(subtask.id) }
+				: subtask
 		);
 	}
 	return copy;
@@ -93,7 +104,7 @@ function stampTag(tag: Record<string, unknown>): void {
 
 /**
  * Stamp every tag of a whole tasks.json object with the schema version, and
- * store its task IDs and dependencies as strings, for writers that save the
+ * store its task and subtask IDs and dependencies as strings, for writers that save the
  * file in one piece (the legacy scripts). Takes the tagged format
  * (`{ <tag>: { tasks, metadata } }`) or the single-tag `{ tasks, metadata }`.
  * Keys that are not tags are left alone, so a file that holds no tasks passes

@@ -208,7 +208,7 @@ export class TaskEntity implements Task {
 		const nextId = this.subtasks.length + 1;
 		this.subtasks.push({
 			...subtask,
-			id: nextId,
+			id: String(nextId),
 			parentId: this.id
 		});
 		this.updatedAt = new Date().toISOString();

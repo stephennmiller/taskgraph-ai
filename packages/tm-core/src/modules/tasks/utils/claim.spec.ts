@@ -77,7 +77,7 @@ describe('claimNextInTasks', () => {
 				metadata: { claimedBy: 'alice' },
 				subtasks: [
 					{
-						id: 1,
+						id: '1',
 						parentId: '1',
 						title: 'Sub',
 						description: '',
@@ -102,7 +102,7 @@ describe('claimNextInTasks', () => {
 				status: 'in-progress',
 				subtasks: [
 					{
-						id: 1,
+						id: '1',
 						parentId: '1',
 						title: 'Sub',
 						description: '',

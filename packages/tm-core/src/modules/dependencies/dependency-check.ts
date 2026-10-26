@@ -224,7 +224,7 @@ export function validateTaskDependencies(
 			for (const depId of subtask.dependencies || []) {
 				if (
 					String(depId) === fullSubtaskId ||
-					(isSiblingReference(depId) && depId === subtask.id)
+					(isSiblingReference(depId) && String(depId) === String(subtask.id))
 				) {
 					issues.push({
 						type: 'self',

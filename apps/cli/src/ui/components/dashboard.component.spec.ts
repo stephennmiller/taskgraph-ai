@@ -37,7 +37,7 @@ const createTestSubtask = (
 	parentId: string,
 	status: TaskStatus
 ): Subtask => ({
-	id,
+	id: String(id),
 	parentId,
 	title: '',
 	status,

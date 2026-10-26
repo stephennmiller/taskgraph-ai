@@ -240,7 +240,7 @@ describe('tasks.updateWithPrompt', () => {
 		const { task } = await update({ id: '5' });
 
 		const [, second, third] = task.subtasks;
-		expect(task.subtasks.map((s) => s.id)).toEqual([1, 2, 3]);
+		expect(task.subtasks.map((s) => s.id)).toEqual(['1', '2', '3']);
 		expect(second.metadata).toEqual({
 			owner: 'kim',
 			dependencySources: { '5.1': 'inferred' }
@@ -265,7 +265,7 @@ describe('tasks.updateWithPrompt', () => {
 
 		await update();
 		const first = saved().subtasks;
-		expect(first.find((s: any) => s.id === 1)).toMatchObject({
+		expect(first.find((s: any) => s.id === '1')).toMatchObject({
 			title: 'Shipped',
 			status: 'done',
 			details: 'kept'
@@ -277,7 +277,7 @@ describe('tasks.updateWithPrompt', () => {
 			{ id: '1', prompt: 'Rewrite it' },
 			{ onWarning: (m) => warnings.push(m) }
 		);
-		expect(saved().subtasks).toMatchObject([done]);
+		expect(saved().subtasks).toMatchObject([{ ...done, id: '1' }]);
 		expect(warnings).toContain(
 			'Subtasks removed by AI. Restoring original subtasks.'
 		);
@@ -479,11 +479,11 @@ describe('tasks.updateWithPrompt', () => {
 
 		expect(saved().subtasks.map((s: any) => [s.id, s.title, s.status])).toEqual(
 			[
-				[1, 'S3', 'pending'],
+				['1', 'S3', 'pending'],
 				// Still after the subtask it followed
-				[4, 'Added meanwhile', 'pending'],
-				[2, 'Shipped', 'done'],
-				[3, 'S2', 'in-progress']
+				['4', 'Added meanwhile', 'pending'],
+				['2', 'Shipped', 'done'],
+				['3', 'S2', 'in-progress']
 			]
 		);
 	});
@@ -511,9 +511,9 @@ describe('tasks.updateWithPrompt', () => {
 
 		expect(saved().subtasks.map((s: any) => [s.id, s.title, s.status])).toEqual(
 			[
-				[1, 'New', 'pending'],
-				[2, 'A', 'in-progress'],
-				[3, 'B', 'pending']
+				['1', 'New', 'pending'],
+				['2', 'A', 'in-progress'],
+				['3', 'B', 'pending']
 			]
 		);
 	});
@@ -539,7 +539,7 @@ describe('tasks.updateWithPrompt', () => {
 			{ onWarning: (m) => warnings.push(m) }
 		);
 
-		expect(saved().subtasks.map((s: any) => s.id)).toEqual([1, 2]);
+		expect(saved().subtasks.map((s: any) => s.id)).toEqual(['1', '2']);
 		expect(warnings).toEqual([]);
 	});
 

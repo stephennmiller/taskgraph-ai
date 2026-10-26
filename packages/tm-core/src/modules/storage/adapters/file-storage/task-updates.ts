@@ -171,7 +171,7 @@ function setSubtaskStatusIn(
 
 	// Find the subtask within the parent task
 	const subtaskIndex = parentTask.subtasks.findIndex(
-		(st) => st.id === subtaskNumericId || String(st.id) === subId
+		(st) => Number(st.id) === subtaskNumericId
 	);
 
 	if (subtaskIndex === -1) {

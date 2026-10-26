@@ -130,7 +130,7 @@ export function createSubtask(
 	const defaultParentId = idStr.includes('.') ? idStr.split('.')[0] : '1';
 
 	return {
-		id: overrides.id,
+		id: idStr,
 		parentId: overrides.parentId ?? defaultParentId,
 		title: overrides.title,
 		description: overrides.description ?? overrides.title,

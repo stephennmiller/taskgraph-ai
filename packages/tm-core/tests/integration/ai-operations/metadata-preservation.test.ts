@@ -195,7 +195,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 					metadata: { parentMeta: 'parent-value' },
 					subtasks: [
 						{
-							id: 1,
+							id: '1',
 							parentId: '1',
 							title: 'Subtask with metadata',
 							description: 'Has its own metadata',
@@ -280,7 +280,7 @@ describe('AI Operation Metadata Preservation - Integration Tests', () => {
 				createTask('1', {
 					subtasks: [
 						{
-							id: 1,
+							id: '1',
 							parentId: '1',
 							title: 'Tracked subtask',
 							description: 'Has metadata from import',

@@ -170,7 +170,7 @@ describe('tasks.updateFrom', () => {
 			assignee: 'lee',
 			acceptanceCriteria: [{ text: 'Sub works', checked: false }]
 		});
-		expect(three.subtasks).toMatchObject([subtask]);
+		expect(three.subtasks).toMatchObject([{ ...subtask, id: '1' }]);
 	});
 
 	it('marks added dependencies as inferred and keeps links on tasks and subtasks', async () => {
@@ -246,7 +246,7 @@ describe('tasks.updateFrom', () => {
 		);
 
 		expect(savedTasks()[0].status).toBe('pending');
-		expect(savedTasks()[0].subtasks).toMatchObject([done]);
+		expect(savedTasks()[0].subtasks).toMatchObject([{ ...done, id: '1' }]);
 		expect(warnings).toEqual([
 			'Task 2: Completed subtask 1 was modified or removed. Restoring.',
 			"Task 2: AI changed task status. Restoring original status 'pending'."
@@ -284,9 +284,9 @@ describe('tasks.updateFrom', () => {
 				.subtasks.sort(byId)
 				.map((s: any) => [s.id, s.title, s.status, s.details])
 		).toEqual([
-			[1, 'A', 'done', 'Kept'],
-			[2, 'B', 'in-progress', 'B notes'],
-			[3, 'New', 'pending', undefined]
+			['1', 'A', 'done', 'Kept'],
+			['2', 'B', 'in-progress', 'B notes'],
+			['3', 'New', 'pending', undefined]
 		]);
 	});
 

@@ -66,8 +66,8 @@ describe('renderIssue', () => {
 		const issue = renderIssue(
 			makeTask({
 				subtasks: [
-					{ id: 1, parentId: '3', title: 'Form', status: 'done' },
-					{ id: 2, parentId: '3', title: 'API', status: 'pending' }
+					{ id: '1', parentId: '3', title: 'Form', status: 'done' },
+					{ id: '2', parentId: '3', title: 'API', status: 'pending' }
 				] as Task['subtasks']
 			}),
 			{ tag: 'master' }

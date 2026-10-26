@@ -23,7 +23,7 @@ describe('stampTasksFileSchemaVersion', () => {
 		});
 	});
 
-	it('stores task IDs and dependencies as strings, as FileStorage does (#392)', () => {
+	it('stores task and subtask IDs and dependencies as strings, as FileStorage does (#392, #748)', () => {
 		const task = {
 			id: 2,
 			dependencies: [1, '3.1'],
@@ -38,12 +38,13 @@ describe('stampTasksFileSchemaVersion', () => {
 				id: '2',
 				dependencies: ['1', '3.1'],
 				// On a subtask a bare number is a sibling, so it keeps its type
-				subtasks: [{ id: 1, dependencies: [2, '3'] }]
+				subtasks: [{ id: '1', dependencies: [2, '3'] }]
 			}
 		]);
 		// The caller's task object is not changed
 		expect(task.id).toBe(2);
 		expect(task.dependencies).toEqual([1, '3.1']);
+		expect(task.subtasks[0].id).toBe(1);
 	});
 
 	it('never lowers a newer version already recorded on a tag', () => {
@@ -133,7 +134,7 @@ describe('stampTasksFileSchemaVersion', () => {
 		expect(Object.getPrototypeOf(data)).toBeNull();
 		expect(JSON.parse(JSON.stringify(data))).toEqual(
 			JSON.parse(
-				'{"__proto__":{"tasks":[],"metadata":{"created":"c","schemaVersion":1}},"constructor":{"tasks":[],"metadata":{"schemaVersion":1}}}'
+				`{"__proto__":{"tasks":[],"metadata":{"created":"c","schemaVersion":${CURRENT_SCHEMA_VERSION}}},"constructor":{"tasks":[],"metadata":{"schemaVersion":${CURRENT_SCHEMA_VERSION}}}}`
 			)
 		);
 	});
@@ -144,6 +145,8 @@ describe('stampTasksFileSchemaVersion', () => {
 
 		stampTasksFileSchemaVersion(data);
 
-		expect(data.master.metadata).toEqual({ schemaVersion: 1 });
+		expect(data.master.metadata).toEqual({
+			schemaVersion: CURRENT_SCHEMA_VERSION
+		});
 	});
 });

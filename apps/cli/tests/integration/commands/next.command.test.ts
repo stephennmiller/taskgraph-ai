@@ -425,7 +425,7 @@ describe('next command', () => {
 						acceptanceCriteria: ['Parent criterion'],
 						subtasks: [
 							{
-								id: 1,
+								id: '1',
 								parentId: '1',
 								title: 'Child',
 								description: 'd',

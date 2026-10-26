@@ -46,7 +46,7 @@ describe('FileStorage subtask dependencies - Integration Tests', () => {
 		const { subtasks: _none, ...base } = task('2');
 		const child: Subtask = {
 			...base,
-			id: 2,
+			id: '2',
 			parentId: '2',
 			dependencies
 		};
