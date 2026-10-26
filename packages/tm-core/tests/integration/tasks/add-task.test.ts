@@ -229,18 +229,17 @@ describe('tasks.add', () => {
 			expect(added()).not.toHaveProperty('metadata');
 		});
 
-		it('drops one that does not exist, with a warning', async () => {
-			const onWarning = vi.fn();
+		it('rejects ones that do not exist before the AI call, and saves nothing (#710)', async () => {
+			const before = readFile();
 
-			await tmCore.tasks.add(
-				{ prompt: 'p', dependencies: [999] },
-				{ onWarning }
-			);
-
-			expect(added().dependencies).toEqual([]);
-			expect(onWarning).toHaveBeenCalledWith(
-				"Task 999 doesn't exist; adding the task without that dependency"
-			);
+			await expect(
+				tmCore.tasks.add({ prompt: 'p', dependencies: [1, 999, 998] })
+			).rejects.toMatchObject({
+				message: "Tasks 999, 998 don't exist in tag 'master'",
+				hint: 'Run `taskgraph list` to see task IDs'
+			});
+			expect(generateObject).not.toHaveBeenCalled();
+			expect(readFile()).toEqual(before);
 		});
 
 		it('marks the ones the AI chose as inferred', async () => {
@@ -304,19 +303,23 @@ describe('tasks.add', () => {
 		});
 
 		it('resolves within the target tag only (#288)', async () => {
+			await expect(
+				tmCore.tasks.add({ prompt: 'p', dependencies: [3], tag: 'feature' })
+			).rejects.toThrow("Task 3 doesn't exist in tag 'feature'");
+
 			generateObject.mockResolvedValueOnce(
 				aiTask({ dependencies: [1, 3] }) as any
 			);
 			const onWarning = vi.fn();
 
 			const result = await tmCore.tasks.add(
-				{ prompt: 'p', dependencies: [3], tag: 'feature' },
+				{ prompt: 'p', tag: 'feature' },
 				{ onWarning }
 			);
 
 			expect(added('feature').dependencies).toEqual(['1']);
 			expect(onWarning).toHaveBeenCalledWith(
-				"Task 3 doesn't exist; adding the task without that dependency"
+				"The AI suggested dependencies that don't exist (3); left them out"
 			);
 			expect(result.dependencies).toEqual([
 				{ id: '1', title: 'Feature groundwork', addedByAi: true }
@@ -337,19 +340,20 @@ describe('tasks.add', () => {
 			]);
 		});
 
-		it('uses the priority given, and medium with a warning for an unknown one', async () => {
+		it('uses the priority given, and rejects an unknown one before the AI call (#710)', async () => {
 			await tmCore.tasks.add({ prompt: 'p', priority: 'HIGH' });
 			expect(added().priority).toBe('high');
 
-			const onWarning = vi.fn();
-			await tmCore.tasks.add(
-				{ prompt: 'p', priority: 'urgent' },
-				{ onWarning }
-			);
-			expect(added().priority).toBe('medium');
-			expect(onWarning).toHaveBeenCalledWith(
-				'Invalid priority "urgent". Using default priority "medium".'
-			);
+			generateObject.mockClear();
+			const before = readFile();
+			await expect(
+				tmCore.tasks.add({ prompt: 'p', priority: 'urgent' })
+			).rejects.toMatchObject({
+				message: '"urgent" isn\'t a priority',
+				hint: 'Use high, medium or low'
+			});
+			expect(generateObject).not.toHaveBeenCalled();
+			expect(readFile()).toEqual(before);
 		});
 
 		it('uses global.defaultPriority without a priority, and warns when it is unknown', async () => {

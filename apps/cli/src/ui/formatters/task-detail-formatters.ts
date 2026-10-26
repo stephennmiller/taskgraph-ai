@@ -83,6 +83,8 @@ export interface TaskDetailOptions {
 	prdSection?: { source: string; text: string };
 	/** Only list subtasks with this status (`show --status`) */
 	statusFilter?: string;
+	/** Unfinished dependencies stand in the way, so don't suggest starting it */
+	blocked?: boolean;
 	/** Terminal width */
 	width?: number;
 }
@@ -425,7 +427,12 @@ export function formatTaskDetail(
 	}
 
 	const next = formatNextStep(
-		getSuggestedActions(id, task.status, subtasks.length > 0)[0],
+		getSuggestedActions(
+			id,
+			task.status,
+			subtasks.length > 0,
+			options.blocked
+		)[0],
 		width
 	);
 	if (next.length > 0) sections.push(next);

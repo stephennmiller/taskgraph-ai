@@ -111,8 +111,9 @@ export class TaskAiCommands {
 	 * Add one task: written by the AI from `prompt`, or given as `title` and
 	 * `description` (no AI call). The AI call runs without the file lock; the
 	 * save re-reads tasks.json under it and appends only the new task, with
-	 * an ID free at that moment. Dependencies that don't exist in the tag are
-	 * dropped with a warning; an unknown `discoveredFrom` throws before any AI call.
+	 * an ID free at that moment. An unknown dependency, priority or
+	 * `discoveredFrom` throws before any AI call; a dependency the AI suggests
+	 * that doesn't exist is dropped with a warning.
 	 */
 	async add(input: AddTaskInput, hooks?: AddTaskHooks): Promise<AddTaskResult> {
 		return new AddTaskService(

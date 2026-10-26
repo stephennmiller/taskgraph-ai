@@ -62,13 +62,16 @@ describe('doctor command', () => {
 		fs.rmSync(bin, { recursive: true, force: true });
 	});
 
+	// Without a claude on PATH, doctor asks the one bundled in node_modules,
+	// which a test must not run; runDoctor's spec covers both cases
 	it('runs outside a project and exits 1 with a fix for each failed check', () => {
+		fakeClaude([]);
 		const result = run();
 
 		expect(result.status).toBe(1);
 		expect(result.stderr).toBe('');
-		expect(result.stdout).toContain('✗ Claude Code  not found');
-		expect(result.stdout).toContain('✗ Project      none in this folder');
+		expect(result.stdout).toContain('✗ Plugin          not installed');
+		expect(result.stdout).toContain('✗ Project         none in this folder');
 		expect(result.stdout).toContain('Run taskgraph init to set one up');
 	});
 

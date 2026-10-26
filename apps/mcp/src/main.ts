@@ -8,6 +8,19 @@
 // Set before any import runs: modules build loggers at load time (#612).
 process.env.TASKGRAPH_MCP = 'true';
 
+// `npx taskgraph-ai` runs this server, not the CLI. MCP clients never give it
+// a terminal, so one means a person typed it: say what it is, on stderr
+if (process.stdin.isTTY) {
+	process.stderr.write(
+		[
+			'TaskGraph MCP server: waiting for an MCP client on stdin. Ctrl+C stops it.',
+			'For the CLI, run npx -p taskgraph-ai taskgraph, or install it with',
+			'npm install -g taskgraph-ai and run taskgraph.',
+			''
+		].join('\n')
+	);
+}
+
 const { startServer } = await import('./server.js');
 startServer();
 

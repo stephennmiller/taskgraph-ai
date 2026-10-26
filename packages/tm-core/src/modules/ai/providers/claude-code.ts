@@ -141,10 +141,10 @@ function withTrustedExecutable(
 }
 
 /**
- * Whether the Agent SDK's platform binary (an optional dependency, skipped by
- * `--omit=optional`) is installed where the SDK looks for it.
+ * The Agent SDK's platform binary (an optional dependency, skipped by
+ * `--omit=optional`), if it is installed where the SDK looks for it.
  */
-export function hasBundledClaudeBinary(): boolean {
+export function bundledClaudeBinary(): string | undefined {
 	const sdkPath = createRequire(
 		createRequire(import.meta.url).resolve('ai-sdk-provider-claude-code')
 	).resolve('@anthropic-ai/claude-agent-sdk');
@@ -152,13 +152,15 @@ export function hasBundledClaudeBinary(): boolean {
 	const base = `@anthropic-ai/claude-agent-sdk-${process.platform}-${process.arch}`;
 	const exe = process.platform === 'win32' ? 'claude.exe' : 'claude';
 	// The SDK tries both Linux libc variants, so either one will do
-	return [base, `${base}-musl`].some((pkg) => {
+	for (const pkg of [base, `${base}-musl`]) {
 		try {
-			return fs.existsSync(sdkRequire.resolve(`${pkg}/${exe}`));
+			const binary = sdkRequire.resolve(`${pkg}/${exe}`);
+			if (fs.existsSync(binary)) return binary;
 		} catch {
-			return false;
+			// Not installed
 		}
-	});
+	}
+	return undefined;
 }
 
 /**
@@ -168,7 +170,7 @@ export function hasBundledClaudeBinary(): boolean {
  */
 export function claudeFromPath(
 	projectRoot: string | null,
-	bundled = hasBundledClaudeBinary()
+	bundled = bundledClaudeBinary() !== undefined
 ): string | undefined {
 	if (bundled) return undefined;
 	const claude = findOnPath(

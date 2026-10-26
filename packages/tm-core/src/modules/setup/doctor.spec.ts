@@ -123,7 +123,8 @@ describe('runDoctor', () => {
 		const report = await runDoctor({
 			projectPath: project(),
 			nodeVersion: '22.19.0',
-			run: noClaude
+			run: noClaude,
+			bundledClaude: null
 		});
 		const checks = byName(report.checks);
 
@@ -135,6 +136,40 @@ describe('runDoctor', () => {
 		});
 		expect(checks['signed-in'].status).toBe('skip');
 		expect(checks.plugin.status).toBe('skip');
+	});
+
+	it('asks the bundled Claude Code when none is on PATH, and reports signed-out (#709)', async () => {
+		const bundled = '/sdk/claude-agent-sdk-linux-x64/claude';
+		const fake = claude({
+			version: '2.1.309 (Claude Code)',
+			auth: { loggedIn: false }
+		});
+		const asked: string[] = [];
+		const run: CommandRunner = async (command, args, cwd) => {
+			asked.push(command);
+			return command === bundled ? fake(command, args, cwd) : null;
+		};
+
+		const report = await runDoctor({
+			projectPath: project(),
+			nodeVersion: '22.19.0',
+			run,
+			bundledClaude: bundled
+		});
+		const checks = byName(report.checks);
+
+		expect(new Set(asked)).toEqual(new Set(['claude', bundled]));
+		expect(checks.claude).toEqual({
+			name: 'claude',
+			status: 'pass',
+			detail: '2.1.309',
+			bundled: true
+		});
+		expect(checks['signed-in']).toEqual({
+			name: 'signed-in',
+			status: 'fail',
+			problem: 'signed-out'
+		});
 	});
 
 	it('fails when Claude Code is signed out', async () => {
@@ -333,10 +368,8 @@ describe('runDoctor', () => {
 });
 
 describe('createCommandRunner', () => {
+	// A full path runs without a shell on every platform, as the bundled claude.exe does
 	const node = process.execPath;
-	// On Windows the runner joins the command into one shell string, which
-	// these inline scripts don't survive
-	const posix = process.platform !== 'win32';
 
 	it('resolves null when the command does not exist', async () => {
 		const run = createCommandRunner(5_000);
@@ -344,35 +377,29 @@ describe('createCommandRunner', () => {
 		expect(await run('taskgraph-no-such-command', [], os.tmpdir())).toBeNull();
 	});
 
-	it.runIf(posix)(
-		'keeps the output of a command that exits non-zero, as claude auth status does when signed out',
-		async () => {
-			const run = createCommandRunner(5_000);
+	it('keeps the output of a command that exits non-zero, as claude auth status does when signed out', async () => {
+		const run = createCommandRunner(5_000);
 
-			const out = await run(
-				node,
-				['-e', 'console.log(JSON.stringify({loggedIn:false}));process.exit(1)'],
-				os.tmpdir()
-			);
+		const out = await run(
+			node,
+			['-e', 'console.log(JSON.stringify({loggedIn:false}));process.exit(1)'],
+			os.tmpdir()
+		);
 
-			expect(JSON.parse(out ?? '')).toEqual({ loggedIn: false });
-		}
-	);
+		expect(JSON.parse(out ?? '')).toEqual({ loggedIn: false });
+	});
 
-	it.runIf(posix)(
-		'gives up on a command that runs past the deadline',
-		async () => {
-			const run = createCommandRunner(200);
-			const started = Date.now();
+	it('gives up on a command that runs past the deadline', async () => {
+		const run = createCommandRunner(200);
+		const started = Date.now();
 
-			const out = await run(
-				node,
-				['-e', 'console.log("partial");setTimeout(()=>{},10000)'],
-				os.tmpdir()
-			);
+		const out = await run(
+			node,
+			['-e', 'console.log("partial");setTimeout(()=>{},10000)'],
+			os.tmpdir()
+		);
 
-			expect(out).toBeNull();
-			expect(Date.now() - started).toBeLessThan(5_000);
-		}
-	);
+		expect(out).toBeNull();
+		expect(Date.now() - started).toBeLessThan(5_000);
+	});
 });

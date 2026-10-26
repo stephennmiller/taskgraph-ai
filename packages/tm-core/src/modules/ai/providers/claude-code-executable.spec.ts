@@ -14,7 +14,7 @@ import {
 import {
 	ClaudeCodeProvider,
 	claudeFromPath,
-	hasBundledClaudeBinary,
+	bundledClaudeBinary,
 	isTrustedClaudeExecutable
 } from './claude-code.js';
 
@@ -143,7 +143,7 @@ describe('isTrustedClaudeExecutable', () => {
 
 		it('leaves the SDK binary in charge when it is installed', async () => {
 			usePath(path.join(base, 'bin'));
-			expect(hasBundledClaudeBinary()).toBe(true);
+			expect(bundledClaudeBinary()).toBeDefined();
 			expect(claudeFromPath(project)).toBeUndefined();
 
 			await new ClaudeCodeProvider({
