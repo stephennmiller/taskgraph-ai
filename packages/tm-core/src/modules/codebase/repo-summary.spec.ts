@@ -234,6 +234,29 @@ describe('repo summary', () => {
 			expect(getRepoSummary(root)).toBe('from cache');
 		});
 
+		it('rebuilds a cache written at the previous summary version', () => {
+			getRepoSummary(root);
+			const cached = JSON.parse(fs.readFileSync(cacheFile(root), 'utf8'));
+			// Version 2 is what #687 left on disk: same HEAD, weaker tag escaping
+			fs.writeFileSync(
+				cacheFile(root),
+				JSON.stringify({
+					...cached,
+					version: 2,
+					summary: 'stale summary from version 2'
+				})
+			);
+
+			const summary = getRepoSummary(root);
+
+			expect(summary).not.toBe('stale summary from version 2');
+			expect(summary).toContain('src/one.ts');
+			const rebuilt = JSON.parse(fs.readFileSync(cacheFile(root), 'utf8'));
+			expect(rebuilt.version).toBeGreaterThan(2);
+			expect(rebuilt.head).toBe(cached.head);
+			expect(rebuilt.summary).toBe(summary);
+		});
+
 		it('rebuilds after a new commit', () => {
 			getRepoSummary(root);
 			write(root, 'src/two.ts');
