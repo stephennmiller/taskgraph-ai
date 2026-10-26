@@ -11,6 +11,10 @@
  *     then /plugin install taskgraph@taskgraph
  *   – MCP server      optional; add it with taskgraph init --mcp
  *
+ * With only the Claude Code bundled with TaskGraph (no `claude` on PATH), the
+ * row reads `2.1.309, bundled with taskgraph`, and signing in starts with
+ * installing Claude Code, since there's no `claude` to run `auth login` with.
+ *
  * Checks skipped because an earlier one failed (sign-in and plugin without
  * Claude Code, MCP outside a project) get no line: the failure above already
  * says what to fix first.
@@ -59,7 +63,7 @@ function shownPath(dir: string, cwd: string): string {
 
 function row(
 	check: DoctorCheck,
-	cliVersion: string,
+	report: DoctorReport,
 	options: DoctorFormatOptions
 ): Row | null {
 	const pass = chalk.green('✓');
@@ -72,7 +76,9 @@ function row(
 				? 'signed in'
 				: check.name === 'project'
 					? shownPath(detail, options.cwd)
-					: detail || 'installed';
+					: check.bundled
+						? `${detail || 'installed'}, bundled with taskgraph`
+						: detail || 'installed';
 		return { mark: pass, value };
 	}
 
@@ -106,7 +112,13 @@ function row(
 			return {
 				mark: fail,
 				value: 'signed out',
-				fix: ['Run `claude auth login`']
+				// The bundled binary isn't on PATH, so `claude` can't be run as typed
+				fix: report.checks.some((c) => c.name === 'claude' && c.bundled)
+					? [
+							'Install Claude Code: `npm install -g @anthropic-ai/claude-code`',
+							'then run `claude auth login`'
+						]
+					: ['Run `claude auth login`']
 			};
 		case 'project':
 			return {
@@ -128,7 +140,7 @@ function row(
 			if (check.problem === 'too-old') {
 				return {
 					mark: fail,
-					value: `${detail ? `${detail} ` : ''}needs taskgraph ${check.required}; this is ${clean(cliVersion)}`,
+					value: `${detail ? `${detail} ` : ''}needs taskgraph ${check.required}; this is ${clean(report.cliVersion)}`,
 					fix: ['Run `npm install -g taskgraph-ai@latest`']
 				};
 			}
@@ -156,7 +168,7 @@ export function formatDoctorReport(
 	const rows = report.checks
 		.map((check) => ({
 			label: LABELS[check.name],
-			row: row(check, report.cliVersion, options)
+			row: row(check, report, options)
 		}))
 		.filter(
 			(entry): entry is { label: string; row: Row } => entry.row !== null

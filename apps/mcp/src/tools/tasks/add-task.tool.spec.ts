@@ -117,7 +117,7 @@ describe('add_task', () => {
 		);
 		tasks.add.mockImplementationOnce(async (_request, { onWarning }) => {
 			onWarning(
-				"Task 9 doesn't exist; adding the task without that dependency"
+				"The AI suggested dependencies that don't exist (9); left them out"
 			);
 			return { task: { id: '5' }, tag: 'master', dependencies: [] };
 		});
@@ -129,7 +129,7 @@ describe('add_task', () => {
 
 		expect(quiet.data).not.toHaveProperty('warnings');
 		expect(reply(result).data.warnings).toEqual([
-			"Task 9 doesn't exist; adding the task without that dependency"
+			"The AI suggested dependencies that don't exist (9); left them out"
 		]);
 	});
 

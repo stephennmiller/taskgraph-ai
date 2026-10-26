@@ -125,11 +125,11 @@ export class TagsCommand extends Command {
 				'after',
 				`
 Examples:
-  $ tm tags          # List all tags (default)
-  $ tm tags list     # List all tags (explicit)
-  $ tm tags list --show-metadata  # List with metadata
-  $ tm tags list --ready  # Show only tags with parallelizable work
-  $ tm tags --json        # Tags with counts, for scripts
+  $ taskgraph tags          # List all tags (default)
+  $ taskgraph tags list     # List all tags (explicit)
+  $ taskgraph tags list --show-metadata  # List with metadata
+  $ taskgraph tags list --ready  # Show only tags with parallelizable work
+  $ taskgraph tags --json        # Tags with counts, for scripts
 `
 			)
 			.action(async (options) => {
@@ -153,9 +153,9 @@ Examples:
 				'after',
 				`
 Examples:
-  $ tm tags add feature-auth         # Create new tag
-  $ tm tags add sprint-2 --copy-from sprint-1  # Create with tasks copied
-  $ tm tags add --from-branch        # Create from current git branch
+  $ taskgraph tags add feature-auth         # Create new tag
+  $ taskgraph tags add sprint-2 --copy-from sprint-1  # Create with tasks copied
+  $ taskgraph tags add --from-branch        # Create from current git branch
 `
 			)
 			.action(async (name, options) => {
@@ -174,8 +174,8 @@ Examples:
 				'after',
 				`
 Examples:
-  $ tm tags use feature-auth    # Switch by name
-  $ tm tags use abc123          # Switch by ID (last 8 chars)
+  $ taskgraph tags use feature-auth    # Switch by name
+  $ taskgraph tags use abc123          # Switch by ID (last 8 chars)
 `
 			)
 			.action(async (name) => {
@@ -195,8 +195,8 @@ Examples:
 				'after',
 				`
 Examples:
-  $ tm tags remove old-feature      # Remove tag with confirmation
-  $ tm tags remove old-feature -y   # Remove without confirmation
+  $ taskgraph tags remove old-feature      # Remove tag with confirmation
+  $ taskgraph tags remove old-feature -y   # Remove without confirmation
 
 Warning: This will delete all tasks in the tag!
 `
@@ -218,7 +218,7 @@ Warning: This will delete all tasks in the tag!
 				'after',
 				`
 Examples:
-  $ tm tags rename old-name new-name
+  $ taskgraph tags rename old-name new-name
 `
 			)
 			.action(async (oldName, newName) => {

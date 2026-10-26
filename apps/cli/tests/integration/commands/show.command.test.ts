@@ -125,6 +125,24 @@ describe('show command', () => {
 		expect(exitCode).toBe(0);
 		expect(output).toContain('Second Task');
 		expect(output).toContain('Depends on task 1');
+		expect(output).toContain('Next: taskgraph set-status --id=2');
+	});
+
+	it('suggests why, not starting, for a task whose dependencies are unfinished (#710)', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({ id: 1, title: 'First Task', status: 'pending' }),
+					createTask({ id: 2, title: 'Second Task', dependencies: ['1'] })
+				]
+			})
+		);
+
+		const { output, exitCode } = runShow('2');
+
+		expect(exitCode).toBe(0);
+		expect(output).toContain('Next: taskgraph why 2 to see what it waits on');
+		expect(output).not.toContain('--status=in-progress');
 	});
 
 	it('should show task with subtasks', () => {

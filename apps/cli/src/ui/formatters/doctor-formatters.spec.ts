@@ -59,6 +59,22 @@ describe('formatDoctorReport', () => {
 		);
 	});
 
+	it('names the bundled Claude Code, and says to install Claude Code to sign in (#709)', () => {
+		const output = format([
+			{ name: 'claude', status: 'pass', detail: '2.1.309', bundled: true },
+			{ name: 'signed-in', status: 'fail', problem: 'signed-out' }
+		]);
+
+		expect(output).toBe(
+			[
+				'✓ Claude Code     2.1.309, bundled with taskgraph',
+				'✗ Claude sign-in  signed out',
+				'  Install Claude Code: npm install -g @anthropic-ai/claude-code',
+				'  then run claude auth login'
+			].join('\n')
+		);
+	});
+
 	it('leaves out checks skipped because an earlier one failed', () => {
 		const output = format([
 			{ name: 'node', status: 'pass', detail: '22.13.0' },

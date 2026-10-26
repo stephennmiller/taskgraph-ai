@@ -51,7 +51,7 @@ describe('add-task', () => {
 		} as any);
 		add.mockImplementation(async (_input, hooks) => {
 			hooks.onWarning(
-				"Task 9 doesn't exist; adding the task without that dependency"
+				"The AI suggested dependencies that don't exist (9); left them out"
 			);
 			return {
 				task: {
@@ -93,7 +93,7 @@ describe('add-task', () => {
 		);
 		const text = out.join('\n');
 		expect(text).toContain(
-			"⚠ Task 9 doesn't exist; adding the task without that dependency"
+			"⚠ The AI suggested dependencies that don't exist (9); left them out"
 		);
 		expect(text).toContain(
 			'✓ Added task 3  Write the README · medium priority'

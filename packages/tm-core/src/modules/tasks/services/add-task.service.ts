@@ -65,7 +65,7 @@ export interface AddTaskInput {
 
 /** Calls made while the task is added, so a caller can show progress */
 export interface AddTaskHooks {
-	/** A heads-up such as a dependency that doesn't exist */
+	/** A heads-up such as an AI-suggested dependency that doesn't exist */
 	onWarning?: (message: string) => void;
 	/** AI service detail, sent only with `global.debug` on */
 	onDebug?: (message: string) => void;
@@ -194,11 +194,13 @@ export class AddTaskService {
 			explicit: input.dependencies ?? [],
 			existingIds
 		});
+		// Checked before any AI call or write, so a typo costs nothing
 		const missing = explicit.missingExplicit;
 		if (missing.length > 0) {
 			const one = missing.length === 1;
-			warn(
-				`${one ? 'Task' : 'Tasks'} ${missing.join(', ')} ${one ? "doesn't" : "don't"} exist; adding the task without ${one ? 'that dependency' : 'those dependencies'}`
+			throw withHint(
+				`${one ? 'Task' : 'Tasks'} ${missing.join(', ')} ${one ? "doesn't" : "don't"} exist in tag '${tag}'`,
+				'Run `taskgraph list` to see task IDs'
 			);
 		}
 		const explicitDependencies = explicit.dependencies;
@@ -316,10 +318,7 @@ export class AddTaskService {
 		}
 		const normalized = priority.toLowerCase();
 		if (PRIORITIES.includes(normalized)) return normalized;
-		warn(
-			`Invalid priority "${priority}". Using default priority "${DEFAULT_PRIORITY}".`
-		);
-		return DEFAULT_PRIORITY;
+		throw withHint(`"${priority}" isn't a priority`, 'Use high, medium or low');
 	}
 
 	private async generate(

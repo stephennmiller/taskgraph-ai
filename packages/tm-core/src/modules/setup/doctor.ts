@@ -6,7 +6,9 @@
  *
  * Returns data only; the CLI words it. Claude Code is asked through its own
  * CLI (`claude --version`, `claude auth status`, `claude plugin list`), so
- * the checks follow wherever it keeps its settings.
+ * the checks follow wherever it keeps its settings. Without a `claude` on
+ * PATH, the copy bundled with the Agent SDK is asked instead, since AI
+ * commands run with that one too.
  */
 
 import { execFile } from 'node:child_process';
@@ -21,6 +23,7 @@ import {
 	isTaskGraphProject,
 	resolveProjectRoot
 } from '../../common/utils/project-root-finder.js';
+import { bundledClaudeBinary } from '../ai/providers/claude-code.js';
 import { launchesTaskGraphPackage } from './mcp-server.js';
 import { readPluginManifest } from './plugin-manifest.js';
 import { satisfiesMinimum } from './version-range.js';
@@ -54,6 +57,8 @@ export interface DoctorCheck {
 	problem?: DoctorProblem;
 	/** The range a `too-old` check needed */
 	required?: string;
+	/** Claude Code: only the copy bundled with the Agent SDK was found, not one on PATH */
+	bundled?: boolean;
 }
 
 export interface DoctorReport {
@@ -79,6 +84,8 @@ export interface DoctorOptions {
 	run?: CommandRunner;
 	/** Claude Code's `.claude.json`; defaults to the one in CLAUDE_CONFIG_DIR or home */
 	claudeConfigFile?: string;
+	/** The Claude Code bundled with the Agent SDK, null for none; defaults to the installed one */
+	bundledClaude?: string | null;
 }
 
 /** The plugin's id in `claude plugin list` starts with its name */
@@ -101,7 +108,10 @@ export function createCommandRunner(
 				// npm installs `claude` as a .cmd shim, which Windows runs only
 				// through a shell. The arguments are fixed strings, so the shell
 				// sees nothing from the user; one string avoids Node's DEP0190.
-				windows ? [command, ...args].join(' ') : command,
+				// A bundled binary's path may hold spaces
+				windows
+					? [/\s/.test(command) ? `"${command}"` : command, ...args].join(' ')
+					: command,
 				windows ? [] : args,
 				{
 					cwd,
@@ -151,12 +161,20 @@ function checkProject(root: string): DoctorCheck {
 }
 
 /** `2.1.309 (Claude Code)` → `2.1.309` */
-function checkClaude(versionOutput: string | null): DoctorCheck {
+function checkClaude(
+	versionOutput: string | null,
+	bundled: boolean
+): DoctorCheck {
 	if (versionOutput === null) {
 		return { name: 'claude', status: 'fail', problem: 'not-found' };
 	}
 	const version = versionOutput.trim().split(/\s+/)[0];
-	return { name: 'claude', status: 'pass', detail: version || undefined };
+	return {
+		name: 'claude',
+		status: 'pass',
+		detail: version || undefined,
+		...(bundled && { bundled })
+	};
 }
 
 function checkSignedIn(statusOutput: string | null): DoctorCheck {
@@ -306,12 +324,26 @@ export async function runDoctor(
 	// Project settings can enable or disable the plugin, so ask from the project
 	const cwd = inProject ? root : process.cwd();
 
-	const [claudeVersion, authStatus, pluginList] = await Promise.all([
-		run('claude', ['--version'], cwd),
-		run('claude', ['auth', 'status', '--json'], cwd),
-		run('claude', ['plugin', 'list', '--json'], cwd)
-	]);
-	const claude = checkClaude(claudeVersion);
+	const ask = (command: string) =>
+		Promise.all([
+			run(command, ['--version'], cwd),
+			run(command, ['auth', 'status', '--json'], cwd),
+			run(command, ['plugin', 'list', '--json'], cwd)
+		]);
+	let answers = await ask('claude');
+	let bundled = false;
+	if (answers[0] === null) {
+		const binary =
+			options.bundledClaude === undefined
+				? bundledClaudeBinary()
+				: options.bundledClaude;
+		if (binary) {
+			answers = await ask(binary);
+			bundled = true;
+		}
+	}
+	const [claudeVersion, authStatus, pluginList] = answers;
+	const claude = checkClaude(claudeVersion, bundled);
 	const claudeFound = claude.status === 'pass';
 
 	const checks: DoctorCheck[] = [

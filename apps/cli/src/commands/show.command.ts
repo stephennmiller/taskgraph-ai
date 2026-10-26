@@ -64,6 +64,8 @@ export class ShowCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ShowTaskResult | ShowMultipleTasksResult;
 	private requestedId?: string;
+	/** The single task shown waits on unfinished dependencies */
+	private blocked = false;
 
 	constructor(name?: string) {
 		super(name || 'show');
@@ -188,6 +190,11 @@ export class ShowCommand extends Command {
 		// Get the task
 		this.requestedId = taskId;
 		const result = await this.tmCore.tasks.get(taskId, options.tag);
+		if (result.task) {
+			this.blocked = (
+				await this.tmCore.tasks.explainBlockers(taskId, { tag: options.tag })
+			).blocked;
+		}
 
 		return {
 			task: await this.withPrdSection(taskId, result.task, options.tag),
@@ -317,6 +324,7 @@ export class ShowCommand extends Command {
 				id: result.originalTaskId,
 				prdSection: result.task.prdSection,
 				statusFilter: options.status,
+				blocked: this.blocked,
 				checklist: this.tmCore?.tasks.getChecklist(
 					result.task,
 					Boolean(result.originalTaskId)

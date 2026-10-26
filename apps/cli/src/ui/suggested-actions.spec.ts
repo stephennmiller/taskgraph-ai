@@ -11,6 +11,14 @@ describe('getSuggestedActions', () => {
 		expect(actions).toContain('taskgraph expand --id=3');
 	});
 
+	it('points a pending task that waits on dependencies at why, not at starting it (#710)', () => {
+		const actions = commands(
+			getSuggestedActions('3.2', 'pending', false, true)
+		);
+		expect(actions[0]).toBe('taskgraph why 3.2');
+		expect(actions.some((c) => c.includes('--status=in-progress'))).toBe(false);
+	});
+
 	it('never suggests starting a task that is already in progress', () => {
 		const actions = commands(getSuggestedActions(3, 'in-progress', true));
 		expect(actions.some((c) => c.includes('--status=in-progress'))).toBe(false);

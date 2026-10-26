@@ -10,12 +10,15 @@ export interface SuggestedAction {
 
 /**
  * Pick next-step suggestions that fit the task's current status, so the CLI
- * never suggests starting a task that is already started or finished.
+ * never suggests starting a task that is already started, finished, or still
+ * waiting on unfinished dependencies.
+ * @param blocked - Something unfinished stands in the way (tm-core's explainBlockers)
  */
 export function getSuggestedActions(
 	taskId: string | number,
 	status: string | undefined,
-	hasSubtasks: boolean
+	hasSubtasks: boolean,
+	blocked = false
 ): SuggestedAction[] {
 	const id = String(taskId);
 	const isSubtask = id.includes('.');
@@ -73,10 +76,15 @@ export function getSuggestedActions(
 			];
 		default:
 			return [
-				{
-					command: `taskgraph set-status --id=${id} --status=in-progress`,
-					description: 'to start working'
-				},
+				blocked
+					? {
+							command: `taskgraph why ${id}`,
+							description: 'to see what it waits on'
+						}
+					: {
+							command: `taskgraph set-status --id=${id} --status=in-progress`,
+							description: 'to start working'
+						},
 				...expand,
 				logProgress
 			];

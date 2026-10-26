@@ -123,7 +123,8 @@ describe('runDoctor', () => {
 		const report = await runDoctor({
 			projectPath: project(),
 			nodeVersion: '22.19.0',
-			run: noClaude
+			run: noClaude,
+			bundledClaude: null
 		});
 		const checks = byName(report.checks);
 
@@ -135,6 +136,40 @@ describe('runDoctor', () => {
 		});
 		expect(checks['signed-in'].status).toBe('skip');
 		expect(checks.plugin.status).toBe('skip');
+	});
+
+	it('asks the bundled Claude Code when none is on PATH, and reports signed-out (#709)', async () => {
+		const bundled = '/sdk/claude-agent-sdk-linux-x64/claude';
+		const fake = claude({
+			version: '2.1.309 (Claude Code)',
+			auth: { loggedIn: false }
+		});
+		const asked: string[] = [];
+		const run: CommandRunner = async (command, args, cwd) => {
+			asked.push(command);
+			return command === bundled ? fake(command, args, cwd) : null;
+		};
+
+		const report = await runDoctor({
+			projectPath: project(),
+			nodeVersion: '22.19.0',
+			run,
+			bundledClaude: bundled
+		});
+		const checks = byName(report.checks);
+
+		expect(new Set(asked)).toEqual(new Set(['claude', bundled]));
+		expect(checks.claude).toEqual({
+			name: 'claude',
+			status: 'pass',
+			detail: '2.1.309',
+			bundled: true
+		});
+		expect(checks['signed-in']).toEqual({
+			name: 'signed-in',
+			status: 'fail',
+			problem: 'signed-out'
+		});
 	});
 
 	it('fails when Claude Code is signed out', async () => {

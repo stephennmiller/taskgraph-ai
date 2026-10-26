@@ -29,6 +29,8 @@ describe.skipIf(!built)('add-task command output', () => {
 	let work: string;
 	let env: NodeJS.ProcessEnv;
 
+	const tasksFile = () =>
+		path.join(project, '.taskgraph', 'tasks', 'tasks.json');
 	const addTask = (...args: string[]) =>
 		spawnSync(process.execPath, [binPath, 'add-task', ...args], {
 			cwd: project,
@@ -88,20 +90,33 @@ describe.skipIf(!built)('add-task command output', () => {
 		expect(res.stdout).not.toContain('Using manually provided task data');
 	});
 
-	it('warns once about a dependency that does not exist and adds the task without it', () => {
+	it('exits 1 and adds nothing for a dependency that does not exist (#710)', () => {
+		const before = fs.readFileSync(tasksFile(), 'utf8');
 		const res = addTask(
 			'--title=Write the README',
 			'--description=Setup, scripts and env vars',
 			'--dependencies=1,9'
 		);
 
-		expect(res.status).toBe(0);
-		const output = res.stdout + res.stderr;
-		expect(output).toContain(
-			"Task 9 doesn't exist; adding the task without that dependency"
+		expect(res.status).toBe(1);
+		expect(res.stderr).toContain("✗ Task 9 doesn't exist in tag 'master'");
+		expect(res.stderr).toContain('Run taskgraph list to see task IDs');
+		expect(res.stdout).not.toContain('Added task');
+		expect(fs.readFileSync(tasksFile(), 'utf8')).toBe(before);
+	});
+
+	it('exits 1 and adds nothing for an unknown priority (#710)', () => {
+		const before = fs.readFileSync(tasksFile(), 'utf8');
+		const res = addTask(
+			'--title=Write the README',
+			'--description=Setup, scripts and env vars',
+			'--priority=urgent'
 		);
-		expect(output).not.toContain('Removing invalid dependencies');
-		expect(res.stdout).toContain('  Depends on  1  Set up the database schema');
+
+		expect(res.status).toBe(1);
+		expect(res.stderr).toContain('✗ "urgent" isn\'t a priority');
+		expect(res.stderr).toContain('Use high, medium or low');
+		expect(fs.readFileSync(tasksFile(), 'utf8')).toBe(before);
 	});
 
 	it('keeps the dependencies you passed and marks the ones the AI added, within 80 columns', () => {
