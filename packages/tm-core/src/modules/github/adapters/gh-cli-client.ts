@@ -18,7 +18,27 @@ import type {
 	UpdateIssueInput
 } from './github-client.interface.js';
 
-const REPO_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+/**
+ * GitHub `owner/name`.
+ *
+ * An owner has no dots, so it cannot be `.` or `..`. Underscores and loose
+ * hyphens stay allowed: Enterprise Managed User logins end in `_shortcode`,
+ * and some older logins break today's hyphen rules.
+ * A repository name is 1-100 characters from `[A-Za-z0-9._-]`, is not
+ * only dots, and does not end in `.git`.
+ */
+const OWNER_PATTERN = /^[A-Za-z0-9_-]+$/;
+const NAME_PATTERN = /^(?!\.+$)(?!.*\.git$)[A-Za-z0-9._-]{1,100}$/i;
+
+function isGitHubRepo(repo: string): boolean {
+	const slash = repo.indexOf('/');
+	if (slash < 1 || repo.includes('/', slash + 1)) return false;
+	return (
+		OWNER_PATTERN.test(repo.slice(0, slash)) &&
+		NAME_PATTERN.test(repo.slice(slash + 1))
+	);
+}
+
 const PAGE_SIZE = 100;
 const MAX_RETRIES = 3;
 const MAX_WAIT_MS = 120_000;
@@ -105,7 +125,7 @@ export class GhCliClient implements GitHubClient {
 		private readonly repo: string,
 		private readonly options: GhCliClientOptions = {}
 	) {
-		if (!REPO_PATTERN.test(repo)) {
+		if (!isGitHubRepo(repo)) {
 			throw new TaskGraphError(
 				`Invalid repository "${repo}", expected owner/name`,
 				ERROR_CODES.INVALID_INPUT

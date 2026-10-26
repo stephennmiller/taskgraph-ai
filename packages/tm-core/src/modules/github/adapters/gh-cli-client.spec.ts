@@ -197,4 +197,35 @@ describe('GhCliClient', () => {
 			});
 		});
 	});
+
+	it.each([
+		'../app',
+		'acme/..',
+		'./app',
+		'acme/.',
+		'.../app',
+		'acme/...',
+		'../..',
+		'acme/....',
+		'acme/repo.git',
+		'acme/repo.GIT',
+		'has.dot/repo',
+		`acme/${'a'.repeat(101)}`
+	])('rejects %s, which is not a GitHub owner/name', (repo) => {
+		expect(() => new GhCliClient(repo)).toThrow(`Invalid repository "${repo}"`);
+	});
+
+	it.each([
+		'acme/app',
+		'a/b',
+		'user-name/.github',
+		'A0/my.repo_name-1',
+		'org/..hidden',
+		// Enterprise Managed User login
+		'octocat_acme/repo',
+		'legacy-/repo',
+		`${'a'.repeat(39)}/${'b'.repeat(100)}`
+	])('accepts GitHub repository %s', (repo) => {
+		expect(() => new GhCliClient(repo)).not.toThrow();
+	});
 });
