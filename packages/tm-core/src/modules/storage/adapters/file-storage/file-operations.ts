@@ -45,7 +45,11 @@ function invalidJsonError(
 }
 
 /**
- * File locking configuration for cross-process safety
+ * File locking configuration for cross-process safety.
+ *
+ * Writers in this process do not compete for these retries: `enqueueWrite`
+ * runs one of them at a time, and the next takes the lock only after the
+ * previous one has released it. The budget is what another process waits.
  */
 const LOCK_OPTIONS = {
 	stale: 10000, // Consider lock stale after 10 seconds
@@ -57,6 +61,32 @@ const LOCK_OPTIONS = {
 	},
 	realpath: false // Don't resolve symlinks (faster)
 };
+
+/**
+ * Tail of the in-process write queue for one resolved path. One MCP server
+ * runs tool calls at the same time, and each call builds its own
+ * FileOperations, so the queue has to live on the module. A failed write
+ * does not block the rest: the tail always settles.
+ */
+const writeQueueTails = new Map<string, Promise<void>>();
+
+function enqueueWrite<T>(
+	filePath: string,
+	write: () => Promise<T>
+): Promise<T> {
+	const key = path.resolve(filePath);
+	const previous = writeQueueTails.get(key) ?? Promise.resolve();
+	const run = previous.then(write);
+	const tail = run.then(
+		() => undefined,
+		() => undefined
+	);
+	writeQueueTails.set(key, tail);
+	void tail.then(() => {
+		if (writeQueueTails.get(key) === tail) writeQueueTails.delete(key);
+	});
+	return run;
+}
 
 /**
  * Refuse a file that is a symlink, so a write can't be pointed elsewhere (#616)
@@ -180,6 +210,16 @@ export class FileOperations {
 		filePath: string,
 		data: FileStorageData | any
 	): Promise<void> {
+		await enqueueWrite(filePath, () => this.writeJsonExclusive(filePath, data));
+	}
+
+	/**
+	 * writeJson while this process's queue for filePath is held.
+	 */
+	private async writeJsonExclusive(
+		filePath: string,
+		data: FileStorageData | any
+	): Promise<void> {
 		// Ensure file exists for locking (proper-lockfile requires this)
 		await this.ensureFileExists(filePath);
 
@@ -216,6 +256,21 @@ export class FileOperations {
 	 *   released (to update a second file in step with this one)
 	 */
 	async modifyJson<T = any>(
+		filePath: string,
+		modifier: (currentData: T) => T | Promise<T>,
+		options: { afterWrite?: () => Promise<void> } = {}
+	): Promise<void> {
+		await enqueueWrite(filePath, () =>
+			this.modifyJsonExclusive(filePath, modifier, options)
+		);
+	}
+
+	/**
+	 * modifyJson while this process's queue for filePath is held.
+	 * A modifier must not call back into this file: the queue (and the file
+	 * lock) are already held, so that call would wait for itself.
+	 */
+	private async modifyJsonExclusive<T = any>(
 		filePath: string,
 		modifier: (currentData: T) => T | Promise<T>,
 		options: { afterWrite?: () => Promise<void> } = {}

@@ -7,6 +7,7 @@ import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import lockfile from 'proper-lockfile';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileOperations } from './file-operations.js';
 
@@ -270,6 +271,63 @@ describe('FileOperations', () => {
 
 			const result = JSON.parse(await fs.readFile(testFilePath, 'utf-8'));
 			expect(result.count).toBe(numInstances);
+		});
+
+		it('keeps writing after one writer in the queue throws', async () => {
+			await fs.writeFile(testFilePath, JSON.stringify({ count: 0 }));
+			const failed = fileOps.modifyJson(testFilePath, () => {
+				throw new Error('boom');
+			});
+			const next = fileOps.modifyJson(
+				testFilePath,
+				(data: { count: number }) => ({
+					count: data.count + 1
+				})
+			);
+
+			await expect(failed).rejects.toThrow('boom');
+			await next;
+			expect(JSON.parse(await fs.readFile(testFilePath, 'utf-8')).count).toBe(
+				1
+			);
+		});
+
+		it('takes the file lock once per file, even from several instances', async () => {
+			// One MCP server builds a new FileOperations for every tool call and
+			// runs those calls at the same time (#697). They must share one
+			// in-process queue: two overlapping lock() calls means they are
+			// competing for the file lock and can give up.
+			await fs.writeFile(testFilePath, JSON.stringify({ count: 0 }));
+			let inFlight = 0;
+			let maxInFlight = 0;
+			const acquire = lockfile.lock.bind(lockfile);
+			const spy = vi
+				.spyOn(lockfile, 'lock')
+				.mockImplementation((file, options) => {
+					inFlight += 1;
+					maxInFlight = Math.max(maxInFlight, inFlight);
+					return acquire(file, options).finally(() => {
+						inFlight -= 1;
+					});
+				});
+
+			try {
+				const writers = 8;
+				await Promise.all(
+					Array.from({ length: writers }, () => new FileOperations()).map(
+						(ops) =>
+							ops.modifyJson(testFilePath, (data: { count: number }) => ({
+								count: data.count + 1
+							}))
+					)
+				);
+				expect(maxInFlight).toBe(1);
+				expect(JSON.parse(await fs.readFile(testFilePath, 'utf-8')).count).toBe(
+					writers
+				);
+			} finally {
+				spy.mockRestore();
+			}
 		});
 	});
 
