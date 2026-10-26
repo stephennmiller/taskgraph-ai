@@ -39,6 +39,8 @@ export interface AutoUpdateContext {
 	stdinIsTTY?: boolean;
 	/** Home directory; defaults to os.homedir() */
 	home?: string;
+	/** `taskgraph upgrade`: refuse only in a process `loop` started */
+	explicit?: boolean;
 }
 
 function context(options: AutoUpdateContext = {}) {
@@ -65,11 +67,12 @@ export function autoUpdateSkipReason(
 	options: AutoUpdateContext = {}
 ): string | null {
 	const { argv, env, stdinIsTTY } = context(options);
+	if (env[LOOP_CHILD_ENV] === '1') return 'started by loop';
+	if (env[PARALLEL_WORKER_ENV] === '1') return 'started by a parallel worker';
+	if (options.explicit) return null;
 	if (env[SKIP_AUTO_UPDATE_ENV] === '1') return 'TASKGRAPH_SKIP_AUTO_UPDATE=1';
 	if (env.CI) return 'CI environment';
 	if (env.NODE_ENV === 'test') return 'NODE_ENV=test';
-	if (env[LOOP_CHILD_ENV] === '1') return 'started by loop';
-	if (env[PARALLEL_WORKER_ENV] === '1') return 'started by a parallel worker';
 	if (!stdinIsTTY) return 'stdin is not a terminal';
 
 	const args = argv.slice(2);

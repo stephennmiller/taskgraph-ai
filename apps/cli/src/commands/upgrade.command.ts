@@ -2,8 +2,8 @@
  * @fileoverview `taskgraph upgrade`: install the latest TaskGraph.
  *
  * A normal command only says when a newer version is out. This is the
- * explicit install. It still refuses in CI, without a terminal, for JSON
- * output, and from `loop` or a parallel worker.
+ * explicit install, so it refuses only in a process started by `loop` or
+ * `loop --parallel`.
  */
 
 import { TASKGRAPH_VERSION } from '@tm/core';
@@ -22,7 +22,7 @@ export class UpgradeCommand extends Command {
 
 		this.description('Install the latest version of TaskGraph').action(
 			async () => {
-				const reason = autoUpdateSkipReason();
+				const reason = autoUpdateSkipReason({ explicit: true });
 				if (reason) {
 					console.log(theme.muted(`Not installing (${reason})`));
 					process.exitCode = 1;
@@ -41,7 +41,9 @@ export class UpgradeCommand extends Command {
 					info.highlights
 				);
 				// No restart: it would only run `upgrade` again on the new version
-				if (!(await performAutoUpdate(info.latestVersion))) {
+				if (
+					!(await performAutoUpdate(info.latestVersion, { explicit: true }))
+				) {
 					process.exitCode = 1;
 				}
 			}

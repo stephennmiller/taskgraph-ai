@@ -68,7 +68,7 @@ taskgraph upgrade
 
 This installs the newest `taskgraph-ai` from npm. Other commands only tell you when a newer version is out. See [Staying up to date](/getting-started/quick-start/installation#staying-up-to-date).
 
-`upgrade` installs nothing, and exits 1, in CI, when input isn't a terminal, or when `loop` or `loop --parallel` started the process.
+`upgrade` installs nothing, and exits 1, when `loop` or `loop --parallel` started the process.
 
 The JSON has `ok`, `cliVersion` and `checks`, each with `name` (`node`, `claude`, `signed-in`, `project`, `plugin`, `mcp`), `status` (`pass`, `fail`, `skip`) and, when they apply, `detail`, `problem` and `required`.
 
