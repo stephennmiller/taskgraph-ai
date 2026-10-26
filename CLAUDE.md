@@ -172,5 +172,5 @@ Remove what a change leaves unused: files, exports, types and dependencies. `npm
 
 ## Versioning & Release Guidelines
 
-- **Use a conventional-commit PR title** - releases are cut automatically on merge to `main` from commit messages: `feat:` bumps minor, `fix:`/`perf:`/`revert:` bump patch, `!` or a `BREAKING CHANGE:` footer bumps major. Below 1.0.0 (the current 0.x line) every level shifts down one: `feat:` bumps patch and a breaking change bumps minor. `chore:`, `docs:`, `ci:`, `test:` do not release. Do not add a changeset: `.changeset/` is only read by the release workflow (`.github/workflows/release.yml`), and `version-bump.yml` bumps from commits.
+- **Use a conventional-commit PR title** - releases are cut automatically on merge to `main` from commit messages: `feat:` bumps minor, `fix:`/`perf:`/`revert:` bump patch, `!` or a `BREAKING CHANGE:` footer bumps major. Below 1.0.0 (the current 0.x line) every level shifts down one: `feat:` bumps patch and a breaking change bumps minor. `chore:`, `docs:`, `ci:`, `test:` do not release. Do not add a changeset. `version-bump.yml` bumps from commits and stages the npm release; there is no changesets publish path.
 - Keep the PR title user-facing: it becomes the release note, so say what the end-user gets or what is fixed

@@ -13,14 +13,25 @@ permissions:
   contents: read
 
 jobs:
+  # Job id is the required status check `check-release-mode` on main.
+  # Renaming it would leave that rule waiting on a check that never reports.
+  # The script parses workflow YAML with js-yaml, hence `npm ci`.
+  # --ignore-scripts skips the prepare hook.
   check-release-mode:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          fetch-depth: 0
 
-      - name: Check release mode
-        run: node ./.github/scripts/check-pre-release-mode.mjs "pull_request"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Check release config
+        run: node ./.github/scripts/check-release-config.mjs
