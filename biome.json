@@ -4,7 +4,6 @@
 			"**",
 			"!**/build",
 			"!**/coverage",
-			"!**/.changeset",
 			"!**/.taskgraph/**/tasks",
 			"!**/.taskmaster/tasks",
 			"!**/package-lock.json",
