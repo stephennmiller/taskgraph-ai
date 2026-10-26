@@ -27,23 +27,38 @@ jobs:
     permissions:
       contents: write # push the release commit and tag, create the GitHub Release
     steps:
-      # main's ruleset requires PRs and the GitHub Actions app can't be a bypass
-      # actor on a user-owned repo, so pushes use a fine-grained PAT owned by a
-      # repo admin (the admin role is the ruleset's bypass actor).
-      - name: Require RELEASE_TOKEN
+      # main's ruleset requires pull requests, and the GitHub Actions app
+      # cannot be a bypass actor on a user-owned repo. Push as a GitHub App
+      # that is on that bypass list. The private key only mints an installation
+      # token (one hour, revoked when the job ends). Checkout persists that
+      # token, and `git push` uses it. The token requests contents: write only.
+      # Setup: a GitHub App with Contents read and write, installed on this
+      # repo, listed on the main ruleset bypass list. Secrets:
+      # RELEASE_APP_CLIENT_ID (the app's Client ID) and RELEASE_APP_PRIVATE_KEY
+      # (its PEM private key).
+      - name: Require release app credentials
         env:
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          RELEASE_APP_CLIENT_ID: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          RELEASE_APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$RELEASE_TOKEN" ]; then
-            echo "::error::RELEASE_TOKEN secret is not set; the release push to main would be rejected."
+          if [ -z "$RELEASE_APP_CLIENT_ID" ] || [ -z "$RELEASE_APP_PRIVATE_KEY" ]; then
+            echo "::error::RELEASE_APP_CLIENT_ID and RELEASE_APP_PRIVATE_KEY must be set. The release push uses a short-lived GitHub App installation token."
             exit 1
           fi
+
+      - name: Create release app token
+        id: release-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: main
           fetch-depth: 0 # full history and tags to find the last release
-          token: ${{ secrets.RELEASE_TOKEN }}
+          token: ${{ steps.release-token.outputs.token }}
 
       # If main moved on, the newer commit's own CI run will cover these
       # commits too (the bump range is "last release tag..HEAD").
