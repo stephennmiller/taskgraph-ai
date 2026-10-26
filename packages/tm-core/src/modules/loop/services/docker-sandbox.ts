@@ -25,6 +25,8 @@ export function sandboxRunArgs(
 		'--name',
 		sandboxName(projectRoot),
 		'claude',
+		// Docker reads anything before `--` as its own flags or a workspace path
+		'--',
 		...claudeArgs
 	];
 }

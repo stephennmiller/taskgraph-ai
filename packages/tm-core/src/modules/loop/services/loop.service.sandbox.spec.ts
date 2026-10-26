@@ -29,11 +29,11 @@ beforeEach(() => {
 	dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-sandbox-'));
 	log = path.join(dir, 'docker.log');
 	const docker = path.join(dir, 'docker');
-	// Logs the first five arguments (the prompt has newlines); `sandbox run`
+	// Logs the first seven arguments (the prompt has newlines); `sandbox run`
 	// hangs like a long Claude run, the rest exit at once
 	fs.writeFileSync(
 		docker,
-		`#!/bin/sh\necho $1 $2 $3 $4 $5 >> '${log}'\n[ "$2" = run ] && exec sleep 30\nexit 0\n`,
+		`#!/bin/sh\necho $1 $2 $3 $4 $5 $6 $7 >> '${log}'\n[ "$2" = run ] && exec sleep 30\nexit 0\n`,
 		{ mode: 0o755 }
 	);
 	vi.stubEnv('PATH', `${dir}${path.delimiter}${process.env.PATH}`);
@@ -55,7 +55,7 @@ it.skipIf(process.platform === 'win32')(
 		expect(result.iterations[0].status).toBe('error');
 		const [run, stop] = calls();
 		const name = run.match(
-			/^sandbox run --name (taskgraph-loop-\w+) claude$/
+			/^sandbox run --name (taskgraph-loop-\w+) claude -- -p$/
 		)?.[1];
 		expect(name).toBeDefined();
 		expect(stop).toBe(`sandbox stop ${name}`);

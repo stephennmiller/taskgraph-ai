@@ -146,6 +146,7 @@ describe('LoopService', () => {
 					'--name',
 					expect.stringMatching(/^taskgraph-loop-[0-9a-f]{12}$/),
 					'claude',
+					'--',
 					'-p',
 					'Say OK'
 				],
