@@ -13,14 +13,17 @@
 ## Related Issues
 <!-- Link issues: Fixes #123 -->
 
-## How to Test This
-<!-- Quick steps to verify the changes work -->
+## Testing
+<!-- What you ran and its output. Say what you could not test. -->
 ```bash
-# Example commands or steps
+# Commands you ran
 ```
 
-**Expected result:**
-<!-- What should happen? -->
+## Risk
+<!-- Low, medium or high, and why. What could break for users? -->
+
+## How to revert
+<!-- Usually "revert this PR". Say if data, config or a release needs undoing too. -->
 
 ## Contributor Checklist
 
@@ -28,10 +31,6 @@
 - [ ] Format check passes: `npm run format-check` (or `npm run format` to fix)
 - [ ] Linked related issues (if any)
 - [ ] Manually tested the changes
-
-## Changelog Entry
-<!-- One line describing the change for users -->
-<!-- Example: "Added Kiro IDE integration with automatic task status updates" -->
 
 ---
 

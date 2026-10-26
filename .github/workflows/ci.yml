@@ -6,6 +6,9 @@ on:
       - main
       - next
   pull_request:
+  # The merge queue runs the required checks on each group before it merges
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
@@ -456,7 +459,7 @@ jobs:
   # The patterns are in .github/scripts/parity-paths.txt.
   parity-changes:
     name: Parity changes
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -470,11 +473,11 @@ jobs:
       - name: Find changes under the compared code
         id: changed
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_REV: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
         run: |
           # -z: names unquoted, so a non-ASCII path still matches its pattern;
           # --no-renames: a file moved out of a covered folder counts too
-          git diff -z --no-renames --name-only "origin/${BASE_REF}...HEAD" > changed-files.txt
+          git diff -z --no-renames --name-only "${BASE_REV}...HEAD" > changed-files.txt
           # grep exits 1 for no match; anything else (a missing or bad pattern
           # file) must fail the job rather than skip the comparison
           code=0
@@ -488,7 +491,7 @@ jobs:
   # Runs the scripted CLI and MCP scenarios on the target branch's build and on
   # this PR's build and reports where they differ. Informational: a difference is
   # shown in the job summary and does not fail the PR. Only a scenario that
-  # cannot run fails the job. It is not a required check.
+  # cannot run fails the job.
   parity:
     name: Parity
     needs: [build, parity-changes]
@@ -503,7 +506,7 @@ jobs:
       - name: Check out the target branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
           path: base
           persist-credentials: false
 

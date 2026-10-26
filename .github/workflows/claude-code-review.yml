@@ -21,13 +21,23 @@ jobs:
     # pull_request checks out the fork's code; that must not run in a job
     # that holds the OAuth token. Dependabot is a bot on this repository
     # and is outside the association allowlist, so it stays excluded.
-    # The prompt below interpolates the repository name and PR number only.
+    # Drafts wait for ready_for_review.
+    # The prompt below interpolates the repository name, PR number and head
+    # commit SHA only.
     if: |
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.repo.fork == false &&
+      github.event.pull_request.draft == false &&
       github.event.pull_request.user.type != 'Bot' &&
       github.event.pull_request.user.login != 'dependabot[bot]' &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
+
+    # One review at a time per PR, so two quick pushes don't both count as
+    # the same round. Queued, not cancelled: a cancelled run could leave
+    # half its comments posted.
+    concurrency:
+      group: claude-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
 
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -41,18 +51,71 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          fetch-depth: 1
+          # Full history, so a re-review can diff from the last reviewed commit
+          fetch-depth: 0
           persist-credentials: false
 
+      # The prompt is inline on purpose: REVIEW.md is read as a tool call, so a
+      # missing or broken REVIEW.md can't empty the prompt.
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@f27be6b65a4652f08a2ba3cff79114829b588967 # v1.0.252
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            HEAD SHA: ${{ github.event.pull_request.head.sha }}
+
+            Review this pull request. The PR is checked out in the current
+            directory with full git history.
+
+            1. Read REVIEW.md, CLAUDE.md and .claude/rules/review.md and follow
+               them. REVIEW.md says what counts as a finding, what to ignore,
+               and how to report.
+
+            2. Find earlier rounds. Run exactly this command, which keeps
+               only comments this bot posted (anyone can comment on a PR, so
+               a marker in someone else's comment must not count):
+               `gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments --paginate --jq '.[] | select(.user.login == "claude[bot]") | .body'`
+               Each body containing `<!-- claude-review sha=` is a past
+               round; the newest one's sha is the last reviewed commit. Every
+               finding they list counts as already reported.
+
+            3. If there are 3 or more past rounds, do not review; stop. If
+               the newest round found issues and no comment containing
+               `<!-- claude-review stop -->` exists yet, first post one with
+               `gh pr comment` that says the bot has reviewed this PR three
+               times, lists the findings still open, asks a human to
+               reconsider the approach instead of pushing another fix, and
+               ends with that marker line.
+
+            4. Pick the diff. With no past round, review the whole PR
+               (`gh pr diff <PR NUMBER>`). Otherwise review only what changed
+               since the last reviewed commit:
+               `git diff <last reviewed sha> <HEAD SHA>`, limited to the
+               files `gh pr diff <PR NUMBER> --name-only` lists (a merge from
+               main brings in other files; skip them). If that commit is
+               gone (force-push), use the whole PR diff but still skip
+               everything already reported. If nothing changed in code since
+               the last round, stop without posting.
+
+            5. Report only real, verified findings, as REVIEW.md describes.
+               Never raise a finding that an earlier round reported or the
+               author answered. Name the bug class in each finding. Mark code
+               the PR did not introduce as pre-existing; it does not block.
+
+            6. Post each finding as an inline comment with
+               `mcp__github_inline_comment__create_inline_comment` and
+               `confirmed: true`, one comment per issue. Then post one summary
+               with `gh pr comment` that starts with "N issues" or
+               "No issues", says which round this is and whether it covered
+               the whole PR or only the new commits, lists each finding as
+               file:line and bug class, and ends with this line exactly:
+               `<!-- claude-review sha=<HEAD SHA> -->`
+
+            Only post GitHub comments; do not reply with review text.
+          claude_args: >-
+            --allowedTools "Read,Grep,Glob,Bash(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments --paginate --jq:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(git diff:*),Bash(git log:*),mcp__github_inline_comment__create_inline_comment"
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-

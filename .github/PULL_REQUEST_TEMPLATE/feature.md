@@ -28,15 +28,24 @@
 **What you should see:**
 <!-- Expected behavior -->
 
+## Testing
+<!-- What you ran and its output. Say what you could not test. -->
+```bash
+# Commands you ran
+```
+
+## Risk
+<!-- Low, medium or high, and why. What could break for users? -->
+
+## How to revert
+<!-- Usually "revert this PR". Say if data, config or a release needs undoing too. -->
+
 ## Contributor Checklist
 - [ ] Tests pass: `npm test`
 - [ ] Format check passes: `npm run format-check`
 - [ ] Added tests for new functionality
 - [ ] Manually tested in CLI mode
 - [ ] Manually tested in MCP mode (if applicable)
-
-## Changelog Entry
-<!-- One-liner for release notes -->
 
 ---
 
