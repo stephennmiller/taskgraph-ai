@@ -12,6 +12,9 @@ import { findRootDir } from './utils.mjs';
 // `.changeset/config.json`. It does not read `.changeset/pre.json`, which is
 // changesets' runtime mode and not config.
 const STAGED_PUBLISH_WORKFLOW = 'version-bump.yml';
+// Releases stage under `next`; only this workflow, behind the npm-release
+// environment's approval, moves a dist-tag such as `latest`.
+const DIST_TAG_WORKFLOW = 'npm-dist-tag.yml';
 
 // Command-shaped. A YAML comment is dropped by the parser, and `npm stage
 // publish` does not match `npm publish`.
@@ -19,6 +22,9 @@ const CHANGESET_CMD = /(?:^|[\s;&|`(])(?:npx\s+)?changeset\b/;
 const PUBLISH_PACKAGES_CMD = /(?:^|[\s;&|`(])publish-packages\b/;
 const NPM_PUBLISH_CMD = /(?:^|[\s;&|`(])npm\s+publish\b/;
 const NPM_STAGE_PUBLISH_CMD = /(?:^|[\s;&|`(])npm\s+stage\s+publish\b/;
+const NEXT_TAG_STAGE_PUBLISH_CMD =
+	/(?:^|[\s;&|`(])npm\s+stage\s+publish\b[^\n]*\s--tag[=\s]+next(?:\s|$)/m;
+const NPM_DIST_TAG_CMD = /(?:^|[\s;&|`(])npm\s+dist-tags?\b/;
 
 function jobRuns(job) {
 	const steps = Array.isArray(job?.steps) ? job.steps : [];
@@ -111,6 +117,20 @@ export function findReleaseConfigViolations(config) {
 						'runs npm publish; the trusted publisher only allows npm stage publish from version-bump.yml'
 				});
 			}
+			if (NPM_DIST_TAG_CMD.test(text)) {
+				if (file !== DIST_TAG_WORKFLOW) {
+					violations.push({
+						...where,
+						message: `runs npm dist-tag outside ${DIST_TAG_WORKFLOW}, the only workflow that may move latest`
+					});
+				} else if (!job?.environment || !hasIdTokenWrite(job, workflow)) {
+					violations.push({
+						...where,
+						message:
+							'npm dist-tag must run in an approval environment with id-token: write, not an npm token'
+					});
+				}
+			}
 			if (!NPM_STAGE_PUBLISH_CMD.test(text)) continue;
 			if (file !== STAGED_PUBLISH_WORKFLOW) {
 				violations.push({
@@ -121,6 +141,12 @@ export function findReleaseConfigViolations(config) {
 				continue;
 			}
 			staged = true;
+			if (!NEXT_TAG_STAGE_PUBLISH_CMD.test(text)) {
+				violations.push({
+					...where,
+					message: `npm stage publish must use --tag next; ${DIST_TAG_WORKFLOW} promotes it to latest`
+				});
+			}
 			if (!hasIdTokenWrite(job, workflow)) {
 				violations.push({
 					...where,
@@ -185,7 +211,9 @@ function main() {
 		console.error(`${violations.length} release-config violation(s).`);
 		process.exit(1);
 	}
-	console.log('Release config stages npm only from version-bump.yml.');
+	console.log(
+		'Release config stages npm under next from version-bump.yml and moves latest only from npm-dist-tag.yml.'
+	);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

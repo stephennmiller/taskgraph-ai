@@ -119,10 +119,11 @@ jobs:
       pushed: ${{ steps.push.outputs.pushed }}
       tag: ${{ steps.bump.outputs.tag }}
 
-  # Uploads the tagged build to npm as a STAGED release. `npm stage publish`
-  # defers proof-of-presence (2FA): nothing is installable until a maintainer
-  # runs `npm stage approve <stage-id>` (list them with `npm stage list
-  # taskgraph-ai`). Authenticates with npm trusted publishing (OIDC), so there
+  # Uploads the tagged build to npm as a STAGED release under the `next`
+  # dist-tag. `npm stage publish` defers proof-of-presence (2FA): nothing is
+  # installable until a maintainer runs `npm stage approve <stage-id>` (list
+  # them with `npm stage list taskgraph-ai`). `latest` moves only when
+  # npm-dist-tag.yml promotes it (CONTRIBUTING.md, "Releasing and rolling back"). Authenticates with npm trusted publishing (OIDC), so there
   # is no npm token. The trusted publisher on npmjs.com must name this file,
   # version-bump.yml, with no environment, and needs only the default "stage
   # publish" permission (leave "Allow npm publish" and "Allow npm dist-tag"
@@ -160,4 +161,4 @@ jobs:
         run: npm run build
 
       - name: Stage release on npm
-        run: npm stage publish
+        run: npm stage publish --tag next

@@ -23,7 +23,7 @@ const stageWorkflow = (permissions) => ({
 	jobs: {
 		publish: {
 			...(permissions ? {} : { permissions: { contents: 'read' } }),
-			steps: [{ run: 'npm stage publish' }]
+			steps: [{ run: 'npm stage publish --tag next' }]
 		}
 	}
 });
@@ -32,7 +32,7 @@ const oidcStageWorkflow = () => ({
 	jobs: {
 		publish: {
 			permissions: { contents: 'read', 'id-token': 'write' },
-			steps: [{ run: 'npm stage publish' }]
+			steps: [{ run: 'npm stage publish --tag next' }]
 		}
 	}
 });
@@ -66,7 +66,7 @@ describe('findReleaseConfigViolations', () => {
 					jobs: {
 						publish: {
 							permissions: { contents: 'read' },
-							steps: [{ run: 'npm stage publish' }]
+							steps: [{ run: 'npm stage publish --tag next' }]
 						}
 					}
 				}
@@ -180,7 +180,7 @@ describe('findReleaseConfigViolations', () => {
 					jobs: {
 						rc: {
 							permissions: { 'id-token': 'write' },
-							steps: [{ run: 'npm stage publish' }]
+							steps: [{ run: 'npm stage publish --tag next' }]
 						}
 					}
 				},
@@ -249,6 +249,85 @@ describe('findReleaseConfigViolations', () => {
 	});
 });
 
+describe('next tag and dist-tag rules', () => {
+	const distTagWorkflow = (job) => ({
+		jobs: {
+			'set-latest': {
+				environment: 'npm-release',
+				permissions: { 'id-token': 'write' },
+				steps: [{ run: 'npm dist-tag add "taskgraph-ai@$VERSION" latest' }],
+				...job
+			}
+		}
+	});
+
+	it('rejects a staged publish that would go straight to latest', () => {
+		for (const run of [
+			'npm stage publish',
+			'npm stage publish --tag latest',
+			'npm stage publish --tag nextgen'
+		]) {
+			const config = cleanConfig();
+			config.workflows['version-bump.yml'].jobs.publish.steps = [{ run }];
+			expect(findReleaseConfigViolations(config)).toEqual([
+				{
+					file: 'version-bump.yml',
+					job: 'publish',
+					message:
+						'npm stage publish must use --tag next; npm-dist-tag.yml promotes it to latest'
+				}
+			]);
+		}
+	});
+
+	it('accepts --tag=next', () => {
+		const config = cleanConfig();
+		config.workflows['version-bump.yml'].jobs.publish.steps = [
+			{ run: 'npm stage publish --tag=next' }
+		];
+		expect(findReleaseConfigViolations(config)).toEqual([]);
+	});
+
+	it('accepts npm dist-tag from npm-dist-tag.yml in an environment with OIDC', () => {
+		const config = cleanConfig();
+		config.workflows['npm-dist-tag.yml'] = distTagWorkflow();
+		expect(findReleaseConfigViolations(config)).toEqual([]);
+	});
+
+	it('rejects npm dist-tag without an environment or id-token write', () => {
+		for (const job of [
+			{ environment: undefined },
+			{ permissions: { contents: 'read' } }
+		]) {
+			const config = cleanConfig();
+			config.workflows['npm-dist-tag.yml'] = distTagWorkflow(job);
+			expect(findReleaseConfigViolations(config)).toEqual([
+				{
+					file: 'npm-dist-tag.yml',
+					job: 'set-latest',
+					message:
+						'npm dist-tag must run in an approval environment with id-token: write, not an npm token'
+				}
+			]);
+		}
+	});
+
+	it('rejects npm dist-tag in any other workflow', () => {
+		const config = cleanConfig();
+		config.workflows['version-bump.yml'].jobs.publish.steps.push({
+			run: 'npm dist-tag add taskgraph-ai@1.0.0 latest'
+		});
+		expect(findReleaseConfigViolations(config)).toEqual([
+			{
+				file: 'version-bump.yml',
+				job: 'publish',
+				message:
+					'runs npm dist-tag outside npm-dist-tag.yml, the only workflow that may move latest'
+			}
+		]);
+	});
+});
+
 describe('loadReleaseConfig', () => {
 	let dir;
 
@@ -268,7 +347,7 @@ describe('loadReleaseConfig', () => {
 				'    permissions:',
 				'      id-token: write',
 				'    steps:',
-				'      - run: npm stage publish',
+				'      - run: npm stage publish --tag next',
 				''
 			].join('\n')
 		);

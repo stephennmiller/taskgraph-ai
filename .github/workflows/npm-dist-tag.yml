@@ -1,0 +1,55 @@
+name: Set npm latest
+
+# Points the npm `latest` dist-tag at a published version. Releases are staged
+# under `next` by version-bump.yml, so this is both steps of the runbook in
+# CONTRIBUTING.md ("Releasing and rolling back"):
+#   promote:  the version `next` points at, once it has soaked
+#   rollback: the last good version, after a bad release reached `latest`
+# `npm deprecate` is not an OIDC operation, so the maintainer runs it locally.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to point latest at, e.g. 0.62.0 (no leading v)'
+        required: true
+        type: string
+
+concurrency:
+  group: npm-dist-tag
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  set-latest:
+    name: Point latest at ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Required reviewers on this environment approve each run. The npm trusted
+    # publisher for this file names this environment and has only
+    # "Allow npm dist-tag" checked.
+    environment: npm-release
+    permissions:
+      id-token: write # npm trusted publishing (OIDC) for npm dist-tag
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Update npm for trusted publishing
+        run: npm install -g npm@12.2.1
+
+      - name: Point latest at the version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          # [[ =~ ]] matches the whole value; grep would pass "0.62.0<newline>anything".
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must be an exact release like 0.62.0"
+            exit 1
+          fi
+          npm dist-tag ls taskgraph-ai
+          npm dist-tag add "taskgraph-ai@$VERSION" latest
+          npm dist-tag ls taskgraph-ai
