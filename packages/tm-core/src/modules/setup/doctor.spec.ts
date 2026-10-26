@@ -368,10 +368,8 @@ describe('runDoctor', () => {
 });
 
 describe('createCommandRunner', () => {
+	// A full path runs without a shell on every platform, as the bundled claude.exe does
 	const node = process.execPath;
-	// On Windows the runner joins the command into one shell string, which
-	// these inline scripts don't survive
-	const posix = process.platform !== 'win32';
 
 	it('resolves null when the command does not exist', async () => {
 		const run = createCommandRunner(5_000);
@@ -379,35 +377,29 @@ describe('createCommandRunner', () => {
 		expect(await run('taskgraph-no-such-command', [], os.tmpdir())).toBeNull();
 	});
 
-	it.runIf(posix)(
-		'keeps the output of a command that exits non-zero, as claude auth status does when signed out',
-		async () => {
-			const run = createCommandRunner(5_000);
+	it('keeps the output of a command that exits non-zero, as claude auth status does when signed out', async () => {
+		const run = createCommandRunner(5_000);
 
-			const out = await run(
-				node,
-				['-e', 'console.log(JSON.stringify({loggedIn:false}));process.exit(1)'],
-				os.tmpdir()
-			);
+		const out = await run(
+			node,
+			['-e', 'console.log(JSON.stringify({loggedIn:false}));process.exit(1)'],
+			os.tmpdir()
+		);
 
-			expect(JSON.parse(out ?? '')).toEqual({ loggedIn: false });
-		}
-	);
+		expect(JSON.parse(out ?? '')).toEqual({ loggedIn: false });
+	});
 
-	it.runIf(posix)(
-		'gives up on a command that runs past the deadline',
-		async () => {
-			const run = createCommandRunner(200);
-			const started = Date.now();
+	it('gives up on a command that runs past the deadline', async () => {
+		const run = createCommandRunner(200);
+		const started = Date.now();
 
-			const out = await run(
-				node,
-				['-e', 'console.log("partial");setTimeout(()=>{},10000)'],
-				os.tmpdir()
-			);
+		const out = await run(
+			node,
+			['-e', 'console.log("partial");setTimeout(()=>{},10000)'],
+			os.tmpdir()
+		);
 
-			expect(out).toBeNull();
-			expect(Date.now() - started).toBeLessThan(5_000);
-		}
-	);
+		expect(out).toBeNull();
+		expect(Date.now() - started).toBeLessThan(5_000);
+	});
 });

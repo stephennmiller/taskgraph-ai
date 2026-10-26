@@ -101,17 +101,16 @@ const COMMAND_TIMEOUT_MS = 15_000;
 export function createCommandRunner(
 	timeoutMs: number = COMMAND_TIMEOUT_MS
 ): CommandRunner {
-	const windows = process.platform === 'win32';
 	return (command, args, cwd) =>
 		new Promise((resolve) => {
+			// npm installs `claude` as a .cmd shim, which Windows runs only
+			// through a shell. The arguments are fixed strings, so the shell
+			// sees nothing from the user; one string avoids Node's DEP0190.
+			// A full path (the bundled claude.exe) runs directly, so cmd.exe
+			// never parses its spaces, `&` or `%`
+			const windows = process.platform === 'win32' && !path.isAbsolute(command);
 			execFile(
-				// npm installs `claude` as a .cmd shim, which Windows runs only
-				// through a shell. The arguments are fixed strings, so the shell
-				// sees nothing from the user; one string avoids Node's DEP0190.
-				// A bundled binary's path may hold spaces
-				windows
-					? [/\s/.test(command) ? `"${command}"` : command, ...args].join(' ')
-					: command,
+				windows ? [command, ...args].join(' ') : command,
 				windows ? [] : args,
 				{
 					cwd,
