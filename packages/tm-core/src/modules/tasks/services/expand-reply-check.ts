@@ -5,7 +5,7 @@
 
 /** A whole field that only stands in for text, such as "TBD" or "To be determined" */
 const PLACEHOLDER_TEXT =
-	/^(?:placeholder(?: \w+)?|todo|tbd|tba|n\/?a|lorem ipsum.*|coming soon|details to follow|fill (?:this )?in(?: later)?|to be (?:determined|defined|decided|added|written|completed|filled in)(?: later)?)$/i;
+	/^(?:placeholder(?: (?:subtask|task|title|description|details|text))?|todo|tbd|tba|n\/?a|lorem ipsum.*|coming soon|details to follow|fill (?:this )?in(?: later)?|to be (?:determined|defined|decided|added|written|completed|filled in)(?: later)?)$/i;
 
 function isPlaceholder(text: unknown): boolean {
 	if (typeof text !== 'string') return false;

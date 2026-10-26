@@ -336,7 +336,15 @@ export class ExpandTaskService {
 			// A stub reply is a bad draw, not the task: ask once more
 			warn(`Task ${taskId}: the AI returned ${firstProblem}; asking again`);
 			const first = response?.telemetryData;
-			response = await callAi();
+			try {
+				response = await callAi();
+			} catch (error) {
+				// The first call was paid for even though the retry failed
+				if (error instanceof Error && first) {
+					(error as ExpandError).telemetryData = first;
+				}
+				throw error;
+			}
 			const second = response?.telemetryData;
 			if (first && second) {
 				response.telemetryData = {

@@ -142,6 +142,36 @@ describe('tasks.expand with a stub reply', () => {
 		}
 	);
 
+	it('keeps the cost of the first call when the retry fails', async () => {
+		generateObject
+			.mockResolvedValueOnce(answer([aiSubtask(1)], 5) as any)
+			.mockRejectedValueOnce(new Error('network down'));
+
+		const error = await tmCore.tasks
+			.expand({ id: '2', num: 3 })
+			.catch((e: unknown) => e);
+
+		expect(error).toMatchObject({
+			message: 'network down',
+			telemetryData: { inputTokens: 5 }
+		});
+		expect(saved()[1].subtasks).toHaveLength(0);
+	});
+
+	it('saves a real subtask whose title starts with "Placeholder" at once', async () => {
+		generateObject.mockResolvedValue(
+			answer([
+				aiSubtask(1, { title: 'Placeholder images' }),
+				aiSubtask(2)
+			]) as any
+		);
+
+		await tmCore.tasks.expand({ id: '2', num: 2 });
+
+		expect(generateObject).toHaveBeenCalledTimes(1);
+		expect(saved()[1].subtasks[0].title).toBe('Placeholder images');
+	});
+
 	it('takes one subtask when one was asked for, or the AI chose the count', async () => {
 		generateObject.mockResolvedValue(answer([aiSubtask(1)]) as any);
 
