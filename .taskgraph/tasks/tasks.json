@@ -68,7 +68,7 @@
         "description": "The generated plan is the product, and nothing measures it. The fake claude (#236) and build comparison (#238) test plumbing, not output. `tests/manual/prompts/prompt-test.js` is manual.",
         "details": "GitHub issue #252: https://github.com/stephennmiller/taskgraph-ai/issues/252\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
         "testStrategy": "",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
         "subtasks": []
@@ -883,6 +883,18 @@
         "dependencies": [],
         "priority": "medium",
         "subtasks": []
+      },
+      {
+        "id": "68",
+        "title": "tm-core coverage thresholds are never enforced in CI (#711)",
+        "description": "CI runs the @tm/core tests without coverage, so the 80% thresholds never block a merge.",
+        "details": "GitHub issue #711: https://github.com/stephennmiller/taskgraph-ai/issues/711\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-26T03:01:10.709Z"
       }
     ],
     "metadata": {
@@ -891,9 +903,9 @@
       "schemaVersion": 1,
       "updated": "2026-10-24T00:05:11.748Z",
       "version": "1.0.0",
-      "lastModified": "2026-10-24T12:52:37.003Z",
-      "taskCount": 67,
-      "completedCount": 54,
+      "lastModified": "2026-10-26T03:01:10.709Z",
+      "taskCount": 68,
+      "completedCount": 60,
       "tags": [
         "master"
       ]

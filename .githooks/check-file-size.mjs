@@ -25,6 +25,8 @@ const IGNORED_PATTERNS = [
 	/^\.taskgraph\/reports\//,
 	// archived TaskGraph data, kept for history and never edited
 	/^\.taskgraph\/archive\//,
+	// written by `npm run evals -- --update-baseline`
+	/^evals\/baseline\.json$/,
 	// binary / media
 	/\.(png|jpe?g|gif|webp|avif|ico|svg|mp4|mov|webm|mp3|wav|pdf|woff2?|ttf|otf|eot|zip|gz|tgz|wasm)$/i
 ];

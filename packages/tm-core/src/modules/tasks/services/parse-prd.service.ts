@@ -378,11 +378,19 @@ export class ParsePrdService {
 				'prd'
 			),
 			prdPath,
+			// 'prd' also covers the <prd_sections> fence the headings go in
 			prdSections: promptSections.length
-				? formatPrdSectionList(promptSections)
+				? neutralizeTag(formatPrdSectionList(promptSections), 'prd')
 				: '',
+			// 'existing_tasks' for this fence; 'prd' also covers <prd> and <prd_sections>
 			existingTasks: existingTasks.length
-				? formatExistingTaskList(existingTasks)
+				? neutralizeTag(
+						neutralizeTag(
+							formatExistingTaskList(existingTasks),
+							'existing_tasks'
+						),
+						'prd'
+					)
 				: '',
 			hasCodebaseAnalysis: aiConfig.hasCodebaseAnalysis(
 				research,

@@ -66,7 +66,7 @@ describe('parity-paths.txt', () => {
 		'apps/cli/tests/integration/parity-paths.test.ts',
 		'packages/tm-core/tests/integration/example.test.ts',
 		'packages/claude-code-plugin/commands/next.md',
-		'.github/workflows/release.yml',
+		'.github/workflows/version-bump.yml',
 		'packages/claude-code-plugin/package.json',
 		'tests/unit/ci/job-timeouts.test.js'
 	])('skips the comparison for %s', (file) => {

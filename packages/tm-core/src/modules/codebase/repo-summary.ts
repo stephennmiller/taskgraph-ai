@@ -37,8 +37,11 @@ import {
 } from '../../common/constants/paths.js';
 import { neutralizeTag } from '../../common/utils/prompt-tag.js';
 
-/** Bump when the summary's content changes, so old caches are rebuilt */
-const SUMMARY_VERSION = 2;
+/**
+ * Bump when the summary's content changes, so old caches are rebuilt.
+ * 3 invalidates caches from before the stricter neutralizeTag (#687).
+ */
+const SUMMARY_VERSION = 3;
 const CACHE_FILE = 'repo-summary.json';
 const TREE_DEPTH = 3;
 const MAX_TREE_LINES = 150;
