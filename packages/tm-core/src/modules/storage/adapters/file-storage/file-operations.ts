@@ -53,11 +53,14 @@ function invalidJsonError(
  */
 const LOCK_OPTIONS = {
 	stale: 10000, // Consider lock stale after 10 seconds
+	// About 10 s: another process (the CLI next to a busy MCP server) can wait
+	// behind several writes in a row (#697). Randomized so waiters don't retry in step
 	retries: {
-		retries: 5,
+		retries: 14,
 		factor: 2,
 		minTimeout: 100,
-		maxTimeout: 1000
+		maxTimeout: 1000,
+		randomize: true
 	},
 	realpath: false // Don't resolve symlinks (faster)
 };

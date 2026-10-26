@@ -273,6 +273,25 @@ describe('FileOperations', () => {
 			expect(result.count).toBe(numInstances);
 		});
 
+		it('waits out a lock another process holds for a few seconds', async () => {
+			// The CLI next to a busy MCP server waits behind several writes (#697);
+			// the old 2.5 s budget gave up
+			await fs.writeFile(testFilePath, JSON.stringify({ count: 0 }));
+			const release = await lockfile.lock(testFilePath, { realpath: false });
+			const held = new Promise((resolve) => setTimeout(resolve, 3000)).then(
+				() => release()
+			);
+
+			await fileOps.modifyJson(testFilePath, (data: { count: number }) => ({
+				count: data.count + 1
+			}));
+			await held;
+
+			expect(JSON.parse(await fs.readFile(testFilePath, 'utf-8')).count).toBe(
+				1
+			);
+		}, 15000);
+
 		it('keeps writing after one writer in the queue throws', async () => {
 			await fs.writeFile(testFilePath, JSON.stringify({ count: 0 }));
 			const failed = fileOps.modifyJson(testFilePath, () => {
