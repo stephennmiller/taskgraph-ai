@@ -67,9 +67,11 @@ when bundled code changes.
   the risk and how to revert.
 - Use a conventional-commit title written for users. It becomes the release
   note (see [Versioning](#versioning)). Don't add a changeset.
-- The Claude review bot reviews each push to a non-draft PR, following
-  [REVIEW.md](REVIEW.md). It reviews only the commits since its last round and
-  stops after three rounds. Fix each finding or reply saying why not.
+- The Claude review bot reviews each push to a non-draft PR opened by a
+  collaborator from a branch in this repo, following [REVIEW.md](REVIEW.md).
+  Fork PRs get a human review instead. The bot reviews only the commits since
+  its last round and stops after three rounds. Fix each finding or reply
+  saying why not.
 - A PR merges when CI is green, every review thread is resolved, and it has no
   merge conflict. PRs are squash-merged with the PR title as the commit
   message. There is no merge queue, because the repo is owned by a personal
