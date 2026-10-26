@@ -10,11 +10,12 @@ import { afterAll, beforeAll, vi } from 'vitest';
 process.env.GIT_CONFIG_GLOBAL = os.devNull;
 process.env.GIT_CONFIG_NOSYSTEM = '1';
 // No auto maintenance after a commit: newer git runs it detached, and its lock
-// file in .git/objects races a test deleting .git; Node 24's rmSync can then
-// return without error with .git still there (#713).
-process.env.GIT_CONFIG_COUNT = '1';
-process.env.GIT_CONFIG_KEY_0 = 'maintenance.auto';
-process.env.GIT_CONFIG_VALUE_0 = 'false';
+// file in .git/objects races a test deleting the repo (#713). Appended, so
+// config the environment already passes this way still applies.
+const gitConfigCount = Number(process.env.GIT_CONFIG_COUNT) || 0;
+process.env[`GIT_CONFIG_KEY_${gitConfigCount}`] = 'maintenance.auto';
+process.env[`GIT_CONFIG_VALUE_${gitConfigCount}`] = 'false';
+process.env.GIT_CONFIG_COUNT = String(gitConfigCount + 1);
 
 // Suppress console errors during tests unless explicitly testing them
 const originalError = console.error;

@@ -267,10 +267,18 @@ describe('repo summary', () => {
 		});
 
 		it('builds without caching outside git', () => {
-			fs.rmSync(path.join(root, '.git'), { recursive: true, force: true });
+			// A fresh folder, not root minus .git: git's background maintenance can
+			// keep a deleted .git partly in place (#713)
+			const plain = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-repo-summary-'));
+			try {
+				write(plain, '.taskgraph/config.json', '{}');
+				write(plain, 'src/one.ts');
 
-			expect(getRepoSummary(root)).toContain('src/one.ts');
-			expect(fs.existsSync(cacheFile(root))).toBe(false);
+				expect(getRepoSummary(plain)).toContain('src/one.ts');
+				expect(fs.existsSync(cacheFile(plain))).toBe(false);
+			} finally {
+				fs.rmSync(plain, { recursive: true, force: true });
+			}
 		});
 	});
 });
