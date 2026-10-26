@@ -198,7 +198,7 @@ function renumberSubtasks(
 		if (!newIds.has(String(s.id))) newIds.set(String(s.id), highest + i + 1);
 	});
 	added.forEach((subtask, i) => {
-		subtask.id = highest + i + 1;
+		subtask.id = String(highest + i + 1);
 		subtask.dependencies = (subtask.dependencies ?? []).map((raw) => {
 			const dep = resolveSubtaskDependency(taskId, raw);
 			const newId = dep.startsWith(`${taskId}.`)

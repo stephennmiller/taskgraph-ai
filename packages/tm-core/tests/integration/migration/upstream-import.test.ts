@@ -62,11 +62,16 @@ describe('importUpstreamProject', () => {
 		const result = importUpstreamProject(project);
 
 		// Only the schema version stamp is added to each tag's metadata, and
-		// task IDs and dependencies are stored as strings (#392)
+		// task and subtask IDs and task dependencies are stored as strings
+		// (#392, #748)
 		const source = readJson('.taskmaster', 'tasks', 'tasks.json');
 		for (const tag of Object.values<{
 			metadata?: object;
-			tasks: { id: unknown; dependencies?: unknown[] }[];
+			tasks: {
+				id: unknown;
+				dependencies?: unknown[];
+				subtasks?: { id: unknown }[];
+			}[];
 		}>(source)) {
 			tag.metadata = {
 				...tag.metadata,
@@ -75,6 +80,8 @@ describe('importUpstreamProject', () => {
 			for (const task of tag.tasks) {
 				task.id = String(task.id);
 				task.dependencies = task.dependencies?.map(String);
+				for (const subtask of task.subtasks ?? [])
+					subtask.id = String(subtask.id);
 			}
 		}
 		expect(readJson('.taskgraph', 'tasks', 'tasks.json')).toEqual(source);

@@ -163,7 +163,7 @@ function moveSubtaskToSubtask(
 		);
 		const newSubtask: Item = {
 			...subtask,
-			id: destSubtaskId,
+			id: String(destSubtaskId),
 			parentId: String(destParent.id),
 			dependencies: moved.dependencies
 		};
@@ -277,7 +277,7 @@ function moveTaskToSubtask(
 	// dependencies are written as strings (and the new parent dropped)
 	const converted = dependenciesForConvertedTask(sourceTask, destParent.id);
 	const newSubtask: Item = {
-		id: destSubtaskId,
+		id: String(destSubtaskId),
 		parentId: String(destParent.id),
 		title: sourceTask.title,
 		description: sourceTask.description,

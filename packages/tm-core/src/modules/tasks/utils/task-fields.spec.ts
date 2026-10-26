@@ -109,7 +109,7 @@ describe('selectTaskFields', () => {
 		expect(picked).toEqual({
 			id: '1',
 			title: 'Login',
-			subtasks: [{ id: 1, title: 'Form' }]
+			subtasks: [{ id: '1', title: 'Form' }]
 		});
 	});
 

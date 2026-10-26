@@ -180,10 +180,10 @@ describe('mergeTasksJson', () => {
 			]);
 			const subtasks = byId(result.merged, 1)?.subtasks;
 			expect(subtasks.map((s: Json) => [s.id, s.title])).toEqual([
-				[1, 'Subtask 1'],
-				[2, 'Ours: schema'],
-				[3, 'Subtask 3'],
-				[4, 'Theirs: API']
+				['1', 'Subtask 1'],
+				['2', 'Ours: schema'],
+				['3', 'Subtask 3'],
+				['4', 'Theirs: API']
 			]);
 			expect(subtasks[2].dependencies).toEqual([4, '1.4']);
 			expect(subtasks[2].metadata).toEqual({

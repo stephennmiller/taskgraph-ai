@@ -111,8 +111,8 @@ describe('add-subtask and move through tasks', () => {
 		expect(byId('3').dependencies).toEqual(['9.2']);
 		expect(byId('4').subtasks[0].dependencies).toEqual(['9.1']);
 		expect(byId('9').subtasks).toMatchObject([
-			{ id: 1, parentId: '9', dependencies: [] },
-			{ id: 2, parentId: '9', dependencies: [1] }
+			{ id: '1', parentId: '9', dependencies: [] },
+			{ id: '2', parentId: '9', dependencies: [1] }
 		]);
 	});
 
@@ -140,8 +140,8 @@ describe('add-subtask and move through tasks', () => {
 
 		const [, parser] = readFile().master.tasks;
 		expect(parser.subtasks).toMatchObject([
-			{ id: 1, parentId: '2' },
-			{ id: 2, parentId: '2' }
+			{ id: '1', parentId: '2' },
+			{ id: '2', parentId: '2' }
 		]);
 	});
 
@@ -165,7 +165,7 @@ describe('add-subtask and move through tasks', () => {
 		});
 
 		expect(tag).toBe('master');
-		expect(subtask).toMatchObject({ id: 1, dependencies: ['1'] });
+		expect(subtask).toMatchObject({ id: '1', dependencies: ['1'] });
 		expect(readFile().master.tasks[1].subtasks[0].title).toBe('Read files');
 	});
 
@@ -178,7 +178,7 @@ describe('add-subtask and move through tasks', () => {
 			fromTaskId: '2'
 		});
 
-		expect(subtask).toMatchObject({ id: 2, title: 'Report' });
+		expect(subtask).toMatchObject({ id: '2', title: 'Report' });
 		expect(idsIn('master')).toEqual(['1', '20']);
 		expect(readFile().master.tasks[1].subtasks[0]).not.toHaveProperty(
 			'parentTaskId'

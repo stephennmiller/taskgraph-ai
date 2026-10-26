@@ -341,7 +341,7 @@ export class UpdateTaskService {
 				const before = matched[i];
 				const corrected = {
 					...subtask,
-					id,
+					id: String(id),
 					// A number is an earlier sibling; a string is a task or subtask
 					dependencies: cleanGeneratedSubtaskDependencies(
 						subtask.dependencies,
@@ -372,7 +372,7 @@ export class UpdateTaskService {
 							subtasks: task.subtasks.map((st) => {
 								const key = String(st.id);
 								if (!newIdOf.has(key)) newIdOf.set(key, ++next);
-								return { ...st, id: newIdOf.get(key) as number };
+								return { ...st, id: String(newIdOf.get(key)) };
 							})
 						}
 					: task;
@@ -571,7 +571,7 @@ export class UpdateTaskService {
 			merged.subtasks = merged.subtasks.map((subtask, i) => {
 				const before = matched[i];
 				const restored = keepStoredFields(
-					{ ...subtask, id: before ? before.id : ++next },
+					{ ...subtask, id: before ? before.id : String(++next) },
 					before
 				);
 				assignMetadata(

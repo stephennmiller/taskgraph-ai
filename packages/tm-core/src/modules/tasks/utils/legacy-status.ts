@@ -1,7 +1,8 @@
 /**
- * @fileoverview Older status spellings and stale fields
+ * @fileoverview Older status spellings, subtask ID types and stale fields
  * Older task and archive files can say 'completed' where TaskGraph says
- * 'done'. Every loader reads it as 'done', so the next save writes 'done'.
+ * 'done', and store subtask IDs as numbers. Every loader reads them as
+ * 'done' and strings, so the next save writes those.
  */
 
 import type { Task } from '../../../common/types/index.js';
@@ -19,18 +20,22 @@ export function normalizeTaskStatus<T extends string | undefined>(
 
 /**
  * Copies of the tasks with 'completed' read as 'done', on tasks and their
- * subtasks, and without the `tag` and `parentTaskId` fields older versions
- * wrote: a tag rename or a renumbering move left them stale (#701, #702), and
- * nothing reads them now
+ * subtasks, each subtask's numeric `id` as a string (schema version 2, #748),
+ * and without the `tag` and `parentTaskId` fields older versions wrote: a tag
+ * rename or a renumbering move left them stale (#701, #702), and nothing
+ * reads them now
  */
 export function normalizeTaskStatuses(tasks: Task[]): Task[] {
 	return tasks.map((task) => {
 		if (!isObject(task)) return task;
 		const copy = current(task);
 		if (Array.isArray(task.subtasks)) {
-			copy.subtasks = task.subtasks.map((subtask) =>
-				isObject(subtask) ? current(subtask) : subtask
-			);
+			copy.subtasks = task.subtasks.map((subtask) => {
+				if (!isObject(subtask)) return subtask;
+				const migrated = current(subtask);
+				if (typeof migrated.id === 'number') migrated.id = String(migrated.id);
+				return migrated;
+			});
 		}
 		return copy;
 	});

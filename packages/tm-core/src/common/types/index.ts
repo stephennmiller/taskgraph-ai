@@ -171,12 +171,13 @@ export interface Task extends TaskImplementationMetadata {
 }
 
 /**
- * Subtask interface extending Task
- * ID can be number (file storage) or string (API storage with display_id)
+ * Subtask interface extending Task. `id` is the subtask's own number within
+ * its parent, as a string (`"2"`); files older than schema version 2 stored
+ * a number, which FileStorage converts on load.
  */
 export interface Subtask
 	extends Omit<Task, 'id' | 'subtasks' | 'dependencies'> {
-	id: number | string;
+	id: string;
 	parentId: string;
 	/**
 	 * The JSON type carries the meaning: a number below 100 is a sibling
@@ -336,7 +337,7 @@ export function isSubtask(obj: unknown): obj is Subtask {
 	const subtask = obj as Record<string, unknown>;
 
 	return (
-		typeof subtask.id === 'number' &&
+		typeof subtask.id === 'string' &&
 		typeof subtask.parentId === 'string' &&
 		typeof subtask.title === 'string' &&
 		typeof subtask.description === 'string' &&

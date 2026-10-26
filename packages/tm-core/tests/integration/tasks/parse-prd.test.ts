@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPromptManager } from '../../../src/modules/ai/prompts/prompt-manager.js';
 import { buildPrdSnapshot } from '../../../src/modules/prd/prd-deltas.js';
 import { parsePrdSections } from '../../../src/modules/prd/prd-sections.js';
+import { CURRENT_SCHEMA_VERSION } from '../../../src/modules/storage/adapters/file-storage/index.js';
 import legacyInputs from './__snapshots__/parse-prd-prompt-inputs.legacy.json' with {
 	type: 'json'
 };
@@ -174,7 +175,10 @@ describe('tasks.parsePrd', () => {
 			['5', []],
 			['6', ['5']]
 		]);
-		expect(tag().metadata).toMatchObject({ schemaVersion: 1, kept: 'yes' });
+		expect(tag().metadata).toMatchObject({
+			schemaVersion: CURRENT_SCHEMA_VERSION,
+			kept: 'yes'
+		});
 	});
 
 	it('with force, keeps the tasks when the AI returns none', async () => {

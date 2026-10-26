@@ -1,8 +1,8 @@
 /**
  * @fileoverview One shape for task IDs on the way out of @tm/core
  *
- * tasks.json stores task and subtask IDs as numbers or strings, and older
- * files leave a subtask's `parentId` out. Everything @tm/core hands to the
+ * tasks.json stores task and subtask IDs as strings, but older files may hold
+ * numbers and leave a subtask's `parentId` out. Everything @tm/core hands to the
  * CLI and MCP gives IDs as strings:
  *  - a task's `id` and `dependencies` are strings
  *  - a subtask's `id` is a string, and `parentId` is its task's ID
@@ -42,7 +42,7 @@ export function normalizeTaskIds(task: Task): Task {
 /**
  * The task as a JSON reply gives it: each subtask's `id` and `dependencies`
  * are full dotted IDs (`"9.1"`), the form `show`, `set-status` and `next` take. Never save the
- * result; tasks.json keeps the subtask's own number. Null stays null.
+ * result; tasks.json keeps the subtask's own number (`"1"`). Null stays null.
  */
 export function withFullSubtaskIds<T extends { id: string | number } | null>(
 	task: T

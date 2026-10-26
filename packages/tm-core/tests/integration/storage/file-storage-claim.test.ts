@@ -108,7 +108,7 @@ describe('FileStorage claimNextTask', () => {
 				status: 'in-progress',
 				subtasks: [
 					{
-						id: 1,
+						id: '1',
 						parentId: '1',
 						title: 'Started',
 						description: '',
@@ -119,7 +119,7 @@ describe('FileStorage claimNextTask', () => {
 						testStrategy: ''
 					},
 					{
-						id: 2,
+						id: '2',
 						parentId: '1',
 						title: 'Not started',
 						description: '',

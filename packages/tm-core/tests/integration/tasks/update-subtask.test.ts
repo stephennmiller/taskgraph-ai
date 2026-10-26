@@ -91,7 +91,7 @@ describe('tasks.updateSubtask', () => {
 	const subtaskIn = (data: any, parent: number, id: number, tag = 'master') =>
 		data[tag].tasks
 			.find((t: any) => String(t.id) === String(parent))
-			.subtasks.find((s: any) => s.id === id);
+			.subtasks.find((s: any) => String(s.id) === String(id));
 
 	beforeEach(async () => {
 		projectDir = fs.realpathSync(

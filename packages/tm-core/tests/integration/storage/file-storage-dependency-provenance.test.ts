@@ -88,7 +88,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 			createTask('2', {
 				subtasks: [
 					{
-						id: 1,
+						id: '1',
 						parentId: '2',
 						title: 'S1',
 						description: '',
@@ -99,7 +99,7 @@ describe('FileStorage dependency provenance - Integration Tests', () => {
 						testStrategy: ''
 					},
 					{
-						id: 2,
+						id: '2',
 						parentId: '2',
 						title: 'S2',
 						description: '',

@@ -104,9 +104,11 @@ export const findTask = (tasks: Item[], id: DependencyId) =>
 	tasks.find((t) => String(t.id) === String(id));
 
 const nextSubtaskId = (parent: Item) =>
-	parent.subtasks.length > 0
-		? Math.max(...parent.subtasks.map((st: Item) => Number(st.id))) + 1
-		: 1;
+	String(
+		parent.subtasks.length > 0
+			? Math.max(...parent.subtasks.map((st: Item) => Number(st.id))) + 1
+			: 1
+	);
 
 /**
  * Whether `task` (a subtask of `parentId` when given) depends on `targetId`,

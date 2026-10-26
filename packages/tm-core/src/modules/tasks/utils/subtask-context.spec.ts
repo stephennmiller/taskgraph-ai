@@ -70,7 +70,7 @@ describe('subtaskInContext', () => {
 			title: 'Cycles',
 			status: 'in-progress',
 			priority: 'high',
-			subtasks: [stored({ id: 1, status: 'done', dependencies: [] }), sub]
+			subtasks: [stored({ id: '1', status: 'done', dependencies: [] }), sub]
 		});
 
 		const next = selectNextTask([parent]) as unknown as Subtask;

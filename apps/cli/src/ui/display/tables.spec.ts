@@ -105,7 +105,7 @@ describe('createTaskTable - narrow terminals', () => {
 describe('createTaskTable with escape sequences in task text', () => {
 	it('prints titles and subtask titles without them', () => {
 		const subtask = {
-			id: 1,
+			id: '1',
 			parentId: '1',
 			title: HOSTILE,
 			description: '',

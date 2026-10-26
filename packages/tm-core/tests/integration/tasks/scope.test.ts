@@ -200,14 +200,16 @@ describe('tasks.scope', () => {
 						commandName: p.commandName
 					}))
 				).toEqual(captured.calls);
-				// As tm-core stores every task: string task dependencies, parentId
+				// As tm-core stores every task: string task dependencies and
+				// subtask IDs, parentId
 				const { saved: legacySaved } = captured as any;
 				const saved = readTask();
 				expect({ ...saved, id: Number(saved.id) }).toEqual({
 					...legacySaved,
 					dependencies: legacySaved.dependencies.map(String),
-					subtasks: legacySaved.subtasks.map((s: object) => ({
+					subtasks: legacySaved.subtasks.map((s: { id: number }) => ({
 						...s,
+						id: String(s.id),
 						parentId: '3'
 					}))
 				});
@@ -282,11 +284,11 @@ describe('tasks.scope', () => {
 
 		expect(readTask(4).title).toBe('Edited meanwhile');
 		expect(readTask().subtasks.map((s: any) => [s.id, s.title])).toEqual([
-			[1, 'Hash passwords'],
-			[2, 'Login route'],
-			[5, 'Audit log'],
-			[6, 'New step one'],
-			[7, 'New step two']
+			['1', 'Hash passwords'],
+			['2', 'Login route'],
+			['5', 'Audit log'],
+			['6', 'New step one'],
+			['7', 'New step two']
 		]);
 	});
 
@@ -324,9 +326,9 @@ describe('tasks.scope', () => {
 		const result = await tmCore.tasks.scope({ ids: '3', direction: 'up' });
 
 		expect(readTask().subtasks.map((s: any) => [s.id, s.title])).toEqual([
-			[1, 'Shipped'],
-			[3, 'New step one'],
-			[4, 'New step two']
+			['1', 'Shipped'],
+			['3', 'New step one'],
+			['4', 'New step two']
 		]);
 		expect(result.tasks[0]).toMatchObject({ preserved: 1, generated: 2 });
 	});
@@ -363,10 +365,10 @@ describe('tasks.scope', () => {
 
 		const saved = readTask();
 		expect(saved.subtasks.map((s: any) => [s.id, s.dependencies])).toEqual([
-			[1, []],
-			[2, [1]],
-			[4, []],
-			[5, ['3.4']]
+			['1', []],
+			['2', [1]],
+			['4', []],
+			['5', ['3.4']]
 		]);
 		expect(readTask(4).dependencies).toEqual(['3.1']);
 		expect(onWarning).toHaveBeenCalledWith(
