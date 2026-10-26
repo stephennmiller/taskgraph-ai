@@ -8,6 +8,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { Task } from '../../../src/common/types/index.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 describe('add-subtask and move through tasks', () => {
@@ -189,6 +190,34 @@ describe('add-subtask and move through tasks', () => {
 		await tmCore.tasks.renameTag('feature', 'later');
 
 		expect(readFile().later.tasks[0]).not.toHaveProperty('tag');
+	});
+
+	it('drops the stale tag and parentTaskId an older version saved (#701, #702)', async () => {
+		fs.writeFileSync(
+			tasksPath,
+			JSON.stringify({
+				feature: {
+					tasks: [
+						{
+							id: 4,
+							title: 'Moved',
+							tag: 'feature',
+							parentTaskId: 9,
+							dependencies: [],
+							subtasks: [{ id: 1, title: 'Step', parentTaskId: 2 }]
+						}
+					],
+					metadata: {}
+				}
+			})
+		);
+		await tmCore.tasks.renameTag('feature', 'later');
+
+		const { task } = await tmCore.tasks.get('4', 'later');
+
+		expect(task).not.toHaveProperty('tag');
+		expect(task).not.toHaveProperty('parentTaskId');
+		expect((task as Task).subtasks[0]).not.toHaveProperty('parentTaskId');
 	});
 
 	it('moves a task to another tag and saves both tags', async () => {

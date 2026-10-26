@@ -1,5 +1,5 @@
 /**
- * @fileoverview Older status spellings
+ * @fileoverview Older status spellings and stale fields
  * Older task and archive files can say 'completed' where TaskGraph says
  * 'done'. Every loader reads it as 'done', so the next save writes 'done'.
  */
@@ -19,24 +19,31 @@ export function normalizeTaskStatus<T extends string | undefined>(
 
 /**
  * Copies of the tasks with 'completed' read as 'done', on tasks and their
- * subtasks
+ * subtasks, and without the `tag` and `parentTaskId` fields older versions
+ * wrote: a tag rename or a renumbering move left them stale (#701, #702), and
+ * nothing reads them now
  */
 export function normalizeTaskStatuses(tasks: Task[]): Task[] {
-	return tasks.map((task) =>
-		isObject(task)
-			? {
-					...task,
-					status: normalizeTaskStatus(task.status),
-					...(Array.isArray(task.subtasks) && {
-						subtasks: task.subtasks.map((subtask) =>
-							isObject(subtask)
-								? { ...subtask, status: normalizeTaskStatus(subtask.status) }
-								: subtask
-						)
-					})
-				}
-			: task
-	);
+	return tasks.map((task) => {
+		if (!isObject(task)) return task;
+		const copy = current(task);
+		if (Array.isArray(task.subtasks)) {
+			copy.subtasks = task.subtasks.map((subtask) =>
+				isObject(subtask) ? current(subtask) : subtask
+			);
+		}
+		return copy;
+	});
+}
+
+function current<T extends { status?: string }>(item: T): T {
+	const copy: T & { tag?: unknown; parentTaskId?: unknown } = {
+		...item,
+		status: normalizeTaskStatus(item.status)
+	};
+	delete copy.tag;
+	delete copy.parentTaskId;
+	return copy;
 }
 
 // A hand-edited file can hold null or other non-objects; leave them for
