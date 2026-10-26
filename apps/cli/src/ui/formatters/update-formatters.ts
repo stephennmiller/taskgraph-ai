@@ -5,8 +5,9 @@
  *     • Add Codex CLI provider with OAuth authentication
  *     • Move to AI SDK v5
  *
- * The install spinner prints on the next line, so this doesn't also say
- * "Auto-updating…". It replaces a yellow box headed "Update Available!".
+ * By default the CLI only notifies. Pass `hint` to add the line that says
+ * how to install (`taskgraph upgrade`). An opted-in install leaves the hint
+ * off: the install spinner prints on the next line.
  */
 
 import { stripTerminalControls } from '@tm/core';
@@ -26,7 +27,8 @@ export function formatUpdateNotice(
 	currentVersion: string,
 	latestVersion: string,
 	highlights: string[] = [],
-	width = terminalWidth()
+	width = terminalWidth(),
+	hint = false
 ): string {
 	const lines = [
 		`${theme.brand('TaskGraph')} ${chalk.green(stripTerminalControls(latestVersion, { singleLine: true }))} is out ${theme.muted(`(you have ${currentVersion})`)}`
@@ -39,6 +41,9 @@ export function formatUpdateNotice(
 				'    '
 			)
 		);
+	}
+	if (hint) {
+		lines.push(theme.muted('Run `taskgraph upgrade` to install it'));
 	}
 	return lines.join('\n');
 }

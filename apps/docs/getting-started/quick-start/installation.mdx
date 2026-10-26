@@ -75,6 +75,22 @@ The equivalent `.mcp.json` entry is:
 }
 ```
 
+## Staying up to date
+
+Running `taskgraph` in a terminal checks npm for a newer version and tells you when one is out. It does not install it. Install the new version yourself:
+
+```bash
+taskgraph upgrade
+```
+
+To install updates automatically, set `TASKGRAPH_AUTO_UPDATE=install`, or put this in `~/.taskgraph/auto-update.json` (your home directory, not a project's `.taskgraph/`):
+
+```json
+{ "autoUpdate": "install" }
+```
+
+TaskGraph never installs an update when input isn't a terminal, when `CI` is set, when the command prints JSON, or from `loop` and `loop --parallel`. Those runs set `TASKGRAPH_SKIP_AUTO_UPDATE=1` on every process they start. Set that yourself to skip the version check. If an install is already running, another one skips it instead of installing twice.
+
 ## Upgrading from Task Master or before 0.47
 
 See the [upgrade guide](/upgrading).

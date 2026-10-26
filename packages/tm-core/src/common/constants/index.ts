@@ -150,3 +150,6 @@ export * from './providers.js';
  * Path constants - file paths and directory structure
  */
 export * from './paths.js';
+
+/** Env vars that stop a child process from installing an update */
+export * from './auto-update.js';

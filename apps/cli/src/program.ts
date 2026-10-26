@@ -25,6 +25,10 @@ import {
 	restartWithNewVersion
 } from './utils/auto-update/index.js';
 import {
+	autoUpdateSkipReason,
+	isAutoInstallEnabled
+} from './utils/auto-update/policy.js';
+import {
 	displayError,
 	formatCommanderError,
 	printError
@@ -38,7 +42,9 @@ const RUNS_WITHOUT_PROJECT = new Set([
 	// Git runs the merge driver from the repository root, which may not be
 	// the project root
 	'merge-driver',
-	'doctor'
+	'doctor',
+	// Installs the CLI itself; it doesn't read a project's tasks
+	'upgrade'
 ]);
 
 /**
@@ -175,21 +181,24 @@ export async function runCLI(argv: string[] = process.argv): Promise<void> {
 		const printsOnlyItsOwnOutput =
 			['completion', 'merge-driver'].includes(argv[2]) ||
 			wantsJsonOutput(argv.slice(2));
-		const skipAutoUpdate =
-			process.env.TASKGRAPH_SKIP_AUTO_UPDATE === '1' ||
-			process.env.CI ||
-			process.env.NODE_ENV === 'test' ||
-			printsOnlyItsOwnOutput;
-
-		if (!skipAutoUpdate) {
+		// `upgrade` installs itself. A startup install would run twice.
+		const explicitUpgrade = argv[2] === 'upgrade';
+		// Notify only, unless the user opted in. Never install or ask from a
+		// script, CI, JSON, or a process `loop` / a parallel worker started.
+		if (!explicitUpgrade && autoUpdateSkipReason({ argv }) === null) {
 			const updateInfo = await checkForUpdate(TASKGRAPH_VERSION);
 			if (updateInfo.needsUpdate) {
+				const install = isAutoInstallEnabled();
 				displayUpgradeNotification(
 					updateInfo.currentVersion,
 					updateInfo.latestVersion,
-					updateInfo.highlights
+					updateInfo.highlights,
+					{ hint: !install }
 				);
-				if (await performAutoUpdate(updateInfo.latestVersion)) {
+				if (
+					install &&
+					(await performAutoUpdate(updateInfo.latestVersion, { argv }))
+				) {
 					// The restarted process runs the user's command
 					restartWithNewVersion(argv);
 					return;

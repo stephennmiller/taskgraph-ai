@@ -326,6 +326,6 @@ For AI-powered commands that benefit from project context, follow the research c
 
 ## Version Checking and Updates
 
-`runCLI` in [`program.ts`](../../apps/cli/src/program.ts) checks for an update before the command runs (skipped in CI, tests, `--json` runs, `completion` and `merge-driver`), using `checkForUpdate`, `displayUpgradeNotification` and `performAutoUpdate` from `apps/cli/src/utils/auto-update/`.
+`runCLI` in [`program.ts`](../../apps/cli/src/program.ts) checks for an update before the command runs. By default it only notifies; `taskgraph upgrade` or `TASKGRAPH_AUTO_UPDATE=install` (or `~/.taskgraph/auto-update.json`) installs. The check is skipped when stdin isn't a terminal, in CI, in tests, for `--json`, `completion` and `merge-driver`, and when `loop` or a parallel worker set `TASKGRAPH_LOOP_CHILD` / `TASKGRAPH_PARALLEL_WORKER` (those children also get `TASKGRAPH_SKIP_AUTO_UPDATE=1`). An install takes the lock in `~/.taskgraph/update.lock`. The pieces live in `apps/cli/src/utils/auto-update/`.
 
 Refer to the commands in `apps/cli/src/commands/` for implementation examples and `ui.md` for output.

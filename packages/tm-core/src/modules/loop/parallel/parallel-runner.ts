@@ -24,6 +24,7 @@ import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
+import { childAutoUpdateEnv } from '../child-env.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
 import { ContainerWorkers, preflightContainer } from './container-workers.js';
@@ -304,11 +305,13 @@ export class ParallelLoopRunner {
 					// `taskgraph` run in the worktree would otherwise find the
 					// worktree's own copy of tasks.json, checked out from HEAD:
 					// status changes would land on the branch, and tasks not yet
-					// committed would be missing. An env value, never a shell
-					env: {
+					// committed would be missing. An env value, never a shell.
+					// The marker and TASKGRAPH_SKIP_AUTO_UPDATE stop the worker
+					// from installing an update.
+					env: childAutoUpdateEnv('parallel', {
 						...process.env,
 						[PROJECT_ROOT_ENV]: path.resolve(this.projectRoot)
-					},
+					}),
 					stdio: ['ignore', log, log],
 					// Own process group, so an abort can stop Claude's children too
 					detached: process.platform !== 'win32'

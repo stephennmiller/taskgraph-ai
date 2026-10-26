@@ -96,6 +96,8 @@ See [Archiving finished tasks](/capabilities/archive) for how archived IDs and d
 | Variable | Description |
 | --- | --- |
 | `CLAUDE_CODE_API_KEY` | Optional. Bill Claude Code calls to this Anthropic API key instead of your Claude Code sign-in. |
+| `TASKGRAPH_AUTO_UPDATE` | `install` installs a newer version before a command runs. Unset, or `notify`, only tells you one is out. `taskgraph upgrade` installs on request. A home file can opt in too: `~/.taskgraph/auto-update.json` with `{ "autoUpdate": "install" }`. |
+| `TASKGRAPH_SKIP_AUTO_UPDATE` | Set to `1` to skip the version check. `loop` and `loop --parallel` set this on every process they start. |
 | `TASKGRAPH_TOOLS` | Which MCP tools to load: `core` (default), `standard`, `all` or a comma-separated list. See [MCP tools](/capabilities/mcp). |
 | `TASKGRAPH_RESPONSE_LANGUAGE` | Override the language of generated content (`global.responseLanguage`, which `taskgraph lang` sets). |
 | `TASKGRAPH_TAG` | Override the active tag. |

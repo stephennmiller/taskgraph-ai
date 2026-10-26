@@ -6,6 +6,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import { childAutoUpdateEnv } from '../child-env.js';
 import { isTaskPreset } from '../loop-task.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
 import {
@@ -405,7 +406,10 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			encoding: 'utf-8',
 			maxBuffer: 50 * 1024 * 1024,
 			stdio: ['inherit', 'pipe', 'pipe'],
-			timeout
+			timeout,
+			// Claude runs `taskgraph`. Mark this child so that install can't
+			// start, and skip the update check entirely.
+			env: childAutoUpdateEnv('loop')
 		});
 
 		if (result.error) {
@@ -475,7 +479,9 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			const child = spawn(command, args, {
 				cwd: this.projectRoot,
-				stdio: ['inherit', 'pipe', 'pipe']
+				stdio: ['inherit', 'pipe', 'pipe'],
+				// Same marker as the non-verbose spawn above
+				env: childAutoUpdateEnv('loop')
 			});
 			const timeout = loopIterationTimeoutMs();
 			let timedOut = false;

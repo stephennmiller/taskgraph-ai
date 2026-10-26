@@ -10,6 +10,12 @@ describe('formatUpdateNotice', () => {
 		);
 	});
 
+	it('says how to install when the run will only notify', () => {
+		expect(plain(formatUpdateNotice('1.0.0', '1.1.0', [], 80, true))).toBe(
+			'TaskGraph 1.1.0 is out (you have 1.0.0)\nRun `taskgraph upgrade` to install it'
+		);
+	});
+
 	it('lists highlights as bullets under the version line', () => {
 		const output = plain(
 			formatUpdateNotice(
