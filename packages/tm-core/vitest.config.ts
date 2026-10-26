@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
  * - Path aliases for cleaner imports
  * - Test setup file
  * - Higher coverage thresholds (80%), enforced by `npm run test:coverage`
+ *   (the CI Test job runs that script)
  */
 export default mergeConfig(
 	rootConfig,
@@ -30,7 +31,7 @@ export default mergeConfig(
 			// Core-specific setup
 			setupFiles: ['./tests/setup.ts'],
 
-			// Higher coverage thresholds for core package (test:coverage only)
+			// Higher coverage thresholds for core package (test:coverage, including CI)
 			coverage: {
 				thresholds: {
 					branches: 80,
