@@ -38,6 +38,13 @@ describe('parseCommit', () => {
 		expect(parseCommit(msg)).toEqual({ type: 'fix', breaking: false });
 	});
 
+	it('treats a security advisory merge as a fix', () => {
+		expect(parseCommit('Merge commit from fork')).toEqual({
+			type: 'fix',
+			breaking: false
+		});
+	});
+
 	it('returns a null type for non-conventional subjects', () => {
 		expect(parseCommit('Merge branch main').type).toBeNull();
 	});
