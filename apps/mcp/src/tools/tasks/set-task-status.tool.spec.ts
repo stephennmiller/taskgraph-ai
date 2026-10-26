@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tasks = {
 	updateStatus: vi.fn(),
+	updateStatuses: vi.fn(),
 	updateChecklist: vi.fn()
 };
 
@@ -51,7 +52,7 @@ afterEach(() => {
 
 describe('set_task_status criteria gate', () => {
 	it('returns the unchecked criteria and the fix as an error result', async () => {
-		tasks.updateStatus.mockRejectedValue(
+		tasks.updateStatuses.mockRejectedValue(
 			checkDoneGate({ acceptanceCriteria: ['Login works'] }, '3', [
 				'Tests pass'
 			])
@@ -73,12 +74,14 @@ describe('set_task_status criteria gate', () => {
 	});
 
 	it('passes force through to tm-core', async () => {
-		tasks.updateStatus.mockResolvedValue({
-			success: true,
-			taskId: '3',
-			oldStatus: 'pending',
-			newStatus: 'done'
-		});
+		tasks.updateStatuses.mockResolvedValue([
+			{
+				success: true,
+				taskId: '3',
+				oldStatus: 'pending',
+				newStatus: 'done'
+			}
+		]);
 
 		const result = await register().execute(
 			{ projectRoot: project, id: '3', status: 'done', force: true },
@@ -86,9 +89,13 @@ describe('set_task_status criteria gate', () => {
 		);
 
 		expect(result.isError).toBeFalsy();
-		expect(tasks.updateStatus).toHaveBeenCalledWith('3', 'done', undefined, {
-			force: true
-		});
+		expect(tasks.updateStatuses).toHaveBeenCalledWith(
+			['3'],
+			'done',
+			undefined,
+			{ force: true }
+		);
+		expect(tasks.updateStatus).not.toHaveBeenCalled();
 	});
 
 	it('checks criteria before setting the status', async () => {
@@ -97,12 +104,14 @@ describe('set_task_status criteria gate', () => {
 			checkedCount: 0,
 			unchecked: []
 		});
-		tasks.updateStatus.mockResolvedValue({
-			success: true,
-			taskId: '3',
-			oldStatus: 'pending',
-			newStatus: 'done'
-		});
+		tasks.updateStatuses.mockResolvedValue([
+			{
+				success: true,
+				taskId: '3',
+				oldStatus: 'pending',
+				newStatus: 'done'
+			}
+		]);
 
 		await register().execute(
 			{ projectRoot: project, id: '3', status: 'done', check: [1, 2] },
@@ -115,7 +124,7 @@ describe('set_task_status criteria gate', () => {
 			undefined
 		);
 		expect(tasks.updateChecklist.mock.invocationCallOrder[0]).toBeLessThan(
-			tasks.updateStatus.mock.invocationCallOrder[0]
+			tasks.updateStatuses.mock.invocationCallOrder[0]
 		);
 	});
 
@@ -136,6 +145,27 @@ describe('set_task_status criteria gate', () => {
 			'3',
 			{ check: undefined, uncheck: [2] },
 			undefined
+		);
+		expect(tasks.updateStatus).not.toHaveBeenCalled();
+		expect(tasks.updateStatuses).not.toHaveBeenCalled();
+	});
+
+	it('updates several ids in one call', async () => {
+		tasks.updateStatuses.mockRejectedValue(new Error('Task 99 not found'));
+
+		const result = await register().execute(
+			{ projectRoot: project, id: '1,99', status: 'done' },
+			ctx
+		);
+
+		expect(result.isError).toBe(true);
+		expect(String(result.content[0].text)).toContain('Task 99 not found');
+		expect(tasks.updateStatuses).toHaveBeenCalledTimes(1);
+		expect(tasks.updateStatuses).toHaveBeenCalledWith(
+			['1', '99'],
+			'done',
+			undefined,
+			{ force: undefined }
 		);
 		expect(tasks.updateStatus).not.toHaveBeenCalled();
 	});

@@ -59,6 +59,16 @@ const collect = (value: string, previous: string[] = []) => [
 	value
 ];
 
+/** The id a failed status write names, when the error carries one */
+function failedStatusId(error: unknown): string | undefined {
+	if (typeof error !== 'object' || error === null) return undefined;
+	const context = (error as { context?: { taskId?: unknown } }).context;
+	if (typeof context?.taskId === 'string') return context.taskId;
+	const taskId = (error as { taskId?: unknown }).taskId;
+	if (typeof taskId === 'string') return taskId;
+	return undefined;
+}
+
 /**
  * Result type from set-status command
  */
@@ -242,7 +252,7 @@ export class SetStatusCommand extends Command {
 				}
 			}
 
-			// Update each task
+			// Every id in one write: a missing id or a refused done saves none
 			const updatedTasks: Array<{
 				taskId: string;
 				oldStatus: TaskStatus;
@@ -250,19 +260,15 @@ export class SetStatusCommand extends Command {
 			}> = [];
 			let failure: unknown;
 
-			for (const taskId of options.status ? taskIds : []) {
+			if (options.status) {
 				try {
-					const result = await this.tmCore.tasks.updateStatus(
-						taskId,
-						options.status as TaskStatus,
+					const results = await this.tmCore.tasks.updateStatuses(
+						taskIds,
+						options.status,
 						options.tag,
 						{ force: options.force }
 					);
-					updatedTasks.push({
-						taskId: result.taskId,
-						oldStatus: result.oldStatus,
-						newStatus: result.newStatus
-					});
+					updatedTasks.push(...results);
 				} catch (error: any) {
 					hasError = true;
 					if (options.format === 'json') {
@@ -277,7 +283,7 @@ export class SetStatusCommand extends Command {
 							{
 								success: false,
 								error: errorMessage,
-								taskId,
+								taskId: gate?.taskId ?? failedStatusId(error),
 								...(gate && { unchecked: gate.unchecked }),
 								// --check was saved before the status failed
 								...(checklist && { checklist }),
@@ -288,8 +294,6 @@ export class SetStatusCommand extends Command {
 					} else {
 						failure = error;
 					}
-					// Don't exit here - let finally block clean up first
-					break;
 				}
 			}
 
@@ -300,8 +304,8 @@ export class SetStatusCommand extends Command {
 				...(checklist && { checklist })
 			};
 
-			// Report what did change before the task that stopped the run; a
-			// JSON failure has already been printed and stands on its own
+			// A JSON failure is already printed. Text still shows a checklist
+			// that was saved before the status was refused.
 			const showResults =
 				(updatedTasks.length > 0 || checklist !== undefined) &&
 				!(hasError && options.format === 'json');

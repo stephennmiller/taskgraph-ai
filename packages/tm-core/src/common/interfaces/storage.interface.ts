@@ -133,6 +133,22 @@ export interface IStorage {
 	): Promise<UpdateStatusResult>;
 
 	/**
+	 * Update several tasks or subtasks to one status in a single locked write.
+	 * Ids are applied in order. A missing id or a refused done throws before
+	 * anything is saved.
+	 * @param taskIds - IDs of the tasks or subtasks (e.g. "1", "1.2")
+	 * @param newStatus - Status to set on each
+	 * @param tag - Optional tag context
+	 * @returns One result per id, in the same order
+	 */
+	updateTaskStatuses(
+		taskIds: string[],
+		newStatus: TaskStatus,
+		tag?: string,
+		options?: UpdateStatusOptions
+	): Promise<UpdateStatusResult[]>;
+
+	/**
 	 * Change one task or subtask in a single locked read-modify-write
 	 * @param taskId - ID of the task or subtask (e.g., "1" or "1.2")
 	 * @param change - Gets the item as stored; returns the fields to set, or

@@ -61,6 +61,7 @@ import type {
 } from './services/task-service.js';
 import type {
 	TaskFieldUpdates,
+	UpdateStatusOptions,
 	WatchEvent,
 	WatchOptions,
 	WatchSubscription
@@ -410,13 +411,42 @@ export class TasksDomain {
 		tag?: string,
 		options: { force?: boolean } = {}
 	) {
+		return this.taskService.updateTaskStatus(
+			taskId,
+			status,
+			tag,
+			this.statusWriteOptions(options.force)
+		);
+	}
+
+	/**
+	 * Update several tasks or subtasks to one status in a single write.
+	 * A missing id or a refused done leaves every id unchanged.
+	 * The done gate is the same as `updateStatus`.
+	 */
+	async updateStatuses(
+		taskIds: string[],
+		status: TaskStatus,
+		tag?: string,
+		options: { force?: boolean } = {}
+	) {
+		return this.taskService.updateTaskStatuses(
+			taskIds,
+			status,
+			tag,
+			this.statusWriteOptions(options.force)
+		);
+	}
+
+	/** The done gate shared by updateStatus and updateStatuses */
+	private statusWriteOptions(force?: boolean): UpdateStatusOptions {
 		const definitionOfDone = this.configManager.getDefinitionOfDone();
-		return this.taskService.updateTaskStatus(taskId, status, tag, {
+		return {
 			guardDone: (task, id, auto) =>
-				options.force && !auto
+				force && !auto
 					? undefined
 					: checkDoneGate(task, id, definitionOfDone, id.includes('.'))
-		});
+		};
 	}
 
 	// ========== Acceptance Criteria ==========

@@ -91,23 +91,19 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 						);
 					}
 
-					const results: Array<{
-						success: boolean;
-						oldStatus: TaskStatus;
-						newStatus: TaskStatus;
-						taskId: string;
-					}> = [];
+					// One write for every id: a missing id or a refused done saves none
+					const results = status
+						? await tmCore.tasks.updateStatuses(
+								taskIds,
+								status as TaskStatus,
+								tag,
+								{ force }
+							)
+						: [];
 
-					for (const taskId of status ? taskIds : []) {
-						const result = await tmCore.tasks.updateStatus(
-							taskId,
-							status as TaskStatus,
-							tag,
-							{ force }
-						);
-						results.push(result);
+					for (const result of results) {
 						log.info(
-							`Updated task ${taskId}: ${result.oldStatus} → ${result.newStatus}`
+							`Updated task ${result.taskId}: ${result.oldStatus} → ${result.newStatus}`
 						);
 					}
 
