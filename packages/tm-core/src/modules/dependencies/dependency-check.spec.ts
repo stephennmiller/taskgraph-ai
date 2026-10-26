@@ -129,6 +129,31 @@ describe('validateTaskDependencies', () => {
 		expect(valid).toBe(true);
 	});
 
+	it('reports a loop a subtask inherits from its parent (#698)', () => {
+		// Task 4 waits on 1.1, and 1.1 waits on 4 because task 1 does
+		const { issues } = validate([
+			task('1', ['4'], [subtask(1)]),
+			task('4', ['1.1'])
+		]);
+
+		expect(
+			issues.map((issue) => [issue.type, issue.taskId, issue.fixable])
+		).toEqual([
+			['circular', '1.1', false],
+			['circular', '4', false]
+		]);
+	});
+
+	it("does not call a task's dependency on its own subtask a loop", () => {
+		// 1.2 waits on its sibling 1.1. Task 1 also lists 1.2, which is not
+		// passed down, so 1.1 does not wait on 1.2 and there is no loop.
+		const { issues } = validate([
+			task('1', ['1.2'], [subtask(1), subtask(2, [1])])
+		]);
+
+		expect(issues).toEqual([]);
+	});
+
 	it('reports a link to a missing task, not the healthy links', () => {
 		const { issues } = validate([
 			task(1),
@@ -179,6 +204,22 @@ describe('fixTaskDependencies', () => {
 		const before = structuredClone(tasks);
 
 		expect(fix(tasks).fixes).toEqual([]);
+		expect(tasks).toEqual(before);
+	});
+
+	it('leaves a loop through an inherited parent dependency for the user (#698)', () => {
+		const tasks = [task('1', ['4'], [subtask(1)]), task('4', ['1.1'])];
+		const before = structuredClone(tasks);
+
+		const result = fix(tasks);
+
+		expect(result.fixes).toEqual([]);
+		expect(result.remaining.map((issue) => [issue.type, issue.taskId])).toEqual(
+			[
+				['circular', '1.1'],
+				['circular', '4']
+			]
+		);
 		expect(tasks).toEqual(before);
 	});
 
@@ -331,6 +372,7 @@ function random(seed: number) {
 	};
 }
 
+/** Same edges as dependencyEdges, including what a subtask inherits (#698) */
 function edges(tasks: Raw[], subtasksOnly = false): Map<string, string[]> {
 	const graph = new Map<string, string[]>();
 	const add = (id: string, deps: string[]) =>
@@ -339,12 +381,23 @@ function edges(tasks: Raw[], subtasksOnly = false): Map<string, string[]> {
 			deps.filter((d) => d !== id && (!subtasksOnly || d.includes('.')))
 		);
 	for (const t of tasks) {
-		if (!subtasksOnly) add(String(t.id), (t.dependencies ?? []).map(String));
+		const taskId = String(t.id);
+		const parentDeps = (t.dependencies ?? []).map(String);
+		if (!subtasksOnly) add(taskId, parentDeps);
+		const ownSubtasks = new Set(
+			(t.subtasks ?? []).map((s: Raw) => `${taskId}.${s.id}`)
+		);
 		for (const s of t.subtasks ?? []) {
-			add(
-				`${t.id}.${s.id}`,
-				(s.dependencies ?? []).map((d: Id) => resolveSubtaskDependency(t.id, d))
+			const own = (s.dependencies ?? []).map((d: Id) =>
+				resolveSubtaskDependency(taskId, d)
 			);
+			const inherited = subtasksOnly
+				? []
+				: parentDeps.filter(
+						(dep: string) =>
+							dep !== taskId && !ownSubtasks.has(dep) && !own.includes(dep)
+					);
+			add(`${taskId}.${s.id}`, [...own, ...inherited]);
 		}
 	}
 	return graph;

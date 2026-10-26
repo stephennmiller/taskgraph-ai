@@ -15,7 +15,10 @@ import {
 } from '../../common/errors/taskgraph-error.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import { isArchivedReference } from '../tasks/utils/archive.js';
-import { createTaskLookup, dependsOnTransitively } from './dependency-check.js';
+import {
+	createTaskLookup,
+	wouldCloseDependencyLoop
+} from './dependency-check.js';
 import {
 	assignMetadata,
 	hasDependency,
@@ -246,7 +249,7 @@ export function addDependencyIn(
 			`Task ${taskId} can't depend on itself`
 		);
 	}
-	if (dependsOnTransitively(tasks, dependencyId, taskId)) {
+	if (wouldCloseDependencyLoop(tasks, taskId, dependencyId)) {
 		throw errorWithHint(
 			ERROR_CODES.TASK_DEPENDENCY_ERROR,
 			`That would make a loop: task ${dependencyId} already depends on task ${taskId}`,

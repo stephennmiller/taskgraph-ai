@@ -169,6 +169,26 @@ describe('addDependencyIn', () => {
 		expect(tasks).toEqual(before);
 	});
 
+	it('refuses a loop through a dependency the subtask inherits (#698)', () => {
+		// 4 waits on 1.1, so task 1 depending on 4 makes 1.1 wait on 4
+		const tasks = [
+			task('1', [], { subtasks: [subtask(1)] }),
+			task('4', ['1.1'])
+		];
+		const before = structuredClone(tasks);
+
+		expect(() => add(tasks, '1', '4')).toThrow(/would make a loop/);
+		expect(tasks).toEqual(before);
+	});
+
+	it('allows a task to depend on its own subtask', () => {
+		const tasks = [task('1', [], { subtasks: [subtask(1)] })];
+
+		add(tasks, '1', '1.1');
+
+		expect(tasks[0].dependencies).toEqual(['1.1']);
+	});
+
 	it('finds a loop through a subtask that depends on a task by number', () => {
 		const tasks = [task(150), task(2, [], { subtasks: [subtask(1, [150])] })];
 
