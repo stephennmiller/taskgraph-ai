@@ -1,0 +1,97 @@
+[
+	{
+		"id": "682-merge-rewrite",
+		"pr": 682,
+		"commit": "4aac89cfcd1a9390f46817e95f96d5cfc67b3db4",
+		"bugs": [
+			{
+				"file": "packages/tm-core/src/modules/tasks/services/update-task-helpers.ts",
+				"lines": [80],
+				"fixedBy": 683,
+				"bug": "an AI rewrite that empties details starts the kept note with a blank line"
+			}
+		]
+	},
+	{
+		"id": "683-placeholder-tasks-json",
+		"pr": 683,
+		"commit": "8c1e4a94f8db3e33d4ade4c3d1f933e91b6c2e9b",
+		"bugs": [
+			{
+				"file": "packages/tm-core/src/modules/storage/adapters/file-storage/file-operations.ts",
+				"lines": [265],
+				"fixedBy": 740,
+				"bug": "a modifier that returns {} still writes the {} placeholder, so next/archive/fix-dependencies leave an empty tasks.json (#704)"
+			}
+		]
+	},
+	{
+		"id": "687-prd-fence",
+		"pr": 687,
+		"commit": "44bfd024592d9c2f74f4859fb762a1dfa35f6cb2",
+		"bugs": [
+			{
+				"file": "packages/tm-core/src/modules/codebase/repo-summary.ts",
+				"lines": [41, 387],
+				"fixedBy": 725,
+				"bug": "stricter tag escaping without bumping SUMMARY_VERSION, so cached summaries keep the old escaping"
+			},
+			{
+				"file": "packages/tm-core/src/modules/tasks/services/parse-prd.service.ts",
+				"lines": [381, 382],
+				"fixedBy": 692,
+				"bug": "the PRD heading list still goes into the prompt unfenced and unneutralized (#689)"
+			}
+		]
+	},
+	{
+		"id": "688-move-parent",
+		"pr": 688,
+		"commit": "4a9a33a9942c00c4d211570533b58f3134357173",
+		"bugs": [
+			{
+				"file": "packages/tm-core/src/modules/tasks/utils/move-within-tag.ts",
+				"lines": [167, 281],
+				"fixedBy": 744,
+				"bug": "move sets parentId but leaves parentTaskId stale, which isDependentOn later reads (#701)"
+			}
+		]
+	},
+	{
+		"id": "726-trusted-actors",
+		"pr": 726,
+		"commit": "52f06905b4c8b078f148c0b79ed1dea0b9b4a2d4",
+		"bugs": [
+			{
+				"file": ".github/workflows/claude.yml",
+				"lines": [53],
+				"fixedBy": 729,
+				"bug": "assigning an outsider's issue starts Claude because github.actor is the owner"
+			},
+			{
+				"file": ".github/workflows/claude.yml",
+				"lines": [30, 33],
+				"fixedBy": 729,
+				"bug": "an @claude comment on a fork pull request starts Claude; issue_comment carries no head repository to check"
+			}
+		]
+	},
+	{
+		"id": "732-clean",
+		"pr": 732,
+		"commit": "a8738be3cc52c01276001f9c1c2a42e1ba1765c1",
+		"bugs": []
+	},
+	{
+		"id": "738-clean",
+		"pr": 738,
+		"commit": "d5a4cfa743ae236e118f42b45d43607416b42c9c",
+		"bugs": []
+	},
+	{
+		"id": "739-clean",
+		"pr": 739,
+		"commit": "ac0f693e4a532fc0b1c1210b2d9b4c24798d4532",
+		"bugs": []
+	}
+]

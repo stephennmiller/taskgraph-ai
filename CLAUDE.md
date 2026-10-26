@@ -19,6 +19,7 @@ npm run test -w @tm/core          # one package (also @tm/cli, @tm/mcp); coverag
 npm run test:coverage -w @tm/core # coverage and the 80% thresholds; CI runs this; Vitest
 npm test                          # root tests/ suite (Vitest, vitest.root.config.ts)
 npm run evals                     # real-model plan evals (parse-prd, expand, analyze-complexity); not in CI
+npm run evals:review              # real-model review-bot evals on past reverts and fix-forwards; not in CI
 ```
 
 Changing a parse-prd, expand or analyze-complexity prompt, or the default model: run `npm run evals` before and after, and update `evals/baseline.json` (`-- --update-baseline`) when the plans got better. See CONTRIBUTING.md.

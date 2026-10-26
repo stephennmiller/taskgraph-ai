@@ -182,6 +182,20 @@ npm run evals -- --update-baseline     # save this run as the baseline (every sa
 
 Run it before and after changing a prompt or the default model, and update the baseline in the same PR when the change is an improvement. The scoring lives in `packages/tm-core/src/modules/evals/`.
 
+### Review Evals
+
+`npm run evals:review` checks the review bot. It runs the prompt and tools from `.github/workflows/claude-code-review.yml` with `claude -p` on each PR in `evals/review-cases.json`: merged PRs that shipped a bug later reverted or fixed forward, with the bug's file and lines, and a few PRs with no known bug. Each runs in a worktree at the PR's merge commit with today's `REVIEW.md`, `CLAUDE.md` and `.claude/rules/`. It runs with `--restricted --strict-mcp-config`, so your own settings, allow rules and MCP servers don't apply, the posting tools are denied, and an added system prompt keeps it from posting to GitHub and asks for its findings as `FINDING <path>:<line>` lines. A finding within 5 lines of a known bug catches it.
+
+It reports recall (known bugs caught), findings on the clean PRs (noise), and other findings on the buggy PRs, saves the run to `evals/results/review-<date and time>.json` and prints `evals/review-baseline.json` next to it. It calls the real model with your Claude Code sign-in, needs `gh` signed in and the full git history (`git fetch --unshallow origin` in a shallow clone), and is never run in CI.
+
+```bash
+npm run evals:review                                    # every case
+npm run evals:review -- --only 683-placeholder-tasks-json
+npm run evals:review -- --update-baseline               # save this run as the baseline
+```
+
+Run it before and after changing the review workflow's prompt, tools or model. When a PR is reverted or fixed forward, add a case with the original PR's merge commit and the bug's lines in that commit.
+
 ### Code Formatting
 
 We use [Biome](https://biomejs.dev) for consistent formatting:
