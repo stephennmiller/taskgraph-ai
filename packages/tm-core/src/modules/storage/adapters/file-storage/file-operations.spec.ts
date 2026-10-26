@@ -217,6 +217,22 @@ describe('FileOperations', () => {
 			expect(fsSync.readFileSync(newFilePath, 'utf-8')).toBe('{"tasks":[]}');
 		});
 
+		it('removes the file it created when the modifier saves nothing (#704)', async () => {
+			const newFilePath = path.join(tempDir, 'new-file.json');
+
+			await fileOps.modifyJson(newFilePath, (data) => data);
+
+			expect(fsSync.existsSync(newFilePath)).toBe(false);
+		});
+
+		it('keeps an existing {} file when the modifier saves nothing', async () => {
+			await fs.writeFile(testFilePath, '{}');
+
+			await fileOps.modifyJson(testFilePath, (data) => data);
+
+			expect(fsSync.readFileSync(testFilePath, 'utf-8')).toBe('{}');
+		});
+
 		it('keeps an existing {} file when the modifier throws', async () => {
 			await fs.writeFile(testFilePath, '{}');
 

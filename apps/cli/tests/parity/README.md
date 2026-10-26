@@ -77,7 +77,7 @@ with the target branch as build A and the pull request as build B.
 | `edge-stale-lock.json` | `set-status` when a crashed older save left a stale `tasks.json.lock` file (#234). |
 | `phase1-dependencies.json` | Add, remove, validate and fix dependencies (CLI and MCP), a subtask ID as a dependency, and the failures: self-dependency, cycle, unknown ID. A deliberately broken graph for validate and fix. |
 | `phase1-removal.json` | `remove-task` (one and several IDs), `remove-subtask` (also `--convert`), `clear-subtasks` (one task, `--all`), and their failures (non-subtask, subtask ID, unknown task). |
-| `phase1-removal-lists.json` | Lists of IDs: `remove-subtask` and `clear-subtasks` with one bad ID (nothing changes), `remove-task` on a subtask, CLI `remove-task` skipping an unknown ID while MCP `remove_task` refuses the list. |
+| `phase1-removal-lists.json` | Lists of IDs: `remove-subtask` and `clear-subtasks` with one bad ID (nothing changes), `remove-task` on a subtask, CLI `remove-task` and MCP `remove_task` both refusing a list with an unknown ID. |
 | `phase1-structure.json` | `add-subtask` (new, and converting a task), `move` (task to subtask, subtask to task, several IDs, onto an existing ID, across tags with `--ignore-dependencies`, and the cross-tag conflict). |
 | `phase1-move-dependencies.json` | `move` across tags with `--with-dependencies` (the moved task's dependencies must arrive in the target tag) and `--ignore-dependencies` (they stay behind), CLI and MCP. |
 | `phase1-tag-flag.json` | Every non-tag command and tool with `--tag` / the MCP `tag` parameter on a tag that is not current, and an unknown tag. The current tag's tasks must stay untouched. |
