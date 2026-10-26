@@ -17,6 +17,9 @@ const TYPE_TO_BUMP = {
 	revert: 'patch'
 };
 const MERGE_RE = /^Merge pull request #\d+ from (\S+)/;
+// The fixed message GitHub writes when a security advisory's private fork is
+// merged; the message can't be edited, and these merges are security fixes.
+const ADVISORY_MERGE = 'Merge commit from fork';
 const BRANCH_PREFIX_TO_TYPE = {
 	feat: 'feat',
 	feature: 'feat',
@@ -37,6 +40,9 @@ export function parseCommit(message) {
 	// body line. Its branch name is only a fallback for non-conventional titles.
 	const subject = merge ? (rest.find((l) => l.trim()) ?? '') : firstLine;
 	const match = SUBJECT_RE.exec(subject);
+	if (firstLine.trim() === ADVISORY_MERGE) {
+		return { type: 'fix', breaking: BREAKING_FOOTER_RE.test(message) };
+	}
 	return {
 		type: match ? match[1] : merge ? typeFromBranch(merge[1]) : null,
 		breaking: Boolean(match?.[2]) || BREAKING_FOOTER_RE.test(message)
