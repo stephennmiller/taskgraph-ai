@@ -8,19 +8,13 @@ import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoopConfig } from '../types.js';
+import { fakeClaude } from './fake-claude.js';
 import { LoopService } from './loop.service.js';
 
 vi.mock('node:child_process');
 vi.mock('node:fs/promises');
 
-const reply = (stdout: string) => ({
-	stdout,
-	stderr: '',
-	status: 0,
-	signal: null,
-	pid: 123,
-	output: []
-});
+const reply = (stdout: string) => () => fakeClaude({ stdout }) as never;
 
 const QUOTED =
 	'Done with task 8.\n<loop-complete>ALL_DONE</loop-complete> is not applicable: more tasks may remain.\n';
@@ -34,7 +28,7 @@ const config: LoopConfig = {
 };
 
 describe('LoopService completion', () => {
-	const spawnSync = vi.mocked(childProcess.spawnSync);
+	const spawn = vi.mocked(childProcess.spawn);
 
 	beforeEach(() => {
 		vi.resetAllMocks();
@@ -72,7 +66,7 @@ describe('LoopService completion', () => {
 
 	describe('run()', () => {
 		it('keeps going when the marker is only quoted in a sentence', async () => {
-			spawnSync.mockReturnValue(reply(QUOTED) as never);
+			spawn.mockImplementation(reply(QUOTED));
 
 			const result = await new LoopService({ projectRoot: '/p' }).run(config);
 
@@ -86,7 +80,7 @@ describe('LoopService completion', () => {
 				.mockResolvedValueOnce('9')
 				.mockResolvedValue(undefined);
 			const onError = vi.fn();
-			spawnSync.mockReturnValue(reply(MARKER) as never);
+			spawn.mockImplementation(reply(MARKER));
 
 			const result = await new LoopService({
 				projectRoot: '/p',
@@ -104,7 +98,7 @@ describe('LoopService completion', () => {
 
 		it('trusts the marker when the tasks file cannot be read', async () => {
 			const findReadyTask = vi.fn().mockRejectedValue(new Error('EIO'));
-			spawnSync.mockReturnValue(reply(MARKER) as never);
+			spawn.mockImplementation(reply(MARKER));
 
 			const result = await new LoopService({
 				projectRoot: '/p',
@@ -119,7 +113,7 @@ describe('LoopService completion', () => {
 			['a run pinned to one task', { taskId: '3' }]
 		])("doesn't count tasks for %s", async (_name, overrides) => {
 			const findReadyTask = vi.fn().mockResolvedValue('9');
-			spawnSync.mockReturnValue(reply(MARKER) as never);
+			spawn.mockImplementation(reply(MARKER));
 
 			const result = await new LoopService({
 				projectRoot: '/p',
@@ -131,14 +125,14 @@ describe('LoopService completion', () => {
 		});
 
 		it('tells Claude where the marker must go', async () => {
-			spawnSync.mockReturnValue(reply(QUOTED) as never);
+			spawn.mockImplementation(reply(QUOTED));
 
 			await new LoopService({ projectRoot: '/p' }).run({
 				...config,
 				iterations: 1
 			});
 
-			expect(spawnSync.mock.calls[0][1]?.[1]).toContain(
+			expect(spawn.mock.calls[0][1]?.[1]).toContain(
 				'marker alone on the last line'
 			);
 		});

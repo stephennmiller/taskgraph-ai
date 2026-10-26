@@ -8,3 +8,10 @@ export function timeoutFromEnv(name: string, fallbackMs: number): number {
 	if (!(Number.isFinite(configured) && configured > 0)) return fallbackMs;
 	return Math.min(configured, 2 ** 31 - 1);
 }
+
+/** A limit for a message: "10 minutes", or "30 seconds" under a minute */
+export function formatTimeout(ms: number): string {
+	return ms >= 60000
+		? `${Math.round(ms / 60000)} minutes`
+		: `${Math.round(ms / 1000)} seconds`;
+}

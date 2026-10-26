@@ -2,7 +2,7 @@
  * Every AI call gets a time limit, and the output-token limit reaches the
  * SDK under the name it reads (maxOutputTokens) for object calls too.
  */
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { aiCallTimeoutMs, BaseAIProvider } from './base-provider.js';
 
 const sdk: Record<string, any> = vi.hoisted(() => ({
@@ -79,6 +79,47 @@ describe('AI call limits', () => {
 			expect(options.abortSignal.aborted).toBe(false);
 		}
 	);
+
+	describe('a call that runs past the limit (#653)', () => {
+		// What the Claude Code provider throws when the signal fires
+		const abortedByUser = ({ abortSignal }: { abortSignal: AbortSignal }) =>
+			new Promise((_, reject) =>
+				abortSignal.addEventListener('abort', () =>
+					reject(new Error('Claude Code process aborted by user'))
+				)
+			);
+
+		afterEach(() => {
+			vi.unstubAllEnvs();
+		});
+
+		test.each(calls.filter(([name]) => !name.startsWith('stream')))(
+			'%s says it timed out and how to wait longer',
+			async (name: string, run: () => Promise<unknown>) => {
+				vi.stubEnv('TASKGRAPH_AI_TIMEOUT_MS', '20');
+				sdk[name].mockImplementation(abortedByUser);
+
+				const error = await run().catch((e: Error) => e);
+
+				expect(error).toMatchObject({ name: 'TimeoutError' });
+				expect((error as Error).message).toContain(
+					'The AI call timed out after 0 seconds'
+				);
+				expect((error as Error).message).toContain('TASKGRAPH_AI_TIMEOUT_MS');
+				expect((error as Error).message).not.toContain('aborted by user');
+			}
+		);
+
+		test('an abort the limit did not cause keeps its own message', async () => {
+			sdk.generateText.mockRejectedValue(
+				new Error('Claude Code process aborted by user')
+			);
+
+			await expect(provider.generateText(base)).rejects.toThrow(
+				'aborted by user'
+			);
+		});
+	});
 
 	test.each([['streamText'], ['streamObject']])(
 		'%s is not cut off, since it runs as long as the model writes',

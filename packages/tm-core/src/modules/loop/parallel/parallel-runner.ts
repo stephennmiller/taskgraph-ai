@@ -25,6 +25,7 @@ import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { PROJECT_ROOT_ENV } from '../../../common/utils/project-root-finder.js';
 import { childAutoUpdateEnv } from '../child-env.js';
+import { OWN_PROCESS_GROUP, killProcessGroup } from '../process-group.js';
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
 import { resolveClaimant } from '../../tasks/utils/claim.js';
 import { ContainerWorkers, preflightContainer } from './container-workers.js';
@@ -143,7 +144,7 @@ export class ParallelLoopRunner {
 			workers?.stop(runningContainers());
 			for (const r of running) {
 				if (r.task.state === 'running' && r.child) {
-					this.kill(r.child, 'SIGKILL');
+					killProcessGroup(r.child, 'SIGKILL');
 				}
 			}
 		};
@@ -314,7 +315,7 @@ export class ParallelLoopRunner {
 					}),
 					stdio: ['ignore', log, log],
 					// Own process group, so an abort can stop Claude's children too
-					detached: process.platform !== 'win32'
+					detached: OWN_PROCESS_GROUP
 				});
 				entry.child = child;
 				// A hung worker would hold up the whole run: stop it like an abort does
@@ -363,28 +364,10 @@ export class ParallelLoopRunner {
 
 	/** SIGTERM now, SIGKILL after the grace period; returns the SIGKILL timer */
 	private terminate(child: ChildProcess, graceMs: number): NodeJS.Timeout {
-		this.kill(child, 'SIGTERM');
-		const timer = setTimeout(() => this.kill(child, 'SIGKILL'), graceMs);
+		killProcessGroup(child, 'SIGTERM');
+		const timer = setTimeout(() => killProcessGroup(child, 'SIGKILL'), graceMs);
 		timer.unref();
 		return timer;
-	}
-
-	/** Signal the child's process group (or just the child on Windows) */
-	private kill(child: ChildProcess, sig: NodeJS.Signals): void {
-		if (child.exitCode !== null || child.signalCode !== null) return;
-		try {
-			if (process.platform !== 'win32' && child.pid) {
-				process.kill(-child.pid, sig);
-			} else {
-				child.kill(sig);
-			}
-		} catch {
-			try {
-				child.kill(sig);
-			} catch {
-				// Already gone
-			}
-		}
 	}
 
 	/**
