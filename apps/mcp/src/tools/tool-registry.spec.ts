@@ -1,5 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { FastMCP } from 'fastmcp';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { logger } from '../logger.js';
 import {
 	coreTools,
 	getToolsConfiguration,
@@ -7,6 +11,11 @@ import {
 	standardTools,
 	toolRegistry
 } from './tool-registry.js';
+
+const repoRoot = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	'../../../..'
+);
 
 const ALL_COUNT = Object.keys(toolRegistry).length;
 
@@ -151,6 +160,32 @@ describe('registerTaskGraphTools', () => {
 
 		expect(result.registeredTools).toEqual([]);
 		expect(result.failedTools).toEqual(['get_tasks', 'next_task']);
+	});
+});
+
+describe('TASKGRAPH_TOOLS=all', () => {
+	it('warns that all gives the MCP host full project control', () => {
+		const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+		try {
+			register('all');
+
+			const text = warn.mock.calls.flat().join(' ');
+			expect(text).toMatch(/full project control/);
+			expect(text).toMatch(/core or standard/);
+		} finally {
+			warn.mockRestore();
+		}
+	});
+
+	it('the repo .mcp.json stays on core, which registers only the core tools', () => {
+		const config = JSON.parse(
+			fs.readFileSync(path.join(repoRoot, '.mcp.json'), 'utf8')
+		);
+		const mode = config.mcpServers['taskgraph-ai'].env.TASKGRAPH_TOOLS;
+
+		expect(mode).toBe('core');
+		expect(register(mode).names).toEqual(coreTools);
 	});
 });
 
