@@ -16,6 +16,10 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
 import {
+	TASK_DATA_TAG,
+	neutralizeTag
+} from '../../../common/utils/prompt-tag.js';
+import {
 	AiService,
 	type AiTagInfo,
 	type AiTelemetryData
@@ -44,6 +48,9 @@ import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 const MAX_RELATED_TASKS = 10;
 
 const ACTIVE_STATUSES = ['pending', 'blocked', 'in-progress'];
+
+/** Longest expansionPrompt saved to the report; expand reads it as a suggestion */
+const MAX_EXPANSION_PROMPT_LENGTH = 1000;
 
 /** One task's entry in the report, as the AI writes it */
 export interface ComplexityAnalysisItem {
@@ -445,6 +452,13 @@ export class AnalyzeComplexityService {
 					placeholder: true
 				});
 			}
+		}
+		// expansionPrompt comes from task text (AI-written or the placeholder's title), and expand puts it in its prompt
+		for (const a of analyses) {
+			// A cut through an emoji leaves a lone surrogate, which some providers reject
+			a.expansionPrompt = neutralizeTag(a.expansionPrompt, TASK_DATA_TAG)
+				.slice(0, MAX_EXPANSION_PROMPT_LENGTH)
+				.replace(/[\uD800-\uDBFF]$/, '');
 		}
 
 		const tagTaskIds = new Set(allTasks.map((t) => String(t.id)));

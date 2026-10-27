@@ -47,11 +47,19 @@ const cases: Array<[string, string, Record<string, unknown>, string[]]> = [
 				task,
 				subtaskCount: 3,
 				nextSubtaskId: 1,
-				expansionPrompt: 'Split it by layer',
+				expansionPrompt: hostile('expansion'),
 				complexityReasoningContext: hostile('reasoning'),
 				gatheredContext: hostile('context')
 			},
-			['title', 'description', 'details', 'reasoning', 'context']
+			[
+				'title',
+				'description',
+				'details',
+				'reasoning',
+				'context',
+				// Only the complexity-report variant uses the report's expansionPrompt
+				...(variant === 'complexity-report' ? ['expansion'] : [])
+			]
 		]
 	),
 	[
@@ -133,6 +141,21 @@ describe('task text in AI prompts', () => {
 			expect(systemPrompt).toContain('<task-data>');
 		}
 	);
+
+	it('renders update-task JSON without stray braces around it', () => {
+		const { userPrompt } = new PromptManager().loadPrompt(
+			'update-task',
+			{
+				task,
+				taskJson: '{\n  "id": 1\n}',
+				updatePrompt: 'Use Postgres',
+				gatheredContext: ''
+			},
+			'default'
+		);
+
+		expect(userPrompt).toContain('<task-data>\n{\n  "id": 1\n}\n</task-data>');
+	});
 
 	it("leaves the user's own request outside the fence", () => {
 		const { userPrompt } = new PromptManager().loadPrompt(
