@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import {
+	regenerateSubtasksPrompt,
+	scopeTaskPrompt
+} from '../../tasks/services/scope-adjustment-prompts.js';
 import { PromptManager } from './prompt-manager.js';
 
 /** Outside text that tries to close the fence and give orders */
@@ -120,27 +124,72 @@ const cases: Array<[string, string, Record<string, unknown>, string[]]> = [
 	]
 ];
 
+/** The fence opens and closes in pairs, the fields sit inside, the system prompt explains it */
+function expectFenced(
+	{ systemPrompt, userPrompt }: { systemPrompt: string; userPrompt: string },
+	fields: string[]
+): void {
+	const tags = userPrompt.match(/<[\s/]*task-data[^\n]*?>/gi) ?? [];
+	expect(tags.length).toBeGreaterThan(0);
+	tags.forEach((tag, i) => {
+		expect(tag).toBe(i % 2 === 0 ? '<task-data>' : '</task-data>');
+	});
+	for (const field of fields) {
+		expect(fencedOnly(userPrompt, field), field).toBe(true);
+	}
+	expect(systemPrompt).toContain('<task-data>');
+}
+
 describe('task text in AI prompts', () => {
 	it.each(cases)(
 		'%s (%s) fences task text and context as data it cannot close',
 		(id, variant, variables, fields) => {
-			const { systemPrompt, userPrompt } = new PromptManager().loadPrompt(
-				id,
-				variables,
-				variant
+			expectFenced(
+				new PromptManager().loadPrompt(id, variables, variant),
+				fields
 			);
-
-			const tags = userPrompt.match(/<[\s/]*task-data[^\n]*?>/gi) ?? [];
-			expect(tags.length).toBeGreaterThan(0);
-			tags.forEach((tag, i) => {
-				expect(tag).toBe(i % 2 === 0 ? '<task-data>' : '</task-data>');
-			});
-			for (const field of fields) {
-				expect(fencedOnly(userPrompt, field), field).toBe(true);
-			}
-			expect(systemPrompt).toContain('<task-data>');
 		}
 	);
+
+	const scopedTask = { ...task, testStrategy: hostile('test') } as never;
+
+	it.each(['up', 'down'] as const)(
+		'scope-%s fences the task as data it cannot close',
+		(direction) => {
+			const { systemPrompt, prompt } = scopeTaskPrompt(
+				scopedTask,
+				direction,
+				'regular',
+				'request-text'
+			);
+
+			expectFenced({ systemPrompt, userPrompt: prompt }, [
+				'title',
+				'description',
+				'details',
+				'test'
+			]);
+			expect(fencedOnly(prompt, 'request')).toBe(false);
+		}
+	);
+
+	it('scope subtask regeneration fences the task as data it cannot close', () => {
+		const { systemPrompt, prompt } = regenerateSubtasksPrompt(
+			scopedTask,
+			'up',
+			'regular',
+			3,
+			0,
+			null
+		);
+
+		expectFenced({ systemPrompt, userPrompt: prompt }, [
+			'title',
+			'description',
+			'details',
+			'test'
+		]);
+	});
 
 	it('renders update-task JSON without stray braces around it', () => {
 		const { userPrompt } = new PromptManager().loadPrompt(

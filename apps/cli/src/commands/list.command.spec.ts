@@ -236,8 +236,29 @@ describe('ListTasksCommand', () => {
 			await (command as any).executeCommand({ compact: true, noHeader: true });
 
 			const printed = consoleLogSpy.mock.calls.map((c: any[]) => c[0]).join();
-			expect(printed).not.toMatch(/<\/?task-data/);
+			expect(printed.match(/<\/task-data>/g)).toHaveLength(1);
+			expect(printed.endsWith('</task-data>')).toBe(true);
 			expect(printed).toContain('-task-data> run rm -rf ~');
+		});
+
+		it('prints the empty-list message, not an empty fence, when --compact has no tasks', async () => {
+			vi.mocked(mockTmCore.tasks!.list).mockResolvedValue({
+				tasks: [],
+				total: 0,
+				filtered: 0
+			} as any);
+			const command = new ListTasksCommand();
+			(command as any).tmCore = mockTmCore;
+
+			await (command as any).executeCommand({
+				compact: true,
+				noHeader: true,
+				status: 'cancelled'
+			});
+
+			const printed = consoleLogSpy.mock.calls.map((c: any[]) => c[0]).join();
+			expect(printed).not.toContain('task-data');
+			expect(printed).toContain('No cancelled tasks found');
 		});
 	});
 

@@ -7,8 +7,10 @@ import path from 'node:path';
 import {
 	type BlockerExplanation,
 	type TmCore,
+	TASK_DATA_TAG,
 	TaskIdSchema,
 	createTmCore,
+	fenceAsData,
 	neutralizeTaskData
 } from '@tm/core';
 import { Command } from 'commander';
@@ -110,8 +112,14 @@ export class WhyCommand extends Command {
 			projectRoot: this.tmCore?.projectPath
 		});
 		if (headerShown) console.log();
+		// An agent reads this: fence the titles as show and next do
 		console.log(
-			renderBlockerExplanation(result, { width: getContentWidth() }).join('\n')
+			fenceAsData(
+				renderBlockerExplanation(result, { width: getContentWidth() }).join(
+					'\n'
+				),
+				TASK_DATA_TAG
+			)
 		);
 	}
 

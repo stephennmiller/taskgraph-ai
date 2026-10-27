@@ -50,7 +50,7 @@ taskgraph graph --id=3           # one task and the tasks drawn under it
 taskgraph graph --format json    # machine-readable
 ```
 
-Each task is drawn once, under the dependency it waits on longest. Its other dependencies follow the title (`needs 4`). The task `next` would pick is marked `← next`; when `next` picks a subtask, its parent is marked `← next: 3.2`. Tasks in a dependency loop and dependency IDs that match no task are called out.
+Each task is drawn once, under the dependency it waits on longest. Its other dependencies follow the title (`needs 4`). The task `next` would pick is marked `← next`; when `next` picks a subtask, its parent is marked `← next: 3.2`. Tasks in a dependency loop and dependency IDs that match no task are called out. The tree, and the `why` output below, sit between `<task-data>` and `</task-data>` lines, as `show` and `next` print task text, so an agent can tell the titles from the instructions around them (see [JSON output](/capabilities/json-output#plain-lines-from-list-in-a-pipe)); the samples here leave those lines out.
 
 ```
 ○ 1  Set up the database · wave 1 · blocks 3 ◆  ← next

@@ -7,7 +7,9 @@ import path from 'node:path';
 import {
 	type DependencyTree,
 	type TmCore,
+	TASK_DATA_TAG,
 	createTmCore,
+	fenceAsData,
 	neutralizeTaskData
 } from '@tm/core';
 import chalk from 'chalk';
@@ -110,7 +112,8 @@ export class GraphCommand extends Command {
 			nextId: result.nextId,
 			width: getContentWidth()
 		});
-		console.log(lines.join('\n'));
+		// An agent reads this: fence the titles as show and next do
+		console.log(fenceAsData(lines.join('\n'), TASK_DATA_TAG));
 	}
 
 	static register(program: Command, name?: string): GraphCommand {
