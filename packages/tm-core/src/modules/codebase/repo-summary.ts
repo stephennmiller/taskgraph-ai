@@ -36,6 +36,8 @@ import {
 	TASKGRAPH_DIR
 } from '../../common/constants/paths.js';
 import { neutralizeTag } from '../../common/utils/prompt-tag.js';
+import { writeAtomically } from '../../common/utils/write-atomically.js';
+import { refuseSymlinkedFolders } from '../storage/adapters/file-storage/file-operations.js';
 
 /**
  * Bump when the summary's content changes, so old caches are rebuilt.
@@ -408,20 +410,22 @@ function readCache(file: string): CachedSummary | null {
 	}
 }
 
-/** Save the cache; a failure only costs a rebuild next time */
+/**
+ * Save the cache; a failure (a read-only checkout, a symlinked cache or
+ * .taskgraph folder) only costs a rebuild next time
+ */
 function writeCache(root: string, cached: CachedSummary): void {
 	const dir = path.join(root, TASKGRAPH_CACHE_DIR);
+	const file = path.join(dir, CACHE_FILE);
 	try {
+		refuseSymlinkedFolders(file);
 		fs.mkdirSync(dir, { recursive: true });
 		// Keep the cache out of git without editing the project's .gitignore
 		const ignore = path.join(dir, '.gitignore');
 		if (!fs.existsSync(ignore)) fs.writeFileSync(ignore, '*\n');
-		const file = path.join(dir, CACHE_FILE);
-		const temp = `${file}.${process.pid}.tmp`;
-		fs.writeFileSync(temp, JSON.stringify(cached, null, 2));
-		fs.renameSync(temp, file);
+		writeAtomically(file, JSON.stringify(cached, null, 2));
 	} catch {
-		// Read-only checkout or similar; the summary still works uncached
+		// The summary still works uncached
 	}
 }
 

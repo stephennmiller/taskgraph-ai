@@ -12,7 +12,7 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
+import { resolveContextFile } from '../ai/project-context.js';
 import { isClarificationsHeading } from './clarifications.js';
 import {
 	type PrdSection,
@@ -155,22 +155,23 @@ export const MAX_PRD_BYTES = 10 * 1024 * 1024;
 /**
  * `computePrdCoverage` with each PRD read from disk. Relative paths are read
  * from the project root, as parse-prd stores them. `metadata.source` comes
- * from the task file, so only a regular file up to `MAX_PRD_BYTES` is read:
- * a source naming `/dev/zero` or a FIFO counts as unreadable instead of
- * hanging the check.
+ * from the task file, so only a regular file inside the project, up to
+ * `MAX_PRD_BYTES` and not a secret, is read: a source naming `/dev/zero`,
+ * a FIFO, `.env` or a file outside the project counts as unreadable.
  */
 export function checkPrdCoverage(
 	tasks: PrdCoverageTask[],
 	projectRoot: string
 ): PrdCoverage | null {
 	return computePrdCoverage(tasks, (prdPath) =>
-		readPrdFile(path.resolve(projectRoot, prdPath))
+		readPrdFile(projectRoot, prdPath)
 	);
 }
 
-/** A regular file up to `MAX_PRD_BYTES`, or null */
-function readPrdFile(file: string): string | null {
+/** A regular file resolveContextFile accepts, up to `MAX_PRD_BYTES`, or null */
+function readPrdFile(projectRoot: string, prdPath: string): string | null {
 	try {
+		const file = resolveContextFile(projectRoot, prdPath);
 		const stat = fs.statSync(file);
 		if (!stat.isFile() || stat.size > MAX_PRD_BYTES) return null;
 		return fs.readFileSync(file, 'utf8');
@@ -182,7 +183,8 @@ function readPrdFile(file: string): string | null {
 /**
  * The text of the section a `metadata.source` cites, subsections included,
  * as written in the PRD; undefined when the file or heading is gone. Only a
- * file inside the project is read, since the source comes from the task file.
+ * file inside the project that isn't a secret is read, since the source
+ * comes from the task file.
  */
 export function readPrdSection(
 	source: string,
@@ -190,23 +192,7 @@ export function readPrdSection(
 ): string | undefined {
 	const parsed = parsePrdSource(source);
 	if (!parsed) return undefined;
-	let file: string;
-	try {
-		const root = fs.realpathSync(projectRoot);
-		file = fs.realpathSync(path.resolve(root, parsed.path));
-		const relative = path.relative(root, file);
-		if (
-			!relative ||
-			relative === '..' ||
-			relative.startsWith(`..${path.sep}`) ||
-			path.isAbsolute(relative)
-		) {
-			return undefined;
-		}
-	} catch {
-		return undefined;
-	}
-	const content = readPrdFile(file);
+	const content = readPrdFile(projectRoot, parsed.path);
 	if (content === null) return undefined;
 	const sections = parsePrdSections(content);
 	const start = sections.findIndex((s) => s.slug === parsed.slug);

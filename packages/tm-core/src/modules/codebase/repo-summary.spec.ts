@@ -266,6 +266,24 @@ describe('repo summary', () => {
 			expect(getRepoSummary(root)).toContain('src/two.ts');
 		});
 
+		it.skipIf(process.platform === 'win32')(
+			'leaves a symlinked cache folder alone and still returns the summary (#782)',
+			() => {
+				const elsewhere = fs.mkdtempSync(
+					path.join(os.tmpdir(), 'tm-elsewhere-')
+				);
+				try {
+					fs.symlinkSync(elsewhere, path.join(root, '.taskgraph', 'cache'));
+
+					expect(getRepoSummary(root)).toContain('src/one.ts');
+
+					expect(fs.readdirSync(elsewhere)).toEqual([]);
+				} finally {
+					fs.rmSync(elsewhere, { recursive: true, force: true });
+				}
+			}
+		);
+
 		it('builds without caching outside git', () => {
 			// A fresh folder, not root minus .git: git's background maintenance can
 			// keep a deleted .git partly in place (#713)

@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	dropOldNumTasksDefault,
 	readLogLevel,
-	toSavedConfig
+	toSavedConfig,
+	writeSplitConfig
 } from './config-file.js';
 
 let root: string;
@@ -104,4 +105,24 @@ describe('dropOldNumTasksDefault', () => {
 		).toBe(null);
 		expect(dropOldNumTasksDefault({})).toBe(null);
 	});
+});
+
+describe('writeSplitConfig', () => {
+	it.skipIf(process.platform === 'win32')(
+		'refuses a .taskgraph folder that is a symlink (#782)',
+		() => {
+			const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-elsewhere-'));
+			const linked = path.join(root, 'linked');
+			fs.mkdirSync(linked);
+			fs.symlinkSync(elsewhere, path.join(linked, '.taskgraph'));
+			try {
+				expect(() => writeSplitConfig(linked, { models: {} })).toThrow(
+					/symlink/
+				);
+				expect(fs.readdirSync(elsewhere)).toEqual([]);
+			} finally {
+				fs.rmSync(elsewhere, { recursive: true, force: true });
+			}
+		}
+	);
 });

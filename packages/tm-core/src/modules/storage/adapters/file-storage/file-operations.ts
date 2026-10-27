@@ -6,10 +6,11 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import { constants } from 'node:fs';
+import fsSync, { constants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import lockfile from 'proper-lockfile';
+import { TASKGRAPH_DIR } from '../../../../common/constants/paths.js';
 import {
 	ERROR_CODES,
 	TaskGraphError
@@ -96,10 +97,11 @@ function enqueueWrite<T>(
  * elsewhere (#616)
  */
 export async function refuseSymlink(filePath: string): Promise<void> {
-	const info = await fs.lstat(filePath).catch((err: any) => {
-		if (err.code === 'ENOENT') return null;
-		throw err;
-	});
+	refuseSymlinkSync(filePath);
+}
+
+function refuseSymlinkSync(filePath: string): void {
+	const info = fsSync.lstatSync(filePath, { throwIfNoEntry: false });
 	if (info?.isSymbolicLink()) {
 		throw new TaskGraphError(
 			`Refusing to write ${filePath}: it is a symlink`,
@@ -110,6 +112,18 @@ export async function refuseSymlink(filePath: string): Promise<void> {
 			}
 		);
 	}
+}
+
+/**
+ * Refuse the file's folder, and the `.taskgraph` folder above it, when one
+ * is a symlink: a committed link would send the file, its temp files and
+ * its lock folder wherever the link points (#782)
+ */
+export function refuseSymlinkedFolders(filePath: string): void {
+	const dir = path.dirname(filePath);
+	refuseSymlinkSync(dir);
+	const parent = path.dirname(dir);
+	if (path.basename(parent) === TASKGRAPH_DIR) refuseSymlinkSync(parent);
 }
 
 /**
@@ -366,9 +380,11 @@ export class FileOperations {
 	/**
 	 * Ensure file exists for locking (proper-lockfile requires the file to exist).
 	 * Uses atomic creation with 'wx' flag to prevent TOCTOU race conditions.
-	 * Returns true when this call created the file.
+	 * Returns true when this call created the file. Runs before anything is
+	 * written, so a symlinked folder is refused here.
 	 */
 	private async ensureFileExists(filePath: string): Promise<boolean> {
+		refuseSymlinkedFolders(filePath);
 		const dir = path.dirname(filePath);
 		await fs.mkdir(dir, { recursive: true });
 		try {
