@@ -237,7 +237,9 @@ jobs:
     # cancelled, not failed, so leave a wide margin.
     timeout-minutes: 25
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, parity-changes]
+    # parity-changes is skipped on push, so don't let that skip this job
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -285,21 +287,21 @@ jobs:
       # coverage is on. Plain `npm run test` leaves it off (#259); this step
       # runs test:coverage so a drop below 80% fails the job (#711).
       - name: Run @tm/core tests
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.parity-changes.outputs.code != 'false' }}
         run: npm run test:coverage -w @tm/core
         env:
           NODE_ENV: test
           CI: true
 
       - name: Run @tm/cli tests
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.parity-changes.outputs.code != 'false' }}
         run: npm run test -w @tm/cli
         env:
           NODE_ENV: test
           CI: true
 
       - name: Run @tm/mcp tests
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.parity-changes.outputs.code != 'false' }}
         run: npm run test -w @tm/mcp
         env:
           NODE_ENV: test
@@ -323,7 +325,8 @@ jobs:
     name: Startup Time
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build
+    needs: [build, parity-changes]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.parity-changes.outputs.code != 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -366,6 +369,8 @@ jobs:
     name: Smoke (${{ matrix.os }}, Node ${{ matrix.node }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
+    needs: parity-changes
+    if: ${{ !cancelled() }}
     strategy:
       fail-fast: false
       matrix:
@@ -391,34 +396,37 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        if: ${{ needs.parity-changes.outputs.code != 'false' }}
         run: npm ci
         timeout-minutes: 10
 
       - name: Build
+        if: ${{ needs.parity-changes.outputs.code != 'false' }}
         run: npm run build
         env:
           NODE_ENV: production
 
       - name: Switch to Node ${{ matrix.node }}
-        if: matrix.node != env.NODE_VERSION
+        if: ${{ matrix.node != env.NODE_VERSION && needs.parity-changes.outputs.code != 'false' }}
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ matrix.node }}
 
       - name: CLI smoke tests
+        if: ${{ needs.parity-changes.outputs.code != 'false' }}
         run: npm run test:smoke -w @tm/cli
         env:
           NODE_ENV: test
           CI: true
 
       - name: MCP smoke test
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.parity-changes.outputs.code != 'false' }}
         run: npm run smoke:mcp
 
       # With a log level set, a tm-core logger built before TASKGRAPH_MCP was set
       # printed to stdout. get_tasks logs that no complexity report exists (#612).
       - name: MCP smoke test with debug logging
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.parity-changes.outputs.code != 'false' }}
         # node prints the cwd as JSON, so Windows paths keep their backslashes escaped
         run: npm run smoke:mcp -- --call get_tasks --args "{\"projectRoot\":$(node -p 'JSON.stringify(process.cwd())')}"
         env:
@@ -431,7 +439,8 @@ jobs:
     name: Packed tarball
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build
+    needs: [build, parity-changes]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.parity-changes.outputs.code != 'false' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -457,6 +466,10 @@ jobs:
   # dist/, the files init copies, the dependencies, or the comparison itself?
   # Cheap, so the heavy job below is skipped for docs and test-only changes.
   # The patterns are in .github/scripts/parity-paths.txt.
+  # `code` adds .github/scripts/test-paths.txt, what the workspace suites, Smoke,
+  # Startup Time and Packed tarball read; when false (docs, CI-only, root
+  # tests/) those are skipped. They gate on != 'false', so a push, where this
+  # job is skipped, or a failure here runs them all.
   parity-changes:
     name: Parity changes
     if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
@@ -464,6 +477,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.changed.outputs.run }}
+      code: ${{ steps.changed.outputs.code }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -485,6 +499,13 @@ jobs:
           case $code in
           0) echo "run=true" >> "$GITHUB_OUTPUT" ;;
           1) echo "run=false" >> "$GITHUB_OUTPUT" ;;
+          *) exit "$code" ;;
+          esac
+          code=0
+          grep -zEq -f .github/scripts/parity-paths.txt -f .github/scripts/test-paths.txt changed-files.txt || code=$?
+          case $code in
+          0) echo "code=true" >> "$GITHUB_OUTPUT" ;;
+          1) echo "code=false" >> "$GITHUB_OUTPUT" ;;
           *) exit "$code" ;;
           esac
 

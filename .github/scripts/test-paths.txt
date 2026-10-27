@@ -1,0 +1,5 @@
+^(apps/(cli|mcp)|packages/(tm-core|tm-profiles))/
+^\.github/scripts/
+^\.mcp\.json$
+^(turbo\.json|tsconfig[^/]*\.json|vitest[^/]*\.ts|\.nvmrc)$
+^(README(-upstream)?\.md|CHANGELOG\.md|LICENSE)$

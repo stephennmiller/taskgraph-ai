@@ -73,3 +73,60 @@ describe('parity-paths.txt', () => {
 		expect(runs(file)).toBe(false);
 	});
 });
+
+// `code` output of the same job: parity-paths.txt plus test-paths.txt decide
+// whether the workspace suites, Smoke, Startup Time and Packed tarball run
+describe('test-paths.txt', () => {
+	const extra = fs
+		.readFileSync(path.join(root, '.github/scripts/test-paths.txt'), 'utf8')
+		.replace(/\n$/, '')
+		.split('\n');
+	const all = [...patterns, ...extra.map((line) => new RegExp(line))];
+	const tests = (file: string) => all.some((p) => p.test(file));
+
+	it('has no blank line, which grep -f would match against every file', () => {
+		expect(extra.filter((line) => line.trim() === '')).toEqual([]);
+	});
+
+	it('is the list the Parity changes job reads', () => {
+		const ci = fs.readFileSync(
+			path.join(root, '.github/workflows/ci.yml'),
+			'utf8'
+		);
+		expect(ci).toContain(
+			'-f .github/scripts/parity-paths.txt -f .github/scripts/test-paths.txt'
+		);
+	});
+
+	it.each([
+		'apps/cli/tests/integration/parity-paths.test.ts',
+		'apps/mcp/vitest.config.ts',
+		'packages/tm-core/tests/fixtures/taskmaster-project',
+		'packages/tm-profiles/package.json',
+		'.github/scripts/pack-smoke.sh',
+		'.github/scripts/check-startup-time.mjs',
+		'.mcp.json',
+		'turbo.json',
+		'tsconfig.json',
+		'vitest.config.ts',
+		'.nvmrc',
+		'README.md',
+		'CHANGELOG.md',
+		'LICENSE'
+	])('runs the suites for %s', (file) => {
+		expect(fs.existsSync(path.join(root, file))).toBe(true);
+		expect(tests(file)).toBe(true);
+	});
+
+	it.each([
+		'CONTRIBUTING.md',
+		'apps/docs/docs.json',
+		'.github/workflows/version-bump.yml',
+		'.taskgraph/tasks/tasks.json',
+		'packages/claude-code-plugin/commands/next.md',
+		'tests/unit/ci/job-timeouts.test.js',
+		'evals/baseline.json'
+	])('skips the suites for %s', (file) => {
+		expect(tests(file)).toBe(false);
+	});
+});
