@@ -138,10 +138,11 @@ describe('importing an untrusted upstream folder', () => {
 });
 
 describe('importUpstreamConfig claudeCode settings', () => {
-	it('keeps prompts and tool lists, drops MCP servers, executable and permissions', () => {
+	it('keeps maxTurns and disallowedTools, drops the rest', () => {
 		const { config, droppedSettings } = importUpstreamConfig({
 			claudeCode: {
 				maxTurns: 5,
+				disallowedTools: ['Bash'],
 				appendSystemPrompt: 'Be brief',
 				allowedTools: ['Read'],
 				pathToClaudeCodeExecutable: '/tmp/evil',
@@ -155,10 +156,11 @@ describe('importUpstreamConfig claudeCode settings', () => {
 
 		expect(config.claudeCode).toEqual({
 			maxTurns: 5,
-			appendSystemPrompt: 'Be brief',
-			allowedTools: ['Read']
+			disallowedTools: ['Bash']
 		});
 		expect(droppedSettings).toEqual([
+			'claudeCode.appendSystemPrompt',
+			'claudeCode.allowedTools',
 			'claudeCode.pathToClaudeCodeExecutable',
 			'claudeCode.permissionMode',
 			'claudeCode.mcpServers',

@@ -18,29 +18,13 @@ const AI_COMMAND_NAMES = [
 	'update-tasks'
 ];
 
+// Only keys the provider still reads. TaskGraph sets the system prompt,
+// tools, permission mode and MCP servers itself (see providers/claude-code.ts),
+// so unknown keys are stripped rather than honored.
 const BaseSettingsSchema = z.object({
 	pathToClaudeCodeExecutable: z.string().optional(),
 	maxTurns: z.number().int().positive().optional(),
-	customSystemPrompt: z.string().optional(),
-	appendSystemPrompt: z.string().optional(),
-	permissionMode: z
-		.enum(['default', 'acceptEdits', 'plan', 'bypassPermissions'])
-		.optional(),
-	allowedTools: z.array(z.string()).optional(),
-	disallowedTools: z.array(z.string()).optional(),
-	mcpServers: z
-		.record(
-			z.string(),
-			z.object({
-				type: z.enum(['stdio', 'sse']).optional(),
-				command: z.string(),
-				args: z.array(z.string()).optional(),
-				env: z.record(z.string(), z.string()).optional(),
-				url: z.url().optional(),
-				headers: z.record(z.string(), z.string()).optional()
-			})
-		)
-		.optional()
+	disallowedTools: z.array(z.string()).optional()
 });
 
 /** `claudeCode` settings; `commandSpecific` keys must be AI command names */

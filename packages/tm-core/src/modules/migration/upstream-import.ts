@@ -47,16 +47,11 @@ const CLAUDE_MODELS = ['opus', 'sonnet', 'haiku'] as const;
  */
 /**
  * `claudeCode` settings carried over. The rest can hold secrets (MCP server
- * `env` and `headers`), run another program (`pathToClaudeCodeExecutable`)
- * or widen permissions (`permissionMode`), so they are dropped and listed.
+ * `env` and `headers`), run another program (`pathToClaudeCodeExecutable`),
+ * widen permissions (`permissionMode`) or do nothing in TaskGraph (the
+ * system prompt keys, `allowedTools`), so they are dropped and listed.
  */
-const KEPT_CLAUDE_CODE_SETTINGS = [
-	'maxTurns',
-	'customSystemPrompt',
-	'appendSystemPrompt',
-	'allowedTools',
-	'disallowedTools'
-];
+const KEPT_CLAUDE_CODE_SETTINGS = ['maxTurns', 'disallowedTools'];
 
 const KEPT_GLOBAL_SETTINGS = [
 	'logLevel',
