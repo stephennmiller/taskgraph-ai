@@ -30,7 +30,7 @@ export async function replyWith(
 	args: ToolArgs,
 	{ log }: Pick<ToolContext, 'log'>,
 	errorPrefix: string,
-	work: () => Promise<{ data: unknown; tag?: string }>
+	work: () => Promise<{ data: unknown; tag?: string; note?: string }>
 ) {
 	try {
 		const tasksPath = path.join(args.projectRoot, TASKGRAPH_TASKS_FILE);
@@ -39,13 +39,14 @@ export async function replyWith(
 				`Tasks live in ${tasksPath}; a different file isn't supported`
 			);
 		}
-		const { data, tag: usedTag } = await work();
+		const { data, tag: usedTag, note } = await work();
 		return handleApiResult({
 			result: { success: true, data },
 			log,
 			errorPrefix,
 			projectRoot: args.projectRoot,
-			tag: usedTag ?? args.tag
+			tag: usedTag ?? args.tag,
+			note
 		});
 	} catch (error: unknown) {
 		return handleApiResult({

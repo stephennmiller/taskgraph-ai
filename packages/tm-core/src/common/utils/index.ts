@@ -83,6 +83,8 @@ export { writeAtomically } from './write-atomically.js';
 export {
 	fenceAsData,
 	neutralizeTag,
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
 	TASK_DATA_TAG
 } from './prompt-tag.js';
 

@@ -10,6 +10,8 @@ import {
 	Subtask,
 	taskIdsSchema,
 	parseTaskIds,
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
 	type Task,
 	withFullSubtaskIds
 } from '@tm/core';
@@ -112,11 +114,12 @@ export function registerGetTaskTool(server: FastMCP) {
 					return handleApiResult({
 						result: {
 							success: true,
-							data: responseData
+							data: neutralizeTaskData(responseData)
 						},
 						log,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					log.error(`Error in get-task: ${error.message}`);

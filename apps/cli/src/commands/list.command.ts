@@ -7,15 +7,18 @@ import {
 	OUTPUT_FORMATS,
 	buildBlocksMap,
 	createTmCore,
+	fenceAsData,
 	filterBlockingTasks,
 	filterByStatus,
 	filterReadyTasks,
+	neutralizeTaskData,
 	parseStatusFilter,
 	sanitizeForTerminal,
 	satisfyArchivedDependencies,
 	type InvalidDependency,
 	type OutputFormat,
 	STATUS_ICONS,
+	TASK_DATA_TAG,
 	type TmCore,
 	type WatchSubscription,
 	withFullSubtaskIds
@@ -492,7 +495,10 @@ export class ListTasksCommand extends Command {
 			// Compact prints titles itself: strip escape sequences first (the
 			// text formatters do their own; JSON escapes them)
 			case 'compact':
-				this.displayCompact(sanitizeForTerminal(result), options);
+				this.displayCompact(
+					neutralizeTaskData(sanitizeForTerminal(result)),
+					options
+				);
 				break;
 
 			case 'text':
@@ -511,7 +517,8 @@ export class ListTasksCommand extends Command {
 	 */
 	private displayJson(data: ListTasksResult): void {
 		printJson({
-			tasks: data.tasks.map(withFullSubtaskIds),
+			// Titles and details may be read by an agent: none can close a fence
+			tasks: neutralizeTaskData(data.tasks.map(withFullSubtaskIds)),
 			metadata: {
 				total: data.total,
 				filtered: data.filtered,
@@ -572,8 +579,14 @@ export class ListTasksCommand extends Command {
 			console.log(formatEmptyList(this.emptyListFilter(options)));
 			return;
 		}
+		// An agent reads this: fence the titles as show and next do
 		console.log(
-			formatPlainTaskList(data.tasks, { withSubtasks: options.withSubtasks })
+			fenceAsData(
+				formatPlainTaskList(data.tasks, {
+					withSubtasks: options.withSubtasks
+				}),
+				TASK_DATA_TAG
+			)
 		);
 	}
 

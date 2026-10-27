@@ -207,9 +207,11 @@ describe('list command', () => {
 
 			expect(status).toBe(0);
 			expect(stdout.trimEnd().split('\n')).toEqual([
+				'<task-data>',
 				'1  done         medium  Set up the database',
 				'2  in-progress  high    Sign-in with sessions  deps:1',
-				'3  pending      medium  Bookmark endpoints  deps:2'
+				'3  pending      medium  Bookmark endpoints  deps:2',
+				'</task-data>'
 			]);
 		});
 
@@ -234,7 +236,9 @@ describe('list command', () => {
 
 			expect(status).toBe(0);
 			expect(stdout.trimEnd().split('\n')).toEqual([
-				'3  pending  medium  Bookmark endpoints  deps:2'
+				'<task-data>',
+				'3  pending  medium  Bookmark endpoints  deps:2',
+				'</task-data>'
 			]);
 			expect(stderr).not.toContain('non-existent');
 		});
