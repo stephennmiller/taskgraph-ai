@@ -221,21 +221,19 @@ export function normalizeProjectRoot(rawPath: string): string {
 }
 
 /**
- * Get project root from session object
+ * The root folders the client reported, normalized, in the order it sent them
  */
-function getProjectRootFromSession(session: any): string | null {
+function getProjectRootsFromSession(session: any): string[] {
 	try {
-		// Check primary location
-		if (session?.roots?.[0]?.uri) {
-			return normalizeProjectRoot(session.roots[0].uri);
-		}
-		// Check alternate location
-		else if (session?.roots?.roots?.[0]?.uri) {
-			return normalizeProjectRoot(session.roots.roots[0].uri);
-		}
-		return null;
+		// Primary location, else the alternate one
+		const roots = session?.roots?.roots ?? session?.roots;
+		return Array.isArray(roots)
+			? roots
+					.filter((root) => root?.uri)
+					.map((root) => normalizeProjectRoot(root.uri))
+			: [];
 	} catch {
-		return null;
+		return [];
 	}
 }
 
@@ -246,9 +244,10 @@ const TAG_PATTERN = /^[A-Za-z0-9_-]+$/;
  * (namedProjectRoot in @tm/core):
  * 1. args.projectRoot (explicitly provided)
  * 2. TASKGRAPH_PROJECT_ROOT, from process.env or else the session's env
- * 3. the session's root folder
- * When 2 or 3 names a project, args.projectRoot must be it or a directory
- * inside it (symlinks followed), or the tool replies with an error (#794).
+ * 3. the session's first root folder
+ * When 2 names a project, args.projectRoot must be it or a directory inside
+ * it (symlinks followed); else when the client reported root folders, it must
+ * be inside one of them. Otherwise the tool replies with an error (#794).
  */
 export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 	fn: (
@@ -271,26 +270,31 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 		let normalizedRoot: string | null = null;
 
 		try {
-			const sessionRoot =
-				namedProjectRoot(undefined, process.env, session?.env) ??
-				getProjectRootFromSession(session);
-			normalizedRoot =
+			const envRoot = namedProjectRoot(undefined, process.env, session?.env);
+			const sessionRoots = envRoot
+				? [envRoot]
+				: getProjectRootsFromSession(session);
+			const root =
 				namedProjectRoot(
 					args.projectRoot ? normalizeProjectRoot(args.projectRoot) : undefined,
 					process.env,
 					session?.env
-				) ?? sessionRoot;
+				) ?? sessionRoots[0];
+			normalizedRoot = root ?? null;
 
 			if (
-				normalizedRoot &&
-				sessionRoot &&
-				resolvePathInsideRoot(
-					realpathOfExistingPrefix(sessionRoot),
-					normalizedRoot
-				) === null
+				root &&
+				sessionRoots.length &&
+				!sessionRoots.some(
+					(sessionRoot) =>
+						resolvePathInsideRoot(
+							realpathOfExistingPrefix(sessionRoot),
+							root
+						) !== null
+				)
 			) {
 				return createErrorResponse(
-					`projectRoot ${normalizedRoot} is outside this session's project (${sessionRoot})`
+					`projectRoot ${root} is outside this session's project (${sessionRoots.join(', ')})`
 				);
 			}
 

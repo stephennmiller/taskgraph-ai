@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	resolveInsideRoot,
 	withNormalizedProjectRoot,
@@ -12,6 +12,11 @@ vi.mock('@tm/core', async (importOriginal) => ({
 	...(await importOriginal<typeof import('@tm/core')>()),
 	createTmCore: vi.fn(async () => ({}))
 }));
+
+// A value in the developer's shell would bind every explicit projectRoot below
+beforeEach(() => {
+	vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+});
 
 describe('withNormalizedProjectRoot tag check', () => {
 	const run = (tag: unknown) => {
@@ -188,6 +193,50 @@ describe('withNormalizedProjectRoot binds projectRoot to the session (#794)', ()
 		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', root);
 
 		expectRefused(await call({ projectRoot: path.join(root, 'escape') }), root);
+	});
+
+	it('accepts the root named through a symlink, in either direction', async () => {
+		const real = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-bound-real-'))
+		);
+		const link = path.join(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-bound-link-')),
+			'project'
+		);
+		fs.symlinkSync(real, link);
+
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', link);
+		expect((await call({ projectRoot: real })).fn).toHaveBeenCalledOnce();
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', real);
+		expect((await call({ projectRoot: link })).fn).toHaveBeenCalledOnce();
+	});
+
+	it('accepts a projectRoot inside any of several client roots', async () => {
+		const roots = [{ uri: `file://${main}` }, { uri: `file://${other}` }];
+		const inside = path.join(other, 'pkg');
+
+		const { fn } = await call({ projectRoot: inside }, { session: { roots } });
+
+		expect(fn).toHaveBeenCalledWith(
+			expect.objectContaining({ projectRoot: inside }),
+			expect.anything()
+		);
+		expectRefused(
+			await call({ projectRoot: path.dirname(main) }, { session: { roots } }),
+			`${main}, ${other}`
+		);
+	});
+
+	it('binds to TASKGRAPH_PROJECT_ROOT alone when the client also reports roots', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+
+		expectRefused(
+			await call(
+				{ projectRoot: other },
+				{ session: { roots: [{ uri: `file://${other}` }] } }
+			),
+			main
+		);
 	});
 });
 
