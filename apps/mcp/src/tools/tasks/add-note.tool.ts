@@ -3,7 +3,7 @@
  * Append a progress note to a task or subtask as written, with no AI call
  */
 
-import { TaskIdSchema } from '@tm/core';
+import { neutralizeTaskData, TASK_DATA_NOTE, TaskIdSchema } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -46,16 +46,17 @@ export function registerAddNoteTool(server: FastMCP) {
 					return handleApiResult({
 						result: {
 							success: true,
-							data: {
+							data: neutralizeTaskData({
 								message: `Added a note to ${kind} ${note.id}`,
 								id: note.id,
 								title: note.title,
 								addedAt: note.addedAt
-							}
+							})
 						},
 						log,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: unknown) {
 					const err = error instanceof Error ? error : new Error(String(error));

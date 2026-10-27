@@ -8,6 +8,8 @@ import path from 'node:path';
 import {
 	COMPLEXITY_REPORT_FILE,
 	countComplexity,
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
 	TASKGRAPH_TASKS_FILE
 } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
@@ -151,7 +153,7 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 					return handleApiResult({
 						result: {
 							success: true,
-							data: {
+							data: neutralizeTaskData({
 								message: result.unchanged
 									? `No active task matched, so the report at ${result.reportPath} is unchanged`
 									: `Task complexity analysis complete. Report saved to ${result.reportPath}`,
@@ -163,12 +165,13 @@ export function registerAnalyzeComplexityTool(server: FastMCP) {
 								telemetryData: result.telemetryData,
 								tagInfo: result.tagInfo,
 								...(warnings.length > 0 && { warnings })
-							}
+							})
 						},
 						log,
 						errorPrefix,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: unknown) {
 					// The fix tm-core suggests, e.g. the threshold's range
@@ -210,7 +213,8 @@ export function registerComplexityReportTool(server: FastMCP) {
 						result,
 						log,
 						errorPrefix: 'Error retrieving complexity report',
-						projectRoot
+						projectRoot,
+						note: TASK_DATA_NOTE
 					});
 				try {
 					const file = args.file
@@ -218,7 +222,7 @@ export function registerComplexityReportTool(server: FastMCP) {
 						: undefined;
 					const found = tmCore.tasks.getComplexityReport({ file });
 					if (found) {
-						return reply({ success: true, data: found });
+						return reply({ success: true, data: neutralizeTaskData(found) });
 					}
 					if (!file) {
 						return createErrorResponse(

@@ -3,6 +3,7 @@
  * Move done and cancelled tasks out of tasks.json, or restore one by ID
  */
 
+import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -66,14 +67,15 @@ export function registerArchiveTasksTool(server: FastMCP) {
 						return handleApiResult({
 							result: {
 								success: true,
-								data: {
+								data: neutralizeTaskData({
 									restored: summarize(result.task),
 									tag: result.tag
-								}
+								})
 							},
 							log,
 							projectRoot,
-							tag
+							tag,
+							note: TASK_DATA_NOTE
 						});
 					}
 
@@ -86,16 +88,17 @@ export function registerArchiveTasksTool(server: FastMCP) {
 					return handleApiResult({
 						result: {
 							success: true,
-							data: {
+							data: neutralizeTaskData({
 								[result.dryRun ? 'wouldArchive' : 'archived']:
 									result.tasks.map(summarize),
 								olderThanDays: result.olderThanDays,
 								tag: result.tag
-							}
+							})
 						},
 						log,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					log.error(`Error in archive_tasks: ${error.message}`);

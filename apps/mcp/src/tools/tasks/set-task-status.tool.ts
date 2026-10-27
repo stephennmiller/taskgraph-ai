@@ -11,6 +11,8 @@ import {
 	taskIdsSchema,
 	parseTaskIds,
 	getUncheckedCriteria,
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
 	type TaskStatus
 } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
@@ -118,12 +120,13 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 							data: {
 								message,
 								tasks: results,
-								...(checklist && { checklist })
+								...(checklist && { checklist: neutralizeTaskData(checklist) })
 							}
 						},
 						log,
 						projectRoot,
-						tag
+						tag,
+						...(checklist && { note: TASK_DATA_NOTE })
 					});
 				} catch (error: unknown) {
 					const err = error instanceof Error ? error : new Error(String(error));
@@ -137,7 +140,7 @@ export function registerSetTaskStatusTool(server: FastMCP) {
 						? [
 								`${err.message}:`,
 								...gate.unchecked.map(
-									(item) => `  ${item.number}. ${item.text}`
+									(item) => `  ${item.number}. ${neutralizeTaskData(item.text)}`
 								),
 								`Check them with check: [${gate.unchecked.map((item) => item.number).join(', ')}], or pass force: true`
 							].join('\n')
