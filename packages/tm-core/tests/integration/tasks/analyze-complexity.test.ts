@@ -170,6 +170,20 @@ describe('tasks.analyzeComplexity', () => {
 			expect(saved).not.toMatch(/<\/?task-data/i);
 		});
 
+		it('caps expansionPrompt without leaving half of an emoji', async () => {
+			const reply = answer([2]);
+			reply.mainResult.complexityAnalysis[0].expansionPrompt = `${'x'.repeat(999)}\u{1F600} more`;
+			vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue(
+				reply as any
+			);
+			const core = await setUp();
+
+			await core.tasks.analyzeComplexity({ ids: '2' });
+
+			const saved = readReport().complexityAnalysis[0].expansionPrompt;
+			expect(saved).toBe('x'.repeat(999));
+		});
+
 		it('writes to output, relative to the project root', async () => {
 			vi.spyOn(AiService.prototype, 'generateObject').mockResolvedValue(
 				answer([2, 3, 4, 5, 8]) as any

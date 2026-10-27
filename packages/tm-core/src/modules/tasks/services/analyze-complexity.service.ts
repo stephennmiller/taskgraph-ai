@@ -435,10 +435,10 @@ export class AnalyzeComplexityService {
 		// The AI wrote expansionPrompt from task text, and expand puts it in its prompt
 		const analyses: ComplexityAnalysisItem[] = returned.map((a) => ({
 			...a,
-			expansionPrompt: neutralizeTag(a.expansionPrompt, TASK_DATA_TAG).slice(
-				0,
-				MAX_EXPANSION_PROMPT_LENGTH
-			)
+			// A cut through an emoji leaves a lone surrogate, which some providers reject
+			expansionPrompt: neutralizeTag(a.expansionPrompt, TASK_DATA_TAG)
+				.slice(0, MAX_EXPANSION_PROMPT_LENGTH)
+				.replace(/[\uD800-\uDBFF]$/, '')
 		}));
 
 		const answered = new Set(analyses.map((a) => String(a.taskId)));
