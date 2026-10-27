@@ -3,7 +3,7 @@
  * rename_tag, copy_tag
  */
 
-import type { TmCore } from '@tm/core';
+import { neutralizeTaskData, TASK_DATA_NOTE, type TmCore } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -25,7 +25,8 @@ const GIT_ERRORS: Record<string, string> = {
  */
 function tagTool<TArgs extends { projectRoot: string }>(
 	errorPrefix: string,
-	run: (args: TArgs, tmCore: TmCore) => Promise<unknown>
+	run: (args: TArgs, tmCore: TmCore) => Promise<unknown>,
+	note?: string
 ) {
 	return withToolContext(async (args: TArgs, { log, tmCore }: ToolContext) => {
 		let result: {
@@ -45,7 +46,8 @@ function tagTool<TArgs extends { projectRoot: string }>(
 			result,
 			log,
 			errorPrefix,
-			projectRoot: args.projectRoot
+			projectRoot: args.projectRoot,
+			note
 		});
 	});
 }
@@ -68,7 +70,8 @@ export function registerListTagsTool(server: FastMCP) {
 			'Error listing tags',
 			async (_args, tmCore) => {
 				const result = await tmCore.tasks.listTags();
-				return {
+				// Tag descriptions are text from tasks.json, like task text
+				return neutralizeTaskData({
 					tags: result.tags.map((tag) => ({
 						name: tag.name,
 						isCurrent: tag.isCurrent,
@@ -82,8 +85,9 @@ export function registerListTagsTool(server: FastMCP) {
 					currentTag: result.currentTag,
 					totalTags: result.totalTags,
 					message: `Found ${result.totalTags} tag(s)`
-				};
-			}
+				});
+			},
+			TASK_DATA_NOTE
 		)
 	});
 }
