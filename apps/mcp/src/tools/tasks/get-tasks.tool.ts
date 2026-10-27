@@ -8,7 +8,9 @@ import { handleApiResult, withToolContext } from '../../shared/utils.js';
 import type { ToolContext } from '../../shared/types.js';
 import {
 	DEFAULT_TASK_FIELDS,
+	neutralizeTaskData,
 	parseStatusFilter,
+	TASK_DATA_NOTE,
 	parseTaskFields,
 	selectTaskFields,
 	withFullSubtaskIds
@@ -85,9 +87,8 @@ export function registerGetTasksTool(server: FastMCP) {
 						result: {
 							success: true,
 							data: {
-								tasks: selectTaskFields(
-									tasks.map(withFullSubtaskIds),
-									selected
+								tasks: neutralizeTaskData(
+									selectTaskFields(tasks.map(withFullSubtaskIds), selected)
 								),
 								filter: status || 'all'
 							}
@@ -95,7 +96,8 @@ export function registerGetTasksTool(server: FastMCP) {
 						log,
 						projectRoot,
 						tag: result.tag,
-						minify: true
+						minify: true,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					log.error(`Error in get-tasks: ${error.message}`);

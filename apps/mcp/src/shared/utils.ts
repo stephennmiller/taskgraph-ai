@@ -108,6 +108,8 @@ export async function handleApiResult<T>(options: {
 	tag?: string; // Optional tag/brief to use instead of reading from state.json
 	/** Print the JSON on one line, without indentation */
 	minify?: boolean;
+	/** A top-level `note` beside `data`, such as TASK_DATA_NOTE */
+	note?: string;
 }): Promise<ContentResult> {
 	const {
 		result,
@@ -115,7 +117,8 @@ export async function handleApiResult<T>(options: {
 		errorPrefix = 'API error',
 		projectRoot,
 		tag: providedTag,
-		minify = false
+		minify = false,
+		note
 	} = options;
 
 	// Get version info for every response
@@ -163,6 +166,7 @@ export async function handleApiResult<T>(options: {
 	if (currentTag) {
 		responsePayload.tag = currentTag;
 	}
+	if (note) responsePayload.note = note;
 
 	return {
 		content: [

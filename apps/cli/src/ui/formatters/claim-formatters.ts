@@ -1,8 +1,11 @@
 /**
  * @fileoverview What `next --claim` prints, e.g.
  *
+ *   <task-data>
  *   ✓ Claimed task 2  Build the login API
  *     ▶ in-progress · claimed by steve
+ *   </task-data>
+ *
  *   Next: taskgraph show 2
  *
  * and when nothing is ready:
@@ -11,7 +14,7 @@
  *   Run taskgraph list to see what's in progress or blocked
  */
 
-import { sanitizeForTerminal } from '@tm/core';
+import { fenceAsData, sanitizeForTerminal, TASK_DATA_TAG } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import { getStatusWithColor } from './status-formatters.js';
@@ -57,9 +60,13 @@ export function formatClaim(
 	const kind = claim.taskId.includes('.') ? 'subtask' : 'task';
 	const lead = `Claimed ${kind} ${claim.taskId}  `;
 	const title = fit(claim.title, width - 2 - lead.length);
-	return [
-		`${chalk.green('✓')} Claimed ${kind} ${theme.brand(claim.taskId)}  ${title}`,
-		`  ${getStatusWithColor('in-progress')} ${theme.muted(`· claimed by ${claim.claimedBy}`)}`,
-		`Next: ${theme.brand(`taskgraph show ${claim.taskId}`)}`
-	].join('\n');
+	// The title is task text, fenced as next and show fence it
+	const claimed = fenceAsData(
+		[
+			`${chalk.green('✓')} Claimed ${kind} ${theme.brand(claim.taskId)}  ${title}`,
+			`  ${getStatusWithColor('in-progress')} ${theme.muted(`· claimed by ${claim.claimedBy}`)}`
+		].join('\n'),
+		TASK_DATA_TAG
+	);
+	return `${claimed}\n\nNext: ${theme.brand(`taskgraph show ${claim.taskId}`)}`;
 }

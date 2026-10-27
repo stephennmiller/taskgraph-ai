@@ -3,7 +3,11 @@
  * tm-core's tasks.getNext(), or with claim: true, tasks.claimNext()
  */
 
-import { withFullSubtaskIds } from '@tm/core';
+import {
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
+	withFullSubtaskIds
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -63,7 +67,9 @@ export function registerNextTaskTool(server: FastMCP) {
 							return {
 								data: claim
 									? {
-											nextTask: withFullSubtaskIds(claim.task),
+											nextTask: neutralizeTaskData(
+												withFullSubtaskIds(claim.task)
+											),
 											isSubtask: String(claim.task.id).includes('.'),
 											claimedBy: claim.claimedBy,
 											claimedAt: claim.claimedAt,
@@ -73,7 +79,8 @@ export function registerNextTaskTool(server: FastMCP) {
 											message:
 												'No task is ready to claim. Every task is done, in progress or waiting on dependencies.',
 											nextTask: null
-										}
+										},
+								note: claim ? TASK_DATA_NOTE : undefined
 							};
 						}
 					);
@@ -114,13 +121,15 @@ export function registerNextTaskTool(server: FastMCP) {
 						);
 						return {
 							data: {
-								nextTask:
+								nextTask: neutralizeTaskData(
 									complexityScore === undefined
 										? item
-										: { ...item, complexityScore },
+										: { ...item, complexityScore }
+								),
 								isSubtask,
 								nextSteps: `Start it with set_task_status id "${nextTask.id}" status "in-progress"`
-							}
+							},
+							note: TASK_DATA_NOTE
 						};
 					}
 				);

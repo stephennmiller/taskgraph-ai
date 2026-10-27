@@ -10,6 +10,7 @@ import {
 	type TaskClaim,
 	type TmCore,
 	createTmCore,
+	neutralizeTaskData,
 	withFullSubtaskIds
 } from '@tm/core';
 import { Command } from 'commander';
@@ -221,7 +222,7 @@ export class NextCommand extends Command {
 		if (options.format === 'json') {
 			printJson({
 				...result,
-				task: withFullSubtaskIds(result.task)
+				task: neutralizeTaskData(withFullSubtaskIds(result.task))
 			});
 			return;
 		}
@@ -269,7 +270,7 @@ export class NextCommand extends Command {
 	private displayJson(result: NextTaskResult): void {
 		printJson({
 			...result,
-			task: withFullSubtaskIds(result.task)
+			task: neutralizeTaskData(withFullSubtaskIds(result.task))
 		});
 	}
 
