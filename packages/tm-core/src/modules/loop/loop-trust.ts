@@ -43,9 +43,30 @@ export function trustLoop(
 	const root = canonical(projectRoot);
 	const trusted = readTrusted(home);
 	if (trusted.includes(root)) return;
+	writeTrusted(home, [...trusted, root]);
+}
+
+/**
+ * Ask again before the next unprompted run: tasks came in from outside
+ * (a PRD, GitHub issues) that the earlier approval didn't cover
+ */
+export function untrustLoop(
+	projectRoot: string,
+	home: string = os.homedir()
+): void {
+	const root = canonical(projectRoot);
+	const trusted = readTrusted(home);
+	if (!trusted.includes(root)) return;
+	writeTrusted(
+		home,
+		trusted.filter((p) => p !== root)
+	);
+}
+
+function writeTrusted(home: string, trusted: string[]): void {
 	fs.mkdirSync(path.dirname(trustFile(home)), { recursive: true });
 	// Write beside, then rename, so a crash cannot leave half a file
 	const tmp = `${trustFile(home)}.${process.pid}.tmp`;
-	fs.writeFileSync(tmp, JSON.stringify([...trusted, root], null, 2));
+	fs.writeFileSync(tmp, JSON.stringify(trusted, null, 2));
 	fs.renameSync(tmp, trustFile(home));
 }

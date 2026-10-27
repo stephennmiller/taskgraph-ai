@@ -35,11 +35,13 @@ import {
 	type TaskChecklist,
 	type TaskStatus,
 	buildChecklist,
+	fenceAsData,
 	fullSubtaskId,
 	getPrdSource,
 	getTaskLinks,
 	resolveSubtaskDependency,
-	sanitizeForTerminal
+	sanitizeForTerminal,
+	TASK_DATA_TAG
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -426,6 +428,12 @@ export function formatTaskDetail(
 		);
 	}
 
+	// Task text can come from a PRD or a GitHub issue; an agent reading this
+	// must see where it starts and ends
+	const shown = fenceAsData(
+		sections.map((lines) => lines.join('\n')).join('\n\n'),
+		TASK_DATA_TAG
+	);
 	const next = formatNextStep(
 		getSuggestedActions(
 			id,
@@ -435,7 +443,5 @@ export function formatTaskDetail(
 		)[0],
 		width
 	);
-	if (next.length > 0) sections.push(next);
-
-	return sections.map((lines) => lines.join('\n')).join('\n\n');
+	return next.length > 0 ? `${shown}\n\n${next.join('\n')}` : shown;
 }

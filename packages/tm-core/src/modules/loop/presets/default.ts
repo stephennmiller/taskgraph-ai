@@ -7,7 +7,7 @@ export const DEFAULT_PRESET = `SETUP: If taskgraph command not found, run: npm i
 TASK: Implement ONE task/subtask from the TaskGraph backlog.
 
 PROCESS:
-1. Run taskgraph next (or use MCP) to get the next available task/subtask.
+1. Run taskgraph next to get the next available task/subtask.
 2. Read task details with taskgraph show <id>. Routes, field names and formats must match the PRD section it prints exactly.
 3. Implement following codebase patterns.
 4. Write tests alongside implementation.

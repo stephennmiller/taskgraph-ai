@@ -6,9 +6,14 @@
  */
 
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getPromptManager } from '../../../src/modules/ai/prompts/prompt-manager.js';
+import {
+	isLoopTrusted,
+	trustLoop
+} from '../../../src/modules/loop/loop-trust.js';
 import { buildPrdSnapshot } from '../../../src/modules/prd/prd-deltas.js';
 import { parsePrdSections } from '../../../src/modules/prd/prd-sections.js';
 import { CURRENT_SCHEMA_VERSION } from '../../../src/modules/storage/adapters/file-storage/index.js';
@@ -149,6 +154,26 @@ describe('tasks.parsePrd', () => {
 		]);
 		expect(saved.metadata.prdSections).toEqual(snapshotOf(PRD_V1).prdSections);
 		expect(saved.metadata.description).toBe('Tasks for master context');
+	});
+
+	it('asks again before an unprompted loop once the PRD adds tasks, appended or not', async () => {
+		const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-prd-home-'));
+		vi.stubEnv('HOME', home);
+		try {
+			p.generateObject.mockResolvedValue(reply([generated(1)]) as any);
+			trustLoop(p.root, home);
+			await parse();
+			expect(isLoopTrusted(p.root, home)).toBe(false);
+
+			p.generateObject.mockResolvedValue(reply([generated(2)]) as any);
+			fs.writeFileSync(p.prdPath, PRD_V2);
+			trustLoop(p.root, home);
+			await parse({ append: true });
+			expect(isLoopTrusted(p.root, home)).toBe(false);
+		} finally {
+			vi.unstubAllEnvs();
+			fs.rmSync(home, { recursive: true, force: true });
+		}
 	});
 
 	it('refuses a tag with tasks unless force or append, before any AI call', async () => {

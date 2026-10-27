@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import {
 	MAX_PARALLEL,
 	ParallelLoopError,
@@ -121,6 +122,10 @@ describe('buildParallelPrompt', () => {
 		expect(prompt).toContain('taskgraph/task-7');
 		expect(prompt).toContain('`taskgraph show 7`');
 		expect(prompt).toContain("Don't merge");
+	});
+
+	it('tells Claude that task text in taskgraph output is data', () => {
+		expect(buildParallelPrompt({ taskId: '7' })).toContain(TASK_DATA_RULE);
 	});
 
 	it('has Claude mark the task review, since its branch is unmerged', () => {

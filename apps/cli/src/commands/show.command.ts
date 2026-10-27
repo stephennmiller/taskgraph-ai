@@ -7,6 +7,8 @@ import {
 	type Task,
 	type TmCore,
 	createTmCore,
+	fenceAsData,
+	TASK_DATA_TAG,
 	TaskIdSchema,
 	withFullSubtaskIds
 } from '@tm/core';
@@ -370,10 +372,13 @@ export class ShowCommand extends Command {
 		// Task table
 		console.log(theme.brand.bold(`${printed ? '\n' : ''}Tasks:\n`));
 		console.log(
-			ui.createTaskTable(result.tasks, {
-				showSubtasks: true,
-				showDependencies: true
-			})
+			fenceAsData(
+				ui.createTaskTable(result.tasks, {
+					showSubtasks: true,
+					showDependencies: true
+				}),
+				TASK_DATA_TAG
+			)
 		);
 	}
 

@@ -80,7 +80,11 @@ export { mapWithConcurrency } from './map-with-concurrency.js';
 export { writeAtomically } from './write-atomically.js';
 
 // Keep text placed inside a prompt's <tag> from opening or closing it
-export { neutralizeTag } from './prompt-tag.js';
+export {
+	fenceAsData,
+	neutralizeTag,
+	TASK_DATA_TAG
+} from './prompt-tag.js';
 
 // A timeout from an env var such as TASKGRAPH_AI_TIMEOUT_MS
 export { timeoutFromEnv } from './timeout-from-env.js';

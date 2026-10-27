@@ -1,6 +1,10 @@
 import { createRequire } from 'node:module';
 import type { ValidateFunction } from 'ajv';
 import { getLogger } from '../../../common/logger/index.js';
+import {
+	neutralizeTag,
+	TASK_DATA_TAG
+} from '../../../common/utils/prompt-tag.js';
 import { getRepoSummary } from '../../codebase/index.js';
 
 import addTaskPrompt from './add-task.json' with { type: 'json' };
@@ -90,6 +94,9 @@ function withRepoSummary(variables: PromptVariables): PromptVariables {
 	}
 	return { ...variables, repoSummary };
 }
+
+/** A value can't open or close the <task-data> fence templates put around task text */
+const asData = (value: string) => neutralizeTag(value, TASK_DATA_TAG);
 
 /**
  * Manages prompt templates for AI interactions
@@ -446,14 +453,16 @@ export class PromptManager {
 			/\{\{\{json\s+(\w+(?:\.\w+)*)\}\}\}/g,
 			(_match, path) => {
 				const value = this.getNestedValue(variables, path);
-				return value !== undefined ? JSON.stringify(value, null, 2) : '';
+				return value !== undefined
+					? asData(JSON.stringify(value, null, 2))
+					: '';
 			}
 		);
 
 		// Handle variable substitution {{variable}}
 		rendered = rendered.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_match, path) => {
 			const value = this.getNestedValue(variables, path);
-			return value !== undefined ? String(value) : '';
+			return value !== undefined ? asData(String(value)) : '';
 		});
 
 		return rendered;

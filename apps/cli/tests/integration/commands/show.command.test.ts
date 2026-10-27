@@ -403,7 +403,7 @@ describe('show command output', () => {
 			const res = show(id);
 
 			expect(res.stdout).toContain(
-				'PRD · docs/prd.md#sessions\n  ## Sessions\n\n  `POST /sessions` takes `{ "email", "password" }`.\n\n'
+				'PRD · docs/prd.md#sessions\n  ## Sessions\n\n  `POST /sessions` takes `{ "email", "password" }`.\n'
 			);
 			expect(res.stdout).not.toContain('Billing');
 			expect(JSON.parse(show(id, '--json').stdout).task.prdSection).toEqual({
@@ -464,6 +464,17 @@ describe('show command output', () => {
 		expect(res.stdout).not.toContain('Next:');
 		expect(res.stderr).toContain('Task 9 not found');
 		expect(res.stderr).toContain('taskgraph list');
+	});
+
+	it('fences the task table for several IDs as data', () => {
+		const res = show('1,2');
+		const fence = res.stdout.match(/<[\s/]*task-data[^\n]*/gi);
+
+		expect(res.status).toBe(0);
+		expect(fence).toEqual(['<task-data>', '</task-data>']);
+		const inside = res.stdout.split('<task-data>')[1].split('</task-data>')[0];
+		expect(inside).toContain('Set up the database schema');
+		expect(inside).toContain('Email and password sign-in');
 	});
 
 	it('prints one error with a hint when none of several IDs exist', () => {

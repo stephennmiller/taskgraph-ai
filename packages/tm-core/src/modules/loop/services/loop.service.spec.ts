@@ -12,6 +12,7 @@ import {
 	type MockInstance
 } from 'vitest';
 import { fakeClaude } from './fake-claude.js';
+import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { LoopService, type LoopServiceOptions } from './loop.service.js';
 import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
@@ -534,6 +535,30 @@ describe('LoopService', () => {
 				expect(fsPromises.readFile).toHaveBeenCalledWith('toString', 'utf-8');
 				const promptArg = mockSpawn.mock.calls[0][1][1];
 				expect(promptArg).toContain('Custom prompt content');
+			});
+
+			it('tells Claude that task text in taskgraph output is data, with a custom prompt too', async () => {
+				vi.mocked(fsPromises.readFile).mockResolvedValue(
+					'Custom prompt content'
+				);
+				mockSpawn.mockImplementation(
+					() =>
+						fakeClaude({
+							stdout: '',
+							stderr: '',
+							status: 0
+						}) as never
+				);
+
+				await service.run({
+					prompt: '/custom/prompt.md',
+					iterations: 1,
+					sleepSeconds: 0,
+					progressFile: '/test/progress.txt'
+				});
+
+				const promptArg = mockSpawn.mock.calls[0][1][1];
+				expect(promptArg).toContain(TASK_DATA_RULE);
 			});
 
 			it('should throw on empty custom prompt file', async () => {

@@ -5,7 +5,9 @@
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
+import { isLoopTrusted } from '../loop-trust.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
 import {
 	checkSandboxAuth,
@@ -95,8 +97,16 @@ export class LoopService {
 		let consecutiveErrors = 0;
 
 		await this.initProgressFile(config);
+		// Approved through the trust file: parse-prd or github import can withdraw it mid-run
+		const approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
 		for (let i = 1; i <= config.iterations && this._isRunning; i++) {
+			if (approved && !isLoopTrusted(this.projectRoot)) {
+				const msg =
+					'Tasks were added since loop was approved. Run loop again to approve them.';
+				this.reportError(config.callbacks, msg);
+				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
+			}
 			// Notify presentation layer of iteration start
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
@@ -290,7 +300,6 @@ export class LoopService {
 		const taskInfo = config.taskId
 			? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}.`
 			: '';
-		// Note: tasks.json reference removed - let the preset control task source to avoid confusion
 		return `@${config.progressFile} @CLAUDE.md
 
 Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
@@ -301,7 +310,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		iteration: number
 	): Promise<string> {
 		const basePrompt = await this.resolvePrompt(config.prompt);
-		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${SIGNAL_RULE}`;
+		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
 	}
 
 	private parseCompletion(

@@ -6,6 +6,7 @@
 
 import path from 'node:path';
 import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
+import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import { LoopError } from '../loop-task.js';
 
@@ -152,6 +153,8 @@ export function buildParallelPrompt(options: {
 		`3. Commit your work on ${branch}. Don't merge, rebase or push; the branch is left for review.`,
 		`4. Mark it ready for review: \`taskgraph set-status --id=${taskId} --status=review${tagFlag}\`.`,
 		'',
-		`Work only on task ${taskId}. Don't start another task.`
+		`Work only on task ${taskId}. Don't start another task.`,
+		'',
+		TASK_DATA_RULE
 	].join('\n');
 }

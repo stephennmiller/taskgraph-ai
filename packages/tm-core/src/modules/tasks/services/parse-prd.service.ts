@@ -38,6 +38,7 @@ import {
 	MAX_CLARIFYING_QUESTIONS,
 	normalizeClarifyingQuestions
 } from '../../prd/clarifications.js';
+import { untrustLoop } from '../../loop/loop-trust.js';
 import { formatExistingTaskList } from '../../prd/generated-tasks.js';
 import {
 	PRD_SNAPSHOT_KEY,
@@ -426,6 +427,9 @@ export class ParsePrdService {
 		}
 
 		const defaultPriority = aiConfig.defaultPriority || 'medium';
+		// The PRD's author wrote these tasks, not the user who approved loop;
+		// withdraw that approval first, so a failed write can't leave it standing
+		if (generated.length > 0) untrustLoop(projectRoot);
 		const saved = await this.save(tag, snapshot, (current) => {
 			// A plain parse was allowed because the tag was empty; tasks added
 			// since then are replaced only with force

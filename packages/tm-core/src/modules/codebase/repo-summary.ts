@@ -39,9 +39,10 @@ import { neutralizeTag } from '../../common/utils/prompt-tag.js';
 
 /**
  * Bump when the summary's content changes, so old caches are rebuilt.
- * 3 invalidates caches from before the stricter neutralizeTag (#687).
+ * 3 invalidates caches from before the stricter neutralizeTag (#687), 4
+ * from before it caught lookalike tags.
  */
-const SUMMARY_VERSION = 3;
+const SUMMARY_VERSION = 4;
 const CACHE_FILE = 'repo-summary.json';
 const TREE_DEPTH = 3;
 const MAX_TREE_LINES = 150;

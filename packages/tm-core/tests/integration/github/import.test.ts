@@ -7,9 +7,13 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '../../../src/common/types/index.js';
 import { GitHubDomain } from '../../../src/modules/github/github-domain.js';
+import {
+	isLoopTrusted,
+	trustLoop
+} from '../../../src/modules/loop/loop-trust.js';
 import type {
 	GitHubLink,
 	RemoteIssue
@@ -111,6 +115,37 @@ describe('GitHub import', () => {
 
 		expect(again).toMatchObject({ created: 0, linked: 0, skipped: 2 });
 		expect(await readTasks()).toHaveLength(3);
+	});
+
+	it("marks the issue body as the issue author's text, not instructions", async () => {
+		await setup();
+
+		await domain.import({ repo: REPO });
+
+		const details = (await taskFor(40)).details.split('\n');
+		expect(details[0]).toBe(
+			`GitHub issue #40: https://github.com/${REPO}/issues/40`
+		);
+		expect(details[2]).toMatch(/written on GitHub by the issue's author/);
+		expect(details.at(-1)).toBe('Body of 40');
+	});
+
+	it('asks again before an unprompted loop once issues are added', async () => {
+		const home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-gh-home-'));
+		vi.stubEnv('HOME', home);
+		try {
+			await setup();
+			trustLoop(projectDir, home);
+
+			await domain.import({ repo: REPO, dryRun: true });
+			expect(isLoopTrusted(projectDir, home)).toBe(true);
+
+			await domain.import({ repo: REPO });
+			expect(isLoopTrusted(projectDir, home)).toBe(false);
+		} finally {
+			vi.unstubAllEnvs();
+			fs.rmSync(home, { recursive: true, force: true });
+		}
 	});
 
 	it('links an unlinked task whose title ends in (#<n>) instead of adding one', async () => {

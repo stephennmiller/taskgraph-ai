@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { isLoopTrusted, trustLoop } from './loop-trust.js';
+import { isLoopTrusted, trustLoop, untrustLoop } from './loop-trust.js';
 
 describe('loop trust', () => {
 	let base: string;
@@ -58,5 +58,23 @@ describe('loop trust', () => {
 
 		expect(isLoopTrusted(project, home)).toBe(true);
 		expect(isLoopTrusted(other, home)).toBe(true);
+	});
+
+	it('forgets one project on untrustLoop and keeps the others', () => {
+		const other = path.join(base, 'other');
+		fs.mkdirSync(other);
+		trustLoop(project, home);
+		trustLoop(other, home);
+
+		untrustLoop(project, home);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+		expect(isLoopTrusted(other, home)).toBe(true);
+	});
+
+	it('writes no trust file when untrusting a project nobody approved', () => {
+		untrustLoop(project, home);
+
+		expect(fs.existsSync(path.join(home, '.taskgraph'))).toBe(false);
 	});
 });
