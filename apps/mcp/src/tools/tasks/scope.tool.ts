@@ -4,7 +4,11 @@
  * are the legacy tools', plus `warnings` when there are any.
  */
 
-import { withFullSubtaskIds } from '@tm/core';
+import {
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
+	withFullSubtaskIds
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -104,13 +108,14 @@ function registerScopeTool(server: FastMCP, direction: 'up' | 'down') {
 					);
 					return {
 						tag: result.tag,
-						data: {
+						note: TASK_DATA_NOTE,
+						data: neutralizeTaskData({
 							updatedTasks,
 							tasksUpdated: updatedTasks.length,
 							message: `Successfully scoped ${direction} ${updatedTasks.length} task(s)`,
 							telemetryData: result.telemetryData,
 							...(warnings.length > 0 && { warnings })
-						}
+						})
 					};
 				}
 			);
