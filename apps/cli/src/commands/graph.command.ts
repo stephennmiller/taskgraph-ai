@@ -4,7 +4,12 @@
  */
 
 import path from 'node:path';
-import { type DependencyTree, type TmCore, createTmCore } from '@tm/core';
+import {
+	type DependencyTree,
+	type TmCore,
+	createTmCore,
+	neutralizeTaskData
+} from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { renderDependencyTree } from '../ui/components/dependency-tree.component.js';
@@ -73,7 +78,7 @@ export class GraphCommand extends Command {
 			};
 
 			if (options.format === 'json') {
-				printJson(result);
+				printJson(neutralizeTaskData(result));
 			} else {
 				this.displayText(result);
 			}

@@ -5,7 +5,7 @@
  */
 
 import path from 'node:path';
-import { type TmCore, createTmCore } from '@tm/core';
+import { type TmCore, createTmCore, neutralizeTaskData } from '@tm/core';
 import { Command } from 'commander';
 import {
 	formatArchiveResult,
@@ -133,7 +133,7 @@ Examples:
 				status: t.status
 			}));
 			if (options.format === 'json') {
-				printJson({ ...result, tasks });
+				printJson(neutralizeTaskData({ ...result, tasks }));
 				return;
 			}
 			console.log(
@@ -170,7 +170,7 @@ Examples:
 				tag: options.tag
 			});
 			if (options.format === 'json') {
-				printJson({ restored: true, tag, task });
+				printJson(neutralizeTaskData({ restored: true, tag, task }));
 				return;
 			}
 			console.log(

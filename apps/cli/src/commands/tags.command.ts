@@ -4,7 +4,7 @@
  */
 
 import type { TmCore } from '@tm/core';
-import { createTmCore, getProjectPaths } from '@tm/core';
+import { createTmCore, getProjectPaths, neutralizeTaskData } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import {
@@ -294,7 +294,8 @@ Examples:
 				? await tmCore.tasks.getTagsWithStats({ ready: options.ready })
 				: await tmCore.tasks.listTags({ ready: options?.ready });
 			if (options?.json) {
-				printJson(result);
+				// Tag descriptions come from tasks.json: none can close a fence an agent reads
+				printJson(neutralizeTaskData(result));
 			} else {
 				console.log(
 					formatTagList(result.tags, {
