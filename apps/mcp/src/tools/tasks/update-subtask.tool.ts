@@ -5,7 +5,12 @@
  */
 
 import path from 'node:path';
-import { TASKGRAPH_TASKS_FILE, TaskIdSchema } from '@tm/core';
+import {
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
+	TASKGRAPH_TASKS_FILE,
+	TaskIdSchema
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -98,7 +103,8 @@ export function registerUpdateSubtaskTool(server: FastMCP) {
 						}
 						return {
 							tag: result.tag,
-							data: {
+							note: TASK_DATA_NOTE,
+							data: neutralizeTaskData({
 								message: nothingAdded
 									? `Nothing added to subtask ${result.id}: the AI returned no text${parsedMetadata ? ' (metadata saved)' : ''}`
 									: `Successfully updated subtask with ID ${result.id}`,
@@ -111,7 +117,7 @@ export function registerUpdateSubtaskTool(server: FastMCP) {
 								useResearch: args.research === true,
 								telemetryData: result.telemetryData,
 								tagInfo: result.tagInfo
-							}
+							})
 						};
 					}
 				);
