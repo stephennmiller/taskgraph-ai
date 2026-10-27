@@ -67,11 +67,20 @@ describe('neutralizeTag', () => {
 		);
 	});
 
-	it('stays fast on a long whitespace run after <', () => {
-		const text = `<${' '.repeat(200_000)}/${' '.repeat(200_000)}`;
+	it.each([
+		[
+			'a long whitespace run after <',
+			`<${' '.repeat(200_000)}/${' '.repeat(200_000)}`
+		],
+		['a long zero-width run inside the name', `</task${'​'.repeat(200_000)}x`],
+		[
+			'a long separator run on the NFKD path',
+			`café </task${'-­'.repeat(100_000)}x`
+		]
+	])('stays fast on %s', (_name, text) => {
 		const start = performance.now();
 
-		neutralizeTag(text, 'prd');
+		neutralizeTag(text, 'task-data');
 
 		expect(performance.now() - start).toBeLessThan(1000);
 	});

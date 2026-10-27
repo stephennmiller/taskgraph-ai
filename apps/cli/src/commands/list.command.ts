@@ -542,6 +542,10 @@ export class ListTasksCommand extends Command {
 			});
 		}
 
+		if (tasks.length === 0) {
+			console.log(formatEmptyList(this.emptyListFilter(options)));
+			return;
+		}
 		// An agent reads this too: fence the titles as the plain output does
 		const lines: string[] = [];
 		for (const task of tasks) {
