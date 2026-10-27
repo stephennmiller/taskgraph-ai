@@ -17,7 +17,7 @@ rules:
       # (the action is expected to refuse a workflow file that differs from the
       # default branch's copy). Left alone deliberately; revisit if that changes.
       - claude.yml:28
-      - claude-dedupe-issues.yml:23
+      - claude-dedupe-issues.yml:29
   dangerous-triggers:
     ignore:
       # `issue_comment` is needed to answer "@claude" comments. The job only runs when

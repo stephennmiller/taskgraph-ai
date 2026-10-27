@@ -13,6 +13,12 @@ on:
 
 jobs:
   claude-dedupe-issues:
+    # The prompt reads the issue body with an issues:write token, so only
+    # issues from the owner, members and collaborators run on their own;
+    # dedupe any other issue by hand with workflow_dispatch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -31,10 +37,11 @@ jobs:
         # pins, so both workflows run the same source. The old pin (v0.0.63, from
         # August 2025) bundled a Claude Code whose default model has been retired.
         # Not claude-code-action itself: it refuses issue authors without write
-        # access, and dedupe has to run on issues from outside reporters. The
-        # mirror has no recent tags, so Dependabot cannot bump it. When it bumps
-        # claude-code-action in claude.yml, move this pin to the matching
-        # "Sync from claude-code-action base-action@<sha>" commit by hand.
+        # access, and workflow_dispatch has to run on issues from outside
+        # reporters. The mirror has no recent tags, so Dependabot cannot bump
+        # it. When it bumps claude-code-action in claude.yml, move this pin to
+        # the matching "Sync from claude-code-action base-action@<sha>" commit
+        # by hand.
         uses: anthropics/claude-code-base-action@2a32bc834f10ce844915c4830aad32db0659b2ec # mirror of claude-code-action v1.0.252
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
