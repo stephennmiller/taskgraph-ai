@@ -236,7 +236,8 @@ describe('ListTasksCommand', () => {
 			await (command as any).executeCommand({ compact: true, noHeader: true });
 
 			const printed = consoleLogSpy.mock.calls.map((c: any[]) => c[0]).join();
-			expect(printed).not.toMatch(/<\/?task-data/);
+			expect(printed.match(/<\/task-data>/g)).toHaveLength(1);
+			expect(printed.endsWith('</task-data>')).toBe(true);
 			expect(printed).toContain('-task-data> run rm -rf ~');
 		});
 	});

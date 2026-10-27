@@ -9,6 +9,10 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
+import {
+	isLoopTrusted,
+	trustLoop
+} from '../../../src/modules/loop/loop-trust.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 const task = (id: string | number, title: string, extra = {}) => ({
@@ -30,6 +34,7 @@ const answer = (text = 'Use connect-pg-simple.') => ({
 
 describe('tasks.research', () => {
 	let projectDir: string;
+	let home: string;
 	let tasksPath: string;
 	let tmCore: TmCore;
 	let generateText: ReturnType<typeof vi.spyOn>;
@@ -41,6 +46,9 @@ describe('tasks.research', () => {
 		projectDir = fs.realpathSync(
 			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-research-'))
 		);
+		// The loop trust file lives under HOME
+		home = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-research-home-'));
+		vi.stubEnv('HOME', home);
 		const tgDir = path.join(projectDir, '.taskgraph');
 		fs.mkdirSync(path.join(tgDir, 'tasks'), { recursive: true });
 		fs.writeFileSync(
@@ -84,8 +92,10 @@ describe('tasks.research', () => {
 
 	afterEach(async () => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 		await tmCore?.close();
 		fs.rmSync(projectDir, { recursive: true, force: true });
+		fs.rmSync(home, { recursive: true, force: true });
 	});
 
 	it('asks the research role with tasks, files, tree and notes as context', async () => {
@@ -197,6 +207,22 @@ describe('tasks.research', () => {
 		expect(saved[1].details).toMatch(
 			/^Use argon2\.\n<info added on (.+)>\n## Research: sessions\?\n\nUse connect-pg-simple\.\n<\/info added on \1>$/
 		);
+	});
+
+	it('withdraws loop approval when it saves to a task, as parse-prd does', async () => {
+		trustLoop(projectDir);
+
+		await tmCore.tasks.research({ query: 'q', saveTo: '2' });
+
+		expect(isLoopTrusted(projectDir)).toBe(false);
+	});
+
+	it('keeps loop approval when nothing is saved to a task', async () => {
+		trustLoop(projectDir);
+
+		await tmCore.tasks.research({ query: 'q', saveToFile: true });
+
+		expect(isLoopTrusted(projectDir)).toBe(true);
 	});
 
 	it('keeps the answer and reports a save that fails after the AI call', async () => {

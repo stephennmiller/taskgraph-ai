@@ -495,10 +495,7 @@ export class ListTasksCommand extends Command {
 			// Compact prints titles itself: strip escape sequences first (the
 			// text formatters do their own; JSON escapes them)
 			case 'compact':
-				this.displayCompact(
-					neutralizeTaskData(sanitizeForTerminal(result)),
-					options
-				);
+				this.displayCompact(sanitizeForTerminal(result), options);
 				break;
 
 			case 'text':
@@ -545,6 +542,8 @@ export class ListTasksCommand extends Command {
 			});
 		}
 
+		// An agent reads this too: fence the titles as the plain output does
+		const lines: string[] = [];
 		for (const task of tasks) {
 			const icon = STATUS_ICONS[task.status];
 			// Show tag in compact format when listing all tags (tasks are TaskWithTag[])
@@ -553,19 +552,20 @@ export class ListTasksCommand extends Command {
 				allTags && 'tagName' in task
 					? theme.accent(`[${oneLine(task.tagName)}] `)
 					: '';
-			console.log(
+			lines.push(
 				`${tagPrefix}${chalk.cyan(oneLine(task.id))} ${icon} ${oneLine(task.title)}`
 			);
 
 			if (options.withSubtasks && task.subtasks?.length) {
 				for (const subtask of task.subtasks) {
 					const subIcon = STATUS_ICONS[subtask.status];
-					console.log(
+					lines.push(
 						`  ${theme.muted(oneLine(subtask.id))} ${subIcon} ${theme.muted(oneLine(subtask.title))}`
 					);
 				}
 			}
 		}
+		console.log(fenceAsData(lines.join('\n'), TASK_DATA_TAG));
 	}
 
 	/**

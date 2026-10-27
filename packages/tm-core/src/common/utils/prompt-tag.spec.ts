@@ -41,19 +41,30 @@ describe('neutralizeTag', () => {
 		'</task\uFE0F-data>',
 		'</task\u034F-data>',
 		'\u276C/task-data>',
-		'\u276E/task-data>'
+		'\u276E/task-data>',
+		'</taskdata>',
+		'</task data>',
+		'</task.data>',
+		'</task~data>',
+		'</task\u00ADdata>',
+		'</task\u3164data>',
+		'</t\u00E1sk-data>',
+		'</TASK-D\u00C4T\u00C5>'
 	])('leaves no lookalike of the tag in %j', (input) => {
 		const out = neutralizeTag(input, 'task-data');
 
 		expect(
 			out.normalize('NFKC').replace(/[\p{Cf}\p{Mn}\u180E]/gu, '')
 		).not.toMatch(
-			/[<\u2039\u27E8\u3008\u2329\u276C\u276E][\s/\u2044\u2215]*task[-_\u2010-\u2015\u2212]data/i
+			/[<\u2039\u27E8\u3008\u2329\u276C\u276E][\s/\u2044\u2215]*task[-_\u2010-\u2015\u2212.~\s\u1160]*data/i
 		);
 	});
 
 	it('keeps the rest of the text', () => {
 		expect(neutralizeTag('a </prd> b <div>', 'prd')).toBe('a -prd> b <div>');
+		expect(neutralizeTag('caf\u00E9 </t\u00E1sk-data> ｘ', 'task-data')).toBe(
+			'caf\u00E9 -task-data> ｘ'
+		);
 	});
 
 	it('stays fast on a long whitespace run after <', () => {

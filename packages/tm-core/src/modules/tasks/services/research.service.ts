@@ -34,6 +34,7 @@ import {
 import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { findTaskOrSubtask, gatherTaskContext } from '../../ai/task-context.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
+import { untrustLoop } from '../../loop/loop-trust.js';
 import type { TaskService } from './task-service.js';
 
 /** How many tasks matching the question go into the context */
@@ -515,6 +516,9 @@ export class ResearchService {
 				ERROR_CODES.INVALID_INPUT
 			);
 		}
+		// The research model copied this text from web pages, which the user who
+		// approved loop never read; withdraw that approval before the write
+		untrustLoop(this.projectRoot);
 		const { saved } = await this.taskService.appendToDetails(
 			id,
 			(target.text ?? conversationForTask(history)).trim(),

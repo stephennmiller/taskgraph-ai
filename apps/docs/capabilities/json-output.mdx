@@ -62,7 +62,7 @@ Task text in the JSON from `list`, `next`, `show`, `prime`, `archive`, `archive 
 
 ## Plain lines from `list` in a pipe
 
-When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--format` is given, `taskgraph list` prints one plain line per task instead of the summary and table: full titles, no color codes, no box characters. The lines sit between `<task-data>` and `</task-data>`, as `show` and `next` print task text, so an agent can tell the task text from the instructions around it.
+When stdout isn't a terminal (a pipe, a file, or an agent's shell) and no `--format` is given, `taskgraph list` prints one plain line per task instead of the summary and table: full titles, no color codes, no box characters. The lines sit between `<task-data>` and `</task-data>`, as `show`, `next`, `graph`, `why` and `list --compact` print task text, so an agent can tell the task text from the instructions around it.
 
 ```
 <task-data>

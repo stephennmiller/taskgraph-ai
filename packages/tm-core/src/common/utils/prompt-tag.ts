@@ -7,25 +7,52 @@ const HIDDEN = '\\p{Cf}\\p{Mn}\\u180E';
 const GAP = `[\\s/\\u2044\\u2215\\uFF0F\\u29F8${HIDDEN}]*`;
 const INVISIBLE = `[${HIDDEN}]*`;
 
-/** One character of a tag name, also as its fullwidth form; `-` and `_` also as dash lookalikes */
-function tagChar(c: string): string {
-	if (c === '-' || c === '_')
-		return '[-_\\u2010-\\u2015\\u2212\\uFE63\\uFF0D\\uFF3F]';
-	const wide = String.fromCharCode(c.charCodeAt(0) + 0xfee0);
-	return `[${c}${wide}]`;
+/**
+ * What may stand between the words of a tag name: `-`, `_`, a dash
+ * lookalike, `.`, `~`, whitespace, a Hangul filler or nothing. One class with
+ * the invisible characters, so the match stays linear.
+ */
+const SEPARATOR = `[-_\\u2010-\\u2015\\u2212\\uFE63\\uFF0D\\uFF3F.~\\s\\u1160\\u3164${HIDDEN}]*`;
+
+/** The tag name with invisible characters allowed between letters and any separator between words */
+function tagName(tag: string): string {
+	return tag
+		.split(/[-_]/)
+		.map((word) => [...word].map((c) => `[${c}]`).join(INVISIBLE))
+		.join(SEPARATOR);
 }
 
 /**
  * Text going between `<tag>` and `</tag>` in a prompt can't open or close
  * that tag, so outside text reads as data, not as part of the prompt.
- * Lookalikes count too (fullwidth `＜`, `∕`, a non-ASCII dash, a zero-width
- * space inside the name), since a model may read them as the tag.
+ * Lookalikes count too (fullwidth `＜`, `∕`, a non-ASCII dash or none, a
+ * zero-width space inside the name, an accented letter), since a model may
+ * read them as the tag.
  */
 export function neutralizeTag(text: string, tag: string): string {
 	// The `-` stops a `<` or `</` just before the match joining the tag name
 	// (`</</tag>` must not become `</tag>`)
-	const name = [...tag].map(tagChar).join(INVISIBLE);
-	return text.replace(new RegExp(`${OPEN}${GAP}${name}`, 'giu'), `-${tag}`);
+	const pattern = new RegExp(`${OPEN}${GAP}${tagName(tag)}`, 'giu');
+	if (text.normalize('NFKD') === text) return text.replace(pattern, `-${tag}`);
+	// Matched on a copy with each character decomposed (NFKD: `á` is `a` and
+	// a mark, `ｔ` is `t`), each folded index mapped to its offset in `text`
+	let folded = '';
+	const offsetAt: number[] = [];
+	let offset = 0;
+	for (const char of text) {
+		const parts = char.normalize('NFKD');
+		for (let i = 0; i < parts.length; i++) offsetAt.push(offset);
+		folded += parts;
+		offset += char.length;
+	}
+	offsetAt.push(text.length);
+	let out = '';
+	let last = 0;
+	for (const match of folded.matchAll(pattern)) {
+		out += text.slice(last, offsetAt[match.index]) + `-${tag}`;
+		last = offsetAt[match.index + match[0].length];
+	}
+	return out + text.slice(last);
 }
 
 /** `text` on its own lines between `<tag>` and `</tag>`, unable to close them */
