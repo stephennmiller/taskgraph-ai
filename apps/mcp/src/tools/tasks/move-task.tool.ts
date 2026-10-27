@@ -3,6 +3,7 @@
  * Move tasks or subtasks to new IDs within a tag, or tasks to another tag
  */
 
+import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -120,10 +121,11 @@ export function registerMoveTaskTool(server: FastMCP) {
 								}
 							: { ...moves[0], message };
 					return handleApiResult({
-						result: { success: true, data },
+						result: { success: true, data: neutralizeTaskData(data) },
 						log,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					return handleApiResult({

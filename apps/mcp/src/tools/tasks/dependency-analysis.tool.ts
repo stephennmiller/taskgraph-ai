@@ -3,7 +3,7 @@
  * Bottlenecks, critical path and cycles for a tag, plus why one task is blocked
  */
 
-import { taskIdSchema } from '@tm/core';
+import { neutralizeTaskData, TASK_DATA_NOTE, taskIdSchema } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -54,10 +54,11 @@ export function registerDependencyAnalysisTool(server: FastMCP) {
 						taskId: id
 					});
 					return handleApiResult({
-						result: { success: true, data },
+						result: { success: true, data: neutralizeTaskData(data) },
 						log,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					log.error(`Error in dependency_analysis: ${error.message}`);

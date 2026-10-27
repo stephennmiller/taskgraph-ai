@@ -9,7 +9,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
 	type PrdDelta,
+	neutralizeTaskData,
 	PRD_FILE,
+	TASK_DATA_NOTE,
 	TASKGRAPH_DOCS_DIR,
 	TASKGRAPH_TASKS_FILE,
 	parseClarificationAnswers,
@@ -149,14 +151,15 @@ export function registerParsePrdTool(server: FastMCP) {
 								);
 							return {
 								tag,
-								data: {
+								note: TASK_DATA_NOTE,
+								data: neutralizeTaskData({
 									message:
 										questions.length > 0
 											? `Ask the user these ${questions.length} questions, then call parse_prd with their answers in clarifications`
 											: 'No open questions; call parse_prd without clarify to generate tasks',
 									questions,
 									telemetryData
-								}
+								})
 							};
 						}
 

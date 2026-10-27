@@ -4,6 +4,7 @@
  * clearSubtasks.
  */
 
+import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import { replyId, replyWith } from '../../shared/tool-reply.js';
@@ -57,7 +58,8 @@ export function registerRemoveTaskTool(server: FastMCP) {
 					const dangling = result.danglingDependents;
 					return {
 						tag: result.tag,
-						data: {
+						note: TASK_DATA_NOTE,
+						data: neutralizeTaskData({
 							totalTasks: total,
 							successful: result.removedTasks.length,
 							failed: total - result.removedTasks.length,
@@ -68,7 +70,7 @@ export function registerRemoveTaskTool(server: FastMCP) {
 							...(dangling > 0 && {
 								hint: `${dangling === 1 ? '1 task depends' : `${dangling} tasks depend`} on missing tasks. Run: taskgraph fix-dependencies --tag ${result.tag}`
 							})
-						}
+						})
 					};
 				})
 		)
@@ -109,12 +111,15 @@ export function registerRemoveSubtaskTool(server: FastMCP) {
 					});
 					return {
 						tag: usedTag,
-						data: task
-							? {
-									message: `Subtask ${args.id} successfully converted to task #${task.id}`,
-									task
-								}
-							: { message: `Subtask ${args.id} successfully removed` }
+						...(task && { note: TASK_DATA_NOTE }),
+						data: neutralizeTaskData(
+							task
+								? {
+										message: `Subtask ${args.id} successfully converted to task #${task.id}`,
+										task
+									}
+								: { message: `Subtask ${args.id} successfully removed` }
+						)
 					};
 				})
 		)
@@ -160,7 +165,8 @@ export function registerClearSubtasksTool(server: FastMCP) {
 					const count = cleared.reduce((sum, t) => sum + t.count, 0);
 					return {
 						tag: usedTag,
-						data: {
+						note: TASK_DATA_NOTE,
+						data: neutralizeTaskData({
 							message:
 								cleared.length > 0
 									? `Cleared ${count} subtask(s) from ${cleared.length} task(s) in tag '${usedTag}'`
@@ -175,7 +181,7 @@ export function registerClearSubtasksTool(server: FastMCP) {
 								title
 							})),
 							tag: usedTag
-						}
+						})
 					};
 				})
 		)

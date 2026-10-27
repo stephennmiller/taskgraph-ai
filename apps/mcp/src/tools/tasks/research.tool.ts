@@ -4,6 +4,7 @@
  * answer to a task or to .taskgraph/docs/research/
  */
 
+import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import { errorMessage } from '../../shared/tool-reply.js';
@@ -90,7 +91,8 @@ export function registerResearchTool(server: FastMCP) {
 						log,
 						errorPrefix: 'Error performing research',
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				try {
 					const result = await tmCore.tasks.research(
@@ -126,7 +128,7 @@ export function registerResearchTool(server: FastMCP) {
 					}
 					return reply({
 						success: true,
-						data: {
+						data: neutralizeTaskData({
 							query: result.query,
 							result: result.result,
 							contextSize: result.contextSize,
@@ -143,7 +145,7 @@ export function registerResearchTool(server: FastMCP) {
 							...(result.saveFailures.length
 								? { saveFailures: result.saveFailures }
 								: {})
-						}
+						})
 					});
 				} catch (error: unknown) {
 					const message = errorMessage(error);

@@ -3,6 +3,7 @@
  * Create or update GitHub issues for tasks (one way, previewed by default)
  */
 
+import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -72,9 +73,10 @@ export function registerGithubPushTool(server: FastMCP) {
 						taskIds: id
 					});
 					return handleApiResult({
-						result: { success: true, data: result },
+						result: { success: true, data: neutralizeTaskData(result) },
 						log,
-						projectRoot
+						projectRoot,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					log.error(`Error in github_push: ${error.message}`);
