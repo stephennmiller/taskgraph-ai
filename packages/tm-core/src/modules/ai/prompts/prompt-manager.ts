@@ -365,6 +365,10 @@ export class PromptManager {
 	 */
 	renderTemplate(template: string, variables: PromptVariables): string {
 		let rendered = template;
+		// Substituted text is held out as `\0<n>\0` until every pass has run,
+		// so `{{var}}` in a value (a task title) renders literally (#784)
+		const values: string[] = [];
+		const inert = (value: string) => `\0${values.push(value) - 1}\0`;
 
 		// Handle helper functions like (eq variable "value")
 		rendered = rendered.replace(
@@ -442,7 +446,7 @@ export class PromptManager {
 						};
 
 						// Recursively render the content with item context
-						return this.renderTemplate(content, itemContext);
+						return inert(this.renderTemplate(content, itemContext));
 					})
 					.join('');
 			}
@@ -454,7 +458,7 @@ export class PromptManager {
 			(_match, path) => {
 				const value = this.getNestedValue(variables, path);
 				return value !== undefined
-					? asData(JSON.stringify(value, null, 2))
+					? inert(asData(JSON.stringify(value, null, 2)))
 					: '';
 			}
 		);
@@ -462,10 +466,10 @@ export class PromptManager {
 		// Handle variable substitution {{variable}}
 		rendered = rendered.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (_match, path) => {
 			const value = this.getNestedValue(variables, path);
-			return value !== undefined ? asData(String(value)) : '';
+			return value !== undefined ? inert(asData(String(value))) : '';
 		});
 
-		return rendered;
+		return rendered.replace(/\0(\d+)\0/g, (_match, i) => values[Number(i)]);
 	}
 
 	/**
