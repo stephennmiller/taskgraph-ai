@@ -224,3 +224,4 @@ problems privately, as [SECURITY.md](SECURITY.md) describes.
 
 By contributing, you agree that your contributions are licensed under the
 project's license (MIT with Commons Clause).
+
