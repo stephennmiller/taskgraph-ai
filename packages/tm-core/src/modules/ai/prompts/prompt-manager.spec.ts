@@ -183,6 +183,61 @@ describe('PromptManager', () => {
 			const result = promptManager.renderTemplate(template, variables);
 			expect(result).toBe('Special: <>&"\'');
 		});
+
+		it('renders template syntax inside a value literally (#784)', () => {
+			const result = promptManager.renderTemplate(
+				'{{#each items}}{{name}};{{/each}} {{{json items}}} {{root}}',
+				{
+					items: [{ name: '{{root}}' }, { name: '{{{json items}}}' }],
+					root: '{{root}}'
+				}
+			);
+
+			expect(result).toBe(
+				'{{root}};{{{json items}}}; ' +
+					JSON.stringify(
+						[{ name: '{{root}}' }, { name: '{{{json items}}}' }],
+						null,
+						2
+					) +
+					' {{root}}'
+			);
+		});
+
+		it('restores a value that holds placeholder-like text or $-patterns (#784)', () => {
+			const result = promptManager.renderTemplate(
+				'{{a}}|{{#each items}}{{name}}{{/each}}|{{{json c}}}|{{b}}',
+				{
+					a: '\u00001\u0000 $& $1 $<b> $$',
+					items: [{ name: '\u00003\u0000' }],
+					c: ['$&'],
+					b: 'B'
+				}
+			);
+
+			expect(result).toBe(
+				'\u00001\u0000 $& $1 $<b> $$|\u00003\u0000|[\n  "$&"\n]|B'
+			);
+		});
+
+		it.each(['analyze-complexity', 'update-tasks'])(
+			'%s keeps {{projectRoot}} and {{{json tasks}}} in task titles literal (#784)',
+			(id) => {
+				const tasks = [
+					{ id: 1, title: 'Fix {{projectRoot}}' },
+					{ id: 2, title: 'See {{{json tasks}}}' }
+				];
+
+				const { userPrompt } = promptManager.loadPrompt(id, {
+					tasks,
+					projectRoot: '/repo',
+					updatePrompt: 'x'
+				});
+
+				expect(userPrompt).toContain(JSON.stringify(tasks, null, 2));
+				expect(userPrompt.match(/"title"/g)).toHaveLength(2);
+			}
+		);
 	});
 
 	describe('listPrompts', () => {
