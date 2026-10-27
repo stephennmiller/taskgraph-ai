@@ -428,6 +428,37 @@ describe('FileOperations', () => {
 				fsSync.readdirSync(tempDir).filter((f) => f.includes('.tmp'))
 			).toHaveLength(0);
 		});
+
+		it.skipIf(process.platform === 'win32')(
+			"refuses to write when the file's folder or the .taskgraph folder is a symlink (#782)",
+			async () => {
+				const real = path.join(tempDir, 'real');
+				fsSync.mkdirSync(path.join(real, 'tasks'), { recursive: true });
+				const project = path.join(tempDir, 'project');
+				fsSync.mkdirSync(path.join(project, '.taskgraph'), { recursive: true });
+				fsSync.symlinkSync(real, path.join(project, '.taskgraph', 'tasks'));
+				const linkedRoot = path.join(tempDir, 'linked');
+				fsSync.mkdirSync(linkedRoot);
+				fsSync.symlinkSync(real, path.join(linkedRoot, '.taskgraph'));
+				const files = [
+					path.join(project, '.taskgraph', 'tasks', 'tasks.json'),
+					path.join(linkedRoot, '.taskgraph', 'state.json'),
+					path.join(linkedRoot, '.taskgraph', 'tasks', 'archive.json')
+				];
+
+				for (const file of files) {
+					await expect(fileOps.writeJson(file, { a: 1 })).rejects.toThrow(
+						/symlink/
+					);
+					await expect(
+						fileOps.modifyJson(file, () => ({ a: 1 }))
+					).rejects.toThrow(/symlink/);
+				}
+
+				expect(fsSync.readdirSync(real)).toEqual(['tasks']);
+				expect(fsSync.readdirSync(path.join(real, 'tasks'))).toEqual([]);
+			}
+		);
 	});
 
 	describe('rename into place', () => {

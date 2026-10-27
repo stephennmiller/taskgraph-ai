@@ -192,6 +192,26 @@ describe('checkPrdCoverage', () => {
 		expect(coverage?.files).toHaveLength(1 + devices.length);
 	});
 
+	it('treats a file outside the project or a secret file as unreadable (#782)', () => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-coverage-'));
+		const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-outside-'));
+		fs.writeFileSync(path.join(outside, 'prd.md'), '# A\n\n## B\n');
+		fs.writeFileSync(path.join(dir, '.env'), '# DATABASE\nDB_URL=secret\n');
+		try {
+			const coverage = checkPrdCoverage(
+				[
+					task(1, `${path.join(outside, 'prd.md').replace(/\\/g, '/')}#b`),
+					task(2, '.env#database')
+				],
+				dir
+			);
+
+			expect(coverage?.files.map((file) => file.missing)).toEqual([true, true]);
+		} finally {
+			fs.rmSync(outside, { recursive: true, force: true });
+		}
+	});
+
 	it('treats a file over the size limit as unreadable', () => {
 		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-coverage-'));
 		fs.writeFileSync(path.join(dir, 'big.md'), '');
@@ -231,6 +251,13 @@ describe('readPrdSection', () => {
 		expect(readPrdSection('docs/prd.md#gone', root)).toBeUndefined();
 		expect(readPrdSection('docs/gone.md#overview', root)).toBeUndefined();
 		expect(readPrdSection('not a source', root)).toBeUndefined();
+	});
+
+	it('reads no secret file (#782)', () => {
+		const root = project();
+		fs.writeFileSync(path.join(root, '.env'), '# DATABASE\nDB_URL=hunter2\n');
+
+		expect(readPrdSection('.env#database', root)).toBeUndefined();
 	});
 
 	it('reads nothing outside the project', () => {

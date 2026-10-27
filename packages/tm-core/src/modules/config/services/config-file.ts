@@ -17,6 +17,7 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_LOCAL_CONFIG_FILE
 } from '../../../common/constants/paths.js';
+import { refuseSymlinkedFolders } from '../../storage/adapters/file-storage/file-operations.js';
 import { mergeMachineConfig, splitMachineConfig } from './machine-config.js';
 
 type JsonObject = Record<string, any>;
@@ -205,6 +206,7 @@ export function readConfigJson(
 export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 	const configPath = path.join(rootPath, TASKGRAPH_CONFIG_FILE);
 	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
+	refuseSymlinkedFolders(configPath);
 	const currentShared = readConfigJson(configPath);
 	if (currentShared === UNREADABLE_CONFIG) {
 		// Saving over it would replace the user's settings with defaults
