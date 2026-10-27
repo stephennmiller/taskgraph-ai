@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
 	createTmCore,
 	namedProjectRoot,
+	realpathOfExistingPrefix,
 	resolvePathInsideRoot
 } from '@tm/core';
 import type { ContentResult, Context } from 'fastmcp';
@@ -246,6 +247,8 @@ const TAG_PATTERN = /^[A-Za-z0-9_-]+$/;
  * 1. args.projectRoot (explicitly provided)
  * 2. TASKGRAPH_PROJECT_ROOT, from process.env or else the session's env
  * 3. the session's root folder
+ * When 2 or 3 names a project, args.projectRoot must be it or a directory
+ * inside it (symlinks followed), or the tool replies with an error (#794).
  */
 export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 	fn: (
@@ -268,12 +271,28 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 		let normalizedRoot: string | null = null;
 
 		try {
+			const sessionRoot =
+				namedProjectRoot(undefined, process.env, session?.env) ??
+				getProjectRootFromSession(session);
 			normalizedRoot =
 				namedProjectRoot(
 					args.projectRoot ? normalizeProjectRoot(args.projectRoot) : undefined,
 					process.env,
 					session?.env
-				) ?? getProjectRootFromSession(session);
+				) ?? sessionRoot;
+
+			if (
+				normalizedRoot &&
+				sessionRoot &&
+				resolvePathInsideRoot(
+					realpathOfExistingPrefix(sessionRoot),
+					normalizedRoot
+				) === null
+			) {
+				return createErrorResponse(
+					`projectRoot ${normalizedRoot} is outside this session's project (${sessionRoot})`
+				);
+			}
 
 			if (!normalizedRoot) {
 				log?.error?.(

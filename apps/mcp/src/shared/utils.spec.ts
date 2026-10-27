@@ -56,21 +56,17 @@ describe('withNormalizedProjectRoot project root (#339)', () => {
 		return fn.mock.calls[0]?.[0]?.projectRoot;
 	};
 
-	it('takes an explicit projectRoot over TASKGRAPH_PROJECT_ROOT', async () => {
+	it('takes an explicit projectRoot equal to TASKGRAPH_PROJECT_ROOT', async () => {
 		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
 
-		expect(await rootPassed({ projectRoot: other })).toBe(other);
+		expect(await rootPassed({ projectRoot: main })).toBe(main);
 	});
 
-	it("takes an explicit projectRoot over the session's TASKGRAPH_PROJECT_ROOT", async () => {
-		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+	it('takes an explicit projectRoot inside TASKGRAPH_PROJECT_ROOT', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+		const inside = path.join(main, 'packages', 'app');
 
-		expect(
-			await rootPassed(
-				{ projectRoot: other },
-				{ session: { env: { TASKGRAPH_PROJECT_ROOT: main } } }
-			)
-		).toBe(other);
+		expect(await rootPassed({ projectRoot: inside })).toBe(inside);
 	});
 
 	it('keeps a loop --parallel task worktree on the main project', async () => {
@@ -105,6 +101,93 @@ describe('withNormalizedProjectRoot project root (#339)', () => {
 		expect(
 			await rootPassed({}, { session: { roots: [{ uri: `file://${other}` }] } })
 		).toBe(other);
+	});
+
+	it('takes an explicit projectRoot with no known session root', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+
+		expect(await rootPassed({ projectRoot: other }, { session: {} })).toBe(
+			other
+		);
+	});
+});
+
+describe('withNormalizedProjectRoot binds projectRoot to the session (#794)', () => {
+	const main = path.resolve('/projects/main');
+	const other = path.resolve('/projects/other');
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
+
+	const call = async (args: object, context: object = {}) => {
+		const fn = vi.fn().mockResolvedValue({ content: [] });
+		const result = await withNormalizedProjectRoot(fn)(args as never, {
+			log: {},
+			...context
+		});
+		return { fn, result };
+	};
+
+	const expectRefused = (
+		{ fn, result }: Awaited<ReturnType<typeof call>>,
+		root: string
+	) => {
+		expect(result.isError).toBe(true);
+		expect(result.content[0]).toMatchObject({
+			text: expect.stringContaining(`outside this session's project (${root})`)
+		});
+		expect(fn).not.toHaveBeenCalled();
+	};
+
+	it('refuses a projectRoot outside TASKGRAPH_PROJECT_ROOT', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+
+		expectRefused(await call({ projectRoot: other }), main);
+	});
+
+	it("refuses a projectRoot outside the session's TASKGRAPH_PROJECT_ROOT", async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+
+		expectRefused(
+			await call(
+				{ projectRoot: other },
+				{ session: { env: { TASKGRAPH_PROJECT_ROOT: main } } }
+			),
+			main
+		);
+	});
+
+	it("refuses a projectRoot outside the session's root folder", async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
+
+		expectRefused(
+			await call(
+				{ projectRoot: other },
+				{ session: { roots: [{ uri: `file://${main}` }] } }
+			),
+			main
+		);
+	});
+
+	it('refuses a parent of the session root and a sibling with the same prefix', async () => {
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
+
+		expectRefused(await call({ projectRoot: path.dirname(main) }), main);
+		expectRefused(await call({ projectRoot: `${main}-other` }), main);
+	});
+
+	it('refuses a symlink inside the root that points outside it', async () => {
+		const root = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-bound-root-'))
+		);
+		const outside = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), 'tm-bound-outside-'))
+		);
+		fs.symlinkSync(outside, path.join(root, 'escape'));
+		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', root);
+
+		expectRefused(await call({ projectRoot: path.join(root, 'escape') }), root);
 	});
 });
 
