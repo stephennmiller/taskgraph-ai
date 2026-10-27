@@ -43,19 +43,25 @@ export interface AutoUpdateContext {
 	explicit?: boolean;
 }
 
+/**
+ * $HOME on each call. os.homedir() caches the first answer, so a test
+ * (or a process that changes HOME) would otherwise read the wrong place.
+ */
+export function resolveHome(env: NodeJS.ProcessEnv = process.env): string {
+	return (
+		env.HOME ??
+		(process.platform === 'win32' ? env.USERPROFILE : undefined) ??
+		os.homedir()
+	);
+}
+
 function context(options: AutoUpdateContext = {}) {
 	const env = options.env ?? process.env;
 	return {
 		argv: options.argv ?? process.argv,
 		env,
 		stdinIsTTY: options.stdinIsTTY ?? Boolean(process.stdin.isTTY),
-		// $HOME on each call. os.homedir() caches the first answer, so a test
-		// (or a process that changes HOME) would otherwise read the wrong place.
-		home:
-			options.home ??
-			env.HOME ??
-			(process.platform === 'win32' ? env.USERPROFILE : undefined) ??
-			os.homedir()
+		home: options.home ?? resolveHome(env)
 	};
 }
 

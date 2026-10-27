@@ -1,18 +1,18 @@
 /**
  * @fileoverview Check npm registry for package updates with caching
  *
- * Uses a simple file-based cache in the OS temp directory to avoid
+ * Uses a simple file-based cache under `~/.taskgraph` to avoid
  * hitting npm on every CLI invocation. Cache expires after 1 hour.
  */
 
 import fs from 'node:fs';
 import https from 'https';
-import os from 'node:os';
 import path from 'node:path';
 
 import { PACKAGE_NAME } from './constants.js';
 
-import { fetchChangelogHighlights } from './changelog.js';
+import { SEMVER_RE, fetchChangelogHighlights } from './changelog.js';
+import { resolveHome } from './policy.js';
 import type { UpdateInfo } from './types.js';
 import { compareVersions, getCurrentVersion } from './version.js';
 
@@ -23,8 +23,8 @@ import { compareVersions, getCurrentVersion } from './version.js';
 /** Cache TTL: 1 hour in milliseconds */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
-/** Cache file name */
-const CACHE_FILENAME = 'taskgraph-update-cache.json';
+/** Cache file name, beside `update.lock` */
+const CACHE_FILENAME = 'update-cache.json';
 
 interface UpdateCache {
 	timestamp: number;
@@ -36,24 +36,38 @@ interface UpdateCache {
 // Cache Operations (Single Responsibility: cache I/O)
 // ============================================================================
 
-/**
- * Get the path to the update cache file in OS temp directory
- */
-const getCachePath = (): string => path.join(os.tmpdir(), CACHE_FILENAME);
+/** The update cache file under `~/.taskgraph` */
+const getCachePath = (): string =>
+	path.join(resolveHome(), '.taskgraph', CACHE_FILENAME);
 
 /**
- * Read cached update info if still valid
+ * Read cached update info if still valid. The file is only as trusted as
+ * the home directory: a non-semver version, a timestamp in the future or
+ * an expired one all count as no cache.
+ * @internal - Exported for testing purposes only
  * @returns Cached data or null if expired/missing/invalid
  */
-function readCache(): UpdateCache | null {
+export function readCache(): UpdateCache | null {
 	try {
-		const cachePath = getCachePath();
-		if (!fs.existsSync(cachePath)) return null;
-
-		const data: UpdateCache = JSON.parse(fs.readFileSync(cachePath, 'utf-8'));
-		const isExpired = Date.now() - data.timestamp > CACHE_TTL_MS;
-
-		return isExpired ? null : data;
+		const data = JSON.parse(
+			fs.readFileSync(getCachePath(), 'utf-8')
+		) as Partial<UpdateCache>;
+		if (
+			typeof data.timestamp !== 'number' ||
+			typeof data.latestVersion !== 'string' ||
+			!SEMVER_RE.test(data.latestVersion)
+		) {
+			return null;
+		}
+		const age = Date.now() - data.timestamp;
+		if (age < 0 || age > CACHE_TTL_MS) return null;
+		return {
+			timestamp: data.timestamp,
+			latestVersion: data.latestVersion,
+			highlights: Array.isArray(data.highlights)
+				? data.highlights.filter((h) => typeof h === 'string')
+				: undefined
+		};
 	} catch {
 		return null;
 	}
@@ -61,11 +75,14 @@ function readCache(): UpdateCache | null {
 
 /**
  * Write update info to cache
+ * @internal - Exported for testing purposes only
  */
-function writeCache(latestVersion: string, highlights?: string[]): void {
+export function writeCache(latestVersion: string, highlights?: string[]): void {
 	try {
+		const cachePath = getCachePath();
+		fs.mkdirSync(path.dirname(cachePath), { recursive: true });
 		fs.writeFileSync(
-			getCachePath(),
+			cachePath,
 			JSON.stringify(
 				{
 					timestamp: Date.now(),
