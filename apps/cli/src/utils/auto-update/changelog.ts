@@ -56,6 +56,9 @@ export async function fetchChangelogHighlights(
 	});
 }
 
+/** Basic semver: also bounds the input before it is put in a RegExp */
+export const SEMVER_RE = /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/;
+
 /**
  * Parse changelog markdown to extract Minor Changes for a specific version
  * @internal - Exported for testing purposes only
@@ -65,8 +68,7 @@ export function parseChangelogHighlights(
 	version: string
 ): string[] {
 	try {
-		// Validate version format (basic semver pattern) to prevent ReDoS
-		if (!/^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?$/.test(version)) {
+		if (!SEMVER_RE.test(version)) {
 			return [];
 		}
 
