@@ -253,6 +253,17 @@ export function setModels(
 	};
 }
 
+/**
+ * A language name, as `responseLanguage` goes into every AI system prompt
+ * verbatim: letters, spaces and hyphens, 1 to 40 characters. Combining marks
+ * count as letters: Indic scripts and decomposed accents are made of them.
+ */
+export function isLanguageName(value: unknown): value is string {
+	return (
+		typeof value === 'string' && /^\p{L}[\p{L}\p{M} -]{0,39}$/u.test(value)
+	);
+}
+
 /** Set the language AI responses are written in */
 export function setResponseLanguage(
 	projectRoot: string,
@@ -261,10 +272,11 @@ export function setResponseLanguage(
 	if (!isConfigFilePresent(projectRoot)) {
 		return failure('CONFIG_MISSING', CONFIG_MISSING_ERROR);
 	}
-	if (typeof language !== 'string' || language.trim() === '') {
+	if (typeof language === 'string') language = language.trim();
+	if (!isLanguageName(language)) {
 		return failure(
 			'INVALID_RESPONSE_LANGUAGE',
-			`Invalid response language: ${language}. Must be a non-empty string.`
+			`Invalid response language: ${language}. Use a language name of letters, spaces and hyphens, up to 40 characters, such as "Português".`
 		);
 	}
 	const written = updateProjectConfig(projectRoot, (config) => {
