@@ -7,6 +7,8 @@
 
 import path from 'node:path';
 import {
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
 	TASKGRAPH_TASKS_FILE,
 	type UpdateHooks,
 	withFullSubtaskIds
@@ -161,7 +163,8 @@ export function registerUpdateTaskTool(server: FastMCP) {
 						}
 						return {
 							tag,
-							data: {
+							note: TASK_DATA_NOTE,
+							data: neutralizeTaskData({
 								message: `Successfully updated task with ID ${taskId} based on the prompt`,
 								taskId,
 								tasksPath: tasksPathOf(args.projectRoot),
@@ -180,7 +183,7 @@ export function registerUpdateTaskTool(server: FastMCP) {
 									result.tagInfo ??
 									(result.telemetryData ? undefined : { tag }),
 								...(warnings.length > 0 && { warnings })
-							}
+							})
 						};
 					}
 				);

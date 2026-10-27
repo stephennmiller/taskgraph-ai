@@ -3,7 +3,7 @@
  * Add a subtask to a task, or turn a task into one
  */
 
-import { fullSubtaskId } from '@tm/core';
+import { fullSubtaskId, neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -84,16 +84,17 @@ export function registerAddSubtaskTool(server: FastMCP) {
 					return handleApiResult({
 						result: {
 							success: true,
-							data: {
+							data: neutralizeTaskData({
 								message: taskId
 									? `Task ${parseInt(taskId, 10)} successfully converted to a subtask of task ${parentId}`
 									: `New subtask ${parentId}.${subtask.id} successfully created`,
 								subtask: { ...subtask, id: fullSubtaskId(parentId, subtask.id) }
-							}
+							})
 						},
 						log,
 						projectRoot,
-						tag
+						tag,
+						note: TASK_DATA_NOTE
 					});
 				} catch (error: any) {
 					return handleApiResult({

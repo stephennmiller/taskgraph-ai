@@ -8,6 +8,7 @@ import {
 	type TmCore,
 	createTmCore,
 	fenceAsData,
+	neutralizeTaskData,
 	TASK_DATA_TAG,
 	TaskIdSchema,
 	withFullSubtaskIds
@@ -283,13 +284,16 @@ export class ShowCommand extends Command {
 	 * Display in JSON format
 	 */
 	private displayJson(result: ShowTaskResult | ShowMultipleTasksResult): void {
+		// Titles and details may be read by an agent: none can close a fence
 		printJson(
-			'tasks' in result
-				? { ...result, tasks: result.tasks.map(withFullSubtaskIds) }
-				: {
-						...result,
-						task: withFullSubtaskIds(result.task)
-					}
+			neutralizeTaskData(
+				'tasks' in result
+					? { ...result, tasks: result.tasks.map(withFullSubtaskIds) }
+					: {
+							...result,
+							task: withFullSubtaskIds(result.task)
+						}
+			)
 		);
 	}
 

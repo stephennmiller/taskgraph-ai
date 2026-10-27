@@ -7,6 +7,8 @@
 import {
 	type ExpandOptions,
 	type ExpandTaskHooks,
+	neutralizeTaskData,
+	TASK_DATA_NOTE,
 	withFullSubtaskIds
 } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
@@ -135,7 +137,8 @@ export function registerExpandTaskTool(server: FastMCP) {
 						);
 						return {
 							tag,
-							data:
+							note: TASK_DATA_NOTE,
+							data: neutralizeTaskData(
 								expanded.skipped === 'has-subtasks'
 									? {
 											message: `Task ${task.id} already has subtasks. Expansion skipped.`,
@@ -151,6 +154,7 @@ export function registerExpandTaskTool(server: FastMCP) {
 											telemetryData: expanded.telemetryData ?? undefined,
 											tagInfo: expanded.tagInfo ?? undefined
 										}
+							)
 						};
 					}
 				);

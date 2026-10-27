@@ -7,7 +7,12 @@
  */
 
 import path from 'node:path';
-import { type TmCore, checkCliForPlugin, createTmCore } from '@tm/core';
+import {
+	type TmCore,
+	checkCliForPlugin,
+	createTmCore,
+	neutralizeTaskData
+} from '@tm/core';
 import { Command, Option } from 'commander';
 import {
 	formatCliTooOldForPlugin,
@@ -69,7 +74,7 @@ export class PrimeCommand extends Command {
 					tag: options.tag
 				});
 				if (options.json) {
-					printJson({ unnoted });
+					printJson({ unnoted: neutralizeTaskData(unnoted) });
 				} else if (unnoted.length > 0) {
 					console.log(formatUnnotedReminder(unnoted));
 				}
@@ -84,7 +89,8 @@ export class PrimeCommand extends Command {
 				tag: options.tag
 			});
 			if (options.json) {
-				printJson(context);
+				// Titles and done-when text: none can close a fence an agent reads
+				printJson(neutralizeTaskData(context));
 				return;
 			}
 			console.log(formatPrimeContext(context));
