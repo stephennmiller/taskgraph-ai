@@ -36,9 +36,12 @@ interface UpdateCache {
 // Cache Operations (Single Responsibility: cache I/O)
 // ============================================================================
 
-/** The update cache file under `~/.taskgraph` */
-const getCachePath = (): string =>
-	path.join(resolveHome(), '.taskgraph', CACHE_FILENAME);
+/** The update cache file under `~/.taskgraph`; throws without a home */
+function getCachePath(): string {
+	const home = resolveHome();
+	if (!home) throw new Error('no home directory');
+	return path.join(home, '.taskgraph', CACHE_FILENAME);
+}
 
 /**
  * Read cached update info if still valid. The file is only as trusted as

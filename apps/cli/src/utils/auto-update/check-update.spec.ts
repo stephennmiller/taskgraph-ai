@@ -7,6 +7,7 @@ import { readCache, writeCache } from './check-update.js';
 
 describe('update cache', () => {
 	const savedHome = process.env.HOME;
+	const savedCwd = process.cwd();
 	let home: string;
 	const cacheFile = () => path.join(home, '.taskgraph', 'update-cache.json');
 	const write = (cache: unknown) => {
@@ -20,7 +21,9 @@ describe('update cache', () => {
 	});
 
 	afterEach(() => {
-		process.env.HOME = savedHome;
+		if (savedHome === undefined) delete process.env.HOME;
+		else process.env.HOME = savedHome;
+		process.chdir(savedCwd);
 		fs.rmSync(home, { recursive: true, force: true });
 	});
 
@@ -61,6 +64,16 @@ describe('update cache', () => {
 
 		write({ timestamp: Date.now(), latestVersion: '1.2.3', highlights: 'x' });
 		expect(readCache()?.highlights).toBeUndefined();
+	});
+
+	it('touches nothing in the working directory when HOME is empty', () => {
+		process.chdir(home);
+		process.env.HOME = '';
+
+		writeCache('1.2.3');
+
+		expect(fs.existsSync(path.join(home, '.taskgraph'))).toBe(false);
+		expect(readCache()).toBeNull();
 	});
 
 	it('keeps a write failure silent', () => {

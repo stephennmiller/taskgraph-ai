@@ -44,15 +44,18 @@ export interface AutoUpdateContext {
 }
 
 /**
- * $HOME on each call. os.homedir() caches the first answer, so a test
- * (or a process that changes HOME) would otherwise read the wrong place.
+ * `$HOME` (then `USERPROFILE` on Windows), else os.homedir(), read on each
+ * call. Null when no absolute home is known: os.homedir() returns an empty
+ * `HOME` as is, and `~/.taskgraph` must not land in the working directory.
  */
-export function resolveHome(env: NodeJS.ProcessEnv = process.env): string {
-	return (
-		env.HOME ??
-		(process.platform === 'win32' ? env.USERPROFILE : undefined) ??
-		os.homedir()
-	);
+export function resolveHome(
+	env: NodeJS.ProcessEnv = process.env
+): string | null {
+	const home =
+		env.HOME ||
+		(process.platform === 'win32' ? env.USERPROFILE : undefined) ||
+		os.homedir();
+	return path.isAbsolute(home) ? home : null;
 }
 
 function context(options: AutoUpdateContext = {}) {
@@ -122,7 +125,8 @@ export function isAutoInstallEnabled(options: AutoUpdateContext = {}): boolean {
 	return readAutoInstallSetting(home);
 }
 
-function readAutoInstallSetting(home: string): boolean {
+function readAutoInstallSetting(home: string | null): boolean {
+	if (!home) return false;
 	const file = path.join(home, '.taskgraph', AUTO_UPDATE_FILE);
 	try {
 		const stat = fs.statSync(file);
