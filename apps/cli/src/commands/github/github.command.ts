@@ -8,7 +8,8 @@ import {
 	type PullOptions,
 	type PushOptions,
 	type TmCore,
-	createTmCore
+	createTmCore,
+	neutralizeTaskData
 } from '@tm/core';
 import { Command } from 'commander';
 import { displayError } from '../../utils/error-handler.js';
@@ -332,7 +333,7 @@ Examples:
 			label: options.label,
 			dryRun: options.dryRun
 		});
-		console.log(options.json ? formatJson(result) : formatImport(result));
+		this.print(options, result, [formatImport(result)]);
 	}
 
 	private async runUnlink(id: string, options: UnlinkOptions): Promise<void> {
@@ -341,7 +342,12 @@ Examples:
 	}
 
 	private print(options: CommonOptions, json: unknown, text: string[]): void {
-		console.log(options.json ? formatJson(json as object) : text.join('\n\n'));
+		// Task and issue titles: none can close a fence an agent reads
+		console.log(
+			options.json
+				? formatJson(neutralizeTaskData(json as object))
+				: text.join('\n\n')
+		);
 	}
 
 	/** Can we prompt? Overridable for tests */

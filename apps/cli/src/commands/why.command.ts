@@ -8,7 +8,8 @@ import {
 	type BlockerExplanation,
 	type TmCore,
 	TaskIdSchema,
-	createTmCore
+	createTmCore,
+	neutralizeTaskData
 } from '@tm/core';
 import { Command } from 'commander';
 import { renderBlockerExplanation } from '../ui/components/blocker-explanation.component.js';
@@ -90,7 +91,7 @@ export class WhyCommand extends Command {
 			};
 
 			if (options.format === 'json') {
-				printJson(result);
+				printJson(neutralizeTaskData(result));
 			} else {
 				this.displayText(result);
 			}

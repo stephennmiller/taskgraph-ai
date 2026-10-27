@@ -9,6 +9,7 @@ import {
 	type TmCore,
 	createTmCore,
 	getUncheckedCriteria,
+	neutralizeTaskData,
 	parseChecklistNumbers,
 	TaskIdSchema
 } from '@tm/core';
@@ -285,8 +286,9 @@ export class SetStatusCommand extends Command {
 								: String(error);
 
 						const gate = getUncheckedCriteria(error);
+						// Criteria text: none can close a fence an agent reads
 						printJson(
-							{
+							neutralizeTaskData({
 								success: false,
 								error: errorMessage,
 								taskId: gate?.taskId ?? failedStatusId(error),
@@ -294,7 +296,7 @@ export class SetStatusCommand extends Command {
 								// --check was saved before the status failed
 								...(checklist && { checklist }),
 								timestamp: new Date().toISOString()
-							},
+							}),
 							{ compact: true }
 						);
 					} else {
@@ -360,7 +362,7 @@ export class SetStatusCommand extends Command {
 
 		switch (format) {
 			case 'json':
-				printJson(result);
+				printJson(neutralizeTaskData(result));
 				break;
 
 			case 'text':

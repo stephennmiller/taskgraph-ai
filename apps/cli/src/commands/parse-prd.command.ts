@@ -15,6 +15,7 @@ import {
 	type ParsePrdHooks,
 	type TmCore,
 	createTmCore,
+	neutralizeTaskData,
 	parseClarificationAnswers,
 	writeClarifications
 } from '@tm/core';
@@ -256,7 +257,8 @@ export class ParsePrdCommand extends Command {
 					{ prdPath, research },
 					this.logHooks(console.error)
 				);
-				printJson({ prd: displayPath(prdPath), questions });
+				// The AI read the PRD: no question can close a fence an agent reads
+				printJson(neutralizeTaskData({ prd: displayPath(prdPath), questions }));
 			} catch (error) {
 				printError(
 					`Couldn't find questions to ask: ${(error as Error).message}`
