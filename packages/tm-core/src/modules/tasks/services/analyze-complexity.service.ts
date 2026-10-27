@@ -432,14 +432,7 @@ export class AnalyzeComplexityService {
 		if (!Array.isArray(returned)) {
 			throw new Error('AI service did not return a complexity analysis.');
 		}
-		// The AI wrote expansionPrompt from task text, and expand puts it in its prompt
-		const analyses: ComplexityAnalysisItem[] = returned.map((a) => ({
-			...a,
-			// A cut through an emoji leaves a lone surrogate, which some providers reject
-			expansionPrompt: neutralizeTag(a.expansionPrompt, TASK_DATA_TAG)
-				.slice(0, MAX_EXPANSION_PROMPT_LENGTH)
-				.replace(/[\uD800-\uDBFF]$/, '')
-		}));
+		const analyses: ComplexityAnalysisItem[] = [...returned];
 
 		const answered = new Set(analyses.map((a) => String(a.taskId)));
 		const unanswered = tasks.filter((t) => !answered.has(String(t.id)));
@@ -459,6 +452,13 @@ export class AnalyzeComplexityService {
 					placeholder: true
 				});
 			}
+		}
+		// expansionPrompt comes from task text (AI-written or the placeholder's title), and expand puts it in its prompt
+		for (const a of analyses) {
+			// A cut through an emoji leaves a lone surrogate, which some providers reject
+			a.expansionPrompt = neutralizeTag(a.expansionPrompt, TASK_DATA_TAG)
+				.slice(0, MAX_EXPANSION_PROMPT_LENGTH)
+				.replace(/[\uD800-\uDBFF]$/, '');
 		}
 
 		const tagTaskIds = new Set(allTasks.map((t) => String(t.id)));
