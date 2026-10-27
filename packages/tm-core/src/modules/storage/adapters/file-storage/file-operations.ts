@@ -100,7 +100,7 @@ export async function refuseSymlink(filePath: string): Promise<void> {
 	refuseSymlinkSync(filePath);
 }
 
-function refuseSymlinkSync(filePath: string): void {
+export function refuseSymlinkSync(filePath: string): void {
 	const info = fsSync.lstatSync(filePath, { throwIfNoEntry: false });
 	if (info?.isSymbolicLink()) {
 		throw new TaskGraphError(

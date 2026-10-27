@@ -5,8 +5,6 @@
  * legacy tool's.
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
 import {
 	type PrdDelta,
 	neutralizeTaskData,
@@ -21,7 +19,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
 import { replyWith } from '../../shared/tool-reply.js';
-import { resolveInsideRoot, withToolContext } from '../../shared/utils.js';
+import { withToolContext } from '../../shared/utils.js';
 
 // The schema clients see; kept as the legacy tool had it
 const ParsePrdSchema = z.object({
@@ -123,14 +121,12 @@ export function registerParsePrdTool(server: FastMCP) {
 					context,
 					'Error parsing PRD',
 					async () => {
-						resolveInsideRoot(args.projectRoot, args.input);
-						// Not the real path: the PRD's path in the tasks is relative to tm-core's root
-						const prdPath = path.resolve(args.projectRoot, args.input);
-						if (!fs.existsSync(prdPath)) {
-							throw new Error(
-								`Input PRD file not found at resolved path: ${prdPath}`
-							);
-						}
+						// tm-core refuses a PRD outside the project, a secret file or
+						// a link out of it, before the answers are written into it
+						const { prdPath } = await tmCore.tasks.parsePrdTarget({
+							prdPath: args.input,
+							tag
+						});
 						if (args.clarify && args.clarifications) {
 							throw new Error(
 								'Pass clarify to get questions, or clarifications to save answers, not both'

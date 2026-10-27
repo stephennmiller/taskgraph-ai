@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
 	acceptSuggestedAnswers,
 	applyClarifications,
@@ -7,7 +10,8 @@ import {
 	MAX_CLARIFYING_QUESTIONS,
 	normalizeClarifyingQuestions,
 	parseClarificationAnswers,
-	readClarifications
+	readClarifications,
+	writeClarifications
 } from './clarifications.js';
 
 const PRD = ['# Bookmarks', '', 'Save links and tag them.', ''].join('\n');
@@ -279,5 +283,37 @@ describe('parseClarificationAnswers', () => {
 				{ question: 'Q?', answer: 'x'.repeat(MAX_CLARIFICATION_LENGTH + 1) }
 			])
 		).toThrow(`Answer 1 is longer than ${MAX_CLARIFICATION_LENGTH}`);
+	});
+});
+
+describe('writeClarifications', () => {
+	let dir: string;
+
+	beforeEach(() => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'prd-'));
+	});
+
+	afterEach(() => {
+		fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	it('writes the answers into the PRD', () => {
+		const prd = path.join(dir, 'prd.md');
+		fs.writeFileSync(prd, PRD);
+
+		const result = writeClarifications(prd, [DB]);
+
+		expect(result.added).toBe(1);
+		expect(fs.readFileSync(prd, 'utf8')).toContain('**A:** PostgreSQL 16');
+	});
+
+	it('refuses a PRD that is a symlink and leaves its target unchanged', () => {
+		const target = path.join(dir, 'target.md');
+		const link = path.join(dir, 'prd.md');
+		fs.writeFileSync(target, PRD);
+		fs.symlinkSync(target, link);
+
+		expect(() => writeClarifications(link, [DB])).toThrow('is a symlink');
+		expect(fs.readFileSync(target, 'utf8')).toBe(PRD);
 	});
 });

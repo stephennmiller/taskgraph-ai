@@ -29,7 +29,10 @@ import {
 	type AiTelemetryData
 } from '../../ai/ai-service.js';
 import { AiConfig, type AiReport } from '../../ai/config-ai-host.js';
-import { estimateTokens } from '../../ai/project-context.js';
+import {
+	estimateTokens,
+	resolveContextFile
+} from '../../ai/project-context.js';
 import { getPromptManager } from '../../ai/prompts/prompt-manager.js';
 import { COMMAND_SCHEMAS } from '../../ai/schemas/registry.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
@@ -160,21 +163,25 @@ export class ParsePrdService {
 		return path.join(this.projectRoot, TASKGRAPH_TASKS_FILE);
 	}
 
-	/** The PRD to read: the one named, else the first default that exists */
+	/**
+	 * The PRD to read: the one named, else the first default that exists.
+	 * Only a file inside the project that isn't a secret, reached without a
+	 * link out of it (resolveContextFile); the path is as given, not its
+	 * real path, since tasks cite it relative to the project root.
+	 */
 	resolvePrdPath(prdPath?: string): string {
 		if (prdPath) {
-			const resolved = path.resolve(this.projectRoot, prdPath);
-			if (!fs.existsSync(resolved)) {
+			if (!this.prdExists(prdPath)) {
 				throw new TaskGraphError(
 					`${prdPath} not found`,
 					ERROR_CODES.FILE_NOT_FOUND
 				);
 			}
-			return resolved;
+			return path.resolve(this.projectRoot, prdPath);
 		}
 		const found = DEFAULT_PRD_FILES.map((file) =>
 			path.join(this.projectRoot, file)
-		).find((file) => fs.existsSync(file));
+		).find((file) => this.prdExists(file));
 		if (!found) {
 			throw new TaskGraphError(
 				`Required PRD file not found. Searched: ${DEFAULT_PRD_FILES.join(', ')}`,
@@ -182,6 +189,22 @@ export class ParsePrdService {
 			);
 		}
 		return found;
+	}
+
+	/** Whether the PRD exists; resolveContextFile's refusals pass through */
+	private prdExists(file: string): boolean {
+		try {
+			resolveContextFile(this.projectRoot, file);
+			return true;
+		} catch (error) {
+			if (
+				error instanceof TaskGraphError &&
+				error.code === ERROR_CODES.FILE_NOT_FOUND
+			) {
+				return false;
+			}
+			throw error;
+		}
 	}
 
 	/**

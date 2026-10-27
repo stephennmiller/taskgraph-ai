@@ -1,6 +1,7 @@
 /**
  * @fileoverview Tests for the parse_prd MCP tool: the arguments it hands
- * tm-core, its path checks, and the reply shapes the legacy tool had.
+ * tm-core, the PRD tm-core resolves first, and the reply shapes the legacy
+ * tool had.
  * tm-core is faked at the createTmCore boundary; everything else is real.
  */
 
@@ -10,7 +11,11 @@ import path from 'node:path';
 import { TASK_DATA_NOTE } from '@tm/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const tasks = { parsePrd: vi.fn(), findPrdGaps: vi.fn() };
+const tasks = {
+	parsePrd: vi.fn(),
+	parsePrdTarget: vi.fn(),
+	findPrdGaps: vi.fn()
+};
 const config = { getActiveTag: vi.fn(() => 'master') };
 
 vi.mock('@tm/core', async (importOriginal) => ({
@@ -55,6 +60,11 @@ beforeEach(() => {
 	project = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'prd-')));
 	prd = path.join(project, 'prd.md');
 	fs.writeFileSync(prd, '# Bookmarks\n');
+	tasks.parsePrdTarget.mockImplementation(async ({ prdPath, tag }) => ({
+		prdPath: path.resolve(project, prdPath),
+		tag,
+		taskCount: 0
+	}));
 	tasks.parsePrd.mockResolvedValue({
 		tag: 'master',
 		prdPath: prd,
@@ -87,6 +97,10 @@ describe('parse_prd', () => {
 			ctx
 		);
 
+		expect(tasks.parsePrdTarget).toHaveBeenCalledWith({
+			prdPath: 'prd.md',
+			tag: 'feature'
+		});
 		expect(tasks.parsePrd).toHaveBeenCalledWith(
 			{
 				prdPath: prd,
@@ -116,20 +130,33 @@ describe('parse_prd', () => {
 		});
 	});
 
-	it('hands tm-core the PRD under the project root as given, not its real path', async () => {
-		// macOS /tmp is a symlink: a realpath here would not sit under tm-core's root
-		const link = `${project}-link`;
-		fs.symlinkSync(project, link);
-		try {
-			await tool().execute({ projectRoot: link, input: 'prd.md' }, ctx);
-		} finally {
-			fs.rmSync(link);
-		}
-
-		expect(tasks.parsePrd).toHaveBeenCalledWith(
-			expect.objectContaining({ prdPath: path.join(link, 'prd.md') }),
-			expect.any(Object)
+	it('writes the answers only into a PRD tm-core accepted, and asks for no tasks otherwise', async () => {
+		const outside = path.join(
+			path.dirname(project),
+			`${path.basename(project)}-outside.md`
 		);
+		fs.writeFileSync(outside, '# Outside\n');
+		tasks.parsePrdTarget.mockRejectedValue(
+			new Error(`${outside} is outside the project (${project})`)
+		);
+		try {
+			const result = await tool().execute(
+				{
+					projectRoot: project,
+					input: outside,
+					clarifications: [{ question: 'Which DB?', answer: 'SQLite' }]
+				},
+				ctx
+			);
+
+			expect(result.isError).toBe(true);
+			expect(result.content[0].text).toContain('outside the project');
+			expect(fs.readFileSync(outside, 'utf8')).toBe('# Outside\n');
+		} finally {
+			fs.rmSync(outside);
+		}
+		expect(tasks.parsePrd).not.toHaveBeenCalled();
+		expect(tasks.findPrdGaps).not.toHaveBeenCalled();
 	});
 
 	it('still replies with the saved tasks when the progress report fails', async () => {
@@ -249,8 +276,6 @@ describe('parse_prd', () => {
 	});
 
 	it.each([
-		[{ input: '../secrets/.env' }, 'outside the project root'],
-		[{ input: 'missing.md' }, 'Input PRD file not found at resolved path'],
 		[
 			{ input: 'prd.md', output: '../elsewhere/tasks.json' },
 			"a different file isn't supported"
