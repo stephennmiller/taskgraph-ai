@@ -21,6 +21,7 @@ import {
 } from '../services/config-merger.service.js';
 import { ConfigPersistence } from '../services/config-persistence.service.js';
 import { EnvironmentConfigProvider } from '../services/environment-config-provider.service.js';
+import { isLanguageName } from '../services/project-settings.js';
 import { readProjectEnv } from '../services/project-env.js';
 import { RuntimeStateManager } from '../services/runtime-state-manager.service.js';
 
@@ -38,6 +39,7 @@ export class ConfigManager {
 	private projectRoot: string;
 	private config: PartialConfiguration = {};
 	private initialized = false;
+	private warnedResponseLanguage = false;
 
 	// Services
 	private loader: ConfigLoader;
@@ -175,12 +177,22 @@ export class ConfigManager {
 
 	/**
 	 * Response language (`global.responseLanguage`, where `lang` writes it);
-	 * English when unset
+	 * English when unset or not a language name, since it goes into every AI
+	 * system prompt verbatim
 	 */
 	getResponseLanguage(): string {
-		const global = (this.config as { global?: { responseLanguage?: string } })
-			.global;
-		return global?.responseLanguage || 'English';
+		const raw = (this.config as { global?: { responseLanguage?: unknown } })
+			.global?.responseLanguage;
+		const language = typeof raw === 'string' ? raw.trim() : raw;
+		if (!language) return 'English';
+		if (isLanguageName(language)) return language;
+		if (!this.warnedResponseLanguage) {
+			this.warnedResponseLanguage = true;
+			getLogger('ConfigManager').warn(
+				'global.responseLanguage is not a language name (letters, spaces and hyphens, up to 40 characters); responding in English. Fix it with `taskgraph lang --response <language>`.'
+			);
+		}
+		return 'English';
 	}
 
 	/**
