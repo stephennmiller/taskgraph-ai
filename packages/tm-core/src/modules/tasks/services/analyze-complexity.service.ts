@@ -16,6 +16,10 @@ import {
 } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
 import {
+	TASK_DATA_TAG,
+	neutralizeTag
+} from '../../../common/utils/prompt-tag.js';
+import {
 	AiService,
 	type AiTagInfo,
 	type AiTelemetryData
@@ -44,6 +48,9 @@ import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 const MAX_RELATED_TASKS = 10;
 
 const ACTIVE_STATUSES = ['pending', 'blocked', 'in-progress'];
+
+/** Longest expansionPrompt saved to the report; expand reads it as a suggestion */
+const MAX_EXPANSION_PROMPT_LENGTH = 1000;
 
 /** One task's entry in the report, as the AI writes it */
 export interface ComplexityAnalysisItem {
@@ -425,7 +432,14 @@ export class AnalyzeComplexityService {
 		if (!Array.isArray(returned)) {
 			throw new Error('AI service did not return a complexity analysis.');
 		}
-		const analyses: ComplexityAnalysisItem[] = [...returned];
+		// The AI wrote expansionPrompt from task text, and expand puts it in its prompt
+		const analyses: ComplexityAnalysisItem[] = returned.map((a) => ({
+			...a,
+			expansionPrompt: neutralizeTag(a.expansionPrompt, TASK_DATA_TAG).slice(
+				0,
+				MAX_EXPANSION_PROMPT_LENGTH
+			)
+		}));
 
 		const answered = new Set(analyses.map((a) => String(a.taskId)));
 		const unanswered = tasks.filter((t) => !answered.has(String(t.id)));
