@@ -76,4 +76,20 @@ describe('resolvePrdPath', () => {
 
 		expect(() => service.resolvePrdPath('prd.md')).toThrow();
 	});
+	it('resolves a PRD through a project root that is a link, as the path given', () => {
+		// macOS /tmp is a link: tasks cite the PRD under the root as configured
+		const link = path.join(base, 'project-link');
+		fs.symlinkSync(root, link);
+		fs.writeFileSync(path.join(root, 'spec.md'), '# Spec');
+		fs.writeFileSync(path.join(docs, 'prd.md'), '# PRD');
+		const linked = new ParsePrdService(
+			{} as any,
+			{ getProjectRoot: () => link } as any
+		);
+
+		expect(linked.resolvePrdPath('spec.md')).toBe(path.join(link, 'spec.md'));
+		expect(linked.resolvePrdPath()).toBe(
+			path.join(link, '.taskgraph', 'docs', 'prd.md')
+		);
+	});
 });
