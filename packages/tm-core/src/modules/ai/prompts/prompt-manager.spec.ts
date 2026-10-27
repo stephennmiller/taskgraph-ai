@@ -204,6 +204,22 @@ describe('PromptManager', () => {
 			);
 		});
 
+		it('restores a value that holds placeholder-like text or $-patterns (#784)', () => {
+			const result = promptManager.renderTemplate(
+				'{{a}}|{{#each items}}{{name}}{{/each}}|{{{json c}}}|{{b}}',
+				{
+					a: '\u00001\u0000 $& $1 $<b> $$',
+					items: [{ name: '\u00003\u0000' }],
+					c: ['$&'],
+					b: 'B'
+				}
+			);
+
+			expect(result).toBe(
+				'\u00001\u0000 $& $1 $<b> $$|\u00003\u0000|[\n  "$&"\n]|B'
+			);
+		});
+
 		it.each(['analyze-complexity', 'update-tasks'])(
 			'%s keeps {{projectRoot}} and {{{json tasks}}} in task titles literal (#784)',
 			(id) => {
