@@ -5,12 +5,12 @@ import {
 	ParallelLoopError,
 	assertParallelFlags,
 	buildParallelPrompt,
-	isSafeTaskId,
 	parseParallelCount,
 	taskBranchName,
 	taskLogPath,
 	taskWorktreePath
 } from './parallel-plan.js';
+import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 
 describe('parseParallelCount', () => {
 	it('accepts whole numbers from 1 to the maximum', () => {

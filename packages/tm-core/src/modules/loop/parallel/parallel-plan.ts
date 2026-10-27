@@ -6,6 +6,7 @@
 
 import path from 'node:path';
 import { TASKGRAPH_WORKTREES_DIR } from '../../../common/constants/paths.js';
+import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import { LoopError } from '../loop-task.js';
 
 /** Upper bound on `--parallel`: each task is a full Claude Code session */
@@ -80,15 +81,6 @@ export function assertParallelFlags(flags: ParallelFlags): void {
 				`${conflict}, or run \`taskgraph loop\` without --parallel`
 		);
 	}
-}
-
-/**
- * Task IDs that are safe in a branch name and a directory name: letters,
- * digits, `-` and `_`, starting with a letter or digit. No dots (subtasks,
- * `..`), slashes or spaces.
- */
-export function isSafeTaskId(id: string): boolean {
-	return /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(id);
 }
 
 function assertSafe(id: string): void {

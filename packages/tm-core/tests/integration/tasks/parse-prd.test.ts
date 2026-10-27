@@ -226,6 +226,13 @@ describe('tasks.parsePrd', () => {
 		);
 	});
 
+	it('refuses a tag that is not a valid tag name', async () => {
+		await expect(parse({ tag: 'x/../y' })).rejects.toThrow(
+			'"x/../y" isn\'t a valid tag name'
+		);
+		expect(p.generateObject).not.toHaveBeenCalled();
+	});
+
 	it('uses global.defaultNumTasks, and warns about a count that is not one', async () => {
 		await p.close();
 		p = await createPrdProject({ global: { defaultNumTasks: 6 } });

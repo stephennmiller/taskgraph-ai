@@ -253,6 +253,19 @@ describe('tasks.analyzeComplexity', () => {
 			expect(generate).not.toHaveBeenCalled();
 		});
 
+		it('a symlinked reports folder', async () => {
+			const reports = path.join(projectDir, '.taskgraph', 'reports');
+			const outside = path.join(projectDir, 'outside');
+			fs.mkdirSync(outside);
+			fs.rmSync(reports, { recursive: true });
+			fs.symlinkSync(outside, reports);
+			const core = await setUp();
+
+			await expect(core.tasks.analyzeComplexity()).rejects.toThrow(/symlink/);
+			expect(fs.readdirSync(outside)).toEqual([]);
+			expect(generate).not.toHaveBeenCalled();
+		});
+
 		it('a tag with no tasks', async () => {
 			fs.writeFileSync(
 				path.join(projectDir, '.taskgraph', 'tasks', 'tasks.json'),

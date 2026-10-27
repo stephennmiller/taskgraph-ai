@@ -57,7 +57,7 @@ import {
 } from '../../prd/prd-sections.js';
 import { nextTaskId, readArchivedIdsSync } from '../utils/archive.js';
 import { prepareGeneratedTasks } from '../utils/prd-tasks.js';
-import { isReservedNewTagName } from '../utils/tag-names.js';
+import { assertTagName, isReservedNewTagName } from '../utils/tag-names.js';
 import {
 	type ParsePrdGenerateHooks,
 	generatePrdTasks,
@@ -286,6 +286,8 @@ export class ParsePrdService {
 			);
 		}
 		const loaded = await this.readTag(tag);
+		// A new tag gets a valid name; one already in the file keeps its own
+		if (!loaded.exists) assertTagName(tag);
 		const { highestId } = readArchivedIdsSync(tasksPath, tag);
 		// Overwriting (force) replaces the list, so numbering starts over (above
 		// any archived IDs, which stay reserved); only append continues after
@@ -479,20 +481,23 @@ export class ParsePrdService {
 	 * tasks.json has none; one that doesn't parse throws (treating it as
 	 * empty would skip the overwrite check)
 	 */
-	private async readTag(
-		tag: string
-	): Promise<{ tasks: Task[]; metadata: Record<string, unknown> | null }> {
+	private async readTag(tag: string): Promise<{
+		tasks: Task[];
+		metadata: Record<string, unknown> | null;
+		exists: boolean;
+	}> {
 		const file = this.tasksPath;
 		if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8').trim() === '') {
-			return { tasks: [], metadata: null };
+			return { tasks: [], metadata: null, exists: false };
 		}
 		await this.taskService.initialize();
 		const storage = this.taskService.getStorage();
 		// Storage reads a missing master as the first tag; that one isn't this tag
 		if (!(await storage.getAllTags()).includes(tag)) {
-			return { tasks: [], metadata: null };
+			return { tasks: [], metadata: null, exists: false };
 		}
 		return {
+			exists: true,
 			tasks: await storage.loadTasks(tag),
 			metadata: (await storage.loadMetadata(tag)) as Record<
 				string,

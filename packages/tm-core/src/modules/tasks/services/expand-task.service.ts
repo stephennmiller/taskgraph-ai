@@ -52,6 +52,7 @@ import {
 } from '../../dependencies/subtask-dependency.js';
 import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
+import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 import { degenerateReply } from './expand-reply-check.js';
 import type { TaskService } from './task-service.js';
 
@@ -491,20 +492,23 @@ export class ExpandTaskService {
 		reportPath: string | undefined,
 		warn: (message: string) => void
 	): TaskAnalysis | undefined {
-		const suffix = tag === 'master' ? '.json' : `_${tag}.json`;
-		const defaultFile = complexityReportPath(
-			this.configManager.getProjectRoot(),
-			tag
-		);
-		const file =
-			reportPath ??
-			[
+		let file = reportPath;
+		if (file === undefined) {
+			// An invalid stored tag has no report
+			if (!TAG_NAME_PATTERN.test(tag)) return undefined;
+			const suffix = tag === 'master' ? '.json' : `_${tag}.json`;
+			const defaultFile = complexityReportPath(
+				this.configManager.getProjectRoot(),
+				tag
+			);
+			file = [
 				defaultFile,
 				...LEGACY_REPORT_NAMES.map((name) =>
 					path.join(path.dirname(defaultFile), `${name}${suffix}`)
 				)
 			].find((candidate) => fs.existsSync(candidate));
-		if (!file) return undefined;
+			if (!file) return undefined;
+		}
 		try {
 			if (!fs.existsSync(file)) {
 				warn(`Complexity report ${file} not found. Proceeding without it.`);

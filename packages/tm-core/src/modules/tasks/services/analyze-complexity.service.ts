@@ -33,8 +33,12 @@ import {
 	withoutPlaceholders
 } from '../../reports/managers/complexity-report-manager.js';
 import type { ComplexityReportMetadata } from '../../reports/types.js';
-import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
+import {
+	FileOperations,
+	refuseSymlink
+} from '../../storage/adapters/file-storage/file-operations.js';
 import { normalizeTaskStatus } from '../utils/legacy-status.js';
+import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
 
 /** How many related tasks go into the prompt's project context */
 const MAX_RELATED_TASKS = 10;
@@ -236,6 +240,8 @@ export function readComplexityReport(
 	projectRoot: string,
 	{ tag, file }: { tag?: string; file?: string }
 ): { report: ComplexityReportFile; reportPath: string } | null {
+	// An invalid stored tag has no report
+	if (!file && tag && !TAG_NAME_PATTERN.test(tag)) return null;
 	const candidates = file
 		? [path.resolve(projectRoot, file)]
 		: REPORT_NAMES.map((name) => {
@@ -295,6 +301,8 @@ export class AnalyzeComplexityService {
 		const reportPath = input.output
 			? path.resolve(projectRoot, input.output)
 			: complexityReportPath(projectRoot, tag);
+		// modifyJson refuses a symlinked report; refuse a symlinked reports folder too
+		if (!input.output) await refuseSymlink(path.dirname(reportPath));
 
 		const allTasks = readStoredTasks(
 			path.join(projectRoot, TASKGRAPH_TASKS_FILE),

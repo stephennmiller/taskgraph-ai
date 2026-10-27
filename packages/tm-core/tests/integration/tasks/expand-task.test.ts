@@ -537,6 +537,14 @@ describe('tasks.expand', () => {
 			expect(saved.master.tasks[1].subtasks[0].title).toBe('Parse flags');
 		});
 
+		it('expands in a stored invalid tag', async () => {
+			write({ ...fixture(), 'a/b': fixture().feature });
+
+			await tmCore.tasks.expand({ id: '3', tag: 'a/b', num: 2 });
+
+			expect(readFile()['a/b'].tasks[2].subtasks).toHaveLength(2);
+		});
+
 		it("refuses a tag that doesn't exist and leaves master alone (#548)", async () => {
 			const before = readFile();
 

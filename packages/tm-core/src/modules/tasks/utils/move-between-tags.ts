@@ -12,7 +12,7 @@ import {
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { pruneTaskLinks } from '../../dependencies/task-links.js';
 import { liveOrArchived } from './archive.js';
-import { isReservedNewTagName } from './tag-names.js';
+import { assertTagName, isReservedNewTagName } from './tag-names.js';
 import {
 	type CrossTagConflict,
 	type CrossTagMoveOptions,
@@ -110,6 +110,7 @@ export function moveTasksBetweenTags(
 		);
 	}
 	if (!tags.has(targetTag)) {
+		assertTagName(targetTag);
 		if (isReservedNewTagName(targetTag)) {
 			fail(`"${targetTag}" is a reserved tag name`);
 		}

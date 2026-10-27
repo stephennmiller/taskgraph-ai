@@ -170,6 +170,61 @@ describe('TaskFileGeneratorService', () => {
 			}
 		);
 
+		it('writes no file for a task ID with ../ in it, and still writes the rest', async () => {
+			const tasks = createSampleTasks();
+			tasks[0].id = 'x/../../../escaped';
+			service = new TaskFileGeneratorService(
+				createMockStorage(tasks),
+				tempDir,
+				mockConfigManager
+			);
+
+			const result = await service.generateTaskFiles();
+
+			expect(result.success).toBe(false);
+			expect(result.fileErrors?.['x/../../../escaped']).toContain(
+				"can't be used in a file name"
+			);
+			expect(fs.existsSync(path.join(tempDir, 'escaped.md'))).toBe(false);
+			expect(fs.existsSync(path.join(result.directory, 'task_002.md'))).toBe(
+				true
+			);
+		});
+
+		describe('symlinks', () => {
+			let outside: string;
+			beforeEach(() => {
+				outside = path.join(tempDir, 'outside');
+				fs.mkdirSync(outside);
+				fs.writeFileSync(path.join(outside, 'task_009.md'), 'keep me');
+			});
+
+			it('writes and deletes nothing through a symlinked tasks folder', async () => {
+				fs.mkdirSync(path.join(tempDir, '.taskgraph'));
+				fs.symlinkSync(outside, path.join(tempDir, '.taskgraph', 'tasks'));
+
+				const result = await service.generateTaskFiles();
+
+				expect(result.success).toBe(false);
+				expect(result.error).toContain('symlink');
+				expect(fs.readdirSync(outside)).toEqual(['task_009.md']);
+			});
+
+			it('writes no task file that is a symlink, and still writes the rest', async () => {
+				const dir = path.join(tempDir, '.taskgraph', 'tasks');
+				fs.mkdirSync(dir, { recursive: true });
+				const target = path.join(outside, 'task_009.md');
+				fs.symlinkSync(target, path.join(dir, 'task_001.md'));
+
+				const result = await service.generateTaskFiles();
+
+				expect(result.success).toBe(false);
+				expect(result.fileErrors?.['1']).toContain('symlink');
+				expect(fs.readFileSync(target, 'utf8')).toBe('keep me');
+				expect(fs.existsSync(path.join(dir, 'task_002.md'))).toBe(true);
+			});
+		});
+
 		it('should generate task files for all tasks', async () => {
 			const result = await service.generateTaskFiles();
 

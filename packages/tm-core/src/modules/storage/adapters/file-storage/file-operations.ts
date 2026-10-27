@@ -92,9 +92,10 @@ function enqueueWrite<T>(
 }
 
 /**
- * Refuse a file that is a symlink, so a write can't be pointed elsewhere (#616)
+ * Refuse a file or folder that is a symlink, so a write can't be pointed
+ * elsewhere (#616)
  */
-async function refuseSymlink(filePath: string): Promise<void> {
+export async function refuseSymlink(filePath: string): Promise<void> {
 	const info = await fs.lstat(filePath).catch((err: any) => {
 		if (err.code === 'ENOENT') return null;
 		throw err;
@@ -105,7 +106,7 @@ async function refuseSymlink(filePath: string): Promise<void> {
 			ERROR_CODES.FILE_WRITE_ERROR,
 			{
 				resource: filePath,
-				userMessage: `${filePath} is a symlink; TaskGraph won't write through it. Replace it with a regular file.`
+				userMessage: `${filePath} is a symlink; TaskGraph won't write through it. Replace it with a regular file or folder.`
 			}
 		);
 	}

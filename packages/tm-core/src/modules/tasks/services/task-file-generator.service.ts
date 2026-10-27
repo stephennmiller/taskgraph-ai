@@ -9,6 +9,8 @@ import type { Task, Subtask, TaskStatus } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
+import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
+import { refuseSymlink } from '../../storage/adapters/file-storage/file-operations.js';
 import { assertTagName } from '../utils/tag-names.js';
 
 /**
@@ -64,6 +66,8 @@ export class TaskFileGeneratorService {
 		try {
 			// The tag goes into each file name
 			assertTagName(tag);
+			// Writes and orphan cleanup must not follow a symlinked default folder
+			if (!options.outputDir) await refuseSymlink(outputDir);
 
 			// Ensure output directory exists
 			await fs.mkdir(outputDir, { recursive: true });
@@ -92,9 +96,16 @@ export class TaskFileGeneratorService {
 			const fileErrors: Record<string, string> = {};
 			const results = await Promise.allSettled(
 				tasks.map(async (task) => {
+					// The ID goes into the file name, and a hand-edited one can hold ../
+					if (!isSafeTaskId(String(task.id))) {
+						throw new Error(
+							`Task ID ${JSON.stringify(String(task.id))} can't be used in a file name`
+						);
+					}
 					const content = this.formatTaskContent(task, tasks);
 					const fileName = this.getTaskFileName(task.id, tag);
 					const filePath = path.join(outputDir, fileName);
+					await refuseSymlink(filePath);
 					await fs.writeFile(filePath, content, 'utf-8');
 					return task.id;
 				})

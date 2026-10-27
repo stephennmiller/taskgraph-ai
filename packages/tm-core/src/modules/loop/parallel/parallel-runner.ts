@@ -31,13 +31,13 @@ import { resolveClaimant } from '../../tasks/utils/claim.js';
 import { ContainerWorkers, preflightContainer } from './container-workers.js';
 import {
 	buildParallelPrompt,
-	isSafeTaskId,
 	parseParallelCount,
 	taskBranchName,
 	taskLogPath,
 	taskWorktreePath,
 	worktreesDir
 } from './parallel-plan.js';
+import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
 	loopIterationTimeoutMs,
 	timeoutMessage
