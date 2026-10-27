@@ -46,10 +46,10 @@ The task files in `.taskmaster/tasks/` (`task_001.txt` and so on) are not copied
 TaskGraph runs every AI call through Claude Code, so only part of a Task Master config applies.
 
 - **Model roles that map to Claude Code are kept.** A `main`, `research` or `fallback` model whose ID names a Claude model (for example `claude-code`/`opus`, or `anthropic`/`claude-sonnet-4-20250514`) becomes `opus`, `sonnet` or `haiku`. Any other model (Perplexity, OpenAI, Gemini, Ollama and so on) is skipped, and that role keeps TaskGraph's default, `sonnet`. Change it with `taskgraph models --setup`.
-- **General settings are kept:** project name, default priority, default subtask and task counts, response language, default tag, log level, codebase analysis, and from the `claudeCode` section the turn limit, system prompts and allowed or disallowed tools.
+- **General settings are kept:** project name, default priority, default subtask and task counts, response language, default tag, log level, codebase analysis, and from the `claudeCode` section the turn limit and disallowed tools.
 - **A saved task count of 10 is dropped.** Task Master saves its defaults into `config.json`, so `"defaultNumTasks": 10` is usually its default rather than your choice. Without it, `parse-prd` sizes the task list to the PRD. Any other count is kept. To keep asking for about 10 tasks, set `global.defaultNumTasks` to `10` again or pass `--num-tasks 10`.
 - **Provider and API-key settings are dropped:** base URLs (Ollama, Bedrock, Azure), the Vertex project, the user ID, any API key, and settings for providers TaskGraph removed.
-- **Risky `claudeCode` settings are dropped:** `mcpServers` (its `env` and `headers` can hold secrets), `pathToClaudeCodeExecutable`, `permissionMode` and `commandSpecific`. Set them again in `.taskgraph/config.json` if you need them.
+- **Other `claudeCode` settings are dropped:** `mcpServers` (its `env` and `headers` can hold secrets), `pathToClaudeCodeExecutable`, `permissionMode` and `commandSpecific`, which can be set again in `.taskgraph/config.json`, and `customSystemPrompt`, `appendSystemPrompt` and `allowedTools`, which TaskGraph doesn't read (the role sets the system prompt and tools).
 
 The import refuses a `.taskmaster/` file or folder that is a link to somewhere outside it, and a `.taskgraph/` path that is a link to somewhere outside the project, so a checked-out project can't make it read or write elsewhere.
 

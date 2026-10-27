@@ -115,6 +115,27 @@ describe('AiConfig', () => {
 			expect(config.claudeCodeSettingsFor('research')).toEqual({ maxTurns: 6 });
 		});
 
+		it('strips keys the provider never reads, without a warning', () => {
+			const report = vi.fn();
+			const config = aiConfig(
+				{
+					claudeCode: {
+						maxTurns: 6,
+						customSystemPrompt: 'You are terse',
+						appendSystemPrompt: 'Be brief',
+						allowedTools: ['Bash'],
+						permissionMode: 'bypassPermissions',
+						mcpServers: { x: { command: 'x' } },
+						commandSpecific: { 'add-task': { appendSystemPrompt: 'Short' } }
+					}
+				},
+				report
+			);
+
+			expect(config.claudeCodeSettingsFor('add-task')).toEqual({ maxTurns: 6 });
+			expect(report).not.toHaveBeenCalled();
+		});
+
 		it('drops invalid settings with a warning', () => {
 			const report = vi.fn();
 			const config = aiConfig({ claudeCode: { maxTurns: -1 } }, report);

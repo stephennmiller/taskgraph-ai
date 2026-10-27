@@ -99,17 +99,9 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 {
   "claudeCode": {
     "maxTurns": 8,
-    "customSystemPrompt": "You are a helpful assistant focused on code quality",
-    "appendSystemPrompt": "Always follow coding best practices",
     "commandSpecific": {
-      "parse-prd": {
-        "maxTurns": 10,
-        "customSystemPrompt": "You are a task breakdown specialist"
-      },
-      "analyze-complexity": {
-        "maxTurns": 3,
-        "appendSystemPrompt": "Focus on identifying bottlenecks"
-      }
+      "parse-prd": { "maxTurns": 10 },
+      "analyze-complexity": { "maxTurns": 3 }
     }
   }
 }
@@ -118,11 +110,9 @@ Claude Code settings can be set globally in the `claudeCode` section of `.taskgr
 | Setting | Purpose |
 | --- | --- |
 | `maxTurns` | Most turns (model replies, each with its tool calls) in one call. Defaults to 6 for `main` and `fallback` and 8 for `research`. Raise it if calls fail with `Reached maximum number of turns`. |
-| `customSystemPrompt` | Replaces Claude Code's system prompt to specialize behavior. |
-| `appendSystemPrompt` | Adds standards or context to the system prompt. |
 | `pathToClaudeCodeExecutable` | Absolute path to a `claude` executable to run instead of the Claude Code binary the Agent SDK installs, or instead of the `claude` on your `PATH` when that binary is skipped (see [Smaller install](#smaller-install)). It must be named `claude` (`claude.exe` on Windows: the `claude.cmd` that npm installs can't be launched without a shell, so use the native installer's `claude.exe`) and live outside the project, or it's ignored with a warning. It differs per machine, so set it in the gitignored `.taskgraph/config.local.json` (see [Shared and per-machine settings](/configuration#shared-and-per-machine-settings)). |
 
-Tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here. See [What AI calls can access](#what-ai-calls-can-access).
+The system prompt, tools, permission mode, MCP servers, settings sources, working directory, extra directories and hooks are set by the role and can't be changed here; any other key in `claudeCode` is ignored. See [What AI calls can access](#what-ai-calls-can-access).
 
 ## Notes
 
