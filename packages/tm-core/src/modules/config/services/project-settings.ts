@@ -255,10 +255,13 @@ export function setModels(
 
 /**
  * A language name, as `responseLanguage` goes into every AI system prompt
- * verbatim: letters, spaces and hyphens, 1 to 40 characters
+ * verbatim: letters, spaces and hyphens, 1 to 40 characters. Combining marks
+ * count as letters: Indic scripts and decomposed accents are made of them.
  */
 export function isLanguageName(value: unknown): value is string {
-	return typeof value === 'string' && /^\p{L}[\p{L} -]{0,39}$/u.test(value);
+	return (
+		typeof value === 'string' && /^\p{L}[\p{L}\p{M} -]{0,39}$/u.test(value)
+	);
 }
 
 /** Set the language AI responses are written in */
