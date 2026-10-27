@@ -21,6 +21,7 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
+import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operations.js';
 
 /** The most questions one `--clarify` run asks */
 export const MAX_CLARIFYING_QUESTIONS = 5;
@@ -224,6 +225,7 @@ export function writeClarifications(
 	prdPath: string,
 	clarifications: Clarification[]
 ): ApplyClarificationsResult {
+	refuseSymlinkSync(prdPath);
 	const result = applyClarifications(
 		fs.readFileSync(prdPath, 'utf8'),
 		clarifications
