@@ -459,6 +459,30 @@ describe('FileOperations', () => {
 				expect(fsSync.readdirSync(path.join(real, 'tasks'))).toEqual([]);
 			}
 		);
+
+		it.skipIf(process.platform === 'win32')(
+			'still writes when the project root itself is behind a symlink, like macOS /var (#782)',
+			async () => {
+				const real = path.join(tempDir, 'real');
+				fsSync.mkdirSync(path.join(real, '.taskgraph', 'tasks'), {
+					recursive: true
+				});
+				const linkedRoot = path.join(tempDir, 'linked');
+				fsSync.symlinkSync(real, linkedRoot);
+				const file = path.join(linkedRoot, '.taskgraph', 'tasks', 'tasks.json');
+
+				await fileOps.writeJson(file, { a: 1 });
+
+				expect(
+					JSON.parse(
+						fsSync.readFileSync(
+							path.join(real, '.taskgraph', 'tasks', 'tasks.json'),
+							'utf-8'
+						)
+					)
+				).toEqual({ a: 1 });
+			}
+		);
 	});
 
 	describe('rename into place', () => {
