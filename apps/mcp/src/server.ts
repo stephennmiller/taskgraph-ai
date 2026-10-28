@@ -3,7 +3,6 @@
  * TASKGRAPH_TOOLS picks.
  */
 
-import dotenv from 'dotenv';
 import { FastMCP } from 'fastmcp';
 import { logger } from './logger.js';
 import { getVersionInfo } from './shared/utils.js';
@@ -11,8 +10,6 @@ import {
 	getToolsConfiguration,
 	registerTaskGraphTools
 } from './tools/tool-registry.js';
-
-dotenv.config({ quiet: true });
 
 /**
  * What the client tells the model about this server. Claude Code loads it at

@@ -4,6 +4,12 @@
  * tier registers.
  */
 
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SERVER_INSTRUCTIONS, TaskGraphMCPServer } from './server.js';
 import { coreTools } from './tools/tool-registry.js';
@@ -67,4 +73,40 @@ describe('TaskGraphMCPServer.init', () => {
 			'Failed to register 1 tools: next_task'
 		);
 	});
+});
+
+describe('loading the server module', () => {
+	let dir: string | undefined;
+	afterEach(() => {
+		if (dir) fs.rmSync(dir, { recursive: true, force: true });
+	});
+
+	// A cloned repo's .env must not reach process.env, which the Claude Code
+	// subprocess inherits
+	it("leaves the working directory's .env out of process.env", () => {
+		dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-mcp-env-'));
+		fs.writeFileSync(path.join(dir, '.env'), 'TASKGRAPH_PROBE=1\n');
+		const tsx = pathToFileURL(
+			createRequire(import.meta.url).resolve('tsx/esm')
+		);
+		const server = pathToFileURL(
+			path.join(path.dirname(fileURLToPath(import.meta.url)), 'server.ts')
+		);
+		const env = { ...process.env };
+		delete env.TASKGRAPH_PROBE;
+
+		const out = execFileSync(
+			process.execPath,
+			[
+				'--import',
+				tsx.href,
+				'--input-type=module',
+				'-e',
+				`await import('${server.href}'); console.log(String(process.env.TASKGRAPH_PROBE))`
+			],
+			{ cwd: dir, encoding: 'utf8', env }
+		);
+
+		expect(out.trim().split('\n').at(-1)).toBe('undefined');
+	}, 60000);
 });

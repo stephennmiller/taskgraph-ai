@@ -105,6 +105,8 @@ See [Archiving finished tasks](/capabilities/archive) for how archived IDs and d
 | `TASKGRAPH_LOG_LEVEL` | Console log level. |
 | `TASKGRAPH_DEBUG` | Set to `true` for debug logging. |
 
+Set these in your shell, CI or the MCP server's `env`. TaskGraph reads a project's `.env` only for `TASKGRAPH_TAG`, `TASKGRAPH_RESPONSE_LANGUAGE`, `TASKGRAPH_MODEL_MAIN`, `TASKGRAPH_MODEL_RESEARCH`, `TASKGRAPH_MODEL_FALLBACK` and `TASKGRAPH_ENABLE_CODEBASE_ANALYSIS`. It never loads `.env` into its own environment or passes it to Claude Code, so a `.env` in a cloned repository can't set anything else, such as `CLAUDE_CODE_API_KEY`, a proxy, `TASKGRAPH_PROJECT_ROOT`, `TASKGRAPH_TOOLS` or the log level.
+
 Models (set them with `taskgraph models`), `maxTokens`, `temperature`, `defaultSubtasks`, `defaultPriority` and `projectName` belong in `config.json`, not in environment variables.
 
 <Note>
@@ -113,7 +115,7 @@ Upgrading? Variables named `TASK_MASTER_*` and `TASKMASTER_*` were renamed to `T
 
 ## Behind a proxy
 
-TaskGraph has no proxy setting of its own. AI calls run through Claude Code, which follows the standard `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` variables. Set them in your shell or in the project's `.env`. From `.env`, TaskGraph passes Claude Code only these three and `CLAUDE_CODE_API_KEY`; other variables must come from your shell. An `"enableProxy"` line left in an older `config.json` is ignored, and you can delete it.
+TaskGraph has no proxy setting of its own. AI calls run through Claude Code, which follows the standard `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY` variables. Set them in your shell, CI or the MCP server's `env`. TaskGraph doesn't read them from a project's `.env`, so a cloned repository can't route your Claude Code traffic through its own proxy. An `"enableProxy"` line left in an older `config.json` is ignored, and you can delete it.
 
 ## Troubleshooting
 

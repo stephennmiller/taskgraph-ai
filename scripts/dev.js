@@ -37,30 +37,18 @@ if (args.length === 1 && (args[0] === '--version' || args[0] === '-V')) {
 }
 
 async function runCommand() {
-	const { join } = await import('node:path');
-	const { findProjectRoot } = await import('@tm/core');
-	const { default: dotenv } = await import('dotenv');
+	// The project's .env is never loaded into process.env, which the Claude
+	// Code subprocess inherits: tm-core reads the keys it supports per project
+	// (readProjectEnv), so a cloned repo's .env can't set anything else.
 
 	// Store the original working directory
 	// This is needed for commands that take relative paths as arguments
-	const originalCwd = process.cwd();
-
-	// Find project root for .env loading
-	// We don't change the working directory to avoid breaking relative path logic
-	const projectRoot = findProjectRoot();
-
-	// Load .env from project root without changing cwd. quiet: dotenv 17+ logs
-	// "injected env (N) from .env" otherwise, which led every command's output.
-	dotenv.config({ path: join(projectRoot, '.env'), quiet: true });
-
-	// Make original cwd available to commands that need it
-	process.env.TASKGRAPH_ORIGINAL_CWD = originalCwd;
+	process.env.TASKGRAPH_ORIGINAL_CWD = process.cwd();
 
 	if (process.env.DEBUG === '1') {
 		console.error('DEBUG - dev.js received args:', args);
 	}
 
-	// Imported after dotenv.config() so module-level code sees the .env values
 	const { runCLI } = await import('@tm/cli');
 
 	// Run the CLI with the process arguments (not awaited, as before)
