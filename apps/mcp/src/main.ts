@@ -7,6 +7,8 @@
 // Silences tm-core's console output, which would corrupt the stdio stream.
 // Set before any import runs: modules build loggers at load time (#612).
 process.env.TASKGRAPH_MCP = 'true';
+// On Windows, cmd.exe and libuv otherwise run a git.exe or claude.cmd sitting in the project directory before the one on PATH
+process.env.NoDefaultCurrentDirectoryInExePath = '1';
 
 // `npx taskgraph-ai` runs this server, not the CLI. MCP clients never give it
 // a terminal, so one means a person typed it: say what it is, on stderr

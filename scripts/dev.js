@@ -37,6 +37,9 @@ if (args.length === 1 && (args[0] === '--version' || args[0] === '-V')) {
 }
 
 async function runCommand() {
+	// On Windows, cmd.exe and libuv otherwise run a git.exe or claude.cmd sitting in the project directory before the one on PATH
+	process.env.NoDefaultCurrentDirectoryInExePath = '1';
+
 	// The project's .env is never loaded into process.env, which the Claude
 	// Code subprocess inherits: tm-core reads the keys it supports per project
 	// (readProjectEnv), so a cloned repo's .env can't set anything else.
