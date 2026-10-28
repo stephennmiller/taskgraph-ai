@@ -36,10 +36,10 @@ afterEach(() => {
 describe('resolvePrdPath', () => {
 	it('returns the named PRD under the project root, and the first default otherwise', () => {
 		fs.writeFileSync(path.join(root, 'spec.md'), '# Spec');
-		fs.writeFileSync(path.join(docs, 'prd.txt'), '# PRD');
+		fs.writeFileSync(path.join(docs, 'PRD.md'), '# PRD');
 
 		expect(service.resolvePrdPath('spec.md')).toBe(path.join(root, 'spec.md'));
-		expect(service.resolvePrdPath()).toBe(path.join(docs, 'prd.txt'));
+		expect(service.resolvePrdPath()).toBe(path.join(docs, 'PRD.md'));
 	});
 
 	it('keeps the not-found messages', () => {
@@ -66,9 +66,11 @@ describe('resolvePrdPath', () => {
 
 	it('refuses a default PRD that is a link to .env instead of skipping it', () => {
 		fs.symlinkSync(path.join(root, '.env'), path.join(docs, 'PRD.md'));
-		fs.writeFileSync(path.join(docs, 'prd.md'), '# PRD');
+		// not prd.md: on a case-insensitive filesystem that is PRD.md, and the write goes through the link
+		fs.writeFileSync(path.join(docs, 'PRD.txt'), '# PRD');
 
 		expect(() => service.resolvePrdPath()).toThrow('secret file');
+		expect(fs.readFileSync(path.join(root, '.env'), 'utf8')).toBe('TOKEN=1');
 	});
 
 	it('refuses a named PRD that links out of the project', () => {
@@ -81,7 +83,7 @@ describe('resolvePrdPath', () => {
 		const link = path.join(base, 'project-link');
 		fs.symlinkSync(root, link);
 		fs.writeFileSync(path.join(root, 'spec.md'), '# Spec');
-		fs.writeFileSync(path.join(docs, 'prd.md'), '# PRD');
+		fs.writeFileSync(path.join(docs, 'PRD.md'), '# PRD');
 		const linked = new ParsePrdService(
 			{} as any,
 			{ getProjectRoot: () => link } as any
@@ -89,7 +91,7 @@ describe('resolvePrdPath', () => {
 
 		expect(linked.resolvePrdPath('spec.md')).toBe(path.join(link, 'spec.md'));
 		expect(linked.resolvePrdPath()).toBe(
-			path.join(link, '.taskgraph', 'docs', 'prd.md')
+			path.join(link, '.taskgraph', 'docs', 'PRD.md')
 		);
 	});
 });
