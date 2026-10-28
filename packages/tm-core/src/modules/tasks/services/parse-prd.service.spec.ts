@@ -66,9 +66,11 @@ describe('resolvePrdPath', () => {
 
 	it('refuses a default PRD that is a link to .env instead of skipping it', () => {
 		fs.symlinkSync(path.join(root, '.env'), path.join(docs, 'PRD.md'));
-		fs.writeFileSync(path.join(docs, 'prd.md'), '# PRD');
+		// not prd.md: on a case-insensitive filesystem that is PRD.md, and the write goes through the link
+		fs.writeFileSync(path.join(docs, 'PRD.txt'), '# PRD');
 
 		expect(() => service.resolvePrdPath()).toThrow('secret file');
+		expect(fs.readFileSync(path.join(root, '.env'), 'utf8')).toBe('TOKEN=1');
 	});
 
 	it('refuses a named PRD that links out of the project', () => {
