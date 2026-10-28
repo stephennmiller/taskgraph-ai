@@ -36,10 +36,10 @@ afterEach(() => {
 describe('resolvePrdPath', () => {
 	it('returns the named PRD under the project root, and the first default otherwise', () => {
 		fs.writeFileSync(path.join(root, 'spec.md'), '# Spec');
-		fs.writeFileSync(path.join(docs, 'prd.txt'), '# PRD');
+		fs.writeFileSync(path.join(docs, 'PRD.md'), '# PRD');
 
 		expect(service.resolvePrdPath('spec.md')).toBe(path.join(root, 'spec.md'));
-		expect(service.resolvePrdPath()).toBe(path.join(docs, 'prd.txt'));
+		expect(service.resolvePrdPath()).toBe(path.join(docs, 'PRD.md'));
 	});
 
 	it('keeps the not-found messages', () => {
@@ -81,7 +81,7 @@ describe('resolvePrdPath', () => {
 		const link = path.join(base, 'project-link');
 		fs.symlinkSync(root, link);
 		fs.writeFileSync(path.join(root, 'spec.md'), '# Spec');
-		fs.writeFileSync(path.join(docs, 'prd.md'), '# PRD');
+		fs.writeFileSync(path.join(docs, 'PRD.md'), '# PRD');
 		const linked = new ParsePrdService(
 			{} as any,
 			{ getProjectRoot: () => link } as any
@@ -89,7 +89,7 @@ describe('resolvePrdPath', () => {
 
 		expect(linked.resolvePrdPath('spec.md')).toBe(path.join(link, 'spec.md'));
 		expect(linked.resolvePrdPath()).toBe(
-			path.join(link, '.taskgraph', 'docs', 'prd.md')
+			path.join(link, '.taskgraph', 'docs', 'PRD.md')
 		);
 	});
 });
