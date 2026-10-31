@@ -176,11 +176,14 @@ export function wouldSubtaskCloseLoop(
 		)
 		.filter((dep) => dep !== parentId);
 	if (subtaskId !== undefined) {
-		// Its old parent stops waiting on it, and it on that parent's dependencies
-		graph.set(
-			fromParentId,
-			(graph.get(fromParentId) ?? []).filter((id) => id !== taskId)
-		);
+		// Its old parent stops waiting on it (unless it lists it, a dependency
+		// that follows it), and it on that parent's dependencies
+		if (!(task?.dependencies ?? []).map(String).includes(taskId)) {
+			graph.set(
+				fromParentId,
+				(graph.get(fromParentId) ?? []).filter((id) => id !== taskId)
+			);
+		}
 		graph.set(taskId, own);
 	}
 	const inherited = (graph.get(parentId) ?? []).filter(

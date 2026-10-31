@@ -238,6 +238,28 @@ describe('moveTasksIn', () => {
 		expect(tasks[4].subtasks.map((st) => st.dependencies)).toEqual([['2.1']]);
 	});
 
+	it('refuses a subtask its old parent lists, when the new parent waits on that parent (#824)', () => {
+		// 2 keeps waiting on 2.2 as 4.1, and 4.1 waits on 2 through task 4
+		const tasks = sample();
+		tasks[1].dependencies.push('2.2');
+
+		expect(() => moveTasksIn(tasks, '2.2', '4.1', 'master', noArchive)).toThrow(
+			'Cannot move subtask 2.2 to 4.1: that would make a dependency loop'
+		);
+	});
+
+	it('moves a subtask that lists its old parent under a task that waits on it (#824)', () => {
+		// 5 waits on 4 and 4 on 2, but 2 never waited on 2.2, which lists it
+		const tasks = sample();
+		tasks[1].subtasks[1].dependencies.push('2');
+
+		moveTasksIn(tasks, '2.2', '5.1', 'master', noArchive);
+
+		expect(tasks[4].subtasks.map((st) => st.dependencies)).toEqual([
+			['2.1', '2']
+		]);
+	});
+
 	it('refuses an archived destination ID', () => {
 		expect(() =>
 			moveTasksIn(sample(), '3', '9', 'master', new Set(['9']))

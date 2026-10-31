@@ -89,6 +89,27 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 		expect(savedTask('4').subtasks[0].dependencies).toEqual(['1']);
 	});
 
+	it('expand-all checks each save against the subtasks saved before it', async () => {
+		// Task 1 waits on 4 and 2 on 3: 3.1 → 1 and 4.1 → 2 are each fine
+		// alone, but together they loop 3 → 3.1 → 1 → 4 → 4.1 → 2 → 3
+		write(
+			{ ...task('1', ['4']), status: 'done' },
+			{ ...task('2', ['3']), status: 'done' },
+			task('3'),
+			task('4')
+		);
+		generateObject.mockResolvedValue(
+			reply({ subtasks: [aiSubtask(1, ['1', '2'])] }) as any
+		);
+
+		await tmCore.tasks.expandAll({ num: 1 });
+
+		const kept = ['3', '4'].flatMap(
+			(id) => savedTask(id).subtasks[0].dependencies
+		);
+		expect(kept).toHaveLength(1);
+	});
+
 	it('update-task drops a dependency on a task that waits on the parent', async () => {
 		// Task 2 waits on 1, so a subtask of 1 can't wait on 2; 3 is fine
 		write(

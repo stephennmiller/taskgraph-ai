@@ -225,7 +225,6 @@ export class ExpandTaskService {
 		// force: the prompt and the search see the task without its subtasks
 		const task: Task =
 			input.force && hadSubtasks ? { ...stored, subtasks: [] } : stored;
-		const view = tasks.map((t) => (t === stored ? task : t));
 		const warn = (message: string) => hooks.onWarning?.(message);
 		const aiConfig = new AiConfig(this.configManager, (level, message) =>
 			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
@@ -255,7 +254,12 @@ export class ExpandTaskService {
 				complexityReasoningContext: analysis?.reasoning
 					? `\nComplexity Analysis Reasoning: ${analysis.reasoning}`
 					: '',
-				gatheredContext: await this.gatherContext(view, tasks, task, warn),
+				gatheredContext: await this.gatherContext(
+					tasks.map((t) => (t === stored ? task : t)),
+					tasks,
+					task,
+					warn
+				),
 				useResearch,
 				expansionPrompt,
 				hasCodebaseAnalysis: aiConfig.hasCodebaseAnalysis(
@@ -332,11 +336,18 @@ export class ExpandTaskService {
 					ERROR_CODES.VALIDATION_ERROR
 				);
 			}
-			addedSubtasks = this.prepareSubtasks(view, task, generated, (message) => {
+			const debug = (message: string) => {
 				logger.debug(message);
 				if (aiConfig.debug) hooks.onDebug?.(message);
-			});
-			saved = await this.save(taskId, tag, addedSubtasks, input.force === true);
+			};
+			addedSubtasks = this.prepareSubtasks(task, generated, debug);
+			saved = await this.save(
+				taskId,
+				tag,
+				addedSubtasks,
+				input.force === true,
+				debug
+			);
 		} catch (error) {
 			// The call was made and paid for, even though nothing was saved
 			if (error instanceof Error) {
@@ -363,7 +374,8 @@ export class ExpandTaskService {
 		taskId: string,
 		tag: string,
 		addedSubtasks: Subtask[],
-		force: boolean
+		force: boolean,
+		debug: (message: string) => void
 	): Promise<Task> {
 		const { result } = await this.taskService.modifyTasks((current) => {
 			const target = current.find((t) => String(t.id) === taskId);
@@ -377,6 +389,17 @@ export class ExpandTaskService {
 			// on the old subtasks: the new ones reuse their IDs
 			if (force) removeAllSubtasks(current as never, target as never);
 			if (!Array.isArray(target.subtasks)) target.subtasks = [];
+			// Checked here, not before the AI call: expand-all saves its tasks
+			// concurrently, and two saves can make a loop neither makes alone
+			for (const subtask of addedSubtasks) {
+				subtask.dependencies = withoutLoopsThroughParent(
+					current,
+					taskId,
+					subtask.id,
+					subtask.dependencies ?? [],
+					debug
+				);
+			}
 			renumberSubtasks(taskId, target.subtasks, addedSubtasks);
 			target.subtasks.push(...addedSubtasks);
 			return { tasks: current, result: target };
@@ -536,7 +559,6 @@ export class ExpandTaskService {
 
 	/** The AI's subtasks, ordered and ready to store */
 	private prepareSubtasks(
-		tasks: Task[],
 		task: Task,
 		generated: any[],
 		debug: (message: string) => void
@@ -558,13 +580,6 @@ export class ExpandTaskService {
 			// The AI's criteria are stored as unchecked items (none: no field)
 			const prepared = setGeneratedCriteria({
 				...subtask,
-				dependencies: withoutLoopsThroughParent(
-					tasks,
-					task.id,
-					subtask.id,
-					subtask.dependencies ?? [],
-					debug
-				),
 				status: subtask.status ?? 'pending',
 				testStrategy: subtask.testStrategy ?? null
 			});
