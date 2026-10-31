@@ -119,6 +119,8 @@ export interface AiServiceResult {
 	tagInfo: AiTagInfo;
 	providerName: string;
 	modelId: string;
+	/** The role whose model answered, which a fallback can make 'research' */
+	role: string;
 }
 
 // --- Configuration for Retries ---
@@ -628,7 +630,8 @@ export class AiService {
 					telemetryData,
 					tagInfo: this.getTagInfo(effectiveProjectRoot),
 					providerName,
-					modelId
+					modelId,
+					role: currentRole
 				};
 			} catch (error: any) {
 				const cleanMessage = extractErrorMessage(error);

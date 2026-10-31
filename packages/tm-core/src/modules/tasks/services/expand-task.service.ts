@@ -47,6 +47,7 @@ import { withoutLoopsThroughParent } from '../../dependencies/dependency-edges.j
 import { orderGeneratedSubtasks } from '../../dependencies/forward-dependencies.js';
 import { removeAllSubtasks } from '../../dependencies/removed-references.js';
 import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
 import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
@@ -315,6 +316,7 @@ export class ExpandTaskService {
 				};
 			}
 		}
+		untrustLoopIfResearch(response, projectRoot);
 		let saved: Task;
 		let addedSubtasks: Subtask[];
 		try {

@@ -33,6 +33,7 @@ import {
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '../../dependencies/dependency-provenance.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
 import type { TaskService } from './task-service.js';
 import {
@@ -202,6 +203,7 @@ export class UpdateTaskService {
 		const ai = new AiService(aiConfig.toHost());
 		if (append) {
 			const response = await ai.generateText(request);
+			untrustLoopIfResearch(response, projectRoot);
 			const text =
 				typeof response.mainResult === 'string'
 					? response.mainResult.trim()
@@ -231,6 +233,7 @@ export class UpdateTaskService {
 			schema: COMMAND_SCHEMAS['update-task-by-id'],
 			objectName: 'task'
 		});
+		untrustLoopIfResearch(response, projectRoot);
 		const debug = (message: string) => {
 			if (aiConfig.debug) hooks.onDebug?.(message);
 		};
@@ -445,6 +448,7 @@ export class UpdateTaskService {
 			commandName: 'update-tasks',
 			outputType: input.outputType ?? 'cli'
 		});
+		untrustLoopIfResearch(response, projectRoot);
 		const returned = response.mainResult?.tasks;
 		if (!Array.isArray(returned)) {
 			throw new Error('Parsed AI response for updated tasks was not an array.');

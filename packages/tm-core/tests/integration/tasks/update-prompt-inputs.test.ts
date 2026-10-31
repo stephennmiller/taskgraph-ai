@@ -119,14 +119,16 @@ describe('update prompt inputs', () => {
 					telemetryData: null,
 					tagInfo: { currentTag: 'master', availableTags: ['master'] },
 					providerName: 'claude-code',
-					modelId: 'sonnet'
+					modelId: 'sonnet',
+					role: 'main'
 				})),
 			text: vi.spyOn(AiService.prototype, 'generateText').mockResolvedValue({
 				mainResult: 'Added text',
 				telemetryData: null,
 				tagInfo: { currentTag: 'master', availableTags: ['master'] },
 				providerName: 'claude-code',
-				modelId: 'sonnet'
+				modelId: 'sonnet',
+				role: 'main'
 			})
 		};
 		tmCore = await createTmCore({ projectPath: projectDir });

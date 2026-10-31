@@ -29,6 +29,7 @@ import {
 } from '../../dependencies/dependency-provenance.js';
 import { mergeNewTaskDependencies } from '../../dependencies/new-task-dependencies.js';
 import { setTaskLink } from '../../dependencies/task-links.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { normalizeAcceptanceCriteria } from '../utils/acceptance-criteria.js';
 import { normalizeAssignee } from '../utils/assignee.js';
 import { nextTaskId, readArchivedIdsSync } from '../utils/archive.js';
@@ -382,6 +383,7 @@ export class AddTaskService {
 			commandName: 'add-task',
 			outputType: request.outputType ?? 'cli'
 		});
+		untrustLoopIfResearch(response, projectRoot);
 
 		const result = response?.mainResult;
 		const candidate = result?.task ?? result?.object?.task;
