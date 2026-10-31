@@ -3,7 +3,7 @@
  * TASKGRAPH_TOOLS picks.
  */
 
-import { FastMCP } from 'fastmcp';
+import { FastMCP, type FastMCPSession, UserError } from 'fastmcp';
 import { logger } from './logger.js';
 import { getVersionInfo } from './shared/utils.js';
 import {
@@ -32,26 +32,54 @@ export class TaskGraphMCPServer {
 	readonly server = new FastMCP({
 		...this.options,
 		// FastMCP takes tool calls while it is still fetching the client's
-		// roots; hold them until it has the roots so none skips the check
-		onToolCall: () => this.connected
+		// roots; hold each one until the roots are known so none skips the check
+		onToolCall: () => {
+			this.rootsBound ??= this.bindRoots().catch((error: Error) => {
+				this.rootsBound = undefined; // the next call asks again
+				throw new UserError(
+					`Could not get this session's project folders from the client: ${error.message}`
+				);
+			});
+			return this.rootsBound;
+		}
 	});
 	/**
-	 * Resolves when the first client has connected. A tool's context.session
-	 * is FastMCP's auth object, not the FastMCPSession, so each session's auth
-	 * carries its roots (live: FastMCP swaps them on rootsChanged) for
+	 * A tool's context.session is FastMCP's auth object, not the
+	 * FastMCPSession, so the client's roots go here for
 	 * withNormalizedProjectRoot to bind projectRoot to (#794)
 	 */
-	private readonly connected = new Promise<void>((resolve) =>
+	private readonly sessionAuth: { roots: FastMCPSession['roots'] } = {
+		roots: []
+	};
+	/** The stdio session, once FastMCP has set it up */
+	private readonly session = new Promise<FastMCPSession>((resolve) =>
 		this.server.on('connect', ({ session }) => {
-			session.updateAuth({
-				get roots() {
-					return session.roots;
-				}
+			this.sessionAuth.roots = session.roots;
+			session.updateAuth(this.sessionAuth);
+			session.on('rootsChanged', ({ roots }) => {
+				this.sessionAuth.roots = roots;
 			});
-			resolve();
+			resolve(session);
 		})
 	);
+	private rootsBound?: Promise<void>;
 	private initialized = false;
+
+	/**
+	 * Waits for the session and its roots. Rejects when a client that has
+	 * roots doesn't list them, so no call skips the check.
+	 */
+	private async bindRoots() {
+		const session = await this.session;
+		// FastMCP lists roots only for a client that advertises listChanged, and
+		// carries on with none when listing fails
+		if (
+			session.server.getClientCapabilities()?.roots &&
+			!this.sessionAuth.roots.length
+		) {
+			this.sessionAuth.roots = (await session.server.listRoots()).roots;
+		}
+	}
 
 	/**
 	 * Register the tools TASKGRAPH_TOOLS picks; a second call does nothing.

@@ -24,10 +24,14 @@ type Message = {
 
 /**
  * A client that speaks JSON-RPC straight to the server's transport: it
- * advertises roots, answers roots/list with `roots`, and answers any other
- * server request (ping) with an empty result
+ * advertises `capabilities`, answers roots/list with `roots` (or an error),
+ * and answers any other server request (ping) with an empty result
  */
-async function connectClient(server: TaskGraphMCPServer, roots: string[]) {
+async function connectClient(
+	server: TaskGraphMCPServer,
+	roots: string[] | 'error',
+	capabilities: object = { roots: { listChanged: true } }
+) {
 	const pending = new Map<number, (message: Message) => void>();
 	let nextId = 1;
 	const transport = {
@@ -39,14 +43,20 @@ async function connectClient(server: TaskGraphMCPServer, roots: string[]) {
 		},
 		async send(message: Message) {
 			if (message.method && message.id !== undefined) {
-				const result =
-					message.method === 'roots/list'
-						? {
-								roots: roots.map((root) => ({ uri: pathToFileURL(root).href }))
-							}
-						: {};
+				const reply =
+					message.method !== 'roots/list'
+						? { result: {} }
+						: roots === 'error'
+							? { error: { code: -32603, message: 'roots unavailable' } }
+							: {
+									result: {
+										roots: roots.map((root) => ({
+											uri: pathToFileURL(root).href
+										}))
+									}
+								};
 				queueMicrotask(() =>
-					transport.onmessage?.({ jsonrpc: '2.0', id: message.id, result })
+					transport.onmessage?.({ jsonrpc: '2.0', id: message.id, ...reply })
 				);
 			} else if (message.id !== undefined && !message.method) {
 				pending.get(message.id as number)?.(message);
@@ -65,7 +75,7 @@ async function connectClient(server: TaskGraphMCPServer, roots: string[]) {
 	await vi.waitFor(() => expect(transport.onmessage).toBeDefined());
 	await request('initialize', {
 		protocolVersion: '2025-06-18',
-		capabilities: { roots: { listChanged: true } },
+		capabilities,
 		clientInfo: { name: 'roots-test', version: '1.0.0' }
 	});
 	transport.onmessage?.({
@@ -77,8 +87,14 @@ async function connectClient(server: TaskGraphMCPServer, roots: string[]) {
 			isError?: boolean;
 			content: Array<{ text: string }>;
 		};
+	// The client's roots changed: the server lists them again
+	const rootsChanged = () =>
+		transport.onmessage?.({
+			jsonrpc: '2.0',
+			method: 'notifications/roots/list_changed'
+		});
 	// Resolves once FastMCP has fetched the roots and emitted connect
-	return { connected, callTool };
+	return { connected, callTool, rootsChanged };
 }
 
 describe('client roots bind projectRoot (#794)', () => {
@@ -95,8 +111,12 @@ describe('client roots bind projectRoot (#794)', () => {
 		);
 	};
 
-	const start = async (roots: string[]) => {
-		const client = await connectClient(new TaskGraphMCPServer().init(), roots);
+	const start = async (roots: string[] | 'error', capabilities?: object) => {
+		const client = await connectClient(
+			new TaskGraphMCPServer().init(),
+			roots,
+			capabilities
+		);
 		connected = client.connected;
 		return client;
 	};
@@ -155,5 +175,53 @@ describe('client roots bind projectRoot (#794)', () => {
 
 		expect(reply.isError).toBe(true);
 		expect(reply.content[0].text).toContain('outside this session');
+	});
+
+	it('refuses an outside projectRoot when the client lists roots without listChanged', async () => {
+		const client = await start([inside], { roots: {} });
+		await client.connected;
+
+		const reply = await client.callTool('get_tasks', { projectRoot: outside });
+
+		expect(reply.isError).toBe(true);
+		expect(reply.content[0].text).toContain('outside this session');
+	});
+
+	it('refuses calls when a client that has roots fails to list them', async () => {
+		const client = await start('error');
+		await client.connected;
+
+		const reply = await client.callTool('get_tasks', { projectRoot: inside });
+
+		expect(reply.isError).toBe(true);
+		expect(reply.content[0].text).toContain(
+			"Could not get this session's project folders"
+		);
+	});
+
+	it('takes any projectRoot from a client without roots', async () => {
+		const client = await start('error', {});
+		await client.connected;
+
+		const reply = await client.callTool('get_tasks', { projectRoot: outside });
+
+		expect(reply.isError).toBeFalsy();
+	});
+
+	it('checks projectRoot against the roots the client changed to', async () => {
+		const roots = [inside];
+		const client = await start(roots);
+		await client.connected;
+		expect(
+			(await client.callTool('get_tasks', { projectRoot: inside })).isError
+		).toBeFalsy();
+
+		roots.splice(0, 1, outside);
+		client.rootsChanged();
+
+		await vi.waitFor(async () => {
+			const reply = await client.callTool('get_tasks', { projectRoot: inside });
+			expect(reply.isError).toBe(true);
+		});
 	});
 });
