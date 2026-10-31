@@ -330,8 +330,8 @@ export class LoopCommand extends Command {
 	}
 
 	/**
-	 * First run in a project, or the task text changed since the approval:
-	 * `loop` turns Claude's permission prompts off.
+	 * First run in a project, or the task text or project instructions
+	 * changed since the approval: `loop` turns Claude's permission prompts off.
 	 * With --parallel there's no sandbox to suggest instead.
 	 */
 	private async confirmTrust(parallel?: number): Promise<void> {

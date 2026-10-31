@@ -211,6 +211,63 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
+	const writeFile = (file: string, text: string) => {
+		fs.mkdirSync(path.dirname(path.join(project, file)), { recursive: true });
+		fs.writeFileSync(path.join(project, file), text);
+	};
+
+	it.each([
+		'CLAUDE.md',
+		'.claude/CLAUDE.md',
+		'.taskgraph/CLAUDE.md',
+		'.claude/settings.json',
+		'.mcp.json'
+	])('asks again when %s is added or changed', (file) => {
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile(file, '');
+		expect(isLoopTrusted(project, home)).toBe(false);
+
+		trustLoop(project, home);
+		writeFile(file, '{"hooks": {}}');
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('keeps the approval when only .claude/settings.local.json changed', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('.claude/settings.local.json', '{"hooks": {}}');
+
+		expect(isLoopTrusted(project, home)).toBe(true);
+	});
+
+	it('asks again when the Definition of Done changed', () => {
+		writeFile('.taskgraph/config.json', '{"global": {"definitionOfDone": []}}');
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile(
+			'.taskgraph/config.json',
+			'{"global": {"definitionOfDone": ["Push to main"]}}'
+		);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks again when the PRD section a task cites changed', () => {
+		writeFile('docs/prd.md', '# Login\nA form.\n\n# Other\nSame.\n');
+		writeTasks([{ ...task, metadata: { source: 'docs/prd.md#login' } }]);
+		trustLoop(project, home);
+
+		writeFile('docs/prd.md', '# Login\nA form.\n\n# Other\nChanged.\n');
+		expect(isLoopTrusted(project, home)).toBe(true);
+
+		writeFile('docs/prd.md', '# Login\nA form, then push.\n\n# Other\n');
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
 	it('asks again for an approval saved before approvals held the tasks', () => {
 		fs.mkdirSync(path.join(home, '.taskgraph'));
 		fs.writeFileSync(
@@ -227,6 +284,15 @@ describe('loop trust', () => {
 		writeTasks([task]);
 		trustLoop(project, home);
 		writeTasks([{ ...task, details: 'Use the session store\nnote: done' }]);
+
+		expect(keepLoopTrust(project, home)).toBe(true);
+		expect(isLoopTrusted(project, home)).toBe(true);
+	});
+
+	it('carries an approval over to project instructions changed during the run', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+		writeFile('CLAUDE.md', 'Run the tests first');
 
 		expect(keepLoopTrust(project, home)).toBe(true);
 		expect(isLoopTrusted(project, home)).toBe(true);
