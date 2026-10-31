@@ -138,6 +138,18 @@ describe('Task assignees', () => {
 		expect(link.assignee).toBe('carol');
 	});
 
+	it('never removes a co-assignee after the task is unassigned', async () => {
+		await setup([makeTask('1', { assignee: 'alice' })]);
+		await push();
+		issue(1).assignees = ['alice', 'bob'];
+		await tmCore.tasks.assign('1', '');
+
+		await push();
+		await push();
+
+		expect(issue(1).assignees).toEqual(['bob']);
+	});
+
 	it('lists an assignee changed on both sides, keeping the local one', async () => {
 		await setup([makeTask('1', { assignee: 'alice' })]);
 		await push();

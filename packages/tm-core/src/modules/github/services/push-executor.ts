@@ -243,17 +243,15 @@ export async function executePush(
 }
 
 /**
- * The assignee GitHub holds after a write that sent `assignee`. Without push
- * access GitHub drops assignees silently; the base must say so, or the next
- * pull reads the empty issue as an unassignment and clears the task
+ * The base after a write that sent `assignee`: it, if GitHub kept it.
+ * Without push access GitHub drops assignees silently, and a base naming
+ * someone else would have the next push remove them
  */
 function heldBy(
 	issue: RemoteIssue,
 	assignee: string | undefined
 ): string | undefined {
-	return assignee && issue.assignees.includes(assignee)
-		? assignee
-		: issue.assignees[0];
+	return assignee && issue.assignees.includes(assignee) ? assignee : undefined;
 }
 
 /**
