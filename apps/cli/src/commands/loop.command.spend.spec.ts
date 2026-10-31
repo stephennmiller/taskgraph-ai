@@ -127,4 +127,34 @@ describe('LoopCommand cost and caps', () => {
 			{ skipExit: true }
 		);
 	});
+
+	it("passes --model to tm-core and shows each iteration's model and effort", async () => {
+		run.mockImplementation(async (config) => {
+			config.callbacks.onIterationEnd({
+				iteration: 1,
+				status: 'success',
+				model: 'opus',
+				effort: 'low',
+				costUsd: 0.42
+			});
+			return result();
+		});
+
+		await execute({ model: 'opus' });
+
+		expect(run).toHaveBeenCalledWith(
+			expect.objectContaining({ model: 'opus' })
+		);
+		expect(printed()).toContain(
+			'  Iteration 1 completed: success · opus, low effort · $0.42'
+		);
+	});
+
+	it('refuses a --model that would read as a flag, before starting tm-core', async () => {
+		await expect(execute({ model: '--verbose' })).rejects.toThrow(
+			'process.exit called'
+		);
+
+		expect(createTmCore).not.toHaveBeenCalled();
+	});
 });

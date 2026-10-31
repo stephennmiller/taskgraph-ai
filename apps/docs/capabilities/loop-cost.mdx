@@ -1,0 +1,71 @@
+---
+title: Loop Cost and Models
+sidebarTitle: "Loop Cost and Models"
+description: "What each loop iteration costs, how to cap a run, and how a task's complexity picks its model and effort"
+---
+
+## Cost and caps
+
+Every iteration reads what Claude Code reported spending, in dollars, and how many turns it took. Each iteration's status line shows them, with its duration, and the summary adds the run's total to the iterations line:
+
+```
+  Iteration 1 completed: success · $0.42 · 12 turns · 3m 10s
+  Iteration 2 completed: success · $0.31 · 9 turns · 2m 4s
+
+Loop Complete
+────────────────────────────────────────
+Total iterations: 2 · $0.73 · 21 turns
+Tasks completed: 2
+Final status: Max iterations reached
+```
+
+The cost is Claude Code's own estimate (`total_cost_usd` in its `result` event), which can differ from your bill. To read it, each iteration runs `claude -p` with `--output-format stream-json`, with or without `--verbose`; an older Claude Code that prints no `result` event still works, without the cost.
+
+Two flags cap a run:
+
+- `--max-turns <n>` passes `--max-turns` to every `claude -p`. An iteration that hits it stops with an error, `Claude Code reached the --max-turns limit`, and three in a row end the run like any other errors.
+- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with final status `Budget reached (--max-budget-usd)` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it.
+
+```bash
+taskgraph loop --max-turns 60 --max-budget-usd 10 --trust
+```
+
+Both work with `--sandbox` and `--parallel` (see [Run tasks in parallel](/capabilities/loop-parallel)).
+
+## Model and effort by complexity
+
+When the task an iteration works on has a complexity score from [`analyze-complexity`](/capabilities/cli-planning-commands#analyze-task-complexity) (1 to 10), `loop` picks the model and effort for that iteration from it, so a one-line fix doesn't cost as much as a refactor. The task is the one `--id` names, or the one `taskgraph next` picks with the `default` and `tdd` presets. It passes `--model` and `--effort` to `claude -p`, which take precedence over the `model` and `effortLevel` in your Claude Code settings:
+
+| Score | Model | Effort |
+| ----- | ----- | ------ |
+| 1-3   | `sonnet` | `low` |
+| 4-6   | Claude Code's default | Claude Code's default |
+| 7-10  | Claude Code's default | `high` |
+
+A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
+
+```
+  Iteration 1 completed: success · sonnet, low effort · $0.12 · 6 turns · 48s
+```
+
+```
+# Iteration 1: success · complexity 2 · sonnet, low effort · $0.12 · 6 turns · 48s
+```
+
+`--model <model>` runs every iteration on that model (an alias such as `opus`, or a full model name). It replaces the band's model only; the band's effort still applies.
+
+Set your own bands under `loop.bands` in `.taskgraph/config.json`. A task goes into the first band whose `maxScore` its score doesn't exceed; a band without `model` or `effort` leaves that one to Claude Code. `effort` is one of `low`, `medium`, `high`, `xhigh` or `max`:
+
+```json
+{
+  "loop": {
+    "bands": [
+      { "maxScore": 4, "model": "haiku", "effort": "low" },
+      { "maxScore": 8, "model": "sonnet", "effort": "medium" },
+      { "maxScore": 10, "model": "opus", "effort": "high" }
+    ]
+  }
+}
+```
+
+A score above the last band's `maxScore` runs with Claude Code's defaults. `"bands": []` turns the picking off. A band `loop` can't use (a `maxScore` that isn't a whole number from 1 to 10, two bands with the same `maxScore`, an unknown effort, a model name that starts with `-`) stops the run before Claude Code starts, with the band named.

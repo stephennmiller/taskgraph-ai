@@ -44,7 +44,7 @@ A task counts as done in the summary only when Claude Code exited without an err
 
 `.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
 
-`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project`, `--container`, `--max-turns` and `--max-budget-usd`. Each task's Claude Code gets `--max-turns` as given, and an equal share of `--max-budget-usd` (`--parallel 4 --max-budget-usd 10` gives each task $2.50), so the whole run stays under the amount. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project`, `--container`, `--max-turns` and `--max-budget-usd`. Each task's Claude Code gets `--max-turns` as given, and an equal share of `--max-budget-usd` (`--parallel 4 --max-budget-usd 10` gives each task $2.50), so the whole run stays under the amount. Each task also runs at the model and effort its complexity score picks, and `--model` overrides the model (see [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity)). It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
 
 ## Status goes to the main project
 

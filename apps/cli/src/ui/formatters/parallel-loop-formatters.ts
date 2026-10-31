@@ -158,7 +158,7 @@ export function formatParallelSummary(
 	const idWidth = Math.max(...tasks.map((t) => t.id.length));
 	const rows = tasks.map(
 		(t) =>
-			`  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}${formatLoopSpend({ costUsd: t.costUsd, turns: t.turns })}`
+			`  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}${formatLoopSpend({ model: t.model, effort: t.effort, costUsd: t.costUsd, turns: t.turns })}`
 	);
 	const spent = formatLoopSpend({ costUsd: result.totalCostUsd });
 	const kept = tasks.filter((t) => t.kept);

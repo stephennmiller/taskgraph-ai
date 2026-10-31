@@ -138,7 +138,8 @@ export {
 	LoopError,
 	PRESET_NAMES,
 	TASK_PRESETS,
-	parseLoopCaps
+	parseLoopCaps,
+	parseLoopModel
 } from './modules/loop/index.js';
 export {
 	DEFAULT_CONTAINER_IMAGE,
