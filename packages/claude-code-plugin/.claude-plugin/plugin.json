@@ -13,7 +13,7 @@
 	"termsOfServiceUrl": "https://github.com/stephennmiller/taskgraph-ai/blob/main/LICENSE",
 	"license": "MIT WITH Commons-Clause",
 	"metadata": {
-		"taskgraphCli": ">=0.58.1"
+		"taskgraphCli": ">=0.62.34"
 	},
 	"keywords": [
 		"task-management",
