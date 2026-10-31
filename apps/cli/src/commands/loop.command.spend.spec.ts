@@ -104,6 +104,28 @@ describe('LoopCommand cost and caps', () => {
 		);
 	});
 
+	it("strips escape sequences from Claude's text, tool names and stderr (#890)", async () => {
+		const write = vi
+			.spyOn(process.stderr, 'write')
+			.mockImplementation(() => true);
+		run.mockImplementation(async (config) => {
+			config.callbacks.onText('Done\x1b[2J\x1b]0;pwned\x07\nnext line');
+			config.callbacks.onToolUse('Bash\x1b[1A');
+			config.callbacks.onOutput('out\x1b]8;;https://x\x07link');
+			config.callbacks.onStderr(1, 'warn\x1b[31m red\n');
+			return result();
+		});
+
+		await execute({});
+
+		const raw = [
+			...log.mock.calls.map((c: unknown[]) => String(c[0] ?? '')),
+			...write.mock.calls.map((c: unknown[]) => String(c[0] ?? ''))
+		].join('\n');
+		expect(stripVTControlCharacters(raw)).toContain('Done\nnext line');
+		expect(raw).not.toMatch(/\x1b\[2J|\x1b\]0;|\x1b\[1A|\x1b\]8;|\x1b\[31m/);
+	});
+
 	it('says the budget stopped the run, and exits 0', async () => {
 		run.mockResolvedValue(result({ finalStatus: 'budget_reached' }));
 
