@@ -1,12 +1,11 @@
 /**
  * @fileoverview `taskgraph init`: set up TaskGraph in the current folder
- * through tm-core's initializeProject. Asks about Git, task storage, Claude
- * Code, the response language and the `tm` alias unless flags or --yes
- * answer them, then runs `taskgraph models --setup` and prints a summary.
+ * through tm-core's initializeProject. Asks only whether to store tasks in
+ * Git (unless --yes or --git-tasks/--no-git-tasks answer it); everything
+ * else takes its default or a flag, then it prints a summary.
  * `init --merge-driver` only sets up the tasks.json merge driver.
  */
 
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import {
 	RULE_PROFILES,
@@ -16,12 +15,10 @@ import {
 	UPSTREAM_IMPORT_OPTION,
 	UPSTREAM_NAME,
 	UpstreamImportError,
-	aliasMissingFile,
 	checkUpstreamImport,
 	findInvalidRulesProfiles,
 	findProjectRoot,
 	initializeProject,
-	insideGitWorkTree,
 	planInit,
 	resolveStoreTasksInGit,
 	setUpMergeDriver
@@ -53,15 +50,6 @@ interface InitCommandOptions {
 	gitTasks?: boolean;
 	mergeDriver?: boolean;
 	[UPSTREAM_IMPORT_OPTION]?: boolean;
-}
-
-/** The answers init needs, from flags or prompts */
-interface InitAnswers {
-	initGit: boolean;
-	storeTasksInGit: boolean;
-	claudeCode: boolean;
-	responseLanguage: string;
-	aliases: boolean;
 }
 
 /** Ctrl-C at a prompt */
@@ -108,7 +96,7 @@ export class InitCommand extends Command {
 			.option('--skip-install', 'Skip installing dependencies')
 			.option('--dry-run', 'Show what would be done without making changes')
 			.option('--aliases', 'Add the tm alias to your shell startup file')
-			.option('--no-aliases', "Don't add the tm alias, and don't ask")
+			.option('--no-aliases', "Don't add the tm alias (the default)")
 			.option('--git', 'Initialize Git repository')
 			.option('--no-git', 'Skip Git repository initialization')
 			.option('--git-tasks', 'Store tasks in Git')
@@ -175,33 +163,34 @@ export class InitCommand extends Command {
 		const skipPrompts = Boolean(
 			options.yes || (options.name && options.description)
 		);
-		if (!skipPrompts && !(process.stdin.isTTY && process.stdout.isTTY)) {
+		const askGitTasks = !skipPrompts && options.gitTasks === undefined;
+		if (askGitTasks && !(process.stdin.isTTY && process.stdout.isTTY)) {
 			printError(
-				'init needs a terminal to ask its questions',
-				'Run `taskgraph init --yes`; flags such as `--no-git-tasks` or `--no-claude` change its defaults'
+				'init needs a terminal to ask whether to store tasks in Git',
+				'Run `taskgraph init --yes`, or answer it with `--git-tasks` or `--no-git-tasks`'
 			);
 			process.exit(1);
 		}
 
 		displayInitBanner();
 
-		// Claude Code is on unless --no-claude: --yes and the prompt's default
-		// both set it up. --claude, --no-claude or --rules answer the prompt.
-		const claudeAnswered = options.claude !== undefined || rules.length > 0;
-		const answers: InitAnswers = skipPrompts
-			? {
-					initGit: options.git ?? true,
-					// No flag: keep what an earlier init chose, else store tasks in Git
-					storeTasksInGit: resolveStoreTasksInGit(
-						projectRoot,
-						options.gitTasks
-					),
-					claudeCode: options.claude !== false,
-					responseLanguage: 'English',
-					// The shell startup file is outside the project: only --aliases
-					aliases: options.aliases === true
-				}
-			: await askInitQuestions(options, claudeAnswered);
+		// No flag: keep what an earlier init chose, else store tasks in Git
+		const gitTasksDefault = resolveStoreTasksInGit(
+			projectRoot,
+			options.gitTasks
+		);
+		// Git storage is the one question (#883); the rest take their defaults,
+		// which the summary says how to change
+		const answers = {
+			initGit: options.git ?? true,
+			storeTasksInGit: askGitTasks
+				? await askStoreTasksInGit(gitTasksDefault)
+				: gitTasksDefault,
+			claudeCode: options.claude !== false,
+			responseLanguage: 'English',
+			// The shell startup file is outside the project: only --aliases
+			aliases: options.aliases === true
+		};
 
 		if (options.dryRun) {
 			const plan = planInit(projectRoot, answers);
@@ -239,29 +228,6 @@ export class InitCommand extends Command {
 			return;
 		}
 
-		// Interactive runs choose models now; --yes keeps the defaults, which
-		// the summary mentions. An import brings its models.
-		if (!options.yes && !result.imported) {
-			console.log('');
-			try {
-				// This same CLI rather than `npx taskgraph`, which can resolve to
-				// a different npm package when TaskGraph isn't installed locally
-				execFileSync(
-					process.execPath,
-					[process.argv[1], 'models', '--setup', '--no-banner'],
-					{ stdio: 'inherit', cwd: projectRoot }
-				);
-				console.log('');
-			} catch {
-				console.warn(
-					chalk.yellow('!'),
-					chalk.yellow(
-						'Model setup did not finish; run `taskgraph models --setup` to retry'
-					)
-				);
-			}
-		}
-
 		if (result.imported) {
 			console.log(
 				`${formatUpstreamImport({
@@ -279,8 +245,7 @@ export class InitCommand extends Command {
 				changes: result.changes,
 				hints: result.hints,
 				alreadySetUp: result.alreadySetUp,
-				claudeCode: answers.claudeCode,
-				defaultModels: Boolean(options.yes)
+				claudeCode: answers.claudeCode
 			})}\n`
 		);
 	}
@@ -306,96 +271,26 @@ export class InitCommand extends Command {
 }
 
 /**
- * Ask what flags didn't answer. Each answer replaces its prompt with one
- * line, so nothing needs confirming at the end.
+ * Ask whether to store tasks in Git, starting on the current choice.
  * @throws {InitCancelled} On Ctrl-C
  */
-async function askInitQuestions(
-	options: InitCommandOptions,
-	claudeAnswered: boolean
-): Promise<InitAnswers> {
+async function askStoreTasksInGit(defaultYes: boolean): Promise<boolean> {
 	const { default: inquirer } = await import('inquirer');
 	const ask = inquirer.createPromptModule({ clearPromptOnDone: true });
-	const cancellable = async <T>(pending: Promise<T>): Promise<T> => {
-		try {
-			return await pending;
-		} catch (error) {
-			if ((error as Error)?.name === 'ExitPromptError') {
-				throw new InitCancelled();
-			}
-			throw error;
-		}
-	};
-	const confirm = async (
-		question: string,
-		shown: string,
-		defaultYes: boolean
-	): Promise<boolean> => {
-		const { answer } = await cancellable(
-			ask<{ answer: boolean }>([
-				{
-					type: 'confirm',
-					name: 'answer',
-					message: question,
-					default: defaultYes
-				}
-			])
-		);
-		console.log(answerLine(shown, answer));
-		return answer;
-	};
-
-	// Nothing to ask when there's already a repository: init won't run git init
-	const initGit =
-		options.git ??
-		(insideGitWorkTree() ||
-			(await confirm(
-				'Initialize a Git repository in project root?',
-				'Initialize a Git repository in project root?',
-				true
-			)));
-	const storeTasksInGit =
-		options.gitTasks ??
-		(await confirm(
-			'Store tasks in Git (tasks.json and tasks/ directory)?',
-			'Store tasks in Git (tasks.json and tasks/ directory)?',
-			true
-		));
-	const claudeCode = claudeAnswered
-		? options.claude !== false
-		: await confirm(
-				'Set up Claude Code integration (CLAUDE.md import)?',
-				'Set up Claude Code integration?',
-				true
-			);
-
-	const { language } = await cancellable(
-		ask<{ language: string }>([
+	const question = 'Store tasks in Git (tasks.json and tasks/ directory)?';
+	try {
+		const { answer } = await ask<{ answer: boolean }>([
 			{
-				type: 'input',
-				name: 'language',
-				message: 'Language for AI responses',
-				default: 'English'
+				type: 'confirm',
+				name: 'answer',
+				message: question,
+				default: defaultYes
 			}
-		])
-	);
-	const responseLanguage = language.trim() || 'English';
-	console.log(
-		`${theme.brand('Language for AI responses?')} ${chalk.dim(terminalSafe(responseLanguage))}`
-	);
-
-	// The shell startup file is outside the project, so ask first, with No
-	// as the default, unless --aliases or --no-aliases answered
-	let aliases = options.aliases === true;
-	const rcFile = options.aliases === undefined ? aliasMissingFile() : null;
-	if (rcFile) {
-		const shown = terminalSafe(displayPath(rcFile));
-		aliases = await confirm(
-			`Add a tm alias for taskgraph to ${shown}?`,
-			`Add a tm alias to ${shown}?`,
-			false
-		);
+		]);
+		console.log(`${answerLine(question, answer)}\n`);
+		return answer;
+	} catch (error) {
+		if ((error as Error)?.name === 'ExitPromptError') throw new InitCancelled();
+		throw error;
 	}
-
-	return { initGit, storeTasksInGit, claudeCode, responseLanguage, aliases };
 }

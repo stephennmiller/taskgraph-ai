@@ -146,4 +146,28 @@ describe('init and the Claude Code integration', () => {
 		expect(result.stderr).toContain('taskgraph init --yes');
 		expect(fs.readdirSync(dir)).toEqual([]);
 	});
+
+	it('--no-git-tasks answers the only question, so no terminal is needed', () => {
+		const result = spawnSync(
+			'node',
+			[getCliBinPath(), 'init', '--no-git-tasks', '--no-git'],
+			{
+				cwd: dir,
+				encoding: 'utf8',
+				input: '',
+				timeout: 60000,
+				env: {
+					...process.env,
+					HOME: home,
+					FORCE_COLOR: '0',
+					TASKGRAPH_SKIP_AUTO_UPDATE: '1'
+				}
+			}
+		);
+
+		expect(result.status).toBe(0);
+		expect(exists('CLAUDE.md')).toBe(true);
+		expect(result.stdout).toContain('Next: taskgraph add-task');
+		expect(result.stdout).not.toContain('Next steps');
+	});
 });
