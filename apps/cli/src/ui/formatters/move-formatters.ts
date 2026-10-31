@@ -14,7 +14,7 @@
  *     --ignore-dependencies (or restore them first, when archived)
  */
 
-import type { CrossTagConflict } from '@tm/core';
+import { type CrossTagConflict, crossTagConflictFixes } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import { terminalSafe } from './markdown-formatters.js';
@@ -73,13 +73,13 @@ export function formatCrossTagConflictHint(
 	moveTo: string,
 	sourceTag: string
 ): string {
-	const restore = `\`taskgraph archive restore <id> --tag=${terminalSafe(sourceTag)}\``;
-	const archived = conflicts.filter((conflict) => conflict.archived).length;
-	if (archived === conflicts.length) {
-		return `Archived tasks can't move: drop them with \`taskgraph move ${moveTo} --ignore-dependencies\`, or restore them first with ${restore}`;
+	const restoreStep = `\`taskgraph archive restore <id> --tag=${terminalSafe(sourceTag)}\``;
+	const { moveAlong, restore } = crossTagConflictFixes(conflicts);
+	if (!moveAlong) {
+		return `Archived tasks can't move: drop them with \`taskgraph move ${moveTo} --ignore-dependencies\`, or restore them first with ${restoreStep}`;
 	}
 	const hint = `Move them too: \`taskgraph move ${moveTo} --with-dependencies\` (tasks that depend on them go in --from), or drop them with --ignore-dependencies`;
-	return archived > 0
-		? `${hint}. Archived ones can't move until restored: ${restore}`
+	return restore
+		? `${hint}. Archived ones can't move until restored: ${restoreStep}`
 		: hint;
 }
