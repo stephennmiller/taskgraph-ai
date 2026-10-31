@@ -2,7 +2,8 @@ import { execFile } from 'node:child_process';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GhCliClient } from './gh-cli-client.js';
 
-vi.mock('node:child_process', () => ({ execFile: vi.fn() }));
+// git-utils, where runGh lives, also promisifies exec at load
+vi.mock('node:child_process', () => ({ exec: vi.fn(), execFile: vi.fn() }));
 
 const execFileMock = vi.mocked(execFile) as unknown as ReturnType<typeof vi.fn>;
 const stdinEnd = vi.fn();
