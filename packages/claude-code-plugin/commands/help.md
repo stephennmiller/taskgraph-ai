@@ -1,61 +1,52 @@
 ---
-description: "TaskGraph: list the TaskGraph commands and what each does."
+description: "TaskGraph: list the TaskGraph slash commands, grouped like the CLI's --help."
 argument-hint: "[command]"
 ---
 
-Show the TaskGraph slash commands.
+Show the TaskGraph slash commands. Each is named after the `taskgraph` CLI command it runs, except `to-done` and `project-status`, which do more than one CLI command.
 
 Arguments: $ARGUMENTS
 
-If the arguments name a command in the list below, read its line and run `taskgraph <cli-command> --help` for its CLI flags (for example `taskgraph expand --help` for `expand-task`), and show that output unchanged. Otherwise show this list as it is:
+If the arguments name a command in the list below, read its line and run `taskgraph <command> --help` for its CLI flags (for `to-done` and `project-status`, `taskgraph set-status --help` and `taskgraph prime --help`), and show that output unchanged. Otherwise show this list as it is:
 
 ```
-Start
-  /taskgraph:install-taskgraph [--quick]   Install the taskgraph CLI
-  /taskgraph:init-project [--quick]        Set up TaskGraph in this project
-  /taskgraph:view-models                   Show the AI models in use
-  /taskgraph:setup-models                  Choose the AI models
-
-Plan
-  /taskgraph:parse-prd <file>              Turn a PRD into tasks, gaps first
-  /taskgraph:parse-prd-with-research       Same, with web research
-  /taskgraph:analyze-complexity            Score tasks, say which to split
-  /taskgraph:complexity-report             Show the complexity report
-  /taskgraph:expand-task <id>              Break one task into subtasks
-  /taskgraph:expand-all-tasks              Break down every task without any
-
-See
-  /taskgraph:next-task                     The next task to work on
-  /taskgraph:show-task <id>                One task in full
-  /taskgraph:list-tasks [status]           All tasks, or one status
+Daily workflow
+  /taskgraph:next                          The next task to work on
+  /taskgraph:show <id>                     One task in full
+  /taskgraph:list [status]                 All tasks, or one status
   /taskgraph:project-status                Progress, work in hand, bottlenecks
-  /taskgraph:graph [id]                    Tasks as a dependency tree
-  /taskgraph:why <id>                      Why a task is blocked
-
-Work
-  /taskgraph:to-in-progress <id>           Start a task
+  /taskgraph:set-status <id> <status>      Start a task, or set any status
   /taskgraph:to-done <id>                  Check the criteria and close a task
-  /taskgraph:set-status <id> <status>      Set any other status
-
-Edit
   /taskgraph:add-task <text>               Add a task
+  /taskgraph:loop [n]                      Have Claude Code work the tasks
+
+Setup
+  /taskgraph:init [--quick]                Install the CLI, set up this project
+  /taskgraph:models [setup]                Show or choose the AI models
+
+Create & update
+  /taskgraph:parse-prd <file> [research]   Turn a PRD into tasks, gaps first
+  /taskgraph:update <id> <changes>         Rewrite every task from an ID onward
   /taskgraph:update-task <id> <changes>    Rewrite one task
-  /taskgraph:update-tasks-from-id <id>     Rewrite every task from an ID onward
+  /taskgraph:note <id> <text>              Log a progress note, as written
+  /taskgraph:add-subtask <id> <title>      Add a subtask, or move a task under
   /taskgraph:remove-task <id>              Delete a task
-  /taskgraph:add-subtask <id> <title>      Add a subtask
-  /taskgraph:convert-task-to-subtask       Move a task under another
   /taskgraph:remove-subtask <id>           Delete a subtask, or make it a task
   /taskgraph:clear-subtasks <id>           Delete all of a task's subtasks
   /taskgraph:sync-readme                   Write the task list into README.md
 
-Dependencies
+Analyze & expand
+  /taskgraph:analyze-complexity            Score tasks, say which to split
+  /taskgraph:complexity-report             Show the complexity report
+  /taskgraph:expand <id>|all               Break tasks into subtasks
+
+Organize
+  /taskgraph:graph [id]                    Tasks as a dependency tree
+  /taskgraph:why <id>                      Why a task is blocked
   /taskgraph:add-dependency <id> <id>      Make a task wait on another
   /taskgraph:remove-dependency <id> <id>   Remove a dependency
   /taskgraph:validate-dependencies         Check for broken or circular links
   /taskgraph:fix-dependencies              Repair what it can
-
-To have Claude Code work the tasks one after another, run taskgraph loop in a
-terminal (--prompt tdd for test-first, --parallel <n> for independent tasks).
 ```
 
-Start with `/taskgraph:next-task`. In a project with no tasks yet, start with `/taskgraph:init-project` and `/taskgraph:parse-prd`.
+Then, in one sentence, suggest `/taskgraph:next` to find what to work on. In a project with no tasks yet, start with `/taskgraph:init` and `/taskgraph:parse-prd`.

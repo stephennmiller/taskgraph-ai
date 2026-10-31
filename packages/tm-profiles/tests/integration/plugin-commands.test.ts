@@ -22,41 +22,37 @@ const flagsByCommand = cliSurface((file) =>
 const body = (name: string) =>
 	readFileSync(join(commandsDir, `${name}.md`), 'utf-8');
 
-// The plugin is the only slash-command channel (#169): these files are canonical
+// The plugin is the only slash-command channel (#169): these files are canonical.
+// Each is named after the CLI command it runs (#884), except to-done and project-status
 const EXPECTED_COMMANDS = [
 	'parse-prd',
-	'parse-prd-with-research',
 	'analyze-complexity',
 	'complexity-report',
-	'expand-task',
-	'expand-all-tasks',
+	'expand',
 	'add-task',
 	'add-subtask',
 	'remove-task',
 	'remove-subtask',
 	'clear-subtasks',
-	'convert-task-to-subtask',
 	'add-dependency',
 	'remove-dependency',
 	'fix-dependencies',
 	'validate-dependencies',
-	'setup-models',
-	'view-models',
-	'install-taskgraph',
-	'init-project',
-	'show-task',
+	'models',
+	'init',
+	'show',
 	'graph',
 	'why',
-	'list-tasks',
+	'list',
 	'project-status',
-	'next-task',
+	'next',
 	'help',
 	'set-status',
 	'to-done',
-	'to-in-progress',
 	'update-task',
-	'update-tasks-from-id',
-	'tm-main',
+	'update',
+	'note',
+	'loop',
 	'sync-readme'
 ];
 
@@ -75,37 +71,77 @@ describe('plugin command files', () => {
 });
 
 describe('merged plugin commands', () => {
-	it('list-tasks covers status and subtask listing', () => {
-		expect(body('list-tasks')).toContain('taskgraph list --status=');
-		expect(body('list-tasks')).toContain('taskgraph list --with-subtasks');
+	it('list covers status and subtask listing', () => {
+		expect(body('list')).toContain('taskgraph list --status=');
+		expect(body('list')).toContain('taskgraph list --with-subtasks');
 	});
 
-	it('init-project covers the quick form', () => {
-		expect(body('init-project')).toContain('taskgraph init -y');
-		expect(body('init-project')).toContain('--quick');
-	});
-
-	it('install-taskgraph covers the quick form', () => {
-		expect(body('install-taskgraph')).toContain('--quick');
-		expect(body('install-taskgraph')).toContain(
+	it('init installs the CLI and covers the quick form', () => {
+		expect(body('init')).toContain('taskgraph init -y');
+		expect(body('init')).toContain('--quick');
+		expect(body('init')).toContain(
 			'taskgraph --version 2>/dev/null || npm install -g taskgraph-ai'
+		);
+		expect(body('init')).toContain('taskgraph doctor');
+	});
+
+	it('models shows the models by default and sets them when asked', () => {
+		expect(body('models')).toMatch(/With no arguments[\s\S]*Stop here/);
+		expect(body('models')).toContain('taskgraph models --set-main <model>');
+	});
+
+	it('expand covers one task and all of them', () => {
+		expect(body('expand')).toContain('taskgraph expand --id=<id>');
+		expect(body('expand')).toContain('taskgraph expand --all');
+	});
+
+	it('parse-prd takes research as an argument', () => {
+		expect(body('parse-prd')).toContain('`research` → `--research`');
+	});
+
+	it('set-status covers starting a task', () => {
+		expect(body('set-status')).toContain('taskgraph next --claim');
+		expect(body('set-status')).toMatch(
+			/For `in-progress`, run `taskgraph show <id>`/
 		);
 	});
 
-	it('list-tasks passes blocked as a status, apart from unmet dependencies', () => {
-		expect(body('list-tasks')).toContain('taskgraph list --status=blocked');
-		expect(body('list-tasks')).toContain('unmet dependencies');
+	it('add-subtask also moves an existing task under the parent', () => {
+		expect(body('add-subtask')).toContain(
+			'taskgraph add-subtask --parent=<parent-id> --task-id=<task-id>'
+		);
+	});
+
+	it('list passes blocked as a status, apart from unmet dependencies', () => {
+		expect(body('list')).toContain('taskgraph list --status=blocked');
+		expect(body('list')).toContain('unmet dependencies');
 	});
 
 	it('update-task points bulk and status changes at the right commands', () => {
-		expect(body('update-task')).toContain('/taskgraph:update-tasks-from-id');
+		expect(body('update-task')).toContain('/taskgraph:update`');
 		expect(body('update-task')).toContain('/taskgraph:set-status');
 	});
 
+	it('loop runs with --trust only after the user agrees', () => {
+		expect(body('loop')).toMatch(
+			/go on only once they agree\. Then add `--trust`/
+		);
+		expect(body('loop')).not.toMatch(/^\s*taskgraph loop .*--trust/m);
+	});
+
+	it('loop keeps parallel apart from the flags the CLI refuses with it', () => {
+		expect(body('loop')).toContain(
+			'`loop` refuses it with a number, a task ID, a preset or `sandbox`'
+		);
+	});
+
+	it('note passes the text in single quotes after --', () => {
+		expect(body('note')).toContain("taskgraph note <id> -- '<note>'");
+	});
+
 	it.each([
-		['list-tasks', '[status] [--subtasks]'],
-		['init-project', '[--quick] [<prd-file>]'],
-		['install-taskgraph', '[--quick]'],
+		['list', '[status] [--subtasks]'],
+		['init', '[--quick] [<prd-file>]'],
 		['update-task', '<task ID> <changes>']
 	])('%s declares its argument hint', (name, hint) => {
 		expect(body(name)).toContain(`argument-hint: "${hint}"`);
@@ -378,35 +414,31 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		'analyze-complexity': 'analyze-complexity',
 		'clear-subtasks': 'clear-subtasks',
 		'complexity-report': 'complexity-report',
-		'convert-task-to-subtask': 'add-subtask',
-		'expand-all-tasks': 'expand',
-		'expand-task': 'expand',
+		expand: 'expand',
 		'fix-dependencies': 'fix-dependencies',
 		graph: 'graph',
-		'init-project': 'init',
-		'install-taskgraph': '--version',
-		'list-tasks': 'list',
-		'next-task': 'next',
+		init: 'init',
+		list: 'list',
+		loop: 'loop',
+		models: 'models',
+		next: 'next',
+		note: 'note',
 		'parse-prd': 'parse-prd',
-		'parse-prd-with-research': 'parse-prd',
 		'project-status': 'prime',
 		'remove-dependency': 'remove-dependency',
 		'remove-subtask': 'remove-subtask',
 		'remove-task': 'remove-task',
 		'set-status': 'set-status',
-		'setup-models': 'models',
-		'show-task': 'show',
+		show: 'show',
 		'sync-readme': 'sync-readme',
 		'to-done': 'set-status',
-		'to-in-progress': 'set-status',
 		'update-task': 'update-task',
-		'update-tasks-from-id': 'update',
+		update: 'update',
 		'validate-dependencies': 'validate-dependencies',
-		'view-models': 'models',
 		why: 'why'
 	};
-	// Lists of the slash commands, not tied to one CLI command
-	const REFERENCES = ['help', 'tm-main'];
+	// The list of the slash commands, not tied to one CLI command
+	const REFERENCES = ['help'];
 
 	it('knows which CLI command every slash command runs', () => {
 		const unmapped = names.filter(
@@ -438,10 +470,13 @@ describe('command bodies run the CLI instead of asking for untracked data', () =
 		expect(names.filter((name) => !listed.has(name))).toEqual(REFERENCES);
 	});
 
-	it('tm-main shows the same list as help', () => {
-		const list = (name: string) => body(name).match(/```\n[\s\S]*?```/)?.[0];
-
-		expect(list('tm-main')).toBeDefined();
-		expect(list('tm-main')).toBe(list('help'));
+	it('every slash command but to-done and project-status is a CLI command', () => {
+		expect(
+			names.filter(
+				(name) =>
+					!flagsByCommand.has(name) &&
+					!['to-done', 'project-status'].includes(name)
+			)
+		).toEqual([]);
 	});
 });

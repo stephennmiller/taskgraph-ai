@@ -9,7 +9,7 @@ Usage: `/taskgraph:set-status <id> <status>`
 
 Arguments: $ARGUMENTS (task ID, then status)
 
-`/taskgraph:to-in-progress <id>` and `/taskgraph:to-done <id>` are the shortcuts for the two most common changes; `to-done` checks the acceptance criteria first. Use this command for every other status:
+To close a task, `/taskgraph:to-done <id>` checks its acceptance criteria against your changes first. Use this command for every status:
 
 - `pending` - not started, or moved back to the start
 - `in-progress` - being worked on
@@ -28,10 +28,13 @@ Use the ID only when it is digits and dots (`3`, `3.2`, or several as `3,4`). If
    ```
 
    For `done`, `set-status` refuses while acceptance criteria are unchecked and lists them. Report that; pass `--force` only when the user says so.
+
+   For `in-progress` with no ID, ask which task, or whether to take the next one: `taskgraph next --claim` starts the task `next` picks.
 2. For `deferred`, `cancelled` or `blocked`, save the user's reason on the task, in single quotes with any `'` written as `'\''`. `note` takes one ID, so run it once per task. The `--` stops a reason that starts with `-` from being read as a flag (`--file=...` would read a file into the note):
 
    ```bash
    taskgraph note <id> -- '<reason>'
    ```
 
-3. Show the `set-status` output unchanged, then suggest `taskgraph next` for what to work on now.
+3. Show the `set-status` output unchanged.
+4. For `in-progress`, run `taskgraph show <id>` and show its output unchanged in a code block. Then, in one or two sentences, point out any dependency that isn't done (`/taskgraph:why <id>`) and the acceptance criteria the work has to meet; when the work is finished, close it with `/taskgraph:to-done <id>`. For any other status, suggest `taskgraph next` for what to work on now.

@@ -8,8 +8,10 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const commandsDir = join(repoRoot, 'packages/claude-code-plugin/commands');
 
 /**
- * Slash commands that were merged or renamed (#170, #171, #244) or never existed.
- * They must not be referenced anywhere: there are no aliases.
+ * Slash commands that were merged or renamed (#170, #171, #244, #884) or never
+ * existed. They must not be referenced anywhere: there are no aliases. Renamed
+ * names that are also file or anchor names elsewhere (next-task, expand-task,
+ * expand-all-tasks, list-tasks, show-task) are caught by the /taskgraph: reference check below.
  */
 const REMOVED_COMMANDS = [
 	'list-tasks-by-status',
@@ -25,7 +27,16 @@ const REMOVED_COMMANDS = [
 	'remove-all-subtasks',
 	'clear-all-subtasks',
 	'generate-tasks',
-	'analyze-project'
+	'analyze-project',
+	'tm-main',
+	'install-taskgraph',
+	'init-project',
+	'setup-models',
+	'view-models',
+	'update-tasks-from-id',
+	'parse-prd-with-research',
+	'to-in-progress',
+	'convert-task-to-subtask'
 ];
 
 /** Slash-command prefixes that no longer exist: the plugin namespace is /taskgraph: */
