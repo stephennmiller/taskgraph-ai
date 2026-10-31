@@ -299,6 +299,7 @@ export class NextCommand extends Command {
 			formatTaskDetail(result.task, {
 				id: String(result.task.id),
 				checklist: result.checklist,
+				rawText: !process.stdout.isTTY,
 				fence: fencesTaskData()
 			})
 		);

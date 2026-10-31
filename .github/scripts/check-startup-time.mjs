@@ -15,7 +15,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 // dozens of times a session, so startup time is paid on every command.
 // Shared runners are noisy: each command runs several times, and the median
 // is compared to a budget well above what a laptop measures (about 40 ms for
-// --version, 160 ms for list and next). Before #248 every command took 1.6 s.
+// --version, 160 ms for list, next and show). Before #248 every command took 1.6 s.
 // It also fails when a command imports a package in HEAVY_PACKAGES, which a
 // fast runner could absorb within the budget.
 
@@ -23,11 +23,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const BUDGETS = [
 	{ args: ['--version'], budgetMs: 200 },
 	{ args: ['list'], budgetMs: 400 },
-	{ args: ['next'], budgetMs: 400 }
+	{ args: ['next'], budgetMs: 400 },
+	{ args: ['show', '1'], budgetMs: 400 }
 ];
 
 /**
- * Packages that `list` and `next` must not load: the AI SDKs, markdown
+ * Packages that the commands in BUDGETS must not load: the AI SDKs, markdown
  * rendering, prompts and the MCP server. The timing budgets catch them on a
  * fast runner; this catches them deterministically, including when rolldown
  * moves a @tm/core module into a lazy chunk that loads one of them.
@@ -81,14 +82,19 @@ export function median(values) {
 	return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-/** A tagged tasks.json with `count` tasks, each depending on the one before. */
+/**
+ * A tagged tasks.json with `count` tasks, each depending on the one before.
+ * Task text has markdown and HTML, as real tasks do, so `next` and `show`
+ * reach the code that would render it in a terminal (#836).
+ */
 export function buildFixtureTasks(count) {
 	const statuses = ['done', 'in-progress', 'pending', 'pending'];
 	const tasks = Array.from({ length: count }, (_, i) => ({
 		id: i + 1,
 		title: `Task ${i + 1}`,
-		description: `Fixture task ${i + 1} for the startup time check`,
-		details: '',
+		description: `Fixture task ${i + 1} for the \`startup-time\` check`,
+		details:
+			'Steps:\n- Build with `npm run build`\n- Time **each** command\n\n<p>Saved as <em>HTML</em></p>',
 		testStrategy: '',
 		status: statuses[i % statuses.length],
 		dependencies: i === 0 ? [] : [i],

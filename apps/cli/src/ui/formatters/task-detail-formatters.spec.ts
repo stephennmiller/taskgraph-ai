@@ -522,6 +522,20 @@ describe('formatTaskDetail', () => {
 		expect(plain(output)).toMatch(/Set .*title/);
 	});
 
+	it('prints task text as written with rawText, for a pipe (#836)', () => {
+		const task = createTask({
+			id: 9,
+			title: 'Piped',
+			description: 'Run `taskgraph next` first',
+			details: '- **one**\n- <em>two</em>'
+		});
+
+		const output = plain(formatTaskDetail(task, { width: 80, rawText: true }));
+
+		expect(output).toContain('\nRun `taskgraph next` first\n');
+		expect(output).toContain('Details\n  - **one**\n  - <em>two</em>');
+	});
+
 	it('renders HTML task text as plain text', () => {
 		const task = createTask({
 			id: 4,
