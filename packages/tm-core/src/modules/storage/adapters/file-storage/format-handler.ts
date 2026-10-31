@@ -4,6 +4,7 @@
 
 import type { Task, TaskMetadata } from '../../../../common/types/index.js';
 import { normalizeTaskStatuses } from '../../../tasks/utils/legacy-status.js';
+import { isTagObject } from './schema-version.js';
 import { buildTagMetadata } from './tag-update.js';
 
 export interface FileStorageData {
@@ -12,6 +13,15 @@ export interface FileStorageData {
 }
 
 export type FileFormat = 'legacy' | 'standard';
+
+/**
+ * Whether a top-level key of tasks.json is a tag. `tasks` and `metadata` are
+ * the untagged file's fields unless they hold a tag, which versions before
+ * #802 could create
+ */
+function isTagKey(data: any, key: string): boolean {
+	return (key !== 'tasks' && key !== 'metadata') || isTagObject(data[key]);
+}
 
 /**
  * Handles format detection and conversion between legacy and standard task file formats
@@ -25,15 +35,10 @@ export class FormatHandler {
 			return 'standard';
 		}
 
-		const keys = Object.keys(data);
-
-		// Check if this uses the legacy format with tag keys
-		// Legacy format has keys that are not 'tasks' or 'metadata'
-		const hasLegacyFormat = keys.some(
-			(key) => key !== 'tasks' && key !== 'metadata'
-		);
-
-		return hasLegacyFormat ? 'legacy' : 'standard';
+		// Tagged ('legacy') when any top-level key is a tag
+		return Object.keys(data).some((key) => isTagKey(data, key))
+			? 'legacy'
+			: 'standard';
 	}
 
 	/**
@@ -65,8 +70,8 @@ export class FormatHandler {
 		}
 
 		// If we're looking for 'master' tag but it doesn't exist, try the first available tag
-		const availableKeys = Object.keys(data).filter(
-			(key) => key !== 'tasks' && key !== 'metadata'
+		const availableKeys = Object.keys(data).filter((key) =>
+			isTagKey(data, key)
 		);
 		if (tag === 'master' && availableKeys.length > 0) {
 			const firstTag = availableKeys[0];
@@ -118,8 +123,8 @@ export class FormatHandler {
 		}
 
 		// If we're looking for 'master' tag but it doesn't exist, try the first available tag
-		const availableKeys = Object.keys(data).filter(
-			(key) => key !== 'tasks' && key !== 'metadata'
+		const availableKeys = Object.keys(data).filter((key) =>
+			isTagKey(data, key)
 		);
 		if (tag === 'master' && availableKeys.length > 0) {
 			const firstTag = availableKeys[0];
@@ -151,9 +156,7 @@ export class FormatHandler {
 		const format = this.detectFormat(data);
 
 		if (format === 'legacy') {
-			// Return all tag keys from legacy format
-			const keys = Object.keys(data);
-			return keys.filter((key) => key !== 'tasks' && key !== 'metadata');
+			return Object.keys(data).filter((key) => isTagKey(data, key));
 		}
 
 		// Standard format - just has 'master' tag

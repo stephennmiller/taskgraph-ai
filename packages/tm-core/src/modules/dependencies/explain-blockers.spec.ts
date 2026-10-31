@@ -395,6 +395,64 @@ describe('explainBlockers', () => {
 			]);
 		});
 
+		describe("a loop through a subtask's own parent (#803)", () => {
+			// 3.1 needs 4, 4 needs 3, and 3 can't finish before 3.1
+			const tasks = [
+				task('3', [], 'pending', [sub(1, ['4']), sub(2)]),
+				task('4', ['3'])
+			];
+			const loop = (from: string, to: string) => [
+				expect.objectContaining({
+					kind: 'cycle',
+					cycle: ['3', '3.1', '4'],
+					edges: [{ from, to }]
+				})
+			];
+
+			it('reports the loop for the subtask, not "do the parent"', () => {
+				const result = explainBlockers(tasks, '3.1');
+
+				expect(shape(result.blockers)).toEqual([['4', [['3:cycle']]]]);
+				expect(result.rootCauses).toEqual(loop('4', '3'));
+			});
+
+			it('reports it for the task waiting on the parent', () => {
+				const result = explainBlockers(tasks, '4');
+
+				// Only the subtask in the loop is drawn, not 3.2
+				expect(shape(result.blockers)).toEqual([
+					['3', [['3.1', [['4:cycle']]]]]
+				]);
+				expect(result.rootCauses).toEqual(loop('3.1', '4'));
+			});
+
+			it('leaves a parent with no loop through it as work to do', () => {
+				const result = explainBlockers(
+					[task('3', [], 'pending', [sub(1)]), task('4', ['3'])],
+					'4'
+				);
+
+				expect(shape(result.blockers)).toEqual([['3:ready']]);
+			});
+
+			it('names a real dependency when the subtask lists the parent', () => {
+				// 3.1 lists 3, so 3 doesn't wait on 3.1; it waits on 3.2, which
+				// needs 3.1
+				const result = explainBlockers(
+					[task('3', [], 'pending', [sub(1, ['3']), sub(2, [1])])],
+					'3.2'
+				);
+
+				expect(result.rootCauses).toEqual([
+					expect.objectContaining({
+						kind: 'cycle',
+						cycle: ['3', '3.1', '3.2'],
+						edges: [{ from: '3.1', to: '3' }]
+					})
+				]);
+			});
+		});
+
 		it("does not count a task's own subtask as its blocker (#658)", () => {
 			const result = explainBlockers(
 				[task('1'), task('2', ['1', '2.1'], 'pending', [sub(1)])],

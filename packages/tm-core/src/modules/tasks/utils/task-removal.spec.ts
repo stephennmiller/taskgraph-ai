@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { Task } from '../../../common/types/index.js';
+import { validateTaskDependencies } from '../../dependencies/dependency-check.js';
 import {
 	clearSubtasksIn,
 	previewTaskRemoval,
@@ -107,6 +108,16 @@ describe('removeTasksIn', () => {
 		expect(result.removedTaskNumbers).toEqual([]);
 	});
 
+	it('drops references to a subtask named with a leading zero (#805)', () => {
+		const tasks = tasksOf();
+
+		const result = removeTasksIn(asTasks(tasks), ['2.02'], 'master', none);
+
+		expect(tasks[2].dependencies).toEqual([1]);
+		expect(tasks[2].metadata.taskLinks).toEqual({ 1: 'related', 7: 'related' });
+		expect(result.danglingDependents).toBe(0);
+	});
+
 	it('changes nothing when any ID names nothing', () => {
 		const tasks = tasksOf();
 
@@ -198,8 +209,8 @@ describe('removeSubtasksIn', () => {
 			description: 'Two.2',
 			details: '',
 			status: 'done',
-			// Sibling 2.1 is now the full ID, task 1 as it was, then the old parent
-			dependencies: ['2.1', '1', '2'],
+			// Sibling 2.1 is now the full ID, task 1 as it was; not the old parent
+			dependencies: ['2.1', '1'],
 			priority: 'high',
 			metadata: {
 				owner: 'kim',
@@ -209,6 +220,33 @@ describe('removeSubtasksIn', () => {
 		expect(tasks.at(-1)).toBe(converted);
 		// What depended on the subtask now depends on the task
 		expect(tasks[2].dependencies).toEqual([1, 9]);
+	});
+
+	it("doesn't make the new task wait on its old parent, which would loop (#803)", () => {
+		const sub = (id: number, dependencies: number[]) => ({
+			id,
+			title: `One.${id}`,
+			status: 'pending',
+			dependencies
+		});
+		const tasks = asTasks([
+			{
+				id: 1,
+				title: 'One',
+				status: 'pending',
+				dependencies: [],
+				subtasks: [sub(1, []), sub(2, [1]), sub(3, [2])]
+			}
+		] as Raw[]);
+
+		const [converted] = removeSubtasksIn(tasks, ['1.2'], {
+			...options,
+			convert: true
+		}) as Raw[];
+
+		expect(converted.dependencies).toEqual(['1.1']);
+		// 1.3 now waits on the new task, which doesn't wait on task 1
+		expect(validateTaskDependencies(tasks).issues).toEqual([]);
 	});
 
 	// The service saves nothing when this throws

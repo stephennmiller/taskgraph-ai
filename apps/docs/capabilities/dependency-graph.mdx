@@ -38,9 +38,9 @@ On a top-level task there is no sibling to name: a number or a plain string is a
 A subtask is part of its parent, so the analysis links them both ways:
 
 - **A subtask waits on what its parent waits on.** If task 3 depends on task 2, subtask 3.1 can't start before task 2 is done either, even though 3.1 lists nothing. `why`, `next`, the critical path, bottleneck counts and loop checks all follow this. A parent's dependency on one of its own subtasks is not passed down.
-- **A parent isn't finished until its subtasks are.** The critical path orders a parent after its open subtasks, so a chain can run `1 → 3.1 → 3.2 → 3 → 5`. A subtask that lists its own parent keeps that dependency, and the parent is then not ordered after it.
+- **A parent isn't finished until its subtasks are.** The critical path orders a parent after its open subtasks, so a chain can run `1 → 3.1 → 3.2 → 3 → 5`. A subtask that lists its own parent keeps that dependency, and the parent is then not ordered after it. Loop checks follow this too: if task 4 depends on task 3, subtask 3.1 can't depend on task 4, because 3 can't finish before 3.1. `validate-dependencies`, `why` and the `cycles` of `dependency_analysis` report such a loop, and `add-dependency` and `add-subtask` refuse to make one.
 
-`validate-dependencies` and `fix-dependencies` check only the dependencies written on each task and subtask, so they don't report a loop that only exists through a parent (task 2 needs 4, and 4 needs 2.1). `why` and the `cycles` of `dependency_analysis` do.
+`fix-dependencies` only breaks loops made of dependencies written on subtasks. A loop through a parent (task 2 needs 4, and 4 needs 2.1) is reported for you to break with `remove-dependency`.
 
 ## `taskgraph graph`
 
@@ -238,7 +238,7 @@ Everything in `dependencies` is a `blocks` link, so files written before link ty
 
 Each tag in `.taskgraph/tasks/tasks.json` records `metadata.schemaVersion` (currently `2`), stamped whenever TaskGraph saves the tag, from any command, and in the empty file `init` creates. A missing or malformed value is read as version 1. A tag written by a newer version, or with a malformed `schemaVersion`, prints a warning to stderr once per file and tag, and is still read. The stamp never lowers a version already on disk.
 
-Version 2 saves each subtask's `id` as a string (`"2"`), as task IDs are. A version 1 file, with numeric subtask IDs, loads as it did and is saved in the new form the next time TaskGraph writes it. An older TaskGraph still reads a version 2 file, with a warning that the version is newer than it understands.
+Version 2 saves each subtask's `id` as a string (`"2"`), as task IDs are. A version 1 file, with numeric subtask IDs, loads as it did and is saved in the new form the next time TaskGraph writes it. A subtask `id` some older files hold with its parent's prefix (`"3.2"` on task 3) loads as its own number (`"2"`) and is saved that way too, unless another subtask of that task already has that number. An older TaskGraph still reads a version 2 file, with a warning that the version is newer than it understands.
 
 ## MCP
 
