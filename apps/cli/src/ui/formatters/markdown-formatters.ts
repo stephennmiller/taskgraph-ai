@@ -131,6 +131,16 @@ function getTurndownService(): TurndownService {
 	return turndownService;
 }
 
+/** Undo escaped newlines, tabs and quotes in stored task text */
+function unescapeStored(content: string): string {
+	// Order matters: handle escaped backslashes first
+	return content
+		.replace(/\\\\/g, '\\')
+		.replace(/\\n/g, '\n')
+		.replace(/\\t/g, '\t')
+		.replace(/\\"/g, '"');
+}
+
 /**
  * Turn stored task text into markdown: undo escaped newlines, tabs and
  * quotes, and convert HTML (tiptap) to markdown.
@@ -138,18 +148,35 @@ function getTurndownService(): TurndownService {
 export function toMarkdown(content: string): string {
 	if (!content) return '';
 
-	// Clean up escape characters first - order matters: handle escaped backslashes first
-	const cleaned = content
-		.replace(/\\\\/g, '\\')
-		.replace(/\\n/g, '\n')
-		.replace(/\\t/g, '\t')
-		.replace(/\\"/g, '"');
+	const cleaned = unescapeStored(content);
 
 	// Check if content has HTML tags - if so, convert to markdown first.
 	// turndown decodes entities, so `&#27;[2J` becomes an escape sequence here
 	return /<[^>]+>/.test(cleaned)
 		? terminalSafe(getTurndownService().turndown(cleaned))
 		: cleaned;
+}
+
+/**
+ * Stored task text as written, for a reader on the other end of a pipe:
+ * markdown and HTML left as they are, so marked, marked-terminal and
+ * turndown never load (#836). Long lines wrap to `columns` under their own
+ * indent; lines in a fenced code block don't. HTML entities stay encoded,
+ * so unlike turndown's output they can't turn into escape sequences.
+ */
+export function formatRawText(content: string, columns: number): string {
+	let inFence = false;
+	return terminalSafe(unescapeStored(content))
+		.replace(/^\s*\n/, '')
+		.trimEnd()
+		.split('\n')
+		.flatMap((line) => {
+			const fence = /^\s*(```|~~~)/.test(line);
+			if (fence) inFence = !inFence;
+			if (fence || inFence) return [line];
+			return wrapLine(line, columns, line.match(/^ */)?.[0] ?? '');
+		})
+		.join('\n');
 }
 
 /**

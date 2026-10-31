@@ -1,6 +1,10 @@
 import { stripVTControlCharacters } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { formatMarkdown, renderMarkdown } from './markdown-formatters.js';
+import {
+	formatMarkdown,
+	formatRawText,
+	renderMarkdown
+} from './markdown-formatters.js';
 
 describe('formatMarkdown', () => {
 	// Plain prose skips marked-terminal (#248), so it must come out exactly
@@ -119,5 +123,41 @@ describe('formatMarkdown', () => {
 	])('renders %j through marked', (markdown, expected) => {
 		const output = stripVTControlCharacters(formatMarkdown(markdown, 12));
 		expect(output).toBe(expected);
+	});
+});
+
+describe('formatRawText', () => {
+	it('keeps markdown as written and wraps long lines under their own indent', () => {
+		const text =
+			'\n\nRun `npm test`:\n- **first** step\n  - a nested item long enough to wrap\n';
+
+		expect(formatRawText(text, 24)).toBe(
+			'Run `npm test`:\n- **first** step\n  - a nested item long\n  enough to wrap'
+		);
+	});
+
+	it('leaves lines in a fenced code block unwrapped', () => {
+		const text =
+			'```ts\nconst answer = compute(first, second, third);\n```\nafter the fence, wrapped';
+
+		expect(formatRawText(text, 20).split('\n')).toEqual([
+			'```ts',
+			'const answer = compute(first, second, third);',
+			'```',
+			'after the fence,',
+			'wrapped'
+		]);
+	});
+
+	it('undoes escaped newlines and keeps HTML and its entities as written', () => {
+		expect(formatRawText('<p>Clear &#27;[2J</p>\\nnext', 80)).toBe(
+			'<p>Clear &#27;[2J</p>\nnext'
+		);
+	});
+
+	it('removes escape sequences and control characters', () => {
+		expect(formatRawText('Clear \u001b[2Jscreen\u0007', 80)).toBe(
+			'Clear screen'
+		);
 	});
 });
