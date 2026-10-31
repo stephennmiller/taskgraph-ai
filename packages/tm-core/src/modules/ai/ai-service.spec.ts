@@ -106,6 +106,7 @@ describe('AiService', () => {
 			});
 
 			expect(result.mainResult).toBe('Main provider response');
+			expect(result.role).toBe('main');
 			expect(result).toHaveProperty('telemetryData');
 			expect(host.getRoleModel).toHaveBeenCalledWith('main', fakeProjectRoot);
 			expect(host.getParametersForRole).toHaveBeenCalledWith(
@@ -157,6 +158,8 @@ describe('AiService', () => {
 			});
 
 			expect(result.mainResult).toBe('Research provider response');
+			// Callers that save the reply read this to withdraw loop approval
+			expect(result.role).toBe('research');
 			expect(mockClaudeProvider.generateText).toHaveBeenCalledTimes(3);
 			expect(mockClaudeProvider.generateText).toHaveBeenLastCalledWith(
 				expect.objectContaining({ role: 'research' })

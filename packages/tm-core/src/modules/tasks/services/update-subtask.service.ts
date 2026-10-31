@@ -28,6 +28,7 @@ import {
 import type { ConfigManager } from '../../config/managers/config-manager.js';
 import { withoutReservedMetadata } from '../../dependencies/dependency-provenance.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import type { TaskService } from './task-service.js';
 
 /** How many tasks related to the prompt go into the context */
@@ -226,6 +227,7 @@ export class UpdateSubtaskService {
 			commandName: 'update-subtask',
 			outputType: input.outputType ?? 'cli'
 		});
+		untrustLoopIfResearch(response, projectRoot);
 		const added =
 			typeof response?.mainResult === 'string'
 				? response.mainResult.trim()
