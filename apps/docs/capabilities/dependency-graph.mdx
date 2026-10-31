@@ -185,7 +185,6 @@ Provenance lives in the task's `metadata.dependencySources`, a map from dependen
 - **`dependencySources` is a reserved metadata key.** The `metadata` parameter of the MCP `update_task` and `update_subtask` tools (available only with `TASKGRAPH_ALLOW_METADATA_UPDATES=true`) drops it, so a hand-written value can't overwrite provenance.
 - Marks for a dependency that is removed are dropped with it, and a moved task carries its marks to the new ID.
 - Running `add-dependency` for a dependency that is already inferred makes it explicit.
-- Known limit: when `update-task` regenerates subtasks and the AI reorders them, subtasks are renumbered without remapping their sibling dependencies, so a sibling dependency can change source.
 
 ## Links that don't block
 

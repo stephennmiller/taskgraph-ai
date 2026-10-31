@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Task } from '../../../common/types/index.js';
+import type { Subtask, Task } from '../../../common/types/index.js';
 import { appendNote } from '../utils/notes.js';
-import { mergeRewrite } from './update-task-helpers.js';
+import { keptSubtaskIds, mergeRewrite } from './update-task-helpers.js';
 
 const AT = '2026-10-25T00:00:00.000Z';
 const NOTE = `<info added on ${AT}>\nfound X\n</info added on ${AT}>`;
@@ -93,5 +93,15 @@ describe('mergeRewrite: details appended during the AI call', () => {
 
 		expect(merged.details).toBe('New details');
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('details'));
+	});
+});
+
+describe('keptSubtaskIds', () => {
+	it('gives a new subtask the next whole number, past a dotted ID left as is', () => {
+		const original = [{ id: '1' }, { id: '3.1' }] as Subtask[];
+
+		const ids = keptSubtaskIds(original, [original[1], undefined], 2);
+
+		expect(ids).toEqual(['3.1', '2']);
 	});
 });
