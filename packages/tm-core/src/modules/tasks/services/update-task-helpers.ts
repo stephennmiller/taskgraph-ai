@@ -16,6 +16,7 @@ import {
 	same
 } from '../../git/merge-driver/merge-json-utils.js';
 import { withoutNewLoops } from '../../dependencies/dependency-edges.js';
+import { findDanglingLinks } from '../../dependencies/task-links.js';
 import {
 	assignMetadata,
 	reconcileDependencySources
@@ -261,7 +262,8 @@ export function rewriteSubtasks(
 				id: ids[i],
 				// A number is a sibling; a string is a task or subtask
 				dependencies: cleanGeneratedSubtaskDependencies(deps[i], stored.id),
-				status: subtask.status || 'pending',
+				// A new subtask isn't done yet: a done one renumbered would be saved twice (#869)
+				status: (before && subtask.status) || 'pending',
 				testStrategy: subtask.testStrategy ?? null
 			};
 			keepStoredFields(corrected, before);
@@ -280,7 +282,8 @@ export function rewriteSubtasks(
  * the lock, `now`, became `saved`): drop everything that points at a subtask
  * a rewrite removed (#804, #827), then each dependency a rewrite added that
  * would close a loop (#824, #832), checked against `current`, not the tasks
- * read before the AI call. `warn` is told about each removal and drop (#863)
+ * read before the AI call. `warn` is told about each removal and drop (#863),
+ * links included (#869)
  */
 export function settleRewrites(
 	current: Task[],
@@ -293,18 +296,27 @@ export function settleRewrites(
 			.filter((st) => !kept.has(String(st.id)))
 			.map((st) => fullSubtaskId(saved.id, st.id));
 	});
-	const changed = dropReferences(current, removed);
 	if (removed.length > 0) {
+		const gone = new Set(removed);
+		// dropReferences doesn't say who lost a link, so look before it drops them
+		const linked = [
+			...new Set(
+				findDanglingLinks(current, (id) => !gone.has(id))
+					.filter((link) => gone.has(link.linkedId))
+					.map((link) => link.taskId)
+			)
+		];
+		const changed = dropReferences(current, removed);
 		const [noun, isNot, wasIt, it] =
 			removed.length === 1
 				? ['Subtask', "isn't", 'it was', 'it']
 				: ['Subtasks', "aren't", 'they were', 'them'];
-		const lost =
-			changed.length > 0
-				? `; dependencies on ${it} were dropped from ${changed.join(', ')}`
-				: '';
+		const lost = (what: string, from: string[]) =>
+			from.length > 0 ? `; ${what} were dropped from ${from.join(', ')}` : '';
 		warn(
-			`${noun} ${removed.join(', ')} ${isNot} in the AI's rewrite, so ${wasIt} removed${lost}`
+			`${noun} ${removed.join(', ')} ${isNot} in the AI's rewrite, so ${wasIt} removed` +
+				lost(`dependencies on ${it}`, changed) +
+				lost(`links to ${it}`, linked)
 		);
 	}
 	withoutNewLoops(
