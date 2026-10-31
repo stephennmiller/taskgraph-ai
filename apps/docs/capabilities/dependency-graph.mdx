@@ -239,7 +239,7 @@ Everything in `dependencies` is a `blocks` link, so files written before link ty
 
 Each tag in `.taskgraph/tasks/tasks.json` records `metadata.schemaVersion` (currently `2`), stamped whenever TaskGraph saves the tag, from any command, and in the empty file `init` creates. A missing or malformed value is read as version 1. A tag written by a newer version, or with a malformed `schemaVersion`, prints a warning to stderr once per file and tag, and is still read. The stamp never lowers a version already on disk.
 
-Version 2 saves each subtask's `id` as a string (`"2"`), as task IDs are. A version 1 file, with numeric subtask IDs, loads as it did and is saved in the new form the next time TaskGraph writes it. An older TaskGraph still reads a version 2 file, with a warning that the version is newer than it understands.
+Version 2 saves each subtask's `id` as a string (`"2"`), as task IDs are. A version 1 file, with numeric subtask IDs, loads as it did and is saved in the new form the next time TaskGraph writes it. A subtask `id` some older files hold with its parent's prefix (`"3.2"` on task 3) loads as its own number (`"2"`) and is saved that way too. An older TaskGraph still reads a version 2 file, with a warning that the version is newer than it understands.
 
 ## MCP
 

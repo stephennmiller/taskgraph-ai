@@ -70,6 +70,25 @@ describe('normalizeTaskStatuses', () => {
 		expect(input[0].tag).toBe('renamed-away');
 	});
 
+	it("reads a subtask ID stored with its parent's prefix as its own number (#805)", () => {
+		const input = [
+			createTask({
+				id: '3',
+				title: 'A',
+				subtasks: [
+					createSubtask({ id: '3.2', parentId: '3', title: 'B' }),
+					// Another task's prefix is a reference, not this task's number
+					createSubtask({ id: '4.1', parentId: '3', title: 'C' })
+				]
+			})
+		];
+
+		const [task] = normalizeTaskStatuses(input);
+
+		expect(task.subtasks.map((s) => s.id)).toEqual(['2', '4.1']);
+		expect(input[0].subtasks[0].id).toBe('3.2');
+	});
+
 	it('leaves entries that are not objects for validation to report', () => {
 		const input = [
 			null,
