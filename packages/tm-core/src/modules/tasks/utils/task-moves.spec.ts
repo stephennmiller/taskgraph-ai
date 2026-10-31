@@ -384,13 +384,13 @@ describe('moveTasksBetweenTags', () => {
 			error = e;
 		}
 
-		expect(error?.context.details.conflicts.map((c: any) => c.message)).toEqual(
-			[
-				'Task 3 depends on 2 (in feat)',
-				'Task 3 depends on 9 (in feat)',
-				'Task 3.1 depends on 1 (in feat)'
-			]
-		);
+		expect(
+			error?.context.details.conflicts.map((c: any) => [c.message, c.archived])
+		).toEqual([
+			['Task 3 depends on 2 (in feat)', undefined],
+			['Task 3 depends on 9 (archived in feat)', true],
+			['Task 3.1 depends on 1 (in feat)', undefined]
+		]);
 		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '9']);
 	});
 

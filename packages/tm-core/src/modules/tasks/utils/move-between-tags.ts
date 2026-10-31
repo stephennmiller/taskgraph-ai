@@ -11,7 +11,7 @@ import {
 } from '../../dependencies/dependency-provenance.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { pruneTaskLinks } from '../../dependencies/task-links.js';
-import { liveOrArchived } from './archive.js';
+import { isArchivedReference, liveOrArchived } from './archive.js';
 import { assertTagName, isReservedNewTagName } from './tag-names.js';
 import {
 	type CrossTagConflict,
@@ -164,9 +164,8 @@ First promote it to a full task using:
 		]);
 		// Every tag numbers from 1, so a dependency the source tag has, live or
 		// archived, is that task, not the same ID elsewhere (#801)
-		const inSource = liveOrArchived(source as Task[], () =>
-			archivedIds(sourceTag)
-		);
+		const liveInSource = liveOrArchived(source as Task[], new Set());
+		const sourceArchived = archivedIds(sourceTag);
 		for (const { item, id, parentId } of holders) {
 			const holderMoved = isMoved(id);
 			const deps: unknown[] = [];
@@ -177,13 +176,17 @@ First promote it to a full task using:
 						? String(dep)
 						: resolveSubtaskDependency(parentId, dep);
 				if (holderMoved && !isMoved(full)) {
-					const tag = inSource(full) ? sourceTag : dependencyTag(full, tags);
+					const live = liveInSource(full);
+					const archived = !live && isArchivedReference(full, sourceArchived);
+					const tag = live || archived ? sourceTag : dependencyTag(full, tags);
 					if (tag !== undefined && tag !== targetTag) {
 						conflicts.push({
 							taskId: id,
 							dependencyId: dep,
 							dependencyTag: tag,
-							message: `Task ${id} depends on ${full} (in ${tag})`
+							message: `Task ${id} depends on ${full} (${archived ? 'archived ' : ''}in ${tag})`,
+							// withDependencies can't bring an archived task along
+							...(archived ? { archived: true } : {})
 						});
 					}
 					const depTask = dependencyTaskId(full);

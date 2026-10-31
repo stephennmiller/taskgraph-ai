@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { CrossTagConflict } from '@tm/core';
 import {
+	formatCrossTagConflictHint,
 	formatCrossTagConflicts,
 	formatMoves,
 	formatTagMove
@@ -57,5 +59,51 @@ describe('formatCrossTagConflicts', () => {
 				}
 			])
 		).toBe('  Task 5 depends on 4 (in backlog)');
+	});
+});
+
+describe('formatCrossTagConflictHint', () => {
+	const live: CrossTagConflict = {
+		taskId: '3',
+		dependencyId: '2',
+		dependencyTag: 'feat',
+		message: 'Task 3 depends on 2 (in feat)'
+	};
+	const archived: CrossTagConflict = {
+		taskId: '3',
+		dependencyId: '9',
+		dependencyTag: 'feat',
+		message: 'Task 3 depends on 9 (archived in feat)',
+		archived: true
+	};
+	const moveTo = '--from=3 --from-tag=feat --to-tag=master';
+
+	it('suggests moving live dependencies along', () => {
+		expect(formatCrossTagConflictHint([live], moveTo, 'feat')).toBe(
+			'Move them too: `taskgraph move --from=3 --from-tag=feat --to-tag=master --with-dependencies` (tasks that depend on them go in --from), or drop them with --ignore-dependencies'
+		);
+	});
+
+	it('never suggests --with-dependencies when only archived tasks block the move', () => {
+		const hint = formatCrossTagConflictHint([archived], moveTo, 'feat');
+
+		expect(hint).not.toContain('--with-dependencies');
+		expect(hint).toBe(
+			"Archived tasks can't move: drop them with `taskgraph move --from=3 --from-tag=feat --to-tag=master --ignore-dependencies`, or restore them first with `taskgraph archive restore <id> --tag=feat`"
+		);
+	});
+
+	it('says archived ones need restoring when both kinds block the move', () => {
+		expect(
+			formatCrossTagConflictHint([live, archived], moveTo, 'feat')
+		).toMatch(
+			/--with-dependencies.*Archived ones can't move until restored: `taskgraph archive restore <id> --tag=feat`$/
+		);
+	});
+
+	it('strips escape codes from the tag name', () => {
+		expect(
+			formatCrossTagConflictHint([archived], moveTo, 'a\x1b[2Jb')
+		).not.toContain('\x1b[2J');
 	});
 });
