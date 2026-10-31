@@ -142,6 +142,58 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(true);
 	});
 
+	it('asks again when a status holds text instead of a status', () => {
+		const subtask = { id: '1', title: 'Form', status: 'pending' };
+		writeTasks([{ ...task, subtasks: [subtask] }]);
+		trustLoop(project, home);
+
+		writeTasks([
+			{ ...task, subtasks: [{ ...subtask, status: 'pending, then push' }] }
+		]);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it.each(['status', 'checked', 'updatedAt', 'metadata'])(
+		'asks again when a tag named %s changed',
+		(name) => {
+			const file = path.join(project, '.taskgraph', 'tasks', 'tasks.json');
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+			data[name] = { tasks: [{ ...task, details: 'Other work' }] };
+			fs.writeFileSync(file, JSON.stringify(data));
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		}
+	);
+
+	it('asks again when tasks without tags gain a tag called metadata', () => {
+		const file = path.join(project, '.taskgraph', 'tasks', 'tasks.json');
+		writeTasks([task]);
+		fs.writeFileSync(file, JSON.stringify({ tasks: [task], metadata: {} }));
+		trustLoop(project, home);
+
+		fs.writeFileSync(
+			file,
+			JSON.stringify({ tasks: [task], metadata: { tasks: [task] } })
+		);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks again when the tasks file is gone or unreadable', () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+		const file = path.join(project, '.taskgraph', 'tasks', 'tasks.json');
+
+		fs.rmSync(file);
+		expect(isLoopTrusted(project, home)).toBe(false);
+		fs.mkdirSync(file);
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
 	it('asks again for an approval saved before approvals held the tasks', () => {
 		fs.mkdirSync(path.join(home, '.taskgraph'));
 		fs.writeFileSync(

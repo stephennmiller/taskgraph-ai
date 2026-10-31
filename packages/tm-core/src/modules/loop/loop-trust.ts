@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { TASK_STATUSES } from '../../common/constants/index.js';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 
 interface TrustEntry {
@@ -31,7 +32,7 @@ function readTrusted(home: string): unknown[] {
 }
 
 /** The entry for this project, or a bare path from before entries held a hash */
-function isEntryFor(entry: unknown, root: string): boolean {
+function entryMatches(entry: unknown, root: string): boolean {
 	return (
 		entry === root ||
 		(typeof entry === 'object' &&
@@ -41,7 +42,7 @@ function isEntryFor(entry: unknown, root: string): boolean {
 }
 
 const findEntry = (home: string, root: string) =>
-	readTrusted(home).find((e) => isEntryFor(e, root));
+	readTrusted(home).find((e) => entryMatches(e, root));
 
 /** Symlinks and `..` must not make one path look like another */
 function canonical(projectRoot: string): string {
@@ -52,12 +53,14 @@ function canonical(projectRoot: string): string {
 	}
 }
 
-/** Progress marks taskgraph rewrites as work moves on; what Claude is asked to do stays the same */
-const PROGRESS_KEYS = new Set([
-	'status',
-	'updatedAt',
-	'checked',
-	'definitionOfDoneChecked'
+/**
+ * Progress marks taskgraph rewrites as work moves on, each with the values it
+ * takes; any other value (text in a subtask's status, say) is hashed
+ */
+const PROGRESS_MARKS = new Map<string, (value: unknown) => boolean>([
+	['status', (v) => v === 'completed' || TASK_STATUSES.includes(v as never)],
+	['updatedAt', (v) => typeof v === 'string' && /^[\d:.TZ+-]*$/.test(v)],
+	['checked', (v) => typeof v === 'boolean']
 ]);
 
 /**
@@ -72,13 +75,17 @@ function tasksHash(root: string): string {
 		text = '';
 	}
 	try {
-		text = JSON.stringify(
-			JSON.parse(text),
-			function (this: { tasks?: unknown }, key, value) {
-				const tagMetadata = key === 'metadata' && Array.isArray(this.tasks);
-				return PROGRESS_KEYS.has(key) || tagMetadata ? undefined : value;
-			}
+		const data = JSON.parse(text);
+		// Only a tag's own metadata, not a tag or task that is called `metadata`
+		const tags = new Set(
+			data && typeof data === 'object' ? Object.values(data) : []
 		);
+		text = JSON.stringify(data, function (key, value) {
+			const skip =
+				(key === 'metadata' && tags.has(this)) ||
+				PROGRESS_MARKS.get(key)?.(value);
+			return skip ? undefined : value;
+		});
 	} catch {
 		// Not JSON: hash it as it is, so any change still counts
 	}
@@ -102,7 +109,7 @@ export function trustLoop(
 ): void {
 	const root = canonical(projectRoot);
 	writeTrusted(home, [
-		...readTrusted(home).filter((e) => !isEntryFor(e, root)),
+		...readTrusted(home).filter((e) => !entryMatches(e, root)),
 		{ path: root, tasks: tasksHash(root) }
 	]);
 }
@@ -133,10 +140,10 @@ export function untrustLoop(
 ): void {
 	const root = canonical(projectRoot);
 	const trusted = readTrusted(home);
-	if (!trusted.some((e) => isEntryFor(e, root))) return;
+	if (!trusted.some((e) => entryMatches(e, root))) return;
 	writeTrusted(
 		home,
-		trusted.filter((e) => !isEntryFor(e, root))
+		trusted.filter((e) => !entryMatches(e, root))
 	);
 }
 
