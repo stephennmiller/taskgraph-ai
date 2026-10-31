@@ -96,7 +96,9 @@ export class TagsCommand extends Command {
 		this.description('Manage tags for task organization')
 			.option('--show-metadata', 'Show additional tag metadata')
 			.option('--ready', 'Show only tags with ready tasks available')
-			.option('--json', 'Output the tag list as JSON');
+			.option('--json', 'Output the tag list as JSON')
+			// Commander adds no `help` subcommand to a command with a default action
+			.helpCommand(true);
 
 		// Add subcommands
 		this.addListCommand();
@@ -105,6 +107,21 @@ export class TagsCommand extends Command {
 		this.addRemoveCommand();
 		this.addRenameCommand();
 		this.addCopyCommand();
+
+		// The root program passes on flags it doesn't know, so `tags` parses its
+		// list flags even after another subcommand (`tags use x --json`).
+		// Only `list` reads them; any other subcommand rejects them.
+		this.hook('preSubcommand', (tags, sub) => {
+			if (sub.name() === 'list') return;
+			const flag = tags.options.find(
+				(option) => tags.getOptionValueSource(option.attributeName()) === 'cli'
+			);
+			if (flag) {
+				sub.error(`error: unknown option '${flag.long}'`, {
+					code: 'commander.unknownOption'
+				});
+			}
+		});
 
 		// Default action: list tags (with options from parent command)
 		this.action(async (options) => {

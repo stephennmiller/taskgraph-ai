@@ -185,6 +185,65 @@ describe('tags --json', () => {
 	});
 });
 
+describe('tags subcommands without JSON output (#811)', () => {
+	it.each([
+		['use', 'master'],
+		['add', 'sprint-2'],
+		['remove', 'old', '--yes'],
+		['rename', 'a', 'b'],
+		['copy', 'a', 'b']
+	])('tags %s rejects --json instead of printing text', async (...args) => {
+		vi.clearAllMocks();
+		const stderr = vi
+			.spyOn(process.stderr, 'write')
+			.mockImplementation(() => true);
+		const exit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+		// Through a root program: it is what hands --json on to `tags`
+		const program = new Command().addCommand(
+			new TagsCommand().setThrowOnError(true)
+		);
+
+		try {
+			await expect(
+				program.parseAsync(['tags', ...args, '--json'], { from: 'user' })
+			).rejects.toThrow('exit 1');
+			expect(stderr.mock.calls.flat().join('')).toContain(
+				"unknown option '--json'"
+			);
+			expect(createTmCore).not.toHaveBeenCalled();
+		} finally {
+			stderr.mockRestore();
+			exit.mockRestore();
+		}
+	});
+});
+
+describe('tags help (#833)', () => {
+	it('tags help use shows the help for tags use', () => {
+		const stdout = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation(() => true);
+		const exit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+			throw new Error(`exit ${code}`);
+		});
+		const program = new Command().addCommand(new TagsCommand());
+
+		try {
+			expect(() =>
+				program.parse(['tags', 'help', 'use'], { from: 'user' })
+			).toThrow('exit 0');
+			expect(stdout.mock.calls.flat().join('')).toContain(
+				'tags use [options] <name>'
+			);
+		} finally {
+			stdout.mockRestore();
+			exit.mockRestore();
+		}
+	});
+});
+
 describe('tags remove', () => {
 	const deleteTag = vi.fn();
 
