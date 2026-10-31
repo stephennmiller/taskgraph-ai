@@ -5,6 +5,7 @@
 
 import { ERROR_CODES } from '../../../common/errors/taskgraph-error.js';
 import type { Task } from '../../../common/types/index.js';
+import { wouldSubtaskCloseLoop } from '../../dependencies/dependency-edges.js';
 import {
 	assignMetadata,
 	rekeyDependencySources
@@ -101,6 +102,25 @@ function moveOne(
 const parseSubtaskId = (id: string) =>
 	id.split('.').map((part) => parseInt(part, 10));
 
+/** Refuse a move under `parentId` that would close a loop through it */
+function refuseLoop(
+	tasks: Item[],
+	parentId: number,
+	fromId: string,
+	what: string
+) {
+	if (
+		wouldSubtaskCloseLoop(tasks as Task[], String(parentId), {
+			fromTaskId: fromId
+		})
+	) {
+		fail(
+			`Cannot move ${what}: that would make a dependency loop`,
+			ERROR_CODES.TASK_DEPENDENCY_ERROR
+		);
+	}
+}
+
 /** Insert after the subtask `subtaskId`, or at the end when there is none */
 function insertSubtask(parent: Item, subtaskId: number, subtask: Item) {
 	const at = parent.subtasks.findIndex(
@@ -155,6 +175,12 @@ function moveSubtaskToSubtask(
 				`Subtask ${destParentId}.${destSubtaskId} already exists. Use a different destination ID`
 			);
 		}
+		refuseLoop(
+			tasks,
+			destParentId,
+			`${sourceParentId}.${sourceSubtaskId}`,
+			`subtask ${sourceId} to ${destinationId}`
+		);
 		// Its siblings stay the subtasks they were, so they're written as full IDs
 		const moved = dependenciesForMovedItem(
 			subtask,
@@ -271,6 +297,12 @@ function moveTaskToSubtask(
 			`Subtask ${destParentId}.${destSubtaskId} already exists. Use a different destination ID`
 		);
 	}
+	refuseLoop(
+		tasks,
+		destParentId,
+		String(sourceTaskId),
+		`task ${sourceId} to ${destinationId}`
+	);
 	destParent.subtasks ??= [];
 
 	// Under a subtask a bare number would name a sibling, so its task

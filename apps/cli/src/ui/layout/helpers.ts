@@ -171,3 +171,34 @@ export function wrapLine(
 	lines.push(current);
 	return lines;
 }
+
+/**
+ * An indented tree, one line per node: `line` draws each node after `lead`
+ * (`├─ `, `└─ ` and the indent above them). `parent` is undefined for a root.
+ * Iterative, so a long dependency chain can't overflow the stack
+ */
+export function drawTree<N>(
+	roots: N[],
+	childrenOf: (node: N) => N[],
+	line: (node: N, lead: string, parent: N | undefined) => string
+): string[] {
+	const lines: string[] = [];
+	const stack: { node: N; parent?: N; prefix: string; last: boolean }[] = [];
+	const pushAll = (nodes: N[], parent: N | undefined, prefix: string) => {
+		for (let i = nodes.length - 1; i >= 0; i--) {
+			stack.push({
+				node: nodes[i],
+				parent,
+				prefix,
+				last: i === nodes.length - 1
+			});
+		}
+	};
+	pushAll(roots, undefined, '');
+	for (let at = stack.pop(); at; at = stack.pop()) {
+		const { node, parent, prefix, last } = at;
+		lines.push(line(node, prefix + theme.muted(last ? '└─ ' : '├─ '), parent));
+		pushAll(childrenOf(node), node, prefix + theme.muted(last ? '   ' : '│  '));
+	}
+	return lines;
+}

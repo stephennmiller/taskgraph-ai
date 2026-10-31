@@ -158,6 +158,20 @@ describe('buildDependencyTree', () => {
 		);
 	});
 
+	it('lays out a chain too deep for recursion', () => {
+		// 5000 overflowed the recursive walk; much longer is slow under coverage
+		const tasks = Array.from({ length: 5000 }, (_, i) =>
+			task(String(i + 1), i ? [String(i)] : [])
+		);
+
+		const tree = buildDependencyTree(tasks);
+		let last = tree.roots[0];
+		while (last.children.length) last = last.children[0];
+
+		expect(last.id).toBe('5000');
+		expect(buildDependencyTree(tasks, { rootId: '1' }).total).toBe(5000);
+	});
+
 	it('ignores a task depending on itself', () => {
 		const tree = buildDependencyTree([task('1', ['1'])]);
 

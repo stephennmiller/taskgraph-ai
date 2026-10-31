@@ -22,7 +22,7 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
-import { truncate, wrapLine } from '../layout/helpers.js';
+import { drawTree, truncate, wrapLine } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface RenderBlockerExplanationOptions {
@@ -99,14 +99,6 @@ export function renderBlockerExplanation(
 		return head + truncate(title, room) + suffix;
 	};
 
-	const walk = (node: BlockerNode, prefix: string, last: boolean) => {
-		lines.push(line(node, prefix + theme.muted(last ? '└─ ' : '├─ ')));
-		const childPrefix = prefix + theme.muted(last ? '   ' : '│  ');
-		node.blockers.forEach((b, i) =>
-			walk(b, childPrefix, i === node.blockers.length - 1)
-		);
-	};
-
 	lines.push(
 		`${getStatusIcon(explanation.status)} ${theme.brand(explanation.id)}  ${truncate(explanation.title, Math.max(12, width - explanation.id.length - 4))}`
 	);
@@ -117,9 +109,9 @@ export function renderBlockerExplanation(
 	}
 
 	lines.push('Blocked by:');
-	explanation.blockers.forEach((b, i) =>
-		walk(b, '', i === explanation.blockers.length - 1)
-	);
+	for (const l of drawTree(explanation.blockers, (n) => n.blockers, line)) {
+		lines.push(l);
+	}
 
 	const fixes = unblockSteps(explanation.rootCauses);
 	if (fixes.length)

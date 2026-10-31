@@ -29,7 +29,7 @@ import {
 import chalk from 'chalk';
 import { getStatusIcon } from '../formatters/status-formatters.js';
 import { formatWaveSummary } from '../formatters/wave-formatters.js';
-import { truncate } from '../layout/helpers.js';
+import { drawTree, truncate } from '../layout/helpers.js';
 import { theme } from '../theme.js';
 
 export interface RenderDependencyTreeOptions {
@@ -135,28 +135,16 @@ export function renderDependencyTree(
 		return head + styled + suffix;
 	};
 
-	const walk = (
-		node: DependencyTreeNode,
-		parent: DependencyTreeNode,
-		prefix: string,
-		last: boolean
-	) => {
-		lines.push(
-			line(node, prefix + theme.muted(last ? '└─ ' : '├─ '), parent.id)
-		);
-		const childPrefix = prefix + theme.muted(last ? '   ' : '│  ');
-		node.children.forEach((c, i) =>
-			walk(c, node, childPrefix, i === node.children.length - 1)
-		);
-	};
-
 	tree.roots.forEach((root, i) => {
 		const prev = tree.roots[i - 1];
 		if (prev && (prev.children.length || root.children.length)) lines.push('');
 		lines.push(line(root, ''));
-		root.children.forEach((c, j) =>
-			walk(c, root, '', j === root.children.length - 1)
+		const below = drawTree(
+			root.children,
+			(n) => n.children,
+			(node, lead, parent) => line(node, lead, (parent ?? root).id)
 		);
+		for (const l of below) lines.push(l);
 	});
 
 	if (tree.cyclic.length) {
