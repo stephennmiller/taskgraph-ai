@@ -220,6 +220,18 @@ describe('GitHub push - integration', () => {
 		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(2);
 	});
 
+	it('still pushes, without relinking, when the signed-in account cannot be read', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
+		github.getViewer = () => Promise.reject(new Error('403'));
+
+		const rerun = await push();
+
+		expect(rerun.created).toBe(1);
+		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(2);
+	});
+
 	it('keeps a claim made while the issue was being created (#655)', async () => {
 		await setup([makeTask('1', { metadata: { source: 'prd' } })]);
 		github.duringCreate = () =>

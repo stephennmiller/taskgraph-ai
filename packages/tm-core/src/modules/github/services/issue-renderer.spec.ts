@@ -113,6 +113,20 @@ describe('marker', () => {
 		expect(parseMarker(body)).toBeNull();
 	});
 
+	it('reads a first-line marker from a body with CRLF line endings', () => {
+		const body = `${markerFor('master', '1')}\r\n\r\nintro`;
+
+		expect(parseMarker(body)).toEqual({ tag: 'master', id: '1' });
+	});
+
+	it.each([
+		['leading whitespace', ` ${markerFor('master', '1')}\nintro`],
+		['a byte order mark', `﻿${markerFor('master', '1')}\nintro`],
+		['text after it on the line', `${markerFor('master', '1')} intro`]
+	])('ignores a marker line with %s', (_case, body) => {
+		expect(parseMarker(body)).toBeNull();
+	});
+
 	it('returns null when there is no marker', () => {
 		expect(parseMarker('plain issue')).toBeNull();
 	});
