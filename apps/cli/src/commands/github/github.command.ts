@@ -24,7 +24,7 @@ import {
 	formatStatus,
 	formatUnlink,
 	hasPullChanges,
-	hasStatusChanges,
+	hasTaskChanges,
 	hasWrites
 } from './github-format.js';
 
@@ -305,15 +305,15 @@ Examples:
 			return;
 		}
 
-		// Only a status change needs asking about; marking tasks in sync is bookkeeping
-		if (hasStatusChanges(plan) && !options.yes) {
+		// Only a status or assignee change needs asking about; marking tasks in sync is bookkeeping
+		if (hasTaskChanges(plan) && !options.yes) {
 			if (options.json || !this.isInteractive()) {
 				throw new Error(
 					'Refusing to change tasks without confirmation. Pass --yes to proceed or --dry-run to preview.'
 				);
 			}
 			console.log(formatPullPlan(plan));
-			if (!(await this.confirm('Update these task statuses?'))) {
+			if (!(await this.confirm('Update these tasks?'))) {
 				console.log('Cancelled. Nothing was changed.');
 				return;
 			}

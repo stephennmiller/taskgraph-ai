@@ -94,20 +94,36 @@ function countPullSteps(plan: PullPlan): Record<PullStep['action'], number> {
 /** True when a pull would change something in tasks.json */
 export function hasPullChanges(plan: PullPlan): boolean {
 	const counts = countPullSteps(plan);
-	return counts.apply + counts.sync > 0;
+	return (
+		counts.apply + counts.sync > 0 ||
+		plan.steps.some((s) => s.assignTo !== undefined)
+	);
 }
 
-/** True when a pull would change a task's status (worth asking about) */
-export function hasStatusChanges(plan: PullPlan): boolean {
-	return countPullSteps(plan).apply > 0;
+/** True when a pull would change a task's status or assignee (worth asking about) */
+export function hasTaskChanges(plan: PullPlan): boolean {
+	return plan.steps.some(
+		(s) => s.action === 'apply' || s.assignTo !== undefined
+	);
 }
 
 function describePullStep(step: PullStep): string {
 	const label = PULL_LABEL[step.action](step.action.padEnd(8));
-	const change =
-		step.action === 'conflict'
-			? `local ${step.from}, GitHub ${step.to}`
-			: `${step.from} -> ${step.to}`;
+	const changes: string[] = [];
+	if (step.action === 'conflict') {
+		changes.push(`local ${step.from}, GitHub ${step.to}`);
+	} else if (step.action !== 'skip') {
+		changes.push(`${step.from} -> ${step.to}`);
+	}
+	if (step.assignTo !== undefined) {
+		changes.push(`assignee -> ${step.assignTo ?? 'nobody'}`);
+	}
+	if (step.githubAssignee !== undefined) {
+		changes.push(
+			`assignee: GitHub ${step.githubAssignee ?? 'nobody'}, local kept`
+		);
+	}
+	const change = changes.join(', ');
 	const target = step.issueNumber ? ` (#${step.issueNumber})` : '';
 	return `  ${label} [${step.tag}] ${step.taskId} ${step.title}${target}  ${theme.muted(change)}`;
 }
@@ -119,8 +135,13 @@ export function formatPullPlan(plan: PullPlan): string {
 		chalk.bold(`Pull plan for ${plan.repo}`),
 		`  ${counts.apply} to update, ${counts.sync} already in sync, ${counts.conflict} conflict(s), ${counts.skip} unchanged or skipped`
 	];
-	// Skipped tasks are only counted, not listed
-	for (const step of plan.steps.filter((s) => s.action !== 'skip')) {
+	// Skipped tasks are only counted, not listed, unless their assignee changes
+	for (const step of plan.steps.filter(
+		(s) =>
+			s.action !== 'skip' ||
+			s.assignTo !== undefined ||
+			s.githubAssignee !== undefined
+	)) {
 		lines.push(describePullStep(step));
 	}
 	if (counts.conflict > 0) {
@@ -138,7 +159,8 @@ export function formatPullResult(result: PullResult): string {
 	const prefix = result.dryRun ? 'would be ' : '';
 	return [
 		chalk.bold(result.dryRun ? 'Dry run, nothing written' : 'Pull complete'),
-		`  ${prefix}updated ${result.applied}, ${prefix}marked in sync ${result.synced}, conflicts ${result.conflicts}, skipped ${result.skipped}`
+		`  ${prefix}updated ${result.applied}, ${prefix}marked in sync ${result.synced}, conflicts ${result.conflicts}, skipped ${result.skipped}`,
+		...(result.assigned > 0 ? [`  ${prefix}reassigned ${result.assigned}`] : [])
 	].join('\n');
 }
 

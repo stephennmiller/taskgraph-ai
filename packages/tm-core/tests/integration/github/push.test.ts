@@ -56,6 +56,7 @@ class InMemoryGitHub implements GitHubClient {
 			url: `https://github.com/${REPO}/issues/${number}`,
 			state: 'open',
 			author: VIEWER,
+			assignees: [],
 			...input
 		};
 		this.issues.push(issue);
@@ -70,6 +71,9 @@ class InMemoryGitHub implements GitHubClient {
 		if (!issue) throw new Error(`no issue ${number}`);
 		Object.assign(issue, input);
 		return { ...issue };
+	}
+	async changeAssignees(): Promise<RemoteIssue> {
+		throw new Error('these tests assign nobody');
 	}
 	async ensureLabels(): Promise<void> {
 		this.writes++;

@@ -28,7 +28,6 @@ import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
-import type { TaskClaim } from './utils/claim.js';
 import { subtaskInContext } from './utils/subtask-context.js';
 import {
 	type ReadmeExportOptions,
@@ -226,26 +225,8 @@ export class TasksDomain {
 		return this.taskService.getNextTask(tag);
 	}
 
-	/**
-	 * Pick the next task nobody has started, set it in-progress and record who
-	 * claimed it, in one locked write. Setting it back to pending clears the
-	 * claim. `among` limits the pick to those top-level task IDs (one
-	 * parallel wave, say).
-	 * @returns The claim, or null when no task is ready
-	 */
-	async claimNext(
-		options: {
-			tag?: string;
-			claimant?: string;
-			among?: ReadonlySet<string>;
-		} = {}
-	): Promise<TaskClaim | null> {
-		return this.taskService.claimNextTask(
-			options.tag,
-			options.claimant,
-			options.among
-		);
-	}
+	claimNext: TaskEditCommands['claimNext'] = (...a) =>
+		this.edits.claimNext(...a);
 
 	// ===== Dependency views (TaskDependencyViews) =====
 
@@ -285,6 +266,7 @@ export class TasksDomain {
 	getArchivedIds: TaskEditCommands['getArchivedIds'] = (...a) =>
 		this.edits.getArchivedIds(...a);
 	addNote: TaskEditCommands['addNote'] = (...a) => this.edits.addNote(...a);
+	assign: TaskEditCommands['assign'] = (...a) => this.edits.assign(...a);
 	addSubtask: TaskEditCommands['addSubtask'] = (...a) =>
 		this.edits.addSubtask(...a);
 	move: TaskEditCommands['move'] = (...a) => this.edits.move(...a);

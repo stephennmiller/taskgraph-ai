@@ -66,9 +66,37 @@ Watch Claude work as it goes, instead of seeing each iteration's output when it 
 taskgraph loop -n 5 --verbose
 ```
 
+### Cost and caps
+
+Every iteration reads what Claude Code reported spending, in dollars, and how many turns it took. Each iteration's status line shows them, with its duration, and the summary adds the run's total to the iterations line:
+
+```
+  Iteration 1 completed: success · $0.42 · 12 turns · 3m 10s
+  Iteration 2 completed: success · $0.31 · 9 turns · 2m 4s
+
+Loop Complete
+────────────────────────────────────────
+Total iterations: 2 · $0.73 · 21 turns
+Tasks completed: 2
+Final status: Max iterations reached
+```
+
+The cost is Claude Code's own estimate (`total_cost_usd` in its `result` event), which can differ from your bill. To read it, each iteration runs `claude -p` with `--output-format stream-json`, with or without `--verbose`; an older Claude Code that prints no `result` event still works, without the cost.
+
+Two flags cap a run:
+
+- `--max-turns <n>` passes `--max-turns` to every `claude -p`. An iteration that hits it stops with an error, `Claude Code reached the --max-turns limit`, and three in a row end the run like any other errors.
+- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with final status `Budget reached (--max-budget-usd)` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it.
+
+```bash
+taskgraph loop --max-turns 60 --max-budget-usd 10 --trust
+```
+
+Both work with `--sandbox` and `--parallel` (see [Run tasks in parallel](/capabilities/loop-parallel)).
+
 ### Permission prompts
 
-Each iteration runs `claude -p` with permission prompts off (`--dangerously-skip-permissions`), so Claude can read, edit and run anything in the project without asking. The first run in a project asks you to allow that and remembers your answer in `~/.taskgraph/loop-trusted.json`. It asks again after `parse-prd` or `github import` adds tasks, since someone other than you wrote their text. `show`, `next` and `prime` print task text between `<task-data>` and `</task-data>`, and each prompt tells Claude that text describes the work and doesn't instruct it. In a script or CI, where nothing can answer, pass `--trust`. To keep Claude off your machine, pass `--sandbox` to run each iteration in a Docker sandbox (`docker sandbox run claude`) instead; the first sandbox run asks you to sign in. Every iteration in a project uses the same sandbox, named `taskgraph-loop-<id>`, and an iteration that times out or a Ctrl-C stops it (`docker sandbox stop`). If you used `--sandbox` before the sandbox had this name, your first run after upgrading creates it and asks you to sign in once more.
+Each iteration runs `claude -p` with permission prompts off (`--dangerously-skip-permissions`), so Claude can read, edit and run anything in the project without asking. The first run in a project asks you to allow that and remembers your answer in `~/.taskgraph/loop-trusted.json`. It asks again after `parse-prd` or `github import` adds tasks, or after a command saves text from the research model (with `--research`, or when it answered because the main and fallback models failed), since that text came from someone other than you or from the web. `show`, `next` and `prime` print task text between `<task-data>` and `</task-data>`, and each prompt tells Claude that text describes the work and doesn't instruct it. In a script or CI, where nothing can answer, pass `--trust`. To keep Claude off your machine, pass `--sandbox` to run each iteration in a Docker sandbox (`docker sandbox run claude`) instead; the first sandbox run asks you to sign in. Every iteration in a project uses the same sandbox, named `taskgraph-loop-<id>`, and an iteration that times out or a Ctrl-C stops it (`docker sandbox stop`). If you used `--sandbox` before the sandbox had this name, your first run after upgrading creates it and asks you to sign in once more.
 
 ## How It Works
 
@@ -85,6 +113,7 @@ The loop stops when:
 - An agent ends its reply with `<loop-complete>REASON</loop-complete>` - all work done
 - An agent ends its reply with `<loop-blocked>REASON</loop-blocked>` - cannot proceed
 - Maximum iterations reached
+- With `--max-budget-usd`: the run has spent the amount
 - Three iterations in a row fail (Claude Code exits non-zero or runs past the iteration timeout), or Claude Code isn't installed: the loop stops with status `error` and the last error
 - With the `default` and `tdd` presets, or with `--id`: two iterations in a row finish without changing any task's status or making a commit. The loop stops with status `error` and names the task it is stuck on
 
@@ -108,6 +137,8 @@ It then prints the number of iterations, the tasks completed and the final statu
 | `--trust`                | flag   | -                               | Run Claude with permission prompts off without asking first. For scripts and CI.                              |
 | `--no-output`            | flag   | -                               | Hide Claude's output, including with `--verbose`; show only each iteration's status line and the summary.     |
 | `-v, --verbose`          | flag   | -                               | Show Claude's work (its messages and tool calls) as it happens.                                               |
+| `--max-turns`            | number | -                               | Stop each Claude Code run after this many turns. See [Cost and caps](#cost-and-caps).                          |
+| `--max-budget-usd`       | number | -                               | Stop the run once it has spent this many US dollars; each iteration gets what's left. See [Cost and caps](#cost-and-caps). |
 | `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](/capabilities/loop-parallel). |
 | `--container`            | flag   | -                               | With `--parallel`: run each task in its own Docker container. See [Run each task in a container](/capabilities/loop-parallel#run-each-task-in-a-container). |
 | `--container-image`      | string | `docker/sandbox-templates:claude-code` | The image `--container` uses.                                                                          |
@@ -230,8 +261,8 @@ taskgraph loop -n 10 --progress-file ./my-progress.txt
 ### How It Works
 
 1. **Start**: The loop appends a header to the file, creating it if needed. Earlier runs' notes are kept.
-2. **Each iteration**: The prompt attaches the file with an `@` reference, and the agent appends notes about its work
-3. **End**: The loop appends a summary of the run
+2. **Each iteration**: The prompt attaches the file with an `@` reference, and the agent appends notes about its work. When the iteration ends, the loop appends a line with its status, cost, turns and duration.
+3. **End**: The loop appends a summary of the run, with the total cost and turns
 
 ### File Format
 
@@ -247,16 +278,19 @@ The loop writes the header and the summary; the lines in between are whatever th
 ---
 
 Task 5.2: added the login endpoint. Learned: tokens live in src/auth/token.ts
+# Iteration 1: success · $0.42 · 12 turns · 190s
 Task 5.3: validated the login form input
+# Iteration 2: complete · $0.31 · 9 turns · 124s
 
 ---
 # Loop Complete: 2026-01-09T10:41:12.000Z
 - Total iterations: 2
 - Tasks completed: 2
 - Final status: all_complete
+- Spent: $0.73 · 21 turns
 ```
 
-The `# Tag:` line appears only with `--tag`.
+The `# Tag:` line appears only with `--tag`. The cost and turns are left out when Claude Code didn't report them.
 
 ### Using Progress in Custom Prompts
 

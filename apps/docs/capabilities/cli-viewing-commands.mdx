@@ -32,6 +32,9 @@ taskgraph list -w -c
 
 # Hide the header
 taskgraph list --no-header
+
+# Only the tasks assigned to you (your GitHub login, from gh)
+taskgraph list --mine
 ```
 
 ## Show Next Task
@@ -44,7 +47,8 @@ taskgraph next
 # Take the next task nobody has started: set it in-progress and record
 # who claimed it (session ID, else your user name) in one locked write,
 # so two sessions never get the same task. Setting it back to pending
-# releases it.
+# releases it. A task nobody is assigned to is assigned to your GitHub
+# login when gh is signed in.
 taskgraph next --claim
 ```
 

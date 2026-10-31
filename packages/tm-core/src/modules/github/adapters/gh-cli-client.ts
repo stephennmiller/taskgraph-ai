@@ -64,6 +64,7 @@ interface RawIssue {
 	title: string;
 	body: string | null;
 	labels: Array<{ name: string } | string>;
+	assignees?: Array<{ login: string }> | null;
 	state: 'open' | 'closed';
 	state_reason?: 'completed' | 'not_planned' | 'reopened' | null;
 	pull_request?: unknown;
@@ -80,6 +81,7 @@ function toRemoteIssue(raw: RawIssue): RemoteIssue {
 		title: raw.title,
 		body: raw.body ?? '',
 		labels: raw.labels.map((l) => (typeof l === 'string' ? l : l.name)),
+		assignees: (raw.assignees ?? []).map((a) => a.login.toLowerCase()),
 		state: raw.state,
 		stateReason:
 			raw.state_reason === 'completed' || raw.state_reason === 'not_planned'
@@ -185,6 +187,19 @@ export class GhCliClient implements GitHubClient {
 			'PATCH',
 			`repos/${this.repo}/issues/${number}`,
 			body
+		);
+		return toRemoteIssue(data);
+	}
+
+	async changeAssignees(
+		number: number,
+		change: 'add' | 'remove',
+		logins: string[]
+	): Promise<RemoteIssue> {
+		const { data } = await this.request(
+			change === 'add' ? 'POST' : 'DELETE',
+			`repos/${this.repo}/issues/${number}/assignees`,
+			{ assignees: logins }
 		);
 		return toRemoteIssue(data);
 	}

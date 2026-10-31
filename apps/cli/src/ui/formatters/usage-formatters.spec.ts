@@ -1,5 +1,10 @@
+import { stripVTControlCharacters } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { formatCost, formatUsageLine } from './usage-formatters.js';
+import {
+	formatCost,
+	formatLoopSpend,
+	formatUsageLine
+} from './usage-formatters.js';
 
 describe('formatUsageLine', () => {
 	it('shows the model and token counts with thousands separators', () => {
@@ -99,5 +104,22 @@ describe('formatCost', () => {
 			)
 		).toBe('sonnet · 121.129 tokens (121.000 in, 129 out)');
 		expect(formatCost(1.5, 'EUR', 'de-DE')).toBe('1,50\u00a0€');
+	});
+});
+
+describe('formatLoopSpend', () => {
+	it('lists cost, turns and time after a separator', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ costUsd: 1.5, turns: 1, durationMs: 190_000 })
+			)
+		).toBe(' · $1.50 · 1 turn · 3m 10s');
+	});
+
+	it("leaves out what Claude Code didn't report, and is empty for nothing", () => {
+		expect(stripVTControlCharacters(formatLoopSpend({ turns: 4 }))).toBe(
+			' · 4 turns'
+		);
+		expect(formatLoopSpend({})).toBe('');
 	});
 });

@@ -53,6 +53,7 @@ function remoteIssue(
 		labels: ['taskgraph'],
 		state: 'open',
 		author: VIEWER,
+		assignees: [],
 		...overrides
 	};
 }

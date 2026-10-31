@@ -40,6 +40,10 @@ export interface ParallelTask {
 	exitCode?: number | null;
 	/** Why it failed, in plain words */
 	error?: string;
+	/** What Claude Code reported spending, in US dollars (set when it exits) */
+	costUsd?: number;
+	/** Agentic turns Claude Code took (set when it exits) */
+	turns?: number;
 	/** Commits on the branch past the starting commit (set at the end) */
 	commits?: number;
 	/** Uncommitted changes left in the worktree (set at the end) */
@@ -72,6 +76,13 @@ export interface ParallelLoopOptions {
 	trusted?: boolean;
 	/** Recorded as the claim owner; the session ID or user name by default */
 	claimant?: string;
+	/** Passed to each task's `claude -p` as `--max-turns` */
+	maxTurns?: number;
+	/**
+	 * The most the whole run may spend, in US dollars: each task's
+	 * `claude -p` gets an equal share as `--max-budget-usd`
+	 */
+	maxBudgetUsd?: number;
 	/** Stops the run: children are killed, claims released */
 	signal?: AbortSignal;
 	callbacks?: ParallelLoopCallbacks;
@@ -98,4 +109,6 @@ export interface ParallelLoopResult {
 	skippedIds: string[];
 	/** The run was aborted */
 	aborted: boolean;
+	/** Sum of the tasks' costUsd, when any reported one */
+	totalCostUsd?: number;
 }

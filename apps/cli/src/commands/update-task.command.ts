@@ -13,6 +13,7 @@ import type { Ora } from 'ora';
 import { truncate } from '../ui/layout/helpers.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import {
+	formatAssigned,
 	formatNotesAdded,
 	formatNothingToUpdate,
 	formatTasksUpdated,
@@ -43,6 +44,7 @@ interface CommonOptions {
 export interface UpdateTaskCommandOptions extends CommonOptions {
 	id?: string;
 	append?: boolean;
+	assignee?: string;
 }
 
 export interface UpdateCommandOptions extends CommonOptions {
@@ -135,6 +137,10 @@ export class UpdateTaskCommand extends Command {
 				'--append',
 				'Append timestamped information to task details instead of full update'
 			)
+			.option(
+				'--assignee <login>',
+				"GitHub login of who the task is for ('' clears it); no prompt needed"
+			)
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.action(
 				async (
@@ -162,7 +168,8 @@ export class UpdateTaskCommand extends Command {
 			);
 			process.exit(1);
 		}
-		if (!prompt) {
+		const { assignee } = options;
+		if (!prompt && assignee === undefined) {
 			printError(
 				'Missing prompt',
 				`Try \`taskgraph update-task --id=${terminalSafe(id)} --prompt="what changed"\``
@@ -174,6 +181,14 @@ export class UpdateTaskCommand extends Command {
 			'update-task',
 			options,
 			async (tmCore, tag, hooks, stop) => {
+				// First, so a bad login fails before the AI call is paid for
+				if (assignee !== undefined) {
+					const assigned = await tmCore.tasks.assign(id, assignee, tag);
+					console.log(
+						formatAssigned({ id, title: assigned.title }, assigned.assignee)
+					);
+				}
+				if (!prompt) return;
 				const result = await tmCore.tasks.updateWithPrompt(
 					{
 						id,

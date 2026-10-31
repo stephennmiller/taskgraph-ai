@@ -22,6 +22,7 @@ function issue(overrides: Partial<RemoteIssue> = {}): RemoteIssue {
 		body: '',
 		labels: ['taskgraph'],
 		state: 'open',
+		assignees: [],
 		...overrides
 	};
 }

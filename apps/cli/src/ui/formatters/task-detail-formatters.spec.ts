@@ -191,6 +191,17 @@ describe('formatTaskDetail', () => {
 		).toBeLessThanOrEqual(80);
 	});
 
+	it('names who the task is assigned to', () => {
+		const output = formatTaskDetail(
+			{ ...signIn(), assignee: 'octocat' },
+			{ width: 100 }
+		);
+
+		expect(lines(output)[1]).toContain(
+			'high priority · assigned to octocat · complexity 7'
+		);
+	});
+
 	it('wraps and cuts to fit a narrow terminal instead of misaligning', () => {
 		const output = formatTaskDetail(signIn(), { width: 50 });
 

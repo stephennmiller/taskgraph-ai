@@ -57,6 +57,18 @@ For each linked task, pull compares three statuses: the one at the last push or 
 
 Tasks that were never pushed or imported, or whose issue is gone, are skipped. Pull reads issues with the `taskgraph` label; when a linked issue lacks it (an imported one), pull reads every issue in the repository instead.
 
+## Assignees
+
+A task's assignee is a GitHub login. Set it with `add-task --assignee` or `update-task --assignee`, and `next --claim` sets it to your login when nobody has the task. `taskgraph list --mine` shows the tasks assigned to you, and tasks with a subtask assigned to you.
+
+Assignees sync both ways. Like status, each side is compared with the assignee at the last push or pull:
+
+- **Push** adds the task's assignee to its issue when it changed locally, and removes the one it last synced. Anyone else assigned on GitHub stays.
+- **Pull** gives the task the issue's assignee when it changed on GitHub and not locally, and asks first unless you pass `--yes`. When both changed, the task keeps its own and the plan lists GitHub's. An issue with several assignees keeps the task's one if it is among them, otherwise the first.
+- **Import** gives each task the issue's first assignee, unless a task it links already has one. Push never writes to an imported issue, so a local change to its assignee stays local.
+
+GitHub only accepts collaborators on the repository as assignees. When it refuses one, push stops and says which login to fix. Without push access to the repository, GitHub drops assignees without an error; the task keeps its own.
+
 ## Importing existing issues
 
 `taskgraph github import` reads the repository's open issues and adds a task for each one that no task is linked to yet. It writes only to your tasks, never to GitHub.
@@ -121,7 +133,7 @@ After the first push, each task stores its issue in its `metadata.github` field.
 
 ## Limits
 
-- **Content is one way.** Only status is read back, by `pull`, and an issue's body is read once, by `import`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
+- **Content is one way.** Only status and the assignee are read back, by `pull`, and an issue's body is read once, by `import`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
 - **Orphans are reported, not closed,** unless you pass `--close-orphans` or `closeOrphans: true`.
 - **`--id` and `id` match top-level tasks.** Subtasks follow their parent.
 - **Each `gh` call gets 60 seconds.** One that takes longer, for example on a stalled network or a credential prompt nobody can answer, is stopped and the command fails with a non-zero exit. A push keeps the links it saved before that, and the next push carries on from there.

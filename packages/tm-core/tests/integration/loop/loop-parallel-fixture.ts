@@ -32,6 +32,8 @@ if (mode === 'commit' || mode === 'commit-fail') {
 	fs.writeFileSync('work.txt', 'done\\n');
 	execFileSync('git', ['add', 'work.txt']);
 	execFileSync('git', ['commit', '-q', '-m', 'work on ' + name]);
+	// stream-json's last event: what the run cost
+	console.log(JSON.stringify({ type: 'result', subtype: 'success', result: 'done', total_cost_usd: 0.25, num_turns: 3 }));
 	process.exit(mode === 'commit' ? 0 : 1);
 }
 if (mode === 'fail') process.exit(1);

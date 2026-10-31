@@ -22,3 +22,4 @@ export * from './task-fields.js';
 export * from './task-moves.js';
 export * from './move-within-tag.js';
 export * from './move-between-tags.js';
+export * from './assignee.js';

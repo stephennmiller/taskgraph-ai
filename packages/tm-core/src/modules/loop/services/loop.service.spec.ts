@@ -13,6 +13,7 @@ import {
 } from 'vitest';
 import { fakeClaude } from './fake-claude.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
+import { parseCompletion } from './iteration-result.js';
 import { LoopService, type LoopServiceOptions } from './loop.service.js';
 import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
@@ -532,23 +533,7 @@ describe('LoopService', () => {
 		});
 	});
 
-	describe('parseCompletion (inlined)', () => {
-		let service: LoopService;
-		let parseCompletion: (
-			output: string,
-			exitCode: number
-		) => { status: string; message?: string };
-
-		beforeEach(() => {
-			service = new LoopService(defaultOptions);
-			// Access private method
-			parseCompletion = (
-				service as unknown as {
-					parseCompletion: typeof parseCompletion;
-				}
-			).parseCompletion.bind(service);
-		});
-
+	describe('parseCompletion', () => {
 		it('should detect complete marker', () => {
 			const result = parseCompletion(
 				'<loop-complete>ALL DONE</loop-complete>',

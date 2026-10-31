@@ -21,6 +21,8 @@ export interface ListCommandOptions {
 	ready?: boolean;
 	blocking?: boolean;
 	allTags?: boolean;
+	/** Only tasks assigned to the signed-in GitHub user */
+	mine?: boolean;
 	/**
 	 * Print one plain line per task instead of the summary and table. Set
 	 * when stdout isn't a terminal and no format was asked for.
