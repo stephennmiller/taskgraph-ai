@@ -93,10 +93,6 @@ if (mode === 'hang' || env.FAKE_DOCKER_STUCK || env.FAKE_DOCKER_LOST) {
 	return;
 }
 fs.writeFileSync(path.join(cwd, 'work.txt'), 'done\\n');
-if (mode === 'claude-files') {
-	fs.mkdirSync(path.join(cwd, '.claude'), { recursive: true });
-	fs.writeFileSync(path.join(cwd, '.claude', 'settings.json'), '{"hooks":{}}\\n');
-}
 sh('add', '-A');
 sh('commit', '-q', '-m', 'work on ' + id);
 const file = path.join(state, '.taskgraph', 'tasks', 'tasks.json');
@@ -287,8 +283,8 @@ describe('loop --parallel --container', () => {
 
 	it('starts no container on a task branch that was already here with other commits', async () => {
 		git(root, 'checkout', '-q', '-b', 'taskgraph/task-1');
-		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Other instructions\n');
-		git(root, 'add', 'CLAUDE.md');
+		fs.writeFileSync(path.join(root, 'notes.md'), 'Other notes\n');
+		git(root, 'add', 'notes.md');
 		git(root, 'commit', '-qm', 'from a pull request');
 		git(root, 'checkout', '-q', 'main');
 
@@ -304,7 +300,6 @@ describe('loop --parallel --container', () => {
 	});
 
 	it("doesn't count a container's commits as where the last run left the branch", async () => {
-		vi.stubEnv('FAKE_DOCKER_MODE', 'claude-files');
 		const first = await runParallel();
 		expect(first.tasks[0]).toMatchObject({ state: 'done', kept: true });
 		const data = JSON.parse(
@@ -323,7 +318,7 @@ describe('loop --parallel --container', () => {
 
 		expect(second.tasks[0]).toMatchObject({
 			state: 'failed',
-			error: expect.stringContaining('changes .claude/settings.json')
+			error: expect.stringContaining('taskgraph/task-1 already exists')
 		});
 	});
 

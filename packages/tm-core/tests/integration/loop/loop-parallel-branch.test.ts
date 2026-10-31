@@ -1,8 +1,7 @@
 /**
  * @fileoverview `loop --parallel` with a `taskgraph/task-<id>` branch that's
- * already in the repository: picked up again at the starting commit, where
- * the last run left it, or when its commits change no file Claude Code
- * loads. Real git and tasks.json, fake Claude Code.
+ * already in the repository: picked up again only at the starting commit or
+ * where the last run left it. Real git and tasks.json, fake Claude Code.
  *
  * @integration
  */
@@ -101,12 +100,8 @@ describe('loop --parallel with an existing task branch', () => {
 
 	it("doesn't start Claude on a task branch that was already here with other commits", async () => {
 		writePlan({ 'task-1': 'commit' });
-		// What `gh pr checkout` leaves for a pull request from taskgraph/task-1
-		git(root, 'checkout', '-q', '-b', 'taskgraph/task-1');
-		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Other instructions\n');
-		git(root, 'add', 'CLAUDE.md');
-		git(root, 'commit', '-qm', 'from a pull request');
-		git(root, 'checkout', '-q', 'main');
+		// Any commit no run recorded, even one that changes no file Claude Code loads
+		commitFile(root, 'src/app.ts', 'taskgraph/task-1');
 
 		const [result] = (
 			await tmCore.loop.runParallel({
@@ -118,7 +113,7 @@ describe('loop --parallel with an existing task branch', () => {
 		).tasks;
 
 		expect(result).toMatchObject({ state: 'failed', claimed: false });
-		expect(result.error).toContain('changes CLAUDE.md');
+		expect(result.error).toContain('taskgraph/task-1 already exists');
 		expect(result.error).toMatch(/git diff \w+ taskgraph\/task-1/);
 		expect(result.error).toContain('git branch -m taskgraph/task-1');
 		expect(result.error).toContain('git branch -D taskgraph/task-1');
@@ -143,113 +138,24 @@ describe('loop --parallel with an existing task branch', () => {
 		).tasks;
 		expect(second).toMatchObject({ error: 'exit 1', commits: 1, kept: true });
 
-		// Compared without case, at any depth
-		commitFile(second.worktree, 'docs/Claude.MD');
+		// Still where the last run left it after main moves on
+		commitFile(root, 'src/main.ts');
 		const [third] = (
 			await tmCore.loop.runParallel({ ...options, claimant: 'c' })
 		).tasks;
-		expect(third).toMatchObject({
+		expect(third).toMatchObject({ error: 'exit 1', commits: 1, kept: true });
+
+		commitFile(third.worktree, 'src/app.ts');
+		const [fourth] = (
+			await tmCore.loop.runParallel({ ...options, claimant: 'd' })
+		).tasks;
+		expect(fourth).toMatchObject({
 			state: 'failed',
-			error: expect.stringContaining('changes docs/Claude.MD')
+			error: expect.stringContaining('taskgraph/task-1 already exists')
 		});
 		expect(git(root, 'rev-list', '--count', 'main..taskgraph/task-1')).toBe(
 			'2'
 		);
-	}, 60_000);
-
-	it('picks up a task branch nothing recorded when its commits change no file Claude Code loads', async () => {
-		// Kept from before records, or by a run that crashed, with a commit of the user's own
-		commitFile(root, 'src/app.ts', 'taskgraph/task-1');
-		writePlan({ 'task-1': 'commit' });
-
-		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
-
-		expect(result).toMatchObject({ state: 'done', commits: 2, kept: true });
-		expect(fs.readFileSync(record('taskgraph/task-1'), 'utf8')).toBe(
-			git(root, 'rev-parse', 'taskgraph/task-1')
-		);
-	}, 60_000);
-
-	it.each([
-		'.claude/settings.json',
-		'packages/a/.Claude/agents/x.md',
-		'.mcp.json',
-		'CLAUDE.local.md',
-		'.taskgraph/config.json',
-		'.taskgraph/config.local.json',
-		'.taskgraph/reports/task-complexity-report.json'
-	])(
-		"doesn't pick up a task branch nothing recorded that changes %s",
-		async (file) => {
-			commitFile(root, file, 'taskgraph/task-1');
-			writePlan({ 'task-1': 'commit' });
-
-			const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
-
-			expect(result.state).toBe('failed');
-			expect(result.error).toContain(`changes ${file}`);
-			expect(fs.existsSync(result.worktree)).toBe(false);
-		},
-		60_000
-	);
-
-	it("doesn't pick up a task branch nothing recorded whose CLAUDE.md is from before yours changed", async () => {
-		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Old\n');
-		git(root, 'add', 'CLAUDE.md');
-		git(root, 'commit', '-qm', 'old instructions');
-		commitFile(root, 'src/app.ts', 'taskgraph/task-1');
-		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Approved\n');
-		git(root, 'commit', '-qam', 'new instructions');
-		writePlan({ 'task-1': 'commit' });
-
-		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
-
-		expect(result.state).toBe('failed');
-		expect(result.error).toContain('changes CLAUDE.md');
-		expect(fs.existsSync(result.worktree)).toBe(false);
-	}, 60_000);
-
-	it('a rename away from CLAUDE.md counts as a change to it', async () => {
-		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Approved\n');
-		git(root, 'add', 'CLAUDE.md');
-		git(root, 'commit', '-qm', 'instructions');
-		git(root, 'checkout', '-q', '-b', 'taskgraph/task-1');
-		git(root, 'mv', 'CLAUDE.md', 'notes.md');
-		git(root, 'commit', '-qm', 'rename');
-		git(root, 'checkout', '-q', 'main');
-		writePlan({ 'task-1': 'commit' });
-
-		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
-
-		expect(result.error).toContain('changes CLAUDE.md');
-	}, 60_000);
-
-	it('counts a change to the file a loaded symlink points at', async () => {
-		fs.writeFileSync(path.join(root, 'AGENTS.md'), 'Approved\n');
-		// CLAUDE.md -> AGENTS.md, one folder down so the target is resolved from the link's folder
-		fs.mkdirSync(path.join(root, 'docs'));
-		fs.symlinkSync('../AGENTS.md', path.join(root, 'docs', 'CLAUDE.md'));
-		git(root, 'add', '.');
-		git(root, 'commit', '-qm', 'instructions through a symlink');
-		commitFile(root, 'AGENTS.md', 'taskgraph/task-1');
-		writePlan({ 'task-1': 'commit' });
-
-		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
-
-		expect(result.state).toBe('failed');
-		expect(result.error).toContain('changes AGENTS.md');
-		expect(fs.existsSync(result.worktree)).toBe(false);
-	}, 60_000);
-
-	it("doesn't pick up a task branch that shares no history with the current commit", async () => {
-		git(root, 'checkout', '-q', '--orphan', 'taskgraph/task-1');
-		git(root, 'commit', '-qm', 'unrelated');
-		git(root, 'checkout', '-q', 'main');
-		writePlan({ 'task-1': 'commit' });
-
-		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
-
-		expect(result.error).toContain('shares no history');
 	}, 60_000);
 
 	it('records where the branch is as soon as its worktree is made, before cleanup', async () => {

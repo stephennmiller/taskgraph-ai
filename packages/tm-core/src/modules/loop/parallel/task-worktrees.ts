@@ -87,27 +87,6 @@ export function isTaskGraphState(file: string, projectPrefix: string): boolean {
 	);
 }
 
-/**
- * What Claude Code loads and `loop --trust` approves, lowercased, matched at
- * any depth; keep in step with CLAUDE_FILES, LOCAL_FILES and `.claude` in
- * ../loop-trust.ts
- */
-const LOADED_PATHS = [
-	'claude.md',
-	'claude.local.md',
-	'.claude',
-	'.mcp.json',
-	'.taskgraph/config.json',
-	'.taskgraph/config.local.json',
-	'.taskgraph/reports'
-];
-
-/** Whether `file` (from `git diff --name-only`) is, or is inside, one of LOADED_PATHS */
-function isLoadedByClaude(file: string): boolean {
-	const padded = `/${file.toLowerCase()}/`;
-	return LOADED_PATHS.some((p) => padded.includes(`/${p}/`));
-}
-
 export class TaskWorktrees {
 	/** The project folder with symlinks resolved, so paths compare with git's */
 	private readonly projectRoot: string;
@@ -363,93 +342,12 @@ export class TaskWorktrees {
 	}
 
 	/**
-	 * Files in LOADED_PATHS that differ between `base` and `tip`, or undefined
-	 * when they share no history. Against `base` itself, not where `tip` forked:
-	 * an older CLAUDE.md from before yours changed wasn't approved either
-	 */
-	private async loadedChanges(
-		base: string,
-		tip: string
-	): Promise<string[] | undefined> {
-		try {
-			await this.git(['merge-base', base, tip]);
-			// --no-renames: a rename would list only the new name, not CLAUDE.md
-			const out = await this.git([
-				'diff',
-				'--name-only',
-				'-z',
-				'--no-renames',
-				'--no-relative',
-				base,
-				tip,
-				'--'
-			]);
-			const targets = await this.loadedLinkTargets(base);
-			return out.split('\0').filter((f) => {
-				const lower = f.toLowerCase();
-				return (
-					f &&
-					(isLoadedByClaude(f) ||
-						targets.some((t) => lower === t || lower.startsWith(`${t}/`)))
-				);
-			});
-		} catch {
-			return undefined;
-		}
-	}
-
-	/**
-	 * Where the symlinks among LOADED_PATHS at `commit` point inside the
-	 * repository, lowercased: Claude Code reads through them (CLAUDE.md to
-	 * AGENTS.md, say). A branch that changes such a link is caught by its own
-	 * name, so `base`'s links are the ones to follow.
-	 * shortcut: one level only, a link to a link isn't followed; follow chains if anyone nests them
-	 */
-	private async loadedLinkTargets(commit: string): Promise<string[]> {
-		const empty = (
-			await this.git(['hash-object', '-t', 'tree', '/dev/null'])
-		).trim();
-		const raw = await this.git([
-			'diff',
-			'--raw',
-			'-z',
-			'--no-abbrev',
-			'--no-renames',
-			'--no-relative',
-			empty,
-			commit,
-			'--',
-			...LOADED_PATHS.flatMap((p) => [
-				`:(glob,icase)**/${p}`,
-				`:(glob,icase)**/${p}/**`
-			])
-		]);
-		// `:000000 <mode> <sha> <sha> A` then the path
-		const fields = raw.split('\0');
-		const targets: string[] = [];
-		for (let i = 0; i + 1 < fields.length; i += 2) {
-			const [, mode, , sha] = fields[i].split(' ');
-			if (mode !== '120000') continue;
-			const target = await this.git(['cat-file', 'blob', sha]);
-			if (target.startsWith('/')) continue;
-			targets.push(
-				path.posix
-					.normalize(path.posix.join(path.posix.dirname(fields[i + 1]), target))
-					.replace(/\/+$/, '')
-					.toLowerCase()
-			);
-		}
-		return targets;
-	}
-
-	/**
 	 * Claude runs in the task branch with the files on it, and `loop --trust`
 	 * approved only the ones in this checkout. So a branch that's already
-	 * here is used when it's at `base`, where an earlier run left it
-	 * (recordBranch), or when every file Claude Code loads is as at `base` (a
-	 * branch kept from an older version, a crash, a commit of your own); not
-	 * when one differs, as after `gh pr checkout` or a pull.
-	 * @throws ParallelLoopError naming the files and how to set the branch aside
+	 * here is used only when it's at `base` or where an earlier run left it
+	 * (recordBranch); any other commits on it (`gh pr checkout`, a pull, a
+	 * `--container` run, a commit of your own) weren't approved.
+	 * @throws ParallelLoopError naming the branch and how to set it aside
 	 */
 	async assertBranchReusable(branch: string, base: string): Promise<void> {
 		const tip = await this.tip(branch);
@@ -461,16 +359,8 @@ export class TaskWorktrees {
 				() => ''
 			);
 		if (recorded === tip) return;
-		const changed = await this.loadedChanges(base, tip);
-		if (changed?.length === 0) return;
-		const what = changed
-			? `changes ${changed.slice(0, 5).join(', ')}${changed.length > 5 ? ` and ${changed.length - 5} more` : ''}, which Claude Code loads`
-			: 'shares no history with your current commit';
-		const review = changed
-			? `git diff ${base} ${branch}`
-			: `git log -p ${branch}`;
 		throw new ParallelLoopError(
-			`${branch} already exists and ${what}, so its files weren't approved. Review it with \`${review}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
+			`${branch} already exists with commits no earlier run left there, so its files weren't approved. Review it with \`git diff ${base} ${branch}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`
 		);
 	}
 
