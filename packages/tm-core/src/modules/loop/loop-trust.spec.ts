@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -213,6 +214,30 @@ describe('loop trust', () => {
 
 		expect(keepLoopTrust(project, home)).toBe(true);
 		expect(isLoopTrusted(project, home)).toBe(true);
+	});
+
+	it('keeps a withdrawal another process makes while it re-stamps', async () => {
+		writeTasks([task]);
+		trustLoop(project, home);
+		const file = path.join(home, '.taskgraph', 'loop-trusted.json');
+		// Holds the lock, then withdraws every approval and lets go
+		const holder = spawn(
+			process.execPath,
+			[
+				'-e',
+				`const fs = require('fs');
+				const release = require('proper-lockfile').lockSync(process.argv[1], { realpath: false });
+				console.log('locked');
+				setTimeout(() => { fs.writeFileSync(process.argv[1], '[]'); release(); }, 300);`,
+				file
+			],
+			{ cwd: import.meta.dirname }
+		);
+		await new Promise((resolve) => holder.stdout.once('data', resolve));
+
+		expect(keepLoopTrust(project, home)).toBe(false);
+		expect(isLoopTrusted(project, home)).toBe(false);
+		await new Promise((resolve) => holder.once('close', resolve));
 	});
 
 	it('does not carry over an approval that was withdrawn', () => {

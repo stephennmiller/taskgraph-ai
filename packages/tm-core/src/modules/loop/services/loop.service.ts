@@ -125,7 +125,7 @@ export class LoopService {
 		for (let i = 1; i <= config.iterations && this._isRunning; i++) {
 			if (this.approved && !keepLoopTrust(this.projectRoot)) {
 				const msg =
-					'Tasks were added since loop was approved. Run loop again to approve them.';
+					'Approval for this project was withdrawn during the run: parse-prd, github import or research added to the tasks. Run loop again to approve the tasks as they are now.';
 				this.reportError(config.callbacks, msg);
 				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}

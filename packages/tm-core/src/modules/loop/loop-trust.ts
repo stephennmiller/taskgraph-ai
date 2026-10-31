@@ -10,6 +10,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import lockfile from 'proper-lockfile';
 import { TASK_STATUSES } from '../../common/constants/index.js';
 import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 
@@ -108,11 +109,14 @@ export function trustLoop(
 	home: string = os.homedir()
 ): void {
 	const root = canonical(projectRoot);
-	writeTrusted(home, [
-		...readTrusted(home).filter((e) => !entryMatches(e, root)),
-		{ path: root, tasks: tasksHash(root) }
-	]);
+	updateTrusted(home, (trusted) => withEntry(trusted, root));
 }
+
+/** The list with this project's entry for its tasks as they are now */
+const withEntry = (trusted: unknown[], root: string) => [
+	...trusted.filter((e) => !entryMatches(e, root)),
+	{ path: root, tasks: tasksHash(root) }
+];
 
 /**
  * Between iterations of an approved run: carry the approval over to the
@@ -124,10 +128,12 @@ export function keepLoopTrust(
 	home: string = os.homedir()
 ): boolean {
 	const root = canonical(projectRoot);
-	const entry = findEntry(home, root);
-	if (typeof entry !== 'object') return false;
-	trustLoop(root, home);
-	return true;
+	let kept = false;
+	updateTrusted(home, (trusted) => {
+		kept = trusted.some((e) => typeof e === 'object' && entryMatches(e, root));
+		return kept ? withEntry(trusted, root) : undefined;
+	});
+	return kept;
 }
 
 /**
@@ -139,18 +145,45 @@ export function untrustLoop(
 	home: string = os.homedir()
 ): void {
 	const root = canonical(projectRoot);
-	const trusted = readTrusted(home);
-	if (!trusted.some((e) => entryMatches(e, root))) return;
-	writeTrusted(
-		home,
+	if (!findEntry(home, root)) return;
+	updateTrusted(home, (trusted) =>
 		trusted.filter((e) => !entryMatches(e, root))
 	);
 }
 
-function writeTrusted(home: string, trusted: unknown[]): void {
-	fs.mkdirSync(path.dirname(trustFile(home)), { recursive: true });
-	// Write beside, then rename, so a crash cannot leave half a file
-	const tmp = `${trustFile(home)}.${process.pid}.tmp`;
-	fs.writeFileSync(tmp, JSON.stringify(trusted, null, 2));
-	fs.renameSync(tmp, trustFile(home));
+/**
+ * Read, change and write the list under a lock, so a withdrawal another
+ * process makes between this read and this write isn't lost
+ * @param change - The new list, or undefined to leave the file as it is
+ */
+function updateTrusted(
+	home: string,
+	change: (trusted: unknown[]) => unknown[] | undefined
+): void {
+	const file = trustFile(home);
+	fs.mkdirSync(path.dirname(file), { recursive: true });
+	const release = lockTrusted(file);
+	try {
+		const trusted = change(readTrusted(home));
+		if (!trusted) return;
+		// Write beside, then rename, so a crash cannot leave half a file
+		const tmp = `${file}.${process.pid}.tmp`;
+		fs.writeFileSync(tmp, JSON.stringify(trusted, null, 2));
+		fs.renameSync(tmp, file);
+	} finally {
+		release();
+	}
+}
+
+/** lockSync takes no retries: try every 20 ms, for up to about 2 seconds */
+function lockTrusted(file: string): () => void {
+	for (let tries = 1; ; tries++) {
+		try {
+			return lockfile.lockSync(file, { realpath: false, stale: 10_000 });
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code;
+			if (code !== 'ELOCKED' || tries === 100) throw error;
+			Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 20);
+		}
+	}
 }
