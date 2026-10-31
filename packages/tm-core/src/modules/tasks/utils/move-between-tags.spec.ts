@@ -120,6 +120,44 @@ describe('moveTasksBetweenTags', () => {
 		]);
 	});
 
+	it('lists no conflict for "1x" or "1.1x", which name no task, when task 1 moves (#874)', () => {
+		const tags = tagsWith();
+		tags.set('empty', []);
+		const parser = (tags.get('master') as any[])[1];
+		parser.dependencies = ['1x'];
+		parser.subtasks[1].dependencies = ['1.1x'];
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['1'],
+			'master',
+			'empty',
+			{},
+			archived
+		);
+
+		expect(result.movedTasks.map((m) => String(m.id))).toEqual(['1']);
+		expect(parser.dependencies).toEqual(['1x']);
+		expect(parser.subtasks[1].dependencies).toEqual(['1.1x']);
+	});
+
+	it('brings no task along for "1x" with withDependencies (#874)', () => {
+		const tags = tagsWith();
+		tags.set('empty', []);
+		(tags.get('master') as any[])[2].dependencies = ['1x'];
+
+		const result = moveTasksBetweenTags(
+			tags,
+			['3'],
+			'master',
+			'empty',
+			{ withDependencies: true, ignoreDependencies: true },
+			archived
+		);
+
+		expect(result.movedTasks.map((m) => String(m.id))).toEqual(['3']);
+	});
+
 	it('still refuses dependents left behind with withDependencies (#674)', () => {
 		const tags = tagsWith();
 		tags.set('feature', []);

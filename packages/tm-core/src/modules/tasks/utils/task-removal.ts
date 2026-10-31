@@ -21,7 +21,11 @@ import {
 	dependenciesForMovedItem,
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
-import { canonicalTaskId, fullSubtaskId } from '../validation/task-id.js';
+import {
+	canonicalTaskId,
+	fullSubtaskId,
+	normalizeTaskId
+} from '../validation/task-id.js';
 import { liveOrArchived, nextTaskId } from './archive.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 
@@ -317,7 +321,7 @@ export function clearSubtasksIn(
 
 /** Check each ID and find its task: in the order given, without repeats */
 function resolveTasks(tasks: Task[], ids: string): Task[] {
-	const unique = [...new Set(splitIds(ids))];
+	const unique = [...new Set(splitIds(ids).map(normalizeTaskId))];
 	if (unique.length === 0) {
 		throw errorWithHint(ERROR_CODES.INVALID_INPUT, 'No task IDs given');
 	}

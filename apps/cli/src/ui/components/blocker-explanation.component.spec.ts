@@ -138,6 +138,26 @@ describe('renderBlockerExplanation', () => {
 		);
 	});
 
+	it('suggests fix-dependencies for an older spelling of a task, not removing it (#874)', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation(
+					[node('5', [{ id: '01', kind: 'missing', blockers: [] }])],
+					{
+						rootCauses: [
+							{ id: '01', kind: 'missing', listedBy: ['5'], canonicalId: '1' }
+						]
+					}
+				)
+			)
+		);
+
+		expect(lines).toContain(
+			'  01 is task 1, stored in an older form. Rewrite it with: taskgraph fix-dependencies'
+		);
+		expect(lines.join('\n')).not.toContain('remove-dependency');
+	});
+
 	it('names stalled tasks and how to reopen them', () => {
 		const lines = plain(
 			renderBlockerExplanation(

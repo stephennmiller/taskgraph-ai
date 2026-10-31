@@ -11,7 +11,7 @@ import {
 } from '../../dependencies/dependency-provenance.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import { pruneTaskLinks } from '../../dependencies/task-links.js';
-import { normalizeTaskId } from '../validation/task-id.js';
+import { canonicalTaskId, normalizeTaskId } from '../validation/task-id.js';
 import { isArchivedReference, liveOrArchived } from './archive.js';
 import { assertTagName, isReservedNewTagName } from './tag-names.js';
 import {
@@ -27,12 +27,15 @@ import {
 	taken
 } from './task-moves.js';
 
-/** The parent task ID a dependency names: 5 for "5" and for "5.2" */
+/**
+ * The parent task ID a dependency names: 5 for "5", "05" and "5.2". Null for
+ * "5x" or "5.2x", which name nothing; parseInt read them as task 5
+ */
 function dependencyTaskId(dep: unknown): number | null {
 	if (typeof dep === 'number') return Number.isFinite(dep) ? dep : null;
-	if (typeof dep !== 'string' || dep.trim() === '') return null;
-	const parsed = parseInt(dep.trim().split('.')[0], 10);
-	return Number.isFinite(parsed) ? parsed : null;
+	if (typeof dep !== 'string') return null;
+	const id = canonicalTaskId(dep);
+	return id === undefined ? null : Number(id.split('.')[0]);
 }
 
 /**
@@ -48,12 +51,10 @@ function forwardDependencies(sources: Item[], tasks: Item[]): DependencyId[] {
 		seen.add(taskId);
 		const task = findTask(tasks, taskId);
 		for (const dep of task?.dependencies ?? []) {
+			const canonical =
+				typeof dep === 'string' ? canonicalTaskId(dep) : undefined;
 			const id =
-				typeof dep === 'string' &&
-				!dep.includes('.') &&
-				!Number.isNaN(parseInt(dep, 10))
-					? parseInt(dep, 10)
-					: dep;
+				canonical && !canonical.includes('.') ? Number(canonical) : dep;
 			if (id == null || id === taskId) continue;
 			found.add(id);
 			visit(id, depth + 1);
@@ -127,8 +128,10 @@ First promote it to a full task using:
 	// left behind and subtask-held dependencies are still checked
 	{
 		const movedIds = new Set(toMove.map((id) => String(dependencyTaskId(id))));
-		const isMoved = (id: DependencyId) =>
-			movedIds.has(String(dependencyTaskId(id)));
+		const isMoved = (id: DependencyId) => {
+			const task = dependencyTaskId(id);
+			return task !== null && movedIds.has(String(task));
+		};
 		const conflicts: CrossTagConflict[] = [];
 		// What --ignore-dependencies drops, by the task or subtask holding it
 		const drops: { item: Item; parentId?: DependencyId; deps: unknown[] }[] =
@@ -230,7 +233,7 @@ First promote it to a full task using:
 	const movedTasks: CrossTagMoveResult['movedTasks'] = [];
 	const targetArchived = archivedIds(targetTag);
 	for (const taskId of toMove) {
-		const id = String(parseInt(String(taskId), 10));
+		const id = normalizeTaskId(taskId);
 		const index = source.findIndex((t) => String(t.id) === id);
 		if (index === -1) {
 			notFound(`Task ${taskId} not found in source tag "${sourceTag}"`);

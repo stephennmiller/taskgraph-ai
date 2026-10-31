@@ -144,6 +144,10 @@ function unblockSteps(causes: BlockerRootCause[]): string[] {
 			steps.push(
 				`${c.id} is ${c.status}. Reopen it with: ${cmd(`taskgraph set-status --id=${c.id} --status=pending`)}`
 			);
+		} else if (c.kind === 'missing' && c.canonicalId) {
+			steps.push(
+				`${c.id} is task ${c.canonicalId}, stored in an older form. Rewrite it with: ${cmd('taskgraph fix-dependencies')}`
+			);
 		} else if (c.kind === 'missing') {
 			const fixes = (c.listedBy ?? []).map((by) =>
 				cmd(`taskgraph remove-dependency --id=${by} --depends-on=${c.id}`)

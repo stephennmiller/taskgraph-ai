@@ -20,6 +20,7 @@
 
 import { isTaskComplete } from '../../common/constants/index.js';
 import type { Task, TaskStatus } from '../../common/types/index.js';
+import { canonicalTaskId } from '../tasks/validation/task-id.js';
 import { createDependencyState } from './dependency-check.js';
 import {
 	type DependencyGraphNode,
@@ -77,6 +78,11 @@ export interface BlockerRootCause {
 	kind: BlockerKind;
 	/** For `missing`: every task that lists the ID */
 	listedBy?: string[];
+	/**
+	 * For `missing`: the task an older spelling names ("1" for "01"), which
+	 * fix-dependencies rewrites it to
+	 */
+	canonicalId?: string;
 	/** For `cycle`: every task in the loop */
 	cycle?: string[];
 	/** For `cycle`: the dependencies that close a loop; removing all breaks it */
@@ -149,6 +155,19 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		}
 	};
 
+	/** A missing ID's root cause, with the task an older spelling names */
+	const missingCause = (id: string, by: string): BlockerRootCause => {
+		const canonicalId = canonicalTaskId(id);
+		return {
+			id,
+			kind: 'missing',
+			listedBy: [by],
+			...(canonicalId !== undefined &&
+				canonicalId !== id &&
+				nodes.has(canonicalId) && { canonicalId })
+		};
+	};
+
 	const addLoopEdge = (from: DependencyGraphNode, to: DependencyGraphNode) => {
 		const cycle = loopOf.get(to.id) ?? [to.id];
 		addCause({
@@ -217,7 +236,7 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 					inheritedOut.push(addLoopEdge(parent, parent));
 				}
 				for (const missing of [...parent.missing].sort(compareIds)) {
-					addCause({ id: missing, kind: 'missing', listedBy: [parent.id] });
+					addCause(missingCause(missing, parent.id));
 					inheritedOut.push({ id: missing, kind: 'missing', blockers: [] });
 				}
 			}
@@ -316,7 +335,7 @@ export function explainBlockers(tasks: Task[], id: string): BlockerExplanation {
 		}
 
 		for (const missing of [...frame.node.missing].sort(compareIds)) {
-			addCause({ id: missing, kind: 'missing', listedBy: [frame.node.id] });
+			addCause(missingCause(missing, frame.node.id));
 			frame.out.push({ id: missing, kind: 'missing', blockers: [] });
 		}
 
