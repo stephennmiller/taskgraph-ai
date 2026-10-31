@@ -33,6 +33,7 @@ import {
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '../../dependencies/dependency-provenance.js';
+import { withoutLoopsThroughParent } from '../../dependencies/dependency-edges.js';
 import { dropReferences } from '../../dependencies/removed-references.js';
 import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
@@ -236,6 +237,7 @@ export class UpdateTaskService {
 			objectName: 'task'
 		});
 		const { updated, relabel } = this.rewrite(
+			tasks,
 			stored,
 			response.mainResult?.task,
 			prompt,
@@ -306,14 +308,16 @@ export class UpdateTaskService {
 	}
 
 	/**
-	 * The AI's rewrite of `stored`, ready to save: its ID and status kept
-	 * (status unless the prompt mentions it), each subtask under the ID of
-	 * the stored one it matches (#576, #804), done subtasks restored, and
-	 * every field the AI left out or nulled kept. `relabel` gives a copy of
+	 * The AI's rewrite of `stored` (one of `tasks`), ready to save: its ID
+	 * and status kept (status unless the prompt mentions it), each subtask
+	 * under the ID of the stored one it matches (#576, #804) and without a
+	 * dependency that loops back to the task (#824), done subtasks restored,
+	 * and every field the AI left out or nulled kept. `relabel` gives a copy of
 	 * the task as saved since with a subtask added during the call moved off
 	 * an ID the rewrite gave a new one
 	 */
 	private rewrite(
+		tasks: Task[],
 		stored: Task,
 		aiTask: any,
 		prompt: string,
@@ -356,7 +360,13 @@ export class UpdateTaskService {
 					...subtask,
 					id,
 					// A number is a sibling; a string is a task or subtask
-					dependencies: cleanGeneratedSubtaskDependencies(deps[i], stored.id),
+					dependencies: withoutLoopsThroughParent(
+						tasks,
+						stored.id,
+						id,
+						cleanGeneratedSubtaskDependencies(deps[i], stored.id),
+						debug
+					),
 					status: subtask.status || 'pending',
 					testStrategy: subtask.testStrategy ?? null
 				};

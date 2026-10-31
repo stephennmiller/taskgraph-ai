@@ -143,10 +143,11 @@ export function wouldCloseDependencyLoop(
  * Whether a new subtask of `parentId` would close a loop. The parent can't
  * finish before it unless it lists the parent, so it loops when what it
  * depends on reaches the parent: `dependencies` (full IDs) for a new subtask,
- * or those of the task `fromTaskId` being moved under the parent (which drops
- * its dependency on the parent, see `dependenciesForMovedItem`). The moved
- * task also starts waiting on the parent's dependencies (not on itself or the
- * parent's subtasks), which loops when one of them reaches it.
+ * or those of the task or subtask (`"2.1"`) `fromTaskId` being moved under
+ * the parent (which drops its dependency on the parent, see
+ * `dependenciesForMovedItem`). The moved item also starts waiting on the
+ * parent's dependencies (not on itself or the parent's subtasks), which loops
+ * when one of them reaches it.
  */
 export function wouldSubtaskCloseLoop(
 	tasks: Task[],
@@ -161,12 +162,62 @@ export function wouldSubtaskCloseLoop(
 		return !deps.includes(parentId) && reaches(deps, parentId);
 	}
 	const taskId = source.fromTaskId;
-	const task = tasks.find((t) => String(t.id) === taskId);
-	const own = (task?.dependencies ?? [])
-		.map(String)
+	const [fromParentId, subtaskId] = taskId.split('.');
+	const task = tasks.find((t) => String(t.id) === fromParentId);
+	const item =
+		subtaskId === undefined
+			? task
+			: task?.subtasks?.find((st) => String(st.id) === subtaskId);
+	const own = (item?.dependencies ?? [])
+		.map((dep) =>
+			subtaskId === undefined
+				? String(dep)
+				: resolveSubtaskDependency(fromParentId, dep)
+		)
 		.filter((dep) => dep !== parentId);
+	if (subtaskId !== undefined) {
+		// Its old parent stops waiting on it (unless it lists it, a dependency
+		// that follows it), and it on that parent's dependencies
+		if (!(task?.dependencies ?? []).map(String).includes(taskId)) {
+			graph.set(
+				fromParentId,
+				(graph.get(fromParentId) ?? []).filter((id) => id !== taskId)
+			);
+		}
+		graph.set(taskId, own);
+	}
 	const inherited = (graph.get(parentId) ?? []).filter(
 		(dep) => dep !== taskId && !dep.startsWith(`${parentId}.`)
 	);
 	return reaches(own, parentId) || reaches(inherited, taskId);
+}
+
+/**
+ * `dependencies` the AI wrote for a new subtask of `parentId` (as stored: a
+ * number up to 99 is a sibling) without those on other tasks that would close
+ * a loop through the parent (`wouldSubtaskCloseLoop`). Siblings stay: each is
+ * checked as a subtask of its own.
+ * @param log - Told about each dependency dropped
+ */
+export function withoutLoopsThroughParent<T extends string | number>(
+	tasks: Task[],
+	parentId: string | number,
+	subtaskId: string | number,
+	dependencies: T[],
+	log: (message: string) => void = () => {}
+): T[] {
+	const parent = String(parentId);
+	return dependencies.filter((raw) => {
+		const dep = resolveSubtaskDependency(parent, raw);
+		if (
+			dep.startsWith(`${parent}.`) ||
+			!wouldSubtaskCloseLoop(tasks, parent, { dependencies: [dep] })
+		) {
+			return true;
+		}
+		log(
+			`Dropped dependency ${dep} of subtask ${parent}.${subtaskId}: it made a loop`
+		);
+		return false;
+	});
 }
