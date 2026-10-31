@@ -124,4 +124,52 @@ describe('ParallelLoopRunner', () => {
 		expect(args.slice(-4)).toEqual(['--model', 'opus', '--effort', 'low']);
 		expect(result.tasks[0]).toMatchObject({ model: 'opus', effort: 'low' });
 	});
+
+	it('marks the total partial when a task died before reporting its cost (#861)', async () => {
+		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-parallel-'));
+		fs.mkdirSync(path.join(root, '.taskgraph', 'worktrees'), {
+			recursive: true
+		});
+		const ids = ['1', '2'];
+		const tasks = {
+			getDependencyTree: async () => ({ waves: { waves: [ids] } }),
+			claimNext: async () => {
+				const id = ids.shift();
+				return { task: id ? { id, title: `Task ${id}` } : null };
+			},
+			get: async () => ({ task: { status: 'pending', metadata: {} } }),
+			updateStatus: async () => {}
+		};
+		// Task 1 reports its cost; task 2 starts, then is killed before its result event
+		const output = [
+			`${JSON.stringify({ type: 'result', subtype: 'success', result: 'ok', total_cost_usd: 0.4, num_turns: 2 })}\n`,
+			`${JSON.stringify({ type: 'system', subtype: 'init' })}\n`
+		];
+		const spawner = vi.fn(
+			(_command: string, _args: string[], options: { stdio: number[] }) => {
+				const child = new EventEmitter() as EventEmitter & {
+					pid: number;
+					kill: () => void;
+				};
+				child.pid = 4242;
+				child.kill = () => {};
+				const last = output.length === 1;
+				fs.writeSync(options.stdio[1], output.shift() ?? '');
+				setImmediate(() => child.emit('close', last ? 137 : 0, null));
+				return child;
+			}
+		);
+
+		const result = await new ParallelLoopRunner(
+			root,
+			tasks as never,
+			() => 'master'
+		).run({ parallel: 2, spawner: spawner as never });
+
+		expect(result.tasks.map((t) => [t.id, t.costUsd, t.costUnknown])).toEqual([
+			['1', 0.4, undefined],
+			['2', undefined, true]
+		]);
+		expect(result).toMatchObject({ totalCostUsd: 0.4, costPartial: true });
+	});
 });

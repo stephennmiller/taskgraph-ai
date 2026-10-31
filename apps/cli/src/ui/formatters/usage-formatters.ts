@@ -97,6 +97,8 @@ export function formatLoopSpend(spend: {
 	costUsd?: number;
 	/** costUsd is what loop counted, not what Claude Code reported */
 	costUnknown?: boolean;
+	/** A total that leaves out a cost nobody knows: shown as `at least` */
+	costPartial?: boolean;
 	turns?: number;
 	durationMs?: number;
 }): string {
@@ -107,8 +109,10 @@ export function formatLoopSpend(spend: {
 		spend.session ?? null,
 		setting || null,
 		spend.costUsd !== undefined
-			? `${spend.costUnknown ? 'cost unknown, counted as ' : ''}${formatCost(spend.costUsd)}`
-			: null,
+			? `${spend.costUnknown ? 'cost unknown, counted as ' : spend.costPartial ? 'at least ' : ''}${formatCost(spend.costUsd)}`
+			: spend.costUnknown || spend.costPartial
+				? 'cost unknown'
+				: null,
 		spend.turns !== undefined
 			? `${spend.turns} ${spend.turns === 1 ? 'turn' : 'turns'}`
 			: null,

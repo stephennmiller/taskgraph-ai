@@ -43,6 +43,8 @@ export interface ParallelTask extends ModelChoice {
 	error?: string;
 	/** What Claude Code reported spending, in US dollars (set when it exits) */
 	costUsd?: number;
+	/** Claude Code started but reported no cost: killed, timed out or crashed (set when it exits) */
+	costUnknown?: boolean;
 	/** Agentic turns Claude Code took (set when it exits) */
 	turns?: number;
 	/** Commits on the branch past the starting commit (set at the end) */
@@ -114,4 +116,6 @@ export interface ParallelLoopResult {
 	aborted: boolean;
 	/** Sum of the tasks' costUsd, when any reported one */
 	totalCostUsd?: number;
+	/** A task's cost is unknown and not in totalCostUsd, so the run spent at least that */
+	costPartial?: boolean;
 }

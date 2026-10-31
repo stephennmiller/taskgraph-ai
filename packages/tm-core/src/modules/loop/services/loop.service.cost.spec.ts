@@ -185,6 +185,14 @@ describe('LoopService cost and caps', () => {
 			message: 'Claude Code reached the --max-turns limit',
 			turns: 3
 		});
+		// Its last iteration failed, so the run did (#861)
+		expect(result).toMatchObject({
+			finalStatus: 'error',
+			errorMessage: 'Claude Code reached the --max-turns limit'
+		});
+		expect(written()).toContain(
+			'# Iteration 1: error · Claude Code reached the --max-turns limit · $0.20 · 3 turns'
+		);
 	});
 
 	it('gives each iteration what is left of --max-budget-usd and stops once it is spent', async () => {
@@ -228,12 +236,14 @@ describe('LoopService cost and caps', () => {
 				costUsd: 1.5,
 				costUnknown: true
 			});
+			// A failed iteration, not the budget, ended the run (#861)
 			expect(result).toMatchObject({
-				finalStatus: 'budget_reached',
+				finalStatus: 'error',
 				totalCostUsd: 1.5
 			});
+			expect(result.errorMessage).toContain("Claude didn't finish");
 			expect(written()).toMatch(
-				/# Iteration 1: error · cost unknown, counted as \$1\.50 · \d+s\n/
+				/# Iteration 1: error · Claude didn't finish .+ · cost unknown, counted as \$1\.50 · \d+s\n/
 			);
 		}
 	);
@@ -269,9 +279,55 @@ describe('LoopService cost and caps', () => {
 				costUsd: 2,
 				costUnknown: true
 			});
-			expect(result.finalStatus).toBe('budget_reached');
+			// A crash, not a budget stop (#861)
+			expect(result).toMatchObject({
+				finalStatus: 'error',
+				errorMessage: 'Exit code 137'
+			});
 		}
 	);
+
+	it('ends as budget_reached when Claude stopped at the budget it was given (#861)', async () => {
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					stdout: streamJson({
+						subtype: 'error_max_budget_usd',
+						total_cost_usd: 1,
+						num_turns: 4
+					}),
+					status: 1
+				}) as never
+		);
+
+		const result = await service.run(
+			config({ iterations: 3, maxBudgetUsd: 1 })
+		);
+
+		expect(spawn).toHaveBeenCalledTimes(1);
+		expect(result.iterations[0].message).toBe(
+			'Claude Code reached the --max-budget-usd limit'
+		);
+		expect(result.finalStatus).toBe('budget_reached');
+	});
+
+	it("marks the total partial when an iteration's cost is unknown and there is no budget (#861)", async () => {
+		const started = streamJson({ result: 'x' }).split('\n')[0];
+		spawn
+			.mockImplementationOnce(spends(0.3, 2))
+			.mockImplementationOnce(
+				() => fakeClaude({ stdout: `${started}\n`, status: 137 }) as never
+			)
+			.mockImplementationOnce(spends(0.2, 1));
+
+		const result = await service.run(config({ iterations: 3 }));
+
+		expect(result).toMatchObject({ totalCostUsd: 0.5, costPartial: true });
+		expect(written()).toMatch(
+			/# Iteration 2: error · Exit code 137 · cost unknown · \d+s\n/
+		);
+		expect(written()).toContain('- Spent: at least $0.50 · 3 turns');
+	});
 
 	it('counts nothing for a claude that failed before it started (no events)', async () => {
 		spawn.mockImplementation(

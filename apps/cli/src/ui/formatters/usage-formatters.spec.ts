@@ -131,6 +131,19 @@ describe('formatLoopSpend', () => {
 		).toBe(' · cost unknown, counted as $0.75');
 	});
 
+	it('says when a cost is unknown, and a total that leaves one out is a floor (#861)', () => {
+		const shown = (spend: Parameters<typeof formatLoopSpend>[0]) =>
+			stripVTControlCharacters(formatLoopSpend(spend));
+
+		expect(shown({ costUnknown: true, turns: 2 })).toBe(
+			' · cost unknown · 2 turns'
+		);
+		expect(shown({ costUsd: 0.25, costPartial: true })).toBe(
+			' · at least $0.25'
+		);
+		expect(shown({ costPartial: true })).toBe(' · cost unknown');
+	});
+
 	it('leads with the model and effort the iteration ran at', () => {
 		expect(
 			stripVTControlCharacters(
