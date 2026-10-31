@@ -40,7 +40,8 @@ export interface HelpGroup {
  * Every command a user runs gets a row. Left out on purpose: `prime` (for
  * agents, named in the footer), the hidden `merge-driver` (git runs it),
  * `help`, `update-subtask` (the help points at `note`
- * instead, #245) and the old per-tag commands that `tags <…>` replaces.
+ * instead, #245), the old per-tag commands that `tags <…>` replaces, and the
+ * hidden aliases of merged commands (#882).
  * program.spec.ts fails when a visible command has no row (#364).
  */
 export const HELP_GROUPS: readonly HelpGroup[] = [
@@ -71,8 +72,7 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 		commands: [
 			{ name: 'parse-prd', desc: 'Generate tasks from a PRD' },
 			{ name: 'generate', desc: 'Write a file for each task' },
-			{ name: 'update', desc: 'Update tasks from an ID onwards' },
-			{ name: 'update-task', desc: 'Update one task' },
+			{ name: 'update', desc: 'Update one task, or --from an ID onwards' },
 			{ name: 'note', desc: 'Log a progress note on a task, as written' },
 			{ name: 'add-subtask', desc: 'Add a subtask, or make a task one' },
 			{ name: 'remove-task', desc: 'Remove a task or subtask' },
@@ -88,11 +88,15 @@ export const HELP_GROUPS: readonly HelpGroup[] = [
 	{
 		title: 'Analyze & expand',
 		commands: [
-			{ name: 'analyze-complexity', desc: 'Score tasks for complexity' },
-			{ name: 'complexity-report', desc: 'Show the complexity report' },
+			{
+				name: 'analyze-complexity',
+				desc: 'Score complexity; --report shows it'
+			},
 			{ name: 'expand', desc: 'Break a task into subtasks' },
-			{ name: 'scope-up', desc: 'Grow a task’s scope with AI' },
-			{ name: 'scope-down', desc: 'Shrink a task’s scope with AI' },
+			{
+				name: 'scope <up|down>',
+				desc: 'Grow or shrink a task’s scope with AI'
+			},
 			{ name: 'research', desc: 'Ask a research question about the project' }
 		]
 	},

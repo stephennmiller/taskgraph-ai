@@ -275,7 +275,7 @@ The same actions as slash commands and CLI commands:
 | Mark task 3 done | `/taskgraph:to-done 3` | `taskgraph set-status --id=3 --status=done` |
 | Break task 4 into subtasks | `/taskgraph:expand-task 4` | `taskgraph expand --id=4` |
 | Add a task for ... | `/taskgraph:add-task <what you want>` | `taskgraph add-task --prompt='...'` |
-| Update task 5: ... | `/taskgraph:update-task 5 <change>` | `taskgraph update-task --id=5 --prompt='...'` |
+| Update task 5: ... | `/taskgraph:update-task 5 <change>` | `taskgraph update 5 --prompt='...'` |
 | Research ... | (research skill) | `taskgraph research "JWT best practices"` |
 
 If you use the MCP server instead, research, tags and the dependency editing
@@ -342,11 +342,11 @@ taskgraph set-status --id=3 --status=done    # change status
 taskgraph add-task --prompt='...' --research # add a task
 taskgraph expand --id=4 --research           # split into subtasks
 taskgraph expand --all                       # expand every eligible task
-taskgraph update-task --id=5 --prompt='...'  # change one task
+taskgraph update 5 --prompt='...'            # change one task
 taskgraph update --from=5 --prompt='...'     # change task 5 onward
 taskgraph note 3.2 'chose argon2'            # log progress, as written
 taskgraph analyze-complexity --research
-taskgraph complexity-report
+taskgraph analyze-complexity --report
 taskgraph add-dependency --id=5 --depends-on=3
 taskgraph validate-dependencies
 taskgraph move --from=5 --from-tag=backlog --to-tag=in-progress

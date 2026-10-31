@@ -13,6 +13,7 @@ import { formatComplexityRun } from '../ui/formatters/complexity-report-formatte
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { formatUsageLine } from '../ui/formatters/usage-formatters.js';
 import { createSpinner } from '../ui/spinner.js';
+import { showComplexityReport } from './complexity-report.command.js';
 import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import {
@@ -35,6 +36,8 @@ export interface AnalyzeComplexityCommandOptions {
 	from?: string;
 	to?: string;
 	tag?: string;
+	/** Show the saved report instead; a string names the report file */
+	report?: boolean | string;
 }
 
 /** The report path relative to the project, as the user would type it */
@@ -68,7 +71,18 @@ export class AnalyzeComplexityCommand extends Command {
 			.option('--from <id>', 'Starting task ID in a range to analyze')
 			.option('--to <id>', 'Ending task ID in a range to analyze')
 			.option('--tag <tag>', 'Specify tag context for task operations')
+			.option(
+				'--report [file]',
+				'Show the saved report (from a file, if given) instead of analyzing'
+			)
 			.action(async (options: AnalyzeComplexityCommandOptions) => {
+				if (options.report) {
+					await showComplexityReport({
+						tag: options.tag,
+						file: options.report === true ? undefined : options.report
+					});
+					return;
+				}
 				await this.executeCommand(options);
 			});
 	}

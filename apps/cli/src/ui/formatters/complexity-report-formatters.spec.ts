@@ -52,7 +52,7 @@ describe('formatComplexityRun', () => {
 			'  2  Add Postgres with migrations  ● 5  4 subtasks',
 			'  6  Write the README              ● 2',
 			'Saved to .taskgraph/reports/task-complexity-report.json',
-			'Next: taskgraph expand --all, or taskgraph complexity-report to see why'
+			'Next: taskgraph expand --all, or analyze-complexity --report to see why'
 		]);
 	});
 

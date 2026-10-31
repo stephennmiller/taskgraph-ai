@@ -15,16 +15,16 @@ taskgraph update --from=<id> --prompt='<prompt>'
 
 ```bash
 # Update a single task by ID with new information
-taskgraph update-task --id=<id> --prompt='<prompt>'
+taskgraph update <id> --prompt='<prompt>'
 
 # Use research-backed updates (research model)
-taskgraph update-task --id=<id> --prompt='<prompt>' --research
+taskgraph update <id> --prompt='<prompt>' --research
 
 # Assign the task to a GitHub login, no prompt or AI needed ('' clears it)
-taskgraph update-task --id=<id> --assignee=octocat
+taskgraph update <id> --assignee=octocat
 ```
 
-When `update-task` or `update --from` has the AI rewrite a task's subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. Each one it kept also keeps its status (a done one is kept exactly as it was), unless your prompt mentions "status", the same rule the task's own status follows. A subtask it adds gets the next free ID and starts as `pending`. Dependencies and `related` / `discovered-from` links to a subtask it drops are removed, with a warning that names the subtask and the tasks that lost a dependency or a link. If the AI returns no subtasks at all, the task keeps the ones it had. A dependency the AI adds that would make a loop is left out, with a warning. `expand` warns the same way when it leaves out a loop-making dependency, and the MCP tools return these warnings in a `warnings` list.
+When `update` has the AI rewrite a task's subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. Each one it kept also keeps its status (a done one is kept exactly as it was), unless your prompt mentions "status", the same rule the task's own status follows. A subtask it adds gets the next free ID and starts as `pending`. Dependencies and `related` / `discovered-from` links to a subtask it drops are removed, with a warning that names the subtask and the tasks that lost a dependency or a link. If the AI returns no subtasks at all, the task keeps the ones it had. A dependency the AI adds that would make a loop is left out, with a warning. `expand` warns the same way when it leaves out a loop-making dependency, and the MCP tools return these warnings in a `warnings` list.
 
 ## Update a Subtask
 
@@ -39,7 +39,7 @@ taskgraph update-subtask --id=5.2 --prompt="Add rate limiting of 100 requests pe
 taskgraph update-subtask --id=<parentId.subtaskId> --prompt='<prompt>' --research
 ```
 
-Unlike the `update-task` command which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. The AI writes the appended text from your prompt; to save a note exactly as written, use `taskgraph note`.
+Unlike `update`, which replaces task information, the `update-subtask` command _appends_ new information to the existing subtask details, marking it with a timestamp. The AI writes the appended text from your prompt; to save a note exactly as written, use `taskgraph note`.
 
 ## Log a Progress Note
 
@@ -61,7 +61,7 @@ block `update-subtask` writes, and nothing else in `tasks.json` changes.
 repeated in the closing `</info added on <time>>` line. A note can be at
 most 64 KB.
 MCP clients use the `add_note` tool. Use `update-subtask` or
-`update-task --append` when you want the AI to write the note instead.
+`update <id> --append` when you want the AI to write the note instead.
 
 ## Set Task Status
 

@@ -22,7 +22,6 @@ const ALLOWED_COMMANDS = new Set([
 	'parse-prd',
 	'generate',
 	'update',
-	'update-task',
 	'note',
 	'remove-task',
 	'add-subtask',
@@ -31,10 +30,8 @@ const ALLOWED_COMMANDS = new Set([
 	'sync-readme',
 	'github',
 	'analyze-complexity',
-	'complexity-report',
 	'expand',
-	'scope-up',
-	'scope-down',
+	'scope',
 	'research',
 	'graph',
 	'why',
@@ -69,11 +66,12 @@ describe('formatHelp', () => {
 	// 30 rows left out loop, move, lang, scope-up, scope-down and github
 	// (#219). Each command a user runs now has one row, so the cap is the
 	// command count; raise it only for a new command, not a second row.
-	// 37 with doctor (#256). 38 with upgrade (#696).
-	it('lists at most 38 rows with no repeated command', () => {
+	// 37 with doctor (#256). 38 with upgrade (#696). 35 once update-task,
+	// complexity-report and scope-up / scope-down merged (#882).
+	it('lists at most 35 rows with no repeated command', () => {
 		const names = rowNames();
 
-		expect(names.length).toBeLessThanOrEqual(38);
+		expect(names.length).toBeLessThanOrEqual(35);
 		expect(new Set(names).size).toBe(names.length);
 	});
 
@@ -94,14 +92,20 @@ describe('formatHelp', () => {
 		expect(allRows().some((row) => row.name.startsWith('prime'))).toBe(false);
 	});
 
-	it.each(['loop', 'move', 'lang', 'scope-up', 'scope-down', 'github'])(
+	it.each(['loop', 'move', 'lang', 'scope', 'github'])(
 		'lists %s, which the help used to leave out',
 		(command) => {
 			expect(rowNames()).toContain(command);
 		}
 	);
 
-	it.each(['merge-driver'])('gives %s no row', (command) => {
+	it.each([
+		'merge-driver',
+		'update-task',
+		'complexity-report',
+		'scope-up',
+		'scope-down'
+	])('gives %s no row', (command) => {
 		expect(rowNames()).not.toContain(command);
 	});
 
