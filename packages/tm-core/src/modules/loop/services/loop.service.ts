@@ -27,6 +27,7 @@ import {
 	completeIteration,
 	createErrorIteration,
 	formatCommandError,
+	loopResult,
 	type RunSpend,
 	runSpend
 } from './iteration-result.js';
@@ -357,21 +358,12 @@ export class LoopService {
 	): Promise<LoopResult> {
 		this._isRunning = false;
 		if (this.approved) keepLoopTrust(this.projectRoot);
-		const sum = (key: 'costUsd' | 'turns') =>
-			iterations.some((it) => it[key] !== undefined)
-				? iterations.reduce((total, it) => total + (it[key] ?? 0), 0)
-				: undefined;
-		const totalCostUsd = sum('costUsd');
-		const totalTurns = sum('turns');
-		const result: LoopResult = {
+		const result = loopResult(
 			iterations,
-			totalIterations: iterations.length,
 			tasksCompleted,
 			finalStatus,
-			...(errorMessage ? { errorMessage } : {}),
-			...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
-			...(totalTurns !== undefined ? { totalTurns } : {})
-		};
+			errorMessage
+		);
 		await appendFinalSummary(config.progressFile, result);
 		return result;
 	}

@@ -408,8 +408,11 @@ export class LoopCommand extends Command {
 	}
 
 	private createOutputCallbacks(showOutput: boolean): LoopOutputCallbacks {
+		// The iteration's error already printed as [Loop Error], not repeated on its status line
+		let printedError: string | undefined;
 		return {
 			onIterationStart: (iteration: number, total: number) => {
+				printedError = undefined;
 				console.log();
 				console.log(chalk.cyan(`━━━ Iteration ${iteration} of ${total} ━━━`));
 			},
@@ -426,6 +429,7 @@ export class LoopCommand extends Command {
 				if (severity === 'warning') {
 					console.error(chalk.yellow(`[Loop Warning] ${message}`));
 				} else {
+					printedError = raw;
 					console.error(chalk.red(`[Loop Error] ${message}`));
 				}
 			},
@@ -439,9 +443,16 @@ export class LoopCommand extends Command {
 						: iteration.status === 'error'
 							? chalk.red
 							: chalk.yellow;
+				// Why it failed: a --max-turns cap or an exit code (#861)
+				const why =
+					iteration.status === 'error' &&
+					iteration.message &&
+					iteration.message !== printedError
+						? ` (${terminalSafe(iteration.message)})`
+						: '';
 				console.log(
 					statusColor(
-						`  Iteration ${iteration.iteration} completed: ${iteration.status}`
+						`  Iteration ${iteration.iteration} completed: ${iteration.status}${why}`
 					) +
 						formatLoopSpend({
 							session: iteration.session,
@@ -465,6 +476,7 @@ export class LoopCommand extends Command {
 			`Total iterations: ${result.totalIterations}` +
 				formatLoopSpend({
 					costUsd: result.totalCostUsd,
+					costPartial: result.costPartial,
 					turns: result.totalTurns
 				})
 		);

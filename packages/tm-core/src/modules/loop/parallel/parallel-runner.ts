@@ -45,7 +45,8 @@ import {
 } from '../services/iteration-limits.js';
 import {
 	STREAM_JSON_ARGS,
-	findResultEvent
+	findResultEvent,
+	hasStreamEvent
 } from '../services/stream-events.js';
 import { TaskWorktrees } from './task-worktrees.js';
 import {
@@ -103,8 +104,11 @@ function readSpend(task: ParallelTask, from: number): void {
 	try {
 		// From where this run started: a rerun appends to the failed run's log
 		const log = fs.readFileSync(task.logFile).subarray(from);
-		const run = findResultEvent(log.toString('utf8'));
+		const text = log.toString('utf8');
+		const run = findResultEvent(text);
 		if (run?.costUsd !== undefined) task.costUsd = run.costUsd;
+		// Started, then killed or crashed before its result event (#861)
+		else if (hasStreamEvent(text)) task.costUnknown = true;
 		if (run?.turns !== undefined) task.turns = run.turns;
 	} catch {
 		// No log (the spawn failed): nothing was spent
@@ -321,7 +325,8 @@ export class ParallelLoopRunner {
 			aborted,
 			...(costs.length
 				? { totalCostUsd: costs.reduce((a, b) => a + b, 0) }
-				: {})
+				: {}),
+			...(running.some((r) => r.task.costUnknown) ? { costPartial: true } : {})
 		};
 	}
 
