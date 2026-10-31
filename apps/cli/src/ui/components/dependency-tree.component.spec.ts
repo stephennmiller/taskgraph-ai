@@ -310,6 +310,15 @@ describe('renderDependencyTree', () => {
 			expect(lines.join('\n')).not.toContain('inferred');
 		});
 	});
+
+	it('draws a chain too deep for recursion', () => {
+		let chain = node('5000');
+		for (let i = 4999; i >= 1; i--) chain = node(String(i), [chain]);
+
+		const lines = plain(renderDependencyTree(tree([chain])));
+
+		expect(lines[4999].trimStart()).toBe('└─ ○ 5000  Task 5000');
+	});
 });
 
 describe('renderDependencyTree with escape sequences in titles', () => {

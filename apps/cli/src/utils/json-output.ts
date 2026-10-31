@@ -4,7 +4,7 @@
  * top-level `schemaVersion` from @tm/core.
  */
 
-import { toVersionedJson } from '@tm/core';
+import { stringifyJson, toVersionedJson, writeJson } from '@tm/core';
 import { Option } from 'commander';
 
 /** The payload as printed: versioned, indented unless `compact` */
@@ -12,19 +12,43 @@ export function formatJson(
 	payload: object,
 	options: { compact?: boolean } = {}
 ): string {
-	return JSON.stringify(
-		toVersionedJson(payload),
-		null,
-		options.compact ? undefined : 2
-	);
+	// Not JSON.stringify, which overflows the stack on a deep dependency tree
+	return stringifyJson(toVersionedJson(payload), {
+		indent: options.compact ? undefined : 2
+	});
 }
 
-/** Print a versioned JSON payload to stdout */
+/** Text past which printJson prints what it has so far */
+const PRINT_AT = 1 << 24;
+
+/**
+ * Print a versioned JSON payload to stdout. Indented, a long dependency chain
+ * makes more text than fits in one string, so past PRINT_AT characters the
+ * lines made so far are printed as they're made.
+ */
 export function printJson(
 	payload: object,
 	options: { compact?: boolean } = {}
 ): void {
-	console.log(formatJson(payload, options));
+	let text = '';
+	let printAt = PRINT_AT;
+	writeJson(
+		toVersionedJson(payload),
+		{ indent: options.compact ? undefined : 2 },
+		(chunk) => {
+			text += chunk;
+			if (text.length < printAt) return;
+			// console.log, not stdout.write: it ignores EPIPE (`| head`)
+			const end = text.lastIndexOf('\n');
+			if (end >= 0) {
+				console.log(text.slice(0, end));
+				text = text.slice(end + 1);
+			}
+			// Compact text has no newline: look again PRINT_AT later
+			printAt = text.length + PRINT_AT;
+		}
+	);
+	console.log(text);
 }
 
 /**

@@ -103,18 +103,43 @@ export function buildDependencyTree(
 		)
 	];
 
-	// Longest path from a root; cycles get Infinity so they never become parents
+	// Longest path from a root; cycles get Infinity so they never become parents.
+	// Iterative, so a long chain can't overflow the stack
 	const depth = new Map<string, number>();
-	const visiting = new Set<string>();
 	const depthOf = (id: string): number => {
 		const cached = depth.get(id);
 		if (cached !== undefined) return cached;
-		if (visiting.has(id)) return Number.POSITIVE_INFINITY;
-		visiting.add(id);
-		const deps = known(byId.get(id) as Task);
-		const d = deps.length ? Math.max(...deps.map(depthOf)) + 1 : 0;
-		visiting.delete(id);
-		depth.set(id, d);
+		const frame = (at: string) => ({
+			id: at,
+			deps: known(byId.get(at) as Task),
+			next: 0,
+			d: 0
+		});
+		const visiting = new Set([id]);
+		const stack = [frame(id)];
+		let d = 0;
+		while (stack.length) {
+			const top = stack[stack.length - 1];
+			if (top.next < top.deps.length) {
+				const dep = top.deps[top.next++];
+				const depDepth = depth.get(dep);
+				if (depDepth !== undefined) {
+					top.d = Math.max(top.d, depDepth + 1);
+				} else if (visiting.has(dep)) {
+					top.d = Number.POSITIVE_INFINITY;
+				} else {
+					visiting.add(dep);
+					stack.push(frame(dep));
+				}
+				continue;
+			}
+			stack.pop();
+			visiting.delete(top.id);
+			depth.set(top.id, top.d);
+			d = top.d;
+			const below = stack[stack.length - 1];
+			if (below) below.d = Math.max(below.d, top.d + 1);
+		}
 		return d;
 	};
 
@@ -131,12 +156,15 @@ export function buildDependencyTree(
 
 	const childrenOf = new Map<string, string[]>();
 	for (const [id, parent] of parentOf) {
-		if (parent) childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), id]);
+		if (!parent) continue;
+		const siblings = childrenOf.get(parent);
+		if (siblings) siblings.push(id);
+		else childrenOf.set(parent, [id]);
 	}
 
 	const waves = parallelWaves(tasks);
 	const placed = new Set<string>();
-	const toNode = (id: string): DependencyTreeNode => {
+	const makeNode = (id: string): DependencyTreeNode => {
 		placed.add(id);
 		const task = byId.get(id) as Task;
 		const parent = parentOf.get(id);
@@ -153,11 +181,21 @@ export function buildDependencyTree(
 				.filter((d) => getDependencySource(task, d) === 'inferred')
 				.sort(compareIds),
 			wave: waves.waveOf[id] ?? null,
-			children: (childrenOf.get(id) ?? [])
+			children: []
+		};
+	};
+	// Iterative, so a long chain can't overflow the stack
+	const toNode = (id: string): DependencyTreeNode => {
+		const root = makeNode(id);
+		const stack = [root];
+		for (let node = stack.pop(); node; node = stack.pop()) {
+			node.children = (childrenOf.get(node.id) ?? [])
 				.filter((c) => !placed.has(c))
 				.sort(compareIds)
-				.map(toNode)
-		};
+				.map(makeNode);
+			for (const child of node.children) stack.push(child);
+		}
+		return root;
 	};
 
 	const isRoot = (t: Task) =>
@@ -199,5 +237,11 @@ export function buildDependencyTree(
 }
 
 function countNodes(nodes: DependencyTreeNode[]): number {
-	return nodes.reduce((n, node) => n + 1 + countNodes(node.children), 0);
+	let count = 0;
+	const stack = [...nodes];
+	for (let node = stack.pop(); node; node = stack.pop()) {
+		count++;
+		for (const child of node.children) stack.push(child);
+	}
+	return count;
 }

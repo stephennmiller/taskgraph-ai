@@ -63,6 +63,13 @@ export {
 	type VersionedJson
 } from './json-output.js';
 
+// JSON.stringify at any nesting depth (deep dependency trees)
+export {
+	stringifyJson,
+	writeJson,
+	type StringifyJsonOptions
+} from './stringify-json.js';
+
 // Strip escape sequences and control characters before printing file text
 export {
 	sanitizeForTerminal,
