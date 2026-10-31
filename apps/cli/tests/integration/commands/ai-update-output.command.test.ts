@@ -254,9 +254,7 @@ describe.skipIf(!built)('AI command output (fake claude)', () => {
 
 		expect(res.status).toBe(1);
 		expect(res.stderr).toContain("✗ Task 1 is done, so it can't be updated");
-		expect(res.stderr).toContain(
-			'taskgraph set-status --id=1 --status=pending'
-		);
+		expect(res.stderr).toContain('taskgraph set-status 1 pending');
 		expect(res.all).not.toMatch(BOX);
 	});
 
