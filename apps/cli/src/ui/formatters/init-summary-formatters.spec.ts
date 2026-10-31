@@ -16,8 +16,7 @@ const fresh: InitSummary = {
 		{ path: '.gitignore', note: 'created' }
 	],
 	alreadySetUp: false,
-	claudeCode: false,
-	defaultModels: true
+	claudeCode: false
 };
 
 describe('formatInitSummary', () => {
@@ -31,14 +30,15 @@ describe('formatInitSummary', () => {
 		]);
 	});
 
-	it('gives three next steps, ending at taskgraph next', () => {
+	it('leads with one next step to a first task, not a numbered list', () => {
 		const text = plain(formatInitSummary(fresh));
 
-		expect(text).toContain('Next steps');
-		expect(text).toContain('1. Write a PRD in .taskgraph/docs/prd.md');
-		expect(text).toContain('2. Turn it into tasks: taskgraph parse-prd');
-		expect(text).toContain('3. Start the first task: taskgraph next');
-		expect(text).not.toContain('4.');
+		expect(text).toContain(
+			"Next: taskgraph add-task --prompt='<what to do>', or taskgraph parse-prd <file>"
+		);
+		expect(text).not.toContain('Next steps');
+		expect(text).not.toMatch(/^\s*\d\. /m);
+		for (const line of text.split('\n')) expect(line.length).toBeLessThan(80);
 	});
 
 	it('says AI runs through Claude Code and never asks for API keys', () => {
@@ -48,23 +48,39 @@ describe('formatInitSummary', () => {
 		expect(text).not.toMatch(/api key/i);
 	});
 
-	it('mentions the models command only when setup was skipped', () => {
-		const skipped = plain(formatInitSummary(fresh));
-		const chosen = plain(formatInitSummary({ ...fresh, defaultModels: false }));
+	it('says how to change the default models and language', () => {
+		const text = plain(formatInitSummary(fresh));
 
-		expect(skipped).toContain('taskgraph models --setup');
-		expect(chosen).not.toContain('taskgraph models --setup');
+		expect(text).toContain(
+			'Change the models or language with taskgraph models --setup or taskgraph lang'
+		);
 	});
 
-	it('puts the plugin install first when Claude Code was set up', () => {
-		const text = plain(formatInitSummary({ ...fresh, claudeCode: true }));
+	it('keeps the plugin install hint when Claude Code was set up', () => {
+		const lines = plain(
+			formatInitSummary({ ...fresh, claudeCode: true })
+		).split('\n');
+		const next = lines.findIndex((line) => line.startsWith('Next: '));
 
-		expect(text).toContain('1. Add the slash commands in Claude Code:');
-		expect(text).toContain(
-			'     /plugin marketplace add stephennmiller/taskgraph-ai'
+		expect(lines.slice(next + 1, next + 4)).toEqual([
+			'Add the slash commands in Claude Code:',
+			'  /plugin marketplace add stephennmiller/taskgraph-ai',
+			'  /plugin install taskgraph@taskgraph'
+		]);
+	});
+
+	it('shows only the plugin hint on a re-run with Claude Code', () => {
+		const text = plain(
+			formatInitSummary({
+				...fresh,
+				alreadySetUp: true,
+				changes: [],
+				claudeCode: true
+			})
 		);
-		expect(text).toContain('     /plugin install taskgraph@taskgraph');
-		expect(text).toContain('2. Write a PRD');
+
+		expect(text).toContain('/plugin install taskgraph@taskgraph');
+		expect(text).not.toContain('Next:');
 	});
 
 	it('says so when the folder was already set up and nothing changed', () => {

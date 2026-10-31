@@ -24,15 +24,17 @@ taskgraph init --mcp
 taskgraph init --merge-driver
 ```
 
-`init` sets up the Claude Code integration by default: it copies TaskGraph's agent guide to `.taskgraph/CLAUDE.md` and imports it from your `CLAUDE.md`. Interactive runs ask, with Yes as the default; `--yes` sets it up without asking, and `--no-claude` skips it. Slash commands and session hooks come from the plugin.
+`init` sets up the Claude Code integration by default: it copies TaskGraph's agent guide to `.taskgraph/CLAUDE.md` and imports it from your `CLAUDE.md`. `--no-claude` skips it. Slash commands and session hooks come from the plugin.
 
 `init` writes no `.mcp.json` unless you pass `--mcp`, because the CLI and the plugin need no MCP server. `--mcp` needs the Claude Code integration, so it can't be combined with `--no-claude`. `--rules claude` still works; `claude` is the only rule profile.
 
 Inside a Git repository, `init` also sets up the [tasks.json merge driver](/capabilities/merge-driver), so two branches that both add or archive tasks merge without an ID clash.
 
-`init` changes your shell startup file only if you agree. Interactive runs ask whether to add `alias tm='taskgraph'` to `~/.zshrc` or `~/.bashrc`, with No as the default. `--yes` never adds it; pass `--aliases` to add it without asking, or `--no-aliases` to skip the question.
+`init` asks one question: whether to store tasks in Git (Yes by default, or what an earlier `init` chose). `--git-tasks`, `--no-git-tasks` or `--yes` answer it. Everything else takes its default: the default models (change them with `taskgraph models --setup`), English for AI responses (`taskgraph lang`), and a new Git repository if the folder isn't in one (`--no-git` skips it).
 
-Without a terminal (scripts, CI, agents), `init` asks nothing: it stops with an error and exits 1 unless `--yes` (or `--name` with `--description`) answers the questions. Ctrl-C at a question exits 130 and changes nothing.
+`init` changes your shell startup file only with `--aliases`, which adds `alias tm='taskgraph'` to `~/.zshrc` or `~/.bashrc`.
+
+Without a terminal (scripts, CI, agents), `init` asks nothing: it stops with an error and exits 1 unless `--yes`, `--git-tasks`/`--no-git-tasks` (or `--name` with `--description`) answers the question. Ctrl-C at the question exits 130 and changes nothing.
 
 ## Check the Setup
 
