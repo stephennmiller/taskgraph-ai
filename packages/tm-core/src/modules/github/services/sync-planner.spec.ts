@@ -51,6 +51,7 @@ function remoteIssue(
 		body,
 		labels: ['taskgraph'],
 		state: 'open',
+		assignees: [],
 		...overrides
 	};
 }

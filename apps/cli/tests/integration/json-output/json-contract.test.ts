@@ -40,6 +40,9 @@ describe('--json contract', () => {
 			env: {
 				...process.env,
 				HOME: home,
+				// Signed out of gh, so next --claim assigns nobody wherever this runs
+				GH_TOKEN: '',
+				GITHUB_TOKEN: '',
 				FORCE_COLOR: '0',
 				COLUMNS: '80',
 				TASKGRAPH_SKIP_AUTO_UPDATE: '1'

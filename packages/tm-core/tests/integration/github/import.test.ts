@@ -34,6 +34,7 @@ const handWritten = (
 	body: `Body of ${number}`,
 	labels: [],
 	state: 'open',
+	assignees: [],
 	...overrides
 });
 

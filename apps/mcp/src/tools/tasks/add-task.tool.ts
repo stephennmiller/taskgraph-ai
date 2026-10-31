@@ -51,6 +51,10 @@ const AddTaskSchema = z.object({
 			'ID of the task you found this work while doing; links them without blocking the new task'
 		),
 	priority: z.string().optional().describe('Task priority (high, medium, low)'),
+	assignee: z
+		.string()
+		.optional()
+		.describe('GitHub login of who the task is for'),
 	file: z
 		.string()
 		.optional()
@@ -123,6 +127,7 @@ export function registerAddTaskTool(server: FastMCP) {
 							priority: args.priority,
 							research: isManual ? false : args.research,
 							acceptanceCriteria: args.acceptanceCriteria,
+							assignee: args.assignee,
 							tag,
 							session,
 							outputType: 'mcp'

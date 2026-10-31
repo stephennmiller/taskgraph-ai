@@ -1,6 +1,6 @@
 /**
  * @fileoverview Task edits of the tasks domain that need no AI: archive and
- * restore, progress notes, and moving tasks and subtasks. TasksDomain
+ * restore, progress notes, assignees, and moving tasks and subtasks. TasksDomain
  * exposes each one as `tmCore.tasks.<name>`.
  */
 
@@ -11,6 +11,8 @@ import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../common/errors/taskgraph-error.js';
+import { normalizeAssignee } from './utils/assignee.js';
+import type { TaskClaim } from './utils/claim.js';
 import { normalizeNoteText, type TaskNote } from './utils/notes.js';
 import {
 	type AddSubtaskInput,
@@ -96,6 +98,62 @@ export class TaskEditCommands {
 	 */
 	async getArchivedIds(tag?: string): Promise<Set<string>> {
 		return this.taskService.getArchivedTaskIds(tag);
+	}
+
+	// ========== Claims and assignees ==========
+
+	/**
+	 * Pick the next task nobody has started, set it in-progress and record who
+	 * claimed it, in one locked write. Setting it back to pending clears the
+	 * claim. `among` limits the pick to those top-level task IDs (one
+	 * parallel wave, say). `assignee`, a GitHub login, is given the claimed
+	 * task unless someone is assigned to it already.
+	 * @returns The claim, or null when no task is ready
+	 */
+	async claimNext(
+		options: {
+			tag?: string;
+			claimant?: string;
+			among?: ReadonlySet<string>;
+			assignee?: string;
+		} = {}
+	): Promise<TaskClaim | null> {
+		// A bad login fails before the claim is written
+		if (options.assignee) normalizeAssignee(options.assignee);
+		const claim = await this.taskService.claimNextTask(
+			options.tag,
+			options.claimant,
+			options.among
+		);
+		if (!claim || !options.assignee || claim.task.assignee) return claim;
+		const { assignee } = await this.assign(
+			claim.task.id,
+			options.assignee,
+			options.tag,
+			{ keepExisting: true }
+		);
+		return { ...claim, task: { ...claim.task, assignee } };
+	}
+
+	/**
+	 * Assign a task or subtask (`1` or `1.2`) to a GitHub login; an empty
+	 * login clears it. Throws INVALID_INPUT for a value that isn't a login.
+	 * `keepExisting` leaves an item someone is assigned to alone.
+	 * @returns The item as saved
+	 */
+	assign(
+		taskId: string | number,
+		login: string,
+		tag?: string,
+		options: { keepExisting?: boolean } = {}
+	): Promise<Task | Subtask> {
+		const assignee = normalizeAssignee(login) ?? undefined;
+		return this.taskService.modifyTask(
+			String(taskId),
+			(current) =>
+				options.keepExisting && current.assignee ? {} : { assignee },
+			tag
+		);
 	}
 
 	// ========== Notes ==========

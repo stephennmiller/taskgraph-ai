@@ -158,12 +158,13 @@ function linkFacts(task: Task | Subtask): string[] {
 	return facts.map((fact) => theme.muted(fact));
 }
 
-/** `▶ in-progress · high priority · complexity 7 · depends on 1` */
+/** `▶ in-progress · high priority · assigned to octocat · complexity 7 · depends on 1` */
 function facts(task: Task | Subtask, width: number): string[] {
 	const parts = [getStatusWithColor(task.status as TaskStatus)];
 	if (task.priority) {
 		parts.push(`${getPriorityWithColor(task.priority)} priority`);
 	}
+	if (task.assignee) parts.push(theme.muted(`assigned to ${task.assignee}`));
 	if (typeof task.complexity === 'number') {
 		const level = complexityLevel(task.complexity).toLowerCase();
 		parts.push(theme.muted(`complexity ${task.complexity} (${level})`));

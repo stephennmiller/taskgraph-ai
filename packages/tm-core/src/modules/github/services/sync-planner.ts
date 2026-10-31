@@ -100,6 +100,14 @@ export function planSync(input: PlanInput): PushPlan {
 					reason: 'content changed'
 				};
 			}
+			if (task.assignee !== link.assignee) {
+				return {
+					...base,
+					action: 'update',
+					issueNumber: number,
+					reason: 'assignee changed'
+				};
+			}
 			const waitsOnNew = (task.dependencies ?? []).some((dep) =>
 				creating.has(keyOf(tag, String(dep)))
 			);

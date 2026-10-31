@@ -75,7 +75,7 @@ export class NextCommand extends Command {
 			.addOption(jsonOption())
 			.option(
 				'--claim',
-				'Start the next task and record who took it, in one locked write'
+				'Start the next task and record who took it, in one locked write; assigns it to your GitHub login if nobody has it'
 			)
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
 			.option(
@@ -195,7 +195,8 @@ export class NextCommand extends Command {
 		}
 
 		const claim: TaskClaim | null = await this.tmCore.tasks.claimNext({
-			tag: options.tag
+			tag: options.tag,
+			assignee: (await this.tmCore.github.currentLogin()) ?? undefined
 		});
 		const tag = options.tag || this.tmCore.config.getActiveTag();
 		const hasAnyTasks = claim

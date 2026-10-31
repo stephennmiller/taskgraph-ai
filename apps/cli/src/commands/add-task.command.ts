@@ -38,6 +38,7 @@ export interface AddTaskCommandOptions {
 	priority?: string;
 	research?: boolean;
 	ac?: string[];
+	assignee?: string;
 	tag?: string;
 }
 
@@ -94,6 +95,7 @@ export class AddTaskCommand extends Command {
 				'Acceptance criterion; repeat for more (set-status --check ticks them)',
 				(value: string, previous: string[] = []) => [...previous, value]
 			)
+			.option('--assignee <login>', 'GitHub login of who the task is for')
 			.option('--tag <tag>', 'Specify tag context for task operations')
 			.action(async (options: AddTaskCommandOptions) => {
 				await this.executeCommand(options);
@@ -143,6 +145,7 @@ export class AddTaskCommand extends Command {
 					priority: options.priority,
 					research: options.research,
 					acceptanceCriteria: options.ac,
+					assignee: options.assignee,
 					tag,
 					outputType: 'cli'
 				},

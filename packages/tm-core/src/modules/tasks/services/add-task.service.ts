@@ -30,6 +30,7 @@ import {
 import { mergeNewTaskDependencies } from '../../dependencies/new-task-dependencies.js';
 import { setTaskLink } from '../../dependencies/task-links.js';
 import { normalizeAcceptanceCriteria } from '../utils/acceptance-criteria.js';
+import { normalizeAssignee } from '../utils/assignee.js';
 import { nextTaskId, readArchivedIdsSync } from '../utils/archive.js';
 
 /** How many tasks matching the prompt the AI is shown as context */
@@ -55,6 +56,8 @@ export interface AddTaskInput {
 	acceptanceCriteria?: string[];
 	/** The task this work was found while doing; a link that never blocks */
 	discoveredFrom?: string | number;
+	/** GitHub login of who the task is for */
+	assignee?: string;
 	/** The active tag when left out */
 	tag?: string;
 	/** The MCP session, for its env */
@@ -159,6 +162,7 @@ export class AddTaskService {
 			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
 		);
 		const priority = this.resolvePriority(input.priority, aiConfig, warn);
+		const assignee = input.assignee ? normalizeAssignee(input.assignee) : null;
 		const tag = input.tag || this.configManager.getActiveTag();
 		const storage = this.storage();
 
@@ -253,7 +257,8 @@ export class AddTaskService {
 			status: 'pending',
 			dependencies: merged.dependencies,
 			priority,
-			subtasks: []
+			subtasks: [],
+			...(assignee && { assignee })
 		} as unknown as Task;
 		const acceptanceCriteria = normalizeAcceptanceCriteria(
 			input.acceptanceCriteria
