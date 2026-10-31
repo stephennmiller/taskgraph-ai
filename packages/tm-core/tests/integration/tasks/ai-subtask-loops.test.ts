@@ -124,13 +124,18 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 	 * Task 1 rewritten by `via`; `during` runs while the AI is writing.
 	 * Resolves to the warnings
 	 */
-	const rewrite = async (via: string, aiTask: object, during = () => {}) => {
+	const rewrite = async (
+		via: string,
+		aiTask: object,
+		during = () => {},
+		prompt = 'Rewrite it'
+	) => {
 		const updateTask = via === 'update-task';
 		generateObject.mockImplementation(async () => {
 			during();
 			return reply(updateTask ? { task: aiTask } : { tasks: [aiTask] }) as any;
 		});
-		const input = { prompt: 'Rewrite it' };
+		const input = { prompt };
 		const warnings: string[] = [];
 		const hooks = { onWarning: (m: string) => warnings.push(m) };
 		await (updateTask
@@ -474,6 +479,67 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 				['4', 'C v2', 'pending'],
 				['3', 'C', 'done']
 			]);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		"%s keeps each matched subtask's stored status unless the prompt asks for a status change (#872)",
+		async (via) => {
+			const statuses = ['in-progress', 'review', 'blocked', 'pending'];
+			write(
+				task(
+					'1',
+					[],
+					statuses.map((status, i) => ({
+						...stored(String(i + 1), `S${i + 1}`),
+						status
+					})) as never
+				)
+			);
+			// The AI can write only pending or done
+			const aiTask = {
+				...task('1'),
+				subtasks: ['pending', 'done', 'pending', 'done'].map((status, i) => ({
+					...aiSubtask(i + 1, []),
+					title: `S${i + 1}`,
+					status
+				}))
+			};
+			const savedStatuses = () =>
+				savedTask('1').subtasks.map((st: any) => st.status);
+
+			const warnings = await rewrite(via, aiTask);
+
+			expect(savedStatuses()).toEqual(statuses);
+			expect(warnings.join('\n')).toContain(
+				"AI changed subtask 1.1 status. Restoring original status 'in-progress'."
+			);
+
+			await rewrite(via, aiTask, () => {}, 'Set the status of 1.4 to done');
+
+			expect(savedStatuses()).toEqual(['pending', 'done', 'pending', 'done']);
+		}
+	);
+
+	it.each([
+		['update-task', 'pending'],
+		['update-task', undefined],
+		['update --from', 'pending'],
+		['update --from', undefined]
+	])(
+		'%s saves a matched subtask with no stored status as pending, without a warning, when the AI sends %s (#872)',
+		async (via, aiStatus) => {
+			const { status: _, ...noStatus } = stored('1', 'S1');
+			write(task('1', [], [noStatus] as never));
+			const aiTask = {
+				...task('1'),
+				subtasks: [{ ...aiSubtask(1, []), title: 'S1', status: aiStatus }]
+			};
+
+			const warnings = await rewrite(via, aiTask);
+
+			expect(savedTask('1').subtasks[0].status).toBe('pending');
+			expect(warnings.join('\n')).not.toContain('status');
 		}
 	);
 

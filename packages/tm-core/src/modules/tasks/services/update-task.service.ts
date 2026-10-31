@@ -334,7 +334,12 @@ export class UpdateTaskService {
 		if (Array.isArray(updated.subtasks)) {
 			// Matched subtasks keep their stored IDs, so dependencies on them from
 			// other tasks still name them (#804); new ones get the next free ID
-			const { subtasks, newIds } = rewriteSubtasks(stored, updated.subtasks);
+			const { subtasks, newIds } = rewriteSubtasks(
+				stored,
+				updated.subtasks,
+				prompt,
+				warn
+			);
 			updated.subtasks = subtasks;
 			const ids = subtasks.map((st) => st.id);
 			// A subtask added during the call under an ID a new one took moves on
@@ -530,7 +535,7 @@ export class UpdateTaskService {
 				// No subtasks back is the AI leaving them out (#863)
 				subtasks:
 					Array.isArray(ai.subtasks) && ai.subtasks.length > 0
-						? rewriteSubtasks(task, ai.subtasks).subtasks
+						? rewriteSubtasks(task, ai.subtasks, prompt, warn).subtasks
 						: null
 			},
 			task
