@@ -339,6 +339,15 @@ describe('renderBlockerExplanation', () => {
 			'taskgraph remove-dependency --id=5 --depends-on=99'
 		);
 	});
+
+	it('draws a chain too deep for recursion', () => {
+		let chain = node('1', [], { kind: 'ready' });
+		for (let i = 2; i <= 5000; i++) chain = node(String(i), [chain]);
+
+		const lines = plain(renderBlockerExplanation(explanation([chain])));
+
+		expect(lines[5001].trimStart()).toBe('└─ ○ 1  Task 1  ← ready to start');
+	});
 });
 
 describe('renderBlockerExplanation with escape sequences in titles', () => {

@@ -158,6 +158,19 @@ describe('buildDependencyTree', () => {
 		);
 	});
 
+	it('lays out a chain too deep for recursion', () => {
+		const tasks = Array.from({ length: 20000 }, (_, i) =>
+			task(String(i + 1), i ? [String(i)] : [])
+		);
+
+		const tree = buildDependencyTree(tasks);
+		let last = tree.roots[0];
+		while (last.children.length) last = last.children[0];
+
+		expect(last.id).toBe('20000');
+		expect(buildDependencyTree(tasks, { rootId: '1' }).total).toBe(20000);
+	});
+
 	it('ignores a task depending on itself', () => {
 		const tree = buildDependencyTree([task('1', ['1'])]);
 

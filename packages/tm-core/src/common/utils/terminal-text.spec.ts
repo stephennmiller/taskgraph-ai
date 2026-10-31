@@ -133,4 +133,17 @@ describe('sanitizeForTerminal', () => {
 		expect(safe.b).toBe(safe.a);
 		expect(safe.self).toBe(safe);
 	});
+
+	it('copies nesting too deep for recursion', () => {
+		let deep: { title: string; children: unknown[] } = {
+			title: 'x\x1b[2Jy',
+			children: []
+		};
+		for (let i = 0; i < 100000; i++) deep = { title: 'ok', children: [deep] };
+
+		let safe = sanitizeForTerminal(deep);
+		while (safe.children.length) safe = safe.children[0] as typeof deep;
+
+		expect(safe.title).toBe('xy');
+	});
 });

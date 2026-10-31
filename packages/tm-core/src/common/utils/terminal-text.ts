@@ -72,33 +72,40 @@ export function stripTerminalControls(
  * returns anything that isn't a string, array or plain object as it is.
  */
 export function sanitizeForTerminal<T>(value: T): T {
-	return sanitizeValue(value, new WeakMap()) as T;
-}
+	// Iterative, so a deeply nested tree (a long dependency chain) can't
+	// overflow the stack: each copy is made empty, then filled from `pending`
+	const seen = new WeakMap<object, unknown>();
+	const pending: Array<[object, unknown[] | Record<string, unknown>]> = [];
+	const copyOf = (item: unknown): unknown => {
+		if (typeof item === 'string') return stripTerminalControls(item);
+		if (item === null || typeof item !== 'object') return item;
 
-function sanitizeValue(
-	value: unknown,
-	seen: WeakMap<object, unknown>
-): unknown {
-	if (typeof value === 'string') return stripTerminalControls(value);
-	if (value === null || typeof value !== 'object') return value;
+		const done = seen.get(item);
+		if (done !== undefined) return done;
 
-	const done = seen.get(value);
-	if (done !== undefined) return done;
-
-	if (Array.isArray(value)) {
-		const copy: unknown[] = [];
-		seen.set(value, copy);
-		for (const item of value) copy.push(sanitizeValue(item, seen));
+		let copy: unknown[] | Record<string, unknown>;
+		if (Array.isArray(item)) {
+			copy = [];
+		} else {
+			const proto = Object.getPrototypeOf(item);
+			if (proto !== Object.prototype && proto !== null) return item;
+			copy = {};
+		}
+		seen.set(item, copy);
+		pending.push([item, copy]);
 		return copy;
-	}
+	};
 
-	const proto = Object.getPrototypeOf(value);
-	if (proto !== Object.prototype && proto !== null) return value;
-
-	const copy: Record<string, unknown> = {};
-	seen.set(value, copy);
-	for (const [key, item] of Object.entries(value)) {
-		copy[stripTerminalControls(key)] = sanitizeValue(item, seen);
+	const result = copyOf(value);
+	for (let next = pending.pop(); next; next = pending.pop()) {
+		const [source, copy] = next;
+		if (Array.isArray(copy)) {
+			for (const item of source as unknown[]) copy.push(copyOf(item));
+		} else {
+			for (const [key, item] of Object.entries(source)) {
+				copy[stripTerminalControls(key)] = copyOf(item);
+			}
+		}
 	}
-	return copy;
+	return result as T;
 }
