@@ -91,7 +91,7 @@ The loop stops when:
 - Maximum iterations reached
 - With `--max-budget-usd`: the run has spent the amount
 - Three iterations in a row fail (Claude Code exits non-zero or runs past the iteration timeout), or Claude Code isn't installed: the loop stops with status `error` and the last error
-- The run reaches its last iteration, or spends its budget, right after an iteration that failed: it ends with status `error` and that iteration's error, not `Max iterations reached` or `Budget reached`. Claude Code stopping at `--max-budget-usd` itself still ends as `Budget reached`
+- The run reaches its last iteration, or spends its budget, right after an iteration that failed: it ends with status `error` and that iteration's error, not `Max iterations reached` or `Budget reached`. Claude Code stopping at `--max-budget-usd` itself isn't a failure: the run ends as `Budget reached`, or `Max iterations reached` when that was the last iteration, and exits 0
 - With the `default` and `tdd` presets, or with `--id`: two iterations in a row finish without changing any task's status or making a commit. The loop stops with status `error` and names the task it is stuck on
 
 Each iteration gets an hour. One that runs longer is stopped and counts as a failed iteration. Set `TASKGRAPH_LOOP_TIMEOUT_MS` (milliseconds) to change it; see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout).
