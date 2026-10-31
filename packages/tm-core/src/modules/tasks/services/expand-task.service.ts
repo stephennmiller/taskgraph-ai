@@ -348,7 +348,7 @@ export class ExpandTaskService {
 				tag,
 				addedSubtasks,
 				input.force === true,
-				debug
+				warn
 			);
 		} catch (error) {
 			// The call was made and paid for, even though nothing was saved
@@ -377,7 +377,7 @@ export class ExpandTaskService {
 		tag: string,
 		addedSubtasks: Subtask[],
 		force: boolean,
-		debug: (message: string) => void
+		warn: (message: string) => void
 	): Promise<Task> {
 		const { result } = await this.taskService.modifyTasks((current) => {
 			const target = current.find((t) => String(t.id) === taskId);
@@ -399,7 +399,7 @@ export class ExpandTaskService {
 					taskId,
 					subtask.id,
 					subtask.dependencies ?? [],
-					debug
+					warn
 				);
 			}
 			renumberSubtasks(taskId, target.subtasks, addedSubtasks);

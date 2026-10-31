@@ -111,6 +111,26 @@ describe('expand_task', () => {
 		});
 	});
 
+	it("puts tm-core's warnings in the reply, not only the log (#863)", async () => {
+		const warning = 'Dropped dependency 3 of subtask 4.1: it made a loop';
+		tasks.expand.mockImplementation(async (_input, hooks) => {
+			hooks.onWarning(warning);
+			return {
+				task: savedTask,
+				tag: 'master',
+				addedSubtasks: savedTask.subtasks,
+				hadSubtasks: false,
+				telemetryData: null,
+				tagInfo: null
+			};
+		});
+
+		const result = await tool().execute({ id: '3', projectRoot: project }, ctx);
+
+		expect(reply(result).data.warnings).toEqual([warning]);
+		expect(ctx.log.warn).toHaveBeenCalledWith(warning);
+	});
+
 	it('replies that expansion was skipped for a task with subtasks', async () => {
 		tasks.expand.mockResolvedValue({
 			task: savedTask,
@@ -241,6 +261,7 @@ describe('expand_all', () => {
 			hooks.onStart(['1', '2', '3']);
 			hooks.onTaskDone('1', { skipped: undefined });
 			hooks.onTaskDone('2', new Error('AI down'));
+			hooks.onWarning('Dropped dependency 1 of subtask 3.1: it made a loop');
 			return summary;
 		});
 
@@ -271,7 +292,8 @@ describe('expand_all', () => {
 				skippedCount: 1,
 				tasksToExpand: 3
 			},
-			telemetryData: summary.telemetryData
+			telemetryData: summary.telemetryData,
+			warnings: ['Dropped dependency 1 of subtask 3.1: it made a loop']
 		});
 		expect(ctx.log.info).toHaveBeenCalledWith(
 			'Found 3 tasks eligible for expansion.'

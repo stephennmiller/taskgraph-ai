@@ -139,7 +139,9 @@ export function keepStatus(
  * The stored subtask each of the AI's `subtasks` is, by index. Each stored
  * one matches once, across the whole list: ID and title first, then title
  * (the AI may renumber a reorder or an insert itself), then ID (the AI may
- * send strings)
+ * send strings). A reply numbered 1, 2, 3... over stored IDs with gaps was
+ * renumbered, so its IDs name no stored subtask and that last pass is skipped
+ * (#863)
  */
 function matchSubtasks(
 	original: Subtask[],
@@ -149,13 +151,16 @@ function matchSubtasks(
 		String(st.id) === String(subtask.id);
 	const sameTitle = (st: Subtask, subtask: { title?: unknown }) =>
 		Boolean(subtask.title) && st.title === subtask.title;
+	const counts = (items: Array<{ id?: unknown }>) =>
+		items.every((item, i) => String(item.id) === String(i + 1));
+	const renumbered = counts(subtasks) && !counts(original);
 	const matched: (Subtask | undefined)[] = [];
 	const taken = new Set<Subtask>();
 	for (const same of [
 		(st: Subtask, subtask: { id?: unknown; title?: unknown }) =>
 			sameId(st, subtask) && sameTitle(st, subtask),
 		sameTitle,
-		sameId
+		...(renumbered ? [] : [sameId])
 	]) {
 		subtasks.forEach((subtask, i) => {
 			if (matched[i]) return;
@@ -270,26 +275,37 @@ export function rewriteSubtasks(
  * the lock, `now`, became `saved`): drop everything that points at a subtask
  * a rewrite removed (#804, #827), then each dependency a rewrite added that
  * would close a loop (#824, #832), checked against `current`, not the tasks
- * read before the AI call
+ * read before the AI call. `warn` is told about each removal and drop (#863)
  */
 export function settleRewrites(
 	current: Task[],
 	rewrites: Array<{ stored: Task; now: Task; saved: Task }>,
-	debug: (message: string) => void
+	warn: (message: string) => void
 ): void {
-	dropReferences(
-		current,
-		rewrites.flatMap(({ stored, saved }) => {
-			const kept = new Set((saved.subtasks ?? []).map((st) => String(st.id)));
-			return (stored.subtasks ?? [])
-				.filter((st) => !kept.has(String(st.id)))
-				.map((st) => fullSubtaskId(saved.id, st.id));
-		})
-	);
+	const removed = rewrites.flatMap(({ stored, saved }) => {
+		const kept = new Set((saved.subtasks ?? []).map((st) => String(st.id)));
+		return (stored.subtasks ?? [])
+			.filter((st) => !kept.has(String(st.id)))
+			.map((st) => fullSubtaskId(saved.id, st.id));
+	});
+	const changed = dropReferences(current, removed);
+	if (removed.length > 0) {
+		const [noun, isNot, wasIt, it] =
+			removed.length === 1
+				? ['Subtask', "isn't", 'it was', 'it']
+				: ['Subtasks', "aren't", 'they were', 'them'];
+		const lost =
+			changed.length > 0
+				? `; dependencies on ${it} were dropped from ${changed.join(', ')}`
+				: '';
+		warn(
+			`${noun} ${removed.join(', ')} ${isNot} in the AI's rewrite, so ${wasIt} removed${lost}`
+		);
+	}
 	withoutNewLoops(
 		current,
 		rewrites.map(({ now, saved }) => ({ before: now, task: saved })),
-		debug
+		warn
 	);
 }
 

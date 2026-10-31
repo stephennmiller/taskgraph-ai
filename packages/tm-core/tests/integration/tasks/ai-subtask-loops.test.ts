@@ -4,7 +4,8 @@
  * subtask that would loop back to the subtask's own parent is dropped (#824),
  * and so is any other the AI writes for the task or a subtask it keeps that
  * would close a loop (#832). A parent can't finish before its subtasks, so
- * such a subtask could never start.
+ * such a subtask could never start. Each drop is a warning, and so is a
+ * subtask a rewrite removes, with the dependencies on it (#863).
  */
 
 import * as fs from 'node:fs';
@@ -86,9 +87,16 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 			reply({ subtasks: [aiSubtask(1, ['3', '1'])] }) as any
 		);
 
-		await tmCore.tasks.expand({ id: '4', num: 1 });
+		const warnings: string[] = [];
+		await tmCore.tasks.expand(
+			{ id: '4', num: 1 },
+			{ onWarning: (m) => warnings.push(m) }
+		);
 
 		expect(savedTask('4').subtasks[0].dependencies).toEqual(['1']);
+		expect(warnings).toContain(
+			'Dropped dependency 3 of subtask 4.1: it made a loop'
+		);
 	});
 
 	it('expand-all checks each save against the subtasks saved before it', async () => {
@@ -112,17 +120,23 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 		expect(kept).toHaveLength(1);
 	});
 
-	/** Task 1 rewritten by `via`; `during` runs while the AI is writing */
-	const rewrite = (via: string, aiTask: object, during = () => {}) => {
+	/**
+	 * Task 1 rewritten by `via`; `during` runs while the AI is writing.
+	 * Resolves to the warnings
+	 */
+	const rewrite = async (via: string, aiTask: object, during = () => {}) => {
 		const updateTask = via === 'update-task';
 		generateObject.mockImplementation(async () => {
 			during();
 			return reply(updateTask ? { task: aiTask } : { tasks: [aiTask] }) as any;
 		});
 		const input = { prompt: 'Rewrite it' };
-		return updateTask
-			? tmCore.tasks.updateWithPrompt({ ...input, id: '1' })
-			: tmCore.tasks.updateFrom({ ...input, from: 1 });
+		const warnings: string[] = [];
+		const hooks = { onWarning: (m: string) => warnings.push(m) };
+		await (updateTask
+			? tmCore.tasks.updateWithPrompt({ ...input, id: '1' }, hooks)
+			: tmCore.tasks.updateFrom({ ...input, from: 1 }, hooks));
+		return warnings;
 	};
 
 	it.each(['update-task', 'update --from'])(
@@ -150,12 +164,16 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 			// Task 2 waits on 1, so 1 can't wait on 2; 3 is fine
 			write(task('1'), task('2', ['1']), task('3'));
 
-			await rewrite(via, task('1', ['2', '3']));
+			const warnings = await rewrite(via, task('1', ['2', '3']));
 
 			expect(savedTask('1')).toMatchObject({
 				dependencies: ['3'],
 				metadata: { dependencySources: { '3': 'inferred' } }
 			});
+			// Not just in debug output (#863)
+			expect(warnings).toContain(
+				'Dropped dependency 2 of task 1: it made a loop'
+			);
 		}
 	);
 
@@ -236,4 +254,122 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 		expect(savedTask('2')).toMatchObject({ dependencies: [] });
 		expect(savedTask('2').metadata).toBeUndefined();
 	});
+	/** A pending subtask of task 1 as stored */
+	const stored = (id: string, title: string) => ({
+		...aiSubtask(1, []),
+		id,
+		title
+	});
+
+	it.each(['update-task', 'update --from'])(
+		'%s matches nothing by ID when the AI renumbers gapped subtasks, and warns what it removed (#863)',
+		async (via) => {
+			write(
+				task('1', [], [
+					stored('1', 'A'),
+					stored('3', 'C'),
+					stored('4', 'D')
+				] as never),
+				task('2', ['1.4']),
+				task('3', ['1.3'])
+			);
+			const retitled = (id: number, title: string) => ({
+				...aiSubtask(id, []),
+				title
+			});
+
+			const warnings = await rewrite(via, {
+				...task('1'),
+				subtasks: [
+					retitled(1, 'A v2'),
+					retitled(2, 'C v2'),
+					retitled(3, 'D v2')
+				]
+			});
+
+			// 3 is not C's rewrite: no stored subtask is paired with the wrong one
+			expect(
+				savedTask('1').subtasks.map((st: any) => [st.id, st.title])
+			).toEqual([
+				['5', 'A v2'],
+				['6', 'C v2'],
+				['7', 'D v2']
+			]);
+			expect(savedTask('3').dependencies).toEqual([]);
+			expect(warnings).toContain(
+				"Subtasks 1.1, 1.3, 1.4 aren't in the AI's rewrite, so they were removed; dependencies on them were dropped from 2, 3"
+			);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s still matches by title when the AI renumbers gapped subtasks (#863)',
+		async (via) => {
+			write(
+				task('1', [], [stored('1', 'A'), stored('3', 'C')] as never),
+				task('2', ['1.3'])
+			);
+
+			const warnings = await rewrite(via, {
+				...task('1'),
+				subtasks: [
+					{ ...aiSubtask(1, []), title: 'A' },
+					{ ...aiSubtask(2, []), title: 'C' }
+				]
+			});
+
+			expect(savedTask('1').subtasks.map((st: any) => st.id)).toEqual([
+				'1',
+				'3'
+			]);
+			expect(savedTask('2').dependencies).toEqual(['1.3']);
+			expect(warnings.join('\n')).not.toContain('removed');
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s warns about a subtask the AI left out and the dependency that went with it (#863)',
+		async (via) => {
+			write(
+				task('1', [], [
+					aiSubtask(1, []),
+					aiSubtask(2, []),
+					aiSubtask(3, [])
+				] as never),
+				task('2', ['1.3'])
+			);
+
+			const warnings = await rewrite(via, {
+				...task('1'),
+				subtasks: [aiSubtask(1, []), aiSubtask(2, [])]
+			});
+
+			expect(savedTask('1').subtasks.map((st: any) => st.id)).toEqual([
+				'1',
+				'2'
+			]);
+			expect(savedTask('2').dependencies).toEqual([]);
+			expect(warnings).toContain(
+				"Subtask 1.3 isn't in the AI's rewrite, so it was removed; dependencies on it were dropped from 2"
+			);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s keeps the subtasks when the AI returns none (#863)',
+		async (via) => {
+			write(
+				task('1', [], [aiSubtask(1, []), aiSubtask(2, [])] as never),
+				task('2', ['1.2'])
+			);
+
+			await rewrite(via, { ...task('1'), subtasks: [] });
+
+			expect(savedTask('1').subtasks.map((st: any) => st.id)).toEqual([
+				'1',
+				'2'
+			]);
+			expect(savedTask('2').dependencies).toEqual(['1.2']);
+		}
+	);
 });
