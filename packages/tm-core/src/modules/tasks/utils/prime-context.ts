@@ -7,7 +7,7 @@
  */
 
 import { isTaskComplete } from '../../../common/constants/index.js';
-import type { Task } from '../../../common/types/index.js';
+import type { AcceptanceCriterion, Task } from '../../../common/types/index.js';
 import { normalizeAcceptanceCriteria } from './acceptance-criteria.js';
 import { rankNextTasks } from './next-task.js';
 import { hasNoteSince } from './notes.js';
@@ -66,6 +66,8 @@ export interface PrimeInProgressTask extends PrimeTask {
 	 * strategy when it has none. Empty when the task states neither.
 	 */
 	doneWhen: string[];
+	/** Its acceptance criteria and whether each is checked, numbered from 1 as `--check` takes them */
+	criteria: AcceptanceCriterion[];
 }
 
 export interface PrimeContext {
@@ -123,7 +125,8 @@ export function buildPrimeContext(
 				status: st.status,
 				priority: st.priority || task.priority || 'medium',
 				parentTitle: task.title,
-				doneWhen: doneWhen(st)
+				doneWhen: doneWhen(st),
+				criteria: normalizeAcceptanceCriteria(st.acceptanceCriteria)
 			});
 		}
 		if (task.status === 'in-progress' && subtasks.length === 0) {
@@ -132,7 +135,8 @@ export function buildPrimeContext(
 				title: task.title,
 				status: task.status,
 				priority: task.priority || 'medium',
-				doneWhen: doneWhen(task)
+				doneWhen: doneWhen(task),
+				criteria: normalizeAcceptanceCriteria(task.acceptanceCriteria)
 			});
 		}
 	}
@@ -168,6 +172,30 @@ export function buildPrimeContext(
 		ready,
 		rules: PRIME_RULES
 	};
+}
+
+/** An in-progress task and the numbers and text of its unchecked criteria */
+export interface PrimeUnmetCriteria {
+	task: PrimeInProgressTask;
+	unmet: { number: number; text: string }[];
+}
+
+/**
+ * The in-progress tasks with an unchecked acceptance criterion. The plugin's
+ * Stop hook blocks a stop once while there are any. Only the task's own
+ * criteria count: the Definition of Done is gated at `set-status done`.
+ */
+export function findUnmetCriteria(
+	inProgress: PrimeInProgressTask[]
+): PrimeUnmetCriteria[] {
+	const result: PrimeUnmetCriteria[] = [];
+	for (const task of inProgress) {
+		const unmet = task.criteria.flatMap((c, i) =>
+			c.checked ? [] : [{ number: i + 1, text: c.text }]
+		);
+		if (unmet.length > 0) result.push({ task, unmet });
+	}
+	return result;
 }
 
 /**

@@ -1,5 +1,5 @@
 {
-	"description": "Gives Claude the project's TaskGraph state and workflow rules at session start and after compaction (or says to install or update the taskgraph CLI when it is missing or older than the plugin needs), and reminds it once per session to log a note on the task in progress before it stops. Does nothing outside a TaskGraph project.",
+	"description": "Gives Claude the project's TaskGraph state and workflow rules at session start and after compaction (or says to install or update the taskgraph CLI when it is missing or older than the plugin needs), and after compaction asks it to log a note on the task in progress. Adds that task and its unchecked acceptance criteria to each prompt. When Claude stops, reminds it once per session to log a note on the task in progress, and otherwise keeps it going once while that task has unchecked criteria. Does nothing outside a TaskGraph project.",
 	"hooks": {
 		"SessionStart": [
 			{
@@ -8,6 +8,17 @@
 						"type": "command",
 						"command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh\"",
 						"timeout": 20
+					}
+				]
+			}
+		],
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit.sh\"",
+						"timeout": 10
 					}
 				]
 			}
