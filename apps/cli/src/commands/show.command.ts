@@ -151,6 +151,10 @@ export class ShowCommand extends Command {
 			if (!options.silent) {
 				this.displayResults(result, options);
 			}
+			// Any missed ID fails the command, in any format and with --silent (#808)
+			if ('found' in result ? !result.found : result.notFound.length > 0) {
+				process.exitCode = 1;
+			}
 		} catch (error: any) {
 			displayError(error);
 		}
@@ -273,10 +277,6 @@ export class ShowCommand extends Command {
 					this.displayMultipleTasks(result, options);
 				}
 				break;
-		}
-		// Any missed ID fails the command, in either format (#808)
-		if ('found' in result ? !result.found : result.notFound.length > 0) {
-			process.exitCode = 1;
 		}
 	}
 

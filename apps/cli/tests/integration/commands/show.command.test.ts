@@ -519,4 +519,11 @@ describe('show command output', () => {
 		expect(noneJson.status).toBe(1);
 		expect(JSON.parse(noneJson.stdout).notFound).toEqual(['98', '99']);
 	});
+
+	// --silent prints nothing, so the exit code is a script's only signal
+	it('exits 1 with --silent when an ID is missing, and 0 when all are found', () => {
+		expect(show('99', '--silent').status).toBe(1);
+		expect(show('2,99', '--silent').status).toBe(1);
+		expect(show('2', '--silent').status).toBe(0);
+	});
 });
