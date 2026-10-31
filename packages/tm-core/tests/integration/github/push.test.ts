@@ -252,6 +252,21 @@ describe('GitHub push - integration', () => {
 		expect(github.issues).toHaveLength(1);
 	});
 
+	it('stops instead of duplicating issues when the account lookup is rate limited (#860)', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
+		github.getViewer = () =>
+			Promise.reject(
+				new Error(
+					'GitHub request GET user failed (403): API rate limit exceeded for user ID 1.'
+				)
+			);
+
+		await expect(push()).rejects.toThrow('rate limit');
+		expect(github.issues).toHaveLength(1);
+	});
+
 	it('keeps a claim made while the issue was being created (#655)', async () => {
 		await setup([makeTask('1', { metadata: { source: 'prd' } })]);
 		github.duringCreate = () =>

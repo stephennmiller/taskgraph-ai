@@ -250,6 +250,22 @@ describe('Task assignees', () => {
 		expect((await readTask('1')).assignee).toBe('alice');
 	});
 
+	it('keeps pushing when GitHub drops every assignee, as without push access (#860)', async () => {
+		await setup([makeTask('1', { assignee: 'alice' })]);
+		const create = github.createIssue.bind(github);
+		vi.spyOn(github, 'createIssue').mockImplementation(
+			({ assignees: _, ...input }) => create(input)
+		);
+		const change = github.changeAssignees.bind(github);
+		vi.spyOn(github, 'changeAssignees').mockImplementation((n, how, logins) =>
+			change(n, how, how === 'add' ? [] : logins)
+		);
+		await push();
+
+		await expect(push()).resolves.toMatchObject({ updated: 1 });
+		expect(issue(1).assignees).toEqual([]);
+	});
+
 	it('keeps an assignee changed while the pull was reading GitHub', async () => {
 		await setup([makeTask('1')]);
 		await push();

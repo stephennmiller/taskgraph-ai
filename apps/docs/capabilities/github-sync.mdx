@@ -67,7 +67,7 @@ Assignees sync both ways. Like status, each side is compared with the assignee a
 - **Pull** gives the task the issue's assignee when it changed on GitHub and not locally, and asks first unless you pass `--yes`. When both changed, the task keeps its own and the plan lists GitHub's. An issue with several assignees keeps the task's one if it is among them, otherwise the first.
 - **Import** gives each task the issue's first assignee, unless a task it links already has one. Push never writes to an imported issue, so a local change to its assignee stays local.
 
-GitHub only accepts collaborators on the repository as assignees. When it refuses one, push stops and says which login to fix. When a new issue's assignee is dropped without an error (as GitHub does without push access to the repository), the task keeps its own. When a reassignment doesn't take, push stops with the same hint and leaves the old assignee on the issue.
+GitHub only accepts collaborators on the repository as assignees. When it refuses one, push stops and says which login to fix. When a new issue's assignee is dropped without an error (as GitHub does without push access to the repository), the task keeps its own. When moving an issue from its synced assignee to another doesn't take, push stops with the same hint and leaves the old assignee on the issue.
 
 ## Importing existing issues
 

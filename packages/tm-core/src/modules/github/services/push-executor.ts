@@ -146,7 +146,9 @@ export async function executePush(
 				() => client.changeAssignees(number, 'add', [assignee]),
 				{ assignee, repo, taskId }
 			);
-			if (!heldBy(issue, assignee)) {
+			// With no base there is no one to keep; GitHub drops every assignee
+			// without push access, and the task keeps its own as on create
+			if (base && !heldBy(issue, assignee)) {
 				throw errorWithHint(
 					ERROR_CODES.API_ERROR,
 					`GitHub did not assign ${stripTerminalControls(assignee)} to issue #${number}`,
