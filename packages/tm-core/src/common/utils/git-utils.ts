@@ -200,6 +200,8 @@ export function runGh(
 				});
 			}
 		);
+		// gh can exit before reading a large body (EPIPE); its exit reaches the callback
+		child.stdin?.on('error', () => {});
 		child.stdin?.end(options.input);
 	});
 }

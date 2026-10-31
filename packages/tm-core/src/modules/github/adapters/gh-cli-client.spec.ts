@@ -24,7 +24,7 @@ function respond(
 			cb: (e: Error | null, out: string, err: string) => void
 		) => {
 			cb(status >= 400 ? new Error('exit 1') : null, stdout, '');
-			return { stdin: { end: stdinEnd } };
+			return { stdin: { on: vi.fn(), end: stdinEnd } };
 		}
 	);
 }

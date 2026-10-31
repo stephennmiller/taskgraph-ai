@@ -9,9 +9,11 @@ export function timeoutFromEnv(name: string, fallbackMs: number): number {
 	return Math.min(configured, 2 ** 31 - 1);
 }
 
-/** A limit for a message: "10 minutes", or "30 seconds" under a minute */
+/** A limit for a message: "10 minutes", "1 minute", or "30 seconds" under a minute */
 export function formatTimeout(ms: number): string {
-	return ms >= 60000
-		? `${Math.round(ms / 60000)} minutes`
-		: `${Math.round(ms / 1000)} seconds`;
+	const [n, unit] =
+		ms >= 60000
+			? [Math.round(ms / 60000), 'minute']
+			: [Math.round(ms / 1000), 'second'];
+	return `${n} ${unit}${n === 1 ? '' : 's'}`;
 }

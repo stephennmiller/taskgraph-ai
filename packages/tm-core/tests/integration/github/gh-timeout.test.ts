@@ -8,6 +8,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { runGh } from '../../../src/common/utils/git-utils.js';
 import { GhCliClient } from '../../../src/modules/github/adapters/gh-cli-client.js';
 import { GitHubDomain } from '../../../src/modules/github/github-domain.js';
 import { FileStorage } from '../../../src/modules/storage/adapters/file-storage/file-storage.js';
@@ -89,5 +90,32 @@ describe.skipIf(process.platform === 'win32')('gh timeout', () => {
 		// Gone once Node reaps it
 		await vi.waitFor(() => expect(isAlive(Number(ghPid))).toBe(false));
 		expect(fs.readFileSync(tasksFile, 'utf8')).toBe(before);
+	});
+});
+
+describe.skipIf(process.platform === 'win32')('gh that exits early', () => {
+	const originalPath = process.env.PATH;
+	let binDir: string;
+
+	beforeEach(() => {
+		// Exits without reading stdin, like gh failing its auth check
+		binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-gh-epipe-'));
+		fs.writeFileSync(path.join(binDir, 'gh'), '#!/bin/sh\nexit 1\n', {
+			mode: 0o755
+		});
+		process.env.PATH = `${binDir}${path.delimiter}${originalPath}`;
+	});
+
+	afterEach(() => {
+		process.env.PATH = originalPath;
+		fs.rmSync(binDir, { recursive: true, force: true });
+	});
+
+	it('reports the exit instead of crashing on EPIPE for a large body', async () => {
+		const result = await runGh(['api', '--input', '-'], {
+			input: 'x'.repeat(1024 * 1024)
+		});
+
+		expect(result.error).toMatchObject({ code: 1 });
 	});
 });

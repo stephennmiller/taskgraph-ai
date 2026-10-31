@@ -62,7 +62,7 @@ describe('LoopService limits', () => {
 
 			expect(child.kill).toHaveBeenCalledWith('SIGTERM');
 			expect(result.iterations[0].status).toBe('error');
-			expect(result.iterations[0].message).toContain('1 seconds');
+			expect(result.iterations[0].message).toContain('1 second ');
 			expect(result.iterations[0].message).toContain(
 				'TASKGRAPH_LOOP_TIMEOUT_MS'
 			);
