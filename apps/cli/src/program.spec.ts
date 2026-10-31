@@ -89,6 +89,64 @@ describe('setupCLI', () => {
 	});
 });
 
+describe('help <command> (#835)', () => {
+	// Commander writes help and parse errors to the streams; printError uses
+	// console.error
+	function run(args: string[]) {
+		const stdout = vi
+			.spyOn(process.stdout, 'write')
+			.mockImplementation(() => true);
+		const stderr = vi
+			.spyOn(process.stderr, 'write')
+			.mockImplementation(() => true);
+		const consoleError = vi
+			.spyOn(console, 'error')
+			.mockImplementation(() => {});
+		const exit = vi.spyOn(process, 'exit').mockImplementation((code) => {
+			throw new Error(`exit ${code ?? 0}`);
+		});
+		try {
+			expect(() => setupCLI().parse(args, { from: 'user' })).toThrow(/exit/);
+			return {
+				code: Number(String(exit.mock.calls[0][0] ?? 0)),
+				out: stdout.mock.calls.flat().join(''),
+				err: [...stderr.mock.calls, ...consoleError.mock.calls].flat().join('')
+			};
+		} finally {
+			stdout.mockRestore();
+			stderr.mockRestore();
+			consoleError.mockRestore();
+			exit.mockRestore();
+		}
+	}
+
+	it('help tags shows the help for tags', () => {
+		const { code, out } = run(['help', 'tags']);
+		expect(code).toBe(0);
+		expect(out).toContain('Usage: taskgraph tags');
+	});
+
+	it('help tags use shows the help for tags use', () => {
+		const { code, out } = run(['help', 'tags', 'use']);
+		expect(code).toBe(0);
+		expect(out).toContain('tags use [options] <name>');
+	});
+
+	it('help with an unknown command fails with a hint', () => {
+		const { code, err } = run(['help', 'nope']);
+		expect(code).toBe(1);
+		expect(err).toContain("Unknown command 'nope'");
+		expect(err).toContain('taskgraph --help');
+	});
+
+	it('help with an unknown subcommand points at its parent', () => {
+		const { code, err } = run(['help', 'tags', 'nope']);
+		expect(code).toBe(1);
+		expect(err).toContain("Unknown command 'tags nope'");
+		expect(err).toContain('taskgraph tags --help');
+	});
+});
+
 const updateAvailable = {
 	currentVersion: '1.0.0',
 	latestVersion: '1.1.0',
