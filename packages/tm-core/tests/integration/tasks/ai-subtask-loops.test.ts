@@ -427,6 +427,57 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 	);
 
 	it.each(['update-task', 'update --from'])(
+		'%s names the links to a removed subtask in the warning (#869)',
+		async (via) => {
+			const links = (taskLinks: object) => ({ metadata: { taskLinks } });
+			write(
+				task('1', [], [aiSubtask(1, []), aiSubtask(2, [])] as never),
+				{ ...task('2', ['1.2']), ...links({ '1.2': 'related' }) },
+				{ ...task('3'), ...links({ '1.2': 'discovered-from', '2': 'related' }) }
+			);
+
+			const warnings = await rewrite(via, {
+				...task('1'),
+				subtasks: [aiSubtask(1, [])]
+			});
+
+			expect(savedTask('3').metadata.taskLinks).toEqual({ '2': 'related' });
+			expect(warnings).toContain(
+				"Subtask 1.2 isn't in the AI's rewrite, so it was removed; dependencies on it were dropped from 2; links to it were dropped from 2, 3"
+			);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
+		'%s saves a new subtask the AI marks done as pending, so a rewritten done subtask is saved once (#869)',
+		async (via) => {
+			write(
+				task('1', [], [
+					stored('1', 'A'),
+					{ ...stored('3', 'C'), status: 'done' }
+				] as never)
+			);
+
+			// C renumbered and retitled: it matches no stored subtask
+			await rewrite(via, {
+				...task('1'),
+				subtasks: [
+					{ ...aiSubtask(1, []), title: 'A' },
+					{ ...aiSubtask(2, []), title: 'C v2', status: 'done' }
+				]
+			});
+
+			expect(
+				savedTask('1').subtasks.map((st: any) => [st.id, st.title, st.status])
+			).toEqual([
+				['1', 'A', 'pending'],
+				['4', 'C v2', 'pending'],
+				['3', 'C', 'done']
+			]);
+		}
+	);
+
+	it.each(['update-task', 'update --from'])(
 		'%s keeps the subtasks when the AI returns none (#863)',
 		async (via) => {
 			write(
