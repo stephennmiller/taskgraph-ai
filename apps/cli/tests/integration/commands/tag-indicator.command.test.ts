@@ -113,7 +113,9 @@ describe('tag indicator', () => {
 				['graph']
 			]) {
 				const result = run(args);
-				expect(result.status, args.join(' ')).toBe(0);
+				// 9 is missing, so `show 1,9` exits 1 (#808) but still prints task 1
+				const missing = args.join(' ') === 'show 1,9';
+				expect(result.status, args.join(' ')).toBe(missing ? 1 : 0);
 				expect(result.stdout.split('\n')[0].trim(), args.join(' ')).not.toBe(
 					''
 				);

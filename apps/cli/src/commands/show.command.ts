@@ -151,6 +151,10 @@ export class ShowCommand extends Command {
 			if (!options.silent) {
 				this.displayResults(result, options);
 			}
+			// Any missed ID fails the command, in any format and with --silent (#808)
+			if ('found' in result ? !result.found : result.notFound.length > 0) {
+				process.exitCode = 1;
+			}
 		} catch (error: any) {
 			displayError(error);
 		}
@@ -261,10 +265,6 @@ export class ShowCommand extends Command {
 		switch (format) {
 			case 'json':
 				this.displayJson(result);
-				// Scripts can tell a miss from a hit without parsing the JSON
-				if ('found' in result && !result.found) {
-					process.exitCode = 1;
-				}
 				break;
 
 			case 'text':
@@ -313,7 +313,6 @@ export class ShowCommand extends Command {
 					? `Run \`taskgraph show ${parentId}\` to see its subtasks`
 					: 'Run `taskgraph list` to see task IDs'
 			);
-			process.exitCode = 1;
 			return;
 		}
 
@@ -352,7 +351,6 @@ export class ShowCommand extends Command {
 				`Tasks ${result.notFound.join(', ')} not found`,
 				'Run `taskgraph list` to see task IDs'
 			);
-			process.exitCode = 1;
 			return;
 		}
 
