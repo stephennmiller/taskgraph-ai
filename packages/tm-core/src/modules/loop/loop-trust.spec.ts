@@ -224,7 +224,9 @@ describe('loop trust', () => {
 		'.claude/rules/style.md',
 		'.claude/agents/reviewer.md',
 		'.claude/skills/deploy/SKILL.md',
-		'.mcp.json'
+		'.mcp.json',
+		'.taskgraph/reports/task-complexity-report.json',
+		'.taskgraph/reports/task-complexity-report_feature.json'
 	])('asks again when %s is added or changed', (file) => {
 		writeTasks([task]);
 		trustLoop(project, home);
@@ -309,10 +311,9 @@ describe('loop trust', () => {
 		expect(fs.existsSync(marker)).toBe(false);
 	});
 
-	it('treats local files as untracked when git cannot run', () => {
+	it('counts local files as tracked when git cannot run', () => {
 		writeFile('CLAUDE.local.md', 'Old');
 		git('init', '-q');
-		git('add', 'CLAUDE.local.md');
 		vi.stubEnv('PATH', '');
 		try {
 			writeTasks([task]);
@@ -320,10 +321,117 @@ describe('loop trust', () => {
 
 			writeFile('CLAUDE.local.md', 'New');
 
-			expect(isLoopTrusted(project, home)).toBe(true);
+			expect(isLoopTrusted(project, home)).toBe(false);
 		} finally {
 			vi.unstubAllEnvs();
 		}
+	});
+
+	it('counts local files as tracked when git refuses the folder', () => {
+		const repo = path.join(base, 'repo');
+		project = path.join(repo, 'app');
+		writeFile('CLAUDE.local.md', 'Old');
+		writeFile('.claude/settings.local.json', '{}');
+		// Files that make the project folder look like a bare repository
+		writeFile('HEAD', 'ref: refs/heads/main\n');
+		writeFile('config', '[core]\n\tbare = true\n');
+		fs.mkdirSync(path.join(project, 'objects'));
+		fs.mkdirSync(path.join(project, 'refs'));
+		execFileSync('git', ['init', '-q', repo]);
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('.claude/settings.local.json', '{"hooks": {}}');
+		expect(isLoopTrusted(project, home)).toBe(false);
+
+		trustLoop(project, home);
+		writeFile('CLAUDE.local.md', 'New');
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it.each([
+		['claude.local.md', 'CLAUDE.local.md'],
+		['.Claude/settings.local.json', '.claude/settings.local.json']
+	])(
+		'asks again when git tracks %s and a case-insensitive disk opens it as %s',
+		(committed, opened) => {
+			writeFile(committed, '{}');
+			git('init', '-q');
+			git('add', committed);
+			// What a case-insensitive disk shows: the tracked file under the name Claude Code asks for
+			fs.renameSync(
+				path.join(project, committed.split('/')[0]),
+				path.join(project, opened.split('/')[0])
+			);
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile(opened, '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		}
+	);
+
+	describe('in a project below the top of its repository', () => {
+		let repo: string;
+		const writeAbove = (file: string, text: string) => {
+			fs.mkdirSync(path.dirname(path.join(repo, file)), { recursive: true });
+			fs.writeFileSync(path.join(repo, file), text);
+		};
+
+		beforeEach(() => {
+			repo = path.join(base, 'repo');
+			project = path.join(repo, 'packages', 'app');
+			fs.mkdirSync(project, { recursive: true });
+			execFileSync('git', ['init', '-q', repo]);
+			writeTasks([task]);
+		});
+
+		it.each([
+			'CLAUDE.md',
+			'.claude/CLAUDE.md',
+			'.claude/rules/style.md',
+			'.claude/skills/deploy/SKILL.md',
+			'packages/CLAUDE.md'
+		])('asks again when %s above the project changed', (file) => {
+			writeAbove(file, 'Old');
+			trustLoop(project, home);
+
+			writeAbove(file, 'New');
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		});
+
+		it('asks again when a tracked CLAUDE.local.md above the project changed, not an untracked one', () => {
+			writeAbove('CLAUDE.local.md', 'Old');
+			trustLoop(project, home);
+			writeAbove('CLAUDE.local.md', 'Mine');
+			expect(isLoopTrusted(project, home)).toBe(true);
+
+			execFileSync('git', ['add', 'CLAUDE.local.md'], { cwd: repo });
+			trustLoop(project, home);
+			writeAbove('CLAUDE.local.md', 'New');
+			expect(isLoopTrusted(project, home)).toBe(false);
+		});
+
+		it('keeps the approval when files above the repository changed', () => {
+			fs.writeFileSync(path.join(base, 'CLAUDE.md'), 'Old');
+			trustLoop(project, home);
+
+			fs.writeFileSync(path.join(base, 'CLAUDE.md'), 'New');
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		});
+
+		it('follows a .claude link to a folder elsewhere in the repository', () => {
+			writeAbove('.claude/settings.json', '{}');
+			fs.symlinkSync('../../.claude', path.join(project, '.claude'));
+			trustLoop(project, home);
+
+			writeAbove('.claude/settings.json', '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		});
 	});
 
 	it('asks again when a file in a folder a symlink under .claude names inside the project changed', () => {
@@ -422,6 +530,85 @@ describe('loop trust', () => {
 			'.taskgraph/config.json',
 			'{"loop": {"bands": [{"maxScore": 10, "model": "opus", "effort": "max"}], "resumeMaxContextTokens": 1}}'
 		);
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	describe('.taskgraph/config.local.json', () => {
+		const local = '.taskgraph/config.local.json';
+		const bands = '{"loop": {"bands": [{"maxScore": 10, "model": "opus"}]}}';
+
+		beforeEach(() => {
+			writeTasks([task]);
+			writeFile('.taskgraph/config.json', '{"global": {}}');
+			writeFile(local, '{}');
+			git('init', '-q');
+		});
+
+		it("doesn't count while git doesn't track it", () => {
+			trustLoop(project, home);
+
+			writeFile(local, bands);
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		});
+
+		it('asks again when a tracked one changes the loop settings or the Definition of Done', () => {
+			git('add', local);
+			trustLoop(project, home);
+			writeFile(local, bands);
+			expect(isLoopTrusted(project, home)).toBe(false);
+
+			trustLoop(project, home);
+			writeFile(local, '{"global": {"definitionOfDone": ["Push to main"]}}');
+			expect(isLoopTrusted(project, home)).toBe(false);
+		});
+
+		it('asks again when git tracks it under another case', () => {
+			const committed = '.taskgraph/Config.Local.json';
+			fs.renameSync(path.join(project, local), path.join(project, committed));
+			git('add', committed);
+			// What a case-insensitive disk shows
+			fs.renameSync(path.join(project, committed), path.join(project, local));
+			trustLoop(project, home);
+
+			writeFile(local, bands);
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		});
+
+		it('counts as tracked when git cannot run', () => {
+			vi.stubEnv('PATH', '');
+			try {
+				trustLoop(project, home);
+
+				writeFile(local, bands);
+
+				expect(isLoopTrusted(project, home)).toBe(false);
+			} finally {
+				vi.unstubAllEnvs();
+			}
+		});
+	});
+
+	it("doesn't count Claude files in the home folder when the repository's top is there", () => {
+		project = path.join(home, 'code', 'app');
+		fs.mkdirSync(project, { recursive: true });
+		execFileSync('git', ['init', '-q', home]);
+		writeTasks([task]);
+		const writeHome = (file: string, text: string) => {
+			fs.mkdirSync(path.dirname(path.join(home, file)), { recursive: true });
+			fs.writeFileSync(path.join(home, file), text);
+		};
+		writeHome('CLAUDE.md', 'Old');
+		writeHome('.claude/skills/mine/SKILL.md', 'Old');
+		writeHome('code/CLAUDE.md', 'Old');
+		trustLoop(project, home);
+
+		writeHome('CLAUDE.md', 'New');
+		writeHome('.claude/skills/mine/SKILL.md', 'New');
+		expect(isLoopTrusted(project, home)).toBe(true);
+
+		writeHome('code/CLAUDE.md', 'New');
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 

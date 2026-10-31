@@ -14,10 +14,13 @@ import path from 'node:path';
 import lockfile from 'proper-lockfile';
 import { TASK_STATUSES } from '../../common/constants/index.js';
 import {
+	COMPLEXITY_REPORT_FILE,
 	TASKGRAPH_CONFIG_FILE,
+	TASKGRAPH_LOCAL_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
 } from '../../common/constants/paths.js';
 import { isWithin } from '../../common/utils/project-root-finder.js';
+import { mergeMachineConfig } from '../config/services/machine-config.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { PRD_SOURCE_KEY } from '../prd/prd-sections.js';
 import { normalizeDefinitionOfDone } from '../tasks/utils/acceptance-criteria.js';
@@ -81,32 +84,43 @@ const progressMarks = (doneItems: Set<string>) =>
 		]
 	]);
 
-/** The project's Definition of Done, as `ConfigManager` reads it */
-function definitionOfDone(root: string): Set<string> {
-	try {
-		const config = JSON.parse(
-			fs.readFileSync(path.join(root, TASKGRAPH_CONFIG_FILE), 'utf8')
-		);
-		return new Set(normalizeDefinitionOfDone(config?.global?.definitionOfDone));
-	} catch {
-		return new Set();
-	}
+/**
+ * config.json with config.local.json merged over it, as the config loader
+ * does, but only when git tracks the local file: untracked, it is the
+ * user's own, like `LOCAL_FILES`. A file that isn't JSON counts as missing.
+ * @param tracked - From `trackedFiles`
+ */
+function projectConfig(
+	root: string,
+	tracked: (file: string) => boolean
+): Record<string, any> {
+	const read = (file: string) => {
+		try {
+			return JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+		} catch {
+			return null;
+		}
+	};
+	return mergeMachineConfig<Record<string, any>>(
+		read(TASKGRAPH_CONFIG_FILE),
+		tracked(TASKGRAPH_LOCAL_CONFIG_FILE)
+			? read(TASKGRAPH_LOCAL_CONFIG_FILE)
+			: null
+	);
 }
+
+/** The project's Definition of Done, from `projectConfig` */
+const definitionOfDone = (config: Record<string, any>): Set<string> =>
+	new Set(normalizeDefinitionOfDone(config?.global?.definitionOfDone));
 
 /**
  * `loop.bands` and `loop.resumeMaxContextTokens`, which pick each iteration's
  * model, effort and resume; undefined when neither is set
  */
-function loopModelSettings(root: string): unknown {
-	try {
-		const loop = JSON.parse(
-			fs.readFileSync(path.join(root, TASKGRAPH_CONFIG_FILE), 'utf8')
-		)?.loop;
-		const settings = [loop?.bands, loop?.resumeMaxContextTokens];
-		return settings.some((v) => v !== undefined) ? settings : undefined;
-	} catch {
-		return undefined;
-	}
+function loopModelSettings(config: Record<string, any>): unknown {
+	const loop = config?.loop;
+	const settings = [loop?.bands, loop?.resumeMaxContextTokens];
+	return settings.some((v) => v !== undefined) ? settings : undefined;
 }
 
 /**
@@ -121,12 +135,38 @@ const CLAUDE_FILES = ['CLAUDE.md', '.taskgraph/CLAUDE.md', '.mcp.json'];
  */
 const LOCAL_FILES = ['CLAUDE.local.md', '.claude/settings.local.json'];
 
+/** Every tag's complexity report, under each name versions have used */
+const REPORTS_DIR = path.dirname(COMPLEXITY_REPORT_FILE);
+
 /**
- * Which of `LOCAL_FILES` git tracks, in one call; none outside a repository.
+ * The project and each folder above it up to the repository's top level
+ * (the nearest with a `.git`, where git looks), as paths from the project:
+ * '', '..', '../..'. Undefined outside a repository.
+ */
+function foldersToTop(root: string): string[] | undefined {
+	const folders: string[] = [];
+	for (let dir = root, rel = ''; ; rel = rel ? `${rel}/..` : '..') {
+		folders.push(rel);
+		if (fs.lstatSync(path.join(dir, '.git'), { throwIfNoEntry: false }))
+			return folders;
+		const parent = path.dirname(dir);
+		if (parent === dir) return undefined;
+		dir = parent;
+	}
+}
+
+/**
+ * Whether git tracks a file (a path from the project), whatever its case,
+ * since a case-insensitive disk opens `claude.local.md` as `CLAUDE.local.md`.
+ * Asks git once, for `files`. When git fails (not installed, a repository
+ * it won't use) every file counts as tracked.
  * Runs before the project is approved, so the repository's own config must
  * not name a program for git to start or a bare repository for it to use
  */
-function trackedLocalFiles(root: string): Set<string> {
+function trackedFiles(
+	root: string,
+	files: string[]
+): (file: string) => boolean {
 	try {
 		const out = execFileSync(
 			'git',
@@ -138,7 +178,7 @@ function trackedLocalFiles(root: string): Set<string> {
 				'ls-files',
 				'-z',
 				'--',
-				...LOCAL_FILES
+				...files.map((file) => `:(icase)${file}`)
 			],
 			{
 				cwd: root,
@@ -147,31 +187,39 @@ function trackedLocalFiles(root: string): Set<string> {
 				timeout: 10000
 			}
 		);
-		return new Set(out.split('\0'));
+		const tracked = new Set(out.toLowerCase().split('\0'));
+		return (file) => tracked.has(file.toLowerCase());
 	} catch {
-		return new Set();
+		return () => true;
 	}
 }
 
 const sha256 = (data: string | Buffer) =>
 	createHash('sha256').update(data).digest('hex');
 
-/** Bounds on the `.claude` walk, which runs before every loop iteration */
+/** Bounds on the file walk, which runs before every loop iteration */
 const CLAUDE_DIR_MAX_ENTRIES = 5000;
 const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
 
 /**
- * Everything under `.claude` (rules, agents, commands, skills, hooks,
- * settings) as [path, content] pairs in a fixed order, less Claude Code's
- * `worktrees` and an untracked `settings.local.json`. A symlink gives its
- * link text, and the content too when it resolves to a file or folder
- * inside the project; links that leave the project aren't followed. A file past the
+ * Every file under `starts` (paths from the project: `.claude` with its
+ * rules, agents, commands, skills, hooks and settings, and the rest) as
+ * [path, content] pairs in a fixed order, less Claude Code's
+ * `.claude/worktrees` and an untracked `.claude/settings.local.json`. A
+ * symlink gives its link text, and the content too when it resolves to a
+ * file or folder inside the repository (`top`); links that leave it aren't
+ * followed. A file past the
  * byte budget gives its size and change times, which rewriting it changes.
  * Past the entry cap the walk stops and a value that never repeats goes in,
  * so loop asks every time.
- * @param tracked - From `trackedLocalFiles`
+ * @param tracked - From `trackedFiles`
  */
-function claudeDir(root: string, tracked: Set<string>): unknown {
+function fileTree(
+	root: string,
+	top: string,
+	tracked: (file: string) => boolean,
+	starts: string[]
+): unknown {
 	const out: Array<[string, string]> = [];
 	let seen = 0;
 	let bytes = 0;
@@ -190,7 +238,7 @@ function claudeDir(root: string, tracked: Set<string>): unknown {
 			if (stat.isSymbolicLink()) {
 				out.push([rel, `link:${fs.readlinkSync(full)}`]);
 				const target = fs.realpathSync(full);
-				if (isWithin(root, target)) {
+				if (isWithin(top, target)) {
 					const targetStat = fs.statSync(target);
 					if (targetStat.isFile()) out.push([rel, content(target, targetStat)]);
 					else if (targetStat.isDirectory()) return walk(rel);
@@ -213,15 +261,15 @@ function claudeDir(root: string, tracked: Set<string>): unknown {
 			if (
 				rel === '.claude' &&
 				(name === 'worktrees' ||
-					(name === 'settings.local.json' &&
-						!tracked.has('.claude/settings.local.json')))
+					(name.toLowerCase() === 'settings.local.json' &&
+						!tracked('.claude/settings.local.json')))
 			)
 				continue;
 			if (!visit(`${rel}/${name}`)) return false;
 		}
 		return true;
 	};
-	return visit('.claude') ? out : randomUUID();
+	return starts.every(visit) ? out : randomUUID();
 }
 
 /**
@@ -229,10 +277,27 @@ function claudeDir(root: string, tracked: Set<string>): unknown {
  * `metadata`, so set-status or checking off a criterion keeps an approval;
  * with the files in `CLAUDE_FILES` (null when missing), the tracked
  * `LOCAL_FILES`, `.claude`, the Definition of Done, the loop's model
- * settings and the PRD sections tasks cite, which `show` prints with each task
+ * settings, the PRD sections tasks cite, which `show` prints with each
+ * task, and the complexity reports, whose expansion prompts come with every
+ * task. In a project below the repository's top level, also the
+ * instructions, rules and skills of each folder above it, which Claude Code
+ * loads at start
  */
-function trustHash(root: string): string {
-	const doneItems = definitionOfDone(root);
+function trustHash(root: string, home: string): string {
+	const folders = foldersToTop(root);
+	// Files in the home folder and above are the user's own, as Claude Code's user settings
+	const above = (folders?.slice(1) ?? []).filter(
+		(dir) => !isWithin(path.resolve(root, dir), home)
+	);
+	const tracked = folders
+		? trackedFiles(root, [
+				...LOCAL_FILES,
+				TASKGRAPH_LOCAL_CONFIG_FILE,
+				...above.map((dir) => `${dir}/CLAUDE.local.md`)
+			])
+		: () => false;
+	const config = projectConfig(root, tracked);
+	const doneItems = definitionOfDone(config);
 	const sources = new Set<string>();
 	let text: string;
 	try {
@@ -257,9 +322,8 @@ function trustHash(root: string): string {
 	} catch {
 		// Not JSON: hash it as it is, so any change still counts
 	}
-	const tracked = trackedLocalFiles(root);
 	// Untracked, CLAUDE.local.md adds nothing, so approvals from before stay valid
-	const local = tracked.has('CLAUDE.local.md') ? ['CLAUDE.local.md'] : [];
+	const local = tracked('CLAUDE.local.md') ? ['CLAUDE.local.md'] : [];
 	const files = [...CLAUDE_FILES, ...local].map((file) => {
 		try {
 			return fs.readFileSync(path.join(root, file), 'utf8');
@@ -269,12 +333,25 @@ function trustHash(root: string): string {
 	});
 	const prd = [...sources].map((s) => readPrdSection(s, root) ?? null);
 	// Unset, the model settings add nothing, so approvals from before stay valid
-	const models = loopModelSettings(root);
+	const models = loopModelSettings(config);
+	const starts = [
+		'.claude',
+		...above.flatMap((dir) => [
+			`${dir}/CLAUDE.md`,
+			...(tracked(`${dir}/CLAUDE.local.md`) ? [`${dir}/CLAUDE.local.md`] : []),
+			`${dir}/.claude/CLAUDE.md`,
+			`${dir}/.claude/rules`,
+			`${dir}/.claude/skills`
+		]),
+		// Only when there: approvals from before stay valid without reports
+		...(fs.existsSync(path.join(root, REPORTS_DIR)) ? [REPORTS_DIR] : [])
+	];
+	const top = path.resolve(root, folders?.at(-1) ?? '');
 	return sha256(
 		JSON.stringify([
 			text,
 			files,
-			claudeDir(root, tracked),
+			fileTree(root, top, tracked, starts),
 			[...doneItems],
 			prd,
 			...(models === undefined ? [] : [models])
@@ -289,7 +366,10 @@ export function isLoopTrusted(
 	const root = canonical(projectRoot);
 	const entry = findEntry(home, root);
 	// A bare path from an older version holds no hash: ask again once
-	return (entry as TrustEntry | undefined)?.tasks === trustHash(root);
+	return (
+		(entry as TrustEntry | undefined)?.tasks ===
+		trustHash(root, canonical(home))
+	);
 }
 
 /** Approve this project's tasks and instructions as they are now */
@@ -298,13 +378,13 @@ export function trustLoop(
 	home: string = os.homedir()
 ): void {
 	const root = canonical(projectRoot);
-	updateTrusted(home, (trusted) => withEntry(trusted, root));
+	updateTrusted(home, (trusted) => withEntry(trusted, root, home));
 }
 
 /** The list with this project's entry for its tasks as they are now */
-const withEntry = (trusted: unknown[], root: string) => [
+const withEntry = (trusted: unknown[], root: string, home: string) => [
 	...trusted.filter((e) => !entryMatches(e, root)),
-	{ path: root, tasks: trustHash(root) }
+	{ path: root, tasks: trustHash(root, canonical(home)) }
 ];
 
 /** Why an approved run stopped: `keepLoopTrust` found the approval withdrawn */
@@ -324,7 +404,7 @@ export function keepLoopTrust(
 	let kept = false;
 	updateTrusted(home, (trusted) => {
 		kept = trusted.some((e) => typeof e === 'object' && entryMatches(e, root));
-		return kept ? withEntry(trusted, root) : undefined;
+		return kept ? withEntry(trusted, root, home) : undefined;
 	});
 	return kept;
 }
