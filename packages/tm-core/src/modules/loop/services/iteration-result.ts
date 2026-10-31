@@ -43,13 +43,14 @@ export function completeIteration(
 		duration: Date.now() - startTime,
 		// A cap that stopped Claude says more than its exit code
 		message: (status === 'error' && run?.capHit) || message,
-		...runSpend(run)
+		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
+		...(run?.turns !== undefined ? { turns: run.turns } : {})
 	};
 }
 
 export type RunSpend = Pick<LoopIteration, 'costUsd' | 'turns' | 'costUnknown'>;
 
-/** The cost and turns Claude Code reported, or `costUnknown` when it reported no cost (#855) */
+/** For a run loop stopped or that died: the cost and turns Claude Code reported, or `costUnknown` (#855) */
 export function runSpend(run: ClaudeRunResult | undefined): RunSpend {
 	return {
 		...(run?.costUsd !== undefined

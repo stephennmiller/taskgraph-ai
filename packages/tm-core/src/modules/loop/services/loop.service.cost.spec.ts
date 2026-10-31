@@ -248,6 +248,21 @@ describe('LoopService cost and caps', () => {
 		expect(result.totalCostUsd).toBeUndefined();
 	});
 
+	it('counts nothing for a clean exit without a result event (older Claude Code) under a budget', async () => {
+		spawn.mockImplementation(
+			() => fakeClaude({ stdout: 'Did one task\n', status: 0 }) as never
+		);
+
+		const result = await service.run(
+			config({ iterations: 3, maxBudgetUsd: 10 })
+		);
+
+		expect(spawn).toHaveBeenCalledTimes(3);
+		expect(result.finalStatus).toBe('max_iterations');
+		expect(result.iterations[0].costUsd).toBeUndefined();
+		expect(result.iterations[0].costUnknown).toBeUndefined();
+	});
+
 	it("doesn't count a budget for a claude that never started", async () => {
 		spawn.mockImplementation(
 			() =>
