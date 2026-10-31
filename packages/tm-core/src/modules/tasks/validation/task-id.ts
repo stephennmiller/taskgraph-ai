@@ -37,6 +37,35 @@ export function isValidTaskIdFormat(id: string): boolean {
 }
 
 /**
+ * The form tasks.json stores a task or subtask ID in, so every command reads
+ * `03` as task 3 and `1.03` as subtask 1.3. Undefined for anything else
+ * (`1.1x`, `2.`, `1.2.3`), which names no task.
+ *
+ * @example
+ * ```typescript
+ * canonicalTaskId(" 03 ");  // "3"
+ * canonicalTaskId("01.03"); // "1.3"
+ * canonicalTaskId("1.1x");  // undefined
+ * ```
+ */
+export function canonicalTaskId(id: string | number): string | undefined {
+	const text = String(id).trim();
+	if (!/^\d+(\.\d+)?$/.test(text)) return undefined;
+	return (
+		text
+			.split('.')
+			// Drop leading zeros as text: parseInt rounds a long ID
+			.map((part) => part.replace(/^0+(?=\d)/, ''))
+			.join('.')
+	);
+}
+
+/** canonicalTaskId, or the ID trimmed when it isn't one, for lookups to miss */
+export function normalizeTaskId(id: string | number): string {
+	return canonicalTaskId(id) ?? String(id).trim();
+}
+
+/**
  * Zod schema for a single task ID
  * Validates format: numeric task or numeric subtask
  * This schema is used in MCP tool definitions which can't have transforms.

@@ -15,6 +15,7 @@ import {
 	type DependencyTree
 } from '../dependencies/index.js';
 import { buildPrimeContext, type PrimeContext } from './utils/prime-context.js';
+import { normalizeTaskId } from './validation/task-id.js';
 
 /** Read-only dependency views behind TasksDomain */
 export class TaskDependencyViews {
@@ -62,7 +63,7 @@ export class TaskDependencyViews {
 		options: { tag?: string } = {}
 	): Promise<BlockerExplanation> {
 		const tasks = await this.taskService.getDependencyView(options.tag);
-		return explainBlockers(tasks, String(taskId));
+		return explainBlockers(tasks, normalizeTaskId(taskId));
 	}
 
 	/**

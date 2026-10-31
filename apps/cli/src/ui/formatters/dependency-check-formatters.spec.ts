@@ -48,7 +48,7 @@ describe('formatDependencyCheck', () => {
 			"  4    depends on task 99, which doesn't exist",
 			'  4    depends on itself',
 			"  1.1  depends on subtask 1.7, which doesn't exist",
-			'Run taskgraph fix-dependencies to remove them'
+			'Run taskgraph fix-dependencies to fix them'
 		]);
 	});
 
@@ -61,7 +61,7 @@ describe('formatDependencyCheck', () => {
 		expect(lines(output)).toEqual([
 			'✗ 1 dependency problem',
 			"  4  links to subtask 9.1, which doesn't exist",
-			'Run taskgraph fix-dependencies to remove them'
+			'Run taskgraph fix-dependencies to fix them'
 		]);
 		expect(
 			lines(
@@ -96,7 +96,7 @@ describe('formatDependencyCheck', () => {
 			issues: [{ type: 'circular', taskId: '1.2', fixable: true }]
 		});
 		expect(lines(output).at(-1)).toBe(
-			'Run taskgraph fix-dependencies to remove them'
+			'Run taskgraph fix-dependencies to fix them'
 		);
 	});
 
@@ -168,6 +168,20 @@ describe('formatDependencyFixes', () => {
 			'  2    removed a duplicate of task 1',
 			"  4    removed task 99, which doesn't exist",
 			'  4    removed its dependency on itself'
+		]);
+	});
+
+	it('says which dependency it rewrote in its stored form (#864)', () => {
+		const output = formatDependencyFixes({
+			...counts,
+			fixes: [
+				{ type: 'rewritten', taskId: 3, dependencyId: '1.1', storedAs: '1.01' }
+			]
+		});
+
+		expect(lines(output)).toEqual([
+			'✓ Fixed 1 dependency problem',
+			'  3  wrote 1.01 as subtask 1.1'
 		]);
 	});
 

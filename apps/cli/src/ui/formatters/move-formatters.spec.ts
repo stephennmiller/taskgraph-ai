@@ -101,6 +101,24 @@ describe('formatCrossTagConflictHint', () => {
 		);
 	});
 
+	it('suggests fix-dependencies for a dependency the source tag lacks (#864)', () => {
+		const missing: CrossTagConflict = {
+			taskId: '3',
+			dependencyId: '9',
+			dependencyTag: 'feat',
+			message:
+				"Task 3 depends on 9, which feat doesn't have (master has a different 9)",
+			missing: true
+		};
+
+		expect(formatCrossTagConflictHint([missing], moveTo, 'feat')).toBe(
+			'Drop them with `taskgraph move --from=3 --from-tag=feat --to-tag=master --ignore-dependencies`, or remove them first with `taskgraph fix-dependencies --tag=feat`'
+		);
+		expect(formatCrossTagConflictHint([live, missing], moveTo, 'feat')).toMatch(
+			/--with-dependencies.*Missing ones can't move; remove them with `taskgraph fix-dependencies --tag=feat`$/
+		);
+	});
+
 	it('strips escape codes from the tag name', () => {
 		expect(
 			formatCrossTagConflictHint([archived], moveTo, 'a\x1b[2Jb')

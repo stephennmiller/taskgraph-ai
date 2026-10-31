@@ -29,6 +29,7 @@ import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
 import { subtaskInContext } from './utils/subtask-context.js';
+import { normalizeTaskId } from './validation/task-id.js';
 import {
 	type ReadmeExportOptions,
 	writeReadmeExport
@@ -177,8 +178,8 @@ export class TasksDomain {
 		| { task: Subtask; isSubtask: true }
 		| { task: null; isSubtask: boolean }
 	> {
-		// Parse ID - check for dot notation (subtask)
-		const parts = taskId.split('.');
+		// Parse ID - check for dot notation (subtask); "01.03" is 1.3
+		const parts = normalizeTaskId(taskId).split('.');
 		const parentId = parts[0];
 		const subtaskIdPart = parts[1];
 
@@ -394,7 +395,7 @@ export class TasksDomain {
 		options: { force?: boolean } = {}
 	) {
 		return this.taskService.updateTaskStatus(
-			taskId,
+			normalizeTaskId(taskId),
 			status,
 			tag,
 			this.statusWriteOptions(options.force)
@@ -412,7 +413,7 @@ export class TasksDomain {
 		options: { force?: boolean } = {}
 	) {
 		return this.taskService.updateTaskStatuses(
-			taskIds,
+			taskIds.map(normalizeTaskId),
 			status,
 			tag,
 			this.statusWriteOptions(options.force)

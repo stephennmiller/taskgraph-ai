@@ -43,21 +43,31 @@ export interface CrossTagConflict {
 	message: string;
 	/** The dependency is archived in the source tag, so it can't move along */
 	archived?: true;
+	/**
+	 * The source tag doesn't have the dependency, but the target tag has that
+	 * ID, so keeping it would name an unrelated task
+	 */
+	missing?: true;
 }
 
 /**
  * What can clear the conflicts that refused a move to another tag, for the
- * CLI and MCP to word: moving the dependencies along (withDependencies), and
- * restoring the archived ones first, since those can't move. Dropping them
- * (ignoreDependencies) always works.
+ * CLI and MCP to word: moving the dependencies along (withDependencies),
+ * restoring the archived ones first, since those can't move, and removing
+ * the missing ones (fix-dependencies). Dropping them (ignoreDependencies)
+ * always works.
  */
 export function crossTagConflictFixes(conflicts: CrossTagConflict[]): {
 	moveAlong: boolean;
 	restore: boolean;
+	missing: boolean;
 } {
 	return {
-		moveAlong: conflicts.some((conflict) => !conflict.archived),
-		restore: conflicts.some((conflict) => conflict.archived)
+		moveAlong: conflicts.some(
+			(conflict) => !conflict.archived && !conflict.missing
+		),
+		restore: conflicts.some((conflict) => conflict.archived),
+		missing: conflicts.some((conflict) => conflict.missing)
 	};
 }
 

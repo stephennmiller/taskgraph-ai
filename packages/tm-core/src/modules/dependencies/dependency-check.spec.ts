@@ -11,7 +11,6 @@ import {
 	breakSubtaskLoops,
 	countTasksAndDependencies,
 	createDependencyState,
-	createTaskLookup,
 	fixTaskDependencies,
 	validateTaskDependencies
 } from './dependency-check.js';
@@ -329,26 +328,6 @@ describe('fixTaskDependencies', () => {
 			jira: 'ABC-1',
 			dependencySources: { 1: 'inferred' }
 		});
-	});
-});
-
-describe('createTaskLookup', () => {
-	it('finds tasks and subtasks by number or string ID, the first task winning', () => {
-		const exists = createTaskLookup(
-			asTasks([
-				{ id: 1, subtasks: [{ id: 1 }, { id: 2 }] },
-				{ id: 1, subtasks: [{ id: 9 }] },
-				{ id: '4', subtasks: [{ id: '1' }] },
-				{ id: 3, subtasks: [] }
-			])
-		);
-
-		for (const id of [1, '1', '01', '1.1', '1.2', '1.2.3', '4', '4.1']) {
-			expect(exists(id), `id ${id}`).toBe(true);
-		}
-		for (const id of [0, '', '2', '1.9', '3.1', '3.y', 'x.1', 'x', '.1']) {
-			expect(exists(id), `id ${id}`).toBe(false);
-		}
 	});
 });
 

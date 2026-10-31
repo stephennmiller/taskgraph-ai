@@ -12,7 +12,7 @@ import {
 	assignMetadata,
 	pruneDependencySources
 } from './dependency-provenance.js';
-import { fullSubtaskId } from '../tasks/validation/task-id.js';
+import { fullSubtaskId, normalizeTaskId } from '../tasks/validation/task-id.js';
 import { resolveSubtaskDependency } from './subtask-dependency.js';
 import { pruneTaskLinks } from './task-links.js';
 
@@ -48,7 +48,10 @@ export function dropReferences(
 		parentId?: DependencyId
 	) => {
 		if (!item.dependencies) return;
-		const kept = item.dependencies.filter((dep) => !removed.has(fullId(dep)));
+		// Older versions stored "1.02" as typed; it names 1.2 too
+		const kept = item.dependencies.filter(
+			(dep) => !removed.has(normalizeTaskId(fullId(dep)))
+		);
 		// Leave untouched items as they are, metadata included
 		if (kept.length === item.dependencies.length) return;
 		item.dependencies = kept;

@@ -6,7 +6,7 @@
  *   ✗ 2 dependency problems
  *     4  depends on task 99, which doesn't exist
  *     4  depends on itself
- *   Run taskgraph fix-dependencies to remove them
+ *   Run taskgraph fix-dependencies to fix them
  *
  *   ✓ Fixed 2 dependency problems
  *     4  removed task 99, which doesn't exist
@@ -40,9 +40,17 @@ export interface DependencyIssue {
 
 /** One change `fix-dependencies` made */
 export interface DependencyFix {
-	type: 'missing' | 'self' | 'duplicate' | 'circular' | 'missing-link';
+	type:
+		| 'missing'
+		| 'self'
+		| 'duplicate'
+		| 'circular'
+		| 'missing-link'
+		| 'rewritten';
 	taskId: Id;
 	dependencyId?: Id;
+	/** For `rewritten`: the dependency as it was stored ("1.01") */
+	storedAs?: Id;
 }
 
 /** How much was checked, for the muted summary */
@@ -114,6 +122,8 @@ function describeFix(fix: DependencyFix): string {
 			return `removed ${dep} to break a loop`;
 		case 'missing-link':
 			return `removed its link to ${dep}, which doesn't exist`;
+		case 'rewritten':
+			return `wrote ${safeId(fix.storedAs ?? '?')} as ${dep}`;
 	}
 }
 
@@ -201,7 +211,7 @@ function problems(
 		fixable
 			? theme.muted('Run ') +
 					theme.brand('taskgraph fix-dependencies') +
-					theme.muted(' to remove them')
+					theme.muted(' to fix them')
 			: theme.muted('Break the loop with ') +
 					theme.brand('taskgraph remove-dependency --id=<id> --depends-on=<id>')
 	);

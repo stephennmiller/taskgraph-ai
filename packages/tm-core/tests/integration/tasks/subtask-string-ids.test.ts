@@ -138,6 +138,20 @@ describe('subtask IDs stored as strings (#748)', () => {
 		]);
 	});
 
+	it('reads leading zeros as remove-task does, in get and set-status (#864)', async () => {
+		expect((await tmCore.tasks.get('01.02')).task).toMatchObject({
+			id: '1.2',
+			title: 'B'
+		});
+		expect((await tmCore.tasks.get('02')).task).toMatchObject({ id: '2' });
+
+		await tmCore.tasks.updateStatus('01.03', 'in-progress');
+		await tmCore.tasks.updateStatuses(['02'], 'in-progress');
+
+		expect(subtasksOf(1)[2].status).toBe('in-progress');
+		expect(readFile().master.tasks[1].status).toBe('in-progress');
+	});
+
 	it('finds, changes and numbers after subtasks stored with dotted IDs (#805)', async () => {
 		const dotted = v1File();
 		dotted.master.tasks[0].subtasks = dotted.master.tasks[0].subtasks.map(

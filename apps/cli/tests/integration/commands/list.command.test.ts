@@ -312,7 +312,7 @@ describe('list command', () => {
 			const { stderr } = runPiped(['list', '--json']);
 
 			expect(stderr).toContain('Task 1 depends on non-existent task 9\n');
-			expect(stderr).toContain('Run taskgraph fix-dependencies to remove them');
+			expect(stderr).toContain('Run taskgraph fix-dependencies to fix them');
 			expect(stderr).not.toContain('\u001b');
 			expect(stderr).not.toContain('pwned');
 		});

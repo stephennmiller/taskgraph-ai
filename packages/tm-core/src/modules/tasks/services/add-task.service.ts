@@ -33,6 +33,7 @@ import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { normalizeAcceptanceCriteria } from '../utils/acceptance-criteria.js';
 import { normalizeAssignee } from '../utils/assignee.js';
 import { nextTaskId, readArchivedIdsSync } from '../utils/archive.js';
+import { canonicalTaskId } from '../validation/task-id.js';
 
 /** How many tasks matching the prompt the AI is shown as context */
 const MAX_RELATED_TASKS = 10;
@@ -117,15 +118,11 @@ function resolveDiscoveredFrom(
 	tasks: Task[]
 ): string | undefined {
 	if (id === undefined || id === null || id === '') return undefined;
-	const text = String(id).trim();
 	const hint = 'Run `taskgraph list` to see task IDs';
-	if (!/^\d+(\.\d+)?$/.test(text)) {
-		throw withHint(`"${text}" isn't a task ID`, hint);
+	const fullId = canonicalTaskId(id);
+	if (fullId === undefined) {
+		throw withHint(`"${String(id).trim()}" isn't a task ID`, hint);
 	}
-	const fullId = text
-		.split('.')
-		.map((part) => String(parseInt(part, 10)))
-		.join('.');
 	if (findTitle(tasks, fullId) === undefined) {
 		throw withHint(`Task ${fullId} doesn't exist`, hint);
 	}

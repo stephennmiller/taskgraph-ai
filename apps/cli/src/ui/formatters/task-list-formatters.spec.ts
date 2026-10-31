@@ -376,7 +376,7 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 			'',
 			'Warning: 1 invalid dependency reference(s) found (tag: feature):',
 			'  Task 3 depends on non-existent task 9',
-			'Run taskgraph fix-dependencies --tag feature to remove them'
+			'Run taskgraph fix-dependencies --tag feature to fix them'
 		]);
 	});
 
@@ -390,7 +390,7 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 
 		expect(output[1]).toContain('(tag: a;rm -rf ~)');
 		expect(output.at(-1)).toBe(
-			'Run taskgraph fix-dependencies --tag <tag> to remove them'
+			'Run taskgraph fix-dependencies --tag <tag> to fix them'
 		);
 	});
 
@@ -404,7 +404,7 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 
 		expect(output).toHaveLength(9);
 		expect(output.at(-2)).toBe('  ...and 2 more');
-		expect(output.at(-1)).toBe('Run taskgraph fix-dependencies to remove them');
+		expect(output.at(-1)).toBe('Run taskgraph fix-dependencies to fix them');
 	});
 
 	it('wraps every line to a 50-column terminal (#463)', () => {
@@ -422,7 +422,7 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 			'  Task 12.3 depends on non-existent task 45.6',
 			'Run',
 			'taskgraph fix-dependencies --tag feature-branch to',
-			'remove them'
+			'fix them'
 		]);
 	});
 
@@ -440,7 +440,7 @@ describe('formatInvalidDependencyWarning (#366)', () => {
 			'',
 			'Warning: 1 invalid dependency reference(s) found (tag: x y):',
 			'  Task 3 depends on non-existent task 9',
-			'Run taskgraph fix-dependencies --tag <tag> to remove them'
+			'Run taskgraph fix-dependencies --tag <tag> to fix them'
 		]);
 	});
 });

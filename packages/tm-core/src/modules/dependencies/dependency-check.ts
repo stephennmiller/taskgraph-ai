@@ -18,6 +18,7 @@ import { isTaskComplete } from '../../common/constants/index.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import type { PrdCoverage } from '../prd/prd-coverage.js';
 import { isArchivedReference, liveOrArchived } from '../tasks/utils/archive.js';
+import { canonicalTaskId } from '../tasks/validation/task-id.js';
 import { dependencyEdges } from './dependency-edges.js';
 import { stronglyConnectedComponents } from './dependency-graph.js';
 import {
@@ -43,11 +44,20 @@ export interface DependencyIssue {
 	message: string;
 }
 
-/** One dependency or link fixDependencies removed */
+/** One dependency or link fixDependencies removed, or rewrote */
 export interface DependencyFix {
-	type: 'missing' | 'self' | 'duplicate' | 'circular' | 'missing-link';
+	/** `rewritten`: a dependency stored as typed ("1.01") now in its stored form ("1.1") */
+	type:
+		| 'missing'
+		| 'self'
+		| 'duplicate'
+		| 'circular'
+		| 'missing-link'
+		| 'rewritten';
 	taskId: Id;
 	dependencyId?: Id;
+	/** For `rewritten`: the dependency as it was stored */
+	storedAs?: Id;
 }
 
 export interface DependencyCounts {
@@ -105,8 +115,10 @@ function findLoopMembers(graph: Map<string, string[]>): Set<string> {
 }
 
 /**
- * Whether an ID names a task (by its number) or a subtask ("parent.sub";
- * anything after a second dot is ignored), answered from an index
+ * Whether an ID names a task ("3") or a subtask ("3.2"), answered from an
+ * index. Only the stored form counts: "03", "1.01" and "1.1x" name nothing,
+ * as they do for the loop check and `why` (fixTaskDependencies rewrites a
+ * stored "1.01" as "1.1").
  */
 export function createTaskLookup(tasks: Task[]): (id: Id) => boolean {
 	// Task ID -> its subtask IDs (null when it has none); the first task wins
@@ -121,14 +133,11 @@ export function createTaskLookup(tasks: Task[]): (id: Id) => boolean {
 	}
 
 	return (id) => {
-		if (!id) return false;
-		if (typeof id === 'string' && id.includes('.')) {
-			const [parentId, subtaskId] = id.split('.').map((n) => parseInt(n, 10));
-			if (Number.isNaN(parentId) || Number.isNaN(subtaskId)) return false;
-			return subtaskIds.get(String(parentId))?.has(String(subtaskId)) ?? false;
-		}
-		const taskId = parseInt(String(id), 10);
-		return !Number.isNaN(taskId) && subtaskIds.has(String(taskId));
+		if (!id || canonicalTaskId(id) !== String(id)) return false;
+		const [taskId, subtaskId] = String(id).split('.');
+		return subtaskId === undefined
+			? subtaskIds.has(taskId)
+			: (subtaskIds.get(taskId)?.has(subtaskId) ?? false);
 	};
 }
 
@@ -406,11 +415,12 @@ function dropDuplicates<T extends Id>(
 }
 
 /**
- * Remove references to tasks that don't exist, self-dependencies and
+ * Rewrite a dependency stored as typed ("1.01") in its stored form ("1.1"),
+ * remove references to tasks that don't exist, self-dependencies and
  * duplicates, break loops between subtasks, and drop links to missing tasks.
  * Changes `tasks` in place.
  * @param archivedIds - Archived task IDs; dependencies on them are kept
- * @returns What was removed, in order, and the problems left (loops through
+ * @returns What was rewritten or removed, in order, and the problems left (loops through
  *   a task), as validateTaskDependencies reports them
  */
 export function fixTaskDependencies(
@@ -418,6 +428,36 @@ export function fixTaskDependencies(
 	archivedIds: ReadonlySet<string> = new Set()
 ): { fixes: DependencyFix[]; remaining: DependencyIssue[] } {
 	const fixes: DependencyFix[] = [];
+
+	// Older versions stored "1.01" and "01" as typed: keep the dependency, in
+	// the form the task or subtask it names is stored in, rather than drop it
+	const exists = createTaskLookup(tasks);
+	const rewrite = (holderId: Id, deps: Id[]) =>
+		deps.map((dep) => {
+			const id = typeof dep === 'string' ? canonicalTaskId(dep) : undefined;
+			if (id === undefined || id === dep) return dep;
+			if (!exists(id) && !isArchivedReference(id, archivedIds)) return dep;
+			fixes.push({
+				type: 'rewritten',
+				taskId: holderId,
+				dependencyId: id,
+				storedAs: dep
+			});
+			return id;
+		});
+	for (const task of tasks) {
+		if (Array.isArray(task.dependencies)) {
+			task.dependencies = rewrite(task.id, task.dependencies) as string[];
+		}
+		for (const subtask of task.subtasks || []) {
+			if (Array.isArray(subtask.dependencies)) {
+				subtask.dependencies = rewrite(
+					`${task.id}.${subtask.id}`,
+					subtask.dependencies
+				);
+			}
+		}
+	}
 
 	// Duplicates first: on a task `1` and `"1"` are the same, on a subtask a
 	// bare number is a sibling
@@ -447,8 +487,8 @@ export function fixTaskDependencies(
 
 	const archived = (depId: Id) => isArchivedReference(depId, archivedIds);
 	const validTaskIds = new Set(tasks.map((t) => String(t.id)));
-	const isTask = (depId: Id) =>
-		validTaskIds.has(String(parseInt(String(depId), 10)));
+	// Only the stored form: validate-dependencies reports "1x" as missing too
+	const isTask = (depId: Id) => validTaskIds.has(String(depId));
 	const validSubtaskIds = new Set<string>();
 	for (const task of tasks) {
 		for (const subtask of task.subtasks || []) {
@@ -464,10 +504,10 @@ export function fixTaskDependencies(
 					return false;
 				}
 				if (archived(depId) && !isTask(depId)) return true;
-				const known =
-					typeof depId === 'string' && depId.includes('.')
-						? validSubtaskIds.has(depId)
-						: isTask(depId);
+				// An older file can hold subtask 1.2 as the number 1.2
+				const known = String(depId).includes('.')
+					? validSubtaskIds.has(String(depId))
+					: isTask(depId);
 				if (!known) {
 					fixes.push({ type: 'missing', taskId: task.id, dependencyId: depId });
 				}
