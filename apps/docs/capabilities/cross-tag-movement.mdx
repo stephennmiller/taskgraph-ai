@@ -199,6 +199,8 @@ await moveTask({
 });
 ```
 
+A move refused for dependency conflicts returns an error that lists each conflict and says what to retry with: `withDependencies: true` or `ignoreDependencies: true`, or, for an archived dependency, `archive_tasks` with `restore` first.
+
 ## Troubleshooting
 
 ### Common Issues

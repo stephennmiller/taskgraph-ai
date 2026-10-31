@@ -44,6 +44,22 @@ export interface CrossTagConflict {
 	archived?: true;
 }
 
+/**
+ * What can clear the conflicts that refused a move to another tag, for the
+ * CLI and MCP to word: moving the dependencies along (withDependencies), and
+ * restoring the archived ones first, since those can't move. Dropping them
+ * (ignoreDependencies) always works.
+ */
+export function crossTagConflictFixes(conflicts: CrossTagConflict[]): {
+	moveAlong: boolean;
+	restore: boolean;
+} {
+	return {
+		moveAlong: conflicts.some((conflict) => !conflict.archived),
+		restore: conflicts.some((conflict) => conflict.archived)
+	};
+}
+
 export interface NewSubtaskInput {
 	title: string;
 	description?: string;

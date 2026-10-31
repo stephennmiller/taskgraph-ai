@@ -294,6 +294,7 @@ export { keepStoredFields } from './modules/tasks/utils/index.js';
 // cross-tag move found in its way
 export {
 	MOVE_ERROR_CODES,
+	crossTagConflictFixes,
 	type CrossTagConflict
 } from './modules/tasks/utils/index.js';
 

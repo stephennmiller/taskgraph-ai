@@ -3,7 +3,13 @@
  * Move tasks or subtasks to new IDs within a tag, or tasks to another tag
  */
 
-import { neutralizeTaskData, TASK_DATA_NOTE } from '@tm/core';
+import {
+	type CrossTagConflict,
+	crossTagConflictFixes,
+	MOVE_ERROR_CODES,
+	neutralizeTaskData,
+	TASK_DATA_NOTE
+} from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import type { ToolContext } from '../../shared/types.js';
@@ -43,6 +49,29 @@ const MoveTaskSchema = z.object({
 });
 
 type MoveTaskArgs = z.infer<typeof MoveTaskSchema>;
+
+/**
+ * Why a move to another tag failed. Refused for dependency conflicts, it
+ * lists them and says what to retry with, as the CLI does
+ */
+function moveToTagError(error: any): string {
+	const details = error?.context?.details ?? {};
+	if (details.moveCode !== MOVE_ERROR_CODES.CROSS_TAG_DEPENDENCY_CONFLICTS) {
+		return error.message;
+	}
+	const conflicts: CrossTagConflict[] = details.conflicts;
+	const { moveAlong, restore } = crossTagConflictFixes(conflicts);
+	const restoreStep = `archive_tasks with restore: "<id>", tag: "${details.sourceTag}"`;
+	let hint = `Archived tasks can't move: drop them with ignoreDependencies: true, or restore them first with ${restoreStep}`;
+	if (moveAlong) {
+		hint =
+			'Move them too: retry with withDependencies: true (tasks that depend on them go in from), or drop them with ignoreDependencies: true';
+		if (restore)
+			hint += `. Archived ones can't move until restored: ${restoreStep}`;
+	}
+	const lines = conflicts.map((conflict) => `  ${conflict.message}`);
+	return neutralizeTaskData([error.message, ...lines, hint].join('\n'));
+}
 
 /**
  * Register the move_task tool with the MCP server
@@ -94,7 +123,10 @@ export function registerMoveTaskTool(server: FastMCP) {
 						});
 					} catch (error: any) {
 						return handleApiResult({
-							result: { success: false, error: { message: error.message } },
+							result: {
+								success: false,
+								error: { message: moveToTagError(error) }
+							},
 							log,
 							errorPrefix: 'Error moving tasks between tags',
 							projectRoot
