@@ -528,17 +528,18 @@ describe('tasks.updateWithPrompt', () => {
 					sub(1, { title: 'A' }),
 					sub(2, { title: 'B' }),
 					sub(3, { title: 'C' }),
-					sub(4, { title: 'D', dependencies: [2] })
+					sub(4, { title: 'D', dependencies: [2] }),
+					sub(5, { title: 'E', status: 'done' })
 				]
 			}),
-			stored({ id: '2', dependencies: ['1.2'] }),
+			stored({ id: '2', dependencies: ['1.2', '1.5'] }),
 			stored({
 				id: '3',
 				dependencies: ['1.3'],
 				metadata: { dependencySources: { '1.3': 'inferred' } }
 			})
 		);
-		// The AI adds a step before B, drops C and renumbers by position
+		// The AI adds a step before B, drops C and E (done) and renumbers
 		answer(
 			fromAi({
 				subtasks: [
@@ -557,11 +558,12 @@ describe('tasks.updateWithPrompt', () => {
 			task.subtasks.map((s: any) => [s.id, s.title, s.dependencies])
 		).toEqual([
 			['1', 'A', []],
-			['5', 'New', [1]],
+			['6', 'New', [1]],
 			['2', 'B', []],
-			['4', 'D', [2]]
+			['4', 'D', [2]],
+			['5', 'E', []]
 		]);
-		expect(two.dependencies).toEqual(['1.2']);
+		expect(two.dependencies).toEqual(['1.2', '1.5']);
 		expect(three.dependencies).toEqual([]);
 		expect(three.metadata?.dependencySources).toBeUndefined();
 	});
