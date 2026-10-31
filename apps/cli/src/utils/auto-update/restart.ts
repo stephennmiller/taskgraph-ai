@@ -5,24 +5,23 @@
 import { spawn } from 'child_process';
 import process from 'process';
 
+import { SKIP_AUTO_UPDATE_ENV } from '@tm/core';
 import chalk from 'chalk';
-
-import { BIN_NAME } from './constants.js';
 
 /**
  * Restart the CLI with the newly installed version
  * @param argv - Original command-line arguments (process.argv)
  */
 export function restartWithNewVersion(argv: string[]): void {
-	const args = argv.slice(2); // Remove 'node' and script path
-
 	console.log(chalk.dim('Restarting with updated version...\n'));
 
-	// Spawn the updated CLI binary
-	const child = spawn(BIN_NAME, args, {
+	// npm installed the new version over the entry script this run started
+	// from. Node runs it directly, with no shell to split or read the user's
+	// arguments (Windows would need one to start the taskgraph.cmd shim).
+	const child = spawn(process.execPath, argv.slice(1), {
 		stdio: 'inherit', // Inherit stdin/stdout/stderr so it looks seamless
-		detached: false,
-		shell: process.platform === 'win32' // Windows compatibility
+		// If npm installed somewhere else, the old version must not update again
+		env: { ...process.env, [SKIP_AUTO_UPDATE_ENV]: '1' }
 	});
 
 	child.on('exit', (code, signal) => {

@@ -14,6 +14,7 @@ import path from 'node:path';
 
 import chalk from 'chalk';
 
+import { SEMVER_RE } from './changelog.js';
 import { PACKAGE_NAME } from './constants.js';
 import { autoUpdateSkipReason, type AutoUpdateContext } from './policy.js';
 
@@ -34,6 +35,25 @@ interface UpdateLock {
  * Install through npm, which checks the registry's integrity hash itself
  */
 async function installFromNpm(latestVersion: string): Promise<boolean> {
+	// The version reaches a shell on Windows: only a plain semver gets there
+	if (!SEMVER_RE.test(latestVersion)) {
+		console.log(chalk.red('Auto-update failed: not a valid version number'));
+		return false;
+	}
+	const args = [
+		'install',
+		'-g',
+		`${PACKAGE_NAME}@${latestVersion}`,
+		'--no-fund',
+		'--no-audit',
+		'--loglevel=warn'
+	];
+	// npm is npm.cmd on Windows, which runs only through a shell. The
+	// arguments are fixed strings and a checked version; one string avoids
+	// Node's DEP0190. NoDefaultCurrentDirectoryInExePath, set at startup,
+	// keeps cmd.exe from running an npm.cmd in the working directory.
+	const windows = process.platform === 'win32';
+
 	const spinner = createSpinner(
 		theme.brand(
 			`Updating ${PACKAGE_NAME} to version ${chalk.green(latestVersion)}`
@@ -42,17 +62,12 @@ async function installFromNpm(latestVersion: string): Promise<boolean> {
 
 	return new Promise((resolve) => {
 		const updateProcess = spawn(
-			'npm',
-			[
-				'install',
-				'-g',
-				`${PACKAGE_NAME}@${latestVersion}`,
-				'--no-fund',
-				'--no-audit',
-				'--loglevel=warn'
-			],
+			windows ? ['npm', ...args].join(' ') : 'npm',
+			windows ? [] : args,
 			{
-				stdio: ['ignore', 'pipe', 'pipe']
+				stdio: ['ignore', 'pipe', 'pipe'],
+				shell: windows,
+				windowsHide: true
 			}
 		);
 
