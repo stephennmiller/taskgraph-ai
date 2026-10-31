@@ -33,13 +33,16 @@ import {
 	reconcileDependencySources,
 	withoutReservedMetadata
 } from '../../dependencies/dependency-provenance.js';
+import { dropReferences } from '../../dependencies/removed-references.js';
 import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
 import { keepStoredFields } from '../utils/stored-fields.js';
+import { fullSubtaskId } from '../validation/task-id.js';
 import type { TaskService } from './task-service.js';
 import {
 	aiDependencies,
 	keepDoneSubtasks,
 	keepStatus,
+	keptSubtaskIds,
 	matchSubtasks,
 	mergeRewrite,
 	promptView,
@@ -244,13 +247,22 @@ export class UpdateTaskService {
 		const { result: saved } = await this.taskService.modifyTasks((current) => {
 			const index = current.findIndex((t) => String(t.id) === taskId);
 			if (index === -1) throw removedError(taskId);
-			current[index] = mergeRewrite(
-				relabel(stored),
+			const merged = mergeRewrite(
+				stored,
 				updated,
 				relabel(current[index]),
 				warn
 			);
-			return { tasks: current, result: current[index] };
+			current[index] = merged;
+			// Nothing may keep pointing at a subtask the rewrite removed (#804)
+			const kept = new Set((merged.subtasks ?? []).map((st) => String(st.id)));
+			dropReferences(
+				current,
+				(stored.subtasks ?? [])
+					.filter((st) => !kept.has(String(st.id)))
+					.map((st) => fullSubtaskId(merged.id, st.id))
+			);
+			return { tasks: current, result: merged };
 		}, tag);
 		return {
 			...result(saved),
@@ -294,11 +306,11 @@ export class UpdateTaskService {
 
 	/**
 	 * The AI's rewrite of `stored`, ready to save: its ID and status kept
-	 * (status unless the prompt mentions it), subtasks renumbered, done
-	 * subtasks restored, and every field the AI left out or nulled kept.
-	 * `relabel` gives a copy of the task as stored (or as saved since) with
-	 * each subtask under the ID the rewrite gave it, so the save merges
-	 * changes made during the call into the right subtask (#576)
+	 * (status unless the prompt mentions it), each subtask under the ID of
+	 * the stored one it matches (#576, #804), done subtasks restored, and
+	 * every field the AI left out or nulled kept. `relabel` gives a copy of
+	 * the task as saved since with a subtask added during the call moved off
+	 * an ID the rewrite gave a new one
 	 */
 	private rewrite(
 		stored: Task,
@@ -330,63 +342,67 @@ export class UpdateTaskService {
 		const original = stored.subtasks ?? [];
 		let relabel = (task: Task) => task;
 		if (Array.isArray(updated.subtasks)) {
-			// Stored subtask ID -> the ID the rewrite gives it
-			const newIdOf = new Map<string, number>();
+			// Matched subtasks keep their stored IDs, so dependencies on them from
+			// other tasks still name them (#804); new ones get the next free ID
 			const matched = matchSubtasks(original, updated.subtasks);
-			matched.forEach((st, i) => {
-				if (st) newIdOf.set(String(st.id), i + 1);
+			const ids = keptSubtaskIds(original, matched, updated.subtasks.length);
+			const newIds = new Set(ids.filter((_, i) => !matched[i]));
+			// The AI numbers siblings by the IDs in its reply; read them as saved
+			const savedIdOf = new Map<string, number>();
+			updated.subtasks.forEach((subtask: any, i: number) => {
+				const key = String(subtask.id);
+				if (!savedIdOf.has(key)) savedIdOf.set(key, Number(ids[i]));
 			});
 			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
-				const id = i + 1;
+				const id = ids[i];
 				const before = matched[i];
 				const corrected = {
 					...subtask,
-					id: String(id),
-					// A number is an earlier sibling; a string is a task or subtask
+					id,
+					// A number is a sibling; a string is a task or subtask
 					dependencies: cleanGeneratedSubtaskDependencies(
-						subtask.dependencies,
+						Array.isArray(subtask.dependencies)
+							? subtask.dependencies.map((dep: unknown) =>
+									typeof dep === 'number'
+										? (savedIdOf.get(String(dep)) ?? dep)
+										: dep
+								)
+							: subtask.dependencies,
 						stored.id,
-						id
+						Number(id)
 					),
 					status: subtask.status || 'pending',
 					testStrategy: subtask.testStrategy ?? null
 				};
 				keepStoredFields(corrected, before);
-				// Known limit: renumbered subtasks keep their sibling dependency
-				// numbers, so a reorder can change what one names
 				assignMetadata(
 					corrected,
 					reconcileDependencySources(corrected, before, stored.id)
 				);
 				return corrected;
 			});
-			debug(
-				`Fixed ${updated.subtasks.length} subtask IDs to be sequential numeric IDs.`
-			);
-			// Subtasks the AI dropped, or someone added meanwhile, get new IDs
-			let next = updated.subtasks.length;
-			relabel = (task) =>
-				Array.isArray(task.subtasks)
-					? {
-							...task,
-							subtasks: task.subtasks.map((st) => {
-								const key = String(st.id);
-								if (!newIdOf.has(key)) newIdOf.set(key, ++next);
-								return { ...st, id: String(newIdOf.get(key)) };
-							})
-						}
-					: task;
+			// A subtask added during the call under an ID a new one took moves on
+			relabel = (task) => {
+				if (!Array.isArray(task.subtasks)) return task;
+				let free = Math.max(
+					...[...ids, ...task.subtasks.map((st) => st.id)].map(
+						(id) => Number(id) || 0
+					)
+				);
+				return {
+					...task,
+					subtasks: task.subtasks.map((st) =>
+						newIds.has(String(st.id)) ? { ...st, id: String(++free) } : st
+					)
+				};
+			};
 		}
 		if (original.length > 0) {
 			if (!updated.subtasks) {
 				warn('Subtasks removed by AI. Restoring original subtasks.');
 				updated.subtasks = original;
 			} else {
-				updated.subtasks = keepDoneSubtasks(
-					relabel(stored).subtasks ?? [],
-					updated.subtasks,
-					warn
-				);
+				updated.subtasks = keepDoneSubtasks(original, updated.subtasks, warn);
 			}
 		}
 		// The schema has only some fields and sends null for the ones the AI
@@ -566,14 +582,11 @@ export class UpdateTaskService {
 			// new one gets the next free ID
 			const original = task.subtasks ?? [];
 			const matched = matchSubtasks(original, merged.subtasks);
-			let next = Math.max(0, ...original.map((st) => Number(st.id) || 0));
+			const ids = keptSubtaskIds(original, matched, merged.subtasks.length);
 			// Restore what the schema can't return from the matched subtask
 			merged.subtasks = merged.subtasks.map((subtask, i) => {
 				const before = matched[i];
-				const restored = keepStoredFields(
-					{ ...subtask, id: before ? before.id : String(++next) },
-					before
-				);
+				const restored = keepStoredFields({ ...subtask, id: ids[i] }, before);
 				assignMetadata(
 					restored,
 					reconcileDependencySources(subtask, before, task.id)

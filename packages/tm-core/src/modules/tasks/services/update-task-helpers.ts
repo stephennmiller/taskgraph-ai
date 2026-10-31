@@ -156,6 +156,22 @@ export function matchSubtasks(
 	return matched;
 }
 
+/**
+ * The ID each of `count` rewritten subtasks is saved under: the stored
+ * subtask it matched (see matchSubtasks), or the next ID after every stored
+ * one, so no ID is reused
+ */
+export function keptSubtaskIds(
+	original: Subtask[],
+	matched: (Subtask | undefined)[],
+	count: number
+): string[] {
+	let next = Math.max(0, ...original.map((st) => Number(st.id) || 0));
+	return Array.from({ length: count }, (_, i) =>
+		String(matched[i] ? matched[i].id : ++next)
+	);
+}
+
 /** `subtasks` with each done one of `original` restored as it was, no ID twice */
 export function keepDoneSubtasks(
 	original: Subtask[],
