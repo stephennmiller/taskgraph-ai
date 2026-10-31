@@ -250,6 +250,7 @@ export class ParallelLoopRunner {
 						...taskArgs
 					];
 					let cwd: string;
+					await git.assertBranchReusable(entry.task.branch, base);
 					if (workers) {
 						const prepared = await workers.prepare(
 							entry.task,
@@ -512,6 +513,7 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
+			if (hasWorktree) await git.recordBranch(task.branch);
 			if (releaseClaim || !hasWork) {
 				await this.release(task.id, tag, claimant);
 			}

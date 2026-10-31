@@ -281,6 +281,24 @@ describe('loop --parallel --container', () => {
 		expect(readTask().status).toBe('in-progress');
 	});
 
+	it('starts no container on a task branch that was already here with other commits', async () => {
+		git(root, 'checkout', '-q', '-b', 'taskgraph/task-1');
+		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Other instructions\n');
+		git(root, 'add', 'CLAUDE.md');
+		git(root, 'commit', '-qm', 'from a pull request');
+		git(root, 'checkout', '-q', 'main');
+
+		const result = await runParallel();
+
+		expect(result.tasks[0]).toMatchObject({
+			state: 'failed',
+			error: expect.stringContaining('git branch -m taskgraph/task-1')
+		});
+		expect(dockerCalls().some(([command]) => command === 'run')).toBe(false);
+		expect(fs.existsSync(clone)).toBe(false);
+		expect(readTask().status).toBe('pending');
+	});
+
 	it('on abort removes the container by name, keeps the clone, releases the claim; a rerun reuses the clone', async () => {
 		vi.stubEnv('FAKE_DOCKER_MODE', 'hang');
 		const controller = new AbortController();

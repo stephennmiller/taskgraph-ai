@@ -294,13 +294,70 @@ export class TaskWorktrees {
 		return (await this.git(['rev-parse', '--show-object-format'])).trim();
 	}
 
-	async branchExists(branch: string): Promise<boolean> {
-		return this.succeeds([
+	/** The commit `branch` points at, or undefined when there's no such branch */
+	private async tip(branch: string): Promise<string | undefined> {
+		return this.git([
 			'rev-parse',
 			'--verify',
 			'--quiet',
-			`refs/heads/${branch}`
+			`refs/heads/${branch}^{commit}`
+		]).then(
+			(sha) => sha.trim(),
+			() => undefined
+		);
+	}
+
+	/** Where the tip a run left `branch` at is kept, inside the git folder */
+	private async recordFile(branch: string): Promise<string> {
+		const common = path.resolve(
+			this.projectRoot,
+			(await this.git(['rev-parse', '--git-common-dir'])).trim()
+		);
+		return path.join(common, 'taskgraph', 'branches', branch);
+	}
+
+	/**
+	 * Note where this run left `branch` (or that it's gone), so the next run
+	 * can pick it up again: see assertBranchReusable
+	 */
+	async recordBranch(branch: string): Promise<void> {
+		const [file, tip] = await Promise.all([
+			this.recordFile(branch),
+			this.tip(branch)
 		]);
+		if (!tip) {
+			fs.rmSync(file, { force: true });
+			return;
+		}
+		fs.mkdirSync(path.dirname(file), { recursive: true });
+		fs.writeFileSync(file, tip);
+	}
+
+	/**
+	 * Claude runs in the task branch with the files on it, and `loop --trust`
+	 * approved only the ones in this checkout. So a branch that's already
+	 * here is used only when it's at `base` or where an earlier run left it
+	 * (recordBranch), not when it came from `gh pr checkout`, a pull or a
+	 * commit made since.
+	 * @throws ParallelLoopError naming the branch and how to set it aside
+	 */
+	async assertBranchReusable(branch: string, base: string): Promise<void> {
+		const tip = await this.tip(branch);
+		if (tip === undefined || tip === base) return;
+		const recorded = await fs.promises
+			.readFile(await this.recordFile(branch), 'utf8')
+			.then(
+				(s) => s.trim(),
+				() => ''
+			);
+		if (recorded === tip) return;
+		throw new ParallelLoopError(
+			`${branch} already exists with commits no \`loop --parallel\` run left there, so its CLAUDE.md and .claude settings weren't approved; review it, rename it (\`git branch -m ${branch} <new-name>\`) and run again`
+		);
+	}
+
+	async branchExists(branch: string): Promise<boolean> {
+		return (await this.tip(branch)) !== undefined;
 	}
 
 	/**
