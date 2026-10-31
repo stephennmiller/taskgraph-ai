@@ -10,10 +10,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiService } from '../../../src/modules/ai/ai-service.js';
-import {
-	isLoopTrusted,
-	trustLoop
-} from '../../../src/modules/loop/loop-trust.js';
+import { trustLoop } from '../../../src/modules/loop/loop-trust.js';
 import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 
 const task = (id: string, title: string, extra = {}) => ({
@@ -93,6 +90,12 @@ describe('loop approval after a command saves AI output', () => {
 	let home: string;
 	let tmCore: TmCore;
 	let answeredBy: string;
+	// Whether the approval entry is still there. Not isLoopTrusted: an approval
+	// that also checks the tasks' text would fail after any saved change
+	const approvalKept = () =>
+		fs
+			.readFileSync(path.join(home, '.taskgraph', 'loop-trusted.json'), 'utf8')
+			.includes(JSON.stringify(projectDir));
 
 	beforeEach(async () => {
 		projectDir = fs.realpathSync(
@@ -154,7 +157,7 @@ describe('loop approval after a command saves AI output', () => {
 
 			await run(tmCore);
 
-			expect(isLoopTrusted(projectDir)).toBe(false);
+			expect(approvalKept()).toBe(false);
 		}
 	);
 
@@ -165,7 +168,7 @@ describe('loop approval after a command saves AI output', () => {
 
 			await run(tmCore);
 
-			expect(isLoopTrusted(projectDir)).toBe(true);
+			expect(approvalKept()).toBe(true);
 		}
 	);
 });
