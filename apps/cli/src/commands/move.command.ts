@@ -11,6 +11,7 @@ import {
 } from '@tm/core';
 import { Command } from 'commander';
 import {
+	formatCrossTagConflictHint,
 	formatCrossTagConflicts,
 	formatMoves,
 	formatTagMove
@@ -132,7 +133,7 @@ export class MoveCommand extends Command {
 				);
 				printError(
 					`Can't move tasks from "${details.sourceTag}" to "${details.targetTag}": ${conflicts.length} ${conflicts.length === 1 ? 'dependency stays' : 'dependencies stay'} behind\n${formatCrossTagConflicts(conflicts)}`,
-					`Move them too: \`taskgraph move ${moveTo} --with-dependencies\` (tasks that depend on them go in --from), or drop them with --ignore-dependencies`
+					formatCrossTagConflictHint(conflicts, moveTo, details.sourceTag)
 				);
 				process.exit(1);
 			}
