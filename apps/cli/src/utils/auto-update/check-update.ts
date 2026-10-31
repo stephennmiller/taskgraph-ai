@@ -184,15 +184,17 @@ function buildUpdateInfo(
 /**
  * Check for newer version of taskgraph-ai
  * Uses a 1-hour cache to avoid hitting npm on every CLI invocation, and
- * a 10-minute one after a failed check
+ * a 10-minute one after a failed check. `fresh` skips the cache, for an
+ * explicit `taskgraph upgrade`.
  */
 export async function checkForUpdate(
-	currentVersionOverride?: string
+	currentVersionOverride?: string,
+	{ fresh = false }: { fresh?: boolean } = {}
 ): Promise<UpdateInfo> {
 	const currentVersion = currentVersionOverride || getCurrentVersion();
 
 	// Return cached result if valid
-	const cached = readCache();
+	const cached = fresh ? null : readCache();
 	if (cached) {
 		return buildUpdateInfo(
 			currentVersion,
@@ -205,7 +207,7 @@ export async function checkForUpdate(
 	const latestVersion = await fetchLatestVersion(currentVersion);
 	if (!latestVersion) {
 		writeCache(currentVersion, undefined, true);
-		return buildUpdateInfo(currentVersion, currentVersion);
+		return { ...buildUpdateInfo(currentVersion, currentVersion), failed: true };
 	}
 
 	// Fetch changelog highlights if update available

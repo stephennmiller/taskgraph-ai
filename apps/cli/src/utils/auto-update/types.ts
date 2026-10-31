@@ -7,4 +7,6 @@ export interface UpdateInfo {
 	latestVersion: string;
 	needsUpdate: boolean;
 	highlights?: string[];
+	/** The registry couldn't be reached, so latestVersion is only the running version */
+	failed?: boolean;
 }

@@ -84,14 +84,17 @@ describe('update cache', () => {
 		expect(() => writeCache('1.2.3')).not.toThrow();
 	});
 
-	it('caches a failed registry check, so the next command skips the network', async () => {
-		// The registry can't be reached: every request fails
-		const request = vi.spyOn(https, 'request').mockImplementation((() => {
+	/** The registry can't be reached: every request fails */
+	const failEveryRequest = () =>
+		vi.spyOn(https, 'request').mockImplementation((() => {
 			const req = new EventEmitter() as EventEmitter & { end: () => void };
 			req.end = () =>
 				setImmediate(() => req.emit('error', new Error('ETIMEDOUT')));
 			return req;
 		}) as never);
+
+	it('caches a failed registry check, so the next command skips the network', async () => {
+		const request = failEveryRequest();
 
 		expect((await checkForUpdate('1.0.0')).needsUpdate).toBe(false);
 		expect((await checkForUpdate('1.0.0')).needsUpdate).toBe(false);
@@ -114,5 +117,15 @@ describe('update cache', () => {
 
 		write({ timestamp: elevenMinutesAgo, latestVersion: '1.2.3' });
 		expect(readCache()).toMatchObject({ latestVersion: '1.2.3' });
+	});
+
+	it('asks the registry on a fresh check despite a cached failure, and says it failed', async () => {
+		write({ timestamp: Date.now(), latestVersion: '1.0.0', failed: true });
+		const request = failEveryRequest();
+
+		const info = await checkForUpdate('1.0.0', { fresh: true });
+
+		expect(request).toHaveBeenCalledTimes(1);
+		expect(info).toMatchObject({ needsUpdate: false, failed: true });
 	});
 });

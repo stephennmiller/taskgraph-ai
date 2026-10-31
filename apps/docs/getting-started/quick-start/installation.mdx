@@ -83,6 +83,8 @@ Running `taskgraph` in a terminal checks npm for a newer version, at most once a
 taskgraph upgrade
 ```
 
+`taskgraph upgrade` always asks npm, whatever an earlier check cached, and exits non-zero when npm can't be reached.
+
 To install updates automatically, set `TASKGRAPH_AUTO_UPDATE=install`, or put this in `~/.taskgraph/auto-update.json` (your home directory, not a project's `.taskgraph/`):
 
 ```json
