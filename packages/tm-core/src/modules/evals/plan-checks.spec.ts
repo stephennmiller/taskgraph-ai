@@ -210,7 +210,10 @@ describe('checkDependencies', () => {
 
 		const result = checkDependencies(tasks);
 
-		expect(result.cycles).toEqual([['1', '2']]);
+		// Their subtasks wait on the other task too, and each parent on them
+		expect(result.cycles).toEqual([
+			['1', '1.1', '1.2', '2', '2.1', '2.2', '2.3']
+		]);
 		expect(result.score).toBe(0);
 	});
 

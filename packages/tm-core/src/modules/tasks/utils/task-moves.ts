@@ -17,6 +17,7 @@ import {
 import { assertTaskStatus } from '../../../common/constants/index.js';
 import type { Subtask, Task } from '../../../common/types/index.js';
 import { assignMetadata } from '../../dependencies/dependency-provenance.js';
+import { wouldSubtaskCloseLoop } from '../../dependencies/dependency-edges.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import {
 	dependenciesForConvertedTask,
@@ -117,32 +118,6 @@ const nextSubtaskId = (parent: Item) =>
 	);
 
 /**
- * Whether `task` (a subtask of `parentId` when given) depends on `targetId`,
- * directly, through what it depends on, or through its subtasks
- */
-function isDependentOn(
-	tasks: Item[],
-	task: Item,
-	targetId: string,
-	parentId?: DependencyId
-): boolean {
-	const fullDeps: string[] = (task.dependencies || []).map(
-		(dep: DependencyId) =>
-			parentId === undefined
-				? String(dep)
-				: resolveSubtaskDependency(parentId, dep)
-	);
-	if (fullDeps.includes(targetId)) return true;
-	for (const depId of fullDeps) {
-		const depTask = findTask(tasks, depId);
-		if (depTask && isDependentOn(tasks, depTask, targetId)) return true;
-	}
-	return (task.subtasks ?? []).some((subtask: Item) =>
-		isDependentOn(tasks, subtask, targetId, task.id)
-	);
-}
-
-/**
  * Add a subtask to `parentId`: a new one, or the task `fromTaskId` turned
  * into one (what depended on that task then depends on the subtask).
  * @returns The subtask as stored
@@ -163,6 +138,15 @@ export function addSubtaskIn(
 		const data = source.subtask;
 		const status = data.status || 'pending';
 		assertTaskStatus(status, { parentId, newStatus: status });
+		const dependencies = (data.dependencies || []).map((dep) =>
+			resolveSubtaskDependency(parentIdNum, dep)
+		);
+		if (wouldSubtaskCloseLoop(tasks, String(parentIdNum), { dependencies })) {
+			fail(
+				`Cannot add a subtask to task ${parentIdNum} that depends on ${dependencies.join(', ')}: that would make a dependency loop`,
+				ERROR_CODES.TASK_DEPENDENCY_ERROR
+			);
+		}
 		const subtask: Item = {
 			id: newSubtaskId,
 			title: data.title,
@@ -182,9 +166,13 @@ export function addSubtaskIn(
 	if (taskIdNum === parentIdNum) {
 		fail('Cannot make a task a subtask of itself');
 	}
-	if (isDependentOn(items, parentTask, String(taskIdNum))) {
+	if (
+		wouldSubtaskCloseLoop(tasks, String(parentIdNum), {
+			fromTaskId: String(taskIdNum)
+		})
+	) {
 		fail(
-			`Cannot create circular dependency: task ${parentIdNum} is already a subtask or dependent of task ${taskIdNum}`,
+			`Cannot make task ${taskIdNum} a subtask of task ${parentIdNum}: that would make a dependency loop`,
 			ERROR_CODES.TASK_DEPENDENCY_ERROR
 		);
 	}
