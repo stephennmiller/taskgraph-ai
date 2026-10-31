@@ -145,6 +145,12 @@ describe('help <command> (#835)', () => {
 		expect(err).toContain("Unknown command 'tags nope'");
 		expect(err).toContain('taskgraph tags --help');
 	});
+
+	it('quotes only the path up to the first unknown name', () => {
+		const { code, err } = run(['help', 'nope', 'tags']);
+		expect(code).toBe(1);
+		expect(err).toContain("Unknown command 'nope'");
+	});
 });
 
 const updateAvailable = {

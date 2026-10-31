@@ -147,7 +147,7 @@ export function setupCLI(): Command {
 						stripTerminalControls(text, { singleLine: true });
 					const parent = safe(names.slice(0, i).join(' '));
 					printError(
-						`Unknown command '${safe(names.join(' '))}'`,
+						`Unknown command '${safe(names.slice(0, i + 1).join(' '))}'`,
 						parent
 							? `Run \`taskgraph ${parent} --help\` to see its commands`
 							: 'Run `taskgraph --help` to see all commands'
