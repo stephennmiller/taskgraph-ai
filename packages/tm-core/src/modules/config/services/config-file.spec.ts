@@ -125,4 +125,40 @@ describe('writeSplitConfig', () => {
 			}
 		}
 	);
+
+	it
+		.skipIf(process.platform === 'win32')
+		.each(['config.json', 'config.local.json'])(
+		'refuses to write through a symlinked %s',
+		(file) => {
+			const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-elsewhere-'));
+			const target = path.join(elsewhere, 'settings.json');
+			fs.writeFileSync(target, '{"keep":true}');
+			fs.symlinkSync(target, path.join(root, '.taskgraph', file));
+			try {
+				expect(() =>
+					writeSplitConfig(root, {
+						models: { main: { provider: 'openai', modelId: 'gpt-5' } }
+					})
+				).toThrow(/symlink/);
+				expect(fs.readFileSync(target, 'utf8')).toBe('{"keep":true}');
+			} finally {
+				fs.rmSync(elsewhere, { recursive: true, force: true });
+			}
+		}
+	);
+
+	it('writes regular config files', () => {
+		writeSplitConfig(root, {
+			models: { main: { provider: 'openai', modelId: 'gpt-5' } }
+		});
+
+		const saved = JSON.parse(
+			fs.readFileSync(path.join(root, '.taskgraph', 'config.json'), 'utf8')
+		);
+		expect(saved.models.main).toMatchObject({
+			provider: 'openai',
+			modelId: 'gpt-5'
+		});
+	});
 });
