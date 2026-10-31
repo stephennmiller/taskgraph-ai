@@ -118,6 +118,8 @@ export async function handleApiResult<T>(options: {
 	minify?: boolean;
 	/** A top-level `note` beside `data`, such as TASK_DATA_NOTE */
 	note?: string;
+	/** Requested IDs with no task, beside `data`; left out when empty */
+	notFound?: string[];
 }): Promise<ContentResult> {
 	const {
 		result,
@@ -126,7 +128,8 @@ export async function handleApiResult<T>(options: {
 		projectRoot,
 		tag: providedTag,
 		minify = false,
-		note
+		note,
+		notFound
 	} = options;
 
 	// Get version info for every response
@@ -175,6 +178,7 @@ export async function handleApiResult<T>(options: {
 		responsePayload.tag = currentTag;
 	}
 	if (note) responsePayload.note = note;
+	if (notFound?.length) responsePayload.notFound = notFound;
 
 	return {
 		content: [

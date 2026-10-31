@@ -505,4 +505,18 @@ describe('show command output', () => {
 		expect(res.stderr).toContain('taskgraph list');
 		expect(res.stderr).not.toMatch(/[╭╮╰╯│]/);
 	});
+
+	// #808: a list with a missing ID exited 0 unless every ID missed in text
+	it('exits 1 when any of several IDs is missing, in text and JSON', () => {
+		const partText = show('2,99');
+		const partJson = show('2,99', '--json');
+		const noneJson = show('98,99', '--json');
+
+		expect(partText.status).toBe(1);
+		expect(partText.stdout).toContain('Not found: 99');
+		expect(partJson.status).toBe(1);
+		expect(JSON.parse(partJson.stdout).notFound).toEqual(['99']);
+		expect(noneJson.status).toBe(1);
+		expect(JSON.parse(noneJson.stdout).notFound).toEqual(['98', '99']);
+	});
 });
