@@ -53,6 +53,16 @@ function missing(
 	];
 }
 
+/**
+ * Hook calls newer than the minimum that print nothing on a CLI without them,
+ * so an older CLI only loses that hook's extra text (the hook tests run each
+ * one against an old CLI). Drop an entry once the minimum has it.
+ */
+const OPTIONAL_HOOK_CALLS = new Set([
+	'prime --current',
+	'prime --unmet-criteria'
+]);
+
 const raise = `The plugin uses these, which taskgraph ${minimum} lacks. Raise metadata.taskgraphCli (${range}) in packages/claude-code-plugin/.claude-plugin/plugin.json to the first release that has them, then regenerate the snapshot: node packages/tm-profiles/tests/integration/cli-surface.ts v<that version>`;
 
 const markdownFiles = readdirSync(pluginDir, {
@@ -130,7 +140,12 @@ describe('plugin CLI range', () => {
 	it.each(hookCommands)(
 		'the %s hook uses only commands and flags the minimum has',
 		(_event, command) => {
-			expect(missing(invocations(hookLines(command))), raise).toEqual([]);
+			expect(
+				missing(invocations(hookLines(command))).filter(
+					(call) => !OPTIONAL_HOOK_CALLS.has(call)
+				),
+				raise
+			).toEqual([]);
 		}
 	);
 });
