@@ -28,13 +28,17 @@ export function parseCompletion(
 	return { status: 'success' };
 }
 
-/** The iteration's result from the reply, the exit code and the cost Claude Code reported */
+/**
+ * The iteration's result from the reply, the exit code and the cost Claude
+ * Code reported. `started`: Claude Code printed a stream-json event.
+ */
 export function completeIteration(
 	iterationNum: number,
 	startTime: number,
 	reply: string,
 	exitCode: number,
-	run: ClaudeRunResult | undefined
+	run: ClaudeRunResult | undefined,
+	started = false
 ): LoopIteration {
 	const { status, message } = parseCompletion(reply, exitCode);
 	return {
@@ -44,6 +48,20 @@ export function completeIteration(
 		// A cap that stopped Claude says more than its exit code
 		message: (status === 'error' && run?.capHit) || message,
 		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
+		...(run?.turns !== undefined ? { turns: run.turns } : {}),
+		// Died mid-run (a crash, or docker's 137 for a killed container) (#855)
+		...(!run && exitCode !== 0 && started ? { costUnknown: true } : {})
+	};
+}
+
+export type RunSpend = Pick<LoopIteration, 'costUsd' | 'turns' | 'costUnknown'>;
+
+/** For a run loop stopped or that died: the cost and turns Claude Code reported, or `costUnknown` (#855) */
+export function runSpend(run: ClaudeRunResult | undefined): RunSpend {
+	return {
+		...(run?.costUsd !== undefined
+			? { costUsd: run.costUsd }
+			: { costUnknown: true }),
 		...(run?.turns !== undefined ? { turns: run.turns } : {})
 	};
 }
@@ -65,15 +83,18 @@ export function formatCommandError(
 	return `Failed to execute '${command}': ${error.message}`;
 }
 
+/** `spent` once Claude ran: what it reported, or that it reported no cost */
 export function createErrorIteration(
 	iterationNum: number,
 	startTime: number,
-	message: string
+	message: string,
+	spent?: RunSpend
 ): LoopIteration {
 	return {
 		iteration: iterationNum,
 		status: 'error',
 		duration: Date.now() - startTime,
-		message
+		message,
+		...spent
 	};
 }

@@ -123,6 +123,14 @@ describe('formatLoopSpend', () => {
 		expect(formatLoopSpend({})).toBe('');
 	});
 
+	it('says when the cost is what loop counted, not what Claude Code reported', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ costUsd: 0.75, costUnknown: true })
+			)
+		).toBe(' · cost unknown, counted as $0.75');
+	});
+
 	it('leads with the model and effort the iteration ran at', () => {
 		expect(
 			stripVTControlCharacters(

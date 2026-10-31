@@ -29,9 +29,14 @@ export async function initProgressFile(config: LoopConfig): Promise<void> {
 }
 
 /** `$0.42 · 12 turns`, leaving out what Claude Code didn't report */
-function spend(costUsd?: number, turns?: number): string[] {
+function spend(
+	costUsd?: number,
+	turns?: number,
+	costUnknown?: boolean
+): string[] {
+	const cost = costUsd !== undefined ? `$${costUsd.toFixed(2)}` : undefined;
 	return [
-		...(costUsd !== undefined ? [`$${costUsd.toFixed(2)}`] : []),
+		...(cost ? [costUnknown ? `cost unknown, counted as ${cost}` : cost] : []),
 		...(turns !== undefined ? [`${turns} turns`] : [])
 	];
 }
@@ -51,7 +56,7 @@ export async function appendIterationLine(
 			? [`complexity ${iteration.complexity}`]
 			: []),
 		...(setting.length ? [setting.join(', ')] : []),
-		...spend(iteration.costUsd, iteration.turns),
+		...spend(iteration.costUsd, iteration.turns, iteration.costUnknown),
 		...(iteration.duration !== undefined
 			? [`${Math.round(iteration.duration / 1000)}s`]
 			: [])
