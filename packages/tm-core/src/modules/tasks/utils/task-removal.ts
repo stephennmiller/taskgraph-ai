@@ -21,7 +21,7 @@ import {
 	dependenciesForMovedItem,
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
-import { fullSubtaskId } from '../validation/task-id.js';
+import { canonicalTaskId, fullSubtaskId } from '../validation/task-id.js';
 import { liveOrArchived, nextTaskId } from './archive.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 
@@ -41,22 +41,17 @@ function findItem(
 	id: string
 ): { task: Task; subtask?: StoredSubtask } | undefined {
 	// "2.", "2x" or "2.1.1" names nothing; parseInt read them as task 2 or 2.1
-	if (!/^\d+(\.\d+)?$/.test(id)) return undefined;
-	const parts = id.split('.');
-	if (parts.length > 1) {
-		const parentId = String(parseInt(parts[0], 10));
-		const fullId = `${parentId}.${parseInt(parts[1], 10)}`;
-		const task = tasks.find((t) => String(t.id) === parentId);
-		const subtask = (task?.subtasks ?? []).find(
-			(st) => fullSubtaskId(task!.id, st.id) === fullId
-		);
-		return task && subtask
-			? { task, subtask: subtask as StoredSubtask }
-			: undefined;
-	}
-	const taskId = String(parseInt(id, 10));
-	const task = tasks.find((t) => String(t.id) === taskId);
-	return task && { task };
+	const fullId = canonicalTaskId(id);
+	if (fullId === undefined) return undefined;
+	const [parentId, subtaskId] = fullId.split('.');
+	const task = tasks.find((t) => String(t.id) === parentId);
+	if (subtaskId === undefined) return task && { task };
+	const subtask = (task?.subtasks ?? []).find(
+		(st) => fullSubtaskId(task!.id, st.id) === fullId
+	);
+	return task && subtask
+		? { task, subtask: subtask as StoredSubtask }
+		: undefined;
 }
 
 // ========== remove-task ==========
@@ -105,7 +100,9 @@ export function previewTaskRemoval(
 		preview.found.push({ id, title: item.task.title });
 		preview.subtaskCount += item.task.subtasks?.length ?? 0;
 		const dependentIds = tasks
-			.filter((t) => t.dependencies?.some((d) => String(d) === id))
+			.filter((t) =>
+				t.dependencies?.some((d) => String(d) === String(item.task.id))
+			)
 			.map((t) => String(t.id));
 		if (dependentIds.length > 0) preview.dependents.push({ id, dependentIds });
 	}

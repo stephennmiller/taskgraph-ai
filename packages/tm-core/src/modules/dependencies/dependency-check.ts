@@ -18,6 +18,7 @@ import { isTaskComplete } from '../../common/constants/index.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import type { PrdCoverage } from '../prd/prd-coverage.js';
 import { isArchivedReference, liveOrArchived } from '../tasks/utils/archive.js';
+import { canonicalTaskId } from '../tasks/validation/task-id.js';
 import { dependencyEdges } from './dependency-edges.js';
 import { stronglyConnectedComponents } from './dependency-graph.js';
 import {
@@ -105,8 +106,9 @@ function findLoopMembers(graph: Map<string, string[]>): Set<string> {
 }
 
 /**
- * Whether an ID names a task (by its number) or a subtask ("parent.sub";
- * anything after a second dot is ignored), answered from an index
+ * Whether an ID names a task ("3") or a subtask ("3.2"), answered from an
+ * index. Only the stored form counts: "03", "1.01" and "1.1x" name nothing,
+ * as they do for the loop check, `why` and remove-dependency.
  */
 export function createTaskLookup(tasks: Task[]): (id: Id) => boolean {
 	// Task ID -> its subtask IDs (null when it has none); the first task wins
@@ -121,14 +123,11 @@ export function createTaskLookup(tasks: Task[]): (id: Id) => boolean {
 	}
 
 	return (id) => {
-		if (!id) return false;
-		if (typeof id === 'string' && id.includes('.')) {
-			const [parentId, subtaskId] = id.split('.').map((n) => parseInt(n, 10));
-			if (Number.isNaN(parentId) || Number.isNaN(subtaskId)) return false;
-			return subtaskIds.get(String(parentId))?.has(String(subtaskId)) ?? false;
-		}
-		const taskId = parseInt(String(id), 10);
-		return !Number.isNaN(taskId) && subtaskIds.has(String(taskId));
+		if (!id || canonicalTaskId(id) !== String(id)) return false;
+		const [taskId, subtaskId] = String(id).split('.');
+		return subtaskId === undefined
+			? subtaskIds.has(taskId)
+			: (subtaskIds.get(taskId)?.has(subtaskId) ?? false);
 	};
 }
 

@@ -15,6 +15,7 @@ import {
 } from '../../common/errors/taskgraph-error.js';
 import type { Subtask, Task } from '../../common/types/index.js';
 import { isArchivedReference } from '../tasks/utils/archive.js';
+import { normalizeTaskId } from '../tasks/validation/task-id.js';
 import { createTaskLookup } from './dependency-check.js';
 import { wouldCloseDependencyLoop } from './dependency-edges.js';
 import {
@@ -53,14 +54,6 @@ export interface RemoveDependencyResult {
 	/** Whether tasks.json changed: a dependency the task never had isn't */
 	removed: boolean;
 	message: string;
-}
-
-/** `3` and `03` are task 3; `3.2` is kept as typed */
-function formatId(id: string): string {
-	const trimmed = String(id).trim();
-	if (trimmed.includes('.')) return trimmed;
-	const number = parseInt(trimmed, 10);
-	return Number.isNaN(number) ? trimmed : String(number);
 }
 
 /** The task or subtask an ID names, with the parent ID for a subtask */
@@ -162,8 +155,8 @@ export function addDependencyIn(
 			'Use --type=blocks, related or discovered-from'
 		);
 	}
-	const taskId = formatId(taskIdInput);
-	const dependencyId = formatId(dependsOnInput);
+	const taskId = normalizeTaskId(taskIdInput);
+	const dependencyId = normalizeTaskId(dependsOnInput);
 	const result = (changed: boolean, message: string): AddDependencyResult => ({
 		taskId,
 		dependencyId,
@@ -281,8 +274,8 @@ export function removeDependencyIn(
 	taskIdInput: string,
 	dependsOnInput: string
 ): RemoveDependencyResult {
-	const taskId = formatId(taskIdInput);
-	const dependencyId = formatId(dependsOnInput);
+	const taskId = normalizeTaskId(taskIdInput);
+	const dependencyId = normalizeTaskId(dependsOnInput);
 	const result = (removed: boolean, message: string) => ({
 		taskId,
 		dependencyId,
@@ -308,12 +301,14 @@ export function removeDependencyIn(
 
 	// On a subtask a bare number is a sibling (stored 1 for "1.1"), a string
 	// without a dot is a task
-	const index = dependencies.findIndex(
-		(dep) =>
-			(parentId === undefined
+	// Older versions stored "1.02" as typed
+	const index = dependencies.findIndex((dep) => {
+		const full =
+			parentId === undefined
 				? String(dep)
-				: resolveSubtaskDependency(parentId, dep)) === dependencyId
-	);
+				: resolveSubtaskDependency(parentId, dep);
+		return normalizeTaskId(full) === dependencyId;
+	});
 	if (index === -1) {
 		return result(
 			false,
