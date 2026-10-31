@@ -147,6 +147,19 @@ describe('init and the Claude Code integration', () => {
 		expect(fs.readdirSync(dir)).toEqual([]);
 	});
 
+	it('a second init keeps the response language set with taskgraph lang', () => {
+		init();
+		const configPath = path.join(dir, '.taskgraph/config.json');
+		const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+		config.global.responseLanguage = 'French';
+		fs.writeFileSync(configPath, JSON.stringify(config));
+
+		expect(init().status).toBe(0);
+		expect(
+			JSON.parse(fs.readFileSync(configPath, 'utf8')).global.responseLanguage
+		).toBe('French');
+	});
+
 	it('--no-git-tasks answers the only question, so no terminal is needed', () => {
 		const result = spawnSync(
 			'node',

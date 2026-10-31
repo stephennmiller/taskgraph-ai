@@ -186,8 +186,9 @@ export class InitCommand extends Command {
 			storeTasksInGit: askGitTasks
 				? await askStoreTasksInGit(gitTasksDefault)
 				: gitTasksDefault,
+			// No responseLanguage: config.json starts in English, and a re-run
+			// keeps what `taskgraph lang` set
 			claudeCode: options.claude !== false,
-			responseLanguage: 'English',
 			// The shell startup file is outside the project: only --aliases
 			aliases: options.aliases === true
 		};
