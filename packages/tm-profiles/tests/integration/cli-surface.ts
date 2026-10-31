@@ -67,7 +67,8 @@ export function cliSurface(read: (file: string) => string): CliSurface {
 		'apps/cli/src/program.ts'
 	]) {
 		const source = stripComments(readIfPresent(read, file));
-		const starts = [...source.matchAll(/\.command\('([a-z-]+)'/g)];
+		// The name may be followed by arguments: .command('help [command...]')
+		const starts = [...source.matchAll(/\.command\('([a-z-]+)[ ']/g)];
 		starts.forEach((match, index) => {
 			const block = source.slice(
 				match.index,
