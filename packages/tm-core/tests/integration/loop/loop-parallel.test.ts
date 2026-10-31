@@ -144,6 +144,8 @@ describe('loop --parallel', () => {
 			trusted: true,
 			claimant: 'tester',
 			command: fakeClaude(),
+			maxTurns: 7,
+			maxBudgetUsd: 3,
 			callbacks: {
 				onTaskStart: (t) => {
 					started.push(t);
@@ -163,13 +165,27 @@ describe('loop --parallel', () => {
 		expect(result.aborted).toBe(false);
 		const byId = Object.fromEntries(result.tasks.map((t) => [t.id, t]));
 
-		// Claude got the prompt as one argv entry, with permission prompts off
+		// Claude got the prompt as one argv entry, with permission prompts off,
+		// stream-json for the cost, and a third of the budget each
 		const argv = JSON.parse(
 			fs.readFileSync(byId['1'].logFile, 'utf8').split('\n')[0]
 		);
 		expect(argv[0]).toBe('-p');
 		expect(argv[1]).toContain('TaskGraph task 1');
-		expect(argv.slice(2)).toEqual(['--dangerously-skip-permissions']);
+		expect(argv.slice(2)).toEqual([
+			'--dangerously-skip-permissions',
+			'--output-format',
+			'stream-json',
+			'--verbose',
+			'--max-turns',
+			'7',
+			'--max-budget-usd',
+			'1'
+		]);
+		// The cost comes from the result event at the end of the log
+		expect(byId['1']).toMatchObject({ costUsd: 0.25, turns: 3 });
+		expect(byId['2'].costUsd).toBeUndefined();
+		expect(result.totalCostUsd).toBe(0.25);
 		expect(argv.join(' ')).not.toContain(hostile);
 
 		// Task 1 committed: worktree, branch and claim stay for review
@@ -230,8 +246,14 @@ describe('loop --parallel', () => {
 		});
 		expect(fs.existsSync(first.worktree)).toBe(true);
 		expect(taskById('1')?.status).toBe('pending');
+		expect(first.costUsd).toBe(0.25);
+		// The rerun dies before its result event: the first run's cost, earlier
+		// in the same log, isn't reported as the rerun's
+		writePlan({ 'task-1': 'fail' });
 		const rerun = await tmCore.loop.runParallel({ ...options, claimant: 'b' });
 		expect(rerun.tasks.map((t) => t.id)).toEqual(['1']);
+		expect(rerun.tasks[0].costUsd).toBeUndefined();
+		expect(rerun.totalCostUsd).toBeUndefined();
 	}, 60_000);
 
 	it('stops a worker past TASKGRAPH_LOOP_TIMEOUT_MS, keeps its work and releases it', async () => {

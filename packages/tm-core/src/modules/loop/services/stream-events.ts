@@ -69,3 +69,77 @@ export function processBufferedLines(
 		remaining: lines[lines.length - 1]
 	};
 }
+
+/**
+ * Claude Code arguments for structured output: one JSON event per line, the
+ * last a `result` event with the run's cost and turn count
+ */
+export const STREAM_JSON_ARGS = ['--output-format', 'stream-json', '--verbose'];
+
+/** What one Claude Code run cost, read from its final `result` event */
+export interface ClaudeRunResult {
+	/** The reply's text, checked for completion markers */
+	text: string;
+	costUsd?: number;
+	turns?: number;
+	/** Why Claude Code stopped early, when a --max-turns or --max-budget-usd cap ended it */
+	capHit?: string;
+}
+
+const CAP_HIT: Record<string, string> = {
+	error_max_turns: 'Claude Code reached the --max-turns limit',
+	error_max_budget_usd: 'Claude Code reached the --max-budget-usd limit'
+};
+
+const finite = (value: unknown) =>
+	typeof value === 'number' && Number.isFinite(value) && value >= 0
+		? value
+		: undefined;
+
+/** The fields loop keeps from a `result` event; fields of the wrong type are left out */
+export function readResultEvent(
+	event: Record<string, unknown>
+): ClaudeRunResult {
+	const subtype = typeof event.subtype === 'string' ? event.subtype : '';
+	return {
+		text: typeof event.result === 'string' ? event.result : '',
+		costUsd: finite(event.total_cost_usd),
+		turns: finite(event.num_turns),
+		...(Object.hasOwn(CAP_HIT, subtype) ? { capHit: CAP_HIT[subtype] } : {})
+	};
+}
+
+/**
+ * The last `result` event in stream-json output, or undefined when there is
+ * none (an older Claude Code, or a process that died first)
+ */
+export function findResultEvent(output: string): ClaudeRunResult | undefined {
+	const lines = output.split('\n');
+	for (let i = lines.length - 1; i >= 0; i--) {
+		const event = parseEvent(lines[i]);
+		if (event?.type === 'result') {
+			return readResultEvent(event as Record<string, unknown>);
+		}
+	}
+	return undefined;
+}
+
+/** The output with its stream-json events taken out, for a run with no result event */
+export function withoutEvents(output: string): string {
+	return output
+		.split('\n')
+		.filter((line) => !parseEvent(line))
+		.join('\n');
+}
+
+function parseEvent(line: string) {
+	const text = line.trim();
+	if (!text.startsWith('{')) return undefined;
+	try {
+		const event: unknown = JSON.parse(text);
+		return isValidStreamEvent(event) ? event : undefined;
+	} catch {
+		// Not an event: stderr text in a log, or a cut-off line
+		return undefined;
+	}
+}

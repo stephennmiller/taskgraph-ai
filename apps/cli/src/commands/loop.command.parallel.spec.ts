@@ -26,6 +26,7 @@ vi.mock('@tm/core', async (importOriginal) => {
 		assertContainerFlags: actual.assertContainerFlags,
 		DEFAULT_CONTAINER_IMAGE: actual.DEFAULT_CONTAINER_IMAGE,
 		parseParallelCount: actual.parseParallelCount,
+		parseLoopCaps: actual.parseLoopCaps,
 		// So is making task text safe to print
 		sanitizeForTerminal: actual.sanitizeForTerminal,
 		stripTerminalControls: actual.stripTerminalControls
@@ -141,6 +142,19 @@ describe('LoopCommand --parallel', () => {
 
 		expect(runParallel).toHaveBeenCalledWith(
 			expect.objectContaining({ container: { image: 'my/image:1' } })
+		);
+	});
+
+	it('passes --max-turns and --max-budget-usd to tm-core', async () => {
+		await execute({
+			parallel: '2',
+			trust: true,
+			maxTurns: '40',
+			maxBudgetUsd: '6'
+		});
+
+		expect(runParallel).toHaveBeenCalledWith(
+			expect.objectContaining({ maxTurns: 40, maxBudgetUsd: 6 })
 		);
 	});
 

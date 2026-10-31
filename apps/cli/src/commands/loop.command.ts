@@ -18,12 +18,14 @@ import {
 	assertContainerFlags,
 	assertParallelFlags,
 	createTmCore,
+	parseLoopCaps,
 	parseParallelCount
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
 import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
+import { formatLoopSpend } from '../ui/formatters/usage-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import {
@@ -48,6 +50,8 @@ export interface LoopCommandOptions {
 	parallel?: string;
 	container?: boolean;
 	containerImage?: string;
+	maxTurns?: string;
+	maxBudgetUsd?: string;
 }
 
 export class LoopCommand extends Command {
@@ -88,6 +92,14 @@ export class LoopCommand extends Command {
 			)
 			.option('-v, --verbose', "Show Claude's work in real-time")
 			.option(
+				'--max-turns <n>',
+				"Stop each Claude Code run after n turns (claude's --max-turns)"
+			)
+			.option(
+				'--max-budget-usd <amount>',
+				'Stop the run once it has spent this many US dollars; each Claude Code run gets what is left'
+			)
+			.option(
 				'--parallel <n>',
 				`Run up to n ready tasks at once (1-${MAX_PARALLEL}), each in its own git worktree and branch`
 			)
@@ -111,6 +123,7 @@ export class LoopCommand extends Command {
 
 		try {
 			assertContainerFlags(options);
+			const caps = parseLoopCaps(options);
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
 
@@ -184,6 +197,7 @@ export class LoopCommand extends Command {
 				sandbox: options.sandbox,
 				trusted: options.trust,
 				verbose: options.verbose ?? false,
+				...caps,
 				callbacks: this.createOutputCallbacks(options.output ?? true)
 			};
 
@@ -228,6 +242,7 @@ export class LoopCommand extends Command {
 				taskId: options.id
 			});
 			assertContainerFlags(options);
+			const caps = parseLoopCaps(options);
 
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
@@ -262,6 +277,7 @@ export class LoopCommand extends Command {
 				tag: options.tag,
 				trusted: true,
 				container,
+				...caps,
 				signal: controller.signal,
 				callbacks: {
 					onTaskStart: (task) => {
@@ -409,7 +425,12 @@ export class LoopCommand extends Command {
 				console.log(
 					statusColor(
 						`  Iteration ${iteration.iteration} completed: ${iteration.status}`
-					)
+					) +
+						formatLoopSpend({
+							costUsd: iteration.costUsd,
+							turns: iteration.turns,
+							durationMs: iteration.duration
+						})
 				);
 			}
 		};
@@ -419,7 +440,13 @@ export class LoopCommand extends Command {
 		console.log();
 		console.log(chalk.bold('Loop Complete'));
 		console.log(chalk.dim('─'.repeat(40)));
-		console.log(`Total iterations: ${result.totalIterations}`);
+		console.log(
+			`Total iterations: ${result.totalIterations}` +
+				formatLoopSpend({
+					costUsd: result.totalCostUsd,
+					turns: result.totalTurns
+				})
+		);
 		console.log(`Tasks completed: ${result.tasksCompleted}`);
 		console.log(`Final status: ${this.formatStatus(result.finalStatus)}`);
 		if (result.errorMessage) {
@@ -431,6 +458,7 @@ export class LoopCommand extends Command {
 		const statusMap: Record<LoopResult['finalStatus'], string> = {
 			all_complete: chalk.green('All tasks complete'),
 			max_iterations: chalk.yellow('Max iterations reached'),
+			budget_reached: chalk.yellow('Budget reached (--max-budget-usd)'),
 			blocked: chalk.red('Blocked'),
 			error: chalk.red('Error')
 		};
