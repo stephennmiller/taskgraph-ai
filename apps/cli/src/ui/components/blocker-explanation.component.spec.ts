@@ -155,6 +155,10 @@ describe('renderBlockerExplanation', () => {
 		expect(lines).toContain(
 			'  01 is task 1, stored in an older form. Rewrite it with: taskgraph fix-dependencies'
 		);
+		expect(lines.join('\n')).toContain(
+			'⚠ 01  task 1, stored in an older form  ← missing'
+		);
+		expect(lines.join('\n')).not.toContain('no such task');
 		expect(lines.join('\n')).not.toContain('remove-dependency');
 	});
 
