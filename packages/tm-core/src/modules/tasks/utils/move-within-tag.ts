@@ -16,7 +16,7 @@ import {
 	dependenciesForMovedItem,
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
-import { isValidTaskIdFormat } from '../validation/task-id.js';
+import { isValidTaskIdFormat, normalizeTaskId } from '../validation/task-id.js';
 import { promotedSubtaskDescription } from './promoted-subtask.js';
 import {
 	type DependencyId,
@@ -42,8 +42,10 @@ export function moveTasksIn(
 	tag: string,
 	archivedIds: ReadonlySet<string>
 ): WithinTagMoveResult {
-	const sourceIds = from.split(',').map((id) => id.trim());
-	const destinationIds = to.split(',').map((id) => id.trim());
+	// "1.03" is subtask 1.3, as everywhere else
+	const ids = (list: string) => list.split(',').map(normalizeTaskId);
+	const sourceIds = ids(from);
+	const destinationIds = ids(to);
 	if (sourceIds.length !== destinationIds.length) {
 		fail(
 			`Number of source IDs (${sourceIds.length}) must match number of destination IDs (${destinationIds.length})`,

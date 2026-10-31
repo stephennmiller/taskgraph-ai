@@ -7,9 +7,8 @@ import {
 	type Task,
 	type TmCore,
 	createTmCore,
-	fenceAsData,
+	formatTaskData,
 	neutralizeTaskData,
-	TASK_DATA_TAG,
 	TaskIdSchema,
 	withFullSubtaskIds
 } from '@tm/core';
@@ -22,6 +21,7 @@ import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
 import { getProjectRoot } from '../utils/project-root.js';
 import * as ui from '../utils/ui.js';
+import { fencesTaskData } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
 
 /**
@@ -206,7 +206,10 @@ export class ShowCommand extends Command {
 		return {
 			task: await this.withPrdSection(taskId, result.task, options.tag),
 			found: result.task !== null,
-			originalTaskId: result.isSubtask ? taskId : undefined
+			// The stored ID ("1.3" for "01.03"), or as typed when not found
+			originalTaskId: result.isSubtask
+				? String(result.task?.id ?? taskId)
+				: undefined
 		};
 	}
 
@@ -334,7 +337,8 @@ export class ShowCommand extends Command {
 				checklist: this.tmCore?.tasks.getChecklist(
 					result.task,
 					Boolean(result.originalTaskId)
-				)
+				),
+				fence: fencesTaskData()
 			})
 		);
 	}
@@ -375,12 +379,12 @@ export class ShowCommand extends Command {
 		// Task table
 		console.log(theme.brand.bold(`${printed ? '\n' : ''}Tasks:\n`));
 		console.log(
-			fenceAsData(
+			formatTaskData(
 				ui.createTaskTable(result.tasks, {
 					showSubtasks: true,
 					showDependencies: true
 				}),
-				TASK_DATA_TAG
+				fencesTaskData()
 			)
 		);
 	}

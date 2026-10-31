@@ -39,10 +39,22 @@ import {
 } from './parallel-plan.js';
 import { isSafeTaskId } from '../../../common/utils/safe-task-id.js';
 import {
+	capArgs,
 	loopIterationTimeoutMs,
 	timeoutMessage
 } from '../services/iteration-limits.js';
+import {
+	STREAM_JSON_ARGS,
+	findResultEvent,
+	hasStreamEvent
+} from '../services/stream-events.js';
 import { TaskWorktrees } from './task-worktrees.js';
+import {
+	type LoopBand,
+	type ModelChoice,
+	modelArgs,
+	pickModelEffort
+} from '../model-bands.js';
 import { isFinishedStatus } from '../task-progress.js';
 import type {
 	ParallelLoopOptions,
@@ -87,6 +99,22 @@ function openLog(file: string): number {
 	return fs.openSync(file, flags, 0o600);
 }
 
+/** The cost and turns at the end of a task's log, if Claude Code got that far */
+function readSpend(task: ParallelTask, from: number): void {
+	try {
+		// From where this run started: a rerun appends to the failed run's log
+		const log = fs.readFileSync(task.logFile).subarray(from);
+		const text = log.toString('utf8');
+		const run = findResultEvent(text);
+		if (run?.costUsd !== undefined) task.costUsd = run.costUsd;
+		// Started, then killed or crashed before its result event (#861)
+		else if (hasStreamEvent(text)) task.costUnknown = true;
+		if (run?.turns !== undefined) task.turns = run.turns;
+	} catch {
+		// No log (the spawn failed): nothing was spent
+	}
+}
+
 const describeSpawnError = (error: NodeJS.ErrnoException, command: string) =>
 	error.code === 'ENOENT'
 		? `${command} isn't installed or isn't on PATH`
@@ -99,7 +127,9 @@ export class ParallelLoopRunner {
 		private readonly projectRoot: string,
 		private readonly tasks: TasksDomain,
 		/** The tag a run without --tag works on */
-		private readonly activeTag: () => string
+		private readonly activeTag: () => string,
+		/** Complexity bands that pick each task's model and effort */
+		private readonly bands: LoopBand[] = []
 	) {}
 
 	async run(options: ParallelLoopOptions): Promise<ParallelLoopResult> {
@@ -108,6 +138,17 @@ export class ParallelLoopRunner {
 		const command = options.command ?? 'claude';
 		const spawner = options.spawner ?? spawn;
 		const claimant = options.claimant?.trim() || resolveClaimant();
+		// stream-json, so the log ends with the cost; the budget split evenly
+		const claudeArgs = [
+			...STREAM_JSON_ARGS,
+			...capArgs({
+				maxTurns: options.maxTurns,
+				maxBudgetUsd:
+					options.maxBudgetUsd === undefined
+						? undefined
+						: options.maxBudgetUsd / limit
+			})
+		];
 		const git = new TaskWorktrees(this.projectRoot);
 		// Checked before anything is claimed, so a missing runtime or token
 		// costs nothing
@@ -198,11 +239,24 @@ export class ParallelLoopRunner {
 						tag,
 						container: !!workers
 					});
+					const choice = await this.chooseModel(id, tag, options.model);
+					Object.assign(entry.task, choice);
+					const taskArgs = [...claudeArgs, ...modelArgs(choice)];
 					let cmd = command;
-					let args = ['-p', prompt, '--dangerously-skip-permissions'];
+					let args = [
+						'-p',
+						prompt,
+						'--dangerously-skip-permissions',
+						...taskArgs
+					];
 					let cwd: string;
 					if (workers) {
-						const prepared = await workers.prepare(entry.task, base, prompt);
+						const prepared = await workers.prepare(
+							entry.task,
+							base,
+							prompt,
+							taskArgs
+						);
 						entry.hasWorktree = true;
 						entry.createdBranch = prepared.createdBranch;
 						entry.container = prepared.name;
@@ -261,12 +315,32 @@ export class ParallelLoopRunner {
 		}
 
 		await this.settle(running, git, workers, base, tag, claimant, aborted);
+		const costs = running.flatMap((r) =>
+			r.task.costUsd === undefined ? [] : [r.task.costUsd]
+		);
 		return {
 			tasks: running.map((r) => r.task),
 			readyCount: wave.length,
 			skippedIds,
-			aborted
+			aborted,
+			...(costs.length
+				? { totalCostUsd: costs.reduce((a, b) => a + b, 0) }
+				: {}),
+			...(running.some((r) => r.task.costUnknown) ? { costPartial: true } : {})
 		};
+	}
+
+	/** The model and effort for a task, from its complexity score (none if unreadable) */
+	private async chooseModel(
+		id: string,
+		tag: string | undefined,
+		model: string | undefined
+	): Promise<ModelChoice> {
+		const score = await this.tasks
+			.get(id, tag)
+			.then((found) => found.task?.complexity)
+			.catch(() => undefined);
+		return pickModelEffort(score, this.bands, model);
 	}
 
 	/** Start Claude Code in the task's worktree; resolves when it's gone */
@@ -284,6 +358,7 @@ export class ParallelLoopRunner {
 	): Promise<void> {
 		const { task } = entry;
 		const log = openLog(task.logFile);
+		const logStart = fs.fstatSync(log).size;
 		const timeout = loopIterationTimeoutMs();
 		const timers: NodeJS.Timeout[] = [];
 		return new Promise<void>((resolve) => {
@@ -297,6 +372,7 @@ export class ParallelLoopRunner {
 				settled = true;
 				for (const timer of timers) clearTimeout(timer);
 				task.exitCode = exitCode;
+				readSpend(task, logStart);
 				this.finish(entry, state, error);
 				resolve();
 			};

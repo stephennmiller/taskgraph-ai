@@ -11,12 +11,15 @@ import {
 	type TmCore,
 	checkCliForPlugin,
 	createTmCore,
+	findUnmetCriteria,
 	neutralizeTaskData
 } from '@tm/core';
 import { Command, Option } from 'commander';
 import {
 	formatCliTooOldForPlugin,
+	formatCurrentTask,
 	formatPrimeContext,
+	formatUnmetCriteria,
 	formatUnnotedReminder
 } from '../ui/formatters/prime-formatters.js';
 import { displayError } from '../utils/error-handler.js';
@@ -28,6 +31,8 @@ export interface PrimeCommandOptions {
 	json?: boolean;
 	project?: string;
 	unnotedSince?: string;
+	current?: boolean;
+	unmetCriteria?: boolean;
 	pluginRoot?: string;
 }
 
@@ -47,6 +52,20 @@ export class PrimeCommand extends Command {
 			.option(
 				'--unnoted-since <time>',
 				'Only list in-progress tasks with no note since <time> (ISO)'
+			)
+			// Text for the plugin's UserPromptSubmit and Stop hooks; nothing when
+			// nothing applies
+			.addOption(
+				new Option(
+					'--current',
+					'Only the task in progress and its unchecked criteria'
+				).conflicts(['json', 'unnotedSince', 'unmetCriteria'])
+			)
+			.addOption(
+				new Option(
+					'--unmet-criteria',
+					'Only in-progress tasks with unchecked acceptance criteria'
+				).conflicts(['json', 'unnotedSince'])
 			)
 			// The plugin's SessionStart hook passes its folder, so prime can say
 			// when this CLI is older than the plugin needs. A CLI that predates
@@ -78,6 +97,16 @@ export class PrimeCommand extends Command {
 				} else if (unnoted.length > 0) {
 					console.log(formatUnnotedReminder(unnoted));
 				}
+				return;
+			}
+			if (options.current || options.unmetCriteria) {
+				const { inProgress } = await this.tmCore.tasks.getPrimeContext({
+					tag: options.tag
+				});
+				const text = options.current
+					? formatCurrentTask(inProgress)
+					: formatUnmetCriteria(findUnmetCriteria(inProgress));
+				if (text) console.log(text);
 				return;
 			}
 			// Say it before reading the tasks, so it shows even if that fails

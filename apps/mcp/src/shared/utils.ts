@@ -259,7 +259,7 @@ const TAG_PATTERN = /^[A-Za-z0-9_-]+$/;
  * Wrapper to normalize project root in args, in the order the CLI uses
  * (namedProjectRoot in @tm/core):
  * 1. args.projectRoot (explicitly provided)
- * 2. TASKGRAPH_PROJECT_ROOT, from process.env or else the session's env
+ * 2. TASKGRAPH_PROJECT_ROOT
  * 3. the session's first root folder
  * When 2 names a project, args.projectRoot must be it or a directory inside
  * it (symlinks followed); else when the client reported root folders, it must
@@ -286,15 +286,14 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 		let normalizedRoot: string | null = null;
 
 		try {
-			const envRoot = namedProjectRoot(undefined, process.env, session?.env);
+			const envRoot = namedProjectRoot(undefined, process.env);
 			const sessionRoots = envRoot
 				? [envRoot]
 				: getProjectRootsFromSession(session);
 			const root =
 				namedProjectRoot(
 					args.projectRoot ? normalizeProjectRoot(args.projectRoot) : undefined,
-					process.env,
-					session?.env
+					process.env
 				) ?? sessionRoots[0];
 			normalizedRoot = root ?? null;
 

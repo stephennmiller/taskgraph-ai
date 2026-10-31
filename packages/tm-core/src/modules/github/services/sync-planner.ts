@@ -11,6 +11,7 @@ import type {
 	RemoteIssue,
 	SyncTask
 } from '../types.js';
+import { assigneeOf } from '../../tasks/utils/assignee.js';
 import { hashIssue, parseMarker, renderIssue } from './issue-renderer.js';
 
 export interface PlanInput {
@@ -22,6 +23,8 @@ export interface PlanInput {
 	closeOrphans?: boolean;
 	/** Tags being pushed; orphans from other tags are left alone */
 	scopeTags?: string[];
+	/** Login push runs as; a lost link is recovered only from its issues */
+	viewer?: string;
 }
 
 const keyOf = (tag: string, id: string) => `${tag}\u0000${id}`;
@@ -38,6 +41,7 @@ export function planSync(input: PlanInput): PushPlan {
 
 	const byMarker = new Map<string, RemoteIssue>();
 	for (const issue of remote) {
+		if (!input.viewer || issue.author !== input.viewer) continue;
 		const marker = parseMarker(issue.body);
 		if (marker) byMarker.set(keyOf(marker.tag, marker.id), issue);
 	}
@@ -98,6 +102,14 @@ export function planSync(input: PlanInput): PushPlan {
 					action: 'update',
 					issueNumber: number,
 					reason: 'content changed'
+				};
+			}
+			if (assigneeOf(task) !== link.assignee) {
+				return {
+					...base,
+					action: 'update',
+					issueNumber: number,
+					reason: 'assignee changed'
 				};
 			}
 			const waitsOnNew = (task.dependencies ?? []).some((dep) =>

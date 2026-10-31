@@ -23,6 +23,7 @@ import { UpdateCommand, UpdateTaskCommand } from './update-task.command.js';
 
 const updateWithPrompt = vi.fn();
 const updateFrom = vi.fn();
+const assign = vi.fn();
 const strip = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, '');
 
 const task = { id: '3', title: 'Store \x1b[31msessions', subtasks: [] };
@@ -52,7 +53,7 @@ describe('update-task and update', () => {
 			throw new Error(`exit ${code}`);
 		}) as never);
 		vi.mocked(createTmCore).mockResolvedValue({
-			tasks: { updateWithPrompt, updateFrom },
+			tasks: { updateWithPrompt, updateFrom, assign },
 			config: { getActiveTag: () => 'master' }
 		} as any);
 		updateWithPrompt.mockResolvedValue({
@@ -74,6 +75,16 @@ describe('update-task and update', () => {
 		new UpdateTaskCommand().parseAsync(args, { from: 'user' });
 	const update = (...args: string[]) =>
 		new UpdateCommand().parseAsync(args, { from: 'user' });
+
+	it('update-task --assignee assigns without a prompt or the AI', async () => {
+		assign.mockResolvedValue({ ...task, assignee: 'octocat' });
+
+		await updateTask('3', '--assignee', '@OctoCat');
+
+		expect(assign).toHaveBeenCalledWith('3', '@OctoCat', 'master');
+		expect(updateWithPrompt).not.toHaveBeenCalled();
+		expect(out).toEqual(['✓ Assigned task 3 to octocat  Store sessions']);
+	});
 
 	it('update-task hands tm-core the task and prompt, then confirms the rewrite', async () => {
 		await updateTask('--id=3', '--prompt=Use SQLite', '--research');
@@ -136,9 +147,7 @@ describe('update-task and update', () => {
 		expect(err.join('\n')).toContain(
 			"✗ Task 3 is done, so it can't be updated"
 		);
-		expect(err.join('\n')).toContain(
-			'taskgraph set-status --id=3 --status=pending'
-		);
+		expect(err.join('\n')).toContain('taskgraph set-status 3 pending');
 	});
 
 	it.each([

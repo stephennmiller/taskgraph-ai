@@ -618,10 +618,10 @@ describe('tasks.expand', () => {
 			expect(saved.map((s: any) => s.id)).toEqual(['1', '2', '3', '4', '5']);
 		});
 
-		it('finds the task in a file saved with string IDs (#392)', async () => {
+		it('finds "03" in a file saved with string IDs (#392, #874)', async () => {
 			write(fixture(true));
 
-			await tmCore.tasks.expand({ id: '3', num: 2 });
+			await tmCore.tasks.expand({ id: '03', num: 2 });
 
 			expect(readFile().master.tasks[2].subtasks).toHaveLength(2);
 		});

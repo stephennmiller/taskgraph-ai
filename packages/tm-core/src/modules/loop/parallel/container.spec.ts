@@ -20,6 +20,7 @@ const run = (overrides: Partial<ContainerRun> = {}): ContainerRun => ({
 	cwd: '/repo/.taskgraph/worktrees/task-3',
 	stateDir: '/repo/.taskgraph/worktrees/task-3.state',
 	prompt: "Work on task 3; don't `rm -rf` $HOME",
+	claudeArgs: ['--max-turns', '5'],
 	taskgraphPackage: 'taskgraph-ai@1.2.3',
 	user: '501:20',
 	...overrides
@@ -67,7 +68,7 @@ describe('buildContainerArgs', () => {
 		);
 	});
 
-	it('ends with the image and a fixed script that gets the prompt and package as arguments', () => {
+	it('ends with the image and a fixed script that gets the prompt, package and Claude arguments as arguments', () => {
 		const args = buildContainerArgs(run({ image: 'my/image:1' }));
 		const at = args.indexOf('my/image:1');
 
@@ -78,8 +79,14 @@ describe('buildContainerArgs', () => {
 		expect(args.slice(at + 3)).toEqual([
 			'sh',
 			"Work on task 3; don't `rm -rf` $HOME",
-			'taskgraph-ai@1.2.3'
+			'taskgraph-ai@1.2.3',
+			'--max-turns',
+			'5'
 		]);
+		expect(args[at + 2]).toContain('shift 2;');
+		expect(args[at + 2]).toContain(
+			'claude -p "$p" --dangerously-skip-permissions "$@"'
+		);
 	});
 
 	it('refuses a path with a comma, which would split a --mount value', () => {

@@ -57,6 +57,18 @@ For each linked task, pull compares three statuses: the one at the last push or 
 
 Tasks that were never pushed or imported, or whose issue is gone, are skipped. Pull reads issues with the `taskgraph` label; when a linked issue lacks it (an imported one), pull reads every issue in the repository instead.
 
+## Assignees
+
+A task's assignee is a GitHub login. Set it with `add-task --assignee` or `update-task --assignee`, and `next --claim` sets it to your login when nobody has the task. `next --claim` prints who has the task by that login (`assigned to alice`); `--json` keeps the raw `claimedBy`. `taskgraph list --mine` shows the tasks assigned to you, and tasks with a subtask assigned to you, or says `Nothing assigned to alice` when there are none.
+
+Assignees sync both ways. Like status, each side is compared with the assignee at the last push or pull:
+
+- **Push** adds the task's assignee to its issue when it changed locally, then removes the one it last synced. Anyone else assigned on GitHub stays. Logins compare case-insensitively, so `Alice` in a hand-edited `tasks.json` is `alice` on GitHub.
+- **Pull** gives the task the issue's assignee when it changed on GitHub and not locally, and asks first unless you pass `--yes`. When both changed, the task keeps its own and the plan lists GitHub's. An issue with several assignees keeps the task's one if it is among them, otherwise the first.
+- **Import** gives each task the issue's first assignee, unless a task it links already has one. Push never writes to an imported issue, so a local change to its assignee stays local.
+
+GitHub only accepts collaborators on the repository as assignees. When it refuses one, push stops and says which login to fix. When a new issue's assignee is dropped without an error (as GitHub does without push access to the repository), the task keeps its own. When moving an issue from its synced assignee to another doesn't take, push stops with the same hint and leaves the old assignee on the issue.
+
 ## Importing existing issues
 
 `taskgraph github import` reads the repository's open issues and adds a task for each one that no task is linked to yet. It writes only to your tasks, never to GitHub.
@@ -107,7 +119,7 @@ The result has the plan (one step per task: `create`, `update`, `skip` or `close
 ## What an issue looks like
 
 - **Title:** `[<id>] <task title>`
-- **Body:** a hidden marker, the description, `Blocked by #N` lines for dependencies that already have issues, and a `### Subtasks` checklist. Subtasks are part of the parent's issue, not separate issues.
+- **Body:** a hidden marker on the first line, the description, `Blocked by #N` lines for dependencies that already have issues, and a `### Subtasks` checklist. Subtasks are part of the parent's issue, not separate issues.
 - **Labels:** `taskgraph`, `taskgraph:priority/<priority>`, `taskgraph:status/<status>` while the task is open, and `taskgraph:tag/<tag>`. TaskGraph creates missing labels.
 - **State:** `done` closes the issue as completed, `cancelled` closes it as not planned, anything else is open.
 
@@ -115,13 +127,13 @@ An unchanged task is skipped, so running `push` again is cheap and safe.
 
 ## How tasks stay linked
 
-After the first push, each task stores its issue in its `metadata.github` field. If that is lost, the next push finds the issue again through the hidden marker in its body and relinks it, so a task is not duplicated.
+After the first push, each task stores its issue in its `metadata.github` field. If that is lost, the next push finds the issue again through the hidden marker on the first line of its body and relinks it, so a task is not duplicated. It relinks only issues opened by the GitHub account `gh` is signed in as; for an issue opened by another account, or when GitHub won't say which account it is (such as with the `GITHUB_TOKEN` of a GitHub Actions run), push creates a new issue instead. If the account lookup fails any other way, such as a timeout, push stops rather than risk duplicating issues; run it again.
 
 `unlink` removes the stored link and leaves the issue alone. The marker is still in the issue body, so the next push relinks it. Remove the marker from the issue if you want the task to get a new one.
 
 ## Limits
 
-- **Content is one way.** Only status is read back, by `pull`, and an issue's body is read once, by `import`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
+- **Content is one way.** Only status and the assignee are read back, by `pull`, and an issue's body is read once, by `import`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
 - **Orphans are reported, not closed,** unless you pass `--close-orphans` or `closeOrphans: true`.
 - **`--id` and `id` match top-level tasks.** Subtasks follow their parent.
 - **Each `gh` call gets 60 seconds.** One that takes longer, for example on a stalled network or a credential prompt nobody can answer, is stopped and the command fails with a non-zero exit. A push keeps the links it saved before that, and the next push carries on from there.

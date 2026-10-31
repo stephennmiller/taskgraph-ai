@@ -27,6 +27,7 @@ import {
 	reconcileDependencySources
 } from '../../dependencies/dependency-provenance.js';
 import { dropReferences } from '../../dependencies/removed-references.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { fullSubtaskId } from '../validation/task-id.js';
 import {
 	AnalyzeComplexityService,
@@ -167,21 +168,25 @@ export class ScopeAdjustmentService {
 			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
 		);
 		const ai = new AiService(aiConfig.toHost());
-		const call = (
+		const projectRoot = this.configManager.getProjectRoot();
+		const call = async (
 			schema: unknown,
 			objectName: string,
 			prompts: { systemPrompt: string; prompt: string }
-		) =>
-			ai.generateObject({
+		) => {
+			const response = await ai.generateObject({
 				role: input.research ? 'research' : 'main',
 				session: input.session,
-				projectRoot: this.configManager.getProjectRoot(),
+				projectRoot,
 				schema,
 				objectName,
 				...prompts,
 				commandName: `scope-${direction}`,
 				outputType: input.outputType ?? 'cli'
 			});
+			untrustLoopIfResearch(response, projectRoot);
+			return response;
+		};
 
 		const telemetry: AiTelemetryData[] = [];
 		const done: ScopedTask[] = [];

@@ -4,12 +4,25 @@
  *   ✓ Task 1  ○ pending → ▶ in-progress
  *
  * set-status runs many times a day, so the change gets one line rather than
- * a box. Several tasks get a count and one aligned line each.
+ * a box. Several tasks get a count and one aligned line each. Marking a task
+ * done adds what it made ready and the next step:
+ *
+ *   ✓ Task 2  ○ pending → ✓ done
+ *     Ready now  3  Write the login page
+ *                5  Add logout endpoint
+ *   Next: taskgraph next
  */
 
-import { sanitizeForTerminal, type TaskStatus } from '@tm/core';
+import {
+	type ReadyTask,
+	sanitizeForTerminal,
+	TAG_NAME_PATTERN,
+	type TaskStatus
+} from '@tm/core';
 import chalk from 'chalk';
+import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
+import { fit, terminalSafe } from './markdown-formatters.js';
 import { getStatusWithColor } from './status-formatters.js';
 
 /** One task's status change */
@@ -44,5 +57,34 @@ export function formatStatusChanges(changes: StatusChange[]): string {
 			(change) =>
 				`  ${theme.brand(change.taskId.padEnd(idWidth))}  ${transition(change)}`
 		)
+	].join('\n');
+}
+
+/**
+ * The lines after a task reached done: the tasks and subtasks it made ready,
+ * IDs aligned and titles cut to the width, then the next step. A `--tag`
+ * write gets `next --tag` so the step reads the same tag.
+ */
+export function formatReadyAfterDone(
+	ready: ReadyTask[],
+	width = terminalWidth(),
+	tag?: string
+): string {
+	const label = 'Ready now';
+	const idWidth = Math.max(0, ...ready.map((t) => terminalSafe(t.id).length));
+	const room = width - (2 + label.length + 2 + idWidth + 2);
+	const rows = ready.map(
+		(task, i) =>
+			`  ${theme.muted(i === 0 ? label : ' '.repeat(label.length))}  ` +
+			`${theme.brand(terminalSafe(task.id).padEnd(idWidth))}  ` +
+			fit(terminalSafe(task.title), Math.max(10, room))
+	);
+	const tagFlag =
+		tag === undefined
+			? ''
+			: ` --tag ${TAG_NAME_PATTERN.test(tag) ? tag : '<tag>'}`;
+	return [
+		...rows,
+		theme.muted('Next: ') + theme.brand(`taskgraph next${tagFlag}`)
 	].join('\n');
 }

@@ -18,7 +18,9 @@ export async function fetchChangelogHighlights(
 			method: 'GET',
 			headers: {
 				'User-Agent': `${PACKAGE_NAME}/${version}`
-			}
+			},
+			// One deadline for the whole request, connecting included (#809)
+			signal: AbortSignal.timeout(3000)
 		};
 
 		const req = https.request(options, (res) => {
@@ -44,11 +46,6 @@ export async function fetchChangelogHighlights(
 		});
 
 		req.on('error', () => {
-			resolve([]);
-		});
-
-		req.setTimeout(3000, () => {
-			req.destroy();
 			resolve([]);
 		});
 

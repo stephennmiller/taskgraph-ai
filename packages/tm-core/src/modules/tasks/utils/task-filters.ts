@@ -14,6 +14,7 @@ import {
 	createTaskLookup
 } from '../../dependencies/dependency-check.js';
 import { isArchivedReference } from './archive.js';
+import { assigneeOf } from './assignee.js';
 
 const logger = getLogger('TaskFilters');
 
@@ -213,6 +214,19 @@ export function filterByStatus<T extends Task>(
 	return statuses
 		? tasks.filter((task) => statuses.includes(task.status))
 		: tasks;
+}
+
+/**
+ * The tasks assigned to `login` (lowercase, as stored), or with a subtask
+ * assigned to it (a claim can take a subtask); all of them without a login
+ */
+export function filterByAssignee<T extends Task>(
+	tasks: T[],
+	login?: string
+): T[] {
+	if (!login) return tasks;
+	const mine = (item: { assignee?: unknown }) => assigneeOf(item) === login;
+	return tasks.filter((task) => mine(task) || task.subtasks?.some(mine));
 }
 
 /**

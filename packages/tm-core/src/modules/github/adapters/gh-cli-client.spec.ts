@@ -55,7 +55,10 @@ describe('GhCliClient', () => {
 	});
 
 	it('lists issues by label via execFile with an argument array, skipping pull requests', () => {
-		respond(200, [rawIssue(1), rawIssue(2, { pull_request: {} })]);
+		respond(200, [
+			rawIssue(1, { assignees: [{ login: 'OctoCat' }] }),
+			rawIssue(2, { pull_request: {} })
+		]);
 
 		return client.listIssues('taskgraph').then((issues) => {
 			expect(execFileMock.mock.calls[0][0]).toBe('gh');
@@ -73,6 +76,7 @@ describe('GhCliClient', () => {
 					title: 't1',
 					body: 'b',
 					labels: ['taskgraph'],
+					assignees: ['octocat'],
 					state: 'open',
 					stateReason: undefined
 				}
@@ -104,6 +108,26 @@ describe('GhCliClient', () => {
 					labels: ['taskgraph']
 				});
 			});
+	});
+
+	it('removes one assignee through the assignees endpoint, leaving the others', () => {
+		respond(200, rawIssue(5, { assignees: [{ login: 'Carol' }] }));
+
+		return client.changeAssignees(5, 'remove', ['alice']).then((issue) => {
+			expect(callArgs(0)).toEqual([
+				'api',
+				'-i',
+				'-X',
+				'DELETE',
+				'repos/acme/app/issues/5/assignees',
+				'--input',
+				'-'
+			]);
+			expect(JSON.parse(stdinEnd.mock.calls[0][0])).toEqual({
+				assignees: ['alice']
+			});
+			expect(issue.assignees).toEqual(['carol']);
+		});
 	});
 
 	it('closes an issue with a state reason', () => {
@@ -196,6 +220,23 @@ describe('GhCliClient', () => {
 				fullName: 'acme/app',
 				url: 'https://github.com/acme/app'
 			});
+		});
+	});
+
+	it('reads the signed-in login with a fixed argument list', () => {
+		respond(200, { login: 'octocat' });
+
+		return client.getViewer().then((login) => {
+			expect(callArgs(0)).toEqual(['api', '-i', '-X', 'GET', 'user']);
+			expect(login).toBe('octocat');
+		});
+	});
+
+	it('maps the issue author login', () => {
+		respond(200, [rawIssue(1, { user: { login: 'octocat' } }), rawIssue(2)]);
+
+		return client.listIssues('taskgraph').then((issues) => {
+			expect(issues.map((i) => i.author)).toEqual(['octocat', undefined]);
 		});
 	});
 

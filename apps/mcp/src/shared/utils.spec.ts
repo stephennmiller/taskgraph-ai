@@ -90,17 +90,6 @@ describe('withNormalizedProjectRoot project root (#339)', () => {
 		).toBe(main);
 	});
 
-	it("uses the session's TASKGRAPH_PROJECT_ROOT when the process has none", async () => {
-		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
-
-		expect(
-			await rootPassed(
-				{},
-				{ session: { env: { TASKGRAPH_PROJECT_ROOT: main } } }
-			)
-		).toBe(main);
-	});
-
 	it("falls back to the session's root folder", async () => {
 		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
 
@@ -150,18 +139,6 @@ describe('withNormalizedProjectRoot binds projectRoot to the session (#794)', ()
 		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', main);
 
 		expectRefused(await call({ projectRoot: other }), main);
-	});
-
-	it("refuses a projectRoot outside the session's TASKGRAPH_PROJECT_ROOT", async () => {
-		vi.stubEnv('TASKGRAPH_PROJECT_ROOT', '');
-
-		expectRefused(
-			await call(
-				{ projectRoot: other },
-				{ session: { env: { TASKGRAPH_PROJECT_ROOT: main } } }
-			),
-			main
-		);
 	});
 
 	it("refuses a projectRoot outside the session's root folder", async () => {

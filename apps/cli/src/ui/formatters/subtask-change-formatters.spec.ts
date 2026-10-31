@@ -24,7 +24,7 @@ describe('formatSubtaskAdded', () => {
 
 		expect(output.split('\n')).toEqual([
 			'✓ Added subtask 1.3  Write the migration',
-			'Next: taskgraph set-status --id=1.3 --status=in-progress'
+			'Next: taskgraph set-status 1.3 in-progress'
 		]);
 	});
 
@@ -55,6 +55,12 @@ describe('formatSubtaskAdded', () => {
 		).toBe('✓ Task 3 is now subtask 1.4  Write docs');
 	});
 
+	it('names "01" and "03" as tasks 1 and 3 (#874)', () => {
+		expect(
+			plain(formatSubtaskAdded('01', { id: 4, title: 'Write docs' }, '03', 80))
+		).toBe('✓ Task 3 is now subtask 1.4  Write docs');
+	});
+
 	it.each([80, 40])('cuts a long title to fit %i columns', (width) => {
 		const lines = plain(
 			formatSubtaskAdded(
@@ -82,6 +88,12 @@ describe('formatSubtaskRemoved', () => {
 		expect(
 			plain(formatSubtaskRemoved('1.2', { id: 4, title: 'Add indexes' }, 80))
 		).toBe('✓ Subtask 1.2 is now task 4  Add indexes');
+	});
+
+	it('names "01.02" as subtask 1.2 (#874)', () => {
+		expect(plain(formatSubtaskRemoved('01.02', null))).toBe(
+			'✓ Removed subtask 1.2'
+		);
 	});
 
 	it('strips escape sequences from the typed ID', () => {

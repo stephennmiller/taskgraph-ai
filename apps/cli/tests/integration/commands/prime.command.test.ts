@@ -165,6 +165,49 @@ describe('prime command', () => {
 		});
 	}, 120000);
 
+	it('--current and --unmet-criteria show the unchecked criteria until they are checked', () => {
+		const tasksFile = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+		const data = JSON.parse(fs.readFileSync(tasksFile, 'utf8'));
+		data.master.tasks[1].acceptanceCriteria = [
+			{ text: 'Shows the sign-in form', checked: true },
+			'Rejects a bad password'
+		];
+		fs.writeFileSync(tasksFile, JSON.stringify(data));
+
+		const current = run(['prime', '--current']);
+		const unmet = run(['prime', '--unmet-criteria']);
+		const check = run(['set-status', '--id=2', '--check=2']);
+		const after = run(['prime', '--unmet-criteria']);
+
+		expect(current.status).toBe(0);
+		expect(current.stdout).toContain(
+			'<task-data>\n2  Add sign-in\n  Unchecked (1 of 2 checked):\n  2. Rejects a bad password\n</task-data>'
+		);
+		expect(unmet.status).toBe(0);
+		expect(unmet.stdout).toContain(
+			'Task 2 is still in progress with unchecked acceptance criteria:'
+		);
+		expect(unmet.stdout).toContain('  2. Rejects a bad password');
+		expect(check.status).toBe(0);
+		expect(after.status).toBe(0);
+		expect(after.stdout).toBe('');
+		expect(run(['prime', '--current']).stdout).toContain(
+			'All its criteria are checked.'
+		);
+	}, 120000);
+
+	it('--current prints nothing when no task is in progress, and refuses --json', () => {
+		run(['set-status', '--id=2', '--status=pending']);
+
+		const current = run(['prime', '--current']);
+		const json = run(['prime', '--current', '--json']);
+
+		expect(current.status).toBe(0);
+		expect(current.stdout).toBe('');
+		expect(json.status).toBe(1);
+		expect(json.stderr).toContain("cannot be used with option '--json'");
+	}, 120000);
+
 	it('--unnoted-since exits 1 when the time does not parse', () => {
 		const result = run(['prime', '--unnoted-since', 'yesterday']);
 

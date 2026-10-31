@@ -5,7 +5,15 @@
  * sync (`link.lastPushedStatus`); a side has "changed" when it differs from it.
  */
 
-import type { PullPlan, PullStep, RemoteIssue, SyncTask } from '../types.js';
+import type { Task } from '../../../common/types/index.js';
+import type {
+	GitHubLink,
+	PullPlan,
+	PullStep,
+	RemoteIssue,
+	SyncTask
+} from '../types.js';
+import { assigneeOf } from '../../tasks/utils/assignee.js';
 import { sameStatus, statusFromIssue } from './issue-status.js';
 import { getLink } from './sync-planner.js';
 
@@ -39,6 +47,7 @@ export function planPull(input: PullPlanInput): PullPlan {
 			};
 		}
 
+		const assignee = assigneeChange(task, link, issue);
 		const from = task.status;
 		// An imported issue says only open (pending) or closed. Push never
 		// writes to it, so a local change can't conflict with it
@@ -46,7 +55,13 @@ export function planPull(input: PullPlanInput): PullPlan {
 			link.imported && issue.state === 'open'
 				? 'pending'
 				: statusFromIssue(issue, link.lastPushedStatus);
-		const step = { ...base, issueNumber: link.issueNumber, from, to };
+		const step = {
+			...base,
+			issueNumber: link.issueNumber,
+			from,
+			to,
+			...assignee
+		};
 		const localChanged =
 			!link.imported && !sameStatus(from, link.lastPushedStatus);
 		const remoteChanged = !sameStatus(to, link.lastPushedStatus);
@@ -72,4 +87,28 @@ export function planPull(input: PullPlanInput): PullPlan {
 	});
 
 	return { repo: input.repo, steps };
+}
+
+/** The issue's assignee as the task would hold it: the task's own if it is among them */
+function issueAssignee(task: Task, issue: RemoteIssue): string | undefined {
+	const local = assigneeOf(task);
+	return local && issue.assignees.includes(local) ? local : issue.assignees[0];
+}
+
+/**
+ * What a pull does with the assignee: `assignTo` when it changed on GitHub
+ * since the last sync and not locally, `githubAssignee` when it changed on
+ * both sides to different logins (the task keeps its own), else nothing
+ */
+function assigneeChange(
+	task: Task,
+	link: GitHubLink,
+	issue: RemoteIssue
+): Pick<PullStep, 'assignTo' | 'githubAssignee'> {
+	const local = assigneeOf(task);
+	const remote = issueAssignee(task, issue);
+	if (remote === link.assignee || remote === local) return {};
+	return local === link.assignee
+		? { assignTo: remote ?? null }
+		: { githubAssignee: remote ?? null };
 }

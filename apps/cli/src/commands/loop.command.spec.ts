@@ -27,6 +27,8 @@ vi.mock('@tm/core', async (importOriginal) => {
 		assertContainerFlags: actual.assertContainerFlags,
 		DEFAULT_CONTAINER_IMAGE: actual.DEFAULT_CONTAINER_IMAGE,
 		parseParallelCount: actual.parseParallelCount,
+		parseLoopCaps: actual.parseLoopCaps,
+		parseLoopModel: actual.parseLoopModel,
 		// So is making task text safe to print
 		sanitizeForTerminal: actual.sanitizeForTerminal,
 		stripTerminalControls: actual.stripTerminalControls
@@ -189,28 +191,6 @@ describe('LoopCommand', () => {
 		it('should have --project option', () => {
 			const option = loopCommand.options.find((o) => o.long === '--project');
 			expect(option).toBeDefined();
-		});
-	});
-
-	describe('displayResult', () => {
-		it('should display loop completion summary', () => {
-			const displayResult = (loopCommand as any).displayResult.bind(
-				loopCommand
-			);
-			const mockResult: LoopResult = {
-				iterations: [],
-				totalIterations: 5,
-				tasksCompleted: 3,
-				finalStatus: 'max_iterations'
-			};
-
-			displayResult(mockResult);
-
-			expect(consoleLogSpy).toHaveBeenCalled();
-			const allOutput = consoleLogSpy.mock.calls.flat().join(' ');
-			expect(allOutput).toContain('Loop Complete');
-			expect(allOutput).toContain('5');
-			expect(allOutput).toContain('3');
 		});
 	});
 

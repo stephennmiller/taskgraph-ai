@@ -39,6 +39,17 @@ export TASKGRAPH_SKIP_AUTO_UPDATE=1
 p="${CLAUDE_PLUGIN_ROOT:-}"
 if out=$(taskgraph prime --project "$d" --plugin-root "$p" 2>/dev/null); then
 	printf '%s\n' "$out"
+	# A PreCompact hook can't reach Claude, so ask for the note once it's
+	# compacted, while the summary still holds the work
+	f="$d/.taskgraph/tasks/tasks.json"
+	case "$in" in
+		*'"source":"compact"'*)
+			if [ ! -f "$f" ] || grep -q '"in-progress"' "$f"; then
+				echo
+				echo "The conversation was just compacted. If a task is in progress, log what you did on it before compaction now, from the summary: taskgraph note <id> '<what you did or decided>'"
+			fi
+			;;
+	esac
 else
 	out=$(taskgraph prime --project "$d" --plugin-root "$p" 2>&1)
 	case "$out" in

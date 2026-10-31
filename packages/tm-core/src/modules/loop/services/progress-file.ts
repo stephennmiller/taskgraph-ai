@@ -1,11 +1,12 @@
 /**
  * @fileoverview The loop's progress file: the header a run appends when it
- * starts and the summary it appends when it ends
+ * starts, the line it appends after each iteration, and the summary it
+ * appends when it ends
  */
 
 import { appendFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import type { LoopConfig, LoopResult } from '../types.js';
+import type { LoopConfig, LoopIteration, LoopResult } from '../types.js';
 
 export async function initProgressFile(config: LoopConfig): Promise<void> {
 	await mkdir(path.dirname(config.progressFile), { recursive: true });
@@ -27,10 +28,66 @@ export async function initProgressFile(config: LoopConfig): Promise<void> {
 	);
 }
 
+/** `$0.42 · 12 turns`, leaving out what Claude Code didn't report; `partial`: a total missing an unknown cost */
+function spend(
+	costUsd?: number,
+	turns?: number,
+	costUnknown?: boolean,
+	partial?: boolean
+): string[] {
+	const cost =
+		costUsd === undefined
+			? costUnknown || partial
+				? 'cost unknown'
+				: undefined
+			: `${costUnknown ? 'cost unknown, counted as ' : partial ? 'at least ' : ''}$${costUsd.toFixed(2)}`;
+	return [
+		...(cost ? [cost] : []),
+		...(turns !== undefined ? [`${turns} turns`] : [])
+	];
+}
+
+/** `# Iteration 2: success · resumed · complexity 2 · sonnet, low effort · $0.42 · 12 turns · 83s` */
+export async function appendIterationLine(
+	file: string,
+	iteration: LoopIteration
+): Promise<void> {
+	const setting = [
+		iteration.model,
+		iteration.effort && `${iteration.effort} effort`
+	].filter(Boolean);
+	const facts = [
+		iteration.status,
+		...(iteration.status === 'error' && iteration.message
+			? [iteration.message]
+			: []),
+		...(iteration.session ? [iteration.session] : []),
+		...(iteration.complexity !== undefined
+			? [`complexity ${iteration.complexity}`]
+			: []),
+		...(setting.length ? [setting.join(', ')] : []),
+		...spend(iteration.costUsd, iteration.turns, iteration.costUnknown),
+		...(iteration.duration !== undefined
+			? [`${Math.round(iteration.duration / 1000)}s`]
+			: [])
+	];
+	await appendFile(
+		file,
+		`# Iteration ${iteration.iteration}: ${facts.join(' · ')}\n`,
+		'utf-8'
+	);
+}
+
 export async function appendFinalSummary(
 	file: string,
 	result: LoopResult
 ): Promise<void> {
+	const cost = spend(
+		result.totalCostUsd,
+		result.totalTurns,
+		false,
+		result.costPartial
+	);
 	await appendFile(
 		file,
 		`
@@ -39,7 +96,7 @@ export async function appendFinalSummary(
 - Total iterations: ${result.totalIterations}
 - Tasks completed: ${result.tasksCompleted}
 - Final status: ${result.finalStatus}
-`,
+${cost.length ? `- Spent: ${cost.join(' · ')}\n` : ''}`,
 		'utf-8'
 	);
 }

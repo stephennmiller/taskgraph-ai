@@ -19,9 +19,12 @@ taskgraph update-task --id=<id> --prompt='<prompt>'
 
 # Use research-backed updates (research model)
 taskgraph update-task --id=<id> --prompt='<prompt>' --research
+
+# Assign the task to a GitHub login, no prompt or AI needed ('' clears it)
+taskgraph update-task --id=<id> --assignee=octocat
 ```
 
-When the AI rewrites the subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. A subtask it adds gets the next free ID, and dependencies on a subtask it drops are removed.
+When `update-task` or `update --from` has the AI rewrite a task's subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. Each one it kept also keeps its status (a done one is kept exactly as it was), unless your prompt mentions "status", the same rule the task's own status follows. A subtask it adds gets the next free ID and starts as `pending`. Dependencies and `related` / `discovered-from` links to a subtask it drops are removed, with a warning that names the subtask and the tasks that lost a dependency or a link. If the AI returns no subtasks at all, the task keeps the ones it had. A dependency the AI adds that would make a loop is left out, with a warning. `expand` warns the same way when it leaves out a loop-making dependency, and the MCP tools return these warnings in a `warnings` list.
 
 ## Update a Subtask
 
@@ -116,6 +119,8 @@ taskgraph validate-dependencies
 # Find and fix invalid dependencies automatically
 taskgraph fix-dependencies
 ```
+
+Commands read `01` as task 1 and `1.01` as subtask 1.1, and `add-dependency` stores the plain form. Older versions stored `1.01` as typed, which `validate-dependencies` and `why` report as missing; `fix-dependencies` rewrites it as `1.1` rather than removing it.
 
 Once `parse-prd` has recorded where tasks came from, `validate-dependencies` also checks the PRD: it lists sections no task covers, tasks that cite a heading the PRD no longer has (renamed or removed), and tasks with no section. A task covers its section and the sections inside it. These are warnings: only dependency problems make the command exit 1.
 

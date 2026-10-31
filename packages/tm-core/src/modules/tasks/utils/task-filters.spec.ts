@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { Task } from '../../../common/types/index.js';
 import { createSubtask, createTask } from '../../../testing/task-fixtures.js';
 import {
 	buildBlocksMap,
+	filterByAssignee,
 	filterByStatus,
 	filterReadyTasks,
 	parseStatusFilter
@@ -72,5 +74,30 @@ describe('parseStatusFilter', () => {
 		expect(() => parseStatusFilter('pending,bogus')).toThrow(
 			'"bogus" isn\'t a status. Use one of: pending, in-progress'
 		);
+	});
+});
+
+describe('filterByAssignee', () => {
+	it('keeps tasks assigned to the login, or with a subtask assigned to it', () => {
+		const tasks = [
+			{ id: '1', assignee: 'Octocat', subtasks: [] },
+			{ id: '2', subtasks: [{ id: '1', assignee: 'octocat' }] },
+			{ id: '3', assignee: 'hubot', subtasks: [] }
+		] as unknown as Task[];
+
+		expect(filterByAssignee(tasks, 'octocat').map((t) => t.id)).toEqual([
+			'1',
+			'2'
+		]);
+		expect(filterByAssignee(tasks)).toHaveLength(3);
+	});
+
+	it('skips an assignee that is not a string (#860)', () => {
+		const tasks = [
+			{ id: '1', assignee: 5, subtasks: [{ id: '1', assignee: {} }] },
+			{ id: '2', assignee: 'octocat', subtasks: [] }
+		] as unknown as Task[];
+
+		expect(filterByAssignee(tasks, 'octocat').map((t) => t.id)).toEqual(['2']);
 	});
 });

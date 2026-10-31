@@ -2,6 +2,8 @@
  * @fileoverview Type definitions for the loop module
  */
 
+import type { LoopBand, LoopEffort } from './model-bands.js';
+
 /**
  * Available preset loop prompts
  */
@@ -76,6 +78,29 @@ export interface LoopConfig {
 	 * Note: NOT compatible with `sandbox=true` (will return error).
 	 */
 	verbose?: boolean;
+	/** Passed to each `claude -p` as `--max-turns` (optional) */
+	maxTurns?: number;
+	/**
+	 * The most the whole run may spend, in US dollars (optional). Each
+	 * iteration gets what's left as `--max-budget-usd`, and the run stops
+	 * before an iteration once nothing is left.
+	 */
+	maxBudgetUsd?: number;
+	/** `--model` for every iteration, in place of the band's model (optional) */
+	model?: string;
+	/**
+	 * Complexity bands that pick each iteration's model and effort (see
+	 * model-bands.ts); none means Claude Code's defaults every time
+	 */
+	bands?: LoopBand[];
+	/** Resume the previous iteration's Claude Code session for the next task when it can (#841); off by default */
+	reuseSession?: boolean;
+	/**
+	 * Resume the previous iteration's session only while its context is
+	 * below this many tokens (default DEFAULT_RESUME_MAX_CONTEXT_TOKENS; 0
+	 * never resumes)
+	 */
+	resumeMaxContextTokens?: number;
 	/**
 	 * Output callbacks for presentation layer (CLI/MCP).
 	 * If not provided, the service runs silently (no console output).
@@ -97,6 +122,28 @@ export interface LoopIteration {
 	message?: string;
 	/** Duration of this iteration in milliseconds */
 	duration?: number;
+	/** What Claude Code reported spending, in US dollars */
+	costUsd?: number;
+	/** Agentic turns Claude Code took */
+	turns?: number;
+	/**
+	 * Claude Code was stopped by loop's timeout, or killed or crashed after it
+	 * started, before it reported a cost. With --max-budget-usd, costUsd is
+	 * then the budget the iteration was given, the most it could have spent.
+	 */
+	costUnknown?: boolean;
+	/** Complexity score of the task the iteration started on, when it had one */
+	complexity?: number;
+	/** `--model` the iteration ran with, when one was picked */
+	model?: string;
+	/** `--effort` the iteration ran with, when one was picked */
+	effort?: LoopEffort;
+	/** With reuseSession: whether the iteration resumed the previous one's Claude Code session or started a new one */
+	session?: 'resumed' | 'fresh';
+	/** Claude Code's session ID, from its result event */
+	sessionId?: string;
+	/** Tokens in the session's context at its last API call */
+	contextTokens?: number;
 }
 
 /**
@@ -110,7 +157,18 @@ export interface LoopResult {
 	/** Number of tasks completed successfully */
 	tasksCompleted: number;
 	/** Final status of the loop */
-	finalStatus: 'all_complete' | 'max_iterations' | 'blocked' | 'error';
+	finalStatus:
+		| 'all_complete'
+		| 'max_iterations'
+		| 'budget_reached'
+		| 'blocked'
+		| 'error';
+	/** Sum of the iterations' costUsd, when any reported one */
+	totalCostUsd?: number;
+	/** An iteration's cost is unknown and not in totalCostUsd, so the run spent at least that */
+	costPartial?: boolean;
+	/** Sum of the iterations' turns, when any reported them */
+	totalTurns?: number;
 	/** Error message when finalStatus is 'error' (optional) */
 	errorMessage?: string;
 }

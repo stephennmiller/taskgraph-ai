@@ -46,6 +46,12 @@ const UpdateTaskSchema = z.object({
 		.describe(
 			'Append timestamped information to task details instead of full update'
 		),
+	assignee: z
+		.string()
+		.optional()
+		.describe(
+			"GitHub login of who the task is for; '' clears it. Needs no prompt"
+		),
 	metadata: z
 		.string()
 		.optional()
@@ -117,9 +123,9 @@ export function registerUpdateTaskTool(server: FastMCP) {
 					createErrorResponse
 				);
 				if (error) return error;
-				if (!args.prompt && !parsedMetadata) {
+				if (!args.prompt && !parsedMetadata && args.assignee === undefined) {
 					return createErrorResponse(
-						'Either prompt or metadata must be provided for update-task'
+						'Either prompt, metadata or assignee must be provided for update-task'
 					);
 				}
 				const tag = args.tag || tmCore.config.getActiveTag();
@@ -130,6 +136,26 @@ export function registerUpdateTaskTool(server: FastMCP) {
 					context,
 					'Error updating task',
 					async () => {
+						if (args.assignee !== undefined) {
+							const assigned = await tmCore.tasks.assign(
+								taskId,
+								args.assignee,
+								tag
+							);
+							if (!args.prompt && !parsedMetadata) {
+								return {
+									tag,
+									data: {
+										message: assigned.assignee
+											? `Assigned task ${taskId} to ${assigned.assignee}`
+											: `Unassigned task ${taskId}`,
+										taskId,
+										assignee: assigned.assignee ?? null,
+										updated: true
+									}
+								};
+							}
+						}
 						const result = await tmCore.tasks.updateWithPrompt(
 							{
 								id: taskId,

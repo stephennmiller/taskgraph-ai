@@ -13,6 +13,9 @@ import {
 } from 'vitest';
 import { fakeClaude } from './fake-claude.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
+import { parseCompletion } from './iteration-result.js';
+import { isPreset } from '../presets/index.js';
+import { buildContextHeader } from './loop-prompt.js';
 import { LoopService, type LoopServiceOptions } from './loop.service.js';
 import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
@@ -532,23 +535,7 @@ describe('LoopService', () => {
 		});
 	});
 
-	describe('parseCompletion (inlined)', () => {
-		let service: LoopService;
-		let parseCompletion: (
-			output: string,
-			exitCode: number
-		) => { status: string; message?: string };
-
-		beforeEach(() => {
-			service = new LoopService(defaultOptions);
-			// Access private method
-			parseCompletion = (
-				service as unknown as {
-					parseCompletion: typeof parseCompletion;
-				}
-			).parseCompletion.bind(service);
-		});
-
+	describe('parseCompletion', () => {
 		it('should detect complete marker', () => {
 			const result = parseCompletion(
 				'<loop-complete>ALL DONE</loop-complete>',
@@ -589,17 +576,7 @@ describe('LoopService', () => {
 		});
 	});
 
-	describe('isPreset (inlined)', () => {
-		let service: LoopService;
-		let isPreset: (name: string) => boolean;
-
-		beforeEach(() => {
-			service = new LoopService(defaultOptions);
-			isPreset = (
-				service as unknown as { isPreset: (n: string) => boolean }
-			).isPreset.bind(service);
-		});
-
+	describe('isPreset', () => {
 		it('should return true for default preset', () => {
 			expect(isPreset('default')).toBe(true);
 		});
@@ -629,27 +606,7 @@ describe('LoopService', () => {
 		});
 	});
 
-	describe('buildContextHeader (inlined)', () => {
-		let service: LoopService;
-		let buildContextHeader: (
-			config: {
-				iterations: number;
-				progressFile: string;
-				tag?: string;
-				taskId?: string;
-			},
-			iteration: number
-		) => string;
-
-		beforeEach(() => {
-			service = new LoopService(defaultOptions);
-			buildContextHeader = (
-				service as unknown as {
-					buildContextHeader: typeof buildContextHeader;
-				}
-			).buildContextHeader.bind(service);
-		});
-
+	describe('buildContextHeader', () => {
 		it('should include iteration info', () => {
 			const header = buildContextHeader(
 				{ iterations: 5, progressFile: '/test/progress.txt' },

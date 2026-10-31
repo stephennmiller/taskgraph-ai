@@ -246,6 +246,37 @@ describe('addDependencyIn', () => {
 		expect(() => add(tasks, '1', '100000')).toThrow(/would make a loop/);
 	});
 
+	it('stores "1.01" as 1.1, so the loop check sees it (#864)', () => {
+		const tasks = [task('1', [], { subtasks: [subtask(1, ['2'])] }), task('2')];
+
+		expect(() => add(tasks, '2', '1.01')).toThrow(
+			'That would make a loop: task 1.1 already depends on task 2'
+		);
+		expect(tasks[1].dependencies).toEqual([]);
+	});
+
+	it('stores "01.01" as 1.1', () => {
+		const tasks = [task('1', [], { subtasks: [subtask(1)] }), task('2')];
+
+		expect(add(tasks, '02', '01.01')).toMatchObject({
+			taskId: '2',
+			dependencyId: '1.1'
+		});
+		expect(tasks[1].dependencies).toEqual(['1.1']);
+	});
+
+	it.each(['1.1x', '1.', '1.1.1'])(
+		'refuses "%s", which names no task (#864)',
+		(dependsOn) => {
+			const tasks = [task('1', [], { subtasks: [subtask(1)] }), task('2')];
+
+			expect(() => add(tasks, '2', dependsOn)).toThrow(
+				`Task ${dependsOn} not found`
+			);
+			expect(tasks[1].dependencies).toEqual([]);
+		}
+	);
+
 	it('points at restore for an archived task', () => {
 		expect(() => add([task(2)], '2', '1', undefined, ['1'])).toThrow(
 			'Task 1 is archived, so it already counts as done'
@@ -397,6 +428,13 @@ describe('removeDependencyIn', () => {
 			removed: false,
 			message: 'Task 1 has no dependencies; nothing changed'
 		});
+	});
+
+	it('takes out "1.02" that older versions stored as typed (#864)', () => {
+		const tasks = [task(1, [], { subtasks: [subtask(2)] }), task(2, ['1.02'])];
+
+		expect(remove(tasks, '2', '1.2').removed).toBe(true);
+		expect(tasks[1].dependencies).toEqual([]);
 	});
 
 	it('refuses an unknown task', () => {

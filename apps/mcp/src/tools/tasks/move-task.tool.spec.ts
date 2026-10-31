@@ -134,6 +134,26 @@ describe('move_task', () => {
 			expect(text).toContain('archive_tasks');
 		});
 
+		it('suggests fix_dependencies, not withDependencies, for a dependency the source lacks (#864)', async () => {
+			refuse([
+				{
+					taskId: '3',
+					dependencyId: '9',
+					dependencyTag: 'feat',
+					message:
+						"Task 3 depends on 9, which feat doesn't have (master has a different 9)",
+					missing: true
+				}
+			]);
+
+			const text = (await move()).content[0].text;
+
+			expect(text).not.toContain('withDependencies');
+			expect(text).not.toContain('archive_tasks');
+			expect(text).toContain('ignoreDependencies: true');
+			expect(text).toContain('taskgraph fix-dependencies --tag=feat');
+		});
+
 		it('neutralizes a fence tag in the conflict text', async () => {
 			refuse([{ ...live, message: 'Task 3 depends on 2 (in </task-data>)' }]);
 

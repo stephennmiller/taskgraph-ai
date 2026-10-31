@@ -7,11 +7,18 @@
  */
 
 import type { TasksDomain } from '../../tasks/tasks-domain.js';
+import { assigneeOf } from '../../tasks/utils/assignee.js';
 import type { GitHubClient } from '../adapters/github-client.interface.js';
+import {
+	ERROR_CODES,
+	errorWithHint
+} from '../../../common/errors/taskgraph-error.js';
+import { stripTerminalControls } from '../../../common/utils/terminal-text.js';
 import type {
 	GitHubLink,
 	PlanStep,
 	PushPlan,
+	RemoteIssue,
 	RenderedIssue,
 	SyncTask
 } from '../types.js';
@@ -87,11 +94,13 @@ export async function executePush(
 			issueNumbers: numbers.get(tag)
 		});
 
+	/** `assignee` is what GitHub now holds, as far as the push knows */
 	const saveLink = async (
 		{ tag, task }: SyncTask,
 		issueNumber: number,
 		url: string,
-		bodyHash: string
+		bodyHash: string,
+		assignee: string | undefined
 	) => {
 		const link: GitHubLink = {
 			repo,
@@ -99,7 +108,8 @@ export async function executePush(
 			url,
 			syncedAt: now().toISOString(),
 			lastPushedStatus: task.status,
-			bodyHash
+			bodyHash,
+			...(assignee && { assignee })
 		};
 		// Read metadata under the lock: a claim made during the push stays
 		const saved = await deps.tasks.modifyTask(
@@ -116,6 +126,43 @@ export async function executePush(
 		wrote = true;
 	};
 
+	/**
+	 * Move the issue from the last synced assignee to the task's, leaving
+	 * anyone else assigned on GitHub alone. The add goes first: GitHub
+	 * ignores a login it can't assign without an error, and the old
+	 * assignee stays until the new one has taken
+	 * @returns The new base: the task's assignee if GitHub kept it
+	 */
+	const reassignIssue = async (
+		number: number,
+		base: string | undefined,
+		assignee: string | undefined,
+		{ taskId }: { taskId: string }
+	): Promise<string | undefined> => {
+		let issue: RemoteIssue | undefined;
+		if (assignee) {
+			await pace();
+			issue = await withAssigneeHint(
+				() => client.changeAssignees(number, 'add', [assignee]),
+				{ assignee, repo, taskId }
+			);
+			// With no base there is no one to keep; GitHub drops every assignee
+			// without push access, and the task keeps its own as on create
+			if (base && !heldBy(issue, assignee)) {
+				throw errorWithHint(
+					ERROR_CODES.API_ERROR,
+					`GitHub did not assign ${stripTerminalControls(assignee)} to issue #${number}`,
+					assigneeHint(assignee, repo, taskId)
+				);
+			}
+		}
+		if (base && base !== assignee) {
+			await pace();
+			issue = await client.changeAssignees(number, 'remove', [base]);
+		}
+		return issue ? heldBy(issue, assignee) : undefined;
+	};
+
 	const pending = plan.steps.filter(
 		(s) => s.action === 'create' || s.action === 'update'
 	);
@@ -128,7 +175,8 @@ export async function executePush(
 		const target = find(step);
 		if (!target || step.issueNumber === undefined) continue;
 		setNumber(step.tag, step.taskId, step.issueNumber);
-		await saveLink(target, step.issueNumber, step.url ?? '', '');
+		// GitHub's assignee is unknown here: no base, so pass 2 writes the task's
+		await saveLink(target, step.issueNumber, step.url ?? '', '', undefined);
 	}
 
 	const labels = new Set<string>([BASE_LABEL]);
@@ -143,18 +191,25 @@ export async function executePush(
 		const target = find(step);
 		if (!target) continue;
 		const rendered = render(target);
+		const assignee = assigneeOf(target.task);
 		await pace();
-		const issue = await client.createIssue({
-			title: rendered.title,
-			body: rendered.body,
-			labels: rendered.labels
-		});
+		const issue = await withAssigneeHint(
+			() =>
+				client.createIssue({
+					title: rendered.title,
+					body: rendered.body,
+					labels: rendered.labels,
+					...(assignee && { assignees: [assignee] })
+				}),
+			{ assignee, repo, taskId: step.taskId }
+		);
 		setNumber(step.tag, step.taskId, issue.number);
 		await saveLink(
 			target,
 			issue.number,
 			issue.url,
-			hashIssue(asCreated(rendered))
+			hashIssue(asCreated(rendered)),
+			heldBy(issue, assignee)
 		);
 		counts.created++;
 	}
@@ -167,16 +222,26 @@ export async function executePush(
 		if (!link) continue;
 		const rendered = render(target);
 		const hash = hashIssue(rendered);
-		if (hash === link.bodyHash) continue;
-		await pace();
-		await client.updateIssue(link.issueNumber, {
-			title: rendered.title,
-			body: rendered.body,
-			labels: rendered.labels,
-			state: rendered.state,
-			stateReason: rendered.stateReason
-		});
-		await saveLink(target, link.issueNumber, link.url, hash);
+		const assignee = assigneeOf(target.task);
+		const reassign = assignee !== link.assignee;
+		if (hash === link.bodyHash && !reassign) continue;
+		let base = link.assignee;
+		if (hash !== link.bodyHash) {
+			await pace();
+			await client.updateIssue(link.issueNumber, {
+				title: rendered.title,
+				body: rendered.body,
+				labels: rendered.labels,
+				state: rendered.state,
+				stateReason: rendered.stateReason
+			});
+		}
+		if (reassign) {
+			base = await reassignIssue(link.issueNumber, link.assignee, assignee, {
+				taskId: step.taskId
+			});
+		}
+		await saveLink(target, link.issueNumber, link.url, hash, base);
 		if (step.action === 'update') counts.updated++;
 	}
 
@@ -191,4 +256,48 @@ export async function executePush(
 	}
 
 	return counts;
+}
+
+/**
+ * The base after a write that sent `assignee`: it, if GitHub kept it.
+ * Without push access GitHub drops assignees silently, and a base naming
+ * someone else would have the next push remove them
+ */
+function heldBy(
+	issue: RemoteIssue,
+	assignee: string | undefined
+): string | undefined {
+	return assignee && issue.assignees.includes(assignee) ? assignee : undefined;
+}
+
+/**
+ * Run a GitHub write that sets `assignee`; GitHub refuses (422) a login that
+ * can't be assigned in the repo, so say how to fix that
+ */
+async function withAssigneeHint<T>(
+	write: () => Promise<T>,
+	{
+		assignee,
+		repo,
+		taskId
+	}: { assignee: string | undefined; repo: string; taskId: string }
+): Promise<T> {
+	try {
+		return await write();
+	} catch (error) {
+		if (
+			!assignee ||
+			!(error instanceof Error) ||
+			!/\(422\)/.test(error.message)
+		) {
+			throw error;
+		}
+		throw Object.assign(error, {
+			hint: assigneeHint(assignee, repo, taskId)
+		});
+	}
+}
+
+function assigneeHint(assignee: string, repo: string, taskId: string) {
+	return `Only collaborators on ${repo} can be assigned. Add ${stripTerminalControls(assignee)} as a collaborator, or change it with \`taskgraph update-task ${taskId} --assignee <login>\``;
 }

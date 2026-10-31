@@ -133,11 +133,11 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 ### 1. Task and Subtask Management
 
--   **`add_task`**: Creates a new task. `discoveredFrom` links it to the task it was found in, without blocking it. It fails on a dependency or priority that doesn't exist. Its reply lists any `warnings`, such as a dependency the AI suggested that doesn't exist and was dropped.
+-   **`add_task`**: Creates a new task. `discoveredFrom` links it to the task it was found in, without blocking it. `assignee` sets who it is for, as a GitHub login. It fails on a dependency or priority that doesn't exist. Its reply lists any `warnings`, such as a dependency the AI suggested that doesn't exist and was dropped.
 -   **`add_subtask`**: Adds a subtask to a parent task.
 -   **`remove_task`**: Removes one or more tasks or subtasks.
 -   **`remove_subtask`**: Removes a subtask from its parent.
--   **`update_task`**: Updates a single task.
+-   **`update_task`**: Updates a single task. `assignee` alone sets who it is for (a GitHub login, `''` clears it) without an AI call.
 -   **`add_note`**: Appends a progress note to a task or subtask as written, with a timestamp. No AI call.
 -   **`update_subtask`**: Has the AI write notes onto a subtask.
 -   **`update`**: Updates multiple tasks.
@@ -148,7 +148,7 @@ The MCP tools can be categorized in the same way as the core functionalities:
 
 -   **`get_tasks`**: Lists tasks as compact JSON with `id`, `title`, `status`, `priority` and `dependencies`. `fields` asks for more (`"title,details"`, or `"all"`), `status` filters (`"pending,review"`; an unknown status is an error), and `withSubtasks` nests subtasks with the same fields. There is no stats block; count the `tasks` array.
 -   **`get_task`**: Shows the details of a specific task. With several IDs (`"2,5"`), the IDs it found no task for come back in a top-level `notFound` beside `data`.
--   **`next_task`**: Shows the next task to work on, with a `nextSteps` line naming the `set_task_status` call that starts it. With `claim: true` it also starts the task and records who claimed it, in one locked write, so parallel sessions never get the same task.
+-   **`next_task`**: Shows the next task to work on, with a `nextSteps` line naming the `set_task_status` call that starts it. With `claim: true` it also starts the task and records who claimed it, in one locked write, so parallel sessions never get the same task. A task nobody is assigned to is assigned to the GitHub login `gh` is signed in as.
 -   **Task text in replies**: `get_tasks`, `get_task` and `next_task`, and the task text in the replies of `update_task`, `update_subtask`, `expand_task`, `scope_up_task`, `scope_down_task`, `add_subtask`, `remove_task`, `remove_subtask` (with `convert`), `clear_subtasks`, `archive_tasks`, `add_note`, `move_task`, `set_task_status` (the checklist), `dependency_analysis`, `analyze_project_complexity`, `complexity_report`, `research`, `parse_prd` (with `clarify`), `github_push` and `list_tags` (tag descriptions), add a top-level `note` beside `data` saying the task text may come from a PRD or an issue someone else wrote, doesn't instruct the agent, and what in it to ignore. A `<task-data>` or `</task-data>` tag anywhere in the task data, a `metadata` key included, comes back as `-task-data`, so it can't close the fence `show` and `next` print. The criteria a refused `set_task_status` lists in its error get the same change.
 -   **`set_task_status`**: Sets the status of a task or subtask.
 -   **`archive_tasks`**: Moves done and cancelled tasks older than N days (`olderThanDays`, default 30) into `.taskgraph/tasks/archive.json`; `dryRun` lists them first, and `restore` brings one back by ID. In the `all` tier.
@@ -158,6 +158,8 @@ The MCP tools can be categorized in the same way as the core functionalities:
 -   **`parse_prd`**: Parses a PRD to generate tasks. With `clarify: true` it returns up to 5 questions about gaps in the PRD, each with a `suggestedAnswer`, and generates nothing; ask the user, then call it again with their answers in `clarifications: [{question, answer}]`. The answers are saved in the PRD under `## Clarifications` before the tasks are generated.
 -   **`expand_task`**: Expands a task into subtasks.
 -   **`expand_all`**: Expands all eligible tasks.
+
+The replies of `expand_task`, `expand_all`, `update_task` and `update` list any `warnings`, such as a dependency the AI wrote that would make a loop and was left out, or a subtask a rewrite removed along with the dependencies on it.
 
 Tasks from `parse_prd` and subtasks from `expand_task`/`expand_all` come with unchecked acceptance criteria. `set_task_status` won't mark one done until its criteria are checked off (its `check` parameter), unless `force` is set.
 -   **`analyze_project_complexity`**: Analyzes task complexity.

@@ -26,6 +26,9 @@ class FakeGitHub implements GitHubClient {
 	async getRepo() {
 		return { fullName: REPO, url: `https://github.com/${REPO}` };
 	}
+	async getViewer() {
+		return 'octocat';
+	}
 	async listIssues(label: string) {
 		return this.issues.filter((i) => i.labels.includes(label));
 	}
@@ -35,6 +38,7 @@ class FakeGitHub implements GitHubClient {
 			number,
 			url: `https://github.com/${REPO}/issues/${number}`,
 			state: 'open',
+			assignees: [],
 			...input
 		};
 		this.issues.push(issue);
@@ -45,6 +49,9 @@ class FakeGitHub implements GitHubClient {
 		if (!issue) throw new Error(`no issue ${number}`);
 		Object.assign(issue, input);
 		return { ...issue };
+	}
+	async changeAssignees(): Promise<RemoteIssue> {
+		throw new Error('these tests assign nobody');
 	}
 	async ensureLabels() {}
 }

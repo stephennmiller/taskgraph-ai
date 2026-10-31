@@ -3,6 +3,7 @@
  */
 
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
+import type { ModelChoice } from '../model-bands.js';
 
 /** Starts one Claude Code process; `child_process.spawn` by default */
 type AgentSpawner = (
@@ -22,8 +23,8 @@ export type ParallelTaskState =
 	/** Stopped by an abort before Claude Code finished */
 	| 'stopped';
 
-/** One task in a parallel run */
-export interface ParallelTask {
+/** One task in a parallel run; model and effort are what its complexity picked */
+export interface ParallelTask extends ModelChoice {
 	id: string;
 	title: string;
 	/** `taskgraph/task-<id>` */
@@ -40,6 +41,12 @@ export interface ParallelTask {
 	exitCode?: number | null;
 	/** Why it failed, in plain words */
 	error?: string;
+	/** What Claude Code reported spending, in US dollars (set when it exits) */
+	costUsd?: number;
+	/** Claude Code started but reported no cost: killed, timed out or crashed (set when it exits) */
+	costUnknown?: boolean;
+	/** Agentic turns Claude Code took (set when it exits) */
+	turns?: number;
 	/** Commits on the branch past the starting commit (set at the end) */
 	commits?: number;
 	/** Uncommitted changes left in the worktree (set at the end) */
@@ -72,6 +79,15 @@ export interface ParallelLoopOptions {
 	trusted?: boolean;
 	/** Recorded as the claim owner; the session ID or user name by default */
 	claimant?: string;
+	/** Passed to each task's `claude -p` as `--max-turns` */
+	maxTurns?: number;
+	/**
+	 * The most the whole run may spend, in US dollars: each task's
+	 * `claude -p` gets an equal share as `--max-budget-usd`
+	 */
+	maxBudgetUsd?: number;
+	/** `--model` for every task, in place of the band's model */
+	model?: string;
 	/** Stops the run: children are killed, claims released */
 	signal?: AbortSignal;
 	callbacks?: ParallelLoopCallbacks;
@@ -98,4 +114,8 @@ export interface ParallelLoopResult {
 	skippedIds: string[];
 	/** The run was aborted */
 	aborted: boolean;
+	/** Sum of the tasks' costUsd, when any reported one */
+	totalCostUsd?: number;
+	/** A task's cost is unknown and not in totalCostUsd, so the run spent at least that */
+	costPartial?: boolean;
 }

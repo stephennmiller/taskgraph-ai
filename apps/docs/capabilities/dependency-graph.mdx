@@ -38,7 +38,7 @@ On a top-level task there is no sibling to name: a number or a plain string is a
 A subtask is part of its parent, so the analysis links them both ways:
 
 - **A subtask waits on what its parent waits on.** If task 3 depends on task 2, subtask 3.1 can't start before task 2 is done either, even though 3.1 lists nothing. `why`, `next`, the critical path, bottleneck counts and loop checks all follow this. A parent's dependency on one of its own subtasks is not passed down.
-- **A parent isn't finished until its subtasks are.** The critical path orders a parent after its open subtasks, so a chain can run `1 → 3.1 → 3.2 → 3 → 5`. A subtask that lists its own parent keeps that dependency, and the parent is then not ordered after it. Loop checks follow this too: if task 4 depends on task 3, subtask 3.1 can't depend on task 4, because 3 can't finish before 3.1. `validate-dependencies`, `why` and the `cycles` of `dependency_analysis` report such a loop, `add-dependency`, `add-subtask` and `move` refuse to make one, and `expand` and `update-task` drop an AI subtask dependency that would.
+- **A parent isn't finished until its subtasks are.** The critical path orders a parent after its open subtasks, so a chain can run `1 → 3.1 → 3.2 → 3 → 5`. A subtask that lists its own parent keeps that dependency, and the parent is then not ordered after it. Loop checks follow this too: if task 4 depends on task 3, subtask 3.1 can't depend on task 4, because 3 can't finish before 3.1. `validate-dependencies`, `why` and the `cycles` of `dependency_analysis` report such a loop, `add-dependency`, `add-subtask` and `move` refuse to make one, and `expand`, `update-task` and `update` drop an AI dependency that would.
 
 `fix-dependencies` only breaks loops made of dependencies written on subtasks. A loop through a parent (task 2 needs 4, and 4 needs 2.1) is reported for you to break with `remove-dependency`.
 
@@ -50,7 +50,7 @@ taskgraph graph --id=3           # one task and the tasks drawn under it
 taskgraph graph --format json    # machine-readable
 ```
 
-Each task is drawn once, under the dependency it waits on longest. Its other dependencies follow the title (`needs 4`). The task `next` would pick is marked `← next`; when `next` picks a subtask, its parent is marked `← next: 3.2`. Tasks in a dependency loop and dependency IDs that match no task are called out. The tree, and the `why` output below, sit between `<task-data>` and `</task-data>` lines, as `show` and `next` print task text, so an agent can tell the titles from the instructions around them (see [JSON output](/capabilities/json-output#plain-lines-from-list-in-a-pipe)); the samples here leave those lines out.
+Each task is drawn once, under the dependency it waits on longest. Its other dependencies follow the title (`needs 4`). The task `next` would pick is marked `← next`; when `next` picks a subtask, its parent is marked `← next: 3.2`. Tasks in a dependency loop and dependency IDs that match no task are called out. Piped, the tree and the `why` output below sit between `<task-data>` and `</task-data>` lines, as `show` and `next` print task text, so an agent can tell titles from instructions (see [JSON output](/capabilities/json-output#plain-lines-from-list-in-a-pipe)); the samples here leave those lines out.
 
 ```
 ○ 1  Set up the database · wave 1 · blocks 3 ◆  ← next

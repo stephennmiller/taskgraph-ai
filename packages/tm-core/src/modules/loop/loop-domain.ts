@@ -20,7 +20,8 @@ import {
 	defaultIterations,
 	isTaskPreset
 } from './loop-task.js';
-import { isLoopTrusted, trustLoop } from './loop-trust.js';
+import { isLoopTrusted, keepLoopTrust, trustLoop } from './loop-trust.js';
+import { type LoopBand, resolveLoopBands } from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
@@ -29,6 +30,7 @@ import type {
 	ParallelLoopResult
 } from './parallel/types.js';
 import { LoopService } from './services/loop.service.js';
+import { resolveResumeLimit } from './session-resume.js';
 import { taskStatuses } from './task-progress.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 
@@ -123,7 +125,10 @@ export class LoopDomain {
 			taskStatuses: tasks
 				? async (tag) => taskStatuses((await tasks.list({ tag })).tasks)
 				: undefined,
-			headCommit: () => getHeadCommit(this.projectRoot)
+			headCommit: () => getHeadCommit(this.projectRoot),
+			taskComplexity: tasks
+				? async (id, tag) => (await tasks.get(id, tag)).task?.complexity
+				: undefined
 		});
 		return this.loopService.run(fullConfig);
 	}
@@ -173,9 +178,18 @@ export class LoopDomain {
 		if (!this.tasks) {
 			throw new Error('loop --parallel needs the tasks domain');
 		}
-		return new ParallelLoopRunner(this.projectRoot, this.tasks, () =>
-			this.configManager.getActiveTag()
-		).run(options);
+		const approved = isLoopTrusted(this.projectRoot);
+		try {
+			return await new ParallelLoopRunner(
+				this.projectRoot,
+				this.tasks,
+				() => this.configManager.getActiveTag(),
+				this.loopBands()
+			).run(options);
+		} finally {
+			// The tasks' own changes (notes, new subtasks) stay approved for the next run
+			if (approved) keepLoopTrust(this.projectRoot);
+		}
 	}
 
 	/**
@@ -306,7 +320,25 @@ export class LoopDomain {
 			taskId: partial.taskId,
 			sandbox: partial.sandbox ?? false,
 			verbose: partial.verbose ?? false,
+			maxTurns: partial.maxTurns,
+			maxBudgetUsd: partial.maxBudgetUsd,
+			model: partial.model,
+			bands: partial.bands ?? this.loopBands(),
+			reuseSession: partial.reuseSession,
+			resumeMaxContextTokens:
+				partial.resumeMaxContextTokens ??
+				resolveResumeLimit(this.loopSettings()),
 			callbacks: partial.callbacks
 		};
+	}
+
+	/** The project's `loop.bands`, or the defaults; throws LoopError for a bad one */
+	private loopBands(): LoopBand[] {
+		return resolveLoopBands(this.loopSettings());
+	}
+
+	/** The project config's `loop` key */
+	private loopSettings(): unknown {
+		return (this.configManager.getConfig() as { loop?: unknown }).loop;
 	}
 }

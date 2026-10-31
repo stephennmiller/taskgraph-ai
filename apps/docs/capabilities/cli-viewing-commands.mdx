@@ -32,6 +32,9 @@ taskgraph list -w -c
 
 # Hide the header
 taskgraph list --no-header
+
+# Only the tasks assigned to you (your GitHub login, from gh)
+taskgraph list --mine
 ```
 
 ## Show Next Task
@@ -44,7 +47,8 @@ taskgraph next
 # Take the next task nobody has started: set it in-progress and record
 # who claimed it (session ID, else your user name) in one locked write,
 # so two sessions never get the same task. Setting it back to pending
-# releases it.
+# releases it. A task nobody is assigned to is assigned to your GitHub
+# login when gh is signed in.
 taskgraph next --claim
 ```
 
@@ -135,6 +139,16 @@ taskgraph prime --json
 # Only the in-progress tasks with no note since a time (ISO); prints
 # nothing when every one has a note. The plugin's Stop hook uses it.
 taskgraph prime --unnoted-since=2026-10-23T09:00:00Z
+
+# Only the task in progress and its unchecked acceptance criteria, in at
+# most 13 lines; prints nothing when no task is in progress. The plugin's
+# UserPromptSubmit hook adds it to each prompt.
+taskgraph prime --current
+
+# Only the in-progress tasks with unchecked acceptance criteria, and how
+# to check them off; prints nothing when there are none. The plugin's Stop
+# hook uses it.
+taskgraph prime --unmet-criteria
 ```
 
 `prime` is for agents, so `taskgraph --help` mentions it under its groups
@@ -144,10 +158,12 @@ doesn't start cold. The hook prints nothing in a folder without
 `.taskgraph/`.
 
 The JSON has `tag`, `counts` (`total`, `done`), `inProgress` (each with
-`id`, `title`, `status`, `priority`, `doneWhen`, and `parentTitle` for a
-subtask), `ready` (the same fields without `doneWhen`) and `rules`
+`id`, `title`, `status`, `priority`, `doneWhen`, `criteria` (each with
+`text` and `checked`), and `parentTitle` for a subtask), `ready` (the same
+fields without `doneWhen` and `criteria`) and `rules`
 (`text` and `command`). With `--unnoted-since`, the JSON is
-`{ "unnoted": [...] }` with the `ready` fields for each task.
+`{ "unnoted": [...] }` with the `ready` fields for each task. `--current`
+and `--unmet-criteria` print text only.
 
 A note counts if a `taskgraph note`, `update-subtask` or `research --save`
 block was added to the task (or its parent or subtask) at or after that

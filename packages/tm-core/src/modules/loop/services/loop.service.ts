@@ -2,29 +2,54 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
-import { readFile } from 'node:fs/promises';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
-import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
-import { isLoopTrusted } from '../loop-trust.js';
-import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import { TRUST_LOST, isLoopTrusted, keepLoopTrust } from '../loop-trust.js';
+import {
+	type ModelChoice,
+	modelArgs,
+	pickModelEffort
+} from '../model-bands.js';
+import {
+	DEFAULT_RESUME_MAX_CONTEXT_TOKENS,
+	resumableSession
+} from '../session-resume.js';
 import { statusProgress } from '../task-progress.js';
 import {
 	checkSandboxAuth,
 	runInteractiveAuth,
-	sandboxRunArgs,
 	stopSandbox
 } from './docker-sandbox.js';
-import { spawnIteration } from './iteration-process.js';
-import { appendFinalSummary, initProgressFile } from './progress-file.js';
+import { buildCommandArgs, spawnIteration } from './iteration-process.js';
+import { buildPrompt } from './loop-prompt.js';
 import {
+	completeIteration,
+	createErrorIteration,
+	formatCommandError,
+	loopResult,
+	type RunSpend,
+	runSpend
+} from './iteration-result.js';
+import {
+	appendFinalSummary,
+	appendIterationLine,
+	initProgressFile
+} from './progress-file.js';
+import {
+	type ClaudeRunResult,
+	contextTokens,
+	findResultEvent,
 	handleStreamEvent,
+	hasStreamEvent,
 	isValidStreamEvent,
-	processBufferedLines
+	processBufferedLines,
+	readResultEvent,
+	withoutEvents
 } from './stream-events.js';
 import {
 	CLAUDE_MISSING,
+	capArgs,
 	DOCKER_MISSING,
 	MAX_CONSECUTIVE_ERRORS,
 	MAX_STALLED_ITERATIONS,
@@ -35,7 +60,6 @@ import type {
 	LoopConfig,
 	LoopIteration,
 	LoopOutputCallbacks,
-	LoopPreset,
 	LoopResult
 } from '../types.js';
 
@@ -47,14 +71,9 @@ export interface LoopServiceOptions {
 	taskStatuses?: (tag?: string) => Promise<Map<string, TaskStatus>>;
 	/** The commit HEAD points at (null if none), so a commit counts as progress on a task that takes several iterations */
 	headCommit?: () => Promise<string | null>;
+	/** A task's complexity score, which picks the iteration's model and effort */
+	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
 }
-
-/** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
-const SIGNAL_LINE = /^<loop-(complete|blocked)>([^<]*)<\/loop-\1>$/i;
-
-/** Appended to every prompt, presets and custom files alike */
-const SIGNAL_RULE =
-	'To stop the loop, end your reply with the <loop-complete> or <loop-blocked> marker alone on the last line. A marker anywhere else is ignored.';
 
 export class LoopService {
 	private readonly projectRoot: string;
@@ -63,14 +82,18 @@ export class LoopService {
 	) => Promise<string | undefined>;
 	private readonly taskStatuses?: LoopServiceOptions['taskStatuses'];
 	private readonly headCommit?: LoopServiceOptions['headCommit'];
+	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
+	/** Approved via the trust file; re-stamped each iteration */
+	private approved = false;
 
 	constructor(options: LoopServiceOptions) {
 		this.projectRoot = options.projectRoot;
 		this.findReadyTask = options.findReadyTask;
 		this.taskStatuses = options.taskStatuses;
 		this.headCommit = options.headCommit;
+		this.taskComplexity = options.taskComplexity;
 	}
 
 	getProjectRoot(): string {
@@ -112,34 +135,73 @@ export class LoopService {
 		let tasksCompleted = 0;
 		let consecutiveErrors = 0;
 		let stalled = 0;
+		let spent = 0;
+		// The iteration whose session the next one may resume
+		let resumeFrom: LoopIteration | undefined;
 		// Only a run that works on tasks can be stuck on one
 		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
 		await initProgressFile(config);
 		let statuses = await this.readStatuses(config);
 		let head = await this.readHead();
-		// Approved through the trust file: parse-prd or github import can withdraw it mid-run
-		const approved = !config.sandbox && isLoopTrusted(this.projectRoot);
+		this.approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
 		for (let i = 1; i <= config.iterations && this._isRunning; i++) {
-			if (approved && !isLoopTrusted(this.projectRoot)) {
-				const msg =
-					'Tasks were added since loop was approved. Run loop again to approve them.';
+			if (this.approved && !keepLoopTrust(this.projectRoot)) {
+				const msg = TRUST_LOST;
 				this.reportError(config.callbacks, msg);
 				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}
-			// Notify presentation layer of iteration start
+			// The run's budget: each iteration gets what's left
+			const left =
+				config.maxBudgetUsd === undefined
+					? undefined
+					: config.maxBudgetUsd - spent;
+			if (left !== undefined && left < 0.0001) {
+				return this.finalize(
+					config,
+					iterations,
+					tasksCompleted,
+					'budget_reached'
+				);
+			}
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
-			const prompt = await this.buildPrompt(config, i);
-			const iteration = await this.executeIteration(
-				prompt,
-				i,
-				config.sandbox ?? false,
-				config.verbose ?? false,
-				config.callbacks
-			);
+			const choice = await this.chooseModel(config);
+			// Opt-in (#841); a sandbox keeps its sessions in the container, not here
+			let resume =
+				config.reuseSession && !config.sandbox
+					? resumableSession(
+							resumeFrom,
+							choice,
+							config.resumeMaxContextTokens ?? DEFAULT_RESUME_MAX_CONTEXT_TOKENS
+						)
+					: undefined;
+			const run = async () =>
+				this.executeIteration(
+					await buildPrompt(config, i, !!resume),
+					i,
+					config.sandbox ?? false,
+					config.verbose ?? false,
+					[
+						...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
+						...modelArgs(choice),
+						...(resume ? ['--resume', resume] : [])
+					],
+					config.callbacks
+				);
+			let iteration = await run();
+			// The session couldn't be resumed (gone, or never written): don't spend an iteration on it
+			if (resume && iteration.status === 'error' && iteration.turns === 0) {
+				resume = undefined;
+				iteration = await run();
+			}
+			Object.assign(iteration, choice);
+			if (config.reuseSession) iteration.session = resume ? 'resumed' : 'fresh';
+			// Reported no cost: count all it was given (#855)
+			if (iteration.costUnknown && left !== undefined) iteration.costUsd = left;
 			iterations.push(iteration);
+			spent += iteration.costUsd ?? 0;
 
 			// Completed means its status moved to done or review, not that Claude exited 0
 			const after = await this.readStatuses(config);
@@ -153,6 +215,8 @@ export class LoopService {
 			const headAfter = await this.readHead();
 			const committed = !!headAfter && headAfter !== head;
 			head = headAfter;
+			// Resume only a session that got somewhere
+			resumeFrom = progress.changed || committed ? iteration : undefined;
 
 			// Claude can say all tasks are done while one is still ready; keep going then
 			if (iteration.status === 'complete') {
@@ -160,6 +224,8 @@ export class LoopService {
 				if (ready) {
 					iteration.status = 'success';
 					iteration.message = `Claude said all tasks are done, but task ${ready} is ready`;
+					// That session believes the work is done
+					resumeFrom = undefined;
 					this.reportError(
 						config.callbacks,
 						`${iteration.message}. Continuing.`,
@@ -168,8 +234,8 @@ export class LoopService {
 				}
 			}
 
-			// Notify presentation layer of iteration completion
 			config.callbacks?.onIterationEnd?.(iteration);
+			await appendIterationLine(config.progressFile, iteration);
 
 			// Check for early exit conditions
 			if (iteration.status === 'complete') {
@@ -244,6 +310,24 @@ export class LoopService {
 		}
 	}
 
+	/** The model and effort for the task this iteration starts on, from its complexity score */
+	private async chooseModel(
+		config: LoopConfig
+	): Promise<ModelChoice & { complexity?: number }> {
+		// No lookup or no bands: skip the extra `taskgraph next`
+		if (!this.taskComplexity || !config.bands?.length) {
+			return pickModelEffort(undefined, [], config.model);
+		}
+		const id = config.taskId ?? (await this.readyTask(config));
+		const score = id
+			? await this.taskComplexity(id, config.tag).catch(() => undefined)
+			: undefined;
+		const choice = pickModelEffort(score, config.bands, config.model);
+		return typeof score === 'number'
+			? { ...choice, complexity: score }
+			: choice;
+	}
+
 	/** HEAD's commit, or null when there's no lookup or it fails */
 	private readHead(): Promise<string | null> {
 		return this.headCommit?.().catch(() => null) ?? Promise.resolve(null);
@@ -273,13 +357,13 @@ export class LoopService {
 		errorMessage?: string
 	): Promise<LoopResult> {
 		this._isRunning = false;
-		const result: LoopResult = {
+		if (this.approved) keepLoopTrust(this.projectRoot);
+		const result = loopResult(
 			iterations,
-			totalIterations: iterations.length,
 			tasksCompleted,
 			finalStatus,
-			...(errorMessage ? { errorMessage } : {})
-		};
+			errorMessage
+		);
 		await appendFinalSummary(config.progressFile, result);
 		return result;
 	}
@@ -302,70 +386,21 @@ export class LoopService {
 		}
 	}
 
-	private isPreset(name: string): name is LoopPreset {
-		return checkIsPreset(name);
-	}
-
-	private async resolvePrompt(prompt: string): Promise<string> {
-		if (this.isPreset(prompt)) {
-			return PRESETS[prompt];
-		}
-		const content = await readFile(prompt, 'utf-8');
-		if (!content.trim()) {
-			throw new Error(`Custom prompt file '${prompt}' is empty`);
-		}
-		return content;
-	}
-
-	private buildContextHeader(config: LoopConfig, iteration: number): string {
-		const tagInfo = config.tag ? ` (tag: ${config.tag})` : '';
-		// The pinned task replaces the preset's `taskgraph next` step
-		const taskInfo = config.taskId
-			? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}.`
-			: '';
-		return `@${config.progressFile} @CLAUDE.md
-
-Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
-	}
-
-	private async buildPrompt(
-		config: LoopConfig,
-		iteration: number
-	): Promise<string> {
-		const basePrompt = await this.resolvePrompt(config.prompt);
-		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
-	}
-
-	private parseCompletion(
-		output: string,
-		exitCode: number
-	): { status: LoopIteration['status']; message?: string } {
-		const lastLine = output.trimEnd().split('\n').pop()?.trim() ?? '';
-		const signal = lastLine.match(SIGNAL_LINE);
-		if (signal) {
-			const status =
-				signal[1].toLowerCase() === 'complete' ? 'complete' : 'blocked';
-			return { status, message: signal[2].trim() };
-		}
-
-		if (exitCode !== 0)
-			return { status: 'error', message: `Exit code ${exitCode}` };
-		return { status: 'success' };
-	}
-
 	private async executeIteration(
 		prompt: string,
 		iterationNum: number,
 		sandbox: boolean,
-		verbose = false,
+		verbose: boolean,
+		extra: string[],
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
 		const startTime = Date.now();
 		const command = sandbox ? 'docker' : 'claude';
+		const args = buildCommandArgs(this.projectRoot, prompt, sandbox, extra);
 
 		if (verbose) {
 			return this.executeVerboseIteration(
-				prompt,
+				args,
 				iterationNum,
 				command,
 				sandbox,
@@ -374,17 +409,16 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			);
 		}
 
-		const args = this.buildCommandArgs(prompt, sandbox, false);
 		const timeout = loopIterationTimeoutMs();
 		return new Promise((resolve) => {
 			let settled = false;
 			let timedOut = false;
 			let stdout = '';
 			let stderr = '';
-			const fail = (errorMessage: string): void => {
+			const fail = (errorMessage: string, spent?: RunSpend): void => {
 				this.reportError(callbacks, errorMessage);
 				resolve(
-					this.createErrorIteration(iterationNum, startTime, errorMessage)
+					createErrorIteration(iterationNum, startTime, errorMessage, spent)
 				);
 			};
 			const child = spawnIteration(
@@ -407,56 +441,58 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			child.once('error', (error: NodeJS.ErrnoException) => {
 				if (settled) return;
 				settled = true;
-				fail(this.formatCommandError(error, command, sandbox));
+				fail(formatCommandError(error, command, sandbox));
 			});
 
 			child.once('close', (exitCode: number | null) => {
 				if (settled) return;
 				settled = true;
-				if (timedOut) return fail(timeoutMessage(timeout));
+				// No result event (an older Claude Code, or one that died): what
+				// isn't an event is the reply
+				const run = findResultEvent(stdout);
+				if (timedOut) return fail(timeoutMessage(timeout), runSpend(run));
 
-				const output = stdout + stderr;
+				const reply = run ? run.text : withoutEvents(stdout);
+				const output = reply + stderr;
 				if (output) {
 					callbacks?.onOutput?.(output);
 				}
 
 				if (exitCode === null) {
-					return fail('Command terminated abnormally (no exit code)');
+					return fail(
+						'Command terminated abnormally (no exit code)',
+						runSpend(run)
+					);
 				}
 
 				// Markers come from Claude's reply on stdout; stderr would hide the last line
-				const { status, message } = this.parseCompletion(stdout, exitCode);
-				resolve({
-					iteration: iterationNum,
-					status,
-					duration: Date.now() - startTime,
-					message
-				});
+				resolve(
+					completeIteration(
+						iterationNum,
+						startTime,
+						reply,
+						exitCode,
+						run,
+						hasStreamEvent(stdout)
+					)
+				);
 			});
 		});
 	}
 
 	/**
 	 * Execute an iteration with verbose output (shows Claude's work in real-time).
-	 * Uses Claude's stream-json format to display assistant messages as they arrive.
-	 * @param prompt - The prompt to send to Claude
-	 * @param iterationNum - Current iteration number (1-indexed)
-	 * @param command - The command to execute ('claude' or 'docker')
-	 * @param sandbox - Whether running in Docker sandbox mode
-	 * @param startTime - Timestamp when iteration started (for duration calculation)
-	 * @param callbacks - Optional callbacks for presentation layer output
-	 * @returns Promise resolving to the iteration result
+	 * Uses Claude's stream-json format to display assistant messages as they
+	 * arrive. `args` come from buildCommandArgs; `startTime` times the iteration.
 	 */
 	private executeVerboseIteration(
-		prompt: string,
+		args: string[],
 		iterationNum: number,
 		command: string,
 		sandbox: boolean,
 		startTime: number,
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
-		const args = this.buildCommandArgs(prompt, sandbox, true);
-
 		return new Promise((resolve) => {
 			// Prevent multiple resolutions from race conditions between error/close events
 			let isResolved = false;
@@ -482,7 +518,9 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
-			let finalResult = '';
+			let started = false;
+			let run: ClaudeRunResult | undefined;
+			let context: number | undefined;
 			let buffer = '';
 
 			const processLine = (line: string): void => {
@@ -491,16 +529,19 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				try {
 					const event = JSON.parse(line);
 
-					// Validate event structure before accessing properties
 					if (!isValidStreamEvent(event)) {
 						return;
 					}
+					started = true;
 
 					handleStreamEvent(event, callbacks);
 
-					// Final result text, checked for completion markers
+					const tokens = contextTokens(event as Record<string, unknown>);
+					if (tokens !== undefined) context = tokens;
+					// Final result: its text is checked for completion markers
 					if (event.type === 'result') {
-						finalResult = typeof event.result === 'string' ? event.result : '';
+						run = readResultEvent(event as Record<string, unknown>);
+						if (context !== undefined) run.contextTokens = context;
 					}
 				} catch (error) {
 					// Log malformed JSON for debugging (non-JSON lines like system output are expected)
@@ -514,7 +555,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			// Handle null stdout (shouldn't happen with pipe, but be defensive)
 			if (!child.stdout) {
 				resolveOnce(
-					this.createErrorIteration(
+					createErrorIteration(
 						iterationNum,
 						startTime,
 						'Failed to capture stdout from child process'
@@ -542,7 +583,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			child.stdout.on('end', () => {
 				stdoutEnded = true;
-				// Process any remaining buffer when stdout ends
 				if (buffer) {
 					processLine(buffer);
 					buffer = '';
@@ -554,7 +594,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			});
 
 			child.on('error', (error: NodeJS.ErrnoException) => {
-				const errorMessage = this.formatCommandError(error, command, sandbox);
+				const errorMessage = formatCommandError(error, command, sandbox);
 				this.reportError(callbacks, errorMessage);
 
 				// Cleanup: remove listeners and kill process if still running
@@ -569,7 +609,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				}
 
 				resolveOnce(
-					this.createErrorIteration(iterationNum, startTime, errorMessage)
+					createErrorIteration(iterationNum, startTime, errorMessage)
 				);
 			});
 
@@ -585,65 +625,27 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 						: 'Command terminated abnormally (no exit code)';
 					this.reportError(callbacks, errorMsg);
 					resolveOnce(
-						this.createErrorIteration(iterationNum, startTime, errorMsg)
+						createErrorIteration(
+							iterationNum,
+							startTime,
+							errorMsg,
+							runSpend(run)
+						)
 					);
 					return;
 				}
 
-				const { status, message } = this.parseCompletion(finalResult, exitCode);
-				resolveOnce({
-					iteration: iterationNum,
-					status,
-					duration: Date.now() - startTime,
-					message
-				});
+				resolveOnce(
+					completeIteration(
+						iterationNum,
+						startTime,
+						run?.text ?? '',
+						exitCode,
+						run,
+						started
+					)
+				);
 			});
 		});
-	}
-
-	private buildCommandArgs(
-		prompt: string,
-		sandbox: boolean,
-		verbose: boolean
-	): string[] {
-		if (sandbox) {
-			return sandboxRunArgs(this.projectRoot, '-p', prompt);
-		}
-
-		const args = ['-p', prompt, '--dangerously-skip-permissions'];
-		if (verbose) {
-			// Use stream-json format to show Claude's work in real-time
-			args.push('--output-format', 'stream-json', '--verbose');
-		}
-		return args;
-	}
-
-	private formatCommandError(
-		error: NodeJS.ErrnoException,
-		command: string,
-		sandbox: boolean
-	): string {
-		if (error.code === 'ENOENT') {
-			return sandbox ? DOCKER_MISSING : CLAUDE_MISSING;
-		}
-
-		if (error.code === 'EACCES') {
-			return `Permission denied executing '${command}'`;
-		}
-
-		return `Failed to execute '${command}': ${error.message}`;
-	}
-
-	private createErrorIteration(
-		iterationNum: number,
-		startTime: number,
-		message: string
-	): LoopIteration {
-		return {
-			iteration: iterationNum,
-			status: 'error',
-			duration: Date.now() - startTime,
-			message
-		};
 	}
 }

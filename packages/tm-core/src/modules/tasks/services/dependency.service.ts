@@ -93,7 +93,8 @@ export class DependencyService {
 	}
 
 	/**
-	 * Remove dependencies on missing tasks, self-dependencies and duplicates,
+	 * Rewrite dependencies stored as typed ("1.01" as "1.1"), remove
+	 * dependencies on missing tasks, self-dependencies and duplicates,
 	 * break loops between subtasks and drop links to missing tasks. Loops
 	 * through a task are left in `remaining` for the user to break.
 	 */

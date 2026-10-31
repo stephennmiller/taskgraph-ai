@@ -89,6 +89,7 @@ export { writeAtomically } from './write-atomically.js';
 // Keep text placed inside a prompt's <tag> from opening or closing it
 export {
 	fenceAsData,
+	formatTaskData,
 	neutralizeTag,
 	neutralizeTaskData,
 	TASK_DATA_NOTE,

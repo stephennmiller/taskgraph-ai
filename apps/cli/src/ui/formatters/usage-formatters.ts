@@ -7,7 +7,13 @@
  * here, so a cost line would always read "$0.000000". The cached share is
  * added when it's at least 1%: Claude Code sends a large, mostly cached
  * context with every call, which otherwise makes small commands look huge.
+ *
+ * `loop` adds what each iteration or task ran on and spent:
+ * ` · sonnet, low effort · $0.42 · 12 turns · 3m 10s`.
  */
+
+import { formatDuration } from '../components/parse-prd-progress.component.js';
+import { theme } from '../theme.js';
 
 /** The telemetry fields this line uses */
 export interface UsageTelemetry {
@@ -76,4 +82,41 @@ export function formatUsageLine(
 		);
 	}
 	return parts.join(' · ');
+}
+
+/**
+ * ` · resumed · sonnet, low effort · $0.42 · 12 turns · 3m 10s`, muted, for
+ * the end of a `loop` line; leaves out what wasn't picked or reported, and is
+ * empty when there's nothing
+ */
+export function formatLoopSpend(spend: {
+	/** `resumed` or `fresh`: whether the iteration reused the last Claude Code session */
+	session?: string;
+	model?: string;
+	effort?: string;
+	costUsd?: number;
+	/** costUsd is what loop counted, not what Claude Code reported */
+	costUnknown?: boolean;
+	/** A total that leaves out a cost nobody knows: shown as `at least` */
+	costPartial?: boolean;
+	turns?: number;
+	durationMs?: number;
+}): string {
+	const setting = [spend.model, spend.effort && `${spend.effort} effort`]
+		.filter(Boolean)
+		.join(', ');
+	const facts = [
+		spend.session ?? null,
+		setting || null,
+		spend.costUsd !== undefined
+			? `${spend.costUnknown ? 'cost unknown, counted as ' : spend.costPartial ? 'at least ' : ''}${formatCost(spend.costUsd)}`
+			: spend.costUnknown || spend.costPartial
+				? 'cost unknown'
+				: null,
+		spend.turns !== undefined
+			? `${spend.turns} ${spend.turns === 1 ? 'turn' : 'turns'}`
+			: null,
+		spend.durationMs !== undefined ? formatDuration(spend.durationMs) : null
+	].filter(Boolean);
+	return facts.length ? theme.muted(` · ${facts.join(' · ')}`) : '';
 }

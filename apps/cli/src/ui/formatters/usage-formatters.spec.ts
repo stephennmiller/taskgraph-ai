@@ -1,5 +1,10 @@
+import { stripVTControlCharacters } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { formatCost, formatUsageLine } from './usage-formatters.js';
+import {
+	formatCost,
+	formatLoopSpend,
+	formatUsageLine
+} from './usage-formatters.js';
 
 describe('formatUsageLine', () => {
 	it('shows the model and token counts with thousands separators', () => {
@@ -99,5 +104,62 @@ describe('formatCost', () => {
 			)
 		).toBe('sonnet · 121.129 tokens (121.000 in, 129 out)');
 		expect(formatCost(1.5, 'EUR', 'de-DE')).toBe('1,50\u00a0€');
+	});
+});
+
+describe('formatLoopSpend', () => {
+	it('lists cost, turns and time after a separator', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ costUsd: 1.5, turns: 1, durationMs: 190_000 })
+			)
+		).toBe(' · $1.50 · 1 turn · 3m 10s');
+	});
+
+	it("leaves out what Claude Code didn't report, and is empty for nothing", () => {
+		expect(stripVTControlCharacters(formatLoopSpend({ turns: 4 }))).toBe(
+			' · 4 turns'
+		);
+		expect(formatLoopSpend({})).toBe('');
+	});
+
+	it('says when the cost is what loop counted, not what Claude Code reported', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ costUsd: 0.75, costUnknown: true })
+			)
+		).toBe(' · cost unknown, counted as $0.75');
+	});
+
+	it('says when a cost is unknown, and a total that leaves one out is a floor (#861)', () => {
+		const shown = (spend: Parameters<typeof formatLoopSpend>[0]) =>
+			stripVTControlCharacters(formatLoopSpend(spend));
+
+		expect(shown({ costUnknown: true, turns: 2 })).toBe(
+			' · cost unknown · 2 turns'
+		);
+		expect(shown({ costUsd: 0.25, costPartial: true })).toBe(
+			' · at least $0.25'
+		);
+		expect(shown({ costPartial: true })).toBe(' · cost unknown');
+	});
+
+	it('leads with the model and effort the iteration ran at', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ model: 'sonnet', effort: 'low', turns: 3 })
+			)
+		).toBe(' · sonnet, low effort · 3 turns');
+		expect(stripVTControlCharacters(formatLoopSpend({ effort: 'high' }))).toBe(
+			' · high effort'
+		);
+	});
+
+	it('says first whether the iteration resumed the last session', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ session: 'resumed', model: 'sonnet', turns: 3 })
+			)
+		).toBe(' · resumed · sonnet · 3 turns');
 	});
 });

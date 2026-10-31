@@ -41,7 +41,7 @@ export function getSuggestedActions(
 			return [
 				logProgress,
 				{
-					command: `taskgraph set-status --id=${id} --status=done`,
+					command: `taskgraph set-status ${id} done`,
 					description: 'when it is finished'
 				},
 				...expand
@@ -49,11 +49,11 @@ export function getSuggestedActions(
 		case 'review':
 			return [
 				{
-					command: `taskgraph set-status --id=${id} --status=done`,
+					command: `taskgraph set-status ${id} done`,
 					description: 'once the review passes'
 				},
 				{
-					command: `taskgraph set-status --id=${id} --status=in-progress`,
+					command: `taskgraph set-status ${id} in-progress`,
 					description: 'if it needs more work'
 				}
 			];
@@ -69,7 +69,7 @@ export function getSuggestedActions(
 		case 'deferred':
 			return [
 				{
-					command: `taskgraph set-status --id=${id} --status=pending`,
+					command: `taskgraph set-status ${id} pending`,
 					description: 'when it is ready to pick up again'
 				},
 				logProgress
@@ -82,7 +82,7 @@ export function getSuggestedActions(
 							description: 'to see what it waits on'
 						}
 					: {
-							command: `taskgraph set-status --id=${id} --status=in-progress`,
+							command: `taskgraph set-status ${id} in-progress`,
 							description: 'to start working'
 						},
 				...expand,

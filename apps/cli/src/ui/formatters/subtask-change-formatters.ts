@@ -3,7 +3,7 @@
  *
  *   ✓ Added subtask 1.3  Write the migration
  *     depends on 1.1
- *   Next: taskgraph set-status --id=1.3 --status=in-progress
+ *   Next: taskgraph set-status 1.3 in-progress
  *
  *   ✓ Task 3 is now subtask 1.3  Write docs
  *   ✓ Removed subtask 1.1
@@ -14,6 +14,7 @@
  * "Next Steps" list.
  */
 
+import { normalizeTaskId } from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -44,10 +45,11 @@ export function formatSubtaskAdded(
 	fromTaskId?: number | string,
 	width = terminalWidth()
 ): string {
-	const id = `${parentId}.${subtask.id}`;
+	// "01" as typed is task 1, which tm-core found
+	const id = `${normalizeTaskId(parentId)}.${subtask.id}`;
 	if (fromTaskId !== undefined) {
 		return resultLine(
-			`Task ${fromTaskId} is now subtask ${id}`,
+			`Task ${normalizeTaskId(fromTaskId)} is now subtask ${id}`,
 			subtask.title,
 			width
 		);
@@ -64,7 +66,7 @@ export function formatSubtaskAdded(
 	if (!subtask.status || subtask.status === 'pending') {
 		lines.push(
 			theme.muted('Next: ') +
-				theme.brand(`taskgraph set-status --id=${id} --status=in-progress`)
+				theme.brand(`taskgraph set-status ${id} in-progress`)
 		);
 	}
 	return lines.join('\n');
@@ -80,8 +82,8 @@ export function formatSubtaskRemoved(
 	convertedTo?: SubtaskRef | null,
 	width = terminalWidth()
 ): string {
-	// The ID is what the user typed, which parseInt read leniently
-	const id = terminalSafe(subtaskId);
+	// The ID as typed: "01.02" is subtask 1.2
+	const id = terminalSafe(normalizeTaskId(subtaskId));
 	if (!convertedTo) return `${chalk.green('✓')} Removed subtask ${id}`;
 	return resultLine(
 		`Subtask ${id} is now task ${convertedTo.id}`,

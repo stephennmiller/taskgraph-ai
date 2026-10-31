@@ -107,14 +107,26 @@ describe('LoopService limits', () => {
 	});
 
 	it('keeps going when a success breaks the run of errors', async () => {
-		for (const status of [1, 1, 0, 1, 1]) {
+		for (const status of [1, 1, 0, 1, 1, 0]) {
 			spawn.mockImplementationOnce(exit(status));
 		}
 
-		const result = await service.run(config({ iterations: 5 }));
+		const result = await service.run(config({ iterations: 6 }));
 
-		expect(result.totalIterations).toBe(5);
+		expect(result.totalIterations).toBe(6);
 		expect(result.finalStatus).toBe('max_iterations');
+	});
+
+	it('ends as an error when the last iteration failed (#861)', async () => {
+		spawn.mockImplementationOnce(exit(0)).mockImplementationOnce(exit(1));
+
+		const result = await service.run(config({ iterations: 2 }));
+
+		expect(result.totalIterations).toBe(2);
+		expect(result).toMatchObject({
+			finalStatus: 'error',
+			errorMessage: 'Exit code 1'
+		});
 	});
 
 	it('stops at once when the Claude CLI is not installed', async () => {

@@ -60,15 +60,24 @@ function moveToTagError(error: any): string {
 		return error.message;
 	}
 	const conflicts: CrossTagConflict[] = details.conflicts;
-	const { moveAlong, restore } = crossTagConflictFixes(conflicts);
-	// archive_tasks is outside the core and standard tiers, so name the CLI too
+	const { moveAlong, restore, missing } = crossTagConflictFixes(conflicts);
+	// archive_tasks and fix_dependencies are outside the core and standard
+	// tiers, so name the CLI too
 	const restoreStep = `archive_tasks with restore: "<id>", tag: "${details.sourceTag}" (if that tool isn't loaded: taskgraph archive restore <id> --tag=${details.sourceTag})`;
-	let hint = `Archived tasks can't move: drop them with ignoreDependencies: true, or restore them first with ${restoreStep}`;
+	const fixStep = `fix_dependencies with tag: "${details.sourceTag}" (if that tool isn't loaded: taskgraph fix-dependencies --tag=${details.sourceTag})`;
+	let hint: string;
 	if (moveAlong) {
 		hint =
 			'Move them too: retry with withDependencies: true (tasks that depend on them go in from), or drop them with ignoreDependencies: true';
 		if (restore)
 			hint += `. Archived ones can't move until restored: ${restoreStep}`;
+	} else if (restore) {
+		hint = `Archived tasks can't move: drop them with ignoreDependencies: true, or restore them first with ${restoreStep}`;
+	} else {
+		hint = `Drop them with ignoreDependencies: true, or remove them first with ${fixStep}`;
+	}
+	if (missing && (moveAlong || restore)) {
+		hint += `. Missing ones can't move; remove them with ${fixStep}`;
 	}
 	const lines = conflicts.map((conflict) => `  ${conflict.message}`);
 	return neutralizeTaskData([error.message, ...lines, hint].join('\n'));

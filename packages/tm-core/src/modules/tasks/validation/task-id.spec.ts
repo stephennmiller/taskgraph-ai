@@ -11,7 +11,8 @@ import {
 	parseTaskIds,
 	extractParentId,
 	fullSubtaskId,
-	isSubtaskId
+	isSubtaskId,
+	canonicalTaskId
 } from './task-id.js';
 
 describe('Task ID Validation', () => {
@@ -156,6 +157,22 @@ describe('Task ID Validation', () => {
 
 		it('keeps an ID that is already dotted', () => {
 			expect(fullSubtaskId(3, '3.2')).toBe('3.2');
+		});
+	});
+
+	describe('canonicalTaskId (#864)', () => {
+		it('drops leading zeros and rejects what names no task', () => {
+			expect(canonicalTaskId(' 03 ')).toBe('3');
+			expect(canonicalTaskId('01.03')).toBe('1.3');
+			expect(canonicalTaskId('0.00')).toBe('0.0');
+			expect(canonicalTaskId(7)).toBe('7');
+			// Not rounded, as parseInt would
+			expect(canonicalTaskId('012345678901234567891')).toBe(
+				'12345678901234567891'
+			);
+			for (const id of ['1.1x', '2.', '1.2.3', '', 'x', '-1']) {
+				expect(canonicalTaskId(id), id).toBeUndefined();
+			}
 		});
 	});
 });

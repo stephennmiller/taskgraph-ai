@@ -91,6 +91,17 @@ describe('tasks.addNote', () => {
 		expect(other.details ?? '').toBe('');
 	});
 
+	it('reads "01.02" as subtask 1.2 and "02" as task 2 (#874)', async () => {
+		const sub = await tmCore.tasks.addNote('01.02', 'Tokens expire after 1h');
+		const task = await tmCore.tasks.addNote('02', 'Form validates on blur');
+
+		expect(sub).toMatchObject({ id: '1.2', title: 'Issue tokens' });
+		expect(task).toMatchObject({ id: '2', title: 'Add the sign-up form' });
+		const [first, second] = await readTasks();
+		expect(first.subtasks[1].details).toContain('Tokens expire after 1h');
+		expect(second.details).toContain('Form validates on blur');
+	});
+
 	it('keeps every note when several are added', async () => {
 		await tmCore.tasks.addNote('2', 'First');
 		await tmCore.tasks.addNote('2', 'Second');

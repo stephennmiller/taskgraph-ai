@@ -17,6 +17,7 @@ import { Command } from 'commander';
 import { formatClaim } from '../ui/formatters/claim-formatters.js';
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { formatNoNextTask } from '../ui/formatters/task-list-formatters.js';
+import { fencesTaskData } from '../ui/layout/helpers.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
@@ -75,7 +76,7 @@ export class NextCommand extends Command {
 			.addOption(jsonOption())
 			.option(
 				'--claim',
-				'Start the next task and record who took it, in one locked write'
+				'Start the next task and record who took it, in one locked write; assigns it to your GitHub login if nobody has it'
 			)
 			.option('--silent', 'Suppress output (useful for programmatic usage)')
 			.option(
@@ -195,7 +196,8 @@ export class NextCommand extends Command {
 		}
 
 		const claim: TaskClaim | null = await this.tmCore.tasks.claimNext({
-			tag: options.tag
+			tag: options.tag,
+			assignee: (await this.tmCore.github.currentLogin()) ?? undefined
 		});
 		const tag = options.tag || this.tmCore.config.getActiveTag();
 		const hasAnyTasks = claim
@@ -232,12 +234,14 @@ export class NextCommand extends Command {
 					? {
 							taskId: String(result.task.id),
 							title: result.task.title,
-							claimedBy: result.claimedBy
+							claimedBy: result.claimedBy,
+							assignee: result.task.assignee
 						}
 					: null,
 				{
 					hasAnyTasks: result.hasAnyTasks,
-					width: process.stdout.columns || 80
+					width: process.stdout.columns || 80,
+					fence: fencesTaskData()
 				}
 			)
 		);
@@ -295,7 +299,8 @@ export class NextCommand extends Command {
 			formatTaskDetail(result.task, {
 				id: String(result.task.id),
 				checklist: result.checklist,
-				rawText: !process.stdout.isTTY
+				rawText: !process.stdout.isTTY,
+				fence: fencesTaskData()
 			})
 		);
 	}

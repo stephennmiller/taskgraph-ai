@@ -9,6 +9,7 @@ import {
 	createTmCore,
 	fenceAsData,
 	filterBlockingTasks,
+	filterByAssignee,
 	filterByStatus,
 	filterReadyTasks,
 	neutralizeTaskData,
@@ -55,6 +56,8 @@ import {
 export class ListTasksCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ListTasksResult;
+	/** The login `--mine` matched, named when nothing is assigned to it */
+	private login?: string;
 
 	constructor(name?: string) {
 		super(name || 'list');
@@ -94,6 +97,7 @@ export class ListTasksCommand extends Command {
 				'Show only tasks ready to work on (dependencies satisfied)'
 			)
 			.option('--blocking', 'Show only tasks that block other tasks')
+			.option('--mine', 'Show only tasks assigned to you (your GitHub login)')
 			.option(
 				'--all-tags',
 				'Show tasks from all tags (combine with --ready for actionable tasks)'
@@ -327,6 +331,7 @@ export class ListTasksCommand extends Command {
 		}
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
+		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
 		if (!options.withSubtasks) {
 			filteredTasks = filteredTasks.map((task) => ({ ...task, subtasks: [] }));
 		}
@@ -447,6 +452,7 @@ export class ListTasksCommand extends Command {
 		}
 
 		filteredTasks = filterByStatus(filteredTasks, options.status);
+		filteredTasks = filterByAssignee(filteredTasks, await this.mine(options));
 
 		return {
 			tasks: filteredTasks,
@@ -454,6 +460,13 @@ export class ListTasksCommand extends Command {
 			filtered: filteredTasks.length,
 			allTags: true
 		};
+	}
+
+	/** The signed-in GitHub login for --mine; throws with a fix when gh can't say */
+	private async mine(options: ListCommandOptions): Promise<string | undefined> {
+		if (!options.mine || !this.tmCore) return undefined;
+		this.login = await this.tmCore.github.requireLogin();
+		return this.login;
 	}
 
 	/**
@@ -543,7 +556,7 @@ export class ListTasksCommand extends Command {
 		}
 
 		if (tasks.length === 0) {
-			console.log(formatEmptyList(this.emptyListFilter(options)));
+			console.log(this.emptyList(options));
 			return;
 		}
 		// An agent reads this too: fence the titles as the plain output does
@@ -580,7 +593,7 @@ export class ListTasksCommand extends Command {
 		options: ListCommandOptions
 	): void {
 		if (data.tasks.length === 0) {
-			console.log(formatEmptyList(this.emptyListFilter(options)));
+			console.log(this.emptyList(options));
 			return;
 		}
 		// An agent reads this: fence the titles as show and next do
@@ -594,13 +607,21 @@ export class ListTasksCommand extends Command {
 		);
 	}
 
+	/** What an empty list says: `No ready tasks found`, `Nothing assigned to steve` */
+	private emptyList(options: ListCommandOptions): string {
+		return formatEmptyList(this.emptyListFilter(options), {
+			assignee: this.login
+		});
+	}
+
 	/** The filter an empty list names: `No ready tasks found` */
 	private emptyListFilter(options: ListCommandOptions): string | undefined {
 		if (options.ready) return 'ready';
 		if (options.blocking) return 'blocking';
-		return options.status && options.status !== 'all'
-			? options.status.split(',').join(' or ')
-			: undefined;
+		if (options.status && options.status !== 'all') {
+			return options.status.split(',').join(' or ');
+		}
+		return undefined;
 	}
 
 	/**
@@ -622,7 +643,7 @@ export class ListTasksCommand extends Command {
 
 		// No tasks message
 		if (tasks.length === 0) {
-			console.log(formatEmptyList(this.emptyListFilter(options)));
+			console.log(this.emptyList(options));
 			return;
 		}
 
@@ -640,7 +661,8 @@ export class ListTasksCommand extends Command {
 				showSubtasks: options.withSubtasks,
 				showDependencies: true,
 				showBlocks: true, // Show which tasks this one blocks
-				showComplexity: true, // Enable complexity column
+				keepBlocks: options.blocking, // --blocking filters on that column
+				showComplexity: true, // Shown when some task has a score
 				showTag: allTags // Show tag column for cross-tag listing
 			})
 		);

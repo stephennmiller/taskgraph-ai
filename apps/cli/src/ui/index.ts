@@ -38,6 +38,7 @@ export {
 
 // The one-line confirmation after set-status
 export {
+	formatReadyAfterDone,
 	formatStatusChanges,
 	type StatusChange
 } from './formatters/status-change-formatters.js';
@@ -162,6 +163,11 @@ export {
 // What `loop` prints before it starts
 export {
 	formatLoopIntro,
+	formatLoopIterationEnd,
+	formatLoopIterationStart,
+	formatLoopMessage,
+	formatLoopSummary,
+	formatSandboxAuth,
 	type LoopIntro
 } from './formatters/loop-formatters.js';
 

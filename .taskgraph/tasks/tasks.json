@@ -895,6 +895,18 @@
         "priority": "medium",
         "subtasks": [],
         "updatedAt": "2026-10-26T03:01:10.709Z"
+      },
+      {
+        "id": "69",
+        "title": "Assign tasks to teammates by GitHub login and sync assignees with GitHub issues (#840)",
+        "description": "--assignee on add-task and update-task, list --mine, next --claim assigns your GitHub login, and github push/pull/import sync issue assignees.",
+        "details": "GitHub issue #840: https://github.com/stephennmiller/taskgraph-ai/issues/840\nThe issue holds the scope and the done criteria, and it wins where this task disagrees.",
+        "testStrategy": "",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-10-31T15:00:00.000Z"
       }
     ],
     "metadata": {

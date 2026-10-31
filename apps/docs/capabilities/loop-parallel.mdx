@@ -14,23 +14,25 @@ TaskGraph picks the tasks from the graph: wave 1 of `taskgraph graph`, the tasks
 
 1. Claims the task, the same way `taskgraph next --claim` does: the task goes `in-progress` with `claimedBy` and `claimedAt` in its metadata, so another session won't pick it up.
 2. Creates a git worktree at `.taskgraph/worktrees/task-<id>` on a new branch `taskgraph/task-<id>`, starting from your current commit.
-3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`.
+3. Starts one Claude Code process in that worktree. Its output goes to `.taskgraph/worktrees/task-<id>.log`, as Claude Code's `stream-json` events (one JSON object per line); the last line is the `result` event with what the task cost.
 
 Claude reads the task with `taskgraph show`, does the work, commits it on the task's branch, and marks the task `review` with `taskgraph set-status`.
 
 <Warning>
-Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`), and it asks again after `parse-prd` or `github import` adds tasks. `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable, or add `--container` to run each one in its own container (see [below](#run-each-task-in-a-container)).
+Every task's Claude Code process runs with `--dangerously-skip-permissions`: permission prompts are off, nobody watches it, and it can read, edit and run anything your user account can, not only files in its worktree. With `--parallel 4`, four of them run at once. The first run in a project asks you to approve this (or pass `--trust`), and it asks again when the task text or the project instructions Claude loads changed since you approved it, including after a command saves text from the research model (see [loop](/capabilities/loop)). `--sandbox` isn't available with `--parallel`: a worktree's git data lives in the main repository's `.git`, outside the folder the Docker sandbox mounts, so Claude couldn't commit. Run parallel tasks only in a repository you trust, on a machine where that's acceptable, or add `--container` to run each one in its own container (see [below](#run-each-task-in-a-container)).
 </Warning>
 
 While they run you get one status line per task. When all have finished you get a summary:
 
 ```
-✓ 2 of 3 tasks done · 1 failed · 1 branch to review
-  1  taskgraph/task-1 · 2 commits
-  2  no changes; worktree removed
+✓ 2 of 3 tasks done · 1 failed · 1 branch to review · $1.84
+  1  taskgraph/task-1 · 2 commits · $1.12 · 41 turns
+  2  no changes; worktree removed · $0.72 · 19 turns
   3  failed: exit 1 · .taskgraph/worktrees/task-3.log
 Next: review with git log -p HEAD..taskgraph/task-1
 ```
+
+The cost and turns come from each task's log; a task whose Claude Code didn't get as far as its `result` event shows none.
 
 A task counts as done in the summary only when Claude Code exited without an error and the task is in `review` (or `done`); one Claude left `in-progress` or `pending` doesn't count.
 
@@ -42,7 +44,7 @@ A task counts as done in the summary only when Claude Code exited without an err
 
 `.taskgraph/worktrees` must be a real folder. If it, a task's worktree path or a log file is a symlink, that task fails instead of writing through it.
 
-`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project` and `--container`. It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
+`--parallel` takes a number from 1 to 16 and works with `--tag`, `--trust`, `--project`, `--container`, `--max-turns` and `--max-budget-usd`. Each task's Claude Code gets `--max-turns` as given, and an equal share of `--max-budget-usd` (`--parallel 4 --max-budget-usd 10` gives each task $2.50), so the whole run stays under the amount. Each task also runs at the model and effort its complexity score picks, and `--model` overrides the model (see [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity)). It can't be combined with `--prompt` (other than `default`), `--iterations`, `--id`, `--verbose` or `--sandbox` (see the warning above). The exit code is 0 when every task finished, 1 when one failed, and 130 after Ctrl-C.
 
 ## Status goes to the main project
 

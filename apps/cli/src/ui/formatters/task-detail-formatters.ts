@@ -35,13 +35,12 @@ import {
 	type TaskChecklist,
 	type TaskStatus,
 	buildChecklist,
-	fenceAsData,
+	formatTaskData,
 	fullSubtaskId,
 	getPrdSource,
 	getTaskLinks,
 	resolveSubtaskDependency,
-	sanitizeForTerminal,
-	TASK_DATA_TAG
+	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -97,6 +96,8 @@ export interface TaskDetailOptions {
 	 * marked-terminal and turndown (#836).
 	 */
 	rawText?: boolean;
+	/** Fence the task text in `<task-data>` for an agent; default true (#876) */
+	fence?: boolean;
 }
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
@@ -172,12 +173,13 @@ function linkFacts(task: Task | Subtask): string[] {
 	return facts.map((fact) => theme.muted(fact));
 }
 
-/** `▶ in-progress · high priority · complexity 7 · depends on 1` */
+/** `▶ in-progress · high priority · assigned to octocat · complexity 7 · depends on 1` */
 function facts(task: Task | Subtask, width: number): string[] {
 	const parts = [getStatusWithColor(task.status as TaskStatus)];
 	if (task.priority) {
 		parts.push(`${getPriorityWithColor(task.priority)} priority`);
 	}
+	if (task.assignee) parts.push(theme.muted(`assigned to ${task.assignee}`));
 	if (typeof task.complexity === 'number') {
 		const level = complexityLevel(task.complexity).toLowerCase();
 		parts.push(theme.muted(`complexity ${task.complexity} (${level})`));
@@ -347,7 +349,7 @@ function subtaskSection(
 	];
 }
 
-/** `Next: taskgraph set-status --id=2 --status=done when it is finished` */
+/** `Next: taskgraph set-status 2 done when it is finished` */
 export function formatNextStep(
 	action: SuggestedAction | null | undefined,
 	width: number
@@ -446,9 +448,9 @@ export function formatTaskDetail(
 
 	// Task text can come from a PRD or a GitHub issue; an agent reading this
 	// must see where it starts and ends
-	const shown = fenceAsData(
+	const shown = formatTaskData(
 		sections.map((lines) => lines.join('\n')).join('\n\n'),
-		TASK_DATA_TAG
+		options.fence ?? true
 	);
 	const next = formatNextStep(
 		getSuggestedActions(

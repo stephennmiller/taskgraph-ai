@@ -49,7 +49,7 @@ function describeStart(e: BlockerExplanation): string[] {
 	if (e.status === 'cancelled') return ['Cancelled.'];
 	if (e.status === 'pending') {
 		return [
-			`Not blocked. Start it with: ${cmd(`taskgraph set-status --id=${e.id} --status=in-progress`)}`
+			`Not blocked. Start it with: ${cmd(`taskgraph set-status ${e.id} in-progress`)}`
 		];
 	}
 	return [`Not blocked by any dependencies (status: ${e.status}).`];
@@ -62,6 +62,11 @@ export function renderBlockerExplanation(
 	explanation = sanitizeForTerminal(explanation);
 	const width = options.width ?? 100;
 	const lines: string[] = [];
+	// "01" when task 1 exists: the tree names task 1, as the fix below does
+	const olderForms = new Map<string, string>();
+	for (const c of explanation.rootCauses) {
+		if (c.canonicalId) olderForms.set(c.id, c.canonicalId);
+	}
 	// A command wider than the line breaks at its spaces after all
 	const wrap = (text: string, indent: string) => {
 		const room = width - indent.length;
@@ -94,7 +99,13 @@ export function renderBlockerExplanation(
 				: getStatusIcon(node.status as TaskStatus);
 		const head = `${lead}${icon} ${theme.brand(node.id)}  `;
 		const suffix = note(node) ? theme.muted(`  ← ${note(node)}`) : '';
-		const title = node.kind === 'missing' ? 'no such task' : (node.title ?? '');
+		const older = olderForms.get(node.id);
+		const title =
+			node.kind !== 'missing'
+				? (node.title ?? '')
+				: older
+					? `task ${older}, stored in an older form`
+					: 'no such task';
 		const room = Math.max(12, width - visible(head) - visible(suffix));
 		return head + truncate(title, room) + suffix;
 	};
@@ -138,11 +149,15 @@ function unblockSteps(causes: BlockerRootCause[]): string[] {
 			steps.push(`Finish ${label(c.id, c.title)}: it's in progress.`);
 		} else if (c.kind === 'review') {
 			steps.push(
-				`${c.id} is in review. Close it with: ${cmd(`taskgraph set-status --id=${c.id} --status=done`)}`
+				`${c.id} is in review. Close it with: ${cmd(`taskgraph set-status ${c.id} done`)}`
 			);
 		} else if (c.kind === 'stalled') {
 			steps.push(
-				`${c.id} is ${c.status}. Reopen it with: ${cmd(`taskgraph set-status --id=${c.id} --status=pending`)}`
+				`${c.id} is ${c.status}. Reopen it with: ${cmd(`taskgraph set-status ${c.id} pending`)}`
+			);
+		} else if (c.kind === 'missing' && c.canonicalId) {
+			steps.push(
+				`${c.id} is task ${c.canonicalId}, stored in an older form. Rewrite it with: ${cmd('taskgraph fix-dependencies')}`
 			);
 		} else if (c.kind === 'missing') {
 			const fixes = (c.listedBy ?? []).map((by) =>

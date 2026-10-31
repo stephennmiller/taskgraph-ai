@@ -36,6 +36,7 @@ function issue(number: number, overrides: Partial<RemoteIssue> = {}) {
 		title: `[${number}] Task ${number}`,
 		body: '',
 		labels: ['taskgraph'],
+		assignees: [] as string[],
 		state: 'open',
 		...overrides
 	} as RemoteIssue;
@@ -156,5 +157,24 @@ describe('planPull', () => {
 			['1', 'apply'],
 			['2', 'skip']
 		]);
+	});
+
+	it("keeps the task's assignee when it is one of the issue's several", () => {
+		const task = linked('1', 'pending', 'pending', { assignee: 'bob' });
+		task.task.assignee = 'bob';
+		const other = linked('2', 'pending', 'pending', { assignee: 'bob' });
+		other.task.assignee = 'bob';
+
+		const plan = planPull({
+			repo: REPO,
+			tasks: [task, other],
+			remote: [
+				issue(1, { assignees: ['alice', 'bob'] }),
+				issue(2, { assignees: ['alice', 'carol'] })
+			]
+		});
+
+		expect(plan.steps[0].assignTo).toBeUndefined();
+		expect(plan.steps[1].assignTo).toBe('alice');
 	});
 });

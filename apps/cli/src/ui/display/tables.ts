@@ -3,6 +3,7 @@
  * Provides table creation and formatting for tasks
  */
 
+import { stripVTControlCharacters } from 'node:util';
 import {
 	isTaskComplete,
 	sanitizeForTerminal,
@@ -22,7 +23,7 @@ import {
 	truncate,
 	wrapLine
 } from '../layout/helpers.js';
-import { theme } from '../theme.js';
+import { TABLE_BORDER, theme } from '../theme.js';
 
 /**
  * Default priority for tasks/subtasks when not specified
@@ -65,6 +66,8 @@ export function createTaskTable(
 		showComplexity?: boolean;
 		showDependencies?: boolean;
 		showBlocks?: boolean;
+		/** Hide the Blocks column last, as when the list is filtered on it */
+		keepBlocks?: boolean;
 		showTag?: boolean;
 	}
 ): string {
@@ -74,14 +77,22 @@ export function createTaskTable(
 		showComplexity = false,
 		showDependencies = true,
 		showBlocks = false,
+		keepBlocks = false,
 		showTag = false
 	} = options || {};
 
+	// A column of N/A only costs width, so show Complexity when some row has a score
+	const hasComplexity = tasks.some(
+		(t) =>
+			typeof t.complexity === 'number' ||
+			(showSubtasks &&
+				(t.subtasks ?? []).some((s) => typeof s.complexity === 'number'))
+	);
 	const requested: Record<string, boolean> = {
 		tag: showTag,
 		dependencies: showDependencies,
 		blocks: showBlocks,
-		complexity: showComplexity
+		complexity: showComplexity && hasComplexity
 	};
 	// Tag and ID fit their widest value (plus cell padding), up to the default width
 	const fitTo: Record<string, string[]> = {
@@ -94,6 +105,8 @@ export function createTaskTable(
 	const specs = TASK_TABLE_COLUMNS.filter(
 		(col) => requested[col.key] ?? true
 	).map((col) => {
+		// Hide Blocks last, not never: below about 47 columns it can't fit
+		if (col.key === 'blocks' && keepBlocks) return { ...col, dropOrder: 5 };
 		const values = fitTo[col.key];
 		if (!values) return col;
 		const widest = Math.max(col.header.length, ...values.map((v) => v.length));
@@ -108,7 +121,7 @@ export function createTaskTable(
 				TASK_TABLE_COLUMNS.find((col) => col.key === key)?.header ?? key
 			)
 		),
-		style: { head: [], border: [] },
+		style: { head: [], border: TABLE_BORDER },
 		colWidths: plan.widths,
 		wordWrap: true
 	});
@@ -123,7 +136,8 @@ export function createTaskTable(
 				// Tag goes first when showing all tags
 				tag: theme.accent(task.tagName || '-'),
 				id: chalk.cyan(task.id.toString()),
-				title: truncate(task.title, width('title') - 3),
+				// The width includes one space of cell padding on each side
+				title: truncate(task.title, width('title') - 2),
 				status: getStatusWithColor(task.status, true), // Use table version
 				priority: getPriorityWithColor(task.priority),
 				// For table display, show simple format without status icons
@@ -153,7 +167,7 @@ export function createTaskTable(
 						// Subtasks inherit parent's tag, just show dash
 						tag: theme.muted('-'),
 						id: theme.muted(` └─ ${subtask.id}`),
-						title: theme.muted(truncate(subtask.title, width('title') - 6)),
+						title: theme.muted(truncate(subtask.title, width('title') - 2)),
 						status: theme.muted(getStatusWithColor(subtask.status, true)),
 						priority: theme.muted(subtask.priority || DEFAULT_PRIORITY),
 						dependencies: theme.muted(
@@ -191,5 +205,15 @@ export function createTaskTable(
 					.join('\n')
 			: '';
 
-	return table.toString() + hiddenNote;
+	// Keep the rule under the one-line header (line 2) and drop the ones
+	// between body rows, which double the table's height
+	const rendered = table
+		.toString()
+		.split('\n')
+		.filter(
+			(line, i) => i === 2 || !stripVTControlCharacters(line).startsWith('├')
+		)
+		.join('\n');
+
+	return rendered + hiddenNote;
 }

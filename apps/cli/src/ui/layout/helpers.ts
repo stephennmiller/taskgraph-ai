@@ -40,6 +40,16 @@ export function terminalWidth(
 }
 
 /**
+ * Whether to fence task text in `<task-data>`: only when stdout isn't a
+ * terminal, since agents read a pipe and a person reads a TTY (#876)
+ */
+export function fencesTaskData(
+	stream: { isTTY?: boolean } = process.stdout
+): boolean {
+	return !stream.isTTY;
+}
+
+/**
  * Usable width for boxes and tables: 95% of the terminal (or of `COLUMNS`),
  * or 100 columns when neither says (for example, piped to a file).
  */

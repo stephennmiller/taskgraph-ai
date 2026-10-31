@@ -82,6 +82,11 @@ describe('next --claim', () => {
 	});
 
 	it('starts the next task and records who claimed it', () => {
+		// An assignee, so the line doesn't depend on who gh is signed in as
+		const file = JSON.parse(fs.readFileSync(tasksPath, 'utf8'));
+		file.master.tasks[0].assignee = 'alice';
+		fs.writeFileSync(tasksPath, JSON.stringify(file));
+
 		const result = run(['next', '--claim'], {
 			USER: 'steve',
 			CLAUDE_CODE_SESSION_ID: ''
@@ -89,7 +94,8 @@ describe('next --claim', () => {
 
 		expect(result.status, result.stderr).toBe(0);
 		expect(result.stdout).toContain('✓ Claimed task 1  Build the login API');
-		expect(result.stdout).toContain('claimed by steve');
+		// The assignee, not the claimant (#877)
+		expect(result.stdout).toContain('▶ in-progress · assigned to alice');
 		const [first] = readTasks();
 		expect(first.status).toBe('in-progress');
 		expect(first.metadata).toMatchObject({ claimedBy: 'steve' });

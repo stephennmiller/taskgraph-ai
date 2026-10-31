@@ -36,6 +36,7 @@ import {
 	complexityReportPath,
 	withoutPlaceholders
 } from '../../reports/managers/complexity-report-manager.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import type { ComplexityReportMetadata } from '../../reports/types.js';
 import {
 	FileOperations,
@@ -427,6 +428,8 @@ export class AnalyzeComplexityService {
 			commandName: 'analyze-complexity',
 			outputType: input.outputType ?? 'cli'
 		});
+		// expand feeds the report's expansionPrompt to the AI
+		untrustLoopIfResearch(response, projectRoot);
 
 		const returned = response?.mainResult?.complexityAnalysis;
 		if (!Array.isArray(returned)) {

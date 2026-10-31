@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TASKGRAPH_STATE_FILE } from '../../common/constants/paths.js';
 import { resolveProjectRoot } from '../../common/utils/project-root-finder.js';
+import { refuseSymlinkSync } from '../storage/adapters/file-storage/file-operations.js';
 
 /**
  * Whether the migration notice is due, marking it shown when it is.
@@ -41,6 +42,7 @@ export function takeMigrationNotice(projectRoot?: string): boolean {
 	try {
 		state.migrationNoticePending = false;
 		state.migrationNoticeShown = true;
+		refuseSymlinkSync(statePath);
 		fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
 	} catch (error) {
 		// Still show it, as before #254; it shows again until the write succeeds

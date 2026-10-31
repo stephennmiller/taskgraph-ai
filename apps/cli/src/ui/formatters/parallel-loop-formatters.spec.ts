@@ -118,6 +118,48 @@ describe('formatParallelSummary', () => {
 		]);
 	});
 
+	it('adds what each task and the run spent', () => {
+		const out = summary(
+			result(
+				[
+					task('1', {
+						commits: 1,
+						kept: true,
+						finished: true,
+						costUsd: 0.72,
+						turns: 31
+					}),
+					task('2', { kept: false })
+				],
+				{ totalCostUsd: 0.72 }
+			)
+		);
+
+		expect(out.split('\n').slice(0, 3)).toEqual([
+			'✓ 1 of 2 tasks done · 1 branch to review · $0.72',
+			'  1  taskgraph/task-1 · 1 commit · $0.72 · 31 turns',
+			'  2  no changes; worktree removed'
+		]);
+	});
+
+	it("says when a task's cost is unknown and the run's total leaves it out (#861)", () => {
+		const out = summary(
+			result(
+				[
+					task('1', { commits: 1, kept: true, finished: true, costUsd: 0.72 }),
+					task('2', { kept: false, costUnknown: true })
+				],
+				{ totalCostUsd: 0.72, costPartial: true }
+			)
+		);
+
+		expect(out.split('\n').slice(0, 3)).toEqual([
+			'✓ 1 of 2 tasks done · 1 branch to review · at least $0.72',
+			'  1  taskgraph/task-1 · 1 commit · $0.72',
+			'  2  no changes; worktree removed · cost unknown'
+		]);
+	});
+
 	it('says "branches" for more than one kept branch', () => {
 		const out = summary(
 			result([

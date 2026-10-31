@@ -47,9 +47,11 @@ import { withoutLoopsThroughParent } from '../../dependencies/dependency-edges.j
 import { orderGeneratedSubtasks } from '../../dependencies/forward-dependencies.js';
 import { removeAllSubtasks } from '../../dependencies/removed-references.js';
 import { cleanGeneratedSubtaskDependencies } from '../../dependencies/subtask-dependency.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
 import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
+import { normalizeTaskId } from '../validation/task-id.js';
 import { degenerateReply } from './expand-reply-check.js';
 import { renumberSubtasks } from './expand-subtask-ids.js';
 import type { TaskService } from './task-service.js';
@@ -186,7 +188,7 @@ export class ExpandTaskService {
 		input: ExpandTaskInput,
 		hooks: ExpandTaskHooks = {}
 	): Promise<ExpandTaskResult> {
-		const taskId = String(input.id).trim();
+		const taskId = normalizeTaskId(input.id);
 		if (!/^\d+$/.test(taskId)) {
 			throw new TaskGraphError(
 				`"${taskId}" isn't a task ID; expand takes a task, not a subtask`,
@@ -315,6 +317,7 @@ export class ExpandTaskService {
 				};
 			}
 		}
+		untrustLoopIfResearch(response, projectRoot);
 		let saved: Task;
 		let addedSubtasks: Subtask[];
 		try {
@@ -346,7 +349,7 @@ export class ExpandTaskService {
 				tag,
 				addedSubtasks,
 				input.force === true,
-				debug
+				warn
 			);
 		} catch (error) {
 			// The call was made and paid for, even though nothing was saved
@@ -375,7 +378,7 @@ export class ExpandTaskService {
 		tag: string,
 		addedSubtasks: Subtask[],
 		force: boolean,
-		debug: (message: string) => void
+		warn: (message: string) => void
 	): Promise<Task> {
 		const { result } = await this.taskService.modifyTasks((current) => {
 			const target = current.find((t) => String(t.id) === taskId);
@@ -397,7 +400,7 @@ export class ExpandTaskService {
 					taskId,
 					subtask.id,
 					subtask.dependencies ?? [],
-					debug
+					warn
 				);
 			}
 			renumberSubtasks(taskId, target.subtasks, addedSubtasks);

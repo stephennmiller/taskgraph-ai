@@ -15,8 +15,20 @@ import {
 	isObject,
 	same
 } from '../../git/merge-driver/merge-json-utils.js';
-import { isSiblingReference } from '../../dependencies/subtask-dependency.js';
+import { withoutNewLoops } from '../../dependencies/dependency-edges.js';
+import { findDanglingLinks } from '../../dependencies/task-links.js';
+import {
+	assignMetadata,
+	reconcileDependencySources
+} from '../../dependencies/dependency-provenance.js';
+import { dropReferences } from '../../dependencies/removed-references.js';
+import {
+	cleanGeneratedSubtaskDependencies,
+	isSiblingReference
+} from '../../dependencies/subtask-dependency.js';
 import { mergeTagChanges } from '../../storage/adapters/file-storage/merge-tag-changes.js';
+import { keepStoredFields } from '../utils/stored-fields.js';
+import { fullSubtaskId } from '../validation/task-id.js';
 
 /** A positive whole number, as a string; `hint` says what to use instead */
 export function taskIdOf(id: unknown, hint: string, allowZero = false): string {
@@ -106,19 +118,20 @@ export function mergeRewrite(
 	).merged.tasks[0];
 }
 
-/** The stored status, unless the prompt mentions status */
+/** The stored status of `what` (a task or a subtask), unless the prompt mentions status */
 export function keepStatus(
-	stored: Task,
+	stored: { status?: unknown },
 	updated: { status?: unknown },
 	prompt: string,
-	warn: (message: string) => void
+	warn: (message: string) => void,
+	what = 'task'
 ) {
 	if (
 		updated.status !== stored.status &&
 		!prompt.toLowerCase().includes('status')
 	) {
 		warn(
-			`AI changed task status. Restoring original status '${stored.status}'.`
+			`AI changed ${what} status. Restoring original status '${stored.status}'.`
 		);
 		updated.status = stored.status;
 	}
@@ -128,9 +141,12 @@ export function keepStatus(
  * The stored subtask each of the AI's `subtasks` is, by index. Each stored
  * one matches once, across the whole list: ID and title first, then title
  * (the AI may renumber a reorder or an insert itself), then ID (the AI may
- * send strings)
+ * send strings). A reply numbered 1, 2, 3... over stored IDs with gaps, using
+ * a number no stored subtask has, was renumbered, so its IDs name no stored
+ * subtask and that last pass is skipped (#863). One that only drops subtasks
+ * ([1, 2] of 1, 2, 4) kept its IDs, as the prompt asks
  */
-export function matchSubtasks(
+function matchSubtasks(
 	original: Subtask[],
 	subtasks: Array<{ id?: unknown; title?: unknown }>
 ): (Subtask | undefined)[] {
@@ -138,13 +154,20 @@ export function matchSubtasks(
 		String(st.id) === String(subtask.id);
 	const sameTitle = (st: Subtask, subtask: { title?: unknown }) =>
 		Boolean(subtask.title) && st.title === subtask.title;
+	const storedIds = new Set(original.map((st) => String(st.id)));
+	// Gaps in the set, not the order: stored 1, 4, 2, 3 sent back as 1..5 kept its IDs
+	const gapped = original.some((_, i) => !storedIds.has(String(i + 1)));
+	const renumbered =
+		gapped &&
+		subtasks.every((subtask, i) => String(subtask.id) === String(i + 1)) &&
+		subtasks.some((subtask) => !storedIds.has(String(subtask.id)));
 	const matched: (Subtask | undefined)[] = [];
 	const taken = new Set<Subtask>();
 	for (const same of [
 		(st: Subtask, subtask: { id?: unknown; title?: unknown }) =>
 			sameId(st, subtask) && sameTitle(st, subtask),
 		sameTitle,
-		sameId
+		...(renumbered ? [] : [sameId])
 	]) {
 		subtasks.forEach((subtask, i) => {
 			if (matched[i]) return;
@@ -185,7 +208,7 @@ export function keptSubtaskIds(
  * the reply left out is kept (a done one comes back, and references to a
  * dropped one go on save); any other sibling number is dropped
  */
-export function siblingsAsSaved(
+function siblingsAsSaved(
 	parentId: string,
 	subtasks: Array<{ id?: unknown; dependencies?: unknown }>,
 	ids: string[],
@@ -216,6 +239,108 @@ export function siblingsAsSaved(
 			return original.some((st) => String(st.id) === String(n)) ? [n] : [];
 		});
 	});
+}
+
+/**
+ * The AI's `subtasks` of `stored`, each under the ID of the stored subtask it
+ * matches (#576, #804) or the next free one (`newIds`), with its sibling
+ * dependencies named by saved ID (#827), its status kept as keepStatus keeps
+ * the task's (#872), the stored fields it left out kept and the dependencies
+ * it added marked inferred
+ */
+export function rewriteSubtasks(
+	stored: Task,
+	subtasks: any[],
+	prompt: string,
+	warn: (message: string) => void
+): { subtasks: Subtask[]; newIds: Set<string> } {
+	const original = stored.subtasks ?? [];
+	const matched = matchSubtasks(original, subtasks);
+	const ids = keptSubtaskIds(original, matched, subtasks.length);
+	const deps = siblingsAsSaved(stored.id, subtasks, ids, original);
+	return {
+		subtasks: subtasks.map((subtask, i) => {
+			const before = matched[i];
+			const corrected = {
+				...subtask,
+				id: ids[i],
+				// A number is a sibling; a string is a task or subtask
+				dependencies: cleanGeneratedSubtaskDependencies(deps[i], stored.id),
+				// A new subtask isn't done yet: a done one renumbered would be saved twice (#869)
+				status: before
+					? (subtask.status ?? before.status ?? 'pending')
+					: 'pending',
+				testStrategy: subtask.testStrategy ?? null
+			};
+			// The AI can only write pending or done, so in-progress, review and blocked would be lost (#872);
+			// a done one is keepDoneSubtasks' to restore. No stored status reads as pending
+			if (before && before.status !== 'done') {
+				keepStatus(
+					{ status: before.status ?? 'pending' },
+					corrected,
+					prompt,
+					warn,
+					`subtask ${fullSubtaskId(stored.id, before.id)}`
+				);
+			}
+			keepStoredFields(corrected, before);
+			assignMetadata(
+				corrected,
+				reconcileDependencySources(corrected, before, stored.id)
+			);
+			return corrected;
+		}),
+		newIds: new Set(ids.filter((_, i) => !matched[i]))
+	};
+}
+
+/**
+ * After the save merged each rewrite into `current` (the task as read under
+ * the lock, `now`, became `saved`): drop everything that points at a subtask
+ * a rewrite removed (#804, #827), then each dependency a rewrite added that
+ * would close a loop (#824, #832), checked against `current`, not the tasks
+ * read before the AI call. `warn` is told about each removal and drop (#863),
+ * links included (#869)
+ */
+export function settleRewrites(
+	current: Task[],
+	rewrites: Array<{ stored: Task; now: Task; saved: Task }>,
+	warn: (message: string) => void
+): void {
+	const removed = rewrites.flatMap(({ stored, saved }) => {
+		const kept = new Set((saved.subtasks ?? []).map((st) => String(st.id)));
+		return (stored.subtasks ?? [])
+			.filter((st) => !kept.has(String(st.id)))
+			.map((st) => fullSubtaskId(saved.id, st.id));
+	});
+	if (removed.length > 0) {
+		const gone = new Set(removed);
+		// dropReferences doesn't say who lost a link, so look before it drops them
+		const linked = [
+			...new Set(
+				findDanglingLinks(current, (id) => !gone.has(id))
+					.filter((link) => gone.has(link.linkedId))
+					.map((link) => link.taskId)
+			)
+		];
+		const changed = dropReferences(current, removed);
+		const [noun, isNot, wasIt, it] =
+			removed.length === 1
+				? ['Subtask', "isn't", 'it was', 'it']
+				: ['Subtasks', "aren't", 'they were', 'them'];
+		const lost = (what: string, from: string[]) =>
+			from.length > 0 ? `; ${what} were dropped from ${from.join(', ')}` : '';
+		warn(
+			`${noun} ${removed.join(', ')} ${isNot} in the AI's rewrite, so ${wasIt} removed` +
+				lost(`dependencies on ${it}`, changed) +
+				lost(`links to ${it}`, linked)
+		);
+	}
+	withoutNewLoops(
+		current,
+		rewrites.map(({ now, saved }) => ({ before: now, task: saved })),
+		warn
+	);
 }
 
 /** `subtasks` with each done one of `original` restored as it was, no ID twice */

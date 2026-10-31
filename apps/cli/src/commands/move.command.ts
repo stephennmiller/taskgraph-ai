@@ -132,7 +132,7 @@ export class MoveCommand extends Command {
 					`--from=${details.taskIds.join(',')} --from-tag=${details.sourceTag} --to-tag=${details.targetTag}`
 				);
 				printError(
-					`Can't move tasks from "${details.sourceTag}" to "${details.targetTag}": ${conflicts.length} ${conflicts.length === 1 ? 'dependency stays' : 'dependencies stay'} behind\n${formatCrossTagConflicts(conflicts)}`,
+					`Can't move tasks from "${details.sourceTag}" to "${details.targetTag}": ${conflicts.length} ${conflicts.length === 1 ? 'dependency conflict' : 'dependency conflicts'}\n${formatCrossTagConflicts(conflicts)}`,
 					formatCrossTagConflictHint(conflicts, moveTo, details.sourceTag)
 				);
 				process.exit(1);

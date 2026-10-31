@@ -4,9 +4,11 @@
 
 import {
 	ERROR_CODES,
-	TaskGraphError
+	TaskGraphError,
+	errorWithHint
 } from '../../common/errors/taskgraph-error.js';
 import {
+	getGitHubLogin,
 	getGitHubRepoInfo,
 	isGhCliAvailable
 } from '../../common/utils/git-utils.js';
@@ -53,6 +55,7 @@ export interface GitHubDomainOptions {
 
 export class GitHubDomain {
 	private tasksDomain?: TasksDomain;
+	private login?: Promise<string | null>;
 
 	constructor(
 		private readonly projectRoot: string,
@@ -79,6 +82,26 @@ export class GitHubDomain {
 			linkedTasks,
 			unlinkedTasks: tasks.length - linkedTasks
 		};
+	}
+
+	/**
+	 * The signed-in GitHub user's login (lowercase), or null without `gh`.
+	 * Asked once per process; watch mode re-lists often
+	 */
+	currentLogin(): Promise<string | null> {
+		this.login ??= getGitHubLogin(this.projectRoot);
+		return this.login;
+	}
+
+	/** currentLogin, throwing a MISSING_CONFIGURATION error with a fix when there is none */
+	async requireLogin(): Promise<string> {
+		const login = await this.currentLogin();
+		if (login) return login;
+		throw errorWithHint(
+			ERROR_CODES.MISSING_CONFIGURATION,
+			"Can't tell who you are on GitHub",
+			'Install the GitHub CLI and run `gh auth login`, then try again'
+		);
 	}
 
 	/** Work out what a push would do, without writing anything */
@@ -129,15 +152,27 @@ export class GitHubDomain {
 	 */
 	async pull(options: PullOptions = {}): Promise<PullResult> {
 		const { plan, tasks } = await this.preparePull(options);
-		const counts = { applied: 0, synced: 0, conflicts: 0, skipped: 0 };
+		const counts = {
+			applied: 0,
+			synced: 0,
+			conflicts: 0,
+			skipped: 0,
+			assigned: 0
+		};
 		const byKey = new Map(
 			tasks.map((t) => [`${t.tag}\u0000${t.task.id}`, t] as const)
 		);
 		for (const step of plan.steps) {
+			const target = byKey.get(`${step.tag}\u0000${step.taskId}`);
+			if (step.assignTo !== undefined && target) {
+				counts.assigned++;
+				if (!options.dryRun) {
+					await this.recordAssignee(plan.repo, step.assignTo, target);
+				}
+			}
 			if (step.action === 'conflict') counts.conflicts++;
 			else if (step.action === 'skip') counts.skipped++;
 			else {
-				const target = byKey.get(`${step.tag}\u0000${step.taskId}`);
 				if (!options.dryRun && target) {
 					await this.recordPull(plan.repo, step, target);
 				}
@@ -173,25 +208,36 @@ export class GitHubDomain {
 
 		const tasksDomain = this.requireTasks();
 		const syncedAt = (this.options.now?.() ?? new Date()).toISOString();
-		const linkFor = (step: ImportStep): GitHubLink => ({
+		const byNumber = new Map(issues.map((i) => [i.number, i]));
+		const assigneeOf = (step: ImportStep) =>
+			byNumber.get(step.issueNumber)?.assignees[0];
+		const linkFor = (step: ImportStep, assignee?: string): GitHubLink => ({
 			repo,
 			issueNumber: step.issueNumber,
 			url: step.url,
 			syncedAt,
 			lastPushedStatus: 'pending',
 			bodyHash: '',
-			imported: true
+			imported: true,
+			...(assignee && { assignee })
 		});
-		const byNumber = new Map(issues.map((i) => [i.number, i]));
 		const inTag = all.filter((t) => t.tag === tag).map((t) => t.task);
 
 		for (const step of steps.filter((s) => s.action === 'link')) {
 			const task = inTag.find((t) => String(t.id) === step.taskId) as Task;
 			await tasksDomain.modifyTask(
 				task.id,
-				(current) => ({
-					metadata: { ...current.metadata, github: linkFor(step) }
-				}),
+				// A task's own assignee stays; the issue's is the base either way
+				(current) => {
+					const assignee = current.assignee ?? assigneeOf(step);
+					return {
+						...(assignee && { assignee }),
+						metadata: {
+							...current.metadata,
+							github: linkFor(step, assigneeOf(step))
+						}
+					};
+				},
 				tag
 			);
 		}
@@ -213,7 +259,8 @@ export class GitHubDomain {
 				priority: 'medium',
 				dependencies: [],
 				subtasks: [],
-				metadata: { github: linkFor(step) }
+				...(assigneeOf(step) && { assignee: assigneeOf(step) }),
+				metadata: { github: linkFor(step, assigneeOf(step)) }
 			})),
 			tag
 		);
@@ -296,13 +343,28 @@ export class GitHubDomain {
 	private async prepare(options: PushOptions) {
 		const { repo, client, tag, tasks, remote, wanted } =
 			await this.scope(options);
+		// A token that cannot read its own user (Actions' GITHUB_TOKEN) only
+		// turns off link recovery; any other failure, a rate limit (also 403)
+		// included, stops the push, which
+		// without recovery could duplicate issues
+		const viewer = await client.getViewer().catch((error: unknown) => {
+			if (
+				error instanceof Error &&
+				/\((403|404)\)/.test(error.message) &&
+				!/rate limit/i.test(error.message)
+			) {
+				return undefined;
+			}
+			throw error;
+		});
 		const full = planSync({
 			repo,
 			tasks,
 			remote,
 			includeDetails: options.includeDetails,
 			closeOrphans: options.closeOrphans,
-			scopeTags: tag ? [tag] : undefined
+			scopeTags: tag ? [tag] : undefined,
+			viewer
 		});
 		// Plan against every task so unselected ones are not mistaken for
 		// orphans, then keep only the selected steps
@@ -366,6 +428,26 @@ export class GitHubDomain {
 				return { metadata: { ...current.metadata, github } };
 			},
 			step.tag
+		);
+	}
+
+	/** Give the task the issue's assignee, and move the link's base to it */
+	private async recordAssignee(
+		repo: string,
+		login: string | null,
+		{ tag, task }: SyncTask
+	): Promise<void> {
+		const assignee = login ?? undefined;
+		await this.requireTasks().modifyTask(
+			task.id,
+			(current) => {
+				const latest = getLink(current as Task, repo);
+				// Assigned again since the pull read it: that change wins
+				if (!latest || current.assignee !== task.assignee) return {};
+				const github: GitHubLink = { ...latest, assignee };
+				return { assignee, metadata: { ...current.metadata, github } };
+			},
+			tag
 		);
 	}
 

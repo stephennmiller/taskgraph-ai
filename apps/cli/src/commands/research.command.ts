@@ -174,7 +174,6 @@ export class ResearchCommand extends Command {
 		input: ResearchInput
 	): Promise<ResearchResult> {
 		let spinner: Ora | undefined;
-		let ticker: NodeJS.Timeout | undefined;
 		const print = (line: string) => {
 			if (spinner?.isSpinning) {
 				spinner.clear();
@@ -198,16 +197,9 @@ export class ResearchCommand extends Command {
 						customContext: context.customContext
 					});
 					if (line) console.log(line);
-					const started = Date.now();
 					spinner = createSpinner('Researching…').start();
-					ticker = setInterval(() => {
-						if (spinner) {
-							spinner.text = `Researching… ${Math.round((Date.now() - started) / 1000)}s`;
-						}
-					}, 1000);
 				}
 			});
-			clearInterval(ticker);
 			spinner?.stop();
 			console.log(`\n${formatResearchAnswer(result.result)}`);
 			const usage = result.telemetryData
@@ -216,7 +208,6 @@ export class ResearchCommand extends Command {
 			if (usage) console.log(`\n${theme.muted(usage)}`);
 			return result;
 		} catch (error: any) {
-			clearInterval(ticker);
 			if (spinner?.isSpinning) spinner.fail();
 			throw error;
 		}

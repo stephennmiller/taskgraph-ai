@@ -12,6 +12,7 @@ import {
 	TASKGRAPH_VERSION,
 	isTaskGraphProject,
 	resolveProjectRoot,
+	stripTerminalControls,
 	takeMigrationNotice
 } from '@tm/core';
 import { Command } from 'commander';
@@ -130,11 +131,32 @@ export function setupCLI(): Command {
 		process.exit(1);
 	});
 
+	// `help tags use` walks to `tags use` and prints its help; bare `help`
+	// prints the grouped screen
 	program
-		.command('help')
+		.command('help [command...]')
 		.description('Show help information')
-		.action(() => {
-			program.help();
+		.action((names: string[]) => {
+			let target = program;
+			for (const [i, name] of names.entries()) {
+				const sub = target.commands.find(
+					(c) => c.name() === name || c.aliases().includes(name)
+				);
+				if (!sub) {
+					const safe = (text: string) =>
+						stripTerminalControls(text, { singleLine: true });
+					const parent = safe(names.slice(0, i).join(' '));
+					printError(
+						`Unknown command '${safe(names.slice(0, i + 1).join(' '))}'`,
+						parent
+							? `Run \`taskgraph ${parent} --help\` to see its commands`
+							: 'Run `taskgraph --help` to see all commands'
+					);
+					process.exit(1);
+				}
+				target = sub;
+			}
+			target.help();
 		});
 
 	program.configureHelp({ helpWidth: 120, sortSubcommands: false });

@@ -8,7 +8,7 @@
  *   ✓ Moved 2 tasks from "backlog" to "sprint"
  *   Next: taskgraph validate-dependencies, then fix-dependencies
  *
- *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency stays behind
+ *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency conflict
  *     Task 5 depends on 4 (in backlog)
  *     Move them too: taskgraph move ... --with-dependencies, or drop them with
  *     --ignore-dependencies (or restore them first, when archived)
@@ -74,12 +74,19 @@ export function formatCrossTagConflictHint(
 	sourceTag: string
 ): string {
 	const restoreStep = `\`taskgraph archive restore <id> --tag=${terminalSafe(sourceTag)}\``;
-	const { moveAlong, restore } = crossTagConflictFixes(conflicts);
-	if (!moveAlong) {
-		return `Archived tasks can't move: drop them with \`taskgraph move ${moveTo} --ignore-dependencies\`, or restore them first with ${restoreStep}`;
+	const fixStep = `\`taskgraph fix-dependencies --tag=${terminalSafe(sourceTag)}\``;
+	const { moveAlong, restore, missing } = crossTagConflictFixes(conflicts);
+	let hint: string;
+	if (moveAlong) {
+		hint = `Move them too: \`taskgraph move ${moveTo} --with-dependencies\` (tasks that depend on them go in --from), or drop them with --ignore-dependencies`;
+		if (restore)
+			hint += `. Archived ones can't move until restored: ${restoreStep}`;
+	} else if (restore) {
+		hint = `Archived tasks can't move: drop them with \`taskgraph move ${moveTo} --ignore-dependencies\`, or restore them first with ${restoreStep}`;
+	} else {
+		hint = `Drop them with \`taskgraph move ${moveTo} --ignore-dependencies\`, or remove them first with ${fixStep}`;
 	}
-	const hint = `Move them too: \`taskgraph move ${moveTo} --with-dependencies\` (tasks that depend on them go in --from), or drop them with --ignore-dependencies`;
-	return restore
-		? `${hint}. Archived ones can't move until restored: ${restoreStep}`
+	return missing && (moveAlong || restore)
+		? `${hint}. Missing ones can't move; remove them with ${fixStep}`
 		: hint;
 }

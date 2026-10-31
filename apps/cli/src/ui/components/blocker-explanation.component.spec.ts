@@ -42,7 +42,7 @@ describe('renderBlockerExplanation', () => {
 
 		expect(lines).toEqual([
 			'○ 7  Task 7',
-			'Not blocked. Start it with: taskgraph set-status --id=7 --status=in-progress'
+			'Not blocked. Start it with: taskgraph set-status 7 in-progress'
 		]);
 	});
 
@@ -138,6 +138,30 @@ describe('renderBlockerExplanation', () => {
 		);
 	});
 
+	it('suggests fix-dependencies for an older spelling of a task, not removing it (#874)', () => {
+		const lines = plain(
+			renderBlockerExplanation(
+				explanation(
+					[node('5', [{ id: '01', kind: 'missing', blockers: [] }])],
+					{
+						rootCauses: [
+							{ id: '01', kind: 'missing', listedBy: ['5'], canonicalId: '1' }
+						]
+					}
+				)
+			)
+		);
+
+		expect(lines).toContain(
+			'  01 is task 1, stored in an older form. Rewrite it with: taskgraph fix-dependencies'
+		);
+		expect(lines.join('\n')).toContain(
+			'⚠ 01  task 1, stored in an older form  ← missing'
+		);
+		expect(lines.join('\n')).not.toContain('no such task');
+		expect(lines.join('\n')).not.toContain('remove-dependency');
+	});
+
 	it('names stalled tasks and how to reopen them', () => {
 		const lines = plain(
 			renderBlockerExplanation(
@@ -151,7 +175,7 @@ describe('renderBlockerExplanation', () => {
 
 		expect(lines).toContain('└─ – 2  Task 2  ← deferred, needs a decision');
 		expect(lines).toContain(
-			'  2 is deferred. Reopen it with: taskgraph set-status --id=2 --status=pending'
+			'  2 is deferred. Reopen it with: taskgraph set-status 2 pending'
 		);
 	});
 
@@ -182,7 +206,7 @@ describe('renderBlockerExplanation', () => {
 		expect(lines).toContain('└─ ? 3  Task 3  ← in review');
 		expect(lines).toContain("  Finish 2 (Task 2): it's in progress.");
 		expect(lines).toContain(
-			'  3 is in review. Close it with: taskgraph set-status --id=3 --status=done'
+			'  3 is in review. Close it with: taskgraph set-status 3 done'
 		);
 		expect(lines.join('\n')).not.toContain('ready');
 	});

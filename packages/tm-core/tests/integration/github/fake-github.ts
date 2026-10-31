@@ -18,6 +18,9 @@ export class FakeGitHub implements GitHubClient {
 	async getRepo() {
 		return { fullName: REPO, url: `https://github.com/${REPO}` };
 	}
+	async getViewer() {
+		return 'octocat';
+	}
 	async listIssues(label?: string, state: 'open' | 'all' = 'all') {
 		return this.issues
 			.filter((i) => !label || i.labels.includes(label))
@@ -30,7 +33,9 @@ export class FakeGitHub implements GitHubClient {
 			number,
 			url: `https://github.com/${REPO}/issues/${number}`,
 			state: 'open',
-			...input
+			...input,
+			// GitHub matches logins case-insensitively; the client lowercases them
+			assignees: (input.assignees ?? []).map((a) => a.toLowerCase())
 		};
 		this.issues.push(issue);
 		return { ...issue };
@@ -39,6 +44,20 @@ export class FakeGitHub implements GitHubClient {
 		const issue = this.issues.find((i) => i.number === number);
 		if (!issue) throw new Error(`no issue ${number}`);
 		Object.assign(issue, input);
+		return { ...issue };
+	}
+	async changeAssignees(
+		number: number,
+		change: 'add' | 'remove',
+		logins: string[]
+	) {
+		const issue = this.issues.find((i) => i.number === number);
+		if (!issue) throw new Error(`no issue ${number}`);
+		const lower = logins.map((l) => l.toLowerCase());
+		issue.assignees =
+			change === 'add'
+				? [...new Set([...issue.assignees, ...lower])]
+				: issue.assignees.filter((a) => !lower.includes(a));
 		return { ...issue };
 	}
 	async ensureLabels() {}

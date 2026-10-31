@@ -29,8 +29,11 @@ import {
 } from '../../dependencies/dependency-provenance.js';
 import { mergeNewTaskDependencies } from '../../dependencies/new-task-dependencies.js';
 import { setTaskLink } from '../../dependencies/task-links.js';
+import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { normalizeAcceptanceCriteria } from '../utils/acceptance-criteria.js';
+import { normalizeAssignee } from '../utils/assignee.js';
 import { nextTaskId, readArchivedIdsSync } from '../utils/archive.js';
+import { canonicalTaskId } from '../validation/task-id.js';
 
 /** How many tasks matching the prompt the AI is shown as context */
 const MAX_RELATED_TASKS = 10;
@@ -55,6 +58,8 @@ export interface AddTaskInput {
 	acceptanceCriteria?: string[];
 	/** The task this work was found while doing; a link that never blocks */
 	discoveredFrom?: string | number;
+	/** GitHub login of who the task is for */
+	assignee?: string;
 	/** The active tag when left out */
 	tag?: string;
 	/** The MCP session, for its env */
@@ -113,15 +118,11 @@ function resolveDiscoveredFrom(
 	tasks: Task[]
 ): string | undefined {
 	if (id === undefined || id === null || id === '') return undefined;
-	const text = String(id).trim();
 	const hint = 'Run `taskgraph list` to see task IDs';
-	if (!/^\d+(\.\d+)?$/.test(text)) {
-		throw withHint(`"${text}" isn't a task ID`, hint);
+	const fullId = canonicalTaskId(id);
+	if (fullId === undefined) {
+		throw withHint(`"${String(id).trim()}" isn't a task ID`, hint);
 	}
-	const fullId = text
-		.split('.')
-		.map((part) => String(parseInt(part, 10)))
-		.join('.');
 	if (findTitle(tasks, fullId) === undefined) {
 		throw withHint(`Task ${fullId} doesn't exist`, hint);
 	}
@@ -159,6 +160,7 @@ export class AddTaskService {
 			level === 'warn' ? warn(message) : hooks.onDebug?.(message)
 		);
 		const priority = this.resolvePriority(input.priority, aiConfig, warn);
+		const assignee = input.assignee ? normalizeAssignee(input.assignee) : null;
 		const tag = input.tag || this.configManager.getActiveTag();
 		const storage = this.storage();
 
@@ -253,7 +255,8 @@ export class AddTaskService {
 			status: 'pending',
 			dependencies: merged.dependencies,
 			priority,
-			subtasks: []
+			subtasks: [],
+			...(assignee && { assignee })
 		} as unknown as Task;
 		const acceptanceCriteria = normalizeAcceptanceCriteria(
 			input.acceptanceCriteria
@@ -377,6 +380,7 @@ export class AddTaskService {
 			commandName: 'add-task',
 			outputType: request.outputType ?? 'cli'
 		});
+		untrustLoopIfResearch(response, projectRoot);
 
 		const result = response?.mainResult;
 		const candidate = result?.task ?? result?.object?.task;

@@ -8,7 +8,6 @@ import {
 	type LoopConfig,
 	type LoopIteration,
 	type LoopOutputCallbacks,
-	type LoopResult,
 	type LoopTask,
 	DEFAULT_CONTAINER_IMAGE,
 	MAX_PARALLEL,
@@ -18,12 +17,20 @@ import {
 	assertContainerFlags,
 	assertParallelFlags,
 	createTmCore,
+	parseLoopCaps,
+	parseLoopModel,
 	parseParallelCount
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
-import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
+import {
+	formatLoopIntro,
+	formatLoopIterationEnd,
+	formatLoopIterationStart,
+	formatLoopMessage,
+	formatLoopSummary,
+	formatSandboxAuth
+} from '../ui/formatters/loop-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import {
@@ -32,6 +39,7 @@ import {
 	formatParallelTaskLines
 } from '../ui/formatters/parallel-loop-formatters.js';
 import { terminalWidth } from '../ui/layout/helpers.js';
+import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { getProjectRoot } from '../utils/project-root.js';
 
 export interface LoopCommandOptions {
@@ -48,6 +56,10 @@ export interface LoopCommandOptions {
 	parallel?: string;
 	container?: boolean;
 	containerImage?: string;
+	maxTurns?: string;
+	maxBudgetUsd?: string;
+	model?: string;
+	reuseSession?: boolean;
 }
 
 export class LoopCommand extends Command {
@@ -88,6 +100,22 @@ export class LoopCommand extends Command {
 			)
 			.option('-v, --verbose', "Show Claude's work in real-time")
 			.option(
+				'--max-turns <n>',
+				"Stop each Claude Code run after n turns (claude's --max-turns)"
+			)
+			.option(
+				'--max-budget-usd <amount>',
+				'Stop the run once it has spent this many US dollars; each Claude Code run gets what is left'
+			)
+			.option(
+				'--model <model>',
+				"Run every iteration on this model instead of the one the task's complexity picks"
+			)
+			.option(
+				'--reuse-session',
+				"Resume the last iteration's Claude Code session for the next task instead of starting a new one"
+			)
+			.option(
 				'--parallel <n>',
 				`Run up to n ready tasks at once (1-${MAX_PARALLEL}), each in its own git worktree and branch`
 			)
@@ -111,6 +139,8 @@ export class LoopCommand extends Command {
 
 		try {
 			assertContainerFlags(options);
+			const caps = parseLoopCaps(options);
+			const model = parseLoopModel(options.model);
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
 
@@ -175,6 +205,8 @@ export class LoopCommand extends Command {
 				console.log(line);
 			}
 
+			// Errors printed during the run, not repeated in the summary
+			const shown = new Set<string>();
 			const config: Partial<LoopConfig> = {
 				iterations,
 				prompt,
@@ -184,11 +216,19 @@ export class LoopCommand extends Command {
 				sandbox: options.sandbox,
 				trusted: options.trust,
 				verbose: options.verbose ?? false,
-				callbacks: this.createOutputCallbacks(options.output ?? true)
+				...caps,
+				model,
+				reuseSession: options.reuseSession,
+				callbacks: this.createOutputCallbacks(
+					options.output ?? true,
+					pinned?.id,
+					shown
+				)
 			};
 
 			const result = await this.tmCore.loop.run(config);
-			this.displayResult(result);
+			console.log();
+			console.log(formatLoopSummary(result, shown, terminalWidth()));
 			// Scripts and CI read the exit code; a stuck or failed loop is a failure
 			if (result.finalStatus === 'error' || result.finalStatus === 'blocked') {
 				process.exitCode = 1;
@@ -228,6 +268,8 @@ export class LoopCommand extends Command {
 				taskId: options.id
 			});
 			assertContainerFlags(options);
+			const caps = parseLoopCaps(options);
+			const model = parseLoopModel(options.model);
 
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
@@ -262,6 +304,8 @@ export class LoopCommand extends Command {
 				tag: options.tag,
 				trusted: true,
 				container,
+				...caps,
+				model,
 				signal: controller.signal,
 				callbacks: {
 					onTaskStart: (task) => {
@@ -304,7 +348,8 @@ export class LoopCommand extends Command {
 	}
 
 	/**
-	 * First run in a project: `loop` turns Claude's permission prompts off.
+	 * First run in a project, or the task text or project instructions
+	 * changed since the approval: `loop` turns Claude's permission prompts off.
 	 * With --parallel there's no sandbox to suggest instead.
 	 */
 	private async confirmTrust(parallel?: number): Promise<void> {
@@ -339,30 +384,21 @@ export class LoopCommand extends Command {
 	}
 
 	private handleSandboxAuth(): void {
-		console.log(chalk.dim('Checking sandbox auth...'));
 		const authCheck = this.tmCore.loop.checkSandboxAuth();
 
 		if (authCheck.error) {
 			throw new Error(authCheck.error);
 		}
 
-		if (authCheck.ready) {
-			console.log(chalk.green('✓ Sandbox ready'));
-			return;
-		}
+		if (authCheck.ready) return;
 
-		console.log(
-			chalk.yellow(
-				'Sandbox needs authentication. Starting interactive session...'
-			)
-		);
-		console.log(chalk.dim('Please complete auth, then Ctrl+C to continue.\n'));
+		console.log(formatSandboxAuth(false));
 
 		const authResult = this.tmCore.loop.runInteractiveAuth();
 		if (!authResult.success) {
 			throw new Error(authResult.error || 'Interactive authentication failed');
 		}
-		console.log(chalk.green('✓ Auth complete\n'));
+		console.log(formatSandboxAuth(true));
 	}
 
 	private validateIterations(iterations: string): void {
@@ -374,67 +410,46 @@ export class LoopCommand extends Command {
 		}
 	}
 
-	private createOutputCallbacks(showOutput: boolean): LoopOutputCallbacks {
+	private createOutputCallbacks(
+		showOutput: boolean,
+		taskId: string | undefined,
+		shown: Set<string>
+	): LoopOutputCallbacks {
+		// The iteration's error already printed as it happened, not repeated on its status line
+		let printedError: string | undefined;
 		return {
 			onIterationStart: (iteration: number, total: number) => {
-				console.log();
-				console.log(chalk.cyan(`━━━ Iteration ${iteration} of ${total} ━━━`));
+				printedError = undefined;
+				if (showOutput) console.log();
+				console.log(formatLoopIterationStart(iteration, total, taskId));
 			},
 			// --no-output: Claude's text and tool calls aren't printed
 			...(showOutput && {
-				onText: (text: string) => console.log(text),
+				// Claude's text can carry escape codes from files or pages it read (#890)
+				onText: (text: string) => console.log(terminalSafe(text)),
 				onToolUse: (toolName: string) =>
-					console.log(chalk.dim(`  → ${toolName}`)),
-				onOutput: (output: string) => console.log(output)
+					console.log(chalk.dim(`  → ${terminalSafe(toolName)}`)),
+				onOutput: (output: string) => console.log(terminalSafe(output))
 			}),
-			// Messages can name a task ID read from tasks.json
-			onError: (raw: string, severity?: 'warning' | 'error') => {
-				const message = terminalSafe(raw);
-				if (severity === 'warning') {
-					console.error(chalk.yellow(`[Loop Warning] ${message}`));
-				} else {
-					console.error(chalk.red(`[Loop Error] ${message}`));
+			onError: (message: string, severity?: 'warning' | 'error') => {
+				if (severity !== 'warning') {
+					printedError = message;
+					shown.add(message);
 				}
+				console.error(formatLoopMessage(message, severity, terminalWidth()));
 			},
 			onStderr: (iteration: number, text: string) => {
-				process.stderr.write(chalk.dim(`[Iteration ${iteration}] `) + text);
+				process.stderr.write(
+					chalk.dim(`[Iteration ${iteration}] `) + terminalSafe(text)
+				);
 			},
 			onIterationEnd: (iteration: LoopIteration) => {
-				const statusColor =
-					iteration.status === 'success'
-						? chalk.green
-						: iteration.status === 'error'
-							? chalk.red
-							: chalk.yellow;
+				if (iteration.message) shown.add(iteration.message);
 				console.log(
-					statusColor(
-						`  Iteration ${iteration.iteration} completed: ${iteration.status}`
-					)
+					formatLoopIterationEnd(iteration, printedError, terminalWidth())
 				);
 			}
 		};
-	}
-
-	private displayResult(result: LoopResult): void {
-		console.log();
-		console.log(chalk.bold('Loop Complete'));
-		console.log(chalk.dim('─'.repeat(40)));
-		console.log(`Total iterations: ${result.totalIterations}`);
-		console.log(`Tasks completed: ${result.tasksCompleted}`);
-		console.log(`Final status: ${this.formatStatus(result.finalStatus)}`);
-		if (result.errorMessage) {
-			console.log(chalk.red(`Error: ${terminalSafe(result.errorMessage)}`));
-		}
-	}
-
-	private formatStatus(status: LoopResult['finalStatus']): string {
-		const statusMap: Record<LoopResult['finalStatus'], string> = {
-			all_complete: chalk.green('All tasks complete'),
-			max_iterations: chalk.yellow('Max iterations reached'),
-			blocked: chalk.red('Blocked'),
-			error: chalk.red('Error')
-		};
-		return statusMap[status];
 	}
 
 	static register(program: Command, name?: string): LoopCommand {

@@ -118,6 +118,18 @@ describe('removeTasksIn', () => {
 		expect(result.danglingDependents).toBe(0);
 	});
 
+	it('drops a dependency stored as "2.02", which older versions wrote (#864)', () => {
+		const tasks = [
+			...tasksOf(),
+			{ id: 4, title: 'Four', dependencies: ['2.02'] }
+		];
+
+		const result = removeTasksIn(asTasks(tasks), ['2.2'], 'master', none);
+
+		expect(tasks[3].dependencies).toEqual([]);
+		expect(result.danglingDependents).toBe(0);
+	});
+
 	it('changes nothing when any ID names nothing', () => {
 		const tasks = tasksOf();
 
@@ -177,6 +189,12 @@ describe('previewTaskRemoval', () => {
 			subtaskCount: 2,
 			dependents: [{ id: '1', dependentIds: ['2', '3'] }]
 		});
+	});
+
+	it('lists the dependents of a task named with a leading zero (#864)', () => {
+		expect(previewTaskRemoval(asTasks(tasksOf()), ['01']).dependents).toEqual([
+			{ id: '01', dependentIds: ['2', '3'] }
+		]);
 	});
 });
 
@@ -286,6 +304,15 @@ describe('clearSubtasksIn', () => {
 		});
 		expect(tasks[1].subtasks).toEqual([]);
 		expect(tasks[2].dependencies).toEqual([1]);
+	});
+
+	it('reads "02" as task 2, once with "2" (#874)', () => {
+		const tasks = tasksOf();
+
+		const result = clearSubtasksIn(asTasks(tasks), '02,2');
+
+		expect(result.cleared).toEqual([{ id: 2, title: 'Two', count: 2 }]);
+		expect(tasks[1].subtasks).toEqual([]);
 	});
 
 	it('clears every task with "all"', () => {

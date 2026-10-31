@@ -1,6 +1,7 @@
 import { Writable } from 'node:stream';
 import { Chalk } from 'chalk';
-import { describe, expect, it } from 'vitest';
+import { stripVTControlCharacters as stripAnsi } from 'node:util';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { brandSpinner, createSpinner } from './spinner.js';
 
 describe('brandSpinner', () => {
@@ -54,5 +55,76 @@ describe('createSpinner', () => {
 		expect(written).toContain('✓ Done');
 		expect(written).toContain('✗ Broke');
 		expect(written).not.toContain('✔');
+	});
+});
+
+describe('createSpinner elapsed time (#881)', () => {
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	function ttyStream() {
+		let written = '';
+		const stream = Object.assign(
+			new Writable({
+				write(chunk, _enc, done) {
+					written += chunk.toString();
+					done();
+				}
+			}),
+			{
+				isTTY: true,
+				columns: 80,
+				cursorTo: () => true,
+				moveCursor: () => true,
+				clearLine: () => true
+			}
+		);
+		return { stream, output: () => written };
+	}
+
+	it('adds seconds once the wait passes 3s, and stops the clock on fail', () => {
+		vi.useFakeTimers();
+		const { stream, output } = ttyStream();
+		const spinner = createSpinner({ text: 'Writing', stream, isEnabled: true });
+
+		spinner.start();
+		vi.advanceTimersByTime(2000);
+		expect(spinner.suffixText).toBe('');
+		vi.advanceTimersByTime(10_000);
+		expect(stripAnsi(String(spinner.suffixText))).toBe('12s');
+
+		spinner.fail('Broke');
+
+		expect(vi.getTimerCount()).toBe(0);
+		expect(stripAnsi(output())).toContain('✗ Broke\n');
+		expect(stripAnsi(output())).not.toContain('✗ Broke 12s');
+	});
+
+	it('leaves the text alone with elapsed: false', () => {
+		vi.useFakeTimers();
+		const { stream } = ttyStream();
+		const spinner = createSpinner({
+			text: 'Parsing  0:12',
+			stream,
+			isEnabled: true,
+			elapsed: false
+		}).start();
+
+		vi.advanceTimersByTime(12_000);
+
+		expect(spinner.suffixText).toBe('');
+		spinner.stop();
+	});
+
+	it('prints the plain start line once off a terminal', () => {
+		vi.useFakeTimers();
+		const { stream, output } = ttyStream();
+		createSpinner({ text: 'Writing', stream, isEnabled: false }).start();
+
+		vi.advanceTimersByTime(12_000);
+
+		expect(vi.getTimerCount()).toBe(0);
+		expect(output()).toBe('- Writing\n');
 	});
 });

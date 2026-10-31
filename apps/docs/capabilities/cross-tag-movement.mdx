@@ -85,13 +85,13 @@ A refused move changes nothing and says how to go on.
 When a task you move (or one of its subtasks) depends on tasks that stay behind, or tasks that stay behind depend on it or its subtasks (`Task 7 depends on 5, which moves to in-progress`):
 
 ```text
-✗ Can't move tasks from "backlog" to "in-progress": 2 dependencies stay behind
+✗ Can't move tasks from "backlog" to "in-progress": 2 dependency conflicts
   Task 5 depends on 2 (in backlog)
   Task 6 depends on 3 (in backlog)
   Move them too: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --with-dependencies (tasks that depend on them go in --from), or drop them with --ignore-dependencies
 ```
 
-A dependency is looked up in the source tag first, even when the target tag has a task with the same ID. An archived task can't move with `--with-dependencies`, so a conflict on one reads `Task 5 depends on 2 (archived in backlog)`, and the hint offers `--ignore-dependencies` or `taskgraph archive restore <id> --tag=backlog` instead.
+A dependency is looked up only in the source tag, even when the target tag has a task with the same ID. One the source tag doesn't have names nothing and moves as it is, unless the target tag has that ID: then it would name an unrelated task, so the move is refused with `Task 3 depends on 9, which backlog doesn't have (in-progress has a different 9)`, and the hint offers `--ignore-dependencies` or `taskgraph fix-dependencies --tag=backlog`. An archived task can't move with `--with-dependencies`, so a conflict on one reads `Task 5 depends on 2 (archived in backlog)`, and the hint offers `--ignore-dependencies` or `taskgraph archive restore <id> --tag=backlog` instead.
 
 After `--ignore-dependencies`, the result line is followed by
 `Next: taskgraph validate-dependencies, then taskgraph fix-dependencies`.
@@ -199,7 +199,7 @@ await moveTask({
 });
 ```
 
-A move refused for dependency conflicts returns an error that lists each conflict and says what to retry with: `withDependencies: true` or `ignoreDependencies: true`, or, for an archived dependency, `archive_tasks` with `restore` first (or `taskgraph archive restore <id>` when that tool isn't loaded).
+A move refused for dependency conflicts returns an error that lists each conflict and says what to retry with: `withDependencies: true` or `ignoreDependencies: true`, or, for an archived dependency, `archive_tasks` with `restore` first (or `taskgraph archive restore <id>` when that tool isn't loaded), and for one the source tag doesn't have, `fix_dependencies` (or `taskgraph fix-dependencies`).
 
 ## Troubleshooting
 

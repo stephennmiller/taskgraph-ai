@@ -28,8 +28,9 @@ import { TASKGRAPH_TASKS_FILE } from '../../common/constants/paths.js';
 import type { Subtask, Task, TaskStatus } from '../../common/types/index.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { getPrdSource } from '../prd/prd-sections.js';
-import type { TaskClaim } from './utils/claim.js';
+import { newlyReadyTasks } from './utils/next-task.js';
 import { subtaskInContext } from './utils/subtask-context.js';
+import { normalizeTaskId } from './validation/task-id.js';
 import {
 	type ReadmeExportOptions,
 	writeReadmeExport
@@ -178,8 +179,8 @@ export class TasksDomain {
 		| { task: Subtask; isSubtask: true }
 		| { task: null; isSubtask: boolean }
 	> {
-		// Parse ID - check for dot notation (subtask)
-		const parts = taskId.split('.');
+		// Parse ID - check for dot notation (subtask); "01.03" is 1.3
+		const parts = normalizeTaskId(taskId).split('.');
 		const parentId = parts[0];
 		const subtaskIdPart = parts[1];
 
@@ -226,26 +227,8 @@ export class TasksDomain {
 		return this.taskService.getNextTask(tag);
 	}
 
-	/**
-	 * Pick the next task nobody has started, set it in-progress and record who
-	 * claimed it, in one locked write. Setting it back to pending clears the
-	 * claim. `among` limits the pick to those top-level task IDs (one
-	 * parallel wave, say).
-	 * @returns The claim, or null when no task is ready
-	 */
-	async claimNext(
-		options: {
-			tag?: string;
-			claimant?: string;
-			among?: ReadonlySet<string>;
-		} = {}
-	): Promise<TaskClaim | null> {
-		return this.taskService.claimNextTask(
-			options.tag,
-			options.claimant,
-			options.among
-		);
-	}
+	claimNext: TaskEditCommands['claimNext'] = (...a) =>
+		this.edits.claimNext(...a);
 
 	// ===== Dependency views (TaskDependencyViews) =====
 
@@ -285,6 +268,7 @@ export class TasksDomain {
 	getArchivedIds: TaskEditCommands['getArchivedIds'] = (...a) =>
 		this.edits.getArchivedIds(...a);
 	addNote: TaskEditCommands['addNote'] = (...a) => this.edits.addNote(...a);
+	assign: TaskEditCommands['assign'] = (...a) => this.edits.assign(...a);
 	addSubtask: TaskEditCommands['addSubtask'] = (...a) =>
 		this.edits.addSubtask(...a);
 	move: TaskEditCommands['move'] = (...a) => this.edits.move(...a);
@@ -412,7 +396,7 @@ export class TasksDomain {
 		options: { force?: boolean } = {}
 	) {
 		return this.taskService.updateTaskStatus(
-			taskId,
+			normalizeTaskId(taskId),
 			status,
 			tag,
 			this.statusWriteOptions(options.force)
@@ -421,7 +405,7 @@ export class TasksDomain {
 
 	/**
 	 * `updateStatus` for several ids in one write: a missing id or a refused
-	 * done leaves every id unchanged
+	 * done leaves every id unchanged. `ready`: what a done unblocked, in next order
 	 */
 	async updateStatuses(
 		taskIds: string[],
@@ -429,12 +413,16 @@ export class TasksDomain {
 		tag?: string,
 		options: { force?: boolean } = {}
 	) {
-		return this.taskService.updateTaskStatuses(
-			taskIds,
+		const view = () => this.taskService.getDependencyView(tag);
+		const before = status === 'done' ? await view() : undefined;
+		const updated = await this.taskService.updateTaskStatuses(
+			taskIds.map(normalizeTaskId),
 			status,
 			tag,
 			this.statusWriteOptions(options.force)
 		);
+		const ready = before ? newlyReadyTasks(before, await view()) : [];
+		return { updated, ready };
 	}
 
 	/** The done gate shared by updateStatus and updateStatuses */
