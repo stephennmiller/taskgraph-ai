@@ -246,8 +246,14 @@ describe('loop --parallel', () => {
 		});
 		expect(fs.existsSync(first.worktree)).toBe(true);
 		expect(taskById('1')?.status).toBe('pending');
+		expect(first.costUsd).toBe(0.25);
+		// The rerun dies before its result event: the first run's cost, earlier
+		// in the same log, isn't reported as the rerun's
+		writePlan({ 'task-1': 'fail' });
 		const rerun = await tmCore.loop.runParallel({ ...options, claimant: 'b' });
 		expect(rerun.tasks.map((t) => t.id)).toEqual(['1']);
+		expect(rerun.tasks[0].costUsd).toBeUndefined();
+		expect(rerun.totalCostUsd).toBeUndefined();
 	}, 60_000);
 
 	it('stops a worker past TASKGRAPH_LOOP_TIMEOUT_MS, keeps its work and releases it', async () => {

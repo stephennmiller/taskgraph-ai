@@ -116,16 +116,30 @@ export function readResultEvent(
 export function findResultEvent(output: string): ClaudeRunResult | undefined {
 	const lines = output.split('\n');
 	for (let i = lines.length - 1; i >= 0; i--) {
-		const line = lines[i].trim();
-		if (!line.startsWith('{')) continue;
-		try {
-			const event: unknown = JSON.parse(line);
-			if (isValidStreamEvent(event) && event.type === 'result') {
-				return readResultEvent(event as Record<string, unknown>);
-			}
-		} catch {
-			// Not an event: stderr text in a log, or a cut-off line
+		const event = parseEvent(lines[i]);
+		if (event?.type === 'result') {
+			return readResultEvent(event as Record<string, unknown>);
 		}
 	}
 	return undefined;
+}
+
+/** The output with its stream-json events taken out, for a run with no result event */
+export function withoutEvents(output: string): string {
+	return output
+		.split('\n')
+		.filter((line) => !parseEvent(line))
+		.join('\n');
+}
+
+function parseEvent(line: string) {
+	const text = line.trim();
+	if (!text.startsWith('{')) return undefined;
+	try {
+		const event: unknown = JSON.parse(text);
+		return isValidStreamEvent(event) ? event : undefined;
+	} catch {
+		// Not an event: stderr text in a log, or a cut-off line
+		return undefined;
+	}
 }

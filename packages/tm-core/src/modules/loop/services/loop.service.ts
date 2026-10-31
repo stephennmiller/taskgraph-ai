@@ -30,7 +30,8 @@ import {
 	handleStreamEvent,
 	isValidStreamEvent,
 	processBufferedLines,
-	readResultEvent
+	readResultEvent,
+	withoutEvents
 } from './stream-events.js';
 import {
 	CLAUDE_MISSING,
@@ -431,9 +432,10 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				settled = true;
 				if (timedOut) return fail(timeoutMessage(timeout));
 
-				// No result event (an older Claude Code): the raw output is the reply
+				// No result event (an older Claude Code, or one that died): what
+				// isn't an event is the reply
 				const run = findResultEvent(stdout);
-				const reply = run ? run.text : stdout;
+				const reply = run ? run.text : withoutEvents(stdout);
 				const output = reply + stderr;
 				if (output) {
 					callbacks?.onOutput?.(output);

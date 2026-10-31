@@ -93,9 +93,11 @@ function openLog(file: string): number {
 }
 
 /** The cost and turns at the end of a task's log, if Claude Code got that far */
-function readSpend(task: ParallelTask): void {
+function readSpend(task: ParallelTask, from: number): void {
 	try {
-		const run = findResultEvent(fs.readFileSync(task.logFile, 'utf8'));
+		// From where this run started: a rerun appends to the failed run's log
+		const log = fs.readFileSync(task.logFile).subarray(from);
+		const run = findResultEvent(log.toString('utf8'));
 		if (run?.costUsd !== undefined) task.costUsd = run.costUsd;
 		if (run?.turns !== undefined) task.turns = run.turns;
 	} catch {
@@ -327,6 +329,7 @@ export class ParallelLoopRunner {
 	): Promise<void> {
 		const { task } = entry;
 		const log = openLog(task.logFile);
+		const logStart = fs.fstatSync(log).size;
 		const timeout = loopIterationTimeoutMs();
 		const timers: NodeJS.Timeout[] = [];
 		return new Promise<void>((resolve) => {
@@ -340,7 +343,7 @@ export class ParallelLoopRunner {
 				settled = true;
 				for (const timer of timers) clearTimeout(timer);
 				task.exitCode = exitCode;
-				readSpend(task);
+				readSpend(task, logStart);
 				this.finish(entry, state, error);
 				resolve();
 			};

@@ -95,6 +95,26 @@ describe('LoopService cost and caps', () => {
 		}
 	);
 
+	it("quiet mode doesn't print the JSON events of a run that died before its result event", async () => {
+		const events = streamJson({ result: 'x' }).split('\n')[0];
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					stdout: `${events}\nplain text\n${events}\n`,
+					status: 1
+				}) as never
+		);
+		const onOutput = vi.fn();
+
+		const result = await service.run(config({ callbacks: { onOutput } }));
+
+		expect(onOutput).toHaveBeenCalledWith('plain text\n');
+		expect(result.iterations[0]).toMatchObject({
+			status: 'error',
+			message: 'Exit code 1'
+		});
+	});
+
 	it('reads completion markers from the result text', async () => {
 		spawn.mockImplementation(
 			() =>
