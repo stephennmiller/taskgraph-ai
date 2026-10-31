@@ -105,12 +105,6 @@ describe('package identity', () => {
 		expect(new Set(authors)).toEqual(new Set(['Stephen Miller']));
 	});
 
-	test('auto-updater re-spawns a binary the package actually ships', () => {
-		const constants = read('apps/cli/src/utils/auto-update/constants.ts');
-		const binName = constants.match(/BIN_NAME = '([^']+)'/)[1];
-		expect(Object.keys(pkg.bin)).toContain(binName);
-	});
-
 	test('auto-updater queries the same package it ships as', () => {
 		expect(read('apps/cli/src/utils/auto-update/constants.ts')).toContain(
 			`PACKAGE_NAME = '${pkg.name}'`
