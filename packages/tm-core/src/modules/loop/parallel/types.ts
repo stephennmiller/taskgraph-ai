@@ -48,6 +48,11 @@ export interface ParallelTask {
 	kept?: boolean;
 	/** The task is still claimed (in-progress) after the run (set at the end) */
 	claimed?: boolean;
+	/**
+	 * Claude Code exited 0 and the task is in review or done: what the
+	 * summary counts as done, like the sequential loop (set at the end)
+	 */
+	finished?: boolean;
 }
 
 /** Progress callbacks for the presentation layer */

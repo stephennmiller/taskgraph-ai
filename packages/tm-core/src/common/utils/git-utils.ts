@@ -34,6 +34,23 @@ export async function isGitRepository(projectRoot: string): Promise<boolean> {
 }
 
 /**
+ * The commit HEAD points at, or null outside a repository or before the
+ * first commit
+ */
+export async function getHeadCommit(
+	projectRoot: string
+): Promise<string | null> {
+	try {
+		const { stdout } = await execAsync('git rev-parse --verify --quiet HEAD', {
+			cwd: projectRoot
+		});
+		return stdout.trim() || null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Synchronous check if directory is in a git repository
  */
 export function isGitRepositorySync(projectRoot: string): boolean {
