@@ -10,8 +10,8 @@
  * waits on everything its parent waits on. Those edges are kept apart from
  * the ones it lists, as `inherited`. A parent's dependency on one of its own
  * subtasks is not passed down. A parent isn't finished until its subtasks
- * are, which only `criticalPath` uses: it orders a parent after its open
- * subtasks. `blockedCount` (and so `bottlenecks` and `next`) follows
+ * are, which `criticalPath` and `findCycles` use: the critical path orders a
+ * parent after its open subtasks. `blockedCount` (and so `bottlenecks` and `next`) follows
  * subtasks that wait on a task through their parent, and counts a parent and
  * its subtasks as one unit of waiting work.
  *
@@ -166,6 +166,21 @@ const startEdges = (node: DependencyGraphNode): string[] =>
 	node.inherited.length
 		? [...node.dependencies, ...node.inherited]
 		: node.dependencies;
+
+/**
+ * What a task waits on to finish: `startEdges`, plus a parent's subtasks,
+ * except one that lists the parent (#803)
+ */
+const finishEdges = (
+	nodes: DependencyGraph['nodes'],
+	node: DependencyGraphNode
+): string[] => [
+	...startEdges(node),
+	...node.subtasks.filter(
+		(sub) =>
+			!(nodes.get(sub) as DependencyGraphNode).dependencies.includes(node.id)
+	)
+];
 
 /** The reverse of `startEdges`: who waits on each task to start */
 function startDependents(graph: DependencyGraph): Map<string, string[]> {
@@ -335,7 +350,9 @@ export function bottlenecks(
  * Tasks in dependency cycles, one sorted group per cycle (strongly connected
  * component), groups sorted by their first ID. Considers every task, finished
  * or not. Inherited edges count: if task 2 needs 4 and 4 needs 2.1, then 2.1
- * waits on 4 through its parent, and 2.1 and 4 form a loop.
+ * waits on 4 through its parent, and 2.1 and 4 form a loop. So does a parent
+ * waiting on its subtasks: if 4 needs 2 and 2.1 needs 4, then 2, 2.1 and 4
+ * form a loop (#803).
  */
 export function findCycles(
 	tasks: Task[],
@@ -343,7 +360,7 @@ export function findCycles(
 ): string[][] {
 	const { nodes } = graph;
 	return stronglyConnectedComponents([...nodes.keys()], (id) =>
-		startEdges(nodes.get(id) as DependencyGraphNode)
+		finishEdges(nodes, nodes.get(id) as DependencyGraphNode)
 	)
 		.filter((group) => group.length > 1)
 		.map((group) => group.sort(compareIds))
@@ -375,13 +392,7 @@ export function criticalPath(
 	for (const id of open) dependentsOf.set(id, []);
 	for (const id of open) {
 		const node = nodes.get(id) as DependencyGraphNode;
-		const deps = new Set(startEdges(node));
-		for (const sub of node.subtasks) {
-			if (!(nodes.get(sub) as DependencyGraphNode).dependencies.includes(id)) {
-				deps.add(sub);
-			}
-		}
-		const openDeps = [...deps].filter(isOpenId);
+		const openDeps = [...new Set(finishEdges(nodes, node))].filter(isOpenId);
 		depsOf.set(id, openDeps);
 		for (const dep of openDeps) (dependentsOf.get(dep) as string[]).push(id);
 	}

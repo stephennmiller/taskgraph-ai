@@ -19,3 +19,22 @@ describe('FormatHandler.extractMetadata', () => {
 		expect(metadata?.completedCount).toBe(2);
 	});
 });
+
+describe('FormatHandler tasks and metadata keys (#802)', () => {
+	const handler = new FormatHandler();
+
+	it('reads an untagged file as untagged', () => {
+		const data = { tasks: [{ id: '1' }], metadata: { tags: ['master'] } };
+
+		expect(handler.detectFormat(data)).toBe('standard');
+		expect(handler.extractTags(data)).toEqual(['master']);
+	});
+
+	it('reads a tasks or metadata key holding a tag as a tag', () => {
+		const data = { metadata: { tasks: [{ id: '1' }], metadata: {} } };
+
+		expect(handler.detectFormat(data)).toBe('legacy');
+		expect(handler.extractTags(data)).toEqual(['metadata']);
+		expect(handler.extractTasks(data, 'master')).toEqual([{ id: '1' }]);
+	});
+});

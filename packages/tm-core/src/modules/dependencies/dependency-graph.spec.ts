@@ -542,6 +542,17 @@ describe('findCycles', () => {
 		expect(cycles).toEqual([['2.1', '2.2']]);
 	});
 
+	it("finds a loop through a subtask's own parent (#803)", () => {
+		// 4 needs 3, which can't finish before 3.1, which needs 4. 3.2 lists
+		// its parent, so 3 doesn't wait on it.
+		const tasks = [
+			task('3', [], 'pending', [sub(1, ['4']), sub(2, ['3'])]),
+			task('4', ['3'])
+		];
+
+		expect(findCycles(tasks)).toEqual([['3', '3.1', '4']]);
+	});
+
 	it('reports a 10k two-way chain as one cycle without overflowing the stack', () => {
 		const ids = Array.from({ length: 10_000 }, (_, i) => String(i + 1));
 		const loop = ids.map((id, i) =>

@@ -17,6 +17,7 @@ import {
 import { assertTaskStatus } from '../../../common/constants/index.js';
 import type { Subtask, Task } from '../../../common/types/index.js';
 import { assignMetadata } from '../../dependencies/dependency-provenance.js';
+import { wouldSubtaskCloseLoop } from '../../dependencies/dependency-edges.js';
 import { resolveSubtaskDependency } from '../../dependencies/subtask-dependency.js';
 import {
 	dependenciesForConvertedTask,
@@ -40,6 +41,24 @@ export interface CrossTagConflict {
 	dependencyId: DependencyId;
 	dependencyTag: string;
 	message: string;
+	/** The dependency is archived in the source tag, so it can't move along */
+	archived?: true;
+}
+
+/**
+ * What can clear the conflicts that refused a move to another tag, for the
+ * CLI and MCP to word: moving the dependencies along (withDependencies), and
+ * restoring the archived ones first, since those can't move. Dropping them
+ * (ignoreDependencies) always works.
+ */
+export function crossTagConflictFixes(conflicts: CrossTagConflict[]): {
+	moveAlong: boolean;
+	restore: boolean;
+} {
+	return {
+		moveAlong: conflicts.some((conflict) => !conflict.archived),
+		restore: conflicts.some((conflict) => conflict.archived)
+	};
 }
 
 export interface NewSubtaskInput {
@@ -103,38 +122,16 @@ export function taken(
 export const findTask = (tasks: Item[], id: DependencyId) =>
 	tasks.find((t) => String(t.id) === String(id));
 
+// A dotted ID left as is ("4.1" under task 3) is not one of this task's numbers
 const nextSubtaskId = (parent: Item) =>
 	String(
-		parent.subtasks.length > 0
-			? Math.max(...parent.subtasks.map((st: Item) => Number(st.id))) + 1
-			: 1
+		Math.max(
+			0,
+			...parent.subtasks
+				.map((st: Item) => Number(st.id))
+				.filter(Number.isInteger)
+		) + 1
 	);
-
-/**
- * Whether `task` (a subtask of `parentId` when given) depends on `targetId`,
- * directly, through what it depends on, or through its subtasks
- */
-function isDependentOn(
-	tasks: Item[],
-	task: Item,
-	targetId: string,
-	parentId?: DependencyId
-): boolean {
-	const fullDeps: string[] = (task.dependencies || []).map(
-		(dep: DependencyId) =>
-			parentId === undefined
-				? String(dep)
-				: resolveSubtaskDependency(parentId, dep)
-	);
-	if (fullDeps.includes(targetId)) return true;
-	for (const depId of fullDeps) {
-		const depTask = findTask(tasks, depId);
-		if (depTask && isDependentOn(tasks, depTask, targetId)) return true;
-	}
-	return (task.subtasks ?? []).some((subtask: Item) =>
-		isDependentOn(tasks, subtask, targetId, task.id)
-	);
-}
 
 /**
  * Add a subtask to `parentId`: a new one, or the task `fromTaskId` turned
@@ -157,6 +154,15 @@ export function addSubtaskIn(
 		const data = source.subtask;
 		const status = data.status || 'pending';
 		assertTaskStatus(status, { parentId, newStatus: status });
+		const dependencies = (data.dependencies || []).map((dep) =>
+			resolveSubtaskDependency(parentIdNum, dep)
+		);
+		if (wouldSubtaskCloseLoop(tasks, String(parentIdNum), { dependencies })) {
+			fail(
+				`Cannot add a subtask to task ${parentIdNum} that depends on ${dependencies.join(', ')}: that would make a dependency loop`,
+				ERROR_CODES.TASK_DEPENDENCY_ERROR
+			);
+		}
 		const subtask: Item = {
 			id: newSubtaskId,
 			title: data.title,
@@ -176,9 +182,13 @@ export function addSubtaskIn(
 	if (taskIdNum === parentIdNum) {
 		fail('Cannot make a task a subtask of itself');
 	}
-	if (isDependentOn(items, parentTask, String(taskIdNum))) {
+	if (
+		wouldSubtaskCloseLoop(tasks, String(parentIdNum), {
+			fromTaskId: String(taskIdNum)
+		})
+	) {
 		fail(
-			`Cannot create circular dependency: task ${parentIdNum} is already a subtask or dependent of task ${taskIdNum}`,
+			`Cannot make task ${taskIdNum} a subtask of task ${parentIdNum}: that would make a dependency loop`,
 			ERROR_CODES.TASK_DEPENDENCY_ERROR
 		);
 	}

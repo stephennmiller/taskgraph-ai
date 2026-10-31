@@ -76,6 +76,29 @@ describe('get_task', () => {
 		]);
 	});
 
+	// #808: a missed ID in a list was dropped without a word
+	it('lists the IDs it found no task for in notFound', async () => {
+		tasks.get.mockImplementation(async (id: string) => ({
+			task: id === '2' ? { id, title: 'Task 2' } : null,
+			isSubtask: false
+		}));
+
+		const result = reply(
+			await register().execute({ id: '2,99', projectRoot }, ctx)
+		);
+
+		expect(result.data).toEqual([{ id: '2', title: 'Task 2' }]);
+		expect(result.notFound).toEqual(['99']);
+	});
+
+	it('leaves notFound out when every ID is found', async () => {
+		const result = reply(
+			await register().execute({ id: '1,2', projectRoot }, ctx)
+		);
+
+		expect(result).not.toHaveProperty('notFound');
+	});
+
 	// #661: a subtask's bare "1" sent to set_task_status changed task 1
 	it('gives each subtask its full dotted ID, as next_task does', async () => {
 		tasks.get.mockResolvedValue({

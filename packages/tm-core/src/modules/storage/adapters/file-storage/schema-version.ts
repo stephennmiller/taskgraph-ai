@@ -41,7 +41,8 @@ export function withSchemaVersion<T extends object>(
 	};
 }
 
-function isTagObject(value: unknown): value is Record<string, unknown> {
+/** A tag's value in tasks.json: an object with a `tasks` array */
+export function isTagObject(value: unknown): value is Record<string, unknown> {
 	return (
 		value !== null &&
 		typeof value === 'object' &&

@@ -91,6 +91,8 @@ When a task you move (or one of its subtasks) depends on tasks that stay behind,
   Move them too: taskgraph move --from=5,6 --from-tag=backlog --to-tag=in-progress --with-dependencies (tasks that depend on them go in --from), or drop them with --ignore-dependencies
 ```
 
+A dependency is looked up in the source tag first, even when the target tag has a task with the same ID. An archived task can't move with `--with-dependencies`, so a conflict on one reads `Task 5 depends on 2 (archived in backlog)`, and the hint offers `--ignore-dependencies` or `taskgraph archive restore <id> --tag=backlog` instead.
+
 After `--ignore-dependencies`, the result line is followed by
 `Next: taskgraph validate-dependencies, then taskgraph fix-dependencies`.
 
@@ -196,6 +198,8 @@ await moveTask({
   ignoreDependencies: true
 });
 ```
+
+A move refused for dependency conflicts returns an error that lists each conflict and says what to retry with: `withDependencies: true` or `ignoreDependencies: true`, or, for an archived dependency, `archive_tasks` with `restore` first (or `taskgraph archive restore <id>` when that tool isn't loaded).
 
 ## Troubleshooting
 

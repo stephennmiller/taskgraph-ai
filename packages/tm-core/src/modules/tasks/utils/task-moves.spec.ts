@@ -63,6 +63,15 @@ describe('addSubtaskIn', () => {
 		expect(tasks[1].subtasks).toHaveLength(3);
 	});
 
+	it("numbers past the task's own subtasks, not a dotted ID with another task's prefix (#805)", () => {
+		const tasks = sample();
+		tasks[1].subtasks.push({ id: '4.1', title: 'Odd' } as never);
+
+		const subtask = addSubtaskIn(tasks, '2', { subtask: { title: 'Next' } });
+
+		expect(subtask.id).toBe('3');
+	});
+
 	it('refuses a status set-status would refuse, and adds nothing', () => {
 		const tasks = sample();
 
@@ -85,12 +94,72 @@ describe('addSubtaskIn', () => {
 		]);
 	});
 
-	it('refuses a task its new parent depends on', () => {
+	it('refuses a task that its new parent reaches through another task', () => {
+		// 5 waits on 4, which waits on 3; as 5.1, 3 would also wait on 4
 		const tasks = sample();
+		const before = structuredClone(tasks);
 
 		expect(() => addSubtaskIn(tasks, '5', { fromTaskId: '3' })).toThrow(
-			'Cannot create circular dependency: task 5 is already a subtask or dependent of task 3'
+			'Cannot make task 3 a subtask of task 5: that would make a dependency loop'
 		);
+		expect(tasks).toEqual(before);
+	});
+
+	it('refuses a task that waits on its new parent (#803)', () => {
+		// 5 waits on 4, which waits on 2; task 2 can't finish before 2.3 (5)
+		const tasks = sample();
+
+		expect(() => addSubtaskIn(tasks, '2', { fromTaskId: '5' })).toThrow(
+			'Cannot make task 5 a subtask of task 2: that would make a dependency loop'
+		);
+	});
+
+	it('refuses a task that also lists its new parent, which the move drops (#803)', () => {
+		// 5 needs 2 and 4; as 2.3 it drops 2 but still needs 4, which needs 2
+		const tasks = sample();
+		(tasks[4] as unknown as { dependencies: number[] }).dependencies = [2, 4];
+		const before = structuredClone(tasks);
+
+		expect(() => addSubtaskIn(tasks, '2', { fromTaskId: '5' })).toThrow(
+			'Cannot make task 5 a subtask of task 2: that would make a dependency loop'
+		);
+		expect(tasks).toEqual(before);
+	});
+
+	it('takes a task its new parent depends on directly (#803)', () => {
+		const tasks = sample();
+
+		addSubtaskIn(tasks, '5', { fromTaskId: '4' });
+
+		// 5 now waits on its own subtask, which is no loop
+		expect(tasks.find((t) => String(t.id) === '5')?.dependencies).toEqual([
+			'5.1'
+		]);
+	});
+
+	it('refuses a new subtask that depends on what waits on its parent (#803)', () => {
+		const tasks = sample();
+
+		expect(() =>
+			addSubtaskIn(tasks, '2', {
+				subtask: { title: 'Loop', dependencies: ['4'] }
+			})
+		).toThrow(
+			'Cannot add a subtask to task 2 that depends on 4: that would make a dependency loop'
+		);
+		expect(tasks[1].subtasks).toHaveLength(2);
+	});
+
+	it('takes a subtask that lists its own parent, which is no loop', () => {
+		const tasks = sample();
+
+		addSubtaskIn(tasks, '2', {
+			subtask: { title: 'After', dependencies: ['2'] }
+		});
+		addSubtaskIn(tasks, '4', { fromTaskId: '5' });
+
+		expect(tasks[1].subtasks).toHaveLength(3);
+		expect(ids(tasks)).toEqual(['1', '2', '3', '4']);
 	});
 
 	it('refuses a missing parent', () => {
@@ -345,6 +414,72 @@ describe('moveTasksBetweenTags', () => {
 		expect(result.tips).toHaveLength(2);
 	});
 
+	// feat's task 3 needs feat's 2 and archived 9, its subtask needs feat's 1;
+	// master has its own 1, 2 and 9
+	const sameIdsInTarget = () =>
+		new Map<string, Task[]>([
+			[
+				'master',
+				[
+					{ id: '1', title: 'Setup DB', dependencies: [], subtasks: [] },
+					{ id: '2', title: 'Write docs', dependencies: [], subtasks: [] },
+					{ id: '9', title: 'Ship', dependencies: [], subtasks: [] }
+				] as any
+			],
+			[
+				'feat',
+				[
+					{ id: '1', title: 'Auth API', dependencies: [], subtasks: [] },
+					{ id: '2', title: 'Session store', dependencies: [], subtasks: [] },
+					{
+						id: '3',
+						title: 'Login UI',
+						dependencies: ['2', '9'],
+						subtasks: [{ id: 1, title: 'Form', dependencies: ['1'] }]
+					}
+				] as any
+			]
+		]);
+	const featArchived = (tag: string) =>
+		tag === 'feat' ? new Set(['9']) : noArchive;
+
+	it('refuses a move whose dependencies stay in the source tag, though the target has the same IDs (#801)', () => {
+		const tags = sameIdsInTarget();
+
+		let error: any;
+		try {
+			moveTasksBetweenTags(tags, ['3'], 'feat', 'master', {}, featArchived);
+		} catch (e) {
+			error = e;
+		}
+
+		expect(
+			error?.context.details.conflicts.map((c: any) => [c.message, c.archived])
+		).toEqual([
+			['Task 3 depends on 2 (in feat)', undefined],
+			['Task 3 depends on 9 (archived in feat)', true],
+			['Task 3.1 depends on 1 (in feat)', undefined]
+		]);
+		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '9']);
+	});
+
+	it('drops those dependencies with ignoreDependencies instead of rebinding them (#801)', () => {
+		const tags = sameIdsInTarget();
+
+		moveTasksBetweenTags(
+			tags,
+			['3'],
+			'feat',
+			'master',
+			{ ignoreDependencies: true },
+			featArchived
+		);
+
+		const moved = tags.get('master')?.find((t) => String(t.id) === '3');
+		expect(moved?.dependencies).toEqual([]);
+		expect(moved?.subtasks?.[0].dependencies).toEqual([]);
+	});
+
 	it('creates a missing target tag, but not a reserved one', () => {
 		const tags = tagsWith();
 
@@ -361,6 +496,9 @@ describe('moveTasksBetweenTags', () => {
 		expect(() =>
 			moveTasksBetweenTags(tags, ['3'], 'master', 'tag', {}, archived)
 		).toThrow('"tag" is a reserved tag name');
+		expect(() =>
+			moveTasksBetweenTags(tags, ['3'], 'master', 'tasks', {}, archived)
+		).toThrow('"tasks" is a reserved tag name');
 		expect(() =>
 			moveTasksBetweenTags(tags, ['3'], 'master', 'x/../y', {}, archived)
 		).toThrow('"x/../y" isn\'t a valid tag name');

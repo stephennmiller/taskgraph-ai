@@ -11,10 +11,10 @@
  *   ✗ Can't move tasks from "backlog" to "sprint": 1 dependency stays behind
  *     Task 5 depends on 4 (in backlog)
  *     Move them too: taskgraph move ... --with-dependencies, or drop them with
- *     --ignore-dependencies
+ *     --ignore-dependencies (or restore them first, when archived)
  */
 
-import type { CrossTagConflict } from '@tm/core';
+import { type CrossTagConflict, crossTagConflictFixes } from '@tm/core';
 import chalk from 'chalk';
 import { theme } from '../theme.js';
 import { terminalSafe } from './markdown-formatters.js';
@@ -61,4 +61,25 @@ export function formatTagMove(
  */
 export function formatCrossTagConflicts(conflicts: CrossTagConflict[]): string {
 	return conflicts.map((conflict) => `  ${conflict.message}`).join('\n');
+}
+
+/**
+ * What to do about the dependencies that kept tasks from moving: move them
+ * too, or drop them. An archived one can't move, so it must be restored first.
+ * @param moveTo - The move's flags, escaped, for the commands to copy
+ */
+export function formatCrossTagConflictHint(
+	conflicts: CrossTagConflict[],
+	moveTo: string,
+	sourceTag: string
+): string {
+	const restoreStep = `\`taskgraph archive restore <id> --tag=${terminalSafe(sourceTag)}\``;
+	const { moveAlong, restore } = crossTagConflictFixes(conflicts);
+	if (!moveAlong) {
+		return `Archived tasks can't move: drop them with \`taskgraph move ${moveTo} --ignore-dependencies\`, or restore them first with ${restoreStep}`;
+	}
+	const hint = `Move them too: \`taskgraph move ${moveTo} --with-dependencies\` (tasks that depend on them go in --from), or drop them with --ignore-dependencies`;
+	return restore
+		? `${hint}. Archived ones can't move until restored: ${restoreStep}`
+		: hint;
 }

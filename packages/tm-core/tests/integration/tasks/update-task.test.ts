@@ -211,7 +211,7 @@ describe('tasks.updateWithPrompt', () => {
 		expect(readFile().master.tasks[1]).not.toHaveProperty('metadata');
 	});
 
-	it('renumbers subtasks, keeps their marks and reads dependency forms as legacy did', async () => {
+	it("keeps stored subtask IDs over the AI's, keeps their marks and reads dependency forms as legacy did", async () => {
 		write(
 			stored({ id: '2' }),
 			stored({
@@ -229,7 +229,7 @@ describe('tasks.updateWithPrompt', () => {
 			fromAi({
 				id: 9,
 				subtasks: [
-					sub(4),
+					sub(4, { title: 'S1' }),
 					sub(7, { title: 'S2', dependencies: [1] }),
 					// Sibling 1, task 2 (not sibling 2) and subtask 2.1
 					sub(8, { title: 'S3', dependencies: [1, '2', '2.1'] })
@@ -479,11 +479,11 @@ describe('tasks.updateWithPrompt', () => {
 
 		expect(saved().subtasks.map((s: any) => [s.id, s.title, s.status])).toEqual(
 			[
-				['1', 'S3', 'pending'],
+				['3', 'S3', 'pending'],
 				// Still after the subtask it followed
 				['4', 'Added meanwhile', 'pending'],
-				['2', 'Shipped', 'done'],
-				['3', 'S2', 'in-progress']
+				['1', 'Shipped', 'done'],
+				['2', 'S2', 'in-progress']
 			]
 		);
 	});
@@ -495,6 +495,8 @@ describe('tasks.updateWithPrompt', () => {
 		generateObject.mockImplementation(async () => {
 			const data = readFile();
 			data.master.tasks[0].subtasks[0].status = 'in-progress';
+			// Under the ID the AI's new subtask gets
+			data.master.tasks[0].subtasks.push(sub(3, { title: 'Added meanwhile' }));
 			fs.writeFileSync(tasksPath, JSON.stringify(data));
 			return reply({
 				task: fromAi({
@@ -511,11 +513,94 @@ describe('tasks.updateWithPrompt', () => {
 
 		expect(saved().subtasks.map((s: any) => [s.id, s.title, s.status])).toEqual(
 			[
-				['1', 'New', 'pending'],
-				['2', 'A', 'in-progress'],
-				['3', 'B', 'pending']
+				['3', 'New', 'pending'],
+				['1', 'A', 'in-progress'],
+				['2', 'B', 'pending'],
+				['4', 'Added meanwhile', 'pending']
 			]
 		);
+	});
+
+	it('keeps stored subtask IDs when the AI inserts and drops a step, and drops references to the dropped one (#804)', async () => {
+		write(
+			stored({
+				subtasks: [
+					sub(1, { title: 'A' }),
+					sub(2, { title: 'B' }),
+					sub(3, { title: 'C' }),
+					sub(4, { title: 'D', dependencies: [2] }),
+					sub(5, { title: 'E', status: 'done' })
+				]
+			}),
+			stored({ id: '2', dependencies: ['1.2', '1.5'] }),
+			stored({
+				id: '3',
+				dependencies: ['1.3'],
+				metadata: { dependencySources: { '1.3': 'inferred' } }
+			})
+		);
+		// The AI adds a step before B, drops C and E (done) and renumbers
+		answer(
+			fromAi({
+				subtasks: [
+					sub(1, { title: 'A' }),
+					sub(2, { title: 'New', dependencies: [1] }),
+					sub(3, { title: 'B' }),
+					sub(4, { title: 'D', dependencies: [3] })
+				]
+			})
+		);
+
+		await update();
+
+		const [task, two, three] = readFile().master.tasks;
+		expect(
+			task.subtasks.map((s: any) => [s.id, s.title, s.dependencies])
+		).toEqual([
+			['1', 'A', []],
+			['6', 'New', [1]],
+			['2', 'B', []],
+			['4', 'D', [2]],
+			['5', 'E', []]
+		]);
+		expect(two.dependencies).toEqual(['1.2', '1.5']);
+		expect(three.dependencies).toEqual([]);
+		expect(three.metadata?.dependencySources).toBeUndefined();
+	});
+
+	it('keeps a dependency on a step inserted before it or moved after, by reply order (#804)', async () => {
+		write(
+			stored({
+				subtasks: [
+					sub(1, { title: 'A' }),
+					sub(2, { title: 'B' }),
+					sub(3, { title: 'C' })
+				]
+			})
+		);
+		// New goes before B and B needs it; C moves first and A needs it; A
+		// asks for B, which now comes after it, and for itself as "1.1"
+		answer(
+			fromAi({
+				subtasks: [
+					sub(1, { title: 'C' }),
+					sub(2, { title: 'A', dependencies: [1, 4, '1.2'] }),
+					sub(3, { title: 'New' }),
+					sub(4, { title: 'B', dependencies: [3, '1.2'] })
+				]
+			})
+		);
+
+		await update();
+
+		expect(
+			saved().subtasks.map((s: any) => [s.id, s.title, s.dependencies])
+		).toEqual([
+			['3', 'C', []],
+			['1', 'A', [3]],
+			['4', 'New', []],
+			['2', 'B', [4, 1]]
+		]);
 	});
 
 	it('keeps an unchanged done subtask in place, without a warning', async () => {
