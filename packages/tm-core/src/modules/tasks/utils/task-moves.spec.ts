@@ -63,6 +63,15 @@ describe('addSubtaskIn', () => {
 		expect(tasks[1].subtasks).toHaveLength(3);
 	});
 
+	it("numbers past the task's own subtasks, not a dotted ID with another task's prefix (#805)", () => {
+		const tasks = sample();
+		tasks[1].subtasks.push({ id: '4.1', title: 'Odd' } as never);
+
+		const subtask = addSubtaskIn(tasks, '2', { subtask: { title: 'Next' } });
+
+		expect(subtask.id).toBe('3');
+	});
+
 	it('refuses a status set-status would refuse, and adds nothing', () => {
 		const tasks = sample();
 

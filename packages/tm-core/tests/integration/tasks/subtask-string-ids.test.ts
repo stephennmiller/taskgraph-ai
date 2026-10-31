@@ -143,8 +143,11 @@ describe('subtask IDs stored as strings (#748)', () => {
 		dotted.master.tasks[0].subtasks = dotted.master.tasks[0].subtasks.map(
 			(s) => ({ ...s, id: `1.${s.id}` as never })
 		);
+		// Sibling dependencies written either way still point at their subtask
+		dotted.master.tasks[0].subtasks[2].dependencies = ['1.2', 1];
 		await open(dotted);
 
+		expect((await tmCore.tasks.validateDependencies()).issues).toEqual([]);
 		expect((await tmCore.tasks.get('1.2')).task).toMatchObject({
 			id: '1.2',
 			title: 'B'

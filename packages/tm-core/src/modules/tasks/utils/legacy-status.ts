@@ -23,9 +23,9 @@ export function normalizeTaskStatus<T extends string | undefined>(
  * Copies of the tasks with 'completed' read as 'done', on tasks and their
  * subtasks, each subtask's numeric `id` as a string (schema version 2, #748)
  * and a dotted one with its parent's prefix (`"3.2"` on task 3) as its own
- * number (#805), and without the `tag` and `parentTaskId` fields older
- * versions wrote: a tag rename or a renumbering move left them stale (#701,
- * #702), and nothing reads them now
+ * number unless a sibling has that number (#805), and without the `tag` and
+ * `parentTaskId` fields older versions wrote: a tag rename or a renumbering
+ * move left them stale (#701, #702), and nothing reads them now
  */
 export function normalizeTaskStatuses(tasks: Task[]): Task[] {
 	return tasks.map((task) => {
@@ -33,12 +33,22 @@ export function normalizeTaskStatuses(tasks: Task[]): Task[] {
 		const copy = current(task);
 		if (Array.isArray(task.subtasks)) {
 			const prefix = `${task.id}.`;
-			copy.subtasks = task.subtasks.map((subtask) => {
+			const ids = task.subtasks.map((s) => (isObject(s) ? String(s.id) : ''));
+			const bare = ids.map((id) => {
+				const rest = id.startsWith(prefix) ? id.slice(prefix.length) : '';
+				return /^\d+$/.test(rest) ? rest : id;
+			});
+			copy.subtasks = task.subtasks.map((subtask, i) => {
 				if (!isObject(subtask)) return subtask;
 				const migrated = current(subtask);
 				if (typeof migrated.id === 'number') migrated.id = String(migrated.id);
-				if (typeof migrated.id === 'string' && migrated.id.startsWith(prefix)) {
-					migrated.id = migrated.id.slice(prefix.length);
+				// Left dotted when a sibling already has that number, so two
+				// subtasks never share an ID
+				if (
+					bare[i] !== ids[i] &&
+					bare.indexOf(bare[i]) === bare.lastIndexOf(bare[i])
+				) {
+					migrated.id = bare[i];
 				}
 				return migrated;
 			});

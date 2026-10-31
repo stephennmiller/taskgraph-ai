@@ -37,6 +37,23 @@ describe("mergeTasksJson with the older 'completed' status", () => {
 		expect(tasksOf(result.merged)[0].subtasks[0].status).toBe('done');
 	});
 
+	it("reads a subtask ID with its task's prefix as the saved bare one, so it is no change (#805)", () => {
+		const sub = (id: string, status: string) => ({ id, title: 'Sub', status });
+		const base = file([
+			task(1, 'pending', { subtasks: [sub('1.2', 'pending')] })
+		]);
+		const ours = file([task(1, 'pending', { subtasks: [sub('2', 'done')] })]);
+		const theirs = file([
+			task(1, 'in-progress', { subtasks: [sub('1.2', 'pending')] })
+		]);
+
+		const result = mergeTasksJson(base, ours, theirs);
+
+		expect(result.conflicts).toEqual([]);
+		expect(tasksOf(result.merged)[0].status).toBe('in-progress');
+		expect(tasksOf(result.merged)[0].subtasks).toEqual([sub('2', 'done')]);
+	});
+
 	it('keeps a task restored from an archive that says completed at its ID', () => {
 		const archive = {
 			master: {

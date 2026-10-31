@@ -103,11 +103,15 @@ export function taken(
 export const findTask = (tasks: Item[], id: DependencyId) =>
 	tasks.find((t) => String(t.id) === String(id));
 
+// A dotted ID left as is ("4.1" under task 3) is not one of this task's numbers
 const nextSubtaskId = (parent: Item) =>
 	String(
-		parent.subtasks.length > 0
-			? Math.max(...parent.subtasks.map((st: Item) => Number(st.id))) + 1
-			: 1
+		Math.max(
+			0,
+			...parent.subtasks
+				.map((st: Item) => Number(st.id))
+				.filter(Number.isInteger)
+		) + 1
 	);
 
 /**
