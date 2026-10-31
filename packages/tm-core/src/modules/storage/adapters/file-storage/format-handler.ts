@@ -151,9 +151,13 @@ export class FormatHandler {
 		const format = this.detectFormat(data);
 
 		if (format === 'legacy') {
-			// Return all tag keys from legacy format
-			const keys = Object.keys(data);
-			return keys.filter((key) => key !== 'tasks' && key !== 'metadata');
+			// A tasks or metadata key is a tag when it holds a tag, not the
+			// untagged file's fields: older versions could create one (#802)
+			return Object.keys(data).filter(
+				(key) =>
+					(key !== 'tasks' && key !== 'metadata') ||
+					Array.isArray(data[key]?.tasks)
+			);
 		}
 
 		// Standard format - just has 'master' tag

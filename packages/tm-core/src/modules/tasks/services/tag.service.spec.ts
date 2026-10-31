@@ -108,8 +108,18 @@ describe('TagService.createTag', () => {
 		);
 	});
 
-	// tag and _rawTaggedData are fields of the legacy reader (#399)
-	it.each(['master', 'Main', 'default', 'tag', '_rawTaggedData', '__proto__'])(
+	// tag and _rawTaggedData are fields of the legacy reader (#399); tasks and
+	// metadata are the keys of an untagged file (#802)
+	it.each([
+		'master',
+		'Main',
+		'default',
+		'tag',
+		'_rawTaggedData',
+		'__proto__',
+		'tasks',
+		'metadata'
+	])(
 		'refuses the reserved name %s as a new, renamed or copied tag',
 		async (name) => {
 			const before = fs.readFileSync(tasksPath, 'utf8');
@@ -241,18 +251,27 @@ describe('TagService.renameTag', () => {
 		);
 	});
 
-	it('keeps, renames and deletes a reserved-name tag already in the file', async () => {
-		writeTasks({ ...readTasks(), tag: { tasks: [task('1')], metadata: {} } });
+	it.each(['tag', 'tasks', 'metadata'])(
+		'lists, keeps, renames and deletes a tag named %s already in the file',
+		async (name) => {
+			writeTasks({
+				...readTasks(),
+				[name]: { tasks: [task('1')], metadata: {} }
+			});
 
-		await service().createTag('other');
-		await service().deleteTag('other');
-		expect(readTasks().tag.tasks).toHaveLength(1);
+			const listed = await service().listTags();
+			expect(listed.tags.map((tag) => tag.name)).toContain(name);
+			await service().createTag('other');
+			await service().deleteTag('other');
+			expect(readTasks()[name].tasks).toHaveLength(1);
 
-		await service().renameTag('tag', 'renamed');
-		await service().deleteTag('renamed');
+			await service().renameTag(name, 'renamed');
+			expect(readTasks().renamed.tasks).toHaveLength(1);
+			await service().deleteTag('renamed');
 
-		expect(Object.keys(readTasks())).toEqual(['master', 'feature']);
-	});
+			expect(Object.keys(readTasks())).toEqual(['master', 'feature']);
+		}
+	);
 });
 
 // Names that are also Object.prototype members are ordinary names (#379)
