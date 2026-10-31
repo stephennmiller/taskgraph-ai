@@ -65,6 +65,8 @@ taskgraph show 6 --tag=feature-x
 
 When the task came from a PRD (`metadata.source`), `show` prints that PRD section as written, subsections included, so routes and field names reach you exactly. A subtask shows its parent's section. Only a PRD inside the project is read; for one outside it, `show` prints just the source. `show --json` and the MCP `get_task` tool carry the same section on each task as `prdSection: { source, text }`.
 
+With several IDs (`show 2,5`), `show` prints the tasks it found and lists the rest as not found, and exits 1 if any ID is missing, in text, JSON and with `--silent`. The MCP `get_task` tool returns the found tasks in `data` and the missing IDs in a top-level `notFound`.
+
 ## Show the Dependency Tree
 
 ```bash

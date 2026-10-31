@@ -65,6 +65,7 @@ export function registerGetTaskTool(server: FastMCP) {
 						}))
 					);
 
+					const notFound = taskIds.filter((_, i) => !results[i].task);
 					const tasks: (Task | Subtask)[] = [];
 					for (const { prdSection, ...result } of results) {
 						if (!result.task) continue;
@@ -119,7 +120,8 @@ export function registerGetTaskTool(server: FastMCP) {
 						log,
 						projectRoot,
 						tag,
-						note: TASK_DATA_NOTE
+						note: TASK_DATA_NOTE,
+						notFound
 					});
 				} catch (error: any) {
 					log.error(`Error in get-task: ${error.message}`);
