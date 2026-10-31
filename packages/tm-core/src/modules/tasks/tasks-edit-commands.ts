@@ -25,6 +25,7 @@ import type {
 	CrossTagMoveResult,
 	WithinTagMoveResult
 } from './utils/task-moves.js';
+import { normalizeTaskId } from './validation/task-id.js';
 
 /** What `archive` moved, or would move with dryRun */
 export interface ArchiveResult {
@@ -171,7 +172,7 @@ export class TaskEditCommands {
 		options: { tag?: string } = {}
 	): Promise<TaskNote> {
 		const note = normalizeNoteText(text);
-		const id = String(taskId).trim();
+		const id = normalizeTaskId(taskId);
 		const { saved, addedAt } = await this.taskService.appendToDetails(
 			id,
 			note,

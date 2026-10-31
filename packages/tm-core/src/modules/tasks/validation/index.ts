@@ -10,5 +10,6 @@ export {
 	parseTaskIds,
 	extractParentId,
 	isSubtaskId,
-	fullSubtaskId
+	fullSubtaskId,
+	normalizeTaskId
 } from './task-id.js';

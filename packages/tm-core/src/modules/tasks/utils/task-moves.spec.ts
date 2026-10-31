@@ -128,6 +128,27 @@ describe('addSubtaskIn', () => {
 			addSubtaskIn(sample(), '9', { subtask: { title: 'x' } })
 		).toThrow('Parent task with ID 9 not found');
 	});
+
+	it('reads parent "02" as task 2 and refuses "2x" (#874)', () => {
+		const tasks = sample();
+
+		addSubtaskIn(tasks, '02', { subtask: { title: 'Next' } });
+
+		expect(tasks[1].subtasks).toHaveLength(3);
+		expect(() =>
+			addSubtaskIn(tasks, '2x', { subtask: { title: 'x' } })
+		).toThrow('Parent task with ID 2x not found');
+		expect(tasks[1].subtasks).toHaveLength(3);
+	});
+
+	it('refuses subtask 2.1 as the task to convert, not moving task 2 (#874)', () => {
+		const tasks = sample();
+
+		expect(() => addSubtaskIn(tasks, '1', { fromTaskId: '2.1' })).toThrow(
+			'Task with ID 2.1 not found'
+		);
+		expect(ids(tasks)).toEqual(['1', '2', '3', '4', '5']);
+	});
 });
 
 describe('moveTasksIn', () => {

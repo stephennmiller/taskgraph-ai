@@ -51,6 +51,7 @@ import { untrustLoopIfResearch } from '../../loop/untrust-after-research.js';
 import { getPrdSource } from '../../prd/prd-sections.js';
 import { setGeneratedCriteria } from '../utils/acceptance-criteria.js';
 import { TAG_NAME_PATTERN } from '../utils/tag-names.js';
+import { normalizeTaskId } from '../validation/task-id.js';
 import { degenerateReply } from './expand-reply-check.js';
 import { renumberSubtasks } from './expand-subtask-ids.js';
 import type { TaskService } from './task-service.js';
@@ -187,7 +188,7 @@ export class ExpandTaskService {
 		input: ExpandTaskInput,
 		hooks: ExpandTaskHooks = {}
 	): Promise<ExpandTaskResult> {
-		const taskId = String(input.id).trim();
+		const taskId = normalizeTaskId(input.id);
 		if (!/^\d+$/.test(taskId)) {
 			throw new TaskGraphError(
 				`"${taskId}" isn't a task ID; expand takes a task, not a subtask`,

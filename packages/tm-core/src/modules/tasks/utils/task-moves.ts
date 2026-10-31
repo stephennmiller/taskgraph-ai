@@ -23,6 +23,7 @@ import {
 	dependenciesForConvertedTask,
 	retargetDependents
 } from '../../dependencies/task-to-subtask.js';
+import { normalizeTaskId } from '../validation/task-id.js';
 
 // Tasks as stored: IDs and dependencies may be numbers or strings
 export type Item = Record<string, any>;
@@ -154,9 +155,10 @@ export function addSubtaskIn(
 	source: { fromTaskId: string } | { subtask: NewSubtaskInput }
 ): Subtask {
 	const items = tasks as Item[];
-	const parentIdNum = parseInt(parentId, 10);
-	const parentTask = findTask(items, parentIdNum);
-	if (!parentTask) notFound(`Parent task with ID ${parentIdNum} not found`);
+	// "01" is task 1; parseInt also read "1x" and subtask "8.1" as a task
+	const parentKey = normalizeTaskId(parentId);
+	const parentTask = findTask(items, parentKey);
+	if (!parentTask) notFound(`Parent task with ID ${parentKey} not found`);
 	parentTask.subtasks ??= [];
 	const newSubtaskId = nextSubtaskId(parentTask);
 
@@ -165,11 +167,11 @@ export function addSubtaskIn(
 		const status = data.status || 'pending';
 		assertTaskStatus(status, { parentId, newStatus: status });
 		const dependencies = (data.dependencies || []).map((dep) =>
-			resolveSubtaskDependency(parentIdNum, dep)
+			resolveSubtaskDependency(parentKey, dep)
 		);
-		if (wouldSubtaskCloseLoop(tasks, String(parentIdNum), { dependencies })) {
+		if (wouldSubtaskCloseLoop(tasks, parentKey, { dependencies })) {
 			fail(
-				`Cannot add a subtask to task ${parentIdNum} that depends on ${dependencies.join(', ')}: that would make a dependency loop`,
+				`Cannot add a subtask to task ${parentKey} that depends on ${dependencies.join(', ')}: that would make a dependency loop`,
 				ERROR_CODES.TASK_DEPENDENCY_ERROR
 			);
 		}
@@ -185,20 +187,20 @@ export function addSubtaskIn(
 		return subtask as unknown as Subtask;
 	}
 
-	const taskIdNum = parseInt(source.fromTaskId, 10);
-	const taskIndex = items.findIndex((t) => String(t.id) === String(taskIdNum));
-	if (taskIndex === -1) notFound(`Task with ID ${taskIdNum} not found`);
+	const taskKey = normalizeTaskId(source.fromTaskId);
+	const taskIndex = items.findIndex((t) => String(t.id) === taskKey);
+	if (taskIndex === -1) notFound(`Task with ID ${taskKey} not found`);
 	const task = items[taskIndex];
-	if (taskIdNum === parentIdNum) {
+	if (taskKey === parentKey) {
 		fail('Cannot make a task a subtask of itself');
 	}
 	if (
-		wouldSubtaskCloseLoop(tasks, String(parentIdNum), {
-			fromTaskId: String(taskIdNum)
+		wouldSubtaskCloseLoop(tasks, parentKey, {
+			fromTaskId: taskKey
 		})
 	) {
 		fail(
-			`Cannot make task ${taskIdNum} a subtask of task ${parentIdNum}: that would make a dependency loop`,
+			`Cannot make task ${taskKey} a subtask of task ${parentKey}: that would make a dependency loop`,
 			ERROR_CODES.TASK_DEPENDENCY_ERROR
 		);
 	}
@@ -206,7 +208,7 @@ export function addSubtaskIn(
 	// Its dependencies were task IDs; under a subtask a bare number is a sibling
 	const { dependencies, metadata } = dependenciesForConvertedTask(
 		task,
-		parentIdNum
+		parentKey
 	);
 	const subtask: Item = {
 		...task,
@@ -216,10 +218,6 @@ export function addSubtaskIn(
 	assignMetadata(subtask, metadata);
 	parentTask.subtasks.push(subtask);
 	items.splice(taskIndex, 1);
-	retargetDependents(
-		items,
-		String(taskIdNum),
-		`${parentIdNum}.${newSubtaskId}`
-	);
+	retargetDependents(items, taskKey, `${parentKey}.${newSubtaskId}`);
 	return subtask as unknown as Subtask;
 }

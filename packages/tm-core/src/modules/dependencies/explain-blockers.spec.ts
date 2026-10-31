@@ -124,6 +124,15 @@ describe('explainBlockers', () => {
 		]);
 	});
 
+	it('names the task an older spelling such as "01" stands for (#874)', () => {
+		const result = explainBlockers([task('1'), task('2', ['01', '07'])], '2');
+
+		expect(result.rootCauses).toEqual([
+			{ id: '01', kind: 'missing', listedBy: ['2'], canonicalId: '1' },
+			{ id: '07', kind: 'missing', listedBy: ['2'] }
+		]);
+	});
+
 	it('names deferred and blocked dependencies as stalled, not ready', () => {
 		const result = explainBlockers(
 			[

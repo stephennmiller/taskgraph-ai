@@ -306,6 +306,15 @@ describe('clearSubtasksIn', () => {
 		expect(tasks[2].dependencies).toEqual([1]);
 	});
 
+	it('reads "02" as task 2, once with "2" (#874)', () => {
+		const tasks = tasksOf();
+
+		const result = clearSubtasksIn(asTasks(tasks), '02,2');
+
+		expect(result.cleared).toEqual([{ id: 2, title: 'Two', count: 2 }]);
+		expect(tasks[1].subtasks).toEqual([]);
+	});
+
 	it('clears every task with "all"', () => {
 		const result = clearSubtasksIn(asTasks(tasksOf()), 'all');
 
