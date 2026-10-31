@@ -157,10 +157,13 @@ export class ConfigManager {
 			);
 		}
 
-		return {
-			type: 'file',
-			basePath: storage?.basePath ?? this.projectRoot
-		};
+		if (storage && 'basePath' in storage) {
+			getLogger('ConfigManager').debug(
+				'Ignoring storage.basePath in config.json: tasks are always stored in this project.'
+			);
+		}
+
+		return { type: 'file' };
 	}
 
 	/**
