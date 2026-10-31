@@ -85,11 +85,13 @@ export function formatUsageLine(
 }
 
 /**
- * ` · sonnet, low effort · $0.42 · 12 turns · 3m 10s`, muted, for the end of
- * a `loop` line; leaves out what wasn't picked or reported, and is empty
- * when there's nothing
+ * ` · resumed · sonnet, low effort · $0.42 · 12 turns · 3m 10s`, muted, for
+ * the end of a `loop` line; leaves out what wasn't picked or reported, and is
+ * empty when there's nothing
  */
 export function formatLoopSpend(spend: {
+	/** `resumed` or `fresh`: whether the iteration reused the last Claude Code session */
+	session?: string;
 	model?: string;
 	effort?: string;
 	costUsd?: number;
@@ -102,6 +104,7 @@ export function formatLoopSpend(spend: {
 		.filter(Boolean)
 		.join(', ');
 	const facts = [
+		spend.session ?? null,
 		setting || null,
 		spend.costUsd !== undefined
 			? `${spend.costUnknown ? 'cost unknown, counted as ' : ''}${formatCost(spend.costUsd)}`

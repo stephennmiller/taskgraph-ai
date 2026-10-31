@@ -30,6 +30,7 @@ import type {
 	ParallelLoopResult
 } from './parallel/types.js';
 import { LoopService } from './services/loop.service.js';
+import { resolveResumeLimit } from './session-resume.js';
 import { taskStatuses } from './task-progress.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 
@@ -323,13 +324,21 @@ export class LoopDomain {
 			maxBudgetUsd: partial.maxBudgetUsd,
 			model: partial.model,
 			bands: partial.bands ?? this.loopBands(),
+			reuseSession: partial.reuseSession,
+			resumeMaxContextTokens:
+				partial.resumeMaxContextTokens ??
+				resolveResumeLimit(this.loopSettings()),
 			callbacks: partial.callbacks
 		};
 	}
 
 	/** The project's `loop.bands`, or the defaults; throws LoopError for a bad one */
 	private loopBands(): LoopBand[] {
-		const config = this.configManager.getConfig() as { loop?: unknown };
-		return resolveLoopBands(config.loop);
+		return resolveLoopBands(this.loopSettings());
+	}
+
+	/** The project config's `loop` key */
+	private loopSettings(): unknown {
+		return (this.configManager.getConfig() as { loop?: unknown }).loop;
 	}
 }

@@ -150,6 +150,27 @@ describe('LoopCommand cost and caps', () => {
 		);
 	});
 
+	it('passes --reuse-session to tm-core and says whether each iteration resumed', async () => {
+		run.mockImplementation(async (config) => {
+			config.callbacks.onIterationEnd({
+				iteration: 2,
+				status: 'success',
+				session: 'resumed',
+				costUsd: 0.42
+			});
+			return result();
+		});
+
+		await execute({ reuseSession: true });
+
+		expect(run).toHaveBeenCalledWith(
+			expect.objectContaining({ reuseSession: true })
+		);
+		expect(printed()).toContain(
+			'  Iteration 2 completed: success · resumed · $0.42'
+		);
+	});
+
 	it('refuses a --model that would read as a flag, before starting tm-core', async () => {
 		await expect(execute({ model: '--verbose' })).rejects.toThrow(
 			'process.exit called'

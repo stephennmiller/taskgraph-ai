@@ -49,6 +49,10 @@ export function completeIteration(
 		message: (status === 'error' && run?.capHit) || message,
 		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
 		...(run?.turns !== undefined ? { turns: run.turns } : {}),
+		...(run?.sessionId ? { sessionId: run.sessionId } : {}),
+		...(run?.contextTokens !== undefined
+			? { contextTokens: run.contextTokens }
+			: {}),
 		// Died mid-run (a crash, or docker's 137 for a killed container) (#855)
 		...(!run && exitCode !== 0 && started ? { costUnknown: true } : {})
 	};

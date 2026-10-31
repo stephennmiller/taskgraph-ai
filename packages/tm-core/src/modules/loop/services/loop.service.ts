@@ -2,10 +2,8 @@
  * @fileoverview Loop Service - Orchestrates running Claude Code iterations (sandbox or CLI mode)
  */
 
-import { readFile } from 'node:fs/promises';
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
-import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
 import { TRUST_LOST, isLoopTrusted, keepLoopTrust } from '../loop-trust.js';
 import {
@@ -13,7 +11,10 @@ import {
 	modelArgs,
 	pickModelEffort
 } from '../model-bands.js';
-import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import {
+	DEFAULT_RESUME_MAX_CONTEXT_TOKENS,
+	resumableSession
+} from '../session-resume.js';
 import { statusProgress } from '../task-progress.js';
 import {
 	checkSandboxAuth,
@@ -21,6 +22,7 @@ import {
 	stopSandbox
 } from './docker-sandbox.js';
 import { buildCommandArgs, spawnIteration } from './iteration-process.js';
+import { buildPrompt } from './loop-prompt.js';
 import {
 	completeIteration,
 	createErrorIteration,
@@ -35,6 +37,7 @@ import {
 } from './progress-file.js';
 import {
 	type ClaudeRunResult,
+	contextTokens,
 	findResultEvent,
 	handleStreamEvent,
 	hasStreamEvent,
@@ -56,7 +59,6 @@ import type {
 	LoopConfig,
 	LoopIteration,
 	LoopOutputCallbacks,
-	LoopPreset,
 	LoopResult
 } from '../types.js';
 
@@ -71,10 +73,6 @@ export interface LoopServiceOptions {
 	/** A task's complexity score, which picks the iteration's model and effort */
 	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
 }
-
-/** Appended to every prompt, presets and custom files alike */
-const SIGNAL_RULE =
-	'To stop the loop, end your reply with the <loop-complete> or <loop-blocked> marker alone on the last line. A marker anywhere else is ignored.';
 
 export class LoopService {
 	private readonly projectRoot: string;
@@ -137,6 +135,8 @@ export class LoopService {
 		let consecutiveErrors = 0;
 		let stalled = 0;
 		let spent = 0;
+		// The iteration whose session the next one may resume
+		let resumeFrom: LoopIteration | undefined;
 		// Only a run that works on tasks can be stuck on one
 		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
@@ -166,20 +166,37 @@ export class LoopService {
 			}
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
-			const prompt = await this.buildPrompt(config, i);
 			const choice = await this.chooseModel(config);
-			const iteration = await this.executeIteration(
-				prompt,
-				i,
-				config.sandbox ?? false,
-				config.verbose ?? false,
-				[
-					...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
-					...modelArgs(choice)
-				],
-				config.callbacks
-			);
+			// Opt-in (#841); a sandbox keeps its sessions in the container, not here
+			let resume =
+				config.reuseSession && !config.sandbox
+					? resumableSession(
+							resumeFrom,
+							choice,
+							config.resumeMaxContextTokens ?? DEFAULT_RESUME_MAX_CONTEXT_TOKENS
+						)
+					: undefined;
+			const run = async () =>
+				this.executeIteration(
+					await buildPrompt(config, i, !!resume),
+					i,
+					config.sandbox ?? false,
+					config.verbose ?? false,
+					[
+						...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
+						...modelArgs(choice),
+						...(resume ? ['--resume', resume] : [])
+					],
+					config.callbacks
+				);
+			let iteration = await run();
+			// The session couldn't be resumed (gone, or never written): don't spend an iteration on it
+			if (resume && iteration.status === 'error' && iteration.turns === 0) {
+				resume = undefined;
+				iteration = await run();
+			}
 			Object.assign(iteration, choice);
+			if (config.reuseSession) iteration.session = resume ? 'resumed' : 'fresh';
 			// Reported no cost: count all it was given (#855)
 			if (iteration.costUnknown && left !== undefined) iteration.costUsd = left;
 			iterations.push(iteration);
@@ -197,6 +214,8 @@ export class LoopService {
 			const headAfter = await this.readHead();
 			const committed = !!headAfter && headAfter !== head;
 			head = headAfter;
+			// Resume only a session that got somewhere
+			resumeFrom = progress.changed || committed ? iteration : undefined;
 
 			// Claude can say all tasks are done while one is still ready; keep going then
 			if (iteration.status === 'complete') {
@@ -204,6 +223,8 @@ export class LoopService {
 				if (ready) {
 					iteration.status = 'success';
 					iteration.message = `Claude said all tasks are done, but task ${ready} is ready`;
+					// That session believes the work is done
+					resumeFrom = undefined;
 					this.reportError(
 						config.callbacks,
 						`${iteration.message}. Continuing.`,
@@ -373,40 +394,6 @@ export class LoopService {
 		}
 	}
 
-	private isPreset(name: string): name is LoopPreset {
-		return checkIsPreset(name);
-	}
-
-	private async resolvePrompt(prompt: string): Promise<string> {
-		if (this.isPreset(prompt)) {
-			return PRESETS[prompt];
-		}
-		const content = await readFile(prompt, 'utf-8');
-		if (!content.trim()) {
-			throw new Error(`Custom prompt file '${prompt}' is empty`);
-		}
-		return content;
-	}
-
-	private buildContextHeader(config: LoopConfig, iteration: number): string {
-		const tagInfo = config.tag ? ` (tag: ${config.tag})` : '';
-		// The pinned task replaces the preset's `taskgraph next` step
-		const taskInfo = config.taskId
-			? `\n\nWork on task ${config.taskId} only. Use it in place of the task taskgraph next would pick, and read it with taskgraph show ${config.taskId}.`
-			: '';
-		return `@${config.progressFile} @CLAUDE.md
-
-Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
-	}
-
-	private async buildPrompt(
-		config: LoopConfig,
-		iteration: number
-	): Promise<string> {
-		const basePrompt = await this.resolvePrompt(config.prompt);
-		return `${this.buildContextHeader(config, iteration)}\n\n${basePrompt}\n\n${TASK_DATA_RULE}\n\n${SIGNAL_RULE}`;
-	}
-
 	private async executeIteration(
 		prompt: string,
 		iterationNum: number,
@@ -541,6 +528,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			let stdoutEnded = false;
 			let started = false;
 			let run: ClaudeRunResult | undefined;
+			let context: number | undefined;
 			let buffer = '';
 
 			const processLine = (line: string): void => {
@@ -556,9 +544,12 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 					handleStreamEvent(event, callbacks);
 
+					const tokens = contextTokens(event as Record<string, unknown>);
+					if (tokens !== undefined) context = tokens;
 					// Final result: its text is checked for completion markers
 					if (event.type === 'result') {
 						run = readResultEvent(event as Record<string, unknown>);
+						if (context !== undefined) run.contextTokens = context;
 					}
 				} catch (error) {
 					// Log malformed JSON for debugging (non-JSON lines like system output are expected)
