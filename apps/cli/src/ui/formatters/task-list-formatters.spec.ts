@@ -228,6 +228,17 @@ describe('formatEmptyList', () => {
 		expect(out[0]).toBe('No pending tasks found');
 		expect(out[1]).toBe('Next: taskgraph list to see every task');
 	});
+
+	it('names the login --mine matched (#877)', () => {
+		const out = lines(
+			formatEmptyList(undefined, { width: 80, assignee: 'stephennmiller' })
+		);
+
+		expect(out).toEqual([
+			'Nothing assigned to stephennmiller',
+			'Next: taskgraph list to see every task'
+		]);
+	});
 });
 
 describe('formatNoNextTask', () => {

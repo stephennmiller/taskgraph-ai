@@ -66,6 +66,17 @@ export function fenceAsData(text: string, tag: string): string {
 export const TASK_DATA_TAG = 'task-data';
 
 /**
+ * Task text as the CLI prints it: fenced for an agent, which reads a pipe;
+ * bare for a person at a terminal (#876). Neutralized either way, so a
+ * title can't close a fence when the same text is later piped.
+ */
+export function formatTaskData(text: string, fence: boolean): string {
+	return fence
+		? fenceAsData(text, TASK_DATA_TAG)
+		: neutralizeTag(text, TASK_DATA_TAG);
+}
+
+/**
  * Task JSON (an MCP reply, `--json` output) with every string, values and
  * keys (`metadata` keys come from the file), run through `neutralizeTag`
  * for the task-data tag, so a field can't close a fence the agent reads it

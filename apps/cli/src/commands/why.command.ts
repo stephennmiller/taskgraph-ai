@@ -7,15 +7,14 @@ import path from 'node:path';
 import {
 	type BlockerExplanation,
 	type TmCore,
-	TASK_DATA_TAG,
 	TaskIdSchema,
 	createTmCore,
-	fenceAsData,
+	formatTaskData,
 	neutralizeTaskData
 } from '@tm/core';
 import { Command } from 'commander';
 import { renderBlockerExplanation } from '../ui/components/blocker-explanation.component.js';
-import { getContentWidth } from '../ui/layout/helpers.js';
+import { fencesTaskData, getContentWidth } from '../ui/layout/helpers.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError, printError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
@@ -112,13 +111,13 @@ export class WhyCommand extends Command {
 			projectRoot: this.tmCore?.projectPath
 		});
 		if (headerShown) console.log();
-		// An agent reads this: fence the titles as show and next do
+		// An agent reads this piped: fence the titles as show and next do
 		console.log(
-			fenceAsData(
+			formatTaskData(
 				renderBlockerExplanation(result, { width: getContentWidth() }).join(
 					'\n'
 				),
-				TASK_DATA_TAG
+				fencesTaskData()
 			)
 		);
 	}
