@@ -3,9 +3,9 @@
  * its exit code, and the cost and turns it reported
  */
 
-import type { LoopIteration } from '../types.js';
+import type { LoopIteration, LoopResult } from '../types.js';
 import { CLAUDE_MISSING, DOCKER_MISSING } from './iteration-limits.js';
-import type { ClaudeRunResult } from './stream-events.js';
+import { BUDGET_CAP_HIT, type ClaudeRunResult } from './stream-events.js';
 
 /** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
 const SIGNAL_LINE = /^<loop-(complete|blocked)>([^<]*)<\/loop-\1>$/i;
@@ -100,5 +100,44 @@ export function createErrorIteration(
 		duration: Date.now() - startTime,
 		message,
 		...spent
+	};
+}
+
+/** The run's result, with its cost and turns summed over the iterations */
+export function loopResult(
+	iterations: LoopIteration[],
+	tasksCompleted: number,
+	finalStatus: LoopResult['finalStatus'],
+	errorMessage?: string
+): LoopResult {
+	// Ran out right after a failed iteration: the run failed (#861), unless Claude stopped at the budget itself
+	const last = iterations.at(-1);
+	if (
+		(finalStatus === 'max_iterations' || finalStatus === 'budget_reached') &&
+		last?.status === 'error' &&
+		last.message !== BUDGET_CAP_HIT
+	) {
+		finalStatus = 'error';
+		errorMessage = last.message;
+	}
+	const sum = (key: 'costUsd' | 'turns') =>
+		iterations.some((it) => it[key] !== undefined)
+			? iterations.reduce((total, it) => total + (it[key] ?? 0), 0)
+			: undefined;
+	const totalCostUsd = sum('costUsd');
+	const totalTurns = sum('turns');
+	// Not in the total: an iteration that died before reporting, with no budget to count
+	const costPartial = iterations.some(
+		(it) => it.costUnknown && it.costUsd === undefined
+	);
+	return {
+		iterations,
+		totalIterations: iterations.length,
+		tasksCompleted,
+		finalStatus,
+		...(errorMessage ? { errorMessage } : {}),
+		...(totalCostUsd !== undefined ? { totalCostUsd } : {}),
+		...(totalTurns !== undefined ? { totalTurns } : {}),
+		...(costPartial ? { costPartial } : {})
 	};
 }

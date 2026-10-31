@@ -28,15 +28,21 @@ export async function initProgressFile(config: LoopConfig): Promise<void> {
 	);
 }
 
-/** `$0.42 · 12 turns`, leaving out what Claude Code didn't report */
+/** `$0.42 · 12 turns`, leaving out what Claude Code didn't report; `partial`: a total missing an unknown cost */
 function spend(
 	costUsd?: number,
 	turns?: number,
-	costUnknown?: boolean
+	costUnknown?: boolean,
+	partial?: boolean
 ): string[] {
-	const cost = costUsd !== undefined ? `$${costUsd.toFixed(2)}` : undefined;
+	const cost =
+		costUsd === undefined
+			? costUnknown || partial
+				? 'cost unknown'
+				: undefined
+			: `${costUnknown ? 'cost unknown, counted as ' : partial ? 'at least ' : ''}$${costUsd.toFixed(2)}`;
 	return [
-		...(cost ? [costUnknown ? `cost unknown, counted as ${cost}` : cost] : []),
+		...(cost ? [cost] : []),
 		...(turns !== undefined ? [`${turns} turns`] : [])
 	];
 }
@@ -52,6 +58,9 @@ export async function appendIterationLine(
 	].filter(Boolean);
 	const facts = [
 		iteration.status,
+		...(iteration.status === 'error' && iteration.message
+			? [iteration.message]
+			: []),
 		...(iteration.session ? [iteration.session] : []),
 		...(iteration.complexity !== undefined
 			? [`complexity ${iteration.complexity}`]
@@ -73,7 +82,12 @@ export async function appendFinalSummary(
 	file: string,
 	result: LoopResult
 ): Promise<void> {
-	const cost = spend(result.totalCostUsd, result.totalTurns);
+	const cost = spend(
+		result.totalCostUsd,
+		result.totalTurns,
+		false,
+		result.costPartial
+	);
 	await appendFile(
 		file,
 		`

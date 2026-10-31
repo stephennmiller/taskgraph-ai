@@ -114,6 +114,49 @@ describe('LoopCommand cost and caps', () => {
 		expect(process.exitCode).toBeUndefined();
 	});
 
+	it('says why an iteration failed, once, and exits 1 when the run ended on it (#861)', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		run.mockImplementation(async (config) => {
+			config.callbacks.onIterationStart(1, 2);
+			config.callbacks.onIterationEnd({
+				iteration: 1,
+				status: 'error',
+				message: 'Claude Code reached the --max-turns limit',
+				costUsd: 0.2,
+				turns: 5
+			});
+			// Reported as it happened, so not repeated on the status line
+			config.callbacks.onIterationStart(2, 2);
+			config.callbacks.onError('Command terminated abnormally (no exit code)');
+			config.callbacks.onIterationEnd({
+				iteration: 2,
+				status: 'error',
+				message: 'Command terminated abnormally (no exit code)',
+				costUnknown: true
+			});
+			return result({
+				finalStatus: 'error',
+				errorMessage: 'Command terminated abnormally (no exit code)',
+				totalCostUsd: 0.2,
+				costPartial: true,
+				totalTurns: 5
+			});
+		});
+
+		await execute({ maxTurns: '5' });
+
+		expect(printed()).toEqual(
+			expect.arrayContaining([
+				'  Iteration 1 completed: error (Claude Code reached the --max-turns limit) · $0.2 · 5 turns',
+				'  Iteration 2 completed: error · cost unknown',
+				'Total iterations: 1 · at least $0.2 · 5 turns',
+				'Final status: Error'
+			])
+		);
+		expect(error).toHaveBeenCalledTimes(1);
+		expect(process.exitCode).toBe(1);
+	});
+
 	it('refuses a bad --max-budget-usd before starting tm-core', async () => {
 		await expect(execute({ maxBudgetUsd: 'lots' })).rejects.toThrow(
 			'process.exit called'

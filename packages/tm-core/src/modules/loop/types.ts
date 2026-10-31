@@ -165,6 +165,8 @@ export interface LoopResult {
 		| 'error';
 	/** Sum of the iterations' costUsd, when any reported one */
 	totalCostUsd?: number;
+	/** An iteration's cost is unknown and not in totalCostUsd, so the run spent at least that */
+	costPartial?: boolean;
 	/** Sum of the iterations' turns, when any reported them */
 	totalTurns?: number;
 	/** Error message when finalStatus is 'error' (optional) */

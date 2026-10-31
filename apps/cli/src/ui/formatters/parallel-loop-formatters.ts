@@ -158,9 +158,12 @@ export function formatParallelSummary(
 	const idWidth = Math.max(...tasks.map((t) => t.id.length));
 	const rows = tasks.map(
 		(t) =>
-			`  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}${formatLoopSpend({ model: t.model, effort: t.effort, costUsd: t.costUsd, turns: t.turns })}`
+			`  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}${formatLoopSpend({ model: t.model, effort: t.effort, costUsd: t.costUsd, costUnknown: t.costUnknown, turns: t.turns })}`
 	);
-	const spent = formatLoopSpend({ costUsd: result.totalCostUsd });
+	const spent = formatLoopSpend({
+		costUsd: result.totalCostUsd,
+		costPartial: result.costPartial
+	});
 	const kept = tasks.filter((t) => t.kept);
 	// Exiting 0 isn't enough: Claude must have marked the task review or done
 	const done = tasks.filter((t) => t.finished).length;

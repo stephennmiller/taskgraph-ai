@@ -90,9 +90,12 @@ export interface ClaudeRunResult {
 	contextTokens?: number;
 }
 
+/** An iteration's message when Claude Code stopped at its --max-budget-usd */
+export const BUDGET_CAP_HIT = 'Claude Code reached the --max-budget-usd limit';
+
 const CAP_HIT: Record<string, string> = {
 	error_max_turns: 'Claude Code reached the --max-turns limit',
-	error_max_budget_usd: 'Claude Code reached the --max-budget-usd limit'
+	error_max_budget_usd: BUDGET_CAP_HIT
 };
 
 const finite = (value: unknown) =>
