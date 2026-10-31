@@ -7,6 +7,12 @@
  */
 
 import type { Task } from '../../common/types/index.js';
+import { fullSubtaskId } from '../tasks/validation/task-id.js';
+import {
+	assignMetadata,
+	hasDependency,
+	pruneDependencySources
+} from './dependency-provenance.js';
 import { resolveSubtaskDependency } from './subtask-dependency.js';
 
 /**
@@ -220,4 +226,75 @@ export function withoutLoopsThroughParent<T extends string | number>(
 		);
 		return false;
 	});
+}
+
+/**
+ * Drop each dependency a rewrite gave a task or its subtasks (one it lacked
+ * `before`, the task as it was) that would close a loop
+ * (`wouldCloseDependencyLoop`), with its provenance mark. All of them are
+ * taken out first, then each is checked, in order, with only those kept
+ * before it in place, so none is dropped for a loop through one dropped later.
+ * @param tasks - Every task, the rewritten ones (`task`) among them
+ * @param log - Told about each dependency dropped
+ */
+export function withoutNewLoops(
+	tasks: Task[],
+	rewrites: Array<{ before: Task | undefined; task: Task }>,
+	log: (message: string) => void = () => {}
+): void {
+	type Item = {
+		id: string | number;
+		dependencies?: Array<string | number>;
+		metadata?: Record<string, unknown>;
+	};
+	const checks: Array<{
+		item: Item;
+		parentId?: string;
+		deps: Array<string | number>;
+		added: Array<string | number>;
+	}> = [];
+	const takeOut = (item: Item, had: Item | undefined, parentId?: string) => {
+		const deps = item.dependencies ?? [];
+		const isNew = (dep: string | number) =>
+			!had || !hasDependency(had, dep, parentId);
+		const added = deps.filter(isNew);
+		if (added.length === 0) return;
+		item.dependencies = deps.filter((dep) => !isNew(dep));
+		checks.push({ item, parentId, deps, added });
+	};
+	for (const { before, task } of rewrites) {
+		takeOut(task, before);
+		for (const subtask of task.subtasks ?? []) {
+			takeOut(
+				subtask,
+				before?.subtasks?.find((st) => String(st.id) === String(subtask.id)),
+				String(task.id)
+			);
+		}
+	}
+	for (const { item, parentId, deps, added } of checks) {
+		const id =
+			parentId === undefined
+				? String(item.id)
+				: fullSubtaskId(parentId, item.id);
+		// Pushing onto the item's own list puts each kept one in place
+		const kept = item.dependencies ?? [];
+		for (const dep of added) {
+			const full =
+				parentId === undefined
+					? String(dep)
+					: resolveSubtaskDependency(parentId, dep);
+			if (!wouldCloseDependencyLoop(tasks, id, full)) {
+				kept.push(dep);
+				continue;
+			}
+			log(
+				`Dropped dependency ${full} of ${parentId === undefined ? 'task' : 'subtask'} ${id}: it made a loop`
+			);
+		}
+		item.dependencies = deps.filter((dep) => kept.includes(dep));
+		if (kept.length < deps.length) {
+			assignMetadata(item, pruneDependencySources(item, parentId));
+		}
+	}
 }
