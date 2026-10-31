@@ -55,6 +55,16 @@ describe('formatReadyAfterDone', () => {
 		]);
 	});
 
+	it('keeps the tag in the next step for a --tag write', () => {
+		expect(plain(formatReadyAfterDone([], 80, 'feat'))).toBe(
+			'Next: taskgraph next --tag feat'
+		);
+		// A tag name that could carry shell syntax gets a placeholder
+		expect(plain(formatReadyAfterDone([], 80, 'a;rm -rf'))).toBe(
+			'Next: taskgraph next --tag <tag>'
+		);
+	});
+
 	it('gives only the next step when nothing became ready', () => {
 		expect(plain(formatReadyAfterDone([], 80))).toBe('Next: taskgraph next');
 	});

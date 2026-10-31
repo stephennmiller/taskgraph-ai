@@ -13,7 +13,12 @@
  *   Next: taskgraph next
  */
 
-import { type ReadyTask, sanitizeForTerminal, type TaskStatus } from '@tm/core';
+import {
+	type ReadyTask,
+	sanitizeForTerminal,
+	TAG_NAME_PATTERN,
+	type TaskStatus
+} from '@tm/core';
 import chalk from 'chalk';
 import { terminalWidth } from '../layout/helpers.js';
 import { theme } from '../theme.js';
@@ -57,11 +62,13 @@ export function formatStatusChanges(changes: StatusChange[]): string {
 
 /**
  * The lines after a task reached done: the tasks and subtasks it made ready,
- * IDs aligned and titles cut to the width, then the next step.
+ * IDs aligned and titles cut to the width, then the next step. A `--tag`
+ * write gets `next --tag` so the step reads the same tag.
  */
 export function formatReadyAfterDone(
 	ready: ReadyTask[],
-	width = terminalWidth()
+	width = terminalWidth(),
+	tag?: string
 ): string {
 	const label = 'Ready now';
 	const idWidth = Math.max(0, ...ready.map((t) => terminalSafe(t.id).length));
@@ -72,7 +79,12 @@ export function formatReadyAfterDone(
 			`${theme.brand(terminalSafe(task.id).padEnd(idWidth))}  ` +
 			fit(terminalSafe(task.title), Math.max(10, room))
 	);
-	return [...rows, theme.muted('Next: ') + theme.brand('taskgraph next')].join(
-		'\n'
-	);
+	const tagFlag =
+		tag === undefined
+			? ''
+			: ` --tag ${TAG_NAME_PATTERN.test(tag) ? tag : '<tag>'}`;
+	return [
+		...rows,
+		theme.muted('Next: ') + theme.brand(`taskgraph next${tagFlag}`)
+	].join('\n');
 }

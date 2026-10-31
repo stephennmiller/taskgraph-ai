@@ -374,7 +374,7 @@ export class SetStatusCommand extends Command {
 			case 'text':
 			default:
 				if (!options.silent) {
-					this.displayTextResults(result);
+					this.displayTextResults(result, options.tag);
 				}
 				break;
 		}
@@ -383,7 +383,7 @@ export class SetStatusCommand extends Command {
 	/**
 	 * Display results in text format
 	 */
-	private displayTextResults(result: SetStatusResult): void {
+	private displayTextResults(result: SetStatusResult, tag?: string): void {
 		const lines: string[] = [];
 		// A task that reached done already says its checklist is clear
 		const reachedDone = result.updatedTasks.some(
@@ -401,7 +401,9 @@ export class SetStatusCommand extends Command {
 		const finished = result.updatedTasks.some(
 			(change) => change.newStatus === 'done' && change.oldStatus !== 'done'
 		);
-		if (finished) lines.push(formatReadyAfterDone(result.ready));
+		if (finished) {
+			lines.push(formatReadyAfterDone(result.ready, undefined, tag));
+		}
 		// The result is the first line: no leading blank line (#273)
 		if (lines.length > 0) console.log(lines.join('\n'));
 	}
