@@ -58,4 +58,26 @@ describe('storage.basePath in project config', () => {
 		expect(saved.master.tasks[0].status).toBe('done');
 		expect(fs.readFileSync(otherTasksPath, 'utf-8')).toBe(otherBefore);
 	});
+
+	it('a storage setting that is not an object still lists the tasks', async () => {
+		projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tm-base-path-'));
+		otherDir = projectDir;
+		fs.mkdirSync(path.join(projectDir, '.taskgraph/tasks'), {
+			recursive: true
+		});
+		await seedTasks(
+			new FileStorage(projectDir),
+			[createTask({ id: 1, title: 'Project task', status: 'pending' })],
+			'master'
+		);
+		fs.writeFileSync(
+			path.join(projectDir, '.taskgraph/config.json'),
+			JSON.stringify({ storage: 'file' })
+		);
+		tmCore = await createTmCore({ projectPath: projectDir });
+
+		const { tasks } = await tmCore.tasks.list();
+
+		expect(tasks.map((t) => t.title)).toEqual(['Project task']);
+	});
 });

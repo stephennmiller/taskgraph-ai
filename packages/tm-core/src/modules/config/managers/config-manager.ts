@@ -157,7 +157,8 @@ export class ConfigManager {
 			);
 		}
 
-		if (storage && 'basePath' in storage) {
+		// config.json can hold a string here, and `in` throws on one
+		if (typeof storage === 'object' && storage && 'basePath' in storage) {
 			getLogger('ConfigManager').debug(
 				'Ignoring storage.basePath in config.json: tasks are always stored in this project.'
 			);
