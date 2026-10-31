@@ -566,6 +566,41 @@ describe('tasks.updateWithPrompt', () => {
 		expect(three.metadata?.dependencySources).toBeUndefined();
 	});
 
+	it('keeps a dependency on a step inserted before it or moved after, by reply order (#804)', async () => {
+		write(
+			stored({
+				subtasks: [
+					sub(1, { title: 'A' }),
+					sub(2, { title: 'B' }),
+					sub(3, { title: 'C' })
+				]
+			})
+		);
+		// New goes before B and B needs it; C moves first and A needs it; A
+		// asks for B, which now comes after it, and for itself as "1.1"
+		answer(
+			fromAi({
+				subtasks: [
+					sub(1, { title: 'C' }),
+					sub(2, { title: 'A', dependencies: [1, 4, '1.2'] }),
+					sub(3, { title: 'New' }),
+					sub(4, { title: 'B', dependencies: [3, '1.2'] })
+				]
+			})
+		);
+
+		await update();
+
+		expect(
+			saved().subtasks.map((s: any) => [s.id, s.title, s.dependencies])
+		).toEqual([
+			['3', 'C', []],
+			['1', 'A', [3]],
+			['4', 'New', []],
+			['2', 'B', [4, 1]]
+		]);
+	});
+
 	it('keeps an unchanged done subtask in place, without a warning', async () => {
 		const done = {
 			id: 1,

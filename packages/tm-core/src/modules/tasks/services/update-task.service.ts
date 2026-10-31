@@ -47,6 +47,7 @@ import {
 	mergeRewrite,
 	promptView,
 	removedError,
+	siblingsAsSaved,
 	taskIdOf
 } from './update-task-helpers.js';
 
@@ -347,12 +348,7 @@ export class UpdateTaskService {
 			const matched = matchSubtasks(original, updated.subtasks);
 			const ids = keptSubtaskIds(original, matched, updated.subtasks.length);
 			const newIds = new Set(ids.filter((_, i) => !matched[i]));
-			// The AI numbers siblings by the IDs in its reply; read them as saved
-			const savedIdOf = new Map<string, number>();
-			updated.subtasks.forEach((subtask: any, i: number) => {
-				const key = String(subtask.id);
-				if (!savedIdOf.has(key)) savedIdOf.set(key, Number(ids[i]));
-			});
+			const deps = siblingsAsSaved(stored.id, updated.subtasks, ids, original);
 			updated.subtasks = updated.subtasks.map((subtask: any, i: number) => {
 				const id = ids[i];
 				const before = matched[i];
@@ -360,17 +356,7 @@ export class UpdateTaskService {
 					...subtask,
 					id,
 					// A number is a sibling; a string is a task or subtask
-					dependencies: cleanGeneratedSubtaskDependencies(
-						Array.isArray(subtask.dependencies)
-							? subtask.dependencies.map((dep: unknown) =>
-									typeof dep === 'number'
-										? (savedIdOf.get(String(dep)) ?? dep)
-										: dep
-								)
-							: subtask.dependencies,
-						stored.id,
-						Number(id)
-					),
+					dependencies: cleanGeneratedSubtaskDependencies(deps[i], stored.id),
 					status: subtask.status || 'pending',
 					testStrategy: subtask.testStrategy ?? null
 				};
@@ -385,9 +371,10 @@ export class UpdateTaskService {
 			relabel = (task) => {
 				if (!Array.isArray(task.subtasks)) return task;
 				let free = Math.max(
-					...[...ids, ...task.subtasks.map((st) => st.id)].map(
-						(id) => Number(id) || 0
-					)
+					0,
+					...[...ids, ...task.subtasks.map((st) => st.id)]
+						.map(Number)
+						.filter(Number.isInteger)
 				);
 				return {
 					...task,

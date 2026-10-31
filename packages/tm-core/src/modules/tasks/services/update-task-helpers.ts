@@ -15,6 +15,7 @@ import {
 	isObject,
 	same
 } from '../../git/merge-driver/merge-json-utils.js';
+import { isSiblingReference } from '../../dependencies/subtask-dependency.js';
 import { mergeTagChanges } from '../../storage/adapters/file-storage/merge-tag-changes.js';
 
 /** A positive whole number, as a string; `hint` says what to use instead */
@@ -166,10 +167,55 @@ export function keptSubtaskIds(
 	matched: (Subtask | undefined)[],
 	count: number
 ): string[] {
-	let next = Math.max(0, ...original.map((st) => Number(st.id) || 0));
+	// A dotted ID left as is ("4.1" under task 3) is not one of its numbers
+	let next = Math.max(
+		0,
+		...original.map((st) => Number(st.id)).filter(Number.isInteger)
+	);
 	return Array.from({ length: count }, (_, i) =>
 		String(matched[i] ? matched[i].id : ++next)
 	);
+}
+
+/**
+ * Each of the AI's `subtasks`' dependencies, with every sibling (2, or "5.2"
+ * on task 5) named by its reply ID, else its saved ID (`ids`, by index), put
+ * under its saved ID when it comes earlier in the reply and dropped when it
+ * doesn't: saved IDs no longer follow reply order (#804). A stored subtask
+ * the reply left out is kept (a done one comes back, and references to a
+ * dropped one go on save); any other sibling number is dropped
+ */
+export function siblingsAsSaved(
+	parentId: string,
+	subtasks: Array<{ id?: unknown; dependencies?: unknown }>,
+	ids: string[],
+	original: Subtask[]
+): unknown[] {
+	const replyIndex = new Map<string, number>();
+	subtasks.forEach((subtask, i) => {
+		const key = String(subtask.id);
+		if (!replyIndex.has(key)) replyIndex.set(key, i);
+	});
+	const prefix = `${parentId}.`;
+	const siblingOf = (dep: unknown) => {
+		if (typeof dep === 'number') {
+			return isSiblingReference(dep) ? dep : undefined;
+		}
+		const text = typeof dep === 'string' ? dep.trim() : '';
+		return text.startsWith(prefix)
+			? Number(text.slice(prefix.length))
+			: undefined;
+	};
+	return subtasks.map((subtask, i) => {
+		if (!Array.isArray(subtask.dependencies)) return subtask.dependencies;
+		return subtask.dependencies.flatMap((dep: unknown) => {
+			const n = siblingOf(dep);
+			if (n === undefined) return [dep];
+			const j = replyIndex.get(String(n)) ?? ids.indexOf(String(n));
+			if (j !== -1) return j < i ? [Number(ids[j])] : [];
+			return original.some((st) => String(st.id) === String(n)) ? [n] : [];
+		});
+	});
 }
 
 /** `subtasks` with each done one of `original` restored as it was, no ID twice */
