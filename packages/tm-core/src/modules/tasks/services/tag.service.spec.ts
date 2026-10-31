@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Task } from '../../../common/types/index.js';
 import { FileStorage } from '../../storage/adapters/file-storage/index.js';
 import { TagService } from './tag.service.js';
 
@@ -272,6 +273,27 @@ describe('TagService.renameTag', () => {
 			expect(Object.keys(readTasks())).toEqual(['master', 'feature']);
 		}
 	);
+
+	// With no other key the file used to read as untagged, so master's next
+	// save overwrote the stranded tag (#802)
+	it('reaches a tasks tag that is the only key in the file', async () => {
+		writeTasks({ tasks: { tasks: [task('1')], metadata: {} } });
+		const storage = new FileStorage(projectRoot);
+
+		expect(await storage.getAllTags()).toEqual(['tasks']);
+		await expect(
+			storage.appendTasks([task('2') as Task], 'master')
+		).rejects.toThrow('Tag "master"');
+		await storage.appendTasks([task('2') as Task], 'tasks');
+		expect(readTasks().tasks.tasks.map((t: { id: string }) => t.id)).toEqual([
+			'1',
+			'2'
+		]);
+
+		await service().renameTag('tasks', 'recovered');
+		expect(Object.keys(readTasks())).toEqual(['recovered']);
+		expect(readTasks().recovered.tasks).toHaveLength(2);
+	});
 });
 
 // Names that are also Object.prototype members are ordinary names (#379)

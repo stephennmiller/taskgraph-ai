@@ -45,12 +45,7 @@ export function applyTagUpdate(
 ): any {
 	const normalizedTasks = normalizeTaskIds(tasks);
 
-	if (
-		formatHandler.detectFormat(existingData) === 'legacy' ||
-		Object.keys(existingData).some(
-			(key) => key !== 'tasks' && key !== 'metadata'
-		)
-	) {
+	if (formatHandler.detectFormat(existingData) === 'legacy') {
 		// Legacy format - update/add the tag
 		setOwnKey(existingData, resolvedTag, {
 			tasks: normalizedTasks,
