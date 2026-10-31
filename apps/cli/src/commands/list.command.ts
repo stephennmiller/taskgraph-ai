@@ -56,6 +56,8 @@ import {
 export class ListTasksCommand extends Command {
 	private tmCore?: TmCore;
 	private lastResult?: ListTasksResult;
+	/** The login `--mine` matched, named when nothing is assigned to it */
+	private login?: string;
 
 	constructor(name?: string) {
 		super(name || 'list');
@@ -463,7 +465,8 @@ export class ListTasksCommand extends Command {
 	/** The signed-in GitHub login for --mine; throws with a fix when gh can't say */
 	private async mine(options: ListCommandOptions): Promise<string | undefined> {
 		if (!options.mine || !this.tmCore) return undefined;
-		return this.tmCore.github.requireLogin();
+		this.login = await this.tmCore.github.requireLogin();
+		return this.login;
 	}
 
 	/**
@@ -553,7 +556,7 @@ export class ListTasksCommand extends Command {
 		}
 
 		if (tasks.length === 0) {
-			console.log(formatEmptyList(this.emptyListFilter(options)));
+			console.log(this.emptyList(options));
 			return;
 		}
 		// An agent reads this too: fence the titles as the plain output does
@@ -590,7 +593,7 @@ export class ListTasksCommand extends Command {
 		options: ListCommandOptions
 	): void {
 		if (data.tasks.length === 0) {
-			console.log(formatEmptyList(this.emptyListFilter(options)));
+			console.log(this.emptyList(options));
 			return;
 		}
 		// An agent reads this: fence the titles as show and next do
@@ -604,6 +607,13 @@ export class ListTasksCommand extends Command {
 		);
 	}
 
+	/** What an empty list says: `No ready tasks found`, `Nothing assigned to steve` */
+	private emptyList(options: ListCommandOptions): string {
+		return formatEmptyList(this.emptyListFilter(options), {
+			assignee: this.login
+		});
+	}
+
 	/** The filter an empty list names: `No ready tasks found` */
 	private emptyListFilter(options: ListCommandOptions): string | undefined {
 		if (options.ready) return 'ready';
@@ -611,7 +621,7 @@ export class ListTasksCommand extends Command {
 		if (options.status && options.status !== 'all') {
 			return options.status.split(',').join(' or ');
 		}
-		return options.mine ? 'assigned' : undefined;
+		return undefined;
 	}
 
 	/**
@@ -633,7 +643,7 @@ export class ListTasksCommand extends Command {
 
 		// No tasks message
 		if (tasks.length === 0) {
-			console.log(formatEmptyList(this.emptyListFilter(options)));
+			console.log(this.emptyList(options));
 			return;
 		}
 

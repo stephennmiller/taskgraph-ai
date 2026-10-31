@@ -7,15 +7,14 @@ import path from 'node:path';
 import {
 	type DependencyTree,
 	type TmCore,
-	TASK_DATA_TAG,
 	createTmCore,
-	fenceAsData,
+	formatTaskData,
 	neutralizeTaskData
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { renderDependencyTree } from '../ui/components/dependency-tree.component.js';
-import { getContentWidth } from '../ui/layout/helpers.js';
+import { fencesTaskData, getContentWidth } from '../ui/layout/helpers.js';
 import { theme } from '../ui/theme.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
@@ -112,8 +111,8 @@ export class GraphCommand extends Command {
 			nextId: result.nextId,
 			width: getContentWidth()
 		});
-		// An agent reads this: fence the titles as show and next do
-		console.log(fenceAsData(lines.join('\n'), TASK_DATA_TAG));
+		// An agent reads this piped: fence the titles as show and next do
+		console.log(formatTaskData(lines.join('\n'), fencesTaskData()));
 	}
 
 	static register(program: Command, name?: string): GraphCommand {

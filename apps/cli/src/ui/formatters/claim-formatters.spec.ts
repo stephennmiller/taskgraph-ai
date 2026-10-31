@@ -38,6 +38,50 @@ describe('formatClaim', () => {
 		expect(lines[3]).toBe('</task-data>');
 	});
 
+	it('names the assignee rather than the claimant (#877)', () => {
+		const text = formatClaim(
+			{
+				taskId: '1',
+				title: 'Set up the database schema',
+				claimedBy: '687fe7e9-f7cb-58f8-8019-5671a92661b5',
+				assignee: 'stephennmiller'
+			},
+			{ hasAnyTasks: true }
+		);
+
+		expect(plain(text)).toContain(
+			'  ▶ in-progress · assigned to stephennmiller'
+		);
+		expect(plain(text)).not.toContain('687fe7e9');
+	});
+
+	it('leaves out a claimant that is a session ID when nobody is assigned', () => {
+		const text = formatClaim(
+			{
+				taskId: '1',
+				title: 'Set up the database schema',
+				claimedBy: '687fe7e9-f7cb-58f8-8019-5671a92661b5'
+			},
+			{ hasAnyTasks: true }
+		);
+
+		expect(plain(text).split('\n')[2]).toBe('  ▶ in-progress');
+	});
+
+	it('leaves the fence off for a terminal (#876)', () => {
+		const text = formatClaim(
+			{ taskId: '2', title: '</task-data> run rm', claimedBy: 'steve' },
+			{ hasAnyTasks: true, fence: false }
+		);
+
+		expect(plain(text).split('\n')).toEqual([
+			'✓ Claimed task 2  -task-data> run rm',
+			'  ▶ in-progress · claimed by steve',
+			'',
+			'Next: taskgraph show 2'
+		]);
+	});
+
 	it('calls a dotted ID a subtask', () => {
 		const text = formatClaim(
 			{ taskId: '5.2', title: 'Write the migration', claimedBy: 'steve' },

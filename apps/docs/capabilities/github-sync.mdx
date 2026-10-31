@@ -59,7 +59,7 @@ Tasks that were never pushed or imported, or whose issue is gone, are skipped. P
 
 ## Assignees
 
-A task's assignee is a GitHub login. Set it with `add-task --assignee` or `update-task --assignee`, and `next --claim` sets it to your login when nobody has the task. `taskgraph list --mine` shows the tasks assigned to you, and tasks with a subtask assigned to you.
+A task's assignee is a GitHub login. Set it with `add-task --assignee` or `update-task --assignee`, and `next --claim` sets it to your login when nobody has the task. `next --claim` prints who has the task by that login (`assigned to alice`); `--json` keeps the raw `claimedBy`. `taskgraph list --mine` shows the tasks assigned to you, and tasks with a subtask assigned to you, or says `Nothing assigned to alice` when there are none.
 
 Assignees sync both ways. Like status, each side is compared with the assignee at the last push or pull:
 

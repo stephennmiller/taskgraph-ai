@@ -288,23 +288,30 @@ export function formatListNextStep(
 }
 
 /**
- * What `list` says when no task matches: `No tasks found`, or
- * `No pending tasks found`, and how to get some
+ * What `list` says when no task matches: `No tasks found`,
+ * `No pending tasks found` or `Nothing assigned to steve`, and how to get some
  *
  * @param filter - The status or view asked for (`pending`, `ready`), if any
+ * @param options.assignee - The login `--mine` matched
  */
 export function formatEmptyList(
 	filter?: string,
-	options: ListSummaryOptions = {}
+	options: ListSummaryOptions & { assignee?: string } = {}
 ): string {
 	const width = resolveWidth(options.width);
-	const message = filter ? `No ${filter} tasks found` : 'No tasks found';
-	const action = filter
-		? { command: 'taskgraph list', description: 'to see every task' }
-		: {
-				command: "taskgraph add-task --prompt='...'",
-				description: 'to add one, or taskgraph parse-prd'
-			};
+	const assignee = sanitizeForTerminal(options.assignee);
+	const message = filter
+		? `No ${filter} tasks found`
+		: assignee
+			? `Nothing assigned to ${assignee}`
+			: 'No tasks found';
+	const action =
+		filter || assignee
+			? { command: 'taskgraph list', description: 'to see every task' }
+			: {
+					command: "taskgraph add-task --prompt='...'",
+					description: 'to add one, or taskgraph parse-prd'
+				};
 	return [theme.text(message), ...formatNextStep(action, width)].join('\n');
 }
 

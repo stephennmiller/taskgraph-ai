@@ -35,13 +35,12 @@ import {
 	type TaskChecklist,
 	type TaskStatus,
 	buildChecklist,
-	fenceAsData,
+	formatTaskData,
 	fullSubtaskId,
 	getPrdSource,
 	getTaskLinks,
 	resolveSubtaskDependency,
-	sanitizeForTerminal,
-	TASK_DATA_TAG
+	sanitizeForTerminal
 } from '@tm/core';
 import chalk from 'chalk';
 import {
@@ -89,6 +88,8 @@ export interface TaskDetailOptions {
 	blocked?: boolean;
 	/** Terminal width */
 	width?: number;
+	/** Fence the task text in `<task-data>` for an agent; default true (#876) */
+	fence?: boolean;
 }
 
 /** `1`, `1 and 3`, `1, 3 and 4` */
@@ -431,9 +432,9 @@ export function formatTaskDetail(
 
 	// Task text can come from a PRD or a GitHub issue; an agent reading this
 	// must see where it starts and ends
-	const shown = fenceAsData(
+	const shown = formatTaskData(
 		sections.map((lines) => lines.join('\n')).join('\n\n'),
-		TASK_DATA_TAG
+		options.fence ?? true
 	);
 	const next = formatNextStep(
 		getSuggestedActions(

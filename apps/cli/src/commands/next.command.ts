@@ -17,6 +17,7 @@ import { Command } from 'commander';
 import { formatClaim } from '../ui/formatters/claim-formatters.js';
 import { formatTaskDetail } from '../ui/formatters/task-detail-formatters.js';
 import { formatNoNextTask } from '../ui/formatters/task-list-formatters.js';
+import { fencesTaskData } from '../ui/layout/helpers.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import { jsonOption, printJson } from '../utils/json-output.js';
@@ -233,12 +234,14 @@ export class NextCommand extends Command {
 					? {
 							taskId: String(result.task.id),
 							title: result.task.title,
-							claimedBy: result.claimedBy
+							claimedBy: result.claimedBy,
+							assignee: result.task.assignee
 						}
 					: null,
 				{
 					hasAnyTasks: result.hasAnyTasks,
-					width: process.stdout.columns || 80
+					width: process.stdout.columns || 80,
+					fence: fencesTaskData()
 				}
 			)
 		);
@@ -295,7 +298,8 @@ export class NextCommand extends Command {
 		console.log(
 			formatTaskDetail(result.task, {
 				id: String(result.task.id),
-				checklist: result.checklist
+				checklist: result.checklist,
+				fence: fencesTaskData()
 			})
 		);
 	}
