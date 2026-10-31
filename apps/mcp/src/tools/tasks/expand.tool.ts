@@ -88,9 +88,18 @@ const ExpandAllSchema = z.object({
 type ExpandTaskArgs = z.infer<typeof ExpandTaskSchema>;
 type ExpandAllArgs = z.infer<typeof ExpandAllSchema>;
 
-/** tm-core's warnings, and AI detail with global.debug on, to the client log */
-const reportTo = ({ log }: ToolContext): ExpandTaskHooks => ({
-	onWarning: (message) => log.warn(message),
+/**
+ * tm-core's warnings, and AI detail with global.debug on, to the client log;
+ * warnings also go in `warnings`, since the client may not show the log
+ */
+const reportTo = (
+	{ log }: ToolContext,
+	warnings: string[]
+): ExpandTaskHooks => ({
+	onWarning: (message) => {
+		warnings.push(message);
+		log.warn(message);
+	},
 	onDebug: (message) => log.debug(message)
 });
 
@@ -108,6 +117,7 @@ export function registerExpandTaskTool(server: FastMCP) {
 			async (args: ExpandTaskArgs, context: ToolContext) => {
 				const { tmCore, session } = context;
 				const tag = args.tag || tmCore.config.getActiveTag();
+				const warnings: string[] = [];
 				return replyWith(
 					{ ...args, tag },
 					context,
@@ -125,7 +135,7 @@ export function registerExpandTaskTool(server: FastMCP) {
 								outputType: 'mcp',
 								keepExpanded: true
 							},
-							reportTo(context)
+							reportTo(context, warnings)
 						);
 						const { hadSubtasks } = expanded;
 						// A task left as it was is the one read, with the legacy number ID
@@ -152,7 +162,8 @@ export function registerExpandTaskTool(server: FastMCP) {
 											subtasksAdded: task.subtasks?.length ?? 0,
 											hasExistingSubtasks: hadSubtasks,
 											telemetryData: expanded.telemetryData ?? undefined,
-											tagInfo: expanded.tagInfo ?? undefined
+											tagInfo: expanded.tagInfo ?? undefined,
+											...(warnings.length > 0 && { warnings })
 										}
 							)
 						};
@@ -180,6 +191,7 @@ export function registerExpandAllTool(server: FastMCP) {
 			) => {
 				const { tmCore, session, log } = context;
 				const tag = args.tag || tmCore.config.getActiveTag();
+				const warnings: string[] = [];
 				const options: ExpandOptions = {
 					num: args.num || undefined,
 					research: args.research === true,
@@ -195,7 +207,7 @@ export function registerExpandAllTool(server: FastMCP) {
 					'Error expanding all tasks',
 					async () => {
 						const summary = await tmCore.tasks.expandAll(options, {
-							...reportTo(context),
+							...reportTo(context, warnings),
 							onStart: (ids) =>
 								log.info(`Found ${ids.length} tasks eligible for expansion.`),
 							onTaskDone: (id, outcome) => {
@@ -223,7 +235,8 @@ export function registerExpandAllTool(server: FastMCP) {
 									tasksToExpand
 								},
 								// The legacy reply had [] here when no task was eligible
-								telemetryData: tasksToExpand === 0 ? [] : summary.telemetryData
+								telemetryData: tasksToExpand === 0 ? [] : summary.telemetryData,
+								...(warnings.length > 0 && { warnings })
 							}
 						};
 					}

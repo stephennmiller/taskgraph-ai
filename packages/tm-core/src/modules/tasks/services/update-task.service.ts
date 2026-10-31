@@ -251,7 +251,7 @@ export class UpdateTaskService {
 			const now = relabel(current[index]);
 			const merged = mergeRewrite(stored, updated, now, warn);
 			current[index] = merged;
-			settleRewrites(current, [{ stored, now, saved: merged }], debug);
+			settleRewrites(current, [{ stored, now, saved: merged }], warn);
 			return { tasks: current, result: merged };
 		}, tag);
 		return {
@@ -355,7 +355,8 @@ export class UpdateTaskService {
 			};
 		}
 		if (original.length > 0) {
-			if (!updated.subtasks) {
+			// No subtasks back ([] too) is the AI leaving them out (#863)
+			if (!updated.subtasks?.length) {
 				warn('Subtasks removed by AI. Restoring original subtasks.');
 				updated.subtasks = original;
 			} else {
@@ -489,7 +490,7 @@ export class UpdateTaskService {
 				current[index] = mergeRewrite(stored, updated, now, warn);
 				done.push({ stored, now, saved: current[index] });
 			}
-			settleRewrites(current, done, debug);
+			settleRewrites(current, done, warn);
 			return {
 				tasks: done.length ? current : null,
 				result: done.map(({ saved }) => saved)
@@ -526,9 +527,11 @@ export class UpdateTaskService {
 				// Each subtask keeps the ID of the stored one it matches, so the
 				// save and the restores below follow it when the AI renumbers
 				// (#576); a new one gets the next free ID
-				subtasks: Array.isArray(ai.subtasks)
-					? rewriteSubtasks(task, ai.subtasks).subtasks
-					: null
+				// No subtasks back is the AI leaving them out (#863)
+				subtasks:
+					Array.isArray(ai.subtasks) && ai.subtasks.length > 0
+						? rewriteSubtasks(task, ai.subtasks).subtasks
+						: null
 			},
 			task
 		) as Task;

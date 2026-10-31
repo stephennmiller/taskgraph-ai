@@ -24,7 +24,7 @@ taskgraph update-task --id=<id> --prompt='<prompt>' --research
 taskgraph update-task --id=<id> --assignee=octocat
 ```
 
-When `update-task` or `update --from` has the AI rewrite a task's subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. A subtask it adds gets the next free ID, and dependencies on a subtask it drops are removed. A dependency the AI adds that would make a loop is left out.
+When `update-task` or `update --from` has the AI rewrite a task's subtasks, each one it kept keeps its ID, so dependencies on it from other tasks still point at it. A subtask it adds gets the next free ID, and dependencies on a subtask it drops are removed, with a warning that names the subtask and the tasks that lost the dependency. If the AI returns no subtasks at all, the task keeps the ones it had. A dependency the AI adds that would make a loop is left out, with a warning. `expand` warns the same way when it leaves out a loop-making dependency, and the MCP tools return these warnings in a `warnings` list.
 
 ## Update a Subtask
 
