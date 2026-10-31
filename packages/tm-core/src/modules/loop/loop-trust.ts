@@ -17,6 +17,7 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_TASKS_FILE
 } from '../../common/constants/paths.js';
+import { isWithin } from '../../common/utils/project-root-finder.js';
 import { readPrdSection } from '../prd/prd-coverage.js';
 import { PRD_SOURCE_KEY } from '../prd/prd-sections.js';
 import { normalizeDefinitionOfDone } from '../tasks/utils/acceptance-criteria.js';
@@ -104,15 +105,32 @@ const CLAUDE_FILES = ['CLAUDE.md', '.taskgraph/CLAUDE.md', '.mcp.json'];
  */
 const LOCAL_FILES = ['CLAUDE.local.md', '.claude/settings.local.json'];
 
-/** Which of `LOCAL_FILES` git tracks, in one call; none outside a repository */
+/**
+ * Which of `LOCAL_FILES` git tracks, in one call; none outside a repository.
+ * Runs before the project is approved, so the repository's own config must
+ * not name a program for git to start or a bare repository for it to use
+ */
 function trackedLocalFiles(root: string): Set<string> {
 	try {
-		const out = execFileSync('git', ['ls-files', '-z', '--', ...LOCAL_FILES], {
-			cwd: root,
-			encoding: 'utf8',
-			stdio: ['ignore', 'pipe', 'ignore'],
-			timeout: 10000
-		});
+		const out = execFileSync(
+			'git',
+			[
+				'-c',
+				'core.fsmonitor=false',
+				'-c',
+				'safe.bareRepository=explicit',
+				'ls-files',
+				'-z',
+				'--',
+				...LOCAL_FILES
+			],
+			{
+				cwd: root,
+				encoding: 'utf8',
+				stdio: ['ignore', 'pipe', 'ignore'],
+				timeout: 10000
+			}
+		);
 		return new Set(out.split('\0'));
 	} catch {
 		return new Set();
@@ -130,8 +148,8 @@ const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
  * Everything under `.claude` (rules, agents, commands, skills, hooks,
  * settings) as [path, content] pairs in a fixed order, less Claude Code's
  * `worktrees` and an untracked `settings.local.json`. A symlink gives its
- * link text, and the content too when it resolves to a file inside the
- * project; links that leave the project aren't followed. A file past the
+ * link text, and the content too when it resolves to a file or folder
+ * inside the project; links that leave the project aren't followed. A file past the
  * byte budget gives its size and change times, which rewriting it changes.
  * Past the entry cap the walk stops and a value that never repeats goes in,
  * so loop asks every time.
@@ -156,21 +174,13 @@ function claudeDir(root: string, tracked: Set<string>): unknown {
 			if (stat.isSymbolicLink()) {
 				out.push([rel, `link:${fs.readlinkSync(full)}`]);
 				const target = fs.realpathSync(full);
-				if (target.startsWith(root + path.sep)) {
+				if (isWithin(root, target)) {
 					const targetStat = fs.statSync(target);
 					if (targetStat.isFile()) out.push([rel, content(target, targetStat)]);
+					else if (targetStat.isDirectory()) return walk(rel);
 				}
 			} else if (stat.isDirectory()) {
-				for (const name of fs.readdirSync(full).sort()) {
-					if (
-						rel === '.claude' &&
-						(name === 'worktrees' ||
-							(name === 'settings.local.json' &&
-								!tracked.has('.claude/settings.local.json')))
-					)
-						continue;
-					if (!visit(`${rel}/${name}`)) return false;
-				}
+				return walk(rel);
 			} else if (!stat.isFile()) {
 				out.push([rel, 'special']); // A FIFO would block a read
 			} else {
@@ -178,6 +188,20 @@ function claudeDir(root: string, tracked: Set<string>): unknown {
 			}
 		} catch (error) {
 			out.push([rel, `error:${(error as NodeJS.ErrnoException).code}`]);
+		}
+		return true;
+	};
+	// Through a symlink too; a link loop ends at the entry cap or path length
+	const walk = (rel: string): boolean => {
+		for (const name of fs.readdirSync(path.join(root, rel)).sort()) {
+			if (
+				rel === '.claude' &&
+				(name === 'worktrees' ||
+					(name === 'settings.local.json' &&
+						!tracked.has('.claude/settings.local.json')))
+			)
+				continue;
+			if (!visit(`${rel}/${name}`)) return false;
 		}
 		return true;
 	};

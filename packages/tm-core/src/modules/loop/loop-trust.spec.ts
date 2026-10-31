@@ -2,7 +2,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	isLoopTrusted,
 	keepLoopTrust,
@@ -291,6 +291,52 @@ describe('loop trust', () => {
 			expect(isLoopTrusted(project, home)).toBe(true);
 		}
 	);
+
+	it('checks tracked files without running a program the repository config names', () => {
+		const marker = path.join(base, 'ran');
+		writeFile('fsmonitor.sh', `#!/bin/sh\ntouch '${marker}'\n`);
+		fs.chmodSync(path.join(project, 'fsmonitor.sh'), 0o755);
+		writeFile('CLAUDE.local.md', 'Old');
+		git('init', '-q');
+		git('add', 'CLAUDE.local.md');
+		git('config', 'core.fsmonitor', path.join(project, 'fsmonitor.sh'));
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('CLAUDE.local.md', 'New');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+		expect(fs.existsSync(marker)).toBe(false);
+	});
+
+	it('treats local files as untracked when git cannot run', () => {
+		writeFile('CLAUDE.local.md', 'Old');
+		git('init', '-q');
+		git('add', 'CLAUDE.local.md');
+		vi.stubEnv('PATH', '');
+		try {
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile('CLAUDE.local.md', 'New');
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		} finally {
+			vi.unstubAllEnvs();
+		}
+	});
+
+	it('asks again when a file in a folder a symlink under .claude names inside the project changed', () => {
+		writeFile('shared/skills/review/SKILL.md', 'Old');
+		fs.mkdirSync(path.join(project, '.claude'));
+		fs.symlinkSync('../shared/skills', path.join(project, '.claude/skills'));
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('shared/skills/review/SKILL.md', 'New');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
 
 	it('asks again when the file a symlink under .claude names inside the project changed', () => {
 		writeFile('notes.md', 'Old');
