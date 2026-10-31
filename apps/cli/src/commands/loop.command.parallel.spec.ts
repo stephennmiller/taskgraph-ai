@@ -62,7 +62,8 @@ describe('LoopCommand --parallel', () => {
 				commits: 2,
 				uncommitted: false,
 				kept: true,
-				claimed: true
+				claimed: false,
+				finished: true
 			}
 		],
 		readyCount: 1,

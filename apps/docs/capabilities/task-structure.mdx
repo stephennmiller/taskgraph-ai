@@ -361,7 +361,7 @@ The `show` command:
 ```
 
 - **Isolation:** tasks in different tags never interfere, and each tag numbers its tasks from 1.
-- **Current tag:** stored in `.taskgraph/state.json`, falling back to `master`. Override it per command with `--tag`.
+- **Current tag:** stored in `.taskgraph/state.json`, or `master` when that file is missing. Override it per command with `--tag`.
 - **Dependencies** must reference tasks in the same tag, and subtask IDs must be unique within their parent.
 - **Legacy files:** a `tasks.json` in the old `{"tasks": [...]}` shape is converted to `{"master": {"tasks": [...]}}` on first read, with all data preserved.
 

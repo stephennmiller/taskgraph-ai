@@ -8,10 +8,10 @@ import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '@tm/core';
 import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
-import { errorMessage } from '../../shared/tool-reply.js';
 import type { ToolContext } from '../../shared/types.js';
 import {
 	createErrorResponse,
+	errorMessage,
 	handleApiResult,
 	withToolContext
 } from '../../shared/utils.js';

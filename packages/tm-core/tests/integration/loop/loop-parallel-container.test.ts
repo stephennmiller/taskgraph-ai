@@ -217,7 +217,7 @@ describe('loop --parallel --container', () => {
 		const result = await runParallel();
 
 		expect(result.tasks).toMatchObject([
-			{ id: '1', state: 'done', commits: 1, kept: true }
+			{ id: '1', state: 'done', commits: 1, kept: true, finished: true }
 		]);
 		expect(git(root, 'log', '--format=%s', 'main..taskgraph/task-1')).toBe(
 			'work on 1'

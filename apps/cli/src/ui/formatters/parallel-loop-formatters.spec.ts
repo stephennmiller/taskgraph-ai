@@ -103,8 +103,8 @@ describe('formatParallelSummary', () => {
 	it('leads with the result, one row per task, and one next step', () => {
 		const out = summary(
 			result([
-				task('1', { commits: 2, kept: true }),
-				task('2', { kept: false }),
+				task('1', { commits: 2, kept: true, finished: true }),
+				task('2', { kept: false, finished: true }),
 				task('3', { state: 'failed', error: 'exit 1', kept: false })
 			])
 		);
@@ -121,12 +121,20 @@ describe('formatParallelSummary', () => {
 	it('says "branches" for more than one kept branch', () => {
 		const out = summary(
 			result([
-				task('1', { commits: 1, kept: true }),
-				task('2', { commits: 1, kept: true })
+				task('1', { commits: 1, kept: true, finished: true }),
+				task('2', { commits: 1, kept: true, finished: true })
 			])
 		);
 
 		expect(out).toContain('✓ 2 of 2 tasks done · 2 branches to review');
+	});
+
+	it("doesn't count a task Claude left unmarked as done", () => {
+		const out = summary(
+			result([task('1', { commits: 1, kept: true, claimed: true })])
+		);
+
+		expect(out).toContain('✗ 0 of 1 task done · 1 branch to review');
 	});
 
 	it('keeps a failed task that left work, and says it failed', () => {

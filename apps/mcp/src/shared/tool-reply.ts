@@ -6,19 +6,12 @@
 import path from 'node:path';
 import { TASKGRAPH_TASKS_FILE } from '@tm/core';
 import type { ToolContext } from './types.js';
-import { handleApiResult } from './utils.js';
+import { errorMessage, handleApiResult } from './utils.js';
 
 interface ToolArgs {
 	projectRoot: string;
 	tag?: string;
 	file?: string;
-}
-
-/** An error's message, followed by the fix tm-core suggests in its `hint` */
-export function errorMessage(error: unknown): string {
-	const message = error instanceof Error ? error.message : String(error);
-	const hint = (error as { hint?: unknown } | null)?.hint;
-	return typeof hint === 'string' ? `${message}. ${hint}` : message;
 }
 
 /**
