@@ -29,7 +29,28 @@ export class TaskGraphMCPServer {
 		version: getVersionInfo().version as `${number}.${number}.${number}`,
 		instructions: SERVER_INSTRUCTIONS
 	};
-	readonly server = new FastMCP(this.options);
+	readonly server = new FastMCP({
+		...this.options,
+		// FastMCP takes tool calls while it is still fetching the client's
+		// roots; hold them until it has the roots so none skips the check
+		onToolCall: () => this.connected
+	});
+	/**
+	 * Resolves when the first client has connected. A tool's context.session
+	 * is FastMCP's auth object, not the FastMCPSession, so each session's auth
+	 * carries its roots (live: FastMCP swaps them on rootsChanged) for
+	 * withNormalizedProjectRoot to bind projectRoot to (#794)
+	 */
+	private readonly connected = new Promise<void>((resolve) =>
+		this.server.on('connect', ({ session }) => {
+			session.updateAuth({
+				get roots() {
+					return session.roots;
+				}
+			});
+			resolve();
+		})
+	);
 	private initialized = false;
 
 	/**

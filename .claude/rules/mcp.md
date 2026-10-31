@@ -69,7 +69,7 @@ export function registerYourTool(server: FastMCP) {
 - **`handleApiResult({ result, log, errorPrefix, projectRoot, tag })`** is what `replyWith` calls; use it directly when a tool replies in more than one shape. Success is `{ data, version, tag }` as JSON text; failure is an `isError` reply with the message, version and tag. Pass `tag` whenever the tool takes one, or the reply names the current tag instead (`tests/integration/tools/reply-tag.tool.test.ts` checks this).
 - **Schemas** are what clients see: renaming a tool, a parameter or a reply field breaks callers. Keep the names, and say in a comment when a field stays only for older clients.
 - **Long work** runs inline and returns the finished result; there is no job queue. For progress the client can show, call `reportProgress` when it is defined (`parse-prd.tool.ts`), and don't let a failed report fail work that is already saved. Otherwise use `log.info()`.
-- **Session**: `session.env` carries the env the MCP client config sets, and `session.roots` the client's folders.
+- **Session**: `session.env` carries the env the MCP client config sets, and `session.roots` the client's folders. FastMCP passes its auth object as `context.session`, not the session, so `TaskGraphMCPServer` puts the session's `roots` there when a client connects and holds tool calls until it has (`tests/integration/client-roots.test.ts`).
 
 ## Adding a tool
 
