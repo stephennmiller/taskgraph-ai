@@ -37,6 +37,7 @@ import {
 	type ClaudeRunResult,
 	findResultEvent,
 	handleStreamEvent,
+	hasStreamEvent,
 	isValidStreamEvent,
 	processBufferedLines,
 	readResultEvent,
@@ -486,7 +487,14 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 				// Markers come from Claude's reply on stdout; stderr would hide the last line
 				resolve(
-					completeIteration(iterationNum, startTime, reply, exitCode, run)
+					completeIteration(
+						iterationNum,
+						startTime,
+						reply,
+						exitCode,
+						run,
+						hasStreamEvent(stdout)
+					)
 				);
 			});
 		});
@@ -530,6 +538,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
+			let started = false;
 			let run: ClaudeRunResult | undefined;
 			let buffer = '';
 
@@ -539,10 +548,10 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				try {
 					const event = JSON.parse(line);
 
-					// Validate event structure before accessing properties
 					if (!isValidStreamEvent(event)) {
 						return;
 					}
+					started = true;
 
 					handleStreamEvent(event, callbacks);
 
@@ -590,7 +599,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 			child.stdout.on('end', () => {
 				stdoutEnded = true;
-				// Process any remaining buffer when stdout ends
 				if (buffer) {
 					processLine(buffer);
 					buffer = '';
@@ -649,7 +657,8 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 						startTime,
 						run?.text ?? '',
 						exitCode,
-						run
+						run,
+						started
 					)
 				);
 			});

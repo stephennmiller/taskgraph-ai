@@ -28,13 +28,17 @@ export function parseCompletion(
 	return { status: 'success' };
 }
 
-/** The iteration's result from the reply, the exit code and the cost Claude Code reported */
+/**
+ * The iteration's result from the reply, the exit code and the cost Claude
+ * Code reported. `started`: Claude Code printed a stream-json event.
+ */
 export function completeIteration(
 	iterationNum: number,
 	startTime: number,
 	reply: string,
 	exitCode: number,
-	run: ClaudeRunResult | undefined
+	run: ClaudeRunResult | undefined,
+	started = false
 ): LoopIteration {
 	const { status, message } = parseCompletion(reply, exitCode);
 	return {
@@ -44,7 +48,9 @@ export function completeIteration(
 		// A cap that stopped Claude says more than its exit code
 		message: (status === 'error' && run?.capHit) || message,
 		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
-		...(run?.turns !== undefined ? { turns: run.turns } : {})
+		...(run?.turns !== undefined ? { turns: run.turns } : {}),
+		// Died mid-run (a crash, or docker's 137 for a killed container) (#855)
+		...(!run && exitCode !== 0 && started ? { costUnknown: true } : {})
 	};
 }
 

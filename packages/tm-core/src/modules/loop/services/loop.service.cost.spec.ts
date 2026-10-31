@@ -248,6 +248,64 @@ describe('LoopService cost and caps', () => {
 		expect(result.totalCostUsd).toBeUndefined();
 	});
 
+	it.each([
+		['quiet', false],
+		['--verbose', true]
+	])(
+		'counts an iteration that died mid-run (exit 137, no result event) at its budget (%s)',
+		async (_, verbose) => {
+			const started = streamJson({ result: 'x' }).split('\n')[0];
+			spawn.mockImplementation(
+				() => fakeClaude({ stdout: `${started}\n`, status: 137 }) as never
+			);
+
+			const result = await service.run(
+				config({ iterations: 5, maxBudgetUsd: 2, verbose })
+			);
+
+			expect(spawn).toHaveBeenCalledTimes(1);
+			expect(result.iterations[0]).toMatchObject({
+				status: 'error',
+				costUsd: 2,
+				costUnknown: true
+			});
+			expect(result.finalStatus).toBe('budget_reached');
+		}
+	);
+
+	it('counts nothing for a claude that failed before it started (no events)', async () => {
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					stderr: "error: unknown option '--max-budget-usd'\n",
+					status: 1
+				}) as never
+		);
+
+		const result = await service.run(
+			config({ iterations: 3, maxBudgetUsd: 10 })
+		);
+
+		expect(result.iterations[0].costUnknown).toBeUndefined();
+		expect(result.finalStatus).toBe('error');
+	});
+
+	it('counts the real cost of a non-zero exit that printed its result event', async () => {
+		spawn.mockImplementation(spends(0.3, 2, 1));
+
+		const result = await service.run(
+			config({ iterations: 2, maxBudgetUsd: 5 })
+		);
+
+		expect(spawn).toHaveBeenCalledTimes(2);
+		expect(result.iterations[0]).toMatchObject({
+			status: 'error',
+			costUsd: 0.3
+		});
+		expect(result.iterations[0].costUnknown).toBeUndefined();
+		expect(result.totalCostUsd).toBeCloseTo(0.6);
+	});
+
 	it('counts nothing for a clean exit without a result event (older Claude Code) under a budget', async () => {
 		spawn.mockImplementation(
 			() => fakeClaude({ stdout: 'Did one task\n', status: 0 }) as never

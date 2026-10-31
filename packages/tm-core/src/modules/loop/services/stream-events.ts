@@ -124,6 +124,10 @@ export function findResultEvent(output: string): ClaudeRunResult | undefined {
 	return undefined;
 }
 
+/** Whether the output holds a stream-json event, i.e. Claude Code got going */
+export const hasStreamEvent = (output: string): boolean =>
+	output.split('\n').some((line) => parseEvent(line) !== undefined);
+
 /** The output with its stream-json events taken out, for a run with no result event */
 export function withoutEvents(output: string): string {
 	return output

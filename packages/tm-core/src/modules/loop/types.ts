@@ -119,9 +119,9 @@ export interface LoopIteration {
 	/** Agentic turns Claude Code took */
 	turns?: number;
 	/**
-	 * Claude Code was stopped by loop's timeout or killed before it reported
-	 * a cost. With --max-budget-usd, costUsd is then the budget the
-	 * iteration was given, the most it could have spent.
+	 * Claude Code was stopped by loop's timeout, or killed or crashed after it
+	 * started, before it reported a cost. With --max-budget-usd, costUsd is
+	 * then the budget the iteration was given, the most it could have spent.
 	 */
 	costUnknown?: boolean;
 	/** Complexity score of the task the iteration started on, when it had one */
