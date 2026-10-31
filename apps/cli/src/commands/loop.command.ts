@@ -23,6 +23,7 @@ import {
 import chalk from 'chalk';
 import { Command } from 'commander';
 import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
+import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import {
@@ -386,7 +387,9 @@ export class LoopCommand extends Command {
 					console.log(chalk.dim(`  → ${toolName}`)),
 				onOutput: (output: string) => console.log(output)
 			}),
-			onError: (message: string, severity?: 'warning' | 'error') => {
+			// Messages can name a task ID read from tasks.json
+			onError: (raw: string, severity?: 'warning' | 'error') => {
+				const message = terminalSafe(raw);
 				if (severity === 'warning') {
 					console.error(chalk.yellow(`[Loop Warning] ${message}`));
 				} else {
@@ -420,7 +423,7 @@ export class LoopCommand extends Command {
 		console.log(`Tasks completed: ${result.tasksCompleted}`);
 		console.log(`Final status: ${this.formatStatus(result.finalStatus)}`);
 		if (result.errorMessage) {
-			console.log(chalk.red(`Error: ${result.errorMessage}`));
+			console.log(chalk.red(`Error: ${terminalSafe(result.errorMessage)}`));
 		}
 	}
 

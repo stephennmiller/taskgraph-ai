@@ -159,7 +159,8 @@ export function formatParallelSummary(
 		(t) => `  ${theme.brand(t.id.padEnd(idWidth))}  ${outcome(t, projectRoot)}`
 	);
 	const kept = tasks.filter((t) => t.kept);
-	const done = tasks.filter((t) => t.state === 'done').length;
+	// Exiting 0 isn't enough: Claude must have marked the task review or done
+	const done = tasks.filter((t) => t.finished).length;
 	const failed = tasks.filter((t) => t.state === 'failed').length;
 	const review = kept.length
 		? ` · ${plural(kept.length, 'branch', 'branches')} to review`
@@ -174,11 +175,11 @@ export function formatParallelSummary(
 		next = kept.length
 			? `Next: ${theme.brand(`taskgraph loop --parallel ${options.parallel}${rerunFlags(options.container)}`)} picks up where they left off`
 			: null;
-	} else if (done === 0) {
+	} else if (failed === tasks.length) {
 		lead = `${chalk.red('✗')} ${plural(tasks.length, 'task')} failed${review}`;
 		next = `Next: read the log beside each worktree, e.g. ${theme.brand(rel(projectRoot, tasks[0].logFile))}`;
 	} else {
-		lead = `${chalk.green('✓')} ${done} of ${plural(tasks.length, 'task')} done${failed ? ` · ${failed} failed` : ''}${review}`;
+		lead = `${done ? chalk.green('✓') : chalk.red('✗')} ${done} of ${plural(tasks.length, 'task')} done${failed ? ` · ${failed} failed` : ''}${review}`;
 		next = kept.length
 			? `Next: review with ${theme.brand(`git log -p HEAD..${kept[0].branch}`)}`
 			: null;

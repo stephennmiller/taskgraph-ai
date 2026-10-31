@@ -173,11 +173,13 @@ describe('loop --parallel', () => {
 		expect(argv.join(' ')).not.toContain(hostile);
 
 		// Task 1 committed: worktree, branch and claim stay for review
+		// Not marked review, so it doesn't count as done
 		expect(byId['1']).toMatchObject({
 			state: 'done',
 			commits: 1,
 			kept: true,
-			claimed: true
+			claimed: true,
+			finished: false
 		});
 		expect(fs.existsSync(byId['1'].worktree)).toBe(true);
 		expect(git(root, 'log', '-1', '--format=%s', 'taskgraph/task-1')).toBe(
@@ -195,7 +197,11 @@ describe('loop --parallel', () => {
 			kept: false,
 			claimed: false
 		});
-		expect(byId['3']).toMatchObject({ state: 'done', kept: false });
+		expect(byId['3']).toMatchObject({
+			state: 'done',
+			kept: false,
+			finished: false
+		});
 		for (const id of ['2', '3']) {
 			expect(fs.existsSync(byId[id].worktree)).toBe(false);
 			expect(branchExists(`taskgraph/task-${id}`)).toBe(false);
@@ -272,7 +278,8 @@ describe('loop --parallel', () => {
 			commits: 1,
 			uncommitted: false,
 			kept: true,
-			claimed: false
+			claimed: false,
+			finished: true
 		});
 		expect(taskById('1')?.status).toBe('review');
 		// The worktree's copy is as committed, and the branch carries only work

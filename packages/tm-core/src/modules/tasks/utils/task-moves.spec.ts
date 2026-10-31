@@ -405,6 +405,72 @@ describe('moveTasksBetweenTags', () => {
 		expect(result.tips).toHaveLength(2);
 	});
 
+	// feat's task 3 needs feat's 2 and archived 9, its subtask needs feat's 1;
+	// master has its own 1, 2 and 9
+	const sameIdsInTarget = () =>
+		new Map<string, Task[]>([
+			[
+				'master',
+				[
+					{ id: '1', title: 'Setup DB', dependencies: [], subtasks: [] },
+					{ id: '2', title: 'Write docs', dependencies: [], subtasks: [] },
+					{ id: '9', title: 'Ship', dependencies: [], subtasks: [] }
+				] as any
+			],
+			[
+				'feat',
+				[
+					{ id: '1', title: 'Auth API', dependencies: [], subtasks: [] },
+					{ id: '2', title: 'Session store', dependencies: [], subtasks: [] },
+					{
+						id: '3',
+						title: 'Login UI',
+						dependencies: ['2', '9'],
+						subtasks: [{ id: 1, title: 'Form', dependencies: ['1'] }]
+					}
+				] as any
+			]
+		]);
+	const featArchived = (tag: string) =>
+		tag === 'feat' ? new Set(['9']) : noArchive;
+
+	it('refuses a move whose dependencies stay in the source tag, though the target has the same IDs (#801)', () => {
+		const tags = sameIdsInTarget();
+
+		let error: any;
+		try {
+			moveTasksBetweenTags(tags, ['3'], 'feat', 'master', {}, featArchived);
+		} catch (e) {
+			error = e;
+		}
+
+		expect(
+			error?.context.details.conflicts.map((c: any) => [c.message, c.archived])
+		).toEqual([
+			['Task 3 depends on 2 (in feat)', undefined],
+			['Task 3 depends on 9 (archived in feat)', true],
+			['Task 3.1 depends on 1 (in feat)', undefined]
+		]);
+		expect(ids(tags.get('master') ?? [])).toEqual(['1', '2', '9']);
+	});
+
+	it('drops those dependencies with ignoreDependencies instead of rebinding them (#801)', () => {
+		const tags = sameIdsInTarget();
+
+		moveTasksBetweenTags(
+			tags,
+			['3'],
+			'feat',
+			'master',
+			{ ignoreDependencies: true },
+			featArchived
+		);
+
+		const moved = tags.get('master')?.find((t) => String(t.id) === '3');
+		expect(moved?.dependencies).toEqual([]);
+		expect(moved?.subtasks?.[0].dependencies).toEqual([]);
+	});
+
 	it('creates a missing target tag, but not a reserved one', () => {
 		const tags = tagsWith();
 

@@ -139,6 +139,35 @@ describe('tags command', () => {
 		}
 	});
 
+	// #807: these printed "Switched to" / "Added task" on master and exited 0
+	it('use fails on a state.json it could not save over, naming the file', () => {
+		const statePath = path.join(dir, '.taskgraph', 'state.json');
+		run(['tags', 'add', 'feat']);
+		fs.writeFileSync(statePath, '[]');
+
+		const result = run(['tags', 'use', 'feat']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain(`${statePath}: state.json does not hold`);
+		expect(result.stderr).toContain('delete it');
+		expect(result.stdout).not.toContain('Switched');
+	});
+
+	it('fails on a broken state.json instead of using master', () => {
+		const tasksPath = path.join(dir, '.taskgraph', 'tasks', 'tasks.json');
+		const before = fs.readFileSync(tasksPath, 'utf8');
+		fs.writeFileSync(
+			path.join(dir, '.taskgraph', 'state.json'),
+			'{"currentTag": "feat",\n<<<<<<< HEAD\n'
+		);
+
+		const result = run(['add-task', '--title=x', '--description=x']);
+
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain("Couldn't read");
+		expect(fs.readFileSync(tasksPath, 'utf8')).toBe(before);
+	});
+
 	it('creates a tag named after the current git branch with --from-branch', () => {
 		const git = (...args: string[]) =>
 			spawnSync('git', args, { cwd: dir, encoding: 'utf8' });

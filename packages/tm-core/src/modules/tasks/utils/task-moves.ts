@@ -41,6 +41,8 @@ export interface CrossTagConflict {
 	dependencyId: DependencyId;
 	dependencyTag: string;
 	message: string;
+	/** The dependency is archived in the source tag, so it can't move along */
+	archived?: true;
 }
 
 export interface NewSubtaskInput {

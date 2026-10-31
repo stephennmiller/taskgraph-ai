@@ -43,6 +43,7 @@ import {
 	timeoutMessage
 } from '../services/iteration-limits.js';
 import { TaskWorktrees } from './task-worktrees.js';
+import { isFinishedStatus } from '../task-progress.js';
 import type {
 	ParallelLoopOptions,
 	ParallelLoopResult,
@@ -439,6 +440,8 @@ export class ParallelLoopRunner {
 				await this.release(task.id, tag, claimant);
 			}
 			task.claimed = await this.isClaimed(task.id, tag, claimant);
+			task.finished =
+				task.state === 'done' && (await this.isFinished(task.id, tag));
 		}
 	}
 
@@ -474,6 +477,18 @@ export class ParallelLoopRunner {
 			);
 		} catch {
 			return true;
+		}
+	}
+
+	/** In review or done (assumed not if unreadable) */
+	private async isFinished(
+		id: string,
+		tag: string | undefined
+	): Promise<boolean> {
+		try {
+			return isFinishedStatus((await this.tasks.get(id, tag)).task?.status);
+		} catch {
+			return false;
 		}
 	}
 

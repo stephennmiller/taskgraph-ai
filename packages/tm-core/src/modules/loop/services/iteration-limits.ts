@@ -11,6 +11,9 @@ import {
 /** Errors in a row that end the run, so a broken setup doesn't burn every iteration */
 export const MAX_CONSECUTIVE_ERRORS = 3;
 
+/** Iterations in a row that change no task status before the run stops as stuck (#812) */
+export const MAX_STALLED_ITERATIONS = 2;
+
 const DEFAULT_ITERATION_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** One iteration's limit: TASKGRAPH_LOOP_TIMEOUT_MS, else an hour */

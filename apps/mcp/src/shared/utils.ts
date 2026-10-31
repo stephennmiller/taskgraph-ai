@@ -44,6 +44,13 @@ export function createContentResponse(content: any): ContentResult {
 	};
 }
 
+/** An error's message, followed by the fix tm-core suggests in its `hint` */
+export function errorMessage(error: unknown): string {
+	const message = error instanceof Error ? error.message : String(error);
+	const hint = (error as { hint?: unknown } | null)?.hint;
+	return typeof hint === 'string' ? `${message}. ${hint}` : message;
+}
+
 /**
  * Creates an error response for MCP tools
  */
@@ -332,7 +339,7 @@ export function withNormalizedProjectRoot<T extends { projectRoot?: string }>(
 				result: {
 					success: false,
 					error: {
-						message: `Operation failed: ${error.message}`
+						message: `Operation failed: ${errorMessage(error)}`
 					}
 				}
 			});
@@ -380,10 +387,13 @@ export function withToolContext<TArgs extends { projectRoot?: string }>(
 			args: TArgs & { projectRoot: string },
 			context: Context<undefined>
 		) => {
-			// Create tmCore instance
+			// tm-core wraps a broken config.json or state.json in "Failed to
+			// initialize TmCore"; the cause names the file and the fix
 			const tmCore = await createTmCore({
 				projectPath: args.projectRoot,
 				loggerConfig: { mcpMode: true, logCallback: context.log }
+			}).catch((error) => {
+				throw error?.cause ?? error;
 			});
 
 			// Create enhanced context with tmCore
