@@ -185,7 +185,10 @@ export class ExpandCommand extends Command {
 				...this.reportHooks,
 				onStart: (ids) => {
 					total = ids.length;
-					this.spinner = createSpinner(progress()).start();
+					this.spinner = createSpinner({
+						text: progress(),
+						elapsed: false
+					}).start();
 					ticker = setInterval(() => {
 						if (this.spinner) this.spinner.text = progress();
 					}, 1000);
