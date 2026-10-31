@@ -267,14 +267,16 @@ export function rewriteSubtasks(
 				// A number is a sibling; a string is a task or subtask
 				dependencies: cleanGeneratedSubtaskDependencies(deps[i], stored.id),
 				// A new subtask isn't done yet: a done one renumbered would be saved twice (#869)
-				status: before ? (subtask.status ?? before.status) : 'pending',
+				status: before
+					? (subtask.status ?? before.status ?? 'pending')
+					: 'pending',
 				testStrategy: subtask.testStrategy ?? null
 			};
 			// The AI can only write pending or done, so in-progress, review and blocked would be lost (#872);
-			// a done one is keepDoneSubtasks' to restore
+			// a done one is keepDoneSubtasks' to restore. No stored status reads as pending
 			if (before && before.status !== 'done') {
 				keepStatus(
-					before,
+					{ status: before.status ?? 'pending' },
 					corrected,
 					prompt,
 					warn,

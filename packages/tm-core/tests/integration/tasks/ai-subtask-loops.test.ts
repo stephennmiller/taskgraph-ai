@@ -521,6 +521,28 @@ describe('AI-written subtask dependencies that loop through the parent', () => {
 		}
 	);
 
+	it.each([
+		['update-task', 'pending'],
+		['update-task', undefined],
+		['update --from', 'pending'],
+		['update --from', undefined]
+	])(
+		'%s saves a matched subtask with no stored status as pending, without a warning, when the AI sends %s (#872)',
+		async (via, aiStatus) => {
+			const { status: _, ...noStatus } = stored('1', 'S1');
+			write(task('1', [], [noStatus] as never));
+			const aiTask = {
+				...task('1'),
+				subtasks: [{ ...aiSubtask(1, []), title: 'S1', status: aiStatus }]
+			};
+
+			const warnings = await rewrite(via, aiTask);
+
+			expect(savedTask('1').subtasks[0].status).toBe('pending');
+			expect(warnings.join('\n')).not.toContain('status');
+		}
+	);
+
 	it.each(['update-task', 'update --from'])(
 		'%s keeps the subtasks when the AI returns none (#863)',
 		async (via) => {
