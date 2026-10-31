@@ -162,6 +162,11 @@ First promote it to a full task using:
 				parentId: task.id as DependencyId
 			}))
 		]);
+		// Every tag numbers from 1, so a dependency the source tag has, live or
+		// archived, is that task, not the same ID elsewhere (#801)
+		const inSource = liveOrArchived(source as Task[], () =>
+			archivedIds(sourceTag)
+		);
 		for (const { item, id, parentId } of holders) {
 			const holderMoved = isMoved(id);
 			const deps: unknown[] = [];
@@ -172,7 +177,7 @@ First promote it to a full task using:
 						? String(dep)
 						: resolveSubtaskDependency(parentId, dep);
 				if (holderMoved && !isMoved(full)) {
-					const tag = dependencyTag(full, tags);
+					const tag = inSource(full) ? sourceTag : dependencyTag(full, tags);
 					if (tag !== undefined && tag !== targetTag) {
 						conflicts.push({
 							taskId: id,
@@ -182,7 +187,12 @@ First promote it to a full task using:
 						});
 					}
 					const depTask = dependencyTaskId(full);
-					if (depTask !== null && findTask(source, depTask)) deps.push(dep);
+					if (
+						tag === sourceTag ||
+						(depTask !== null && findTask(source, depTask))
+					) {
+						deps.push(dep);
+					}
 				} else if (!holderMoved && isMoved(full)) {
 					// Left behind, it would name an ID the source tag no longer has
 					conflicts.push({
