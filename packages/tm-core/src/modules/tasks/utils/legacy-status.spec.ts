@@ -70,6 +70,43 @@ describe('normalizeTaskStatuses', () => {
 		expect(input[0].tag).toBe('renamed-away');
 	});
 
+	it("reads a subtask ID stored with its parent's prefix as its own number (#805)", () => {
+		const input = [
+			createTask({
+				id: '3',
+				title: 'A',
+				subtasks: [
+					createSubtask({ id: '3.2', parentId: '3', title: 'B' }),
+					// Another task's prefix is a reference, not this task's number
+					createSubtask({ id: '4.1', parentId: '3', title: 'C' })
+				]
+			})
+		];
+
+		const [task] = normalizeTaskStatuses(input);
+
+		expect(task.subtasks.map((s) => s.id)).toEqual(['2', '4.1']);
+		expect(input[0].subtasks[0].id).toBe('3.2');
+	});
+
+	it('leaves a dotted subtask ID as is when a sibling already has its number (#805)', () => {
+		const input = [
+			createTask({
+				id: '1',
+				title: 'A',
+				subtasks: [
+					createSubtask({ id: '1.2', parentId: '1', title: 'B' }),
+					createSubtask({ id: 2 as never, parentId: '1', title: 'C' }),
+					createSubtask({ id: '1.3.1', parentId: '1', title: 'D' })
+				]
+			})
+		];
+
+		const [task] = normalizeTaskStatuses(input);
+
+		expect(task.subtasks.map((s) => s.id)).toEqual(['1.2', '2', '1.3.1']);
+	});
+
 	it('leaves entries that are not objects for validation to report', () => {
 		const input = [
 			null,

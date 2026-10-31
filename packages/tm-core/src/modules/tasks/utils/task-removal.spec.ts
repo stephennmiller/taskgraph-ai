@@ -107,6 +107,16 @@ describe('removeTasksIn', () => {
 		expect(result.removedTaskNumbers).toEqual([]);
 	});
 
+	it('drops references to a subtask named with a leading zero (#805)', () => {
+		const tasks = tasksOf();
+
+		const result = removeTasksIn(asTasks(tasks), ['2.02'], 'master', none);
+
+		expect(tasks[2].dependencies).toEqual([1]);
+		expect(tasks[2].metadata.taskLinks).toEqual({ 1: 'related', 7: 'related' });
+		expect(result.danglingDependents).toBe(0);
+	});
+
 	it('changes nothing when any ID names nothing', () => {
 		const tasks = tasksOf();
 

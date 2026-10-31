@@ -137,4 +137,31 @@ describe('subtask IDs stored as strings (#748)', () => {
 			{ id: '1', title: 'C', parentId: '2', dependencies: ['1.2'] }
 		]);
 	});
+
+	it('finds, changes and numbers after subtasks stored with dotted IDs (#805)', async () => {
+		const dotted = v1File();
+		dotted.master.tasks[0].subtasks = dotted.master.tasks[0].subtasks.map(
+			(s) => ({ ...s, id: `1.${s.id}` as never })
+		);
+		// Sibling dependencies written either way still point at their subtask
+		dotted.master.tasks[0].subtasks[2].dependencies = ['1.2', 1];
+		await open(dotted);
+
+		expect((await tmCore.tasks.validateDependencies()).issues).toEqual([]);
+		expect((await tmCore.tasks.get('1.2')).task).toMatchObject({
+			id: '1.2',
+			title: 'B'
+		});
+		await tmCore.tasks.updateStatus('1.2', 'in-progress');
+		await tmCore.tasks.addNote('1.2', 'Started');
+		const { subtask } = await tmCore.tasks.addSubtask('1', { title: 'D' });
+
+		expect(subtask.id).toBe('4');
+		expect(subtasksOf(1).map((s: any) => [s.id, s.status])).toEqual([
+			['1', 'pending'],
+			['2', 'in-progress'],
+			['3', 'pending'],
+			['4', 'pending']
+		]);
+	});
 });

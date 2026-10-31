@@ -162,7 +162,7 @@ export function removeTasksIn(
 				...item.subtask,
 				parentTaskId: parseInt(id, 10)
 			});
-			removedIds.add(id);
+			removedIds.add(fullSubtaskId(item.task.id, item.subtask.id));
 			outcome.messages.push(
 				`Successfully removed subtask ${id} from tag '${tag}'`
 			);
