@@ -61,7 +61,8 @@ describe('LoopCommand cost and caps', () => {
 				isTrusted: () => true,
 				resolveIterations: () => 1,
 				isPreset: () => true,
-				isTaskPreset: () => false
+				isTaskPreset: () => false,
+				resolveTask: async (id: string) => ({ id, title: 'Users table' })
 			},
 			tasks: { getCount: async () => 0 },
 			config: { getActiveTag: () => 'master' }
@@ -77,7 +78,7 @@ describe('LoopCommand cost and caps', () => {
 		(new LoopCommand() as any).execute({ trust: true, ...options });
 	const printed = () =>
 		log.mock.calls.map((c: unknown[]) =>
-			stripVTControlCharacters(String(c[0]))
+			stripVTControlCharacters(String(c[0] ?? ''))
 		);
 
 	it('passes the caps to tm-core and prints what each iteration and the run spent', async () => {
@@ -97,10 +98,10 @@ describe('LoopCommand cost and caps', () => {
 		expect(run).toHaveBeenCalledWith(
 			expect.objectContaining({ maxTurns: 30, maxBudgetUsd: 5 })
 		);
+		expect(printed()).toContain('✓ Iteration 1 · $0.42 · 12 turns · 1m 23s');
 		expect(printed()).toContain(
-			'  Iteration 1 completed: success · $0.42 · 12 turns · 1m 23s'
+			'Iteration limit reached · 0 tasks completed in 1 iteration · $0.42 · 12 turns'
 		);
-		expect(printed()).toContain('Total iterations: 1 · $0.42 · 12 turns');
 	});
 
 	it('says the budget stopped the run, and exits 0', async () => {
@@ -109,7 +110,7 @@ describe('LoopCommand cost and caps', () => {
 		await execute({ maxBudgetUsd: '1' });
 
 		expect(printed()).toContain(
-			'Final status: Budget reached (--max-budget-usd)'
+			'--max-budget-usd reached · 0 tasks completed in 1 iteration'
 		);
 		expect(process.exitCode).toBeUndefined();
 	});
@@ -147,14 +148,50 @@ describe('LoopCommand cost and caps', () => {
 
 		expect(printed()).toEqual(
 			expect.arrayContaining([
-				'  Iteration 1 completed: error (Claude Code reached the --max-turns limit) · $0.2 · 5 turns',
-				'  Iteration 2 completed: error · cost unknown',
-				'Total iterations: 1 · at least $0.2 · 5 turns',
-				'Final status: Error'
+				'Iteration 1 of 2',
+				'✗ Iteration 1 failed: Claude Code reached the --max-turns limit · $0.2 · 5 turns',
+				'Iteration 2 of 2',
+				'✗ Iteration 2 failed · cost unknown',
+				// The error printed as it happened, so the summary doesn't repeat it
+				'✗ Loop failed · 0 tasks completed in 1 iteration · at least $0.2 · 5 turns'
 			])
 		);
 		expect(error).toHaveBeenCalledTimes(1);
 		expect(process.exitCode).toBe(1);
+	});
+
+	it('prints one line per iteration on stdout, messages on stderr, and a one-line summary (#880)', async () => {
+		const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+		run.mockImplementation(async (config) => {
+			config.callbacks.onIterationStart(1, 1);
+			config.callbacks.onError('Task 3 is ready\x1b[2J', 'warning');
+			config.callbacks.onIterationEnd({
+				iteration: 1,
+				status: 'complete',
+				costUsd: 1.42,
+				turns: 61
+			});
+			return result({
+				finalStatus: 'all_complete',
+				tasksCompleted: 1,
+				totalCostUsd: 1.42,
+				totalTurns: 61
+			});
+		});
+
+		await execute({ id: '3.2', output: false });
+
+		expect(printed().slice(-4)).toEqual([
+			'Iteration 1 of 1 · task 3.2',
+			'✓ Iteration 1 · $1.42 · 61 turns',
+			'',
+			'✓ All tasks complete · 1 task completed in 1 iteration · $1.42 · 61 turns'
+		]);
+		expect(error).toHaveBeenCalledTimes(1);
+		expect(stripVTControlCharacters(String(error.mock.calls[0][0]))).toBe(
+			'Task 3 is ready'
+		);
+		expect(process.exitCode).toBeUndefined();
 	});
 
 	it('refuses a bad --max-budget-usd before starting tm-core', async () => {
@@ -188,9 +225,7 @@ describe('LoopCommand cost and caps', () => {
 		expect(run).toHaveBeenCalledWith(
 			expect.objectContaining({ model: 'opus' })
 		);
-		expect(printed()).toContain(
-			'  Iteration 1 completed: success · opus, low effort · $0.42'
-		);
+		expect(printed()).toContain('✓ Iteration 1 · opus, low effort · $0.42');
 	});
 
 	it('passes --reuse-session to tm-core and says whether each iteration resumed', async () => {
@@ -209,9 +244,7 @@ describe('LoopCommand cost and caps', () => {
 		expect(run).toHaveBeenCalledWith(
 			expect.objectContaining({ reuseSession: true })
 		);
-		expect(printed()).toContain(
-			'  Iteration 2 completed: success · resumed · $0.42'
-		);
+		expect(printed()).toContain('✓ Iteration 2 · resumed · $0.42');
 	});
 
 	it('refuses a --model that would read as a flag, before starting tm-core', async () => {

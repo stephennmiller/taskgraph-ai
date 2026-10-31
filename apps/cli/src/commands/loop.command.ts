@@ -8,7 +8,6 @@ import {
 	type LoopConfig,
 	type LoopIteration,
 	type LoopOutputCallbacks,
-	type LoopResult,
 	type LoopTask,
 	DEFAULT_CONTAINER_IMAGE,
 	MAX_PARALLEL,
@@ -24,9 +23,14 @@ import {
 } from '@tm/core';
 import chalk from 'chalk';
 import { Command } from 'commander';
-import { formatLoopIntro } from '../ui/formatters/loop-formatters.js';
-import { terminalSafe } from '../ui/formatters/markdown-formatters.js';
-import { formatLoopSpend } from '../ui/formatters/usage-formatters.js';
+import {
+	formatLoopIntro,
+	formatLoopIterationEnd,
+	formatLoopIterationStart,
+	formatLoopMessage,
+	formatLoopSummary,
+	formatSandboxAuth
+} from '../ui/formatters/loop-formatters.js';
 import { displayCommandHeader } from '../utils/display-helpers.js';
 import { displayError } from '../utils/error-handler.js';
 import {
@@ -200,6 +204,8 @@ export class LoopCommand extends Command {
 				console.log(line);
 			}
 
+			// Errors printed during the run, not repeated in the summary
+			const shown = new Set<string>();
 			const config: Partial<LoopConfig> = {
 				iterations,
 				prompt,
@@ -212,11 +218,16 @@ export class LoopCommand extends Command {
 				...caps,
 				model,
 				reuseSession: options.reuseSession,
-				callbacks: this.createOutputCallbacks(options.output ?? true)
+				callbacks: this.createOutputCallbacks(
+					options.output ?? true,
+					pinned?.id,
+					shown
+				)
 			};
 
 			const result = await this.tmCore.loop.run(config);
-			this.displayResult(result);
+			console.log();
+			console.log(formatLoopSummary(result, shown, terminalWidth()));
 			// Scripts and CI read the exit code; a stuck or failed loop is a failure
 			if (result.finalStatus === 'error' || result.finalStatus === 'blocked') {
 				process.exitCode = 1;
@@ -372,30 +383,21 @@ export class LoopCommand extends Command {
 	}
 
 	private handleSandboxAuth(): void {
-		console.log(chalk.dim('Checking sandbox auth...'));
 		const authCheck = this.tmCore.loop.checkSandboxAuth();
 
 		if (authCheck.error) {
 			throw new Error(authCheck.error);
 		}
 
-		if (authCheck.ready) {
-			console.log(chalk.green('✓ Sandbox ready'));
-			return;
-		}
+		if (authCheck.ready) return;
 
-		console.log(
-			chalk.yellow(
-				'Sandbox needs authentication. Starting interactive session...'
-			)
-		);
-		console.log(chalk.dim('Please complete auth, then Ctrl+C to continue.\n'));
+		console.log(formatSandboxAuth(false));
 
 		const authResult = this.tmCore.loop.runInteractiveAuth();
 		if (!authResult.success) {
 			throw new Error(authResult.error || 'Interactive authentication failed');
 		}
-		console.log(chalk.green('✓ Auth complete\n'));
+		console.log(formatSandboxAuth(true));
 	}
 
 	private validateIterations(iterations: string): void {
@@ -407,14 +409,18 @@ export class LoopCommand extends Command {
 		}
 	}
 
-	private createOutputCallbacks(showOutput: boolean): LoopOutputCallbacks {
-		// The iteration's error already printed as [Loop Error], not repeated on its status line
+	private createOutputCallbacks(
+		showOutput: boolean,
+		taskId: string | undefined,
+		shown: Set<string>
+	): LoopOutputCallbacks {
+		// The iteration's error already printed as it happened, not repeated on its status line
 		let printedError: string | undefined;
 		return {
 			onIterationStart: (iteration: number, total: number) => {
 				printedError = undefined;
-				console.log();
-				console.log(chalk.cyan(`━━━ Iteration ${iteration} of ${total} ━━━`));
+				if (showOutput) console.log();
+				console.log(formatLoopIterationStart(iteration, total, taskId));
 			},
 			// --no-output: Claude's text and tool calls aren't printed
 			...(showOutput && {
@@ -423,79 +429,23 @@ export class LoopCommand extends Command {
 					console.log(chalk.dim(`  → ${toolName}`)),
 				onOutput: (output: string) => console.log(output)
 			}),
-			// Messages can name a task ID read from tasks.json
-			onError: (raw: string, severity?: 'warning' | 'error') => {
-				const message = terminalSafe(raw);
-				if (severity === 'warning') {
-					console.error(chalk.yellow(`[Loop Warning] ${message}`));
-				} else {
-					printedError = raw;
-					console.error(chalk.red(`[Loop Error] ${message}`));
+			onError: (message: string, severity?: 'warning' | 'error') => {
+				if (severity !== 'warning') {
+					printedError = message;
+					shown.add(message);
 				}
+				console.error(formatLoopMessage(message, severity, terminalWidth()));
 			},
 			onStderr: (iteration: number, text: string) => {
 				process.stderr.write(chalk.dim(`[Iteration ${iteration}] `) + text);
 			},
 			onIterationEnd: (iteration: LoopIteration) => {
-				const statusColor =
-					iteration.status === 'success'
-						? chalk.green
-						: iteration.status === 'error'
-							? chalk.red
-							: chalk.yellow;
-				// Why it failed: a --max-turns cap or an exit code (#861)
-				const why =
-					iteration.status === 'error' &&
-					iteration.message &&
-					iteration.message !== printedError
-						? ` (${terminalSafe(iteration.message)})`
-						: '';
+				if (iteration.message) shown.add(iteration.message);
 				console.log(
-					statusColor(
-						`  Iteration ${iteration.iteration} completed: ${iteration.status}${why}`
-					) +
-						formatLoopSpend({
-							session: iteration.session,
-							model: iteration.model,
-							effort: iteration.effort,
-							costUsd: iteration.costUsd,
-							costUnknown: iteration.costUnknown,
-							turns: iteration.turns,
-							durationMs: iteration.duration
-						})
+					formatLoopIterationEnd(iteration, printedError, terminalWidth())
 				);
 			}
 		};
-	}
-
-	private displayResult(result: LoopResult): void {
-		console.log();
-		console.log(chalk.bold('Loop Complete'));
-		console.log(chalk.dim('─'.repeat(40)));
-		console.log(
-			`Total iterations: ${result.totalIterations}` +
-				formatLoopSpend({
-					costUsd: result.totalCostUsd,
-					costPartial: result.costPartial,
-					turns: result.totalTurns
-				})
-		);
-		console.log(`Tasks completed: ${result.tasksCompleted}`);
-		console.log(`Final status: ${this.formatStatus(result.finalStatus)}`);
-		if (result.errorMessage) {
-			console.log(chalk.red(`Error: ${terminalSafe(result.errorMessage)}`));
-		}
-	}
-
-	private formatStatus(status: LoopResult['finalStatus']): string {
-		const statusMap: Record<LoopResult['finalStatus'], string> = {
-			all_complete: chalk.green('All tasks complete'),
-			max_iterations: chalk.yellow('Max iterations reached'),
-			budget_reached: chalk.yellow('Budget reached (--max-budget-usd)'),
-			blocked: chalk.red('Blocked'),
-			error: chalk.red('Error')
-		};
-		return statusMap[status];
 	}
 
 	static register(program: Command, name?: string): LoopCommand {

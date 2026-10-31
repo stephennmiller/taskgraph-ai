@@ -30,7 +30,8 @@ import { formatDuration } from '../components/parse-prd-progress.component.js';
 import { theme } from '../theme.js';
 import { formatLoopSpend } from './usage-formatters.js';
 
-const plural = (n: number, word: string, many = `${word}s`) =>
+/** `1 task`, `2 tasks` */
+export const plural = (n: number, word: string, many = `${word}s`) =>
 	`${n} ${n === 1 ? word : many}`;
 
 /**

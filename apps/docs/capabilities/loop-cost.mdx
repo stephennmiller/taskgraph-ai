@@ -6,17 +6,15 @@ description: "What each loop iteration costs, how to cap a run, how a task's com
 
 ## Cost and caps
 
-Every iteration reads what Claude Code reported spending, in dollars, and how many turns it took. Each iteration's status line shows them, with its duration, and the summary adds the run's total to the iterations line:
+Every iteration reads what Claude Code reported spending, in dollars, and how many turns it took. Each iteration's status line shows them, with its duration, and the summary line ends with the run's total:
 
 ```
-  Iteration 1 completed: success · $0.42 · 12 turns · 3m 10s
-  Iteration 2 completed: success · $0.31 · 9 turns · 2m 4s
+Iteration 1 of 2
+✓ Iteration 1 · $0.42 · 12 turns · 3m 10s
+Iteration 2 of 2
+✓ Iteration 2 · $0.31 · 9 turns · 2m 4s
 
-Loop Complete
-────────────────────────────────────────
-Total iterations: 2 · $0.73 · 21 turns
-Tasks completed: 2
-Final status: Max iterations reached
+Iteration limit reached · 2 tasks completed in 2 iterations · $0.73 · 21 turns
 ```
 
 The cost is Claude Code's own estimate (`total_cost_usd` in its `result` event), which can differ from your bill. To read it, each iteration runs `claude -p` with `--output-format stream-json`, with or without `--verbose`; an older Claude Code that prints no `result` event still works, without the cost.
@@ -24,7 +22,7 @@ The cost is Claude Code's own estimate (`total_cost_usd` in its `result` event),
 Two flags cap a run:
 
 - `--max-turns <n>` passes `--max-turns` to every `claude -p`. An iteration that hits it stops with an error, `Claude Code reached the --max-turns limit`, shown on its status line and in the progress file. Three in a row end the run like any other errors, and so does one on the last iteration (exit code 1).
-- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with final status `Budget reached (--max-budget-usd)` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it. An iteration that reports no cost (stopped by loop's timeout, or killed or crashed after it started but before its `result` event) counts as the whole budget it was given, shown as `cost unknown, counted as $X`, so the run stops rather than overshoot. That run ends with status `error`, since the iteration failed, not `Budget reached`. Without `--max-budget-usd` such an iteration shows `cost unknown` and adds nothing to the run's total, which then reads `at least $X`. A `--parallel` task stopped or killed before its `result` event shows the same way.
+- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with the summary `--max-budget-usd reached` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it. An iteration that reports no cost (stopped by loop's timeout, or killed or crashed after it started but before its `result` event) counts as the whole budget it was given, shown as `cost unknown, counted as $X`, so the run stops rather than overshoot. That run ends with status `error`, since the iteration failed, not `--max-budget-usd reached`. Without `--max-budget-usd` such an iteration shows `cost unknown` and adds nothing to the run's total, which then reads `at least $X`. A `--parallel` task stopped or killed before its `result` event shows the same way.
 
 ```bash
 taskgraph loop --max-turns 60 --max-budget-usd 10 --trust
@@ -47,7 +45,7 @@ Each iteration reads the score from the report as it is then, so a task re-score
 A task without a score (a subtask, a task `analyze-complexity` hasn't scored, or a preset that picks its own work such as `linting`) runs as before, with Claude Code's own model and effort. The status line and the progress file show what each iteration ran at, next to its cost:
 
 ```
-  Iteration 1 completed: success · sonnet, low effort · $0.12 · 6 turns · 48s
+✓ Iteration 1 · sonnet, low effort · $0.12 · 6 turns · 48s
 ```
 
 ```
