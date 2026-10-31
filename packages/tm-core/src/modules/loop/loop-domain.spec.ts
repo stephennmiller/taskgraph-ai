@@ -10,7 +10,8 @@ import type { LoopConfig } from './types.js';
 // Mock ConfigManager
 function createMockConfigManager(projectRoot = '/test/project'): ConfigManager {
 	return {
-		getProjectRoot: vi.fn().mockReturnValue(projectRoot)
+		getProjectRoot: vi.fn().mockReturnValue(projectRoot),
+		getConfig: vi.fn().mockReturnValue({})
 	} as unknown as ConfigManager;
 }
 

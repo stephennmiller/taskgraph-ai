@@ -22,6 +22,8 @@ export interface PlanInput {
 	closeOrphans?: boolean;
 	/** Tags being pushed; orphans from other tags are left alone */
 	scopeTags?: string[];
+	/** Login push runs as; a lost link is recovered only from its issues */
+	viewer?: string;
 }
 
 const keyOf = (tag: string, id: string) => `${tag}\u0000${id}`;
@@ -38,6 +40,7 @@ export function planSync(input: PlanInput): PushPlan {
 
 	const byMarker = new Map<string, RemoteIssue>();
 	for (const issue of remote) {
+		if (!input.viewer || issue.author !== input.viewer) continue;
 		const marker = parseMarker(issue.body);
 		if (marker) byMarker.set(keyOf(marker.tag, marker.id), issue);
 	}

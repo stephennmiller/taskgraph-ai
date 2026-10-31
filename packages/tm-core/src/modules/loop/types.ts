@@ -2,6 +2,8 @@
  * @fileoverview Type definitions for the loop module
  */
 
+import type { LoopBand, LoopEffort } from './model-bands.js';
+
 /**
  * Available preset loop prompts
  */
@@ -84,6 +86,13 @@ export interface LoopConfig {
 	 * before an iteration once nothing is left.
 	 */
 	maxBudgetUsd?: number;
+	/** `--model` for every iteration, in place of the band's model (optional) */
+	model?: string;
+	/**
+	 * Complexity bands that pick each iteration's model and effort (see
+	 * model-bands.ts); none means Claude Code's defaults every time
+	 */
+	bands?: LoopBand[];
 	/**
 	 * Output callbacks for presentation layer (CLI/MCP).
 	 * If not provided, the service runs silently (no console output).
@@ -109,6 +118,12 @@ export interface LoopIteration {
 	costUsd?: number;
 	/** Agentic turns Claude Code took */
 	turns?: number;
+	/** Complexity score of the task the iteration started on, when it had one */
+	complexity?: number;
+	/** `--model` the iteration ran with, when one was picked */
+	model?: string;
+	/** `--effort` the iteration ran with, when one was picked */
+	effort?: LoopEffort;
 }
 
 /**

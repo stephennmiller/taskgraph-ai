@@ -28,6 +28,7 @@ vi.mock('@tm/core', async (importOriginal) => {
 		DEFAULT_CONTAINER_IMAGE: actual.DEFAULT_CONTAINER_IMAGE,
 		parseParallelCount: actual.parseParallelCount,
 		parseLoopCaps: actual.parseLoopCaps,
+		parseLoopModel: actual.parseLoopModel,
 		// So is making task text safe to print
 		sanitizeForTerminal: actual.sanitizeForTerminal,
 		stripTerminalControls: actual.stripTerminalControls

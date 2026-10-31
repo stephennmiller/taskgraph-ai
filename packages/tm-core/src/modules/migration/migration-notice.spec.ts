@@ -76,4 +76,21 @@ describe('takeMigrationNotice', () => {
 		expect(warn).toHaveBeenCalledWith(expect.stringContaining('EROFS'));
 		expect(readState()).toEqual(state);
 	});
+
+	it.skipIf(process.platform === 'win32')(
+		'leaves a symlinked state.json and its target unchanged',
+		() => {
+			const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-elsewhere-'));
+			const target = path.join(elsewhere, 'state.json');
+			const text = JSON.stringify({ migrationNoticePending: true });
+			fs.writeFileSync(target, text);
+			fs.symlinkSync(target, statePath);
+			try {
+				takeMigrationNotice(root);
+				expect(fs.readFileSync(target, 'utf8')).toBe(text);
+			} finally {
+				fs.rmSync(elsewhere, { recursive: true, force: true });
+			}
+		}
+	);
 });

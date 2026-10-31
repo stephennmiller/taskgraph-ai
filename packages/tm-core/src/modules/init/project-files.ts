@@ -22,6 +22,10 @@ import {
 	hasPerMachineSettings,
 	mergeMachineConfig
 } from '../config/services/machine-config.js';
+import {
+	refuseSymlinkSync,
+	refuseSymlinkedFolders
+} from '../storage/adapters/file-storage/file-operations.js';
 import { stampTasksFileSchemaVersion } from '../storage/adapters/file-storage/schema-version.js';
 import { readAsset } from './assets.js';
 import type { InitReport } from './claude-code.js';
@@ -45,7 +49,10 @@ export function createInitialStateFile(
 		migrationNoticeShown: true
 	};
 	try {
-		fs.writeFileSync(stateFilePath, JSON.stringify(initialState, null, 2));
+		// wx: a dangling symlink there fails instead of creating its target
+		fs.writeFileSync(stateFilePath, JSON.stringify(initialState, null, 2), {
+			flag: 'wx'
+		});
 	} catch (error) {
 		report('error', `Failed to create state file: ${errorText(error)}`);
 	}
@@ -73,7 +80,9 @@ export function createInitialTasksFile(
 		}
 	});
 	try {
-		fs.writeFileSync(tasksPath, `${JSON.stringify(emptyTasks, null, 2)}\n`);
+		fs.writeFileSync(tasksPath, `${JSON.stringify(emptyTasks, null, 2)}\n`, {
+			flag: 'wx'
+		});
 	} catch (error) {
 		report('error', `Failed to create tasks file: ${errorText(error)}`);
 	}
@@ -102,7 +111,7 @@ export function copyTemplateFile(
 		return;
 	}
 	try {
-		fs.writeFileSync(targetPath, content);
+		fs.writeFileSync(targetPath, content, { flag: 'wx' });
 	} catch (error) {
 		report(
 			'error',
@@ -120,6 +129,8 @@ export function updateConfigMaxTokens(
 	report: InitReport
 ): boolean {
 	try {
+		refuseSymlinkedFolders(configPath);
+		refuseSymlinkSync(configPath);
 		const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 		for (const role of ['main', 'research', 'fallback']) {
 			const model = config.models?.[role];
@@ -143,6 +154,8 @@ export function updateStorageConfig(
 	report: InitReport
 ): void {
 	try {
+		refuseSymlinkedFolders(configPath);
+		refuseSymlinkSync(configPath);
 		if (!fs.existsSync(configPath)) {
 			report(
 				'warn',

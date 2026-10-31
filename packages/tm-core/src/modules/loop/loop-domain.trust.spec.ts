@@ -47,7 +47,10 @@ describe('LoopDomain.runParallel trust', () => {
 		writeTasks('Use the session store');
 		trustLoop(project, home);
 		domain = new LoopDomain(
-			{ getProjectRoot: () => project } as unknown as ConfigManager,
+			{
+				getProjectRoot: () => project,
+				getConfig: () => ({})
+			} as unknown as ConfigManager,
 			{} as TasksDomain
 		);
 	});

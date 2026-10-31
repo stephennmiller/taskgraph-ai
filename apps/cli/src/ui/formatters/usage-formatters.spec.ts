@@ -122,4 +122,15 @@ describe('formatLoopSpend', () => {
 		);
 		expect(formatLoopSpend({})).toBe('');
 	});
+
+	it('leads with the model and effort the iteration ran at', () => {
+		expect(
+			stripVTControlCharacters(
+				formatLoopSpend({ model: 'sonnet', effort: 'low', turns: 3 })
+			)
+		).toBe(' · sonnet, low effort · 3 turns');
+		expect(stripVTControlCharacters(formatLoopSpend({ effort: 'high' }))).toBe(
+			' · high effort'
+		);
+	});
 });

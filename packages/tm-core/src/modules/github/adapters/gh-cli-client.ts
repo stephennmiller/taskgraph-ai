@@ -68,6 +68,7 @@ interface RawIssue {
 	state: 'open' | 'closed';
 	state_reason?: 'completed' | 'not_planned' | 'reopened' | null;
 	pull_request?: unknown;
+	user?: { login: string } | null;
 }
 
 const defaultSleep = (ms: number) =>
@@ -85,7 +86,8 @@ function toRemoteIssue(raw: RawIssue): RemoteIssue {
 		stateReason:
 			raw.state_reason === 'completed' || raw.state_reason === 'not_planned'
 				? raw.state_reason
-				: undefined
+				: undefined,
+		author: raw.user?.login
 	};
 }
 
@@ -141,6 +143,11 @@ export class GhCliClient implements GitHubClient {
 	async getRepo(): Promise<RepoInfo> {
 		const { data } = await this.request('GET', `repos/${this.repo}`);
 		return { fullName: data.full_name, url: data.html_url };
+	}
+
+	async getViewer(): Promise<string> {
+		const { data } = await this.request('GET', 'user');
+		return data.login;
 	}
 
 	async listIssues(

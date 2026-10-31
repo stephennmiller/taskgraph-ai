@@ -21,6 +21,7 @@ import {
 	isTaskPreset
 } from './loop-task.js';
 import { isLoopTrusted, keepLoopTrust, trustLoop } from './loop-trust.js';
+import { type LoopBand, resolveLoopBands } from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
 import { TaskWorktrees } from './parallel/task-worktrees.js';
@@ -123,7 +124,10 @@ export class LoopDomain {
 			taskStatuses: tasks
 				? async (tag) => taskStatuses((await tasks.list({ tag })).tasks)
 				: undefined,
-			headCommit: () => getHeadCommit(this.projectRoot)
+			headCommit: () => getHeadCommit(this.projectRoot),
+			taskComplexity: tasks
+				? async (id, tag) => (await tasks.get(id, tag)).task?.complexity
+				: undefined
 		});
 		return this.loopService.run(fullConfig);
 	}
@@ -175,8 +179,11 @@ export class LoopDomain {
 		}
 		const approved = isLoopTrusted(this.projectRoot);
 		try {
-			return await new ParallelLoopRunner(this.projectRoot, this.tasks, () =>
-				this.configManager.getActiveTag()
+			return await new ParallelLoopRunner(
+				this.projectRoot,
+				this.tasks,
+				() => this.configManager.getActiveTag(),
+				this.loopBands()
 			).run(options);
 		} finally {
 			// The tasks' own changes (notes, new subtasks) stay approved for the next run
@@ -314,7 +321,15 @@ export class LoopDomain {
 			verbose: partial.verbose ?? false,
 			maxTurns: partial.maxTurns,
 			maxBudgetUsd: partial.maxBudgetUsd,
+			model: partial.model,
+			bands: partial.bands ?? this.loopBands(),
 			callbacks: partial.callbacks
 		};
+	}
+
+	/** The project's `loop.bands`, or the defaults; throws LoopError for a bad one */
+	private loopBands(): LoopBand[] {
+		const config = this.configManager.getConfig() as { loop?: unknown };
+		return resolveLoopBands(config.loop);
 	}
 }

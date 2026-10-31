@@ -223,6 +223,23 @@ describe('GhCliClient', () => {
 		});
 	});
 
+	it('reads the signed-in login with a fixed argument list', () => {
+		respond(200, { login: 'octocat' });
+
+		return client.getViewer().then((login) => {
+			expect(callArgs(0)).toEqual(['api', '-i', '-X', 'GET', 'user']);
+			expect(login).toBe('octocat');
+		});
+	});
+
+	it('maps the issue author login', () => {
+		respond(200, [rawIssue(1, { user: { login: 'octocat' } }), rawIssue(2)]);
+
+		return client.listIssues('taskgraph').then((issues) => {
+			expect(issues.map((i) => i.author)).toEqual(['octocat', undefined]);
+		});
+	});
+
 	it.each([
 		'../app',
 		'acme/..',

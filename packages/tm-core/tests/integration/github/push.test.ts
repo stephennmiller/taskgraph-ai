@@ -23,6 +23,7 @@ import { type TmCore, createTmCore } from '../../../src/tm-core.js';
 import { seedTasks } from '../seed-tasks.js';
 
 const REPO = 'acme/app';
+const VIEWER = 'octocat';
 
 class InMemoryGitHub implements GitHubClient {
 	issues: RemoteIssue[] = [];
@@ -35,6 +36,9 @@ class InMemoryGitHub implements GitHubClient {
 
 	async getRepo(): Promise<RepoInfo> {
 		return { fullName: REPO, url: `https://github.com/${REPO}` };
+	}
+	async getViewer(): Promise<string> {
+		return VIEWER;
 	}
 	async listIssues(label: string): Promise<RemoteIssue[]> {
 		return this.issues
@@ -51,6 +55,7 @@ class InMemoryGitHub implements GitHubClient {
 			number,
 			url: `https://github.com/${REPO}/issues/${number}`,
 			state: 'open',
+			author: VIEWER,
 			assignees: [],
 			...input
 		};
@@ -203,6 +208,32 @@ describe('GitHub push - integration', () => {
 		expect(rerun.created).toBe(0);
 		expect(github.issues).toHaveLength(1);
 		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(1);
+	});
+
+	it('leaves an issue opened by another account alone when relinking', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
+		github.issues[0].author = 'someone-else';
+		const before = { ...github.issues[0] };
+
+		const rerun = await push();
+
+		expect(rerun.created).toBe(1);
+		expect(github.issues[0]).toEqual(before);
+		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(2);
+	});
+
+	it('still pushes, without relinking, when the signed-in account cannot be read', async () => {
+		await setup([makeTask('1')]);
+		await push();
+		await tmCore.tasks.modifyTask('1', () => ({ metadata: {} }), 'master');
+		github.getViewer = () => Promise.reject(new Error('403'));
+
+		const rerun = await push();
+
+		expect(rerun.created).toBe(1);
+		expect(((await readTasks())[0].metadata as any).github.issueNumber).toBe(2);
 	});
 
 	it('keeps a claim made while the issue was being created (#655)', async () => {

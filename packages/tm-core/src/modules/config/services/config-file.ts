@@ -17,7 +17,10 @@ import {
 	TASKGRAPH_CONFIG_FILE,
 	TASKGRAPH_LOCAL_CONFIG_FILE
 } from '../../../common/constants/paths.js';
-import { refuseSymlinkedFolders } from '../../storage/adapters/file-storage/file-operations.js';
+import {
+	refuseSymlinkSync,
+	refuseSymlinkedFolders
+} from '../../storage/adapters/file-storage/file-operations.js';
 import { mergeMachineConfig, splitMachineConfig } from './machine-config.js';
 
 type JsonObject = Record<string, any>;
@@ -199,7 +202,8 @@ export function readConfigJson(
  * per-machine setting an earlier release wrote to config.json moves to the
  * local file on the next write. config.json gets only the keys it already
  * has or that differ from the defaults (see toSavedConfig).
- * Throws, writing nothing, when config.json isn't valid JSON.
+ * Throws, writing nothing, when config.json isn't valid JSON or either file
+ * (or its folder) is a symlink.
  * @param rootPath - Project root
  * @param config - Full config (shared and local merged)
  */
@@ -207,6 +211,8 @@ export function writeSplitConfig(rootPath: string, config: JsonObject): void {
 	const configPath = path.join(rootPath, TASKGRAPH_CONFIG_FILE);
 	const localPath = path.join(rootPath, TASKGRAPH_LOCAL_CONFIG_FILE);
 	refuseSymlinkedFolders(configPath);
+	refuseSymlinkSync(configPath);
+	refuseSymlinkSync(localPath);
 	const currentShared = readConfigJson(configPath);
 	if (currentShared === UNREADABLE_CONFIG) {
 		// Saving over it would replace the user's settings with defaults

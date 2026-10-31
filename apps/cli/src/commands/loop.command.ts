@@ -19,6 +19,7 @@ import {
 	assertParallelFlags,
 	createTmCore,
 	parseLoopCaps,
+	parseLoopModel,
 	parseParallelCount
 } from '@tm/core';
 import chalk from 'chalk';
@@ -52,6 +53,7 @@ export interface LoopCommandOptions {
 	containerImage?: string;
 	maxTurns?: string;
 	maxBudgetUsd?: string;
+	model?: string;
 }
 
 export class LoopCommand extends Command {
@@ -100,6 +102,10 @@ export class LoopCommand extends Command {
 				'Stop the run once it has spent this many US dollars; each Claude Code run gets what is left'
 			)
 			.option(
+				'--model <model>',
+				"Run every iteration on this model instead of the one the task's complexity picks"
+			)
+			.option(
 				'--parallel <n>',
 				`Run up to n ready tasks at once (1-${MAX_PARALLEL}), each in its own git worktree and branch`
 			)
@@ -124,6 +130,7 @@ export class LoopCommand extends Command {
 		try {
 			assertContainerFlags(options);
 			const caps = parseLoopCaps(options);
+			const model = parseLoopModel(options.model);
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
 
@@ -198,6 +205,7 @@ export class LoopCommand extends Command {
 				trusted: options.trust,
 				verbose: options.verbose ?? false,
 				...caps,
+				model,
 				callbacks: this.createOutputCallbacks(options.output ?? true)
 			};
 
@@ -243,6 +251,7 @@ export class LoopCommand extends Command {
 			});
 			assertContainerFlags(options);
 			const caps = parseLoopCaps(options);
+			const model = parseLoopModel(options.model);
 
 			const projectRoot = path.resolve(getProjectRoot(options.project));
 			this.tmCore = await createTmCore({ projectPath: projectRoot });
@@ -278,6 +287,7 @@ export class LoopCommand extends Command {
 				trusted: true,
 				container,
 				...caps,
+				model,
 				signal: controller.signal,
 				callbacks: {
 					onTaskStart: (task) => {
@@ -428,6 +438,8 @@ export class LoopCommand extends Command {
 						`  Iteration ${iteration.iteration} completed: ${iteration.status}`
 					) +
 						formatLoopSpend({
+							model: iteration.model,
+							effort: iteration.effort,
 							costUsd: iteration.costUsd,
 							turns: iteration.turns,
 							durationMs: iteration.duration

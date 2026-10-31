@@ -74,6 +74,7 @@
 							"capabilities/archive",
 							"capabilities/loop",
 							"capabilities/loop-parallel",
+							"capabilities/loop-cost",
 							"capabilities/loop-presets",
 							"capabilities/research",
 							"capabilities/github-sync",
