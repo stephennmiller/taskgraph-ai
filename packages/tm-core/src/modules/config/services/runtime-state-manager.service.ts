@@ -27,6 +27,29 @@ export interface RuntimeState {
 }
 
 /**
+ * The error for a state.json that can't be read or saved. It names the file
+ * and the way out: a corrupt state.json is never overwritten.
+ */
+export function stateFileError(
+	verb: 'read' | 'save',
+	statePath: string,
+	error: unknown
+): TaskGraphError {
+	// The path goes in the message itself: MCP replies show only the message
+	return Object.assign(
+		new TaskGraphError(
+			`Couldn't ${verb} ${statePath}: ${(error as Error).message}`,
+			ERROR_CODES.CONFIG_ERROR,
+			{ statePath },
+			error as Error
+		),
+		{
+			hint: 'Fix the file, or delete it: it holds only the current tag and branch-tag mappings'
+		}
+	);
+}
+
+/**
  * RuntimeStateManager handles runtime state persistence
  * Single responsibility: Runtime state management (separate from config)
  */
@@ -47,6 +70,8 @@ export class RuntimeStateManager {
 
 	/**
 	 * Load runtime state from disk
+	 * @throws {TaskGraphError} when state.json exists but can't be read, so a
+	 * broken file doesn't silently switch the current tag to master
 	 */
 	async loadState(): Promise<RuntimeState> {
 		try {
@@ -83,9 +108,7 @@ export class RuntimeStateManager {
 				return this.currentState;
 			}
 
-			// Failed to load, use defaults
-			this.logger.warn('Failed to load state file:', error.message);
-			return this.currentState;
+			throw stateFileError('read', this.stateFilePath, error);
 		}
 	}
 
@@ -105,21 +128,7 @@ export class RuntimeStateManager {
 				})
 			);
 		} catch (error) {
-			// Name the file and the way out: a corrupt state.json is never overwritten
-			throw Object.assign(
-				new TaskGraphError(
-					'Failed to save runtime state',
-					ERROR_CODES.CONFIG_ERROR,
-					{
-						statePath: this.stateFilePath,
-						userMessage: `Couldn't save ${this.stateFilePath}: ${(error as Error).message}`
-					},
-					error as Error
-				),
-				{
-					hint: 'Fix the file, or delete it: it holds only the current tag and branch-tag mappings'
-				}
-			);
+			throw stateFileError('save', this.stateFilePath, error);
 		}
 	}
 

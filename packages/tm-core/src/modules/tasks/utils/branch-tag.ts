@@ -17,6 +17,7 @@ import {
 	isValidBranchForTag,
 	sanitizeBranchNameForTag
 } from '../../../common/utils/git-utils.js';
+import { stateFileError } from '../../config/services/runtime-state-manager.service.js';
 import { FileOperations } from '../../storage/adapters/file-storage/file-operations.js';
 
 /** A git branch and the tag name it maps to */
@@ -133,8 +134,9 @@ export async function recordBranchTag(
 }
 
 /**
- * Make tagName the current tag in state.json. A failed write is logged, not
- * thrown: the tag change it follows has already been saved.
+ * Make tagName the current tag in state.json.
+ * @throws {TaskGraphError} when state.json can't be saved, so the caller
+ * never reports a switch that didn't happen
  */
 export async function recordCurrentTag(
 	projectRoot: string,
@@ -148,8 +150,10 @@ export async function recordCurrentTag(
 			state.migrationNoticeShown ??= false;
 		});
 	} catch (error) {
-		getLogger('BranchTag').warn(
-			`Could not update current tag in state.json: ${(error as Error).message}`
+		throw stateFileError(
+			'save',
+			path.join(projectRoot, TASKGRAPH_STATE_FILE),
+			error
 		);
 	}
 }

@@ -209,6 +209,19 @@ describe('TagService.useTag', () => {
 		);
 		expect(readState().currentTag).toBe('master');
 	});
+
+	it('fails, naming state.json, when the switch cannot be saved (#807)', async () => {
+		const conflicted = '{"currentTag": "master",\n<<<<<<< HEAD\n';
+		fs.writeFileSync(statePath, conflicted);
+
+		const error = await service()
+			.useTag('feature')
+			.catch((e) => e);
+
+		expect(error.message).toContain(statePath);
+		expect(error.hint).toMatch(/delete it/);
+		expect(fs.readFileSync(statePath, 'utf8')).toBe(conflicted);
+	});
 });
 
 describe('TagService.renameTag', () => {
@@ -229,6 +242,15 @@ describe('TagService.renameTag', () => {
 
 		expect(result.isCurrentTag).toBe(true);
 		expect(readState().currentTag).toBe('feat');
+	});
+
+	it('fails when a renamed current tag cannot be recorded as current (#807)', async () => {
+		currentTag = 'feature';
+		fs.writeFileSync(statePath, '[]');
+
+		await expect(service().renameTag('feature', 'feat')).rejects.toThrow(
+			statePath
+		);
 	});
 
 	it('refuses master and an existing name', async () => {
