@@ -2,7 +2,8 @@
  * @fileoverview Check npm registry for package updates with caching
  *
  * Uses a simple file-based cache under `~/.taskgraph` to avoid
- * hitting npm on every CLI invocation. Cache expires after 1 hour.
+ * hitting npm on every CLI invocation. Cache expires after 1 hour, or
+ * after 10 minutes when the registry couldn't be reached.
  */
 
 import fs from 'node:fs';
@@ -23,6 +24,9 @@ import { compareVersions, getCurrentVersion } from './version.js';
 /** Cache TTL: 1 hour in milliseconds */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
+/** A failed check is retried after 10 minutes, so a dead network slows one command, not every one */
+const FAILED_CHECK_TTL_MS = 10 * 60 * 1000;
+
 /** Cache file name, beside `update.lock` */
 const CACHE_FILENAME = 'update-cache.json';
 
@@ -30,6 +34,8 @@ interface UpdateCache {
 	timestamp: number;
 	latestVersion: string;
 	highlights?: string[];
+	/** The registry couldn't be reached; latestVersion is the version that ran */
+	failed?: boolean;
 }
 
 // ============================================================================
@@ -63,7 +69,8 @@ export function readCache(): UpdateCache | null {
 			return null;
 		}
 		const age = Date.now() - data.timestamp;
-		if (age < 0 || age > CACHE_TTL_MS) return null;
+		const ttl = data.failed === true ? FAILED_CHECK_TTL_MS : CACHE_TTL_MS;
+		if (age < 0 || age > ttl) return null;
 		return {
 			timestamp: data.timestamp,
 			latestVersion: data.latestVersion,
@@ -80,7 +87,11 @@ export function readCache(): UpdateCache | null {
  * Write update info to cache
  * @internal - Exported for testing purposes only
  */
-export function writeCache(latestVersion: string, highlights?: string[]): void {
+export function writeCache(
+	latestVersion: string,
+	highlights?: string[],
+	failed?: boolean
+): void {
 	try {
 		const cachePath = getCachePath();
 		fs.mkdirSync(path.dirname(cachePath), { recursive: true });
@@ -90,7 +101,8 @@ export function writeCache(latestVersion: string, highlights?: string[]): void {
 				{
 					timestamp: Date.now(),
 					latestVersion,
-					highlights
+					highlights,
+					failed
 				} satisfies UpdateCache,
 				null,
 				2
@@ -105,7 +117,7 @@ export function writeCache(latestVersion: string, highlights?: string[]): void {
 // NPM Registry Operations (Single Responsibility: npm API)
 // ============================================================================
 
-/** Request timeout for npm registry */
+/** Deadline for the whole npm registry request, connecting included */
 const NPM_TIMEOUT_MS = 3000;
 
 /**
@@ -122,7 +134,9 @@ function fetchLatestVersion(currentVersion: string): Promise<string | null> {
 				headers: {
 					Accept: 'application/vnd.npm.install-v1+json',
 					'User-Agent': `${PACKAGE_NAME}/${currentVersion}`
-				}
+				},
+				// req.setTimeout starts only once connected, so a blackholed host would hang
+				signal: AbortSignal.timeout(NPM_TIMEOUT_MS)
 			},
 			(res) => {
 				let data = '';
@@ -143,10 +157,6 @@ function fetchLatestVersion(currentVersion: string): Promise<string | null> {
 		);
 
 		req.on('error', () => resolve(null));
-		req.setTimeout(NPM_TIMEOUT_MS, () => {
-			req.destroy();
-			resolve(null);
-		});
 		req.end();
 	});
 }
@@ -173,7 +183,8 @@ function buildUpdateInfo(
 
 /**
  * Check for newer version of taskgraph-ai
- * Uses a 1-hour cache to avoid hitting npm on every CLI invocation
+ * Uses a 1-hour cache to avoid hitting npm on every CLI invocation, and
+ * a 10-minute one after a failed check
  */
 export async function checkForUpdate(
 	currentVersionOverride?: string
@@ -193,6 +204,7 @@ export async function checkForUpdate(
 	// Fetch from npm registry
 	const latestVersion = await fetchLatestVersion(currentVersion);
 	if (!latestVersion) {
+		writeCache(currentVersion, undefined, true);
 		return buildUpdateInfo(currentVersion, currentVersion);
 	}
 

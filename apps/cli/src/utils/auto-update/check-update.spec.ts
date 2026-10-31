@@ -1,9 +1,11 @@
+import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
+import https from 'node:https';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readCache, writeCache } from './check-update.js';
+import { checkForUpdate, readCache, writeCache } from './check-update.js';
 
 describe('update cache', () => {
 	const savedHome = process.env.HOME;
@@ -24,6 +26,7 @@ describe('update cache', () => {
 		if (savedHome === undefined) delete process.env.HOME;
 		else process.env.HOME = savedHome;
 		process.chdir(savedCwd);
+		vi.restoreAllMocks();
 		fs.rmSync(home, { recursive: true, force: true });
 	});
 
@@ -79,5 +82,37 @@ describe('update cache', () => {
 	it('keeps a write failure silent', () => {
 		fs.writeFileSync(path.join(home, '.taskgraph'), 'not a directory');
 		expect(() => writeCache('1.2.3')).not.toThrow();
+	});
+
+	it('caches a failed registry check, so the next command skips the network', async () => {
+		// The registry can't be reached: every request fails
+		const request = vi.spyOn(https, 'request').mockImplementation((() => {
+			const req = new EventEmitter() as EventEmitter & { end: () => void };
+			req.end = () =>
+				setImmediate(() => req.emit('error', new Error('ETIMEDOUT')));
+			return req;
+		}) as never);
+
+		expect((await checkForUpdate('1.0.0')).needsUpdate).toBe(false);
+		expect((await checkForUpdate('1.0.0')).needsUpdate).toBe(false);
+
+		expect(request).toHaveBeenCalledTimes(1);
+		// One deadline for the whole request, connecting included
+		expect(request.mock.calls[0][0]).toHaveProperty('signal');
+		expect(readCache()).toMatchObject({ latestVersion: '1.0.0' });
+	});
+
+	it('retries a failed check after 10 minutes, a good one after an hour', () => {
+		const elevenMinutesAgo = Date.now() - 11 * 60 * 1000;
+
+		write({
+			timestamp: elevenMinutesAgo,
+			latestVersion: '1.2.3',
+			failed: true
+		});
+		expect(readCache()).toBeNull();
+
+		write({ timestamp: elevenMinutesAgo, latestVersion: '1.2.3' });
+		expect(readCache()).toMatchObject({ latestVersion: '1.2.3' });
 	});
 });

@@ -77,7 +77,7 @@ The equivalent `.mcp.json` entry is:
 
 ## Staying up to date
 
-Running `taskgraph` in a terminal checks npm for a newer version and tells you when one is out. It does not install it. Install the new version yourself:
+Running `taskgraph` in a terminal checks npm for a newer version, at most once an hour, and tells you when one is out. When npm can't be reached within 3 seconds, the next check waits 10 minutes. The check does not install the update. Install it yourself:
 
 ```bash
 taskgraph upgrade
