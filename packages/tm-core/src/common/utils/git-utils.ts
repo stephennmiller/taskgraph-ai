@@ -3,8 +3,10 @@
  * Git integration utilities using raw git commands and gh CLI
  */
 
-import { exec, execSync } from 'child_process';
+import { type ChildProcess, exec, execFile, execSync } from 'child_process';
 import { promisify } from 'util';
+import { ERROR_CODES, errorWithHint } from '../errors/taskgraph-error.js';
+import { formatTimeout } from './timeout-from-env.js';
 
 const execAsync = promisify(exec);
 
@@ -157,17 +159,59 @@ export async function getRemoteBranches(
 	}
 }
 
+/** How long one `gh` call may run before it is killed */
+const GH_TIMEOUT_MS = 60_000;
+
+/**
+ * Run `gh` with an argument array. A non-zero exit resolves with `error` set,
+ * since `gh api` still prints the response then. A call still running after
+ * `timeoutMs` is killed and rejects with a TaskGraphError that says what to do.
+ */
+export function runGh(
+	args: string[],
+	options: { cwd?: string; input?: string; timeoutMs?: number } = {}
+): Promise<{ stdout: string; stderr: string; error: Error | null }> {
+	const timeoutMs = options.timeoutMs ?? GH_TIMEOUT_MS;
+	return new Promise((resolve, reject) => {
+		let child: ChildProcess | undefined;
+		// Not execFile's own timeout: it waits for the pipes to close, which a
+		// process gh started can hold open long after gh is killed
+		const timer = setTimeout(() => {
+			child?.kill('SIGKILL');
+			for (const stream of child?.stdio ?? []) stream?.destroy();
+			reject(
+				errorWithHint(
+					ERROR_CODES.NETWORK_ERROR,
+					`\`gh ${args.join(' ')}\` did not finish within ${formatTimeout(timeoutMs)} and was stopped`,
+					'Check your network connection and that `gh auth status` finishes without asking for anything, then try again'
+				)
+			);
+		}, timeoutMs);
+		child = execFile(
+			'gh',
+			args,
+			{ cwd: options.cwd, maxBuffer: 64 * 1024 * 1024 },
+			(error, stdout, stderr) => {
+				clearTimeout(timer);
+				resolve({
+					stdout: String(stdout ?? ''),
+					stderr: String(stderr ?? (error ? error.message : '')),
+					error
+				});
+			}
+		);
+		// gh can exit before reading a large body (EPIPE); its exit reaches the callback
+		child.stdin?.on('error', () => {});
+		child.stdin?.end(options.input);
+	});
+}
+
 /**
  * Check if gh CLI is available and authenticated
  */
 export async function isGhCliAvailable(projectRoot?: string): Promise<boolean> {
-	try {
-		const options = projectRoot ? { cwd: projectRoot } : {};
-		await execAsync('gh auth status', options);
-		return true;
-	} catch (error) {
-		return false;
-	}
+	const { error } = await runGh(['auth', 'status'], { cwd: projectRoot });
+	return !error;
 }
 
 /**
@@ -180,13 +224,14 @@ export async function getGitHubRepoInfo(
 		throw new Error('projectRoot is required for getGitHubRepoInfo');
 	}
 
+	const { stdout, error } = await runGh(
+		['repo', 'view', '--json', 'name,owner,defaultBranchRef'],
+		{ cwd: projectRoot }
+	);
+	if (error) return null;
 	try {
-		const { stdout } = await execAsync(
-			'gh repo view --json name,owner,defaultBranchRef',
-			{ cwd: projectRoot }
-		);
 		return JSON.parse(stdout) as GitHubRepoInfo;
-	} catch (error) {
+	} catch {
 		return null;
 	}
 }

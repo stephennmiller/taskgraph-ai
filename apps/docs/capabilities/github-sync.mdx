@@ -124,3 +124,4 @@ After the first push, each task stores its issue in its `metadata.github` field.
 - **Content is one way.** Only status is read back, by `pull`, and an issue's body is read once, by `import`. Edits to an issue's title, body or subtask checkboxes are not, and the next push of a changed task overwrites them along with the labels and state.
 - **Orphans are reported, not closed,** unless you pass `--close-orphans` or `closeOrphans: true`.
 - **`--id` and `id` match top-level tasks.** Subtasks follow their parent.
+- **Each `gh` call gets 60 seconds.** One that takes longer, for example on a stalled network or a credential prompt nobody can answer, is stopped and the command fails with a non-zero exit. A push keeps the links it saved before that, and the next push carries on from there.

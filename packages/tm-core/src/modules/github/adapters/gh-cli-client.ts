@@ -1,16 +1,16 @@
 /**
  * @fileoverview GitHubClient backed by `gh api`.
  *
- * Every call goes through execFile with an argument array. Request bodies are
- * written to stdin (`--input -`), never put on the command line, so titles and
- * bodies can contain any characters without shell interpretation.
+ * Every call goes through `runGh` (execFile with an argument array). Request
+ * bodies are written to stdin (`--input -`), never put on the command line, so
+ * titles and bodies can contain any characters without shell interpretation.
  */
 
-import { execFile } from 'node:child_process';
 import {
 	ERROR_CODES,
 	TaskGraphError
 } from '../../../common/errors/taskgraph-error.js';
+import { runGh } from '../../../common/utils/git-utils.js';
 import type { RemoteIssue, RepoInfo } from '../types.js';
 import type {
 	CreateIssueInput,
@@ -48,6 +48,8 @@ export interface GhCliClientOptions {
 	cwd?: string;
 	/** Injectable for tests */
 	sleep?: (ms: number) => Promise<void>;
+	/** How long one gh call may run; defaults to 60 seconds */
+	timeoutMs?: number;
 }
 
 interface GhResponse {
@@ -211,7 +213,11 @@ export class GhCliClient implements GitHubClient {
 		const input = body === undefined ? undefined : JSON.stringify(body);
 
 		for (let attempt = 0; ; attempt++) {
-			const { stdout, stderr } = await this.run(args, input);
+			const { stdout, stderr } = await runGh(args, {
+				cwd: this.options.cwd,
+				input,
+				timeoutMs: this.options.timeoutMs
+			});
 			const response = parseResponse(stdout);
 			if (response.status > 0 && response.status < 400) return response;
 
@@ -232,27 +238,5 @@ export class GhCliClient implements GitHubClient {
 				{ operation: 'gh-api', resource: path }
 			);
 		}
-	}
-
-	private run(
-		args: string[],
-		input?: string
-	): Promise<{ stdout: string; stderr: string }> {
-		return new Promise((resolve) => {
-			// gh exits non-zero on 4xx/5xx but still prints the response, so
-			// errors resolve with whatever was captured and the caller inspects it
-			const child = execFile(
-				'gh',
-				args,
-				{ cwd: this.options.cwd, maxBuffer: 64 * 1024 * 1024 },
-				(error, stdout, stderr) => {
-					resolve({
-						stdout: String(stdout ?? ''),
-						stderr: String(stderr ?? (error ? error.message : ''))
-					});
-				}
-			);
-			child.stdin?.end(input);
-		});
 	}
 }
