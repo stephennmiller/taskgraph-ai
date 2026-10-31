@@ -69,4 +69,18 @@ describe('fixTaskDependencies with IDs older versions stored as typed (#864)', (
 		]);
 		expect(validateTaskDependencies(tasks).issues).toEqual([]);
 	});
+
+	it('keeps a subtask dependency an older file stored as a number', () => {
+		const tasks = asTasks([
+			{ id: '1', dependencies: [], subtasks: [{ id: '2', dependencies: [] }] },
+			{ id: '2', dependencies: [1.2, 1.3], subtasks: [] }
+		]);
+
+		const { fixes } = fixTaskDependencies(tasks);
+
+		expect(tasks[1].dependencies).toEqual([1.2]);
+		expect(fixes).toEqual([
+			{ type: 'missing', taskId: '2', dependencyId: 1.3 }
+		]);
+	});
 });

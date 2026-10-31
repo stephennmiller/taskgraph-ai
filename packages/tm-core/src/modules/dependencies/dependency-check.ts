@@ -504,10 +504,10 @@ export function fixTaskDependencies(
 					return false;
 				}
 				if (archived(depId) && !isTask(depId)) return true;
-				const known =
-					typeof depId === 'string' && depId.includes('.')
-						? validSubtaskIds.has(depId)
-						: isTask(depId);
+				// An older file can hold subtask 1.2 as the number 1.2
+				const known = String(depId).includes('.')
+					? validSubtaskIds.has(String(depId))
+					: isTask(depId);
 				if (!known) {
 					fixes.push({ type: 'missing', taskId: task.id, dependencyId: depId });
 				}

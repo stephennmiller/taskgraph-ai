@@ -48,7 +48,7 @@ describe('formatDependencyCheck', () => {
 			"  4    depends on task 99, which doesn't exist",
 			'  4    depends on itself',
 			"  1.1  depends on subtask 1.7, which doesn't exist",
-			'Run taskgraph fix-dependencies to remove them'
+			'Run taskgraph fix-dependencies to fix them'
 		]);
 	});
 
@@ -61,7 +61,7 @@ describe('formatDependencyCheck', () => {
 		expect(lines(output)).toEqual([
 			'✗ 1 dependency problem',
 			"  4  links to subtask 9.1, which doesn't exist",
-			'Run taskgraph fix-dependencies to remove them'
+			'Run taskgraph fix-dependencies to fix them'
 		]);
 		expect(
 			lines(
@@ -96,7 +96,7 @@ describe('formatDependencyCheck', () => {
 			issues: [{ type: 'circular', taskId: '1.2', fixable: true }]
 		});
 		expect(lines(output).at(-1)).toBe(
-			'Run taskgraph fix-dependencies to remove them'
+			'Run taskgraph fix-dependencies to fix them'
 		);
 	});
 

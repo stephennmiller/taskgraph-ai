@@ -6,7 +6,7 @@
  *   ✗ 2 dependency problems
  *     4  depends on task 99, which doesn't exist
  *     4  depends on itself
- *   Run taskgraph fix-dependencies to remove them
+ *   Run taskgraph fix-dependencies to fix them
  *
  *   ✓ Fixed 2 dependency problems
  *     4  removed task 99, which doesn't exist
@@ -211,7 +211,7 @@ function problems(
 		fixable
 			? theme.muted('Run ') +
 					theme.brand('taskgraph fix-dependencies') +
-					theme.muted(' to remove them')
+					theme.muted(' to fix them')
 			: theme.muted('Break the loop with ') +
 					theme.brand('taskgraph remove-dependency --id=<id> --depends-on=<id>')
 	);

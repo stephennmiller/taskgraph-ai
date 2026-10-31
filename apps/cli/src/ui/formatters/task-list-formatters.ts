@@ -421,7 +421,7 @@ const INVALID_DEPENDENCIES_SHOWN = 5;
  *
  *   Warning: 1 invalid dependency reference(s) found:
  *     Task 3 depends on non-existent task 9
- *   Run taskgraph fix-dependencies to remove them
+ *   Run taskgraph fix-dependencies to fix them
  *
  * Each line wraps at spaces to the terminal width (#463).
  *
@@ -466,7 +466,7 @@ export function formatInvalidDependencyWarning(
 				theme.brand(
 					`taskgraph fix-dependencies${tagFlag}`.replaceAll(' ', '\u00a0')
 				) +
-				theme.muted(' to remove them'),
+				theme.muted(' to fix them'),
 			width,
 			''
 		).map((line) => line.replaceAll('\u00a0', ' '))
