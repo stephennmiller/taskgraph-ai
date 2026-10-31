@@ -165,15 +165,23 @@ export function toMarkdown(content: string): string {
  * so unlike turndown's output they can't turn into escape sequences.
  */
 export function formatRawText(content: string, columns: number): string {
-	let inFence = false;
+	// The open fence's marker: only the same character, as long or longer,
+	// closes it, so a ~~~ line inside a ``` block is code
+	let fence = '';
 	return terminalSafe(unescapeStored(content))
 		.replace(/^\s*\n/, '')
 		.trimEnd()
 		.split('\n')
 		.flatMap((line) => {
-			const fence = /^\s*(```|~~~)/.test(line);
-			if (fence) inFence = !inFence;
-			if (fence || inFence) return [line];
+			const marker = line.match(/^\s*(`{3,}|~{3,})/)?.[1];
+			if (
+				marker &&
+				(!fence || (marker[0] === fence[0] && marker.length >= fence.length))
+			) {
+				fence = fence ? '' : marker;
+				return [line];
+			}
+			if (fence) return [line];
 			return wrapLine(line, columns, line.match(/^ */)?.[0] ?? '');
 		})
 		.join('\n');

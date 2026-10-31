@@ -149,6 +149,21 @@ describe('formatRawText', () => {
 		]);
 	});
 
+	it('closes a fence only with the marker that opened it', () => {
+		const text =
+			'````md\n~~~ not a fence, just code\nstill code, not to be wrapped\n```\n````\nafter the fence, wrapped';
+
+		expect(formatRawText(text, 20).split('\n')).toEqual([
+			'````md',
+			'~~~ not a fence, just code',
+			'still code, not to be wrapped',
+			'```',
+			'````',
+			'after the fence,',
+			'wrapped'
+		]);
+	});
+
 	it('undoes escaped newlines and keeps HTML and its entities as written', () => {
 		expect(formatRawText('<p>Clear &#27;[2J</p>\\nnext', 80)).toBe(
 			'<p>Clear &#27;[2J</p>\nnext'
