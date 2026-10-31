@@ -36,13 +36,21 @@ function spend(costUsd?: number, turns?: number): string[] {
 	];
 }
 
-/** `# Iteration 2: success · $0.42 · 12 turns · 83s` */
+/** `# Iteration 2: success · complexity 2 · sonnet, low effort · $0.42 · 12 turns · 83s` */
 export async function appendIterationLine(
 	file: string,
 	iteration: LoopIteration
 ): Promise<void> {
+	const setting = [
+		iteration.model,
+		iteration.effort && `${iteration.effort} effort`
+	].filter(Boolean);
 	const facts = [
 		iteration.status,
+		...(iteration.complexity !== undefined
+			? [`complexity ${iteration.complexity}`]
+			: []),
+		...(setting.length ? [setting.join(', ')] : []),
 		...spend(iteration.costUsd, iteration.turns),
 		...(iteration.duration !== undefined
 			? [`${Math.round(iteration.duration / 1000)}s`]

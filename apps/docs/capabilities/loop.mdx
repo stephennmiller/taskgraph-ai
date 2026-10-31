@@ -66,33 +66,9 @@ Watch Claude work as it goes, instead of seeing each iteration's output when it 
 taskgraph loop -n 5 --verbose
 ```
 
-### Cost and caps
+### Cost, caps and models
 
-Every iteration reads what Claude Code reported spending, in dollars, and how many turns it took. Each iteration's status line shows them, with its duration, and the summary adds the run's total to the iterations line:
-
-```
-  Iteration 1 completed: success · $0.42 · 12 turns · 3m 10s
-  Iteration 2 completed: success · $0.31 · 9 turns · 2m 4s
-
-Loop Complete
-────────────────────────────────────────
-Total iterations: 2 · $0.73 · 21 turns
-Tasks completed: 2
-Final status: Max iterations reached
-```
-
-The cost is Claude Code's own estimate (`total_cost_usd` in its `result` event), which can differ from your bill. To read it, each iteration runs `claude -p` with `--output-format stream-json`, with or without `--verbose`; an older Claude Code that prints no `result` event still works, without the cost.
-
-Two flags cap a run:
-
-- `--max-turns <n>` passes `--max-turns` to every `claude -p`. An iteration that hits it stops with an error, `Claude Code reached the --max-turns limit`, and three in a row end the run like any other errors.
-- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with final status `Budget reached (--max-budget-usd)` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it.
-
-```bash
-taskgraph loop --max-turns 60 --max-budget-usd 10 --trust
-```
-
-Both work with `--sandbox` and `--parallel` (see [Run tasks in parallel](/capabilities/loop-parallel)).
+Each iteration's status line shows what it cost, how many turns it took and the model and effort it ran at. `--max-turns` and `--max-budget-usd` cap a run, and a task's complexity score picks its model and effort. See [Loop cost and models](/capabilities/loop-cost).
 
 ### Permission prompts
 
@@ -137,8 +113,9 @@ It then prints the number of iterations, the tasks completed and the final statu
 | `--trust`                | flag   | -                               | Run Claude with permission prompts off without asking first. For scripts and CI.                              |
 | `--no-output`            | flag   | -                               | Hide Claude's output, including with `--verbose`; show only each iteration's status line and the summary.     |
 | `-v, --verbose`          | flag   | -                               | Show Claude's work (its messages and tool calls) as it happens.                                               |
-| `--max-turns`            | number | -                               | Stop each Claude Code run after this many turns. See [Cost and caps](#cost-and-caps).                          |
-| `--max-budget-usd`       | number | -                               | Stop the run once it has spent this many US dollars; each iteration gets what's left. See [Cost and caps](#cost-and-caps). |
+| `--max-turns`            | number | -                               | Stop each Claude Code run after this many turns. See [Cost and caps](/capabilities/loop-cost#cost-and-caps).                          |
+| `--max-budget-usd`       | number | -                               | Stop the run once it has spent this many US dollars; each iteration gets what's left. See [Cost and caps](/capabilities/loop-cost#cost-and-caps). |
+| `--model`                | string | -                               | Run every iteration on this model instead of the one the task's complexity picks. See [Model and effort by complexity](/capabilities/loop-cost#model-and-effort-by-complexity). |
 | `--parallel`             | number | -                               | Run up to N ready tasks at once, each in its own git worktree and branch. See [Run tasks in parallel](/capabilities/loop-parallel). |
 | `--container`            | flag   | -                               | With `--parallel`: run each task in its own Docker container. See [Run each task in a container](/capabilities/loop-parallel#run-each-task-in-a-container). |
 | `--container-image`      | string | `docker/sandbox-templates:claude-code` | The image `--container` uses.                                                                          |

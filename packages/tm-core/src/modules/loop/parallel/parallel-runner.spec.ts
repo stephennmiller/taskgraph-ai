@@ -36,6 +36,7 @@ vi.mock('./task-worktrees.js', () => ({
 	}
 }));
 
+import { DEFAULT_LOOP_BANDS } from '../model-bands.js';
 import { ParallelLoopRunner } from './parallel-runner.js';
 
 describe('ParallelLoopRunner', () => {
@@ -86,5 +87,41 @@ describe('ParallelLoopRunner', () => {
 			TASKGRAPH_PROJECT_ROOT: path.resolve(root)
 		});
 		expect(env.TASKGRAPH_LOOP_CHILD).toBeUndefined();
+	});
+
+	it("runs each task at the model and effort its complexity picks, with --model's override", async () => {
+		root = fs.mkdtempSync(path.join(os.tmpdir(), 'tg-parallel-'));
+		fs.mkdirSync(path.join(root, '.taskgraph', 'worktrees'), {
+			recursive: true
+		});
+		const tasks = {
+			getDependencyTree: async () => ({ waves: { waves: [['1']] } }),
+			claimNext: async () => ({ task: { id: '1', title: 'Write the lock' } }),
+			get: async () => ({
+				task: { status: 'pending', metadata: {}, complexity: 2 }
+			}),
+			updateStatus: async () => {}
+		};
+		const spawner = vi.fn(() => {
+			const child = new EventEmitter() as EventEmitter & {
+				pid: number;
+				kill: () => void;
+			};
+			child.pid = 4242;
+			child.kill = () => {};
+			setImmediate(() => child.emit('close', 0, null));
+			return child;
+		});
+
+		const result = await new ParallelLoopRunner(
+			root,
+			tasks as never,
+			() => 'master',
+			DEFAULT_LOOP_BANDS
+		).run({ parallel: 1, model: 'opus', spawner: spawner as never });
+
+		const args: string[] = (spawner.mock.calls[0] as unknown[])[1] as never;
+		expect(args.slice(-4)).toEqual(['--model', 'opus', '--effort', 'low']);
+		expect(result.tasks[0]).toMatchObject({ model: 'opus', effort: 'low' });
 	});
 });

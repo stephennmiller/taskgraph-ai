@@ -3,6 +3,7 @@
  */
 
 import type { ChildProcess, SpawnOptions } from 'node:child_process';
+import type { ModelChoice } from '../model-bands.js';
 
 /** Starts one Claude Code process; `child_process.spawn` by default */
 type AgentSpawner = (
@@ -22,8 +23,8 @@ export type ParallelTaskState =
 	/** Stopped by an abort before Claude Code finished */
 	| 'stopped';
 
-/** One task in a parallel run */
-export interface ParallelTask {
+/** One task in a parallel run; model and effort are what its complexity picked */
+export interface ParallelTask extends ModelChoice {
 	id: string;
 	title: string;
 	/** `taskgraph/task-<id>` */
@@ -83,6 +84,8 @@ export interface ParallelLoopOptions {
 	 * `claude -p` gets an equal share as `--max-budget-usd`
 	 */
 	maxBudgetUsd?: number;
+	/** `--model` for every task, in place of the band's model */
+	model?: string;
 	/** Stops the run: children are killed, claims released */
 	signal?: AbortSignal;
 	callbacks?: ParallelLoopCallbacks;

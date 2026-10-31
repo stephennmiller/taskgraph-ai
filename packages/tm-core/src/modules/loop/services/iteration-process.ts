@@ -6,6 +6,8 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { childAutoUpdateEnv } from '../child-env.js';
 import { OWN_PROCESS_GROUP, killProcessGroup } from '../process-group.js';
+import { sandboxRunArgs } from './docker-sandbox.js';
+import { STREAM_JSON_ARGS } from './stream-events.js';
 
 /** Signals that stop `loop`; Claude, in its own process group, gets them passed on */
 const STOP_SIGNALS: NodeJS.Signals[] = ['SIGINT', 'SIGTERM', 'SIGHUP'];
@@ -59,4 +61,29 @@ export function spawnIteration(
 	child.once('close', cleanup);
 	child.once('error', cleanup);
 	return child;
+}
+
+/** stream-json in every mode: its last event has the iteration's cost and turns */
+export function buildCommandArgs(
+	projectRoot: string,
+	prompt: string,
+	sandbox: boolean,
+	extra: string[]
+): string[] {
+	if (sandbox) {
+		return sandboxRunArgs(
+			projectRoot,
+			'-p',
+			prompt,
+			...STREAM_JSON_ARGS,
+			...extra
+		);
+	}
+	return [
+		'-p',
+		prompt,
+		'--dangerously-skip-permissions',
+		...STREAM_JSON_ARGS,
+		...extra
+	];
 }

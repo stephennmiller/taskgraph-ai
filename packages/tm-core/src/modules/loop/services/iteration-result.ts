@@ -4,6 +4,7 @@
  */
 
 import type { LoopIteration } from '../types.js';
+import { CLAUDE_MISSING, DOCKER_MISSING } from './iteration-limits.js';
 import type { ClaudeRunResult } from './stream-events.js';
 
 /** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
@@ -44,5 +45,35 @@ export function completeIteration(
 		message: (status === 'error' && run?.capHit) || message,
 		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
 		...(run?.turns !== undefined ? { turns: run.turns } : {})
+	};
+}
+
+/** What went wrong starting `claude` or `docker`, in plain words */
+export function formatCommandError(
+	error: NodeJS.ErrnoException,
+	command: string,
+	sandbox: boolean
+): string {
+	if (error.code === 'ENOENT') {
+		return sandbox ? DOCKER_MISSING : CLAUDE_MISSING;
+	}
+
+	if (error.code === 'EACCES') {
+		return `Permission denied executing '${command}'`;
+	}
+
+	return `Failed to execute '${command}': ${error.message}`;
+}
+
+export function createErrorIteration(
+	iterationNum: number,
+	startTime: number,
+	message: string
+): LoopIteration {
+	return {
+		iteration: iterationNum,
+		status: 'error',
+		duration: Date.now() - startTime,
+		message
 	};
 }

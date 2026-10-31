@@ -48,6 +48,12 @@ import {
 	findResultEvent
 } from '../services/stream-events.js';
 import { TaskWorktrees } from './task-worktrees.js';
+import {
+	type LoopBand,
+	type ModelChoice,
+	modelArgs,
+	pickModelEffort
+} from '../model-bands.js';
 import { isFinishedStatus } from '../task-progress.js';
 import type {
 	ParallelLoopOptions,
@@ -117,7 +123,9 @@ export class ParallelLoopRunner {
 		private readonly projectRoot: string,
 		private readonly tasks: TasksDomain,
 		/** The tag a run without --tag works on */
-		private readonly activeTag: () => string
+		private readonly activeTag: () => string,
+		/** Complexity bands that pick each task's model and effort */
+		private readonly bands: LoopBand[] = []
 	) {}
 
 	async run(options: ParallelLoopOptions): Promise<ParallelLoopResult> {
@@ -227,12 +235,15 @@ export class ParallelLoopRunner {
 						tag,
 						container: !!workers
 					});
+					const choice = await this.chooseModel(id, tag, options.model);
+					Object.assign(entry.task, choice);
+					const taskArgs = [...claudeArgs, ...modelArgs(choice)];
 					let cmd = command;
 					let args = [
 						'-p',
 						prompt,
 						'--dangerously-skip-permissions',
-						...claudeArgs
+						...taskArgs
 					];
 					let cwd: string;
 					if (workers) {
@@ -240,7 +251,7 @@ export class ParallelLoopRunner {
 							entry.task,
 							base,
 							prompt,
-							claudeArgs
+							taskArgs
 						);
 						entry.hasWorktree = true;
 						entry.createdBranch = prepared.createdBranch;
@@ -312,6 +323,19 @@ export class ParallelLoopRunner {
 				? { totalCostUsd: costs.reduce((a, b) => a + b, 0) }
 				: {})
 		};
+	}
+
+	/** The model and effort for a task, from its complexity score (none if unreadable) */
+	private async chooseModel(
+		id: string,
+		tag: string | undefined,
+		model: string | undefined
+	): Promise<ModelChoice> {
+		const score = await this.tasks
+			.get(id, tag)
+			.then((found) => found.task?.complexity)
+			.catch(() => undefined);
+		return pickModelEffort(score, this.bands, model);
 	}
 
 	/** Start Claude Code in the task's worktree; resolves when it's gone */

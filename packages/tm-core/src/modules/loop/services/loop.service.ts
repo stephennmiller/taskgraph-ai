@@ -8,16 +8,24 @@ import type { TaskStatus } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
 import { isLoopTrusted } from '../loop-trust.js';
+import {
+	type ModelChoice,
+	modelArgs,
+	pickModelEffort
+} from '../model-bands.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
 import { statusProgress } from '../task-progress.js';
 import {
 	checkSandboxAuth,
 	runInteractiveAuth,
-	sandboxRunArgs,
 	stopSandbox
 } from './docker-sandbox.js';
-import { spawnIteration } from './iteration-process.js';
-import { completeIteration } from './iteration-result.js';
+import { buildCommandArgs, spawnIteration } from './iteration-process.js';
+import {
+	completeIteration,
+	createErrorIteration,
+	formatCommandError
+} from './iteration-result.js';
 import {
 	appendFinalSummary,
 	appendIterationLine,
@@ -25,7 +33,6 @@ import {
 } from './progress-file.js';
 import {
 	type ClaudeRunResult,
-	STREAM_JSON_ARGS,
 	findResultEvent,
 	handleStreamEvent,
 	isValidStreamEvent,
@@ -58,6 +65,8 @@ export interface LoopServiceOptions {
 	taskStatuses?: (tag?: string) => Promise<Map<string, TaskStatus>>;
 	/** The commit HEAD points at (null if none), so a commit counts as progress on a task that takes several iterations */
 	headCommit?: () => Promise<string | null>;
+	/** A task's complexity score, which picks the iteration's model and effort */
+	taskComplexity?: (id: string, tag?: string) => Promise<unknown>;
 }
 
 /** Appended to every prompt, presets and custom files alike */
@@ -71,6 +80,7 @@ export class LoopService {
 	) => Promise<string | undefined>;
 	private readonly taskStatuses?: LoopServiceOptions['taskStatuses'];
 	private readonly headCommit?: LoopServiceOptions['headCommit'];
+	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 
@@ -79,6 +89,7 @@ export class LoopService {
 		this.findReadyTask = options.findReadyTask;
 		this.taskStatuses = options.taskStatuses;
 		this.headCommit = options.headCommit;
+		this.taskComplexity = options.taskComplexity;
 	}
 
 	getProjectRoot(): string {
@@ -154,14 +165,19 @@ export class LoopService {
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
 			const prompt = await this.buildPrompt(config, i);
+			const choice = await this.chooseModel(config);
 			const iteration = await this.executeIteration(
 				prompt,
 				i,
 				config.sandbox ?? false,
 				config.verbose ?? false,
-				capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
+				[
+					...capArgs({ maxTurns: config.maxTurns, maxBudgetUsd: left }),
+					...modelArgs(choice)
+				],
 				config.callbacks
 			);
+			Object.assign(iteration, choice);
 			iterations.push(iteration);
 			spent += iteration.costUsd ?? 0;
 
@@ -269,6 +285,24 @@ export class LoopService {
 		}
 	}
 
+	/** The model and effort for the task this iteration starts on, from its complexity score */
+	private async chooseModel(
+		config: LoopConfig
+	): Promise<ModelChoice & { complexity?: number }> {
+		// No lookup or no bands: skip the extra `taskgraph next`
+		if (!this.taskComplexity || !config.bands?.length) {
+			return pickModelEffort(undefined, [], config.model);
+		}
+		const id = config.taskId ?? (await this.readyTask(config));
+		const score = id
+			? await this.taskComplexity?.(id, config.tag).catch(() => undefined)
+			: undefined;
+		const choice = pickModelEffort(score, config.bands ?? [], config.model);
+		return typeof score === 'number'
+			? { ...choice, complexity: score }
+			: choice;
+	}
+
 	/** HEAD's commit, or null when there's no lookup or it fails */
 	private readHead(): Promise<string | null> {
 		return this.headCommit?.().catch(() => null) ?? Promise.resolve(null);
@@ -374,12 +408,12 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		iterationNum: number,
 		sandbox: boolean,
 		verbose: boolean,
-		caps: string[],
+		extra: string[],
 		callbacks?: LoopOutputCallbacks
 	): Promise<LoopIteration> {
 		const startTime = Date.now();
 		const command = sandbox ? 'docker' : 'claude';
-		const args = this.buildCommandArgs(prompt, sandbox, caps);
+		const args = buildCommandArgs(this.projectRoot, prompt, sandbox, extra);
 
 		if (verbose) {
 			return this.executeVerboseIteration(
@@ -400,9 +434,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			let stderr = '';
 			const fail = (errorMessage: string): void => {
 				this.reportError(callbacks, errorMessage);
-				resolve(
-					this.createErrorIteration(iterationNum, startTime, errorMessage)
-				);
+				resolve(createErrorIteration(iterationNum, startTime, errorMessage));
 			};
 			const child = spawnIteration(
 				command,
@@ -424,7 +456,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			child.once('error', (error: NodeJS.ErrnoException) => {
 				if (settled) return;
 				settled = true;
-				fail(this.formatCommandError(error, command, sandbox));
+				fail(formatCommandError(error, command, sandbox));
 			});
 
 			child.once('close', (exitCode: number | null) => {
@@ -455,14 +487,8 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 
 	/**
 	 * Execute an iteration with verbose output (shows Claude's work in real-time).
-	 * Uses Claude's stream-json format to display assistant messages as they arrive.
-	 * @param args - The command's arguments, from buildCommandArgs
-	 * @param iterationNum - Current iteration number (1-indexed)
-	 * @param command - The command to execute ('claude' or 'docker')
-	 * @param sandbox - Whether running in Docker sandbox mode
-	 * @param startTime - Timestamp when iteration started (for duration calculation)
-	 * @param callbacks - Optional callbacks for presentation layer output
-	 * @returns Promise resolving to the iteration result
+	 * Uses Claude's stream-json format to display assistant messages as they
+	 * arrive. `args` come from buildCommandArgs; `startTime` times the iteration.
 	 */
 	private executeVerboseIteration(
 		args: string[],
@@ -529,7 +555,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			// Handle null stdout (shouldn't happen with pipe, but be defensive)
 			if (!child.stdout) {
 				resolveOnce(
-					this.createErrorIteration(
+					createErrorIteration(
 						iterationNum,
 						startTime,
 						'Failed to capture stdout from child process'
@@ -569,7 +595,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			});
 
 			child.on('error', (error: NodeJS.ErrnoException) => {
-				const errorMessage = this.formatCommandError(error, command, sandbox);
+				const errorMessage = formatCommandError(error, command, sandbox);
 				this.reportError(callbacks, errorMessage);
 
 				// Cleanup: remove listeners and kill process if still running
@@ -584,7 +610,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				}
 
 				resolveOnce(
-					this.createErrorIteration(iterationNum, startTime, errorMessage)
+					createErrorIteration(iterationNum, startTime, errorMessage)
 				);
 			});
 
@@ -599,9 +625,7 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 						? timeoutMessage(timeout)
 						: 'Command terminated abnormally (no exit code)';
 					this.reportError(callbacks, errorMsg);
-					resolveOnce(
-						this.createErrorIteration(iterationNum, startTime, errorMsg)
-					);
+					resolveOnce(createErrorIteration(iterationNum, startTime, errorMsg));
 					return;
 				}
 
@@ -616,58 +640,5 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				);
 			});
 		});
-	}
-
-	/** stream-json in every mode: its last event has the iteration's cost and turns */
-	private buildCommandArgs(
-		prompt: string,
-		sandbox: boolean,
-		caps: string[]
-	): string[] {
-		if (sandbox) {
-			return sandboxRunArgs(
-				this.projectRoot,
-				'-p',
-				prompt,
-				...STREAM_JSON_ARGS,
-				...caps
-			);
-		}
-		return [
-			'-p',
-			prompt,
-			'--dangerously-skip-permissions',
-			...STREAM_JSON_ARGS,
-			...caps
-		];
-	}
-
-	private formatCommandError(
-		error: NodeJS.ErrnoException,
-		command: string,
-		sandbox: boolean
-	): string {
-		if (error.code === 'ENOENT') {
-			return sandbox ? DOCKER_MISSING : CLAUDE_MISSING;
-		}
-
-		if (error.code === 'EACCES') {
-			return `Permission denied executing '${command}'`;
-		}
-
-		return `Failed to execute '${command}': ${error.message}`;
-	}
-
-	private createErrorIteration(
-		iterationNum: number,
-		startTime: number,
-		message: string
-	): LoopIteration {
-		return {
-			iteration: iterationNum,
-			status: 'error',
-			duration: Date.now() - startTime,
-			message
-		};
 	}
 }
