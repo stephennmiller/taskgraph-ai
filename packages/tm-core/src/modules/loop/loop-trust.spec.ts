@@ -221,6 +221,9 @@ describe('loop trust', () => {
 		'.claude/CLAUDE.md',
 		'.taskgraph/CLAUDE.md',
 		'.claude/settings.json',
+		'.claude/rules/style.md',
+		'.claude/agents/reviewer.md',
+		'.claude/skills/deploy/SKILL.md',
 		'.mcp.json'
 	])('asks again when %s is added or changed', (file) => {
 		writeTasks([task]);
@@ -234,13 +237,67 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
-	it('keeps the approval when only .claude/settings.local.json changed', () => {
+	it.each(['.claude/settings.local.json', '.claude/worktrees/a/CLAUDE.md'])(
+		'keeps the approval when only %s changed',
+		(file) => {
+			writeFile('.claude/rules/style.md', 'Tabs');
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile(file, '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		}
+	);
+
+	it('asks again when a file under .claude is deleted', () => {
+		writeFile('.claude/rules/style.md', 'Tabs');
 		writeTasks([task]);
 		trustLoop(project, home);
 
-		writeFile('.claude/settings.local.json', '{"hooks": {}}');
+		fs.rmSync(path.join(project, '.claude/rules/style.md'));
 
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('hashes a symlink under .claude by its target path, not what it points to', () => {
+		writeFile('notes.md', 'Old');
+		writeFile('other.md', 'Other');
+		fs.mkdirSync(path.join(project, '.claude/rules'), { recursive: true });
+		const link = path.join(project, '.claude/rules/notes.md');
+		fs.symlinkSync('../../notes.md', link);
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('notes.md', 'New');
 		expect(isLoopTrusted(project, home)).toBe(true);
+
+		fs.rmSync(link);
+		fs.symlinkSync('../../other.md', link);
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('notices a rewrite of a file past the .claude byte budget', () => {
+		const big = path.join(project, '.claude/skills/data.bin');
+		writeFile('.claude/skills/data.bin', 'a'.repeat(9 * 1024 * 1024));
+		fs.utimesSync(big, 0, 0);
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		writeFile('.claude/skills/data.bin', 'b'.repeat(9 * 1024 * 1024));
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks every time when .claude has more files than it checks', () => {
+		const dir = path.join(project, '.claude/commands');
+		fs.mkdirSync(dir, { recursive: true });
+		for (let i = 0; i < 5001; i++)
+			fs.writeFileSync(path.join(dir, `${i}.md`), '');
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
 	it('asks again when the Definition of Done changed', () => {
@@ -266,6 +323,26 @@ describe('loop trust', () => {
 
 		writeFile('docs/prd.md', '# Login\nA form, then push.\n\n# Other\n');
 		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('asks again when a cited PRD that was missing appears', () => {
+		writeTasks([{ ...task, metadata: { source: 'docs/prd.md#login' } }]);
+		trustLoop(project, home);
+		expect(isLoopTrusted(project, home)).toBe(true);
+
+		writeFile('docs/prd.md', '# Login\nA form.\n');
+
+		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('does not read a cited PRD outside the project', () => {
+		fs.writeFileSync(path.join(base, 'outside.md'), '# Login\nOld\n');
+		writeTasks([{ ...task, metadata: { source: '../outside.md#login' } }]);
+		trustLoop(project, home);
+
+		fs.writeFileSync(path.join(base, 'outside.md'), '# Login\nNew\n');
+
+		expect(isLoopTrusted(project, home)).toBe(true);
 	});
 
 	it('asks again for an approval saved before approvals held the tasks', () => {

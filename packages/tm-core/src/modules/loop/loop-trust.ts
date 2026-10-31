@@ -6,7 +6,7 @@
  * either since (another branch, a pull, a hand edit) needs a new one.
  */
 
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -92,22 +92,69 @@ function definitionOfDone(root: string): Set<string> {
 }
 
 /**
- * Project files the loop's Claude session loads: instructions, hooks it runs
- * and MCP servers it starts. `.claude/settings.local.json` is the user's own.
+ * Project files outside `.claude` the loop's Claude session loads:
+ * instructions and the MCP servers it starts
  */
-const CLAUDE_FILES = [
-	'CLAUDE.md',
-	'.claude/CLAUDE.md',
-	'.taskgraph/CLAUDE.md',
-	'.claude/settings.json',
-	'.mcp.json'
-];
+const CLAUDE_FILES = ['CLAUDE.md', '.taskgraph/CLAUDE.md', '.mcp.json'];
+
+const sha256 = (data: string | Buffer) =>
+	createHash('sha256').update(data).digest('hex');
+
+/** Bounds on the `.claude` walk, which runs before every loop iteration */
+const CLAUDE_DIR_MAX_ENTRIES = 5000;
+const CLAUDE_DIR_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Everything under `.claude` (rules, agents, commands, skills, hooks,
+ * settings) as [path, content] pairs in a fixed order, less the user's own
+ * `settings.local.json` and Claude Code's `worktrees`. A symlink gives its
+ * link text and isn't followed; a file past the byte budget gives its size
+ * and change times, which rewriting it changes. Past the entry cap the walk
+ * stops and a value that never repeats goes in, so loop asks every time.
+ */
+function claudeDir(root: string): unknown {
+	const out: Array<[string, string]> = [];
+	let seen = 0;
+	let bytes = 0;
+	const visit = (rel: string): boolean => {
+		if (++seen > CLAUDE_DIR_MAX_ENTRIES) return false;
+		const full = path.join(root, rel);
+		try {
+			const stat = fs.lstatSync(full);
+			if (stat.isSymbolicLink()) {
+				out.push([rel, `link:${fs.readlinkSync(full)}`]);
+			} else if (stat.isDirectory()) {
+				for (const name of fs.readdirSync(full).sort()) {
+					if (
+						rel === '.claude' &&
+						(name === 'settings.local.json' || name === 'worktrees')
+					)
+						continue;
+					if (!visit(`${rel}/${name}`)) return false;
+				}
+			} else if (!stat.isFile()) {
+				out.push([rel, 'special']); // A FIFO would block a read
+			} else if (bytes + stat.size <= CLAUDE_DIR_MAX_BYTES) {
+				bytes += stat.size;
+				// Bytes, not text: decoding would make different binaries look alike
+				out.push([rel, sha256(fs.readFileSync(full))]);
+			} else {
+				out.push([rel, `${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}`]);
+			}
+		} catch (error) {
+			out.push([rel, `error:${(error as NodeJS.ErrnoException).code}`]);
+		}
+		return true;
+	};
+	return visit('.claude') ? out : randomUUID();
+}
 
 /**
  * Hash of every tag's tasks, less progress marks and each tag's bookkeeping
  * `metadata`, so set-status or checking off a criterion keeps an approval;
- * with the files in `CLAUDE_FILES` (null when missing), the Definition of
- * Done and the PRD sections tasks cite, which `show` prints with each task
+ * with the files in `CLAUDE_FILES` (null when missing), `.claude`, the
+ * Definition of Done and the PRD sections tasks cite, which `show` prints
+ * with each task
  */
 function trustHash(root: string): string {
 	const doneItems = definitionOfDone(root);
@@ -143,9 +190,9 @@ function trustHash(root: string): string {
 		}
 	});
 	const prd = [...sources].map((s) => readPrdSection(s, root) ?? null);
-	return createHash('sha256')
-		.update(JSON.stringify([text, files, [...doneItems], prd]))
-		.digest('hex');
+	return sha256(
+		JSON.stringify([text, files, claudeDir(root), [...doneItems], prd])
+	);
 }
 
 export function isLoopTrusted(
