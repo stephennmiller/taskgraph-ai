@@ -1,3 +1,5 @@
+import { stringifyJson } from './stringify-json.js';
+
 /** `<` and characters a model may read as `<` */
 const OPEN =
 	'[<\\uFE64\\uFF1C\\u2039\\u27E8\\u3008\\u2329\\u276C\\u276E\\u2770]';
@@ -67,20 +69,15 @@ export const TASK_DATA_TAG = 'task-data';
  * Task JSON (an MCP reply, `--json` output) with every string, values and
  * keys (`metadata` keys come from the file), run through `neutralizeTag`
  * for the task-data tag, so a field can't close a fence the agent reads it
- * in. Goes through JSON, as the caller prints it.
+ * in. Goes through JSON, as the caller prints it, without recursion so a
+ * deeply nested dependency tree fits (#822).
  */
 export function neutralizeTaskData<T>(value: T): T {
 	if (value === undefined) return value;
 	const neutral = (text: string) => neutralizeTag(text, TASK_DATA_TAG);
-	return JSON.parse(JSON.stringify(value), (_key, field) => {
-		if (typeof field === 'string') return neutral(field);
-		if (field === null || typeof field !== 'object' || Array.isArray(field))
-			return field;
-		// fromEntries defines keys, so a `__proto__` key stays data
-		return Object.fromEntries(
-			Object.entries(field).map(([key, item]) => [neutral(key), item])
-		);
-	});
+	// JSON.parse without a reviver handles any depth and keeps a `__proto__`
+	// key as data
+	return JSON.parse(stringifyJson(value, { mapString: neutral }));
 }
 
 /** Where task text comes from and what to ignore in it */

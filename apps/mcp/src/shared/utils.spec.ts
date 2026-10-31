@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+	handleApiResult,
 	resolveInsideRoot,
 	withNormalizedProjectRoot,
 	withToolContext
@@ -315,5 +316,22 @@ describe('resolveInsideRoot', () => {
 		expect(() =>
 			resolveInsideRoot(path.join(root, 'missing'), 'docs')
 		).toThrow();
+	});
+});
+
+describe('handleApiResult', () => {
+	it('replies with data nested too deep for JSON.stringify (#822)', async () => {
+		let blocker = { id: '1', blockers: [] as unknown[] };
+		for (let i = 2; i <= 5000; i++)
+			blocker = { id: String(i), blockers: [blocker] };
+
+		const reply = await handleApiResult({
+			result: { success: true, data: blocker },
+			tag: 'master',
+			minify: true
+		});
+
+		const text = (reply.content[0] as { text: string }).text;
+		expect(JSON.parse(text).data.blockers[0].id).toBe('4999');
 	});
 });

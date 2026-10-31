@@ -8,7 +8,8 @@ import {
 	createTmCore,
 	namedProjectRoot,
 	realpathOfExistingPrefix,
-	resolvePathInsideRoot
+	resolvePathInsideRoot,
+	stringifyJson
 } from '@tm/core';
 import type { ContentResult, Context } from 'fastmcp';
 import packageJson from '../../../../package.json' with { type: 'json' };
@@ -180,7 +181,11 @@ export async function handleApiResult<T>(options: {
 		content: [
 			{
 				type: 'text',
-				text: JSON.stringify(responsePayload, null, minify ? undefined : 2)
+				// Not JSON.stringify, which overflows the stack on a deep blocker
+				// tree (analyze_dependencies with an id, #822)
+				text: stringifyJson(responsePayload, {
+					indent: minify ? undefined : 2
+				})
 			}
 		]
 	};

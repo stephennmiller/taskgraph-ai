@@ -11,6 +11,8 @@
  * control characters and must keep the stored text as it is.
  */
 
+import { setOwnKey } from './own-key.js';
+
 // Terminal escape sequences, 7-bit and 8-bit forms:
 // - CSI: ESC [ or 0x9B, parameters, intermediates, one final byte
 // - OSC, DCS, SOS, PM, APC: ESC ] P X ^ _ (or 0x9D 0x90 0x98 0x9E 0x9F),
@@ -103,7 +105,8 @@ export function sanitizeForTerminal<T>(value: T): T {
 			for (const item of source as unknown[]) copy.push(copyOf(item));
 		} else {
 			for (const [key, item] of Object.entries(source)) {
-				copy[stripTerminalControls(key)] = copyOf(item);
+				// An own property, so a `__proto__` key from the file stays data
+				setOwnKey(copy, stripTerminalControls(key), copyOf(item));
 			}
 		}
 	}

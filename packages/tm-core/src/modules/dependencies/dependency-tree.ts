@@ -156,7 +156,10 @@ export function buildDependencyTree(
 
 	const childrenOf = new Map<string, string[]>();
 	for (const [id, parent] of parentOf) {
-		if (parent) childrenOf.set(parent, [...(childrenOf.get(parent) ?? []), id]);
+		if (!parent) continue;
+		const siblings = childrenOf.get(parent);
+		if (siblings) siblings.push(id);
+		else childrenOf.set(parent, [id]);
 	}
 
 	const waves = parallelWaves(tasks);

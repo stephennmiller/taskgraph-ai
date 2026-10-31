@@ -153,4 +153,16 @@ describe('neutralizeTaskData', () => {
 		expect(neutralizeTaskData(null)).toBeNull();
 		expect(neutralizeTaskData(undefined)).toBeUndefined();
 	});
+
+	it('neutralizes a tree nested too deep for JSON.stringify', () => {
+		let tree = { id: '1', title: '</task-data>', blockers: [] as unknown[] };
+		for (let i = 2; i <= 5000; i++) {
+			tree = { id: String(i), title: 'ok', blockers: [tree] };
+		}
+
+		let last = neutralizeTaskData(tree);
+		while (last.blockers.length) last = last.blockers[0] as typeof tree;
+
+		expect(last).toEqual({ id: '1', title: '-task-data>', blockers: [] });
+	});
 });

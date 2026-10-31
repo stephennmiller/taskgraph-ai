@@ -134,6 +134,17 @@ describe('sanitizeForTerminal', () => {
 		expect(safe.self).toBe(safe);
 	});
 
+	it('keeps a __proto__ key as data', () => {
+		const value = JSON.parse('{"__proto__": {"title": "x\\u001b[2Jy"}}');
+
+		const safe = sanitizeForTerminal(value);
+
+		expect(Object.getPrototypeOf(safe)).toBe(Object.prototype);
+		expect(Object.getOwnPropertyDescriptor(safe, '__proto__')?.value).toEqual({
+			title: 'xy'
+		});
+	});
+
 	it('copies nesting too deep for recursion', () => {
 		let deep: { title: string; children: unknown[] } = {
 			title: 'x\x1b[2Jy',
