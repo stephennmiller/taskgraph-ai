@@ -83,14 +83,11 @@ export interface TagSettings {
 }
 
 /**
- * Runtime storage configuration used for storage backend selection
- * This is what getStorageConfig() returns and what StorageFactory expects
+ * Runtime storage configuration: what getStorageConfig() returns
  */
 export interface RuntimeStorageConfig {
-	/** Storage backend type: tasks are stored in a local file */
+	/** Storage backend type: tasks are stored in the project's local file */
 	type: 'file';
-	/** Base path for file storage (if configured) */
-	basePath?: string;
 }
 
 /**

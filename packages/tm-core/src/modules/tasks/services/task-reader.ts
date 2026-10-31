@@ -11,7 +11,7 @@ import type {
 } from '../../../common/types/index.js';
 import type { IStorage } from '../../../common/interfaces/storage.interface.js';
 import { ConfigManager } from '../../config/managers/config-manager.js';
-import { StorageFactory } from '../../storage/services/storage-factory.js';
+import { FileStorage } from '../../storage/adapters/file-storage/index.js';
 import {
 	satisfyArchivedDependencies,
 	withStoredDependencies
@@ -75,14 +75,9 @@ export class TaskReader {
 	async initialize(): Promise<void> {
 		if (this.initialized) return;
 
-		// Create storage based on configuration
-		const storageConfig = this.configManager.getStorageConfig();
-		const projectRoot = this.configManager.getProjectRoot();
-
-		this.storage = await StorageFactory.createFromStorageConfig(
-			storageConfig,
-			projectRoot
-		);
+		// Warns about storage settings left from older configs
+		this.configManager.getStorageConfig();
+		this.storage = new FileStorage(this.configManager.getProjectRoot());
 
 		// Initialize storage
 		await this.storage.initialize();

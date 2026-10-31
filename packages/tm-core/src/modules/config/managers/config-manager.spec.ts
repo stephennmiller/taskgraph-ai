@@ -170,10 +170,7 @@ describe('ConfigManager', () => {
 
 		it('should return storage configuration', () => {
 			const storage = manager.getStorageConfig();
-			expect(storage).toEqual({
-				type: 'file',
-				basePath: testProjectRoot
-			});
+			expect(storage).toEqual({ type: 'file' });
 		});
 
 		it.each(['api', 'auto'])(
@@ -199,8 +196,7 @@ describe('ConfigManager', () => {
 				const oldConfigManager = await ConfigManager.create(testProjectRoot);
 
 				expect(oldConfigManager.getStorageConfig()).toEqual({
-					type: 'file',
-					basePath: testProjectRoot
+					type: 'file'
 				});
 			}
 		);
