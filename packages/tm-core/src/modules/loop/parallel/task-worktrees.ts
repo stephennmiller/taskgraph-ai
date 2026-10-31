@@ -363,15 +363,16 @@ export class TaskWorktrees {
 	}
 
 	/**
-	 * Files in LOADED_PATHS that `tip` changed since it left `base`'s history,
-	 * or undefined when they share no history
+	 * Files in LOADED_PATHS that differ between `base` and `tip`, or undefined
+	 * when they share no history. Against `base` itself, not where `tip` forked:
+	 * an older CLAUDE.md from before yours changed wasn't approved either
 	 */
 	private async loadedChanges(
 		base: string,
 		tip: string
 	): Promise<string[] | undefined> {
 		try {
-			const fork = (await this.git(['merge-base', base, tip])).trim();
+			await this.git(['merge-base', base, tip]);
 			// --no-renames: a rename would list only the new name, not CLAUDE.md
 			const out = await this.git([
 				'diff',
@@ -379,7 +380,7 @@ export class TaskWorktrees {
 				'-z',
 				'--no-renames',
 				'--no-relative',
-				fork,
+				base,
 				tip,
 				'--'
 			]);
@@ -393,9 +394,9 @@ export class TaskWorktrees {
 	 * Claude runs in the task branch with the files on it, and `loop --trust`
 	 * approved only the ones in this checkout. So a branch that's already
 	 * here is used when it's at `base`, where an earlier run left it
-	 * (recordBranch), or when its commits leave every file Claude Code loads
-	 * as it was (a branch kept from an older version, a crash, a commit of
-	 * your own); not when they change one, as `gh pr checkout` or a pull can.
+	 * (recordBranch), or when every file Claude Code loads is as at `base` (a
+	 * branch kept from an older version, a crash, a commit of your own); not
+	 * when one differs, as after `gh pr checkout` or a pull.
 	 * @throws ParallelLoopError naming the files and how to set the branch aside
 	 */
 	async assertBranchReusable(branch: string, base: string): Promise<void> {
@@ -414,7 +415,7 @@ export class TaskWorktrees {
 			? `changes ${changed.slice(0, 5).join(', ')}${changed.length > 5 ? ` and ${changed.length - 5} more` : ''}, which Claude Code loads`
 			: 'shares no history with your current commit';
 		const review = changed
-			? `git diff ${base}...${branch}`
+			? `git diff ${base} ${branch}`
 			: `git log -p ${branch}`;
 		throw new ParallelLoopError(
 			`${branch} already exists and ${what}, so its files weren't approved. Review it with \`${review}\`, then rename it (\`git branch -m ${branch} <new-name>\`) or delete it (\`git branch -D ${branch}\`, after \`git worktree remove\` if a worktree has it), and run again`

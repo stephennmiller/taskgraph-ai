@@ -119,8 +119,7 @@ describe('loop --parallel with an existing task branch', () => {
 
 		expect(result).toMatchObject({ state: 'failed', claimed: false });
 		expect(result.error).toContain('changes CLAUDE.md');
-		expect(result.error).toContain('git diff ');
-		expect(result.error).toContain('...taskgraph/task-1');
+		expect(result.error).toMatch(/git diff \w+ taskgraph\/task-1/);
 		expect(result.error).toContain('git branch -m taskgraph/task-1');
 		expect(result.error).toContain('git branch -D taskgraph/task-1');
 		expect(fs.existsSync(result.worktree)).toBe(false);
@@ -193,6 +192,22 @@ describe('loop --parallel with an existing task branch', () => {
 		},
 		60_000
 	);
+
+	it("doesn't pick up a task branch nothing recorded whose CLAUDE.md is from before yours changed", async () => {
+		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Old\n');
+		git(root, 'add', 'CLAUDE.md');
+		git(root, 'commit', '-qm', 'old instructions');
+		commitFile(root, 'src/app.ts', 'taskgraph/task-1');
+		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Approved\n');
+		git(root, 'commit', '-qam', 'new instructions');
+		writePlan({ 'task-1': 'commit' });
+
+		const [result] = (await tmCore.loop.runParallel(options('a'))).tasks;
+
+		expect(result.state).toBe('failed');
+		expect(result.error).toContain('changes CLAUDE.md');
+		expect(fs.existsSync(result.worktree)).toBe(false);
+	}, 60_000);
 
 	it('a rename away from CLAUDE.md counts as a change to it', async () => {
 		fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'Approved\n');

@@ -515,7 +515,10 @@ export class ParallelLoopRunner {
 			} else {
 				task.kept = false;
 			}
-			if (hasWorktree) await this.recordBranch(git, task.branch);
+			// A container's commits weren't made here: note only that its branch is gone
+			if (hasWorktree && !(workers && (await git.branchExists(task.branch)))) {
+				await this.recordBranch(git, task.branch);
+			}
 			if (releaseClaim || !hasWork) {
 				await this.release(task.id, tag, claimant);
 			}
