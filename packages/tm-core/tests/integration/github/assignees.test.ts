@@ -94,6 +94,34 @@ describe('Task assignees', () => {
 		expect((await push()).updated).toBe(0);
 	});
 
+	it('settles a mixed-case assignee from a hand-edited file (#860)', async () => {
+		await setup([makeTask('1', { assignee: 'Alice' })]);
+		await push();
+
+		expect((await push()).updated).toBe(0);
+		const plan = await domain.planPull({ repo: REPO, tag: 'master' });
+		expect(plan.steps[0]).not.toHaveProperty('githubAssignee');
+		await tmCore.tasks.assign('1', 'bob');
+		await push();
+		expect(issue(1).assignees).toEqual(['bob']);
+	});
+
+	it('keeps the old assignee and says why when GitHub ignores the new one (#860)', async () => {
+		await setup([makeTask('1', { assignee: 'alice' })]);
+		await push();
+		await tmCore.tasks.assign('1', 'stranger');
+		// GitHub answers 201 but leaves out a login it can't assign
+		const change = github.changeAssignees.bind(github);
+		vi.spyOn(github, 'changeAssignees').mockImplementation((n, how, logins) =>
+			change(n, how, how === 'add' ? [] : logins)
+		);
+
+		await expect(push()).rejects.toMatchObject({
+			hint: expect.stringContaining('collaborators on acme/app')
+		});
+		expect(issue(1).assignees).toEqual(['alice']);
+	});
+
 	it('swaps only its own assignee, keeping others assigned on GitHub', async () => {
 		await setup([makeTask('1', { assignee: 'alice' }), makeTask('2')]);
 		await push();
