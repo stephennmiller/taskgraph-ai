@@ -5,10 +5,12 @@
 import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '../../../common/logger/index.js';
+import type { TaskStatus } from '../../../common/types/index.js';
 import { TASK_DATA_RULE } from '../../../common/utils/prompt-tag.js';
 import { isTaskPreset } from '../loop-task.js';
 import { isLoopTrusted } from '../loop-trust.js';
 import { PRESETS, isPreset as checkIsPreset } from '../presets/index.js';
+import { statusProgress } from '../task-progress.js';
 import {
 	checkSandboxAuth,
 	runInteractiveAuth,
@@ -17,9 +19,15 @@ import {
 } from './docker-sandbox.js';
 import { spawnIteration } from './iteration-process.js';
 import {
+	handleStreamEvent,
+	isValidStreamEvent,
+	processBufferedLines
+} from './stream-events.js';
+import {
 	CLAUDE_MISSING,
 	DOCKER_MISSING,
 	MAX_CONSECUTIVE_ERRORS,
+	MAX_STALLED_ITERATIONS,
 	loopIterationTimeoutMs,
 	timeoutMessage
 } from './iteration-limits.js';
@@ -35,6 +43,8 @@ export interface LoopServiceOptions {
 	projectRoot: string;
 	/** The task `taskgraph next` would pick in a tag, checked before a run ends as all_complete */
 	findReadyTask?: (tag?: string) => Promise<string | undefined>;
+	/** Each task's and subtask's status in a tag, compared around every iteration */
+	taskStatuses?: (tag?: string) => Promise<Map<string, TaskStatus>>;
 }
 
 /** A marker counts only alone on the last non-empty line, so quoting it in a sentence doesn't stop the loop */
@@ -49,12 +59,14 @@ export class LoopService {
 	private readonly findReadyTask?: (
 		tag?: string
 	) => Promise<string | undefined>;
+	private readonly taskStatuses?: LoopServiceOptions['taskStatuses'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
 
 	constructor(options: LoopServiceOptions) {
 		this.projectRoot = options.projectRoot;
 		this.findReadyTask = options.findReadyTask;
+		this.taskStatuses = options.taskStatuses;
 	}
 
 	getProjectRoot(): string {
@@ -95,8 +107,12 @@ export class LoopService {
 		const iterations: LoopIteration[] = [];
 		let tasksCompleted = 0;
 		let consecutiveErrors = 0;
+		let stalled = 0;
+		// Only a run that works on tasks can be stuck on one
+		const watchesTasks = !!config.taskId || isTaskPreset(config.prompt);
 
 		await this.initProgressFile(config);
+		let statuses = await this.readStatuses(config);
 		// Approved through the trust file: parse-prd or github import can withdraw it mid-run
 		const approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
@@ -120,6 +136,15 @@ export class LoopService {
 			);
 			iterations.push(iteration);
 
+			// Completed means its status moved to done or review, not that Claude exited 0
+			const after = await this.readStatuses(config);
+			const progress =
+				statuses && after
+					? statusProgress(statuses, after)
+					: { finished: 0, changed: true };
+			statuses = after;
+			tasksCompleted += progress.finished;
+
 			// Claude can say all tasks are done while one is still ready; keep going then
 			if (iteration.status === 'complete') {
 				const ready = await this.readyTask(config);
@@ -142,15 +167,12 @@ export class LoopService {
 				return this.finalize(
 					config,
 					iterations,
-					tasksCompleted + 1,
+					tasksCompleted,
 					'all_complete'
 				);
 			}
 			if (iteration.status === 'blocked') {
 				return this.finalize(config, iterations, tasksCompleted, 'blocked');
-			}
-			if (iteration.status === 'success') {
-				tasksCompleted++;
 			}
 			consecutiveErrors =
 				iteration.status === 'error' ? consecutiveErrors + 1 : 0;
@@ -165,6 +187,14 @@ export class LoopService {
 					'error',
 					iteration.message
 				);
+			}
+			if (progress.changed) stalled = 0;
+			else if (iteration.status === 'success') stalled++;
+			if (watchesTasks && stalled >= MAX_STALLED_ITERATIONS) {
+				const stuck = config.taskId ?? (await this.readyTask(config));
+				const msg = `${stuck ? `Task ${stuck} is stuck: no` : 'No'} task changed status in ${stalled} iterations in a row. Check the progress file and the task, then run loop again.`;
+				this.reportError(config.callbacks, msg);
+				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}
 
 			// Sleep between iterations (except last)
@@ -199,6 +229,22 @@ export class LoopService {
 			this.reportError(
 				config.callbacks,
 				`Couldn't check for a ready task: ${error instanceof Error ? error.message : String(error)}`,
+				'warning'
+			);
+			return undefined;
+		}
+	}
+
+	/** The tag's task statuses, or undefined when there's no lookup or the file can't be read */
+	private async readStatuses(
+		config: LoopConfig
+	): Promise<Map<string, TaskStatus> | undefined> {
+		try {
+			return await this.taskStatuses?.(config.tag);
+		} catch (error) {
+			this.reportError(
+				config.callbacks,
+				`Couldn't read task statuses: ${error instanceof Error ? error.message : String(error)}`,
 				'warning'
 			);
 			return undefined;
@@ -469,11 +515,11 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 					const event = JSON.parse(line);
 
 					// Validate event structure before accessing properties
-					if (!this.isValidStreamEvent(event)) {
+					if (!isValidStreamEvent(event)) {
 						return;
 					}
 
-					this.handleStreamEvent(event, callbacks);
+					handleStreamEvent(event, callbacks);
 
 					// Final result text, checked for completion markers
 					if (event.type === 'result') {
@@ -500,12 +546,10 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				return;
 			}
 
-			child.stdout.on('data', (data: Buffer) => {
+			// Decoded as a stream, so a character split across chunks stays whole
+			child.stdout.setEncoding('utf-8').on('data', (data: string) => {
 				try {
-					const lines = this.processBufferedLines(
-						buffer,
-						data.toString('utf-8')
-					);
+					const lines = processBufferedLines(buffer, data);
 					buffer = lines.remaining;
 					for (const line of lines.complete) {
 						processLine(line);
@@ -528,9 +572,8 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				}
 			});
 
-			child.stderr?.on('data', (data: Buffer) => {
-				const stderrText = data.toString('utf-8');
-				callbacks?.onStderr?.(iterationNum, stderrText);
+			child.stderr?.setEncoding('utf-8').on('data', (data: string) => {
+				callbacks?.onStderr?.(iterationNum, data);
 			});
 
 			child.on('error', (error: NodeJS.ErrnoException) => {
@@ -581,39 +624,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 		});
 	}
 
-	/**
-	 * Validate that a parsed JSON object has the expected stream event structure.
-	 */
-	private isValidStreamEvent(event: unknown): event is {
-		type: string;
-		message?: {
-			content?: Array<{ type: string; text?: string; name?: string }>;
-		};
-		result?: string;
-	} {
-		if (!event || typeof event !== 'object') {
-			return false;
-		}
-
-		const e = event as Record<string, unknown>;
-		if (!('type' in e) || typeof e.type !== 'string') {
-			return false;
-		}
-
-		// Validate message structure if present
-		if ('message' in e && e.message !== undefined) {
-			if (typeof e.message !== 'object' || e.message === null) {
-				return false;
-			}
-			const msg = e.message as Record<string, unknown>;
-			if ('content' in msg && !Array.isArray(msg.content)) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	private buildCommandArgs(
 		prompt: string,
 		sandbox: boolean,
@@ -657,38 +667,6 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			status: 'error',
 			duration: Date.now() - startTime,
 			message
-		};
-	}
-
-	private handleStreamEvent(
-		event: {
-			type: string;
-			message?: {
-				content?: Array<{ type: string; text?: string; name?: string }>;
-			};
-		},
-		callbacks?: LoopOutputCallbacks
-	): void {
-		if (event.type !== 'assistant' || !event.message?.content) return;
-
-		for (const block of event.message.content) {
-			if (block.type === 'text' && block.text) {
-				callbacks?.onText?.(block.text);
-			} else if (block.type === 'tool_use' && block.name) {
-				callbacks?.onToolUse?.(block.name);
-			}
-		}
-	}
-
-	private processBufferedLines(
-		buffer: string,
-		newData: string
-	): { complete: string[]; remaining: string } {
-		const combined = buffer + newData;
-		const lines = combined.split('\n');
-		return {
-			complete: lines.slice(0, -1),
-			remaining: lines[lines.length - 1]
 		};
 	}
 }

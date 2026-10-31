@@ -32,6 +32,8 @@ While they run you get one status line per task. When all have finished you get 
 Next: review with git log -p HEAD..taskgraph/task-1
 ```
 
+A task counts as done in the summary only when Claude Code exited without an error and the task is in `review` (or `done`); one Claude left `in-progress` or `pending` doesn't count.
+
 **Nothing is merged.** A task that left commits or changes keeps its worktree and its branch, ready for you to review and merge yourself. It's in `review` if Claude got that far, and otherwise stays claimed (`in-progress`). If Claude Code failed (exited non-zero), the worktree is still kept but the claim is released, so the next `taskgraph loop --parallel` run retries the task in that worktree. A task's Claude Code process that runs past an hour (`TASKGRAPH_LOOP_TIMEOUT_MS`, see [Loop iteration timeout](/best-practices/configuration-advanced#loop-iteration-timeout)) is stopped and counts as failed. A task that left nothing has its worktree and branch removed, and its claim released: it goes back to `pending`, unless Claude already marked it.
 
 **Ctrl-C** stops every Claude Code process and releases every claim (the tasks still `in-progress` go back to `pending`; one Claude already marked `review` stays there). Closing the terminal or sending `SIGTERM` does the same. Worktrees with work in them stay. Run the same command again to pick up where they left off: an existing `taskgraph/task-<id>` branch or worktree is reused. A second Ctrl-C exits at once, without the cleanup, but still kills the Claude Code processes.

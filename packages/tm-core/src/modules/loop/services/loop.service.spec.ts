@@ -224,50 +224,6 @@ describe('LoopService', () => {
 		});
 
 		describe('successful iteration run', () => {
-			it('should run a single iteration successfully', async () => {
-				mockSpawn.mockImplementation(
-					() =>
-						fakeClaude({
-							stdout: 'Task completed',
-							stderr: '',
-							status: 0
-						}) as never
-				);
-
-				const result = await service.run({
-					prompt: 'default',
-					iterations: 1,
-					sleepSeconds: 0,
-					progressFile: '/test/progress.txt'
-				});
-
-				expect(result.totalIterations).toBe(1);
-				expect(result.tasksCompleted).toBe(1);
-				expect(result.finalStatus).toBe('max_iterations');
-			});
-
-			it('should run multiple iterations', async () => {
-				mockSpawn.mockImplementation(
-					() =>
-						fakeClaude({
-							stdout: 'Done',
-							stderr: '',
-							status: 0
-						}) as never
-				);
-
-				const result = await service.run({
-					prompt: 'default',
-					iterations: 3,
-					sleepSeconds: 0,
-					progressFile: '/test/progress.txt'
-				});
-
-				expect(result.totalIterations).toBe(3);
-				expect(result.tasksCompleted).toBe(3);
-				expect(mockSpawn).toHaveBeenCalledTimes(3);
-			});
-
 			it('should call spawnSync with claude -p by default (non-sandbox)', async () => {
 				mockSpawn.mockImplementation(
 					() =>

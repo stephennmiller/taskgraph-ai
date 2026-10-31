@@ -28,6 +28,7 @@ import type {
 	ParallelLoopResult
 } from './parallel/types.js';
 import { LoopService } from './services/loop.service.js';
+import { taskStatuses } from './task-progress.js';
 import type { LoopConfig, LoopPreset, LoopResult } from './types.js';
 
 /** A task ID (`3`) or a subtask ID (`3.2`): no spaces, at most one dot */
@@ -117,6 +118,9 @@ export class LoopDomain {
 						const task = await tasks.getNext(tag);
 						return task ? String(task.id) : undefined;
 					}
+				: undefined,
+			taskStatuses: tasks
+				? async (tag) => taskStatuses((await tasks.list({ tag })).tasks)
 				: undefined
 		});
 		return this.loopService.run(fullConfig);

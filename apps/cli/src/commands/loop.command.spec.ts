@@ -321,6 +321,26 @@ describe('LoopCommand', () => {
 			}
 		);
 
+		it('prints a stuck task ID without its escape codes', async () => {
+			const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+			const message = 'Task 1\x1b[2J is stuck';
+			mockLoopRun.mockImplementation(async (config) => {
+				config.callbacks.onError(message, 'error');
+				return createMockResult({
+					finalStatus: 'error',
+					errorMessage: message
+				});
+			});
+
+			await run();
+
+			const printed = [...consoleLogSpy.mock.calls, ...errorSpy.mock.calls]
+				.flat()
+				.join('\n');
+			expect(printed).toContain('is stuck');
+			expect(printed).not.toContain('\x1b[2J');
+		});
+
 		it.each(['all_complete', 'max_iterations'] as const)(
 			'succeeds when the loop ends %s',
 			async (finalStatus) => {
