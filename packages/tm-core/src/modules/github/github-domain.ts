@@ -343,8 +343,20 @@ export class GitHubDomain {
 	private async prepare(options: PushOptions) {
 		const { repo, client, tag, tasks, remote, wanted } =
 			await this.scope(options);
-		// A token that cannot read its own user (Actions' GITHUB_TOKEN) only turns off link recovery
-		const viewer = await client.getViewer().catch(() => undefined);
+		// A token that cannot read its own user (Actions' GITHUB_TOKEN) only
+		// turns off link recovery; any other failure, a rate limit (also 403)
+		// included, stops the push, which
+		// without recovery could duplicate issues
+		const viewer = await client.getViewer().catch((error: unknown) => {
+			if (
+				error instanceof Error &&
+				/\((403|404)\)/.test(error.message) &&
+				!/rate limit/i.test(error.message)
+			) {
+				return undefined;
+			}
+			throw error;
+		});
 		const full = planSync({
 			repo,
 			tasks,

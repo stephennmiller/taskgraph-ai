@@ -13,6 +13,7 @@ import type {
 	RemoteIssue,
 	SyncTask
 } from '../types.js';
+import { assigneeOf } from '../../tasks/utils/assignee.js';
 import { sameStatus, statusFromIssue } from './issue-status.js';
 import { getLink } from './sync-planner.js';
 
@@ -90,7 +91,7 @@ export function planPull(input: PullPlanInput): PullPlan {
 
 /** The issue's assignee as the task would hold it: the task's own if it is among them */
 function issueAssignee(task: Task, issue: RemoteIssue): string | undefined {
-	const local = task.assignee;
+	const local = assigneeOf(task);
 	return local && issue.assignees.includes(local) ? local : issue.assignees[0];
 }
 
@@ -104,9 +105,10 @@ function assigneeChange(
 	link: GitHubLink,
 	issue: RemoteIssue
 ): Pick<PullStep, 'assignTo' | 'githubAssignee'> {
+	const local = assigneeOf(task);
 	const remote = issueAssignee(task, issue);
-	if (remote === link.assignee || remote === task.assignee) return {};
-	return task.assignee === link.assignee
+	if (remote === link.assignee || remote === local) return {};
+	return local === link.assignee
 		? { assignTo: remote ?? null }
 		: { githubAssignee: remote ?? null };
 }

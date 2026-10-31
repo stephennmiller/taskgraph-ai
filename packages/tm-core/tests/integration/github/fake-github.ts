@@ -33,8 +33,9 @@ export class FakeGitHub implements GitHubClient {
 			number,
 			url: `https://github.com/${REPO}/issues/${number}`,
 			state: 'open',
-			assignees: [],
-			...input
+			...input,
+			// GitHub matches logins case-insensitively; the client lowercases them
+			assignees: (input.assignees ?? []).map((a) => a.toLowerCase())
 		};
 		this.issues.push(issue);
 		return { ...issue };
@@ -52,10 +53,11 @@ export class FakeGitHub implements GitHubClient {
 	) {
 		const issue = this.issues.find((i) => i.number === number);
 		if (!issue) throw new Error(`no issue ${number}`);
+		const lower = logins.map((l) => l.toLowerCase());
 		issue.assignees =
 			change === 'add'
-				? [...new Set([...issue.assignees, ...logins])]
-				: issue.assignees.filter((a) => !logins.includes(a));
+				? [...new Set([...issue.assignees, ...lower])]
+				: issue.assignees.filter((a) => !lower.includes(a));
 		return { ...issue };
 	}
 	async ensureLabels() {}
