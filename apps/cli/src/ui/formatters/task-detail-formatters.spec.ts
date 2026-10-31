@@ -319,7 +319,7 @@ describe('formatTaskDetail', () => {
 				'○ pending · medium priority',
 				'</task-data>',
 				'',
-				'Next: taskgraph set-status --id=1 --status=in-progress to start working'
+				'Next: taskgraph set-status 1 in-progress to start working'
 			].join('\n')
 		);
 	});

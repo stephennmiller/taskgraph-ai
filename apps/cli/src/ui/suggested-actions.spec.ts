@@ -7,7 +7,7 @@ const commands = (actions: { command: string }[]) =>
 describe('getSuggestedActions', () => {
 	it('suggests starting a pending task', () => {
 		const actions = commands(getSuggestedActions(3, 'pending', false));
-		expect(actions[0]).toBe('taskgraph set-status --id=3 --status=in-progress');
+		expect(actions[0]).toBe('taskgraph set-status 3 in-progress');
 		expect(actions).toContain('taskgraph expand --id=3');
 	});
 
@@ -22,7 +22,7 @@ describe('getSuggestedActions', () => {
 	it('never suggests starting a task that is already in progress', () => {
 		const actions = commands(getSuggestedActions(3, 'in-progress', true));
 		expect(actions.some((c) => c.includes('--status=in-progress'))).toBe(false);
-		expect(actions).toContain('taskgraph set-status --id=3 --status=done');
+		expect(actions).toContain('taskgraph set-status 3 done');
 	});
 
 	it('suggests logging progress with note for an in-progress task or subtask', () => {
@@ -58,15 +58,15 @@ describe('getSuggestedActions', () => {
 	it('suggests returning blocked and deferred tasks to pending', () => {
 		for (const status of ['blocked', 'deferred']) {
 			expect(commands(getSuggestedActions(6, status, false))[0]).toBe(
-				'taskgraph set-status --id=6 --status=pending'
+				'taskgraph set-status 6 pending'
 			);
 		}
 	});
 
 	it('suggests finishing or reopening a task in review', () => {
 		expect(commands(getSuggestedActions(5, 'review', false))).toEqual([
-			'taskgraph set-status --id=5 --status=done',
-			'taskgraph set-status --id=5 --status=in-progress'
+			'taskgraph set-status 5 done',
+			'taskgraph set-status 5 in-progress'
 		]);
 	});
 });

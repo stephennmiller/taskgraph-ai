@@ -142,9 +142,7 @@ describe('next command', () => {
 				'Subtask 2.2  Sessions table and cookie middleware'
 			);
 			expect(output).toContain('depends on 2.1');
-			expect(output).toContain(
-				'Next: taskgraph set-status --id=2.2 --status=in-progress'
-			);
+			expect(output).toContain('Next: taskgraph set-status 2.2 in-progress');
 			expect(output).not.toMatch(/[╭╮╰╯]/);
 			expect(output).not.toContain('Next Task:');
 			for (const line of output.split('\n')) {

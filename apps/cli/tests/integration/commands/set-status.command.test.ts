@@ -398,4 +398,46 @@ describe('set-status command', () => {
 		expect(tasks['feature-x'].tasks[0].status).toBe('in-progress');
 		expect(tasks.master.tasks[0].status).toBe('pending');
 	});
+
+	it('lists what marking done made ready, once, then the next step (#879)', () => {
+		writeTasks(
+			createTasksFile({
+				tasks: [
+					createTask({ id: 1, title: 'Schema' }),
+					createTask({ id: 2, title: 'Auth' }),
+					createTask({ id: 3, title: 'Login page', dependencies: ['1', '2'] }),
+					createTask({ id: 4, title: 'Billing', dependencies: ['2'] }),
+					createTask({ id: 5, title: 'Admin', dependencies: ['9'] })
+				]
+			})
+		);
+
+		const output = execSync(`node "${binPath}" set-status 1,2 done`, {
+			encoding: 'utf8',
+			env: {
+				...process.env,
+				TASKGRAPH_SKIP_AUTO_UPDATE: '1',
+				NO_COLOR: '1',
+				COLUMNS: '80'
+			}
+		});
+
+		expect(output.trimEnd().split('\n')).toEqual([
+			'✓ Updated 2 tasks',
+			'  1  ○ pending → ✓ done',
+			'  2  ○ pending → ✓ done',
+			// In `next` order: 4 has fewer dependencies
+			'  Ready now  4  Billing',
+			'             3  Login page',
+			'Next: taskgraph next'
+		]);
+
+		const json = JSON.parse(
+			execSync(`node "${binPath}" set-status 3 done --json`, {
+				encoding: 'utf8',
+				env: { ...process.env, TASKGRAPH_SKIP_AUTO_UPDATE: '1' }
+			})
+		);
+		expect(json.ready).toEqual([]);
+	});
 });

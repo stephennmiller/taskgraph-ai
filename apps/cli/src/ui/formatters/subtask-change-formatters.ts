@@ -3,7 +3,7 @@
  *
  *   ✓ Added subtask 1.3  Write the migration
  *     depends on 1.1
- *   Next: taskgraph set-status --id=1.3 --status=in-progress
+ *   Next: taskgraph set-status 1.3 in-progress
  *
  *   ✓ Task 3 is now subtask 1.3  Write docs
  *   ✓ Removed subtask 1.1
@@ -66,7 +66,7 @@ export function formatSubtaskAdded(
 	if (!subtask.status || subtask.status === 'pending') {
 		lines.push(
 			theme.muted('Next: ') +
-				theme.brand(`taskgraph set-status --id=${id} --status=in-progress`)
+				theme.brand(`taskgraph set-status ${id} in-progress`)
 		);
 	}
 	return lines.join('\n');

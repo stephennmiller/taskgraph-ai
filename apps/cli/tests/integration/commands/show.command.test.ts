@@ -125,7 +125,7 @@ describe('show command', () => {
 		expect(exitCode).toBe(0);
 		expect(output).toContain('Second Task');
 		expect(output).toContain('Depends on task 1');
-		expect(output).toContain('Next: taskgraph set-status --id=2');
+		expect(output).toContain('Next: taskgraph set-status 2 ');
 	});
 
 	it('suggests why, not starting, for a task whose dependencies are unfinished (#710)', () => {
@@ -383,9 +383,7 @@ describe('show command output', () => {
 		expect(res.stdout).toContain(
 			'○ pending · medium priority · depends on 2.1'
 		);
-		expect(res.stdout).toContain(
-			'Next: taskgraph set-status --id=2.2 --status=in-progress'
-		);
+		expect(res.stdout).toContain('Next: taskgraph set-status 2.2 in-progress');
 	});
 
 	it("prints the PRD section a task cites, and its parent's for a subtask (#649)", () => {

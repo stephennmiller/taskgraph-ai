@@ -74,14 +74,17 @@ describe('set_task_status criteria gate', () => {
 	});
 
 	it('passes force through to tm-core', async () => {
-		tasks.updateStatuses.mockResolvedValue([
-			{
-				success: true,
-				taskId: '3',
-				oldStatus: 'pending',
-				newStatus: 'done'
-			}
-		]);
+		tasks.updateStatuses.mockResolvedValue({
+			updated: [
+				{
+					success: true,
+					taskId: '3',
+					oldStatus: 'pending',
+					newStatus: 'done'
+				}
+			],
+			ready: []
+		});
 
 		const result = await register().execute(
 			{ projectRoot: project, id: '3', status: 'done', force: true },
@@ -104,14 +107,17 @@ describe('set_task_status criteria gate', () => {
 			checkedCount: 0,
 			unchecked: []
 		});
-		tasks.updateStatuses.mockResolvedValue([
-			{
-				success: true,
-				taskId: '3',
-				oldStatus: 'pending',
-				newStatus: 'done'
-			}
-		]);
+		tasks.updateStatuses.mockResolvedValue({
+			updated: [
+				{
+					success: true,
+					taskId: '3',
+					oldStatus: 'pending',
+					newStatus: 'done'
+				}
+			],
+			ready: []
+		});
 
 		await register().execute(
 			{ projectRoot: project, id: '3', status: 'done', check: [1, 2] },

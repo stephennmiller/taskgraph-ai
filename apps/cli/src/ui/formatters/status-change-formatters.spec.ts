@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { formatStatusChanges } from './status-change-formatters.js';
+import {
+	formatReadyAfterDone,
+	formatStatusChanges
+} from './status-change-formatters.js';
 
 // Strip ANSI codes so assertions read like the terminal does
 const plain = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
@@ -32,5 +35,50 @@ describe('formatStatusChanges', () => {
 		]);
 
 		expect(plain(text)).toBe('✓ Task 4  ✓ done (unchanged)');
+	});
+});
+
+describe('formatReadyAfterDone', () => {
+	it('lists what became ready, IDs aligned, then the next step', () => {
+		const text = formatReadyAfterDone(
+			[
+				{ id: '3', title: 'Write the login page' },
+				{ id: '12.1', title: 'Add logout endpoint' }
+			],
+			80
+		);
+
+		expect(plain(text).split('\n')).toEqual([
+			'  Ready now  3     Write the login page',
+			'             12.1  Add logout endpoint',
+			'Next: taskgraph next'
+		]);
+	});
+
+	it('keeps the tag in the next step for a --tag write', () => {
+		expect(plain(formatReadyAfterDone([], 80, 'feat'))).toBe(
+			'Next: taskgraph next --tag feat'
+		);
+		// A tag name that could carry shell syntax gets a placeholder
+		expect(plain(formatReadyAfterDone([], 80, 'a;rm -rf'))).toBe(
+			'Next: taskgraph next --tag <tag>'
+		);
+	});
+
+	it('gives only the next step when nothing became ready', () => {
+		expect(plain(formatReadyAfterDone([], 80))).toBe('Next: taskgraph next');
+	});
+
+	it('cuts a long title to the width and strips escape codes', () => {
+		const lines = plain(
+			formatReadyAfterDone(
+				[{ id: '3', title: `\u001b]0;evil\u0007${'x'.repeat(200)}` }],
+				80
+			)
+		).split('\n');
+
+		expect(lines[0]).toHaveLength(80);
+		expect(lines[0]).toMatch(/…$/);
+		expect(lines[0]).not.toContain('evil\u0007');
 	});
 });

@@ -148,3 +148,21 @@ export function rankNextTasks(
 
 	return [...candidateSubtasks, ...eligibleTasks];
 }
+
+/** A task or subtask that a status change made ready */
+export interface ReadyTask {
+	id: string;
+	title: string;
+}
+
+/**
+ * The items `next` can pick in `after` but not in `before`, in `next` order:
+ * what a change (such as marking a task done) made ready. Pass both views
+ * with archived dependencies satisfied, as getNext reads them.
+ */
+export function newlyReadyTasks(before: Task[], after: Task[]): ReadyTask[] {
+	const wasReady = new Set(rankNextTasks(before).map((t) => String(t.id)));
+	return rankNextTasks(after)
+		.filter((t) => !wasReady.has(String(t.id)))
+		.map((t) => ({ id: String(t.id), title: t.title }));
+}

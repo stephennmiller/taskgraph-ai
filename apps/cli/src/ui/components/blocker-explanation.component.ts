@@ -49,7 +49,7 @@ function describeStart(e: BlockerExplanation): string[] {
 	if (e.status === 'cancelled') return ['Cancelled.'];
 	if (e.status === 'pending') {
 		return [
-			`Not blocked. Start it with: ${cmd(`taskgraph set-status --id=${e.id} --status=in-progress`)}`
+			`Not blocked. Start it with: ${cmd(`taskgraph set-status ${e.id} in-progress`)}`
 		];
 	}
 	return [`Not blocked by any dependencies (status: ${e.status}).`];
@@ -149,11 +149,11 @@ function unblockSteps(causes: BlockerRootCause[]): string[] {
 			steps.push(`Finish ${label(c.id, c.title)}: it's in progress.`);
 		} else if (c.kind === 'review') {
 			steps.push(
-				`${c.id} is in review. Close it with: ${cmd(`taskgraph set-status --id=${c.id} --status=done`)}`
+				`${c.id} is in review. Close it with: ${cmd(`taskgraph set-status ${c.id} done`)}`
 			);
 		} else if (c.kind === 'stalled') {
 			steps.push(
-				`${c.id} is ${c.status}. Reopen it with: ${cmd(`taskgraph set-status --id=${c.id} --status=pending`)}`
+				`${c.id} is ${c.status}. Reopen it with: ${cmd(`taskgraph set-status ${c.id} pending`)}`
 			);
 		} else if (c.kind === 'missing' && c.canonicalId) {
 			steps.push(
