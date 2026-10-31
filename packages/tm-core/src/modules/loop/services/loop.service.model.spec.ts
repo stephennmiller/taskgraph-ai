@@ -67,7 +67,7 @@ describe('LoopService model and effort', () => {
 			.mock.calls.map((c) => String(c[1]))
 			.join('');
 		expect(logged).toContain(
-			'# Iteration 1: success · fresh · complexity 2 · sonnet, low effort'
+			'# Iteration 1: success · complexity 2 · sonnet, low effort'
 		);
 	});
 

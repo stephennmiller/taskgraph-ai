@@ -6,7 +6,7 @@
 
 import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoopConfig } from '../types.js';
 import { fakeClaude } from './fake-claude.js';
 import { parseLoopCaps } from './iteration-limits.js';
@@ -67,6 +67,11 @@ describe('LoopService cost and caps', () => {
 		vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
 		vi.mocked(fsPromises.appendFile).mockResolvedValue(undefined);
 		service = new LoopService({ projectRoot: '/test/project' });
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllEnvs();
 	});
 
 	it.each([
@@ -153,11 +158,9 @@ describe('LoopService cost and caps', () => {
 		await service.run(config({ iterations: 2 }));
 
 		expect(written()).toMatch(
-			/# Iteration 1: success · fresh · \$0\.60 · 5 turns · \d+s\n/
+			/# Iteration 1: success · \$0\.60 · 5 turns · \d+s\n/
 		);
-		expect(written()).toMatch(
-			/# Iteration 2: success · fresh · \$0\.60 · 5 turns/
-		);
+		expect(written()).toMatch(/# Iteration 2: success · \$0\.60 · 5 turns/);
 		expect(written()).toContain('- Spent: $1.20 · 10 turns');
 	});
 
@@ -200,6 +203,138 @@ describe('LoopService cost and caps', () => {
 			totalCostUsd: 1.2
 		});
 		expect(written()).toContain('- Final status: budget_reached');
+	});
+
+	it.each([
+		['quiet', false],
+		['--verbose', true]
+	])(
+		'counts an iteration killed before its result event at the budget it was given (%s)',
+		async (_, verbose) => {
+			vi.useFakeTimers();
+			vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '1000');
+			spawn.mockImplementation(() => fakeClaude({ hang: true }) as never);
+
+			const run = service.run(
+				config({ iterations: 5, maxBudgetUsd: 1.5, verbose })
+			);
+			await vi.advanceTimersByTimeAsync(1000);
+			const result = await run;
+
+			// It could have spent all 1.5 it was given, so no second iteration starts
+			expect(spawn).toHaveBeenCalledTimes(1);
+			expect(result.iterations[0]).toMatchObject({
+				status: 'error',
+				costUsd: 1.5,
+				costUnknown: true
+			});
+			expect(result).toMatchObject({
+				finalStatus: 'budget_reached',
+				totalCostUsd: 1.5
+			});
+			expect(written()).toMatch(
+				/# Iteration 1: error · cost unknown, counted as \$1\.50 · \d+s\n/
+			);
+		}
+	);
+
+	it('counts nothing for an iteration that reported no cost when there is no budget', async () => {
+		spawn.mockImplementation(() => fakeClaude({ status: null }) as never);
+
+		const result = await service.run(config());
+
+		expect(result.iterations[0]).toMatchObject({ costUnknown: true });
+		expect(result.iterations[0].costUsd).toBeUndefined();
+		expect(result.totalCostUsd).toBeUndefined();
+	});
+
+	it.each([
+		['quiet', false],
+		['--verbose', true]
+	])(
+		'counts an iteration that died mid-run (exit 137, no result event) at its budget (%s)',
+		async (_, verbose) => {
+			const started = streamJson({ result: 'x' }).split('\n')[0];
+			spawn.mockImplementation(
+				() => fakeClaude({ stdout: `${started}\n`, status: 137 }) as never
+			);
+
+			const result = await service.run(
+				config({ iterations: 5, maxBudgetUsd: 2, verbose })
+			);
+
+			expect(spawn).toHaveBeenCalledTimes(1);
+			expect(result.iterations[0]).toMatchObject({
+				status: 'error',
+				costUsd: 2,
+				costUnknown: true
+			});
+			expect(result.finalStatus).toBe('budget_reached');
+		}
+	);
+
+	it('counts nothing for a claude that failed before it started (no events)', async () => {
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					stderr: "error: unknown option '--max-budget-usd'\n",
+					status: 1
+				}) as never
+		);
+
+		const result = await service.run(
+			config({ iterations: 3, maxBudgetUsd: 10 })
+		);
+
+		expect(result.iterations[0].costUnknown).toBeUndefined();
+		expect(result.finalStatus).toBe('error');
+	});
+
+	it('counts the real cost of a non-zero exit that printed its result event', async () => {
+		spawn.mockImplementation(spends(0.3, 2, 1));
+
+		const result = await service.run(
+			config({ iterations: 2, maxBudgetUsd: 5 })
+		);
+
+		expect(spawn).toHaveBeenCalledTimes(2);
+		expect(result.iterations[0]).toMatchObject({
+			status: 'error',
+			costUsd: 0.3
+		});
+		expect(result.iterations[0].costUnknown).toBeUndefined();
+		expect(result.totalCostUsd).toBeCloseTo(0.6);
+	});
+
+	it('counts nothing for a clean exit without a result event (older Claude Code) under a budget', async () => {
+		spawn.mockImplementation(
+			() => fakeClaude({ stdout: 'Did one task\n', status: 0 }) as never
+		);
+
+		const result = await service.run(
+			config({ iterations: 3, maxBudgetUsd: 10 })
+		);
+
+		expect(spawn).toHaveBeenCalledTimes(3);
+		expect(result.finalStatus).toBe('max_iterations');
+		expect(result.iterations[0].costUsd).toBeUndefined();
+		expect(result.iterations[0].costUnknown).toBeUndefined();
+	});
+
+	it("doesn't count a budget for a claude that never started", async () => {
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					error: Object.assign(new Error('spawn claude EACCES'), {
+						code: 'EACCES'
+					})
+				}) as never
+		);
+
+		const result = await service.run(config({ maxBudgetUsd: 1 }));
+
+		expect(result.iterations[0].costUsd).toBeUndefined();
+		expect(result.iterations[0].costUnknown).toBeUndefined();
 	});
 
 	it('passes the caps through the Docker sandbox too', async () => {

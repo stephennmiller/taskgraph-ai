@@ -5,7 +5,7 @@
 import { getLogger } from '../../../common/logger/index.js';
 import type { TaskStatus } from '../../../common/types/index.js';
 import { isTaskPreset } from '../loop-task.js';
-import { isLoopTrusted } from '../loop-trust.js';
+import { TRUST_LOST, isLoopTrusted, keepLoopTrust } from '../loop-trust.js';
 import {
 	type ModelChoice,
 	modelArgs,
@@ -26,7 +26,9 @@ import { buildPrompt } from './loop-prompt.js';
 import {
 	completeIteration,
 	createErrorIteration,
-	formatCommandError
+	formatCommandError,
+	type RunSpend,
+	runSpend
 } from './iteration-result.js';
 import {
 	appendFinalSummary,
@@ -38,6 +40,7 @@ import {
 	contextTokens,
 	findResultEvent,
 	handleStreamEvent,
+	hasStreamEvent,
 	isValidStreamEvent,
 	processBufferedLines,
 	readResultEvent,
@@ -81,6 +84,8 @@ export class LoopService {
 	private readonly taskComplexity?: LoopServiceOptions['taskComplexity'];
 	private readonly logger = getLogger('LoopService');
 	private _isRunning = false;
+	/** Approved via the trust file; re-stamped each iteration */
+	private approved = false;
 
 	constructor(options: LoopServiceOptions) {
 		this.projectRoot = options.projectRoot;
@@ -136,13 +141,11 @@ export class LoopService {
 		await initProgressFile(config);
 		let statuses = await this.readStatuses(config);
 		let head = await this.readHead();
-		// Approved through the trust file: parse-prd or github import can withdraw it mid-run
-		const approved = !config.sandbox && isLoopTrusted(this.projectRoot);
+		this.approved = !config.sandbox && isLoopTrusted(this.projectRoot);
 
 		for (let i = 1; i <= config.iterations && this._isRunning; i++) {
-			if (approved && !isLoopTrusted(this.projectRoot)) {
-				const msg =
-					'Tasks were added since loop was approved. Run loop again to approve them.';
+			if (this.approved && !keepLoopTrust(this.projectRoot)) {
+				const msg = TRUST_LOST;
 				this.reportError(config.callbacks, msg);
 				return this.finalize(config, iterations, tasksCompleted, 'error', msg);
 			}
@@ -159,7 +162,6 @@ export class LoopService {
 					'budget_reached'
 				);
 			}
-			// Notify presentation layer of iteration start
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
 			const prompt = await buildPrompt(config, i);
@@ -187,6 +189,8 @@ export class LoopService {
 			);
 			Object.assign(iteration, choice);
 			iteration.session = resume ? 'resumed' : 'fresh';
+			// Reported no cost: count all it was given (#855)
+			if (iteration.costUnknown && left !== undefined) iteration.costUsd = left;
 			iterations.push(iteration);
 			spent += iteration.costUsd ?? 0;
 
@@ -217,7 +221,6 @@ export class LoopService {
 				}
 			}
 
-			// Notify presentation layer of iteration completion
 			config.callbacks?.onIterationEnd?.(iteration);
 			await appendIterationLine(config.progressFile, iteration);
 
@@ -341,6 +344,7 @@ export class LoopService {
 		errorMessage?: string
 	): Promise<LoopResult> {
 		this._isRunning = false;
+		if (this.approved) keepLoopTrust(this.projectRoot);
 		const sum = (key: 'costUsd' | 'turns') =>
 			iterations.some((it) => it[key] !== undefined)
 				? iterations.reduce((total, it) => total + (it[key] ?? 0), 0)
@@ -407,9 +411,11 @@ export class LoopService {
 			let timedOut = false;
 			let stdout = '';
 			let stderr = '';
-			const fail = (errorMessage: string): void => {
+			const fail = (errorMessage: string, spent?: RunSpend): void => {
 				this.reportError(callbacks, errorMessage);
-				resolve(createErrorIteration(iterationNum, startTime, errorMessage));
+				resolve(
+					createErrorIteration(iterationNum, startTime, errorMessage, spent)
+				);
 			};
 			const child = spawnIteration(
 				command,
@@ -437,11 +443,11 @@ export class LoopService {
 			child.once('close', (exitCode: number | null) => {
 				if (settled) return;
 				settled = true;
-				if (timedOut) return fail(timeoutMessage(timeout));
-
 				// No result event (an older Claude Code, or one that died): what
 				// isn't an event is the reply
 				const run = findResultEvent(stdout);
+				if (timedOut) return fail(timeoutMessage(timeout), runSpend(run));
+
 				const reply = run ? run.text : withoutEvents(stdout);
 				const output = reply + stderr;
 				if (output) {
@@ -449,12 +455,22 @@ export class LoopService {
 				}
 
 				if (exitCode === null) {
-					return fail('Command terminated abnormally (no exit code)');
+					return fail(
+						'Command terminated abnormally (no exit code)',
+						runSpend(run)
+					);
 				}
 
 				// Markers come from Claude's reply on stdout; stderr would hide the last line
 				resolve(
-					completeIteration(iterationNum, startTime, reply, exitCode, run)
+					completeIteration(
+						iterationNum,
+						startTime,
+						reply,
+						exitCode,
+						run,
+						hasStreamEvent(stdout)
+					)
 				);
 			});
 		});
@@ -498,6 +514,7 @@ export class LoopService {
 
 			// Track stdout completion to handle race between data and close events
 			let stdoutEnded = false;
+			let started = false;
 			let run: ClaudeRunResult | undefined;
 			let context: number | undefined;
 			let buffer = '';
@@ -508,10 +525,10 @@ export class LoopService {
 				try {
 					const event = JSON.parse(line);
 
-					// Validate event structure before accessing properties
 					if (!isValidStreamEvent(event)) {
 						return;
 					}
+					started = true;
 
 					handleStreamEvent(event, callbacks);
 
@@ -562,7 +579,6 @@ export class LoopService {
 
 			child.stdout.on('end', () => {
 				stdoutEnded = true;
-				// Process any remaining buffer when stdout ends
 				if (buffer) {
 					processLine(buffer);
 					buffer = '';
@@ -604,7 +620,14 @@ export class LoopService {
 						? timeoutMessage(timeout)
 						: 'Command terminated abnormally (no exit code)';
 					this.reportError(callbacks, errorMsg);
-					resolveOnce(createErrorIteration(iterationNum, startTime, errorMsg));
+					resolveOnce(
+						createErrorIteration(
+							iterationNum,
+							startTime,
+							errorMsg,
+							runSpend(run)
+						)
+					);
 					return;
 				}
 
@@ -614,7 +637,8 @@ export class LoopService {
 						startTime,
 						run?.text ?? '',
 						exitCode,
-						run
+						run,
+						started
 					)
 				);
 			});

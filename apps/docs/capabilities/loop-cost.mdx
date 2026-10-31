@@ -24,7 +24,7 @@ The cost is Claude Code's own estimate (`total_cost_usd` in its `result` event),
 Two flags cap a run:
 
 - `--max-turns <n>` passes `--max-turns` to every `claude -p`. An iteration that hits it stops with an error, `Claude Code reached the --max-turns limit`, and three in a row end the run like any other errors.
-- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with final status `Budget reached (--max-budget-usd)` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it.
+- `--max-budget-usd <amount>` caps the whole run. Each iteration's `claude -p` gets what's left as `--max-budget-usd`, and the loop stops before an iteration once nothing is left, with final status `Budget reached (--max-budget-usd)` and exit code 0. Claude Code checks the cap against its own estimate and can go slightly past it. An iteration that reports no cost (stopped by loop's timeout, or killed or crashed after it started but before its `result` event) counts as the whole budget it was given, shown as `cost unknown, counted as $X`, so the run stops rather than overshoot.
 
 ```bash
 taskgraph loop --max-turns 60 --max-budget-usd 10 --trust

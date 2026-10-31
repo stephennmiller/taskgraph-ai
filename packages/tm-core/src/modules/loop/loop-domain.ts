@@ -20,7 +20,7 @@ import {
 	defaultIterations,
 	isTaskPreset
 } from './loop-task.js';
-import { isLoopTrusted, trustLoop } from './loop-trust.js';
+import { isLoopTrusted, keepLoopTrust, trustLoop } from './loop-trust.js';
 import { type LoopBand, resolveLoopBands } from './model-bands.js';
 import { preflightContainer } from './parallel/container-workers.js';
 import { ParallelLoopRunner } from './parallel/parallel-runner.js';
@@ -178,12 +178,18 @@ export class LoopDomain {
 		if (!this.tasks) {
 			throw new Error('loop --parallel needs the tasks domain');
 		}
-		return new ParallelLoopRunner(
-			this.projectRoot,
-			this.tasks,
-			() => this.configManager.getActiveTag(),
-			this.loopBands()
-		).run(options);
+		const approved = isLoopTrusted(this.projectRoot);
+		try {
+			return await new ParallelLoopRunner(
+				this.projectRoot,
+				this.tasks,
+				() => this.configManager.getActiveTag(),
+				this.loopBands()
+			).run(options);
+		} finally {
+			// The tasks' own changes (notes, new subtasks) stay approved for the next run
+			if (approved) keepLoopTrust(this.projectRoot);
+		}
 	}
 
 	/**

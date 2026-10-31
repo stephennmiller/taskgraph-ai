@@ -95,6 +95,8 @@ export function formatLoopSpend(spend: {
 	model?: string;
 	effort?: string;
 	costUsd?: number;
+	/** costUsd is what loop counted, not what Claude Code reported */
+	costUnknown?: boolean;
 	turns?: number;
 	durationMs?: number;
 }): string {
@@ -104,7 +106,9 @@ export function formatLoopSpend(spend: {
 	const facts = [
 		spend.session ?? null,
 		setting || null,
-		spend.costUsd !== undefined ? formatCost(spend.costUsd) : null,
+		spend.costUsd !== undefined
+			? `${spend.costUnknown ? 'cost unknown, counted as ' : ''}${formatCost(spend.costUsd)}`
+			: null,
 		spend.turns !== undefined
 			? `${spend.turns} ${spend.turns === 1 ? 'turn' : 'turns'}`
 			: null,
