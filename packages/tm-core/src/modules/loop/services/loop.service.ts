@@ -24,7 +24,9 @@ import { buildCommandArgs, spawnIteration } from './iteration-process.js';
 import {
 	completeIteration,
 	createErrorIteration,
-	formatCommandError
+	formatCommandError,
+	type RunSpend,
+	runSpend
 } from './iteration-result.js';
 import {
 	appendFinalSummary,
@@ -161,7 +163,6 @@ export class LoopService {
 					'budget_reached'
 				);
 			}
-			// Notify presentation layer of iteration start
 			config.callbacks?.onIterationStart?.(i, config.iterations);
 
 			const prompt = await this.buildPrompt(config, i);
@@ -178,6 +179,8 @@ export class LoopService {
 				config.callbacks
 			);
 			Object.assign(iteration, choice);
+			// Reported no cost: count all it was given (#855)
+			if (iteration.costUnknown && left !== undefined) iteration.costUsd = left;
 			iterations.push(iteration);
 			spent += iteration.costUsd ?? 0;
 
@@ -208,7 +211,6 @@ export class LoopService {
 				}
 			}
 
-			// Notify presentation layer of iteration completion
 			config.callbacks?.onIterationEnd?.(iteration);
 			await appendIterationLine(config.progressFile, iteration);
 
@@ -432,9 +434,11 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			let timedOut = false;
 			let stdout = '';
 			let stderr = '';
-			const fail = (errorMessage: string): void => {
+			const fail = (errorMessage: string, spent?: RunSpend): void => {
 				this.reportError(callbacks, errorMessage);
-				resolve(createErrorIteration(iterationNum, startTime, errorMessage));
+				resolve(
+					createErrorIteration(iterationNum, startTime, errorMessage, spent)
+				);
 			};
 			const child = spawnIteration(
 				command,
@@ -462,11 +466,11 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 			child.once('close', (exitCode: number | null) => {
 				if (settled) return;
 				settled = true;
-				if (timedOut) return fail(timeoutMessage(timeout));
-
 				// No result event (an older Claude Code, or one that died): what
 				// isn't an event is the reply
 				const run = findResultEvent(stdout);
+				if (timedOut) return fail(timeoutMessage(timeout), runSpend(run));
+
 				const reply = run ? run.text : withoutEvents(stdout);
 				const output = reply + stderr;
 				if (output) {
@@ -474,7 +478,10 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 				}
 
 				if (exitCode === null) {
-					return fail('Command terminated abnormally (no exit code)');
+					return fail(
+						'Command terminated abnormally (no exit code)',
+						runSpend(run)
+					);
 				}
 
 				// Markers come from Claude's reply on stdout; stderr would hide the last line
@@ -625,7 +632,14 @@ Loop iteration ${iteration} of ${config.iterations}${tagInfo}${taskInfo}`;
 						? timeoutMessage(timeout)
 						: 'Command terminated abnormally (no exit code)';
 					this.reportError(callbacks, errorMsg);
-					resolveOnce(createErrorIteration(iterationNum, startTime, errorMsg));
+					resolveOnce(
+						createErrorIteration(
+							iterationNum,
+							startTime,
+							errorMsg,
+							runSpend(run)
+						)
+					);
 					return;
 				}
 

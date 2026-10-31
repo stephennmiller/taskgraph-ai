@@ -43,7 +43,18 @@ export function completeIteration(
 		duration: Date.now() - startTime,
 		// A cap that stopped Claude says more than its exit code
 		message: (status === 'error' && run?.capHit) || message,
-		...(run?.costUsd !== undefined ? { costUsd: run.costUsd } : {}),
+		...runSpend(run)
+	};
+}
+
+export type RunSpend = Pick<LoopIteration, 'costUsd' | 'turns' | 'costUnknown'>;
+
+/** The cost and turns Claude Code reported, or `costUnknown` when it reported no cost (#855) */
+export function runSpend(run: ClaudeRunResult | undefined): RunSpend {
+	return {
+		...(run?.costUsd !== undefined
+			? { costUsd: run.costUsd }
+			: { costUnknown: true }),
 		...(run?.turns !== undefined ? { turns: run.turns } : {})
 	};
 }
@@ -65,15 +76,18 @@ export function formatCommandError(
 	return `Failed to execute '${command}': ${error.message}`;
 }
 
+/** `spent` once Claude ran: what it reported, or that it reported no cost */
 export function createErrorIteration(
 	iterationNum: number,
 	startTime: number,
-	message: string
+	message: string,
+	spent?: RunSpend
 ): LoopIteration {
 	return {
 		iteration: iterationNum,
 		status: 'error',
 		duration: Date.now() - startTime,
-		message
+		message,
+		...spent
 	};
 }

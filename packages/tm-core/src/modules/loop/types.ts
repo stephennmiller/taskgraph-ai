@@ -118,6 +118,12 @@ export interface LoopIteration {
 	costUsd?: number;
 	/** Agentic turns Claude Code took */
 	turns?: number;
+	/**
+	 * Claude Code ran but reported no cost (stopped or died before its
+	 * result event). With --max-budget-usd, costUsd is then the budget the
+	 * iteration was given, the most it could have spent.
+	 */
+	costUnknown?: boolean;
 	/** Complexity score of the task the iteration started on, when it had one */
 	complexity?: number;
 	/** `--model` the iteration ran with, when one was picked */

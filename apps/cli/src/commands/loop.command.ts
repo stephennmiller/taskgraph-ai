@@ -440,6 +440,7 @@ export class LoopCommand extends Command {
 							model: iteration.model,
 							effort: iteration.effort,
 							costUsd: iteration.costUsd,
+							costUnknown: iteration.costUnknown,
 							turns: iteration.turns,
 							durationMs: iteration.duration
 						})

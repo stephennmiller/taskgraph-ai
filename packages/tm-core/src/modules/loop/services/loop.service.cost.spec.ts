@@ -6,7 +6,7 @@
 
 import * as childProcess from 'node:child_process';
 import * as fsPromises from 'node:fs/promises';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LoopConfig } from '../types.js';
 import { fakeClaude } from './fake-claude.js';
 import { parseLoopCaps } from './iteration-limits.js';
@@ -67,6 +67,11 @@ describe('LoopService cost and caps', () => {
 		vi.mocked(fsPromises.mkdir).mockResolvedValue(undefined);
 		vi.mocked(fsPromises.appendFile).mockResolvedValue(undefined);
 		service = new LoopService({ projectRoot: '/test/project' });
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+		vi.unstubAllEnvs();
 	});
 
 	it.each([
@@ -198,6 +203,65 @@ describe('LoopService cost and caps', () => {
 			totalCostUsd: 1.2
 		});
 		expect(written()).toContain('- Final status: budget_reached');
+	});
+
+	it.each([
+		['quiet', false],
+		['--verbose', true]
+	])(
+		'counts an iteration killed before its result event at the budget it was given (%s)',
+		async (_, verbose) => {
+			vi.useFakeTimers();
+			vi.stubEnv('TASKGRAPH_LOOP_TIMEOUT_MS', '1000');
+			spawn.mockImplementation(() => fakeClaude({ hang: true }) as never);
+
+			const run = service.run(
+				config({ iterations: 5, maxBudgetUsd: 1.5, verbose })
+			);
+			await vi.advanceTimersByTimeAsync(1000);
+			const result = await run;
+
+			// It could have spent all 1.5 it was given, so no second iteration starts
+			expect(spawn).toHaveBeenCalledTimes(1);
+			expect(result.iterations[0]).toMatchObject({
+				status: 'error',
+				costUsd: 1.5,
+				costUnknown: true
+			});
+			expect(result).toMatchObject({
+				finalStatus: 'budget_reached',
+				totalCostUsd: 1.5
+			});
+			expect(written()).toMatch(
+				/# Iteration 1: error · cost unknown, counted as \$1\.50 · \d+s\n/
+			);
+		}
+	);
+
+	it('counts nothing for an iteration that reported no cost when there is no budget', async () => {
+		spawn.mockImplementation(() => fakeClaude({ status: null }) as never);
+
+		const result = await service.run(config());
+
+		expect(result.iterations[0]).toMatchObject({ costUnknown: true });
+		expect(result.iterations[0].costUsd).toBeUndefined();
+		expect(result.totalCostUsd).toBeUndefined();
+	});
+
+	it("doesn't count a budget for a claude that never started", async () => {
+		spawn.mockImplementation(
+			() =>
+				fakeClaude({
+					error: Object.assign(new Error('spawn claude EACCES'), {
+						code: 'EACCES'
+					})
+				}) as never
+		);
+
+		const result = await service.run(config({ maxBudgetUsd: 1 }));
+
+		expect(result.iterations[0].costUsd).toBeUndefined();
+		expect(result.iterations[0].costUnknown).toBeUndefined();
 	});
 
 	it('passes the caps through the Docker sandbox too', async () => {
