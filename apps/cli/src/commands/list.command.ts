@@ -661,7 +661,8 @@ export class ListTasksCommand extends Command {
 				showSubtasks: options.withSubtasks,
 				showDependencies: true,
 				showBlocks: true, // Show which tasks this one blocks
-				showComplexity: true, // Enable complexity column
+				keepBlocks: options.blocking, // --blocking filters on that column
+				showComplexity: true, // Shown when some task has a score
 				showTag: allTags // Show tag column for cross-tag listing
 			})
 		);

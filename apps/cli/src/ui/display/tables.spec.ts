@@ -100,6 +100,79 @@ describe('createTaskTable - narrow terminals', () => {
 		expect(widest(output)).toBeLessThanOrEqual(50);
 		expect(output).toContain('feature');
 	});
+
+	it('draws a rule under the header and none between rows', () => {
+		setColumns(80);
+		const tasks = ['1', '2', '3'].map((id) => makeTask(id, 'master'));
+
+		const lines = stripAnsi(createTaskTable(tasks, listOptions)).split('\n');
+
+		expect(lines.filter((line) => line.startsWith('├'))).toHaveLength(1);
+		expect(lines[2]).toMatch(/^├/);
+		// Top border, header, header rule, one line per task, bottom border
+		expect(lines.findIndex((line) => line.startsWith('└'))).toBe(
+			3 + tasks.length
+		);
+	});
+
+	it('leaves out Complexity when no task has a score, and shows it when one does', () => {
+		setColumns(120);
+		const scored = { ...makeTask('2', 'master'), complexity: 7 };
+
+		const without = stripAnsi(
+			createTaskTable([makeTask('1', 'master')], listOptions)
+		);
+		const withScore = stripAnsi(
+			createTaskTable([makeTask('1', 'master'), scored], listOptions)
+		);
+
+		expect(without).not.toContain('Complexity');
+		expect(withScore).toContain('│ Complexity');
+	});
+
+	it('keeps Blocks at 80 columns when asked to, hiding Dependencies instead', () => {
+		setColumns(80);
+		const task = { ...makeTask('1', 'master'), blocks: ['2'] };
+
+		const output = stripAnsi(
+			createTaskTable([task], { ...listOptions, keepBlocks: true })
+		);
+
+		expect(output).toContain('│ Blocks');
+		expect(output).toContain('Hidden to fit width: Dependencies');
+	});
+
+	it('hides Blocks at 40 columns even when asked to keep it, rather than overflow', () => {
+		setColumns(40);
+		const task = { ...makeTask('1', 'master'), blocks: ['2'] };
+
+		const output = stripAnsi(
+			createTaskTable([task], { ...listOptions, keepBlocks: true })
+		);
+
+		expect(widest(output)).toBeLessThanOrEqual(38);
+		expect(output).toContain('Blocks');
+	});
+
+	it('cuts a title only when it is longer than its cell', () => {
+		setColumns(80);
+		const tasks = [
+			{ ...makeTask('1', 'master'), title: 'A'.repeat(200) },
+			{ ...makeTask('2', 'master'), title: 'B'.repeat(10) }
+		];
+
+		const lines = stripAnsi(createTaskTable(tasks, listOptions)).split('\n');
+		// Title cell text width is the column width less a space on each side
+		const cellWidth = lines[1].split('│')[2].length - 2;
+		const cut = lines.find((line) => line.includes('AAA')) ?? '';
+
+		expect(cut).toContain(`${'A'.repeat(cellWidth - 3)}... │`);
+		// Top border, header, header rule, one line per task, bottom border
+		expect(lines.findIndex((line) => line.startsWith('└'))).toBe(
+			3 + tasks.length
+		);
+		expect(widest(lines.join('\n'))).toBeLessThanOrEqual(76);
+	});
 });
 
 describe('createTaskTable with escape sequences in task text', () => {
