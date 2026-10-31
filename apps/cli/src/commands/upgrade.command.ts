@@ -29,7 +29,13 @@ export class UpgradeCommand extends Command {
 					return;
 				}
 
-				const info = await checkForUpdate(TASKGRAPH_VERSION);
+				// An explicit upgrade asks npm now, not a cached (or failed) check
+				const info = await checkForUpdate(TASKGRAPH_VERSION, { fresh: true });
+				if (info.failed) {
+					console.error("Couldn't reach the npm registry, try again later");
+					process.exitCode = 1;
+					return;
+				}
 				if (!info.needsUpdate) {
 					console.log(`TaskGraph ${info.currentVersion} is up to date`);
 					return;
