@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -260,7 +260,39 @@ describe('loop trust', () => {
 		expect(isLoopTrusted(project, home)).toBe(false);
 	});
 
-	it('hashes a symlink under .claude by its target path, not what it points to', () => {
+	const git = (...args: string[]) =>
+		execFileSync('git', args, { cwd: project, stdio: 'ignore' });
+
+	it.each(['.claude/settings.local.json', 'CLAUDE.local.md'])(
+		'asks again when %s is tracked by git and changed',
+		(file) => {
+			writeFile(file, '{}');
+			git('init', '-q');
+			git('add', file);
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile(file, '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(false);
+		}
+	);
+
+	it.each(['.claude/settings.local.json', 'CLAUDE.local.md'])(
+		'keeps the approval when an untracked %s in a git repository changed',
+		(file) => {
+			writeFile(file, '{}');
+			git('init', '-q');
+			writeTasks([task]);
+			trustLoop(project, home);
+
+			writeFile(file, '{"hooks": {}}');
+
+			expect(isLoopTrusted(project, home)).toBe(true);
+		}
+	);
+
+	it('asks again when the file a symlink under .claude names inside the project changed', () => {
 		writeFile('notes.md', 'Old');
 		writeFile('other.md', 'Other');
 		fs.mkdirSync(path.join(project, '.claude/rules'), { recursive: true });
@@ -270,11 +302,25 @@ describe('loop trust', () => {
 		trustLoop(project, home);
 
 		writeFile('notes.md', 'New');
-		expect(isLoopTrusted(project, home)).toBe(true);
+		expect(isLoopTrusted(project, home)).toBe(false);
 
+		trustLoop(project, home);
 		fs.rmSync(link);
 		fs.symlinkSync('../../other.md', link);
 		expect(isLoopTrusted(project, home)).toBe(false);
+	});
+
+	it('does not follow a symlink under .claude that leaves the project', () => {
+		const outside = path.join(base, 'outside.md');
+		fs.writeFileSync(outside, 'Old');
+		fs.mkdirSync(path.join(project, '.claude/rules'), { recursive: true });
+		fs.symlinkSync(outside, path.join(project, '.claude/rules/outside.md'));
+		writeTasks([task]);
+		trustLoop(project, home);
+
+		fs.writeFileSync(outside, 'New');
+
+		expect(isLoopTrusted(project, home)).toBe(true);
 	});
 
 	it('notices a rewrite of a file past the .claude byte budget', () => {
